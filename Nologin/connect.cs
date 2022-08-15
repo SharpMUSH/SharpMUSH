@@ -16,7 +16,7 @@ namespace SharpMUSH.Nologin
 
            if (id >= 0)
            {
-               CmdReply = "Welcome Back #" + id; 
+               
                ThingID = id;
            }
            else

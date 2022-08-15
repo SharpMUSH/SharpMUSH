@@ -15,6 +15,7 @@ namespace SharpMUSH.DB
         public MUSHContext()
         {
             var folder = Environment.CurrentDirectory;
+            
 
             DbPath = System.IO.Path.Join(folder, "mush.db");
         }
@@ -24,28 +25,29 @@ namespace SharpMUSH.DB
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.Entity<ThingType>()
+            modelBuilder.Entity<MUSHObj>()
                 .HasDiscriminator<string>("type")
+                .HasValue<MUSHObj>("object")
                 .HasValue<UserType>("player")
                 .HasValue<ThingType>("thing")
                 .HasValue<RoomType>("room")
                 .HasValue<ExitType>("exit");
 
             modelBuilder
-                .Entity<ThingType>()
+                .Entity<MUSHObj>()
                 .HasMany(t => t.Flags)
                 .WithMany(f => f.Things)
                 .UsingEntity(j => j.ToTable("ThingFlagsLink"));
             modelBuilder
-                .Entity<ThingType>()
+                .Entity<MUSHObj>()
                 .HasMany(t => t.Children)
                 .WithMany(f => f.Parents)
                 .UsingEntity(j => j.ToTable("AncestorLink"));
 
-            modelBuilder.Entity<ThingType>()
+            modelBuilder.Entity<MUSHObj>()
                 .HasOne(l => l.Location);
 
-            modelBuilder.Entity<ThingType>()
+            modelBuilder.Entity<MUSHObj>()
                 .HasOne(o => o.Owner);
         }
     }

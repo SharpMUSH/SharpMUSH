@@ -9,6 +9,6 @@ namespace SharpMUSH.DB
 
         public string Name { get; set; }
 
-        public ICollection<ThingType> Things { get; set; }
+        public ICollection<MUSHObj> Things { get; set; }
     }
 }

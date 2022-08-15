@@ -25,6 +25,7 @@ namespace SharpMUSH
 
             Server = new MUSHServer(IPAddress.Any, port);
             Server.Start();
+            Console.Write("Directory:" + Environment.CurrentDirectory);
         }
 
         public static MUSHSingleton Instance => instance;

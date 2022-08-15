@@ -1,6 +1,6 @@
 namespace SharpMUSH.DB
 {
-    public class ExitType : ThingType
+    public class ExitType : MUSHObj
     {
     }
 }

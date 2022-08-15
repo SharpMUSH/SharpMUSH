@@ -1,6 +1,6 @@
 namespace SharpMUSH.DB
 {
-    public class RoomType : ThingType
+    public class RoomType : MUSHObj
     {
         public UserType Owner { get; set; }
 

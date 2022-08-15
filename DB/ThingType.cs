@@ -1,22 +1,12 @@
-using System.ComponentModel.DataAnnotations;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace SharpMUSH.DB
 {
-    public class ThingType
+    public class ThingType : MUSHObj
     {
-        [Key]
-        public int ThingID { get; set; }
-
-        public string Name { get; set; }
-
-        public ICollection<Attrib> Attributes { get; set; }
-
-        public ThingType Location { get; set; } = null;
-
-        public ICollection<ThingType> Parents { get; set; }
-        public ICollection<ThingType> Children { get; set; }
-        public ICollection<FlagType> Flags { get; set; }
-
-        public UserType Owner { get; set; } = null;
     }
 }

@@ -2,6 +2,7 @@ using NetCoreServer;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Text;
+using SharpMUSH.Cmd;
 using SharpMUSH.Nologin;
 
 namespace SharpMUSH
@@ -62,9 +63,11 @@ namespace SharpMUSH
                         ThingID = (int)c.ThingID;
                         var user = MUSHDB.GetUserByIdAsync(ThingID).Result;
                         var name = user.Name;
-                        Send(c.CmdReply + "\r\n");
 
-                        Server.Multicast(name + "(" + ThingID + ") has connected.\r\n");
+                        look cmd = new look();
+                        cmd.Cmd("here",ThingID);
+
+                        Server.Multicast(name + "(#" + ThingID + ") has connected.\r\n");
 
                     }
                     Send(c.CmdReply + "\r\n");

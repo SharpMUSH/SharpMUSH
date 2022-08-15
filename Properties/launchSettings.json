@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "SharpMUSH": {
+      "commandName": "Project",
+      "workingDirectory": ".\\"
+    }
+  }
+}

@@ -11,6 +11,6 @@ namespace SharpMUSH.DB
         public string Value { get; set; }
         public bool Executable { get; set; }
         public string Command { get; set; }
-        public ThingType Obj { get; set; }
+        public MUSHObj Obj { get; set; }
     }
 }

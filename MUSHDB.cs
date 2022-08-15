@@ -112,7 +112,7 @@ namespace SharpMUSH
                 await using (var Context = new MUSHContext())
                 {
                     
-                    return await Context.Users.Where(u => u.Location.ThingID == locId && u.Connected).ToArrayAsync();
+                    return await Context.Users.Where(u => u.Location.ThingID == locId).ToArrayAsync();
                     
                 }
             }
@@ -139,6 +139,34 @@ namespace SharpMUSH
             {
 
                 return -1;
+            }
+        }
+
+        public static async Task<RoomType> getRoomByIdAsync(int locationThingId)
+        {
+            using (var Context = new MUSHContext())
+            {
+                var room = await Context.Rooms.Include(r => r.Attributes).Include(r => r.Flags)
+                    .FirstAsync(r => r.ThingID == locationThingId);
+
+                return room;
+            }
+        }
+
+        public static async Task<ThingType[]> GetThingsInLocationByIdAsync(int roomThingId)
+        {
+            try
+            {
+                await using (var Context = new MUSHContext())
+                {
+
+                    return await Context.Things.Where(t => t.Location.ThingID == roomThingId).ToArrayAsync();
+
+                }
+            }
+            catch
+            {
+                return null;
             }
         }
     }

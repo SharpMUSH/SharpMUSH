@@ -1,6 +1,6 @@
 namespace SharpMUSH.DB
 {
-    public class UserType : ThingType
+    public class UserType : MUSHObj
     {
         public bool Connected { get; set; } = false;
 
