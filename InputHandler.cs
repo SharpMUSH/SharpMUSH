@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Net.Mime;
 using SharpMUSH.Cmd;
 using System.Reflection;
 
@@ -18,16 +19,25 @@ namespace SharpMUSH
         {
             Input = Input.Replace("\n", "").Replace("\r", "");
            
-            var Command = Input.Split(' ')[0].ToLower();
-            var Text = Input.Substring(Command.Length + 1);
+            var Command = Input.Split(' ');
+            var Text = "";
 
-            var cmd = (baseCommand)CreateCmdInstance(Command);
-            cmd.Cmd(Text, ThingID);
+            if (Command.Length > 1)
+            {
+                Text = Input.Substring(Command.Length + 1);
+            }
+
+
+
+            var cmd = (baseCommand)CreateCmdInstance(Command[0]);
+            
+
+            
             
 
             if (cmd != null)
             {
-                
+                cmd.Cmd(Text, ThingID);
                 return cmd.CmdReply;
             }
             else
