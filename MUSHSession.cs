@@ -1,19 +1,17 @@
 using NetCoreServer;
-using System.Net.Sockets;
-using System.Runtime.CompilerServices;
-using System.Text;
-using SharpMUSH.Cmd;
 using SharpMUSH.Nologin;
+using System.Net.Sockets;
+using System.Text;
 
 namespace SharpMUSH
 {
-    internal class MUSHSession : TcpSession
+    public class MUSHSession : TcpSession
     {
         private readonly MUSHSingleton _mushSingleton;
         private bool auth = false;
         private int ThingID = -1;
 
-        public MUSHSession() : base (MUSHSingleton.Instance.Server)
+        public MUSHSession() : base(MUSHSingleton.Instance.Server)
         {
             _mushSingleton = MUSHSingleton.Instance;
         }
@@ -33,7 +31,7 @@ namespace SharpMUSH
             if (auth)
             {
                 MUSHDB.SetUserDisconnected(ThingID);
-                var user = MUSHDB.GetUserByIdAsync(ThingID).Result;
+                var user = MUSHDB.GetPlayerById(ThingID);
                 Server.Multicast(user.Name + "(" + ThingID + ") has disconnected.\r\n");
             }
 
@@ -61,11 +59,8 @@ namespace SharpMUSH
                     {
                         auth = true;
                         ThingID = (int)c.ThingID;
-                        var user = MUSHDB.GetUserByIdAsync(ThingID).Result;
+                        var user = MUSHDB.GetPlayerById(ThingID);
                         var name = user.Name;
-
-                        look cmd = new look();
-                        cmd.Cmd("here",ThingID);
 
                         Server.Multicast(name + "(#" + ThingID + ") has connected.\r\n");
 

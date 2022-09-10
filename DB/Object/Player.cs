@@ -1,6 +1,6 @@
-namespace SharpMUSH.DB
+namespace SharpMUSH.DB.Object
 {
-    public class UserType : MUSHObj
+    public class Player : Thing
     {
         public bool Connected { get; set; } = false;
 
@@ -8,6 +8,10 @@ namespace SharpMUSH.DB
 
         public Guid Session { get; set; } = Guid.Empty;
 
+        public bool EditMode { get; set; } = false;
+
         public string Password { get; set; }
+        public string Salt { get; set; }
+        public IList<Thing> Owned { get; set; } = null;
     }
 }

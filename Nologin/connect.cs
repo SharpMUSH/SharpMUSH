@@ -1,9 +1,6 @@
-using Microsoft.EntityFrameworkCore;
-using SharpMUSH.Cmd;
-
 namespace SharpMUSH.Nologin
 {
-    public class connect : baseCommand
+    public class connect
     {
         MUSHSingleton Game = MUSHSingleton.Instance;
         public string CmdReply = "";
@@ -11,18 +8,18 @@ namespace SharpMUSH.Nologin
         public string Name = "";
         public connect(string[] args, Guid guid)
         {
-           var id = MUSHDB.AuthUserByNameAsync(args[1], args[2].Replace("\n", "").Replace("\r",""), guid).Result;
-           
+            var id = MUSHDB.AuthUserByNameAsync(args[1], args[2].Replace("\n", "").Replace("\r", ""), guid).Result;
 
-           if (id >= 0)
-           {
-               
-               ThingID = id;
-           }
-           else
-           {
-               CmdReply = "No such user.";
-           }
+
+            if (id >= 0)
+            {
+
+                ThingID = id;
+            }
+            else
+            {
+                CmdReply = "No such user.";
+            }
         }
     }
 }

@@ -8,6 +8,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="CS-Script" Version="4.4.6" />
+    <PackageReference Include="IronPython" Version="2.7.12" />
+    <PackageReference Include="IronPython.Interpreter" Version="2.7.4" />
     <PackageReference Include="Microsoft.EntityFrameWorkCore.Design" Version="6.0.8">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
@@ -15,9 +18,11 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="6.0.8" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="6.0.0" />
     <PackageReference Include="NetCoreServer" Version="6.5.0" />
+    <PackageReference Include="Portable.BouncyCastle" Version="1.9.0" />
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Cmd\" />
     <Folder Include="Migrations\" />
   </ItemGroup>
 

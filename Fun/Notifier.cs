@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SharpMUSH
+namespace SharpMUSH.Fun
 {
-    internal interface IMUSHSingleton
+    internal class Notifier
     {
     }
 }

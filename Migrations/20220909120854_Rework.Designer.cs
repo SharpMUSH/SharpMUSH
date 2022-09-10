@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SharpMUSH.DB;
 
@@ -10,9 +11,10 @@ using SharpMUSH.DB;
 namespace SharpMUSH.Migrations
 {
     [DbContext(typeof(MUSHContext))]
-    partial class MUSHContextModelSnapshot : ModelSnapshot
+    [Migration("20220909120854_Rework")]
+    partial class Rework
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "6.0.8");
@@ -126,7 +128,7 @@ namespace SharpMUSH.Migrations
 
                     b.ToTable("BaseObject");
 
-                    b.HasDiscriminator<string>("type").HasValue("garbage");
+                    b.HasDiscriminator<string>("type").HasValue("object");
                 });
 
             modelBuilder.Entity("SharpMUSH.DB.ObjectAttribute.Argument", b =>
@@ -172,7 +174,8 @@ namespace SharpMUSH.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ThingId");
+                    b.HasIndex("ThingId", "Name")
+                        .IsUnique();
 
                     b.ToTable("Attributes");
 
@@ -188,6 +191,9 @@ namespace SharpMUSH.Migrations
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("TEXT");
+
+                    b.Property<int>("ThingID")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
