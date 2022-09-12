@@ -2,19 +2,29 @@ namespace SharpMUSH.Python
 {
     public class Notify
     {
-        MUSHSingleton Game = MUSHSingleton.Instance;
+
+        private MUSHDatabase DB = new MUSHDatabase();
 
         public void ToPlayer(int playerId, string message)
         {
+
+
+
             // Get the player from the database
-            var player = MUSHDB.GetPlayerById(playerId);
+            var player = DB.GetPlayerById(playerId);
 
             // Get the session from the player
-            var session = Game.Server.FindSession(player.Session);
-            if (session.IsConnected)
+            if (player.Session != null)
             {
-                session.Send(message);
+                foreach (var sess in player.Session)
+                {
+                    var session = Game.Server.FindSession(sess);
+
+                    session.Send(message);
+
+                }
             }
+
         }
 
         public void ToRoom(int roomId, string message)
@@ -22,7 +32,7 @@ namespace SharpMUSH.Python
 
 
             // Get the contents of the room
-            var contents = MUSHDB.GetPlayersInLocationById(roomId);
+            var contents = DB.GetPlayersInLocationById(roomId);
 
             // Send the message to each player in the room
             foreach (var player in contents)
@@ -34,7 +44,7 @@ namespace SharpMUSH.Python
         public void ToRoomExcept(int roomId, int playerId, string message)
         {
             // Get the contents of the room
-            var contents = MUSHDB.GetPlayersInLocationById(roomId);
+            var contents = DB.GetPlayersInLocationById(roomId);
 
             // Send the message to each player in the room except the player
 

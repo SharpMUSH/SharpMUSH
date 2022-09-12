@@ -4,7 +4,8 @@ namespace SharpMUSH.DB.Object
 {
     public class Room : Thing
     {
-        public Player Owner { get; set; }
+        public IList<Exit> Exits { get; set; }
+        public IList<Exit> Entrances { get; set; }
 
         public Room()
         {

@@ -1,15 +1,23 @@
+using System.Net;
+
 namespace SharpMUSH
 {
-    public class Program
+
+    public static class Game
     {
 
+        public static MUSHServer Server { get; private set; }
+        public static InputHandler InputHandle { get; private set; }
 
-
-        // Main
-
-        private static void Main(string[] args)
+        public static void Start()
         {
-            Game.Start();
+            // Start the server
+            const int port = 1701;
+            InputHandle = new InputHandler();
+            Server = new MUSHServer(IPAddress.Any, port);
+            Server.Start();
+            Console.Write("Directory:" + Environment.CurrentDirectory);
+
             for (; ; )
             {
                 string line = Console.ReadLine();
@@ -20,18 +28,15 @@ namespace SharpMUSH
                 if (line == "!")
                 {
                     Console.Write("Server restarting...");
-                    Game.Server.Restart();
+                    Server.Restart();
                     Console.WriteLine("Done!");
                     continue;
                 }
 
                 // Multicast admin message to all sessions
                 line = "(admin) " + line;
-                Game.Server.Multicast(line);
+                Server.Multicast(line);
             }
-
-            // Stop the server
-
 
         }
     }

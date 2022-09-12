@@ -6,7 +6,7 @@ namespace SharpMUSH
 {
     public class MUSHServer : TcpServer
     {
-        
+
         public MUSHServer(IPAddress address, int port) : base(address, port)
         {
         }
@@ -18,9 +18,22 @@ namespace SharpMUSH
         {
             Console.WriteLine($"Chat TCP server caught an error with code {error}");
         }
+
+
+        // FindSessionByThingID
+        public List<MUSHSession>? FindSessionByThingId(int Id)
+        {
+            var sessions = Game.Server.Sessions.Values.Cast<MUSHSession>();
+            return sessions.Where(s => s.ThingID == Id).ToList();
+
+        }
+
+        // FindSessionByPlayerName
+
+
+
+
+
     }
 }
 
-namespace SharpMUSH.DB
-{
-}

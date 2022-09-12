@@ -1,4 +1,6 @@
+using SharpMUSH.DB.Link;
 using SharpMUSH.DB.Object;
+using SharpMUSH.DB.ObjectAttribute;
 
 namespace SharpMUSH.DB.ObjectPerm
 {
@@ -10,11 +12,12 @@ namespace SharpMUSH.DB.ObjectPerm
         public string Name { get; set; }
 
         public string Description { get; set; }
-        public bool IsDefault { get; set; }
-        public bool IsSet { get; set; }
 
-        public ICollection<Flag> Flags { get; set; }
-        public ICollection<Thing> Things { get; set; }
+        public IList<Flag> Flags { get; set; }
+
+        public IList<FlagPermission> FlagPermissions { get; set; }
+        public IList<Thing> Things { get; set; }
+        public IList<Attrib> Attributes { get; set; }
 
     }
 }

@@ -1,12 +1,21 @@
-
+using Microsoft.Scripting.Hosting;
+using SharpMUSH.DB.Object;
+using SharpMUSH.DB.ObjectAttribute;
 using SharpMUSH.Python;
+
 
 namespace SharpMUSH
 {
     public class InputHandler
     {
-        MUSHSingleton Game = MUSHSingleton.Instance;
 
+        MUSHDatabase DB = new MUSHDatabase();
+
+
+
+
+
+        // Constructor for InputHandler
         public InputHandler()
         {
 
@@ -17,276 +26,147 @@ namespace SharpMUSH
         {
 
             Microsoft.Scripting.Hosting.ScriptEngine pyEngine = IronPython.Hosting.Python.CreateEngine();
+
             Microsoft.Scripting.Hosting.ScriptScope pyScope = pyEngine.CreateScope();
 
-            // Parse Input
-            var args = Input.Split(' ');
-            // Check if arg[0] contains a switch delimited by a forward-slash
-            // Store command and switch in a variable for later use
-            var cmd = args[0];
-            var sw = "";
+            // Get the player
+            var player = DB.GetPlayerById(ThingID);
+
+            // Parse input
+            string[] InputArray = Input.Split(' ');
+
+            // Get the first word
+            string cmd = InputArray[0];
+
+            // Does the command contain a switch forwardslash
 
             if (cmd.Contains("/"))
             {
-                var cmdSplit = cmd.Split('/');
-                cmd = cmdSplit[0];
-                sw = cmdSplit[1];
+                // Split the command and switch
+                string[] cmdArray = cmd.Split('/');
+
+                // Set the command
+                cmd = cmdArray[0];
+
+                // Set the switch
+                string sw = cmdArray[1];
+
+                // Set the switch in the scope
+                pyScope.SetVariable("switch", sw);
+
             }
 
-            // remove cmd from args list
-            args = args.Skip(1).ToArray();
-
-
-            // Check if command exists
-            // We check for the command on a Command attribute in the following order:
-            // Command with NULL Thing > Player > Player Ancestors > Player Location > Player Location Ancestors >
-            // Player Contents > Player Contents Ancestors > Player Location Contents > Player Location Contents Ancestors
-
-
-            // If we don't find a Command we return an error
-
-            // If we don't find a Command we return an Error message
-
-            // Check for NULL Thing Command
-            var cmds = MUSHDB.GetCommandsByThingId(0);
-            if (cmds != null)
+            // If InputArray has more than one word add elements 1 onward to Args
+            string[] Args = new string[InputArray.Length - 1];
+            if (InputArray.Length > 1)
             {
-                // Iterate through the commands and check for a match
-                foreach (var c in cmds)
+                for (int i = 1; i < InputArray.Length; i++)
                 {
-                    if (c.Name.ToLower() == cmd.ToLower())
+                    Args[i - 1] = InputArray[i];
+                }
+            }
+            // Set nArgs to the number of arguments
+            int nArgs = Args.Length;
+
+            // strip any line returns and newlines from Input
+
+            Input = Input.Replace("\r", "");
+            Input = Input.Replace("\n", "");
+
+
+            pyScope.SetVariable("Input", Input);
+            pyScope.SetVariable("ThingID", ThingID);
+
+            // Create a Scripted Object and set variable
+
+            // Create a list of Things to check for commands
+            var thingsToCheck = new List<Thing>();
+            // Add the command to the list
+            thingsToCheck.Add(DB.GetThingById(0));
+            // Add the player to the list
+            thingsToCheck.Add(player);
+            // Add the player's ancestors to the list
+            thingsToCheck.AddRange(DB.GetAncestors(player.Id));
+
+            // Add the player's location to the list
+            thingsToCheck.Add(DB.GetThingById(player.Location.Id));
+            // Add the player's location's ancestors to the list
+            thingsToCheck.AddRange(DB.GetAncestors(player.Location.Id));
+
+            // Add the player's contents to the list
+            thingsToCheck.AddRange(DB.GetContentsById(player.Id));
+            // Add the player's contents' ancestors to the list
+
+            foreach (var thing in DB.GetContentsById(player.Id))
+            {
+                thingsToCheck.AddRange(DB.GetAncestors(thing.Id));
+            }
+
+            // Add the player's location's contents to the list
+            thingsToCheck.AddRange(DB.GetContentsById(player.Location.Id));
+            // Add the player's location's contents' ancestors to the list
+            foreach (var thing in DB.GetContentsById(player.Location.Id))
+            {
+                thingsToCheck.AddRange(DB.GetAncestors(thing.Id));
+            }
+
+            // Create a list of commands to check
+            var commandsToCheck = new List<Attrib>();
+
+            // Add the commands from the things in the list
+            foreach (var thing in thingsToCheck)
+            {
+                commandsToCheck.AddRange(DB.GetCommandsById(thing.Id));
+            }
+
+            // Check if the command exists
+
+            var foundCommand = commandsToCheck.Find(match: c => c.Command == cmd);
+
+            if (foundCommand != null)
+            {
+                // Get the script for the command
+                var script = DB.GetScript(foundCommand.Value, foundCommand.Id);
+                if (script != null)
+                {
+                    try
                     {
-                        var scripted = new Scripted(ThingID, 0, cmd, sw, args);
+                        var scripted = new Scripted(ThingID, foundCommand.Id);
                         pyScope.SetVariable("MUSH", scripted);
+                        pyScope.SetVariable("Input", Input.Replace("\n", "").Replace("\r", ""));
                         // Execute the Python code
-                        var pyCode = pyEngine.CreateScriptSourceFromString(c.Value);
+                        var pyCode = pyEngine.CreateScriptSourceFromString(script.Value);
                         var pyResult = pyCode.Execute(pyScope);
                         // Return the result
-                        return pyResult.ToString();
+                        //return pyResult.ToString();
+                        return "";
+
+                    }
+                    catch (Exception ex)
+                    {
+                        ExceptionOperations eo = pyEngine.GetService<ExceptionOperations>();
+                        string error = eo.FormatException(ex);
+                        return error;
                     }
                 }
+                return "No script found for command " + cmd + " on thing " + foundCommand.Id + ".\n";
             }
-            // Check for Player Command
-            cmds = MUSHDB.GetCommandsByThingId(ThingID);
-            if (cmds != null)
+            else
             {
-                // Iterate through the commands and check for a match
-                foreach (var c in cmds)
-                {
-                    if (c.Name.ToLower() == cmd.ToLower())
-                    {
-                        var scripted = new Scripted(ThingID, ThingID, cmd, sw, args);
-                        pyScope.SetVariable("MUSH", scripted);
-                        // Execute the Python code
-                        var pyCode = pyEngine.CreateScriptSourceFromString(c.Value);
-                        var pyResult = pyCode.Execute(pyScope);
-                        // Return the result
-                        return pyResult.ToString();
-                    }
-                }
+                return "No command found for " + cmd + ".\n";
             }
-            // Check for Player Ancestors Command
-            var playerAncestors = MUSHDB.GetParentsByThingId(ThingID);
-            if (playerAncestors != null)
-            {
-                foreach (var a in playerAncestors)
-                {
-                    cmds = MUSHDB.GetCommandsByThingId(a.Id);
-                    if (cmds != null)
-                    {
-                        // Iterate through the commands and check for a match
-                        foreach (var c in cmds)
-                        {
-                            if (c.Name.ToLower() == cmd.ToLower())
-                            {
-                                var scripted = new Scripted(ThingID, ThingID, cmd, sw, args);
-                                pyScope.SetVariable("MUSH", scripted);
-                                // Execute the Python code
-                                var pyCode = pyEngine.CreateScriptSourceFromString(c.Value);
-                                var pyResult = pyCode.Execute(pyScope);
-                                // Return the result
-                                return pyResult.ToString();
-                            }
-                        }
-                    }
-                }
-            }
-            // Check for Player Location Command
-            var playerLocation = MUSHDB.GetLocationByThingId(ThingID);
-            if (playerLocation != null)
-            {
-                cmds = MUSHDB.GetCommandsByThingId(playerLocation.Id);
-                if (cmds != null)
-                {
-                    // Iterate through the commands and check for a match
-                    foreach (var c in cmds)
-                    {
-                        if (c.Name.ToLower() == cmd.ToLower())
-                        {
-                            var scripted = new Scripted(ThingID, playerLocation.Id, cmd, sw, args);
-                            pyScope.SetVariable("MUSH", scripted);
-                            // Execute the Python code
-                            var pyCode = pyEngine.CreateScriptSourceFromString(c.Value);
-                            var pyResult = pyCode.Execute(pyScope);
-                            // Return the result
-                            return pyResult.ToString();
-                        }
-                    }
-                }
-                // Check for Player Location Ancestors Command
-
-                foreach (var a in playerLocation.Parents)
-                {
-                    cmds = MUSHDB.GetCommandsByThingId(a.Id);
-                    if (cmds != null)
-                    {
-                        // Iterate through the commands and check for a match
-                        foreach (var c in cmds)
-                        {
-                            if (c.Name.ToLower() == cmd.ToLower())
-                            {
-                                var scripted = new Scripted(ThingID, playerLocation.Id, cmd, sw, args);
-                                pyScope.SetVariable("MUSH", scripted);
-                                // Execute the Python code
-                                var pyCode = pyEngine.CreateScriptSourceFromString(c.Value);
-                                var pyResult = pyCode.Execute(pyScope);
-                                // Return the result
-                                return pyResult.ToString();
-                            }
-                        }
-                    }
-                }
-
-
-            }
-            // Check for Player Contents Command
-            var playerContents = MUSHDB.GetContentsByThingId(ThingID);
-            if (playerContents != null)
-            {
-                foreach (var c in playerContents)
-                {
-                    cmds = MUSHDB.GetCommandsByThingId(c.Id);
-                    if (cmds != null)
-                    {
-                        // Iterate through the commands and check for a match
-                        foreach (var cmd1 in cmds)
-                        {
-                            if (cmd1.Name.ToLower() == cmd.ToLower())
-                            {
-                                var scripted = new Scripted(ThingID, c.Id, cmd, sw, args);
-                                pyScope.SetVariable("MUSH", scripted);
-                                // Execute the Python code
-                                var pyCode = pyEngine.CreateScriptSourceFromString(cmd1.Value);
-                                var pyResult = pyCode.Execute(pyScope);
-                                // Return the result
-                                return pyResult.ToString();
-                            }
-                        }
-                    }
-                }
-            }
-            // Check for Player Contents Ancestors Command
-            if (playerContents != null)
-            {
-                foreach (var c in playerContents)
-                {
-                    var playerContentsAncestors = MUSHDB.GetParentsByThingId(c.Id);
-                    if (playerContentsAncestors != null)
-                    {
-                        foreach (var a in playerContentsAncestors)
-                        {
-                            cmds = MUSHDB.GetCommandsByThingId(a.Id);
-                            if (cmds != null)
-                            {
-                                // Iterate through the commands and check for a match
-                                for (var i = 0; i < cmds.Count; i++)
-                                {
-
-                                    var cmd1 = cmds[i];
-                                    if (string.Equals(cmd1.Name, cmd, StringComparison.OrdinalIgnoreCase))
-                                    {
-                                        var scripted = new Scripted(ThingID, c.Id, cmd, sw, args);
-                                        pyScope.SetVariable("MUSH", scripted);
-                                        // Execute the Python code
-                                        var pyCode = pyEngine.CreateScriptSourceFromString(cmd1.Value);
-                                        var pyResult = pyCode.Execute(pyScope);
-                                        // Return the result
-                                        return pyResult.ToString();
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            // Check for Player Location Contents Command
-            var playerLocationContents = MUSHDB.GetContentsByThingId(playerLocation.Id);
-            if (playerLocationContents != null)
-            {
-                foreach (var c in playerLocationContents)
-                {
-                    cmds = MUSHDB.GetCommandsByThingId(c.Id);
-                    if (cmds != null)
-                    {
-                        // Iterate through the commands and check for a match
-                        foreach (var cmd1 in cmds)
-                        {
-                            if (cmd1.Name.ToLower() == cmd.ToLower())
-                            {
-                                var scripted = new Scripted(ThingID, c.Id, cmd, sw, args);
-                                pyScope.SetVariable("MUSH", scripted);
-                                // Execute the Python code
-                                var pyCode = pyEngine.CreateScriptSourceFromString(cmd1.Value);
-                                var pyResult = pyCode.Execute(pyScope);
-                                // Return the result
-                                return pyResult.ToString();
-                            }
-                        }
-                    }
-                }
-            }
-            // Check for Player Location Contents Ancestors Command
-            if (playerLocationContents != null)
-            {
-                foreach (var c in playerLocationContents)
-                {
-                    var playerLocationContentsAncestors = MUSHDB.GetParentsByThingId(c.Id);
-                    if (playerLocationContentsAncestors != null)
-                    {
-                        for (var i = 0; i < playerLocationContentsAncestors.Count; i++)
-                        {
-                            var a = playerLocationContentsAncestors[i];
-                            cmds = MUSHDB.GetCommandsByThingId(a.Id);
-                            if (cmds != null)
-                            {
-                                var scripted = new Scripted(ThingID, c.Id, cmd, sw, args);
-                                pyScope.SetVariable("MUSH", scripted);
-                                // Iterate through the commands and check for a match
-                                foreach (var cmd1 in cmds)
-                                {
-                                    if (string.Equals(cmd1.Name, cmd, StringComparison.OrdinalIgnoreCase))
-                                    {
-                                        // Execute the Python code
-                                        var pyCode = pyEngine.CreateScriptSourceFromString(cmd1.Value);
-                                        var pyResult = pyCode.Execute(pyScope);
-                                        // Return the result
-                                        return pyResult.ToString();
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            // We found nothing return an error message
-            return "Command not found. Type 'help' for a list of commands.";
-
-
-
-
-
         }
 
 
+
     }
+
+
+
+
+
+
+
+
+
 }

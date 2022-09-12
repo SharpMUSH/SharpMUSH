@@ -1,9 +1,13 @@
 using SharpMUSH.DB.Object;
+using SharpMUSH.DB.ObjectAttribute;
 
 namespace SharpMUSH.Python
 {
     public class ScriptDB
     {
+        private MUSHDatabase DB = new MUSHDatabase();
+
+
         public int Executor { get; protected set; }
         public int Caller { get; protected set; }
 
@@ -13,16 +17,16 @@ namespace SharpMUSH.Python
             Caller = caller;
         }
 
-        // GetAttribute(ThingID, AttributeName)
+        // GetAttribute(Id, AttributeName)
         // Get the value of an attribute
-        public string GetAttribute(int thingID, string attributeName)
+        public string GetAttribute(int Id, string attributeName)
         {
             // Check if the Executor is the owner of the thing
             // If not check if the Executor has the permission to read the attribute
-            if (MUSHDB.IsOwner(Executor, thingID) || MUSHDB.HasPermission(Executor, "ReadAllAttribute"))
+            if (DB.IsOwner(Executor, Id) || DB.HasPermission(Executor, "ReadAllAttribute"))
             {
                 // Get the attribute from the database
-                var attribute = MUSHDB.GetAttribute(thingID, attributeName);
+                var attribute = DB.GetAttribute(Id, attributeName);
                 if (attribute != null)
                 {
                     return attribute.Value;
@@ -37,36 +41,110 @@ namespace SharpMUSH.Python
                 return "#-1 PERMISSION DENIED";
             }
         }
-        // SetAttribute(ThingID, AttributeName, AttributeValue)
-        // Set the value of an attribute
-        public string SetAttribute(int thingID, string attributeName, string attributeValue)
+
+        // SetPlayerEditObject(MUSH.Caller, CmdObj, CmdName, CmdCommand)
+
+        public void SetPlayerEditObject(int playerId, int Id, string name, string command)
+        {
+            DB.UpdateAttribute(playerId, "Editing", Id.ToString());
+            DB.UpdateAttribute(playerId, "EditingName", name);
+            DB.UpdateAttribute(playerId, "EditingCommand", command);
+        }
+
+
+        // GetCommand(Id, CommandName)
+        // get a Command
+        public Attrib? GetCommand(int Id, string Name)
         {
             // Check if the Executor is the owner of the thing
-            // If not check if the Executor has the permission to write the attribute
-            if (MUSHDB.IsOwner(Executor, thingID) || MUSHDB.HasPermission(Executor, "WriteAllAttribute"))
+            // If not check if the Executor has the permission to read the attribute
+            if (DB.IsOwner(Executor, Id) || DB.HasPermission(Executor, "ReadAllAttribute"))
             {
-                // Update the attribute
-
-                MUSHDB.UpdateOrCreateAttribute(thingID, attributeName, attributeValue);
-
-                return "SET: Attribute: " + attributeName + " on object: " + thingID;
+                // Get the attribute from the database
+                var attribute = DB.GetAttribute(Id, Name);
+                if (attribute != null)
+                {
+                    return attribute;
+                }
+                else
+                {
+                    return null;
+                }
             }
             else
             {
-                return "#-1 PERMISSION DENIED";
+                return null;
             }
         }
-        // GetObject(ThingID)
+
+        // SetCommand(Id, CommandName, Value)
+        // Set a command
+
+        public bool SetCommand(int Id, string Name, string Value, string command)
+        {
+            // Check if the Executor is the owner of the thing
+            // If not check if the Executor has the permission to read the attribute
+            if (DB.IsOwner(Executor, Id) || DB.HasPermission(Executor, "WriteAllAttribute"))
+            {
+                // Get the attribute from the database
+                var attribute = DB.GetAttribute(Id, Name);
+                if (attribute != null)
+                {
+                    attribute.Command = command;
+                    attribute.IsCMD = true;
+                    attribute.Value = Value;
+                    DB.UpdateAttribute(attribute);
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                return false;
+            }
+
+        }
+
+
+        public void SetPlayerEditMode(int Id, bool edit)
+        {
+            DB.SetPlayerEditMode(Id, edit);
+
+        }
+
+        // SetAttribute(Id, AttributeName, AttributeValue)
+        // Set the value of an attribute
+        public bool SetAttribute(int Id, string attributeName, string attributeValue)
+        {
+            // Check if the Executor is the owner of the thing
+            // If not check if the Executor has the permission to write the attribute
+            if (DB.IsOwner(Executor, Id) || DB.HasPermission(Executor, "WriteAllAttribute"))
+            {
+                // Update the attribute
+
+                DB.UpdateAttribute(Id, attributeName, attributeValue);
+
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+        // GetObject(Id)
         // Get the object from the database
 
-        public string GetName(int thingID)
+        public string GetName(int Id)
         {
             // Check if the Executor is the owner of the thing
             // If not check if the Executor has the permission to read the object
-            if (MUSHDB.IsOwner(Executor, thingID) || MUSHDB.HasPermission(Executor, "ReadAllObject") || MUSHDB.GetLocationByThingId(thingID) == MUSHDB.GetLocationByThingId(Executor))
+            if (DB.IsOwner(Executor, Id) || DB.HasPermission(Executor, "ReadAllObject") || DB.GetLocationById(Id) == DB.GetLocationById(Executor))
             {
                 // Get the object from the database
-                var thing = MUSHDB.GetThingByThingID(thingID);
+                var thing = DB.GetThingById(Id);
                 if (thing != null)
                 {
                     return thing.Name;
@@ -88,10 +166,10 @@ namespace SharpMUSH.Python
         public string CreateObject(string name)
         {
             // Check if the Executor has the permission to create an object
-            if (MUSHDB.HasPermission(Executor, "CreateObject"))
+            if (DB.HasPermission(Executor, "CreateObject"))
             {
                 // Create the object
-                var thing = MUSHDB.CreateThing(name, Executor);
+                var thing = DB.CreateThing(name, Executor);
 
                 return "CREATED: " + thing.Id + " with name: " + thing.Name;
             }
@@ -107,10 +185,10 @@ namespace SharpMUSH.Python
         public string CreatePlayer(string name, string password)
         {
             // Check if the Executor has the permission to create a player
-            if (MUSHDB.HasPermission(Executor, "CreatePlayer"))
+            if (DB.HasPermission(Executor, "CreatePlayer"))
             {
                 // Create the player
-                var thing = MUSHDB.CreatePlayer(name, password, Executor);
+                var thing = DB.CreatePlayer(name, password, Executor);
 
                 return "CREATED: " + thing.Id + " with name: " + thing.Name;
             }
@@ -120,20 +198,20 @@ namespace SharpMUSH.Python
             }
         }
 
-        // ChangePassword(ThingID, Password, OldPassword)
+        // ChangePassword(Id, Password, OldPassword)
         // Change the password of a player
 
-        public string ChangePlayerPassword(int ThingID, string Password, string OldPassword)
+        public string ChangePlayerPassword(int Id, string Password, string OldPassword)
         {
-            if (MUSHDB.HasPermission(Executor, "Admin") || ThingID == Caller)
+            if (DB.HasPermission(Executor, "Admin") || Id == Caller)
             {
-                if (MUSHDB.HasPermission(ThingID, "God") && !MUSHDB.HasPermission(Caller, "God"))
+                if (DB.HasPermission(Id, "God") && !DB.HasPermission(Caller, "God"))
                 {
                     return "#-1 PERMISSION DENIED";
                 }
                 else
                 {
-                    if (MUSHDB.UpdatePassword(ThingID, Password, OldPassword))
+                    if (DB.UpdatePassword(Id, Password, OldPassword))
                     {
                         return "Password Updated.";
                     }
@@ -150,16 +228,16 @@ namespace SharpMUSH.Python
             }
         }
 
-        // lcon(ThingId)
+        // lcon(Id)
         // Returns a list of Things
 
-        public List<Thing> Contents(int ThingId)
+        public List<Thing> Contents(int Id)
         {
-            // Get contents of ThingId
-            if (MUSHDB.HasPermission(Executor, "ReadAllObject") || MUSHDB.IsOwner(Executor, ThingId) || MUSHDB.GetLocationByThingId(ThingId) == MUSHDB.GetLocationByThingId(Executor)
-                || MUSHDB.GetLocationByThingId(Executor).Id == ThingId)
+            // Get contents of Id
+            if (DB.HasPermission(Executor, "ReadAllObject") || DB.IsOwner(Executor, Id) || DB.GetLocationById(Id) == DB.GetLocationById(Executor)
+                || DB.GetLocationById(Executor).Id == Id)
             {
-                return MUSHDB.GetContentsByThingId(ThingId);
+                return DB.GetContentsById(Id);
             }
             else
             {
@@ -172,30 +250,39 @@ namespace SharpMUSH.Python
 
         public List<Player> Who()
         {
-            if (MUSHDB.HasPermission(Executor, "SeeDark"))
+            if (DB.HasPermission(Executor, "SeeDark"))
             {
-                return MUSHDB.Priv_GetOnlinePlayers();
+                return DB.Priv_GetOnlinePlayers();
             }
             else
             {
-                return MUSHDB.GetOnlinePlayers();
+                return DB.GetOnlinePlayers();
             }
 
         }
 
-        // lowned(ThingId)
+        // lowned(Id)
         // Returns a list of all owned objects
 
-        public List<Thing> Owned(int ThingId)
+        public List<Thing> Owned(int Id)
         {
-            if (MUSHDB.HasPermission(Executor, "ReadAllObject") || MUSHDB.IsOwner(Executor, ThingId))
+            if (DB.HasPermission(Executor, "ReadAllObject") || DB.IsOwner(Executor, Id))
             {
-                return MUSHDB.GetOwnedByThingId(ThingId);
+                return DB.GetOwnedById(Id);
             }
             else
             {
                 return new List<Thing>();
             }
         }
+        public Thing? GetPlayerLocation(int Id)
+        {
+            var thing = DB.GetLocationById(Id);
+
+            return thing;
+
+        }
     }
+
+
 }

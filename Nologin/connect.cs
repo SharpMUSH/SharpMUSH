@@ -2,23 +2,33 @@ namespace SharpMUSH.Nologin
 {
     public class connect
     {
-        MUSHSingleton Game = MUSHSingleton.Instance;
+        MUSHDatabase DB = new MUSHDatabase();
+
         public string CmdReply = "";
         public int? ThingID = -1;
         public string Name = "";
         public connect(string[] args, Guid guid)
         {
-            var id = MUSHDB.AuthUserByNameAsync(args[1], args[2].Replace("\n", "").Replace("\r", ""), guid).Result;
 
-
-            if (id >= 0)
+            if (args.Length == 3)
             {
 
-                ThingID = id;
+                var id = DB.AuthenticatePlayer(args[1], args[2].Replace("\n", "").Replace("\r", ""), guid);
+
+
+                if (id > 0)
+                {
+
+                    ThingID = id;
+                }
+                else
+                {
+                    CmdReply = "Unable to authenticate.";
+                }
             }
             else
             {
-                CmdReply = "No such user.";
+                CmdReply = "Invalid arguments.";
             }
         }
     }

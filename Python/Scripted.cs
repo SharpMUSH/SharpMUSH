@@ -2,24 +2,19 @@ namespace SharpMUSH.Python
 {
     public class Scripted
     {
-        private MUSHSingleton Game = MUSHSingleton.Instance;
+        private MUSHDatabase DB = new MUSHDatabase();
 
         public int Caller { get; protected set; }
         public int Executor { get; protected set; }
-        public string Command { get; protected set; }
-        public string Switch { get; protected set; }
-        public string[] Args { get; protected set; }
-        private readonly Notify notify = new Notify();
-        private readonly ScriptDB DB;
 
-        public Scripted(int caller, int executor, string cmd, string swc, string[] args)
+        private readonly Notify notify = new Notify();
+        public ScriptDB Data;
+
+        public Scripted(int caller, int executor)
         {
             Caller = caller;
             Executor = executor;
-            Command = cmd;
-            Switch = swc;
-            Args = args;
-            DB = new ScriptDB(Executor, Caller);
+            Data = new ScriptDB(Executor, Caller);
 
         }
 
@@ -49,7 +44,7 @@ namespace SharpMUSH.Python
         public void Broadcast(string message)
         {
             // Check if Executor has Permission Broadcast
-            if (MUSHDB.HasPermission(Executor, "Broadcast"))
+            if (DB.HasPermission(Executor, "Broadcast"))
             {
                 Game.Server.Multicast(message);
             }
