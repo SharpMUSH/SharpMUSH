@@ -17,19 +17,16 @@ namespace SharpMUSH.DB
         public DbSet<Attrib> Attributes { get; set; }
         public DbSet<Flag> Flags { get; set; }
 
-        public MUSHContext()
+        public MUSHContext(DbContextOptions<MUSHContext> options) : base(options)
         {
-            var folder = Environment.CurrentDirectory;
 
-
-            DbPath = System.IO.Path.Join(folder, "mush.db");
         }
 
-        protected override void OnConfiguring(DbContextOptionsBuilder options)
-            => options.UseSqlite($"Data Source={DbPath}");
+
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+
             #region Thing
             #region Basic
             /* Thing */
@@ -40,6 +37,8 @@ namespace SharpMUSH.DB
                 .HasValue<Room>("room")
                 .HasValue<Exit>("exit");
 
+
+
             // modelBuilder.Entity<Thing>().Property(t => t.Name).IsRequired(true);
             // //modelBuilder.Entity<Thing>().Property(t => t.Location).IsRequired(false);
             // //modelBuilder.Entity<Thing>().Property(t => t.Contents).IsRequired(false);
@@ -48,9 +47,10 @@ namespace SharpMUSH.DB
             // modelBuilder.Entity<Thing>().Property(t => t.Flags).IsRequired(false);
             // modelBuilder.Entity<Thing>().Property(t => t.Permissions).IsRequired(false);
             // modelBuilder.Entity<Thing>().Property(t => t.Owner).IsRequired(true);
+            modelBuilder.Entity<Thing>().HasMany<Attrib>(t => t.Attributes).WithOne(a => a.Thing);
             // Relations
             modelBuilder.Entity<Thing>().HasOne(t => t.Location).WithOne().HasForeignKey<Thing>(t => t.LocationId);
-            modelBuilder.Entity<Thing>().HasMany(t => t.Contents).WithOne(t => t.Location).HasForeignKey(t => t.LocationId);
+
             modelBuilder.Entity<Thing>().HasIndex(u => u.Name).IsUnique(false);
             modelBuilder
                 .Entity<Thing>()
@@ -86,13 +86,15 @@ namespace SharpMUSH.DB
 
             #region Player
             /* Player */
+
+
             modelBuilder.Entity<Player>().Property(p => p.Name).IsRequired(true);
             modelBuilder.Entity<Player>().Property(p => p.Password).IsRequired(true);
             modelBuilder.Entity<Player>().Property(p => p.Salt).IsRequired(true);
             modelBuilder.Entity<Player>().Property(p => p.LastOn).IsRequired(false);
             modelBuilder.Entity<Player>().Property(p => p.LastHost).IsRequired(false);
 
-            modelBuilder.Entity<Player>().HasMany(p => p.Owned).WithOne(t => t.Owner).HasForeignKey(t => t.OwnerId);
+
             modelBuilder.Entity<Player>().HasIndex(u => u.Name).IsUnique();
             modelBuilder.Entity<Player>().HasOne(e => e.Editing).WithOne().HasForeignKey<Player>(e => e.EditingId);
             #endregion Player
@@ -118,7 +120,7 @@ namespace SharpMUSH.DB
             #region Attribute
             modelBuilder.Entity<Attrib>().Property(a => a.Name).IsRequired(true);
             modelBuilder.Entity<Attrib>().Property(a => a.Value).IsRequired(true);
-            modelBuilder.Entity<Attrib>().Property(a => a.Thing).IsRequired(false);
+
             modelBuilder.Entity<Attrib>().Property(a => a.ThingId).IsRequired(false);
             // Unique key for Attrib on Name and ThingId Columns
             modelBuilder.Entity<Attrib>().HasIndex(a => new { a.Name, a.ThingId }).IsUnique();
@@ -178,22 +180,51 @@ namespace SharpMUSH.DB
             #region Seed
             // Seed Data
 
-            modelBuilder.Entity<Room>().HasData(new Room { Id = 1, Name = "Welcome Room" });
-            // Seed Attrib DESCRIBE for Thing 1
-
-            modelBuilder.Entity<Attrib>().HasData(new Attrib { Id = 1, Name = "Describe", Value = "Welcome to the MUSH, there isn't much to see right now but more will be added soon!", ThingId = 1 }
-
-            );
-
-
-
-
-
-
-
+            // Add a new thing with Id -1 Named Global Commands
             var salt = MUSHDatabase.GenerateShaSalt();
             var password = MUSHDatabase.SecureHash("password", salt);
-            modelBuilder.Entity<Player>().HasData(new Player { Id = 2, Name = "Admin", Password = password, Salt = salt, LocationId = 1 });
+
+
+
+
+            modelBuilder.Entity<Player>().HasData(new Player
+            {
+                Id = 2,
+                Name = "Admin",
+                Password = password,
+                Salt = salt,
+                LocationId = 1
+            });
+            modelBuilder
+                .Entity<Thing>()
+                .HasData(new Thing
+                {
+                    Id = -1,
+                    Name = "Global Commands"
+                });
+
+            // Seed Attrib DESCRIBE for Thing 1
+            modelBuilder.Entity<Room>().HasData(new Room { Id = 1, Name = "Welcome Room", OwnerId = 2 });
+            modelBuilder.Entity<Attrib>().HasData(
+                    new Attrib
+                    {
+                        Id = 1,
+                        Name = "Describe",
+                        Value = "Welcome to the MUSH, there isn't much to see right now but more will be added soon!",
+                        ThingId = 1
+                    });
+
+
+
+
+
+
+
+
+
+
+
+            //modelBuilder.Entity<Player>().HasData(new Player { Id = 2, Name = "Admin", Password = password, Salt = salt, LocationId = 1, OwnerId = 2 });
             modelBuilder.Entity<Permission>().HasData(
                 new Permission { Id = 1, Name = "Default", Description = "Default Permissions" },
                 new Permission { Id = 2, Name = "Admin", Description = "Admin Permissions" },
@@ -232,38 +263,38 @@ namespace SharpMUSH.DB
                 new Flag { Id = 2, Name = "Admin" }
                 );
             modelBuilder.Entity<FlagPermission>().HasData(
-                new FlagPermission { FlagId = 2, PermissionId = 1 },
-                new FlagPermission { FlagId = 2, PermissionId = 2 },
-                new FlagPermission { FlagId = 2, PermissionId = 3 },
-                new FlagPermission { FlagId = 2, PermissionId = 4 },
-                new FlagPermission { FlagId = 2, PermissionId = 5 },
-                new FlagPermission { FlagId = 2, PermissionId = 6 },
-                new FlagPermission { FlagId = 2, PermissionId = 7 },
-                new FlagPermission { FlagId = 2, PermissionId = 8 },
-                new FlagPermission { FlagId = 2, PermissionId = 9 },
-                new FlagPermission { FlagId = 2, PermissionId = 10 },
-                new FlagPermission { FlagId = 2, PermissionId = 11 },
-                new FlagPermission { FlagId = 2, PermissionId = 12 },
-                new FlagPermission { FlagId = 2, PermissionId = 13 },
-                new FlagPermission { FlagId = 2, PermissionId = 14 },
-                new FlagPermission { FlagId = 2, PermissionId = 15 },
-                new FlagPermission { FlagId = 2, PermissionId = 16 },
-                new FlagPermission { FlagId = 2, PermissionId = 17 },
-                new FlagPermission { FlagId = 2, PermissionId = 18 },
-                new FlagPermission { FlagId = 2, PermissionId = 19 },
-                new FlagPermission { FlagId = 2, PermissionId = 20 },
-                new FlagPermission { FlagId = 2, PermissionId = 21 },
-                new FlagPermission { FlagId = 2, PermissionId = 22 },
-                new FlagPermission { FlagId = 2, PermissionId = 23 },
-                new FlagPermission { FlagId = 2, PermissionId = 24 },
-                new FlagPermission { FlagId = 2, PermissionId = 25 },
-                new FlagPermission { FlagId = 2, PermissionId = 26 },
-                new FlagPermission { FlagId = 2, PermissionId = 27 },
-                new FlagPermission { FlagId = 2, PermissionId = 28 }
+                new FlagPermission { Id = -1, FlagId = 2, PermissionId = 1 },
+                new FlagPermission { Id = -2, FlagId = 2, PermissionId = 2 },
+                new FlagPermission { Id = -3, FlagId = 2, PermissionId = 3 },
+                new FlagPermission { Id = -4, FlagId = 2, PermissionId = 4 },
+                new FlagPermission { Id = -5, FlagId = 2, PermissionId = 5 },
+                new FlagPermission { Id = -6, FlagId = 2, PermissionId = 6 },
+                new FlagPermission { Id = -7, FlagId = 2, PermissionId = 7 },
+                new FlagPermission { Id = -8, FlagId = 2, PermissionId = 8 },
+                new FlagPermission { Id = -9, FlagId = 2, PermissionId = 9 },
+                new FlagPermission { Id = -10, FlagId = 2, PermissionId = 10 },
+                new FlagPermission { Id = -11, FlagId = 2, PermissionId = 11 },
+                new FlagPermission { Id = -12, FlagId = 2, PermissionId = 12 },
+                new FlagPermission { Id = -13, FlagId = 2, PermissionId = 13 },
+                new FlagPermission { Id = -14, FlagId = 2, PermissionId = 14 },
+                new FlagPermission { Id = -15, FlagId = 2, PermissionId = 15 },
+                new FlagPermission { Id = -16, FlagId = 2, PermissionId = 16 },
+                new FlagPermission { Id = -17, FlagId = 2, PermissionId = 17 },
+                new FlagPermission { Id = -18, FlagId = 2, PermissionId = 18 },
+                new FlagPermission { Id = -19, FlagId = 2, PermissionId = 19 },
+                new FlagPermission { Id = -20, FlagId = 2, PermissionId = 20 },
+                new FlagPermission { Id = -21, FlagId = 2, PermissionId = 21 },
+                new FlagPermission { Id = -22, FlagId = 2, PermissionId = 22 },
+                new FlagPermission { Id = -23, FlagId = 2, PermissionId = 23 },
+                new FlagPermission { Id = -24, FlagId = 2, PermissionId = 24 },
+                new FlagPermission { Id = -25, FlagId = 2, PermissionId = 25 },
+                new FlagPermission { Id = -26, FlagId = 2, PermissionId = 26 },
+                new FlagPermission { Id = -27, FlagId = 2, PermissionId = 27 },
+                new FlagPermission { Id = -28, FlagId = 2, PermissionId = 28 }
                 );
 
             modelBuilder.Entity<ThingFlag>().HasData(
-                new ThingFlag { ThingId = 2, FlagId = 2 });
+                new ThingFlag { Id = -1, ThingId = 2, FlagId = 2 });
 
 
 
@@ -276,5 +307,6 @@ namespace SharpMUSH.DB
 
 
         }
+
     }
 }

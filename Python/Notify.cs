@@ -1,31 +1,23 @@
 namespace SharpMUSH.Python
 {
-    public class Notify
+    public class Notify : GameService
     {
+        // Constructor with Dependency Injection
+        public Notify(MUSHDatabase _db, MUSHServer _server, InputHandler _inputHandler, IServiceProvider _service) : base(_db, _server, _inputHandler, _service)
+        {
+        }
 
-        private MUSHDatabase DB = new MUSHDatabase();
-
-        public void ToPlayer(int playerId, string message)
+        public void ToPlayer(int Id, string message)
         {
 
-
-
-            // Get the player from the database
-            var player = DB.GetPlayerById(playerId);
-
-            // Get the session from the player
-            if (player.Session != null)
+            var sessions = Server.FindSessionByThingId(Id);
+            foreach (var session in sessions)
             {
-                foreach (var sess in player.Session)
-                {
-                    var session = Game.Server.FindSession(sess);
-
-                    session.Send(message);
-
-                }
+                session.Send(message);
             }
-
         }
+
+
 
         public void ToRoom(int roomId, string message)
         {
@@ -54,5 +46,5 @@ namespace SharpMUSH.Python
         }
     }
 
-}
 
+}

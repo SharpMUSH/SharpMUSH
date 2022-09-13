@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using NetCoreServer;
 using SharpMUSH.Nologin;
 using System.Net.Sockets;
@@ -7,19 +8,20 @@ namespace SharpMUSH
 {
     public class MUSHSession : TcpSession
     {
-        private readonly MUSHDatabase DB = new MUSHDatabase();
+
         private bool auth = false;
         public int ThingID = -1;
+        IServiceProvider Service;
 
-        public MUSHSession() : base(Game.Server)
+        public MUSHSession(MUSHServer _server, IServiceProvider _service) : base(_server)
         {
-
+            Service = _service;
         }
 
         protected override void OnConnected()
         {
             Console.WriteLine($"Chat TCP session with Id {Id} connected!");
-
+            MUSHDatabase DB = Service.GetService<MUSHDatabase>();
             // Get LOGON attribute from -1 thing
             var logon = DB.GetAttribute(1, "LOGON");
             if (logon != null)
@@ -34,6 +36,7 @@ namespace SharpMUSH
             Console.WriteLine($"Chat TCP session with Id {Id} disconnected!");
             if (auth)
             {
+                MUSHDatabase DB = Service.GetService<MUSHDatabase>();
                 DB.SetUserDisconnected(ThingID);
                 var user = DB.GetPlayerById(ThingID);
                 Server.Multicast(user.Name + "(" + ThingID + ") has disconnected.\r\n");
@@ -43,13 +46,14 @@ namespace SharpMUSH
 
         protected override void OnReceived(byte[] buffer, long offset, long size)
         {
+
             string message = Encoding.UTF8.GetString(buffer, (int)offset, (int)size);
             Console.WriteLine("Incoming: " + message);
 
             if (auth)
             {
                 // Multicast message to all connected sessions
-                string fromServer = Game.InputHandle.FromClient(message, ThingID);
+                string fromServer = Service.GetService<InputHandler>().FromClient(message, ThingID);
 
                 Send(fromServer);
             }
@@ -61,9 +65,11 @@ namespace SharpMUSH
                 {
                     Send("Connecting... \r\n");
 
-                    connect c = new connect(args, Id);
+                    connect c = Service.GetService<connect>();
+                    c.Cmd(args, Id);
                     if (c.ThingID >= 0)
                     {
+                        MUSHDatabase DB = Service.GetService<MUSHDatabase>();
                         auth = true;
                         ThingID = (int)c.ThingID;
                         var user = DB.GetPlayerById(ThingID);

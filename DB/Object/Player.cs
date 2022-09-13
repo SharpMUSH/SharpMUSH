@@ -17,7 +17,6 @@ namespace SharpMUSH.DB.Object
 
         public string Password { get; set; }
         public string Salt { get; set; }
-        public IList<Thing>? Owned { get; set; }
         public IPAddress? LastIP { get; set; }
         public string? LastHost { get; set; }
 

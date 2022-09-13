@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Scripting.Hosting;
 using SharpMUSH.DB.Object;
 using SharpMUSH.DB.ObjectAttribute;
@@ -6,20 +7,14 @@ using SharpMUSH.Python;
 
 namespace SharpMUSH
 {
-    public class InputHandler
+    public class InputHandler : GameService
     {
-
-        MUSHDatabase DB = new MUSHDatabase();
-
-
-
-
-
-        // Constructor for InputHandler
-        public InputHandler()
+        // Constructor
+        public InputHandler(MUSHDatabase _db, MUSHServer _server, IServiceProvider _service) : base(_db, _server, null, _service)
         {
 
         }
+
 
 
         public string FromClient(string Input, int ThingID)
@@ -55,6 +50,8 @@ namespace SharpMUSH
                 pyScope.SetVariable("switch", sw);
 
             }
+            // strip line return and newline from cmd
+            cmd = cmd.Replace("\r", "").Replace("\n", "");
 
             // If InputArray has more than one word add elements 1 onward to Args
             string[] Args = new string[InputArray.Length - 1];
@@ -77,7 +74,7 @@ namespace SharpMUSH
             pyScope.SetVariable("Input", Input);
             pyScope.SetVariable("ThingID", ThingID);
 
-            // Create a Scripted Object and set variable
+            // Create a ScriptNotify Object and set variable
 
             // Create a list of Things to check for commands
             var thingsToCheck = new List<Thing>();
@@ -89,9 +86,9 @@ namespace SharpMUSH
             thingsToCheck.AddRange(DB.GetAncestors(player.Id));
 
             // Add the player's location to the list
-            thingsToCheck.Add(DB.GetThingById(player.Location.Id));
+            thingsToCheck.Add(DB.GetThingById((int)player.LocationId));
             // Add the player's location's ancestors to the list
-            thingsToCheck.AddRange(DB.GetAncestors(player.Location.Id));
+            thingsToCheck.AddRange(DB.GetAncestors((int)player.LocationId));
 
             // Add the player's contents to the list
             thingsToCheck.AddRange(DB.GetContentsById(player.Id));
@@ -103,9 +100,10 @@ namespace SharpMUSH
             }
 
             // Add the player's location's contents to the list
-            thingsToCheck.AddRange(DB.GetContentsById(player.Location.Id));
+            thingsToCheck.AddRange(DB.GetContentsById((int)player.LocationId));
+
             // Add the player's location's contents' ancestors to the list
-            foreach (var thing in DB.GetContentsById(player.Location.Id))
+            foreach (var thing in DB.GetContentsById((int)player.LocationId))
             {
                 thingsToCheck.AddRange(DB.GetAncestors(thing.Id));
             }
@@ -114,9 +112,17 @@ namespace SharpMUSH
             var commandsToCheck = new List<Attrib>();
 
             // Add the commands from the things in the list
-            foreach (var thing in thingsToCheck)
+            if (thingsToCheck != null)
             {
-                commandsToCheck.AddRange(DB.GetCommandsById(thing.Id));
+                foreach (var thing in thingsToCheck)
+                {
+                    if (thing != null)
+                        commandsToCheck.AddRange(DB.GetCommandsById(thing.Id));
+                    var glob = DB.GetGlobalCommands();
+                    if (glob.Count > 0)
+                        commandsToCheck.AddRange(glob);
+
+                }
             }
 
             // Check if the command exists
@@ -126,19 +132,30 @@ namespace SharpMUSH
             if (foundCommand != null)
             {
                 // Get the script for the command
-                var script = DB.GetScript(foundCommand.Value, foundCommand.Id);
+                var script = foundCommand;
                 if (script != null)
                 {
                     try
                     {
-                        var scripted = new Scripted(ThingID, foundCommand.Id);
-                        pyScope.SetVariable("MUSH", scripted);
+
+                        ScriptFormat format = Service.GetService<ScriptFormat>();
+                        ScriptDB SDB = Service.GetService<ScriptDB>();
+                        SDB.AddValues((int)script.ThingId, ThingID);
+                        ScriptNotify MushScript = Service.GetService<ScriptNotify>();
+
+                        MushScript.Executor = (int)script.ThingId;
                         pyScope.SetVariable("Input", Input.Replace("\n", "").Replace("\r", ""));
+                        pyScope.SetVariable("DB", SDB);
+                        pyScope.SetVariable("Notify", MushScript);
+                        pyScope.SetVariable("Caller", ThingID);
+                        pyScope.SetVariable("Format", format);
+                        pyScope.SetVariable("Executor", script.ThingId);
+
+
                         // Execute the Python code
                         var pyCode = pyEngine.CreateScriptSourceFromString(script.Value);
                         var pyResult = pyCode.Execute(pyScope);
-                        // Return the result
-                        //return pyResult.ToString();
+
                         return "";
 
                     }

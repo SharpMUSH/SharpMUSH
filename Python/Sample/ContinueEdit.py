@@ -1,5 +1,7 @@
 ObjAttrib = MUSH.Data.GetAttribute(Caller, "Editing")
 NameAttrib = MUSH.Data.GetAttribute(Caller, "EditingName")
+import MUSH.Data as Data
+
 
 if "#-1" not in ObjAttrib and "#-1" not in NameAttrib:
     command = MUSH.Data.GetCommand(int(ObjAttrib), NameAttrib)

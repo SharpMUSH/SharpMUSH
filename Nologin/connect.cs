@@ -1,13 +1,16 @@
 namespace SharpMUSH.Nologin
 {
-    public class connect
+    internal class connect : GameService
     {
-        MUSHDatabase DB = new MUSHDatabase();
 
+        // Constructor with Dependency Injection
+        public connect(MUSHDatabase _db, MUSHServer _server, InputHandler _inputHandler, IServiceProvider _service) : base(_db, _server, _inputHandler, _service)
+        {
+        }
         public string CmdReply = "";
         public int? ThingID = -1;
         public string Name = "";
-        public connect(string[] args, Guid guid)
+        public void Cmd(string[] args, Guid guid)
         {
 
             if (args.Length == 3)

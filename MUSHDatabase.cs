@@ -14,15 +14,12 @@ namespace SharpMUSH
         #region Constructor
         MUSHContext Context;
         // ctor
-        public MUSHDatabase()
+        public MUSHDatabase(MUSHContext _context)
         {
-            // Create the database if it does not exist
-            using (var db = new MUSHContext())
-            {
-                db.Database.EnsureCreated();
 
-            }
-            Context = new MUSHContext();
+            Context = _context;
+            Context.Database.EnsureCreated();
+            //Context.Database.Migrate();
         }
         #endregion
 
@@ -79,10 +76,10 @@ namespace SharpMUSH
 
 
         #region Command
-        public bool SetCommand(int Id, string name, string value)
+        public bool SetCommand(int Id, string name, string value, bool global)
         {
             // Set the command for the thing
-            var command = Context.Attributes.FirstOrDefault(c => c.Thing.Id == Id && c.Name == name);
+            var command = Context.Attributes.FirstOrDefault(c => c.Thing.Id == Id && c.Name == name && c.IsCMD);
             var thing = Context.Things.FirstOrDefault(t => t.Id == Id);
             if (thing != null)
             {
@@ -90,8 +87,10 @@ namespace SharpMUSH
                 {
                     command = new Attrib();
                     command.Thing = thing;
-                    command.Name = name;
+                    command.Name = name + "Command";
                     command.Value = value;
+                    command.IsCMD = true;
+                    command.IsGlobal = global;
                     Context.Attributes.Add(command);
 
                 }
@@ -168,6 +167,11 @@ namespace SharpMUSH
             return null;
         }
 
+        internal List<Attrib> GetGlobalCommands()
+        {
+            return Context.Attributes.Where(a => a.IsGlobal && a.IsCMD).ToList();
+        }
+
         internal void UpdateAttribute(int Id, string attributeName, string attributeValue)
         {
             Attrib attrib = null;
@@ -219,8 +223,7 @@ namespace SharpMUSH
                 {
                     Name = name,
                     Location = Creator,
-                    Owner = Creator,
-                    Contents = new List<Thing>(),
+                    OwnerId = Creator.Id,
                     Parents = new List<Thing>(),
                     Children = new List<Thing>(),
                     Flags = new List<Flag>(),
@@ -312,10 +315,8 @@ namespace SharpMUSH
                     Name = name,
                     Password = SecureHash(password, name),
                     Connected = false,
-                    Session = new[] { Guid.Empty },
                     Location = Creator,
-                    Owner = Creator,
-                    Contents = new List<Thing>(),
+                    OwnerId = Creator.Id,
                     Parents = new List<Thing>(),
                     Children = new List<Thing>(),
                     Flags = new List<Flag>(),
@@ -409,7 +410,7 @@ namespace SharpMUSH
         {
 
             var thing = Context.Things.Find(Id);
-            if (thing != null && thing.Owner.Id == executor)
+            if (thing != null && thing.OwnerId == executor)
             {
                 return true;
             }
@@ -422,28 +423,27 @@ namespace SharpMUSH
         #region Getters
         public List<Thing> GetParentsById(int Id)
         {
-            using (var Context = new MUSHContext())
+
+            // Get the object from the database
+            var obj = Context.Objects.Include(p => p.Parents).Where(e => e.Id == Id).FirstOrDefault();
+            // Does the obj exist?
+            if (obj != null)
             {
-                // Get the object from the database
-                var obj = Context.Objects.Include(p => p.Parents).Where(e => e.Id == Id).FirstOrDefault();
-                // Does the obj exist?
-                if (obj != null)
-                {
-                    return obj.Parents.ToList();
-                }
-                return new List<Thing>();
+                return obj.Parents.ToList();
             }
+            return new List<Thing>();
+
         }
 
         public List<Thing> GetContentsById(int Id)
         {
 
             // Get the object from the database
-            var obj = Context.Objects.Include(c => c.Contents).Where(e => e.Id == Id).FirstOrDefault();
+            var obj = Context.Objects.Where(e => e.LocationId == Id);
             // Does the obj exist?
             if (obj != null)
             {
-                return obj.Contents.ToList();
+                return obj.ToList();
             }
             return new List<Thing>();
 
@@ -463,11 +463,10 @@ namespace SharpMUSH
 
         public Player GetPlayerById(int Id)
         {
-            using (var Context = new MUSHContext())
-            {
-                var player = Context.Players.Find(Id);
-                return player;
-            }
+
+            var player = Context.Players.Find(Id);
+            return player;
+
         }
 
         public Thing GetLocationById(int Id)
@@ -542,7 +541,7 @@ namespace SharpMUSH
         {
             // Get all objects where the owner is Id
 
-            return Context.Objects.Where(o => o.Owner.Id == Id).ToList();
+            return Context.Objects.Where(o => o.OwnerId == Id).ToList();
 
         }
 

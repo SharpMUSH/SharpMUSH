@@ -5,13 +5,18 @@ namespace SharpMUSH.Python
 {
     public class ScriptDB
     {
-        private MUSHDatabase DB = new MUSHDatabase();
+        private MUSHDatabase DB { get; set; }
+
+        public ScriptDB(MUSHDatabase _db)
+        {
+            DB = _db;
+        }
 
 
         public int Executor { get; protected set; }
         public int Caller { get; protected set; }
 
-        public ScriptDB(int executor, int caller)
+        public void AddValues(int executor, int caller)
         {
             Executor = executor;
             Caller = caller;

@@ -1,21 +1,19 @@
 namespace SharpMUSH.Python
 {
-    public class Scripted
+    public class ScriptNotify
     {
-        private MUSHDatabase DB = new MUSHDatabase();
+        private MUSHDatabase DB;
 
-        public int Caller { get; protected set; }
-        public int Executor { get; protected set; }
+        private MUSHServer Server;
+        private Notify notify;
 
-        private readonly Notify notify = new Notify();
-        public ScriptDB Data;
+        public int Executor { get; set; }
 
-        public Scripted(int caller, int executor)
+        public ScriptNotify(MUSHDatabase _db, MUSHServer _server, Notify _notify)
         {
-            Caller = caller;
-            Executor = executor;
-            Data = new ScriptDB(Executor, Caller);
-
+            DB = _db;
+            Server = _server;
+            notify = _notify;
         }
 
         // Pemit(ThingID, Message)
@@ -46,7 +44,7 @@ namespace SharpMUSH.Python
             // Check if Executor has Permission Broadcast
             if (DB.HasPermission(Executor, "Broadcast"))
             {
-                Game.Server.Multicast(message);
+                Server.Multicast(message);
             }
         }
     }

@@ -1,20 +1,30 @@
-using System.Net;
+using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Interfaces;
 
 namespace SharpMUSH
 {
 
-    public static class Game
+    internal class Game : IGame
     {
+        public MUSHServer Server { get; set; }
+        public MUSHDatabase DB { get; set; }
+        public InputHandler InputHandle { get; set; }
+        IServiceProvider Service;
 
-        public static MUSHServer Server { get; private set; }
-        public static InputHandler InputHandle { get; private set; }
+        public Game(MUSHServer _server, MUSHDatabase _db, InputHandler _inputHandler, IServiceProvider _service)
+        {
+            Server = _server;
+            DB = _db;
+            InputHandle = _inputHandler;
+            Service = _service;
+        }
 
-        public static void Start()
+        public void Start()
         {
             // Start the server
             const int port = 1701;
-            InputHandle = new InputHandler();
-            Server = new MUSHServer(IPAddress.Any, port);
+
+            Server = Service.GetService<MUSHServer>();
             Server.Start();
             Console.Write("Directory:" + Environment.CurrentDirectory);
 
