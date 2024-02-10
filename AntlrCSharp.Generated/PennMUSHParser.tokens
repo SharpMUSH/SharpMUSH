@@ -1,0 +1,11 @@
+FUNCHAR=1
+OBRACK=2
+CBRACK=3
+OPAREN=4
+CPAREN=5
+COMMA=6
+'['=2
+']'=3
+'('=4
+')'=5
+','=6
