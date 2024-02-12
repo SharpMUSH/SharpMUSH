@@ -8,27 +8,30 @@ options {
  * Parser Rules  
  */
 
+plainString: evaluationString EOF;
+
 evaluationString 
-    : function explicitEvaluationString 
-    | explicitFunction explicitEvaluationString
-    | function
-    | explicitFunction
-    | genericText
+    : function explicitEvaluationString*?
+    | explicitEvaluationString
     ;
 explicitEvaluationString
-    : explicitFunction explicitEvaluationString 
-    | explicitFunction 
-    | genericText
+    : explicitFunction explicitEvaluationString*?
+    | genericText explicitEvaluationString*?
     ;
-explicitFunction 
+explicitFunction
     : OBRACK function CBRACK
     ;
 function 
-    : FUNCHAR+ OPAREN funArguments CPAREN
+    : funName OPAREN CPAREN
+    | funName OPAREN funArguments CPAREN
     ;
-funArguments 
-    : evaluationString COMMA
+funName 
+    : FUNCHAR+
+    ;
+funArguments
+    : evaluationString (COMMA evaluationString)*?
     ;
 genericText 
-    : (.*?)
-    ; 
+    : (~ESCAPE)+? // This is ignoring space? 
+    | ESCAPE
+    ;

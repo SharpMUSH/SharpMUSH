@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-// Generated from c:/Users/admin/OneDrive/Documents/Repos/MUParser/AntlrCSharp/PennMUSHLexer.g4 by ANTLR 4.13.1
+// Generated from c:/Users/admin/OneDrive/Documents/Repos/MUParser/AntlrCSharp.Generated/PennMUSHLexer.g4 by ANTLR 4.13.1
 
 // Unreachable code detected
 #pragma warning disable 0162
@@ -33,17 +33,23 @@ public partial class PennMUSHLexer : Lexer {
 	protected static DFA[] decisionToDFA;
 	protected static PredictionContextCache sharedContextCache = new PredictionContextCache();
 	public const int
-		FUNCHAR=1, OBRACK=2, CBRACK=3, OPAREN=4, CPAREN=5, COMMA=6;
+		ESCAPE=1, FUNCHAR=2, OBRACK=3, CBRACK=4, OBRACE=5, CBRACE=6, OPAREN=7, 
+		CPAREN=8, COMMA=9, EQUALS=10, DOLLAR=11, PERCENT=12, SEMICOLON=13, COLON=14, 
+		OANSI=15, WS=16, UNESCAPE=17, OTHER=18;
+	public const int
+		ESCAPING=1;
 	public static string[] channelNames = {
 		"DEFAULT_TOKEN_CHANNEL", "HIDDEN"
 	};
 
 	public static string[] modeNames = {
-		"DEFAULT_MODE"
+		"DEFAULT_MODE", "ESCAPING"
 	};
 
 	public static readonly string[] ruleNames = {
-		"FUNCHAR", "OBRACK", "CBRACK", "OPAREN", "CPAREN", "COMMA"
+		"ESCAPE", "FUNCHAR", "OBRACK", "CBRACK", "OBRACE", "CBRACE", "OPAREN", 
+		"CPAREN", "COMMA", "EQUALS", "DOLLAR", "PERCENT", "SEMICOLON", "COLON", 
+		"OANSI", "WS", "UNESCAPE", "OTHER"
 	};
 
 
@@ -57,10 +63,13 @@ public partial class PennMUSHLexer : Lexer {
 	}
 
 	private static readonly string[] _LiteralNames = {
-		null, null, "'['", "']'", "'('", "')'", "','"
+		null, null, null, "'['", "']'", "'{'", "'}'", "'('", "')'", "','", "'='", 
+		"'$'", "'%'", "';'", "':'", "'\\u001B'", "' '"
 	};
 	private static readonly string[] _SymbolicNames = {
-		null, "FUNCHAR", "OBRACK", "CBRACK", "OPAREN", "CPAREN", "COMMA"
+		null, "ESCAPE", "FUNCHAR", "OBRACK", "CBRACK", "OBRACE", "CBRACE", "OPAREN", 
+		"CPAREN", "COMMA", "EQUALS", "DOLLAR", "PERCENT", "SEMICOLON", "COLON", 
+		"OANSI", "WS", "UNESCAPE", "OTHER"
 	};
 	public static readonly IVocabulary DefaultVocabulary = new Vocabulary(_LiteralNames, _SymbolicNames);
 
@@ -90,15 +99,31 @@ public partial class PennMUSHLexer : Lexer {
 		}
 	}
 	private static int[] _serializedATN = {
-		4,0,6,28,6,-1,2,0,7,0,2,1,7,1,2,2,7,2,2,3,7,3,2,4,7,4,2,5,7,5,1,0,4,0,
-		15,8,0,11,0,12,0,16,1,1,1,1,1,2,1,2,1,3,1,3,1,4,1,4,1,5,1,5,1,16,0,6,1,
-		1,3,2,5,3,7,4,9,5,11,6,1,0,1,3,0,48,57,65,90,97,122,28,0,1,1,0,0,0,0,3,
-		1,0,0,0,0,5,1,0,0,0,0,7,1,0,0,0,0,9,1,0,0,0,0,11,1,0,0,0,1,14,1,0,0,0,
-		3,18,1,0,0,0,5,20,1,0,0,0,7,22,1,0,0,0,9,24,1,0,0,0,11,26,1,0,0,0,13,15,
-		7,0,0,0,14,13,1,0,0,0,15,16,1,0,0,0,16,17,1,0,0,0,16,14,1,0,0,0,17,2,1,
-		0,0,0,18,19,5,91,0,0,19,4,1,0,0,0,20,21,5,93,0,0,21,6,1,0,0,0,22,23,5,
-		40,0,0,23,8,1,0,0,0,24,25,5,41,0,0,25,10,1,0,0,0,26,27,5,44,0,0,27,12,
-		1,0,0,0,2,0,16,0
+		4,0,18,84,6,-1,6,-1,2,0,7,0,2,1,7,1,2,2,7,2,2,3,7,3,2,4,7,4,2,5,7,5,2,
+		6,7,6,2,7,7,7,2,8,7,8,2,9,7,9,2,10,7,10,2,11,7,11,2,12,7,12,2,13,7,13,
+		2,14,7,14,2,15,7,15,2,16,7,16,2,17,7,17,1,0,1,0,1,0,1,0,1,1,4,1,44,8,1,
+		11,1,12,1,45,1,2,1,2,1,3,1,3,1,4,1,4,1,5,1,5,1,6,1,6,1,7,1,7,1,8,1,8,1,
+		9,1,9,1,10,1,10,1,11,1,11,1,12,1,12,1,13,1,13,1,14,1,14,1,15,1,15,1,16,
+		1,16,1,16,1,16,1,16,1,17,1,17,1,17,1,17,1,45,0,18,2,1,4,2,6,3,8,4,10,5,
+		12,6,14,7,16,8,18,9,20,10,22,11,24,12,26,13,28,14,30,15,32,16,34,17,36,
+		18,2,0,1,2,3,0,48,57,65,90,97,122,1,0,92,92,83,0,2,1,0,0,0,0,4,1,0,0,0,
+		0,6,1,0,0,0,0,8,1,0,0,0,0,10,1,0,0,0,0,12,1,0,0,0,0,14,1,0,0,0,0,16,1,
+		0,0,0,0,18,1,0,0,0,0,20,1,0,0,0,0,22,1,0,0,0,0,24,1,0,0,0,0,26,1,0,0,0,
+		0,28,1,0,0,0,0,30,1,0,0,0,0,32,1,0,0,0,1,34,1,0,0,0,1,36,1,0,0,0,2,38,
+		1,0,0,0,4,43,1,0,0,0,6,47,1,0,0,0,8,49,1,0,0,0,10,51,1,0,0,0,12,53,1,0,
+		0,0,14,55,1,0,0,0,16,57,1,0,0,0,18,59,1,0,0,0,20,61,1,0,0,0,22,63,1,0,
+		0,0,24,65,1,0,0,0,26,67,1,0,0,0,28,69,1,0,0,0,30,71,1,0,0,0,32,73,1,0,
+		0,0,34,75,1,0,0,0,36,80,1,0,0,0,38,39,5,92,0,0,39,40,1,0,0,0,40,41,6,0,
+		0,0,41,3,1,0,0,0,42,44,7,0,0,0,43,42,1,0,0,0,44,45,1,0,0,0,45,46,1,0,0,
+		0,45,43,1,0,0,0,46,5,1,0,0,0,47,48,5,91,0,0,48,7,1,0,0,0,49,50,5,93,0,
+		0,50,9,1,0,0,0,51,52,5,123,0,0,52,11,1,0,0,0,53,54,5,125,0,0,54,13,1,0,
+		0,0,55,56,5,40,0,0,56,15,1,0,0,0,57,58,5,41,0,0,58,17,1,0,0,0,59,60,5,
+		44,0,0,60,19,1,0,0,0,61,62,5,61,0,0,62,21,1,0,0,0,63,64,5,36,0,0,64,23,
+		1,0,0,0,65,66,5,37,0,0,66,25,1,0,0,0,67,68,5,59,0,0,68,27,1,0,0,0,69,70,
+		5,58,0,0,70,29,1,0,0,0,71,72,5,27,0,0,72,31,1,0,0,0,73,74,5,32,0,0,74,
+		33,1,0,0,0,75,76,5,92,0,0,76,77,1,0,0,0,77,78,6,16,1,0,78,79,6,16,2,0,
+		79,35,1,0,0,0,80,81,8,1,0,0,81,82,1,0,0,0,82,83,6,17,2,0,83,37,1,0,0,0,
+		3,0,1,45,3,5,1,0,6,0,0,4,0,0
 	};
 
 	public static readonly ATN _ATN =

@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-// Generated from c:/Users/admin/OneDrive/Documents/Repos/MUParser/AntlrCSharp/PennMUSHParser.g4 by ANTLR 4.13.1
+// Generated from c:/Users/admin/OneDrive/Documents/Repos/MUParser/AntlrCSharp.Generated/PennMUSHParser.g4 by ANTLR 4.13.1
 
 // Unreachable code detected
 #pragma warning disable 0162
@@ -31,6 +31,12 @@ using IToken = Antlr4.Runtime.IToken;
 [System.CodeDom.Compiler.GeneratedCode("ANTLR", "4.13.1")]
 [System.CLSCompliant(false)]
 public interface IPennMUSHParserVisitor<Result> : IParseTreeVisitor<Result> {
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="PennMUSHParser.plainString"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitPlainString([NotNull] PennMUSHParser.PlainStringContext context);
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="PennMUSHParser.evaluationString"/>.
 	/// </summary>
@@ -55,6 +61,12 @@ public interface IPennMUSHParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	Result VisitFunction([NotNull] PennMUSHParser.FunctionContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="PennMUSHParser.funName"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitFunName([NotNull] PennMUSHParser.FunNameContext context);
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="PennMUSHParser.funArguments"/>.
 	/// </summary>
