@@ -32,6 +32,24 @@ using IToken = Antlr4.Runtime.IToken;
 [System.CLSCompliant(false)]
 public interface IPennMUSHParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <summary>
+	/// Visit a parse tree produced by <see cref="PennMUSHParser.commandString"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitCommandString([NotNull] PennMUSHParser.CommandStringContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="PennMUSHParser.commandList"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitCommandList([NotNull] PennMUSHParser.CommandListContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="PennMUSHParser.command"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitCommand([NotNull] PennMUSHParser.CommandContext context);
+	/// <summary>
 	/// Visit a parse tree produced by <see cref="PennMUSHParser.plainString"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
@@ -50,11 +68,11 @@ public interface IPennMUSHParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitExplicitEvaluationString([NotNull] PennMUSHParser.ExplicitEvaluationStringContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="PennMUSHParser.explicitFunction"/>.
+	/// Visit a parse tree produced by <see cref="PennMUSHParser.funName"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitExplicitFunction([NotNull] PennMUSHParser.ExplicitFunctionContext context);
+	Result VisitFunName([NotNull] PennMUSHParser.FunNameContext context);
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="PennMUSHParser.function"/>.
 	/// </summary>
@@ -62,17 +80,17 @@ public interface IPennMUSHParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitFunction([NotNull] PennMUSHParser.FunctionContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="PennMUSHParser.funName"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitFunName([NotNull] PennMUSHParser.FunNameContext context);
-	/// <summary>
 	/// Visit a parse tree produced by <see cref="PennMUSHParser.funArguments"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	Result VisitFunArguments([NotNull] PennMUSHParser.FunArgumentsContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="PennMUSHParser.validSubstitution"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitValidSubstitution([NotNull] PennMUSHParser.ValidSubstitutionContext context);
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="PennMUSHParser.genericText"/>.
 	/// </summary>

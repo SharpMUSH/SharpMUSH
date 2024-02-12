@@ -6,7 +6,12 @@ options {
 
 /*
  * Parser Rules  
+ * TODO: Support {} behavior in functions and commands.
  */
+
+commandString: commandList EOF;
+commandList: command (SEMICOLON command)*;
+command: evaluationString+?;
 
 plainString: evaluationString EOF;
 
@@ -15,23 +20,53 @@ evaluationString
     | explicitEvaluationString
     ;
 explicitEvaluationString
-    : explicitFunction explicitEvaluationString*?
+    : PERCENT validSubstitution explicitEvaluationString*?
+    | OBRACK function CBRACK explicitEvaluationString*?
     | genericText explicitEvaluationString*?
     ;
-explicitFunction
-    : OBRACK function CBRACK
+funName 
+    : FUNCHAR
     ;
 function 
-    : funName OPAREN CPAREN
-    | funName OPAREN funArguments CPAREN
-    ;
-funName 
-    : FUNCHAR+
+    : funName CPAREN
+    | funName funArguments CPAREN
     ;
 funArguments
     : evaluationString (COMMA evaluationString)*?
     ;
+validSubstitution
+    : REG_STARTCARET explicitEvaluationString+? CCARET
+    | SPACE
+    | BLANKLINE
+    | TAB
+    | COLON
+    | DBREF
+    | ENACTOR_NAME
+    | CAP_ENACTOR_NAME
+    | ACCENT_NAME
+    | MONIKER_NAME
+    | PERCENT
+    | SUB_PRONOUN
+    | OBJ_PRONOUN
+    | POS_PRONOUN
+    | ABS_POS_PRONOUN
+    | VWX
+    | ARG_NUM
+    | CALLED_DBREF
+    | EXECUTOR_DBREF
+    | LOCATION_DBREF
+    | LASTCOMMAND_BEFORE_EVAL
+    | LASTCOMMAND_AFTER_EVAL
+    | INVOCATION_DEPTH    
+    | EQUALS
+    | CURRENT_ARG_COUNT
+    | REG_NUM
+    | ITEXT_NUM
+    | STEXT_NUM
+    ;
 genericText 
-    : (~ESCAPE)+? // This is ignoring space? 
+    : ESCAPE UNESCAPE // This is ignoring space? 
     | ESCAPE
+    | OTHER
+    | .
     ;

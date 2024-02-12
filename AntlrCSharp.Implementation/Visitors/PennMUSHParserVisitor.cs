@@ -36,18 +36,23 @@ namespace AntlrCSharp.Implementation.Visitors
 			return base.VisitChildren(context) ?? ImmutableList.Create<string>().Add(woof); 
 		}
 
-		public override IImmutableList<string> VisitExplicitFunction([NotNull] PennMUSHParser.ExplicitFunctionContext context)
-		{
-			var woof = context.GetText();
-			Log.Logger.Information("VisitExplicitFunction: {Text}", woof);
-			return base.VisitChildren(context) ?? ImmutableList.Create<string>().Add(woof); 
-		}
-
 		public override IImmutableList<string> VisitGenericText([NotNull] PennMUSHParser.GenericTextContext context)
 		{
 			var woof = context.GetText();
 			Log.Logger.Information("VisitGenericText: {Text}", woof);
-			return base.VisitChildren(context) ?? ImmutableList.Create<string>().Add(woof); 
+			return base.VisitChildren(context) ?? ImmutableList.Create<string>().Add(woof);
+		}
+
+		/// <summary>
+		/// Visit a parse tree produced by <see cref="PennMUSHParser.validSubstitution"/>.
+		/// </summary>
+		/// <param name="context">The parse tree.</param>
+		/// <return>The visitor result.</return>
+		public override IImmutableList<string> VisitValidSubstitution([NotNull] PennMUSHParser.ValidSubstitutionContext context)
+		{
+			var woof = context.GetText();
+			Log.Logger.Information("VisitValidSubstitution: {Text}", woof);
+			return base.VisitChildren(context) ?? ImmutableList.Create<string>().Add(woof);
 		}
 	}
 }
