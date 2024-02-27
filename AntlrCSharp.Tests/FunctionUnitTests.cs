@@ -3,9 +3,9 @@ using Serilog;
 namespace AntlrCSharpTests;
 
 [TestClass]
-public class UnitTests
+public class FunctionUnitTests
 {
-	public UnitTests()
+	public FunctionUnitTests()
 	{
 		Log.Logger = new LoggerConfiguration()
 										.WriteTo.Console()
@@ -18,6 +18,7 @@ public class UnitTests
 	[DataRow("function(test(dog)")]
 	[DataRow("function(foo\\,dog)")]
 	[DataRow("function(foo\\\\,dog)")]
+	[DataRow("function(foo,dog)")]
 	[DataRow("function(%s)")]
 	[DataRow("function(%q0)")]
 	[DataRow("function(%q<test>)")]
@@ -34,7 +35,7 @@ public class UnitTests
 	{
 		Console.WriteLine("Testing: {0}", str);
 		var parser = new AntlrCSharp.Implementation.Parser();
-		var result = parser.Parse(str);
+		var result = parser.FunctionParse(str);
 
 		Console.WriteLine(string.Join("", result));
 	}

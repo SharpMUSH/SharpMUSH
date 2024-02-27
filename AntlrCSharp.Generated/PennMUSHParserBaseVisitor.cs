@@ -35,6 +35,16 @@ using ParserRuleContext = Antlr4.Runtime.ParserRuleContext;
 [System.CLSCompliant(false)]
 public partial class PennMUSHParserBaseVisitor<Result> : AbstractParseTreeVisitor<Result>, IPennMUSHParserVisitor<Result> {
 	/// <summary>
+	/// Visit a parse tree produced by <see cref="PennMUSHParser.singleCommandString"/>.
+	/// <para>
+	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
+	/// on <paramref name="context"/>.
+	/// </para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	public virtual Result VisitSingleCommandString([NotNull] PennMUSHParser.SingleCommandStringContext context) { return VisitChildren(context); }
+	/// <summary>
 	/// Visit a parse tree produced by <see cref="PennMUSHParser.commandString"/>.
 	/// <para>
 	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>

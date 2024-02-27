@@ -32,6 +32,12 @@ using IToken = Antlr4.Runtime.IToken;
 [System.CLSCompliant(false)]
 public interface IPennMUSHParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <summary>
+	/// Visit a parse tree produced by <see cref="PennMUSHParser.singleCommandString"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitSingleCommandString([NotNull] PennMUSHParser.SingleCommandStringContext context);
+	/// <summary>
 	/// Visit a parse tree produced by <see cref="PennMUSHParser.commandString"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>

@@ -9,9 +9,14 @@ options {
  * TODO: Support {} behavior in functions and commands.
  */
 
+singleCommandString: command EOF;
 commandString: commandList EOF;
 commandList: command (SEMICOLON command)*;
 command: evaluationString+?;
+/*
+    TODO: If a command is an @command, we should use evaluationString after the standard @command, switches and all.
+    What's more, there's things to consider when it comes to their standard arguments.
+*/
 
 plainString: evaluationString EOF;
 
@@ -28,11 +33,12 @@ funName
     : FUNCHAR
     ;
 function 
-    : funName CPAREN
-    | funName funArguments CPAREN
+    : funName OPAREN CPAREN
+    | funName OPAREN funArguments CPAREN
     ;
 funArguments
-    : evaluationString (COMMA evaluationString)*?
+    : evaluationString (COMMA evaluationString)+
+    | evaluationString
     ;
 validSubstitution
     : REG_STARTCARET explicitEvaluationString+? CCARET
@@ -65,7 +71,7 @@ validSubstitution
     | STEXT_NUM
     ;
 genericText 
-    : ESCAPE UNESCAPE // This is ignoring space? 
+    : ESCAPE UNESCAPE
     | ESCAPE
     | OTHER
     | .

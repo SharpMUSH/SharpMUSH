@@ -4,7 +4,7 @@ lexer grammar PennMUSHLexer;
  * Lexer Rules   
  */
 
-fragment OPAREN: '(';
+OPAREN: '(';
 ESCAPE: '\\' -> pushMode(ESCAPING);
 OBRACK: '[';
 CBRACK: ']';
@@ -21,7 +21,7 @@ SEMICOLON: ';';
 COLON: ':';
 OANSI: '\u001B';
 FUNCHAR
-    : [a-zA-Z0-9]+ OPAREN // Lazy way of indicating printable characters. There's more printable characters than this!
+    : [a-zA-Z0-9]+ // Lazy way of indicating printable characters. There's more printable characters than this!
     ;
 OTHER: ~('\\'|'['|']'|'{'|'}'|'('|')'|'<'|'>'|','|'='|'$'|'%'|';'|':'|'\u001B')+;
 

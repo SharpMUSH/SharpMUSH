@@ -43,16 +43,38 @@ namespace AntlrCSharp.Implementation.Visitors
 			return base.VisitChildren(context) ?? ImmutableList.Create<string>().Add(woof);
 		}
 
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="PennMUSHParser.validSubstitution"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
 		public override IImmutableList<string> VisitValidSubstitution([NotNull] PennMUSHParser.ValidSubstitutionContext context)
 		{
 			var woof = context.GetText();
 			Log.Logger.Information("VisitValidSubstitution: {Text}", woof);
 			return base.VisitChildren(context) ?? ImmutableList.Create<string>().Add(woof);
 		}
+
+		public override IImmutableList<string> VisitCommand([NotNull] PennMUSHParser.CommandContext context)
+		{
+			var woof = context.GetText();
+			Log.Logger.Information("VisitCommand: {Text}", woof);
+			return base.VisitChildren(context) ?? ImmutableList.Create<string>().Add(woof);
+		}
+
+		public override IImmutableList<string> VisitCommandString([NotNull] PennMUSHParser.CommandStringContext context)
+		{
+			var woof = context.GetText();
+			Log.Logger.Information("VisitCommandString: {Text}", woof);
+			return base.VisitChildren(context) ?? ImmutableList.Create<string>().Add(woof);
+		}
+		public override IImmutableList<string> VisitCommandList([NotNull] PennMUSHParser.CommandListContext context)
+		{
+			var woof = context.GetText();
+			Log.Logger.Information("VisitCommandList: {Text}", woof);
+			return base.VisitChildren(context) ?? ImmutableList.Create<string>().Add(woof);
+		}
+		public override IImmutableList<string> VisitSingleCommandString([NotNull] PennMUSHParser.SingleCommandStringContext context)
+		{
+			var woof = context.GetText();
+			Log.Logger.Information("VisitSingleCommandString: {Text}", woof);
+			return base.VisitChildren(context) ?? ImmutableList.Create<string>().Add(woof);
+		}
+
 	}
 }
