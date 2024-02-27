@@ -74,6 +74,24 @@ public interface IPennMUSHParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitExplicitEvaluationString([NotNull] PennMUSHParser.ExplicitEvaluationStringContext context);
 	/// <summary>
+	/// Visit a parse tree produced by <see cref="PennMUSHParser.explicitEvaluationStringSubstitution"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitExplicitEvaluationStringSubstitution([NotNull] PennMUSHParser.ExplicitEvaluationStringSubstitutionContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="PennMUSHParser.explicitEvaluationStringFunction"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitExplicitEvaluationStringFunction([NotNull] PennMUSHParser.ExplicitEvaluationStringFunctionContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="PennMUSHParser.explicitEvaluationText"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitExplicitEvaluationText([NotNull] PennMUSHParser.ExplicitEvaluationTextContext context);
+	/// <summary>
 	/// Visit a parse tree produced by <see cref="PennMUSHParser.funName"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
@@ -103,4 +121,10 @@ public interface IPennMUSHParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	Result VisitGenericText([NotNull] PennMUSHParser.GenericTextContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="PennMUSHParser.escapedText"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitEscapedText([NotNull] PennMUSHParser.EscapedTextContext context);
 }

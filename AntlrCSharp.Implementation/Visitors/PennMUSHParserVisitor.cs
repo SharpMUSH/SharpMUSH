@@ -1,15 +1,24 @@
 ﻿using Antlr4.Runtime.Misc;
 using Serilog;
+using System.Xml.Linq;
 
 namespace AntlrCSharp.Implementation.Visitors
 {
 	public class PennMUSHParserVisitor(Parser parser) : PennMUSHParserBaseVisitor<IEnumerable<string>>
 	{
+		protected override IEnumerable<string> AggregateResult(IEnumerable<string> aggregate, IEnumerable<string> nextResult)
+		{
+			if (aggregate != null && nextResult != null) return aggregate.Concat(nextResult);
+			return aggregate ?? nextResult;
+		}
+
 		public override IEnumerable<string> VisitFunction([NotNull] PennMUSHParser.FunctionContext context)
 		{
 			var woof = context.GetText();
 			var functionName = context.funName().GetText();
-			var arguments = context.funArguments()?.children?.Select(x => x.GetText()).Where((_,i) => i % 2 == 0) ?? Enumerable.Empty<string>();
+			var arguments = context.funArguments()?.children?.
+				Select(x => x.GetText()).Where((_, i) => i % 2 == 0)
+				?? Enumerable.Empty<string>();
 			var result = Functions.Functions.add(parser, arguments!.ToArray());
 			Log.Logger.Information("VisitFunction: {Text} -- {Name}@{Depth}", woof, functionName, context.Depth());
 			Log.Logger.Information("VisitFunction2: {@Test}", arguments);
@@ -24,14 +33,15 @@ namespace AntlrCSharp.Implementation.Visitors
 			var woof = context.GetText();
 			Log.Logger.Information("VisitEvaluationString: {Text}", woof);
 			var children = base.VisitChildren(context);
-			return children ?? [woof]; 
+			return children ?? [woof];
 		}
 
 		public override IEnumerable<string> VisitExplicitEvaluationString([NotNull] PennMUSHParser.ExplicitEvaluationStringContext context)
 		{
 			var woof = context.GetText();
 			Log.Logger.Information("VisitExplicitEvaluationString: {Text}", woof);
-			var children = base.VisitChildren(context);
+			var children = base.VisitChildren(context); // This is returning Null
+
 			return children ?? [woof];
 		}
 

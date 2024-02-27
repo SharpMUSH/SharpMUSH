@@ -25,9 +25,18 @@ evaluationString
     | explicitEvaluationString
     ;
 explicitEvaluationString
-    : PERCENT validSubstitution explicitEvaluationString*?
-    | OBRACK function CBRACK explicitEvaluationString*?
-    | genericText explicitEvaluationString*?
+    : explicitEvaluationStringSubstitution explicitEvaluationString*?
+    | explicitEvaluationStringFunction explicitEvaluationString*?
+    | explicitEvaluationText explicitEvaluationString*?
+    ;
+explicitEvaluationStringSubstitution
+    : PERCENT validSubstitution
+    ;
+explicitEvaluationStringFunction
+    : OBRACK function CBRACK
+    ;
+explicitEvaluationText
+    : genericText
     ;
 funName 
     : FUNCHAR
@@ -71,8 +80,11 @@ validSubstitution
     | STEXT_NUM
     ;
 genericText 
-    : ESCAPE UNESCAPE
-    | ESCAPE
+    : escapedText
     | OTHER
     | .
+    ;
+escapedText
+    : ESCAPE UNESCAPE
+    | ESCAPE
     ;
