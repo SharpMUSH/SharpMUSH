@@ -1,12 +1,11 @@
 ﻿using Antlr4.Runtime;
 using AntlrCSharp.Implementation.Visitors;
-using System.Collections.Immutable;
 
 namespace AntlrCSharp.Implementation
 {
 	public class Parser
 	{
-		public IEnumerable<string> FunctionParse(string text)
+		public CallState? FunctionParse(string text)
 		{
 			AntlrInputStream inputStream = new(text.ToString());
 			PennMUSHLexer pennLexer = new(inputStream);
@@ -18,7 +17,7 @@ namespace AntlrCSharp.Implementation
 			return visitor.Visit(chatContext);
 		}
 
-		public IEnumerable<string> CommandListParse(string text)
+		public CallState? CommandListParse(string text)
 		{
 			AntlrInputStream inputStream = new(text.ToString());
 			PennMUSHLexer pennLexer = new(inputStream);
@@ -30,7 +29,7 @@ namespace AntlrCSharp.Implementation
 			return visitor.Visit(chatContext);
 		}
 
-		public IEnumerable<string> CommandParse(string text)
+		public CallState? CommandParse(string text)
 		{
 			AntlrInputStream inputStream = new(text.ToString());
 			PennMUSHLexer pennLexer = new(inputStream);

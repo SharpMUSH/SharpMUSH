@@ -22,7 +22,7 @@ public class CommandUnitTests
 	{
 		Console.WriteLine("Testing: {0}", str);
 		var parser = new AntlrCSharp.Implementation.Parser();
-		var result = parser.CommandListParse(str);
+		var result = parser.CommandListParse(str)?.Message;
 
 		Console.WriteLine(string.Join("", result));
 	}
@@ -37,7 +37,7 @@ public class CommandUnitTests
 	{
 		Console.WriteLine("Testing: {0}", str);
 		var parser = new AntlrCSharp.Implementation.Parser();
-		var result = parser.CommandParse(str);
+		var result = parser.CommandParse(str)?.Message;
 
 		Console.WriteLine(string.Join("", result));
 	}

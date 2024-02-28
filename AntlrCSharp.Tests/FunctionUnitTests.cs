@@ -35,7 +35,7 @@ public class FunctionUnitTests
 	{
 		Console.WriteLine("Testing: {0}", str);
 		var parser = new AntlrCSharp.Implementation.Parser();
-		var result = parser.FunctionParse(str);
+		var result = parser.FunctionParse(str)?.Message;
 
 		Console.WriteLine(string.Join("", result));
 	}

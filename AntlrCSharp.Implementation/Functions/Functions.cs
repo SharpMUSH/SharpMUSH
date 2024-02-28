@@ -1,18 +1,30 @@
-﻿namespace AntlrCSharp.Implementation.Functions
+﻿using System.Linq;
+
+namespace AntlrCSharp.Implementation.Functions
 {
 	public static partial class Functions
 	{
 		[PennFunction(Name = "add")]
-		public static string add(Parser parser, params string[] contents)
+		public static CallState add(Parser parser, params CallState[] contents)
 		{
-			var parsedValues = contents.Select(parser.FunctionParse);
-			var doubles = parsedValues.Select(x => (IsDouble: double.TryParse(string.Join("",x), out var b), Double: b));
-			var notDoubles = doubles.Where(x => !x.IsDouble);
+			var parsedValues = contents.Select(x => parser.FunctionParse(x?.Message ?? string.Empty));
+			var doubles = parsedValues.Select(x => 
+				(
+					IsDouble: double.TryParse(string.Join("", x?.Message), out var b), 
+					Double: b, 
+					Original: x
+				));
+
+			var notDoubles = doubles.Where(x => !x.IsDouble).Select(x => x.Original);
+
 			if(notDoubles.Any())
 			{
-				return $"#-1 The following are not valid Numbers: {string.Join(", ", notDoubles)}";
+				return new CallState(Message: $"#-1 The following are not valid Numbers: {string.Join(", ", notDoubles)}");
 			}
-			return doubles.Sum(x => x.Double).ToString();
+			else
+			{
+				return new CallState(Message: doubles.Sum(x => x.Double).ToString());
+			}
 		}
 	}
 }
