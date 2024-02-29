@@ -1,11 +1,12 @@
-﻿using System.Linq;
+﻿using AntlrCSharp.Implementation.Constants;
+using System.Linq;
 
 namespace AntlrCSharp.Implementation.Functions
 {
 	public static partial class Functions
 	{
 		[PennFunction(Name = "add")]
-		public static CallState add(Parser parser, params CallState[] contents)
+		public static CallState add(Parser parser, PennMUSHParser.FunctionContext context, params CallState[] contents)
 		{
 			var parsedValues = contents.Select(x => parser.FunctionParse(x?.Message ?? string.Empty));
 			var doubles = parsedValues.Select(x => 
@@ -19,11 +20,11 @@ namespace AntlrCSharp.Implementation.Functions
 
 			if(notDoubles.Any())
 			{
-				return new CallState(Message: $"#-1 The following are not valid Numbers: {string.Join(", ", notDoubles)}");
+				return new CallState(Message: Errors.ErrorNumbers, context.Depth());
 			}
 			else
 			{
-				return new CallState(Message: doubles.Sum(x => x.Double).ToString());
+				return new CallState(Message: doubles.Sum(x => x.Double).ToString(), context.Depth());
 			}
 		}
 	}

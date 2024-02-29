@@ -21,11 +21,13 @@ command: evaluationString+?;
 plainString: evaluationString EOF;
 
 evaluationString 
-    : function explicitEvaluationString*?
+    : OBRACE evaluationString CBRACE
+    | function explicitEvaluationString*?
     | explicitEvaluationString
     ;
 explicitEvaluationString
-    : explicitEvaluationStringSubstitution explicitEvaluationString*?
+    : OBRACE explicitEvaluationString CBRACE
+    | explicitEvaluationStringSubstitution explicitEvaluationString*?
     | explicitEvaluationStringFunction explicitEvaluationString*?
     | explicitEvaluationText explicitEvaluationString*?
     ;
