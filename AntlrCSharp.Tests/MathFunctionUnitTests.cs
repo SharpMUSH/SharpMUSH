@@ -22,7 +22,7 @@ namespace AntlrCSharp.Tests
 		public void Test(string str, string expected)
 		{
 			Console.WriteLine("Testing: {0}", str);
-			var parser = new AntlrCSharp.Implementation.Parser();
+			var parser = new Implementation.Parser();
 			var result = parser.FunctionParse(str)?.Message;
 
 			Console.WriteLine(string.Join("", result));

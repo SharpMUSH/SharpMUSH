@@ -19,5 +19,6 @@
 		public const string ErrorArgRange = "#-1 ARGUMENT OUT OF RANGE";
 		public const string ErrorBadRegName = "#-1 REGISTER NAME INVALID";
 		public const string ErrorTooManyRegs = "#-1 TOO MANY REGISTERS";
+		public const string ErrorNoSuchFunction = "#-1 COULD NOT FIND FUNCTION: {0}";
 	}
 }

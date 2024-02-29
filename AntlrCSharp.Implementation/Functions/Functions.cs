@@ -1,31 +1,91 @@
 ﻿using AntlrCSharp.Implementation.Constants;
-using System.Linq;
+using OneOf;
+using System.Reflection;
+using static PennMUSHParser;
 
 namespace AntlrCSharp.Implementation.Functions
 {
 	public static partial class Functions
 	{
-		[PennFunction(Name = "add")]
-		public static CallState add(Parser parser, PennMUSHParser.FunctionContext context, params CallState[] contents)
+		private static readonly Dictionary<string, (PennFunctionAttribute Attribute, Func<Parser, FunctionContext, CallState[], CallState> Function)> _functionLibrary = [];
+		private static readonly Dictionary<string, (MethodInfo Method, PennFunctionAttribute Attribute)> _knownBuiltInMethods = typeof(Functions)
+			.GetMethods()
+			.Select(m => (Method: m, Attribute: m.GetCustomAttribute(typeof(PennFunctionAttribute), false) as PennFunctionAttribute))
+			.Where(x => x.Attribute is not null)
+			.Select(y => new KeyValuePair<string, (MethodInfo Method, PennFunctionAttribute Attribute)>(y.Attribute!.Name, (y.Method, y.Attribute!)))
+			.ToDictionary();
+
+
+		/// <summary>
+		/// TODO: Optimization needed. We should at least grab the in-built ones at startup.
+		/// </summary>
+		/// <param name="name">Function Name</param>
+		/// <param name="parser">Parser for evaluation</param>
+		/// <param name="context">Function Context for Depth</param>
+		/// <param name="args">Arguments</param>
+		/// <returns>The resulting CallState.</returns>
+		public static CallState CallFunction(string name, Parser parser, FunctionContext context, params CallState[] args)
 		{
-			var parsedValues = contents.Select(x => parser.FunctionParse(x?.Message ?? string.Empty));
-			var doubles = parsedValues.Select(x => 
-				(
-					IsDouble: double.TryParse(string.Join("", x?.Message), out var b), 
-					Double: b, 
-					Original: x
-				));
-
-			var notDoubles = doubles.Where(x => !x.IsDouble).Select(x => x.Original);
-
-			if(notDoubles.Any())
+			if (context.Depth() > Configurable.MaxCallDepth)
 			{
-				return new CallState(Message: Errors.ErrorNumbers, context.Depth());
+				return new CallState(Errors.ErrorCall, context.Depth());
+			}
+
+			if (!_functionLibrary.TryGetValue(name, out var fun))
+			{
+				var DiscoveredFunction = DiscoverBuiltInFunction(name, context);
+
+				if (DiscoveredFunction.TryPickT1(out var functionValue, out var didNotFindValue) == false)
+				{
+					return new CallState(string.Format(Errors.ErrorNoSuchFunction, name), context.Depth());
+				}
+
+				_functionLibrary.Add(name, functionValue);
+				fun = _functionLibrary[name];
+			}
+
+			CallState[] refinedArguments;
+			if ((fun.Attribute.Flags & FunctionFlags.NoParse) != FunctionFlags.NoParse)
+			{
+				// TODO: Should we increase the Depth of the response by adding our context.Depth here?
+				// This is also where we need to do a DEPTH CHECK.
+				refinedArguments = args.Select(a => parser.FunctionParse(a.Message ?? string.Empty)).ToArray()!;
 			}
 			else
 			{
-				return new CallState(Message: doubles.Sum(x => x.Double).ToString(), context.Depth());
+				refinedArguments = args;
 			}
+
+			return fun.Function(parser, context, refinedArguments);
 		}
+
+		private static OneOf<bool, (PennFunctionAttribute, Func<Parser, FunctionContext, CallState[], CallState>)> DiscoverBuiltInFunction(string name, FunctionContext context)
+		{
+			if (!_knownBuiltInMethods.TryGetValue(name, out var result)) 
+				return false;
+
+			return (result.Attribute, new Func<Parser, FunctionContext, CallState[], CallState>
+				((p, c, s) =>
+					(CallState)result.Method.Invoke(null, [p, c, result.Attribute, s])!
+				));
+		}
+
+		/// <summary>
+		/// Removes a function name from the Library.
+		/// </summary>
+		/// <param name="name">Function to remove.</param>
+		/// <returns>True if it was removed, false if it was not found.</returns>
+		public static bool RemoveFunction(string name) =>
+			_functionLibrary.Remove(name.ToLower());
+
+		/// <summary>
+		/// Adds the function to the function library.
+		/// </summary>
+		/// <param name="name">Name of the function</param>
+		/// <param name="attr">Function Attributes that describe behavior</param>
+		/// <param name="func">Function to run when this is called</param>
+		/// <returns>True if could be added. False if the name already existed.</returns>
+		public static bool AddFunction(string name, PennFunctionAttribute attr, Func<Parser, FunctionContext, CallState[], CallState> func) =>
+			_functionLibrary.TryAdd(name.ToLower(), (attr, func));
 	}
 }
