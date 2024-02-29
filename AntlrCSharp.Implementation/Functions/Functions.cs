@@ -7,7 +7,7 @@ namespace AntlrCSharp.Implementation.Functions
 {
 	public static partial class Functions
 	{
-		private static readonly Dictionary<string, (PennFunctionAttribute Attribute, Func<Parser, FunctionContext, CallState[], CallState> Function)> _functionLibrary = [];
+		private static readonly Dictionary<string, (PennFunctionAttribute Attribute, Func<Parser, CallState[], CallState> Function)> _functionLibrary = [];
 		private static readonly Dictionary<string, (MethodInfo Method, PennFunctionAttribute Attribute)> _knownBuiltInMethods = typeof(Functions)
 			.GetMethods()
 			.Select(m => (Method: m, Attribute: m.GetCustomAttribute(typeof(PennFunctionAttribute), false) as PennFunctionAttribute))
@@ -32,7 +32,7 @@ namespace AntlrCSharp.Implementation.Functions
 
 			if (!_functionLibrary.TryGetValue(name, out var libraryMatch))
 			{
-				var DiscoveredFunction = DiscoverBuiltInFunction(name, context);
+				var DiscoveredFunction = DiscoverBuiltInFunction(name);
 
 				if (DiscoveredFunction.TryPickT1(out var functionValue, out var didNotFindValue) == false)
 				{
@@ -70,17 +70,17 @@ namespace AntlrCSharp.Implementation.Functions
 				return new CallState(Errors.ErrorArgRange, context.Depth());
 			}
 
-			return function(parser, context, refinedArguments);
+			return function(parser, refinedArguments) with { Depth = context.Depth() };
 		}
 
-		private static OneOf<bool, (PennFunctionAttribute, Func<Parser, FunctionContext, CallState[], CallState>)> DiscoverBuiltInFunction(string name, FunctionContext context)
+		private static OneOf<bool, (PennFunctionAttribute, Func<Parser, CallState[], CallState>)> DiscoverBuiltInFunction(string name)
 		{
 			if (!_knownBuiltInMethods.TryGetValue(name, out var result)) 
 				return false;
 
-			return (result.Attribute, new Func<Parser, FunctionContext, CallState[], CallState>
-				((p, c, s) =>
-					(CallState)result.Method.Invoke(null, [p, c, result.Attribute, s])!
+			return (result.Attribute, new Func<Parser, CallState[], CallState>
+				((p, s) =>
+					(CallState)result.Method.Invoke(null, [p, result.Attribute, s])!
 				));
 		}
 
@@ -99,7 +99,7 @@ namespace AntlrCSharp.Implementation.Functions
 		/// <param name="attr">Function Attributes that describe behavior</param>
 		/// <param name="func">Function to run when this is called</param>
 		/// <returns>True if could be added. False if the name already existed.</returns>
-		public static bool AddFunction(string name, PennFunctionAttribute attr, Func<Parser, FunctionContext, CallState[], CallState> func) =>
+		public static bool AddFunction(string name, PennFunctionAttribute attr, Func<Parser, CallState[], CallState> func) =>
 			_functionLibrary.TryAdd(name.ToLower(), (attr, func));
 	}
 }

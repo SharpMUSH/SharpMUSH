@@ -3,11 +3,15 @@ using AntlrCSharp.Implementation.Visitors;
 
 namespace AntlrCSharp.Implementation
 {
+	/// <summary>
+	/// Provides the parser.
+	/// Each call is Synchronous, and stateful at this time.
+	/// </summary>
 	public class Parser
 	{
 		public CallState? FunctionParse(string text)
 		{
-			AntlrInputStream inputStream = new(text.ToString());
+			AntlrInputStream inputStream = new(text);
 			PennMUSHLexer pennLexer = new(inputStream);
 			CommonTokenStream commonTokenStream = new(pennLexer);
 			PennMUSHParser pennParser = new(commonTokenStream);
@@ -19,7 +23,7 @@ namespace AntlrCSharp.Implementation
 
 		public CallState? CommandListParse(string text)
 		{
-			AntlrInputStream inputStream = new(text.ToString());
+			AntlrInputStream inputStream = new(text);
 			PennMUSHLexer pennLexer = new(inputStream);
 			CommonTokenStream commonTokenStream = new(pennLexer);
 			PennMUSHParser pennParser = new(commonTokenStream);
@@ -31,7 +35,7 @@ namespace AntlrCSharp.Implementation
 
 		public CallState? CommandParse(string text)
 		{
-			AntlrInputStream inputStream = new(text.ToString());
+			AntlrInputStream inputStream = new(text);
 			PennMUSHLexer pennLexer = new(inputStream);
 			CommonTokenStream commonTokenStream = new(pennLexer);
 			PennMUSHParser pennParser = new(commonTokenStream);

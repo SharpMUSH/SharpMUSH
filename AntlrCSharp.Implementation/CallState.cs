@@ -1,6 +1,6 @@
 ﻿namespace AntlrCSharp.Implementation
 {
-	public record CallState(string? Message, int Depth)
+	public record CallState(string? Message, int Depth = 0)
 	{
 	}
 }

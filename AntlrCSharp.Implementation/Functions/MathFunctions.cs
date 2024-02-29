@@ -5,7 +5,7 @@ namespace AntlrCSharp.Implementation.Functions
 	public static partial class Functions
 	{
 		[PennFunction(Name = "add", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-		public static CallState Add(Parser _1, PennMUSHParser.FunctionContext context, PennFunctionAttribute _2, params CallState[] args)
+		public static CallState Add(Parser _1, PennFunctionAttribute _2, params CallState[] args)
 		{
 			var doubles = args.Select(x =>
 				(
@@ -14,8 +14,8 @@ namespace AntlrCSharp.Implementation.Functions
 				));
 
 			return doubles.Any(x => !x.IsDouble)
-					? new CallState(Message: Errors.ErrorNumbers, context.Depth())
-					: new CallState(Message: doubles.Sum(x => x.Double).ToString(), context.Depth());
+					? new CallState(Message: Errors.ErrorNumbers)
+					: new CallState(Message: doubles.Sum(x => x.Double).ToString());
 		}
 	}
 }
