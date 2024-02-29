@@ -23,6 +23,7 @@ public class FunctionUnitTests
 	[DataRow("strcat(%q0)")]
 	[DataRow("strcat(%q<test>)")]
 	[DataRow("%s")]
+	[DataRow("\\t", "t")]
 	[DataRow("%q<test>")]
 	[DataRow("%q<0>")]
 	[DataRow("strcat(%q<0>)")]

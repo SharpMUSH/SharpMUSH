@@ -88,5 +88,5 @@ genericText
     ;
 escapedText
     : ESCAPE UNESCAPE
-    | ESCAPE
+    | ESCAPE ESCAPING_OTHER
     ;

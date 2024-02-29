@@ -1,4 +1,4 @@
-﻿namespace AntlrCSharp.Implementation.Constants
+﻿namespace AntlrCSharp.Implementation.Definitions
 {
 	public static class Errors
 	{

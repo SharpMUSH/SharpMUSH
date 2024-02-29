@@ -1,4 +1,4 @@
-﻿using AntlrCSharp.Implementation.Constants;
+﻿using AntlrCSharp.Implementation.Definitions;
 using OneOf;
 using System.Reflection;
 using static PennMUSHParser;
@@ -15,7 +15,6 @@ namespace AntlrCSharp.Implementation.Functions
 			.Select(y => new KeyValuePair<string, (MethodInfo Method, PennFunctionAttribute Attribute)>(y.Attribute!.Name, (y.Method, y.Attribute!)))
 			.ToDictionary();
 
-
 		/// <summary>
 		/// TODO: Optimization needed. We should at least grab the in-built ones at startup.
 		/// </summary>
@@ -24,14 +23,14 @@ namespace AntlrCSharp.Implementation.Functions
 		/// <param name="context">Function Context for Depth</param>
 		/// <param name="args">Arguments</param>
 		/// <returns>The resulting CallState.</returns>
-		public static CallState CallFunction(string name, Parser parser, FunctionContext context, params CallState[] args)
+		public static CallState CallFunction(string name, Parser parser, FunctionContext context, CallState[] args)
 		{
 			if (context.Depth() > Configurable.MaxCallDepth)
 			{
 				return new CallState(Errors.ErrorCall, context.Depth());
 			}
 
-			if (!_functionLibrary.TryGetValue(name, out var fun))
+			if (!_functionLibrary.TryGetValue(name, out var libraryMatch))
 			{
 				var DiscoveredFunction = DiscoverBuiltInFunction(name, context);
 
@@ -41,11 +40,13 @@ namespace AntlrCSharp.Implementation.Functions
 				}
 
 				_functionLibrary.Add(name, functionValue);
-				fun = _functionLibrary[name];
+				libraryMatch = _functionLibrary[name];
 			}
 
+			(var attribute, var function) = libraryMatch;
+
 			CallState[] refinedArguments;
-			if ((fun.Attribute.Flags & FunctionFlags.NoParse) != FunctionFlags.NoParse)
+			if ((attribute.Flags & FunctionFlags.NoParse) != FunctionFlags.NoParse)
 			{
 				// TODO: Should we increase the Depth of the response by adding our context.Depth here?
 				// This is also where we need to do a DEPTH CHECK.
@@ -56,7 +57,20 @@ namespace AntlrCSharp.Implementation.Functions
 				refinedArguments = args;
 			}
 
-			return fun.Function(parser, context, refinedArguments);
+			/* Validation, this should probably go into its own function! */
+			if (args.Length > attribute.MaxArgs)
+			{
+				// Better Error Needed.
+				return new CallState(Errors.ErrorArgRange, context.Depth());
+			}
+
+			if (args.Length < attribute.MinArgs)
+			{
+				// Better Error Needed.
+				return new CallState(Errors.ErrorArgRange, context.Depth());
+			}
+
+			return function(parser, context, refinedArguments);
 		}
 
 		private static OneOf<bool, (PennFunctionAttribute, Func<Parser, FunctionContext, CallState[], CallState>)> DiscoverBuiltInFunction(string name, FunctionContext context)

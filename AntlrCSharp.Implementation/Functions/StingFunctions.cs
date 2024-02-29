@@ -1,4 +1,4 @@
-﻿using AntlrCSharp.Implementation.Constants;
+﻿using AntlrCSharp.Implementation.Definitions;
 
 namespace AntlrCSharp.Implementation.Functions
 {

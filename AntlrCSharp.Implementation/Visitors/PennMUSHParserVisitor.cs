@@ -1,4 +1,5 @@
 ﻿using Antlr4.Runtime.Misc;
+using OneOf.Types;
 using Serilog;
 
 namespace AntlrCSharp.Implementation.Visitors
@@ -94,6 +95,7 @@ namespace AntlrCSharp.Implementation.Visitors
 			var children = base.VisitChildren(context);
 			return children ?? new CallState(woof, context.Depth());
 		}
+
 		public override CallState? VisitCommandList([NotNull] PennMUSHParser.CommandListContext context)
 		{
 			var woof = context.GetText();
@@ -101,6 +103,7 @@ namespace AntlrCSharp.Implementation.Visitors
 			var children = base.VisitChildren(context);
 			return children ?? new CallState(woof, context.Depth());
 		}
+
 		public override CallState? VisitSingleCommandString([NotNull] PennMUSHParser.SingleCommandStringContext context)
 		{
 			var woof = context.GetText();
@@ -109,5 +112,10 @@ namespace AntlrCSharp.Implementation.Visitors
 			return children ?? new CallState(woof, context.Depth());
 		}
 
+		public override CallState? VisitEscapedText([NotNull] PennMUSHParser.EscapedTextContext context)
+		{
+			var children = base.VisitChildren(context);
+			return children ?? new CallState(context.GetText().Remove(0, 1), context.Depth());
+		}
 	}
 }
