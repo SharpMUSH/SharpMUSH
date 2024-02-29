@@ -4,7 +4,7 @@ namespace AntlrCSharp.Implementation.Functions
 {
 	public static partial class Functions
 	{
-		[PennFunction(Name = "add", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+		[PennFunction(Name = "add", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
 		public static CallState Add(Parser _1, PennFunctionAttribute _2, params CallState[] args)
 		{
 			var doubles = args.Select(x =>

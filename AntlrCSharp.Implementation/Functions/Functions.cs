@@ -52,6 +52,10 @@ namespace AntlrCSharp.Implementation.Functions
 				// This is also where we need to do a DEPTH CHECK.
 				refinedArguments = args.Select(a => parser.FunctionParse(a.Message ?? string.Empty)).ToArray()!;
 			}
+			else if ((attribute.Flags & FunctionFlags.NoParse) == FunctionFlags.NoParse && attribute.MaxArgs == 1)
+			{
+				return new CallState(context.GetText(), context.Depth());
+			}
 			else
 			{
 				refinedArguments = args;
@@ -66,8 +70,7 @@ namespace AntlrCSharp.Implementation.Functions
 
 			if (args.Length < attribute.MinArgs)
 			{
-				// Better Error Needed.
-				return new CallState(Errors.ErrorArgRange, context.Depth());
+				return new CallState(string.Format(Errors.ErrorTooFewArguments, name, attribute.MinArgs, args.Length), context.Depth());
 			}
 
 			return function(parser, refinedArguments) with { Depth = context.Depth() };
@@ -75,7 +78,7 @@ namespace AntlrCSharp.Implementation.Functions
 
 		private static OneOf<bool, (PennFunctionAttribute, Func<Parser, CallState[], CallState>)> DiscoverBuiltInFunction(string name)
 		{
-			if (!_knownBuiltInMethods.TryGetValue(name, out var result)) 
+			if (!_knownBuiltInMethods.TryGetValue(name, out var result))
 				return false;
 
 			return (result.Attribute, new Func<Parser, CallState[], CallState>

@@ -23,6 +23,9 @@
 		UserFunction = 1 << 16,
 		StripAnsi = 1 << 17,
 		Deprecated = 1 << 18,
-		Clone = 1 << 19
+		Clone = 1 << 19,
+		IntegersOnly = 1 << 20,
+		PositiveIntegersOnly = 1 << 21,
+		DecimalsOnly = 1 << 22
 	}
 }

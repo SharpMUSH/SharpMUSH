@@ -20,5 +20,6 @@
 		public const string ErrorBadRegName = "#-1 REGISTER NAME INVALID";
 		public const string ErrorTooManyRegs = "#-1 TOO MANY REGISTERS";
 		public const string ErrorNoSuchFunction = "#-1 COULD NOT FIND FUNCTION: {0}";
+		public const string ErrorTooFewArguments = "#-1 FUNCTION ({0}) EXPECTS AT LEAST {1} ARGUMENTS BUT GOT {2}";
 	}
 }

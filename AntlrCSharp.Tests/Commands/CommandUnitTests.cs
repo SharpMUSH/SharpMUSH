@@ -1,16 +1,16 @@
 using Serilog;
 
-namespace AntlrCSharpTests;
+namespace AntlrCSharp.Tests.Commands;
 
 [TestClass]
-public class CommandUnitTests
+public class CommandUnitTests : BaseUnitTest
 {
 	public CommandUnitTests()
 	{
 		Log.Logger = new LoggerConfiguration()
-										.WriteTo.Console()
-										.MinimumLevel.Debug()
-										.CreateLogger();
+																		.WriteTo.Console()
+																		.MinimumLevel.Debug()
+																		.CreateLogger();
 	}
 
 	[TestMethod]
@@ -21,7 +21,7 @@ public class CommandUnitTests
 	public void Test(string str)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var parser = new AntlrCSharp.Implementation.Parser();
+		var parser = new Implementation.Parser();
 		var result = parser.CommandListParse(str)?.Message;
 
 		Console.WriteLine(string.Join("", result));
@@ -36,7 +36,7 @@ public class CommandUnitTests
 	public void TestSingle(string str)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var parser = new AntlrCSharp.Implementation.Parser();
+		var parser = new Implementation.Parser();
 		var result = parser.CommandParse(str)?.Message;
 
 		Console.WriteLine(string.Join("", result));
