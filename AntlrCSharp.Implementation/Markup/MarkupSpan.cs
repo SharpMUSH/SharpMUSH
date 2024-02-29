@@ -60,17 +60,14 @@ namespace AntlrCSharp.Implementation.Markup
 		/// StrA is compared to StrB to determine whether it is lexicographically less, equal, or greater, 
 		/// and then returns either a negative integer, 0, or a positive integer; respectively.
 		/// </summary>
-		/// <remarks>
-		/// This is a very naive implementation, and should probably only be called when markup is removed from the spans being compared!
-		///</remarks>
 		/// <param name="strA">Markup String A</param>
 		/// <param name="strB">Markup String B</param>
 		/// <returns>The lexicographic comparison value for Markup String A & B</returns>
-		public static int Compare(MarkupSpan<T> strA, MarkupSpan<T> strB)
-			=> string.Compare(strA.ToStringWithoutMarkup(), strB.ToStringWithoutMarkup());
+		public int Compare(MarkupSpan<T> strB)
+			=> string.Compare(ToStringWithoutMarkup(), strB.ToStringWithoutMarkup());
 
-		public static MarkupSpan<T> Concat(MarkupSpan<T> span1, MarkupSpan<T> span2)
-			=> span1 with { Contents = span1.Contents.Add(span2) };
+		public MarkupSpan<T> Concat(MarkupSpan<T> span2)
+			=> this with { Contents = Contents.Add(span2) };
 
 		public static MarkupSpan<T> Insert(MarkupSpan<T> span, int startIndex)
 			=> throw new NotImplementedException();

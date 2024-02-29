@@ -2,9 +2,6 @@
 {
 	public abstract record IMarkup
 	{
-		public string Wrap(string str)
-		{
-			return str;
-		}
+		public abstract string Wrap(string str);
 	}
 }

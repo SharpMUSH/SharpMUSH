@@ -16,7 +16,7 @@ namespace AntlrCSharp.Implementation.Markup
 			}
 		}
 
-		public string Wrap(string initialString) =>
+		public override string Wrap(string initialString) =>
 			Attributes.Aggregate(initialString, (aggregateString, markupFunction) => markupFunction(aggregateString));
 	}
 }

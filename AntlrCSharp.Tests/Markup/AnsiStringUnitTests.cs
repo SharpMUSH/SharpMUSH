@@ -1,21 +1,32 @@
 ﻿using AntlrCSharp.Implementation.Markup;
 using Serilog;
+using AnsiString = AntlrCSharp.Implementation.Markup.MarkupSpan<AntlrCSharp.Implementation.Markup.AnsiMarkup>;
 
 namespace AntlrCSharp.Tests.Markup
 {
 	[TestClass]
 	public class AnsiStringUnitTests : BaseUnitTest
 	{
-		[TestMethod]
-		[DataRow("con", "cat", "concat")]
-		public void Concat(string strA, string strB, string expected)
+		public static IEnumerable<object[]> ConcatData
 		{
-			var result = MarkupSpan<AnsiMarkup>.Concat(new MarkupSpan<AnsiMarkup>(strA), new MarkupSpan<AnsiMarkup>(strB));
-			var exp = new MarkupSpan<AnsiMarkup>(expected);
-
-			Log.Logger.Information("{Result} VS {Expected}", result, exp);
-
-			Assert.AreEqual(exp.ToString(), result.ToString());
+			get
+			{
+				return new [] {
+					(object[]) [new AnsiString("con"), new AnsiString("cat"), new AnsiString("concat")],
+					(object[]) [new AnsiString(new AnsiMarkup(Foreground: "#FF0000"),"red"), new AnsiString("cat"), new AnsiString("redcat")]
+				};
+			}
 		}
+
+	[TestMethod]
+	[DynamicData(nameof(ConcatData))]
+	public void Concat(AnsiString strA, AnsiString strB, AnsiString expected)
+	{
+		var result = strA.Concat(strB);
+
+		Log.Logger.Information("{Result} VS {Expected}", result, expected);
+
+		Assert.AreEqual(expected.ToString(), result.ToString());
 	}
+}
 }
