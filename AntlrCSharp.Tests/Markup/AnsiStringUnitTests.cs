@@ -16,7 +16,6 @@ namespace AntlrCSharp.Tests.Markup
 			ANSIInitializer.Enabled = true;
 		}
 
-
 		public static IEnumerable<object[]> ConcatData
 		{
 			get
@@ -31,11 +30,40 @@ namespace AntlrCSharp.Tests.Markup
 			}
 		}
 
+		public static IEnumerable<object[]> SubstringData
+		{
+			get
+			{
+				return new object[][] {
+					[new AnsiString("abcdef"), 3, new AnsiString("def")],
+					[new AnsiString("abcdef"), 0, new AnsiString("abcdef")],
+					[new AnsiString("abcdef"), 6, new AnsiString("")],
+					[new AnsiString(new(Foreground: "#FF0000"),"red").Concat(new AnsiString(new(Foreground: "#0000FF"),"cat")), 
+					 3, new AnsiString(new AnsiString(new(Foreground: "#0000FF"),"cat"))],
+					[new AnsiString(new(Foreground: "#FF0000"),"red").Concat(new AnsiString(new(Foreground: "#0000FF"),"cat")), 
+					 2, new AnsiString(new(Foreground: "#FF0000"),"d").Concat(new AnsiString(new(Foreground: "#0000FF"),"cat"))],
+					[new AnsiString(new(Foreground: "#FF0000"),"red").Concat(new AnsiString(new(Foreground: "#0000FF"),"cat")),
+					 6, new AnsiString("")]
+				};
+			}
+		}
+
 		[TestMethod]
 		[DynamicData(nameof(ConcatData))]
 		public void Concat(AnsiString strA, AnsiString strB, AnsiString expected)
 		{
 			var result = strA.Concat(strB);
+
+			Log.Logger.Information("{Result}{NewLine}{Expected}", result, Environment.NewLine, expected);
+
+			CollectionAssert.AreEqual(Encoding.Unicode.GetBytes(expected.ToString()), Encoding.Unicode.GetBytes(result.ToString()));
+		}
+
+		[TestMethod]
+		[DynamicData(nameof(SubstringData))]
+		public void Substring(AnsiString str, int start, AnsiString expected)
+		{
+			var result = str.Substring(start);
 
 			Log.Logger.Information("{Result}{NewLine}{Expected}", result, Environment.NewLine, expected);
 

@@ -1,6 +1,7 @@
 ﻿using OneOf;
 using System;
 using System.Collections.Immutable;
+using System.ComponentModel.DataAnnotations;
 
 namespace AntlrCSharp.Implementation.Markup
 {
@@ -74,21 +75,55 @@ namespace AntlrCSharp.Implementation.Markup
 			=> string.Compare(ToStringWithoutMarkup(), strB.ToStringWithoutMarkup());
 
 		public MarkupSpan<T> Concat(MarkupSpan<T> span2)
-			=> new MarkupSpan<T>(null, (new MarkupSpan<T>[] { this with { }, span2 with { } }).ToImmutableList());
+			=> new(
+					null,
+					(new MarkupSpan<T>[] { this with { }, span2 with { } }).ToImmutableList()
+				);
 
 		public static MarkupSpan<T> Insert(MarkupSpan<T> span, int startIndex)
 			=> throw new NotImplementedException();
 
-		public static MarkupSpan<T> Substring(MarkupSpan<T> span, int startIndex)
+		/// <summary>
+		/// This can't be the most efficient way of doing this.
+		/// </summary>
+		/// <param name="startIndex">The first character the capture, and all others after it.</param>
+		/// <returns>A new MarkupSpan</returns>
+		public MarkupSpan<T> Substring(int startIndex)
 		{
-			// TODO: We need to Skip until we get to the right spot, then concat the rest.
-			// Right now this is just grabbing the Substring of each Child. Which is not correct.
-			var item = 0;
-			var a = span.Contents.SkipWhile(x => (item += x.Match(str => str.Length, span => span.Length())) < startIndex);
-			var b = a.FirstOrDefault().Match(str => new MarkupSpan<T>(str.Substring(startIndex)),
-						span => Substring(span, startIndex));
+			if (startIndex >= Length())
+			{
+				return new MarkupSpan<T>(string.Empty);
+			}
 
-			return b.Concat(new MarkupSpan<T>(null, a.Skip(1).ToImmutableList()));
+			var item = 0;
+
+			var remainder = Contents
+				.Select(x => 
+					x.Match(
+						str => (str.Length, x), 
+						span => (span.Length(), x)))
+				.SkipWhile(x =>
+				{
+					item += x.Item1;
+					return item < startIndex;
+				});
+
+			var first = remainder.First();
+			var toGo = first.Item1 - (item - startIndex);
+			
+			var firstMarkupSpan = first.x.Match(str => new MarkupSpan<T>(str.Substring(toGo)),
+				span => span.Substring(toGo) with { });
+			
+			var rest = remainder.Skip(1).Select(y => y.x).ToImmutableList();
+
+			if (!rest.IsEmpty)
+			{
+				return new MarkupSpan<T>(Markup, firstMarkupSpan.Concat(new MarkupSpan<T>(null,rest)));
+			}
+			else
+			{
+				return new MarkupSpan<T>(Markup, firstMarkupSpan);
+			}
 		}
 
 		public int Length()
