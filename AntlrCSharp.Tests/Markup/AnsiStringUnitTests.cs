@@ -1,9 +1,9 @@
-﻿using ANSIConsole;
-using AntlrCSharp.Implementation.Markup;
-using Serilog;
-using System.Collections.Immutable;
+﻿using Serilog;
 using System.Text;
-using AnsiString = AntlrCSharp.Implementation.Markup.MarkupSpan<AntlrCSharp.Implementation.Markup.AnsiMarkup>;
+using AnsiString = MarkupString.MarkupStringModule.MarkupString;
+using A = MarkupString.MarkupStringModule;
+using M = MarkupString.MarkupImplementation.AnsiMarkup;
+using B = MarkupString.MarkupImplementation.AnsiStructure;
 
 namespace AntlrCSharp.Tests.Markup
 {
@@ -12,8 +12,7 @@ namespace AntlrCSharp.Tests.Markup
 	{
 		public AnsiStringUnitTests()
 		{
-			ANSIInitializer.Init(false);
-			ANSIInitializer.Enabled = true;
+			A.initialize();
 		}
 
 		public static IEnumerable<object[]> ConcatData
@@ -21,11 +20,13 @@ namespace AntlrCSharp.Tests.Markup
 			get
 			{
 				return new AnsiString[][] {
-					[new AnsiString("con"), new AnsiString("cat"), new AnsiString("concat")],
-					[new AnsiString(new AnsiMarkup(Foreground: "#FF0000"),"red"), new AnsiString("cat"),
-					 new AnsiString(null, (new AnsiString[] {new(new(Foreground: "#FF0000"),"red"), new("cat") }).ToImmutableList())],
-					[new AnsiString(new AnsiMarkup(Foreground: "#FF0000"),"red"), new AnsiString(new AnsiMarkup(Foreground: "#0000FF"),"cat"),
-					 new AnsiString(null, (new AnsiString[] {new(new(Foreground: "#FF0000"),"red"), new(new(Foreground: "#0000FF"),"cat") }).ToImmutableList())]
+					[A.single("con"), A.single("cat"), A.single("concat")],
+					[A.markupSingle2(M.Create(foreground: "#FF0000"), A.single("red")), A.single("cat"),
+					 A.multiple([A.markupSingle2(M.Create(foreground: "#FF0000"), A.single("red")), 
+					             A.single("cat")])],
+					[A.markupSingle2(M.Create(foreground: "#FF0000"), A.single("red")), A.markupSingle(M.Create(foreground: "#0000FF"),"cat"),
+					 A.multiple([A.markupSingle2(M.Create(foreground: "#FF0000"), A.single("red")), 
+											 A.markupSingle2(M.Create(foreground: "#0000FF"), A.single("cat"))])]
 				};
 			}
 		}
@@ -35,15 +36,33 @@ namespace AntlrCSharp.Tests.Markup
 			get
 			{
 				return new object[][] {
-					[new AnsiString("abcdef"), 3, new AnsiString("def")],
-					[new AnsiString("abcdef"), 0, new AnsiString("abcdef")],
-					[new AnsiString("abcdef"), 6, new AnsiString("")],
-					[new AnsiString(new(Foreground: "#FF0000"),"red").Concat(new AnsiString(new(Foreground: "#0000FF"),"cat")), 
-					 3, new AnsiString(new AnsiString(new(Foreground: "#0000FF"),"cat"))],
-					[new AnsiString(new(Foreground: "#FF0000"),"red").Concat(new AnsiString(new(Foreground: "#0000FF"),"cat")), 
-					 2, new AnsiString(new(Foreground: "#FF0000"),"d").Concat(new AnsiString(new(Foreground: "#0000FF"),"cat"))],
-					[new AnsiString(new(Foreground: "#FF0000"),"red").Concat(new AnsiString(new(Foreground: "#0000FF"),"cat")),
-					 6, new AnsiString("")]
+					[A.single("redCat"), 3, A.single("red")],
+					[A.single("redCat"), 0, A.single(string.Empty)],
+					[A.single("redCat"), 6, A.single("redCat")],
+					[A.concat(A.markupSingle( M.Create(foreground: "#FF0000"),"red"),A.markupSingle(M.Create(foreground: "#0000FF"), "cat")),
+					 3, A.markupSingle(M.Create(foreground: "#FF0000" ), "cat")],
+					[A.concat(A.markupSingle( M.Create(foreground: "#FF0000"),"red"),A.markupSingle(M.Create(foreground: "#0000FF"), "cat")),
+					 2, A.concat(A.markupSingle(M.Create(foreground: "#FF0000"),"d"),A.markupSingle(M.Create(foreground: "#0000FF"), "cat"))],
+					[A.concat(A.markupSingle( M.Create(foreground: "#FF0000"),"red"),A.markupSingle(M.Create(foreground: "#0000FF"), "cat")),
+					 6, A.single(string.Empty)]
+				};
+			}
+		}
+
+		public static IEnumerable<object[]> SubstringLengthData
+		{
+			get
+			{
+				return new object[][] {
+					[A.single("redCat"), 3, A.single("red")],
+					[A.single("redCat"), 0, A.single(string.Empty)],
+					[A.single("redCat"), 6, A.single("redCat")],
+					[A.concat(A.markupSingle( M.Create(foreground: "#FF0000"),"red"),A.markupSingle(M.Create(foreground: "#0000FF"), "cat")),
+					 3, A.markupSingle(M.Create(foreground: "#FF0000" ), "red")],
+					[A.concat(A.markupSingle( M.Create(foreground: "#FF0000"),"red"),A.markupSingle(M.Create(foreground: "#0000FF"), "cat")),
+					 4, A.concat(A.markupSingle(M.Create(foreground: "#FF0000"),"red"),A.markupSingle(M.Create(foreground: "#0000FF"), "c"))],
+					[A.concat(A.markupSingle( M.Create(foreground: "#FF0000"),"red"),A.markupSingle(M.Create(foreground: "#0000FF"), "cat")),
+					 0, A.single(string.Empty)]
 				};
 			}
 		}
@@ -52,9 +71,10 @@ namespace AntlrCSharp.Tests.Markup
 		[DynamicData(nameof(ConcatData))]
 		public void Concat(AnsiString strA, AnsiString strB, AnsiString expected)
 		{
-			var result = strA.Concat(strB);
+			var a = A.single("concat");
+			var result = A.concat(strA, strB);
 
-			Log.Logger.Information("{Result}{NewLine}{Expected}", result, Environment.NewLine, expected);
+			Log.Logger.Information("Result: {Result}{NewLine}Expected: {Expected}", result, Environment.NewLine, expected);
 
 			CollectionAssert.AreEqual(Encoding.Unicode.GetBytes(expected.ToString()), Encoding.Unicode.GetBytes(result.ToString()));
 		}
@@ -63,9 +83,25 @@ namespace AntlrCSharp.Tests.Markup
 		[DynamicData(nameof(SubstringData))]
 		public void Substring(AnsiString str, int start, AnsiString expected)
 		{
-			var result = str.Substring(start);
+			var ansiStructure = new B();
+			var ansiMarkup = new M(ansiStructure);
 
-			Log.Logger.Information("{Result}{NewLine}{Expected}", result, Environment.NewLine, expected);
+			var b = A.markupSingle(ansiMarkup, "abc");
+
+			var result = A.substring(start, A.getLength(str) - start, str);
+
+			Log.Logger.Information("Result: {Result}{NewLine}Expected: {Expected}", result, Environment.NewLine, expected);
+
+			CollectionAssert.AreEqual(Encoding.Unicode.GetBytes(expected.ToString()), Encoding.Unicode.GetBytes(result.ToString()));
+		}
+
+		[TestMethod]
+		[DynamicData(nameof(SubstringLengthData))]
+		public void SubstringLength(AnsiString str, int length, AnsiString expected)
+		{
+			var result = A.substring(0, length, str);
+
+			Log.Logger.Information("Result: {Result}{NewLine}Expected: {Expected}", result, Environment.NewLine, expected);
 
 			CollectionAssert.AreEqual(Encoding.Unicode.GetBytes(expected.ToString()), Encoding.Unicode.GetBytes(result.ToString()));
 		}

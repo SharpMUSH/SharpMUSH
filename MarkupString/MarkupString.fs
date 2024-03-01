@@ -1,0 +1,95 @@
+﻿namespace MarkupString
+
+module MarkupStringModule =
+  open MarkupImplementation
+
+  let initialize() =
+    ANSIConsole.ANSIInitializer.Enabled <- true
+    ANSIConsole.ANSIInitializer.Init false |> ignore
+
+  type Content =
+      | Text of string
+      | MarkupText of MarkupString
+
+  and MarkupTypes =
+      | MarkedupText of Markup
+      | Empty
+
+  and MarkupString(markupDetails: MarkupTypes, content: List<Content>) =
+      member val MarkupDetails = markupDetails with get, set
+      member val Content = content with get, set
+
+      with override this.ToString() = 
+            let rec getText (markupStr: MarkupString) : string =
+                let innerText = (markupStr.Content |> List.fold (fun acc item ->
+                    match item with
+                    | Text str -> acc + str
+                    | MarkupText mStr -> acc + getText mStr
+                ) "")
+                match markupStr.MarkupDetails with
+                  | Empty -> innerText
+                  | MarkedupText str -> str.Wrap(innerText)
+            getText(this)
+      
+  let markupSingle (markupDetails: Markup, str: string) : MarkupString = 
+      MarkupString(MarkedupText markupDetails, [Text str])
+      
+  let markupSingle2 (markupDetails: Markup, mu: MarkupString) : MarkupString = 
+      MarkupString(MarkedupText markupDetails, [MarkupText mu])
+      
+  let markupMultiple (markupDetails: Markup, mu: seq<MarkupString>) : MarkupString = 
+      MarkupString(MarkedupText markupDetails, mu |> Seq.map (fun x -> MarkupText x) |> Seq.toList )
+    
+  let single (str: string) : MarkupString = 
+      MarkupString(Empty, [Text str])
+
+  let multiple (mu: seq<MarkupString>) : MarkupString = 
+      MarkupString(Empty, mu |> Seq.map (fun x -> MarkupText x) |> Seq.toList )
+
+  let empty () : MarkupString = 
+      MarkupString(Empty, [Text ""])
+
+  let rec getLength (markupStr: MarkupString) : int =
+      markupStr.Content |> List.fold (fun acc item ->
+          acc + 
+          (match item with
+            | Text str -> str.Length
+            | MarkupText mStr -> getLength mStr)
+      ) 0
+
+  let inline extractText str start length =
+      if length <= 0 || str = "" then None
+      else Some(str.Substring(start, min (str.Length - start) length))
+
+  let concat (originalMarkupStr: MarkupString) (newMarkupStr: MarkupString) : MarkupString =
+      let combinedContent = [] @ [ MarkupText originalMarkupStr ] @ [MarkupText newMarkupStr ]
+      MarkupString(Empty, combinedContent)
+
+  let rec substringAux contents start length acc =
+      match contents, length with
+      | _, 0 -> List.rev acc
+      | [], _ -> List.rev acc
+      | head :: tail, _ ->
+          match head with
+          | Text str when start < str.Length ->
+              let skip = max start 0
+              let take = min (str.Length - skip) length
+              match extractText str skip take with
+              | Some result -> substringAux tail (start - str.Length) (length - take) (Text result :: acc)
+              | None -> substringAux tail (start - str.Length) length acc
+          | MarkupText markupStr ->
+              let strLen = getLength markupStr
+              if start < strLen then
+                  let subMarkup = substring (max start 0, min strLen length) markupStr
+                  let subLength = getLength subMarkup
+                  if subLength > 0 then
+                      substringAux tail (start - strLen) (length - min strLen length) (MarkupText subMarkup :: acc)
+                  else
+                      substringAux tail (start - strLen) length acc
+              else
+                  substringAux tail (start - strLen) length acc
+          | _ -> raise (System.InvalidOperationException "Encountered unexpected content type in substring operation.")
+
+  and substring (start, length) (markupStr: MarkupString) : MarkupString =
+      let newContent = substringAux markupStr.Content start length []
+      MarkupString(markupStr.MarkupDetails, newContent)

@@ -7,7 +7,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AntlrCSharp.Generated", "An
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AntlrCSharp.Tests", "AntlrCSharp.Tests\AntlrCSharp.Tests.csproj", "{B337D027-927C-4A5F-A0B4-571E0E199CB6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AntlrCSharp.Implementation", "AntlrCSharp.Implementation\AntlrCSharp.Implementation.csproj", "{8B42DB16-267F-4897-9DA3-4FA845F5A108}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AntlrCSharp.Implementation", "AntlrCSharp.Implementation\AntlrCSharp.Implementation.csproj", "{8B42DB16-267F-4897-9DA3-4FA845F5A108}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "MarkupString", "MarkupString\MarkupString.fsproj", "{1EDA5B19-BAD2-4424-A2CA-1E151429DB70}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -27,6 +29,10 @@ Global
 		{8B42DB16-267F-4897-9DA3-4FA845F5A108}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8B42DB16-267F-4897-9DA3-4FA845F5A108}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8B42DB16-267F-4897-9DA3-4FA845F5A108}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1EDA5B19-BAD2-4424-A2CA-1E151429DB70}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1EDA5B19-BAD2-4424-A2CA-1E151429DB70}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1EDA5B19-BAD2-4424-A2CA-1E151429DB70}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1EDA5B19-BAD2-4424-A2CA-1E151429DB70}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Markup.fs" />
+    <Compile Include="MarkupString.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ANSI.Console" Version="2.5.0" />
+  </ItemGroup>
+
+</Project>
