@@ -18,7 +18,7 @@ namespace AntlrCSharp.Implementation.Functions
 			=> new(args.Select(x => x.Message!).Any(Predicates.Falsey) ? "1" : "0");
 
 		[PennFunction(Name = "cnand", Flags = FunctionFlags.Regular | FunctionFlags.NoParse)]
-		public static CallState Cnand(Parser parser, PennFunctionAttribute _2, params CallState[] args)
+		public static CallState CNand(Parser parser, PennFunctionAttribute _2, params CallState[] args)
 			=> new(args.Select(x => x.Message!).Any(m => Predicates.Falsey(parser.FunctionParse(m.ToString())!.Message!)) ? "0" : "1");
 
 		[PennFunction(Name = "or", Flags = FunctionFlags.Regular)]
@@ -30,7 +30,7 @@ namespace AntlrCSharp.Implementation.Functions
 			=> new(args.Select(x => x.Message!).All(Predicates.Falsey) ? "1" : "0");
 
 		[PennFunction(Name = "ncor", Flags = FunctionFlags.Regular | FunctionFlags.NoParse)]
-		public static CallState Ncor(Parser parser, PennFunctionAttribute _2, params CallState[] args)
+		public static CallState NCor(Parser parser, PennFunctionAttribute _2, params CallState[] args)
 			=> new(args.Select(x => x.Message!).All(m => Predicates.Falsey(parser.FunctionParse(m.ToString())!.Message!)) ? "1" : "0");
 
 		[PennFunction(Name = "cor", Flags = FunctionFlags.Regular | FunctionFlags.NoParse)]

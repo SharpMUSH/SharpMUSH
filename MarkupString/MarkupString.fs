@@ -66,7 +66,7 @@ module MarkupStringModule =
           acc + (match item with
                 | Text str -> str.Length
                 | MarkupText mStr -> getLength mStr)) 0
-
+                
   let concat (originalMarkupStr: MarkupString) (newMarkupStr: MarkupString) : MarkupString =
     match originalMarkupStr.MarkupDetails with
     | Empty ->
@@ -74,6 +74,16 @@ module MarkupStringModule =
         MarkupString(Empty, combinedContent)
     | _ ->
         let combinedContent = [MarkupText originalMarkupStr; MarkupText newMarkupStr]
+        MarkupString(Empty, combinedContent)
+  
+  // TODO: Merge with concat and take an optional separator.
+  let concat2 (originalMarkupStr: MarkupString, separator: MarkupString) (newMarkupStr: MarkupString) : MarkupString =
+    match originalMarkupStr.MarkupDetails with
+    | Empty ->
+        let combinedContent = originalMarkupStr.Content @ [MarkupText separator] @ [MarkupText newMarkupStr]
+        MarkupString(Empty, combinedContent)
+    | _ ->
+        let combinedContent = [MarkupText originalMarkupStr; MarkupText separator; MarkupText newMarkupStr]
         MarkupString(Empty, combinedContent)
 
   [<TailCall>]
