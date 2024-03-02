@@ -61,10 +61,12 @@ module MarkupStringModule =
       if length <= 0 || str = "" then None
       else Some(str.Substring(start, min (str.Length - start) length))
 
+  // TODO: Optimization possible here. We may be able to just concat to the content if the original's markup is Clear.
   let concat (originalMarkupStr: MarkupString) (newMarkupStr: MarkupString) : MarkupString =
       let combinedContent = [] @ [ MarkupText originalMarkupStr ] @ [MarkupText newMarkupStr ]
       MarkupString(Empty, combinedContent)
 
+  [<TailCall>]
   let rec substringAux contents start length acc =
       match contents, length with
       | _, 0 -> List.rev acc
@@ -77,13 +79,17 @@ module MarkupStringModule =
               match extractText str skip take with
               | Some result -> substringAux tail (start - str.Length) (length - take) (Text result :: acc)
               | None -> substringAux tail (start - str.Length) length acc
+          | Text str when start >= str.Length -> 
+              substringAux tail (start - str.Length) length acc
           | MarkupText markupStr ->
               let strLen = getLength markupStr
               if start < strLen then
-                  let subMarkup = substring (max start 0, min strLen length) markupStr
+                  let skip = max start 0
+                  let take = min strLen length
+                  let subMarkup = substring (skip, take) markupStr
                   let subLength = getLength subMarkup
                   if subLength > 0 then
-                      substringAux tail (start - strLen) (length - min strLen length) (MarkupText subMarkup :: acc)
+                      substringAux tail (0) (length - subLength) (MarkupText subMarkup :: acc)
                   else
                       substringAux tail (start - strLen) length acc
               else
