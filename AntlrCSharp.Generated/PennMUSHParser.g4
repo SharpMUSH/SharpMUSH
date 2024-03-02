@@ -83,10 +83,14 @@ validSubstitution
     ;
 genericText 
     : escapedText
+    | ansi
     | OTHER
     | .
     ;
 escapedText
     : ESCAPE UNESCAPE
     | ESCAPE ESCAPING_OTHER
+    ;
+ansi
+    : OANSI ANSICHARACTER? CANSI
     ;

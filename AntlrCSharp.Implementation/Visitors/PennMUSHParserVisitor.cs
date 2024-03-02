@@ -41,39 +41,14 @@ namespace AntlrCSharp.Implementation.Visitors
 			return result;
 		}
 
-		public override CallState? VisitEvaluationString([NotNull] PennMUSHParser.EvaluationStringContext context)
-		{
-			var children = base.VisitChildren(context);
-
-			if (children is not null)
-			{
-				return children;
-			}
-			else
-			{
-				return new CallState(context.GetText(), context.Depth());
-			}
-		}
+		public override CallState? VisitEvaluationString([NotNull] PennMUSHParser.EvaluationStringContext context) 
+			=> base.VisitChildren(context) ?? new CallState(context.GetText(), context.Depth());
 
 		public override CallState? VisitExplicitEvaluationString([NotNull] PennMUSHParser.ExplicitEvaluationStringContext context)
-		{
-			var children = base.VisitChildren(context);
-
-			if (children is not null)
-			{
-				return children;
-			}
-			else
-			{
-				return new CallState(context.GetText(), context.Depth());
-			}
-		}
+			=> base.VisitChildren(context) ?? new CallState(context.GetText(), context.Depth());
 
 		public override CallState? VisitGenericText([NotNull] PennMUSHParser.GenericTextContext context)
-		{
-			var children = base.VisitChildren(context);
-			return children ?? new CallState(context.GetText(), context.Depth());
-		}
+			=> base.VisitChildren(context) ?? new CallState(context.GetText(), context.Depth());
 
 		public override CallState? VisitValidSubstitution([NotNull] PennMUSHParser.ValidSubstitutionContext context)
 		{
@@ -115,10 +90,7 @@ namespace AntlrCSharp.Implementation.Visitors
 			return children ?? new CallState(woof, context.Depth());
 		}
 
-		public override CallState? VisitEscapedText([NotNull] PennMUSHParser.EscapedTextContext context)
-		{
-			var children = base.VisitChildren(context);
-			return children ?? new CallState(context.GetText().Remove(0, 1), context.Depth());
-		}
+		public override CallState? VisitEscapedText([NotNull] PennMUSHParser.EscapedTextContext context) 
+			=> base.VisitChildren(context) ?? new CallState(context.GetText().Remove(0, 1), context.Depth());
 	}
 }

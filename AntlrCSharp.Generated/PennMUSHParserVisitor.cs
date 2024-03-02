@@ -127,4 +127,10 @@ public interface IPennMUSHParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	Result VisitEscapedText([NotNull] PennMUSHParser.EscapedTextContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="PennMUSHParser.ansi"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitAnsi([NotNull] PennMUSHParser.AnsiContext context);
 }

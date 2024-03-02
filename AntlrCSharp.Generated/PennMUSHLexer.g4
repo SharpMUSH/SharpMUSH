@@ -19,7 +19,7 @@ DOLLAR: '$';
 PERCENT: '%' -> pushMode(SUBSTITUTION);
 SEMICOLON: ';';
 COLON: ':';
-OANSI: '\u001B';
+OANSI: '\u001B' -> pushMode(ANSI);
 FUNCHAR
     : [a-zA-Z0-9]+ // Lazy way of indicating printable characters. There's more printable characters than this!
     ;
@@ -57,3 +57,8 @@ STEXT_NUM: '$'[0-9]+ -> popMode;
 mode ESCAPING; 
 UNESCAPE: '\\' -> skip, popMode;
 ESCAPING_OTHER: ~'\\' -> popMode;
+
+// --------------- ANSI MODE ---------------------
+mode ANSI;
+CANSI: 'm' -> popMode;
+ANSICHARACTER: ~'m'+;
