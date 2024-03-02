@@ -3,7 +3,6 @@
 namespace AntlrCSharp.Implementation.Functions
 {
 	/*
-	 TODO: 
 			accent()
 			align()
 			alphamax()

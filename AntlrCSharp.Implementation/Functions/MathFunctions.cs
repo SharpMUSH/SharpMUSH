@@ -2,6 +2,43 @@
 
 namespace AntlrCSharp.Implementation.Functions
 {
+	/*
+		acos()
+		asin()
+		atan()
+		atan2()
+		bound()
+		ceil()
+		cos()
+		ctu()
+		dist2d()
+		dist3d()
+		e()
+		exp()
+		floor()
+		fmod()
+		fraction()
+		ln()
+		lmath()
+		log()
+		mean()
+		median()
+		pi()
+		power()
+		root()
+		round()
+		sign()
+		sin()
+		sqrt()
+		stddev()
+		tan()
+		trunc()
+		val()
+		dec()
+		inc()
+		mod()
+		remainder()
+	 */
 	public static partial class Functions
 	{
 		[PennFunction(Name = "add", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
@@ -39,50 +76,5 @@ namespace AntlrCSharp.Implementation.Functions
 		[PennFunction(Name = "abs", MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
 		public static CallState Abs(Parser _1, PennFunctionAttribute _2, params CallState[] args)
 			=> ValidateDecimalAndEvaluate(args, Math.Abs);
-
-		private static CallState ValidateDecimalAndAggregate(CallState[] args, Func<decimal, decimal, decimal> aggregateFunction)
-		{
-			var doubles = args.Select(x =>
-				(
-					IsDouble: decimal.TryParse(string.Join("", MModule.plainText(x.Message)), out var b),
-					Double: b
-				)).ToList();
-
-			return doubles.Any(x => !x.IsDouble)
-					? new CallState(Message: Errors.ErrorNumbers)
-					: new CallState(Message: doubles.Select(x => x.Double).Aggregate(aggregateFunction).ToString());
-		}
-
-		private static CallState ValidateIntegerAndAggregate(CallState[] args, Func<int, int, int> aggregateFunction)
-		{
-			var integers = args.Select(x =>
-				(
-					IsInteger: int.TryParse(string.Join("", MModule.plainText(x.Message)), out var b),
-					Integer: b
-				)).ToList();
-
-			return integers.Any(x => !x.IsInteger)
-					? new CallState(Message: Errors.ErrorNumbers)
-					: new CallState(Message: integers.Select(x => x.Integer).Aggregate(aggregateFunction).ToString());
-		}
-
-		private static CallState ValidateDecimalAndAggregateToInt(CallState[] args, Func<decimal, decimal, decimal> aggregateFunction)
-		{
-			var doubles = args.Select(x =>
-				(
-					IsDouble: decimal.TryParse(string.Join("", MModule.plainText(x.Message)), out var b),
-					Double: b
-				)).ToList();
-
-			return doubles.Any(x => !x.IsDouble)
-					? new CallState(Message: Errors.ErrorNumbers)
-					: new CallState(Message: Math.Floor(doubles.Select(x => x.Double).Aggregate(aggregateFunction)).ToString());
-		}
-
-		private static CallState ValidateDecimalAndEvaluate(CallState[] args, Func<decimal,decimal> func)
-			=> decimal.TryParse(MModule.plainText(args[0].Message), out var dec)
-				? new CallState(Errors.ErrorNumber)
-				: new CallState(func(dec).ToString());
-
 	}
 }
