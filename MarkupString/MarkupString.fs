@@ -2,11 +2,12 @@
 
 module MarkupStringModule =
   open MarkupImplementation
+  open System
 
   let initialize() =
     ANSIConsole.ANSIInitializer.Enabled <- true
     ANSIConsole.ANSIInitializer.Init false |> ignore
-
+    
   type Content =
       | Text of string
       | MarkupText of MarkupString
@@ -16,6 +17,7 @@ module MarkupStringModule =
       | Empty
 
   and MarkupString(markupDetails: MarkupTypes, content: List<Content>) =
+
       member val MarkupDetails = markupDetails with get, set
       member val Content = content with get, set
 
@@ -30,7 +32,10 @@ module MarkupStringModule =
                   | Empty -> innerText
                   | MarkedupText str -> str.Wrap(innerText)
             getText(this)
-      
+
+  let (|MarkupStringPattern|) (markupStr: MarkupString) =
+        (markupStr.MarkupDetails, markupStr.Content)
+
   let markupSingle (markupDetails: Markup, str: string) : MarkupString = 
       MarkupString(MarkedupText markupDetails, [Text str])
       
@@ -48,6 +53,14 @@ module MarkupStringModule =
 
   let empty () : MarkupString = 
       MarkupString(Empty, [Text ""])
+
+  let rec plainText (markupStr: MarkupString) : string =
+      let innerText = (markupStr.Content |> List.fold (fun acc item ->
+              match item with
+              | Text str -> acc + str
+              | MarkupText mStr -> acc + plainText mStr
+          ) "")
+      innerText
 
   let rec getLength (markupStr: MarkupString) : int =
       markupStr.Content |> List.fold (fun acc item ->
@@ -99,3 +112,29 @@ module MarkupStringModule =
   and substring (start, length) (markupStr: MarkupString) : MarkupString =
       let newContent = substringAux markupStr.Content start length []
       MarkupString(markupStr.MarkupDetails, newContent)
+
+  let split (delimiter: string) (markupStr: MarkupString) : MarkupString[] =
+    let rec findDelimiters (text: string) (pos: int) =
+        if pos >= text.Length then []
+        else
+            match text.IndexOf(delimiter, pos) with
+            | -1 -> []
+            | idx -> idx :: findDelimiters text (idx + delimiter.Length)
+
+    let fullText = plainText markupStr
+
+    let delimiterPositions = 
+      let a = findDelimiters fullText 0
+      a
+
+    let rec buildSplits positions lastPos segments =
+        match positions with
+        | [] ->
+            let lastSegment = substring (lastPos, fullText.Length - lastPos) markupStr
+            List.rev (lastSegment :: segments)
+        | pos :: tail ->
+            let length = pos - lastPos
+            let segment = substring (lastPos, length) markupStr
+            buildSplits tail (pos + delimiter.Length) (segment :: segments)
+
+    buildSplits delimiterPositions 0 [] |> Array.ofList

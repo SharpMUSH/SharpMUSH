@@ -3,7 +3,6 @@ using System.Text;
 using AnsiString = MarkupString.MarkupStringModule.MarkupString;
 using A = MarkupString.MarkupStringModule;
 using M = MarkupString.MarkupImplementation.AnsiMarkup;
-using B = MarkupString.MarkupImplementation.AnsiStructure;
 
 namespace AntlrCSharp.Tests.Markup
 {
@@ -19,14 +18,43 @@ namespace AntlrCSharp.Tests.Markup
 		{
 			get
 			{
-				return new AnsiString[][] {
+				return new object[][] {
 					[A.single("con"), A.single("cat"), A.single("concat")],
 					[A.markupSingle2(M.Create(foreground: "#FF0000"), A.single("red")), A.single("cat"),
-					 A.multiple([A.markupSingle2(M.Create(foreground: "#FF0000"), A.single("red")), 
-					             A.single("cat")])],
+					 A.multiple([A.markupSingle2(M.Create(foreground: "#FF0000"), A.single("red")),
+											 A.single("cat")])],
 					[A.markupSingle2(M.Create(foreground: "#FF0000"), A.single("red")), A.markupSingle(M.Create(foreground: "#0000FF"),"cat"),
-					 A.multiple([A.markupSingle2(M.Create(foreground: "#FF0000"), A.single("red")), 
+					 A.multiple([A.markupSingle2(M.Create(foreground: "#FF0000"), A.single("red")),
 											 A.markupSingle2(M.Create(foreground: "#0000FF"), A.single("cat"))])]
+				};
+			}
+		}
+
+		public static IEnumerable<object[]> SplitData
+		{
+			get
+			{
+				return new object[][] {
+					[A.concat(A.single("con"), A.single(";cat")), ";", 
+						new AnsiString[] 
+						{
+							A.single("con"),
+							A.single("cat") 
+						}],
+					[A.concat(A.markupSingle( M.Create(foreground: "#FF0000"),"red"), A.single(";cat")), ";",
+					 new AnsiString[] { 
+						 A.markupSingle(M.Create(foreground: "#FF0000"), "red"), 
+						 A.single("cat")
+					 }],
+					[A.concat(A.markupSingle( M.Create(foreground: "#FF0000"),"r;e;d"), A.single("c;at")), ";",
+					 new AnsiString[] 
+					 {
+						 A.markupSingle(M.Create(foreground: "#FF0000"), "r"),
+						 A.markupSingle(M.Create(foreground: "#FF0000"), "e"),
+						 A.multiple([ A.markupSingle(M.Create(foreground: "#FF0000"), "d"), 
+							A.single("c")]), 
+						 A.single("at") 
+					 }]
 				};
 			}
 		}
@@ -84,7 +112,6 @@ namespace AntlrCSharp.Tests.Markup
 		[DynamicData(nameof(ConcatData))]
 		public void Concat(AnsiString strA, AnsiString strB, AnsiString expected)
 		{
-			var a = A.single("concat");
 			var result = A.concat(strA, strB);
 
 			Log.Logger.Information("Result: {Result}{NewLine}Expected: {Expected}", result, Environment.NewLine, expected);
@@ -112,6 +139,23 @@ namespace AntlrCSharp.Tests.Markup
 			Log.Logger.Information("Result: {Result}{NewLine}Expected: {Expected}", result, Environment.NewLine, expected);
 
 			CollectionAssert.AreEqual(Encoding.Unicode.GetBytes(expected.ToString()), Encoding.Unicode.GetBytes(result.ToString()));
+		}
+
+		[TestMethod]
+		[DynamicData(nameof(SplitData))]
+		public void Split(AnsiString str, string delimiter, AnsiString[] expected)
+		{
+			var result = A.split(delimiter, str);
+
+			foreach (var (First, Second) in expected.Zip(result))
+			{
+				Log.Logger.Information("Result: {Result}{NewLine}Expected: {Expected}", Second, Environment.NewLine, First);
+			}
+
+			foreach (var (First, Second) in expected.Zip(result))
+			{
+				CollectionAssert.AreEqual(Encoding.Unicode.GetBytes(First.ToString()), Encoding.Unicode.GetBytes(Second.ToString()));
+			}
 		}
 	}
 }
