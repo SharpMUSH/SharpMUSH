@@ -86,13 +86,13 @@ namespace AntlrCSharp.Implementation.Functions
 		public static CallState Concat(Parser _1, PennFunctionAttribute _2, params CallState[] args)
 			=> new(args
 					.Select(x => x.Message)
-					.Aggregate(MModule.concat));
+					.Aggregate((x,y) => MModule.concat(x,y)));
 
 		[PennFunction(Name = "cat", Flags = FunctionFlags.Regular)]
 		public static CallState Cat(Parser _1, PennFunctionAttribute _2, params CallState[] args)
 			=> new(args
 					.Select(x => x.Message)
-					.Aggregate((x, y) => MModule.concat2(x, MModule.single(" "), y)));
+					.Aggregate((x, y) => MModule.concat(x, y, MModule.single(" "))));
 
 		[PennFunction(Name = "lit", Flags = FunctionFlags.Regular | FunctionFlags.NoParse, MaxArgs = 1)]
 		public static CallState Lit(Parser _1, PennFunctionAttribute _2, params CallState[] args)

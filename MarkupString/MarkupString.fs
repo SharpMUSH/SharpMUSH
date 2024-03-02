@@ -1,5 +1,7 @@
 ﻿namespace MarkupString
 
+open System.Runtime.InteropServices
+
 module MarkupStringModule =
   open MarkupImplementation
 
@@ -67,23 +69,20 @@ module MarkupStringModule =
                 | Text str -> str.Length
                 | MarkupText mStr -> getLength mStr)) 0
                 
-  let concat (originalMarkupStr: MarkupString) (newMarkupStr: MarkupString) : MarkupString =
+  let concat (originalMarkupStr: MarkupString) 
+             (newMarkupStr: MarkupString) 
+             ([<Optional;DefaultParameterValue(null)>]optionalSeparator: MarkupString option) : MarkupString =
+    let separatorContent = 
+        match optionalSeparator with
+        | Some separator -> [MarkupText separator]
+        | None -> [Text ""]
+
     match originalMarkupStr.MarkupDetails with
     | Empty ->
-        let combinedContent = originalMarkupStr.Content @ [MarkupText newMarkupStr]
+        let combinedContent = originalMarkupStr.Content @ separatorContent @ [MarkupText newMarkupStr]
         MarkupString(Empty, combinedContent)
     | _ ->
-        let combinedContent = [MarkupText originalMarkupStr; MarkupText newMarkupStr]
-        MarkupString(Empty, combinedContent)
-  
-  // TODO: Merge with concat and take an optional separator.
-  let concat2 (originalMarkupStr: MarkupString, separator: MarkupString) (newMarkupStr: MarkupString) : MarkupString =
-    match originalMarkupStr.MarkupDetails with
-    | Empty ->
-        let combinedContent = originalMarkupStr.Content @ [MarkupText separator] @ [MarkupText newMarkupStr]
-        MarkupString(Empty, combinedContent)
-    | _ ->
-        let combinedContent = [MarkupText originalMarkupStr; MarkupText separator; MarkupText newMarkupStr]
+        let combinedContent = [MarkupText originalMarkupStr] @ separatorContent @ [MarkupText newMarkupStr]
         MarkupString(Empty, combinedContent)
 
   [<TailCall>]
@@ -175,3 +174,59 @@ module MarkupStringModule =
             buildSplits tail (pos + delimiter.Length) (segment :: segments)
 
     buildSplits delimiterPositions 0 [] |> Array.ofList
+
+  // Align code starts here.
+  type Justification = Left | Center | Right | Full | Paragraph
+
+  type ColumnOptions = {
+      Width: int
+      Justification: Justification
+      NoFill: bool
+      TruncateRow: bool
+      TruncateColumn: bool
+      NoColSepAfter: bool
+  }
+
+  type AlignOptions = {
+      Filler: char
+      ColSep: string
+      RowSep: string
+  }
+
+  let defaultAlignOptions = { Filler = ' '; ColSep = " "; RowSep = "\n" }
+
+  let justifyText (text: string) (width: int) (justification: Justification) : string =
+      match justification with
+      | Left -> text.PadRight(width)
+      | Center -> text.PadLeft((width + text.Length) / 2).PadRight(width)
+      | Right -> text.PadLeft(width)
+      | _ -> text // Full and Paragraph justifications can be implemented as needed
+
+  let formatColumn (content: MarkupString) (options: ColumnOptions) : MarkupString =
+      // This function should format the content of a single column based on the provided options.
+      // For simplicity, only basic text content is considered here.
+      let formattedText = justifyText (plainText content) options.Width options.Justification
+      single (formattedText) // Assuming markupSingle creates a MarkupString with the specified text
+
+  let align (columns: MarkupString list) (widths: int list) (alignOptions: AlignOptions) : MarkupString =
+    let optionsList = 
+        List.map2 (fun width _ -> 
+            { Width = width; Justification = Left; NoFill = false; TruncateRow = false; TruncateColumn = false; NoColSepAfter = false }
+        ) widths columns
+
+    let formattedColumns = List.map2 formatColumn columns optionsList
+
+    // Combine the formatted column contents, inserting column separators as needed.
+    let fullContent = 
+        formattedColumns
+        |> List.collect (fun col -> col.Content @ [Text alignOptions.ColSep]) // Collect is used to flatten and concatenate the lists
+        |> List.rev 
+        |> List.tail 
+        |> List.rev  // Removing the last separator added by the above process
+
+    MarkupString(Empty, fullContent)
+
+  // Example usage
+  let column1 = single("Column 1")
+  let column2 = single("Column 2")
+  let formatted = align [column1; column2] [10; 20] defaultAlignOptions
