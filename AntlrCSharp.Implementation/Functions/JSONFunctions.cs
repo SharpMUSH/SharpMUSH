@@ -19,7 +19,7 @@ namespace AntlrCSharp.Implementation.Functions
 	{
 		public static Dictionary<string, Func<CallState[], CallState>> JsonFunctions = new()
 		{
-			{"null",(a) => ""}
+			{"null", NullJSON}
 		};
 
 		[PennFunction(Name = "isjson", MaxArgs = 1, Flags = FunctionFlags.Regular)]
