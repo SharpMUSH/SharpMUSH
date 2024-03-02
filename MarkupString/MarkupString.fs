@@ -52,7 +52,7 @@ module MarkupStringModule =
 
   let empty () : MarkupString = 
       MarkupString(Empty, [Text ""])
-
+      
   let rec plainText (markupStr: MarkupString) : string =
       let innerText = (markupStr.Content |> List.fold (fun acc item ->
               match item with
@@ -60,23 +60,28 @@ module MarkupStringModule =
               | MarkupText mStr -> acc + plainText mStr
           ) "")
       innerText
-
+      
+  [<TailCall>]
   let rec getLength (markupStr: MarkupString) : int =
       markupStr.Content |> List.fold (fun acc item ->
-          acc + 
-          (match item with
-            | Text str -> str.Length
-            | MarkupText mStr -> getLength mStr)
-      ) 0
+          acc + (match item with
+                | Text str -> str.Length
+                | MarkupText mStr -> getLength mStr)) 0
 
   let inline extractText str start length =
       if length <= 0 || str = "" then None
       else Some(str.Substring(start, min (str.Length - start) length))
 
-  // TODO: Optimization possible here. We may be able to just concat to the content if the original's markup is Clear.
   let concat (originalMarkupStr: MarkupString) (newMarkupStr: MarkupString) : MarkupString =
-      let combinedContent = [] @ [ MarkupText originalMarkupStr ] @ [MarkupText newMarkupStr ]
-      MarkupString(Empty, combinedContent)
+    match originalMarkupStr.MarkupDetails with
+    | Empty ->
+        // If the original markup is Empty, directly append the new content to the original content.
+        let combinedContent = originalMarkupStr.Content @ [MarkupText newMarkupStr]
+        MarkupString(Empty, combinedContent)
+    | _ ->
+        // If the original markup is not Empty, encapsulate both MarkupStrings in a new MarkupString with Empty markup.
+        let combinedContent = [MarkupText originalMarkupStr; MarkupText newMarkupStr]
+        MarkupString(Empty, combinedContent)
 
   [<TailCall>]
   let rec substringAux contents start length acc =
@@ -112,7 +117,8 @@ module MarkupStringModule =
       let newContent = substringAux markupStr.Content start length []
       MarkupString(markupStr.MarkupDetails, newContent)
 
-  let split (delimiter: string) (markupStr: MarkupString) : MarkupString[] =
+  [<TailCall>]
+  let rec split (delimiter: string) (markupStr: MarkupString) : MarkupString[] =
     let rec findDelimiters (text: string) (pos: int) =
         if pos >= text.Length then []
         else

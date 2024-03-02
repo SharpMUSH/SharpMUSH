@@ -68,8 +68,7 @@ namespace AntlrCSharp.Tests.Markup
 					 {
 						 A.markupSingle(M.Create(foreground: "#FF0000"), "r"),
 						 A.markupSingle(M.Create(foreground: "#FF0000"), "e"),
-						 A.multiple([ A.markupSingle(M.Create(foreground: "#FF0000"), "d"), 
-							A.single("c")]), 
+						 A.multiple([A.markupSingle(M.Create(foreground: "#FF0000"), "d"), A.single("c")]), 
 						 A.single("at") 
 					 }]
 				};
