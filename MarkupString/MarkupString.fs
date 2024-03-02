@@ -121,19 +121,21 @@ module MarkupStringModule =
                     substringAux tail (start - strLen) length acc
             | _ -> raise (System.InvalidOperationException "Encountered unexpected content type in substring operation.")
       MarkupString(markupStr.MarkupDetails, substringAux markupStr.Content start length [])
-      
+
+  // TODO: IndexesOf, which will no doubt also affect split(), I believe fails if a searched item crosses two MarkupStrings.
   [<TailCall>]
-  let indexesOf (markupStr: MarkupString, search: string) : seq<int> =
+  let indexesOf (markupStr: MarkupString, search: MarkupString) : seq<int> =
     let text = plainText markupStr
+    let srch = plainText search
 
     let rec findDelimiters pos =
         seq {
             if pos < text.Length then
-                let foundPos = text.IndexOf(search, pos)
+                let foundPos = text.IndexOf(srch, pos)
                 if foundPos <> -1 then
                     yield foundPos
-                    if search <> "" then
-                        yield! findDelimiters (foundPos + search.Length)
+                    if srch <> "" then
+                        yield! findDelimiters (foundPos + srch.Length)
                     else
                         yield! findDelimiters (foundPos + 1)
         }
@@ -141,7 +143,7 @@ module MarkupStringModule =
     findDelimiters 0
     
   [<TailCall>]
-  let rec indexOf (markupStr: MarkupString, search: string) : int =
+  let rec indexOf (markupStr: MarkupString, search: MarkupString) : int =
     let matches = indexesOf (markupStr, search) 
     match matches with 
       | _ when Seq.isEmpty matches -> -1

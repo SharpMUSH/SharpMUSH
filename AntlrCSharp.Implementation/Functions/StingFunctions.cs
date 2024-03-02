@@ -5,7 +5,6 @@ namespace AntlrCSharp.Implementation.Functions
 	/*
 	 TODO: 
 			accent()
-			after()
 			align()
 			alphamax()
 			alphamin()
@@ -73,6 +72,16 @@ namespace AntlrCSharp.Implementation.Functions
 
 	public static partial class Functions
 	{
+		[PennFunction(Name = "after", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
+		public static CallState After(Parser _1, PennFunctionAttribute _2, params CallState[] args)
+		{
+			var fullString = args[0]!.Message;
+			var search = args[1]!.Message;
+			var idx = MModule.indexOf(fullString, search);
+
+			return new CallState(MModule.substring(idx, MModule.getLength(fullString) - idx, args[0].Message));
+		}
+
 		[PennFunction(Name = "strcat", Flags = FunctionFlags.Regular)]
 		public static CallState Concat(Parser _1, PennFunctionAttribute _2, params CallState[] args)
 			=> new(args
