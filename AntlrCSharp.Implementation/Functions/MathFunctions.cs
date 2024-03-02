@@ -9,7 +9,7 @@ namespace AntlrCSharp.Implementation.Functions
 		{
 			var doubles = args.Select(x =>
 				(
-					IsDouble: decimal.TryParse(string.Join("", x?.Message), out var b),
+					IsDouble: decimal.TryParse(string.Join("", MModule.plainText(x?.Message)), out var b),
 					Double: b
 				));
 

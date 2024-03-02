@@ -5,15 +5,13 @@ using A = MarkupString.MarkupStringModule;
 
 namespace AntlrCSharp.Tests.Markup
 {
-    [TestClass]
+	[TestClass]
 	public class AnsiStringUnitTests : BaseUnitTest
 	{
 		public AnsiStringUnitTests()
 		{
 			A.initialize();
 		}
-
-		
 
 		[TestMethod]
 		[DynamicData(nameof(Data.Concat.ConcatData))]

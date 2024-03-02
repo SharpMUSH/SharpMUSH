@@ -7,6 +7,11 @@ namespace AntlrCSharp.Implementation
 	/// Provides the parser.
 	/// Each call is Synchronous, and stateful at this time.
 	/// </summary>
+	/// <remarks>
+	/// FunctionParse taking a string instead of a MarkupString may be problematic.
+	/// It will string-match ansi, which contains special characters such as ';'
+	/// It then re-inserts it eventually into a MString, which could be bad?
+	/// </remarks>
 	public class Parser
 	{
 		public CallState? FunctionParse(string text)

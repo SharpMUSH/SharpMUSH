@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AntlrCSharp.Generated\AntlrCSharp.Generated.csproj" />
+    <ProjectReference Include="..\MarkupString\MarkupString.fsproj" />
   </ItemGroup>
 
 </Project>

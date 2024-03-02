@@ -50,7 +50,7 @@ namespace AntlrCSharp.Implementation.Functions
 			{
 				// TODO: Should we increase the Depth of the response by adding our context.Depth here?
 				// This is also where we need to do a DEPTH CHECK.
-				refinedArguments = args.Select(a => parser.FunctionParse(a.Message ?? string.Empty)).ToArray()!;
+				refinedArguments = args.Select(a => parser.FunctionParse(a?.Message?.ToString() ?? string.Empty)).ToArray()!;
 			}
 			else if ((attribute.Flags & FunctionFlags.NoParse) == FunctionFlags.NoParse && attribute.MaxArgs == 1)
 			{

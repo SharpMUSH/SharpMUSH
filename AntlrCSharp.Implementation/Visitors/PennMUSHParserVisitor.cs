@@ -16,7 +16,7 @@ namespace AntlrCSharp.Implementation.Visitors
 		{
 			if (aggregate?.Message != null && nextResult?.Message != null)
 			{
-				return aggregate with { Message = string.Concat(aggregate?.Message, nextResult?.Message) };
+				return aggregate with { Message = MModule.concat(aggregate.Message, nextResult.Message) };
 			}
 			return aggregate ?? nextResult ?? null;
 		}

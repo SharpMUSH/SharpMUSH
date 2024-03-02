@@ -31,7 +31,7 @@ public class FunctionUnitTests : BaseUnitTest
 	{
 		Console.WriteLine("Testing: {0}", str);
 		var parser = new Implementation.Parser();
-		var result = parser.FunctionParse(str)?.Message;
+		var result = parser.FunctionParse(str)?.Message?.ToString();
 
 		Console.WriteLine(string.Join("", result));
 

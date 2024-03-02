@@ -6,7 +6,6 @@ namespace AntlrCSharp.Tests.Markup.Data
 {
 	internal static class Split
 	{
-
 		public static IEnumerable<object[]> SplitData
 		{
 			get

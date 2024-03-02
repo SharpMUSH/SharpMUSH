@@ -1,6 +1,4 @@
-﻿using Serilog;
-
-namespace AntlrCSharp.Tests.Functions
+﻿namespace AntlrCSharp.Tests.Functions
 {
 	[TestClass]
 	public class BooleanFunctionUnitTests : BaseUnitTest
@@ -18,7 +16,7 @@ namespace AntlrCSharp.Tests.Functions
 			Console.WriteLine("Testing: {0}", str);
 
 			var parser = new Implementation.Parser();
-			var result = parser.FunctionParse(str)?.Message;
+			var result = parser.FunctionParse(str)?.Message?.ToString();
 
 			Assert.AreEqual(expected, result);
 		}
@@ -33,7 +31,7 @@ namespace AntlrCSharp.Tests.Functions
 			Console.WriteLine("Testing: {0}", str);
 
 			var parser = new Implementation.Parser();
-			var result = parser.FunctionParse(str)?.Message;
+			var result = parser.FunctionParse(str)?.Message?.ToString();
 
 			Assert.AreEqual(expected, result);
 		}
@@ -48,7 +46,7 @@ namespace AntlrCSharp.Tests.Functions
 			Console.WriteLine("Testing: {0}", str);
 
 			var parser = new Implementation.Parser();
-			var result = parser.FunctionParse(str)?.Message;
+			var result = parser.FunctionParse(str)?.Message?.ToString();
 
 			Assert.AreEqual(expected, result);
 		}
