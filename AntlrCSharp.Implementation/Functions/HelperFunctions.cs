@@ -5,7 +5,7 @@ namespace AntlrCSharp.Implementation.Functions
 {
 	public partial class Functions
 	{
-
+		// TODO: When a flag is implemented to only accept Integers or Decimals for the Math functions, a lot of these validation checks can go away from this sector.
 		private static CallState ValidateDecimalAndAggregate(CallState[] args, Func<decimal, decimal, decimal> aggregateFunction)
 		{
 			var doubles = args.Select(x =>

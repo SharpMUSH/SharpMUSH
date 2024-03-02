@@ -1,19 +1,14 @@
 ﻿using AntlrCSharp.Implementation.Definitions;
-using static Microsoft.FSharp.Core.ByRefKinds;
-using System.Numerics;
 
 namespace AntlrCSharp.Implementation.Functions
 {
-	/*
-		baseconv()
-	*/
 	public partial class Functions
 	{
 		private const string Chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz+/";
 
 		[PennFunction(Name = "baseconv", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 		public static CallState BaseConv(Parser _1, PennFunctionAttribute _2, params CallState[] args)
-			=> ValidateIntegerAndEvaluate(args, (int[]x) => 
+			=> ValidateIntegerAndEvaluate(args[1..], (int[]x) => 
 				{
 					var input = MModule.plainText(args[0].Message!);
 					var fromBase = x[1];
@@ -33,7 +28,7 @@ namespace AntlrCSharp.Implementation.Functions
 					}
 
 					// Convert input to base 10
-					BigInteger number = BigInteger.Zero;
+					System.Numerics.BigInteger number = System.Numerics.BigInteger.Zero;
 					foreach (char c in input)
 					{
 						number = number * fromBase + Chars.IndexOf(c);

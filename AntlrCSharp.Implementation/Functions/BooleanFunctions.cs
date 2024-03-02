@@ -16,7 +16,6 @@ namespace AntlrCSharp.Implementation.Functions
 		public static CallState Cor(Parser parser, PennFunctionAttribute _2, params CallState[] args)
 			=> new(args.Select(x => x.Message!).Any(m => Predicates.Truthy(parser.FunctionParse(m.ToString())!.Message!)) ? "1" : "0");
 
-		// TODO: This should only accept numbers
 		[PennFunction(Name = "eq", Flags = FunctionFlags.Regular | FunctionFlags.DecimalsOnly)]
 		public static CallState Eq(Parser _1, PennFunctionAttribute _2, params CallState[] args)
 			=> new(args.All(x => x.Message == args[0].Message) ? "0" : "1");
@@ -45,7 +44,6 @@ namespace AntlrCSharp.Implementation.Functions
 		public static CallState CNand(Parser parser, PennFunctionAttribute _2, params CallState[] args)
 			=> new(args.Select(x => x.Message!).Any(m => Predicates.Falsey(parser.FunctionParse(m.ToString())!.Message!)) ? "0" : "1");
 
-		// TODO: This should only accept numbers
 		[PennFunction(Name = "neq", Flags = FunctionFlags.Regular | FunctionFlags.DecimalsOnly)]
 		public static CallState Neq(Parser _1, PennFunctionAttribute _2, params CallState[] args)
 			=> new(args.Any(x => x.Message == args[0].Message) ? "0" : "1");
