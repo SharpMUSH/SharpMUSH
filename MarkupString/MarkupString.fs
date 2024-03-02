@@ -16,7 +16,6 @@ module MarkupStringModule =
       | Empty
 
   and MarkupString(markupDetails: MarkupTypes, content: List<Content>) =
-
       member val MarkupDetails = markupDetails with get, set
       member val Content = content with get, set
 
@@ -68,54 +67,50 @@ module MarkupStringModule =
                 | Text str -> str.Length
                 | MarkupText mStr -> getLength mStr)) 0
 
-  let inline extractText str start length =
-      if length <= 0 || str = "" then None
-      else Some(str.Substring(start, min (str.Length - start) length))
-
   let concat (originalMarkupStr: MarkupString) (newMarkupStr: MarkupString) : MarkupString =
     match originalMarkupStr.MarkupDetails with
     | Empty ->
-        // If the original markup is Empty, directly append the new content to the original content.
         let combinedContent = originalMarkupStr.Content @ [MarkupText newMarkupStr]
         MarkupString(Empty, combinedContent)
     | _ ->
-        // If the original markup is not Empty, encapsulate both MarkupStrings in a new MarkupString with Empty markup.
         let combinedContent = [MarkupText originalMarkupStr; MarkupText newMarkupStr]
         MarkupString(Empty, combinedContent)
 
   [<TailCall>]
-  let rec substringAux contents start length acc =
-      match contents, length with
-      | _, 0 -> List.rev acc
-      | [], _ -> List.rev acc
-      | head :: tail, _ ->
-          match head with
-          | Text str when start < str.Length ->
-              let skip = max start 0
-              let take = min (str.Length - skip) length
-              match extractText str skip take with
-              | Some result -> substringAux tail (start - str.Length) (length - take) (Text result :: acc)
-              | None -> substringAux tail (start - str.Length) length acc
-          | Text str when start >= str.Length -> 
-              substringAux tail (start - str.Length) length acc
-          | MarkupText markupStr ->
-              let strLen = getLength markupStr
-              if start < strLen then
-                  let skip = max start 0
-                  let take = min strLen length
-                  let subMarkup = substring (skip, take) markupStr
-                  let subLength = getLength subMarkup
-                  if subLength > 0 then
-                      substringAux tail (0) (length - subLength) (MarkupText subMarkup :: acc)
-                  else
-                      substringAux tail (start - strLen) length acc
-              else
-                  substringAux tail (start - strLen) length acc
-          | _ -> raise (System.InvalidOperationException "Encountered unexpected content type in substring operation.")
+  let rec substring (start, length) (markupStr: MarkupString) : MarkupString =
+      let inline extractText str start length =
+          if length <= 0 || str = "" then None
+          else Some(str.Substring(start, min (str.Length - start) length))
 
-  and substring (start, length) (markupStr: MarkupString) : MarkupString =
-      let newContent = substringAux markupStr.Content start length []
-      MarkupString(markupStr.MarkupDetails, newContent)
+      let rec substringAux contents start length acc =
+        match contents, length with
+        | _, 0 -> List.rev acc
+        | [], _ -> List.rev acc
+        | head :: tail, _ ->
+            match head with
+            | Text str when start < str.Length ->
+                let skip = max start 0
+                let take = min (str.Length - skip) length
+                match extractText str skip take with
+                | Some result -> substringAux tail (start - str.Length) (length - take) (Text result :: acc)
+                | None -> substringAux tail (start - str.Length) length acc
+            | Text str when start >= str.Length -> 
+                substringAux tail (start - str.Length) length acc
+            | MarkupText markupStr ->
+                let strLen = getLength markupStr
+                if start < strLen then
+                    let skip = max start 0
+                    let take = min strLen length
+                    let subMarkup = substring (skip, take) markupStr
+                    let subLength = getLength subMarkup
+                    if subLength > 0 then
+                        substringAux tail (0) (length - subLength) (MarkupText subMarkup :: acc)
+                    else
+                        substringAux tail (start - strLen) length acc
+                else
+                    substringAux tail (start - strLen) length acc
+            | _ -> raise (System.InvalidOperationException "Encountered unexpected content type in substring operation.")
+      MarkupString(markupStr.MarkupDetails, substringAux markupStr.Content start length [])
 
   [<TailCall>]
   let rec split (delimiter: string) (markupStr: MarkupString) : MarkupString[] =
