@@ -3,6 +3,7 @@ using AntlrCSharp.Implementation.Definitions;
 
 namespace AntlrCSharp.Implementation.Functions
 {
+	[AttributeUsage(AttributeTargets.Method)]
 	public class PennFunctionAttribute : Attribute
 	{
 		public required string Name { get; set; }
