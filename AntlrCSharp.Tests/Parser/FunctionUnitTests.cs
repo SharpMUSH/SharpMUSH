@@ -1,5 +1,3 @@
-using Serilog;
-
 namespace AntlrCSharp.Tests.Parser;
 
 [TestClass]

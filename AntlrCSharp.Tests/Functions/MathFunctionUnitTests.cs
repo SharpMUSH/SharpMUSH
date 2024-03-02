@@ -1,6 +1,4 @@
-﻿using Serilog;
-
-namespace AntlrCSharp.Tests.Functions
+﻿namespace AntlrCSharp.Tests.Functions
 {
 	[TestClass]
 	public class MathFunctionUnitTests: BaseUnitTest

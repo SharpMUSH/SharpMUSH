@@ -1,7 +1,7 @@
 ﻿using A = MarkupString.MarkupStringModule;
 using M = MarkupString.MarkupImplementation.AnsiMarkup;
 
-namespace AntlrCSharp.Tests.Markup
+namespace AntlrCSharp.Tests.Markup.Data
 {
 	internal static class Substring
 	{

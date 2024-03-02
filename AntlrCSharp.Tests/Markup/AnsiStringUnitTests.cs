@@ -13,8 +13,8 @@ namespace AntlrCSharp.Tests.Markup
 			A.initialize();
 		}
 
-		[TestMethod]
-		[DynamicData(nameof(Data.Concat.ConcatData))]
+		[DataTestMethod]
+		[DynamicData(nameof(Data.Concat.ConcatData), typeof(Data.Concat))]
 		public void Concat(AnsiString strA, AnsiString strB, AnsiString expected)
 		{
 			var result = A.concat(strA, strB);
@@ -24,8 +24,8 @@ namespace AntlrCSharp.Tests.Markup
 			CollectionAssert.AreEqual(Encoding.Unicode.GetBytes(expected.ToString()), Encoding.Unicode.GetBytes(result.ToString()));
 		}
 
-		[TestMethod]
-		[DynamicData(nameof(Markup.Substring.SubstringData))]
+		[DataTestMethod]
+		[DynamicData(nameof(Data.Substring.SubstringData), typeof(Data.Substring))]
 		public void Substring(AnsiString str, int start, AnsiString expected)
 		{
 			var result = A.substring(start, A.getLength(str) - start, str);
@@ -35,8 +35,8 @@ namespace AntlrCSharp.Tests.Markup
 			CollectionAssert.AreEqual(Encoding.Unicode.GetBytes(expected.ToString()), Encoding.Unicode.GetBytes(result.ToString()));
 		}
 
-		[TestMethod]
-		[DynamicData(nameof(Markup.Substring.SubstringLengthData))]
+		[DataTestMethod]
+		[DynamicData(nameof(Data.Substring.SubstringLengthData), typeof(Data.Substring))]
 		public void SubstringLength(AnsiString str, int length, AnsiString expected)
 		{
 			var result = A.substring(0, length, str);
@@ -46,8 +46,8 @@ namespace AntlrCSharp.Tests.Markup
 			CollectionAssert.AreEqual(Encoding.Unicode.GetBytes(expected.ToString()), Encoding.Unicode.GetBytes(result.ToString()));
 		}
 
-		[TestMethod]
-		[DynamicData(nameof(Data.Split.SplitData))]
+		[DataTestMethod]
+		[DynamicData(nameof(Data.Split.SplitData), typeof(Data.Split))]
 		public void Split(AnsiString str, string delimiter, AnsiString[] expected)
 		{
 			var result = A.split(delimiter, str);

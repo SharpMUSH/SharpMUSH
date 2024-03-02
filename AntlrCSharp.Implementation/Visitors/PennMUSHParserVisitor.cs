@@ -1,5 +1,4 @@
 ﻿using Antlr4.Runtime.Misc;
-using OneOf.Types;
 using Serilog;
 
 namespace AntlrCSharp.Implementation.Visitors
@@ -30,7 +29,7 @@ namespace AntlrCSharp.Implementation.Visitors
 			var arguments = context.funArguments()?.children?
 				.Where((_, i) => i % 2 == 0)
 				.Select(x => new CallState(x.GetText(), context.Depth()))
-				?? Enumerable.Empty<CallState>();
+				?? [new CallState("", context.Depth())];
 
 			// TODO: There seems to be a standard in PennMUSH that if there is no argument, it passes in an Empty String
 			// as the one and only argument.
