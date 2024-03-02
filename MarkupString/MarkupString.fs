@@ -121,6 +121,31 @@ module MarkupStringModule =
                     substringAux tail (start - strLen) length acc
             | _ -> raise (System.InvalidOperationException "Encountered unexpected content type in substring operation.")
       MarkupString(markupStr.MarkupDetails, substringAux markupStr.Content start length [])
+      
+  [<TailCall>]
+  let indexesOf (markupStr: MarkupString, search: string) : seq<int> =
+    let text = plainText markupStr
+
+    let rec findDelimiters pos =
+        seq {
+            if pos < text.Length then
+                let foundPos = text.IndexOf(search, pos)
+                if foundPos <> -1 then
+                    yield foundPos
+                    if search <> "" then
+                        yield! findDelimiters (foundPos + search.Length)
+                    else
+                        yield! findDelimiters (foundPos + 1)
+        }
+
+    findDelimiters 0
+    
+  [<TailCall>]
+  let rec indexOf (markupStr: MarkupString, search: string) : int =
+    let matches = indexesOf (markupStr, search) 
+    match matches with 
+      | _ when Seq.isEmpty matches -> -1
+      | _ -> matches |> Seq.head
 
   [<TailCall>]
   let rec split (delimiter: string) (markupStr: MarkupString) : MarkupString[] =
