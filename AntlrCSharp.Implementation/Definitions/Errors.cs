@@ -22,5 +22,6 @@
 		public const string ErrorNoSuchFunction = "#-1 COULD NOT FIND FUNCTION: {0}";
 		public const string ErrorTooFewArguments = "#-1 FUNCTION ({0}) EXPECTS AT LEAST {1} ARGUMENTS BUT GOT {2}";
 		public const string ErrorTooManyArguments = "#-1 FUNCTION ({0}) EXPECTS AT MOST {1} ARGUMENTS BUT GOT {2}";
+		public const string ErrorWrongArgumentsRange = "#-1 FUNCTION ({0}) EXPECTS AT LEAST {1} ARGUMENTS AND AT MOST {2} BUT GOT {3}";
 	}
 }
