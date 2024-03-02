@@ -32,6 +32,19 @@ namespace AntlrCSharp.Implementation.Functions
 					: new CallState(Message: integers.Select(x => x.Integer).Aggregate(aggregateFunction).ToString());
 		}
 
+		private static CallState ValidateIntegerAndEvaluate(CallState[] args, Func<int[], MString> aggregateFunction)
+		{
+			var integers = args.Select(x =>
+				(
+					IsInteger: int.TryParse(string.Join("", MModule.plainText(x.Message)), out var b),
+					Integer: b
+				)).ToList();
+
+			return integers.Any(x => !x.IsInteger)
+					? new CallState(Message: Errors.ErrorNumbers)
+					: new CallState(Message: aggregateFunction(integers.Select(x => x.Integer).ToArray()).ToString());
+		}
+
 		private static CallState ValidateDecimalAndAggregateToInt(CallState[] args, Func<decimal, decimal, decimal> aggregateFunction)
 		{
 			var doubles = args.Select(x =>
@@ -49,6 +62,12 @@ namespace AntlrCSharp.Implementation.Functions
 			=> decimal.TryParse(MModule.plainText(args[0].Message), out var dec)
 				? new CallState(Errors.ErrorNumber)
 				: new CallState(func(dec).ToString());
+
+		private static CallState ValidateIntegerAndEvaluate(CallState[] args, Func<int, int> func)
+			=> int.TryParse(MModule.plainText(args[0].Message), out var integer)
+				? new CallState(Errors.ErrorInteger)
+				: new CallState(func(integer).ToString());
+
 		private static CallState ValidateDecimalAndEvaluatePairwise(this CallState[] args, Func<(decimal, decimal), bool> func)
 		{
 			if (args.Length < 2)

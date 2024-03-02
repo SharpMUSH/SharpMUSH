@@ -53,7 +53,7 @@ namespace AntlrCSharp.Implementation.Functions
 		public static CallState Mul(Parser _1, PennFunctionAttribute _2, params CallState[] args) =>
 			ValidateDecimalAndAggregate(args, (acc, sub) => acc * sub);
 
-		[PennFunction(Name = "div", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
+		[PennFunction(Name = "div", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.IntegersOnly)]
 		public static CallState Div(Parser _1, PennFunctionAttribute _2, params CallState[] args) =>
 			ValidateIntegerAndAggregate(args, (acc, sub) => acc / sub);
 

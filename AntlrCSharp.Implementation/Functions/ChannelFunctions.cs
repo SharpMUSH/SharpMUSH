@@ -1,4 +1,6 @@
-﻿namespace AntlrCSharp.Implementation.Functions
+﻿using AntlrCSharp.Implementation.Definitions;
+
+namespace AntlrCSharp.Implementation.Functions
 {
 	/*
 		cbuffer()
@@ -21,6 +23,5 @@
 	*/
 	public partial class Functions
 	{
-
 	}
 }
