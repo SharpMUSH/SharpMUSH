@@ -35,11 +35,28 @@ namespace AntlrCSharp.Tests.Markup
 			get
 			{
 				return new object[][] {
-					[A.concat(A.single("con"), A.single(";cat")), ";", 
-						new AnsiString[] 
+					[A.concat(A.single("con"), A.single(";cat")), ";",
+						new AnsiString[]
 						{
 							A.single("con"),
-							A.single("cat") 
+							A.single("cat")
+						}],
+					[A.concat(A.single("ca"), A.single(";t")), "",
+						new AnsiString[]
+						{
+							A.single(""),
+							A.single("c"),
+							A.single("a"),
+							A.single(";"),
+							A.single("t")
+						}],
+					[A.concat(A.single(";con"), A.single(";cat;")), ";",
+						new AnsiString[]
+						{
+							A.single(""),
+							A.single("con"),
+							A.single("cat"),
+							A.single("")
 						}],
 					[A.concat(A.markupSingle( M.Create(foreground: "#FF0000"),"red"), A.single(";cat")), ";",
 					 new AnsiString[] { 
@@ -75,7 +92,7 @@ namespace AntlrCSharp.Tests.Markup
 											 A.markupSingle2(M.Create(foreground: "#0000FF"), A.single("cat")),
 											 A.markupSingle2(M.Create(foreground: "#00FF00"), A.single("green")),
 											 A.markupSingle2(M.Create(foreground: "#0000FF"), A.single("cat"))]),
-					 7, A.multiple([A.markupSingle2(M.Create(foreground: "#00FF00"), A.single("reen")),
+					 8, A.multiple([A.markupSingle2(M.Create(foreground: "#00FF00"), A.single("een")),
 											    A.markupSingle2(M.Create(foreground: "#0000FF"), A.single("cat"))])],
 					[A.concat(A.markupSingle( M.Create(foreground: "#FF0000"),"red"),A.markupSingle(M.Create(foreground: "#0000FF"), "cat")),
 					 6, A.single(string.Empty)]

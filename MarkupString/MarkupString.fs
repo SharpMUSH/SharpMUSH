@@ -2,7 +2,6 @@
 
 module MarkupStringModule =
   open MarkupImplementation
-  open System
 
   let initialize() =
     ANSIConsole.ANSIInitializer.Enabled <- true
@@ -119,13 +118,13 @@ module MarkupStringModule =
         else
             match text.IndexOf(delimiter, pos) with
             | -1 -> []
-            | idx -> idx :: findDelimiters text (idx + delimiter.Length)
+            | idx -> idx :: if(delimiter <> "") 
+                              then findDelimiters text (idx + delimiter.Length) 
+                              else findDelimiters text (idx + 1) 
 
     let fullText = plainText markupStr
 
-    let delimiterPositions = 
-      let a = findDelimiters fullText 0
-      a
+    let delimiterPositions = findDelimiters fullText 0
 
     let rec buildSplits positions lastPos segments =
         match positions with
