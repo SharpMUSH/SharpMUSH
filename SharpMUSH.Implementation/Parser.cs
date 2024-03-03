@@ -64,18 +64,8 @@ namespace AntlrCSharp.Implementation
 		}
 
 		// TODO: Executor should carry more than just dbref. Also port information.
-		public CallState? CommandParse(DBRef player, string text)
+		public CallState? CommandParse(string text)
 		{
-			var basicCommandState = new ParserState(
-				Registers: ImmutableDictionary<string, MString>.Empty,
-				CurrentEvaluation: null,
-				Function: null,
-				Command: null,
-				Arguments: [],
-				Executor: player,
-				Enactor: player,
-				Caller: player);
-
 			AntlrInputStream inputStream = new(text);
 			SharpMUSHLexer pennLexer = new(inputStream);
 			CommonTokenStream commonTokenStream = new(pennLexer);

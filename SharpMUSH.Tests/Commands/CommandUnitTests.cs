@@ -37,7 +37,7 @@ public class CommandUnitTests : BaseUnitTest
 	{
 		Console.WriteLine("Testing: {0}", str);
 		var parser = TestParser();
-		var result = parser.CommandParse(new DBRef(1), str)?.Message;
+		var result = parser.CommandParse(str)?.Message;
 
 		Console.WriteLine(string.Join("", result));
 	}
