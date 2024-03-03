@@ -10,7 +10,7 @@
 	</PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="Markup.fs" />
+    <Compile Include="Markup\Markup.fs" />
     <Compile Include="MarkupString.fs" />
   </ItemGroup>
 

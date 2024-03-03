@@ -18,8 +18,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\AntlrCSharp.Generated\AntlrCSharp.Generated.csproj" />
-    <ProjectReference Include="..\MarkupString\MarkupString.fsproj" />
+    <ProjectReference Include="..\AntlrCSharp.Generated\SharpMUSH.Generated.csproj" />
+    <ProjectReference Include="..\MarkupString\SharpMUSH.MarkupString.fsproj" />
   </ItemGroup>
 
 </Project>

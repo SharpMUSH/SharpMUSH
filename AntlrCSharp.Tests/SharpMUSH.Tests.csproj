@@ -26,8 +26,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\AntlrCSharp.Implementation\AntlrCSharp.Implementation.csproj" />
-    <ProjectReference Include="..\MarkupString\MarkupString.fsproj" />
+    <ProjectReference Include="..\AntlrCSharp.Implementation\SharpMUSH.Implementation.csproj" />
+    <ProjectReference Include="..\MarkupString\SharpMUSH.MarkupString.fsproj" />
   </ItemGroup>
 
 </Project>
