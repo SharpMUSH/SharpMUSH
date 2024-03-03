@@ -1,9 +1,7 @@
 ﻿using Antlr4.Runtime;
 using AntlrCSharp.Implementation.Definitions;
 using AntlrCSharp.Implementation.Visitors;
-using Microsoft.Win32;
 using System.Collections.Immutable;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace AntlrCSharp.Implementation
 {
