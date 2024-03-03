@@ -8,11 +8,6 @@ namespace AntlrCSharp.Tests.Markup
 	[TestClass]
 	public class AnsiStringUnitTests : BaseUnitTest
 	{
-		public AnsiStringUnitTests()
-		{
-			A.initialize();
-		}
-
 		[DataTestMethod]
 		[DynamicData(nameof(Data.Concat.ConcatData), typeof(Data.Concat))]
 		public void Concat(AnsiString strA, AnsiString strB, AnsiString expected)

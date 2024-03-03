@@ -14,8 +14,10 @@
     <Compile Include="MarkupString.fs" />
   </ItemGroup>
 
+  <ItemGroup />
+
   <ItemGroup>
-    <PackageReference Include="ANSI.Console" Version="2.5.0" />
+    <PackageReference Include="ANSI.Console" Version="2.5.1" />
   </ItemGroup>
 
   <ItemGroup>

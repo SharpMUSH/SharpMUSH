@@ -11,6 +11,13 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SharpMUSH.Implementation", 
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "SharpMUSH.MarkupString", "SharpMUSH.MarkupString\SharpMUSH.MarkupString.fsproj", "{1EDA5B19-BAD2-4424-A2CA-1E151429DB70}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{07FDDC5D-EE27-4D5C-B03F-AA79FB1A5C4D}"
+	ProjectSection(SolutionItems) = preProject
+		Solution Files\LogBlackBgo.svg = Solution Files\LogBlackBgo.svg
+		Solution Files\Logo.svg = Solution Files\Logo.svg
+		README.md = README.md
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

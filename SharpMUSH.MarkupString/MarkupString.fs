@@ -5,10 +5,6 @@ open System.Runtime.InteropServices
 module MarkupStringModule =
   open MarkupImplementation
 
-  let initialize() =
-    ANSIConsole.ANSIInitializer.Enabled <- true
-    ANSIConsole.ANSIInitializer.Init false |> ignore
-    
   type Content =
       | Text of string
       | MarkupText of MarkupString
