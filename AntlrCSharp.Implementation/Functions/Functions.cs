@@ -7,7 +7,7 @@ namespace AntlrCSharp.Implementation.Functions
 {
 	public static partial class Functions
 	{
-		private static readonly Dictionary<string, (PennFunctionAttribute Attribute, Func<Parser, CallState[], CallState> Function)> _functionLibrary = [];
+		private static readonly Dictionary<string, (PennFunctionAttribute Attribute, Func<Parser, CallState> Function)> _functionLibrary = [];
 		private static readonly Dictionary<string, (MethodInfo Method, PennFunctionAttribute Attribute)> _knownBuiltInMethods = typeof(Functions)
 			.GetMethods()
 			.Select(m => (Method: m, Attribute: m.GetCustomAttribute(typeof(PennFunctionAttribute), false) as PennFunctionAttribute))
@@ -25,11 +25,6 @@ namespace AntlrCSharp.Implementation.Functions
 		/// <returns>The resulting CallState.</returns>
 		public static CallState CallFunction(string name, Parser parser, FunctionContext context, CallState[] args)
 		{
-			if (context.Depth() > Configurable.MaxCallDepth)
-			{
-				return new CallState(Errors.ErrorCall, context.Depth());
-			}
-
 			if (!_functionLibrary.TryGetValue(name, out var libraryMatch))
 			{
 				var DiscoveredFunction = DiscoverBuiltInFunction(name);
@@ -44,6 +39,12 @@ namespace AntlrCSharp.Implementation.Functions
 			}
 
 			(var attribute, var function) = libraryMatch;
+
+			var currentStack = parser.State;
+			var currentState = parser.State.Peek();
+			var contextDepth = context.Depth();
+			var stackDepth = currentStack.Count();
+			var recursionDepth = currentStack.Count(x => x.Function == name);
 
 			CallState[] refinedArguments;
 			if ((attribute.Flags & FunctionFlags.NoParse) != FunctionFlags.NoParse)
@@ -73,18 +74,34 @@ namespace AntlrCSharp.Implementation.Functions
 				return new CallState(string.Format(Errors.ErrorTooFewArguments, name, attribute.MinArgs, args.Length), context.Depth());
 			}
 
-			return function(parser, refinedArguments) with { Depth = context.Depth() };
+			if (contextDepth > Configurable.MaxCallDepth)
+				return new CallState(Errors.ErrorCall, contextDepth);
+			if (stackDepth > Configurable.MaxFunctionDepth)
+				return new CallState(Errors.ErrorInvoke, stackDepth);
+			if (recursionDepth > Configurable.MaxRecursionDepth)
+				return new CallState(Errors.ErrorRecursion, recursionDepth);
+
+			var newParser = new Parser(parser, new Parser.ParserState(
+				Registers: currentState.Registers,
+				CurrentEvaluation: currentState.CurrentEvaluation,
+				Function: name,
+				Command: null,
+				Arguments: refinedArguments,
+				Executor: currentState.Executor,
+				Enactor: currentState.Enactor,
+				Caller: currentState.Caller
+			));
+
+			return function(newParser) with { Depth = context.Depth() };
 		}
 
-		private static OneOf<bool, (PennFunctionAttribute, Func<Parser, CallState[], CallState>)> DiscoverBuiltInFunction(string name)
+		private static OneOf<bool, (PennFunctionAttribute, Func<Parser, CallState>)> DiscoverBuiltInFunction(string name)
 		{
 			if (!_knownBuiltInMethods.TryGetValue(name, out var result))
 				return false;
 
-			return (result.Attribute, new Func<Parser, CallState[], CallState>
-				((p, s) =>
-					(CallState)result.Method.Invoke(null, [p, result.Attribute, s])!
-				));
+			return (result.Attribute, new Func<Parser, CallState>
+				(p => (CallState)result.Method.Invoke(null, [p, result.Attribute])!));
 		}
 
 		/// <summary>
@@ -102,7 +119,7 @@ namespace AntlrCSharp.Implementation.Functions
 		/// <param name="attr">Function Attributes that describe behavior</param>
 		/// <param name="func">Function to run when this is called</param>
 		/// <returns>True if could be added. False if the name already existed.</returns>
-		public static bool AddFunction(string name, PennFunctionAttribute attr, Func<Parser, CallState[], CallState> func) =>
+		public static bool AddFunction(string name, PennFunctionAttribute attr, Func<Parser, CallState> func) =>
 			_functionLibrary.TryAdd(name.ToLower(), (attr, func));
 	}
 }

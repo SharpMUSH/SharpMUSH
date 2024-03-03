@@ -1,24 +1,25 @@
 ﻿using Antlr4.Runtime;
 using AntlrCSharp.Implementation.Definitions;
 using AntlrCSharp.Implementation.Visitors;
+using System.Collections.Immutable;
 
 namespace AntlrCSharp.Implementation
 {
-    /// <summary>
-    /// Provides the parser.
-    /// Each call is Synchronous, and stateful at this time.
-    /// </summary>
-    public class Parser
+	/// <summary>
+	/// Provides the parser.
+	/// Each call is Synchronous, and stateful at this time.
+	/// </summary>
+	public class Parser
 	{
-		public struct ParserState
-		{
-			Dictionary<string, MString> Registers;
-			DBAttribute CurrentEvaluation;
-			MString[] Arguments;
-			DBref Executor;
-			DBref Enactor;
-			DBref Caller;
-		}
+		public record ParserState(
+			ImmutableDictionary<string, MString> Registers,
+			DBAttribute? CurrentEvaluation,
+			string? Function,
+			string? Command,
+			CallState[] Arguments,
+			DBref Executor,
+			DBref Enactor,
+			DBref Caller);
 
 		/// <summary>
 		/// Stack may not be needed if we can bring ParserState into the custom Visitors.
@@ -28,27 +29,15 @@ namespace AntlrCSharp.Implementation
 		/// 
 		/// Time to start drawing a tree to make sure we put things in the right spots.
 		/// </summary>
-		public Stack<ParserState> State { get; set; }
+		public ImmutableStack<ParserState> State { get; init; }
 
-		public Parser()
-		{
-			State = new();
-		}
+		protected Parser() => State = [];
 
-		public Parser(Stack<ParserState>? state)
-		{
-			State = state ?? new();
-		}
+		public Parser(ImmutableStack<ParserState> state) => State = state ?? [];
 
-		public Parser(Parser parser, ParserState state) : this(null)
-		{
-			foreach(var st in parser.State.ToArray().Reverse())
-			{
-				State.Push(st);
-			}
-			
-			State.Push(state);
-		}
+		public Parser(Parser parser, ParserState state) => State = parser.State.Push(state);
+
+		public Parser(ParserState state) => State = [state];
 
 		public CallState? FunctionParse(string text)
 		{

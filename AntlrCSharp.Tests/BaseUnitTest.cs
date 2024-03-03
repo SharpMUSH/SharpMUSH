@@ -1,4 +1,6 @@
-﻿using Serilog;
+﻿using Definitions = AntlrCSharp.Implementation.Definitions;
+using Serilog;
+using System.Collections.Immutable;
 
 namespace AntlrCSharp.Tests
 {
@@ -11,5 +13,17 @@ namespace AntlrCSharp.Tests
 																			.MinimumLevel.Debug()
 																			.CreateLogger();
 		}
+
+		public static Implementation.Parser TestParser() =>
+			new(state: new Implementation.Parser.ParserState(
+					Registers: ImmutableDictionary<string, MarkupString.MarkupStringModule.MarkupString>.Empty,
+					CurrentEvaluation: null,
+					Function: null,
+					Command: "think",
+					Arguments: [],
+					Executor: new Definitions.DBref(),
+					Enactor: new Definitions.DBref(),
+					Caller: new Definitions.DBref()
+				));
 	}
 }

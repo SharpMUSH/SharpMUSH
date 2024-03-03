@@ -21,7 +21,7 @@ public class CommandUnitTests : BaseUnitTest
 	public void Test(string str)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var parser = new Implementation.Parser();
+		var parser = TestParser();
 		var result = parser.CommandListParse(str)?.Message;
 
 		Console.WriteLine(string.Join("", result));
@@ -36,7 +36,7 @@ public class CommandUnitTests : BaseUnitTest
 	public void TestSingle(string str)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var parser = new Implementation.Parser();
+		var parser = TestParser();
 		var result = parser.CommandParse(str)?.Message;
 
 		Console.WriteLine(string.Join("", result));

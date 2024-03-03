@@ -21,11 +21,11 @@ namespace AntlrCSharp.Implementation.Functions
 		};
 
 		[PennFunction(Name = "isjson", MaxArgs = 1, Flags = FunctionFlags.Regular)]
-		public static CallState IsJSON(Parser _1, PennFunctionAttribute _2, params CallState[] args)
+		public static CallState IsJSON(Parser parser, PennFunctionAttribute _2)
 		{
 			try
 			{
-				using var jsonDoc = JsonDocument.Parse(args[0].Message!.ToString());
+				using var jsonDoc = JsonDocument.Parse(parser.State.Peek().Arguments[0].Message!.ToString());
 				return new CallState("1");
 			}
 			catch (JsonException)
@@ -35,9 +35,9 @@ namespace AntlrCSharp.Implementation.Functions
 		}
 
 		[PennFunction(Name = "json", Flags = FunctionFlags.Regular)]
-		public static CallState JSON(Parser _1, PennFunctionAttribute _2, params CallState[] args)
-			=> JsonFunctions.TryGetValue(MModule.plainText(args[0].Message!).ToLower(), out var fun)
-				? fun(args)
+		public static CallState JSON(Parser parser, PennFunctionAttribute _2)
+			=> JsonFunctions.TryGetValue(MModule.plainText(parser.State.Peek().Arguments[0].Message!).ToLower(), out var fun)
+				? fun(parser.State.Peek().Arguments)
 				: new CallState(MModule.single("#-1 Invalid Type"));
 
 		private static CallState NullJSON(CallState[] args)

@@ -9,6 +9,7 @@
 		public const string ErrorNumber = "#-1 ARGUMENT MUST BE NUMBER";
 		public const string ErrorNumbers = "#-1 ARGUMENTS MUST BE NUMBERS";
 		public const string ErrorInvoke = "#-1 FUNCTION INVOCATION LIMIT EXCEEDED";
+		public const string ErrorRecursion = "#-1 FUNCTION RECURSION LIMIT EXCEEDED";
 		public const string ErrorCall = "#-1 CALL LIMIT EXCEEDED";
 		public const string ErrorPerm = "#-1 PERMISSION DENIED";
 		public const string ErrorAttrPermissions = "#-1 NO PERMISSION TO GET ATTRIBUTE";

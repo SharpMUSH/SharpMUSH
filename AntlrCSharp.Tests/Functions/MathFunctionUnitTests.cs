@@ -13,7 +13,7 @@
 		{
 			Console.WriteLine("Testing: {0}", str);
 
-			var parser = new Implementation.Parser();
+			var parser = TestParser();
 			var result = parser.FunctionParse(str)?.Message?.ToString();
 
 			Assert.AreEqual(expected, result);
