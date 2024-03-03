@@ -3,7 +3,7 @@
 open System.Runtime.InteropServices
 
 module MarkupImplementation =
-  open ANSIConsole
+  open ANSILibrary
 
   type Markup =
       abstract member Wrap: string -> string
@@ -67,18 +67,18 @@ module MarkupImplementation =
     interface Markup with
       override this.Wrap (text: string) : string =
         let applyDetails (details: AnsiStructure) (text: string) =
-          StringExtensions.ToANSI text
-          |> (fun t -> match details.LinkUrl with | null -> t | url -> StringExtensions.Link(t, url))
-          |> (fun t -> match details.Foreground with | null -> t | fg -> StringExtensions.Color(t, fg))
-          |> (fun t -> match details.Background with | null -> t | bg -> StringExtensions.Background(t, bg))
-          |> (fun t -> if details.Blink then StringExtensions.Blink(t) else t)
-          |> (fun t -> if details.Bold then StringExtensions.Bold(t) else t)
-          |> (fun t -> if details.Faint then StringExtensions.Faint(t) else t)
-          |> (fun t -> if details.Italic then StringExtensions.Italic(t) else t)
-          |> (fun t -> if details.Overlined then StringExtensions.Overlined(t) else t)
-          |> (fun t -> if details.Underlined then StringExtensions.Underlined(t) else t)
-          |> (fun t -> if details.StrikeThrough then StringExtensions.StrikeThrough(t) else t)
-          |> (fun t -> if details.Inverted then StringExtensions.Inverted(t) else t)
-          |> (fun t -> if details.Clear then StringExtensions.Clear(t) else t)
+          StringExtensions.toANSI text
+          |> (fun t -> match details.LinkUrl with | null -> t | url -> StringExtensions.linkANSI t url)
+          |> (fun t -> match details.Foreground with | null -> t | fg -> StringExtensions.colorString t fg)
+          |> (fun t -> match details.Background with | null -> t | bg -> StringExtensions.backgroundString t bg)
+          |> (fun t -> if details.Blink then StringExtensions.blinkANSI(t) else t)
+          |> (fun t -> if details.Bold then StringExtensions.boldANSI(t) else t)
+          |> (fun t -> if details.Faint then StringExtensions.faintANSI(t) else t)
+          |> (fun t -> if details.Italic then StringExtensions.italicANSI(t) else t)
+          |> (fun t -> if details.Overlined then StringExtensions.overlinedANSI(t) else t)
+          |> (fun t -> if details.Underlined then StringExtensions.underlinedANSI(t) else t)
+          |> (fun t -> if details.StrikeThrough then StringExtensions.strikeThroughANSI(t) else t)
+          |> (fun t -> if details.Inverted then StringExtensions.invertedANSI(t) else t)
+          |> (fun t -> if details.Clear then StringExtensions.clearANSI(t) else t)
 
         (applyDetails details text).ToString()
