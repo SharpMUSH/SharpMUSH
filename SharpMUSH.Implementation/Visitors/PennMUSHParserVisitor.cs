@@ -4,12 +4,12 @@ using Serilog;
 namespace AntlrCSharp.Implementation.Visitors
 {
 	/// <summary>
-	/// This class implements the PennMUSHParserBaseVisitor from the Generated code.
+	/// This class implements the SharpMUSHParserBaseVisitor from the Generated code.
 	/// If additional pieces of the parse-tree are added, the Generated project must be re-generated 
 	/// and new Visitors may need to be added.
 	/// </summary>
 	/// <param name="parser">The Parser, so that inner functions can force a parser-call.</param>
-	public class PennMUSHParserVisitor(Parser parser) : PennMUSHParserBaseVisitor<CallState?>
+	public class SharpMUSHParserVisitor(Parser parser) : SharpMUSHParserBaseVisitor<CallState?>
 	{
 		protected override CallState? AggregateResult(CallState? aggregate, CallState? nextResult)
 		{
@@ -20,7 +20,7 @@ namespace AntlrCSharp.Implementation.Visitors
 			return aggregate ?? nextResult ?? null;
 		}
 
-		public override CallState? VisitFunction([NotNull] PennMUSHParser.FunctionContext context)
+		public override CallState? VisitFunction([NotNull] SharpMUSHParser.FunctionContext context)
 		{
 			// TODO: There needs to be a standard behavior for functions, rather than making /each/ function call their contents.
 			//       Instead, a function like if() should be explicitly stating if a function call needs to be evaluated or not.
@@ -31,7 +31,7 @@ namespace AntlrCSharp.Implementation.Visitors
 				.Select(x => new CallState(x.GetText(), context.Depth()))
 				?? [new CallState("", context.Depth())];
 
-			// TODO: There seems to be a standard in PennMUSH that if there is no argument, it passes in an Empty String
+			// TODO: There seems to be a standard in PennMUSH and its brethern that if there is no argument, it passes in an Empty String
 			// as the one and only argument.
 
 			var result = Functions.Functions.CallFunction(functionName.ToLower(), parser, context, arguments.ToArray());
@@ -41,16 +41,16 @@ namespace AntlrCSharp.Implementation.Visitors
 			return result;
 		}
 
-		public override CallState? VisitEvaluationString([NotNull] PennMUSHParser.EvaluationStringContext context) 
+		public override CallState? VisitEvaluationString([NotNull] SharpMUSHParser.EvaluationStringContext context) 
 			=> base.VisitChildren(context) ?? new CallState(context.GetText(), context.Depth());
 
-		public override CallState? VisitExplicitEvaluationString([NotNull] PennMUSHParser.ExplicitEvaluationStringContext context)
+		public override CallState? VisitExplicitEvaluationString([NotNull] SharpMUSHParser.ExplicitEvaluationStringContext context)
 			=> base.VisitChildren(context) ?? new CallState(context.GetText(), context.Depth());
 
-		public override CallState? VisitGenericText([NotNull] PennMUSHParser.GenericTextContext context)
+		public override CallState? VisitGenericText([NotNull] SharpMUSHParser.GenericTextContext context)
 			=> base.VisitChildren(context) ?? new CallState(context.GetText(), context.Depth());
 
-		public override CallState? VisitValidSubstitution([NotNull] PennMUSHParser.ValidSubstitutionContext context)
+		public override CallState? VisitValidSubstitution([NotNull] SharpMUSHParser.ValidSubstitutionContext context)
 		{
 			var woof = context.GetText();
 			Log.Logger.Information("VisitValidSubstitution: {Text}", woof);
@@ -58,7 +58,7 @@ namespace AntlrCSharp.Implementation.Visitors
 			return children ?? new CallState(woof, context.Depth());
 		}
 
-		public override CallState? VisitCommand([NotNull] PennMUSHParser.CommandContext context)
+		public override CallState? VisitCommand([NotNull] SharpMUSHParser.CommandContext context)
 		{
 			var woof = context.GetText();
 			Log.Logger.Information("VisitCommand: {Text}", woof);
@@ -66,7 +66,7 @@ namespace AntlrCSharp.Implementation.Visitors
 			return children ?? new CallState(woof, context.Depth());
 		}
 
-		public override CallState? VisitCommandString([NotNull] PennMUSHParser.CommandStringContext context)
+		public override CallState? VisitCommandString([NotNull] SharpMUSHParser.CommandStringContext context)
 		{
 			var woof = context.GetText();
 			Log.Logger.Information("VisitCommandString: {Text}", woof);
@@ -74,7 +74,7 @@ namespace AntlrCSharp.Implementation.Visitors
 			return children ?? new CallState(woof, context.Depth());
 		}
 
-		public override CallState? VisitCommandList([NotNull] PennMUSHParser.CommandListContext context)
+		public override CallState? VisitCommandList([NotNull] SharpMUSHParser.CommandListContext context)
 		{
 			var woof = context.GetText();
 			Log.Logger.Information("VisitCommandList: {Text}", woof);
@@ -82,7 +82,7 @@ namespace AntlrCSharp.Implementation.Visitors
 			return children ?? new CallState(woof, context.Depth());
 		}
 
-		public override CallState? VisitSingleCommandString([NotNull] PennMUSHParser.SingleCommandStringContext context)
+		public override CallState? VisitSingleCommandString([NotNull] SharpMUSHParser.SingleCommandStringContext context)
 		{
 			var woof = context.GetText();
 			Log.Logger.Information("VisitSingleCommandString: {Text}", woof);
@@ -90,7 +90,7 @@ namespace AntlrCSharp.Implementation.Visitors
 			return children ?? new CallState(woof, context.Depth());
 		}
 
-		public override CallState? VisitEscapedText([NotNull] PennMUSHParser.EscapedTextContext context) 
+		public override CallState? VisitEscapedText([NotNull] SharpMUSHParser.EscapedTextContext context) 
 			=> base.VisitChildren(context) ?? new CallState(context.GetText().Remove(0, 1), context.Depth());
 	}
 }

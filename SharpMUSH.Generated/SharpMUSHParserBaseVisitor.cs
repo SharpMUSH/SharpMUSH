@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-// Generated from d:/CSharpPennMUSH/AntlrCSharp.Generated/PennMUSHParser.g4 by ANTLR 4.13.1
+// Generated from d:/CSharpPennMUSH/SharpMUSH.Generated/SharpMUSHParser.g4 by ANTLR 4.13.1
 
 // Unreachable code detected
 #pragma warning disable 0162
@@ -25,7 +25,7 @@ using IToken = Antlr4.Runtime.IToken;
 using ParserRuleContext = Antlr4.Runtime.ParserRuleContext;
 
 /// <summary>
-/// This class provides an empty implementation of <see cref="IPennMUSHParserVisitor{Result}"/>,
+/// This class provides an empty implementation of <see cref="ISharpMUSHParserVisitor{Result}"/>,
 /// which can be extended to create a visitor which only needs to handle a subset
 /// of the available methods.
 /// </summary>
@@ -33,9 +33,9 @@ using ParserRuleContext = Antlr4.Runtime.ParserRuleContext;
 [System.CodeDom.Compiler.GeneratedCode("ANTLR", "4.13.1")]
 [System.Diagnostics.DebuggerNonUserCode]
 [System.CLSCompliant(false)]
-public partial class PennMUSHParserBaseVisitor<Result> : AbstractParseTreeVisitor<Result>, IPennMUSHParserVisitor<Result> {
+public partial class SharpMUSHParserBaseVisitor<Result> : AbstractParseTreeVisitor<Result>, ISharpMUSHParserVisitor<Result> {
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="PennMUSHParser.singleCommandString"/>.
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.singleCommandString"/>.
 	/// <para>
 	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
 	/// on <paramref name="context"/>.
@@ -43,9 +43,9 @@ public partial class PennMUSHParserBaseVisitor<Result> : AbstractParseTreeVisito
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	public virtual Result VisitSingleCommandString([NotNull] PennMUSHParser.SingleCommandStringContext context) { return VisitChildren(context); }
+	public virtual Result VisitSingleCommandString([NotNull] SharpMUSHParser.SingleCommandStringContext context) { return VisitChildren(context); }
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="PennMUSHParser.commandString"/>.
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.commandString"/>.
 	/// <para>
 	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
 	/// on <paramref name="context"/>.
@@ -53,9 +53,9 @@ public partial class PennMUSHParserBaseVisitor<Result> : AbstractParseTreeVisito
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	public virtual Result VisitCommandString([NotNull] PennMUSHParser.CommandStringContext context) { return VisitChildren(context); }
+	public virtual Result VisitCommandString([NotNull] SharpMUSHParser.CommandStringContext context) { return VisitChildren(context); }
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="PennMUSHParser.commandList"/>.
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.commandList"/>.
 	/// <para>
 	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
 	/// on <paramref name="context"/>.
@@ -63,9 +63,9 @@ public partial class PennMUSHParserBaseVisitor<Result> : AbstractParseTreeVisito
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	public virtual Result VisitCommandList([NotNull] PennMUSHParser.CommandListContext context) { return VisitChildren(context); }
+	public virtual Result VisitCommandList([NotNull] SharpMUSHParser.CommandListContext context) { return VisitChildren(context); }
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="PennMUSHParser.command"/>.
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.command"/>.
 	/// <para>
 	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
 	/// on <paramref name="context"/>.
@@ -73,9 +73,9 @@ public partial class PennMUSHParserBaseVisitor<Result> : AbstractParseTreeVisito
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	public virtual Result VisitCommand([NotNull] PennMUSHParser.CommandContext context) { return VisitChildren(context); }
+	public virtual Result VisitCommand([NotNull] SharpMUSHParser.CommandContext context) { return VisitChildren(context); }
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="PennMUSHParser.plainString"/>.
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.plainString"/>.
 	/// <para>
 	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
 	/// on <paramref name="context"/>.
@@ -83,9 +83,9 @@ public partial class PennMUSHParserBaseVisitor<Result> : AbstractParseTreeVisito
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	public virtual Result VisitPlainString([NotNull] PennMUSHParser.PlainStringContext context) { return VisitChildren(context); }
+	public virtual Result VisitPlainString([NotNull] SharpMUSHParser.PlainStringContext context) { return VisitChildren(context); }
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="PennMUSHParser.evaluationString"/>.
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.evaluationString"/>.
 	/// <para>
 	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
 	/// on <paramref name="context"/>.
@@ -93,9 +93,9 @@ public partial class PennMUSHParserBaseVisitor<Result> : AbstractParseTreeVisito
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	public virtual Result VisitEvaluationString([NotNull] PennMUSHParser.EvaluationStringContext context) { return VisitChildren(context); }
+	public virtual Result VisitEvaluationString([NotNull] SharpMUSHParser.EvaluationStringContext context) { return VisitChildren(context); }
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="PennMUSHParser.explicitEvaluationString"/>.
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.explicitEvaluationString"/>.
 	/// <para>
 	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
 	/// on <paramref name="context"/>.
@@ -103,9 +103,9 @@ public partial class PennMUSHParserBaseVisitor<Result> : AbstractParseTreeVisito
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	public virtual Result VisitExplicitEvaluationString([NotNull] PennMUSHParser.ExplicitEvaluationStringContext context) { return VisitChildren(context); }
+	public virtual Result VisitExplicitEvaluationString([NotNull] SharpMUSHParser.ExplicitEvaluationStringContext context) { return VisitChildren(context); }
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="PennMUSHParser.explicitEvaluationStringSubstitution"/>.
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.explicitEvaluationStringSubstitution"/>.
 	/// <para>
 	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
 	/// on <paramref name="context"/>.
@@ -113,9 +113,9 @@ public partial class PennMUSHParserBaseVisitor<Result> : AbstractParseTreeVisito
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	public virtual Result VisitExplicitEvaluationStringSubstitution([NotNull] PennMUSHParser.ExplicitEvaluationStringSubstitutionContext context) { return VisitChildren(context); }
+	public virtual Result VisitExplicitEvaluationStringSubstitution([NotNull] SharpMUSHParser.ExplicitEvaluationStringSubstitutionContext context) { return VisitChildren(context); }
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="PennMUSHParser.explicitEvaluationStringFunction"/>.
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.explicitEvaluationStringFunction"/>.
 	/// <para>
 	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
 	/// on <paramref name="context"/>.
@@ -123,9 +123,9 @@ public partial class PennMUSHParserBaseVisitor<Result> : AbstractParseTreeVisito
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	public virtual Result VisitExplicitEvaluationStringFunction([NotNull] PennMUSHParser.ExplicitEvaluationStringFunctionContext context) { return VisitChildren(context); }
+	public virtual Result VisitExplicitEvaluationStringFunction([NotNull] SharpMUSHParser.ExplicitEvaluationStringFunctionContext context) { return VisitChildren(context); }
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="PennMUSHParser.explicitEvaluationText"/>.
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.explicitEvaluationText"/>.
 	/// <para>
 	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
 	/// on <paramref name="context"/>.
@@ -133,9 +133,9 @@ public partial class PennMUSHParserBaseVisitor<Result> : AbstractParseTreeVisito
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	public virtual Result VisitExplicitEvaluationText([NotNull] PennMUSHParser.ExplicitEvaluationTextContext context) { return VisitChildren(context); }
+	public virtual Result VisitExplicitEvaluationText([NotNull] SharpMUSHParser.ExplicitEvaluationTextContext context) { return VisitChildren(context); }
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="PennMUSHParser.funName"/>.
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.funName"/>.
 	/// <para>
 	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
 	/// on <paramref name="context"/>.
@@ -143,9 +143,9 @@ public partial class PennMUSHParserBaseVisitor<Result> : AbstractParseTreeVisito
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	public virtual Result VisitFunName([NotNull] PennMUSHParser.FunNameContext context) { return VisitChildren(context); }
+	public virtual Result VisitFunName([NotNull] SharpMUSHParser.FunNameContext context) { return VisitChildren(context); }
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="PennMUSHParser.function"/>.
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.function"/>.
 	/// <para>
 	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
 	/// on <paramref name="context"/>.
@@ -153,9 +153,9 @@ public partial class PennMUSHParserBaseVisitor<Result> : AbstractParseTreeVisito
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	public virtual Result VisitFunction([NotNull] PennMUSHParser.FunctionContext context) { return VisitChildren(context); }
+	public virtual Result VisitFunction([NotNull] SharpMUSHParser.FunctionContext context) { return VisitChildren(context); }
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="PennMUSHParser.funArguments"/>.
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.funArguments"/>.
 	/// <para>
 	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
 	/// on <paramref name="context"/>.
@@ -163,9 +163,9 @@ public partial class PennMUSHParserBaseVisitor<Result> : AbstractParseTreeVisito
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	public virtual Result VisitFunArguments([NotNull] PennMUSHParser.FunArgumentsContext context) { return VisitChildren(context); }
+	public virtual Result VisitFunArguments([NotNull] SharpMUSHParser.FunArgumentsContext context) { return VisitChildren(context); }
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="PennMUSHParser.validSubstitution"/>.
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.validSubstitution"/>.
 	/// <para>
 	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
 	/// on <paramref name="context"/>.
@@ -173,9 +173,9 @@ public partial class PennMUSHParserBaseVisitor<Result> : AbstractParseTreeVisito
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	public virtual Result VisitValidSubstitution([NotNull] PennMUSHParser.ValidSubstitutionContext context) { return VisitChildren(context); }
+	public virtual Result VisitValidSubstitution([NotNull] SharpMUSHParser.ValidSubstitutionContext context) { return VisitChildren(context); }
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="PennMUSHParser.genericText"/>.
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.genericText"/>.
 	/// <para>
 	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
 	/// on <paramref name="context"/>.
@@ -183,9 +183,9 @@ public partial class PennMUSHParserBaseVisitor<Result> : AbstractParseTreeVisito
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	public virtual Result VisitGenericText([NotNull] PennMUSHParser.GenericTextContext context) { return VisitChildren(context); }
+	public virtual Result VisitGenericText([NotNull] SharpMUSHParser.GenericTextContext context) { return VisitChildren(context); }
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="PennMUSHParser.escapedText"/>.
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.escapedText"/>.
 	/// <para>
 	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
 	/// on <paramref name="context"/>.
@@ -193,9 +193,9 @@ public partial class PennMUSHParserBaseVisitor<Result> : AbstractParseTreeVisito
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	public virtual Result VisitEscapedText([NotNull] PennMUSHParser.EscapedTextContext context) { return VisitChildren(context); }
+	public virtual Result VisitEscapedText([NotNull] SharpMUSHParser.EscapedTextContext context) { return VisitChildren(context); }
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="PennMUSHParser.ansi"/>.
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.ansi"/>.
 	/// <para>
 	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
 	/// on <paramref name="context"/>.
@@ -203,5 +203,5 @@ public partial class PennMUSHParserBaseVisitor<Result> : AbstractParseTreeVisito
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	public virtual Result VisitAnsi([NotNull] PennMUSHParser.AnsiContext context) { return VisitChildren(context); }
+	public virtual Result VisitAnsi([NotNull] SharpMUSHParser.AnsiContext context) { return VisitChildren(context); }
 }

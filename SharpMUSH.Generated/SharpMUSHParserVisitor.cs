@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-// Generated from d:/CSharpPennMUSH/AntlrCSharp.Generated/PennMUSHParser.g4 by ANTLR 4.13.1
+// Generated from d:/CSharpPennMUSH/SharpMUSH.Generated/SharpMUSHParser.g4 by ANTLR 4.13.1
 
 // Unreachable code detected
 #pragma warning disable 0162
@@ -25,112 +25,112 @@ using IToken = Antlr4.Runtime.IToken;
 
 /// <summary>
 /// This interface defines a complete generic visitor for a parse tree produced
-/// by <see cref="PennMUSHParser"/>.
+/// by <see cref="SharpMUSHParser"/>.
 /// </summary>
 /// <typeparam name="Result">The return type of the visit operation.</typeparam>
 [System.CodeDom.Compiler.GeneratedCode("ANTLR", "4.13.1")]
 [System.CLSCompliant(false)]
-public interface IPennMUSHParserVisitor<Result> : IParseTreeVisitor<Result> {
+public interface ISharpMUSHParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="PennMUSHParser.singleCommandString"/>.
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.singleCommandString"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitSingleCommandString([NotNull] PennMUSHParser.SingleCommandStringContext context);
+	Result VisitSingleCommandString([NotNull] SharpMUSHParser.SingleCommandStringContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="PennMUSHParser.commandString"/>.
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.commandString"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitCommandString([NotNull] PennMUSHParser.CommandStringContext context);
+	Result VisitCommandString([NotNull] SharpMUSHParser.CommandStringContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="PennMUSHParser.commandList"/>.
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.commandList"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitCommandList([NotNull] PennMUSHParser.CommandListContext context);
+	Result VisitCommandList([NotNull] SharpMUSHParser.CommandListContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="PennMUSHParser.command"/>.
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.command"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitCommand([NotNull] PennMUSHParser.CommandContext context);
+	Result VisitCommand([NotNull] SharpMUSHParser.CommandContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="PennMUSHParser.plainString"/>.
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.plainString"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitPlainString([NotNull] PennMUSHParser.PlainStringContext context);
+	Result VisitPlainString([NotNull] SharpMUSHParser.PlainStringContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="PennMUSHParser.evaluationString"/>.
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.evaluationString"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitEvaluationString([NotNull] PennMUSHParser.EvaluationStringContext context);
+	Result VisitEvaluationString([NotNull] SharpMUSHParser.EvaluationStringContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="PennMUSHParser.explicitEvaluationString"/>.
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.explicitEvaluationString"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitExplicitEvaluationString([NotNull] PennMUSHParser.ExplicitEvaluationStringContext context);
+	Result VisitExplicitEvaluationString([NotNull] SharpMUSHParser.ExplicitEvaluationStringContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="PennMUSHParser.explicitEvaluationStringSubstitution"/>.
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.explicitEvaluationStringSubstitution"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitExplicitEvaluationStringSubstitution([NotNull] PennMUSHParser.ExplicitEvaluationStringSubstitutionContext context);
+	Result VisitExplicitEvaluationStringSubstitution([NotNull] SharpMUSHParser.ExplicitEvaluationStringSubstitutionContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="PennMUSHParser.explicitEvaluationStringFunction"/>.
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.explicitEvaluationStringFunction"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitExplicitEvaluationStringFunction([NotNull] PennMUSHParser.ExplicitEvaluationStringFunctionContext context);
+	Result VisitExplicitEvaluationStringFunction([NotNull] SharpMUSHParser.ExplicitEvaluationStringFunctionContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="PennMUSHParser.explicitEvaluationText"/>.
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.explicitEvaluationText"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitExplicitEvaluationText([NotNull] PennMUSHParser.ExplicitEvaluationTextContext context);
+	Result VisitExplicitEvaluationText([NotNull] SharpMUSHParser.ExplicitEvaluationTextContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="PennMUSHParser.funName"/>.
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.funName"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitFunName([NotNull] PennMUSHParser.FunNameContext context);
+	Result VisitFunName([NotNull] SharpMUSHParser.FunNameContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="PennMUSHParser.function"/>.
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.function"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitFunction([NotNull] PennMUSHParser.FunctionContext context);
+	Result VisitFunction([NotNull] SharpMUSHParser.FunctionContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="PennMUSHParser.funArguments"/>.
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.funArguments"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitFunArguments([NotNull] PennMUSHParser.FunArgumentsContext context);
+	Result VisitFunArguments([NotNull] SharpMUSHParser.FunArgumentsContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="PennMUSHParser.validSubstitution"/>.
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.validSubstitution"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitValidSubstitution([NotNull] PennMUSHParser.ValidSubstitutionContext context);
+	Result VisitValidSubstitution([NotNull] SharpMUSHParser.ValidSubstitutionContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="PennMUSHParser.genericText"/>.
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.genericText"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitGenericText([NotNull] PennMUSHParser.GenericTextContext context);
+	Result VisitGenericText([NotNull] SharpMUSHParser.GenericTextContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="PennMUSHParser.escapedText"/>.
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.escapedText"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitEscapedText([NotNull] PennMUSHParser.EscapedTextContext context);
+	Result VisitEscapedText([NotNull] SharpMUSHParser.EscapedTextContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="PennMUSHParser.ansi"/>.
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.ansi"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitAnsi([NotNull] PennMUSHParser.AnsiContext context);
+	Result VisitAnsi([NotNull] SharpMUSHParser.AnsiContext context);
 }

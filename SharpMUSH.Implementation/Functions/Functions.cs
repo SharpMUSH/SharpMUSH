@@ -1,7 +1,7 @@
 ﻿using AntlrCSharp.Implementation.Definitions;
 using OneOf;
 using System.Reflection;
-using static PennMUSHParser;
+using static SharpMUSHParser;
 
 namespace AntlrCSharp.Implementation.Functions
 {

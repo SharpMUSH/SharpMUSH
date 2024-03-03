@@ -1,4 +1,4 @@
-lexer grammar PennMUSHLexer;
+lexer grammar SharpMUSHLexer;
 
 /*
  * Lexer Rules   

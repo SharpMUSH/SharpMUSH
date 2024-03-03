@@ -1,7 +1,7 @@
-parser grammar PennMUSHParser;
+parser grammar SharpMUSHParser;
 
 options { 
-    tokenVocab=PennMUSHLexer; 
+    tokenVocab=SharpMUSHLexer; 
 }
 
 /*

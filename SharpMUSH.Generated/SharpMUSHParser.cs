@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-// Generated from d:/CSharpPennMUSH/AntlrCSharp.Generated/PennMUSHParser.g4 by ANTLR 4.13.1
+// Generated from d:/CSharpPennMUSH/SharpMUSH.Generated/SharpMUSHParser.g4 by ANTLR 4.13.1
 
 // Unreachable code detected
 #pragma warning disable 0162
@@ -32,7 +32,7 @@ using DFA = Antlr4.Runtime.Dfa.DFA;
 
 [System.CodeDom.Compiler.GeneratedCode("ANTLR", "4.13.1")]
 [System.CLSCompliant(false)]
-public partial class PennMUSHParser : Parser {
+public partial class SharpMUSHParser : Parser {
 	protected static DFA[] decisionToDFA;
 	protected static PredictionContextCache sharedContextCache = new PredictionContextCache();
 	public const int
@@ -89,22 +89,22 @@ public partial class PennMUSHParser : Parser {
 		}
 	}
 
-	public override string GrammarFileName { get { return "PennMUSHParser.g4"; } }
+	public override string GrammarFileName { get { return "SharpMUSHParser.g4"; } }
 
 	public override string[] RuleNames { get { return ruleNames; } }
 
 	public override int[] SerializedAtn { get { return _serializedATN; } }
 
-	static PennMUSHParser() {
+	static SharpMUSHParser() {
 		decisionToDFA = new DFA[_ATN.NumberOfDecisions];
 		for (int i = 0; i < _ATN.NumberOfDecisions; i++) {
 			decisionToDFA[i] = new DFA(_ATN.GetDecisionState(i), i);
 		}
 	}
 
-		public PennMUSHParser(ITokenStream input) : this(input, Console.Out, Console.Error) { }
+		public SharpMUSHParser(ITokenStream input) : this(input, Console.Out, Console.Error) { }
 
-		public PennMUSHParser(ITokenStream input, TextWriter output, TextWriter errorOutput)
+		public SharpMUSHParser(ITokenStream input, TextWriter output, TextWriter errorOutput)
 		: base(input, output, errorOutput)
 	{
 		Interpreter = new ParserATNSimulator(this, _ATN, decisionToDFA, sharedContextCache);
@@ -114,7 +114,7 @@ public partial class PennMUSHParser : Parser {
 		[System.Diagnostics.DebuggerNonUserCode] public CommandContext command() {
 			return GetRuleContext<CommandContext>(0);
 		}
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode Eof() { return GetToken(PennMUSHParser.Eof, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode Eof() { return GetToken(SharpMUSHParser.Eof, 0); }
 		public SingleCommandStringContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
 		{
@@ -122,7 +122,7 @@ public partial class PennMUSHParser : Parser {
 		public override int RuleIndex { get { return RULE_singleCommandString; } }
 		[System.Diagnostics.DebuggerNonUserCode]
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IPennMUSHParserVisitor<TResult> typedVisitor = visitor as IPennMUSHParserVisitor<TResult>;
+			ISharpMUSHParserVisitor<TResult> typedVisitor = visitor as ISharpMUSHParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitSingleCommandString(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -156,7 +156,7 @@ public partial class PennMUSHParser : Parser {
 		[System.Diagnostics.DebuggerNonUserCode] public CommandListContext commandList() {
 			return GetRuleContext<CommandListContext>(0);
 		}
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode Eof() { return GetToken(PennMUSHParser.Eof, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode Eof() { return GetToken(SharpMUSHParser.Eof, 0); }
 		public CommandStringContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
 		{
@@ -164,7 +164,7 @@ public partial class PennMUSHParser : Parser {
 		public override int RuleIndex { get { return RULE_commandString; } }
 		[System.Diagnostics.DebuggerNonUserCode]
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IPennMUSHParserVisitor<TResult> typedVisitor = visitor as IPennMUSHParserVisitor<TResult>;
+			ISharpMUSHParserVisitor<TResult> typedVisitor = visitor as ISharpMUSHParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitCommandString(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -201,9 +201,9 @@ public partial class PennMUSHParser : Parser {
 		[System.Diagnostics.DebuggerNonUserCode] public CommandContext command(int i) {
 			return GetRuleContext<CommandContext>(i);
 		}
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode[] SEMICOLON() { return GetTokens(PennMUSHParser.SEMICOLON); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode[] SEMICOLON() { return GetTokens(SharpMUSHParser.SEMICOLON); }
 		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode SEMICOLON(int i) {
-			return GetToken(PennMUSHParser.SEMICOLON, i);
+			return GetToken(SharpMUSHParser.SEMICOLON, i);
 		}
 		public CommandListContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
@@ -212,7 +212,7 @@ public partial class PennMUSHParser : Parser {
 		public override int RuleIndex { get { return RULE_commandList; } }
 		[System.Diagnostics.DebuggerNonUserCode]
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IPennMUSHParserVisitor<TResult> typedVisitor = visitor as IPennMUSHParserVisitor<TResult>;
+			ISharpMUSHParserVisitor<TResult> typedVisitor = visitor as ISharpMUSHParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitCommandList(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -271,7 +271,7 @@ public partial class PennMUSHParser : Parser {
 		public override int RuleIndex { get { return RULE_command; } }
 		[System.Diagnostics.DebuggerNonUserCode]
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IPennMUSHParserVisitor<TResult> typedVisitor = visitor as IPennMUSHParserVisitor<TResult>;
+			ISharpMUSHParserVisitor<TResult> typedVisitor = visitor as ISharpMUSHParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitCommand(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -322,7 +322,7 @@ public partial class PennMUSHParser : Parser {
 		[System.Diagnostics.DebuggerNonUserCode] public EvaluationStringContext evaluationString() {
 			return GetRuleContext<EvaluationStringContext>(0);
 		}
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode Eof() { return GetToken(PennMUSHParser.Eof, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode Eof() { return GetToken(SharpMUSHParser.Eof, 0); }
 		public PlainStringContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
 		{
@@ -330,7 +330,7 @@ public partial class PennMUSHParser : Parser {
 		public override int RuleIndex { get { return RULE_plainString; } }
 		[System.Diagnostics.DebuggerNonUserCode]
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IPennMUSHParserVisitor<TResult> typedVisitor = visitor as IPennMUSHParserVisitor<TResult>;
+			ISharpMUSHParserVisitor<TResult> typedVisitor = visitor as ISharpMUSHParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitPlainString(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -361,11 +361,11 @@ public partial class PennMUSHParser : Parser {
 	}
 
 	public partial class EvaluationStringContext : ParserRuleContext {
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode OBRACE() { return GetToken(PennMUSHParser.OBRACE, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode OBRACE() { return GetToken(SharpMUSHParser.OBRACE, 0); }
 		[System.Diagnostics.DebuggerNonUserCode] public EvaluationStringContext evaluationString() {
 			return GetRuleContext<EvaluationStringContext>(0);
 		}
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode CBRACE() { return GetToken(PennMUSHParser.CBRACE, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode CBRACE() { return GetToken(SharpMUSHParser.CBRACE, 0); }
 		[System.Diagnostics.DebuggerNonUserCode] public FunctionContext function() {
 			return GetRuleContext<FunctionContext>(0);
 		}
@@ -382,7 +382,7 @@ public partial class PennMUSHParser : Parser {
 		public override int RuleIndex { get { return RULE_evaluationString; } }
 		[System.Diagnostics.DebuggerNonUserCode]
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IPennMUSHParserVisitor<TResult> typedVisitor = visitor as IPennMUSHParserVisitor<TResult>;
+			ISharpMUSHParserVisitor<TResult> typedVisitor = visitor as ISharpMUSHParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitEvaluationString(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -452,14 +452,14 @@ public partial class PennMUSHParser : Parser {
 	}
 
 	public partial class ExplicitEvaluationStringContext : ParserRuleContext {
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode OBRACE() { return GetToken(PennMUSHParser.OBRACE, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode OBRACE() { return GetToken(SharpMUSHParser.OBRACE, 0); }
 		[System.Diagnostics.DebuggerNonUserCode] public ExplicitEvaluationStringContext[] explicitEvaluationString() {
 			return GetRuleContexts<ExplicitEvaluationStringContext>();
 		}
 		[System.Diagnostics.DebuggerNonUserCode] public ExplicitEvaluationStringContext explicitEvaluationString(int i) {
 			return GetRuleContext<ExplicitEvaluationStringContext>(i);
 		}
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode CBRACE() { return GetToken(PennMUSHParser.CBRACE, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode CBRACE() { return GetToken(SharpMUSHParser.CBRACE, 0); }
 		[System.Diagnostics.DebuggerNonUserCode] public ExplicitEvaluationStringSubstitutionContext explicitEvaluationStringSubstitution() {
 			return GetRuleContext<ExplicitEvaluationStringSubstitutionContext>(0);
 		}
@@ -476,7 +476,7 @@ public partial class PennMUSHParser : Parser {
 		public override int RuleIndex { get { return RULE_explicitEvaluationString; } }
 		[System.Diagnostics.DebuggerNonUserCode]
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IPennMUSHParserVisitor<TResult> typedVisitor = visitor as IPennMUSHParserVisitor<TResult>;
+			ISharpMUSHParserVisitor<TResult> typedVisitor = visitor as ISharpMUSHParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitExplicitEvaluationString(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -585,7 +585,7 @@ public partial class PennMUSHParser : Parser {
 	}
 
 	public partial class ExplicitEvaluationStringSubstitutionContext : ParserRuleContext {
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode PERCENT() { return GetToken(PennMUSHParser.PERCENT, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode PERCENT() { return GetToken(SharpMUSHParser.PERCENT, 0); }
 		[System.Diagnostics.DebuggerNonUserCode] public ValidSubstitutionContext validSubstitution() {
 			return GetRuleContext<ValidSubstitutionContext>(0);
 		}
@@ -596,7 +596,7 @@ public partial class PennMUSHParser : Parser {
 		public override int RuleIndex { get { return RULE_explicitEvaluationStringSubstitution; } }
 		[System.Diagnostics.DebuggerNonUserCode]
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IPennMUSHParserVisitor<TResult> typedVisitor = visitor as IPennMUSHParserVisitor<TResult>;
+			ISharpMUSHParserVisitor<TResult> typedVisitor = visitor as ISharpMUSHParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitExplicitEvaluationStringSubstitution(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -627,11 +627,11 @@ public partial class PennMUSHParser : Parser {
 	}
 
 	public partial class ExplicitEvaluationStringFunctionContext : ParserRuleContext {
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode OBRACK() { return GetToken(PennMUSHParser.OBRACK, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode OBRACK() { return GetToken(SharpMUSHParser.OBRACK, 0); }
 		[System.Diagnostics.DebuggerNonUserCode] public FunctionContext function() {
 			return GetRuleContext<FunctionContext>(0);
 		}
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode CBRACK() { return GetToken(PennMUSHParser.CBRACK, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode CBRACK() { return GetToken(SharpMUSHParser.CBRACK, 0); }
 		public ExplicitEvaluationStringFunctionContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
 		{
@@ -639,7 +639,7 @@ public partial class PennMUSHParser : Parser {
 		public override int RuleIndex { get { return RULE_explicitEvaluationStringFunction; } }
 		[System.Diagnostics.DebuggerNonUserCode]
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IPennMUSHParserVisitor<TResult> typedVisitor = visitor as IPennMUSHParserVisitor<TResult>;
+			ISharpMUSHParserVisitor<TResult> typedVisitor = visitor as ISharpMUSHParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitExplicitEvaluationStringFunction(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -682,7 +682,7 @@ public partial class PennMUSHParser : Parser {
 		public override int RuleIndex { get { return RULE_explicitEvaluationText; } }
 		[System.Diagnostics.DebuggerNonUserCode]
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IPennMUSHParserVisitor<TResult> typedVisitor = visitor as IPennMUSHParserVisitor<TResult>;
+			ISharpMUSHParserVisitor<TResult> typedVisitor = visitor as ISharpMUSHParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitExplicitEvaluationText(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -711,7 +711,7 @@ public partial class PennMUSHParser : Parser {
 	}
 
 	public partial class FunNameContext : ParserRuleContext {
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode FUNCHAR() { return GetToken(PennMUSHParser.FUNCHAR, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode FUNCHAR() { return GetToken(SharpMUSHParser.FUNCHAR, 0); }
 		public FunNameContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
 		{
@@ -719,7 +719,7 @@ public partial class PennMUSHParser : Parser {
 		public override int RuleIndex { get { return RULE_funName; } }
 		[System.Diagnostics.DebuggerNonUserCode]
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IPennMUSHParserVisitor<TResult> typedVisitor = visitor as IPennMUSHParserVisitor<TResult>;
+			ISharpMUSHParserVisitor<TResult> typedVisitor = visitor as ISharpMUSHParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitFunName(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -751,8 +751,8 @@ public partial class PennMUSHParser : Parser {
 		[System.Diagnostics.DebuggerNonUserCode] public FunNameContext funName() {
 			return GetRuleContext<FunNameContext>(0);
 		}
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode OPAREN() { return GetToken(PennMUSHParser.OPAREN, 0); }
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode CPAREN() { return GetToken(PennMUSHParser.CPAREN, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode OPAREN() { return GetToken(SharpMUSHParser.OPAREN, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode CPAREN() { return GetToken(SharpMUSHParser.CPAREN, 0); }
 		[System.Diagnostics.DebuggerNonUserCode] public FunArgumentsContext funArguments() {
 			return GetRuleContext<FunArgumentsContext>(0);
 		}
@@ -763,7 +763,7 @@ public partial class PennMUSHParser : Parser {
 		public override int RuleIndex { get { return RULE_function; } }
 		[System.Diagnostics.DebuggerNonUserCode]
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IPennMUSHParserVisitor<TResult> typedVisitor = visitor as IPennMUSHParserVisitor<TResult>;
+			ISharpMUSHParserVisitor<TResult> typedVisitor = visitor as ISharpMUSHParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitFunction(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -821,9 +821,9 @@ public partial class PennMUSHParser : Parser {
 		[System.Diagnostics.DebuggerNonUserCode] public EvaluationStringContext evaluationString(int i) {
 			return GetRuleContext<EvaluationStringContext>(i);
 		}
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode[] COMMA() { return GetTokens(PennMUSHParser.COMMA); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode[] COMMA() { return GetTokens(SharpMUSHParser.COMMA); }
 		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode COMMA(int i) {
-			return GetToken(PennMUSHParser.COMMA, i);
+			return GetToken(SharpMUSHParser.COMMA, i);
 		}
 		public FunArgumentsContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
@@ -832,7 +832,7 @@ public partial class PennMUSHParser : Parser {
 		public override int RuleIndex { get { return RULE_funArguments; } }
 		[System.Diagnostics.DebuggerNonUserCode]
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IPennMUSHParserVisitor<TResult> typedVisitor = visitor as IPennMUSHParserVisitor<TResult>;
+			ISharpMUSHParserVisitor<TResult> typedVisitor = visitor as ISharpMUSHParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitFunArguments(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -891,41 +891,41 @@ public partial class PennMUSHParser : Parser {
 	}
 
 	public partial class ValidSubstitutionContext : ParserRuleContext {
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode REG_STARTCARET() { return GetToken(PennMUSHParser.REG_STARTCARET, 0); }
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode CCARET() { return GetToken(PennMUSHParser.CCARET, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode REG_STARTCARET() { return GetToken(SharpMUSHParser.REG_STARTCARET, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode CCARET() { return GetToken(SharpMUSHParser.CCARET, 0); }
 		[System.Diagnostics.DebuggerNonUserCode] public ExplicitEvaluationStringContext[] explicitEvaluationString() {
 			return GetRuleContexts<ExplicitEvaluationStringContext>();
 		}
 		[System.Diagnostics.DebuggerNonUserCode] public ExplicitEvaluationStringContext explicitEvaluationString(int i) {
 			return GetRuleContext<ExplicitEvaluationStringContext>(i);
 		}
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode SPACE() { return GetToken(PennMUSHParser.SPACE, 0); }
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode BLANKLINE() { return GetToken(PennMUSHParser.BLANKLINE, 0); }
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode TAB() { return GetToken(PennMUSHParser.TAB, 0); }
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode COLON() { return GetToken(PennMUSHParser.COLON, 0); }
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode DBREF() { return GetToken(PennMUSHParser.DBREF, 0); }
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode ENACTOR_NAME() { return GetToken(PennMUSHParser.ENACTOR_NAME, 0); }
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode CAP_ENACTOR_NAME() { return GetToken(PennMUSHParser.CAP_ENACTOR_NAME, 0); }
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode ACCENT_NAME() { return GetToken(PennMUSHParser.ACCENT_NAME, 0); }
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode MONIKER_NAME() { return GetToken(PennMUSHParser.MONIKER_NAME, 0); }
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode PERCENT() { return GetToken(PennMUSHParser.PERCENT, 0); }
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode SUB_PRONOUN() { return GetToken(PennMUSHParser.SUB_PRONOUN, 0); }
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode OBJ_PRONOUN() { return GetToken(PennMUSHParser.OBJ_PRONOUN, 0); }
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode POS_PRONOUN() { return GetToken(PennMUSHParser.POS_PRONOUN, 0); }
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode ABS_POS_PRONOUN() { return GetToken(PennMUSHParser.ABS_POS_PRONOUN, 0); }
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode VWX() { return GetToken(PennMUSHParser.VWX, 0); }
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode ARG_NUM() { return GetToken(PennMUSHParser.ARG_NUM, 0); }
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode CALLED_DBREF() { return GetToken(PennMUSHParser.CALLED_DBREF, 0); }
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode EXECUTOR_DBREF() { return GetToken(PennMUSHParser.EXECUTOR_DBREF, 0); }
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode LOCATION_DBREF() { return GetToken(PennMUSHParser.LOCATION_DBREF, 0); }
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode LASTCOMMAND_BEFORE_EVAL() { return GetToken(PennMUSHParser.LASTCOMMAND_BEFORE_EVAL, 0); }
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode LASTCOMMAND_AFTER_EVAL() { return GetToken(PennMUSHParser.LASTCOMMAND_AFTER_EVAL, 0); }
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode INVOCATION_DEPTH() { return GetToken(PennMUSHParser.INVOCATION_DEPTH, 0); }
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode EQUALS() { return GetToken(PennMUSHParser.EQUALS, 0); }
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode CURRENT_ARG_COUNT() { return GetToken(PennMUSHParser.CURRENT_ARG_COUNT, 0); }
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode REG_NUM() { return GetToken(PennMUSHParser.REG_NUM, 0); }
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode ITEXT_NUM() { return GetToken(PennMUSHParser.ITEXT_NUM, 0); }
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode STEXT_NUM() { return GetToken(PennMUSHParser.STEXT_NUM, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode SPACE() { return GetToken(SharpMUSHParser.SPACE, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode BLANKLINE() { return GetToken(SharpMUSHParser.BLANKLINE, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode TAB() { return GetToken(SharpMUSHParser.TAB, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode COLON() { return GetToken(SharpMUSHParser.COLON, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode DBREF() { return GetToken(SharpMUSHParser.DBREF, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode ENACTOR_NAME() { return GetToken(SharpMUSHParser.ENACTOR_NAME, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode CAP_ENACTOR_NAME() { return GetToken(SharpMUSHParser.CAP_ENACTOR_NAME, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode ACCENT_NAME() { return GetToken(SharpMUSHParser.ACCENT_NAME, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode MONIKER_NAME() { return GetToken(SharpMUSHParser.MONIKER_NAME, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode PERCENT() { return GetToken(SharpMUSHParser.PERCENT, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode SUB_PRONOUN() { return GetToken(SharpMUSHParser.SUB_PRONOUN, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode OBJ_PRONOUN() { return GetToken(SharpMUSHParser.OBJ_PRONOUN, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode POS_PRONOUN() { return GetToken(SharpMUSHParser.POS_PRONOUN, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode ABS_POS_PRONOUN() { return GetToken(SharpMUSHParser.ABS_POS_PRONOUN, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode VWX() { return GetToken(SharpMUSHParser.VWX, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode ARG_NUM() { return GetToken(SharpMUSHParser.ARG_NUM, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode CALLED_DBREF() { return GetToken(SharpMUSHParser.CALLED_DBREF, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode EXECUTOR_DBREF() { return GetToken(SharpMUSHParser.EXECUTOR_DBREF, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode LOCATION_DBREF() { return GetToken(SharpMUSHParser.LOCATION_DBREF, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode LASTCOMMAND_BEFORE_EVAL() { return GetToken(SharpMUSHParser.LASTCOMMAND_BEFORE_EVAL, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode LASTCOMMAND_AFTER_EVAL() { return GetToken(SharpMUSHParser.LASTCOMMAND_AFTER_EVAL, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode INVOCATION_DEPTH() { return GetToken(SharpMUSHParser.INVOCATION_DEPTH, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode EQUALS() { return GetToken(SharpMUSHParser.EQUALS, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode CURRENT_ARG_COUNT() { return GetToken(SharpMUSHParser.CURRENT_ARG_COUNT, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode REG_NUM() { return GetToken(SharpMUSHParser.REG_NUM, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode ITEXT_NUM() { return GetToken(SharpMUSHParser.ITEXT_NUM, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode STEXT_NUM() { return GetToken(SharpMUSHParser.STEXT_NUM, 0); }
 		public ValidSubstitutionContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
 		{
@@ -933,7 +933,7 @@ public partial class PennMUSHParser : Parser {
 		public override int RuleIndex { get { return RULE_validSubstitution; } }
 		[System.Diagnostics.DebuggerNonUserCode]
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IPennMUSHParserVisitor<TResult> typedVisitor = visitor as IPennMUSHParserVisitor<TResult>;
+			ISharpMUSHParserVisitor<TResult> typedVisitor = visitor as ISharpMUSHParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitValidSubstitution(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -1188,7 +1188,7 @@ public partial class PennMUSHParser : Parser {
 		[System.Diagnostics.DebuggerNonUserCode] public AnsiContext ansi() {
 			return GetRuleContext<AnsiContext>(0);
 		}
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode OTHER() { return GetToken(PennMUSHParser.OTHER, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode OTHER() { return GetToken(SharpMUSHParser.OTHER, 0); }
 		public GenericTextContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
 		{
@@ -1196,7 +1196,7 @@ public partial class PennMUSHParser : Parser {
 		public override int RuleIndex { get { return RULE_genericText; } }
 		[System.Diagnostics.DebuggerNonUserCode]
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IPennMUSHParserVisitor<TResult> typedVisitor = visitor as IPennMUSHParserVisitor<TResult>;
+			ISharpMUSHParserVisitor<TResult> typedVisitor = visitor as ISharpMUSHParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitGenericText(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -1252,9 +1252,9 @@ public partial class PennMUSHParser : Parser {
 	}
 
 	public partial class EscapedTextContext : ParserRuleContext {
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode ESCAPE() { return GetToken(PennMUSHParser.ESCAPE, 0); }
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode UNESCAPE() { return GetToken(PennMUSHParser.UNESCAPE, 0); }
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode ESCAPING_OTHER() { return GetToken(PennMUSHParser.ESCAPING_OTHER, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode ESCAPE() { return GetToken(SharpMUSHParser.ESCAPE, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode UNESCAPE() { return GetToken(SharpMUSHParser.UNESCAPE, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode ESCAPING_OTHER() { return GetToken(SharpMUSHParser.ESCAPING_OTHER, 0); }
 		public EscapedTextContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
 		{
@@ -1262,7 +1262,7 @@ public partial class PennMUSHParser : Parser {
 		public override int RuleIndex { get { return RULE_escapedText; } }
 		[System.Diagnostics.DebuggerNonUserCode]
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IPennMUSHParserVisitor<TResult> typedVisitor = visitor as IPennMUSHParserVisitor<TResult>;
+			ISharpMUSHParserVisitor<TResult> typedVisitor = visitor as ISharpMUSHParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitEscapedText(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -1308,9 +1308,9 @@ public partial class PennMUSHParser : Parser {
 	}
 
 	public partial class AnsiContext : ParserRuleContext {
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode OANSI() { return GetToken(PennMUSHParser.OANSI, 0); }
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode CANSI() { return GetToken(PennMUSHParser.CANSI, 0); }
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode ANSICHARACTER() { return GetToken(PennMUSHParser.ANSICHARACTER, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode OANSI() { return GetToken(SharpMUSHParser.OANSI, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode CANSI() { return GetToken(SharpMUSHParser.CANSI, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode ANSICHARACTER() { return GetToken(SharpMUSHParser.ANSICHARACTER, 0); }
 		public AnsiContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
 		{
@@ -1318,7 +1318,7 @@ public partial class PennMUSHParser : Parser {
 		public override int RuleIndex { get { return RULE_ansi; } }
 		[System.Diagnostics.DebuggerNonUserCode]
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IPennMUSHParserVisitor<TResult> typedVisitor = visitor as IPennMUSHParserVisitor<TResult>;
+			ISharpMUSHParserVisitor<TResult> typedVisitor = visitor as ISharpMUSHParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitAnsi(this);
 			else return visitor.VisitChildren(this);
 		}
