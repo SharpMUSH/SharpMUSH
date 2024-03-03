@@ -1,3 +1,4 @@
+using AntlrCSharp.Implementation.Definitions;
 using Serilog;
 
 namespace AntlrCSharp.Tests.Commands;
@@ -8,9 +9,9 @@ public class CommandUnitTests : BaseUnitTest
 	public CommandUnitTests()
 	{
 		Log.Logger = new LoggerConfiguration()
-																		.WriteTo.Console()
-																		.MinimumLevel.Debug()
-																		.CreateLogger();
+											.WriteTo.Console()
+											.MinimumLevel.Debug()
+											.CreateLogger();
 	}
 
 	[TestMethod]
@@ -27,7 +28,6 @@ public class CommandUnitTests : BaseUnitTest
 		Console.WriteLine(string.Join("", result));
 	}
 
-
 	[TestMethod]
 	[DataRow("think test()")]
 	[DataRow("think [test()]")]
@@ -37,7 +37,7 @@ public class CommandUnitTests : BaseUnitTest
 	{
 		Console.WriteLine("Testing: {0}", str);
 		var parser = TestParser();
-		var result = parser.CommandParse(str)?.Message;
+		var result = parser.CommandParse(new DBRef(1), str)?.Message;
 
 		Console.WriteLine(string.Join("", result));
 	}

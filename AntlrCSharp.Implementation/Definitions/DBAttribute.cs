@@ -2,6 +2,6 @@
 {
 	public class DBAttribute
 	{
-		public DBref? DB;
+		public DBRef? DB;
 	}
 }

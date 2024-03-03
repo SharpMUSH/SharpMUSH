@@ -21,9 +21,9 @@ namespace AntlrCSharp.Tests
 					Function: null,
 					Command: "think",
 					Arguments: [],
-					Executor: new Definitions.DBref(),
-					Enactor: new Definitions.DBref(),
-					Caller: new Definitions.DBref()
+					Executor: new Definitions.DBRef(1),
+					Enactor: new Definitions.DBRef(1),
+					Caller: new Definitions.DBRef(1)
 				));
 	}
 }

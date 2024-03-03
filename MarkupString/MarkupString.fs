@@ -175,7 +175,8 @@ module MarkupStringModule =
 
     buildSplits delimiterPositions 0 [] |> Array.ofList
 
-  // Align code starts here.
+  // Align code starts here. 
+  // There's some errors in here assuredly. For instance, alignOptions should be per- width.
   type Justification = Left | Center | Right | Full | Paragraph
 
   type ColumnOptions = {
@@ -195,20 +196,20 @@ module MarkupStringModule =
 
   let defaultAlignOptions = { Filler = ' '; ColSep = " "; RowSep = "\n" }
 
-  let justifyText (text: string) (width: int) (justification: Justification) : string =
-      match justification with
-      | Left -> text.PadRight(width)
-      | Center -> text.PadLeft((width + text.Length) / 2).PadRight(width)
-      | Right -> text.PadLeft(width)
-      | _ -> text // Full and Paragraph justifications can be implemented as needed
-
-  let formatColumn (content: MarkupString) (options: ColumnOptions) : MarkupString =
-      // This function should format the content of a single column based on the provided options.
-      // For simplicity, only basic text content is considered here.
-      let formattedText = justifyText (plainText content) options.Width options.Justification
-      single (formattedText) // Assuming markupSingle creates a MarkupString with the specified text
-
   let align (columns: MarkupString list) (widths: int list) (alignOptions: AlignOptions) : MarkupString =
+    let justifyText (text: string) (width: int) (justification: Justification) : string =
+        match justification with
+        | Left -> text.PadRight(width)
+        | Center -> text.PadLeft((width + text.Length) / 2).PadRight(width)
+        | Right -> text.PadLeft(width)
+        | _ -> text // Full and Paragraph justifications can be implemented as needed
+
+    let formatColumn (content: MarkupString) (options: ColumnOptions) : MarkupString =
+        // This function should format the content of a single column based on the provided options.
+        // For simplicity, only basic text content is considered here.
+        let formattedText = justifyText (plainText content) options.Width options.Justification
+        single (formattedText) // Assuming markupSingle creates a MarkupString with the specified text
+
     let optionsList = 
         List.map2 (fun width _ -> 
             { Width = width; Justification = Left; NoFill = false; TruncateRow = false; TruncateColumn = false; NoColSepAfter = false }
@@ -225,8 +226,3 @@ module MarkupStringModule =
         |> List.rev  // Removing the last separator added by the above process
 
     MarkupString(Empty, fullContent)
-
-  // Example usage
-  let column1 = single("Column 1")
-  let column2 = single("Column 2")
-  let formatted = align [column1; column2] [10; 20] defaultAlignOptions

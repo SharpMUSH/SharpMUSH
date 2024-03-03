@@ -1,7 +1,9 @@
 ﻿using Antlr4.Runtime;
 using AntlrCSharp.Implementation.Definitions;
 using AntlrCSharp.Implementation.Visitors;
+using Microsoft.Win32;
 using System.Collections.Immutable;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace AntlrCSharp.Implementation
 {
@@ -17,9 +19,9 @@ namespace AntlrCSharp.Implementation
 			string? Function,
 			string? Command,
 			CallState[] Arguments,
-			DBref Executor,
-			DBref Enactor,
-			DBref Caller);
+			DBRef Executor,
+			DBRef Enactor,
+			DBRef Caller);
 
 		/// <summary>
 		/// Stack may not be needed if we can bring ParserState into the custom Visitors.
@@ -63,8 +65,19 @@ namespace AntlrCSharp.Implementation
 			return visitor.Visit(chatContext);
 		}
 
-		public CallState? CommandParse(string text)
+		// TODO: Executor should carry more than just dbref. Also port information.
+		public CallState? CommandParse(DBRef player, string text)
 		{
+			var basicCommandState = new ParserState(
+				Registers: ImmutableDictionary<string, MString>.Empty,
+				CurrentEvaluation: null,
+				Function: null,
+				Command: null,
+				Arguments: [],
+				Executor: player,
+				Enactor: player,
+				Caller: player);
+
 			AntlrInputStream inputStream = new(text);
 			PennMUSHLexer pennLexer = new(inputStream);
 			CommonTokenStream commonTokenStream = new(pennLexer);
