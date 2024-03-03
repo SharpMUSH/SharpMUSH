@@ -45,7 +45,7 @@ namespace AntlrCSharp.Implementation
 			SharpMUSHLexer pennLexer = new(inputStream);
 			CommonTokenStream commonTokenStream = new(pennLexer);
 			SharpMUSHParser pennParser = new(commonTokenStream);
-			SharpMUSHParser.EvaluationStringContext chatContext = pennParser.evaluationString();
+			SharpMUSHParser.PlainStringContext chatContext = pennParser.plainString();
 			SharpMUSHParserVisitor visitor = new(this);
 
 			return visitor.Visit(chatContext);
