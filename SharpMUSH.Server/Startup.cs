@@ -25,9 +25,9 @@ namespace SharpMUSH.Server
 			services.AddArango("Server=http://127.0.0.1:8529;User=root;Realm=;Password=KJt7fVjUGFSl9Xqn;", new ArangoConfiguration ()
 			{
 				Serializer = new ArangoNewtonsoftSerializer(new ArangoNewtonsoftDefaultContractResolver())
-
 			});
 			services.AddSingleton<ISharpDatabase, ArangoDatabase>();
+			services.AddSingleton(new ArangoHandle("CurrentSharpMUSHWorld"));
 			services.BuildServiceProvider();
 		}
 

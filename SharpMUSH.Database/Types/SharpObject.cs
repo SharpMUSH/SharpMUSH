@@ -14,6 +14,9 @@ namespace SharpMUSH.Database.Types
 			public required string[] AttributeTriggers { get; set; }
 		}
 
+		[ArangoIgnore]
+		public string? Id { get; set; }
+
 		[JsonProperty("_key")]
 		public virtual int? _key { get; set; }
 
@@ -21,7 +24,7 @@ namespace SharpMUSH.Database.Types
 
 		public Dictionary<string, SharpLock>? Locks { get; set; }
 
-		public required long CreationTime { get; set; } = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+		public long CreationTime { get; set; } = DateTimeOffset.Now.ToUnixTimeMilliseconds();
 
 		public string[]? Powers { get; set; }
 

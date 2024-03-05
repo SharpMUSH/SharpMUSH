@@ -10,6 +10,7 @@
     <PackageReference Include="Core.Arango" Version="3.11.4" />
     <PackageReference Include="Core.Arango.Migration" Version="3.11.10" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
+    <PackageReference Include="OneOf" Version="3.0.263" />
   </ItemGroup>
 
 </Project>

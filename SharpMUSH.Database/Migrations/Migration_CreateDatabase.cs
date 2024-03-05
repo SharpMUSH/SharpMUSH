@@ -348,8 +348,28 @@ namespace SharpMUSH.Database.Migrations
 						}
 					}
 				}
-			}
+			},
+				Graphs = new ArangoGraph[]
+				{
+					new ArangoGraph()
+					{
+						EdgeDefinitions = [new ArangoEdgeDefinition()
+						{
+							Collection = "edge_isobject",
+							To = ["node_objects"],
+							From = ["node_things", "node_players", "node_rooms", "node_exits"]
+						},
+						new ArangoEdgeDefinition()
+						{
+							Collection = "edge_isobject",
+							From = ["node_things", "node_players", "node_rooms", "node_exits"],
+							To = ["node_objects"]
+						}],
+						Name = "graph_objects"
+					}
+				}
 			}, new ArangoMigrationOptions { DryRun = false, Notify = x => Console.WriteLine("Migration Change: {0}: {1} - {2}", x.Name, x.Object, x.State) }); ;
+
 
 			/// The stuff below this is not running for some reason.
 			/// Seems like a deadlock coming from an Exception.

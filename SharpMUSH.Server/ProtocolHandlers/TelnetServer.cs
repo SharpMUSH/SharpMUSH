@@ -14,6 +14,7 @@ namespace SharpMUSH.Server.ProtocolHandlers
 			Console.OutputEncoding = Encoding.UTF8;
 			_Logger = logger;
 
+			// TODO: This does not belong this. A 'main thread' is needed to migrate this.
 			_Logger.LogInformation("Starting Database");
 			database.Migrate();
 		}

@@ -1,7 +1,13 @@
-﻿namespace SharpMUSH.Database.Types
+﻿using Core.Arango;
+
+namespace SharpMUSH.Database.Types
 {
 	public class SharpObjectFlag
 	{
+
+		[ArangoIgnore]
+		public string? Id { get; set; }
+
 		public required string Name { get; set; }
 		
 		public string[]? Aliases { get; set; }

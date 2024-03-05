@@ -5,6 +5,9 @@ namespace SharpMUSH.Database.Types
 {
 	public class SharpAttribute
 	{
+		[ArangoIgnore]
+		public string? Id { get; set; }	
+
 		public required string Name { get; set; }
 
 		public required string[] Flags { get; set; }
@@ -13,8 +16,13 @@ namespace SharpMUSH.Database.Types
 		[ArangoIgnore]
 		public virtual string? LongName { get; set; }
 
+		// RELATIONSHIP
 		[JsonIgnore]
 		public virtual SharpAttribute[]? Leaves { get; set; }
+
+		// RELATIONSHIP
+		[JsonIgnore]
+		public virtual SharpPlayer? Owner { get; set; }
 
 		// RELATIONSHIP for quick lookups
 		[JsonIgnore]

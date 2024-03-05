@@ -5,18 +5,22 @@ namespace SharpMUSH.Database.Types
 {
 	public class SharpThing
 	{
-		// Relationship
-		[JsonIgnore]
-		public virtual SharpObject? Object { get; set; }
+
+		[ArangoIgnore]
+		public string? Id { get; set; }
 
 		public string[]? Aliases { get; set; }
 
 		// Relationship
 		[JsonIgnore]
-		public required SharpObject Location { get; set; }
+		public virtual SharpObject? Object { get; set; }
 
 		// Relationship
 		[JsonIgnore]
-		public required SharpObject Home { get; set; }
+		public virtual SharpObject? Location { get; set; }
+
+		// Relationship
+		[JsonIgnore]
+		public virtual SharpObject? Home { get; set; }
 	}
 }

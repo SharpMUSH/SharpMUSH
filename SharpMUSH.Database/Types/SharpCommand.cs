@@ -1,9 +1,13 @@
-﻿using Newtonsoft.Json;
+﻿using Core.Arango;
+using Newtonsoft.Json;
 
 namespace SharpMUSH.Database.Types
 {
 	public class SharpCommand
 	{
+		[ArangoIgnore]
+		public string? Id { get; set; }
+
 		public required string Name { get; set; }
 
 		public string? Alias { get; set; }

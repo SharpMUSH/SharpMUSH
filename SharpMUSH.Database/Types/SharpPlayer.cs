@@ -5,6 +5,9 @@ namespace SharpMUSH.Database.Types
 {
 	public class SharpPlayer
 	{
+		[ArangoIgnore]
+		public string? Id { get; set; }
+
 		// Relationship
 		[JsonIgnore]
 		public virtual SharpObject? Object { get; set; }
@@ -13,11 +16,11 @@ namespace SharpMUSH.Database.Types
 
 		// Relationship
 		[JsonIgnore]
-		public virtual SharpObject Location { get; set; }
+		public virtual SharpObject? Location { get; set; }
 
 		// Relationship
 		[JsonIgnore]
-		public virtual SharpObject Home { get; set; }
+		public virtual SharpObject? Home { get; set; }
 
 		public required string PasswordHash { get; set; }
 	}
