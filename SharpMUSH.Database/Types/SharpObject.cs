@@ -14,8 +14,8 @@ namespace SharpMUSH.Database.Types
 			public required string[] AttributeTriggers { get; set; }
 		}
 
-		[JsonProperty("_Key")]
-		public virtual int DBRef { get; set; }
+		[JsonProperty("_key")]
+		public virtual int? _key { get; set; }
 
 		public required string Name { get; set; }
 

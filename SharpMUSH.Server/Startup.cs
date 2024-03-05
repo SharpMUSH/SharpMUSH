@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Database;
 using Serilog;
+using Core.Arango.Serialization.Newtonsoft;
 
 namespace SharpMUSH.Server
 {
@@ -21,7 +22,11 @@ namespace SharpMUSH.Server
 				logging.SetMinimumLevel(LogLevel.Debug);
 			});
 
-			services.AddArango("Server=http://127.0.0.1:8529;User=root;Realm=;Password=KJt7fVjUGFSl9Xqn;");
+			services.AddArango("Server=http://127.0.0.1:8529;User=root;Realm=;Password=KJt7fVjUGFSl9Xqn;", new ArangoConfiguration ()
+			{
+				Serializer = new ArangoNewtonsoftSerializer(new ArangoNewtonsoftDefaultContractResolver())
+
+			});
 			services.AddSingleton<ISharpDatabase, ArangoDatabase>();
 			services.BuildServiceProvider();
 		}
