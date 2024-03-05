@@ -120,12 +120,31 @@ namespace SharpMUSH.Database
 			return int.Parse(obj.Key);
 		}
 
-		public async Task<OneOf<SharpPlayer,SharpRoom,SharpExit,SharpThing>> GetObjectNode(int dbref, int? createdsecs = null, int? createdmsecs = null)
+		public async Task<SharpAttribute[]?> GetAttribute(int dbref, string attribute)
+		{
+			// TODO: Don't care about the type we get back. Just do the search!
+			var attrList = attribute.Split("`");
+			
+			var startVertex = $"node_objects/{dbref}";
+			var length = $"2..{attrList.Length}"; // Skip the hop to the object definition.
+			var let = $"LET attrs = {attrList}";
+			var query = $"{let} FOR v,e IN {length} OUTBOUND {startVertex} GRAPH graph_attributes PRUNE v.Name == LAST(attrs) RETURN {{attribute = e, pop = POP(attrs)}}";
+
+			var result = await arangodb.Query.ExecuteAsync<SharpAttribute>(handle, $"{query}");
+
+			// TODO: What if we did not find it?
+			// We return the whole path so that the system can inspect the Flags and see if the permissions are A-OK.
+			return result.ToArray();
+		}
+
+		public async Task<OneOf<SharpPlayer,SharpRoom,SharpExit,SharpThing>?> GetObjectNode(int dbref, int? createdsecs = null, int? createdmsecs = null)
 		{
 			var obj = await arangodb.Document.GetAsync<SharpObject>(handle, "node_objects", dbref.ToString());
 			var startVertex = obj.Id;
+
+			// TODO: Version that cares about createdsecs / createdmsecs
 			var query = await arangodb.Query.ExecuteAsync<(string id, string collection, string vertex)>(handle, 
-				$"FOR vertex IN 1..1 INBOUND {startVertex} GRAPH graph_objects RETURN {{ \"id\": v._id, \"collection\": PARSE_COLLECTION( v_.id ), \"vertex\": v}}");
+				$"FOR v IN 1..1 INBOUND {startVertex} GRAPH graph_objects RETURN {{ \"id\": v._id, \"collection\": PARSE_COLLECTION( v_.id ), \"vertex\": v}}");
 			
 			(string id, string collection, dynamic vertex) = query.First();
 

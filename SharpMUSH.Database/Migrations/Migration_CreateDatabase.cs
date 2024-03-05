@@ -324,6 +324,15 @@ namespace SharpMUSH.Database.Migrations
 				{
 					Collection = new ArangoCollection
 					{
+						Name = "edge_hasattribute",
+						Type = ArangoCollectionType.Edge,
+						WaitForSync = true
+					}
+				},
+				new()
+				{
+					Collection = new ArangoCollection
+					{
 						Name = "edge_isobject",
 						Type = ArangoCollectionType.Edge,
 						WaitForSync = true
@@ -353,19 +362,35 @@ namespace SharpMUSH.Database.Migrations
 				{
 					new ArangoGraph()
 					{
-						EdgeDefinitions = [new ArangoEdgeDefinition()
-						{
-							Collection = "edge_isobject",
-							To = ["node_objects"],
-							From = ["node_things", "node_players", "node_rooms", "node_exits"]
-						},
-						new ArangoEdgeDefinition()
-						{
-							Collection = "edge_isobject",
-							From = ["node_things", "node_players", "node_rooms", "node_exits"],
-							To = ["node_objects"]
-						}],
+						EdgeDefinitions = 
+						[
+							new ArangoEdgeDefinition()
+							{
+								Collection = "edge_isobject",
+								To = ["node_objects"],
+								From = ["node_things", "node_players", "node_rooms", "node_exits"]
+							},
+							new ArangoEdgeDefinition()
+							{
+								Collection = "edge_isobject",
+								From = ["node_things", "node_players", "node_rooms", "node_exits"],
+								To = ["node_objects"]
+							}
+						],
 						Name = "graph_objects"
+					},
+					new ArangoGraph()
+					{
+						EdgeDefinitions =
+						[
+							new ArangoEdgeDefinition()
+							{
+								Collection = "edge_hasattribute",
+								To = ["node_attributes"],
+								From = ["node_attributes", "node_objects", "node_things", "node_players", "node_rooms", "node_exits"]
+							}
+						],
+						Name = "graph_attributes"
 					}
 				}
 			}, new ArangoMigrationOptions { DryRun = false, Notify = x => Console.WriteLine("Migration Change: {0}: {1} - {2}", x.Name, x.Object, x.State) }); ;
