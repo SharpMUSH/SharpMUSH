@@ -10,7 +10,6 @@
 	</PropertyGroup>
 
   <ItemGroup>
-    <None Include="nuget.config" />
     <Compile Include="Markup\ANSILibrary\ANSI.fs" />
     <Compile Include="Markup\Markup.fs" />
     <Compile Include="MarkupString.fs" />

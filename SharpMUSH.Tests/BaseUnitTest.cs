@@ -9,9 +9,9 @@ namespace AntlrCSharp.Tests
 		public BaseUnitTest()
 		{
 			Log.Logger = new LoggerConfiguration()
-																			.WriteTo.Console()
-																			.MinimumLevel.Debug()
-																			.CreateLogger();
+												.WriteTo.Console()
+												.MinimumLevel.Debug()
+												.CreateLogger();
 		}
 
 		public static Implementation.Parser TestParser() =>
