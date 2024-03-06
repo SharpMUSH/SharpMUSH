@@ -1,5 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using SharpMUSH.Database;
+using SharpMUSH.Database.Types;
 using System.Diagnostics;
 using Testcontainers.ArangoDb;
 
@@ -10,7 +11,7 @@ namespace SharpMUSH.IntegrationTests
 	{
 		private readonly HttpClient httpClient;
 		private ArangoDbContainer? container;
-		private ArangoDatabase? database;
+		private ISharpDatabase? database;
 
 		public ArangoDBTests()
 		{
@@ -20,11 +21,10 @@ namespace SharpMUSH.IntegrationTests
     
 		public async Task OneTimeSetup()
 		{
-
 			await Task.CompletedTask;
 			
 			var TestServer = new Infrastructure();
-			database = (ArangoDatabase)TestServer.Services.GetService(typeof(ArangoDatabase))!;
+			database = TestServer.Services.GetService(typeof(ISharpDatabase)) as ISharpDatabase;
 
 			container= new ArangoDbBuilder()
 				.WithImage("arangodb:3.11.8")
@@ -33,25 +33,37 @@ namespace SharpMUSH.IntegrationTests
 			await container.StartAsync()
 				.ConfigureAwait(false);
 
-			// Construct the request URI by specifying the scheme, hostname, assigned random host port, and the endpoint "uuid".
-			var requestUri = new UriBuilder(Uri.UriSchemeHttp, container.Hostname, container.GetMappedPublicPort(8529), "uuid").Uri;
-
-			// Send an HTTP GET request to the specified URI and retrieve the response as a string.
-			var guid = await httpClient.GetStringAsync(requestUri)
-				.ConfigureAwait(false);
-
-			// Ensure that the retrieved UUID is a valid GUID.
-			Debug.Assert(Guid.TryParse(guid, out _));
-
-			await database.Migrate();
+			await database!.Migrate();
 		}
 
 		[TestMethod]
-		public async Task Test()
+		public async Task TestRoomZero()
 		{
-			Assert.IsTrue(true);
-			await Task.CompletedTask;
-			//Assert.IsNotNull(await database!.GetObjectNode(0));
+			var roomZero = (await database!.GetObjectNode(0)).Value.AsT1;
+
+			Assert.AreEqual(typeof(SharpRoom), roomZero.GetType());
+			Assert.AreEqual("Room Zero", roomZero!.Object!.Name);
+			Assert.AreEqual(0, roomZero!.Object!._key);
+		}
+
+		[TestMethod]
+		public async Task TestRoomTwo()
+		{
+			var masterRoom = (await database!.GetObjectNode(2)).Value.AsT1;
+
+			Assert.AreEqual(typeof(SharpRoom), masterRoom.GetType());
+			Assert.AreEqual("Master Room", masterRoom!.Object!.Name);
+			Assert.AreEqual(2, masterRoom!.Object!._key);
+		}
+
+		[TestMethod]
+		public async Task TestPlayerOne()
+		{
+			var playerOne = (await database!.GetObjectNode(1)).Value.AsT0;
+
+			Assert.AreEqual(typeof(SharpPlayer), playerOne.GetType());
+			Assert.AreEqual("God", playerOne!.Object!.Name);
+			Assert.AreEqual(1, playerOne!.Object!._key);
 		}
 	}
 }

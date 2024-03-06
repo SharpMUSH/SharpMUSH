@@ -237,8 +237,8 @@ namespace SharpMUSH.Database.Migrations
 										Alias = new { type = "string" },
 										RestrictedErrorMessage = new { type = "string" },
 										Traits = new { type = "array", items = new { type = "string" } },
-										MinArgs = new { type = "number", multipleOf = "1" },
-										MaxArgs = new { type = "number", multipleOf = "1" },
+										MinArgs = new { type = "number", multipleOf = 1 },
+										MaxArgs = new { type = "number", multipleOf = 1 },
 										Restrictions = new { type = "array", items = new { type = "string" } }
 									},
 									required = (string[])[
@@ -369,12 +369,6 @@ namespace SharpMUSH.Database.Migrations
 								Collection = "edge_isobject",
 								To = ["node_objects"],
 								From = ["node_things", "node_players", "node_rooms", "node_exits"]
-							},
-							new ArangoEdgeDefinition()
-							{
-								Collection = "edge_isobject",
-								From = ["node_things", "node_players", "node_rooms", "node_exits"],
-								To = ["node_objects"]
 							}
 						],
 						Name = "graph_objects"
@@ -426,9 +420,9 @@ namespace SharpMUSH.Database.Migrations
 			});
 			var roomTwoRoom = await migrator.Context.Document.CreateAsync(handle, "node_rooms", new SharpRoom { });
 
-			var playerOnePlayer = await migrator.Context.Document.CreateAsync(handle, "node_players", new SharpPlayer
+			var playerOnePlayer = await migrator.Context.Document.CreateAsync(handle, "node_players", new 
 			{
-				PasswordHash = string.Empty
+				PasswordHash = ""
 			});
 
 			await migrator.Context.Document.CreateAsync(handle, "edge_isobject", new SharpEdge { From = roomTwoRoom.Id, To = roomTwoObj.Id });

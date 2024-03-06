@@ -142,10 +142,13 @@ namespace SharpMUSH.Database
 			var startVertex = obj.Id;
 
 			// TODO: Version that cares about createdsecs / createdmsecs
-			var query = await arangodb.Query.ExecuteAsync<(string id, string collection, string vertex)>(handle, 
-				$"FOR v IN 1..1 INBOUND {startVertex} GRAPH graph_objects RETURN {{ \"id\": v._id, \"collection\": PARSE_COLLECTION( v_.id ), \"vertex\": v}}");
+			var query = await arangodb.Query.ExecuteAsync<dynamic>(handle, 
+				$"FOR v IN 1..1 INBOUND {startVertex} GRAPH graph_objects RETURN {{ \"id\": v._id, \"collection\": PARSE_IDENTIFIER( v._id ).collection, \"vertex\": v}}");
 			
-			(string id, string collection, dynamic vertex) = query.First();
+			var res = query.FirstOrDefault();
+			string id = res.id;
+			string collection = res.collection;
+			dynamic vertex = res.vertex;
 
 			switch (collection)
 			{

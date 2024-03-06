@@ -27,6 +27,5 @@ namespace SharpMUSH.IntegrationTests
 				.UseStartup<Startup>()
 				.UseEnvironment("test")
 				.UseKestrel(options => options.ListenLocalhost(4202, builder => builder.UseConnectionHandler<TelnetServer>()));
-
 	}
 }
