@@ -18,6 +18,11 @@ namespace SharpMUSH.Database
 				HistoryCollection = "MigrationHistory"
 			};
 
+			if(!await migrator.Context.Database.ExistAsync(handle))
+			{
+				await migrator.Context.Database.CreateAsync(handle);
+			}
+
 			// load all migrations from assembly
 			migrator.AddMigrations(typeof(ArangoDatabase).Assembly);
 

@@ -4,6 +4,9 @@ using Microsoft.AspNetCore.Connections;
 using Serilog;
 using Serilog.Sinks.SystemConsole.Themes;
 using SharpMUSH.Server.ProtocolHandlers;
+using Microsoft.Extensions.Configuration;
+using Core.Arango;
+using Core.Arango.Serialization.Newtonsoft;
 
 namespace SharpMUSH.Server
 {
@@ -19,13 +22,19 @@ namespace SharpMUSH.Server
 
 			Log.Logger = log;
 
-			CreateWebHostBuilder(args).Build().Run();
+			var config = new ArangoConfiguration()
+			{
+				ConnectionString = "Server=http://127.0.0.1:8529;User=root;Realm=;Password=KJt7fVjUGFSl9Xqn;",
+				Serializer = new ArangoNewtonsoftSerializer(new ArangoNewtonsoftDefaultContractResolver())
+			};
+
+			CreateWebHostBuilder(config).Build().Run();
 			await Task.CompletedTask;
 		}
 
-		public static IWebHostBuilder CreateWebHostBuilder(string[] args) =>
-				WebHost.CreateDefaultBuilder(args)
-					.UseStartup<Startup>()
+		public static IWebHostBuilder CreateWebHostBuilder(ArangoConfiguration acnf) =>
+				WebHost.CreateDefaultBuilder()
+					.UseStartup(x => new Startup(acnf))
 					.UseKestrel(options => options.ListenLocalhost(4202, builder => builder.UseConnectionHandler<TelnetServer>()));
 	}
 }

@@ -1,36 +1,40 @@
-﻿using SharpMUSH.Database;
+﻿using Core.Arango.Serialization.Newtonsoft;
+using Core.Arango;
+using SharpMUSH.Database;
 using SharpMUSH.Database.Types;
 using Testcontainers.ArangoDb;
 
 namespace SharpMUSH.IntegrationTests
 {
-	[Ignore]
 	[TestClass]
 	public class ArangoDBTests
 	{
-		private readonly HttpClient httpClient;
 		private ArangoDbContainer? container;
 		private ISharpDatabase? database;
 
 		public ArangoDBTests()
 		{
-			httpClient = new HttpClient();
 			OneTimeSetup().ConfigureAwait(false).GetAwaiter().GetResult();
 		}
     
 		public async Task OneTimeSetup()
 		{
-			await Task.CompletedTask;
-			
-			var TestServer = new Infrastructure();
-			database = TestServer.Services.GetService(typeof(ISharpDatabase)) as ISharpDatabase;
-
 			container= new ArangoDbBuilder()
 				.WithImage("arangodb:3.11.8")
+				.WithPassword("password")
 				.Build();
 
 			await container.StartAsync()
 				.ConfigureAwait(false);
+
+			var config = new ArangoConfiguration()
+			{
+				ConnectionString = $"Server={container.GetTransportAddress()};User=root;Realm=;Password=password;",
+				Serializer = new ArangoNewtonsoftSerializer(new ArangoNewtonsoftDefaultContractResolver())
+			};
+
+			var TestServer = new Infrastructure(config);
+			database = TestServer.Services.GetService(typeof(ISharpDatabase)) as ISharpDatabase;
 
 			await database!.Migrate();
 		}

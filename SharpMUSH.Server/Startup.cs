@@ -6,14 +6,15 @@ using Microsoft.Extensions.Logging;
 using SharpMUSH.Database;
 using Serilog;
 using Core.Arango.Serialization.Newtonsoft;
+using Microsoft.Extensions.Configuration;
 
 namespace SharpMUSH.Server
 {
-	public class Startup
+	public class Startup(ArangoConfiguration config)
 	{
 		// This method gets called by the runtime. Use this method to add services to the container.
 		// For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
-		public static void ConfigureServices(IServiceCollection services)
+		public void ConfigureServices(IServiceCollection services)
 		{
 			services.AddLogging(logging =>
 			{
@@ -22,10 +23,7 @@ namespace SharpMUSH.Server
 				logging.SetMinimumLevel(LogLevel.Debug);
 			});
 
-			services.AddArango("Server=http://127.0.0.1:8529;User=root;Realm=;Password=KJt7fVjUGFSl9Xqn;", new ArangoConfiguration ()
-			{
-				Serializer = new ArangoNewtonsoftSerializer(new ArangoNewtonsoftDefaultContractResolver())
-			});
+			services.AddArango((x) => config.ConnectionString);
 			services.AddSingleton<ISharpDatabase, ArangoDatabase>();
 			services.AddSingleton(new ArangoHandle("CurrentSharpMUSHWorld"));
 			services.BuildServiceProvider();

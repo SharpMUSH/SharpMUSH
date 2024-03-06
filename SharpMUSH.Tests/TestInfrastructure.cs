@@ -7,12 +7,13 @@ using SharpMUSH.Server;
 using SharpMUSH.Server.ProtocolHandlers;
 using Serilog.Sinks.SystemConsole.Themes;
 using Serilog;
+using Core.Arango;
 
 namespace SharpMUSH.IntegrationTests
 {
 	public class Infrastructure : TestServer
 	{
-		public Infrastructure() : base(WebHostBuilder()) {
+		public Infrastructure(ArangoConfiguration acnf) : base(WebHostBuilder(acnf)) {
 			var log = new LoggerConfiguration()
 				.Enrich.FromLogContext()
 				.WriteTo.Console(theme: AnsiConsoleTheme.Code)
@@ -22,9 +23,9 @@ namespace SharpMUSH.IntegrationTests
 			Log.Logger = log;
 		}
 
-		public static IWebHostBuilder WebHostBuilder() =>
+		public static IWebHostBuilder WebHostBuilder(ArangoConfiguration acnf) =>
 			WebHost.CreateDefaultBuilder()
-				.UseStartup<Startup>()
+					.UseStartup(x => new Startup(acnf))
 				.UseEnvironment("test")
 				.UseKestrel(options => options.ListenLocalhost(4202, builder => builder.UseConnectionHandler<TelnetServer>()));
 	}
