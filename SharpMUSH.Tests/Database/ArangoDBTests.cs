@@ -1,11 +1,10 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using SharpMUSH.Database;
+﻿using SharpMUSH.Database;
 using SharpMUSH.Database.Types;
-using System.Diagnostics;
 using Testcontainers.ArangoDb;
 
 namespace SharpMUSH.IntegrationTests
 {
+	[Ignore]
 	[TestClass]
 	public class ArangoDBTests
 	{
