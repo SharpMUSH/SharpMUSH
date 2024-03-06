@@ -4,7 +4,6 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
@@ -14,6 +13,7 @@
 	</PropertyGroup>
 	
   <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="8.0.2" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
     <PackageReference Include="MSTest.TestAdapter" Version="3.2.2" />
     <PackageReference Include="MSTest.TestFramework" Version="3.2.2" />
@@ -23,11 +23,14 @@
     </PackageReference>
     <PackageReference Include="Serilog" Version="3.1.1" />
     <PackageReference Include="Serilog.Sinks.Console" Version="5.0.1" />
+    <PackageReference Include="Testcontainers.ArangoDb" Version="3.7.0" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\SharpMUSH.Database\SharpMUSH.Database.csproj" />
     <ProjectReference Include="..\SharpMUSH.Implementation\SharpMUSH.Implementation.csproj" />
     <ProjectReference Include="..\SharpMUSH.MarkupString\SharpMUSH.MarkupString.fsproj" />
+    <ProjectReference Include="..\SharpMUSH.Server\SharpMUSH.Server.csproj" />
   </ItemGroup>
 
 </Project>

@@ -120,15 +120,14 @@ namespace SharpMUSH.Database
 			return int.Parse(obj.Key);
 		}
 
-		public async Task<SharpAttribute[]?> GetAttribute(int dbref, string attribute)
+		public async Task<SharpAttribute[]?> GetAttribute(int dbref, string[] attribute)
 		{
 			// TODO: Don't care about the type we get back. Just do the search!
-			var attrList = attribute.Split("`");
 			
 			var startVertex = $"node_objects/{dbref}";
-			var length = $"2..{attrList.Length}"; // Skip the hop to the object definition.
-			var let = $"LET attrs = {attrList}";
-			var query = $"{let} FOR v,e IN {length} OUTBOUND {startVertex} GRAPH graph_attributes PRUNE v.Name == LAST(attrs) RETURN {{attribute = e, pop = POP(attrs)}}";
+			var length = $"2..{attribute.Length}"; // Skip the hop to the object definition.
+			var let = $"LET attributes = {attribute}";
+			var query = $"{let} FOR v,e IN {length} OUTBOUND {startVertex} GRAPH graph_attributes PRUNE v.Name == LAST(attributes) RETURN {{attribute = e, pop = POP(attributes)}}";
 
 			var result = await arangodb.Query.ExecuteAsync<SharpAttribute>(handle, $"{query}");
 
