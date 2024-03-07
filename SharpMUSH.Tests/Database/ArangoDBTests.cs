@@ -16,10 +16,10 @@ namespace SharpMUSH.IntegrationTests
 		{
 			OneTimeSetup().ConfigureAwait(false).GetAwaiter().GetResult();
 		}
-    
+
 		public async Task OneTimeSetup()
 		{
-			container= new ArangoDbBuilder()
+			container = new ArangoDbBuilder()
 				.WithImage("arangodb:3.11.8")
 				.WithPassword("password")
 				.Build();
@@ -46,7 +46,7 @@ namespace SharpMUSH.IntegrationTests
 
 			Assert.AreEqual(typeof(SharpRoom), roomZero.GetType());
 			Assert.AreEqual("Room Zero", roomZero!.Object!.Name);
-			Assert.AreEqual(0, roomZero!.Object!._key);
+			Assert.AreEqual(0, roomZero!.Object!.Key);
 		}
 
 		[TestMethod]
@@ -56,7 +56,7 @@ namespace SharpMUSH.IntegrationTests
 
 			Assert.AreEqual(typeof(SharpRoom), masterRoom.GetType());
 			Assert.AreEqual("Master Room", masterRoom!.Object!.Name);
-			Assert.AreEqual(2, masterRoom!.Object!._key);
+			Assert.AreEqual(2, masterRoom!.Object!.Key);
 		}
 
 		[TestMethod]
@@ -66,7 +66,38 @@ namespace SharpMUSH.IntegrationTests
 
 			Assert.AreEqual(typeof(SharpPlayer), playerOne.GetType());
 			Assert.AreEqual("God", playerOne!.Object!.Name);
-			Assert.AreEqual(1, playerOne!.Object!._key);
+			Assert.AreEqual(1, playerOne!.Object!.Key);
+		}
+
+		[TestMethod]
+		public async Task SetAndGetAnAttribute()
+		{
+			var playerOne = (await database!.GetObjectNode(1)).Value.AsT0;
+
+			Assert.AreEqual(typeof(SharpPlayer), playerOne.GetType());
+			Assert.AreEqual("God", playerOne!.Object!.Name);
+			Assert.AreEqual(1, playerOne!.Object!.Key);
+
+			var playerOneDBRef = playerOne!.Object!.Key!.Value;
+
+			await database!.SetAttribute(playerOneDBRef, ["SingleLayer"], "Single", playerOne);
+			await database!.SetAttribute(playerOneDBRef, ["Two"], "Twin", playerOne);
+			await database!.SetAttribute(playerOneDBRef, ["Two", "Layers"], "Layer", playerOne);
+			await database!.SetAttribute(playerOneDBRef, ["Two", "Leaves"], "Leaf", playerOne);
+			await database!.SetAttribute(playerOneDBRef, ["Two", "Leaves2"], "Leaf2", playerOne);
+			await database!.SetAttribute(playerOneDBRef, ["Three", "Layers", "Deep"], "Deep1", playerOne);
+			await database!.SetAttribute(playerOneDBRef, ["Three", "Layers", "Deep2"], "Deeper", playerOne);
+
+			var existingSingle = await database!.GetAttribute(playerOneDBRef, ["SingleLayer"]);
+			var existingLayer = await database!.GetAttribute(playerOneDBRef, ["Two", "Layers"]);
+			var existingLeaf = await database!.GetAttribute(playerOneDBRef, ["Two", "Leaves"]);
+
+			Assert.AreEqual(1, existingSingle!.Length);
+			Assert.AreEqual(2, existingLayer!.Length);
+			Assert.AreEqual(2, existingLeaf!.Length);
+			Assert.AreEqual("Single", existingSingle!.Last().Value);
+			Assert.AreEqual("Layer", existingLayer!.Last().Value);
+			Assert.AreEqual("Leaf", existingLeaf!.Last().Value);
 		}
 	}
 }

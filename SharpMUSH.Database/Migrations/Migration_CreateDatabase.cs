@@ -297,7 +297,7 @@ namespace SharpMUSH.Database.Migrations
 				{
 					Collection = new ArangoCollection
 					{
-						Name = "edge_atlocation",
+						Name = "edge_at_location",
 						Type = ArangoCollectionType.Edge,
 						WaitForSync = true
 					}
@@ -306,7 +306,7 @@ namespace SharpMUSH.Database.Migrations
 				{
 					Collection = new ArangoCollection
 					{
-						Name = "edge_hashome",
+						Name = "edge_has_home",
 						Type = ArangoCollectionType.Edge,
 						WaitForSync = true
 					}
@@ -315,7 +315,7 @@ namespace SharpMUSH.Database.Migrations
 				{
 					Collection = new ArangoCollection
 					{
-						Name = "edge_hasflags",
+						Name = "edge_has_flags",
 						Type = ArangoCollectionType.Edge,
 						WaitForSync = true
 					}
@@ -324,7 +324,7 @@ namespace SharpMUSH.Database.Migrations
 				{
 					Collection = new ArangoCollection
 					{
-						Name = "edge_hasattribute",
+						Name = "edge_has_attribute",
 						Type = ArangoCollectionType.Edge,
 						WaitForSync = true
 					}
@@ -333,7 +333,7 @@ namespace SharpMUSH.Database.Migrations
 				{
 					Collection = new ArangoCollection
 					{
-						Name = "edge_isobject",
+						Name = "edge_has_object_owner",
 						Type = ArangoCollectionType.Edge,
 						WaitForSync = true
 					}
@@ -342,7 +342,16 @@ namespace SharpMUSH.Database.Migrations
 				{
 					Collection = new ArangoCollection
 					{
-						Name = "edge_hashook",
+						Name = "edge_has_attribute_owner",
+						Type = ArangoCollectionType.Edge,
+						WaitForSync = true
+					}
+				},
+				new()
+				{
+					Collection = new ArangoCollection
+					{
+						Name = "edge_has_hook",
 						Type = ArangoCollectionType.Edge,
 						WaitForSync = true,
 						Schema = new ArangoSchema()
@@ -366,7 +375,7 @@ namespace SharpMUSH.Database.Migrations
 						[
 							new ArangoEdgeDefinition()
 							{
-								Collection = "edge_isobject",
+								Collection = "edge_is_object",
 								To = ["node_objects"],
 								From = ["node_things", "node_players", "node_rooms", "node_exits"]
 							}
@@ -379,9 +388,9 @@ namespace SharpMUSH.Database.Migrations
 						[
 							new ArangoEdgeDefinition()
 							{
-								Collection = "edge_hasattribute",
+								Collection = "edge_has_attribute",
 								To = ["node_attributes"],
-								From = ["node_attributes", "node_objects", "node_things", "node_players", "node_rooms", "node_exits"]
+								From = ["node_attributes", "node_things", "node_players", "node_rooms", "node_exits"]
 							}
 						],
 						Name = "graph_attributes"
@@ -425,11 +434,14 @@ namespace SharpMUSH.Database.Migrations
 				PasswordHash = ""
 			});
 
-			await migrator.Context.Document.CreateAsync(handle, "edge_isobject", new SharpEdge { From = roomTwoRoom.Id, To = roomTwoObj.Id });
-			await migrator.Context.Document.CreateAsync(handle, "edge_isobject", new SharpEdge { From = roomZeroRoom.Id, To = roomZeroObj.Id });
-			await migrator.Context.Document.CreateAsync(handle, "edge_isobject", new SharpEdge { From = playerOnePlayer.Id, To = playerOneObj.Id });
-			await migrator.Context.Document.CreateAsync(handle, "edge_atlocation", new SharpEdge { From = playerOnePlayer.Id, To = roomZeroRoom.Id });
-			await migrator.Context.Document.CreateAsync(handle, "edge_hashome", new SharpEdge { From = playerOnePlayer.Id, To = roomZeroRoom.Id });
+			await migrator.Context.Document.CreateAsync(handle, "edge_is_object", new SharpEdge { From = roomTwoRoom.Id, To = roomTwoObj.Id });
+			await migrator.Context.Document.CreateAsync(handle, "edge_is_object", new SharpEdge { From = roomZeroRoom.Id, To = roomZeroObj.Id });
+			await migrator.Context.Document.CreateAsync(handle, "edge_is_object", new SharpEdge { From = playerOnePlayer.Id, To = playerOneObj.Id });
+			await migrator.Context.Document.CreateAsync(handle, "edge_at_location", new SharpEdge { From = playerOnePlayer.Id, To = roomZeroRoom.Id });
+			await migrator.Context.Document.CreateAsync(handle, "edge_has_home", new SharpEdge { From = playerOnePlayer.Id, To = roomZeroRoom.Id });
+			await migrator.Context.Document.CreateAsync(handle, "edge_has_object_owner", new SharpEdge { From = roomTwoRoom.Id, To = playerOnePlayer.Id });
+			await migrator.Context.Document.CreateAsync(handle, "edge_has_object_owner", new SharpEdge { From = roomZeroRoom.Id, To = playerOnePlayer.Id });
+			await migrator.Context.Document.CreateAsync(handle, "edge_has_object_owner", new SharpEdge { From = playerOnePlayer.Id, To = playerOneObj.Id });
 		}
 
 		public Task Down(IArangoMigrator migrator, ArangoHandle handle)

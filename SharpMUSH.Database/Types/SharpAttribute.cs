@@ -6,11 +6,13 @@ namespace SharpMUSH.Database.Types
 	public class SharpAttribute
 	{
 		[ArangoIgnore]
-		public string? Id { get; set; }	
+		public string? Id { get; set; }
 
 		public required string Name { get; set; }
 
 		public required string[] Flags { get; set; }
+
+		public string Value { get; set; } = string.Empty;
 
 		// Computed Value
 		[ArangoIgnore]

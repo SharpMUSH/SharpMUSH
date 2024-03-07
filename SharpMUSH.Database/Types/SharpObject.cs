@@ -1,5 +1,4 @@
 ﻿using Core.Arango;
-using Core.Arango.Protocol;
 using Newtonsoft.Json;
 
 namespace SharpMUSH.Database.Types
@@ -18,9 +17,13 @@ namespace SharpMUSH.Database.Types
 		public string? Id { get; set; }
 
 		[JsonProperty("_key")]
-		public virtual int? _key { get; set; }
+		public virtual int? Key { get; set; }
 
 		public required string Name { get; set; }
+
+		// RELATIONSHIP
+		[JsonIgnore]
+		public virtual SharpPlayer? Owner { get; set; }
 
 		public Dictionary<string, SharpLock>? Locks { get; set; }
 
