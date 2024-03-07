@@ -87,13 +87,28 @@ namespace SharpMUSH.IntegrationTests
 			var existingSingle = await database!.GetAttribute(playerOneDBRef, ["SingleLayer"]);
 			var existingLayer = await database!.GetAttribute(playerOneDBRef, ["Two", "Layers"]);
 			var existingLeaf = await database!.GetAttribute(playerOneDBRef, ["Two", "Leaves"]);
+			var existingLeaf2 = await database!.GetAttribute(playerOneDBRef, ["Two", "Leaves2"]);
+			var existingDeep1 = await database!.GetAttribute(playerOneDBRef, ["Three", "Layers", "Deep"]);
+			var existingDeep2 = await database!.GetAttribute(playerOneDBRef, ["Three", "Layers", "Deep2"]);
 
 			Assert.AreEqual(1, existingSingle!.Length);
 			Assert.AreEqual(2, existingLayer!.Length);
 			Assert.AreEqual(2, existingLeaf!.Length);
+			Assert.AreEqual(2, existingLeaf2!.Length);
+			Assert.AreEqual(3, existingDeep1!.Length);
+			Assert.AreEqual(3, existingDeep2!.Length);
 			Assert.AreEqual("Single", existingSingle!.Last().Value);
 			Assert.AreEqual("Layer", existingLayer!.Last().Value);
 			Assert.AreEqual("Leaf", existingLeaf!.Last().Value);
+			Assert.AreEqual("Leaf2", existingLeaf2!.Last().Value);
+			Assert.AreEqual("Deep1", existingDeep1!.Last().Value);
+			Assert.AreEqual("Deeper", existingDeep2!.Last().Value);
+			Assert.AreEqual("SingleLayer", existingSingle!.Last().LongName);
+			Assert.AreEqual("Two`Layers", existingLayer!.Last().LongName);
+			Assert.AreEqual("Two`Leaves", existingLeaf!.Last().LongName);
+			Assert.AreEqual("Two`Leaves2", existingLeaf2!.Last().LongName);
+			Assert.AreEqual("Three`Layers`Deep", existingDeep1!.Last().LongName);
+			Assert.AreEqual("Three`Layers`Deep2", existingDeep2!.Last().LongName);
 		}
 	}
 }

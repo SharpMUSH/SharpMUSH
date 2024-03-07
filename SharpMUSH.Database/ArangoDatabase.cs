@@ -189,7 +189,7 @@ namespace SharpMUSH.Database
 
 			// TODO: What if we did not find it?
 			// TODO: What should the result be if we did not find it?
-			return result.Select(x => new SharpAttribute() { Name = x.Name, Flags = x.Flags.ToObject<string[]>(), Value = x.Value, Id = x._id }).ToArray();
+			return result.Select(x => new SharpAttribute() { Name = x.Name, Flags = x.Flags.ToObject<string[]>(), Value = x.Value, Id = x._id, LongName = x.LongName }).ToArray();
 		}
 
 		public async Task<bool> SetAttribute(int dbref, string[] attribute, string value, SharpPlayer owner)
