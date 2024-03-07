@@ -183,6 +183,7 @@ namespace SharpMUSH.Database.Migrations
 								properties = new
 								{
 									Name = new { type = "string" },
+									LongName = new { type = "string" },
 									Flags = new { type = "array", items = new { type = "string" } }
 								},
 								required = (string[])[nameof(SharpAttribute.Name)]

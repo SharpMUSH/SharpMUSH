@@ -222,8 +222,8 @@ namespace SharpMUSH.Database
 				lastId = newOne.Id;
 			}
 
-			await arangodb.Document.UpdateAsync(handle, "node_attributes", new { Key = lastId!.Split("/").Last(), Value = value }, mergeObjects: true);
-			await arangodb.Document.CreateAsync(handle, "edge_has_attribute_owner", new SharpEdge { From = lastId, To = owner.Id }, mergeObjects: true);
+			await arangodb.Document.UpdateAsync(handle, "node_attributes", new { Key = lastId!.Split("/").Last(), Value = value, LongName = string.Join("`", attribute) }, mergeObjects: true);
+			await arangodb.Document.CreateAsync(handle, "edge_has_attribute_owner", new SharpEdge { From = lastId, To = owner.Id!,  }, mergeObjects: true);
 
 			return true;
 		}
