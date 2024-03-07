@@ -9,15 +9,11 @@ namespace SharpMUSH.IntegrationTests
 	[TestClass]
 	public class ArangoDBTests
 	{
-		private ArangoDbContainer? container;
-		private ISharpDatabase? database;
+		private static ArangoDbContainer? container;
+		private static ISharpDatabase? database;
 
-		public ArangoDBTests()
-		{
-			OneTimeSetup().ConfigureAwait(false).GetAwaiter().GetResult();
-		}
-
-		public async Task OneTimeSetup()
+		[ClassInitialize()]
+		public static async Task OneTimeSetup(TestContext context)
 		{
 			container = new ArangoDbBuilder()
 				.WithImage("arangodb:3.11.8")
