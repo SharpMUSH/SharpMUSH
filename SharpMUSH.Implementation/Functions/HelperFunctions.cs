@@ -1,6 +1,7 @@
 ﻿using AntlrCSharp.Implementation.Definitions;
 using AntlrCSharp.Implementation.Tools;
 using OneOf;
+using SharpMUSH.Library.Models;
 using System.Text.RegularExpressions;
 
 namespace AntlrCSharp.Implementation.Functions
@@ -15,7 +16,7 @@ namespace AntlrCSharp.Implementation.Functions
 		/// </summary>
 		/// <param name="dbrefAttr">#DBREF/Attribute</param>
 		/// <returns>False if it could not be split. DBRef & Attribute if it could.</returns>
-		private static OneOf<(DBRef db, string Attribute), bool> SplitDBRefAndAttr(string DBRefAttr)
+		public static OneOf<(DBRef db, string Attribute), bool> SplitDBRefAndAttr(string DBRefAttr)
 		{
 			var match = DatabaseReferenceWithAttributeRegex.Match(DBRefAttr);
 			var dbref = match.Groups["DatabaseNumber"]?.Value;
@@ -24,7 +25,18 @@ namespace AntlrCSharp.Implementation.Functions
 
 			if (string.IsNullOrEmpty(attr)) { return false; }
 
-			return (new DBRef(int.Parse(dbref!), ctime == null ? null : int.Parse(ctime)), attr);
+			return (new DBRef(int.Parse(dbref!), string.IsNullOrWhiteSpace(ctime) ? null : int.Parse(ctime)), attr);
+		}
+
+		public static OneOf<DBRef, bool> ParseDBRef(string DBRefAttr)
+		{
+			var match = DatabaseReferenceRegex.Match(DBRefAttr);
+			var dbref = match.Groups["DatabaseNumber"]?.Value;
+			var ctime = match.Groups["CreationTimestamp"]?.Value;
+
+			if (string.IsNullOrEmpty(dbref)) { return false; }
+
+			return (new DBRef(int.Parse(dbref!), string.IsNullOrWhiteSpace(ctime) ? null : int.Parse(ctime)));
 		}
 
 		// TODO: When a flag is implemented to only accept Integers or Decimals for the Math functions, a lot of these validation checks can go away from this sector.

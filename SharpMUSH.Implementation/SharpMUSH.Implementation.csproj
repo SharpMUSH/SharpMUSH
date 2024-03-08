@@ -12,11 +12,13 @@
 	
   <ItemGroup>
     <PackageReference Include="Antlr4.Runtime.Standard" Version="4.13.1" />
+    <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="8.0.2" />
     <PackageReference Include="OneOf" Version="3.0.263" />
     <PackageReference Include="Serilog" Version="3.1.1" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\SharpMUSH.Database\SharpMUSH.Database.csproj" />
     <ProjectReference Include="..\SharpMUSH.Generated\SharpMUSH.Generated.csproj" />
     <ProjectReference Include="..\SharpMUSH.Library\SharpMUSH.Library.csproj" />
     <ProjectReference Include="..\SharpMUSH.MarkupString\SharpMUSH.MarkupString.fsproj" />

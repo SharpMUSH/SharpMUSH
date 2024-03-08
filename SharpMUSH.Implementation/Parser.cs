@@ -1,6 +1,9 @@
 ﻿using Antlr4.Runtime;
 using AntlrCSharp.Implementation.Definitions;
 using AntlrCSharp.Implementation.Visitors;
+using SharpMUSH.Database;
+using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Services;
 using System.Collections.Immutable;
 
 namespace AntlrCSharp.Implementation
@@ -9,7 +12,10 @@ namespace AntlrCSharp.Implementation
 	/// Provides the parser.
 	/// Each call is Synchronous, and stateful at this time.
 	/// </summary>
-	public class Parser
+	public class Parser(
+			IPasswordService _passwordService,
+			IPermissionService _permissionService,
+			ISharpDatabase _database)
 	{
 		public record ParserState(
 			ImmutableDictionary<string, MString> Registers,
@@ -21,6 +27,12 @@ namespace AntlrCSharp.Implementation
 			DBRef Enactor,
 			DBRef Caller);
 
+		public IPasswordService PasswordService => _passwordService;
+		
+		public IPermissionService PermissionService => _permissionService;
+		
+		public ISharpDatabase Database => _database;
+
 		/// <summary>
 		/// Stack may not be needed if we can bring ParserState into the custom Visitors.
 		/// 
@@ -29,20 +41,35 @@ namespace AntlrCSharp.Implementation
 		/// 
 		/// Time to start drawing a tree to make sure we put things in the right spots.
 		/// </summary>
-		public ImmutableStack<ParserState> State { get; init; }
+		public ImmutableStack<ParserState> State { get; private set; } = [];
 
-		// TODO: We need to have the Database passed along. Either through the Parser, or otherwise.
-		// But preferably by means of DI.
-		// The Parser should probably also pass a Permissions checker.
-		// The Parser should probably also pass the Password Hash Provider.
-		//     https://learn.microsoft.com/en-us/dotnet/api/microsoft.aspnetcore.identity.passwordhasher-1?view=aspnetcore-8.0
-		protected Parser() => State = [];
+		public Parser(
+			IPasswordService passwordService,
+			IPermissionService permissionService,
+			ISharpDatabase database,
+			ImmutableStack<ParserState> state) :
+				this(passwordService, permissionService, database)
+				=> State = state ?? [];
 
-		public Parser(ImmutableStack<ParserState> state) => State = state ?? [];
+		public Parser Push(ParserState state)
+		{
+			State = State.Push(state);
+			return this;
+		}
+		
+		public Parser Pop()
+		{
+			State = State.Pop();
+			return this;
+		}
 
-		public Parser(Parser parser, ParserState state) => State = parser.State.Push(state);
-
-		public Parser(ParserState state) => State = [state];
+		public Parser(
+			IPasswordService passwordService,
+			IPermissionService permissionService,
+			ISharpDatabase database,
+			ParserState state) :
+				this(passwordService, permissionService, database)
+				=> State = [state];
 
 		public CallState? FunctionParse(string text)
 		{

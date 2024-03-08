@@ -8,7 +8,7 @@ namespace SharpMUSH.Database
 	{
 		Task Migrate();
 
-		Task<int> CreatePlayer(string name, string passwordHash, OneOf<SharpPlayer, SharpRoom, SharpThing> location);
+		Task<int> CreatePlayer(string name, string password, DBRef location);
 
 		Task<int> CreateRoom(string name, SharpPlayer creator);
 
@@ -27,7 +27,7 @@ namespace SharpMUSH.Database
 		/// <param name="dbref">Database Reference Number</param>
 		/// <param name="createdmsecs">Created Miliseconds (Unix Timestamp</param>
 		/// <returns>A OneOf over the object being returned</returns>
-		Task<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing>?> GetObjectNode(DBRef dbref, int? createdmsecs = null);
+		Task<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing>?> GetObjectNode(DBRef dbref);
 
 		/// <summary>
 		/// Set an attribute. This does not do any checks, as that is up to the functionality itself.

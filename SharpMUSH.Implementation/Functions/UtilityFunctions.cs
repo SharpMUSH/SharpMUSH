@@ -1,4 +1,6 @@
-﻿namespace AntlrCSharp.Implementation.Functions
+﻿using AntlrCSharp.Implementation.Definitions;
+
+namespace AntlrCSharp.Implementation.Functions
 {
 	/*
 		allof()
@@ -37,7 +39,6 @@
 		numversion()
 		objeval()
 		open()
-		pcreate()
 		r()
 		rand()
 		s()
@@ -65,6 +66,25 @@
 	 */
 	public partial class Functions
 	{
+		// TODO: Not compatible due to not being able to indicate a DBREF
+		[PennFunction(Name = "pcreate", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly)]
+		public static CallState PCreate(Parser parser, PennFunctionAttribute _2)
+		{
+			var args = parser.State.Peek().Arguments;
+			var location = parser.Database.GetObjectNode(new SharpMUSH.Library.Models.DBRef { Number = Configurable.PlayerStart }).Result;
 
+			var trueLocation = location!.Value.Match(
+				player => player.Object!.Key,
+				room => room.Object!.Key,
+				exit => exit.Object!.Key,
+				thing => thing.Object!.Key);
+
+			var created = parser.Database.CreatePlayer(
+				args[0].Message!.ToString(), 
+				args[1].Message!.ToString(), 
+				new SharpMUSH.Library.Models.DBRef(trueLocation ?? 1)).Result;
+
+			return new CallState($"#{created}");
+		}
 	}
 }

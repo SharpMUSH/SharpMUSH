@@ -81,7 +81,7 @@ namespace AntlrCSharp.Implementation.Functions
 			if (recursionDepth > Configurable.MaxRecursionDepth)
 				return new CallState(Errors.ErrorRecursion, recursionDepth);
 
-			var newParser = new Parser(parser, new Parser.ParserState(
+			parser.Push(new Parser.ParserState(
 				Registers: currentState.Registers,
 				CurrentEvaluation: currentState.CurrentEvaluation,
 				Function: name,
@@ -92,7 +92,7 @@ namespace AntlrCSharp.Implementation.Functions
 				Caller: currentState.Caller
 			));
 
-			return function(newParser) with { Depth = context.Depth() };
+			return function(parser) with { Depth = context.Depth() };
 		}
 
 		private static OneOf<bool, (PennFunctionAttribute, Func<Parser, CallState>)> DiscoverBuiltInFunction(string name)

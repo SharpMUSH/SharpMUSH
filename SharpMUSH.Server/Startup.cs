@@ -4,8 +4,9 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Database;
-using SharpMUSH.Implementation.Services;
 using Serilog;
+using SharpMUSH.Library.Services;
+using Microsoft.AspNetCore.Identity;
 
 namespace SharpMUSH.Server
 {
@@ -24,6 +25,7 @@ namespace SharpMUSH.Server
 
 			services.AddArango((x) => config.ConnectionString);
 			services.AddSingleton<ISharpDatabase, ArangoDatabase>();
+			services.AddSingleton<PasswordHasher<string>, PasswordHasher<string>>(_ => new PasswordHasher<string>());
 			services.AddSingleton<IPasswordService, PasswordService>();
 			services.AddSingleton<IPermissionService, PermissionService>();
 			services.AddSingleton(new ArangoHandle("CurrentSharpMUSHWorld"));
