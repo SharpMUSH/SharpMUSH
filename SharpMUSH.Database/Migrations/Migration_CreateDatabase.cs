@@ -5,8 +5,12 @@ using SharpMUSH.Database.Types;
 
 namespace SharpMUSH.Database.Migrations
 {
-
-	// sample migration / downgrades not yet supported
+	/// <summary>
+	/// Creates the basic database, containing Player #1 (God), Room 0, and Room 2.
+	/// This should not use the Sharp class definitions, because it should be unmarried to their definitions.
+	/// That way, if things change, the Migration doesn't fail, and instead we use new migrations to get over the 
+	/// hurdle of breaking changes and database upgrades.
+	/// </summary>
 	public class Migration_CreateDatabase : IArangoMigration
 	{
 		public long Id => 20240304_001; // sortable unique id

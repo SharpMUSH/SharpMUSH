@@ -31,6 +31,11 @@ namespace AntlrCSharp.Implementation
 		/// </summary>
 		public ImmutableStack<ParserState> State { get; init; }
 
+		// TODO: We need to have the Database passed along. Either through the Parser, or otherwise.
+		// But preferably by means of DI.
+		// The Parser should probably also pass a Permissions checker.
+		// The Parser should probably also pass the Password Hash Provider.
+		//     https://learn.microsoft.com/en-us/dotnet/api/microsoft.aspnetcore.identity.passwordhasher-1?view=aspnetcore-8.0
 		protected Parser() => State = [];
 
 		public Parser(ImmutableStack<ParserState> state) => State = state ?? [];

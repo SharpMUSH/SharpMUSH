@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SharpMUSH.Generated\SharpMUSH.Generated.csproj" />
+    <ProjectReference Include="..\SharpMUSH.Library\SharpMUSH.Library.csproj" />
     <ProjectReference Include="..\SharpMUSH.MarkupString\SharpMUSH.MarkupString.fsproj" />
   </ItemGroup>
 

@@ -1,4 +1,4 @@
-﻿namespace AntlrCSharp.Implementation.Definitions
+﻿namespace SharpMUSH.Library.Models
 {
 	public readonly struct DBRef
 	{

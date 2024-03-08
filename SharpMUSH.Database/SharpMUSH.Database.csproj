@@ -13,4 +13,8 @@
     <PackageReference Include="OneOf" Version="3.0.263" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\SharpMUSH.Library\SharpMUSH.Library.csproj" />
+  </ItemGroup>
+
 </Project>

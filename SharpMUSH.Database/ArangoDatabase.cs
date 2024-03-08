@@ -3,6 +3,7 @@ using Core.Arango.Migration;
 using Microsoft.Extensions.Logging;
 using OneOf;
 using SharpMUSH.Database.Types;
+using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Database
 {
@@ -116,9 +117,9 @@ namespace SharpMUSH.Database
 			return int.Parse(obj.Key);
 		}
 
-		public async Task<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing>?> GetObjectNode(int dbref, int? createdsecs = null, int? createdmsecs = null)
+		public async Task<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing>?> GetObjectNode(DBRef dbref, int? createdmsecs = null)
 		{
-			var obj = await arangodb.Document.GetAsync<SharpObject>(handle, "node_objects", dbref.ToString());
+			var obj = await arangodb.Document.GetAsync<SharpObject>(handle, "node_objects", dbref.Number.ToString());
 			var startVertex = obj.Id;
 
 			// TODO: Version that cares about createdsecs / createdmsecs
@@ -169,14 +170,33 @@ namespace SharpMUSH.Database
 			}
 		}
 
-		public Task<SharpAttribute[]?> GetAttributes(int dbref, string[] attribute_pattern)
+		public Task<SharpAttribute[]?> GetAttributes(DBRef dbref, string attribute_pattern)
 		{
+			// Step 1: Get Object.
+			// Step 2: Find all attributes that belong to that Object.
+			// Step 3: Filter down.
+
+			// We cannot expect that attribute_pattern has been translated from GLOB to Arango LIKE.
+			// "foo"  LIKE  "f%"          // true
+
 			throw new NotImplementedException();
 		}
 
-		public async Task<SharpAttribute[]?> GetAttribute(int dbref, string[] attribute)
+		public Task<SharpAttribute[]?> GetAttributesRegex(DBRef dbref, string attribute_pattern)
 		{
-			var startVertex = $"node_objects/{dbref}";
+			// Step 1: Get Object.
+			// Step 2: Find all attributes that belong to that Object.
+			// Step 3: Filter down.
+
+			// Technically a (largely useful) subset of Regex is supported by ArangoDB.
+			// But it is annoying that ArangoDB and C# have different levels of Regex available to them.
+			//  "foo"  =~  "^f[o].$"       // true
+			throw new NotImplementedException();
+		}
+
+		public async Task<SharpAttribute[]?> GetAttribute(DBRef dbref, string[] attribute)
+		{
+			var startVertex = $"node_objects/{dbref.Number}";
 			var let = "LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH graph_objects RETURN v)";
 			var query = $"{let} FOR v,e,p IN 1..@max OUTBOUND start GRAPH graph_attributes PRUNE condition = NTH(@attr,LENGTH(p.edges)-1) != v.Name FILTER !condition RETURN v";
 
@@ -189,14 +209,15 @@ namespace SharpMUSH.Database
 
 			// TODO: What if we did not find it?
 			// TODO: What should the result be if we did not find it?
+			// TODO: This doesn't handle Inheritance - so we may need to pass back the player it was found on as well either way.
 			return result.Select(x => new SharpAttribute() { Name = x.Name, Flags = x.Flags.ToObject<string[]>(), Value = x.Value, Id = x._id, LongName = x.LongName }).ToArray();
 		}
 
-		public async Task<bool> SetAttribute(int dbref, string[] attribute, string value, SharpPlayer owner)
+		public async Task<bool> SetAttribute(DBRef dbref, string[] attribute, string value, SharpPlayer owner)
 		{
 			if (owner is null) { throw new ArgumentNullException(nameof(owner)); }
 
-			var startVertex = $"node_objects/{dbref}";
+			var startVertex = $"node_objects/{dbref.Number}";
 			var let1 = "LET start = (FOR v IN 1..1 INBOUND @startVertex GRAPH graph_objects RETURN v)";
 			var let2 = $"LET foundAttributes = (FOR v,e,p IN 1..@max OUTBOUND FIRST(start) GRAPH graph_attributes PRUNE condition = NTH(@attr,LENGTH(p.edges)-1) != v.Name FILTER !condition RETURN v)";
 			var query = $"{let1} {let2} RETURN APPEND(start, foundAttributes)";
@@ -226,6 +247,11 @@ namespace SharpMUSH.Database
 			await arangodb.Document.CreateAsync(handle, "edge_has_attribute_owner", new SharpEdge { From = lastId, To = owner.Id!,  }, mergeObjects: true);
 
 			return true;
+		}
+
+		public Task<bool> ClearAttribute(DBRef dbref, string[] attribute)
+		{
+			throw new NotImplementedException();
 		}
 	}
 }

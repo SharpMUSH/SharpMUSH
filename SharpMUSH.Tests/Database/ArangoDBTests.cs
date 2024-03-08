@@ -38,7 +38,7 @@ namespace SharpMUSH.IntegrationTests
 		[TestMethod]
 		public async Task TestRoomZero()
 		{
-			var roomZero = (await database!.GetObjectNode(0)).Value.AsT1;
+			var roomZero = (await database!.GetObjectNode(new Library.Models.DBRef(0))).Value.AsT1;
 
 			Assert.AreEqual(typeof(SharpRoom), roomZero.GetType());
 			Assert.AreEqual("Room Zero", roomZero!.Object!.Name);
@@ -48,7 +48,7 @@ namespace SharpMUSH.IntegrationTests
 		[TestMethod]
 		public async Task TestRoomTwo()
 		{
-			var masterRoom = (await database!.GetObjectNode(2)).Value.AsT1;
+			var masterRoom = (await database!.GetObjectNode(new Library.Models.DBRef(2))).Value.AsT1;
 
 			Assert.AreEqual(typeof(SharpRoom), masterRoom.GetType());
 			Assert.AreEqual("Master Room", masterRoom!.Object!.Name);
@@ -58,7 +58,7 @@ namespace SharpMUSH.IntegrationTests
 		[TestMethod]
 		public async Task TestPlayerOne()
 		{
-			var playerOne = (await database!.GetObjectNode(1)).Value.AsT0;
+			var playerOne = (await database!.GetObjectNode(new Library.Models.DBRef(1))).Value.AsT0;
 
 			Assert.AreEqual(typeof(SharpPlayer), playerOne.GetType());
 			Assert.AreEqual("God", playerOne!.Object!.Name);
@@ -68,13 +68,13 @@ namespace SharpMUSH.IntegrationTests
 		[TestMethod]
 		public async Task SetAndGetAnAttribute()
 		{
-			var playerOne = (await database!.GetObjectNode(1)).Value.AsT0;
+			var playerOne = (await database!.GetObjectNode(new Library.Models.DBRef(1))).Value.AsT0;
 
 			Assert.AreEqual(typeof(SharpPlayer), playerOne.GetType());
 			Assert.AreEqual("God", playerOne!.Object!.Name);
 			Assert.AreEqual(1, playerOne!.Object!.Key);
 
-			var playerOneDBRef = playerOne!.Object!.Key!.Value;
+			var playerOneDBRef = new Library.Models.DBRef(playerOne!.Object!.Key!.Value);
 
 			await database!.SetAttribute(playerOneDBRef, ["SingleLayer"], "Single", playerOne);
 			await database!.SetAttribute(playerOneDBRef, ["Two"], "Twin", playerOne);
