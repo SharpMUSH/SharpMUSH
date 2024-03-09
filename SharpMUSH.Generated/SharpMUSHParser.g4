@@ -16,7 +16,7 @@ command: evaluationString+?;
 /*
     TODO: If a command is an @command, we should use evaluationString after the standard @command, switches and all.
     What's more, there's things to consider when it comes to their standard arguments.
-*/
+*/ 
 
 plainString: evaluationString EOF;
 
@@ -52,8 +52,17 @@ funArguments
     | evaluationString
     ;
 validSubstitution
+    : complexSubstitutionSymbol
+    | substitutionSymbol
+    ;
+complexSubstitutionSymbol
     : REG_STARTCARET explicitEvaluationString+? CCARET
-    | SPACE
+    | REG_NUM
+    | ITEXT_NUM
+    | STEXT_NUM
+    ;
+substitutionSymbol
+    : SPACE
     | BLANKLINE
     | TAB
     | COLON
@@ -77,9 +86,6 @@ validSubstitution
     | INVOCATION_DEPTH    
     | EQUALS
     | CURRENT_ARG_COUNT
-    | REG_NUM
-    | ITEXT_NUM
-    | STEXT_NUM
     ;
 genericText 
     : escapedText

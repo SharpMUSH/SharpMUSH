@@ -30,7 +30,7 @@ mode SUBSTITUTION;
 REG_STARTCARET: [qQ]'<' -> popMode;
 REG_NUM: [qQ][0-9] -> popMode;
 VWX: [vwxVWX][a-zA-Z] -> popMode;
-ARG_NUM: [0-9] -> popMode;
+ARG_NUM: [0-9] -> popMode; 
 SPACE: [bB] -> popMode;
 BLANKLINE: [rR] -> popMode;
 TAB: [tT] -> popMode;

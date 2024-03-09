@@ -116,6 +116,18 @@ public interface ISharpMUSHParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitValidSubstitution([NotNull] SharpMUSHParser.ValidSubstitutionContext context);
 	/// <summary>
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.complexSubstitutionSymbol"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitComplexSubstitutionSymbol([NotNull] SharpMUSHParser.ComplexSubstitutionSymbolContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.substitutionSymbol"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitSubstitutionSymbol([NotNull] SharpMUSHParser.SubstitutionSymbolContext context);
+	/// <summary>
 	/// Visit a parse tree produced by <see cref="SharpMUSHParser.genericText"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>

@@ -22,8 +22,6 @@ namespace AntlrCSharp.Implementation.Visitors
 
 		public override CallState? VisitFunction([NotNull] SharpMUSHParser.FunctionContext context)
 		{
-			// TODO: There needs to be a standard behavior for functions, rather than making /each/ function call their contents.
-			//       Instead, a function like if() should be explicitly stating if a function call needs to be evaluated or not.
 			var textContents = context.GetText();
 			var functionName = context.funName().GetText();
 			var arguments = context.funArguments()?.children?
@@ -31,13 +29,7 @@ namespace AntlrCSharp.Implementation.Visitors
 				.Select(x => new CallState(x.GetText(), context.Depth()))
 				?? [new CallState("", context.Depth())];
 
-			// TODO: There seems to be a standard in PennMUSH and its brethern that if there is no argument, it passes in an Empty String
-			// as the one and only argument.
-
 			var result = Functions.Functions.CallFunction(functionName.ToLower(), parser, context, arguments.ToArray());
-			Log.Logger.Information("VisitFunction: {@Text} -- {Name}@{Depth}", textContents, functionName, context.Depth());
-			Log.Logger.Information("VisitFunction2: {@Test}", arguments);
-			Log.Logger.Information("VisitFunction3: {@Result}", result);
 			return result;
 		}
 
@@ -52,10 +44,23 @@ namespace AntlrCSharp.Implementation.Visitors
 
 		public override CallState? VisitValidSubstitution([NotNull] SharpMUSHParser.ValidSubstitutionContext context)
 		{
-			var woof = context.GetText();
-			Log.Logger.Information("VisitValidSubstitution: {Text}", woof);
+			/*
+
+				var textContents = context.GetText();
+				var functionName = context.funName().GetText();
+				var arguments = context.funArguments()?.children?
+					.Where((_, i) => i % 2 == 0)
+					.Select(x => new CallState(x.GetText(), context.Depth()))
+					?? [new CallState("", context.Depth())];
+
+				var result = Functions.Functions.CallFunction(functionName.ToLower(), parser, context, arguments.ToArray());
+				return result;
+
+			*/
+			var textContents = context.GetText();
+			Log.Logger.Information("VisitValidSubstitution: {Text}", textContents);
 			var children = base.VisitChildren(context);
-			return children ?? new CallState(woof, context.Depth());
+			return children ?? new CallState(textContents, context.Depth());
 		}
 
 		public override CallState? VisitCommand([NotNull] SharpMUSHParser.CommandContext context)
