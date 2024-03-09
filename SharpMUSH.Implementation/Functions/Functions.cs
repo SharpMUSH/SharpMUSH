@@ -7,12 +7,12 @@ namespace SharpMUSH.Implementation.Functions
 {
 	public static partial class Functions
 	{
-		private static readonly Dictionary<string, (PennFunctionAttribute Attribute, Func<Parser, CallState> Function)> _functionLibrary = [];
-		private static readonly Dictionary<string, (MethodInfo Method, PennFunctionAttribute Attribute)> _knownBuiltInMethods = typeof(Functions)
+		private static readonly Dictionary<string, (SharpFunctionAttribute Attribute, Func<Parser, CallState> Function)> _functionLibrary = [];
+		private static readonly Dictionary<string, (MethodInfo Method, SharpFunctionAttribute Attribute)> _knownBuiltInMethods = typeof(Functions)
 			.GetMethods()
-			.Select(m => (Method: m, Attribute: m.GetCustomAttribute(typeof(PennFunctionAttribute), false) as PennFunctionAttribute))
+			.Select(m => (Method: m, Attribute: m.GetCustomAttribute(typeof(SharpFunctionAttribute), false) as SharpFunctionAttribute))
 			.Where(x => x.Attribute is not null)
-			.Select(y => new KeyValuePair<string, (MethodInfo Method, PennFunctionAttribute Attribute)>(y.Attribute!.Name, (y.Method, y.Attribute!)))
+			.Select(y => new KeyValuePair<string, (MethodInfo Method, SharpFunctionAttribute Attribute)>(y.Attribute!.Name, (y.Method, y.Attribute!)))
 			.ToDictionary();
 
 		/// <summary>
@@ -95,7 +95,7 @@ namespace SharpMUSH.Implementation.Functions
 			return function(parser) with { Depth = context.Depth() };
 		}
 
-		private static OneOf<bool, (PennFunctionAttribute, Func<Parser, CallState>)> DiscoverBuiltInFunction(string name)
+		private static OneOf<bool, (SharpFunctionAttribute, Func<Parser, CallState>)> DiscoverBuiltInFunction(string name)
 		{
 			if (!_knownBuiltInMethods.TryGetValue(name, out var result))
 				return false;
@@ -119,7 +119,7 @@ namespace SharpMUSH.Implementation.Functions
 		/// <param name="attr">Function Attributes that describe behavior</param>
 		/// <param name="func">Function to run when this is called</param>
 		/// <returns>True if could be added. False if the name already existed.</returns>
-		public static bool AddFunction(string name, PennFunctionAttribute attr, Func<Parser, CallState> func) =>
+		public static bool AddFunction(string name, SharpFunctionAttribute attr, Func<Parser, CallState> func) =>
 			_functionLibrary.TryAdd(name.ToLower(), (attr, func));
 	}
 }

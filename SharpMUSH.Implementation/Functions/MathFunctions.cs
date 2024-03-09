@@ -41,40 +41,40 @@ namespace SharpMUSH.Implementation.Functions
 	 */
 	public static partial class Functions
 	{
-		[PennFunction(Name = "add", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
-		public static CallState Add(Parser parser, PennFunctionAttribute _2) =>
+		[SharpFunction(Name = "add", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
+		public static CallState Add(Parser parser, SharpFunctionAttribute _2) =>
 			ValidateDecimalAndAggregate(parser.State.Peek().Arguments, (acc, sub) => acc + sub);
 
-		[PennFunction(Name = "sub", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
-		public static CallState Sub(Parser parser, PennFunctionAttribute _2) =>
+		[SharpFunction(Name = "sub", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
+		public static CallState Sub(Parser parser, SharpFunctionAttribute _2) =>
 			ValidateDecimalAndAggregate(parser.State.Peek().Arguments, (acc, sub) => acc - sub);
 
-		[PennFunction(Name = "mul", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
-		public static CallState Mul(Parser parser, PennFunctionAttribute _2) =>
+		[SharpFunction(Name = "mul", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
+		public static CallState Mul(Parser parser, SharpFunctionAttribute _2) =>
 			ValidateDecimalAndAggregate(parser.State.Peek().Arguments, (acc, sub) => acc * sub);
 
-		[PennFunction(Name = "div", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.IntegersOnly)]
-		public static CallState Div(Parser parser, PennFunctionAttribute _2) =>
+		[SharpFunction(Name = "div", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.IntegersOnly)]
+		public static CallState Div(Parser parser, SharpFunctionAttribute _2) =>
 			ValidateIntegerAndAggregate(parser.State.Peek().Arguments, (acc, sub) => acc / sub);
 
-		[PennFunction(Name = "fdiv", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
-		public static CallState FDiv(Parser parser, PennFunctionAttribute _2) =>
+		[SharpFunction(Name = "fdiv", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
+		public static CallState FDiv(Parser parser, SharpFunctionAttribute _2) =>
 			ValidateDecimalAndAggregate(parser.State.Peek().Arguments, (acc, sub) => acc / sub);
 
-		[PennFunction(Name = "floordiv", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
-		public static CallState FloorDiv(Parser parser, PennFunctionAttribute _2) =>
+		[SharpFunction(Name = "floordiv", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
+		public static CallState FloorDiv(Parser parser, SharpFunctionAttribute _2) =>
 			ValidateDecimalAndAggregateToInt(parser.State.Peek().Arguments, (acc, sub) => acc / sub);
 
-		[PennFunction(Name = "max", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
-		public static CallState Max(Parser parser, PennFunctionAttribute _2) =>
+		[SharpFunction(Name = "max", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
+		public static CallState Max(Parser parser, SharpFunctionAttribute _2) =>
 			ValidateDecimalAndAggregate(parser.State.Peek().Arguments, Math.Max);
 
-		[PennFunction(Name = "min", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
-		public static CallState Min(Parser parser, PennFunctionAttribute _2) =>
+		[SharpFunction(Name = "min", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
+		public static CallState Min(Parser parser, SharpFunctionAttribute _2) =>
 			ValidateDecimalAndAggregate(parser.State.Peek().Arguments, Math.Min);
 
-		[PennFunction(Name = "abs", MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
-		public static CallState Abs(Parser parser, PennFunctionAttribute _2)
+		[SharpFunction(Name = "abs", MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
+		public static CallState Abs(Parser parser, SharpFunctionAttribute _2)
 			=> ValidateDecimalAndEvaluate(parser.State.Peek().Arguments, Math.Abs);
 	}
 }

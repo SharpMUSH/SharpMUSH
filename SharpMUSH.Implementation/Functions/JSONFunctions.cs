@@ -20,8 +20,8 @@ namespace SharpMUSH.Implementation.Functions
 			{"boolean", BooleanJSON}
 		};
 
-		[PennFunction(Name = "isjson", MaxArgs = 1, Flags = FunctionFlags.Regular)]
-		public static CallState IsJSON(Parser parser, PennFunctionAttribute _2)
+		[SharpFunction(Name = "isjson", MaxArgs = 1, Flags = FunctionFlags.Regular)]
+		public static CallState IsJSON(Parser parser, SharpFunctionAttribute _2)
 		{
 			try
 			{
@@ -34,8 +34,8 @@ namespace SharpMUSH.Implementation.Functions
 			}
 		}
 
-		[PennFunction(Name = "json", Flags = FunctionFlags.Regular)]
-		public static CallState JSON(Parser parser, PennFunctionAttribute _2)
+		[SharpFunction(Name = "json", Flags = FunctionFlags.Regular)]
+		public static CallState JSON(Parser parser, SharpFunctionAttribute _2)
 			=> JsonFunctions.TryGetValue(MModule.plainText(parser.State.Peek().Arguments[0].Message!).ToLower(), out var fun)
 				? fun(parser.State.Peek().Arguments)
 				: new CallState(MModule.single("#-1 Invalid Type"));

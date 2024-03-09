@@ -71,8 +71,8 @@ namespace SharpMUSH.Implementation.Functions
 
 	public static partial class Functions
 	{
-		[PennFunction(Name = "after", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
-		public static CallState After(Parser parser, PennFunctionAttribute _2)
+		[SharpFunction(Name = "after", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
+		public static CallState After(Parser parser, SharpFunctionAttribute _2)
 		{
 			var args = parser.State.Peek().Arguments;
 			var fullString = args[0]!.Message;
@@ -82,20 +82,20 @@ namespace SharpMUSH.Implementation.Functions
 			return new CallState(MModule.substring(idx, MModule.getLength(fullString) - idx, args[0].Message));
 		}
 
-		[PennFunction(Name = "strcat", Flags = FunctionFlags.Regular)]
-		public static CallState Concat(Parser parser, PennFunctionAttribute _2)
+		[SharpFunction(Name = "strcat", Flags = FunctionFlags.Regular)]
+		public static CallState Concat(Parser parser, SharpFunctionAttribute _2)
 			=> new(parser.State.Peek().Arguments
 					.Select(x => x.Message)
 					.Aggregate((x,y) => MModule.concat(x,y)));
 
-		[PennFunction(Name = "cat", Flags = FunctionFlags.Regular)]
-		public static CallState Cat(Parser parser, PennFunctionAttribute _2)
+		[SharpFunction(Name = "cat", Flags = FunctionFlags.Regular)]
+		public static CallState Cat(Parser parser, SharpFunctionAttribute _2)
 			=> new(parser.State.Peek().Arguments
 					.Select(x => x.Message)
 					.Aggregate((x, y) => MModule.concat(x, y, MModule.single(" "))));
 
-		[PennFunction(Name = "lit", Flags = FunctionFlags.Regular | FunctionFlags.NoParse, MaxArgs = 1)]
-		public static CallState Lit(Parser parser, PennFunctionAttribute _2)
+		[SharpFunction(Name = "lit", Flags = FunctionFlags.Regular | FunctionFlags.NoParse, MaxArgs = 1)]
+		public static CallState Lit(Parser parser, SharpFunctionAttribute _2)
 		{
 			throw new Exception("This should never get called. The FunctionParser should handle this.");
 		}

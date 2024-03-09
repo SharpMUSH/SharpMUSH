@@ -21,13 +21,4 @@
 			<_Parameter1_TypeName>System.Boolean</_Parameter1_TypeName>
 		</AssemblyAttribute>
 	</ItemGroup>
-	
-  <ItemGroup>
-    <Antlr4 Update="PennMUSHLexer.g4">
-      <DefaultCustomToolNamespace>$([MSBuild]::ValueOrDefault('$(RootNamespace).%(DefaultCustomToolNamespace)', '').TrimEnd('.'))</DefaultCustomToolNamespace>
-      <CustomToolNamespace>$([MSBuild]::ValueOrDefault(%(CustomToolNamespace), %(DefaultCustomToolNamespace)))</CustomToolNamespace>
-      <Listener>false</Listener>
-    </Antlr4>
-  </ItemGroup>
-
 </Project>

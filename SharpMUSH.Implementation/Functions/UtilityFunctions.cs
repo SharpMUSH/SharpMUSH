@@ -67,8 +67,8 @@ namespace SharpMUSH.Implementation.Functions
 	public partial class Functions
 	{
 		// TODO: Not compatible due to not being able to indicate a DBREF
-		[PennFunction(Name = "pcreate", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly)]
-		public static CallState PCreate(Parser parser, PennFunctionAttribute _2)
+		[SharpFunction(Name = "pcreate", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly)]
+		public static CallState PCreate(Parser parser, SharpFunctionAttribute _2)
 		{
 			var args = parser.State.Peek().Arguments;
 			var location = parser.Database.GetObjectNode(new SharpMUSH.Library.Models.DBRef { Number = Configurable.PlayerStart }).Result;

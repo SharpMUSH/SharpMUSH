@@ -4,7 +4,7 @@ using SharpMUSH.Implementation.Definitions;
 namespace SharpMUSH.Implementation.Functions
 {
 	[AttributeUsage(AttributeTargets.Method)]
-	public class PennFunctionAttribute : Attribute
+	public class SharpFunctionAttribute : Attribute
 	{
 		public required string Name { get; set; }
 		public int MinArgs { get; set; } = 0;

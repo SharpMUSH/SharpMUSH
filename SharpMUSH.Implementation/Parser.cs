@@ -74,10 +74,10 @@ namespace SharpMUSH.Implementation
 		public CallState? FunctionParse(string text)
 		{
 			AntlrInputStream inputStream = new(text);
-			SharpMUSHLexer pennLexer = new(inputStream);
-			CommonTokenStream commonTokenStream = new(pennLexer);
-			SharpMUSHParser pennParser = new(commonTokenStream);
-			SharpMUSHParser.PlainStringContext chatContext = pennParser.plainString();
+			SharpMUSHLexer sharpLexer = new(inputStream);
+			CommonTokenStream commonTokenStream = new(sharpLexer);
+			SharpMUSHParser sharpParser = new(commonTokenStream);
+			SharpMUSHParser.PlainStringContext chatContext = sharpParser.plainString();
 			SharpMUSHParserVisitor visitor = new(this);
 
 			return visitor.Visit(chatContext);
@@ -86,10 +86,10 @@ namespace SharpMUSH.Implementation
 		public CallState? CommandListParse(string text)
 		{
 			AntlrInputStream inputStream = new(text);
-			SharpMUSHLexer pennLexer = new(inputStream);
-			CommonTokenStream commonTokenStream = new(pennLexer);
-			SharpMUSHParser pennParser = new(commonTokenStream);
-			SharpMUSHParser.CommandListContext chatContext = pennParser.commandList();
+			SharpMUSHLexer sharpLexer = new(inputStream);
+			CommonTokenStream commonTokenStream = new(sharpLexer);
+			SharpMUSHParser sharpParser = new(commonTokenStream);
+			SharpMUSHParser.CommandListContext chatContext = sharpParser.commandList();
 			SharpMUSHParserVisitor visitor = new(this);
 
 			return visitor.Visit(chatContext);
@@ -99,10 +99,10 @@ namespace SharpMUSH.Implementation
 		public CallState? CommandParse(string text)
 		{
 			AntlrInputStream inputStream = new(text);
-			SharpMUSHLexer pennLexer = new(inputStream);
-			CommonTokenStream commonTokenStream = new(pennLexer);
-			SharpMUSHParser pennParser = new(commonTokenStream);
-			SharpMUSHParser.CommandContext chatContext = pennParser.command();
+			SharpMUSHLexer sharpLexer = new(inputStream);
+			CommonTokenStream commonTokenStream = new(sharpLexer);
+			SharpMUSHParser sharpParser = new(commonTokenStream);
+			SharpMUSHParser.CommandContext chatContext = sharpParser.command();
 			SharpMUSHParserVisitor visitor = new(this);
 
 			return visitor.Visit(chatContext);

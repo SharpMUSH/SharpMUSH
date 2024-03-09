@@ -43,8 +43,8 @@ namespace SharpMUSH.Implementation.Functions
 	*/
 	public partial class Functions
 	{
-		[PennFunction(Name = "attrib_set", MaxArgs = 2, Flags = FunctionFlags.Regular)]
-		public static CallState Attrib_Set(Parser parser, PennFunctionAttribute _2)
+		[SharpFunction(Name = "attrib_set", MaxArgs = 2, Flags = FunctionFlags.Regular)]
+		public static CallState Attrib_Set(Parser parser, SharpFunctionAttribute _2)
 		{
 			// TODO: If we have the NoSideFX flag, don't function! 
 			// That should be handled by the parser before it gets here.

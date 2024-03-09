@@ -6,8 +6,8 @@ namespace SharpMUSH.Implementation.Functions
 	{
 		private const string Chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz+/";
 
-		[PennFunction(Name = "baseconv", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-		public static CallState BaseConv(Parser parser, PennFunctionAttribute _2)
+		[SharpFunction(Name = "baseconv", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+		public static CallState BaseConv(Parser parser, SharpFunctionAttribute _2)
 			=> ValidateIntegerAndEvaluate(parser.State.Peek().Arguments[1..], (int[] x) =>
 				{
 					var input = MModule.plainText(parser.State.Peek().Arguments[0].Message!);
@@ -49,32 +49,32 @@ namespace SharpMUSH.Implementation.Functions
 					return MModule.single(result == string.Empty ? "0" : result);
 				});
 
-		[PennFunction(Name = "band", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-		public static CallState BAnd(Parser parser, PennFunctionAttribute _2)
+		[SharpFunction(Name = "band", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+		public static CallState BAnd(Parser parser, SharpFunctionAttribute _2)
 			=> ValidateIntegerAndAggregate(parser.State.Peek().Arguments, (x, y) => x & y);
 
-		[PennFunction(Name = "bnand", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-		public static CallState BNand(Parser parser, PennFunctionAttribute _2)
+		[SharpFunction(Name = "bnand", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+		public static CallState BNand(Parser parser, SharpFunctionAttribute _2)
 			=> ValidateIntegerAndAggregate(parser.State.Peek().Arguments, (x, y) => ~(x & y));
 
-		[PennFunction(Name = "bnot", MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-		public static CallState BNot(Parser parser, PennFunctionAttribute _2)
+		[SharpFunction(Name = "bnot", MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+		public static CallState BNot(Parser parser, SharpFunctionAttribute _2)
 			=> ValidateIntegerAndEvaluate(parser.State.Peek().Arguments, x => ~x);
 
-		[PennFunction(Name = "bor", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-		public static CallState Bor(Parser parser, PennFunctionAttribute _2)
+		[SharpFunction(Name = "bor", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+		public static CallState Bor(Parser parser, SharpFunctionAttribute _2)
 			=> ValidateIntegerAndAggregate(parser.State.Peek().Arguments, (x, y) => x | y);
 
-		[PennFunction(Name = "bxor", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-		public static CallState BXor(Parser parser, PennFunctionAttribute _2)
+		[SharpFunction(Name = "bxor", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+		public static CallState BXor(Parser parser, SharpFunctionAttribute _2)
 			=> ValidateIntegerAndAggregate(parser.State.Peek().Arguments, (x, y) => x ^ y);
 
-		[PennFunction(Name = "shr", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-		public static CallState ShR(Parser parser, PennFunctionAttribute _2)
+		[SharpFunction(Name = "shr", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+		public static CallState ShR(Parser parser, SharpFunctionAttribute _2)
 			=> ValidateIntegerAndAggregate(parser.State.Peek().Arguments, (x, y) => x >> y);
 
-		[PennFunction(Name = "shl", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-		public static CallState ShL(Parser parser, PennFunctionAttribute _2)
+		[SharpFunction(Name = "shl", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+		public static CallState ShL(Parser parser, SharpFunctionAttribute _2)
 			=> ValidateIntegerAndAggregate(parser.State.Peek().Arguments, (x, y) => x << y);
 	}
 }
