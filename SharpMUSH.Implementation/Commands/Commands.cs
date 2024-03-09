@@ -1,5 +1,8 @@
-﻿using SharpMUSH.Implementation.Functions;
+﻿using Microsoft.Win32;
+using SharpMUSH.Implementation.Functions;
+using System.ComponentModel.DataAnnotations;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using static SharpMUSHParser;
 
 namespace SharpMUSH.Implementation.Commands
@@ -52,6 +55,28 @@ namespace SharpMUSH.Implementation.Commands
 			// Step 3: Check room Aliases
 			// Step 4: Check if we are setting an attribute: &...
 			// Step 5: Check @COMMAND in command library
+
+			// TODO: Optimize
+			var slashIndex = command.IndexOf(Slash);
+			command = command[..(slashIndex > -1 ? 0 : slashIndex)];
+
+			if(_commandLibrary.TryGetValue(command, out var libraryCommandDefinition))
+			{
+				libraryCommandDefinition.Function.Invoke(parser.Push(new Parser.ParserState(
+					Registers: parser.State.Peek().Registers,
+					CurrentEvaluation: parser.State.Peek().CurrentEvaluation,
+					Command: "command",
+					// TODO: Evaluate
+					// TODO: Comma Separate should be handled by the parser, and we get use GetText if we need to stich it.
+					Arguments: [new CallState(conText[firstSeparator..])],
+					Function: null,
+					Executor: new Library.Models.DBRef(1), // TODO: Fix
+					Enactor: new Library.Models.DBRef(1),
+					Caller: new Library.Models.DBRef(1)
+				)));
+			}
+
+
 			// Step 6: Check @attribute setting
 			// Step 7: Enter Aliases
 			// Step 8: Leave Aliases

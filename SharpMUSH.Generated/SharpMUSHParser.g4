@@ -12,7 +12,7 @@ options {
 singleCommandString: command EOF;
 commandString: commandList EOF;
 commandList: command (SEMICOLON command)*;
-command: evaluationString+?;
+command: evaluationString+?; // TODO: Add a Command Pattern.
 /*
     TODO: If a command is an @command, we should use evaluationString after the standard @command, switches and all.
     What's more, there's things to consider when it comes to their standard arguments.
