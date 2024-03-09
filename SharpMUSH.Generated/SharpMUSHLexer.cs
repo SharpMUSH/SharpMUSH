@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-// Generated from d:/SharpMUSH/SharpMUSH.Generated/SharpMUSHLexer.g4 by ANTLR 4.13.1
+// Generated from D:/SharpMUSH/SharpMUSH.Generated/SharpMUSHLexer.g4 by ANTLR 4.13.1
 
 // Unreachable code detected
 #pragma warning disable 0162

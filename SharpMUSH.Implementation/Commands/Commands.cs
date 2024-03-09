@@ -14,7 +14,6 @@ namespace SharpMUSH.Implementation.Commands
 			.Select(y => new KeyValuePair<string, (MethodInfo Method, SharpCommandAttribute Attribute)>(y.Attribute!.Name, (y.Method, y.Attribute!)))
 			.ToDictionary();
 
-
 		/*
 				/noparse   : The command does not evaluate the leftside arg(s).
 				/eqsplit   : The parser parses leftside and rightside around =
