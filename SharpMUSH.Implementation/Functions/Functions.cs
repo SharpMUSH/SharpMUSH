@@ -15,6 +15,13 @@ namespace SharpMUSH.Implementation.Functions
 			.Select(y => new KeyValuePair<string, (MethodInfo Method, SharpFunctionAttribute Attribute)>(y.Attribute!.Name, (y.Method, y.Attribute!)))
 			.ToDictionary();
 
+		static Functions()
+		{
+			foreach (var knownMethod in _knownBuiltInMethods)
+			{
+				_functionLibrary.Add(knownMethod.Key, (knownMethod.Value.Attribute, new Func<Parser, CallState>(p => (CallState)knownMethod.Value.Method.Invoke(null, [p, knownMethod.Value.Attribute])!)));
+			}
+		}
 		/// <summary>
 		/// TODO: Optimization needed. We should at least grab the in-built ones at startup.
 		/// </summary>

@@ -12,7 +12,7 @@
 				return new CallState(string.Empty);
 			}
 			
-			return parser.FunctionParse(parser.State.Peek().Arguments[1].Message!.ToString())!;
+			return parser.FunctionParse(parser.State.Peek().Arguments[0].Message!.ToString())!;
 		}
 	}
 }

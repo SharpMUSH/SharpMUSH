@@ -20,10 +20,11 @@ PERCENT: '%' -> pushMode(SUBSTITUTION);
 SEMICOLON: ';';
 COLON: ':';
 OANSI: '\u001B' -> pushMode(ANSI);
+RSPACE: ' ';
 FUNCHAR
     : [a-zA-Z0-9]+ // Lazy way of indicating printable characters. There's more printable characters than this!
     ;
-OTHER: ~('\\'|'['|']'|'{'|'}'|'('|')'|'<'|'>'|','|'='|'$'|'%'|';'|':'|'\u001B')+;
+OTHER: ~('\\'|'['|']'|'{'|'}'|'('|')'|'<'|'>'|','|'='|'$'|'%'|';'|':'|'\u001B'|' ')+;
 
 // --------------- SUBSTITUTION MODE -------------
 mode SUBSTITUTION;

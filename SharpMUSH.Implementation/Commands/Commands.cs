@@ -1,8 +1,5 @@
-﻿using Microsoft.Win32;
-using SharpMUSH.Implementation.Functions;
-using System.ComponentModel.DataAnnotations;
+﻿using Antlr4.Runtime.Tree;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using static SharpMUSHParser;
 
 namespace SharpMUSH.Implementation.Commands
@@ -19,22 +16,28 @@ namespace SharpMUSH.Implementation.Commands
 			.Select(y => new KeyValuePair<string, (MethodInfo Method, SharpCommandAttribute Attribute)>(y.Attribute!.Name, (y.Method, y.Attribute!)))
 			.ToDictionary();
 
-		public static CallState EvaluateCommands(Parser parser, FunctionContext context, CallState[] args)
+		static Commands()
 		{
-			var conText = context.GetText();
-			// TODO: Support the first word to be evaluated.
-			var firstSeparator = int.Min(conText.IndexOf(Space), conText.Length);
+			foreach( var knownCommand in _knownBuiltInCommands)
+			{
+				_commandLibrary.Add(knownCommand.Key, (knownCommand.Value.Attribute, new Func<Parser, CallState>(p => (CallState)knownCommand.Value.Method.Invoke(null, [p, knownCommand.Value.Attribute])!)));
+			}
+		}
 
-			// There can still be Switches attached to this.
-			var command = conText[..firstSeparator];
+		public static CallState EvaluateCommands(Parser parser, CommandContext context, Func<IRuleNode, CallState?> visitChildren)
+		{
+
+			var firstCommandMatch = context.firstCommandMatch();
+			var conText = context.GetText();
+			var command = firstCommandMatch.GetText();
 
 			// Step 1: Check if it's a SOCKET command
 			// TODO: Optimize
 			var socketCommandPattern = _commandLibrary.Where(x => 
-				(x.Key == command) &&
+				(x.Key == command.ToUpper()) &&
 				((x.Value.Attribute.Behavior & Definitions.CommandBehavior.SOCKET) == Definitions.CommandBehavior.SOCKET));
 
-			if(socketCommandPattern.Any()) 
+			if(socketCommandPattern.Any())
 			{
 				// Run as Socket Command.
 				throw new NotImplementedException();
@@ -43,8 +46,8 @@ namespace SharpMUSH.Implementation.Commands
 			// Step 2: Check for a single-token command
 			// TODO: Optimize
 			var singleTokenCommandPattern = _commandLibrary.Where(x =>
-				(x.Key == conText.Substring(0,1)) &&
-				((x.Value.Attribute.Behavior & Definitions.CommandBehavior.SOCKET) == Definitions.CommandBehavior.SOCKET));
+				(x.Key == command[..1].ToUpper()) &&
+				((x.Value.Attribute.Behavior & Definitions.CommandBehavior.SingleToken) == Definitions.CommandBehavior.SingleToken));
 
 			if(singleTokenCommandPattern.Any())
 			{
@@ -57,22 +60,29 @@ namespace SharpMUSH.Implementation.Commands
 			// Step 5: Check @COMMAND in command library
 
 			// TODO: Optimize
-			var slashIndex = command.IndexOf(Slash);
-			command = command[..(slashIndex > -1 ? 0 : slashIndex)];
+			// TODO: Evaluate Command
+			var evaluatedCallContext = visitChildren(firstCommandMatch)!.Message!;
+			var evaluatedCallContextAsString = MModule.plainText(evaluatedCallContext);
+			var slashIndex = evaluatedCallContextAsString.IndexOf(Slash);
+			var rootCommand = evaluatedCallContextAsString[..(slashIndex > -1 ? slashIndex : evaluatedCallContextAsString.Length)];
 
-			if(_commandLibrary.TryGetValue(command, out var libraryCommandDefinition))
+			if (_commandLibrary.TryGetValue(rootCommand.ToUpper(), out var libraryCommandDefinition))
 			{
-				libraryCommandDefinition.Function.Invoke(parser.Push(new Parser.ParserState(
+				var argument = (libraryCommandDefinition.Attribute.Behavior & Definitions.CommandBehavior.NoParse) == Definitions.CommandBehavior.NoParse
+					? new CallState(context.evaluationString().GetText())!
+					: visitChildren(context.evaluationString())!;
+
+				return libraryCommandDefinition.Function.Invoke(parser.Push(new Parser.ParserState(
 					Registers: parser.State.Peek().Registers,
 					CurrentEvaluation: parser.State.Peek().CurrentEvaluation,
-					Command: "command",
+					Command: rootCommand,
 					// TODO: Evaluate
 					// TODO: Comma Separate should be handled by the parser, and we get use GetText if we need to stich it.
-					Arguments: [new CallState(conText[firstSeparator..])],
+					Arguments: [argument],
 					Function: null,
 					Executor: new Library.Models.DBRef(1), // TODO: Fix
-					Enactor: new Library.Models.DBRef(1),
-					Caller: new Library.Models.DBRef(1)
+					Enactor: new Library.Models.DBRef(1),  // We need call context
+					Caller: new Library.Models.DBRef(1)    // Especially when coming from a connection.
 				)));
 			}
 
@@ -89,7 +99,8 @@ namespace SharpMUSH.Implementation.Commands
 			// Step 15: Global User-defined commands
 			// Step 16: HUH_COMMAND is run
 
-			throw new NotImplementedException();
+			// TODO: Create a HUH_COMMAND
+			return new CallState("Huh?");
 		}
 	}
 }

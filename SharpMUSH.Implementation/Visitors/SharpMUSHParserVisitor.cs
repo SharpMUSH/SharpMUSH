@@ -69,8 +69,10 @@ namespace SharpMUSH.Implementation.Visitors
 		{
 			var woof = context.GetText();
 			Log.Logger.Information("VisitCommand: {Text}", woof);
-			var children = base.VisitChildren(context);
-			return children ?? new CallState(woof, context.Depth());
+
+			return Commands.Commands.EvaluateCommands(parser, context, base.VisitChildren);
+			// var children = base.VisitChildren(context);
+			// return children ?? new CallState(woof, context.Depth());
 		}
 
 		public override CallState? VisitCommandString([NotNull] SharpMUSHParser.CommandStringContext context)

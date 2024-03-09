@@ -86,5 +86,13 @@ namespace SharpMUSH.Implementation.Functions
 
 			return new CallState($"#{created}");
 		}
+
+		[SharpFunction(Name = "ansi", MinArgs = 2, Flags = FunctionFlags.Regular)]
+		public static CallState ANSI(Parser parser, SharpFunctionAttribute _2)
+		{
+			var args = parser.State.Peek().Arguments;
+
+			return new CallState(args[1].Message);
+		}
 	}
 }

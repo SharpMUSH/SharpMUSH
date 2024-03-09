@@ -9,16 +9,30 @@ options {
  * TODO: Support {} behavior in functions and commands.
  */
 
-singleCommandString: command EOF;
-commandString: commandList EOF;
-commandList: command (SEMICOLON command)*;
-command: evaluationString+?; // TODO: Add a Command Pattern.
-/*
-    TODO: If a command is an @command, we should use evaluationString after the standard @command, switches and all.
-    What's more, there's things to consider when it comes to their standard arguments.
-*/ 
+singleCommandString
+    : command EOF
+    ;
 
-plainString: evaluationString EOF;
+commandString
+    : commandList EOF
+    ;
+
+commandList
+    : command (SEMICOLON command)*
+    ;
+
+command
+    : firstCommandMatch RSPACE evaluationString
+    | firstCommandMatch
+    ;
+
+firstCommandMatch
+    : evaluationString
+    ;
+
+plainString
+    : evaluationString EOF
+    ;
 
 evaluationString 
     : OBRACE evaluationString CBRACE
