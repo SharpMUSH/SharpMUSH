@@ -60,6 +60,7 @@ complexSubstitutionSymbol
     | REG_NUM
     | ITEXT_NUM
     | STEXT_NUM
+    | VWX
     ;
 substitutionSymbol
     : SPACE
@@ -76,7 +77,6 @@ substitutionSymbol
     | OBJ_PRONOUN
     | POS_PRONOUN
     | ABS_POS_PRONOUN
-    | VWX
     | ARG_NUM
     | CALLED_DBREF
     | EXECUTOR_DBREF
