@@ -1,7 +1,7 @@
 ﻿
-using AntlrCSharp.Implementation.Definitions;
+using SharpMUSH.Implementation.Definitions;
 
-namespace AntlrCSharp.Implementation.Functions
+namespace SharpMUSH.Implementation.Functions
 {
 	[AttributeUsage(AttributeTargets.Method)]
 	public class PennFunctionAttribute : Attribute

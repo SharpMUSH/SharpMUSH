@@ -1,4 +1,4 @@
-﻿namespace AntlrCSharp.Implementation.Commands
+﻿namespace SharpMUSH.Implementation.Commands
 {
 	public static partial class Commands
 	{

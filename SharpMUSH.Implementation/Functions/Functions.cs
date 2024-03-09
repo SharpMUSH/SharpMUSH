@@ -1,9 +1,9 @@
-﻿using AntlrCSharp.Implementation.Definitions;
+﻿using SharpMUSH.Implementation.Definitions;
 using OneOf;
 using System.Reflection;
 using static SharpMUSHParser;
 
-namespace AntlrCSharp.Implementation.Functions
+namespace SharpMUSH.Implementation.Functions
 {
 	public static partial class Functions
 	{

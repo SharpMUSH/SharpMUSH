@@ -1,7 +1,6 @@
-using AntlrCSharp.Implementation.Definitions;
 using Serilog;
 
-namespace AntlrCSharp.Tests.Commands;
+namespace SharpMUSH.Tests.Commands;
 
 [TestClass]
 public class CommandUnitTests : BaseUnitTest

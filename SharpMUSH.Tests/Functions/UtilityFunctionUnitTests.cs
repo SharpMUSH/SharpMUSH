@@ -1,4 +1,4 @@
-﻿using AntlrCSharp.Tests;
+﻿using SharpMUSH.Tests;
 using SharpMUSH.Database;
 using SharpMUSH.Library.Services;
 
@@ -23,7 +23,7 @@ namespace SharpMUSH.Tests.Functions
 				pws: new PasswordService(new Microsoft.AspNetCore.Identity.PasswordHasher<string>()));
 			var result = parser.FunctionParse("pcreate(John,SomePassword)")?.Message?.ToString()!;
 
-			var a = AntlrCSharp.Implementation.Functions.Functions.ParseDBRef(result).AsT0;
+			var a = SharpMUSH.Implementation.Functions.Functions.ParseDBRef(result).AsT0;
 			var db = await database!.GetObjectNode(a);
 			var player = db!.Value.AsT0;
 

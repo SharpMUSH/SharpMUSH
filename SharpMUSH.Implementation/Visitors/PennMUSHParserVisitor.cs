@@ -1,7 +1,7 @@
 ﻿using Antlr4.Runtime.Misc;
 using Serilog;
 
-namespace AntlrCSharp.Implementation.Visitors
+namespace SharpMUSH.Implementation.Visitors
 {
 	/// <summary>
 	/// This class implements the SharpMUSHParserBaseVisitor from the Generated code.
@@ -44,23 +44,25 @@ namespace AntlrCSharp.Implementation.Visitors
 
 		public override CallState? VisitValidSubstitution([NotNull] SharpMUSHParser.ValidSubstitutionContext context)
 		{
-			/*
-
-				var textContents = context.GetText();
-				var functionName = context.funName().GetText();
-				var arguments = context.funArguments()?.children?
-					.Where((_, i) => i % 2 == 0)
-					.Select(x => new CallState(x.GetText(), context.Depth()))
-					?? [new CallState("", context.Depth())];
-
-				var result = Functions.Functions.CallFunction(functionName.ToLower(), parser, context, arguments.ToArray());
-				return result;
-
-			*/
 			var textContents = context.GetText();
-			Log.Logger.Information("VisitValidSubstitution: {Text}", textContents);
-			var children = base.VisitChildren(context);
-			return children ?? new CallState(textContents, context.Depth());
+			var complexSubstitutionSymbol = context.complexSubstitutionSymbol();
+			var simpleSubstitutionSymbol = context.substitutionSymbol();
+
+			if (complexSubstitutionSymbol  != null )
+			{
+				var result = Substitutions.Substitutions.ParseComplexSubstitution(complexSubstitutionSymbol.GetText(), parser, complexSubstitutionSymbol);
+				return result;
+			}
+			else if(simpleSubstitutionSymbol != null)
+			{
+				var result = Substitutions.Substitutions.ParseSimpleSubstitution(simpleSubstitutionSymbol.GetText(), parser, simpleSubstitutionSymbol);
+				return result;
+			}
+			else
+			{
+				var children = base.VisitChildren(context);
+				return children ?? new CallState(textContents, context.Depth());
+			}
 		}
 
 		public override CallState? VisitCommand([NotNull] SharpMUSHParser.CommandContext context)

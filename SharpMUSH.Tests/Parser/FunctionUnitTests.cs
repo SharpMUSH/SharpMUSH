@@ -1,4 +1,4 @@
-namespace AntlrCSharp.Tests.Parser;
+namespace SharpMUSH.Tests.Parser;
 
 [TestClass]
 public class FunctionUnitTests : BaseUnitTest

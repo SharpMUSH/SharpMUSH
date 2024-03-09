@@ -9,7 +9,7 @@ using SharpMUSH.IntegrationTests;
 using Testcontainers.ArangoDb;
 using SharpMUSH.Library.Models;
 
-namespace AntlrCSharp.Tests
+namespace SharpMUSH.Tests
 {
 	public class BaseUnitTest
 	{

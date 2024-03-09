@@ -3,7 +3,7 @@ using System.Text;
 using AnsiString = MarkupString.MarkupStringModule.MarkupString;
 using A = MarkupString.MarkupStringModule;
 
-namespace AntlrCSharp.Tests.Markup
+namespace SharpMUSH.Tests.Markup
 {
 	[TestClass]
 	public class AnsiStringUnitTests : BaseUnitTest

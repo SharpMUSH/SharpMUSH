@@ -1,4 +1,4 @@
-﻿namespace AntlrCSharp.Implementation.Functions
+﻿namespace SharpMUSH.Implementation.Functions
 {
 	/*
 		cemit()

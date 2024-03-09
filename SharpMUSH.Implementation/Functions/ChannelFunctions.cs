@@ -1,6 +1,6 @@
-﻿using AntlrCSharp.Implementation.Definitions;
+﻿using SharpMUSH.Implementation.Definitions;
 
-namespace AntlrCSharp.Implementation.Functions
+namespace SharpMUSH.Implementation.Functions
 {
 	/*
 		cbuffer()

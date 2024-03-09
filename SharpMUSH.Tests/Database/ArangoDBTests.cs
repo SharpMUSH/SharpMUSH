@@ -1,6 +1,6 @@
 ﻿using SharpMUSH.Database;
 using SharpMUSH.Database.Types;
-using AntlrCSharp.Tests;
+using SharpMUSH.Tests;
 
 namespace SharpMUSH.IntegrationTests
 {

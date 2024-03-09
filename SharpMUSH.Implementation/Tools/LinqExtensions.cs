@@ -1,4 +1,4 @@
-﻿namespace AntlrCSharp.Implementation.Tools
+﻿namespace SharpMUSH.Implementation.Tools
 {
 	internal static class LinqExtensions
 	{

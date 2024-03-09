@@ -1,12 +1,12 @@
 ﻿using Antlr4.Runtime;
-using AntlrCSharp.Implementation.Definitions;
-using AntlrCSharp.Implementation.Visitors;
+using SharpMUSH.Implementation.Definitions;
+using SharpMUSH.Implementation.Visitors;
 using SharpMUSH.Database;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services;
 using System.Collections.Immutable;
 
-namespace AntlrCSharp.Implementation
+namespace SharpMUSH.Implementation
 {
 	/// <summary>
 	/// Provides the parser.

@@ -40,7 +40,7 @@ explicitEvaluationStringFunction
 explicitEvaluationText
     : genericText
     ;
-funName 
+funName  // TODO: A Substitution can be inside of a funName to create a function name.
     : FUNCHAR
     ;
 function 

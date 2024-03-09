@@ -1,7 +1,7 @@
-﻿using AntlrCSharp.Implementation.Definitions;
+﻿using SharpMUSH.Implementation.Definitions;
 using System.Text.Json;
 
-namespace AntlrCSharp.Implementation.Functions
+namespace SharpMUSH.Implementation.Functions
 {
 	/*
     json()

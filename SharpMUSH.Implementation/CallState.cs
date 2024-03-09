@@ -1,4 +1,4 @@
-﻿namespace AntlrCSharp.Implementation
+﻿namespace SharpMUSH.Implementation
 {
 	public record CallState(MString? Message, int Depth = 0)
 	{

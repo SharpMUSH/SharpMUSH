@@ -1,6 +1,6 @@
 ﻿using SharpMUSH.Library.Models;
 
-namespace AntlrCSharp.Implementation.Definitions
+namespace SharpMUSH.Implementation.Definitions
 {
 	public class DBAttribute
 	{

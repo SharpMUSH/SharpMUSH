@@ -2,7 +2,7 @@
 using AnsiString = MarkupString.MarkupStringModule.MarkupString;
 using M = MarkupString.MarkupImplementation.AnsiMarkup;
 
-namespace AntlrCSharp.Tests.Markup.Data
+namespace SharpMUSH.Tests.Markup.Data
 {
 	internal static class Split
 	{

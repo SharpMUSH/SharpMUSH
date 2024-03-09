@@ -1,4 +1,4 @@
-﻿namespace AntlrCSharp.Tests.Functions
+﻿namespace SharpMUSH.Tests.Functions
 {
 	[TestClass]
 	public class MathFunctionUnitTests: BaseUnitTest

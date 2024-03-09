@@ -1,10 +1,10 @@
-﻿using AntlrCSharp.Implementation.Definitions;
-using AntlrCSharp.Implementation.Tools;
+﻿using SharpMUSH.Implementation.Definitions;
+using SharpMUSH.Implementation.Tools;
 using OneOf;
 using SharpMUSH.Library.Models;
 using System.Text.RegularExpressions;
 
-namespace AntlrCSharp.Implementation.Functions
+namespace SharpMUSH.Implementation.Functions
 {
 	public partial class Functions
 	{

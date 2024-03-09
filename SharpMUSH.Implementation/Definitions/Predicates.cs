@@ -1,4 +1,4 @@
-﻿namespace AntlrCSharp.Implementation.Definitions
+﻿namespace SharpMUSH.Implementation.Definitions
 {
 	public static class Predicates
 	{
