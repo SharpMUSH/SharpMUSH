@@ -32,8 +32,7 @@ namespace SharpMUSH.Implementation.Substitutions
 				case "t":
 					return new CallState("\t");
 				case "#":
-					// ENACTOR DBREF
-					throw new NotImplementedException();
+					return new CallState($"#{parser.State.Peek().Enactor.Number}");
 				case "n":
 					// ENACTOR NAME
 					throw new NotImplementedException();
@@ -64,11 +63,9 @@ namespace SharpMUSH.Implementation.Substitutions
 					// ABSOLUTE POSSESSIVE PRONOUN
 					throw new NotImplementedException();
 				case "@":
-					// CALLER DBREF
-					throw new NotImplementedException();
+					return new CallState($"#{parser.State.Peek().Caller.Number}");
 				case "!":
-					// EXECUTOR DBREF
-					throw new NotImplementedException();
+					return new CallState($"#{parser.State.Peek().Executor.Number}");
 				case "L":
 				case "l":
 					// LOCATION OF EXECUTOR

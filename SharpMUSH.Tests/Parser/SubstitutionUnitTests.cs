@@ -6,7 +6,11 @@
 
 		[TestMethod]
 		[DataRow("think %t", "think \t")]
-		// [DataRow("strcat(%s)")]
+		[DataRow("think %#", "think #1")]
+		[DataRow("think %!", "think #1")]
+		[DataRow("think %@", "think #1")]
+		[DataRow("think [strcat(%!,5)]", "think #15")]
+		[DataRow("think %!5", "think #15")]
 		// [DataRow("strcat(%q0)")]
 		// [DataRow("strcat(%q<test>)")]
 		// [DataRow("%s")]
