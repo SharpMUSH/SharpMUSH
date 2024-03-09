@@ -10,6 +10,12 @@
 	<PropertyGroup>
 		<TreatWarningsAsErrors>True</TreatWarningsAsErrors>
 	</PropertyGroup>
+
+	<ItemGroup>
+	  <Compile Remove="ANTLR4\**" />
+	  <EmbeddedResource Remove="ANTLR4\**" />
+	  <None Remove="ANTLR4\**" />
+	</ItemGroup>
 	
   <ItemGroup>
     <PackageReference Include="Antlr4.Runtime.Standard" Version="4.13.1" />

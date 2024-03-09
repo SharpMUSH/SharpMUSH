@@ -8,6 +8,8 @@
 		EqSplit = 2,
 		LSArgs = 4,
 		RSArgs = 8,
-		RSNoParse = 16
+		RSNoParse = 16,
+		SOCKET = 32,
+		SingleToken = 64
 	}
 }
