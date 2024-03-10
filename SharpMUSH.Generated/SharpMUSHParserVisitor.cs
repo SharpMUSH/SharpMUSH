@@ -62,6 +62,24 @@ public interface ISharpMUSHParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitFirstCommandMatch([NotNull] SharpMUSHParser.FirstCommandMatchContext context);
 	/// <summary>
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.eqsplitCommandArgs"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitEqsplitCommandArgs([NotNull] SharpMUSHParser.EqsplitCommandArgsContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.commaCommandArgs"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitCommaCommandArgs([NotNull] SharpMUSHParser.CommaCommandArgsContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.singleCommandArg"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitSingleCommandArg([NotNull] SharpMUSHParser.SingleCommandArgContext context);
+	/// <summary>
 	/// Visit a parse tree produced by <see cref="SharpMUSHParser.plainString"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>

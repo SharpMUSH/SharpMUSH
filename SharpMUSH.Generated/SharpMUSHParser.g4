@@ -7,6 +7,7 @@ options {
 /*
  * Parser Rules  
  * TODO: Support {} behavior in functions and commands.
+ * TODO: Allow Whitespace around specific characters without impacting things.
  */
 
 singleCommandString
@@ -27,6 +28,19 @@ command
     ;
 
 firstCommandMatch
+    : evaluationString
+    ;
+
+eqsplitCommandArgs
+    : singleCommandArg EQUALS commaCommandArgs
+    ;
+
+commaCommandArgs
+    : evaluationString
+    | evaluationString (COMMA evaluationString)+?
+    ;
+
+singleCommandArg
     : evaluationString
     ;
 

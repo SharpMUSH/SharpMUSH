@@ -76,7 +76,6 @@ namespace SharpMUSH.Implementation.Commands
 					Registers: parser.State.Peek().Registers,
 					CurrentEvaluation: parser.State.Peek().CurrentEvaluation,
 					Command: rootCommand,
-					// TODO: Evaluate
 					// TODO: Comma Separate should be handled by the parser, and we get use GetText if we need to stich it.
 					Arguments: [argument],
 					Function: null,
