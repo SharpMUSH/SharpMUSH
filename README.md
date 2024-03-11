@@ -10,8 +10,7 @@ It takes its basis and functionality heavily from PennMUSH and its brethren with
 ![Visual Studio](https://img.shields.io/badge/Visual%20Studio-5C2D91.svg?style=for-the-badge&logo=visual-studio&logoColor=white)
 
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/SharpMUSH/SharpMUSH/dotnet.yml?style=for-the-badge)](https://github.com/SharpMUSH/SharpMUSH/actions/workflows/dotnet.yml)
-
-[![Discord](https://img.shields.io/discord/1216626296642343044?style=for-the-badge)](https://discord.gg/jYErRbqaC9)
+[![Discord](https://img.shields.io/discord/1216626296642343044?style=for-the-badge&refresh=1)](https://discord.gg/jYErRbqaC9)
 
 <br/>
 <br/>
