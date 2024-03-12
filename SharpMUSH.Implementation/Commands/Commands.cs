@@ -72,7 +72,7 @@ namespace SharpMUSH.Implementation.Commands
 					? new CallState(context.evaluationString().GetText())!
 					: visitChildren(context.evaluationString())!;
 
-				return libraryCommandDefinition.Function.Invoke(parser.Push(new Parser.ParserState(
+				var result = libraryCommandDefinition.Function.Invoke(parser.Push(new Parser.ParserState(
 					Registers: parser.State.Peek().Registers,
 					CurrentEvaluation: parser.State.Peek().CurrentEvaluation,
 					Command: rootCommand,
@@ -83,6 +83,9 @@ namespace SharpMUSH.Implementation.Commands
 					Enactor: new Library.Models.DBRef(1),  // We need call context
 					Caller: new Library.Models.DBRef(1)    // Especially when coming from a connection.
 				)));
+
+				parser.Pop();
+				return result;
 			}
 
 

@@ -28,6 +28,8 @@ namespace SharpMUSH.Server
 			services.AddSingleton<PasswordHasher<string>, PasswordHasher<string>>(_ => new PasswordHasher<string>());
 			services.AddSingleton<IPasswordService, PasswordService>();
 			services.AddSingleton<IPermissionService, PermissionService>();
+			services.AddSingleton<INotifyService, NotifyService>();
+			services.AddSingleton<IQueueService, QueueService>();
 			services.AddSingleton(new ArangoHandle("CurrentSharpMUSHWorld"));
 			services.BuildServiceProvider();
 		}

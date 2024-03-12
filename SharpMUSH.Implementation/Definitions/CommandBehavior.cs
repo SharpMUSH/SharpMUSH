@@ -3,7 +3,7 @@
 	[Flags]
 	public enum CommandBehavior
 	{
-		Undefined = 0,
+		Default = 0,
 		NoParse = 1,
 		EqSplit = 2,
 		LSArgs = 4,

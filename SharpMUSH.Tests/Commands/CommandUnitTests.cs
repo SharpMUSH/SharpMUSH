@@ -1,3 +1,5 @@
+using NSubstitute;
+using NSubstitute.ReceivedExtensions;
 using Serilog;
 
 namespace SharpMUSH.Tests.Commands;
@@ -24,8 +26,9 @@ public class CommandUnitTests : BaseUnitTest
 		var parser = TestParser();
 		var result = parser.CommandParse(str)?.Message;
 
-		Console.WriteLine(result!);
-		Assert.AreEqual(expected, result!.ToString());
+		parser.NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(parser.State.Peek().Executor, expected);
 	}
 
 	[TestMethod]

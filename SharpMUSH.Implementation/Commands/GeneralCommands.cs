@@ -2,7 +2,7 @@
 {
 	public static partial class Commands
 	{
-		[SharpCommand(Name = "THINK", Behavior = Definitions.CommandBehavior.Undefined, MinArgs = 0, MaxArgs = 1)]
+		[SharpCommand(Name = "THINK", Behavior = Definitions.CommandBehavior.Default, MinArgs = 0, MaxArgs = 1)]
 		public static CallState Think(Parser parser, SharpCommandAttribute _2)
 		{
 			var args = parser.State.Peek().Arguments;
@@ -11,8 +11,12 @@
 			{
 				return new CallState(string.Empty);
 			}
-			
-			return parser.FunctionParse(parser.State.Peek().Arguments[0].Message!.ToString())!;
+
+			var notification = args[0]!.Message!.ToString();
+			var executor = parser.State.Peek().Executor;
+			parser.NotifyService.Notify(executor, notification);
+
+			return new CallState("");
 		}
 	}
 }

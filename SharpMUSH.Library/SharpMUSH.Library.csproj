@@ -10,4 +10,10 @@
     <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="8.0.2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Reference Include="SharpMUSH.MarkupString">
+      <HintPath>..\SharpMUSH.MarkupString\obj\Debug\net8.0\ref\SharpMUSH.MarkupString.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
 </Project>

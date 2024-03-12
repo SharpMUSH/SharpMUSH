@@ -1,4 +1,6 @@
-﻿namespace SharpMUSH.Tests.Parser
+﻿using NSubstitute.ReceivedExtensions;
+
+namespace SharpMUSH.Tests.Parser
 {
 	[TestClass]
 	public class SubstitutionUnitTests : BaseUnitTest
@@ -31,7 +33,9 @@
 
 			if (expected != null)
 			{
-				Assert.AreEqual(expected, result);
+				parser.NotifyService
+					.Received(Quantity.Exactly(1))
+					.Notify(parser.State.Peek().Executor, expected);
 			}
 		}
 	}
