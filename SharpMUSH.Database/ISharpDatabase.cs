@@ -1,5 +1,4 @@
 ﻿using OneOf;
-using SharpMUSH.Database.Types;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Database
@@ -22,10 +21,10 @@ namespace SharpMUSH.Database
 
 		/// <summary>
 		/// Get the Object represented by a Database Reference Number.
-		/// Optionally passing either the createdsecs or createdmiliseconds will do a more specific lookup.
+		/// Optionally passing either the CreatedSecs or CreatedMilliseconds will do a more specific lookup.
 		/// </summary>
 		/// <param name="dbref">Database Reference Number</param>
-		/// <param name="createdmsecs">Created Miliseconds (Unix Timestamp</param>
+		/// <param name="createdmsecs">Created Milliseconds (Unix Timestamp</param>
 		/// <returns>A OneOf over the object being returned</returns>
 		Task<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing>?> GetObjectNode(DBRef dbref);
 

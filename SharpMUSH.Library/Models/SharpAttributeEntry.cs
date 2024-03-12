@@ -1,10 +1,10 @@
-﻿using Core.Arango;
+﻿using Newtonsoft.Json;
 
-namespace SharpMUSH.Database.Types
+namespace SharpMUSH.Library.Models
 {
 	public class SharpAttributeEntry
 	{
-		[ArangoIgnore]
+		[JsonIgnore]
 		public string? Id { get; set; }
 
 		public required string Name { get; set; }

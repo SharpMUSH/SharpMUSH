@@ -1,7 +1,6 @@
-﻿using Core.Arango;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 
-namespace SharpMUSH.Database.Types
+namespace SharpMUSH.Library.Models
 {
 	public class SharpObject
 	{
@@ -13,7 +12,7 @@ namespace SharpMUSH.Database.Types
 			public required string[] AttributeTriggers { get; set; }
 		}
 
-		[ArangoIgnore]
+		[JsonIgnore]
 		public string? Id { get; set; }
 
 		[JsonProperty("_key")]

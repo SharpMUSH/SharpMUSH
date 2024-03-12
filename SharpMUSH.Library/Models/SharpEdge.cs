@@ -1,11 +1,10 @@
-﻿using Core.Arango;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 
-namespace SharpMUSH.Database.Types
+namespace SharpMUSH.Library.Models
 {
 	public class SharpEdge
 	{
-		[ArangoIgnore]
+		[JsonIgnore]
 		public string? Id { get; set; }
 
 		[JsonProperty("_from")]

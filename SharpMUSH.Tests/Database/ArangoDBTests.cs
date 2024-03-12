@@ -1,6 +1,6 @@
 ﻿using SharpMUSH.Database;
-using SharpMUSH.Database.Types;
 using SharpMUSH.Tests;
+using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.IntegrationTests
 {
@@ -38,7 +38,7 @@ namespace SharpMUSH.IntegrationTests
 		[TestMethod]
 		public async Task TestPlayerOne()
 		{
-			var playerOne = (await database!.GetObjectNode(new Library.Models.DBRef(1))).Value.AsT0;
+			var playerOne = (await database!.GetObjectNode(new DBRef(1))).Value.AsT0;
 
 			Assert.AreEqual(typeof(SharpPlayer), playerOne.GetType());
 			Assert.AreEqual("God", playerOne!.Object!.Name);
@@ -48,13 +48,13 @@ namespace SharpMUSH.IntegrationTests
 		[TestMethod]
 		public async Task SetAndGetAnAttribute()
 		{
-			var playerOne = (await database!.GetObjectNode(new Library.Models.DBRef(1))).Value.AsT0;
+			var playerOne = (await database!.GetObjectNode(new DBRef(1))).Value.AsT0;
 
 			Assert.AreEqual(typeof(SharpPlayer), playerOne.GetType());
 			Assert.AreEqual("God", playerOne!.Object!.Name);
 			Assert.AreEqual(1, playerOne!.Object!.Key);
 
-			var playerOneDBRef = new Library.Models.DBRef(playerOne!.Object!.Key!.Value);
+			var playerOneDBRef = new DBRef(playerOne!.Object!.Key!.Value);
 
 			await database!.SetAttribute(playerOneDBRef, ["SingleLayer"], "Single", playerOne);
 			await database!.SetAttribute(playerOneDBRef, ["Two"], "Twin", playerOne);
@@ -83,12 +83,12 @@ namespace SharpMUSH.IntegrationTests
 			Assert.AreEqual("Leaf2", existingLeaf2!.Last().Value);
 			Assert.AreEqual("Deep1", existingDeep1!.Last().Value);
 			Assert.AreEqual("Deeper", existingDeep2!.Last().Value);
-			Assert.AreEqual("SingleLayer", existingSingle!.Last().LongName);
-			Assert.AreEqual("Two`Layers", existingLayer!.Last().LongName);
-			Assert.AreEqual("Two`Leaves", existingLeaf!.Last().LongName);
-			Assert.AreEqual("Two`Leaves2", existingLeaf2!.Last().LongName);
-			Assert.AreEqual("Three`Layers`Deep", existingDeep1!.Last().LongName);
-			Assert.AreEqual("Three`Layers`Deep2", existingDeep2!.Last().LongName);
+			Assert.AreEqual("SINGLELAYER", existingSingle!.Last().LongName);
+			Assert.AreEqual("TWO`LAYERS", existingLayer!.Last().LongName);
+			Assert.AreEqual("TWO`LEAVES", existingLeaf!.Last().LongName);
+			Assert.AreEqual("TWO`LEAVES2", existingLeaf2!.Last().LongName);
+			Assert.AreEqual("THREE`LAYERS`DEEP", existingDeep1!.Last().LongName);
+			Assert.AreEqual("THREE`LAYERS`DEEP2", existingDeep2!.Last().LongName);
 		}
 	}
 }

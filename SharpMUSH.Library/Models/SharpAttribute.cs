@@ -1,11 +1,10 @@
-﻿using Core.Arango;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 
-namespace SharpMUSH.Database.Types
+namespace SharpMUSH.Library.Models
 {
 	public class SharpAttribute
 	{
-		[ArangoIgnore]
+		[JsonIgnore]
 		public string? Id { get; set; }
 
 		public required string Name { get; set; }
@@ -15,7 +14,7 @@ namespace SharpMUSH.Database.Types
 		public string Value { get; set; } = string.Empty;
 
 		// Computed Value
-		[ArangoIgnore]
+		[JsonIgnore]
 		public virtual string? LongName { get; set; }
 
 		// RELATIONSHIP

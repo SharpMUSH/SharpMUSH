@@ -1,7 +1,7 @@
 ﻿using Core.Arango.Migration;
 using Core.Arango;
 using Core.Arango.Protocol;
-using SharpMUSH.Database.Types;
+using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Database.Migrations
 {
@@ -374,7 +374,7 @@ namespace SharpMUSH.Database.Migrations
 			},
 				Graphs = new ArangoGraph[]
 				{
-					new ArangoGraph()
+					new()
 					{
 						EdgeDefinitions = 
 						[
@@ -387,7 +387,7 @@ namespace SharpMUSH.Database.Migrations
 						],
 						Name = "graph_objects"
 					},
-					new ArangoGraph()
+					new()
 					{
 						EdgeDefinitions =
 						[

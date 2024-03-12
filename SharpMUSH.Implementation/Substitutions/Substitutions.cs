@@ -4,7 +4,7 @@ namespace SharpMUSH.Implementation.Substitutions
 {
 	public static partial class Substitutions
 	{
-		public static CallState ParseSimpleSubstitution(string symbol, Parser parser, SubstitutionSymbolContext context)
+		public static CallState ParseSimpleSubstitution(string symbol, Parser parser, SubstitutionSymbolContext _)
 			=> symbol switch
 			{
 				"0" or "1" or "2" or "3" or "4" or "5" or "6" or "7" or "8" or "9" => new CallState((parser.State.Peek().Arguments.ElementAtOrDefault(int.Parse(symbol))?.Message) ?? MModule.empty()),
@@ -26,7 +26,7 @@ namespace SharpMUSH.Implementation.Substitutions
 				"C" or "c" => throw new NotImplementedException(),// LAST COMMAND BEFORE EVALUATION
 				"U" or "u" => throw new NotImplementedException(),// LAST COMMAND AFTER EVALUATION
 				"?" => new CallState(parser.State.Count().ToString()),
-				"+" => new CallState(parser.State.Peek().Arguments.Count().ToString()),
+				"+" => new CallState(parser.State.Peek().Arguments.Length.ToString()),
 				_ => new CallState(symbol),
 			};
 
