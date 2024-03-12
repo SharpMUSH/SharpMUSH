@@ -1,8 +1,11 @@
-﻿namespace SharpMUSH.Implementation.Commands
+﻿using SharpMUSH.Library.Models;
+using CB = SharpMUSH.Implementation.Definitions.CommandBehavior;
+
+namespace SharpMUSH.Implementation.Commands
 {
 	public static partial class Commands
 	{
-		[SharpCommand(Name = "THINK", Behavior = Definitions.CommandBehavior.Default, MinArgs = 0, MaxArgs = 1)]
+		[SharpCommand(Name = "THINK", Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
 		public static CallState Think(Parser parser, SharpCommandAttribute _2)
 		{
 			var args = parser.State.Peek().Arguments;
@@ -15,6 +18,32 @@
 			var notification = args[0]!.Message!.ToString();
 			var executor = parser.State.Peek().Executor;
 			parser.NotifyService.Notify(executor, notification);
+
+			return new CallState("");
+		}
+
+		[SharpCommand(Name = "@PEMIT", Behavior = CB.Default | CB.EqSplit, MinArgs = 1, MaxArgs = 2)]
+		public static CallState PEmit(Parser parser, SharpCommandAttribute _2)
+		{
+			var args = parser.State.Peek().Arguments;
+
+			if (args.Count < 2)
+			{
+				return new CallState(string.Empty);
+			}
+
+			var notification = args[1]!.Message!.ToString();
+			var target = MModule.plainText(args[0]!.Message!);
+			var parsedTarget = Functions.Functions.ParseDBRef(target);
+			
+			if (parsedTarget.IsT0)
+			{
+				parser.NotifyService.Notify(parsedTarget.AsT0, notification);
+			}
+			else
+			{
+				parser.NotifyService.Notify(parser.State.Peek().Executor, "I can't see that here.");
+			}
 
 			return new CallState("");
 		}

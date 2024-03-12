@@ -60,7 +60,8 @@ namespace SharpMUSH.Implementation.Commands
 			// Step 5: Check @COMMAND in command library
 
 			// TODO: Optimize
-			// TODO: Evaluate Command
+			// TODO: Evaluate Command -- commands that run more commands are always NoParse for the arguments it's relevant for.
+			// TODO: Get the Switches and send them along as a list of items!
 			var evaluatedCallContext = visitChildren(firstCommandMatch)!.Message!;
 			var evaluatedCallContextAsString = MModule.plainText(evaluatedCallContext);
 			var slashIndex = evaluatedCallContextAsString.IndexOf(Slash);
