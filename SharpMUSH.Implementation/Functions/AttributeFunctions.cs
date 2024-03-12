@@ -67,7 +67,7 @@ namespace SharpMUSH.Implementation.Functions
 
 			// Clear on only having 1 arg. 
 			// Write on having 2 args.
-			if (args.Length == 1)
+			if (args.Count == 1)
 			{
 				// Database.Clear.
 			}

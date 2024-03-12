@@ -7,7 +7,7 @@
 		{
 			var args = parser.State.Peek().Arguments;
 
-			if (args.Length < 1)
+			if (args.Count < 1)
 			{
 				return new CallState(string.Empty);
 			}

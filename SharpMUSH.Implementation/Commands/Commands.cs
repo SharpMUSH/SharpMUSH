@@ -18,7 +18,7 @@ namespace SharpMUSH.Implementation.Commands
 
 		static Commands()
 		{
-			foreach( var knownCommand in _knownBuiltInCommands)
+			foreach (var knownCommand in _knownBuiltInCommands)
 			{
 				_commandLibrary.Add(knownCommand.Key, (knownCommand.Value.Attribute, new Func<Parser, CallState>(p => (CallState)knownCommand.Value.Method.Invoke(null, [p, knownCommand.Value.Attribute])!)));
 			}
@@ -33,11 +33,11 @@ namespace SharpMUSH.Implementation.Commands
 
 			// Step 1: Check if it's a SOCKET command
 			// TODO: Optimize
-			var socketCommandPattern = _commandLibrary.Where(x => 
-				(x.Key == command.ToUpper()) &&
+			var socketCommandPattern = _commandLibrary.Where(x =>
+				(x.Key.Equals(command, StringComparison.CurrentCultureIgnoreCase)) &&
 				((x.Value.Attribute.Behavior & Definitions.CommandBehavior.SOCKET) == Definitions.CommandBehavior.SOCKET));
 
-			if(socketCommandPattern.Any())
+			if (socketCommandPattern.Any())
 			{
 				// Run as Socket Command.
 				throw new NotImplementedException();
@@ -46,10 +46,10 @@ namespace SharpMUSH.Implementation.Commands
 			// Step 2: Check for a single-token command
 			// TODO: Optimize
 			var singleTokenCommandPattern = _commandLibrary.Where(x =>
-				(x.Key == command[..1].ToUpper()) &&
+				(x.Key.Equals(command[..1], StringComparison.CurrentCultureIgnoreCase)) &&
 				((x.Value.Attribute.Behavior & Definitions.CommandBehavior.SingleToken) == Definitions.CommandBehavior.SingleToken));
 
-			if(singleTokenCommandPattern.Any())
+			if (singleTokenCommandPattern.Any())
 			{
 				// Run single token command
 				throw new NotImplementedException();
@@ -66,8 +66,22 @@ namespace SharpMUSH.Implementation.Commands
 			var slashIndex = evaluatedCallContextAsString.IndexOf(Slash);
 			var rootCommand = evaluatedCallContextAsString[..(slashIndex > -1 ? slashIndex : evaluatedCallContextAsString.Length)];
 
+			// TODO: TOo many ifs. This needs to be split out.
 			if (_commandLibrary.TryGetValue(rootCommand.ToUpper(), out var libraryCommandDefinition))
 			{
+				if(context.children.Count > 1)
+				{
+					if ((libraryCommandDefinition.Attribute.Behavior & Definitions.CommandBehavior.EqSplit) == Definitions.CommandBehavior.EqSplit)
+					{
+						_ = parser.CommandEqSplitArgsParse(context.children[2].GetText());
+					}
+					else
+					{
+						_ = parser.CommandCommaArgsParse(context.children[2].GetText());
+					}
+				}
+
+
 				var argument = (libraryCommandDefinition.Attribute.Behavior & Definitions.CommandBehavior.NoParse) == Definitions.CommandBehavior.NoParse
 					? new CallState(context.evaluationString().GetText())!
 					: visitChildren(context.evaluationString())!;

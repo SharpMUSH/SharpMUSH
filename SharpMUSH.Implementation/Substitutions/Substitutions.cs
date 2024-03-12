@@ -26,7 +26,7 @@ namespace SharpMUSH.Implementation.Substitutions
 				"C" or "c" => throw new NotImplementedException(),// LAST COMMAND BEFORE EVALUATION
 				"U" or "u" => throw new NotImplementedException(),// LAST COMMAND AFTER EVALUATION
 				"?" => new CallState(parser.State.Count().ToString()),
-				"+" => new CallState(parser.State.Peek().Arguments.Length.ToString()),
+				"+" => new CallState(parser.State.Peek().Arguments.Count.ToString()),
 				_ => new CallState(symbol),
 			};
 

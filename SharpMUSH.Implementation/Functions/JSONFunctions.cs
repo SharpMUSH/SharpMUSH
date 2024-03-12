@@ -14,7 +14,7 @@ namespace SharpMUSH.Implementation.Functions
   */
 	public partial class Functions
 	{
-		public static Dictionary<string, Func<CallState[], CallState>> JsonFunctions = new()
+		public static Dictionary<string, Func<List<CallState>, CallState>> JsonFunctions = new()
 		{
 			{"null", NullJSON},
 			{"boolean", BooleanJSON}
@@ -40,16 +40,16 @@ namespace SharpMUSH.Implementation.Functions
 				? fun(parser.State.Peek().Arguments)
 				: new CallState(MModule.single("#-1 Invalid Type"));
 
-		private static CallState NullJSON(CallState[] args)
-			=> (args.Length > 2)
-					? new CallState(string.Format(Errors.ErrorTooManyArguments, "json", 2, args.Length))
+		private static CallState NullJSON(List<CallState> args)
+			=> (args.Count > 2)
+					? new CallState(string.Format(Errors.ErrorTooManyArguments, "json", 2, args.Count))
 					: new CallState("null");
 
-		private static CallState BooleanJSON(CallState[] args)
+		private static CallState BooleanJSON(List<CallState> args)
 		{
-			if (args.Length != 2)
+			if (args.Count != 2)
 			{
-				return new CallState(string.Format(Errors.ErrorWrongArgumentsRange, "json", 2, 2, args.Length));
+				return new CallState(string.Format(Errors.ErrorWrongArgumentsRange, "json", 2, 2, args.Count));
 			}
 
 			var entry = MModule.plainText(args[1].Message);

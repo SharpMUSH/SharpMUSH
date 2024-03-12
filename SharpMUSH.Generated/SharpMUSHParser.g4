@@ -33,11 +33,12 @@ firstCommandMatch
 
 eqsplitCommandArgs
     : singleCommandArg EQUALS commaCommandArgs
+    | singleCommandArg
     ;
 
 commaCommandArgs
-    : evaluationString
-    | evaluationString (COMMA evaluationString)+?
+    : singleCommandArg (COMMA singleCommandArg)+?
+    | singleCommandArg
     ;
 
 singleCommandArg

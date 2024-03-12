@@ -30,7 +30,7 @@ namespace SharpMUSH.Implementation.Functions
 		/// <param name="context">Function Context for Depth</param>
 		/// <param name="args">Arguments</param>
 		/// <returns>The resulting CallState.</returns>
-		public static CallState CallFunction(string name, Parser parser, FunctionContext context, CallState[] args)
+		public static CallState CallFunction(string name, Parser parser, FunctionContext context, List<CallState> args)
 		{
 			if (!_functionLibrary.TryGetValue(name, out var libraryMatch))
 			{
@@ -53,12 +53,12 @@ namespace SharpMUSH.Implementation.Functions
 			var stackDepth = currentStack.Count();
 			var recursionDepth = currentStack.Count(x => x.Function == name);
 
-			CallState[] refinedArguments;
+			List<CallState> refinedArguments;
 			if ((attribute.Flags & FunctionFlags.NoParse) != FunctionFlags.NoParse)
 			{
 				// TODO: Should we increase the Depth of the response by adding our context.Depth here?
 				// This is also where we need to do a DEPTH CHECK.
-				refinedArguments = args.Select(a => parser.FunctionParse(a?.Message?.ToString() ?? string.Empty)).ToArray()!;
+				refinedArguments = args.Select(a => parser.FunctionParse(a?.Message?.ToString() ?? string.Empty)).ToList()!;
 			}
 			else if ((attribute.Flags & FunctionFlags.NoParse) == FunctionFlags.NoParse && attribute.MaxArgs == 1)
 			{
@@ -70,15 +70,15 @@ namespace SharpMUSH.Implementation.Functions
 			}
 
 			/* Validation, this should probably go into its own function! */
-			if (args.Length > attribute.MaxArgs)
+			if (args.Count > attribute.MaxArgs)
 			{
 				// Better Error Needed.
 				return new CallState(Errors.ErrorArgRange, context.Depth());
 			}
 
-			if (args.Length < attribute.MinArgs)
+			if (args.Count < attribute.MinArgs)
 			{
-				return new CallState(string.Format(Errors.ErrorTooFewArguments, name, attribute.MinArgs, args.Length), context.Depth());
+				return new CallState(string.Format(Errors.ErrorTooFewArguments, name, attribute.MinArgs, args.Count), context.Depth());
 			}
 
 			if (contextDepth > Configurable.MaxCallDepth)

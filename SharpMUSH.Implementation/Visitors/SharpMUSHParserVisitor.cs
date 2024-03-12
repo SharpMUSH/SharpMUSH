@@ -29,11 +29,11 @@ namespace SharpMUSH.Implementation.Visitors
 				.Select(x => new CallState(x.GetText(), context.Depth()))
 				?? [new CallState("", context.Depth())];
 
-			var result = Functions.Functions.CallFunction(functionName.ToLower(), parser, context, arguments.ToArray());
+			var result = Functions.Functions.CallFunction(functionName.ToLower(), parser, context, arguments.ToList());
 			return result;
 		}
 
-		public override CallState? VisitEvaluationString([NotNull] SharpMUSHParser.EvaluationStringContext context) 
+		public override CallState? VisitEvaluationString([NotNull] SharpMUSHParser.EvaluationStringContext context)
 			=> base.VisitChildren(context) ?? new CallState(context.GetText(), context.Depth());
 
 		public override CallState? VisitExplicitEvaluationString([NotNull] SharpMUSHParser.ExplicitEvaluationStringContext context)
@@ -48,12 +48,12 @@ namespace SharpMUSH.Implementation.Visitors
 			var complexSubstitutionSymbol = context.complexSubstitutionSymbol();
 			var simpleSubstitutionSymbol = context.substitutionSymbol();
 
-			if (complexSubstitutionSymbol  != null )
+			if (complexSubstitutionSymbol != null)
 			{
 				var result = Substitutions.Substitutions.ParseComplexSubstitution(complexSubstitutionSymbol.GetText(), parser, complexSubstitutionSymbol);
 				return result;
 			}
-			else if(simpleSubstitutionSymbol != null)
+			else if (simpleSubstitutionSymbol != null)
 			{
 				var result = Substitutions.Substitutions.ParseSimpleSubstitution(simpleSubstitutionSymbol.GetText(), parser, simpleSubstitutionSymbol);
 				return result;
@@ -71,8 +71,6 @@ namespace SharpMUSH.Implementation.Visitors
 			Log.Logger.Information("VisitCommand: {Text}", woof);
 
 			return Commands.Commands.EvaluateCommands(parser, context, base.VisitChildren);
-			// var children = base.VisitChildren(context);
-			// return children ?? new CallState(woof, context.Depth());
 		}
 
 		public override CallState? VisitCommandString([NotNull] SharpMUSHParser.CommandStringContext context)
@@ -99,7 +97,23 @@ namespace SharpMUSH.Implementation.Visitors
 			return children ?? new CallState(woof, context.Depth());
 		}
 
-		public override CallState? VisitEscapedText([NotNull] SharpMUSHParser.EscapedTextContext context) 
+		public override CallState? VisitEscapedText([NotNull] SharpMUSHParser.EscapedTextContext context)
 			=> base.VisitChildren(context) ?? new CallState(context.GetText().Remove(0, 1), context.Depth());
+
+		/// <summary>
+		/// Visit a parse tree produced by <see cref="SharpMUSHParser.singleCommandArg"/>.
+		/// <para>
+		/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
+		/// on <paramref name="context"/>.
+		/// </para>
+		/// </summary>
+		/// <param name="context">The parse tree.</param>
+		/// <return>The visitor result.</return>
+		public override CallState? VisitSingleCommandArg([NotNull] SharpMUSHParser.SingleCommandArgContext context)
+		{
+			parser.State.Peek().Arguments.Add(new CallState(context.GetText()));
+			
+			return null;
+		}
 	}
 }

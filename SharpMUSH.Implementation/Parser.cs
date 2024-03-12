@@ -24,7 +24,7 @@ namespace SharpMUSH.Implementation
 			DBAttribute? CurrentEvaluation,
 			string? Function,
 			string? Command,
-			CallState[] Arguments,
+			List<CallState> Arguments,
 			DBRef Executor,
 			DBRef Enactor,
 			DBRef Caller);
@@ -113,6 +113,30 @@ namespace SharpMUSH.Implementation
 			CommonTokenStream commonTokenStream = new(sharpLexer);
 			SharpMUSHParser sharpParser = new(commonTokenStream);
 			SharpMUSHParser.CommandContext chatContext = sharpParser.command();
+			SharpMUSHParserVisitor visitor = new(this);
+
+			return visitor.Visit(chatContext);
+		}
+
+		public CallState? CommandCommaArgsParse(string text)
+		{
+			AntlrInputStream inputStream = new(text);
+			SharpMUSHLexer sharpLexer = new(inputStream);
+			CommonTokenStream commonTokenStream = new(sharpLexer);
+			SharpMUSHParser sharpParser = new(commonTokenStream);
+			SharpMUSHParser.EqsplitCommandArgsContext chatContext = sharpParser.eqsplitCommandArgs();
+			SharpMUSHParserVisitor visitor = new(this);
+
+			return visitor.Visit(chatContext);
+		}
+
+		public CallState? CommandEqSplitArgsParse(string text)
+		{
+			AntlrInputStream inputStream = new(text);
+			SharpMUSHLexer sharpLexer = new(inputStream);
+			CommonTokenStream commonTokenStream = new(sharpLexer);
+			SharpMUSHParser sharpParser = new(commonTokenStream);
+			SharpMUSHParser.CommaCommandArgsContext chatContext = sharpParser.commaCommandArgs();
 			SharpMUSHParserVisitor visitor = new(this);
 
 			return visitor.Visit(chatContext);
