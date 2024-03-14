@@ -92,6 +92,7 @@ namespace SharpMUSH.Implementation.Functions
 		{
 			var args = parser.State.Peek().Arguments;
 
+			// [1] contains the wrong message because CommandArg has been adding to the Arguments.
 			return new CallState(args[1].Message);
 		}
 	}

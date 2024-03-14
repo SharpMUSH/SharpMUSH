@@ -68,6 +68,12 @@ public interface ISharpMUSHParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitEqsplitCommandArgs([NotNull] SharpMUSHParser.EqsplitCommandArgsContext context);
 	/// <summary>
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.eqsplitCommand"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitEqsplitCommand([NotNull] SharpMUSHParser.EqsplitCommandContext context);
+	/// <summary>
 	/// Visit a parse tree produced by <see cref="SharpMUSHParser.commaCommandArgs"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>

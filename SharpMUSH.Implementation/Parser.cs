@@ -124,7 +124,19 @@ namespace SharpMUSH.Implementation
 			SharpMUSHLexer sharpLexer = new(inputStream);
 			CommonTokenStream commonTokenStream = new(sharpLexer);
 			SharpMUSHParser sharpParser = new(commonTokenStream);
-			SharpMUSHParser.EqsplitCommandArgsContext chatContext = sharpParser.eqsplitCommandArgs();
+			SharpMUSHParser.CommaCommandArgsContext chatContext = sharpParser.commaCommandArgs();
+			SharpMUSHParserVisitor visitor = new(this);
+
+			return visitor.Visit(chatContext);
+		}
+
+		public CallState? CommandSingleArgParse(string text)
+		{
+			AntlrInputStream inputStream = new(text);
+			SharpMUSHLexer sharpLexer = new(inputStream);
+			CommonTokenStream commonTokenStream = new(sharpLexer);
+			SharpMUSHParser sharpParser = new(commonTokenStream);
+			SharpMUSHParser.SingleCommandArgContext chatContext = sharpParser.singleCommandArg();
 			SharpMUSHParserVisitor visitor = new(this);
 
 			return visitor.Visit(chatContext);
@@ -136,7 +148,19 @@ namespace SharpMUSH.Implementation
 			SharpMUSHLexer sharpLexer = new(inputStream);
 			CommonTokenStream commonTokenStream = new(sharpLexer);
 			SharpMUSHParser sharpParser = new(commonTokenStream);
-			SharpMUSHParser.CommaCommandArgsContext chatContext = sharpParser.commaCommandArgs();
+			SharpMUSHParser.EqsplitCommandArgsContext chatContext = sharpParser.eqsplitCommandArgs();
+			SharpMUSHParserVisitor visitor = new(this);
+
+			return visitor.Visit(chatContext);
+		}
+
+		public CallState? CommandEqSplitParse(string text)
+		{
+			AntlrInputStream inputStream = new(text);
+			SharpMUSHLexer sharpLexer = new(inputStream);
+			CommonTokenStream commonTokenStream = new(sharpLexer);
+			SharpMUSHParser sharpParser = new(commonTokenStream);
+			SharpMUSHParser.EqsplitCommandContext chatContext = sharpParser.eqsplitCommand();
 			SharpMUSHParserVisitor visitor = new(this);
 
 			return visitor.Visit(chatContext);

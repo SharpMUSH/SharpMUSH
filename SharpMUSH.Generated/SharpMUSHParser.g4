@@ -19,7 +19,7 @@ commandString
     ;
 
 commandList
-    : command (SEMICOLON command)*
+    : command (SEMICOLON command)*?
     ;
 
 command
@@ -32,13 +32,15 @@ firstCommandMatch
     ;
 
 eqsplitCommandArgs
-    : singleCommandArg EQUALS commaCommandArgs
-    | singleCommandArg
+    : singleCommandArg (EQUALS commaCommandArgs)? EOF
+    ;
+    
+eqsplitCommand
+    : singleCommandArg (EQUALS singleCommandArg)? EOF
     ;
 
 commaCommandArgs
-    : singleCommandArg (COMMA singleCommandArg)+?
-    | singleCommandArg
+    : singleCommandArg (COMMA singleCommandArg)*? EOF
     ;
 
 singleCommandArg
@@ -73,19 +75,17 @@ funName  // TODO: A Substitution can be inside of a funName to create a function
     : FUNCHAR
     ;
 function 
-    : funName OPAREN CPAREN
-    | funName OPAREN funArguments CPAREN
+    : funName OPAREN (funArguments)? CPAREN
     ;
 funArguments
-    : evaluationString (COMMA evaluationString)+
-    | evaluationString
+    : evaluationString (COMMA evaluationString)*?
     ;
 validSubstitution
     : complexSubstitutionSymbol
     | substitutionSymbol
     ;
 complexSubstitutionSymbol
-    : REG_STARTCARET explicitEvaluationString+? CCARET
+    : REG_STARTCARET explicitEvaluationString*? CCARET
     | REG_NUM
     | ITEXT_NUM
     | STEXT_NUM

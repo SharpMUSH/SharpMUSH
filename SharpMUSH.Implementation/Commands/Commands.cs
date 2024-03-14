@@ -70,29 +70,72 @@ namespace SharpMUSH.Implementation.Commands
 			// TODO: TOo many ifs. This needs to be split out.
 			if (_commandLibrary.TryGetValue(rootCommand.ToUpper(), out var libraryCommandDefinition))
 			{
-				if(context.children.Count > 1)
+				// comamnd (space) argument(s)
+				if (context.children.Count > 1)
 				{
-					if ((libraryCommandDefinition.Attribute.Behavior & Definitions.CommandBehavior.EqSplit) == Definitions.CommandBehavior.EqSplit)
+					// command arg0 = arg1 ,still arg 1
+					if ((libraryCommandDefinition.Attribute.Behavior & (Definitions.CommandBehavior.EqSplit | Definitions.CommandBehavior.RSArgs)) != 0)
 					{
 						_ = parser.CommandEqSplitArgsParse(context.children[2].GetText());
 					}
-					else
+					// command arg0 = arg1,arg2
+					else if ((libraryCommandDefinition.Attribute.Behavior & Definitions.CommandBehavior.EqSplit) != 0)
+					{
+						_ = parser.CommandEqSplitParse(context.children[2].GetText());
+					}
+					// Command arg0,arg1,arg2,arg
+					else if ((libraryCommandDefinition.Attribute.Behavior & Definitions.CommandBehavior.RSArgs) != 0)
 					{
 						_ = parser.CommandCommaArgsParse(context.children[2].GetText());
 					}
+					else
+					{
+						_ = parser.CommandSingleArgParse(context.children[2].GetText());
+					}
 				}
 
+				List<CallState> arguments = []; // = parser.State.Peek().Arguments;
+				bool eqSplit = (libraryCommandDefinition.Attribute.Behavior & Definitions.CommandBehavior.EqSplit) != 0;
+				bool noParse = (libraryCommandDefinition.Attribute.Behavior & Definitions.CommandBehavior.NoParse) != 0;
+				bool noRSParse = (libraryCommandDefinition.Attribute.Behavior & Definitions.CommandBehavior.RSNoParse) != 0;
+				var nArgs = parser.State.Peek().Arguments.Count;
 
-				var argument = (libraryCommandDefinition.Attribute.Behavior & Definitions.CommandBehavior.NoParse) == Definitions.CommandBehavior.NoParse
-					? new CallState(context.evaluationString().GetText())!
-					: visitChildren(context.evaluationString())!;
+				// TODO: Implement lsargs - but there are no immediate commands that need it.
+
+				if (eqSplit)
+				{
+					if (noParse)
+					{
+						arguments.Add(parser.State.Peek().Arguments[0]);
+					}
+					else
+					{
+						arguments.Add(parser.FunctionParse(parser.State.Peek().Arguments[0].Message!.ToString())!);
+					}
+
+					if (noRSParse && nArgs > 1)
+					{
+						arguments.AddRange(parser.State.Peek().Arguments[1..]);
+					}
+					else if (nArgs > 1)
+					{
+						arguments.AddRange(parser.State.Peek().Arguments[1..].Select(x => parser.FunctionParse(x.Message!.ToString())!));
+					}
+				}
+				else if (!eqSplit && noParse)
+				{
+					arguments = parser.State.Peek().Arguments;
+				}
+				else if(!eqSplit && !noParse)
+				{
+					arguments.AddRange(parser.State.Peek().Arguments.Select(x => parser.FunctionParse(x.Message!.ToString())!));
+				}
 
 				var result = libraryCommandDefinition.Function.Invoke(parser.Push(new Parser.ParserState(
 					Registers: parser.State.Peek().Registers,
 					CurrentEvaluation: parser.State.Peek().CurrentEvaluation,
 					Command: rootCommand,
-					// TODO: Comma Separate should be handled by the parser, and we get use GetText if we need to stich it.
-					Arguments: [argument],
+					Arguments: arguments,
 					Function: null,
 					Executor: new Library.Models.DBRef(1), // TODO: Fix
 					Enactor: new Library.Models.DBRef(1),  // We need call context

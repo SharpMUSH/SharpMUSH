@@ -99,7 +99,9 @@ namespace SharpMUSH.Implementation.Functions
 				Caller: currentState.Caller
 			));
 
-			return function(parser) with { Depth = context.Depth() };
+			var result = function(parser) with { Depth = context.Depth() };
+			parser.Pop();
+			return result;
 		}
 
 		private static OneOf<bool, (SharpFunctionAttribute, Func<Parser, CallState>)> DiscoverBuiltInFunction(string name)
