@@ -48,7 +48,7 @@ namespace SharpMUSH.Implementation.Functions
 			(var attribute, var function) = libraryMatch;
 
 			var currentStack = parser.State;
-			var currentState = parser.State.Peek();
+			var currentState = parser.CurrentState();
 			var contextDepth = context.Depth();
 			var stackDepth = currentStack.Count();
 			var recursionDepth = currentStack.Count(x => x.Function == name);
@@ -82,11 +82,19 @@ namespace SharpMUSH.Implementation.Functions
 			}
 
 			if (contextDepth > Configurable.MaxCallDepth)
+			{
 				return new CallState(Errors.ErrorCall, contextDepth);
+			}
+
 			if (stackDepth > Configurable.MaxFunctionDepth)
+			{
 				return new CallState(Errors.ErrorInvoke, stackDepth);
+			}
+
 			if (recursionDepth > Configurable.MaxRecursionDepth)
+			{
 				return new CallState(Errors.ErrorRecursion, recursionDepth);
+			}
 
 			parser.Push(new Parser.ParserState(
 				Registers: currentState.Registers,

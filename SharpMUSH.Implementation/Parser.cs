@@ -59,6 +59,8 @@ namespace SharpMUSH.Implementation
 				this(passwordService, permissionService, database, notifyService, queueService)
 				=> State = state ?? [];
 
+		public ParserState CurrentState() => State.Peek();
+
 		public Parser Push(ParserState state)
 		{
 			State = State.Push(state);

@@ -70,7 +70,7 @@ namespace SharpMUSH.Implementation.Functions
 		[SharpFunction(Name = "pcreate", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly)]
 		public static CallState PCreate(Parser parser, SharpFunctionAttribute _2)
 		{
-			var args = parser.State.Peek().Arguments;
+			var args = parser.CurrentState().Arguments;
 			var location = parser.Database.GetObjectNode(new SharpMUSH.Library.Models.DBRef { Number = Configurable.PlayerStart }).Result;
 
 			var trueLocation = location!.Value.Match(
@@ -90,7 +90,7 @@ namespace SharpMUSH.Implementation.Functions
 		[SharpFunction(Name = "ansi", MinArgs = 2, Flags = FunctionFlags.Regular)]
 		public static CallState ANSI(Parser parser, SharpFunctionAttribute _2)
 		{
-			var args = parser.State.Peek().Arguments;
+			var args = parser.CurrentState().Arguments;
 
 			// [1] contains the wrong message because CommandArg has been adding to the Arguments.
 			return new CallState(args[1].Message);

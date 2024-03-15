@@ -74,7 +74,7 @@ namespace SharpMUSH.Implementation.Functions
 		[SharpFunction(Name = "after", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
 		public static CallState After(Parser parser, SharpFunctionAttribute _2)
 		{
-			var args = parser.State.Peek().Arguments;
+			var args = parser.CurrentState().Arguments;
 			var fullString = args[0]!.Message;
 			var search = args[1]!.Message;
 			var idx = MModule.indexOf(fullString, search);
@@ -84,13 +84,13 @@ namespace SharpMUSH.Implementation.Functions
 
 		[SharpFunction(Name = "strcat", Flags = FunctionFlags.Regular)]
 		public static CallState Concat(Parser parser, SharpFunctionAttribute _2)
-			=> new(parser.State.Peek().Arguments
+			=> new(parser.CurrentState().Arguments
 					.Select(x => x.Message)
 					.Aggregate((x,y) => MModule.concat(x,y)));
 
 		[SharpFunction(Name = "cat", Flags = FunctionFlags.Regular)]
 		public static CallState Cat(Parser parser, SharpFunctionAttribute _2)
-			=> new(parser.State.Peek().Arguments
+			=> new(parser.CurrentState().Arguments
 					.Select(x => x.Message)
 					.Aggregate((x, y) => MModule.concat(x, y, MModule.single(" "))));
 

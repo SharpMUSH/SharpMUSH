@@ -25,7 +25,7 @@ namespace SharpMUSH.Implementation.Functions
 		{
 			try
 			{
-				using var jsonDoc = JsonDocument.Parse(parser.State.Peek().Arguments[0].Message!.ToString());
+				using var jsonDoc = JsonDocument.Parse(parser.CurrentState().Arguments[0].Message!.ToString());
 				return new CallState("1");
 			}
 			catch (JsonException)
@@ -36,8 +36,8 @@ namespace SharpMUSH.Implementation.Functions
 
 		[SharpFunction(Name = "json", Flags = FunctionFlags.Regular)]
 		public static CallState JSON(Parser parser, SharpFunctionAttribute _2)
-			=> JsonFunctions.TryGetValue(MModule.plainText(parser.State.Peek().Arguments[0].Message!).ToLower(), out var fun)
-				? fun(parser.State.Peek().Arguments)
+			=> JsonFunctions.TryGetValue(MModule.plainText(parser.CurrentState().Arguments[0].Message!).ToLower(), out var fun)
+				? fun(parser.CurrentState().Arguments)
 				: new CallState(MModule.single("#-1 Invalid Type"));
 
 		private static CallState NullJSON(List<CallState> args)

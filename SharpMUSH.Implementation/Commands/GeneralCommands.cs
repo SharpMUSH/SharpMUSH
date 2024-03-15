@@ -8,7 +8,7 @@ namespace SharpMUSH.Implementation.Commands
 		[SharpCommand(Name = "THINK", Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
 		public static CallState Think(Parser parser, SharpCommandAttribute _2)
 		{
-			var args = parser.State.Peek().Arguments;
+			var args = parser.CurrentState().Arguments;
 
 			if (args.Count < 1)
 			{
@@ -16,7 +16,7 @@ namespace SharpMUSH.Implementation.Commands
 			}
 
 			var notification = args[0]!.Message!.ToString();
-			var executor = parser.State.Peek().Executor;
+			var executor = parser.CurrentState().Executor;
 			parser.NotifyService.Notify(executor, notification);
 
 			return new CallState("");
@@ -25,7 +25,7 @@ namespace SharpMUSH.Implementation.Commands
 		[SharpCommand(Name = "@PEMIT", Behavior = CB.Default | CB.EqSplit, MinArgs = 1, MaxArgs = 2)]
 		public static CallState PEmit(Parser parser, SharpCommandAttribute _2)
 		{
-			var args = parser.State.Peek().Arguments;
+			var args = parser.CurrentState().Arguments;
 
 			if (args.Count < 2)
 			{
@@ -42,7 +42,7 @@ namespace SharpMUSH.Implementation.Commands
 			}
 			else
 			{
-				parser.NotifyService.Notify(parser.State.Peek().Executor, "I can't see that here.");
+				parser.NotifyService.Notify(parser.CurrentState().Executor, "I can't see that here.");
 			}
 
 			return new CallState("");

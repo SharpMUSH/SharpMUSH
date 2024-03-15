@@ -8,17 +8,17 @@ namespace SharpMUSH.Implementation.Functions
 
 		[SharpFunction(Name = "baseconv", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 		public static CallState BaseConv(Parser parser, SharpFunctionAttribute _2)
-			=> ValidateIntegerAndEvaluate(parser.State.Peek().Arguments[1..], (int[] x) =>
+			=> ValidateIntegerAndEvaluate(parser.CurrentState().Arguments[1..], (int[] x) =>
 				{
-					var input = MModule.plainText(parser.State.Peek().Arguments[0].Message!);
+					var input = MModule.plainText(parser.CurrentState().Arguments[0].Message!);
 					var fromBase = x[1];
 					var toBase = x[2];
 
 					if (fromBase < 2 || fromBase > 64)
-						return MModule.single("#-1 fromBase must be between 2 and 64.");
+						return MModule.single("#-1 Argument 1 must be between 2 and 64.");
 
 					if (toBase < 2 || toBase > 64)
-						return MModule.single("#-1 toBase must be between 2 and 64.");
+						return MModule.single("#-1 Argument 2 must be between 2 and 64.");
 
 					// Validate input according to fromBase
 					foreach (char c in input)
@@ -51,30 +51,30 @@ namespace SharpMUSH.Implementation.Functions
 
 		[SharpFunction(Name = "band", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 		public static CallState BAnd(Parser parser, SharpFunctionAttribute _2)
-			=> ValidateIntegerAndAggregate(parser.State.Peek().Arguments, (x, y) => x & y);
+			=> ValidateIntegerAndAggregate(parser.CurrentState().Arguments, (x, y) => x & y);
 
 		[SharpFunction(Name = "bnand", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 		public static CallState BNand(Parser parser, SharpFunctionAttribute _2)
-			=> ValidateIntegerAndAggregate(parser.State.Peek().Arguments, (x, y) => ~(x & y));
+			=> ValidateIntegerAndAggregate(parser.CurrentState().Arguments, (x, y) => ~(x & y));
 
 		[SharpFunction(Name = "bnot", MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 		public static CallState BNot(Parser parser, SharpFunctionAttribute _2)
-			=> ValidateIntegerAndEvaluate(parser.State.Peek().Arguments, x => ~x);
+			=> ValidateIntegerAndEvaluate(parser.CurrentState().Arguments, x => ~x);
 
 		[SharpFunction(Name = "bor", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 		public static CallState Bor(Parser parser, SharpFunctionAttribute _2)
-			=> ValidateIntegerAndAggregate(parser.State.Peek().Arguments, (x, y) => x | y);
+			=> ValidateIntegerAndAggregate(parser.CurrentState().Arguments, (x, y) => x | y);
 
 		[SharpFunction(Name = "bxor", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 		public static CallState BXor(Parser parser, SharpFunctionAttribute _2)
-			=> ValidateIntegerAndAggregate(parser.State.Peek().Arguments, (x, y) => x ^ y);
+			=> ValidateIntegerAndAggregate(parser.CurrentState().Arguments, (x, y) => x ^ y);
 
 		[SharpFunction(Name = "shr", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 		public static CallState ShR(Parser parser, SharpFunctionAttribute _2)
-			=> ValidateIntegerAndAggregate(parser.State.Peek().Arguments, (x, y) => x >> y);
+			=> ValidateIntegerAndAggregate(parser.CurrentState().Arguments, (x, y) => x >> y);
 
 		[SharpFunction(Name = "shl", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 		public static CallState ShL(Parser parser, SharpFunctionAttribute _2)
-			=> ValidateIntegerAndAggregate(parser.State.Peek().Arguments, (x, y) => x << y);
+			=> ValidateIntegerAndAggregate(parser.CurrentState().Arguments, (x, y) => x << y);
 	}
 }

@@ -15,7 +15,7 @@ namespace SharpMUSH.Tests.Commands
 
 			parser.NotifyService
 				.Received(Quantity.Exactly(1))
-				.Notify(parser.State.Peek().Executor, expected);
+				.Notify(parser.CurrentState().Executor, expected);
 		}
 	}
 }

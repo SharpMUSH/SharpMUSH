@@ -94,11 +94,11 @@ namespace SharpMUSH.Implementation.Commands
 					}
 				}
 
-				List<CallState> arguments = []; // = parser.State.Peek().Arguments;
+				List<CallState> arguments = []; // = parser.CurrentState().Arguments;
 				bool eqSplit = (libraryCommandDefinition.Attribute.Behavior & Definitions.CommandBehavior.EqSplit) != 0;
 				bool noParse = (libraryCommandDefinition.Attribute.Behavior & Definitions.CommandBehavior.NoParse) != 0;
 				bool noRSParse = (libraryCommandDefinition.Attribute.Behavior & Definitions.CommandBehavior.RSNoParse) != 0;
-				var nArgs = parser.State.Peek().Arguments.Count;
+				var nArgs = parser.CurrentState().Arguments.Count;
 
 				// TODO: Implement lsargs - but there are no immediate commands that need it.
 
@@ -106,34 +106,34 @@ namespace SharpMUSH.Implementation.Commands
 				{
 					if (noParse)
 					{
-						arguments.Add(parser.State.Peek().Arguments[0]);
+						arguments.Add(parser.CurrentState().Arguments[0]);
 					}
 					else
 					{
-						arguments.Add(parser.FunctionParse(parser.State.Peek().Arguments[0].Message!.ToString())!);
+						arguments.Add(parser.FunctionParse(parser.CurrentState().Arguments[0].Message!.ToString())!);
 					}
 
 					if (noRSParse && nArgs > 1)
 					{
-						arguments.AddRange(parser.State.Peek().Arguments[1..]);
+						arguments.AddRange(parser.CurrentState().Arguments[1..]);
 					}
 					else if (nArgs > 1)
 					{
-						arguments.AddRange(parser.State.Peek().Arguments[1..].Select(x => parser.FunctionParse(x.Message!.ToString())!));
+						arguments.AddRange(parser.CurrentState().Arguments[1..].Select(x => parser.FunctionParse(x.Message!.ToString())!));
 					}
 				}
 				else if (!eqSplit && noParse)
 				{
-					arguments = parser.State.Peek().Arguments;
+					arguments = parser.CurrentState().Arguments;
 				}
 				else if(!eqSplit && !noParse)
 				{
-					arguments.AddRange(parser.State.Peek().Arguments.Select(x => parser.FunctionParse(x.Message!.ToString())!));
+					arguments.AddRange(parser.CurrentState().Arguments.Select(x => parser.FunctionParse(x.Message!.ToString())!));
 				}
 
 				var result = libraryCommandDefinition.Function.Invoke(parser.Push(new Parser.ParserState(
-					Registers: parser.State.Peek().Registers,
-					CurrentEvaluation: parser.State.Peek().CurrentEvaluation,
+					Registers: parser.CurrentState().Registers,
+					CurrentEvaluation: parser.CurrentState().CurrentEvaluation,
 					Command: rootCommand,
 					Arguments: arguments,
 					Function: null,
