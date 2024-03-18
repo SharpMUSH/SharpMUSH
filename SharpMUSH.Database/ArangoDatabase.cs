@@ -35,7 +35,7 @@ namespace SharpMUSH.Database
 
 		public async Task<int> CreatePlayer(string name, string password, DBRef location)
 		{
-			var obj = await arangoDB.Document.CreateAsync<dynamic, dynamic>(handle, "node_objects", new
+			var obj = await arangoDB.Document.CreateAsync<dynamic, dynamic>(handle, DatabaseConstants.objects, new
 			{
 				Name = name,
 				CreationTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
@@ -44,13 +44,13 @@ namespace SharpMUSH.Database
 			var newObject = obj.New;
 			var hashedPassword = passwordService.HashPassword($"#{newObject.Key}:{newObject.CreationTime}", password);
 
-			var player = await arangoDB.Document.CreateAsync<dynamic, dynamic>(handle, "node_players", new
+			var player = await arangoDB.Document.CreateAsync<dynamic, dynamic>(handle, DatabaseConstants.players, new
 			{
 				PasswordHash = hashedPassword
 			});
 
-			await arangoDB.Document.CreateAsync(handle, "edge_is_object", new SharpEdge { From = player.Id, To = obj.Id });
-			await arangoDB.Document.CreateAsync(handle, "edge_has_object_owner", new SharpEdge { From = player.Id, To = player.Id! });
+			await arangoDB.Document.CreateAsync(handle, DatabaseConstants.isObject, new SharpEdge { From = player.Id, To = obj.Id });
+			await arangoDB.Document.CreateAsync(handle, DatabaseConstants.hasObjectOwner, new SharpEdge { From = player.Id, To = player.Id! });
 
 			var objectLocation = await GetObjectNode(location);
 
@@ -60,35 +60,35 @@ namespace SharpMUSH.Database
 				exit => throw new ArgumentException("An Exit is not a valid location to create a player!"),
 				thing => thing.Id);
 
-			await arangoDB.Document.CreateAsync(handle, "edge_at_location", new SharpEdge { From = player.Id, To = idx! });
-			await arangoDB.Document.CreateAsync(handle, "edge_has_home", new SharpEdge { From = player.Id, To = idx! });
+			await arangoDB.Document.CreateAsync(handle, DatabaseConstants.atLocation, new SharpEdge { From = player.Id, To = idx! });
+			await arangoDB.Document.CreateAsync(handle, DatabaseConstants.hasHome, new SharpEdge { From = player.Id, To = idx! });
 
 			return int.Parse(obj.Key);
 		}
 
 		public async Task<int> CreateRoom(string name, SharpPlayer creator)
 		{
-			var obj = await arangoDB.Document.CreateAsync(handle, "node_objects", new SharpObject()
+			var obj = await arangoDB.Document.CreateAsync(handle, DatabaseConstants.objects, new SharpObject()
 			{
 				Name = name
 			});
 
-			var room = await arangoDB.Document.CreateAsync(handle, "node_rooms", new SharpRoom()
+			var room = await arangoDB.Document.CreateAsync(handle, DatabaseConstants.rooms, new SharpRoom()
 			{
 			});
 
-			var _ = await arangoDB.Document.CreateAsync(handle, "edge_is_object", new SharpEdge { From = room.Id, To = obj.Id });
-			await arangoDB.Document.CreateAsync(handle, "edge_has_object_owner", new SharpEdge { From = room.Id, To = creator.Id! });
+			var _ = await arangoDB.Document.CreateAsync(handle, DatabaseConstants.isObject, new SharpEdge { From = room.Id, To = obj.Id });
+			await arangoDB.Document.CreateAsync(handle, DatabaseConstants.hasObjectOwner, new SharpEdge { From = room.Id, To = creator.Id! });
 
 			return int.Parse(obj.Key);
 		}
 
 		public async Task<int> CreateThing(string name, OneOf<SharpPlayer, SharpRoom, SharpThing> location, SharpPlayer creator)
 		{
-			var obj = await arangoDB.Document.CreateAsync(handle, "node_objects", new SharpObject() { Name = name });
-			var thing = await arangoDB.Document.CreateAsync(handle, "node_things", new SharpThing() { });
+			var obj = await arangoDB.Document.CreateAsync(handle, DatabaseConstants.objects, new SharpObject() { Name = name });
+			var thing = await arangoDB.Document.CreateAsync(handle, DatabaseConstants.things, new SharpThing() { });
 
-			await arangoDB.Document.CreateAsync(handle, "edge_is_object", new SharpEdge { From = thing.Id, To = obj.Id });
+			await arangoDB.Document.CreateAsync(handle, DatabaseConstants.isObject, new SharpEdge { From = thing.Id, To = obj.Id });
 
 			var idx = location.Match(
 				player => player.Id,
@@ -96,19 +96,19 @@ namespace SharpMUSH.Database
 				thing => thing.Id
 				);
 
-			await arangoDB.Document.CreateAsync(handle, "edge_at_location", new SharpEdge { From = thing.Id, To = idx! });
-			await arangoDB.Document.CreateAsync(handle, "edge_has_home", new SharpEdge { From = thing.Id, To = idx! });
-			await arangoDB.Document.CreateAsync(handle, "edge_has_object_owner", new SharpEdge { From = thing.Id, To = creator.Id! });
+			await arangoDB.Document.CreateAsync(handle, DatabaseConstants.atLocation, new SharpEdge { From = thing.Id, To = idx! });
+			await arangoDB.Document.CreateAsync(handle, DatabaseConstants.hasHome, new SharpEdge { From = thing.Id, To = idx! });
+			await arangoDB.Document.CreateAsync(handle, DatabaseConstants.hasObjectOwner, new SharpEdge { From = thing.Id, To = creator.Id! });
 
 			return int.Parse(obj.Key);
 		}
 
 		public async Task<int> CreateExit(string name, OneOf<SharpPlayer, SharpRoom, SharpThing> location, SharpPlayer creator)
 		{
-			var obj = await arangoDB.Document.CreateAsync(handle, "node_objects", new SharpObject() { Name = name });
-			var exit = await arangoDB.Document.CreateAsync(handle, "node_exits", new SharpExit());
+			var obj = await arangoDB.Document.CreateAsync(handle, DatabaseConstants.objects, new SharpObject() { Name = name });
+			var exit = await arangoDB.Document.CreateAsync(handle, DatabaseConstants.exits, new SharpExit());
 
-			await arangoDB.Document.CreateAsync(handle, "edge_is_object", new SharpEdge { From = exit.Id, To = obj.Id });
+			await arangoDB.Document.CreateAsync(handle, DatabaseConstants.isObject, new SharpEdge { From = exit.Id, To = obj.Id });
 
 			var idx = location.Match(
 				player => player.Id,
@@ -116,20 +116,20 @@ namespace SharpMUSH.Database
 				thing => thing.Id
 			);
 
-			await arangoDB.Document.CreateAsync(handle, "edge_has_home", new SharpEdge { From = exit.Id, To = idx! });
-			await arangoDB.Document.CreateAsync(handle, "edge_has_object_owner", new SharpEdge { From = exit.Id, To = idx! });
+			await arangoDB.Document.CreateAsync(handle, DatabaseConstants.hasHome, new SharpEdge { From = exit.Id, To = idx! });
+			await arangoDB.Document.CreateAsync(handle, DatabaseConstants.hasObjectOwner, new SharpEdge { From = exit.Id, To = idx! });
 
 			return int.Parse(obj.Key);
 		}
 
 		public async Task<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing>?> GetObjectNode(DBRef dbref)
 		{
-			var obj = await arangoDB.Document.GetAsync<dynamic>(handle, "node_objects", dbref.Number.ToString());
+			var obj = await arangoDB.Document.GetAsync<dynamic>(handle, DatabaseConstants.objects, dbref.Number.ToString());
 			var startVertex = obj._id;
 
 			// TODO: Version that cares about CreatedMilliseconds
 			var query = await arangoDB.Query.ExecuteAsync<dynamic>(handle,
-				$"FOR v IN 1..1 INBOUND {startVertex} GRAPH graph_objects RETURN {{ \"id\": v._id, \"collection\": PARSE_IDENTIFIER( v._id ).collection, \"vertex\": v}}");
+				$"FOR v IN 1..1 INBOUND {startVertex} GRAPH {DatabaseConstants.graphObjects} RETURN {{ \"id\": v._id, \"collection\": PARSE_IDENTIFIER( v._id ).collection, \"vertex\": v}}");
 
 			var res = query.FirstOrDefault();
 
@@ -154,10 +154,10 @@ namespace SharpMUSH.Database
 
 			return collection switch
 			{
-				"node_things" => new SharpThing { Id = id, Object = convertObject },
-				"node_players" => new SharpPlayer { Id = id, PasswordHash = vertex.PasswordHash, Aliases = vertex.Aliases, Object = convertObject },
-				"node_rooms" => new SharpRoom { Id = id, Object = convertObject },
-				"node_exits" => new SharpThing { Id = id, Object = convertObject, Aliases = vertex.Aliases },
+				DatabaseConstants.things => new SharpThing { Id = id, Object = convertObject },
+				DatabaseConstants.players => new SharpPlayer { Id = id, PasswordHash = vertex.PasswordHash, Aliases = vertex.Aliases, Object = convertObject },
+				DatabaseConstants.rooms => new SharpRoom { Id = id, Object = convertObject },
+				DatabaseConstants.exits => new SharpThing { Id = id, Object = convertObject, Aliases = vertex.Aliases },
 				_ => throw new ArgumentException($"Invalid collection found: {collection}"),
 			};
 		}
@@ -188,9 +188,9 @@ namespace SharpMUSH.Database
 
 		public async Task<SharpAttribute[]?> GetAttribute(DBRef dbref, string[] attribute)
 		{
-			var startVertex = $"node_objects/{dbref.Number}";
-			var let = "LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH graph_objects RETURN v)";
-			var query = $"{let} FOR v,e,p IN 1..@max OUTBOUND start GRAPH graph_attributes PRUNE condition = NTH(@attr,LENGTH(p.edges)-1) != v.Name FILTER !condition RETURN v";
+			var startVertex = $"{DatabaseConstants.objects}/{dbref.Number}";
+			var let = $"LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.graphObjects} RETURN v)";
+			var query = $"{let} FOR v,e,p IN 1..@max OUTBOUND start GRAPH {DatabaseConstants.graphAttributes} PRUNE condition = NTH(@attr,LENGTH(p.edges)-1) != v.Name FILTER !condition RETURN v";
 
 			var result = await arangoDB.Query.ExecuteAsync<dynamic>(handle, query, new Dictionary<string, object>()
 			{
@@ -209,9 +209,9 @@ namespace SharpMUSH.Database
 		{
 			ArgumentNullException.ThrowIfNull(owner);
 
-			var startVertex = $"node_objects/{dbref.Number}";
-			var let1 = "LET start = (FOR v IN 1..1 INBOUND @startVertex GRAPH graph_objects RETURN v)";
-			var let2 = $"LET foundAttributes = (FOR v,e,p IN 1..@max OUTBOUND FIRST(start) GRAPH graph_attributes PRUNE condition = NTH(@attr,LENGTH(p.edges)-1) != v.Name FILTER !condition RETURN v)";
+			var startVertex = $"{DatabaseConstants.objects}/{dbref.Number}";
+			var let1 = $"LET start = (FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.graphObjects} RETURN v)";
+			var let2 = $"LET foundAttributes = (FOR v,e,p IN 1..@max OUTBOUND FIRST(start) GRAPH {DatabaseConstants.graphAttributes} PRUNE condition = NTH(@attr,LENGTH(p.edges)-1) != v.Name FILTER !condition RETURN v)";
 			var query = $"{let1} {let2} RETURN APPEND(start, foundAttributes)";
 
 			var result = await arangoDB.Query.ExecuteAsync<dynamic[]>(handle, query, new Dictionary<string, object>()
@@ -230,13 +230,13 @@ namespace SharpMUSH.Database
 
 			foreach (var next in remaining)
 			{
-				var newOne = await arangoDB.Document.CreateAsync(handle, "node_attributes", new SharpAttribute() { Name = next.ToUpper(), Flags = [] });
-				await arangoDB.Document.CreateAsync(handle, "edge_has_attribute", new SharpEdge() { From = lastId, To = newOne.Id });
+				var newOne = await arangoDB.Document.CreateAsync(handle, DatabaseConstants.attributes, new SharpAttribute() { Name = next.ToUpper(), Flags = [] });
+				await arangoDB.Document.CreateAsync(handle, DatabaseConstants.hasAttribute, new SharpEdge() { From = lastId, To = newOne.Id });
 				lastId = newOne.Id;
 			}
 
-			await arangoDB.Document.UpdateAsync(handle, "node_attributes", new { Key = lastId!.Split("/").Last(), Value = value, LongName = string.Join("`", attribute.Select(x => x.ToUpper())) }, mergeObjects: true);
-			await arangoDB.Document.CreateAsync(handle, "edge_has_attribute_owner", new SharpEdge { From = lastId, To = owner.Id!, }, mergeObjects: true);
+			await arangoDB.Document.UpdateAsync(handle, DatabaseConstants.attributes, new { Key = lastId!.Split("/").Last(), Value = value, LongName = string.Join("`", attribute.Select(x => x.ToUpper())) }, mergeObjects: true);
+			await arangoDB.Document.CreateAsync(handle, DatabaseConstants.hasAttributeOwner, new SharpEdge { From = lastId, To = owner.Id!, }, mergeObjects: true);
 
 			return true;
 		}

@@ -26,7 +26,7 @@ namespace SharpMUSH.Database.Migrations
 					new() {
 						Collection = new ArangoCollection
 						{
-							Name = "node_objects",
+							Name = DatabaseConstants.objects,
 							Type = ArangoCollectionType.Document,
 							KeyOptions = new ArangoKeyOptions()
 							{
@@ -38,12 +38,12 @@ namespace SharpMUSH.Database.Migrations
 							Schema = new ArangoSchema()
 							{
 								Rule = new {
-									type = "object",
+									type = DatabaseConstants.typeObject,
 									properties = new {
-										Name = new { type = "string" },
-										Locks = new { type = "object" },
-										CreationTime = new { type = "number" },
-										Powers = new { type = "array", items = new { type = "string" } }
+										Name = new { type = DatabaseConstants.typeString },
+										Locks = new { type = DatabaseConstants.typeObject },
+										CreationTime = new { type = DatabaseConstants.typeNumber },
+										Powers = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } }
 									},
 									required = (string[])[nameof(SharpObject.Name)],
 									additionalProperties = true
@@ -63,16 +63,16 @@ namespace SharpMUSH.Database.Migrations
 				{
 					Collection = new ArangoCollection
 					{
-						Name = "node_things",
+						Name = DatabaseConstants.things,
 						Type = ArangoCollectionType.Document,
 						WaitForSync = true,
 						Schema = new ArangoSchema()
 						{
 							Rule = new {
-								type = "object",
+								type = DatabaseConstants.typeObject,
 								properties = new
 								{
-									Aliases = new { type = "array", items = new { type = "string" } },
+									Aliases = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } },
 								}
 							}
 
@@ -90,7 +90,7 @@ namespace SharpMUSH.Database.Migrations
 				{
 					Collection = new ArangoCollection
 					{
-						Name = "node_rooms",
+						Name = DatabaseConstants.rooms,
 						Type = ArangoCollectionType.Document,
 						WaitForSync = true
 					}
@@ -99,16 +99,16 @@ namespace SharpMUSH.Database.Migrations
 				{
 					Collection = new ArangoCollection
 					{
-						Name = "node_exits",
+						Name = DatabaseConstants.exits,
 						Type = ArangoCollectionType.Document,
 						WaitForSync = true,
 						Schema = new ArangoSchema()
 						{
 							Rule = new {
-								type = "object",
+								type = DatabaseConstants.typeObject,
 								properties = new
 								{
-									Aliases = new { type = "array", items = new { type = "string" } }
+									Aliases = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } }
 								}
 							}
 						}
@@ -118,17 +118,17 @@ namespace SharpMUSH.Database.Migrations
 				{
 					Collection = new ArangoCollection
 					{
-						Name = "node_players",
+						Name = DatabaseConstants.players,
 						Type = ArangoCollectionType.Document,
 						WaitForSync = true,
 						Schema = new ArangoSchema()
 						{
 							Rule = new {
-								type = "object",
+								type = DatabaseConstants.typeObject,
 								properties = new
 								{
-									PasswordHash = new { type = "string" },
-									Aliases = new { type = "array", items = new { type = "string" } } 
+									PasswordHash = new { type = DatabaseConstants.typeString },
+									Aliases = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } } 
 								},
 								required = (string[])[nameof(SharpPlayer.PasswordHash)]
 							}
@@ -146,21 +146,21 @@ namespace SharpMUSH.Database.Migrations
 				{
 					Collection = new ArangoCollection
 					{
-						Name = "node_object_flags",
+						Name = DatabaseConstants.objectFlags,
 						Type = ArangoCollectionType.Document,
 						WaitForSync = true,
 						Schema = new ArangoSchema()
 						{
 							Rule = new {
-								type = "object",
+								type = DatabaseConstants.typeObject,
 								properties = new
 								{
-									Name = new { type = "string" },
-									Symbol = new { type = "string", multipleOf = 1 },
-									Aliases = new { type = "array", items = new { type = "string" } },
-									SetPermissions = new { type = "array", items = new { type = "string" } },
-									UnsetPermissions = new { type = "array", items = new { type = "string" } },
-									TypeRestrictions = new { type = "array", items = new { type = "string" } }
+									Name = new { type = DatabaseConstants.typeString },
+									Symbol = new { type = DatabaseConstants.typeString, multipleOf = 1 },
+									Aliases = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } },
+									SetPermissions = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } },
+									UnsetPermissions = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } },
+									TypeRestrictions = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } }
 								},
 								required = (string[])[
 									nameof(SharpObjectFlag.Name),
@@ -177,18 +177,18 @@ namespace SharpMUSH.Database.Migrations
 				{
 					Collection = new ArangoCollection
 					{
-						Name = "node_attributes",
+						Name = DatabaseConstants.attributes,
 						Type = ArangoCollectionType.Document,
 						WaitForSync = true,
 						Schema = new ArangoSchema()
 						{
 							Rule = new {
-								type = "object",
+								type = DatabaseConstants.typeObject,
 								properties = new
 								{
-									Name = new { type = "string" },
-									LongName = new { type = "string" },
-									Flags = new { type = "array", items = new { type = "string" } }
+									Name = new { type = DatabaseConstants.typeString },
+									LongName = new { type = DatabaseConstants.typeString },
+									Flags = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } }
 								},
 								required = (string[])[nameof(SharpAttribute.Name)]
 							}
@@ -199,19 +199,19 @@ namespace SharpMUSH.Database.Migrations
 				{
 					Collection = new ArangoCollection
 					{
-						Name = "node_attribute_entries",
+						Name = DatabaseConstants.attributeEntries,
 						Type = ArangoCollectionType.Document,
 						WaitForSync = true,
 						Schema = new ArangoSchema()
 						{
 							Rule = new {
-								type = "object",
+								type = DatabaseConstants.typeObject,
 								properties = new
 								{
-									Name = new { type = "string" },
-									DefaultFlags = new { type = "array", items = new { type = "string" } },
-									Limit = new { type = "string" },
-									Enum = new { type = "array", items = new { type = "string" } }
+									Name = new { type = DatabaseConstants.typeString },
+									DefaultFlags = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } },
+									Limit = new { type = DatabaseConstants.typeString },
+									Enum = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } }
 								},
 								required = (string[])[nameof(SharpAttributeEntry.Name)]
 							}
@@ -229,22 +229,22 @@ namespace SharpMUSH.Database.Migrations
 				{
 					Collection = new ArangoCollection
 					{
-						Name = "node_functions",
+						Name = DatabaseConstants.functions,
 						Type = ArangoCollectionType.Document,
 						WaitForSync = true,
 						Schema = new ArangoSchema()
 						{
 							Rule = new
 							{
-									type = "object",
+									type = DatabaseConstants.typeObject,
 									properties = new {
-										Name = new { type = "string" },
-										Alias = new { type = "string" },
-										RestrictedErrorMessage = new { type = "string" },
-										Traits = new { type = "array", items = new { type = "string" } },
-										MinArgs = new { type = "number", multipleOf = 1 },
-										MaxArgs = new { type = "number", multipleOf = 1 },
-										Restrictions = new { type = "array", items = new { type = "string" } }
+										Name = new { type = DatabaseConstants.typeString },
+										Alias = new { type = DatabaseConstants.typeString },
+										RestrictedErrorMessage = new { type = DatabaseConstants.typeString },
+										Traits = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } },
+										MinArgs = new { type = DatabaseConstants.typeNumber, multipleOf = 1 },
+										MaxArgs = new { type = DatabaseConstants.typeNumber, multipleOf = 1 },
+										Restrictions = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } }
 									},
 									required = (string[])[
 											nameof(SharpFunction.Name),
@@ -268,19 +268,19 @@ namespace SharpMUSH.Database.Migrations
 				{
 					Collection = new ArangoCollection
 					{
-						Name = "node_commands",
+						Name = DatabaseConstants.commands,
 						Type = ArangoCollectionType.Document,
 						WaitForSync = true,
 						Schema = new ArangoSchema()
 						{
 							Rule = new {
-								type = "object",
+								type = DatabaseConstants.typeObject,
 								properties = new
 								{
-									Name = new { type = "string" },
-									Alias = new { type = "string" },
-									Limit = new { type = "string" },
-									Enum = new { type = "array", items = new { type = "string" } }
+									Name = new { type = DatabaseConstants.typeString },
+									Alias = new { type = DatabaseConstants.typeString },
+									Limit = new { type = DatabaseConstants.typeString },
+									Enum = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } }
 								},
 								required = (string[])[nameof(SharpCommand.Name)]
 							}
@@ -302,7 +302,7 @@ namespace SharpMUSH.Database.Migrations
 				{
 					Collection = new ArangoCollection
 					{
-						Name = "edge_at_location",
+						Name = DatabaseConstants.atLocation,
 						Type = ArangoCollectionType.Edge,
 						WaitForSync = true
 					}
@@ -311,7 +311,7 @@ namespace SharpMUSH.Database.Migrations
 				{
 					Collection = new ArangoCollection
 					{
-						Name = "edge_has_home",
+						Name = DatabaseConstants.hasHome,
 						Type = ArangoCollectionType.Edge,
 						WaitForSync = true
 					}
@@ -320,7 +320,7 @@ namespace SharpMUSH.Database.Migrations
 				{
 					Collection = new ArangoCollection
 					{
-						Name = "edge_has_flags",
+						Name = DatabaseConstants.hasFlags,
 						Type = ArangoCollectionType.Edge,
 						WaitForSync = true
 					}
@@ -329,7 +329,7 @@ namespace SharpMUSH.Database.Migrations
 				{
 					Collection = new ArangoCollection
 					{
-						Name = "edge_has_attribute",
+						Name = DatabaseConstants.hasAttribute,
 						Type = ArangoCollectionType.Edge,
 						WaitForSync = true
 					}
@@ -338,7 +338,7 @@ namespace SharpMUSH.Database.Migrations
 				{
 					Collection = new ArangoCollection
 					{
-						Name = "edge_has_object_owner",
+						Name = DatabaseConstants.hasObjectOwner,
 						Type = ArangoCollectionType.Edge,
 						WaitForSync = true
 					}
@@ -347,7 +347,7 @@ namespace SharpMUSH.Database.Migrations
 				{
 					Collection = new ArangoCollection
 					{
-						Name = "edge_has_attribute_owner",
+						Name = DatabaseConstants.hasAttributeOwner,
 						Type = ArangoCollectionType.Edge,
 						WaitForSync = true
 					}
@@ -356,7 +356,7 @@ namespace SharpMUSH.Database.Migrations
 				{
 					Collection = new ArangoCollection
 					{
-						Name = "edge_has_hook",
+						Name = DatabaseConstants.hasHook,
 						Type = ArangoCollectionType.Edge,
 						WaitForSync = true,
 						Schema = new ArangoSchema()
@@ -364,7 +364,7 @@ namespace SharpMUSH.Database.Migrations
 							Rule = new {
 								properties = new
 								{
-									Type = new { type = "string" }
+									Type = new { type = DatabaseConstants.typeString }
 								},
 								required = (string[])[nameof(SharpHookEdge.Type)]
 							}
@@ -380,12 +380,17 @@ namespace SharpMUSH.Database.Migrations
 						[
 							new ArangoEdgeDefinition()
 							{
-								Collection = "edge_is_object",
-								To = ["node_objects"],
-								From = ["node_things", "node_players", "node_rooms", "node_exits"]
+								Collection = DatabaseConstants.isObject,
+								To = [DatabaseConstants.objects],
+								From = [
+									DatabaseConstants.things, 
+									DatabaseConstants.players, 
+									DatabaseConstants.rooms, 
+									DatabaseConstants.exits
+									]
 							}
 						],
-						Name = "graph_objects"
+						Name = DatabaseConstants.graphObjects
 					},
 					new()
 					{
@@ -393,12 +398,18 @@ namespace SharpMUSH.Database.Migrations
 						[
 							new ArangoEdgeDefinition()
 							{
-								Collection = "edge_has_attribute",
-								To = ["node_attributes"],
-								From = ["node_attributes", "node_things", "node_players", "node_rooms", "node_exits"]
+								Collection = DatabaseConstants.hasAttribute,
+								To = [DatabaseConstants.attributes],
+								From = [
+									DatabaseConstants.attributes, 
+									DatabaseConstants.things, 
+									DatabaseConstants.players, 
+									DatabaseConstants.rooms,
+									DatabaseConstants.exits
+									]
 							}
 						],
-						Name = "graph_attributes"
+						Name = DatabaseConstants.graphAttributes
 					}
 				}
 			}, new ArangoMigrationOptions { DryRun = false, Notify = x => Console.WriteLine("Migration Change: {0}: {1} - {2}", x.Name, x.Object, x.State) }); ;
@@ -409,16 +420,16 @@ namespace SharpMUSH.Database.Migrations
 			/// The exception is a Schema Failure.
 
 			/* Create Room Zero */
-			var roomZeroObj = await migrator.Context.Document.CreateAsync(handle, "node_objects", new 
+			var roomZeroObj = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objects, new 
 			{
 				_key = "0",
 				Name = "Room Zero",
 				CreationTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
 			});
-			var roomZeroRoom = await migrator.Context.Document.CreateAsync(handle, "node_rooms", new SharpRoom { });
+			var roomZeroRoom = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.rooms, new SharpRoom { });
 
 			/* Create Player One */
-			var playerOneObj = await migrator.Context.Document.CreateAsync(handle, "node_objects", new 
+			var playerOneObj = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objects, new 
 			{
 				_key = "1",
 				Name = "God",
@@ -426,27 +437,27 @@ namespace SharpMUSH.Database.Migrations
 			});
 
 			/* Create Room Zero */
-			var roomTwoObj = await migrator.Context.Document.CreateAsync(handle, "node_objects", new 
+			var roomTwoObj = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objects, new 
 			{
 				_key = "2",
 				Name = "Master Room",
 				CreationTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
 			});
-			var roomTwoRoom = await migrator.Context.Document.CreateAsync(handle, "node_rooms", new SharpRoom { });
+			var roomTwoRoom = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.rooms, new SharpRoom { });
 
-			var playerOnePlayer = await migrator.Context.Document.CreateAsync(handle, "node_players", new 
+			var playerOnePlayer = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.players, new 
 			{
 				PasswordHash = ""
 			});
 
-			await migrator.Context.Document.CreateAsync(handle, "edge_is_object", new SharpEdge { From = roomTwoRoom.Id, To = roomTwoObj.Id });
-			await migrator.Context.Document.CreateAsync(handle, "edge_is_object", new SharpEdge { From = roomZeroRoom.Id, To = roomZeroObj.Id });
-			await migrator.Context.Document.CreateAsync(handle, "edge_is_object", new SharpEdge { From = playerOnePlayer.Id, To = playerOneObj.Id });
-			await migrator.Context.Document.CreateAsync(handle, "edge_at_location", new SharpEdge { From = playerOnePlayer.Id, To = roomZeroRoom.Id });
-			await migrator.Context.Document.CreateAsync(handle, "edge_has_home", new SharpEdge { From = playerOnePlayer.Id, To = roomZeroRoom.Id });
-			await migrator.Context.Document.CreateAsync(handle, "edge_has_object_owner", new SharpEdge { From = roomTwoRoom.Id, To = playerOnePlayer.Id });
-			await migrator.Context.Document.CreateAsync(handle, "edge_has_object_owner", new SharpEdge { From = roomZeroRoom.Id, To = playerOnePlayer.Id });
-			await migrator.Context.Document.CreateAsync(handle, "edge_has_object_owner", new SharpEdge { From = playerOnePlayer.Id, To = playerOneObj.Id });
+			await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.isObject, new SharpEdge { From = roomTwoRoom.Id, To = roomTwoObj.Id });
+			await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.isObject, new SharpEdge { From = roomZeroRoom.Id, To = roomZeroObj.Id });
+			await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.isObject, new SharpEdge { From = playerOnePlayer.Id, To = playerOneObj.Id });
+			await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.atLocation, new SharpEdge { From = playerOnePlayer.Id, To = roomZeroRoom.Id });
+			await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.hasHome, new SharpEdge { From = playerOnePlayer.Id, To = roomZeroRoom.Id });
+			await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.hasObjectOwner, new SharpEdge { From = roomTwoRoom.Id, To = playerOnePlayer.Id });
+			await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.hasObjectOwner, new SharpEdge { From = roomZeroRoom.Id, To = playerOnePlayer.Id });
+			await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.hasObjectOwner, new SharpEdge { From = playerOnePlayer.Id, To = playerOneObj.Id });
 		}
 
 		public Task Down(IArangoMigrator migrator, ArangoHandle handle)
