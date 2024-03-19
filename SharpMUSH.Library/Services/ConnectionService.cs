@@ -5,10 +5,10 @@ namespace SharpMUSH.Library.Services
 {
 	public class ConnectionService : IConnectionService
 	{
-		private ConcurrentDictionary<int, (int Handle, DBRef? Ref, IConnectionService.ConnectionState State)> _sessionState = [];
-		private List<Action<(int Handle, DBRef? Ref, IConnectionService.ConnectionState OldState, IConnectionService.ConnectionState NewState)>> _handlers;
+		private ConcurrentDictionary<string, (string Handle, DBRef? Ref, IConnectionService.ConnectionState State)> _sessionState = [];
+		private List<Action<(string Handle, DBRef? Ref, IConnectionService.ConnectionState OldState, IConnectionService.ConnectionState NewState)>> _handlers;
 
-		public void Disconnect(int handle) {
+		public void Disconnect(string handle) {
 			var get = Get(handle);
 			if (get == null) return;
 
@@ -20,21 +20,21 @@ namespace SharpMUSH.Library.Services
 			_sessionState.Remove(handle, out _);
 		}
 
-		public (int, DBRef?, IConnectionService.ConnectionState)? Get(int handle) =>
+		public (string, DBRef?, IConnectionService.ConnectionState)? Get(string handle) =>
 			_sessionState.GetValueOrDefault(handle);
 
-		public IEnumerable<(int, DBRef?, IConnectionService.ConnectionState)> GetAll() =>
+		public IEnumerable<(string, DBRef?, IConnectionService.ConnectionState)> GetAll() =>
 			_sessionState.Values;
 
-		public void ListenState(Action<(int, DBRef?, IConnectionService.ConnectionState, IConnectionService.ConnectionState)> handler) =>
+		public void ListenState(Action<(string, DBRef?, IConnectionService.ConnectionState, IConnectionService.ConnectionState)> handler) =>
 			_handlers.Add(handler);
 
-		public void ListenState(Action<(int, DBRef, IConnectionService.ConnectionState, IConnectionService.ConnectionState)> handler)
+		public void ListenState(Action<(string, DBRef, IConnectionService.ConnectionState, IConnectionService.ConnectionState)> handler)
 		{
 			throw new NotImplementedException();
 		}
 
-		public void Login(int handle, DBRef player)
+		public void Login(string handle, DBRef player)
 		{
 			var get = Get(handle);
 			if (get == null) return;
@@ -49,7 +49,7 @@ namespace SharpMUSH.Library.Services
 			}
 		}
 
-		public void Register(int handle)
+		public void Register(string handle)
 		{
 			_sessionState.AddOrUpdate(handle,
 				x => (handle, null, IConnectionService.ConnectionState.Connected),
