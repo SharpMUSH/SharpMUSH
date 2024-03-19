@@ -129,6 +129,18 @@ namespace SharpMUSH.Implementation.Functions
 			throw new NotImplementedException();
 		}
 
+		[SharpFunction(Name = "EDIT", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
+		public static CallState Edit(Parser parser, SharpFunctionAttribute _2)
+		{
+			throw new NotImplementedException();
+		}
+
+		[SharpFunction(Name = "ESCAPE", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
+		public static CallState Escape(Parser parser, SharpFunctionAttribute _2)
+		{
+			throw new NotImplementedException();
+		}
+
 		[SharpFunction(Name = "FLIP", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 		public static CallState Flip(Parser parser, SharpFunctionAttribute _2)
 		{

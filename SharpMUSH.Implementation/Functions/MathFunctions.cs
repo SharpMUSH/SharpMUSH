@@ -83,18 +83,6 @@ namespace SharpMUSH.Implementation.Functions
 			throw new NotImplementedException();
 		}
 
-		[SharpFunction(Name = "EDIT", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
-		public static CallState Edit(Parser parser, SharpFunctionAttribute _2)
-		{
-			throw new NotImplementedException();
-		}
-
-		[SharpFunction(Name = "ELOCK", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-		public static CallState ELock(Parser parser, SharpFunctionAttribute _2)
-		{
-			throw new NotImplementedException();
-		}
-
 		[SharpFunction(Name = "ENCODE64", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 		public static CallState Encode64(Parser parser, SharpFunctionAttribute _2)
 		{
@@ -103,24 +91,6 @@ namespace SharpMUSH.Implementation.Functions
 
 		[SharpFunction(Name = "ENCRYPT", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular)]
 		public static CallState Encrypt(Parser parser, SharpFunctionAttribute _2)
-		{
-			throw new NotImplementedException();
-		}
-
-		[SharpFunction(Name = "ETIME", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular)]
-		public static CallState ETime(Parser parser, SharpFunctionAttribute _2)
-		{
-			throw new NotImplementedException();
-		}
-
-		[SharpFunction(Name = "ETIMEFMT", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
-		public static CallState ETimeFmt(Parser parser, SharpFunctionAttribute _2)
-		{
-			throw new NotImplementedException();
-		}
-
-		[SharpFunction(Name = "ESCAPE", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
-		public static CallState Escape(Parser parser, SharpFunctionAttribute _2)
 		{
 			throw new NotImplementedException();
 		}
@@ -263,10 +233,8 @@ namespace SharpMUSH.Implementation.Functions
 		}
 
 		[SharpFunction(Name = "FLOOR", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-		public static CallState Floor(Parser parser, SharpFunctionAttribute _2)
-		{
-			throw new NotImplementedException();
-		}
+		public static CallState Floor(Parser parser, SharpFunctionAttribute _2) =>
+			EvaluateDouble(parser.CurrentState().Arguments, Math.Floor);
 
 		[SharpFunction(Name = "LOG", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 		public static CallState Log(Parser parser, SharpFunctionAttribute _2)
@@ -275,16 +243,12 @@ namespace SharpMUSH.Implementation.Functions
 		}
 
 		[SharpFunction(Name = "LN", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-		public static CallState Ln(Parser parser, SharpFunctionAttribute _2)
-		{
-			throw new NotImplementedException();
-		}
+		public static CallState Ln(Parser parser, SharpFunctionAttribute _2) =>
+			EvaluateDouble(parser.CurrentState().Arguments, Math.Log);
 
 		[SharpFunction(Name = "PI", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]
-		public static CallState PI(Parser parser, SharpFunctionAttribute _2)
-		{
-			throw new NotImplementedException();
-		}
+		public static CallState PI(Parser parser, SharpFunctionAttribute _2) =>
+			new(Math.PI.ToString());
 
 		[SharpFunction(Name = "POWER", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 		public static CallState Power(Parser parser, SharpFunctionAttribute _2)
@@ -305,10 +269,8 @@ namespace SharpMUSH.Implementation.Functions
 		}
 
 		[SharpFunction(Name = "SQRT", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-		public static CallState Sqrt(Parser parser, SharpFunctionAttribute _2)
-		{
-			throw new NotImplementedException();
-		}
+		public static CallState Sqrt(Parser parser, SharpFunctionAttribute _2) =>
+			EvaluateDouble(parser.CurrentState().Arguments, Math.Sqrt);
 
 		[SharpFunction(Name = "STDDEV", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 		public static CallState StdDev(Parser parser, SharpFunctionAttribute _2)

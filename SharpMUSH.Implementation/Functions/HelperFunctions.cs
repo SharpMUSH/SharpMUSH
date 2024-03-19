@@ -60,6 +60,9 @@ namespace SharpMUSH.Implementation.Functions
 		private static CallState EvaluateDecimal(List<CallState> args, Func<decimal, decimal> func)
 			=> new(func(decimal.Parse(MModule.plainText(args[0].Message))).ToString());
 
+		private static CallState EvaluateDouble(List<CallState> args, Func<double, double> func)
+			=> new(func(double.Parse(MModule.plainText(args[0].Message))).ToString());
+
 		private static CallState EvaluateInteger(List<CallState> args, Func<int, int> func)
 			=> new(func(int.Parse(MModule.plainText(args[0].Message))).ToString());
 

@@ -93,5 +93,17 @@ namespace SharpMUSH.Implementation.Functions
 		{
 			throw new NotImplementedException();
 		}
+
+		[SharpFunction(Name = "ETIME", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular)]
+		public static CallState ETime(Parser parser, SharpFunctionAttribute _2)
+		{
+			throw new NotImplementedException();
+		}
+
+		[SharpFunction(Name = "ETIMEFMT", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
+		public static CallState ETimeFmt(Parser parser, SharpFunctionAttribute _2)
+		{
+			throw new NotImplementedException();
+		}
 	}
 }
