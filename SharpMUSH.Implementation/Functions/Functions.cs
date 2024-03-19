@@ -49,7 +49,7 @@ namespace SharpMUSH.Implementation.Functions
 			(var attribute, var function) = libraryMatch;
 
 			var currentStack = parser.State;
-			var currentState = parser.CurrentState();
+			var currentState = parser.CurrentState;
 			var contextDepth = context.Depth();
 			var stackDepth = currentStack.Count();
 			var recursionDepth = currentStack.Count(x => x.Function == name);

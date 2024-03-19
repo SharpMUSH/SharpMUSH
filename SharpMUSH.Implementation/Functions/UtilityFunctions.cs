@@ -10,7 +10,7 @@ namespace SharpMUSH.Implementation.Functions
 		[SharpFunction(Name = "pcreate", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly)]
 		public static CallState PCreate(Parser parser, SharpFunctionAttribute _2)
 		{
-			var args = parser.CurrentState().Arguments;
+			var args = parser.CurrentState.Arguments;
 			var location = parser.Database.GetObjectNode(new Library.Models.DBRef { Number = Configurable.PlayerStart }).Result;
 
 			var trueLocation = location!.Value.Match(
@@ -30,7 +30,7 @@ namespace SharpMUSH.Implementation.Functions
 		[SharpFunction(Name = "ansi", MinArgs = 2, Flags = FunctionFlags.Regular)]
 		public static CallState ANSI(Parser parser, SharpFunctionAttribute _2)
 		{
-			var args = parser.CurrentState().Arguments;
+			var args = parser.CurrentState.Arguments;
 
 			return new CallState(args[1].Message);
 		}
@@ -123,11 +123,11 @@ namespace SharpMUSH.Implementation.Functions
 
 		[SharpFunction(Name = "ISINT", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 		public static CallState IsInt(Parser parser, SharpFunctionAttribute _2) =>
-			new(int.TryParse(parser.CurrentState().Arguments[0].Message!.ToString(), out var _) ? "1" : "0");
+			new(int.TryParse(parser.CurrentState.Arguments[0].Message!.ToString(), out var _) ? "1" : "0");
 		
 		[SharpFunction(Name = "ISNUM", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 		public static CallState IsNum(Parser parser, SharpFunctionAttribute _2) =>
-			new (decimal.TryParse(parser.CurrentState().Arguments[0].Message!.ToString(), out var _) ? "1" : "0");
+			new (decimal.TryParse(parser.CurrentState.Arguments[0].Message!.ToString(), out var _) ? "1" : "0");
 
 		[SharpFunction(Name = "ISOBJID", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 		public static CallState IsObjId(Parser parser, SharpFunctionAttribute _2)
@@ -138,7 +138,7 @@ namespace SharpMUSH.Implementation.Functions
 		[SharpFunction(Name = "ISREGEXP", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 		public static CallState isregexp(Parser parser, SharpFunctionAttribute _2)
 		{
-			var arg = parser.CurrentState().Arguments[0].Message!.ToString();
+			var arg = parser.CurrentState.Arguments[0].Message!.ToString();
 			
 			if (string.IsNullOrWhiteSpace(arg)) return new("0");
 			

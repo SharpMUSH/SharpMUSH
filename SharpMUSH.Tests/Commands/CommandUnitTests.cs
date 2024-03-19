@@ -28,7 +28,7 @@ public class CommandUnitTests : BaseUnitTest
 
 		parser.NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(parser.CurrentState().Executor, expected);
+			.Notify(parser.CurrentState.Executor, expected);
 	}
 
 	[TestMethod]

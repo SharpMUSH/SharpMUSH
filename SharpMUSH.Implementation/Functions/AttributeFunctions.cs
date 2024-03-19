@@ -16,7 +16,7 @@ namespace SharpMUSH.Implementation.Functions
 			// TODO: If we have the NoSideFX flag, don't function! 
 			// That should be handled by the parser before it gets here.
 
-			var args = parser.CurrentState().Arguments;
+			var args = parser.CurrentState.Arguments;
 			var split = SplitDBRefAndAttr(MModule.plainText(args[0].Message!));
 
 			if (!split.TryPickT0(out var details, out var _))

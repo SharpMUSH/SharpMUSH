@@ -47,13 +47,15 @@ namespace SharpMUSH.Tests
 			IPermissionService? ps = null,
 			ISharpDatabase? ds = null,
 			INotifyService? ns = null,
-			IQueueService? qs = null) 
+			IQueueService? qs = null,
+			IConnectionService? cs = null) 
 			=> new(
 					pws ?? Substitute.For<IPasswordService>(),
 					ps ?? Substitute.For<IPermissionService>(),
 					ds ?? Substitute.For<ISharpDatabase>(),
 					ns ?? Substitute.For<INotifyService>(),
 					qs ?? Substitute.For<IQueueService>(),
+					cs ?? Substitute.For<IConnectionService>(),
 					state: new Implementation.Parser.ParserState(
 						Registers: ImmutableDictionary<string, MarkupString.MarkupStringModule.MarkupString>.Empty,
 						CurrentEvaluation: null,

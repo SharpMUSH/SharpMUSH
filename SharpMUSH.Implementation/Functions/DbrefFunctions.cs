@@ -7,10 +7,10 @@ namespace SharpMUSH.Implementation.Functions
 		[SharpFunction(Name = "loc", MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 		public static CallState Loc(Parser parser, SharpFunctionAttribute _2)
 		{
-			var dbRefConversion = ParseDBRef(MModule.plainText(parser.CurrentState().Arguments[0].Message));
+			var dbRefConversion = ParseDBRef(MModule.plainText(parser.CurrentState.Arguments[0].Message));
 			if (!dbRefConversion.TryPickT0(out var dbRef, out _))
 			{
-				parser.NotifyService.Notify(parser.CurrentState().Executor, "I can't see that here.");
+				parser.NotifyService.Notify(parser.CurrentState.Executor, "I can't see that here.");
 				return new CallState("#-1");
 			}
 

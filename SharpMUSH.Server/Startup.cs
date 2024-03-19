@@ -30,6 +30,7 @@ namespace SharpMUSH.Server
 			services.AddSingleton<IPermissionService, PermissionService>();
 			services.AddSingleton<INotifyService, NotifyService>();
 			services.AddSingleton<IQueueService, QueueService>();
+			services.AddSingleton<IConnectionService, ConnectionService>();
 			services.AddSingleton(new ArangoHandle("CurrentSharpMUSHWorld"));
 			services.BuildServiceProvider();
 		}

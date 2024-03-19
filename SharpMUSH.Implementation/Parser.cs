@@ -17,7 +17,8 @@ namespace SharpMUSH.Implementation
 			IPermissionService _permissionService,
 			ISharpDatabase _database,
 			INotifyService _notifyService,
-			IQueueService _queueService)
+			IQueueService _queueService,
+			IConnectionService _connectionService)
 	{
 		public record ParserState(
 			ImmutableDictionary<string, MString> Registers,
@@ -37,7 +38,11 @@ namespace SharpMUSH.Implementation
 
 		public IQueueService QueueService => _queueService;
 
-		public INotifyService	NotifyService => _notifyService;
+		public INotifyService NotifyService => _notifyService;
+
+		public IConnectionService ConnectionService => _connectionService;
+
+		public ParserState CurrentState => State.Peek();
 
 		/// <summary>
 		/// Stack may not be needed if we can bring ParserState into the custom Visitors.
@@ -55,11 +60,11 @@ namespace SharpMUSH.Implementation
 			ISharpDatabase database,
 		  INotifyService notifyService,
 			IQueueService queueService,
+			IConnectionService connectionService,
 			ImmutableStack<ParserState> state) :
-				this(passwordService, permissionService, database, notifyService, queueService)
+				this(passwordService, permissionService, database, notifyService, queueService, connectionService)
 				=> State = state ?? [];
 
-		public ParserState CurrentState() => State.Peek();
 
 		public Parser Push(ParserState state)
 		{
@@ -79,8 +84,9 @@ namespace SharpMUSH.Implementation
 			ISharpDatabase database,
 			INotifyService notifyService, 
 			IQueueService queueService,
+			IConnectionService connectionService,
 			ParserState state) :
-				this(passwordService, permissionService, database, notifyService, queueService)
+				this(passwordService, permissionService, database, notifyService, queueService, connectionService)
 				=> State = [state];
 
 		public CallState? FunctionParse(string text)

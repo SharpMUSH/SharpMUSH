@@ -6,40 +6,39 @@ namespace SharpMUSH.Implementation.Functions
 	{
 		[SharpFunction(Name = "add", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
 		public static CallState Add(Parser parser, SharpFunctionAttribute _2) =>
-			AggregateDecimals(parser.CurrentState().Arguments, (acc, sub) => acc + sub);
+			AggregateDecimals(parser.CurrentState.Arguments, (acc, sub) => acc + sub);
 
 		[SharpFunction(Name = "sub", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
 		public static CallState Sub(Parser parser, SharpFunctionAttribute _2) =>
-			AggregateDecimals(parser.CurrentState().Arguments, (acc, sub) => acc - sub);
+			AggregateDecimals(parser.CurrentState.Arguments, (acc, sub) => acc - sub);
 
 		[SharpFunction(Name = "mul", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
 		public static CallState Mul(Parser parser, SharpFunctionAttribute _2) =>
-			AggregateDecimals(parser.CurrentState().Arguments, (acc, sub) => acc * sub);
+			AggregateDecimals(parser.CurrentState.Arguments, (acc, sub) => acc * sub);
 
 		[SharpFunction(Name = "div", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.IntegersOnly)]
 		public static CallState Div(Parser parser, SharpFunctionAttribute _2) =>
-			AggregateIntegers(parser.CurrentState().Arguments, (acc, sub) => acc / sub);
+			AggregateIntegers(parser.CurrentState.Arguments, (acc, sub) => acc / sub);
 
 		[SharpFunction(Name = "fdiv", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
 		public static CallState FDiv(Parser parser, SharpFunctionAttribute _2) =>
-			AggregateDecimals(parser.CurrentState().Arguments, (acc, sub) => acc / sub);
+			AggregateDecimals(parser.CurrentState.Arguments, (acc, sub) => acc / sub);
 
 		[SharpFunction(Name = "floordiv", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
 		public static CallState FloorDiv(Parser parser, SharpFunctionAttribute _2) =>
-			AggregateDecimalToInt(parser.CurrentState().Arguments, (acc, sub) => acc / sub);
+			AggregateDecimalToInt(parser.CurrentState.Arguments, (acc, sub) => acc / sub);
 
 		[SharpFunction(Name = "max", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
 		public static CallState Max(Parser parser, SharpFunctionAttribute _2) =>
-			AggregateDecimals(parser.CurrentState().Arguments, Math.Max);
+			AggregateDecimals(parser.CurrentState.Arguments, Math.Max);
 
 		[SharpFunction(Name = "min", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
 		public static CallState Min(Parser parser, SharpFunctionAttribute _2) =>
-			AggregateDecimals(parser.CurrentState().Arguments, Math.Min);
+			AggregateDecimals(parser.CurrentState.Arguments, Math.Min);
 
 		[SharpFunction(Name = "abs", MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
 		public static CallState Abs(Parser parser, SharpFunctionAttribute _2)
-			=> EvaluateDecimal(parser.CurrentState().Arguments, Math.Abs);
-
+			=> EvaluateDecimal(parser.CurrentState.Arguments, Math.Abs);
 
 		[SharpFunction(Name = "BOUND", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 		public static CallState Bound(Parser parser, SharpFunctionAttribute _2)
@@ -218,7 +217,7 @@ namespace SharpMUSH.Implementation.Functions
 		[SharpFunction(Name = "E", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
 		public static CallState E(Parser parser, SharpFunctionAttribute _2)
 		{
-			var arguments = parser.CurrentState().Arguments;
+			var arguments = parser.CurrentState.Arguments;
 			var arg1 = arguments[1]?.Message?.ToString();
 
 			return new(double.TryParse(arg1 ?? "1", out var dec)
@@ -232,9 +231,9 @@ namespace SharpMUSH.Implementation.Functions
 			throw new NotImplementedException();
 		}
 
-		[SharpFunction(Name = "FLOOR", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+		[SharpFunction(Name = "FLOOR", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
 		public static CallState Floor(Parser parser, SharpFunctionAttribute _2) =>
-			EvaluateDouble(parser.CurrentState().Arguments, Math.Floor);
+			EvaluateDouble(parser.CurrentState.Arguments, Math.Floor);
 
 		[SharpFunction(Name = "LOG", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 		public static CallState Log(Parser parser, SharpFunctionAttribute _2)
@@ -242,9 +241,9 @@ namespace SharpMUSH.Implementation.Functions
 			throw new NotImplementedException();
 		}
 
-		[SharpFunction(Name = "LN", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+		[SharpFunction(Name = "LN", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
 		public static CallState Ln(Parser parser, SharpFunctionAttribute _2) =>
-			EvaluateDouble(parser.CurrentState().Arguments, Math.Log);
+			EvaluateDouble(parser.CurrentState.Arguments, Math.Log);
 
 		[SharpFunction(Name = "PI", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]
 		public static CallState PI(Parser parser, SharpFunctionAttribute _2) =>
@@ -268,9 +267,9 @@ namespace SharpMUSH.Implementation.Functions
 			throw new NotImplementedException();
 		}
 
-		[SharpFunction(Name = "SQRT", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+		[SharpFunction(Name = "SQRT", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
 		public static CallState Sqrt(Parser parser, SharpFunctionAttribute _2) =>
-			EvaluateDouble(parser.CurrentState().Arguments, Math.Sqrt);
+			EvaluateDouble(parser.CurrentState.Arguments, Math.Sqrt);
 
 		[SharpFunction(Name = "STDDEV", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 		public static CallState StdDev(Parser parser, SharpFunctionAttribute _2)
