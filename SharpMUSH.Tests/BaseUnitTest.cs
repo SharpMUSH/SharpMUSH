@@ -23,8 +23,9 @@ namespace SharpMUSH.Tests
 		{
 			var container = new ArangoDbBuilder()
 				.WithImage("arangodb:3.11.8")
-			.WithPassword("password")
-			.Build();
+				.WithPassword("password")
+				.Build();
+
 			await container.StartAsync()
 				.ConfigureAwait(false);
 

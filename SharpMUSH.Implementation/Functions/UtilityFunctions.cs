@@ -66,7 +66,27 @@ namespace SharpMUSH.Implementation.Functions
 		[SharpFunction(Name = "CHECKPASS", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly | FunctionFlags.StripAnsi)]
 		public static CallState Checkpass(Parser parser, SharpFunctionAttribute _2)
 		{
-			throw new NotImplementedException();
+			var dbRefConversion = ParseDBRef(MModule.plainText(parser.CurrentState.Arguments[0].Message));
+			if (!dbRefConversion.TryPickT0(out var dbRef, out _))
+			{
+				parser.NotifyService.Notify(parser.CurrentState.Executor, "I can't see that here.");
+				return new CallState("#-1 NO SUCH PLAYER");
+			}
+
+			var objectInfo = parser.Database.GetObjectNode(dbRef).Result;
+			if (!objectInfo!.Value.IsT0)
+			{
+				return new CallState("#-1 NO SUCH PLAYER");
+			}
+			
+			var player = objectInfo.Value.AsT0;
+
+			var result = parser.PasswordService.PasswordIsValid(
+				$"#{player!.Object!.Key}:{player!.Object!.CreationTime}", 
+				parser.CurrentState.Arguments[1].Message!.ToString(), 
+				player.PasswordHash);
+
+			return result ? new("1") : new("0");
 		}
 		
 		[SharpFunction(Name = "CLONE", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular)]
