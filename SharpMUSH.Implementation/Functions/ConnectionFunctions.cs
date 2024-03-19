@@ -29,6 +29,7 @@ namespace SharpMUSH.Implementation.Functions
 		{
 			throw new NotImplementedException();
 		}
+		[SharpFunction(Name = "DOING", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 		public static CallState doing(Parser parser, SharpFunctionAttribute _2)
 		{
 			throw new NotImplementedException();

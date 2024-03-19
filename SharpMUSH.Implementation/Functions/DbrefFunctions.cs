@@ -303,7 +303,6 @@ namespace SharpMUSH.Implementation.Functions
 			throw new NotImplementedException();
 		}
 
-
 		[SharpFunction(Name = "ANDFLAGS", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 		public static CallState andflags(Parser parser, SharpFunctionAttribute _2)
 		{

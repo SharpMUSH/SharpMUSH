@@ -3,15 +3,6 @@ using System.Text.Json;
 
 namespace SharpMUSH.Implementation.Functions
 {
-	/*
-    json()
-    json_map()
-    json_query()
-    json_mod()
-    
-    wsjson()
-    oob()
-  */
 	public partial class Functions
 	{
 		public static Dictionary<string, Func<List<CallState>, CallState>> JsonFunctions = new()
