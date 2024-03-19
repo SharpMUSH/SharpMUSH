@@ -54,6 +54,39 @@ namespace SharpMUSH.Implementation.Functions
 			var recursionDepth = currentStack.Count(x => x.Function == name);
 
 			List<CallState> refinedArguments;
+
+			/* Validation, this should probably go into its own function! */
+			if (args.Count > attribute.MaxArgs)
+			{
+				parser.Pop();
+				// Better Error Needed.
+				return new CallState(Errors.ErrorArgRange, context.Depth());
+			}
+
+			if (args.Count < attribute.MinArgs)
+			{
+				parser.Pop();
+				return new CallState(string.Format(Errors.ErrorTooFewArguments, name, attribute.MinArgs, args.Count), context.Depth());
+			}
+
+			if (contextDepth > Configurable.MaxCallDepth)
+			{
+				parser.Pop();
+				return new CallState(Errors.ErrorCall, contextDepth);
+			}
+
+			if (stackDepth > Configurable.MaxFunctionDepth)
+			{
+				parser.Pop();
+				return new CallState(Errors.ErrorInvoke, stackDepth);
+			}
+
+			if (recursionDepth > Configurable.MaxRecursionDepth)
+			{
+				parser.Pop();
+				return new CallState(Errors.ErrorRecursion, recursionDepth);
+			}
+
 			if ((attribute.Flags & FunctionFlags.NoParse) != FunctionFlags.NoParse)
 			{
 				// TODO: Should we increase the Depth of the response by adding our context.Depth here?
@@ -67,33 +100,6 @@ namespace SharpMUSH.Implementation.Functions
 			else
 			{
 				refinedArguments = args;
-			}
-
-			/* Validation, this should probably go into its own function! */
-			if (args.Count > attribute.MaxArgs)
-			{
-				// Better Error Needed.
-				return new CallState(Errors.ErrorArgRange, context.Depth());
-			}
-
-			if (args.Count < attribute.MinArgs)
-			{
-				return new CallState(string.Format(Errors.ErrorTooFewArguments, name, attribute.MinArgs, args.Count), context.Depth());
-			}
-
-			if (contextDepth > Configurable.MaxCallDepth)
-			{
-				return new CallState(Errors.ErrorCall, contextDepth);
-			}
-
-			if (stackDepth > Configurable.MaxFunctionDepth)
-			{
-				return new CallState(Errors.ErrorInvoke, stackDepth);
-			}
-
-			if (recursionDepth > Configurable.MaxRecursionDepth)
-			{
-				return new CallState(Errors.ErrorRecursion, recursionDepth);
 			}
 
 			parser.Push(new Parser.ParserState(

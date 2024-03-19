@@ -72,13 +72,13 @@ namespace SharpMUSH.Implementation.Functions
 		}
 
 		[SharpFunction(Name = "DIST2D", MinArgs = 4, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-		public static CallState Dist2d(Parser parser, SharpFunctionAttribute _2)
+		public static CallState Distance2d(Parser parser, SharpFunctionAttribute _2)
 		{
 			throw new NotImplementedException();
 		}
 
 		[SharpFunction(Name = "DIST3D", MinArgs = 6, MaxArgs = 6, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-		public static CallState Dist3d(Parser parser, SharpFunctionAttribute _2)
+		public static CallState Distance3d(Parser parser, SharpFunctionAttribute _2)
 		{
 			throw new NotImplementedException();
 		}
@@ -138,7 +138,7 @@ namespace SharpMUSH.Implementation.Functions
 		}
 
 		[SharpFunction(Name = "LMATH", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-		public static CallState Lmath(Parser parser, SharpFunctionAttribute _2)
+		public static CallState LMath(Parser parser, SharpFunctionAttribute _2)
 		{
 			throw new NotImplementedException();
 		}
