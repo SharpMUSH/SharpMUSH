@@ -2,6 +2,7 @@
 using OneOf;
 using System.Reflection;
 using static SharpMUSHParser;
+using OneOf.Types;
 
 namespace SharpMUSH.Implementation.Functions
 {
@@ -37,7 +38,7 @@ namespace SharpMUSH.Implementation.Functions
 			{
 				var DiscoveredFunction = DiscoverBuiltInFunction(name);
 
-				if (DiscoveredFunction.TryPickT1(out var functionValue, out var didNotFindValue) == false)
+				if (DiscoveredFunction.TryPickT1(out var functionValue, out _) == false)
 				{
 					return new CallState(string.Format(Errors.ErrorNoSuchFunction, name), context.Depth());
 				}
@@ -135,10 +136,10 @@ namespace SharpMUSH.Implementation.Functions
 			return result;
 		}
 
-		private static OneOf<bool, (SharpFunctionAttribute, Func<Parser, CallState>)> DiscoverBuiltInFunction(string name)
+		private static OneOf<None, (SharpFunctionAttribute, Func<Parser, CallState>)> DiscoverBuiltInFunction(string name)
 		{
 			if (!_knownBuiltInMethods.TryGetValue(name, out var result))
-				return false;
+				return new None();
 
 			return (result.Attribute, new Func<Parser, CallState>
 				(p => (CallState)result.Method.Invoke(null, [p, result.Attribute])!));

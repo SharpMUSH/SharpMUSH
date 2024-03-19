@@ -198,7 +198,7 @@ namespace SharpMUSH.Implementation.Functions
 		}
 
 		[SharpFunction(Name = "LISTQ", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-		public static CallState listq(Parser parser, SharpFunctionAttribute _2)
+		public static CallState ListQ(Parser parser, SharpFunctionAttribute _2)
 		{
 			throw new NotImplementedException();
 		}
