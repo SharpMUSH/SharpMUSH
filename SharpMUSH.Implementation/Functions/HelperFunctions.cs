@@ -39,68 +39,29 @@ namespace SharpMUSH.Implementation.Functions
 			return (new DBRef(int.Parse(dbref!), string.IsNullOrWhiteSpace(ctime) ? null : int.Parse(ctime)));
 		}
 
-		// TODO: When a flag is implemented to only accept Integers or Decimals for the Math functions, a lot of these validation checks can go away from this sector.
-		private static CallState ValidateDecimalAndAggregate(List<CallState> args, Func<decimal, decimal, decimal> aggregateFunction)
-		{
-			var doubles = args.Select(x =>
-				(
-					IsDouble: decimal.TryParse(string.Join("", MModule.plainText(x.Message)), out var b),
-					Double: b
-				)).ToList();
+		private static CallState AggregateDecimals(List<CallState> args, Func<decimal, decimal, decimal> aggregateFunction) =>
+			new(args
+				.Select(x => decimal.Parse(MModule.plainText(x.Message)))
+				.Aggregate(aggregateFunction).ToString());
 
-			return doubles.Any(x => !x.IsDouble)
-					? new CallState(Message: Errors.ErrorNumbers)
-					: new CallState(Message: doubles.Select(x => x.Double).Aggregate(aggregateFunction).ToString());
-		}
+		private static CallState AggregateIntegers(List<CallState> args, Func<int, int, int> aggregateFunction) =>
+			new(args
+				.Select(x => int.Parse(MModule.plainText(x.Message)))
+				.Aggregate(aggregateFunction).ToString());
 
-		private static CallState ValidateIntegerAndAggregate(List<CallState> args, Func<int, int, int> aggregateFunction)
-		{
-			var integers = args.Select(x =>
-				(
-					IsInteger: int.TryParse(string.Join("", MModule.plainText(x.Message)), out var b),
-					Integer: b
-				)).ToList();
+		private static CallState ValidateIntegerAndEvaluate(List<CallState> args, Func<IEnumerable<int>, MString> aggregateFunction)
+			 => new(aggregateFunction(args.Select(x => int.Parse(MModule.plainText(x.Message!)))).ToString());
 
-			return integers.Any(x => !x.IsInteger)
-					? new CallState(Message: Errors.ErrorNumbers)
-					: new CallState(Message: integers.Select(x => x.Integer).Aggregate(aggregateFunction).ToString());
-		}
+		private static CallState AggregateDecimalToInt(List<CallState> args, Func<decimal, decimal, decimal> aggregateFunction) =>
+			new(Math.Floor(args
+				.Select(x => decimal.Parse(string.Join(string.Empty, MModule.plainText(x.Message))))
+				.Aggregate(aggregateFunction)).ToString());
 
-		private static CallState ValidateIntegerAndEvaluate(List<CallState> args, Func<int[], MString> aggregateFunction)
-		{
-			var integers = args.Select(x =>
-				(
-					IsInteger: int.TryParse(string.Join("", MModule.plainText(x.Message)), out var b),
-					Integer: b
-				)).ToList();
+		private static CallState EvaluateDecimal(List<CallState> args, Func<decimal, decimal> func)
+			=> new(func(decimal.Parse(MModule.plainText(args[0].Message))).ToString());
 
-			return integers.Any(x => !x.IsInteger)
-					? new CallState(Message: Errors.ErrorNumbers)
-					: new CallState(Message: aggregateFunction(integers.Select(x => x.Integer).ToArray()).ToString());
-		}
-
-		private static CallState ValidateDecimalAndAggregateToInt(List<CallState> args, Func<decimal, decimal, decimal> aggregateFunction)
-		{
-			var doubles = args.Select(x =>
-				(
-					IsDouble: decimal.TryParse(string.Join("", MModule.plainText(x.Message)), out var b),
-					Double: b
-				)).ToList();
-
-			return doubles.Any(x => !x.IsDouble)
-					? new CallState(Message: Errors.ErrorNumbers)
-					: new CallState(Message: Math.Floor(doubles.Select(x => x.Double).Aggregate(aggregateFunction)).ToString());
-		}
-
-		private static CallState ValidateDecimalAndEvaluate(List<CallState> args, Func<decimal, decimal> func)
-			=> decimal.TryParse(MModule.plainText(args[0].Message), out var dec)
-				? new CallState(Errors.ErrorNumber)
-				: new CallState(func(dec).ToString());
-
-		private static CallState ValidateIntegerAndEvaluate(List<CallState> args, Func<int, int> func)
-			=> int.TryParse(MModule.plainText(args[0].Message), out var integer)
-				? new CallState(Errors.ErrorInteger)
-				: new CallState(func(integer).ToString());
+		private static CallState EvaluateInteger(List<CallState> args, Func<int, int> func)
+			=> new(func(int.Parse(MModule.plainText(args[0].Message))).ToString());
 
 		private static CallState ValidateDecimalAndEvaluatePairwise(this List<CallState> args, Func<(decimal, decimal), bool> func)
 		{

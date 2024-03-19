@@ -6,39 +6,39 @@ namespace SharpMUSH.Implementation.Functions
 	{
 		[SharpFunction(Name = "add", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
 		public static CallState Add(Parser parser, SharpFunctionAttribute _2) =>
-			ValidateDecimalAndAggregate(parser.CurrentState().Arguments, (acc, sub) => acc + sub);
+			AggregateDecimals(parser.CurrentState().Arguments, (acc, sub) => acc + sub);
 
 		[SharpFunction(Name = "sub", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
 		public static CallState Sub(Parser parser, SharpFunctionAttribute _2) =>
-			ValidateDecimalAndAggregate(parser.CurrentState().Arguments, (acc, sub) => acc - sub);
+			AggregateDecimals(parser.CurrentState().Arguments, (acc, sub) => acc - sub);
 
 		[SharpFunction(Name = "mul", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
 		public static CallState Mul(Parser parser, SharpFunctionAttribute _2) =>
-			ValidateDecimalAndAggregate(parser.CurrentState().Arguments, (acc, sub) => acc * sub);
+			AggregateDecimals(parser.CurrentState().Arguments, (acc, sub) => acc * sub);
 
 		[SharpFunction(Name = "div", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.IntegersOnly)]
 		public static CallState Div(Parser parser, SharpFunctionAttribute _2) =>
-			ValidateIntegerAndAggregate(parser.CurrentState().Arguments, (acc, sub) => acc / sub);
+			AggregateIntegers(parser.CurrentState().Arguments, (acc, sub) => acc / sub);
 
 		[SharpFunction(Name = "fdiv", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
 		public static CallState FDiv(Parser parser, SharpFunctionAttribute _2) =>
-			ValidateDecimalAndAggregate(parser.CurrentState().Arguments, (acc, sub) => acc / sub);
+			AggregateDecimals(parser.CurrentState().Arguments, (acc, sub) => acc / sub);
 
 		[SharpFunction(Name = "floordiv", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
 		public static CallState FloorDiv(Parser parser, SharpFunctionAttribute _2) =>
-			ValidateDecimalAndAggregateToInt(parser.CurrentState().Arguments, (acc, sub) => acc / sub);
+			AggregateDecimalToInt(parser.CurrentState().Arguments, (acc, sub) => acc / sub);
 
 		[SharpFunction(Name = "max", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
 		public static CallState Max(Parser parser, SharpFunctionAttribute _2) =>
-			ValidateDecimalAndAggregate(parser.CurrentState().Arguments, Math.Max);
+			AggregateDecimals(parser.CurrentState().Arguments, Math.Max);
 
 		[SharpFunction(Name = "min", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
 		public static CallState Min(Parser parser, SharpFunctionAttribute _2) =>
-			ValidateDecimalAndAggregate(parser.CurrentState().Arguments, Math.Min);
+			AggregateDecimals(parser.CurrentState().Arguments, Math.Min);
 
 		[SharpFunction(Name = "abs", MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
 		public static CallState Abs(Parser parser, SharpFunctionAttribute _2)
-			=> ValidateDecimalAndEvaluate(parser.CurrentState().Arguments, Math.Abs);
+			=> EvaluateDecimal(parser.CurrentState().Arguments, Math.Abs);
 
 
 		[SharpFunction(Name = "BOUND", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]

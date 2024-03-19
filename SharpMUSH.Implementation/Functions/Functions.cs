@@ -22,6 +22,7 @@ namespace SharpMUSH.Implementation.Functions
 				_functionLibrary.Add(knownMethod.Key, (knownMethod.Value.Attribute, new Func<Parser, CallState>(p => (CallState)knownMethod.Value.Method.Invoke(null, [p, knownMethod.Value.Attribute])!)));
 			}
 		}
+
 		/// <summary>
 		/// TODO: Optimization needed. We should at least grab the in-built ones at startup.
 		/// </summary>
@@ -55,6 +56,8 @@ namespace SharpMUSH.Implementation.Functions
 
 			List<CallState> refinedArguments;
 
+			// TODO: Check Permissions here.
+
 			/* Validation, this should probably go into its own function! */
 			if (args.Count > attribute.MaxArgs)
 			{
@@ -87,11 +90,16 @@ namespace SharpMUSH.Implementation.Functions
 				return new CallState(Errors.ErrorRecursion, recursionDepth);
 			}
 
+			var stripAnsi = (attribute.Flags & FunctionFlags.StripAnsi) != 0;
+
 			if ((attribute.Flags & FunctionFlags.NoParse) != FunctionFlags.NoParse)
 			{
 				// TODO: Should we increase the Depth of the response by adding our context.Depth here?
 				// This is also where we need to do a DEPTH CHECK.
-				refinedArguments = args.Select(a => parser.FunctionParse(a?.Message?.ToString() ?? string.Empty)).ToList()!;
+				refinedArguments = args.Select(a => stripAnsi
+					? parser.FunctionParse(MModule.plainText(a?.Message ?? MModule.empty()))
+					: parser.FunctionParse(a?.Message?.ToString() ?? string.Empty)
+					).ToList()!;
 			}
 			else if ((attribute.Flags & FunctionFlags.NoParse) == FunctionFlags.NoParse && attribute.MaxArgs == 1)
 			{
@@ -99,7 +107,16 @@ namespace SharpMUSH.Implementation.Functions
 			}
 			else
 			{
-				refinedArguments = args;
+				refinedArguments = args.Select(arg => stripAnsi ? new CallState(MModule.plainText(arg.Message), arg.Depth) : arg ).ToList()!;
+			}
+
+			if ((attribute.Flags & FunctionFlags.DecimalsOnly) != 0 && refinedArguments.Any(a => !decimal.TryParse(a.Message!.ToString(), out _)))
+			{
+				return new CallState(attribute.MaxArgs > 1 ? Errors.ErrorNumbers : Errors.ErrorNumber);
+			}
+			if ((attribute.Flags & FunctionFlags.IntegersOnly) != 0 && refinedArguments.Any(a => !int.TryParse(a.Message!.ToString(), out _)))
+			{
+				return new CallState(attribute.MaxArgs > 1 ? Errors.ErrorIntegers : Errors.ErrorInteger);
 			}
 
 			parser.Push(new Parser.ParserState(
