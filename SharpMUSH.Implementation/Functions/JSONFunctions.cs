@@ -60,5 +60,31 @@ namespace SharpMUSH.Implementation.Functions
 				_ => new CallState(entry is "1" or "true" ? "true" : "false")
 			};
 		}
+
+		[SharpFunction(Name = "JSON", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
+		public static CallState json(Parser parser, SharpFunctionAttribute _2)
+		{
+			throw new NotImplementedException();
+		}
+		[SharpFunction(Name = "JSON_MAP", MinArgs = 2, MaxArgs = 33, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+		public static CallState json_map(Parser parser, SharpFunctionAttribute _2)
+		{
+			throw new NotImplementedException();
+		}
+		[SharpFunction(Name = "JSON_MOD", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+		public static CallState json_mod(Parser parser, SharpFunctionAttribute _2)
+		{
+			throw new NotImplementedException();
+		}
+		[SharpFunction(Name = "JSON_QUERY", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+		public static CallState json_query(Parser parser, SharpFunctionAttribute _2)
+		{
+			throw new NotImplementedException();
+		}
+		[SharpFunction(Name = "OOB", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+		public static CallState oob(Parser parser, SharpFunctionAttribute _2)
+		{
+			throw new NotImplementedException();
+		}
 	}
 }

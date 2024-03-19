@@ -45,5 +45,14 @@ namespace SharpMUSH.Database
 		/// <param name="attribute">Attribute Path.</param>
 		/// <returns>Success or Failure</returns>
 		Task<bool> ClearAttribute(DBRef dbref, string[] attribute);
+
+		/// <summary>
+		/// Wipe an attribute and all of its children.
+		/// This does not do any checks regarding permissions, as that is up to the functionality itself.
+		/// </summary>
+		/// <param name="dbref">Database Reference Number</param>
+		/// <param name="attribute">Attribute Path.</param>
+		/// <returns>Success or Failure</returns>
+		Task<bool> WipeAttribute(DBRef dbref, string[] attribute);
 	}
 }

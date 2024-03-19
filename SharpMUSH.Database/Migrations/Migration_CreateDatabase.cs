@@ -43,6 +43,7 @@ namespace SharpMUSH.Database.Migrations
 										Name = new { type = DatabaseConstants.typeString },
 										Locks = new { type = DatabaseConstants.typeObject },
 										CreationTime = new { type = DatabaseConstants.typeNumber },
+										ModifiedTime = new { type = DatabaseConstants.typeNumber },
 										Powers = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } }
 									},
 									required = (string[])[nameof(SharpObject.Name)],
@@ -424,7 +425,8 @@ namespace SharpMUSH.Database.Migrations
 			{
 				_key = "0",
 				Name = "Room Zero",
-				CreationTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+				CreationTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+				ModifiedTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
 			});
 			var roomZeroRoom = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.rooms, new SharpRoom { });
 
@@ -433,7 +435,8 @@ namespace SharpMUSH.Database.Migrations
 			{
 				_key = "1",
 				Name = "God",
-				CreationTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+				CreationTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+				ModifiedTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
 			});
 
 			/* Create Room Zero */
@@ -441,7 +444,8 @@ namespace SharpMUSH.Database.Migrations
 			{
 				_key = "2",
 				Name = "Master Room",
-				CreationTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+				CreationTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+				ModifiedTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
 			});
 			var roomTwoRoom = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.rooms, new SharpRoom { });
 

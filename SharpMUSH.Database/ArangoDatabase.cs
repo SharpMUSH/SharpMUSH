@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using OneOf;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services;
+using System;
 
 namespace SharpMUSH.Database
 {
@@ -38,7 +39,8 @@ namespace SharpMUSH.Database
 			var obj = await arangoDB.Document.CreateAsync<dynamic, dynamic>(handle, DatabaseConstants.objects, new
 			{
 				Name = name,
-				CreationTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+				CreationTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+				ModifiedTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
 			}, returnNew: true);
 
 			var newObject = obj.New;
@@ -145,6 +147,7 @@ namespace SharpMUSH.Database
 			{
 				Name = obj.Name,
 				CreationTime = obj.CreationTime,
+				ModifiedTime = obj.ModifiedTime,
 				Flags = obj.Flags,
 				Locks = obj.Locks,
 				Id = obj._id,
@@ -162,28 +165,63 @@ namespace SharpMUSH.Database
 			};
 		}
 
-		public Task<SharpAttribute[]?> GetAttributes(DBRef dbref, string attribute_pattern)
+		public async Task<SharpAttribute[]?> GetAttributes(DBRef dbref, string attribute_pattern)
 		{
-			// Step 1: Get Object.
-			// Step 2: Find all attributes that belong to that Object.
-			// Step 3: Filter down.
+			var startVertex = $"{DatabaseConstants.objects}/{dbref.Number}";
+			var result = await arangoDB.Query.ExecuteAsync<dynamic>(handle, $"RETURN DOCUMENT({startVertex})");
+			var pattern = attribute_pattern.Replace("_","\\_").Replace("%","\\%").Replace("?", "_").Replace("*","%");
 
-			// We cannot expect that attribute_pattern has been translated from GLOB to Arango LIKE.
-			// "foo"  LIKE  "f%"          // true
+			if (!result.Any())
+			{
+				return null;
+			}
 
-			throw new NotImplementedException();
+			// TODO: This is a lazy implementation and does not appropriately support the ` section of pattern matching for attribute trees.
+			// TODO: Create an Inverted Index on LongName.
+
+			var query = $"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.graphAttributes} FILTER v.LongName LIKE @pattern RETURN v";
+
+			var result2 = await arangoDB.Query.ExecuteAsync<dynamic>(handle, query, new Dictionary<string, object>()
+			{
+				{ "startVertex", startVertex },
+				{ "pattern", pattern }
+			});
+
+			return result2.Select(x => new SharpAttribute()
+			{
+				Flags = x.Flags,
+				Name = x.Name,
+				Value = x.Value,
+				LongName = x.LongName
+			}).ToArray();
 		}
 
-		public Task<SharpAttribute[]?> GetAttributesRegex(DBRef dbref, string attribute_pattern)
+		public async Task<SharpAttribute[]?> GetAttributesRegex(DBRef dbref, string attribute_pattern)
 		{
-			// Step 1: Get Object.
-			// Step 2: Find all attributes that belong to that Object.
-			// Step 3: Filter down.
+			var startVertex = $"{DatabaseConstants.objects}/{dbref.Number}";
+			var result = await arangoDB.Query.ExecuteAsync<dynamic>(handle, $"RETURN DOCUMENT({startVertex})");
 
-			// Technically a (largely useful) subset of Regex is supported by ArangoDB.
-			// But it is annoying that ArangoDB and C# have different levels of Regex available to them.
-			//  "foo"  =~  "^f[o].$"       // true
-			throw new NotImplementedException();
+			if (!result.Any())
+			{
+				return null;
+			}
+
+			// TODO: Create an Inverted Index on LongName.
+			var query = $"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.graphAttributes} FILTER v.LongName =~ @pattern RETURN v";
+
+			var result2 = await arangoDB.Query.ExecuteAsync<dynamic>(handle, query, new Dictionary<string, object>()
+			{
+				{ "startVertex", startVertex },
+				{ "pattern", attribute_pattern }
+			});
+
+			return result2.Select(x => new SharpAttribute()
+			{
+				Flags = x.Flags,
+				Name = x.Name,
+				Value = x.Value,
+				LongName = x.LongName
+			}).ToArray();
 		}
 
 		public async Task<SharpAttribute[]?> GetAttribute(DBRef dbref, string[] attribute)
@@ -243,6 +281,15 @@ namespace SharpMUSH.Database
 
 		public Task<bool> ClearAttribute(DBRef dbref, string[] attribute)
 		{
+			// Set the contents to empty.
+
+			throw new NotImplementedException();
+		}
+
+		public Task<bool> WipeAttribute(DBRef dbref, string[] attribute)
+		{
+			// Wipe a list of attributes. We assume the calling code figured out the permissions part.
+
 			throw new NotImplementedException();
 		}
 	}

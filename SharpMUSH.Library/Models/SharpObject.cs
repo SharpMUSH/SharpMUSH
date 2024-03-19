@@ -27,6 +27,8 @@ namespace SharpMUSH.Library.Models
 		public Dictionary<string, SharpLock>? Locks { get; set; }
 
 		public long CreationTime { get; set; } = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+		
+		public long ModifiedTime { get; set; } = DateTimeOffset.Now.ToUnixTimeMilliseconds();
 
 		public string[]? Powers { get; set; }
 
