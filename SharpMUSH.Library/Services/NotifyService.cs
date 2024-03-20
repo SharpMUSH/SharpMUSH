@@ -1,22 +1,22 @@
-﻿using MarkupString;
+﻿using MediatR;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Requests;
 
 namespace SharpMUSH.Library.Services
 {
-	public class NotifyService : INotifyService
+	public class NotifyService(IPublisher _publisher, IConnectionService _connectionService) : INotifyService
 	{
+		public async Task Notify(DBRef who, string what)
+			=> await _publisher.Publish(
+				new TelnetOutputRequest(
+					_connectionService.Get(who).Select(x => x.Item1).ToArray(),
+					what
+				));
 
-		public NotifyService()
-		{
-			// We need to DI in some kind of resolver that goes from DBRef to Port.
-			// We also need to DI in the Server's function to actually notify.
-		}
+		public async Task Notify(string handle, string what)
+			=> await _publisher.Publish(new TelnetOutputRequest([handle], what));
 
-		public void Notify(DBRef who, string what) 
-		{
-			// Notify WHO that WHAT.	
-			throw new NotImplementedException();
-		}
-
+		public async Task Notify(string[] handles, string what)
+			=> await _publisher.Publish(new TelnetOutputRequest(handles, what));
 	}
 }

@@ -5,6 +5,7 @@ using SharpMUSH.Database;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services;
 using System.Collections.Immutable;
+using MarkupString;
 
 namespace SharpMUSH.Implementation
 {
@@ -26,14 +27,15 @@ namespace SharpMUSH.Implementation
 			string? Function,
 			string? Command,
 			List<CallState> Arguments,
-			DBRef Executor,
-			DBRef Enactor,
-			DBRef Caller);
+			DBRef? Executor,
+			DBRef? Enactor,
+			DBRef? Caller,
+			string Handle);
 
 		public IPasswordService PasswordService => _passwordService;
-		
+
 		public IPermissionService PermissionService => _permissionService;
-		
+
 		public ISharpDatabase Database => _database;
 
 		public IQueueService QueueService => _queueService;
@@ -58,7 +60,7 @@ namespace SharpMUSH.Implementation
 			IPasswordService passwordService,
 			IPermissionService permissionService,
 			ISharpDatabase database,
-		  INotifyService notifyService,
+			INotifyService notifyService,
 			IQueueService queueService,
 			IConnectionService connectionService,
 			ImmutableStack<ParserState> state) :
@@ -71,7 +73,7 @@ namespace SharpMUSH.Implementation
 			State = State.Push(state);
 			return this;
 		}
-		
+
 		public Parser Pop()
 		{
 			State = State.Pop();
@@ -82,7 +84,7 @@ namespace SharpMUSH.Implementation
 			IPasswordService passwordService,
 			IPermissionService permissionService,
 			ISharpDatabase database,
-			INotifyService notifyService, 
+			INotifyService notifyService,
 			IQueueService queueService,
 			IConnectionService connectionService,
 			ParserState state) :
@@ -113,9 +115,26 @@ namespace SharpMUSH.Implementation
 			return visitor.Visit(chatContext);
 		}
 
-		// TODO: Executor should carry more than just dbref. Also port information.
-		public CallState? CommandParse(string text)
+		/// <summary>
+		/// This is the main entry point for commands run by a player.
+		/// </summary>
+		/// <param name="handle">The handle that identifies the connection.</param>
+		/// <param name="text">The text to parse.</param>
+		/// <returns>A completed task.</returns>
+		public Task CommandParse(string handle, string text)
 		{
+			var handleId = ConnectionService.Get(handle);
+			State.Push(new ParserState(
+				ImmutableDictionary<string, MString>.Empty, 
+				null,
+				null,
+				text,
+				[],
+				handleId!.Value.Item2,
+				handleId!.Value.Item2,
+				handleId!.Value.Item2, 
+				handle));
+
 			AntlrInputStream inputStream = new(text);
 			SharpMUSHLexer sharpLexer = new(inputStream);
 			CommonTokenStream commonTokenStream = new(sharpLexer);
@@ -123,7 +142,8 @@ namespace SharpMUSH.Implementation
 			SharpMUSHParser.CommandContext chatContext = sharpParser.command();
 			SharpMUSHParserVisitor visitor = new(this);
 
-			return visitor.Visit(chatContext);
+			visitor.Visit(chatContext);
+			return Task.CompletedTask;
 		}
 
 		public CallState? CommandCommaArgsParse(string text)

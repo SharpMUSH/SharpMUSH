@@ -12,6 +12,7 @@
 	
   <ItemGroup>
     <PackageReference Include="Antlr4.Runtime.Standard" Version="4.13.1" />
+    <PackageReference Include="MediatR" Version="12.2.0" />
     <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="8.0.2" />
     <PackageReference Include="OneOf" Version="3.0.263" />
     <PackageReference Include="OneOf.Monads" Version="1.21.0" />

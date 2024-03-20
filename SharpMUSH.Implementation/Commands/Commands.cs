@@ -43,6 +43,13 @@ namespace SharpMUSH.Implementation.Commands
 				throw new NotImplementedException();
 			}
 
+			// TODO: PAST HERE, WE MUST HAVE AN EXECUTOR!
+
+			if(parser.CurrentState.Executor == null)
+			{
+				throw new NotImplementedException();
+			}
+
 			// Step 2: Check for a single-token command
 			// TODO: Optimize
 			var singleTokenCommandPattern = _commandLibrary.Where(x =>
@@ -137,9 +144,10 @@ namespace SharpMUSH.Implementation.Commands
 					Command: rootCommand,
 					Arguments: arguments,
 					Function: null,
-					Executor: new Library.Models.DBRef(1), // TODO: Fix
-					Enactor: new Library.Models.DBRef(1),  // We need call context
-					Caller: new Library.Models.DBRef(1)    // Especially when coming from a connection.
+					Executor: parser.CurrentState.Executor,
+					Enactor: parser.CurrentState.Enactor,
+					Caller: parser.CurrentState.Caller,
+					Handle: parser.CurrentState.Handle
 				)));
 
 				parser.Pop();
@@ -160,7 +168,7 @@ namespace SharpMUSH.Implementation.Commands
 			// Step 16: HUH_COMMAND is run
 
 			// TODO: Create a HUH_COMMAND
-			return new CallState("Huh?");
+			throw new NotImplementedException();
 		}
 	}
 }

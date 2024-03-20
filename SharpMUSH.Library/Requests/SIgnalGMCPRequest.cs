@@ -1,4 +1,6 @@
-﻿namespace SharpMUSH.Library.Requests
+﻿using MediatR;
+
+namespace SharpMUSH.Library.Requests
 {
-	public record SignalGMCPRequest(string Handle, string Module, string Writeback);
+	public record SignalGMCPRequest(string Handle, string Module, string Writeback) : INotification;
 }

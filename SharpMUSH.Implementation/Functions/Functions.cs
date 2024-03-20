@@ -128,7 +128,8 @@ namespace SharpMUSH.Implementation.Functions
 				Arguments: refinedArguments,
 				Executor: currentState.Executor,
 				Enactor: currentState.Enactor,
-				Caller: currentState.Caller
+				Caller: currentState.Caller,
+				Handle: currentState.Handle
 			));
 
 			var result = function(parser) with { Depth = context.Depth() };

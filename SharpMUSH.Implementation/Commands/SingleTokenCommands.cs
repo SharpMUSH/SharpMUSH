@@ -6,7 +6,7 @@
 		public static CallState NoParse(Parser parser, SharpCommandAttribute _2)
 		{
 			// TODO: Notify others in the room.
-			parser.NotifyService.Notify(parser.CurrentState.Executor, parser.CurrentState.Arguments[0].ToString());
+			parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, parser.CurrentState.Arguments[0].ToString());
 
 			return new CallState(string.Empty);
 		}

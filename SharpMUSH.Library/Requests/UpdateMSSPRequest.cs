@@ -1,4 +1,6 @@
-﻿namespace SharpMUSH.Library.Requests
+﻿using MediatR;
+
+namespace SharpMUSH.Library.Requests
 {
-	public record UpdateMSSPRequest(string Handle, TelnetNegotiationCore.Models.MSSPConfig Config);
+	public record UpdateMSSPRequest(string Handle, TelnetNegotiationCore.Models.MSSPConfig Config) : INotification;
 }

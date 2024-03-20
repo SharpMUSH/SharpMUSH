@@ -44,28 +44,37 @@ namespace SharpMUSH.Tests
 		}
 
 		public static Implementation.Parser TestParser(
-			IPasswordService? pws = null, 
+			IPasswordService? pws = null,
 			IPermissionService? ps = null,
 			ISharpDatabase? ds = null,
 			INotifyService? ns = null,
 			IQueueService? qs = null,
-			IConnectionService? cs = null) 
-			=> new(
+			IConnectionService? cs = null)
+		{
+			// This needs adjustments, as the Database won't agree with the Milliseconds.
+			var one = new DBRef(1, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+			var simpleConnectionService = new ConnectionService();
+			simpleConnectionService.Register("1");
+			simpleConnectionService.Login("1", one);
+
+			return new(
 					pws ?? Substitute.For<IPasswordService>(),
 					ps ?? Substitute.For<IPermissionService>(),
 					ds ?? Substitute.For<ISharpDatabase>(),
 					ns ?? Substitute.For<INotifyService>(),
 					qs ?? Substitute.For<IQueueService>(),
-					cs ?? Substitute.For<IConnectionService>(),
+					cs ?? simpleConnectionService,
 					state: new Implementation.Parser.ParserState(
 						Registers: ImmutableDictionary<string, MarkupString.MarkupStringModule.MarkupString>.Empty,
 						CurrentEvaluation: null,
 						Function: null,
 						Command: "think",
 						Arguments: [],
-						Executor: new DBRef(1),
-						Enactor: new DBRef(1),
-						Caller: new DBRef(1)
+						Executor: one,
+						Enactor: one,
+						Caller: one,
+						Handle: "1"
 					));
+		}
 	}
 }

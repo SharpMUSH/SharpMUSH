@@ -11,7 +11,8 @@ namespace SharpMUSH.Implementation.Substitutions
 				"B" or "b" => new CallState(" "),
 				"R" or "r" => new CallState(Environment.NewLine),
 				"T" or "t" => new CallState("\t"),
-				"#" => new CallState($"#{parser.CurrentState.Enactor.Number}"),
+				"#" => new CallState($"#{parser.CurrentState.Enactor!.Value.Number}"),
+				":" => new CallState($"#{parser.CurrentState.Enactor!.Value.Number}:{parser.CurrentState.Enactor!.Value.CreationMilliseconds}"),
 				"n" => throw new NotImplementedException(),// ENACTOR NAME
 				"N" => throw new NotImplementedException(),// CAPPED ENACTOR NAME
 				"~" => throw new NotImplementedException(),// ACCENTED ENACTOR NAME
@@ -20,8 +21,8 @@ namespace SharpMUSH.Implementation.Substitutions
 				"O" or "o" => throw new NotImplementedException(),// OBJECT PRONOUN
 				"P" or "p" => throw new NotImplementedException(),// POSSESSIVE PRONOUN
 				"A" or "a" => throw new NotImplementedException(),// ABSOLUTE POSSESSIVE PRONOUN
-				"@" => new CallState($"#{parser.CurrentState.Caller.Number}"),
-				"!" => new CallState($"#{parser.CurrentState.Executor.Number}"),
+				"@" => new CallState($"#{parser.CurrentState.Caller!.Value.Number}"),
+				"!" => new CallState($"#{parser.CurrentState.Executor!.Value.Number}"),
 				"L" or "l" => throw new NotImplementedException(),// LOCATION OF EXECUTOR
 				"C" or "c" => throw new NotImplementedException(),// LAST COMMAND BEFORE EVALUATION
 				"U" or "u" => throw new NotImplementedException(),// LAST COMMAND AFTER EVALUATION

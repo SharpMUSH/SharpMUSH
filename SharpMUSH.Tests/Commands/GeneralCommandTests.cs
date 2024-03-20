@@ -1,4 +1,6 @@
-﻿using NSubstitute.ReceivedExtensions;
+﻿using NSubstitute;
+using NSubstitute.ReceivedExtensions;
+using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Tests.Commands
 {
@@ -7,15 +9,15 @@ namespace SharpMUSH.Tests.Commands
 	{
 		[TestMethod]
 		[DataRow("@pemit #1=This is a test", "This is a test")]
-		public void Test(string str, string expected)
+		public async Task Test(string str, string expected)
 		{
 			Console.WriteLine("Testing: {0}", str);
 			var parser = TestParser();
-			_ = parser.CommandParse(str);
+			await parser.CommandParse("1", str);
 
-			parser.NotifyService
+			await parser.NotifyService
 				.Received(Quantity.Exactly(1))
-				.Notify(parser.CurrentState.Executor, expected);
+				.Notify(Arg.Any<DBRef>(), expected);
 		}
 	}
 }

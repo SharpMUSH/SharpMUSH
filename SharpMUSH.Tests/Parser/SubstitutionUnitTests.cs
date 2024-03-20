@@ -23,19 +23,17 @@ namespace SharpMUSH.Tests.Parser
 		// [DataRow("strcat(%q<%s>)")]
 		// [DataRow("strcat(%q<%q0>)")]
 		// [DataRow("strcat(%q<Word %q<5> [strcat(%q<6six>)]>)")]
-		public void Test(string str, string? expected = null)
+		public async Task Test(string str, string? expected = null)
 		{
 			Console.WriteLine("Testing: {0}", str);
 			var parser = TestParser();
-			var result = parser.CommandParse(str)?.Message?.ToString();
-
-			Console.WriteLine(string.Join("", result));
+			await parser.CommandParse("1", str);
 
 			if (expected != null)
 			{
-				parser.NotifyService
+				await parser.NotifyService
 					.Received(Quantity.Exactly(1))
-					.Notify(parser.CurrentState.Executor, expected);
+					.Notify(parser.CurrentState.Executor!.Value, expected);
 			}
 		}
 	}

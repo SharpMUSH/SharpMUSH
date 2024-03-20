@@ -16,7 +16,7 @@ namespace SharpMUSH.Implementation.Commands
 			}
 
 			var notification = args[0]!.Message!.ToString();
-			var executor = parser.CurrentState.Executor;
+			var executor = parser.CurrentState.Executor!.Value;
 			parser.NotifyService.Notify(executor, notification);
 
 			return new CallState("");
@@ -42,7 +42,7 @@ namespace SharpMUSH.Implementation.Commands
 			}
 			else
 			{
-				parser.NotifyService.Notify(parser.CurrentState.Executor, "I can't see that here.");
+				parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, "I can't see that here.");
 			}
 
 			return new CallState("");

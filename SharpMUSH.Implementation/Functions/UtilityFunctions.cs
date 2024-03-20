@@ -69,7 +69,7 @@ namespace SharpMUSH.Implementation.Functions
 			var dbRefConversion = ParseDBRef(MModule.plainText(parser.CurrentState.Arguments[0].Message));
 			if (!dbRefConversion.TryPickT0(out var dbRef, out _))
 			{
-				parser.NotifyService.Notify(parser.CurrentState.Executor, "I can't see that here.");
+				parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, "I can't see that here.");
 				return new CallState("#-1 NO SUCH PLAYER");
 			}
 

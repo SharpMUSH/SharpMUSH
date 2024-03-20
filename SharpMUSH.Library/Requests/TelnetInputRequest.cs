@@ -1,4 +1,6 @@
-﻿namespace SharpMUSH.Library.Requests
+﻿using MediatR;
+
+namespace SharpMUSH.Library.Requests
 {
-	public record TelnetInputRequest(string Handle, string Input);
+	public record TelnetInputRequest(string Handle, string Input) : INotification;
 }

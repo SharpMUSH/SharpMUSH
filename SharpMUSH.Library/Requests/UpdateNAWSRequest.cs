@@ -1,4 +1,6 @@
-﻿namespace SharpMUSH.Library.Requests
+﻿using MediatR;
+
+namespace SharpMUSH.Library.Requests
 {
-	public record UpdateNAWSRequest(string Handle, int Height, int Width);
+	public record UpdateNAWSRequest(string Handle, int Height, int Width) : INotification;
 }
