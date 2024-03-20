@@ -10,6 +10,7 @@
     <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="8.0.2" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="OneOf" Version="3.0.263" />
+    <PackageReference Include="TelnetNegotiationCore" Version="1.0.7" />
   </ItemGroup>
 
   <ItemGroup>

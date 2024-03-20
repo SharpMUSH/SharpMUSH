@@ -5,8 +5,8 @@ namespace SharpMUSH.Library.Services
 {
 	public class ConnectionService : IConnectionService
 	{
-		private ConcurrentDictionary<string, (string Handle, DBRef? Ref, IConnectionService.ConnectionState State)> _sessionState = [];
-		private List<Action<(string Handle, DBRef? Ref, IConnectionService.ConnectionState OldState, IConnectionService.ConnectionState NewState)>> _handlers;
+		private readonly ConcurrentDictionary<string, (string Handle, DBRef? Ref, IConnectionService.ConnectionState State)> _sessionState = [];
+		private readonly List<Action<(string Handle, DBRef? Ref, IConnectionService.ConnectionState OldState, IConnectionService.ConnectionState NewState)>> _handlers = [];
 
 		public void Disconnect(string handle) {
 			var get = Get(handle);
@@ -22,6 +22,9 @@ namespace SharpMUSH.Library.Services
 
 		public (string, DBRef?, IConnectionService.ConnectionState)? Get(string handle) =>
 			_sessionState.GetValueOrDefault(handle);
+
+		public IEnumerable<(string, DBRef?, IConnectionService.ConnectionState)> Get(DBRef reference) =>
+			_sessionState.Values.Where(x => x.Ref.HasValue).Where(x => x.Ref!.Value.Equals(reference));
 
 		public IEnumerable<(string, DBRef?, IConnectionService.ConnectionState)> GetAll() =>
 			_sessionState.Values;

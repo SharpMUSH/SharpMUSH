@@ -32,6 +32,10 @@ namespace SharpMUSH.Server
 			services.AddSingleton<IQueueService, QueueService>();
 			services.AddSingleton<IConnectionService, ConnectionService>();
 			services.AddSingleton(new ArangoHandle("CurrentSharpMUSHWorld"));
+			services.AddMediatR(cfg => {
+				cfg.RegisterServicesFromAssemblyContaining<Implementation.Parser>();
+				cfg.RegisterServicesFromAssemblyContaining<Startup>();
+			});
 			services.BuildServiceProvider();
 		}
 

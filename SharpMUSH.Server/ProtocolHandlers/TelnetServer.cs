@@ -8,6 +8,8 @@ using System.Text;
 using TelnetNegotiationCore.Handlers;
 using TelnetNegotiationCore.Interpreters;
 using TelnetNegotiationCore.Models;
+using MediatR;
+using SharpMUSH.Library.Requests;
 
 namespace SharpMUSH.Server.ProtocolHandlers
 {
@@ -15,63 +17,44 @@ namespace SharpMUSH.Server.ProtocolHandlers
 	{
 		private readonly ILogger _logger;
 		private readonly IConnectionService _connectionService;
+		private readonly IPublisher _publisher;
 		private readonly MSSPConfig msspConfig = new() { Name = "SharpMUSH", UTF_8 = true };
 
-		public TelnetServer(ILogger<TelnetServer> logger, ISharpDatabase database, IConnectionService connectionService) : base()
+		public TelnetServer(ILogger<TelnetServer> logger, ISharpDatabase database, IConnectionService connectionService, IPublisher publisher) : base()
 		{
 			Console.OutputEncoding = Encoding.UTF8;
 			_logger = logger;
 			_connectionService = connectionService;
+			_publisher = publisher;
 
 			// TODO: This does not belong this. A 'main thread' is needed to migrate this.
 			_logger.LogInformation("Starting Database");
 			database.Migrate();
 		}
 
-		private async Task WriteToOutputStreamAsync(byte[] arg, PipeWriter writer, CancellationToken ct)
+		private async Task WriteToOutputStreamAsync(byte[] arg, PipeWriter writer, string handle, CancellationToken ct)
 		{
 			try { await writer.WriteAsync(new ReadOnlyMemory<byte>(arg), ct); }
-			catch (ObjectDisposedException ode) { _logger.LogError(ode, "Stream has been closed"); }
+			catch (ObjectDisposedException ode) { _logger.LogError(ode, "{ConnectionId} Stream has been closed", handle); }
 		}
 
-		public Task SignalGMCPAsync((string module, string writeback) val)
-		{
-			_logger.LogDebug("GMCP Signal: {Module}: {WriteBack}", val.module, val.writeback);
-			return Task.CompletedTask;
-		}
+		public async Task SignalGMCPAsync((string module, string writeback) val, string handle) =>
+			await _publisher.Publish(new SignalGMCPRequest(handle, val.module, val.writeback));
 
-		public Task SignalMSSPAsync(MSSPConfig val)
-		{
-			_logger.LogDebug("New MSSP: {@MSSPConfig}", val);
-			return Task.CompletedTask;
-		}
+		public async Task SignalMSSPAsync(MSSPConfig val, string handle) =>
+			await _publisher.Publish(new UpdateMSSPRequest(handle, val));
 
-		public Task SignalNAWSAsync(int height, int width)
-		{
-			_logger.LogDebug("Client Height and Width updated: {Height}x{Width}", height, width);
-			return Task.CompletedTask;
-		}
+		public async Task SignalNAWSAsync(int height, int width, string handle) =>
+			await _publisher.Publish(new UpdateNAWSRequest(handle, height, width));
 
 		private static async Task SignalMSDPAsync(MSDPServerHandler handler, TelnetInterpreter telnet, string config) =>
 			await handler.HandleAsync(telnet, config);
 
-		public static async Task WriteBackAsync(byte[] writeback, Encoding encoding, TelnetInterpreter telnet)
-		{
-			var str = encoding.GetString(writeback);
+		public async Task WriteBackAsync(byte[] writeback, Encoding encoding, TelnetInterpreter telnet, string handle) =>
+			await _publisher.Publish(new TelnetInputRequest(handle, encoding.GetString(writeback)));
 
-			// TODO: Send to the Command Parser!
-			if (str.StartsWith("echo"))
-			{
-				await telnet.SendAsync(encoding.GetBytes($"We heard: {str}" + Environment.NewLine));
-			}
-			Console.WriteLine(encoding.GetString(writeback));
-		}
-
-		private async Task MSDPUpdateBehavior(string resetVariable)
-		{
-			_logger.LogDebug("MSDP Reset Request: {@Reset}", resetVariable);
-			await Task.CompletedTask;
-		}
+		private async Task MSDPUpdateBehavior(string resetVariable, string handle) =>
+			await _publisher.Publish(new UpdateMSDPRequest(handle, resetVariable));
 
 		public async override Task OnConnectedAsync(ConnectionContext connection)
 		{
@@ -80,18 +63,25 @@ namespace SharpMUSH.Server.ProtocolHandlers
 				_logger.LogInformation("{ConnectionId} connected", connection.ConnectionId);
 				_connectionService.Register(connection.ConnectionId);
 
-				var MSDPHandler = new MSDPServerHandler(new MSDPServerModel(MSDPUpdateBehavior) { });
+				var MSDPHandler = new MSDPServerHandler(new MSDPServerModel(x => MSDPUpdateBehavior(x, connection.ConnectionId)) { });
 
 				var telnet = await new TelnetInterpreter(TelnetInterpreter.TelnetMode.Server, _logger)
 				{
-					CallbackOnSubmitAsync = WriteBackAsync,
-					SignalOnGMCPAsync = SignalGMCPAsync,
-					SignalOnMSSPAsync = SignalMSSPAsync,
-					SignalOnNAWSAsync = SignalNAWSAsync,
-					SignalOnMSDPAsync = (telnet, config) => SignalMSDPAsync(MSDPHandler, telnet, config),
-					CallbackNegotiationAsync = (x) => WriteToOutputStreamAsync(x, connection.Transport.Output, connection.ConnectionClosed),
+					CallbackOnSubmitAsync = (writeback, encoding, telnet_instance)
+						=> WriteBackAsync(writeback, encoding, telnet_instance, connection.ConnectionId),
+					SignalOnGMCPAsync = module_and_writeback
+						=> SignalGMCPAsync(module_and_writeback, connection.ConnectionId),
+					SignalOnMSSPAsync = msspConfig
+						=> SignalMSSPAsync(msspConfig, connection.ConnectionId),
+					SignalOnNAWSAsync = (newHeight, newWidth)
+						=> SignalNAWSAsync(newHeight, newWidth, connection.ConnectionId),
+					SignalOnMSDPAsync = (telnet, config)
+						=> SignalMSDPAsync(MSDPHandler, telnet, config),
+					CallbackNegotiationAsync = (bytes)
+						=> WriteToOutputStreamAsync(bytes, connection.Transport.Output, connection.ConnectionId, connection.ConnectionClosed),
 					CharsetOrder = new[] { Encoding.GetEncoding("utf-8"), Encoding.GetEncoding("iso-8859-1") }
-				}.RegisterMSSPConfig(() => msspConfig).BuildAsync();
+				}.RegisterMSSPConfig(() => msspConfig)
+				 .BuildAsync();
 
 				try
 				{

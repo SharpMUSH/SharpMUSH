@@ -1,8 +1,8 @@
 ﻿using SharpMUSH.Implementation.Definitions;
-using OneOf;
 using System.Reflection;
 using static SharpMUSHParser;
 using OneOf.Types;
+using OneOf.Monads;
 
 namespace SharpMUSH.Implementation.Functions
 {
@@ -43,7 +43,7 @@ namespace SharpMUSH.Implementation.Functions
 					return new CallState(string.Format(Errors.ErrorNoSuchFunction, name), context.Depth());
 				}
 
-				_functionLibrary.Add(name, functionValue);
+				_functionLibrary.Add(name, functionValue.Value);
 				libraryMatch = _functionLibrary[name];
 			}
 
@@ -136,10 +136,10 @@ namespace SharpMUSH.Implementation.Functions
 			return result;
 		}
 
-		private static OneOf<None, (SharpFunctionAttribute, Func<Parser, CallState>)> DiscoverBuiltInFunction(string name)
+		private static Option<(SharpFunctionAttribute, Func<Parser, CallState>)> DiscoverBuiltInFunction(string name)
 		{
 			if (!_knownBuiltInMethods.TryGetValue(name, out var result))
-				return new None();
+				return new OneOf.Monads.None();
 
 			return (result.Attribute, new Func<Parser, CallState>
 				(p => (CallState)result.Method.Invoke(null, [p, result.Attribute])!));

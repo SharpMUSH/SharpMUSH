@@ -19,6 +19,13 @@ namespace SharpMUSH.Library.Services
 		(string, DBRef?, ConnectionState)? Get(string handle);
 
 		/// <summary>
+		/// Get all handles connected to the DBRef
+		/// </summary>
+		/// <param name="reference">A database reference</param>
+		/// <returns>All matching handles connected to the DBRef</returns>
+		IEnumerable<(string, DBRef?, ConnectionState)> Get(DBRef reference);
+
+		/// <summary>
 		/// Gets all handle information.
 		/// </summary>
 		IEnumerable<(string, DBRef?,ConnectionState)> GetAll();
