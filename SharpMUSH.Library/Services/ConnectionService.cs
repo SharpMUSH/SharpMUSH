@@ -5,7 +5,7 @@ namespace SharpMUSH.Library.Services
 {
 	public class ConnectionService : IConnectionService
 	{
-		private readonly ConcurrentDictionary<string, (string Handle, DBRef? Ref, IConnectionService.ConnectionState State)> _sessionState = [];
+		private readonly ConcurrentDictionary<string, (string Handle, DBRef? Ref, IConnectionService.ConnectionState State, Func<byte[], Task> OutputFunction)> _sessionState = [];
 		private readonly List<Action<(string Handle, DBRef? Ref, IConnectionService.ConnectionState OldState, IConnectionService.ConnectionState NewState)>> _handlers = [];
 
 		public void Disconnect(string handle) {
@@ -20,31 +20,26 @@ namespace SharpMUSH.Library.Services
 			_sessionState.Remove(handle, out _);
 		}
 
-		public (string, DBRef?, IConnectionService.ConnectionState)? Get(string handle) =>
+		public (string, DBRef?, IConnectionService.ConnectionState, Func<byte[], Task>)? Get(string handle) =>
 			_sessionState.GetValueOrDefault(handle);
 
-		public IEnumerable<(string, DBRef?, IConnectionService.ConnectionState)> Get(DBRef reference) =>
+		public IEnumerable<(string, DBRef?, IConnectionService.ConnectionState, Func<byte[], Task>)> Get(DBRef reference) =>
 			_sessionState.Values.Where(x => x.Ref.HasValue).Where(x => x.Ref!.Value.Equals(reference));
 
-		public IEnumerable<(string, DBRef?, IConnectionService.ConnectionState)> GetAll() =>
+		public IEnumerable<(string, DBRef?, IConnectionService.ConnectionState, Func<byte[], Task>)> GetAll() =>
 			_sessionState.Values;
 
 		public void ListenState(Action<(string, DBRef?, IConnectionService.ConnectionState, IConnectionService.ConnectionState)> handler) =>
 			_handlers.Add(handler);
 
-		public void ListenState(Action<(string, DBRef, IConnectionService.ConnectionState, IConnectionService.ConnectionState)> handler)
-		{
-			throw new NotImplementedException();
-		}
-
-		public void Login(string handle, DBRef player)
+		public void Bind(string handle, DBRef player)
 		{
 			var get = Get(handle);
 			if (get == null) return;
 			
 			_sessionState.AddOrUpdate(handle, 
-				x => (handle, player, IConnectionService.ConnectionState.LoggedIn), 
-				(x,y) => (handle, player, IConnectionService.ConnectionState.LoggedIn));
+				x => throw new InvalidDataException("Tried to add a new handle during Login."), 
+				(x,y) => (y.Handle, player, IConnectionService.ConnectionState.LoggedIn, y.OutputFunction));
 
 			foreach (var handler in _handlers)
 			{
@@ -52,11 +47,11 @@ namespace SharpMUSH.Library.Services
 			}
 		}
 
-		public void Register(string handle)
+		public void Register(string handle, Func<byte[],Task> outputFunction)
 		{
 			_sessionState.AddOrUpdate(handle,
-				x => (handle, null, IConnectionService.ConnectionState.Connected),
-				(x, y) => (handle, null, IConnectionService.ConnectionState.Connected));
+				x => (handle, null, IConnectionService.ConnectionState.Connected, outputFunction),
+				(x, y) => (handle, null, IConnectionService.ConnectionState.Connected, outputFunction));
 
 			foreach (var handler in _handlers)
 			{

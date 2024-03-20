@@ -10,160 +10,157 @@ using SharpMUSH.Library.Services;
 using TelnetNegotiationCore.Handlers;
 using TelnetNegotiationCore.Interpreters;
 using TelnetNegotiationCore.Models;
+using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Server.ProtocolHandlers
 {
-    public class TelnetServer : ConnectionHandler
-    {
-        private readonly ILogger _logger;
-        private readonly IConnectionService _connectionService;
-        private readonly IPublisher _publisher;
-        private readonly MSSPConfig msspConfig = new() { Name = "SharpMUSH", UTF_8 = true };
+	public class TelnetServer : ConnectionHandler
+	{
+		// TelnetOutputRequest
+		private readonly ILogger _logger;
+		private readonly IConnectionService _connectionService;
+		private readonly IPublisher _publisher;
+		private readonly MSSPConfig msspConfig = new() { Name = "SharpMUSH", UTF_8 = true };
 
-        public TelnetServer(
-            ILogger<TelnetServer> logger,
-            ISharpDatabase database,
-            IConnectionService connectionService,
-            IPublisher publisher
-        )
-            : base()
-        {
-            Console.OutputEncoding = Encoding.UTF8;
-            _logger = logger;
-            _connectionService = connectionService;
-            _publisher = publisher;
+		public TelnetServer(
+				ILogger<TelnetServer> logger,
+				ISharpDatabase database,
+				IConnectionService connectionService,
+				IPublisher publisher
+		)
+				: base()
+		{
+			Console.OutputEncoding = Encoding.UTF8;
+			_logger = logger;
+			_connectionService = connectionService;
+			_publisher = publisher;
 
-            // TODO: This does not belong this. A 'main thread' is needed to migrate this.
-            _logger.LogInformation("Starting Database");
-            database.Migrate();
-        }
 
-        private async Task WriteToOutputStreamAsync(
-            byte[] arg,
-            PipeWriter writer,
-            string handle,
-            CancellationToken ct
-        )
-        {
-            try
-            {
-                await writer.WriteAsync(new ReadOnlyMemory<byte>(arg), ct);
-            }
-            catch (ObjectDisposedException ode)
-            {
-                _logger.LogError(ode, "{ConnectionId} Stream has been closed", handle);
-            }
-        }
+			// TODO: This does not belong this. A 'main thread' is needed to migrate this.
+			_logger.LogInformation("Starting Database");
+			database.Migrate();
+		}
 
-        public async Task SignalGMCPAsync((string module, string writeback) val, string handle) =>
-            await _publisher.Publish(new SignalGMCPRequest(handle, val.module, val.writeback));
+		private async Task WriteToOutputStreamAsync(
+				byte[] arg,
+				PipeWriter writer,
+				string handle,
+				CancellationToken ct
+		)
+		{
+			try
+			{
+				await writer.WriteAsync(new ReadOnlyMemory<byte>(arg), ct);
+			}
+			catch (ObjectDisposedException ode)
+			{
+				_logger.LogError(ode, "{ConnectionId} Stream has been closed", handle);
+			}
+		}
 
-        public async Task SignalMSSPAsync(MSSPConfig val, string handle) =>
-            await _publisher.Publish(new UpdateMSSPRequest(handle, val));
+		public async Task SignalGMCPAsync((string module, string writeback) val, string handle) =>
+				await _publisher.Publish(new SignalGMCPRequest(handle, val.module, val.writeback));
 
-        public async Task SignalNAWSAsync(int height, int width, string handle) =>
-            await _publisher.Publish(new UpdateNAWSRequest(handle, height, width));
+		public async Task SignalMSSPAsync(MSSPConfig val, string handle) =>
+				await _publisher.Publish(new UpdateMSSPRequest(handle, val));
 
-        private static async Task SignalMSDPAsync(
-            MSDPServerHandler handler,
-            TelnetInterpreter telnet,
-            string config
-        ) => await handler.HandleAsync(telnet, config);
+		public async Task SignalNAWSAsync(int height, int width, string handle) =>
+				await _publisher.Publish(new UpdateNAWSRequest(handle, height, width));
 
-        public async Task WriteBackAsync(
-            byte[] writeback,
-            Encoding encoding,
-            TelnetInterpreter telnet,
-            string handle
-        ) =>
-            await _publisher.Publish(new TelnetInputRequest(handle, encoding.GetString(writeback)));
+		private static async Task SignalMSDPAsync(
+				MSDPServerHandler handler,
+				TelnetInterpreter telnet,
+				string config
+		) => await handler.HandleAsync(telnet, config);
 
-        private async Task MSDPUpdateBehavior(string resetVariable, string handle) =>
-            await _publisher.Publish(new UpdateMSDPRequest(handle, resetVariable));
+		public async Task WriteBackAsync(
+				byte[] writeback,
+				Encoding encoding,
+				string handle
+		) =>
+				await _publisher.Publish(new TelnetInputRequest(handle, encoding.GetString(writeback)));
 
-        public override async Task OnConnectedAsync(ConnectionContext connection)
-        {
-            using (
-                _logger.BeginScope(
-                    new Dictionary<string, object> { { "ConnectionId", connection.ConnectionId } }
-                )
-            )
-            {
-                _logger.LogInformation("{ConnectionId} connected", connection.ConnectionId);
-                _connectionService.Register(connection.ConnectionId);
+		private async Task MSDPUpdateBehavior(string resetVariable, string handle) =>
+				await _publisher.Publish(new UpdateMSDPRequest(handle, resetVariable));
 
-                var MSDPHandler = new MSDPServerHandler(
-                    new MSDPServerModel(x => MSDPUpdateBehavior(x, connection.ConnectionId)) { }
-                );
+		public override async Task OnConnectedAsync(ConnectionContext connection)
+		{
+			using (
+					_logger.BeginScope(
+							new Dictionary<string, object> { { "ConnectionId", connection.ConnectionId } }
+					)
+			)
+			{
+				_logger.LogInformation("{ConnectionId} connected", connection.ConnectionId);
 
-                var telnet = await new TelnetInterpreter(
-                    TelnetInterpreter.TelnetMode.Server,
-                    _logger
-                )
-                {
-                    CallbackOnSubmitAsync = (writeback, encoding, telnet_instance) =>
-                        WriteBackAsync(
-                            writeback,
-                            encoding,
-                            telnet_instance,
-                            connection.ConnectionId
-                        ),
-                    SignalOnGMCPAsync = module_and_writeback =>
-                        SignalGMCPAsync(module_and_writeback, connection.ConnectionId),
-                    SignalOnMSSPAsync = msspConfig =>
-                        SignalMSSPAsync(msspConfig, connection.ConnectionId),
-                    SignalOnNAWSAsync = (newHeight, newWidth) =>
-                        SignalNAWSAsync(newHeight, newWidth, connection.ConnectionId),
-                    SignalOnMSDPAsync = (telnet, config) =>
-                        SignalMSDPAsync(MSDPHandler, telnet, config),
-                    CallbackNegotiationAsync = (bytes) =>
-                        WriteToOutputStreamAsync(
-                            bytes,
-                            connection.Transport.Output,
-                            connection.ConnectionId,
-                            connection.ConnectionClosed
-                        ),
-                    CharsetOrder = new[]
-                    {
-                        Encoding.GetEncoding("utf-8"),
-                        Encoding.GetEncoding("iso-8859-1")
-                    }
-                }
-                    .RegisterMSSPConfig(() => msspConfig)
-                    .BuildAsync();
+				var MSDPHandler = new MSDPServerHandler(
+						new MSDPServerModel(x => MSDPUpdateBehavior(x, connection.ConnectionId)) { }
+				);
 
-                try
-                {
-                    while (!connection.ConnectionClosed.IsCancellationRequested)
-                    {
-                        var result = await connection.Transport.Input.ReadAsync(
-                            connection.ConnectionClosed
-                        );
 
-                        foreach (var segment in result.Buffer)
-                        {
-                            await telnet.InterpretByteArrayAsync(segment.Span.ToImmutableArray());
-                        }
-                        if (result.IsCompleted)
-                        {
-                            break;
-                        }
+				var telnet = await new TelnetInterpreter(
+						TelnetInterpreter.TelnetMode.Server,
+						_logger
+				)
+				{
+					CallbackOnSubmitAsync = (writeback, encoding, telnet_instance) =>
+							WriteBackAsync(
+									writeback,
+									encoding,
+									connection.ConnectionId
+							),
+					SignalOnGMCPAsync = module_and_writeback =>
+							SignalGMCPAsync(module_and_writeback, connection.ConnectionId),
+					SignalOnMSSPAsync = msspConfig =>
+							SignalMSSPAsync(msspConfig, connection.ConnectionId),
+					SignalOnNAWSAsync = (newHeight, newWidth) =>
+							SignalNAWSAsync(newHeight, newWidth, connection.ConnectionId),
+					SignalOnMSDPAsync = (telnet, config) =>
+							SignalMSDPAsync(MSDPHandler, telnet, config),
+					CallbackNegotiationAsync = (x) => WriteToOutputStreamAsync(x, connection.Transport.Output, connection.ConnectionId, connection.ConnectionClosed),
+					CharsetOrder = new[]
+						{
+												Encoding.GetEncoding("utf-8"),
+												Encoding.GetEncoding("iso-8859-1")
+						}
+				}.RegisterMSSPConfig(() => msspConfig)
+					 .BuildAsync();
 
-                        connection.Transport.Input.AdvanceTo(result.Buffer.End);
-                    }
-                }
-                catch (Exception)
-                {
-                    _logger.LogDebug(
-                        "Connection {ConnectionId} disconnected unexpectedly.",
-                        connection.ConnectionId
-                    );
-                    _connectionService.Disconnect(connection.ConnectionId);
-                }
+				_connectionService.Register(connection.ConnectionId, telnet.SendAsync);
+				// TODO: Move this to commands.
+				_connectionService.Bind(connection.ConnectionId, new DBRef(1, 1709704139507));
 
-                _logger.LogInformation("{ConnectionId} disconnected", connection.ConnectionId);
-                _connectionService.Disconnect(connection.ConnectionId);
-            }
-        }
-    }
+				try
+				{
+					while (!connection.ConnectionClosed.IsCancellationRequested)
+					{
+						var result = await connection.Transport.Input.ReadAsync(connection.ConnectionClosed);
+
+						foreach (var segment in result.Buffer)
+						{
+							await telnet.InterpretByteArrayAsync(segment.Span.ToImmutableArray());
+						}
+
+						if (result.IsCompleted)
+						{
+							break;
+						}
+
+						connection.Transport.Input.AdvanceTo(result.Buffer.End);
+					}
+				}
+				catch (Exception)
+				{
+					_logger.LogDebug(
+							"Connection {ConnectionId} disconnected unexpectedly.",
+							connection.ConnectionId
+					);
+					_connectionService.Disconnect(connection.ConnectionId);
+				}
+
+				_logger.LogInformation("{ConnectionId} disconnected", connection.ConnectionId);
+				_connectionService.Disconnect(connection.ConnectionId);
+			}
+		}
+	}
 }

@@ -54,8 +54,8 @@ namespace SharpMUSH.Tests
 			// This needs adjustments, as the Database won't agree with the Milliseconds.
 			var one = new DBRef(1, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
 			var simpleConnectionService = new ConnectionService();
-			simpleConnectionService.Register("1");
-			simpleConnectionService.Login("1", one);
+			simpleConnectionService.Register("1", (x) => Task.CompletedTask);
+			simpleConnectionService.Bind("1", one);
 
 			return new(
 					pws ?? Substitute.For<IPasswordService>(),

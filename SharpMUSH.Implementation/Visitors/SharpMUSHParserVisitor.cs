@@ -111,7 +111,7 @@ namespace SharpMUSH.Implementation.Visitors
 		/// <return>The visitor result.</return>
 		public override CallState? VisitSingleCommandArg([NotNull] SharpMUSHParser.SingleCommandArgContext context)
 		{
-			parser.			CurrentState.Arguments.Add(new CallState(context.GetText()));
+			parser.CurrentState.Arguments.Add(new CallState(context.GetText()));
 			
 			return null;
 		}

@@ -124,7 +124,7 @@ namespace SharpMUSH.Implementation
 		public Task CommandParse(string handle, string text)
 		{
 			var handleId = ConnectionService.Get(handle);
-			State.Push(new ParserState(
+			State = State.Push(new ParserState(
 				ImmutableDictionary<string, MString>.Empty, 
 				null,
 				null,

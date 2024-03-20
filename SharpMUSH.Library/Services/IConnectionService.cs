@@ -6,9 +6,9 @@ namespace SharpMUSH.Library.Services
 	{
 		enum ConnectionState { Error, None, Connected, LoggedIn, Disconnected };
 
-		void Register(string handle);
+		void Register(string handle, Func<byte[], Task> outputFunction);
 
-		void Login(string handle, DBRef player);
+		void Bind(string handle, DBRef player);
 
 		void Disconnect(string handle);
 
@@ -16,19 +16,19 @@ namespace SharpMUSH.Library.Services
 		/// Gets the connection state of a handle.
 		/// </summary>
 		/// <param name="handle"></param>
-		(string, DBRef?, ConnectionState)? Get(string handle);
+		(string, DBRef?, ConnectionState, Func<byte[], Task>)? Get(string handle);
 
 		/// <summary>
 		/// Get all handles connected to the DBRef
 		/// </summary>
 		/// <param name="reference">A database reference</param>
 		/// <returns>All matching handles connected to the DBRef</returns>
-		IEnumerable<(string, DBRef?, ConnectionState)> Get(DBRef reference);
+		IEnumerable<(string, DBRef?, ConnectionState, Func<byte[], Task>)> Get(DBRef reference);
 
 		/// <summary>
 		/// Gets all handle information.
 		/// </summary>
-		IEnumerable<(string, DBRef?,ConnectionState)> GetAll();
+		IEnumerable<(string, DBRef?,ConnectionState, Func<byte[], Task>)> GetAll();
 
 		/// <summary>
 		/// Register a handler that listens to connection change events.
