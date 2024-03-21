@@ -1,6 +1,4 @@
-﻿using MediatR;
-using SharpMUSH.Library.Models;
-using System.Text;
+﻿using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Services
 {
@@ -9,51 +7,42 @@ namespace SharpMUSH.Library.Services
 	{
 		public async Task Notify(DBRef who, string what)
 		{
-			var list = _connectionService.Get(who).Select(x => x.Item4).ToArray();
+			var list = _connectionService.Get(who);
 
 			try
 			{
-				foreach (var fun in list)
+				foreach (var item in list)
 				{
-					await fun(Encoding.UTF8.GetBytes(what));
+					await item.OutputFunction(item.Encoding().GetBytes(what));
 				}
 			}
-			catch
-			{
-
-			}
+			catch { }
 		}
 
 
 		public async Task Notify(string handle, string what)
 		{
-			var fun = _connectionService.Get(handle)!.Value.Item4;
+			var item = _connectionService.Get(handle);
 
 			try
 			{
-					await fun(Encoding.UTF8.GetBytes(what));
+				await item!.OutputFunction(item.Encoding().GetBytes(what));
 			}
-			catch
-			{
-
-			}
+			catch { }
 		}
 
 		public async Task Notify(string[] handles, string what)
 		{
-			var list = handles.Select(_connectionService.Get).Select(x => x!.Value.Item4).ToArray();
-			
+			var list = handles.Select(_connectionService.Get);
+
 			try
 			{
-				foreach (var fun in list)
+				foreach (var item in list)
 				{
-					await fun(Encoding.UTF8.GetBytes(what));
+					await item!.OutputFunction(item!.Encoding().GetBytes(what));
 				}
 			}
-			catch
-			{
-
-			}
+			catch { }
 		}
-		}
+	}
 }

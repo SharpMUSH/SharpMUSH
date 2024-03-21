@@ -1,11 +1,13 @@
 ﻿using SharpMUSH.Library.Models;
 using System.Collections.Concurrent;
+using System.Text;
 
 namespace SharpMUSH.Library.Services
 {
 	public class ConnectionService : IConnectionService
 	{
-		private readonly ConcurrentDictionary<string, (string Handle, DBRef? Ref, IConnectionService.ConnectionState State, Func<byte[], Task> OutputFunction)> _sessionState = [];
+
+		private readonly ConcurrentDictionary<string, IConnectionService.ConnectionData> _sessionState = [];
 		private readonly List<Action<(string Handle, DBRef? Ref, IConnectionService.ConnectionState OldState, IConnectionService.ConnectionState NewState)>> _handlers = [];
 
 		public void Disconnect(string handle) {
@@ -14,19 +16,19 @@ namespace SharpMUSH.Library.Services
 
 			foreach(var handler in _handlers)
 			{
-				handler(new(get.Value.Item1, get.Value.Item2, get.Value.Item3, IConnectionService.ConnectionState.Disconnected));
+				handler(new(get.Handle, get.Ref, get.State, IConnectionService.ConnectionState.Disconnected));
 			}
 
 			_sessionState.Remove(handle, out _);
 		}
 
-		public (string, DBRef?, IConnectionService.ConnectionState, Func<byte[], Task>)? Get(string handle) =>
+		public IConnectionService.ConnectionData? Get(string handle) =>
 			_sessionState.GetValueOrDefault(handle);
 
-		public IEnumerable<(string, DBRef?, IConnectionService.ConnectionState, Func<byte[], Task>)> Get(DBRef reference) =>
+		public IEnumerable<IConnectionService.ConnectionData> Get(DBRef reference) =>
 			_sessionState.Values.Where(x => x.Ref.HasValue).Where(x => x.Ref!.Value.Equals(reference));
 
-		public IEnumerable<(string, DBRef?, IConnectionService.ConnectionState, Func<byte[], Task>)> GetAll() =>
+		public IEnumerable<IConnectionService.ConnectionData> GetAll() =>
 			_sessionState.Values;
 
 		public void ListenState(Action<(string, DBRef?, IConnectionService.ConnectionState, IConnectionService.ConnectionState)> handler) =>
@@ -36,22 +38,38 @@ namespace SharpMUSH.Library.Services
 		{
 			var get = Get(handle);
 			if (get == null) return;
-			
-			_sessionState.AddOrUpdate(handle, 
-				x => throw new InvalidDataException("Tried to add a new handle during Login."), 
-				(x,y) => (y.Handle, player, IConnectionService.ConnectionState.LoggedIn, y.OutputFunction));
+
+			_sessionState.AddOrUpdate(handle,
+				x => throw new InvalidDataException("Tried to add a new handle during Login."),
+				(x, y) => y with { Ref = player, State = IConnectionService.ConnectionState.LoggedIn });
 
 			foreach (var handler in _handlers)
 			{
-				handler(new(handle, player, get.Value.Item3, IConnectionService.ConnectionState.LoggedIn));
+				handler(new(handle, player, get.State, IConnectionService.ConnectionState.LoggedIn));
 			}
 		}
 
-		public void Register(string handle, Func<byte[],Task> outputFunction)
+		public void Update(string handle, string key, string value)
+		{
+			var get = Get(handle);
+			if (get == null) return;
+
+			_sessionState.AddOrUpdate(handle,
+				x => throw new InvalidDataException("Tried to add a new handle during update."),
+				(x, y) => {
+					y.Metadata.AddOrUpdate(key, value, (x, y) => value);
+					return y; 
+				});
+		}
+
+		public void Register(string handle, Func<byte[],Task> outputFunction, Func<Encoding> encoding, ConcurrentDictionary<string,string>? MetaData = null)
 		{
 			_sessionState.AddOrUpdate(handle,
-				x => (handle, null, IConnectionService.ConnectionState.Connected, outputFunction),
-				(x, y) => (handle, null, IConnectionService.ConnectionState.Connected, outputFunction));
+				x => new IConnectionService.ConnectionData(handle, null, IConnectionService.ConnectionState.Connected, outputFunction, encoding, MetaData ?? 
+				new ConcurrentDictionary<string, string>(new Dictionary<string,string> {
+					{"ConnectionStartTime", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() },
+					{"LastConnectionSignal", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() }})),
+				(x, y) => throw new InvalidDataException("Tried to replace an existing handle during Register."));
 
 			foreach (var handler in _handlers)
 			{

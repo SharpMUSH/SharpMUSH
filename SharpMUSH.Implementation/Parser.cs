@@ -130,9 +130,9 @@ namespace SharpMUSH.Implementation
 				null,
 				text,
 				[],
-				handleId!.Value.Item2,
-				handleId!.Value.Item2,
-				handleId!.Value.Item2, 
+				handleId!.Ref,
+				handleId!.Ref,
+				handleId!.Ref, 
 				handle));
 
 			AntlrInputStream inputStream = new(text);

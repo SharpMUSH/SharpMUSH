@@ -77,26 +77,20 @@ namespace SharpMUSH.Server.ProtocolHandlers
 				byte[] writeback,
 				Encoding encoding,
 				string handle
-		) =>
-				await _publisher.Publish(new TelnetInputRequest(handle, encoding.GetString(writeback)));
+		) => await _publisher.Publish(new TelnetInputRequest(handle, encoding.GetString(writeback)));
 
 		private async Task MSDPUpdateBehavior(string resetVariable, string handle) =>
 				await _publisher.Publish(new UpdateMSDPRequest(handle, resetVariable));
 
 		public override async Task OnConnectedAsync(ConnectionContext connection)
 		{
-			using (
-					_logger.BeginScope(
-							new Dictionary<string, object> { { "ConnectionId", connection.ConnectionId } }
-					)
-			)
+			using (_logger.BeginScope(new Dictionary<string, object> { { "ConnectionId", connection.ConnectionId } }))
 			{
 				_logger.LogInformation("{ConnectionId} connected", connection.ConnectionId);
 
 				var MSDPHandler = new MSDPServerHandler(
 						new MSDPServerModel(x => MSDPUpdateBehavior(x, connection.ConnectionId)) { }
 				);
-
 
 				var telnet = await new TelnetInterpreter(
 						TelnetInterpreter.TelnetMode.Server,
@@ -126,7 +120,7 @@ namespace SharpMUSH.Server.ProtocolHandlers
 				}.RegisterMSSPConfig(() => msspConfig)
 					 .BuildAsync();
 
-				_connectionService.Register(connection.ConnectionId, telnet.SendAsync);
+				_connectionService.Register(connection.ConnectionId, telnet.SendAsync, () => telnet.CurrentEncoding);
 				// TODO: Move this to commands.
 				_connectionService.Bind(connection.ConnectionId, new DBRef(1, 1709704139507));
 

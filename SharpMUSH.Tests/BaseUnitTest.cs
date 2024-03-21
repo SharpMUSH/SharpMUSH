@@ -8,6 +8,7 @@ using Core.Arango;
 using SharpMUSH.IntegrationTests;
 using Testcontainers.ArangoDb;
 using SharpMUSH.Library.Models;
+using System.Text;
 
 namespace SharpMUSH.Tests
 {
@@ -54,7 +55,7 @@ namespace SharpMUSH.Tests
 			// This needs adjustments, as the Database won't agree with the Milliseconds.
 			var one = new DBRef(1, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
 			var simpleConnectionService = new ConnectionService();
-			simpleConnectionService.Register("1", (x) => Task.CompletedTask);
+			simpleConnectionService.Register("1", (x) => Task.CompletedTask, () => Encoding.UTF8);
 			simpleConnectionService.Bind("1", one);
 
 			return new(

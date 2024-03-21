@@ -1,14 +1,26 @@
 ﻿using SharpMUSH.Library.Models;
+using System.Collections.Concurrent;
+using System.Text;
 
 namespace SharpMUSH.Library.Services
 {
 	public interface IConnectionService
 	{
 		enum ConnectionState { Error, None, Connected, LoggedIn, Disconnected };
+		public record ConnectionData(
+			string Handle, 
+			DBRef? Ref, 
+			ConnectionState State, 
+			Func<byte[], Task> OutputFunction, 
+			Func<Encoding> Encoding,
+			ConcurrentDictionary<string,string> Metadata
+		);
 
-		void Register(string handle, Func<byte[], Task> outputFunction);
-
+		void Register(string handle, Func<byte[], Task> outputFunction, Func<Encoding> encoding, ConcurrentDictionary<string, string>? MetaData = null);
+		
 		void Bind(string handle, DBRef player);
+
+		void Update(string handle, string key, string value);
 
 		void Disconnect(string handle);
 
@@ -16,19 +28,19 @@ namespace SharpMUSH.Library.Services
 		/// Gets the connection state of a handle.
 		/// </summary>
 		/// <param name="handle"></param>
-		(string, DBRef?, ConnectionState, Func<byte[], Task>)? Get(string handle);
+		ConnectionData? Get(string handle);
 
 		/// <summary>
 		/// Get all handles connected to the DBRef
 		/// </summary>
 		/// <param name="reference">A database reference</param>
 		/// <returns>All matching handles connected to the DBRef</returns>
-		IEnumerable<(string, DBRef?, ConnectionState, Func<byte[], Task>)> Get(DBRef reference);
+		IEnumerable<ConnectionData> Get(DBRef reference);
 
 		/// <summary>
 		/// Gets all handle information.
 		/// </summary>
-		IEnumerable<(string, DBRef?,ConnectionState, Func<byte[], Task>)> GetAll();
+		IEnumerable<ConnectionData> GetAll();
 
 		/// <summary>
 		/// Register a handler that listens to connection change events.

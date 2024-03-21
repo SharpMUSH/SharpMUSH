@@ -26,7 +26,6 @@ namespace SharpMUSH.Implementation.Commands
 
 		public static CallState EvaluateCommands(Parser parser, CommandContext context, Func<IRuleNode, CallState?> visitChildren)
 		{
-
 			var firstCommandMatch = context.firstCommandMatch();
 			var conText = context.GetText();
 			var command = firstCommandMatch.GetText();
@@ -47,7 +46,7 @@ namespace SharpMUSH.Implementation.Commands
 
 			if(parser.CurrentState.Executor == null)
 			{
-				throw new NotImplementedException();
+				parser.NotifyService.Notify(parser.CurrentState.Handle, "No such command available at login.");
 			}
 
 			// Step 2: Check for a single-token command
@@ -58,6 +57,7 @@ namespace SharpMUSH.Implementation.Commands
 
 			if (singleTokenCommandPattern.Any())
 			{
+				var rest = command[1..];
 				// Run single token command
 				throw new NotImplementedException();
 			}
@@ -74,10 +74,10 @@ namespace SharpMUSH.Implementation.Commands
 			var slashIndex = evaluatedCallContextAsString.IndexOf(Slash);
 			var rootCommand = evaluatedCallContextAsString[..(slashIndex > -1 ? slashIndex : evaluatedCallContextAsString.Length)];
 
-			// TODO: TOo many ifs. This needs to be split out.
+			// TODO: Too many ifs. This needs to be split out.
 			if (_commandLibrary.TryGetValue(rootCommand.ToUpper(), out var libraryCommandDefinition))
 			{
-				// comamnd (space) argument(s)
+				// command (space) argument(s)
 				if (context.children.Count > 1)
 				{
 					// command arg0 = arg1 ,still arg 1
