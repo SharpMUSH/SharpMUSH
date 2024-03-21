@@ -84,77 +84,71 @@ namespace SharpMUSH.Server.ProtocolHandlers
 
 		public override async Task OnConnectedAsync(ConnectionContext connection)
 		{
-			using (_logger.BeginScope(new Dictionary<string, object> { { "ConnectionId", connection.ConnectionId } }))
+			var MSDPHandler = new MSDPServerHandler(
+					new MSDPServerModel(x => MSDPUpdateBehavior(x, connection.ConnectionId)) { }
+			);
+
+			var telnet = await new TelnetInterpreter(
+					TelnetInterpreter.TelnetMode.Server,
+					_logger
+			)
 			{
-				_logger.LogInformation("{ConnectionId} connected", connection.ConnectionId);
-
-				var MSDPHandler = new MSDPServerHandler(
-						new MSDPServerModel(x => MSDPUpdateBehavior(x, connection.ConnectionId)) { }
-				);
-
-				var telnet = await new TelnetInterpreter(
-						TelnetInterpreter.TelnetMode.Server,
-						_logger
-				)
-				{
-					CallbackOnSubmitAsync = (writeback, encoding, telnet_instance) =>
-							WriteBackAsync(
-									writeback,
-									encoding,
-									connection.ConnectionId
-							),
-					SignalOnGMCPAsync = module_and_writeback =>
-							SignalGMCPAsync(module_and_writeback, connection.ConnectionId),
-					SignalOnMSSPAsync = msspConfig =>
-							SignalMSSPAsync(msspConfig, connection.ConnectionId),
-					SignalOnNAWSAsync = (newHeight, newWidth) =>
-							SignalNAWSAsync(newHeight, newWidth, connection.ConnectionId),
-					SignalOnMSDPAsync = (telnet, config) =>
-							SignalMSDPAsync(MSDPHandler, telnet, config),
-					CallbackNegotiationAsync = (x) => WriteToOutputStreamAsync(x, connection.Transport.Output, connection.ConnectionId, connection.ConnectionClosed),
-					CharsetOrder = new[]
-						{
+				CallbackOnSubmitAsync = (writeback, encoding, telnet_instance) =>
+						WriteBackAsync(
+								writeback,
+								encoding,
+								connection.ConnectionId
+						),
+				SignalOnGMCPAsync = module_and_writeback =>
+						SignalGMCPAsync(module_and_writeback, connection.ConnectionId),
+				SignalOnMSSPAsync = msspConfig =>
+						SignalMSSPAsync(msspConfig, connection.ConnectionId),
+				SignalOnNAWSAsync = (newHeight, newWidth) =>
+						SignalNAWSAsync(newHeight, newWidth, connection.ConnectionId),
+				SignalOnMSDPAsync = (telnet, config) =>
+						SignalMSDPAsync(MSDPHandler, telnet, config),
+				CallbackNegotiationAsync = (x) => WriteToOutputStreamAsync(x, connection.Transport.Output, connection.ConnectionId, connection.ConnectionClosed),
+				CharsetOrder = new[]
+					{
 												Encoding.GetEncoding("utf-8"),
 												Encoding.GetEncoding("iso-8859-1")
 						}
-				}.RegisterMSSPConfig(() => msspConfig)
-					 .BuildAsync();
+			}.RegisterMSSPConfig(() => msspConfig)
+				 .BuildAsync();
 
-				_connectionService.Register(connection.ConnectionId, telnet.SendAsync, () => telnet.CurrentEncoding);
-				// TODO: Move this to commands.
-				_connectionService.Bind(connection.ConnectionId, new DBRef(1, 1709704139507));
+			_connectionService.Register(connection.ConnectionId, telnet.SendAsync, () => telnet.CurrentEncoding);
+			// TODO: Move this to commands.
+			_connectionService.Bind(connection.ConnectionId, new DBRef(1, 1709704139507));
 
-				try
+			try
+			{
+				while (!connection.ConnectionClosed.IsCancellationRequested)
 				{
-					while (!connection.ConnectionClosed.IsCancellationRequested)
+					var result = await connection.Transport.Input.ReadAsync(connection.ConnectionClosed);
+
+					foreach (var segment in result.Buffer)
 					{
-						var result = await connection.Transport.Input.ReadAsync(connection.ConnectionClosed);
-
-						foreach (var segment in result.Buffer)
-						{
-							await telnet.InterpretByteArrayAsync(segment.Span.ToImmutableArray());
-						}
-
-						if (result.IsCompleted)
-						{
-							break;
-						}
-
-						connection.Transport.Input.AdvanceTo(result.Buffer.End);
+						await telnet.InterpretByteArrayAsync(segment.Span.ToImmutableArray());
 					}
-				}
-				catch (Exception)
-				{
-					_logger.LogDebug(
-							"Connection {ConnectionId} disconnected unexpectedly.",
-							connection.ConnectionId
-					);
-					_connectionService.Disconnect(connection.ConnectionId);
-				}
 
-				_logger.LogInformation("{ConnectionId} disconnected", connection.ConnectionId);
-				_connectionService.Disconnect(connection.ConnectionId);
+					if (result.IsCompleted)
+					{
+						break;
+					}
+
+					connection.Transport.Input.AdvanceTo(result.Buffer.End);
+				}
 			}
+			catch (ConnectionResetException)
+			{
+				// Disconnected while evaluating. That's fine. It just means someone closed their client.
+			}
+			catch (Exception)
+			{
+				_logger.LogDebug("Connection {ConnectionId} disconnected unexpectedly.", connection.ConnectionId);
+			}
+
+			_connectionService.Disconnect(connection.ConnectionId);
 		}
 	}
 }

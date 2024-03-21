@@ -1,4 +1,5 @@
 ﻿using Antlr4.Runtime.Tree;
+using OneOf.Monads;
 using System.Reflection;
 using static SharpMUSHParser;
 
@@ -8,7 +9,7 @@ namespace SharpMUSH.Implementation.Commands
 	{
 		private const char Space = ' ';
 		private const char Slash = '/';
-		private static readonly Dictionary<string, (SharpCommandAttribute Attribute, Func<Parser, CallState> Function)> _commandLibrary = [];
+		private static readonly Dictionary<string, (SharpCommandAttribute Attribute, Func<Parser, Option<CallState>> Function)> _commandLibrary = [];
 		private static readonly Dictionary<string, (MethodInfo Method, SharpCommandAttribute Attribute)> _knownBuiltInCommands = typeof(Commands)
 			.GetMethods()
 			.Select(m => (Method: m, Attribute: m.GetCustomAttribute(typeof(SharpCommandAttribute), false) as SharpCommandAttribute))
@@ -20,11 +21,23 @@ namespace SharpMUSH.Implementation.Commands
 		{
 			foreach (var knownCommand in _knownBuiltInCommands)
 			{
-				_commandLibrary.Add(knownCommand.Key, (knownCommand.Value.Attribute, new Func<Parser, CallState>(p => (CallState)knownCommand.Value.Method.Invoke(null, [p, knownCommand.Value.Attribute])!)));
+				_commandLibrary.Add(knownCommand.Key, (knownCommand.Value.Attribute, new Func<Parser, Option<CallState>>(p => (Option<CallState>)knownCommand.Value.Method.Invoke(null, [p, knownCommand.Value.Attribute])!)));
 			}
 		}
 
-		public static CallState EvaluateCommands(Parser parser, CommandContext context, Func<IRuleNode, CallState?> visitChildren)
+		/// <summary>
+		/// Evaluates the command, with the parser info given.
+		/// </summary>
+		/// <remarks>
+		/// Call State is expected to be empty on return. 
+		/// But if one wanted to implement an @pipe command that can pass a result from say, an @dig command, 
+		/// there would be a need for some way of passing on secondary data.
+		/// </remarks>
+		/// <param name="parser">Parser with state.</param>
+		/// <param name="context">Command Context</param>
+		/// <param name="visitChildren">Parser function to visit children.</param>
+		/// <returns>An empty Call State</returns>
+		public static Option<CallState> EvaluateCommands(Parser parser, CommandContext context, Func<IRuleNode, CallState?> visitChildren)
 		{
 			var firstCommandMatch = context.firstCommandMatch();
 			var conText = context.GetText();

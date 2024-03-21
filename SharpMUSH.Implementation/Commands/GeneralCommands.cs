@@ -1,4 +1,5 @@
-﻿using SharpMUSH.Library.Models;
+﻿using OneOf.Monads;
+using SharpMUSH.Library.Models;
 using CB = SharpMUSH.Implementation.Definitions.CommandBehavior;
 
 namespace SharpMUSH.Implementation.Commands
@@ -6,24 +7,24 @@ namespace SharpMUSH.Implementation.Commands
 	public static partial class Commands
 	{
 		[SharpCommand(Name = "THINK", Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
-		public static CallState Think(Parser parser, SharpCommandAttribute _2)
+		public static Option<CallState> Think(Parser parser, SharpCommandAttribute _2)
 		{
 			var args = parser.CurrentState.Arguments;
 
 			if (args.Count < 1)
 			{
-				return new CallState(string.Empty);
+				return new None();
 			}
 
 			var notification = args[0]!.Message!.ToString();
 			var executor = parser.CurrentState.Executor!.Value;
 			parser.NotifyService.Notify(executor, notification);
 
-			return new CallState("");
+			return new None();
 		}
 
 		[SharpCommand(Name = "@PEMIT", Behavior = CB.Default | CB.EqSplit, MinArgs = 1, MaxArgs = 2)]
-		public static CallState PEmit(Parser parser, SharpCommandAttribute _2)
+		public static Option<CallState> PEmit(Parser parser, SharpCommandAttribute _2)
 		{
 			var args = parser.CurrentState.Arguments;
 
@@ -45,7 +46,7 @@ namespace SharpMUSH.Implementation.Commands
 				parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, "I can't see that here.");
 			}
 
-			return new CallState("");
+			return new None();
 		}
 	}
 }

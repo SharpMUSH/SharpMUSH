@@ -11,9 +11,10 @@
 			return new CallState(string.Empty);
 		}
 
-		[SharpCommand(Name = "&", Behavior = Definitions.CommandBehavior.SingleToken | Definitions.CommandBehavior.NoParse, MinArgs = 0, MaxArgs = 1)]
+		[SharpCommand(Name = "&", Behavior = Definitions.CommandBehavior.SingleToken | Definitions.CommandBehavior.NoParse | Definitions.CommandBehavior.EqSplit, MinArgs = 1, MaxArgs = 2)]
 		public static CallState Set_Attrib_Ampersand(Parser parser, SharpCommandAttribute _2)
 		{
+			// This will come in as arg[0] = <attr> <object> and arg[1] as [value]
 			throw new NotImplementedException();
 		}
 	}
