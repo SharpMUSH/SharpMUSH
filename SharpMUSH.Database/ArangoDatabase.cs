@@ -164,6 +164,33 @@ namespace SharpMUSH.Database
 			};
 		}
 
+		public async Task<SharpObject?> GetBaseObjectNode(DBRef dbref)
+		{
+			var obj = await arangoDB.Document.GetAsync<dynamic>(handle, DatabaseConstants.objects, dbref.Number.ToString());
+			var startVertex = obj._id;
+
+			// TODO: Version that cares about CreatedMilliseconds
+			var query = await arangoDB.Query.ExecuteAsync<dynamic>(handle,
+				$"FOR v IN 1..1 INBOUND {startVertex} GRAPH {DatabaseConstants.graphObjects} RETURN {{ \"id\": v._id, \"collection\": PARSE_IDENTIFIER( v._id ).collection, \"vertex\": v}}");
+
+			var res = query.FirstOrDefault();
+
+			if (res == null)
+			{
+				return null;
+			}
+
+			return new SharpObject() { 
+				Name = res.Name, 
+				Id = res._id, 
+				Key = res._key, 
+				Flags = res.Flags, 
+				Powers = res.Powers, 
+				Locks = res.Locks, 
+				CreationTime = res.CreationTime, 
+				ModifiedTime = res.ModifiedTime
+			};
+		}
 		public async Task<SharpAttribute[]?> GetAttributes(DBRef dbref, string attribute_pattern)
 		{
 			var startVertex = $"{DatabaseConstants.objects}/{dbref.Number}";

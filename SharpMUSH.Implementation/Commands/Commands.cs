@@ -52,7 +52,7 @@ namespace SharpMUSH.Implementation.Commands
 			if (socketCommandPattern.Any())
 			{
 				// Run as Socket Command.
-				throw new NotImplementedException();
+				return socketCommandPattern.First().Value.Function.Invoke(parser);
 			}
 
 			// TODO: PAST HERE, WE MUST HAVE AN EXECUTOR!

@@ -28,6 +28,8 @@ namespace SharpMUSH.Database
 		/// <returns>A OneOf over the object being returned</returns>
 		Task<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing>?> GetObjectNode(DBRef dbref);
 
+		Task<SharpObject?> GetBaseObjectNode(DBRef dbref);
+
 		/// <summary>
 		/// Set an attribute. This does not do any checks, as that is up to the functionality itself.
 		/// </summary>
