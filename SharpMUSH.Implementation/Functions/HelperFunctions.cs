@@ -95,10 +95,10 @@ namespace SharpMUSH.Implementation.Functions
 				(span.Seconds, "s")
 			];
 
-		public static string TimeString(TimeSpan span, int pad = 0, char padding = '0', ushort accuracy = 1) =>
+		public static string TimeString(TimeSpan span, int pad = 0, char padding = '0', ushort accuracy = 1, bool ignoreZero = true) =>
 			$"{string.Join(" ",
 				ExtractArray(span)
-				.SkipWhile((x,y) => x.Item1 == 0)
+				.SkipWhile((x,y) => ignoreZero ? x.Item1 == 0 : y < 5 - accuracy)
 				.Take(accuracy)
 				.DefaultIfEmpty((0, "s"))
 				.Select(x => $"{x.Item1.ToString().PadRight(pad, padding)}{x.Item2}"))}";
