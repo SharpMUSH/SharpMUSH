@@ -10,6 +10,8 @@ namespace SharpMUSH.Implementation.Functions
 	{
 		private static Regex DatabaseReferenceRegex = DatabaseReference();
 		private static Regex DatabaseReferenceWithAttributeRegex = DatabaseReferenceWithAttribute();
+		private static Regex TimeFormatMatchRegex = TimeFormatMatch();
+		private static Regex TimeSpanFormatMatchRegex = TimeSpanFormatMatch();
 
 		/// <summary>
 		/// Takes the pattern of '#DBREF/attribute' and splits it out if possible.
@@ -84,6 +86,115 @@ namespace SharpMUSH.Implementation.Functions
 					: new CallState(Message: doubles.Select(x => x.Double).Pairwise().Skip(1).SkipWhile(func).Any().ToString());
 		}
 
+		private static (int, string)[] ExtractArray(TimeSpan span) =>
+			[
+				(span.Days > 6 ? span.Days / 7 : 0,"w"), 
+				(span.Days < 7 ? span.Days : span.Days % 7, "d"), 
+				(span.Hours, "h"), 
+				(span.Minutes, "m"), 
+				(span.Seconds, "s")
+			];
+
+		public static string TimeString(TimeSpan span, int pad = 0, char padding = '0', ushort accuracy = 1) =>
+			$"{string.Join(" ",
+				ExtractArray(span)
+				.SkipWhile((x,y) => x.Item1 == 0)
+				.Take(accuracy)
+				.DefaultIfEmpty((0, "s"))
+				.Select(x => $"{x.Item1.ToString().PadRight(pad, padding)}{x.Item2}"))}";
+
+		public static string TimeFormat(DateTimeOffset time, string format)
+			=> TimeFormatMatchRegex.Replace(format, match =>
+				match.Groups["Character"].Value switch
+				{
+					// Abbreviated weekday name 
+					"a" => string.Empty,
+					// Full weekday name
+					"A" => string.Empty,
+					// Abbreviated month name
+					"b" => string.Empty,
+					// Full month name  
+					"B" => string.Empty,
+					// Date and time 
+					"c" => string.Empty,
+					// Day of the month
+					"d" => string.Empty,
+					// Hour of the 24-hour day
+					"H" => time.Hour.ToString(),
+					// Hour of the 12-hour day
+					"I" => time.Hour > 12 ? $"{time.Hour - 12}PM" : $"{time.Hour}AM",
+					// Day of the year 
+					"j" => time.DayOfYear.ToString(),
+					// Month of the year
+					"m" => string.Empty,
+					// Minutes after the hour 
+					"M" => string.Empty,
+					"P" or "p" => string.Empty,
+					// Seconds after the minute
+					"S" => string.Empty,
+					// Week of the year from 1rst Sunday
+					"U" => string.Empty,
+					// Day of the week. 0 = Sunday
+					"w" => string.Empty,
+					// Week of the year from 1rst Monday
+					"W" => string.Empty,
+					// Date 
+					"x" => string.Empty,
+					// Time
+					"X" => time.DateTime.ToShortTimeString(),
+					// Two-digit year
+					"y" => time.Year.ToString("{0:2}"),
+					// Four-digit year
+					"Y" => time.Year.ToString(),
+					// Time zone
+					"Z" => time.Offset.ToString(),
+					// $ character
+					"$" => "$",
+					_ => string.Empty,
+				});
+
+		public static string TimeSpanFormat(DateTimeOffset time, string format)
+			=> TimeFormatMatchRegex.Replace(format, match =>
+				{
+					var character = match.Groups["Character"];
+					var adjustment = match.Groups["Adjustment"].Success
+						? match.Groups["Adjustment"].Value
+						: null;
+					var pad = adjustment?.Contains('x') ?? false;
+					var append = adjustment?.Contains('z') ?? false;
+
+					return character.Value switch
+					{
+						// The number of seconds
+						"s" => string.Empty,
+						// The number of seconds
+						"S" => string.Empty,
+						// The number of minutes
+						"m" => string.Empty,
+						// The number of minutes
+						"M" => string.Empty,
+						// The number of weeks
+						"w" => string.Empty,
+						// The number of weeks
+						"W" => string.Empty,
+						// The number of hours
+						"h" => string.Empty,
+						// The number of hours
+						"H" => string.Empty,
+						// The number of days
+						"d" => string.Empty,
+						// The number of days
+						"D" => string.Empty,
+						// The number of 365-day years 
+						"y" => string.Empty,
+						// The number of 365-day years
+						"Y" => string.Empty,
+						// $ character
+						"$" => "$",
+						_ => string.Empty,
+					};
+				});
+
 		/// <summary>
 		/// A regular expression that takes the form of '#123:43143124' or '#543'.
 		/// </summary>
@@ -98,5 +209,19 @@ namespace SharpMUSH.Implementation.Functions
 		/// <returns>A regex that has a named group for the DBRef Number, Creation Milliseconds, and attribute (if any).</returns>
 		[GeneratedRegex(@"#(?<DatabaseNumber>\d+)(?::(?<CreationTimestamp>\d+))?/(?<Attribute>[a-zA-Z1-9@_\-\.`]+)")]
 		private static partial Regex DatabaseReferenceWithAttribute();
+
+		/// <summary>
+		/// A regular expression that puts in time formats, with the ability to escape $ with another $.
+		/// </summary>
+		/// <returns>A regex that has a match for each replacement.</returns>
+		[GeneratedRegex(@"\$(?<Character>[aAbBcdHIjmMpSUwWxXyYZ\$])")]
+		private static partial Regex TimeFormatMatch();
+
+		/// <summary>
+		/// A regular expression that puts in time formats, with the ability to escape $ with another $.
+		/// </summary>
+		/// <returns>A regex that has a match for each replacement.</returns>
+		[GeneratedRegex(@"\$(?<Adjustment>z?x?|x?z?)(?<Character>[smwhdySMWHDY\$])")]
+		private static partial Regex TimeSpanFormatMatch();
 	}
 }

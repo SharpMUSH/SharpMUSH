@@ -30,7 +30,7 @@ namespace SharpMUSH.Implementation
 			DBRef? Executor,
 			DBRef? Enactor,
 			DBRef? Caller,
-			string Handle);
+			string? Handle);
 
 		public IPasswordService PasswordService => _passwordService;
 

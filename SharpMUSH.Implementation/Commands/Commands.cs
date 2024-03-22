@@ -41,11 +41,23 @@ namespace SharpMUSH.Implementation.Commands
 		{
 			var firstCommandMatch = context.firstCommandMatch();
 			var conText = context.GetText();
+
+			if (firstCommandMatch == null)
+			{
+				return new None();
+			}
+
 			var command = firstCommandMatch.GetText();
+
+			if (parser.CurrentState.Handle != null && command != "IDLE")
+			{
+				parser.ConnectionService.Update(parser.CurrentState.Handle, "LastConnectionSignal", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString());
+			}
 
 			// Step 1: Check if it's a SOCKET command
 			// TODO: Optimize
 			var socketCommandPattern = _commandLibrary.Where(x =>
+				parser.CurrentState.Handle != null &&
 				(x.Key.Equals(command, StringComparison.CurrentCultureIgnoreCase)) &&
 				((x.Value.Attribute.Behavior & Definitions.CommandBehavior.SOCKET) == Definitions.CommandBehavior.SOCKET));
 
@@ -55,9 +67,7 @@ namespace SharpMUSH.Implementation.Commands
 				return socketCommandPattern.First().Value.Function.Invoke(parser);
 			}
 
-			// TODO: PAST HERE, WE MUST HAVE AN EXECUTOR!
-
-			if(parser.CurrentState.Executor == null)
+			if (parser.CurrentState.Executor == null && parser.CurrentState.Handle != null)
 			{
 				parser.NotifyService.Notify(parser.CurrentState.Handle, "No such command available at login.");
 			}
@@ -146,7 +156,7 @@ namespace SharpMUSH.Implementation.Commands
 				{
 					arguments = parser.CurrentState.Arguments;
 				}
-				else if(!eqSplit && !noParse)
+				else if (!eqSplit && !noParse)
 				{
 					arguments.AddRange(parser.CurrentState.Arguments.Select(x => parser.FunctionParse(x.Message!.ToString())!));
 				}
