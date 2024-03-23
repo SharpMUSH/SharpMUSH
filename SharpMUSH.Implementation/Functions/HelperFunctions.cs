@@ -3,6 +3,8 @@ using SharpMUSH.Implementation.Tools;
 using OneOf;
 using SharpMUSH.Library.Models;
 using System.Text.RegularExpressions;
+using System.Linq;
+using OneOf.Monads;
 
 namespace SharpMUSH.Implementation.Functions
 {
@@ -12,6 +14,7 @@ namespace SharpMUSH.Implementation.Functions
 		private static Regex DatabaseReferenceWithAttributeRegex = DatabaseReferenceWithAttribute();
 		private static Regex TimeFormatMatchRegex = TimeFormatMatch();
 		private static Regex TimeSpanFormatMatchRegex = TimeSpanFormatMatch();
+		private static Regex NameListPatternRegex = NameListPattern();
 
 		/// <summary>
 		/// Takes the pattern of '#DBREF/attribute' and splits it out if possible.
@@ -30,13 +33,13 @@ namespace SharpMUSH.Implementation.Functions
 			return (new DBRef(int.Parse(dbref!), string.IsNullOrWhiteSpace(ctime) ? null : int.Parse(ctime)), attr);
 		}
 
-		public static OneOf<DBRef, bool> ParseDBRef(string DBRefAttr)
+		public static Option<DBRef> ParseDBRef(string DBRefAttr)
 		{
 			var match = DatabaseReferenceRegex.Match(DBRefAttr);
 			var dbref = match.Groups["DatabaseNumber"]?.Value;
 			var ctime = match.Groups["CreationTimestamp"]?.Value;
 
-			if (string.IsNullOrEmpty(dbref)) { return false; }
+			if (string.IsNullOrEmpty(dbref)) { return new None(); }
 
 			return (new DBRef(int.Parse(dbref!), string.IsNullOrWhiteSpace(ctime) ? null : int.Parse(ctime)));
 		}
@@ -88,17 +91,17 @@ namespace SharpMUSH.Implementation.Functions
 
 		private static (int, string)[] ExtractArray(TimeSpan span) =>
 			[
-				(span.Days > 6 ? span.Days / 7 : 0,"w"), 
-				(span.Days < 7 ? span.Days : span.Days % 7, "d"), 
-				(span.Hours, "h"), 
-				(span.Minutes, "m"), 
+				(span.Days > 6 ? span.Days / 7 : 0, "w"),
+				(span.Days < 7 ? span.Days : span.Days % 7, "d"),
+				(span.Hours, "h"),
+				(span.Minutes, "m"),
 				(span.Seconds, "s")
 			];
 
 		public static string TimeString(TimeSpan span, int pad = 0, char padding = '0', ushort accuracy = 1, bool ignoreZero = true) =>
 			$"{string.Join(" ",
 				ExtractArray(span)
-				.SkipWhile((x,y) => ignoreZero ? x.Item1 == 0 : y < 5 - accuracy)
+				.SkipWhile((x, y) => ignoreZero ? x.Item1 == 0 : y < 5 - accuracy)
 				.Take(accuracy)
 				.DefaultIfEmpty((0, "s"))
 				.Select(x => $"{x.Item1.ToString().PadRight(pad, padding)}{x.Item2}"))}";
@@ -195,13 +198,55 @@ namespace SharpMUSH.Implementation.Functions
 					};
 				});
 
+		public enum LocateFlags
+		{
+			NoTypePreference,
+			ExitsPreference,
+			PreferLockPass,
+			PlayersPreference,
+			RoomsPreference,
+			ThingsPreference,
+			FailIfNotPreferred,
+			UseLastIfAmbiguous,
+			AbsoluteMatch,
+			ExitsInTheRoomOfLooker,
+			MatchHereForLookerLocation,
+			MatchObjectsInLookerInventory,
+			MatchAgainstLookerLocationName,
+			MatchMeForLooker,
+			MatchObjectsInLookerLocation,
+			MatchWildCardForPlayerName,
+			MatchOptionalWildCardForPlayerName,
+			EnglishStyleMatching,
+			All,
+			NoPartialMatches,
+			MatchLookerControlledObjects
+		}
+
+		public static string Locate(DBRef looker, string name, LocateFlags flags)
+		{
+			throw new NotImplementedException();
+		}
+
+		public static IEnumerable<OneOf<DBRef, string>> NameList(string list)
+			=> NameListPatternRegex.Matches(list).Cast<Match>().Select(x =>
+				!string.IsNullOrWhiteSpace(x.Groups["DBRef"].Value)
+					? OneOf<DBRef, string>.FromT0(ParseDBRef(x.Groups["DBRef"].Value).Value())
+					: OneOf<DBRef, string>.FromT1(x.Groups["User"].Value));
+
+		/// <summary>
+		/// A regular expression that matches one or more names in a list format.
+		/// </summary>
+		/// <returns>A regex that has a named group for the match.</returns>
+		[GeneratedRegex("(\"(?<User>.+?)\"|(?<DBRef>#\\d+(:\\d+)?)|(?<User>\\S+))(\\s+|$)")]
+		private static partial Regex NameListPattern();
+
 		/// <summary>
 		/// A regular expression that takes the form of '#123:43143124' or '#543'.
 		/// </summary>
 		/// <returns>A regex that has a named group for the DBRef Number and Creation Milliseconds.</returns>
 		[GeneratedRegex(@"#(?<DatabaseNumber>\d+)(?::(?<CreationTimestamp>\d+))?")]
 		private static partial Regex DatabaseReference();
-
 
 		/// <summary>
 		/// A regular expression that takes the form of '#123:43143124' or '#543'.

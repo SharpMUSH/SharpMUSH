@@ -22,7 +22,7 @@ namespace SharpMUSH.Tests.Functions
 				pws: new PasswordService(new Microsoft.AspNetCore.Identity.PasswordHasher<string>()));
 			var result = parser.FunctionParse("pcreate(John,SomePassword)")?.Message?.ToString()!;
 
-			var a = Implementation.Functions.Functions.ParseDBRef(result).AsT0;
+			var a = Implementation.Functions.Functions.ParseDBRef(result).AsT1.Value;
 			var db = await database!.GetObjectNode(a);
 			var player = db!.Value.AsT0;
 

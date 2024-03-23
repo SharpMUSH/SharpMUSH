@@ -20,6 +20,8 @@ namespace SharpMUSH.Library.Models
 
 		public required string Name { get; set; }
 
+		public required string Type { get; set; }
+
 		// RELATIONSHIP
 		[JsonIgnore]
 		public virtual SharpPlayer? Owner { get; set; }

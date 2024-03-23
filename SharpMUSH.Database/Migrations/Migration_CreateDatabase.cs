@@ -41,12 +41,13 @@ namespace SharpMUSH.Database.Migrations
 									type = DatabaseConstants.typeObject,
 									properties = new {
 										Name = new { type = DatabaseConstants.typeString },
+										Type = new { type = DatabaseConstants.typeString },
 										Locks = new { type = DatabaseConstants.typeObject },
 										CreationTime = new { type = DatabaseConstants.typeNumber },
 										ModifiedTime = new { type = DatabaseConstants.typeNumber },
 										Powers = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } }
 									},
-									required = (string[])[nameof(SharpObject.Name)],
+									required = (string[])[nameof(SharpObject.Name), nameof(SharpObject.Type)],
 									additionalProperties = true
 								}
 							},
@@ -425,6 +426,7 @@ namespace SharpMUSH.Database.Migrations
 			{
 				_key = "0",
 				Name = "Room Zero",
+				Type = "Room",
 				CreationTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
 				ModifiedTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
 			});
@@ -435,6 +437,7 @@ namespace SharpMUSH.Database.Migrations
 			{
 				_key = "1",
 				Name = "God",
+				Type = "Player",
 				CreationTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
 				ModifiedTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
 			});
@@ -444,6 +447,7 @@ namespace SharpMUSH.Database.Migrations
 			{
 				_key = "2",
 				Name = "Master Room",
+				Type = "Room",
 				CreationTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
 				ModifiedTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
 			});

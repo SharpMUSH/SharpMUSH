@@ -8,7 +8,12 @@ using SharpMUSH.Library.Services;
 namespace SharpMUSH.Database
 {
 	// TODO: Unit of Work / Transaction around all of this!
-	public class ArangoDatabase(ILogger<ArangoDatabase> logger, IArangoContext arangoDB, ArangoHandle handle, IPasswordService passwordService) : ISharpDatabase
+	public class ArangoDatabase(
+		ILogger<ArangoDatabase> logger,
+		IArangoContext arangoDB,
+		ArangoHandle handle,
+		IPasswordService passwordService
+		) : ISharpDatabase
 	{
 		public async Task Migrate()
 		{
@@ -38,6 +43,7 @@ namespace SharpMUSH.Database
 			var obj = await arangoDB.Document.CreateAsync<dynamic, dynamic>(handle, DatabaseConstants.objects, new
 			{
 				Name = name,
+				Type = "Player",
 				CreationTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
 				ModifiedTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
 			}, returnNew: true);
@@ -71,6 +77,7 @@ namespace SharpMUSH.Database
 		{
 			var obj = await arangoDB.Document.CreateAsync(handle, DatabaseConstants.objects, new SharpObject()
 			{
+				Type = "Room",
 				Name = name
 			});
 
@@ -86,7 +93,10 @@ namespace SharpMUSH.Database
 
 		public async Task<int> CreateThing(string name, OneOf<SharpPlayer, SharpRoom, SharpThing> location, SharpPlayer creator)
 		{
-			var obj = await arangoDB.Document.CreateAsync(handle, DatabaseConstants.objects, new SharpObject() { Name = name });
+			var obj = await arangoDB.Document.CreateAsync(handle, DatabaseConstants.objects, new SharpObject() {
+				Type = "Thing",
+				Name = name 
+			});
 			var thing = await arangoDB.Document.CreateAsync(handle, DatabaseConstants.things, new SharpThing() { });
 
 			await arangoDB.Document.CreateAsync(handle, DatabaseConstants.isObject, new SharpEdge { From = thing.Id, To = obj.Id });
@@ -106,7 +116,10 @@ namespace SharpMUSH.Database
 
 		public async Task<int> CreateExit(string name, OneOf<SharpPlayer, SharpRoom, SharpThing> location, SharpPlayer creator)
 		{
-			var obj = await arangoDB.Document.CreateAsync(handle, DatabaseConstants.objects, new SharpObject() { Name = name });
+			var obj = await arangoDB.Document.CreateAsync(handle, DatabaseConstants.objects, new SharpObject() {
+				Type = "Exit",
+				Name = name 
+			});
 			var exit = await arangoDB.Document.CreateAsync(handle, DatabaseConstants.exits, new SharpExit());
 
 			await arangoDB.Document.CreateAsync(handle, DatabaseConstants.isObject, new SharpEdge { From = exit.Id, To = obj.Id });
@@ -132,7 +145,7 @@ namespace SharpMUSH.Database
 			var query = await arangoDB.Query.ExecuteAsync<dynamic>(handle,
 				$"FOR v IN 1..1 INBOUND {startVertex} GRAPH {DatabaseConstants.graphObjects} RETURN {{ \"id\": v._id, \"collection\": PARSE_IDENTIFIER( v._id ).collection, \"vertex\": v}}");
 
-			var res = query.FirstOrDefault();
+			var res = query.SingleOrDefault();
 
 			if (res == null)
 			{
@@ -145,6 +158,7 @@ namespace SharpMUSH.Database
 			var convertObject = new SharpObject()
 			{
 				Name = obj.Name,
+				Type = obj.Type,
 				CreationTime = obj.CreationTime,
 				ModifiedTime = obj.ModifiedTime,
 				Flags = obj.Flags,
@@ -175,14 +189,16 @@ namespace SharpMUSH.Database
 				return null;
 			}
 
-			return new SharpObject() { 
-				Name = obj.Name, 
-				Id = obj._id, 
-				Key = obj._key, 
-				Flags = obj.Flags, 
-				Powers = obj.Powers, 
-				Locks = obj.Locks, 
-				CreationTime = obj.CreationTime, 
+			return new SharpObject()
+			{
+				Name = obj.Name,
+				Type = obj.Type,
+				Id = obj._id,
+				Key = obj._key,
+				Flags = obj.Flags,
+				Powers = obj.Powers,
+				Locks = obj.Locks,
+				CreationTime = obj.CreationTime,
 				ModifiedTime = obj.ModifiedTime
 			};
 		}
@@ -190,7 +206,7 @@ namespace SharpMUSH.Database
 		{
 			var startVertex = $"{DatabaseConstants.objects}/{dbref.Number}";
 			var result = await arangoDB.Query.ExecuteAsync<dynamic>(handle, $"RETURN DOCUMENT({startVertex})");
-			var pattern = attribute_pattern.Replace("_","\\_").Replace("%","\\%").Replace("?", "_").Replace("*","%");
+			var pattern = attribute_pattern.Replace("_", "\\_").Replace("%", "\\%").Replace("?", "_").Replace("*", "%");
 
 			if (!result.Any())
 			{
@@ -312,6 +328,47 @@ namespace SharpMUSH.Database
 			// Wipe a list of attributes. We assume the calling code figured out the permissions part.
 
 			throw new NotImplementedException();
+		}
+
+		public async Task<SharpPlayer?> GetPlayerByName(string name)
+		{
+			// Todo: Look up by Alias.
+			var query = await arangoDB.Query.ExecuteAsync<dynamic>(handle, $"FOR v IN {DatabaseConstants.objects} FILTER v.Type == @type && v.Name == @name RETURN v",
+				bindVars: new Dictionary<string, object>
+				{
+					{ "name", name },
+					{ "type", "Player" }
+				});
+
+			// Todo: Edit to return multiple players and let the above layer figure out which one it wants.
+			var result = query.FirstOrDefault();
+			if (result == null) return null;
+
+			var playerQuery = $"FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.graphObjects} RETURN v";
+			var playerQueryResult = await arangoDB.Query.ExecuteAsync<dynamic>(handle, playerQuery,
+				bindVars: new Dictionary<string, object>
+				{
+					{ "startVertex", result._id },
+				});
+			var playerQueryFirstResult = playerQueryResult.First();
+
+			return new SharpPlayer() { 
+				PasswordHash = playerQueryFirstResult.PasswordHash, 
+				Object = new SharpObject()
+				{
+					Name = result.Name,
+					Type = result.Type, 
+					CreationTime = result.CreationTime,
+					Flags = result.Flags,
+					Id = result._id,
+					Key = result._key,
+					ModifiedTime = result.ModifiedTime,
+					Locks = result.Locks,
+					Owner = result.Owner,
+					Parent = result.Parent,
+					Powers = result.Powers,
+				}
+			};
 		}
 	}
 }

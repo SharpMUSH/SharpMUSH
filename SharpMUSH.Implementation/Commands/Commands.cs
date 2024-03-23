@@ -1,5 +1,7 @@
-﻿using Antlr4.Runtime.Tree;
+﻿using Antlr4.Runtime;
+using Antlr4.Runtime.Tree;
 using OneOf.Monads;
+using OneOf.Types;
 using System.Reflection;
 using static SharpMUSHParser;
 
@@ -44,7 +46,7 @@ namespace SharpMUSH.Implementation.Commands
 
 			if (firstCommandMatch == null)
 			{
-				return new None();
+				return new OneOf.Monads.None();
 			}
 
 			var command = firstCommandMatch.GetText();
@@ -61,10 +63,25 @@ namespace SharpMUSH.Implementation.Commands
 				(x.Key.Equals(command, StringComparison.CurrentCultureIgnoreCase)) &&
 				((x.Value.Attribute.Behavior & Definitions.CommandBehavior.SOCKET) == Definitions.CommandBehavior.SOCKET));
 
-			if (socketCommandPattern.Any())
+			if (_commandLibrary.TryGetValue(command.ToUpper(), out var librarySocketCommandDefinition))
 			{
+				var arguments = ArgumentSplit(parser, context, librarySocketCommandDefinition);
+
 				// Run as Socket Command.
-				return socketCommandPattern.First().Value.Function.Invoke(parser);
+				var result = socketCommandPattern.First().Value.Function.Invoke(parser.Push(new Parser.ParserState(
+					Registers: parser.CurrentState.Registers,
+					CurrentEvaluation: parser.CurrentState.CurrentEvaluation,
+					Command: command,
+					Arguments: arguments,
+					Function: null,
+					Executor: parser.CurrentState.Executor,
+					Enactor: parser.CurrentState.Enactor,
+					Caller: parser.CurrentState.Caller,
+					Handle: parser.CurrentState.Handle
+				)));
+
+				parser.Pop();
+				return result;
 			}
 
 			if (parser.CurrentState.Executor == null && parser.CurrentState.Handle != null)
@@ -92,74 +109,14 @@ namespace SharpMUSH.Implementation.Commands
 			// TODO: Optimize
 			// TODO: Evaluate Command -- commands that run more commands are always NoParse for the arguments it's relevant for.
 			// TODO: Get the Switches and send them along as a list of items!
-			var evaluatedCallContext = visitChildren(firstCommandMatch)!.Message!;
-			var evaluatedCallContextAsString = MModule.plainText(evaluatedCallContext);
+			var evaluatedCallContextAsString = MModule.plainText(visitChildren(firstCommandMatch)!.Message!);
 			var slashIndex = evaluatedCallContextAsString.IndexOf(Slash);
 			var rootCommand = evaluatedCallContextAsString[..(slashIndex > -1 ? slashIndex : evaluatedCallContextAsString.Length)];
 
 			// TODO: Too many ifs. This needs to be split out.
 			if (_commandLibrary.TryGetValue(rootCommand.ToUpper(), out var libraryCommandDefinition))
 			{
-				// command (space) argument(s)
-				if (context.children.Count > 1)
-				{
-					// command arg0 = arg1 ,still arg 1
-					if ((libraryCommandDefinition.Attribute.Behavior & (Definitions.CommandBehavior.EqSplit | Definitions.CommandBehavior.RSArgs)) != 0)
-					{
-						_ = parser.CommandEqSplitArgsParse(context.children[2].GetText());
-					}
-					// command arg0 = arg1,arg2
-					else if ((libraryCommandDefinition.Attribute.Behavior & Definitions.CommandBehavior.EqSplit) != 0)
-					{
-						_ = parser.CommandEqSplitParse(context.children[2].GetText());
-					}
-					// Command arg0,arg1,arg2,arg
-					else if ((libraryCommandDefinition.Attribute.Behavior & Definitions.CommandBehavior.RSArgs) != 0)
-					{
-						_ = parser.CommandCommaArgsParse(context.children[2].GetText());
-					}
-					else
-					{
-						_ = parser.CommandSingleArgParse(context.children[2].GetText());
-					}
-				}
-
-				List<CallState> arguments = []; // = parser.CurrentState().Arguments;
-				bool eqSplit = (libraryCommandDefinition.Attribute.Behavior & Definitions.CommandBehavior.EqSplit) != 0;
-				bool noParse = (libraryCommandDefinition.Attribute.Behavior & Definitions.CommandBehavior.NoParse) != 0;
-				bool noRSParse = (libraryCommandDefinition.Attribute.Behavior & Definitions.CommandBehavior.RSNoParse) != 0;
-				var nArgs = parser.CurrentState.Arguments.Count;
-
-				// TODO: Implement lsargs - but there are no immediate commands that need it.
-
-				if (eqSplit)
-				{
-					if (noParse)
-					{
-						arguments.Add(parser.CurrentState.Arguments[0]);
-					}
-					else
-					{
-						arguments.Add(parser.FunctionParse(parser.CurrentState.Arguments[0].Message!.ToString())!);
-					}
-
-					if (noRSParse && nArgs > 1)
-					{
-						arguments.AddRange(parser.CurrentState.Arguments[1..]);
-					}
-					else if (nArgs > 1)
-					{
-						arguments.AddRange(parser.CurrentState.Arguments[1..].Select(x => parser.FunctionParse(x.Message!.ToString())!));
-					}
-				}
-				else if (!eqSplit && noParse)
-				{
-					arguments = parser.CurrentState.Arguments;
-				}
-				else if (!eqSplit && !noParse)
-				{
-					arguments.AddRange(parser.CurrentState.Arguments.Select(x => parser.FunctionParse(x.Message!.ToString())!));
-				}
+				var arguments = ArgumentSplit(parser, context, libraryCommandDefinition);
 
 				var result = libraryCommandDefinition.Function.Invoke(parser.Push(new Parser.ParserState(
 					Registers: parser.CurrentState.Registers,
@@ -192,6 +149,73 @@ namespace SharpMUSH.Implementation.Commands
 
 			// TODO: Create a HUH_COMMAND
 			throw new NotImplementedException();
+		}
+
+		private static List<CallState> ArgumentSplit(Parser parser, CommandContext context, (SharpCommandAttribute Attribute, Func<Parser, Option<CallState>> Function) libraryCommandDefinition)
+		{
+
+			// command (space) argument(s)
+			if (context.children.Count > 1)
+			{
+				// command arg0 = arg1 ,still arg 1 
+				if ((libraryCommandDefinition.Attribute.Behavior & (Definitions.CommandBehavior.EqSplit | Definitions.CommandBehavior.RSArgs)) != 0)
+				{
+					_ = parser.CommandEqSplitArgsParse(context.children[2].GetText());
+				}
+				// command arg0 = arg1,arg2
+				else if ((libraryCommandDefinition.Attribute.Behavior & Definitions.CommandBehavior.EqSplit) != 0)
+				{
+					_ = parser.CommandEqSplitParse(context.children[2].GetText());
+				}
+				// Command arg0,arg1,arg2,arg
+				else if ((libraryCommandDefinition.Attribute.Behavior & Definitions.CommandBehavior.RSArgs) != 0)
+				{
+					_ = parser.CommandCommaArgsParse(context.children[2].GetText());
+				}
+				else
+				{
+					_ = parser.CommandSingleArgParse(context.children[2].GetText());
+				}
+			}
+
+			List<CallState> arguments = []; // = parser.CurrentState().Arguments;
+			bool eqSplit = (libraryCommandDefinition.Attribute.Behavior & Definitions.CommandBehavior.EqSplit) != 0;
+			bool noParse = (libraryCommandDefinition.Attribute.Behavior & Definitions.CommandBehavior.NoParse) != 0;
+			bool noRSParse = (libraryCommandDefinition.Attribute.Behavior & Definitions.CommandBehavior.RSNoParse) != 0;
+			var nArgs = parser.CurrentState.Arguments.Count;
+
+			// TODO: Implement lsargs - but there are no immediate commands that need it.
+
+			if (eqSplit)
+			{
+				if (noParse)
+				{
+					arguments.Add(parser.CurrentState.Arguments[0]);
+				}
+				else
+				{
+					arguments.Add(parser.FunctionParse(parser.CurrentState.Arguments[0].Message!.ToString())!);
+				}
+
+				if (noRSParse && nArgs > 1)
+				{
+					arguments.AddRange(parser.CurrentState.Arguments[1..]);
+				}
+				else if (nArgs > 1)
+				{
+					arguments.AddRange(parser.CurrentState.Arguments[1..].Select(x => parser.FunctionParse(x.Message!.ToString())!));
+				}
+			}
+			else if (!eqSplit && noParse)
+			{
+				arguments = parser.CurrentState.Arguments;
+			}
+			else if (!eqSplit && !noParse)
+			{
+				arguments.AddRange(parser.CurrentState.Arguments.Select(x => parser.FunctionParse(x.Message!.ToString())!));
+			}
+
+			return arguments;
 		}
 	}
 }

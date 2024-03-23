@@ -37,13 +37,13 @@ namespace SharpMUSH.Implementation.Commands
 			var target = MModule.plainText(args[0]!.Message!);
 			var parsedTarget = Functions.Functions.ParseDBRef(target);
 			
-			if (parsedTarget.IsT0)
+			if (parsedTarget.IsNone())
 			{
-				parser.NotifyService.Notify(parsedTarget.AsT0, notification);
+				parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, "I can't see that here.");
 			}
 			else
 			{
-				parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, "I can't see that here.");
+				parser.NotifyService.Notify(parsedTarget.AsT1.Value, notification);
 			}
 
 			return new None();

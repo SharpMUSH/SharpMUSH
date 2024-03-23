@@ -8,12 +8,13 @@ namespace SharpMUSH.Implementation.Functions
 		public static CallState Loc(Parser parser, SharpFunctionAttribute _2)
 		{
 			var dbRefConversion = ParseDBRef(MModule.plainText(parser.CurrentState.Arguments[0].Message));
-			if (!dbRefConversion.TryPickT0(out var dbRef, out _))
+			if (dbRefConversion.IsNone())
 			{
 				parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, "I can't see that here.");
 				return new CallState("#-1");
 			}
 
+			var dbRef = dbRefConversion.AsT1.Value;
 			var objectInfo = parser.Database.GetObjectNode(dbRef).Result;
 
 			// TODO: Check the type, as an Exit doesn't return the right thing or Loc on a Location Search.

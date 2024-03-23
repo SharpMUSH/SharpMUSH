@@ -30,6 +30,8 @@ namespace SharpMUSH.Database
 
 		Task<SharpObject?> GetBaseObjectNode(DBRef dbref);
 
+		Task<SharpPlayer?> GetPlayerByName(string name);
+
 		/// <summary>
 		/// Set an attribute. This does not do any checks, as that is up to the functionality itself.
 		/// </summary>
