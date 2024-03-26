@@ -3,11 +3,9 @@ using Core.Arango.Migration;
 using Microsoft.Extensions.Logging;
 using OneOf;
 using OneOf.Types;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services;
-using System.Numerics;
-using System.Reflection.Metadata.Ecma335;
-using System.Xml.Linq;
 
 namespace SharpMUSH.Database
 {
@@ -107,11 +105,7 @@ namespace SharpMUSH.Database
 
 			await arangoDB.Document.CreateAsync(handle, DatabaseConstants.isObject, new SharpEdge { From = thing.Id, To = obj.Id });
 
-			var idx = location.Match(
-				player => player.Id,
-				room => room.Id,
-				thing => thing.Id
-				);
+			var idx = location.Object()?.Id;
 
 			await arangoDB.Document.CreateAsync(handle, DatabaseConstants.atLocation, new SharpEdge { From = thing.Id, To = idx! });
 			await arangoDB.Document.CreateAsync(handle, DatabaseConstants.hasHome, new SharpEdge { From = thing.Id, To = idx! });
@@ -131,21 +125,17 @@ namespace SharpMUSH.Database
 
 			await arangoDB.Document.CreateAsync(handle, DatabaseConstants.isObject, new SharpEdge { From = exit.Id, To = obj.Id });
 
-			var idx = location.Match(
-				player => player.Id,
-				room => room.Id,
-				thing => thing.Id
-			);
+			var idx = location.Object()!.Id!;
 
-			await arangoDB.Document.CreateAsync(handle, DatabaseConstants.hasHome, new SharpEdge { From = exit.Id, To = idx! });
-			await arangoDB.Document.CreateAsync(handle, DatabaseConstants.hasObjectOwner, new SharpEdge { From = exit.Id, To = idx! });
+			await arangoDB.Document.CreateAsync(handle, DatabaseConstants.hasHome, new SharpEdge { From = exit.Id, To = idx });
+			await arangoDB.Document.CreateAsync(handle, DatabaseConstants.hasObjectOwner, new SharpEdge { From = exit.Id, To = idx });
 
 			return int.Parse(obj.Key);
 		}
 
 		public async Task<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None>> GetObjectNodeAsync(DBRef dbref)
 		{
-			// TODO: Version that cares about CreatedMilliseconds
+			// TODO: Version that cares about CreatedMilliseconds 
 			var obj = await arangoDB.Document.GetAsync<dynamic>(handle, DatabaseConstants.objects, dbref.Number.ToString());
 			if (obj == null) return new None();
 
@@ -183,20 +173,15 @@ namespace SharpMUSH.Database
 			};
 		}
 
-		private async Task<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None>> GetObjectNodeAsync(string dbID)
+		private async Task<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing>> GetObjectNodeAsync(string dbID)
 		{
 			var startVertex = dbID;
 
 			var query = await arangoDB.Query.ExecuteAsync<dynamic>(handle,
 				$"FOR v IN 0..1 OUTBOUND {startVertex} GRAPH {DatabaseConstants.graphObjects} RETURN {{ \"id\": v._id, \"collection\": PARSE_IDENTIFIER( v._id ).collection, \"vertex\": v}}");
 
+			var obj = query.Last().vertex;
 			var res = query.First();
-			var obj = query.Last();
-
-			if (res == null)
-			{
-				return new None();
-			}
 
 			string id = res.id;
 			string collection = res.collection;
@@ -226,18 +211,15 @@ namespace SharpMUSH.Database
 
 		public async Task<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None>> PopulateObjectNodeAsync(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> node)
 		{
-			var startVertex = node.Match(
-				player => player.Id,
-				room => room.Id,
-				exit => exit.Id,
-				thing => thing.Id
-				);
+			var startVertex = node!.Id();
+			if (startVertex == null)
+				return new None();
 
 			// TODO: This is doing too much work. It should assume that the object is populated, and should just put the SharpObject into it.
 			var query = await arangoDB.Query.ExecuteAsync<dynamic>(handle,
 				$"FOR v IN 1..1 OUTBOUND {startVertex} GRAPH {DatabaseConstants.graphObjects} RETURN {{ \"id\": v._id, \"collection\": PARSE_IDENTIFIER( v._id ).collection, \"vertex\": v}}");
 
-			var obj = query.SingleOrDefault();
+			var obj = query.Single()!.vertex;
 			if (obj == null) { return new None(); }
 
 			var convertObject = new SharpObject()
@@ -429,8 +411,12 @@ namespace SharpMUSH.Database
 
 			var variableDepth = depth == -1 ? "0" : $"0..{depth}";
 			var locationQuery = $"FOR v IN {variableDepth} OUTBOUND @startVertex GRAPH {DatabaseConstants.graphLocations} RETURN v";
-			var query = await arangoDB.Query.ExecuteAsync<dynamic>(handle, $"{locationQuery}");
-			var result = await PopulateObjectNodeAsync(query.Last()._id);
+			var query = await arangoDB.Query.ExecuteAsync<dynamic>(handle, locationQuery, new Dictionary<string, object>()
+			{
+				{ "startVertex", baseObject.Id()! }
+			});
+			var locationBaseObj = await GetObjectNodeAsync((string)query.Last()._id);
+			var result = await PopulateObjectNodeAsync(locationBaseObj);
 
 			return result;
 		}
@@ -440,19 +426,11 @@ namespace SharpMUSH.Database
 			var baseObject = await GetObjectNodeAsync(obj);
 			if (baseObject.IsT4) return null;
 
-			var startVertex = baseObject.Match(
-				player => player.Id,
-				room => room.Id,
-				exit => exit.Id, 
-				thing => thing.Id,
-				none => throw new Exception("Unexpected None Value")
-				);
-
 			var locationQuery = $"FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.graphLocations} RETURN v";
 			var query = await arangoDB.Query.ExecuteAsync<dynamic>(handle, $"{locationQuery}",
 				new Dictionary<string, object>
 				{
-					{"startVertex", startVertex! }
+					{"startVertex", baseObject.Object()!.Id! }
 				});
 			var result = query
 				.Select(x => (string)x._id)
@@ -461,8 +439,7 @@ namespace SharpMUSH.Database
 					player => player,
 					room => new None(),
 					exit => exit,
-					thing => thing,
-					none => none
+					thing => thing
 				));
 
 			return result;
@@ -470,13 +447,7 @@ namespace SharpMUSH.Database
 
 		public async Task<IEnumerable<OneOf<SharpPlayer, SharpExit, SharpThing, None>>?> GetContentsAsync(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None> node)
 		{
-			var startVertex = node.Match(
-				player => player.Id,
-				room => room.Id,
-				exit => exit.Id,
-				thing => thing.Id,
-				none => null
-				);
+			var startVertex = node.Id();
 
 			if (startVertex == null) return null;
 
@@ -493,8 +464,7 @@ namespace SharpMUSH.Database
 					player => player,
 					room => new None(),
 					exit => exit,
-					thing => thing,
-					none => none
+					thing => thing
 				));
 
 			return result;

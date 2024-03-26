@@ -16,7 +16,7 @@ namespace SharpMUSH.Implementation.Commands
 			var everyone = parser.ConnectionService.GetAll();
 			var fmt = "{0,-18} {1,10} {2,6}  {3,-32}";
 			var header = string.Format(fmt, "Player Name", "On For", "Idle", "Doing");
-			var players = everyone.Select(player =>
+			var players = everyone.Where(player => player.Ref.HasValue).Select(player =>
 			{
 				var name = parser.Database.GetBaseObjectNodeAsync(player.Ref!.Value).GetAwaiter().GetResult();
 				var onFor = DateTimeOffset.UtcNow - DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(player.Metadata["ConnectionStartTime"]));

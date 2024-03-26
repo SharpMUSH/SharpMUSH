@@ -1,4 +1,5 @@
 ﻿using OneOf.Monads;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using CB = SharpMUSH.Implementation.Definitions.CommandBehavior;
 
@@ -48,12 +49,16 @@ namespace SharpMUSH.Implementation.Commands
 			{
 				parser.NotifyService.Notify(executor, "I can't see that here.");
 			}
+			
+			var contents = parser.Database.GetContentsAsync(viewing).Result;
 
-			var contents = parser.Database.GetContentsAsync(viewing);
+			var name = viewing.Object()!.Name;
+			var location = viewing.Object()!.Key;
+			var contentKeys = contents!.Select(x => x.Object()!.Key).Where( x => x.HasValue);
 
-			parser.NotifyService.Notify(executor, $"Name: ");
-			parser.NotifyService.Notify(executor, $"Location: ");
-			parser.NotifyService.Notify(executor, $"Contents: ");
+			parser.NotifyService.Notify(executor, $"Name: {name}");
+			parser.NotifyService.Notify(executor, $"Location: {location}");
+			parser.NotifyService.Notify(executor, $"Contents: {string.Join(Environment.NewLine, contentKeys)}");
 
 			return new None();
 		}
@@ -70,6 +75,8 @@ namespace SharpMUSH.Implementation.Commands
 
 			var notification = args[1]!.Message!.ToString();
 			var target = MModule.plainText(args[0]!.Message!);
+
+			// TODO: Use Locate() here.
 			var parsedTarget = Functions.Functions.ParseDBRef(target);
 			
 			if (parsedTarget.IsNone())

@@ -87,6 +87,7 @@ namespace SharpMUSH.Implementation.Commands
 			if (parser.CurrentState.Executor == null && parser.CurrentState.Handle != null)
 			{
 				parser.NotifyService.Notify(parser.CurrentState.Handle, "No such command available at login.");
+				return new OneOf.Monads.None();
 			}
 
 			// Step 2: Check for a single-token command
