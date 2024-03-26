@@ -18,7 +18,7 @@ namespace SharpMUSH.Implementation.Commands
 			var header = string.Format(fmt, "Player Name", "On For", "Idle", "Doing");
 			var players = everyone.Select(player =>
 			{
-				var name = parser.Database.GetBaseObjectNode(player.Ref!.Value).GetAwaiter().GetResult();
+				var name = parser.Database.GetBaseObjectNodeAsync(player.Ref!.Value).GetAwaiter().GetResult();
 				var onFor = DateTimeOffset.UtcNow - DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(player.Metadata["ConnectionStartTime"]));
 				var idleFor = DateTimeOffset.UtcNow - DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(player.Metadata["LastConnectionSignal"]));
 				return string.Format(
@@ -46,7 +46,7 @@ namespace SharpMUSH.Implementation.Commands
 		[SharpCommand(Name = "CONNECT", Behavior = Definitions.CommandBehavior.SOCKET | Definitions.CommandBehavior.NoParse, MinArgs = 1, MaxArgs = 2)]
 		public static Option<CallState> CONNECT(Parser parser, SharpCommandAttribute _2)
 		{
-			// TODO: Early HUH if already logged in.
+			// Early HUH if already logged in.
 			if( parser.ConnectionService.Get(parser.CurrentState.Handle!)?.Ref != null)
 			{
 				parser.NotifyService.Notify(parser.CurrentState.Handle!, "Huh?  (Type \"help\" for help.)");
@@ -69,10 +69,10 @@ namespace SharpMUSH.Implementation.Commands
 			var foundDB = nameItem.Match(
 				dbref =>
 				{
-					var rs = parser.Database.GetObjectNode(dbref).Result;
-					return (rs == null || !rs.Value.IsT0) ? null : rs.Value.AsT0;
+					var rs = parser.Database.GetObjectNodeAsync(dbref).Result;
+					return (rs.IsT4 || !rs.IsT0) ? null : rs.AsT0;
 				},
-				name => parser.Database.GetPlayerByName(name).Result)!;
+				name => parser.Database.GetPlayerByNameAsync(name).Result)!;
 
 			if (foundDB == null)
 			{

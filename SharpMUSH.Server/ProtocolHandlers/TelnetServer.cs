@@ -117,8 +117,6 @@ namespace SharpMUSH.Server.ProtocolHandlers
 				 .BuildAsync();
 
 			_connectionService.Register(connection.ConnectionId, telnet.SendAsync, () => telnet.CurrentEncoding);
-			// TODO: Move this to commands.
-			// _connectionService.Bind(connection.ConnectionId, new DBRef(1, 1709704139507));
 
 			try
 			{

@@ -1,4 +1,5 @@
 ﻿using OneOf;
+using OneOf.Types;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Database
@@ -7,17 +8,17 @@ namespace SharpMUSH.Database
 	{
 		Task Migrate();
 
-		Task<int> CreatePlayer(string name, string password, DBRef location);
+		Task<int> CreatePlayerAsync(string name, string password, DBRef location);
 
-		Task<int> CreateRoom(string name, SharpPlayer creator);
+		Task<int> CreateRoomAsync(string name, SharpPlayer creator);
 
-		Task<int> CreateThing(string name, OneOf<SharpPlayer, SharpRoom, SharpThing> location, SharpPlayer creator);
+		Task<int> CreateThingAsync(string name, OneOf<SharpPlayer, SharpRoom, SharpThing> location, SharpPlayer creator);
 
-		Task<int> CreateExit(string name, OneOf<SharpPlayer, SharpRoom, SharpThing> location, SharpPlayer creator);
+		Task<int> CreateExitAsync(string name, OneOf<SharpPlayer, SharpRoom, SharpThing> location, SharpPlayer creator);
 
-		Task<SharpAttribute[]?> GetAttribute(DBRef dbref, string[] attribute);
+		Task<IEnumerable<SharpAttribute>?> GetAttributeAsync(DBRef dbref, string[] attribute);
 		
-		Task<SharpAttribute[]?> GetAttributes(DBRef dbref, string attribute_pattern);
+		Task<IEnumerable<SharpAttribute>?> GetAttributesAsync(DBRef dbref, string attribute_pattern);
 
 		/// <summary>
 		/// Get the Object represented by a Database Reference Number.
@@ -26,11 +27,11 @@ namespace SharpMUSH.Database
 		/// <param name="dbref">Database Reference Number</param>
 		/// <param name="createdmsecs">Created Milliseconds (Unix Timestamp</param>
 		/// <returns>A OneOf over the object being returned</returns>
-		Task<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing>?> GetObjectNode(DBRef dbref);
+		Task<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None>> GetObjectNodeAsync(DBRef dbref);
 
-		Task<SharpObject?> GetBaseObjectNode(DBRef dbref);
+		Task<SharpObject?> GetBaseObjectNodeAsync(DBRef dbref);
 
-		Task<SharpPlayer?> GetPlayerByName(string name);
+		Task<SharpPlayer?> GetPlayerByNameAsync(string name);
 
 		/// <summary>
 		/// Set an attribute. This does not do any checks, as that is up to the functionality itself.
@@ -39,7 +40,7 @@ namespace SharpMUSH.Database
 		/// <param name="attribute">Attribute Path.</param>
 		/// <param name="value">The value to place into the attribute</param>
 		/// <returns>Success or Failure</returns>
-		Task<bool> SetAttribute(DBRef dbref, string[] attribute, string value, SharpPlayer owner);
+		Task<bool> SetAttributeAsync(DBRef dbref, string[] attribute, string value, SharpPlayer owner);
 
 		/// <summary>
 		/// Sets an attribute to string.Empty, or if it has no children, removes it entirely.
@@ -48,7 +49,7 @@ namespace SharpMUSH.Database
 		/// <param name="dbref">Database Reference Number</param>
 		/// <param name="attribute">Attribute Path.</param>
 		/// <returns>Success or Failure</returns>
-		Task<bool> ClearAttribute(DBRef dbref, string[] attribute);
+		Task<bool> ClearAttributeAsync(DBRef dbref, string[] attribute);
 
 		/// <summary>
 		/// Wipe an attribute and all of its children.
@@ -57,6 +58,6 @@ namespace SharpMUSH.Database
 		/// <param name="dbref">Database Reference Number</param>
 		/// <param name="attribute">Attribute Path.</param>
 		/// <returns>Success or Failure</returns>
-		Task<bool> WipeAttribute(DBRef dbref, string[] attribute);
+		Task<bool> WipeAttributeAsync(DBRef dbref, string[] attribute);
 	}
 }

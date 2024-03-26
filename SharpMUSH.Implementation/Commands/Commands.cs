@@ -63,7 +63,7 @@ namespace SharpMUSH.Implementation.Commands
 				(x.Key.Equals(command, StringComparison.CurrentCultureIgnoreCase)) &&
 				((x.Value.Attribute.Behavior & Definitions.CommandBehavior.SOCKET) == Definitions.CommandBehavior.SOCKET));
 
-			if (_commandLibrary.TryGetValue(command.ToUpper(), out var librarySocketCommandDefinition))
+			if (socketCommandPattern.Any() && _commandLibrary.TryGetValue(command.ToUpper(), out var librarySocketCommandDefinition))
 			{
 				var arguments = ArgumentSplit(parser, context, librarySocketCommandDefinition);
 

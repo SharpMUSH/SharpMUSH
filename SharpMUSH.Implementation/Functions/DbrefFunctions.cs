@@ -15,16 +15,17 @@ namespace SharpMUSH.Implementation.Functions
 			}
 
 			var dbRef = dbRefConversion.AsT1.Value;
-			var objectInfo = parser.Database.GetObjectNode(dbRef).Result;
+			var objectInfo = parser.Database.GetObjectNodeAsync(dbRef).Result;
 
 			// TODO: Check the type, as an Exit doesn't return the right thing or Loc on a Location Search.
 			// It has a few things that return different results.
 			// A room returns #-1 if there is no DROP-TO set.
-			var id = objectInfo!.Value.Match(
+			var id = objectInfo!.Match(
 				player => player.Id,
 				room => room.Id,
 				exit => exit.Id,
-				thing => thing.Id
+				thing => thing.Id,
+				none => null
 				);
 
 			// TODO: Do the regular search otherwise.

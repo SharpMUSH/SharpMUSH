@@ -403,15 +403,38 @@ namespace SharpMUSH.Database.Migrations
 								Collection = DatabaseConstants.hasAttribute,
 								To = [DatabaseConstants.attributes],
 								From = [
-									DatabaseConstants.attributes, 
-									DatabaseConstants.things, 
-									DatabaseConstants.players, 
+									DatabaseConstants.attributes,
+									DatabaseConstants.things,
+									DatabaseConstants.players,
 									DatabaseConstants.rooms,
 									DatabaseConstants.exits
 									]
 							}
 						],
 						Name = DatabaseConstants.graphAttributes
+					},
+					new()
+					{
+						EdgeDefinitions =
+						[
+							new ArangoEdgeDefinition()
+							{
+								Collection = DatabaseConstants.atLocation,
+								To = [
+									DatabaseConstants.things,
+									DatabaseConstants.players,
+									DatabaseConstants.rooms,
+									DatabaseConstants.exits
+									],
+								From = [
+									DatabaseConstants.things,
+									DatabaseConstants.players,
+									DatabaseConstants.rooms,
+									DatabaseConstants.exits
+									]
+							}
+						],
+						Name = DatabaseConstants.graphLocations
 					}
 				}
 			}, new ArangoMigrationOptions { DryRun = false, Notify = x => Console.WriteLine("Migration Change: {0}: {1} - {2}", x.Name, x.Object, x.State) }); ;

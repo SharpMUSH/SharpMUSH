@@ -18,7 +18,7 @@ namespace SharpMUSH.IntegrationTests
 		[TestMethod]
 		public async Task TestRoomZero()
 		{
-			var roomZero = (await database!.GetObjectNode(new Library.Models.DBRef(0))).Value.AsT1;
+			var roomZero = (await database!.GetObjectNodeAsync(new Library.Models.DBRef(0))).AsT1;
 
 			Assert.AreEqual(typeof(SharpRoom), roomZero.GetType());
 			Assert.AreEqual("Room Zero", roomZero!.Object!.Name);
@@ -28,7 +28,7 @@ namespace SharpMUSH.IntegrationTests
 		[TestMethod]
 		public async Task TestRoomTwo()
 		{
-			var masterRoom = (await database!.GetObjectNode(new Library.Models.DBRef(2))).Value.AsT1;
+			var masterRoom = (await database!.GetObjectNodeAsync(new Library.Models.DBRef(2))).AsT1;
 
 			Assert.AreEqual(typeof(SharpRoom), masterRoom.GetType());
 			Assert.AreEqual("Master Room", masterRoom!.Object!.Name);
@@ -38,7 +38,7 @@ namespace SharpMUSH.IntegrationTests
 		[TestMethod]
 		public async Task TestPlayerOne()
 		{
-			var playerOne = (await database!.GetObjectNode(new DBRef(1))).Value.AsT0;
+			var playerOne = (await database!.GetObjectNodeAsync(new DBRef(1))).AsT0;
 
 			Assert.AreEqual(typeof(SharpPlayer), playerOne.GetType());
 			Assert.AreEqual("God", playerOne!.Object!.Name);
@@ -48,7 +48,7 @@ namespace SharpMUSH.IntegrationTests
 		[TestMethod]
 		public async Task SetAndGetAnAttribute()
 		{
-			var playerOne = (await database!.GetObjectNode(new DBRef(1))).Value.AsT0;
+			var playerOne = (await database!.GetObjectNodeAsync(new DBRef(1))).AsT0;
 
 			Assert.AreEqual(typeof(SharpPlayer), playerOne.GetType());
 			Assert.AreEqual("God", playerOne!.Object!.Name);
@@ -56,27 +56,27 @@ namespace SharpMUSH.IntegrationTests
 
 			var playerOneDBRef = new DBRef(playerOne!.Object!.Key!.Value);
 
-			await database!.SetAttribute(playerOneDBRef, ["SingleLayer"], "Single", playerOne);
-			await database!.SetAttribute(playerOneDBRef, ["Two"], "Twin", playerOne);
-			await database!.SetAttribute(playerOneDBRef, ["Two", "Layers"], "Layer", playerOne);
-			await database!.SetAttribute(playerOneDBRef, ["Two", "Leaves"], "Leaf", playerOne);
-			await database!.SetAttribute(playerOneDBRef, ["Two", "Leaves2"], "Leaf2", playerOne);
-			await database!.SetAttribute(playerOneDBRef, ["Three", "Layers", "Deep"], "Deep1", playerOne);
-			await database!.SetAttribute(playerOneDBRef, ["Three", "Layers", "Deep2"], "Deeper", playerOne);
+			await database!.SetAttributeAsync(playerOneDBRef, ["SingleLayer"], "Single", playerOne);
+			await database!.SetAttributeAsync(playerOneDBRef, ["Two"], "Twin", playerOne);
+			await database!.SetAttributeAsync(playerOneDBRef, ["Two", "Layers"], "Layer", playerOne);
+			await database!.SetAttributeAsync(playerOneDBRef, ["Two", "Leaves"], "Leaf", playerOne);
+			await database!.SetAttributeAsync(playerOneDBRef, ["Two", "Leaves2"], "Leaf2", playerOne);
+			await database!.SetAttributeAsync(playerOneDBRef, ["Three", "Layers", "Deep"], "Deep1", playerOne);
+			await database!.SetAttributeAsync(playerOneDBRef, ["Three", "Layers", "Deep2"], "Deeper", playerOne);
 
-			var existingSingle = await database!.GetAttribute(playerOneDBRef, ["SingleLayer"]);
-			var existingLayer = await database!.GetAttribute(playerOneDBRef, ["Two", "Layers"]);
-			var existingLeaf = await database!.GetAttribute(playerOneDBRef, ["Two", "Leaves"]);
-			var existingLeaf2 = await database!.GetAttribute(playerOneDBRef, ["Two", "Leaves2"]);
-			var existingDeep1 = await database!.GetAttribute(playerOneDBRef, ["Three", "Layers", "Deep"]);
-			var existingDeep2 = await database!.GetAttribute(playerOneDBRef, ["Three", "Layers", "Deep2"]);
+			var existingSingle = await database!.GetAttributeAsync(playerOneDBRef, ["SingleLayer"]);
+			var existingLayer = await database!.GetAttributeAsync(playerOneDBRef, ["Two", "Layers"]);
+			var existingLeaf = await database!.GetAttributeAsync(playerOneDBRef, ["Two", "Leaves"]);
+			var existingLeaf2 = await database!.GetAttributeAsync(playerOneDBRef, ["Two", "Leaves2"]);
+			var existingDeep1 = await database!.GetAttributeAsync(playerOneDBRef, ["Three", "Layers", "Deep"]);
+			var existingDeep2 = await database!.GetAttributeAsync(playerOneDBRef, ["Three", "Layers", "Deep2"]);
 
-			Assert.AreEqual(1, existingSingle!.Length);
-			Assert.AreEqual(2, existingLayer!.Length);
-			Assert.AreEqual(2, existingLeaf!.Length);
-			Assert.AreEqual(2, existingLeaf2!.Length);
-			Assert.AreEqual(3, existingDeep1!.Length);
-			Assert.AreEqual(3, existingDeep2!.Length);
+			Assert.AreEqual(1, existingSingle!.Count());
+			Assert.AreEqual(2, existingLayer!.Count());
+			Assert.AreEqual(2, existingLeaf!.Count());
+			Assert.AreEqual(2, existingLeaf2!.Count());
+			Assert.AreEqual(3, existingDeep1!.Count());
+			Assert.AreEqual(3, existingDeep2!.Count());
 			Assert.AreEqual("Single", existingSingle!.Last().Value);
 			Assert.AreEqual("Layer", existingLayer!.Last().Value);
 			Assert.AreEqual("Leaf", existingLeaf!.Last().Value);

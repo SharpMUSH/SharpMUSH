@@ -11,15 +11,18 @@ namespace SharpMUSH.Implementation.Functions
 		public static CallState PCreate(Parser parser, SharpFunctionAttribute _2)
 		{
 			var args = parser.CurrentState.Arguments;
-			var location = parser.Database.GetObjectNode(new Library.Models.DBRef { Number = Configurable.PlayerStart }).Result;
+			var location = parser.Database.GetObjectNodeAsync(new Library.Models.DBRef { 
+				Number = Configurable.PlayerStart 
+			}).Result;
 
-			var trueLocation = location!.Value.Match(
+			var trueLocation = location.Match(
 				player => player.Object!.Key,
 				room => room.Object!.Key,
 				exit => exit.Object!.Key,
-				thing => thing.Object!.Key);
+				thing => thing.Object!.Key,
+				none => null);
 
-			var created = parser.Database.CreatePlayer(
+			var created = parser.Database.CreatePlayerAsync(
 				args[0].Message!.ToString(), 
 				args[1].Message!.ToString(), 
 				new Library.Models.DBRef(trueLocation ?? 1)).Result;
@@ -74,13 +77,13 @@ namespace SharpMUSH.Implementation.Functions
 			}
 
 			var dbRef = dbRefConversion.AsT1.Value;
-			var objectInfo = parser.Database.GetObjectNode(dbRef).Result;
-			if (!objectInfo!.Value.IsT0)
+			var objectInfo = parser.Database.GetObjectNodeAsync(dbRef).Result;
+			if (!objectInfo!.IsT0)
 			{
 				return new CallState("#-1 NO SUCH PLAYER");
 			}
 			
-			var player = objectInfo.Value.AsT0;
+			var player = objectInfo.AsT0;
 
 			var result = parser.PasswordService.PasswordIsValid(
 				$"#{player!.Object!.Key}:{player!.Object!.CreationTime}", 

@@ -25,6 +25,7 @@ namespace SharpMUSH.Database
 
 		internal const string graphObjects = "graph_objects";
 		internal const string graphAttributes = "graph_attributes";
+		internal const string graphLocations = "graph_locations";
 
 		internal const string typeObject = "object";
 		internal const string typeString = "string";

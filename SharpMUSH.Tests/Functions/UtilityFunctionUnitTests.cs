@@ -23,8 +23,8 @@ namespace SharpMUSH.Tests.Functions
 			var result = parser.FunctionParse("pcreate(John,SomePassword)")?.Message?.ToString()!;
 
 			var a = Implementation.Functions.Functions.ParseDBRef(result).AsT1.Value;
-			var db = await database!.GetObjectNode(a);
-			var player = db!.Value.AsT0;
+			var db = await database!.GetObjectNodeAsync(a);
+			var player = db!.AsT0;
 
 			Assert.IsTrue(parser.PasswordService.PasswordIsValid(result, "SomePassword", player.PasswordHash));
 			Assert.IsFalse(parser.PasswordService.PasswordIsValid(result, "SomePassword2", player.PasswordHash));
