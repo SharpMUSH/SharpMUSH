@@ -1,6 +1,7 @@
 ﻿using OneOf;
 using OneOf.Types;
 using SharpMUSH.Library.Models;
+using System.Reflection.Metadata;
 
 namespace SharpMUSH.Database
 {
@@ -59,5 +60,14 @@ namespace SharpMUSH.Database
 		/// <param name="attribute">Attribute Path.</param>
 		/// <returns>Success or Failure</returns>
 		Task<bool> WipeAttributeAsync(DBRef dbref, string[] attribute);
+
+		Task<IEnumerable<OneOf<SharpPlayer, SharpExit, SharpThing>>> GetNearbyObjectsAsync(DBRef obj);
+
+		Task<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None>> GetLocationAsync(DBRef obj, int depth = 1);
+
+		Task<IEnumerable<OneOf<SharpPlayer, SharpExit, SharpThing, None>>?> GetContentsAsync(DBRef obj);
+
+		Task<IEnumerable<OneOf<SharpPlayer, SharpExit, SharpThing, None>>?> GetContentsAsync(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None> node);
+
 	}
 }

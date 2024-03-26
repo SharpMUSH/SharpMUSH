@@ -6,6 +6,7 @@ using OneOf.Types;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services;
 using System.Numerics;
+using System.Reflection.Metadata.Ecma335;
 using System.Xml.Linq;
 
 namespace SharpMUSH.Database
@@ -439,8 +440,52 @@ namespace SharpMUSH.Database
 			var baseObject = await GetObjectNodeAsync(obj);
 			if (baseObject.IsT4) return null;
 
+			var startVertex = baseObject.Match(
+				player => player.Id,
+				room => room.Id,
+				exit => exit.Id, 
+				thing => thing.Id,
+				none => throw new Exception("Unexpected None Value")
+				);
+
 			var locationQuery = $"FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.graphLocations} RETURN v";
-			var query = await arangoDB.Query.ExecuteAsync<dynamic>(handle, $"{locationQuery}");
+			var query = await arangoDB.Query.ExecuteAsync<dynamic>(handle, $"{locationQuery}",
+				new Dictionary<string, object>
+				{
+					{"startVertex", startVertex! }
+				});
+			var result = query
+				.Select(x => (string)x._id)
+				.Select(GetObjectNodeAsync) // TODO: Optimize to make a single call.
+				.Select(x => x.Result.Match<OneOf<SharpPlayer, SharpExit, SharpThing, None>>(
+					player => player,
+					room => new None(),
+					exit => exit,
+					thing => thing,
+					none => none
+				));
+
+			return result;
+		}
+
+		public async Task<IEnumerable<OneOf<SharpPlayer, SharpExit, SharpThing, None>>?> GetContentsAsync(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None> node)
+		{
+			var startVertex = node.Match(
+				player => player.Id,
+				room => room.Id,
+				exit => exit.Id,
+				thing => thing.Id,
+				none => null
+				);
+
+			if (startVertex == null) return null;
+
+			var locationQuery = $"FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.graphLocations} RETURN v";
+			var query = await arangoDB.Query.ExecuteAsync<dynamic>(handle, $"{locationQuery}",
+				new Dictionary<string, object>
+				{
+					{"startVertex", startVertex! }
+				});
 			var result = query
 				.Select(x => (string)x._id)
 				.Select(GetObjectNodeAsync) // TODO: Optimize to make a single call.

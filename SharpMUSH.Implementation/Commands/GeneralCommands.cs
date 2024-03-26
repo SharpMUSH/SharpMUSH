@@ -23,6 +23,41 @@ namespace SharpMUSH.Implementation.Commands
 			return new None();
 		}
 
+		[SharpCommand(Name = "LOOK", Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
+		public static Option<CallState> Look(Parser parser, SharpCommandAttribute _2)
+		{
+			// TODO: Consult CONFORMAT, DESCFORMAT, INAMEFORMAT, NAMEFORMAT, etc.
+			
+			var args = parser.CurrentState.Arguments;
+			var executor = parser.CurrentState.Executor!.Value;
+			OneOf.OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, OneOf.Types.None> viewing;
+
+			if (args.Count == 1)
+			{
+				// TODO: Find the object using Locate(), then give the results of that.
+				viewing = new OneOf.Types.None();
+				throw new NotImplementedException();
+			}
+			else
+			{
+				viewing = parser.Database.GetLocationAsync(executor, 1).Result;
+				// Look at the current location.
+			}
+
+			if (viewing.IsT4)
+			{
+				parser.NotifyService.Notify(executor, "I can't see that here.");
+			}
+
+			var contents = parser.Database.GetContentsAsync(viewing);
+
+			parser.NotifyService.Notify(executor, $"Name: ");
+			parser.NotifyService.Notify(executor, $"Location: ");
+			parser.NotifyService.Notify(executor, $"Contents: ");
+
+			return new None();
+		}
+
 		[SharpCommand(Name = "@PEMIT", Behavior = CB.Default | CB.EqSplit, MinArgs = 1, MaxArgs = 2)]
 		public static Option<CallState> PEmit(Parser parser, SharpCommandAttribute _2)
 		{
