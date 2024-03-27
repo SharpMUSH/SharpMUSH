@@ -1,5 +1,4 @@
 ﻿using Antlr4.Runtime;
-using Serilog;
 using SharpMUSH.Implementation.Visitors;
 using SharpMUSH.Library.Models;
 using System.Linq.Expressions;
@@ -10,6 +9,8 @@ public class BooleanExpressionParser(Parser parser)
 {
 	private readonly Dictionary<string, Func<DBRef, DBRef, bool>> _cache = [];
 
+	// TODO: Allow the Evaluation to indicate if the cache should be evaluated for optimization.
+	// This should occur if a character stop existing, a flag gets removed, etc, and should be unusual.
 	public bool Parse(string text, DBRef caller, DBRef victim)
 	{
 		Func<DBRef, DBRef, bool> func;

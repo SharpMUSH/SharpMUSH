@@ -7,7 +7,7 @@ public class SharpMUSHBooleanExpressionValidationVisitor(Parser parser, DBRef in
 	protected override bool? AggregateResult(bool? aggregate, bool? nextResult)
 		=> (aggregate ?? true) && (nextResult ?? true);
 
-	public override bool? VisitLock(SharpMUSHBoolExpParser.LockContext context) 
+	public override bool? VisitLock(SharpMUSHBoolExpParser.LockContext context)
 		=> VisitChildren(context);
 
 	public override bool? VisitLockExprList(SharpMUSHBoolExpParser.LockExprListContext context)
@@ -52,7 +52,7 @@ public class SharpMUSHBooleanExpressionValidationVisitor(Parser parser, DBRef in
 	{
 		var value = context.@string().GetText();
 		var _ = invoker; // Silence the linter / compiler for now.
-		// We don't check for legality of flags.
+										 // We don't check for legality of flags.
 		return true;
 	}
 
@@ -63,10 +63,7 @@ public class SharpMUSHBooleanExpressionValidationVisitor(Parser parser, DBRef in
 	}
 
 	public override bool? VisitBitTypeExpr(SharpMUSHBoolExpParser.BitTypeExprContext context)
-	{
-		var value = context.@string().GetText().ToUpper().Trim();
-		return value is "PLAYER" or "THING" or "EXIT" or "ROOM";
-	}
+		=> context.@string().GetText().ToUpper().Trim() is "PLAYER" or "THING" or "EXIT" or "ROOM";
 
 	public override bool? VisitChannelExpr(SharpMUSHBoolExpParser.ChannelExprContext context)
 	{
@@ -120,9 +117,9 @@ public class SharpMUSHBooleanExpressionValidationVisitor(Parser parser, DBRef in
 	}
 
 	public override bool? VisitString(SharpMUSHBoolExpParser.StringContext context) =>
-		VisitChildren(context);
+		throw new ArgumentException("Parser should never reach here.");
 
-	public override bool?	 VisitAttributeName(SharpMUSHBoolExpParser.AttributeNameContext context) =>
-		VisitChildren(context);
+	public override bool? VisitAttributeName(SharpMUSHBoolExpParser.AttributeNameContext context) =>
+		throw new ArgumentException("Parser should never reach here.");
 
 }

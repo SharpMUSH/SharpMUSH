@@ -42,28 +42,30 @@ public class SharpMUSHBooleanExpressionVisitor(Parser parser, ParameterExpressio
 	{
 		var _2 = caller;
 		var _ = parser.GetType();
-		Expression result = VisitChildren(context);
 
+		Expression result = VisitChildren(context);
 		for (; result.CanReduce; result = result.Reduce()) { }
 		return result;
 	}
 
 	public override Expression VisitLockExprList(SharpMUSHBoolExpParser.LockExprListContext context)
 	{
-		// Do Nothing
-		return VisitChildren(context);
+		Expression result = VisitChildren(context);
+		for (; result.CanReduce; result = result.Reduce()) { }
+		return result;
 	}
 
 	public override Expression VisitLockAndExpr(SharpMUSHBoolExpParser.LockAndExprContext context)
-		=> Expression.And(Visit(context.lockExpr()), Visit(context.lockExprList()));
+		=> Expression.AndAlso(Visit(context.lockExpr()), Visit(context.lockExprList()));
 
 	public override Expression VisitLockOrExpr(SharpMUSHBoolExpParser.LockOrExprContext context)
-		=> Expression.Or(Visit(context.lockExpr()), Visit(context.lockExprList()));
+		=> Expression.OrElse(Visit(context.lockExpr()), Visit(context.lockExprList()));
 
 	public override Expression VisitLockExpr(SharpMUSHBoolExpParser.LockExprContext context)
 	{
-		// Do Nothing. Consider maybe a reduce here?
-		return VisitChildren(context);
+		Expression result = VisitChildren(context);
+		for (; result.CanReduce; result = result.Reduce()) { }
+		return result;
 	}
 
 	public override Expression VisitNotExpr(SharpMUSHBoolExpParser.NotExprContext context)
@@ -76,6 +78,7 @@ public class SharpMUSHBooleanExpressionVisitor(Parser parser, ParameterExpressio
 		=> Expression.Constant(true);
 
 	public override Expression VisitEnclosedExpr(SharpMUSHBoolExpParser.EnclosedExprContext context)
+
 		=> Visit(context.lockExprList());
 
 	public override Expression VisitOwnerExpr(SharpMUSHBoolExpParser.OwnerExprContext context)
@@ -160,9 +163,9 @@ public class SharpMUSHBooleanExpressionVisitor(Parser parser, ParameterExpressio
 	}
 
 	public override Expression VisitString(SharpMUSHBoolExpParser.StringContext context) =>
-		VisitChildren(context);
+		throw new ArgumentException("Parser should never reach here.");
 
 	public override Expression VisitAttributeName(SharpMUSHBoolExpParser.AttributeNameContext context) =>
-		VisitChildren(context);
+		throw new ArgumentException("Parser should never reach here.");
 
 }
