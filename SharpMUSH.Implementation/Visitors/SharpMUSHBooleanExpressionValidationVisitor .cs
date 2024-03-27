@@ -64,7 +64,7 @@ public class SharpMUSHBooleanExpressionValidationVisitor(Parser parser, DBRef in
 
 	public override bool? VisitBitTypeExpr(SharpMUSHBoolExpParser.BitTypeExprContext context)
 	{
-		var value = context.@string().GetText().ToUpper();
+		var value = context.@string().GetText().ToUpper().Trim();
 		return value is "PLAYER" or "THING" or "EXIT" or "ROOM";
 	}
 

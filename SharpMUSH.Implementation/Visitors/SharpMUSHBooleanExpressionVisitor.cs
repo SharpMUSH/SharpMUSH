@@ -17,6 +17,7 @@ public class SharpMUSHBooleanExpressionVisitor(Parser parser, ParameterExpressio
 					thing => thing.Object!.Flags!.Any(x => x.Name == flag),
 					none => false
 				);
+
 	private readonly Expression<Func<DBRef, string, Parser, bool>> hasPower = (dbRef, power, psr)
 		=> psr.Database.GetObjectNode(dbRef)!
 				.Match(
@@ -91,13 +92,13 @@ public class SharpMUSHBooleanExpressionVisitor(Parser parser, ParameterExpressio
 	}
 
 	public override Expression VisitBitFlagExpr(SharpMUSHBoolExpParser.BitFlagExprContext context)
-		=> Expression.Invoke(hasFlag, victim, Expression.Constant(context.@string().GetText()), Expression.Constant(parser));
+		=> Expression.Invoke(hasFlag, victim, Expression.Constant(context.@string().GetText().ToUpper().Trim()), Expression.Constant(parser));
 
 	public override Expression VisitBitPowerExpr(SharpMUSHBoolExpParser.BitPowerExprContext context)
-		=> Expression.Invoke(hasPower, victim, Expression.Constant(context.@string().GetText()), Expression.Constant(parser));
+		=> Expression.Invoke(hasPower, victim, Expression.Constant(context.@string().GetText().ToUpper().Trim()), Expression.Constant(parser));
 
 	public override Expression VisitBitTypeExpr(SharpMUSHBoolExpParser.BitTypeExprContext context) 
-		=> Expression.Invoke(isType, victim, Expression.Constant(context.@string().GetText()), Expression.Constant(parser));
+		=> Expression.Invoke(isType, victim, Expression.Constant(context.@string().GetText().ToUpper().Trim()), Expression.Constant(parser));
 
 	public override Expression VisitChannelExpr(SharpMUSHBoolExpParser.ChannelExprContext context)
 	{

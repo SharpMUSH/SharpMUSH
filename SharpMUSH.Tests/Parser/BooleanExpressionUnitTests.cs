@@ -40,8 +40,11 @@ public class BooleanExpressionUnitTests : BaseUnitTest
 		Assert.AreEqual(expected, bep.Parse(input, new DBRef(1), new DBRef(1)));
 	}
 
-	[DataRow("type^Player", true)]
+	[DataRow("type^Player & #TRUE", true)]
+	[DataRow("type^Player & #FALSE", false)]
+	[DataRow("type^Player & !type^Player", false)]
 	[DataRow("type^Thing", false)]
+	[DataRow("type^Player", true)]
 	[TestMethod]
 	public void TypeExpressions(string input, bool expected)
 	{
