@@ -198,9 +198,10 @@ namespace SharpMUSH.Implementation.Functions
 					};
 				});
 
+		[Flags]
 		public enum LocateFlags
 		{
-			NoTypePreference,
+			NoTypePreference = 0,
 			ExitsPreference,
 			PreferLockPass,
 			PlayersPreference,
@@ -210,6 +211,7 @@ namespace SharpMUSH.Implementation.Functions
 			UseLastIfAmbiguous,
 			AbsoluteMatch,
 			ExitsInTheRoomOfLooker,
+			ExitsInsideOfLooker,
 			MatchHereForLookerLocation,
 			MatchObjectsInLookerInventory,
 			MatchAgainstLookerLocationName,
@@ -221,10 +223,39 @@ namespace SharpMUSH.Implementation.Functions
 			All,
 			NoPartialMatches,
 			MatchLookerControlledObjects
-		}
+		}	
 
-		public static string Locate(DBRef looker, string name, LocateFlags flags)
+		public static bool HasObjectFlags(SharpObject obj, SharpObjectFlag flag)
+			=> obj.Flags!.Contains(flag);
+
+		public static bool HasObjectPowers(SharpObject obj, string power) =>
+			obj.Powers!.Contains(power);
+
+		public static string Locate(SharpObject looker, SharpObject executor, string name, LocateFlags flags)
 		{
+			if ((flags &
+				~(LocateFlags.PreferLockPass
+				| LocateFlags.FailIfNotPreferred
+				| LocateFlags.NoPartialMatches
+				| LocateFlags.MatchLookerControlledObjects)) != 0)
+			{
+				flags |= (LocateFlags.All | LocateFlags.MatchAgainstLookerLocationName | LocateFlags.ExitsInsideOfLooker);
+			}
+
+			if ((flags &
+				(LocateFlags.MatchObjectsInLookerLocation
+				| LocateFlags.MatchObjectsInLookerLocation
+				| LocateFlags.MatchObjectsInLookerInventory
+				| LocateFlags.MatchHereForLookerLocation
+				| LocateFlags.ExitsPreference
+				| LocateFlags.ExitsInsideOfLooker)) != 0)
+			{
+				// if (!nearby(executor, looker) && !See_All(executor) &&
+				// !controls(executor, looker)) {
+				// safe_str("#-1", buff, bp);
+				// return;
+			}
+
 			throw new NotImplementedException();
 		}
 

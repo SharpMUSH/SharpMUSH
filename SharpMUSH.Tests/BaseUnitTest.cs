@@ -44,6 +44,9 @@ namespace SharpMUSH.Tests
 			return database;
 		}
 
+		public static Implementation.BooleanExpressionParser BooleanExpressionParser(Implementation.Parser parser) 
+			=> new(parser);
+
 		public static Implementation.Parser TestParser(
 			IPasswordService? pws = null,
 			IPermissionService? ps = null,

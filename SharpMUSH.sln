@@ -22,7 +22,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SharpMUSH.Database", "Sharp
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SharpMUSH.Server", "SharpMUSH.Server\SharpMUSH.Server.csproj", "{08B11CA1-8A66-48D1-A2A1-95F47A32E649}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.Library", "SharpMUSH.Library\SharpMUSH.Library.csproj", "{4A012D6A-5FCD-4216-976F-CE173D59269B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SharpMUSH.Library", "SharpMUSH.Library\SharpMUSH.Library.csproj", "{4A012D6A-5FCD-4216-976F-CE173D59269B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

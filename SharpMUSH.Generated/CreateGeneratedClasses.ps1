@@ -1,2 +1,4 @@
 java -jar $PSScriptRoot\ANTLR4\antlr4-4.13.2-SNAPSHOT-complete.jar -Dlanguage=CSharp -message-format antlr -o $PSScriptRoot -no-listener -visitor -Xexact-output-dir $PSScriptRoot\SharpMUSHLexer.g4
 java -jar $PSScriptRoot\ANTLR4\antlr4-4.13.2-SNAPSHOT-complete.jar -Dlanguage=CSharp -message-format antlr -o $PSScriptRoot -no-listener -visitor -Xexact-output-dir $PSScriptRoot\SharpMUSHParser.g4
+java -jar $PSScriptRoot\ANTLR4\antlr4-4.13.2-SNAPSHOT-complete.jar -Dlanguage=CSharp -message-format antlr -o $PSScriptRoot -no-listener -visitor -Xexact-output-dir $PSScriptRoot\SharpMUSHBoolExpLexer.g4
+java -jar $PSScriptRoot\ANTLR4\antlr4-4.13.2-SNAPSHOT-complete.jar -Dlanguage=CSharp -message-format antlr -o $PSScriptRoot -no-listener -visitor -Xexact-output-dir $PSScriptRoot\SharpMUSHBoolExpParser.g4
