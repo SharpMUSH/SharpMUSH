@@ -12,24 +12,21 @@ public class BooleanExpressionParser(Parser parser)
 
 	public bool Parse(string text, DBRef caller, DBRef victim)
 	{
-		AntlrInputStream inputStream = new(text);
-		SharpMUSHBoolExpLexer sharpLexer = new(inputStream);
-		CommonTokenStream commonTokenStream = new(sharpLexer);
-		SharpMUSHBoolExpParser sharpParser = new(commonTokenStream);
-		SharpMUSHBoolExpParser.LockContext chatContext = sharpParser.@lock();
-		ParameterExpression parameter = Expression.Parameter(typeof(DBRef), "caller");
-		ParameterExpression parameter2 = Expression.Parameter(typeof(DBRef), "victim");
-		SharpMUSHBooleanExpressionVisitor visitor = new(parser, parameter, parameter2);
-		Expression expression = visitor.Visit(chatContext);
-
-		Log.Logger.Information("Expression: {expression}", expression.ToString());
-
-		UnaryExpression isTrue = Expression.IsTrue(expression);
-
 		Func<DBRef, DBRef, bool> func;
 		if( !_cache.TryGetValue(text, out func!) )
 		{
+			AntlrInputStream inputStream = new(text);
+			SharpMUSHBoolExpLexer sharpLexer = new(inputStream);
+			CommonTokenStream commonTokenStream = new(sharpLexer);
+			SharpMUSHBoolExpParser sharpParser = new(commonTokenStream);
+			SharpMUSHBoolExpParser.LockContext chatContext = sharpParser.@lock();
+			ParameterExpression parameter = Expression.Parameter(typeof(DBRef), "caller");
+			ParameterExpression parameter2 = Expression.Parameter(typeof(DBRef), "victim");
+			SharpMUSHBooleanExpressionVisitor visitor = new(parser, parameter, parameter2);
+			Expression expression = visitor.Visit(chatContext);
+
 			func = Expression.Lambda<Func<DBRef, DBRef, bool>>(expression, parameter, parameter2).Compile();
+
 			_cache.Add(text, func);
 		}
 		return func(caller, victim);
