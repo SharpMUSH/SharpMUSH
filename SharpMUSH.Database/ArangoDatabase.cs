@@ -46,7 +46,7 @@ namespace SharpMUSH.Database
 			var obj = await arangoDB.Document.CreateAsync<dynamic, dynamic>(handle, DatabaseConstants.objects, new
 			{
 				Name = name,
-				Type = "Player",
+				Type = DatabaseConstants.typePlayer,
 				CreationTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
 				ModifiedTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
 			}, returnNew: true);
@@ -81,7 +81,7 @@ namespace SharpMUSH.Database
 		{
 			var obj = await arangoDB.Document.CreateAsync(handle, DatabaseConstants.objects, new SharpObject()
 			{
-				Type = "Room",
+				Type = DatabaseConstants.typeRoom,
 				Name = name
 			});
 
@@ -99,7 +99,7 @@ namespace SharpMUSH.Database
 		{
 			var obj = await arangoDB.Document.CreateAsync(handle, DatabaseConstants.objects, new SharpObject()
 			{
-				Type = "Thing",
+				Type = DatabaseConstants.typeThing,
 				Name = name
 			});
 			var thing = await arangoDB.Document.CreateAsync(handle, DatabaseConstants.things, new SharpThing() { });
@@ -119,7 +119,7 @@ namespace SharpMUSH.Database
 		{
 			var obj = await arangoDB.Document.CreateAsync(handle, DatabaseConstants.objects, new SharpObject()
 			{
-				Type = "Exit",
+				Type = DatabaseConstants.typeExit,
 				Name = name
 			});
 			var exit = await arangoDB.Document.CreateAsync(handle, DatabaseConstants.exits, new SharpExit());
@@ -482,7 +482,7 @@ namespace SharpMUSH.Database
 				bindVars: new Dictionary<string, object>
 				{
 					{ "name", name },
-					{ "type", "Player" }
+					{ "type", DatabaseConstants.typePlayer }
 				});
 
 			// Todo: Edit to return multiple players and let the above layer figure out which one it wants.

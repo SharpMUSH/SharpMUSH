@@ -447,9 +447,9 @@ namespace SharpMUSH.Database.Migrations
 			/* Create Room Zero */
 			var roomZeroObj = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objects, new 
 			{
-				_key = "0",
+				_key = 0.ToString(),
 				Name = "Room Zero",
-				Type = "Room",
+				Type = DatabaseConstants.typeRoom,
 				CreationTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
 				ModifiedTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
 			});
@@ -458,9 +458,9 @@ namespace SharpMUSH.Database.Migrations
 			/* Create Player One */
 			var playerOneObj = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objects, new 
 			{
-				_key = "1",
+				_key = 1.ToString(),
 				Name = "God",
-				Type = "Player",
+				Type = DatabaseConstants.typePlayer,
 				CreationTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
 				ModifiedTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
 			});
@@ -468,9 +468,9 @@ namespace SharpMUSH.Database.Migrations
 			/* Create Room Zero */
 			var roomTwoObj = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objects, new 
 			{
-				_key = "2",
+				_key = 2.ToString(),
 				Name = "Master Room",
-				Type = "Room",
+				Type = DatabaseConstants.typeRoom,
 				CreationTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
 				ModifiedTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
 			});
@@ -478,7 +478,7 @@ namespace SharpMUSH.Database.Migrations
 
 			var playerOnePlayer = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.players, new 
 			{
-				PasswordHash = ""
+				PasswordHash = string.Empty
 			});
 
 			await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.isObject, new SharpEdge { From = roomTwoRoom.Id, To = roomTwoObj.Id });

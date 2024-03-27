@@ -31,5 +31,10 @@ namespace SharpMUSH.Database
 		internal const string typeString = "string";
 		internal const string typeNumber = "number";
 		internal const string typeArray = "array";
+
+		internal const string typeRoom = "ROOM";
+		internal const string typePlayer = "PLAYER";
+		internal const string typeExit = "EXIT";
+		internal const string typeThing = "THING";
 	}
 }
