@@ -29,6 +29,8 @@ namespace SharpMUSH.Database
 		/// <returns>A OneOf over the object being returned</returns>
 		Task<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None>> GetObjectNodeAsync(DBRef dbref);
 
+		OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None> GetObjectNode(DBRef dbref);
+
 		Task<SharpObject?> GetBaseObjectNodeAsync(DBRef dbref);
 
 		Task<SharpPlayer?> GetPlayerByNameAsync(string name);

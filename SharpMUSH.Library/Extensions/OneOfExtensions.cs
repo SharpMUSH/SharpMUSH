@@ -1,6 +1,8 @@
 ﻿using OneOf.Types;
 using OneOf;
+using OneOf.Monads;
 using SharpMUSH.Library.Models;
+using None = OneOf.Types.None;
 
 namespace SharpMUSH.Library.Extensions
 {
@@ -13,6 +15,15 @@ namespace SharpMUSH.Library.Extensions
 					exit => exit.Object,
 					thing => thing.Object,
 					none => null
+				);
+
+		public static Option<SharpObject> ObjectOption(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None> union) =>
+			union.Match<Option<SharpObject>>(
+					player => player.Object!,
+					room => room.Object!,
+					exit => exit.Object!,
+					thing => thing.Object!,
+					none => new OneOf.Monads.None()
 				);
 
 		public static string? Id(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None> union) =>

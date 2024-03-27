@@ -3,6 +3,7 @@ using Core.Arango.Migration;
 using Microsoft.Extensions.Logging;
 using OneOf;
 using OneOf.Types;
+using Serilog;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services;
@@ -133,8 +134,12 @@ namespace SharpMUSH.Database
 			return int.Parse(obj.Key);
 		}
 
+		public OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None> GetObjectNode(DBRef dbref) 
+			=> GetObjectNodeAsync(dbref).Result;
+
 		public async Task<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None>> GetObjectNodeAsync(DBRef dbref)
 		{
+			Log.Logger.Information("Test");
 			// TODO: Version that cares about CreatedMilliseconds 
 			var obj = await arangoDB.Document.GetAsync<dynamic>(handle, DatabaseConstants.objects, dbref.Number.ToString());
 			if (obj == null) return new None();

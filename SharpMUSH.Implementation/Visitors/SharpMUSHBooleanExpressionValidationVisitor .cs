@@ -52,7 +52,8 @@ public class SharpMUSHBooleanExpressionValidationVisitor(Parser parser, DBRef in
 	{
 		var value = context.@string().GetText();
 		var _ = invoker; // Silence the linter / compiler for now.
-		return VisitChildren(context);
+		// We don't check for legality of flags.
+		return true;
 	}
 
 	public override bool? VisitBitPowerExpr(SharpMUSHBoolExpParser.BitPowerExprContext context)
@@ -63,8 +64,8 @@ public class SharpMUSHBooleanExpressionValidationVisitor(Parser parser, DBRef in
 
 	public override bool? VisitBitTypeExpr(SharpMUSHBoolExpParser.BitTypeExprContext context)
 	{
-		var value = context.@string().GetText();
-		return VisitChildren(context);
+		var value = context.@string().GetText().ToUpper();
+		return value is "PLAYER" or "THING" or "EXIT" or "ROOM";
 	}
 
 	public override bool? VisitChannelExpr(SharpMUSHBoolExpParser.ChannelExprContext context)

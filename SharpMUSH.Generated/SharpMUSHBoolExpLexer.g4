@@ -50,5 +50,5 @@ CHANNEL: C H A N N E L CARET;
 IP: I P CARET;
 HOSTNAME: H O S T N A M E CARET;
 ATTRIBUTE_COLON: ':';
-STRING: ~( '#' | '&' | '|' | ':' | '!' | ')' | '(' | '/' )+;
-ATTRIBUTENAME: ~( '#' | '&' | '|' | ':' | '!' | ')' | '(' | '/' | ' ' )+;
+STRING: ~( '#' | '&' | '|' | ':' | '!' | ')' | '(' | '/' | '^' )+;
+ATTRIBUTENAME: ~( '#' | '&' | '|' | ':' | '!' | ')' | '(' | '/' | '^' | ' ' )+;
