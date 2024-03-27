@@ -1,13 +1,14 @@
-﻿using System.Linq.Expressions;
+﻿using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Tests.Parser;
 
 [TestClass]
 public class BooleanExpressionUnitTests : BaseUnitTest
 {
-	[Ignore("Don't break GitHub build while we know this isn't completed.")]
-	[DataRow("#TRUE",true)]
+	[DataRow("#TRUE", true)]
 	[DataRow("(#TRUE)", true)]
+	[DataRow("#FALSE", false)]
+	[DataRow("(#FALSE)", false)]
 	[DataRow("#TRUE & #TRUE", true)]
 	[DataRow("#TRUE | #TRUE", true)]
 	[DataRow("#TRUE & !#FALSE", true)]
@@ -19,9 +20,7 @@ public class BooleanExpressionUnitTests : BaseUnitTest
 	{
 		var bep = BooleanExpressionParser(TestParser());
 
-		var expression = Expression.IsTrue(bep.Parse(input));
-		var result = expression.Method!.Invoke(null, []) as bool?;
-
-		Assert.AreEqual(expected, result!);
+		Assert.IsTrue(bep.Validate(input, new DBRef(1)));
+		Assert.AreEqual(expected, bep.Parse(input, new DBRef(1)));
 	}
 }

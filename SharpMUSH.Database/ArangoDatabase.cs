@@ -392,7 +392,7 @@ namespace SharpMUSH.Database
 			throw new NotImplementedException();
 		}
 
-		public async Task<IEnumerable<OneOf<SharpPlayer, SharpExit, SharpThing>>> GetNearbyObjectsAsync(DBRef obj)
+		public Task<IEnumerable<OneOf<SharpPlayer, SharpExit, SharpThing>>> GetNearbyObjectsAsync(DBRef obj)
 		{
 
 			throw new NotImplementedException();

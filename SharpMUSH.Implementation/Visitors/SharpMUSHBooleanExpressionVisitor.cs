@@ -1,15 +1,17 @@
-﻿using OneOf.Monads;
-using System.Linq.Expressions;
+﻿using System.Linq.Expressions;
 
 namespace SharpMUSH.Implementation.Visitors
 {
-	public class SharpMUSHBooleanExpressionVisitor(Parser parser) : SharpMUSHBoolExpParserBaseVisitor<Expression>
+	public class SharpMUSHBooleanExpressionVisitor(Parser parser, ParameterExpression parameter) : SharpMUSHBoolExpParserBaseVisitor<Expression>
 	{
+		protected override Expression AggregateResult(Expression aggregate, Expression nextResult) => 
+			new Expression[] { aggregate, nextResult }.First(x => x != null);
+
 		public override Expression VisitLock(SharpMUSHBoolExpParser.LockContext context)
 		{
 			var _ = parser.GetType();
-			Expression result;
-			for (result = VisitChildren(context); result.CanReduce; result = result.Reduce()) { }
+			Expression result = VisitChildren(context);
+			for (; result.CanReduce; result = result.Reduce()) { }
 			return result;
 		}
 
@@ -41,85 +43,96 @@ namespace SharpMUSH.Implementation.Visitors
 			=> Expression.Constant(true);
 
 		public override Expression VisitEnclosedExpr(SharpMUSHBoolExpParser.EnclosedExprContext context)
-		{
-			// Do nothing. But consider a reduce.
-			return VisitChildren(context);
-		}
+			=> Visit(context.lockExprList());
 
 		public override Expression VisitOwnerExpr(SharpMUSHBoolExpParser.OwnerExprContext context)
 		{
-			return VisitChildren(context);
+			var value = context.@string().GetText();
+			var result = VisitChildren(context);
+			return result;
 		}
 
 		public override Expression VisitCarryExpr(SharpMUSHBoolExpParser.CarryExprContext context)
 		{
+			var value = context.@string().GetText();
 			return VisitChildren(context);
 		}
 
 		public override Expression VisitBitFlagExpr(SharpMUSHBoolExpParser.BitFlagExprContext context)
 		{
+			var value = context.@string().GetText();
+			var _ = parameter; // Silence the linter / compiler for now.
 			return VisitChildren(context);
 		}
 
 		public override Expression VisitBitPowerExpr(SharpMUSHBoolExpParser.BitPowerExprContext context)
 		{
+			var value = context.@string().GetText();
 			return VisitChildren(context);
 		}
 
 		public override Expression VisitBitTypeExpr(SharpMUSHBoolExpParser.BitTypeExprContext context)
 		{
+			var value = context.@string().GetText();
 			return VisitChildren(context);
 		}
 
 		public override Expression VisitChannelExpr(SharpMUSHBoolExpParser.ChannelExprContext context)
 		{
+			var value = context.@string().GetText();
 			return VisitChildren(context);
 		}
 
 		public override Expression VisitDbRefListExpr(SharpMUSHBoolExpParser.DbRefListExprContext context)
 		{
+			var value = context.attributeName().GetText();
 			return VisitChildren(context);
 		}
 
 		public override Expression VisitIpExpr(SharpMUSHBoolExpParser.IpExprContext context)
 		{
+			var value = context.@string().GetText();
 			return VisitChildren(context);
 		}
 
 		public override Expression VisitHostNameExpr(SharpMUSHBoolExpParser.HostNameExprContext context)
 		{
+			var value = context.@string().GetText();
 			return VisitChildren(context);
 		}
 
 		public override Expression VisitExactObjectExpr(SharpMUSHBoolExpParser.ExactObjectExprContext context)
 		{
+			var value = context.@string().GetText();
 			return VisitChildren(context);
 		}
 
 		public override Expression VisitAttributeExpr(SharpMUSHBoolExpParser.AttributeExprContext context)
 		{
+			var value = context.@string().GetText();
+			var attribute = context.attributeName().GetText();
 			return VisitChildren(context);
 		}
 
 		public override Expression VisitEvaluationExpr(SharpMUSHBoolExpParser.EvaluationExprContext context)
 		{
+			var value = context.@string().GetText();
+			var attribute = context.attributeName().GetText();
 			return VisitChildren(context);
 		}
 
 		public override Expression VisitIndirectExpr(SharpMUSHBoolExpParser.IndirectExprContext context)
 		{
+			var value = context.@string().GetText();
+			var attribute = context.attributeName().GetText();
 			return VisitChildren(context);
 		}
 
-		public override Expression VisitString(SharpMUSHBoolExpParser.StringContext context)
-		{
-			return VisitChildren(context);
-		}
+		public override Expression VisitString(SharpMUSHBoolExpParser.StringContext context) =>
+			VisitChildren(context);
 
-		public override Expression VisitAttributeName(SharpMUSHBoolExpParser.AttributeNameContext context)
-		{
-			return VisitChildren(context);
-		}
+		public override Expression VisitAttributeName(SharpMUSHBoolExpParser.AttributeNameContext context) =>
+			VisitChildren(context);
 
 	}
 }
