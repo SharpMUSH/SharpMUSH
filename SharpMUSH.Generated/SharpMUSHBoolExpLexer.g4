@@ -27,12 +27,13 @@ fragment C: [cC];
 fragment H: [hH];
 fragment I: [iI];
 fragment J: [jJ];
+fragment WS: ' ';
 
-OPEN: '(';
-CLOSE: ')';
+OPEN: WS* '(' WS*;
+CLOSE: WS* ')' WS*;
 NOT: '!';
-AND: '&';
-OR: '|';
+AND: WS* '&' WS*;
+OR: WS* '|' WS*;
 CARRY: '+';
 OWNER: '$';
 INDIRECT: '@';

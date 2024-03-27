@@ -57,7 +57,7 @@ public partial class SharpMUSHBoolExpParser : Parser {
 	};
 
 	private static readonly string[] _LiteralNames = {
-		null, "'('", "')'", "'!'", "'&'", "'|'", "'+'", "'$'", "'@'", "'/'", null, 
+		null, null, null, "'!'", null, null, "'+'", "'$'", "'@'", "'/'", null, 
 		null, null, null, null, null, null, null, null, null, null, "':'"
 	};
 	private static readonly string[] _SymbolicNames = {
