@@ -229,7 +229,7 @@ namespace SharpMUSH.Implementation.Functions
 			=> obj.Flags!.Contains(flag);
 
 		public static bool HasObjectPowers(SharpObject obj, string power) =>
-			obj.Powers!.Contains(power);
+			obj.Powers!.Any( x => x.Name == power || x.Alias == power);
 
 		public static string Locate(SharpObject looker, SharpObject executor, string name, LocateFlags flags)
 		{

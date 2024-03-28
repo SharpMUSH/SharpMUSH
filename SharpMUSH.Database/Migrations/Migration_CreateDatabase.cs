@@ -179,6 +179,36 @@ namespace SharpMUSH.Database.Migrations
 				{
 					Collection = new ArangoCollection
 					{
+						Name = DatabaseConstants.objectPowers,
+						Type = ArangoCollectionType.Document,
+						WaitForSync = true,
+						Schema = new ArangoSchema()
+						{
+							Rule = new {
+								type = DatabaseConstants.typeObject,
+								properties = new
+								{
+									Name = new { type = DatabaseConstants.typeString },
+									Alias = new { type = DatabaseConstants.typeString },
+									SetPermissions = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } },
+									UnsetPermissions = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } },
+									TypeRestrictions = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } }
+								},
+								required = (string[])[
+									nameof(SharpPower.Name),
+									nameof(SharpPower.Alias),
+									nameof(SharpPower.SetPermissions),
+									nameof(SharpPower.UnsetPermissions),
+									nameof(SharpPower.TypeRestrictions)
+										]
+							}
+						}
+					}
+				},
+				new()
+				{
+					Collection = new ArangoCollection
+					{
 						Name = DatabaseConstants.attributes,
 						Type = ArangoCollectionType.Document,
 						WaitForSync = true,
@@ -258,13 +288,13 @@ namespace SharpMUSH.Database.Migrations
 							}
 						}
 					},
-					Indices = new ArangoIndex[]
-						{
+					Indices =
+						[
 							new() { Fields = [ nameof(SharpFunction.Name) ] },
 							new() { Fields = [ nameof(SharpFunction.Traits) ] },
 							new() { Fields = [ nameof(SharpFunction.Alias) ] },
 							new() { Fields = [ nameof(SharpFunction.Enabled) ] },
-						}
+						]
 				},
 				new()
 				{
@@ -288,17 +318,11 @@ namespace SharpMUSH.Database.Migrations
 							}
 						}
 					},
-					Indices = new ArangoIndex[]
-						{
-							new()
-							{
-								Fields = [nameof(SharpCommand.Name)]
-							},
-							new()
-							{
-								Fields = [nameof(SharpCommand.Alias)]
-							}
-						}
+					Indices =
+						[
+							new() { Fields = [nameof(SharpCommand.Name)] },
+							new() { Fields = [nameof(SharpCommand.Alias)] }
+						]
 				},
 				new()
 				{
@@ -374,25 +398,43 @@ namespace SharpMUSH.Database.Migrations
 					}
 				}
 			},
-				Graphs = new ArangoGraph[]
-				{
+				Graphs =
+				[
 					new()
 					{
-						EdgeDefinitions = 
+						EdgeDefinitions =
 						[
 							new ArangoEdgeDefinition()
 							{
 								Collection = DatabaseConstants.isObject,
 								To = [DatabaseConstants.objects],
 								From = [
-									DatabaseConstants.things, 
-									DatabaseConstants.players, 
-									DatabaseConstants.rooms, 
+									DatabaseConstants.things,
+									DatabaseConstants.players,
+									DatabaseConstants.rooms,
 									DatabaseConstants.exits
 									]
 							}
 						],
 						Name = DatabaseConstants.graphObjects
+					},
+					new()
+					{
+						EdgeDefinitions =
+						[
+							new ArangoEdgeDefinition()
+							{
+								Collection = DatabaseConstants.hasPowers,
+								To = [DatabaseConstants.objectPowers],
+								From = [
+									DatabaseConstants.things,
+									DatabaseConstants.players,
+									DatabaseConstants.rooms,
+									DatabaseConstants.exits
+									]
+							}
+						],
+						Name = DatabaseConstants.graphPowers
 					},
 					new()
 					{
@@ -436,8 +478,13 @@ namespace SharpMUSH.Database.Migrations
 						],
 						Name = DatabaseConstants.graphLocations
 					}
-				}
-			}, new ArangoMigrationOptions { DryRun = false, Notify = x => Console.WriteLine("Migration Change: {0}: {1} - {2}", x.Name, x.Object, x.State) }); ;
+				]
+			}, 
+			new ArangoMigrationOptions 
+			{ 
+				DryRun = false, 
+				Notify = x => Console.WriteLine("Migration Change: {0}: {1} - {2}", x.Name, x.Object, x.State) 
+			});
 
 
 			/// The stuff below this is not running for some reason.

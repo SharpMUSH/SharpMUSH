@@ -32,7 +32,9 @@ namespace SharpMUSH.Library.Models
 		
 		public long ModifiedTime { get; set; } = DateTimeOffset.Now.ToUnixTimeMilliseconds();
 
-		public string[]? Powers { get; set; }
+		// RELATIONSHIP
+		[JsonIgnore]
+		public SharpPower[]? Powers { get; set; }
 
 		// RELATIONSHIP
 		[JsonIgnore]

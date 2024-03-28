@@ -34,7 +34,7 @@ namespace SharpMUSH.Library
 			=> IsGod(obj) || IsWizard(obj) || IsRoyalty(obj);
 
 		public static bool HasPower(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj, string power)
-			=> obj.Object()!.Powers!.Contains(power);
+			=> obj.Object()!.Powers!.Any(x => x.Name == power || x.Alias == power);
 
 		public static bool HasFlag(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj, string flag)
 			=> obj.Object()!.Flags!.Any(x => x.Name == flag);
