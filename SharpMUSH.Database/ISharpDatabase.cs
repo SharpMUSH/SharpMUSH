@@ -1,5 +1,6 @@
 ﻿using OneOf;
 using OneOf.Types;
+using SharpMUSH.Database.Models;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Database
@@ -8,13 +9,13 @@ namespace SharpMUSH.Database
 	{
 		Task Migrate();
 
-		Task<int> CreatePlayerAsync(string name, string password, DBRef location);
+		Task<DBRef> CreatePlayerAsync(string name, string password, DBRef location);
 
-		Task<int> CreateRoomAsync(string name, SharpPlayer creator);
+		Task<DBRef> CreateRoomAsync(string name, SharpPlayer creator);
 
-		Task<int> CreateThingAsync(string name, OneOf<SharpPlayer, SharpRoom, SharpThing> location, SharpPlayer creator);
+		Task<DBRef> CreateThingAsync(string name, OneOf<SharpPlayer, SharpRoom, SharpThing> location, SharpPlayer creator);
 
-		Task<int> CreateExitAsync(string name, OneOf<SharpPlayer, SharpRoom, SharpThing> location, SharpPlayer creator);
+		Task<DBRef> CreateExitAsync(string name, OneOf<SharpPlayer, SharpRoom, SharpThing> location, SharpPlayer creator);
 
 		Task<IEnumerable<SharpAttribute>?> GetAttributeAsync(DBRef dbref, string[] attribute);
 		
@@ -33,7 +34,7 @@ namespace SharpMUSH.Database
 
 		Task<SharpObject?> GetBaseObjectNodeAsync(DBRef dbref);
 
-		Task<SharpPlayer?> GetPlayerByNameAsync(string name);
+		Task<IEnumerable<SharpPlayer>> GetPlayerByNameAsync(string name);
 
 		/// <summary>
 		/// Set an attribute. This does not do any checks, as that is up to the functionality itself.

@@ -2,6 +2,7 @@
 using Core.Arango;
 using Core.Arango.Protocol;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Database.Models;
 
 namespace SharpMUSH.Database.Migrations
 {
@@ -130,7 +131,7 @@ namespace SharpMUSH.Database.Migrations
 								properties = new
 								{
 									PasswordHash = new { type = DatabaseConstants.typeString },
-									Aliases = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } } 
+									Aliases = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } }
 								},
 								required = (string[])[nameof(SharpPlayer.PasswordHash)]
 							}
@@ -249,13 +250,13 @@ namespace SharpMUSH.Database.Migrations
 							}
 						}
 					},
-					Indices = new ArangoIndex[]
-						{
+					Indices =
+						[
 							new()
 							{
 								Fields = [nameof(SharpAttributeEntry.Name)]
 							}
-						}
+						]
 				},
 				new()
 				{
@@ -346,6 +347,15 @@ namespace SharpMUSH.Database.Migrations
 				{
 					Collection = new ArangoCollection
 					{
+						Name = DatabaseConstants.hasParent,
+						Type = ArangoCollectionType.Edge,
+						WaitForSync = true
+					}
+				},
+				new()
+				{
+					Collection = new ArangoCollection
+					{
 						Name = DatabaseConstants.hasFlags,
 						Type = ArangoCollectionType.Edge,
 						WaitForSync = true
@@ -427,10 +437,7 @@ namespace SharpMUSH.Database.Migrations
 								Collection = DatabaseConstants.hasPowers,
 								To = [DatabaseConstants.objectPowers],
 								From = [
-									DatabaseConstants.things,
-									DatabaseConstants.players,
-									DatabaseConstants.rooms,
-									DatabaseConstants.exits
+									DatabaseConstants.objects
 									]
 							}
 						],
@@ -442,14 +449,25 @@ namespace SharpMUSH.Database.Migrations
 						[
 							new ArangoEdgeDefinition()
 							{
+								Collection = DatabaseConstants.hasFlags,
+								To = [DatabaseConstants.objectFlags],
+								From = [
+									DatabaseConstants.objects
+									]
+							}
+						],
+						Name = DatabaseConstants.graphFlags
+					},
+					new()
+					{
+						EdgeDefinitions =
+						[
+							new ArangoEdgeDefinition()
+							{
 								Collection = DatabaseConstants.hasAttribute,
 								To = [DatabaseConstants.attributes],
 								From = [
-									DatabaseConstants.attributes,
-									DatabaseConstants.things,
-									DatabaseConstants.players,
-									DatabaseConstants.rooms,
-									DatabaseConstants.exits
+									DatabaseConstants.objects
 									]
 							}
 						],
@@ -463,27 +481,93 @@ namespace SharpMUSH.Database.Migrations
 							{
 								Collection = DatabaseConstants.atLocation,
 								To = [
-									DatabaseConstants.things,
-									DatabaseConstants.players,
 									DatabaseConstants.rooms,
-									DatabaseConstants.exits
+									DatabaseConstants.things,
+									DatabaseConstants.players
 									],
 								From = [
+									DatabaseConstants.exits,
 									DatabaseConstants.things,
-									DatabaseConstants.players,
-									DatabaseConstants.rooms,
-									DatabaseConstants.exits
+									DatabaseConstants.players
 									]
 							}
 						],
-						Name = DatabaseConstants.graphLocations
+						Name = DatabaseConstants.graphLocations,
+					},
+					new()
+					{
+						EdgeDefinitions =
+						[
+							new ArangoEdgeDefinition()
+							{
+								Collection = DatabaseConstants.hasHome,
+								To = [
+									DatabaseConstants.objects
+									],
+								From = [
+									DatabaseConstants.objects
+									]
+							}
+						],
+						Name = DatabaseConstants.graphHomes
+					},
+					new()
+					{
+						EdgeDefinitions =
+						[
+							new ArangoEdgeDefinition()
+							{
+								Collection = DatabaseConstants.hasObjectOwner,
+								To = [
+									DatabaseConstants.objects
+									],
+								From = [
+									DatabaseConstants.objects
+									]
+							}
+						],
+						Name = DatabaseConstants.graphObjectOwners
+					},
+					new()
+					{
+						EdgeDefinitions =
+						[
+							new ArangoEdgeDefinition()
+							{
+								Collection = DatabaseConstants.hasAttributeOwner,
+								To = [
+									DatabaseConstants.objects
+									],
+								From = [
+									DatabaseConstants.objects
+									]
+							}
+						],
+						Name = DatabaseConstants.graphAttributeOwners
+					},
+					new()
+					{
+						EdgeDefinitions =
+						[
+							new ArangoEdgeDefinition()
+							{
+								Collection = DatabaseConstants.hasParent,
+								To = [
+									DatabaseConstants.objects
+									],
+								From = [
+									DatabaseConstants.objects
+									]
+							}
+						],
+						Name = DatabaseConstants.graphParents
 					}
 				]
-			}, 
-			new ArangoMigrationOptions 
-			{ 
-				DryRun = false, 
-				Notify = x => Console.WriteLine("Migration Change: {0}: {1} - {2}", x.Name, x.Object, x.State) 
+			},
+			new ArangoMigrationOptions
+			{
+				DryRun = false,
+				Notify = x => Console.WriteLine("Migration Change: {0}: {1} - {2}", x.Name, x.Object, x.State)
 			});
 
 
@@ -492,7 +576,7 @@ namespace SharpMUSH.Database.Migrations
 			/// The exception is a Schema Failure.
 
 			/* Create Room Zero */
-			var roomZeroObj = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objects, new 
+			var roomZeroObj = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objects, new
 			{
 				_key = 0.ToString(),
 				Name = "Room Zero",
@@ -503,7 +587,7 @@ namespace SharpMUSH.Database.Migrations
 			var roomZeroRoom = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.rooms, new SharpRoom { });
 
 			/* Create Player One */
-			var playerOneObj = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objects, new 
+			var playerOneObj = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objects, new
 			{
 				_key = 1.ToString(),
 				Name = "God",
@@ -513,7 +597,7 @@ namespace SharpMUSH.Database.Migrations
 			});
 
 			/* Create Room Zero */
-			var roomTwoObj = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objects, new 
+			var roomTwoObj = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objects, new
 			{
 				_key = 2.ToString(),
 				Name = "Master Room",
@@ -523,8 +607,9 @@ namespace SharpMUSH.Database.Migrations
 			});
 			var roomTwoRoom = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.rooms, new SharpRoom { });
 
-			var playerOnePlayer = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.players, new 
+			var playerOnePlayer = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.players, new
 			{
+				Aliases = Array.Empty<string>(),
 				PasswordHash = string.Empty
 			});
 
@@ -533,9 +618,9 @@ namespace SharpMUSH.Database.Migrations
 			await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.isObject, new SharpEdge { From = playerOnePlayer.Id, To = playerOneObj.Id });
 			await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.atLocation, new SharpEdge { From = playerOnePlayer.Id, To = roomZeroRoom.Id });
 			await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.hasHome, new SharpEdge { From = playerOnePlayer.Id, To = roomZeroRoom.Id });
-			await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.hasObjectOwner, new SharpEdge { From = roomTwoRoom.Id, To = playerOnePlayer.Id });
-			await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.hasObjectOwner, new SharpEdge { From = roomZeroRoom.Id, To = playerOnePlayer.Id });
-			await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.hasObjectOwner, new SharpEdge { From = playerOnePlayer.Id, To = playerOneObj.Id });
+			await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.hasObjectOwner, new SharpEdge { From = roomTwoObj.Id, To = playerOnePlayer.Id });
+			await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.hasObjectOwner, new SharpEdge { From = roomZeroObj.Id, To = playerOnePlayer.Id });
+			await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.hasObjectOwner, new SharpEdge { From = playerOneObj.Id, To = playerOnePlayer.Id });
 		}
 
 		public Task Down(IArangoMigrator migrator, ArangoHandle handle)

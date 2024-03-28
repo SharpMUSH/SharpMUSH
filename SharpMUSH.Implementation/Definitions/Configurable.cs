@@ -6,7 +6,7 @@
 		public const int MaxFunctionDepth = 1000000;
 		public const int MaxRecursionDepth = 1000000;
 
-		public const int PlayerStart = 1;
+		public const int PlayerStart = 0;
 
 		/// <summary>
 		/// Historically, MU*s use the old SEX attribute for this for Compatibility reasons.

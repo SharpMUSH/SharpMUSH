@@ -18,6 +18,7 @@ namespace SharpMUSH.Database
 		internal const string isObject = "edge_is_object";
 		internal const string atLocation = "edge_at_location";
 		internal const string hasObjectOwner = "edge_has_object_owner";
+		internal const string hasParent = "edge_has_parent";
 		internal const string hasHome = "edge_has_home";
 		internal const string hasFlags = "edge_has_flags";
 		internal const string hasPowers = "edge_has_powers";
@@ -27,8 +28,13 @@ namespace SharpMUSH.Database
 
 		internal const string graphObjects = "graph_objects";
 		internal const string graphPowers = "graph_powers";
+		internal const string graphFlags = "graph_flags";
 		internal const string graphAttributes = "graph_attributes";
 		internal const string graphLocations = "graph_locations";
+		internal const string graphHomes = "graph_homes";
+		internal const string graphParents = "graph_parents";
+		internal const string graphObjectOwners = "graph_object_owners";
+		internal const string graphAttributeOwners = "graph_attribute_owners";
 
 		internal const string typeObject = "object";
 		internal const string typeString = "string";

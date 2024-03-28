@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using OneOf;
 
 namespace SharpMUSH.Library.Models
 {
@@ -22,11 +23,7 @@ namespace SharpMUSH.Library.Models
 
 		public required string Type { get; set; }
 
-		// RELATIONSHIP
-		[JsonIgnore]
-		public virtual SharpPlayer? Owner { get; set; }
-
-		public Dictionary<string, SharpLock>? Locks { get; set; }
+		public required Dictionary<string, SharpLock> Locks { get; set; }
 
 		public long CreationTime { get; set; } = DateTimeOffset.Now.ToUnixTimeMilliseconds();
 		
@@ -34,18 +31,22 @@ namespace SharpMUSH.Library.Models
 
 		// RELATIONSHIP
 		[JsonIgnore]
-		public SharpPower[]? Powers { get; set; }
+		public required IQueryable<SharpPlayer> Owner { get; set; }
 
 		// RELATIONSHIP
 		[JsonIgnore]
-		public virtual SharpAttribute[]? Attributes { get; set; }
+		public required IQueryable<SharpPower> Powers { get; set; }
 
 		// RELATIONSHIP
 		[JsonIgnore]
-		public virtual SharpObjectFlag[]? Flags { get; set; }
+		public required IQueryable<SharpAttribute> Attributes { get; set; }
 
 		// RELATIONSHIP
 		[JsonIgnore]
-		public virtual SharpObject? Parent { get; set; }
+		public required IQueryable<SharpObjectFlag> Flags { get; set; }
+		
+		// RELATIONSHIP
+		[JsonIgnore]
+		public required IQueryable<SharpObject> Parent { get ; set; }
 	}
 }

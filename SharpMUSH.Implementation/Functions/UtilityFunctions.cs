@@ -27,7 +27,7 @@ namespace SharpMUSH.Implementation.Functions
 				args[1].Message!.ToString(), 
 				new Library.Models.DBRef(trueLocation ?? 1)).Result;
 
-			return new CallState($"#{created}");
+			return new CallState($"#{created.Number}:{created.CreationMilliseconds}");
 		}
 
 		[SharpFunction(Name = "ansi", MinArgs = 2, Flags = FunctionFlags.Regular)]

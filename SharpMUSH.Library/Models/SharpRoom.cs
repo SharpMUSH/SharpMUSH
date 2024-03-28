@@ -10,6 +10,6 @@ namespace SharpMUSH.Library.Models
 
 		// Relationship
 		[JsonIgnore]
-		public SharpObject? Object { get; set; }
+		public SharpObject Object { get; set; }
 	}
 }

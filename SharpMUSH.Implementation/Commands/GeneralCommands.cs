@@ -1,4 +1,5 @@
 ﻿using OneOf.Monads;
+using SharpMUSH.Database.Models;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using CB = SharpMUSH.Implementation.Definitions.CommandBehavior;

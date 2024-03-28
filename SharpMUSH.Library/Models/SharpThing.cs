@@ -12,7 +12,7 @@ namespace SharpMUSH.Library.Models
 
 		// Relationship
 		[JsonIgnore]
-		public virtual SharpObject? Object { get; set; }
+		public virtual SharpObject Object { get; set; }
 
 		// Relationship
 		[JsonIgnore]

@@ -42,11 +42,11 @@ namespace SharpMUSH.Library
 		public static bool Inheritable(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
 			=> IsPlayer(obj)
 					|| obj.HasFlag("Trust")
-					|| obj.Object()!.Owner!.Object!.Flags!.Any(x => x.Name == "Trust")
+					|| obj.Object()!.Owner!.Single().Object.Flags!.Any(x => x.Name == "Trust")
 					|| IsWizard(obj);
 
 		public static bool Owns(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> who,
 																 OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> what)
-			=> who.Object()!.Owner!.Object!.Id == what.Object()!.Owner!.Object!.Id;
+			=> who.Object()!.Owner!.Single().Object.Id == what.Object()!.Owner!.Single().Object.Id;
 	}
 }

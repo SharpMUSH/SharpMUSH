@@ -1,6 +1,7 @@
 ﻿using OneOf.Monads;
 using Serilog;
 using SharpMUSH.Library.Models;
+using System.Data.SqlTypes;
 using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Implementation.Commands
@@ -72,7 +73,7 @@ namespace SharpMUSH.Implementation.Commands
 					var rs = parser.Database.GetObjectNodeAsync(dbref).Result;
 					return (rs.IsT4 || !rs.IsT0) ? null : rs.AsT0;
 				},
-				name => parser.Database.GetPlayerByNameAsync(name).Result)!;
+				name => parser.Database.GetPlayerByNameAsync(name).Result.First());
 
 			if (foundDB == null)
 			{
@@ -89,7 +90,7 @@ namespace SharpMUSH.Implementation.Commands
 				return new None();
 			}
 
-			// TODO: Step 3: Confirm there is no Sitelock.
+			// TODO: Step 3: Confirm there is no SiteLock.
 			// TODO: Step 4: Bind object in the ConnectionService.
 			parser.ConnectionService.Bind(parser.CurrentState.Handle!, 
 				new DBRef(foundDB!.Object!.Key!.Value, foundDB!.Object!.CreationTime));

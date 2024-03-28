@@ -18,7 +18,7 @@ namespace SharpMUSH.IntegrationTests
 		[TestMethod]
 		public async Task TestRoomZero()
 		{
-			var roomZero = (await database!.GetObjectNodeAsync(new Library.Models.DBRef(0))).AsT1;
+			var roomZero = (await database!.GetObjectNodeAsync(new DBRef(0))).AsT1;
 
 			Assert.AreEqual(typeof(SharpRoom), roomZero.GetType());
 			Assert.AreEqual("Room Zero", roomZero!.Object!.Name);
@@ -28,7 +28,7 @@ namespace SharpMUSH.IntegrationTests
 		[TestMethod]
 		public async Task TestRoomTwo()
 		{
-			var masterRoom = (await database!.GetObjectNodeAsync(new Library.Models.DBRef(2))).AsT1;
+			var masterRoom = (await database!.GetObjectNodeAsync(new DBRef(2))).AsT1;
 
 			Assert.AreEqual(typeof(SharpRoom), masterRoom.GetType());
 			Assert.AreEqual("Master Room", masterRoom!.Object!.Name);

@@ -3,7 +3,6 @@ using SharpMUSH.Implementation.Tools;
 using OneOf;
 using SharpMUSH.Library.Models;
 using System.Text.RegularExpressions;
-using System.Linq;
 using OneOf.Monads;
 
 namespace SharpMUSH.Implementation.Functions
@@ -30,7 +29,7 @@ namespace SharpMUSH.Implementation.Functions
 
 			if (string.IsNullOrEmpty(attr)) { return false; }
 
-			return (new DBRef(int.Parse(dbref!), string.IsNullOrWhiteSpace(ctime) ? null : int.Parse(ctime)), attr);
+			return (new DBRef(int.Parse(dbref!), string.IsNullOrWhiteSpace(ctime) ? null : long.Parse(ctime)), attr);
 		}
 
 		public static Option<DBRef> ParseDBRef(string DBRefAttr)
@@ -41,7 +40,7 @@ namespace SharpMUSH.Implementation.Functions
 
 			if (string.IsNullOrEmpty(dbref)) { return new None(); }
 
-			return (new DBRef(int.Parse(dbref!), string.IsNullOrWhiteSpace(ctime) ? null : int.Parse(ctime)));
+			return (new DBRef(int.Parse(dbref!), string.IsNullOrWhiteSpace(ctime) ? null : long.Parse(ctime)));
 		}
 
 		private static CallState AggregateDecimals(List<CallState> args, Func<decimal, decimal, decimal> aggregateFunction) =>
