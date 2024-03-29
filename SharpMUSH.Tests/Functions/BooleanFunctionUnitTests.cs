@@ -11,7 +11,8 @@
 		[DataRow("t(#-1 Words)", "0")]
 		[DataRow("t()", "0")]
 		[DataRow("t( )", "1")]
-		public void Add(string str, string expected)
+		[DataRow("t(%b)", "1")]
+		public void T(string str, string expected)
 		{
 			Console.WriteLine("Testing: {0}", str);
 
