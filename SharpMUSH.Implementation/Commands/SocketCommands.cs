@@ -11,7 +11,7 @@ namespace SharpMUSH.Implementation.Commands
 		private static Regex ConnectionPatternRegex = ConnectionPattern();
 
 		[SharpCommand(Name = "WHO", Behavior = Definitions.CommandBehavior.SOCKET | Definitions.CommandBehavior.NoParse, MinArgs = 0, MaxArgs = 1)]
-		public static Option<CallState> WHO(Parser parser, SharpCommandAttribute _2)
+		public static Option<CallState> WHO(MUSHCodeParser parser, SharpCommandAttribute _2)
 		{
 			_ = parser.State;
 			var everyone = parser.ConnectionService.GetAll();
@@ -45,7 +45,7 @@ namespace SharpMUSH.Implementation.Commands
 		/// connect "person without a password"
 		/// </example>
 		[SharpCommand(Name = "CONNECT", Behavior = Definitions.CommandBehavior.SOCKET | Definitions.CommandBehavior.NoParse, MinArgs = 1, MaxArgs = 2)]
-		public static Option<CallState> CONNECT(Parser parser, SharpCommandAttribute _2)
+		public static Option<CallState> CONNECT(MUSHCodeParser parser, SharpCommandAttribute _2)
 		{
 			// Early HUH if already logged in.
 			if( parser.ConnectionService.Get(parser.CurrentState.Handle!)?.Ref != null)

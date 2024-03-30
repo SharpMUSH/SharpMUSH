@@ -5,7 +5,7 @@ using System.Linq.Expressions;
 
 namespace SharpMUSH.Implementation;
 
-public class BooleanExpressionParser(Parser parser)
+public class BooleanExpressionParser(MUSHCodeParser parser)
 {
 	private readonly Dictionary<string, Func<DBRef, DBRef, bool>> _cache = [];
 

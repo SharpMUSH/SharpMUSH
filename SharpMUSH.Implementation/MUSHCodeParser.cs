@@ -13,7 +13,7 @@ namespace SharpMUSH.Implementation
 	/// Provides the parser.
 	/// Each call is Synchronous, and stateful at this time.
 	/// </summary>
-	public class Parser(
+	public class MUSHCodeParser(
 			IPasswordService _passwordService,
 			IPermissionService _permissionService,
 			ISharpDatabase _database,
@@ -56,7 +56,7 @@ namespace SharpMUSH.Implementation
 		/// </summary>
 		public ImmutableStack<ParserState> State { get; private set; } = [];
 
-		public Parser(
+		public MUSHCodeParser(
 			IPasswordService passwordService,
 			IPermissionService permissionService,
 			ISharpDatabase database,
@@ -68,19 +68,19 @@ namespace SharpMUSH.Implementation
 				=> State = state ?? [];
 
 
-		public Parser Push(ParserState state)
+		public MUSHCodeParser Push(ParserState state)
 		{
 			State = State.Push(state);
 			return this;
 		}
 
-		public Parser Pop()
+		public MUSHCodeParser Pop()
 		{
 			State = State.Pop();
 			return this;
 		}
 
-		public Parser(
+		public MUSHCodeParser(
 			IPasswordService passwordService,
 			IPermissionService permissionService,
 			ISharpDatabase database,

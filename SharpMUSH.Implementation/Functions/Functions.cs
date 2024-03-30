@@ -8,7 +8,7 @@ namespace SharpMUSH.Implementation.Functions
 {
 	public static partial class Functions
 	{
-		private static readonly Dictionary<string, (SharpFunctionAttribute Attribute, Func<Parser, CallState> Function)> _functionLibrary = [];
+		private static readonly Dictionary<string, (SharpFunctionAttribute Attribute, Func<MUSHCodeParser, CallState> Function)> _functionLibrary = [];
 		private static readonly Dictionary<string, (MethodInfo Method, SharpFunctionAttribute Attribute)> _knownBuiltInMethods = typeof(Functions)
 			.GetMethods()
 			.Select(m => (Method: m, Attribute: m.GetCustomAttribute(typeof(SharpFunctionAttribute), false) as SharpFunctionAttribute))
@@ -20,7 +20,7 @@ namespace SharpMUSH.Implementation.Functions
 		{
 			foreach (var knownMethod in _knownBuiltInMethods)
 			{
-				_functionLibrary.Add(knownMethod.Key, (knownMethod.Value.Attribute, new Func<Parser, CallState>(p => (CallState)knownMethod.Value.Method.Invoke(null, [p, knownMethod.Value.Attribute])!)));
+				_functionLibrary.Add(knownMethod.Key, (knownMethod.Value.Attribute, new Func<MUSHCodeParser, CallState>(p => (CallState)knownMethod.Value.Method.Invoke(null, [p, knownMethod.Value.Attribute])!)));
 			}
 		}
 
@@ -32,7 +32,7 @@ namespace SharpMUSH.Implementation.Functions
 		/// <param name="context">Function Context for Depth</param>
 		/// <param name="args">Arguments</param>
 		/// <returns>The resulting CallState.</returns>
-		public static CallState CallFunction(string name, Parser parser, FunctionContext context, List<CallState> args)
+		public static CallState CallFunction(string name, MUSHCodeParser parser, FunctionContext context, List<CallState> args)
 		{
 			if (!_functionLibrary.TryGetValue(name, out var libraryMatch))
 			{
@@ -120,7 +120,7 @@ namespace SharpMUSH.Implementation.Functions
 				return new CallState(attribute.MaxArgs > 1 ? Errors.ErrorIntegers : Errors.ErrorInteger);
 			}
 
-			parser.Push(new Parser.ParserState(
+			parser.Push(new MUSHCodeParser.ParserState(
 				Registers: currentState.Registers,
 				CurrentEvaluation: currentState.CurrentEvaluation,
 				Function: name,
@@ -137,12 +137,12 @@ namespace SharpMUSH.Implementation.Functions
 			return result;
 		}
 
-		private static Option<(SharpFunctionAttribute, Func<Parser, CallState>)> DiscoverBuiltInFunction(string name)
+		private static Option<(SharpFunctionAttribute, Func<MUSHCodeParser, CallState>)> DiscoverBuiltInFunction(string name)
 		{
 			if (!_knownBuiltInMethods.TryGetValue(name, out var result))
 				return new OneOf.Monads.None();
 
-			return (result.Attribute, new Func<Parser, CallState>
+			return (result.Attribute, new Func<MUSHCodeParser, CallState>
 				(p => (CallState)result.Method.Invoke(null, [p, result.Attribute])!));
 		}
 
@@ -161,7 +161,7 @@ namespace SharpMUSH.Implementation.Functions
 		/// <param name="attr">Function Attributes that describe behavior</param>
 		/// <param name="func">Function to run when this is called</param>
 		/// <returns>True if could be added. False if the name already existed.</returns>
-		public static bool AddFunction(string name, SharpFunctionAttribute attr, Func<Parser, CallState> func) =>
+		public static bool AddFunction(string name, SharpFunctionAttribute attr, Func<MUSHCodeParser, CallState> func) =>
 			_functionLibrary.TryAdd(name.ToLower(), (attr, func));
 	}
 }

@@ -3,12 +3,12 @@ using System.Linq.Expressions;
 
 namespace SharpMUSH.Implementation.Visitors;
 
-public class SharpMUSHBooleanExpressionVisitor(Parser parser, ParameterExpression caller, ParameterExpression victim) : SharpMUSHBoolExpParserBaseVisitor<Expression>
+public class SharpMUSHBooleanExpressionVisitor(MUSHCodeParser parser, ParameterExpression caller, ParameterExpression victim) : SharpMUSHBoolExpParserBaseVisitor<Expression>
 {
 	protected override Expression AggregateResult(Expression aggregate, Expression nextResult) =>
 		new Expression[] { aggregate, nextResult }.First(x => x != null);
 
-	private readonly Expression<Func<DBRef, string, Parser, bool>> hasFlag = (dbRef, flag, psr)
+	private readonly Expression<Func<DBRef, string, MUSHCodeParser, bool>> hasFlag = (dbRef, flag, psr)
 		=> psr.Database.GetObjectNode(dbRef)!
 				.Match(
 					player => player.Object!.Flags!.Any(x => x.Name == flag || x.Symbol == flag),
@@ -18,7 +18,7 @@ public class SharpMUSHBooleanExpressionVisitor(Parser parser, ParameterExpressio
 					none => false
 				);
 
-	private readonly Expression<Func<DBRef, string, Parser, bool>> hasPower = (dbRef, power, psr)
+	private readonly Expression<Func<DBRef, string, MUSHCodeParser, bool>> hasPower = (dbRef, power, psr)
 		=> psr.Database.GetObjectNode(dbRef)!
 				.Match(
 					player => player.Object!.Powers!.Any(x => x.Name == power || x.Alias == power ),
@@ -28,7 +28,7 @@ public class SharpMUSHBooleanExpressionVisitor(Parser parser, ParameterExpressio
 					none => false
 				);
 
-	private readonly Expression<Func<DBRef, string, Parser, bool>> isType = (dbRef, type, psr)
+	private readonly Expression<Func<DBRef, string, MUSHCodeParser, bool>> isType = (dbRef, type, psr)
 		=> psr.Database.GetObjectNode(dbRef)!
 				.Match(
 					player => player.Object!.Type == type,

@@ -9,7 +9,7 @@ namespace SharpMUSH.Implementation.Visitors
 	/// and new Visitors may need to be added.
 	/// </summary>
 	/// <param name="parser">The Parser, so that inner functions can force a parser-call.</param>
-	public class SharpMUSHParserVisitor(Parser parser) : SharpMUSHParserBaseVisitor<CallState?>
+	public class SharpMUSHParserVisitor(MUSHCodeParser parser) : SharpMUSHParserBaseVisitor<CallState?>
 	{
 		protected override CallState? AggregateResult(CallState? aggregate, CallState? nextResult)
 		{

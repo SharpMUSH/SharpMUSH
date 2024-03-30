@@ -7,7 +7,7 @@ namespace SharpMUSH.Implementation.Functions
 		private const string Chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz+/";
 
 		[SharpFunction(Name = "baseconv", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-		public static CallState BaseConv(Parser parser, SharpFunctionAttribute _2)
+		public static CallState BaseConv(MUSHCodeParser parser, SharpFunctionAttribute _2)
 			=> ValidateIntegerAndEvaluate(parser.CurrentState.Arguments[1..], (IEnumerable<int> x) =>
 				{
 					var input = MModule.plainText(parser.CurrentState.Arguments[0].Message!);
@@ -50,31 +50,31 @@ namespace SharpMUSH.Implementation.Functions
 				});
 
 		[SharpFunction(Name = "band", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-		public static CallState BAnd(Parser parser, SharpFunctionAttribute _2)
+		public static CallState BAnd(MUSHCodeParser parser, SharpFunctionAttribute _2)
 			=> AggregateIntegers(parser.CurrentState.Arguments, (x, y) => x & y);
 
 		[SharpFunction(Name = "bnand", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-		public static CallState BNand(Parser parser, SharpFunctionAttribute _2)
+		public static CallState BNand(MUSHCodeParser parser, SharpFunctionAttribute _2)
 			=> AggregateIntegers(parser.CurrentState.Arguments, (x, y) => ~(x & y));
 
 		[SharpFunction(Name = "bnot", MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-		public static CallState BNot(Parser parser, SharpFunctionAttribute _2)
+		public static CallState BNot(MUSHCodeParser parser, SharpFunctionAttribute _2)
 			=> EvaluateInteger(parser.CurrentState.Arguments, x => ~x);
 
 		[SharpFunction(Name = "bor", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-		public static CallState Bor(Parser parser, SharpFunctionAttribute _2)
+		public static CallState Bor(MUSHCodeParser parser, SharpFunctionAttribute _2)
 			=> AggregateIntegers(parser.CurrentState.Arguments, (x, y) => x | y);
 
 		[SharpFunction(Name = "bxor", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-		public static CallState BXor(Parser parser, SharpFunctionAttribute _2)
+		public static CallState BXor(MUSHCodeParser parser, SharpFunctionAttribute _2)
 			=> AggregateIntegers(parser.CurrentState.Arguments, (x, y) => x ^ y);
 
 		[SharpFunction(Name = "shr", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-		public static CallState ShR(Parser parser, SharpFunctionAttribute _2)
+		public static CallState ShR(MUSHCodeParser parser, SharpFunctionAttribute _2)
 			=> AggregateIntegers(parser.CurrentState.Arguments, (x, y) => x >> y);
 
 		[SharpFunction(Name = "shl", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-		public static CallState ShL(Parser parser, SharpFunctionAttribute _2)
+		public static CallState ShL(MUSHCodeParser parser, SharpFunctionAttribute _2)
 			=> AggregateIntegers(parser.CurrentState.Arguments, (x, y) => x << y);
 	}
 }

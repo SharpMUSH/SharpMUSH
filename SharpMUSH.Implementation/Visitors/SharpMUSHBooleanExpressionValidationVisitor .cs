@@ -2,7 +2,7 @@
 
 namespace SharpMUSH.Implementation.Visitors;
 
-public class SharpMUSHBooleanExpressionValidationVisitor(Parser parser, DBRef invoker) : SharpMUSHBoolExpParserBaseVisitor<bool?>
+public class SharpMUSHBooleanExpressionValidationVisitor(MUSHCodeParser parser, DBRef invoker) : SharpMUSHBoolExpParserBaseVisitor<bool?>
 {
 	protected override bool? AggregateResult(bool? aggregate, bool? nextResult)
 		=> (aggregate ?? true) && (nextResult ?? true);

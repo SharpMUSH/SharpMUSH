@@ -44,10 +44,10 @@ namespace SharpMUSH.Tests
 			return database;
 		}
 
-		public static Implementation.BooleanExpressionParser BooleanExpressionParser(Implementation.Parser parser) 
+		public static Implementation.BooleanExpressionParser BooleanExpressionParser(Implementation.MUSHCodeParser parser) 
 			=> new(parser);
 
-		public static Implementation.Parser TestParser(
+		public static Implementation.MUSHCodeParser TestParser(
 			IPasswordService? pws = null,
 			IPermissionService? ps = null,
 			ISharpDatabase? ds = null,
@@ -68,7 +68,7 @@ namespace SharpMUSH.Tests
 					ns ?? Substitute.For<INotifyService>(),
 					qs ?? Substitute.For<IQueueService>(),
 					cs ?? simpleConnectionService,
-					state: new Implementation.Parser.ParserState(
+					state: new Implementation.MUSHCodeParser.ParserState(
 						Registers: ImmutableDictionary<string, MarkupString.MarkupStringModule.MarkupString>.Empty,
 						CurrentEvaluation: null,
 						Function: null,
