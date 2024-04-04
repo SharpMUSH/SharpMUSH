@@ -23,7 +23,7 @@ namespace SharpMUSH.Tests
 		public static async Task<ISharpDatabase> IntegrationServer()
 		{
 			var container = new ArangoDbBuilder()
-				.WithImage("arangodb:3.11.8")
+				.WithImage("arangodb:latest")
 				.WithPassword("password")
 				.Build();
 
