@@ -67,7 +67,6 @@ namespace SharpMUSH.Implementation
 				this(passwordService, permissionService, database, notifyService, queueService, connectionService)
 				=> State = state ?? [];
 
-
 		public MUSHCodeParser Push(ParserState state)
 		{
 			State = State.Push(state);

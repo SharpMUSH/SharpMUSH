@@ -60,7 +60,7 @@ namespace SharpMUSH.Tests
 			var simpleConnectionService = new ConnectionService();
 			simpleConnectionService.Register("1", (x) => Task.CompletedTask, () => Encoding.UTF8);
 			simpleConnectionService.Bind("1", one);
-
+			
 			return new(
 					pws ?? Substitute.For<IPasswordService>(),
 					ps ?? Substitute.For<IPermissionService>(),
