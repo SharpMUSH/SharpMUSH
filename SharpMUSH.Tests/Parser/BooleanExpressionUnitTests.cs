@@ -40,7 +40,7 @@ public class BooleanExpressionUnitTests : BaseUnitTest
 		var bep = BooleanExpressionParser(TestParser());
 
 		Assert.IsTrue(bep.Validate(input, new DBRef(1)));
-		Assert.AreEqual(expected, bep.Parse(input, new DBRef(1), new DBRef(1)));
+		Assert.AreEqual(expected, bep.Compile(input)(new DBRef(1), new DBRef(1)));
 	}
 
 	[DataRow("type^Player & #TRUE", true)]
@@ -54,7 +54,7 @@ public class BooleanExpressionUnitTests : BaseUnitTest
 		var bep = BooleanExpressionParser(TestParser(ds: _database));
 
 		Assert.IsTrue(bep.Validate(input, new DBRef(1)));
-		Assert.AreEqual(expected, bep.Parse(input, new DBRef(1), new DBRef(1)));
+		Assert.AreEqual(expected, bep.Compile(input)(new DBRef(1), new DBRef(1)));
 	}
 
 	[DataRow("type^Player", true)]

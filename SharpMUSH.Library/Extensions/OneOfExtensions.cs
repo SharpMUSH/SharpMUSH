@@ -1,5 +1,4 @@
-﻿using OneOf.Types;
-using OneOf;
+﻿using OneOf;
 using OneOf.Monads;
 using SharpMUSH.Library.Models;
 using None = OneOf.Types.None;
@@ -14,7 +13,7 @@ namespace SharpMUSH.Library.Extensions
 					room => room.Object,
 					exit => exit.Object,
 					thing => thing.Object,
-					none => null
+					none => (SharpObject?)null
 				);
 
 		public static Option<SharpObject> ObjectOption(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None> union) =>

@@ -3,7 +3,7 @@ using System.Linq.Expressions;
 
 namespace SharpMUSH.Implementation.Visitors;
 
-public class SharpMUSHBooleanExpressionVisitor(MUSHCodeParser parser, ParameterExpression caller, ParameterExpression victim) : SharpMUSHBoolExpParserBaseVisitor<Expression>
+public class SharpMUSHBooleanExpressionVisitor(MUSHCodeParser parser, ParameterExpression gated, ParameterExpression unlocker) : SharpMUSHBoolExpParserBaseVisitor<Expression>
 {
 	protected override Expression AggregateResult(Expression aggregate, Expression nextResult) =>
 		new Expression[] { aggregate, nextResult }.First(x => x != null);
@@ -40,7 +40,7 @@ public class SharpMUSHBooleanExpressionVisitor(MUSHCodeParser parser, ParameterE
 
 	public override Expression VisitLock(SharpMUSHBoolExpParser.LockContext context)
 	{
-		var _2 = caller;
+		var _2 = gated;
 		var _ = parser.GetType();
 
 		Expression result = VisitChildren(context);
@@ -95,13 +95,13 @@ public class SharpMUSHBooleanExpressionVisitor(MUSHCodeParser parser, ParameterE
 	}
 
 	public override Expression VisitBitFlagExpr(SharpMUSHBoolExpParser.BitFlagExprContext context)
-		=> Expression.Invoke(hasFlag, victim, Expression.Constant(context.@string().GetText().ToUpper().Trim()), Expression.Constant(parser));
+		=> Expression.Invoke(hasFlag, unlocker, Expression.Constant(context.@string().GetText().ToUpper().Trim()), Expression.Constant(parser));
 
 	public override Expression VisitBitPowerExpr(SharpMUSHBoolExpParser.BitPowerExprContext context)
-		=> Expression.Invoke(hasPower, victim, Expression.Constant(context.@string().GetText().ToUpper().Trim()), Expression.Constant(parser));
+		=> Expression.Invoke(hasPower, unlocker, Expression.Constant(context.@string().GetText().ToUpper().Trim()), Expression.Constant(parser));
 
 	public override Expression VisitBitTypeExpr(SharpMUSHBoolExpParser.BitTypeExprContext context) 
-		=> Expression.Invoke(isType, victim, Expression.Constant(context.@string().GetText().ToUpper().Trim()), Expression.Constant(parser));
+		=> Expression.Invoke(isType, unlocker, Expression.Constant(context.@string().GetText().ToUpper().Trim()), Expression.Constant(parser));
 
 	public override Expression VisitChannelExpr(SharpMUSHBoolExpParser.ChannelExprContext context)
 	{
