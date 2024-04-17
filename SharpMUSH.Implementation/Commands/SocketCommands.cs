@@ -1,7 +1,6 @@
 ﻿using OneOf.Monads;
 using Serilog;
 using SharpMUSH.Library.Models;
-using System.Data.SqlTypes;
 using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Implementation.Commands
@@ -93,7 +92,7 @@ namespace SharpMUSH.Implementation.Commands
 			// TODO: Step 3: Confirm there is no SiteLock.
 			// TODO: Step 4: Bind object in the ConnectionService.
 			parser.ConnectionService.Bind(parser.CurrentState.Handle!, 
-				new DBRef(foundDB!.Object!.Key!.Value, foundDB!.Object!.CreationTime));
+				new DBRef(foundDB!.Object!.Key!, foundDB!.Object!.CreationTime));
 
 			// TODO: Step 5: Trigger OnConnect Event in EventService.
 

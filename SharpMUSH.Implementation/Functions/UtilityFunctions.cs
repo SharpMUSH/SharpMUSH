@@ -20,12 +20,12 @@ namespace SharpMUSH.Implementation.Functions
 				room => room.Object!.Key,
 				exit => exit.Object!.Key,
 				thing => thing.Object!.Key,
-				none => null);
+				none => -1);
 
 			var created = parser.Database.CreatePlayerAsync(
 				args[0].Message!.ToString(), 
 				args[1].Message!.ToString(), 
-				new Library.Models.DBRef(trueLocation ?? 1)).Result;
+				new Library.Models.DBRef(trueLocation == -1 ? 1 : trueLocation)).Result;
 
 			return new CallState($"#{created.Number}:{created.CreationMilliseconds}");
 		}

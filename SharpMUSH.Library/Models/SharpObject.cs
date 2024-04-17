@@ -1,5 +1,4 @@
 ﻿using Newtonsoft.Json;
-using OneOf;
 
 namespace SharpMUSH.Library.Models
 {
@@ -17,7 +16,9 @@ namespace SharpMUSH.Library.Models
 		public string? Id { get; set; }
 
 		[JsonProperty("_key")]
-		public virtual int? Key { get; set; }
+		public virtual int Key { get; set; }
+
+		public DBRef DBRef => new(Key!,CreationTime);
 
 		public required string Name { get; set; }
 

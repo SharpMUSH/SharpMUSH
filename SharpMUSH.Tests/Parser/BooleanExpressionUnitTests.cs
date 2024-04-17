@@ -1,4 +1,5 @@
 ﻿using SharpMUSH.Database;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Tests.Parser;
@@ -38,9 +39,10 @@ public class BooleanExpressionUnitTests : BaseUnitTest
 	public void SimpleExpressions(string input, bool expected)
 	{
 		var bep = BooleanExpressionParser(TestParser());
+		var dbn = _database!.GetObjectNode(new DBRef(1)).Known();
 
-		Assert.IsTrue(bep.Validate(input, new DBRef(1)));
-		Assert.AreEqual(expected, bep.Compile(input)(new DBRef(1), new DBRef(1)));
+		Assert.IsTrue(bep.Validate(input, dbn));
+		Assert.AreEqual(expected, bep.Compile(input)(dbn, dbn));
 	}
 
 	[DataRow("type^Player & #TRUE", true)]
@@ -52,9 +54,10 @@ public class BooleanExpressionUnitTests : BaseUnitTest
 	public void TypeExpressions(string input, bool expected)
 	{
 		var bep = BooleanExpressionParser(TestParser(ds: _database));
+		var dbn = _database!.GetObjectNode(new DBRef(1)).Known();
 
-		Assert.IsTrue(bep.Validate(input, new DBRef(1)));
-		Assert.AreEqual(expected, bep.Compile(input)(new DBRef(1), new DBRef(1)));
+		Assert.IsTrue(bep.Validate(input, dbn));
+		Assert.AreEqual(expected, bep.Compile(input)(dbn, dbn));
 	}
 
 	[DataRow("type^Player", true)]
@@ -66,7 +69,8 @@ public class BooleanExpressionUnitTests : BaseUnitTest
 	public void TypeValidation(string input, bool expected)
 	{
 		var bep = BooleanExpressionParser(TestParser());
+		var dbn = _database!.GetObjectNode(new DBRef(1)).Known();
 
-		Assert.AreEqual(expected, bep.Validate(input, new DBRef(1)));
+		Assert.AreEqual(expected, bep.Validate(input, dbn));
 	}
 }

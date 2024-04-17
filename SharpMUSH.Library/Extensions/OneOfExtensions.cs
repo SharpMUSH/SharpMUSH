@@ -16,6 +16,14 @@ namespace SharpMUSH.Library.Extensions
 					none => (SharpObject?)null
 				);
 
+		public static OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> Known(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None> union) =>
+			union.Match<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing>>(
+				player => player,
+				room => room,
+				exit => exit,
+				thing => thing,
+				none => throw new ArgumentNullException(nameof(union)));
+
 		public static Option<SharpObject> ObjectOption(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None> union) =>
 			union.Match<Option<SharpObject>>(
 					player => player.Object,
@@ -62,7 +70,7 @@ namespace SharpMUSH.Library.Extensions
 					player => player.Object,
 					exit => exit.Object,
 					thing => thing.Object,
-					none => null
+					none => (SharpObject?)null
 				);
 	}
 }

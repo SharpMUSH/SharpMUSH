@@ -51,10 +51,10 @@ namespace SharpMUSH.IntegrationTests
 			var playerOne = (await database!.GetObjectNodeAsync(new DBRef(1))).AsT0;
 
 			Assert.AreEqual(typeof(SharpPlayer), playerOne.GetType());
-			Assert.AreEqual("God", playerOne!.Object!.Name);
-			Assert.AreEqual(1, playerOne!.Object!.Key);
+			Assert.AreEqual("God", playerOne.Object.Name);
+			Assert.AreEqual(1, playerOne.Object.Key);
 
-			var playerOneDBRef = new DBRef(playerOne!.Object!.Key!.Value);
+			var playerOneDBRef = new DBRef(playerOne!.Object.Key);
 
 			await database!.SetAttributeAsync(playerOneDBRef, ["SingleLayer"], "Single", playerOne);
 			await database!.SetAttributeAsync(playerOneDBRef, ["Two"], "Twin", playerOne);

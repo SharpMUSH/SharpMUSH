@@ -4,7 +4,7 @@ using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Services
 {
-	public class PermissionService : IPermissionService
+	public class PermissionService(ILockService lockService) : IPermissionService
 	{
 		public bool CanSet(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> executor, OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> target, SharpAttribute attribute)
 		{
@@ -47,7 +47,6 @@ namespace SharpMUSH.Library.Services
 				return false;
 
 			/* Zone Master items here.*/
-			/* Control Lock check here. */
 
 			/*
 				if (!ZONE_CONTROL_ZMP && (Zone(what) != NOTHING) &&
@@ -57,15 +56,10 @@ namespace SharpMUSH.Library.Services
 				if (ZMaster(Owner(what)) && !IsPlayer(what) &&
 						eval_lock(who, Owner(what), Zone_Lock))
 					return 1;
-
-				c = getlock_noparent(what, Control_Lock);
-				if (c != TRUE_BOOLEXP)
-				{
-					if (eval_boolexp(who, c, what, NULL))
-						return 1;
-				}
-				return 0;
 			*/
+
+			if (lockService.Evaluate(LockType.Control, target, who))
+				return true;
 
 			return false;
 

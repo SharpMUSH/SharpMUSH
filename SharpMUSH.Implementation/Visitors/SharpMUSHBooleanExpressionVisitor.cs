@@ -1,4 +1,5 @@
-﻿using SharpMUSH.Library.Models;
+﻿using OneOf;
+using SharpMUSH.Library.Models;
 using System.Linq.Expressions;
 
 namespace SharpMUSH.Implementation.Visitors;
@@ -8,34 +9,31 @@ public class SharpMUSHBooleanExpressionVisitor(MUSHCodeParser parser, ParameterE
 	protected override Expression AggregateResult(Expression aggregate, Expression nextResult) =>
 		new Expression[] { aggregate, nextResult }.First(x => x != null);
 
-	private readonly Expression<Func<DBRef, string, MUSHCodeParser, bool>> hasFlag = (dbRef, flag, psr)
-		=> psr.Database.GetObjectNode(dbRef)!
+	private readonly Expression<Func<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing>, string, MUSHCodeParser, bool>> hasFlag = (dbRef, flag, psr)
+		=> dbRef
 				.Match(
 					player => player.Object!.Flags!.Any(x => x.Name == flag || x.Symbol == flag),
 					room => room.Object!.Flags!.Any(x => x.Name == flag || x.Symbol == flag),
 					exit => exit.Object!.Flags!.Any(x => x.Name == flag || x.Symbol == flag),
-					thing => thing.Object!.Flags!.Any(x => x.Name == flag || x.Symbol == flag),
-					none => false
+					thing => thing.Object!.Flags!.Any(x => x.Name == flag || x.Symbol == flag)
 				);
 
-	private readonly Expression<Func<DBRef, string, MUSHCodeParser, bool>> hasPower = (dbRef, power, psr)
-		=> psr.Database.GetObjectNode(dbRef)!
+	private readonly Expression<Func<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing>, string, MUSHCodeParser, bool>> hasPower = (dbRef, power, psr)
+		=> dbRef
 				.Match(
 					player => player.Object!.Powers!.Any(x => x.Name == power || x.Alias == power ),
 					room => room.Object!.Powers!.Any(x => x.Name == power || x.Alias == power),
 					exit => exit.Object!.Powers!.Any(x => x.Name == power || x.Alias == power),
-					thing => thing.Object!.Powers!.Any(x => x.Name == power || x.Alias == power),
-					none => false
+					thing => thing.Object!.Powers!.Any(x => x.Name == power || x.Alias == power)
 				);
 
-	private readonly Expression<Func<DBRef, string, MUSHCodeParser, bool>> isType = (dbRef, type, psr)
-		=> psr.Database.GetObjectNode(dbRef)!
+	private readonly Expression<Func<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing>, string, MUSHCodeParser, bool>> isType = (dbRef, type, psr)
+		=> dbRef
 				.Match(
 					player => player.Object!.Type == type,
 					room => room.Object!.Type == type,
 					exit => exit.Object!.Type == type,
-					thing => thing.Object!.Type == type,
-					none => false
+					thing => thing.Object!.Type == type
 				);
 
 	public override Expression VisitLock(SharpMUSHBoolExpParser.LockContext context)

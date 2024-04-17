@@ -55,7 +55,7 @@ namespace SharpMUSH.Implementation.Commands
 
 			var name = viewing.Object()!.Name;
 			var location = viewing.Object()!.Key;
-			var contentKeys = contents!.Select(x => x.Object()!.Key).Where( x => x.HasValue);
+			var contentKeys = contents!.Select(x => x.Object()!.Key);
 
 			parser.NotifyService.Notify(executor, $"Name: {name}");
 			parser.NotifyService.Notify(executor, $"Location: {location}");
