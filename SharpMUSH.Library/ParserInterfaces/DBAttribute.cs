@@ -2,4 +2,8 @@
 
 namespace SharpMUSH.Library.ParserInterfaces;
 
-public record DBAttribute(string Name, DBRef DB);
+public record DBAttribute(DBRef DB, string Name)
+{
+	public override string ToString()
+		=> $"#{DB}/{Name.ToUpper()}";
+}

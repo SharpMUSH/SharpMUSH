@@ -41,7 +41,7 @@ namespace SharpMUSH.Implementation
 		/// 
 		/// Time to start drawing a tree to make sure we put things in the right spots.
 		/// </summary>
-		public ImmutableStack<ParserState> State { get; private set; } = [];
+		public IImmutableStack<ParserState> State { get; private set; } = ImmutableStack<ParserState>.Empty;
 
 		public MUSHCodeParser(
 			IPasswordService passwordService,

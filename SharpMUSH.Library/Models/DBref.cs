@@ -12,5 +12,8 @@
 
 		public int Number { get; init; }
 		public long? CreationMilliseconds { get; init; }
+
+		public override string ToString() 
+			=> $"#{Number}:{CreationMilliseconds}";
 	}
 }

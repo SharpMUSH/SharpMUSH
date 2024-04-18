@@ -8,7 +8,7 @@ using SharpMUSH.Library;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services;
-using System.Text.Json.Nodes;
+using System.Collections.Immutable;
 
 namespace SharpMUSH.Database;
 
@@ -181,7 +181,7 @@ public class ArangoDatabase(
 			Type = obj.Type,
 			CreationTime = obj.CreationTime,
 			ModifiedTime = obj.ModifiedTime,
-			Locks = obj.Locks,
+			Locks = (obj.Locks ?? []).ToImmutableDictionary(),
 			Id = obj.Id,
 			Key = int.Parse(obj.Key),
 			Flags = GetFlags(startVertex),
@@ -222,7 +222,7 @@ public class ArangoDatabase(
 			Type = obj.Type,
 			CreationTime = obj.CreationTime,
 			ModifiedTime = obj.ModifiedTime,
-			Locks = obj.Locks,
+			Locks = (obj.Locks ?? []).ToImmutableDictionary(),
 			Flags = GetFlags(startVertex),
 			Powers = GetPowers(startVertex),
 			Attributes = GetAttributes(startVertex),
@@ -253,7 +253,7 @@ public class ArangoDatabase(
 				Type = obj.Type,
 				Id = obj.Id,
 				Key = int.Parse(obj.Key),
-				Locks = obj.Locks,
+				Locks = (obj.Locks ?? []).ToImmutableDictionary(),
 				CreationTime = obj.CreationTime,
 				ModifiedTime = obj.ModifiedTime,
 				Flags = GetFlags(obj.Id),
@@ -323,12 +323,12 @@ public class ArangoDatabase(
 		}).ToArray();
 	}
 
-	public async Task SetLockAsync(DBRef target, string lockName, string lockString)
+	public async Task SetLockAsync(SharpObject target, string lockName, string lockString)
 		=> await arangoDB.Document.UpdateAsync(handle, DatabaseConstants.objects, new
 			{
-				Key = target.Number,
-				Locks = new JsonObject([KeyValuePair.Create<string, JsonNode?>(lockName, lockString)])
-			}, mergeObjects: true); // TODO: Merge Objects won't do what I need it to do. A better query is needed.
+				target.Key,
+				Locks = target.Locks.Add(lockName, lockString)
+			}, mergeObjects: true); 
 
 	public async Task<IEnumerable<SharpAttribute>?> GetAttributeAsync(DBRef dbref, string[] attribute)
 	{
@@ -513,7 +513,7 @@ public class ArangoDatabase(
 					Type = curObject.Type,
 					Id = curObject.Id,
 					Key = int.Parse(curObject.Key),
-					Locks = curObject.Locks,
+					Locks = (curObject.Locks ?? []).ToImmutableDictionary(),
 					CreationTime = curObject.CreationTime,
 					ModifiedTime = curObject.ModifiedTime,
 					Flags = GetFlags(curObject.Id),

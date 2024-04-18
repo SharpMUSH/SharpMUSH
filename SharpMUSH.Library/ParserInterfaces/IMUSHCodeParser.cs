@@ -12,8 +12,7 @@ public partial interface IMUSHCodeParser
 	IPasswordService PasswordService { get; }
 	IPermissionService PermissionService { get; }
 	IQueueService QueueService { get; }
-	ImmutableStack<ParserState> State { get; }
-
+	IImmutableStack<ParserState> State { get; }
 	CallState? CommandCommaArgsParse(string text);
 	CallState? CommandEqSplitArgsParse(string text);
 	CallState? CommandEqSplitParse(string text);

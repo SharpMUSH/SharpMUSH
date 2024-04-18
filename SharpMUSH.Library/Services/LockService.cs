@@ -41,7 +41,7 @@ public class LockService(IBooleanExpressionParser bep) : ILockService
 		if (!bep.Validate(lockString, lockee)) return false;
 
 		_cachedLockString.AddOrUpdate((lockee.Object().DBRef, standardType), bep.Compile(lockString), out var _);
-		db.SetLockAsync(lockee.Object().DBRef, standardType.ToString(), lockString).ConfigureAwait(false).GetAwaiter().GetResult();
+		db.SetLockAsync(lockee.Object(), standardType.ToString(), lockString).ConfigureAwait(false).GetAwaiter().GetResult();
 
 		return true;
 	}

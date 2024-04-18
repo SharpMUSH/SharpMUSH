@@ -16,7 +16,7 @@ namespace SharpMUSH.Library
 
 		Task<DBRef> CreateExitAsync(string name, OneOf<SharpPlayer, SharpRoom, SharpThing> location, SharpPlayer creator);
 
-		Task SetLockAsync(DBRef target, string lockName, string lockString);
+		Task SetLockAsync(SharpObject target, string lockName, string lockString);
 
 		Task<IEnumerable<SharpAttribute>?> GetAttributeAsync(DBRef dbref, string[] attribute);
 		

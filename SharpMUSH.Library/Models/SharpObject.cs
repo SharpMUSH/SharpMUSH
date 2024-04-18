@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using System.Collections.Immutable;
 
 namespace SharpMUSH.Library.Models
 {
@@ -16,7 +17,7 @@ namespace SharpMUSH.Library.Models
 
 		public required string Type { get; set; }
 
-		public required Dictionary<string, string> Locks { get; set; }
+		public required IImmutableDictionary<string, string> Locks { get; set; }
 
 		public long CreationTime { get; set; } = DateTimeOffset.Now.ToUnixTimeMilliseconds();
 
