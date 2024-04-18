@@ -1,6 +1,6 @@
-﻿using SharpMUSH.Database;
-using SharpMUSH.Tests;
+﻿using SharpMUSH.Tests;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library;
 
 namespace SharpMUSH.IntegrationTests
 {

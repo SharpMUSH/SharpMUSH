@@ -1,10 +1,11 @@
-﻿using static SharpMUSHParser;
+﻿using SharpMUSH.Library.ParserInterfaces;
+using static SharpMUSHParser;
 
 namespace SharpMUSH.Implementation.Substitutions
 {
 	public static partial class Substitutions
 	{
-		public static CallState ParseSimpleSubstitution(string symbol, MUSHCodeParser parser, SubstitutionSymbolContext _)
+		public static CallState ParseSimpleSubstitution(string symbol, IMUSHCodeParser parser, SubstitutionSymbolContext _)
 			=> symbol switch
 			{
 				"0" or "1" or "2" or "3" or "4" or "5" or "6" or "7" or "8" or "9" => new CallState((parser.CurrentState.Arguments.ElementAtOrDefault(int.Parse(symbol))?.Message) ?? MModule.empty()),
@@ -31,7 +32,7 @@ namespace SharpMUSH.Implementation.Substitutions
 				_ => new CallState(symbol),
 			};
 
-		public static CallState ParseComplexSubstitution(string symbol, MUSHCodeParser parser, ComplexSubstitutionSymbolContext context)
+		public static CallState ParseComplexSubstitution(string symbol, IMUSHCodeParser parser, ComplexSubstitutionSymbolContext context)
 		{
 			throw new NotImplementedException();
 		}

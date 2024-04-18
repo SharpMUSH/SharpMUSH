@@ -1,5 +1,6 @@
 ﻿using Antlr4.Runtime.Misc;
 using Serilog;
+using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Implementation.Visitors
 {
@@ -9,7 +10,7 @@ namespace SharpMUSH.Implementation.Visitors
 	/// and new Visitors may need to be added.
 	/// </summary>
 	/// <param name="parser">The Parser, so that inner functions can force a parser-call.</param>
-	public class SharpMUSHParserVisitor(MUSHCodeParser parser) : SharpMUSHParserBaseVisitor<CallState?>
+	public class SharpMUSHParserVisitor(IMUSHCodeParser parser) : SharpMUSHParserBaseVisitor<CallState?>
 	{
 		protected override CallState? AggregateResult(CallState? aggregate, CallState? nextResult)
 		{

@@ -8,8 +8,7 @@ namespace SharpMUSH.Library.Models
 		[JsonIgnore]
 		public string? Id { get; set; }
 
-		// Relationship
 		[JsonIgnore]
-		public SharpObject Object { get; set; }
+		public required SharpObject Object { get; set; }
 	}
 }

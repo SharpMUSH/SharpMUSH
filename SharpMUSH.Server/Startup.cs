@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Serilog;
 using SharpMUSH.Database;
 using SharpMUSH.Implementation;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Server

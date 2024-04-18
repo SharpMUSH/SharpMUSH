@@ -2,11 +2,12 @@
 using OneOf;
 using SharpMUSH.Implementation.Visitors;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
 using System.Linq.Expressions;
 
 namespace SharpMUSH.Implementation;
 
-public class BooleanExpressionParser(MUSHCodeParser parser)
+public class BooleanExpressionParser(IMUSHCodeParser parser)
 {
 	// TODO: Allow the Evaluation to indicate if the cache should be evaluated for optimization.
 	// This should occur if a character stop existing, a flag gets removed, etc, and should be unusual.

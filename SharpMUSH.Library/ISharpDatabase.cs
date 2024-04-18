@@ -1,9 +1,8 @@
 ﻿using OneOf;
 using OneOf.Types;
-using SharpMUSH.Database.Models;
 using SharpMUSH.Library.Models;
 
-namespace SharpMUSH.Database
+namespace SharpMUSH.Library
 {
 	public interface ISharpDatabase
 	{
@@ -16,6 +15,8 @@ namespace SharpMUSH.Database
 		Task<DBRef> CreateThingAsync(string name, OneOf<SharpPlayer, SharpRoom, SharpThing> location, SharpPlayer creator);
 
 		Task<DBRef> CreateExitAsync(string name, OneOf<SharpPlayer, SharpRoom, SharpThing> location, SharpPlayer creator);
+
+		Task SetLockAsync(DBRef target, string lockName, string lockString);
 
 		Task<IEnumerable<SharpAttribute>?> GetAttributeAsync(DBRef dbref, string[] attribute);
 		

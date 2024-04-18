@@ -2,6 +2,7 @@
 using Antlr4.Runtime.Tree;
 using OneOf.Monads;
 using OneOf.Types;
+using SharpMUSH.Library.ParserInterfaces;
 using System.Reflection;
 using static SharpMUSHParser;
 
@@ -11,7 +12,7 @@ namespace SharpMUSH.Implementation.Commands
 	{
 		private const char Space = ' ';
 		private const char Slash = '/';
-		private static readonly Dictionary<string, (SharpCommandAttribute Attribute, Func<MUSHCodeParser, Option<CallState>> Function)> _commandLibrary = [];
+		private static readonly Dictionary<string, (SharpCommandAttribute Attribute, Func<IMUSHCodeParser, Option<CallState>> Function)> _commandLibrary = [];
 		private static readonly Dictionary<string, (MethodInfo Method, SharpCommandAttribute Attribute)> _knownBuiltInCommands = typeof(Commands)
 			.GetMethods()
 			.Select(m => (Method: m, Attribute: m.GetCustomAttribute(typeof(SharpCommandAttribute), false) as SharpCommandAttribute))
@@ -23,7 +24,7 @@ namespace SharpMUSH.Implementation.Commands
 		{
 			foreach (var knownCommand in _knownBuiltInCommands)
 			{
-				_commandLibrary.Add(knownCommand.Key, (knownCommand.Value.Attribute, new Func<MUSHCodeParser, Option<CallState>>(p => (Option<CallState>)knownCommand.Value.Method.Invoke(null, [p, knownCommand.Value.Attribute])!)));
+				_commandLibrary.Add(knownCommand.Key, (knownCommand.Value.Attribute, new Func<IMUSHCodeParser, Option<CallState>>(p => (Option<CallState>)knownCommand.Value.Method.Invoke(null, [p, knownCommand.Value.Attribute])!)));
 			}
 		}
 
@@ -39,7 +40,7 @@ namespace SharpMUSH.Implementation.Commands
 		/// <param name="context">Command Context</param>
 		/// <param name="visitChildren">Parser function to visit children.</param>
 		/// <returns>An empty Call State</returns>
-		public static Option<CallState> EvaluateCommands(MUSHCodeParser parser, CommandContext context, Func<IRuleNode, CallState?> visitChildren)
+		public static Option<CallState> EvaluateCommands(IMUSHCodeParser parser, CommandContext context, Func<IRuleNode, CallState?> visitChildren)
 		{
 			var firstCommandMatch = context.firstCommandMatch();
 			var conText = context.GetText();
@@ -68,7 +69,7 @@ namespace SharpMUSH.Implementation.Commands
 				var arguments = ArgumentSplit(parser, context, librarySocketCommandDefinition);
 
 				// Run as Socket Command.
-				var result = socketCommandPattern.First().Value.Function.Invoke(parser.Push(new MUSHCodeParser.ParserState(
+				var result = socketCommandPattern.First().Value.Function.Invoke(parser.Push(new ParserState(
 					Registers: parser.CurrentState.Registers,
 					CurrentEvaluation: parser.CurrentState.CurrentEvaluation,
 					Command: command,
@@ -119,7 +120,7 @@ namespace SharpMUSH.Implementation.Commands
 			{
 				var arguments = ArgumentSplit(parser, context, libraryCommandDefinition);
 
-				var result = libraryCommandDefinition.Function.Invoke(parser.Push(new MUSHCodeParser.ParserState(
+				var result = libraryCommandDefinition.Function.Invoke(parser.Push(new ParserState(
 					Registers: parser.CurrentState.Registers,
 					CurrentEvaluation: parser.CurrentState.CurrentEvaluation,
 					Command: rootCommand,
@@ -152,7 +153,7 @@ namespace SharpMUSH.Implementation.Commands
 			throw new NotImplementedException();
 		}
 
-		private static List<CallState> ArgumentSplit(MUSHCodeParser parser, CommandContext context, (SharpCommandAttribute Attribute, Func<MUSHCodeParser, Option<CallState>> Function) libraryCommandDefinition)
+		private static List<CallState> ArgumentSplit(IMUSHCodeParser parser, CommandContext context, (SharpCommandAttribute Attribute, Func<MUSHCodeParser, Option<CallState>> Function) libraryCommandDefinition)
 		{
 
 			// command (space) argument(s)

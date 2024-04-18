@@ -1,10 +1,11 @@
 ﻿using OneOf;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
 using System.Linq.Expressions;
 
 namespace SharpMUSH.Implementation.Visitors;
 
-public class SharpMUSHBooleanExpressionVisitor(MUSHCodeParser parser, ParameterExpression gated, ParameterExpression unlocker) : SharpMUSHBoolExpParserBaseVisitor<Expression>
+public class SharpMUSHBooleanExpressionVisitor(IMUSHCodeParser parser, ParameterExpression gated, ParameterExpression unlocker) : SharpMUSHBoolExpParserBaseVisitor<Expression>
 {
 	protected override Expression AggregateResult(Expression aggregate, Expression nextResult) =>
 		new Expression[] { aggregate, nextResult }.First(x => x != null);

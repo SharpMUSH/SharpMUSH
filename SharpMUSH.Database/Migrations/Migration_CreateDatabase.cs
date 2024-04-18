@@ -584,7 +584,7 @@ namespace SharpMUSH.Database.Migrations
 				CreationTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
 				ModifiedTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
 			});
-			var roomZeroRoom = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.rooms, new SharpRoom { });
+			var roomZeroRoom = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.rooms, new { });
 
 			/* Create Player One */
 			var playerOneObj = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objects, new
@@ -605,7 +605,7 @@ namespace SharpMUSH.Database.Migrations
 				CreationTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
 				ModifiedTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
 			});
-			var roomTwoRoom = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.rooms, new SharpRoom { });
+			var roomTwoRoom = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.rooms, new { });
 
 			var playerOnePlayer = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.players, new
 			{

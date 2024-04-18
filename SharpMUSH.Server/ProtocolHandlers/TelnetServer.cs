@@ -4,13 +4,12 @@ using System.Text;
 using MediatR;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.Extensions.Logging;
-using SharpMUSH.Database;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services;
 using TelnetNegotiationCore.Handlers;
 using TelnetNegotiationCore.Interpreters;
 using TelnetNegotiationCore.Models;
-using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Server.ProtocolHandlers
 {

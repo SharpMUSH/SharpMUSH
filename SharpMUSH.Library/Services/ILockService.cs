@@ -16,6 +16,7 @@ namespace SharpMUSH.Library.Services
 			OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> unlocker);
 
 		bool Set(
+			ISharpDatabase db,
 			LockType standardType, 
 			string lockString, 
 			OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> lockee);

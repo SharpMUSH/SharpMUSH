@@ -1,7 +1,6 @@
 ﻿using Serilog;
 using System.Collections.Immutable;
 using SharpMUSH.Library.Services;
-using SharpMUSH.Database;
 using NSubstitute;
 using Core.Arango.Serialization.Newtonsoft;
 using Core.Arango;
@@ -9,6 +8,8 @@ using SharpMUSH.IntegrationTests;
 using Testcontainers.ArangoDb;
 using SharpMUSH.Library.Models;
 using System.Text;
+using SharpMUSH.Library;
+using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Tests
 {
@@ -68,7 +69,7 @@ namespace SharpMUSH.Tests
 					ns ?? Substitute.For<INotifyService>(),
 					qs ?? Substitute.For<IQueueService>(),
 					cs ?? simpleConnectionService,
-					state: new Implementation.MUSHCodeParser.ParserState(
+					state: new ParserState(
 						Registers: ImmutableDictionary<string, MarkupString.MarkupStringModule.MarkupString>.Empty,
 						CurrentEvaluation: null,
 						Function: null,

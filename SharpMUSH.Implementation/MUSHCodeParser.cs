@@ -1,11 +1,9 @@
 ﻿using Antlr4.Runtime;
-using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Implementation.Visitors;
-using SharpMUSH.Database;
-using SharpMUSH.Library.Models;
+using SharpMUSH.Library;
+using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using System.Collections.Immutable;
-using MarkupString;
 
 namespace SharpMUSH.Implementation
 {
@@ -19,19 +17,8 @@ namespace SharpMUSH.Implementation
 			ISharpDatabase _database,
 			INotifyService _notifyService,
 			IQueueService _queueService,
-			IConnectionService _connectionService)
+			IConnectionService _connectionService) : IMUSHCodeParser
 	{
-		public record ParserState(
-			ImmutableDictionary<string, MString> Registers,
-			DBAttribute? CurrentEvaluation,
-			string? Function,
-			string? Command,
-			List<CallState> Arguments,
-			DBRef? Executor,
-			DBRef? Enactor,
-			DBRef? Caller,
-			string? Handle);
-
 		public IPasswordService PasswordService => _passwordService;
 
 		public IPermissionService PermissionService => _permissionService;
@@ -67,13 +54,13 @@ namespace SharpMUSH.Implementation
 				this(passwordService, permissionService, database, notifyService, queueService, connectionService)
 				=> State = state ?? [];
 
-		public MUSHCodeParser Push(ParserState state)
+		public IMUSHCodeParser Push(ParserState state)
 		{
 			State = State.Push(state);
 			return this;
 		}
 
-		public MUSHCodeParser Pop()
+		public IMUSHCodeParser Pop()
 		{
 			State = State.Pop();
 			return this;
@@ -124,14 +111,14 @@ namespace SharpMUSH.Implementation
 		{
 			var handleId = ConnectionService.Get(handle);
 			State = State.Push(new ParserState(
-				ImmutableDictionary<string, MString>.Empty, 
+				ImmutableDictionary<string, MString>.Empty,
 				null,
 				null,
 				text,
 				[],
 				handleId!.Ref,
 				handleId!.Ref,
-				handleId!.Ref, 
+				handleId!.Ref,
 				handle));
 
 			AntlrInputStream inputStream = new(text);

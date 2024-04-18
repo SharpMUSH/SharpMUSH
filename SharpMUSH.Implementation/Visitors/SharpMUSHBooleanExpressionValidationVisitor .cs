@@ -1,9 +1,10 @@
 ﻿using OneOf;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Implementation.Visitors;
 
-public class SharpMUSHBooleanExpressionValidationVisitor(MUSHCodeParser parser, OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> invoker) : SharpMUSHBoolExpParserBaseVisitor<bool?>
+public class SharpMUSHBooleanExpressionValidationVisitor(IMUSHCodeParser parser, OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> invoker) : SharpMUSHBoolExpParserBaseVisitor<bool?>
 {
 	protected override bool? AggregateResult(bool? aggregate, bool? nextResult)
 		=> (aggregate ?? true) && (nextResult ?? true);

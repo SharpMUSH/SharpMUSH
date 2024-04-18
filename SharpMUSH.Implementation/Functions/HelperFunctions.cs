@@ -4,6 +4,7 @@ using OneOf;
 using SharpMUSH.Library.Models;
 using System.Text.RegularExpressions;
 using OneOf.Monads;
+using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Implementation.Functions
 {

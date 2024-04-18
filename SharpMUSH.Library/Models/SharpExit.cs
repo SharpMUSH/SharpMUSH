@@ -9,9 +9,7 @@ namespace SharpMUSH.Library.Models
 
 		public string[]? Aliases { get; set; }
 
-		// Relationship
-		[JsonIgnore]
-		public virtual SharpObject Object { get; set; }
+		public required SharpObject Object { get; set; }
 
 		// Relationship
 		[JsonIgnore]

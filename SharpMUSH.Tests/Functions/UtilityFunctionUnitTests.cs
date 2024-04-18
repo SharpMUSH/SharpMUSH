@@ -1,4 +1,4 @@
-﻿using SharpMUSH.Database;
+﻿using SharpMUSH.Library;
 using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Tests.Functions

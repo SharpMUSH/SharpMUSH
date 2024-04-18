@@ -1,7 +1,7 @@
 ﻿using OneOf.Monads;
-using SharpMUSH.Database.Models;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
 using CB = SharpMUSH.Implementation.Definitions.CommandBehavior;
 
 namespace SharpMUSH.Implementation.Commands
@@ -9,7 +9,7 @@ namespace SharpMUSH.Implementation.Commands
 	public static partial class Commands
 	{
 		[SharpCommand(Name = "THINK", Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
-		public static Option<CallState> Think(MUSHCodeParser parser, SharpCommandAttribute _2)
+		public static Option<CallState> Think(IMUSHCodeParser parser, SharpCommandAttribute _2)
 		{
 			var args = parser.CurrentState.Arguments;
 
@@ -26,7 +26,7 @@ namespace SharpMUSH.Implementation.Commands
 		}
 
 		[SharpCommand(Name = "LOOK", Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
-		public static Option<CallState> Look(MUSHCodeParser parser, SharpCommandAttribute _2)
+		public static Option<CallState> Look(IMUSHCodeParser parser, SharpCommandAttribute _2)
 		{
 			// TODO: Consult CONFORMAT, DESCFORMAT, INAMEFORMAT, NAMEFORMAT, etc.
 			
@@ -65,7 +65,7 @@ namespace SharpMUSH.Implementation.Commands
 		}
 
 		[SharpCommand(Name = "@PEMIT", Behavior = CB.Default | CB.EqSplit, MinArgs = 1, MaxArgs = 2)]
-		public static Option<CallState> PEmit(MUSHCodeParser parser, SharpCommandAttribute _2)
+		public static Option<CallState> PEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 		{
 			var args = parser.CurrentState.Arguments;
 
