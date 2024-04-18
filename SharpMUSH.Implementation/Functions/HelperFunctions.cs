@@ -10,11 +10,11 @@ namespace SharpMUSH.Implementation.Functions
 {
 	public partial class Functions
 	{
-		private static Regex DatabaseReferenceRegex = DatabaseReference();
-		private static Regex DatabaseReferenceWithAttributeRegex = DatabaseReferenceWithAttribute();
-		private static Regex TimeFormatMatchRegex = TimeFormatMatch();
-		private static Regex TimeSpanFormatMatchRegex = TimeSpanFormatMatch();
-		private static Regex NameListPatternRegex = NameListPattern();
+		private readonly static Regex DatabaseReferenceRegex = DatabaseReference();
+		private readonly static Regex DatabaseReferenceWithAttributeRegex = DatabaseReferenceWithAttribute();
+		private readonly static Regex TimeFormatMatchRegex = TimeFormatMatch();
+		private readonly static Regex TimeSpanFormatMatchRegex = TimeSpanFormatMatch();
+		private readonly static Regex NameListPatternRegex = NameListPattern();
 
 		/// <summary>
 		/// Takes the pattern of '#DBREF/attribute' and splits it out if possible.

@@ -8,6 +8,7 @@ using Serilog;
 using SharpMUSH.Database;
 using SharpMUSH.Implementation;
 using SharpMUSH.Library;
+using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Server
@@ -36,7 +37,7 @@ namespace SharpMUSH.Server
 			services.AddSingleton<IQueueService, QueueService>();
 			services.AddSingleton<IConnectionService, ConnectionService>();
 			services.AddSingleton(new ArangoHandle("CurrentSharpMUSHWorld"));
-			services.AddScoped<MUSHCodeParser, MUSHCodeParser>();
+			services.AddScoped<IMUSHCodeParser, MUSHCodeParser>();
 			services.AddMediatR(cfg =>
 			{
 				cfg.RegisterServicesFromAssemblyContaining<MUSHCodeParser>();

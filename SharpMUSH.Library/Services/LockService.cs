@@ -1,17 +1,16 @@
 ﻿using DotNext.Runtime.Caching;
 using OneOf;
 using SharpMUSH.Library.Models;
-using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Extensions;
-using SharpMUSH.Library;
+using SharpMUSH.Library.ParserInterfaces;
 
-namespace SharpMUSH.Implementation.Services;
+namespace SharpMUSH.Library.Services;
 
-public class LockService(BooleanExpressionParser bep) : ILockService
+public class LockService(IBooleanExpressionParser bep) : ILockService
 {
 	private static readonly ConcurrentCache<(DBRef, LockType), Func<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing>, OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing>, bool>> _cachedLockString = new(100, CacheEvictionPolicy.LFU);
 
-	public string Get(LockType standardType, OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> lockee)
+	public static string Get(LockType standardType, OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> lockee)
 		=> lockee.Object().Locks.GetValueOrDefault(standardType.ToString(), "#TRUE");
 
 	public bool Evaluate(
@@ -42,7 +41,7 @@ public class LockService(BooleanExpressionParser bep) : ILockService
 		if (!bep.Validate(lockString, lockee)) return false;
 
 		_cachedLockString.AddOrUpdate((lockee.Object().DBRef, standardType), bep.Compile(lockString), out var _);
-		db.SetLockAsync(lockee.Object().DBRef, standardType.ToString(), lockString);
+		db.SetLockAsync(lockee.Object().DBRef, standardType.ToString(), lockString).ConfigureAwait(false).GetAwaiter().GetResult();
 
 		return true;
 	}

@@ -7,7 +7,7 @@ using System.Linq.Expressions;
 
 namespace SharpMUSH.Implementation;
 
-public class BooleanExpressionParser(IMUSHCodeParser parser)
+public class BooleanExpressionParser(IMUSHCodeParser parser) : IBooleanExpressionParser
 {
 	// TODO: Allow the Evaluation to indicate if the cache should be evaluated for optimization.
 	// This should occur if a character stop existing, a flag gets removed, etc, and should be unusual.

@@ -1,7 +1,5 @@
-﻿using Antlr4.Runtime;
-using Antlr4.Runtime.Tree;
+﻿using Antlr4.Runtime.Tree;
 using OneOf.Monads;
-using OneOf.Types;
 using SharpMUSH.Library.ParserInterfaces;
 using System.Reflection;
 using static SharpMUSHParser;
@@ -10,7 +8,6 @@ namespace SharpMUSH.Implementation.Commands
 {
 	public static partial class Commands
 	{
-		private const char Space = ' ';
 		private const char Slash = '/';
 		private static readonly Dictionary<string, (SharpCommandAttribute Attribute, Func<IMUSHCodeParser, Option<CallState>> Function)> _commandLibrary = [];
 		private static readonly Dictionary<string, (MethodInfo Method, SharpCommandAttribute Attribute)> _knownBuiltInCommands = typeof(Commands)
@@ -153,7 +150,7 @@ namespace SharpMUSH.Implementation.Commands
 			throw new NotImplementedException();
 		}
 
-		private static List<CallState> ArgumentSplit(IMUSHCodeParser parser, CommandContext context, (SharpCommandAttribute Attribute, Func<MUSHCodeParser, Option<CallState>> Function) libraryCommandDefinition)
+		private static List<CallState> ArgumentSplit(IMUSHCodeParser parser, CommandContext context, (SharpCommandAttribute Attribute, Func<IMUSHCodeParser, Option<CallState>> Function) libraryCommandDefinition)
 		{
 
 			// command (space) argument(s)

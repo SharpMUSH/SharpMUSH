@@ -8,7 +8,7 @@ namespace SharpMUSH.Implementation.Commands
 {
 	public static partial class Commands
 	{
-		private static Regex ConnectionPatternRegex = ConnectionPattern();
+		private readonly static Regex ConnectionPatternRegex = ConnectionPattern();
 
 		[SharpCommand(Name = "WHO", Behavior = Definitions.CommandBehavior.SOCKET | Definitions.CommandBehavior.NoParse, MinArgs = 0, MaxArgs = 1)]
 		public static Option<CallState> WHO(IMUSHCodeParser parser, SharpCommandAttribute _2)

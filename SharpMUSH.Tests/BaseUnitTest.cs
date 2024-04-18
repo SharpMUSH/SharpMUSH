@@ -10,6 +10,7 @@ using SharpMUSH.Library.Models;
 using System.Text;
 using SharpMUSH.Library;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Implementation;
 
 namespace SharpMUSH.Tests
 {
@@ -45,10 +46,10 @@ namespace SharpMUSH.Tests
 			return database;
 		}
 
-		public static Implementation.BooleanExpressionParser BooleanExpressionParser(Implementation.MUSHCodeParser parser) 
-			=> new(parser);
+		public static IBooleanExpressionParser BooleanExpressionTestParser(IMUSHCodeParser parser)
+			=> new BooleanExpressionParser(parser);
 
-		public static Implementation.MUSHCodeParser TestParser(
+		public static IMUSHCodeParser TestParser(
 			IPasswordService? pws = null,
 			IPermissionService? ps = null,
 			ISharpDatabase? ds = null,
@@ -61,8 +62,8 @@ namespace SharpMUSH.Tests
 			var simpleConnectionService = new ConnectionService();
 			simpleConnectionService.Register("1", (x) => Task.CompletedTask, () => Encoding.UTF8);
 			simpleConnectionService.Bind("1", one);
-			
-			return new(
+
+			return new MUSHCodeParser(
 					pws ?? Substitute.For<IPasswordService>(),
 					ps ?? Substitute.For<IPermissionService>(),
 					ds ?? Substitute.For<ISharpDatabase>(),

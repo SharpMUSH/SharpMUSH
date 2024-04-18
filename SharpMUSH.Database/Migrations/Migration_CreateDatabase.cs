@@ -22,8 +22,8 @@ namespace SharpMUSH.Database.Migrations
 		{
 			await migrator.ApplyStructureAsync(handle, new ArangoStructure()
 			{
-				Collections = new List<ArangoCollectionIndices>
-				{
+				Collections =
+				[
 					new() {
 						Collection = new ArangoCollection
 						{
@@ -54,13 +54,13 @@ namespace SharpMUSH.Database.Migrations
 							},
 							WaitForSync = true
 						},
-						Indices = new ArangoIndex[]
-						{
+						Indices =
+						[
 							new()
 							{
 								Fields = [nameof(SharpObject.Name)]
 							}
-						}
+						]
 					},
 				new()
 				{
@@ -81,13 +81,13 @@ namespace SharpMUSH.Database.Migrations
 
 						}
 					},
-					Indices = new ArangoIndex[]
-						{
+					Indices =
+						[
 							new()
 							{
 								Fields = [nameof(SharpThing.Aliases)]
 							}
-						}
+						]
 				},
 				new()
 				{
@@ -137,13 +137,13 @@ namespace SharpMUSH.Database.Migrations
 							}
 						}
 					},
-					Indices = new ArangoIndex[]
-						{
+					Indices =
+						[
 							new()
 							{
 								Fields = [nameof(SharpPlayer.Aliases)]
 							}
-						}
+						]
 				},
 				new()
 				{
@@ -407,7 +407,7 @@ namespace SharpMUSH.Database.Migrations
 						}
 					}
 				}
-			},
+			],
 				Graphs =
 				[
 					new()

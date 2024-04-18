@@ -107,11 +107,7 @@ namespace SharpMUSH.Server.ProtocolHandlers
 				SignalOnMSDPAsync = (telnet, config) =>
 						SignalMSDPAsync(MSDPHandler, telnet, config),
 				CallbackNegotiationAsync = (x) => WriteToOutputStreamAsync(x, connection.Transport.Output, connection.ConnectionId, connection.ConnectionClosed),
-				CharsetOrder = new[]
-					{
-												Encoding.GetEncoding("utf-8"),
-												Encoding.GetEncoding("iso-8859-1")
-						}
+				CharsetOrder = [Encoding.GetEncoding("utf-8"), Encoding.GetEncoding("iso-8859-1")]
 			}.RegisterMSSPConfig(() => msspConfig)
 				 .BuildAsync();
 

@@ -10,7 +10,7 @@ public class SharpMUSHBooleanExpressionVisitor(IMUSHCodeParser parser, Parameter
 	protected override Expression AggregateResult(Expression aggregate, Expression nextResult) =>
 		new Expression[] { aggregate, nextResult }.First(x => x != null);
 
-	private readonly Expression<Func<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing>, string, MUSHCodeParser, bool>> hasFlag = (dbRef, flag, psr)
+	private readonly Expression<Func<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing>, string, IMUSHCodeParser, bool>> hasFlag = (dbRef, flag, psr)
 		=> dbRef
 				.Match(
 					player => player.Object!.Flags!.Any(x => x.Name == flag || x.Symbol == flag),
@@ -19,7 +19,7 @@ public class SharpMUSHBooleanExpressionVisitor(IMUSHCodeParser parser, Parameter
 					thing => thing.Object!.Flags!.Any(x => x.Name == flag || x.Symbol == flag)
 				);
 
-	private readonly Expression<Func<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing>, string, MUSHCodeParser, bool>> hasPower = (dbRef, power, psr)
+	private readonly Expression<Func<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing>, string, IMUSHCodeParser, bool>> hasPower = (dbRef, power, psr)
 		=> dbRef
 				.Match(
 					player => player.Object!.Powers!.Any(x => x.Name == power || x.Alias == power ),
@@ -28,7 +28,7 @@ public class SharpMUSHBooleanExpressionVisitor(IMUSHCodeParser parser, Parameter
 					thing => thing.Object!.Powers!.Any(x => x.Name == power || x.Alias == power)
 				);
 
-	private readonly Expression<Func<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing>, string, MUSHCodeParser, bool>> isType = (dbRef, type, psr)
+	private readonly Expression<Func<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing>, string, IMUSHCodeParser, bool>> isType = (dbRef, type, psr)
 		=> dbRef
 				.Match(
 					player => player.Object!.Type == type,
