@@ -1,47 +1,30 @@
 ﻿using OneOf;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using System.Linq.Expressions;
+using System.Linq;
 
 namespace SharpMUSH.Implementation.Visitors;
 
 public class SharpMUSHBooleanExpressionVisitor(IMUSHCodeParser parser, ParameterExpression gated, ParameterExpression unlocker) : SharpMUSHBoolExpParserBaseVisitor<Expression>
 {
-	protected override Expression AggregateResult(Expression aggregate, Expression nextResult) =>
-		new Expression[] { aggregate, nextResult }.First(x => x != null);
+	protected override Expression AggregateResult(Expression aggregate, Expression nextResult)
+		=> new Expression[] { aggregate, nextResult }.First(x => x != null);
 
 	private readonly Expression<Func<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing>, string, IMUSHCodeParser, bool>> hasFlag = (dbRef, flag, psr)
-		=> dbRef
-				.Match(
-					player => player.Object!.Flags!.Any(x => x.Name == flag || x.Symbol == flag),
-					room => room.Object!.Flags!.Any(x => x.Name == flag || x.Symbol == flag),
-					exit => exit.Object!.Flags!.Any(x => x.Name == flag || x.Symbol == flag),
-					thing => thing.Object!.Flags!.Any(x => x.Name == flag || x.Symbol == flag)
-				);
+		=> dbRef.Object().Flags.Any(x => x.Name == flag || x.Symbol == flag);
 
 	private readonly Expression<Func<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing>, string, IMUSHCodeParser, bool>> hasPower = (dbRef, power, psr)
-		=> dbRef
-				.Match(
-					player => player.Object!.Powers!.Any(x => x.Name == power || x.Alias == power ),
-					room => room.Object!.Powers!.Any(x => x.Name == power || x.Alias == power),
-					exit => exit.Object!.Powers!.Any(x => x.Name == power || x.Alias == power),
-					thing => thing.Object!.Powers!.Any(x => x.Name == power || x.Alias == power)
-				);
+		=> dbRef.Object().Powers.Any(x => x.Name == power || x.Alias == power);
 
 	private readonly Expression<Func<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing>, string, IMUSHCodeParser, bool>> isType = (dbRef, type, psr)
-		=> dbRef
-				.Match(
-					player => player.Object!.Type == type,
-					room => room.Object!.Type == type,
-					exit => exit.Object!.Type == type,
-					thing => thing.Object!.Type == type
-				);
+		=> dbRef.Object().Type == type;
+
+	private static readonly string[] defaultStringArrayValue = [];
 
 	public override Expression VisitLock(SharpMUSHBoolExpParser.LockContext context)
 	{
-		var _2 = gated;
-		var _ = parser.GetType();
-
 		Expression result = VisitChildren(context);
 		for (; result.CanReduce; result = result.Reduce()) { }
 		return result;
@@ -77,12 +60,12 @@ public class SharpMUSHBooleanExpressionVisitor(IMUSHCodeParser parser, Parameter
 		=> Expression.Constant(true);
 
 	public override Expression VisitEnclosedExpr(SharpMUSHBoolExpParser.EnclosedExprContext context)
-
 		=> Visit(context.lockExprList());
 
 	public override Expression VisitOwnerExpr(SharpMUSHBoolExpParser.OwnerExprContext context)
 	{
 		var value = context.@string().GetText();
+
 		var result = VisitChildren(context);
 		return result;
 	}
@@ -99,7 +82,7 @@ public class SharpMUSHBooleanExpressionVisitor(IMUSHCodeParser parser, Parameter
 	public override Expression VisitBitPowerExpr(SharpMUSHBoolExpParser.BitPowerExprContext context)
 		=> Expression.Invoke(hasPower, unlocker, Expression.Constant(context.@string().GetText().ToUpper().Trim()), Expression.Constant(parser));
 
-	public override Expression VisitBitTypeExpr(SharpMUSHBoolExpParser.BitTypeExprContext context) 
+	public override Expression VisitBitTypeExpr(SharpMUSHBoolExpParser.BitTypeExprContext context)
 		=> Expression.Invoke(isType, unlocker, Expression.Constant(context.@string().GetText().ToUpper().Trim()), Expression.Constant(parser));
 
 	public override Expression VisitChannelExpr(SharpMUSHBoolExpParser.ChannelExprContext context)
@@ -139,10 +122,19 @@ public class SharpMUSHBooleanExpressionVisitor(IMUSHCodeParser parser, Parameter
 
 	public override Expression VisitAttributeExpr(SharpMUSHBoolExpParser.AttributeExprContext context)
 	{
-		// TODO: Implement Attribute Expression
 		var value = context.@string().GetText();
 		var attribute = context.attributeName().GetText();
-		return VisitChildren(context);
+
+		Expression<Func<DBRef, bool>> expr = dbref =>
+			parser.Database
+				.GetAttributeAsync(dbref, new string[] { attribute })
+				.ConfigureAwait(false).GetAwaiter().GetResult()!
+				.FirstOrDefault(new SharpAttribute() { 
+					Name = string.Empty,
+					Flags = defaultStringArrayValue,
+					Value = Guid.NewGuid().ToString() }).Value == value; 
+
+		return Expression.Invoke(expr, gated);
 	}
 
 	public override Expression VisitEvaluationExpr(SharpMUSHBoolExpParser.EvaluationExprContext context)

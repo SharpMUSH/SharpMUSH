@@ -15,7 +15,6 @@ public class BooleanExpressionUnitTests : BaseUnitTest
 		_database = await IntegrationServer();
 	}
 
-
 	[DataRow("!#FALSE", true)]
 	[DataRow("#TRUE", true)]
 	[DataRow("(#TRUE)", true)]

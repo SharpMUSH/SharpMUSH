@@ -27,7 +27,6 @@ namespace SharpMUSH.Library
 		/// Optionally passing either the CreatedSecs or CreatedMilliseconds will do a more specific lookup.
 		/// </summary>
 		/// <param name="dbref">Database Reference Number</param>
-		/// <param name="createdmsecs">Created Milliseconds (Unix Timestamp</param>
 		/// <returns>A OneOf over the object being returned</returns>
 		Task<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None>> GetObjectNodeAsync(DBRef dbref);
 
