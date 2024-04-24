@@ -46,7 +46,7 @@ namespace SharpMUSH.Library.Services
 			if (target.Inheritable() || target.IsPlayer())
 				return false;
 
-			/* Zone Master items here.*/
+			/* TODO: Zone Master items here.*/
 
 			/*
 				if (!ZONE_CONTROL_ZMP && (Zone(what) != NOTHING) &&

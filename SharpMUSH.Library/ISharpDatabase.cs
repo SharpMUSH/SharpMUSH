@@ -70,6 +70,5 @@ namespace SharpMUSH.Library
 		Task<IEnumerable<OneOf<SharpPlayer, SharpExit, SharpThing, None>>?> GetContentsAsync(DBRef obj);
 
 		Task<IEnumerable<OneOf<SharpPlayer, SharpExit, SharpThing, None>>?> GetContentsAsync(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None> node);
-
 	}
 }
