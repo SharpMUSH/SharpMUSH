@@ -1,4 +1,5 @@
 ﻿using SharpMUSH.Implementation.Definitions;
+using SharpMUSH.Library;
 using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Implementation.Functions
@@ -8,7 +9,7 @@ namespace SharpMUSH.Implementation.Functions
 		[SharpFunction(Name = "loc", MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 		public static CallState Loc(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		{
-			var dbRefConversion = ParseDBRef(MModule.plainText(parser.CurrentState.Arguments[0].Message));
+			var dbRefConversion = HelperFunctions.ParseDBRef(MModule.plainText(parser.CurrentState.Arguments[0].Message));
 			if (dbRefConversion.IsNone())
 			{
 				parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, "I can't see that here.");

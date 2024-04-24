@@ -1,5 +1,6 @@
 ﻿using Antlr4.Runtime;
 using SharpMUSH.Implementation.Definitions;
+using SharpMUSH.Library;
 using SharpMUSH.Library.ParserInterfaces;
 using System.Text.RegularExpressions;
 
@@ -70,7 +71,7 @@ namespace SharpMUSH.Implementation.Functions
 		[SharpFunction(Name = "CHECKPASS", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly | FunctionFlags.StripAnsi)]
 		public static CallState Checkpass(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		{
-			var dbRefConversion = ParseDBRef(MModule.plainText(parser.CurrentState.Arguments[0].Message));
+			var dbRefConversion = HelperFunctions.ParseDBRef(MModule.plainText(parser.CurrentState.Arguments[0].Message));
 			if (dbRefConversion.IsNone())
 			{
 				parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, "I can't see that here.");

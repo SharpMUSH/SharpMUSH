@@ -1,4 +1,5 @@
 ﻿using SharpMUSH.Implementation.Definitions;
+using SharpMUSH.Library;
 using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Implementation.Functions
@@ -18,7 +19,7 @@ namespace SharpMUSH.Implementation.Functions
 			// That should be handled by the parser before it gets here.
 
 			var args = parser.CurrentState.Arguments;
-			var split = SplitDBRefAndAttr(MModule.plainText(args[0].Message!));
+			var split = HelperFunctions.SplitDBRefAndAttr(MModule.plainText(args[0].Message!));
 
 			if (!split.TryPickT0(out var details, out var _))
 			{

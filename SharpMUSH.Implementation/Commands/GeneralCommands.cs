@@ -1,4 +1,5 @@
 ﻿using OneOf.Monads;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -78,7 +79,7 @@ namespace SharpMUSH.Implementation.Commands
 			var target = MModule.plainText(args[0]!.Message!);
 
 			// TODO: Use Locate() here.
-			var parsedTarget = Functions.Functions.ParseDBRef(target);
+			var parsedTarget = HelperFunctions.ParseDBRef(target);
 			
 			if (parsedTarget.IsNone())
 			{

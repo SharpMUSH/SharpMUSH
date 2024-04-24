@@ -1,11 +1,16 @@
 ﻿using OneOf;
+using OneOf.Monads;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Library;
 
-public static class HelperFunctions
+public static partial class HelperFunctions
 {
+	private readonly static Regex DatabaseReferenceRegex = DatabaseReference();
+	private readonly static Regex DatabaseReferenceWithAttributeRegex = DatabaseReferenceWithAttribute();
+
 	public static bool IsPlayer(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
 		=> obj.Match(player => true, room => false, exit => false, thing => false);
 
@@ -51,4 +56,46 @@ public static class HelperFunctions
 	public static bool Owns(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> who,
 															 OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> what)
 		=> who.Object()!.Owner!.Single().Object.Id == what.Object()!.Owner!.Single().Object.Id;
+
+	/// <summary>
+	/// Takes the pattern of '#DBREF/attribute' and splits it out if possible.
+	/// </summary>
+	/// <param name="dbrefAttr">#DBREF/Attribute</param>
+	/// <returns>False if it could not be split. DBRef & Attribute if it could.</returns>
+	public static OneOf<(DBRef db, string Attribute), bool> SplitDBRefAndAttr(string DBRefAttr)
+	{
+		var match = DatabaseReferenceWithAttributeRegex.Match(DBRefAttr);
+		var dbref = match.Groups["DatabaseNumber"]?.Value;
+		var ctime = match.Groups["CreationTimestamp"]?.Value;
+		var attr = match.Groups["Attribute"]?.Value;
+
+		if (string.IsNullOrEmpty(attr)) { return false; }
+
+		return (new DBRef(int.Parse(dbref!), string.IsNullOrWhiteSpace(ctime) ? null : long.Parse(ctime)), attr);
+	}
+
+	public static Option<DBRef> ParseDBRef(string DBRefAttr)
+	{
+		var match = DatabaseReferenceRegex.Match(DBRefAttr);
+		var dbref = match.Groups["DatabaseNumber"]?.Value;
+		var ctime = match.Groups["CreationTimestamp"]?.Value;
+
+		if (string.IsNullOrEmpty(dbref)) { return new None(); }
+
+		return (new DBRef(int.Parse(dbref!), string.IsNullOrWhiteSpace(ctime) ? null : long.Parse(ctime)));
+	}
+
+	/// <summary>
+	/// A regular expression that takes the form of '#123:43143124' or '#543'.
+	/// </summary>
+	/// <returns>A regex that has a named group for the DBRef Number and Creation Milliseconds.</returns>
+	[GeneratedRegex(@"#(?<DatabaseNumber>\d+)(?::(?<CreationTimestamp>\d+))?")]
+	private static partial Regex DatabaseReference();
+
+	/// <summary>
+	/// A regular expression that takes the form of '#123:43143124' or '#543'.
+	/// </summary>
+	/// <returns>A regex that has a named group for the DBRef Number, Creation Milliseconds, and attribute (if any).</returns>
+	[GeneratedRegex(@"#(?<DatabaseNumber>\d+)(?::(?<CreationTimestamp>\d+))?/(?<Attribute>[a-zA-Z1-9@_\-\.`]+)")]
+	private static partial Regex DatabaseReferenceWithAttribute();
 }

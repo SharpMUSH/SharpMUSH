@@ -3,48 +3,20 @@ using SharpMUSH.Implementation.Tools;
 using OneOf;
 using SharpMUSH.Library.Models;
 using System.Text.RegularExpressions;
-using OneOf.Monads;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Extensions;
+using OneOf.Monads;
 
 namespace SharpMUSH.Implementation.Functions;
 
 public partial class Functions
 {
-	private readonly static Regex DatabaseReferenceRegex = DatabaseReference();
-	private readonly static Regex DatabaseReferenceWithAttributeRegex = DatabaseReferenceWithAttribute();
 	private readonly static Regex TimeFormatMatchRegex = TimeFormatMatch();
+	private readonly static Regex NthRegex = Nth();
 	private readonly static Regex TimeSpanFormatMatchRegex = TimeSpanFormatMatch();
 	private readonly static Regex NameListPatternRegex = NameListPattern();
 
-	/// <summary>
-	/// Takes the pattern of '#DBREF/attribute' and splits it out if possible.
-	/// </summary>
-	/// <param name="dbrefAttr">#DBREF/Attribute</param>
-	/// <returns>False if it could not be split. DBRef & Attribute if it could.</returns>
-	public static OneOf<(DBRef db, string Attribute), bool> SplitDBRefAndAttr(string DBRefAttr)
-	{
-		var match = DatabaseReferenceWithAttributeRegex.Match(DBRefAttr);
-		var dbref = match.Groups["DatabaseNumber"]?.Value;
-		var ctime = match.Groups["CreationTimestamp"]?.Value;
-		var attr = match.Groups["Attribute"]?.Value;
-
-		if (string.IsNullOrEmpty(attr)) { return false; }
-
-		return (new DBRef(int.Parse(dbref!), string.IsNullOrWhiteSpace(ctime) ? null : long.Parse(ctime)), attr);
-	}
-
-	public static Option<DBRef> ParseDBRef(string DBRefAttr)
-	{
-		var match = DatabaseReferenceRegex.Match(DBRefAttr);
-		var dbref = match.Groups["DatabaseNumber"]?.Value;
-		var ctime = match.Groups["CreationTimestamp"]?.Value;
-
-		if (string.IsNullOrEmpty(dbref)) { return new None(); }
-
-		return (new DBRef(int.Parse(dbref!), string.IsNullOrWhiteSpace(ctime) ? null : long.Parse(ctime)));
-	}
 
 	private static CallState AggregateDecimals(List<CallState> args, Func<decimal, decimal, decimal> aggregateFunction) =>
 		new(args
@@ -294,114 +266,86 @@ public partial class Functions
 		return false;
 	}
 
-	// TODO: Stop using REF here. Return a proper result.
-	private static int parse_english(ref string name, ref LocateFlags flags)
+	private static (string RemainingString,LocateFlags NewFlags,int Count) ParseEnglish(
+		string oldName, 
+		LocateFlags oldFlags)
 	{
-		LocateFlags saveflags = flags;
-		string savename = name;
-		string mname;
-		char[] e;
+		LocateFlags flags = oldFlags;
+		LocateFlags saveFlags = flags;
+		string name = oldName;
+		string saveName = name;
 		int count = 0;
 
-		// Handle restriction adjectives first
 		if ((flags & LocateFlags.MatchObjectsInLookerLocation) != 0)
 		{
 			if (name.StartsWith("this here ", StringComparison.OrdinalIgnoreCase))
 			{
-				name = name.Substring(10);
+				name = name[10..];
 				flags &= ~(LocateFlags.MatchObjectsInLookerInventory | LocateFlags.ExitsInTheRoomOfLooker);
 			}
 			else if (name.StartsWith("here ", StringComparison.OrdinalIgnoreCase) || name.StartsWith("this ", StringComparison.OrdinalIgnoreCase))
 			{
-				name = name.Substring(5);
+				name = name[5..];
 				flags &= ~(LocateFlags.MatchObjectsInLookerInventory | LocateFlags.ExitsInTheRoomOfLooker | LocateFlags.MatchAgainstLookerLocationName);
 			}
 		}
 
 		if (((flags & LocateFlags.MatchObjectsInLookerInventory) != 0) && (name.StartsWith("my ", StringComparison.OrdinalIgnoreCase) || name.StartsWith("me ", StringComparison.OrdinalIgnoreCase)))
 		{
-			name = name.Substring(3);
+			name = name[3..];
 			flags &= ~(LocateFlags.ExitsInTheRoomOfLooker | LocateFlags.ExitsInTheRoomOfLooker | LocateFlags.MatchAgainstLookerLocationName);
 		}
 
 		if (((flags & (LocateFlags.ExitsInTheRoomOfLooker | LocateFlags.ExitsInsideOfLooker)) != 0) && (name.StartsWith("toward ", StringComparison.OrdinalIgnoreCase)))
 		{
-			name = name.Substring(7);
+			name = name[7..];
 			flags &= ~(LocateFlags.ExitsInTheRoomOfLooker | LocateFlags.MatchObjectsInLookerInventory | LocateFlags.MatchAgainstLookerLocationName);
 		}
 
 		name = name.TrimStart();
 
-		// If the name was just 'toward' (with no object name), reset everything and press on.
-		if (name == "")
+		if (string.IsNullOrWhiteSpace(name))
 		{
-			name = savename;
-			flags = saveflags;
-			return 0;
+			return (saveName,saveFlags,0);
 		}
 
-		// Handle count adjectives
 		if (!char.IsDigit(name[0]))
 		{
-			// Quick exit
-			return 0;
+			return (name,flags,0);
 		}
 
-		mname = name.Split(' ')[0];
-		if (mname == null)
+		var mName = name.Split(' ').FirstOrDefault();
+		if (string.IsNullOrWhiteSpace(mName))
 		{
-			// Quick exit - count without a noun
-			return 0;
+			return (name,flags,0);
 		}
 
-		// Ok, let's see if we can get a count adjective
-		savename = name;
-		int.TryParse(mname, out count);
-		if (count < 1)
+		var ordinalMatch = NthRegex.Match(mName);
+
+		if (ordinalMatch.Success)
 		{
-			count = -1;
-		}
-		else if ((count > 10) && (count < 14))
-		{
-			if (mname.ToLower() != "th")
-				count = -1;
-		}
-		else if ((count % 10) == 1)
-		{
-			if (mname.ToLower() != "st")
-				count = -1;
-		}
-		else if ((count % 10) == 2)
-		{
-			if (mname.ToLower() != "nd")
-				count = -1;
-		}
-		else if ((count % 10) == 3)
-		{
-			if (mname.ToLower() != "rd")
-				count = -1;
-		}
-		else if (mname.ToLower() != "th")
-		{
-			count = -1;
+			count = int.Parse(ordinalMatch.Groups["Number"].Value);
+			var ordinal = ordinalMatch.Groups["Ordinal"].Value;
+
+			// This is really only valid in English.
+			if (count < 1
+				|| Enumerable.Range(10, 14).Contains(count) && !ordinal.Equals("th", StringComparison.CurrentCultureIgnoreCase)
+				|| count % 10 == 1 && !ordinal.Equals("st", StringComparison.CurrentCultureIgnoreCase)
+				|| count % 10 == 2 && !ordinal.Equals("nd", StringComparison.CurrentCultureIgnoreCase)
+				|| count % 10 == 3 && !ordinal.Equals("rd", StringComparison.CurrentCultureIgnoreCase)
+				|| ordinal != "th")
+			{
+				return (name, flags, 0);
+			}
 		}
 
-		if (count < 0)
-		{
-			// An error (like '0th' or '12nd') - this wasn't really a count adjective. Reset and press on.
-			name = savename;
-			return 0;
-		}
-
-		// We've got a count adjective
-		name = name.Substring(mname.Length).TrimStart();
-		return count;
+		return (name[mName.Length..].TrimStart(), flags, count);
 	}
 
 	public static IEnumerable<OneOf<DBRef, string>> NameList(string list)
 		=> NameListPatternRegex.Matches(list).Cast<Match>().Select(x =>
 			!string.IsNullOrWhiteSpace(x.Groups["DBRef"].Value)
-				? OneOf<DBRef, string>.FromT0(ParseDBRef(x.Groups["DBRef"].Value).Value())
+				? OneOf<DBRef, string>.FromT0(HelperFunctions.ParseDBRef(x.Groups["DBRef"].Value).Value())
 				: OneOf<DBRef, string>.FromT1(x.Groups["User"].Value));
 
 	/// <summary>
@@ -411,19 +355,6 @@ public partial class Functions
 	[GeneratedRegex("(\"(?<User>.+?)\"|(?<DBRef>#\\d+(:\\d+)?)|(?<User>\\S+))(\\s+|$)")]
 	private static partial Regex NameListPattern();
 
-	/// <summary>
-	/// A regular expression that takes the form of '#123:43143124' or '#543'.
-	/// </summary>
-	/// <returns>A regex that has a named group for the DBRef Number and Creation Milliseconds.</returns>
-	[GeneratedRegex(@"#(?<DatabaseNumber>\d+)(?::(?<CreationTimestamp>\d+))?")]
-	private static partial Regex DatabaseReference();
-
-	/// <summary>
-	/// A regular expression that takes the form of '#123:43143124' or '#543'.
-	/// </summary>
-	/// <returns>A regex that has a named group for the DBRef Number, Creation Milliseconds, and attribute (if any).</returns>
-	[GeneratedRegex(@"#(?<DatabaseNumber>\d+)(?::(?<CreationTimestamp>\d+))?/(?<Attribute>[a-zA-Z1-9@_\-\.`]+)")]
-	private static partial Regex DatabaseReferenceWithAttribute();
 
 	/// <summary>
 	/// A regular expression that puts in time formats, with the ability to escape $ with another $.
@@ -438,4 +369,7 @@ public partial class Functions
 	/// <returns>A regex that has a match for each replacement.</returns>
 	[GeneratedRegex(@"\$(?<Adjustment>z?x?|x?z?)(?<Character>[smwhdySMWHDY\$])")]
 	private static partial Regex TimeSpanFormatMatch();
+
+	[GeneratedRegex(@"^(?<Number>\d+)(?<Ordinal>rd|th|nd|st)$")]
+	private static partial Regex Nth();
 }
