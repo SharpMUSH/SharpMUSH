@@ -6,7 +6,6 @@ using System.Text.RegularExpressions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Extensions;
-using OneOf.Monads;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -205,7 +204,7 @@ public partial class Functions
 	public static bool HasObjectPowers(SharpObject obj, string power) =>
 		obj.Powers!.Any(x => x.Name == power || x.Alias == power);
 
-	public static async Task<string> Locate(
+	public static string Locate(
 		IMUSHCodeParser parser,
 		OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> looker,
 		OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> executor,
@@ -228,7 +227,7 @@ public partial class Functions
 			| LocateFlags.MatchHereForLookerLocation
 			| LocateFlags.ExitsPreference
 			| LocateFlags.ExitsInsideOfLooker)) != 0) &&
-			(!await Nearby(parser, executor, looker) && !executor.IsSee_All() && !parser.PermissionService.Controls(executor, looker))
+			(!Nearby(executor, looker) && !executor.IsSee_All() && !parser.PermissionService.Controls(executor, looker))
 			)
 		{
 			return "#-1 NOT PERMITTED TO EVALUATE ON LOOKER";
@@ -237,37 +236,39 @@ public partial class Functions
 		throw new NotImplementedException();
 	}
 
+	public static DBRef? WhereIs(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> thing)
+	{
+		if (thing.IsT1) return null;
+		var minusRoom = thing.MinusRoom();
+		if (thing.IsT2) return OneOfExtensions.Home(minusRoom).Object()?.DBRef;
+		else return OneOfExtensions.Location(minusRoom).Object()?.DBRef;
+	}
 
-	public static async Task<bool> Nearby(
-		IMUSHCodeParser parser,
+	public static DBRef FriendlyWhereIs(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> thing)
+	{
+		if (thing.IsT1) return thing.Object().DBRef;
+		var minusRoom = thing.MinusRoom();
+		if (thing.IsT2) return OneOfExtensions.Home(minusRoom).Object().DBRef;
+		else return OneOfExtensions.Location(minusRoom).Object().DBRef;
+	}
+
+	public static bool Nearby(
 		OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj1,
 		OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj2)
 	{
-		if (obj1.IsT1 && obj2.IsT1)
-		{
-			return false;
-		}
+		if (obj1.IsT1 && obj2.IsT1) return false;
 
-		// I need a version of this (where_is) that returns self if it was a room to begin with.
-		var loc1 = await parser.Database.GetLocationAsync(obj1.Object().DBRef);
+		var loc1 = FriendlyWhereIs(obj1);
 
-		if (loc1.Object()!.Key == obj2.Object().Key)
-		{
-			return true;
-		}
+		if (loc1 == obj2.Object().DBRef) return true;
 
-		// I need a version of this (where_is) that returns self if it was a room to begin with.
-		var loc2 = await parser.Database.GetLocationAsync(obj2.Object().DBRef);
-		if ((loc2.Object()!.Key == obj1.Object()!.Key) || (loc2.Object()!.Key == loc1.Object()!.Key))
-		{
-			return true;
-		}
+		var loc2 = FriendlyWhereIs(obj2);
 
-		return false;
+		return (loc2 == obj1.Object()!.DBRef) || (loc2 == loc1);
 	}
 
-	private static (string RemainingString,LocateFlags NewFlags,int Count) ParseEnglish(
-		string oldName, 
+	private static (string RemainingString, LocateFlags NewFlags, int Count) ParseEnglish(
+		string oldName,
 		LocateFlags oldFlags)
 	{
 		LocateFlags flags = oldFlags;
@@ -306,18 +307,18 @@ public partial class Functions
 
 		if (string.IsNullOrWhiteSpace(name))
 		{
-			return (saveName,saveFlags,0);
+			return (saveName, saveFlags, 0);
 		}
 
 		if (!char.IsDigit(name[0]))
 		{
-			return (name,flags,0);
+			return (name, flags, 0);
 		}
 
 		var mName = name.Split(' ').FirstOrDefault();
 		if (string.IsNullOrWhiteSpace(mName))
 		{
-			return (name,flags,0);
+			return (name, flags, 0);
 		}
 
 		var ordinalMatch = NthRegex.Match(mName);
@@ -355,7 +356,6 @@ public partial class Functions
 	[GeneratedRegex("(\"(?<User>.+?)\"|(?<DBRef>#\\d+(:\\d+)?)|(?<User>\\S+))(\\s+|$)")]
 	private static partial Regex NameListPattern();
 
-
 	/// <summary>
 	/// A regular expression that puts in time formats, with the ability to escape $ with another $.
 	/// </summary>
@@ -370,6 +370,10 @@ public partial class Functions
 	[GeneratedRegex(@"\$(?<Adjustment>z?x?|x?z?)(?<Character>[smwhdySMWHDY\$])")]
 	private static partial Regex TimeSpanFormatMatch();
 
+	/// <summary>
+	/// A regular expression that checks if a string is a number followed by an ordinal indicator.
+	/// </summary>
+	/// <returns>A regex that has a Named Group for Number and Ordinal.</returns>
 	[GeneratedRegex(@"^(?<Number>\d+)(?<Ordinal>rd|th|nd|st)$")]
 	private static partial Regex Nth();
 }

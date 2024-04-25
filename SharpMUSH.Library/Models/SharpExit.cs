@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using OneOf;
 
 namespace SharpMUSH.Library.Models
 {
@@ -13,10 +14,10 @@ namespace SharpMUSH.Library.Models
 
 		// Relationship
 		[JsonIgnore]
-		public virtual SharpObject? Location { get; set; } // DESTINATION
+		public virtual Func<OneOf<SharpPlayer, SharpRoom, SharpThing>> Location { get; set; } // DESTINATION
 
 		// Relationship
 		[JsonIgnore]
-		public virtual SharpObject? Home { get; set; } // SOURCE ROOM
+		public virtual Func<OneOf<SharpPlayer, SharpRoom, SharpThing>> Home { get; set; } // SOURCE ROOM
 	}
 }
