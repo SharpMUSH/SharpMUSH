@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Extensions;
+using OneOf.Monads;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -233,6 +234,101 @@ public partial class Functions
 			return "#-1 NOT PERMITTED TO EVALUATE ON LOOKER";
 		}
 
+		var match = LocateMatch(parser, executor, looker, flags, name, (flags & LocateFlags.UseLastIfAmbiguous) != 0);
+		if (match.IsT4) return string.Empty;
+
+		var result = match.WithoutNone();
+		var location = FriendlyWhereIs(result);
+
+		if (parser.PermissionService.CanExamine(executor, location.WithExit()) ||
+			((!result.IsDarkLegal() || location.WithExit().IsLight() || result.IsLight()) && parser.PermissionService.CanInteract(result, executor, Library.Services.IPermissionService.InteractType.See)))
+		{
+			return result.Object().DBRef.ToString();
+		}
+
+		return string.Empty;
+	}
+
+	/* The real work. Here's the spec:
+	 * str  --> "me"
+	 *      --> "here"
+	 *      --> "#dbref"
+	 *      --> "*player"
+	 *      --> adj-phrase name
+	 *      --> name
+	 * adj-phrase --> adj
+	 *            --> adj count
+	 *            --> count
+	 * adj  --> "my", "me" (restrict match to inventory)
+	 *      --> "here", "this", "this here" (restrict match to neighbor objects)
+	 *      --> "toward" (restrict match to exits)
+	 * count --> 1st, 21st, etc.
+	 *       --> 2nd, 22nd, etc.
+	 *       --> 3rd, 23rd, etc.
+	 *       --> 4th, 10th, etc.
+	 * name --> exit_alias
+	 *      --> full_obj_name
+	 *      --> partial_obj_name
+	 *
+	 * 1. Look for exact matches and return immediately:
+	 *  a. "me" if requested
+	 *  b. "here" if requested
+	 *  c. #dbref, possibly with a control check
+	 *  d. *player
+	 * 2. Parse for adj-phrases and restrict further matching and/or
+	 *    remember the object count
+	 * 3. Look for matches (remote contents, neighbor, inventory, exits,
+	 *    containers, carried exits)
+	 *  a. If we don't have an object count, collect the number of exact
+	 *     and partial matches and the best partial match.
+	 *  b. If we do have an object count, collect the nth exact match
+	 *     and the nth match (exact or partial). number of matches is always
+	 *     0 or 1.
+	 * 4. Make decisions
+	 *  a. If we got a single exact match, return it
+	 *  b. If we got multiple exact matches, complain
+	 *  c. If we got no exact matches, but a single partial match, return it
+	 *  d. If we got multiple partial matches, complain
+	 *  e. If we got no matches, complain
+	 */
+
+	/* MATCHED() is called from inside the MATCH_LIST macro. full is 1 if the
+		match was full/exact, and 0 if it was partial */
+	private static OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, OneOf.Types.None> LocateMatch(
+		IMUSHCodeParser parser,
+		OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> looker,
+		OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> where,
+		LocateFlags flags,
+		string name,
+		bool lastMatch)
+	{
+		OneOf<SharpPlayer, SharpRoom, SharpThing> location;
+		if (where.IsRoom())
+		{
+			location = where.MinusExit();
+		}
+		if (where.IsExit())
+		{
+			location = where.MinusRoom().Home();
+		}
+		else
+		{
+			location = FriendlyWhereIs(where);
+		}
+
+		if((flags & LocateFlags.NoTypePreference) == 0 
+			&& (flags & LocateFlags.MatchMeForLooker) != 0 
+			&& !((flags & LocateFlags.MatchObjectsInLookerInventory) != 0)
+			&& name.Equals("me", StringComparison.InvariantCultureIgnoreCase))
+		{
+			if ((flags & LocateFlags.MatchLookerControlledObjects) == 0
+				&& parser.PermissionService.Controls(looker, where))
+			{
+				return where.WithNone();
+			}
+			return new OneOf.Types.None();
+		}
+
 		throw new NotImplementedException();
 	}
 
@@ -244,25 +340,25 @@ public partial class Functions
 		else return OneOfExtensions.Location(minusRoom).Object()?.DBRef;
 	}
 
-	public static DBRef FriendlyWhereIs(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> thing)
+	public static OneOf<SharpPlayer, SharpRoom, SharpThing> FriendlyWhereIs(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> thing)
 	{
-		if (thing.IsT1) return thing.Object().DBRef;
+		if (thing.IsT1) return thing.AsT1;
 		var minusRoom = thing.MinusRoom();
-		if (thing.IsT2) return OneOfExtensions.Home(minusRoom).Object().DBRef;
-		else return OneOfExtensions.Location(minusRoom).Object().DBRef;
+		if (thing.IsT2) return OneOfExtensions.Home(minusRoom);
+		else return OneOfExtensions.Location(minusRoom);
 	}
 
 	public static bool Nearby(
 		OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj1,
 		OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj2)
 	{
-		if (obj1.IsT1 && obj2.IsT1) return false;
+		if (obj1.IsRoom() && obj2.IsRoom()) return false;
 
-		var loc1 = FriendlyWhereIs(obj1);
+		var loc1 = FriendlyWhereIs(obj1).Object().DBRef;
 
 		if (loc1 == obj2.Object().DBRef) return true;
 
-		var loc2 = FriendlyWhereIs(obj2);
+		var loc2 = FriendlyWhereIs(obj2).Object().DBRef;
 
 		return (loc2 == obj1.Object()!.DBRef) || (loc2 == loc1);
 	}

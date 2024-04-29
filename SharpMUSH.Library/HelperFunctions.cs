@@ -12,16 +12,25 @@ public static partial class HelperFunctions
 	private readonly static Regex DatabaseReferenceWithAttributeRegex = DatabaseReferenceWithAttribute();
 
 	public static bool IsPlayer(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
-		=> obj.Match(player => true, room => false, exit => false, thing => false);
+		=> obj.IsT0;
 
 	public static bool IsRoom(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
-		=> obj.Match(player => false, room => true, exit => false, thing => false);
+		=> obj.IsT1;
 
 	public static bool IsExit(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
-		=> obj.Match(player => false, room => false, exit => true, thing => false);
+		=> obj.IsT2;
 
 	public static bool IsThing(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
-		=> obj.Match(player => false, room => false, exit => false, thing => true);
+		=> obj.IsT3;
+
+	public static bool IsPlayer(this OneOf<SharpPlayer, SharpRoom, SharpThing> obj)
+		=> obj.IsT0;
+
+	public static bool IsRoom(this OneOf<SharpPlayer, SharpRoom, SharpThing> obj)
+		=> obj.IsT1;
+
+	public static bool IsThing(this OneOf<SharpPlayer, SharpRoom,SharpThing> obj)
+		=> obj.IsT2;
 
 	public static bool IsWizard(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
 		=> obj.Object()!.Flags!.Any(x => x.Name == "Wizard");
@@ -40,12 +49,40 @@ public static partial class HelperFunctions
 
 	public static bool IsSee_All(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
 		=> IsPriv(obj) || obj.HasPower("See_All");
+	
+	public static bool IsGuest(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
+		=> obj.HasPower("Guest");
+
+	public static bool IsVisual(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
+		=> obj.HasPower("Visual");
+
+	public static bool IsDark(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
+		=> obj.HasPower("Dark");
+
+	public static bool IsLight(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
+		=> obj.HasPower("Light");
+	
+	public static bool IsDarkLegal(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
+		=> obj.IsDark() && (obj.CanDark() || !obj.IsAlive());
+
+	public static bool IsAudible(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
+		=> obj.HasPower("Audible");
+
+	public static bool IsAlive(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
+		=> IsPlayer(obj) || IsPuppet(obj) || (IsAudible(obj) && obj.Object().Attributes!.Any(x => x.Name == "FORWARDLIST"));
+
+	public static bool IsPuppet(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
+		=> obj.HasPower("Puppet");
 
 	public static bool HasPower(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj, string power)
 		=> obj.Object().Powers!.Any(x => x.Name == power || x.Alias == power);
 
 	public static bool HasFlag(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj, string flag)
 		=> obj.Object().Flags!.Any(x => x.Name == flag);
+
+	// This may belong in the Permission Service.
+	public static bool CanDark(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
+		=> obj.HasPower("Can_Dark") || obj.IsWizard();
 
 	public static bool Inheritable(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
 		=> IsPlayer(obj)

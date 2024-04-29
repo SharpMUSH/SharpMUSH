@@ -65,5 +65,17 @@ namespace SharpMUSH.Library.Services
 
 			throw new NotImplementedException();
 		}
+
+		public bool CanExamine(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> examiner,
+																		 OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> examinee)
+			=> examiner.Object().DBRef == examinee.Object().DBRef
+					|| Controls(examiner, examinee)
+					|| examiner.IsSee_All()	
+					|| (examinee.IsVisual() && lockService.Evaluate(LockType.Examine, examinee, examiner));
+
+		public bool CanInteract(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> result, OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> executor, IPermissionService.InteractType type)
+		{
+			throw new NotImplementedException();
+		}
 	}
 }

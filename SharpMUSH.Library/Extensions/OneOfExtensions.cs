@@ -40,6 +40,37 @@ namespace SharpMUSH.Library.Extensions
 				thing => thing
 			);
 
+		public static OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> WithExit(this OneOf<SharpPlayer, SharpRoom, SharpThing> union)
+			=> union.Match<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing>>(
+				player => player,
+				room => room,
+				thing => thing
+			);
+
+		public static OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> WithRoom(this OneOf<SharpPlayer, SharpExit, SharpThing> union)
+			=> union.Match<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing>>(
+				player => player,
+				exit => exit,
+				thing => thing
+			);
+
+		public static OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None> WithNone(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> union)
+			=> union.Match<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None>>(
+				player => player,
+				room => room,
+				exit => exit,
+				thing => thing
+			);
+
+		public static OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> WithoutNone(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None> union)
+			=> union.Match<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing>>(
+				player => player,
+				room => room,
+				exit => exit,
+				thing => thing,
+				exit => throw new ArgumentException("Cannot convert an None to a non-None value.")
+			);
+
 		public static OneOf<SharpPlayer, SharpRoom, SharpThing> Home(this OneOf<SharpPlayer, SharpExit, SharpThing> thing)
 			=> thing.Match(
 				player => player.Home(),
