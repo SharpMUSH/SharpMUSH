@@ -17,10 +17,10 @@ namespace SharpMUSH.Library.Models
 
 		// Relationship
 		[JsonIgnore]
-		public Func<OneOf<SharpPlayer, SharpRoom, SharpThing>> Location { get; set; }
+		public required Func<OneOf<SharpPlayer, SharpRoom, SharpThing>> Location { get; set; }
 
 		// Relationship
 		[JsonIgnore]
-		public Func<OneOf<SharpPlayer, SharpRoom, SharpThing>> Home { get; set; }
+		public required Func<OneOf<SharpPlayer, SharpRoom, SharpThing>> Home { get; set; }
 	}
 }

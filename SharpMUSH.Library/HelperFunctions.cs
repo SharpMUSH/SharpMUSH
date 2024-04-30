@@ -1,5 +1,6 @@
 ﻿using OneOf;
 using OneOf.Monads;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using System.Text.RegularExpressions;
@@ -67,6 +68,8 @@ public static partial class HelperFunctions
 
 	public static bool IsAudible(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
 		=> obj.HasPower("Audible");
+	public static bool IsOrphan(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
+		=> obj.HasPower("Orphan");
 
 	public static bool IsAlive(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
 		=> IsPlayer(obj) || IsPuppet(obj) || (IsAudible(obj) && obj.Object().Attributes!.Any(x => x.Name == "FORWARDLIST"));
@@ -83,6 +86,14 @@ public static partial class HelperFunctions
 	// This may belong in the Permission Service.
 	public static bool CanDark(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
 		=> obj.HasPower("Can_Dark") || obj.IsWizard();
+
+	public static DBRef? Ancestor(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
+		=> obj.IsOrphan() ? null : obj.Match(
+				player => Configurable.AncestorPlayer,
+				room => Configurable.AncestorRoom,
+				exit => Configurable.AncestorExit,
+				thing => Configurable.AncestorThing
+			);
 
 	public static bool Inheritable(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
 		=> IsPlayer(obj)

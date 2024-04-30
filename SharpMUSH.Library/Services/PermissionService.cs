@@ -37,10 +37,10 @@ namespace SharpMUSH.Library.Services
 			if (target.IsWizard() || (target.IsPriv() && !who.IsPriv()))
 				return false;
 
-			if(who.IsMistrust()) 
+			if (who.IsMistrust())
 				return false;
 
-			if(who.Owns(target) && (!target.Inheritable() || who.Inheritable()))
+			if (who.Owns(target) && (!target.Inheritable() || who.Inheritable()))
 				return true;
 
 			if (target.Inheritable() || target.IsPlayer())
@@ -62,20 +62,35 @@ namespace SharpMUSH.Library.Services
 				return true;
 
 			return false;
-
-			throw new NotImplementedException();
 		}
 
 		public bool CanExamine(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> examiner,
 																		 OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> examinee)
 			=> examiner.Object().DBRef == examinee.Object().DBRef
 					|| Controls(examiner, examinee)
-					|| examiner.IsSee_All()	
+					|| examiner.IsSee_All()
 					|| (examinee.IsVisual() && lockService.Evaluate(LockType.Examine, examinee, examiner));
 
 		public bool CanInteract(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> result, OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> executor, IPermissionService.InteractType type)
 		{
 			throw new NotImplementedException();
 		}
+
+		public static bool CanEval(
+			OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> evaluator,
+			OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> evaluation_target) 
+				=> !evaluation_target.IsPriv() 
+					 || evaluator.IsGod() 
+					 || ((evaluator.IsWizard() 
+								|| (evaluator.IsRoyalty() && !evaluation_target.IsWizard())) 
+							&& !evaluation_target.IsGod());
+
+		public static bool CanEvalAttr(
+			OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> evaluator, 
+			OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> evaluation_target, 
+			SharpAttribute attribute) 
+				=> CanEval(evaluator, evaluation_target) 
+					 || attribute.IsPublic();
+
 	}
 }

@@ -1,6 +1,6 @@
-﻿using Antlr4.Runtime;
-using SharpMUSH.Implementation.Definitions;
+﻿using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using System.Text.RegularExpressions;
 

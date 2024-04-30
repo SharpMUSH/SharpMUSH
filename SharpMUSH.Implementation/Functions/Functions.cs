@@ -3,6 +3,7 @@ using System.Reflection;
 using static SharpMUSHParser;
 using OneOf.Monads;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Definitions;
 
 namespace SharpMUSH.Implementation.Functions
 {

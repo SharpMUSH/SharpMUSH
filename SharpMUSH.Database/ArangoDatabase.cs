@@ -193,10 +193,10 @@ public class ArangoDatabase(
 
 		return obj.Type switch
 		{
-			DatabaseConstants.typeThing => new SharpThing { Id = id, Object = convertObject },
+			DatabaseConstants.typeThing => new SharpThing { Id = id, Object = convertObject, Location = () => GetLocation(id), Home = () => GetHome(id)},
 			DatabaseConstants.typePlayer => new SharpPlayer { Id = id, Object = convertObject, Aliases = vertex.Aliases.ToObject<string[]>(), Location = () => GetLocation(id), Home = () => GetHome(id), PasswordHash = vertex.PasswordHash },
 			DatabaseConstants.typeRoom => new SharpRoom { Id = id, Object = convertObject },
-			DatabaseConstants.typeExit => new SharpThing { Id = id, Object = convertObject, Aliases = vertex.Aliases },
+			DatabaseConstants.typeExit => new SharpExit { Id = id, Object = convertObject, Aliases = vertex.Aliases, Location = () => GetLocation(id), Home = () => GetHome(id) },
 			_ => throw new ArgumentException($"Invalid Object Type found: '{obj.Type}'"),
 		};
 	}
@@ -232,10 +232,10 @@ public class ArangoDatabase(
 
 		return obj.Type switch
 		{
-			DatabaseConstants.typeThing => new SharpThing { Id = id, Object = convertObject },
+			DatabaseConstants.typeThing => new SharpThing { Id = id, Object = convertObject, Location = () => GetLocation(id), Home = () => GetHome(id) },
 			DatabaseConstants.typePlayer => new SharpPlayer { Id = id, Object = convertObject, Aliases = vertex.Aliases, Location = () => GetLocation(id), Home = () => GetHome(id), PasswordHash = vertex.PasswordHash },
 			DatabaseConstants.typeRoom => new SharpRoom { Id = id, Object = convertObject },
-			DatabaseConstants.typeExit => new SharpThing { Id = id, Object = convertObject, Aliases = vertex.Aliases },
+			DatabaseConstants.typeExit => new SharpExit { Id = id, Object = convertObject, Aliases = vertex.Aliases, Location = () => GetLocation(id), Home = () => GetHome(id) },
 			_ => throw new ArgumentException($"Invalid Object Type found: '{obj.Type}'"),
 		};
 	}
