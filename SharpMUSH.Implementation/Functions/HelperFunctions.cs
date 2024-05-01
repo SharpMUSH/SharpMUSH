@@ -6,7 +6,6 @@ using System.Text.RegularExpressions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Extensions;
-using OneOf.Monads;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -189,6 +188,7 @@ public partial class Functions
 		MatchHereForLookerLocation,
 		MatchObjectsInLookerInventory,
 		MatchAgainstLookerLocationName,
+		MatchRemoteContents,
 		MatchMeForLooker,
 		MatchObjectsInLookerLocation,
 		MatchWildCardForPlayerName,
@@ -302,7 +302,11 @@ public partial class Functions
 		string name,
 		bool lastMatch)
 	{
+		var noControl = 0;
+		OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, OneOf.Types.None> match;
+		OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, OneOf.Types.None> bestMatch;
 		OneOf<SharpPlayer, SharpRoom, SharpThing> location;
+		int final;
 		if (where.IsRoom())
 		{
 			location = where.MinusExit();
@@ -316,8 +320,8 @@ public partial class Functions
 			location = FriendlyWhereIs(where);
 		}
 
-		if((flags & LocateFlags.NoTypePreference) == 0 
-			&& (flags & LocateFlags.MatchMeForLooker) != 0 
+		if ((flags & LocateFlags.NoTypePreference) == 0
+			&& (flags & LocateFlags.MatchMeForLooker) != 0
 			&& !((flags & LocateFlags.MatchObjectsInLookerInventory) != 0)
 			&& name.Equals("me", StringComparison.InvariantCultureIgnoreCase))
 		{
@@ -326,8 +330,155 @@ public partial class Functions
 			{
 				return where.WithNone();
 			}
+			// TODO: Permission Denied
 			return new OneOf.Types.None();
 		}
+
+		if ((flags & LocateFlags.MatchHereForLookerLocation) != 0
+			&& !((flags & LocateFlags.MatchObjectsInLookerInventory) != 0)
+			&& name.Equals("here", StringComparison.InvariantCultureIgnoreCase))
+		{
+			if ((flags & LocateFlags.MatchLookerControlledObjects) == 0
+				&& parser.PermissionService.Controls(looker, where))
+			{
+				return FriendlyWhereIs(where).WithExit().WithNone();
+			}
+			// TODO: Permission Denied
+			return new OneOf.Types.None();
+		}
+
+		if (((flags & LocateFlags.MatchOptionalWildCardForPlayerName) != 0
+				|| (flags & LocateFlags.PlayersPreference) != 0 && name.StartsWith('*'))
+			&& ((flags & LocateFlags.PlayersPreference) != 0 || (flags & LocateFlags.NoTypePreference) != 0))
+		{
+			// TODO: Fix Async
+			var maybeMatch = parser.Database.GetPlayerByNameAsync(name).Result.FirstOrDefault();
+			match = maybeMatch == null
+				? OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, OneOf.Types.None>.FromT4(new OneOf.Types.None())
+				: OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, OneOf.Types.None>.FromT0(maybeMatch);
+			if (maybeMatch != null && (flags & LocateFlags.MatchObjectsInLookerInventory) != 0)
+			{
+				if (((flags & LocateFlags.MatchObjectsInLookerLocation) == 0)
+					|| looker.HasLongFingers()
+					|| Nearby(looker, match.WithoutNone())
+					|| parser.PermissionService.Controls(looker, match.WithoutNone()))
+				{
+					if ((flags & LocateFlags.MatchLookerControlledObjects) == 0
+						&& parser.PermissionService.Controls(looker, where))
+					{
+						return match;
+					}
+					else
+					{
+						// TODO: Permission Denied!
+						return new OneOf.Types.None();
+					}
+				}
+				else
+				{
+					bestMatch = match;
+				}
+			}
+		}
+
+		var abs = HelperFunctions.ParseDBRef(name);
+		if (abs.IsSome())
+		{
+			var absObject = parser.Database.GetObjectNode(abs.Value());
+			match = absObject;
+			if (!match.IsT4 && (flags & LocateFlags.AbsoluteMatch) != 0)
+			{
+				if ((flags & LocateFlags.MatchObjectsInLookerLocation) == 0
+						|| looker.HasLongFingers()
+						|| (Nearby(looker, match.WithoutNone())
+						|| parser.PermissionService.Controls(looker, match.WithoutNone())))
+				{
+					if ((flags & LocateFlags.MatchLookerControlledObjects) == 0
+							&& parser.PermissionService.Controls(looker, where))
+					{
+						return match;
+					}
+					else
+					{
+						// TODO: Permission Denied
+						return new OneOf.Types.None();
+					}
+				}
+			}
+		}
+
+		if ((flags & LocateFlags.EnglishStyleMatching) != 0)
+		{
+			(name, flags, final) = ParseEnglish(name, flags);
+		}
+
+		while (true)
+		{
+			if((flags & (LocateFlags.MatchObjectsInLookerInventory | LocateFlags.MatchRemoteContents)) != 0)
+			{
+				// MATCH_LIST(Contents(where);
+			}
+
+			if((flags & LocateFlags.MatchAgainstLookerLocationName) != 0 
+				&& (flags & LocateFlags.MatchRemoteContents) == 0 
+				&& location.Object().DBRef != where.Object().DBRef)
+			{
+				// MATCH_LIST(Contents(location);
+			}
+
+
+		}
+
+		/*
+    if ((type & TYPE_EXIT) || !(flags & MAT_TYPE)) {
+      if (GoodObject(loc) && IsRoom(loc) && (flags & MAT_EXIT)) {
+        if ((flags & MAT_REMOTES) && !(flags & (MAT_NEAR | MAT_CONTENTS)) &&
+            GoodObject(Zone(loc)) && IsRoom(Zone(loc))) {
+          MATCH_LIST(Exits(Zone(loc)));
+        }
+        if ((flags & MAT_GLOBAL) && !(flags & (MAT_NEAR | MAT_CONTENTS))) {
+          MATCH_LIST(Exits(MASTER_ROOM));
+        }
+        if (GoodObject(loc) && IsRoom(loc)) {
+          MATCH_LIST(Exits(loc));
+        }
+      }
+    }
+    if ((flags & MAT_CONTAINER) && !(flags & MAT_CONTENTS) && goodwhere) {
+      MATCH_LIST(loc);
+    }
+    if ((type & TYPE_EXIT) || !(flags & MAT_TYPE)) {
+      if ((flags & MAT_CARRIED_EXIT) && goodwhere && IsRoom(where) &&
+          ((loc != where) || !(flags & MAT_EXIT))) {
+        MATCH_LIST(Exits(where));
+      }
+    }
+    break;
+  }
+
+  if (!GoodObject(bestmatch) && final) {
+    //  we never found the Nth item 
+    bestmatch = NOTHING;
+  } else if (!final && curr > 1) {
+    // If we had a preferred type, and only found 1 of that type, give that, otherwise ambiguous 
+    if (right_type != 1 && !(flags & MAT_LAST)) {
+      bestmatch = AMBIGUOUS;
+    }
+  }
+
+  if (!GoodObject(bestmatch) && (flags & MAT_NOISY) && GoodObject(who)) {
+    // give error message 
+    if (bestmatch == AMBIGUOUS) {
+      notify(who, T("I don't know which one you mean!"));
+    } else if (nocontrol) {
+      notify(who, T("Permission denied."));
+    } else {
+      notify(who, T("I can't see that here."));
+    }
+  }
+		 */
+
+		_ = noControl;
 
 		throw new NotImplementedException();
 	}

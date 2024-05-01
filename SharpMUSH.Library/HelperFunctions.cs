@@ -80,6 +80,9 @@ public static partial class HelperFunctions
 	public static bool HasPower(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj, string power)
 		=> obj.Object().Powers!.Any(x => x.Name == power || x.Alias == power);
 
+	public static bool HasLongFingers(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
+		=> obj.IsPriv() || obj.HasPower("Long_Fingers");
+
 	public static bool HasFlag(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj, string flag)
 		=> obj.Object().Flags!.Any(x => x.Name == flag);
 
@@ -126,11 +129,11 @@ public static partial class HelperFunctions
 	{
 		var match = DatabaseReferenceRegex.Match(DBRefAttr);
 		var dbref = match.Groups["DatabaseNumber"]?.Value;
-		var ctime = match.Groups["CreationTimestamp"]?.Value;
+		var cTime = match.Groups["CreationTimestamp"]?.Value;
 
 		if (string.IsNullOrEmpty(dbref)) { return new None(); }
 
-		return (new DBRef(int.Parse(dbref!), string.IsNullOrWhiteSpace(ctime) ? null : long.Parse(ctime)));
+		return (new DBRef(int.Parse(dbref!), string.IsNullOrWhiteSpace(cTime) ? null : long.Parse(cTime)));
 	}
 
 	/// <summary>
