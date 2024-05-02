@@ -243,7 +243,7 @@ public partial class Functions
 		if (parser.PermissionService.CanExamine(executor, location.WithExit()) ||
 			((!result.IsDarkLegal() || location.WithExit().IsLight() || result.IsLight()) && parser.PermissionService.CanInteract(result, executor, Library.Services.IPermissionService.InteractType.See)))
 		{
-			return result.Object().DBRef.ToString();
+			return result.Object().DBRef.ToString()!;
 		}
 
 		return string.Empty;
@@ -426,7 +426,7 @@ public partial class Functions
 				// MATCH_LIST(Contents(location);
 			}
 
-
+			break;
 		}
 
 		/*
