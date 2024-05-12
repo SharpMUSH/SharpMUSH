@@ -30,7 +30,7 @@ namespace SharpMUSH.Server
 			services.AddSingleton<ISharpDatabase, ArangoDatabase>();
 			services.AddSingleton<PasswordHasher<string>, PasswordHasher<string>>(
 					_ => new PasswordHasher<string>()
-			);
+			);	
 			services.AddSingleton<IPasswordService, PasswordService>();
 			services.AddSingleton<IPermissionService, PermissionService>();
 			services.AddSingleton<INotifyService, NotifyService>();

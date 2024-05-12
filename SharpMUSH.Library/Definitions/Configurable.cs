@@ -15,6 +15,8 @@ namespace SharpMUSH.Library.Definitions
 		public static DBRef? AncestorRoom = null;
 		public static DBRef? AncestorExit = null;
 
+		public static DBRef MasterRoom = new DBRef(2);
+
 		/// <summary>
 		/// Historically, MU*s use the old SEX attribute for this for Compatibility reasons.
 		/// </summary>

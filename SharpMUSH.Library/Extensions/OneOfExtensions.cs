@@ -1,5 +1,6 @@
 ﻿using OneOf;
 using OneOf.Monads;
+using OneOf.Types;
 using SharpMUSH.Library.Models;
 using None = OneOf.Types.None;
 
@@ -40,27 +41,36 @@ namespace SharpMUSH.Library.Extensions
 				thing => thing
 			);
 
-		public static OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> WithExit(this OneOf<SharpPlayer, SharpRoom, SharpThing> union)
+		public static OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> WithExitOption(this OneOf<SharpPlayer, SharpRoom, SharpThing> union)
 			=> union.Match<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing>>(
 				player => player,
 				room => room,
 				thing => thing
 			);
 
-		public static OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> WithRoom(this OneOf<SharpPlayer, SharpExit, SharpThing> union)
+		public static OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> WithRoomOption(this OneOf<SharpPlayer, SharpExit, SharpThing> union)
 			=> union.Match<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing>>(
 				player => player,
 				exit => exit,
 				thing => thing
 			);
 
-		public static OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None> WithNone(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> union)
+		public static OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None> WithNoneOption(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> union)
 			=> union.Match<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None>>(
 				player => player,
 				room => room,
 				exit => exit,
 				thing => thing
 			);
+
+		public static OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None, Error<string>> WithErrorOption(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None> union)
+	=> union.Match<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None, Error<string>>>(
+		player => player,
+		room => room,
+		exit => exit,
+		thing => thing,
+		none => none
+	);
 
 		public static OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> WithoutNone(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None> union)
 			=> union.Match<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing>>(
