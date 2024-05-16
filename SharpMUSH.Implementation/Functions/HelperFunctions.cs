@@ -245,7 +245,7 @@ public partial class Functions
 		if (parser.PermissionService.CanExamine(executor, location.WithExitOption()) ||
 			((!result.IsDarkLegal() || location.WithExitOption().IsLight() || result.IsLight()) && parser.PermissionService.CanInteract(result, executor, Library.Services.IPermissionService.InteractType.See)))
 		{
-			return result.Object().DBRef.ToString();
+			return result.Object().DBRef.ToString()!;
 		}
 
 		return string.Empty;
