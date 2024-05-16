@@ -1,5 +1,6 @@
 ﻿using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Implementation.Functions
@@ -285,7 +286,21 @@ namespace SharpMUSH.Implementation.Functions
 		[SharpFunction(Name = "LCON", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 		public static CallState lcon(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		{
-			throw new NotImplementedException();
+			var dbRefConversion = HelperFunctions.ParseDBRef(MModule.plainText(parser.CurrentState.Arguments[0].Message));
+			if (dbRefConversion.IsNone())
+			{
+				parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, "I can't see that here.");
+				return new CallState("#-1");
+			}
+
+			var contents = parser.Database.GetContentsAsync(dbRefConversion.Value()).Result;
+			if (contents == null)
+			{
+				parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, "I can't see that here.");
+				return new CallState("#-1");
+			}
+
+			return new CallState(string.Join(" ", contents!.Select(x => x.Object()!.DBRef.ToString())))
 		}
 
 		[SharpFunction(Name = "LEXITS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
