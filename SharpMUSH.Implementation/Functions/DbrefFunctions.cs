@@ -300,7 +300,7 @@ namespace SharpMUSH.Implementation.Functions
 				return new CallState("#-1");
 			}
 
-			return new CallState(string.Join(" ", contents!.Select(x => x.Object()!.DBRef.ToString())))
+			return new CallState(string.Join(" ", contents!.Select(x => x.Object()!.DBRef.ToString())));
 		}
 
 		[SharpFunction(Name = "LEXITS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
