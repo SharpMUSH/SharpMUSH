@@ -1,4 +1,5 @@
 ﻿using OneOf;
+using OneOf.Types;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 
@@ -92,5 +93,9 @@ namespace SharpMUSH.Library.Services
 				=> CanEval(evaluator, evaluation_target) 
 					 || attribute.IsPublic();
 
+		public bool CouldDoIt(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> who, OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None> thing1, string? what)
+		{
+			throw new NotImplementedException();
+		}
 	}
 }

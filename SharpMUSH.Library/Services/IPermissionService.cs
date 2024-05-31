@@ -1,4 +1,5 @@
 ﻿using OneOf;
+using OneOf.Types;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Services
@@ -19,5 +20,7 @@ namespace SharpMUSH.Library.Services
 		bool CanExamine(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> examiner, OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> examinee);
 
 		bool CanInteract(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> result, OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> executor, InteractType type);
+		
+		bool CouldDoIt(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> who, OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None> thing1, string? what);
 	}
 }

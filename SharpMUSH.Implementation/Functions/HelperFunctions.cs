@@ -17,7 +17,7 @@ public partial class Functions
 	private readonly static Regex TimeSpanFormatMatchRegex = TimeSpanFormatMatch();
 	private readonly static Regex NameListPatternRegex = NameListPattern();
 
-	enum ControlFlow { Break, Continue, Return, None };
+	public enum ControlFlow { Break, Continue, Return, None };
 
 	private static CallState AggregateDecimals(List<CallState> args, Func<decimal, decimal, decimal> aggregateFunction) =>
 		new(args
@@ -201,6 +201,17 @@ public partial class Functions
 		MatchLookerControlledObjects
 	}
 
+	public static IEnumerable<string> TypePreferences(LocateFlags flags) =>
+		((string[])["Player", "Thing", "Room", "Exit"]).Where(x =>
+			x switch
+			{
+				"Player" => flags.HasFlag(LocateFlags.PlayersPreference),
+				"Thing" => flags.HasFlag(LocateFlags.ThingsPreference),
+				"Room" => flags.HasFlag(LocateFlags.RoomsPreference),
+				"Exit" => flags.HasFlag(LocateFlags.ExitsPreference),
+				_ => false
+			});
+
 	public static bool HasObjectFlags(SharpObject obj, SharpObjectFlag flag)
 		=> obj.Flags!.Contains(flag);
 
@@ -237,9 +248,10 @@ public partial class Functions
 		}
 
 		var match = LocateMatch(parser, executor, looker, flags, name, (flags & LocateFlags.UseLastIfAmbiguous) != 0);
+		if (match.IsT5) return match.AsT5.Value;
 		if (match.IsT4) return string.Empty;
 
-		var result = match.WithoutNone();
+		var result = match.WithoutError().WithoutNone();
 		var location = FriendlyWhereIs(result);
 
 		if (parser.PermissionService.CanExamine(executor, location.WithExitOption()) ||
@@ -465,35 +477,35 @@ public partial class Functions
 			break;
 		}
 
-		bestMatch = new OneOf.Types.None();
+		bestMatch = new None();
 
 		if (bestMatch.IsT4 && final != 0)
 		{
-			return new OneOf.Types.None();
+			return new None();
 		}
 		else if (final == 0 && curr > 1)
 		{
 			if (right_type != 1 && !flags.HasFlag(LocateFlags.UseLastIfAmbiguous))
 			{
-				return new OneOf.Types.Error<string>(Errors.ErrorAmbiguous);
+				return new Error<string>(Errors.ErrorAmbiguous);
 			}
 			return bestMatch.WithErrorOption();
 		}
 
-		return new OneOf.Types.None();
+		return new None();
 	}
 
 	public static void Match_List(IMUSHCodeParser parser,
-		IEnumerable<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, OneOf.Types.None>> list,
+		IEnumerable<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None>> list,
 		OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> looker,
 		OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> where,
-		LocateFlags flags, 
+		LocateFlags flags,
 		string name)
 	{
 		foreach (var item in list)
 		{
 			if (item.IsT4) continue;
-			
+
 			var cur = item.WithoutNone();
 			if (flags.HasFlag(LocateFlags.PlayersPreference) && !cur.IsPlayer()
 				|| flags.HasFlag(LocateFlags.RoomsPreference) && !cur.IsRoom()
@@ -511,8 +523,8 @@ public partial class Functions
 			{
 				continue;
 			}
-			else if (cur.IsPlayer() && (cur.AsT0).Aliases!.Contains(name) 
-				|| (!cur.IsExit() 
+			else if (cur.IsPlayer() && (cur.AsT0).Aliases!.Contains(name)
+				|| (!cur.IsExit()
 					&& !string.Equals(cur.Object().Name, name, StringComparison.OrdinalIgnoreCase)))
 			{
 				// matched(1)
@@ -522,7 +534,7 @@ public partial class Functions
 				// matched(0)
 			}
 		}
-		
+
 		throw new NotImplementedException();
 	}
 
@@ -550,14 +562,14 @@ public partial class Functions
 
 		if (preferredType != 0)
 		{
-			if (thing1.Object()!.Type.HasFlag((SharpObjectType)preferredType))
+			if (TypePreferences(flags).Contains(thing1.Object()!.Type))
 			{
-				if (!thing2.Object()!.Type.HasFlag((SharpObjectType)preferredType))
+				if (!TypePreferences(flags).Contains(thing2.Object()!.Type))
 				{
 					return thing1;
 				}
 			}
-			else if (thing2.Object()!.Type.HasFlag((SharpObjectType)preferredType))
+			else if (TypePreferences(flags).Contains(thing2.Object()!.Type))
 			{
 				return thing2;
 			}
@@ -566,12 +578,12 @@ public partial class Functions
 
 		if (flags.HasFlag(LocateFlags.PreferLockPass))
 		{
-			var key = parser.PermissionService.CouldDoIt(thing1, null);
-			if (!key && parser.PermissionService.CouldDoIt(thing2, null))
+			var key = parser.PermissionService.CouldDoIt(who, thing1, null);
+			if (!key && parser.PermissionService.CouldDoIt(who, thing2, null))
 			{
 				return thing2;
 			}
-			else if (key && !parser.PermissionService.CouldDoIt(thing2, null))
+			else if (key && !parser.PermissionService.CouldDoIt(who, thing2, null))
 			{
 				return thing1;
 			}
@@ -579,52 +591,7 @@ public partial class Functions
 		return thing2;
 	}
 
-	/*
-	 static dbref
-choose_thing(const dbref who, const int preferred_type, long flags,
-             dbref thing1, dbref thing2)
-{
-  int key;
-  //  If there's only one valid thing, return it 
-  // Rather convoluted to ensure we always return AMBIGUOUS, not NOTHING, if we
-  // have one of each 
-  //  (Apologies to Theodor Geisel) 
-  if (!GoodObject(thing1) && !GoodObject(thing2)) {
-    if (thing1 == NOTHING)
-      return thing2;
-    else
-      return thing1;
-  } else if (!GoodObject(thing1)) {
-    return thing2;
-  } else if (!GoodObject(thing2)) {
-    return thing1;
-  }
-
-  //  If a type is given, and only one thing is of that type, return it 
-  if (preferred_type != NOTYPE) {
-    if (Typeof(thing1) & preferred_type) {
-      if (!(Typeof(thing2) & preferred_type)) {
-        return thing1;
-      }
-    } else if (Typeof(thing2) & preferred_type) {
-      return thing2;
-    }
-  }
-
-  if (flags & MAT_CHECK_KEYS) {
-    key = could_doit(who, thing1, NULL);
-    if (!key && could_doit(who, thing2, NULL)) {
-      return thing2;
-    } else if (key && !could_doit(who, thing2, NULL)) {
-      return thing1;
-    }
-  }
-  //  No luck. Return last match 
-  return thing2;
-}
-	 */
-
-	public static (OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, OneOf.Types.None, OneOf.Types.Error<string>> BestMatch, int Final, int Curr, int RightType, int Exact, ControlFlow c) Matched(
+	public static (OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None, Error<string>> BestMatch, int Final, int Curr, int RightType, int Exact, ControlFlow c) Matched(
 		IMUSHCodeParser parser,
 		bool full,
 		int exact,
@@ -640,15 +607,15 @@ choose_thing(const dbref who, const int preferred_type, long flags,
 		if (!(!flags.HasFlag(LocateFlags.MatchLookerControlledObjects)
 				&& parser.PermissionService.Controls(looker, where)))
 		{
-			return (new OneOf.Types.Error<string>(Errors.ErrorPerm), final, curr, right_type, exact, ControlFlow.Continue);
+			return (new Error<string>(Errors.ErrorPerm), final, curr, right_type, exact, ControlFlow.Continue);
 		}
 		if (final != 0)
 		{
-			OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, OneOf.Types.None> bm = new OneOf.Types.None(); 
-				// TODO: Make this call BEST_MATCH()
-			if(bm.WithoutNone().Object().DBRef != cur.Object().DBRef)
+			OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None> bm = new None();
+			// TODO: Make this call BEST_MATCH()
+			if (bm.WithoutNone().Object().DBRef != cur.Object().DBRef)
 			{
-				return (new OneOf.Types.None(), final, curr, right_type, exact, ControlFlow.Continue);
+				return (new None(), final, curr, right_type, exact, ControlFlow.Continue);
 			}
 
 			if (full)
@@ -681,7 +648,7 @@ choose_thing(const dbref who, const int preferred_type, long flags,
 		{
 			curr++;
 			if (curr == final)
-			{	
+			{
 				return (cur.WithNoneOption().WithErrorOption(), final, curr, right_type, exact, ControlFlow.Break);
 			}
 		}

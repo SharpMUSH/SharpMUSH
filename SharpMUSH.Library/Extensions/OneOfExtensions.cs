@@ -78,7 +78,17 @@ namespace SharpMUSH.Library.Extensions
 				room => room,
 				exit => exit,
 				thing => thing,
-				exit => throw new ArgumentException("Cannot convert an None to a non-None value.")
+				none => throw new ArgumentException("Cannot convert an None to a non-None value.")
+			);
+
+		public static OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None> WithoutError(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None, Error<string>> union)
+			=> union.Match<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None>>(
+				player => player,
+				room => room,
+				exit => exit,
+				thing => thing,
+				none => none,
+				error => throw new ArgumentException("Cannot convert an Error to a non-Error value.")
 			);
 
 		public static OneOf<SharpPlayer, SharpRoom, SharpThing> Home(this OneOf<SharpPlayer, SharpExit, SharpThing> thing)
