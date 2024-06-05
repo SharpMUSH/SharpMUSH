@@ -18,7 +18,7 @@
     <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="8.0.6" />
     <PackageReference Include="OneOf" Version="3.0.271" />
     <PackageReference Include="OneOf.Monads" Version="1.21.0" />
-    <PackageReference Include="Serilog" Version="3.1.1" />
+    <PackageReference Include="Serilog" Version="4.0.0" />
   </ItemGroup>
 
   <ItemGroup>
