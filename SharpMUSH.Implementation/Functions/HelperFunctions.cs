@@ -17,7 +17,7 @@ public partial class Functions
 	private readonly static Regex TimeSpanFormatMatchRegex = TimeSpanFormatMatch();
 	private readonly static Regex NameListPatternRegex = NameListPattern();
 
-	public enum ControlFlow { Break, Continue, Return, None };
+	public enum ControlFlow { Break, Continue, None };
 
 	private static CallState AggregateDecimals(List<CallState> args, Func<decimal, decimal, decimal> aggregateFunction) =>
 		new(args
@@ -422,7 +422,7 @@ public partial class Functions
 			if (flags.HasFlag(LocateFlags.MatchObjectsInLookerInventory | LocateFlags.MatchRemoteContents))
 			{
 				var contents = parser.Database.GetContentsAsync(where.WithNoneOption()).GetAwaiter().GetResult();
-				// MATCH_LIST(contents);
+				// var a = Match_List(parser, contents, looker, where, flags, name);
 			}
 
 			if (flags.HasFlag(LocateFlags.MatchAgainstLookerLocationName)
@@ -495,13 +495,20 @@ public partial class Functions
 		return new None();
 	}
 
-	public static void Match_List(IMUSHCodeParser parser,
+	public static (OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None, Error<string>> BestMatch, int Final, int Curr, int RightType, int Exact, ControlFlow c) Match_List(IMUSHCodeParser parser,
 		IEnumerable<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None>> list,
 		OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> looker,
 		OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> where,
+		OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None, Error<string>> bestMatch,
+		int exact,
+		int final, 
+		int curr, 
+		int rightType,
 		LocateFlags flags,
 		string name)
 	{
+		ControlFlow flow;
+
 		foreach (var item in list)
 		{
 			if (item.IsT4) continue;
@@ -517,7 +524,11 @@ public partial class Functions
 			var abs = HelperFunctions.ParseDBRef(name);
 			if (abs.IsSome() && cur.Object().DBRef == abs.Value())
 			{
-				// matched(1)
+				(bestMatch,final, curr, rightType, exact, flow) = 
+					Matched(parser, true, exact, final, curr, rightType, looker, where, cur, bestMatch, flags);
+				
+				if (flow == ControlFlow.Break) break;
+				else if (flow == ControlFlow.Continue) continue;
 			}
 			else if (!parser.PermissionService.CanInteract(cur, looker, Library.Services.IPermissionService.InteractType.Match))
 			{
@@ -527,11 +538,19 @@ public partial class Functions
 				|| (!cur.IsExit()
 					&& !string.Equals(cur.Object().Name, name, StringComparison.OrdinalIgnoreCase)))
 			{
-				// matched(1)
+				(bestMatch, final, curr, rightType, exact, flow) = 
+					Matched(parser, true, exact, final, curr, rightType, looker, where, cur, bestMatch, flags);
+				
+				if (flow == ControlFlow.Break) break;
+				else if (flow == ControlFlow.Continue) continue;
 			}
 			else if (!flags.HasFlag(LocateFlags.NoPartialMatches) && !cur.IsExit() && cur.Object().Name.Equals(name, StringComparison.OrdinalIgnoreCase))
 			{
-				// matched(0)
+				(bestMatch, final, curr, rightType, exact, flow) = 
+					Matched(parser, false, exact, final, curr, rightType, looker, where, cur, bestMatch, flags);
+				
+				if (flow == ControlFlow.Break) break;
+				else if (flow == ControlFlow.Continue) continue;
 			}
 		}
 
@@ -601,7 +620,7 @@ public partial class Functions
 		OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> looker,
 		OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> where,
 		OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> cur,
-		OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> bestMatch,
+		OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None, Error<string>> bestMatch,
 		LocateFlags flags)
 	{
 		if (!(!flags.HasFlag(LocateFlags.MatchLookerControlledObjects)
@@ -639,7 +658,9 @@ public partial class Functions
 				curr++;
 			}
 
-			if (!flags.HasFlag(LocateFlags.NoTypePreference) && (bestMatch.Object().Type == cur.Object().Type))
+			if (!flags.HasFlag(LocateFlags.NoTypePreference) 
+				&& !bestMatch.IsT5 && !bestMatch.IsT4 
+				&& (bestMatch.WithoutError().WithoutNone().Object().Type == cur.Object().Type))
 			{
 				right_type++;
 			}
