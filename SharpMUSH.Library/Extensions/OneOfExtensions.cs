@@ -55,6 +55,14 @@ namespace SharpMUSH.Library.Extensions
 				thing => thing
 			);
 
+		public static OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None> WithRoomOption(this OneOf<SharpPlayer, SharpExit, SharpThing, None> union)
+			=> union.Match<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None>>(
+				player => player,
+				exit => exit,
+				thing => thing,
+				none => none
+			);
+
 		public static OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None> WithNoneOption(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> union)
 			=> union.Match<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None>>(
 				player => player,

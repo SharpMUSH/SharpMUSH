@@ -308,7 +308,7 @@ public partial class Functions
 
 	/* MATCHED() is called from inside the MATCH_LIST macro. full is 1 if the
 		match was full/exact, and 0 if it was partial */
-	private static OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, OneOf.Types.None, OneOf.Types.Error<string>> LocateMatch(
+	private static OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None, Error<string>> LocateMatch(
 		IMUSHCodeParser parser,
 		OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> looker,
 		OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> where,
@@ -316,11 +316,12 @@ public partial class Functions
 		string name,
 		bool lastMatch)
 	{
-		OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, OneOf.Types.None> match;
-		OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, OneOf.Types.None> bestMatch;
+		OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None, Error<string>> match;
+		OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None, Error<string>> bestMatch = new None();
 		OneOf<SharpPlayer, SharpRoom, SharpThing> location;
 		int final = 0;
 		int curr = 0;
+		bool exact = false;
 		int right_type = 0;
 		if (where.IsRoom())
 		{
@@ -357,7 +358,7 @@ public partial class Functions
 			{
 				return FriendlyWhereIs(where).WithExitOption().WithNoneOption().WithErrorOption();
 			}
-			return new OneOf.Types.Error<string>(Errors.ErrorPerm);
+			return new Error<string>(Errors.ErrorPerm);
 		}
 
 		if ((flags.HasFlag(LocateFlags.MatchOptionalWildCardForPlayerName) || flags.HasFlag(LocateFlags.PlayersPreference) && name.StartsWith('*'))
@@ -366,21 +367,21 @@ public partial class Functions
 			// TODO: Fix Async
 			var maybeMatch = parser.Database.GetPlayerByNameAsync(name).Result.FirstOrDefault();
 			match = maybeMatch == null
-				? OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, OneOf.Types.None>.FromT4(new OneOf.Types.None())
-				: OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, OneOf.Types.None>.FromT0(maybeMatch);
+				? OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None, Error<string>>.FromT4(new None())
+				: OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None, Error<string>>.FromT0(maybeMatch);
 			if (maybeMatch != null && (flags & LocateFlags.MatchObjectsInLookerInventory) != 0)
 			{
 				if (!flags.HasFlag(LocateFlags.MatchObjectsInLookerLocation)
 					|| looker.HasLongFingers()
-					|| Nearby(looker, match.WithoutNone())
-					|| parser.PermissionService.Controls(looker, match.WithoutNone()))
+					|| Nearby(looker, match.WithoutError().WithoutNone())
+					|| parser.PermissionService.Controls(looker, match.WithoutError().WithoutNone()))
 				{
 					if (!flags.HasFlag(LocateFlags.MatchLookerControlledObjects)
 						&& parser.PermissionService.Controls(looker, where))
 					{
-						return match.WithErrorOption();
+						return match;
 					}
-					return new OneOf.Types.Error<string>(Errors.ErrorPerm);
+					return new Error<string>(Errors.ErrorPerm);
 				}
 				else
 				{
@@ -393,21 +394,21 @@ public partial class Functions
 		if (abs.IsSome())
 		{
 			var absObject = parser.Database.GetObjectNode(abs.Value());
-			match = absObject;
+			match = absObject.WithErrorOption();
 			if (!match.IsT4 && (flags & LocateFlags.AbsoluteMatch) != 0)
 			{
 				if (!flags.HasFlag(LocateFlags.MatchObjectsInLookerLocation)
 						|| looker.HasLongFingers()
-						|| (Nearby(looker, match.WithoutNone())
-						|| parser.PermissionService.Controls(looker, match.WithoutNone())))
+						|| (Nearby(looker, match.WithoutError().WithoutNone())
+						|| parser.PermissionService.Controls(looker, match.WithoutError().WithoutNone())))
 				{
 					if (!flags.HasFlag(LocateFlags.MatchLookerControlledObjects)
 							&& parser.PermissionService.Controls(looker, where))
 					{
-						return match.WithErrorOption();
+						return match;
 					}
 
-					return new OneOf.Types.Error<string>(Errors.ErrorPerm);
+					return new Error<string>(Errors.ErrorPerm);
 				}
 			}
 		}
@@ -421,16 +422,22 @@ public partial class Functions
 		{
 			if (flags.HasFlag(LocateFlags.MatchObjectsInLookerInventory | LocateFlags.MatchRemoteContents))
 			{
-				var contents = parser.Database.GetContentsAsync(where.WithNoneOption()).GetAwaiter().GetResult();
-				// var a = Match_List(parser, contents, looker, where, flags, name);
+				var contents = parser.Database
+					.GetContentsAsync(where.WithNoneOption())
+					.GetAwaiter().GetResult()!
+					.Select(x => x.WithRoomOption());
+				var a = Match_List(parser, contents, looker, where, bestMatch, exact, final, curr, right_type, flags, name);
 			}
 
 			if (flags.HasFlag(LocateFlags.MatchAgainstLookerLocationName)
 					&& !flags.HasFlag(LocateFlags.MatchRemoteContents)
 					&& location.Object().DBRef != where.Object().DBRef)
 			{
-				var contents = parser.Database.GetContentsAsync(location.WithExitOption().WithNoneOption()).GetAwaiter().GetResult();
-				// MATCH_LIST(contents);
+				var contents = parser.Database
+					.GetContentsAsync(location.WithExitOption().WithNoneOption())
+					.GetAwaiter().GetResult()!
+					.Select(x => x.WithRoomOption());
+				var a = Match_List(parser, contents, looker, where, bestMatch, exact, final, curr, right_type, flags, name);
 			}
 
 			if (flags.HasFlag(LocateFlags.ExitsPreference) || flags.HasFlag(LocateFlags.NoTypePreference))
@@ -442,25 +449,32 @@ public partial class Functions
 					/* TODO: && IsRoom(Zone(loc) */
 					{
 						/* TODO: MATCH_LIST(Exits(Zone(loc))); */
+						throw new NotImplementedException();
 					}
 					if (flags.HasFlag(LocateFlags.All) && !flags.HasFlag(LocateFlags.MatchObjectsInLookerLocation | LocateFlags.MatchObjectsInLookerInventory))
 					{
-						var exits = parser.Database.GetContentsAsync(Library.Definitions.Configurable.MasterRoom).GetAwaiter().GetResult()!
-							.Where(x => x.IsT1);
+						var exits = parser.Database
+							.GetContentsAsync(Library.Definitions.Configurable.MasterRoom)
+							.GetAwaiter().GetResult()!
+							.Where(x => x.IsT1)!
+							.Select(x => x.WithRoomOption());
 
-						// MATCH_LIST(exits)
+						var a = Match_List(parser, exits, looker, where, bestMatch, exact, final, curr, right_type, flags, name);
 					}
 					if (location.IsRoom())
 					{
-						var exits = parser.Database.GetContentsAsync(location.WithExitOption().WithNoneOption()).GetAwaiter().GetResult()!
-							.Where(x => x.IsT1);
-						// MATCH_LIST(exits);
+						var exits = parser.Database
+							.GetContentsAsync(location.WithExitOption().WithNoneOption())
+							.GetAwaiter().GetResult()!
+							.Where(x => x.IsT1)
+							.Select(x => x.WithRoomOption());
+						var a = Match_List(parser, exits, looker, where, bestMatch, exact, final, curr, right_type, flags, name);
 					}
 				}
 			}
 			if (flags.HasFlag(LocateFlags.MatchObjectsInLookerInventory))
 			{
-				// MATCH_LIST(loc);
+				var a = Match_List(parser, [location.WithExitOption().WithNoneOption()], looker, where, bestMatch, exact, final, curr, right_type, flags, name);
 			}
 			if (flags.HasFlag(LocateFlags.ExitsPreference) || flags.HasFlag(LocateFlags.NoTypePreference))
 			{
@@ -468,10 +482,13 @@ public partial class Functions
 					&& where.IsRoom()
 					&& ((location.Object().DBRef != where.Object().DBRef) || !flags.HasFlag(LocateFlags.ExitsPreference)))
 				{
-					var exits = parser.Database.GetContentsAsync(where.WithNoneOption()).GetAwaiter().GetResult()!
-							.Where(x => x.IsT1);
+					var exits = parser.Database
+						.GetContentsAsync(where.WithNoneOption())
+						.GetAwaiter().GetResult()!
+							.Where(x => x.IsT1)
+							.Select(x => x.WithRoomOption());
 
-					// MATCH_LIST(exits);
+					var a = Match_List(parser, exits, looker, where, bestMatch, exact, final, curr, right_type, flags, name);
 				}
 			}
 			break;
@@ -489,20 +506,21 @@ public partial class Functions
 			{
 				return new Error<string>(Errors.ErrorAmbiguous);
 			}
-			return bestMatch.WithErrorOption();
+			return bestMatch;
 		}
 
 		return new None();
 	}
 
-	public static (OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None, Error<string>> BestMatch, int Final, int Curr, int RightType, int Exact, ControlFlow c) Match_List(IMUSHCodeParser parser,
+	public static (OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None, Error<string>> BestMatch, int Final, int Curr, int RightType, bool Exact, ControlFlow c) Match_List(
+		IMUSHCodeParser parser,
 		IEnumerable<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None>> list,
 		OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> looker,
 		OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> where,
 		OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None, Error<string>> bestMatch,
-		int exact,
-		int final, 
-		int curr, 
+		bool exact,
+		int final,
+		int curr,
 		int rightType,
 		LocateFlags flags,
 		string name)
@@ -524,9 +542,9 @@ public partial class Functions
 			var abs = HelperFunctions.ParseDBRef(name);
 			if (abs.IsSome() && cur.Object().DBRef == abs.Value())
 			{
-				(bestMatch,final, curr, rightType, exact, flow) = 
+				(bestMatch, final, curr, rightType, exact, flow) =
 					Matched(parser, true, exact, final, curr, rightType, looker, where, cur, bestMatch, flags);
-				
+
 				if (flow == ControlFlow.Break) break;
 				else if (flow == ControlFlow.Continue) continue;
 			}
@@ -538,23 +556,23 @@ public partial class Functions
 				|| (!cur.IsExit()
 					&& !string.Equals(cur.Object().Name, name, StringComparison.OrdinalIgnoreCase)))
 			{
-				(bestMatch, final, curr, rightType, exact, flow) = 
+				(bestMatch, final, curr, rightType, exact, flow) =
 					Matched(parser, true, exact, final, curr, rightType, looker, where, cur, bestMatch, flags);
-				
+
 				if (flow == ControlFlow.Break) break;
 				else if (flow == ControlFlow.Continue) continue;
 			}
 			else if (!flags.HasFlag(LocateFlags.NoPartialMatches) && !cur.IsExit() && cur.Object().Name.Equals(name, StringComparison.OrdinalIgnoreCase))
 			{
-				(bestMatch, final, curr, rightType, exact, flow) = 
+				(bestMatch, final, curr, rightType, exact, flow) =
 					Matched(parser, false, exact, final, curr, rightType, looker, where, cur, bestMatch, flags);
-				
+
 				if (flow == ControlFlow.Break) break;
 				else if (flow == ControlFlow.Continue) continue;
 			}
 		}
 
-		throw new NotImplementedException();
+		return (bestMatch, final, curr, rightType, exact, ControlFlow.None);
 	}
 
 	public static OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None> ChooseThing(IMUSHCodeParser parser, OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> who, int preferredType, LocateFlags flags, OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None> thing1, OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None> thing2)
@@ -610,10 +628,10 @@ public partial class Functions
 		return thing2;
 	}
 
-	public static (OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None, Error<string>> BestMatch, int Final, int Curr, int RightType, int Exact, ControlFlow c) Matched(
+	public static (OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None, Error<string>> BestMatch, int Final, int Curr, int RightType, bool Exact, ControlFlow c) Matched(
 		IMUSHCodeParser parser,
 		bool full,
-		int exact,
+		bool exact,
 		int final,
 		int curr,
 		int right_type,
@@ -639,7 +657,7 @@ public partial class Functions
 
 			if (full)
 			{
-				if (exact != 0)
+				if (exact)
 				{
 					//  Another exact match 
 					curr++;
@@ -647,7 +665,7 @@ public partial class Functions
 				else
 				{
 					//  Ignore any previous partial matches now we have an exact match 
-					exact = 1;
+					exact = true;
 					curr = 1;
 					right_type = 0;
 				}
@@ -658,8 +676,8 @@ public partial class Functions
 				curr++;
 			}
 
-			if (!flags.HasFlag(LocateFlags.NoTypePreference) 
-				&& !bestMatch.IsT5 && !bestMatch.IsT4 
+			if (!flags.HasFlag(LocateFlags.NoTypePreference)
+				&& !bestMatch.IsT5 && !bestMatch.IsT4
 				&& (bestMatch.WithoutError().WithoutNone().Object().Type == cur.Object().Type))
 			{
 				right_type++;
