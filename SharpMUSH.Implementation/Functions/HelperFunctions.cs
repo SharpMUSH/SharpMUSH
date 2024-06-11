@@ -587,7 +587,7 @@ public partial class Functions
 		return (bestMatch, final, curr, rightType, exact, ControlFlow.Break);
 	}
 
-	public static AnyOptionalSharpObject ChooseThing(IMUSHCodeParser parser, AnySharpObject who, int preferredType, LocateFlags flags, AnyOptionalSharpObject thing1, AnyOptionalSharpObject thing2)
+	public static AnyOptionalSharpObject ChooseThing(IMUSHCodeParser parser, AnySharpObject who, LocateFlags flags, AnyOptionalSharpObject thing1, AnyOptionalSharpObject thing2)
 	{
 		if (thing1.IsT4 && thing2.IsT4)
 		{
@@ -609,7 +609,7 @@ public partial class Functions
 			return thing1;
 		}
 
-		if (preferredType != 0)
+		if (TypePreferences(flags).Any())
 		{
 			if (TypePreferences(flags).Contains(thing1.Object()!.Type))
 			{
@@ -660,8 +660,7 @@ public partial class Functions
 		}
 		if (final != 0)
 		{
-			AnyOptionalSharpObject bm = new None();
-			// TODO: Make this call BEST_MATCH()
+			AnyOptionalSharpObject bm = ChooseThing(parser, looker, flags, bestMatch.WithoutError(), cur.WithNoneOption());
 			if (bm.WithoutNone().Object().DBRef != cur.Object().DBRef)
 			{
 				return (new None(), final, curr, right_type, exact, ControlFlow.Continue);
