@@ -740,14 +740,11 @@ public partial class Functions
 	}
 
 	public static IEnumerable<OneOf<DBRef, string>> NameList(string list)
-	{
-		var a = NameListPatternRegex.Matches(list).Cast<Match>().Select(x =>
-			!string.IsNullOrWhiteSpace(x.Groups["DBRef"].Value)
-				? OneOf<DBRef, string>.FromT0(HelperFunctions.ParseDBRef(x.Groups["DBRef"].Value).Value())
-				: OneOf<DBRef, string>.FromT1(x.Groups["User"].Value));
+		=> NameListPatternRegex.Matches(list).Cast<Match>().Select(x =>
+				!string.IsNullOrWhiteSpace(x.Groups["DBRef"].Value)
+					? OneOf<DBRef, string>.FromT0(HelperFunctions.ParseDBRef(x.Groups["DBRef"].Value).Value())
+					: OneOf<DBRef, string>.FromT1(x.Groups["User"].Value));
 
-		return a;
-	}
 
 	/// <summary>
 	/// A regular expression that matches one or more names in a list format.
