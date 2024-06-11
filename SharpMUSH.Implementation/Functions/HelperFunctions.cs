@@ -523,7 +523,7 @@ public partial class Functions
 		return new None();
 	}
 
-	public static (AnyOptionalSharpObjectOrError BestMatch, int Final, int Curr, int RightType, bool Exact, ControlFlow c) Match_List		(
+	public static (AnyOptionalSharpObjectOrError BestMatch, int Final, int Curr, int RightType, bool Exact, ControlFlow c) Match_List(
 		IMUSHCodeParser parser,
 		IEnumerable<AnySharpObject> list,
 		AnySharpObject looker,
@@ -589,41 +589,12 @@ public partial class Functions
 
 	public static AnyOptionalSharpObject ChooseThing(IMUSHCodeParser parser, AnySharpObject who, LocateFlags flags, AnyOptionalSharpObject thing1, AnyOptionalSharpObject thing2)
 	{
-		if (thing1.IsT4 && thing2.IsT4)
-		{
-			if (thing1.IsT4)
-			{
-				return thing2;
-			}
-			else
-			{
-				return thing1;
-			}
-		}
-		else if (thing1.IsT4)
-		{
-			return thing2;
-		}
-		else if (thing2.IsT4)
-		{
-			return thing1;
-		}
+		if (thing1.IsNone() && thing2.IsNone()) return thing1.IsNone() ? thing2 : thing1;
+		else if (thing1.IsNone()) return thing2;
+		else if (thing2.IsNone()) return thing1;
 
-		if (TypePreferences(flags).Any())
-		{
-			if (TypePreferences(flags).Contains(thing1.Object()!.Type))
-			{
-				if (!TypePreferences(flags).Contains(thing2.Object()!.Type))
-				{
-					return thing1;
-				}
-			}
-			else if (TypePreferences(flags).Contains(thing2.Object()!.Type))
-			{
-				return thing2;
-			}
-		}
-
+		if (TypePreferences(flags).Contains(thing1.Object()!.Type) && !TypePreferences(flags).Contains(thing2.Object()!.Type)) return thing1;
+		else if (TypePreferences(flags).Contains(thing2.Object()!.Type)) return thing2;
 
 		if (flags.HasFlag(LocateFlags.PreferLockPass))
 		{
@@ -688,7 +659,7 @@ public partial class Functions
 			}
 
 			if (!flags.HasFlag(LocateFlags.NoTypePreference)
-				&& !bestMatch.IsT5 && !bestMatch.IsT4
+				&& bestMatch.IsValid()
 				&& (bestMatch.WithoutError().WithoutNone().Object().Type == cur.Object().Type))
 			{
 				right_type++;
@@ -708,17 +679,17 @@ public partial class Functions
 
 	public static DBRef? WhereIs(AnySharpObject thing)
 	{
-		if (thing.IsT1) return null;
+		if (thing.IsRoom()) return null;
 		var minusRoom = thing.MinusRoom();
-		if (thing.IsT2) return OneOfExtensions.Home(minusRoom).Object()?.DBRef;
+		if (thing.IsExit()) return OneOfExtensions.Home(minusRoom).Object()?.DBRef;
 		else return OneOfExtensions.Location(minusRoom).Object()?.DBRef;
 	}
 
 	public static AnySharpContainer FriendlyWhereIs(AnySharpObject thing)
 	{
-		if (thing.IsT1) return thing.AsT1;
+		if (thing.IsRoom()) return thing.AsT1;
 		var minusRoom = thing.MinusRoom();
-		if (thing.IsT2) return OneOfExtensions.Home(minusRoom);
+		if (thing.IsExit()) return OneOfExtensions.Home(minusRoom);
 		else return OneOfExtensions.Location(minusRoom);
 	}
 

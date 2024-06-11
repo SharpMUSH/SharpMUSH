@@ -150,5 +150,15 @@ namespace SharpMUSH.Library.Extensions
 					exit => exit.Id,
 					thing => thing.Id
 				);
+
+		public static bool IsNone(this AnyOptionalSharpObject union) => union.IsT4;
+
+		public static bool IsNone(this AnyOptionalSharpContainer union) => union.IsT3;
+
+		public static bool IsNone(this AnyOptionalSharpObjectOrError union) => union.IsT4;
+
+		public static bool IsError(this AnyOptionalSharpObjectOrError union) => union.IsT5;
+
+		public static bool IsValid(this AnyOptionalSharpObjectOrError union) => !(union.IsT4 || union.IsT5);
 	}
 }
