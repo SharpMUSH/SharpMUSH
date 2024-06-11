@@ -87,38 +87,38 @@ public partial class Functions
 			match.Groups["Character"].Value switch
 			{
 				// Abbreviated weekday name 
-				"a" => string.Empty,
+				"a" => time.ToString("ddd"),
 				// Full weekday name
-				"A" => string.Empty,
+				"A" => time.ToString("dddd"),
 				// Abbreviated month name
-				"b" => string.Empty,
+				"b" => time.ToString("MMM"),
 				// Full month name  
-				"B" => string.Empty,
+				"B" => time.ToString("MMMM"),
 				// Date and time 
-				"c" => string.Empty,
+				"c" => time.ToString("g"),
 				// Day of the month
-				"d" => string.Empty,
+				"d" => time.ToString("dd"),
 				// Hour of the 24-hour day
-				"H" => time.Hour.ToString(),
+				"H" => time.ToString("HH"),
 				// Hour of the 12-hour day
-				"I" => time.Hour > 12 ? $"{time.Hour - 12}PM" : $"{time.Hour}AM",
+				"I" => time.ToString("hh t"),
 				// Day of the year 
 				"j" => time.DayOfYear.ToString(),
 				// Month of the year
-				"m" => string.Empty,
+				"m" => time.ToString("M"),
 				// Minutes after the hour 
-				"M" => string.Empty,
+				"M" => time.ToString("m"),
 				"P" or "p" => string.Empty,
 				// Seconds after the minute
-				"S" => string.Empty,
+				"S" => time.ToString("s"),
 				// Week of the year from 1rst Sunday
-				"U" => string.Empty,
+				"U" => string.Empty, // TODO: This
 				// Day of the week. 0 = Sunday
-				"w" => string.Empty,
+				"w" => time.DayOfWeek.ToString(),
 				// Week of the year from 1rst Monday
-				"W" => string.Empty,
+				"W" => string.Empty, // TODO: This
 				// Date 
-				"x" => string.Empty,
+				"x" => time.ToString("d"),
 				// Time
 				"X" => time.DateTime.ToShortTimeString(),
 				// Two-digit year
