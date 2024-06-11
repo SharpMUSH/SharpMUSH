@@ -1,5 +1,6 @@
 ﻿using OneOf;
 using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library
@@ -12,9 +13,9 @@ namespace SharpMUSH.Library
 
 		Task<DBRef> CreateRoomAsync(string name, SharpPlayer creator);
 
-		Task<DBRef> CreateThingAsync(string name, OneOf<SharpPlayer, SharpRoom, SharpThing> location, SharpPlayer creator);
+		Task<DBRef> CreateThingAsync(string name, AnySharpContainer location, SharpPlayer creator);
 
-		Task<DBRef> CreateExitAsync(string name, OneOf<SharpPlayer, SharpRoom, SharpThing> location, SharpPlayer creator);
+		Task<DBRef> CreateExitAsync(string name, AnySharpContainer location, SharpPlayer creator);
 
 		Task SetLockAsync(SharpObject target, string lockName, string lockString);
 
@@ -28,9 +29,9 @@ namespace SharpMUSH.Library
 		/// </summary>
 		/// <param name="dbref">Database Reference Number</param>
 		/// <returns>A OneOf over the object being returned</returns>
-		Task<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None>> GetObjectNodeAsync(DBRef dbref);
+		Task<AnyOptionalSharpObject> GetObjectNodeAsync(DBRef dbref);
 
-		OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None> GetObjectNode(DBRef dbref);
+		AnyOptionalSharpObject GetObjectNode(DBRef dbref);
 
 		Task<SharpObject?> GetBaseObjectNodeAsync(DBRef dbref);
 
@@ -63,12 +64,12 @@ namespace SharpMUSH.Library
 		/// <returns>Success or Failure</returns>
 		Task<bool> WipeAttributeAsync(DBRef dbref, string[] attribute);
 
-		Task<IEnumerable<OneOf<SharpPlayer, SharpExit, SharpThing>>> GetNearbyObjectsAsync(DBRef obj);
+		Task<IEnumerable<AnySharpContent>> GetNearbyObjectsAsync(DBRef obj);
 
-		Task<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None>> GetLocationAsync(DBRef obj, int depth = 1);
+		Task<AnyOptionalSharpObject> GetLocationAsync(DBRef obj, int depth = 1);
 
-		Task<IEnumerable<OneOf<SharpPlayer, SharpExit, SharpThing, None>>?> GetContentsAsync(DBRef obj);
+		Task<IEnumerable<AnySharpContent>?> GetContentsAsync(DBRef obj);
 
-		Task<IEnumerable<OneOf<SharpPlayer, SharpExit, SharpThing, None>>?> GetContentsAsync(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None> node);
+		Task<IEnumerable<AnySharpContent>?> GetContentsAsync(AnyOptionalSharpObject node);
 	}
 }

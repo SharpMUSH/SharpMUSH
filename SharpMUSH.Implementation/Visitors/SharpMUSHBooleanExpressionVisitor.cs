@@ -1,4 +1,5 @@
 ﻿using OneOf;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -11,13 +12,13 @@ public class SharpMUSHBooleanExpressionVisitor(IMUSHCodeParser parser, Parameter
 	protected override Expression AggregateResult(Expression aggregate, Expression nextResult)
 		=> new Expression[] { aggregate, nextResult }.First(x => x != null);
 
-	private readonly Expression<Func<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing>, string, IMUSHCodeParser, bool>> hasFlag = (dbRef, flag, psr)
+	private readonly Expression<Func<AnySharpObject, string, IMUSHCodeParser, bool>> hasFlag = (dbRef, flag, psr)
 		=> dbRef.Object().Flags.Any(x => x.Name == flag || x.Symbol == flag);
 
-	private readonly Expression<Func<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing>, string, IMUSHCodeParser, bool>> hasPower = (dbRef, power, psr)
+	private readonly Expression<Func<AnySharpObject, string, IMUSHCodeParser, bool>> hasPower = (dbRef, power, psr)
 		=> dbRef.Object().Powers.Any(x => x.Name == power || x.Alias == power);
 
-	private readonly Expression<Func<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing>, string, IMUSHCodeParser, bool>> isType = (dbRef, type, psr)
+	private readonly Expression<Func<AnySharpObject, string, IMUSHCodeParser, bool>> isType = (dbRef, type, psr)
 		=> dbRef.Object().Type == type;
 
 	private static readonly string[] defaultStringArrayValue = [];

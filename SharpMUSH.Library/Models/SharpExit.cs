@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using OneOf;
+using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Library.Models
 {
@@ -14,10 +15,10 @@ namespace SharpMUSH.Library.Models
 
 		// Relationship
 		[JsonIgnore]
-		public required Func<OneOf<SharpPlayer, SharpRoom, SharpThing>> Location { get; set; } // DESTINATION
+		public required Func<AnySharpContainer> Location { get; set; } // DESTINATION
 
 		// Relationship
 		[JsonIgnore]
-		public required Func<OneOf<SharpPlayer, SharpRoom, SharpThing>> Home { get; set; } // SOURCE ROOM
+		public required Func<AnySharpContainer> Home { get; set; } // SOURCE ROOM
 	}
 }

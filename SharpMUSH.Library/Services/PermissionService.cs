@@ -1,5 +1,6 @@
 ﻿using OneOf;
 using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 
@@ -7,18 +8,18 @@ namespace SharpMUSH.Library.Services
 {
 	public class PermissionService(ILockService lockService) : IPermissionService
 	{
-		public bool CanSet(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> executor, OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> target, SharpAttribute attribute)
+		public bool CanSet(AnySharpObject executor, AnySharpObject target, SharpAttribute attribute)
 		{
 			throw new NotImplementedException();
 		}
 
-		public bool Controls(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> executor, OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> target, SharpAttribute attribute)
+		public bool Controls(AnySharpObject executor, AnySharpObject target, SharpAttribute attribute)
 		{
 
 			throw new NotImplementedException();
 		}
 
-		public bool Controls(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> who, OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> target)
+		public bool Controls(AnySharpObject who, AnySharpObject target)
 		{
 			if (who.HasPower("guest"))
 				return false;
@@ -65,21 +66,21 @@ namespace SharpMUSH.Library.Services
 			return false;
 		}
 
-		public bool CanExamine(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> examiner,
-																		 OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> examinee)
+		public bool CanExamine(AnySharpObject examiner,
+																		 AnySharpObject examinee)
 			=> examiner.Object().DBRef == examinee.Object().DBRef
 					|| Controls(examiner, examinee)
 					|| examiner.IsSee_All()
 					|| (examinee.IsVisual() && lockService.Evaluate(LockType.Examine, examinee, examiner));
 
-		public bool CanInteract(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> result, OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> executor, IPermissionService.InteractType type)
+		public bool CanInteract(AnySharpObject result, AnySharpObject executor, IPermissionService.InteractType type)
 		{
 			throw new NotImplementedException();
 		}
 
 		public static bool CanEval(
-			OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> evaluator,
-			OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> evaluation_target) 
+			AnySharpObject evaluator,
+			AnySharpObject evaluation_target) 
 				=> !evaluation_target.IsPriv() 
 					 || evaluator.IsGod() 
 					 || ((evaluator.IsWizard() 
@@ -87,13 +88,13 @@ namespace SharpMUSH.Library.Services
 							&& !evaluation_target.IsGod());
 
 		public static bool CanEvalAttr(
-			OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> evaluator, 
-			OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> evaluation_target, 
+			AnySharpObject evaluator, 
+			AnySharpObject evaluation_target, 
 			SharpAttribute attribute) 
 				=> CanEval(evaluator, evaluation_target) 
 					 || attribute.IsPublic();
 
-		public bool CouldDoIt(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> who, OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None> thing1, string? what)
+		public bool CouldDoIt(AnySharpObject who, AnyOptionalSharpObject thing1, string? what)
 		{
 			throw new NotImplementedException();
 		}

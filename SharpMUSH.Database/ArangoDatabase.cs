@@ -5,6 +5,7 @@ using OneOf;
 using OneOf.Types;
 using SharpMUSH.Database.Models;
 using SharpMUSH.Library;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services;
@@ -92,7 +93,7 @@ public class ArangoDatabase(
 		return new DBRef(int.Parse(obj.Key), time);
 	}
 
-	public async Task<DBRef> CreateThingAsync(string name, OneOf<SharpPlayer, SharpRoom, SharpThing> location, SharpPlayer creator)
+	public async Task<DBRef> CreateThingAsync(string name, AnySharpContainer location, SharpPlayer creator)
 	{
 		var time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
@@ -111,7 +112,7 @@ public class ArangoDatabase(
 		return new DBRef(int.Parse(obj.Key), time);
 	}
 
-	public async Task<DBRef> CreateExitAsync(string name, OneOf<SharpPlayer, SharpRoom, SharpThing> location, SharpPlayer creator)
+	public async Task<DBRef> CreateExitAsync(string name, AnySharpContainer location, SharpPlayer creator)
 	{
 		var time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
@@ -128,7 +129,7 @@ public class ArangoDatabase(
 		return new DBRef(int.Parse(obj.Key), time);
 	}
 
-	public OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None> GetObjectNode(DBRef dbref)
+	public AnyOptionalSharpObject GetObjectNode(DBRef dbref)
 		=> GetObjectNodeAsync(dbref).Result;
 
 	private IQueryable<SharpPower> GetPowers(string id)
@@ -151,15 +152,15 @@ public class ArangoDatabase(
 		=> arangoDB.Query.ExecuteAsync<SharpObject>(handle,
 			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphParents} RETURN v").Result.AsQueryable();
 
-	private OneOf<SharpPlayer, SharpRoom, SharpThing> GetHome(string id)
-		=> arangoDB.Query.ExecuteAsync<OneOf<SharpPlayer, SharpRoom, SharpThing>>(handle,
+	private AnySharpContainer GetHome(string id)
+		=> arangoDB.Query.ExecuteAsync<AnySharpContainer>(handle,
 			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphParents} RETURN v").Result.Single();
 
-	private OneOf<SharpPlayer, SharpRoom, SharpThing> GetLocation(string id)
-		=> arangoDB.Query.ExecuteAsync<OneOf<SharpPlayer, SharpRoom, SharpThing>>(handle,
+	private AnySharpContainer GetLocation(string id)
+		=> arangoDB.Query.ExecuteAsync<AnySharpContainer>(handle,
 			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphParents} RETURN v").Result.Single();
 
-	public async Task<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None>> GetObjectNodeAsync(DBRef dbref)
+	public async Task<AnyOptionalSharpObject> GetObjectNodeAsync(DBRef dbref)
 	{
 		var obj = await arangoDB.Document.GetAsync<SharpObjectQueryResult>(handle, DatabaseConstants.objects, dbref.Number.ToString());
 
@@ -201,7 +202,7 @@ public class ArangoDatabase(
 		};
 	}
 
-	private async Task<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None>> GetObjectNodeAsync(string dbID)
+	private async Task<AnyOptionalSharpObject> GetObjectNodeAsync(string dbID)
 	{
 		var startVertex = dbID;
 
@@ -399,7 +400,7 @@ public class ArangoDatabase(
 		throw new NotImplementedException();
 	}
 
-	public Task<IEnumerable<OneOf<SharpPlayer, SharpExit, SharpThing>>> GetNearbyObjectsAsync(DBRef obj)
+	public Task<IEnumerable<AnySharpContent>> GetNearbyObjectsAsync(DBRef obj)
 	{
 
 		throw new NotImplementedException();
@@ -411,7 +412,7 @@ public class ArangoDatabase(
 	/// <param name="obj">Location</param>
 	/// <param name="depth">Depth</param>
 	/// <returns>The deepest findable object based on depth</returns>
-	public async Task<OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None>> GetLocationAsync(DBRef obj, int depth = 1)
+	public async Task<AnyOptionalSharpObject> GetLocationAsync(DBRef obj, int depth = 1)
 	{
 		var baseObject = await GetObjectNodeAsync(obj);
 		if (baseObject.IsT4) return new None();
@@ -427,7 +428,7 @@ public class ArangoDatabase(
 		return locationBaseObj;
 	}
 
-	public async Task<IEnumerable<OneOf<SharpPlayer, SharpExit, SharpThing, None>>?> GetContentsAsync(DBRef obj)
+	public async Task<IEnumerable<AnySharpContent>?> GetContentsAsync(DBRef obj)
 	{
 		var baseObject = await GetObjectNodeAsync(obj);
 		if (baseObject.IsT4) return null;
@@ -441,18 +442,18 @@ public class ArangoDatabase(
 		var result = query
 			.Select(x => (string)x._id)
 			.Select(GetObjectNodeAsync) // TODO: Optimize to make a single call.
-			.Select(x => x.Result.Match<OneOf<SharpPlayer, SharpExit, SharpThing, None>>(
+			.Select(x => x.Result.Match<AnySharpContent>(
 				player => player,
-				room => new None(),
+				room => throw new Exception("Invalid Contents found"),
 				exit => exit,
 				thing => thing,
-				none => none
+				none => throw new Exception("Invalid Contents found")
 			));
 
 		return result;
 	}
 
-	public async Task<IEnumerable<OneOf<SharpPlayer, SharpExit, SharpThing, None>>?> GetContentsAsync(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None> node)
+	public async Task<IEnumerable<AnySharpContent>?> GetContentsAsync(AnyOptionalSharpObject node)
 	{
 		var startVertex = node.Id();
 
@@ -467,12 +468,12 @@ public class ArangoDatabase(
 		var result = query
 			.Select(x => (string)x._id)
 			.Select(GetObjectNodeAsync) // TODO: Optimize to make a single call.
-			.Select(x => x.Result.Match<OneOf<SharpPlayer, SharpExit, SharpThing, None>>(
+			.Select(x => x.Result.Match<AnySharpContent>(
 				player => player,
-				room => new None(),
+				room => throw new Exception("Invalid Contents found"),
 				exit => exit,
 				thing => thing,
-				none => none
+				none => throw new Exception("Invalid Contents found")
 			));
 
 		return result;

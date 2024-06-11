@@ -1,5 +1,6 @@
 ﻿using OneOf.Monads;
 using SharpMUSH.Library;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -33,7 +34,7 @@ namespace SharpMUSH.Implementation.Commands
 			
 			var args = parser.CurrentState.Arguments;
 			var executor = parser.CurrentState.Executor!.Value;
-			OneOf.OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, OneOf.Types.None> viewing;
+			AnyOptionalSharpObject viewing;
 
 			if (args.Count == 1)
 			{

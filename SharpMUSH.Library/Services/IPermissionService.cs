@@ -1,5 +1,4 @@
-﻿using OneOf;
-using OneOf.Types;
+﻿using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Services
@@ -11,16 +10,16 @@ namespace SharpMUSH.Library.Services
 			See, Hear, Match, Presence
 		}
 
-		public bool CanSet(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> executor, OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> target, SharpAttribute attribute);
+		public bool CanSet(AnySharpObject executor, AnySharpObject target, SharpAttribute attribute);
 
-		public bool Controls(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> executor, OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> target, SharpAttribute attribute);
+		public bool Controls(AnySharpObject executor, AnySharpObject target, SharpAttribute attribute);
 
-		public bool Controls(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> executor, OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> target);
+		public bool Controls(AnySharpObject executor, AnySharpObject target);
 
-		bool CanExamine(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> examiner, OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> examinee);
+		bool CanExamine(AnySharpObject examiner, AnySharpObject examinee);
 
-		bool CanInteract(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> result, OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> executor, InteractType type);
+		bool CanInteract(AnySharpObject result, AnySharpObject executor, InteractType type);
 		
-		bool CouldDoIt(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> who, OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None> thing1, string? what);
+		bool CouldDoIt(AnySharpObject who, AnyOptionalSharpObject thing1, string? what);
 	}
 }

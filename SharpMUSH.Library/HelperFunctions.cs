@@ -1,6 +1,7 @@
 ﻿using OneOf;
 using OneOf.Monads;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using System.Text.RegularExpressions;
@@ -12,85 +13,85 @@ public static partial class HelperFunctions
 	private readonly static Regex DatabaseReferenceRegex = DatabaseReference();
 	private readonly static Regex DatabaseReferenceWithAttributeRegex = DatabaseReferenceWithAttribute();
 
-	public static bool IsPlayer(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
+	public static bool IsPlayer(this AnySharpObject obj)
 		=> obj.IsT0;
 
-	public static bool IsRoom(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
+	public static bool IsRoom(this AnySharpObject obj)
 		=> obj.IsT1;
 
-	public static bool IsExit(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
+	public static bool IsExit(this AnySharpObject obj)
 		=> obj.IsT2;
 
-	public static bool IsThing(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
+	public static bool IsThing(this AnySharpObject obj)
 		=> obj.IsT3;
 
-	public static bool IsPlayer(this OneOf<SharpPlayer, SharpRoom, SharpThing> obj)
+	public static bool IsPlayer(this AnySharpContainer obj)
 		=> obj.IsT0;
 
-	public static bool IsRoom(this OneOf<SharpPlayer, SharpRoom, SharpThing> obj)
+	public static bool IsRoom(this AnySharpContainer obj)
 		=> obj.IsT1;
 
-	public static bool IsThing(this OneOf<SharpPlayer, SharpRoom,SharpThing> obj)
+	public static bool IsThing(this AnySharpContainer obj)
 		=> obj.IsT2;
 
-	public static bool IsWizard(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
+	public static bool IsWizard(this AnySharpObject obj)
 		=> obj.Object()!.Flags!.Any(x => x.Name == "Wizard");
 
-	public static bool IsRoyalty(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
+	public static bool IsRoyalty(this AnySharpObject obj)
 		=> obj.Object()!.Flags!.Any(x => x.Name == "Royalty");
 
-	public static bool IsMistrust(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
+	public static bool IsMistrust(this AnySharpObject obj)
 		=> obj.Object()!.Flags!.Any(x => x.Name == "Mistrust");
 
-	public static bool IsGod(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
+	public static bool IsGod(this AnySharpObject obj)
 		=> obj.Object()!.Key! == 1;
 
-	public static bool IsPriv(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
+	public static bool IsPriv(this AnySharpObject obj)
 		=> IsGod(obj) || IsWizard(obj) || IsRoyalty(obj);
 
-	public static bool IsSee_All(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
+	public static bool IsSee_All(this AnySharpObject obj)
 		=> IsPriv(obj) || obj.HasPower("See_All");
 	
-	public static bool IsGuest(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
+	public static bool IsGuest(this AnySharpObject obj)
 		=> obj.HasPower("Guest");
 
-	public static bool IsVisual(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
+	public static bool IsVisual(this AnySharpObject obj)
 		=> obj.HasPower("Visual");
 
-	public static bool IsDark(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
+	public static bool IsDark(this AnySharpObject obj)
 		=> obj.HasPower("Dark");
 
-	public static bool IsLight(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
+	public static bool IsLight(this AnySharpObject obj)
 		=> obj.HasPower("Light");
 	
-	public static bool IsDarkLegal(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
+	public static bool IsDarkLegal(this AnySharpObject obj)
 		=> obj.IsDark() && (obj.CanDark() || !obj.IsAlive());
 
-	public static bool IsAudible(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
+	public static bool IsAudible(this AnySharpObject obj)
 		=> obj.HasPower("Audible");
-	public static bool IsOrphan(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
+	public static bool IsOrphan(this AnySharpObject obj)
 		=> obj.HasPower("Orphan");
 
-	public static bool IsAlive(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
+	public static bool IsAlive(this AnySharpObject obj)
 		=> IsPlayer(obj) || IsPuppet(obj) || (IsAudible(obj) && obj.Object().Attributes!.Any(x => x.Name == "FORWARDLIST"));
 
-	public static bool IsPuppet(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
+	public static bool IsPuppet(this AnySharpObject obj)
 		=> obj.HasPower("Puppet");
 
-	public static bool HasPower(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj, string power)
+	public static bool HasPower(this AnySharpObject obj, string power)
 		=> obj.Object().Powers!.Any(x => x.Name == power || x.Alias == power);
 
-	public static bool HasLongFingers(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
+	public static bool HasLongFingers(this AnySharpObject obj)
 		=> obj.IsPriv() || obj.HasPower("Long_Fingers");
 
-	public static bool HasFlag(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj, string flag)
+	public static bool HasFlag(this AnySharpObject obj, string flag)
 		=> obj.Object().Flags!.Any(x => x.Name == flag);
 
 	// This may belong in the Permission Service.
-	public static bool CanDark(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
+	public static bool CanDark(this AnySharpObject obj)
 		=> obj.HasPower("Can_Dark") || obj.IsWizard();
 
-	public static DBRef? Ancestor(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
+	public static DBRef? Ancestor(this AnySharpObject obj)
 		=> obj.IsOrphan() ? null : obj.Match(
 				player => Configurable.AncestorPlayer,
 				room => Configurable.AncestorRoom,
@@ -98,14 +99,14 @@ public static partial class HelperFunctions
 				thing => Configurable.AncestorThing
 			);
 
-	public static bool Inheritable(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> obj)
+	public static bool Inheritable(this AnySharpObject obj)
 		=> IsPlayer(obj)
 				|| obj.HasFlag("Trust")
 				|| obj.Object().Owner!.Single().Object.Flags!.Any(x => x.Name == "Trust")
 				|| IsWizard(obj);
 
-	public static bool Owns(this OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> who,
-															 OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> what)
+	public static bool Owns(this AnySharpObject who,
+															 AnySharpObject what)
 		=> who.Object()!.Owner!.Single().Object.Id == what.Object()!.Owner!.Single().Object.Id;
 
 	/// <summary>
