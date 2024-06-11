@@ -264,51 +264,6 @@ public partial class Functions
 		return string.Empty;
 	}
 
-	/* The real work. Here's the spec:
-	 * str  --> "me"
-	 *      --> "here"
-	 *      --> "#dbref"
-	 *      --> "*player"
-	 *      --> adj-phrase name
-	 *      --> name
-	 * adj-phrase --> adj
-	 *            --> adj count
-	 *            --> count
-	 * adj  --> "my", "me" (restrict match to inventory)
-	 *      --> "here", "this", "this here" (restrict match to neighbor objects)
-	 *      --> "toward" (restrict match to exits)
-	 * count --> 1st, 21st, etc.
-	 *       --> 2nd, 22nd, etc.
-	 *       --> 3rd, 23rd, etc.
-	 *       --> 4th, 10th, etc.
-	 * name --> exit_alias
-	 *      --> full_obj_name
-	 *      --> partial_obj_name
-	 *
-	 * 1. Look for exact matches and return immediately:
-	 *  a. "me" if requested
-	 *  b. "here" if requested
-	 *  c. #dbref, possibly with a control check
-	 *  d. *player
-	 * 2. Parse for adj-phrases and restrict further matching and/or
-	 *    remember the object count
-	 * 3. Look for matches (remote contents, neighbor, inventory, exits,
-	 *    containers, carried exits)
-	 *  a. If we don't have an object count, collect the number of exact
-	 *     and partial matches and the best partial match.
-	 *  b. If we do have an object count, collect the nth exact match
-	 *     and the nth match (exact or partial). number of matches is always
-	 *     0 or 1.
-	 * 4. Make decisions
-	 *  a. If we got a single exact match, return it
-	 *  b. If we got multiple exact matches, complain
-	 *  c. If we got no exact matches, but a single partial match, return it
-	 *  d. If we got multiple partial matches, complain
-	 *  e. If we got no matches, complain
-	 */
-
-	/* MATCHED() is called from inside the MATCH_LIST macro. full is 1 if the
-		match was full/exact, and 0 if it was partial */
 	private static AnyOptionalSharpObjectOrError LocateMatch(
 		IMUSHCodeParser parser,
 		AnySharpObject looker,
@@ -785,16 +740,20 @@ public partial class Functions
 	}
 
 	public static IEnumerable<OneOf<DBRef, string>> NameList(string list)
-		=> NameListPatternRegex.Matches(list).Cast<Match>().Select(x =>
+	{
+		var a = NameListPatternRegex.Matches(list).Cast<Match>().Select(x =>
 			!string.IsNullOrWhiteSpace(x.Groups["DBRef"].Value)
 				? OneOf<DBRef, string>.FromT0(HelperFunctions.ParseDBRef(x.Groups["DBRef"].Value).Value())
 				: OneOf<DBRef, string>.FromT1(x.Groups["User"].Value));
+
+		return a;
+	}
 
 	/// <summary>
 	/// A regular expression that matches one or more names in a list format.
 	/// </summary>
 	/// <returns>A regex that has a named group for the match.</returns>
-	[GeneratedRegex("(\"(?<User>.+?)\"|(?<DBRef>#\\d+(:\\d+)?)|(?<User>\\S+))(\\s+|$)")]
+	[GeneratedRegex("(\"(?<User>.+?)\"|(?<DBRef>#\\d+(:\\d+)?)|(?<User>\\S+))(\\s?|$)")]
 	private static partial Regex NameListPattern();
 
 	/// <summary>
