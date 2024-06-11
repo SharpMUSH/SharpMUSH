@@ -116,5 +116,47 @@ namespace SharpMUSH.Implementation.Visitors
 		{
 			return new CallState(null, context.Depth(), [context.GetText()]);
 		}
+
+		/// <summary>
+		/// Visit a parse tree produced by <see cref="SharpMUSHParser.eqsplitCommandArgs"/>.
+		/// <para>
+		/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
+		/// on <paramref name="context"/>.
+		/// </para>
+		/// </summary>
+		/// <param name="context">The parse tree.</param>
+		/// <return>The visitor result.</return>
+		public override CallState? VisitEqsplitCommandArgs([NotNull] SharpMUSHParser.EqsplitCommandArgsContext context)
+		{
+			return new CallState(null, context.Depth(), [context.GetText()]);
+		}
+
+		/// <summary>
+		/// Visit a parse tree produced by <see cref="SharpMUSHParser.eqsplitCommand"/>.
+		/// <para>
+		/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
+		/// on <paramref name="context"/>.
+		/// </para>
+		/// </summary>
+		/// <param name="context">The parse tree.</param>
+		/// <return>The visitor result.</return>
+		public override CallState? VisitEqsplitCommand([NotNull] SharpMUSHParser.EqsplitCommandContext context)
+		{
+			return new CallState(null, context.Depth(), [context.GetText()]);
+		}
+
+		/// <summary>
+		/// Visit a parse tree produced by <see cref="SharpMUSHParser.commaCommandArgs"/>.
+		/// <para>
+		/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
+		/// on <paramref name="context"/>.
+		/// </para>
+		/// </summary>
+		/// <param name="context">The parse tree.</param>
+		/// <return>The visitor result.</return>
+		public override CallState? VisitCommaCommandArgs([NotNull] SharpMUSHParser.CommaCommandArgsContext context)
+		{
+			return new CallState(null, context.Depth(), [context.GetText()]);
+		}
 	}
 }
