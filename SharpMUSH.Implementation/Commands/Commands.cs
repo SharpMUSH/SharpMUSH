@@ -159,7 +159,7 @@ namespace SharpMUSH.Implementation.Commands
 			// command (space) argument(s)
 			if (context.children.Count > 1)
 			{
-				// command arg0 = arg1 ,still arg 1 
+				// command arg0 = arg1,still arg 1 
 				if ((libraryCommandDefinition.Attribute.Behavior & (Definitions.CommandBehavior.EqSplit | Definitions.CommandBehavior.RSArgs)) != 0)
 				{
 					argCallState = parser.CommandEqSplitArgsParse(context.children[2].GetText())!;
@@ -185,7 +185,7 @@ namespace SharpMUSH.Implementation.Commands
 			bool eqSplit = (libraryCommandDefinition.Attribute.Behavior & Definitions.CommandBehavior.EqSplit) != 0;
 			bool noParse = (libraryCommandDefinition.Attribute.Behavior & Definitions.CommandBehavior.NoParse) != 0;
 			bool noRSParse = (libraryCommandDefinition.Attribute.Behavior & Definitions.CommandBehavior.RSNoParse) != 0;
-			var nArgs = parser.CurrentState.Arguments.Count;
+			var nArgs = argCallState!.Arguments!.Length;
 
 			// TODO: Implement lsargs - but there are no immediate commands that need it.
 

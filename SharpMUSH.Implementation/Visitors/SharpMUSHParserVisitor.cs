@@ -1,6 +1,7 @@
 ﻿using Antlr4.Runtime.Misc;
 using Serilog;
 using SharpMUSH.Library.ParserInterfaces;
+using static SharpMUSHParser;
 
 namespace SharpMUSH.Implementation.Visitors
 {
@@ -128,7 +129,9 @@ namespace SharpMUSH.Implementation.Visitors
 		/// <return>The visitor result.</return>
 		public override CallState? VisitEqsplitCommandArgs([NotNull] SharpMUSHParser.EqsplitCommandArgsContext context)
 		{
-			return new CallState(null, context.Depth(), [context.GetText()]);
+			var baseArg = base.VisitChildren(context.singleCommandArg());
+			var commaArgs = base.VisitChildren(context.commaCommandArgs());
+			return new CallState(null, context.Depth(), [baseArg!.Message!.ToString(), ..commaArgs!.Arguments]);
 		}
 
 		/// <summary>
@@ -142,7 +145,9 @@ namespace SharpMUSH.Implementation.Visitors
 		/// <return>The visitor result.</return>
 		public override CallState? VisitEqsplitCommand([NotNull] SharpMUSHParser.EqsplitCommandContext context)
 		{
-			return new CallState(null, context.Depth(), [context.GetText()]);
+			var baseArg = base.VisitChildren(context.singleCommandArg()[0]);
+			var RSArg = base.VisitChildren(context.singleCommandArg()[1]);
+			return new CallState(null, context.Depth(), [baseArg!.Message!.ToString(), .. RSArg!.Arguments]);
 		}
 
 		/// <summary>
