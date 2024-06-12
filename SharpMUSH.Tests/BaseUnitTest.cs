@@ -11,6 +11,7 @@ using System.Text;
 using SharpMUSH.Library;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Implementation;
+using SharpMUSH.Library.Extensions;
 
 namespace SharpMUSH.Tests
 {
@@ -57,8 +58,14 @@ namespace SharpMUSH.Tests
 			IQueueService? qs = null,
 			IConnectionService? cs = null)
 		{
-			// This needs adjustments, as the Database won't agree with the Milliseconds.
 			var one = new DBRef(1, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+			if (ds != null)
+			{
+				var realOne = ds!.GetObjectNode(new DBRef(1));
+				one = realOne.Object()!.DBRef;
+			}
+
+			// This needs adjustments, as the Database won't agree with the Milliseconds.
 			var simpleConnectionService = new ConnectionService();
 			simpleConnectionService.Register("1", (x) => Task.CompletedTask, () => Encoding.UTF8);
 			simpleConnectionService.Bind("1", one);

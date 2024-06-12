@@ -78,9 +78,12 @@ namespace SharpMUSH.Implementation.Commands
 
 			var notification = args[1]!.Message!.ToString();
 			var target = MModule.plainText(args[0]!.Message!);
+			// This should not be needed.
+			var maybeExecutor = parser.Database.GetObjectNode(parser.CurrentState.Executor!.Value);
+			var executor = maybeExecutor.WithoutNone();
 
-			// TODO: Use Locate() here.
-			var parsedTarget = HelperFunctions.ParseDBRef(target);
+			var locatetarget = SharpMUSH.Implementation.Functions.Functions.Locate(parser, executor, executor, target, Functions.Functions.LocateFlags.All);
+			var parsedTarget = HelperFunctions.ParseDBRef(locatetarget);
 			
 			if (parsedTarget.IsNone())
 			{
