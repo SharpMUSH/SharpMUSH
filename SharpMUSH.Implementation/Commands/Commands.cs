@@ -208,7 +208,7 @@ namespace SharpMUSH.Implementation.Commands
 				}
 				else if (nArgs > 1)
 				{
-					arguments.AddRange(argCallState.Arguments![1..].Select(parser.FunctionParse).Where(x => x != null).Select(x => x!));
+					arguments.AddRange(argCallState.Arguments![1..].Select(parser.FunctionParse).Select(x => x!));
 				}
 			}
 			else if (!eqSplit && noParse)
@@ -217,7 +217,7 @@ namespace SharpMUSH.Implementation.Commands
 			}
 			else if (!eqSplit && !noParse)
 			{
-				arguments.AddRange(argCallState.Arguments!.Select(parser.FunctionParse).Where(x => x != null).Select(x => x!));
+				arguments.AddRange(argCallState.Arguments!.Select(parser.FunctionParse).Select(x => x!));
 			}
 
 			return arguments;

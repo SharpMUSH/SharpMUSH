@@ -15,6 +15,10 @@ namespace SharpMUSH.Implementation.Visitors
 	{
 		protected override CallState? AggregateResult(CallState? aggregate, CallState? nextResult)
 		{
+			if (aggregate?.Arguments != null || nextResult?.Arguments != null)
+			{
+				return (aggregate ?? nextResult!) with { Arguments = [.. aggregate?.Arguments ?? Enumerable.Empty<string>(), .. nextResult?.Arguments ?? Enumerable.Empty<string>()] };
+			}
 			if (aggregate?.Message != null && nextResult?.Message != null)
 			{
 				return aggregate with { Message = MModule.concat(aggregate.Message, nextResult.Message) };
@@ -161,7 +165,8 @@ namespace SharpMUSH.Implementation.Visitors
 		/// <return>The visitor result.</return>
 		public override CallState? VisitCommaCommandArgs([NotNull] SharpMUSHParser.CommaCommandArgsContext context)
 		{
-			return new CallState(null, context.Depth(), [context.GetText()]);
+			var children = base.VisitChildren(context);
+			return new CallState(null, context.Depth(), children!.Arguments);
 		}
 	}
 }
