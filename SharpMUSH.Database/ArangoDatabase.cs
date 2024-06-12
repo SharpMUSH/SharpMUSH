@@ -154,11 +154,11 @@ public class ArangoDatabase(
 
 	private AnySharpContainer GetHome(string id)
 		=> arangoDB.Query.ExecuteAsync<AnySharpContainer>(handle,
-			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphParents} RETURN v").Result.Single();
+			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphHomes} RETURN v").Result.Single();
 
 	private AnySharpContainer GetLocation(string id)
 		=> arangoDB.Query.ExecuteAsync<AnySharpContainer>(handle,
-			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphParents} RETURN v").Result.Single();
+			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphLocations} RETURN v").Result.Single();
 
 	public async Task<AnyOptionalSharpObject> GetObjectNodeAsync(DBRef dbref)
 	{
