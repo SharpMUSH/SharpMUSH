@@ -82,7 +82,7 @@ namespace SharpMUSH.Implementation.Commands
 			var maybeExecutor = parser.Database.GetObjectNode(parser.CurrentState.Executor!.Value);
 			var executor = maybeExecutor.WithoutNone();
 
-			var locatetarget = SharpMUSH.Implementation.Functions.Functions.Locate(parser, executor, executor, target, Functions.Functions.LocateFlags.All);
+			var locatetarget = Functions.Functions.Locate(parser, executor, executor, target, Functions.Functions.LocateFlags.All);
 			var parsedTarget = HelperFunctions.ParseDBRef(locatetarget);
 			
 			if (parsedTarget.IsNone())

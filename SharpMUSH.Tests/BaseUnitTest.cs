@@ -52,7 +52,7 @@ namespace SharpMUSH.Tests
 
 		public static IMUSHCodeParser TestParser(
 			IPasswordService? pws = null,
-			IPermissionService? ps = null,
+			IPermissionService? ps = null, // Permission Service needs the parser... this is circular.
 			ISharpDatabase? ds = null,
 			INotifyService? ns = null,
 			IQueueService? qs = null,

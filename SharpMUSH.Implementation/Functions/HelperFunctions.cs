@@ -197,9 +197,9 @@ public partial class Functions
 		MatchWildCardForPlayerName,
 		MatchOptionalWildCardForPlayerName,
 		EnglishStyleMatching,
-		All,
 		NoPartialMatches,
-		MatchLookerControlledObjects
+		MatchLookerControlledObjects,
+		All = (MatchMeForLooker|MatchHereForLookerLocation|AbsoluteMatch|MatchOptionalWildCardForPlayerName|MatchObjectsInLookerLocation|MatchObjectsInLookerInventory|ExitsInTheRoomOfLooker|EnglishStyleMatching)
 	}
 
 	public static IEnumerable<string> TypePreferences(LocateFlags flags) =>
@@ -230,7 +230,7 @@ public partial class Functions
 			~(LocateFlags.PreferLockPass
 			| LocateFlags.FailIfNotPreferred
 			| LocateFlags.NoPartialMatches
-			| LocateFlags.MatchLookerControlledObjects)) != 0)
+			| LocateFlags.MatchLookerControlledObjects)) != 0)	
 		{
 			flags |= (LocateFlags.All | LocateFlags.MatchAgainstLookerLocationName | LocateFlags.ExitsInsideOfLooker);
 		}
@@ -360,8 +360,9 @@ public partial class Functions
 						|| (Nearby(looker, match.WithoutError().WithoutNone())
 						|| parser.PermissionService.Controls(looker, match.WithoutError().WithoutNone())))
 				{
-					if (!flags.HasFlag(LocateFlags.MatchLookerControlledObjects)
-							&& parser.PermissionService.Controls(looker, where))
+					var hasflag = flags.HasFlag(LocateFlags.MatchLookerControlledObjects);
+					var controls = parser.PermissionService.Controls(looker, where);
+					if (!(hasflag && !controls))
 					{
 						return match;
 					}
