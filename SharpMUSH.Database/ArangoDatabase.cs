@@ -1,7 +1,6 @@
 ﻿using Core.Arango;
 using Core.Arango.Migration;
 using Microsoft.Extensions.Logging;
-using OneOf;
 using OneOf.Types;
 using SharpMUSH.Database.Models;
 using SharpMUSH.Library;
@@ -153,12 +152,34 @@ public class ArangoDatabase(
 			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphParents} RETURN v").Result.AsQueryable();
 
 	private AnySharpContainer GetHome(string id)
-		=> arangoDB.Query.ExecuteAsync<AnySharpContainer>(handle,
-			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphHomes} RETURN v").Result.Single();
+	{
+		var homeId = arangoDB.Query.ExecuteAsync<string>(handle,
+			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphHomes} RETURN v._id").Result.Single();
+		var homeObject = GetObjectNodeAsync(homeId).Result;
+
+		return homeObject.Match<AnySharpContainer>(
+			player => player,
+			room => room,
+			exit => throw new Exception("Invalid Location found"),
+			thing => thing,
+			none => throw new Exception("Invalid Location found"));
+	}
 
 	private AnySharpContainer GetLocation(string id)
-		=> arangoDB.Query.ExecuteAsync<AnySharpContainer>(handle,
-			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphLocations} RETURN v").Result.Single();
+	{
+		// TODO: It can't do this conversion. It doesn't directly translate at all.
+		// SharpRoom etc should also populate with its correct values.
+		var locationId = arangoDB.Query.ExecuteAsync<string>(handle,
+			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphLocations} RETURN v._id").Result.Single();
+		var locationObject = GetObjectNodeAsync(locationId).Result;
+
+		return locationObject.Match<AnySharpContainer>(
+			player => player,
+			room => room,
+			exit => throw new Exception("Invalid Location found"),
+			thing => thing,
+			none => throw new Exception("Invalid Location found"));
+	}
 
 	public async Task<AnyOptionalSharpObject> GetObjectNodeAsync(DBRef dbref)
 	{
@@ -194,7 +215,7 @@ public class ArangoDatabase(
 
 		return obj.Type switch
 		{
-			DatabaseConstants.typeThing => new SharpThing { Id = id, Object = convertObject, Location = () => GetLocation(id), Home = () => GetHome(id)},
+			DatabaseConstants.typeThing => new SharpThing { Id = id, Object = convertObject, Location = () => GetLocation(id), Home = () => GetHome(id) },
 			DatabaseConstants.typePlayer => new SharpPlayer { Id = id, Object = convertObject, Aliases = vertex.Aliases.ToObject<string[]>(), Location = () => GetLocation(id), Home = () => GetHome(id), PasswordHash = vertex.PasswordHash },
 			DatabaseConstants.typeRoom => new SharpRoom { Id = id, Object = convertObject },
 			DatabaseConstants.typeExit => new SharpExit { Id = id, Object = convertObject, Aliases = vertex.Aliases, Location = () => GetLocation(id), Home = () => GetHome(id) },
@@ -209,21 +230,21 @@ public class ArangoDatabase(
 		var query = await arangoDB.Query.ExecuteAsync<dynamic>(handle,
 			$"FOR v IN 0..1 OUTBOUND {startVertex} GRAPH {DatabaseConstants.graphObjects} RETURN v");
 
-		var obj = (SharpObjectQueryResult)query.Last().vertex;
 		var res = query.First();
+		var obj = query.Last();
 
-		string id = res.id;
-		string collection = res.collection;
+		string id = res._id;
+		string collection = id.Split("/")[0];
 		dynamic vertex = res.vertex;
 		var convertObject = new SharpObject()
 		{
-			Id = obj.Id,
-			Key = int.Parse(obj.Key),
+			Id = obj._id,
+			Key = int.Parse((string)obj._key),
 			Name = obj.Name,
 			Type = obj.Type,
 			CreationTime = obj.CreationTime,
 			ModifiedTime = obj.ModifiedTime,
-			Locks = (obj.Locks ?? []).ToImmutableDictionary(),
+			Locks = (((Dictionary<string,string>)obj.Locks) ?? []).ToImmutableDictionary(),
 			Flags = GetFlags(startVertex),
 			Powers = GetPowers(startVertex),
 			Attributes = GetAttributes(startVertex),
@@ -231,12 +252,12 @@ public class ArangoDatabase(
 			Parent = GetParent(startVertex)
 		};
 
-		return obj.Type switch
+		return collection switch
 		{
-			DatabaseConstants.typeThing => new SharpThing { Id = id, Object = convertObject, Location = () => GetLocation(id), Home = () => GetHome(id) },
-			DatabaseConstants.typePlayer => new SharpPlayer { Id = id, Object = convertObject, Aliases = vertex.Aliases, Location = () => GetLocation(id), Home = () => GetHome(id), PasswordHash = vertex.PasswordHash },
-			DatabaseConstants.typeRoom => new SharpRoom { Id = id, Object = convertObject },
-			DatabaseConstants.typeExit => new SharpExit { Id = id, Object = convertObject, Aliases = vertex.Aliases, Location = () => GetLocation(id), Home = () => GetHome(id) },
+			DatabaseConstants.things => new SharpThing { Id = id, Object = convertObject, Location = () => GetLocation(id), Home = () => GetHome(id) },
+			DatabaseConstants.players => new SharpPlayer { Id = id, Object = convertObject, Aliases = vertex.Aliases, Location = () => GetLocation(id), Home = () => GetHome(id), PasswordHash = vertex.PasswordHash },
+			DatabaseConstants.rooms => new SharpRoom { Id = id, Object = convertObject },
+			DatabaseConstants.exits => new SharpExit { Id = id, Object = convertObject, Aliases = vertex.Aliases, Location = () => GetLocation(id), Home = () => GetHome(id) },
 			_ => throw new ArgumentException($"Invalid Object Type found: '{obj.Type}'"),
 		};
 	}
@@ -326,10 +347,10 @@ public class ArangoDatabase(
 
 	public async Task SetLockAsync(SharpObject target, string lockName, string lockString)
 		=> await arangoDB.Document.UpdateAsync(handle, DatabaseConstants.objects, new
-			{
-				target.Key,
-				Locks = target.Locks.Add(lockName, lockString)
-			}, mergeObjects: true); 
+		{
+			target.Key,
+			Locks = target.Locks.Add(lockName, lockString)
+		}, mergeObjects: true);
 
 	public async Task<IEnumerable<SharpAttribute>?> GetAttributeAsync(DBRef dbref, string[] attribute)
 	{

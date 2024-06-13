@@ -502,10 +502,14 @@ namespace SharpMUSH.Database.Migrations
 							{
 								Collection = DatabaseConstants.hasHome,
 								To = [
-									DatabaseConstants.objects
+									DatabaseConstants.rooms,
+									DatabaseConstants.things,
+									DatabaseConstants.players
 									],
 								From = [
-									DatabaseConstants.objects
+									DatabaseConstants.exits,
+									DatabaseConstants.things,
+									DatabaseConstants.players
 									]
 							}
 						],
@@ -519,7 +523,7 @@ namespace SharpMUSH.Database.Migrations
 							{
 								Collection = DatabaseConstants.hasObjectOwner,
 								To = [
-									DatabaseConstants.objects
+									DatabaseConstants.players
 									],
 								From = [
 									DatabaseConstants.objects
@@ -539,7 +543,7 @@ namespace SharpMUSH.Database.Migrations
 									DatabaseConstants.objects
 									],
 								From = [
-									DatabaseConstants.objects
+									DatabaseConstants.attributes
 									]
 							}
 						],

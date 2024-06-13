@@ -6,8 +6,10 @@ namespace SharpMUSH.Library.DiscriminatedUnions
 	[GenerateOneOf]
 	public class AnyOptionalSharpContainer : OneOfBase<SharpPlayer, SharpRoom, SharpThing, OneOf.Types.None>
 	{
-		protected AnyOptionalSharpContainer(OneOf<SharpPlayer, SharpRoom, SharpThing, OneOf.Types.None> input) : base(input)
-		{
-		}
+		public AnyOptionalSharpContainer(OneOf<SharpPlayer, SharpRoom, SharpThing, OneOf.Types.None> input) : base(input) { }
+		public static implicit operator AnyOptionalSharpContainer(SharpPlayer x) => new(x);
+		public static implicit operator AnyOptionalSharpContainer(SharpRoom x) => new(x);
+		public static implicit operator AnyOptionalSharpContainer(SharpThing x) => new(x);
+		public static implicit operator AnyOptionalSharpContainer(OneOf.Types.None x) => new(x);
 	}
 }

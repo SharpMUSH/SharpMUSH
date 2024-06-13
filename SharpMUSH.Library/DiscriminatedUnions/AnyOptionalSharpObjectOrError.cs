@@ -6,10 +6,7 @@ namespace SharpMUSH.Library.DiscriminatedUnions
 	[GenerateOneOf]
 	public class AnyOptionalSharpObjectOrError : OneOfBase<SharpPlayer, SharpRoom, SharpExit, SharpThing, OneOf.Types.None, OneOf.Types.Error<string>>
 	{
-		protected AnyOptionalSharpObjectOrError(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, OneOf.Types.None, OneOf.Types.Error<string>> input) : base(input)
-		{
-		}
-
+		public AnyOptionalSharpObjectOrError(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, OneOf.Types.None, OneOf.Types.Error<string>> input) : base(input) { }
 		public static implicit operator AnyOptionalSharpObjectOrError(SharpPlayer x) => new(x);
 		public static implicit operator AnyOptionalSharpObjectOrError(SharpRoom x) => new(x);
 		public static implicit operator AnyOptionalSharpObjectOrError(SharpExit x) => new(x);
