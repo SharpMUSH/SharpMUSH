@@ -354,7 +354,7 @@ public class ArangoDatabase(
 		const string let = $"LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.graphObjects} RETURN v)";
 		const string query = $"{let} FOR v,e,p IN 1..@max OUTBOUND start GRAPH {DatabaseConstants.graphAttributes} PRUNE condition = NTH(@attr,LENGTH(p.edges)-1) != v.Name FILTER !condition RETURN v";
 
-		var result = await arangoDB.Query.ExecuteAsync<dynamic>(handle, query, new Dictionary<string, object>()
+		var result = await arangoDB.Query.ExecuteAsync<SharpAttributeQueryResult>(handle, query, new Dictionary<string, object>()
 		{
 			{ "attr", attribute.Select(x => x.ToUpper()) },
 			{ "startVertex", startVertex },
@@ -364,7 +364,7 @@ public class ArangoDatabase(
 		// TODO: What if we did not find it?
 		// TODO: What should the result be if we did not find it?
 		// TODO: This doesn't handle Inheritance - so we may need to pass back the player it was found on as well either way.
-		return result.Select(x => new SharpAttribute() { Name = x.Name, Flags = x.Flags.ToObject<string[]>(), Value = x.Value, Id = x._id, LongName = x.LongName }).ToArray();
+		return result.Select(x => new SharpAttribute() { Name = x.Name, Flags = x.Flags, Value = x.Value, Id = x.Id, LongName = x.LongName }).ToArray();
 	}
 
 	public async Task<bool> SetAttributeAsync(DBRef dbref, string[] attribute, string value, SharpPlayer owner)
@@ -429,7 +429,7 @@ public class ArangoDatabase(
 	/// <param name="obj">Location</param>
 	/// <param name="depth">Depth</param>
 	/// <returns>The deepest findable object based on depth</returns>
-	public async Task<AnyOptionalSharpObject> GetLocationAsync(DBRef obj, int depth = 1)
+	public async Task<AnyOptionalSharpContainer> GetLocationAsync(DBRef obj, int depth = 1)
 	{
 		var baseObject = await GetObjectNodeAsync(obj);
 		if (baseObject.IsT4) return new None();
@@ -441,8 +441,14 @@ public class ArangoDatabase(
 			{ "startVertex", baseObject.Id()! }
 		});
 		var locationBaseObj = await GetObjectNodeAsync((string)query.Last()._id);
+		var trueLocation = locationBaseObj.Match<AnyOptionalSharpContainer>(
+			player => player,
+			room => room,
+			exit => throw new Exception("Invalid Location found"),
+			thing => thing,
+			none => throw new Exception("Invalid Location found"));
 
-		return locationBaseObj;
+		return trueLocation;
 	}
 
 	public async Task<IEnumerable<AnySharpContent>?> GetContentsAsync(DBRef obj)

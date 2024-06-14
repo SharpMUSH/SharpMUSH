@@ -11,5 +11,13 @@ namespace SharpMUSH.Library.DiscriminatedUnions
 		public static implicit operator AnyOptionalSharpContainer(SharpRoom x) => new(x);
 		public static implicit operator AnyOptionalSharpContainer(SharpThing x) => new(x);
 		public static implicit operator AnyOptionalSharpContainer(OneOf.Types.None x) => new(x);
+		
+		public AnyOptionalSharpObject WithExitOption()
+			=> Match<AnyOptionalSharpObject>(
+				player => player,
+				room => room,
+				thing => thing,
+				none => none
+			);
 	}
 }

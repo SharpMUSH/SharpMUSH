@@ -34,23 +34,28 @@ namespace SharpMUSH.Implementation.Commands
 			
 			var args = parser.CurrentState.Arguments;
 			var executor = parser.CurrentState.Executor!.Value;
-			AnyOptionalSharpObject viewing;
+			var executorObj = parser.Database.GetObjectNode(executor).WithoutNone();
+			AnyOptionalSharpObject viewing = new OneOf.Types.None();
 
 			if (args.Count == 1)
 			{
-				// TODO: Find the object using Locate(), then give the results of that.
-				viewing = new OneOf.Types.None();
-				throw new NotImplementedException();
+				var locate = Functions.Functions.Locate(parser, executorObj, executorObj, args[0]!.Message!.ToString(), Functions.Functions.LocateFlags.All);
+				var locateDb = HelperFunctions.ParseDBRef(locate);
+				
+				if(locateDb.IsSome())
+				{
+					viewing = parser.Database.GetObjectNode(locateDb.Value());
+				}
 			}
 			else
 			{
-				viewing = parser.Database.GetLocationAsync(executor, 1).Result;
-				// Look at the current location.
+				viewing = (parser.Database.GetLocationAsync(executor, 1).Result).WithExitOption();
 			}
 
 			if (viewing.IsT4)
 			{
 				parser.NotifyService.Notify(executor, "I can't see that here.");
+				return new None();
 			}
 			
 			var contents = parser.Database.GetContentsAsync(viewing).Result;
@@ -63,7 +68,7 @@ namespace SharpMUSH.Implementation.Commands
 			parser.NotifyService.Notify(executor, $"Location: {location}");
 			parser.NotifyService.Notify(executor, $"Contents: {string.Join(Environment.NewLine, contentKeys)}");
 
-			return new None();
+			return new CallState(viewing.Object()!.DBRef.ToString());
 		}
 
 		[SharpCommand(Name = "@PEMIT", Behavior = CB.Default | CB.EqSplit, MinArgs = 1, MaxArgs = 2)]

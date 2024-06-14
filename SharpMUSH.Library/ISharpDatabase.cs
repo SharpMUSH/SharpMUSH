@@ -66,7 +66,7 @@ namespace SharpMUSH.Library
 
 		Task<IEnumerable<AnySharpContent>> GetNearbyObjectsAsync(DBRef obj);
 
-		Task<AnyOptionalSharpObject> GetLocationAsync(DBRef obj, int depth = 1);
+		Task<AnyOptionalSharpContainer> GetLocationAsync(DBRef obj, int depth = 1);
 
 		Task<IEnumerable<AnySharpContent>?> GetContentsAsync(DBRef obj);
 
