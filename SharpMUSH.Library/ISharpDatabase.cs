@@ -65,8 +65,10 @@ namespace SharpMUSH.Library
 		Task<bool> WipeAttributeAsync(DBRef dbref, string[] attribute);
 
 		Task<IEnumerable<AnySharpContent>> GetNearbyObjectsAsync(DBRef obj);
-
+		
 		Task<AnyOptionalSharpContainer> GetLocationAsync(DBRef obj, int depth = 1);
+		
+		Task<AnySharpContainer> GetLocationAsync(AnySharpObject obj, int depth = 1);
 
 		Task<IEnumerable<AnySharpContent>?> GetContentsAsync(DBRef obj);
 

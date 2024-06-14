@@ -450,6 +450,8 @@ public class ArangoDatabase(
 
 		return trueLocation;
 	}
+	
+	public async Task<AnySharpContainer> GetLocationAsync(AnySharpObject obj, int depth = 1) => (await GetLocationAsync(obj.Object().DBRef, depth)).WithoutNone();
 
 	public async Task<IEnumerable<AnySharpContent>?> GetContentsAsync(DBRef obj)
 	{

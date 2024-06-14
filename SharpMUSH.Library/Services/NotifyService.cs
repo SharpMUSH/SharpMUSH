@@ -1,4 +1,6 @@
-﻿using SharpMUSH.Library.Models;
+﻿using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Services
 {
@@ -18,6 +20,8 @@ namespace SharpMUSH.Library.Services
 			}
 			catch { }
 		}
+
+		public Task Notify(AnySharpObject who, string what) => Notify(who.Object().DBRef, what);
 
 
 		public async Task Notify(string handle, string what)

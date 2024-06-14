@@ -33,28 +33,26 @@ namespace SharpMUSH.Implementation.Commands
 			// TODO: Consult CONFORMAT, DESCFORMAT, INAMEFORMAT, NAMEFORMAT, etc.
 			
 			var args = parser.CurrentState.Arguments;
-			var executor = parser.CurrentState.Executor!.Value;
-			var executorObj = parser.Database.GetObjectNode(executor).WithoutNone();
+			var enactor = parser.CurrentState.Enactor!.Value.Get(parser.Database).WithoutNone();
 			AnyOptionalSharpObject viewing = new OneOf.Types.None();
 
 			if (args.Count == 1)
 			{
-				var locate = Functions.Functions.Locate(parser, executorObj, executorObj, args[0]!.Message!.ToString(), Functions.Functions.LocateFlags.All);
-				var locateDb = HelperFunctions.ParseDBRef(locate);
+				var locate = Functions.Functions.Locate(parser, enactor, enactor, args[0]!.Message!.ToString(), Functions.Functions.LocateFlags.All);
 				
-				if(locateDb.IsSome())
+				if(locate.IsValid())
 				{
-					viewing = parser.Database.GetObjectNode(locateDb.Value());
+					viewing = locate.WithoutError();
 				}
 			}
 			else
 			{
-				viewing = (parser.Database.GetLocationAsync(executor, 1).Result).WithExitOption();
+				viewing = parser.Database.GetLocationAsync(enactor.Object().DBRef, 1).Result.WithExitOption();
 			}
 
-			if (viewing.IsT4)
+			if (viewing.IsNone())
 			{
-				parser.NotifyService.Notify(executor, "I can't see that here.");
+				parser.NotifyService.Notify(enactor, "I can't see that here.");
 				return new None();
 			}
 			
@@ -64,9 +62,9 @@ namespace SharpMUSH.Implementation.Commands
 			var location = viewing.Object()!.Key;
 			var contentKeys = contents!.Select(x => x.Object()!.Key);
 
-			parser.NotifyService.Notify(executor, $"Name: {name}");
-			parser.NotifyService.Notify(executor, $"Location: {location}");
-			parser.NotifyService.Notify(executor, $"Contents: {string.Join(Environment.NewLine, contentKeys)}");
+			parser.NotifyService.Notify(enactor, $"Name: {name}");
+			parser.NotifyService.Notify(enactor, $"Location: {location}");
+			parser.NotifyService.Notify(enactor, $"Contents: {string.Join(Environment.NewLine, contentKeys)}");
 
 			return new CallState(viewing.Object()!.DBRef.ToString());
 		}
@@ -90,16 +88,19 @@ namespace SharpMUSH.Implementation.Commands
 			foreach(var target in nameListTargets)
 			{
 				var targetString = target.Match(dbref => dbref.ToString(), str => str);
-				var locatetarget = Functions.Functions.Locate(parser, executor, executor, targetString, Functions.Functions.LocateFlags.All);
-				var parsedTarget = HelperFunctions.ParseDBRef(locatetarget);
+				var locateTarget = Functions.Functions.Locate(parser, executor, executor, targetString, Functions.Functions.LocateFlags.All);
 
-				if (parsedTarget.IsNone())
+				if (locateTarget.IsNone())
 				{
 					parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, "I can't see that here.");
 				}
+				else if(locateTarget.IsError())
+				{
+					parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, locateTarget.AsT5.Value);
+				}
 				else
 				{
-					parser.NotifyService.Notify(parsedTarget.AsT1.Value, notification);
+					parser.NotifyService.Notify(locateTarget.WithoutError().WithoutNone().Object().DBRef, notification);
 				}
 			}
 

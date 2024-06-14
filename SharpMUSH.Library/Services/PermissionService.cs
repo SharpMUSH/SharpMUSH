@@ -1,6 +1,4 @@
-﻿using OneOf;
-using OneOf.Types;
-using SharpMUSH.Library.DiscriminatedUnions;
+﻿using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 
@@ -49,7 +47,6 @@ namespace SharpMUSH.Library.Services
 				return false;
 
 			/* TODO: Zone Master items here.*/
-
 			/*
 				if (!ZONE_CONTROL_ZMP && (Zone(what) != NOTHING) &&
 						eval_lock(who, Zone(what), Zone_Lock))
@@ -59,15 +56,11 @@ namespace SharpMUSH.Library.Services
 						eval_lock(who, Owner(what), Zone_Lock))
 					return 1;
 			*/
-
-			if (lockService.Evaluate(LockType.Control, target, who))
-				return true;
-
-			return false;
+			
+			return lockService.Evaluate(LockType.Control, target, who);
 		}
 
-		public bool CanExamine(AnySharpObject examiner,
-																		 AnySharpObject examinee)
+		public bool CanExamine(AnySharpObject examiner, AnySharpObject examinee)
 			=> examiner.Object().DBRef == examinee.Object().DBRef
 					|| Controls(examiner, examinee)
 					|| examiner.IsSee_All()
@@ -80,18 +73,18 @@ namespace SharpMUSH.Library.Services
 
 		public static bool CanEval(
 			AnySharpObject evaluator,
-			AnySharpObject evaluation_target) 
-				=> !evaluation_target.IsPriv() 
+			AnySharpObject evaluationTarget) 
+				=> !evaluationTarget.IsPriv() 
 					 || evaluator.IsGod() 
 					 || ((evaluator.IsWizard() 
-								|| (evaluator.IsRoyalty() && !evaluation_target.IsWizard())) 
-							&& !evaluation_target.IsGod());
+								|| (evaluator.IsRoyalty() && !evaluationTarget.IsWizard())) 
+							&& !evaluationTarget.IsGod());
 
 		public static bool CanEvalAttr(
 			AnySharpObject evaluator, 
-			AnySharpObject evaluation_target, 
+			AnySharpObject evaluationTarget, 
 			SharpAttribute attribute) 
-				=> CanEval(evaluator, evaluation_target) 
+				=> CanEval(evaluator, evaluationTarget) 
 					 || attribute.IsPublic();
 
 		public bool CouldDoIt(AnySharpObject who, AnyOptionalSharpObject thing1, string? what)

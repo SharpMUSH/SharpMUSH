@@ -13,10 +13,10 @@ namespace SharpMUSH.Implementation.Functions;
 
 public partial class Functions
 {
-	private readonly static Regex TimeFormatMatchRegex = TimeFormatMatch();
-	private readonly static Regex NthRegex = Nth();
-	private readonly static Regex TimeSpanFormatMatchRegex = TimeSpanFormatMatch();
-	private readonly static Regex NameListPatternRegex = NameListPattern();
+	private static readonly Regex TimeFormatMatchRegex = TimeFormatMatch();
+	private static readonly Regex NthRegex = Nth();
+	private static readonly Regex TimeSpanFormatMatchRegex = TimeSpanFormatMatch();
+	private static readonly Regex NameListPatternRegex = NameListPattern();
 
 	public enum ControlFlow { Break, Continue, Return, None };
 
@@ -219,7 +219,7 @@ public partial class Functions
 	public static bool HasObjectPowers(SharpObject obj, string power) =>
 		obj.Powers!.Any(x => x.Name == power || x.Alias == power);
 
-	public static string Locate(
+	public static AnyOptionalSharpObjectOrError Locate(
 		IMUSHCodeParser parser,
 		AnySharpObject looker,
 		AnySharpObject executor,
@@ -245,12 +245,12 @@ public partial class Functions
 			(!Nearby(executor, looker) && !executor.IsSee_All() && !parser.PermissionService.Controls(executor, looker))
 			)
 		{
-			return "#-1 NOT PERMITTED TO EVALUATE ON LOOKER";
+			return new Error<string>("#-1 NOT PERMITTED TO EVALUATE ON LOOKER");
 		}
 
 		var match = LocateMatch(parser, executor, looker, flags, name, (flags & LocateFlags.UseLastIfAmbiguous) != 0);
-		if (match.IsT5) return match.AsT5.Value;
-		if (match.IsT4) return string.Empty;
+		if (match.IsT5) return match.AsT5;
+		if (match.IsT4) return new None();
 
 		var result = match.WithoutError().WithoutNone();
 		var location = FriendlyWhereIs(result);
@@ -258,10 +258,10 @@ public partial class Functions
 		if (parser.PermissionService.CanExamine(executor, location.WithExitOption()) ||
 			((!result.IsDarkLegal() || location.WithExitOption().IsLight() || result.IsLight()) && parser.PermissionService.CanInteract(result, executor, Library.Services.IPermissionService.InteractType.See)))
 		{
-			return result.Object().DBRef.ToString()!;
+			return result.WithNoneOption().WithErrorOption();
 		}
 
-		return string.Empty;
+		return new None();
 	}
 
 	private static AnyOptionalSharpObjectOrError LocateMatch(
@@ -360,9 +360,9 @@ public partial class Functions
 						|| (Nearby(looker, match.WithoutError().WithoutNone())
 						|| parser.PermissionService.Controls(looker, match.WithoutError().WithoutNone())))
 				{
-					var hasflag = flags.HasFlag(LocateFlags.MatchLookerControlledObjects);
+					var hasFlag = flags.HasFlag(LocateFlags.MatchLookerControlledObjects);
 					var controls = parser.PermissionService.Controls(looker, where);
-					if (!(hasflag && !controls))
+					if (!(hasFlag && !controls))
 					{
 						return match;
 					}
