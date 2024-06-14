@@ -1,4 +1,7 @@
 ﻿
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
+
 namespace SharpMUSH.Library.Models
 {
 	public readonly struct DBRef : IEquatable<DBRef>
@@ -30,7 +33,7 @@ namespace SharpMUSH.Library.Models
 			return HashCode.Combine(Number, CreationMilliseconds);
 		}
 
-		public override string ToString() 
+		public override string ToString()
 			=> $"#{Number}:{CreationMilliseconds}";
 
 		public static bool operator ==(DBRef left, DBRef right)
@@ -41,6 +44,20 @@ namespace SharpMUSH.Library.Models
 		public static bool operator !=(DBRef left, DBRef right)
 		{
 			return !(left == right);
+		}
+
+		public static bool TryParse(string value, out DBRef? dbref)
+		{
+			var parsed = HelperFunctions.ParseDBRef(value);
+
+			if (parsed.IsSome())
+			{
+				dbref = parsed.Value();
+				return true;
+			}
+
+			dbref = null;
+			return false;
 		}
 	}
 }
