@@ -47,8 +47,8 @@ namespace SharpMUSH.Tests
 			return database;
 		}
 
-		public static IBooleanExpressionParser BooleanExpressionTestParser(IMUSHCodeParser parser)
-			=> new BooleanExpressionParser(parser);
+		public static IBooleanExpressionParser BooleanExpressionTestParser(ISharpDatabase database)
+			=> new BooleanExpressionParser(database);
 
 		public static IMUSHCodeParser TestParser(
 			IPasswordService? pws = null,

@@ -1,9 +1,10 @@
-﻿using SharpMUSH.Library.DiscriminatedUnions;
+﻿using SharpMUSH.Library;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Implementation.Visitors;
 
-public class SharpMUSHBooleanExpressionValidationVisitor(IMUSHCodeParser parser, AnySharpObject invoker) : SharpMUSHBoolExpParserBaseVisitor<bool?>
+public class SharpMUSHBooleanExpressionValidationVisitor(AnySharpObject invoker) : SharpMUSHBoolExpParserBaseVisitor<bool?>
 {
 	protected override bool? AggregateResult(bool? aggregate, bool? nextResult)
 		=> (aggregate ?? true) && (nextResult ?? true);
@@ -37,7 +38,6 @@ public class SharpMUSHBooleanExpressionValidationVisitor(IMUSHCodeParser parser,
 
 	public override bool? VisitOwnerExpr(SharpMUSHBoolExpParser.OwnerExprContext context)
 	{
-		var _ = parser; // silence the linter / compiler for now.
 		var value = context.@string().GetText();
 		var result = VisitChildren(context);
 		return result;

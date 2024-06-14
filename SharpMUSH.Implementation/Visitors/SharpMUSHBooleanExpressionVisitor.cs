@@ -4,21 +4,22 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using System.Linq.Expressions;
+using SharpMUSH.Library;
 
 namespace SharpMUSH.Implementation.Visitors;
 
-public class SharpMUSHBooleanExpressionVisitor(IMUSHCodeParser parser, ParameterExpression gated, ParameterExpression unlocker) : SharpMUSHBoolExpParserBaseVisitor<Expression>
+public class SharpMUSHBooleanExpressionVisitor(ISharpDatabase database, ParameterExpression gated, ParameterExpression unlocker) : SharpMUSHBoolExpParserBaseVisitor<Expression>
 {
 	protected override Expression AggregateResult(Expression aggregate, Expression nextResult)
 		=> new Expression[] { aggregate, nextResult }.First(x => x != null);
 
-	private readonly Expression<Func<AnySharpObject, string, IMUSHCodeParser, bool>> hasFlag = (dbRef, flag, psr)
+	private readonly Expression<Func<AnySharpObject, string, bool>> hasFlag = (dbRef, flag)
 		=> dbRef.Object().Flags.Any(x => x.Name == flag || x.Symbol == flag);
 
-	private readonly Expression<Func<AnySharpObject, string, IMUSHCodeParser, bool>> hasPower = (dbRef, power, psr)
+	private readonly Expression<Func<AnySharpObject, string, bool>> hasPower = (dbRef, power)
 		=> dbRef.Object().Powers.Any(x => x.Name == power || x.Alias == power);
 
-	private readonly Expression<Func<AnySharpObject, string, IMUSHCodeParser, bool>> isType = (dbRef, type, psr)
+	private readonly Expression<Func<AnySharpObject, string, bool>> isType = (dbRef, type)
 		=> dbRef.Object().Type == type;
 
 	private static readonly string[] defaultStringArrayValue = [];
@@ -77,13 +78,13 @@ public class SharpMUSHBooleanExpressionVisitor(IMUSHCodeParser parser, Parameter
 	}
 
 	public override Expression VisitBitFlagExpr(SharpMUSHBoolExpParser.BitFlagExprContext context)
-		=> Expression.Invoke(hasFlag, unlocker, Expression.Constant(context.@string().GetText().ToUpper().Trim()), Expression.Constant(parser));
+		=> Expression.Invoke(hasFlag, unlocker, Expression.Constant(context.@string().GetText().ToUpper().Trim()));
 
 	public override Expression VisitBitPowerExpr(SharpMUSHBoolExpParser.BitPowerExprContext context)
-		=> Expression.Invoke(hasPower, unlocker, Expression.Constant(context.@string().GetText().ToUpper().Trim()), Expression.Constant(parser));
+		=> Expression.Invoke(hasPower, unlocker, Expression.Constant(context.@string().GetText().ToUpper().Trim()));
 
 	public override Expression VisitBitTypeExpr(SharpMUSHBoolExpParser.BitTypeExprContext context)
-		=> Expression.Invoke(isType, unlocker, Expression.Constant(context.@string().GetText().ToUpper().Trim()), Expression.Constant(parser));
+		=> Expression.Invoke(isType, unlocker, Expression.Constant(context.@string().GetText().ToUpper().Trim()));
 
 	public override Expression VisitChannelExpr(SharpMUSHBoolExpParser.ChannelExprContext context)
 	{
@@ -126,7 +127,7 @@ public class SharpMUSHBooleanExpressionVisitor(IMUSHCodeParser parser, Parameter
 		var attribute = context.attributeName().GetText();
 
 		Expression<Func<DBRef, bool>> expr = dbref =>
-			parser.Database
+			database
 				.GetAttributeAsync(dbref, new string[] { attribute })
 				.ConfigureAwait(false).GetAwaiter().GetResult()!
 				.FirstOrDefault(new SharpAttribute() { 

@@ -36,6 +36,8 @@ namespace SharpMUSH.Server
 			services.AddSingleton<INotifyService, NotifyService>();
 			services.AddSingleton<IQueueService, QueueService>();
 			services.AddSingleton<IConnectionService, ConnectionService>();
+			services.AddSingleton<ILockService, LockService>();
+			services.AddSingleton<IBooleanExpressionParser, BooleanExpressionParser>();
 			services.AddSingleton(new ArangoHandle("CurrentSharpMUSHWorld"));
 			services.AddScoped<IMUSHCodeParser, MUSHCodeParser>();
 			services.AddMediatR(cfg =>

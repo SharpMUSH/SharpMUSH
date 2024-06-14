@@ -77,21 +77,25 @@ namespace SharpMUSH.Implementation.Commands
 			}
 
 			var notification = args[1]!.Message!.ToString();
-			var target = MModule.plainText(args[0]!.Message!);
-			// This should not be needed.
-			var maybeExecutor = parser.Database.GetObjectNode(parser.CurrentState.Executor!.Value);
-			var executor = maybeExecutor.WithoutNone();
-
-			var locatetarget = Functions.Functions.Locate(parser, executor, executor, target, Functions.Functions.LocateFlags.All);
-			var parsedTarget = HelperFunctions.ParseDBRef(locatetarget);
+			var targetListText = MModule.plainText(args[0]!.Message!);
+			var nameListTargets = Functions.Functions.NameList(targetListText);
 			
-			if (parsedTarget.IsNone())
+			var executor = parser.Database.GetObjectNode(parser.CurrentState.Executor!.Value).WithoutNone();
+
+			foreach(var target in nameListTargets)
 			{
-				parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, "I can't see that here.");
-			}
-			else
-			{
-				parser.NotifyService.Notify(parsedTarget.AsT1.Value, notification);
+				var targetString = target.Match(dbref => dbref.ToString(), str => str);
+				var locatetarget = Functions.Functions.Locate(parser, executor, executor, targetString, Functions.Functions.LocateFlags.All);
+				var parsedTarget = HelperFunctions.ParseDBRef(locatetarget);
+
+				if (parsedTarget.IsNone())
+				{
+					parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, "I can't see that here.");
+				}
+				else
+				{
+					parser.NotifyService.Notify(parsedTarget.AsT1.Value, notification);
+				}
 			}
 
 			return new None();

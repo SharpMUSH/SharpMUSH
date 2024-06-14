@@ -96,7 +96,8 @@ namespace SharpMUSH.Implementation.Commands
 				new DBRef(foundDB!.Object!.Key!, foundDB!.Object!.CreationTime));
 
 			// TODO: Step 5: Trigger OnConnect Event in EventService.
-
+			
+			parser.NotifyService.Notify(parser.CurrentState.Handle!, "Connected!");
 			Log.Logger.Debug("Successful login and binding for {@person}", foundDB.Object);
 			return new None();
 		}

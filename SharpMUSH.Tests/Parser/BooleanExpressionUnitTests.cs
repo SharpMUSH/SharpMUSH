@@ -37,7 +37,7 @@ public class BooleanExpressionUnitTests : BaseUnitTest
 	[TestMethod]
 	public void SimpleExpressions(string input, bool expected)
 	{
-		var bep = BooleanExpressionTestParser(TestParser());
+		var bep = BooleanExpressionTestParser(_database!);
 		var dbn = _database!.GetObjectNode(new DBRef(1)).Known();
 
 		Assert.IsTrue(bep.Validate(input, dbn));
@@ -52,7 +52,7 @@ public class BooleanExpressionUnitTests : BaseUnitTest
 	[TestMethod]
 	public void TypeExpressions(string input, bool expected)
 	{
-		var bep = BooleanExpressionTestParser(TestParser(ds: _database));
+		var bep = BooleanExpressionTestParser(_database!);
 		var dbn = _database!.GetObjectNode(new DBRef(1)).Known();
 
 		Assert.IsTrue(bep.Validate(input, dbn));
@@ -67,7 +67,7 @@ public class BooleanExpressionUnitTests : BaseUnitTest
 	[TestMethod]
 	public void TypeValidation(string input, bool expected)
 	{
-		var bep = BooleanExpressionTestParser(TestParser());
+		var bep = BooleanExpressionTestParser(_database!);
 		var dbn = _database!.GetObjectNode(new DBRef(1)).Known();
 
 		Assert.AreEqual(expected, bep.Validate(input, dbn));
