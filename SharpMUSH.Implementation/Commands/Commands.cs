@@ -8,7 +8,7 @@ namespace SharpMUSH.Implementation.Commands
 {
 	public static partial class Commands
 	{
-		private const char Slash = '/';
+		private const char SLASH = '/';
 
 		private static readonly
 			Dictionary<string, (SharpCommandAttribute Attribute, Func<IMUSHCodeParser, Option<CallState>> Function)>
@@ -75,22 +75,13 @@ namespace SharpMUSH.Implementation.Commands
 				((x.Value.Attribute.Behavior & Definitions.CommandBehavior.SOCKET) == Definitions.CommandBehavior.SOCKET));
 
 			if (socketCommandPattern.Any() &&
-			    _commandLibrary.TryGetValue(command.ToUpper(), out var librarySocketCommandDefinition))
+					_commandLibrary.TryGetValue(command.ToUpper(), out var librarySocketCommandDefinition))
 			{
 				var arguments = ArgumentSplit(parser, context, librarySocketCommandDefinition);
 
 				// Run as Socket Command.
-				var result = socketCommandPattern.First().Value.Function.Invoke(parser.Push(new ParserState(
-					Registers: parser.CurrentState.Registers,
-					CurrentEvaluation: parser.CurrentState.CurrentEvaluation,
-					Command: command,
-					Arguments: arguments,
-					Function: null,
-					Executor: parser.CurrentState.Executor,
-					Enactor: parser.CurrentState.Enactor,
-					Caller: parser.CurrentState.Caller,
-					Handle: parser.CurrentState.Handle
-				)));
+				var result = socketCommandPattern.First().Value.Function.Invoke(parser.Push(
+					parser.CurrentState with { Command = command, Arguments = arguments, Function = null }));
 
 				parser.Pop();
 				return result;
@@ -113,7 +104,15 @@ namespace SharpMUSH.Implementation.Commands
 			{
 				var rest = command[1..];
 				// Run single token command
-				throw new NotImplementedException();
+				var singleRootCommand = command[..1];
+				var singleLibraryCommandDefinition = singleTokenCommandPattern.Single().Value;
+				var arguments = ArgumentSplit(parser, context, singleLibraryCommandDefinition);
+
+				var result = singleLibraryCommandDefinition.Function.Invoke(parser.Push(
+					parser.CurrentState with { Command = singleRootCommand, Arguments = [new CallState(rest), .. arguments], Function = null }));
+
+				parser.Pop();
+				return result;
 			}
 
 			// Step 3: Check room Aliases
@@ -124,7 +123,7 @@ namespace SharpMUSH.Implementation.Commands
 			// TODO: Evaluate Command -- commands that run more commands are always NoParse for the arguments it's relevant for.
 			// TODO: Get the Switches and send them along as a list of items!
 			var evaluatedCallContextAsString = MModule.plainText(visitChildren(firstCommandMatch)!.Message!);
-			var slashIndex = evaluatedCallContextAsString.IndexOf(Slash);
+			var slashIndex = evaluatedCallContextAsString.IndexOf(SLASH);
 			var rootCommand =
 				evaluatedCallContextAsString[..(slashIndex > -1 ? slashIndex : evaluatedCallContextAsString.Length)];
 
@@ -177,7 +176,7 @@ namespace SharpMUSH.Implementation.Commands
 			{
 				// command arg0 = arg1,still arg 1 
 				if ((libraryCommandDefinition.Attribute.Behavior &
-				     (Definitions.CommandBehavior.EqSplit | Definitions.CommandBehavior.RSArgs)) != 0)
+						 (Definitions.CommandBehavior.EqSplit | Definitions.CommandBehavior.RSArgs)) != 0)
 				{
 					argCallState = parser.CommandEqSplitArgsParse(context.children[2].GetText())!;
 				}

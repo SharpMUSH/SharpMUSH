@@ -13,7 +13,6 @@ namespace SharpMUSH.Library.Services
 
 		public bool Controls(AnySharpObject executor, AnySharpObject target, SharpAttribute attribute)
 		{
-
 			throw new NotImplementedException();
 		}
 

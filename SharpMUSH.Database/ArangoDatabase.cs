@@ -143,9 +143,18 @@ public class ArangoDatabase(
 		=> arangoDB.Query.ExecuteAsync<SharpAttribute>(handle,
 			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphPowers} RETURN v").Result.AsQueryable();
 
-	private IQueryable<SharpPlayer> GetObjectOwner(string id)
-		=> arangoDB.Query.ExecuteAsync<SharpPlayer>(handle,
-			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphObjectOwners} RETURN v").Result.AsQueryable();
+	// This does return the SharpPlayer, but needs to also return the Object so we can Populate.
+	// We can get the full populated object from the SharpPlayer by using GetObjectNode() on its Id.
+	// But this probably should not be IQueryable and instead just be a Func<SharpPlayer>.
+	private SharpPlayer GetObjectOwner(string id)
+	{
+		var owner = arangoDB.Query.ExecuteAsync<SharpPlayerQueryResult>(handle, 
+			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphObjectOwners} RETURN v").Result.Single();
+		
+		var populatedOwner = GetObjectNodeAsync( owner.Id).Result;
+		
+		return populatedOwner.AsT0;
+	}
 
 	private IQueryable<SharpObject> GetParent(string id)
 		=> arangoDB.Query.ExecuteAsync<SharpObject>(handle,
@@ -208,7 +217,7 @@ public class ArangoDatabase(
 			Flags = GetFlags(startVertex),
 			Powers = GetPowers(startVertex),
 			Attributes = GetAttributes(startVertex),
-			Owner = GetObjectOwner(startVertex),
+			Owner = () => GetObjectOwner(startVertex),
 			Parent = GetParent(startVertex)
 		};
 
@@ -244,7 +253,7 @@ public class ArangoDatabase(
 			Flags = GetFlags(dbID),
 			Powers = GetPowers(dbID),
 			Attributes = GetAttributes(dbID),
-			Owner = GetObjectOwner(dbID),
+			Owner = () => GetObjectOwner(dbID),
 			Parent = GetParent(dbID)
 		};
 
@@ -277,7 +286,7 @@ public class ArangoDatabase(
 				Flags = GetFlags(obj.Id),
 				Powers = GetPowers(obj.Id),
 				Attributes = GetAttributes(obj.Id),
-				Owner = GetObjectOwner(obj.Id),
+				Owner = () => GetObjectOwner(obj.Id),
 				Parent = GetParent(obj.Id)
 			};
 	}
@@ -369,7 +378,7 @@ public class ArangoDatabase(
 
 	public async Task<bool> SetAttributeAsync(DBRef dbref, string[] attribute, string value, SharpPlayer owner)
 	{
-		ArgumentNullException.ThrowIfNull(owner);
+		ArgumentException.ThrowIfNullOrEmpty(owner?.Id);
 
 		var startVertex = $"{DatabaseConstants.objects}/{dbref.Number}";
 		const string let1 = $"LET start = (FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.graphObjects} RETURN v)";
@@ -545,7 +554,7 @@ public class ArangoDatabase(
 					Flags = GetFlags(curObject.Id),
 					Powers = GetPowers(curObject.Id),
 					Attributes = GetAttributes(curObject.Id),
-					Owner = GetObjectOwner(curObject.Id),
+					Owner = () => GetObjectOwner(curObject.Id),
 					Parent = GetParent(curObject.Id)
 				},
 				Location = () => GetLocation(curPlayer.Id),

@@ -9,8 +9,10 @@ namespace SharpMUSH.Library.Services;
 
 public class LockService(IBooleanExpressionParser bep) : ILockService
 {
-	private static readonly ConcurrentCache<(DBRef, LockType), Func<AnySharpObject, AnySharpObject, bool>> _cachedLockString = new(100, CacheEvictionPolicy.LFU);
+	private static readonly ConcurrentCache<(DBRef, LockType), Func<AnySharpObject, AnySharpObject, bool>> CachedLockString 
+		= new(100, CacheEvictionPolicy.LFU);
 
+	// TODO: Optimize #TRUE calls, we don't need to cache those.
 	public static string Get(LockType standardType, AnySharpObject lockee)
 		=> lockee.Object().Locks.GetValueOrDefault(standardType.ToString(), "#TRUE");
 
@@ -24,13 +26,13 @@ public class LockService(IBooleanExpressionParser bep) : ILockService
 		LockType standardType,
 		AnySharpObject gated,
 		AnySharpObject unlocker)
-			=> _cachedLockString.GetOrAdd((gated.Object().DBRef, standardType), bep.Compile(Get(standardType, gated)), out var _)(gated, unlocker);
+			=> CachedLockString.GetOrAdd((gated.Object().DBRef, standardType), bep.Compile(Get(standardType, gated)), out var _)(gated, unlocker);
 
 	public IEnumerable<bool> Evaluate(
 		LockType standardType,
 		IEnumerable<AnySharpObject> gated,
 		AnySharpObject unlocker)
-			=> gated.Select(g => _cachedLockString.GetOrAdd((g.Object().DBRef, standardType), bep.Compile(Get(standardType, g)), out var _)(g, unlocker));
+			=> gated.Select(g => CachedLockString.GetOrAdd((g.Object().DBRef, standardType), bep.Compile(Get(standardType, g)), out var _)(g, unlocker));
 
 	public bool Set(
 		ISharpDatabase db,
@@ -41,7 +43,7 @@ public class LockService(IBooleanExpressionParser bep) : ILockService
 		// BEP is in charge of notifying as of this current draft.
 		if (!bep.Validate(lockString, lockee)) return false;
 
-		_cachedLockString.AddOrUpdate((lockee.Object().DBRef, standardType), bep.Compile(lockString), out var _);
+		CachedLockString.AddOrUpdate((lockee.Object().DBRef, standardType), bep.Compile(lockString), out var _);
 		db.SetLockAsync(lockee.Object(), standardType.ToString(), lockString).ConfigureAwait(false).GetAwaiter().GetResult();
 
 		return true;

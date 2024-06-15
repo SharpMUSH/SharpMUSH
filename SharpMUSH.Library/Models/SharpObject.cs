@@ -25,7 +25,7 @@ namespace SharpMUSH.Library.Models
 
 		// RELATIONSHIP
 		[JsonIgnore]
-		public required IQueryable<SharpPlayer> Owner { get; set; }
+		public required Func<SharpPlayer> Owner { get; set; }
 
 		// RELATIONSHIP
 		[JsonIgnore]
