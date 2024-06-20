@@ -10,12 +10,10 @@ namespace SharpMUSH.Implementation.Commands
 	{
 		private const char SLASH = '/';
 
-		private static readonly
-			Dictionary<string, (SharpCommandAttribute Attribute, Func<IMUSHCodeParser, Option<CallState>> Function)>
-			_commandLibrary = [];
+		private static readonly Dictionary<string, (SharpCommandAttribute Attribute, Func<IMUSHCodeParser, Option<CallState>> Function)> _commandLibrary = [];
 
-		private static readonly Dictionary<string, (MethodInfo Method, SharpCommandAttribute Attribute)>
-			_knownBuiltInCommands = typeof(Commands)
+		private static readonly Dictionary<string, (MethodInfo Method, SharpCommandAttribute Attribute)> _knownBuiltInCommands =
+			typeof(Commands)
 				.GetMethods()
 				.Select(m => (Method: m,
 					Attribute: m.GetCustomAttribute(typeof(SharpCommandAttribute), false) as SharpCommandAttribute))
@@ -31,8 +29,8 @@ namespace SharpMUSH.Implementation.Commands
 			{
 				_commandLibrary.Add(knownCommand.Key,
 					(knownCommand.Value.Attribute,
-						new Func<IMUSHCodeParser, Option<CallState>>(p =>
-							(Option<CallState>)knownCommand.Value.Method.Invoke(null, [p, knownCommand.Value.Attribute])!)));
+						p =>
+							(Option<CallState>)knownCommand.Value.Method.Invoke(null, [p, knownCommand.Value.Attribute])!));
 			}
 		}
 
@@ -52,12 +50,8 @@ namespace SharpMUSH.Implementation.Commands
 			Func<IRuleNode, CallState?> visitChildren)
 		{
 			var firstCommandMatch = context.firstCommandMatch();
-			var conText = context.GetText();
 
-			if (firstCommandMatch == null)
-			{
-				return new OneOf.Monads.None();
-			}
+			if (firstCommandMatch == null) return new OneOf.Monads.None();
 
 			var command = firstCommandMatch.GetText();
 
@@ -79,7 +73,7 @@ namespace SharpMUSH.Implementation.Commands
 			{
 				var arguments = ArgumentSplit(parser, context, librarySocketCommandDefinition);
 
-				// Run as Socket Command.
+				// Run as Socket Command. 
 				var result = socketCommandPattern.First().Value.Function.Invoke(parser.Push(
 					parser.CurrentState with { Command = command, Arguments = arguments, Function = null }));
 
@@ -95,16 +89,15 @@ namespace SharpMUSH.Implementation.Commands
 
 			// Step 2: Check for a single-token command
 			// TODO: Optimize
-			var singleTokenCommandPattern = _commandLibrary.Where(x =>
-				(x.Key.Equals(command[..1], StringComparison.CurrentCultureIgnoreCase)) &&
-				((x.Value.Attribute.Behavior & Definitions.CommandBehavior.SingleToken) ==
-				 Definitions.CommandBehavior.SingleToken));
+			var singleTokenCommandPattern = _commandLibrary.Where(x
+				=> x.Key.Equals(command[..1], StringComparison.CurrentCultureIgnoreCase) &&
+					x.Value.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.SingleToken));
 
 			if (singleTokenCommandPattern.Any())
 			{
-				var rest = command[1..];
 				// Run single token command
 				var singleRootCommand = command[..1];
+				var rest = command[1..];
 				var singleLibraryCommandDefinition = singleTokenCommandPattern.Single().Value;
 				var arguments = ArgumentSplit(parser, context, singleLibraryCommandDefinition);
 
@@ -116,7 +109,8 @@ namespace SharpMUSH.Implementation.Commands
 			}
 
 			// Step 3: Check room Aliases
-			// Step 4: Check if we are setting an attribute: &...
+			// Step 4: Check if we are setting an attribute: &... -- we're just treating this as a Single Token Command for now.
+			// Who would rely on a room alias being & anyway?
 			// Step 5: Check @COMMAND in command library
 
 			// TODO: Optimize
@@ -124,26 +118,21 @@ namespace SharpMUSH.Implementation.Commands
 			// TODO: Get the Switches and send them along as a list of items!
 			var evaluatedCallContextAsString = MModule.plainText(visitChildren(firstCommandMatch)!.Message!);
 			var slashIndex = evaluatedCallContextAsString.IndexOf(SLASH);
-			var rootCommand =
-				evaluatedCallContextAsString[..(slashIndex > -1 ? slashIndex : evaluatedCallContextAsString.Length)];
+			var rootCommand = evaluatedCallContextAsString[..(slashIndex > -1 ? slashIndex : evaluatedCallContextAsString.Length)];
 
 			// TODO: Too many ifs. This needs to be split out.
-			if (_commandLibrary.TryGetValue(rootCommand.ToUpper(), out var libraryCommandDefinition))
+			if (_commandLibrary.TryGetValue(rootCommand.ToUpper(), out var libraryCommandDefinition)
+				&& rootCommand.ToUpper() != "HUH_COMMAND")
 			{
-				// TODO: ArgumentSplit looks at CurrentState, and will as such look at the state of a commandlist instead of the individual command.
 				var arguments = ArgumentSplit(parser, context, libraryCommandDefinition);
 
-				var result = libraryCommandDefinition.Function.Invoke(parser.Push(new ParserState(
-					Registers: parser.CurrentState.Registers,
-					CurrentEvaluation: parser.CurrentState.CurrentEvaluation,
-					Command: rootCommand,
-					Arguments: arguments,
-					Function: null,
-					Executor: parser.CurrentState.Executor,
-					Enactor: parser.CurrentState.Enactor,
-					Caller: parser.CurrentState.Caller,
-					Handle: parser.CurrentState.Handle
-				)));
+				var result = libraryCommandDefinition.Function.Invoke(
+					parser.Push(parser.CurrentState with
+					{
+						Command = rootCommand,
+						Arguments = arguments,
+						Function = null
+					}));
 
 				parser.Pop();
 				return result;
@@ -162,8 +151,17 @@ namespace SharpMUSH.Implementation.Commands
 			// Step 15: Global User-defined commands
 			// Step 16: HUH_COMMAND is run
 
-			// TODO: Create a HUH_COMMAND
-			throw new NotImplementedException();
+			// HUH_COMMAND!
+			var huhCommand = _commandLibrary["HUH_COMMAND"].Function.Invoke(
+				parser.Push(parser.CurrentState with
+				{
+					Command = "HUH_COMMAND",
+					Arguments = [],
+					Function = null
+				}));
+
+			parser.Pop();
+			return huhCommand;
 		}
 
 		private static List<CallState> ArgumentSplit(IMUSHCodeParser parser, CommandContext context,
@@ -175,18 +173,17 @@ namespace SharpMUSH.Implementation.Commands
 			if (context.children.Count > 1)
 			{
 				// command arg0 = arg1,still arg 1 
-				if ((libraryCommandDefinition.Attribute.Behavior &
-						 (Definitions.CommandBehavior.EqSplit | Definitions.CommandBehavior.RSArgs)) != 0)
+				if (libraryCommandDefinition.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.EqSplit | Definitions.CommandBehavior.RSArgs))
 				{
-					argCallState = parser.CommandEqSplitArgsParse(context.children[2].GetText())!;
+					argCallState = parser.CommandEqSplitArgsParse(context.children[2].GetText());
 				}
 				// command arg0 = arg1,arg2
-				else if ((libraryCommandDefinition.Attribute.Behavior & Definitions.CommandBehavior.EqSplit) != 0)
+				else if (libraryCommandDefinition.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.EqSplit))
 				{
 					argCallState = parser.CommandEqSplitParse(context.children[2].GetText())!;
 				}
 				// Command arg0,arg1,arg2,arg
-				else if ((libraryCommandDefinition.Attribute.Behavior & Definitions.CommandBehavior.RSArgs) != 0)
+				else if (libraryCommandDefinition.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.RSArgs))
 				{
 					argCallState = parser.CommandCommaArgsParse(context.children[2].GetText())!;
 				}
@@ -198,10 +195,10 @@ namespace SharpMUSH.Implementation.Commands
 
 			List<CallState> arguments = [];
 
-			bool eqSplit = (libraryCommandDefinition.Attribute.Behavior & Definitions.CommandBehavior.EqSplit) != 0;
-			bool noParse = (libraryCommandDefinition.Attribute.Behavior & Definitions.CommandBehavior.NoParse) != 0;
-			bool noRSParse = (libraryCommandDefinition.Attribute.Behavior & Definitions.CommandBehavior.RSNoParse) != 0;
-			var nArgs = argCallState!.Arguments!.Length;
+			bool eqSplit = libraryCommandDefinition.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.EqSplit);
+			bool noParse = libraryCommandDefinition.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.NoParse);
+			bool noRSParse = libraryCommandDefinition.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.RSNoParse);
+			var nArgs = argCallState?.Arguments?.Length;
 
 			// TODO: Implement lsargs - but there are no immediate commands that need it.
 
@@ -227,11 +224,11 @@ namespace SharpMUSH.Implementation.Commands
 					arguments.AddRange(argCallState.Arguments![1..].Select(parser.FunctionParse).Select(x => x!));
 				}
 			}
-			else if (!eqSplit && noParse)
+			else if (noParse)
 			{
 				arguments = argCallState.Arguments!.Select(x => new CallState(x, argCallState.Depth)).ToList();
 			}
-			else if (!eqSplit && !noParse)
+			else if (!noParse)
 			{
 				arguments.AddRange(argCallState.Arguments!.Select(parser.FunctionParse).Select(x => x!));
 			}

@@ -19,9 +19,17 @@ namespace SharpMUSH.Implementation.Commands
 			}
 
 			var notification = args[0]!.Message!.ToString();
-			var executor = parser.CurrentState.Executor!.Value;
-			parser.NotifyService.Notify(executor, notification);
+			var enactor = parser.CurrentState.Enactor!.Value;
+			parser.NotifyService.Notify(enactor, notification);
 
+			return new None();
+		}
+		
+		[SharpCommand(Name = "HUH_COMMAND", Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
+		public static Option<CallState> HuhCommand(IMUSHCodeParser parser, SharpCommandAttribute _2)
+		{
+			var enactor= parser.CurrentState.Enactor!.Value;
+			parser.NotifyService.Notify(enactor, "Huh?  (Type \"help\" for help.)");
 			return new None();
 		}
 
@@ -81,12 +89,12 @@ namespace SharpMUSH.Implementation.Commands
 			var targetListText = MModule.plainText(args[0]!.Message!);
 			var nameListTargets = Functions.Functions.NameList(targetListText);
 			
-			var executor = parser.Database.GetObjectNode(parser.CurrentState.Executor!.Value).WithoutNone();
+			var enactor = parser.Database.GetObjectNode(parser.CurrentState.Executor!.Value).WithoutNone();
 
 			foreach(var target in nameListTargets)
 			{
 				var targetString = target.Match(dbref => dbref.ToString(), str => str);
-				var locateTarget = Functions.Functions.Locate(parser, executor, executor, targetString, Functions.Functions.LocateFlags.All);
+				var locateTarget = Functions.Functions.Locate(parser, enactor, enactor, targetString, Functions.Functions.LocateFlags.All);
 
 				if (locateTarget.IsNone())
 				{
