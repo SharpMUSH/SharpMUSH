@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Hosting;
 using Serilog;
 using Serilog.Sinks.SystemConsole.Themes;
+using Testcontainers.ArangoDb;
 using SharpMUSH.Server.ProtocolHandlers;
 
 namespace SharpMUSH.Server;
@@ -19,15 +20,20 @@ public class Program
 				.MinimumLevel.Debug()
 				.CreateLogger();
 
-		Log.Logger = log;
+		var container = new ArangoDbBuilder()
+			.WithReuse(true)
+			.WithLabel("reuse-id", "SharpMUSH")
+			.WithImage("arangodb:latest")
+			.WithPassword("password")
+			.Build();
+
+		await container.StartAsync()
+			.ConfigureAwait(false);
 
 		var config = new ArangoConfiguration()
 		{
-			ConnectionString =
-						"Server=http://127.0.0.1:8529;User=root;Realm=;Password=KJt7fVjUGFSl9Xqn;",
-			Serializer = new ArangoNewtonsoftSerializer(
-						new ArangoNewtonsoftDefaultContractResolver()
-				)
+			ConnectionString = $"Server={container.GetTransportAddress()};User=root;Realm=;Password=password;",
+			Serializer = new ArangoNewtonsoftSerializer(new ArangoNewtonsoftDefaultContractResolver())
 		};
 
 		CreateWebHostBuilder(config).Build().Run();
