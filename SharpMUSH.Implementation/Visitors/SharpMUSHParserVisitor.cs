@@ -17,7 +17,10 @@ namespace SharpMUSH.Implementation.Visitors
 		{
 			if (aggregate?.Arguments != null || nextResult?.Arguments != null)
 			{
-				return (aggregate ?? nextResult!) with { Arguments = [.. aggregate?.Arguments ?? Enumerable.Empty<string>(), .. nextResult?.Arguments ?? Enumerable.Empty<string>()] };
+				return (aggregate ?? nextResult!) with { Arguments = [
+					.. aggregate?.Arguments ?? Enumerable.Empty<string>(), 
+					.. nextResult?.Arguments ?? Enumerable.Empty<string>()
+					]};
 			}
 			if (aggregate?.Message != null && nextResult?.Message != null)
 			{
@@ -135,7 +138,7 @@ namespace SharpMUSH.Implementation.Visitors
 		{
 			var baseArg = base.VisitChildren(context.singleCommandArg());
 			var commaArgs = base.VisitChildren(context.commaCommandArgs());
-			return new CallState(null, context.Depth(), [baseArg!.Message!.ToString(), ..commaArgs!.Arguments]);
+			return new CallState(null, context.Depth(), [baseArg!.Message!.ToString(), ..commaArgs?.Arguments ?? []]);
 		}
 
 		/// <summary>
@@ -150,8 +153,8 @@ namespace SharpMUSH.Implementation.Visitors
 		public override CallState? VisitEqsplitCommand([NotNull] SharpMUSHParser.EqsplitCommandContext context)
 		{
 			var baseArg = base.VisitChildren(context.singleCommandArg()[0]);
-			var RSArg = base.VisitChildren(context.singleCommandArg()[1]);
-			return new CallState(null, context.Depth(), [baseArg!.Message!.ToString(), .. RSArg!.Arguments]);
+			var rsArg = base.VisitChildren(context.singleCommandArg()[1]);
+			return new CallState(null, context.Depth(), [baseArg!.Message!.ToString(), rsArg!.Message!.ToString()]);
 		}
 
 		/// <summary>
