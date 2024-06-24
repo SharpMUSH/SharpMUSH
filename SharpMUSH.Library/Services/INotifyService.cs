@@ -7,7 +7,7 @@ namespace SharpMUSH.Library.Services
 	{
 		Task Notify(DBRef who, string what);
 
-		Task Notify(AnySharpObject? who, string what);
+		Task Notify(AnySharpObject who, string what);
 
 		Task Notify(string handle, string what);
 		
