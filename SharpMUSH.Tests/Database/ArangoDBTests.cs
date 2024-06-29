@@ -89,6 +89,8 @@ namespace SharpMUSH.IntegrationTests
 			Assert.AreEqual("TWO`LEAVES2", existingLeaf2!.Last().LongName);
 			Assert.AreEqual("THREE`LAYERS`DEEP", existingDeep1!.Last().LongName);
 			Assert.AreEqual("THREE`LAYERS`DEEP2", existingDeep2!.Last().LongName);
+			Assert.AreEqual("THREE`LAYERS", existingDeep1!.Skip(1).First().LongName);
+			Assert.AreEqual("THREE`LAYERS", existingDeep2!.Skip(1).First().LongName);
 		}
 	}
 }

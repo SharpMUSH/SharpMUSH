@@ -191,7 +191,7 @@ namespace SharpMUSH.Implementation.Commands
 
 			var eqSplit = libraryCommandDefinition.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.EqSplit);
 			var noParse = libraryCommandDefinition.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.NoParse);
-			var noRSParse = libraryCommandDefinition.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.RSNoParse);
+			var noRsParse = libraryCommandDefinition.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.RSNoParse);
 			var nArgs = argCallState?.Arguments?.Length;
 
 			// TODO: Implement lsargs - but there are no immediate commands that need it.
@@ -206,7 +206,7 @@ namespace SharpMUSH.Implementation.Commands
 
 				if (nArgs > 1)
 				{
-					arguments.AddRange(noRSParse
+					arguments.AddRange(noRsParse
 						? argCallState.Arguments![1..].Select(x => new CallState(x, argCallState.Depth))
 						: argCallState.Arguments![1..].Select(parser.FunctionParse).Select(x => x!));
 				}

@@ -14,11 +14,10 @@ namespace SharpMUSH.Server.ProtocolHandlers
 {
 	public class TelnetServer : ConnectionHandler
 	{
-		// TelnetOutputRequest
 		private readonly ILogger _logger;
 		private readonly IConnectionService _connectionService;
 		private readonly IPublisher _publisher;
-		private readonly MSSPConfig msspConfig = new() { Name = "SharpMUSH", UTF_8 = true };
+		private readonly MSSPConfig _msspConfig = new() { Name = "SharpMUSH", UTF_8 = true };
 
 		public TelnetServer(ILogger<TelnetServer> logger, ISharpDatabase database, IConnectionService connectionService, IPublisher publisher)
 		{
@@ -27,21 +26,9 @@ namespace SharpMUSH.Server.ProtocolHandlers
 			_connectionService = connectionService;
 			_publisher = publisher;
 
-			// TODO: This does not belong here. A 'main thread' is needed to migrate this.
+			// TODO: This does not belong here. A 'main thread' is needed to migrate this, before allowing telnet connections.
 			_logger.LogInformation("Starting Database");
 			database.Migrate();
-		}
-
-		private async Task WriteToOutputStreamAsync(byte[] arg, PipeWriter writer, string handle, CancellationToken ct)
-		{
-			try
-			{
-				await writer.WriteAsync(new ReadOnlyMemory<byte>(arg), ct);
-			}
-			catch (ObjectDisposedException ode)
-			{
-				_logger.LogError(ode, "{ConnectionId} Stream has been closed", handle);
-			}
 		}
 
 		public override async Task OnConnectedAsync(ConnectionContext connection)
@@ -66,11 +53,15 @@ namespace SharpMUSH.Server.ProtocolHandlers
 					=> await _publisher.Publish(
 						new UpdateNAWSRequest(connection.ConnectionId, newHeight, newWidth), ct),
 				SignalOnMSDPAsync = MSDPHandler.HandleAsync,
-				CallbackNegotiationAsync = byteArray
-					=> WriteToOutputStreamAsync(byteArray, connection.Transport.Output, connection.ConnectionId, ct),
+				CallbackNegotiationAsync = async byteArray =>
+				{
+					try { await connection.Transport.Output.WriteAsync(byteArray, ct); }
+					catch (ObjectDisposedException ode) { _logger.LogError(ode, "{ConnectionId} Stream has been closed", connection.ConnectionId); }
+					catch (Exception ex) { _logger.LogError(ex, "{ConnectionId} Unexpected Exception occurred", connection.ConnectionId); }
+				},
 				CharsetOrder = [Encoding.GetEncoding("utf-8"), Encoding.GetEncoding("iso-8859-1")]
 			}
-				.RegisterMSSPConfig(() => msspConfig)
+				.RegisterMSSPConfig(() => _msspConfig)
 				.BuildAsync();
 
 			_connectionService.Register(connection.ConnectionId, telnet.SendAsync, () => telnet.CurrentEncoding);
@@ -86,22 +77,13 @@ namespace SharpMUSH.Server.ProtocolHandlers
 						await telnet.InterpretByteArrayAsync([.. segment.Span]);
 					}
 
-					if (result.IsCompleted)
-					{
-						break;
-					}
-
+					if (result.IsCompleted) break;
+					
 					connection.Transport.Input.AdvanceTo(result.Buffer.End);
 				}
 			}
-			catch (ConnectionResetException)
-			{
-				// Disconnected while evaluating. That's fine. It just means someone closed their client.
-			}
-			catch (Exception)
-			{
-				_logger.LogDebug("Connection {ConnectionId} disconnected unexpectedly.", connection.ConnectionId);
-			}
+			catch (ConnectionResetException) { /* Disconnected while evaluating. That's fine. It just means someone closed their client. */ }
+			catch (Exception) { _logger.LogDebug("Connection {ConnectionId} disconnected unexpectedly.", connection.ConnectionId); }
 
 			_connectionService.Disconnect(connection.ConnectionId);
 		}
