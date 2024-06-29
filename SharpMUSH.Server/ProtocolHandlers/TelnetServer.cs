@@ -1,5 +1,4 @@
-﻿using System.Collections.Immutable;
-using System.IO.Pipelines;
+﻿using System.IO.Pipelines;
 using System.Text;
 using MediatR;
 using Microsoft.AspNetCore.Connections;
@@ -21,31 +20,19 @@ namespace SharpMUSH.Server.ProtocolHandlers
 		private readonly IPublisher _publisher;
 		private readonly MSSPConfig msspConfig = new() { Name = "SharpMUSH", UTF_8 = true };
 
-		public TelnetServer(
-				ILogger<TelnetServer> logger,
-				ISharpDatabase database,
-				IConnectionService connectionService,
-				IPublisher publisher
-		)
-				: base()
+		public TelnetServer(ILogger<TelnetServer> logger, ISharpDatabase database, IConnectionService connectionService, IPublisher publisher)
 		{
 			Console.OutputEncoding = Encoding.UTF8;
 			_logger = logger;
 			_connectionService = connectionService;
 			_publisher = publisher;
 
-
-			// TODO: This does not belong this. A 'main thread' is needed to migrate this.
+			// TODO: This does not belong here. A 'main thread' is needed to migrate this.
 			_logger.LogInformation("Starting Database");
 			database.Migrate();
 		}
 
-		private async Task WriteToOutputStreamAsync(
-				byte[] arg,
-				PipeWriter writer,
-				string handle,
-				CancellationToken ct
-		)
+		private async Task WriteToOutputStreamAsync(byte[] arg, PipeWriter writer, string handle, CancellationToken ct)
 		{
 			try
 			{
@@ -57,59 +44,34 @@ namespace SharpMUSH.Server.ProtocolHandlers
 			}
 		}
 
-		public async Task SignalGMCPAsync((string module, string writeback) val, string handle) =>
-				await _publisher.Publish(new SignalGMCPRequest(handle, val.module, val.writeback));
-
-		public async Task SignalMSSPAsync(MSSPConfig val, string handle) =>
-				await _publisher.Publish(new UpdateMSSPRequest(handle, val));
-
-		public async Task SignalNAWSAsync(int height, int width, string handle) =>
-				await _publisher.Publish(new UpdateNAWSRequest(handle, height, width));
-
-		private static async Task SignalMSDPAsync(
-				MSDPServerHandler handler,
-				TelnetInterpreter telnet,
-				string config
-		) => await handler.HandleAsync(telnet, config);
-
-		public async Task WriteBackAsync(
-				byte[] writeback,
-				Encoding encoding,
-				string handle
-		) => await _publisher.Publish(new TelnetInputRequest(handle, encoding.GetString(writeback)));
-
-		private async Task MSDPUpdateBehavior(string resetVariable, string handle) =>
-				await _publisher.Publish(new UpdateMSDPRequest(handle, resetVariable));
-
 		public override async Task OnConnectedAsync(ConnectionContext connection)
 		{
-			var MSDPHandler = new MSDPServerHandler(
-					new MSDPServerModel(x => MSDPUpdateBehavior(x, connection.ConnectionId)) { }
-			);
+			var ct = connection.ConnectionClosed;
+			var MSDPHandler = new MSDPServerHandler(new MSDPServerModel(async resetVar
+				=> await _publisher.Publish(
+					new UpdateMSDPRequest(connection.ConnectionId, resetVar), ct)));
 
-			var telnet = await new TelnetInterpreter(
-					TelnetInterpreter.TelnetMode.Server,
-					_logger
-			)
+			var telnet = await new TelnetInterpreter(TelnetInterpreter.TelnetMode.Server, _logger)
 			{
-				CallbackOnSubmitAsync = (writeback, encoding, telnet_instance) =>
-						WriteBackAsync(
-								writeback,
-								encoding,
-								connection.ConnectionId
-						),
-				SignalOnGMCPAsync = module_and_writeback =>
-						SignalGMCPAsync(module_and_writeback, connection.ConnectionId),
-				SignalOnMSSPAsync = msspConfig =>
-						SignalMSSPAsync(msspConfig, connection.ConnectionId),
-				SignalOnNAWSAsync = (newHeight, newWidth) =>
-						SignalNAWSAsync(newHeight, newWidth, connection.ConnectionId),
-				SignalOnMSDPAsync = (telnet, config) =>
-						SignalMSDPAsync(MSDPHandler, telnet, config),
-				CallbackNegotiationAsync = (x) => WriteToOutputStreamAsync(x, connection.Transport.Output, connection.ConnectionId, connection.ConnectionClosed),
+				CallbackOnSubmitAsync = async (byteArray, encoding, _)
+					=> await _publisher.Publish(
+							new TelnetInputRequest(connection.ConnectionId, encoding.GetString(byteArray)), ct),
+				SignalOnGMCPAsync = async moduleAndInfo
+					=> await _publisher.Publish(
+						new SignalGMCPRequest(connection.ConnectionId, moduleAndInfo.Package, moduleAndInfo.Info), ct),
+				SignalOnMSSPAsync = async msspConfig
+					=> await _publisher.Publish(
+						new UpdateMSSPRequest(connection.ConnectionId, msspConfig), ct),
+				SignalOnNAWSAsync = async (newHeight, newWidth)
+					=> await _publisher.Publish(
+						new UpdateNAWSRequest(connection.ConnectionId, newHeight, newWidth), ct),
+				SignalOnMSDPAsync = MSDPHandler.HandleAsync,
+				CallbackNegotiationAsync = byteArray
+					=> WriteToOutputStreamAsync(byteArray, connection.Transport.Output, connection.ConnectionId, ct),
 				CharsetOrder = [Encoding.GetEncoding("utf-8"), Encoding.GetEncoding("iso-8859-1")]
-			}.RegisterMSSPConfig(() => msspConfig)
-				 .BuildAsync();
+			}
+				.RegisterMSSPConfig(() => msspConfig)
+				.BuildAsync();
 
 			_connectionService.Register(connection.ConnectionId, telnet.SendAsync, () => telnet.CurrentEncoding);
 
@@ -121,7 +83,7 @@ namespace SharpMUSH.Server.ProtocolHandlers
 
 					foreach (var segment in result.Buffer)
 					{
-						await telnet.InterpretByteArrayAsync(segment.Span.ToImmutableArray());
+						await telnet.InterpretByteArrayAsync([.. segment.Span]);
 					}
 
 					if (result.IsCompleted)

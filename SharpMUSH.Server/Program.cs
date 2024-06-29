@@ -14,11 +14,11 @@ public class Program
 {
 	static async Task Main()
 	{
-		var log = new LoggerConfiguration()
-				.Enrich.FromLogContext()
-				.WriteTo.Console(theme: AnsiConsoleTheme.Code)
-				.MinimumLevel.Debug()
-				.CreateLogger();
+		new LoggerConfiguration()
+			.Enrich.FromLogContext()
+			.WriteTo.Console(theme: AnsiConsoleTheme.Code)
+			.MinimumLevel.Debug()
+			.CreateLogger();
 
 		var container = new ArangoDbBuilder()
 			.WithReuse(true)
@@ -36,14 +36,13 @@ public class Program
 			Serializer = new ArangoNewtonsoftSerializer(new ArangoNewtonsoftDefaultContractResolver())
 		};
 
-		CreateWebHostBuilder(config).Build().Run();
-		await Task.CompletedTask;
+		await CreateWebHostBuilder(config).Build().RunAsync();
 	}
 
-	public static IWebHostBuilder CreateWebHostBuilder(ArangoConfiguration acnf) =>
+	public static IWebHostBuilder CreateWebHostBuilder(ArangoConfiguration arangoConfig) =>
 			WebHost
 					.CreateDefaultBuilder()
-					.UseStartup(x => new Startup(acnf))
+					.UseStartup(x => new Startup(arangoConfig))
 					.UseKestrel(options =>
 							options.ListenLocalhost(
 									4202,

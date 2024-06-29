@@ -280,7 +280,7 @@ public class ArangoDatabase(
 				Type = obj.Type,
 				Id = obj.Id,
 				Key = int.Parse(obj.Key),
-				Locks = obj.Locks.ToImmutableDictionary(),
+				Locks = (obj.Locks ?? []).ToImmutableDictionary(),
 				CreationTime = obj.CreationTime,
 				ModifiedTime = obj.ModifiedTime,
 				Flags = GetFlags(obj.Id),
