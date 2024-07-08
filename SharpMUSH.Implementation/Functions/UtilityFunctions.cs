@@ -1,8 +1,14 @@
-﻿using SharpMUSH.Implementation.Definitions;
+﻿using ANSILibrary;
+using DotNext.Buffers;
+using MarkupString;
+using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
+using System.Drawing;
+using System.Security.Claims;
 using System.Text.RegularExpressions;
+using static ANSILibrary.ANSI;
 
 namespace SharpMUSH.Implementation.Functions
 {
@@ -13,8 +19,9 @@ namespace SharpMUSH.Implementation.Functions
 		public static CallState PCreate(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		{
 			var args = parser.CurrentState.Arguments;
-			var location = parser.Database.GetObjectNodeAsync(new Library.Models.DBRef { 
-				Number = Configurable.PlayerStart 
+			var location = parser.Database.GetObjectNodeAsync(new Library.Models.DBRef
+			{
+				Number = Configurable.PlayerStart
 			}).Result;
 
 			var trueLocation = location.Match(
@@ -25,8 +32,8 @@ namespace SharpMUSH.Implementation.Functions
 				none => -1);
 
 			var created = parser.Database.CreatePlayerAsync(
-				args[0].Message!.ToString(), 
-				args[1].Message!.ToString(), 
+				args[0].Message!.ToString(),
+				args[1].Message!.ToString(),
 				new Library.Models.DBRef(trueLocation == -1 ? 1 : trueLocation)).Result;
 
 			return new CallState($"#{created.Number}:{created.CreationMilliseconds}");
@@ -37,12 +44,160 @@ namespace SharpMUSH.Implementation.Functions
 		{
 			var args = parser.CurrentState.Arguments;
 
+			var foreground = AnsiColor.NoAnsi;
+			var background = AnsiColor.NoAnsi;
+			var blink = false;
+			var bold = false;
+			var clear = false;
+			var invert = false;
+			var underline = false;
+
+			var ansiCodes = args[0].Message!.ToString().Split(' ');
+
+			foreach (var cde in ansiCodes)
+			{
+				var code = cde.AsSpan();
+				byte curHilight = 0;
+				if (code.StartsWith(['#']) || code.StartsWith("/#"))
+				{
+					// Hex.
+					continue;
+				}
+				if (code.StartsWith(['+']) && !code.StartsWith("+xterm"))
+				{
+					// colorname
+					continue;
+				}
+				var xterm = 0;
+				if (
+					(int.TryParse(code, out xterm) && xterm > -1 && xterm < 256) ||
+					(code.StartsWith("+xterm") && int.TryParse(code[5..], out xterm) && xterm > -1 && xterm < 256))
+				{
+					// xterm color
+					continue;
+				}
+				if (code.StartsWith(['<']) && code.EndsWith(['>']))
+				{
+					// Check for triple RGB values
+					continue;
+				}
+				// ansi code. each gets evaluated individually.
+				foreach (var chr in code)
+				{
+					switch (chr)
+					{
+						case 'i':
+							invert = true;
+							break;
+						case 'I':
+							invert = false;
+							break;
+						case 'f':
+							blink = true;
+							break;
+						case 'F':
+							blink = false;
+							break;
+						case 'u':
+							underline = true;
+							break;
+						case 'U':
+							underline = false;
+							break;
+						case 'h':
+							curHilight = 60;
+							break;
+						case 'H':
+							curHilight = 0;
+							break;
+						case 'n':
+							clear = true; // TODO: This PROBABLY needs better handling. No doubt this is not correct due to the tree structure.
+							break;
+						case 'd':
+							// TODO: Inline this as a function.
+							foreground = StringExtensions.ansiByte((byte)(39 + curHilight));
+							break;
+						case 'x':
+							foreground = StringExtensions.ansiByte((byte)(30 + curHilight));
+							break;
+						case 'r':
+							foreground = StringExtensions.ansiByte((byte)(31 + curHilight));
+							break;
+						case 'g':
+							foreground = StringExtensions.ansiByte((byte)(32 + curHilight));
+							break;
+						case 'y':
+							foreground = StringExtensions.ansiByte((byte)(33 + curHilight));
+							break;
+						case 'b':
+							foreground = StringExtensions.ansiByte((byte)(34 + curHilight));
+							break;
+						case 'm':
+							foreground = StringExtensions.ansiByte((byte)(35 + curHilight));
+							break;
+						case 'c':
+							foreground = StringExtensions.ansiByte((byte)(36 + curHilight));
+							break;
+						case 'w':
+							foreground = StringExtensions.ansiByte((byte)(37 + curHilight));
+							break;
+						case 'D':
+							background = StringExtensions.ansiByte((byte)(49 + curHilight));
+							break;
+						case 'X':
+							background = StringExtensions.ansiByte((byte)(40 + curHilight));
+							break;
+						case 'R':
+							background = StringExtensions.ansiByte((byte)(41 + curHilight));
+							break;
+						case 'G':
+							background = StringExtensions.ansiByte((byte)(42 + curHilight));
+							break;
+						case 'Y':
+							background = StringExtensions.ansiByte((byte)(43 + curHilight));
+							break;
+						case 'B':
+							background = StringExtensions.ansiByte((byte)(44 + curHilight));
+							break;
+						case 'M':
+							background = StringExtensions.ansiByte((byte)(45 + curHilight));
+							break;
+						case 'C':
+							background = StringExtensions.ansiByte((byte)(46 + curHilight));
+							break;
+						case 'W':
+							background = StringExtensions.ansiByte((byte)(47 + curHilight));
+							break;
+						default:
+							// Do nothing. Just skip.
+							// Should probably warn about invalid ansi codes.
+							break;
+					}
+				}
+			}
+
+			var details = new MarkupImplementation.AnsiStructure(
+				foreground: foreground,
+				background: background,
+				blink: blink,
+				bold: bold,
+				clear: clear,
+				inverted: invert,
+				underlined: underline,
+				faint: false,
+				italic: false,
+				overlined: false,
+				strikeThrough: false,
+				linkText: null,
+				linkUrl: null);
+			MModule.markupSingle2(new MarkupImplementation.AnsiMarkup(details), args[1].Message);
+
 			return new CallState(args[1].Message);
 		}
 
 		[SharpFunction(Name = "@@", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
 		public static CallState AtAt(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
-			new (string.Empty);
+			new(string.Empty);
 
 		[SharpFunction(Name = "ALLOF", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
 		public static CallState AllOf(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -55,19 +210,19 @@ namespace SharpMUSH.Implementation.Functions
 		{
 			throw new NotImplementedException();
 		}
-		
+
 		[SharpFunction(Name = "BEEP", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.AdminOnly | FunctionFlags.StripAnsi)]
 		public static CallState Beep(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		{
 			throw new NotImplementedException();
 		}
-		
+
 		[SharpFunction(Name = "BENCHMARK", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.NoParse)]
 		public static CallState Benchmark(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		{
 			throw new NotImplementedException();
 		}
-		
+
 		[SharpFunction(Name = "CHECKPASS", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly | FunctionFlags.StripAnsi)]
 		public static CallState Checkpass(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		{
@@ -84,23 +239,23 @@ namespace SharpMUSH.Implementation.Functions
 			{
 				return new CallState("#-1 NO SUCH PLAYER");
 			}
-			
+
 			var player = objectInfo.AsT0;
 
 			var result = parser.PasswordService.PasswordIsValid(
-				$"#{player!.Object!.Key}:{player!.Object!.CreationTime}", 
-				parser.CurrentState.Arguments[1].Message!.ToString(), 
+				$"#{player!.Object!.Key}:{player!.Object!.CreationTime}",
+				parser.CurrentState.Arguments[1].Message!.ToString(),
 				player.PasswordHash);
 
 			return result ? new("1") : new("0");
 		}
-		
+
 		[SharpFunction(Name = "CLONE", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular)]
 		public static CallState Clone(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		{
 			throw new NotImplementedException();
 		}
-		
+
 		[SharpFunction(Name = "CREATE", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular)]
 		public static CallState Create(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		{
@@ -150,10 +305,10 @@ namespace SharpMUSH.Implementation.Functions
 		[SharpFunction(Name = "ISINT", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 		public static CallState IsInt(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 			new(int.TryParse(parser.CurrentState.Arguments[0].Message!.ToString(), out var _) ? "1" : "0");
-		
+
 		[SharpFunction(Name = "ISNUM", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 		public static CallState IsNum(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
-			new (decimal.TryParse(parser.CurrentState.Arguments[0].Message!.ToString(), out var _) ? "1" : "0");
+			new(decimal.TryParse(parser.CurrentState.Arguments[0].Message!.ToString(), out var _) ? "1" : "0");
 
 		[SharpFunction(Name = "ISOBJID", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 		public static CallState IsObjId(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -165,11 +320,11 @@ namespace SharpMUSH.Implementation.Functions
 		public static CallState isregexp(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		{
 			var arg = parser.CurrentState.Arguments[0].Message!.ToString();
-			
+
 			if (string.IsNullOrWhiteSpace(arg)) return new("0");
-			
+
 			try { Regex.Match("", arg); } catch (ArgumentException) { return new("0"); }
-			
+
 			return new("1");
 		}
 
@@ -217,7 +372,7 @@ namespace SharpMUSH.Implementation.Functions
 
 		[SharpFunction(Name = "NULL", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
 		public static CallState Null(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
-			new (string.Empty);
+			new(string.Empty);
 
 		[SharpFunction(Name = "OPEN", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular)]
 		public static CallState Open(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -257,31 +412,31 @@ namespace SharpMUSH.Implementation.Functions
 		{
 			throw new NotImplementedException();
 		}
-		
+
 		[SharpFunction(Name = "SOUNDEX", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 		public static CallState SoundEx(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		{
 			throw new NotImplementedException();
 		}
-		
+
 		[SharpFunction(Name = "SOUNDSLIKE", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 		public static CallState SoundLike(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		{
 			throw new NotImplementedException();
 		}
-		
+
 		[SharpFunction(Name = "SPEAK", MinArgs = 2, MaxArgs = 7, Flags = FunctionFlags.Regular)]
 		public static CallState Speak(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		{
 			throw new NotImplementedException();
 		}
-		
+
 		[SharpFunction(Name = "STRALLOF", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
 		public static CallState StrAllOf(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		{
 			throw new NotImplementedException();
 		}
-		
+
 		[SharpFunction(Name = "STRINSERT", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular)]
 		public static CallState StrInsert(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		{

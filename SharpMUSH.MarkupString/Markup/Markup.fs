@@ -1,6 +1,7 @@
 ﻿namespace MarkupString
 
 open System.Runtime.InteropServices
+open ANSILibrary.ANSI
 
 module MarkupImplementation =
   open ANSILibrary
@@ -15,8 +16,8 @@ module MarkupImplementation =
   [<Struct>]
   type AnsiStructure =
     {
-      Foreground: string;
-      Background: string;
+      Foreground: AnsiColor;
+      Background: AnsiColor;
       LinkText: string;
       LinkUrl: string;
       Blink: bool;
@@ -48,8 +49,8 @@ module MarkupImplementation =
         [<Optional;DefaultParameterValue(false)>]?underlined, 
         [<Optional;DefaultParameterValue(false)>]?strikeThrough) =
       {
-        Foreground = defaultArg foreground null
-        Background = defaultArg background null
+        Foreground = defaultArg foreground AnsiColor.NoAnsi
+        Background = defaultArg background AnsiColor.NoAnsi
         LinkText = defaultArg linkText null
         LinkUrl = defaultArg linkUrl null
         Blink = defaultArg blink false
@@ -69,8 +70,8 @@ module MarkupImplementation =
         let applyDetails (details: AnsiStructure) (text: string) =
           StringExtensions.toANSI text
           |> (fun t -> match details.LinkUrl with | null -> t | url -> StringExtensions.linkANSI t url)
-          |> (fun t -> match details.Foreground with | null -> t | fg -> StringExtensions.colorString t fg)
-          |> (fun t -> match details.Background with | null -> t | bg -> StringExtensions.backgroundString t bg)
+          |> (fun t -> match details.Foreground with | AnsiColor.NoAnsi -> t | fg -> StringExtensions.colorANSI t fg)
+          |> (fun t -> match details.Background with | AnsiColor.NoAnsi -> t | bg -> StringExtensions.backgroundANSI t bg)
           |> (fun t -> if details.Blink then StringExtensions.blinkANSI(t) else t)
           |> (fun t -> if details.Bold then StringExtensions.boldANSI(t) else t)
           |> (fun t -> if details.Faint then StringExtensions.faintANSI(t) else t)

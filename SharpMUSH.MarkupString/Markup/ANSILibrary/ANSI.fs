@@ -5,6 +5,11 @@ open System.Drawing
 
 // Converted from: https://github.com/WilliamRagstad/ANSIConsole/blob/main/ANSIConsole/
 module ANSI =
+  type AnsiColor = 
+    | RGB of rgb : Color 
+    | ANSI of ansiCode : byte
+    | NoAnsi
+
   /// The ASCII escape character (decimal 27).
   let ESC = "\u001b"
 
@@ -23,10 +28,21 @@ module ANSI =
   let Inverted = SGR [|7uy|]
   let StrikeThrough = SGR [|9uy|]
   let Overlined = SGR [|53uy|]
+  
+  let Foreground (color: AnsiColor) = 
+    match color with 
+      | RGB rgb -> SGR [|38uy; 2uy; rgb.R; rgb.G; rgb.B|]
+      | ANSI ansi -> SGR [|38uy; 5uy; ansi|]
+      | NoAnsi -> ""
+  let Background (color: AnsiColor) = 
+    match color with 
+      | RGB rgb -> SGR [|48uy; 2uy; rgb.R; rgb.G; rgb.B|]
+      | ANSI ansi -> SGR [|48uy; 5uy; ansi|]
+      | NoAnsi -> ""
 
-  let Foreground (color: System.Drawing.Color) = SGR [|38uy; 2uy; color.R; color.G; color.B|]
-  let Background (color: System.Drawing.Color) = SGR [|48uy; 2uy; color.R; color.G; color.B|]
   let Hyperlink (text: string, link: string) = sprintf "\u001b]8;;%s\a%s\u001b]8;;\a" link text
+
+open ANSI
 
 [<System.Flags>]
 type ANSIFormatting =
@@ -45,32 +61,12 @@ type ANSIFormatting =
 
 type ANSIString(text: string) =
   let mutable _hyperlink: string option = None
-  let mutable _colorForeground: Color option = None
-  let mutable _colorBackground: Color option = None
+  let mutable _colorForeground: AnsiColor option = None
+  let mutable _colorBackground: AnsiColor option = None
   let mutable _opacity: float option = None
   let mutable _formatting: ANSIFormatting = ANSIFormatting.Clear
   let _text: string = ""
   
-  static member internal ConsoleColors = 
-      [| 
-            0x000000; //Black = 0
-            0x000080; //DarkBlue = 1
-            0x008000; //DarkGreen = 2
-            0x008080; //DarkCyan = 3
-            0x800000; //DarkRed = 4
-            0x800080; //DarkMagenta = 5
-            0x808000; //DarkYellow = 6
-            0xC0C0C0; //Gray = 7
-            0x808080; //DarkGray = 8
-            0x0000FF; //Blue = 9
-            0x00FF00; //Green = 10
-            0x00FFFF; //Cyan = 11
-            0xFF0000; //Red = 12
-            0xFF00FF; //Magenta = 13
-            0xFFFF00; //Yellow = 14
-            0xFFFFFF  //White = 15 
-      |] // All the color codes
-
   member internal this.AddFormatting(add: ANSIFormatting) =
       _formatting <- _formatting ||| add
       if _formatting.HasFlag(ANSIFormatting.UpperCase ||| ANSIFormatting.LowerCase) then
@@ -81,23 +77,12 @@ type ANSIString(text: string) =
       _formatting <- _formatting &&& ~~~rem
       this
 
-  member internal this.GetForegroundColor() = _colorForeground |> Option.defaultValue (ANSIString.FromConsoleColor(Console.ForegroundColor))
-  member internal this.GetBackgroundColor() = _colorBackground |> Option.defaultValue (ANSIString.FromConsoleColor(Console.BackgroundColor))
-
-  member internal this.SetForegroundColor(color: Color) =
-      _colorForeground <- Some color
+  member internal this.SetForegroundColor(color: AnsiColor) =
+      _colorForeground <- Some color 
       this
-
-  member internal this.SetForegroundColor(color: ConsoleColor) =
-      _colorForeground <- Some (ANSIString.FromConsoleColor(color))
-      this
-
-  member internal this.SetBackgroundColor(color: Color) =
+      
+  member internal this.SetBackgroundColor(color: AnsiColor) =
       _colorBackground <- Some color
-      this
-
-  member internal this.SetBackgroundColor(color: ConsoleColor) =
-      _colorBackground <- Some (ANSIString.FromConsoleColor(color))
       this
 
   member internal this.SetOpacity(opacity: float) =
@@ -120,7 +105,7 @@ type ANSIString(text: string) =
     let r = int (blend fromC.R toC.R)
     let g = int (blend fromC.G toC.G)
     let b = int (blend fromC.B toC.B)
-    Color.FromArgb(r, g, b)
+    RGB(Color.FromArgb(r, g, b))
 
   override this.ToString() =
     let applyFormatting formatting transform result =
@@ -128,7 +113,10 @@ type ANSIString(text: string) =
 
     let applyColor colorFunc result =
         match _opacity, _colorForeground, _colorBackground with
-        | Some o, _, _ -> colorFunc(ANSIString.Interpolate(_colorBackground.Value, _colorForeground.Value, o)) + result
+        | Some o, Some bg, Some fg -> 
+          match bg,fg with
+            | RGB b, RGB f -> colorFunc(ANSIString.Interpolate(b, f, o)) + result
+            | _,_ -> result
         | _, Some cf, _ -> colorFunc(cf) + result
         | _ -> result
 
@@ -164,10 +152,6 @@ type ANSIString(text: string) =
         else resultWithHyperlink
 
     finalResult
-
-
-  static member internal FromConsoleColor(color: ConsoleColor) =
-    Color.FromArgb(ANSIString.ConsoleColors[(int)color])
 
 module StringExtensions =
   let toANSI (text: string) = ANSIString(text)
@@ -207,26 +191,14 @@ module StringExtensions =
   let clear (text: string) = toANSI text |> fun t -> t.AddFormatting(ANSIFormatting.Clear)
   let clearANSI (text: ANSIString) = text.AddFormatting(ANSIFormatting.Clear)
 
+  let color (text: string) (color: AnsiColor) = toANSI text |> fun t -> t.SetForegroundColor(color)
+  let colorANSI (text: ANSIString) (color: AnsiColor) = text.SetForegroundColor(color)
+  
+  let rgb (color: Color) = RGB color
+  let ansiByte (color: byte) = ANSI color
 
-  let color (text: string) (color: Color) = toANSI text |> fun t -> t.SetForegroundColor(color)
-  let colorANSI (text: ANSIString) (color: Color) = text.SetForegroundColor(color)
-  let colorString (text: ANSIString) (nameOrHex: string) =
-    let color = 
-        if nameOrHex.StartsWith("#") then
-            ColorTranslator.FromHtml(nameOrHex)
-        else
-            Color.FromName(nameOrHex)
-    text.SetForegroundColor(color)
-
-  let background (text: string) (color: Color) = toANSI text |> fun t -> t.SetBackgroundColor(color)
-  let backgroundANSI (text: ANSIString) (color: Color) = text.SetBackgroundColor(color)
-  let backgroundString (text: ANSIString) (nameOrHex: string) =
-    let color = 
-        if nameOrHex.StartsWith("#") then
-            ColorTranslator.FromHtml(nameOrHex)
-        else
-            Color.FromName(nameOrHex)
-    text.SetBackgroundColor(color)
+  let background (text: string) (color: AnsiColor) = toANSI text |> fun t -> t.SetBackgroundColor(color)
+  let backgroundANSI (text: ANSIString) (color: AnsiColor) = text.SetBackgroundColor(color)
 
   let opacity (text: string) (percent: int) = toANSI text |> fun t -> t.SetOpacity((float)percent / 100.0)
   let opacityANSI (text: ANSIString) (percent: int) = text.SetOpacity((float)percent / 100.0)
