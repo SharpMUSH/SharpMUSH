@@ -52,7 +52,7 @@ namespace SharpMUSH.Tests
 
 		public static IMUSHCodeParser TestParser(
 			IPasswordService? pws = null,
-			IPermissionService? ps = null, // Permission Service needs the parser... this is circular.
+			IPermissionService? ps = null, // Permission Service needs the parser... this is circular. So we need to use the Mediator Pattern.
 			ISharpDatabase? ds = null,
 			INotifyService? ns = null,
 			IQueueService? qs = null,

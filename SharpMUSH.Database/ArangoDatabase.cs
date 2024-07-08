@@ -34,10 +34,7 @@ public class ArangoDatabase(
 			await migrator.Context.Database.CreateAsync(handle);
 		}
 
-		// load all migrations from assembly
 		migrator.AddMigrations(typeof(ArangoDatabase).Assembly);
-
-		// apply all migrations up to latest
 		await migrator.UpgradeAsync(handle);
 
 		logger.LogInformation("Migration Completed.");
@@ -143,9 +140,6 @@ public class ArangoDatabase(
 		=> arangoDB.Query.ExecuteAsync<SharpAttribute>(handle,
 			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphPowers} RETURN v").Result.AsQueryable();
 
-	// This does return the SharpPlayer, but needs to also return the Object so we can Populate.
-	// We can get the full populated object from the SharpPlayer by using GetObjectNode() on its Id.
-	// But this probably should not be IQueryable and instead just be a Func<SharpPlayer>.
 	private SharpPlayer GetObjectOwner(string id)
 	{
 		var owner = arangoDB.Query.ExecuteAsync<SharpPlayerQueryResult>(handle,
@@ -437,6 +431,7 @@ public class ArangoDatabase(
 
 	public Task<bool> WipeAttributeAsync(DBRef dbref, string[] attribute)
 	{
+
 		// Wipe a list of attributes. We assume the calling code figured out the permissions part.
 
 		throw new NotImplementedException();
@@ -531,7 +526,7 @@ public class ArangoDatabase(
 
 	public async Task<IEnumerable<SharpPlayer>> GetPlayerByNameAsync(string name)
 	{
-		// Todo: Look up by Alias.
+		// TODO: Look up by Alias.
 		var query = await arangoDB.Query.ExecuteAsync<dynamic>(handle, $"FOR v IN {DatabaseConstants.objects} FILTER v.Type == @type && v.Name == @name RETURN v",
 			bindVars: new Dictionary<string, object>
 			{
@@ -539,7 +534,7 @@ public class ArangoDatabase(
 				{ "type", DatabaseConstants.typePlayer }
 			});
 
-		// Todo: Edit to return multiple players and let the above layer figure out which one it wants.
+		// TODO: Edit to return multiple players and let the above layer figure out which one it wants.
 		var result = query.FirstOrDefault();
 		if (result == null) return [];
 
@@ -551,11 +546,11 @@ public class ArangoDatabase(
 				{ "startVertex", result._id },
 			});
 
-
 		return playerQueryResult.Select(path =>
 		{
 			var curObject = (path.edges[0] as SharpObjectQueryResult)!;
 			var curPlayer = (path.edges[1] as SharpPlayerQueryResult)!;
+
 			return new SharpPlayer()
 			{
 				Object = new SharpObject()
