@@ -33,6 +33,10 @@ namespace SharpMUSH.Library
 
 		AnyOptionalSharpObject GetObjectNode(DBRef dbref);
 
+		IQueryable<SharpObject> GetParent(string id);
+
+		IQueryable<SharpObject> GetParents(string id);
+
 		Task<SharpObject?> GetBaseObjectNodeAsync(DBRef dbref);
 
 		Task<IEnumerable<SharpPlayer>> GetPlayerByNameAsync(string name);

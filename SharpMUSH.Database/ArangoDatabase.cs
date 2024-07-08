@@ -160,6 +160,10 @@ public class ArangoDatabase(
 		=> arangoDB.Query.ExecuteAsync<SharpObject>(handle,
 			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphParents} RETURN v").Result.AsQueryable();
 
+	private IQueryable<SharpObject> GetParents(string id)
+		=> arangoDB.Query.ExecuteAsync<SharpObject>(handle,
+			$"FOR v IN 1 OUTBOUND {id} GRAPH {DatabaseConstants.graphParents} RETURN v").Result.AsQueryable();
+
 	private AnySharpContainer GetHome(string id)
 	{
 		var homeId = arangoDB.Query.ExecuteAsync<string>(handle,
@@ -269,8 +273,12 @@ public class ArangoDatabase(
 
 	public async Task<SharpObject?> GetBaseObjectNodeAsync(DBRef dbref)
 	{
-		// TODO: Version that cares about CreatedMilliseconds
 		var obj = await arangoDB.Document.GetAsync<SharpObjectQueryResult>(handle, DatabaseConstants.objects, dbref.Number.ToString());
+
+		if (dbref.CreationMilliseconds.HasValue && obj.CreationTime != dbref.CreationMilliseconds)
+		{
+			return null;
+		}
 
 		return obj == null
 			? null
