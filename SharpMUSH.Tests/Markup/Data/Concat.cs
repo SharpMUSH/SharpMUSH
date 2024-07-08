@@ -20,6 +20,9 @@ namespace SharpMUSH.Tests.Markup.Data
 																		A.single("cat")])],
 					[A.markupSingle2(M.Create(foreground: StringExtensions.rgb(Color.Red)), A.single("red")), A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Blue)),"cat"),
 						A.multiple([A.markupSingle2(M.Create(foreground: StringExtensions.rgb(Color.Red)), A.single("red")),
+																		A.markupSingle2(M.Create(foreground: StringExtensions.rgb(Color.Blue)), A.single("cat"))])],
+					[A.markupSingle2(M.Create(clear: true), A.single("clear")), A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Blue)),"cat"),
+						A.multiple([A.markupSingle2(M.Create(clear: true), A.single("clear")),
 																		A.markupSingle2(M.Create(foreground: StringExtensions.rgb(Color.Blue)), A.single("cat"))])]
 				];
 			}
