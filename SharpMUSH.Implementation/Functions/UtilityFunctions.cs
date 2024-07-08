@@ -190,9 +190,8 @@ namespace SharpMUSH.Implementation.Functions
 				strikeThrough: false,
 				linkText: null,
 				linkUrl: null);
-			MModule.markupSingle2(new MarkupImplementation.AnsiMarkup(details), args[1].Message);
 
-			return new CallState(args[1].Message);
+			return new CallState(MModule.markupSingle2(new MarkupImplementation.AnsiMarkup(details), args[1].Message));
 		}
 
 		[SharpFunction(Name = "@@", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
