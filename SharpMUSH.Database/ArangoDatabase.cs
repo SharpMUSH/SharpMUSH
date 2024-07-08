@@ -156,11 +156,11 @@ public class ArangoDatabase(
 		return populatedOwner.AsT0;
 	}
 
-	private IQueryable<SharpObject> GetParent(string id)
+	public IQueryable<SharpObject> GetParent(string id)
 		=> arangoDB.Query.ExecuteAsync<SharpObject>(handle,
 			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphParents} RETURN v").Result.AsQueryable();
 
-	private IQueryable<SharpObject> GetParents(string id)
+	public IQueryable<SharpObject> GetParents(string id)
 		=> arangoDB.Query.ExecuteAsync<SharpObject>(handle,
 			$"FOR v IN 1 OUTBOUND {id} GRAPH {DatabaseConstants.graphParents} RETURN v").Result.AsQueryable();
 
@@ -378,9 +378,8 @@ public class ArangoDatabase(
 			{ "max", attribute.Length }
 		});
 
-		// TODO: What if we did not find it?
-		// TODO: What should the result be if we did not find it?
-		// TODO: This doesn't handle Inheritance - so we may need to pass back the player it was found on as well either way.
+		if (result.Count < attribute.Length) return null;
+
 		return result.Select(x => new SharpAttribute() { Name = x.Name, Flags = x.Flags, Value = x.Value, Id = x.Id, LongName = x.LongName }).ToArray();
 	}
 
@@ -410,15 +409,19 @@ public class ArangoDatabase(
 		foreach (var nextAttr in remaining.Select((attrName, i) => (value: attrName, i)))
 		{
 			var newOne = await arangoDB.Document.CreateAsync<SharpAttributeCreateRequest, SharpAttributeQueryResult>(handle, DatabaseConstants.attributes,
-				new SharpAttributeCreateRequest(nextAttr.value.ToUpper(), [], string.Empty, 
-				string.Join('`', remaining.Take(nextAttr.i+1).Select(x => x.ToUpper()))));
+				new SharpAttributeCreateRequest(nextAttr.value.ToUpper(), [], string.Empty,
+				string.Join('`', remaining.Take(nextAttr.i + 1).Select(x => x.ToUpper()))));
 			await arangoDB.Document.CreateAsync<SharpEdgeCreateRequest, SharpEdgeQueryResult>(handle, DatabaseConstants.hasAttribute,
 				new SharpEdgeCreateRequest(lastId, newOne.Id));
 			lastId = newOne.Id;
 		}
 
-		await arangoDB.Document.UpdateAsync(handle, DatabaseConstants.attributes, new { Key = lastId!.Split("/").Last(), Value = value, 
-			LongName = string.Join("`", attribute.Select(x => x.ToUpper())) }, mergeObjects: true);
+		await arangoDB.Document.UpdateAsync(handle, DatabaseConstants.attributes, new
+		{
+			Key = lastId!.Split("/").Last(),
+			Value = value,
+			LongName = string.Join("`", attribute.Select(x => x.ToUpper()))
+		}, mergeObjects: true);
 		await arangoDB.Document.CreateAsync<SharpEdgeCreateRequest, SharpEdgeQueryResult>(handle, DatabaseConstants.hasAttributeOwner,
 			new SharpEdgeCreateRequest(lastId, owner.Id!), mergeObjects: true);
 
@@ -561,9 +564,9 @@ public class ArangoDatabase(
 					Type = curObject.Type,
 					Id = curObject.Id,
 					Key = int.Parse(curObject.Key),
-					Locks = curObject.Locks.ToImmutableDictionary(),
-					CreationTime = curObject.CreationTime,
-					ModifiedTime = curObject.ModifiedTime,
+					Locks = curObject?.Locks?.ToImmutableDictionary() ?? ImmutableDictionary.Create<string, string>(),
+					CreationTime = curObject!.CreationTime,
+					ModifiedTime = curObject!.ModifiedTime,
 					Flags = GetFlags(curObject.Id),
 					Powers = GetPowers(curObject.Id),
 					Attributes = GetAttributes(curObject.Id),
