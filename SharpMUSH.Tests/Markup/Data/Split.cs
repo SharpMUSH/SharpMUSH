@@ -12,8 +12,8 @@ namespace SharpMUSH.Tests.Markup.Data
 		{
 			get
 			{
-				return new object[][]
-				{
+				return
+				[
 					[A.concat(A.single("con"), A.single(";cat")), ";",
 							new AnsiString[]
 							{
@@ -50,7 +50,7 @@ namespace SharpMUSH.Tests.Markup.Data
 								A.multiple([A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "d"), A.single("c")]),
 								A.single("at")
 						}]
-				};
+				];
 			}
 		}
 	}

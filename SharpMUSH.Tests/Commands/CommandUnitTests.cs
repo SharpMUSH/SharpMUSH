@@ -34,8 +34,8 @@ public class CommandUnitTests : BaseUnitTest
 	[TestMethod]
 	[DataRow("think add(1,2);think add(2,3)", "3", "5")]
 	[DataRow("think [add(1,2)];think add(3,2)","3","5")]
-	[DataRow("[ansi(hy,think)] [ansi(hr,red)];[ansi(hg,think)] [ansi(hg,green)]", "red", "green")]
-	[DataRow("think [ansi(hr,red)];think [ansi(hg,green)]", "red", "green")]
+	[DataRow("[ansi(hy,think)] [ansi(hr,red)];[ansi(hg,think)] [ansi(hg,green)]", "\u001b[38;5;91mred\u001b[0m", "\u001b[38;5;92mgreen\u001b[0m")]
+	[DataRow("think [ansi(hr,red)];think [ansi(hg,green)]", "\u001b[38;5;91mred\u001b[0m", "\u001b[38;5;92mgreen\u001b[0m")]
 	[DataRow("think Command1 Arg;think Command2 Arg", "Command1 Arg", "Command2 Arg")]
 	public async Task TestSingle(string str, string expected1, string expected2)
 	{

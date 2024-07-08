@@ -2,6 +2,9 @@
 using System.Text;
 using AnsiString = MarkupString.MarkupStringModule.MarkupString;
 using A = MarkupString.MarkupStringModule;
+using M = MarkupString.MarkupImplementation.AnsiMarkup;
+using System.Drawing;
+using ANSILibrary;
 
 namespace SharpMUSH.Tests.Markup
 {
@@ -56,6 +59,16 @@ namespace SharpMUSH.Tests.Markup
 			{
 				CollectionAssert.AreEqual(Encoding.Unicode.GetBytes(First.ToString()), Encoding.Unicode.GetBytes(Second.ToString()));
 			}
+		}
+
+		[TestMethod]
+		public void Simple()
+		{
+			var simpleString = A.single("red");
+			var redString = A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "red");
+
+			Assert.AreEqual("red", simpleString.ToString());
+			Assert.AreEqual("\u001b[38;2;255;0;0mred\u001b[0m", redString.ToString());
 		}
 	}
 }

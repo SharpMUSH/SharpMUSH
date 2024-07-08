@@ -65,7 +65,7 @@ type ANSIString(text: string) =
   let mutable _colorBackground: AnsiColor option = None
   let mutable _opacity: float option = None
   let mutable _formatting: ANSIFormatting = ANSIFormatting.Clear
-  let _text: string = ""
+  let _text: string = text
   
   member internal this.AddFormatting(add: ANSIFormatting) =
       _formatting <- _formatting ||| add
