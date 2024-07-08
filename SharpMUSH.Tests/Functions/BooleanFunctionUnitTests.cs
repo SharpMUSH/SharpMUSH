@@ -10,7 +10,7 @@
 		[DataRow("t(false)", "1")]
 		[DataRow("t(#-1 Words)", "0")]
 		[DataRow("t()", "0")]
-		[DataRow("t( )", "1")]
+		[DataRow("t( )", "0")]
 		[DataRow("t(%b)", "1")]
 		public void T(string str, string expected)
 		{

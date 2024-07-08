@@ -40,7 +40,7 @@ eqsplitCommand
     ;
 
 commaCommandArgs
-    : singleCommandArg (COMMA singleCommandArg)*? EOF
+    : singleCommandArg (COMMAWS singleCommandArg)*? EOF
     ;
 
 singleCommandArg
@@ -75,10 +75,10 @@ funName  // TODO: A Substitution can be inside of a funName to create a function
     : FUNCHAR
     ;
 function 
-    : funName OPAREN (funArguments)? CPAREN
+    : funName OPARENWS (funArguments)? CPAREN
     ;
 funArguments
-    : evaluationString (COMMA evaluationString)*?
+    : evaluationString (COMMAWS evaluationString)*?
     ;
 validSubstitution
     : complexSubstitutionSymbol

@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-// Generated from d:/SharpMUSH/SharpMUSH.Generated/SharpMUSHParser.g4 by ANTLR 4.13.1
+// Generated from D:/SharpMUSH/SharpMUSH.Generated/SharpMUSHParser.g4 by ANTLR 4.13.1
 
 // Unreachable code detected
 #pragma warning disable 0162
@@ -36,8 +36,8 @@ public partial class SharpMUSHParser : Parser {
 	protected static DFA[] decisionToDFA;
 	protected static PredictionContextCache sharedContextCache = new PredictionContextCache();
 	public const int
-		OPAREN=1, ESCAPE=2, OBRACK=3, CBRACK=4, OBRACE=5, CBRACE=6, CPAREN=7, 
-		OCARET=8, CCARET=9, COMMA=10, EQUALS=11, DOLLAR=12, PERCENT=13, SEMICOLON=14, 
+		OPARENWS=1, ESCAPE=2, OBRACK=3, CBRACK=4, OBRACE=5, CBRACE=6, CPAREN=7, 
+		OCARET=8, CCARET=9, COMMAWS=10, EQUALS=11, DOLLAR=12, PERCENT=13, SEMICOLON=14, 
 		COLON=15, OANSI=16, RSPACE=17, FUNCHAR=18, OTHER=19, REG_STARTCARET=20, 
 		REG_NUM=21, VWX=22, ARG_NUM=23, SPACE=24, BLANKLINE=25, TAB=26, DBREF=27, 
 		ENACTOR_NAME=28, CAP_ENACTOR_NAME=29, ACCENT_NAME=30, MONIKER_NAME=31, 
@@ -65,15 +65,15 @@ public partial class SharpMUSHParser : Parser {
 	};
 
 	private static readonly string[] _LiteralNames = {
-		null, "'('", null, "'['", "']'", "'{'", "'}'", "')'", "'<'", "'>'", "','", 
+		null, null, null, "'['", "']'", "'{'", "'}'", "')'", "'<'", "'>'", null, 
 		"'='", "'$'", "'%'", "';'", "':'", "'\\u001B'", "' '", null, null, null, 
 		null, null, null, null, null, null, "'#'", "'n'", "'N'", "'~'", null, 
 		null, null, null, null, "'@'", "'!'", null, null, null, "'?'", "'+'", 
 		null, null, null, null, "'m'"
 	};
 	private static readonly string[] _SymbolicNames = {
-		null, "OPAREN", "ESCAPE", "OBRACK", "CBRACK", "OBRACE", "CBRACE", "CPAREN", 
-		"OCARET", "CCARET", "COMMA", "EQUALS", "DOLLAR", "PERCENT", "SEMICOLON", 
+		null, "OPARENWS", "ESCAPE", "OBRACK", "CBRACK", "OBRACE", "CBRACE", "CPAREN", 
+		"OCARET", "CCARET", "COMMAWS", "EQUALS", "DOLLAR", "PERCENT", "SEMICOLON", 
 		"COLON", "OANSI", "RSPACE", "FUNCHAR", "OTHER", "REG_STARTCARET", "REG_NUM", 
 		"VWX", "ARG_NUM", "SPACE", "BLANKLINE", "TAB", "DBREF", "ENACTOR_NAME", 
 		"CAP_ENACTOR_NAME", "ACCENT_NAME", "MONIKER_NAME", "SUB_PRONOUN", "OBJ_PRONOUN", 
@@ -488,9 +488,9 @@ public partial class SharpMUSHParser : Parser {
 			return GetRuleContext<SingleCommandArgContext>(i);
 		}
 		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode Eof() { return GetToken(SharpMUSHParser.Eof, 0); }
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode[] COMMA() { return GetTokens(SharpMUSHParser.COMMA); }
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode COMMA(int i) {
-			return GetToken(SharpMUSHParser.COMMA, i);
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode[] COMMAWS() { return GetTokens(SharpMUSHParser.COMMAWS); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode COMMAWS(int i) {
+			return GetToken(SharpMUSHParser.COMMAWS, i);
 		}
 		public CommaCommandArgsContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
@@ -523,7 +523,7 @@ public partial class SharpMUSHParser : Parser {
 					{
 					{
 					State = 86;
-					Match(COMMA);
+					Match(COMMAWS);
 					State = 87;
 					singleCommandArg();
 					}
@@ -1020,7 +1020,7 @@ public partial class SharpMUSHParser : Parser {
 		[System.Diagnostics.DebuggerNonUserCode] public FunNameContext funName() {
 			return GetRuleContext<FunNameContext>(0);
 		}
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode OPAREN() { return GetToken(SharpMUSHParser.OPAREN, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode OPARENWS() { return GetToken(SharpMUSHParser.OPARENWS, 0); }
 		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode CPAREN() { return GetToken(SharpMUSHParser.CPAREN, 0); }
 		[System.Diagnostics.DebuggerNonUserCode] public FunArgumentsContext funArguments() {
 			return GetRuleContext<FunArgumentsContext>(0);
@@ -1048,7 +1048,7 @@ public partial class SharpMUSHParser : Parser {
 			State = 152;
 			funName();
 			State = 153;
-			Match(OPAREN);
+			Match(OPARENWS);
 			State = 155;
 			ErrorHandler.Sync(this);
 			switch ( Interpreter.AdaptivePredict(TokenStream,11,Context) ) {
@@ -1081,9 +1081,9 @@ public partial class SharpMUSHParser : Parser {
 		[System.Diagnostics.DebuggerNonUserCode] public EvaluationStringContext evaluationString(int i) {
 			return GetRuleContext<EvaluationStringContext>(i);
 		}
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode[] COMMA() { return GetTokens(SharpMUSHParser.COMMA); }
-		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode COMMA(int i) {
-			return GetToken(SharpMUSHParser.COMMA, i);
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode[] COMMAWS() { return GetTokens(SharpMUSHParser.COMMAWS); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode COMMAWS(int i) {
+			return GetToken(SharpMUSHParser.COMMAWS, i);
 		}
 		public FunArgumentsContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
@@ -1116,7 +1116,7 @@ public partial class SharpMUSHParser : Parser {
 					{
 					{
 					State = 160;
-					Match(COMMA);
+					Match(COMMAWS);
 					State = 161;
 					evaluationString();
 					}

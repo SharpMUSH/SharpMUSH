@@ -3,8 +3,8 @@ lexer grammar SharpMUSHLexer;
 /*
  * Lexer Rules   
  */
-
-OPAREN: '(';
+ 
+OPARENWS: '(' [ \r\n\f\t]*;
 ESCAPE: '\\' -> pushMode(ESCAPING);
 OBRACK: '[';
 CBRACK: ']';
@@ -13,7 +13,7 @@ CBRACE: '}' -> skip;
 CPAREN: ')';
 OCARET: '<';
 CCARET: '>';
-COMMA: ',';
+COMMAWS: ',' [ \r\n\f\t]*;
 EQUALS: '=';
 DOLLAR: '$';
 PERCENT: '%' -> pushMode(SUBSTITUTION);
