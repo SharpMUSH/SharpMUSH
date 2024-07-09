@@ -66,9 +66,11 @@ namespace SharpMUSH.Tests.Markup
 		{
 			var simpleString = A.single("red");
 			var redString = A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "red");
+			var redAnsiString = A.markupSingle(M.Create(foreground: StringExtensions.ansiByte(31)), "red");
 
 			Assert.AreEqual("red", simpleString.ToString());
 			Assert.AreEqual("\u001b[38;2;255;0;0mred\u001b[0m", redString.ToString());
+			Assert.AreEqual("\u001b[31mred\u001b[0m", redAnsiString.ToString());
 		}
 	}
 }

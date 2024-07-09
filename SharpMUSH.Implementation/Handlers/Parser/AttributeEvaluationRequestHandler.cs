@@ -8,9 +8,7 @@ public class AttributeEvaluationRequestHandler(IMUSHCodeParser _parser) : INotif
 {
 	public async Task Handle(AttributeEvaluationRequest request, CancellationToken ct)
 	{
-		var _ = _parser; // Quiet the linter.
-		await Task.Delay(0);
-		// => await _parser.FunctionParse(request.Handle, request.Input);
-		throw new NotImplementedException();
+		var contents = await _parser.Database.GetAttributeAsync(request.Attribute.DB, request.Attribute.Name.Split('`'));
+		_parser.FunctionParse(contents!.Last()!.Value);
 	}
 }

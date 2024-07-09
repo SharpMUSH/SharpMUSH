@@ -12,17 +12,17 @@ namespace SharpMUSH.Tests.Functions
 
 		[TestMethod]
 		[DataRow("ansi(r,red)", "red", (byte)31)]
-		[DataRow("ansi(hr,red)", "red", (byte)91)]
+		[DataRow("ansi(hr,red)", "red", (byte)1,(byte)31)]
 		[DataRow("ansi(y,yellow)", "yellow", (byte)33)]
-		[DataRow("ansi(hy,yellow)", "yellow", (byte)93)]
-		public void ANSI(string str, string expectedText, byte expectedByte)
+		[DataRow("ansi(hy,yellow)", "yellow", (byte)1, (byte)33)]
+		public void ANSI(string str, string expectedText, params byte[] expectedBytes)
 		{
 			Console.WriteLine("Testing: {0}", str);
 
 			var parser = TestParser();
 			var result = parser.FunctionParse(str)?.Message!;
 
-			var color = StringExtensions.ansiByte(expectedByte);
+			var color = StringExtensions.ansiBytes(expectedBytes);
 			var markup = MarkupString.MarkupImplementation.AnsiMarkup.Create(foreground: color);
 			var markedUpString = A.markupSingle2(markup, A.single(expectedText));
 
@@ -32,17 +32,17 @@ namespace SharpMUSH.Tests.Functions
 
 		[TestMethod]
 		[DataRow("ansi(R,red)", "red", (byte)41)]
-		[DataRow("ansi(hR,red)", "red", (byte)101)]
+		[DataRow("ansi(hR,red)", "red", (byte)1, (byte)41)]
 		[DataRow("ansi(Y,yellow)", "yellow", (byte)43)]
-		[DataRow("ansi(hY,yellow)", "yellow", (byte)103)]
-		public void ANSIBackground(string str, string expectedText, byte expectedByte)
+		[DataRow("ansi(hY,yellow)", "yellow", (byte)1, (byte)43)]
+		public void ANSIBackground(string str, string expectedText, params byte[] expectedByte)
 		{
 			Console.WriteLine("Testing: {0}", str);
 
 			var parser = TestParser();
 			var result = parser.FunctionParse(str)?.Message!;
 
-			var color = StringExtensions.ansiByte(expectedByte);
+			var color = StringExtensions.ansiBytes(expectedByte);
 			var markup = MarkupString.MarkupImplementation.AnsiMarkup.Create(background: color);
 			var markedUpString = A.markupSingle2(markup, A.single(expectedText));
 

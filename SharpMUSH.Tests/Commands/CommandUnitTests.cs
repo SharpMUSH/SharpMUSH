@@ -43,11 +43,11 @@ public class CommandUnitTests : BaseUnitTest
 		"3",
 		"5")]
 	[DataRow("[ansi(hy,think)] [ansi(hr,red)];[ansi(hg,think)] [ansi(hg,green)]", 
-		"\u001b[38;5;91mred\u001b[0m", 
-		"\u001b[38;5;92mgreen\u001b[0m")]
+		"\u001b[1;31mred\u001b[0m", 
+		"\u001b[1;32mgreen\u001b[0m")]
 	[DataRow("think [ansi(hr,red)];think [ansi(hg,green)]", 
-		"\u001b[38;5;91mred\u001b[0m", 
-		"\u001b[38;5;92mgreen\u001b[0m")]
+		"\u001b[1;31mred\u001b[0m", 
+		"\u001b[1;32mgreen\u001b[0m")]
 	[DataRow("think Command1 Arg;think Command2 Arg", 
 		"Command1 Arg", 
 		"Command2 Arg")]

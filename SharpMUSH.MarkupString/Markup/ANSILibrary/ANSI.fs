@@ -7,14 +7,14 @@ open System.Drawing
 module ANSI =
   type AnsiColor = 
     | RGB of rgb : Color 
-    | ANSI of ansiCode : byte
+    | ANSI of ansiCode : byte []
     | NoAnsi
 
   /// The ASCII escape character (decimal 27).
   let ESC = "\u001b"
 
   /// Introduces a control sequence that uses 8-bit characters.
-  let CSI = ESC + "["
+  let CSI = ESC + "[" 
 
   let SGR (codes: byte []) =
     CSI + (codes |> Array.map string |> String.concat ";") + "m"
@@ -32,12 +32,12 @@ module ANSI =
   let Foreground (color: AnsiColor) = 
     match color with 
       | RGB rgb -> SGR [|38uy; 2uy; rgb.R; rgb.G; rgb.B|]
-      | ANSI ansi -> SGR [|38uy; 5uy; ansi|]
+      | ANSI ansi -> SGR ansi
       | NoAnsi -> ""
   let Background (color: AnsiColor) = 
     match color with 
       | RGB rgb -> SGR [|48uy; 2uy; rgb.R; rgb.G; rgb.B|]
-      | ANSI ansi -> SGR [|48uy; 5uy; ansi|]
+      | ANSI ansi -> SGR ansi
       | NoAnsi -> ""
 
   let Hyperlink (text: string, link: string) = sprintf "\u001b]8;;%s\a%s\u001b]8;;\a" link text
@@ -195,7 +195,8 @@ module StringExtensions =
   let colorANSI (text: ANSIString) (color: AnsiColor) = text.SetForegroundColor(color)
   
   let rgb (color: Color) = RGB color
-  let ansiByte (color: byte) = ANSI color
+  let ansiByte (color: byte) = ANSI [|color|]
+  let ansiBytes (color: byte[]) = ANSI color
 
   let background (text: string) (color: AnsiColor) = toANSI text |> fun t -> t.SetBackgroundColor(color)
   let backgroundANSI (text: ANSIString) (color: AnsiColor) = text.SetBackgroundColor(color)

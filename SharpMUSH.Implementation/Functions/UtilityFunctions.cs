@@ -1,12 +1,9 @@
 ﻿using ANSILibrary;
-using DotNext.Buffers;
 using MarkupString;
 using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
-using System.Drawing;
-using System.Security.Claims;
 using System.Text.RegularExpressions;
 using static ANSILibrary.ANSI;
 
@@ -53,11 +50,12 @@ namespace SharpMUSH.Implementation.Functions
 			var underline = false;
 
 			var ansiCodes = args[0].Message!.ToString().Split(' ');
+			Func<bool,byte,byte[]> highlightFunc = (highlight, b) => highlight ? [1,b] : [b] ;
 
 			foreach (var cde in ansiCodes)
 			{
 				var code = cde.AsSpan();
-				byte curHilight = 0;
+				var curHilight = false;
 				if (code.StartsWith(['#']) || code.StartsWith("/#"))
 				{
 					// Hex.
@@ -105,68 +103,68 @@ namespace SharpMUSH.Implementation.Functions
 							underline = false;
 							break;
 						case 'h':
-							curHilight = 60;
+							curHilight = true;
 							break;
 						case 'H':
-							curHilight = 0;
+							curHilight = false;
 							break;
 						case 'n':
 							clear = true; // TODO: This PROBABLY needs better handling. No doubt this is not correct due to the tree structure.
 							break;
 						case 'd':
 							// TODO: Inline this as a function.
-							foreground = StringExtensions.ansiByte((byte)(39 + curHilight));
+							foreground = StringExtensions.ansiByte(39);
 							break;
 						case 'x':
-							foreground = StringExtensions.ansiByte((byte)(30 + curHilight));
+							foreground = StringExtensions.ansiBytes(highlightFunc(curHilight, 30));
 							break;
 						case 'r':
-							foreground = StringExtensions.ansiByte((byte)(31 + curHilight));
+							foreground = StringExtensions.ansiBytes(highlightFunc(curHilight, 31));
 							break;
 						case 'g':
-							foreground = StringExtensions.ansiByte((byte)(32 + curHilight));
+							foreground = StringExtensions.ansiBytes(highlightFunc(curHilight, 32));
 							break;
 						case 'y':
-							foreground = StringExtensions.ansiByte((byte)(33 + curHilight));
+							foreground = StringExtensions.ansiBytes(highlightFunc(curHilight, 33));
 							break;
 						case 'b':
-							foreground = StringExtensions.ansiByte((byte)(34 + curHilight));
+							foreground = StringExtensions.ansiBytes(highlightFunc(curHilight, 34));
 							break;
 						case 'm':
-							foreground = StringExtensions.ansiByte((byte)(35 + curHilight));
+							foreground = StringExtensions.ansiBytes(highlightFunc(curHilight, 35));
 							break;
 						case 'c':
-							foreground = StringExtensions.ansiByte((byte)(36 + curHilight));
+							foreground = StringExtensions.ansiBytes(highlightFunc(curHilight, 36));
 							break;
 						case 'w':
-							foreground = StringExtensions.ansiByte((byte)(37 + curHilight));
+							foreground = StringExtensions.ansiBytes(highlightFunc(curHilight, 37));
 							break;
 						case 'D':
-							background = StringExtensions.ansiByte((byte)(49 + curHilight));
+							background = StringExtensions.ansiByte(49);
 							break;
 						case 'X':
-							background = StringExtensions.ansiByte((byte)(40 + curHilight));
+							background = StringExtensions.ansiBytes(highlightFunc(curHilight, 40));
 							break;
 						case 'R':
-							background = StringExtensions.ansiByte((byte)(41 + curHilight));
+							background = StringExtensions.ansiBytes(highlightFunc(curHilight, 41));
 							break;
 						case 'G':
-							background = StringExtensions.ansiByte((byte)(42 + curHilight));
+							background = StringExtensions.ansiBytes(highlightFunc(curHilight, 42));
 							break;
 						case 'Y':
-							background = StringExtensions.ansiByte((byte)(43 + curHilight));
+							background = StringExtensions.ansiBytes(highlightFunc(curHilight, 43));
 							break;
 						case 'B':
-							background = StringExtensions.ansiByte((byte)(44 + curHilight));
+							background = StringExtensions.ansiBytes(highlightFunc(curHilight, 44));
 							break;
 						case 'M':
-							background = StringExtensions.ansiByte((byte)(45 + curHilight));
+							background = StringExtensions.ansiBytes(highlightFunc(curHilight, 45));
 							break;
 						case 'C':
-							background = StringExtensions.ansiByte((byte)(46 + curHilight));
+							background = StringExtensions.ansiBytes(highlightFunc(curHilight, 46));
 							break;
 						case 'W':
-							background = StringExtensions.ansiByte((byte)(47 + curHilight));
+							background = StringExtensions.ansiBytes(highlightFunc(curHilight, 47));
 							break;
 						default:
 							// Do nothing. Just skip.
