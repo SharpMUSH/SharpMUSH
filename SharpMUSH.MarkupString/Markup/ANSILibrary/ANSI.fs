@@ -3,7 +3,7 @@
 open System
 open System.Drawing
 
-// Converted from: https://github.com/WilliamRagstad/ANSIConsole/blob/main/ANSIConsole/
+// Converted and heavily changed from: https://github.com/WilliamRagstad/ANSIConsole/blob/main/ANSIConsole/
 module ANSI =
   type AnsiColor = 
     | RGB of rgb : Color 
@@ -56,15 +56,16 @@ type ANSIFormatting =
     | Inverted = 64     
     | StrikeThrough = 128  
     | LowerCase = 256    
-    | UpperCase = 512      
-    | Clear = 1024      
+    | UpperCase = 512
+    | Clear = 1024   
+    | TrueClear = 2048
 
 type ANSIString(text: string) =
   let mutable _hyperlink: string option = None
   let mutable _colorForeground: AnsiColor option = None
   let mutable _colorBackground: AnsiColor option = None
   let mutable _opacity: float option = None
-  let mutable _formatting: ANSIFormatting = ANSIFormatting.Clear
+  let mutable _formatting: ANSIFormatting = ANSIFormatting.None
   let _text: string = text
   
   member internal this.AddFormatting(add: ANSIFormatting) =
@@ -116,7 +117,7 @@ type ANSIString(text: string) =
         | Some o, Some bg, Some fg -> 
           match bg,fg with
             | RGB b, RGB f -> colorFunc(ANSIString.Interpolate(b, f, o)) + result
-            | _,_ -> result
+            | _,_ -> result // TODO: Handle ANSI colors
         | _, Some cf, _ -> colorFunc(cf) + result
         | _ -> result
 
@@ -148,10 +149,14 @@ type ANSIString(text: string) =
         | None -> resultWithBackground
 
     let finalResult =
-        if _formatting.HasFlag(ANSIFormatting.Clear) then resultWithHyperlink + ANSI.Clear
+        if _formatting.HasFlag(ANSIFormatting.TrueClear) then resultWithHyperlink + ANSI.Clear 
         else resultWithHyperlink
 
-    finalResult
+    // TODO: This needs to be changed. The clear needs to affect the span, so should be ahead of the resultWithHyperlink, 
+    // But it also needs to be restored to the previous state. Which means we have to specifically restore colors afterwards.
+    // We can do a manual reset, and have a separate call for a True Clear.
+    if _formatting.HasFlag(ANSIFormatting.Clear) then ANSI.Clear + finalResult
+    else finalResult 
 
 module StringExtensions =
   let toANSI (text: string) = ANSIString(text)
@@ -187,9 +192,12 @@ module StringExtensions =
   let lowerCaseANSI (text: ANSIString) = text.AddFormatting(ANSIFormatting.LowerCase)
 
   let noClear (text: ANSIString) = text.RemoveFormatting(ANSIFormatting.Clear)
-
+  
   let clear (text: string) = toANSI text |> fun t -> t.AddFormatting(ANSIFormatting.Clear)
   let clearANSI (text: ANSIString) = text.AddFormatting(ANSIFormatting.Clear)
+
+  let endWithTrueClear (text: string) = toANSI text |> fun t -> t.AddFormatting(ANSIFormatting.TrueClear)
+  let endWithTrueClearANSI (text: ANSIString) = text.AddFormatting(ANSIFormatting.TrueClear)
 
   let color (text: string) (color: AnsiColor) = toANSI text |> fun t -> t.SetForegroundColor(color)
   let colorANSI (text: ANSIString) (color: AnsiColor) = text.SetForegroundColor(color)

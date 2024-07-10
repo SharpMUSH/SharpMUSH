@@ -9,7 +9,7 @@ module MarkupStringModule =
       | Text of string
       | MarkupText of MarkupString
 
-  and MarkupTypes =
+  and MarkupTypes = // TODO: Consider using built-in option type.
       | MarkedupText of Markup
       | Empty
 
@@ -18,16 +18,49 @@ module MarkupStringModule =
       member val Content = content with get, set
 
       with override this.ToString() = 
-            let rec getText (markupStr: MarkupString) : string =
+            let isMarkedup (m : MarkupTypes) =
+              match m with
+              | MarkedupText _ -> true
+              | Empty -> false
+
+            let findFirstMarkedupText (markupStr: MarkupString) : MarkupTypes =
+                let rec find (content: List<Content>) : MarkupTypes =
+                    match content with
+                    | [] -> Empty
+                    | MarkupText mStr :: _ when isMarkedup(mStr.MarkupDetails) -> mStr.MarkupDetails
+                    | _ :: tail -> find tail
+                match markupStr.MarkupDetails with
+                | MarkedupText m -> markupStr.MarkupDetails
+                | _ -> find markupStr.Content
+
+            let postfix(markupType: MarkupTypes) : string = 
+              match markupType with
+                  | MarkedupText markup -> markup.Postfix
+                  | Empty -> System.String.Empty
+
+            let prefix(markupType: MarkupTypes) : string = 
+              match markupType with
+                  | MarkedupText markup -> markup.Prefix
+                  | Empty -> System.String.Empty
+
+            let rec getText (markupStr: MarkupString, outerMarkupType: MarkupTypes) : string =
                 let innerText = (markupStr.Content |> List.fold (fun acc item ->
                     match item with
                     | Text str -> acc + str
-                    | MarkupText mStr -> acc + getText mStr
-                ) "")
+                    | MarkupText mStr -> 
+                      match markupStr.MarkupDetails with
+                        | Empty -> acc + getText(mStr, outerMarkupType)
+                        | MarkedupText _ -> acc + getText(mStr, markupStr.MarkupDetails)
+                ) System.String.Empty)
                 match markupStr.MarkupDetails with
                   | Empty -> innerText
-                  | MarkedupText str -> str.Wrap(innerText)
-            getText(this)
+                  | MarkedupText str -> 
+                    match outerMarkupType with
+                      | Empty -> str.Wrap(innerText)
+                      | MarkedupText outerMarkup -> str.WrapAndRestore(innerText, outerMarkup)
+            
+            let firstMarkedupTextType = findFirstMarkedupText this
+            prefix(firstMarkedupTextType) + getText(this, Empty) + postfix(firstMarkedupTextType)
 
   let (|MarkupStringPattern|) (markupStr: MarkupString) =
         (markupStr.MarkupDetails, markupStr.Content)
@@ -48,14 +81,14 @@ module MarkupStringModule =
       MarkupString(Empty, mu |> Seq.map (fun x -> MarkupText x) |> Seq.toList )
 
   let empty () : MarkupString = 
-      MarkupString(Empty, [Text ""])
+      MarkupString(Empty, [Text System.String.Empty])
       
   let rec plainText (markupStr: MarkupString) : string =
       let innerText = (markupStr.Content |> List.fold (fun acc item ->
               match item with
               | Text str -> acc + str
               | MarkupText mStr -> acc + plainText mStr
-          ) "")
+          ) System.String.Empty)
       innerText
       
   [<TailCall>]
@@ -71,7 +104,7 @@ module MarkupStringModule =
     let separatorContent = 
         match optionalSeparator with
         | Some separator -> [MarkupText separator]
-        | None -> [Text ""]
+        | None -> [Text System.String.Empty]
 
     match originalMarkupStr.MarkupDetails with
     | Empty ->
@@ -84,7 +117,7 @@ module MarkupStringModule =
   [<TailCall>]
   let rec substring (start, length) (markupStr: MarkupString) : MarkupString =
       let inline extractText str start length =
-          if length <= 0 || str = "" then None
+          if length <= 0 || str = System.String.Empty then None
           else Some(str.Substring(start, min (str.Length - start) length))
 
       let rec substringAux contents start length acc =
@@ -129,7 +162,7 @@ module MarkupStringModule =
                 let foundPos = text.IndexOf(srch, pos)
                 if foundPos <> -1 then
                     yield foundPos
-                    if srch <> "" then
+                    if srch <> System.String.Empty then
                         yield! findDelimiters (foundPos + srch.Length)
                     else
                         yield! findDelimiters (foundPos + 1)
@@ -151,7 +184,7 @@ module MarkupStringModule =
         else
             match text.IndexOf(delimiter, pos) with
             | -1 -> []
-            | idx -> idx :: if(delimiter <> "") 
+            | idx -> idx :: if(delimiter <> System.String.Empty) 
                               then findDelimiters text (idx + delimiter.Length) 
                               else findDelimiters text (idx + 1) 
 

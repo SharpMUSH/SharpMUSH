@@ -50,14 +50,14 @@ namespace SharpMUSH.Tests.Markup
 		{
 			var result = A.split(delimiter, str);
 
-			foreach (var (First, Second) in expected.Zip(result))
+			foreach (var (expectedItem, resultItem) in expected.Zip(result))
 			{
-				Log.Logger.Information("Result: {Result}{NewLine}Expected: {Expected}", Second, Environment.NewLine, First);
+				Log.Logger.Information("Result: {Result}{NewLine}Expected: {Expected}", resultItem, Environment.NewLine, expectedItem);
 			}
 
-			foreach (var (First, Second) in expected.Zip(result))
+			foreach (var (expectedItem, resultItem) in expected.Zip(result))
 			{
-				CollectionAssert.AreEqual(Encoding.Unicode.GetBytes(First.ToString()), Encoding.Unicode.GetBytes(Second.ToString()));
+				CollectionAssert.AreEqual(Encoding.Unicode.GetBytes(expectedItem.ToString()), Encoding.Unicode.GetBytes(resultItem.ToString()));
 			}
 		}
 
@@ -67,10 +67,12 @@ namespace SharpMUSH.Tests.Markup
 			var simpleString = A.single("red");
 			var redString = A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "red");
 			var redAnsiString = A.markupSingle(M.Create(foreground: StringExtensions.ansiByte(31)), "red");
+			// var complexAnsiString = A.markupSingle(M.Create(foreground: StringExtensions.ansiByte(32)),"green");
 
 			Assert.AreEqual("red", simpleString.ToString());
 			Assert.AreEqual("\u001b[38;2;255;0;0mred\u001b[0m", redString.ToString());
 			Assert.AreEqual("\u001b[31mred\u001b[0m", redAnsiString.ToString());
+			// Assert.AreEqual("\u001b[32mwoo\u001b[0m", complexAnsiString.ToString());
 		}
 	}
 }
