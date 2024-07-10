@@ -14,6 +14,7 @@ module MarkupStringModule =
       | Empty
 
   and MarkupString(markupDetails: MarkupTypes, content: List<Content>) =
+      // TODO: Optimize the ansi strings, so we don't re-initialize at least the exact same tag sequentially.
       [<TailCall>]
       let rec getText (markupStr: MarkupString, outerMarkupType: MarkupTypes) : string =
           let accumulate (acc: string, items: List<Content>) =
@@ -66,8 +67,16 @@ module MarkupStringModule =
               | MarkedupText markup -> markup.Prefix
               | Empty -> System.String.Empty
 
+            let optimize(markupType: MarkupTypes) (text: string) : string = 
+              match markupType with
+              | MarkedupText markup -> markup.Optimize text
+              | Empty -> System.String.Empty
+
             let firstMarkedupTextType = findFirstMarkedupText this
-            prefix(firstMarkedupTextType) + getText(this, Empty) + postfix(firstMarkedupTextType)
+            match firstMarkedupTextType with
+            | Empty -> getText(this, Empty)
+            | _ -> optimize firstMarkedupTextType (prefix(firstMarkedupTextType) + getText(this, Empty) + postfix(firstMarkedupTextType))
+              
 
   let (|MarkupStringPattern|) (markupStr: MarkupString) =
         (markupStr.MarkupDetails, markupStr.Content)

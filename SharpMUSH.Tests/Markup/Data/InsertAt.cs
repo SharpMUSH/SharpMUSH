@@ -11,7 +11,9 @@ internal static class InsertAt
 	public static IEnumerable<object[]> InsertAtData =>
 	[
 		[A.single("RedCat"), 3, A.single("Kitty"), A.single("RedKittyCat")],
-		//[A.single("RedCat"), 0, A.single("Kitty"), A.single("KittyRedCat")],
-		//[A.single("RedCat"), 6, A.single("Kitty"), A.single("RedCatKitty")]
+		[A.single("RedCat"), 0, A.single("Kitty"), A.single("KittyRedCat")],
+		[A.single("RedCat"), 6, A.single("Kitty"), A.single("RedCatKitty")],
+		[A.markupSingle( M.Create(foreground: StringExtensions.rgb(Color.Red)),"red"), 2,
+			A.single("a"), A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red) ), "read")]
 	];
 }
