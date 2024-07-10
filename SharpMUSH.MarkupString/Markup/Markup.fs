@@ -93,25 +93,27 @@ module MarkupImplementation =
 
       override this.Prefix: string = System.String.Empty
 
+      [<TailCall>]
       override this.Optimize (text: string) : string =
-          let mutable optimizedText = text
-          let mutable currentIndex = 0
-          let mutable currentEscapeCode = System.String.Empty
-          while currentIndex < optimizedText.Length - 1 do
-              let escapeCodeStartIndex = optimizedText.IndexOf("\u001b[", currentIndex) - 1
-              if escapeCodeStartIndex = -1 then
-                  currentIndex <- optimizedText.Length
-              else
-                  let escapeCodeEndIndex = optimizedText.IndexOf("m", escapeCodeStartIndex)
-                  if escapeCodeEndIndex = -1 then
-                      currentIndex <- optimizedText.Length
-                  else
-                      let escapeCode = optimizedText.Substring((escapeCodeStartIndex), escapeCodeEndIndex - escapeCodeStartIndex + 1)
-                      if escapeCode.Equals currentEscapeCode then
-                          optimizedText <- optimizedText.Remove((escapeCodeStartIndex), escapeCodeEndIndex - escapeCodeStartIndex + 1)
-                      currentIndex <- escapeCodeEndIndex + 1
-                      currentEscapeCode <- escapeCode
-          optimizedText
+        let rec optimizeImpl (acc: string) (currentIndex: int) (currentEscapeCode: string) : string =
+            if currentIndex >= acc.Length - 1 then
+                acc
+            else
+                match acc.IndexOf("\u001b[", currentIndex, System.StringComparison.Ordinal) with
+                | -1 -> acc
+                | escapeCodeStartIndex ->
+                    let escapeCodeEndIndex = acc.IndexOf("m", escapeCodeStartIndex, System.StringComparison.Ordinal)
+                    if escapeCodeEndIndex = -1 then
+                        acc
+                    else
+                        let escapeCode = acc.Substring(escapeCodeStartIndex, escapeCodeEndIndex - escapeCodeStartIndex + 1)
+                        if escapeCode = currentEscapeCode then
+                            let updatedText = acc.Remove(escapeCodeStartIndex, escapeCodeEndIndex - escapeCodeStartIndex + 1)
+                            optimizeImpl updatedText (escapeCodeStartIndex) currentEscapeCode
+                        else
+                            optimizeImpl acc (escapeCodeEndIndex + 1) escapeCode
+        optimizeImpl text 0 System.String.Empty 
+
 
       override this.WrapAndRestore (text: string, outerDetails: Markup) : string =
         let restoreDetailsF (restoreDetails: Markup) =
