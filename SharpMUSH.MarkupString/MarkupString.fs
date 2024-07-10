@@ -14,16 +14,29 @@ module MarkupStringModule =
       | Empty
 
   and MarkupString(markupDetails: MarkupTypes, content: List<Content>) =
-      member val MarkupDetails = markupDetails with get, set
-      member val Content = content with get, set
-
-      with override this.ToString() = 
-            let isMarkedup (m : MarkupTypes) =
+      let rec getText (markupStr: MarkupString, outerMarkupType: MarkupTypes) : string =
+          let innerText = (markupStr.Content |> List.fold (fun acc item ->
+              match item with
+              | Text str -> acc + str
+              | MarkupText mStr -> 
+                match markupStr.MarkupDetails with
+                  | Empty -> acc + getText(mStr, outerMarkupType)
+                  | MarkedupText _ -> acc + getText(mStr, markupStr.MarkupDetails)
+          ) System.String.Empty)
+          match markupStr.MarkupDetails with
+            | Empty -> innerText
+            | MarkedupText str -> 
+              match outerMarkupType with
+                | Empty -> str.Wrap(innerText)
+                | MarkedupText outerMarkup -> str.WrapAndRestore(innerText, outerMarkup)
+                      
+      let isMarkedup (m : MarkupTypes) =
               match m with
               | MarkedupText _ -> true
               | Empty -> false
-
-            let findFirstMarkedupText (markupStr: MarkupString) : MarkupTypes =
+              
+      [<TailCall>]
+      let findFirstMarkedupText (markupStr: MarkupString) : MarkupTypes =
                 let rec find (content: List<Content>) : MarkupTypes =
                     match content with
                     | [] -> Empty
@@ -33,6 +46,10 @@ module MarkupStringModule =
                 | MarkedupText m -> markupStr.MarkupDetails
                 | _ -> find markupStr.Content
 
+      member val MarkupDetails = markupDetails with get, set
+      member val Content = content with get, set
+
+      with override this.ToString() = 
             let postfix(markupType: MarkupTypes) : string = 
               match markupType with
                   | MarkedupText markup -> markup.Postfix
@@ -43,22 +60,6 @@ module MarkupStringModule =
                   | MarkedupText markup -> markup.Prefix
                   | Empty -> System.String.Empty
 
-            let rec getText (markupStr: MarkupString, outerMarkupType: MarkupTypes) : string =
-                let innerText = (markupStr.Content |> List.fold (fun acc item ->
-                    match item with
-                    | Text str -> acc + str
-                    | MarkupText mStr -> 
-                      match markupStr.MarkupDetails with
-                        | Empty -> acc + getText(mStr, outerMarkupType)
-                        | MarkedupText _ -> acc + getText(mStr, markupStr.MarkupDetails)
-                ) System.String.Empty)
-                match markupStr.MarkupDetails with
-                  | Empty -> innerText
-                  | MarkedupText str -> 
-                    match outerMarkupType with
-                      | Empty -> str.Wrap(innerText)
-                      | MarkedupText outerMarkup -> str.WrapAndRestore(innerText, outerMarkup)
-            
             let firstMarkedupTextType = findFirstMarkedupText this
             prefix(firstMarkedupTextType) + getText(this, Empty) + postfix(firstMarkedupTextType)
 
@@ -82,15 +83,16 @@ module MarkupStringModule =
 
   let empty () : MarkupString = 
       MarkupString(Empty, [Text System.String.Empty])
-      
-  let rec plainText (markupStr: MarkupString) : string =
-      let innerText = (markupStr.Content |> List.fold (fun acc item ->
-              match item with
-              | Text str -> acc + str
-              | MarkupText mStr -> acc + plainText mStr
-          ) System.String.Empty)
-      innerText
-      
+    
+  [<TailCall>]
+  let plainText (markupStr: MarkupString) : string =
+      let rec loop (content: List<Content>) (acc: string) =
+          match content with
+          | [] -> acc
+          | Text str :: tail -> loop tail (acc + str)
+          | MarkupText mStr :: tail -> loop tail (loop mStr.Content acc)
+      loop markupStr.Content System.String.Empty
+
   [<TailCall>]
   let rec getLength (markupStr: MarkupString) : int =
       markupStr.Content |> List.fold (fun acc item ->
