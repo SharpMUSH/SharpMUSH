@@ -14,15 +14,22 @@ module MarkupStringModule =
       | Empty
 
   and MarkupString(markupDetails: MarkupTypes, content: List<Content>) =
+      [<TailCall>]
       let rec getText (markupStr: MarkupString, outerMarkupType: MarkupTypes) : string =
-          let innerText = (markupStr.Content |> List.fold (fun acc item ->
-              match item with
-              | Text str -> acc + str
-              | MarkupText mStr -> 
-                match markupStr.MarkupDetails with
-                  | Empty -> acc + getText(mStr, outerMarkupType)
-                  | MarkedupText _ -> acc + getText(mStr, markupStr.MarkupDetails)
-          ) System.String.Empty)
+          let accumulate (acc: string, items: List<Content>) =
+              let rec loop (acc: string, items: List<Content>) =
+                  match items with
+                  | [] -> acc
+                  | Text str :: tail -> loop (acc + str, tail)
+                  | MarkupText mStr :: tail ->
+                      let inner = match markupStr.MarkupDetails with
+                                  | Empty -> getText(mStr, outerMarkupType)
+                                  | MarkedupText _ -> getText(mStr, markupStr.MarkupDetails)
+                      loop (acc + inner, tail)
+              loop (acc, items)
+          
+          let innerText = accumulate (System.String.Empty, markupStr.Content)
+          
           match markupStr.MarkupDetails with
             | Empty -> innerText
             | MarkedupText str -> 
