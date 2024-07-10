@@ -22,36 +22,35 @@ module MarkupStringModule =
                   | [] -> acc
                   | Text str :: tail -> loop (acc + str, tail)
                   | MarkupText mStr :: tail ->
-                      let inner = match markupStr.MarkupDetails with
-                                  | Empty -> getText(mStr, outerMarkupType)
-                                  | MarkedupText _ -> getText(mStr, markupStr.MarkupDetails)
+                      let inner =
+                        match markupStr.MarkupDetails with
+                        | Empty -> getText(mStr, outerMarkupType)
+                        | MarkedupText _ -> getText(mStr, markupStr.MarkupDetails)
                       loop (acc + inner, tail)
               loop (acc, items)
-          
           let innerText = accumulate (System.String.Empty, markupStr.Content)
-          
           match markupStr.MarkupDetails with
-            | Empty -> innerText
-            | MarkedupText str -> 
-              match outerMarkupType with
-                | Empty -> str.Wrap(innerText)
-                | MarkedupText outerMarkup -> str.WrapAndRestore(innerText, outerMarkup)
+          | Empty -> innerText
+          | MarkedupText str -> 
+            match outerMarkupType with
+            | Empty -> str.Wrap(innerText)
+            | MarkedupText outerMarkup -> str.WrapAndRestore(innerText, outerMarkup)
                       
       let isMarkedup (m : MarkupTypes) =
-              match m with
-              | MarkedupText _ -> true
-              | Empty -> false
+        match m with
+        | MarkedupText _ -> true
+        | Empty -> false
               
       [<TailCall>]
       let findFirstMarkedupText (markupStr: MarkupString) : MarkupTypes =
-                let rec find (content: List<Content>) : MarkupTypes =
-                    match content with
-                    | [] -> Empty
-                    | MarkupText mStr :: _ when isMarkedup(mStr.MarkupDetails) -> mStr.MarkupDetails
-                    | _ :: tail -> find tail
-                match markupStr.MarkupDetails with
-                | MarkedupText m -> markupStr.MarkupDetails
-                | _ -> find markupStr.Content
+          let rec find (content: List<Content>) : MarkupTypes =
+              match content with
+              | [] -> Empty
+              | MarkupText mStr :: _ when isMarkedup(mStr.MarkupDetails) -> mStr.MarkupDetails
+              | _ :: tail -> find tail
+          match markupStr.MarkupDetails with
+          | MarkedupText m -> markupStr.MarkupDetails
+          | _ -> find markupStr.Content
 
       member val MarkupDetails = markupDetails with get, set
       member val Content = content with get, set
@@ -59,13 +58,13 @@ module MarkupStringModule =
       with override this.ToString() = 
             let postfix(markupType: MarkupTypes) : string = 
               match markupType with
-                  | MarkedupText markup -> markup.Postfix
-                  | Empty -> System.String.Empty
+              | MarkedupText markup -> markup.Postfix
+              | Empty -> System.String.Empty
 
             let prefix(markupType: MarkupTypes) : string = 
               match markupType with
-                  | MarkedupText markup -> markup.Prefix
-                  | Empty -> System.String.Empty
+              | MarkedupText markup -> markup.Prefix
+              | Empty -> System.String.Empty
 
             let firstMarkedupTextType = findFirstMarkedupText this
             prefix(firstMarkedupTextType) + getText(this, Empty) + postfix(firstMarkedupTextType)
@@ -124,38 +123,38 @@ module MarkupStringModule =
         MarkupString(Empty, combinedContent)
 
   [<TailCall>]
-  let rec substring (start, length) (markupStr: MarkupString) : MarkupString =
+  let rec substring (start: int) (length: int) (markupStr: MarkupString) : MarkupString =
       let inline extractText str start length =
           if length <= 0 || str = System.String.Empty then None
           else Some(str.Substring(start, min (str.Length - start) length))
 
       let rec substringAux contents start length acc =
-        match contents, length with
-        | _, 0 -> List.rev acc
-        | [], _ -> List.rev acc
-        | head :: tail, _ ->
+          match contents, length with
+          | _, 0 -> List.rev acc
+          | [], _ -> List.rev acc
+          | head :: tail, _ ->
             match head with
             | Text str when start < str.Length ->
-                let skip = max start 0
-                let take = min (str.Length - skip) length
-                match extractText str skip take with
-                | Some result -> substringAux tail (start - str.Length) (length - take) (Text result :: acc)
-                | None -> substringAux tail (start - str.Length) length acc
+              let skip = max start 0
+              let take = min (str.Length - skip) length
+              match extractText str skip take with
+              | Some result -> substringAux tail (start - str.Length) (length - take) (Text result :: acc)
+              | None -> substringAux tail (start - str.Length) length acc
             | Text str when start >= str.Length -> 
-                substringAux tail (start - str.Length) length acc
+              substringAux tail (start - str.Length) length acc
             | MarkupText markupStr ->
-                let strLen = getLength markupStr
-                if start < strLen then
-                    let skip = max start 0
-                    let take = min strLen length
-                    let subMarkup = substring (skip, take) markupStr
-                    let subLength = getLength subMarkup
-                    if subLength > 0 then
-                        substringAux tail (0) (length - subLength) (MarkupText subMarkup :: acc)
-                    else
-                        substringAux tail (start - strLen) length acc
+              let strLen = getLength markupStr
+              if start < strLen then
+                let skip = max start 0
+                let take = min strLen length
+                let subMarkup = substring skip take markupStr
+                let subLength = getLength subMarkup
+                if subLength > 0 then
+                  substringAux tail (0) (length - subLength) (MarkupText subMarkup :: acc)
                 else
-                    substringAux tail (start - strLen) length acc
+                  substringAux tail (start - strLen) length acc
+              else
+                substringAux tail (start - strLen) length acc
             | _ -> raise (System.InvalidOperationException "Encountered unexpected content type in substring operation.")
       MarkupString(markupStr.MarkupDetails, substringAux markupStr.Content start length [])
 
@@ -178,13 +177,24 @@ module MarkupStringModule =
         }
 
     findDelimiters 0
-    
+  
   [<TailCall>]
-  let rec indexOf (markupStr: MarkupString, search: MarkupString) : int =
+  let rec indexOf (markupStr: MarkupString) (search: MarkupString) : int =
     let matches = indexesOf (markupStr, search) 
     match matches with 
-      | _ when Seq.isEmpty matches -> -1
-      | _ -> matches |> Seq.head
+    | _ when Seq.isEmpty matches -> -1
+    | _ -> matches |> Seq.head
+
+  let insertAt (input: MarkupString) (insert: MarkupString) (index: int) : MarkupString =
+    let len = getLength input
+    if index <= 0 then
+        concat insert input None
+    elif index >= len then
+        concat input insert None
+    else
+        let before = substring 0 index input 
+        let after = substring index (len - index) input
+        concat (concat before insert None) after None
 
   [<TailCall>]
   let rec split (delimiter: string) (markupStr: MarkupString) : MarkupString[] =
@@ -204,11 +214,11 @@ module MarkupStringModule =
     let rec buildSplits positions lastPos segments =
         match positions with
         | [] ->
-            let lastSegment = substring (lastPos, fullText.Length - lastPos) markupStr
+            let lastSegment = substring lastPos (fullText.Length - lastPos) markupStr
             List.rev (lastSegment :: segments)
         | pos :: tail ->
             let length = pos - lastPos
-            let segment = substring (lastPos, length) markupStr
+            let segment = substring lastPos length markupStr
             buildSplits tail (pos + delimiter.Length) (segment :: segments)
 
     buildSplits delimiterPositions 0 [] |> Array.ofList

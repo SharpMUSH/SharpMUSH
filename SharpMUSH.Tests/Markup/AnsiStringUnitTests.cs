@@ -21,12 +21,23 @@ namespace SharpMUSH.Tests.Markup
 
 			CollectionAssert.AreEqual(Encoding.Unicode.GetBytes(expected.ToString()), Encoding.Unicode.GetBytes(result.ToString()));
 		}
-
+		
 		[DataTestMethod]
 		[DynamicData(nameof(Data.Substring.SubstringData), typeof(Data.Substring))]
 		public void Substring(AnsiString str, int start, AnsiString expected)
 		{
 			var result = A.substring(start, A.getLength(str) - start, str);
+
+			Log.Logger.Information("Result: {Result}{NewLine}Expected: {Expected}", result, Environment.NewLine, expected);
+
+			CollectionAssert.AreEqual(Encoding.Unicode.GetBytes(expected.ToString()), Encoding.Unicode.GetBytes(result.ToString()));
+		}
+		
+		[DataTestMethod]
+		[DynamicData(nameof(Data.InsertAt.InsertAtData), typeof(Data.InsertAt))]
+		public void InsertAt(AnsiString str, int index, AnsiString insert, AnsiString expected)
+		{
+			var result = A.insertAt(str, insert, index);
 
 			Log.Logger.Information("Result: {Result}{NewLine}Expected: {Expected}", result, Environment.NewLine, expected);
 
