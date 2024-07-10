@@ -1,7 +1,6 @@
-﻿using ANSILibrary;
-using System.Drawing;
+﻿using System.Drawing;
+using ANSILibrary;
 using A = MarkupString.MarkupStringModule;
-using AnsiString = MarkupString.MarkupStringModule.MarkupString;
 using M = MarkupString.MarkupImplementation.AnsiMarkup;
 
 namespace SharpMUSH.Tests.Markup.Data
@@ -15,13 +14,31 @@ namespace SharpMUSH.Tests.Markup.Data
 				return
 				[
 					[A.concat(A.single("con"), A.single(";cat")), ";",
-							new AnsiString[]
+							new[]
 							{
 									A.single("con"),
 									A.single("cat")
 							}],
+					[A.concat(A.single("wide"), A.single(";;delimiter")), ";;",
+						new[]
+						{
+							A.single("wide"),
+							A.single("delimiter")
+						}],
+					[A.concat(A.single("wide;"), A.single(";delimiter")), ";;",
+						new[]
+						{
+							A.single("wide"),
+							A.single("delimiter")
+						}],
+					[A.concat(A.concat(A.single("widest;"), A.single(";")), A.single(";delimiter")), ";;;",
+						new[]
+						{
+							A.single("widest"),
+							A.single("delimiter")
+						}],
 					[A.concat(A.single("ca"), A.single(";t")), "",
-							new AnsiString[]
+							new[]
 							{
 									A.single(""),
 									A.single("c"),
@@ -30,7 +47,7 @@ namespace SharpMUSH.Tests.Markup.Data
 									A.single("t")
 							}],
 					[A.concat(A.single(";con"), A.single(";cat;")), ";",
-							new AnsiString[]
+							new[]
 							{
 									A.single(""),
 									A.single("con"),
@@ -38,12 +55,12 @@ namespace SharpMUSH.Tests.Markup.Data
 									A.single("")
 							}],
 					[A.concat(A.markupSingle( M.Create(foreground: StringExtensions.rgb(Color.Red)),"red"), A.single(";cat")), ";",
-						new AnsiString[] {
+						new[] {
 								A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "red"),
 								A.single("cat")
 						}],
 					[A.concat(A.markupSingle( M.Create(foreground: StringExtensions.rgb(Color.Red)),"r;e;d"), A.single("c;at")), ";",
-						new AnsiString[]
+						new[]
 						{
 								A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "r"),
 								A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "e"),
