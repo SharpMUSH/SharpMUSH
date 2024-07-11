@@ -9,6 +9,11 @@ module MarkupStringModule =
       | Text of string
       | MarkupText of MarkupString
 
+  and TrimType = 
+    | TrimStart
+    | TrimEnd
+    | TrimBoth
+
   and MarkupTypes = // TODO: Consider using built-in option type.
       | MarkedupText of Markup
       | Empty
@@ -76,7 +81,6 @@ module MarkupStringModule =
             match firstMarkedupTextType with
             | Empty -> getText(this, Empty)
             | _ -> optimize firstMarkedupTextType (prefix(firstMarkedupTextType) + getText(this, Empty) + postfix(firstMarkedupTextType))
-              
 
   let (|MarkupStringPattern|) (markupStr: MarkupString) =
         (markupStr.MarkupDetails, markupStr.Content)
@@ -167,9 +171,8 @@ module MarkupStringModule =
             | _ -> raise (System.InvalidOperationException "Encountered unexpected content type in substring operation.")
       MarkupString(markupStr.MarkupDetails, substringAux markupStr.Content start length [])
 
-  // TODO: IndexesOf, which will no doubt also affect split(), I believe fails if a searched item crosses two MarkupStrings.
   [<TailCall>]
-  let indexesOf (markupStr: MarkupString, search: MarkupString) : seq<int> =
+  let indexesOf (markupStr: MarkupString) (search: MarkupString) : seq<int> =
     let text = plainText markupStr
     let srch = plainText search
 
@@ -184,15 +187,21 @@ module MarkupStringModule =
                     else
                         yield! findDelimiters (foundPos + 1)
         }
-
     findDelimiters 0
   
   [<TailCall>]
   let rec indexOf (markupStr: MarkupString) (search: MarkupString) : int =
-    let matches = indexesOf (markupStr, search) 
+    let matches = indexesOf markupStr search
     match matches with 
     | _ when Seq.isEmpty matches -> -1
     | _ -> matches |> Seq.head
+    
+  [<TailCall>]
+  let rec indexOfLast (markupStr: MarkupString) (search: MarkupString) : int =
+    let matches = indexesOf markupStr search
+    match matches with 
+    | _ when Seq.isEmpty matches -> -1
+    | _ -> matches |> Seq.last
 
   let insertAt (input: MarkupString) (insert: MarkupString) (index: int) : MarkupString =
     let len = getLength input
@@ -204,6 +213,33 @@ module MarkupStringModule =
         let before = substring 0 index input 
         let after = substring index (len - index) input
         concat (concat before insert None) after None
+
+  let trim (markupStr : MarkupString) (trimStr : MarkupString) (trimType : TrimType) : MarkupString =
+    let trimStrLen = getLength trimStr
+    match trimType with
+    | TrimStart ->
+      let start = indexOf markupStr trimStr
+      if start = -1 || start > trimStrLen
+        then markupStr
+      else 
+        substring start (trimStrLen - start) markupStr
+    | TrimEnd -> 
+      let markupStrLen = getLength markupStr
+      let start = indexOfLast markupStr trimStr
+      if start = -1 || start + trimStrLen < markupStrLen
+        then markupStr
+      else 
+        substring 0 start markupStr
+    | TrimBoth -> 
+      let indexes = indexesOf markupStr trimStr
+      markupStr |> (fun x -> 
+        match Seq.isEmpty indexes with
+        | true -> x
+        | false -> // TODO: This needs changing. I should also be able to composite these functions.
+          let start = indexes |> Seq.head
+          let ed = indexes |> Seq.last
+          substring start (ed - start) x
+      )
 
   [<TailCall>]
   let rec split (delimiter: string) (markupStr: MarkupString) : MarkupString[] =

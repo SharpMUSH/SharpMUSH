@@ -114,7 +114,6 @@ module MarkupImplementation =
                             optimizeImpl acc (escapeCodeEndIndex + 1) escapeCode
         optimizeImpl text 0 System.String.Empty 
 
-
       override this.WrapAndRestore (text: string, outerDetails: Markup) : string =
         let restoreDetailsF (restoreDetails: Markup) =
           match restoreDetails with 
