@@ -45,14 +45,14 @@ public partial class SharpMUSHBoolExpParser : Parser {
 		RULE_lockExpr = 4, RULE_notExpr = 5, RULE_falseExpr = 6, RULE_trueExpr = 7, 
 		RULE_enclosedExpr = 8, RULE_ownerExpr = 9, RULE_carryExpr = 10, RULE_bitFlagExpr = 11, 
 		RULE_bitPowerExpr = 12, RULE_bitTypeExpr = 13, RULE_channelExpr = 14, 
-		RULE_dbRefListExpr = 15, RULE_ipExpr = 16, RULE_hostNameExpr = 17, RULE_exactObjectExpr = 18, 
-		RULE_attributeExpr = 19, RULE_evaluationExpr = 20, RULE_indirectExpr = 21, 
-		RULE_string = 22, RULE_attributeName = 23;
+		RULE_dbRefListExpr = 15, RULE_ipExpr = 16, RULE_hostNameExpr = 17, RULE_nameExpr = 18, 
+		RULE_exactObjectExpr = 19, RULE_attributeExpr = 20, RULE_evaluationExpr = 21, 
+		RULE_indirectExpr = 22, RULE_string = 23, RULE_attributeName = 24;
 	public static readonly string[] ruleNames = {
 		"lock", "lockExprList", "lockAndExpr", "lockOrExpr", "lockExpr", "notExpr", 
 		"falseExpr", "trueExpr", "enclosedExpr", "ownerExpr", "carryExpr", "bitFlagExpr", 
 		"bitPowerExpr", "bitTypeExpr", "channelExpr", "dbRefListExpr", "ipExpr", 
-		"hostNameExpr", "exactObjectExpr", "attributeExpr", "evaluationExpr", 
+		"hostNameExpr", "nameExpr", "exactObjectExpr", "attributeExpr", "evaluationExpr", 
 		"indirectExpr", "string", "attributeName"
 	};
 
@@ -123,9 +123,9 @@ public partial class SharpMUSHBoolExpParser : Parser {
 		try {
 			EnterOuterAlt(_localctx, 1);
 			{
-			State = 48;
+			State = 50;
 			lockExprList();
-			State = 49;
+			State = 51;
 			Match(Eof);
 			}
 		}
@@ -168,27 +168,27 @@ public partial class SharpMUSHBoolExpParser : Parser {
 		LockExprListContext _localctx = new LockExprListContext(Context, State);
 		EnterRule(_localctx, 2, RULE_lockExprList);
 		try {
-			State = 54;
+			State = 56;
 			ErrorHandler.Sync(this);
 			switch ( Interpreter.AdaptivePredict(TokenStream,0,Context) ) {
 			case 1:
 				EnterOuterAlt(_localctx, 1);
 				{
-				State = 51;
+				State = 53;
 				lockAndExpr();
 				}
 				break;
 			case 2:
 				EnterOuterAlt(_localctx, 2);
 				{
-				State = 52;
+				State = 54;
 				lockOrExpr();
 				}
 				break;
 			case 3:
 				EnterOuterAlt(_localctx, 3);
 				{
-				State = 53;
+				State = 55;
 				lockExpr();
 				}
 				break;
@@ -233,11 +233,11 @@ public partial class SharpMUSHBoolExpParser : Parser {
 		try {
 			EnterOuterAlt(_localctx, 1);
 			{
-			State = 56;
-			lockExpr();
-			State = 57;
-			Match(AND);
 			State = 58;
+			lockExpr();
+			State = 59;
+			Match(AND);
+			State = 60;
 			lockExprList();
 			}
 		}
@@ -280,11 +280,11 @@ public partial class SharpMUSHBoolExpParser : Parser {
 		try {
 			EnterOuterAlt(_localctx, 1);
 			{
-			State = 60;
-			lockExpr();
-			State = 61;
-			Match(OR);
 			State = 62;
+			lockExpr();
+			State = 63;
+			Match(OR);
+			State = 64;
 			lockExprList();
 			}
 		}
@@ -342,6 +342,9 @@ public partial class SharpMUSHBoolExpParser : Parser {
 		[System.Diagnostics.DebuggerNonUserCode] public HostNameExprContext hostNameExpr() {
 			return GetRuleContext<HostNameExprContext>(0);
 		}
+		[System.Diagnostics.DebuggerNonUserCode] public NameExprContext nameExpr() {
+			return GetRuleContext<NameExprContext>(0);
+		}
 		[System.Diagnostics.DebuggerNonUserCode] public ExactObjectExprContext exactObjectExpr() {
 			return GetRuleContext<ExactObjectExprContext>(0);
 		}
@@ -369,125 +372,132 @@ public partial class SharpMUSHBoolExpParser : Parser {
 		LockExprContext _localctx = new LockExprContext(Context, State);
 		EnterRule(_localctx, 8, RULE_lockExpr);
 		try {
-			State = 81;
+			State = 84;
 			ErrorHandler.Sync(this);
 			switch ( Interpreter.AdaptivePredict(TokenStream,1,Context) ) {
 			case 1:
 				EnterOuterAlt(_localctx, 1);
 				{
-				State = 64;
+				State = 66;
 				notExpr();
 				}
 				break;
 			case 2:
 				EnterOuterAlt(_localctx, 2);
 				{
-				State = 65;
+				State = 67;
 				enclosedExpr();
 				}
 				break;
 			case 3:
 				EnterOuterAlt(_localctx, 3);
 				{
-				State = 66;
+				State = 68;
 				falseExpr();
 				}
 				break;
 			case 4:
 				EnterOuterAlt(_localctx, 4);
 				{
-				State = 67;
+				State = 69;
 				trueExpr();
 				}
 				break;
 			case 5:
 				EnterOuterAlt(_localctx, 5);
 				{
-				State = 68;
+				State = 70;
 				ownerExpr();
 				}
 				break;
 			case 6:
 				EnterOuterAlt(_localctx, 6);
 				{
-				State = 69;
+				State = 71;
 				carryExpr();
 				}
 				break;
 			case 7:
 				EnterOuterAlt(_localctx, 7);
 				{
-				State = 70;
+				State = 72;
 				indirectExpr();
 				}
 				break;
 			case 8:
 				EnterOuterAlt(_localctx, 8);
 				{
-				State = 71;
+				State = 73;
 				bitFlagExpr();
 				}
 				break;
 			case 9:
 				EnterOuterAlt(_localctx, 9);
 				{
-				State = 72;
+				State = 74;
 				bitPowerExpr();
 				}
 				break;
 			case 10:
 				EnterOuterAlt(_localctx, 10);
 				{
-				State = 73;
+				State = 75;
 				bitTypeExpr();
 				}
 				break;
 			case 11:
 				EnterOuterAlt(_localctx, 11);
 				{
-				State = 74;
+				State = 76;
 				channelExpr();
 				}
 				break;
 			case 12:
 				EnterOuterAlt(_localctx, 12);
 				{
-				State = 75;
+				State = 77;
 				dbRefListExpr();
 				}
 				break;
 			case 13:
 				EnterOuterAlt(_localctx, 13);
 				{
-				State = 76;
+				State = 78;
 				ipExpr();
 				}
 				break;
 			case 14:
 				EnterOuterAlt(_localctx, 14);
 				{
-				State = 77;
+				State = 79;
 				hostNameExpr();
 				}
 				break;
 			case 15:
 				EnterOuterAlt(_localctx, 15);
 				{
-				State = 78;
-				exactObjectExpr();
+				State = 80;
+				nameExpr();
 				}
 				break;
 			case 16:
 				EnterOuterAlt(_localctx, 16);
 				{
-				State = 79;
-				attributeExpr();
+				State = 81;
+				exactObjectExpr();
 				}
 				break;
 			case 17:
 				EnterOuterAlt(_localctx, 17);
 				{
-				State = 80;
+				State = 82;
+				attributeExpr();
+				}
+				break;
+			case 18:
+				EnterOuterAlt(_localctx, 18);
+				{
+				State = 83;
 				evaluationExpr();
 				}
 				break;
@@ -529,9 +539,9 @@ public partial class SharpMUSHBoolExpParser : Parser {
 		try {
 			EnterOuterAlt(_localctx, 1);
 			{
-			State = 83;
+			State = 86;
 			Match(NOT);
-			State = 84;
+			State = 87;
 			lockExpr();
 			}
 		}
@@ -568,7 +578,7 @@ public partial class SharpMUSHBoolExpParser : Parser {
 		try {
 			EnterOuterAlt(_localctx, 1);
 			{
-			State = 86;
+			State = 89;
 			Match(FALSE);
 			}
 		}
@@ -605,7 +615,7 @@ public partial class SharpMUSHBoolExpParser : Parser {
 		try {
 			EnterOuterAlt(_localctx, 1);
 			{
-			State = 88;
+			State = 91;
 			Match(TRUE);
 			}
 		}
@@ -646,11 +656,11 @@ public partial class SharpMUSHBoolExpParser : Parser {
 		try {
 			EnterOuterAlt(_localctx, 1);
 			{
-			State = 90;
+			State = 93;
 			Match(OPEN);
-			State = 91;
+			State = 94;
 			lockExprList();
-			State = 92;
+			State = 95;
 			Match(CLOSE);
 			}
 		}
@@ -690,9 +700,9 @@ public partial class SharpMUSHBoolExpParser : Parser {
 		try {
 			EnterOuterAlt(_localctx, 1);
 			{
-			State = 94;
+			State = 97;
 			Match(OWNER);
-			State = 95;
+			State = 98;
 			@string();
 			}
 		}
@@ -732,9 +742,9 @@ public partial class SharpMUSHBoolExpParser : Parser {
 		try {
 			EnterOuterAlt(_localctx, 1);
 			{
-			State = 97;
+			State = 100;
 			Match(CARRY);
-			State = 98;
+			State = 101;
 			@string();
 			}
 		}
@@ -774,9 +784,9 @@ public partial class SharpMUSHBoolExpParser : Parser {
 		try {
 			EnterOuterAlt(_localctx, 1);
 			{
-			State = 100;
+			State = 103;
 			Match(BIT_FLAG);
-			State = 101;
+			State = 104;
 			@string();
 			}
 		}
@@ -816,9 +826,9 @@ public partial class SharpMUSHBoolExpParser : Parser {
 		try {
 			EnterOuterAlt(_localctx, 1);
 			{
-			State = 103;
+			State = 106;
 			Match(BIT_POWER);
-			State = 104;
+			State = 107;
 			@string();
 			}
 		}
@@ -858,9 +868,9 @@ public partial class SharpMUSHBoolExpParser : Parser {
 		try {
 			EnterOuterAlt(_localctx, 1);
 			{
-			State = 106;
+			State = 109;
 			Match(BIT_TYPE);
-			State = 107;
+			State = 110;
 			@string();
 			}
 		}
@@ -900,9 +910,9 @@ public partial class SharpMUSHBoolExpParser : Parser {
 		try {
 			EnterOuterAlt(_localctx, 1);
 			{
-			State = 109;
+			State = 112;
 			Match(CHANNEL);
-			State = 110;
+			State = 113;
 			@string();
 			}
 		}
@@ -942,9 +952,9 @@ public partial class SharpMUSHBoolExpParser : Parser {
 		try {
 			EnterOuterAlt(_localctx, 1);
 			{
-			State = 112;
+			State = 115;
 			Match(DBREFLIST);
-			State = 113;
+			State = 116;
 			attributeName();
 			}
 		}
@@ -984,9 +994,9 @@ public partial class SharpMUSHBoolExpParser : Parser {
 		try {
 			EnterOuterAlt(_localctx, 1);
 			{
-			State = 115;
+			State = 118;
 			Match(IP);
-			State = 116;
+			State = 119;
 			@string();
 			}
 		}
@@ -1026,9 +1036,51 @@ public partial class SharpMUSHBoolExpParser : Parser {
 		try {
 			EnterOuterAlt(_localctx, 1);
 			{
-			State = 118;
+			State = 121;
 			Match(HOSTNAME);
-			State = 119;
+			State = 122;
+			@string();
+			}
+		}
+		catch (RecognitionException re) {
+			_localctx.exception = re;
+			ErrorHandler.ReportError(this, re);
+			ErrorHandler.Recover(this, re);
+		}
+		finally {
+			ExitRule();
+		}
+		return _localctx;
+	}
+
+	public partial class NameExprContext : ParserRuleContext {
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode NAME() { return GetToken(SharpMUSHBoolExpParser.NAME, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public StringContext @string() {
+			return GetRuleContext<StringContext>(0);
+		}
+		public NameExprContext(ParserRuleContext parent, int invokingState)
+			: base(parent, invokingState)
+		{
+		}
+		public override int RuleIndex { get { return RULE_nameExpr; } }
+		[System.Diagnostics.DebuggerNonUserCode]
+		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
+			ISharpMUSHBoolExpParserVisitor<TResult> typedVisitor = visitor as ISharpMUSHBoolExpParserVisitor<TResult>;
+			if (typedVisitor != null) return typedVisitor.VisitNameExpr(this);
+			else return visitor.VisitChildren(this);
+		}
+	}
+
+	[RuleVersion(0)]
+	public NameExprContext nameExpr() {
+		NameExprContext _localctx = new NameExprContext(Context, State);
+		EnterRule(_localctx, 36, RULE_nameExpr);
+		try {
+			EnterOuterAlt(_localctx, 1);
+			{
+			State = 124;
+			Match(NAME);
+			State = 125;
 			@string();
 			}
 		}
@@ -1064,13 +1116,13 @@ public partial class SharpMUSHBoolExpParser : Parser {
 	[RuleVersion(0)]
 	public ExactObjectExprContext exactObjectExpr() {
 		ExactObjectExprContext _localctx = new ExactObjectExprContext(Context, State);
-		EnterRule(_localctx, 36, RULE_exactObjectExpr);
+		EnterRule(_localctx, 38, RULE_exactObjectExpr);
 		try {
 			EnterOuterAlt(_localctx, 1);
 			{
-			State = 121;
+			State = 127;
 			Match(EXACTOBJECT);
-			State = 122;
+			State = 128;
 			@string();
 			}
 		}
@@ -1109,15 +1161,15 @@ public partial class SharpMUSHBoolExpParser : Parser {
 	[RuleVersion(0)]
 	public AttributeExprContext attributeExpr() {
 		AttributeExprContext _localctx = new AttributeExprContext(Context, State);
-		EnterRule(_localctx, 38, RULE_attributeExpr);
+		EnterRule(_localctx, 40, RULE_attributeExpr);
 		try {
 			EnterOuterAlt(_localctx, 1);
 			{
-			State = 124;
+			State = 130;
 			attributeName();
-			State = 125;
+			State = 131;
 			Match(ATTRIBUTE_COLON);
-			State = 126;
+			State = 132;
 			@string();
 			}
 		}
@@ -1156,15 +1208,15 @@ public partial class SharpMUSHBoolExpParser : Parser {
 	[RuleVersion(0)]
 	public EvaluationExprContext evaluationExpr() {
 		EvaluationExprContext _localctx = new EvaluationExprContext(Context, State);
-		EnterRule(_localctx, 40, RULE_evaluationExpr);
+		EnterRule(_localctx, 42, RULE_evaluationExpr);
 		try {
 			EnterOuterAlt(_localctx, 1);
 			{
-			State = 128;
+			State = 134;
 			attributeName();
-			State = 129;
+			State = 135;
 			Match(EVALUATION);
-			State = 130;
+			State = 136;
 			@string();
 			}
 		}
@@ -1204,30 +1256,30 @@ public partial class SharpMUSHBoolExpParser : Parser {
 	[RuleVersion(0)]
 	public IndirectExprContext indirectExpr() {
 		IndirectExprContext _localctx = new IndirectExprContext(Context, State);
-		EnterRule(_localctx, 42, RULE_indirectExpr);
+		EnterRule(_localctx, 44, RULE_indirectExpr);
 		try {
-			State = 139;
+			State = 145;
 			ErrorHandler.Sync(this);
 			switch ( Interpreter.AdaptivePredict(TokenStream,2,Context) ) {
 			case 1:
 				EnterOuterAlt(_localctx, 1);
 				{
-				State = 132;
+				State = 138;
 				Match(INDIRECT);
-				State = 133;
+				State = 139;
 				@string();
-				State = 134;
+				State = 140;
 				Match(EVALUATION);
-				State = 135;
+				State = 141;
 				attributeName();
 				}
 				break;
 			case 2:
 				EnterOuterAlt(_localctx, 2);
 				{
-				State = 137;
+				State = 143;
 				Match(INDIRECT);
-				State = 138;
+				State = 144;
 				@string();
 				}
 				break;
@@ -1262,11 +1314,11 @@ public partial class SharpMUSHBoolExpParser : Parser {
 	[RuleVersion(0)]
 	public StringContext @string() {
 		StringContext _localctx = new StringContext(Context, State);
-		EnterRule(_localctx, 44, RULE_string);
+		EnterRule(_localctx, 46, RULE_string);
 		try {
 			EnterOuterAlt(_localctx, 1);
 			{
-			State = 141;
+			State = 147;
 			Match(STRING);
 			}
 		}
@@ -1299,11 +1351,11 @@ public partial class SharpMUSHBoolExpParser : Parser {
 	[RuleVersion(0)]
 	public AttributeNameContext attributeName() {
 		AttributeNameContext _localctx = new AttributeNameContext(Context, State);
-		EnterRule(_localctx, 46, RULE_attributeName);
+		EnterRule(_localctx, 48, RULE_attributeName);
 		try {
 			EnterOuterAlt(_localctx, 1);
 			{
-			State = 143;
+			State = 149;
 			Match(ATTRIBUTENAME);
 			}
 		}
@@ -1319,47 +1371,49 @@ public partial class SharpMUSHBoolExpParser : Parser {
 	}
 
 	private static int[] _serializedATN = {
-		4,1,23,146,2,0,7,0,2,1,7,1,2,2,7,2,2,3,7,3,2,4,7,4,2,5,7,5,2,6,7,6,2,7,
+		4,1,23,152,2,0,7,0,2,1,7,1,2,2,7,2,2,3,7,3,2,4,7,4,2,5,7,5,2,6,7,6,2,7,
 		7,7,2,8,7,8,2,9,7,9,2,10,7,10,2,11,7,11,2,12,7,12,2,13,7,13,2,14,7,14,
 		2,15,7,15,2,16,7,16,2,17,7,17,2,18,7,18,2,19,7,19,2,20,7,20,2,21,7,21,
-		2,22,7,22,2,23,7,23,1,0,1,0,1,0,1,1,1,1,1,1,3,1,55,8,1,1,2,1,2,1,2,1,2,
-		1,3,1,3,1,3,1,3,1,4,1,4,1,4,1,4,1,4,1,4,1,4,1,4,1,4,1,4,1,4,1,4,1,4,1,
-		4,1,4,1,4,1,4,3,4,82,8,4,1,5,1,5,1,5,1,6,1,6,1,7,1,7,1,8,1,8,1,8,1,8,1,
-		9,1,9,1,9,1,10,1,10,1,10,1,11,1,11,1,11,1,12,1,12,1,12,1,13,1,13,1,13,
-		1,14,1,14,1,14,1,15,1,15,1,15,1,16,1,16,1,16,1,17,1,17,1,17,1,18,1,18,
-		1,18,1,19,1,19,1,19,1,19,1,20,1,20,1,20,1,20,1,21,1,21,1,21,1,21,1,21,
-		1,21,1,21,3,21,140,8,21,1,22,1,22,1,23,1,23,1,23,0,0,24,0,2,4,6,8,10,12,
-		14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,46,0,0,140,0,48,1,0,0,
-		0,2,54,1,0,0,0,4,56,1,0,0,0,6,60,1,0,0,0,8,81,1,0,0,0,10,83,1,0,0,0,12,
-		86,1,0,0,0,14,88,1,0,0,0,16,90,1,0,0,0,18,94,1,0,0,0,20,97,1,0,0,0,22,
-		100,1,0,0,0,24,103,1,0,0,0,26,106,1,0,0,0,28,109,1,0,0,0,30,112,1,0,0,
-		0,32,115,1,0,0,0,34,118,1,0,0,0,36,121,1,0,0,0,38,124,1,0,0,0,40,128,1,
-		0,0,0,42,139,1,0,0,0,44,141,1,0,0,0,46,143,1,0,0,0,48,49,3,2,1,0,49,50,
-		5,0,0,1,50,1,1,0,0,0,51,55,3,4,2,0,52,55,3,6,3,0,53,55,3,8,4,0,54,51,1,
-		0,0,0,54,52,1,0,0,0,54,53,1,0,0,0,55,3,1,0,0,0,56,57,3,8,4,0,57,58,5,4,
-		0,0,58,59,3,2,1,0,59,5,1,0,0,0,60,61,3,8,4,0,61,62,5,5,0,0,62,63,3,2,1,
-		0,63,7,1,0,0,0,64,82,3,10,5,0,65,82,3,16,8,0,66,82,3,12,6,0,67,82,3,14,
-		7,0,68,82,3,18,9,0,69,82,3,20,10,0,70,82,3,42,21,0,71,82,3,22,11,0,72,
-		82,3,24,12,0,73,82,3,26,13,0,74,82,3,28,14,0,75,82,3,30,15,0,76,82,3,32,
-		16,0,77,82,3,34,17,0,78,82,3,36,18,0,79,82,3,38,19,0,80,82,3,40,20,0,81,
-		64,1,0,0,0,81,65,1,0,0,0,81,66,1,0,0,0,81,67,1,0,0,0,81,68,1,0,0,0,81,
-		69,1,0,0,0,81,70,1,0,0,0,81,71,1,0,0,0,81,72,1,0,0,0,81,73,1,0,0,0,81,
-		74,1,0,0,0,81,75,1,0,0,0,81,76,1,0,0,0,81,77,1,0,0,0,81,78,1,0,0,0,81,
-		79,1,0,0,0,81,80,1,0,0,0,82,9,1,0,0,0,83,84,5,3,0,0,84,85,3,8,4,0,85,11,
-		1,0,0,0,86,87,5,11,0,0,87,13,1,0,0,0,88,89,5,12,0,0,89,15,1,0,0,0,90,91,
-		5,1,0,0,91,92,3,2,1,0,92,93,5,2,0,0,93,17,1,0,0,0,94,95,5,7,0,0,95,96,
-		3,44,22,0,96,19,1,0,0,0,97,98,5,6,0,0,98,99,3,44,22,0,99,21,1,0,0,0,100,
-		101,5,14,0,0,101,102,3,44,22,0,102,23,1,0,0,0,103,104,5,15,0,0,104,105,
-		3,44,22,0,105,25,1,0,0,0,106,107,5,16,0,0,107,108,3,44,22,0,108,27,1,0,
-		0,0,109,110,5,18,0,0,110,111,3,44,22,0,111,29,1,0,0,0,112,113,5,17,0,0,
-		113,114,3,46,23,0,114,31,1,0,0,0,115,116,5,19,0,0,116,117,3,44,22,0,117,
-		33,1,0,0,0,118,119,5,20,0,0,119,120,3,44,22,0,120,35,1,0,0,0,121,122,5,
-		10,0,0,122,123,3,44,22,0,123,37,1,0,0,0,124,125,3,46,23,0,125,126,5,21,
-		0,0,126,127,3,44,22,0,127,39,1,0,0,0,128,129,3,46,23,0,129,130,5,9,0,0,
-		130,131,3,44,22,0,131,41,1,0,0,0,132,133,5,8,0,0,133,134,3,44,22,0,134,
-		135,5,9,0,0,135,136,3,46,23,0,136,140,1,0,0,0,137,138,5,8,0,0,138,140,
-		3,44,22,0,139,132,1,0,0,0,139,137,1,0,0,0,140,43,1,0,0,0,141,142,5,22,
-		0,0,142,45,1,0,0,0,143,144,5,23,0,0,144,47,1,0,0,0,3,54,81,139
+		2,22,7,22,2,23,7,23,2,24,7,24,1,0,1,0,1,0,1,1,1,1,1,1,3,1,57,8,1,1,2,1,
+		2,1,2,1,2,1,3,1,3,1,3,1,3,1,4,1,4,1,4,1,4,1,4,1,4,1,4,1,4,1,4,1,4,1,4,
+		1,4,1,4,1,4,1,4,1,4,1,4,1,4,3,4,85,8,4,1,5,1,5,1,5,1,6,1,6,1,7,1,7,1,8,
+		1,8,1,8,1,8,1,9,1,9,1,9,1,10,1,10,1,10,1,11,1,11,1,11,1,12,1,12,1,12,1,
+		13,1,13,1,13,1,14,1,14,1,14,1,15,1,15,1,15,1,16,1,16,1,16,1,17,1,17,1,
+		17,1,18,1,18,1,18,1,19,1,19,1,19,1,20,1,20,1,20,1,20,1,21,1,21,1,21,1,
+		21,1,22,1,22,1,22,1,22,1,22,1,22,1,22,3,22,146,8,22,1,23,1,23,1,24,1,24,
+		1,24,0,0,25,0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,
+		42,44,46,48,0,0,146,0,50,1,0,0,0,2,56,1,0,0,0,4,58,1,0,0,0,6,62,1,0,0,
+		0,8,84,1,0,0,0,10,86,1,0,0,0,12,89,1,0,0,0,14,91,1,0,0,0,16,93,1,0,0,0,
+		18,97,1,0,0,0,20,100,1,0,0,0,22,103,1,0,0,0,24,106,1,0,0,0,26,109,1,0,
+		0,0,28,112,1,0,0,0,30,115,1,0,0,0,32,118,1,0,0,0,34,121,1,0,0,0,36,124,
+		1,0,0,0,38,127,1,0,0,0,40,130,1,0,0,0,42,134,1,0,0,0,44,145,1,0,0,0,46,
+		147,1,0,0,0,48,149,1,0,0,0,50,51,3,2,1,0,51,52,5,0,0,1,52,1,1,0,0,0,53,
+		57,3,4,2,0,54,57,3,6,3,0,55,57,3,8,4,0,56,53,1,0,0,0,56,54,1,0,0,0,56,
+		55,1,0,0,0,57,3,1,0,0,0,58,59,3,8,4,0,59,60,5,4,0,0,60,61,3,2,1,0,61,5,
+		1,0,0,0,62,63,3,8,4,0,63,64,5,5,0,0,64,65,3,2,1,0,65,7,1,0,0,0,66,85,3,
+		10,5,0,67,85,3,16,8,0,68,85,3,12,6,0,69,85,3,14,7,0,70,85,3,18,9,0,71,
+		85,3,20,10,0,72,85,3,44,22,0,73,85,3,22,11,0,74,85,3,24,12,0,75,85,3,26,
+		13,0,76,85,3,28,14,0,77,85,3,30,15,0,78,85,3,32,16,0,79,85,3,34,17,0,80,
+		85,3,36,18,0,81,85,3,38,19,0,82,85,3,40,20,0,83,85,3,42,21,0,84,66,1,0,
+		0,0,84,67,1,0,0,0,84,68,1,0,0,0,84,69,1,0,0,0,84,70,1,0,0,0,84,71,1,0,
+		0,0,84,72,1,0,0,0,84,73,1,0,0,0,84,74,1,0,0,0,84,75,1,0,0,0,84,76,1,0,
+		0,0,84,77,1,0,0,0,84,78,1,0,0,0,84,79,1,0,0,0,84,80,1,0,0,0,84,81,1,0,
+		0,0,84,82,1,0,0,0,84,83,1,0,0,0,85,9,1,0,0,0,86,87,5,3,0,0,87,88,3,8,4,
+		0,88,11,1,0,0,0,89,90,5,11,0,0,90,13,1,0,0,0,91,92,5,12,0,0,92,15,1,0,
+		0,0,93,94,5,1,0,0,94,95,3,2,1,0,95,96,5,2,0,0,96,17,1,0,0,0,97,98,5,7,
+		0,0,98,99,3,46,23,0,99,19,1,0,0,0,100,101,5,6,0,0,101,102,3,46,23,0,102,
+		21,1,0,0,0,103,104,5,14,0,0,104,105,3,46,23,0,105,23,1,0,0,0,106,107,5,
+		15,0,0,107,108,3,46,23,0,108,25,1,0,0,0,109,110,5,16,0,0,110,111,3,46,
+		23,0,111,27,1,0,0,0,112,113,5,18,0,0,113,114,3,46,23,0,114,29,1,0,0,0,
+		115,116,5,17,0,0,116,117,3,48,24,0,117,31,1,0,0,0,118,119,5,19,0,0,119,
+		120,3,46,23,0,120,33,1,0,0,0,121,122,5,20,0,0,122,123,3,46,23,0,123,35,
+		1,0,0,0,124,125,5,13,0,0,125,126,3,46,23,0,126,37,1,0,0,0,127,128,5,10,
+		0,0,128,129,3,46,23,0,129,39,1,0,0,0,130,131,3,48,24,0,131,132,5,21,0,
+		0,132,133,3,46,23,0,133,41,1,0,0,0,134,135,3,48,24,0,135,136,5,9,0,0,136,
+		137,3,46,23,0,137,43,1,0,0,0,138,139,5,8,0,0,139,140,3,46,23,0,140,141,
+		5,9,0,0,141,142,3,48,24,0,142,146,1,0,0,0,143,144,5,8,0,0,144,146,3,46,
+		23,0,145,138,1,0,0,0,145,143,1,0,0,0,146,45,1,0,0,0,147,148,5,22,0,0,148,
+		47,1,0,0,0,149,150,5,23,0,0,150,49,1,0,0,0,3,56,84,145
 	};
 
 	public static readonly ATN _ATN =

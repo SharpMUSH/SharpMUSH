@@ -79,7 +79,7 @@ public class MUSHCodeParser(
 
 	public CallState? FunctionParse(string text)
 	{
-		AntlrInputStream inputStream = new(text);
+		AntlrInputStreamSpan inputStream = new(text);
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
 		SharpMUSHParser sharpParser = new(commonTokenStream);
@@ -91,7 +91,7 @@ public class MUSHCodeParser(
 
 	public CallState? CommandListParse(string text)
 	{
-		AntlrInputStream inputStream = new(text);
+		AntlrInputStreamSpan inputStream = new(text);
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
 		SharpMUSHParser sharpParser = new(commonTokenStream);
@@ -121,7 +121,7 @@ public class MUSHCodeParser(
 			handleId?.Ref,
 			handle));
 
-		AntlrInputStream inputStream = new(text);
+		AntlrInputStreamSpan inputStream = new(text);
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
 		SharpMUSHParser sharpParser = new(commonTokenStream);
@@ -134,7 +134,7 @@ public class MUSHCodeParser(
 
 	public CallState? CommandCommaArgsParse(string text)
 	{
-		AntlrInputStream inputStream = new(text);
+		AntlrInputStreamSpan inputStream = new(text);
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
 		SharpMUSHParser sharpParser = new(commonTokenStream);
@@ -146,7 +146,7 @@ public class MUSHCodeParser(
 
 	public CallState? CommandSingleArgParse(string text)
 	{
-		AntlrInputStream inputStream = new(text);
+		AntlrInputStreamSpan inputStream = new(text);
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
 		SharpMUSHParser sharpParser = new(commonTokenStream);
@@ -158,7 +158,7 @@ public class MUSHCodeParser(
 
 	public CallState? CommandEqSplitArgsParse(string text)
 	{
-		AntlrInputStream inputStream = new(text);
+		AntlrInputStreamSpan inputStream = new(text);
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
 		SharpMUSHParser sharpParser = new(commonTokenStream);
@@ -170,7 +170,7 @@ public class MUSHCodeParser(
 
 	public CallState? CommandEqSplitParse(string text)
 	{
-		AntlrInputStream inputStream = new(text);
+		AntlrInputStreamSpan inputStream = new(text);
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
 		SharpMUSHParser sharpParser = new(commonTokenStream);

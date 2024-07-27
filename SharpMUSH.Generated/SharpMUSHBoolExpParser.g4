@@ -41,6 +41,7 @@ lockExpr
   | dbRefListExpr
   | ipExpr
   | hostNameExpr
+  | nameExpr
   | exactObjectExpr
   | attributeExpr
   | evaluationExpr
@@ -59,6 +60,7 @@ channelExpr : CHANNEL string ;
 dbRefListExpr : DBREFLIST attributeName ;
 ipExpr : IP string ;
 hostNameExpr : HOSTNAME string ;
+nameExpr: NAME string ;
 exactObjectExpr : EXACTOBJECT string ;
 attributeExpr : attributeName ATTRIBUTE_COLON string ;
 evaluationExpr : attributeName EVALUATION string ;

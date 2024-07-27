@@ -140,6 +140,12 @@ public interface ISharpMUSHBoolExpParserVisitor<Result> : IParseTreeVisitor<Resu
 	/// <return>The visitor result.</return>
 	Result VisitHostNameExpr([NotNull] SharpMUSHBoolExpParser.HostNameExprContext context);
 	/// <summary>
+	/// Visit a parse tree produced by <see cref="SharpMUSHBoolExpParser.nameExpr"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitNameExpr([NotNull] SharpMUSHBoolExpParser.NameExprContext context);
+	/// <summary>
 	/// Visit a parse tree produced by <see cref="SharpMUSHBoolExpParser.exactObjectExpr"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
