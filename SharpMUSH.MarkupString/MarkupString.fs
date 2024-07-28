@@ -1,6 +1,8 @@
 ﻿namespace MarkupString
 
+open System.Text.RegularExpressions
 open System.Runtime.InteropServices
+open System
 
 module MarkupStringModule =
   open MarkupImplementation
@@ -268,54 +270,145 @@ module MarkupStringModule =
 
     buildSplits delimiterPositions 0 [] |> Array.ofList
 
-  // Align code starts here. 
-  // There's some errors in here assuredly. For instance, alignOptions should be per- width.
-  type Justification = Left | Center | Right | Full | Paragraph
+type Justification =
+    | Left
+    | Center
+    | Right
+    | Full
+    | Paragraph
+    
+type ColumnSpec =
+    {
+        Width: int
+        Justification: Justification
+        Options: string
+        Ansi: string
+    }
 
-  type ColumnOptions = {
-      Width: int
-      Justification: Justification
-      NoFill: bool
-      TruncateRow: bool
-      TruncateColumn: bool
-      NoColSepAfter: bool
-  }
+module ColumnSpec =
+    let parse (spec: string) : ColumnSpec =
+        let regex = new Regex(@"^([<>=_])?(\d+)([.`'$xX#]*)(\(.+\))?$")
+        let matchResult = regex.Match(spec)
+        if not matchResult.Success then
+            raise (ArgumentException(sprintf "Invalid column specification: %s" spec))
 
-  type AlignOptions = {
-      Filler: char
-      ColSep: string
-      RowSep: string
-  }
+        let justification =
+            if matchResult.Groups.[1].Success then
+                match matchResult.Groups.[1].Value with
+                | "<" -> Justification.Left
+                | "=" -> Justification.Paragraph
+                | ">" -> Justification.Right
+                | "_" -> Justification.Full
+                | _ -> Justification.Left
+            else
+                Justification.Left
 
-  let defaultAlignOptions = { Filler = ' '; ColSep = " "; RowSep = "\n" }
+        let width = int matchResult.Groups.[2].Value
+        let options = if matchResult.Groups.[3].Success then matchResult.Groups.[3].Value else ""
+        let ansi = if matchResult.Groups.[4].Success then matchResult.Groups.[4].Value.Trim('(', ')') else ""
 
-  let align (columns: MarkupString list) (widths: int list) (alignOptions: AlignOptions) : MarkupString =
-    let justifyText (text: string) (width: int) (justification: Justification) : string =
+        {
+            Width = width
+            Justification = justification
+            Options = options
+            Ansi = ansi
+        }
+
+module TextAligner =
+    let fullJustify (text: string) (width: int) (fill: char) : string =
+        if text.Length >= width then text
+        else
+            let words = text.Split([| ' ' |], StringSplitOptions.RemoveEmptyEntries)
+            if words.Length = 1 then text.PadRight(width, fill)
+            else
+                let totalSpaces = width - text.Length + words.Length - 1
+                let spaceBetweenWords = totalSpaces / (words.Length - 1)
+                let extraSpaces = totalSpaces % (words.Length - 1)
+                let spaces = Array.init (words.Length - 1) (fun i -> spaceBetweenWords + (if i < extraSpaces then 1 else 0))
+                let z = Seq.zip words spaces
+                let intermediate =
+                    Seq.fold (fun acc (word, space) -> acc + word + String(' ', space)) "" z
+                intermediate + words.[words.Length - 1]
+
+    let justify (justification: Justification) (text: string) (width: int) (fill: char): string =
         match justification with
-        | Left -> text.PadRight(width)
-        | Center -> text.PadLeft((width + text.Length) / 2).PadRight(width)
-        | Right -> text.PadLeft(width)
-        | _ -> text // Full and Paragraph justifications can be implemented as needed
+        | Justification.Left -> text.PadRight(width, fill)
+        | Justification.Center -> text.PadLeft((width + text.Length) / 2, fill).PadRight(width, fill)
+        | Justification.Right -> text.PadLeft(width, fill)
+        | Justification.Full -> fullJustify text width fill
+        | _ -> text.PadRight(width, fill)
 
-    let formatColumn (content: MarkupString) (options: ColumnOptions) : MarkupString =
-        // This function should format the content of a single column based on the provided options.
-        // For simplicity, only basic text content is considered here.
-        let formattedText = justifyText (plainText content) options.Width options.Justification
-        single (formattedText) // Assuming markupSingle creates a MarkupString with the specified text
+    let partitionWords (spec: ColumnSpec) (colWords: list<string>) : list<string> * list<string> =
+        let rec collectWords (acc: list<string>) (remaining: list<string>) =
+            match remaining with
+            | word :: rest when String.Join(" ", acc @ [word]).Length <= spec.Width -> collectWords (acc @ [word]) rest
+            | _ -> acc, remaining
+        collectWords [] colWords
 
-    let optionsList = 
-        List.map2 (fun width _ -> 
-            { Width = width; Justification = Left; NoFill = false; TruncateRow = false; TruncateColumn = false; NoColSepAfter = false }
-        ) widths columns
+    let buildRowText (spec: ColumnSpec) (colWords: list<string>) =
+        let rowWords, remainingWords = partitionWords spec colWords
+        let rowText = String.Join(" ", rowWords)
+        if (spec.Options.Contains('x') || spec.Options.Contains('X')) && remainingWords <> [] then
+            let availableWidth = spec.Width - rowText.Length
+            if availableWidth > 0 then
+                let truncatedWord = remainingWords.[0].Substring(0, min availableWidth remainingWords.[0].Length)
+                let remaining = remainingWords.[0].Substring(truncatedWord.Length)
+                rowText + truncatedWord, truncatedWord :: remainingWords.Tail
+            else rowText, remainingWords
+        else rowText, remainingWords
 
-    let formattedColumns = List.map2 formatColumn columns optionsList
+    let align (widths: string) (columns: list<string>) (filler: char) (colsep: char) (rowsep: char) =
+        let rowSepString = rowsep |> Char.ToString
+        let columnSpecs = widths.Split([| ' ' |], StringSplitOptions.RemoveEmptyEntries) |> Array.map ColumnSpec.parse |> Array.toList
+        if columnSpecs.Length <> columns.Length then
+            raise (ArgumentException("Number of columns must match the number of provided widths."))
 
-    // Combine the formatted column contents, inserting column separators as needed.
-    let fullContent = 
-        formattedColumns
-        |> List.collect (fun col -> col.Content @ [Text alignOptions.ColSep]) // Collect is used to flatten and concatenate the lists
-        |> List.rev 
-        |> List.tail 
-        |> List.rev  // Removing the last separator added by the above process
+        let columnText = columns |> List.map (fun col -> col.Split([| '\r'; '\n'; ' ' |], StringSplitOptions.RemoveEmptyEntries) |> Array.toList)
 
-    MarkupString(Empty, fullContent)
+        let rec alignRows acc columnText =
+            let anyNonEmptyColumn = columnText |> List.exists (fun col -> col <> [])
+            if not anyNonEmptyColumn then acc |> List.rev |> List.map (String.concat String.Empty) |> String.concat rowSepString
+            else
+                let newText = 
+                    columnText
+                    |> List.mapi (fun i colWords ->
+                        let spec = columnSpecs.[i]
+                        let rowText, remainingWords = buildRowText spec colWords
+                        let rowText =
+                            if spec.Options.Contains('x') then rowText.Substring(0, Math.Min(spec.Width, rowText.Length))
+                            else rowText
+
+                        let rowText =
+                            if rowText.Length < spec.Width && spec.Options.Contains('.') then rowText.PadRight(spec.Width, ' ')
+                            else rowText
+
+                        let justified = justify spec.Justification rowText spec.Width filler
+                        let justifiedText = if String.IsNullOrEmpty(spec.Ansi) then justified else sprintf "%s%s" spec.Ansi justified
+
+                        justifiedText, (if spec.Options.Contains('`') && rowText = "" then [] else remainingWords)
+                    )
+                let row = newText |> List.map fst |> String.concat (string colsep)
+                alignRows ([row] :: acc) (newText |> List.map snd)
+        
+        alignRows [] columnText
+
+    let lalign (widths: string) (colList: string) (delim: char) (filler: char) (colsep: char) (rowsep: char) =
+        let columns = colList.Split([| delim |], StringSplitOptions.RemoveEmptyEntries) |> Array.toList
+        align widths columns filler colsep rowsep
+
+(*
+// Sample usage
+[<EntryPoint>]
+let main argv =
+    let widths = "<10 >20 30"
+    let columns = [ "Column1 text"; "Column2 text is longer"; "This is Column3, the longest of all" ]
+
+    let result = TextAligner.align widths columns ' ' ' ' '\n'
+    printfn "%s" result
+
+    let colList = "Column1;Column2;Column3"
+    let result = TextAligner.lalign widths colList ';' ' ' ' ' '\n'
+    printfn "%s" result
+
+    0
+    *)

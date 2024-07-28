@@ -54,6 +54,8 @@ public class MUSHCodeParser(
 		this(passwordService, permissionService, database, notifyService, queueService, connectionService)
 		=> State = state;
 
+	// Add register state. Which is also a Dictionary. The functions that recover etc a register state, are responsible themselves.
+
 	public IMUSHCodeParser Push(ParserState state)
 	{
 		State = State.Push(state);
