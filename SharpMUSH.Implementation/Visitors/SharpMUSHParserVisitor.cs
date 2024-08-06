@@ -17,10 +17,13 @@ namespace SharpMUSH.Implementation.Visitors
 		{
 			if (aggregate?.Arguments != null || nextResult?.Arguments != null)
 			{
-				return (aggregate ?? nextResult!) with { Arguments = [
-					.. aggregate?.Arguments ?? Enumerable.Empty<string>(), 
+				return (aggregate ?? nextResult!) with
+				{
+					Arguments = [
+					.. aggregate?.Arguments ?? Enumerable.Empty<string>(),
 					.. nextResult?.Arguments ?? Enumerable.Empty<string>()
-					]};
+					]
+				};
 			}
 			if (aggregate?.Message != null && nextResult?.Message != null)
 			{
@@ -59,7 +62,8 @@ namespace SharpMUSH.Implementation.Visitors
 
 			if (complexSubstitutionSymbol != null)
 			{
-				var result = Substitutions.Substitutions.ParseComplexSubstitution(complexSubstitutionSymbol.GetText(), parser, complexSubstitutionSymbol);
+				var state = VisitChildren(context);
+				var result = Substitutions.Substitutions.ParseComplexSubstitution(state, parser, complexSubstitutionSymbol);
 				return result;
 			}
 			else if (simpleSubstitutionSymbol != null)
@@ -138,7 +142,7 @@ namespace SharpMUSH.Implementation.Visitors
 		{
 			var baseArg = base.VisitChildren(context.singleCommandArg());
 			var commaArgs = base.VisitChildren(context.commaCommandArgs());
-			return new CallState(null, context.Depth(), [baseArg!.Message!.ToString(), ..commaArgs?.Arguments ?? []]);
+			return new CallState(null, context.Depth(), [baseArg!.Message!.ToString(), .. commaArgs?.Arguments ?? []]);
 		}
 
 		/// <summary>
@@ -170,6 +174,18 @@ namespace SharpMUSH.Implementation.Visitors
 		{
 			var children = base.VisitChildren(context);
 			return new CallState(null, context.Depth(), children!.Arguments);
+		}
+
+		public override CallState? VisitComplexSubstitutionSymbol([NotNull] ComplexSubstitutionSymbolContext context)
+		{
+			if (context.ChildCount > 1)
+			{
+				return base.VisitChildren(context);
+			}
+			else
+			{
+				return new CallState(context.GetText(), context.Depth());
+			}
 		}
 	}
 }
