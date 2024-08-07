@@ -15,8 +15,13 @@ namespace SharpMUSH.Tests.Substitutions
 		}
 
 		[TestMethod]
-		[DataRow("think %q0", "q0")]
+		[DataRow("think %q0", "0")]
 		[DataRow("think %q<start>", "start")]
+		[DataRow("think %wv", "wv")]
+		[DataRow("think %vv", "vv")]
+		[DataRow("think %xv", "xv")]
+		[DataRow("think %i0", "0")]
+		[DataRow("think %$0", "0")]
 		public async Task Test(string str, string expected)
 		{
 			Console.WriteLine("Testing: {0}", str);

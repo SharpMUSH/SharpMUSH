@@ -37,36 +37,40 @@ public static partial class Substitutions
 	{
 		ArgumentNullException.ThrowIfNull(symbol);
 
-		if (context.REG_NUM != null) return HandleRegistrySymbol(symbol, parser);
-		else if (context.ITEXT_NUM != null) return HandleITextNumber(symbol, parser);
-		else if (context.STEXT_NUM != null) return HandleSTextNumber(symbol, parser);
-		else if (context.VWX != null) return HandleVWX(symbol, parser);
+		if (context.REG_NUM() is not null) return HandleRegistrySymbol(symbol, parser);
+		else if (context.ITEXT_NUM() is not null) return HandleITextNumber(symbol, parser);
+		else if (context.STEXT_NUM() is not null) return HandleSTextNumber(symbol, parser);
+		else if (context.VWX() is not null) return HandleVWX(symbol, parser);
 		else return HandleRegistrySymbol(symbol, parser);
 	}
 
 	private static CallState HandleRegistrySymbol(CallState symbol, IMUSHCodeParser parser)
 	{
 		// Symbol: %q<(stuff?)> --> start
-		// Symbol Example: %q0 --> q0
+		// Symbol Example: %q0 --> 0
 		// TODO: Implement
 		return symbol;
+		throw new NotImplementedException();
 	}
 
 	private static CallState HandleVWX(CallState symbol, IMUSHCodeParser parser)
 	{
 		// Symbol Example: %vw --> vw
+		return symbol;
 		throw new NotImplementedException();
 	}
 
 	private static CallState HandleSTextNumber(CallState symbol, IMUSHCodeParser parser)
 	{
 		// Symbol Example: %qi0 --> qi0
+		return symbol;
 		throw new NotImplementedException();
 	}
 
 	private static CallState HandleITextNumber(CallState symbol, IMUSHCodeParser parser)
 	{
 		// Symbol Example: %q$0 --> q$0
+		return symbol;
 		throw new NotImplementedException();
 	}
 }

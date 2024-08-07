@@ -178,14 +178,14 @@ namespace SharpMUSH.Implementation.Visitors
 
 		public override CallState? VisitComplexSubstitutionSymbol([NotNull] ComplexSubstitutionSymbolContext context)
 		{
-			if (context.ChildCount > 1)
-			{
+			if (context.ChildCount > 1) 
 				return base.VisitChildren(context);
-			}
-			else
-			{
+			else if(context.REG_NUM() is not null) 
+				return new CallState(context.GetText().Remove(0, 1), context.Depth());
+			else if(context.ITEXT_NUM() is not null || context.STEXT_NUM() is not null) 
+				return new CallState(context.GetText().Remove(0, 1), context.Depth());
+			else 
 				return new CallState(context.GetText(), context.Depth());
-			}
 		}
 	}
 }
