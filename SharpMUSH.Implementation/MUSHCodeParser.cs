@@ -112,8 +112,10 @@ public class MUSHCodeParser(
 	public Task CommandParse(string handle, string text)
 	{
 		var handleId = ConnectionService.Get(handle);
+		var stack = new Stack<ImmutableDictionary<string, MString>>();
+		stack.Push(ImmutableDictionary<string, MString>.Empty);
 		State = State.Push(new ParserState(
-			ImmutableDictionary<string, MString>.Empty,
+			stack,
 			null,
 			null,
 			text,

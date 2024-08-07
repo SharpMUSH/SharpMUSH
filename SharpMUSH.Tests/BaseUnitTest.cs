@@ -69,6 +69,8 @@ namespace SharpMUSH.Tests
 			var simpleConnectionService = new ConnectionService();
 			simpleConnectionService.Register("1", (x) => Task.CompletedTask, () => Encoding.UTF8);
 			simpleConnectionService.Bind("1", one);
+			var stack = new Stack<ImmutableDictionary<string, MarkupString.MarkupStringModule.MarkupString>>();
+			stack.Push(ImmutableDictionary<string, MarkupString.MarkupStringModule.MarkupString>.Empty);
 
 			return new MUSHCodeParser(
 					pws ?? Substitute.For<IPasswordService>(),
@@ -78,7 +80,7 @@ namespace SharpMUSH.Tests
 					qs ?? Substitute.For<IQueueService>(),
 					cs ?? simpleConnectionService,
 					state: new ParserState(
-						Registers: ImmutableDictionary<string, MarkupString.MarkupStringModule.MarkupString>.Empty,
+						Registers: stack,
 						CurrentEvaluation: null,
 						Function: null,
 						Command: "think",
