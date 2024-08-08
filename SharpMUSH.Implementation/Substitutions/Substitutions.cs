@@ -45,13 +45,9 @@ public static partial class Substitutions
 	}
 
 	private static CallState HandleRegistrySymbol(CallState symbol, IMUSHCodeParser parser)
-	{
-		// Symbol: %q<(stuff?)> --> start
-		// Symbol Example: %q0 --> 0
-		// TODO: Implement
-		return symbol;
-		throw new NotImplementedException();
-	}
+		=> parser.CurrentState.Registers.Peek().TryGetValue(symbol.Message!.ToString().ToUpper(), out var value)
+				? new CallState(value)
+				: new CallState(string.Empty);
 
 	private static CallState HandleVWX(CallState symbol, IMUSHCodeParser parser)
 	{

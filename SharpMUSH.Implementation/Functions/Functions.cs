@@ -74,6 +74,16 @@ namespace SharpMUSH.Implementation.Functions
 				return new CallState(string.Format(Errors.ErrorTooFewArguments, name, attribute.MinArgs, args.Count), context.Depth());
 			}
 
+			if (((attribute.Flags & FunctionFlags.UnEvenArgsOnly) != 0) && (args.Count % 2 == 0))
+			{
+				return new CallState(string.Format(Errors.ErrorGotEvenArgs, name), context.Depth());
+			}
+
+			if (((attribute.Flags & FunctionFlags.EvenArgsOnly) != 0) && (args.Count % 2 != 0))
+			{
+				return new CallState(string.Format(Errors.ErrorGotUnEvenArgs, name), context.Depth());
+			}
+
 			if (contextDepth > Configurable.MaxCallDepth)
 			{
 				parser.Pop();

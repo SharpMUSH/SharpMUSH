@@ -3,6 +3,7 @@ using System.Collections.Immutable;
 
 namespace SharpMUSH.Library.ParserInterfaces;
 
+// TODO: The fact that these functions take a String instead of MarkupString is a problem.
 public partial interface IMUSHCodeParser
 {
 	IConnectionService ConnectionService { get; }

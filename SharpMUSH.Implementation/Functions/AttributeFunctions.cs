@@ -1,4 +1,5 @@
-﻿using SharpMUSH.Implementation.Definitions;
+﻿using Antlr4.Runtime.Dfa;
+using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.ParserInterfaces;
 
@@ -240,16 +241,7 @@ namespace SharpMUSH.Implementation.Functions
 		{
 			throw new NotImplementedException();
 		}
-		[SharpFunction(Name = "SETQ", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
-		public static CallState setq(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		{
-			throw new NotImplementedException();
-		}
-		[SharpFunction(Name = "SETR", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
-		public static CallState setr(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		{
-			throw new NotImplementedException();
-		}
+
 		[SharpFunction(Name = "SETDIFF", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular)]
 		public static CallState setmanip(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		{

@@ -1,4 +1,5 @@
 ﻿using ANSILibrary;
+using DotNext.Collections.Generic;
 using MarkupString;
 using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
@@ -50,7 +51,7 @@ namespace SharpMUSH.Implementation.Functions
 			var underline = false;
 
 			var ansiCodes = args[0].Message!.ToString().Split(' ');
-			Func<bool,byte,byte[]> highlightFunc = (highlight, b) => highlight ? [1,b] : [b] ;
+			Func<bool, byte, byte[]> highlightFunc = (highlight, b) => highlight ? [1, b] : [b];
 
 			foreach (var cde in ansiCodes)
 			{
@@ -337,10 +338,34 @@ namespace SharpMUSH.Implementation.Functions
 			throw new NotImplementedException();
 		}
 
-		[SharpFunction(Name = "LETQ", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
+		[SharpFunction(Name = "letq", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse | FunctionFlags.UnEvenArgsOnly)]
 		public static CallState LetQ(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		{
-			throw new NotImplementedException();
+			var everythingIsOkay = true;
+
+			// TODO: Check if MarkupString is properly Immutable. If not, make it Immutable!
+			var currentRegisters = parser.CurrentState.Registers.Peek();
+			var newRegisters = currentRegisters.ToDictionary(k => k.Key, kv => kv.Value);
+			parser.CurrentState.Registers.Push(newRegisters);
+
+			for (var i = 0; i < parser.CurrentState.Arguments.Count - 1; i += 2)
+			{
+				everythingIsOkay &= parser.CurrentState.AddRegister(
+					parser.CurrentState.Arguments[i].Message!.ToString().ToUpper(),
+					parser.CurrentState.Arguments[i + 1].Message!);
+			}
+
+			if (everythingIsOkay)
+			{
+				var parsed = parser.FunctionParse(parser.CurrentState.Arguments.Last().Message!.ToString())!;
+				_ = parser.CurrentState.Registers.Pop();
+				return parsed;
+			}
+			else
+			{
+				_ = parser.CurrentState.Registers.Pop();
+				return new CallState("#-1 REGISTER NAME INVALID");
+			}
 		}
 
 		[SharpFunction(Name = "LINK", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -410,6 +435,49 @@ namespace SharpMUSH.Implementation.Functions
 			throw new NotImplementedException();
 		}
 
+		[SharpFunction(Name = "setq", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
+		public static CallState setq(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		{
+			var everythingIsOkay = true;
+
+			for (var i = 0; i < parser.CurrentState.Arguments.Count; i += 2)
+			{
+				everythingIsOkay &= parser.CurrentState.AddRegister(
+					parser.CurrentState.Arguments[i].Message!.ToString().ToUpper(),
+					parser.CurrentState.Arguments[i + 1].Message!);
+			}
+
+			if (everythingIsOkay)
+			{
+				return new CallState(string.Empty);
+			}
+			else
+			{
+				return new CallState("#-1 REGISTER NAME INVALID");
+			}
+		}
+
+		[SharpFunction(Name = "setr", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.EvenArgsOnly)]
+		public static CallState setr(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		{
+			var everythingIsOkay = true;
+
+			for (var i = 0; i < parser.CurrentState.Arguments.Count; i += 2)
+			{
+				everythingIsOkay &= parser.CurrentState.AddRegister(
+					parser.CurrentState.Arguments[i].Message!.ToString().ToUpper(),
+					parser.CurrentState.Arguments[i + 1].Message!);
+			}
+
+			if (everythingIsOkay)
+			{
+				return new CallState(parser.CurrentState.Arguments[1].Message!);
+			}
+			else
+			{
+				return new CallState("#-1 REGISTER NAME INVALID");
+			}
+		}
 		[SharpFunction(Name = "SOUNDEX", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 		public static CallState SoundEx(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		{

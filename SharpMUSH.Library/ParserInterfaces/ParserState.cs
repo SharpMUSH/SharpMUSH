@@ -1,10 +1,9 @@
 ﻿using SharpMUSH.Library.Models;
-using System.Collections.Immutable;
 
 namespace SharpMUSH.Library.ParserInterfaces;
 
 public record ParserState(
-	Stack<ImmutableDictionary<string, MString>> Registers,
+	Stack<Dictionary<string, MString>> Registers,
 	DBAttribute? CurrentEvaluation,
 	string? Function,
 	string? Command,
@@ -12,4 +11,18 @@ public record ParserState(
 	DBRef? Executor,
 	DBRef? Enactor,
 	DBRef? Caller,
-	string? Handle);
+	string? Handle)
+{
+	public bool AddRegister(string register, MString value)
+	{
+		// TODO: Validate Register Pattern
+
+		var top = Registers.Peek();
+		if (!top.TryAdd(register, value))
+		{
+			top[register] = value;
+		}
+
+		return true;
+	}
+}

@@ -26,6 +26,8 @@
 		Clone = 1 << 19,
 		IntegersOnly = 1 << 20,
 		PositiveIntegersOnly = 1 << 21,
-		DecimalsOnly = 1 << 22
+		DecimalsOnly = 1 << 22,
+		EvenArgsOnly = 1 << 23,
+		UnEvenArgsOnly = 1 << 24
 	}
 }

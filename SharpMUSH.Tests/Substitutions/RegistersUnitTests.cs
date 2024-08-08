@@ -15,8 +15,11 @@ namespace SharpMUSH.Tests.Substitutions
 		}
 
 		[TestMethod]
-		[DataRow("think %q0", "0")]
-		[DataRow("think %q<start>", "start")]
+		[DataRow("think [setq(0,foo)]%q0", "foo")]
+		[DataRow("think [setq(start,bar)]%q<start>", "bar")]
+		[DataRow("think [setr(0,foo)]%q0", "foofoo")]
+		[DataRow("think [setr(start,bar)]%q<start>", "barbar")]
+		[DataRow("think [setr(start,foo)][letq(start,bar,%q<start>)]", "foobar")]
 		[DataRow("think %wv", "wv")]
 		[DataRow("think %vv", "vv")]
 		[DataRow("think %xv", "xv")]
