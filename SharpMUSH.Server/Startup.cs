@@ -10,6 +10,7 @@ using SharpMUSH.Implementation;
 using SharpMUSH.Library;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
+using System.Text;
 
 namespace SharpMUSH.Server
 {
