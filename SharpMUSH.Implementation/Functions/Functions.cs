@@ -33,7 +33,7 @@ namespace SharpMUSH.Implementation.Functions
 		/// <param name="context">Function Context for Depth</param>
 		/// <param name="args">Arguments</param>
 		/// <returns>The resulting CallState.</returns>
-		public static CallState CallFunction(string name, IMUSHCodeParser parser, FunctionContext context, List<CallState> args)
+		public static CallState CallFunction(string name, MString source, IMUSHCodeParser parser, FunctionContext context, List<CallState> args)
 		{
 			if (!_functionLibrary.TryGetValue(name, out var libraryMatch))
 			{
@@ -109,17 +109,17 @@ namespace SharpMUSH.Implementation.Functions
 				// TODO: Should we increase the Depth of the response by adding our context.Depth here?
 				// This is also where we need to do a DEPTH CHECK.
 				refinedArguments = args.Select(a => stripAnsi
-					? parser.FunctionParse(MModule.plainText(a?.Message ?? MModule.empty()))
-					: parser.FunctionParse(a?.Message?.ToString() ?? string.Empty)
+					? parser.FunctionParse(MModule.plainText2(a?.Message ?? MModule.empty()))
+					: parser.FunctionParse(a?.Message ?? MModule.empty())
 					).ToList()!;
 			}
 			else if ((attribute.Flags & FunctionFlags.NoParse) == FunctionFlags.NoParse && attribute.MaxArgs == 1)
 			{
-				return new CallState(context.GetText(), context.Depth());
+				return new CallState(MModule.substring(context.Start.StartIndex, context.Stop.StopIndex - context.Start.StartIndex + 1, source), context.Depth());
 			}
 			else
 			{
-				refinedArguments = args.Select(arg => stripAnsi ? new CallState(MModule.plainText(arg.Message), arg.Depth) : arg ).ToList()!;
+				refinedArguments = args.Select(arg => stripAnsi ? new CallState(MModule.plainText(arg.Message), arg.Depth) : arg).ToList()!;
 			}
 
 			if ((attribute.Flags & FunctionFlags.DecimalsOnly) != 0 && refinedArguments.Any(a => !decimal.TryParse(a.Message!.ToString(), out _)))

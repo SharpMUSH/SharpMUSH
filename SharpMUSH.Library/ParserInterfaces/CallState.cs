@@ -1,8 +1,14 @@
 ﻿namespace SharpMUSH.Library.ParserInterfaces;
 
-public record CallState(MString? Message, int Depth = 0, string[]? Arguments = null)
+public record CallState(MString? Message, int Depth, MString[]? Arguments)
 {
-	public CallState(string Message, int Depth = 0) : this(MModule.single(Message ?? string.Empty), Depth) { }
+	public CallState(MString? Message, int Depth) : this(Message ?? MModule.empty(), Depth, null) { }
 
-	public static CallState EmptyArgument = new CallState(string.Empty, 0) with { Arguments = [] };
+	public CallState(MString? Message) : this(Message ?? MModule.empty(), 0, null) { }
+
+	public CallState(string Message) : this(Message is not null ? MModule.single(Message) : MModule.empty(), 0, null) { }
+	
+	public CallState(string Message, int Depth) : this(Message is not null ? MModule.single(Message) : MModule.empty(), Depth, null) { }
+
+	public static CallState EmptyArgument = new CallState(MModule.empty(), 0) with { Arguments = [] };
 }

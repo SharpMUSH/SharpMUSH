@@ -79,26 +79,26 @@ public class MUSHCodeParser(
 		this(passwordService, permissionService, database, notifyService, queueService, connectionService)
 		=> State = [state];
 
-	public CallState? FunctionParse(string text)
+	public CallState? FunctionParse(MString text)
 	{
-		AntlrInputStreamSpan inputStream = new(text);
+		AntlrInputStreamSpan inputStream = new(MModule.plainText(text));
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
 		SharpMUSHParser sharpParser = new(commonTokenStream);
 		SharpMUSHParser.PlainStringContext chatContext = sharpParser.plainString();
-		SharpMUSHParserVisitor visitor = new(this);
+		SharpMUSHParserVisitor visitor = new(this,text);
 
 		return visitor.Visit(chatContext);
 	}
 
-	public CallState? CommandListParse(string text)
+	public CallState? CommandListParse(MString text)
 	{
-		AntlrInputStreamSpan inputStream = new(text);
+		AntlrInputStreamSpan inputStream = new(MModule.plainText(text));
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
 		SharpMUSHParser sharpParser = new(commonTokenStream);
 		SharpMUSHParser.CommandListContext chatContext = sharpParser.commandList();
-		SharpMUSHParserVisitor visitor = new(this);
+		SharpMUSHParserVisitor visitor = new(this,text);
 
 		return visitor.Visit(chatContext);
 	}
@@ -109,75 +109,75 @@ public class MUSHCodeParser(
 	/// <param name="handle">The handle that identifies the connection.</param>
 	/// <param name="text">The text to parse.</param>
 	/// <returns>A completed task.</returns>
-	public Task CommandParse(string handle, string text)
+	public Task CommandParse(string handle, MString text)
 	{
 		var handleId = ConnectionService.Get(handle);
 		State = State.Push(new ParserState(
 			new ([[]]),
 			null,
 			null,
-			text,
+			MModule.plainText(text),
 			[],
 			handleId?.Ref,
 			handleId?.Ref,
 			handleId?.Ref,
 			handle));
 
-		AntlrInputStreamSpan inputStream = new(text);
+		AntlrInputStreamSpan inputStream = new(MModule.plainText(text));
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
 		SharpMUSHParser sharpParser = new(commonTokenStream);
 		SharpMUSHParser.CommandContext chatContext = sharpParser.command();
-		SharpMUSHParserVisitor visitor = new(this);
+		SharpMUSHParserVisitor visitor = new(this,text);
 
 		visitor.Visit(chatContext);
 		return Task.CompletedTask;
 	}
 
-	public CallState? CommandCommaArgsParse(string text)
+	public CallState? CommandCommaArgsParse(MString text)
 	{
-		AntlrInputStreamSpan inputStream = new(text);
+		AntlrInputStreamSpan inputStream = new(MModule.plainText(text));
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
 		SharpMUSHParser sharpParser = new(commonTokenStream);
 		SharpMUSHParser.CommaCommandArgsContext chatContext = sharpParser.commaCommandArgs();
-		SharpMUSHParserVisitor visitor = new(this);
+		SharpMUSHParserVisitor visitor = new(this,text);
 
 		return visitor.Visit(chatContext);
 	}
 
-	public CallState? CommandSingleArgParse(string text)
+	public CallState? CommandSingleArgParse(MString text)
 	{
-		AntlrInputStreamSpan inputStream = new(text);
+		AntlrInputStreamSpan inputStream = new(MModule.plainText(text));
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
 		SharpMUSHParser sharpParser = new(commonTokenStream);
 		SharpMUSHParser.SingleCommandArgContext chatContext = sharpParser.singleCommandArg();
-		SharpMUSHParserVisitor visitor = new(this);
+		SharpMUSHParserVisitor visitor = new(this,text);
 
 		return visitor.Visit(chatContext);
 	}
 
-	public CallState? CommandEqSplitArgsParse(string text)
+	public CallState? CommandEqSplitArgsParse(MString text)
 	{
-		AntlrInputStreamSpan inputStream = new(text);
+		AntlrInputStreamSpan inputStream = new(MModule.plainText(text));
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
 		SharpMUSHParser sharpParser = new(commonTokenStream);
 		SharpMUSHParser.EqsplitCommandArgsContext chatContext = sharpParser.eqsplitCommandArgs();
-		SharpMUSHParserVisitor visitor = new(this);
+		SharpMUSHParserVisitor visitor = new(this,text);
 
 		return visitor.Visit(chatContext);
 	}
 
-	public CallState? CommandEqSplitParse(string text)
+	public CallState? CommandEqSplitParse(MString text)
 	{
-		AntlrInputStreamSpan inputStream = new(text);
+		AntlrInputStreamSpan inputStream = new(MModule.plainText(text));
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
 		SharpMUSHParser sharpParser = new(commonTokenStream);
 		SharpMUSHParser.EqsplitCommandContext chatContext = sharpParser.eqsplitCommand();
-		SharpMUSHParserVisitor visitor = new(this);
+		SharpMUSHParserVisitor visitor = new(this,text);
 
 		return visitor.Visit(chatContext);
 	}

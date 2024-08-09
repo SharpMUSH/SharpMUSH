@@ -20,7 +20,7 @@ namespace SharpMUSH.Tests.Functions
 			var parser = TestParser(
 				ds: database, 
 				pws: new PasswordService(new Microsoft.AspNetCore.Identity.PasswordHasher<string>()));
-			var result = parser.FunctionParse("pcreate(John,SomePassword)")?.Message?.ToString()!;
+			var result = parser.FunctionParse(MModule.single("pcreate(John,SomePassword)"))?.Message?.ToString()!;
 
 			var a = HelperFunctions.ParseDBRef(result).AsT1.Value;
 			var db = await database!.GetObjectNodeAsync(a);

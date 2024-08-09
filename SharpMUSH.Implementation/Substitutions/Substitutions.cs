@@ -45,7 +45,7 @@ public static partial class Substitutions
 	}
 
 	private static CallState HandleRegistrySymbol(CallState symbol, IMUSHCodeParser parser)
-		=> parser.CurrentState.Registers.Peek().TryGetValue(symbol.Message!.ToString().ToUpper(), out var value)
+		=> parser.CurrentState.Registers.Peek().TryGetValue(MModule.plainText(symbol.Message).ToUpper(), out var value)
 				? new CallState(value)
 				: new CallState(string.Empty);
 

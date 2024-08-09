@@ -42,7 +42,7 @@ public static partial class Commands
 	/// <param name="context">Command Context</param>
 	/// <param name="visitChildren">Parser function to visit children.</param>
 	/// <returns>An empty Call State</returns>
-	public static Option<CallState> EvaluateCommands(IMUSHCodeParser parser, CommandContext context,
+	public static Option<CallState> EvaluateCommands(IMUSHCodeParser parser, MString source, CommandContext context,
 		Func<IRuleNode, CallState?> visitChildren)
 	{
 		var firstCommandMatch = context.firstCommandMatch();
@@ -67,7 +67,7 @@ public static partial class Commands
 		if (socketCommandPattern.Any() &&
 				_commandLibrary.TryGetValue(command.ToUpper(), out var librarySocketCommandDefinition))
 		{
-			return HandleSocketCommandPattern(parser, context, command, socketCommandPattern, librarySocketCommandDefinition);
+			return HandleSocketCommandPattern(parser, source, context, command, socketCommandPattern, librarySocketCommandDefinition);
 		}
 
 		if (parser.CurrentState.Executor == null && parser.CurrentState.Handle != null)
@@ -84,7 +84,7 @@ public static partial class Commands
 
 		if (singleTokenCommandPattern.Any())
 		{
-			return HandleSingleTokenCommandPattern(parser, context, command, singleTokenCommandPattern);
+			return HandleSingleTokenCommandPattern(parser, source, context, command, singleTokenCommandPattern);
 		}
 
 		// Step 3: Check room Aliases
@@ -102,7 +102,7 @@ public static partial class Commands
 		if (_commandLibrary.TryGetValue(rootCommand.ToUpper(), out var libraryCommandDefinition)
 			&& !rootCommand.Equals("HUH_COMMAND", StringComparison.CurrentCultureIgnoreCase))
 		{
-			return HandleInternalCommandPattern(parser, context, rootCommand, libraryCommandDefinition);
+			return HandleInternalCommandPattern(parser, source, context, rootCommand, libraryCommandDefinition);
 		}
 
 		// Step 6: Check @attribute setting
@@ -130,9 +130,9 @@ public static partial class Commands
 		return huhCommand;
 	}
 
-	private static Option<CallState> HandleInternalCommandPattern(IMUSHCodeParser parser, CommandContext context, string rootCommand, (SharpCommandAttribute Attribute, Func<IMUSHCodeParser, Option<CallState>> Function) libraryCommandDefinition)
+	private static Option<CallState> HandleInternalCommandPattern(IMUSHCodeParser parser, MString source, CommandContext context, string rootCommand, (SharpCommandAttribute Attribute, Func<IMUSHCodeParser, Option<CallState>> Function) libraryCommandDefinition)
 	{
-		var arguments = ArgumentSplit(parser, context, libraryCommandDefinition);
+		var arguments = ArgumentSplit(parser, source, context, libraryCommandDefinition);
 
 		var result = libraryCommandDefinition.Function.Invoke(
 			parser.Push(parser.CurrentState with
@@ -146,9 +146,9 @@ public static partial class Commands
 		return result;
 	}
 
-	private static Option<CallState> HandleSocketCommandPattern(IMUSHCodeParser parser, CommandContext context, string command, IEnumerable<KeyValuePair<string, (SharpCommandAttribute Attribute, Func<IMUSHCodeParser, Option<CallState>> Function)>> socketCommandPattern, (SharpCommandAttribute Attribute, Func<IMUSHCodeParser, Option<CallState>> Function) librarySocketCommandDefinition)
+	private static Option<CallState> HandleSocketCommandPattern(IMUSHCodeParser parser, MString source, CommandContext context, string command, IEnumerable<KeyValuePair<string, (SharpCommandAttribute Attribute, Func<IMUSHCodeParser, Option<CallState>> Function)>> socketCommandPattern, (SharpCommandAttribute Attribute, Func<IMUSHCodeParser, Option<CallState>> Function) librarySocketCommandDefinition)
 	{
-		var arguments = ArgumentSplit(parser, context, librarySocketCommandDefinition);
+		var arguments = ArgumentSplit(parser, source, context, librarySocketCommandDefinition);
 
 		// Run as Socket Command. 
 		var result = socketCommandPattern.First().Value.Function.Invoke(parser.Push(
@@ -158,12 +158,12 @@ public static partial class Commands
 		return result;
 	}
 
-	private static Option<CallState> HandleSingleTokenCommandPattern(IMUSHCodeParser parser, CommandContext context, string command, IEnumerable<KeyValuePair<string, (SharpCommandAttribute Attribute, Func<IMUSHCodeParser, Option<CallState>> Function)>> singleTokenCommandPattern)
+	private static Option<CallState> HandleSingleTokenCommandPattern(IMUSHCodeParser parser, MString source, CommandContext context, string command, IEnumerable<KeyValuePair<string, (SharpCommandAttribute Attribute, Func<IMUSHCodeParser, Option<CallState>> Function)>> singleTokenCommandPattern)
 	{
 		var singleRootCommand = command[..1];
 		var rest = command[1..];
 		var singleLibraryCommandDefinition = singleTokenCommandPattern.Single().Value;
-		var arguments = ArgumentSplit(parser, context, singleLibraryCommandDefinition);
+		var arguments = ArgumentSplit(parser, source, context, singleLibraryCommandDefinition);
 
 		var result = singleLibraryCommandDefinition.Function.Invoke(parser.Push(
 			parser.CurrentState with { Command = singleRootCommand, Arguments = [new CallState(rest), .. arguments], Function = null }));
@@ -172,7 +172,7 @@ public static partial class Commands
 		return result;
 	}
 
-	private static List<CallState> ArgumentSplit(IMUSHCodeParser parser, CommandContext context,
+	private static List<CallState> ArgumentSplit(IMUSHCodeParser parser, MString source, CommandContext context,
 		(SharpCommandAttribute Attribute, Func<IMUSHCodeParser, Option<CallState>> Function) libraryCommandDefinition)
 	{
 		var argCallState = CallState.EmptyArgument;
@@ -180,18 +180,25 @@ public static partial class Commands
 		// command (space) argument(s)
 		if (context.children.Count > 1)
 		{
+			var start = context.evaluationString().Start.StartIndex;
+			var len = context.evaluationString().Stop.StopIndex - context.evaluationString().Start.StartIndex + 1;
+
 			argCallState = libraryCommandDefinition.Attribute.Behavior switch
 			{
 				// command arg0 = arg1,still arg 1 
 				Definitions.CommandBehavior.EqSplit | Definitions.CommandBehavior.RSArgs
-					=> parser.CommandEqSplitArgsParse(context.children[2].GetText()),
+					=> parser.CommandEqSplitArgsParse(
+						MModule.substring(start, len, source)),
 				// command arg0 = arg1,arg2
 				Definitions.CommandBehavior.EqSplit
-					=> parser.CommandEqSplitParse(context.children[2].GetText())!,
+					=> parser.CommandEqSplitParse(
+						MModule.substring(start, len, source)),
 				// Command arg0,arg1,arg2,arg
 				Definitions.CommandBehavior.RSArgs
-					=> parser.CommandCommaArgsParse(context.children[2].GetText())!,
-				_ => parser.CommandSingleArgParse(context.children[2].GetText())!
+					=> parser.CommandCommaArgsParse(
+						MModule.substring(start, len, source)),
+				_ => parser.CommandSingleArgParse(
+						MModule.substring(start, len, source))
 			};
 		}
 
@@ -209,8 +216,8 @@ public static partial class Commands
 		if (eqSplit)
 		{
 			arguments.Add(noParse
-				? new CallState(argCallState.Arguments!.FirstOrDefault() ?? string.Empty, argCallState.Depth)
-				: parser.FunctionParse(argCallState.Arguments!.FirstOrDefault() ?? string.Empty)!);
+				? new CallState(argCallState.Arguments!.FirstOrDefault() ?? MModule.empty(), argCallState.Depth)
+				: parser.FunctionParse(argCallState.Arguments!.FirstOrDefault() ?? MModule.empty())!);
 
 			if (nArgs > 1)
 			{

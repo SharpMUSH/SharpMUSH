@@ -10,6 +10,7 @@ public class FunctionUnitTests : BaseUnitTest
 	[DataRow("strcat(foo\\\\,dog)", "foo\\dog")]
 	[DataRow("strcat(foo,-dog)", "foo-dog")]
 	[DataRow("\\t", "t")]
+	[DataRow("add(1,5)","6")]
 	[DataRow("add(1,add(2,3),add(2,2))", "10")]
 	[DataRow("add(1,2)[add(5,5)]", "310")]
 	[DataRow("add(1,2)[add(5,5)]word()", "310word()")]
@@ -17,7 +18,7 @@ public class FunctionUnitTests : BaseUnitTest
 	{
 		Console.WriteLine("Testing: {0}", str);
 		var parser = TestParser();
-		var result = parser.FunctionParse(str)?.Message?.ToString();
+		var result = parser.FunctionParse(MModule.single(str))?.Message?.ToString();
 
 		Console.WriteLine(string.Join("", result));
 

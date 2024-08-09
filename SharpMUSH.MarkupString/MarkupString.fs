@@ -59,6 +59,15 @@ module MarkupStringModule =
           match markupStr.MarkupDetails with
           | MarkedupText m -> markupStr.MarkupDetails
           | _ -> find markupStr.Content
+          
+      // TODO: A version of GetText that creates a new ASCII type string and compresses in the Markup Information.
+      let toConvertableString (markupStr: MarkupString) : string = 
+        getText(markupStr, Empty) 
+
+      // TODO: This should decompile the string into a valid MarkupString, assuming it's a valid string.
+      // TODO: Preferably this would use some sort of simple parser.
+      let fromConvertableString(markupString: string) : MarkupString =
+        MarkupString(Empty, [Text markupString])
 
       member val MarkupDetails = markupDetails with get, set
       member val Content = content with get, set
@@ -113,6 +122,9 @@ module MarkupStringModule =
           | Text str :: tail -> loop tail (acc + str)
           | MarkupText mStr :: tail -> loop tail (loop mStr.Content acc)
       loop markupStr.Content System.String.Empty
+
+  let plainText2 (markupStr: MarkupString) : MarkupString = 
+      MarkupString(Empty, [Text (plainText markupStr)])
 
   [<TailCall>]
   let rec getLength (markupStr: MarkupString) : int =

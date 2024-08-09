@@ -20,7 +20,7 @@ namespace SharpMUSH.Tests.Functions
 			Console.WriteLine("Testing: {0}", str);
 
 			var parser = TestParser();
-			var result = parser.FunctionParse(str)?.Message!;
+			var result = parser.FunctionParse(MModule.single(str))?.Message!;
 
 			var color = StringExtensions.ansiBytes(expectedBytes);
 			var markup = MarkupString.MarkupImplementation.AnsiMarkup.Create(foreground: color);
@@ -40,7 +40,7 @@ namespace SharpMUSH.Tests.Functions
 			Console.WriteLine("Testing: {0}", str);
 
 			var parser = TestParser();
-			var result = parser.FunctionParse(str)?.Message!;
+			var result = parser.FunctionParse(MModule.single(str))?.Message!;
 
 			var color = StringExtensions.ansiBytes(expectedByte);
 			var markup = MarkupString.MarkupImplementation.AnsiMarkup.Create(background: color);

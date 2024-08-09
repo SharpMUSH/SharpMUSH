@@ -29,7 +29,7 @@ namespace SharpMUSH.Tests.Substitutions
 		{
 			Console.WriteLine("Testing: {0}", str);
 			var parser = TestParser();
-			await parser.CommandParse("1", str);
+			await parser.CommandParse("1", MModule.single(str));
 
 			await parser.NotifyService
 				.Received(Quantity.Exactly(1))
