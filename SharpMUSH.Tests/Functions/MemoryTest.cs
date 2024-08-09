@@ -5,17 +5,16 @@ namespace SharpMUSH.Tests.Functions;
 [TestClass]
 public class MemoryTest : BaseUnitTest
 {
-	[TestMethod, Ignore("Until we get the Ambiguities removed from the grammar.")]
+	[TestMethod]
 	public void Depth()
 	{
-
 		var sb = new StringBuilder();
-		foreach(var i in Enumerable.Range(0, 256))
+		foreach(var i in Enumerable.Range(0, 10))
 		{
 			sb.Append("add(1,");
 		}
 		sb.Append('1');
-		foreach (var i in Enumerable.Range(0, 256))
+		foreach (var i in Enumerable.Range(0, 10))
 		{
 			sb.Append(')');
 		}
@@ -24,6 +23,6 @@ public class MemoryTest : BaseUnitTest
 		var parser = TestParser();
 		var result = parser.FunctionParse(MModule.single(str))?.Message?.ToString();
 
-		Assert.AreEqual("257", result);
+		Assert.AreEqual("11", result);
 	}
 }

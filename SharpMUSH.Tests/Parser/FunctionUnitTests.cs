@@ -8,7 +8,7 @@ public class FunctionUnitTests : BaseUnitTest
 	[DataRow("strcat(strcat(dog)", "strcat(dog")]
 	[DataRow("strcat(foo\\,dog)", "foo,dog")]
 	[DataRow("strcat(foo\\\\,dog)", "foo\\dog")]
-	[DataRow("strcat(foo,-dog)", "foo-dog")]
+	[DataRow("strcat(foo,-dog))", "foo-dog)")]
 	[DataRow("\\t", "t")]
 	[DataRow("add(1,5)","6")]
 	[DataRow("add(1,add(2,3),add(2,2))", "10")]

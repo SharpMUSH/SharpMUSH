@@ -7,9 +7,7 @@ options {
 /*
  * Parser Rules  
  * TODO: Support {} behavior in functions and commands.
- * TODO: Allow Whitespace around specific characters without impacting things.
  */
-
 singleCommandString
     : command EOF
     ;
@@ -52,21 +50,21 @@ plainString
     ;
 
 evaluationString 
-    : OBRACE evaluationString CBRACE
-    | function explicitEvaluationString*?
+    : function explicitEvaluationString*?
     | explicitEvaluationString
     ;
+
 explicitEvaluationString
-    : OBRACE explicitEvaluationString CBRACE
-    | explicitEvaluationStringSubstitution explicitEvaluationString*?
+    : OBRACE explicitEvaluationString CBRACE explicitEvaluationString*?
     | explicitEvaluationStringFunction explicitEvaluationString*?
+    | explicitEvaluationStringSubstitution explicitEvaluationString*?
     | explicitEvaluationText explicitEvaluationString*?
     ;
 explicitEvaluationStringSubstitution
     : PERCENT validSubstitution
     ;
 explicitEvaluationStringFunction
-    : OBRACK function CBRACK
+    : OBRACK evaluationString CBRACK
     ;
 explicitEvaluationText
     : genericText
@@ -119,9 +117,9 @@ substitutionSymbol
 genericText 
     : escapedText
     | ansi
-    | OTHER
     | .
     ;
+
 escapedText
     : ESCAPE UNESCAPE
     | ESCAPE ESCAPING_OTHER
