@@ -4,6 +4,10 @@ options {
     tokenVocab=SharpMUSHLexer; 
 }
 
+@parser::members {
+    private int inFunction = 0;
+}
+
 /*
  * Parser Rules  
  * TODO: Support {} behavior in functions and commands.
@@ -73,7 +77,7 @@ funName  // TODO: A Substitution can be inside of a funName to create a function
     : FUNCHAR
     ;
 function 
-    : funName OPARENWS (funArguments)? CPAREN
+    : funName {++inFunction; } OPARENWS (funArguments)? CPAREN {--inFunction;}
     ;
 funArguments
     : evaluationString (COMMAWS evaluationString)*?
@@ -118,7 +122,7 @@ substitutionSymbol
 genericText 
     : escapedText
     | ansi
-    | .
+    | ({inFunction > 0}? ~COMMAWS | {inFunction == 0}? .)
     ;
 
 escapedText
