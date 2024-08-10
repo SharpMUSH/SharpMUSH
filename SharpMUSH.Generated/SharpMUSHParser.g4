@@ -113,6 +113,7 @@ substitutionSymbol
     | INVOCATION_DEPTH    
     | EQUALS
     | CURRENT_ARG_COUNT
+    | OTHER_SUB
     ;
 genericText 
     : escapedText

@@ -3,7 +3,7 @@ lexer grammar SharpMUSHLexer;
 /*
  * Lexer Rules   
  */
- 
+
 OPARENWS: '(' [ \r\n\f\t]*;
 ESCAPE: '\\' -> pushMode(ESCAPING);
 OBRACK: '[';
@@ -51,6 +51,7 @@ INVOCATION_DEPTH: '?' -> popMode;
 CURRENT_ARG_COUNT: '+' -> popMode;
 ITEXT_NUM: [iI][0-9]+ -> popMode;
 STEXT_NUM: '$'[0-9]+ -> popMode;
+OTHER_SUB: . -> popMode;
 
 // --------------- ESCAPING MODE -----------------
 mode ESCAPING; 
