@@ -34,7 +34,7 @@ namespace SharpMUSH.Implementation.Visitors
 
 		public override CallState? VisitFunction([NotNull] SharpMUSHParser.FunctionContext context)
 		{
-			var functionName = context.funName().GetText();
+			var functionName = context.funName().GetText().TrimEnd()[..^1];
 			var arguments = context.funArguments()?.evaluationString()?
 				.Select(x => new CallState(MModule.substring(x.Start.StartIndex, context.Stop?.StopIndex == null ? 0 : (x.Stop.StopIndex - x.Start.StartIndex + 1), source), context.Depth()))
 				?? [new(MModule.empty(), context.Depth())];

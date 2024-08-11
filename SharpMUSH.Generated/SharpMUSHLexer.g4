@@ -4,7 +4,9 @@ lexer grammar SharpMUSHLexer;
  * Lexer Rules   
  */
 
-OPARENWS: '(' [ \r\n\f\t]*;
+fragment WS:  [ \r\n\f\t]*;
+
+// OPARENWS: '(' WS;
 ESCAPE: '\\' -> pushMode(ESCAPING);
 OBRACK: '[';
 CBRACK: ']';
@@ -12,16 +14,14 @@ OBRACE: '{' -> skip;
 CBRACE: '}' -> skip;
 CPAREN: ')';
 CCARET: '>';
-COMMAWS: ',' [ \r\n\f\t]*;
+COMMAWS: ',' WS;
 EQUALS: '=';
 PERCENT: '%' -> pushMode(SUBSTITUTION);
 SEMICOLON: ';';
 COLON: ':';
 OANSI: '\u001B' -> pushMode(ANSI);
 RSPACE: ' ';
-FUNCHAR
-    : [a-zA-Z0-9]+ // Lazy way of indicating printable characters. There's more printable characters than this!
-    ;
+FUNCHAR: [a-zA-Z0-9]+ '(' WS; // Lazy way of indicating printable characters. There's more printable characters than this!
 OTHER: ~('\\'|'['|']'|'{'|'}'|'('|')'|'<'|'>'|','|'='|'$'|'%'|';'|':'|'\u001B'|' ')+;
 
 // --------------- SUBSTITUTION MODE -------------

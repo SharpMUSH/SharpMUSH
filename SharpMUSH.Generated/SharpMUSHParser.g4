@@ -71,13 +71,13 @@ explicitEvaluationStringFunction
     : OBRACK evaluationString CBRACK
     ;
 explicitEvaluationText
-    : genericText
+    : genericText+?
     ;
 funName  // TODO: A Substitution can be inside of a funName to create a function name.
     : FUNCHAR
     ;
 function 
-    : funName {++inFunction; } OPARENWS (funArguments)? CPAREN {--inFunction;}
+    : funName {++inFunction; } (funArguments)? CPAREN {--inFunction;}
     ;
 funArguments
     : evaluationString (COMMAWS evaluationString)*?
