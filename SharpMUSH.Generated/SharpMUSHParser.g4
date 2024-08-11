@@ -59,25 +59,42 @@ evaluationString
     ;
 
 explicitEvaluationString
-    : OBRACE explicitEvaluationString CBRACE explicitEvaluationString*?
-    | explicitEvaluationStringFunction explicitEvaluationString*?
-    | explicitEvaluationStringSubstitution explicitEvaluationString*?
-    | explicitEvaluationText explicitEvaluationString*?
+    : explicitEvaluationStringContents;
+
+explicitEvaluationStringContents
+    : OBRACE explicitEvaluationString CBRACE explicitEvaluationStringContents2*?
+    | explicitEvaluationStringFunction explicitEvaluationStringContents2*?
+    | explicitEvaluationStringSubstitution explicitEvaluationStringContents2*?
+    | startExplicitEvaluationText explicitEvaluationStringContents2*?
     ;
+
+explicitEvaluationStringContents2
+    : OBRACE explicitEvaluationString CBRACE explicitEvaluationStringContents2*?
+    | explicitEvaluationStringFunction explicitEvaluationStringContents2*?
+    | explicitEvaluationStringSubstitution explicitEvaluationStringContents2*?
+    | explicitEvaluationText explicitEvaluationStringContents2*?
+    ;
+
 explicitEvaluationStringSubstitution
     : PERCENT validSubstitution
     ;
 explicitEvaluationStringFunction
     : OBRACK evaluationString CBRACK
     ;
+startExplicitEvaluationText
+    : startGenericText
+    ;
 explicitEvaluationText
     : genericText+?
     ;
 funName  // TODO: A Substitution can be inside of a funName to create a function name.
-    : FUNCHAR
+    : {++inFunction;} FUNCHAR
     ;
 function 
-    : funName {++inFunction; } (funArguments)? CPAREN {--inFunction;}
+    : funName (funArguments)? endFunction
+    ;
+endFunction
+    : {--inFunction;} CPAREN
     ;
 funArguments
     : evaluationString (COMMAWS evaluationString)*?
@@ -119,10 +136,20 @@ substitutionSymbol
     | CURRENT_ARG_COUNT
     | OTHER_SUB
     ;
+
 genericText 
     : escapedText
     | ansi
-    | ({inFunction > 0}? ~COMMAWS | {inFunction == 0}? .)
+    | OTHER
+    | {inFunction > 0}? ~COMMAWS
+    | {inFunction == 0}? .
+    ;
+startGenericText
+    : escapedText
+    | ansi
+    | OTHER
+    | {inFunction > 0}? ~FUNCHAR
+    | {inFunction == 0}? ~FUNCHAR
     ;
 
 escapedText

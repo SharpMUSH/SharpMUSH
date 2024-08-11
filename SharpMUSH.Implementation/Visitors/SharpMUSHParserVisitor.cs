@@ -55,6 +55,10 @@ namespace SharpMUSH.Implementation.Visitors
 			=> base.VisitChildren(context)
 					?? new(MModule.substring(context.Start.StartIndex, context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source), context.Depth());
 
+		public override CallState? VisitStartGenericText([NotNull] SharpMUSHParser.StartGenericTextContext context)
+			=> base.VisitChildren(context)
+					?? new(MModule.substring(context.Start.StartIndex, context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source), context.Depth());
+
 		public override CallState? VisitValidSubstitution([NotNull] SharpMUSHParser.ValidSubstitutionContext context)
 		{
 			var textContents = MModule.single(context.GetText());

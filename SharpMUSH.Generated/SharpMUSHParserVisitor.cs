@@ -104,6 +104,18 @@ public interface ISharpMUSHParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitExplicitEvaluationString([NotNull] SharpMUSHParser.ExplicitEvaluationStringContext context);
 	/// <summary>
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.explicitEvaluationStringContents"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitExplicitEvaluationStringContents([NotNull] SharpMUSHParser.ExplicitEvaluationStringContentsContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.explicitEvaluationStringContents2"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitExplicitEvaluationStringContents2([NotNull] SharpMUSHParser.ExplicitEvaluationStringContents2Context context);
+	/// <summary>
 	/// Visit a parse tree produced by <see cref="SharpMUSHParser.explicitEvaluationStringSubstitution"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
@@ -115,6 +127,12 @@ public interface ISharpMUSHParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	Result VisitExplicitEvaluationStringFunction([NotNull] SharpMUSHParser.ExplicitEvaluationStringFunctionContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.startExplicitEvaluationText"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitStartExplicitEvaluationText([NotNull] SharpMUSHParser.StartExplicitEvaluationTextContext context);
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="SharpMUSHParser.explicitEvaluationText"/>.
 	/// </summary>
@@ -133,6 +151,12 @@ public interface ISharpMUSHParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	Result VisitFunction([NotNull] SharpMUSHParser.FunctionContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.endFunction"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitEndFunction([NotNull] SharpMUSHParser.EndFunctionContext context);
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="SharpMUSHParser.funArguments"/>.
 	/// </summary>
@@ -163,6 +187,12 @@ public interface ISharpMUSHParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	Result VisitGenericText([NotNull] SharpMUSHParser.GenericTextContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.startGenericText"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitStartGenericText([NotNull] SharpMUSHParser.StartGenericTextContext context);
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="SharpMUSHParser.escapedText"/>.
 	/// </summary>
