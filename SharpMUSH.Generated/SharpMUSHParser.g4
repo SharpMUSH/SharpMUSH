@@ -140,13 +140,13 @@ substitutionSymbol
 genericText 
     : escapedText
     | ansi
-    | {inFunction > 0}? ~COMMAWS
+    | {inFunction > 0}? ~(COMMAWS|CPAREN)
     | {inFunction == 0}? .
     ;
 startGenericText
     : escapedText
     | ansi
-    | {inFunction > 0}? ~FUNCHAR
+    | {inFunction > 0}? ~(FUNCHAR|CPAREN)
     | {inFunction == 0}? ~FUNCHAR
     ;
 
