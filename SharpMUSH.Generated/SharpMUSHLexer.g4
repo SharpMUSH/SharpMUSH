@@ -1,10 +1,13 @@
+
+
+
 lexer grammar SharpMUSHLexer;
 
 /*
  * Lexer Rules   
  */
 
-fragment WS:  [ \r\n\f\t]*;
+fragment WS: [ \r\n\f\t]*;
 
 // OPARENWS: '(' WS;
 ESCAPE: '\\' -> pushMode(ESCAPING);
@@ -21,7 +24,9 @@ SEMICOLON: ';';
 COLON: ':';
 OANSI: '\u001B' -> pushMode(ANSI);
 RSPACE: ' ';
-FUNCHAR: [a-zA-Z0-9]+ '(' WS; // Lazy way of indicating printable characters. There's more printable characters than this!
+FUNCHAR:
+    [a-zA-Z0-9]+ '(' WS
+; // Lazy way of indicating printable characters. There's more printable characters than this!
 OTHER: .;
 
 // --------------- SUBSTITUTION MODE -------------
@@ -29,7 +34,7 @@ mode SUBSTITUTION;
 REG_STARTCARET: [qQ]'<' -> popMode;
 REG_NUM: [qQ][0-9] -> popMode;
 VWX: [vwxVWX][a-zA-Z] -> popMode;
-ARG_NUM: [0-9] -> popMode; 
+ARG_NUM: [0-9] -> popMode;
 SPACE: [bB] -> popMode;
 BLANKLINE: [rR] -> popMode;
 TAB: [tT] -> popMode;
@@ -50,11 +55,11 @@ LASTCOMMAND_AFTER_EVAL: [uU] -> popMode;
 INVOCATION_DEPTH: '?' -> popMode;
 CURRENT_ARG_COUNT: '+' -> popMode;
 ITEXT_NUM: [iI][0-9]+ -> popMode;
-STEXT_NUM: '$'[0-9]+ -> popMode;
+STEXT_NUM: '$' [0-9]+ -> popMode;
 OTHER_SUB: . -> popMode;
 
 // --------------- ESCAPING MODE -----------------
-mode ESCAPING; 
+mode ESCAPING;
 ANY: . -> popMode;
 
 // --------------- ANSI MODE ---------------------
