@@ -72,55 +72,45 @@ explicitEvaluationString
 
 explicitEvaluationStringContents
     : OBRACE explicitEvaluationString CBRACE explicitEvaluationStringContentsConcatenated?
-    | explicitEvaluationStringFunction explicitEvaluationStringContentsConcatenated?
-    | explicitEvaluationStringSubstitution explicitEvaluationStringContentsConcatenated?
-    | startExplicitEvaluationText explicitEvaluationStringContentsConcatenated?
+    | OBRACK evaluationString CBRACK explicitEvaluationStringContentsConcatenated?
+    | PERCENT validSubstitution explicitEvaluationStringContentsConcatenated?
+    | startGenericText explicitEvaluationStringContentsConcatenated?
     ;
 
 explicitEvaluationStringContentsConcatenated
     : OBRACE explicitEvaluationString CBRACE explicitEvaluationStringContentsConcatenated?
-    | explicitEvaluationStringFunction explicitEvaluationStringContentsConcatenated?
-    | explicitEvaluationStringSubstitution explicitEvaluationStringContentsConcatenated?
-    | explicitEvaluationText explicitEvaluationStringContentsConcatenated?
+    | OBRACK evaluationString CBRACK explicitEvaluationStringContentsConcatenated?
+    | PERCENT validSubstitution explicitEvaluationStringContentsConcatenated?
+    | genericText+? explicitEvaluationStringContentsConcatenated?
     ;
 
-explicitEvaluationStringSubstitution
-    : PERCENT validSubstitution
-    ;
-explicitEvaluationStringFunction
-    : OBRACK evaluationString CBRACK
-    ;
-startExplicitEvaluationText
-    : startGenericText
-    ;
-explicitEvaluationText
-    : genericText+?
-    ;
 funName  // TODO: A Substitution can be inside of a funName to create a function name.
     : FUNCHAR {++inFunction;} 
     ;
+
 function 
-    : funName (funArguments)? endFunction
+    : funName (funArguments)? CPAREN {--inFunction;} 
     ;
-endFunction
-    : CPAREN {--inFunction;} 
-    ;
+
 funArguments
     : evaluationString (COMMAWS evaluationString)*?
     ;
+
 validSubstitution
     : complexSubstitutionSymbol
     | substitutionSymbol
     ;
+
 complexSubstitutionSymbol
-    : REG_STARTCARET {lookingForRegisterCaret = true;} explicitEvaluationString*? CCARET {lookingForRegisterCaret = false;}
+    : (REG_STARTCARET {lookingForRegisterCaret = true;} explicitEvaluationString*? CCARET {lookingForRegisterCaret = false;}
     | REG_NUM
     | ITEXT_NUM
     | STEXT_NUM
-    | VWX
+    | VWX)
     ;
+
 substitutionSymbol
-    : SPACE
+    : (SPACE
     | BLANKLINE
     | TAB
     | COLON
@@ -143,7 +133,7 @@ substitutionSymbol
     | INVOCATION_DEPTH    
     | EQUALS
     | CURRENT_ARG_COUNT
-    | OTHER_SUB
+    | OTHER_SUB)
     ;
 
 genericText 
@@ -152,6 +142,7 @@ genericText
     | awareGenericText
     | (FUNCHAR|COLON|OTHER)
     ;
+    
 startGenericText
     : escapedText
     | ansi
