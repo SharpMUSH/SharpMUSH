@@ -87,7 +87,7 @@ public class MUSHCodeParser(
 		SharpMUSHParser sharpParser = new(commonTokenStream);
 		sharpParser.AddErrorListener(new DiagnosticErrorListener());
 		sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL_EXACT_AMBIG_DETECTION;
-		SharpMUSHParser.PlainStringContext chatContext = sharpParser.plainString();
+		SharpMUSHParser.StartPlainStringContext chatContext = sharpParser.startPlainString();
 		SharpMUSHParserVisitor visitor = new(this,text);
 
 		return visitor.Visit(chatContext);
@@ -99,7 +99,7 @@ public class MUSHCodeParser(
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
 		SharpMUSHParser sharpParser = new(commonTokenStream);
-		SharpMUSHParser.CommandStringContext chatContext = sharpParser.commandString();
+		SharpMUSHParser.StartCommandStringContext chatContext = sharpParser.startCommandString();
 		SharpMUSHParserVisitor visitor = new(this,text);
 
 		return visitor.Visit(chatContext);
@@ -129,7 +129,7 @@ public class MUSHCodeParser(
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
 		SharpMUSHParser sharpParser = new(commonTokenStream);
-		SharpMUSHParser.SingleCommandStringContext chatContext = sharpParser.singleCommandString();
+		SharpMUSHParser.StartSingleCommandStringContext chatContext = sharpParser.startSingleCommandString();
 		SharpMUSHParserVisitor visitor = new(this,text);
 
 		visitor.Visit(chatContext);
@@ -154,7 +154,7 @@ public class MUSHCodeParser(
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
 		SharpMUSHParser sharpParser = new(commonTokenStream);
-		SharpMUSHParser.PlainSingleCommandArgContext chatContext = sharpParser.plainSingleCommandArg();
+		SharpMUSHParser.StartPlainSingleCommandArgContext chatContext = sharpParser.startPlainSingleCommandArg();
 		SharpMUSHParserVisitor visitor = new(this,text);
 
 		return visitor.Visit(chatContext);
@@ -166,7 +166,7 @@ public class MUSHCodeParser(
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
 		SharpMUSHParser sharpParser = new(commonTokenStream);
-		SharpMUSHParser.EqsplitCommandArgsContext chatContext = sharpParser.eqsplitCommandArgs();
+		SharpMUSHParser.StartEqSplitCommandArgsContext chatContext = sharpParser.startEqSplitCommandArgs();
 		SharpMUSHParserVisitor visitor = new(this,text);
 
 		return visitor.Visit(chatContext);
@@ -178,7 +178,7 @@ public class MUSHCodeParser(
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
 		SharpMUSHParser sharpParser = new(commonTokenStream);
-		SharpMUSHParser.EqsplitCommandContext chatContext = sharpParser.eqsplitCommand();
+		SharpMUSHParser.StartEqSplitCommandContext chatContext = sharpParser.startEqSplitCommand();
 		SharpMUSHParserVisitor visitor = new(this,text);
 
 		return visitor.Visit(chatContext);

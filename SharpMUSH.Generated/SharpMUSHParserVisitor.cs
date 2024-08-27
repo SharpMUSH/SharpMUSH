@@ -32,17 +32,47 @@ using IToken = Antlr4.Runtime.IToken;
 [System.CLSCompliant(false)]
 public interface ISharpMUSHParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="SharpMUSHParser.singleCommandString"/>.
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.startSingleCommandString"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitSingleCommandString([NotNull] SharpMUSHParser.SingleCommandStringContext context);
+	Result VisitStartSingleCommandString([NotNull] SharpMUSHParser.StartSingleCommandStringContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="SharpMUSHParser.commandString"/>.
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.startCommandString"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitCommandString([NotNull] SharpMUSHParser.CommandStringContext context);
+	Result VisitStartCommandString([NotNull] SharpMUSHParser.StartCommandStringContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.startPlainCommaCommandArgs"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitStartPlainCommaCommandArgs([NotNull] SharpMUSHParser.StartPlainCommaCommandArgsContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.startEqSplitCommandArgs"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitStartEqSplitCommandArgs([NotNull] SharpMUSHParser.StartEqSplitCommandArgsContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.startEqSplitCommand"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitStartEqSplitCommand([NotNull] SharpMUSHParser.StartEqSplitCommandContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.startPlainSingleCommandArg"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitStartPlainSingleCommandArg([NotNull] SharpMUSHParser.StartPlainSingleCommandArgContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.startPlainString"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitStartPlainString([NotNull] SharpMUSHParser.StartPlainStringContext context);
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="SharpMUSHParser.commandList"/>.
 	/// </summary>
@@ -62,41 +92,17 @@ public interface ISharpMUSHParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitFirstCommandMatch([NotNull] SharpMUSHParser.FirstCommandMatchContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="SharpMUSHParser.eqsplitCommandArgs"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitEqsplitCommandArgs([NotNull] SharpMUSHParser.EqsplitCommandArgsContext context);
-	/// <summary>
-	/// Visit a parse tree produced by <see cref="SharpMUSHParser.eqsplitCommand"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitEqsplitCommand([NotNull] SharpMUSHParser.EqsplitCommandContext context);
-	/// <summary>
 	/// Visit a parse tree produced by <see cref="SharpMUSHParser.commaCommandArgs"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	Result VisitCommaCommandArgs([NotNull] SharpMUSHParser.CommaCommandArgsContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="SharpMUSHParser.plainSingleCommandArg"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitPlainSingleCommandArg([NotNull] SharpMUSHParser.PlainSingleCommandArgContext context);
-	/// <summary>
 	/// Visit a parse tree produced by <see cref="SharpMUSHParser.singleCommandArg"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	Result VisitSingleCommandArg([NotNull] SharpMUSHParser.SingleCommandArgContext context);
-	/// <summary>
-	/// Visit a parse tree produced by <see cref="SharpMUSHParser.plainString"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitPlainString([NotNull] SharpMUSHParser.PlainStringContext context);
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="SharpMUSHParser.evaluationString"/>.
 	/// </summary>

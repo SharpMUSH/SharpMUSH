@@ -14,17 +14,42 @@ options {
     private bool lookingForCommandArgCommas = false;
     private bool lookingForCommandArgEquals = false;
     private bool lookingForRegisterCaret = false;
+    private bool beginGenericText = false;
 }
 
 /*
  * Parser Rules  
  * TODO: Support {} behavior in functions and commands.
  */
-singleCommandString: command EOF;
 
-commandString:
+// Start a single command, as run by a player.
+startSingleCommandString: command EOF;
+
+// Start a command list, as run by an object.
+startCommandString:
     {inCommandList = true;} commandList EOF {inCommandList = false;}
 ;
+
+// Start looking for a pattern with comma separated arguments.
+startPlainCommaCommandArgs: commaCommandArgs EOF;
+
+// Start looking for a pattern with an '=' split, followed by comma separated arguments.
+startEqSplitCommandArgs:
+    singleCommandArg (EQUALS commaCommandArgs)? EOF
+;
+
+// Start looking for a pattern, with a '=' split, but without comma separated arguments.
+startEqSplitCommand:
+    {lookingForCommandArgEquals = true;} singleCommandArg (
+        EQUALS {lookingForCommandArgEquals = false;} singleCommandArg
+    )? EOF
+;
+
+// Start looking fora single-argument command value, by parsing the argument.
+startPlainSingleCommandArg: singleCommandArg EOF;
+
+// Start looking for a plain string. These may start with a function call.
+startPlainString: evaluationString EOF;
 
 commandList: command (SEMICOLON command)*?;
 
@@ -35,27 +60,13 @@ command:
 
 firstCommandMatch: {inCommandMatch = true;} evaluationString;
 
-eqsplitCommandArgs:
-    singleCommandArg (EQUALS commaCommandArgs)? EOF
-;
-
-eqsplitCommand:
-    {lookingForCommandArgEquals = true;} singleCommandArg (
-        EQUALS singleCommandArg
-    )? EOF {lookingForCommandArgEquals = false;}
-;
-
 commaCommandArgs:
     {lookingForCommandArgCommas = true;} singleCommandArg (
         COMMAWS singleCommandArg
-    )*? EOF {lookingForCommandArgCommas = false;}
+    )*? {lookingForCommandArgCommas = false;}
 ;
 
-plainSingleCommandArg: singleCommandArg EOF;
-
 singleCommandArg: evaluationString;
-
-plainString: evaluationString EOF;
 
 evaluationString:
     function explicitEvaluationString?
@@ -68,7 +79,8 @@ explicitEvaluationStringContents:
     OBRACE explicitEvaluationString CBRACE explicitEvaluationStringContentsConcatenated?
     | OBRACK evaluationString CBRACK explicitEvaluationStringContentsConcatenated?
     | PERCENT validSubstitution explicitEvaluationStringContentsConcatenated?
-    | startGenericText explicitEvaluationStringContentsConcatenated?
+    | {beginGenericText = true; } startGenericText {beginGenericText = false; }
+        explicitEvaluationStringContentsConcatenated?
 ;
 
 explicitEvaluationStringContentsConcatenated:
@@ -150,7 +162,9 @@ awareGenericText:
     | {!lookingForCommandArgCommas && inFunction == 0}? COMMAWS
     | {!lookingForCommandArgEquals}? EQUALS
     | {!lookingForRegisterCaret}? CCARET
+    | {!beginGenericText}? FUNCHAR
 ;
 
 escapedText: ESCAPE ANY;
+
 ansi: OANSI ANSICHARACTER? CANSI;

@@ -94,7 +94,7 @@ namespace SharpMUSH.Implementation.Visitors
 				x => x.Value);
 		}
 
-		public override CallState? VisitCommandString([NotNull] SharpMUSHParser.CommandStringContext context)
+		public override CallState? VisitStartCommandString([NotNull] SharpMUSHParser.StartCommandStringContext context)
 		{
 			var text = MModule.substring(context.Start.StartIndex, context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source);
 			Log.Logger.Information("VisitCommandString: {Text}", text);
@@ -110,7 +110,7 @@ namespace SharpMUSH.Implementation.Visitors
 			return children ?? new CallState(text, context.Depth());
 		}
 
-		public override CallState? VisitSingleCommandString([NotNull] SharpMUSHParser.SingleCommandStringContext context)
+		public override CallState? VisitStartSingleCommandString([NotNull] SharpMUSHParser.StartSingleCommandStringContext context)
 		{
 			var text = MModule.substring(context.Start.StartIndex, context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source);
 			Log.Logger.Information("VisitSingleCommandString: {Text}", text);
@@ -143,7 +143,7 @@ namespace SharpMUSH.Implementation.Visitors
 		/// </summary>
 		/// <param name="context">The parse tree.</param>
 		/// <return>The visitor result.</return>
-		public override CallState? VisitEqsplitCommandArgs([NotNull] SharpMUSHParser.EqsplitCommandArgsContext context)
+		public override CallState? VisitStartEqSplitCommandArgs([NotNull] SharpMUSHParser.StartEqSplitCommandArgsContext context)
 		{
 			var baseArg = base.VisitChildren(context.singleCommandArg());
 			var commaArgs = base.VisitChildren(context.commaCommandArgs());
@@ -160,7 +160,7 @@ namespace SharpMUSH.Implementation.Visitors
 		/// </summary>
 		/// <param name="context">The parse tree.</param>
 		/// <return>The visitor result.</return>
-		public override CallState? VisitEqsplitCommand([NotNull] SharpMUSHParser.EqsplitCommandContext context)
+		public override CallState? VisitStartEqSplitCommand([NotNull] SharpMUSHParser.StartEqSplitCommandContext context)
 		{
 			var baseArg = base.VisitChildren(context.singleCommandArg()[0]);
 			var rsArg = base.VisitChildren(context.singleCommandArg()[1]);
