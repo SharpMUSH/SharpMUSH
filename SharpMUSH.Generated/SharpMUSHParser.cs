@@ -1384,6 +1384,7 @@ public partial class SharpMUSHParser : Parser {
 				State = 204;
 				Match(CCARET);
 				lookingForRegisterCaret = false;
+				            
 				}
 				break;
 			case REG_NUM:
