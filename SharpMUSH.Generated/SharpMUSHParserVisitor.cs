@@ -116,11 +116,11 @@ public interface ISharpMUSHParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitExplicitEvaluationString([NotNull] SharpMUSHParser.ExplicitEvaluationStringContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="SharpMUSHParser.explicitEvaluationStringContentsConcatenated"/>.
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.explicitEvaluationStringConcatenatedRepeat"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitExplicitEvaluationStringContentsConcatenated([NotNull] SharpMUSHParser.ExplicitEvaluationStringContentsConcatenatedContext context);
+	Result VisitExplicitEvaluationStringConcatenatedRepeat([NotNull] SharpMUSHParser.ExplicitEvaluationStringConcatenatedRepeatContext context);
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="SharpMUSHParser.funName"/>.
 	/// </summary>

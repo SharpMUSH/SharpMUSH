@@ -74,24 +74,24 @@ evaluationString:
 ;
 
 explicitEvaluationString:
-    OBRACE explicitEvaluationString CBRACE explicitEvaluationStringContentsConcatenated?
-    | OBRACK evaluationString CBRACK explicitEvaluationStringContentsConcatenated?
-    | PERCENT validSubstitution explicitEvaluationStringContentsConcatenated?
-    | beginGenericText explicitEvaluationStringContentsConcatenated?
+    OBRACE explicitEvaluationString CBRACE explicitEvaluationStringConcatenatedRepeat*?
+    | OBRACK evaluationString CBRACK explicitEvaluationStringConcatenatedRepeat*?
+    | PERCENT validSubstitution explicitEvaluationStringConcatenatedRepeat*?
+    | beginGenericText explicitEvaluationStringConcatenatedRepeat*?
 ;
 
-explicitEvaluationStringContentsConcatenated:
-    OBRACE explicitEvaluationString CBRACE explicitEvaluationStringContentsConcatenated*
-    | OBRACK evaluationString CBRACK explicitEvaluationStringContentsConcatenated*
-    | PERCENT validSubstitution explicitEvaluationStringContentsConcatenated*
-    | genericText+ explicitEvaluationStringContentsConcatenated*
+explicitEvaluationStringConcatenatedRepeat: 
+OBRACE explicitEvaluationString CBRACE
+    | OBRACK evaluationString CBRACK
+    | PERCENT validSubstitution
+    | genericText
 ;
 
 funName:
     FUNCHAR {++inFunction;}
 ; // TODO: A Substitution can be inside of a funName to create a function name.
 
-function: funName (funArguments)? CPAREN {--inFunction;};
+function: funName funArguments?  {--inFunction;} CPAREN;
 
 funArguments: evaluationString (COMMAWS evaluationString)*?;
 
@@ -149,7 +149,7 @@ beginGenericText:
     | {!lookingForCommandArgCommas && inFunction == 0}? COMMAWS
     | {!lookingForCommandArgEquals}? EQUALS
     | {!lookingForRegisterCaret}? CCARET
-    | (COLON | OTHER+)
+    | (COLON | OTHER)
 ;
 
 escapedText: ESCAPE ANY;
