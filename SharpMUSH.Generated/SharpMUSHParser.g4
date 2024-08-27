@@ -81,7 +81,7 @@ explicitEvaluationStringContentsConcatenated:
     OBRACE explicitEvaluationString CBRACE explicitEvaluationStringContentsConcatenated*
     | OBRACK evaluationString CBRACK explicitEvaluationStringContentsConcatenated*
     | PERCENT validSubstitution explicitEvaluationStringContentsConcatenated*
-    | genericText+? explicitEvaluationStringContentsConcatenated*
+    | genericText+ explicitEvaluationStringContentsConcatenated*
 ;
 
 funName:
