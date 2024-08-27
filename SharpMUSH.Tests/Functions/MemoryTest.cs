@@ -22,7 +22,7 @@ public class MemoryTest : BaseUnitTest
 
 		var parser = TestParser();
 		var result = parser.FunctionParse(MModule.single(str))?.Message?.ToString();
-
+		
 		Assert.AreEqual("11", result);
 	}
 }
