@@ -78,10 +78,10 @@ explicitEvaluationString:
 ;
 
 explicitEvaluationStringContentsConcatenated:
-    OBRACE explicitEvaluationString CBRACE explicitEvaluationStringContentsConcatenated?
-    | OBRACK evaluationString CBRACK explicitEvaluationStringContentsConcatenated?
-    | PERCENT validSubstitution explicitEvaluationStringContentsConcatenated?
-    | genericText+? explicitEvaluationStringContentsConcatenated?
+    OBRACE explicitEvaluationString CBRACE explicitEvaluationStringContentsConcatenated*
+    | OBRACK evaluationString CBRACK explicitEvaluationStringContentsConcatenated*
+    | PERCENT validSubstitution explicitEvaluationStringContentsConcatenated*
+    | genericText+? explicitEvaluationStringContentsConcatenated*
 ;
 
 funName:
@@ -136,7 +136,7 @@ substitutionSymbol: (
 ;
 
 genericText:
-    beginGenericText 
+    beginGenericText
     | FUNCHAR
 ;
 
@@ -149,7 +149,7 @@ beginGenericText:
     | {!lookingForCommandArgCommas && inFunction == 0}? COMMAWS
     | {!lookingForCommandArgEquals}? EQUALS
     | {!lookingForRegisterCaret}? CCARET
-    | (COLON | OTHER)
+    | (COLON | OTHER+)
 ;
 
 escapedText: ESCAPE ANY;
