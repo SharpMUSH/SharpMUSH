@@ -52,7 +52,10 @@ startPlainString: evaluationString EOF;
 
 commandList: command (SEMICOLON command)*?;
 
-command: firstCommandMatch (RSPACE {inCommandMatch = false;} evaluationString)?
+command:
+    firstCommandMatch (
+        RSPACE {inCommandMatch = false;} evaluationString
+    )?
 ;
 
 firstCommandMatch: {inCommandMatch = true;} evaluationString;
@@ -70,7 +73,7 @@ evaluationString:
     | explicitEvaluationString
 ;
 
-explicitEvaluationString: 
+explicitEvaluationString:
     OBRACE explicitEvaluationString CBRACE explicitEvaluationStringContentsConcatenated?
     | OBRACK evaluationString CBRACK explicitEvaluationStringContentsConcatenated?
     | PERCENT validSubstitution explicitEvaluationStringContentsConcatenated?
@@ -135,10 +138,7 @@ substitutionSymbol: (
     )
 ;
 
-genericText:
-    beginGenericText
-    | FUNCHAR
-;
+genericText: beginGenericText | FUNCHAR;
 
 beginGenericText:
     escapedText
