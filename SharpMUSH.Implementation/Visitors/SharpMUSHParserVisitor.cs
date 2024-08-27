@@ -39,6 +39,7 @@ namespace SharpMUSH.Implementation.Visitors
 				.Select(x => new CallState(MModule.substring(x.Start.StartIndex, context.Stop?.StopIndex == null ? 0 : (x.Stop.StopIndex - x.Start.StartIndex + 1), source), context.Depth()))
 				?? [new(MModule.empty(), context.Depth())];
 
+			Log.Logger.Information("VisitFunction: Fun: {Text}, Args: {Args}", functionName, arguments.Select( x => x.Message!.ToString()));
 			var result = Functions.Functions.CallFunction(functionName.ToLower(), source, parser, context, arguments.ToList());
 			return result;
 		}
@@ -146,6 +147,7 @@ namespace SharpMUSH.Implementation.Visitors
 		{
 			var baseArg = base.VisitChildren(context.singleCommandArg());
 			var commaArgs = base.VisitChildren(context.commaCommandArgs());
+			Log.Logger.Information("VisitEqsplitCommandArgs: C1: {Text} - C2: {Text2}", baseArg?.ToString(), commaArgs?.ToString());
 			return new(null, context.Depth(), [baseArg!.Message!, .. commaArgs?.Arguments ?? []]);
 		}
 
@@ -162,6 +164,7 @@ namespace SharpMUSH.Implementation.Visitors
 		{
 			var baseArg = base.VisitChildren(context.singleCommandArg()[0]);
 			var rsArg = base.VisitChildren(context.singleCommandArg()[1]);
+			Log.Logger.Information("VisitEqsplitCommand: C1: {Text} - C2: {Text2}", baseArg?.ToString(), rsArg?.ToString());
 			return new(null, context.Depth(), [baseArg!.Message!, rsArg!.Message!]);
 		}
 

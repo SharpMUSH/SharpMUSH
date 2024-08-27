@@ -99,7 +99,7 @@ public class MUSHCodeParser(
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
 		SharpMUSHParser sharpParser = new(commonTokenStream);
-		SharpMUSHParser.CommandListContext chatContext = sharpParser.commandList();
+		SharpMUSHParser.CommandStringContext chatContext = sharpParser.commandString();
 		SharpMUSHParserVisitor visitor = new(this,text);
 
 		return visitor.Visit(chatContext);
@@ -129,7 +129,7 @@ public class MUSHCodeParser(
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
 		SharpMUSHParser sharpParser = new(commonTokenStream);
-		SharpMUSHParser.CommandContext chatContext = sharpParser.command();
+		SharpMUSHParser.SingleCommandStringContext chatContext = sharpParser.singleCommandString();
 		SharpMUSHParserVisitor visitor = new(this,text);
 
 		visitor.Visit(chatContext);
@@ -154,7 +154,7 @@ public class MUSHCodeParser(
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
 		SharpMUSHParser sharpParser = new(commonTokenStream);
-		SharpMUSHParser.SingleCommandArgContext chatContext = sharpParser.singleCommandArg();
+		SharpMUSHParser.PlainSingleCommandArgContext chatContext = sharpParser.plainSingleCommandArg();
 		SharpMUSHParserVisitor visitor = new(this,text);
 
 		return visitor.Visit(chatContext);

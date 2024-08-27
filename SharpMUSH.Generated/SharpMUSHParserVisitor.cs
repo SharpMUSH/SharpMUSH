@@ -80,6 +80,12 @@ public interface ISharpMUSHParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitCommaCommandArgs([NotNull] SharpMUSHParser.CommaCommandArgsContext context);
 	/// <summary>
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.plainSingleCommandArg"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitPlainSingleCommandArg([NotNull] SharpMUSHParser.PlainSingleCommandArgContext context);
+	/// <summary>
 	/// Visit a parse tree produced by <see cref="SharpMUSHParser.singleCommandArg"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
@@ -110,11 +116,11 @@ public interface ISharpMUSHParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitExplicitEvaluationStringContents([NotNull] SharpMUSHParser.ExplicitEvaluationStringContentsContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="SharpMUSHParser.explicitEvaluationStringContents2"/>.
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.explicitEvaluationStringContentsConcatenated"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitExplicitEvaluationStringContents2([NotNull] SharpMUSHParser.ExplicitEvaluationStringContents2Context context);
+	Result VisitExplicitEvaluationStringContentsConcatenated([NotNull] SharpMUSHParser.ExplicitEvaluationStringContentsConcatenatedContext context);
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="SharpMUSHParser.explicitEvaluationStringSubstitution"/>.
 	/// </summary>
@@ -193,6 +199,12 @@ public interface ISharpMUSHParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	Result VisitStartGenericText([NotNull] SharpMUSHParser.StartGenericTextContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.awareGenericText"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitAwareGenericText([NotNull] SharpMUSHParser.AwareGenericTextContext context);
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="SharpMUSHParser.escapedText"/>.
 	/// </summary>

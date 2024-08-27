@@ -6,6 +6,11 @@ options {
 
 @parser::members {
     private int inFunction = 0;
+    private bool inCommandMatch = false;
+    private bool inCommandList = false;
+    private bool lookingForCommandArgCommas = false;
+    private bool lookingForCommandArgEquals = false;
+    private bool lookingForRegisterCaret = false;
 }
 
 /*
@@ -17,7 +22,7 @@ singleCommandString
     ;
 
 commandString
-    : commandList EOF
+    : {inCommandList = true;} commandList EOF {inCommandList = false;}
     ;
 
 commandList
@@ -25,12 +30,12 @@ commandList
     ;
 
 command
-    : firstCommandMatch RSPACE evaluationString
+    : firstCommandMatch RSPACE {inCommandMatch = false;} evaluationString
     | firstCommandMatch
     ;
 
 firstCommandMatch
-    : evaluationString
+    : {inCommandMatch = true;} evaluationString
     ;
 
 eqsplitCommandArgs
@@ -38,11 +43,15 @@ eqsplitCommandArgs
     ;
     
 eqsplitCommand
-    : singleCommandArg (EQUALS singleCommandArg)? EOF
+    : {lookingForCommandArgEquals = true;} singleCommandArg (EQUALS singleCommandArg)? EOF {lookingForCommandArgEquals = false;}   
     ;
 
 commaCommandArgs
-    : singleCommandArg (COMMAWS singleCommandArg)*? EOF
+    : {lookingForCommandArgCommas = true;} singleCommandArg (COMMAWS singleCommandArg)*? EOF {lookingForCommandArgCommas = false;}
+    ;
+
+plainSingleCommandArg
+    : singleCommandArg EOF
     ;
 
 singleCommandArg
@@ -54,7 +63,7 @@ plainString
     ;
 
 evaluationString 
-    : function explicitEvaluationString*?
+    : function explicitEvaluationString?
     | explicitEvaluationString
     ;
 
@@ -62,17 +71,17 @@ explicitEvaluationString
     : explicitEvaluationStringContents;
 
 explicitEvaluationStringContents
-    : OBRACE explicitEvaluationString CBRACE explicitEvaluationStringContents2*?
-    | explicitEvaluationStringFunction explicitEvaluationStringContents2*?
-    | explicitEvaluationStringSubstitution explicitEvaluationStringContents2*?
-    | startExplicitEvaluationText explicitEvaluationStringContents2*?
+    : OBRACE explicitEvaluationString CBRACE explicitEvaluationStringContentsConcatenated?
+    | explicitEvaluationStringFunction explicitEvaluationStringContentsConcatenated?
+    | explicitEvaluationStringSubstitution explicitEvaluationStringContentsConcatenated?
+    | startExplicitEvaluationText explicitEvaluationStringContentsConcatenated?
     ;
 
-explicitEvaluationStringContents2
-    : OBRACE explicitEvaluationString CBRACE explicitEvaluationStringContents2*?
-    | explicitEvaluationStringFunction explicitEvaluationStringContents2*?
-    | explicitEvaluationStringSubstitution explicitEvaluationStringContents2*?
-    | explicitEvaluationText explicitEvaluationStringContents2*?
+explicitEvaluationStringContentsConcatenated
+    : OBRACE explicitEvaluationString CBRACE explicitEvaluationStringContentsConcatenated?
+    | explicitEvaluationStringFunction explicitEvaluationStringContentsConcatenated?
+    | explicitEvaluationStringSubstitution explicitEvaluationStringContentsConcatenated?
+    | explicitEvaluationText explicitEvaluationStringContentsConcatenated?
     ;
 
 explicitEvaluationStringSubstitution
@@ -88,13 +97,13 @@ explicitEvaluationText
     : genericText+?
     ;
 funName  // TODO: A Substitution can be inside of a funName to create a function name.
-    : {++inFunction;} FUNCHAR
+    : FUNCHAR {++inFunction;} 
     ;
 function 
     : funName (funArguments)? endFunction
     ;
 endFunction
-    : {--inFunction;} CPAREN
+    : CPAREN {--inFunction;} 
     ;
 funArguments
     : evaluationString (COMMAWS evaluationString)*?
@@ -104,7 +113,7 @@ validSubstitution
     | substitutionSymbol
     ;
 complexSubstitutionSymbol
-    : REG_STARTCARET explicitEvaluationString*? CCARET
+    : REG_STARTCARET {lookingForRegisterCaret = true;} explicitEvaluationString*? CCARET {lookingForRegisterCaret = false;}
     | REG_NUM
     | ITEXT_NUM
     | STEXT_NUM
@@ -140,19 +149,27 @@ substitutionSymbol
 genericText 
     : escapedText
     | ansi
-    | {inFunction > 0}? ~(COMMAWS|CPAREN)
-    | {inFunction == 0}? .
+    | awareGenericText
+    | (FUNCHAR|COLON|OTHER)
     ;
 startGenericText
     : escapedText
     | ansi
-    | {inFunction > 0}? ~(FUNCHAR|CPAREN)
-    | {inFunction == 0}? ~FUNCHAR
+    | awareGenericText
+    | (COLON|OTHER)
+    ;
+
+awareGenericText
+    : {inFunction == 0}? CPAREN
+    | {!inCommandMatch}? RSPACE
+    | {!inCommandList}? SEMICOLON
+    | {!lookingForCommandArgCommas && inFunction == 0}? COMMAWS
+    | {!lookingForCommandArgEquals}? EQUALS
+    | {!lookingForRegisterCaret}? CCARET
     ;
 
 escapedText
-    : ESCAPE UNESCAPE
-    | ESCAPE ESCAPING_OTHER
+    : ESCAPE ANY
     ;
 ansi
     : OANSI ANSICHARACTER? CANSI

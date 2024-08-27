@@ -10,8 +10,8 @@ fragment WS:  [ \r\n\f\t]*;
 ESCAPE: '\\' -> pushMode(ESCAPING);
 OBRACK: '[';
 CBRACK: ']';
-OBRACE: '{' -> skip;
-CBRACE: '}' -> skip;
+OBRACE: '{';
+CBRACE: '}';
 CPAREN: ')';
 CCARET: '>';
 COMMAWS: ',' WS;
@@ -55,8 +55,7 @@ OTHER_SUB: . -> popMode;
 
 // --------------- ESCAPING MODE -----------------
 mode ESCAPING; 
-UNESCAPE: '\\' -> skip, popMode;
-ESCAPING_OTHER: ~'\\' -> popMode;
+ANY: . -> popMode;
 
 // --------------- ANSI MODE ---------------------
 mode ANSI;
