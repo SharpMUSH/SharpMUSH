@@ -116,12 +116,6 @@ public interface ISharpMUSHParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitExplicitEvaluationString([NotNull] SharpMUSHParser.ExplicitEvaluationStringContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="SharpMUSHParser.explicitEvaluationStringContents"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitExplicitEvaluationStringContents([NotNull] SharpMUSHParser.ExplicitEvaluationStringContentsContext context);
-	/// <summary>
 	/// Visit a parse tree produced by <see cref="SharpMUSHParser.explicitEvaluationStringContentsConcatenated"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
@@ -170,17 +164,11 @@ public interface ISharpMUSHParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitGenericText([NotNull] SharpMUSHParser.GenericTextContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="SharpMUSHParser.startGenericText"/>.
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.beginGenericText"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitStartGenericText([NotNull] SharpMUSHParser.StartGenericTextContext context);
-	/// <summary>
-	/// Visit a parse tree produced by <see cref="SharpMUSHParser.awareGenericText"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitAwareGenericText([NotNull] SharpMUSHParser.AwareGenericTextContext context);
+	Result VisitBeginGenericText([NotNull] SharpMUSHParser.BeginGenericTextContext context);
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="SharpMUSHParser.escapedText"/>.
 	/// </summary>

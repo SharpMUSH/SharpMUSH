@@ -14,7 +14,6 @@ options {
     private bool lookingForCommandArgCommas = false;
     private bool lookingForCommandArgEquals = false;
     private bool lookingForRegisterCaret = false;
-    private bool beginGenericText = false;
 }
 
 /*
@@ -53,9 +52,7 @@ startPlainString: evaluationString EOF;
 
 commandList: command (SEMICOLON command)*?;
 
-command:
-    firstCommandMatch RSPACE {inCommandMatch = false;} evaluationString
-    | firstCommandMatch
+command: firstCommandMatch (RSPACE {inCommandMatch = false;} evaluationString)?
 ;
 
 firstCommandMatch: {inCommandMatch = true;} evaluationString;
@@ -73,14 +70,11 @@ evaluationString:
     | explicitEvaluationString
 ;
 
-explicitEvaluationString: explicitEvaluationStringContents;
-
-explicitEvaluationStringContents:
+explicitEvaluationString: 
     OBRACE explicitEvaluationString CBRACE explicitEvaluationStringContentsConcatenated?
     | OBRACK evaluationString CBRACK explicitEvaluationStringContentsConcatenated?
     | PERCENT validSubstitution explicitEvaluationStringContentsConcatenated?
-    | {beginGenericText = true; } startGenericText {beginGenericText = false; }
-        explicitEvaluationStringContentsConcatenated?
+    | beginGenericText explicitEvaluationStringContentsConcatenated?
 ;
 
 explicitEvaluationStringContentsConcatenated:
@@ -142,27 +136,20 @@ substitutionSymbol: (
 ;
 
 genericText:
-    escapedText
-    | ansi
-    | awareGenericText
-    | (FUNCHAR | COLON | OTHER)
+    beginGenericText 
+    | FUNCHAR
 ;
 
-startGenericText:
+beginGenericText:
     escapedText
     | ansi
-    | awareGenericText
-    | (COLON | OTHER)
-;
-
-awareGenericText:
-    {inFunction == 0}? CPAREN
+    | {inFunction == 0}? CPAREN
     | {!inCommandMatch}? RSPACE
     | {!inCommandList}? SEMICOLON
     | {!lookingForCommandArgCommas && inFunction == 0}? COMMAWS
     | {!lookingForCommandArgEquals}? EQUALS
     | {!lookingForRegisterCaret}? CCARET
-    | {!beginGenericText}? FUNCHAR
+    | (COLON | OTHER)
 ;
 
 escapedText: ESCAPE ANY;
