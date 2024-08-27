@@ -80,8 +80,8 @@ explicitEvaluationString:
     | beginGenericText explicitEvaluationStringConcatenatedRepeat*?
 ;
 
-explicitEvaluationStringConcatenatedRepeat: 
-OBRACE explicitEvaluationString CBRACE
+explicitEvaluationStringConcatenatedRepeat:
+    OBRACE explicitEvaluationString CBRACE
     | OBRACK evaluationString CBRACK
     | PERCENT validSubstitution
     | genericText
@@ -91,7 +91,7 @@ funName:
     FUNCHAR {++inFunction;}
 ; // TODO: A Substitution can be inside of a funName to create a function name.
 
-function: funName funArguments?  {--inFunction;} CPAREN;
+function: funName funArguments? {--inFunction;} CPAREN;
 
 funArguments: evaluationString (COMMAWS evaluationString)*?;
 
