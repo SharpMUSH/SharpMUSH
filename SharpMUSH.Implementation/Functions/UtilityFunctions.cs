@@ -357,7 +357,7 @@ namespace SharpMUSH.Implementation.Functions
 
 			if (everythingIsOkay)
 			{
-				var parsed = parser.FunctionParse(parser.CurrentState.Arguments.Last().Message!)!;
+				var parsed = parser.EvaluationFunctionParse(parser.CurrentState.Arguments.Last().Message!)!;
 				_ = parser.CurrentState.Registers.Pop();
 				return parsed;
 			}

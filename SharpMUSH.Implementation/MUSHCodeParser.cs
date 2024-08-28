@@ -88,7 +88,24 @@ public class MUSHCodeParser(
 		sharpParser.AddErrorListener(new DiagnosticErrorListener(true));
 		sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL_EXACT_AMBIG_DETECTION;
 		SharpMUSHParser.StartPlainStringContext chatContext = sharpParser.startPlainString();
-		SharpMUSHParserVisitor visitor = new(this,text);
+		SharpMUSHParserVisitor visitor = new(this, text);
+
+		return visitor.Visit(chatContext);
+	}
+
+	/// <summary>
+	/// Use when no EOF is to be expected.
+	/// </summary>
+	/// <param name="text">The info to parse.</param>
+	/// <returns>The call information.</returns>
+	public CallState? EvaluationFunctionParse(MString text)
+	{
+		AntlrInputStreamSpan inputStream = new(MModule.plainText(text));
+		SharpMUSHLexer sharpLexer = new(inputStream);
+		CommonTokenStream commonTokenStream = new(sharpLexer);
+		SharpMUSHParser sharpParser = new(commonTokenStream);
+		SharpMUSHParser.EvaluationStringContext chatContext = sharpParser.evaluationString();
+		SharpMUSHParserVisitor visitor = new(this, text);
 
 		return visitor.Visit(chatContext);
 	}

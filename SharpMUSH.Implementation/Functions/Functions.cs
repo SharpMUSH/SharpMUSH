@@ -109,8 +109,8 @@ namespace SharpMUSH.Implementation.Functions
 				// TODO: Should we increase the Depth of the response by adding our context.Depth here?
 				// This is also where we need to do a DEPTH CHECK.
 				refinedArguments = args.Select(a => stripAnsi
-					? parser.FunctionParse(MModule.plainText2(a?.Message ?? MModule.empty()))
-					: parser.FunctionParse(a?.Message ?? MModule.empty())
+					? parser.EvaluationFunctionParse(MModule.plainText2(a?.Message ?? MModule.empty()))
+					: parser.EvaluationFunctionParse(a?.Message ?? MModule.empty())
 					).ToList()!;
 			}
 			else if ((attribute.Flags & FunctionFlags.NoParse) == FunctionFlags.NoParse && attribute.MaxArgs == 1)
