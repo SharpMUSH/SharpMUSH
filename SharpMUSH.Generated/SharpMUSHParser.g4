@@ -42,7 +42,7 @@ startEqSplitCommand:
     {lookingForCommandArgEquals = true;} singleCommandArg (
         EQUALS {lookingForCommandArgEquals = false;} singleCommandArg
     )? EOF
-;
+; 
 
 // Start looking fora single-argument command value, by parsing the argument.
 startPlainSingleCommandArg: singleCommandArg EOF;

@@ -39,6 +39,7 @@ namespace SharpMUSH.Implementation.Visitors
 				.Select(x => new CallState(MModule.substring(x.Start.StartIndex, context.Stop?.StopIndex == null ? 0 : (x.Stop.StopIndex - x.Start.StartIndex + 1), source), context.Depth()))
 				?? [new(MModule.empty(), context.Depth())];
 
+			Log.Logger.Information("VisitFunction: Fun: {Text}, Args: {Args}", functionName, arguments.Select( x => x.Message!.ToString()));
 			var result = Functions.Functions.CallFunction(functionName.ToLower(), source, parser, context, arguments.ToList());
 			return result;
 		}
@@ -86,6 +87,8 @@ namespace SharpMUSH.Implementation.Visitors
 		public override CallState? VisitCommand([NotNull] SharpMUSHParser.CommandContext context)
 		{
 			var text = MModule.substring(context.Start.StartIndex, context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source);
+			Log.Logger.Information("VisitCommand: {Text}", text);
+
 			return Commands.Commands.EvaluateCommands(parser, source, context, base.VisitChildren).Match(
 				x => (CallState?)null,
 				x => x.Value);
@@ -94,6 +97,7 @@ namespace SharpMUSH.Implementation.Visitors
 		public override CallState? VisitStartCommandString([NotNull] SharpMUSHParser.StartCommandStringContext context)
 		{
 			var text = MModule.substring(context.Start.StartIndex, context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source);
+			Log.Logger.Information("VisitCommandString: {Text}", text);
 			var children = base.VisitChildren(context);
 			return children ?? new CallState(text, context.Depth());
 		}
@@ -101,6 +105,7 @@ namespace SharpMUSH.Implementation.Visitors
 		public override CallState? VisitCommandList([NotNull] SharpMUSHParser.CommandListContext context)
 		{
 			var text = MModule.substring(context.Start.StartIndex, context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source);
+			Log.Logger.Information("VisitCommandList: {Text}", text);
 			var children = base.VisitChildren(context);
 			return children ?? new CallState(text, context.Depth());
 		}
@@ -108,6 +113,7 @@ namespace SharpMUSH.Implementation.Visitors
 		public override CallState? VisitStartSingleCommandString([NotNull] SharpMUSHParser.StartSingleCommandStringContext context)
 		{
 			var text = MModule.substring(context.Start.StartIndex, context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source);
+			Log.Logger.Information("VisitSingleCommandString: {Text}", text);
 			var children = base.VisitChildren(context);
 			return children ?? new CallState(text, context.Depth());
 		}
