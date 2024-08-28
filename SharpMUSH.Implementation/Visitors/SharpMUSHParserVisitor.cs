@@ -35,12 +35,14 @@ namespace SharpMUSH.Implementation.Visitors
 		public override CallState? VisitFunction([NotNull] SharpMUSHParser.FunctionContext context)
 		{
 			var functionName = context.funName().GetText().TrimEnd()[..^1];
-			var arguments = context.funArguments()?.evaluationString()?
+			/*var arguments = context.funArguments()?.evaluationString()?
 				.Select(x => new CallState(MModule.substring(x.Start.StartIndex, context.Stop?.StopIndex == null ? 0 : (x.Stop.StopIndex - x.Start.StartIndex + 1), source), context.Depth()))
 				?? [new(MModule.empty(), context.Depth())];
+			*/
+			var arguments = context.funArguments()?.evaluationString() ?? Enumerable.Empty<EvaluationStringContext>().ToArray();
 
-			Log.Logger.Information("VisitFunction: Fun: {Text}, Args: {Args}", functionName, arguments.Select( x => x.Message!.ToString()));
-			var result = Functions.Functions.CallFunction(functionName.ToLower(), source, parser, context, arguments.ToList());
+			Log.Logger.Information("VisitFunction: Fun: {Text}, Args: {Args}", functionName, arguments?.Select( x => x.GetText()));
+			var result = Functions.Functions.CallFunction(functionName.ToLower(), source, parser, context, arguments!, this);
 			return result;
 		}
 

@@ -5,17 +5,17 @@ namespace SharpMUSH.Library.Definitions
 	public static class Configurable
 	{
 		public const int MaxCallDepth = 1000000;
-		public const int MaxFunctionDepth = 1000000;
-		public const int MaxRecursionDepth = 1000000;
+		public const int MaxFunctionDepth = 100;
+		public const int MaxRecursionDepth = 100000;
 
 		public const int PlayerStart = 0;
 
-		public static DBRef? AncestorPlayer = null;
-		public static DBRef? AncestorThing = null;
-		public static DBRef? AncestorRoom = null;
-		public static DBRef? AncestorExit = null;
+		public static readonly DBRef? AncestorPlayer = null;
+		public static readonly DBRef? AncestorThing = null;
+		public static readonly DBRef? AncestorRoom = null;
+		public static readonly DBRef? AncestorExit = null;
 
-		public static DBRef MasterRoom = new DBRef(2);
+		public static readonly DBRef MasterRoom = new(2);
 
 		/// <summary>
 		/// Historically, MU*s use the old SEX attribute for this for Compatibility reasons.

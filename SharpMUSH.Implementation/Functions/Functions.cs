@@ -4,6 +4,7 @@ using static SharpMUSHParser;
 using OneOf.Monads;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Implementation.Visitors;
 
 namespace SharpMUSH.Implementation.Functions
 {
@@ -33,7 +34,7 @@ namespace SharpMUSH.Implementation.Functions
 		/// <param name="context">Function Context for Depth</param>
 		/// <param name="args">Arguments</param>
 		/// <returns>The resulting CallState.</returns>
-		public static CallState CallFunction(string name, MString source, IMUSHCodeParser parser, FunctionContext context, List<CallState> args)
+		public static CallState CallFunction(string name, MString source, IMUSHCodeParser parser, FunctionContext context, EvaluationStringContext[] args, SharpMUSHParserVisitor visitor)
 		{
 			if (!_functionLibrary.TryGetValue(name, out var libraryMatch))
 			{
@@ -61,29 +62,31 @@ namespace SharpMUSH.Implementation.Functions
 			// TODO: Check Permissions here.
 
 			/* Validation, this should probably go into its own function! */
-			if (args.Count > attribute.MaxArgs)
+			if (args.Length > attribute.MaxArgs)
 			{
 				parser.Pop();
 				// Better Error Needed.
 				return new CallState(Errors.ErrorArgRange, context.Depth());
 			}
 
-			if (args.Count < attribute.MinArgs)
+			if (args.Length < attribute.MinArgs)
 			{
 				parser.Pop();
-				return new CallState(string.Format(Errors.ErrorTooFewArguments, name, attribute.MinArgs, args.Count), context.Depth());
+				return new CallState(string.Format(Errors.ErrorTooFewArguments, name, attribute.MinArgs, args.Length), contextDepth);
 			}
 
-			if (((attribute.Flags & FunctionFlags.UnEvenArgsOnly) != 0) && (args.Count % 2 == 0))
+			if (((attribute.Flags & FunctionFlags.UnEvenArgsOnly) != 0) && (args.Length % 2 == 0))
 			{
-				return new CallState(string.Format(Errors.ErrorGotEvenArgs, name), context.Depth());
+				return new CallState(string.Format(Errors.ErrorGotEvenArgs, name), contextDepth);
 			}
 
-			if (((attribute.Flags & FunctionFlags.EvenArgsOnly) != 0) && (args.Count % 2 != 0))
+			if (((attribute.Flags & FunctionFlags.EvenArgsOnly) != 0) && (args.Length % 2 != 0))
 			{
-				return new CallState(string.Format(Errors.ErrorGotUnEvenArgs, name), context.Depth());
+				return new CallState(string.Format(Errors.ErrorGotUnEvenArgs, name), contextDepth);
 			}
 
+			// TODO: Reconsider where this is. We Push down below, after we have the refined arguments.
+			// But each RefinedArguments call will create a new call to this FunctionParser without depth info.
 			if (contextDepth > Configurable.MaxCallDepth)
 			{
 				parser.Pop();
@@ -102,31 +105,34 @@ namespace SharpMUSH.Implementation.Functions
 				return new CallState(Errors.ErrorRecursion, recursionDepth);
 			}
 
-			var stripAnsi = (attribute.Flags & FunctionFlags.StripAnsi) != 0;
+			var stripAnsi = attribute.Flags.HasFlag(FunctionFlags.StripAnsi);
 
-			if ((attribute.Flags & FunctionFlags.NoParse) != FunctionFlags.NoParse)
+			if (!attribute.Flags.HasFlag(FunctionFlags.NoParse))
 			{
-				// TODO: Should we increase the Depth of the response by adding our context.Depth here?
-				// This is also where we need to do a DEPTH CHECK.
-				refinedArguments = args.Select(a => stripAnsi
-					? parser.EvaluationFunctionParse(MModule.plainText2(a?.Message ?? MModule.empty()))
-					: parser.EvaluationFunctionParse(a?.Message ?? MModule.empty())
-					).ToList()!;
+				refinedArguments = args.Select(x => new CallState(stripAnsi 
+					? MModule.plainText2(visitor.VisitChildren(x)?.Message ?? MModule.empty())
+					: visitor.VisitChildren(x)?.Message ?? MModule.empty(), x.Depth()))
+					.DefaultIfEmpty(new CallState(MModule.empty(), context.Depth()))
+					.ToList();
 			}
-			else if ((attribute.Flags & FunctionFlags.NoParse) == FunctionFlags.NoParse && attribute.MaxArgs == 1)
+			else if (attribute.Flags.HasFlag(FunctionFlags.NoParse) && attribute.MaxArgs == 1)
 			{
-				return new CallState(MModule.substring(context.Start.StartIndex, context.Stop.StopIndex - context.Start.StartIndex + 1, source), context.Depth());
+				return new CallState(MModule.substring(context.Start.StartIndex, context.Stop.StopIndex - context.Start.StartIndex + 1, source), contextDepth);
 			}
-			else
+			else 
 			{
-				refinedArguments = args.Select(arg => stripAnsi ? new CallState(MModule.plainText(arg.Message), arg.Depth) : arg).ToList()!;
+				refinedArguments = args.Select(x => new CallState(stripAnsi
+						? MModule.plainText2(MModule.substring(x.Start.StartIndex, context.Stop?.StopIndex == null ? 0 : (x.Stop.StopIndex - x.Start.StartIndex + 1), source))
+						: MModule.substring(x.Start.StartIndex, context.Stop?.StopIndex == null ? 0 : (x.Stop.StopIndex - x.Start.StartIndex + 1), source), x.Depth()))
+					.DefaultIfEmpty(new CallState(MModule.empty(), context.Depth()))
+					.ToList();
 			}
 
-			if ((attribute.Flags & FunctionFlags.DecimalsOnly) != 0 && refinedArguments.Any(a => !decimal.TryParse(a.Message!.ToString(), out _)))
+			if (attribute.Flags.HasFlag(FunctionFlags.DecimalsOnly) && refinedArguments.Any(a => !decimal.TryParse(MModule.plainText(a?.Message ?? MModule.empty()), out _)))
 			{
 				return new CallState(attribute.MaxArgs > 1 ? Errors.ErrorNumbers : Errors.ErrorNumber);
 			}
-			if ((attribute.Flags & FunctionFlags.IntegersOnly) != 0 && refinedArguments.Any(a => !int.TryParse(a.Message!.ToString(), out _)))
+			if (attribute.Flags.HasFlag(FunctionFlags.IntegersOnly) && refinedArguments.Any(a => !int.TryParse(MModule.plainText(a?.Message ?? MModule.empty()), out _)))
 			{
 				return new CallState(attribute.MaxArgs > 1 ? Errors.ErrorIntegers : Errors.ErrorInteger);
 			}
@@ -143,7 +149,7 @@ namespace SharpMUSH.Implementation.Functions
 				Handle: currentState.Handle
 			));
 
-			var result = function(parser) with { Depth = context.Depth() };
+			var result = function(parser) with { Depth = contextDepth };
 			parser.Pop();
 			return result;
 		}

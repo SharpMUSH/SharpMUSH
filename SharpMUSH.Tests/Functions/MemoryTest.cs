@@ -9,12 +9,12 @@ public class MemoryTest : BaseUnitTest
 	public void Depth()
 	{
 		var sb = new StringBuilder();
-		foreach(var i in Enumerable.Range(0, 100))
+		foreach(var i in Enumerable.Range(0, 200))
 		{
 			sb.Append("add(1,");
 		}
 		sb.Append('1');
-		foreach (var i in Enumerable.Range(0, 100))
+		foreach (var i in Enumerable.Range(0, 200))
 		{
 			sb.Append(')');
 		}
@@ -23,7 +23,7 @@ public class MemoryTest : BaseUnitTest
 		var parser = TestParser();
 		var result = parser.FunctionParse(MModule.single(str))?.Message?.ToString();
 		
-		Assert.AreEqual("101", result);
+		Assert.AreEqual("201", result);
 	}
 }
 

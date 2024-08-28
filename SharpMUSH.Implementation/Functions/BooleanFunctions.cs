@@ -65,7 +65,7 @@ namespace SharpMUSH.Implementation.Functions
 		public static CallState Or(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 			=> new(parser.CurrentState.Arguments.Select(x => x.Message!).Any(Predicates.Truthy) ? "1" : "0");
 
-		[SharpFunction(Name = "t", Flags = FunctionFlags.Regular, MinArgs = 1, MaxArgs = 1)]
+		[SharpFunction(Name = "t", Flags = FunctionFlags.Regular, MinArgs = 0, MaxArgs = 1)]
 		public static CallState T(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 			=> new(Predicates.Truthy(parser.CurrentState.Arguments.FirstOrDefault()?.Message!) ? "1" : "0");
 

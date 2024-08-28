@@ -5,7 +5,7 @@ public class FunctionUnitTests : BaseUnitTest
 {
 	[TestMethod]
 	[DataRow("strcat(strcat(),wi`th a[strcat(strcat(strcat(depth of 5)))])","wi`th adepth of 5")]
-	// [DataRow("strcat(strcat(dog)", "strcat(dog")] // Currently Illegal according to the Parser. Fix needed.
+	// [DataRow("strcat(strcat(dog)", "strcat(dog")] // Currently Illegal according to the Parser. Fix maybe needed.
 	[DataRow("strcat(foo\\,dog)", "foo,dog")]
 	[DataRow("strcat(foo\\\\,dog)", "foo\\dog")]
 	[DataRow("strcat(foo,-dog))", "foo-dog)")]

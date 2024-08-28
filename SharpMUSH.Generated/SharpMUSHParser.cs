@@ -1569,7 +1569,7 @@ public partial class SharpMUSHParser : Parser {
 				EnterOuterAlt(_localctx, 4);
 				{
 				State = 216;
-				if (!(!inCommandMatch)) throw new FailedPredicateException(this, "!inCommandMatch");
+				if (!(!inCommandMatch || inFunction > 0)) throw new FailedPredicateException(this, "!inCommandMatch || inFunction > 0");
 				State = 217;
 				Match(RSPACE);
 				}
@@ -1738,7 +1738,7 @@ public partial class SharpMUSHParser : Parser {
 	private bool beginGenericText_sempred(BeginGenericTextContext _localctx, int predIndex) {
 		switch (predIndex) {
 		case 0: return inFunction == 0;
-		case 1: return !inCommandMatch;
+		case 1: return !inCommandMatch || inFunction > 0;
 		case 2: return !inCommandList;
 		case 3: return !lookingForCommandArgCommas && inFunction == 0;
 		case 4: return !lookingForCommandArgEquals;

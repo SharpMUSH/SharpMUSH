@@ -17,5 +17,5 @@ internal class AntlrInputStreamSpan : BaseInputCharStream
 	protected override string ConvertDataToString(int start, int count) => Data.Slice(start, count).ToString();
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	protected override int ValueAt(int i) => _data[i];
+	protected override int ValueAt(int i) => Data[i];
 }

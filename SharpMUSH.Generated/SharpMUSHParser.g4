@@ -90,7 +90,7 @@ explicitEvaluationStringConcatenatedRepeat:
 
 funName:
     FUNCHAR {++inFunction;}
-; // TODO: A Substitution can be inside of a funName to create a function name.
+; // TODO: A Substitution can be inside of a funName to create a function name. The same goes for [] calls.
 
 function: funName funArguments? {--inFunction;} CPAREN;
 
@@ -145,7 +145,7 @@ beginGenericText:
     escapedText
     | ansi
     | {inFunction == 0}? CPAREN
-    | {!inCommandMatch}? RSPACE
+    | {!inCommandMatch || inFunction > 0}? RSPACE
     | {!inCommandList}? SEMICOLON
     | {!lookingForCommandArgCommas && inFunction == 0}? COMMAWS
     | {!lookingForCommandArgEquals}? EQUALS
