@@ -19,7 +19,6 @@ public partial interface IMUSHCodeParser
 	CallState? CommandListParse(MString text);
 	Task CommandParse(string handle, MString text);
 	CallState? CommandSingleArgParse(MString text);
-	CallState? EvaluationFunctionParse(MString text);
 	CallState? FunctionParse(MString text);
 	IMUSHCodeParser Pop();
 	IMUSHCodeParser Push(ParserState state);
