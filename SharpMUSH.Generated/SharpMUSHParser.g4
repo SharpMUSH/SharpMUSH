@@ -155,4 +155,6 @@ beginGenericText:
 
 escapedText: ESCAPE ANY;
 
+regex: DOLLAR ANYREGEX+ SPACEREGEX;
+
 ansi: OANSI ANSICHARACTER? CANSI;

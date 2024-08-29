@@ -20,6 +20,7 @@ CCARET: '>';
 COMMAWS: ',' WS;
 EQUALS: '=';
 PERCENT: '%' -> pushMode(SUBSTITUTION);
+DOLLAR: '$' -> pushMode(REGEX);
 SEMICOLON: ';';
 COLON: ':';
 OANSI: '\u001B' -> pushMode(ANSI);
@@ -61,6 +62,12 @@ OTHER_SUB: . -> popMode;
 // --------------- ESCAPING MODE -----------------
 mode ESCAPING;
 ANY: . -> popMode;
+
+// --------------- REGEX MODE -----------------
+mode REGEX;
+
+SPACEREGEX: ' ' -> popMode;
+ANYREGEX: .;
 
 // --------------- ANSI MODE ---------------------
 mode ANSI;

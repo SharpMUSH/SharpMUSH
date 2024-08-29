@@ -383,7 +383,7 @@ namespace SharpMUSH.Implementation.Functions
 		[SharpFunction(Name = "LISTQ", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 		public static CallState ListQ(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		{
-			throw new NotImplementedException();
+			return new CallState(string.Join(" ", parser.CurrentState.Registers.Peek().Keys));
 		}
 
 		[SharpFunction(Name = "LSET", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -393,8 +393,8 @@ namespace SharpMUSH.Implementation.Functions
 		}
 
 		[SharpFunction(Name = "NULL", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
-		public static CallState Null(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
-			new(string.Empty);
+		public static CallState Null(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+			=> new(string.Empty);
 
 		[SharpFunction(Name = "OPEN", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular)]
 		public static CallState Open(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -426,7 +426,7 @@ namespace SharpMUSH.Implementation.Functions
 		[SharpFunction(Name = "S", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 		public static CallState S(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		{
-			throw new NotImplementedException();
+			return parser.FunctionParse(parser.CurrentState.Arguments.Last().Message!)!;
 		}
 
 		[SharpFunction(Name = "SCAN", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -558,7 +558,20 @@ namespace SharpMUSH.Implementation.Functions
 		[SharpFunction(Name = "UNSETQ", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 		public static CallState UnSetQ(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		{
-			throw new NotImplementedException();
+			if (parser.CurrentState.Arguments.Count == 0)
+			{
+				parser.CurrentState.Registers.Peek().Clear();
+			}
+			else
+			{
+				var registers = MModule.plainText(parser.CurrentState.Arguments[0].Message).Split(" ");
+				foreach (var r in registers)
+				{
+					parser.CurrentState.Registers.Peek().TryRemove(r);
+				}
+			}
+
+			return new(string.Empty);
 		}
 
 		[SharpFunction(Name = "WIPE", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]

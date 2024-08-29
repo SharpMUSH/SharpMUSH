@@ -37,14 +37,14 @@ public partial class SharpMUSHParser : Parser {
 	protected static PredictionContextCache sharedContextCache = new PredictionContextCache();
 	public const int
 		ESCAPE=1, OBRACK=2, CBRACK=3, OBRACE=4, CBRACE=5, CPAREN=6, CCARET=7, 
-		COMMAWS=8, EQUALS=9, PERCENT=10, SEMICOLON=11, COLON=12, OANSI=13, RSPACE=14, 
-		FUNCHAR=15, OTHER=16, REG_STARTCARET=17, REG_NUM=18, VWX=19, ARG_NUM=20, 
-		SPACE=21, BLANKLINE=22, TAB=23, DBREF=24, ENACTOR_NAME=25, CAP_ENACTOR_NAME=26, 
-		ACCENT_NAME=27, MONIKER_NAME=28, SUB_PRONOUN=29, OBJ_PRONOUN=30, POS_PRONOUN=31, 
-		ABS_POS_PRONOUN=32, CALLED_DBREF=33, EXECUTOR_DBREF=34, LOCATION_DBREF=35, 
-		LASTCOMMAND_BEFORE_EVAL=36, LASTCOMMAND_AFTER_EVAL=37, INVOCATION_DEPTH=38, 
-		CURRENT_ARG_COUNT=39, ITEXT_NUM=40, STEXT_NUM=41, OTHER_SUB=42, ANY=43, 
-		CANSI=44, ANSICHARACTER=45;
+		COMMAWS=8, EQUALS=9, PERCENT=10, DOLLAR=11, SEMICOLON=12, COLON=13, OANSI=14, 
+		RSPACE=15, FUNCHAR=16, OTHER=17, REG_STARTCARET=18, REG_NUM=19, VWX=20, 
+		ARG_NUM=21, SPACE=22, BLANKLINE=23, TAB=24, DBREF=25, ENACTOR_NAME=26, 
+		CAP_ENACTOR_NAME=27, ACCENT_NAME=28, MONIKER_NAME=29, SUB_PRONOUN=30, 
+		OBJ_PRONOUN=31, POS_PRONOUN=32, ABS_POS_PRONOUN=33, CALLED_DBREF=34, EXECUTOR_DBREF=35, 
+		LOCATION_DBREF=36, LASTCOMMAND_BEFORE_EVAL=37, LASTCOMMAND_AFTER_EVAL=38, 
+		INVOCATION_DEPTH=39, CURRENT_ARG_COUNT=40, ITEXT_NUM=41, STEXT_NUM=42, 
+		OTHER_SUB=43, ANY=44, SPACEREGEX=45, ANYREGEX=46, CANSI=47, ANSICHARACTER=48;
 	public const int
 		RULE_startSingleCommandString = 0, RULE_startCommandString = 1, RULE_startPlainCommaCommandArgs = 2, 
 		RULE_startEqSplitCommandArgs = 3, RULE_startEqSplitCommand = 4, RULE_startPlainSingleCommandArg = 5, 
@@ -53,7 +53,7 @@ public partial class SharpMUSHParser : Parser {
 		RULE_explicitEvaluationString = 13, RULE_explicitEvaluationStringConcatenatedRepeat = 14, 
 		RULE_funName = 15, RULE_function = 16, RULE_funArguments = 17, RULE_validSubstitution = 18, 
 		RULE_complexSubstitutionSymbol = 19, RULE_substitutionSymbol = 20, RULE_genericText = 21, 
-		RULE_beginGenericText = 22, RULE_escapedText = 23, RULE_ansi = 24;
+		RULE_beginGenericText = 22, RULE_escapedText = 23, RULE_regex = 24, RULE_ansi = 25;
 	public static readonly string[] ruleNames = {
 		"startSingleCommandString", "startCommandString", "startPlainCommaCommandArgs", 
 		"startEqSplitCommandArgs", "startEqSplitCommand", "startPlainSingleCommandArg", 
@@ -61,25 +61,26 @@ public partial class SharpMUSHParser : Parser {
 		"singleCommandArg", "evaluationString", "explicitEvaluationString", "explicitEvaluationStringConcatenatedRepeat", 
 		"funName", "function", "funArguments", "validSubstitution", "complexSubstitutionSymbol", 
 		"substitutionSymbol", "genericText", "beginGenericText", "escapedText", 
-		"ansi"
+		"regex", "ansi"
 	};
 
 	private static readonly string[] _LiteralNames = {
 		null, "'\\'", "'['", "']'", "'{'", "'}'", "')'", "'>'", null, "'='", "'%'", 
-		"';'", "':'", "'\\u001B'", "' '", null, null, null, null, null, null, 
-		null, null, null, "'#'", "'n'", "'N'", "'~'", null, null, null, null, 
-		null, "'@'", "'!'", null, null, null, "'?'", "'+'", null, null, null, 
-		null, "'m'"
+		"'$'", "';'", "':'", "'\\u001B'", null, null, null, null, null, null, 
+		null, null, null, null, "'#'", "'n'", "'N'", "'~'", null, null, null, 
+		null, null, "'@'", "'!'", null, null, null, "'?'", "'+'", null, null, 
+		null, null, null, null, "'m'"
 	};
 	private static readonly string[] _SymbolicNames = {
 		null, "ESCAPE", "OBRACK", "CBRACK", "OBRACE", "CBRACE", "CPAREN", "CCARET", 
-		"COMMAWS", "EQUALS", "PERCENT", "SEMICOLON", "COLON", "OANSI", "RSPACE", 
-		"FUNCHAR", "OTHER", "REG_STARTCARET", "REG_NUM", "VWX", "ARG_NUM", "SPACE", 
-		"BLANKLINE", "TAB", "DBREF", "ENACTOR_NAME", "CAP_ENACTOR_NAME", "ACCENT_NAME", 
-		"MONIKER_NAME", "SUB_PRONOUN", "OBJ_PRONOUN", "POS_PRONOUN", "ABS_POS_PRONOUN", 
-		"CALLED_DBREF", "EXECUTOR_DBREF", "LOCATION_DBREF", "LASTCOMMAND_BEFORE_EVAL", 
-		"LASTCOMMAND_AFTER_EVAL", "INVOCATION_DEPTH", "CURRENT_ARG_COUNT", "ITEXT_NUM", 
-		"STEXT_NUM", "OTHER_SUB", "ANY", "CANSI", "ANSICHARACTER"
+		"COMMAWS", "EQUALS", "PERCENT", "DOLLAR", "SEMICOLON", "COLON", "OANSI", 
+		"RSPACE", "FUNCHAR", "OTHER", "REG_STARTCARET", "REG_NUM", "VWX", "ARG_NUM", 
+		"SPACE", "BLANKLINE", "TAB", "DBREF", "ENACTOR_NAME", "CAP_ENACTOR_NAME", 
+		"ACCENT_NAME", "MONIKER_NAME", "SUB_PRONOUN", "OBJ_PRONOUN", "POS_PRONOUN", 
+		"ABS_POS_PRONOUN", "CALLED_DBREF", "EXECUTOR_DBREF", "LOCATION_DBREF", 
+		"LASTCOMMAND_BEFORE_EVAL", "LASTCOMMAND_AFTER_EVAL", "INVOCATION_DEPTH", 
+		"CURRENT_ARG_COUNT", "ITEXT_NUM", "STEXT_NUM", "OTHER_SUB", "ANY", "SPACEREGEX", 
+		"ANYREGEX", "CANSI", "ANSICHARACTER"
 	};
 	public static readonly IVocabulary DefaultVocabulary = new Vocabulary(_LiteralNames, _SymbolicNames);
 
@@ -146,9 +147,9 @@ public partial class SharpMUSHParser : Parser {
 		try {
 			EnterOuterAlt(_localctx, 1);
 			{
-			State = 50;
+			State = 52;
 			command();
-			State = 51;
+			State = 53;
 			Match(Eof);
 			}
 		}
@@ -189,9 +190,9 @@ public partial class SharpMUSHParser : Parser {
 			EnterOuterAlt(_localctx, 1);
 			{
 			inCommandList = true;
-			State = 54;
+			State = 56;
 			commandList();
-			State = 55;
+			State = 57;
 			Match(Eof);
 			inCommandList = false;
 			}
@@ -232,9 +233,9 @@ public partial class SharpMUSHParser : Parser {
 		try {
 			EnterOuterAlt(_localctx, 1);
 			{
-			State = 58;
+			State = 60;
 			commaCommandArgs();
-			State = 59;
+			State = 61;
 			Match(Eof);
 			}
 		}
@@ -279,21 +280,21 @@ public partial class SharpMUSHParser : Parser {
 		try {
 			EnterOuterAlt(_localctx, 1);
 			{
-			State = 61;
+			State = 63;
 			singleCommandArg();
-			State = 64;
+			State = 66;
 			ErrorHandler.Sync(this);
 			_la = TokenStream.LA(1);
 			if (_la==EQUALS) {
 				{
-				State = 62;
+				State = 64;
 				Match(EQUALS);
-				State = 63;
+				State = 65;
 				commaCommandArgs();
 				}
 			}
 
-			State = 66;
+			State = 68;
 			Match(Eof);
 			}
 		}
@@ -339,22 +340,22 @@ public partial class SharpMUSHParser : Parser {
 			EnterOuterAlt(_localctx, 1);
 			{
 			lookingForCommandArgEquals = true;
-			State = 69;
+			State = 71;
 			singleCommandArg();
-			State = 73;
+			State = 75;
 			ErrorHandler.Sync(this);
 			_la = TokenStream.LA(1);
 			if (_la==EQUALS) {
 				{
-				State = 70;
+				State = 72;
 				Match(EQUALS);
 				lookingForCommandArgEquals = false;
-				State = 72;
+				State = 74;
 				singleCommandArg();
 				}
 			}
 
-			State = 75;
+			State = 77;
 			Match(Eof);
 			}
 		}
@@ -394,9 +395,9 @@ public partial class SharpMUSHParser : Parser {
 		try {
 			EnterOuterAlt(_localctx, 1);
 			{
-			State = 77;
+			State = 79;
 			singleCommandArg();
-			State = 78;
+			State = 80;
 			Match(Eof);
 			}
 		}
@@ -436,9 +437,9 @@ public partial class SharpMUSHParser : Parser {
 		try {
 			EnterOuterAlt(_localctx, 1);
 			{
-			State = 80;
+			State = 82;
 			evaluationString();
-			State = 81;
+			State = 83;
 			Match(Eof);
 			}
 		}
@@ -485,23 +486,23 @@ public partial class SharpMUSHParser : Parser {
 			int _alt;
 			EnterOuterAlt(_localctx, 1);
 			{
-			State = 83;
+			State = 85;
 			command();
-			State = 88;
+			State = 90;
 			ErrorHandler.Sync(this);
 			_alt = Interpreter.AdaptivePredict(TokenStream,2,Context);
 			while ( _alt!=1 && _alt!=global::Antlr4.Runtime.Atn.ATN.INVALID_ALT_NUMBER ) {
 				if ( _alt==1+1 ) {
 					{
 					{
-					State = 84;
+					State = 86;
 					Match(SEMICOLON);
-					State = 85;
+					State = 87;
 					command();
 					}
 					} 
 				}
-				State = 90;
+				State = 92;
 				ErrorHandler.Sync(this);
 				_alt = Interpreter.AdaptivePredict(TokenStream,2,Context);
 			}
@@ -547,17 +548,17 @@ public partial class SharpMUSHParser : Parser {
 		try {
 			EnterOuterAlt(_localctx, 1);
 			{
-			State = 91;
+			State = 93;
 			firstCommandMatch();
-			State = 95;
+			State = 97;
 			ErrorHandler.Sync(this);
 			_la = TokenStream.LA(1);
 			if (_la==RSPACE) {
 				{
-				State = 92;
+				State = 94;
 				Match(RSPACE);
 				inCommandMatch = false;
-				State = 94;
+				State = 96;
 				evaluationString();
 				}
 			}
@@ -600,7 +601,7 @@ public partial class SharpMUSHParser : Parser {
 			EnterOuterAlt(_localctx, 1);
 			{
 			inCommandMatch = true;
-			State = 98;
+			State = 100;
 			evaluationString();
 			}
 		}
@@ -648,23 +649,23 @@ public partial class SharpMUSHParser : Parser {
 			EnterOuterAlt(_localctx, 1);
 			{
 			lookingForCommandArgCommas = true;
-			State = 101;
+			State = 103;
 			singleCommandArg();
-			State = 106;
+			State = 108;
 			ErrorHandler.Sync(this);
 			_alt = Interpreter.AdaptivePredict(TokenStream,4,Context);
 			while ( _alt!=1 && _alt!=global::Antlr4.Runtime.Atn.ATN.INVALID_ALT_NUMBER ) {
 				if ( _alt==1+1 ) {
 					{
 					{
-					State = 102;
+					State = 104;
 					Match(COMMAWS);
-					State = 103;
+					State = 105;
 					singleCommandArg();
 					}
 					} 
 				}
-				State = 108;
+				State = 110;
 				ErrorHandler.Sync(this);
 				_alt = Interpreter.AdaptivePredict(TokenStream,4,Context);
 			}
@@ -706,7 +707,7 @@ public partial class SharpMUSHParser : Parser {
 		try {
 			EnterOuterAlt(_localctx, 1);
 			{
-			State = 111;
+			State = 113;
 			evaluationString();
 			}
 		}
@@ -746,20 +747,20 @@ public partial class SharpMUSHParser : Parser {
 		EvaluationStringContext _localctx = new EvaluationStringContext(Context, State);
 		EnterRule(_localctx, 24, RULE_evaluationString);
 		try {
-			State = 118;
+			State = 120;
 			ErrorHandler.Sync(this);
 			switch ( Interpreter.AdaptivePredict(TokenStream,6,Context) ) {
 			case 1:
 				EnterOuterAlt(_localctx, 1);
 				{
-				State = 113;
-				function();
 				State = 115;
+				function();
+				State = 117;
 				ErrorHandler.Sync(this);
 				switch ( Interpreter.AdaptivePredict(TokenStream,5,Context) ) {
 				case 1:
 					{
-					State = 114;
+					State = 116;
 					explicitEvaluationString();
 					}
 					break;
@@ -769,7 +770,7 @@ public partial class SharpMUSHParser : Parser {
 			case 2:
 				EnterOuterAlt(_localctx, 2);
 				{
-				State = 117;
+				State = 119;
 				explicitEvaluationString();
 				}
 				break;
@@ -829,31 +830,31 @@ public partial class SharpMUSHParser : Parser {
 		EnterRule(_localctx, 26, RULE_explicitEvaluationString);
 		try {
 			int _alt;
-			State = 153;
+			State = 155;
 			ErrorHandler.Sync(this);
 			switch ( Interpreter.AdaptivePredict(TokenStream,11,Context) ) {
 			case 1:
 				EnterOuterAlt(_localctx, 1);
 				{
-				State = 120;
-				Match(OBRACE);
-				State = 121;
-				explicitEvaluationString();
 				State = 122;
+				Match(OBRACE);
+				State = 123;
+				explicitEvaluationString();
+				State = 124;
 				Match(CBRACE);
-				State = 126;
+				State = 128;
 				ErrorHandler.Sync(this);
 				_alt = Interpreter.AdaptivePredict(TokenStream,7,Context);
 				while ( _alt!=1 && _alt!=global::Antlr4.Runtime.Atn.ATN.INVALID_ALT_NUMBER ) {
 					if ( _alt==1+1 ) {
 						{
 						{
-						State = 123;
+						State = 125;
 						explicitEvaluationStringConcatenatedRepeat();
 						}
 						} 
 					}
-					State = 128;
+					State = 130;
 					ErrorHandler.Sync(this);
 					_alt = Interpreter.AdaptivePredict(TokenStream,7,Context);
 				}
@@ -862,25 +863,25 @@ public partial class SharpMUSHParser : Parser {
 			case 2:
 				EnterOuterAlt(_localctx, 2);
 				{
-				State = 129;
-				Match(OBRACK);
-				State = 130;
-				evaluationString();
 				State = 131;
+				Match(OBRACK);
+				State = 132;
+				evaluationString();
+				State = 133;
 				Match(CBRACK);
-				State = 135;
+				State = 137;
 				ErrorHandler.Sync(this);
 				_alt = Interpreter.AdaptivePredict(TokenStream,8,Context);
 				while ( _alt!=1 && _alt!=global::Antlr4.Runtime.Atn.ATN.INVALID_ALT_NUMBER ) {
 					if ( _alt==1+1 ) {
 						{
 						{
-						State = 132;
+						State = 134;
 						explicitEvaluationStringConcatenatedRepeat();
 						}
 						} 
 					}
-					State = 137;
+					State = 139;
 					ErrorHandler.Sync(this);
 					_alt = Interpreter.AdaptivePredict(TokenStream,8,Context);
 				}
@@ -889,23 +890,23 @@ public partial class SharpMUSHParser : Parser {
 			case 3:
 				EnterOuterAlt(_localctx, 3);
 				{
-				State = 138;
+				State = 140;
 				Match(PERCENT);
-				State = 139;
+				State = 141;
 				validSubstitution();
-				State = 143;
+				State = 145;
 				ErrorHandler.Sync(this);
 				_alt = Interpreter.AdaptivePredict(TokenStream,9,Context);
 				while ( _alt!=1 && _alt!=global::Antlr4.Runtime.Atn.ATN.INVALID_ALT_NUMBER ) {
 					if ( _alt==1+1 ) {
 						{
 						{
-						State = 140;
+						State = 142;
 						explicitEvaluationStringConcatenatedRepeat();
 						}
 						} 
 					}
-					State = 145;
+					State = 147;
 					ErrorHandler.Sync(this);
 					_alt = Interpreter.AdaptivePredict(TokenStream,9,Context);
 				}
@@ -914,21 +915,21 @@ public partial class SharpMUSHParser : Parser {
 			case 4:
 				EnterOuterAlt(_localctx, 4);
 				{
-				State = 146;
+				State = 148;
 				beginGenericText();
-				State = 150;
+				State = 152;
 				ErrorHandler.Sync(this);
 				_alt = Interpreter.AdaptivePredict(TokenStream,10,Context);
 				while ( _alt!=1 && _alt!=global::Antlr4.Runtime.Atn.ATN.INVALID_ALT_NUMBER ) {
 					if ( _alt==1+1 ) {
 						{
 						{
-						State = 147;
+						State = 149;
 						explicitEvaluationStringConcatenatedRepeat();
 						}
 						} 
 					}
-					State = 152;
+					State = 154;
 					ErrorHandler.Sync(this);
 					_alt = Interpreter.AdaptivePredict(TokenStream,10,Context);
 				}
@@ -983,44 +984,44 @@ public partial class SharpMUSHParser : Parser {
 		ExplicitEvaluationStringConcatenatedRepeatContext _localctx = new ExplicitEvaluationStringConcatenatedRepeatContext(Context, State);
 		EnterRule(_localctx, 28, RULE_explicitEvaluationStringConcatenatedRepeat);
 		try {
-			State = 166;
+			State = 168;
 			ErrorHandler.Sync(this);
 			switch ( Interpreter.AdaptivePredict(TokenStream,12,Context) ) {
 			case 1:
 				EnterOuterAlt(_localctx, 1);
 				{
-				State = 155;
-				Match(OBRACE);
-				State = 156;
-				explicitEvaluationString();
 				State = 157;
+				Match(OBRACE);
+				State = 158;
+				explicitEvaluationString();
+				State = 159;
 				Match(CBRACE);
 				}
 				break;
 			case 2:
 				EnterOuterAlt(_localctx, 2);
 				{
-				State = 159;
-				Match(OBRACK);
-				State = 160;
-				evaluationString();
 				State = 161;
+				Match(OBRACK);
+				State = 162;
+				evaluationString();
+				State = 163;
 				Match(CBRACK);
 				}
 				break;
 			case 3:
 				EnterOuterAlt(_localctx, 3);
 				{
-				State = 163;
+				State = 165;
 				Match(PERCENT);
-				State = 164;
+				State = 166;
 				validSubstitution();
 				}
 				break;
 			case 4:
 				EnterOuterAlt(_localctx, 4);
 				{
-				State = 165;
+				State = 167;
 				genericText();
 				}
 				break;
@@ -1059,7 +1060,7 @@ public partial class SharpMUSHParser : Parser {
 		try {
 			EnterOuterAlt(_localctx, 1);
 			{
-			State = 168;
+			State = 170;
 			Match(FUNCHAR);
 			++inFunction;
 			}
@@ -1103,20 +1104,20 @@ public partial class SharpMUSHParser : Parser {
 		try {
 			EnterOuterAlt(_localctx, 1);
 			{
-			State = 171;
-			funName();
 			State = 173;
+			funName();
+			State = 175;
 			ErrorHandler.Sync(this);
 			switch ( Interpreter.AdaptivePredict(TokenStream,13,Context) ) {
 			case 1:
 				{
-				State = 172;
+				State = 174;
 				funArguments();
 				}
 				break;
 			}
 			--inFunction;
-			State = 176;
+			State = 178;
 			Match(CPAREN);
 			}
 		}
@@ -1163,23 +1164,23 @@ public partial class SharpMUSHParser : Parser {
 			int _alt;
 			EnterOuterAlt(_localctx, 1);
 			{
-			State = 178;
+			State = 180;
 			evaluationString();
-			State = 183;
+			State = 185;
 			ErrorHandler.Sync(this);
 			_alt = Interpreter.AdaptivePredict(TokenStream,14,Context);
 			while ( _alt!=1 && _alt!=global::Antlr4.Runtime.Atn.ATN.INVALID_ALT_NUMBER ) {
 				if ( _alt==1+1 ) {
 					{
 					{
-					State = 179;
+					State = 181;
 					Match(COMMAWS);
-					State = 180;
+					State = 182;
 					evaluationString();
 					}
 					} 
 				}
-				State = 185;
+				State = 187;
 				ErrorHandler.Sync(this);
 				_alt = Interpreter.AdaptivePredict(TokenStream,14,Context);
 			}
@@ -1221,7 +1222,7 @@ public partial class SharpMUSHParser : Parser {
 		ValidSubstitutionContext _localctx = new ValidSubstitutionContext(Context, State);
 		EnterRule(_localctx, 36, RULE_validSubstitution);
 		try {
-			State = 188;
+			State = 190;
 			ErrorHandler.Sync(this);
 			switch (TokenStream.LA(1)) {
 			case REG_STARTCARET:
@@ -1231,7 +1232,7 @@ public partial class SharpMUSHParser : Parser {
 			case STEXT_NUM:
 				EnterOuterAlt(_localctx, 1);
 				{
-				State = 186;
+				State = 188;
 				complexSubstitutionSymbol();
 				}
 				break;
@@ -1261,7 +1262,7 @@ public partial class SharpMUSHParser : Parser {
 			case OTHER_SUB:
 				EnterOuterAlt(_localctx, 2);
 				{
-				State = 187;
+				State = 189;
 				substitutionSymbol();
 				}
 				break;
@@ -1314,31 +1315,31 @@ public partial class SharpMUSHParser : Parser {
 			int _alt;
 			EnterOuterAlt(_localctx, 1);
 			{
-			State = 204;
+			State = 206;
 			ErrorHandler.Sync(this);
 			switch (TokenStream.LA(1)) {
 			case REG_STARTCARET:
 				{
-				State = 190;
+				State = 192;
 				Match(REG_STARTCARET);
 				lookingForRegisterCaret = true;
-				State = 195;
+				State = 197;
 				ErrorHandler.Sync(this);
 				_alt = Interpreter.AdaptivePredict(TokenStream,16,Context);
 				while ( _alt!=1 && _alt!=global::Antlr4.Runtime.Atn.ATN.INVALID_ALT_NUMBER ) {
 					if ( _alt==1+1 ) {
 						{
 						{
-						State = 192;
+						State = 194;
 						explicitEvaluationString();
 						}
 						} 
 					}
-					State = 197;
+					State = 199;
 					ErrorHandler.Sync(this);
 					_alt = Interpreter.AdaptivePredict(TokenStream,16,Context);
 				}
-				State = 198;
+				State = 200;
 				Match(CCARET);
 				lookingForRegisterCaret = false;
 				            
@@ -1346,25 +1347,25 @@ public partial class SharpMUSHParser : Parser {
 				break;
 			case REG_NUM:
 				{
-				State = 200;
+				State = 202;
 				Match(REG_NUM);
 				}
 				break;
 			case ITEXT_NUM:
 				{
-				State = 201;
+				State = 203;
 				Match(ITEXT_NUM);
 				}
 				break;
 			case STEXT_NUM:
 				{
-				State = 202;
+				State = 204;
 				Match(STEXT_NUM);
 				}
 				break;
 			case VWX:
 				{
-				State = 203;
+				State = 205;
 				Match(VWX);
 				}
 				break;
@@ -1430,9 +1431,9 @@ public partial class SharpMUSHParser : Parser {
 		try {
 			EnterOuterAlt(_localctx, 1);
 			{
-			State = 206;
+			State = 208;
 			_la = TokenStream.LA(1);
-			if ( !((((_la) & ~0x3f) == 0 && ((1L << _la) & 5497557095936L) != 0)) ) {
+			if ( !((((_la) & ~0x3f) == 0 && ((1L << _la) & 10995114190336L) != 0)) ) {
 			ErrorHandler.RecoverInline(this);
 			}
 			else {
@@ -1475,20 +1476,20 @@ public partial class SharpMUSHParser : Parser {
 		GenericTextContext _localctx = new GenericTextContext(Context, State);
 		EnterRule(_localctx, 42, RULE_genericText);
 		try {
-			State = 210;
+			State = 212;
 			ErrorHandler.Sync(this);
 			switch ( Interpreter.AdaptivePredict(TokenStream,18,Context) ) {
 			case 1:
 				EnterOuterAlt(_localctx, 1);
 				{
-				State = 208;
+				State = 210;
 				beginGenericText();
 				}
 				break;
 			case 2:
 				EnterOuterAlt(_localctx, 2);
 				{
-				State = 209;
+				State = 211;
 				Match(FUNCHAR);
 				}
 				break;
@@ -1539,81 +1540,81 @@ public partial class SharpMUSHParser : Parser {
 		EnterRule(_localctx, 44, RULE_beginGenericText);
 		int _la;
 		try {
-			State = 227;
+			State = 229;
 			ErrorHandler.Sync(this);
 			switch ( Interpreter.AdaptivePredict(TokenStream,19,Context) ) {
 			case 1:
 				EnterOuterAlt(_localctx, 1);
 				{
-				State = 212;
+				State = 214;
 				escapedText();
 				}
 				break;
 			case 2:
 				EnterOuterAlt(_localctx, 2);
 				{
-				State = 213;
+				State = 215;
 				ansi();
 				}
 				break;
 			case 3:
 				EnterOuterAlt(_localctx, 3);
 				{
-				State = 214;
+				State = 216;
 				if (!(inFunction == 0)) throw new FailedPredicateException(this, "inFunction == 0");
-				State = 215;
+				State = 217;
 				Match(CPAREN);
 				}
 				break;
 			case 4:
 				EnterOuterAlt(_localctx, 4);
 				{
-				State = 216;
+				State = 218;
 				if (!(!inCommandMatch || inFunction > 0)) throw new FailedPredicateException(this, "!inCommandMatch || inFunction > 0");
-				State = 217;
+				State = 219;
 				Match(RSPACE);
 				}
 				break;
 			case 5:
 				EnterOuterAlt(_localctx, 5);
 				{
-				State = 218;
+				State = 220;
 				if (!(!inCommandList)) throw new FailedPredicateException(this, "!inCommandList");
-				State = 219;
+				State = 221;
 				Match(SEMICOLON);
 				}
 				break;
 			case 6:
 				EnterOuterAlt(_localctx, 6);
 				{
-				State = 220;
+				State = 222;
 				if (!(!lookingForCommandArgCommas && inFunction == 0)) throw new FailedPredicateException(this, "!lookingForCommandArgCommas && inFunction == 0");
-				State = 221;
+				State = 223;
 				Match(COMMAWS);
 				}
 				break;
 			case 7:
 				EnterOuterAlt(_localctx, 7);
 				{
-				State = 222;
+				State = 224;
 				if (!(!lookingForCommandArgEquals)) throw new FailedPredicateException(this, "!lookingForCommandArgEquals");
-				State = 223;
+				State = 225;
 				Match(EQUALS);
 				}
 				break;
 			case 8:
 				EnterOuterAlt(_localctx, 8);
 				{
-				State = 224;
+				State = 226;
 				if (!(!lookingForRegisterCaret)) throw new FailedPredicateException(this, "!lookingForRegisterCaret");
-				State = 225;
+				State = 227;
 				Match(CCARET);
 				}
 				break;
 			case 9:
 				EnterOuterAlt(_localctx, 9);
 				{
-				State = 226;
+				State = 228;
 				_la = TokenStream.LA(1);
 				if ( !(_la==COLON || _la==OTHER) ) {
 				ErrorHandler.RecoverInline(this);
@@ -1660,10 +1661,69 @@ public partial class SharpMUSHParser : Parser {
 		try {
 			EnterOuterAlt(_localctx, 1);
 			{
-			State = 229;
+			State = 231;
 			Match(ESCAPE);
-			State = 230;
+			State = 232;
 			Match(ANY);
+			}
+		}
+		catch (RecognitionException re) {
+			_localctx.exception = re;
+			ErrorHandler.ReportError(this, re);
+			ErrorHandler.Recover(this, re);
+		}
+		finally {
+			ExitRule();
+		}
+		return _localctx;
+	}
+
+	public partial class RegexContext : ParserRuleContext {
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode DOLLAR() { return GetToken(SharpMUSHParser.DOLLAR, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode SPACEREGEX() { return GetToken(SharpMUSHParser.SPACEREGEX, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode[] ANYREGEX() { return GetTokens(SharpMUSHParser.ANYREGEX); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode ANYREGEX(int i) {
+			return GetToken(SharpMUSHParser.ANYREGEX, i);
+		}
+		public RegexContext(ParserRuleContext parent, int invokingState)
+			: base(parent, invokingState)
+		{
+		}
+		public override int RuleIndex { get { return RULE_regex; } }
+		[System.Diagnostics.DebuggerNonUserCode]
+		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
+			ISharpMUSHParserVisitor<TResult> typedVisitor = visitor as ISharpMUSHParserVisitor<TResult>;
+			if (typedVisitor != null) return typedVisitor.VisitRegex(this);
+			else return visitor.VisitChildren(this);
+		}
+	}
+
+	[RuleVersion(0)]
+	public RegexContext regex() {
+		RegexContext _localctx = new RegexContext(Context, State);
+		EnterRule(_localctx, 48, RULE_regex);
+		int _la;
+		try {
+			EnterOuterAlt(_localctx, 1);
+			{
+			State = 234;
+			Match(DOLLAR);
+			State = 236;
+			ErrorHandler.Sync(this);
+			_la = TokenStream.LA(1);
+			do {
+				{
+				{
+				State = 235;
+				Match(ANYREGEX);
+				}
+				}
+				State = 238;
+				ErrorHandler.Sync(this);
+				_la = TokenStream.LA(1);
+			} while ( _la==ANYREGEX );
+			State = 240;
+			Match(SPACEREGEX);
 			}
 		}
 		catch (RecognitionException re) {
@@ -1697,24 +1757,24 @@ public partial class SharpMUSHParser : Parser {
 	[RuleVersion(0)]
 	public AnsiContext ansi() {
 		AnsiContext _localctx = new AnsiContext(Context, State);
-		EnterRule(_localctx, 48, RULE_ansi);
+		EnterRule(_localctx, 50, RULE_ansi);
 		int _la;
 		try {
 			EnterOuterAlt(_localctx, 1);
 			{
-			State = 232;
+			State = 242;
 			Match(OANSI);
-			State = 234;
+			State = 244;
 			ErrorHandler.Sync(this);
 			_la = TokenStream.LA(1);
 			if (_la==ANSICHARACTER) {
 				{
-				State = 233;
+				State = 243;
 				Match(ANSICHARACTER);
 				}
 			}
 
-			State = 236;
+			State = 246;
 			Match(CANSI);
 			}
 		}
@@ -1748,83 +1808,86 @@ public partial class SharpMUSHParser : Parser {
 	}
 
 	private static int[] _serializedATN = {
-		4,1,45,239,2,0,7,0,2,1,7,1,2,2,7,2,2,3,7,3,2,4,7,4,2,5,7,5,2,6,7,6,2,7,
+		4,1,48,249,2,0,7,0,2,1,7,1,2,2,7,2,2,3,7,3,2,4,7,4,2,5,7,5,2,6,7,6,2,7,
 		7,7,2,8,7,8,2,9,7,9,2,10,7,10,2,11,7,11,2,12,7,12,2,13,7,13,2,14,7,14,
 		2,15,7,15,2,16,7,16,2,17,7,17,2,18,7,18,2,19,7,19,2,20,7,20,2,21,7,21,
-		2,22,7,22,2,23,7,23,2,24,7,24,1,0,1,0,1,0,1,1,1,1,1,1,1,1,1,1,1,2,1,2,
-		1,2,1,3,1,3,1,3,3,3,65,8,3,1,3,1,3,1,4,1,4,1,4,1,4,1,4,3,4,74,8,4,1,4,
-		1,4,1,5,1,5,1,5,1,6,1,6,1,6,1,7,1,7,1,7,5,7,87,8,7,10,7,12,7,90,9,7,1,
-		8,1,8,1,8,1,8,3,8,96,8,8,1,9,1,9,1,9,1,10,1,10,1,10,1,10,5,10,105,8,10,
-		10,10,12,10,108,9,10,1,10,1,10,1,11,1,11,1,12,1,12,3,12,116,8,12,1,12,
-		3,12,119,8,12,1,13,1,13,1,13,1,13,5,13,125,8,13,10,13,12,13,128,9,13,1,
-		13,1,13,1,13,1,13,5,13,134,8,13,10,13,12,13,137,9,13,1,13,1,13,1,13,5,
-		13,142,8,13,10,13,12,13,145,9,13,1,13,1,13,5,13,149,8,13,10,13,12,13,152,
-		9,13,3,13,154,8,13,1,14,1,14,1,14,1,14,1,14,1,14,1,14,1,14,1,14,1,14,1,
-		14,3,14,167,8,14,1,15,1,15,1,15,1,16,1,16,3,16,174,8,16,1,16,1,16,1,16,
-		1,17,1,17,1,17,5,17,182,8,17,10,17,12,17,185,9,17,1,18,1,18,3,18,189,8,
-		18,1,19,1,19,1,19,5,19,194,8,19,10,19,12,19,197,9,19,1,19,1,19,1,19,1,
-		19,1,19,1,19,3,19,205,8,19,1,20,1,20,1,21,1,21,3,21,211,8,21,1,22,1,22,
-		1,22,1,22,1,22,1,22,1,22,1,22,1,22,1,22,1,22,1,22,1,22,1,22,1,22,3,22,
-		228,8,22,1,23,1,23,1,23,1,24,1,24,3,24,235,8,24,1,24,1,24,1,24,8,88,106,
-		126,135,143,150,183,195,0,25,0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,
-		32,34,36,38,40,42,44,46,48,0,2,4,0,9,10,12,12,20,39,42,42,2,0,12,12,16,
-		16,248,0,50,1,0,0,0,2,53,1,0,0,0,4,58,1,0,0,0,6,61,1,0,0,0,8,68,1,0,0,
-		0,10,77,1,0,0,0,12,80,1,0,0,0,14,83,1,0,0,0,16,91,1,0,0,0,18,97,1,0,0,
-		0,20,100,1,0,0,0,22,111,1,0,0,0,24,118,1,0,0,0,26,153,1,0,0,0,28,166,1,
-		0,0,0,30,168,1,0,0,0,32,171,1,0,0,0,34,178,1,0,0,0,36,188,1,0,0,0,38,204,
-		1,0,0,0,40,206,1,0,0,0,42,210,1,0,0,0,44,227,1,0,0,0,46,229,1,0,0,0,48,
-		232,1,0,0,0,50,51,3,16,8,0,51,52,5,0,0,1,52,1,1,0,0,0,53,54,6,1,-1,0,54,
-		55,3,14,7,0,55,56,5,0,0,1,56,57,6,1,-1,0,57,3,1,0,0,0,58,59,3,20,10,0,
-		59,60,5,0,0,1,60,5,1,0,0,0,61,64,3,22,11,0,62,63,5,9,0,0,63,65,3,20,10,
-		0,64,62,1,0,0,0,64,65,1,0,0,0,65,66,1,0,0,0,66,67,5,0,0,1,67,7,1,0,0,0,
-		68,69,6,4,-1,0,69,73,3,22,11,0,70,71,5,9,0,0,71,72,6,4,-1,0,72,74,3,22,
-		11,0,73,70,1,0,0,0,73,74,1,0,0,0,74,75,1,0,0,0,75,76,5,0,0,1,76,9,1,0,
-		0,0,77,78,3,22,11,0,78,79,5,0,0,1,79,11,1,0,0,0,80,81,3,24,12,0,81,82,
-		5,0,0,1,82,13,1,0,0,0,83,88,3,16,8,0,84,85,5,11,0,0,85,87,3,16,8,0,86,
-		84,1,0,0,0,87,90,1,0,0,0,88,89,1,0,0,0,88,86,1,0,0,0,89,15,1,0,0,0,90,
-		88,1,0,0,0,91,95,3,18,9,0,92,93,5,14,0,0,93,94,6,8,-1,0,94,96,3,24,12,
-		0,95,92,1,0,0,0,95,96,1,0,0,0,96,17,1,0,0,0,97,98,6,9,-1,0,98,99,3,24,
-		12,0,99,19,1,0,0,0,100,101,6,10,-1,0,101,106,3,22,11,0,102,103,5,8,0,0,
-		103,105,3,22,11,0,104,102,1,0,0,0,105,108,1,0,0,0,106,107,1,0,0,0,106,
-		104,1,0,0,0,107,109,1,0,0,0,108,106,1,0,0,0,109,110,6,10,-1,0,110,21,1,
-		0,0,0,111,112,3,24,12,0,112,23,1,0,0,0,113,115,3,32,16,0,114,116,3,26,
-		13,0,115,114,1,0,0,0,115,116,1,0,0,0,116,119,1,0,0,0,117,119,3,26,13,0,
-		118,113,1,0,0,0,118,117,1,0,0,0,119,25,1,0,0,0,120,121,5,4,0,0,121,122,
-		3,26,13,0,122,126,5,5,0,0,123,125,3,28,14,0,124,123,1,0,0,0,125,128,1,
-		0,0,0,126,127,1,0,0,0,126,124,1,0,0,0,127,154,1,0,0,0,128,126,1,0,0,0,
-		129,130,5,2,0,0,130,131,3,24,12,0,131,135,5,3,0,0,132,134,3,28,14,0,133,
-		132,1,0,0,0,134,137,1,0,0,0,135,136,1,0,0,0,135,133,1,0,0,0,136,154,1,
-		0,0,0,137,135,1,0,0,0,138,139,5,10,0,0,139,143,3,36,18,0,140,142,3,28,
-		14,0,141,140,1,0,0,0,142,145,1,0,0,0,143,144,1,0,0,0,143,141,1,0,0,0,144,
-		154,1,0,0,0,145,143,1,0,0,0,146,150,3,44,22,0,147,149,3,28,14,0,148,147,
-		1,0,0,0,149,152,1,0,0,0,150,151,1,0,0,0,150,148,1,0,0,0,151,154,1,0,0,
-		0,152,150,1,0,0,0,153,120,1,0,0,0,153,129,1,0,0,0,153,138,1,0,0,0,153,
-		146,1,0,0,0,154,27,1,0,0,0,155,156,5,4,0,0,156,157,3,26,13,0,157,158,5,
-		5,0,0,158,167,1,0,0,0,159,160,5,2,0,0,160,161,3,24,12,0,161,162,5,3,0,
-		0,162,167,1,0,0,0,163,164,5,10,0,0,164,167,3,36,18,0,165,167,3,42,21,0,
-		166,155,1,0,0,0,166,159,1,0,0,0,166,163,1,0,0,0,166,165,1,0,0,0,167,29,
-		1,0,0,0,168,169,5,15,0,0,169,170,6,15,-1,0,170,31,1,0,0,0,171,173,3,30,
-		15,0,172,174,3,34,17,0,173,172,1,0,0,0,173,174,1,0,0,0,174,175,1,0,0,0,
-		175,176,6,16,-1,0,176,177,5,6,0,0,177,33,1,0,0,0,178,183,3,24,12,0,179,
-		180,5,8,0,0,180,182,3,24,12,0,181,179,1,0,0,0,182,185,1,0,0,0,183,184,
-		1,0,0,0,183,181,1,0,0,0,184,35,1,0,0,0,185,183,1,0,0,0,186,189,3,38,19,
-		0,187,189,3,40,20,0,188,186,1,0,0,0,188,187,1,0,0,0,189,37,1,0,0,0,190,
-		191,5,17,0,0,191,195,6,19,-1,0,192,194,3,26,13,0,193,192,1,0,0,0,194,197,
-		1,0,0,0,195,196,1,0,0,0,195,193,1,0,0,0,196,198,1,0,0,0,197,195,1,0,0,
-		0,198,199,5,7,0,0,199,205,6,19,-1,0,200,205,5,18,0,0,201,205,5,40,0,0,
-		202,205,5,41,0,0,203,205,5,19,0,0,204,190,1,0,0,0,204,200,1,0,0,0,204,
-		201,1,0,0,0,204,202,1,0,0,0,204,203,1,0,0,0,205,39,1,0,0,0,206,207,7,0,
-		0,0,207,41,1,0,0,0,208,211,3,44,22,0,209,211,5,15,0,0,210,208,1,0,0,0,
-		210,209,1,0,0,0,211,43,1,0,0,0,212,228,3,46,23,0,213,228,3,48,24,0,214,
-		215,4,22,0,0,215,228,5,6,0,0,216,217,4,22,1,0,217,228,5,14,0,0,218,219,
-		4,22,2,0,219,228,5,11,0,0,220,221,4,22,3,0,221,228,5,8,0,0,222,223,4,22,
-		4,0,223,228,5,9,0,0,224,225,4,22,5,0,225,228,5,7,0,0,226,228,7,1,0,0,227,
-		212,1,0,0,0,227,213,1,0,0,0,227,214,1,0,0,0,227,216,1,0,0,0,227,218,1,
-		0,0,0,227,220,1,0,0,0,227,222,1,0,0,0,227,224,1,0,0,0,227,226,1,0,0,0,
-		228,45,1,0,0,0,229,230,5,1,0,0,230,231,5,43,0,0,231,47,1,0,0,0,232,234,
-		5,13,0,0,233,235,5,45,0,0,234,233,1,0,0,0,234,235,1,0,0,0,235,236,1,0,
-		0,0,236,237,5,44,0,0,237,49,1,0,0,0,21,64,73,88,95,106,115,118,126,135,
-		143,150,153,166,173,183,188,195,204,210,227,234
+		2,22,7,22,2,23,7,23,2,24,7,24,2,25,7,25,1,0,1,0,1,0,1,1,1,1,1,1,1,1,1,
+		1,1,2,1,2,1,2,1,3,1,3,1,3,3,3,67,8,3,1,3,1,3,1,4,1,4,1,4,1,4,1,4,3,4,76,
+		8,4,1,4,1,4,1,5,1,5,1,5,1,6,1,6,1,6,1,7,1,7,1,7,5,7,89,8,7,10,7,12,7,92,
+		9,7,1,8,1,8,1,8,1,8,3,8,98,8,8,1,9,1,9,1,9,1,10,1,10,1,10,1,10,5,10,107,
+		8,10,10,10,12,10,110,9,10,1,10,1,10,1,11,1,11,1,12,1,12,3,12,118,8,12,
+		1,12,3,12,121,8,12,1,13,1,13,1,13,1,13,5,13,127,8,13,10,13,12,13,130,9,
+		13,1,13,1,13,1,13,1,13,5,13,136,8,13,10,13,12,13,139,9,13,1,13,1,13,1,
+		13,5,13,144,8,13,10,13,12,13,147,9,13,1,13,1,13,5,13,151,8,13,10,13,12,
+		13,154,9,13,3,13,156,8,13,1,14,1,14,1,14,1,14,1,14,1,14,1,14,1,14,1,14,
+		1,14,1,14,3,14,169,8,14,1,15,1,15,1,15,1,16,1,16,3,16,176,8,16,1,16,1,
+		16,1,16,1,17,1,17,1,17,5,17,184,8,17,10,17,12,17,187,9,17,1,18,1,18,3,
+		18,191,8,18,1,19,1,19,1,19,5,19,196,8,19,10,19,12,19,199,9,19,1,19,1,19,
+		1,19,1,19,1,19,1,19,3,19,207,8,19,1,20,1,20,1,21,1,21,3,21,213,8,21,1,
+		22,1,22,1,22,1,22,1,22,1,22,1,22,1,22,1,22,1,22,1,22,1,22,1,22,1,22,1,
+		22,3,22,230,8,22,1,23,1,23,1,23,1,24,1,24,4,24,237,8,24,11,24,12,24,238,
+		1,24,1,24,1,25,1,25,3,25,245,8,25,1,25,1,25,1,25,8,90,108,128,137,145,
+		152,185,197,0,26,0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,
+		40,42,44,46,48,50,0,2,4,0,9,10,13,13,21,40,43,43,2,0,13,13,17,17,258,0,
+		52,1,0,0,0,2,55,1,0,0,0,4,60,1,0,0,0,6,63,1,0,0,0,8,70,1,0,0,0,10,79,1,
+		0,0,0,12,82,1,0,0,0,14,85,1,0,0,0,16,93,1,0,0,0,18,99,1,0,0,0,20,102,1,
+		0,0,0,22,113,1,0,0,0,24,120,1,0,0,0,26,155,1,0,0,0,28,168,1,0,0,0,30,170,
+		1,0,0,0,32,173,1,0,0,0,34,180,1,0,0,0,36,190,1,0,0,0,38,206,1,0,0,0,40,
+		208,1,0,0,0,42,212,1,0,0,0,44,229,1,0,0,0,46,231,1,0,0,0,48,234,1,0,0,
+		0,50,242,1,0,0,0,52,53,3,16,8,0,53,54,5,0,0,1,54,1,1,0,0,0,55,56,6,1,-1,
+		0,56,57,3,14,7,0,57,58,5,0,0,1,58,59,6,1,-1,0,59,3,1,0,0,0,60,61,3,20,
+		10,0,61,62,5,0,0,1,62,5,1,0,0,0,63,66,3,22,11,0,64,65,5,9,0,0,65,67,3,
+		20,10,0,66,64,1,0,0,0,66,67,1,0,0,0,67,68,1,0,0,0,68,69,5,0,0,1,69,7,1,
+		0,0,0,70,71,6,4,-1,0,71,75,3,22,11,0,72,73,5,9,0,0,73,74,6,4,-1,0,74,76,
+		3,22,11,0,75,72,1,0,0,0,75,76,1,0,0,0,76,77,1,0,0,0,77,78,5,0,0,1,78,9,
+		1,0,0,0,79,80,3,22,11,0,80,81,5,0,0,1,81,11,1,0,0,0,82,83,3,24,12,0,83,
+		84,5,0,0,1,84,13,1,0,0,0,85,90,3,16,8,0,86,87,5,12,0,0,87,89,3,16,8,0,
+		88,86,1,0,0,0,89,92,1,0,0,0,90,91,1,0,0,0,90,88,1,0,0,0,91,15,1,0,0,0,
+		92,90,1,0,0,0,93,97,3,18,9,0,94,95,5,15,0,0,95,96,6,8,-1,0,96,98,3,24,
+		12,0,97,94,1,0,0,0,97,98,1,0,0,0,98,17,1,0,0,0,99,100,6,9,-1,0,100,101,
+		3,24,12,0,101,19,1,0,0,0,102,103,6,10,-1,0,103,108,3,22,11,0,104,105,5,
+		8,0,0,105,107,3,22,11,0,106,104,1,0,0,0,107,110,1,0,0,0,108,109,1,0,0,
+		0,108,106,1,0,0,0,109,111,1,0,0,0,110,108,1,0,0,0,111,112,6,10,-1,0,112,
+		21,1,0,0,0,113,114,3,24,12,0,114,23,1,0,0,0,115,117,3,32,16,0,116,118,
+		3,26,13,0,117,116,1,0,0,0,117,118,1,0,0,0,118,121,1,0,0,0,119,121,3,26,
+		13,0,120,115,1,0,0,0,120,119,1,0,0,0,121,25,1,0,0,0,122,123,5,4,0,0,123,
+		124,3,26,13,0,124,128,5,5,0,0,125,127,3,28,14,0,126,125,1,0,0,0,127,130,
+		1,0,0,0,128,129,1,0,0,0,128,126,1,0,0,0,129,156,1,0,0,0,130,128,1,0,0,
+		0,131,132,5,2,0,0,132,133,3,24,12,0,133,137,5,3,0,0,134,136,3,28,14,0,
+		135,134,1,0,0,0,136,139,1,0,0,0,137,138,1,0,0,0,137,135,1,0,0,0,138,156,
+		1,0,0,0,139,137,1,0,0,0,140,141,5,10,0,0,141,145,3,36,18,0,142,144,3,28,
+		14,0,143,142,1,0,0,0,144,147,1,0,0,0,145,146,1,0,0,0,145,143,1,0,0,0,146,
+		156,1,0,0,0,147,145,1,0,0,0,148,152,3,44,22,0,149,151,3,28,14,0,150,149,
+		1,0,0,0,151,154,1,0,0,0,152,153,1,0,0,0,152,150,1,0,0,0,153,156,1,0,0,
+		0,154,152,1,0,0,0,155,122,1,0,0,0,155,131,1,0,0,0,155,140,1,0,0,0,155,
+		148,1,0,0,0,156,27,1,0,0,0,157,158,5,4,0,0,158,159,3,26,13,0,159,160,5,
+		5,0,0,160,169,1,0,0,0,161,162,5,2,0,0,162,163,3,24,12,0,163,164,5,3,0,
+		0,164,169,1,0,0,0,165,166,5,10,0,0,166,169,3,36,18,0,167,169,3,42,21,0,
+		168,157,1,0,0,0,168,161,1,0,0,0,168,165,1,0,0,0,168,167,1,0,0,0,169,29,
+		1,0,0,0,170,171,5,16,0,0,171,172,6,15,-1,0,172,31,1,0,0,0,173,175,3,30,
+		15,0,174,176,3,34,17,0,175,174,1,0,0,0,175,176,1,0,0,0,176,177,1,0,0,0,
+		177,178,6,16,-1,0,178,179,5,6,0,0,179,33,1,0,0,0,180,185,3,24,12,0,181,
+		182,5,8,0,0,182,184,3,24,12,0,183,181,1,0,0,0,184,187,1,0,0,0,185,186,
+		1,0,0,0,185,183,1,0,0,0,186,35,1,0,0,0,187,185,1,0,0,0,188,191,3,38,19,
+		0,189,191,3,40,20,0,190,188,1,0,0,0,190,189,1,0,0,0,191,37,1,0,0,0,192,
+		193,5,18,0,0,193,197,6,19,-1,0,194,196,3,26,13,0,195,194,1,0,0,0,196,199,
+		1,0,0,0,197,198,1,0,0,0,197,195,1,0,0,0,198,200,1,0,0,0,199,197,1,0,0,
+		0,200,201,5,7,0,0,201,207,6,19,-1,0,202,207,5,19,0,0,203,207,5,41,0,0,
+		204,207,5,42,0,0,205,207,5,20,0,0,206,192,1,0,0,0,206,202,1,0,0,0,206,
+		203,1,0,0,0,206,204,1,0,0,0,206,205,1,0,0,0,207,39,1,0,0,0,208,209,7,0,
+		0,0,209,41,1,0,0,0,210,213,3,44,22,0,211,213,5,16,0,0,212,210,1,0,0,0,
+		212,211,1,0,0,0,213,43,1,0,0,0,214,230,3,46,23,0,215,230,3,50,25,0,216,
+		217,4,22,0,0,217,230,5,6,0,0,218,219,4,22,1,0,219,230,5,15,0,0,220,221,
+		4,22,2,0,221,230,5,12,0,0,222,223,4,22,3,0,223,230,5,8,0,0,224,225,4,22,
+		4,0,225,230,5,9,0,0,226,227,4,22,5,0,227,230,5,7,0,0,228,230,7,1,0,0,229,
+		214,1,0,0,0,229,215,1,0,0,0,229,216,1,0,0,0,229,218,1,0,0,0,229,220,1,
+		0,0,0,229,222,1,0,0,0,229,224,1,0,0,0,229,226,1,0,0,0,229,228,1,0,0,0,
+		230,45,1,0,0,0,231,232,5,1,0,0,232,233,5,44,0,0,233,47,1,0,0,0,234,236,
+		5,11,0,0,235,237,5,46,0,0,236,235,1,0,0,0,237,238,1,0,0,0,238,236,1,0,
+		0,0,238,239,1,0,0,0,239,240,1,0,0,0,240,241,5,45,0,0,241,49,1,0,0,0,242,
+		244,5,14,0,0,243,245,5,48,0,0,244,243,1,0,0,0,244,245,1,0,0,0,245,246,
+		1,0,0,0,246,247,5,47,0,0,247,51,1,0,0,0,22,66,75,90,97,108,117,120,128,
+		137,145,152,155,168,175,185,190,197,206,212,229,238,244
 	};
 
 	public static readonly ATN _ATN =
