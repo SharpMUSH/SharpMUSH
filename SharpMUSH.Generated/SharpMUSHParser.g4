@@ -150,7 +150,7 @@ beginGenericText:
     | {!lookingForCommandArgCommas && inFunction == 0}? COMMAWS
     | {!lookingForCommandArgEquals}? EQUALS
     | {!lookingForRegisterCaret}? CCARET
-    | (COLON | OTHER)
+    | (COLON | OTHER | ANY_AT_ALL)
 ;
 
 escapedText: ESCAPE ANY;

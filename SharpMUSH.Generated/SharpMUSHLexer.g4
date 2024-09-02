@@ -28,7 +28,8 @@ RSPACE: ' ';
 FUNCHAR:
     [a-zA-Z0-9]+ '(' WS
 ; // Lazy way of indicating printable characters. There's more printable characters than this!
-OTHER: .+?;
+OTHER: ~('\\' | '[' | ']' | '{' | '}' | '(' | ')' | '<' | '>' | ',' | '%' | '$' | ';' | ':' | '\u001B' | ' ' | '=')+;
+ANY_AT_ALL: .+?;
 
 // --------------- SUBSTITUTION MODE -------------
 mode SUBSTITUTION;

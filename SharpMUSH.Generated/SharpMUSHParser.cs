@@ -38,13 +38,13 @@ public partial class SharpMUSHParser : Parser {
 	public const int
 		ESCAPE=1, OBRACK=2, CBRACK=3, OBRACE=4, CBRACE=5, CPAREN=6, CCARET=7, 
 		COMMAWS=8, EQUALS=9, PERCENT=10, DOLLAR=11, SEMICOLON=12, COLON=13, OANSI=14, 
-		RSPACE=15, FUNCHAR=16, OTHER=17, REG_STARTCARET=18, REG_NUM=19, VWX=20, 
-		ARG_NUM=21, SPACE=22, BLANKLINE=23, TAB=24, DBREF=25, ENACTOR_NAME=26, 
-		CAP_ENACTOR_NAME=27, ACCENT_NAME=28, MONIKER_NAME=29, SUB_PRONOUN=30, 
-		OBJ_PRONOUN=31, POS_PRONOUN=32, ABS_POS_PRONOUN=33, CALLED_DBREF=34, EXECUTOR_DBREF=35, 
-		LOCATION_DBREF=36, LASTCOMMAND_BEFORE_EVAL=37, LASTCOMMAND_AFTER_EVAL=38, 
-		INVOCATION_DEPTH=39, CURRENT_ARG_COUNT=40, ITEXT_NUM=41, STEXT_NUM=42, 
-		OTHER_SUB=43, ANY=44, SPACEREGEX=45, ANYREGEX=46, CANSI=47, ANSICHARACTER=48;
+		RSPACE=15, FUNCHAR=16, OTHER=17, ANY_AT_ALL=18, REG_STARTCARET=19, REG_NUM=20, 
+		VWX=21, ARG_NUM=22, SPACE=23, BLANKLINE=24, TAB=25, DBREF=26, ENACTOR_NAME=27, 
+		CAP_ENACTOR_NAME=28, ACCENT_NAME=29, MONIKER_NAME=30, SUB_PRONOUN=31, 
+		OBJ_PRONOUN=32, POS_PRONOUN=33, ABS_POS_PRONOUN=34, CALLED_DBREF=35, EXECUTOR_DBREF=36, 
+		LOCATION_DBREF=37, LASTCOMMAND_BEFORE_EVAL=38, LASTCOMMAND_AFTER_EVAL=39, 
+		INVOCATION_DEPTH=40, CURRENT_ARG_COUNT=41, ITEXT_NUM=42, STEXT_NUM=43, 
+		OTHER_SUB=44, ANY=45, SPACEREGEX=46, ANYREGEX=47, CANSI=48, ANSICHARACTER=49;
 	public const int
 		RULE_startSingleCommandString = 0, RULE_startCommandString = 1, RULE_startPlainCommaCommandArgs = 2, 
 		RULE_startEqSplitCommandArgs = 3, RULE_startEqSplitCommand = 4, RULE_startPlainSingleCommandArg = 5, 
@@ -67,17 +67,17 @@ public partial class SharpMUSHParser : Parser {
 	private static readonly string[] _LiteralNames = {
 		null, "'\\'", "'['", "']'", "'{'", "'}'", "')'", "'>'", null, "'='", "'%'", 
 		"'$'", "';'", "':'", "'\\u001B'", null, null, null, null, null, null, 
-		null, null, null, null, "'#'", "'n'", "'N'", "'~'", null, null, null, 
-		null, null, "'@'", "'!'", null, null, null, "'?'", "'+'", null, null, 
-		null, null, null, null, "'m'"
+		null, null, null, null, null, "'#'", "'n'", "'N'", "'~'", null, null, 
+		null, null, null, "'@'", "'!'", null, null, null, "'?'", "'+'", null, 
+		null, null, null, null, null, "'m'"
 	};
 	private static readonly string[] _SymbolicNames = {
 		null, "ESCAPE", "OBRACK", "CBRACK", "OBRACE", "CBRACE", "CPAREN", "CCARET", 
 		"COMMAWS", "EQUALS", "PERCENT", "DOLLAR", "SEMICOLON", "COLON", "OANSI", 
-		"RSPACE", "FUNCHAR", "OTHER", "REG_STARTCARET", "REG_NUM", "VWX", "ARG_NUM", 
-		"SPACE", "BLANKLINE", "TAB", "DBREF", "ENACTOR_NAME", "CAP_ENACTOR_NAME", 
-		"ACCENT_NAME", "MONIKER_NAME", "SUB_PRONOUN", "OBJ_PRONOUN", "POS_PRONOUN", 
-		"ABS_POS_PRONOUN", "CALLED_DBREF", "EXECUTOR_DBREF", "LOCATION_DBREF", 
+		"RSPACE", "FUNCHAR", "OTHER", "ANY_AT_ALL", "REG_STARTCARET", "REG_NUM", 
+		"VWX", "ARG_NUM", "SPACE", "BLANKLINE", "TAB", "DBREF", "ENACTOR_NAME", 
+		"CAP_ENACTOR_NAME", "ACCENT_NAME", "MONIKER_NAME", "SUB_PRONOUN", "OBJ_PRONOUN", 
+		"POS_PRONOUN", "ABS_POS_PRONOUN", "CALLED_DBREF", "EXECUTOR_DBREF", "LOCATION_DBREF", 
 		"LASTCOMMAND_BEFORE_EVAL", "LASTCOMMAND_AFTER_EVAL", "INVOCATION_DEPTH", 
 		"CURRENT_ARG_COUNT", "ITEXT_NUM", "STEXT_NUM", "OTHER_SUB", "ANY", "SPACEREGEX", 
 		"ANYREGEX", "CANSI", "ANSICHARACTER"
@@ -1433,7 +1433,7 @@ public partial class SharpMUSHParser : Parser {
 			{
 			State = 208;
 			_la = TokenStream.LA(1);
-			if ( !((((_la) & ~0x3f) == 0 && ((1L << _la) & 10995114190336L) != 0)) ) {
+			if ( !((((_la) & ~0x3f) == 0 && ((1L << _la) & 21990228370944L) != 0)) ) {
 			ErrorHandler.RecoverInline(this);
 			}
 			else {
@@ -1521,6 +1521,7 @@ public partial class SharpMUSHParser : Parser {
 		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode CCARET() { return GetToken(SharpMUSHParser.CCARET, 0); }
 		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode COLON() { return GetToken(SharpMUSHParser.COLON, 0); }
 		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode OTHER() { return GetToken(SharpMUSHParser.OTHER, 0); }
+		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode ANY_AT_ALL() { return GetToken(SharpMUSHParser.ANY_AT_ALL, 0); }
 		public BeginGenericTextContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
 		{
@@ -1616,7 +1617,7 @@ public partial class SharpMUSHParser : Parser {
 				{
 				State = 228;
 				_la = TokenStream.LA(1);
-				if ( !(_la==COLON || _la==OTHER) ) {
+				if ( !((((_la) & ~0x3f) == 0 && ((1L << _la) & 401408L) != 0)) ) {
 				ErrorHandler.RecoverInline(this);
 				}
 				else {
@@ -1808,7 +1809,7 @@ public partial class SharpMUSHParser : Parser {
 	}
 
 	private static int[] _serializedATN = {
-		4,1,48,249,2,0,7,0,2,1,7,1,2,2,7,2,2,3,7,3,2,4,7,4,2,5,7,5,2,6,7,6,2,7,
+		4,1,49,249,2,0,7,0,2,1,7,1,2,2,7,2,2,3,7,3,2,4,7,4,2,5,7,5,2,6,7,6,2,7,
 		7,7,2,8,7,8,2,9,7,9,2,10,7,10,2,11,7,11,2,12,7,12,2,13,7,13,2,14,7,14,
 		2,15,7,15,2,16,7,16,2,17,7,17,2,18,7,18,2,19,7,19,2,20,7,20,2,21,7,21,
 		2,22,7,22,2,23,7,23,2,24,7,24,2,25,7,25,1,0,1,0,1,0,1,1,1,1,1,1,1,1,1,
@@ -1828,7 +1829,7 @@ public partial class SharpMUSHParser : Parser {
 		22,3,22,230,8,22,1,23,1,23,1,23,1,24,1,24,4,24,237,8,24,11,24,12,24,238,
 		1,24,1,24,1,25,1,25,3,25,245,8,25,1,25,1,25,1,25,8,90,108,128,137,145,
 		152,185,197,0,26,0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,
-		40,42,44,46,48,50,0,2,4,0,9,10,13,13,21,40,43,43,2,0,13,13,17,17,258,0,
+		40,42,44,46,48,50,0,2,4,0,9,10,13,13,22,41,44,44,2,0,13,13,17,18,258,0,
 		52,1,0,0,0,2,55,1,0,0,0,4,60,1,0,0,0,6,63,1,0,0,0,8,70,1,0,0,0,10,79,1,
 		0,0,0,12,82,1,0,0,0,14,85,1,0,0,0,16,93,1,0,0,0,18,99,1,0,0,0,20,102,1,
 		0,0,0,22,113,1,0,0,0,24,120,1,0,0,0,26,155,1,0,0,0,28,168,1,0,0,0,30,170,
@@ -1870,10 +1871,10 @@ public partial class SharpMUSHParser : Parser {
 		182,5,8,0,0,182,184,3,24,12,0,183,181,1,0,0,0,184,187,1,0,0,0,185,186,
 		1,0,0,0,185,183,1,0,0,0,186,35,1,0,0,0,187,185,1,0,0,0,188,191,3,38,19,
 		0,189,191,3,40,20,0,190,188,1,0,0,0,190,189,1,0,0,0,191,37,1,0,0,0,192,
-		193,5,18,0,0,193,197,6,19,-1,0,194,196,3,26,13,0,195,194,1,0,0,0,196,199,
+		193,5,19,0,0,193,197,6,19,-1,0,194,196,3,26,13,0,195,194,1,0,0,0,196,199,
 		1,0,0,0,197,198,1,0,0,0,197,195,1,0,0,0,198,200,1,0,0,0,199,197,1,0,0,
-		0,200,201,5,7,0,0,201,207,6,19,-1,0,202,207,5,19,0,0,203,207,5,41,0,0,
-		204,207,5,42,0,0,205,207,5,20,0,0,206,192,1,0,0,0,206,202,1,0,0,0,206,
+		0,200,201,5,7,0,0,201,207,6,19,-1,0,202,207,5,20,0,0,203,207,5,42,0,0,
+		204,207,5,43,0,0,205,207,5,21,0,0,206,192,1,0,0,0,206,202,1,0,0,0,206,
 		203,1,0,0,0,206,204,1,0,0,0,206,205,1,0,0,0,207,39,1,0,0,0,208,209,7,0,
 		0,0,209,41,1,0,0,0,210,213,3,44,22,0,211,213,5,16,0,0,212,210,1,0,0,0,
 		212,211,1,0,0,0,213,43,1,0,0,0,214,230,3,46,23,0,215,230,3,50,25,0,216,
@@ -1882,11 +1883,11 @@ public partial class SharpMUSHParser : Parser {
 		4,0,225,230,5,9,0,0,226,227,4,22,5,0,227,230,5,7,0,0,228,230,7,1,0,0,229,
 		214,1,0,0,0,229,215,1,0,0,0,229,216,1,0,0,0,229,218,1,0,0,0,229,220,1,
 		0,0,0,229,222,1,0,0,0,229,224,1,0,0,0,229,226,1,0,0,0,229,228,1,0,0,0,
-		230,45,1,0,0,0,231,232,5,1,0,0,232,233,5,44,0,0,233,47,1,0,0,0,234,236,
-		5,11,0,0,235,237,5,46,0,0,236,235,1,0,0,0,237,238,1,0,0,0,238,236,1,0,
-		0,0,238,239,1,0,0,0,239,240,1,0,0,0,240,241,5,45,0,0,241,49,1,0,0,0,242,
-		244,5,14,0,0,243,245,5,48,0,0,244,243,1,0,0,0,244,245,1,0,0,0,245,246,
-		1,0,0,0,246,247,5,47,0,0,247,51,1,0,0,0,22,66,75,90,97,108,117,120,128,
+		230,45,1,0,0,0,231,232,5,1,0,0,232,233,5,45,0,0,233,47,1,0,0,0,234,236,
+		5,11,0,0,235,237,5,47,0,0,236,235,1,0,0,0,237,238,1,0,0,0,238,236,1,0,
+		0,0,238,239,1,0,0,0,239,240,1,0,0,0,240,241,5,46,0,0,241,49,1,0,0,0,242,
+		244,5,14,0,0,243,245,5,49,0,0,244,243,1,0,0,0,244,245,1,0,0,0,245,246,
+		1,0,0,0,246,247,5,48,0,0,247,51,1,0,0,0,22,66,75,90,97,108,117,120,128,
 		137,145,152,155,168,175,185,190,197,206,212,229,238,244
 	};
 
