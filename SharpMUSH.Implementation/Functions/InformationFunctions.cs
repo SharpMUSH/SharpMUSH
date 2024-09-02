@@ -1,4 +1,6 @@
 ﻿using SharpMUSH.Implementation.Definitions;
+using SharpMUSH.Library;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Implementation.Functions
@@ -44,13 +46,31 @@ namespace SharpMUSH.Implementation.Functions
 		[SharpFunction(Name = "HASPOWER", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 		public static CallState HasPower(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		{
-			throw new NotImplementedException();
+			var obj = HelperFunctions.ParseDBRef(MModule.plainText(parser.CurrentState.Arguments[0].Message));
+			var power = MModule.plainText(parser.CurrentState.Arguments[1].Message).ToUpper();
+			// TODO: Better Error
+			if (obj.IsNone()) return new CallState(false);
+
+			var actualObj = parser.Database.GetObjectNode(obj.AsT1.Value);
+			// TODO: Notify
+			if (actualObj.IsNone()) return new CallState(false);
+
+			return new CallState(power.Equals(actualObj.Object()!.Type.ToUpper()));
 		}
 
 		[SharpFunction(Name = "HASTYPE", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 		public static CallState HasType(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		{
-			throw new NotImplementedException();
+			var obj = HelperFunctions.ParseDBRef(MModule.plainText(parser.CurrentState.Arguments[0].Message));
+			var typeList = MModule.plainText(parser.CurrentState.Arguments[1].Message).Split(" ");
+			// TODO: Better Error
+			if (obj.IsNone()) return new CallState(false);
+			
+			var actualObj = parser.Database.GetObjectNode(obj.AsT1.Value);
+			// TODO: Notify
+			if (actualObj.IsNone()) return new CallState(false);
+
+			return new CallState(typeList.Contains(actualObj.Object()!.Type.ToUpper()));
 		}
 
 		[SharpFunction(Name = "INAME", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]

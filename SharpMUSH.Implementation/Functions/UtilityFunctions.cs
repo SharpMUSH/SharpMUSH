@@ -284,20 +284,25 @@ namespace SharpMUSH.Implementation.Functions
 		{
 			throw new NotImplementedException();
 		}
+
 		[SharpFunction(Name = "ILEV", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 		public static CallState ILev(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		{
 			throw new NotImplementedException();
 		}
+
 		[SharpFunction(Name = "INUM", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 		public static CallState INum(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		{
 			throw new NotImplementedException();
 		}
+
 		[SharpFunction(Name = "ISDBREF", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 		public static CallState IsDbRef(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		{
-			throw new NotImplementedException();
+			var parsed = HelperFunctions.ParseDBRef(MModule.plainText(parser.CurrentState.Arguments[0].Message));
+			if (parsed.IsNone()) return new("0");
+			return new CallState(!parser.Database.GetObjectNode(parsed.AsT1.Value).IsT4);
 		}
 
 		[SharpFunction(Name = "ISINT", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -329,7 +334,8 @@ namespace SharpMUSH.Implementation.Functions
 		[SharpFunction(Name = "ISWORD", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 		public static CallState IsWord(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		{
-			throw new NotImplementedException();
+			var str = MModule.plainText(parser.CurrentState.Arguments[0].Message);
+			return new CallState(Regex.IsMatch(str, @"^[a-zA-Z]$"));
 		}
 
 		[SharpFunction(Name = "ITEXT", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -425,9 +431,7 @@ namespace SharpMUSH.Implementation.Functions
 		}
 		[SharpFunction(Name = "S", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 		public static CallState S(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		{
-			return parser.FunctionParse(parser.CurrentState.Arguments.Last().Message!)!;
-		}
+			=> parser.FunctionParse(parser.CurrentState.Arguments.Last().Message!)!;
 
 		[SharpFunction(Name = "SCAN", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 		public static CallState Scan(IMUSHCodeParser parser, SharpFunctionAttribute _2)
