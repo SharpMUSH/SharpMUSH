@@ -136,12 +136,20 @@ namespace SharpMUSH.Library.Extensions
 
 		public static string? Id(this AnyOptionalSharpObject union) =>
 			union.Match(
-					player => player.Id,
-					room => room.Id,
-					exit => exit.Id,
-					thing => thing.Id,
-					none => null
-				);
+				player => player.Id,
+				room => room.Id,
+				exit => exit.Id,
+				thing => thing.Id,
+				none => null
+			);
+
+		public static string? Id(this AnyOptionalSharpContainer union) =>
+			union.Match(
+				player => player.Id,
+				room => room.Id,
+				thing => thing.Id,
+				none => null
+			);
 
 		public static string? Id(this AnySharpObject union) =>
 			union.Match(

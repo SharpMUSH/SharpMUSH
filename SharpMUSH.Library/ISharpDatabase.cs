@@ -17,7 +17,7 @@ public interface ISharpDatabase
 
 	Task SetLockAsync(SharpObject target, string lockName, string lockString);
 
-	Task<IEnumerable<SharpAttribute>?> GetAttributeAsync(DBRef dbref, string[] attribute);
+	Task<IEnumerable<SharpAttribute>?> GetAttributeAsync(DBRef dbref, params string[] attribute);
 	
 	Task<IEnumerable<SharpAttribute>?> GetAttributesAsync(DBRef dbref, string attribute_pattern);
 
@@ -75,4 +75,8 @@ public interface ISharpDatabase
 	Task<IEnumerable<AnySharpContent>?> GetContentsAsync(DBRef obj);
 
 	Task<IEnumerable<AnySharpContent>?> GetContentsAsync(AnyOptionalSharpObject node);
+
+	Task<IEnumerable<SharpExit>?> GetExitsAsync(DBRef obj);
+
+	Task<IEnumerable<SharpExit>?> GetExitsAsync(AnyOptionalSharpContainer node);
 }

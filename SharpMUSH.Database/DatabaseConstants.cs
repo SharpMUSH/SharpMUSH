@@ -19,6 +19,7 @@ internal static class DatabaseConstants
 	internal const string hasObjectOwner = "edge_has_object_owner";
 	internal const string hasParent = "edge_has_parent";
 	internal const string hasHome = "edge_has_home";
+	internal const string hasExit = "edge_has_exit";
 	internal const string hasFlags = "edge_has_flags";
 	internal const string hasPowers = "edge_has_powers";
 	internal const string hasAttribute = "edge_has_attribute";
@@ -30,6 +31,7 @@ internal static class DatabaseConstants
 	internal const string graphFlags = "graph_flags";
 	internal const string graphAttributes = "graph_attributes";
 	internal const string graphLocations = "graph_locations";
+	internal const string graphExits = "graph_exits";
 	internal const string graphHomes = "graph_homes";
 	internal const string graphParents = "graph_parents";
 	internal const string graphObjectOwners = "graph_object_owners";

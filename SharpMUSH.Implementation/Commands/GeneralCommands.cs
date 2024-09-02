@@ -1,7 +1,10 @@
-﻿using OneOf.Monads;
+﻿using ANSILibrary;
+using MarkupString;
+using OneOf.Monads;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
+using System.Drawing;
 using CB = SharpMUSH.Implementation.Definitions.CommandBehavior;
 
 namespace SharpMUSH.Implementation.Commands;
@@ -86,11 +89,19 @@ public static partial class Commands
 
 		var name = viewing.Object()!.Name;
 		var location = viewing.Object()!.Key;
-		var contentKeys = contents!.Select(x => x.Object()!.Key);
+		var contentKeys = contents!.Select(x => x.Object()!.Name);
+		var exitKeys = parser.Database.GetExitsAsync(viewing.Object()!.DBRef).Result?.FirstOrDefault();
+		var description = parser.Database.GetAttributeAsync(viewing.Object()!.DBRef, "DESCRIBE").Result?.FirstOrDefault();
 
-		parser.NotifyService.Notify(enactor, $"Name: {name}");
-		parser.NotifyService.Notify(enactor, $"Location: {location}");
+		// TODO: Pass value into NAMEFORMAT
+		parser.NotifyService.Notify(enactor, $"{MModule.markupSingle2(Ansi.Create(foreground: StringExtensions.rgb(Color.White)), MModule.single(name))}(#{viewing.Object()!.DBRef.Number})" );
+		// TODO: Pass value into DESCFORMAT
+		parser.NotifyService.Notify(enactor, $"{description?.Value ?? "There is nothing to see here."}");
+		// parser.NotifyService.Notify(enactor, $"Location: {location}");
+		// TODO: Pass value into CONFORMAT
 		parser.NotifyService.Notify(enactor, $"Contents: {string.Join(Environment.NewLine, contentKeys)}");
+		// TODO: Pass value into EXITFORMAT
+		parser.NotifyService.Notify(enactor, $"Exits: {string.Join(Environment.NewLine, exitKeys)}");
 
 		return new CallState(viewing.Object()!.DBRef.ToString());
 	}

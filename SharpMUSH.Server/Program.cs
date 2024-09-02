@@ -22,7 +22,7 @@ public class Program
 
 		var container = new ArangoDbBuilder()
 			.WithReuse(true)
-			.WithLabel("reuse-id", "SharpMUSH")
+			.WithLabel("reuse-id", "SharpMUSH2")
 			.WithImage("arangodb:latest")
 			.WithPassword("password")
 			.Build();

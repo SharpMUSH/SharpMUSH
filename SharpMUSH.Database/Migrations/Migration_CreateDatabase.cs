@@ -347,7 +347,7 @@ namespace SharpMUSH.Database.Migrations
 				{
 					Collection = new ArangoCollection
 					{
-						Name = DatabaseConstants.hasParent,
+						Name = DatabaseConstants.hasExit,
 						Type = ArangoCollectionType.Edge,
 						WaitForSync = true
 					}
@@ -505,15 +505,34 @@ namespace SharpMUSH.Database.Migrations
 									DatabaseConstants.rooms,
 									DatabaseConstants.things,
 									DatabaseConstants.players
-									],
+								],
 								From = [
 									DatabaseConstants.exits,
 									DatabaseConstants.things,
 									DatabaseConstants.players
-									]
+								]
 							}
 						],
 						Name = DatabaseConstants.graphHomes
+					},
+					new()
+					{
+						EdgeDefinitions =
+						[
+							new ArangoEdgeDefinition()
+							{
+								Collection = DatabaseConstants.hasExit,
+								To = [
+									DatabaseConstants.exits,
+								],
+								From = [
+									DatabaseConstants.rooms,
+									DatabaseConstants.things,
+									DatabaseConstants.players
+								]
+							}
+						],
+						Name = DatabaseConstants.graphExits
 					},
 					new()
 					{

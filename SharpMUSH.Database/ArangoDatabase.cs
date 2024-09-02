@@ -127,6 +127,8 @@ public class ArangoDatabase(
 
 	public AnyOptionalSharpObject GetObjectNode(DBRef dbref)
 		=> GetObjectNodeAsync(dbref).Result;
+	public AnyOptionalSharpObject GetObjectNode(string dbId)
+		=> GetObjectNodeAsync(dbId).Result;
 
 	private IQueryable<SharpPower> GetPowers(string id)
 		=> arangoDB.Query.ExecuteAsync<SharpPower>(handle,
@@ -233,6 +235,14 @@ public class ArangoDatabase(
 	{
 		var query = await arangoDB.Query.ExecuteAsync<dynamic>(handle,
 			$"FOR v IN 0..1 OUTBOUND {dbID} GRAPH {DatabaseConstants.graphObjects} RETURN v");
+
+		if(query.Count() == 1)
+		{
+			// TODO: BE BETTER
+			query = await arangoDB.Query.ExecuteAsync<dynamic>(handle,
+				$"FOR v IN 0..1 INBOUND {dbID} GRAPH {DatabaseConstants.graphObjects} RETURN v");
+			query.Reverse();
+		}
 
 		var res = query.First();
 		var obj = query.Last();
@@ -359,7 +369,7 @@ public class ArangoDatabase(
 			Locks = target.Locks.Add(lockName, lockString)
 		}, mergeObjects: true);
 
-	public async Task<IEnumerable<SharpAttribute>?> GetAttributeAsync(DBRef dbref, string[] attribute)
+	public async Task<IEnumerable<SharpAttribute>?> GetAttributeAsync(DBRef dbref, params string[] attribute)
 	{
 		var startVertex = $"{DatabaseConstants.objects}/{dbref.Number}";
 		const string let = $"LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.graphObjects} RETURN v)";
@@ -524,6 +534,56 @@ public class ArangoDatabase(
 		return result;
 	}
 
+	public async Task<IEnumerable<SharpExit>?> GetExitsAsync(DBRef obj)
+	{
+		var baseObject = await GetObjectNodeAsync(obj);
+		if (baseObject.IsT4) return null;
+
+		const string exitQuery = $"FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.graphExits} RETURN v";
+		var query = await arangoDB.Query.ExecuteAsync<dynamic>(handle, $"{exitQuery}",
+			new Dictionary<string, object>
+			{
+				{"startVertex", baseObject.Object()!.Id! }
+			});
+		var result = query
+			.Select(x => (string)x._id)
+			.Select(GetObjectNodeAsync) // TODO: Optimize to make a single call.
+			.Select(x => x.Result.Match(
+				player => throw new Exception("Invalid Exit found"),
+				room => throw new Exception("Invalid Exit found"),
+				exit => exit,
+				thing => throw new Exception("Invalid Exit found"),
+				none => throw new Exception("Invalid Exit found")
+			));
+
+		return result;
+	}
+
+	public async Task<IEnumerable<SharpExit>?> GetExitsAsync(AnyOptionalSharpContainer node)
+	{
+		var startVertex = node.Id();
+		if (startVertex == null) return null;
+
+		const string exitQuery = $"FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.graphExits} RETURN v";
+		var query = await arangoDB.Query.ExecuteAsync<dynamic>(handle, $"{exitQuery}",
+			new Dictionary<string, object>
+			{
+				{"startVertex", startVertex! }
+			});
+		var result = query
+			.Select(x => (string)x._id)
+			.Select(GetObjectNodeAsync) // TODO: Optimize to make a single call.
+			.Select(x => x.Result.Match(
+				player => throw new Exception("Invalid Exit found"),
+				room => throw new Exception("Invalid Exit found"),
+				exit => exit,
+				thing => throw new Exception("Invalid Exit found"),
+				none => throw new Exception("Invalid Exit found")
+			));
+
+		return result;
+	}
+
 	public async Task<IEnumerable<SharpPlayer>> GetPlayerByNameAsync(string name)
 	{
 		// TODO: Look up by Alias.
@@ -538,42 +598,6 @@ public class ArangoDatabase(
 		var result = query.FirstOrDefault();
 		if (result == null) return [];
 
-		// This will instead have to be a query on isObject to get multiple player:object pairs.
-		const string playerQuery = $"FOR v,e,p IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.graphObjects} RETURN p";
-		var playerQueryResult = await arangoDB.Query.ExecuteAsync<dynamic>(handle, playerQuery,
-			bindVars: new Dictionary<string, object>
-			{
-				{ "startVertex", result._id },
-			});
-
-		return playerQueryResult.Select(path =>
-		{
-			var curObject = (path.edges[0] as SharpObjectQueryResult)!;
-			var curPlayer = (path.edges[1] as SharpPlayerQueryResult)!;
-
-			return new SharpPlayer()
-			{
-				Object = new SharpObject()
-				{
-					Name = curObject.Name,
-					Type = curObject.Type,
-					Id = curObject.Id,
-					Key = int.Parse(curObject.Key),
-					Locks = curObject?.Locks?.ToImmutableDictionary() ?? ImmutableDictionary.Create<string, string>(),
-					CreationTime = curObject!.CreationTime,
-					ModifiedTime = curObject!.ModifiedTime,
-					Flags = GetFlags(curObject.Id),
-					Powers = GetPowers(curObject.Id),
-					Attributes = GetAttributes(curObject.Id),
-					Owner = () => GetObjectOwner(curObject.Id),
-					Parent = GetParent(curObject.Id)
-				},
-				Location = () => GetLocation(curPlayer.Id),
-				Home = () => GetHome(curPlayer.Id),
-				PasswordHash = curPlayer.PasswordHash,
-				Aliases = curPlayer.Aliases,
-				Id = curPlayer.Id
-			};
-		});
+		return query.Select(x => GetObjectNode((string)x._id).AsT0);
 	}
 }
