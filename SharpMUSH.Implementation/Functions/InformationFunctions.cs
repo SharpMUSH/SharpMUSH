@@ -48,7 +48,7 @@ namespace SharpMUSH.Implementation.Functions
 		{
 			var obj = HelperFunctions.ParseDBRef(MModule.plainText(parser.CurrentState.Arguments[0].Message));
 			var power = MModule.plainText(parser.CurrentState.Arguments[1].Message).ToUpper();
-			// TODO: Better Error
+			// TODO: USE LOCATE
 			if (obj.IsNone()) return new CallState(false);
 
 			var actualObj = parser.Database.GetObjectNode(obj.AsT1.Value);
@@ -63,8 +63,8 @@ namespace SharpMUSH.Implementation.Functions
 		{
 			var obj = HelperFunctions.ParseDBRef(MModule.plainText(parser.CurrentState.Arguments[0].Message));
 			var typeList = MModule.plainText(parser.CurrentState.Arguments[1].Message).Split(" ");
-			// TODO: Better Error
-			if (obj.IsNone()) return new CallState(false);
+			// TODO: USE LOCATE
+			if (obj.IsNone()) return new CallState(false, Errors.ErrorNotVisible);
 			
 			var actualObj = parser.Database.GetObjectNode(obj.AsT1.Value);
 			// TODO: Notify

@@ -8,7 +8,7 @@ public record CallState(MString? Message, int Depth, MString[]? Arguments)
 
 	public CallState(string Message) : this(Message is not null ? MModule.single(Message) : MModule.empty(), 0, null) { }
 
-	public CallState(bool Message) : this(MModule.single(Message ? "1" : "0"), 0, null) { }
+	public CallState(bool Result, string errorIfFalse = "0") : this(MModule.single(Result? "1" : errorIfFalse), 0, null) { }
 
 	public CallState(string Message, int Depth) : this(Message is not null ? MModule.single(Message) : MModule.empty(), Depth, null) { }
 

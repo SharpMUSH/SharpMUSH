@@ -60,39 +60,37 @@ type ANSIFormatting =
     | Clear = 1024   
     | TrueClear = 2048
 
-type ANSIString(text: string) =
-  let mutable _hyperlink: string option = None
-  let mutable _colorForeground: AnsiColor option = None
-  let mutable _colorBackground: AnsiColor option = None
-  let mutable _opacity: float option = None
-  let mutable _formatting: ANSIFormatting = ANSIFormatting.None
-  let _text: string = text
-  
-  member internal this.AddFormatting(add: ANSIFormatting) =
-      _formatting <- _formatting ||| add
-      if _formatting.HasFlag(ANSIFormatting.UpperCase ||| ANSIFormatting.LowerCase) then
-          raise (ArgumentException("formatting cannot include both UpperCase and LowerCase!", "_formatting"))
-      this
+type ANSIString(text: string, hyperlink: string option, colorForeground: AnsiColor option, colorBackground: AnsiColor option, opacity: float option, formatting: ANSIFormatting) =
+  new(text: string) = ANSIString(text, None, None, None, None, ANSIFormatting.None)
 
-  member internal this.RemoveFormatting(rem: ANSIFormatting) =
-      _formatting <- _formatting &&& ~~~rem
-      this
+  member this.Text = text
+  member this.Hyperlink = hyperlink
+  member this.ColorForeground = colorForeground
+  member this.ColorBackground = colorBackground
+  member this.Opacity = opacity
+  member this.Formatting = formatting
 
-  member internal this.SetForegroundColor(color: AnsiColor) =
-      _colorForeground <- Some color 
-      this
+  member this.AddFormatting(add: ANSIFormatting) =
+      let newFormatting = formatting ||| add
+      if newFormatting.HasFlag(ANSIFormatting.UpperCase ||| ANSIFormatting.LowerCase) then
+          raise (ArgumentException("formatting cannot include both UpperCase and LowerCase!", "formatting"))
+      ANSIString(text, hyperlink, colorForeground, colorBackground, opacity, newFormatting)
+
+  member this.RemoveFormatting(rem: ANSIFormatting) =
+      let newFormatting = formatting &&& ~~~rem
+      ANSIString(text, hyperlink, colorForeground, colorBackground, opacity, newFormatting)
+
+  member this.SetForegroundColor(color: AnsiColor) =
+      ANSIString(text, hyperlink, Some color, colorBackground, opacity, formatting)
       
-  member internal this.SetBackgroundColor(color: AnsiColor) =
-      _colorBackground <- Some color
-      this
+  member this.SetBackgroundColor(color: AnsiColor) =
+      ANSIString(text, hyperlink, colorForeground, Some color, opacity, formatting)
 
-  member internal this.SetOpacity(opacity: float) =
-      _opacity <- Some opacity
-      this
+  member this.SetOpacity(opacity: float) =
+      ANSIString(text, hyperlink, colorForeground, colorBackground, Some opacity, formatting)
 
-  member internal this.SetHyperlink(link: string) =
-      _hyperlink <- Some link
-      this
+  member this.SetHyperlink(link: string) =
+      ANSIString(text, Some link, colorForeground, colorBackground, opacity, formatting)
       
   static member internal Interpolate(fromC: Color, toC: Color, percentage: float) =
     let percentageOfTo = percentage
@@ -109,19 +107,19 @@ type ANSIString(text: string) =
     RGB(Color.FromArgb(r, g, b))
 
   override this.ToString() =
-    let applyFormatting formatting transform result =
-        if _formatting.HasFlag(formatting) then transform(result) else result
+    let applyFormatting format transform result =
+        if formatting.HasFlag(format) then transform(result) else result
 
     let applyColor colorFunc result =
-        match _opacity, _colorForeground, _colorBackground with
+        match opacity, colorForeground, colorBackground with
         | Some o, Some bg, Some fg -> 
-          match bg,fg with
+          match bg, fg with
             | RGB b, RGB f -> colorFunc(ANSIString.Interpolate(b, f, o)) + result
-            | _,_ -> result // TODO: Handle ANSI colors
+            | _, _ -> result // TODO: Handle ANSI colors
         | _, Some cf, _ -> colorFunc(cf) + result
         | _ -> result
 
-    let initialResult = _text
+    let initialResult = text
     let resultWithCase =
         initialResult
         |> applyFormatting ANSIFormatting.UpperCase (fun r -> r.ToUpper())
@@ -140,22 +138,23 @@ type ANSIString(text: string) =
 
     let resultWithColors = applyColor ANSI.Foreground resultWithFormatting
     let resultWithBackground =
-        if Option.isSome _colorBackground then ANSI.Background(_colorBackground.Value) + resultWithColors
-        else resultWithColors
+        match colorBackground with
+        | Some bg -> ANSI.Background(bg) + resultWithColors
+        | None -> resultWithColors
 
     let resultWithHyperlink =
-        match _hyperlink with
+        match hyperlink with
         | Some link -> ANSI.Hyperlink(resultWithBackground, link)
         | None -> resultWithBackground
 
     let finalResult =
-        if _formatting.HasFlag(ANSIFormatting.TrueClear) then resultWithHyperlink + ANSI.Clear 
+        if formatting.HasFlag(ANSIFormatting.TrueClear) then resultWithHyperlink + ANSI.Clear 
         else resultWithHyperlink
 
     // TODO: This needs to be changed. The clear needs to affect the span, so should be ahead of the resultWithHyperlink, 
     // But it also needs to be restored to the previous state. Which means we have to specifically restore colors afterwards.
     // We can do a manual reset, and have a separate call for a True Clear.
-    if _formatting.HasFlag(ANSIFormatting.Clear) then ANSI.Clear + finalResult
+    if formatting.HasFlag(ANSIFormatting.Clear) then ANSI.Clear + finalResult
     else finalResult 
 
 module StringExtensions =
