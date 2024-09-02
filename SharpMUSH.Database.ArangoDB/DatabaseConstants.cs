@@ -1,4 +1,4 @@
-﻿namespace SharpMUSH.Database;
+﻿namespace SharpMUSH.Database.ArangoDB;
 
 internal static class DatabaseConstants
 {

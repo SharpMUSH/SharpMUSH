@@ -10,7 +10,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services;
 using System.Collections.Immutable;
 
-namespace SharpMUSH.Database;
+namespace SharpMUSH.Database.ArangoDB;
 
 // TODO: Unit of Work / Transaction around all of this!
 public class ArangoDatabase(
@@ -317,6 +317,7 @@ public class ArangoDatabase(
 		// TODO: This is a lazy implementation and does not appropriately support the ` section of pattern matching for attribute trees.
 		// TODO: Create an Inverted Index on LongName.
 
+		// OPTIONS { indexHint: "inverted_index_name", forceIndexHint: true }
 		const string query = $"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.graphAttributes} FILTER v.LongName LIKE @pattern RETURN v";
 
 		var result2 = await arangoDB.Query.ExecuteAsync<dynamic>(handle, query, new Dictionary<string, object>()

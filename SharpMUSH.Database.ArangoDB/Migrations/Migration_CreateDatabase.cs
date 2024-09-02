@@ -4,7 +4,7 @@ using Core.Arango.Protocol;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Database.Models;
 
-namespace SharpMUSH.Database.Migrations
+namespace SharpMUSH.Database.ArangoDB.Migrations
 {
 	/// <summary>
 	/// Creates the basic database, containing Player #1 (God), Room 0, and Room 2.
@@ -226,7 +226,20 @@ namespace SharpMUSH.Database.Migrations
 								required = (string[])[nameof(SharpAttribute.Name)]
 							}
 						}
-					}
+					},
+					Indices =
+						[
+							new()
+							{
+								Fields = [nameof(SharpAttribute.LongName)],
+								Type = ArangoIndexType.Inverted
+							},
+							new()
+							{
+								Fields = [nameof(SharpAttribute.LongName)],
+								Type = ArangoIndexType.Persistent
+							}
+						]
 				},
 				new()
 				{

@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
-using SharpMUSH.Database;
+using SharpMUSH.Database.ArangoDB;
 using SharpMUSH.Implementation;
 using SharpMUSH.Library;
 using SharpMUSH.Library.ParserInterfaces;
