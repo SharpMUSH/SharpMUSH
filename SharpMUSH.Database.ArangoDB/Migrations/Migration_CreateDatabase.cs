@@ -2,7 +2,6 @@
 using Core.Arango;
 using Core.Arango.Protocol;
 using SharpMUSH.Library.Models;
-using SharpMUSH.Database.Models;
 
 namespace SharpMUSH.Database.ArangoDB.Migrations
 {
