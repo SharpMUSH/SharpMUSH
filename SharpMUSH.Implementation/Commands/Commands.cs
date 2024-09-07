@@ -183,23 +183,27 @@ public static partial class Commands
 			var start = context.evaluationString().Start.StartIndex;
 			var len = context.evaluationString().Stop.StopIndex - context.evaluationString().Start.StartIndex + 1;
 
-			argCallState = libraryCommandDefinition.Attribute.Behavior switch
+			var behavior = libraryCommandDefinition.Attribute.Behavior;
+
+			// command arg0 = arg1,still arg 1 
+			if (behavior.HasFlag(Definitions.CommandBehavior.EqSplit) && behavior.HasFlag(Definitions.CommandBehavior.RSArgs))
 			{
-				// command arg0 = arg1,still arg 1 
-				Definitions.CommandBehavior.EqSplit | Definitions.CommandBehavior.RSArgs
-					=> parser.CommandEqSplitArgsParse(
-						MModule.substring(start, len, source)),
-				// command arg0 = arg1,arg2
-				Definitions.CommandBehavior.EqSplit
-					=> parser.CommandEqSplitParse(
-						MModule.substring(start, len, source)),
-				// Command arg0,arg1,arg2,arg
-				Definitions.CommandBehavior.RSArgs
-					=> parser.CommandCommaArgsParse(
-						MModule.substring(start, len, source)),
-				_ => parser.CommandSingleArgParse(
-						MModule.substring(start, len, source))
-			};
+				argCallState = parser.CommandEqSplitArgsParse(MModule.substring(start, len, source));
+			}
+			// command arg0 = arg1,arg2
+			else if (behavior.HasFlag(Definitions.CommandBehavior.EqSplit))
+			{
+				argCallState = parser.CommandEqSplitParse(MModule.substring(start, len, source));
+			}
+			// Command arg0,arg1,arg2,arg
+			else if (behavior.HasFlag(Definitions.CommandBehavior.RSArgs))
+			{
+				argCallState = parser.CommandCommaArgsParse(MModule.substring(start, len, source));
+			}
+			else
+			{
+				argCallState = parser.CommandSingleArgParse(MModule.substring(start, len, source));
+			}
 		}
 
 		List<CallState> arguments = [];

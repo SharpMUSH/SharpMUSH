@@ -1,6 +1,8 @@
 ﻿using SharpMUSH.Tests;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Extensions;
+using Microsoft.VisualStudio.TestTools.UnitTesting.Logging;
 
 namespace SharpMUSH.IntegrationTests
 {
@@ -71,6 +73,8 @@ namespace SharpMUSH.IntegrationTests
 			var existingDeep1 = await database!.GetAttributeAsync(playerOneDBRef, ["Three", "Layers", "Deep"]);
 			var existingDeep2 = await database!.GetAttributeAsync(playerOneDBRef, ["Three", "Layers", "Deep2"]);
 
+			var obj = await database!.GetObjectNodeAsync(playerOneDBRef);
+
 			Assert.AreEqual(1, existingSingle!.Count());
 			Assert.AreEqual(2, existingLayer!.Count());
 			Assert.AreEqual(2, existingLeaf!.Count());
@@ -91,6 +95,9 @@ namespace SharpMUSH.IntegrationTests
 			Assert.AreEqual("THREE`LAYERS`DEEP2", existingDeep2!.Last().LongName);
 			Assert.AreEqual("THREE`LAYERS", existingDeep1!.Skip(1).First().LongName);
 			Assert.AreEqual("THREE`LAYERS", existingDeep2!.Skip(1).First().LongName);
+
+			var b = obj.Object()!.Attributes();
+			Logger.LogMessage("{a}", b);
 		}
 	}
 }

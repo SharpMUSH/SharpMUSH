@@ -35,13 +35,13 @@ public static partial class HelperFunctions
 		=> obj.IsT2;
 
 	public static bool IsWizard(this AnySharpObject obj)
-		=> obj.Object()!.Flags!.Any(x => x.Name == "Wizard");
+		=> obj.Object()!.Flags().Any(x => x.Name == "Wizard");
 
 	public static bool IsRoyalty(this AnySharpObject obj)
-		=> obj.Object()!.Flags!.Any(x => x.Name == "Royalty");
+		=> obj.Object()!.Flags().Any(x => x.Name == "Royalty");
 
 	public static bool IsMistrust(this AnySharpObject obj)
-		=> obj.Object()!.Flags!.Any(x => x.Name == "Mistrust");
+		=> obj.Object()!.Flags().Any(x => x.Name == "Mistrust");
 
 	public static bool IsGod(this AnySharpObject obj)
 		=> obj.Object()!.Key! == 1;
@@ -73,19 +73,19 @@ public static partial class HelperFunctions
 		=> obj.HasPower("Orphan");
 
 	public static bool IsAlive(this AnySharpObject obj)
-		=> IsPlayer(obj) || IsPuppet(obj) || (IsAudible(obj) && obj.Object().Attributes!.Any(x => x.Name == "FORWARDLIST"));
+		=> IsPlayer(obj) || IsPuppet(obj) || (IsAudible(obj) && obj.Object().Attributes().Any(x => x.Name == "FORWARDLIST"));
 
 	public static bool IsPuppet(this AnySharpObject obj)
 		=> obj.HasPower("Puppet");
 
 	public static bool HasPower(this AnySharpObject obj, string power)
-		=> obj.Object().Powers!.Any(x => x.Name == power || x.Alias == power);
+		=> obj.Object().Powers().Any(x => x.Name == power || x.Alias == power);
 
 	public static bool HasLongFingers(this AnySharpObject obj)
 		=> obj.IsPriv() || obj.HasPower("Long_Fingers");
 
 	public static bool HasFlag(this AnySharpObject obj, string flag)
-		=> obj.Object().Flags!.Any(x => x.Name == flag);
+		=> obj.Object().Flags().Any(x => x.Name == flag);
 
 	// This may belong in the Permission Service.
 	public static bool CanDark(this AnySharpObject obj)
@@ -102,7 +102,7 @@ public static partial class HelperFunctions
 	public static bool Inheritable(this AnySharpObject obj)
 		=> IsPlayer(obj)
 				|| obj.HasFlag("Trust")
-				|| obj.Object().Owner().Object.Flags.Any(x => x.Name == "Trust")
+				|| obj.Object().Owner().Object.Flags().Any(x => x.Name == "Trust")
 				|| IsWizard(obj);
 
 	public static bool Owns(this AnySharpObject who,

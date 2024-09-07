@@ -130,17 +130,20 @@ public class ArangoDatabase(
 	public AnyOptionalSharpObject GetObjectNode(string dbId)
 		=> GetObjectNodeAsync(dbId).Result;
 
-	private IQueryable<SharpPower> GetPowers(string id)
+	private IEnumerable<SharpPower> GetPowers(string id)
 		=> arangoDB.Query.ExecuteAsync<SharpPower>(handle,
-			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphPowers} RETURN v").Result.AsQueryable();
+			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphPowers} RETURN v").Result;
 
-	private IQueryable<SharpObjectFlag> GetFlags(string id)
+	private IEnumerable<SharpObjectFlag> GetFlags(string id)
 		=> arangoDB.Query.ExecuteAsync<SharpObjectFlag>(handle,
-			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphFlags} RETURN v").Result.AsQueryable();
+			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphFlags} RETURN v").Result;
 
-	private IQueryable<SharpAttribute> GetAttributes(string id)
+	private IEnumerable<SharpAttribute> GetAttributes(string id)
 		=> arangoDB.Query.ExecuteAsync<SharpAttribute>(handle,
-			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphPowers} RETURN v").Result.AsQueryable();
+			$"LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.graphObjects} RETURN v) FOR v IN 1..1 OUTBOUND start GRAPH {DatabaseConstants.graphAttributes} RETURN v", new Dictionary<string, object>()
+			{
+				{ "startVertex", id }
+			}).Result;
 
 	private SharpPlayer GetObjectOwner(string id)
 	{
@@ -152,13 +155,13 @@ public class ArangoDatabase(
 		return populatedOwner.AsT0;
 	}
 
-	public IQueryable<SharpObject> GetParent(string id)
+	public SharpObject? GetParent(string id)
 		=> arangoDB.Query.ExecuteAsync<SharpObject>(handle,
-			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphParents} RETURN v").Result.AsQueryable();
+			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphParents} RETURN v").Result.FirstOrDefault();
 
-	public IQueryable<SharpObject> GetParents(string id)
+	public IEnumerable<SharpObject> GetParents(string id)
 		=> arangoDB.Query.ExecuteAsync<SharpObject>(handle,
-			$"FOR v IN 1 OUTBOUND {id} GRAPH {DatabaseConstants.graphParents} RETURN v").Result.AsQueryable();
+			$"FOR v IN 1 OUTBOUND {id} GRAPH {DatabaseConstants.graphParents} RETURN v").Result;
 
 	private AnySharpContainer GetHome(string id)
 	{
@@ -176,8 +179,6 @@ public class ArangoDatabase(
 
 	private AnySharpContainer GetLocation(string id)
 	{
-		// TODO: It can't do this conversion. It doesn't directly translate at all.
-		// SharpRoom etc. should also populate with its correct values.
 		var locationId = arangoDB.Query.ExecuteAsync<string>(handle,
 			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphLocations} RETURN v._id").Result.Single();
 		var locationObject = GetObjectNodeAsync(locationId).Result;
@@ -214,11 +215,11 @@ public class ArangoDatabase(
 			Locks = (obj.Locks ?? []).ToImmutableDictionary(),
 			Id = obj.Id,
 			Key = int.Parse(obj.Key),
-			Flags = GetFlags(startVertex),
-			Powers = GetPowers(startVertex),
-			Attributes = GetAttributes(startVertex),
+			Flags = () => GetFlags(startVertex),
+			Powers = () => GetPowers(startVertex),
+			Attributes = () => GetAttributes(startVertex),
 			Owner = () => GetObjectOwner(startVertex),
-			Parent = GetParent(startVertex)
+			Parent = () => GetParent(startVertex)
 		};
 
 		return obj.Type switch
@@ -258,11 +259,11 @@ public class ArangoDatabase(
 			CreationTime = obj.CreationTime,
 			ModifiedTime = obj.ModifiedTime,
 			Locks = ((Dictionary<string, string>?)obj.Locks ?? []).ToImmutableDictionary(),
-			Flags = GetFlags(dbID),
-			Powers = GetPowers(dbID),
-			Attributes = GetAttributes(dbID),
+			Flags = () => GetFlags(dbID),
+			Powers = () => GetPowers(dbID),
+			Attributes = () => GetAttributes(dbID),
 			Owner = () => GetObjectOwner(dbID),
-			Parent = GetParent(dbID)
+			Parent = () => GetParent(dbID)
 		};
 
 		return collection switch
@@ -295,11 +296,11 @@ public class ArangoDatabase(
 				Locks = (obj.Locks ?? []).ToImmutableDictionary(),
 				CreationTime = obj.CreationTime,
 				ModifiedTime = obj.ModifiedTime,
-				Flags = GetFlags(obj.Id),
-				Powers = GetPowers(obj.Id),
-				Attributes = GetAttributes(obj.Id),
+				Flags = () => GetFlags(obj.Id),
+				Powers = () => GetPowers(obj.Id),
+				Attributes = () => GetAttributes(obj.Id),
 				Owner = () => GetObjectOwner(obj.Id),
-				Parent = GetParent(obj.Id)
+				Parent = () => GetParent(obj.Id)
 			};
 	}
 
@@ -373,6 +374,7 @@ public class ArangoDatabase(
 	public async Task<IEnumerable<SharpAttribute>?> GetAttributeAsync(DBRef dbref, params string[] attribute)
 	{
 		var startVertex = $"{DatabaseConstants.objects}/{dbref.Number}";
+
 		const string let = $"LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.graphObjects} RETURN v)";
 		const string query = $"{let} FOR v,e,p IN 1..@max OUTBOUND start GRAPH {DatabaseConstants.graphAttributes} PRUNE condition = NTH(@attr,LENGTH(p.edges)-1) != v.Name FILTER !condition RETURN v";
 

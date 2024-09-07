@@ -109,12 +109,12 @@ public class SurrealDatabase(
 		throw new NotImplementedException();
 	}
 
-	public IQueryable<SharpObject> GetParent(string id)
+	public SharpObject? GetParent(string id)
 	{
 		throw new NotImplementedException();
 	}
 
-	public IQueryable<SharpObject> GetParents(string id)
+	public IEnumerable<SharpObject> GetParents(string id)
 	{
 		throw new NotImplementedException();
 	}

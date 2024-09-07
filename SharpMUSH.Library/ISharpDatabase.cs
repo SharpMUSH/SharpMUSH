@@ -31,9 +31,9 @@ public interface ISharpDatabase
 
 	AnyOptionalSharpObject GetObjectNode(DBRef dbref);
 
-	IQueryable<SharpObject> GetParent(string id);
+	SharpObject? GetParent(string id);
 
-	IQueryable<SharpObject> GetParents(string id);
+	IEnumerable<SharpObject> GetParents(string id);
 
 	Task<SharpObject?> GetBaseObjectNodeAsync(DBRef dbref);
 

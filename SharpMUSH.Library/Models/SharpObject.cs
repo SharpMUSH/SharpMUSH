@@ -29,18 +29,18 @@ namespace SharpMUSH.Library.Models
 
 		// RELATIONSHIP
 		[JsonIgnore]
-		public required IQueryable<SharpPower> Powers { get; set; }
+		public required Func<IEnumerable<SharpPower>> Powers { get; set; }
 
 		// RELATIONSHIP
 		[JsonIgnore]
-		public required IQueryable<SharpAttribute> Attributes { get; set; }
+		public required Func<IEnumerable<SharpAttribute>> Attributes { get; set; }
 
 		// RELATIONSHIP
 		[JsonIgnore]
-		public required IQueryable<SharpObjectFlag> Flags { get; set; }
+		public required Func<IEnumerable<SharpObjectFlag>> Flags { get; set; }
 
 		// RELATIONSHIP
 		[JsonIgnore]
-		public required IQueryable<SharpObject> Parent { get; set; }
+		public required Func<SharpObject?> Parent { get; set; }
 	}
 }

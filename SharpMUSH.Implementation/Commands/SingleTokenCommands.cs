@@ -1,4 +1,5 @@
 ﻿using OneOf.Monads;
+using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 
@@ -32,7 +33,7 @@ public static partial class Commands
 		if(locate.IsNone())
 		{
 			// TODO: Notify
-			return new CallState(locate.AsT5.Value);
+			return new CallState("I can't see that here.");
 		}
 
 		var realLocated = locate.WithoutError().WithoutNone();

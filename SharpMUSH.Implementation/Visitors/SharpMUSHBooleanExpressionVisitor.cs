@@ -14,10 +14,10 @@ public class SharpMUSHBooleanExpressionVisitor(ISharpDatabase database, Paramete
 		=> new Expression[] { aggregate, nextResult }.First(x => x != null);
 
 	private readonly Expression<Func<AnySharpObject, string, bool>> hasFlag = (dbRef, flag)
-		=> dbRef.Object().Flags.Any(x => x.Name == flag || x.Symbol == flag);
+		=> dbRef.Object().Flags().Any(x => x.Name == flag || x.Symbol == flag);
 
 	private readonly Expression<Func<AnySharpObject, string, bool>> hasPower = (dbRef, power)
-		=> dbRef.Object().Powers.Any(x => x.Name == power || x.Alias == power);
+		=> dbRef.Object().Powers().Any(x => x.Name == power || x.Alias == power);
 
 	private readonly Expression<Func<AnySharpObject, string, bool>> isType = (dbRef, type)
 		=> dbRef.Object().Type == type;
