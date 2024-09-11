@@ -24,7 +24,8 @@ public static partial class Commands
 		var enactor = parser.CurrentState.Enactor!.Value.Get(parser.Database).WithoutNone();
 
 		var locate = Functions.Functions.Locate(parser, enactor, enactor, args[1]!.Message!.ToString(), Functions.Functions.LocateFlags.All);
-			
+		
+		// Arguments are getting here in an evaluated state, when they should not be.
 		if(locate.IsError())
 		{
 			parser.NotifyService.Notify(enactor, locate.AsT5.Value);

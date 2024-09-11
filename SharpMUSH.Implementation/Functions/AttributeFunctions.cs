@@ -34,6 +34,7 @@ namespace SharpMUSH.Implementation.Functions
 			// TODO: Confirm attribute exists.
 			// TODO: Confirm Permissions
 
+			// TODO: We have this code in the single token command. We likely can just have a common routine, or use an Attribute Service.
 
 			// Clear on only having 1 arg. 
 			// Write on having 2 args.
@@ -71,10 +72,21 @@ namespace SharpMUSH.Implementation.Functions
 		{
 			throw new NotImplementedException();
 		}
-		[SharpFunction(Name = "GET", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-		public static CallState get(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		[SharpFunction(Name = "get", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+		public static CallState Get(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		{
-			throw new NotImplementedException();
+			// TODO: Permissions!!
+			var dbrefAndAttr = HelperFunctions.SplitDBRefAndAttr(MModule.plainText(parser.CurrentState.Arguments[0].Message));
+			if (dbrefAndAttr.IsT1 && dbrefAndAttr.AsT1 == false)
+			{
+				// TODO: Improve error.
+				return new CallState("#-1 BAD ARGUMENT FORMAT TO GET");
+			}
+			var (dbref,attribute) = dbrefAndAttr.AsT0;
+
+			var contents = parser.Database.GetAttributeAsync(dbref, attribute).Result?.FirstOrDefault();
+
+			return new CallState(contents?.Value ?? string.Empty);
 		}
 		[SharpFunction(Name = "GET_EVAL", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 		public static CallState get_eval(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -277,10 +289,26 @@ namespace SharpMUSH.Implementation.Functions
 		{
 			throw new NotImplementedException();
 		}
-		[SharpFunction(Name = "UFUN", MinArgs = 1, MaxArgs = 33, Flags = FunctionFlags.Regular)]
-		public static CallState ufun(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		[SharpFunction(Name = "ufun", MinArgs = 1, MaxArgs = 33, Flags = FunctionFlags.Regular)]
+		public static CallState Ufun(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		{
-			throw new NotImplementedException();
+			// TODO: Fix all of this.
+			// TODO: Permissions check for evaluation.
+			// TODO: Don't route through GET. That's lazy. We could be escaping earlier.
+			var get = Get(parser, _2);
+			
+			// Create a new argument state.
+			var newParser = parser.Push(parser.CurrentState with
+			{
+				Arguments = parser.CurrentState.Arguments.Skip(1).ToList()
+			});
+			
+			var parsed = parser.FunctionParse(get.Message!)!;
+			
+			// Pop the arguments.
+			parser.Pop();
+
+			return parsed;
 		}
 		[SharpFunction(Name = "PFUN", MinArgs = 1, MaxArgs = 33, Flags = FunctionFlags.Regular)]
 		public static CallState pfun(IMUSHCodeParser parser, SharpFunctionAttribute _2)
