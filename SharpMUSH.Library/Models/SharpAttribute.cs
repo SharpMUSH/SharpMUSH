@@ -4,9 +4,6 @@ namespace SharpMUSH.Library.Models
 {
 	public class SharpAttribute
 	{
-		[JsonIgnore]
-		public string? Id { get; set; }
-
 		public required string Name { get; set; }
 
 		public required string[] Flags { get; set; }
@@ -19,14 +16,14 @@ namespace SharpMUSH.Library.Models
 
 		// RELATIONSHIP
 		[JsonIgnore]
-		public virtual SharpAttribute[]? Leaves { get; set; }
+		public Func<IEnumerable<SharpAttribute>> Leaves { get; set; }
 
 		// RELATIONSHIP
 		[JsonIgnore]
-		public virtual SharpPlayer? Owner { get; set; }
+		public Func<SharpPlayer> Owner { get; set; }
 
 		// RELATIONSHIP for quick lookups
 		[JsonIgnore]
-		public virtual SharpAttributeEntry? SharpAttributeEntry { get; set; }
+		public Func<SharpAttributeEntry?> SharpAttributeEntry { get; set; }
 	}
 }

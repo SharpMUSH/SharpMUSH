@@ -96,8 +96,9 @@ namespace SharpMUSH.IntegrationTests
 			Assert.AreEqual("THREE`LAYERS", existingDeep1!.Skip(1).First().LongName);
 			Assert.AreEqual("THREE`LAYERS", existingDeep2!.Skip(1).First().LongName);
 
-			var b = obj.Object()!.Attributes();
-			Logger.LogMessage("{a}", b);
+			var attributes = obj.Object()!.Attributes();
+			CollectionAssert.AllItemsAreInstancesOfType(attributes.ToList(), typeof(SharpAttribute));
+			CollectionAssert.AllItemsAreNotNull(attributes.ToList());
 		}
 	}
 }

@@ -139,11 +139,36 @@ public class ArangoDatabase(
 			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphFlags} RETURN v").Result;
 
 	private IEnumerable<SharpAttribute> GetAttributes(string id)
-		=> arangoDB.Query.ExecuteAsync<SharpAttribute>(handle,
-			$"LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.graphObjects} RETURN v) FOR v IN 1..1 OUTBOUND start GRAPH {DatabaseConstants.graphAttributes} RETURN v", new Dictionary<string, object>()
-			{
-				{ "startVertex", id }
-			}).Result;
+	{
+		// This only works for when we get a non-attribute as our ID.
+		// Adjustment is needed if we get an attribute ID.
+		IEnumerable<SharpAttributeQueryResult> sharpAttributeResults;
+		if (id.StartsWith(DatabaseConstants.attributes))
+		{
+			sharpAttributeResults = arangoDB.Query.ExecuteAsync<SharpAttributeQueryResult>(handle,
+				$"FOR v IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.graphAttributes} RETURN v",
+				new Dictionary<string, object>() { { "startVertex", id } }).Result;
+		}
+		else
+		{
+			sharpAttributeResults = arangoDB.Query.ExecuteAsync<SharpAttributeQueryResult>(handle,
+				$"LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.graphObjects} RETURN v) FOR v IN 1..1 OUTBOUND start GRAPH {DatabaseConstants.graphAttributes} RETURN v",
+				new Dictionary<string, object>() { { "startVertex", id } }).Result;
+		}
+
+		var sharpAttributes = sharpAttributeResults.Select(x => new SharpAttribute()
+		{
+			Flags = x.Flags,
+			Name = x.Name,
+			LongName = x.LongName,
+			Owner = () => GetObjectOwner(x.Id),
+			Value = x.Value,
+			Leaves = () => GetAttributes(x.Id),
+			SharpAttributeEntry = () => null // TODO: Fix
+		});
+
+		return sharpAttributes;
+	}
 
 	private SharpPlayer GetObjectOwner(string id)
 	{
@@ -332,7 +357,10 @@ public class ArangoDatabase(
 			Flags = x.Flags,
 			Name = x.Name,
 			Value = x.Value,
-			LongName = x.LongName
+			LongName = x.LongName,
+			Leaves = () => GetAttributes(x._id),
+			Owner = () => GetObjectOwner(x._id),
+			SharpAttributeEntry = () => null // TODO: Fix
 		});
 	}
 
@@ -360,7 +388,10 @@ public class ArangoDatabase(
 			Flags = x.Flags,
 			Name = x.Name,
 			Value = x.Value,
-			LongName = x.LongName
+			LongName = x.LongName,
+			Leaves = () => GetAttributes(x._id),
+			Owner = () => GetObjectOwner(x._id),
+			SharpAttributeEntry = () => null // TODO: Fix
 		}).ToArray();
 	}
 
@@ -387,7 +418,7 @@ public class ArangoDatabase(
 
 		if (result.Count < attribute.Length) return null;
 
-		return result.Select(x => new SharpAttribute() { Name = x.Name, Flags = x.Flags, Value = x.Value, Id = x.Id, LongName = x.LongName }).ToArray();
+		return result.Select(x => new SharpAttribute() { Name = x.Name, Flags = x.Flags, Value = x.Value, LongName = x.LongName }).ToArray();
 	}
 
 	public async Task<bool> SetAttributeAsync(DBRef dbref, string[] attribute, string value, SharpPlayer owner)
