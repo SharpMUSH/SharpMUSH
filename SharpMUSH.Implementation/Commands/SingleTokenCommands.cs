@@ -27,15 +27,16 @@ public static partial class Commands
 			
 		if(locate.IsError())
 		{
-			// TODO: Notify
+			parser.NotifyService.Notify(enactor, locate.AsT5.Value);
 			return new CallState(locate.AsT5.Value);
 		}
 		if(locate.IsNone())
 		{
-			// TODO: Notify
-			return new CallState("I can't see that here.");
+			parser.NotifyService.Notify(enactor, "I can't see that here.");
+			return new CallState("#-1 I can't see that here.");
 		}
 
+		// TODO: Switch to Clear an attribute! Take note of deeper authorization needed in case of the attribute having leaves.
 		var realLocated = locate.WithoutError().WithoutNone();
 		var attributePath = args[0]!.Message!.ToString()!.Split('`');
 		var contents = args[2]?.Message?.ToString() ?? string.Empty;
