@@ -294,12 +294,12 @@ public partial class Functions
 			location = FriendlyWhereIs(where);
 		}
 
-		if (!flags.HasFlag(LocateFlags.NoTypePreference)
+		if (true // !flags.HasFlag(LocateFlags.NoTypePreference) // TODO: Incorrect check.
 			&& flags.HasFlag(LocateFlags.MatchMeForLooker)
-			&& !flags.HasFlag(LocateFlags.MatchObjectsInLookerInventory)
+			// && !flags.HasFlag(LocateFlags.MatchObjectsInLookerInventory) // TODO: This will need a fix. This was a OnlyLookIn flag.
 			&& name.Equals("me", StringComparison.InvariantCultureIgnoreCase))
 		{
-			if (!flags.HasFlag(LocateFlags.MatchLookerControlledObjects)
+			if (true // !flags.HasFlag(LocateFlags.MatchLookerControlledObjects) // TODO: Incorrect check.
 				&& parser.PermissionService.Controls(looker, where))
 			{
 				return where.WithNoneOption().WithErrorOption();
@@ -308,10 +308,10 @@ public partial class Functions
 		}
 
 		if (flags.HasFlag(LocateFlags.MatchHereForLookerLocation)
-			&& !flags.HasFlag(LocateFlags.MatchObjectsInLookerInventory)
+			// && !flags.HasFlag(LocateFlags.MatchObjectsInLookerInventory) // TODO: This will need a fix. This was a OnlyLookIn flag.
 			&& name.Equals("here", StringComparison.InvariantCultureIgnoreCase))
 		{
-			if (!flags.HasFlag(LocateFlags.MatchLookerControlledObjects)
+			if (true // !flags.HasFlag(LocateFlags.MatchLookerControlledObjects) // TODO: Incorrect check.
 				&& parser.PermissionService.Controls(looker, where))
 			{
 				return FriendlyWhereIs(where).WithExitOption().WithNoneOption().WithErrorOption();
@@ -319,7 +319,8 @@ public partial class Functions
 			return new Error<string>(Errors.ErrorPerm);
 		}
 
-		if ((flags.HasFlag(LocateFlags.MatchOptionalWildCardForPlayerName) || flags.HasFlag(LocateFlags.PlayersPreference) && name.StartsWith('*'))
+		if ((flags.HasFlag(LocateFlags.MatchOptionalWildCardForPlayerName) || flags.HasFlag(LocateFlags.PlayersPreference) 
+			&& name.StartsWith('*'))
 			&& (flags.HasFlag(LocateFlags.PlayersPreference) || flags.HasFlag(LocateFlags.NoTypePreference)))
 		{
 			// TODO: Fix Async
@@ -355,7 +356,7 @@ public partial class Functions
 			match = absObject.WithErrorOption();
 			if (!match.IsT4 && (flags & LocateFlags.AbsoluteMatch) != 0)
 			{
-				if (!flags.HasFlag(LocateFlags.MatchObjectsInLookerLocation)
+				if (!flags.HasFlag(LocateFlags.MatchObjectsInLookerLocation) // TODO: This will need a fix. This was a OnlyLookIn flag.
 						|| looker.HasLongFingers()
 						|| (Nearby(looker, match.WithoutError().WithoutNone())
 						|| parser.PermissionService.Controls(looker, match.WithoutError().WithoutNone())))
