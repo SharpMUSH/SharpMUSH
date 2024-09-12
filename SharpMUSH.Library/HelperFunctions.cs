@@ -10,8 +10,8 @@ namespace SharpMUSH.Library;
 
 public static partial class HelperFunctions
 {
-	private readonly static Regex DatabaseReferenceRegex = DatabaseReference();
-	private readonly static Regex DatabaseReferenceWithAttributeRegex = DatabaseReferenceWithAttribute();
+	private static readonly Regex DatabaseReferenceRegex = DatabaseReference();
+	private static readonly Regex DatabaseReferenceWithAttributeRegex = DatabaseReferenceWithAttribute();
 
 	public static bool IsPlayer(this AnySharpObject obj)
 		=> obj.IsT0;
@@ -120,23 +120,20 @@ public static partial class HelperFunctions
 		var obj = match.Groups["Object"]?.Value;
 		var attr = match.Groups["Attribute"]?.Value;
 
-		if (string.IsNullOrEmpty(attr) || string.IsNullOrEmpty(obj)) 
-		{ 
-			return false; 
-		}
-
-		return (obj!, attr!);
+		return string.IsNullOrEmpty(attr) || string.IsNullOrEmpty(obj)
+			? false 
+			: (obj!, attr!);
 	}
 
-	public static Option<DBRef> ParseDBRef(string DBRefAttr)
+	public static Option<DBRef> ParseDBRef(string dbrefStr)
 	{
-		var match = DatabaseReferenceRegex.Match(DBRefAttr);
+		var match = DatabaseReferenceRegex.Match(dbrefStr);
 		var dbref = match.Groups["DatabaseNumber"]?.Value;
 		var cTime = match.Groups["CreationTimestamp"]?.Value;
 
-		if (string.IsNullOrEmpty(dbref)) { return new None(); }
-
-		return (new DBRef(int.Parse(dbref!), string.IsNullOrWhiteSpace(cTime) ? null : long.Parse(cTime)));
+		return string.IsNullOrEmpty(dbref)
+			? new None()
+			: new DBRef(int.Parse(dbref!), string.IsNullOrWhiteSpace(cTime) ? null : long.Parse(cTime));
 	}
 
 	/// <summary>
