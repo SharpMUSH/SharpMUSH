@@ -177,28 +177,31 @@ public partial class Functions
 	[Flags]
 	public enum LocateFlags
 	{
-		NoTypePreference = 0,
-		ExitsPreference,
-		PreferLockPass,
-		PlayersPreference,
-		RoomsPreference,
-		ThingsPreference,
-		FailIfNotPreferred,
-		UseLastIfAmbiguous,
-		AbsoluteMatch,
-		ExitsInTheRoomOfLooker,
-		ExitsInsideOfLooker,
-		MatchHereForLookerLocation,
-		MatchObjectsInLookerInventory,
-		MatchAgainstLookerLocationName,
-		MatchRemoteContents,
-		MatchMeForLooker,
-		MatchObjectsInLookerLocation,
-		MatchWildCardForPlayerName,
-		MatchOptionalWildCardForPlayerName,
-		EnglishStyleMatching,
-		NoPartialMatches,
-		MatchLookerControlledObjects,
+		NoTypePreference = 1,
+		OnlyMatchTypePreference = NoTypePreference << 1,
+		ExitsPreference = OnlyMatchTypePreference << 1,
+		PreferLockPass = ExitsPreference << 1,
+		PlayersPreference = PreferLockPass << 1,
+		RoomsPreference = PlayersPreference << 1,
+		ThingsPreference = RoomsPreference << 1,
+		FailIfNotPreferred = ThingsPreference << 1,
+		UseLastIfAmbiguous = FailIfNotPreferred << 1,
+		AbsoluteMatch = UseLastIfAmbiguous << 1,
+		ExitsInTheRoomOfLooker = AbsoluteMatch << 1,
+		ExitsInsideOfLooker = ExitsInTheRoomOfLooker << 1,
+		MatchHereForLookerLocation = ExitsInsideOfLooker << 1,
+		MatchObjectsInLookerInventory = MatchHereForLookerLocation << 1,
+		MatchAgainstLookerLocationName = MatchObjectsInLookerInventory << 1,
+		OnlyMatchObjectsInLookerInventory = MatchAgainstLookerLocationName << 1,
+		MatchRemoteContents = OnlyMatchObjectsInLookerInventory << 1,
+		MatchMeForLooker = MatchRemoteContents << 1,
+		OnlyMatchObjectsInLookerLocation = MatchMeForLooker << 1,
+		MatchObjectsInLookerLocation = OnlyMatchObjectsInLookerLocation << 1,
+		MatchWildCardForPlayerName = MatchObjectsInLookerLocation << 1,
+		MatchOptionalWildCardForPlayerName = MatchWildCardForPlayerName << 1,
+		EnglishStyleMatching = MatchOptionalWildCardForPlayerName << 1,
+		NoPartialMatches = EnglishStyleMatching << 1,
+		OnlyMatchLookerControlledObjects = NoPartialMatches << 1,
 		All = (MatchMeForLooker|MatchHereForLookerLocation|AbsoluteMatch|MatchOptionalWildCardForPlayerName|MatchObjectsInLookerLocation|MatchObjectsInLookerInventory|ExitsInTheRoomOfLooker|EnglishStyleMatching)
 	}
 
@@ -230,7 +233,7 @@ public partial class Functions
 			~(LocateFlags.PreferLockPass
 			| LocateFlags.FailIfNotPreferred
 			| LocateFlags.NoPartialMatches
-			| LocateFlags.MatchLookerControlledObjects)) != 0)	
+			| LocateFlags.OnlyMatchLookerControlledObjects)) != 0)	
 		{
 			flags |= (LocateFlags.All | LocateFlags.MatchAgainstLookerLocationName | LocateFlags.ExitsInsideOfLooker);
 		}
@@ -296,10 +299,10 @@ public partial class Functions
 
 		if (true // !flags.HasFlag(LocateFlags.NoTypePreference) // TODO: Incorrect check.
 			&& flags.HasFlag(LocateFlags.MatchMeForLooker)
-			// && !flags.HasFlag(LocateFlags.MatchObjectsInLookerInventory) // TODO: This will need a fix. This was a OnlyLookIn flag.
+			&& !flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerInventory) 
 			&& name.Equals("me", StringComparison.InvariantCultureIgnoreCase))
 		{
-			if (true // !flags.HasFlag(LocateFlags.MatchLookerControlledObjects) // TODO: Incorrect check.
+			if (!flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects) 
 				&& parser.PermissionService.Controls(looker, where))
 			{
 				return where.WithNoneOption().WithErrorOption();
@@ -308,10 +311,10 @@ public partial class Functions
 		}
 
 		if (flags.HasFlag(LocateFlags.MatchHereForLookerLocation)
-			// && !flags.HasFlag(LocateFlags.MatchObjectsInLookerInventory) // TODO: This will need a fix. This was a OnlyLookIn flag.
+			&& !flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerInventory) 
 			&& name.Equals("here", StringComparison.InvariantCultureIgnoreCase))
 		{
-			if (true // !flags.HasFlag(LocateFlags.MatchLookerControlledObjects) // TODO: Incorrect check.
+			if (!flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects) 
 				&& parser.PermissionService.Controls(looker, where))
 			{
 				return FriendlyWhereIs(where).WithExitOption().WithNoneOption().WithErrorOption();
@@ -335,7 +338,7 @@ public partial class Functions
 					|| Nearby(looker, match.WithoutError().WithoutNone())
 					|| parser.PermissionService.Controls(looker, match.WithoutError().WithoutNone()))
 				{
-					if (!flags.HasFlag(LocateFlags.MatchLookerControlledObjects)
+					if (!flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
 						&& parser.PermissionService.Controls(looker, where))
 					{
 						return match;
@@ -356,14 +359,13 @@ public partial class Functions
 			match = absObject.WithErrorOption();
 			if (!match.IsT4 && (flags & LocateFlags.AbsoluteMatch) != 0)
 			{
-				if (!flags.HasFlag(LocateFlags.MatchObjectsInLookerLocation) // TODO: This will need a fix. This was a OnlyLookIn flag.
+				if (!flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation)
 						|| looker.HasLongFingers()
 						|| (Nearby(looker, match.WithoutError().WithoutNone())
 						|| parser.PermissionService.Controls(looker, match.WithoutError().WithoutNone())))
 				{
-					var hasFlag = flags.HasFlag(LocateFlags.MatchLookerControlledObjects);
-					var controls = parser.PermissionService.Controls(looker, where);
-					if (!(hasFlag && !controls))
+					if (!(flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects) 
+						&& !parser.PermissionService.Controls(looker, where)))
 					{
 						return match;
 					}
@@ -386,7 +388,8 @@ public partial class Functions
 					.GetContentsAsync(where.WithNoneOption())
 					.GetAwaiter().GetResult()!
 					.Select(x => x.WithRoomOption());
-				(bestMatch, final, curr, right_type, exact, c) = Match_List(parser, contents, looker, where, bestMatch, exact, final, curr, right_type, flags, name);
+				(bestMatch, final, curr, right_type, exact, c) = 
+					Match_List(parser, contents, looker, where, bestMatch, exact, final, curr, right_type, flags, name);
 				if (c == ControlFlow.Break) break;
 				if (c == ControlFlow.Return) break;
 			}
@@ -399,7 +402,8 @@ public partial class Functions
 					.GetContentsAsync(location.WithExitOption().WithNoneOption())
 					.GetAwaiter().GetResult()!
 					.Select(x => x.WithRoomOption());
-				(bestMatch, final, curr, right_type, exact, c) = Match_List(parser, contents, looker, where, bestMatch, exact, final, curr, right_type, flags, name);
+				(bestMatch, final, curr, right_type, exact, c) = 
+					Match_List(parser, contents, looker, where, bestMatch, exact, final, curr, right_type, flags, name);
 				if (c == ControlFlow.Break) break;
 				if (c == ControlFlow.Return) break;
 			}
@@ -409,13 +413,13 @@ public partial class Functions
 				if (location.IsRoom() && flags.HasFlag(LocateFlags.ExitsPreference))
 				{
 					if (flags.HasFlag(LocateFlags.MatchRemoteContents)
-						&& !flags.HasFlag(LocateFlags.MatchObjectsInLookerLocation | LocateFlags.MatchObjectsInLookerInventory))
+						&& !flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation | LocateFlags.OnlyMatchObjectsInLookerInventory))
 					/* TODO: && IsRoom(Zone(loc) */
 					{
 						/* TODO: MATCH_LIST(Exits(Zone(loc))); */
 						throw new NotImplementedException();
 					}
-					if (flags.HasFlag(LocateFlags.All) && !flags.HasFlag(LocateFlags.MatchObjectsInLookerLocation | LocateFlags.MatchObjectsInLookerInventory))
+					if (flags.HasFlag(LocateFlags.All) && !flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation | LocateFlags.OnlyMatchObjectsInLookerInventory))
 					{
 						var exits = parser.Database
 							.GetContentsAsync(Library.Definitions.Configurable.MasterRoom)
@@ -581,7 +585,7 @@ public partial class Functions
 		AnyOptionalSharpObjectOrError bestMatch,
 		LocateFlags flags)
 	{
-		if (!(!flags.HasFlag(LocateFlags.MatchLookerControlledObjects)
+		if (!(!flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
 				&& parser.PermissionService.Controls(looker, where)))
 		{
 			return (new Error<string>(Errors.ErrorPerm), final, curr, right_type, exact, ControlFlow.Continue);
