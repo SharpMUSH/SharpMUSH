@@ -176,14 +176,19 @@ public static partial class Commands
 		(SharpCommandAttribute Attribute, Func<IMUSHCodeParser, Option<CallState>> Function) libraryCommandDefinition)
 	{
 		var argCallState = CallState.EmptyArgument;
+		var behavior = libraryCommandDefinition.Attribute.Behavior;
+		var isNoParse = behavior.HasFlag(Definitions.CommandBehavior.NoParse);
+
+		if (isNoParse)
+		{
+			parser.Push(parser.CurrentState with { ParseMode = ParseMode.NoParse });
+		}
 
 		// command (space) argument(s)
 		if (context.children.Count > 1)
 		{
 			var start = context.evaluationString().Start.StartIndex;
 			var len = context.evaluationString().Stop.StopIndex - context.evaluationString().Start.StartIndex + 1;
-
-			var behavior = libraryCommandDefinition.Attribute.Behavior;
 
 			// command arg0 = arg1,still arg 1 
 			if (behavior.HasFlag(Definitions.CommandBehavior.EqSplit) && behavior.HasFlag(Definitions.CommandBehavior.RSArgs))
@@ -215,7 +220,14 @@ public static partial class Commands
 
 		// TODO: Implement lsargs - but there are no immediate commands that need it.
 
-		if (argCallState == null) return arguments;
+		if (argCallState == null)
+		{
+			if (isNoParse)
+			{
+				parser.Pop();
+			}
+			return arguments;
+		}
 
 		if (eqSplit)
 		{
@@ -234,6 +246,11 @@ public static partial class Commands
 		arguments.AddRange(noParse
 			? argCallState.Arguments!.Select(x => new CallState(x, argCallState.Depth))
 			: argCallState.Arguments!.Select(parser.FunctionParse).Select(x => x!));
+
+		if (isNoParse)
+		{
+			parser.Pop();
+		}
 
 		return arguments;
 	}

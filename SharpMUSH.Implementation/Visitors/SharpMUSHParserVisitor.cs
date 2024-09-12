@@ -47,12 +47,22 @@ namespace SharpMUSH.Implementation.Visitors
 		}
 
 		public override CallState? VisitEvaluationString([NotNull] SharpMUSHParser.EvaluationStringContext context)
-			=> base.VisitChildren(context)
-					?? new(MModule.substring(context.Start.StartIndex, context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source), context.Depth());
+		{
+			if (parser.CurrentState.ParseMode.HasFlag(ParseMode.NoParse))
+				return new(MModule.substring(context.Start.StartIndex, context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source), context.Depth());
+
+			return base.VisitChildren(context)
+							?? new(MModule.substring(context.Start.StartIndex, context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source), context.Depth());
+		}
 
 		public override CallState? VisitExplicitEvaluationString([NotNull] SharpMUSHParser.ExplicitEvaluationStringContext context)
-			=> base.VisitChildren(context)
-					?? new(MModule.substring(context.Start.StartIndex, context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source), context.Depth());
+		{
+			if (parser.CurrentState.ParseMode.HasFlag(ParseMode.NoParse))
+				return new(MModule.substring(context.Start.StartIndex, context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source), context.Depth());
+
+			return base.VisitChildren(context)
+							?? new(MModule.substring(context.Start.StartIndex, context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source), context.Depth());
+		}
 
 		public override CallState? VisitGenericText([NotNull] SharpMUSHParser.GenericTextContext context)
 			=> base.VisitChildren(context)
