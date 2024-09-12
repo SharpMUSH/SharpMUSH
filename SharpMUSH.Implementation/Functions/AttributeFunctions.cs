@@ -1,6 +1,7 @@
 ﻿using Antlr4.Runtime.Dfa;
 using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Implementation.Functions
@@ -84,7 +85,23 @@ namespace SharpMUSH.Implementation.Functions
 			}
 			var (dbref,attribute) = dbrefAndAttr.AsT0;
 
-			var contents = parser.Database.GetAttributeAsync(dbref, attribute).Result?.FirstOrDefault();
+			var executor  = parser.Database.GetObjectNode(parser.CurrentState.Executor!.Value).WithoutNone();
+			var maybeDBref = Functions.Locate(parser, executor, executor, dbref, LocateFlags.All);
+
+			if (maybeDBref.IsError())
+			{
+				parser.NotifyService.Notify(parser.CurrentState.Executor.Value, maybeDBref.AsT5.Value);
+				return new CallState($"#-1 {maybeDBref.AsT5.Value}");
+			}
+
+			if (maybeDBref.IsNone())
+			{
+				parser.NotifyService.Notify(parser.CurrentState.Executor.Value, "I can't see that here.");
+				return new CallState("#-1"); // TODO: Better Error
+			}
+
+			var actualDBref = maybeDBref.WithoutError().WithoutNone().Object().DBRef;
+			var contents = parser.Database.GetAttributeAsync(actualDBref, attribute).Result?.FirstOrDefault();
 
 			return new CallState(contents?.Value ?? string.Empty);
 		}

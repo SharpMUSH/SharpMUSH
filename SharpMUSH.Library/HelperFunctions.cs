@@ -114,16 +114,18 @@ public static partial class HelperFunctions
 	/// </summary>
 	/// <param name="dbrefAttr">#DBREF/Attribute</param>
 	/// <returns>False if it could not be split. DBRef & Attribute if it could.</returns>
-	public static OneOf<(DBRef db, string Attribute), bool> SplitDBRefAndAttr(string DBRefAttr)
+	public static OneOf<(string db, string Attribute), bool> SplitDBRefAndAttr(string DBRefAttr)
 	{
 		var match = DatabaseReferenceWithAttributeRegex.Match(DBRefAttr);
-		var dbref = match.Groups["DatabaseNumber"]?.Value;
-		var ctime = match.Groups["CreationTimestamp"]?.Value;
+		var obj = match.Groups["Object"]?.Value;
 		var attr = match.Groups["Attribute"]?.Value;
 
-		if (string.IsNullOrEmpty(attr)) { return false; }
+		if (string.IsNullOrEmpty(attr) || string.IsNullOrEmpty(obj)) 
+		{ 
+			return false; 
+		}
 
-		return (new DBRef(int.Parse(dbref!), string.IsNullOrWhiteSpace(ctime) ? null : long.Parse(ctime)), attr);
+		return (obj!, attr!);
 	}
 
 	public static Option<DBRef> ParseDBRef(string DBRefAttr)
@@ -148,6 +150,6 @@ public static partial class HelperFunctions
 	/// A regular expression that takes the form of '#123:43143124' or '#543'.
 	/// </summary>
 	/// <returns>A regex that has a named group for the DBRef Number, Creation Milliseconds, and attribute (if any).</returns>
-	[GeneratedRegex(@"#(?<DatabaseNumber>\d+)(?::(?<CreationTimestamp>\d+))?/(?<Attribute>[a-zA-Z1-9@_\-\.`]+)")]
+	[GeneratedRegex(@"(?<Object>.+?)/(?<Attribute>[a-zA-Z1-9@_\-\.`]+)")]
 	private static partial Regex DatabaseReferenceWithAttribute();
 }
