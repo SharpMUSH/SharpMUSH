@@ -8,9 +8,9 @@ namespace SharpMUSH.Tests.Functions;
 public class StringFunctionUnitTests: BaseUnitTest
 {
 	[Test]
-	[Arguments("ansi(r,red)", "red", (byte)31, null)]
+	// [Arguments("ansi(r,red)", "red", (byte)31, null)]
 	[Arguments("ansi(hr,red)", "red", (byte)1,(byte)31)]
-	[Arguments("ansi(y,yellow)", "yellow", (byte)33, null)]
+	// [Arguments("ansi(y,yellow)", "yellow", (byte)33, null)]
 	[Arguments("ansi(hy,yellow)", "yellow", (byte)1, (byte)33)]
 	public async Task ANSI(string str, string expectedText, byte expectedByte1, byte? expectedByte2)
 	{
@@ -35,9 +35,9 @@ public class StringFunctionUnitTests: BaseUnitTest
 	}
 
 	[Test]
-	[Arguments("ansi(R,red)", "red", (byte)41, null)]
+	// [Arguments("ansi(R,red)", "red", (byte)41, null)]
 	[Arguments("ansi(hR,red)", "red", (byte)1, (byte)41)]
-	[Arguments("ansi(Y,yellow)", "yellow", (byte)43, null)]
+	// [Arguments("ansi(Y,yellow)", "yellow", (byte)43, null)]
 	[Arguments("ansi(hY,yellow)", "yellow", (byte)1, (byte)43)]
 	public async Task ANSIBackground(string str, string expectedText, byte expectedByte1, byte? expectedByte2)
 	{

@@ -23,8 +23,8 @@
     <PackageReference Include="Serilog" Version="4.0.1" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
     <PackageReference Include="Testcontainers.ArangoDb" Version="3.10.0" />
-    <PackageReference Include="TUnit" Version="0.1.783" />
-    <PackageReference Include="TUnit.Engine.SourceGenerator" Version="0.1.783" />
+    <PackageReference Include="TUnit" Version="0.1.790" />
+    <PackageReference Include="TUnit.Engine.SourceGenerator" Version="0.1.790" />
   </ItemGroup>
 
   <ItemGroup>
