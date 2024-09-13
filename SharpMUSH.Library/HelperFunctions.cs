@@ -13,27 +13,6 @@ public static partial class HelperFunctions
 	private static readonly Regex DatabaseReferenceRegex = DatabaseReference();
 	private static readonly Regex DatabaseReferenceWithAttributeRegex = DatabaseReferenceWithAttribute();
 
-	public static bool IsPlayer(this AnySharpObject obj)
-		=> obj.IsT0;
-
-	public static bool IsRoom(this AnySharpObject obj)
-		=> obj.IsT1;
-
-	public static bool IsExit(this AnySharpObject obj)
-		=> obj.IsT2;
-
-	public static bool IsThing(this AnySharpObject obj)
-		=> obj.IsT3;
-
-	public static bool IsPlayer(this AnySharpContainer obj)
-		=> obj.IsT0;
-
-	public static bool IsRoom(this AnySharpContainer obj)
-		=> obj.IsT1;
-
-	public static bool IsThing(this AnySharpContainer obj)
-		=> obj.IsT2;
-
 	public static bool IsWizard(this AnySharpObject obj)
 		=> obj.Object()!.Flags().Any(x => x.Name == "Wizard");
 
@@ -73,7 +52,7 @@ public static partial class HelperFunctions
 		=> obj.HasPower("Orphan");
 
 	public static bool IsAlive(this AnySharpObject obj)
-		=> IsPlayer(obj) || IsPuppet(obj) || (IsAudible(obj) && obj.Object().Attributes().Any(x => x.Name == "FORWARDLIST"));
+		=> obj.IsPlayer || IsPuppet(obj) || (IsAudible(obj) && obj.Object().Attributes().Any(x => x.Name == "FORWARDLIST"));
 
 	public static bool IsPuppet(this AnySharpObject obj)
 		=> obj.HasPower("Puppet");
@@ -100,7 +79,7 @@ public static partial class HelperFunctions
 			);
 
 	public static bool Inheritable(this AnySharpObject obj)
-		=> IsPlayer(obj)
+		=> obj.IsPlayer
 				|| obj.HasFlag("Trust")
 				|| obj.Object().Owner().Object.Flags().Any(x => x.Name == "Trust")
 				|| IsWizard(obj);
@@ -144,9 +123,9 @@ public static partial class HelperFunctions
 	private static partial Regex DatabaseReference();
 
 	/// <summary>
-	/// A regular expression that takes the form of '#123:43143124' or '#543'.
+	/// A regular expression that takes the form of 'Object/attributeName'.
 	/// </summary>
-	/// <returns>A regex that has a named group for the DBRef Number, Creation Milliseconds, and attribute (if any).</returns>
+	/// <returns>A regex that has a named group for the Object and Attribute.</returns>
 	[GeneratedRegex(@"(?<Object>.+?)/(?<Attribute>[a-zA-Z1-9@_\-\.`]+)")]
 	private static partial Regex DatabaseReferenceWithAttribute();
 }

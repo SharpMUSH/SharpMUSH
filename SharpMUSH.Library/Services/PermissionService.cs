@@ -42,7 +42,7 @@ namespace SharpMUSH.Library.Services
 			if (who.Owns(target) && (!target.Inheritable() || who.Inheritable()))
 				return true;
 
-			if (target.Inheritable() || target.IsPlayer())
+			if (target.Inheritable() || target.IsPlayer)
 				return false;
 
 			/* TODO: Zone Master items here.*/
@@ -67,7 +67,7 @@ namespace SharpMUSH.Library.Services
 
 		public bool CanInteract(AnySharpObject from, AnySharpObject to, IPermissionService.InteractType type)
 		{
-			if (from == to || from.IsRoom() || to.IsRoom()) return true;
+			if (from == to || from.IsRoom || to.IsRoom) return true;
 			
 			var fromStep = from.MinusRoom();
 			var toStep = to.MinusRoom();

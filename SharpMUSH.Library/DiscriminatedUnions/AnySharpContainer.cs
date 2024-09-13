@@ -17,5 +17,13 @@ namespace SharpMUSH.Library.DiscriminatedUnions
 				room => room,
 				thing => thing
 			);
+
+		public bool IsPlayer => IsT0;
+		public bool IsRoom => IsT1;
+		public bool IsThing => IsT2;
+
+		public SharpPlayer AsPlayer => AsT0;
+		public SharpRoom AsRoom => AsT1;
+		public SharpThing AsThing => AsT2;
 	}
 }

@@ -233,12 +233,12 @@ namespace SharpMUSH.Implementation.Functions
 
 			var dbRef = dbRefConversion.AsT1.Value;
 			var objectInfo = parser.Database.GetObjectNodeAsync(dbRef).Result;
-			if (!objectInfo!.IsT0)
+			if (!objectInfo!.IsPlayer)
 			{
 				return new CallState("#-1 NO SUCH PLAYER");
 			}
 
-			var player = objectInfo.AsT0;
+			var player = objectInfo.AsPlayer;
 
 			var result = parser.PasswordService.PasswordIsValid(
 				$"#{player!.Object!.Key}:{player!.Object!.CreationTime}",

@@ -2,7 +2,6 @@
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Extensions;
-using Microsoft.VisualStudio.TestTools.UnitTesting.Logging;
 
 namespace SharpMUSH.IntegrationTests
 {
@@ -20,7 +19,7 @@ namespace SharpMUSH.IntegrationTests
 		[TestMethod]
 		public async Task TestRoomZero()
 		{
-			var roomZero = (await database!.GetObjectNodeAsync(new DBRef(0))).AsT1;
+			var roomZero = (await database!.GetObjectNodeAsync(new DBRef(0))).AsRoom;
 
 			Assert.AreEqual(typeof(SharpRoom), roomZero.GetType());
 			Assert.AreEqual("Room Zero", roomZero!.Object!.Name);
@@ -30,7 +29,7 @@ namespace SharpMUSH.IntegrationTests
 		[TestMethod]
 		public async Task TestRoomTwo()
 		{
-			var masterRoom = (await database!.GetObjectNodeAsync(new DBRef(2))).AsT1;
+			var masterRoom = (await database!.GetObjectNodeAsync(new DBRef(2))).AsRoom;
 
 			Assert.AreEqual(typeof(SharpRoom), masterRoom.GetType());
 			Assert.AreEqual("Master Room", masterRoom!.Object!.Name);
@@ -40,7 +39,7 @@ namespace SharpMUSH.IntegrationTests
 		[TestMethod]
 		public async Task TestPlayerOne()
 		{
-			var playerOne = (await database!.GetObjectNodeAsync(new DBRef(1))).AsT0;
+			var playerOne = (await database!.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
 
 			Assert.AreEqual(typeof(SharpPlayer), playerOne.GetType());
 			Assert.AreEqual("God", playerOne!.Object!.Name);
@@ -50,7 +49,7 @@ namespace SharpMUSH.IntegrationTests
 		[TestMethod]
 		public async Task SetAndGetAnAttribute()
 		{
-			var playerOne = (await database!.GetObjectNodeAsync(new DBRef(1))).AsT0;
+			var playerOne = (await database!.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
 
 			Assert.AreEqual(typeof(SharpPlayer), playerOne.GetType());
 			Assert.AreEqual("God", playerOne.Object.Name);

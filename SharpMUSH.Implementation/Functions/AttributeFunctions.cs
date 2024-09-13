@@ -85,7 +85,7 @@ public partial class Functions
 		var (dbref,attribute) = dbrefAndAttr.AsT0;
 
 		var executor  = parser.Database.GetObjectNode(parser.CurrentState.Executor!.Value).WithoutNone();
-		var maybeDBref = Functions.Locate(parser, executor, executor, dbref, LocateFlags.All);
+		var maybeDBref = Locate(parser, executor, executor, dbref, LocateFlags.All);
 
 		if (maybeDBref.IsError())
 		{

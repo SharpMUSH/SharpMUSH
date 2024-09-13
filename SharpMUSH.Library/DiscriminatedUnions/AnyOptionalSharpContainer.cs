@@ -12,6 +12,15 @@ public class AnyOptionalSharpContainer : OneOfBase<SharpPlayer, SharpRoom, Sharp
 	public static implicit operator AnyOptionalSharpContainer(SharpThing x) => new(x);
 	public static implicit operator AnyOptionalSharpContainer(OneOf.Types.None x) => new(x);
 
+	public bool IsPlayer => IsT0;
+	public bool IsRoom => IsT1;
+	public bool IsThing => IsT2;
+	public bool IsNone => IsT3;
+
+	public SharpPlayer AsPlayer => AsT0;
+	public SharpRoom AsRoom => AsT1;
+	public SharpThing AsThing => AsT2;
+
 	public AnyOptionalSharpObject WithExitOption()
 		=> Match<AnyOptionalSharpObject>(
 			player => player,

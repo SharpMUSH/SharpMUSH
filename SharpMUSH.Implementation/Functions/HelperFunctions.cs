@@ -284,11 +284,11 @@ public partial class Functions
 		bool exact = false;
 		int right_type = 0;
 
-		if (where.IsRoom())
+		if (where.IsRoom)
 		{
 			location = where.MinusExit();
 		}
-		if (where.IsExit())
+		if (where.IsExit)
 		{
 			location = where.MinusRoom().Home();
 		}
@@ -411,7 +411,7 @@ public partial class Functions
 
 			if (flags.HasFlag(LocateFlags.ExitsPreference) || flags.HasFlag(LocateFlags.NoTypePreference))
 			{
-				if (location.IsRoom() && flags.HasFlag(LocateFlags.ExitsPreference))
+				if (location.IsRoom && flags.HasFlag(LocateFlags.ExitsPreference))
 				{
 					if (flags.HasFlag(LocateFlags.MatchRemoteContents)
 						&& !flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation | LocateFlags.OnlyMatchObjectsInLookerInventory))
@@ -433,7 +433,7 @@ public partial class Functions
 						if (c == ControlFlow.Break) break;
 						if (c == ControlFlow.Return) break;
 					}
-					if (location.IsRoom())
+					if (location.IsRoom)
 					{
 						var exits = parser.Database
 							.GetContentsAsync(location.WithExitOption().WithNoneOption())
@@ -455,7 +455,7 @@ public partial class Functions
 			if (flags.HasFlag(LocateFlags.ExitsPreference) || flags.HasFlag(LocateFlags.NoTypePreference))
 			{
 				if (flags.HasFlag(LocateFlags.ExitsInsideOfLooker)
-					&& where.IsRoom()
+					&& where.IsRoom
 					&& ((location.Object().DBRef != where.Object().DBRef) || !flags.HasFlag(LocateFlags.ExitsPreference)))
 				{
 					var exits = parser.Database
@@ -504,10 +504,10 @@ public partial class Functions
 		foreach (var item in list)
 		{
 			var cur = item;
-			if (flags.HasFlag(LocateFlags.PlayersPreference) && !cur.IsPlayer()
-				|| flags.HasFlag(LocateFlags.RoomsPreference) && !cur.IsRoom()
-				|| flags.HasFlag(LocateFlags.ExitsPreference) && !cur.IsExit()
-				|| flags.HasFlag(LocateFlags.ThingsPreference) && !cur.IsThing())
+			if (flags.HasFlag(LocateFlags.PlayersPreference) && !cur.IsPlayer
+				|| flags.HasFlag(LocateFlags.RoomsPreference) && !cur.IsRoom
+				|| flags.HasFlag(LocateFlags.ExitsPreference) && !cur.IsExit
+				|| flags.HasFlag(LocateFlags.ThingsPreference) && !cur.IsThing)
 			{
 				continue;
 			}
@@ -525,8 +525,8 @@ public partial class Functions
 			{
 				continue;
 			}
-			else if (cur.IsPlayer() && cur.AsT0.Aliases!.Contains(name)
-				|| (!cur.IsExit()
+			else if (cur.IsPlayer && cur.AsPlayer.Aliases!.Contains(name)
+				|| (!cur.IsExit
 					&& !string.Equals(cur.Object().Name, name, StringComparison.OrdinalIgnoreCase)))
 			{
 				(bestMatch, final, curr, rightType, exact, flow) =
@@ -537,7 +537,7 @@ public partial class Functions
 				else if (flow == ControlFlow.Return) return (bestMatch, final, curr, rightType, exact, ControlFlow.Return);
 			}
 			else if (!flags.HasFlag(LocateFlags.NoPartialMatches) 
-				&& !cur.IsExit() 
+				&& !cur.IsExit 
 				&& cur.Object().Name.Equals(name, StringComparison.OrdinalIgnoreCase))
 			{
 				(bestMatch, final, curr, rightType, exact, flow) =
@@ -644,25 +644,25 @@ public partial class Functions
 
 	public static DBRef? WhereIs(AnySharpObject thing)
 	{
-		if (thing.IsRoom()) return null;
+		if (thing.IsRoom) return null;
 		var minusRoom = thing.MinusRoom();
-		if (thing.IsExit()) return OneOfExtensions.Home(minusRoom).Object()?.DBRef;
+		if (thing.IsExit) return OneOfExtensions.Home(minusRoom).Object()?.DBRef;
 		else return OneOfExtensions.Location(minusRoom).Object()?.DBRef;
 	}
 
 	public static AnySharpContainer FriendlyWhereIs(AnySharpObject thing)
 	{
-		if (thing.IsRoom()) return thing.AsT1;
+		if (thing.IsRoom) return thing.AsT1;
 		var minusRoom = thing.MinusRoom();
-		if (thing.IsExit()) return OneOfExtensions.Home(minusRoom);
-		else return OneOfExtensions.Location(minusRoom);
+		if (thing.IsExit) return minusRoom.Home();
+		else return minusRoom.Location();
 	}
 
 	public static bool Nearby(
 		AnySharpObject obj1,
 		AnySharpObject obj2)
 	{
-		if (obj1.IsRoom() && obj2.IsRoom()) return false;
+		if (obj1.IsRoom && obj2.IsRoom) return false;
 
 		var loc1 = FriendlyWhereIs(obj1).Object().DBRef;
 
@@ -677,11 +677,11 @@ public partial class Functions
 		string oldName,
 		LocateFlags oldFlags)
 	{
-		LocateFlags flags = oldFlags;
-		LocateFlags saveFlags = flags;
-		string name = oldName;
-		string saveName = name;
-		int count = 0;
+		var flags = oldFlags;
+		var saveFlags = flags;
+		var name = oldName;
+		var saveName = name;
+		var count = 0;
 
 		if ((flags & LocateFlags.MatchObjectsInLookerLocation) != 0)
 		{
