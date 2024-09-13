@@ -65,9 +65,22 @@ namespace SharpMUSH.Library.Services
 					|| examiner.IsSee_All()
 					|| (examinee.IsVisual() && lockService.Evaluate(LockType.Examine, examinee, examiner));
 
-		public bool CanInteract(AnySharpObject result, AnySharpObject executor, IPermissionService.InteractType type)
+		public bool CanInteract(AnySharpObject from, AnySharpObject to, IPermissionService.InteractType type)
 		{
-			throw new NotImplementedException();
+			if (from == to || from.IsRoom() || to.IsRoom()) return true;
+			
+			var fromStep = from.MinusRoom();
+			var toStep = to.MinusRoom();
+
+			if (type == IPermissionService.InteractType.Hear && !lockService.Evaluate(LockType.Interact, to, from))
+				return false;
+
+			if (fromStep.Object().Id == toStep.Location().Object().Id
+				|| toStep.Object().Id == fromStep.Location().Object().Id
+				|| Controls(to, from))
+				return true;
+
+			return true;
 		}
 
 		public static bool CanEval(

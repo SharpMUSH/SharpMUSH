@@ -17,5 +17,20 @@ namespace SharpMUSH.Library.DiscriminatedUnions
 				exit => exit,
 				thing => thing
 			);
+
+		public AnySharpContainer Location()
+			=> Match(
+				player => player.Location(),
+				exit => exit.Location(),
+				thing => thing.Location()
+			);
+
+
+		public AnySharpContainer Home()
+			=> Match(
+				player => player.Home(),
+				exit => exit.Home(),
+				thing => thing.Home()
+			);
 	}
 }

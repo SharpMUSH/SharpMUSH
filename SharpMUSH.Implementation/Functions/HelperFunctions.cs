@@ -331,13 +331,14 @@ public partial class Functions
 			match = maybeMatch == null
 				? new None()
 				: maybeMatch;
-			if (maybeMatch != null && (flags & LocateFlags.MatchObjectsInLookerInventory) != 0)
+			if (maybeMatch != null && flags.HasFlag(LocateFlags.MatchObjectsInLookerInventory))
 			{
-				if (!flags.HasFlag(LocateFlags.MatchObjectsInLookerLocation)
+				if (!flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation)
 					|| looker.HasLongFingers()
 					|| Nearby(looker, match.WithoutError().WithoutNone())
 					|| parser.PermissionService.Controls(looker, match.WithoutError().WithoutNone()))
 				{
+					// TODO: This doesn't look right.
 					if (!flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
 						&& parser.PermissionService.Controls(looker, where))
 					{
@@ -419,7 +420,8 @@ public partial class Functions
 						/* TODO: MATCH_LIST(Exits(Zone(loc))); */
 						throw new NotImplementedException();
 					}
-					if (flags.HasFlag(LocateFlags.All) && !flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation | LocateFlags.OnlyMatchObjectsInLookerInventory))
+					if (flags.HasFlag(LocateFlags.All) 
+							&& !flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation | LocateFlags.OnlyMatchObjectsInLookerInventory))
 					{
 						var exits = parser.Database
 							.GetContentsAsync(Library.Definitions.Configurable.MasterRoom)
@@ -523,7 +525,7 @@ public partial class Functions
 			{
 				continue;
 			}
-			else if (cur.IsPlayer() && (cur.AsT0).Aliases!.Contains(name)
+			else if (cur.IsPlayer() && cur.AsT0.Aliases!.Contains(name)
 				|| (!cur.IsExit()
 					&& !string.Equals(cur.Object().Name, name, StringComparison.OrdinalIgnoreCase)))
 			{
@@ -534,7 +536,9 @@ public partial class Functions
 				else if (flow == ControlFlow.Continue) continue;
 				else if (flow == ControlFlow.Return) return (bestMatch, final, curr, rightType, exact, ControlFlow.Return);
 			}
-			else if (!flags.HasFlag(LocateFlags.NoPartialMatches) && !cur.IsExit() && cur.Object().Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+			else if (!flags.HasFlag(LocateFlags.NoPartialMatches) 
+				&& !cur.IsExit() 
+				&& cur.Object().Name.Equals(name, StringComparison.OrdinalIgnoreCase))
 			{
 				(bestMatch, final, curr, rightType, exact, flow) =
 					Matched(parser, false, exact, final, curr, rightType, looker, where, cur, bestMatch, flags);
