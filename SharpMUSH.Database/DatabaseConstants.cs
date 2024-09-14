@@ -46,4 +46,18 @@ public static class DatabaseConstants
 	public const string typePlayer = "PLAYER";
 	public const string typeExit = "EXIT";
 	public const string typeThing = "THING";
+
+	public static readonly string[] typesRoom = [typeRoom];
+	public static readonly string[] typesPlayer = [typePlayer];
+	public static readonly string[] typesExit = [typeExit];
+	public static readonly string[] typesThing = [typeThing];
+
+	public static readonly string[] typesContainer = [typeRoom, typePlayer, typeThing];
+	public static readonly string[] typesContent = [typePlayer, typeExit, typeThing];
+	public static readonly string[] typesAll = [typeRoom, typePlayer, typeExit, typeThing];
+
+	public static readonly string[] permissionsWizard = ["wizard"];
+	public static readonly string[] permissionsRoyalty = ["wizard"];
+	public static readonly string[] permissionsTrusted = ["trusted"];
+	public static readonly string[] permissionsLog = ["log"];
 }

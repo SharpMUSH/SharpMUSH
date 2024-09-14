@@ -168,12 +168,14 @@ public static partial class Commands
 
 		// TODO: Proper carry format.
 		parser.NotifyService.Notify(enactor, $"Carrying: {string.Join(Environment.NewLine, contentKeys)}");
-		if(!viewing.IsT1)
+
+		if(!viewing.IsRoom)
 		{ 
 			// TODO: Proper Format.
 			parser.NotifyService.Notify(enactor, $"Home: {viewing.WithoutNone().MinusRoom().Home().Object().Name}");
 			parser.NotifyService.Notify(enactor, $"Location: {viewing.WithoutNone().MinusRoom().Location().Object().Name}");
 		}
+
 		return new CallState(obj.DBRef.ToString());
 	}
 
