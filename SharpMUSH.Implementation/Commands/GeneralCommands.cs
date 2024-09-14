@@ -67,7 +67,7 @@ public static partial class Commands
 
 		if (args.Count == 1)
 		{
-			var locate = parser.LocateService.LocateAndNotifyIfInvalid(parser, enactor, enactor, args[0]!.Message!.ToString(), Library.Services.LocateFlags.All);
+			var locate = parser.LocateService.LocateAndNotifyIfInvalid(parser, enactor, enactor, args[0]!.Message!.ToString(), Library.Services.LocateFlags.All).AsTask().Result;
 			
 			if(locate.IsValid())
 			{
@@ -115,7 +115,7 @@ public static partial class Commands
 
 		if (args.Count == 1)
 		{
-			var locate = parser.LocateService.LocateAndNotifyIfInvalid(parser, enactor, enactor, args[0]!.Message!.ToString(), Library.Services.LocateFlags.All);
+			var locate = parser.LocateService.LocateAndNotifyIfInvalid(parser, enactor, enactor, args[0]!.Message!.ToString(), Library.Services.LocateFlags.All).AsTask().Result;
 
 			if (locate.IsValid())
 			{
@@ -198,7 +198,7 @@ public static partial class Commands
 		foreach(var target in nameListTargets)
 		{
 			var targetString = target.Match(dbref => dbref.ToString(), str => str);
-			var locateTarget = parser.LocateService.LocateAndNotifyIfInvalid(parser, enactor, enactor, targetString, Library.Services.LocateFlags.All);
+			var locateTarget = parser.LocateService.LocateAndNotifyIfInvalid(parser, enactor, enactor, targetString, Library.Services.LocateFlags.All).AsTask().Result;
 
 			if(locateTarget.IsValid())
 			{

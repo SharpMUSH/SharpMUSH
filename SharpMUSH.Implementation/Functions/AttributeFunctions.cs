@@ -88,7 +88,7 @@ public partial class Functions
 		var (dbref, attribute) = dbrefAndAttr.AsT0;
 
 		var executor = (await parser.Database.GetObjectNodeAsync(parser.CurrentState.Executor!.Value)).WithoutNone();
-		var maybeDBref = parser.LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, dbref, Library.Services.LocateFlags.All);
+		var maybeDBref = await parser.LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, dbref, Library.Services.LocateFlags.All);
 
 		if (!maybeDBref.IsValid())
 		{

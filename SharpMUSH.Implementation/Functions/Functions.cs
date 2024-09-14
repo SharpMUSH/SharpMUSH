@@ -109,9 +109,11 @@ namespace SharpMUSH.Implementation.Functions
 
 			if (!attribute.Flags.HasFlag(FunctionFlags.NoParse))
 			{
-				refinedArguments = args.Select(x => new CallState(stripAnsi 
-					? MModule.plainText2(visitor.VisitChildren(x).Result?.Message ?? MModule.empty())
-					: visitor.VisitChildren(x).Result?.Message ?? MModule.empty(), x.Depth()))
+				refinedArguments = (await Task.WhenAll(args
+					.Select(async x => new CallState(
+						stripAnsi 
+						? MModule.plainText2((await visitor.VisitChildren(x))?.Message ?? MModule.empty())
+						: (await visitor.VisitChildren(x))?.Message ?? MModule.empty(), x.Depth()))))
 					.DefaultIfEmpty(new CallState(MModule.empty(), context.Depth()))
 					.ToList();
 			}

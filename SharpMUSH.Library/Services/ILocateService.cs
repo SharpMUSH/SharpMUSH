@@ -36,14 +36,14 @@ public enum LocateFlags
 
 public interface ILocateService
 {
-	public AnyOptionalSharpObjectOrError LocateAndNotifyIfInvalid(
+	public ValueTask<AnyOptionalSharpObjectOrError> LocateAndNotifyIfInvalid(
 		IMUSHCodeParser parser, 
 		AnySharpObject looker, 
 		AnySharpObject executor, 
 		string name, 
 		LocateFlags flags);
 
-	public AnyOptionalSharpObjectOrError Locate(
+	public ValueTask<AnyOptionalSharpObjectOrError> Locate(
 		IMUSHCodeParser parser,
 		AnySharpObject looker,
 		AnySharpObject executor,

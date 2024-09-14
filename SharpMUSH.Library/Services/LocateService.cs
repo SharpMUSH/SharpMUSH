@@ -14,17 +14,17 @@ public partial class LocateService : ILocateService
 
 	public enum ControlFlow { Break, Continue, Return, None };
 
-	public AnyOptionalSharpObjectOrError LocateAndNotifyIfInvalid(IMUSHCodeParser parser, AnySharpObject looker, AnySharpObject executor, string name, LocateFlags flags)
+	public async ValueTask<AnyOptionalSharpObjectOrError> LocateAndNotifyIfInvalid(IMUSHCodeParser parser, AnySharpObject looker, AnySharpObject executor, string name, LocateFlags flags)
 	{
-		var loc = Locate(parser, looker, executor, name, flags);
+		var loc = await Locate(parser, looker, executor, name, flags);
 		if (!loc.IsValid())
 		{
-			parser.NotifyService.Notify(executor, loc.IsError ? loc.AsError.Value : "I can't see that here");
+			await parser.NotifyService.Notify(executor, loc.IsError ? loc.AsError.Value : "I can't see that here");
 		}
 		return loc;
 	}
 
-	public AnyOptionalSharpObjectOrError Locate(
+	public async ValueTask<AnyOptionalSharpObjectOrError> Locate(
 		IMUSHCodeParser parser,
 		AnySharpObject looker,
 		AnySharpObject executor,
@@ -53,7 +53,7 @@ public partial class LocateService : ILocateService
 			return new Error<string>("#-1 NOT PERMITTED TO EVALUATE ON LOOKER");
 		}
 
-		var match = LocateMatch(parser, executor, looker, flags, name, (flags & LocateFlags.UseLastIfAmbiguous) != 0);
+		var match = await LocateMatch(parser, executor, looker, flags, name, (flags & LocateFlags.UseLastIfAmbiguous) != 0);
 		if (match.IsT5) return match.AsT5;
 		if (match.IsT4) return new None();
 
@@ -69,7 +69,7 @@ public partial class LocateService : ILocateService
 		return new None();
 	}
 
-	private static AnyOptionalSharpObjectOrError LocateMatch(
+	private static async ValueTask<AnyOptionalSharpObjectOrError> LocateMatch(
 		IMUSHCodeParser parser,
 		AnySharpObject looker,
 		AnySharpObject where,
@@ -129,7 +129,7 @@ public partial class LocateService : ILocateService
 		    && (flags.HasFlag(LocateFlags.PlayersPreference) || flags.HasFlag(LocateFlags.NoTypePreference)))
 		{
 			// TODO: Fix Async
-			var maybeMatch = parser.Database.GetPlayerByNameAsync(name).Result.FirstOrDefault();
+			var maybeMatch = (await parser.Database.GetPlayerByNameAsync(name)).FirstOrDefault();
 			match = maybeMatch == null
 				? new None()
 				: maybeMatch;

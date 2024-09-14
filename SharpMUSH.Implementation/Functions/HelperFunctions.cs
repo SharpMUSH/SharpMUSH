@@ -180,11 +180,10 @@ public partial class Functions
 					? OneOf<DBRef, string>.FromT0(HelperFunctions.ParseDBRef(x.Groups["DBRef"].Value).Value())
 					: OneOf<DBRef, string>.FromT1(x.Groups["User"].Value));
 
-	public static IEnumerable<SharpPlayer?> PopulatedNameList(IMUSHCodeParser parser, string list)
-		=> NameList(list).Select(x => x.Match(
-				dbref => parser.Database.GetObjectNodeAsync(dbref).Result.TryPickT0(out var player, out var _) ? player : null,
-				name => parser.Database.GetPlayerByNameAsync(name).Result.FirstOrDefault()));
-
+	public static async ValueTask<IEnumerable<SharpPlayer?>> PopulatedNameList(IMUSHCodeParser parser, string list)
+		=> await Task.WhenAll(NameList(list).Select(x => x.Match(
+				async dbref => (await parser.Database.GetObjectNodeAsync(dbref)).TryPickT0(out var player, out var _) ? player : null,
+				async name => (await parser.Database.GetPlayerByNameAsync(name)).FirstOrDefault())));
 
 	/// <summary>
 	/// A regular expression that matches one or more names in a list format.

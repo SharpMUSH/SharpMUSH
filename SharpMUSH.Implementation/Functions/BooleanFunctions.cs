@@ -21,7 +21,9 @@ namespace SharpMUSH.Implementation.Functions
 
 		[SharpFunction(Name = "cor", Flags = FunctionFlags.Regular | FunctionFlags.NoParse)]
 		public static ValueTask<CallState> Cor(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-			=> ValueTask.FromResult<CallState>(new(parser.CurrentState.Arguments.Select(x => x.Message!).Any(m => Predicates.Truthy(parser.FunctionParse(m).AsTask().Result!.Message!)) 
+			=> ValueTask.FromResult<CallState>(new(parser.CurrentState.Arguments
+					.Select(x => x.Message!)
+					.Any(m => Predicates.Truthy(parser.FunctionParse(m).AsTask().Result!.Message!)) 
 				? "1" 
 				: "0"));
 
