@@ -363,7 +363,7 @@ namespace SharpMUSH.Implementation.Functions
 
 			if (everythingIsOkay)
 			{
-				var parsed = parser.FunctionParse(parser.CurrentState.Arguments.Last().Message!)!;
+				var parsed = parser.FunctionParse(parser.CurrentState.Arguments.Last().Message!).AsTask().Result!;
 				_ = parser.CurrentState.Registers.Pop();
 				return parsed;
 			}
@@ -431,7 +431,7 @@ namespace SharpMUSH.Implementation.Functions
 		}
 		[SharpFunction(Name = "S", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 		public static CallState S(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-			=> parser.FunctionParse(parser.CurrentState.Arguments.Last().Message!)!;
+			=> parser.FunctionParse(parser.CurrentState.Arguments.Last().Message!).AsTask().Result!;
 
 		[SharpFunction(Name = "SCAN", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 		public static CallState Scan(IMUSHCodeParser parser, SharpFunctionAttribute _2)

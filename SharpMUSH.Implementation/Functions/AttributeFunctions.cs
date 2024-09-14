@@ -317,7 +317,7 @@ public partial class Functions
 			Arguments = parser.CurrentState.Arguments.Skip(1).ToList()
 		});
 
-		var parsed = parser.FunctionParse(get.Message!)!;
+		var parsed = parser.FunctionParse(get.Message!).AsTask().Result!;
 
 		// Pop the arguments.
 		parser.Pop();

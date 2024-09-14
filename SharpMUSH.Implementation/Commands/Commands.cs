@@ -42,8 +42,8 @@ public static partial class Commands
 	/// <param name="context">Command Context</param>
 	/// <param name="visitChildren">Parser function to visit children.</param>
 	/// <returns>An empty Call State</returns>
-	public static Option<CallState> EvaluateCommands(IMUSHCodeParser parser, MString source, CommandContext context,
-		Func<IRuleNode, CallState?> visitChildren)
+	public async static ValueTask<Option<CallState>> EvaluateCommands(IMUSHCodeParser parser, MString source, CommandContext context,
+		Func<IRuleNode, ValueTask<CallState?>> visitChildren)
 	{
 		var firstCommandMatch = context.firstCommandMatch();
 
@@ -67,12 +67,12 @@ public static partial class Commands
 		if (socketCommandPattern.Any() &&
 				_commandLibrary.TryGetValue(command.ToUpper(), out var librarySocketCommandDefinition))
 		{
-			return HandleSocketCommandPattern(parser, source, context, command, socketCommandPattern, librarySocketCommandDefinition);
+			return await HandleSocketCommandPattern(parser, source, context, command, socketCommandPattern, librarySocketCommandDefinition);
 		}
 
 		if (parser.CurrentState.Executor == null && parser.CurrentState.Handle != null)
 		{
-			parser.NotifyService.Notify(parser.CurrentState.Handle, "No such command available at login.");
+			await parser.NotifyService.Notify(parser.CurrentState.Handle, "No such command available at login.");
 			return new OneOf.Monads.None();
 		}
 
@@ -84,7 +84,7 @@ public static partial class Commands
 
 		if (singleTokenCommandPattern.Any())
 		{
-			return HandleSingleTokenCommandPattern(parser, source, context, command, singleTokenCommandPattern);
+			return await HandleSingleTokenCommandPattern(parser, source, context, command, singleTokenCommandPattern);
 		}
 
 		// Step 3: Check room Aliases
@@ -95,14 +95,14 @@ public static partial class Commands
 		// TODO: Optimize
 		// TODO: Evaluate Command -- commands that run more commands are always NoParse for the arguments it's relevant for.
 		// TODO: Get the Switches and send them along as a list of items!
-		var evaluatedCallContextAsString = MModule.plainText(visitChildren(firstCommandMatch)!.Message!);
+		var evaluatedCallContextAsString = MModule.plainText((await visitChildren(firstCommandMatch))!.Message!);
 		var slashIndex = evaluatedCallContextAsString.IndexOf(SLASH);
 		var rootCommand = evaluatedCallContextAsString[..(slashIndex > -1 ? slashIndex : evaluatedCallContextAsString.Length)];
 
 		if (_commandLibrary.TryGetValue(rootCommand.ToUpper(), out var libraryCommandDefinition)
 			&& !rootCommand.Equals("HUH_COMMAND", StringComparison.CurrentCultureIgnoreCase))
 		{
-			return HandleInternalCommandPattern(parser, source, context, rootCommand, libraryCommandDefinition);
+			return await HandleInternalCommandPattern(parser, source, context, rootCommand, libraryCommandDefinition);
 		}
 
 		// Step 6: Check @attribute setting
@@ -130,9 +130,9 @@ public static partial class Commands
 		return huhCommand;
 	}
 
-	private static Option<CallState> HandleInternalCommandPattern(IMUSHCodeParser parser, MString source, CommandContext context, string rootCommand, (SharpCommandAttribute Attribute, Func<IMUSHCodeParser, Option<CallState>> Function) libraryCommandDefinition)
+	private async static ValueTask<Option<CallState>> HandleInternalCommandPattern(IMUSHCodeParser parser, MString source, CommandContext context, string rootCommand, (SharpCommandAttribute Attribute, Func<IMUSHCodeParser, Option<CallState>> Function) libraryCommandDefinition)
 	{
-		var arguments = ArgumentSplit(parser, source, context, libraryCommandDefinition);
+		var arguments = await ArgumentSplit(parser, source, context, libraryCommandDefinition);
 
 		var result = libraryCommandDefinition.Function.Invoke(
 			parser.Push(parser.CurrentState with
@@ -146,9 +146,9 @@ public static partial class Commands
 		return result;
 	}
 
-	private static Option<CallState> HandleSocketCommandPattern(IMUSHCodeParser parser, MString source, CommandContext context, string command, IEnumerable<KeyValuePair<string, (SharpCommandAttribute Attribute, Func<IMUSHCodeParser, Option<CallState>> Function)>> socketCommandPattern, (SharpCommandAttribute Attribute, Func<IMUSHCodeParser, Option<CallState>> Function) librarySocketCommandDefinition)
+	private async static ValueTask<Option<CallState>> HandleSocketCommandPattern(IMUSHCodeParser parser, MString source, CommandContext context, string command, IEnumerable<KeyValuePair<string, (SharpCommandAttribute Attribute, Func<IMUSHCodeParser, Option<CallState>> Function)>> socketCommandPattern, (SharpCommandAttribute Attribute, Func<IMUSHCodeParser, Option<CallState>> Function) librarySocketCommandDefinition)
 	{
-		var arguments = ArgumentSplit(parser, source, context, librarySocketCommandDefinition);
+		var arguments = await ArgumentSplit(parser, source, context, librarySocketCommandDefinition);
 
 		// Run as Socket Command. 
 		var result = socketCommandPattern.First().Value.Function.Invoke(parser.Push(
@@ -158,12 +158,12 @@ public static partial class Commands
 		return result;
 	}
 
-	private static Option<CallState> HandleSingleTokenCommandPattern(IMUSHCodeParser parser, MString source, CommandContext context, string command, IEnumerable<KeyValuePair<string, (SharpCommandAttribute Attribute, Func<IMUSHCodeParser, Option<CallState>> Function)>> singleTokenCommandPattern)
+	private async static ValueTask<Option<CallState>> HandleSingleTokenCommandPattern(IMUSHCodeParser parser, MString source, CommandContext context, string command, IEnumerable<KeyValuePair<string, (SharpCommandAttribute Attribute, Func<IMUSHCodeParser, Option<CallState>> Function)>> singleTokenCommandPattern)
 	{
 		var singleRootCommand = command[..1];
 		var rest = command[1..];
 		var singleLibraryCommandDefinition = singleTokenCommandPattern.Single().Value;
-		var arguments = ArgumentSplit(parser, source, context, singleLibraryCommandDefinition);
+		var arguments = await ArgumentSplit(parser, source, context, singleLibraryCommandDefinition);
 
 		var result = singleLibraryCommandDefinition.Function.Invoke(parser.Push(
 			parser.CurrentState with { Command = singleRootCommand, Arguments = [new CallState(rest), .. arguments], Function = null }));
@@ -172,7 +172,7 @@ public static partial class Commands
 		return result;
 	}
 
-	private static List<CallState> ArgumentSplit(IMUSHCodeParser parser, MString source, CommandContext context,
+	private async static ValueTask<List<CallState>> ArgumentSplit(IMUSHCodeParser parser, MString source, CommandContext context,
 		(SharpCommandAttribute Attribute, Func<IMUSHCodeParser, Option<CallState>> Function) libraryCommandDefinition)
 	{
 		var argCallState = CallState.EmptyArgument;
@@ -193,21 +193,21 @@ public static partial class Commands
 			// command arg0 = arg1,still arg 1 
 			if (behavior.HasFlag(Definitions.CommandBehavior.EqSplit) && behavior.HasFlag(Definitions.CommandBehavior.RSArgs))
 			{
-				argCallState = parser.CommandEqSplitArgsParse(MModule.substring(start, len, source));
+				argCallState = await parser.CommandEqSplitArgsParse(MModule.substring(start, len, source));
 			}
 			// command arg0 = arg1,arg2
 			else if (behavior.HasFlag(Definitions.CommandBehavior.EqSplit))
 			{
-				argCallState = parser.CommandEqSplitParse(MModule.substring(start, len, source));
+				argCallState = await parser.CommandEqSplitParse(MModule.substring(start, len, source));
 			}
 			// Command arg0,arg1,arg2,arg
 			else if (behavior.HasFlag(Definitions.CommandBehavior.RSArgs))
 			{
-				argCallState = parser.CommandCommaArgsParse(MModule.substring(start, len, source));
+				argCallState = await parser.CommandCommaArgsParse(MModule.substring(start, len, source));
 			}
 			else
 			{
-				argCallState = parser.CommandSingleArgParse(MModule.substring(start, len, source));
+				argCallState = await parser.CommandSingleArgParse(MModule.substring(start, len, source));
 			}
 		}
 
@@ -233,19 +233,19 @@ public static partial class Commands
 		{
 			arguments.Add(noParse
 				? new CallState(argCallState.Arguments!.FirstOrDefault() ?? MModule.empty(), argCallState.Depth)
-				: parser.FunctionParse(argCallState.Arguments!.FirstOrDefault() ?? MModule.empty())!);
+				: (await parser.FunctionParse(argCallState.Arguments!.FirstOrDefault() ?? MModule.empty()))!);
 
 			if (nArgs > 1)
 			{
 				arguments.AddRange(noRsParse
 					? argCallState.Arguments![1..].Select(x => new CallState(x, argCallState.Depth))
-					: argCallState.Arguments![1..].Select(parser.FunctionParse).Select(x => x!));
+					: argCallState.Arguments![1..].Select(x => parser.FunctionParse(x).AsTask().Result).Select(x => x!));
 			}
 		}
 
 		arguments.AddRange(noParse
 			? argCallState.Arguments!.Select(x => new CallState(x, argCallState.Depth))
-			: argCallState.Arguments!.Select(parser.FunctionParse).Select(x => x!));
+			: argCallState.Arguments!.Select(x => parser.FunctionParse(x).AsTask().Result).Select(x => x!));
 
 		if (isNoParse)
 		{

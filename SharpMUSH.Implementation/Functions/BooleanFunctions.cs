@@ -7,19 +7,29 @@ namespace SharpMUSH.Implementation.Functions
 	{
 		[SharpFunction(Name = "and", Flags = FunctionFlags.Regular)]
 		public static CallState And(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-			=> new(parser.CurrentState.Arguments.Select(x => x.Message!).All(Predicates.Truthy) ? "1" : "0");
+			=> new(parser.CurrentState.Arguments.Select(x => x.Message!).All(Predicates.Truthy) 
+				? "1" 
+				: "0");
 
 		[SharpFunction(Name = "cand", Flags = FunctionFlags.Regular | FunctionFlags.NoParse)]
 		public static CallState Cand(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-			=> new(parser.CurrentState.Arguments.Select(x => x.Message!).All(m => Predicates.Truthy(parser.FunctionParse(m)!.Message!)) ? "0" : "1");
+			=> new(parser.CurrentState.Arguments
+					.Select(x => x.Message!)
+					.All(m => Predicates.Truthy(parser.FunctionParse(m).AsTask().Result!.Message!)) 
+				? "0" 
+				: "1");
 
 		[SharpFunction(Name = "cor", Flags = FunctionFlags.Regular | FunctionFlags.NoParse)]
 		public static CallState Cor(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-			=> new(parser.CurrentState.Arguments.Select(x => x.Message!).Any(m => Predicates.Truthy(parser.FunctionParse(m)!.Message!)) ? "1" : "0");
+			=> new(parser.CurrentState.Arguments.Select(x => x.Message!).Any(m => Predicates.Truthy(parser.FunctionParse(m).AsTask().Result!.Message!)) 
+				? "1" 
+				: "0");
 
 		[SharpFunction(Name = "eq", Flags = FunctionFlags.Regular | FunctionFlags.DecimalsOnly)]
 		public static CallState Eq(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-			=> new(parser.CurrentState.Arguments.All(x => x.Message == parser.CurrentState.Arguments[0].Message) ? "0" : "1");
+			=> new(parser.CurrentState.Arguments.All(x => x.Message == parser.CurrentState.Arguments[0].Message) 
+				? "0" 
+				: "1");
 
 		[SharpFunction(Name = "gt", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
 		public static CallState Gt(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -43,7 +53,7 @@ namespace SharpMUSH.Implementation.Functions
 
 		[SharpFunction(Name = "cnand", Flags = FunctionFlags.Regular | FunctionFlags.NoParse)]
 		public static CallState CNand(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-			=> new(parser.CurrentState.Arguments.Select(x => x.Message!).Any(m => Predicates.Falsey(parser.FunctionParse(m)!.Message!)) ? "0" : "1");
+			=> new(parser.CurrentState.Arguments.Select(x => x.Message!).Any(m => Predicates.Falsey(parser.FunctionParse(m).AsTask().Result!.Message!)) ? "0" : "1");
 
 		[SharpFunction(Name = "neq", Flags = FunctionFlags.Regular | FunctionFlags.DecimalsOnly)]
 		public static CallState Neq(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -55,7 +65,7 @@ namespace SharpMUSH.Implementation.Functions
 
 		[SharpFunction(Name = "ncor", Flags = FunctionFlags.Regular | FunctionFlags.NoParse)]
 		public static CallState NCor(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-			=> new(parser.CurrentState.Arguments.Select(x => x.Message!).All(m => Predicates.Falsey(parser.FunctionParse(m)!.Message!)) ? "1" : "0");
+			=> new(parser.CurrentState.Arguments.Select(x => x.Message!).All(m => Predicates.Falsey(parser.FunctionParse(m).AsTask().Result!.Message!)) ? "1" : "0");
 
 		[SharpFunction(Name = "not", Flags = FunctionFlags.Regular, MinArgs = 1, MaxArgs = 1)]
 		public static CallState Not(IMUSHCodeParser parser, SharpFunctionAttribute _2)

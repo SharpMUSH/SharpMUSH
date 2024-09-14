@@ -84,7 +84,7 @@ public class MUSHCodeParser(
 		this(passwordService, permissionService, database, notifyService, locateService, queueService, connectionService)
 		=> State = [state];
 
-	public CallState? FunctionParse(MString text)
+	public ValueTask<CallState?> FunctionParse(MString text)
 	{
 		AntlrInputStreamSpan inputStream = new(MModule.plainText(text));
 		SharpMUSHLexer sharpLexer = new(inputStream);
@@ -98,7 +98,7 @@ public class MUSHCodeParser(
 		return visitor.Visit(chatContext);
 	}
 
-	public CallState? CommandListParse(MString text)
+	public ValueTask<CallState?> CommandListParse(MString text)
 	{
 		AntlrInputStreamSpan inputStream = new(MModule.plainText(text));
 		SharpMUSHLexer sharpLexer = new(inputStream);
@@ -116,7 +116,7 @@ public class MUSHCodeParser(
 	/// <param name="handle">The handle that identifies the connection.</param>
 	/// <param name="text">The text to parse.</param>
 	/// <returns>A completed task.</returns>
-	public Task CommandParse(string handle, MString text)
+	public async ValueTask CommandParse(string handle, MString text)
 	{
 		var handleId = ConnectionService.Get(handle);
 		State = State.Push(new ParserState(
@@ -136,12 +136,11 @@ public class MUSHCodeParser(
 		SharpMUSHParser sharpParser = new(commonTokenStream);
 		SharpMUSHParser.StartSingleCommandStringContext chatContext = sharpParser.startSingleCommandString();
 		SharpMUSHParserVisitor visitor = new(this,text);
-
-		visitor.Visit(chatContext);
-		return Task.CompletedTask;
+		
+		await visitor.Visit(chatContext);
 	}
 
-	public CallState? CommandCommaArgsParse(MString text)
+	public ValueTask<CallState?> CommandCommaArgsParse(MString text)
 	{
 		AntlrInputStreamSpan inputStream = new(MModule.plainText(text));
 		SharpMUSHLexer sharpLexer = new(inputStream);
@@ -153,7 +152,7 @@ public class MUSHCodeParser(
 		return visitor.Visit(chatContext);
 	}
 
-	public CallState? CommandSingleArgParse(MString text)
+	public ValueTask<CallState?> CommandSingleArgParse(MString text)
 	{
 		AntlrInputStreamSpan inputStream = new(MModule.plainText(text));
 		SharpMUSHLexer sharpLexer = new(inputStream);
@@ -165,7 +164,7 @@ public class MUSHCodeParser(
 		return visitor.Visit(chatContext);
 	}
 
-	public CallState? CommandEqSplitArgsParse(MString text)
+	public ValueTask<CallState?> CommandEqSplitArgsParse(MString text)
 	{
 		AntlrInputStreamSpan inputStream = new(MModule.plainText(text));
 		SharpMUSHLexer sharpLexer = new(inputStream);
@@ -177,7 +176,7 @@ public class MUSHCodeParser(
 		return visitor.Visit(chatContext);
 	}
 
-	public CallState? CommandEqSplitParse(MString text)
+	public ValueTask<CallState?> CommandEqSplitParse(MString text)
 	{
 		AntlrInputStreamSpan inputStream = new(MModule.plainText(text));
 		SharpMUSHLexer sharpLexer = new(inputStream);

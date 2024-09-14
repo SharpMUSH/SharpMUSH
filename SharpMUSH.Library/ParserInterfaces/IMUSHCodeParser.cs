@@ -14,13 +14,13 @@ public partial interface IMUSHCodeParser
 	ILocateService LocateService { get; }
 	IQueueService QueueService { get; }
 	IImmutableStack<ParserState> State { get; }
-	CallState? CommandCommaArgsParse(MString text);
-	CallState? CommandEqSplitArgsParse(MString text);
-	CallState? CommandEqSplitParse(MString text);
-	CallState? CommandListParse(MString text);
-	Task CommandParse(string handle, MString text);
-	CallState? CommandSingleArgParse(MString text);
-	CallState? FunctionParse(MString text);
+	ValueTask<CallState?> CommandCommaArgsParse(MString text);
+	ValueTask<CallState?> CommandEqSplitArgsParse(MString text);
+	ValueTask<CallState?> CommandEqSplitParse(MString text);
+	ValueTask<CallState?> CommandListParse(MString text);
+	ValueTask CommandParse(string handle, MString text);
+	ValueTask<CallState?> CommandSingleArgParse(MString text);
+	ValueTask<CallState?> FunctionParse(MString text);
 	IMUSHCodeParser Pop();
 	IMUSHCodeParser Push(ParserState state);
 }

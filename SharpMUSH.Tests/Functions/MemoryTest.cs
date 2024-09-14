@@ -6,7 +6,7 @@ namespace SharpMUSH.Tests.Functions;
 public class MemoryTest : BaseUnitTest
 {
 	[TestMethod]
-	public void Depth()
+	public async Task Depth()
 	{
 		var sb = new StringBuilder();
 		foreach(var _ in Enumerable.Range(0, 200))
@@ -21,7 +21,7 @@ public class MemoryTest : BaseUnitTest
 		var str = sb.ToString();
 
 		var parser = TestParser();
-		var result = parser.FunctionParse(MModule.single(str))?.Message?.ToString();
+		var result = (await parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
 
 		Assert.AreEqual("201", result);
 	}

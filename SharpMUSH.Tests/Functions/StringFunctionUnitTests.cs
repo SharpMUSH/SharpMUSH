@@ -14,12 +14,12 @@ public class StringFunctionUnitTests: BaseUnitTest
 	[DataRow("ansi(hr,red)", "red", (byte)1,(byte)31)]
 	[DataRow("ansi(y,yellow)", "yellow", (byte)33)]
 	[DataRow("ansi(hy,yellow)", "yellow", (byte)1, (byte)33)]
-	public void ANSI(string str, string expectedText, params byte[] expectedBytes)
+	public async Task ANSI(string str, string expectedText, params byte[] expectedBytes)
 	{
 		Console.WriteLine("Testing: {0}", str);
 
 		var parser = TestParser();
-		var result = parser.FunctionParse(MModule.single(str))?.Message!;
+		var result = (await parser.FunctionParse(MModule.single(str)))?.Message!;
 
 		var color = StringExtensions.ansiBytes(expectedBytes);
 		var markup = MarkupString.MarkupImplementation.AnsiMarkup.Create(foreground: color);
@@ -34,12 +34,12 @@ public class StringFunctionUnitTests: BaseUnitTest
 	[DataRow("ansi(hR,red)", "red", (byte)1, (byte)41)]
 	[DataRow("ansi(Y,yellow)", "yellow", (byte)43)]
 	[DataRow("ansi(hY,yellow)", "yellow", (byte)1, (byte)43)]
-	public void ANSIBackground(string str, string expectedText, params byte[] expectedByte)
+	public async Task ANSIBackground(string str, string expectedText, params byte[] expectedByte)
 	{
 		Console.WriteLine("Testing: {0}", str);
 
 		var parser = TestParser();
-		var result = parser.FunctionParse(MModule.single(str))?.Message!;
+		var result = (await parser.FunctionParse(MModule.single(str)))?.Message!;
 
 		var color = StringExtensions.ansiBytes(expectedByte);
 		var markup = MarkupString.MarkupImplementation.AnsiMarkup.Create(background: color);

@@ -14,11 +14,11 @@ public class FunctionUnitTests : BaseUnitTest
 	[DataRow("add(1,add(2,3),add(2,2))", "10")]
 	[DataRow("add(1,2)[add(5,5)]", "310")]
 	[DataRow("add(1,2)[add(5,5)]word()", "310word()")]
-	public void Test(string str, string? expected = null)
+	public async Task Test(string str, string? expected = null)
 	{
 		Console.WriteLine("Testing: {0}", str);
 		var parser = TestParser();
-		var result = parser.FunctionParse(MModule.single(str))?.Message?.ToString();
+		var result = (await parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
 
 		Console.WriteLine(string.Join("", result));
 

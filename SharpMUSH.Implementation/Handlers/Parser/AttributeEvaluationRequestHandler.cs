@@ -11,6 +11,6 @@ public class AttributeEvaluationRequestHandler(IMUSHCodeParser _parser) : INotif
 		// TODO: GetAttributeAsync should return an MString to begin with. 
 		// Which gets to the whole 'how do we serialize the MString' question.
 		var contents = await _parser.Database.GetAttributeAsync(request.Attribute.DB, request.Attribute.Name.Split('`'));
-		_parser.FunctionParse(MModule.single(contents!.Last()!.Value));
+		await _parser.FunctionParse(MModule.single(contents!.Last()!.Value));
 	}
 }

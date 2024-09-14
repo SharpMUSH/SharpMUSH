@@ -12,12 +12,12 @@ public class BooleanFunctionUnitTests : BaseUnitTest
 	[DataRow("t()", "0")]
 	[DataRow("t( )", "0")]
 	[DataRow("t(%b)", "1")]
-	public void T(string str, string expected)
+	public async Task T(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
 
 		var parser = TestParser();
-		var result = parser.FunctionParse(MModule.single(str))?.Message?.ToString();
+		var result = (await parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
 
 		Assert.AreEqual(expected, result);
 	}
@@ -27,12 +27,12 @@ public class BooleanFunctionUnitTests : BaseUnitTest
 	[DataRow("and(0,1)", "0")]
 	[DataRow("and(0,0,1)", "0")]
 	[DataRow("and(1,1,1)", "1")]
-	public void And(string str, string expected)
+	public async Task And(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
 
 		var parser = TestParser();
-		var result = parser.FunctionParse(MModule.single(str))?.Message?.ToString();
+		var result = (await parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
 
 		Assert.AreEqual(expected, result);
 	}
@@ -42,12 +42,12 @@ public class BooleanFunctionUnitTests : BaseUnitTest
 	[DataRow("nand(0,1)", "1")]
 	[DataRow("nand(0,0,1)", "1")]
 	[DataRow("nand(1,1,1)", "0")]
-	public void Nand(string str, string expected)
+	public async Task Nand(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
 
 		var parser = TestParser();
-		var result = parser.FunctionParse(MModule.single(str))?.Message?.ToString();
+		var result = (await parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
 
 		Assert.AreEqual(expected, result);
 	}

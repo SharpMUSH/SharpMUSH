@@ -110,8 +110,8 @@ namespace SharpMUSH.Implementation.Functions
 			if (!attribute.Flags.HasFlag(FunctionFlags.NoParse))
 			{
 				refinedArguments = args.Select(x => new CallState(stripAnsi 
-					? MModule.plainText2(visitor.VisitChildren(x)?.Message ?? MModule.empty())
-					: visitor.VisitChildren(x)?.Message ?? MModule.empty(), x.Depth()))
+					? MModule.plainText2(visitor.VisitChildren(x).Result?.Message ?? MModule.empty())
+					: visitor.VisitChildren(x).Result?.Message ?? MModule.empty(), x.Depth()))
 					.DefaultIfEmpty(new CallState(MModule.empty(), context.Depth()))
 					.ToList();
 			}
