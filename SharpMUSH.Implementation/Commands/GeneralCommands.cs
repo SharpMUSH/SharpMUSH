@@ -79,7 +79,7 @@ public static partial class Commands
 			viewing = parser.Database.GetLocationAsync(enactor.Object().DBRef, 1).Result.WithExitOption();
 		}
 
-		if (!viewing.IsNone())
+		if (viewing.IsNone())
 		{
 			return new None();
 		}

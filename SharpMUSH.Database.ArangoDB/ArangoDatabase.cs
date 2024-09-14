@@ -259,36 +259,39 @@ public class ArangoDatabase(
 
 	private async Task<AnyOptionalSharpObject> GetObjectNodeAsync(string dbID)
 	{
-		var query = await arangoDB.Query.ExecuteAsync<dynamic>(handle,
-			$"FOR v IN 0..1 OUTBOUND {dbID} GRAPH {DatabaseConstants.graphObjects} RETURN v");
-
-		if(query.Count() == 1)
+		ArangoList<dynamic>? query;
+		if (dbID.StartsWith(DatabaseConstants.objects))
 		{
-			// TODO: BE BETTER
 			query = await arangoDB.Query.ExecuteAsync<dynamic>(handle,
 				$"FOR v IN 0..1 INBOUND {dbID} GRAPH {DatabaseConstants.graphObjects} RETURN v");
 			query.Reverse();
+		}
+		else
+		{
+			query = await arangoDB.Query.ExecuteAsync<dynamic>(handle,
+				$"FOR v IN 0..1 OUTBOUND {dbID} GRAPH {DatabaseConstants.graphObjects} RETURN v");
 		}
 
 		var res = query.First();
 		var obj = query.Last();
 
 		string id = res._id;
+		string objId = obj._id;
 		string collection = id.Split("/")[0];
 		var convertObject = new SharpObject()
 		{
-			Id = obj._id,
+			Id = objId,
 			Key = int.Parse((string)obj._key),
 			Name = obj.Name,
 			Type = obj.Type,
 			CreationTime = obj.CreationTime,
 			ModifiedTime = obj.ModifiedTime,
 			Locks = ((Dictionary<string, string>?)obj.Locks ?? []).ToImmutableDictionary(),
-			Flags = () => GetFlags(dbID),
-			Powers = () => GetPowers(dbID),
-			Attributes = () => GetAttributes(dbID),
-			Owner = () => GetObjectOwner(dbID),
-			Parent = () => GetParent(dbID)
+			Flags = () => GetFlags(objId),
+			Powers = () => GetPowers(objId),
+			Attributes = () => GetAttributes(objId),
+			Owner = () => GetObjectOwner(objId),
+			Parent = () => GetParent(objId)
 		};
 
 		return collection switch

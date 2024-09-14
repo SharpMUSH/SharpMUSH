@@ -27,13 +27,9 @@ public static partial class Commands
 		var locate = parser.LocateService.LocateAndNotifyIfInvalid(parser, enactor, enactor, args[1]!.Message!.ToString(), Library.Services.LocateFlags.All);
 		
 		// Arguments are getting here in an evaluated state, when they should not be.
-		if(locate.IsError())
+		if(!locate.IsValid())
 		{
-			return new CallState(locate.AsError.Value);
-		}
-		if(locate.IsNone())
-		{
-			return new CallState(Errors.ErrorCantSeeThat);
+			return new CallState(locate.IsError ? locate.AsError.Value : Errors.ErrorCantSeeThat);
 		}
 
 		// TODO: Switch to Clear an attribute! Take note of deeper authorization needed in case of the attribute having leaves.
@@ -43,8 +39,7 @@ public static partial class Commands
 		var callerObj = parser.CurrentState.Caller!.Value.Get(parser.Database);
 		var callerOwner = callerObj.Object()!.Owner();
 		
-		parser.Database.SetAttributeAsync(realLocated.Object().DBRef, attributePath, contents, 
-			callerOwner);
+		parser.Database.SetAttributeAsync(realLocated.Object().DBRef, attributePath, contents, callerOwner);
 		
 		parser.NotifyService.Notify(parser.CurrentState.Enactor!.Value, $"{realLocated.Object().Name}/{string.Join("`",attributePath)} - Set.");
 		
