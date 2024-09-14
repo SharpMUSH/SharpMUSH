@@ -67,7 +67,7 @@ public static partial class Commands
 
 		if (args.Count == 1)
 		{
-			var locate = parser.LocateService.Locate(parser, enactor, enactor, args[0]!.Message!.ToString(), Library.Services.LocateFlags.All);
+			var locate = parser.LocateService.LocateAndNotifyIfInvalid(parser, enactor, enactor, args[0]!.Message!.ToString(), Library.Services.LocateFlags.All);
 			
 			if(locate.IsValid())
 			{
@@ -79,9 +79,8 @@ public static partial class Commands
 			viewing = parser.Database.GetLocationAsync(enactor.Object().DBRef, 1).Result.WithExitOption();
 		}
 
-		if (viewing.IsNone())
+		if (!viewing.IsNone())
 		{
-			parser.NotifyService.Notify(enactor, "I can't see that here.");
 			return new None();
 		}
 		
@@ -116,7 +115,7 @@ public static partial class Commands
 
 		if (args.Count == 1)
 		{
-			var locate = parser.LocateService.Locate(parser, enactor, enactor, args[0]!.Message!.ToString(), Library.Services.LocateFlags.All);
+			var locate = parser.LocateService.LocateAndNotifyIfInvalid(parser, enactor, enactor, args[0]!.Message!.ToString(), Library.Services.LocateFlags.All);
 
 			if (locate.IsValid())
 			{
@@ -130,7 +129,6 @@ public static partial class Commands
 
 		if (viewing.IsNone())
 		{
-			parser.NotifyService.Notify(enactor, "I can't see that here.");
 			return new None();
 		}
 
@@ -198,17 +196,9 @@ public static partial class Commands
 		foreach(var target in nameListTargets)
 		{
 			var targetString = target.Match(dbref => dbref.ToString(), str => str);
-			var locateTarget = parser.LocateService.Locate(parser, enactor, enactor, targetString, Library.Services.LocateFlags.All);
+			var locateTarget = parser.LocateService.LocateAndNotifyIfInvalid(parser, enactor, enactor, targetString, Library.Services.LocateFlags.All);
 
-			if (locateTarget.IsNone())
-			{
-				parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, "I can't see that here.");
-			}
-			else if(locateTarget.IsError())
-			{
-				parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, locateTarget.AsT5.Value);
-			}
-			else
+			if(locateTarget.IsValid())
 			{
 				parser.NotifyService.Notify(locateTarget.WithoutError().WithoutNone().Object().DBRef, notification);
 			}

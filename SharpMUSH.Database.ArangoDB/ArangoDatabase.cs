@@ -177,7 +177,7 @@ public class ArangoDatabase(
 
 		var populatedOwner = GetObjectNodeAsync(owner.Id).Result;
 
-		return populatedOwner.AsT0;
+		return populatedOwner.AsPlayer;
 	}
 
 	public SharpObject? GetParent(string id)
@@ -632,6 +632,6 @@ public class ArangoDatabase(
 		var result = query.FirstOrDefault();
 		if (result == null) return [];
 
-		return query.Select(x => GetObjectNode((string)x._id).AsT0);
+		return query.Select(x => GetObjectNode((string)x._id).AsPlayer);
 	}
 }

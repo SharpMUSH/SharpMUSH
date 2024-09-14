@@ -302,7 +302,7 @@ namespace SharpMUSH.Implementation.Functions
 		{
 			var parsed = HelperFunctions.ParseDBRef(MModule.plainText(parser.CurrentState.Arguments[0].Message));
 			if (parsed.IsNone()) return new("0");
-			return new CallState(!parser.Database.GetObjectNode(parsed.AsT1.Value).IsT4);
+			return new CallState(!parser.Database.GetObjectNode(parsed.AsT1.Value).IsNone);
 		}
 
 		[SharpFunction(Name = "ISINT", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]

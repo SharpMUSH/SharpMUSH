@@ -73,31 +73,26 @@ public partial class Functions
 	{
 		throw new NotImplementedException();
 	}
+
 	[SharpFunction(Name = "get", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static CallState Get(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// TODO: Permissions!!
 		var dbrefAndAttr = HelperFunctions.SplitDBRefAndAttr(MModule.plainText(parser.CurrentState.Arguments[0].Message));
+		
 		if (dbrefAndAttr.IsT1 && dbrefAndAttr.AsT1 == false)
 		{
-			// TODO: Improve error.
 			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
 		}
+
 		var (dbref, attribute) = dbrefAndAttr.AsT0;
 
 		var executor = parser.Database.GetObjectNode(parser.CurrentState.Executor!.Value).WithoutNone();
-		var maybeDBref = parser.LocateService.Locate(parser, executor, executor, dbref, Library.Services.LocateFlags.All);
+		var maybeDBref = parser.LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, dbref, Library.Services.LocateFlags.All);
 
-		if (maybeDBref.IsError())
+		if (!maybeDBref.IsValid())
 		{
-			parser.NotifyService.Notify(parser.CurrentState.Executor.Value, maybeDBref.AsT5.Value);
-			return new CallState(maybeDBref.AsT5.Value);
-		}
-
-		if (maybeDBref.IsNone())
-		{
-			parser.NotifyService.Notify(parser.CurrentState.Executor.Value, "I can't see that here.");
-			return new CallState("#-1 I can't see that here."); // TODO: Better Error
+			return new CallState(maybeDBref.IsError ? maybeDBref.AsError.Value : Errors.ErrorCantSeeThat);
 		}
 
 		var actualDBref = maybeDBref.WithoutError().WithoutNone().Object().DBRef;
@@ -105,6 +100,7 @@ public partial class Functions
 
 		return new CallState(contents?.Value ?? string.Empty);
 	}
+
 	[SharpFunction(Name = "GET_EVAL", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 	public static CallState get_eval(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{

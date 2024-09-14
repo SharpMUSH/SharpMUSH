@@ -1,5 +1,6 @@
 ﻿using OneOf.Monads;
 using SharpMUSH.Implementation.Definitions;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 
@@ -10,9 +11,9 @@ public static partial class Commands
 	[SharpCommand(Name = "]", Behavior = CommandBehavior.SingleToken | CommandBehavior.NoParse, MinArgs = 1, MaxArgs = 1)]
 	public static Option<CallState> NoParse(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// TODO: Implement this behavior in the State and heeding it in the command evaluation parser behavior.
-		parser.NotifyService.Notify(parser.CurrentState.Enactor!.Value, parser.CurrentState.Arguments[0].ToString());
-
+		parser.Push(parser.CurrentState with { ParseMode = ParseMode.NoParse });
+		parser.CommandParse(parser.CurrentState.Handle!, parser.CurrentState.Arguments[0]!.Message!).GetAwaiter().GetResult();
+		parser.Pop();
 		return new CallState(string.Empty);
 	}
 
@@ -23,23 +24,21 @@ public static partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var enactor = parser.CurrentState.Enactor!.Value.Get(parser.Database).WithoutNone();
 
-		var locate = parser.LocateService.Locate(parser, enactor, enactor, args[1]!.Message!.ToString(), Library.Services.LocateFlags.All);
+		var locate = parser.LocateService.LocateAndNotifyIfInvalid(parser, enactor, enactor, args[1]!.Message!.ToString(), Library.Services.LocateFlags.All);
 		
 		// Arguments are getting here in an evaluated state, when they should not be.
 		if(locate.IsError())
 		{
-			parser.NotifyService.Notify(enactor, locate.AsT5.Value);
-			return new CallState(locate.AsT5.Value);
+			return new CallState(locate.AsError.Value);
 		}
 		if(locate.IsNone())
 		{
-			parser.NotifyService.Notify(enactor, "I can't see that here.");
-			return new CallState("#-1 I can't see that here.");
+			return new CallState(Errors.ErrorCantSeeThat);
 		}
 
 		// TODO: Switch to Clear an attribute! Take note of deeper authorization needed in case of the attribute having leaves.
 		var realLocated = locate.WithoutError().WithoutNone();
-		var attributePath = args[0]!.Message!.ToString()!.Split('`');
+		var attributePath = args[0]!.Message!.ToString()!.ToUpper().Split('`');
 		var contents = args[2]?.Message?.ToString() ?? string.Empty;
 		var callerObj = parser.CurrentState.Caller!.Value.Get(parser.Database);
 		var callerOwner = callerObj.Object()!.Owner();
@@ -47,7 +46,7 @@ public static partial class Commands
 		parser.Database.SetAttributeAsync(realLocated.Object().DBRef, attributePath, contents, 
 			callerOwner);
 		
-		parser.NotifyService.Notify(parser.CurrentState.Enactor!.Value, "Set!");
+		parser.NotifyService.Notify(parser.CurrentState.Enactor!.Value, $"{realLocated.Object().Name}/{string.Join("`",attributePath)} - Set.");
 		
 		return new CallState(string.Empty);
 	}

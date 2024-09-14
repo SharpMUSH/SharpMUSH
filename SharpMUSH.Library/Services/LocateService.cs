@@ -14,6 +14,16 @@ public partial class LocateService : ILocateService
 
 	public enum ControlFlow { Break, Continue, Return, None };
 
+	public AnyOptionalSharpObjectOrError LocateAndNotifyIfInvalid(IMUSHCodeParser parser, AnySharpObject looker, AnySharpObject executor, string name, LocateFlags flags)
+	{
+		var loc = Locate(parser, looker, executor, name, flags);
+		if (!loc.IsValid())
+		{
+			parser.NotifyService.Notify(executor, loc.IsError ? loc.AsError.Value : "I can't see that here");
+		}
+		return loc;
+	}
+
 	public AnyOptionalSharpObjectOrError Locate(
 		IMUSHCodeParser parser,
 		AnySharpObject looker,
