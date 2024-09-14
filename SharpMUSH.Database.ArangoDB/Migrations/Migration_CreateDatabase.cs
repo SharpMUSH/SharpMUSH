@@ -661,164 +661,160 @@ namespace SharpMUSH.Database.ArangoDB.Migrations
 		}
 
 		// Todo: Find a better way of doing this, so we can keep a proper async flow.
-		private static List<ArangoUpdateResult<ArangoVoid>> CreateInitialFlags(IArangoMigrator migrator, ArangoHandle handle)
-		{
-			List<ArangoUpdateResult<ArangoVoid>> list =
-			[
-				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
-				{
-					Name = "ABODE",
-					Symbol = "A",
-					TypeRestrictions = DatabaseConstants.typesRoom
-				}).Result,
-				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
-				{
-						Name = "ANSI",
-						Symbol = "A",
-						TypeRestrictions = DatabaseConstants.typesPlayer
-				}).Result,
-				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
-				{
-						Name = "CHOWN_OK",
-						Symbol = "C",
-						TypeRestrictions = DatabaseConstants.typesContainer
-				}).Result,
-				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
-				{
-						Name = "DARK",
-						Symbol = "D",
-						TypeRestrictions = DatabaseConstants.typesAll
-				}).Result,
-				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
-				{
-						Name = "FIXED",
-						Symbol = "F",
-						SetPermissions = DatabaseConstants.permissionsWizard,
-						UnsetPermissions = DatabaseConstants.permissionsWizard,
-						TypeRestrictions = DatabaseConstants.typesPlayer
-				}).Result,
-				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
-				{
-						Name = "FLOATING",
-						Symbol = "F",
-						TypeRestrictions = DatabaseConstants.typesRoom
-				}).Result,
-				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
-				{
-						Name = "HAVEN",
-						Symbol = "H",
-						TypeRestrictions = DatabaseConstants.typesPlayer
-				}).Result,
-				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
-				{
-						Name = "TRUST",
-						Symbol = "I",
-						Aliases = (string[])["INHERIT"],
-						SetPermissions = DatabaseConstants.permissionsTrusted,
-						UnsetPermissions = DatabaseConstants.permissionsTrusted,
-						TypeRestrictions = DatabaseConstants.typesAll
-				}).Result,
-				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
-				{
-						Name = "JUDGE",
-						Symbol = "J",
-						SetPermissions = DatabaseConstants.permissionsRoyalty,
-						UnsetPermissions = DatabaseConstants.permissionsRoyalty,
-						TypeRestrictions = DatabaseConstants.typesPlayer
-				}).Result,
-				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
-				{
-						Name = "JUMP_OK",
-						Symbol = "J",
-						Aliases = (string[])["TEL-OK", "TEL_OK", "TELOK"],
-						TypeRestrictions = DatabaseConstants.typesRoom
-				}).Result,
-				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
-				{
-						Name = "LINK_OK",
-						Symbol = "L",
-						TypeRestrictions = DatabaseConstants.typesAll
-				}).Result,
-				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
-				{
-						Name = "MONITOR",
-						Symbol = "M",
-						Aliases = (string[])["LISTENER", "WATCHER"],
-						TypeRestrictions = DatabaseConstants.typesContainer
-				}).Result,
-				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
-				{
-						Name = "NO_LEAVE",
-						Symbol = "N",
-						Aliases = (string[])["NOLEAVE"],
-						TypeRestrictions = DatabaseConstants.typesThing
-				}).Result,
-				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
-				{
-						Name = "NO_TEL",
-						Symbol = "N",
-						TypeRestrictions = DatabaseConstants.typesRoom
-				}).Result,
-				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
-				{
-						Name = "OPAQUE",
-						Symbol = "O",
-						TypeRestrictions = DatabaseConstants.typesAll
-				}).Result,
-				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
-				{
-						Name = "QUIET",
-						Symbol = "Q",
-						TypeRestrictions = DatabaseConstants.typesAll
-				}).Result,
-				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
-				{
-						Name = "UNFINDABLE",
-						Symbol = "U",
-						TypeRestrictions = DatabaseConstants.typesAll
-				}).Result,
-				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
-				{
-						Name = "VISUAL",
-						Symbol = "V",
-						TypeRestrictions = DatabaseConstants.typesAll
-				}).Result,
-				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
-				{
-						Name = "WIZARD",
-						Symbol = "W",
-						TypeRestrictions = DatabaseConstants.typesAll,
-						SetPermissions = DatabaseConstants.permissionsTrusted
-								.Union(DatabaseConstants.permissionsWizard)
-								.Union(DatabaseConstants.permissionsLog),
-						UnsetPermissions = DatabaseConstants.permissionsTrusted
-								.Union(DatabaseConstants.permissionsWizard),
-				}).Result,
-				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
-				{
-						Name = "SAFE",
-						Symbol = "X",
-						TypeRestrictions = DatabaseConstants.typesAll
-				}).Result,
-				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
-				{
-						Name = "SHARED",
-						Symbol = "Z",
-						Aliases = (string[])["ZONE"],
-						TypeRestrictions = DatabaseConstants.typesPlayer
-				}).Result,
-				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
-				{
-						Name = "Z_TEL",
-						Symbol = "Z",
-						TypeRestrictions = DatabaseConstants.typesRoom
-								.Union(DatabaseConstants.typesThing)
-				}).Result
-			];
-			return list;
-			// First half done.
-		}
+		private static List<ArangoUpdateResult<ArangoVoid>> CreateInitialFlags(IArangoMigrator migrator, ArangoHandle handle) =>
+		[
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "ABODE",
+				Symbol = "A",
+				TypeRestrictions = DatabaseConstants.typesRoom
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "ANSI",
+				Symbol = "A",
+				TypeRestrictions = DatabaseConstants.typesPlayer
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "CHOWN_OK",
+				Symbol = "C",
+				TypeRestrictions = DatabaseConstants.typesContainer
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "DARK",
+				Symbol = "D",
+				TypeRestrictions = DatabaseConstants.typesAll
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "FIXED",
+				Symbol = "F",
+				SetPermissions = DatabaseConstants.permissionsWizard,
+				UnsetPermissions = DatabaseConstants.permissionsWizard,
+				TypeRestrictions = DatabaseConstants.typesPlayer
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "FLOATING",
+				Symbol = "F",
+				TypeRestrictions = DatabaseConstants.typesRoom
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "HAVEN",
+				Symbol = "H",
+				TypeRestrictions = DatabaseConstants.typesPlayer
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "TRUST",
+				Symbol = "I",
+				Aliases = (string[])["INHERIT"],
+				SetPermissions = DatabaseConstants.permissionsTrusted,
+				UnsetPermissions = DatabaseConstants.permissionsTrusted,
+				TypeRestrictions = DatabaseConstants.typesAll
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "JUDGE",
+				Symbol = "J",
+				SetPermissions = DatabaseConstants.permissionsRoyalty,
+				UnsetPermissions = DatabaseConstants.permissionsRoyalty,
+				TypeRestrictions = DatabaseConstants.typesPlayer
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "JUMP_OK",
+				Symbol = "J",
+				Aliases = (string[])["TEL-OK", "TEL_OK", "TELOK"],
+				TypeRestrictions = DatabaseConstants.typesRoom
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "LINK_OK",
+				Symbol = "L",
+				TypeRestrictions = DatabaseConstants.typesAll
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "MONITOR",
+				Symbol = "M",
+				Aliases = (string[])["LISTENER", "WATCHER"],
+				TypeRestrictions = DatabaseConstants.typesContainer
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "NO_LEAVE",
+				Symbol = "N",
+				Aliases = (string[])["NOLEAVE"],
+				TypeRestrictions = DatabaseConstants.typesThing
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "NO_TEL",
+				Symbol = "N",
+				TypeRestrictions = DatabaseConstants.typesRoom
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "OPAQUE",
+				Symbol = "O",
+				TypeRestrictions = DatabaseConstants.typesAll
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "QUIET",
+				Symbol = "Q",
+				TypeRestrictions = DatabaseConstants.typesAll
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "UNFINDABLE",
+				Symbol = "U",
+				TypeRestrictions = DatabaseConstants.typesAll
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "VISUAL",
+				Symbol = "V",
+				TypeRestrictions = DatabaseConstants.typesAll
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "WIZARD",
+				Symbol = "W",
+				TypeRestrictions = DatabaseConstants.typesAll,
+				SetPermissions = DatabaseConstants.permissionsTrusted
+					.Union(DatabaseConstants.permissionsWizard)
+					.Union(DatabaseConstants.permissionsLog),
+				UnsetPermissions = DatabaseConstants.permissionsTrusted
+					.Union(DatabaseConstants.permissionsWizard),
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "SAFE",
+				Symbol = "X",
+				TypeRestrictions = DatabaseConstants.typesAll
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "SHARED",
+				Symbol = "Z",
+				Aliases = (string[])["ZONE"],
+				TypeRestrictions = DatabaseConstants.typesPlayer
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "Z_TEL",
+				Symbol = "Z",
+				TypeRestrictions = DatabaseConstants.typesRoom
+					.Union(DatabaseConstants.typesThing)
+			}).Result
+		];
 
+		// First half done.
 		public Task Down(IArangoMigrator migrator, ArangoHandle handle)
 		{
 			throw new NotImplementedException();
