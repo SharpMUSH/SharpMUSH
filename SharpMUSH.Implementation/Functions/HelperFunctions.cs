@@ -14,38 +14,38 @@ public partial class Functions
 	private static readonly Regex TimeSpanFormatMatchRegex = TimeSpanFormatMatch();
 	private static readonly Regex NameListPatternRegex = NameListPattern();
 
-	private static CallState AggregateDecimals(List<CallState> args, Func<decimal, decimal, decimal> aggregateFunction) =>
-		new(args
+	private static ValueTask<CallState> AggregateDecimals(List<CallState> args, Func<decimal, decimal, decimal> aggregateFunction) =>
+		ValueTask.FromResult<CallState>(new(args
 			.Select(x => decimal.Parse(MModule.plainText(x.Message)))
-			.Aggregate(aggregateFunction).ToString());
+			.Aggregate(aggregateFunction).ToString()));
 
-	private static CallState AggregateIntegers(List<CallState> args, Func<int, int, int> aggregateFunction) =>
-		new(args
+	private static ValueTask<CallState> AggregateIntegers(List<CallState> args, Func<int, int, int> aggregateFunction) =>
+		ValueTask.FromResult<CallState>(new(args
 			.Select(x => int.Parse(MModule.plainText(x.Message)))
-			.Aggregate(aggregateFunction).ToString());
+			.Aggregate(aggregateFunction).ToString()));
 
-	private static CallState ValidateIntegerAndEvaluate(List<CallState> args, Func<IEnumerable<int>, MString> aggregateFunction)
-		 => new(aggregateFunction(args.Select(x => int.Parse(MModule.plainText(x.Message!)))).ToString());
+	private static ValueTask<CallState> ValidateIntegerAndEvaluate(List<CallState> args, Func<IEnumerable<int>, MString> aggregateFunction)
+		 => ValueTask.FromResult<CallState>(new(aggregateFunction(args.Select(x => int.Parse(MModule.plainText(x.Message!)))).ToString()));
 
-	private static CallState AggregateDecimalToInt(List<CallState> args, Func<decimal, decimal, decimal> aggregateFunction) =>
-		new(Math.Floor(args
+	private static ValueTask<CallState> AggregateDecimalToInt(List<CallState> args, Func<decimal, decimal, decimal> aggregateFunction) =>
+		ValueTask.FromResult<CallState>(new(Math.Floor(args
 			.Select(x => decimal.Parse(string.Join(string.Empty, MModule.plainText(x.Message))))
-			.Aggregate(aggregateFunction)).ToString());
+			.Aggregate(aggregateFunction)).ToString()));
 
-	private static CallState EvaluateDecimal(List<CallState> args, Func<decimal, decimal> func)
-		=> new(func(decimal.Parse(MModule.plainText(args[0].Message))).ToString());
+	private static ValueTask<CallState> EvaluateDecimal(List<CallState> args, Func<decimal, decimal> func)
+		=> ValueTask.FromResult<CallState>(new(func(decimal.Parse(MModule.plainText(args[0].Message))).ToString()));
 
-	private static CallState EvaluateDouble(List<CallState> args, Func<double, double> func)
-		=> new(func(double.Parse(MModule.plainText(args[0].Message))).ToString());
+	private static ValueTask<CallState> EvaluateDouble(List<CallState> args, Func<double, double> func)
+		=> ValueTask.FromResult<CallState>(new(func(double.Parse(MModule.plainText(args[0].Message))).ToString()));
 
-	private static CallState EvaluateInteger(List<CallState> args, Func<int, int> func)
-		=> new(func(int.Parse(MModule.plainText(args[0].Message))).ToString());
+	private static ValueTask<CallState> EvaluateInteger(List<CallState> args, Func<int, int> func)
+		=> ValueTask.FromResult<CallState>(new(func(int.Parse(MModule.plainText(args[0].Message))).ToString()));
 
-	private static CallState ValidateDecimalAndEvaluatePairwise(this List<CallState> args, Func<(decimal, decimal), bool> func)
+	private static ValueTask<CallState> ValidateDecimalAndEvaluatePairwise(this List<CallState> args, Func<(decimal, decimal), bool> func)
 	{
 		if (args.Count < 2)
 		{
-			return new CallState(Message: Errors.ErrorTooFewArguments);
+			return ValueTask.FromResult<CallState>(new CallState(Message: Errors.ErrorTooFewArguments));
 		}
 
 		var doubles = args.Select(x =>
@@ -54,9 +54,9 @@ public partial class Functions
 				Double: b
 			)).ToList();
 
-		return doubles.Any(x => !x.IsDouble)
+		return ValueTask.FromResult<CallState>(doubles.Any(x => !x.IsDouble)
 				? new CallState(Message: Errors.ErrorNumbers)
-				: new CallState(Message: doubles.Select(x => x.Double).Pairwise().Skip(1).SkipWhile(func).Any().ToString());
+				: new CallState(Message: doubles.Select(x => x.Double).Pairwise().Skip(1).SkipWhile(func).Any().ToString()));
 	}
 
 	private static (int, string)[] ExtractArray(TimeSpan span) =>

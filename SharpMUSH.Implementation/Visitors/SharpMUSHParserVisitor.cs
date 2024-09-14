@@ -37,14 +37,13 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source) : Sh
 		return agg ?? next ?? null;
 	}
 
-	public override ValueTask<CallState?> VisitFunction([NotNull] SharpMUSHParser.FunctionContext context)
+	public async override ValueTask<CallState?> VisitFunction([NotNull] SharpMUSHParser.FunctionContext context)
 	{
 		var functionName = context.funName().GetText().TrimEnd()[..^1];
 		var arguments = context.funArguments()?.evaluationString() ?? Enumerable.Empty<EvaluationStringContext>().ToArray();
 
 		Log.Logger.Information("VisitFunction: Fun: {Text}, Args: {Args}", functionName, arguments?.Select( x => x.GetText()));
-		var result = Functions.Functions.CallFunction(functionName.ToLower(), source, parser, context, arguments!, this);
-		return ValueTask.FromResult<CallState?>(result);
+		return await Functions.Functions.CallFunction(functionName.ToLower(), source, parser, context, arguments!, this);
 	}
 
 	public override async ValueTask<CallState?> VisitEvaluationString([NotNull] SharpMUSHParser.EvaluationStringContext context)

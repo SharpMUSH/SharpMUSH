@@ -10,7 +10,7 @@ namespace SharpMUSH.Implementation.Functions
 {
 	public static partial class Functions
 	{
-		private static readonly Dictionary<string, (SharpFunctionAttribute Attribute, Func<IMUSHCodeParser, CallState> Function)> _functionLibrary = [];
+		private static readonly Dictionary<string, (SharpFunctionAttribute Attribute, Func<IMUSHCodeParser, ValueTask<CallState>> Function)> _functionLibrary = [];
 		private static readonly Dictionary<string, (MethodInfo Method, SharpFunctionAttribute Attribute)> _knownBuiltInMethods = typeof(Functions)
 			.GetMethods()
 			.Select(m => (Method: m, Attribute: m.GetCustomAttribute(typeof(SharpFunctionAttribute), false) as SharpFunctionAttribute))
@@ -22,7 +22,7 @@ namespace SharpMUSH.Implementation.Functions
 		{
 			foreach (var knownMethod in _knownBuiltInMethods)
 			{
-				_functionLibrary.Add(knownMethod.Key, (knownMethod.Value.Attribute, new Func<IMUSHCodeParser, CallState>(p => (CallState)knownMethod.Value.Method.Invoke(null, [p, knownMethod.Value.Attribute])!)));
+				_functionLibrary.Add(knownMethod.Key, (knownMethod.Value.Attribute, new Func<IMUSHCodeParser, ValueTask<CallState>>(p => (ValueTask<CallState>)knownMethod.Value.Method.Invoke(null, [p, knownMethod.Value.Attribute])!)));
 			}
 		}
 
@@ -34,7 +34,7 @@ namespace SharpMUSH.Implementation.Functions
 		/// <param name="context">Function Context for Depth</param>
 		/// <param name="args">Arguments</param>
 		/// <returns>The resulting CallState.</returns>
-		public static CallState CallFunction(string name, MString source, IMUSHCodeParser parser, FunctionContext context, EvaluationStringContext[] args, SharpMUSHParserVisitor visitor)
+		public async static ValueTask<CallState> CallFunction(string name, MString source, IMUSHCodeParser parser, FunctionContext context, EvaluationStringContext[] args, SharpMUSHParserVisitor visitor)
 		{
 			if (!_functionLibrary.TryGetValue(name, out var libraryMatch))
 			{
@@ -149,18 +149,18 @@ namespace SharpMUSH.Implementation.Functions
 				Handle: currentState.Handle
 			));
 
-			var result = function(parser) with { Depth = contextDepth };
+			var result = await function(parser) with { Depth = contextDepth };
 			parser.Pop();
 			return result;
 		}
 
-		private static Option<(SharpFunctionAttribute, Func<IMUSHCodeParser, CallState>)> DiscoverBuiltInFunction(string name)
+		private static Option<(SharpFunctionAttribute, Func<IMUSHCodeParser, ValueTask<CallState>>)> DiscoverBuiltInFunction(string name)
 		{
 			if (!_knownBuiltInMethods.TryGetValue(name, out var result))
 				return new None();
 
-			return (result.Attribute, new Func<IMUSHCodeParser, CallState>
-				(p => (CallState)result.Method.Invoke(null, [p, result.Attribute])!));
+			return (result.Attribute, new Func<IMUSHCodeParser, ValueTask<CallState>>
+				(p => (ValueTask<CallState>)result.Method.Invoke(null, [p, result.Attribute])!));
 		}
 
 		/// <summary>
@@ -178,7 +178,7 @@ namespace SharpMUSH.Implementation.Functions
 		/// <param name="attr">Function Attributes that describe behavior</param>
 		/// <param name="func">Function to run when this is called</param>
 		/// <returns>True if could be added. False if the name already existed.</returns>
-		public static bool AddFunction(string name, SharpFunctionAttribute attr, Func<IMUSHCodeParser, CallState> func) =>
+		public static bool AddFunction(string name, SharpFunctionAttribute attr, Func<IMUSHCodeParser, ValueTask<CallState>> func) =>
 			_functionLibrary.TryAdd(name.ToLower(), (attr, func));
 	}
 }
