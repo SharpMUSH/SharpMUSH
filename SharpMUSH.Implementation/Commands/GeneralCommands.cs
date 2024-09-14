@@ -67,7 +67,7 @@ public static partial class Commands
 
 		if (args.Count == 1)
 		{
-			var locate = Functions.Functions.Locate(parser, enactor, enactor, args[0]!.Message!.ToString(), Functions.Functions.LocateFlags.All);
+			var locate = parser.LocateService.Locate(parser, enactor, enactor, args[0]!.Message!.ToString(), Library.Services.LocateFlags.All);
 			
 			if(locate.IsValid())
 			{
@@ -116,7 +116,7 @@ public static partial class Commands
 
 		if (args.Count == 1)
 		{
-			var locate = Functions.Functions.Locate(parser, enactor, enactor, args[0]!.Message!.ToString(), Functions.Functions.LocateFlags.All);
+			var locate = parser.LocateService.Locate(parser, enactor, enactor, args[0]!.Message!.ToString(), Library.Services.LocateFlags.All);
 
 			if (locate.IsValid())
 			{
@@ -198,7 +198,7 @@ public static partial class Commands
 		foreach(var target in nameListTargets)
 		{
 			var targetString = target.Match(dbref => dbref.ToString(), str => str);
-			var locateTarget = Functions.Functions.Locate(parser, enactor, enactor, targetString, Functions.Functions.LocateFlags.All);
+			var locateTarget = parser.LocateService.Locate(parser, enactor, enactor, targetString, Library.Services.LocateFlags.All);
 
 			if (locateTarget.IsNone())
 			{

@@ -28,7 +28,7 @@ namespace SharpMUSH.Tests.Commands
 			permission.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<IPermissionService.InteractType>()).Returns(true);
 
 			Console.WriteLine("Testing: {0}", str);
-			var parser = TestParser(ds: database, ps: permission);
+			var parser = TestParser(ds: database, ls: new LocateService(), ps: permission);
 			await parser.CommandParse("1", MModule.single(str));
 
 			await parser.NotifyService

@@ -7,7 +7,7 @@ namespace SharpMUSH.Implementation.Commands;
 
 public static partial class Commands
 {
-	[SharpCommand(Name = "]", Behavior = Definitions.CommandBehavior.SingleToken | Definitions.CommandBehavior.NoParse, MinArgs = 1, MaxArgs = 1)]
+	[SharpCommand(Name = "]", Behavior = CommandBehavior.SingleToken | CommandBehavior.NoParse, MinArgs = 1, MaxArgs = 1)]
 	public static Option<CallState> NoParse(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// TODO: Implement this behavior in the State and heeding it in the command evaluation parser behavior.
@@ -16,14 +16,14 @@ public static partial class Commands
 		return new CallState(string.Empty);
 	}
 
-	[SharpCommand(Name = "&", Behavior = Definitions.CommandBehavior.SingleToken | Definitions.CommandBehavior.NoParse | Definitions.CommandBehavior.EqSplit, MinArgs = 2, MaxArgs = 3)]
+	[SharpCommand(Name = "&", Behavior = CommandBehavior.SingleToken | CommandBehavior.NoParse | CommandBehavior.EqSplit, MinArgs = 2, MaxArgs = 3)]
 	public static Option<CallState> Set_Attrib_Ampersand(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// This will come in as arg[0] = <attr>, arg[1]: <object> and arg[2] as [value]
 		var args = parser.CurrentState.Arguments;
 		var enactor = parser.CurrentState.Enactor!.Value.Get(parser.Database).WithoutNone();
 
-		var locate = Functions.Functions.Locate(parser, enactor, enactor, args[1]!.Message!.ToString(), Functions.Functions.LocateFlags.All);
+		var locate = parser.LocateService.Locate(parser, enactor, enactor, args[1]!.Message!.ToString(), Library.Services.LocateFlags.All);
 		
 		// Arguments are getting here in an evaluated state, when they should not be.
 		if(locate.IsError())

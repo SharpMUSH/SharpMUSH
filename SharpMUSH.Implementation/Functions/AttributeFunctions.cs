@@ -1,5 +1,6 @@
 ﻿using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 
@@ -80,23 +81,23 @@ public partial class Functions
 		if (dbrefAndAttr.IsT1 && dbrefAndAttr.AsT1 == false)
 		{
 			// TODO: Improve error.
-			return new CallState("#-1 BAD ARGUMENT FORMAT TO GET");
+			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
 		}
-		var (dbref,attribute) = dbrefAndAttr.AsT0;
+		var (dbref, attribute) = dbrefAndAttr.AsT0;
 
-		var executor  = parser.Database.GetObjectNode(parser.CurrentState.Executor!.Value).WithoutNone();
-		var maybeDBref = Locate(parser, executor, executor, dbref, LocateFlags.All);
+		var executor = parser.Database.GetObjectNode(parser.CurrentState.Executor!.Value).WithoutNone();
+		var maybeDBref = parser.LocateService.Locate(parser, executor, executor, dbref, Library.Services.LocateFlags.All);
 
 		if (maybeDBref.IsError())
 		{
 			parser.NotifyService.Notify(parser.CurrentState.Executor.Value, maybeDBref.AsT5.Value);
-			return new CallState($"#-1 {maybeDBref.AsT5.Value}");
+			return new CallState(maybeDBref.AsT5.Value);
 		}
 
 		if (maybeDBref.IsNone())
 		{
 			parser.NotifyService.Notify(parser.CurrentState.Executor.Value, "I can't see that here.");
-			return new CallState("#-1"); // TODO: Better Error
+			return new CallState("#-1 I can't see that here."); // TODO: Better Error
 		}
 
 		var actualDBref = maybeDBref.WithoutError().WithoutNone().Object().DBRef;
@@ -305,6 +306,7 @@ public partial class Functions
 	{
 		throw new NotImplementedException();
 	}
+
 	[SharpFunction(Name = "ufun", MinArgs = 1, MaxArgs = 33, Flags = FunctionFlags.Regular)]
 	public static CallState Ufun(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -312,20 +314,21 @@ public partial class Functions
 		// TODO: Permissions check for evaluation.
 		// TODO: Don't route through GET. That's lazy. We could be escaping earlier.
 		var get = Get(parser, _2);
-		
+
 		// Create a new argument state.
 		var newParser = parser.Push(parser.CurrentState with
 		{
 			Arguments = parser.CurrentState.Arguments.Skip(1).ToList()
 		});
-		
+
 		var parsed = parser.FunctionParse(get.Message!)!;
-		
+
 		// Pop the arguments.
 		parser.Pop();
 
 		return parsed;
 	}
+
 	[SharpFunction(Name = "PFUN", MinArgs = 1, MaxArgs = 33, Flags = FunctionFlags.Regular)]
 	public static CallState pfun(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{

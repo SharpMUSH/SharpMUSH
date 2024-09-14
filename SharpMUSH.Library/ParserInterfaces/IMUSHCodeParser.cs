@@ -11,6 +11,7 @@ public partial interface IMUSHCodeParser
 	INotifyService NotifyService { get; }
 	IPasswordService PasswordService { get; }
 	IPermissionService PermissionService { get; }
+	ILocateService LocateService { get; }
 	IQueueService QueueService { get; }
 	IImmutableStack<ParserState> State { get; }
 	CallState? CommandCommaArgsParse(MString text);
