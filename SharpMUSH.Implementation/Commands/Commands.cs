@@ -42,7 +42,7 @@ public static partial class Commands
 	/// <param name="context">Command Context</param>
 	/// <param name="visitChildren">Parser function to visit children.</param>
 	/// <returns>An empty Call State</returns>
-	public async static ValueTask<Option<CallState>> EvaluateCommands(IMUSHCodeParser parser, MString source, CommandContext context,
+	public static async ValueTask<Option<CallState>> EvaluateCommands(IMUSHCodeParser parser, MString source, CommandContext context,
 		Func<IRuleNode, ValueTask<CallState?>> visitChildren)
 	{
 		var firstCommandMatch = context.firstCommandMatch();
@@ -130,7 +130,7 @@ public static partial class Commands
 		return huhCommand;
 	}
 
-	private async static ValueTask<Option<CallState>> HandleInternalCommandPattern(IMUSHCodeParser parser, MString source, CommandContext context, string rootCommand, (SharpCommandAttribute Attribute, Func<IMUSHCodeParser, Option<CallState>> Function) libraryCommandDefinition)
+	private static async ValueTask<Option<CallState>> HandleInternalCommandPattern(IMUSHCodeParser parser, MString source, CommandContext context, string rootCommand, (SharpCommandAttribute Attribute, Func<IMUSHCodeParser, Option<CallState>> Function) libraryCommandDefinition)
 	{
 		var arguments = await ArgumentSplit(parser, source, context, libraryCommandDefinition);
 
@@ -146,7 +146,7 @@ public static partial class Commands
 		return result;
 	}
 
-	private async static ValueTask<Option<CallState>> HandleSocketCommandPattern(IMUSHCodeParser parser, MString source, CommandContext context, string command, IEnumerable<KeyValuePair<string, (SharpCommandAttribute Attribute, Func<IMUSHCodeParser, Option<CallState>> Function)>> socketCommandPattern, (SharpCommandAttribute Attribute, Func<IMUSHCodeParser, Option<CallState>> Function) librarySocketCommandDefinition)
+	private static async ValueTask<Option<CallState>> HandleSocketCommandPattern(IMUSHCodeParser parser, MString source, CommandContext context, string command, IEnumerable<KeyValuePair<string, (SharpCommandAttribute Attribute, Func<IMUSHCodeParser, Option<CallState>> Function)>> socketCommandPattern, (SharpCommandAttribute Attribute, Func<IMUSHCodeParser, Option<CallState>> Function) librarySocketCommandDefinition)
 	{
 		var arguments = await ArgumentSplit(parser, source, context, librarySocketCommandDefinition);
 
@@ -158,7 +158,7 @@ public static partial class Commands
 		return result;
 	}
 
-	private async static ValueTask<Option<CallState>> HandleSingleTokenCommandPattern(IMUSHCodeParser parser, MString source, CommandContext context, string command, IEnumerable<KeyValuePair<string, (SharpCommandAttribute Attribute, Func<IMUSHCodeParser, Option<CallState>> Function)>> singleTokenCommandPattern)
+	private static async ValueTask<Option<CallState>> HandleSingleTokenCommandPattern(IMUSHCodeParser parser, MString source, CommandContext context, string command, IEnumerable<KeyValuePair<string, (SharpCommandAttribute Attribute, Func<IMUSHCodeParser, Option<CallState>> Function)>> singleTokenCommandPattern)
 	{
 		var singleRootCommand = command[..1];
 		var rest = command[1..];
@@ -172,7 +172,7 @@ public static partial class Commands
 		return result;
 	}
 
-	private async static ValueTask<List<CallState>> ArgumentSplit(IMUSHCodeParser parser, MString source, CommandContext context,
+	private static async ValueTask<List<CallState>> ArgumentSplit(IMUSHCodeParser parser, MString source, CommandContext context,
 		(SharpCommandAttribute Attribute, Func<IMUSHCodeParser, Option<CallState>> Function) libraryCommandDefinition)
 	{
 		var argCallState = CallState.EmptyArgument;

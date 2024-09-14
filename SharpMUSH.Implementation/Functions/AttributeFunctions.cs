@@ -75,7 +75,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "get", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public async static ValueTask<CallState> Get(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Get(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// TODO: Permissions!!
 		var dbrefAndAttr = HelperFunctions.SplitDBRefAndAttr(MModule.plainText(parser.CurrentState.Arguments[0].Message));
@@ -285,7 +285,22 @@ public partial class Functions
 	[SharpFunction(Name = "SETUNION", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> setunion(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var args = parser.CurrentState.Arguments;
+		var list1 = args[0].Message;
+		var list2 = args[1].Message;
+		var delimiter = args[2]?.Message;
+		var sortType = args[3]?.Message;
+		var outputSeperator = MModule.plainText(args[4]?.Message);
+
+		var aList1 = MModule.split(" ", list1);
+		var aList2 = MModule.split(" ", list2);
+
+		var result = aList1
+			.Concat(aList2)
+			.DistinctBy(MModule.plainText)
+			.Aggregate((aggregated,next) => MModule.concat(aggregated,next));
+
+		return new ValueTask<CallState>(new CallState(result));
 	}
 	[SharpFunction(Name = "SUBJ", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> subj(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -304,12 +319,36 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "ufun", MinArgs = 1, MaxArgs = 33, Flags = FunctionFlags.Regular)]
-	public async static ValueTask<CallState> Ufun(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Ufun(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// TODO: Fix all of this.
 		// TODO: Permissions check for evaluation.
 		// TODO: Don't route through GET. That's lazy. We could be escaping earlier.
-		var get = await Get(parser, _2);
+
+		var dbrefAndAttr = HelperFunctions.SplitDBRefAndAttr(MModule.plainText(parser.CurrentState.Arguments[0].Message));
+
+		if (dbrefAndAttr.IsT1 && dbrefAndAttr.AsT1 == false)
+		{
+			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
+		}
+
+		var (dbref, attribute) = dbrefAndAttr.AsT0;
+
+		var executor = (await parser.Database.GetObjectNodeAsync(parser.CurrentState.Executor!.Value)).WithoutNone();
+		var maybeDBref = await parser.LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, dbref, Library.Services.LocateFlags.All);
+
+		if (!maybeDBref.IsValid())
+		{
+			return new CallState(maybeDBref.IsError ? maybeDBref.AsError.Value : Errors.ErrorCantSeeThat);
+		}
+
+		var actualDBref = maybeDBref.WithoutError().WithoutNone().Object().DBRef;
+		var get = (await parser.Database.GetAttributeAsync(actualDBref, attribute))?.FirstOrDefault();
+
+		if (get == null)
+		{
+			return new CallState(string.Empty);
+		}
 
 		// Create a new argument state.
 		var newParser = parser.Push(parser.CurrentState with
@@ -317,7 +356,7 @@ public partial class Functions
 			Arguments = parser.CurrentState.Arguments.Skip(1).ToList()
 		});
 
-		var parsed = (await newParser.FunctionParse(get.Message!))!;
+		var parsed = (await newParser.FunctionParse(MModule.single(get.Value)))!;
 
 		// Pop the arguments.
 		parser.Pop();
