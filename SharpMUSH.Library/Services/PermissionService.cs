@@ -15,6 +15,15 @@ namespace SharpMUSH.Library.Services
 		{
 			throw new NotImplementedException();
 		}
+		public bool CanViewAttribute(AnySharpObject viewer, AnySharpObject target, SharpAttribute[] attribute)
+		{
+			throw new NotImplementedException();
+		}
+
+		public bool CanExecuteAttribute(AnySharpObject viewer, AnySharpObject target, SharpAttribute[] attribute)
+		{
+			throw new NotImplementedException();
+		}
 
 		public bool Controls(AnySharpObject who, AnySharpObject target)
 		{

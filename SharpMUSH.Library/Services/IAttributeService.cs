@@ -7,9 +7,15 @@ namespace SharpMUSH.Library.Services;
 
 public interface IAttributeService
 {
-	ValueTask<OneOf<MString, None, Error<string>>> GetAttributeContentsAsync(AnySharpObject obj, string attribute, bool parent = true);
+	enum AttributeMode
+	{
+		Read = 0,
+		Execute = 1
+	}
 
-	ValueTask<OneOf<SharpAttribute[], Error<string>>> GetVisibleAttributesAsync(AnySharpObject obj, string attribute);
+	ValueTask<OneOf<SharpAttribute, None, Error<string>>> GetAttributeAsync(AnySharpObject executor, AnySharpObject obj, string attribute, AttributeMode mode, bool parent = true);
 
+	ValueTask<OneOf<SharpAttribute[], Error<string>>> GetVisibleAttributesAsync(AnySharpObject executor, AnySharpObject obj);
 
+	ValueTask<OneOf<SharpAttribute[], Error<string>>> GetAttributePatternAsync(AnySharpObject executor, AnySharpObject obj, string attributePattern);
 }
