@@ -9,6 +9,12 @@
 	<PropertyGroup>
 		<TreatWarningsAsErrors>True</TreatWarningsAsErrors>
 	</PropertyGroup>
+
+	<ItemGroup>
+	  <Compile Remove="Handlers\Parser\**" />
+	  <EmbeddedResource Remove="Handlers\Parser\**" />
+	  <None Remove="Handlers\Parser\**" />
+	</ItemGroup>
 	
   <ItemGroup>
     <PackageReference Include="Antlr4.Runtime.Standard" Version="4.13.1" />

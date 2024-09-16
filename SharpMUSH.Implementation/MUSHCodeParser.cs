@@ -15,6 +15,7 @@ public class MUSHCodeParser(
 	IPasswordService _passwordService,
 	IPermissionService _permissionService,
 	ISharpDatabase _database,
+	IAttributeService _attributeService,
 	INotifyService _notifyService,
 	ILocateService _locateService,
 	IQueueService _queueService,
@@ -23,6 +24,8 @@ public class MUSHCodeParser(
 	public IPasswordService PasswordService => _passwordService;
 
 	public IPermissionService PermissionService => _permissionService;
+
+	public IAttributeService AttributeService => _attributeService;
 
 	public ILocateService LocateService => _locateService;
 
@@ -50,12 +53,13 @@ public class MUSHCodeParser(
 		IPasswordService passwordService,
 		IPermissionService permissionService,
 		ISharpDatabase database,
+		IAttributeService attributeService,
 		INotifyService notifyService,
 		ILocateService locateService,
 		IQueueService queueService,
 		IConnectionService connectionService,
 		ImmutableStack<ParserState> state) :
-		this(passwordService, permissionService, database, notifyService, locateService, queueService, connectionService)
+		this(passwordService, permissionService, database, attributeService, notifyService, locateService, queueService, connectionService)
 		=> State = state;
 
 	// Add register state. Which is also a Dictionary. The functions that recover etc a register state, are responsible themselves.
@@ -76,12 +80,13 @@ public class MUSHCodeParser(
 		IPasswordService passwordService,
 		IPermissionService permissionService,
 		ISharpDatabase database,
+		IAttributeService attributeService,
 		INotifyService notifyService,
 		ILocateService locateService,
 		IQueueService queueService,
 		IConnectionService connectionService,
 		ParserState state) :
-		this(passwordService, permissionService, database, notifyService, locateService, queueService, connectionService)
+		this(passwordService, permissionService, database, attributeService, notifyService, locateService, queueService, connectionService)
 		=> State = [state];
 
 	public ValueTask<CallState?> FunctionParse(MString text)

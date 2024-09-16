@@ -54,6 +54,7 @@ namespace SharpMUSH.Tests
 			IPasswordService? pws = null,
 			IPermissionService? ps = null, // Permission Service needs the parser... this is circular. So we need to use the Mediator Pattern.
 			ISharpDatabase? ds = null,
+			IAttributeService? at = null,
 			INotifyService? ns = null,
 			ILocateService? ls = null,
 			IQueueService? qs = null,
@@ -75,6 +76,7 @@ namespace SharpMUSH.Tests
 					pws ?? Substitute.For<IPasswordService>(),
 					ps ?? Substitute.For<IPermissionService>(),
 					ds ?? Substitute.For<ISharpDatabase>(),
+					at ?? Substitute.For<IAttributeService>(),
 					ns ?? Substitute.For<INotifyService>(),
 					ls ?? Substitute.For<ILocateService>(),
 					qs ?? Substitute.For<IQueueService>(),

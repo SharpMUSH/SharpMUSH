@@ -1,4 +1,5 @@
-﻿using SharpMUSH.Implementation.Definitions;
+﻿using Antlr4.Runtime;
+using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
@@ -77,17 +78,14 @@ public partial class Functions
 	[SharpFunction(Name = "get", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> Get(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// TODO: Permissions!!
 		var dbrefAndAttr = HelperFunctions.SplitDBRefAndAttr(MModule.plainText(parser.CurrentState.Arguments[0].Message));
-		
 		if (dbrefAndAttr.IsT1 && dbrefAndAttr.AsT1 == false)
 		{
 			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
 		}
 
 		var (dbref, attribute) = dbrefAndAttr.AsT0;
-
-		var executor = (await parser.Database.GetObjectNodeAsync(parser.CurrentState.Executor!.Value)).WithoutNone();
+		var executor = parser.CurrentState.ExecutorObject(parser.Database).WithoutNone();
 		var maybeDBref = await parser.LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, dbref, Library.Services.LocateFlags.All);
 
 		if (!maybeDBref.IsValid())
@@ -95,10 +93,28 @@ public partial class Functions
 			return new CallState(maybeDBref.IsError ? maybeDBref.AsError.Value : Errors.ErrorCantSeeThat);
 		}
 
-		var actualDBref = maybeDBref.WithoutError().WithoutNone().Object().DBRef;
-		var contents = (await parser.Database.GetAttributeAsync(actualDBref, attribute))?.FirstOrDefault();
+		var actualObject = maybeDBref.WithoutError().WithoutNone()!;
+		var actualDBref = actualObject.Object().DBRef;
+		
+		var maybeAttr = await parser.AttributeService.GetAttributeAsync(
+			executor, 
+			actualObject, 
+			attribute,
+			mode: Library.Services.IAttributeService.AttributeMode.Read,
+			parent: false);
 
-		return new CallState(contents?.Value ?? string.Empty);
+		if (maybeAttr.IsError)
+		{
+			return new CallState(maybeAttr.AsError.Value);
+		}
+		else if(maybeAttr.IsNone)
+		{
+			return new CallState(string.Empty);
+		}
+		else
+		{
+			return new CallState(maybeAttr.AsAttribute.Value);
+		}
 	}
 
 	[SharpFunction(Name = "GET_EVAL", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
@@ -342,23 +358,32 @@ public partial class Functions
 			return new CallState(maybeDBref.IsError ? maybeDBref.AsError.Value : Errors.ErrorCantSeeThat);
 		}
 
-		var actualDBref = maybeDBref.WithoutError().WithoutNone().Object().DBRef;
-		var get = (await parser.Database.GetAttributeAsync(actualDBref, attribute))?.FirstOrDefault();
+		var actualObject = maybeDBref.WithoutError().WithoutNone()!;
+		var actualDBref = actualObject.Object().DBRef;
 
-		if (get == null)
+		var maybeAttr = await parser.AttributeService.GetAttributeAsync(
+			executor,
+			actualObject,
+			attribute,
+			mode: Library.Services.IAttributeService.AttributeMode.Execute,
+			parent: false);
+
+		if (maybeAttr.IsError)
+		{
+			return new CallState(maybeAttr.AsError.Value);
+		}
+		else if (maybeAttr.IsNone)
 		{
 			return new CallState(string.Empty);
 		}
+		
+		var get = maybeAttr.AsAttribute;
 
-		// Create a new argument state.
-		var newParser = parser.Push(parser.CurrentState with
-		{
-			Arguments = parser.CurrentState.Arguments.Skip(1).ToList()
-		});
+		parser.Push(parser.CurrentState 
+			with { Arguments = parser.CurrentState.Arguments.Skip(1).ToList()});
 
-		var parsed = (await newParser.FunctionParse(MModule.single(get.Value)))!;
+		var parsed = (await parser.FunctionParse(MModule.single(get.Value)))!;
 
-		// Pop the arguments.
 		parser.Pop();
 
 		return parsed;

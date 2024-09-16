@@ -8,6 +8,7 @@ public partial interface IMUSHCodeParser
 	IConnectionService ConnectionService { get; }
 	ParserState CurrentState { get; }
 	ISharpDatabase Database { get; }
+	IAttributeService AttributeService { get; }
 	INotifyService NotifyService { get; }
 	IPasswordService PasswordService { get; }
 	IPermissionService PermissionService { get; }

@@ -1,5 +1,4 @@
 ﻿using ANSILibrary;
-using MarkupString;
 using OneOf.Monads;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -12,7 +11,7 @@ namespace SharpMUSH.Implementation.Commands;
 public static partial class Commands
 {
 	[SharpCommand(Name = "THINK", Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
-	public static Option<CallState> Think(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public static async ValueTask<Option<CallState>> Think(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
 
@@ -23,27 +22,27 @@ public static partial class Commands
 
 		var notification = args[0]!.Message!.ToString();
 		var enactor = parser.CurrentState.Enactor!.Value;
-		parser.NotifyService.Notify(enactor, notification);
+		await parser.NotifyService.Notify(enactor, notification);
 
 		return new None();
 	}
 
 	[SharpCommand(Name = "HUH_COMMAND", Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
-	public static Option<CallState> HuhCommand(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public static async ValueTask<Option<CallState>> HuhCommand(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var enactor = parser.CurrentState.Enactor!.Value;
-		parser.NotifyService.Notify(enactor, "Huh?  (Type \"help\" for help.)");
+		await parser.NotifyService.Notify(enactor, "Huh?  (Type \"help\" for help.)");
 		return new None();
 	}
 
 	[SharpCommand(Name = "GOTO", Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
-	public static Option<CallState> GoTo(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public static async ValueTask<Option<CallState>> GoTo(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var enactor = parser.CurrentState.Enactor!.Value;
 		
 		if(parser.CurrentState.Arguments.Count < 1)
 		{
-			parser.NotifyService.Notify(enactor, "You can't go that way.");
+			await parser.NotifyService.Notify(enactor, "You can't go that way.");
 			return new None();
 		}
 
@@ -57,7 +56,7 @@ public static partial class Commands
 	}
 
 	[SharpCommand(Name = "LOOK", Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
-	public static Option<CallState> Look(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public static async ValueTask<Option<CallState>> Look(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// TODO: Consult CONFORMAT, DESCFORMAT, INAMEFORMAT, NAMEFORMAT, etc.
 		
@@ -67,7 +66,12 @@ public static partial class Commands
 
 		if (args.Count == 1)
 		{
-			var locate = parser.LocateService.LocateAndNotifyIfInvalid(parser, enactor, enactor, args[0]!.Message!.ToString(), Library.Services.LocateFlags.All).AsTask().Result;
+			var locate = await parser.LocateService.LocateAndNotifyIfInvalid(
+				parser,
+				enactor,
+				enactor,
+				args[0]!.Message!.ToString(),
+				Library.Services.LocateFlags.All);
 			
 			if(locate.IsValid())
 			{
@@ -76,7 +80,7 @@ public static partial class Commands
 		}
 		else
 		{
-			viewing = parser.Database.GetLocationAsync(enactor.Object().DBRef, 1).Result.WithExitOption();
+			viewing = (await parser.Database.GetLocationAsync(enactor.Object().DBRef, 1)).WithExitOption();
 		}
 
 		if (viewing.IsNone())
@@ -84,30 +88,37 @@ public static partial class Commands
 			return new None();
 		}
 		
-		var contents = parser.Database.GetContentsAsync(viewing).Result;
+		var contents = (await parser.Database.GetContentsAsync(viewing))!;
+		var viewingObject = viewing.Object()!;
 
-		var name = viewing.Object()!.Name;
-		var location = viewing.Object()!.Key;
-		var contentKeys = contents!.Select(x => x.Object()!.Name);
-		var exitKeys = parser.Database.GetExitsAsync(viewing.Object()!.DBRef).Result?.FirstOrDefault();
-		var description = parser.Database.GetAttributeAsync(viewing.Object()!.DBRef, "DESCRIBE").Result?.FirstOrDefault();
+		var name = viewingObject.Name;
+		var location = viewingObject.Key;
+		var contentKeys = contents.Select(x => x.Object()!.Name);
+		var exitKeys = (await parser.Database.GetExitsAsync(viewingObject.DBRef))?.FirstOrDefault();
+		var description = (await parser.AttributeService.GetAttributeAsync(enactor, viewing.Known(), "DESCRIBE", Library.Services.IAttributeService.AttributeMode.Read, false))
+			.Match(
+				attr => string.IsNullOrEmpty(attr.Value) 
+					? "There is nothing to see here" 
+					: attr.Value, 
+				none => "There is nothing to see here",
+				error => string.Empty);
 
 		// TODO: Pass value into NAMEFORMAT
-		parser.NotifyService.Notify(enactor, $"{MModule.markupSingle2(Ansi.Create(foreground: StringExtensions.rgb(Color.White)), MModule.single(name))}" +
-			$"(#{viewing.Object()!.DBRef.Number}{string.Join(string.Empty,viewing.Object()!.Flags().Select(x => x.Symbol))})" );
+		await parser.NotifyService.Notify(enactor, $"{MModule.markupSingle2(Ansi.Create(foreground: StringExtensions.rgb(Color.White)), MModule.single(name))}" +
+			$"(#{viewingObject.DBRef.Number}{string.Join(string.Empty,viewingObject.Flags().Select(x => x.Symbol))})" );
 		// TODO: Pass value into DESCFORMAT
-		parser.NotifyService.Notify(enactor, $"{description?.Value ?? "There is nothing to see here."}");
+		await parser.NotifyService.Notify(enactor, description);
 		// parser.NotifyService.Notify(enactor, $"Location: {location}");
 		// TODO: Pass value into CONFORMAT
-		parser.NotifyService.Notify(enactor, $"Contents: {string.Join(Environment.NewLine, contentKeys)}");
+		await parser.NotifyService.Notify(enactor, $"Contents: {string.Join(Environment.NewLine, contentKeys)}");
 		// TODO: Pass value into EXITFORMAT
-		parser.NotifyService.Notify(enactor, $"Exits: {string.Join(Environment.NewLine, exitKeys)}");
+		await parser.NotifyService.Notify(enactor, $"Exits: {string.Join(Environment.NewLine, exitKeys)}");
 
-		return new CallState(viewing.Object()!.DBRef.ToString());
+		return new CallState(viewingObject.DBRef.ToString());
 	}
 
 	[SharpCommand(Name = "EXAMINE", Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
-	public static Option<CallState> Examine(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public static async ValueTask<Option<CallState>> Examine(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
 		var enactor = parser.CurrentState.Enactor!.Value.Get(parser.Database).WithoutNone();
@@ -115,7 +126,12 @@ public static partial class Commands
 
 		if (args.Count == 1)
 		{
-			var locate = parser.LocateService.LocateAndNotifyIfInvalid(parser, enactor, enactor, args[0]!.Message!.ToString(), Library.Services.LocateFlags.All).AsTask().Result;
+			var locate = await parser.LocateService.LocateAndNotifyIfInvalid(
+				parser,
+				enactor,
+				enactor,
+				args[0]!.Message!.ToString(),
+				Library.Services.LocateFlags.All);
 
 			if (locate.IsValid())
 			{
@@ -124,7 +140,7 @@ public static partial class Commands
 		}
 		else
 		{
-			viewing = parser.Database.GetLocationAsync(enactor.Object().DBRef, 1).Result.WithExitOption();
+			viewing = (await parser.Database.GetLocationAsync(enactor.Object().DBRef, 1)).WithExitOption();
 		}
 
 		if (viewing.IsNone())
@@ -132,7 +148,7 @@ public static partial class Commands
 			return new None();
 		}
 
-		var contents = parser.Database.GetContentsAsync(viewing).Result;
+		var contents = await parser.Database.GetContentsAsync(viewing);
 
 		var obj = viewing.Object()!;
 		var ownerObj = obj.Owner()!.Object;
@@ -140,47 +156,52 @@ public static partial class Commands
 		var ownerName = ownerObj.Name;
 		var location = obj.Key;
 		var contentKeys = contents!.Select(x => x.Object()!.Name);
-		var exitKeys = parser.Database.GetExitsAsync(obj.DBRef).Result?.FirstOrDefault();
-		var description = parser.Database.GetAttributeAsync(obj.DBRef, "DESCRIBE").Result?.FirstOrDefault();
+		var exitKeys = (await parser.Database.GetExitsAsync(obj.DBRef))?.FirstOrDefault();
+		var description = (await parser.AttributeService.GetAttributeAsync(enactor, viewing.Known(), "DESCRIBE", Library.Services.IAttributeService.AttributeMode.Read, false))
+			.Match(
+				attr => string.IsNullOrEmpty(attr.Value)
+					? "There is nothing to see here"
+					: attr.Value,
+				none => "There is nothing to see here",
+				error => string.Empty);
 
-		parser.NotifyService.Notify(enactor, $"{MModule.markupSingle2(Ansi.Create(foreground: StringExtensions.rgb(Color.White)), MModule.single(name))}" +
+		await parser.NotifyService.Notify(enactor, $"{MModule.markupSingle2(Ansi.Create(foreground: StringExtensions.rgb(Color.White)), MModule.single(name))}" +
 		                                     $"(#{obj.DBRef.Number}{string.Join(string.Empty, obj.Flags().Select(x => x.Symbol))})");
-		parser.NotifyService.Notify(enactor, $"Type: {obj.Type} Flags: {string.Join(" ",obj.Flags().Select(x => x.Name))}");
-		parser.NotifyService.Notify(enactor, $"{description?.Value ?? "There is nothing to see here."}");
-		parser.NotifyService.Notify(enactor, $"Owner: {MModule.markupSingle2(Ansi.Create(foreground: StringExtensions.rgb(Color.White)), MModule.single(ownerName))}" +
-		                                     $"(#{obj.DBRef.Number}{string.Join(string.Empty, ownerObj.Flags().Select(x => x.Symbol))})");
+		await parser.NotifyService.Notify(enactor, $"Type: {obj.Type} Flags: {string.Join(" ",obj.Flags().Select(x => x.Name))}");
+		await parser.NotifyService.Notify(enactor, description);
+		await parser.NotifyService.Notify(enactor, $"Owner: {MModule.markupSingle2(Ansi.Create(foreground: StringExtensions.rgb(Color.White)), MModule.single(ownerName))}" +
+		                                           $"(#{obj.DBRef.Number}{string.Join(string.Empty, ownerObj.Flags().Select(x => x.Symbol))})");
 		// TODO: Zone & Money
-		parser.NotifyService.Notify(enactor, $"Parent: {obj.Parent()?.Name ?? "*NOTHING*"}");
+		await parser.NotifyService.Notify(enactor, $"Parent: {obj.Parent()?.Name ?? "*NOTHING*"}");
 		// TODO: LOCK LIST
-		parser.NotifyService.Notify(enactor, $"Powers: {string.Join(" ",obj.Powers().Select(x => x.Name))}");
+		await parser.NotifyService.Notify(enactor, $"Powers: {string.Join(" ",obj.Powers().Select(x => x.Name))}");
 		// TODO: Channels
 		// TODO: Warnings Checked
-		
+
 		// TODO: Match proper date format: Mon Feb 26 18:05:10 2007
-		parser.NotifyService.Notify(enactor, $"Created: {DateTimeOffset.FromUnixTimeMilliseconds(obj.CreationTime).ToString("F")}");
+		await parser.NotifyService.Notify(enactor, $"Created: {DateTimeOffset.FromUnixTimeMilliseconds(obj.CreationTime).ToString("F")}");
 		
 		foreach(var attr in obj.Attributes())
 		{
-			parser.NotifyService.Notify(enactor, $"{attr.Name}: {attr.Value}");
+			await parser.NotifyService.Notify(enactor, $"{attr.Name}[{attr.Owner().Object.DBRef.Number}]: {attr.Value}");
 		}
 
-		// TODO: Attributes and Contents.
-
 		// TODO: Proper carry format.
-		parser.NotifyService.Notify(enactor, $"Carrying: {string.Join(Environment.NewLine, contentKeys)}");
+		await parser.NotifyService.Notify(enactor, $"Contents: {Environment.NewLine}" +
+		                                           $"{string.Join(Environment.NewLine, contentKeys)}");
 
 		if(!viewing.IsRoom)
-		{ 
+		{
 			// TODO: Proper Format.
-			parser.NotifyService.Notify(enactor, $"Home: {viewing.WithoutNone().MinusRoom().Home().Object().Name}");
-			parser.NotifyService.Notify(enactor, $"Location: {viewing.WithoutNone().MinusRoom().Location().Object().Name}");
+			await parser.NotifyService.Notify(enactor, $"Home: {viewing.WithoutNone().MinusRoom().Home().Object().Name}");
+			await parser.NotifyService.Notify(enactor, $"Location: {viewing.WithoutNone().MinusRoom().Location().Object().Name}");
 		}
 
 		return new CallState(obj.DBRef.ToString());
 	}
 
 	[SharpCommand(Name = "@PEMIT", Behavior = CB.Default | CB.EqSplit, MinArgs = 1, MaxArgs = 2)]
-	public static Option<CallState> PEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public static async ValueTask<Option<CallState>> PEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
 
@@ -198,11 +219,11 @@ public static partial class Commands
 		foreach(var target in nameListTargets)
 		{
 			var targetString = target.Match(dbref => dbref.ToString(), str => str);
-			var locateTarget = parser.LocateService.LocateAndNotifyIfInvalid(parser, enactor, enactor, targetString, Library.Services.LocateFlags.All).AsTask().Result;
+			var locateTarget = await parser.LocateService.LocateAndNotifyIfInvalid(parser, enactor, enactor, targetString, Library.Services.LocateFlags.All);
 
 			if(locateTarget.IsValid())
 			{
-				parser.NotifyService.Notify(locateTarget.WithoutError().WithoutNone().Object().DBRef, notification);
+				await parser.NotifyService.Notify(locateTarget.WithoutError().WithoutNone().Object().DBRef, notification);
 			}
 		}
 

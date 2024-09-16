@@ -128,7 +128,7 @@ public class SharpMUSHBooleanExpressionVisitor(ISharpDatabase database, Paramete
 
 		Expression<Func<DBRef, bool>> expr = dbref =>
 			database
-				.GetAttributeAsync(dbref, new string[] { attribute })
+				.GetAttributeAsync(dbref, new string[] { attribute }) // TODO: PERMISSIONS - use the Service instead.
 				.ConfigureAwait(false).GetAwaiter().GetResult()!
 				.FirstOrDefault(new SharpAttribute() { 
 					Name = string.Empty,

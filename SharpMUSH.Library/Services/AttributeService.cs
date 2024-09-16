@@ -9,8 +9,12 @@ namespace SharpMUSH.Library.Services;
 
 public class AttributeService(ISharpDatabase db, IPermissionService ps) : IAttributeService
 {
-
-	public async ValueTask<OneOf<SharpAttribute, None, Error<string>>> GetAttributeAsync(AnySharpObject executor, AnySharpObject obj, string attribute, IAttributeService.AttributeMode mode, bool checkParent = true)
+	public async ValueTask<OptionalSharpAttributeOrError> GetAttributeAsync(
+		AnySharpObject executor,
+		AnySharpObject obj,
+		string attribute,
+		IAttributeService.AttributeMode mode,
+		bool checkParent = true)
 	{
 		// TODO: Check if that is a valid attribute format.
 
@@ -24,21 +28,15 @@ public class AttributeService(ISharpDatabase db, IPermissionService ps) : IAttri
 			_ => throw new InvalidOperationException(nameof(IAttributeService.AttributeMode))
 		};
 
-		while (true)
+		while (curObj != null)
 		{
 			var attr = (await db.GetAttributeAsync(obj.Object().DBRef, attributePath))?.ToArray();
 
 			if (attr?.Length == attributePath.Length)
 			{
-
-				if (permissionPredicate(executor, obj, attr))
-				{
-					return attr.Last();
-				}
-				else
-				{
-					return new Error<string>(Errors.ErrorAttrPermissions);
-				}
+				return permissionPredicate(executor, obj, attr)
+					? attr.Last()
+					: new Error<string>(Errors.ErrorAttrPermissions);
 			}
 
 			if (!checkParent)
@@ -46,16 +44,10 @@ public class AttributeService(ISharpDatabase db, IPermissionService ps) : IAttri
 				return new None();
 			}
 
-			var objParent = curObj.Parent();
-			if (objParent == null)
-			{
-				return new None();
-			}
-			else
-			{
-				curObj = objParent;
-			}
+			curObj = curObj.Parent();
 		}
+		
+		return new None();
 	}
 
 	public ValueTask<OneOf<SharpAttribute[], Error<string>>> GetVisibleAttributesAsync(AnySharpObject executor, AnySharpObject obj)

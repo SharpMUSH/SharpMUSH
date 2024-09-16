@@ -35,6 +35,7 @@ namespace SharpMUSH.Server
 			services.AddSingleton<IPermissionService, PermissionService>();
 			services.AddSingleton<INotifyService, NotifyService>();
 			services.AddSingleton<ILocateService, LocateService>();
+			services.AddSingleton<IAttributeService, AttributeService>();
 			services.AddSingleton<IQueueService, QueueService>();
 			services.AddSingleton<IConnectionService, ConnectionService>();
 			services.AddSingleton<ILockService, LockService>();

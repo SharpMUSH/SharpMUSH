@@ -13,7 +13,7 @@ public interface IAttributeService
 		Execute = 1
 	}
 
-	ValueTask<OneOf<SharpAttribute, None, Error<string>>> GetAttributeAsync(AnySharpObject executor, AnySharpObject obj, string attribute, AttributeMode mode, bool parent = true);
+	ValueTask<OptionalSharpAttributeOrError> GetAttributeAsync(AnySharpObject executor, AnySharpObject obj, string attribute, AttributeMode mode, bool parent = true);
 
 	ValueTask<OneOf<SharpAttribute[], Error<string>>> GetVisibleAttributesAsync(AnySharpObject executor, AnySharpObject obj);
 
