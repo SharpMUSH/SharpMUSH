@@ -3,6 +3,7 @@ using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Definitions;
 
 namespace SharpMUSH.Library.Services;
 
@@ -13,12 +14,6 @@ public class AttributeService(ISharpDatabase db, IPermissionService ps) : IAttri
 	{
 		// TODO: Check if that is a valid attribute format.
 
-		var canExamine = ps.CanExamine(executor, obj);
-		if (!canExamine)
-		{
-			return new Error<string>("#-1 NO PERMISSION TO GET ATTRIBUTE");
-		}
-
 		var curObj = obj.Object();
 		var attributePath = attribute.Split("`");
 
@@ -26,7 +21,7 @@ public class AttributeService(ISharpDatabase db, IPermissionService ps) : IAttri
 		{
 			IAttributeService.AttributeMode.Read => ps.CanViewAttribute,
 			IAttributeService.AttributeMode.Execute => ps.CanExecuteAttribute,
-			_ => throw new NotImplementedException()
+			_ => throw new InvalidOperationException(nameof(IAttributeService.AttributeMode))
 		};
 
 		while (true)
@@ -39,6 +34,10 @@ public class AttributeService(ISharpDatabase db, IPermissionService ps) : IAttri
 				if (permissionPredicate(executor, obj, attr))
 				{
 					return attr.Last();
+				}
+				else
+				{
+					return new Error<string>(Errors.ErrorAttrPermissions);
 				}
 			}
 

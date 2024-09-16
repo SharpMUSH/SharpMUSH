@@ -17,12 +17,12 @@ namespace SharpMUSH.Library.Services
 		}
 		public bool CanViewAttribute(AnySharpObject viewer, AnySharpObject target, SharpAttribute[] attribute)
 		{
-			throw new NotImplementedException();
+			return true; // TODO: Implement
 		}
 
 		public bool CanExecuteAttribute(AnySharpObject viewer, AnySharpObject target, SharpAttribute[] attribute)
 		{
-			throw new NotImplementedException();
+			return true; // TODO: Implement
 		}
 
 		public bool Controls(AnySharpObject who, AnySharpObject target)
