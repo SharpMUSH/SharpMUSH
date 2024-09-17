@@ -161,7 +161,7 @@ public class ArangoDatabase(
 			Flags = x.Flags,
 			Name = x.Name,
 			LongName = x.LongName,
-			Owner = () => GetObjectOwner(x.Id),
+			Owner = () => GetAttributeOwner(x.Id),
 			Value = x.Value,
 			Leaves = () => GetAttributes(x.Id),
 			SharpAttributeEntry = () => null // TODO: Fix
@@ -173,7 +173,17 @@ public class ArangoDatabase(
 	private SharpPlayer GetObjectOwner(string id)
 	{
 		var owner = arangoDB.Query.ExecuteAsync<SharpPlayerQueryResult>(handle,
-			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphObjectOwners} RETURN v").Result.Single();
+			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphObjectOwners} RETURN v").Result.First();
+
+		var populatedOwner = GetObjectNodeAsync(owner.Id).Result;
+
+		return populatedOwner.AsPlayer;
+	}
+
+	private SharpPlayer GetAttributeOwner(string id)
+	{
+		var owner = arangoDB.Query.ExecuteAsync<SharpObjectQueryResult>(handle,
+			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphAttributeOwners} RETURN v").Result.First();
 
 		var populatedOwner = GetObjectNodeAsync(owner.Id).Result;
 
@@ -191,7 +201,7 @@ public class ArangoDatabase(
 	private AnySharpContainer GetHome(string id)
 	{
 		var homeId = arangoDB.Query.ExecuteAsync<string>(handle,
-			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphHomes} RETURN v._id").Result.Single();
+			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphHomes} RETURN v._id").Result.First();
 		var homeObject = GetObjectNodeAsync(homeId).Result;
 
 		return homeObject.Match<AnySharpContainer>(
@@ -205,7 +215,7 @@ public class ArangoDatabase(
 	private AnySharpContainer GetLocation(string id)
 	{
 		var locationId = arangoDB.Query.ExecuteAsync<string>(handle,
-			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphLocations} RETURN v._id").Result.Single();
+			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphLocations} RETURN v._id").Result.First();
 		var locationObject = GetObjectNodeAsync(locationId).Result;
 
 		return locationObject.Match<AnySharpContainer>(
@@ -225,7 +235,7 @@ public class ArangoDatabase(
 
 		var startVertex = obj.Id;
 		var res = (await arangoDB.Query.ExecuteAsync<dynamic>(handle,
-			$"FOR v IN 1..1 INBOUND {startVertex} GRAPH {DatabaseConstants.graphObjects} RETURN v")).SingleOrDefault();
+			$"FOR v IN 1..1 INBOUND {startVertex} GRAPH {DatabaseConstants.graphObjects} RETURN v")).FirstOrDefault();
 
 		if (res == null) return new None();
 
@@ -454,6 +464,8 @@ public class ArangoDatabase(
 				string.Join('`', remaining.Take(nextAttr.i + 1).Select(x => x.ToUpper()))));
 			await arangoDB.Document.CreateAsync<SharpEdgeCreateRequest, SharpEdgeQueryResult>(handle, DatabaseConstants.hasAttribute,
 				new SharpEdgeCreateRequest(lastId, newOne.Id));
+			await arangoDB.Document.CreateAsync<SharpEdgeCreateRequest, SharpEdgeQueryResult>(handle, DatabaseConstants.hasAttributeOwner,
+				new SharpEdgeCreateRequest(newOne.Id, owner.Object.Id!));
 			lastId = newOne.Id;
 		}
 
