@@ -1,9 +1,9 @@
 ﻿using OneOf.Types;
-using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Definitions;
+using OneOf;
 
 namespace SharpMUSH.Library.Services;
 
@@ -77,5 +77,33 @@ public class AttributeService(ISharpDatabase db, IPermissionService ps) : IAttri
 		}
 
 		return attributes.Where(x => ps.CanViewAttribute(executor, obj, x)).ToArray();
+	}
+
+	public async ValueTask<OneOf<Success,Error<string>>> SetAttributeAsync(AnySharpObject executor, AnySharpObject obj, string attribute, MString value)
+	{
+		if (!ps.Controls(executor, obj))
+		{
+			return new Error<string>(Errors.ErrorAttrSetPermissions);
+		}
+
+		var attrPath = attribute.Split("`");
+		var attr = await db.GetAttributeAsync(obj.Object().DBRef, attrPath);
+
+		// TODO: Fix, object permissions also needed.
+		var permission = attr?.All(x => ps.CanSet(executor, obj, x)) ?? true;
+		
+		if (!permission)
+		{
+			return new Error<string>(Errors.ErrorAttrSetPermissions);
+		}
+
+		await db.SetAttributeAsync(obj.Object().DBRef, attrPath, value.ToString(), executor.Object().Owner());
+		
+		return new Success();
+	}
+
+	public ValueTask<SharpAttributesOrError> ClearAttributeAsync(AnySharpObject executor, AnySharpObject obj, string attribute, IAttributeService.AttributeClearMode mode)
+	{
+		throw new NotImplementedException();
 	}
 }

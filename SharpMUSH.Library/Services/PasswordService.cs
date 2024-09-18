@@ -1,13 +1,12 @@
 ﻿using Microsoft.AspNetCore.Identity;
 
-namespace SharpMUSH.Library.Services
-{
-	public class PasswordService(PasswordHasher<string> hasher) : IPasswordService
-	{
-		public string HashPassword(string user, string pw) => 
-			hasher.HashPassword(user, pw);
+namespace SharpMUSH.Library.Services;
 
-		public bool PasswordIsValid(string user,  string pw, string hash) =>
-			hasher.VerifyHashedPassword(user, hash, pw) != PasswordVerificationResult.Failed;
-	}
+public class PasswordService(PasswordHasher<string> hasher) : IPasswordService
+{
+	public string HashPassword(string user, string pw) => 
+		hasher.HashPassword(user, pw);
+
+	public bool PasswordIsValid(string user,  string pw, string hash) =>
+		hasher.VerifyHashedPassword(user, hash, pw) != PasswordVerificationResult.Failed;
 }

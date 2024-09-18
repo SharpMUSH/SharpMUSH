@@ -1,7 +1,6 @@
-﻿namespace SharpMUSH.Library.Services
+﻿namespace SharpMUSH.Library.Services;
+
+public interface IQueueService
 {
-	public interface IQueueService
-	{
-		void Queue(dynamic queueDetails, dynamic command);
-	}
+	void Queue(dynamic queueDetails, dynamic command);
 }

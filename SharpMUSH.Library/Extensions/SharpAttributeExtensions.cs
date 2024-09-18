@@ -26,7 +26,7 @@ public static class SharpAttributeExtensions
 		=> attribute.Flags.Contains("NoCopy");
 
 	public static bool IsVisual(this SharpAttribute attribute)
-		=> attribute.Flags.Contains("Visual");
+		=> attribute.Flags.Contains("Visual") || attribute.IsPublic();
 
 	public static bool IsRegexp(this SharpAttribute attribute)
 		=> attribute.Flags.Contains("Regexp");

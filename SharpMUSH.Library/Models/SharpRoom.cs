@@ -1,14 +1,13 @@
 ﻿using Newtonsoft.Json;
 
-namespace SharpMUSH.Library.Models
+namespace SharpMUSH.Library.Models;
+
+public class SharpRoom
 {
-	public class SharpRoom
-	{
 
-		[JsonIgnore]
-		public string? Id { get; set; }
+	[JsonIgnore]
+	public string? Id { get; set; }
 
-		[JsonIgnore]
-		public required SharpObject Object { get; set; }
-	}
+	[JsonIgnore]
+	public required SharpObject Object { get; set; }
 }

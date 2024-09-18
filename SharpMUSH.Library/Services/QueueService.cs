@@ -1,10 +1,9 @@
-﻿namespace SharpMUSH.Library.Services
+﻿namespace SharpMUSH.Library.Services;
+
+public class QueueService : IQueueService
 {
-	public class QueueService : IQueueService
+	public void Queue(dynamic queueDetails, dynamic command)
 	{
-		public void Queue(dynamic queueDetails, dynamic command)
-		{
-			throw new NotImplementedException();
-		}
+		throw new NotImplementedException();
 	}
 }

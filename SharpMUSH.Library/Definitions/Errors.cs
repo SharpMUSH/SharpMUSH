@@ -13,6 +13,7 @@ public static class Errors
 	public const string ErrorCall = "#-1 CALL LIMIT EXCEEDED";
 	public const string ErrorPerm = "#-1 PERMISSION DENIED";
 	public const string ErrorAttrPermissions = "#-1 NO PERMISSION TO GET ATTRIBUTE";
+	public const string ErrorAttrSetPermissions = "#-1 NO PERMISSION TO SET ATTRIBUTE";
 	public const string ErrorMatch = "#-1 NO MATCH";
 	public const string ErrorNotVisible = "#-1 NO SUCH OBJECT VISIBLE";
 	public const string ErrorDisabled = "#-1 FUNCTION DISABLED";

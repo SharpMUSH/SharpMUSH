@@ -9,24 +9,23 @@ using Serilog.Sinks.SystemConsole.Themes;
 using Serilog;
 using Core.Arango;
 
-namespace SharpMUSH.IntegrationTests
+namespace SharpMUSH.IntegrationTests;
+
+public class Infrastructure : TestServer
 {
-	public class Infrastructure : TestServer
-	{
-		public Infrastructure(ArangoConfiguration acnf) : base(WebHostBuilder(acnf)) {
-			var log = new LoggerConfiguration()
-				.Enrich.FromLogContext()
-				.WriteTo.Console(theme: AnsiConsoleTheme.Code)
-				.MinimumLevel.Debug()
-				.CreateLogger();
+	public Infrastructure(ArangoConfiguration acnf) : base(WebHostBuilder(acnf)) {
+		var log = new LoggerConfiguration()
+			.Enrich.FromLogContext()
+			.WriteTo.Console(theme: AnsiConsoleTheme.Code)
+			.MinimumLevel.Debug()
+			.CreateLogger();
 
-			Log.Logger = log;
-		}
-
-		public static IWebHostBuilder WebHostBuilder(ArangoConfiguration acnf) =>
-			WebHost.CreateDefaultBuilder()
-					.UseStartup(x => new Startup(acnf))
-				.UseEnvironment("test")
-				.UseKestrel(options => options.ListenLocalhost(4202, builder => builder.UseConnectionHandler<TelnetServer>()));
+		Log.Logger = log;
 	}
+
+	public static IWebHostBuilder WebHostBuilder(ArangoConfiguration acnf) =>
+		WebHost.CreateDefaultBuilder()
+			.UseStartup(x => new Startup(acnf))
+			.UseEnvironment("test")
+			.UseKestrel(options => options.ListenLocalhost(4202, builder => builder.UseConnectionHandler<TelnetServer>()));
 }
