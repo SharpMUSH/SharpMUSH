@@ -180,10 +180,18 @@ public static partial class Commands
 
 		// TODO: Match proper date format: Mon Feb 26 18:05:10 2007
 		await parser.NotifyService.Notify(enactor, $"Created: {DateTimeOffset.FromUnixTimeMilliseconds(obj.CreationTime).ToString("F")}");
+
+		var atrs = await parser.AttributeService.GetVisibleAttributesAsync(enactor, viewing.Known());
 		
-		foreach(var attr in obj.Attributes())
+		if (atrs.IsAttribute)
 		{
-			await parser.NotifyService.Notify(enactor, $"{attr.Name}[#{attr.Owner().Object.DBRef.Number}]: {attr.Value}");
+			foreach (var attr in atrs.AsAttributes)
+			{
+				// TODO: Symbols for Flags. Flags are not just strings!
+				await parser.NotifyService.Notify(enactor, 
+					$"{attr.Name} [#{attr.Owner().Object.DBRef.Number}]: ".Hilight()
+					+ attr.Value);
+			}
 		}
 
 		// TODO: Proper carry format.

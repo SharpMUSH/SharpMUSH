@@ -18,9 +18,9 @@ namespace SharpMUSH.Library.Services
 
 		bool CanExamine(AnySharpObject examiner, AnySharpObject examinee);
 
-		bool CanViewAttribute(AnySharpObject viewer, AnySharpObject target, SharpAttribute[] attribute);
+		bool CanViewAttribute(AnySharpObject viewer, AnySharpObject target, params SharpAttribute[] attribute);
 
-		bool CanExecuteAttribute(AnySharpObject viewer, AnySharpObject target, SharpAttribute[] attribute);
+		bool CanExecuteAttribute(AnySharpObject viewer, AnySharpObject target, params SharpAttribute[] attribute);
 
 		bool CanInteract(AnySharpObject result, AnySharpObject executor, InteractType type);
 		

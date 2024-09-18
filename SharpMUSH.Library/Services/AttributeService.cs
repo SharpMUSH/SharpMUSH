@@ -46,17 +46,36 @@ public class AttributeService(ISharpDatabase db, IPermissionService ps) : IAttri
 
 			curObj = curObj.Parent();
 		}
-		
+
 		return new None();
 	}
 
-	public ValueTask<OneOf<SharpAttribute[], Error<string>>> GetVisibleAttributesAsync(AnySharpObject executor, AnySharpObject obj)
+	public ValueTask<SharpAttributesOrError> GetVisibleAttributesAsync(AnySharpObject executor, AnySharpObject obj)
 	{
-		throw new NotImplementedException();
+		var actualObject = obj.Object();
+		var attributes = actualObject.Attributes();
+
+		return ValueTask.FromResult((SharpAttributesOrError)attributes.Where(x => ps.CanViewAttribute(executor, obj, x)).ToArray());
 	}
 
-	public ValueTask<OneOf<SharpAttribute[], Error<string>>> GetAttributePatternAsync(AnySharpObject executor, AnySharpObject obj, string attributePattern)
+	public async ValueTask<SharpAttributesOrError> GetAttributePatternAsync(AnySharpObject executor, AnySharpObject obj, string attributePattern, IAttributeService.AttributePatternMode mode)
 	{
-		throw new NotImplementedException();
+		// TODO: Implement Pattern Modes
+		// TODO: GetAttributesAsync should return the full Path, not the final attribute.
+		// TODO: CanViewAttribute needs to be able to Memoize during a list check, as it's likely to be called multiple times.
+		var attributes = mode switch
+		{
+			IAttributeService.AttributePatternMode.Exact => await db.GetAttributesAsync(obj.Object().DBRef, attributePattern),
+			IAttributeService.AttributePatternMode.Wildcard => await db.GetAttributesAsync(obj.Object().DBRef, attributePattern),
+			IAttributeService.AttributePatternMode.Regex => await db.GetAttributesAsync(obj.Object().DBRef, attributePattern),
+			_ => throw new InvalidOperationException(nameof(IAttributeService.AttributePatternMode))
+		};
+
+		if (attributes == null)
+		{
+			return Enumerable.Empty<SharpAttribute>().ToArray();
+		}
+
+		return attributes.Where(x => ps.CanViewAttribute(executor, obj, x)).ToArray();
 	}
 }
