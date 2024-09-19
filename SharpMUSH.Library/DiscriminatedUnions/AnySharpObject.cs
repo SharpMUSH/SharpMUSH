@@ -1,4 +1,5 @@
 ﻿using OneOf;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.DiscriminatedUnions;
@@ -11,6 +12,13 @@ public class AnySharpObject : OneOfBase<SharpPlayer, SharpRoom, SharpExit, Sharp
 	public static implicit operator AnySharpObject(SharpRoom x) => new(x);
 	public static implicit operator AnySharpObject(SharpExit x) => new(x);
 	public static implicit operator AnySharpObject(SharpThing x) => new(x);
+
+	public DBRef Where => Match(
+		player => player.Location().Object().DBRef,
+		room => room.Object.DBRef,
+		exit => exit.Location().Object().DBRef,
+		thing => thing.Location().Object().DBRef
+	);
 
 	public AnySharpContainer MinusExit()
 		=> Match<AnySharpContainer>(

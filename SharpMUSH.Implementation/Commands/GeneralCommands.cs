@@ -27,6 +27,41 @@ public static partial class Commands
 		return new None();
 	}
 
+	/// <remarks>
+	/// Creating on the DBRef is not implemented.
+	/// </remarks>
+	[SharpCommand(Name = "@PCREATE", Behavior = CB.Default, MinArgs = 2, MaxArgs = 3)]
+	public static async ValueTask<Option<CallState>> PCreate(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		// TODO: Validate Name and Passwords
+		var args = parser.CurrentState.Arguments;
+		var name = MModule.plainText(args[0].Message!);
+		var password = MModule.plainText(args[1].Message!);
+
+		var player = await parser.Database.CreatePlayerAsync(name, password, parser.CurrentState.Executor!.Value);
+
+		return new CallState(player.ToString());
+	}
+
+	/// <remarks>
+	/// Creating on the DBRef is not implemented.
+	/// TODO: Using the Cost is not implemented.
+	/// </remarks>
+	[SharpCommand(Name = "@CREATE", Behavior = CB.Default, MinArgs = 1, MaxArgs = 3)]
+	public static async ValueTask<Option<CallState>> Create(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		// TODO: Validate Name 
+		var args = parser.CurrentState.Arguments;
+		var name = MModule.plainText(args[0].Message!);
+		var executor = parser.CurrentState.ExecutorObject(parser.Database).Known();
+		var location = await parser.Database.GetObjectNodeAsync(executor.Where);
+		var knownLocation = location.Known().MinusExit();
+		
+		var thing = await parser.Database.CreateThingAsync(name, knownLocation, executor.Object()!.Owner());
+
+		return new CallState(thing.ToString());
+	}
+
 	[SharpCommand(Name = "HUH_COMMAND", Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> HuhCommand(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
