@@ -99,7 +99,7 @@ public class ArangoDatabase(
 
 		await arangoDB.Document.CreateAsync(handle, DatabaseConstants.isObject, new SharpEdgeCreateRequest(thing.Id, obj.Id));
 
-		var idx = location.Object()?.Id!;
+		var idx = location.Id;
 
 		await arangoDB.Document.CreateAsync(handle, DatabaseConstants.atLocation, new SharpEdgeCreateRequest(thing.Id, idx));
 		await arangoDB.Document.CreateAsync(handle, DatabaseConstants.hasHome, new SharpEdgeCreateRequest(thing.Id, idx));
@@ -296,7 +296,7 @@ public class ArangoDatabase(
 			Type = obj.Type,
 			CreationTime = obj.CreationTime,
 			ModifiedTime = obj.ModifiedTime,
-			Locks = ((Dictionary<string, string>?)obj.Locks ?? []).ToImmutableDictionary(),
+			Locks = ImmutableDictionary<string,string>.Empty, // FIX: ((Dictionary<string, string>?)obj.Locks ?? []).ToImmutableDictionary(),
 			Flags = () => GetFlags(objId),
 			Powers = () => GetPowers(objId),
 			Attributes = () => GetAttributes(objId),
@@ -569,10 +569,12 @@ public class ArangoDatabase(
 			{
 				{"startVertex", startVertex! }
 			});
-		var result = query
-			.Select(x => (string)x._id)
-			.Select(GetObjectNodeAsync) // TODO: Optimize to make a single call.
-			.Select(x => x.Result.Match<AnySharpContent>(
+
+		string[] ids = query.Select(x => (string)x._id).ToArray();
+		var objects = await Task.WhenAll(ids.Select(async x => await GetObjectNodeAsync(x)));
+		
+
+		var result = objects.Select(x => x.Match<AnySharpContent>(
 				player => player,
 				room => throw new Exception("Invalid Contents found"),
 				exit => exit,

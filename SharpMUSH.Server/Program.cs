@@ -21,7 +21,7 @@ public class Program
 			.CreateLogger();
 
 		var container = new ArangoDbBuilder()
-			.WithReuse(true)
+			// .WithReuse(true)
 			.WithLabel("reuse-id", "SharpMUSH")
 			.WithImage("arangodb:latest")
 			.WithPassword("password")

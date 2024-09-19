@@ -18,6 +18,12 @@ public class AnySharpContainer : OneOfBase<SharpPlayer, SharpRoom, SharpThing>
 			thing => thing
 		);
 
+	public string Id => Match(
+		player => player.Id!,
+		room => room.Id!,
+		thing => thing.Id!
+	);
+
 	public bool IsPlayer => IsT0;
 	public bool IsRoom => IsT1;
 	public bool IsThing => IsT2;
