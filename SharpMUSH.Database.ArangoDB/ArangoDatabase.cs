@@ -1,5 +1,6 @@
 ﻿using Core.Arango;
 using Core.Arango.Migration;
+using Core.Arango.Protocol;
 using Microsoft.Extensions.Logging;
 using OneOf.Types;
 using SharpMUSH.Database.Models;
@@ -12,7 +13,8 @@ using System.Collections.Immutable;
 
 namespace SharpMUSH.Database.ArangoDB;
 
-// TODO: Unit of Work / Transaction around all of this!
+// TODO: Unit of Work / Transaction around all of this! Otherwise it risks the stability of the Database.
+// TODO: Critical!
 public class ArangoDatabase(
 	ILogger<ArangoDatabase> logger,
 	IArangoContext arangoDB,
@@ -43,24 +45,55 @@ public class ArangoDatabase(
 	public async Task<DBRef> CreatePlayerAsync(string name, string password, DBRef location)
 	{
 		var time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-		var obj = await arangoDB.Document.CreateAsync<SharpObjectCreateRequest, SharpObjectQueryResult>(handle, DatabaseConstants.objects, new SharpObjectCreateRequest(
-			name,
-			DatabaseConstants.typePlayer,
-			[],
-			time,
-			time
-		), returnNew: true);
+		var objectLocation = await GetObjectNodeAsync(location);
 
-		var newObject = obj.New;
-		var hashedPassword = passwordService.HashPassword($"#{newObject.Key}:{newObject.CreationTime}", password);
+		var transaction = new ArangoTransaction()
+		{
+			WaitForSync = true,
+			Collections = new ArangoTransactionScope()
+			{
+				Write =
+				[
+					DatabaseConstants.objects,
+					DatabaseConstants.players,
+					DatabaseConstants.isObject,
+					DatabaseConstants.hasObjectOwner,
+					DatabaseConstants.atLocation,
+					DatabaseConstants.hasHome
+				]
+			}
+		};
 
-		var playerResult = await arangoDB.Document.CreateAsync<SharpPlayerCreateRequest, SharpPlayerQueryResult>(handle, DatabaseConstants.players,
+		var transactionHandle = await arangoDB.Transaction.BeginAsync(handle, transaction);
+
+		var obj = await arangoDB.Document.CreateAsync<SharpObjectCreateRequest, SharpObjectQueryResult>(
+			transactionHandle,
+			DatabaseConstants.objects,
+			new SharpObjectCreateRequest(
+				name,
+				DatabaseConstants.typePlayer,
+				[],
+				time,
+				time
+			),
+			returnNew: true);
+
+		var hashedPassword = passwordService.HashPassword($"#{obj.New.Key}:{obj.New.CreationTime}", password);
+
+		var playerResult = await arangoDB.Document.CreateAsync<SharpPlayerCreateRequest, SharpPlayerQueryResult>(
+			transactionHandle,
+			DatabaseConstants.players,
 			new SharpPlayerCreateRequest([], hashedPassword));
 
-		await arangoDB.Document.CreateAsync(handle, DatabaseConstants.isObject, new SharpEdgeCreateRequest(playerResult.Id, obj.Id));
-		await arangoDB.Document.CreateAsync(handle, DatabaseConstants.hasObjectOwner, new SharpEdgeCreateRequest(playerResult.Id, playerResult.Id));
+		await arangoDB.Document.CreateAsync(
+			transactionHandle,
+			DatabaseConstants.isObject,
+			new SharpEdgeCreateRequest(playerResult.Id, obj.Id));
 
-		var objectLocation = await GetObjectNodeAsync(location);
+		await arangoDB.Document.CreateAsync(
+			transactionHandle,
+			DatabaseConstants.hasObjectOwner,
+			new SharpEdgeCreateRequest(playerResult.Id, playerResult.Id));
 
 		var idx = objectLocation.Match(
 			player => player.Id,
@@ -69,8 +102,17 @@ public class ArangoDatabase(
 			thing => thing.Id,
 			none => throw new ArgumentException("A player must have a valid creation location!"));
 
-		await arangoDB.Document.CreateAsync(handle, DatabaseConstants.atLocation, new SharpEdgeCreateRequest(playerResult.Id, idx!));
-		await arangoDB.Document.CreateAsync(handle, DatabaseConstants.hasHome, new SharpEdgeCreateRequest(playerResult.Id, idx!));
+		await arangoDB.Document.CreateAsync(
+			transactionHandle,
+			DatabaseConstants.atLocation,
+			new SharpEdgeCreateRequest(playerResult.Id, idx!));
+
+		await arangoDB.Document.CreateAsync(
+			transactionHandle,
+			DatabaseConstants.hasHome,
+			new SharpEdgeCreateRequest(playerResult.Id, idx!));
+
+		await arangoDB.Transaction.CommitAsync(transactionHandle);
 
 		return new DBRef(int.Parse(obj.Key), time);
 	}
@@ -296,7 +338,7 @@ public class ArangoDatabase(
 			Type = obj.Type,
 			CreationTime = obj.CreationTime,
 			ModifiedTime = obj.ModifiedTime,
-			Locks = ImmutableDictionary<string,string>.Empty, // FIX: ((Dictionary<string, string>?)obj.Locks ?? []).ToImmutableDictionary(),
+			Locks = ImmutableDictionary<string, string>.Empty, // FIX: ((Dictionary<string, string>?)obj.Locks ?? []).ToImmutableDictionary(),
 			Flags = () => GetFlags(objId),
 			Powers = () => GetPowers(objId),
 			Attributes = () => GetAttributes(objId),
@@ -457,26 +499,36 @@ public class ArangoDatabase(
 		var last = actualResult.Last();
 		string lastId = last._id;
 
+		var transactionHandle = await arangoDB.Transaction.BeginAsync(handle, new ArangoTransaction()
+		{
+			Collections = new ArangoTransactionScope
+			{
+				Write = [DatabaseConstants.attributes, DatabaseConstants.hasAttribute, DatabaseConstants.hasAttributeOwner]
+			}
+		});
+
 		foreach (var nextAttr in remaining.Select((attrName, i) => (value: attrName, i)))
 		{
-			var newOne = await arangoDB.Document.CreateAsync<SharpAttributeCreateRequest, SharpAttributeQueryResult>(handle, DatabaseConstants.attributes,
+			var newOne = await arangoDB.Document.CreateAsync<SharpAttributeCreateRequest, SharpAttributeQueryResult>(transactionHandle, DatabaseConstants.attributes,
 				new SharpAttributeCreateRequest(nextAttr.value.ToUpper(), [], string.Empty,
 				string.Join('`', remaining.Take(nextAttr.i + 1).Select(x => x.ToUpper()))));
-			await arangoDB.Document.CreateAsync<SharpEdgeCreateRequest, SharpEdgeQueryResult>(handle, DatabaseConstants.hasAttribute,
+			await arangoDB.Document.CreateAsync<SharpEdgeCreateRequest, SharpEdgeQueryResult>(transactionHandle, DatabaseConstants.hasAttribute,
 				new SharpEdgeCreateRequest(lastId, newOne.Id));
-			await arangoDB.Document.CreateAsync<SharpEdgeCreateRequest, SharpEdgeQueryResult>(handle, DatabaseConstants.hasAttributeOwner,
+			await arangoDB.Document.CreateAsync<SharpEdgeCreateRequest, SharpEdgeQueryResult>(transactionHandle, DatabaseConstants.hasAttributeOwner,
 				new SharpEdgeCreateRequest(newOne.Id, owner.Object.Id!));
 			lastId = newOne.Id;
 		}
 
-		await arangoDB.Document.UpdateAsync(handle, DatabaseConstants.attributes, new
+		await arangoDB.Document.UpdateAsync(transactionHandle, DatabaseConstants.attributes, new
 		{
 			Key = lastId!.Split("/").Last(),
 			Value = value,
 			LongName = string.Join("`", attribute.Select(x => x.ToUpper()))
 		}, mergeObjects: true);
-		await arangoDB.Document.CreateAsync<SharpEdgeCreateRequest, SharpEdgeQueryResult>(handle, DatabaseConstants.hasAttributeOwner,
+		await arangoDB.Document.CreateAsync<SharpEdgeCreateRequest, SharpEdgeQueryResult>(transactionHandle, DatabaseConstants.hasAttributeOwner,
 			new SharpEdgeCreateRequest(lastId, owner.Id!), mergeObjects: true);
+
+		await arangoDB.Transaction.CommitAsync(transactionHandle);
 
 		return true;
 	}
@@ -572,7 +624,7 @@ public class ArangoDatabase(
 
 		string[] ids = query.Select(x => (string)x._id).ToArray();
 		var objects = await Task.WhenAll(ids.Select(async x => await GetObjectNodeAsync(x)));
-		
+
 
 		var result = objects.Select(x => x.Match<AnySharpContent>(
 				player => player,
