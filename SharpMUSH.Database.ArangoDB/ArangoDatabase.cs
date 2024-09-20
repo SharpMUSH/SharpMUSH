@@ -496,7 +496,7 @@ public class ArangoDatabase(
 		var actualResult = result.First();
 
 		var matches = actualResult.Length;
-		var remaining = attribute.Skip(matches - 1).ToList();
+		var remaining = attribute.Skip(matches - 1).ToArray();
 		var last = actualResult.Last();
 		string lastId = last._id;
 

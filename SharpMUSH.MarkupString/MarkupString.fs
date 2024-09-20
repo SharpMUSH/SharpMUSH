@@ -114,7 +114,7 @@ module MarkupStringModule =
   let empty () : MarkupString = 
       MarkupString(Empty, [Text System.String.Empty])
     
-  [<TailCall>]
+  // [<TailCall>] - This is not Tail Recurseive.
   let plainText (markupStr: MarkupString) : string =
       let rec loop (content: List<Content>) (acc: string) =
           match content with
@@ -185,7 +185,7 @@ module MarkupStringModule =
             | _ -> raise (System.InvalidOperationException "Encountered unexpected content type in substring operation.")
       MarkupString(markupStr.MarkupDetails, substringAux markupStr.Content start length [])
 
-  [<TailCall>]
+  // [<TailCall>] - This is not properly tail recursive.
   let indexesOf (markupStr: MarkupString) (search: MarkupString) : seq<int> =
     let text = plainText markupStr
     let srch = plainText search

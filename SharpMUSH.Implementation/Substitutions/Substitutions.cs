@@ -53,20 +53,20 @@ public static partial class Substitutions
 	{
 		// Symbol Example: %vw --> vw
 		return symbol;
-		throw new NotImplementedException();
+		// throw new NotImplementedException();
 	}
 
 	private static CallState HandleSTextNumber(CallState symbol, IMUSHCodeParser parser)
 	{
 		// Symbol Example: %qi0 --> qi0
 		return symbol;
-		throw new NotImplementedException();
+		// throw new NotImplementedException();
 	}
 
 	private static CallState HandleITextNumber(CallState symbol, IMUSHCodeParser parser)
 	{
 		// Symbol Example: %q$0 --> q$0
 		return symbol;
-		throw new NotImplementedException();
+		// throw new NotImplementedException();
 	}
 }

@@ -405,3 +405,6 @@ gen
 # Antlr Generated Files
 .antlr
 .ANTLR4
+
+# Rider
+.idea

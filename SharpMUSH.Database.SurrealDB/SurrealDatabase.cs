@@ -17,6 +17,7 @@ public class SurrealDatabase(
 {
 	public Task<bool> ClearAttributeAsync(DBRef dbref, string[] attribute)
 	{
+		Logger.LogCritical("test");
 		throw new NotImplementedException();
 	}
 
