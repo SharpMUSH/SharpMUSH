@@ -7,19 +7,18 @@ using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Tests.Commands;
 
-[TestClass]
 public class GeneralCommandTests : BaseUnitTest
 {
 	private static ISharpDatabase? database;
 
-	[ClassInitialize()]
-	public static async Task OneTimeSetup(TestContext _)
+	[Before(Class)]
+	public static async Task OneTimeSetup()
 	{
 		database = await IntegrationServer();
 	}
 
-	[TestMethod]
-	[DataRow("@pemit #1=This is a test", "This is a test")]
+	[Test]
+	[Arguments("@pemit #1=This is a test", "This is a test")]
 	public async Task Test(string str, string expected)
 	{
 		var permission = Substitute.For<IPermissionService>();

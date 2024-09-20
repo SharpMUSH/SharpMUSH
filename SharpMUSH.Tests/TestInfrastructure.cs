@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.AspNetCore.Connections;
-using Microsoft.Extensions.Hosting;
 using SharpMUSH.Server;
 using SharpMUSH.Server.ProtocolHandlers;
 using Serilog.Sinks.SystemConsole.Themes;

@@ -2,10 +2,9 @@
 
 namespace SharpMUSH.Tests.Functions;
 
-[TestClass]
 public class MemoryTest : BaseUnitTest
 {
-	[TestMethod]
+	[Test]
 	public async Task Depth()
 	{
 		var sb = new StringBuilder();
@@ -23,7 +22,9 @@ public class MemoryTest : BaseUnitTest
 		var parser = TestParser();
 		var result = (await parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
 
-		Assert.AreEqual("201", result);
+		await Assert
+			.That(result)
+			.IsEqualTo("201");
 	}
 }
 

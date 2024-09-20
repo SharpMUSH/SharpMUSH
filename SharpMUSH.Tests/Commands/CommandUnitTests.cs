@@ -4,10 +4,10 @@ using Serilog;
 
 namespace SharpMUSH.Tests.Commands;
 
-[TestClass]
 public class CommandUnitTests : BaseUnitTest
 {
-	public CommandUnitTests()
+	[Before(Class)]
+	public static void SetupLogger()
 	{
 		Log.Logger = new LoggerConfiguration()
 											.WriteTo.Console()
@@ -15,14 +15,14 @@ public class CommandUnitTests : BaseUnitTest
 											.CreateLogger();
 	}
 
-	[TestMethod]
-	[DataRow("think add(1,2)", 
+	[Test]
+	[Arguments("think add(1,2)", 
 		"3")]
-	[DataRow("think [add(1,2)]", 
+	[Arguments("think [add(1,2)]", 
 		"3")]
-	[DataRow("[ansi(hr,think)] Words", 
+	[Arguments("[ansi(hr,think)] Words", 
 		"Words")]
-	[DataRow("think Command1 Arg;think Command2 Arg", 
+	[Arguments("think Command1 Arg;think Command2 Arg", 
 		"Command1 Arg;think Command2 Arg")]
 	public async Task Test(string str, string expected)
 	{
@@ -35,20 +35,20 @@ public class CommandUnitTests : BaseUnitTest
 			.Notify(parser.CurrentState.Executor!.Value, expected);
 	}
 
-	[TestMethod]
-	[DataRow("think add(1,2);think add(2,3)", 
+	[Test]
+	[Arguments("think add(1,2);think add(2,3)", 
 		"3", 
 		"5")]
-	[DataRow("think [add(1,2)];think add(3,2)",
+	[Arguments("think [add(1,2)];think add(3,2)",
 		"3",
 		"5")]
-	[DataRow("[ansi(hy,think)] [ansi(hr,red)];[ansi(hg,think)] [ansi(hg,green)]", 
+	[Arguments("[ansi(hy,think)] [ansi(hr,red)];[ansi(hg,think)] [ansi(hg,green)]", 
 		"\u001b[1;31mred\u001b[0m", 
 		"\u001b[1;32mgreen\u001b[0m")]
-	[DataRow("think [ansi(hr,red)];think [ansi(hg,green)]", 
+	[Arguments("think [ansi(hr,red)];think [ansi(hg,green)]", 
 		"\u001b[1;31mred\u001b[0m", 
 		"\u001b[1;32mgreen\u001b[0m")]
-	[DataRow("think Command1 Arg;think Command2 Arg", 
+	[Arguments("think Command1 Arg;think Command2 Arg", 
 		"Command1 Arg", 
 		"Command2 Arg")]
 	public async Task TestSingle(string str, string expected1, string expected2)

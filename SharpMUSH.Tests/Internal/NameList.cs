@@ -1,32 +1,37 @@
 ﻿namespace SharpMUSH.Tests.Internal;
 
-[TestClass]
 public class NameList
 {
-	[TestMethod]
-	[DataRow("God", "God")]
-	public void SingleString(string str, string expected)
+	[Test]
+	[Arguments("God", "God")]
+	public async Task SingleString(string str, string expected)
 	{
 		var result = Implementation.Functions.Functions.NameList(str);
 
-		Assert.AreEqual(expected, result.Single().AsT1);
+		await Assert
+			.That(result.Single().AsT1)
+			.IsEqualTo(expected);
 	}
 
-	[TestMethod]
-	[DataRow("#1", 1)]
-	public void SingleDBRef(string str, int expected)
+	[Test]
+	[Arguments("#1", 1)]
+	public async Task SingleDBRef(string str, int expected)
 	{
 		var result = Implementation.Functions.Functions.NameList(str);
 
-		Assert.AreEqual(new Library.Models.DBRef(expected), result.Single().AsT0);
+		await Assert
+			.That(result.Single().AsT0)
+			.IsEqualTo(new Library.Models.DBRef(expected));
 	}
 
-	[TestMethod]
-	[DataRow("#1:999", 1, 999)]
-	public void SingleDBRefWithTimestamp(string str, int expectedDbRef, int expectedTimestamp)
+	[Test]
+	[Arguments("#1:999", 1, 999)]
+	public async Task SingleDBRefWithTimestamp(string str, int expectedDbRef, int expectedTimestamp)
 	{
 		var result = Implementation.Functions.Functions.NameList(str);
 
-		Assert.AreEqual(new Library.Models.DBRef(expectedDbRef, expectedTimestamp), result.Single().AsT0);
+		await Assert
+			.That(result.Single().AsT0)
+			.IsEqualTo(new Library.Models.DBRef(expectedDbRef, expectedTimestamp));
 	}
 }

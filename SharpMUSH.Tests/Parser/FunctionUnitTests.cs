@@ -1,19 +1,18 @@
 namespace SharpMUSH.Tests.Parser;
 
-[TestClass]
 public class FunctionUnitTests : BaseUnitTest
 {
-	[TestMethod]
-	[DataRow("strcat(strcat(),wi`th a[strcat(strcat(strcat(depth of 5)))])","wi`th adepth of 5")]
-	// [DataRow("strcat(strcat(dog)", "strcat(dog")] // Currently Illegal according to the Parser. Fix maybe needed.
-	[DataRow("strcat(foo\\,dog)", "foo,dog")]
-	[DataRow("strcat(foo\\\\,dog)", "foo\\dog")]
-	[DataRow("strcat(foo,-dog))", "foo-dog)")]
-	[DataRow("\\t", "t")]
-	[DataRow("add(1,5)","6")]
-	[DataRow("add(1,add(2,3),add(2,2))", "10")]
-	[DataRow("add(1,2)[add(5,5)]", "310")]
-	[DataRow("add(1,2)[add(5,5)]word()", "310word()")]
+	[Test]
+	[Arguments("strcat(strcat(),wi`th a[strcat(strcat(strcat(depth of 5)))])","wi`th adepth of 5")]
+	// [Arguments("strcat(strcat(dog)", "strcat(dog")] // Currently Illegal according to the Parser. Fix maybe needed.
+	[Arguments("strcat(foo\\,dog)", "foo,dog")]
+	[Arguments("strcat(foo\\\\,dog)", "foo\\dog")]
+	[Arguments("strcat(foo,-dog))", "foo-dog)")]
+	[Arguments("\\t", "t")]
+	[Arguments("add(1,5)","6")]
+	[Arguments("add(1,add(2,3),add(2,2))", "10")]
+	[Arguments("add(1,2)[add(5,5)]", "310")]
+	[Arguments("add(1,2)[add(5,5)]word()", "310word()")]
 	public async Task Test(string str, string? expected = null)
 	{
 		Console.WriteLine("Testing: {0}", str);
@@ -24,7 +23,7 @@ public class FunctionUnitTests : BaseUnitTest
 
 		if (expected != null)
 		{
-			Assert.AreEqual(expected, result);
+			await Assert.That(result).IsEqualTo(expected);
 		}
 	}
 }

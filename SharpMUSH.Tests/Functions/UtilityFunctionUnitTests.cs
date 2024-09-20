@@ -3,18 +3,17 @@ using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Tests.Functions;
 
-[TestClass]
 public class UtilityFunctionUnitTests : BaseUnitTest
 {
 	private static ISharpDatabase? database;
 
-	[ClassInitialize()]
-	public static async Task OneTimeSetup(TestContext _)
+	[Before(Class)]
+	public static async Task OneTimeSetup()
 	{
 		database = await IntegrationServer();
 	}
 
-	[TestMethod]
+	[Test]
 	public async Task PCreate()
 	{
 		var parser = TestParser(
@@ -26,7 +25,7 @@ public class UtilityFunctionUnitTests : BaseUnitTest
 		var db = await database!.GetObjectNodeAsync(a);
 		var player = db!.AsT0;
 
-		Assert.IsTrue(parser.PasswordService.PasswordIsValid(result, "SomePassword", player.PasswordHash));
-		Assert.IsFalse(parser.PasswordService.PasswordIsValid(result, "SomePassword2", player.PasswordHash));
+		await Assert.That(parser.PasswordService.PasswordIsValid(result, "SomePassword", player.PasswordHash)).IsTrue();
+		await Assert.That(parser.PasswordService.PasswordIsValid(result, "SomePassword2", player.PasswordHash)).IsFalse();
 	}
 }

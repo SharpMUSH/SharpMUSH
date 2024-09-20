@@ -4,72 +4,71 @@ using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Tests.Parser;
 
-[TestClass]
 public class BooleanExpressionUnitTests : BaseUnitTest
 {
 	private static ISharpDatabase? _database;
 
-	[ClassInitialize()]
-	public static async Task OneTimeSetup(TestContext _)
+	[Before(Class)]
+	public static async Task OneTimeSetup()
 	{
 		_database = await IntegrationServer();
 	}
 
-	[DataRow("!#FALSE", true)]
-	[DataRow("#TRUE", true)]
-	[DataRow("(#TRUE)", true)]
-	[DataRow("!#TRUE", false)]
-	[DataRow("#FALSE", false)]
-	[DataRow("(#FALSE)", false)]
-	[DataRow("(#FALSE | #TRUE) & #TRUE", true)]
-	[DataRow("(#FALSE | #TRUE) | #FALSE", true)]
-	[DataRow("(#FALSE | #TRUE) & #FALSE", false)]
-	[DataRow("#TRUE & #TRUE", true)]
-	[DataRow("#TRUE | #TRUE", true)]
-	[DataRow("#TRUE & !#FALSE", true)]
-	[DataRow("#TRUE & #FALSE", false)]
-	[DataRow("#FALSE & #TRUE", false)]
-	[DataRow("#TRUE | #FALSE", true)]
-	[DataRow("#FALSE | #TRUE", true)]
-	[DataRow("#TRUE & #TRUE & #TRUE", true)]
-	[DataRow("#TRUE | #TRUE | #TRUE", true)]
-	[DataRow("#TRUE & !#FALSE | #TRUE", true)]
-	[TestMethod]
-	public void SimpleExpressions(string input, bool expected)
+	[Arguments("!#FALSE", true)]
+	[Arguments("#TRUE", true)]
+	[Arguments("(#TRUE)", true)]
+	[Arguments("!#TRUE", false)]
+	[Arguments("#FALSE", false)]
+	[Arguments("(#FALSE)", false)]
+	[Arguments("(#FALSE | #TRUE) & #TRUE", true)]
+	[Arguments("(#FALSE | #TRUE) | #FALSE", true)]
+	[Arguments("(#FALSE | #TRUE) & #FALSE", false)]
+	[Arguments("#TRUE & #TRUE", true)]
+	[Arguments("#TRUE | #TRUE", true)]
+	[Arguments("#TRUE & !#FALSE", true)]
+	[Arguments("#TRUE & #FALSE", false)]
+	[Arguments("#FALSE & #TRUE", false)]
+	[Arguments("#TRUE | #FALSE", true)]
+	[Arguments("#FALSE | #TRUE", true)]
+	[Arguments("#TRUE & #TRUE & #TRUE", true)]
+	[Arguments("#TRUE | #TRUE | #TRUE", true)]
+	[Arguments("#TRUE & !#FALSE | #TRUE", true)]
+	[Test]
+	public async Task SimpleExpressions(string input, bool expected)
 	{
 		var bep = BooleanExpressionTestParser(_database!);
 		var dbn = _database!.GetObjectNode(new DBRef(1)).Known();
 
-		Assert.IsTrue(bep.Validate(input, dbn));
-		Assert.AreEqual(expected, bep.Compile(input)(dbn, dbn));
+		await Assert.That(bep.Validate(input, dbn)).IsTrue();
+		await Assert.That(bep.Compile(input)(dbn, dbn)).IsEqualTo(expected);
 	}
 
-	[DataRow("type^Player & #TRUE", true)]
-	[DataRow("type^Player & #FALSE", false)]
-	[DataRow("type^Player & !type^Player", false)]
-	[DataRow("type^Thing", false)]
-	[DataRow("type^Player", true)]
-	[TestMethod]
-	public void TypeExpressions(string input, bool expected)
+	[Arguments("type^Player & #TRUE", true)]
+	[Arguments("type^Player & #FALSE", false)]
+	[Arguments("type^Player & !type^Player", false)]
+	[Arguments("type^Thing", false)]
+	[Arguments("type^Player", true)]
+	[Test]
+	public async Task TypeExpressions(string input, bool expected)
 	{
 		var bep = BooleanExpressionTestParser(_database!);
 		var dbn = _database!.GetObjectNode(new DBRef(1)).Known();
 
-		Assert.IsTrue(bep.Validate(input, dbn));
-		Assert.AreEqual(expected, bep.Compile(input)(dbn, dbn));
+		await Assert.That(bep.Validate(input, dbn)).IsTrue();
+		await Assert.That(bep.Compile(input)(dbn, dbn)).IsEqualTo(expected);
 	}
 
-	[DataRow("type^Player", true)]
-	[DataRow("type^Thing", true)]
-	[DataRow("type^Room", true)]
-	[DataRow("type^Exit", true)]
-	[DataRow("type^Nonsense", false)]
-	[TestMethod]
-	public void TypeValidation(string input, bool expected)
+	[Arguments("type^Player", true)]
+	[Arguments("type^Thing", true)]
+	[Arguments("type^Room", true)]
+	[Arguments("type^Exit", true)]
+	[Arguments("type^Nonsense", false)]
+	[Test]
+	public async Task TypeValidation(string input, bool expected)
 	{
 		var bep = BooleanExpressionTestParser(_database!);
 		var dbn = _database!.GetObjectNode(new DBRef(1)).Known();
 
-		Assert.AreEqual(expected, bep.Validate(input, dbn));
+		await Assert.That(bep.Validate(input, dbn)).IsEqualTo(expected);
 	}
 }
