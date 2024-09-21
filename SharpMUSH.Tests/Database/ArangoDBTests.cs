@@ -19,7 +19,7 @@ public class ArangoDBTests : BaseUnitTest
 	{
 		var roomZero = (await database!.GetObjectNodeAsync(new DBRef(0))).AsRoom;
 
-		await Assert.That(roomZero.GetType()).IsTypeOf(typeof(SharpRoom));
+		await Assert.That(roomZero).IsTypeOf(typeof(SharpRoom));
 		await Assert.That(roomZero!.Object!.Name).IsEqualTo("Room Zero");
 		await Assert.That(roomZero!.Object!.Key).IsEqualTo(0);
 	}
@@ -29,7 +29,7 @@ public class ArangoDBTests : BaseUnitTest
 	{
 		var masterRoom = (await database!.GetObjectNodeAsync(new DBRef(2))).AsRoom;
 
-		await Assert.That(masterRoom.GetType()).IsTypeOf(typeof(SharpRoom));
+		await Assert.That(masterRoom).IsTypeOf(typeof(SharpRoom));
 		await Assert.That(masterRoom!.Object!.Name).IsEqualTo("Master Room");
 		await Assert.That(masterRoom!.Object!.Key).IsEqualTo(2);
 	}
@@ -39,7 +39,7 @@ public class ArangoDBTests : BaseUnitTest
 	{
 		var playerOne = (await database!.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
 
-		await Assert.That(playerOne.GetType()).IsEqualTo(typeof(SharpPlayer));
+		await Assert.That(playerOne).IsTypeOf(typeof(SharpPlayer));
 		await Assert.That(playerOne!.Object!.Name).IsEqualTo("God");
 		await Assert.That(playerOne!.Object!.Key).IsEqualTo(1);
 	}
@@ -49,7 +49,7 @@ public class ArangoDBTests : BaseUnitTest
 	{
 		var playerOne = (await database!.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
 
-		await Assert.That(playerOne.GetType()).IsEqualTo(typeof(SharpPlayer));
+		await Assert.That(playerOne).IsTypeOf(typeof(SharpPlayer));
 		await Assert.That(playerOne.Object.Name).IsEqualTo("God");
 		await Assert.That(playerOne.Object.Key).IsEqualTo(1);
 
@@ -76,7 +76,7 @@ public class ArangoDBTests : BaseUnitTest
 		await Assert.That(existingLayer!.Count()).IsEqualTo(2);
 		await Assert.That(existingLeaf!.Count()).IsEqualTo(2);
 		await Assert.That(existingLeaf2!.Count()).IsEqualTo(2);
-		await Assert.That(existingDeep1!.Count()).IsEqualTo(32);
+		await Assert.That(existingDeep1!.Count()).IsEqualTo(3);
 		await Assert.That(existingDeep2!.Count()).IsEqualTo(3);
 		await Assert.That(existingSingle!.Last().Value).IsEqualTo("Single");
 		await Assert.That(existingLayer!.Last().Value).IsEqualTo("Layer");
