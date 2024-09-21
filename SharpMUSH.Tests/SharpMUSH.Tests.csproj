@@ -9,7 +9,7 @@
   </PropertyGroup>
 
 	<PropertyGroup>
-		<TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+		<TreatWarningsAsErrors>False</TreatWarningsAsErrors>
 	</PropertyGroup>
 	
   <ItemGroup>
@@ -22,6 +22,7 @@
     <PackageReference Include="NSubstitute" Version="5.1.0" />
     <PackageReference Include="Serilog" Version="4.0.1" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
+    <PackageReference Include="TeamCity.VSTest.TestAdapter" Version="1.0.40" />
     <PackageReference Include="Testcontainers.ArangoDb" Version="3.10.0" />
     <PackageReference Include="TUnit" Version="0.1.790" />
     <PackageReference Include="TUnit.Engine.SourceGenerator" Version="0.1.790" />
