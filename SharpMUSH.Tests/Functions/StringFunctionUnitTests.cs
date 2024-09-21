@@ -5,21 +5,20 @@ using A = MarkupString.MarkupStringModule;
 
 namespace SharpMUSH.Tests.Functions;
 
-public class StringFunctionUnitTests: BaseUnitTest
+public class StringFunctionUnitTests : BaseUnitTest
 {
 	[Test]
 	// [Arguments("ansi(r,red)", "red", (byte)31, null)]
-	[Arguments("ansi(hr,red)", "red", (byte)1,(byte)31)]
+	[Arguments("ansi(hr,red)", "red", (byte)1, (byte)31)]
 	// [Arguments("ansi(y,yellow)", "yellow", (byte)33, null)]
 	[Arguments("ansi(hy,yellow)", "yellow", (byte)1, (byte)33)]
 	public async Task ANSI(string str, string expectedText, byte expectedByte1, byte? expectedByte2)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var expectedBytes = expectedByte2 == null 
+		var expectedBytes = expectedByte2 == null
 			? new byte[] { expectedByte1 }
 			: new byte[] { expectedByte1, expectedByte2.Value };
-		
-		
+
 		var parser = TestParser();
 		var result = (await parser.FunctionParse(MModule.single(str)))?.Message!;
 
@@ -27,11 +26,18 @@ public class StringFunctionUnitTests: BaseUnitTest
 		var markup = MarkupString.MarkupImplementation.AnsiMarkup.Create(foreground: color);
 		var markedUpString = A.markupSingle2(markup, A.single(expectedText));
 
-		Log.Logger.Information("Result: {Result}{NewLine}Expected: {Expected}", result, Environment.NewLine, markedUpString);
-		
-		await Assert
-			.That(Encoding.Unicode.GetBytes(result.ToString()))
-			.IsEqualTo(Encoding.Unicode.GetBytes(markedUpString.ToString()));
+		Log.Logger.Information("Result: {Result}{NewLine}Expected: {Expected}", result, Environment.NewLine,
+			markedUpString);
+
+		var resultBytes = Encoding.Unicode.GetBytes(result.ToString());
+		var nextExpectedBytes = Encoding.Unicode.GetBytes(markedUpString.ToString());
+
+		foreach (var bt in resultBytes.Zip(nextExpectedBytes))
+		{
+			await Assert
+				.That(bt.First)
+				.IsEqualTo(bt.Second);
+		}
 	}
 
 	[Test]
@@ -43,10 +49,10 @@ public class StringFunctionUnitTests: BaseUnitTest
 	{
 		Console.WriteLine("Testing: {0}", str);
 
-		var expectedBytes = expectedByte2 == null 
+		var expectedBytes = expectedByte2 == null
 			? new byte[] { expectedByte1 }
 			: new byte[] { expectedByte1, expectedByte2.Value };
-		
+
 		var parser = TestParser();
 		var result = (await parser.FunctionParse(MModule.single(str)))?.Message!;
 
@@ -54,10 +60,17 @@ public class StringFunctionUnitTests: BaseUnitTest
 		var markup = MarkupString.MarkupImplementation.AnsiMarkup.Create(background: color);
 		var markedUpString = A.markupSingle2(markup, A.single(expectedText));
 
-		Log.Logger.Information("Result: {Result}{NewLine}Expected: {Expected}", result, Environment.NewLine, markedUpString);
-		
-		await Assert
-			.That(Encoding.Unicode.GetBytes(result.ToString()))
-			.IsEqualTo(Encoding.Unicode.GetBytes(markedUpString.ToString()));
+		Log.Logger.Information("Result: {Result}{NewLine}Expected: {Expected}", result, Environment.NewLine,
+			markedUpString);
+
+		var resultBytes = Encoding.Unicode.GetBytes(result.ToString());
+		var nextExpectedBytes = Encoding.Unicode.GetBytes(markedUpString.ToString());
+
+		foreach (var bt in resultBytes.Zip(nextExpectedBytes))
+		{
+			await Assert
+				.That(bt.First)
+				.IsEqualTo(bt.Second);
+		}
 	}
 }

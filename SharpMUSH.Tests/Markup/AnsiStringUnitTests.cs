@@ -18,10 +18,15 @@ public class AnsiStringUnitTests : BaseUnitTest
 		var result = A.concat(strA, strB);
 
 		Log.Logger.Information("Result: {Result}{NewLine}Expected: {Expected}", result, Environment.NewLine, expected);
-
-		await Assert
-			.That(Encoding.Unicode.GetBytes(result.ToString()))
-			.IsEqualTo(Encoding.Unicode.GetBytes(expected.ToString())); 
+		var resultBytes = Encoding.Unicode.GetBytes(result.ToString());
+		var expectedBytes = Encoding.Unicode.GetBytes(expected.ToString());
+		
+		foreach(var bt in resultBytes.Zip(expectedBytes))
+		{		
+			await Assert
+				.That(bt.First)
+				.IsEqualTo(bt.Second); 
+		}
 	}
 		
 	[Test]
@@ -33,9 +38,15 @@ public class AnsiStringUnitTests : BaseUnitTest
 
 		Log.Logger.Information("Result: {Result}{NewLine}Expected: {Expected}", result, Environment.NewLine, expected);
 
-		await Assert
-			.That(Encoding.Unicode.GetBytes(result.ToString()))
-			.IsEqualTo(Encoding.Unicode.GetBytes(expected.ToString())); 
+		var resultBytes = Encoding.Unicode.GetBytes(result.ToString());
+		var expectedBytes = Encoding.Unicode.GetBytes(expected.ToString());
+		
+		foreach(var bt in resultBytes.Zip(expectedBytes))
+		{		
+			await Assert
+				.That(bt.First)
+				.IsEqualTo(bt.Second); 
+		}
 	}
 		
 	[Test]
@@ -47,9 +58,15 @@ public class AnsiStringUnitTests : BaseUnitTest
 
 		Log.Logger.Information("Result: {Result}{NewLine}Expected: {Expected}", result, Environment.NewLine, expected);
 
-		await Assert
-			.That(Encoding.Unicode.GetBytes(result.ToString()))
-			.IsEqualTo(Encoding.Unicode.GetBytes(expected.ToString())); 
+		var resultBytes = Encoding.Unicode.GetBytes(result.ToString());
+		var expectedBytes = Encoding.Unicode.GetBytes(expected.ToString());
+		
+		foreach(var bt in resultBytes.Zip(expectedBytes))
+		{		
+			await Assert
+				.That(bt.First)
+				.IsEqualTo(bt.Second); 
+		}
 	}
 
 	[Test]
@@ -61,9 +78,15 @@ public class AnsiStringUnitTests : BaseUnitTest
 
 		Log.Logger.Information("Result: {Result}{NewLine}Expected: {Expected}", result, Environment.NewLine, expected);
 
-		await Assert
-			.That(Encoding.Unicode.GetBytes(result.ToString()))
-			.IsEqualTo(Encoding.Unicode.GetBytes(expected.ToString())); 
+		var resultBytes = Encoding.Unicode.GetBytes(result.ToString());
+		var expectedBytes = Encoding.Unicode.GetBytes(expected.ToString());
+		
+		foreach(var bt in resultBytes.Zip(expectedBytes))
+		{		
+			await Assert
+				.That(bt.First)
+				.IsEqualTo(bt.Second); 
+		}
 	}
 
 	[Test]
@@ -80,9 +103,15 @@ public class AnsiStringUnitTests : BaseUnitTest
 
 		foreach (var (expectedItem, resultItem) in expected.Zip(result))
 		{
-			await Assert
-				.That(Encoding.Unicode.GetBytes(resultItem.ToString()))
-				.IsEqualTo(Encoding.Unicode.GetBytes(expectedItem.ToString())); 
+			var resultBytes = Encoding.Unicode.GetBytes(resultItem.ToString());
+			var expectedBytes = Encoding.Unicode.GetBytes(expectedItem.ToString());
+		
+			foreach(var bt in resultBytes.Zip(expectedBytes))
+			{
+				await Assert
+					.That(bt.First)
+					.IsEqualTo(bt.Second); 
+			} 
 		}
 	}
 
