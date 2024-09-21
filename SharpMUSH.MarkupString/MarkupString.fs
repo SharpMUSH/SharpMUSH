@@ -185,23 +185,24 @@ module MarkupStringModule =
             | _ -> raise (System.InvalidOperationException "Encountered unexpected content type in substring operation.")
       MarkupString(markupStr.MarkupDetails, substringAux markupStr.Content start length [])
 
-  // [<TailCall>] - This is not properly tail recursive.
+  [<TailCall>] 
   let indexesOf (markupStr: MarkupString) (search: MarkupString) : seq<int> =
     let text = plainText markupStr
     let srch = plainText search
 
-    let rec findDelimiters pos =
-        seq {
-            if pos < text.Length then
-                let foundPos = text.IndexOf(srch, pos)
-                if foundPos <> -1 then
-                    yield foundPos
-                    if srch <> System.String.Empty then
-                        yield! findDelimiters (foundPos + srch.Length)
-                    else
-                        yield! findDelimiters (foundPos + 1)
-        }
-    findDelimiters 0
+    let rec findDelimiters pos acc =
+        if pos < text.Length then
+            match text.IndexOf(srch, pos) with
+            | -1 -> Seq.rev acc
+            | foundPos -> 
+                let newAcc = foundPos :: acc
+                if srch <> System.String.Empty then
+                    findDelimiters (foundPos + srch.Length) newAcc
+                else
+                    findDelimiters (foundPos + 1) newAcc
+        else Seq.rev acc
+                    
+    findDelimiters 0 []
   
   [<TailCall>]
   let rec indexOf (markupStr: MarkupString) (search: MarkupString) : int =
