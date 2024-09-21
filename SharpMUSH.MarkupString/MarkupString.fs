@@ -114,14 +114,14 @@ module MarkupStringModule =
   let empty () : MarkupString = 
       MarkupString(Empty, [Text System.String.Empty])
     
-  // [<TailCall>] - This is not Tail Recurseive.
+  [<TailCall>]
   let plainText (markupStr: MarkupString) : string =
-      let rec loop (content: List<Content>) (acc: string) =
+      let rec loop (content: List<Content>) (acc: string list) =
           match content with
-          | [] -> acc
-          | Text str :: tail -> loop tail (acc + str)
-          | MarkupText mStr :: tail -> loop tail (loop mStr.Content acc)
-      loop markupStr.Content System.String.Empty
+          | [] -> System.String.Concat(List.rev acc)
+          | Text str :: tail -> loop tail (str :: acc)
+          | MarkupText mStr :: tail -> loop (mStr.Content @ tail) acc
+      loop markupStr.Content []
 
   let plainText2 (markupStr: MarkupString) : MarkupString = 
       MarkupString(Empty, [Text (plainText markupStr)])
