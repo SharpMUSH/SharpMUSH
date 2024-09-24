@@ -56,10 +56,10 @@ public class MUSHCodeParser(
 		IAttributeService attributeService,
 		INotifyService notifyService,
 		ILocateService locateService,
-		ITaskScheduler queueService,
+		ITaskScheduler scheduleService,
 		IConnectionService connectionService,
 		ImmutableStack<ParserState> state) :
-		this(passwordService, permissionService, database, attributeService, notifyService, locateService, queueService, connectionService)
+		this(passwordService, permissionService, database, attributeService, notifyService, locateService, scheduleService, connectionService)
 		=> State = state;
 
 	public IMUSHCodeParser FromState(ParserState state) => new MUSHCodeParser(_passwordService, _permissionService,
@@ -84,10 +84,10 @@ public class MUSHCodeParser(
 		IAttributeService attributeService,
 		INotifyService notifyService,
 		ILocateService locateService,
-		ITaskScheduler queueService,
+		ITaskScheduler scheduleService,
 		IConnectionService connectionService,
 		ParserState state) :
-		this(passwordService, permissionService, database, attributeService, notifyService, locateService, queueService, connectionService)
+		this(passwordService, permissionService, database, attributeService, notifyService, locateService, scheduleService, connectionService)
 		=> State = [state];
 
 	public ValueTask<CallState?> FunctionParse(MString text)

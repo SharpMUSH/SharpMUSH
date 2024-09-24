@@ -19,9 +19,9 @@ public class RegistersUnitTests : BaseUnitTest
 	[Arguments("think [setr(0,foo)]%q0", "foofoo")]
 	[Arguments("think [setr(start,bar)]%q<start>", "barbar")]
 	[Arguments("think [setr(start,foo)][letq(start,bar,%q<start>)]", "foobar")]
-	[Arguments("think %wv", "wv")]
-	[Arguments("think %vv", "vv")]
-	[Arguments("think %xv", "xv")]
+	// [Arguments("think %wv", "")] // TODO: Requires full server Integration
+	// [Arguments("think %vv", "")] // TODO: Requires full server Integration
+	// [Arguments("think %xv", "")] // TODO: Requires full server Integration
 	[Arguments("think %i0", "0")]
 	[Arguments("think %$0", "0")]
 	public async Task Test(string str, string expected)
