@@ -7,24 +7,25 @@ namespace SharpMUSH.Tests.Markup.Data;
 
 internal static class Concat
 {
-
-	public static IEnumerable<object[]> ConcatData
-	{
-		get	
-		{
-			return
-			[
-				[A.single("con"), A.single("cat"), A.single("concat")],
-				[A.markupSingle2(M.Create(foreground: StringExtensions.rgb(Color.Red)), A.single("red")), A.single("cat"),
-					A.multiple([A.markupSingle2(M.Create(foreground: StringExtensions.rgb(Color.Red)), A.single("red")),
-						A.single("cat")])],
-				[A.markupSingle2(M.Create(foreground: StringExtensions.rgb(Color.Red)), A.single("red")), A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Blue)),"cat"),
-					A.multiple([A.markupSingle2(M.Create(foreground: StringExtensions.rgb(Color.Red)), A.single("red")),
-						A.markupSingle2(M.Create(foreground: StringExtensions.rgb(Color.Blue)), A.single("cat"))])],
-				[A.markupSingle2(M.Create(clear: true), A.single("clear")), A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Blue)),"cat"),
-					A.multiple([A.markupSingle2(M.Create(clear: true), A.single("clear")),
-						A.markupSingle2(M.Create(foreground: StringExtensions.rgb(Color.Blue)), A.single("cat"))])]
-			];
-		}
-	}
+	public static IEnumerable<(A.MarkupString strA, A.MarkupString strB, A.MarkupString expected)> ConcatData() =>
+	[
+		(A.single("con"), A.single("cat"), A.single("concat")),
+		(A.markupSingle2(M.Create(foreground: StringExtensions.rgb(Color.Red)), A.single("red")), A.single("cat"),
+			A.multiple([
+				A.markupSingle2(M.Create(foreground: StringExtensions.rgb(Color.Red)), A.single("red")),
+				A.single("cat")
+			])),
+		(A.markupSingle2(M.Create(foreground: StringExtensions.rgb(Color.Red)), A.single("red")),
+			A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Blue)), "cat"),
+			A.multiple([
+				A.markupSingle2(M.Create(foreground: StringExtensions.rgb(Color.Red)), A.single("red")),
+				A.markupSingle2(M.Create(foreground: StringExtensions.rgb(Color.Blue)), A.single("cat"))
+			])),
+		(A.markupSingle2(M.Create(clear: true), A.single("clear")),
+			A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Blue)), "cat"),
+			A.multiple([
+				A.markupSingle2(M.Create(clear: true), A.single("clear")),
+				A.markupSingle2(M.Create(foreground: StringExtensions.rgb(Color.Blue)), A.single("cat"))
+			]))
+	];
 }

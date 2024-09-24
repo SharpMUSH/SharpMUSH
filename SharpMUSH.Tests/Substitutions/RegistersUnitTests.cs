@@ -3,7 +3,6 @@ using Serilog;
 
 namespace SharpMUSH.Tests.Substitutions;
 
-[TestClass]
 public class RegistersUnitTests : BaseUnitTest
 {
 	public RegistersUnitTests()
@@ -14,17 +13,17 @@ public class RegistersUnitTests : BaseUnitTest
 			.CreateLogger();
 	}
 
-	[TestMethod]
-	[DataRow("think [setq(0,foo)]%q0", "foo")]
-	[DataRow("think [setq(start,bar)]%q<start>", "bar")]
-	[DataRow("think [setr(0,foo)]%q0", "foofoo")]
-	[DataRow("think [setr(start,bar)]%q<start>", "barbar")]
-	[DataRow("think [setr(start,foo)][letq(start,bar,%q<start>)]", "foobar")]
-	[DataRow("think %wv", "wv")]
-	[DataRow("think %vv", "vv")]
-	[DataRow("think %xv", "xv")]
-	[DataRow("think %i0", "0")]
-	[DataRow("think %$0", "0")]
+	[Test]
+	[Arguments("think [setq(0,foo)]%q0", "foo")]
+	[Arguments("think [setq(start,bar)]%q<start>", "bar")]
+	[Arguments("think [setr(0,foo)]%q0", "foofoo")]
+	[Arguments("think [setr(start,bar)]%q<start>", "barbar")]
+	[Arguments("think [setr(start,foo)][letq(start,bar,%q<start>)]", "foobar")]
+	[Arguments("think %wv", "wv")]
+	[Arguments("think %vv", "vv")]
+	[Arguments("think %xv", "xv")]
+	[Arguments("think %i0", "0")]
+	[Arguments("think %$0", "0")]
 	public async Task Test(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
