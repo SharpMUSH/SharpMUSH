@@ -13,7 +13,7 @@ public partial interface IMUSHCodeParser
 	IPasswordService PasswordService { get; }
 	IPermissionService PermissionService { get; }
 	ILocateService LocateService { get; }
-	IQueueService QueueService { get; }
+	ITaskScheduler Scheduler { get; }
 	IImmutableStack<ParserState> State { get; }
 	ValueTask<CallState?> CommandCommaArgsParse(MString text);
 	ValueTask<CallState?> CommandEqSplitArgsParse(MString text);
@@ -24,4 +24,5 @@ public partial interface IMUSHCodeParser
 	ValueTask<CallState?> FunctionParse(MString text);
 	IMUSHCodeParser Pop();
 	IMUSHCodeParser Push(ParserState state);
+	IMUSHCodeParser FromState(ParserState state);
 }

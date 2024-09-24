@@ -56,7 +56,7 @@ public class BaseUnitTest
 		IAttributeService? at = null,
 		INotifyService? ns = null,
 		ILocateService? ls = null,
-		IQueueService? qs = null,
+		ITaskScheduler? qs = null,
 		IConnectionService? cs = null)
 	{
 		var one = new DBRef(1, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
@@ -78,7 +78,7 @@ public class BaseUnitTest
 			at ?? Substitute.For<IAttributeService>(),
 			ns ?? Substitute.For<INotifyService>(),
 			ls ?? Substitute.For<ILocateService>(),
-			qs ?? Substitute.For<IQueueService>(),
+			qs ?? Substitute.For<ITaskScheduler>(),
 			cs ?? simpleConnectionService,
 			state: new ParserState(
 				Registers: new([[]]),

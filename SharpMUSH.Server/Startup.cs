@@ -10,6 +10,7 @@ using SharpMUSH.Implementation;
 using SharpMUSH.Library;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
+using TaskScheduler = SharpMUSH.Library.Services.TaskScheduler;
 
 namespace SharpMUSH.Server;
 
@@ -36,12 +37,13 @@ public class Startup(ArangoConfiguration config)
 		services.AddSingleton<INotifyService, NotifyService>();
 		services.AddSingleton<ILocateService, LocateService>();
 		services.AddSingleton<IAttributeService, AttributeService>();
-		services.AddSingleton<IQueueService, QueueService>();
+		services.AddSingleton<ITaskScheduler, TaskScheduler>();
 		services.AddSingleton<IConnectionService, ConnectionService>();
 		services.AddSingleton<ILockService, LockService>();
 		services.AddSingleton<IBooleanExpressionParser, BooleanExpressionParser>();
 		services.AddSingleton(new ArangoHandle("CurrentSharpMUSHWorld"));
 		services.AddScoped<IMUSHCodeParser, MUSHCodeParser>();
+		services.AddHostedService<SchedulerService>();
 		services.AddMediatR(cfg =>
 		{
 			cfg.RegisterServicesFromAssemblyContaining<MUSHCodeParser>();

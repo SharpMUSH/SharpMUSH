@@ -18,7 +18,7 @@ public class MUSHCodeParser(
 	IAttributeService _attributeService,
 	INotifyService _notifyService,
 	ILocateService _locateService,
-	IQueueService _queueService,
+	ITaskScheduler _scheduleService,
 	IConnectionService _connectionService) : IMUSHCodeParser
 {
 	public IPasswordService PasswordService => _passwordService;
@@ -31,7 +31,7 @@ public class MUSHCodeParser(
 
 	public ISharpDatabase Database => _database;
 
-	public IQueueService QueueService => _queueService;
+	public ITaskScheduler Scheduler => _scheduleService;
 
 	public INotifyService NotifyService => _notifyService;
 
@@ -56,13 +56,14 @@ public class MUSHCodeParser(
 		IAttributeService attributeService,
 		INotifyService notifyService,
 		ILocateService locateService,
-		IQueueService queueService,
+		ITaskScheduler queueService,
 		IConnectionService connectionService,
 		ImmutableStack<ParserState> state) :
 		this(passwordService, permissionService, database, attributeService, notifyService, locateService, queueService, connectionService)
 		=> State = state;
 
-	// Add register state. Which is also a Dictionary. The functions that recover etc a register state, are responsible themselves.
+	public IMUSHCodeParser FromState(ParserState state) => new MUSHCodeParser(_passwordService, _permissionService,
+		_database, _attributeService, _notifyService, _locateService, _scheduleService, _connectionService, state);
 
 	public IMUSHCodeParser Push(ParserState state)
 	{
@@ -83,7 +84,7 @@ public class MUSHCodeParser(
 		IAttributeService attributeService,
 		INotifyService notifyService,
 		ILocateService locateService,
-		IQueueService queueService,
+		ITaskScheduler queueService,
 		IConnectionService connectionService,
 		ParserState state) :
 		this(passwordService, permissionService, database, attributeService, notifyService, locateService, queueService, connectionService)
