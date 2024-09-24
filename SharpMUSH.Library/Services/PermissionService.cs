@@ -17,7 +17,7 @@ public class PermissionService(ILockService lockService) : IPermissionService
 	// TODO: Confirm Implementation
 	// TODO: Optimize for lists.
 	public bool CanViewAttribute(AnySharpObject viewer, AnySharpObject target, params SharpAttribute[] attribute)
-		=> CanExamine(viewer, target) && attribute.Last().IsVisual();
+		=> CanExamine(viewer, target) || attribute.Last().IsVisual();
 
 	// TODO: Confirm Implementation.
 	// TODO: Optimize for lists.
