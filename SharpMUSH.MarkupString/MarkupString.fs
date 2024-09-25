@@ -1,5 +1,6 @@
 ﻿namespace MarkupString
 
+open System.Text.Json
 open System.Text.RegularExpressions
 open System.Runtime.InteropServices
 open System
@@ -43,7 +44,7 @@ module MarkupStringModule =
             match outerMarkupType with
             | Empty -> str.Wrap(innerText)
             | MarkedupText outerMarkup -> str.WrapAndRestore(innerText, outerMarkup)
-                      
+            
       let isMarkedup (m : MarkupTypes) =
         match m with
         | MarkedupText _ -> true
@@ -72,6 +73,12 @@ module MarkupStringModule =
       member val MarkupDetails = markupDetails with get, set
       member val Content = content with get, set
 
+      member this.Serialize() =
+        JsonSerializer.Serialize(this, JsonSerializerOptions(PropertyNamingPolicy = JsonNamingPolicy.CamelCase))
+        
+      member this.Deserialize(jsonString: string) =
+        JsonSerializer.Deserialize<MarkupString>(jsonString, JsonSerializerOptions(PropertyNamingPolicy = JsonNamingPolicy.CamelCase))
+        
       with override this.ToString() = 
             let postfix(markupType: MarkupTypes) : string = 
               match markupType with

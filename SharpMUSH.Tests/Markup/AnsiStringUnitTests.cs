@@ -128,4 +128,15 @@ public class AnsiStringUnitTests : BaseUnitTest
 		await Assert.That(redAnsiString.ToString()).IsEqualTo("\u001b[31mred\u001b[0m");
 		// Assert.AreEqual("\u001b[32mwoo\u001b[0m", complexAnsiString.ToString());
 	}
+	
+	[Test, Skip("Discriminated Unions cannot be deserialized without an extra library. WIP.")]
+	public async Task Serialization()
+	{
+		var original = A.single("red");
+
+		var serialized = original.Serialize();
+		var deserialized = original.Deserialize(serialized);
+		
+		await Assert.That(deserialized).IsEqualTo(original);
+	}
 }

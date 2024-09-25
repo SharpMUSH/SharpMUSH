@@ -1,7 +1,9 @@
 ﻿namespace ANSILibrary 
 
 open System
-open System.Drawing
+open System.Drawing  
+open System.IO
+open System.Text.Json
 
 // Converted and heavily changed from: https://github.com/WilliamRagstad/ANSIConsole/blob/main/ANSIConsole/
 module ANSI =
@@ -63,6 +65,14 @@ type ANSIFormatting =
 type ANSIString(text: string, hyperlink: string option, colorForeground: AnsiColor option, colorBackground: AnsiColor option, opacity: float option, formatting: ANSIFormatting) =
   new(text: string) = ANSIString(text, None, None, None, None, ANSIFormatting.None)
 
+  member this.Serialize() =
+    let options = JsonSerializerOptions(PropertyNamingPolicy = JsonNamingPolicy.CamelCase)
+    JsonSerializer.Serialize(this, options)
+
+  static member Deserialize(jsonString: string) =
+    let options = JsonSerializerOptions(PropertyNamingPolicy = JsonNamingPolicy.CamelCase)
+    JsonSerializer.Deserialize<ANSIString>(jsonString, options)
+  
   member this.Text = text
   member this.Hyperlink = hyperlink
   member this.ColorForeground = colorForeground
