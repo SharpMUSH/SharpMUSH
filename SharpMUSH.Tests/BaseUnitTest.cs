@@ -82,6 +82,8 @@ public class BaseUnitTest
 			cs ?? simpleConnectionService,
 			state: new ParserState(
 				Registers: new([[]]),
+				IterationRegisters: new(),
+				RegexRegisters: new(),
 				CurrentEvaluation: null,
 				Function: null,
 				Command: "think",

@@ -12,6 +12,8 @@ public enum ParseMode
 
 public record ParserState(
 	Stack<Dictionary<string, MString>> Registers,
+	Stack<Dictionary<string, MString>> IterationRegisters,
+	Stack<Dictionary<string, MString>> RegexRegisters,
 	DBAttribute? CurrentEvaluation,
 	string? Function,
 	string? Command,

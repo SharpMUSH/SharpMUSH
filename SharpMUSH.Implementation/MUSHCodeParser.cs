@@ -127,6 +127,8 @@ public class MUSHCodeParser(
 		var handleId = ConnectionService.Get(handle);
 		State = State.Push(new ParserState(
 			new ([[]]),
+			new(),
+			new(),
 			null,
 			null,
 			MModule.plainText(text),

@@ -1,5 +1,6 @@
 ﻿using SharpMUSH.Implementation.Definitions;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using static SharpMUSHParser;
 using OneOf.Monads;
 using SharpMUSH.Library.ParserInterfaces;
@@ -141,6 +142,8 @@ public static partial class Functions
 
 		parser.Push(new ParserState(
 			Registers: currentState.Registers,
+			IterationRegisters: currentState.IterationRegisters,
+			RegexRegisters: currentState.RegexRegisters,
 			CurrentEvaluation: currentState.CurrentEvaluation,
 			Function: name,
 			Command: null,
