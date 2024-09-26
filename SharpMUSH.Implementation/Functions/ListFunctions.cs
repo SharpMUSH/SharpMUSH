@@ -1,4 +1,5 @@
 ﻿using SharpMUSH.Implementation.Definitions;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Implementation.Functions;
@@ -68,13 +69,6 @@ public partial class Functions
 	[SharpFunction(Name = "iter", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.NoParse)]
 	public static async ValueTask<CallState> Iter(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// Parse arg 0
-		// Set Arguments.
-		// Parse arg2 for values, or default to space
-		// Parse arg3 for values, or default to space
-		// Parse arg1
-
-
 		var argCount = parser.CurrentState.Arguments.Count;
 		
 		var listArg = await parser.FunctionParse(parser.CurrentState.Arguments[0].Message!);
@@ -121,6 +115,39 @@ public partial class Functions
 	{
 		throw new NotImplementedException();
 	}
+	
+	[SharpFunction(Name = "ibreak", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.PositiveIntegersOnly)]
+	public static ValueTask<CallState> IBreak(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var argVal = parser.CurrentState.Arguments[0].Message!.ToString();
+		var iterDepth = string.IsNullOrWhiteSpace(argVal)
+			? "0" 
+			: argVal;
+		var iterNumber = int.Parse(iterDepth);
+		var maxCount = parser.CurrentState.IterationRegisters.Count;
+
+		if (iterNumber >= maxCount)
+		{
+			return ValueTask.FromResult(new CallState(Errors.ErrorRange));
+		}
+
+		parser.CurrentState.IterationRegisters.ElementAt(maxCount - iterNumber - 1).Break = true;
+		
+		return ValueTask.FromResult(CallState.EmptyArgument);
+	}
+
+	[SharpFunction(Name = "ILEV", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public static ValueTask<CallState> ILev(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		throw new NotImplementedException();
+	}
+
+	[SharpFunction(Name = "INUM", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public static ValueTask<CallState> INum(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		throw new NotImplementedException();
+	}
+	
 	[SharpFunction(Name = "LAST", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> last(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{

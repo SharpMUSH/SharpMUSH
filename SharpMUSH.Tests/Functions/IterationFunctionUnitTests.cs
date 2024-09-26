@@ -25,4 +25,18 @@ public class IterationFunctionUnitTests : BaseUnitTest
 		var result = (await parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
+	
+	[Test]
+	[Arguments("iter(1|2|3,add(%i0,1)[ibreak()],|,-)", "2")]
+	[Arguments("iter(1|2|3,add(%i0,1)[ibreak(0)],|,-)", "2")]
+	[Arguments("iter(1|2|3,iter(1 2 3,[add(%i0,%i1)][ibreak()]),|,-)", "2 3 4")]
+	[Arguments("iter(1|2|3,iter(1 2 3,[add(%i0,%i1)][ibreak(0)]),|,-)", "2 3 4")]
+	[Arguments("iter(1|2|3,iter(1 2 3,[add(%i0,%i1)][ibreak(1)]),|,-)", "2-3-4")]
+	// TODO: Why does putting [ibreak()] at the start of the contents cause a different evaluation?
+	public async Task IterationBreak(string function, string expected)
+	{
+		var parser = TestParser();
+		var result = (await parser.FunctionParse(MModule.single(function)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
 }
