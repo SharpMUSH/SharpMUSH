@@ -22,8 +22,8 @@ public class RegistersUnitTests : BaseUnitTest
 	// [Arguments("think %wv", "")] // TODO: Requires full server Integration
 	// [Arguments("think %vv", "")] // TODO: Requires full server Integration
 	// [Arguments("think %xv", "")] // TODO: Requires full server Integration
-	[Arguments("think %i0", "0")]
-	[Arguments("think %$0", "0")]
+	[Arguments("think %i0", "#-1 OUT OF RANGE")]
+	[Arguments("think %$0", "#-1 OUT OF RANGE")]
 	public async Task Test(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);

@@ -89,17 +89,20 @@ public partial class Functions
 
 		var result = new List<MString>();
 
-		var wrappedIteration = new Wrapper<MString> { Value = MModule.empty() };
+		var wrappedIteration = new IterationWrapper<MString> { Value = MModule.empty() };
 		parser.CurrentState.IterationRegisters.Push(wrappedIteration);
 		
 		foreach (var item in list)
 		{
 			wrappedIteration.Value = item!;
+			wrappedIteration.Iteration++;
 			result.Add((await parser.FunctionParse(parser.CurrentState.Arguments[1].Message!))!.Message!);
 			result.Add(sep);
-			
-			// Todo: Check for ibreak() marker.
-			// The position of the current evaluation can by checked by doing a Count;
+
+			if (wrappedIteration.Break)
+			{
+				break;
+			}
 		}
 
 		parser.CurrentState.IterationRegisters.Pop();

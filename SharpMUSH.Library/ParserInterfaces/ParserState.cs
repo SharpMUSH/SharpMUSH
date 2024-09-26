@@ -10,14 +10,16 @@ public enum ParseMode
 	NoParse
 }
 
-public class Wrapper<T>
+public class IterationWrapper<T>
 {
 	public required T Value { get; set; }
+	public uint Iteration { get; set; } = 0;
+	public bool Break { get; set; } = false;
 }
 
 public record ParserState(
 	Stack<Dictionary<string, MString>> Registers,
-	Stack<Wrapper<MString>> IterationRegisters,
+	Stack<IterationWrapper<MString>> IterationRegisters,
 	Stack<Dictionary<string, MString>> RegexRegisters,
 	DBAttribute? CurrentEvaluation,
 	string? Function,
