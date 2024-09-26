@@ -1,4 +1,5 @@
-﻿using SharpMUSH.Library.Extensions;
+﻿using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using static SharpMUSHParser;
@@ -69,17 +70,27 @@ public static partial class Substitutions
 		);
 	}
 
+	// Symbol Example: %q$0 --> 0
 	private static CallState HandleSTextNumber(CallState symbol, IMUSHCodeParser parser)
 	{
-		// Symbol Example: %qi0 --> qi0
 		return symbol;
 		// throw new NotImplementedException();
 	}
 
+	// Symbol Example: %qi0 --> 0
 	private static CallState HandleITextNumber(CallState symbol, IMUSHCodeParser parser)
 	{
-		// Symbol Example: %q$0 --> q$0
-		return symbol;
-		// throw new NotImplementedException();
+		var symbolValue = symbol.Message!.ToString();
+		var symbolNumber = int.Parse(symbolValue);
+		var maxCount = parser.CurrentState.IterationRegisters.Count;
+
+		if (maxCount < symbolNumber)
+		{
+			return new CallState(Errors.ErrorRange); // TODO: Fix Value
+		}
+
+		var val = parser.CurrentState.IterationRegisters.ToArray().ElementAt(maxCount - symbolNumber - 1).Value;
+		
+		return new CallState(val);
 	}
 }

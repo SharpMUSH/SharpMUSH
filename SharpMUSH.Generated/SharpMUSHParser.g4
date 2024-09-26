@@ -106,6 +106,7 @@ complexSubstitutionSymbol: (
             }
         | REG_NUM
         | ITEXT_NUM
+        | ITEXT_LAST
         | STEXT_NUM
         | VWX
     )

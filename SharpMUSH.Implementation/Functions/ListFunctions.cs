@@ -65,10 +65,48 @@ public partial class Functions
 	{
 		throw new NotImplementedException();
 	}
-	[SharpFunction(Name = "ITER", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.NoParse)]
-	public static ValueTask<CallState> iter(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "iter", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.NoParse)]
+	public static async ValueTask<CallState> Iter(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		// Parse arg 0
+		// Set Arguments.
+		// Parse arg2 for values, or default to space
+		// Parse arg3 for values, or default to space
+		// Parse arg1
+
+
+		var argCount = parser.CurrentState.Arguments.Count;
+		
+		var listArg = await parser.FunctionParse(parser.CurrentState.Arguments[0].Message!);
+		var delim = argCount > 2
+			? (await parser.FunctionParse(parser.CurrentState.Arguments[2].Message!))!.Message!
+			: MModule.single(" ");
+		var sep = argCount > 3
+			? (await parser.FunctionParse(parser.CurrentState.Arguments[3].Message!))!.Message!
+			: delim;
+
+		var list = MModule.split(MModule.plainText(delim), listArg!.Message);
+
+		var result = new List<MString>();
+
+		var wrappedIteration = new Wrapper<MString> { Value = MModule.empty() };
+		parser.CurrentState.IterationRegisters.Push(wrappedIteration);
+		
+		foreach (var item in list)
+		{
+			wrappedIteration.Value = item!;
+			result.Add((await parser.FunctionParse(parser.CurrentState.Arguments[1].Message!))!.Message!);
+			result.Add(sep);
+			
+			// Todo: Check for ibreak() marker.
+			// The position of the current evaluation can by checked by doing a Count;
+		}
+
+		parser.CurrentState.IterationRegisters.Pop();
+
+		return new CallState(result.Count > 0 
+			? MModule.multiple(result[..^1]) 
+			: MModule.empty());
 	}
 	[SharpFunction(Name = "ITEMS", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> items(IMUSHCodeParser parser, SharpFunctionAttribute _2)
