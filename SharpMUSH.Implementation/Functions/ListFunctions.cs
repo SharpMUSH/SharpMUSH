@@ -1,4 +1,5 @@
-﻿using SharpMUSH.Implementation.Definitions;
+﻿using MoreLinq.Extensions;
+using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 
@@ -39,7 +40,17 @@ public partial class Functions
 	[SharpFunction(Name = "FIRST", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> first(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var argCount = parser.CurrentState.Arguments.Count;
+
+		var delim = argCount > 1
+			? parser.CurrentState.Arguments[1].Message!
+			: MModule.single(" ");
+
+		var listArg = parser.CurrentState.Arguments[0].Message;
+		var list = MModule.split(delim.ToString(), listArg);
+		var first = list?.FirstOrDefault() ?? MModule.empty();
+
+		return ValueTask.FromResult(new CallState(first));
 	}
 
 	[SharpFunction(Name = "FIRSTOF", MinArgs = 0, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
@@ -177,7 +188,7 @@ public partial class Functions
 		var listArg = parser.CurrentState.Arguments[0].Message;
 		var list = MModule.split(delim.ToString(), listArg);
 		var last = list?.LastOrDefault() ?? MModule.empty();
-		
+
 		return ValueTask.FromResult(new CallState(last));
 	}
 
@@ -261,10 +272,22 @@ public partial class Functions
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "REST", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> rest(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "rest", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular)]
+	public static ValueTask<CallState> Rest(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var argCount = parser.CurrentState.Arguments.Count;
+
+		var delim = argCount > 1
+			? parser.CurrentState.Arguments[1].Message!
+			: MModule.single(" ");
+
+		var listArg = parser.CurrentState.Arguments[0].Message;
+		var list = MModule.split(delim.ToString(), listArg);
+		var listElements = list.Length;
+		var delimiters = Enumerable.Repeat(delim, Math.Max(0, listElements - 2));
+		var last = MModule.multiple(list?.Skip(1).Interleave(delimiters));
+
+		return ValueTask.FromResult(new CallState(last));
 	}
 
 	[SharpFunction(Name = "RESTARTS", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]
