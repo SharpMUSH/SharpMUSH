@@ -9,6 +9,9 @@ internal static class Concat
 {
 	public static IEnumerable<(A.MarkupString strA, A.MarkupString strB, A.MarkupString expected)> ConcatData() =>
 	[
+		(A.single(" "), A.single("woof"), A.single(" woof")),
+		(A.single(string.Empty), A.single("woof"), A.single("woof")),
+		(A.empty(), A.single("woof"), A.single("woof")),
 		(A.single("con"), A.single("cat"), A.single("concat")),
 		(A.markupSingle2(M.Create(foreground: StringExtensions.rgb(Color.Red)), A.single("red")), A.single("cat"),
 			A.multiple([

@@ -90,7 +90,8 @@ public partial class Functions
 		{
 			wrappedIteration.Value = item!;
 			wrappedIteration.Iteration++;
-			result.Add((await parser.FunctionParse(parser.CurrentState.Arguments[1].Message!))!.Message!);
+			var parsed = await parser.FunctionParse(parser.CurrentState.Arguments[1].Message!);
+			result.Add(parsed!.Message!);
 			result.Add(sep);
 
 			if (wrappedIteration.Break)
@@ -133,7 +134,7 @@ public partial class Functions
 
 		parser.CurrentState.IterationRegisters.ElementAt(maxCount - iterNumber - 1).Break = true;
 		
-		return ValueTask.FromResult(CallState.EmptyArgument);
+		return ValueTask.FromResult(CallState.Empty);
 	}
 
 	[SharpFunction(Name = "ILEV", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
