@@ -46,6 +46,7 @@ public class ListFunctionUnitTests : BaseUnitTest
 	[Test]
 	[Arguments("rest(1|2|3)","")]
 	[Arguments("rest(%b)","")]
+	[Arguments("rest(null())","")]
 	[Arguments("rest(1|2|3 5 6)","5 6")]
 	[Arguments("rest(1 2 3)","2 3")]
 	[Arguments("rest(1|2|3,|)","2|3")]
@@ -58,6 +59,7 @@ public class ListFunctionUnitTests : BaseUnitTest
 	
 	[Test]
 	[Arguments("last(1|2|3)","1|2|3")]
+	[Arguments("last(null())","")]
 	[Arguments("last(%b)","")]
 	[Arguments("last(1|2|3 5 6)","6")]
 	[Arguments("last(1 2 3)","3")]

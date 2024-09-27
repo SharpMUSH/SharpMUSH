@@ -283,11 +283,9 @@ public partial class Functions
 		
 		var listArg = parser.CurrentState.Arguments[0].Message;
 		var list = MModule.split(delim.ToString(), listArg);
-		var listElements = list.Length;
-		var delimiters = Enumerable.Repeat(delim, Math.Max(0, listElements - 2));
-		var last = MModule.multiple(list?.Skip(1).Interleave(delimiters));
-
-		return ValueTask.FromResult(new CallState(last));
+		var rest = MModule.multipleWithDelimiter(delim, list.Skip(1));
+		
+		return ValueTask.FromResult(new CallState(rest));
 	}
 
 	[SharpFunction(Name = "RESTARTS", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]

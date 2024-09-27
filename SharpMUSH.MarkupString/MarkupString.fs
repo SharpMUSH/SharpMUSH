@@ -2,6 +2,7 @@
 
 open System.Text.Json
 open System.Text.RegularExpressions
+open System.Linq
 open System.Runtime.InteropServices
 open System
 
@@ -117,10 +118,14 @@ module MarkupStringModule =
 
   let multiple (mu: seq<MarkupString>) : MarkupString = 
       MarkupString(Empty, mu |> Seq.map (fun x -> MarkupText x) |> Seq.toList )
-
+  
   let empty () : MarkupString = 
       MarkupString(Empty, [Text System.String.Empty])
     
+  let multipleWithDelimiter (delimiter: MarkupString) (mu: seq<MarkupString>) : MarkupString =
+      let delimiters = Enumerable.Repeat(delimiter, mu |> Seq.length).Skip(1).Append(empty())
+      MarkupString(Empty, (Seq.foldBack2 (fun a b xs -> (MarkupText a) :: (MarkupText b) :: xs) mu delimiters []))
+  
   [<TailCall>]
   let plainText (markupStr: MarkupString) : string =
       let rec loop (content: List<Content>) (acc: string list) =
