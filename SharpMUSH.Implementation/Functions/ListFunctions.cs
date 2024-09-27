@@ -42,8 +42,8 @@ public partial class Functions
 	{
 		var delim = DefaultArgument(parser.CurrentState.Arguments, 1, MModule.single(" "));
 		var listArg = parser.CurrentState.Arguments[0].Message;
-		var list = MModule.split(delim.ToString(), listArg);
-		var first = list?.FirstOrDefault() ?? MModule.empty();
+		var list = MModule.split2(delim, listArg);
+		var first = list.FirstOrDefault() ?? MModule.empty();
 
 		return ValueTask.FromResult(new CallState(first));
 	}
@@ -91,7 +91,7 @@ public partial class Functions
 		var listArg = await parser.FunctionParse(parser.CurrentState.Arguments[0].Message!);
 		var delim = DefaultArgument(parser.CurrentState.Arguments, 2, MModule.single(" "));
 		var sep = DefaultArgument(parser.CurrentState.Arguments, 3, delim);
-		var list = MModule.split(MModule.plainText(delim), listArg!.Message);
+		var list = MModule.split2(delim, listArg!.Message);
 		var wrappedIteration = new IterationWrapper<MString> { Value = MModule.empty() };
 		var result = new List<MString>();
 
@@ -165,8 +165,8 @@ public partial class Functions
 	{
 		var delim = DefaultArgument(parser.CurrentState.Arguments, 1, MModule.single(" "));
 		var listArg = parser.CurrentState.Arguments[0].Message;
-		var list = MModule.split(delim.ToString(), listArg);
-		var last = list?.LastOrDefault() ?? MModule.empty();
+		var list = MModule.split2(delim, listArg);
+		var last = list.LastOrDefault() ?? MModule.empty();
 
 		return ValueTask.FromResult(new CallState(last));
 	}
@@ -256,7 +256,7 @@ public partial class Functions
 	{
 		var delim = DefaultArgument(parser.CurrentState.Arguments, 1, MModule.single(" "));
 		var listArg = parser.CurrentState.Arguments[0].Message;
-		var list = MModule.split(delim.ToString(), listArg);
+		var list = MModule.split2(delim, listArg);
 		var rest = MModule.multipleWithDelimiter(delim, list.Skip(1));
 		
 		return ValueTask.FromResult(new CallState(rest));

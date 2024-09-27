@@ -134,7 +134,7 @@ module MarkupStringModule =
           | Text str :: tail -> loop tail (str :: acc)
           | MarkupText mStr :: tail -> loop (mStr.Content @ tail) acc
       loop markupStr.Content []
-
+    
   let plainText2 (markupStr: MarkupString) : MarkupString = 
       MarkupString(Empty, [Text (plainText markupStr)])
 
@@ -295,6 +295,9 @@ module MarkupStringModule =
 
     buildSplits delimiterPositions 0 [] |> Array.ofList
 
+  let split2 (delimiter: MarkupString) (markupStr: MarkupString) =
+    split (plainText delimiter) (markupStr)
+    
 type Justification =
     | Left
     | Center
