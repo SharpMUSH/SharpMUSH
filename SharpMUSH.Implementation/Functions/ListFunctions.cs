@@ -176,8 +176,8 @@ public partial class Functions
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "LAST", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> last(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "last", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular)]
+	public static ValueTask<CallState> Last(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var argCount = parser.CurrentState.Arguments.Count;
 
@@ -280,7 +280,7 @@ public partial class Functions
 		var delim = argCount > 1
 			? parser.CurrentState.Arguments[1].Message!
 			: MModule.single(" ");
-
+		
 		var listArg = parser.CurrentState.Arguments[0].Message;
 		var list = MModule.split(delim.ToString(), listArg);
 		var listElements = list.Length;
