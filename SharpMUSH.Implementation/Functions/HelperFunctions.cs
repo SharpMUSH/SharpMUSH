@@ -14,7 +14,18 @@ public partial class Functions
 	private static readonly Regex TimeSpanFormatMatchRegex = TimeSpanFormatMatch();
 	private static readonly Regex NameListPatternRegex = NameListPattern();
 
-	private static ValueTask<CallState> AggregateDecimals(List<CallState> args, Func<decimal, decimal, decimal> aggregateFunction) =>
+	private static MString DefaultArgument(List<CallState> args, int item, MString defaultValue)
+	{
+		if (args.Count - 1 < item || string.IsNullOrWhiteSpace(args[item].Message?.ToString()))
+		{
+			return defaultValue;
+		}
+
+		return args[item].Message!;
+	}
+
+	private static ValueTask<CallState> AggregateDecimals(List<CallState> args,
+		Func<decimal, decimal, decimal> aggregateFunction) =>
 		ValueTask.FromResult<CallState>(new(args
 			.Select(x => decimal.Parse(MModule.plainText(x.Message)))
 			.Aggregate(aggregateFunction).ToString()));
@@ -24,10 +35,13 @@ public partial class Functions
 			.Select(x => int.Parse(MModule.plainText(x.Message)))
 			.Aggregate(aggregateFunction).ToString()));
 
-	private static ValueTask<CallState> ValidateIntegerAndEvaluate(List<CallState> args, Func<IEnumerable<int>, MString> aggregateFunction)
-		 => ValueTask.FromResult<CallState>(new(aggregateFunction(args.Select(x => int.Parse(MModule.plainText(x.Message!)))).ToString()));
+	private static ValueTask<CallState> ValidateIntegerAndEvaluate(List<CallState> args,
+		Func<IEnumerable<int>, MString> aggregateFunction)
+		=> ValueTask.FromResult<CallState>(new(aggregateFunction(args.Select(x => int.Parse(MModule.plainText(x.Message!))))
+			.ToString()));
 
-	private static ValueTask<CallState> AggregateDecimalToInt(List<CallState> args, Func<decimal, decimal, decimal> aggregateFunction) =>
+	private static ValueTask<CallState> AggregateDecimalToInt(List<CallState> args,
+		Func<decimal, decimal, decimal> aggregateFunction) =>
 		ValueTask.FromResult<CallState>(new(Math.Floor(args
 			.Select(x => decimal.Parse(string.Join(string.Empty, MModule.plainText(x.Message))))
 			.Aggregate(aggregateFunction)).ToString()));
@@ -41,7 +55,8 @@ public partial class Functions
 	private static ValueTask<CallState> EvaluateInteger(List<CallState> args, Func<int, int> func)
 		=> ValueTask.FromResult<CallState>(new(func(int.Parse(MModule.plainText(args[0].Message))).ToString()));
 
-	private static ValueTask<CallState> ValidateDecimalAndEvaluatePairwise(this List<CallState> args, Func<(decimal, decimal), bool> func)
+	private static ValueTask<CallState> ValidateDecimalAndEvaluatePairwise(this List<CallState> args,
+		Func<(decimal, decimal), bool> func)
 	{
 		if (args.Count < 2)
 		{
@@ -49,32 +64,33 @@ public partial class Functions
 		}
 
 		var doubles = args.Select(x =>
-			(
-				IsDouble: decimal.TryParse(string.Join("", MModule.plainText(x.Message)), out var b),
-				Double: b
-			)).ToList();
+		(
+			IsDouble: decimal.TryParse(string.Join("", MModule.plainText(x.Message)), out var b),
+			Double: b
+		)).ToList();
 
 		return ValueTask.FromResult<CallState>(doubles.Any(x => !x.IsDouble)
-				? new CallState(Message: Errors.ErrorNumbers)
-				: new CallState(Message: doubles.Select(x => x.Double).Pairwise().Skip(1).SkipWhile(func).Any().ToString()));
+			? new CallState(Message: Errors.ErrorNumbers)
+			: new CallState(Message: doubles.Select(x => x.Double).Pairwise().Skip(1).SkipWhile(func).Any().ToString()));
 	}
 
 	private static (int, string)[] ExtractArray(TimeSpan span) =>
-		[
-			(span.Days > 6 ? span.Days / 7 : 0, "w"),
-			(span.Days < 7 ? span.Days : span.Days % 7, "d"),
-			(span.Hours, "h"),
-			(span.Minutes, "m"),
-			(span.Seconds, "s")
-		];
+	[
+		(span.Days > 6 ? span.Days / 7 : 0, "w"),
+		(span.Days < 7 ? span.Days : span.Days % 7, "d"),
+		(span.Hours, "h"),
+		(span.Minutes, "m"),
+		(span.Seconds, "s")
+	];
 
-	public static string TimeString(TimeSpan span, int pad = 0, char padding = '0', ushort accuracy = 1, bool ignoreZero = true) =>
+	public static string TimeString(TimeSpan span, int pad = 0, char padding = '0', ushort accuracy = 1,
+		bool ignoreZero = true) =>
 		$"{string.Join(" ",
 			ExtractArray(span)
-			.SkipWhile((x, y) => ignoreZero ? x.Item1 == 0 : y < 5 - accuracy)
-			.Take(accuracy)
-			.DefaultIfEmpty((0, "s"))
-			.Select(x => $"{x.Item1.ToString().PadRight(pad, padding)}{x.Item2}"))}";
+				.SkipWhile((x, y) => ignoreZero ? x.Item1 == 0 : y < 5 - accuracy)
+				.Take(accuracy)
+				.DefaultIfEmpty((0, "s"))
+				.Select(x => $"{x.Item1.ToString().PadRight(pad, padding)}{x.Item2}"))}";
 
 	public static string TimeFormat(DateTimeOffset time, string format)
 		=> TimeFormatMatchRegex.Replace(format, match =>
@@ -128,45 +144,45 @@ public partial class Functions
 
 	public static string TimeSpanFormat(DateTimeOffset time, string format)
 		=> TimeFormatMatchRegex.Replace(format, match =>
-			{
-				var character = match.Groups["Character"];
-				var adjustment = match.Groups["Adjustment"].Success
-					? match.Groups["Adjustment"].Value
-					: null;
-				var pad = adjustment?.Contains('x') ?? false;
-				var append = adjustment?.Contains('z') ?? false;
+		{
+			var character = match.Groups["Character"];
+			var adjustment = match.Groups["Adjustment"].Success
+				? match.Groups["Adjustment"].Value
+				: null;
+			var pad = adjustment?.Contains('x') ?? false;
+			var append = adjustment?.Contains('z') ?? false;
 
-				return character.Value switch
-				{
-					// The number of seconds
-					"s" => string.Empty,
-					// The number of seconds
-					"S" => string.Empty,
-					// The number of minutes
-					"m" => string.Empty,
-					// The number of minutes
-					"M" => string.Empty,
-					// The number of weeks
-					"w" => string.Empty,
-					// The number of weeks
-					"W" => string.Empty,
-					// The number of hours
-					"h" => string.Empty,
-					// The number of hours
-					"H" => string.Empty,
-					// The number of days
-					"d" => string.Empty,
-					// The number of days
-					"D" => string.Empty,
-					// The number of 365-day years 
-					"y" => string.Empty,
-					// The number of 365-day years
-					"Y" => string.Empty,
-					// $ character
-					"$" => "$",
-					_ => string.Empty,
-				};
-			});
+			return character.Value switch
+			{
+				// The number of seconds
+				"s" => string.Empty,
+				// The number of seconds
+				"S" => string.Empty,
+				// The number of minutes
+				"m" => string.Empty,
+				// The number of minutes
+				"M" => string.Empty,
+				// The number of weeks
+				"w" => string.Empty,
+				// The number of weeks
+				"W" => string.Empty,
+				// The number of hours
+				"h" => string.Empty,
+				// The number of hours
+				"H" => string.Empty,
+				// The number of days
+				"d" => string.Empty,
+				// The number of days
+				"D" => string.Empty,
+				// The number of 365-day years 
+				"y" => string.Empty,
+				// The number of 365-day years
+				"Y" => string.Empty,
+				// $ character
+				"$" => "$",
+				_ => string.Empty,
+			};
+		});
 
 	public static bool HasObjectFlags(SharpObject obj, SharpObjectFlag flag)
 		=> obj.Flags().Contains(flag);
@@ -176,14 +192,16 @@ public partial class Functions
 
 	public static IEnumerable<OneOf<DBRef, string>> NameList(string list)
 		=> NameListPatternRegex.Matches(list).Cast<Match>().Select(x =>
-				!string.IsNullOrWhiteSpace(x.Groups["DBRef"].Value)
-					? OneOf<DBRef, string>.FromT0(HelperFunctions.ParseDBRef(x.Groups["DBRef"].Value).Value())
-					: OneOf<DBRef, string>.FromT1(x.Groups["User"].Value));
+			!string.IsNullOrWhiteSpace(x.Groups["DBRef"].Value)
+				? OneOf<DBRef, string>.FromT0(HelperFunctions.ParseDBRef(x.Groups["DBRef"].Value).Value())
+				: OneOf<DBRef, string>.FromT1(x.Groups["User"].Value));
 
 	public static async ValueTask<IEnumerable<SharpPlayer?>> PopulatedNameList(IMUSHCodeParser parser, string list)
 		=> await Task.WhenAll(NameList(list).Select(x => x.Match(
-				async dbref => (await parser.Database.GetObjectNodeAsync(dbref)).TryPickT0(out var player, out var _) ? player : null,
-				async name => (await parser.Database.GetPlayerByNameAsync(name)).FirstOrDefault())));
+			async dbref => (await parser.Database.GetObjectNodeAsync(dbref)).TryPickT0(out var player, out var _)
+				? player
+				: null,
+			async name => (await parser.Database.GetPlayerByNameAsync(name)).FirstOrDefault())));
 
 	/// <summary>
 	/// A regular expression that matches one or more names in a list format.
@@ -205,5 +223,4 @@ public partial class Functions
 	/// <returns>A regex that has a match for each replacement.</returns>
 	[GeneratedRegex(@"\$(?<Adjustment>z?x?|x?z?)(?<Character>[smwhdySMWHDY\$])")]
 	private static partial Regex TimeSpanFormatMatch();
-
 }
