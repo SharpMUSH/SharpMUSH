@@ -140,6 +140,7 @@ public static partial class Functions
 			return new CallState(attribute.MaxArgs > 1 ? Errors.ErrorIntegers : Errors.ErrorInteger);
 		}
 
+		// TODO: Consider adding the ParserContexts as Arguments, so that Evaluation can be more optimized.
 		parser.Push(new ParserState(
 			Registers: currentState.Registers,
 			IterationRegisters: currentState.IterationRegisters,
