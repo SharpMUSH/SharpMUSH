@@ -23,6 +23,17 @@ public partial class Functions
 
 		return args[item].Message!;
 	}
+	
+	private static async ValueTask<MString> DefaultEvaluatedArgument(IMUSHCodeParser parser, int item, MString defaultValue)
+	{
+		var args = parser.CurrentState.Arguments;
+		if (args.Count - 1 < item || string.IsNullOrWhiteSpace(args[item].Message?.ToString()))
+		{
+			return defaultValue;
+		}
+
+		return (await parser.FunctionParse(args[item].Message!))!.Message!;
+	}
 
 	private static ValueTask<CallState> AggregateDecimals(List<CallState> args,
 		Func<decimal, decimal, decimal> aggregateFunction) =>

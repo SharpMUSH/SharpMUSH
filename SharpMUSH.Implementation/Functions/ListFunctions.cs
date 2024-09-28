@@ -89,8 +89,9 @@ public partial class Functions
 	public static async ValueTask<CallState> Iter(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var listArg = await parser.FunctionParse(parser.CurrentState.Arguments[0].Message!);
-		var delim = DefaultArgument(parser.CurrentState.Arguments, 2, MModule.single(" "));
-		var sep = DefaultArgument(parser.CurrentState.Arguments, 3, delim);
+		// TODO: Evaluate delim and sep.
+		var delim = await DefaultEvaluatedArgument(parser, 2, MModule.single(" "));
+		var sep = await DefaultEvaluatedArgument(parser, 3, delim);
 		var list = MModule.split2(delim, listArg!.Message);
 		var wrappedIteration = new IterationWrapper<MString> { Value = MModule.empty() };
 		var result = new List<MString>();
@@ -103,7 +104,6 @@ public partial class Functions
 			wrappedIteration.Iteration++;
 			var parsed = await parser.FunctionParse(parser.CurrentState.Arguments[1].Message!);
 			result.Add(parsed!.Message!);
-			result.Add(sep);
 
 			if (wrappedIteration.Break)
 			{
@@ -113,9 +113,7 @@ public partial class Functions
 
 		parser.CurrentState.IterationRegisters.Pop();
 
-		return new CallState(result.Count > 0
-			? MModule.multiple(result[..^1])
-			: MModule.empty());
+		return new CallState(MModule.multipleWithDelimiter(sep, result));
 	}
 
 	[SharpFunction(Name = "ITEMS", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
