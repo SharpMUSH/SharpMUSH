@@ -338,8 +338,6 @@ public partial class Functions
 	public static async ValueTask<CallState> Ufun(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// TODO: Fix all of this.
-		// TODO: Permissions check for evaluation.
-		// TODO: Don't route through GET. That's lazy. We could be escaping earlier.
 
 		var dbrefAndAttr = HelperFunctions.SplitDBRefAndAttr(MModule.plainText(parser.CurrentState.Arguments[0].Message));
 
@@ -358,8 +356,7 @@ public partial class Functions
 			return new CallState(maybeDBref.IsError ? maybeDBref.AsError.Value : Errors.ErrorCantSeeThat);
 		}
 
-		var actualObject = maybeDBref.WithoutError().WithoutNone()!;
-		var actualDBref = actualObject.Object().DBRef;
+		var actualObject = maybeDBref.WithoutError().WithoutNone();
 
 		var maybeAttr = await parser.AttributeService.GetAttributeAsync(
 			executor,
@@ -368,13 +365,14 @@ public partial class Functions
 			mode: Library.Services.IAttributeService.AttributeMode.Execute,
 			parent: false);
 
+		if (maybeAttr.IsNone)
+		{
+			return new CallState(Errors.ErrorNoSuchAttribute);
+		}
+
 		if (maybeAttr.IsError)
 		{
 			return new CallState(maybeAttr.AsError.Value);
-		}
-		else if (maybeAttr.IsNone)
-		{
-			return new CallState(string.Empty);
 		}
 		
 		var get = maybeAttr.AsAttribute;
@@ -383,7 +381,7 @@ public partial class Functions
 			with { Arguments = parser.CurrentState.Arguments.Skip(1).ToList()});
 
 		var parsed = (await parser.FunctionParse(get.Value))!;
-
+	
 		parser.Pop();
 
 		return parsed;

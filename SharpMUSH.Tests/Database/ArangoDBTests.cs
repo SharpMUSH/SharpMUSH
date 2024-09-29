@@ -63,12 +63,12 @@ public class ArangoDBTests : BaseUnitTest
 		await database.SetAttributeAsync(playerOneDBRef, ["Three", "Layers", "Deep"], "Deep1", playerOne);
 		await database.SetAttributeAsync(playerOneDBRef, ["Three", "Layers", "Deep2"], "Deeper", playerOne);
 
-		var existingSingle = (await database.GetAttributeAsync(playerOneDBRef, ["SingleLayer"]))!.ToList();
-		var existingLayer = (await database.GetAttributeAsync(playerOneDBRef, ["Two", "Layers"]))!.ToList();
-		var existingLeaf = (await database.GetAttributeAsync(playerOneDBRef, ["Two", "Leaves"]))!.ToList();
-		var existingLeaf2 = (await database.GetAttributeAsync(playerOneDBRef, ["Two", "Leaves2"]))!.ToList();
-		var existingDeep1 = (await database.GetAttributeAsync(playerOneDBRef, ["Three", "Layers", "Deep"]))!.ToList();
-		var existingDeep2 = (await database.GetAttributeAsync(playerOneDBRef, ["Three", "Layers", "Deep2"]))!.ToList();
+		var existingSingle = (await database.GetAttributeAsync(playerOneDBRef, ["SingleLayer"]))?.ToList();
+		var existingLayer = (await database.GetAttributeAsync(playerOneDBRef, ["Two", "Layers"]))?.ToList();
+		var existingLeaf = (await database.GetAttributeAsync(playerOneDBRef, ["Two", "Leaves"]))?.ToList();
+		var existingLeaf2 = (await database.GetAttributeAsync(playerOneDBRef, ["Two", "Leaves2"]))?.ToList();
+		var existingDeep1 = (await database.GetAttributeAsync(playerOneDBRef, ["Three", "Layers", "Deep"]))?.ToList();
+		var existingDeep2 = (await database.GetAttributeAsync(playerOneDBRef, ["Three", "Layers", "Deep2"]))?.ToList();
 
 		var obj = await database!.GetObjectNodeAsync(playerOneDBRef);
 

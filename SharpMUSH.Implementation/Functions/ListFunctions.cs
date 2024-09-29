@@ -106,7 +106,7 @@ public partial class Functions
 		{
 			wrappedIteration.Value = item!;
 			wrappedIteration.Iteration++;
-			var parsed = await parser.CurrentState.Arguments[1].ParsedMessage()!;
+			var parsed = await parser.CurrentState.Arguments[1].ParsedMessage();
 			result.Add(parsed!);
 
 			if (wrappedIteration.Break)
@@ -189,25 +189,21 @@ public partial class Functions
 
 		var executor = parser.CurrentState.ExecutorObject(parser.Database).Known();
 		var enactor = parser.CurrentState.EnactorObject(parser.Database).Known();
-		var objAttr = HelperFunctions.SplitDBRefAndAttr(MModule.plainText(parser.CurrentState.Arguments[0].Message!));
-		if (objAttr.IsT1 && objAttr.AsT1 == false)
+		var objAttr = HelperFunctions.SplitOptionalDBRefAndAttr(MModule.plainText(parser.CurrentState.Arguments[0].Message!));
+		if (objAttr is { IsT1: true, AsT1: false })
 		{
 			return new CallState(Errors.ErrorObjectAttributeString);
 		}
 
 		var (dbref, attrName) = objAttr.AsT0;
+		dbref ??= executor.ToString();
 
-		var locate = await parser.LocateService.Locate(
+		var locate = await parser.LocateService.LocateAndNotifyIfInvalid(
 			parser,
 			enactor,
 			executor,
 			dbref,
 			LocateFlags.All);
-
-		if (locate.IsError)
-		{
-			await parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, locate.AsError.Value);
-		}
 
 		if (!locate.IsValid())
 		{
@@ -220,8 +216,8 @@ public partial class Functions
 			executor,
 			located,
 			attrName,
-			IAttributeService.AttributeMode.Execute,
-			true);
+			mode: IAttributeService.AttributeMode.Execute,
+			parent: true);
 
 		if (maybeAttr.IsNone)
 		{
