@@ -13,6 +13,7 @@ public static class DatabaseConstants
 	public const string objectFlags = "node_object_flags";
 	public const string objectPowers = "node_object_powers";
 	public const string attributeEntries = "node_attribute_entries";
+	public const string attributeFlags = "node_attribute_flags";
 
 	public const string isObject = "edge_is_object";
 	public const string atLocation = "edge_at_location";
@@ -23,6 +24,7 @@ public static class DatabaseConstants
 	public const string hasFlags = "edge_has_flags";
 	public const string hasPowers = "edge_has_powers";
 	public const string hasAttribute = "edge_has_attribute";
+	public const string hasAttributeFlag = "edge_has_attribute_flag";
 	public const string hasHook = "edge_has_hook";
 	public const string hasAttributeOwner = "edge_has_attribute_owner";
 
@@ -30,6 +32,7 @@ public static class DatabaseConstants
 	public const string graphPowers = "graph_powers";
 	public const string graphFlags = "graph_flags";
 	public const string graphAttributes = "graph_attributes";
+	public const string graphAttributeFlags = "graph_attribute_flags";
 	public const string graphLocations = "graph_locations";
 	public const string graphExits = "graph_exits";
 	public const string graphHomes = "graph_homes";
@@ -41,6 +44,7 @@ public static class DatabaseConstants
 	public const string typeString = "string";
 	public const string typeNumber = "number";
 	public const string typeArray = "array";
+	public static object typeBoolean = "boolean";
 
 	public const string typeRoom = "ROOM";
 	public const string typePlayer = "PLAYER";

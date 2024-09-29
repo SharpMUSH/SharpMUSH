@@ -160,15 +160,42 @@ namespace SharpMUSH.Database.ArangoDB.Migrations
 									Name = new { type = DatabaseConstants.typeString },
 									Symbol = new { type = DatabaseConstants.typeString, multipleOf = 1 },
 									Aliases = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } },
+									System = new {type = DatabaseConstants.typeBoolean },
 									SetPermissions = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } },
 									UnsetPermissions = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } },
 									TypeRestrictions = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } }
 								},
 								required = (string[])[
 									nameof(SharpObjectFlag.Name),
-									nameof(SharpObjectFlag.Symbol),
+									nameof(SharpObjectFlag.System),
 									nameof(SharpObjectFlag.TypeRestrictions)
 										]
+							}
+						}
+					}
+				},
+				new()
+				{
+					Collection = new ArangoCollection
+					{
+						Name = DatabaseConstants.attributeFlags,
+						Type = ArangoCollectionType.Document,
+						WaitForSync = true,
+						Schema = new ArangoSchema()
+						{
+							Rule = new {
+								type = DatabaseConstants.typeObject,
+								properties = new
+								{
+									Name = new { type = DatabaseConstants.typeString },
+									Symbol = new { type = DatabaseConstants.typeString, multipleOf = 1 },
+									System = new {type = DatabaseConstants.typeBoolean },
+								},
+								required = (string[])[
+									nameof(SharpObjectFlag.Name),
+									nameof(SharpObjectFlag.System),
+									nameof(SharpObjectFlag.Symbol)
+								]
 							}
 						}
 					}
@@ -375,6 +402,15 @@ namespace SharpMUSH.Database.ArangoDB.Migrations
 					Collection = new ArangoCollection
 					{
 						Name = DatabaseConstants.hasAttribute,
+						Type = ArangoCollectionType.Edge,
+						WaitForSync = true
+					}
+				},
+				new()
+				{
+					Collection = new ArangoCollection
+					{
+						Name = DatabaseConstants.hasAttributeFlag,
 						Type = ArangoCollectionType.Edge,
 						WaitForSync = true
 					}
@@ -660,8 +696,162 @@ namespace SharpMUSH.Database.ArangoDB.Migrations
 			await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.hasFlags, new SharpEdge { From = playerOneObj.Id, To = wizard.Id });
 		}
 
+		private static List<ArangoUpdateResult<ArangoVoid>> CreateInitialAttributeFlags(IArangoMigrator migrator,
+			ArangoHandle handle) =>
+		[
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+				new
+				{
+					Name = "no_command",
+					Symbol = "$",
+					System = true
+				}).Result,
+				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+				new
+				{
+					Name = "no_inherit",
+					Symbol = "i",
+					System = true
+				}).Result,
+				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+				new
+				{
+					Name = "no_clone",
+					Symbol = "c",
+					System = true
+				}).Result,
+				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+				new
+				{
+					Name = "mortal_dark",
+					Symbol = "m",
+					System = true
+				}).Result,
+				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+				new
+				{
+					Name = "wizard",
+					Symbol = "w",
+					System = true
+				}).Result,
+				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+				new
+				{
+					Name = "veiled",
+					Symbol = "V",
+					System = true
+				}).Result,
+				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+				new
+				{
+					Name = "nearby",
+					Symbol = "n",
+					System = true
+				}).Result,
+				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+				new
+				{
+					Name = "locked",
+					Symbol = "+",
+					System = true
+				}).Result,
+				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+				new
+				{
+					Name = "safe",
+					Symbol = "S",
+					System = true
+				}).Result,
+				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+				new
+				{
+					Name = "visual",
+					Symbol = "v",
+					System = true
+				}).Result,
+				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+				new
+				{
+					Name = "public",
+					Symbol = "p",
+					System = true
+				}).Result,
+				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+				new
+				{
+					Name = "debug",
+					Symbol = "b",
+					System = true
+				}).Result,
+				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+				new
+				{
+					Name = "no_debug",
+					Symbol = "B",
+					System = true
+				}).Result,
+				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+				new
+				{
+					Name = "regexp",
+					Symbol = "R",
+					System = true
+				}).Result,
+				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+				new
+				{
+					Name = "case",
+					Symbol = "C",
+					System = true
+				}).Result,
+				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+				new
+				{
+					Name = "nospace",
+					Symbol = "s",
+					System = true
+				}).Result,
+				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+				new
+				{
+					Name = "noname",
+					Symbol = "N",
+					System = true
+				}).Result,
+				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+				new
+				{
+					Name = "aahear",
+					Symbol = "A",
+					System = true
+				}).Result,
+				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+				new
+				{
+					Name = "amhear",
+					Symbol = "M",
+					System = true
+				}).Result,
+				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+				new
+				{
+					Name = "quiet",
+					Symbol = "Q",
+					System = true
+				}).Result,
+				// TODO: Consider if this is needed for our purposes at all.
+				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+				new
+				{
+					Name = "branch",
+					Symbol = "`",
+					System = true
+				}).Result
+		];
+		
 		// Todo: Find a better way of doing this, so we can keep a proper async flow.
-		private static List<ArangoUpdateResult<ArangoVoid>> CreateInitialFlags(IArangoMigrator migrator, ArangoHandle handle) =>
+		private static List<ArangoUpdateResult<ArangoVoid>> CreateInitialFlags(IArangoMigrator migrator, 
+			ArangoHandle handle) =>
 		[
 			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
 			{
@@ -1042,10 +1232,85 @@ namespace SharpMUSH.Database.ArangoDB.Migrations
 				Symbol = "x",
 				System = true,
 				TypeRestrictions = DatabaseConstants.typesExit,
-			}).Result
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "CHAN_USEFIRSTMATCH",
+				Aliases = (string[])["CHAN_FIRSTMATCH","CHAN_MATCHFIRST"],
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesAll,
+				SetPermissions = DatabaseConstants.permissionsTrusted,
+				UnSetPermissions = DatabaseConstants.permissionsTrusted
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "HEAR_CONNECT",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesPlayer,
+				SetPermissions = DatabaseConstants.permissionsRoyalty
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "HEAVY",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesAll,
+				SetPermissions = DatabaseConstants.permissionsRoyalty
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "LOUD",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesPlayer,
+				SetPermissions = DatabaseConstants.permissionsRoyalty
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "NO_LOG",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesPlayer,
+				SetPermissions = DatabaseConstants.permissionsWizard
+					.Union(DatabaseConstants.permissionsMDark)
+					.Union(DatabaseConstants.permissionsLog),
+				UnSetPermissions = DatabaseConstants.permissionsWizard
+					.Union(DatabaseConstants.permissionsMDark)
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "PARANOID",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesPlayer,
+				SetPermissions = DatabaseConstants.permissionsODark,
+				UnSetPermissions = DatabaseConstants.permissionsODark
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "TRACK_MONEY",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesPlayer,
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "XTERM256",
+				Aliases = (string[])["XTERM","COLOR256"],
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesPlayer
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "MONIKER",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesAll,
+				SetPermissions = DatabaseConstants.permissionsRoyalty,
+				UnSetPermissions = DatabaseConstants.permissionsRoyalty
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "OPEN_OK",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesRoom
+			}).Result,
 		];
 
-		// First half done.
 		public Task Down(IArangoMigrator migrator, ArangoHandle handle)
 		{
 			throw new NotImplementedException();
