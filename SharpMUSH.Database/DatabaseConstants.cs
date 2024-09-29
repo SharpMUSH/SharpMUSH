@@ -60,4 +60,7 @@ public static class DatabaseConstants
 	public static readonly string[] permissionsRoyalty = ["wizard"];
 	public static readonly string[] permissionsTrusted = ["trusted"];
 	public static readonly string[] permissionsLog = ["log"];
+	public static readonly string[] permissionsODark = ["odark"];
+	public static readonly string[] permissionsMDark = ["mdark"];
+
 }

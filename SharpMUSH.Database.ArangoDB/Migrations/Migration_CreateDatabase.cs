@@ -667,30 +667,35 @@ namespace SharpMUSH.Database.ArangoDB.Migrations
 			{
 				Name = "ABODE",
 				Symbol = "A",
+				System = true,
 				TypeRestrictions = DatabaseConstants.typesRoom
 			}).Result,
 			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
 			{
 				Name = "ANSI",
 				Symbol = "A",
+				System = true,
 				TypeRestrictions = DatabaseConstants.typesPlayer
 			}).Result,
 			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
 			{
 				Name = "CHOWN_OK",
 				Symbol = "C",
+				System = true,
 				TypeRestrictions = DatabaseConstants.typesContainer
 			}).Result,
 			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
 			{
 				Name = "DARK",
 				Symbol = "D",
+				System = true,
 				TypeRestrictions = DatabaseConstants.typesAll
 			}).Result,
 			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
 			{
 				Name = "FIXED",
 				Symbol = "F",
+				System = true,
 				SetPermissions = DatabaseConstants.permissionsWizard,
 				UnsetPermissions = DatabaseConstants.permissionsWizard,
 				TypeRestrictions = DatabaseConstants.typesPlayer
@@ -699,18 +704,21 @@ namespace SharpMUSH.Database.ArangoDB.Migrations
 			{
 				Name = "FLOATING",
 				Symbol = "F",
+				System = true,
 				TypeRestrictions = DatabaseConstants.typesRoom
 			}).Result,
 			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
 			{
 				Name = "HAVEN",
 				Symbol = "H",
+				System = true,
 				TypeRestrictions = DatabaseConstants.typesPlayer
 			}).Result,
 			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
 			{
 				Name = "TRUST",
 				Symbol = "I",
+				System = true,
 				Aliases = (string[])["INHERIT"],
 				SetPermissions = DatabaseConstants.permissionsTrusted,
 				UnsetPermissions = DatabaseConstants.permissionsTrusted,
@@ -720,6 +728,7 @@ namespace SharpMUSH.Database.ArangoDB.Migrations
 			{
 				Name = "JUDGE",
 				Symbol = "J",
+				System = true,
 				SetPermissions = DatabaseConstants.permissionsRoyalty,
 				UnsetPermissions = DatabaseConstants.permissionsRoyalty,
 				TypeRestrictions = DatabaseConstants.typesPlayer
@@ -728,6 +737,7 @@ namespace SharpMUSH.Database.ArangoDB.Migrations
 			{
 				Name = "JUMP_OK",
 				Symbol = "J",
+				System = true,
 				Aliases = (string[])["TEL-OK", "TEL_OK", "TELOK"],
 				TypeRestrictions = DatabaseConstants.typesRoom
 			}).Result,
@@ -735,12 +745,14 @@ namespace SharpMUSH.Database.ArangoDB.Migrations
 			{
 				Name = "LINK_OK",
 				Symbol = "L",
+				System = true,
 				TypeRestrictions = DatabaseConstants.typesAll
 			}).Result,
 			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
 			{
 				Name = "MONITOR",
 				Symbol = "M",
+				System = true,
 				Aliases = (string[])["LISTENER", "WATCHER"],
 				TypeRestrictions = DatabaseConstants.typesContainer
 			}).Result,
@@ -748,6 +760,7 @@ namespace SharpMUSH.Database.ArangoDB.Migrations
 			{
 				Name = "NO_LEAVE",
 				Symbol = "N",
+				System = true,
 				Aliases = (string[])["NOLEAVE"],
 				TypeRestrictions = DatabaseConstants.typesThing
 			}).Result,
@@ -755,36 +768,42 @@ namespace SharpMUSH.Database.ArangoDB.Migrations
 			{
 				Name = "NO_TEL",
 				Symbol = "N",
+				System = true,
 				TypeRestrictions = DatabaseConstants.typesRoom
 			}).Result,
 			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
 			{
 				Name = "OPAQUE",
 				Symbol = "O",
+				System = true,
 				TypeRestrictions = DatabaseConstants.typesAll
 			}).Result,
 			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
 			{
 				Name = "QUIET",
 				Symbol = "Q",
+				System = true,
 				TypeRestrictions = DatabaseConstants.typesAll
 			}).Result,
 			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
 			{
 				Name = "UNFINDABLE",
 				Symbol = "U",
+				System = true,
 				TypeRestrictions = DatabaseConstants.typesAll
 			}).Result,
 			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
 			{
 				Name = "VISUAL",
 				Symbol = "V",
+				System = true,
 				TypeRestrictions = DatabaseConstants.typesAll
 			}).Result,
 			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
 			{
 				Name = "WIZARD",
 				Symbol = "W",
+				System = true,
 				TypeRestrictions = DatabaseConstants.typesAll,
 				SetPermissions = DatabaseConstants.permissionsTrusted
 					.Union(DatabaseConstants.permissionsWizard)
@@ -796,12 +815,14 @@ namespace SharpMUSH.Database.ArangoDB.Migrations
 			{
 				Name = "SAFE",
 				Symbol = "X",
+				System = true,
 				TypeRestrictions = DatabaseConstants.typesAll
 			}).Result,
 			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
 			{
 				Name = "SHARED",
 				Symbol = "Z",
+				System = true,
 				Aliases = (string[])["ZONE"],
 				TypeRestrictions = DatabaseConstants.typesPlayer
 			}).Result,
@@ -809,8 +830,218 @@ namespace SharpMUSH.Database.ArangoDB.Migrations
 			{
 				Name = "Z_TEL",
 				Symbol = "Z",
+				System = true,
 				TypeRestrictions = DatabaseConstants.typesRoom
 					.Union(DatabaseConstants.typesThing)
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "LISTEN_PARENT",
+				Symbol = "^",
+				Aliases = (string[])["^"],
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesPlayer
+					.Union(DatabaseConstants.typesThing).Union(DatabaseConstants.typesRoom)
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "NOACCENTS",
+				Symbol = "~",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesPlayer
+					.Union(DatabaseConstants.typesThing).Union(DatabaseConstants.typesRoom)
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "UNREGISTERED",
+				Symbol = "?",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesPlayer,
+				SetPermissions = DatabaseConstants.permissionsRoyalty,
+				UnsetPermissions = DatabaseConstants.permissionsRoyalty
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "NOSPOOF",
+				Symbol = "\"",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesAll,
+				SetPermissions = DatabaseConstants.permissionsODark,
+				UnSetPermissions = DatabaseConstants.permissionsODark
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "AUDIBLE",
+				Symbol = "a",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesAll
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "DEBUG",
+				Aliases = (string[])["TRACE"],
+				Symbol = "b",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesAll
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "DESTROY_OK",
+				Aliases = (string[])["DEST_OK"],
+				Symbol = "d",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesThing
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "ENTER_OK",
+				Symbol = "e",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesAll
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "GAGGED",
+				Symbol = "g",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesPlayer,
+				SetPermissions = DatabaseConstants.permissionsWizard,
+				UnSetPermissions = DatabaseConstants.permissionsWizard
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "HALT",
+				Symbol = "h",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesAll
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "ORPHAN",
+				Symbol = "i",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesAll
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "JURY_OK",
+				Aliases = (string[])["JURYOK"],
+				Symbol = "j",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesPlayer,
+				SetPermissions = DatabaseConstants.permissionsRoyalty,
+				UnSetPermissions = DatabaseConstants.permissionsRoyalty
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "KEEPALIVE",
+				Symbol = "k",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesPlayer
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "LIGHT",
+				Symbol = "l",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesAll
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "MISTRUST",
+				Symbol = "m",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesContent,
+				SetPermissions = DatabaseConstants.permissionsTrusted,
+				UnSetPermissions = DatabaseConstants.permissionsTrusted
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "MISTRUST",
+				Aliases = (string[])["MYOPIC"],
+				Symbol = "m",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesContent,
+				SetPermissions = DatabaseConstants.permissionsTrusted,
+				UnSetPermissions = DatabaseConstants.permissionsTrusted
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "NO_COMMAND",
+				Aliases = (string[])["NOCOMMAND"],
+				Symbol = "n",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesAll
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "ON_VACATION",
+				Aliases = (string[])["ONVACATION","ON-VACATION"],
+				Symbol = "o",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesPlayer
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "PUPPET",
+				Symbol = "P",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesThing
+					.Union(DatabaseConstants.typesRoom)
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "ROYALTY",
+				Symbol = "r",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesAll,
+				SetPermissions = DatabaseConstants.permissionsTrusted
+					.Union(DatabaseConstants.permissionsRoyalty)
+					.Union(DatabaseConstants.permissionsLog),
+				UnSetPermissions = DatabaseConstants.permissionsTrusted
+					.Union(DatabaseConstants.permissionsRoyalty)
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "SUSPECT",
+				Symbol = "s",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesAll,
+				SetPermissions = DatabaseConstants.permissionsWizard
+					.Union(DatabaseConstants.permissionsMDark)
+					.Union(DatabaseConstants.permissionsLog),
+				UnSetPermissions = DatabaseConstants.permissionsWizard
+					.Union(DatabaseConstants.permissionsMDark)
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "TRANSPARENT",
+				Symbol = "t",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesAll
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "VERBOSE",
+				Symbol = "v",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesAll,
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "NO_WARN",
+				Aliases = (string[])["NOWARN"],
+				Symbol = "w",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesAll,
+			}).Result,
+			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+			{
+				Name = "CLOUDY",
+				Aliases = (string[])["TERSE"],
+				Symbol = "x",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesExit,
 			}).Result
 		];
 
