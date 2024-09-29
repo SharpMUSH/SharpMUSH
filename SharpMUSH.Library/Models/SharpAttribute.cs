@@ -6,7 +6,7 @@ public class SharpAttribute
 {
 	public required string Name { get; set; }
 
-	public required string[] Flags { get; set; }
+	public required Func<IEnumerable<SharpAttributeFlag>> Flags { get; set; }
 
 	public string Value { get; set; } = string.Empty;
 

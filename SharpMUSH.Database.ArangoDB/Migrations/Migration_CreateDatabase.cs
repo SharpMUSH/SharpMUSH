@@ -514,10 +514,25 @@ namespace SharpMUSH.Database.ArangoDB.Migrations
 								From = [
 									DatabaseConstants.objects,
 									DatabaseConstants.attributes
-									]
+								]
 							}
 						],
 						Name = DatabaseConstants.graphAttributes
+					},
+					new()
+					{
+						EdgeDefinitions =
+						[
+							new ArangoEdgeDefinition()
+							{
+								Collection = DatabaseConstants.hasAttributeFlag,
+								To = [DatabaseConstants.attributeFlags],
+								From = [
+									DatabaseConstants.attributes
+								]
+							}
+						],
+						Name = DatabaseConstants.graphAttributeFlags
 					},
 					new()
 					{

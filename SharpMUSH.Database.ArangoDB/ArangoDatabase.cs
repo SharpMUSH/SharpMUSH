@@ -20,7 +20,7 @@ public class ArangoDatabase(
 	IArangoContext arangoDB,
 	ArangoHandle handle,
 	IPasswordService passwordService
-	) : ISharpDatabase
+) : ISharpDatabase
 {
 	public async Task Migrate()
 	{
@@ -126,8 +126,10 @@ public class ArangoDatabase(
 			new SharpObjectCreateRequest(name, DatabaseConstants.typeRoom, [], time, time));
 		var room = await arangoDB.Document.CreateAsync(handle, DatabaseConstants.rooms, new SharpRoomCreateRequest());
 
-		await arangoDB.Document.CreateAsync(handle, DatabaseConstants.isObject, new SharpEdgeCreateRequest(room.Id, obj.Id));
-		await arangoDB.Document.CreateAsync(handle, DatabaseConstants.hasObjectOwner, new SharpEdgeCreateRequest(room.Id, creator.Id!));
+		await arangoDB.Document.CreateAsync(handle, DatabaseConstants.isObject,
+			new SharpEdgeCreateRequest(room.Id, obj.Id));
+		await arangoDB.Document.CreateAsync(handle, DatabaseConstants.hasObjectOwner,
+			new SharpEdgeCreateRequest(room.Id, creator.Id!));
 
 		return new DBRef(int.Parse(obj.Key), time);
 	}
@@ -136,17 +138,21 @@ public class ArangoDatabase(
 	{
 		var time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-		var obj = await arangoDB.Document.CreateAsync<SharpObjectCreateRequest, SharpObjectQueryResult>(handle, DatabaseConstants.objects,
+		var obj = await arangoDB.Document.CreateAsync<SharpObjectCreateRequest, SharpObjectQueryResult>(handle,
+			DatabaseConstants.objects,
 			new SharpObjectCreateRequest(name, DatabaseConstants.typeThing, [], time, time));
 		var thing = await arangoDB.Document.CreateAsync(handle, DatabaseConstants.things, new SharpThingCreateRequest([]));
 
-		await arangoDB.Document.CreateAsync(handle, DatabaseConstants.isObject, new SharpEdgeCreateRequest(thing.Id, obj.Id));
+		await arangoDB.Document.CreateAsync(handle, DatabaseConstants.isObject,
+			new SharpEdgeCreateRequest(thing.Id, obj.Id));
 
 		var idx = location.Id;
 
-		await arangoDB.Document.CreateAsync(handle, DatabaseConstants.atLocation, new SharpEdgeCreateRequest(thing.Id, idx));
+		await arangoDB.Document.CreateAsync(handle, DatabaseConstants.atLocation,
+			new SharpEdgeCreateRequest(thing.Id, idx));
 		await arangoDB.Document.CreateAsync(handle, DatabaseConstants.hasHome, new SharpEdgeCreateRequest(thing.Id, idx));
-		await arangoDB.Document.CreateAsync(handle, DatabaseConstants.hasObjectOwner, new SharpEdgeCreateRequest(thing.Id, creator.Id!));
+		await arangoDB.Document.CreateAsync(handle, DatabaseConstants.hasObjectOwner,
+			new SharpEdgeCreateRequest(thing.Id, creator.Id!));
 
 		return new DBRef(int.Parse(obj.Key), time);
 	}
@@ -155,21 +161,25 @@ public class ArangoDatabase(
 	{
 		var time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-		var obj = await arangoDB.Document.CreateAsync<SharpObjectCreateRequest, SharpObjectQueryResult>(handle, DatabaseConstants.objects,
+		var obj = await arangoDB.Document.CreateAsync<SharpObjectCreateRequest, SharpObjectQueryResult>(handle,
+			DatabaseConstants.objects,
 			new SharpObjectCreateRequest(name, DatabaseConstants.typeExit, [], time, time));
 		var exit = await arangoDB.Document.CreateAsync(handle, DatabaseConstants.exits, new SharpExitCreateRequest([]));
 
 		var idx = location.Object()!.Id!;
 
-		await arangoDB.Document.CreateAsync(handle, DatabaseConstants.isObject, new SharpEdgeCreateRequest(exit.Id, obj.Id));
+		await arangoDB.Document.CreateAsync(handle, DatabaseConstants.isObject,
+			new SharpEdgeCreateRequest(exit.Id, obj.Id));
 		await arangoDB.Document.CreateAsync(handle, DatabaseConstants.hasHome, new SharpEdgeCreateRequest(exit.Id, idx));
-		await arangoDB.Document.CreateAsync(handle, DatabaseConstants.hasObjectOwner, new SharpEdgeCreateRequest(exit.Id, idx));
+		await arangoDB.Document.CreateAsync(handle, DatabaseConstants.hasObjectOwner,
+			new SharpEdgeCreateRequest(exit.Id, idx));
 
 		return new DBRef(int.Parse(obj.Key), time);
 	}
 
 	public AnyOptionalSharpObject GetObjectNode(DBRef dbref)
 		=> GetObjectNodeAsync(dbref).Result;
+
 	public AnyOptionalSharpObject GetObjectNode(string dbId)
 		=> GetObjectNodeAsync(dbId).Result;
 
@@ -180,6 +190,24 @@ public class ArangoDatabase(
 	private IEnumerable<SharpObjectFlag> GetFlags(string id)
 		=> arangoDB.Query.ExecuteAsync<SharpObjectFlag>(handle,
 			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphFlags} RETURN v").Result;
+
+	private async Task<IEnumerable<SharpAttributeFlag>> GetAttributeFlagsAsync(string id)
+	{
+		var result = await arangoDB.Query.ExecuteAsync<SharpAttributeFlagQueryResult>(handle,
+			$"FOR v in 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.graphAttributeFlags} RETURN v",
+			new Dictionary<string, object>() { { "startVertex", id } });
+		return result.Select(x =>
+			new SharpAttributeFlag()
+			{
+				Name = x.Name,
+				Symbol = x.Symbol,
+				System = x.System,
+				Id = x.Id
+			});
+	}
+
+	private IEnumerable<SharpAttributeFlag> GetAttributeFlags(string id) =>
+		GetAttributeFlagsAsync(id).Result;
 
 	private IEnumerable<SharpAttribute> GetAttributes(string id)
 	{
@@ -201,7 +229,7 @@ public class ArangoDatabase(
 
 		var sharpAttributes = sharpAttributeResults.Select(x => new SharpAttribute()
 		{
-			Flags = x.Flags,
+			Flags = () => GetAttributeFlags(x.Id),
 			Name = x.Name,
 			LongName = x.LongName,
 			Owner = () => GetAttributeOwner(x.Id),
@@ -271,7 +299,8 @@ public class ArangoDatabase(
 
 	public async Task<AnyOptionalSharpObject> GetObjectNodeAsync(DBRef dbref)
 	{
-		var obj = await arangoDB.Document.GetAsync<SharpObjectQueryResult>(handle, DatabaseConstants.objects, dbref.Number.ToString());
+		var obj = await arangoDB.Document.GetAsync<SharpObjectQueryResult>(handle, DatabaseConstants.objects,
+			dbref.Number.ToString());
 
 		if (obj == null) return new None();
 		if (dbref.CreationMilliseconds != null && obj.CreationTime != dbref.CreationMilliseconds) return new None();
@@ -302,10 +331,19 @@ public class ArangoDatabase(
 
 		return obj.Type switch
 		{
-			DatabaseConstants.typeThing => new SharpThing { Id = id, Object = convertObject, Location = () => GetLocation(id), Home = () => GetHome(id) },
-			DatabaseConstants.typePlayer => new SharpPlayer { Id = id, Object = convertObject, Aliases = res.Aliases.ToObject<string[]>(), Location = () => GetLocation(id), Home = () => GetHome(id), PasswordHash = res.PasswordHash },
+			DatabaseConstants.typeThing => new SharpThing
+				{ Id = id, Object = convertObject, Location = () => GetLocation(id), Home = () => GetHome(id) },
+			DatabaseConstants.typePlayer => new SharpPlayer
+			{
+				Id = id, Object = convertObject, Aliases = res.Aliases.ToObject<string[]>(), Location = () => GetLocation(id),
+				Home = () => GetHome(id), PasswordHash = res.PasswordHash
+			},
 			DatabaseConstants.typeRoom => new SharpRoom { Id = id, Object = convertObject },
-			DatabaseConstants.typeExit => new SharpExit { Id = id, Object = convertObject, Aliases = res.Aliases.ToObject<string[]>(), Location = () => GetLocation(id), Home = () => GetHome(id) },
+			DatabaseConstants.typeExit => new SharpExit
+			{
+				Id = id, Object = convertObject, Aliases = res.Aliases.ToObject<string[]>(), Location = () => GetLocation(id),
+				Home = () => GetHome(id)
+			},
 			_ => throw new ArgumentException($"Invalid Object Type found: '{obj.Type}'"),
 		};
 	}
@@ -339,7 +377,8 @@ public class ArangoDatabase(
 			Type = obj.Type,
 			CreationTime = obj.CreationTime,
 			ModifiedTime = obj.ModifiedTime,
-			Locks = ImmutableDictionary<string, string>.Empty, // FIX: ((Dictionary<string, string>?)obj.Locks ?? []).ToImmutableDictionary(),
+			Locks = ImmutableDictionary<string, string>
+				.Empty, // FIX: ((Dictionary<string, string>?)obj.Locks ?? []).ToImmutableDictionary(),
 			Flags = () => GetFlags(objId),
 			Powers = () => GetPowers(objId),
 			Attributes = () => GetAttributes(objId),
@@ -349,17 +388,27 @@ public class ArangoDatabase(
 
 		return collection switch
 		{
-			DatabaseConstants.things => new SharpThing { Id = id, Object = convertObject, Location = () => GetLocation(id), Home = () => GetHome(id) },
-			DatabaseConstants.players => new SharpPlayer { Id = id, Object = convertObject, Aliases = res.Aliases.ToObject<string[]>(), Location = () => GetLocation(id), Home = () => GetHome(id), PasswordHash = res.PasswordHash },
+			DatabaseConstants.things => new SharpThing
+				{ Id = id, Object = convertObject, Location = () => GetLocation(id), Home = () => GetHome(id) },
+			DatabaseConstants.players => new SharpPlayer
+			{
+				Id = id, Object = convertObject, Aliases = res.Aliases.ToObject<string[]>(), Location = () => GetLocation(id),
+				Home = () => GetHome(id), PasswordHash = res.PasswordHash
+			},
 			DatabaseConstants.rooms => new SharpRoom { Id = id, Object = convertObject },
-			DatabaseConstants.exits => new SharpExit { Id = id, Object = convertObject, Aliases = res.Aliases.ToObject<string[]>(), Location = () => GetLocation(id), Home = () => GetHome(id) },
+			DatabaseConstants.exits => new SharpExit
+			{
+				Id = id, Object = convertObject, Aliases = res.Aliases.ToObject<string[]>(), Location = () => GetLocation(id),
+				Home = () => GetHome(id)
+			},
 			_ => throw new ArgumentException($"Invalid Object Type found: '{obj.Type}'"),
 		};
 	}
 
 	public async Task<SharpObject?> GetBaseObjectNodeAsync(DBRef dbref)
 	{
-		var obj = await arangoDB.Document.GetAsync<SharpObjectQueryResult>(handle, DatabaseConstants.objects, dbref.Number.ToString());
+		var obj = await arangoDB.Document.GetAsync<SharpObjectQueryResult>(handle, DatabaseConstants.objects,
+			dbref.Number.ToString());
 
 		if (dbref.CreationMilliseconds.HasValue && obj.CreationTime != dbref.CreationMilliseconds)
 		{
@@ -400,7 +449,8 @@ public class ArangoDatabase(
 
 		// OPTIONS { indexHint: "inverted_index_name", forceIndexHint: true }
 		// This doesn't seem like it can be done on a GRAPH query?
-		const string query = $"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.graphAttributes} FILTER v.LongName LIKE @pattern RETURN v";
+		const string query =
+			$"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.graphAttributes} FILTER v.LongName LIKE @pattern RETURN v";
 
 		var result2 = await arangoDB.Query.ExecuteAsync<dynamic>(handle, query, new Dictionary<string, object>()
 		{
@@ -410,7 +460,7 @@ public class ArangoDatabase(
 
 		return result2.Select(x => new SharpAttribute()
 		{
-			Flags = x.Flags,
+			Flags = () => GetAttributeFlags(x._id),
 			Name = x.Name,
 			Value = x.Value,
 			LongName = x.LongName,
@@ -431,7 +481,8 @@ public class ArangoDatabase(
 		}
 
 		// TODO: Create an Inverted Index on LongName.
-		var query = $"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.graphAttributes} FILTER v.LongName =~ @pattern RETURN v";
+		var query =
+			$"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.graphAttributes} FILTER v.LongName =~ @pattern RETURN v";
 
 		var result2 = await arangoDB.Query.ExecuteAsync<dynamic>(handle, query, new Dictionary<string, object>()
 		{
@@ -441,7 +492,7 @@ public class ArangoDatabase(
 
 		return result2.Select(x => new SharpAttribute()
 		{
-			Flags = x.Flags,
+			Flags = () => GetAttributeFlags(x._id),
 			Name = x.Name,
 			Value = x.Value,
 			LongName = x.LongName,
@@ -462,19 +513,31 @@ public class ArangoDatabase(
 	{
 		var startVertex = $"{DatabaseConstants.objects}/{dbref.Number}";
 
-		const string let = $"LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.graphObjects} RETURN v)";
-		const string query = $"{let} FOR v,e,p IN 1..@max OUTBOUND start GRAPH {DatabaseConstants.graphAttributes} PRUNE condition = NTH(@attr,LENGTH(p.edges)-1) != v.Name FILTER !condition RETURN v";
+		const string let =
+			$"LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.graphObjects} RETURN v)";
+		const string query =
+			$"{let} FOR v,e,p IN 1..@max OUTBOUND start GRAPH {DatabaseConstants.graphAttributes} PRUNE condition = NTH(@attr,LENGTH(p.edges)-1) != v.Name FILTER !condition RETURN v";
 
-		var result = await arangoDB.Query.ExecuteAsync<SharpAttributeQueryResult>(handle, query, new Dictionary<string, object>()
-		{
-			{ "attr", attribute.Select(x => x.ToUpper()) },
-			{ "startVertex", startVertex },
-			{ "max", attribute.Length }
-		});
+		var result = await arangoDB.Query.ExecuteAsync<SharpAttributeQueryResult>(handle, query,
+			new Dictionary<string, object>()
+			{
+				{ "attr", attribute.Select(x => x.ToUpper()) },
+				{ "startVertex", startVertex },
+				{ "max", attribute.Length }
+			});
 
 		if (result.Count < attribute.Length) return null;
 
-		return result.Select(x => new SharpAttribute() { Name = x.Name, Flags = x.Flags, Value = x.Value, LongName = x.LongName }).ToArray();
+		return result.Select(x => new SharpAttribute()
+		{
+			Name = x.Name, 
+			Flags = () => GetAttributeFlags(x.Id), 
+			Value = x.Value,
+			LongName = x.LongName,
+			Leaves = () => GetAttributes(x.Id),
+			Owner = () => GetAttributeOwner(x.Id),
+			SharpAttributeEntry = () => null // TODO: FIX
+		}).ToArray();
 	}
 
 	public async Task<bool> SetAttributeAsync(DBRef dbref, string[] attribute, string value, SharpPlayer owner)
@@ -482,8 +545,10 @@ public class ArangoDatabase(
 		ArgumentException.ThrowIfNullOrEmpty(owner?.Id);
 
 		var startVertex = $"{DatabaseConstants.objects}/{dbref.Number}";
-		const string let1 = $"LET start = (FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.graphObjects} RETURN v)";
-		const string let2 = $"LET foundAttributes = (FOR v,e,p IN 1..@max OUTBOUND FIRST(start) GRAPH {DatabaseConstants.graphAttributes} PRUNE condition = NTH(@attr,LENGTH(p.edges)-1) != v.Name FILTER !condition RETURN v)";
+		const string let1 =
+			$"LET start = (FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.graphObjects} RETURN v)";
+		const string let2 =
+			$"LET foundAttributes = (FOR v,e,p IN 1..@max OUTBOUND FIRST(start) GRAPH {DatabaseConstants.graphAttributes} PRUNE condition = NTH(@attr,LENGTH(p.edges)-1) != v.Name FILTER !condition RETURN v)";
 		const string query = $"{let1} {let2} RETURN APPEND(start, foundAttributes)";
 
 		var result = await arangoDB.Query.ExecuteAsync<dynamic[]>(handle, query, new Dictionary<string, object>
@@ -512,14 +577,17 @@ public class ArangoDatabase(
 
 		foreach (var nextAttr in remaining.Select((attrName, i) => (value: attrName, i)))
 		{
-			var newOne = await arangoDB.Document.CreateAsync<SharpAttributeCreateRequest, SharpAttributeQueryResult>(transactionHandle, DatabaseConstants.attributes,
+			var newOne = await arangoDB.Document.CreateAsync<SharpAttributeCreateRequest, SharpAttributeQueryResult>(
+				transactionHandle, DatabaseConstants.attributes,
 				new SharpAttributeCreateRequest(nextAttr.value.ToUpper(), [], string.Empty,
-				string.Join('`', remaining.Take(nextAttr.i + 1).Select(x => x.ToUpper()))));
+					string.Join('`', remaining.Take(nextAttr.i + 1).Select(x => x.ToUpper()))));
 
-			await arangoDB.Document.CreateAsync<SharpEdgeCreateRequest, SharpEdgeQueryResult>(transactionHandle, DatabaseConstants.hasAttribute,
+			await arangoDB.Document.CreateAsync<SharpEdgeCreateRequest, SharpEdgeQueryResult>(transactionHandle,
+				DatabaseConstants.hasAttribute,
 				new SharpEdgeCreateRequest(lastId, newOne.Id));
 
-			await arangoDB.Document.CreateAsync<SharpEdgeCreateRequest, SharpEdgeQueryResult>(transactionHandle, DatabaseConstants.hasAttributeOwner,
+			await arangoDB.Document.CreateAsync<SharpEdgeCreateRequest, SharpEdgeQueryResult>(transactionHandle,
+				DatabaseConstants.hasAttributeOwner,
 				new SharpEdgeCreateRequest(newOne.Id, owner.Object.Id!));
 
 			lastId = newOne.Id;
@@ -532,7 +600,8 @@ public class ArangoDatabase(
 			LongName = string.Join("`", attribute.Select(x => x.ToUpper()))
 		}, mergeObjects: true);
 
-		await arangoDB.Document.CreateAsync<SharpEdgeCreateRequest, SharpEdgeQueryResult>(transactionHandle, DatabaseConstants.hasAttributeOwner,
+		await arangoDB.Document.CreateAsync<SharpEdgeCreateRequest, SharpEdgeQueryResult>(transactionHandle,
+			DatabaseConstants.hasAttributeOwner,
 			new SharpEdgeCreateRequest(lastId, owner.Id!), mergeObjects: true);
 
 		await arangoDB.Transaction.CommitAsync(transactionHandle);
@@ -549,7 +618,6 @@ public class ArangoDatabase(
 
 	public Task<bool> WipeAttributeAsync(DBRef dbref, string[] attribute)
 	{
-
 		// Wipe a list of attributes. We assume the calling code figured out the permissions part.
 
 		throw new NotImplementedException();
@@ -557,7 +625,6 @@ public class ArangoDatabase(
 
 	public Task<IEnumerable<AnySharpContent>> GetNearbyObjectsAsync(DBRef obj)
 	{
-
 		throw new NotImplementedException();
 	}
 
@@ -573,7 +640,8 @@ public class ArangoDatabase(
 		if (baseObject.IsT4) return new None();
 
 		var variableDepth = depth == -1 ? "0" : $"0..{depth}";
-		var locationQuery = $"FOR v IN {variableDepth} OUTBOUND @startVertex GRAPH {DatabaseConstants.graphLocations} RETURN v";
+		var locationQuery =
+			$"FOR v IN {variableDepth} OUTBOUND @startVertex GRAPH {DatabaseConstants.graphLocations} RETURN v";
 		var query = await arangoDB.Query.ExecuteAsync<dynamic>(handle, locationQuery, new Dictionary<string, object>()
 		{
 			{ "startVertex", baseObject.Id()! }
@@ -589,18 +657,20 @@ public class ArangoDatabase(
 		return trueLocation;
 	}
 
-	public async Task<AnySharpContainer> GetLocationAsync(AnySharpObject obj, int depth = 1) => (await GetLocationAsync(obj.Object().DBRef, depth)).WithoutNone();
+	public async Task<AnySharpContainer> GetLocationAsync(AnySharpObject obj, int depth = 1) =>
+		(await GetLocationAsync(obj.Object().DBRef, depth)).WithoutNone();
 
 	public async Task<IEnumerable<AnySharpContent>?> GetContentsAsync(DBRef obj)
 	{
 		var baseObject = await GetObjectNodeAsync(obj);
 		if (baseObject.IsT4) return null;
 
-		const string locationQuery = $"FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.graphLocations} RETURN v";
+		const string locationQuery =
+			$"FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.graphLocations} RETURN v";
 		var query = await arangoDB.Query.ExecuteAsync<dynamic>(handle, $"{locationQuery}",
 			new Dictionary<string, object>
 			{
-				{"startVertex", baseObject.Object()!.Id! }
+				{ "startVertex", baseObject.Object()!.Id! }
 			});
 		var result = query
 			.Select(x => (string)x._id)
@@ -622,11 +692,12 @@ public class ArangoDatabase(
 
 		if (startVertex == null) return null;
 
-		const string locationQuery = $"FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.graphLocations} RETURN v";
+		const string locationQuery =
+			$"FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.graphLocations} RETURN v";
 		var query = await arangoDB.Query.ExecuteAsync<dynamic>(handle, $"{locationQuery}",
 			new Dictionary<string, object>
 			{
-				{"startVertex", startVertex! }
+				{ "startVertex", startVertex! }
 			});
 
 		string[] ids = query.Select(x => (string)x._id).ToArray();
@@ -634,12 +705,12 @@ public class ArangoDatabase(
 
 
 		var result = objects.Select(x => x.Match<AnySharpContent>(
-				player => player,
-				room => throw new Exception("Invalid Contents found"),
-				exit => exit,
-				thing => thing,
-				none => throw new Exception("Invalid Contents found")
-			));
+			player => player,
+			room => throw new Exception("Invalid Contents found"),
+			exit => exit,
+			thing => thing,
+			none => throw new Exception("Invalid Contents found")
+		));
 
 		return result;
 	}
@@ -653,7 +724,7 @@ public class ArangoDatabase(
 		var query = await arangoDB.Query.ExecuteAsync<dynamic>(handle, $"{exitQuery}",
 			new Dictionary<string, object>
 			{
-				{"startVertex", baseObject.Object()!.Id! }
+				{ "startVertex", baseObject.Object()!.Id! }
 			});
 		var result = query
 			.Select(x => (string)x._id)
@@ -678,7 +749,7 @@ public class ArangoDatabase(
 		var query = await arangoDB.Query.ExecuteAsync<dynamic>(handle, $"{exitQuery}",
 			new Dictionary<string, object>
 			{
-				{"startVertex", startVertex! }
+				{ "startVertex", startVertex! }
 			});
 		var result = query
 			.Select(x => (string)x._id)
@@ -697,7 +768,8 @@ public class ArangoDatabase(
 	public async Task<IEnumerable<SharpPlayer>> GetPlayerByNameAsync(string name)
 	{
 		// TODO: Look up by Alias.
-		var query = await arangoDB.Query.ExecuteAsync<dynamic>(handle, $"FOR v IN {DatabaseConstants.objects} FILTER v.Type == @type && v.Name == @name RETURN v",
+		var query = await arangoDB.Query.ExecuteAsync<dynamic>(handle,
+			$"FOR v IN {DatabaseConstants.objects} FILTER v.Type == @type && v.Name == @name RETURN v",
 			bindVars: new Dictionary<string, object>
 			{
 				{ "name", name },

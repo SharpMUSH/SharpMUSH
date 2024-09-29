@@ -128,12 +128,15 @@ public class SharpMUSHBooleanExpressionVisitor(ISharpDatabase database, Paramete
 
 		Expression<Func<DBRef, bool>> expr = dbref =>
 			database
-				.GetAttributeAsync(dbref, new string[] { attribute }) // TODO: PERMISSIONS - use the Service instead.
+				.GetAttributeAsync(dbref, attribute) // TODO: PERMISSIONS - use the Service instead.
 				.ConfigureAwait(false).GetAwaiter().GetResult()!
-				.FirstOrDefault(new SharpAttribute() { 
+				.FirstOrDefault(new SharpAttribute { 
 					Name = string.Empty,
-					Flags = defaultStringArrayValue,
-					Value = Guid.NewGuid().ToString() }).Value == value; 
+					Flags = Enumerable.Empty<SharpAttributeFlag>,
+					Value = Guid.NewGuid().ToString(),
+					LongName = string.Empty,
+					Leaves = Enumerable.Empty<SharpAttribute>,
+				}).Value == value; 
 
 		return Expression.Invoke(expr, gated);
 	}
