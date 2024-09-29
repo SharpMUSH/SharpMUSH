@@ -1,7 +1,10 @@
 ﻿using MoreLinq.Extensions;
 using SharpMUSH.Implementation.Definitions;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -89,6 +92,7 @@ public partial class Functions
 	public static async ValueTask<CallState> Iter(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var listArg = (await parser.CurrentState.Arguments[0].ParsedMessage())!;
+
 		// TODO: Evaluate delim and sep.
 		var delim = await NoParseDefaultEvaluatedArgument(parser, 2, MModule.single(" "));
 		var sep = await NoParseDefaultEvaluatedArgument(parser, 3, delim);
@@ -175,10 +179,76 @@ public partial class Functions
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "MAP", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> map(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "map", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
+	public static async ValueTask<CallState> Map(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		// Arg0: Object/Attribute
+		// Arg1: List
+		// Arg2: Delim
+		// Arg3: Sep
+
+		var executor = parser.CurrentState.ExecutorObject(parser.Database).Known();
+		var enactor = parser.CurrentState.EnactorObject(parser.Database).Known();
+		var objAttr = HelperFunctions.SplitDBRefAndAttr(MModule.plainText(parser.CurrentState.Arguments[0].Message!));
+		if (objAttr.IsT1 && objAttr.AsT1 == false)
+		{
+			return new CallState(Errors.ErrorObjectAttributeString);
+		}
+
+		var (dbref, attrName) = objAttr.AsT0;
+
+		var locate = await parser.LocateService.Locate(
+			parser,
+			enactor,
+			executor,
+			dbref,
+			LocateFlags.All);
+
+		if (locate.IsError)
+		{
+			await parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, locate.AsError.Value);
+		}
+
+		if (!locate.IsValid())
+		{
+			return CallState.Empty;
+		}
+
+		var located = locate.WithoutError().WithoutNone();
+
+		var maybeAttr = await parser.AttributeService.GetAttributeAsync(
+			executor,
+			located,
+			attrName,
+			IAttributeService.AttributeMode.Execute,
+			true);
+
+		if (maybeAttr.IsNone)
+		{
+			return new CallState(Errors.ErrorNoSuchAttribute);
+		}
+
+		if (maybeAttr.IsError)
+		{
+			return new CallState(maybeAttr.AsError.Value);
+		}
+
+		var attr = maybeAttr.AsAttribute;
+		var attrValue = attr.Value;
+		var delim = await NoParseDefaultEvaluatedArgument(parser, 2, MModule.single(" "));
+		var sep = await NoParseDefaultEvaluatedArgument(parser, 3, delim);
+
+		var list = MModule.split2(delim, parser.CurrentState.Arguments[1].Message!);
+
+		var result = new List<MString>();
+		foreach (var item in list)
+		{
+			parser.Push(parser.CurrentState with { Arguments = [new CallState(item)] });
+			result.Add((await parser.FunctionParse(attrValue))!.Message!);
+			parser.Pop();
+		}
+
+		return new CallState(MModule.multipleWithDelimiter(sep, result));
 	}
 
 	[SharpFunction(Name = "MATCH", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]

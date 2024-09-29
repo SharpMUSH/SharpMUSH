@@ -14,6 +14,8 @@ public static class Errors
 	public const string ErrorPerm = "#-1 PERMISSION DENIED";
 	public const string ErrorAttrPermissions = "#-1 NO PERMISSION TO GET ATTRIBUTE";
 	public const string ErrorAttrSetPermissions = "#-1 NO PERMISSION TO SET ATTRIBUTE";
+	public const string ErrorObjectAttributeString = "#-1 INVALID OBJECT/ATTRIBUTE VALUE";
+	public const string ErrorNoSuchAttribute = "#-1 NO SUCH ATTRIBUTE";
 	public const string ErrorMatch = "#-1 NO MATCH";
 	public const string ErrorNotVisible = "#-1 NO SUCH OBJECT VISIBLE";
 	public const string ErrorDisabled = "#-1 FUNCTION DISABLED";
@@ -29,5 +31,6 @@ public static class Errors
 	public const string ErrorGotUnEvenArgs = "#-1 FUNCTION ({0}) EXPECTS AN EVEN NUMBER OF ARGUMENTS";
 	public const string ErrorWrongArgumentsRange = "#-1 FUNCTION ({0}) EXPECTS AT LEAST {1} ARGUMENTS AND AT MOST {2} BUT GOT {3}";
 	public const string ErrorBadArgumentFormat = "#-1 BAD ARGUMENT FORMAT TO {0}";
-	public const string ErrorAmbiguous = "#-2 I DON'T KNOW WHICH ONE YOU MEAN";		
+	public const string ErrorAmbiguous = "#-2 I DON'T KNOW WHICH ONE YOU MEAN";
+	public const string NothingToEvaluate = "#-1 NOTHING TO EVALUATE";
 }

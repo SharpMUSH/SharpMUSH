@@ -8,7 +8,7 @@ public class SharpAttribute
 
 	public required Func<IEnumerable<SharpAttributeFlag>> Flags { get; set; }
 
-	public string Value { get; set; } = string.Empty;
+	public MString Value { get; set; } = MModule.empty();
 
 	// Computed Value
 	[JsonIgnore]

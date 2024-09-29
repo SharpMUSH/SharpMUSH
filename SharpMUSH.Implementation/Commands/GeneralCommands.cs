@@ -129,24 +129,27 @@ public static partial class Commands
 		var location = viewingObject.Key;
 		var contentKeys = contents.Select(x => x.Object()!.Name).ToList();
 		var exitKeys = await parser.Database.GetExitsAsync(viewingObject.DBRef) ?? [];
-		var description = (await parser.AttributeService.GetAttributeAsync(enactor, viewing.Known(), "DESCRIBE", Library.Services.IAttributeService.AttributeMode.Read, false))
+		var description = (await parser.AttributeService.GetAttributeAsync(enactor, viewing.Known(), "DESCRIBE",
+				Library.Services.IAttributeService.AttributeMode.Read, false))
 			.Match(
-				attr => string.IsNullOrEmpty(attr.Value)
-					? "There is nothing to see here"
+				attr => MModule.getLength(attr.Value) == 0
+					? MModule.single("There is nothing to see here")
 					: attr.Value,
-				none => "There is nothing to see here",
-				error => string.Empty);
+				none => MModule.single("There is nothing to see here"),
+				error => MModule.empty());
 
 		// TODO: Pass value into NAMEFORMAT
-		await parser.NotifyService.Notify(enactor, $"{MModule.markupSingle2(Ansi.Create(foreground: StringExtensions.rgb(Color.White)), MModule.single(name))}" +
+		await parser.NotifyService.Notify(enactor,
+			$"{MModule.markupSingle2(Ansi.Create(foreground: StringExtensions.rgb(Color.White)), MModule.single(name))}" +
 			$"(#{viewingObject.DBRef.Number}{string.Join(string.Empty, viewingObject.Flags().Select(x => x.Symbol))})");
 		// TODO: Pass value into DESCFORMAT
-		await parser.NotifyService.Notify(enactor, description);
+		await parser.NotifyService.Notify(enactor, description.ToString());
 		// parser.NotifyService.Notify(enactor, $"Location: {location}");
 		// TODO: Pass value into CONFORMAT
 		await parser.NotifyService.Notify(enactor, $"Contents: {string.Join(Environment.NewLine, contentKeys)}");
 		// TODO: Pass value into EXITFORMAT
-		await parser.NotifyService.Notify(enactor, $"Exits: {string.Join(Environment.NewLine, string.Join(", ", exitKeys.Select(x => x.Object)))}");
+		await parser.NotifyService.Notify(enactor,
+			$"Exits: {string.Join(Environment.NewLine, string.Join(", ", exitKeys.Select(x => x.Object)))}");
 
 		return new CallState(viewingObject.DBRef.ToString());
 	}
@@ -191,20 +194,22 @@ public static partial class Commands
 		var location = obj.Key;
 		var contentKeys = contents!.Select(x => x.Object()!.Name);
 		var exitKeys = (await parser.Database.GetExitsAsync(obj.DBRef))?.FirstOrDefault();
-		var description = (await parser.AttributeService.GetAttributeAsync(enactor, viewing.Known(), "DESCRIBE", Library.Services.IAttributeService.AttributeMode.Read, false))
+		var description = (await parser.AttributeService.GetAttributeAsync(enactor, viewing.Known(), "DESCRIBE",
+				Library.Services.IAttributeService.AttributeMode.Read, false))
 			.Match(
-				attr => string.IsNullOrEmpty(attr.Value)
-					? "There is nothing to see here"
+				attr => MModule.getLength(attr.Value) == 0
+					? MModule.single("There is nothing to see here")
 					: attr.Value,
-				none => "There is nothing to see here",
-				error => string.Empty);
+				none => MModule.single("There is nothing to see here"),
+				error => MModule.empty());
 
 		await parser.NotifyService.Notify(enactor, $"{name.Hilight()}" +
-																				 $"(#{obj.DBRef.Number}{string.Join(string.Empty, obj.Flags().Select(x => x.Symbol))})");
-		await parser.NotifyService.Notify(enactor, $"Type: {obj.Type} Flags: {string.Join(" ", obj.Flags().Select(x => x.Name))}");
-		await parser.NotifyService.Notify(enactor, description);
+		                                           $"(#{obj.DBRef.Number}{string.Join(string.Empty, obj.Flags().Select(x => x.Symbol))})");
+		await parser.NotifyService.Notify(enactor,
+			$"Type: {obj.Type} Flags: {string.Join(" ", obj.Flags().Select(x => x.Name))}");
+		await parser.NotifyService.Notify(enactor, description.ToString());
 		await parser.NotifyService.Notify(enactor, $"Owner: {ownerName.Hilight()}" +
-																							 $"(#{obj.DBRef.Number}{string.Join(string.Empty, ownerObj.Flags().Select(x => x.Symbol))})");
+		                                           $"(#{obj.DBRef.Number}{string.Join(string.Empty, ownerObj.Flags().Select(x => x.Symbol))})");
 		// TODO: Zone & Money
 		await parser.NotifyService.Notify(enactor, $"Parent: {obj.Parent()?.Name ?? "*NOTHING*"}");
 		// TODO: LOCK LIST
@@ -213,7 +218,8 @@ public static partial class Commands
 		// TODO: Warnings Checked
 
 		// TODO: Match proper date format: Mon Feb 26 18:05:10 2007
-		await parser.NotifyService.Notify(enactor, $"Created: {DateTimeOffset.FromUnixTimeMilliseconds(obj.CreationTime).ToString("F")}");
+		await parser.NotifyService.Notify(enactor,
+			$"Created: {DateTimeOffset.FromUnixTimeMilliseconds(obj.CreationTime).ToString("F")}");
 
 		var atrs = await parser.AttributeService.GetVisibleAttributesAsync(enactor, viewing.Known());
 
@@ -223,14 +229,16 @@ public static partial class Commands
 			{
 				// TODO: Symbols for Flags. Flags are not just strings!
 				await parser.NotifyService.Notify(enactor,
-					$"{attr.Name} [#{attr.Owner().Object.DBRef.Number}]: ".Hilight()
-					+ attr.Value);
+					MModule.concat(
+						$"{attr.Name} [#{attr.Owner().Object.DBRef.Number}]: "
+							.Hilight()
+						, attr.Value));
 			}
 		}
 
 		// TODO: Proper carry format.
 		await parser.NotifyService.Notify(enactor, $"Contents: {Environment.NewLine}" +
-																							 $"{string.Join(Environment.NewLine, contentKeys)}");
+		                                           $"{string.Join(Environment.NewLine, contentKeys)}");
 
 		if (!viewing.IsRoom)
 		{
@@ -261,7 +269,8 @@ public static partial class Commands
 		foreach (var target in nameListTargets)
 		{
 			var targetString = target.Match(dbref => dbref.ToString(), str => str);
-			var locateTarget = await parser.LocateService.LocateAndNotifyIfInvalid(parser, enactor, enactor, targetString, Library.Services.LocateFlags.All);
+			var locateTarget = await parser.LocateService.LocateAndNotifyIfInvalid(parser, enactor, enactor, targetString,
+				Library.Services.LocateFlags.All);
 
 			if (locateTarget.IsValid())
 			{

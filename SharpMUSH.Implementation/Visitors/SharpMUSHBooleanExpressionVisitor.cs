@@ -133,10 +133,10 @@ public class SharpMUSHBooleanExpressionVisitor(ISharpDatabase database, Paramete
 				.FirstOrDefault(new SharpAttribute { 
 					Name = string.Empty,
 					Flags = Enumerable.Empty<SharpAttributeFlag>,
-					Value = Guid.NewGuid().ToString(),
+					Value = MModule.single(Guid.NewGuid().ToString()),
 					LongName = string.Empty,
 					Leaves = Enumerable.Empty<SharpAttribute>,
-				}).Value == value; 
+				}).Value == MModule.single(value);
 
 		return Expression.Invoke(expr, gated);
 	}

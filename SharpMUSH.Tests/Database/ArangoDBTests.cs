@@ -72,18 +72,18 @@ public class ArangoDBTests : BaseUnitTest
 
 		var obj = await database!.GetObjectNodeAsync(playerOneDBRef);
 
-		await Assert.That(existingSingle!.Count()).IsEqualTo(1);
-		await Assert.That(existingLayer!.Count()).IsEqualTo(2);
-		await Assert.That(existingLeaf!.Count()).IsEqualTo(2);
-		await Assert.That(existingLeaf2!.Count()).IsEqualTo(2);
-		await Assert.That(existingDeep1!.Count()).IsEqualTo(3);
-		await Assert.That(existingDeep2!.Count()).IsEqualTo(3);
-		await Assert.That(existingSingle!.Last().Value).IsEqualTo("Single");
-		await Assert.That(existingLayer!.Last().Value).IsEqualTo("Layer");
-		await Assert.That(existingLeaf!.Last().Value).IsEqualTo("Leaf");
-		await Assert.That(existingLeaf2!.Last().Value).IsEqualTo("Leaf2");
-		await Assert.That(existingDeep1!.Last().Value).IsEqualTo("Deep1");
-		await Assert.That(existingDeep2!.Last().Value).IsEqualTo("Deeper");
+		await Assert.That(existingSingle!.Count).IsEqualTo(1);
+		await Assert.That(existingLayer!.Count).IsEqualTo(2);
+		await Assert.That(existingLeaf!.Count).IsEqualTo(2);
+		await Assert.That(existingLeaf2!.Count).IsEqualTo(2);
+		await Assert.That(existingDeep1!.Count).IsEqualTo(3);
+		await Assert.That(existingDeep2!.Count).IsEqualTo(3);
+		await Assert.That(existingSingle!.Last().Value.ToString()).IsEqualTo("Single");
+		await Assert.That(existingLayer!.Last().Value.ToString()).IsEqualTo("Layer");
+		await Assert.That(existingLeaf!.Last().Value.ToString()).IsEqualTo("Leaf");
+		await Assert.That(existingLeaf2!.Last().Value.ToString()).IsEqualTo("Leaf2");
+		await Assert.That(existingDeep1!.Last().Value.ToString()).IsEqualTo("Deep1");
+		await Assert.That(existingDeep2!.Last().Value.ToString()).IsEqualTo("Deeper");
 		await Assert.That(existingSingle!.Last().LongName).IsEqualTo("SINGLELAYER");
 		await Assert.That(existingLayer!.Last().LongName).IsEqualTo("TWO`LAYERS");
 		await Assert.That(existingLeaf!.Last().LongName).IsEqualTo("TWO`LEAVES");

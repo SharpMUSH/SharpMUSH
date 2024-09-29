@@ -233,7 +233,7 @@ public class ArangoDatabase(
 			Name = x.Name,
 			LongName = x.LongName,
 			Owner = () => GetAttributeOwner(x.Id),
-			Value = x.Value,
+			Value = MarkupString.MarkupStringModule.single(x.Value), // TODO: Compose and Decompose
 			Leaves = () => GetAttributes(x.Id),
 			SharpAttributeEntry = () => null // TODO: Fix
 		});
@@ -532,7 +532,7 @@ public class ArangoDatabase(
 		{
 			Name = x.Name, 
 			Flags = () => GetAttributeFlags(x.Id), 
-			Value = x.Value,
+			Value = MarkupString.MarkupStringModule.single(x.Value), // TODO: Compose and Decompose
 			LongName = x.LongName,
 			Leaves = () => GetAttributes(x.Id),
 			Owner = () => GetAttributeOwner(x.Id),

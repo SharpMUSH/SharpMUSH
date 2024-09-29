@@ -382,7 +382,7 @@ public partial class Functions
 		parser.Push(parser.CurrentState 
 			with { Arguments = parser.CurrentState.Arguments.Skip(1).ToList()});
 
-		var parsed = (await parser.FunctionParse(MModule.single(get.Value)))!;
+		var parsed = (await parser.FunctionParse(get.Value))!;
 
 		parser.Pop();
 
