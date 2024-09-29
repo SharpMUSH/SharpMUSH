@@ -40,7 +40,7 @@ public partial class Functions
 	[SharpFunction(Name = "FIRST", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> first(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var delim = DefaultArgument(parser.CurrentState.Arguments, 1, MModule.single(" "));
+		var delim = NoParseDefaultNoParseArgument(parser.CurrentState.Arguments, 1, MModule.single(" "));
 		var listArg = parser.CurrentState.Arguments[0].Message;
 		var list = MModule.split2(delim, listArg);
 		var first = list.FirstOrDefault() ?? MModule.empty();
@@ -88,11 +88,11 @@ public partial class Functions
 	[SharpFunction(Name = "iter", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.NoParse)]
 	public static async ValueTask<CallState> Iter(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var listArg = await parser.FunctionParse(parser.CurrentState.Arguments[0].Message!);
+		var listArg = (await parser.CurrentState.Arguments[0].ParsedMessage())!;
 		// TODO: Evaluate delim and sep.
-		var delim = await DefaultEvaluatedArgument(parser, 2, MModule.single(" "));
-		var sep = await DefaultEvaluatedArgument(parser, 3, delim);
-		var list = MModule.split2(delim, listArg!.Message);
+		var delim = await NoParseDefaultEvaluatedArgument(parser, 2, MModule.single(" "));
+		var sep = await NoParseDefaultEvaluatedArgument(parser, 3, delim);
+		var list = MModule.split2(delim, listArg);
 		var wrappedIteration = new IterationWrapper<MString> { Value = MModule.empty() };
 		var result = new List<MString>();
 
@@ -102,8 +102,8 @@ public partial class Functions
 		{
 			wrappedIteration.Value = item!;
 			wrappedIteration.Iteration++;
-			var parsed = await parser.FunctionParse(parser.CurrentState.Arguments[1].Message!);
-			result.Add(parsed!.Message!);
+			var parsed = await parser.CurrentState.Arguments[1].ParsedMessage()!;
+			result.Add(parsed!);
 
 			if (wrappedIteration.Break)
 			{
@@ -132,7 +132,7 @@ public partial class Functions
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.PositiveIntegersOnly)]
 	public static ValueTask<CallState> IBreak(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var iterDepth = DefaultArgument(parser.CurrentState.Arguments, 0, MModule.single("0"));
+		var iterDepth = NoParseDefaultNoParseArgument(parser.CurrentState.Arguments, 0, MModule.single("0"));
 		var iterNumber = int.Parse(iterDepth.ToString());
 		var maxCount = parser.CurrentState.IterationRegisters.Count;
 
@@ -161,7 +161,7 @@ public partial class Functions
 	[SharpFunction(Name = "last", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Last(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var delim = DefaultArgument(parser.CurrentState.Arguments, 1, MModule.single(" "));
+		var delim = NoParseDefaultNoParseArgument(parser.CurrentState.Arguments, 1, MModule.single(" "));
 		var listArg = parser.CurrentState.Arguments[0].Message;
 		var list = MModule.split2(delim, listArg);
 		var last = list.LastOrDefault() ?? MModule.empty();
@@ -252,11 +252,11 @@ public partial class Functions
 	[SharpFunction(Name = "rest", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Rest(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var delim = DefaultArgument(parser.CurrentState.Arguments, 1, MModule.single(" "));
+		var delim = NoParseDefaultNoParseArgument(parser.CurrentState.Arguments, 1, MModule.single(" "));
 		var listArg = parser.CurrentState.Arguments[0].Message;
 		var list = MModule.split2(delim, listArg);
 		var rest = MModule.multipleWithDelimiter(delim, list.Skip(1));
-		
+
 		return ValueTask.FromResult(new CallState(rest));
 	}
 

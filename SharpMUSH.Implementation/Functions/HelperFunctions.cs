@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Globalization;
+using System.Text.RegularExpressions;
 using OneOf;
 using SharpMUSH.Implementation.Tools;
 using SharpMUSH.Library;
@@ -14,7 +15,7 @@ public partial class Functions
 	private static readonly Regex TimeSpanFormatMatchRegex = TimeSpanFormatMatch();
 	private static readonly Regex NameListPatternRegex = NameListPattern();
 
-	private static MString DefaultArgument(List<CallState> args, int item, MString defaultValue)
+	private static MString NoParseDefaultNoParseArgument(List<CallState> args, int item, MString defaultValue)
 	{
 		if (args.Count - 1 < item || string.IsNullOrWhiteSpace(args[item].Message?.ToString()))
 		{
@@ -23,28 +24,42 @@ public partial class Functions
 
 		return args[item].Message!;
 	}
-	
-	private static async ValueTask<MString> DefaultEvaluatedArgument(IMUSHCodeParser parser, int item, MString defaultValue)
+
+	private static async ValueTask<MString> NoParseDefaultEvaluatedArgument(IMUSHCodeParser parser, int item,
+		MString defaultValue)
 	{
 		var args = parser.CurrentState.Arguments;
-		if (args.Count - 1 < item || string.IsNullOrWhiteSpace(args[item].Message?.ToString()))
+		if (args.Count - 1 < item || MModule.getLength(args[item].Message!) == 0)
 		{
 			return defaultValue;
 		}
 
-		return (await parser.FunctionParse(args[item].Message!))!.Message!;
+		return (await args[item].ParsedMessage())!;
+	}
+	
+	private static async ValueTask<MString> EvaluatedDefaultEvaluatedArgument(IMUSHCodeParser parser, int item,
+		CallState defaultValue)
+	{
+		var args = parser.CurrentState.Arguments;
+		var parsedValue = (await args[item].ParsedMessage())!;
+		if (args.Count - 1 < item || MModule.getLength(parsedValue) == 0)
+		{
+			return (await defaultValue.ParsedMessage())!;
+		}
+
+		return parsedValue!;
 	}
 
 	private static ValueTask<CallState> AggregateDecimals(List<CallState> args,
 		Func<decimal, decimal, decimal> aggregateFunction) =>
 		ValueTask.FromResult<CallState>(new(args
 			.Select(x => decimal.Parse(MModule.plainText(x.Message)))
-			.Aggregate(aggregateFunction).ToString()));
+			.Aggregate(aggregateFunction).ToString(CultureInfo.InvariantCulture)));
 
 	private static ValueTask<CallState> AggregateIntegers(List<CallState> args, Func<int, int, int> aggregateFunction) =>
 		ValueTask.FromResult<CallState>(new(args
 			.Select(x => int.Parse(MModule.plainText(x.Message)))
-			.Aggregate(aggregateFunction).ToString()));
+			.Aggregate(aggregateFunction).ToString(CultureInfo.InvariantCulture)));
 
 	private static ValueTask<CallState> ValidateIntegerAndEvaluate(List<CallState> args,
 		Func<IEnumerable<int>, MString> aggregateFunction)

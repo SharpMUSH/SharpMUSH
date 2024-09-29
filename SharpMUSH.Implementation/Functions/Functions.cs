@@ -120,13 +120,21 @@ public static partial class Functions
 		}
 		else if (attribute.Flags.HasFlag(FunctionFlags.NoParse) && attribute.MaxArgs == 1)
 		{
-			return new CallState(MModule.substring(context.Start.StartIndex, context.Stop.StopIndex - context.Start.StartIndex + 1, source), contextDepth);
+			return new CallState(
+				MModule.substring(context.Start.StartIndex, context.Stop.StopIndex - context.Start.StartIndex + 1, source),
+				contextDepth,
+				null,
+				async () => (await visitor.VisitChildren(context) ?? CallState.Empty with {Depth = context.Depth()}).Message!);
 		}
 		else 
 		{
 			refinedArguments = args.Select(x => new CallState(stripAnsi
 					? MModule.plainText2(MModule.substring(x.Start.StartIndex, context.Stop?.StopIndex == null ? 0 : (x.Stop.StopIndex - x.Start.StartIndex + 1), source))
-					: MModule.substring(x.Start.StartIndex, context.Stop?.StopIndex == null ? 0 : (x.Stop.StopIndex - x.Start.StartIndex + 1), source), x.Depth()))
+					: MModule.substring(x.Start.StartIndex, context.Stop?.StopIndex == null ? 0 : (x.Stop.StopIndex - x.Start.StartIndex + 1), source), 
+					x.Depth(), null, 
+					async () => stripAnsi 
+						? (await visitor.VisitChildren(x))!.Message
+						: MModule.plainText2((await visitor.VisitChildren(x))!.Message)))
 				.DefaultIfEmpty(new CallState(MModule.empty(), context.Depth()))
 				.ToList();
 		}

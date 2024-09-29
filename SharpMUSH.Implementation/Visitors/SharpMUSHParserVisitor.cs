@@ -141,7 +141,11 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source) : Sh
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	public override ValueTask<CallState?> VisitSingleCommandArg([NotNull] SharpMUSHParser.SingleCommandArgContext context)
-		=> ValueTask.FromResult<CallState?>(new(null, context.Depth(), [MModule.substring(context.Start.StartIndex, context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source)]));
+		=> ValueTask.FromResult<CallState?>(new(
+			null, 
+			context.Depth(), 
+			[MModule.substring(context.Start.StartIndex, context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source)],
+			() => Task.FromResult<MString?>(null)));
 
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="SharpMUSHParser.eqsplitCommandArgs"/>.
@@ -157,7 +161,7 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source) : Sh
 		var baseArg = await base.VisitChildren(context.singleCommandArg());
 		var commaArgs = await base.VisitChildren(context.commaCommandArgs());
 		Log.Logger.Information("VisitEqsplitCommandArgs: C1: {Text} - C2: {Text2}", baseArg?.ToString(), commaArgs?.ToString());
-		return new(null, context.Depth(), [baseArg!.Message!, .. commaArgs?.Arguments ?? []]);
+		return new(null, context.Depth(), [baseArg!.Message!, .. commaArgs?.Arguments ?? []], () => Task.FromResult<MString?>(null));
 	}
 
 	/// <summary>
@@ -174,7 +178,7 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source) : Sh
 		var baseArg = await base.VisitChildren(context.singleCommandArg()[0]);
 		var rsArg = await base.VisitChildren(context.singleCommandArg()[1]);
 		Log.Logger.Information("VisitEqsplitCommand: C1: {Text} - C2: {Text2}", baseArg?.ToString(), rsArg?.ToString());
-		return new(null, context.Depth(), [baseArg!.Message!, rsArg!.Message!]);
+		return new(null, context.Depth(), [baseArg!.Message!, rsArg!.Message!], () => Task.FromResult<MString?>(null));
 	}
 
 	/// <summary>
@@ -189,7 +193,7 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source) : Sh
 	public override async ValueTask<CallState?> VisitCommaCommandArgs([NotNull] SharpMUSHParser.CommaCommandArgsContext context)
 	{
 		var children = await base.VisitChildren(context);
-		return new(null, context.Depth(), children!.Arguments);
+		return new(null, context.Depth(), children!.Arguments, () => Task.FromResult<MString?>(null));
 	}
 
 	public override async ValueTask<CallState?> VisitComplexSubstitutionSymbol([NotNull] ComplexSubstitutionSymbolContext context)
