@@ -267,6 +267,15 @@ module MarkupStringModule =
           let ed = indexes |> Seq.last
           substring start (ed - start) x
       )
+      
+  
+  let rec isMatch (input: MarkupString) (pattern: MarkupString) : bool =
+      let (|EmptyMarkupString|_|) a = if getLength a > 0 then Some () else None
+      let rec matchHelper (inputSection: MarkupString) (patternSection: MarkupString) (escaping: bool) =
+          match (inputSection, patternSection, escaping) with
+            (EmptyMarkupString,EmptyMarkupString,_) -> true
+            (_,_,_) -> false
+      matchHelper input pattern false
 
   [<TailCall>]
   let rec split (delimiter: string) (markupStr: MarkupString) : MarkupString[] =
