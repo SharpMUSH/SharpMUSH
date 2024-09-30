@@ -6,6 +6,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using System.Drawing;
 using CB = SharpMUSH.Implementation.Definitions.CommandBehavior;
+using StringExtensions = ANSILibrary.StringExtensions;
 
 namespace SharpMUSH.Implementation.Commands;
 
