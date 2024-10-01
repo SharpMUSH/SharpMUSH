@@ -38,7 +38,7 @@ public class PatternUnitTests
 	{
 		var result = MModule.getWildcardMatch(MModule.single(input), MModule.single(pattern));
 		await Assert
-			.That(result.Item2.ToString())
+			.That(result.Item2.First().ToString())
 			.IsEqualTo(expectedResult);
 	}
 	
@@ -50,7 +50,19 @@ public class PatternUnitTests
 	{
 		var result = MModule.getWildcardMatches(MModule.single(input), MModule.single(pattern));
 		await Assert
-			.That(result.First().Item2.ToString())
+			.That(result.First().Item2.First().ToString())
+			.IsEqualTo(expectedResult);
+	}
+	
+	[Test]
+	[Arguments("abc", "*", "abc")]
+	[Arguments("abcdefghi", "abc*ghi","def")]
+	[Arguments("abc*ghi", "abc\\*ghi", null)]
+	public async Task TestWildcardMatches2(string input, string pattern, string? expectedResult)
+	{
+		var result = MModule.getWildcardMatches(MModule.single(input), MModule.single(pattern));
+		await Assert
+			.That(result.First().Item2.Skip(1).FirstOrDefault()?.ToString())
 			.IsEqualTo(expectedResult);
 	}
 }
