@@ -1,4 +1,5 @@
-﻿using MoreLinq.Extensions;
+﻿using System.Text.RegularExpressions;
+using MoreLinq.Extensions;
 using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
@@ -250,6 +251,11 @@ public partial class Functions
 	[SharpFunction(Name = "MATCH", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> match(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var str = parser.CurrentState.Arguments[0].Message;
+		var globPattern = MModule.plainText(parser.CurrentState.Arguments[1].Message)!;
+		var regPattern = globPattern.GlobToRegex();
+		
+		
 		throw new NotImplementedException();
 	}
 
