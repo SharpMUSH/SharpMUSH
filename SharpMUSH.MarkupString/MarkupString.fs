@@ -328,7 +328,7 @@ module MarkupStringModule =
         (plainText input, newPattern)
         |> Regex.Match
         |> (fun value -> (value, value.Groups |> Seq.map (fun cap -> substring cap.Index cap.Length input)))
-
+    
     let isWildcardMatch (input: MarkupString) (pattern: MarkupString) : bool =
         let newPattern = getWildcardMatchAsRegex (pattern)
         (plainText input, newPattern) |> Regex.IsMatch

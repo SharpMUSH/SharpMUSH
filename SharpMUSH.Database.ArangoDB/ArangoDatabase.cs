@@ -530,8 +530,8 @@ public class ArangoDatabase(
 
 		return result.Select(x => new SharpAttribute()
 		{
-			Name = x.Name, 
-			Flags = () => GetAttributeFlags(x.Id), 
+			Name = x.Name,
+			Flags = () => GetAttributeFlags(x.Id),
 			Value = MarkupString.MarkupStringModule.single(x.Value), // TODO: Compose and Decompose
 			LongName = x.LongName,
 			Leaves = () => GetAttributes(x.Id),
@@ -543,6 +543,23 @@ public class ArangoDatabase(
 	public async Task<bool> SetAttributeAsync(DBRef dbref, string[] attribute, string value, SharpPlayer owner)
 	{
 		ArgumentException.ThrowIfNullOrEmpty(owner?.Id);
+
+		var transactionHandle = await arangoDB.Transaction.BeginAsync(handle, new ArangoTransaction
+		{
+			LockTimeout = DatabaseBehaviorConstants.TransactionTimeout,
+			WaitForSync = true,
+			AllowImplicit = false,
+			Collections = new ArangoTransactionScope
+			{
+				Write = [DatabaseConstants.attributes, DatabaseConstants.hasAttribute, DatabaseConstants.hasAttributeOwner],
+				Read =
+				[
+					DatabaseConstants.attributes, DatabaseConstants.hasAttribute, DatabaseConstants.objects,
+					DatabaseConstants.isObject, DatabaseConstants.players, DatabaseConstants.rooms, DatabaseConstants.things,
+					DatabaseConstants.exits
+				]
+			}
+		});
 
 		var startVertex = $"{DatabaseConstants.objects}/{dbref.Number}";
 		const string let1 =
@@ -565,30 +582,20 @@ public class ArangoDatabase(
 		var last = actualResult.Last();
 		string lastId = last._id;
 
-		var transactionHandle = await arangoDB.Transaction.BeginAsync(handle, new ArangoTransaction()
-		{
-			LockTimeout = DatabaseBehaviorConstants.TransactionTimeout,
-			WaitForSync = true,
-			Collections = new ArangoTransactionScope
-			{
-				Write = [DatabaseConstants.attributes, DatabaseConstants.hasAttribute, DatabaseConstants.hasAttributeOwner]
-			}
-		});
-
 		foreach (var nextAttr in remaining.Select((attrName, i) => (value: attrName, i)))
 		{
 			var newOne = await arangoDB.Document.CreateAsync<SharpAttributeCreateRequest, SharpAttributeQueryResult>(
 				transactionHandle, DatabaseConstants.attributes,
 				new SharpAttributeCreateRequest(nextAttr.value.ToUpper(), [], string.Empty,
-					string.Join('`', remaining.Take(nextAttr.i + 1).Select(x => x.ToUpper()))));
+					string.Join('`', remaining.Take(nextAttr.i + 1).Select(x => x.ToUpper()))), waitForSync: true);
 
 			await arangoDB.Document.CreateAsync<SharpEdgeCreateRequest, SharpEdgeQueryResult>(transactionHandle,
 				DatabaseConstants.hasAttribute,
-				new SharpEdgeCreateRequest(lastId, newOne.Id));
+				new SharpEdgeCreateRequest(lastId, newOne.Id), waitForSync: true);
 
 			await arangoDB.Document.CreateAsync<SharpEdgeCreateRequest, SharpEdgeQueryResult>(transactionHandle,
 				DatabaseConstants.hasAttributeOwner,
-				new SharpEdgeCreateRequest(newOne.Id, owner.Object.Id!));
+				new SharpEdgeCreateRequest(newOne.Id, owner.Object.Id!), waitForSync: true);
 
 			lastId = newOne.Id;
 		}
@@ -598,11 +605,11 @@ public class ArangoDatabase(
 			Key = lastId!.Split("/").Last(),
 			Value = value,
 			LongName = string.Join("`", attribute.Select(x => x.ToUpper()))
-		}, mergeObjects: true);
+		}, mergeObjects: true, waitForSync: true);
 
 		await arangoDB.Document.CreateAsync<SharpEdgeCreateRequest, SharpEdgeQueryResult>(transactionHandle,
 			DatabaseConstants.hasAttributeOwner,
-			new SharpEdgeCreateRequest(lastId, owner.Id!), mergeObjects: true);
+			new SharpEdgeCreateRequest(lastId, owner.Id!), mergeObjects: true, waitForSync: true);
 
 		await arangoDB.Transaction.CommitAsync(transactionHandle);
 
