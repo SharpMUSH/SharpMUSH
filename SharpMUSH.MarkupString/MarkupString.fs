@@ -312,25 +312,30 @@ module MarkupStringModule =
                     let start = indexes |> Seq.head
                     let ed = indexes |> Seq.last
                     substring start (ed - start) x)
-
-    let getWildcardMatch (input: MarkupString) (pattern: MarkupString) : Match =
-        let escapedPattern = pattern |> plainText |> Regex.Escape
-        let concatPattern = [|"^"; escapedPattern; "$"|] |> String.Concat
-        let globPattern = (concatPattern, @"(?<!\\(\\\\)*)\\\*", @"(.*?)") |> Regex.Replace 
-        let questionPattern = (globPattern, @"(?<!\\(\\\\)*)\\\?", @"(.)") |> Regex.Replace 
-        (plainText input,questionPattern) |> Regex.Match
         
     let getWildcardMatchAsRegex (pattern: MarkupString) : string =
         let escapedPattern = (pattern |> plainText |> Regex.Escape)
         let concatPattern = [|"^"; escapedPattern; "$"|] |> String.Concat
-        let globPattern = (concatPattern, @"(?<!\\(\\\\)*)\\\*", @"(.*?)") |> Regex.Replace
-        let questionPattern = (globPattern, @"(?<!\\(\\\\)*)\\\?", @"(.)") |> Regex.Replace
+        let globPattern = (concatPattern, @"(?<!\\)\\\*", @"(.*?)") |> Regex.Replace
+        let questionPattern = (globPattern, @"(?<!\\)\\\?", @"(.)") |> Regex.Replace
         let kindPattern = (questionPattern, @"\\\\\\\*", @"\*") |> Regex.Replace
         let kindPattern2 = (kindPattern, @"\\\\\\\?", @"\?") |> Regex.Replace
-
-        // TODO: If we did find it, remove the \\ before the *
-        // TODO: If we did find it, remove the \\ before the ?
         kindPattern2
+
+    let getWildcardMatch (input: MarkupString) (pattern: MarkupString) : Match =
+        let newPattern = getWildcardMatchAsRegex(pattern)
+        (plainText input,newPattern) |> Regex.Match
+
+    let isWildcardMatch (input: MarkupString) (pattern: MarkupString) : bool =
+        let newPattern = getWildcardMatchAsRegex(pattern)
+        (plainText input,newPattern) |> Regex.IsMatch
+
+    let getWildcardMatches (input: MarkupString) (pattern: MarkupString) : seq<Match * MarkupString> =
+        let newPattern = getWildcardMatchAsRegex(pattern)
+        (plainText input,newPattern)
+        |> Regex.Matches
+        |> Seq.cast<Match>
+        |> Seq.map (fun value -> (value,substring value.Index value.Length input))
 
     let getRegexpMatches (input: MarkupString) (pattern: MarkupString) : seq<Match * MarkupString> =
         ((plainText input), (plainText pattern))
