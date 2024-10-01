@@ -322,9 +322,10 @@ module MarkupStringModule =
         let kindPattern2 = (kindPattern, @"\\\\\\\?", @"\?") |> Regex.Replace
         kindPattern2
 
-    let getWildcardMatch (input: MarkupString) (pattern: MarkupString) : Match =
+    let getWildcardMatch (input: MarkupString) (pattern: MarkupString) : Match * MarkupString =
         let newPattern = getWildcardMatchAsRegex(pattern)
         (plainText input,newPattern) |> Regex.Match
+        |> (fun value -> (value,substring value.Index value.Length input))
 
     let isWildcardMatch (input: MarkupString) (pattern: MarkupString) : bool =
         let newPattern = getWildcardMatchAsRegex(pattern)

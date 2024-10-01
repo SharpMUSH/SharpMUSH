@@ -21,13 +21,36 @@ public class PatternUnitTests
 	[Arguments("abcdefghi", "abc*ghi", true)]
 	[Arguments("abcdefghi", "abc\\*ghi", false)]
 	[Arguments("abc*ghi", "abc\\*ghi", true)]
-	public async Task TestWildcardMatch(string input, string pattern, bool expectedResult)
+	public async Task TestWildcardIsMatch(string input, string pattern, bool expectedResult)
 	{
 		var result = MModule.isWildcardMatch(MModule.single(input), MModule.single(pattern));
 		await Assert
 			.That(result)
 			.IsEqualTo(expectedResult);
 	}
-
 	
+
+	[Test]
+	[Arguments("abc", "*", "abc")]
+	[Arguments("abcdefghi", "abc*ghi","abcdefghi")]
+	[Arguments("abc*ghi", "abc\\*ghi", "abc*ghi")]
+	public async Task TestWildcardMatch(string input, string pattern, string expectedResult)
+	{
+		var result = MModule.getWildcardMatch(MModule.single(input), MModule.single(pattern));
+		await Assert
+			.That(result.Item2.ToString())
+			.IsEqualTo(expectedResult);
+	}
+	
+	[Test]
+	[Arguments("abc", "*", "abc")]
+	[Arguments("abcdefghi", "abc*ghi","abcdefghi")]
+	[Arguments("abc*ghi", "abc\\*ghi", "abc*ghi")]
+	public async Task TestWildcardMatches(string input, string pattern, string expectedResult)
+	{
+		var result = MModule.getWildcardMatches(MModule.single(input), MModule.single(pattern));
+		await Assert
+			.That(result.First().Item2.ToString())
+			.IsEqualTo(expectedResult);
+	}
 }
