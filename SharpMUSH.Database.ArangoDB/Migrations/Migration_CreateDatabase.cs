@@ -45,7 +45,6 @@ namespace SharpMUSH.Database.ArangoDB.Migrations
 										Locks = new { type = DatabaseConstants.typeObject },
 										CreationTime = new { type = DatabaseConstants.typeNumber },
 										ModifiedTime = new { type = DatabaseConstants.typeNumber },
-										Powers = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } }
 									},
 									required = (string[])[nameof(SharpObject.Name), nameof(SharpObject.Type)],
 									additionalProperties = true
@@ -214,16 +213,14 @@ namespace SharpMUSH.Database.ArangoDB.Migrations
 								properties = new
 								{
 									Name = new { type = DatabaseConstants.typeString },
-									Alias = new { type = DatabaseConstants.typeString },
+									Symbol = new { type = DatabaseConstants.typeString, multipleOf = 1 },
+									System = new { type = DatabaseConstants.typeBoolean },
 									SetPermissions = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } },
 									UnsetPermissions = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } },
 									TypeRestrictions = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } }
 								},
 								required = (string[])[
 									nameof(SharpPower.Name),
-									nameof(SharpPower.Alias),
-									nameof(SharpPower.SetPermissions),
-									nameof(SharpPower.UnsetPermissions),
 									nameof(SharpPower.TypeRestrictions)
 										]
 							}
@@ -698,6 +695,8 @@ namespace SharpMUSH.Database.ArangoDB.Migrations
 			});
 
 			var flags = CreateInitialFlags(migrator, handle);
+			var attributeFlags = CreateInitialAttributeFlags(migrator, handle);
+			var powers = CreateInitialPowers(migrator, handle);
 			var wizard = flags[18];
 
 			await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.isObject, new SharpEdge { From = roomTwoRoom.Id, To = roomTwoObj.Id });
@@ -710,6 +709,362 @@ namespace SharpMUSH.Database.ArangoDB.Migrations
 			await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.hasObjectOwner, new SharpEdge { From = playerOneObj.Id, To = playerOnePlayer.Id });
 			await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.hasFlags, new SharpEdge { From = playerOneObj.Id, To = wizard.Id });
 		}
+
+    private static List<ArangoUpdateResult<ArangoVoid>> CreateInitialPowers(IArangoMigrator migrator,
+            ArangoHandle handle) =>
+    [
+      migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+              new
+              {
+                      Name = "Boot",
+                      System = true,
+                      TypeRestrictions = DatabaseConstants.typesAll,
+                      SetPermissions = DatabaseConstants.permissionsWizard
+                              .Union(DatabaseConstants.permissionsLog),
+                      UnsetPermissions = DatabaseConstants.permissionsWizard
+              }).Result,
+      migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+              new
+              {
+                      Name = "Builder",
+                      System = true,
+                      TypeRestrictions = DatabaseConstants.typesAll,
+                      SetPermissions = DatabaseConstants.permissionsWizard
+                              .Union(DatabaseConstants.permissionsLog),
+                      UnsetPermissions = DatabaseConstants.permissionsWizard
+              }).Result,
+      migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+              new
+              {
+                      Name = "Can_Dark",
+                      System = true,
+                      TypeRestrictions = DatabaseConstants.typesPlayer,
+                      SetPermissions = DatabaseConstants.permissionsWizard
+                              .Union(DatabaseConstants.permissionsLog)
+              }).Result,
+      migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+              new
+              {
+                      Name = "Can_HTTP",
+                      System = true,
+                      TypeRestrictions = DatabaseConstants.typesAll,
+                      SetPermissions = DatabaseConstants.permissionsWizard
+                              .Union(DatabaseConstants.permissionsLog)
+              }).Result,
+      migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+              new
+              {
+                      Name = "Can_Spoof",
+                      System = true,
+                      Aliases = (string[])["Can_nspemit"],
+                      TypeRestrictions = DatabaseConstants.typesAll,
+                      SetPermissions = DatabaseConstants.permissionsWizard
+                              .Union(DatabaseConstants.permissionsLog),
+                      UnsetPermissions = DatabaseConstants.permissionsWizard
+              }).Result,
+      migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+              new
+              {
+                      Name = "Chat_Privs",
+                      System = true,
+                      Aliases = (string[])["Can_nspemit"],
+                      TypeRestrictions = DatabaseConstants.typesAll,
+                      SetPermissions = DatabaseConstants.permissionsWizard
+                              .Union(DatabaseConstants.permissionsLog),
+                      UnsetPermissions = DatabaseConstants.permissionsWizard
+              }).Result,
+      migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+              new
+              {
+                      Name = "Debit",
+                      System = true,
+                      Aliases = (string[])["Steal_Money"],
+                      TypeRestrictions = DatabaseConstants.typesAll,
+                      SetPermissions = DatabaseConstants.permissionsWizard
+                              .Union(DatabaseConstants.permissionsLog),
+              }).Result,
+      migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+              new
+              {
+                      Name = "Functions",
+                      System = true,
+                      TypeRestrictions = DatabaseConstants.typesAll,
+                      SetPermissions = DatabaseConstants.permissionsWizard
+                              .Union(DatabaseConstants.permissionsLog),
+                      UnsetPermissions = DatabaseConstants.permissionsWizard
+              }).Result,
+      migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+              new
+              {
+                      Name = "Guest",
+                      System = true,
+                      TypeRestrictions = DatabaseConstants.typesAll,
+                      SetPermissions = DatabaseConstants.permissionsWizard
+                              .Union(DatabaseConstants.permissionsLog),
+                      UnsetPermissions = DatabaseConstants.permissionsWizard
+              }).Result,
+      migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+              new
+              {
+                      Name = "Halt",
+                      System = true,
+                      TypeRestrictions = DatabaseConstants.typesAll,
+                      SetPermissions = DatabaseConstants.permissionsWizard
+                              .Union(DatabaseConstants.permissionsLog),
+                      UnsetPermissions = DatabaseConstants.permissionsWizard
+              }).Result,
+      migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+              new
+              {
+                      Name = "Hide",
+                      System = true,
+                      TypeRestrictions = DatabaseConstants.typesAll,
+                      SetPermissions = DatabaseConstants.permissionsWizard
+                              .Union(DatabaseConstants.permissionsLog),
+                      UnsetPermissions = DatabaseConstants.permissionsWizard
+              }).Result,
+      migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+              new
+              {
+                      Name = "Hook",
+                      System = true,
+                      TypeRestrictions = DatabaseConstants.typesAll,
+                      SetPermissions = DatabaseConstants.permissionsWizard
+                              .Union(DatabaseConstants.permissionsLog)
+              }).Result,
+      migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+              new
+              {
+                      Name = "Idle",
+                      System = true,
+                      TypeRestrictions = DatabaseConstants.typesAll,
+                      SetPermissions = DatabaseConstants.permissionsWizard
+                              .Union(DatabaseConstants.permissionsLog),
+                      UnsetPermissions = DatabaseConstants.permissionsWizard
+              }).Result,
+      migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+              new
+              {
+                      Name = "Immortal",
+                      System = true,
+                      TypeRestrictions = DatabaseConstants.typesAll,
+                      SetPermissions = DatabaseConstants.permissionsWizard
+                              .Union(DatabaseConstants.permissionsLog),
+                      UnsetPermissions = DatabaseConstants.permissionsWizard
+              }).Result,
+      migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+              new
+              {
+                      Name = "Link_Anywhere",
+                      System = true,
+                      TypeRestrictions = DatabaseConstants.typesAll,
+                      SetPermissions = DatabaseConstants.permissionsWizard
+                              .Union(DatabaseConstants.permissionsLog),
+                      UnsetPermissions = DatabaseConstants.permissionsWizard
+              }).Result,
+      migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+              new
+              {
+                      Name = "Login",
+                      System = true,
+                      TypeRestrictions = DatabaseConstants.typesAll,
+                      SetPermissions = DatabaseConstants.permissionsWizard
+                              .Union(DatabaseConstants.permissionsLog),
+                      UnsetPermissions = DatabaseConstants.permissionsWizard
+              }).Result,
+      migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+              new
+              {
+                      Name = "Long_Fingers",
+                      System = true,
+                      TypeRestrictions = DatabaseConstants.typesAll,
+                      SetPermissions = DatabaseConstants.permissionsWizard
+                              .Union(DatabaseConstants.permissionsLog),
+                      UnsetPermissions = DatabaseConstants.permissionsWizard
+              }).Result,
+      migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+              new
+              {
+                      Name = "Many_Attribs",
+                      System = true,
+                      TypeRestrictions = DatabaseConstants.typesAll,
+                      SetPermissions = DatabaseConstants.permissionsWizard
+                              .Union(DatabaseConstants.permissionsLog)
+              }).Result,
+      migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+              new
+              {
+                      Name = "No_Pay",
+                      System = true,
+                      TypeRestrictions = DatabaseConstants.typesAll,
+                      SetPermissions = DatabaseConstants.permissionsWizard
+                              .Union(DatabaseConstants.permissionsLog),
+                      UnsetPermissions = DatabaseConstants.permissionsWizard
+              }).Result,
+      migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+              new
+              {
+                      Name = "No_Quota",
+                      System = true,
+                      Aliases = (string[])["Free_Quota"],
+                      TypeRestrictions = DatabaseConstants.typesAll,
+                      SetPermissions = DatabaseConstants.permissionsWizard
+                              .Union(DatabaseConstants.permissionsLog),
+                      UnsetPermissions = DatabaseConstants.permissionsWizard
+              }).Result,
+      migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+              new
+              {
+                      Name = "Open_Anywhere",
+                      System = true,
+                      TypeRestrictions = DatabaseConstants.typesAll,
+                      SetPermissions = DatabaseConstants.permissionsWizard
+                              .Union(DatabaseConstants.permissionsLog),
+                      UnsetPermissions = DatabaseConstants.permissionsWizard
+              }).Result,
+      migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+              new
+              {
+                      Name = "Pemit_All",
+                      System = true,
+                      TypeRestrictions = DatabaseConstants.typesAll,
+                      SetPermissions = DatabaseConstants.permissionsWizard
+                              .Union(DatabaseConstants.permissionsLog),
+                      UnsetPermissions = DatabaseConstants.permissionsWizard
+              }).Result,
+      migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+              new
+              {
+                      Name = "Pick_DBRefs",
+                      System = true,
+                      TypeRestrictions = DatabaseConstants.typesAll,
+                      SetPermissions = DatabaseConstants.permissionsWizard
+                              .Union(DatabaseConstants.permissionsLog),
+                      UnsetPermissions = DatabaseConstants.permissionsWizard
+              }).Result,
+      migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+              new
+              {
+                      Name = "Player_Create",
+                      System = true,
+                      TypeRestrictions = DatabaseConstants.typesAll,
+                      SetPermissions = DatabaseConstants.permissionsWizard
+                              .Union(DatabaseConstants.permissionsLog),
+                      UnsetPermissions = DatabaseConstants.permissionsWizard
+              }).Result,
+      migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+              new
+              {
+                      Name = "Poll",
+                      System = true,
+                      TypeRestrictions = DatabaseConstants.typesAll,
+                      SetPermissions = DatabaseConstants.permissionsWizard
+                              .Union(DatabaseConstants.permissionsLog),
+                      UnsetPermissions = DatabaseConstants.permissionsWizard
+              }).Result,
+      migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+              new
+              {
+                      Name = "Pueblo_Send",
+                      System = true,
+                      TypeRestrictions = DatabaseConstants.typesAll,
+                      SetPermissions = DatabaseConstants.permissionsWizard
+                              .Union(DatabaseConstants.permissionsLog),
+                      UnsetPermissions = DatabaseConstants.permissionsWizard
+              }).Result,
+      migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+              new
+              {
+                      Name = "Queue",
+                      System = true,
+                      TypeRestrictions = DatabaseConstants.typesAll,
+                      SetPermissions = DatabaseConstants.permissionsWizard
+                              .Union(DatabaseConstants.permissionsLog),
+                      UnsetPermissions = DatabaseConstants.permissionsWizard
+              }).Result,
+      migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+              new
+              {
+                      Name = "Search",
+                      System = true,
+                      TypeRestrictions = DatabaseConstants.typesAll,
+                      SetPermissions = DatabaseConstants.permissionsWizard
+                              .Union(DatabaseConstants.permissionsLog),
+                      UnsetPermissions = DatabaseConstants.permissionsWizard
+              }).Result,
+      migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+              new
+              {
+                      Name = "See_All",
+                      System = true,
+                      TypeRestrictions = DatabaseConstants.typesAll,
+                      SetPermissions = DatabaseConstants.permissionsWizard
+                              .Union(DatabaseConstants.permissionsLog),
+                      UnsetPermissions = DatabaseConstants.permissionsWizard
+              }).Result,
+      migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+              new
+              {
+                      Name = "See_Queue",
+                      System = true,
+                      TypeRestrictions = DatabaseConstants.typesAll,
+                      SetPermissions = DatabaseConstants.permissionsWizard
+                              .Union(DatabaseConstants.permissionsLog),
+                      UnsetPermissions = DatabaseConstants.permissionsWizard
+              }).Result,
+      migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+              new
+              {
+                      Name = "See_OOB",
+                      System = true,
+                      TypeRestrictions = DatabaseConstants.typesAll,
+                      SetPermissions = DatabaseConstants.permissionsWizard
+                              .Union(DatabaseConstants.permissionsLog),
+                      UnsetPermissions = DatabaseConstants.permissionsWizard
+              }).Result,
+      migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+              new
+              {
+                      Name = "SQL_OK",
+                      System = true,
+                      TypeRestrictions = DatabaseConstants.typesAll,
+                      SetPermissions = DatabaseConstants.permissionsWizard
+                              .Union(DatabaseConstants.permissionsLog),
+                      UnsetPermissions = DatabaseConstants.permissionsWizard
+              }).Result,
+      migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+              new
+              {
+                      Name = "Tport_Anything",
+                      System = true,
+                      Aliases = (string[])["tel_anything"],
+                      TypeRestrictions = DatabaseConstants.typesAll,
+                      SetPermissions = DatabaseConstants.permissionsWizard
+                              .Union(DatabaseConstants.permissionsLog),
+                      UnsetPermissions = DatabaseConstants.permissionsWizard
+              }).Result,
+      migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+              new
+              {
+                      Name = "Tport_Anywhere",
+                      System = true,
+                      Aliases = (string[])["tel_anywhere"],
+                      TypeRestrictions = DatabaseConstants.typesAll,
+                      SetPermissions = DatabaseConstants.permissionsWizard
+                              .Union(DatabaseConstants.permissionsLog),
+                      UnsetPermissions = DatabaseConstants.permissionsWizard
+              }).Result,
+      migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+              new
+              {
+                      Name = "Unkillable",
+                      System = true,
+                      TypeRestrictions = DatabaseConstants.typesAll,
+                      SetPermissions = DatabaseConstants.permissionsWizard
+                              .Union(DatabaseConstants.permissionsLog),
+                      UnsetPermissions = DatabaseConstants.permissionsWizard
+              }).Result
+    ];
 
 		private static List<ArangoUpdateResult<ArangoVoid>> CreateInitialAttributeFlags(IArangoMigrator migrator,
 			ArangoHandle handle) =>

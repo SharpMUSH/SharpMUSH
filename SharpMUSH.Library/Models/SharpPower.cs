@@ -9,7 +9,9 @@ public class SharpPower
 	public string? Id { get; set; }
 
 	public required string Name { get; set; }
-		
+	
+	public required bool System { get; set; } 
+	
 	public required string Alias { get; set; }
 
 	public required string[] SetPermissions { get; set; }

@@ -41,9 +41,17 @@ public class BaseUnitTest
 		var TestServer = new Infrastructure(config);
 		var database = TestServer.Services.GetService(typeof(ISharpDatabase)) as ISharpDatabase;
 
-		await database!.Migrate();
+		try
+		{
+			await database!.Migrate();
 
-		return database;
+		}
+		catch (Exception ex)
+		{
+			Log.Fatal(ex, "Failed to migrate database");
+		}
+		
+		return database!;
 	}
 
 	public static IBooleanExpressionParser BooleanExpressionTestParser(ISharpDatabase database)

@@ -184,8 +184,20 @@ public class ArangoDatabase(
 		=> GetObjectNodeAsync(dbId).Result;
 
 	private IEnumerable<SharpPower> GetPowers(string id)
-		=> arangoDB.Query.ExecuteAsync<SharpPower>(handle,
+	{
+		var result = arangoDB.Query.ExecuteAsync<SharpPowerQueryResult>(handle,
 			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphPowers} RETURN v").Result;
+		return result.Select(x => new SharpPower()
+		{
+			Alias = x.Alias,
+			Name = x.Alias,
+			System = x.System,
+			SetPermissions = x.SetPermissions,
+			TypeRestrictions = x.TypeRestrictions,
+			UnsetPermissions = x.UnsetPermissions,
+			Id = x.Id
+		});
+	}
 
 	private IEnumerable<SharpObjectFlag> GetFlags(string id)
 		=> arangoDB.Query.ExecuteAsync<SharpObjectFlag>(handle,
