@@ -20,8 +20,8 @@ public record SharpSurrealRoomCreateRequest(int? Id)
 public record SharpSurrealObjectFlagCreationRequest(int? Id, string Name, string[]? Aliases, string Symbol, bool System, string[] SetPermissions, string[] UnsetPermissions, string[] TypeRestrictions)
 	: SharpObjectFlagCreationRequest(Name, Aliases, Symbol, System, SetPermissions, UnsetPermissions, TypeRestrictions);
 
-public record SharpSurrealPowerCreateRequest(int? Id, string Name, string Alias, string[] SetPermissions, string[] UnsetPermissions, string[] TypeRestrictions)
-	: SharpPowerCreateRequest(Name, Alias, SetPermissions, UnsetPermissions, TypeRestrictions);
+public record SharpSurrealPowerCreateRequest(int? Id, string Name, string Alias, bool System, string[] SetPermissions, string[] UnsetPermissions, string[] TypeRestrictions)
+	: SharpPowerCreateRequest(Name, Alias, System, SetPermissions, UnsetPermissions, TypeRestrictions);
 
 public record SharpSurrealAttributeEntryCreateRequest(int? Id, string Key, string Name, string[] DefaultFlags, string? Limit, string[]? Enum)
 	: SharpAttributeEntryCreateRequest(Key, Name, DefaultFlags, Limit, Enum);

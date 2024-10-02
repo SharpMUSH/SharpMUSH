@@ -404,7 +404,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "UNIQUE", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> unique(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> DistinctAndSort(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
@@ -416,7 +416,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "WORDS", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static async ValueTask<CallState> words(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> ListCount(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var delim = await NoParseDefaultEvaluatedArgument(parser, 2, " ");
 		var list = MModule.split2(
