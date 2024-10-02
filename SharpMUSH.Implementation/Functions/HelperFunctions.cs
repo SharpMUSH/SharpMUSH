@@ -25,6 +25,9 @@ public partial class Functions
 		return args[item].Message!;
 	}
 
+	private static MString NoParseDefaultNoParseArgument(List<CallState> args, int item, string defaultValue)
+		=> NoParseDefaultNoParseArgument(args, item, MModule.single(defaultValue));
+
 	private static async ValueTask<MString> NoParseDefaultEvaluatedArgument(IMUSHCodeParser parser, int item,
 		MString defaultValue)
 	{
@@ -36,7 +39,11 @@ public partial class Functions
 
 		return (await args[item].ParsedMessage())!;
 	}
-	
+
+	private static ValueTask<MString> NoParseDefaultEvaluatedArgument(IMUSHCodeParser parser, int item,
+		string defaultValue)
+		=> NoParseDefaultEvaluatedArgument(parser, item, MModule.single(defaultValue));
+
 	private static async ValueTask<MString> EvaluatedDefaultEvaluatedArgument(IMUSHCodeParser parser, int item,
 		CallState defaultValue)
 	{

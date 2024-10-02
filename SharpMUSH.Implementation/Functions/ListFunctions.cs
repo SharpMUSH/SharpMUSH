@@ -190,7 +190,8 @@ public partial class Functions
 
 		var executor = parser.CurrentState.ExecutorObject(parser.Database).Known();
 		var enactor = parser.CurrentState.EnactorObject(parser.Database).Known();
-		var objAttr = HelperFunctions.SplitOptionalDBRefAndAttr(MModule.plainText(parser.CurrentState.Arguments[0].Message!));
+		var objAttr =
+			HelperFunctions.SplitOptionalDBRefAndAttr(MModule.plainText(parser.CurrentState.Arguments[0].Message!));
 		if (objAttr is { IsT1: true, AsT1: false })
 		{
 			return new CallState(Errors.ErrorObjectAttributeString);
@@ -254,8 +255,8 @@ public partial class Functions
 		var str = parser.CurrentState.Arguments[0].Message;
 		var globPattern = MModule.plainText(parser.CurrentState.Arguments[1].Message)!;
 		var regPattern = globPattern.GlobToRegex();
-		
-		
+
+
 		throw new NotImplementedException();
 	}
 
@@ -324,12 +325,10 @@ public partial class Functions
 	[SharpFunction(Name = "rest", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Rest(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var delim = NoParseDefaultNoParseArgument(parser.CurrentState.Arguments, 1, MModule.single(" "));
-		var listArg = parser.CurrentState.Arguments[0].Message;
-		var list = MModule.split2(delim, listArg);
-		var rest = MModule.multipleWithDelimiter(delim, list.Skip(1));
+		var delim = NoParseDefaultNoParseArgument(parser.CurrentState.Arguments, 1, " ");
+		var list = MModule.split2(delim, parser.CurrentState.Arguments[0].Message);
 
-		return ValueTask.FromResult(new CallState(rest));
+		return ValueTask.FromResult(new CallState(MModule.multipleWithDelimiter(delim, list.Skip(1))));
 	}
 
 	[SharpFunction(Name = "RESTARTS", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]
@@ -344,10 +343,16 @@ public partial class Functions
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "REVWORDS", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> revwords(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "revwords", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular)]
+	public static async ValueTask<CallState> ReverseList(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var delim = await NoParseDefaultEvaluatedArgument(parser, 2, " ");
+		var sep = await NoParseDefaultEvaluatedArgument(parser, 3, delim);
+		var list = MModule.split2(
+			delim,
+			(await parser.CurrentState.Arguments[0].ParsedMessage())!);
+
+		return new CallState(MModule.multipleWithDelimiter(sep, list.Reverse()));
 	}
 
 	[SharpFunction(Name = "SHUFFLE", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular)]
@@ -411,9 +416,14 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "WORDS", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> words(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> words(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var delim = await NoParseDefaultEvaluatedArgument(parser, 2, " ");
+		var list = MModule.split2(
+			delim,
+			(await parser.CurrentState.Arguments[0].ParsedMessage())!);
+
+		return new CallState(list.Length.ToString());
 	}
 
 	[SharpFunction(Name = "VDIM", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
