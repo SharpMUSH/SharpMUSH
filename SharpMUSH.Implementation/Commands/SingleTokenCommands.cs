@@ -12,7 +12,8 @@ public static partial class Commands
 	public static async ValueTask<Option<CallState>> NoParse(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		parser.Push(parser.CurrentState with { ParseMode = ParseMode.NoParse });
-		await parser.CommandParse(parser.CurrentState.Handle!, parser.CurrentState.Arguments[0]!.Message!);
+		// TODO: There is likely a better way to pick this up where this left off, instead of re-parsing.
+		await parser.CommandParse(parser.CurrentState.Handle!, parser.CurrentState.Arguments[0].Message!);
 		parser.Pop();
 		return new CallState(string.Empty);
 	}
@@ -24,12 +25,12 @@ public static partial class Commands
 	{
 		// This will come in as arg[0] = <attr>, arg[1]: <object> and arg[2] as [value]
 		var args = parser.CurrentState.Arguments;
-		var enactor = parser.CurrentState.Enactor!.Value.Get(parser.Database).WithoutNone();
+		var enactor = (await parser.CurrentState.Enactor!.Value.GetAsync(parser.Database)).WithoutNone();
 
 		var locate = await parser.LocateService.LocateAndNotifyIfInvalid(parser,
 			enactor,
 			enactor,
-			args[1]!.Message!.ToString(), Library.Services.LocateFlags.All);
+			args[1].Message!.ToString(), Library.Services.LocateFlags.All);
 
 		// Arguments are getting here in an evaluated state, when they should not be.
 		if (!locate.IsValid())
@@ -39,9 +40,9 @@ public static partial class Commands
 
 		// TODO: Switch to Clear an attribute! Take note of deeper authorization needed in case of the attribute having leaves.
 		var realLocated = locate.WithoutError().WithoutNone();
-		var attributePath = args[0]!.Message!.ToString()!.ToUpper().Split('`');
+		var attributePath = args[0].Message!.ToString()!.ToUpper().Split('`');
 		var contents = args[2]?.Message?.ToString() ?? string.Empty;
-		var callerObj = parser.CurrentState.Caller!.Value.Get(parser.Database);
+		var callerObj = await parser.CurrentState.Caller!.Value.GetAsync(parser.Database);
 		var callerOwner = callerObj.Object()!.Owner();
 
 		await parser.Database.SetAttributeAsync(realLocated.Object().DBRef, attributePath, contents, callerOwner);
