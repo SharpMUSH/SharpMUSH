@@ -27,7 +27,7 @@ startSingleCommandString: command EOF;
 
 // Start a command list, as run by an object.
 startCommandString:
-    {inCommandList = true;} commandList EOF {inCommandList = false;}
+    {inCommandList = true;} commandList EOF {inCommandList = false; }
 ;
 
 // Start looking for a pattern with comma separated arguments.
@@ -51,7 +51,7 @@ startPlainSingleCommandArg: singleCommandArg EOF;
 // Start looking for a plain string. These may start with a function call.
 startPlainString: evaluationString EOF;
 
-commandList: command (SEMICOLON command)*?;
+commandList: command ({inBraceDepth == 0}? SEMICOLON command)*?;
 
 command:
     firstCommandMatch (
@@ -150,7 +150,7 @@ beginGenericText:
     | ansi
     | {inFunction == 0}? CPAREN
     | {!inCommandMatch || inFunction > 0}? RSPACE
-    | {!inCommandList}? SEMICOLON
+    | { (!inCommandList) || (inCommandMatch && inBraceDepth != 0 ) }? SEMICOLON
     | { (!lookingForCommandArgCommas && inFunction == 0 ) || ( inBraceDepth != 0 ) }? COMMAWS
     | {!lookingForCommandArgEquals}? EQUALS
     | {!lookingForRegisterCaret}? CCARET
