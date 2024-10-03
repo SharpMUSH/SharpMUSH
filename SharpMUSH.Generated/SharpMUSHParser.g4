@@ -11,6 +11,7 @@ options {
     private int inFunction = 0;
     private int inBraceDepth = 0;
     private bool inCommandMatch = false;
+    private bool inCommandSpace = false;
     private bool inCommandList = false;
     private bool lookingForCommandArgCommas = false;
     private bool lookingForCommandArgEquals = false;
@@ -23,11 +24,11 @@ options {
  */
 
 // Start a single command, as run by a player.
-startSingleCommandString: command EOF;
+startSingleCommandString: {inCommandSpace = true;} command EOF {inCommandSpace = false; };
 
 // Start a command list, as run by an object.
 startCommandString:
-    {inCommandList = true;} commandList EOF {inCommandList = false; }
+    {inCommandSpace = true;}{inCommandList = true;} commandList EOF {inCommandList = false; } 
 ;
 
 // Start looking for a pattern with comma separated arguments.
@@ -150,7 +151,7 @@ beginGenericText:
     | ansi
     | {inFunction == 0}? CPAREN
     | {!inCommandMatch || inFunction > 0}? RSPACE
-    | { (!inCommandList) || (inCommandMatch && inBraceDepth != 0 ) }? SEMICOLON
+    | { (!inCommandList) || (inCommandSpace && inBraceDepth != 0 ) }? SEMICOLON
     | { (!lookingForCommandArgCommas && inFunction == 0 ) || ( inBraceDepth != 0 ) }? COMMAWS
     | {!lookingForCommandArgEquals}? EQUALS
     | {!lookingForRegisterCaret}? CCARET

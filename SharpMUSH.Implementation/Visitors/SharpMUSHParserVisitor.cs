@@ -12,11 +12,13 @@ namespace SharpMUSH.Implementation.Visitors;
 /// </summary>
 /// <param name="parser">The Parser, so that inner functions can force a parser-call.</param>
 /// <param name="source">The original MarkupString. A plain GetText is not good enough to get the proper value back.</param>
-public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source) : SharpMUSHParserBaseVisitor<ValueTask<CallState?>>
+public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source)
+	: SharpMUSHParserBaseVisitor<ValueTask<CallState?>>
 {
 	protected override ValueTask<CallState?> DefaultResult => ValueTask.FromResult(default(CallState?));
 
-	protected override async ValueTask<CallState?> AggregateResult(ValueTask<CallState?> aggregate, ValueTask<CallState?> nextResult)
+	protected override async ValueTask<CallState?> AggregateResult(ValueTask<CallState?> aggregate,
+		ValueTask<CallState?> nextResult)
 	{
 		var agg = await aggregate;
 		var next = await nextResult;
@@ -24,16 +26,19 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source) : Sh
 		{
 			return (agg ?? next!) with
 			{
-				Arguments = [
-				.. agg?.Arguments ?? Enumerable.Empty<MString>(),
-				.. next?.Arguments ?? Enumerable.Empty<MString>()
+				Arguments =
+				[
+					.. agg?.Arguments ?? Enumerable.Empty<MString>(),
+					.. next?.Arguments ?? Enumerable.Empty<MString>()
 				]
 			};
 		}
+
 		if (agg?.Message != null && next?.Message != null)
 		{
 			return agg with { Message = MModule.concat(agg.Message, next.Message) };
 		}
+
 		return agg ?? next ?? null;
 	}
 
@@ -42,37 +47,60 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source) : Sh
 		var functionName = context.funName().GetText().TrimEnd()[..^1];
 		var arguments = context.funArguments()?.funArgument() ?? Enumerable.Empty<FunArgumentContext>().ToArray();
 
-		Log.Logger.Information("VisitFunction: Fun: {Text}, Args: {Args}", functionName, arguments?.Select( x => x.GetText()));
+		Log.Logger.Information("VisitFunction: Fun: {Text}, Args: {Args}", functionName,
+			arguments?.Select(x => x.GetText()));
 		return await Functions.Functions.CallFunction(functionName.ToLower(), source, parser, context, arguments!, this);
 	}
 
-	public override async ValueTask<CallState?> VisitEvaluationString([NotNull] SharpMUSHParser.EvaluationStringContext context)
+	public override async ValueTask<CallState?> VisitEvaluationString(
+		[NotNull] SharpMUSHParser.EvaluationStringContext context)
 	{
 		if (parser.CurrentState.ParseMode.HasFlag(ParseMode.NoParse))
-			return new(MModule.substring(context.Start.StartIndex, context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source), context.Depth());
+			return new(
+				MModule.substring(context.Start.StartIndex,
+					context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source),
+				context.Depth());
 
 		return await base.VisitChildren(context)
-		       ?? new(MModule.substring(context.Start.StartIndex, context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source), context.Depth());
+		       ?? new(
+			       MModule.substring(context.Start.StartIndex,
+				       context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source),
+			       context.Depth());
 	}
 
-	public override async ValueTask<CallState?> VisitExplicitEvaluationString([NotNull] SharpMUSHParser.ExplicitEvaluationStringContext context)
+	public override async ValueTask<CallState?> VisitExplicitEvaluationString(
+		[NotNull] SharpMUSHParser.ExplicitEvaluationStringContext context)
 	{
 		if (parser.CurrentState.ParseMode.HasFlag(ParseMode.NoParse))
-			return new(MModule.substring(context.Start.StartIndex, context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source), context.Depth());
+			return new(
+				MModule.substring(context.Start.StartIndex,
+					context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source),
+				context.Depth());
 
 		return await base.VisitChildren(context)
-				?? new(MModule.substring(context.Start.StartIndex, context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source), context.Depth());
+		       ?? new(
+			       MModule.substring(context.Start.StartIndex,
+				       context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source),
+			       context.Depth());
 	}
 
 	public override async ValueTask<CallState?> VisitGenericText([NotNull] SharpMUSHParser.GenericTextContext context)
 		=> await base.VisitChildren(context)
-				?? new(MModule.substring(context.Start.StartIndex, context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source), context.Depth());
+		   ?? new(
+			   MModule.substring(context.Start.StartIndex,
+				   context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source),
+			   context.Depth());
 
-	public override async ValueTask<CallState?> VisitBeginGenericText([NotNull] SharpMUSHParser.BeginGenericTextContext context)
+	public override async ValueTask<CallState?> VisitBeginGenericText(
+		[NotNull] SharpMUSHParser.BeginGenericTextContext context)
 		=> await base.VisitChildren(context)
-				?? new(MModule.substring(context.Start.StartIndex, context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source), context.Depth());
+		   ?? new(
+			   MModule.substring(context.Start.StartIndex,
+				   context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source),
+			   context.Depth());
 
-	public override async ValueTask<CallState?> VisitValidSubstitution([NotNull] SharpMUSHParser.ValidSubstitutionContext context)
+	public override async ValueTask<CallState?> VisitValidSubstitution(
+		[NotNull] SharpMUSHParser.ValidSubstitutionContext context)
 	{
 		var textContents = MModule.single(context.GetText());
 		var complexSubstitutionSymbol = context.complexSubstitutionSymbol();
@@ -85,18 +113,20 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source) : Sh
 		}
 		else if (simpleSubstitutionSymbol != null)
 		{
-			return Substitutions.Substitutions.ParseSimpleSubstitution(simpleSubstitutionSymbol.GetText(), parser, simpleSubstitutionSymbol);
+			return Substitutions.Substitutions.ParseSimpleSubstitution(simpleSubstitutionSymbol.GetText(), parser,
+				simpleSubstitutionSymbol);
 		}
 		else
 		{
 			return await base.VisitChildren(context)
-				?? new(textContents, context.Depth());
+			       ?? new(textContents, context.Depth());
 		}
 	}
 
 	public override async ValueTask<CallState?> VisitCommand([NotNull] SharpMUSHParser.CommandContext context)
 	{
-		var text = MModule.substring(context.Start.StartIndex, context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source);
+		var text = MModule.substring(context.Start.StartIndex,
+			context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source);
 		Log.Logger.Information("VisitCommand: {Text}", text);
 
 		return (await Commands.Commands.EvaluateCommands(parser, source, context, base.VisitChildren)).Match(
@@ -104,32 +134,39 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source) : Sh
 			x => x.Value);
 	}
 
-	public override async ValueTask<CallState?> VisitStartCommandString([NotNull] SharpMUSHParser.StartCommandStringContext context)
+	public override async ValueTask<CallState?> VisitStartCommandString(
+		[NotNull] SharpMUSHParser.StartCommandStringContext context)
 	{
-		var text = MModule.substring(context.Start.StartIndex, context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source);
+		var text = MModule.substring(context.Start.StartIndex,
+			context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source);
 		Log.Logger.Information("VisitCommandString: {Text}", text);
 		return await base.VisitChildren(context)
-			?? new CallState(text, context.Depth());
+		       ?? new CallState(text, context.Depth());
 	}
 
 	public override async ValueTask<CallState?> VisitCommandList([NotNull] SharpMUSHParser.CommandListContext context)
 	{
-		var text = MModule.substring(context.Start.StartIndex, context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source);
+		var text = MModule.substring(context.Start.StartIndex,
+			context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source);
 		Log.Logger.Information("VisitCommandList: {Text}", text);
 		return await base.VisitChildren(context)
-			?? new CallState(text, context.Depth());
+		       ?? new CallState(text, context.Depth());
 	}
 
-	public override async ValueTask<CallState?> VisitStartSingleCommandString([NotNull] SharpMUSHParser.StartSingleCommandStringContext context)
+	public override async ValueTask<CallState?> VisitStartSingleCommandString(
+		[NotNull] SharpMUSHParser.StartSingleCommandStringContext context)
 	{
-		var text = MModule.substring(context.Start.StartIndex, context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source);
+		var text = MModule.substring(context.Start.StartIndex,
+			context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source);
 		Log.Logger.Information("VisitSingleCommandString: {Text}", text);
 		return await base.VisitChildren(context) ?? new CallState(text, context.Depth());
 	}
 
 	public override async ValueTask<CallState?> VisitEscapedText([NotNull] SharpMUSHParser.EscapedTextContext context)
 		=> await base.VisitChildren(context)
-			?? new(MModule.substring(context.Start.StartIndex + 1, context.Stop.StopIndex - context.Start.StartIndex + 1 - 1, source), context.Depth());
+		   ?? new(
+			   MModule.substring(context.Start.StartIndex + 1, context.Stop.StopIndex - context.Start.StartIndex + 1 - 1,
+				   source), context.Depth());
 
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="SharpMUSHParser.singleCommandArg"/>.
@@ -142,9 +179,12 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source) : Sh
 	/// <return>The visitor result.</return>
 	public override ValueTask<CallState?> VisitSingleCommandArg([NotNull] SharpMUSHParser.SingleCommandArgContext context)
 		=> ValueTask.FromResult<CallState?>(new(
-			null, 
-			context.Depth(), 
-			[MModule.substring(context.Start.StartIndex, context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source)],
+			null,
+			context.Depth(),
+			[
+				MModule.substring(context.Start.StartIndex,
+					context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source)
+			],
 			() => Task.FromResult<MString?>(null)));
 
 	/// <summary>
@@ -156,12 +196,15 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source) : Sh
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	public override async ValueTask<CallState?> VisitStartEqSplitCommandArgs([NotNull] SharpMUSHParser.StartEqSplitCommandArgsContext context)
+	public override async ValueTask<CallState?> VisitStartEqSplitCommandArgs(
+		[NotNull] SharpMUSHParser.StartEqSplitCommandArgsContext context)
 	{
 		var baseArg = await base.VisitChildren(context.singleCommandArg());
 		var commaArgs = await base.VisitChildren(context.commaCommandArgs());
-		Log.Logger.Information("VisitEqsplitCommandArgs: C1: {Text} - C2: {Text2}", baseArg?.ToString(), commaArgs?.ToString());
-		return new(null, context.Depth(), [baseArg!.Message!, .. commaArgs?.Arguments ?? []], () => Task.FromResult<MString?>(null));
+		Log.Logger.Information("VisitEqsplitCommandArgs: C1: {Text} - C2: {Text2}", baseArg?.ToString(),
+			commaArgs?.ToString());
+		return new(null, context.Depth(), [baseArg!.Message!, .. commaArgs?.Arguments ?? []],
+			() => Task.FromResult<MString?>(null));
 	}
 
 	/// <summary>
@@ -173,12 +216,18 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source) : Sh
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	public override async ValueTask<CallState?> VisitStartEqSplitCommand([NotNull] SharpMUSHParser.StartEqSplitCommandContext context)
+	public override async ValueTask<CallState?> VisitStartEqSplitCommand(
+		[NotNull] SharpMUSHParser.StartEqSplitCommandContext context)
 	{
-		var baseArg = await base.VisitChildren(context.singleCommandArg()[0]);
-		var rsArg = await base.VisitChildren(context.singleCommandArg()[1]);
-		Log.Logger.Information("VisitEqsplitCommand: C1: {Text} - C2: {Text2}", baseArg?.ToString(), rsArg?.ToString());
-		return new(null, context.Depth(), [baseArg!.Message!, rsArg!.Message!], () => Task.FromResult<MString?>(null));
+		var singleCommandArg = context.singleCommandArg();
+		var baseArg = await base.VisitChildren(singleCommandArg[0]);
+		var rsArg = singleCommandArg.Length > 1 ? await base.VisitChildren(singleCommandArg[1]) : null;
+		Log.Logger.Information("VisitEqSplitCommand: C1: {Text} - C2: {Text2}", baseArg?.ToString(), rsArg?.ToString());
+		return new CallState(
+			null,
+			context.Depth(),
+			[baseArg!.Message!, rsArg?.Message ?? MModule.empty() ],
+			() => Task.FromResult<MString?>(null));
 	}
 
 	/// <summary>
@@ -190,21 +239,30 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source) : Sh
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	public override async ValueTask<CallState?> VisitCommaCommandArgs([NotNull] SharpMUSHParser.CommaCommandArgsContext context)
+	public override async ValueTask<CallState?> VisitCommaCommandArgs(
+		[NotNull] SharpMUSHParser.CommaCommandArgsContext context)
 	{
 		var children = await base.VisitChildren(context);
 		return new(null, context.Depth(), children!.Arguments, () => Task.FromResult<MString?>(null));
 	}
 
-	public override async ValueTask<CallState?> VisitComplexSubstitutionSymbol([NotNull] ComplexSubstitutionSymbolContext context)
+	public override async ValueTask<CallState?> VisitComplexSubstitutionSymbol(
+		[NotNull] ComplexSubstitutionSymbolContext context)
 	{
 		if (context.ChildCount > 1)
 			return await base.VisitChildren(context);
 		else if (context.REG_NUM() is not null)
-			return new(MModule.substring(context.Start.StartIndex + 1, context.Stop.StopIndex - context.Start.StartIndex + 1 - 1, source), context.Depth());
+			return new(
+				MModule.substring(context.Start.StartIndex + 1, context.Stop.StopIndex - context.Start.StartIndex + 1 - 1,
+					source), context.Depth());
 		else if (context.ITEXT_NUM() is not null || context.STEXT_NUM() is not null)
-			return new(MModule.substring(context.Start.StartIndex + 1, context.Stop.StopIndex - context.Start.StartIndex + 1 - 1, source), context.Depth());
+			return new(
+				MModule.substring(context.Start.StartIndex + 1, context.Stop.StopIndex - context.Start.StartIndex + 1 - 1,
+					source), context.Depth());
 		else
-			return new(MModule.substring(context.Start.StartIndex, context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source), context.Depth());
+			return new(
+				MModule.substring(context.Start.StartIndex,
+					context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source),
+				context.Depth());
 	}
 }
