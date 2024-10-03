@@ -104,6 +104,19 @@ public static partial class Commands
 
 		var list = MModule.split(" ", parser.CurrentState.Arguments[0].Message!);
 
+		var wrappedIteration = new IterationWrapper<MString> { Value = MModule.empty() };
+		parser.CurrentState.IterationRegisters.Push(wrappedIteration);
+		var handle = parser.CurrentState.Handle!;
+		var command = parser.CurrentState.Arguments[1].Message!;
+		
+		foreach (var item in list)
+		{
+			wrappedIteration.Value = item;
+			await parser.CommandParse(handle, command);
+		}
+
+		parser.Pop();
+		
 		return new None();
 	}
 

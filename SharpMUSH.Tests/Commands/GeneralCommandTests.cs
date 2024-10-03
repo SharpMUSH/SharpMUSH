@@ -35,4 +35,20 @@ public class GeneralCommandTests : BaseUnitTest
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<DBRef>(), expected);
 	}
+
+	[Test]
+	public async Task DoListSimple()
+	{
+		var permission = Substitute.For<IPermissionService>();
+		permission.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>()).Returns(true);
+		permission.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>()).Returns(true);
+		permission.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<IPermissionService.InteractType>()).Returns(true);
+
+		var parser = TestParser(ds: database, ls: new LocateService(), ps: permission);
+		await parser.CommandParse("1", MModule.single("@dolist 1 2 3=@pemit #1=This is a test"));
+
+		await parser.NotifyService
+			.Received(Quantity.Exactly(3))
+			.Notify(Arg.Any<DBRef>(), "This is a test");
+	}
 }
