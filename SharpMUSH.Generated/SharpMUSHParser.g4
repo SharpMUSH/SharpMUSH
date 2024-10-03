@@ -9,6 +9,7 @@ options {
 
 @parser::members {
     private int inFunction = 0;
+    private int inBraceDepth = 0;
     private bool inCommandMatch = false;
     private bool inCommandList = false;
     private bool lookingForCommandArgCommas = false;
@@ -62,7 +63,7 @@ firstCommandMatch: {inCommandMatch = true;} evaluationString;
 
 commaCommandArgs:
     {lookingForCommandArgCommas = true;} singleCommandArg (
-        COMMAWS singleCommandArg
+        {inBraceDepth == 0}? COMMAWS singleCommandArg
     )*? {lookingForCommandArgCommas = false;}
 ;
 
@@ -92,9 +93,11 @@ funName:
 
 function: funName funArguments? {--inFunction;} CPAREN;
 
-funArguments: funArgument (COMMAWS funArgument)*?;
+funArguments: funArgument ({inBraceDepth == 0}? COMMAWS funArgument)*?;
 
-funArgument: evaluationString;
+funArgument:
+    OBRACE { ++inBraceDepth; } evaluationString CBRACE { --inBraceDepth; }
+    | evaluationString;
 
 validSubstitution:
     complexSubstitutionSymbol
@@ -148,7 +151,7 @@ beginGenericText:
     | {inFunction == 0}? CPAREN
     | {!inCommandMatch || inFunction > 0}? RSPACE
     | {!inCommandList}? SEMICOLON
-    | {!lookingForCommandArgCommas && inFunction == 0}? COMMAWS
+    | { (!lookingForCommandArgCommas && inFunction == 0 ) || ( inBraceDepth != 0 ) }? COMMAWS
     | {!lookingForCommandArgEquals}? EQUALS
     | {!lookingForRegisterCaret}? CCARET
     | (COLON | OTHER | ANY_AT_ALL)
