@@ -75,15 +75,13 @@ evaluationString:
 ;
 
 explicitEvaluationString:
-    OBRACE explicitEvaluationString CBRACE explicitEvaluationStringConcatenatedRepeat*?
-    | OBRACK evaluationString CBRACK explicitEvaluationStringConcatenatedRepeat*?
+    OBRACK evaluationString CBRACK explicitEvaluationStringConcatenatedRepeat*?
     | PERCENT validSubstitution explicitEvaluationStringConcatenatedRepeat*?
     | beginGenericText explicitEvaluationStringConcatenatedRepeat*?
 ;
 
 explicitEvaluationStringConcatenatedRepeat:
-    OBRACE explicitEvaluationString CBRACE
-    | OBRACK evaluationString CBRACK
+    OBRACK evaluationString CBRACK
     | PERCENT validSubstitution
     | genericText
 ;
@@ -94,7 +92,9 @@ funName:
 
 function: funName funArguments? {--inFunction;} CPAREN;
 
-funArguments: evaluationString (COMMAWS evaluationString)*?;
+funArguments: funArgument (COMMAWS funArgument)*?;
+
+funArgument: evaluationString;
 
 validSubstitution:
     complexSubstitutionSymbol

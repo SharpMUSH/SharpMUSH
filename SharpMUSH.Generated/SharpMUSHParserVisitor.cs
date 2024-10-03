@@ -140,6 +140,12 @@ public interface ISharpMUSHParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitFunArguments([NotNull] SharpMUSHParser.FunArgumentsContext context);
 	/// <summary>
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.funArgument"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitFunArgument([NotNull] SharpMUSHParser.FunArgumentContext context);
+	/// <summary>
 	/// Visit a parse tree produced by <see cref="SharpMUSHParser.validSubstitution"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>

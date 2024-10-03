@@ -35,7 +35,7 @@ public static partial class Functions
 	/// <param name="context">Function Context for Depth</param>
 	/// <param name="args">Arguments</param>
 	/// <returns>The resulting CallState.</returns>
-	public static async ValueTask<CallState> CallFunction(string name, MString source, IMUSHCodeParser parser, FunctionContext context, EvaluationStringContext[] args, SharpMUSHParserVisitor visitor)
+	public static async ValueTask<CallState> CallFunction(string name, MString source, IMUSHCodeParser parser, FunctionContext context, FunArgumentContext[] args, SharpMUSHParserVisitor visitor)
 	{
 		if (!_functionLibrary.TryGetValue(name, out var libraryMatch))
 		{

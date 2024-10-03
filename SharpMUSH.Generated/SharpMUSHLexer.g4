@@ -57,7 +57,7 @@ LASTCOMMAND_AFTER_EVAL: [uU] -> popMode;
 INVOCATION_DEPTH: '?' -> popMode;
 CURRENT_ARG_COUNT: '+' -> popMode;
 ITEXT_NUM: [iI][0-9]+ -> popMode;
-ITEXT_LAST: [iI]L -> popMode;
+ITEXT_LAST: [iI] 'L' -> popMode;
 STEXT_NUM: '$' [0-9]+ -> popMode;
 OTHER_SUB: . -> popMode;
 
