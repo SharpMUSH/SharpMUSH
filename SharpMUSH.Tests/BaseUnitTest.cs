@@ -95,6 +95,7 @@ public class BaseUnitTest
 				CurrentEvaluation: null,
 				Function: null,
 				Command: "think",
+				Switches: [],
 				Arguments: [],
 				Executor: one,
 				Enactor: one,

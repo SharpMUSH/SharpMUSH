@@ -24,6 +24,7 @@ public record ParserState(
 	DBAttribute? CurrentEvaluation,
 	string? Function,
 	string? Command,
+	IEnumerable<string> Switches,
 	List<CallState> Arguments,
 	DBRef? Executor,
 	DBRef? Enactor,

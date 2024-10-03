@@ -90,6 +90,23 @@ public static partial class Commands
 		return new None();
 	}
 
+	[SharpCommand(Name = "@DOLIST", Behavior = CB.EqSplit | CB.RSNoParse, MinArgs = 1, MaxArgs = 2, 
+		Switches = ["CLEARREGS","DELIMIT","INLINE","INPLACE","LOCALIZE","NOBREAK","NOTIFY"])]
+	public static async ValueTask<Option<CallState>> DoList(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		var enactor = parser.CurrentState.Enactor!.Value;
+
+		if (parser.CurrentState.Arguments.Count < 2)
+		{
+			await parser.NotifyService.Notify(enactor, "What do you want to do with the list?");
+			return new None();
+		}
+
+		var list = MModule.split(" ", parser.CurrentState.Arguments[0].Message!);
+
+		return new None();
+	}
+
 	[SharpCommand(Name = "LOOK", Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> Look(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{

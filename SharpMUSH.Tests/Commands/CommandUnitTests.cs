@@ -20,6 +20,8 @@ public class CommandUnitTests : BaseUnitTest
 		"3")]
 	[Arguments("think [add(1,2)]", 
 		"3")]
+	/*[Arguments("]think [add(1,2)]", 
+		"[add(1,2)]")]*/
 	[Arguments("[ansi(hr,think)] Words", 
 		"Words")]
 	[Arguments("think Command1 Arg;think Command2 Arg", 

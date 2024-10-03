@@ -126,17 +126,18 @@ public class MUSHCodeParser(
 	{
 		var handleId = ConnectionService.Get(handle);
 		State = State.Push(new ParserState(
-			new ([[]]),
-			new(),
-			new(),
-			null,
-			null,
-			MModule.plainText(text),
-			[],
-			handleId?.Ref,
-			handleId?.Ref,
-			handleId?.Ref,
-			handle));
+			Registers: new ([[]]),
+			IterationRegisters: new(),
+			RegexRegisters: new(),
+			CurrentEvaluation: null,
+			Function: null,
+			Command: MModule.plainText(text),
+			Switches: [],
+			Arguments: [],
+			Executor: handleId?.Ref,
+			Enactor: handleId?.Ref,
+			Caller: handleId?.Ref,
+			Handle: handle));
 
 		AntlrInputStreamSpan inputStream = new(MModule.plainText(text));
 		SharpMUSHLexer sharpLexer = new(inputStream);

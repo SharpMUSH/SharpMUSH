@@ -156,6 +156,7 @@ public static partial class Functions
 			CurrentEvaluation: currentState.CurrentEvaluation,
 			Function: name,
 			Command: null,
+			Switches: [],
 			Arguments: refinedArguments,
 			Executor: currentState.Executor,
 			Enactor: currentState.Enactor,
