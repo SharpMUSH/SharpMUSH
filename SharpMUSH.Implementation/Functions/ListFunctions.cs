@@ -42,7 +42,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "FIRST", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> first(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> FirstInList(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var delim = NoParseDefaultNoParseArgument(parser.CurrentState.Arguments, 1, MModule.single(" "));
 		var listArg = parser.CurrentState.Arguments[0].Message;
