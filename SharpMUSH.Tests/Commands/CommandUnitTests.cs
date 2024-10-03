@@ -51,6 +51,9 @@ public class CommandUnitTests : BaseUnitTest
 	[Arguments("think Command1 Arg;think Command2 Arg", 
 		"Command1 Arg", 
 		"Command2 Arg")]
+	[Arguments("think Command1 Arg;think Command2 Arg.;", 
+		"Command1 Arg", 
+		"Command2 Arg.")]
 	public async Task TestSingle(string str, string expected1, string expected2)
 	{
 		Console.WriteLine("Testing: {0}", str);

@@ -19,6 +19,7 @@ public class GeneralCommandTests : BaseUnitTest
 
 	[Test]
 	[Arguments("@pemit #1=This is a test", "This is a test")]
+	[Arguments("@pemit #1=This is a test;", "This is a test;")]
 	public async Task Test(string str, string expected)
 	{
 		var permission = Substitute.For<IPermissionService>();
