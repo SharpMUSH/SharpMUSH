@@ -47,7 +47,8 @@ public static partial class Commands
 	{
 		var firstCommandMatch = context.firstCommandMatch();
 
-		if (firstCommandMatch == null) return new OneOf.Monads.None();
+		if (firstCommandMatch?.SourceInterval.Length is null or 0 ) 
+			return new OneOf.Monads.None();
 
 		var command = firstCommandMatch.GetText();
 

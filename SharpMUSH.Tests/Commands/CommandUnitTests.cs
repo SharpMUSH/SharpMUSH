@@ -58,7 +58,7 @@ public class CommandUnitTests : BaseUnitTest
 	{
 		Console.WriteLine("Testing: {0}", str);
 		var parser = TestParser();
-		var _ = parser.CommandListParse(MModule.single(str));
+		await parser.CommandListParse(MModule.single(str));
 
 		await parser.NotifyService
 			.Received(Quantity.Exactly(1))
