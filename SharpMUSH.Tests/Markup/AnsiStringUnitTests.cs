@@ -137,6 +137,6 @@ public class AnsiStringUnitTests : BaseUnitTest
 		var serialized = original.Serialize();
 		var deserialized = original.Deserialize(serialized);
 		
-		await Assert.That(deserialized).IsEqualTo(original);
+		await Assert.That(deserialized).IsEquatableOrEqualTo(original);
 	}
 }

@@ -21,7 +21,7 @@ public class NameList
 
 		await Assert
 			.That(result.Single().AsT0)
-			.IsEqualTo(new Library.Models.DBRef(expected));
+			.IsEquatableOrEqualTo(new Library.Models.DBRef(expected));
 	}
 
 	[Test]
@@ -32,6 +32,6 @@ public class NameList
 
 		await Assert
 			.That(result.Single().AsT0)
-			.IsEqualTo(new Library.Models.DBRef(expectedDbRef, expectedTimestamp));
+			.IsEquatableOrEqualTo(new Library.Models.DBRef(expectedDbRef, expectedTimestamp));
 	}
 }
