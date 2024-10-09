@@ -110,7 +110,7 @@ public class MUSHCodeParser(
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
 		SharpMUSHParser sharpParser = new(commonTokenStream);
-		sharpParser.Trace = true;
+		// sharpParser.Trace = true;
 		sharpParser.AddErrorListener(new DiagnosticErrorListener(true));
 		sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL_EXACT_AMBIG_DETECTION;
 		SharpMUSHParser.StartCommandStringContext chatContext = sharpParser.startCommandString();
