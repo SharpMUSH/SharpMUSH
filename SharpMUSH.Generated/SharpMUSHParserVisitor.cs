@@ -92,6 +92,12 @@ public interface ISharpMUSHParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitFirstCommandMatch([NotNull] SharpMUSHParser.FirstCommandMatchContext context);
 	/// <summary>
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.commandRemainder"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitCommandRemainder([NotNull] SharpMUSHParser.CommandRemainderContext context);
+	/// <summary>
 	/// Visit a parse tree produced by <see cref="SharpMUSHParser.commaCommandArgs"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>

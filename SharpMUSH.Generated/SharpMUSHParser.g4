@@ -55,16 +55,18 @@ commandList: command ({inBraceDepth == 0}? SEMICOLON command)*;
 
 command:
     {inCommandMatch = true;} firstCommandMatch (
-        RSPACE {inCommandMatch = false;} evaluationString
+        RSPACE {inCommandMatch = false;} commandRemainder
     )?
 ;
 
 firstCommandMatch: evaluationString;
 
+commandRemainder: evaluationString;
+
 commaCommandArgs:
     {lookingForCommandArgCommas = true;} singleCommandArg (
         {inBraceDepth == 0}? COMMAWS singleCommandArg
-    )*? {lookingForCommandArgCommas = false;}
+    )* {lookingForCommandArgCommas = false;}
 ;
 
 
@@ -76,7 +78,7 @@ evaluationString:
 ;
 
 explicitEvaluationString:
-    OBRACE { ++inBraceDepth; } explicitEvaluationString*? CBRACE { --inBraceDepth; }
+    OBRACE { ++inBraceDepth; } explicitEvaluationString*? CBRACE { --inBraceDepth; } explicitEvaluationStringConcatenatedRepeat*?
     | OBRACK evaluationString CBRACK explicitEvaluationStringConcatenatedRepeat*?
     | PERCENT validSubstitution explicitEvaluationStringConcatenatedRepeat*?
     | beginGenericText explicitEvaluationStringConcatenatedRepeat*?

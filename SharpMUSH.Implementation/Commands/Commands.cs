@@ -223,8 +223,8 @@ public static partial class Commands
 		// command (space) argument(s)
 		if (context.children.Count > 1)
 		{
-			var start = context.evaluationString().Start.StartIndex;
-			var len = context.evaluationString().Stop.StopIndex - context.evaluationString().Start.StartIndex + 1;
+			var start = context.commandRemainder().Start.StartIndex;
+			var len = context.commandRemainder().Stop.StopIndex - context.commandRemainder().Start.StartIndex + 1;
 
 			// command arg0 = arg1,still arg 1 
 			if (behavior.HasFlag(Definitions.CommandBehavior.EqSplit) && behavior.HasFlag(Definitions.CommandBehavior.RSArgs))
