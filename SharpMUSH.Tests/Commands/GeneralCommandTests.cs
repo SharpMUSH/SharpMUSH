@@ -52,7 +52,7 @@ public class GeneralCommandTests : BaseUnitTest
 			.Notify(Arg.Any<DBRef>(), "This is a test");
 	}
 
-	[Test, Skip("Too complex")]
+	[Test]
 	public async Task DoListSimple2()
 	{
 		var permission = Substitute.For<IPermissionService>();
@@ -68,7 +68,7 @@ public class GeneralCommandTests : BaseUnitTest
 			.Notify(Arg.Any<DBRef>(), "This is, a test");
 	}
 
-	[Test, Skip("Too complex")]
+	[Test]
 	public async Task DoListComplex()
 	{
 		var permission = Substitute.For<IPermissionService>();

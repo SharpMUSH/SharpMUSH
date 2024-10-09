@@ -112,7 +112,7 @@ public static partial class Commands
 		foreach (var item in list)
 		{
 			wrappedIteration.Value = item;
-			await parser.CommandParse(handle, command);
+			await parser.CommandListParse(command);
 		}
 
 		parser.Pop();

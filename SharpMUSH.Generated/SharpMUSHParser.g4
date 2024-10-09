@@ -28,7 +28,7 @@ startSingleCommandString: {inCommandSpace = true;} command EOF {inCommandSpace =
 
 // Start a command list, as run by an object.
 startCommandString:
-    {inCommandSpace = true;}{inCommandList = true;} commandList EOF {inCommandList = false; } 
+    {inCommandSpace = true; inCommandList = true;} commandList EOF {inCommandList = false; } 
 ;
 
 // Start looking for a pattern with comma separated arguments.
@@ -55,12 +55,12 @@ startPlainString: evaluationString EOF;
 commandList: command ({inBraceDepth == 0}? SEMICOLON command)*?;
 
 command:
-    firstCommandMatch (
+    {inCommandMatch = true;} firstCommandMatch (
         RSPACE {inCommandMatch = false;} evaluationString
     )?
 ;
 
-firstCommandMatch: {inCommandMatch = true;} evaluationString;
+firstCommandMatch: evaluationString;
 
 commaCommandArgs:
     {lookingForCommandArgCommas = true;} singleCommandArg (
@@ -77,14 +77,14 @@ evaluationString:
 ;
 
 explicitEvaluationString:
-    OBRACE { ++inBraceDepth; } explicitEvaluationString CBRACE { --inBraceDepth; }
+    OBRACE { ++inBraceDepth; } explicitEvaluationString*? CBRACE { --inBraceDepth; }
     | OBRACK evaluationString CBRACK explicitEvaluationStringConcatenatedRepeat*?
     | PERCENT validSubstitution explicitEvaluationStringConcatenatedRepeat*?
     | beginGenericText explicitEvaluationStringConcatenatedRepeat*?
 ;
 
 explicitEvaluationStringConcatenatedRepeat:
-    OBRACE { ++inBraceDepth; } explicitEvaluationStringConcatenatedRepeat CBRACE { --inBraceDepth; }
+    OBRACE { ++inBraceDepth; } explicitEvaluationStringConcatenatedRepeat*? CBRACE { --inBraceDepth; }
     | OBRACK evaluationString CBRACK
     | PERCENT validSubstitution
     | genericText
@@ -94,7 +94,7 @@ funName:
     FUNCHAR {++inFunction;}
 ; // TODO: A Substitution can be inside of a funName to create a function name. The same goes for [] calls.
 
-function: funName funArguments? {--inFunction;} CPAREN;
+function: funName funArguments? CPAREN {--inFunction;} ;
 
 funArguments: funArgument ({inBraceDepth == 0}? COMMAWS funArgument)*?;
 
@@ -149,13 +149,16 @@ genericText: beginGenericText | FUNCHAR;
 beginGenericText:
     escapedText
     | ansi
-    | {inFunction == 0}? CPAREN
-    | {!inCommandMatch || inFunction > 0}? RSPACE
-    | { (!inCommandList) || (inCommandSpace && inBraceDepth != 0 ) }? SEMICOLON
-    | { (!lookingForCommandArgCommas && inFunction == 0 ) || ( inBraceDepth != 0 ) }? COMMAWS
-    | {!lookingForCommandArgEquals}? EQUALS
-    | {!lookingForRegisterCaret}? CCARET
-    | (COLON | OTHER | ANY_AT_ALL)
+    | { inFunction == 0 }? CPAREN
+    | { !inCommandMatch }? RSPACE
+    | { inFunction > 0}? RSPACE
+    | { !inCommandList }? SEMICOLON
+    | { (inCommandSpace && inBraceDepth > 0 ) }? SEMICOLON
+    | { !lookingForCommandArgCommas && inFunction == 0 }? COMMAWS
+    | {( inBraceDepth > 0 ) }? COMMAWS
+    | { !lookingForCommandArgEquals }? EQUALS
+    | { !lookingForRegisterCaret }? CCARET
+    | (OTHER | ANY_AT_ALL)
 ;
 
 escapedText: ESCAPE ANY;

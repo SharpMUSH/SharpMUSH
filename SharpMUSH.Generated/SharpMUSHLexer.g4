@@ -13,7 +13,7 @@ fragment WS: [ \r\n\f\t]*;
 ESCAPE: '\\' -> pushMode(ESCAPING);
 OBRACK: '[';
 CBRACK: ']';
-OBRACE: '{';
+OBRACE: '{' WS;
 CBRACE: '}';
 CPAREN: ')';
 CCARET: '>';
@@ -21,8 +21,7 @@ COMMAWS: ',' WS;
 EQUALS: '=';
 PERCENT: '%' -> pushMode(SUBSTITUTION);
 DOLLAR: '$' -> pushMode(REGEX);
-SEMICOLON: ';';
-COLON: ':';
+SEMICOLON: ';' WS;
 OANSI: '\u001B' -> pushMode(ANSI);
 RSPACE: ' ';
 FUNCHAR:
@@ -33,6 +32,7 @@ ANY_AT_ALL: .+?;
 
 // --------------- SUBSTITUTION MODE -------------
 mode SUBSTITUTION;
+COLON: ':' -> popMode;
 REG_STARTCARET: [qQ]'<' -> popMode;
 REG_NUM: [qQ][0-9] -> popMode;
 VWX: [vwxVWX][a-zA-Z] -> popMode;
