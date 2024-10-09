@@ -21,7 +21,7 @@ COMMAWS: ',' WS;
 EQUALS: '=';
 PERCENT: '%' -> pushMode(SUBSTITUTION);
 DOLLAR: '$' -> pushMode(REGEX);
-SEMICOLON: ';' WS;
+SEMICOLON: WS ';' WS;
 OANSI: '\u001B' -> pushMode(ANSI);
 RSPACE: ' ';
 FUNCHAR:

@@ -52,7 +52,7 @@ startPlainSingleCommandArg: singleCommandArg EOF;
 // Start looking for a plain string. These may start with a function call.
 startPlainString: evaluationString EOF;
 
-commandList: command ({inBraceDepth == 0}? SEMICOLON command)*?;
+commandList: command ({inBraceDepth == 0}? SEMICOLON command)*;
 
 command:
     {inCommandMatch = true;} firstCommandMatch (
@@ -152,10 +152,8 @@ beginGenericText:
     | { inFunction == 0 }? CPAREN
     | { !inCommandMatch }? RSPACE
     | { inFunction > 0}? RSPACE
-    | { !inCommandList }? SEMICOLON
-    | { (inCommandSpace && inBraceDepth > 0 ) }? SEMICOLON
-    | { !lookingForCommandArgCommas && inFunction == 0 }? COMMAWS
-    | {( inBraceDepth > 0 ) }? COMMAWS
+    | { !inCommandList || (inCommandSpace && inBraceDepth > 0 ) }? SEMICOLON
+    | { (!lookingForCommandArgCommas && inFunction == 0) || inBraceDepth > 0 }? COMMAWS
     | { !lookingForCommandArgEquals }? EQUALS
     | { !lookingForRegisterCaret }? CCARET
     | (OTHER | ANY_AT_ALL)
