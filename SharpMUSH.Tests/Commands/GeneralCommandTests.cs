@@ -127,4 +127,23 @@ public class GeneralCommandTests : BaseUnitTest
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<DBRef>(), "Repeat 1 times in this mode.");
 	}
+	
+	[Test, Skip("Failing. Some kind of issue with stack pushing and popping?")]
+	public async Task DoListComplex4()
+	{
+		var permission = Substitute.For<IPermissionService>();
+		permission.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>()).Returns(true);
+		permission.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>()).Returns(true);
+		permission.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<IPermissionService.InteractType>()).Returns(true);
+
+		var parser = TestParser(ds: database, ls: new LocateService(), ps: permission);
+		await parser.CommandParse("1", MModule.single("@dolist 1 2={@dolist 1 2 3=@pemit #1=This is a test}; @pemit #1=Repeat 1 times in this mode."));
+
+		await parser.NotifyService
+			.Received(Quantity.Exactly(6))
+			.Notify(Arg.Any<DBRef>(), "This is a test");
+		await parser.NotifyService
+			.Received(Quantity.Exactly(2))
+			.Notify(Arg.Any<DBRef>(), "Repeat 1 times in this mode.");
+	}
 }
