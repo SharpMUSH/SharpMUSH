@@ -4,6 +4,7 @@ using SharpMUSH.Library;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using System.Collections.Immutable;
+using Serilog;
 
 namespace SharpMUSH.Implementation;
 
@@ -67,12 +68,14 @@ public class MUSHCodeParser(
 
 	public IMUSHCodeParser Push(ParserState state)
 	{
+		Log.Logger.Debug("Pushing state {state}", state);
 		State = State.Push(state);
 		return this;
 	}
 
 	public IMUSHCodeParser Pop()
 	{
+		Log.Logger.Debug("Popping state");
 		State = State.Pop();
 		return this;
 	}

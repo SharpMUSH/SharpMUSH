@@ -31,6 +31,7 @@ public static partial class Functions
 	/// TODO: Optimization needed. We should at least grab the in-built ones at startup.
 	/// </summary>
 	/// <param name="name">Function Name</param>
+	/// <param name="source">The source MarkupString</param>
 	/// <param name="parser">Parser for evaluation</param>
 	/// <param name="context">Function Context for Depth</param>
 	/// <param name="args">Arguments</param>
@@ -39,9 +40,9 @@ public static partial class Functions
 	{
 		if (!_functionLibrary.TryGetValue(name, out var libraryMatch))
 		{
-			var DiscoveredFunction = DiscoverBuiltInFunction(name);
+			var discoveredFunction = DiscoverBuiltInFunction(name);
 
-			if (DiscoveredFunction.TryPickT1(out var functionValue, out _) == false)
+			if (discoveredFunction.TryPickT1(out var functionValue, out _) == false)
 			{
 				return new CallState(string.Format(Errors.ErrorNoSuchFunction, name), context.Depth());
 			}

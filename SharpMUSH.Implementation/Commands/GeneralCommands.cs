@@ -106,7 +106,6 @@ public static partial class Commands
 
 		var wrappedIteration = new IterationWrapper<MString> { Value = MModule.empty() };
 		parser.CurrentState.IterationRegisters.Push(wrappedIteration);
-		var handle = parser.CurrentState.Handle!;
 		var command = parser.CurrentState.Arguments[1].Message!;
 		
 		foreach (var item in list)
@@ -115,7 +114,7 @@ public static partial class Commands
 			await parser.CommandListParse(command);
 		}
 
-		parser.Pop();
+		parser.CurrentState.IterationRegisters.Pop();
 		
 		return new None();
 	}

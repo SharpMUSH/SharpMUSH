@@ -131,14 +131,14 @@ public static partial class Commands
 		// Step 15: Global User-defined commands
 		// Step 16: HUH_COMMAND is run
 
-		// HUH_COMMAND!
-		var huhCommand = await _commandLibrary["HUH_COMMAND"].Function.Invoke(
-			parser.Push(parser.CurrentState with
-			{
-				Command = "HUH_COMMAND",
-				Arguments = [],
-				Function = null
-			}));
+		var newParser = parser.Push(parser.CurrentState with
+		{
+			Command = "HUH_COMMAND",
+			Arguments = [],
+			Function = null
+		});
+
+		var huhCommand = await _commandLibrary["HUH_COMMAND"].Function.Invoke(newParser);
 
 		parser.Pop();
 		return huhCommand;
@@ -151,14 +151,14 @@ public static partial class Commands
 	{
 		var arguments = await ArgumentSplit(parser, source, context, libraryCommandDefinition);
 
-		var result = await libraryCommandDefinition.Function.Invoke(
-			parser.Push(parser.CurrentState with
-			{
-				Command = rootCommand,
-				Switches = switches,
-				Arguments = arguments,
-				Function = null
-			}));
+		var parseState = parser.Push(parser.CurrentState with
+		{
+			Command = rootCommand,
+			Switches = switches,
+			Arguments = arguments,
+			Function = null
+		});
+		var result = await libraryCommandDefinition.Function.Invoke(parseState);
 
 		parser.Pop();
 		return result;
@@ -173,9 +173,15 @@ public static partial class Commands
 	{
 		var arguments = await ArgumentSplit(parser, source, context, librarySocketCommandDefinition);
 
+		var newParser = parser.Push(parser.CurrentState with
+		{
+			Command = command,
+			Arguments = arguments,
+			Function = null
+		});
+
 		// Run as Socket Command. 
-		var result = await socketCommandPattern.First().Value.Function.Invoke(parser.Push(
-			parser.CurrentState with { Command = command, Arguments = arguments, Function = null }));
+		var result = await socketCommandPattern.First().Value.Function.Invoke(newParser);
 
 		parser.Pop();
 		return result;
@@ -191,16 +197,16 @@ public static partial class Commands
 		var singleLibraryCommandDefinition = singleTokenCommandPattern.Single().Value;
 		var arguments = await ArgumentSplit(parser, source, context, singleLibraryCommandDefinition);
 
-		var result = await singleLibraryCommandDefinition.Function.Invoke(
-			parser.Push(
-				parser.CurrentState with
-				{
-					Command = singleRootCommand,
-					Arguments = [new CallState(rest), .. arguments],
-					Function = null
-				}
-			)
+		var newParser = parser.Push(
+			parser.CurrentState with
+			{
+				Command = singleRootCommand,
+				Arguments = [new CallState(rest), .. arguments],
+				Function = null
+			}
 		);
+		
+		var result = await singleLibraryCommandDefinition.Function.Invoke(newParser);
 
 		parser.Pop();
 		return result;

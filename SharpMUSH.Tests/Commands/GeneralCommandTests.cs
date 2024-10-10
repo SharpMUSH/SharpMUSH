@@ -128,7 +128,7 @@ public class GeneralCommandTests : BaseUnitTest
 			.Notify(Arg.Any<DBRef>(), "Repeat 1 times in this mode.");
 	}
 	
-	[Test, Skip("Failing. Some kind of issue with stack pushing and popping?")]
+	[Test]
 	public async Task DoListComplex4()
 	{
 		var permission = Substitute.For<IPermissionService>();
