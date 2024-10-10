@@ -255,7 +255,7 @@ public partial class Functions
 		var str = parser.CurrentState.Arguments[0].Message;
 		var globPattern = MModule.plainText(parser.CurrentState.Arguments[1].Message)!;
 		var regPattern = globPattern.GlobToRegex();
-
+		
 
 		throw new NotImplementedException();
 	}
