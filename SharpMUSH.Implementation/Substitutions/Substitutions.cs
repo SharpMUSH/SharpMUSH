@@ -70,7 +70,7 @@ public static partial class Substitutions
 		);
 	}
 
-	// Symbol Example: %q$0 --> 0
+	// Symbol Example: %$0 --> 0
 	private static CallState HandleSTextNumber(CallState symbol, IMUSHCodeParser parser)
 	{
 		var symbolValue = symbol.Message!.ToString();
@@ -87,7 +87,7 @@ public static partial class Substitutions
 		return new CallState(val.ToString());
 	}
 
-	// Symbol Example: %qi0 --> 0
+	// Symbol Example: %i0 --> 0
 	private static CallState HandleITextNumber(CallState symbol, IMUSHCodeParser parser)
 	{
 		var symbolValue = symbol.Message!.ToString();

@@ -252,18 +252,20 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source)
 	{
 		if (context.ChildCount > 1)
 			return await base.VisitChildren(context);
-		else if (context.REG_NUM() is not null)
+		
+		if (context.REG_NUM() is not null)
 			return new(
 				MModule.substring(context.Start.StartIndex + 1, context.Stop.StopIndex - context.Start.StartIndex + 1 - 1,
 					source), context.Depth());
-		else if (context.ITEXT_NUM() is not null || context.STEXT_NUM() is not null)
+		
+		if (context.ITEXT_NUM() is not null || context.STEXT_NUM() is not null)
 			return new(
 				MModule.substring(context.Start.StartIndex + 1, context.Stop.StopIndex - context.Start.StartIndex + 1 - 1,
 					source), context.Depth());
-		else
-			return new(
-				MModule.substring(context.Start.StartIndex,
-					context.Stop?.StopIndex is null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source),
-				context.Depth());
+		
+		return new(
+			MModule.substring(context.Start.StartIndex,
+				context.Stop?.StopIndex is null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source),
+			context.Depth());
 	}
 }

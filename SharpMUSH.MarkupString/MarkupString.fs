@@ -141,7 +141,7 @@ module MarkupStringModule =
 
         MarkupString(Empty, (Seq.foldBack2 (fun a b xs -> (MarkupText a) :: (MarkupText b) :: xs) mu delimiters []))
 
-    [<TailCall>]
+    // [<TailCall>]
     let plainText (markupStr: MarkupString) : string =
         let rec loop (content: List<Content>) (acc: string list) =
             match content with
@@ -154,7 +154,7 @@ module MarkupStringModule =
     let plainText2 (markupStr: MarkupString) : MarkupString =
         MarkupString(Empty, [ Text(plainText markupStr) ])
 
-    [<TailCall>]
+    // [<TailCall>]
     let rec getLength (markupStr: MarkupString) : int =
         markupStr.Content
         |> List.fold
@@ -233,7 +233,7 @@ module MarkupStringModule =
 
         MarkupString(markupStr.MarkupDetails, substringAux markupStr.Content start length [])
 
-    [<TailCall>]
+    // [<TailCall>]
     let indexesOf (markupStr: MarkupString) (search: MarkupString) : seq<int> =
         let text = plainText markupStr
         let srch = plainText search
