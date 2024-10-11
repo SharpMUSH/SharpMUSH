@@ -28,7 +28,7 @@ public class SubstitutionUnitTests : BaseUnitTest
 		var parser = TestParser();
 		await parser.CommandParse("1", MModule.single(str));
 
-		if (expected != null)
+		if (expected is not null)
 		{
 			await parser.NotifyService
 				.Received(Quantity.Exactly(1))

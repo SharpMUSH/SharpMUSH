@@ -130,10 +130,10 @@ public partial class LocateService : ILocateService
 		{
 			// TODO: Fix Async
 			var maybeMatch = (await parser.Database.GetPlayerByNameAsync(name)).FirstOrDefault();
-			match = maybeMatch == null
+			match = maybeMatch is null
 				? new None()
 				: maybeMatch;
-			if (maybeMatch != null && flags.HasFlag(LocateFlags.MatchObjectsInLookerInventory))
+			if (maybeMatch is not null && flags.HasFlag(LocateFlags.MatchObjectsInLookerInventory))
 			{
 				if (!flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation)
 				    || looker.HasLongFingers()

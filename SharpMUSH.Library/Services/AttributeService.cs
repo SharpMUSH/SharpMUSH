@@ -28,7 +28,7 @@ public class AttributeService(ISharpDatabase db, IPermissionService ps) : IAttri
 			_ => throw new InvalidOperationException(nameof(IAttributeService.AttributeMode))
 		};
 
-		while (curObj != null)
+		while (curObj is not null)
 		{
 			var attr = (await db.GetAttributeAsync(obj.Object().DBRef, attributePath))?.ToArray();
 
@@ -71,7 +71,7 @@ public class AttributeService(ISharpDatabase db, IPermissionService ps) : IAttri
 			_ => throw new InvalidOperationException(nameof(IAttributeService.AttributePatternMode))
 		};
 
-		if (attributes == null)
+		if (attributes is null)
 		{
 			return Enumerable.Empty<SharpAttribute>().ToArray();
 		}

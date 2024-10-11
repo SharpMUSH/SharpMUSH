@@ -130,8 +130,8 @@ public static partial class Functions
 		else 
 		{
 			refinedArguments = args.Select(x => new CallState(stripAnsi
-					? MModule.plainText2(MModule.substring(x.Start.StartIndex, context.Stop?.StopIndex == null ? 0 : (x.Stop.StopIndex - x.Start.StartIndex + 1), source))
-					: MModule.substring(x.Start.StartIndex, context.Stop?.StopIndex == null ? 0 : (x.Stop.StopIndex - x.Start.StartIndex + 1), source), 
+					? MModule.plainText2(MModule.substring(x.Start.StartIndex, context.Stop?.StopIndex is null ? 0 : (x.Stop.StopIndex - x.Start.StartIndex + 1), source))
+					: MModule.substring(x.Start.StartIndex, context.Stop?.StopIndex is null ? 0 : (x.Stop.StopIndex - x.Start.StartIndex + 1), source), 
 					x.Depth(), null, 
 					async () => stripAnsi 
 						? (await visitor.VisitChildren(x))!.Message

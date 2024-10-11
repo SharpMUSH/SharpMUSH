@@ -48,7 +48,7 @@ public static partial class Commands
 	public static Option<CallState> CONNECT(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// Early HUH if already logged in.
-		if( parser.ConnectionService.Get(parser.CurrentState.Handle!)?.Ref != null)
+		if( parser.ConnectionService.Get(parser.CurrentState.Handle!)?.Ref is not null)
 		{
 			parser.NotifyService.Notify(parser.CurrentState.Handle!, "Huh?  (Type \"help\" for help.)");
 			return new None();
@@ -71,7 +71,7 @@ public static partial class Commands
 			dbref => parser.Database.GetObjectNodeAsync(dbref).Result.TryPickT0(out var player, out var _) ? player : null,
 			name => parser.Database.GetPlayerByNameAsync(name).Result.FirstOrDefault());
 
-		if (foundDB == null)
+		if (foundDB is null)
 		{
 			parser.NotifyService.Notify(parser.CurrentState.Handle!, "Could not find that player.");
 			return new None();

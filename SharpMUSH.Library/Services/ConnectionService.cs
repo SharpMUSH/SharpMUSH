@@ -12,7 +12,7 @@ public class ConnectionService : IConnectionService
 
 	public void Disconnect(string handle) {
 		var get = Get(handle);
-		if (get == null) return;
+		if (get is null) return;
 
 		foreach(var handler in _handlers)
 		{
@@ -37,7 +37,7 @@ public class ConnectionService : IConnectionService
 	public void Bind(string handle, DBRef player)
 	{
 		var get = Get(handle);
-		if (get == null) return;
+		if (get is null) return;
 
 		_sessionState.AddOrUpdate(handle,
 			x => throw new InvalidDataException("Tried to add a new handle during Login."),
@@ -52,7 +52,7 @@ public class ConnectionService : IConnectionService
 	public void Update(string handle, string key, string value)
 	{
 		var get = Get(handle);
-		if (get == null) return;
+		if (get is null) return;
 
 		_sessionState.AddOrUpdate(handle,
 			x => throw new InvalidDataException("Tried to add a new handle during update."),

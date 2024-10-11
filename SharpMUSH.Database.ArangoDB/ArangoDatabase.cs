@@ -314,14 +314,14 @@ public class ArangoDatabase(
 		var obj = await arangoDB.Document.GetAsync<SharpObjectQueryResult>(handle, DatabaseConstants.objects,
 			dbref.Number.ToString());
 
-		if (obj == null) return new None();
-		if (dbref.CreationMilliseconds != null && obj.CreationTime != dbref.CreationMilliseconds) return new None();
+		if (obj is null) return new None();
+		if (dbref.CreationMilliseconds is not null && obj.CreationTime != dbref.CreationMilliseconds) return new None();
 
 		var startVertex = obj.Id;
 		var res = (await arangoDB.Query.ExecuteAsync<dynamic>(handle,
 			$"FOR v IN 1..1 INBOUND {startVertex} GRAPH {DatabaseConstants.graphObjects} RETURN v")).FirstOrDefault();
 
-		if (res == null) return new None();
+		if (res is null) return new None();
 
 		string id = res._id;
 
@@ -427,7 +427,7 @@ public class ArangoDatabase(
 			return null;
 		}
 
-		return obj == null
+		return obj is null
 			? null
 			: new SharpObject()
 			{
@@ -709,7 +709,7 @@ public class ArangoDatabase(
 	{
 		var startVertex = node.Id();
 
-		if (startVertex == null) return null;
+		if (startVertex is null) return null;
 
 		const string locationQuery =
 			$"FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.graphLocations} RETURN v";
@@ -762,7 +762,7 @@ public class ArangoDatabase(
 	public async Task<IEnumerable<SharpExit>?> GetExitsAsync(AnyOptionalSharpContainer node)
 	{
 		var startVertex = node.Id();
-		if (startVertex == null) return null;
+		if (startVertex is null) return null;
 
 		const string exitQuery = $"FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.graphExits} RETURN v";
 		var query = await arangoDB.Query.ExecuteAsync<dynamic>(handle, $"{exitQuery}",
@@ -797,7 +797,7 @@ public class ArangoDatabase(
 
 		// TODO: Edit to return multiple players and let the above layer figure out which one it wants.
 		var result = query.FirstOrDefault();
-		if (result == null) return [];
+		if (result is null) return [];
 
 		return query.Select(x => GetObjectNode((string)x._id).AsPlayer);
 	}

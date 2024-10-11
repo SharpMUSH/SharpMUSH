@@ -68,7 +68,7 @@ public class BaseUnitTest
 		IConnectionService? cs = null)
 	{
 		var one = new DBRef(1, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
-		if (ds != null)
+		if (ds is not null)
 		{
 			var realOne = ds!.GetObjectNode(new DBRef(1));
 			one = realOne.Object()!.DBRef;

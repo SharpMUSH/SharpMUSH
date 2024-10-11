@@ -294,7 +294,7 @@ public partial class Functions
 		}
 
 		var contents = await parser.Database.GetContentsAsync(dbRefConversion.Value());
-		if (contents == null)
+		if (contents is null)
 		{
 			await parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, "I can't see that here.");
 			return new CallState("#-1");

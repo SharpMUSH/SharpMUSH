@@ -22,7 +22,7 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source)
 	{
 		var agg = await aggregate;
 		var next = await nextResult;
-		if (agg?.Arguments != null || next?.Arguments != null)
+		if (agg?.Arguments is not null || next?.Arguments is not null)
 		{
 			return (agg ?? next!) with
 			{
@@ -34,7 +34,7 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source)
 			};
 		}
 
-		if (agg?.Message != null && next?.Message != null)
+		if (agg?.Message is not null && next?.Message is not null)
 		{
 			return agg with { Message = MModule.concat(agg.Message, next.Message) };
 		}
@@ -42,7 +42,7 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source)
 		return agg ?? next ?? null;
 	}
 
-	public async override ValueTask<CallState?> VisitFunction([NotNull] SharpMUSHParser.FunctionContext context)
+	public override async ValueTask<CallState?> VisitFunction([NotNull] SharpMUSHParser.FunctionContext context)
 	{
 		var functionName = context.funName().GetText().TrimEnd()[..^1];
 		var arguments = context.funArguments()?.funArgument() ?? Enumerable.Empty<FunArgumentContext>().ToArray();
@@ -58,13 +58,13 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source)
 		if (parser.CurrentState.ParseMode.HasFlag(ParseMode.NoParse))
 			return new(
 				MModule.substring(context.Start.StartIndex,
-					context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source),
+					context.Stop?.StopIndex is null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source),
 				context.Depth());
 
 		return await base.VisitChildren(context)
 		       ?? new(
 			       MModule.substring(context.Start.StartIndex,
-				       context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source),
+				       context.Stop?.StopIndex is null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source),
 			       context.Depth());
 	}
 
@@ -74,13 +74,13 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source)
 		if (parser.CurrentState.ParseMode.HasFlag(ParseMode.NoParse))
 			return new(
 				MModule.substring(context.Start.StartIndex,
-					context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source),
+					context.Stop?.StopIndex is null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source),
 				context.Depth());
 
 		return await base.VisitChildren(context)
 		       ?? new(
 			       MModule.substring(context.Start.StartIndex,
-				       context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source),
+				       context.Stop?.StopIndex is null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source),
 			       context.Depth());
 	}
 
@@ -88,7 +88,7 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source)
 		=> await base.VisitChildren(context)
 		   ?? new(
 			   MModule.substring(context.Start.StartIndex,
-				   context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source),
+				   context.Stop?.StopIndex is null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source),
 			   context.Depth());
 
 	public override async ValueTask<CallState?> VisitBeginGenericText(
@@ -96,7 +96,7 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source)
 		=> await base.VisitChildren(context)
 		   ?? new(
 			   MModule.substring(context.Start.StartIndex,
-				   context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source),
+				   context.Stop?.StopIndex is null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source),
 			   context.Depth());
 
 	public override async ValueTask<CallState?> VisitValidSubstitution(
@@ -106,12 +106,12 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source)
 		var complexSubstitutionSymbol = context.complexSubstitutionSymbol();
 		var simpleSubstitutionSymbol = context.substitutionSymbol();
 
-		if (complexSubstitutionSymbol != null)
+		if (complexSubstitutionSymbol is not null)
 		{
 			var state = await VisitChildren(context);
 			return Substitutions.Substitutions.ParseComplexSubstitution(state, parser, complexSubstitutionSymbol);
 		}
-		else if (simpleSubstitutionSymbol != null)
+		else if (simpleSubstitutionSymbol is not null)
 		{
 			return Substitutions.Substitutions.ParseSimpleSubstitution(simpleSubstitutionSymbol.GetText(), parser,
 				simpleSubstitutionSymbol);
@@ -126,7 +126,7 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source)
 	public override async ValueTask<CallState?> VisitCommand([NotNull] SharpMUSHParser.CommandContext context)
 	{
 		var text = MModule.substring(context.Start.StartIndex,
-			context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source);
+			context.Stop?.StopIndex is null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source);
 		Log.Logger.Information("VisitCommand: {Text}", text);
 
 		return (await Commands.Commands.EvaluateCommands(parser, source, context, base.VisitChildren)).Match(
@@ -138,7 +138,7 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source)
 		[NotNull] SharpMUSHParser.StartCommandStringContext context)
 	{
 		var text = MModule.substring(context.Start.StartIndex,
-			context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source);
+			context.Stop?.StopIndex is null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source);
 		Log.Logger.Information("VisitCommandString: {Text}", text);
 		return await base.VisitChildren(context)
 		       ?? new CallState(text, context.Depth());
@@ -147,7 +147,7 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source)
 	public override async ValueTask<CallState?> VisitCommandList([NotNull] SharpMUSHParser.CommandListContext context)
 	{
 		var text = MModule.substring(context.Start.StartIndex,
-			context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source);
+			context.Stop?.StopIndex is null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source);
 		Log.Logger.Information("VisitCommandList: {Text}", text);
 		return await base.VisitChildren(context)
 		       ?? new CallState(text, context.Depth());
@@ -157,7 +157,7 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source)
 		[NotNull] SharpMUSHParser.StartSingleCommandStringContext context)
 	{
 		var text = MModule.substring(context.Start.StartIndex,
-			context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source);
+			context.Stop?.StopIndex is null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source);
 		Log.Logger.Information("VisitSingleCommandString: {Text}", text);
 		return await base.VisitChildren(context) ?? new CallState(text, context.Depth());
 	}
@@ -183,7 +183,7 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source)
 			context.Depth(),
 			[
 				MModule.substring(context.Start.StartIndex,
-					context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source)
+					context.Stop?.StopIndex is null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source)
 			],
 			() => Task.FromResult<MString?>(null)));
 
@@ -226,7 +226,7 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source)
 		return new CallState(
 			null,
 			context.Depth(),
-			[baseArg!.Message!, rsArg?.Message ?? MModule.empty() ],
+			[baseArg!.Message!, rsArg?.Message ?? MModule.empty()],
 			() => Task.FromResult<MString?>(null));
 	}
 
@@ -243,7 +243,8 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source)
 		[NotNull] SharpMUSHParser.CommaCommandArgsContext context)
 	{
 		var children = await base.VisitChildren(context);
-		return new(null, context.Depth(), children!.Arguments, () => Task.FromResult<MString?>(null));
+		return new(null, context.Depth(), children!.Arguments,
+			() => Task.FromResult<MString?>(null));
 	}
 
 	public override async ValueTask<CallState?> VisitComplexSubstitutionSymbol(
@@ -262,7 +263,7 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source)
 		else
 			return new(
 				MModule.substring(context.Start.StartIndex,
-					context.Stop?.StopIndex == null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source),
+					context.Stop?.StopIndex is null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source),
 				context.Depth());
 	}
 }

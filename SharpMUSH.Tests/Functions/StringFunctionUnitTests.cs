@@ -15,7 +15,7 @@ public class StringFunctionUnitTests : BaseUnitTest
 	public async Task ANSI(string str, string expectedText, byte expectedByte1, byte? expectedByte2)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var expectedBytes = expectedByte2 == null
+		var expectedBytes = expectedByte2 is null
 			? new byte[] { expectedByte1 }
 			: new byte[] { expectedByte1, expectedByte2.Value };
 
@@ -49,7 +49,7 @@ public class StringFunctionUnitTests : BaseUnitTest
 	{
 		Console.WriteLine("Testing: {0}", str);
 
-		var expectedBytes = expectedByte2 == null
+		var expectedBytes = expectedByte2 is null
 			? new byte[] { expectedByte1 }
 			: new byte[] { expectedByte1, expectedByte2.Value };
 

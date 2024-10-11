@@ -22,7 +22,7 @@ public class FunctionUnitTests : BaseUnitTest
 
 		Console.WriteLine(string.Join("", result));
 
-		if (expected != null)
+		if (expected is not null)
 		{
 			await Assert.That(result).IsEqualTo(expected);
 		}

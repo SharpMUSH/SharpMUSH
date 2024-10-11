@@ -11,7 +11,7 @@ namespace SharpMUSH.Implementation.Visitors;
 public class SharpMUSHBooleanExpressionVisitor(ISharpDatabase database, ParameterExpression gated, ParameterExpression unlocker) : SharpMUSHBoolExpParserBaseVisitor<Expression>
 {
 	protected override Expression AggregateResult(Expression aggregate, Expression nextResult)
-		=> new Expression[] { aggregate, nextResult }.First(x => x != null);
+		=> new Expression[] { aggregate, nextResult }.First(x => x is not null);
 
 	private readonly Expression<Func<AnySharpObject, string, bool>> hasFlag = (dbRef, flag)
 		=> dbRef.Object().Flags().Any(x => x.Name == flag || x.Symbol == flag);

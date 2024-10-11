@@ -60,7 +60,7 @@ public static partial class Commands
 
 		var command = firstCommandMatch.GetText();
 
-		if (parser.CurrentState.Handle != null && command != "IDLE")
+		if (parser.CurrentState.Handle is not null && command != "IDLE")
 		{
 			parser.ConnectionService.Update(parser.CurrentState.Handle, "LastConnectionSignal",
 				DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString());
@@ -69,7 +69,7 @@ public static partial class Commands
 		// Step 1: Check if it's a SOCKET command
 		// TODO: Optimize
 		var socketCommandPattern = _commandLibrary.Where(x
-			=> parser.CurrentState.Handle != null
+			=> parser.CurrentState.Handle is not null
 			   && x.Key.Equals(command, StringComparison.CurrentCultureIgnoreCase)
 			   && x.Value.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.SOCKET));
 
@@ -80,7 +80,7 @@ public static partial class Commands
 				librarySocketCommandDefinition);
 		}
 
-		if (parser.CurrentState.Executor == null && parser.CurrentState.Handle != null)
+		if (parser.CurrentState.Executor is null && parser.CurrentState.Handle is not null)
 		{
 			await parser.NotifyService.Notify(parser.CurrentState.Handle, "No such command available at login.");
 			return new OneOf.Monads.None();
@@ -205,7 +205,7 @@ public static partial class Commands
 				Function = null
 			}
 		);
-		
+
 		var result = await singleLibraryCommandDefinition.Function.Invoke(newParser);
 
 		parser.Pop();
@@ -262,7 +262,7 @@ public static partial class Commands
 
 		// TODO: Implement lsargs - but there are no immediate commands that need it.
 
-		if (argCallState == null)
+		if (argCallState is null)
 		{
 			if (isNoParse)
 			{
