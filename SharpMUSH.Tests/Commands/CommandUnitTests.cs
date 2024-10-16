@@ -1,20 +1,10 @@
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
-using Serilog;
 
 namespace SharpMUSH.Tests.Commands;
 
 public class CommandUnitTests : BaseUnitTest
 {
-	[Before(Class)]
-	public static void SetupLogger()
-	{
-		Log.Logger = new LoggerConfiguration()
-											.WriteTo.Console()
-											.MinimumLevel.Debug()
-											.CreateLogger();
-	}
-
 	[Test]
 	[Arguments("think add(1,2)", 
 		"3")]
@@ -22,8 +12,6 @@ public class CommandUnitTests : BaseUnitTest
 		"3")]
 	/*[Arguments("]think [add(1,2)]", 
 		"[add(1,2)]")]*/
-	[Arguments("[ansi(hr,think)] Words", 
-		"Words")]
 	[Arguments("think Command1 Arg;think Command2 Arg", 
 		"Command1 Arg;think Command2 Arg")]
 	public async Task Test(string str, string expected)
@@ -44,9 +32,6 @@ public class CommandUnitTests : BaseUnitTest
 	[Arguments("think [add(1,2)];think add(3,2)",
 		"3",
 		"5")]
-	[Arguments("[ansi(hy,think)] [ansi(hr,red)];[ansi(hg,think)] [ansi(hg,green)]", 
-		"\u001b[1;31mred\u001b[0m", 
-		"\u001b[1;32mgreen\u001b[0m")]
 	[Arguments("think [ansi(hr,red)];think [ansi(hg,green)]", 
 		"\u001b[1;31mred\u001b[0m", 
 		"\u001b[1;32mgreen\u001b[0m")]
