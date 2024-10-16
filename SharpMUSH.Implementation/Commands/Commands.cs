@@ -4,6 +4,10 @@ using DotNext.Collections.Generic;
 using OneOf.Monads;
 using SharpMUSH.Library.ParserInterfaces;
 using System.Reflection;
+using System.Text.RegularExpressions;
+using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Services;
 using static SharpMUSHParser;
 
 namespace SharpMUSH.Implementation.Commands;
@@ -54,6 +58,7 @@ public static partial class Commands
 		Func<IRuleNode, ValueTask<CallState?>> visitChildren)
 	{
 		var firstCommandMatch = context.firstCommandMatch();
+		var executorObject = parser.CurrentState.ExecutorObject(parser.Database).WithoutNone();
 
 		if (firstCommandMatch?.SourceInterval.Length is null or 0)
 			return new OneOf.Monads.None();
@@ -97,7 +102,24 @@ public static partial class Commands
 			return await HandleSingleTokenCommandPattern(parser, source, context, command, singleTokenCommandPattern);
 		}
 
-		// Step 3: Check room Aliases
+		// Step 3: Check exit Aliases
+		if (executorObject.IsContent)
+		{
+			var what = executorObject.AsContent;
+			var locate = await parser.LocateService.LocateAndNotifyIfInvalid(
+				parser,
+				executorObject, 
+				executorObject, 
+				command,
+				LocateFlags.ExitsInTheRoomOfLooker);
+			if (locate.IsExit)
+			{
+				var exit = locate.AsExit;
+				return await HandleGoCommandPattern(parser, exit);
+				// TODO: GO THERE
+			}
+		}		
+		
 		// Step 4: Check if we are setting an attribute: &... -- we're just treating this as a Single Token Command for now.
 		// Who would rely on a room alias being & anyway?
 		// Step 5: Check @COMMAND in command library
@@ -140,6 +162,12 @@ public static partial class Commands
 
 		parser.Pop();
 		return huhCommand;
+	}
+
+	private static async ValueTask<Option<CallState>> HandleGoCommandPattern(IMUSHCodeParser parser, SharpExit exit)
+	{
+		await Task.Delay(1);
+		throw new NotImplementedException();
 	}
 
 	private static async ValueTask<Option<CallState>> HandleInternalCommandPattern(IMUSHCodeParser parser, MString source,

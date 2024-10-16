@@ -17,7 +17,14 @@ public class AnySharpContent : OneOfBase<SharpPlayer, SharpExit, SharpThing>
 			exit => exit,
 			thing => thing
 		);
-
+	
+	public AnyOptionalSharpContent WithNoneOption()
+		=> Match<AnyOptionalSharpContent>(
+			player => player,
+			exit => exit,
+			thing => thing
+		);
+	
 	public AnySharpContainer Location()
 		=> Match(
 			player => player.Location(),
