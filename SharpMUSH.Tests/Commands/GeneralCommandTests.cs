@@ -147,7 +147,7 @@ public class GeneralCommandTests : BaseUnitTest
 			.Notify(Arg.Any<DBRef>(), "Repeat 2 times in this mode.");
 	}
 		
-	[Test, Skip("Severe parser issue found. It's evaluating before it should be evaluating.")]
+	[Test /*, Skip("Severe parser issue found. It's evaluating before it should be evaluating.") */]
 	public async Task DoListComplex5()
 	{
 		var permission = Substitute.For<IPermissionService>();
@@ -156,7 +156,7 @@ public class GeneralCommandTests : BaseUnitTest
 		permission.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<IPermissionService.InteractType>()).Returns(true);
 
 		var parser = TestParser(ds: database, ls: new LocateService(), ps: permission);
-		await parser.CommandParse("1", MModule.single("@dolist a b={@dolist 1 2 3=@pemit #1=This is a test %i0}; @pemit #1=Repeat 2 times in this mode %i0."));
+		await parser.CommandParse("1", MModule.single("@dolist a b={@dolist 1 2 3=@pemit #1=This is a test %i0}; @pemit #1=Repeat 1 times in this mode %i0"));
 
 		await parser.NotifyService
 			.Received(Quantity.Exactly(2))
@@ -169,9 +169,9 @@ public class GeneralCommandTests : BaseUnitTest
 			.Notify(Arg.Any<DBRef>(), "This is a test 3");
 		await parser.NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<DBRef>(), "Repeat 2 times in this mode a");
+			.Notify(Arg.Any<DBRef>(), "Repeat 1 times in this mode a");
 		await parser.NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<DBRef>(), "Repeat 2 times in this mode b");
+			.Notify(Arg.Any<DBRef>(), "Repeat 1 times in this mode b");
 	}
 }

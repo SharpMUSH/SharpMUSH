@@ -109,7 +109,8 @@ public class MUSHCodeParser(
 
 	public ValueTask<CallState?> CommandListParse(MString text)
 	{
-		AntlrInputStreamSpan inputStream = new(MModule.plainText(text));
+		var plaintext = MModule.plainText(text);
+		AntlrInputStreamSpan inputStream = new(plaintext);
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
 		SharpMUSHParser sharpParser = new(commonTokenStream);

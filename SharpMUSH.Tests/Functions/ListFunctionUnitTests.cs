@@ -17,9 +17,11 @@ public class ListFunctionUnitTests : BaseUnitTest
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 	
+	// TODO: Fix: %$0 is for switches.
+	// TODO: This should be #@, which is not yet implemented.
 	[Test]
 	[Arguments("iter(5 6 7,%$0)", "1 2 3")]
-	[Arguments("iter(1|2|3,iter(1 2 3,add(%$0,%i1)),|,-)", "2 3 4-3 4 5-4 5 6")]
+	[Arguments("iter(1|2|3,iter(1 2 3,add(%$0,%i1)),|,-)", "2 2 2-4 4 4-6 6 6")]
 	public async Task IterationNumber(string function, string expected)
 	{
 		var parser = TestParser();

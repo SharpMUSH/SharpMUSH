@@ -103,13 +103,11 @@ public static partial class Commands
 		// Step 5: Check @COMMAND in command library
 
 		// TODO: Optimize
-		// TODO: Evaluate Command -- commands that run more commands are always NoParse for the arguments it's relevant for.
 		// TODO: Get the Switches and send them along as a list of items!
-		var evaluatedCallContextAsString = MModule.plainText((await visitChildren(firstCommandMatch))!.Message!);
-		var slashIndex = evaluatedCallContextAsString.IndexOf(SLASH);
+		var slashIndex = command.IndexOf(SLASH);
 		var rootCommand =
-			evaluatedCallContextAsString[..(slashIndex > -1 ? slashIndex : evaluatedCallContextAsString.Length)];
-		var swtch = evaluatedCallContextAsString[(slashIndex > -1 ? slashIndex : evaluatedCallContextAsString.Length) ..];
+			command[..(slashIndex > -1 ? slashIndex : command.Length)];
+		var swtch = command[(slashIndex > -1 ? slashIndex : command.Length) ..];
 		var switches = swtch.Split(SLASH).Where(s => !string.IsNullOrWhiteSpace(s));
 
 		if (_commandLibrary.TryGetValue(rootCommand.ToUpper(), out var libraryCommandDefinition)
@@ -219,12 +217,9 @@ public static partial class Commands
 	{
 		var argCallState = CallState.EmptyArgument;
 		var behavior = libraryCommandDefinition.Attribute.Behavior;
-		var isNoParse = behavior.HasFlag(Definitions.CommandBehavior.NoParse);
 
-		if (isNoParse)
-		{
-			parser.Push(parser.CurrentState with { ParseMode = ParseMode.NoParse });
-		}
+		// Do not parse the argument splitting.
+		parser.Push(parser.CurrentState with { ParseMode = ParseMode.NoParse });
 
 		// command (space) argument(s)
 		if (context.children.Count > 1)
@@ -253,6 +248,9 @@ public static partial class Commands
 			}
 		}
 
+		// Pop the NoParse state.
+		parser.Pop();
+
 		List<CallState> arguments = [];
 
 		var eqSplit = libraryCommandDefinition.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.EqSplit);
@@ -264,11 +262,6 @@ public static partial class Commands
 
 		if (argCallState is null)
 		{
-			if (isNoParse)
-			{
-				parser.Pop();
-			}
-
 			return arguments;
 		}
 
@@ -280,20 +273,23 @@ public static partial class Commands
 
 			if (nArgs > 1)
 			{
-				arguments.AddRange(noRsParse
-					? argCallState.Arguments![1..].Select(x => new CallState(x, argCallState.Depth))
-					: argCallState.Arguments![1..].Select(x => parser.FunctionParse(x).AsTask().Result).Select(x => x!));
+				if (noRsParse || noParse)
+				{
+					arguments.AddRange(argCallState.Arguments![1..]
+						.Select(x => new CallState(x, argCallState.Depth)));
+				}
+				else
+				{
+					arguments.AddRange(
+						await Task.WhenAll(argCallState.Arguments![1..]
+							.Select(async x => (await parser.FunctionParse(x))!)));
+				}
 			}
 		}
 
 		arguments.AddRange(noParse
 			? argCallState.Arguments!.Select(x => new CallState(x, argCallState.Depth))
 			: argCallState.Arguments!.Select(x => parser.FunctionParse(x).AsTask().Result).Select(x => x!));
-
-		if (isNoParse)
-		{
-			parser.Pop();
-		}
 
 		return arguments;
 	}

@@ -44,6 +44,11 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source)
 
 	public override async ValueTask<CallState?> VisitFunction([NotNull] SharpMUSHParser.FunctionContext context)
 	{
+		if (parser.CurrentState.ParseMode == ParseMode.NoParse)
+		{
+			return new CallState(context.GetText());
+		}
+		
 		var functionName = context.funName().GetText().TrimEnd()[..^1];
 		var arguments = context.funArguments()?.funArgument() ?? Enumerable.Empty<FunArgumentContext>().ToArray();
 
@@ -55,12 +60,6 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source)
 	public override async ValueTask<CallState?> VisitEvaluationString(
 		[NotNull] SharpMUSHParser.EvaluationStringContext context)
 	{
-		if (parser.CurrentState.ParseMode.HasFlag(ParseMode.NoParse))
-			return new(
-				MModule.substring(context.Start.StartIndex,
-					context.Stop?.StopIndex is null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source),
-				context.Depth());
-
 		return await base.VisitChildren(context)
 		       ?? new(
 			       MModule.substring(context.Start.StartIndex,
@@ -71,12 +70,6 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source)
 	public override async ValueTask<CallState?> VisitExplicitEvaluationString(
 		[NotNull] SharpMUSHParser.ExplicitEvaluationStringContext context)
 	{
-		if (parser.CurrentState.ParseMode.HasFlag(ParseMode.NoParse))
-			return new(
-				MModule.substring(context.Start.StartIndex,
-					context.Stop?.StopIndex is null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source),
-				context.Depth());
-
 		return await base.VisitChildren(context)
 		       ?? new(
 			       MModule.substring(context.Start.StartIndex,
@@ -102,6 +95,11 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source)
 	public override async ValueTask<CallState?> VisitValidSubstitution(
 		[NotNull] SharpMUSHParser.ValidSubstitutionContext context)
 	{
+		if (parser.CurrentState.ParseMode == ParseMode.NoParse)
+		{
+			return new CallState("%" + context.GetText());
+		}
+		
 		var textContents = MModule.single(context.GetText());
 		var complexSubstitutionSymbol = context.complexSubstitutionSymbol();
 		var simpleSubstitutionSymbol = context.substitutionSymbol();
