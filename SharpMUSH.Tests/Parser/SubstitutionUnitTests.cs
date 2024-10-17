@@ -1,9 +1,33 @@
-﻿using NSubstitute.ReceivedExtensions;
+﻿using NSubstitute;
+using NSubstitute.ReceivedExtensions;
+using SharpMUSH.Implementation;
+using SharpMUSH.IntegrationTests;
+using SharpMUSH.Library;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Tests.Parser;
 
 public class SubstitutionUnitTests : BaseUnitTest
 {
+	private static ISharpDatabase? database;
+	private static Infrastructure? infrastructure;
+
+	[Before(Class)]
+	public static async Task OneTimeSetup()
+	{
+		(database,infrastructure) = await IntegrationServer();
+	}
+	
+	[After(Class)]
+	public static async Task OneTimeTeardown()
+	{
+		await Task.Delay(1);
+		infrastructure!.Dispose();
+	}
+
+	
 	[Test]
 	[Arguments("think %t", "\t")]
 	[Arguments("think %#", "#1")]
@@ -25,8 +49,13 @@ public class SubstitutionUnitTests : BaseUnitTest
 	public async Task Test(string str, string? expected = null)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var parser = TestParser();
-		await parser.CommandParse("1", MModule.single(str));
+
+		var parser = TestParser(
+			ds: database,
+			ps: infrastructure!.Services.GetService(typeof(IPermissionService)) as IPermissionService,
+			ls: infrastructure!.Services.GetService(typeof(ILocateService)) as ILocateService
+			);
+		await parser!.CommandParse("1", MModule.single(str));
 
 		if (expected is not null)
 		{

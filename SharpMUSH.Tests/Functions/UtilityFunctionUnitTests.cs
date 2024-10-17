@@ -10,7 +10,7 @@ public class UtilityFunctionUnitTests : BaseUnitTest
 	[Before(Class)]
 	public static async Task OneTimeSetup()
 	{
-		database = await IntegrationServer();
+		database = (await IntegrationServer()).Database;
 	}
 
 	[Test]

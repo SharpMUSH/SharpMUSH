@@ -1,16 +1,26 @@
 ﻿using NSubstitute.ReceivedExtensions;
 using Serilog;
+using SharpMUSH.IntegrationTests;
+using SharpMUSH.Library;
+using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Tests.Substitutions;
 
 public class RegistersUnitTests : BaseUnitTest
 {
-	public RegistersUnitTests()
+	private static Infrastructure? infrastructure;
+
+	[Before(Class)]
+	public static async Task OneTimeSetup()
 	{
-		Log.Logger = new LoggerConfiguration()
-			.WriteTo.Console()
-			.MinimumLevel.Debug()
-			.CreateLogger();
+		(_,infrastructure) = await IntegrationServer();
+	}
+	
+	[After(Class)]
+	public static async Task OneTimeTeardown()
+	{
+		await Task.Delay(1);
+		infrastructure!.Dispose();
 	}
 
 	[Test]
@@ -27,7 +37,12 @@ public class RegistersUnitTests : BaseUnitTest
 	public async Task Test(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var parser = TestParser();
+		
+		var parser = TestParser(
+			ds: infrastructure!.Services.GetService(typeof(ISharpDatabase)) as ISharpDatabase,
+			ps: infrastructure!.Services.GetService(typeof(IPermissionService)) as IPermissionService,
+			ls: infrastructure!.Services.GetService(typeof(ILocateService)) as ILocateService
+		);
 		await parser.CommandParse("1", MModule.single(str));
 
 		await parser.NotifyService

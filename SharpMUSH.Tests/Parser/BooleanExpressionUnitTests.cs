@@ -11,7 +11,7 @@ public class BooleanExpressionUnitTests : BaseUnitTest
 	[Before(Class)]
 	public static async Task OneTimeSetup()
 	{
-		_database = await IntegrationServer();
+		_database = (await IntegrationServer()).Database;
 	}
 
 	[Arguments("!#FALSE", true)]

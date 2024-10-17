@@ -58,7 +58,6 @@ public static partial class Commands
 		Func<IRuleNode, ValueTask<CallState?>> visitChildren)
 	{
 		var firstCommandMatch = context.firstCommandMatch();
-		var executorObject = parser.CurrentState.ExecutorObject(parser.Database).WithoutNone();
 
 		if (firstCommandMatch?.SourceInterval.Length is null or 0)
 			return new OneOf.Monads.None();
@@ -101,7 +100,8 @@ public static partial class Commands
 		{
 			return await HandleSingleTokenCommandPattern(parser, source, context, command, singleTokenCommandPattern);
 		}
-
+		
+		var executorObject = parser.CurrentState.ExecutorObject(parser.Database).WithoutNone();
 		// Step 3: Check exit Aliases
 		if (executorObject.IsContent)
 		{

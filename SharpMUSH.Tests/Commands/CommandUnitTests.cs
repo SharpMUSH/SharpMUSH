@@ -1,10 +1,28 @@
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
+using SharpMUSH.IntegrationTests;
+using SharpMUSH.Library;
+using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Tests.Commands;
 
 public class CommandUnitTests : BaseUnitTest
 {
+	private static Infrastructure? infrastructure;
+
+	[Before(Class)]
+	public static async Task OneTimeSetup()
+	{
+		(_,infrastructure) = await IntegrationServer();
+	}
+	
+	[After(Class)]
+	public static async Task OneTimeTeardown()
+	{
+		await Task.Delay(1);
+		infrastructure!.Dispose();
+	}
+	
 	[Test]
 	[Arguments("think add(1,2)", 
 		"3")]
@@ -17,7 +35,11 @@ public class CommandUnitTests : BaseUnitTest
 	public async Task Test(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var parser = TestParser();
+		var parser = TestParser(
+			ds: infrastructure!.Services.GetService(typeof(ISharpDatabase)) as ISharpDatabase,
+			ps: infrastructure!.Services.GetService(typeof(IPermissionService)) as IPermissionService,
+			ls: infrastructure!.Services.GetService(typeof(ILocateService)) as ILocateService
+		);
 		await parser.CommandParse("1", MModule.single(str));
 
 		await parser.NotifyService
@@ -44,7 +66,11 @@ public class CommandUnitTests : BaseUnitTest
 	public async Task TestSingle(string str, string expected1, string expected2)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var parser = TestParser();
+		var parser = TestParser(
+			ds: infrastructure!.Services.GetService(typeof(ISharpDatabase)) as ISharpDatabase,
+			ps: infrastructure!.Services.GetService(typeof(IPermissionService)) as IPermissionService,
+			ls: infrastructure!.Services.GetService(typeof(ILocateService)) as ILocateService
+		);
 		await parser.CommandListParse(MModule.single(str));
 
 		await parser.NotifyService

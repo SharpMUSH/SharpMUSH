@@ -10,11 +10,17 @@ namespace SharpMUSH.Tests.Commands;
 public class GeneralCommandTests : BaseUnitTest
 {
 	private static ISharpDatabase? database;
+	private static IPermissionService? permission;
 
 	[Before(Class)]
 	public static async Task OneTimeSetup()
 	{
-		database = await IntegrationServer();
+		database = (await IntegrationServer()).Database;		
+		
+		permission = Substitute.For<IPermissionService>();
+		permission.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>()).Returns(true);
+		permission.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>()).Returns(true);
+		permission.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<IPermissionService.InteractType>()).Returns(true);
 	}
 
 	[Test]
@@ -22,11 +28,6 @@ public class GeneralCommandTests : BaseUnitTest
 	[Arguments("@pemit #1=This is a test;", "This is a test;")]
 	public async Task Test(string str, string expected)
 	{
-		var permission = Substitute.For<IPermissionService>();
-		permission.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>()).Returns(true);
-		permission.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>()).Returns(true);
-		permission.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<IPermissionService.InteractType>()).Returns(true);
-
 		Console.WriteLine("Testing: {0}", str);
 		var parser = TestParser(ds: database, ls: new LocateService(), ps: permission);
 		await parser.CommandParse("1", MModule.single(str));
@@ -39,11 +40,6 @@ public class GeneralCommandTests : BaseUnitTest
 	[Test]
 	public async Task DoListSimple()
 	{
-		var permission = Substitute.For<IPermissionService>();
-		permission.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>()).Returns(true);
-		permission.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>()).Returns(true);
-		permission.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<IPermissionService.InteractType>()).Returns(true);
-
 		var parser = TestParser(ds: database, ls: new LocateService(), ps: permission);
 		await parser.CommandParse("1", MModule.single("@dolist 1 2 3=@pemit #1=This is a test"));
 
@@ -55,11 +51,6 @@ public class GeneralCommandTests : BaseUnitTest
 	[Test]
 	public async Task DoListSimple2()
 	{
-		var permission = Substitute.For<IPermissionService>();
-		permission.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>()).Returns(true);
-		permission.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>()).Returns(true);
-		permission.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<IPermissionService.InteractType>()).Returns(true);
-
 		var parser = TestParser(ds: database, ls: new LocateService(), ps: permission);
 		await parser.CommandParse("1", MModule.single("@dolist 1 2 3=@pemit #1={This is, a test};"));
 
@@ -71,11 +62,6 @@ public class GeneralCommandTests : BaseUnitTest
 	[Test]
 	public async Task DoListComplex()
 	{
-		var permission = Substitute.For<IPermissionService>();
-		permission.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>()).Returns(true);
-		permission.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>()).Returns(true);
-		permission.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<IPermissionService.InteractType>()).Returns(true);
-
 		var parser = TestParser(ds: database, ls: new LocateService(), ps: permission);
 		await parser.CommandParse("1", MModule.single("@dolist 1 2 3={@pemit #1=This is a test; @pemit #1=This is also a test}"));
 
@@ -90,11 +76,6 @@ public class GeneralCommandTests : BaseUnitTest
 	[Test]
 	public async Task DoListComplex2()
 	{
-		var permission = Substitute.For<IPermissionService>();
-		permission.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>()).Returns(true);
-		permission.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>()).Returns(true);
-		permission.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<IPermissionService.InteractType>()).Returns(true);
-
 		var parser = TestParser(ds: database, ls: new LocateService(), ps: permission);
 		await parser.CommandParse("1", MModule.single("@dolist 1 2 3={@pemit #1=This is a test; @pemit #1=This is also a test}; @pemit #1=Repeat 3 times in this mode."));
 
@@ -112,11 +93,6 @@ public class GeneralCommandTests : BaseUnitTest
 	[Test]
 	public async Task DoListComplex3()
 	{
-		var permission = Substitute.For<IPermissionService>();
-		permission.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>()).Returns(true);
-		permission.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>()).Returns(true);
-		permission.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<IPermissionService.InteractType>()).Returns(true);
-
 		var parser = TestParser(ds: database, ls: new LocateService(), ps: permission);
 		await parser.CommandParse("1", MModule.single("@dolist 1={@dolist 1 2 3=@pemit #1=This is a test}; @pemit #1=Repeat 1 times in this mode."));
 
@@ -131,11 +107,6 @@ public class GeneralCommandTests : BaseUnitTest
 	[Test]
 	public async Task DoListComplex4()
 	{
-		var permission = Substitute.For<IPermissionService>();
-		permission.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>()).Returns(true);
-		permission.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>()).Returns(true);
-		permission.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<IPermissionService.InteractType>()).Returns(true);
-
 		var parser = TestParser(ds: database, ls: new LocateService(), ps: permission);
 		await parser.CommandParse("1", MModule.single("@dolist 1 2={@dolist 1 2 3=@pemit #1=This is a test}; @pemit #1=Repeat 2 times in this mode."));
 
@@ -150,11 +121,6 @@ public class GeneralCommandTests : BaseUnitTest
 	[Test /*, Skip("Severe parser issue found. It's evaluating before it should be evaluating.") */]
 	public async Task DoListComplex5()
 	{
-		var permission = Substitute.For<IPermissionService>();
-		permission.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>()).Returns(true);
-		permission.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>()).Returns(true);
-		permission.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<IPermissionService.InteractType>()).Returns(true);
-
 		var parser = TestParser(ds: database, ls: new LocateService(), ps: permission);
 		await parser.CommandParse("1", MModule.single("@dolist a b={@dolist 1 2 3=@pemit #1=This is a test %i0}; @pemit #1=Repeat 1 times in this mode %i0"));
 

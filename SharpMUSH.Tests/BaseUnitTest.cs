@@ -22,7 +22,7 @@ public class BaseUnitTest
 			.MinimumLevel.Debug()
 			.CreateLogger();
 
-	public static async Task<ISharpDatabase> IntegrationServer()
+	public static async Task<(ISharpDatabase Database, Infrastructure Infrastructure)> IntegrationServer()
 	{
 		var container = new ArangoDbBuilder()
 			.WithImage("arangodb:latest")
@@ -51,7 +51,7 @@ public class BaseUnitTest
 			Log.Fatal(ex, "Failed to migrate database");
 		}
 		
-		return database!;
+		return (database!,TestServer);
 	}
 
 	public static IBooleanExpressionParser BooleanExpressionTestParser(ISharpDatabase database)

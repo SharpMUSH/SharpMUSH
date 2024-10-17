@@ -11,7 +11,7 @@ public class ArangoDBTests : BaseUnitTest
 	[Before(Test)]
 	public async Task OneTimeSetup()
 	{
-		_database = await IntegrationServer();
+		_database = (await IntegrationServer()).Database;
 	}
 
 	[Test]
@@ -39,7 +39,7 @@ public class ArangoDBTests : BaseUnitTest
 	{
 		var playerOne = (await _database!.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
 
-		await Assert.That(playerOne).IsTypeOf(typeof(SharpPlayer));
+		await Assert.That(playerOne).IsTypeOf<SharpPlayer>();
 		await Assert.That(playerOne!.Object!.Name).IsEqualTo("God");
 		await Assert.That(playerOne!.Object!.Key).IsEqualTo(1);
 	}
@@ -50,7 +50,7 @@ public class ArangoDBTests : BaseUnitTest
 	{
 		var playerOne = (await _database!.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
 
-		await Assert.That(playerOne).IsTypeOf(typeof(SharpPlayer));
+		await Assert.That(playerOne).IsTypeOf<SharpPlayer>();
 		await Assert.That(playerOne.Object.Name).IsEqualTo("God");
 		await Assert.That(playerOne.Object.Key).IsEqualTo(1);
 
@@ -99,7 +99,7 @@ public class ArangoDBTests : BaseUnitTest
 		foreach (var attribute in attributes)
 		{
 			await Assert.That(attribute)
-				.IsTypeOf(typeof(SharpAttribute))
+				.IsTypeOf<SharpAttribute>()
 				.And
 				.IsNotNull();
 		}
