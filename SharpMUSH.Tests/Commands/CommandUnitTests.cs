@@ -28,8 +28,8 @@ public class CommandUnitTests : BaseUnitTest
 		"3")]
 	[Arguments("think [add(1,2)]", 
 		"3")]
-	/*[Arguments("]think [add(1,2)]", 
-		"[add(1,2)]")]*/
+	[Arguments("]think [add(1,2)]", 
+		"[add(1,2)]")]
 	[Arguments("think Command1 Arg;think Command2 Arg", 
 		"Command1 Arg;think Command2 Arg")]
 	public async Task Test(string str, string expected)

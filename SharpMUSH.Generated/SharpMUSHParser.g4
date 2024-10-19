@@ -78,17 +78,25 @@ evaluationString:
 ;
 
 explicitEvaluationString:
-    OBRACE { ++inBraceDepth; } explicitEvaluationString*? CBRACE { --inBraceDepth; } explicitEvaluationStringConcatenatedRepeat*?
-    | OBRACK evaluationString CBRACK explicitEvaluationStringConcatenatedRepeat*?
+    bracePattern explicitEvaluationStringConcatenatedRepeat*?
+    | bracketPattern explicitEvaluationStringConcatenatedRepeat*?
     | PERCENT validSubstitution explicitEvaluationStringConcatenatedRepeat*?
     | beginGenericText explicitEvaluationStringConcatenatedRepeat*?
 ;
 
 explicitEvaluationStringConcatenatedRepeat:
-    OBRACE { ++inBraceDepth; } explicitEvaluationStringConcatenatedRepeat*? CBRACE { --inBraceDepth; }
-    | OBRACK evaluationString CBRACK
+    bracePattern
+    | bracketPattern
     | PERCENT validSubstitution
     | genericText
+;
+
+bracePattern:
+    OBRACE { ++inBraceDepth; } explicitEvaluationString*? CBRACE { --inBraceDepth; }
+;
+
+bracketPattern:
+    OBRACK evaluationString CBRACK
 ;
 
 funName:

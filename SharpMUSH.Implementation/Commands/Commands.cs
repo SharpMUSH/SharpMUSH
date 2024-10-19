@@ -221,6 +221,7 @@ public static partial class Commands
 		var singleRootCommand = command[..1];
 		var rest = command[1..];
 		var singleLibraryCommandDefinition = singleTokenCommandPattern.Single().Value;
+		// TODO: Should Single Commands split? - Getting errors out of this.
 		var arguments = await ArgumentSplit(parser, source, context, singleLibraryCommandDefinition);
 
 		var newParser = parser.Push(

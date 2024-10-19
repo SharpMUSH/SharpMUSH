@@ -128,6 +128,18 @@ public interface ISharpMUSHParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitExplicitEvaluationStringConcatenatedRepeat([NotNull] SharpMUSHParser.ExplicitEvaluationStringConcatenatedRepeatContext context);
 	/// <summary>
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.bracePattern"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitBracePattern([NotNull] SharpMUSHParser.BracePatternContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.bracketPattern"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitBracketPattern([NotNull] SharpMUSHParser.BracketPatternContext context);
+	/// <summary>
 	/// Visit a parse tree produced by <see cref="SharpMUSHParser.funName"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>

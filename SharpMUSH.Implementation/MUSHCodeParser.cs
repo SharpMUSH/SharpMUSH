@@ -157,6 +157,26 @@ public class MUSHCodeParser(
 		
 		await visitor.Visit(chatContext);
 	}
+	
+	/// <summary>
+	/// This is the main entry point for commands run by a player.
+	/// </summary>
+	/// <param name="handle">The handle that identifies the connection.</param>
+	/// <param name="text">The text to parse.</param>
+	/// <returns>A completed task.</returns>
+	public async ValueTask CommandParse(MString text)
+	{
+		AntlrInputStreamSpan inputStream = new(MModule.plainText(text));
+		SharpMUSHLexer sharpLexer = new(inputStream);
+		CommonTokenStream commonTokenStream = new(sharpLexer);
+		SharpMUSHParser sharpParser = new(commonTokenStream);
+		sharpParser.AddErrorListener(new DiagnosticErrorListener(true));
+		sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL_EXACT_AMBIG_DETECTION;
+		SharpMUSHParser.StartSingleCommandStringContext chatContext = sharpParser.startSingleCommandString();
+		SharpMUSHParserVisitor visitor = new(this,text);
+		
+		await visitor.Visit(chatContext);
+	}
 
 	public ValueTask<CallState?> CommandCommaArgsParse(MString text)
 	{
