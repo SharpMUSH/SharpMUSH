@@ -1,5 +1,8 @@
 ﻿using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
+using System.Numerics;
+using SharpMUSH.Library.Definitions;
+using DotNext.Collections.Generic;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -25,7 +28,8 @@ public static partial class Functions
 	public static ValueTask<CallState> FDiv(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		AggregateDecimals(parser.CurrentState.Arguments, (acc, sub) => acc / sub);
 
-	[SharpFunction(Name = "floordiv", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
+	[SharpFunction(Name = "floordiv",
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
 	public static ValueTask<CallState> FloorDiv(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		AggregateDecimalToInt(parser.CurrentState.Arguments, (acc, sub) => acc / sub);
 
@@ -37,7 +41,8 @@ public static partial class Functions
 	public static ValueTask<CallState> Min(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		AggregateDecimals(parser.CurrentState.Arguments, Math.Min);
 
-	[SharpFunction(Name = "abs", MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
+	[SharpFunction(Name = "abs", MaxArgs = 1,
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
 	public static ValueTask<CallState> Abs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> EvaluateDecimal(parser.CurrentState.Arguments, Math.Abs);
 
@@ -119,26 +124,23 @@ public static partial class Functions
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "mean", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "mean", MinArgs = 1, MaxArgs = int.MaxValue,
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> Mean(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "median", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "median", MinArgs = 1, MaxArgs = int.MaxValue,
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> Median(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "modulo", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "modulo", MinArgs = 2, MaxArgs = int.MaxValue,
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> Modulo(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		throw new NotImplementedException();
-	}
-
-	[SharpFunction(Name = "pidinfo", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> PIDInfo(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
@@ -215,7 +217,8 @@ public static partial class Functions
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "e", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
+	[SharpFunction(Name = "e", MinArgs = 0, MaxArgs = 1,
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
 	public static ValueTask<CallState> E(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arguments = parser.CurrentState.Arguments;
@@ -232,7 +235,8 @@ public static partial class Functions
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "floor", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
+	[SharpFunction(Name = "floor", MinArgs = 1, MaxArgs = 1,
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
 	public static ValueTask<CallState> Floor(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		EvaluateDouble(parser.CurrentState.Arguments, Math.Floor);
 
@@ -242,7 +246,8 @@ public static partial class Functions
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "ln", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
+	[SharpFunction(Name = "ln", MinArgs = 1, MaxArgs = 1,
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
 	public static ValueTask<CallState> Ln(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		EvaluateDouble(parser.CurrentState.Arguments, Math.Log);
 
@@ -268,11 +273,13 @@ public static partial class Functions
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "sqrt", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
+	[SharpFunction(Name = "sqrt", MinArgs = 1, MaxArgs = 1,
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
 	public static ValueTask<CallState> Sqrt(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		EvaluateDouble(parser.CurrentState.Arguments, Math.Sqrt);
 
-	[SharpFunction(Name = "stddev", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "stddev", MinArgs = 1, MaxArgs = int.MaxValue,
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> StdDev(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
@@ -284,57 +291,114 @@ public static partial class Functions
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "vadd", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> vadd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	private static ValueTask<CallState> VectorOperation(IMUSHCodeParser parser, Func<Vector<decimal>, Vector<decimal>, Vector<decimal>> func)
 	{
-		throw new NotImplementedException();
+		var delim = parser.CurrentState.Arguments.ElementAtOrDefault(3)?.Message ?? MModule.single(" ");
+		var sep = parser.CurrentState.Arguments.ElementAtOrDefault(4)?.Message ?? delim;
+		var list1 = MModule.split2(delim, parser.CurrentState.Arguments[0].Message)
+			.Select(x => (decimal.TryParse(MModule.plainText(x), out var result), result)).ToArray();
+		var list2 = MModule.split2(delim, parser.CurrentState.Arguments[1].Message)
+			.Select(x => (decimal.TryParse(MModule.plainText(x), out var result), result)).ToArray();
+
+		if (list1.Any(x => !x.Item1) || list2.Any(x => !x.Item1))
+		{
+			return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
+		}
+
+		var vector1 = new Vector<decimal>(list1.Select(x => x.Item2).ToArray().AsSpan());
+		var vector2 = new Vector<decimal>(list2.Select(x => x.Item2).ToArray().AsSpan());
+		var vectorResult = func(vector1, vector2);
+
+		var result = new decimal[Math.Max(list1.Length, list2.Length)];
+		vectorResult.CopyTo(result);
+
+		var output = result.Select(x => MModule.single(x.ToString()));
+		return ValueTask.FromResult(new CallState(MModule.multipleWithDelimiter(sep, output)));
 	}
 
-	[SharpFunction(Name = "vcross", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	private static ValueTask<CallState> VectorOperationToScalar(IMUSHCodeParser parser, Func<Vector<decimal>, Vector<decimal>, decimal> func)
+	{
+		var delim = parser.CurrentState.Arguments.ElementAtOrDefault(3)?.Message ?? MModule.single(" ");
+		var list1 = MModule.split2(delim, parser.CurrentState.Arguments[0].Message)
+			.Select(x => (decimal.TryParse(MModule.plainText(x), out var result), result)).ToArray();
+		var list2 = MModule.split2(delim, parser.CurrentState.Arguments[1].Message)
+			.Select(x => (decimal.TryParse(MModule.plainText(x), out var result), result)).ToArray();
+
+		if (list1.Any(x => !x.Item1) || list2.Any(x => !x.Item1))
+		{
+			return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
+		}
+
+		var vector1 = new Vector<decimal>(list1.Select(x => x.Item2).ToArray().AsSpan());
+		var vector2 = new Vector<decimal>(list2.Select(x => x.Item2).ToArray().AsSpan());
+		var vectorResult = func(vector1, vector2);
+
+		var output = vectorResult.ToString();
+
+		return ValueTask.FromResult(new CallState(MModule.single(output)));
+	}
+
+	private static ValueTask<CallState> SingleVectorOperation(IMUSHCodeParser parser, Func<Vector<decimal>, Vector<decimal>> func)
+	{
+		var delim = parser.CurrentState.Arguments.ElementAtOrDefault(1)?.Message ?? MModule.single(" ");
+		var sep = parser.CurrentState.Arguments.ElementAtOrDefault(2)?.Message ?? delim;
+		var list1 = MModule.split2(delim, parser.CurrentState.Arguments[0].Message)
+			.Select(x => (decimal.TryParse(MModule.plainText(x), out var result), result)).ToArray();
+
+		if (list1.Any(x => !x.Item1))
+		{
+			return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
+		}
+
+		var vector1 = new Vector<decimal>(list1.Select(x => x.Item2).ToArray().AsSpan());
+		var vectorResult = func(vector1);
+
+		var result = new decimal[list1.Length];
+		vectorResult.CopyTo(result);
+
+		var output = result.Select(x => MModule.single(x.ToString()));
+		return ValueTask.FromResult(new CallState(MModule.multipleWithDelimiter(sep, output)));
+
+	}
+
+	[SharpFunction(Name = "vadd", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public static ValueTask<CallState> VAdd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> VectorOperation(parser, Vector.Add);
+
+	[SharpFunction(Name = "vcross", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> vcross(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		throw new NotImplementedException();
-	}
+			=> VectorOperation(parser, (v1, v2) => throw new NotImplementedException());
 
-	[SharpFunction(Name = "vsub", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+
+	[SharpFunction(Name = "vsub", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> vsub(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		throw new NotImplementedException();
-	}
+			=> VectorOperation(parser, Vector.Subtract);
 
-	[SharpFunction(Name = "vmax", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+
+	[SharpFunction(Name = "vmax", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> vmax(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		throw new NotImplementedException();
-	}
+			=> VectorOperation(parser, Vector.Max);
 
-	[SharpFunction(Name = "vmin", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+
+	[SharpFunction(Name = "vmin", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> vmin(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		throw new NotImplementedException();
-	}
+				=> VectorOperation(parser, Vector.Min);
 
-	[SharpFunction(Name = "vmul", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "vmul", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> vmul(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		throw new NotImplementedException();
-	}
+				=> VectorOperation(parser, Vector.Multiply);
 
-	[SharpFunction(Name = "vdot", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+
+	[SharpFunction(Name = "vdot", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> vdot(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		throw new NotImplementedException();
-	}
+				=> VectorOperationToScalar(parser, Vector.Dot);
 
 	[SharpFunction(Name = "vmag", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> vmag(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		throw new NotImplementedException();
-	}
+				=> VectorOperationToScalar(parser, (v1,v2) => throw new NotImplementedException());
 
 	[SharpFunction(Name = "vunit", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> vunit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		throw new NotImplementedException();
-	}
+					=> SingleVectorOperation(parser, Vector.OnesComplement);
+
 }
