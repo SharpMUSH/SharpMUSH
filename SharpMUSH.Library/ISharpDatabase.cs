@@ -79,4 +79,6 @@ public interface ISharpDatabase
 	Task<IEnumerable<SharpExit>?> GetExitsAsync(DBRef obj);
 
 	Task<IEnumerable<SharpExit>?> GetExitsAsync(AnyOptionalSharpContainer node);
+
+	Task MoveObject(AnySharpContent enactorObj, DBRef destination);
 }

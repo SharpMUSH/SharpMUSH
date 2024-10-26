@@ -70,28 +70,8 @@ public static partial class Commands
 		return new None();
 	}
 
-	[SharpCommand(Name = "GOTO", Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
-	public static async ValueTask<Option<CallState>> GoTo(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		var enactor = parser.CurrentState.Enactor!.Value;
-
-		if (parser.CurrentState.Arguments.Count < 1)
-		{
-			await parser.NotifyService.Notify(enactor, "You can't go that way.");
-			return new None();
-		}
-
-		// TODO: Implement
-		// Find the target, make sure it's a valid exit.
-		// Figure out the Destination if there's a Destination Attribute.
-		// Otherwise, check the Home of the Exit.
-		// Move the player to the new location.
-
-		return new None();
-	}
-
-	[SharpCommand(Name = "@DOLIST", Behavior = CB.EqSplit | CB.RSNoParse, MinArgs = 1, MaxArgs = 2, 
-		Switches = ["CLEARREGS","DELIMIT","INLINE","INPLACE","LOCALIZE","NOBREAK","NOTIFY"])]
+	[SharpCommand(Name = "@DOLIST", Behavior = CB.EqSplit | CB.RSNoParse, MinArgs = 1, MaxArgs = 2,
+		Switches = ["CLEARREGS", "DELIMIT", "INLINE", "INPLACE", "LOCALIZE", "NOBREAK", "NOTIFY"])]
 	public static async ValueTask<Option<CallState>> DoList(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var enactor = parser.CurrentState.Enactor!.Value;
@@ -107,7 +87,7 @@ public static partial class Commands
 		var wrappedIteration = new IterationWrapper<MString> { Value = MModule.empty() };
 		parser.CurrentState.IterationRegisters.Push(wrappedIteration);
 		var command = parser.CurrentState.Arguments[1].Message!;
-		
+
 		foreach (var item in list)
 		{
 			wrappedIteration.Value = item!;
@@ -116,7 +96,7 @@ public static partial class Commands
 		}
 
 		parser.CurrentState.IterationRegisters.Pop();
-		
+
 		return new None();
 	}
 
@@ -235,12 +215,12 @@ public static partial class Commands
 				error => MModule.empty());
 
 		await parser.NotifyService.Notify(enactor, $"{name.Hilight()}" +
-		                                           $"(#{obj.DBRef.Number}{string.Join(string.Empty, obj.Flags().Select(x => x.Symbol))})");
+																							 $"(#{obj.DBRef.Number}{string.Join(string.Empty, obj.Flags().Select(x => x.Symbol))})");
 		await parser.NotifyService.Notify(enactor,
 			$"Type: {obj.Type} Flags: {string.Join(" ", obj.Flags().Select(x => x.Name))}");
 		await parser.NotifyService.Notify(enactor, description.ToString());
 		await parser.NotifyService.Notify(enactor, $"Owner: {ownerName.Hilight()}" +
-		                                           $"(#{obj.DBRef.Number}{string.Join(string.Empty, ownerObj.Flags().Select(x => x.Symbol))})");
+																							 $"(#{obj.DBRef.Number}{string.Join(string.Empty, ownerObj.Flags().Select(x => x.Symbol))})");
 		// TODO: Zone & Money
 		await parser.NotifyService.Notify(enactor, $"Parent: {obj.Parent()?.Name ?? "*NOTHING*"}");
 		// TODO: LOCK LIST
@@ -269,7 +249,7 @@ public static partial class Commands
 
 		// TODO: Proper carry format.
 		await parser.NotifyService.Notify(enactor, $"Contents: {Environment.NewLine}" +
-		                                           $"{string.Join(Environment.NewLine, contentKeys)}");
+																							 $"{string.Join(Environment.NewLine, contentKeys)}");
 
 		if (!viewing.IsRoom)
 		{
@@ -310,5 +290,39 @@ public static partial class Commands
 		}
 
 		return new None();
+	}
+
+	[SharpCommand(Name = "GOTO", Behavior = CB.Default, MinArgs = 1, MaxArgs = 1)]
+	public static async ValueTask<Option<CallState>> Goto(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		var args = parser.CurrentState.Arguments;
+		var enactor = parser.CurrentState.Enactor!.Value;
+		var enactorObj = parser.CurrentState.EnactorObject(parser.Database).Known();
+		if (args.Count < 1)
+		{
+			await parser.NotifyService.Notify(enactor, "You can't go that way.");
+			return CallState.Empty;
+		}
+
+		var exit = await parser.LocateService.LocateAndNotifyIfInvalid(
+			parser, 
+			enactorObj, 
+			enactorObj, 
+			args[0]!.Message!.ToString(), 
+			Library.Services.LocateFlags.ExitsInTheRoomOfLooker);
+
+		if (!exit.IsValid())
+		{
+			await parser.NotifyService.Notify(enactor, "You can't go that way.");
+			return CallState.Empty;
+		}
+
+		var exitObj = exit.WithoutError().WithoutNone().AsExit;
+		var destination = exitObj.Home().Object().DBRef;
+
+		await parser.Database.MoveObject(enactorObj.AsContent, destination);
+
+		return new CallState(destination.ToString());
 	}
 }

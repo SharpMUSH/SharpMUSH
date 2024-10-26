@@ -130,7 +130,12 @@ public class SurrealDatabase(
 		throw new NotImplementedException();
 	}
 
-	public Task<bool> SetAttributeAsync(DBRef dbref, string[] attribute, string value, SharpPlayer owner)
+		public Task MoveObject(AnySharpContent enactorObj, DBRef destination)
+		{
+				throw new NotImplementedException();
+		}
+
+		public Task<bool> SetAttributeAsync(DBRef dbref, string[] attribute, string value, SharpPlayer owner)
 	{
 		throw new NotImplementedException();
 	}

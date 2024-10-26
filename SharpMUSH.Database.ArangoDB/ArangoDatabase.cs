@@ -344,7 +344,7 @@ public class ArangoDatabase(
 		return obj.Type switch
 		{
 			DatabaseConstants.typeThing => new SharpThing
-				{ Id = id, Object = convertObject, Location = () => GetLocation(id), Home = () => GetHome(id) },
+			{ Id = id, Object = convertObject, Location = () => GetLocation(id), Home = () => GetHome(id) },
 			DatabaseConstants.typePlayer => new SharpPlayer
 			{
 				Id = id, Object = convertObject, Aliases = res.Aliases.ToObject<string[]>(), Location = () => GetLocation(id),
@@ -401,7 +401,7 @@ public class ArangoDatabase(
 		return collection switch
 		{
 			DatabaseConstants.things => new SharpThing
-				{ Id = id, Object = convertObject, Location = () => GetLocation(id), Home = () => GetHome(id) },
+			{ Id = id, Object = convertObject, Location = () => GetLocation(id), Home = () => GetHome(id) },
 			DatabaseConstants.players => new SharpPlayer
 			{
 				Id = id, Object = convertObject, Aliases = res.Aliases.ToObject<string[]>(), Location = () => GetLocation(id),
@@ -800,5 +800,24 @@ public class ArangoDatabase(
 		if (result is null) return [];
 
 		return query.Select(x => GetObjectNode((string)x._id).AsPlayer);
+	}
+
+	public async Task MoveObject(AnySharpContent enactorObj, DBRef destination)
+	{
+		var oldLocation = enactorObj.Location();
+		var newLocation = GetObjectNode(destination);
+		var edge = (await arangoDB.Query.ExecuteAsync<SharpEdgeQueryResult>(handle, 
+			$"FOR v,e IN 1..1 OUTBOUND {oldLocation.Object().Id} GRAPH {DatabaseConstants.graphLocations} RETURN e")).Single();
+
+		await arangoDB.Graph.Edge.UpdateAsync(handle, 
+			DatabaseConstants.graphLocations, 
+			DatabaseConstants.atLocation, 
+			edge.Key,
+			new
+			{
+				From = enactorObj.Object().Id,
+				To = newLocation.WithoutNone().Object().Id
+			}, 
+			waitForSync: true);
 	}
 }
