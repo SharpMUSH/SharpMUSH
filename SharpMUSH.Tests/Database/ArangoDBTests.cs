@@ -7,20 +7,19 @@ namespace SharpMUSH.Tests.Database;
 
 public class ArangoDBTests : BaseUnitTest
 {
-		private static (ISharpDatabase Database, Infrastructure Infrastructure) _server;
+		private static Infrastructure? _server;
 		private static ISharpDatabase? _database;
 
 	[Before(Class)]
 	public static async Task OneTimeSetup()
 	{
-		_server = await IntegrationServer();
-		_database = _server.Database;
+		(_database,_server) = await IntegrationServer();
 	}
 
 	[After(Class)]
 	public static async Task OneTimeTearDown()
 	{
-		_server.Infrastructure.Dispose();
+		_server!.Dispose();
 		await Task.CompletedTask;
 	}
 
