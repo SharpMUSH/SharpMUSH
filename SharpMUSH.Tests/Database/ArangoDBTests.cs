@@ -1,4 +1,5 @@
-﻿using SharpMUSH.Library;
+﻿using SharpMUSH.IntegrationTests;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 
@@ -6,12 +7,21 @@ namespace SharpMUSH.Tests.Database;
 
 public class ArangoDBTests : BaseUnitTest
 {
-	private static ISharpDatabase? _database;
+		private static (ISharpDatabase Database, Infrastructure Infrastructure) _server;
+		private static ISharpDatabase? _database;
 
-	[Before(Test)]
-	public async Task OneTimeSetup()
+	[Before(Class)]
+	public static async Task OneTimeSetup()
 	{
-		_database = (await IntegrationServer()).Database;
+		_server = await IntegrationServer();
+		_database = _server.Database;
+	}
+
+	[After(Class)]
+	public static async Task OneTimeTearDown()
+	{
+		_server.Infrastructure.Dispose();
+		await Task.CompletedTask;
 	}
 
 	[Test]

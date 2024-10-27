@@ -36,7 +36,7 @@ public class Program
 			Serializer = new ArangoNewtonsoftSerializer(new ArangoNewtonsoftDefaultContractResolver())
 		};
 
-		await CreateWebHostBuilder(config).Build().RunAsync();
+		await CreateWebHostBuilder(config).Build().StartAsync();
 	}
 
 	public static IWebHostBuilder CreateWebHostBuilder(ArangoConfiguration arangoConfig) =>
