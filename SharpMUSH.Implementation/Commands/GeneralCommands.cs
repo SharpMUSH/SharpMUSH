@@ -319,7 +319,15 @@ public static partial class Commands
 		}
 
 		var exitObj = exit.WithoutError().WithoutNone().AsExit;
+		// TODO: Check if the exit has a destination attribute.
+		var destinationObj = exitObj.Home();
 		var destination = exitObj.Home().Object().DBRef;
+
+		if (!parser.PermissionService.CanGoto(enactorObj, exitObj, exitObj.Home()))
+		{
+			await parser.NotifyService.Notify(enactor, "You can't go that way.");
+			return CallState.Empty;
+		}
 
 		await parser.Database.MoveObject(enactorObj.AsContent, destination);
 

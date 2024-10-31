@@ -25,4 +25,7 @@ public interface IPermissionService
 	bool CanInteract(AnySharpObject result, AnySharpObject executor, InteractType type);
 		
 	bool CouldDoIt(AnySharpObject who, AnyOptionalSharpObject thing1, string? what);
+
+	bool CanGoto(AnySharpObject who, SharpExit exit, AnySharpContainer destnation);
+
 }

@@ -111,4 +111,13 @@ public class PermissionService(ILockService lockService) : IPermissionService
 	{
 		throw new NotImplementedException();
 	}
+
+	public static bool CanGoto(AnySharpObject who, SharpExit exit, AnySharpContainer destination)
+	{
+		// TODO: Implement
+		var _ = who;
+		var _2 = exit;
+		var _3 = destination;
+		return true;
+	}
 }
