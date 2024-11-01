@@ -1,4 +1,5 @@
 ﻿using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Library.Services;
@@ -37,10 +38,10 @@ public enum LocateFlags
 public interface ILocateService
 {
 	public ValueTask<AnyOptionalSharpObjectOrError> LocateAndNotifyIfInvalid(
-		IMUSHCodeParser parser, 
-		AnySharpObject looker, 
-		AnySharpObject executor, 
-		string name, 
+		IMUSHCodeParser parser,
+		AnySharpObject looker,
+		AnySharpObject executor,
+		string name,
 		LocateFlags flags);
 
 	public ValueTask<AnyOptionalSharpObjectOrError> Locate(

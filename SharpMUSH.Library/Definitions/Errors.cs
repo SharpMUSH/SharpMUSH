@@ -20,6 +20,7 @@ public static class Errors
 	public const string ErrorNoSuchAttribute = "#-1 NO SUCH ATTRIBUTE";
 	public const string ErrorMatch = "#-1 NO MATCH";
 	public const string ErrorNotVisible = "#-1 NO SUCH OBJECT VISIBLE";
+	public const string ErrorCannotTeleport = "#-1 NO PERMISSION TO TELEPORT OBJECT";
 	public const string ErrorDisabled = "#-1 FUNCTION DISABLED";
 	public const string ErrorRange = "#-1 OUT OF RANGE";
 	public const string ErrorArgRange = "#-1 ARGUMENT OUT OF RANGE";

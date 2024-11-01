@@ -1,4 +1,6 @@
-﻿using OneOf.Types;
+﻿using OneOf;
+using OneOf.Types;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -294,7 +296,6 @@ public static partial class Commands
 	[SharpCommand(Name = "GOTO", Behavior = CB.Default, MinArgs = 1, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> Goto(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
 		var args = parser.CurrentState.Arguments;
 		var enactor = parser.CurrentState.Enactor!.Value;
 		var enactorObj = parser.CurrentState.EnactorObject(parser.Database).Known();
@@ -305,10 +306,10 @@ public static partial class Commands
 		}
 
 		var exit = await parser.LocateService.LocateAndNotifyIfInvalid(
-			parser, 
-			enactorObj, 
-			enactorObj, 
-			args[0]!.Message!.ToString(), 
+			parser,
+			enactorObj,
+			enactorObj,
+			args[0]!.Message!.ToString(),
 			Library.Services.LocateFlags.ExitsInTheRoomOfLooker);
 
 		if (!exit.IsValid())
@@ -329,6 +330,92 @@ public static partial class Commands
 		}
 
 		await parser.Database.MoveObject(enactorObj.AsContent, destination);
+
+		return new CallState(destination.ToString());
+	}
+
+
+	[SharpCommand(Name = "@TELEPORT", Behavior = CB.Default | CB.EqSplit, MinArgs = 1, MaxArgs = 2, Switches = ["LIST", "INSIDE", "QUIET"])]
+	public static async ValueTask<Option<CallState>> Teleport(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		var args = parser.CurrentState.Arguments;
+		var enactor = parser.CurrentState.Enactor!.Value;
+
+		// If /list - Arg0 can contain multiple SharpObject
+		// If not, Arg0 is a singular object
+		// Arg0 must only contain SharpContents (Validation)
+		// If Arg1 does not exist, Arg0 is the Destination for the Enactor.
+		// Otherwise, Arg1 is the Destination for the Arg0.
+
+		var enactorObj = parser.CurrentState.EnactorObject(parser.Database).Known();
+		var destinationString = MModule.plainText(args.Count == 1 ? args[0].Message : args[1].Message);
+		var toTeleport = MModule.plainText(args.Count == 1 ? MModule.single(enactor.ToString()) : args[0].Message);
+
+		var isList = parser.CurrentState.Switches.Contains("list");
+
+		var toTeleportList = Enumerable.Empty<OneOf<DBRef, string>>();
+		if (isList)
+		{
+			Functions.Functions.NameList(toTeleport);
+		}
+		else
+		{
+			var isDBRef = DBRef.TryParse(toTeleport, out var objToTeleport);
+			toTeleportList = [ isDBRef ? objToTeleport!.Value : toTeleport];
+		}
+
+		var toTeleportStringList = toTeleportList.Select(x => x.ToString());
+
+		var destination = await parser.LocateService.LocateAndNotifyIfInvalid(parser,
+																																				enactorObj,
+																																				enactorObj,
+																																				destinationString,
+																																				Library.Services.LocateFlags.All);
+
+		if(!destination.IsValid())
+		{
+			await parser.NotifyService.Notify(enactor, "You can't go that way.");
+			return CallState.Empty;
+		}
+
+		var validDestination = destination.WithoutError().WithoutNone();
+
+		if(validDestination.IsExit)
+		{
+			// TODO: Implement Teleporting through an Exit.
+			return CallState.Empty;
+		}
+
+		var destinationContainer = validDestination.AsContainer;
+
+		foreach (var obj in toTeleportStringList)
+		{
+			var locateTarget = await parser.LocateService.LocateAndNotifyIfInvalid(parser, enactorObj, enactorObj, obj, Library.Services.LocateFlags.All);
+			if (!locateTarget.IsValid() || locateTarget.IsRoom)
+			{
+				await parser.NotifyService.Notify(enactor, Errors.ErrorNotVisible);
+				continue;
+			}
+
+			var target = locateTarget.WithoutError().WithoutNone();
+			var targetContent = target.AsContent;
+			if (!parser.PermissionService.Controls(enactorObj, target))
+			{
+				await parser.NotifyService.Notify(enactor, Errors.ErrorCannotTeleport);
+				continue;
+			}
+
+			await parser.Database.MoveObject(targetContent, destinationContainer.Object().DBRef);
+			// TODO: Notify the target that they have been teleported - if Quiet switch is not present.
+			// TODO: Evaluate room verbs upon teleportation.
+			// TODO: If the target is a player, force a LOOK
+
+			// CONSIDER:
+			// There are two ways to move a player: GOTO (exits) and TELEPORT (directly).
+			// Rooms evaluate OENTER either way.
+			// Is this a reason to make this into a 'move service' just for the movement itself?
+			// Or just a common static function?
+		}
 
 		return new CallState(destination.ToString());
 	}

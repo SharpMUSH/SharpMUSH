@@ -3,7 +3,6 @@ using Antlr4.Runtime.Tree;
 using DotNext.Collections.Generic;
 using SharpMUSH.Library.ParserInterfaces;
 using System.Reflection;
-using System.Text.RegularExpressions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services;
@@ -117,7 +116,6 @@ public static partial class Commands
 			{
 				var exit = locate.AsExit;
 				return await HandleGoCommandPattern(parser, exit);
-				// TODO: GO THERE
 			}
 		}		
 		
@@ -144,6 +142,11 @@ public static partial class Commands
 		// Step 7: Enter Aliases
 		// Step 8: Leave Aliases
 		// Step 9: User Defined Commands nearby
+		// -- This is going to be a very important place to Cache the commands.
+		// A caching strategy is going to be reliant on the Attribute Service.
+		// Optimistic that the command still exists, until we try and it no longer does?
+		// What's the best way to retrieve the Regex or Wildcard pattern and transform it? 
+		// It needs to take an area to search in. So this is definitely its own service.
 		// Step 10: Zone Exit Name and Aliases
 		// Step 11: Zone Master User Defined Commands
 		// Step 12: User Defined commands on the location itself.
@@ -167,8 +170,15 @@ public static partial class Commands
 
 	private static async ValueTask<Option<CallState>> HandleGoCommandPattern(IMUSHCodeParser parser, SharpExit exit)
 	{
-		await Task.Delay(1);
-		throw new NotImplementedException();
+		var parseState = parser.Push(parser.CurrentState with
+		{
+			Command = "GOTO",
+			Arguments = [new CallState(exit.Object.DBRef.ToString(), 0)],
+			Function = null
+		});
+		var result = await _commandLibrary.Single(x => x.Key == "GOTO").Value.Function.Invoke(parseState);
+		parser.Pop();
+		return result;
 	}
 
 	private static async ValueTask<Option<CallState>> HandleInternalCommandPattern(IMUSHCodeParser parser, MString source,
