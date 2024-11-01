@@ -112,7 +112,7 @@ public class PermissionService(ILockService lockService) : IPermissionService
 		throw new NotImplementedException();
 	}
 
-	public static bool CanGoto(AnySharpObject who, SharpExit exit, AnySharpContainer destination)
+	public bool CanGoto(AnySharpObject who, SharpExit exit, AnySharpContainer destination)
 	{
 		// TODO: Implement
 		var _ = who;

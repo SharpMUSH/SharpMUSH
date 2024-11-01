@@ -1,8 +1,7 @@
 ﻿using OneOf;
-using OneOf.Monads;
+using OneOf.Types;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
-using None = OneOf.Types.None;
 
 namespace SharpMUSH.Library.Extensions;
 
@@ -14,7 +13,7 @@ public static class OneOfExtensions
 			room => room.Object,
 			exit => exit.Object,
 			thing => thing.Object,
-			none => (SharpObject?)null
+			none => null
 		);
 
 	public static SharpObject Object(this AnySharpContainer union) =>
@@ -125,13 +124,13 @@ public static class OneOfExtensions
 			thing => thing,
 			none => throw new ArgumentNullException(nameof(union)));
 
-	public static Option<SharpObject> ObjectOption(this AnyOptionalSharpObject union) =>
-		union.Match<Option<SharpObject>>(
+	public static OneOf<SharpObject, None> ObjectOption(this AnyOptionalSharpObject union) =>
+		union.Match<OneOf<SharpObject,None>>(
 			player => player.Object,
 			room => room.Object,
 			exit => exit.Object,
 			thing => thing.Object,
-			none => new OneOf.Monads.None()
+			none => new None()
 		);
 
 	public static string? Id(this AnyOptionalSharpObject union) =>

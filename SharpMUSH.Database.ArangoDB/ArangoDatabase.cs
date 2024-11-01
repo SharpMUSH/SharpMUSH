@@ -14,12 +14,11 @@ using System.Collections.Immutable;
 namespace SharpMUSH.Database.ArangoDB;
 
 // TODO: Unit of Work / Transaction around all of this! Otherwise it risks the stability of the Database.
-// TODO: Critical!
 public class ArangoDatabase(
 	ILogger<ArangoDatabase> logger,
 	IArangoContext arangoDB,
 	ArangoHandle handle,
-	IPasswordService passwordService
+	IPasswordService passwordService // TODO: This doesn't belong in the database layer
 ) : ISharpDatabase
 {
 	public async Task Migrate()
@@ -458,6 +457,9 @@ public class ArangoDatabase(
 		}
 
 		// TODO: This is a lazy implementation and does not appropriately support the ` section of pattern matching for attribute trees.
+		// TODO: A pattern with a wildcard can match multiple levels of attributes.
+		// This means it can also match attributes deeper in its structure that need to be reported on.
+		// It already does this right now. But not in a sorted manner!
 
 		// OPTIONS { indexHint: "inverted_index_name", forceIndexHint: true }
 		// This doesn't seem like it can be done on a GRAPH query?

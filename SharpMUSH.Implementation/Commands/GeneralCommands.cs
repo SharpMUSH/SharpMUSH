@@ -1,5 +1,4 @@
-﻿using ANSILibrary;
-using OneOf.Monads;
+﻿using OneOf.Types;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -230,7 +229,7 @@ public static partial class Commands
 
 		// TODO: Match proper date format: Mon Feb 26 18:05:10 2007
 		await parser.NotifyService.Notify(enactor,
-			$"Created: {DateTimeOffset.FromUnixTimeMilliseconds(obj.CreationTime).ToString("F")}");
+			$"Created: {DateTimeOffset.FromUnixTimeMilliseconds(obj.CreationTime):F}");
 
 		var atrs = await parser.AttributeService.GetVisibleAttributesAsync(enactor, viewing.Known());
 

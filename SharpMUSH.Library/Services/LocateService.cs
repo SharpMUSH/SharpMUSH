@@ -158,7 +158,7 @@ public partial class LocateService : ILocateService
 		var abs = HelperFunctions.ParseDBRef(name);
 		if (abs.IsSome())
 		{
-			var absObject = parser.Database.GetObjectNode(abs.Value());
+			var absObject = parser.Database.GetObjectNode(abs.AsValue());
 			match = absObject.WithErrorOption();
 			if (!match.IsT4 && (flags & LocateFlags.AbsoluteMatch) != 0)
 			{
@@ -314,7 +314,7 @@ public partial class LocateService : ILocateService
 				continue;
 			}
 			var abs = HelperFunctions.ParseDBRef(name);
-			if (abs.IsSome() && cur.Object().DBRef == abs.Value())
+			if (abs.IsSome() && cur.Object().DBRef == abs.AsValue())
 			{
 				(bestMatch, final, curr, rightType, exact, flow) =
 					Matched(parser, true, exact, final, curr, rightType, looker, where, cur, bestMatch, flags);

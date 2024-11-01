@@ -1,7 +1,6 @@
 ﻿using System.Diagnostics;
 using Antlr4.Runtime.Tree;
 using DotNext.Collections.Generic;
-using OneOf.Monads;
 using SharpMUSH.Library.ParserInterfaces;
 using System.Reflection;
 using System.Text.RegularExpressions;
@@ -9,6 +8,8 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services;
 using static SharpMUSHParser;
+using SharpMUSH.Library.DiscriminatedUnions;
+using OneOf.Types;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -60,7 +61,7 @@ public static partial class Commands
 		var firstCommandMatch = context.firstCommandMatch();
 
 		if (firstCommandMatch?.SourceInterval.Length is null or 0)
-			return new OneOf.Monads.None();
+			return new None();
 
 		var command = firstCommandMatch.GetText();
 
@@ -87,7 +88,7 @@ public static partial class Commands
 		if (parser.CurrentState.Executor is null && parser.CurrentState.Handle is not null)
 		{
 			await parser.NotifyService.Notify(parser.CurrentState.Handle, "No such command available at login.");
-			return new OneOf.Monads.None();
+			return new None();
 		}
 
 		// Step 2: Check for a single-token command

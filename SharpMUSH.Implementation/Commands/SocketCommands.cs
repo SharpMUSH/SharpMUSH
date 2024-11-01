@@ -1,5 +1,6 @@
-﻿using OneOf.Monads;
+﻿using OneOf.Types;
 using Serilog;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using System.Text.RegularExpressions;

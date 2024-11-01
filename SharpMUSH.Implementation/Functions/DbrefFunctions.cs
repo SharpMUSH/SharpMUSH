@@ -17,7 +17,7 @@ public partial class Functions
 			return new CallState("#-1");
 		}
 
-		var dbRef = dbRefConversion.AsT1.Value;
+		var dbRef = dbRefConversion.AsValue();
 		var objectInfo = await parser.Database.GetObjectNodeAsync(dbRef);
 
 		// TODO: Check the type, as an Exit doesn't return the right thing or Loc on a Location Search.
@@ -293,7 +293,7 @@ public partial class Functions
 			return new CallState("#-1");
 		}
 
-		var contents = await parser.Database.GetContentsAsync(dbRefConversion.Value());
+		var contents = await parser.Database.GetContentsAsync(dbRefConversion.AsValue());
 		if (contents is null)
 		{
 			await parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, "I can't see that here.");

@@ -58,7 +58,7 @@ public partial class Functions
 		// TODO: USE LOCATE
 		if (obj.IsNone()) return new CallState(false);
 
-		var actualObj = await parser.Database.GetObjectNodeAsync(obj.AsT1.Value);
+		var actualObj = await parser.Database.GetObjectNodeAsync(obj.AsValue());
 		// TODO: Notify
 		if (actualObj.IsNone()) return new CallState(false);
 
@@ -73,7 +73,7 @@ public partial class Functions
 		// TODO: USE LOCATE
 		if (obj.IsNone()) return new CallState(false, Errors.ErrorNotVisible);
 			
-		var actualObj = await parser.Database.GetObjectNodeAsync(obj.AsT1.Value);
+		var actualObj = await parser.Database.GetObjectNodeAsync(obj.AsValue());
 		// TODO: Notify
 		if (actualObj.IsNone()) return new CallState(false);
 

@@ -226,7 +226,7 @@ public partial class Functions
 	public static IEnumerable<OneOf<DBRef, string>> NameList(string list)
 		=> NameListPatternRegex.Matches(list).Cast<Match>().Select(x =>
 			!string.IsNullOrWhiteSpace(x.Groups["DBRef"].Value)
-				? OneOf<DBRef, string>.FromT0(HelperFunctions.ParseDBRef(x.Groups["DBRef"].Value).Value())
+				? OneOf<DBRef, string>.FromT0(HelperFunctions.ParseDBRef(x.Groups["DBRef"].Value).AsValue())
 				: OneOf<DBRef, string>.FromT1(x.Groups["User"].Value));
 
 	public static async ValueTask<IEnumerable<SharpPlayer?>> PopulatedNameList(IMUSHCodeParser parser, string list)

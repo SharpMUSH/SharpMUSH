@@ -1,11 +1,11 @@
 ﻿using SharpMUSH.Implementation.Definitions;
 using System.Reflection;
-using System.Text.RegularExpressions;
 using static SharpMUSHParser;
-using OneOf.Monads;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Implementation.Visitors;
+using SharpMUSH.Library.DiscriminatedUnions;
+using OneOf.Types;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -42,12 +42,12 @@ public static partial class Functions
 		{
 			var discoveredFunction = DiscoverBuiltInFunction(name);
 
-			if (discoveredFunction.TryPickT1(out var functionValue, out _) == false)
+			if (discoveredFunction.TryPickT0(out var functionValue, out _) == false)
 			{
 				return new CallState(string.Format(Errors.ErrorNoSuchFunction, name), context.Depth());
 			}
 
-			_functionLibrary.Add(name, functionValue.Value);
+			_functionLibrary.Add(name, functionValue);
 			libraryMatch = _functionLibrary[name];
 		}
 

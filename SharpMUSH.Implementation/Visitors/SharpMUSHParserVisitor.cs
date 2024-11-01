@@ -159,8 +159,7 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source)
 		}
 		else
 		{
-			return await base.VisitChildren(context)
-			       ?? new(textContents, context.Depth());
+			return await base.VisitChildren(context) ?? new(textContents, context.Depth());
 		}
 	}
 
@@ -170,9 +169,10 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source)
 			context.Stop?.StopIndex is null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source);
 		Log.Logger.Information("VisitCommand: {Text}", text);
 
-		return (await Commands.Commands.EvaluateCommands(parser, source, context, base.VisitChildren)).Match(
-			x => (CallState?)null,
-			x => x.Value);
+		return (await Commands.Commands.EvaluateCommands(parser, source, context, base.VisitChildren))
+			.Match(
+				x => x,
+				x => (CallState?)null);
 	}
 
 	public override async ValueTask<CallState?> VisitStartCommandString(

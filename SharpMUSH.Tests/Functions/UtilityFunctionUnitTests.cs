@@ -21,9 +21,9 @@ public class UtilityFunctionUnitTests : BaseUnitTest
 			pws: new PasswordService(new Microsoft.AspNetCore.Identity.PasswordHasher<string>()));
 		var result = (await parser.FunctionParse(MModule.single("pcreate(John,SomePassword)")))?.Message?.ToString()!;
 
-		var a = HelperFunctions.ParseDBRef(result).AsT1.Value;
+		var a = HelperFunctions.ParseDBRef(result).AsValue();
 		var db = await database!.GetObjectNodeAsync(a);
-		var player = db!.AsT0;
+		var player = db!.AsPlayer;
 
 		await Assert.That(parser.PasswordService.PasswordIsValid(result, "SomePassword", player.PasswordHash)).IsTrue();
 		await Assert.That(parser.PasswordService.PasswordIsValid(result, "SomePassword2", player.PasswordHash)).IsFalse();

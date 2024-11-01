@@ -1,5 +1,5 @@
 ﻿using OneOf;
-using OneOf.Monads;
+using OneOf.Types;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;

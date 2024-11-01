@@ -27,6 +27,12 @@ public class AttributeService(ISharpDatabase db, IPermissionService ps) : IAttri
 			IAttributeService.AttributeMode.Execute => ps.CanExecuteAttribute,
 			_ => throw new InvalidOperationException(nameof(IAttributeService.AttributeMode))
 		};
+		var permissionFailureType = mode switch
+		{
+			IAttributeService.AttributeMode.Read => Errors.ErrorAttrPermissions,
+			IAttributeService.AttributeMode.Execute => Errors.ErrorAttrEvalPermissions,
+			_ => throw new InvalidOperationException(nameof(IAttributeService.AttributeMode))
+		};
 
 		while (curObj is not null)
 		{
@@ -36,7 +42,7 @@ public class AttributeService(ISharpDatabase db, IPermissionService ps) : IAttri
 			{
 				return permissionPredicate(executor, obj, attr)
 					? attr.Last()
-					: new Error<string>(Errors.ErrorAttrPermissions);
+					: new Error<string>(permissionFailureType);
 			}
 
 			if (!checkParent)
@@ -58,7 +64,10 @@ public class AttributeService(ISharpDatabase db, IPermissionService ps) : IAttri
 		return ValueTask.FromResult((SharpAttributesOrError)attributes.Where(x => ps.CanViewAttribute(executor, obj, x)).ToArray());
 	}
 
-	public async ValueTask<SharpAttributesOrError> GetAttributePatternAsync(AnySharpObject executor, AnySharpObject obj, string attributePattern, IAttributeService.AttributePatternMode mode)
+	public async ValueTask<SharpAttributesOrError> GetAttributePatternAsync(AnySharpObject executor,
+																																				  AnySharpObject obj,
+																																				  string attributePattern,
+																																				  IAttributeService.AttributePatternMode mode)
 	{
 		// TODO: Implement Pattern Modes
 		// TODO: GetAttributesAsync should return the full Path, not the final attribute.
@@ -79,7 +88,10 @@ public class AttributeService(ISharpDatabase db, IPermissionService ps) : IAttri
 		return attributes.Where(x => ps.CanViewAttribute(executor, obj, x)).ToArray();
 	}
 
-	public async ValueTask<OneOf<Success,Error<string>>> SetAttributeAsync(AnySharpObject executor, AnySharpObject obj, string attribute, MString value)
+	public async ValueTask<OneOf<Success, Error<string>>> SetAttributeAsync(AnySharpObject executor,
+																																				 AnySharpObject obj,
+																																				 string attribute,
+																																				 MString value)
 	{
 		if (!ps.Controls(executor, obj))
 		{
@@ -91,19 +103,52 @@ public class AttributeService(ISharpDatabase db, IPermissionService ps) : IAttri
 
 		// TODO: Fix, object permissions also needed.
 		var permission = attr?.All(x => ps.CanSet(executor, obj, x)) ?? true;
-		
+
 		if (!permission)
 		{
 			return new Error<string>(Errors.ErrorAttrSetPermissions);
 		}
 
 		await db.SetAttributeAsync(obj.Object().DBRef, attrPath, value.ToString(), executor.Object().Owner());
-		
+
 		return new Success();
 	}
 
-	public ValueTask<SharpAttributesOrError> ClearAttributeAsync(AnySharpObject executor, AnySharpObject obj, string attribute, IAttributeService.AttributeClearMode mode)
+	/// <summary>
+	/// Sets the value of an attribute to string.Empty
+	/// </summary>
+	/// <param name="executor"></param>
+	/// <param name="obj"></param>
+	/// <param name="attributePattern"></param>
+	/// <param name="mode"></param>
+	/// <returns></returns>
+	/// <exception cref="NotImplementedException"></exception>
+	public async ValueTask<OneOf<Success, Error<string>>> ClearAttributeAsync(AnySharpObject executor,
+																																					 AnySharpObject obj,
+																																					 string attributePattern,
+																																					 IAttributeService.AttributeClearMode mode)
 	{
+		await ValueTask.CompletedTask;
+
+		if (!ps.Controls(executor, obj))
+		{
+			return new Error<string>(Errors.ErrorAttrSetPermissions);
+		}
+
+		var attr = await db.GetAttributesAsync(obj.Object().DBRef, attributePattern);
+
+		var permission = attr?.All(x => ps.CanSet(executor, obj, x)) ?? true;
+
+		if (!permission)
+		{
+			return new Error<string>(Errors.ErrorAttrSetPermissions);
+		}
+
+		await db.ClearAttributeAsync(obj.Object().DBRef, attr!.Select(x => x.LongName!).ToArray());
+
+
+		return new Success();
+
 		throw new NotImplementedException();
 	}
 }

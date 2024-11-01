@@ -231,7 +231,7 @@ public partial class Functions
 			return new CallState("#-1 NO SUCH PLAYER");
 		}
 
-		var dbRef = dbRefConversion.AsT1.Value;
+		var dbRef = dbRefConversion.AsValue();
 		var objectInfo = await parser.Database.GetObjectNodeAsync(dbRef);
 		if (!objectInfo!.IsPlayer)
 		{
@@ -286,7 +286,7 @@ public partial class Functions
 	{
 		var parsed = HelperFunctions.ParseDBRef(MModule.plainText(parser.CurrentState.Arguments[0].Message));
 		if (parsed.IsNone()) return new("0");
-		return new CallState(!(await parser.Database.GetObjectNodeAsync(parsed.AsT1.Value)).IsNone);
+		return new CallState(!(await parser.Database.GetObjectNodeAsync(parsed.AsValue())).IsNone);
 	}
 
 	[SharpFunction(Name = "ISINT", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]

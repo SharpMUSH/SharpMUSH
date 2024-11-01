@@ -190,8 +190,7 @@ public partial class Functions
 
 		var executor = parser.CurrentState.ExecutorObject(parser.Database).Known();
 		var enactor = parser.CurrentState.EnactorObject(parser.Database).Known();
-		var objAttr =
-			HelperFunctions.SplitOptionalDBRefAndAttr(MModule.plainText(parser.CurrentState.Arguments[0].Message!));
+		var objAttr = HelperFunctions.SplitOptionalDBRefAndAttr(MModule.plainText(parser.CurrentState.Arguments[0].Message!));
 		if (objAttr is { IsT1: true, AsT1: false })
 		{
 			return new CallState(Errors.ErrorObjectAttributeString);
