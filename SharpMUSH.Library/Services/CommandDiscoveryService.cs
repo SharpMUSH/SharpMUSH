@@ -13,11 +13,12 @@ public partial class CommandDiscoveryService : ICommandDiscoveryService
 	// We need to cache the results of the conversion and where that object & attribute live.
 	// We don't need to care for the Cache Building if that command was used, we can immediately cache all commands.
 	// CONSIDERATION: Do we also need a possible Database-Scan for all commands, and cache them?
-	public ValueTask<Option<IEnumerable<(SharpObject SObject, SharpAttribute Attribute, Dictionary<string, MString> Arguments)>>> MatchUserDefinedCommand(
+	public async ValueTask<Option<IEnumerable<(SharpObject SObject, SharpAttribute Attribute, Dictionary<string, MString> Arguments)>>> MatchUserDefinedCommand(
 		IMUSHCodeParser parser,
 		IEnumerable<AnySharpObject> objects,
 		MString commandString)
 	{
+		await Task.CompletedTask;
 		var filteredObjects = objects.Where(x => !x.HasFlag("NO_COMMAND"));
 
 		var commandPatternAttributes = filteredObjects
@@ -39,13 +40,13 @@ public partial class CommandDiscoveryService : ICommandDiscoveryService
 
 		if (!matchedCommandPatternAttributes.Any())
 		{
-			return ValueTask.FromResult<Option<IEnumerable<(SharpObject, SharpAttribute, Dictionary<string, MString>)>>>(new None());
+			return new None();
 		}
 
 		var res = matchedCommandPatternAttributes.Select(match =>
 			(match.Obj,
 			 match.Attr,
-			 match.Reg
+			 Arguments: match.Reg
 				.Matches(MModule.plainText(commandString))
 				.SelectMany(x => x.Groups.Values)
 				.Skip(!match.Attr.Flags().Any(x => x.Name == "REGEX") ? 1 : 0) // Skip the first Group for Wildcard matches, which is the entire Match
@@ -56,6 +57,8 @@ public partial class CommandDiscoveryService : ICommandDiscoveryService
 				.GroupBy(x => x.Key)
 				.ToDictionary(x => x.Key, x => x.First())
 			));
+
+		return (Option<IEnumerable<(SharpObject SObject, SharpAttribute Attribute, Dictionary<string, MString> Arguments)>>)res;
 	}
 
 	[GeneratedRegex(@"^\$.+?(?<!\\)(?:\\\\)*\:", RegexOptions.Singleline)]

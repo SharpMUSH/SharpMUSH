@@ -30,8 +30,8 @@ public partial class Functions
 			none => -1);
 
 		var created = await parser.Database.CreatePlayerAsync(
-			args[0].Message!.ToString(),
-			args[1].Message!.ToString(),
+			args["0"].Message!.ToString(),
+			args["1"].Message!.ToString(),
 			new Library.Models.DBRef(trueLocation == -1 ? 1 : trueLocation));
 
 		return new CallState($"#{created.Number}:{created.CreationMilliseconds}");
@@ -50,7 +50,7 @@ public partial class Functions
 		var invert = false;
 		var underline = false;
 
-		var ansiCodes = args[0].Message!.ToString().Split(' ');
+		var ansiCodes = args["0"].Message!.ToString().Split(' ');
 		Func<bool, byte, byte[]> highlightFunc = (highlight, b) => highlight ? [1, b] : [b];
 
 		foreach (var cde in ansiCodes)
@@ -190,7 +190,7 @@ public partial class Functions
 			linkText: null,
 			linkUrl: null);
 
-		return ValueTask.FromResult(new CallState(MModule.markupSingle2(new MarkupImplementation.AnsiMarkup(details), args[1].Message)));
+		return ValueTask.FromResult(new CallState(MModule.markupSingle2(new MarkupImplementation.AnsiMarkup(details), args["1"].Message)));
 	}
 
 	[SharpFunction(Name = "@@", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
@@ -224,7 +224,7 @@ public partial class Functions
 	[SharpFunction(Name = "CHECKPASS", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> Checkpass(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var dbRefConversion = HelperFunctions.ParseDBRef(MModule.plainText(parser.CurrentState.Arguments[0].Message));
+		var dbRefConversion = HelperFunctions.ParseDBRef(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
 		if (dbRefConversion.IsNone())
 		{
 			await parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, "I can't see that here.");
@@ -242,7 +242,7 @@ public partial class Functions
 
 		var result = parser.PasswordService.PasswordIsValid(
 			$"#{player!.Object!.Key}:{player!.Object!.CreationTime}",
-			parser.CurrentState.Arguments[1].Message!.ToString(),
+			parser.CurrentState.Arguments["1"].Message!.ToString(),
 			player.PasswordHash);
 
 		return result ? new("1") : new("0");
@@ -284,18 +284,18 @@ public partial class Functions
 	[SharpFunction(Name = "ISDBREF", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> IsDbRef(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var parsed = HelperFunctions.ParseDBRef(MModule.plainText(parser.CurrentState.Arguments[0].Message));
+		var parsed = HelperFunctions.ParseDBRef(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
 		if (parsed.IsNone()) return new("0");
 		return new CallState(!(await parser.Database.GetObjectNodeAsync(parsed.AsValue())).IsNone);
 	}
 
 	[SharpFunction(Name = "ISINT", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> IsInt(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
-		ValueTask.FromResult<CallState>(new(int.TryParse(parser.CurrentState.Arguments[0].Message!.ToString(), out var _) ? "1" : "0"));
+		ValueTask.FromResult<CallState>(new(int.TryParse(parser.CurrentState.Arguments["0"].Message!.ToString(), out var _) ? "1" : "0"));
 
 	[SharpFunction(Name = "ISNUM", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> IsNum(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
-		ValueTask.FromResult<CallState>(new(decimal.TryParse(parser.CurrentState.Arguments[0].Message!.ToString(), out var _) ? "1" : "0"));
+		ValueTask.FromResult<CallState>(new(decimal.TryParse(parser.CurrentState.Arguments["0"].Message!.ToString(), out var _) ? "1" : "0"));
 
 	[SharpFunction(Name = "ISOBJID", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> IsObjId(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -306,7 +306,7 @@ public partial class Functions
 	[SharpFunction(Name = "ISREGEXP", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> isregexp(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var arg = parser.CurrentState.Arguments[0].Message!.ToString();
+		var arg = parser.CurrentState.Arguments["0"].Message!.ToString();
 
 		if (string.IsNullOrWhiteSpace(arg)) return ValueTask.FromResult<CallState>(new("0"));
 
@@ -318,7 +318,7 @@ public partial class Functions
 	[SharpFunction(Name = "ISWORD", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> IsWord(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var str = MModule.plainText(parser.CurrentState.Arguments[0].Message);
+		var str = MModule.plainText(parser.CurrentState.Arguments["0"].Message);
 		return ValueTask.FromResult<CallState>(new CallState(Regex.IsMatch(str, @"^[a-zA-Z]$")));
 	}
 
@@ -341,13 +341,14 @@ public partial class Functions
 		for (var i = 0; i < parser.CurrentState.Arguments.Count - 1; i += 2)
 		{
 			everythingIsOkay &= parser.CurrentState.AddRegister(
-				parser.CurrentState.Arguments[i].Message!.ToString().ToUpper(),
-				parser.CurrentState.Arguments[i + 1].Message!);
+				parser.CurrentState.Arguments[i.ToString()].Message!.ToString().ToUpper(),
+				parser.CurrentState.Arguments[(i + 1).ToString()].Message!);
 		}
 
 		if (everythingIsOkay)
 		{
-			var parsed = await parser.FunctionParse(parser.CurrentState.Arguments.Last().Message!);
+			// TODO: Warning: .Last may be dangerous on Arguments in case of named arguments?
+			var parsed = await parser.FunctionParse(parser.CurrentState.Arguments.Last().Value.Message!);
 			_ = parser.CurrentState.Registers.Pop();
 			return parsed!;
 		}
@@ -415,7 +416,7 @@ public partial class Functions
 	}
 	[SharpFunction(Name = "S", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 	public static async ValueTask<CallState> S(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> (await parser.FunctionParse(parser.CurrentState.Arguments.Last().Message!))!;
+		=> (await parser.FunctionParse(parser.CurrentState.Arguments.Last().Value.Message!))!;
 
 	[SharpFunction(Name = "SCAN", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> Scan(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -431,8 +432,8 @@ public partial class Functions
 		for (var i = 0; i < parser.CurrentState.Arguments.Count; i += 2)
 		{
 			everythingIsOkay &= parser.CurrentState.AddRegister(
-				parser.CurrentState.Arguments[i].Message!.ToString().ToUpper(),
-				parser.CurrentState.Arguments[i + 1].Message!);
+				parser.CurrentState.Arguments[i.ToString()].Message!.ToString().ToUpper(),
+				parser.CurrentState.Arguments[(i + 1).ToString()].Message!);
 		}
 
 		if (everythingIsOkay)
@@ -453,13 +454,13 @@ public partial class Functions
 		for (var i = 0; i < parser.CurrentState.Arguments.Count; i += 2)
 		{
 			everythingIsOkay &= parser.CurrentState.AddRegister(
-				parser.CurrentState.Arguments[i].Message!.ToString().ToUpper(),
-				parser.CurrentState.Arguments[i + 1].Message!);
+				parser.CurrentState.Arguments[$"{i}"].Message!.ToString().ToUpper(),
+				parser.CurrentState.Arguments[$"{i + 1}"].Message!);
 		}
 
 		if (everythingIsOkay)
 		{
-			return ValueTask.FromResult<CallState>(new CallState(parser.CurrentState.Arguments[1].Message!));
+			return ValueTask.FromResult<CallState>(new CallState(parser.CurrentState.Arguments["1"].Message!));
 		}
 		else
 		{
@@ -552,7 +553,7 @@ public partial class Functions
 		}
 		else
 		{
-			var registers = MModule.plainText(parser.CurrentState.Arguments[0].Message).Split(" ");
+			var registers = MModule.plainText(parser.CurrentState.Arguments["0"].Message).Split(" ");
 			foreach (var r in registers)
 			{
 				parser.CurrentState.Registers.Peek().TryRemove(r);

@@ -23,7 +23,7 @@ public static partial class Commands
 			return new None();
 		}
 
-		var notification = args[0]!.Message!.ToString();
+		var notification = args["0"].Message!.ToString();
 		var enactor = parser.CurrentState.Enactor!.Value;
 		await parser.NotifyService.Notify(enactor, notification);
 
@@ -38,8 +38,8 @@ public static partial class Commands
 	{
 		// TODO: Validate Name and Passwords
 		var args = parser.CurrentState.Arguments;
-		var name = MModule.plainText(args[0].Message!);
-		var password = MModule.plainText(args[1].Message!);
+		var name = MModule.plainText(args["0"].Message!);
+		var password = MModule.plainText(args["1"].Message!);
 
 		var player = await parser.Database.CreatePlayerAsync(name, password, parser.CurrentState.Executor!.Value);
 
@@ -55,7 +55,7 @@ public static partial class Commands
 	{
 		// TODO: Validate Name 
 		var args = parser.CurrentState.Arguments;
-		var name = MModule.plainText(args[0].Message!);
+		var name = MModule.plainText(args["0"].Message!);
 		var executor = parser.CurrentState.ExecutorObject(parser.Database).Known();
 
 		var thing = await parser.Database.CreateThingAsync(name, executor.Where, executor.Object()!.Owner());
@@ -83,11 +83,11 @@ public static partial class Commands
 			return new None();
 		}
 
-		var list = MModule.split(" ", parser.CurrentState.Arguments[0].Message!);
+		var list = MModule.split(" ", parser.CurrentState.Arguments["0"].Message!);
 
 		var wrappedIteration = new IterationWrapper<MString> { Value = MModule.empty() };
 		parser.CurrentState.IterationRegisters.Push(wrappedIteration);
-		var command = parser.CurrentState.Arguments[1].Message!;
+		var command = parser.CurrentState.Arguments["1"].Message!;
 
 		foreach (var item in list)
 		{
@@ -116,7 +116,7 @@ public static partial class Commands
 				parser,
 				enactor,
 				enactor,
-				args[0]!.Message!.ToString(),
+				args["0"]!.Message!.ToString(),
 				Library.Services.LocateFlags.All);
 
 			if (locate.IsValid())
@@ -179,7 +179,7 @@ public static partial class Commands
 				parser,
 				enactor,
 				enactor,
-				args[0]!.Message!.ToString(),
+				args["0"]!.Message!.ToString(),
 				Library.Services.LocateFlags.All);
 
 			if (locate.IsValid())
@@ -272,8 +272,8 @@ public static partial class Commands
 			return new CallState(string.Empty);
 		}
 
-		var notification = args[1]!.Message!.ToString();
-		var targetListText = MModule.plainText(args[0]!.Message!);
+		var notification = args["1"]!.Message!.ToString();
+		var targetListText = MModule.plainText(args["0"]!.Message!);
 		var nameListTargets = Functions.Functions.NameList(targetListText);
 
 		var enactor = parser.Database.GetObjectNode(parser.CurrentState.Executor!.Value).Known();
@@ -309,7 +309,7 @@ public static partial class Commands
 			parser,
 			enactorObj,
 			enactorObj,
-			args[0]!.Message!.ToString(),
+			args["0"]!.Message!.ToString(),
 			Library.Services.LocateFlags.ExitsInTheRoomOfLooker);
 
 		if (!exit.IsValid())
@@ -348,8 +348,8 @@ public static partial class Commands
 		// Otherwise, Arg1 is the Destination for the Arg0.
 
 		var enactorObj = parser.CurrentState.EnactorObject(parser.Database).Known();
-		var destinationString = MModule.plainText(args.Count == 1 ? args[0].Message : args[1].Message);
-		var toTeleport = MModule.plainText(args.Count == 1 ? MModule.single(enactor.ToString()) : args[0].Message);
+		var destinationString = MModule.plainText(args.Count == 1 ? args["0"].Message : args["1"].Message);
+		var toTeleport = MModule.plainText(args.Count == 1 ? MModule.single(enactor.ToString()) : args["0"].Message);
 
 		var isList = parser.CurrentState.Switches.Contains("list");
 

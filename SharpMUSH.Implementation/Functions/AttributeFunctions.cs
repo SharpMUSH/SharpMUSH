@@ -4,6 +4,7 @@ using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
+using System.Collections.Immutable;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -22,7 +23,7 @@ public partial class Functions
 		// That should be handled by the parser before it gets here.
 
 		var args = parser.CurrentState.Arguments;
-		var split = HelperFunctions.SplitDBRefAndAttr(MModule.plainText(args[0].Message!));
+		var split = HelperFunctions.SplitDBRefAndAttr(MModule.plainText(args["0"].Message!));
 
 		if (!split.TryPickT0(out var details, out var _))
 		{
@@ -46,7 +47,7 @@ public partial class Functions
 		}
 		else
 		{
-			var value = args[0].Message!.ToString();
+			var value = args["0"].Message!.ToString();
 			// TODO: Out of Band message of success, if they are not set QUIET.
 			return ValueTask.FromResult(new CallState(string.Empty));
 		}
@@ -78,7 +79,7 @@ public partial class Functions
 	[SharpFunction(Name = "get", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> Get(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var dbrefAndAttr = HelperFunctions.SplitDBRefAndAttr(MModule.plainText(parser.CurrentState.Arguments[0].Message));
+		var dbrefAndAttr = HelperFunctions.SplitDBRefAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
 		if (dbrefAndAttr.IsT1 && dbrefAndAttr.AsT1 == false)
 		{
 			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
@@ -95,10 +96,10 @@ public partial class Functions
 
 		var actualObject = maybeDBref.WithoutError().WithoutNone()!;
 		var actualDBref = actualObject.Object().DBRef;
-		
+
 		var maybeAttr = await parser.AttributeService.GetAttributeAsync(
-			executor, 
-			actualObject, 
+			executor,
+			actualObject,
 			attribute,
 			mode: Library.Services.IAttributeService.AttributeMode.Read,
 			parent: false);
@@ -107,7 +108,7 @@ public partial class Functions
 		{
 			return new CallState(maybeAttr.AsError.Value);
 		}
-		else if(maybeAttr.IsNone)
+		else if (maybeAttr.IsNone)
 		{
 			return new CallState(string.Empty);
 		}
@@ -302,19 +303,19 @@ public partial class Functions
 	public static ValueTask<CallState> setunion(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var list1 = args[0].Message;
-		var list2 = args[1].Message;
-		var delimiter = args[2]?.Message;
-		var sortType = args[3]?.Message;
-		var outputSeperator = MModule.plainText(args[4]?.Message);
+		var list1 = args["0"].Message;
+		var list2 = args["1"].Message;
+		var delimiter = NoParseDefaultNoParseArgument(args, 2, MModule.single(" "));
+		var sortType = NoParseDefaultNoParseArgument(args, 3, MModule.single("m"));
+		var outputSeparator = NoParseDefaultNoParseArgument(args, 4, delimiter);
 
-		var aList1 = MModule.split(" ", list1);
-		var aList2 = MModule.split(" ", list2);
+		var aList1 = MModule.split2(delimiter, list1);
+		var aList2 = MModule.split2(delimiter, list2);
 
 		var result = aList1
 			.Concat(aList2)
 			.DistinctBy(MModule.plainText)
-			.Aggregate((aggregated,next) => MModule.concat(aggregated,next));
+			.Aggregate((aggregated, next) => MModule.concat(aggregated, next));
 
 		return new ValueTask<CallState>(new CallState(result));
 	}
@@ -339,7 +340,7 @@ public partial class Functions
 	{
 		// TODO: Fix all of this.
 
-		var dbrefAndAttr = HelperFunctions.SplitDBRefAndAttr(MModule.plainText(parser.CurrentState.Arguments[0].Message));
+		var dbrefAndAttr = HelperFunctions.SplitDBRefAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
 
 		if (dbrefAndAttr.IsT1 && dbrefAndAttr.AsT1 == false)
 		{
@@ -374,14 +375,19 @@ public partial class Functions
 		{
 			return new CallState(maybeAttr.AsError.Value);
 		}
-		
+
 		var get = maybeAttr.AsAttribute;
 
-		parser.Push(parser.CurrentState 
-			with { Arguments = parser.CurrentState.Arguments.Skip(1).ToList()});
+		parser.Push(parser.CurrentState with 
+		{ 
+			Arguments = parser.CurrentState.Arguments
+				.Select(
+					(value,i) => new KeyValuePair<string,CallState>(i.ToString(), value.Value))
+				.ToDictionary()
+		});
 
 		var parsed = (await parser.FunctionParse(get.Value))!;
-	
+
 		parser.Pop();
 
 		return parsed;

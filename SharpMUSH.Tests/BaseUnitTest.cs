@@ -64,6 +64,7 @@ public class BaseUnitTest
 		IAttributeService? at = null,
 		INotifyService? ns = null,
 		ILocateService? ls = null,
+		ICommandDiscoveryService? cd = null,
 		ITaskScheduler? qs = null,
 		IConnectionService? cs = null)
 	{
@@ -86,6 +87,7 @@ public class BaseUnitTest
 			at ?? Substitute.For<IAttributeService>(),
 			ns ?? Substitute.For<INotifyService>(),
 			ls ?? Substitute.For<ILocateService>(),
+			cd ?? Substitute.For<ICommandDiscoveryService>(),
 			qs ?? Substitute.For<ITaskScheduler>(),
 			cs ?? simpleConnectionService,
 			state: new ParserState(

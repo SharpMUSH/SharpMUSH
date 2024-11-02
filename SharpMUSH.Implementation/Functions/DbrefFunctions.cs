@@ -10,7 +10,7 @@ public partial class Functions
 	[SharpFunction(Name = "loc", MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> Loc(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var dbRefConversion = HelperFunctions.ParseDBRef(MModule.plainText(parser.CurrentState.Arguments[0].Message));
+		var dbRefConversion = HelperFunctions.ParseDBRef(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
 		if (dbRefConversion.IsNone())
 		{
 			await parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, "I can't see that here.");
@@ -286,7 +286,7 @@ public partial class Functions
 	[SharpFunction(Name = "LCON", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> lcon(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var dbRefConversion = HelperFunctions.ParseDBRef(MModule.plainText(parser.CurrentState.Arguments[0].Message));
+		var dbRefConversion = HelperFunctions.ParseDBRef(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
 		if (dbRefConversion.IsNone())
 		{
 			await parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, "I can't see that here.");

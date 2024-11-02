@@ -113,7 +113,7 @@ public static partial class Functions
 		{
 			refinedArguments = (await Task.WhenAll(args
 					.Select(async x => new CallState(
-						stripAnsi 
+						stripAnsi
 							? MModule.plainText2((await visitor.VisitChildren(x))?.Message ?? MModule.empty())
 							: (await visitor.VisitChildren(x))?.Message ?? MModule.empty(), x.Depth()))))
 				.DefaultIfEmpty(new CallState(MModule.empty(), context.Depth()))
@@ -125,15 +125,15 @@ public static partial class Functions
 				MModule.substring(context.Start.StartIndex, context.Stop.StopIndex - context.Start.StartIndex + 1, source),
 				contextDepth,
 				null,
-				async () => (await visitor.VisitChildren(context) ?? CallState.Empty with {Depth = context.Depth()}).Message!);
+				async () => (await visitor.VisitChildren(context) ?? CallState.Empty with { Depth = context.Depth() }).Message!);
 		}
-		else 
+		else
 		{
 			refinedArguments = args.Select(x => new CallState(stripAnsi
 					? MModule.plainText2(MModule.substring(x.Start.StartIndex, context.Stop?.StopIndex is null ? 0 : (x.Stop.StopIndex - x.Start.StartIndex + 1), source))
-					: MModule.substring(x.Start.StartIndex, context.Stop?.StopIndex is null ? 0 : (x.Stop.StopIndex - x.Start.StartIndex + 1), source), 
-					x.Depth(), null, 
-					async () => stripAnsi 
+					: MModule.substring(x.Start.StartIndex, context.Stop?.StopIndex is null ? 0 : (x.Stop.StopIndex - x.Start.StartIndex + 1), source),
+					x.Depth(), null,
+					async () => stripAnsi
 						? (await visitor.VisitChildren(x))!.Message
 						: MModule.plainText2((await visitor.VisitChildren(x))!.Message)))
 				.DefaultIfEmpty(new CallState(MModule.empty(), context.Depth()))
@@ -158,7 +158,7 @@ public static partial class Functions
 			Function: name,
 			Command: null,
 			Switches: [],
-			Arguments: refinedArguments,
+			Arguments: refinedArguments.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value)).ToDictionary(),
 			Executor: currentState.Executor,
 			Enactor: currentState.Enactor,
 			Caller: currentState.Caller,

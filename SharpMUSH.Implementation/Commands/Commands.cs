@@ -9,6 +9,8 @@ using SharpMUSH.Library.Services;
 using static SharpMUSHParser;
 using SharpMUSH.Library.DiscriminatedUnions;
 using OneOf.Types;
+using System.Collections.ObjectModel;
+using System.Collections.Immutable;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -182,7 +184,7 @@ public static partial class Commands
 
 	private static async Task<Option<CallState>> HandleUserDefinedCommand(
 		IMUSHCodeParser parser,
-    IEnumerable<(SharpObject, SharpAttribute, Dictionary<string,MString>)> matches)
+		IEnumerable<(SharpObject, SharpAttribute, Dictionary<string, MString>)> matches)
 	{
 		// Step 1: Validate if the command can be evaluated (locks)
 		// Evaluate the command for each match. 
@@ -202,7 +204,7 @@ public static partial class Commands
 				Arguments = [],
 				Function = null
 			});
-			
+
 			await newParser.CommandParse(match.Item2.Value);
 
 			parser.Pop();
@@ -216,7 +218,7 @@ public static partial class Commands
 		var parseState = parser.Push(parser.CurrentState with
 		{
 			Command = "GOTO",
-			Arguments = [new CallState(exit.Object.DBRef.ToString(), 0)],
+			Arguments = new() { { "0", new CallState(exit.Object.DBRef.ToString(), 0) } },
 			Function = null
 		});
 		var result = await _commandLibrary.Single(x => x.Key == "GOTO").Value.Function.Invoke(parseState);
@@ -235,7 +237,7 @@ public static partial class Commands
 		{
 			Command = rootCommand,
 			Switches = switches,
-			Arguments = arguments,
+			Arguments = arguments.Select((value,i) => new KeyValuePair<string,CallState>(i.ToString(),value)).ToDictionary(),
 			Function = null
 		});
 		var result = await libraryCommandDefinition.Function.Invoke(parseState);
@@ -256,7 +258,7 @@ public static partial class Commands
 		var newParser = parser.Push(parser.CurrentState with
 		{
 			Command = command,
-			Arguments = arguments,
+			Arguments = arguments.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value)).ToDictionary(),
 			Function = null
 		});
 
@@ -282,7 +284,10 @@ public static partial class Commands
 			parser.CurrentState with
 			{
 				Command = singleRootCommand,
-				Arguments = [new CallState(rest), .. arguments],
+				Arguments = ImmutableDictionary<string, CallState>.Empty
+					.Add("0", new CallState(rest))
+					.AddRange(arguments.Select((value, i) => new KeyValuePair<string, CallState>((i + 1).ToString(), value)))
+					.ToDictionary(),
 				Function = null
 			}
 		);

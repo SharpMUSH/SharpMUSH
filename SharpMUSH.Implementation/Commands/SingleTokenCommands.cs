@@ -16,9 +16,9 @@ public static partial class Commands
 		await parser.CommandParse(
 			MModule.concat(
 				MModule.concat(
-					parser.CurrentState.Arguments[0].Message!, 
-						MModule.single(" ")), 
-					parser.CurrentState.Arguments[1].Message!) );
+					parser.CurrentState.Arguments["0"].Message!,
+						MModule.single(" ")),
+					parser.CurrentState.Arguments["1"].Message!));
 		parser.Pop();
 		return new CallState(string.Empty);
 	}
@@ -35,7 +35,7 @@ public static partial class Commands
 		var locate = await parser.LocateService.LocateAndNotifyIfInvalid(parser,
 			enactor,
 			enactor,
-			args[1].Message!.ToString(), Library.Services.LocateFlags.All);
+			args["1"].Message!.ToString(), Library.Services.LocateFlags.All);
 
 		// Arguments are getting here in an evaluated state, when they should not be.
 		if (!locate.IsValid())
@@ -45,8 +45,8 @@ public static partial class Commands
 
 		// TODO: Switch to Clear an attribute! Take note of deeper authorization needed in case of the attribute having leaves.
 		var realLocated = locate.WithoutError().WithoutNone();
-		var attributePath = args[0].Message!.ToString()!.ToUpper().Split('`');
-		var contents = args[2]?.Message?.ToString() ?? string.Empty;
+		var attributePath = args["0"].Message!.ToString()!.ToUpper().Split('`');
+		var contents = args.TryGetValue("2", out var tmpContents) ? tmpContents.Message!.ToString() : string.Empty;
 		var callerObj = await parser.CurrentState.Caller!.Value.GetAsync(parser.Database);
 		var callerOwner = callerObj.Object()!.Owner();
 

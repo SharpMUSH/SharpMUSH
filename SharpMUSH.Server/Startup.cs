@@ -41,6 +41,7 @@ public class Startup(ArangoConfiguration config)
 		services.AddSingleton<IConnectionService, ConnectionService>();
 		services.AddSingleton<ILockService, LockService>();
 		services.AddSingleton<IBooleanExpressionParser, BooleanExpressionParser>();
+		services.AddSingleton<ICommandDiscoveryService, CommandDiscoveryService>();
 		services.AddSingleton(new ArangoHandle("CurrentSharpMUSHWorld"));
 		services.AddScoped<IMUSHCodeParser, MUSHCodeParser>();
 		services.AddHostedService<SchedulerService>();

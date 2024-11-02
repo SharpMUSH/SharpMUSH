@@ -222,7 +222,7 @@ public static partial class Functions
 	public static ValueTask<CallState> E(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arguments = parser.CurrentState.Arguments;
-		var arg1 = arguments[1]?.Message?.ToString();
+		var arg1 = arguments["1"]?.Message?.ToString();
 
 		return ValueTask.FromResult<CallState>(new(double.TryParse(arg1 ?? "1", out var dec)
 			? Math.Exp(dec).ToString()
@@ -293,11 +293,11 @@ public static partial class Functions
 
 	private static ValueTask<CallState> VectorOperation(IMUSHCodeParser parser, Func<Vector<decimal>, Vector<decimal>, Vector<decimal>> func)
 	{
-		var delim = parser.CurrentState.Arguments.ElementAtOrDefault(3)?.Message ?? MModule.single(" ");
-		var sep = parser.CurrentState.Arguments.ElementAtOrDefault(4)?.Message ?? delim;
-		var list1 = MModule.split2(delim, parser.CurrentState.Arguments[0].Message)
+		var delimiter = parser.CurrentState.Arguments.TryGetValue("3", out var tmpDelimiter) ? tmpDelimiter.Message : MModule.single(" ");
+		var sep = parser.CurrentState.Arguments.TryGetValue("4", out var tmpSep) ? tmpSep.Message : delimiter;
+		var list1 = MModule.split2(delimiter, parser.CurrentState.Arguments["0"].Message)
 			.Select(x => (decimal.TryParse(MModule.plainText(x), out var result), result)).ToArray();
-		var list2 = MModule.split2(delim, parser.CurrentState.Arguments[1].Message)
+		var list2 = MModule.split2(delimiter, parser.CurrentState.Arguments["1"].Message)
 			.Select(x => (decimal.TryParse(MModule.plainText(x), out var result), result)).ToArray();
 
 		if (list1.Any(x => !x.Item1) || list2.Any(x => !x.Item1))
@@ -318,10 +318,10 @@ public static partial class Functions
 
 	private static ValueTask<CallState> VectorOperationToScalar(IMUSHCodeParser parser, Func<Vector<decimal>, Vector<decimal>, decimal> func)
 	{
-		var delim = parser.CurrentState.Arguments.ElementAtOrDefault(3)?.Message ?? MModule.single(" ");
-		var list1 = MModule.split2(delim, parser.CurrentState.Arguments[0].Message)
+		var delimiter = parser.CurrentState.Arguments.TryGetValue("3", out var tmpDelimiter) ? tmpDelimiter.Message : MModule.single(" ");
+		var list1 = MModule.split2(delimiter, parser.CurrentState.Arguments["0"].Message)
 			.Select(x => (decimal.TryParse(MModule.plainText(x), out var result), result)).ToArray();
-		var list2 = MModule.split2(delim, parser.CurrentState.Arguments[1].Message)
+		var list2 = MModule.split2(delimiter, parser.CurrentState.Arguments["1"].Message)
 			.Select(x => (decimal.TryParse(MModule.plainText(x), out var result), result)).ToArray();
 
 		if (list1.Any(x => !x.Item1) || list2.Any(x => !x.Item1))
@@ -329,8 +329,8 @@ public static partial class Functions
 			return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
 		}
 
-		var vector1 = new Vector<decimal>(list1.Select(x => x.Item2).ToArray().AsSpan());
-		var vector2 = new Vector<decimal>(list2.Select(x => x.Item2).ToArray().AsSpan());
+		var vector1 = new Vector<decimal>(list1.Select(x => x.result).ToArray().AsSpan());
+		var vector2 = new Vector<decimal>(list2.Select(x => x.result).ToArray().AsSpan());
 		var vectorResult = func(vector1, vector2);
 
 		var output = vectorResult.ToString();
@@ -340,9 +340,9 @@ public static partial class Functions
 
 	private static ValueTask<CallState> SingleVectorOperation(IMUSHCodeParser parser, Func<Vector<decimal>, Vector<decimal>> func)
 	{
-		var delim = parser.CurrentState.Arguments.ElementAtOrDefault(1)?.Message ?? MModule.single(" ");
-		var sep = parser.CurrentState.Arguments.ElementAtOrDefault(2)?.Message ?? delim;
-		var list1 = MModule.split2(delim, parser.CurrentState.Arguments[0].Message)
+		var delimiter = parser.CurrentState.Arguments.TryGetValue("1", out var tmpDelimiter) ? tmpDelimiter.Message : MModule.single(" ");
+		var sep = parser.CurrentState.Arguments.TryGetValue("2", out var tmpSep) ? tmpSep.Message : delimiter;
+		var list1 = MModule.split2(delimiter, parser.CurrentState.Arguments["0"].Message)
 			.Select(x => (decimal.TryParse(MModule.plainText(x), out var result), result)).ToArray();
 
 		if (list1.Any(x => !x.Item1))
@@ -391,7 +391,7 @@ public static partial class Functions
 
 	[SharpFunction(Name = "vmag", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> vmag(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-				=> VectorOperationToScalar(parser, (v1,v2) => throw new NotImplementedException());
+				=> VectorOperationToScalar(parser, (v1, v2) => throw new NotImplementedException());
 
 	[SharpFunction(Name = "vunit", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> vunit(IMUSHCodeParser parser, SharpFunctionAttribute _2)

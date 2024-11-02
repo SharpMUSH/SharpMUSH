@@ -7,7 +7,7 @@ namespace SharpMUSH.Implementation.Functions;
 
 public partial class Functions
 {
-	public static Dictionary<string, Func<List<CallState>, ValueTask<CallState>>> JsonFunctions = new()
+	public static Dictionary<string, Func<Dictionary<string,CallState>, ValueTask<CallState>>> JsonFunctions = new()
 	{
 		{"null", NullJSON},
 		{"boolean", BooleanJSON}
@@ -18,7 +18,7 @@ public partial class Functions
 	{
 		try
 		{
-			using var jsonDoc = JsonDocument.Parse(parser.CurrentState.Arguments[0].Message!.ToString());
+			using var jsonDoc = JsonDocument.Parse(parser.CurrentState.Arguments["0"].Message!.ToString());
 			return ValueTask.FromResult(new CallState("1"));
 		}
 		catch (JsonException)
@@ -29,23 +29,23 @@ public partial class Functions
 
 	[SharpFunction(Name = "json", Flags = FunctionFlags.Regular)]
 	public static async ValueTask<CallState> JSON(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> JsonFunctions.TryGetValue(MModule.plainText(parser.CurrentState.Arguments[0].Message!).ToLower(), out var fun)
+		=> JsonFunctions.TryGetValue(MModule.plainText(parser.CurrentState.Arguments["0"].Message!).ToLower(), out var fun)
 			? await fun(parser.CurrentState.Arguments)
 			: new CallState(MModule.single("#-1 Invalid Type"));
 
-	private static ValueTask<CallState> NullJSON(List<CallState> args)
+	private static ValueTask<CallState> NullJSON(Dictionary<string, CallState> args)
 		=> (args.Count > 2)
 			? ValueTask.FromResult(new CallState(string.Format(Errors.ErrorTooManyArguments, "json", 2, args.Count)))
 			: ValueTask.FromResult(new CallState("null"));
 
-	private static ValueTask<CallState> BooleanJSON(List<CallState> args)
+	private static ValueTask<CallState> BooleanJSON(Dictionary<string, CallState> args)
 	{
 		if (args.Count != 2)
 		{
 			return ValueTask.FromResult(new CallState(string.Format(Errors.ErrorWrongArgumentsRange, "json", 2, 2, args.Count)));
 		}
 
-		var entry = MModule.plainText(args[1].Message);
+		var entry = MModule.plainText(args["1"].Message);
 
 		return entry switch
 		{

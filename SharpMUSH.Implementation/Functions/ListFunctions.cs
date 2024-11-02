@@ -45,7 +45,7 @@ public partial class Functions
 	public static ValueTask<CallState> FirstInList(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var delim = NoParseDefaultNoParseArgument(parser.CurrentState.Arguments, 1, MModule.single(" "));
-		var listArg = parser.CurrentState.Arguments[0].Message;
+		var listArg = parser.CurrentState.Arguments["0"].Message;
 		var list = MModule.split2(delim, listArg);
 		var first = list.FirstOrDefault() ?? MModule.empty();
 
@@ -92,7 +92,7 @@ public partial class Functions
 	[SharpFunction(Name = "iter", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.NoParse)]
 	public static async ValueTask<CallState> Iter(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var listArg = (await parser.CurrentState.Arguments[0].ParsedMessage())!;
+		var listArg = (await parser.CurrentState.Arguments["0"].ParsedMessage())!;
 
 		// TODO: Evaluate delim and sep.
 		var delim = await NoParseDefaultEvaluatedArgument(parser, 2, MModule.single(" "));
@@ -107,7 +107,7 @@ public partial class Functions
 		{
 			wrappedIteration.Value = item!;
 			wrappedIteration.Iteration++;
-			var parsed = await parser.CurrentState.Arguments[1].ParsedMessage();
+			var parsed = await parser.CurrentState.Arguments["1"].ParsedMessage();
 			result.Add(parsed!);
 
 			if (wrappedIteration.Break)
@@ -167,7 +167,7 @@ public partial class Functions
 	public static ValueTask<CallState> Last(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var delim = NoParseDefaultNoParseArgument(parser.CurrentState.Arguments, 1, MModule.single(" "));
-		var listArg = parser.CurrentState.Arguments[0].Message;
+		var listArg = parser.CurrentState.Arguments["0"].Message;
 		var list = MModule.split2(delim, listArg);
 		var last = list.LastOrDefault() ?? MModule.empty();
 
@@ -190,7 +190,7 @@ public partial class Functions
 
 		var executor = parser.CurrentState.ExecutorObject(parser.Database).Known();
 		var enactor = parser.CurrentState.EnactorObject(parser.Database).Known();
-		var objAttr = HelperFunctions.SplitOptionalDBRefAndAttr(MModule.plainText(parser.CurrentState.Arguments[0].Message!));
+		var objAttr = HelperFunctions.SplitOptionalDBRefAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message!));
 		if (objAttr is { IsT1: true, AsT1: false })
 		{
 			return new CallState(Errors.ErrorObjectAttributeString);
@@ -235,12 +235,12 @@ public partial class Functions
 		var delim = await NoParseDefaultEvaluatedArgument(parser, 2, MModule.single(" "));
 		var sep = await NoParseDefaultEvaluatedArgument(parser, 3, delim);
 
-		var list = MModule.split2(delim, parser.CurrentState.Arguments[1].Message!);
+		var list = MModule.split2(delim, parser.CurrentState.Arguments["1"].Message!);
 
 		var result = new List<MString>();
 		foreach (var item in list)
 		{
-			parser.Push(parser.CurrentState with { Arguments = [new CallState(item)] });
+			parser.Push(parser.CurrentState with { Arguments = new() { { "0", new CallState(item) } } });
 			result.Add((await parser.FunctionParse(attrValue))!.Message!);
 			parser.Pop();
 		}
@@ -251,10 +251,10 @@ public partial class Functions
 	[SharpFunction(Name = "MATCH", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> match(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var str = parser.CurrentState.Arguments[0].Message;
-		var globPattern = MModule.plainText(parser.CurrentState.Arguments[1].Message)!;
+		var str = parser.CurrentState.Arguments["0"].Message;
+		var globPattern = MModule.plainText(parser.CurrentState.Arguments["1"].Message)!;
 		var regPattern = globPattern.GlobToRegex();
-		
+
 
 		throw new NotImplementedException();
 	}
@@ -325,7 +325,7 @@ public partial class Functions
 	public static ValueTask<CallState> Rest(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var delim = NoParseDefaultNoParseArgument(parser.CurrentState.Arguments, 1, " ");
-		var list = MModule.split2(delim, parser.CurrentState.Arguments[0].Message);
+		var list = MModule.split2(delim, parser.CurrentState.Arguments["0"].Message);
 
 		return ValueTask.FromResult(new CallState(MModule.multipleWithDelimiter(delim, list.Skip(1))));
 	}
@@ -349,7 +349,7 @@ public partial class Functions
 		var sep = await NoParseDefaultEvaluatedArgument(parser, 3, delim);
 		var list = MModule.split2(
 			delim,
-			(await parser.CurrentState.Arguments[0].ParsedMessage())!);
+			(await parser.CurrentState.Arguments["0"].ParsedMessage())!);
 
 		return new CallState(MModule.multipleWithDelimiter(sep, list.Reverse()));
 	}
@@ -420,7 +420,7 @@ public partial class Functions
 		var delim = await NoParseDefaultEvaluatedArgument(parser, 2, " ");
 		var list = MModule.split2(
 			delim,
-			(await parser.CurrentState.Arguments[0].ParsedMessage())!);
+			(await parser.CurrentState.Arguments["0"].ParsedMessage())!);
 
 		return new CallState(list.Length.ToString());
 	}

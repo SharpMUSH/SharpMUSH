@@ -9,23 +9,23 @@ public static partial class Functions
 	public static ValueTask<CallState> After(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var fullString = args[0]!.Message;
-		var search = args[1]!.Message;
+		var fullString = args["0"]!.Message;
+		var search = args["1"]!.Message;
 		var idx = MModule.indexOf(fullString, search);
 
-		return ValueTask.FromResult<CallState>(new(MModule.substring(idx, MModule.getLength(fullString) - idx, args[0].Message)));
+		return ValueTask.FromResult<CallState>(new(MModule.substring(idx, MModule.getLength(fullString) - idx, args["0"].Message)));
 	}
 
 	[SharpFunction(Name = "strcat", Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Concat(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(new(parser.CurrentState.Arguments
-			.Select(x => x.Message)
+			.Select(x => x.Value.Message)
 			.Aggregate((x, y) => MModule.concat(x, y))));
 
 	[SharpFunction(Name = "cat", Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Cat(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(new(parser.CurrentState.Arguments
-			.Select(x => x.Message)
+			.Select(x => x.Value.Message)
 			.Aggregate((x, y) => MModule.concat(x, y, MModule.single(" ")))));
 
 	[SharpFunction(Name = "ACCENT", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]

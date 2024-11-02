@@ -11,8 +11,7 @@ public static partial class Substitutions
 	public static CallState ParseSimpleSubstitution(string symbol, IMUSHCodeParser parser, SubstitutionSymbolContext _)
 		=> symbol switch
 		{
-			"0" or "1" or "2" or "3" or "4" or "5" or "6" or "7" or "8" or "9" => new(
-				(parser.CurrentState.Arguments.ElementAtOrDefault(int.Parse(symbol))?.Message) ?? MModule.empty()),
+			"0" or "1" or "2" or "3" or "4" or "5" or "6" or "7" or "8" or "9" => new((parser.CurrentState.Arguments.TryGetValue(symbol, out var tmpCS) ? tmpCS.Message : MModule.empty())),
 			"B" or "b" => new(" "),
 			"R" or "r" => new(Environment.NewLine),
 			"T" or "t" => new("\t"),
@@ -83,7 +82,7 @@ public static partial class Substitutions
 		}
 
 		var val = parser.CurrentState.IterationRegisters.ToArray().ElementAt(maxCount - symbolNumber - 1).Iteration;
-		
+
 		return new CallState(val.ToString());
 	}
 
@@ -101,7 +100,7 @@ public static partial class Substitutions
 		}
 
 		var val = parser.CurrentState.IterationRegisters.ElementAt(symbolNumber).Value;
-		
+
 		return new CallState(val);
 	}
 }

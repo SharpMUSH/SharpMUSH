@@ -53,8 +53,8 @@ public partial class Functions
 	[SharpFunction(Name = "HASPOWER", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> HasPower(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var obj = HelperFunctions.ParseDBRef(MModule.plainText(parser.CurrentState.Arguments[0].Message));
-		var power = MModule.plainText(parser.CurrentState.Arguments[1].Message).ToUpper();
+		var obj = HelperFunctions.ParseDBRef(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+		var power = MModule.plainText(parser.CurrentState.Arguments["1"].Message).ToUpper();
 		// TODO: USE LOCATE
 		if (obj.IsNone()) return new CallState(false);
 
@@ -68,8 +68,8 @@ public partial class Functions
 	[SharpFunction(Name = "HASTYPE", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> HasType(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var obj = HelperFunctions.ParseDBRef(MModule.plainText(parser.CurrentState.Arguments[0].Message));
-		var typeList = MModule.plainText(parser.CurrentState.Arguments[1].Message).Split(" ");
+		var obj = HelperFunctions.ParseDBRef(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+		var typeList = MModule.plainText(parser.CurrentState.Arguments["1"].Message).Split(" ");
 		// TODO: USE LOCATE
 		if (obj.IsNone()) return new CallState(false, Errors.ErrorNotVisible);
 			

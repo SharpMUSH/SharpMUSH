@@ -55,7 +55,7 @@ public static partial class Commands
 			return new None();
 		}
 
-		var match = ConnectionPatternRegex.Match(parser.CurrentState.Arguments[0].Message!.ToString());
+		var match = ConnectionPatternRegex.Match(parser.CurrentState.Arguments["0"].Message!.ToString());
 		var username = match.Groups["User"].Value;
 		var password = match.Groups["Password"].Value;
 

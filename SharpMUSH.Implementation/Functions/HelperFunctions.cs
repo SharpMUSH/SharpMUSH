@@ -15,29 +15,29 @@ public partial class Functions
 	private static readonly Regex TimeSpanFormatMatchRegex = TimeSpanFormatMatch();
 	private static readonly Regex NameListPatternRegex = NameListPattern();
 
-	private static MString NoParseDefaultNoParseArgument(List<CallState> args, int item, MString defaultValue)
+	private static MString NoParseDefaultNoParseArgument(Dictionary<string,CallState> args, int item, MString defaultValue)
 	{
-		if (args.Count - 1 < item || string.IsNullOrWhiteSpace(args[item].Message?.ToString()))
+		if (args.Count - 1 < item || string.IsNullOrWhiteSpace(args[item.ToString()].Message?.ToString()))
 		{
 			return defaultValue;
 		}
 
-		return args[item].Message!;
+		return args[item.ToString()].Message!;
 	}
 
-	private static MString NoParseDefaultNoParseArgument(List<CallState> args, int item, string defaultValue)
+	private static MString NoParseDefaultNoParseArgument(Dictionary<string, CallState> args, int item, string defaultValue)
 		=> NoParseDefaultNoParseArgument(args, item, MModule.single(defaultValue));
 
 	private static async ValueTask<MString> NoParseDefaultEvaluatedArgument(IMUSHCodeParser parser, int item,
 		MString defaultValue)
 	{
 		var args = parser.CurrentState.Arguments;
-		if (args.Count - 1 < item || MModule.getLength(args[item].Message!) == 0)
+		if (args.Count - 1 < item || MModule.getLength(args[item.ToString()].Message!) == 0)
 		{
 			return defaultValue;
 		}
 
-		return (await args[item].ParsedMessage())!;
+		return (await args[item.ToString()].ParsedMessage())!;
 	}
 
 	private static ValueTask<MString> NoParseDefaultEvaluatedArgument(IMUSHCodeParser parser, int item,
@@ -48,7 +48,7 @@ public partial class Functions
 		CallState defaultValue)
 	{
 		var args = parser.CurrentState.Arguments;
-		var parsedValue = (await args[item].ParsedMessage())!;
+		var parsedValue = (await args[item.ToString()].ParsedMessage())!;
 		if (args.Count - 1 < item || MModule.getLength(parsedValue) == 0)
 		{
 			return (await defaultValue.ParsedMessage())!;
@@ -57,38 +57,38 @@ public partial class Functions
 		return parsedValue!;
 	}
 
-	private static ValueTask<CallState> AggregateDecimals(List<CallState> args,
+	private static ValueTask<CallState> AggregateDecimals(Dictionary<string, CallState> args,
 		Func<decimal, decimal, decimal> aggregateFunction) =>
 		ValueTask.FromResult<CallState>(new(args
-			.Select(x => decimal.Parse(MModule.plainText(x.Message)))
+			.Select(x => decimal.Parse(MModule.plainText(x.Value.Message)))
 			.Aggregate(aggregateFunction).ToString(CultureInfo.InvariantCulture)));
 
-	private static ValueTask<CallState> AggregateIntegers(List<CallState> args, Func<int, int, int> aggregateFunction) =>
+	private static ValueTask<CallState> AggregateIntegers(Dictionary<string, CallState> args, Func<int, int, int> aggregateFunction) =>
 		ValueTask.FromResult<CallState>(new(args
-			.Select(x => int.Parse(MModule.plainText(x.Message)))
+			.Select(x => int.Parse(MModule.plainText(x.Value.Message)))
 			.Aggregate(aggregateFunction).ToString(CultureInfo.InvariantCulture)));
 
-	private static ValueTask<CallState> ValidateIntegerAndEvaluate(List<CallState> args,
+	private static ValueTask<CallState> ValidateIntegerAndEvaluate(Dictionary<string,CallState> args,
 		Func<IEnumerable<int>, MString> aggregateFunction)
-		=> ValueTask.FromResult<CallState>(new(aggregateFunction(args.Select(x => int.Parse(MModule.plainText(x.Message!))))
+		=> ValueTask.FromResult<CallState>(new(aggregateFunction(args.Select(x => int.Parse(MModule.plainText(x.Value.Message!))))
 			.ToString()));
 
-	private static ValueTask<CallState> AggregateDecimalToInt(List<CallState> args,
+	private static ValueTask<CallState> AggregateDecimalToInt(Dictionary<string, CallState> args,
 		Func<decimal, decimal, decimal> aggregateFunction) =>
 		ValueTask.FromResult<CallState>(new(Math.Floor(args
-			.Select(x => decimal.Parse(string.Join(string.Empty, MModule.plainText(x.Message))))
+			.Select(x => decimal.Parse(string.Join(string.Empty, MModule.plainText(x.Value.Message))))
 			.Aggregate(aggregateFunction)).ToString()));
 
-	private static ValueTask<CallState> EvaluateDecimal(List<CallState> args, Func<decimal, decimal> func)
-		=> ValueTask.FromResult<CallState>(new(func(decimal.Parse(MModule.plainText(args[0].Message))).ToString()));
+	private static ValueTask<CallState> EvaluateDecimal(Dictionary<string, CallState> args, Func<decimal, decimal> func)
+		=> ValueTask.FromResult<CallState>(new(func(decimal.Parse(MModule.plainText(args["0"].Message))).ToString()));
 
-	private static ValueTask<CallState> EvaluateDouble(List<CallState> args, Func<double, double> func)
-		=> ValueTask.FromResult<CallState>(new(func(double.Parse(MModule.plainText(args[0].Message))).ToString()));
+	private static ValueTask<CallState> EvaluateDouble(Dictionary<string, CallState> args, Func<double, double> func)
+		=> ValueTask.FromResult<CallState>(new(func(double.Parse(MModule.plainText(args["0"].Message))).ToString()));
 
-	private static ValueTask<CallState> EvaluateInteger(List<CallState> args, Func<int, int> func)
-		=> ValueTask.FromResult<CallState>(new(func(int.Parse(MModule.plainText(args[0].Message))).ToString()));
+	private static ValueTask<CallState> EvaluateInteger(Dictionary<string, CallState> args, Func<int, int> func)
+		=> ValueTask.FromResult<CallState>(new(func(int.Parse(MModule.plainText(args["0"].Message))).ToString()));
 
-	private static ValueTask<CallState> ValidateDecimalAndEvaluatePairwise(this List<CallState> args,
+	private static ValueTask<CallState> ValidateDecimalAndEvaluatePairwise(this Dictionary<string,CallState> args,
 		Func<(decimal, decimal), bool> func)
 	{
 		if (args.Count < 2)
@@ -98,7 +98,7 @@ public partial class Functions
 
 		var doubles = args.Select(x =>
 		(
-			IsDouble: decimal.TryParse(string.Join("", MModule.plainText(x.Message)), out var b),
+			IsDouble: decimal.TryParse(string.Join("", MModule.plainText(x.Value.Message)), out var b),
 			Double: b
 		)).ToList();
 
