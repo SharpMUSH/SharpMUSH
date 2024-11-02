@@ -1,17 +1,22 @@
-﻿using SharpMUSH.Library.DiscriminatedUnions;
+﻿using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Library.Services;
 
-public partial class CommandDiscoveryService: ICommandDiscoveryService
+public partial class CommandDiscoveryService : ICommandDiscoveryService
 {
-	// TODO: Severe optimization. We can't keep scanning all attributes each time we want to do a command match, and do conversions.
+	// TODO: Severe optimization needed. We can't keep scanning all attributes each time we want to do a command match, and do conversions.
 	// We need to cache the results of the conversion and where that object & attribute live.
 	// We don't need to care for the Cache Building if that command was used, we can immediately cache all commands.
 	// CONSIDERATION: Do we also need a possible Database-Scan for all commands, and cache them?
-	public ValueTask<Option<Func<IMUSHCodeParser, ValueTask<Option<CallState>>>>> MatchUserDefinedCommand(IMUSHCodeParser parser, AnySharpObject[] objects, MString commandString)
+	public ValueTask<Option<IEnumerable<(SharpObject SObject, SharpAttribute Attribute, Dictionary<string, MString> Arguments)>>> MatchUserDefinedCommand(
+		IMUSHCodeParser parser,
+		IEnumerable<AnySharpObject> objects,
+		MString commandString)
 	{
 		var filteredObjects = objects.Where(x => !x.HasFlag("NO_COMMAND"));
 
@@ -20,7 +25,7 @@ public partial class CommandDiscoveryService: ICommandDiscoveryService
 				.Where(attr =>
 					attr.Flags().All(flag => flag.Name != "NO_COMMAND")
 					&& CommandPatternRegex().IsMatch(MModule.plainText(attr.Value)))
-				.Select(attr => 
+				.Select(attr =>
 					(Obj: sharpObj, Attr: attr, Pattern: CommandPatternRegex().Match(MModule.plainText(attr.Value)))));
 
 		var convertedCommandPatternAttributes = commandPatternAttributes
@@ -34,15 +39,23 @@ public partial class CommandDiscoveryService: ICommandDiscoveryService
 
 		if (!matchedCommandPatternAttributes.Any())
 		{
-			// return ValueTask.FromResult(new None()); ???
+			return ValueTask.FromResult<Option<IEnumerable<(SharpObject, SharpAttribute, Dictionary<string, MString>)>>>(new None());
 		}
 
-		foreach (var (Obj, Attr, Reg) in matchedCommandPatternAttributes)
-		{
-			// ???
-		}
-
-		throw new NotImplementedException();
+		var res = matchedCommandPatternAttributes.Select(match =>
+			(match.Obj,
+			 match.Attr,
+			 match.Reg
+				.Matches(MModule.plainText(commandString))
+				.SelectMany(x => x.Groups.Values)
+				.Skip(!match.Attr.Flags().Any(x => x.Name == "REGEX") ? 1 : 0) // Skip the first Group for Wildcard matches, which is the entire Match
+				.SelectMany<Group, KeyValuePair<string, MString>>(x => [
+					new KeyValuePair<string, MString>(x.Index.ToString(), MModule.substring(x.Index, x.Length, commandString)),
+					new KeyValuePair<string, MString>(x.Name, MModule.substring(x.Index, x.Length, commandString))
+					])
+				.GroupBy(x => x.Key)
+				.ToDictionary(x => x.Key, x => x.First())
+			));
 	}
 
 	[GeneratedRegex(@"^\$.+?(?<!\\)(?:\\\\)*\:", RegexOptions.Singleline)]

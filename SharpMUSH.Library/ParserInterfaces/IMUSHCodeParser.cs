@@ -14,6 +14,7 @@ public partial interface IMUSHCodeParser
 	IPermissionService PermissionService { get; }
 	ILocateService LocateService { get; }
 	ITaskScheduler Scheduler { get; }
+	ICommandDiscoveryService CommandDiscoveryService { get; }
 	IImmutableStack<ParserState> State { get; }
 	ValueTask<CallState?> CommandCommaArgsParse(MString text);
 	ValueTask<CallState?> CommandEqSplitArgsParse(MString text);

@@ -101,7 +101,7 @@ public class SurrealDatabase(
 		throw new NotImplementedException();
 	}
 
-	public Task<IEnumerable<AnySharpContent>> GetNearbyObjectsAsync(DBRef obj)
+	public Task<IEnumerable<AnySharpObject>> GetNearbyObjectsAsync(DBRef obj)
 	{
 		throw new NotImplementedException();
 	}

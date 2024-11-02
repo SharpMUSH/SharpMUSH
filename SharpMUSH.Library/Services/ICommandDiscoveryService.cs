@@ -1,9 +1,13 @@
 ﻿using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Library.Services;
 
 public interface ICommandDiscoveryService
 {
-	public ValueTask<Option<Func<IMUSHCodeParser, ValueTask<Option<CallState>>>>> MatchUserDefinedCommand(IMUSHCodeParser parser, AnySharpObject[] objects, MString commandString);
+	public ValueTask<Option<IEnumerable<(SharpObject SObject, SharpAttribute Attribute, Dictionary<string, MString> Arguments)>>> MatchUserDefinedCommand(
+		IMUSHCodeParser parser,
+		IEnumerable<AnySharpObject> objects,
+		MString commandString);
 }

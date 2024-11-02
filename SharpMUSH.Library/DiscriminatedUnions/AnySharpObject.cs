@@ -49,14 +49,14 @@ public class AnySharpObject : OneOfBase<SharpPlayer, SharpRoom, SharpExit, Sharp
 		exit => exit,
 		thing => thing
 	);
-	
+
 	public AnySharpContainer AsContainer => this.Match<AnySharpContainer>(
 		player => player,
 		room => room,
 		exit => throw new ArgumentException("Cannot convert an exit to container."),
 		thing => thing
 	);
-	
+
 	public bool IsContainer => IsPlayer || IsRoom || IsThing;
 
 	public SharpPlayer AsPlayer => AsT0;

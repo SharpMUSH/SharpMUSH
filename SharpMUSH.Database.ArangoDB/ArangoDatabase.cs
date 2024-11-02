@@ -9,6 +9,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 
 namespace SharpMUSH.Database.ArangoDB;
@@ -644,9 +645,17 @@ public class ArangoDatabase(
 		throw new NotImplementedException();
 	}
 
-	public Task<IEnumerable<AnySharpContent>> GetNearbyObjectsAsync(DBRef obj)
+	public async Task<IEnumerable<AnySharpObject>> GetNearbyObjectsAsync(DBRef obj)
 	{
-		throw new NotImplementedException();
+		var self = (await GetObjectNodeAsync(obj)).WithoutNone();
+		var location = await GetLocationAsync(self);
+
+		return
+		[
+				self,
+				.. (await GetContentsAsync(self.Object().DBRef))!.Select(x => x.WithRoomOption()),
+				.. (await GetContentsAsync(location.Object().DBRef))!.Select(x => x.WithRoomOption()),
+		];
 	}
 
 	/// <summary>

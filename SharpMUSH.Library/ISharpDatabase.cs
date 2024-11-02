@@ -66,7 +66,7 @@ public interface ISharpDatabase
 	/// <returns>Success or Failure</returns>
 	Task<bool> WipeAttributeAsync(DBRef dbref, string[] attribute);
 
-	Task<IEnumerable<AnySharpContent>> GetNearbyObjectsAsync(DBRef obj);
+	Task<IEnumerable<AnySharpObject>> GetNearbyObjectsAsync(DBRef obj);
 	
 	Task<AnyOptionalSharpContainer> GetLocationAsync(DBRef obj, int depth = 1);
 	

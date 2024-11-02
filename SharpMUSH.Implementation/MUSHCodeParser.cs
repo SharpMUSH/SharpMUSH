@@ -19,6 +19,7 @@ public class MUSHCodeParser(
 	IAttributeService _attributeService,
 	INotifyService _notifyService,
 	ILocateService _locateService,
+	ICommandDiscoveryService _commandDiscoveryService,
 	ITaskScheduler _scheduleService,
 	IConnectionService _connectionService) : IMUSHCodeParser
 {
@@ -31,6 +32,7 @@ public class MUSHCodeParser(
 	public ILocateService LocateService => _locateService;
 
 	public ISharpDatabase Database => _database;
+	public ICommandDiscoveryService CommandDiscoveryService => _commandDiscoveryService;
 
 	public ITaskScheduler Scheduler => _scheduleService;
 
@@ -51,20 +53,21 @@ public class MUSHCodeParser(
 	public IImmutableStack<ParserState> State { get; private set; } = ImmutableStack<ParserState>.Empty;
 
 	public MUSHCodeParser(
-		IPasswordService passwordService,
-		IPermissionService permissionService,
-		ISharpDatabase database,
-		IAttributeService attributeService,
-		INotifyService notifyService,
-		ILocateService locateService,
-		ITaskScheduler scheduleService,
-		IConnectionService connectionService,
-		ImmutableStack<ParserState> state) :
-		this(passwordService, permissionService, database, attributeService, notifyService, locateService, scheduleService, connectionService)
-		=> State = state;
+	IPasswordService passwordService,
+	IPermissionService permissionService,
+	ISharpDatabase database,
+	IAttributeService attributeService,
+	INotifyService notifyService,
+	ILocateService locateService,
+	ICommandDiscoveryService commandDiscoveryService,
+	ITaskScheduler scheduleService,
+	IConnectionService connectionService,
+	ImmutableStack<ParserState> state) :
+	this(passwordService, permissionService, database, attributeService, notifyService, locateService, commandDiscoveryService, scheduleService, connectionService)
+	=> State = state;
 
 	public IMUSHCodeParser FromState(ParserState state) => new MUSHCodeParser(_passwordService, _permissionService,
-		_database, _attributeService, _notifyService, _locateService, _scheduleService, _connectionService, state);
+		_database, _attributeService, _notifyService, _locateService, _commandDiscoveryService, _scheduleService, _connectionService, state);
 
 	public IMUSHCodeParser Push(ParserState state)
 	{
@@ -85,10 +88,11 @@ public class MUSHCodeParser(
 		IAttributeService attributeService,
 		INotifyService notifyService,
 		ILocateService locateService,
+		ICommandDiscoveryService commandDiscoveryService,
 		ITaskScheduler scheduleService,
 		IConnectionService connectionService,
 		ParserState state) :
-		this(passwordService, permissionService, database, attributeService, notifyService, locateService, scheduleService, connectionService)
+		this(passwordService, permissionService, database, attributeService, notifyService, locateService, commandDiscoveryService, scheduleService, connectionService)
 		=> State = [state];
 
 	public ValueTask<CallState?> FunctionParse(MString text)
@@ -116,7 +120,7 @@ public class MUSHCodeParser(
 		sharpParser.AddErrorListener(new DiagnosticErrorListener(true));
 		sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL_EXACT_AMBIG_DETECTION;
 		SharpMUSHParser.StartCommandStringContext chatContext = sharpParser.startCommandString();
-		SharpMUSHParserVisitor visitor = new(this,text);
+		SharpMUSHParserVisitor visitor = new(this, text);
 
 		return visitor.Visit(chatContext);
 	}
@@ -131,7 +135,7 @@ public class MUSHCodeParser(
 	{
 		var handleId = ConnectionService.Get(handle);
 		State = State.Push(new ParserState(
-			Registers: new ([[]]),
+			Registers: new([[]]),
 			IterationRegisters: new(),
 			RegexRegisters: new(),
 			CurrentEvaluation: null,
@@ -151,11 +155,11 @@ public class MUSHCodeParser(
 		sharpParser.AddErrorListener(new DiagnosticErrorListener(true));
 		sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL_EXACT_AMBIG_DETECTION;
 		SharpMUSHParser.StartSingleCommandStringContext chatContext = sharpParser.startSingleCommandString();
-		SharpMUSHParserVisitor visitor = new(this,text);
-		
+		SharpMUSHParserVisitor visitor = new(this, text);
+
 		await visitor.Visit(chatContext);
 	}
-	
+
 	/// <summary>
 	/// This is the main entry point for commands run by a player.
 	/// </summary>
@@ -171,8 +175,8 @@ public class MUSHCodeParser(
 		sharpParser.AddErrorListener(new DiagnosticErrorListener(true));
 		sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL_EXACT_AMBIG_DETECTION;
 		SharpMUSHParser.StartSingleCommandStringContext chatContext = sharpParser.startSingleCommandString();
-		SharpMUSHParserVisitor visitor = new(this,text);
-		
+		SharpMUSHParserVisitor visitor = new(this, text);
+
 		await visitor.Visit(chatContext);
 	}
 
@@ -183,7 +187,7 @@ public class MUSHCodeParser(
 		CommonTokenStream commonTokenStream = new(sharpLexer);
 		SharpMUSHParser sharpParser = new(commonTokenStream);
 		SharpMUSHParser.CommaCommandArgsContext chatContext = sharpParser.commaCommandArgs();
-		SharpMUSHParserVisitor visitor = new(this,text);
+		SharpMUSHParserVisitor visitor = new(this, text);
 
 		return visitor.Visit(chatContext);
 	}
@@ -195,7 +199,7 @@ public class MUSHCodeParser(
 		CommonTokenStream commonTokenStream = new(sharpLexer);
 		SharpMUSHParser sharpParser = new(commonTokenStream);
 		SharpMUSHParser.StartPlainSingleCommandArgContext chatContext = sharpParser.startPlainSingleCommandArg();
-		SharpMUSHParserVisitor visitor = new(this,text);
+		SharpMUSHParserVisitor visitor = new(this, text);
 
 		return visitor.Visit(chatContext);
 	}
@@ -207,7 +211,7 @@ public class MUSHCodeParser(
 		CommonTokenStream commonTokenStream = new(sharpLexer);
 		SharpMUSHParser sharpParser = new(commonTokenStream);
 		SharpMUSHParser.StartEqSplitCommandArgsContext chatContext = sharpParser.startEqSplitCommandArgs();
-		SharpMUSHParserVisitor visitor = new(this,text);
+		SharpMUSHParserVisitor visitor = new(this, text);
 
 		return visitor.Visit(chatContext);
 	}
@@ -219,7 +223,7 @@ public class MUSHCodeParser(
 		CommonTokenStream commonTokenStream = new(sharpLexer);
 		SharpMUSHParser sharpParser = new(commonTokenStream);
 		SharpMUSHParser.StartEqSplitCommandContext chatContext = sharpParser.startEqSplitCommand();
-		SharpMUSHParserVisitor visitor = new(this,text);
+		SharpMUSHParserVisitor visitor = new(this, text);
 
 		return visitor.Visit(chatContext);
 	}

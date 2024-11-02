@@ -74,11 +74,11 @@ public static partial class Commands
 		// TODO: Optimize
 		var socketCommandPattern = _commandLibrary.Where(x
 			=> parser.CurrentState.Handle is not null
-			   && x.Key.Equals(command, StringComparison.CurrentCultureIgnoreCase)
-			   && x.Value.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.SOCKET));
+				 && x.Key.Equals(command, StringComparison.CurrentCultureIgnoreCase)
+				 && x.Value.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.SOCKET));
 
 		if (socketCommandPattern.Any() &&
-		    _commandLibrary.TryGetValue(command.ToUpper(), out var librarySocketCommandDefinition))
+				_commandLibrary.TryGetValue(command.ToUpper(), out var librarySocketCommandDefinition))
 		{
 			return await HandleSocketCommandPattern(parser, source, context, command, socketCommandPattern,
 				librarySocketCommandDefinition);
@@ -94,13 +94,13 @@ public static partial class Commands
 		// TODO: Optimize
 		var singleTokenCommandPattern = _commandLibrary.Where(x
 			=> x.Key.Equals(command[..1], StringComparison.CurrentCultureIgnoreCase) &&
-			   x.Value.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.SingleToken));
+				 x.Value.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.SingleToken));
 
 		if (singleTokenCommandPattern.Any())
 		{
 			return await HandleSingleTokenCommandPattern(parser, source, context, command, singleTokenCommandPattern);
 		}
-		
+
 		var executorObject = parser.CurrentState.ExecutorObject(parser.Database).WithoutNone();
 		// Step 3: Check exit Aliases
 		if (executorObject.IsContent)
@@ -108,8 +108,8 @@ public static partial class Commands
 			var what = executorObject.AsContent;
 			var locate = await parser.LocateService.LocateAndNotifyIfInvalid(
 				parser,
-				executorObject, 
-				executorObject, 
+				executorObject,
+				executorObject,
 				command,
 				LocateFlags.ExitsInTheRoomOfLooker);
 			if (locate.IsExit)
@@ -117,8 +117,8 @@ public static partial class Commands
 				var exit = locate.AsExit;
 				return await HandleGoCommandPattern(parser, exit);
 			}
-		}		
-		
+		}
+
 		// Step 4: Check if we are setting an attribute: &... -- we're just treating this as a Single Token Command for now.
 		// Who would rely on a room alias being & anyway?
 		// Step 5: Check @COMMAND in command library
@@ -128,11 +128,11 @@ public static partial class Commands
 		var slashIndex = command.IndexOf(SLASH);
 		var rootCommand =
 			command[..(slashIndex > -1 ? slashIndex : command.Length)];
-		var swtch = command[(slashIndex > -1 ? slashIndex : command.Length) ..];
+		var swtch = command[(slashIndex > -1 ? slashIndex : command.Length)..];
 		var switches = swtch.Split(SLASH).Where(s => !string.IsNullOrWhiteSpace(s));
 
 		if (_commandLibrary.TryGetValue(rootCommand.ToUpper(), out var libraryCommandDefinition)
-		    && !rootCommand.Equals("HUH_COMMAND", StringComparison.CurrentCultureIgnoreCase))
+				&& !rootCommand.Equals("HUH_COMMAND", StringComparison.CurrentCultureIgnoreCase))
 		{
 			return await HandleInternalCommandPattern(parser, source, context, rootCommand, switches,
 				libraryCommandDefinition);
@@ -147,6 +147,18 @@ public static partial class Commands
 		// Optimistic that the command still exists, until we try and it no longer does?
 		// What's the best way to retrieve the Regex or Wildcard pattern and transform it? 
 		// It needs to take an area to search in. So this is definitely its own service.
+		var nearbyObjects = await parser.Database.GetNearbyObjectsAsync(executorObject.Object().DBRef);
+
+		var userDefinedCommandMatches = await parser.CommandDiscoveryService.MatchUserDefinedCommand(
+			parser,
+			nearbyObjects,
+			source);
+
+		if (userDefinedCommandMatches.IsSome())
+		{
+			return await HandleUserDefinedCommand(parser, userDefinedCommandMatches.AsValue());
+		}
+
 		// Step 10: Zone Exit Name and Aliases
 		// Step 11: Zone Master User Defined Commands
 		// Step 12: User Defined commands on the location itself.
@@ -166,6 +178,37 @@ public static partial class Commands
 
 		parser.Pop();
 		return huhCommand;
+	}
+
+	private static async Task<Option<CallState>> HandleUserDefinedCommand(
+		IMUSHCodeParser parser,
+    IEnumerable<(SharpObject, SharpAttribute, Dictionary<string,MString>)> matches)
+	{
+		// Step 1: Validate if the command can be evaluated (locks)
+		// Evaluate the command for each match. 
+		await Task.CompletedTask;
+
+		// TODO: Consider the following:
+		// Problem found: We are assuming that we always have 'a single command to run' based on the command given.
+		// But that's not actually true because of how user-defined commands work.
+		// Which changes how CallState is returned.
+		// Should the Functional approach be used, which only returns the 'last result'?
+		// Or is it just okay to not support return values for custom commands? That seems like an oversight.
+		foreach (var match in matches)
+		{
+			var newParser = parser.Push(parser.CurrentState with
+			{
+				Command = match.Item2.Name,
+				Arguments = [],
+				Function = null
+			});
+			
+			await newParser.CommandParse(match.Item2.Value);
+
+			parser.Pop();
+		}
+
+		throw new NotImplementedException();
 	}
 
 	private static async ValueTask<Option<CallState>> HandleGoCommandPattern(IMUSHCodeParser parser, SharpExit exit)
