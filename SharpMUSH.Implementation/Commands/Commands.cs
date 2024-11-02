@@ -106,7 +106,7 @@ public static partial class Commands
 		if (executorObject.IsContent)
 		{
 			var what = executorObject.AsContent;
-			var locate = await parser.LocateService.LocateAndNotifyIfInvalid(
+			var locate = await parser.LocateService.Locate(
 				parser,
 				executorObject,
 				executorObject,

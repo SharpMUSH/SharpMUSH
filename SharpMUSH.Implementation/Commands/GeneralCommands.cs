@@ -173,6 +173,7 @@ public static partial class Commands
 		var enactor = parser.CurrentState.Enactor!.Value.Get(parser.Database).WithoutNone();
 		AnyOptionalSharpObject viewing = new OneOf.Types.None();
 
+		// TODO: Implement the version of this command that takes an attribute pattern!
 		if (args.Count == 1)
 		{
 			var locate = await parser.LocateService.LocateAndNotifyIfInvalid(
