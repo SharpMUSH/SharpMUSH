@@ -93,7 +93,7 @@ public partial class Functions
 	{
 		if (args.Count < 2)
 		{
-			return ValueTask.FromResult<CallState>(new CallState(Message: Errors.ErrorTooFewArguments));
+			return ValueTask.FromResult(new CallState(Message: Errors.ErrorTooFewArguments));
 		}
 
 		var doubles = args.Select(x =>
@@ -102,7 +102,7 @@ public partial class Functions
 			Double: b
 		)).ToList();
 
-		return ValueTask.FromResult<CallState>(doubles.Any(x => !x.IsDouble)
+		return ValueTask.FromResult(doubles.Any(x => !x.IsDouble)
 			? new CallState(Message: Errors.ErrorNumbers)
 			: new CallState(Message: doubles.Select(x => x.Double).Pairwise().Skip(1).SkipWhile(func).Any().ToString()));
 	}

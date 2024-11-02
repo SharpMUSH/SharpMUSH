@@ -108,7 +108,7 @@ public static partial class Commands
 
 		var args = parser.CurrentState.Arguments;
 		var enactor = parser.CurrentState.Enactor!.Value.Get(parser.Database).WithoutNone();
-		AnyOptionalSharpObject viewing = new OneOf.Types.None();
+		AnyOptionalSharpObject viewing = new None();
 
 		if (args.Count == 1)
 		{
@@ -171,7 +171,7 @@ public static partial class Commands
 	{
 		var args = parser.CurrentState.Arguments;
 		var enactor = parser.CurrentState.Enactor!.Value.Get(parser.Database).WithoutNone();
-		AnyOptionalSharpObject viewing = new OneOf.Types.None();
+		AnyOptionalSharpObject viewing = new None();
 
 		// TODO: Implement the version of this command that takes an attribute pattern!
 		if (args.Count == 1)

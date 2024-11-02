@@ -7,7 +7,7 @@ namespace SharpMUSH.Tests.Markup.Data;
 
 internal static class Split
 {
-	public static IEnumerable<(A.MarkupString str, string delimiter, A.MarkupString[] expected)> SplitData() =>
+	public static IEnumerable<(MString str, string delimiter, MString[] expected)> SplitData() =>
 	[
 		(
 			A.concat(A.single("con"), A.single(";cat")), ";",

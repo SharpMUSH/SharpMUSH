@@ -190,7 +190,7 @@ public partial class Functions
 			linkText: null,
 			linkUrl: null);
 
-		return ValueTask.FromResult(new CallState(MModule.markupSingle2(new MarkupImplementation.AnsiMarkup(details), args["1"].Message)));
+		return ValueTask.FromResult(new CallState(MModule.markupSingle2(new Ansi(details), args["1"].Message)));
 	}
 
 	[SharpFunction(Name = "@@", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
@@ -319,7 +319,7 @@ public partial class Functions
 	public static ValueTask<CallState> IsWord(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var str = MModule.plainText(parser.CurrentState.Arguments["0"].Message);
-		return ValueTask.FromResult<CallState>(new CallState(Regex.IsMatch(str, @"^[a-zA-Z]$")));
+		return ValueTask.FromResult(new CallState(Regex.IsMatch(str, @"^[a-zA-Z]$")));
 	}
 
 	[SharpFunction(Name = "ITEXT", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -438,11 +438,11 @@ public partial class Functions
 
 		if (everythingIsOkay)
 		{
-			return ValueTask.FromResult<CallState>(new CallState(string.Empty));
+			return ValueTask.FromResult(new CallState(string.Empty));
 		}
 		else
 		{
-			return ValueTask.FromResult<CallState>(new CallState("#-1 REGISTER NAME INVALID"));
+			return ValueTask.FromResult(new CallState("#-1 REGISTER NAME INVALID"));
 		}
 	}
 
@@ -460,11 +460,11 @@ public partial class Functions
 
 		if (everythingIsOkay)
 		{
-			return ValueTask.FromResult<CallState>(new CallState(parser.CurrentState.Arguments["1"].Message!));
+			return ValueTask.FromResult(new CallState(parser.CurrentState.Arguments["1"].Message!));
 		}
 		else
 		{
-			return ValueTask.FromResult<CallState>(new CallState("#-1 REGISTER NAME INVALID"));
+			return ValueTask.FromResult(new CallState("#-1 REGISTER NAME INVALID"));
 		}
 	}
 	[SharpFunction(Name = "SOUNDEX", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]

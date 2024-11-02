@@ -105,13 +105,13 @@ public static class OneOfExtensions
 		);
 
 	public static AnySharpContainer Home(this AnySharpContent thing)
-		=> thing.Match<AnySharpContainer>(
+		=> thing.Match(
 			player => player.Home(),
 			exit => exit.Location(),
 			thing => thing.Home());
 
 	public static AnySharpContainer Location(this AnySharpContent thing)
-		=> thing.Match<AnySharpContainer>(
+		=> thing.Match(
 			player => player.Location(),
 			exit => exit.Home(),
 			thing => thing.Location());

@@ -7,7 +7,7 @@ namespace SharpMUSH.Tests.Markup.Data;
 
 internal static class Concat
 {
-	public static IEnumerable<(A.MarkupString strA, A.MarkupString strB, A.MarkupString expected)> ConcatData() =>
+	public static IEnumerable<(MString strA, MString strB, MString expected)> ConcatData() =>
 	[
 		(A.single(" "), A.single("woof"), A.single(" woof")),
 		(A.single(string.Empty), A.single("woof"), A.single("woof")),

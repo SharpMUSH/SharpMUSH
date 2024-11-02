@@ -7,7 +7,7 @@ namespace SharpMUSH.Tests.Markup.Data;
 
 internal static class Substring
 {
-	public static IEnumerable<(A.MarkupString str, int length, A.MarkupString expected)> SubstringLengthData() =>
+	public static IEnumerable<(MString str, int length, MString expected)> SubstringLengthData() =>
 	[
 		(A.single("redCat"), 3, A.single("red")),
 		(A.single("redCat"), 0, A.single(string.Empty)),
@@ -44,7 +44,7 @@ internal static class Substring
 		)
 	];
 
-	public static IEnumerable<(A.MarkupString str, int start, A.MarkupString expected)> SubstringData() =>
+	public static IEnumerable<(MString str, int start, MString expected)> SubstringData() =>
 	[
 		(A.single("redCat"), 3, A.single("Cat")),
 		(A.single("redCat"), 0, A.single("redCat")),

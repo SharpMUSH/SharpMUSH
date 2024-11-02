@@ -7,7 +7,7 @@ namespace SharpMUSH.Tests.Markup.Data;
 
 internal static class InsertAt
 {
-	public static IEnumerable<(A.MarkupString str, int index, A.MarkupString insert, A.MarkupString expected)> InsertAtData() =>
+	public static IEnumerable<(MString str, int index, MString insert, MString expected)> InsertAtData() =>
 	[
 		(A.single("RedCat"), 3, A.single("Kitty"), A.single("RedKittyCat")),
 		(A.single("RedCat"), 0, A.single("Kitty"), A.single("KittyRedCat")),
