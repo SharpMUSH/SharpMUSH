@@ -380,17 +380,18 @@ public partial class Functions
 
 		parser.Push(parser.CurrentState with 
 		{ 
-			Arguments = parser.CurrentState.Arguments
+			CurrentEvaluation = new DBAttribute(actualObject.Object().DBRef, get.Name),
+			Arguments = parser.CurrentState.Arguments.Skip(1)
 				.Select(
 					(value,i) => new KeyValuePair<string,CallState>(i.ToString(), value.Value))
 				.ToDictionary()
 		});
 
-		var parsed = (await parser.FunctionParse(get.Value))!;
+		var parsed = await parser.FunctionParse(get.Value);
 
 		parser.Pop();
 
-		return parsed;
+		return parsed!;
 	}
 
 	[SharpFunction(Name = "PFUN", MinArgs = 1, MaxArgs = 33, Flags = FunctionFlags.Regular)]

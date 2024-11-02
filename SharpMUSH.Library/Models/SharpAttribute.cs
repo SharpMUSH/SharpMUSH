@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Library.Models;
 
@@ -9,6 +10,8 @@ public class SharpAttribute
 	public required Func<IEnumerable<SharpAttributeFlag>> Flags { get; set; }
 
 	public MString Value { get; set; } = MModule.empty();
+
+	public int? CommandListIndex { get; set; }
 
 	// Computed Value
 	[JsonIgnore]

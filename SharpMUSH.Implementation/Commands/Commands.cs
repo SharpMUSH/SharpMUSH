@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using Antlr4.Runtime.Tree;
+﻿using Antlr4.Runtime.Tree;
 using DotNext.Collections.Generic;
 using SharpMUSH.Library.ParserInterfaces;
 using System.Reflection;
@@ -9,7 +8,6 @@ using SharpMUSH.Library.Services;
 using static SharpMUSHParser;
 using SharpMUSH.Library.DiscriminatedUnions;
 using OneOf.Types;
-using System.Collections.ObjectModel;
 using System.Collections.Immutable;
 
 namespace SharpMUSH.Implementation.Commands;
@@ -184,33 +182,27 @@ public static partial class Commands
 
 	private static async Task<Option<CallState>> HandleUserDefinedCommand(
 		IMUSHCodeParser parser,
-		IEnumerable<(SharpObject, SharpAttribute, Dictionary<string, MString>)> matches)
+		IEnumerable<(SharpObject Obj, SharpAttribute Attr, Dictionary<string, CallState> Arguments)> matches)
 	{
 		// Step 1: Validate if the command can be evaluated (locks)
-		// Evaluate the command for each match. 
-		await Task.CompletedTask;
-
-		// TODO: Consider the following:
-		// Problem found: We are assuming that we always have 'a single command to run' based on the command given.
-		// But that's not actually true because of how user-defined commands work.
-		// Which changes how CallState is returned.
-		// Should the Functional approach be used, which only returns the 'last result'?
-		// Or is it just okay to not support return values for custom commands? That seems like an oversight.
-		foreach (var match in matches)
+		foreach (var (Obj, Attr, Arguments) in matches)
 		{
 			var newParser = parser.Push(parser.CurrentState with
 			{
-				Command = match.Item2.Name,
-				Arguments = [],
+				CurrentEvaluation = new DBAttribute(Obj.DBRef, Attr.Name),
+				Arguments = Arguments,
 				Function = null
 			});
 
-			await newParser.CommandParse(match.Item2.Value);
+			await newParser.CommandListParse(MModule.substring(
+				Attr.CommandListIndex!.Value, 
+				MModule.getLength(Attr.Value) - Attr.CommandListIndex!.Value, 
+				Attr.Value));
 
 			parser.Pop();
 		}
 
-		throw new NotImplementedException();
+		return CallState.Empty;
 	}
 
 	private static async ValueTask<Option<CallState>> HandleGoCommandPattern(IMUSHCodeParser parser, SharpExit exit)
@@ -237,7 +229,7 @@ public static partial class Commands
 		{
 			Command = rootCommand,
 			Switches = switches,
-			Arguments = arguments.Select((value,i) => new KeyValuePair<string,CallState>(i.ToString(),value)).ToDictionary(),
+			Arguments = arguments.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value)).ToDictionary(),
 			Function = null
 		});
 		var result = await libraryCommandDefinition.Function.Invoke(parseState);

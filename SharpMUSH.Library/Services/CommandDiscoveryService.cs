@@ -13,7 +13,7 @@ public partial class CommandDiscoveryService : ICommandDiscoveryService
 	// We need to cache the results of the conversion and where that object & attribute live.
 	// We don't need to care for the Cache Building if that command was used, we can immediately cache all commands.
 	// CONSIDERATION: Do we also need a possible Database-Scan for all commands, and cache them?
-	public async ValueTask<Option<IEnumerable<(SharpObject SObject, SharpAttribute Attribute, Dictionary<string, MString> Arguments)>>> MatchUserDefinedCommand(
+	public async ValueTask<Option<IEnumerable<(SharpObject SObject, SharpAttribute Attribute, Dictionary<string, CallState> Arguments)>>> MatchUserDefinedCommand(
 		IMUSHCodeParser parser,
 		IEnumerable<AnySharpObject> objects,
 		MString commandString)
@@ -27,7 +27,12 @@ public partial class CommandDiscoveryService : ICommandDiscoveryService
 					attr.Flags().All(flag => flag.Name != "NO_COMMAND")
 					&& CommandPatternRegex().IsMatch(MModule.plainText(attr.Value)))
 				.Select(attr =>
-					(Obj: sharpObj, Attr: attr, Pattern: CommandPatternRegex().Match(MModule.plainText(attr.Value)))));
+					{
+						var match = CommandPatternRegex().Match(MModule.plainText(attr.Value));
+						attr.CommandListIndex = match.Length;
+						return (Obj: sharpObj, Attr: attr, Pattern: match);
+					}
+					));
 
 		var convertedCommandPatternAttributes = commandPatternAttributes
 			.Select(x =>
@@ -54,11 +59,11 @@ public partial class CommandDiscoveryService : ICommandDiscoveryService
 					new KeyValuePair<string, MString>(x.Index.ToString(), MModule.substring(x.Index, x.Length, commandString)),
 					new KeyValuePair<string, MString>(x.Name, MModule.substring(x.Index, x.Length, commandString))
 					])
-				.GroupBy(x => x.Key)
-				.ToDictionary(x => x.Key, x => x.First())
+				.GroupBy(kv => kv.Key)
+				.ToDictionary(kv => kv.Key, kv => new CallState(kv.First().Value, 0))
 			));
 
-		return (Option<IEnumerable<(SharpObject SObject, SharpAttribute Attribute, Dictionary<string, MString> Arguments)>>)res;
+		return (Option<IEnumerable<(SharpObject SObject, SharpAttribute Attribute, Dictionary<string, CallState> Arguments)>>)res;
 	}
 
 	[GeneratedRegex(@"^\$.+?(?<!\\)(?:\\\\)*\:", RegexOptions.Singleline)]
