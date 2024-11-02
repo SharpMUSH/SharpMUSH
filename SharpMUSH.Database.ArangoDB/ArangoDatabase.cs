@@ -241,7 +241,7 @@ public class ArangoDatabase(
 
 		var sharpAttributes = sharpAttributeResults.Select(x => new SharpAttribute()
 		{
-			Flags = () => GetAttributeFlags(x.Id),
+			Flags = GetAttributeFlags(x.Id),
 			Name = x.Name,
 			LongName = x.LongName,
 			Owner = () => GetAttributeOwner(x.Id),
@@ -475,7 +475,7 @@ public class ArangoDatabase(
 
 		return result2.Select(x => new SharpAttribute()
 		{
-			Flags = () => GetAttributeFlags(x._id),
+			Flags = GetAttributeFlags(x._id),
 			Name = x.Name,
 			Value = x.Value,
 			LongName = x.LongName,
@@ -507,7 +507,7 @@ public class ArangoDatabase(
 
 		return result2.Select(x => new SharpAttribute()
 		{
-			Flags = () => GetAttributeFlags(x._id),
+			Flags = GetAttributeFlags(x._id),
 			Name = x.Name,
 			Value = x.Value,
 			LongName = x.LongName,
@@ -546,7 +546,7 @@ public class ArangoDatabase(
 		return result.Select(x => new SharpAttribute()
 		{
 			Name = x.Name,
-			Flags = () => GetAttributeFlags(x.Id),
+			Flags = GetAttributeFlags(x.Id),
 			Value = MarkupString.MarkupStringModule.single(x.Value), // TODO: Compose and Decompose
 			LongName = x.LongName,
 			Leaves = () => GetAttributes(x.Id),

@@ -132,7 +132,7 @@ public class SharpMUSHBooleanExpressionVisitor(ISharpDatabase database, Paramete
 				.ConfigureAwait(false).GetAwaiter().GetResult()!
 				.FirstOrDefault(new SharpAttribute { 
 					Name = string.Empty,
-					Flags = Enumerable.Empty<SharpAttributeFlag>,
+					Flags = Enumerable.Empty<SharpAttributeFlag>(),
 					Value = MModule.single(Guid.NewGuid().ToString()),
 					LongName = string.Empty,
 					Leaves = Enumerable.Empty<SharpAttribute>,

@@ -7,7 +7,7 @@ public class SharpAttribute
 {
 	public required string Name { get; set; }
 
-	public required Func<IEnumerable<SharpAttributeFlag>> Flags { get; set; }
+	public required IEnumerable<SharpAttributeFlag> Flags { get; set; }
 
 	public MString Value { get; set; } = MModule.empty();
 

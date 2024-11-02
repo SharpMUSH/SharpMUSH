@@ -19,12 +19,12 @@ public partial class CommandDiscoveryService : ICommandDiscoveryService
 		MString commandString)
 	{
 		await Task.CompletedTask;
-		var filteredObjects = objects.Where(x => !x.HasFlag("NO_COMMAND"));
+		var filteredObjects = objects.Where(x => !x.HasFlag("NO_COMMAND")).ToList();
 
 		var commandPatternAttributes = filteredObjects
 			.SelectMany(sharpObj => sharpObj.Object().Attributes()
 				.Where(attr =>
-					attr.Flags().All(flag => flag.Name != "NO_COMMAND")
+					attr.Flags.All(flag => flag.Name != "NO_COMMAND")
 					&& CommandPatternRegex().IsMatch(MModule.plainText(attr.Value)))
 				.Select(attr =>
 					{
@@ -32,16 +32,16 @@ public partial class CommandDiscoveryService : ICommandDiscoveryService
 						attr.CommandListIndex = match.Length;
 						return (Obj: sharpObj, Attr: attr, Pattern: match);
 					}
-					));
+					)).ToList();
 
 		var convertedCommandPatternAttributes = commandPatternAttributes
 			.Select(x =>
-				x.Attr.Flags().Any(flag => flag.Name == "REGEX") ?
+				x.Attr.Flags.Any(flag => flag.Name == "REGEX") ?
 					(x.Obj, x.Attr, Reg: new Regex(x.Pattern.Value)) :
-					(x.Obj, x.Attr, Reg: new Regex(MModule.getWildcardMatchAsRegex(MModule.single(x.Pattern.Value)))));
+					(x.Obj, x.Attr, Reg: new Regex(MModule.getWildcardMatchAsRegex(MModule.single(x.Pattern.Value))))).ToList();
 
 		var matchedCommandPatternAttributes = convertedCommandPatternAttributes
-			.Where(x => x.Reg.IsMatch(MModule.plainText(commandString)));
+			.Where(x => x.Reg.IsMatch(MModule.plainText(commandString))).ToList();
 
 		if (!matchedCommandPatternAttributes.Any())
 		{
@@ -54,7 +54,7 @@ public partial class CommandDiscoveryService : ICommandDiscoveryService
 			 Arguments: match.Reg
 				.Matches(MModule.plainText(commandString))
 				.SelectMany(x => x.Groups.Values)
-				.Skip(!match.Attr.Flags().Any(x => x.Name == "REGEX") ? 1 : 0) // Skip the first Group for Wildcard matches, which is the entire Match
+				.Skip(!match.Attr.Flags.Any(x => x.Name ==	 "REGEX") ? 1 : 0) // Skip the first Group for Wildcard matches, which is the entire Match
 				.SelectMany<Group, KeyValuePair<string, MString>>(x => [
 					new KeyValuePair<string, MString>(x.Index.ToString(), MModule.substring(x.Index, x.Length, commandString)),
 					new KeyValuePair<string, MString>(x.Name, MModule.substring(x.Index, x.Length, commandString))
