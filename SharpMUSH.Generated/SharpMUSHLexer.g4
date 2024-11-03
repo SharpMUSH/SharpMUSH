@@ -9,7 +9,6 @@ lexer grammar SharpMUSHLexer;
 
 fragment WS: [ \r\n\f\t]*;
 
-// OPARENWS: '(' WS;
 ESCAPE: '\\' -> pushMode(ESCAPING);
 OBRACK: '[';
 CBRACK: ']';
@@ -18,9 +17,8 @@ CBRACE: '}';
 CPAREN: ')';
 CCARET: '>';
 COMMAWS: ',' WS;
-EQUALS: '=';
+EQUALS: '=' WS;
 PERCENT: '%' -> pushMode(SUBSTITUTION);
-DOLLAR: '$' -> pushMode(REGEX);
 SEMICOLON: WS ';' WS;
 OANSI: '\u001B' -> pushMode(ANSI);
 RSPACE: ' ';
@@ -64,12 +62,6 @@ OTHER_SUB: . -> popMode;
 // --------------- ESCAPING MODE -----------------
 mode ESCAPING;
 ANY: . -> popMode;
-
-// --------------- REGEX MODE -----------------
-mode REGEX;
-
-SPACEREGEX: ' ' -> popMode;
-ANYREGEX: .;
 
 // --------------- ANSI MODE ---------------------
 mode ANSI;

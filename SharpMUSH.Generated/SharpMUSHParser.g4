@@ -35,7 +35,9 @@ startPlainCommaCommandArgs: commaCommandArgs EOF;
 
 // Start looking for a pattern with an '=' split, followed by comma separated arguments.
 startEqSplitCommandArgs:
-    singleCommandArg (EQUALS commaCommandArgs)? EOF
+    {lookingForCommandArgEquals = true;} singleCommandArg (
+      EQUALS {lookingForCommandArgEquals = false;} commaCommandArgs
+    )? EOF
 ;
 
 // Start looking for a pattern, with a '=' split, but without comma separated arguments.
@@ -169,7 +171,5 @@ beginGenericText:
 ;
 
 escapedText: ESCAPE ANY;
-
-regex: DOLLAR ANYREGEX+ SPACEREGEX;
 
 ansi: OANSI ANSICHARACTER? CANSI;

@@ -200,12 +200,6 @@ public interface ISharpMUSHParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitEscapedText([NotNull] SharpMUSHParser.EscapedTextContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="SharpMUSHParser.regex"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitRegex([NotNull] SharpMUSHParser.RegexContext context);
-	/// <summary>
 	/// Visit a parse tree produced by <see cref="SharpMUSHParser.ansi"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
