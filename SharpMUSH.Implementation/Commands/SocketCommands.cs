@@ -12,7 +12,7 @@ public static partial class Commands
 	private readonly static Regex ConnectionPatternRegex = ConnectionPattern();
 
 	[SharpCommand(Name = "WHO", Behavior = Definitions.CommandBehavior.SOCKET | Definitions.CommandBehavior.NoParse, MinArgs = 0, MaxArgs = 1)]
-	public static Option<CallState> WHO(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public static async ValueTask<Option<CallState>> WHO(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		_ = parser.State;
 		var everyone = parser.ConnectionService.GetAll();
@@ -34,7 +34,7 @@ public static partial class Commands
 
 		var message = $"{header}{Environment.NewLine}{string.Join(Environment.NewLine, players)}{Environment.NewLine}{footer}";
 
-		parser.NotifyService.Notify(handle: parser.CurrentState.Handle!, what: message).Wait();
+		await parser.NotifyService.Notify(handle: parser.CurrentState.Handle!, what: message);
 
 		return new None();
 	}
@@ -46,12 +46,12 @@ public static partial class Commands
 	/// connect "person without a password"
 	/// </example>
 	[SharpCommand(Name = "CONNECT", Behavior = Definitions.CommandBehavior.SOCKET | Definitions.CommandBehavior.NoParse, MinArgs = 1, MaxArgs = 2)]
-	public static Option<CallState> CONNECT(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public static async ValueTask<Option<CallState>> CONNECT(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// Early HUH if already logged in.
 		if( parser.ConnectionService.Get(parser.CurrentState.Handle!)?.Ref is not null)
 		{
-			parser.NotifyService.Notify(parser.CurrentState.Handle!, "Huh?  (Type \"help\" for help.)");
+			await parser.NotifyService.Notify(parser.CurrentState.Handle!, "Huh?  (Type \"help\" for help.)");
 			return new None();
 		}
 
@@ -63,7 +63,7 @@ public static partial class Commands
 
 		if(!nameItems.Any())
 		{
-			parser.NotifyService.Notify(parser.CurrentState.Handle!, "Could not find that player.");
+			await parser.NotifyService.Notify(parser.CurrentState.Handle!, "Could not find that player.");
 			return new None();
 		}
 
@@ -74,7 +74,7 @@ public static partial class Commands
 
 		if (foundDB is null)
 		{
-			parser.NotifyService.Notify(parser.CurrentState.Handle!, "Could not find that player.");
+			await parser.NotifyService.Notify(parser.CurrentState.Handle!, "Could not find that player.");
 			return new None();
 		}
 
@@ -83,7 +83,7 @@ public static partial class Commands
 
 		if(!validPassword && !string.IsNullOrEmpty(foundDB.PasswordHash))
 		{
-			parser.NotifyService.Notify(parser.CurrentState.Handle!, "Invalid Password.");
+			await parser.NotifyService.Notify(parser.CurrentState.Handle!, "Invalid Password.");
 			return new None();
 		}
 
@@ -93,7 +93,7 @@ public static partial class Commands
 			new DBRef(foundDB!.Object!.Key!, foundDB!.Object!.CreationTime));
 
 		// TODO: Step 5: Trigger OnConnect Event in EventService.
-		parser.NotifyService.Notify(parser.CurrentState.Handle!, "Connected!");
+		await parser.NotifyService.Notify(parser.CurrentState.Handle!, "Connected!");
 		Log.Logger.Debug("Successful login and binding for {@person}", foundDB.Object);
 		return new None();
 	}
