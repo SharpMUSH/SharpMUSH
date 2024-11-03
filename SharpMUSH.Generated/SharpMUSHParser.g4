@@ -78,10 +78,10 @@ evaluationString:
 ;
 
 explicitEvaluationString:
-    bracePattern explicitEvaluationStringConcatenatedRepeat*?
-    | bracketPattern explicitEvaluationStringConcatenatedRepeat*?
-    | PERCENT validSubstitution explicitEvaluationStringConcatenatedRepeat*?
-    | beginGenericText explicitEvaluationStringConcatenatedRepeat*?
+    bracePattern explicitEvaluationStringConcatenatedRepeat*
+    | bracketPattern explicitEvaluationStringConcatenatedRepeat*
+    | PERCENT validSubstitution explicitEvaluationStringConcatenatedRepeat*
+    | beginGenericText explicitEvaluationStringConcatenatedRepeat*
 ;
 
 explicitEvaluationStringConcatenatedRepeat:
