@@ -1,4 +1,5 @@
-﻿using OneOf.Types;
+﻿using OneOf;
+using OneOf.Types;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -32,16 +33,17 @@ public partial class CommandDiscoveryService : ICommandDiscoveryService
 						attr.CommandListIndex = match.Length;
 						return (Obj: sharpObj, Attr: attr, Pattern: match);
 					}
-					)).ToList();
+					));
 
 		var convertedCommandPatternAttributes = commandPatternAttributes
 			.Select(x =>
 				x.Attr.Flags.Any(flag => flag.Name == "REGEX") ?
-					(SObject: x.Obj, Attribute: x.Attr, Reg: new Regex(x.Pattern.Value.Remove(x.Pattern.Length-1,1).Remove(0,1))) :
-					(SObject: x.Obj, Attribute: x.Attr, Reg: new Regex(MModule.getWildcardMatchAsRegex(MModule.single(x.Pattern.Value.Remove(x.Pattern.Length - 1, 1).Remove(0, 1)))))).ToList();
+					(SObject: x.Obj, Attribute: x.Attr, Reg: new Regex(x.Pattern.Value.Remove(x.Pattern.Length - 1, 1).Remove(0, 1))) :
+					(SObject: x.Obj, Attribute: x.Attr, Reg: new Regex(MModule.getWildcardMatchAsRegex(
+							MModule.single(x.Pattern.Value.Remove(x.Pattern.Length - 1, 1).Remove(0, 1))))));
 
 		var matchedCommandPatternAttributes = convertedCommandPatternAttributes
-			.Where(x => x.Reg.IsMatch(MModule.plainText(commandString))).ToList();
+			.Where(x => x.Reg.IsMatch(MModule.plainText(commandString)));
 
 		if (!matchedCommandPatternAttributes.Any())
 		{
@@ -54,7 +56,7 @@ public partial class CommandDiscoveryService : ICommandDiscoveryService
 			 Arguments: match.Reg
 				.Matches(MModule.plainText(commandString))
 				.SelectMany(x => x.Groups.Values)
-				.Skip(!match.Attribute.Flags.Any(x => x.Name ==	 "REGEX") ? 1 : 0) // Skip the first Group for Wildcard matches, which is the entire Match
+				.Skip(!match.Attribute.Flags.Any(x => x.Name == "REGEX") ? 1 : 0) // Skip the first Group for Wildcard matches, which is the entire Match
 				.SelectMany<Group, KeyValuePair<string, MString>>(x => [
 					new KeyValuePair<string, MString>(x.Index.ToString(), MModule.substring(x.Index, x.Length, commandString)),
 					new KeyValuePair<string, MString>(x.Name, MModule.substring(x.Index, x.Length, commandString))
@@ -63,8 +65,8 @@ public partial class CommandDiscoveryService : ICommandDiscoveryService
 				.ToDictionary(kv => kv.Key, kv => new CallState(kv.First().Value, 0))
 			));
 
-		// TODO: Bug here, OneOf is having trouble with this.
-		return (Option<IEnumerable<(AnySharpObject SObject, SharpAttribute Attribute, Dictionary<string, CallState> Arguments)>>)res!;
+		return Option<IEnumerable<(AnySharpObject SObject, SharpAttribute Attribute, Dictionary<string, CallState> Arguments)>>
+			.FromOption(res);
 	}
 
 	[GeneratedRegex(@"^\$.+?(?<!\\)(?:\\\\)*\:", RegexOptions.Singleline)]

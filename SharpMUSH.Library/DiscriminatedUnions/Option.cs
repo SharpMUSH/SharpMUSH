@@ -1,7 +1,5 @@
 ﻿using OneOf;
 using OneOf.Types;
-using SharpMUSH.Library.Models;
-using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Library.DiscriminatedUnions;
 
@@ -11,6 +9,8 @@ public partial class Option<T> : OneOfBase<T, None>
 	public bool IsSome() => IsT0;
 	public bool IsNone() => IsT1;
 	public T AsValue() => AsT0;
+
+	public static Option<T> FromOption(T some) => new(some);
 
 	public bool TryGetValue(out T? value)
 	{
