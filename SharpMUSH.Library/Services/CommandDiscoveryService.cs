@@ -22,7 +22,7 @@ public partial class CommandDiscoveryService : ICommandDiscoveryService
 		var filteredObjects = objects.Where(x => !x.HasFlag("NO_COMMAND")).ToList();
 
 		var commandPatternAttributes = filteredObjects
-			.SelectMany(sharpObj => sharpObj.Object().Attributes()
+			.SelectMany(sharpObj => sharpObj.Object().AllAttributes()
 				.Where(attr =>
 					attr.Flags.All(flag => flag.Name != "NO_COMMAND")
 					&& CommandPatternRegex().IsMatch(MModule.plainText(attr.Value)))

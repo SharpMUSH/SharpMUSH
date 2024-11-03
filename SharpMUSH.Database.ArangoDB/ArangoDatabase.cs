@@ -253,6 +253,38 @@ public class ArangoDatabase(
 		return sharpAttributes;
 	}
 
+	private IEnumerable<SharpAttribute> GetAllAttributes(string id)
+	{
+		// This only works for when we get a non-attribute as our ID.
+		// Adjustment is needed if we get an attribute ID.
+		IEnumerable<SharpAttributeQueryResult> sharpAttributeResults;
+		if (id.StartsWith(DatabaseConstants.attributes))
+		{
+			sharpAttributeResults = arangoDB.Query.ExecuteAsync<SharpAttributeQueryResult>(handle,
+				$"FOR v IN 1..999 OUTBOUND @startVertex GRAPH {DatabaseConstants.graphAttributes} RETURN v",
+				new Dictionary<string, object>() { { "startVertex", id } }).Result;
+		}
+		else
+		{
+			sharpAttributeResults = arangoDB.Query.ExecuteAsync<SharpAttributeQueryResult>(handle,
+				$"LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.graphObjects} RETURN v) FOR v IN 1..999 OUTBOUND start GRAPH {DatabaseConstants.graphAttributes} RETURN v",
+				new Dictionary<string, object>() { { "startVertex", id } }).Result;
+		}
+
+		var sharpAttributes = sharpAttributeResults.Select(x => new SharpAttribute()
+		{
+			Flags = GetAttributeFlags(x.Id),
+			Name = x.Name,
+			LongName = x.LongName,
+			Owner = () => GetAttributeOwner(x.Id),
+			Value = MarkupString.MarkupStringModule.single(x.Value), // TODO: Compose and Decompose
+			Leaves = () => GetAttributes(x.Id),
+			SharpAttributeEntry = () => null // TODO: Fix
+		});
+
+		return sharpAttributes;
+	}
+
 	private SharpPlayer GetObjectOwner(string id)
 	{
 		var owner = arangoDB.Query.ExecuteAsync<SharpPlayerQueryResult>(handle,
@@ -337,6 +369,7 @@ public class ArangoDatabase(
 			Flags = () => GetFlags(startVertex),
 			Powers = () => GetPowers(startVertex),
 			Attributes = () => GetAttributes(startVertex),
+			AllAttributes = () => GetAllAttributes(startVertex),
 			Owner = () => GetObjectOwner(startVertex),
 			Parent = () => GetParent(startVertex)
 		};
@@ -394,6 +427,7 @@ public class ArangoDatabase(
 			Flags = () => GetFlags(objId),
 			Powers = () => GetPowers(objId),
 			Attributes = () => GetAttributes(objId),
+			AllAttributes = () => GetAllAttributes(objId),
 			Owner = () => GetObjectOwner(objId),
 			Parent = () => GetParent(objId)
 		};
@@ -441,6 +475,7 @@ public class ArangoDatabase(
 				Flags = () => GetFlags(obj.Id),
 				Powers = () => GetPowers(obj.Id),
 				Attributes = () => GetAttributes(obj.Id),
+				AllAttributes = () => GetAllAttributes(obj.Id),
 				Owner = () => GetObjectOwner(obj.Id),
 				Parent = () => GetParent(obj.Id)
 			};

@@ -35,6 +35,9 @@ public class SharpObject
 	[JsonIgnore]
 	public required Func<IEnumerable<SharpAttribute>> Attributes { get; set; }
 
+	[JsonIgnore]
+	public required Func<IEnumerable<SharpAttribute>> AllAttributes { get; set; }
+
 	// RELATIONSHIP
 	[JsonIgnore]
 	public required Func<IEnumerable<SharpObjectFlag>> Flags { get; set; }

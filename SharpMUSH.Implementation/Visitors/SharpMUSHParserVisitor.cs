@@ -260,6 +260,7 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source)
 	public override async ValueTask<CallState?> VisitStartEqSplitCommand(
 		[NotNull] StartEqSplitCommandContext context)
 	{
+		// Todo: There is a bug here where the second SingleCommandArg is empty, because of a parser failure.
 		var singleCommandArg = context.singleCommandArg();
 		var baseArg = await base.VisitChildren(singleCommandArg[0]);
 		var rsArg = singleCommandArg.Length > 1 ? await base.VisitChildren(singleCommandArg[1]) : null;

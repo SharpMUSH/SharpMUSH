@@ -366,10 +366,12 @@ public static partial class Commands
 				}
 			}
 		}
-
-		arguments.AddRange(noParse
-			? argCallState.Arguments!.Select(x => new CallState(x, argCallState.Depth))
-			: argCallState.Arguments!.Select(x => parser.FunctionParse(x).AsTask().Result).Select(x => x!));
+		else
+		{
+			arguments.AddRange(noParse
+				? argCallState.Arguments!.Select(x => new CallState(x, argCallState.Depth))
+				: argCallState.Arguments!.Select(x => parser.FunctionParse(x).AsTask().Result).Select(x => x!));
+		}
 
 		return arguments;
 	}
