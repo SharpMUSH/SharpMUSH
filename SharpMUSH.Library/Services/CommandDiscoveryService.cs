@@ -13,7 +13,7 @@ public partial class CommandDiscoveryService : ICommandDiscoveryService
 	// We need to cache the results of the conversion and where that object & attribute live.
 	// We don't need to care for the Cache Building if that command was used, we can immediately cache all commands.
 	// CONSIDERATION: Do we also need a possible Database-Scan for all commands, and cache them?
-	public async ValueTask<Option<IEnumerable<(SharpObject SObject, SharpAttribute Attribute, Dictionary<string, CallState> Arguments)>>> MatchUserDefinedCommand(
+	public async ValueTask<Option<IEnumerable<(AnySharpObject SObject, SharpAttribute Attribute, Dictionary<string, CallState> Arguments)>>> MatchUserDefinedCommand(
 		IMUSHCodeParser parser,
 		IEnumerable<AnySharpObject> objects,
 		MString commandString)
@@ -37,8 +37,8 @@ public partial class CommandDiscoveryService : ICommandDiscoveryService
 		var convertedCommandPatternAttributes = commandPatternAttributes
 			.Select(x =>
 				x.Attr.Flags.Any(flag => flag.Name == "REGEX") ?
-					(x.Obj, x.Attr, Reg: new Regex(x.Pattern.Value)) :
-					(x.Obj, x.Attr, Reg: new Regex(MModule.getWildcardMatchAsRegex(MModule.single(x.Pattern.Value))))).ToList();
+					(SObject: x.Obj, Attribute: x.Attr, Reg: new Regex(x.Pattern.Value.Remove(x.Pattern.Length-1,1).Remove(0,1))) :
+					(SObject: x.Obj, Attribute: x.Attr, Reg: new Regex(MModule.getWildcardMatchAsRegex(MModule.single(x.Pattern.Value.Remove(x.Pattern.Length - 1, 1).Remove(0, 1)))))).ToList();
 
 		var matchedCommandPatternAttributes = convertedCommandPatternAttributes
 			.Where(x => x.Reg.IsMatch(MModule.plainText(commandString))).ToList();
@@ -49,12 +49,12 @@ public partial class CommandDiscoveryService : ICommandDiscoveryService
 		}
 
 		var res = matchedCommandPatternAttributes.Select(match =>
-			(match.Obj,
-			 match.Attr,
+			(match.SObject,
+			 match.Attribute,
 			 Arguments: match.Reg
 				.Matches(MModule.plainText(commandString))
 				.SelectMany(x => x.Groups.Values)
-				.Skip(!match.Attr.Flags.Any(x => x.Name ==	 "REGEX") ? 1 : 0) // Skip the first Group for Wildcard matches, which is the entire Match
+				.Skip(!match.Attribute.Flags.Any(x => x.Name ==	 "REGEX") ? 1 : 0) // Skip the first Group for Wildcard matches, which is the entire Match
 				.SelectMany<Group, KeyValuePair<string, MString>>(x => [
 					new KeyValuePair<string, MString>(x.Index.ToString(), MModule.substring(x.Index, x.Length, commandString)),
 					new KeyValuePair<string, MString>(x.Name, MModule.substring(x.Index, x.Length, commandString))
@@ -63,7 +63,8 @@ public partial class CommandDiscoveryService : ICommandDiscoveryService
 				.ToDictionary(kv => kv.Key, kv => new CallState(kv.First().Value, 0))
 			));
 
-		return (Option<IEnumerable<(SharpObject SObject, SharpAttribute Attribute, Dictionary<string, CallState> Arguments)>>)res;
+		// TODO: Bug here, OneOf is having trouble with this.
+		return (Option<IEnumerable<(AnySharpObject SObject, SharpAttribute Attribute, Dictionary<string, CallState> Arguments)>>)res!;
 	}
 
 	[GeneratedRegex(@"^\$.+?(?<!\\)(?:\\\\)*\:", RegexOptions.Singleline)]

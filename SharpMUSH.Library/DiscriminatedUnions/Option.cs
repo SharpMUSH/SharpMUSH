@@ -1,5 +1,7 @@
 ﻿using OneOf;
 using OneOf.Types;
+using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Library.DiscriminatedUnions;
 

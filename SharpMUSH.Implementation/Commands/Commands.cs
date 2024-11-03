@@ -182,14 +182,14 @@ public static partial class Commands
 
 	private static async Task<Option<CallState>> HandleUserDefinedCommand(
 		IMUSHCodeParser parser,
-		IEnumerable<(SharpObject Obj, SharpAttribute Attr, Dictionary<string, CallState> Arguments)> matches)
+		IEnumerable<(AnySharpObject Obj, SharpAttribute Attr, Dictionary<string, CallState> Arguments)> matches)
 	{
 		// Step 1: Validate if the command can be evaluated (locks)
 		foreach (var (Obj, Attr, Arguments) in matches)
 		{
 			var newParser = parser.Push(parser.CurrentState with
 			{
-				CurrentEvaluation = new DBAttribute(Obj.DBRef, Attr.Name),
+				CurrentEvaluation = new DBAttribute(Obj.Object().DBRef, Attr.Name),
 				Arguments = Arguments,
 				Function = null
 			});
