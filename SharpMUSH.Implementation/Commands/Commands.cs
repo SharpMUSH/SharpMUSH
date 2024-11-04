@@ -9,6 +9,8 @@ using static SharpMUSHParser;
 using SharpMUSH.Library.DiscriminatedUnions;
 using OneOf.Types;
 using System.Collections.Immutable;
+using System.Diagnostics;
+using Serilog.Core;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -149,15 +151,24 @@ public static partial class Commands
 		// It needs to take an area to search in. So this is definitely its own service.
 		var nearbyObjects = await parser.Database.GetNearbyObjectsAsync(executorObject.Object().DBRef);
 
+		Stopwatch sw = Stopwatch.StartNew();
 		var userDefinedCommandMatches = await parser.CommandDiscoveryService.MatchUserDefinedCommand(
 			parser,
 			nearbyObjects,
 			source);
+		sw.Stop();
+		
+		await parser.NotifyService.Notify(parser.CurrentState.Handle!, string.Format("Time taken: {0}ms", sw.Elapsed.TotalMilliseconds));
+
 
 		if (userDefinedCommandMatches.IsSome())
 		{
-			return await HandleUserDefinedCommand(parser, userDefinedCommandMatches.AsValue());
+			sw = Stopwatch.StartNew();
+			var res = await HandleUserDefinedCommand(parser, userDefinedCommandMatches.AsValue());
+			await parser.NotifyService.Notify(parser.CurrentState.Handle!, string.Format("Time taken: {0}ms", sw.Elapsed.TotalMilliseconds));
+			return res;
 		}
+
 
 		// Step 10: Zone Exit Name and Aliases
 		// Step 11: Zone Master User Defined Commands

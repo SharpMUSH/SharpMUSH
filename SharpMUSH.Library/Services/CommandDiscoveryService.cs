@@ -4,6 +4,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using System.Diagnostics;
 using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Library.Services;
@@ -21,10 +22,8 @@ public partial class CommandDiscoveryService : ICommandDiscoveryService
 		IEnumerable<AnySharpObject> objects,
 		MString commandString)
 	{
-		await Task.CompletedTask;
-		var filteredObjects = objects.Where(x => !x.HasFlag("NO_COMMAND")).ToList();
-
-		var commandPatternAttributes = filteredObjects
+		var commandPatternAttributes = objects
+			.Where(x => !x.HasFlag("NO_COMMAND"))
 			.SelectMany(sharpObj =>
 				cache.GetOrCreate(
 					sharpObj.Object().DBRef,
