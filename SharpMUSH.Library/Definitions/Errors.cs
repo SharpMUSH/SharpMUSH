@@ -8,6 +8,7 @@ public static class Errors
 	public const string ErrorUIntegers = "#-1 ARGUMENTS MUST BE POSITIVE INTEGERS";
 	public const string ErrorNumber = "#-1 ARGUMENT MUST BE NUMBER";
 	public const string ErrorNumbers = "#-1 ARGUMENTS MUST BE NUMBERS";
+	public const string ErrorDivideByZero = "#-1 DIVIDE BY ZERO";
 	public const string ErrorInvoke = "#-1 FUNCTION INVOCATION LIMIT EXCEEDED";
 	public const string ErrorRecursion = "#-1 FUNCTION RECURSION LIMIT EXCEEDED";
 	public const string ErrorCall = "#-1 CALL LIMIT EXCEEDED";

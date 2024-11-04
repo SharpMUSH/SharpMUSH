@@ -3,28 +3,37 @@ using SharpMUSH.Library.ParserInterfaces;
 using System.Numerics;
 using SharpMUSH.Library.Definitions;
 using MoreLinq;
+using Antlr4.Runtime;
 
 namespace SharpMUSH.Implementation.Functions;
 
 public static partial class Functions
 {
-	[SharpFunction(Name = "add", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
+	[SharpFunction(Name = "add", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
 	public static ValueTask<CallState> Add(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		AggregateDecimals(parser.CurrentState.Arguments, (acc, sub) => acc + sub);
 
-	[SharpFunction(Name = "sub", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
+	[SharpFunction(Name = "sub", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
 	public static ValueTask<CallState> Sub(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		AggregateDecimals(parser.CurrentState.Arguments, (acc, sub) => acc - sub);
 
-	[SharpFunction(Name = "mul", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
+	[SharpFunction(Name = "mul", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
 	public static ValueTask<CallState> Mul(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		AggregateDecimals(parser.CurrentState.Arguments, (acc, sub) => acc * sub);
 
-	[SharpFunction(Name = "div", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.IntegersOnly)]
-	public static ValueTask<CallState> Div(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
-		AggregateIntegers(parser.CurrentState.Arguments, (acc, sub) => acc / sub);
+	[SharpFunction(Name = "div", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.IntegersOnly)]
+	public static ValueTask<CallState> Div(IMUSHCodeParser parser, SharpFunctionAttribute _2) {
+		try
+		{
+			return AggregateIntegers(parser.CurrentState.Arguments, (acc, sub) => acc / sub);
+		}
+		catch(DivideByZeroException)
+		{
+			return ValueTask.FromResult(new CallState(Errors.ErrorDivideByZero));
+		}
+	}
 
-	[SharpFunction(Name = "fdiv", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
+	[SharpFunction(Name = "fdiv", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
 	public static ValueTask<CallState> FDiv(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		AggregateDecimals(parser.CurrentState.Arguments, (acc, sub) => acc / sub);
 
@@ -33,15 +42,15 @@ public static partial class Functions
 	public static ValueTask<CallState> FloorDiv(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		AggregateDecimalToInt(parser.CurrentState.Arguments, (acc, sub) => acc / sub);
 
-	[SharpFunction(Name = "max", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
+	[SharpFunction(Name = "max", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
 	public static ValueTask<CallState> Max(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		AggregateDecimals(parser.CurrentState.Arguments, Math.Max);
 
-	[SharpFunction(Name = "min", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
+	[SharpFunction(Name = "min", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
 	public static ValueTask<CallState> Min(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		AggregateDecimals(parser.CurrentState.Arguments, Math.Min);
 
-	[SharpFunction(Name = "abs", MaxArgs = 1,
+	[SharpFunction(Name = "abs", MinArgs = 1, MaxArgs = 1,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
 	public static ValueTask<CallState> Abs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> EvaluateDecimal(parser.CurrentState.Arguments, Math.Abs);
