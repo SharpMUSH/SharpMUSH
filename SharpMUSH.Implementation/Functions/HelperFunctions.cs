@@ -82,6 +82,9 @@ public partial class Functions
 	private static ValueTask<CallState> EvaluateDecimal(Dictionary<string, CallState> args, Func<decimal, decimal> func)
 		=> ValueTask.FromResult<CallState>(new(func(decimal.Parse(MModule.plainText(args["0"].Message))).ToString()));
 
+	private static ValueTask<CallState> EvaluateDecimalToInteger(Dictionary<string, CallState> args, Func<decimal, int> func)
+		=> ValueTask.FromResult<CallState>(new(func(decimal.Parse(MModule.plainText(args["0"].Message))).ToString()));
+
 	private static ValueTask<CallState> EvaluateDouble(Dictionary<string, CallState> args, Func<double, double> func)
 		=> ValueTask.FromResult<CallState>(new(func(double.Parse(MModule.plainText(args["0"].Message))).ToString()));
 
