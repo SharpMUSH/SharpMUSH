@@ -42,7 +42,7 @@ public static partial class Functions
 		{
 			var discoveredFunction = DiscoverBuiltInFunction(name);
 
-			if (discoveredFunction.TryPickT0(out var functionValue, out _) == false)
+			if (!discoveredFunction.TryPickT0(out var functionValue, out _))
 			{
 				return new CallState(string.Format(Errors.ErrorNoSuchFunction, name), context.Depth());
 			}
