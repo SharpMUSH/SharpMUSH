@@ -1,4 +1,4 @@
-﻿using OneOf;
+﻿using Microsoft.Extensions.Caching.Memory;
 using OneOf.Types;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -10,6 +10,8 @@ namespace SharpMUSH.Library.Services;
 
 public partial class CommandDiscoveryService : ICommandDiscoveryService
 {
+	private static readonly MemoryCache cache = new(new MemoryCacheOptions());
+
 	// TODO: Severe optimization needed. We can't keep scanning all attributes each time we want to do a command match, and do conversions.
 	// We need to cache the results of the conversion and where that object & attribute live.
 	// We don't need to care for the Cache Building if that command was used, we can immediately cache all commands.
@@ -23,17 +25,21 @@ public partial class CommandDiscoveryService : ICommandDiscoveryService
 		var filteredObjects = objects.Where(x => !x.HasFlag("NO_COMMAND")).ToList();
 
 		var commandPatternAttributes = filteredObjects
-			.SelectMany(sharpObj => sharpObj.Object().AllAttributes()
-				.Where(attr =>
-					attr.Flags.All(flag => flag.Name != "NO_COMMAND")
-					&& CommandPatternRegex().IsMatch(MModule.plainText(attr.Value)))
-				.Select(attr =>
-					{
-						var match = CommandPatternRegex().Match(MModule.plainText(attr.Value));
-						attr.CommandListIndex = match.Length;
-						return (Obj: sharpObj, Attr: attr, Pattern: match);
-					}
-					));
+			.SelectMany(sharpObj =>
+				cache.GetOrCreate(
+					sharpObj.Object().DBRef,
+					_ => sharpObj.Object().AllAttributes()
+						.Where(attr =>
+							attr.Flags.All(flag => flag.Name != "NO_COMMAND")
+							&& CommandPatternRegex().IsMatch(MModule.plainText(attr.Value)))
+						.Select(attr =>
+							{
+								var match = CommandPatternRegex().Match(MModule.plainText(attr.Value));
+								attr.CommandListIndex = match.Length;
+								return (Obj: sharpObj, Attr: attr, Pattern: match);
+							})
+						) ?? []
+					);
 
 		var convertedCommandPatternAttributes = commandPatternAttributes
 			.Select(x =>
