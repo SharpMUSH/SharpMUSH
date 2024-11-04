@@ -152,7 +152,7 @@ public static partial class Commands
 		var nearbyObjects = await parser.Database.GetNearbyObjectsAsync(executorObject.Object().DBRef);
 
 		Stopwatch sw = Stopwatch.StartNew();
-		var userDefinedCommandMatches = await parser.CommandDiscoveryService.MatchUserDefinedCommand(
+		var userDefinedCommandMatches = parser.CommandDiscoveryService.MatchUserDefinedCommand(
 			parser,
 			nearbyObjects,
 			source);

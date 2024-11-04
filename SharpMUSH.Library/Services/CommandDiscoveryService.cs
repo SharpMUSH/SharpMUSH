@@ -17,7 +17,7 @@ public partial class CommandDiscoveryService : ICommandDiscoveryService
 	// We need to cache the results of the conversion and where that object & attribute live.
 	// We don't need to care for the Cache Building if that command was used, we can immediately cache all commands.
 	// CONSIDERATION: Do we also need a possible Database-Scan for all commands, and cache them?
-	public async ValueTask<Option<IEnumerable<(AnySharpObject SObject, SharpAttribute Attribute, Dictionary<string, CallState> Arguments)>>> MatchUserDefinedCommand(
+	public Option<IEnumerable<(AnySharpObject SObject, SharpAttribute Attribute, Dictionary<string, CallState> Arguments)>> MatchUserDefinedCommand(
 		IMUSHCodeParser parser,
 		IEnumerable<AnySharpObject> objects,
 		MString commandString)
