@@ -176,7 +176,7 @@ public static partial class Functions
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> Modulo(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-    if (parser.CurrentState.Arguments.Any(x => decimal.TryParse(MModule.plainText(x.Value.Message), out var num) && num == 0))
+    if (parser.CurrentState.Arguments.Skip(1).Any(x => decimal.TryParse(MModule.plainText(x.Value.Message), out var num) && num == 0))
 		{
 			return ValueTask.FromResult(new CallState(Errors.ErrorDivideByZero));
 		}
