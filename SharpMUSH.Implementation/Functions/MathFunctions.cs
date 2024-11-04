@@ -179,13 +179,14 @@ public static partial class Functions
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> Modulo(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
-	}
-
-	[SharpFunction(Name = "powers", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> Powers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		throw new NotImplementedException();
+		try
+		{
+			return AggregateIntegers(parser.CurrentState.Arguments, (acc, mod) => acc % mod);
+		}
+		catch(DivideByZeroException)
+		{
+			return ValueTask.FromResult(new CallState(Errors.ErrorDivideByZero));
+		}
 	}
 
 	[SharpFunction(Name = "remainder", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
@@ -200,17 +201,15 @@ public static partial class Functions
 		throw new NotImplementedException();
 	}
 
+	// Todo: return int
 	[SharpFunction(Name = "sign", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> Sign(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		throw new NotImplementedException();
-	}
+		=> EvaluateDecimal(parser.CurrentState.Arguments, x => Math.Sign(x));
 
+	// Todo: return int
 	[SharpFunction(Name = "trunc", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> Truncate(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		throw new NotImplementedException();
-	}
+		=> EvaluateDecimal(parser.CurrentState.Arguments, Math.Truncate);
 
 	[SharpFunction(Name = "acos", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> ACos(IMUSHCodeParser parser, SharpFunctionAttribute _2)
