@@ -84,8 +84,6 @@ public class MathFunctionUnitTests: BaseUnitTest
         await Assert.That(result).IsEqualTo(expected);
     }
 
-    /* 
-		Not yet implemented
     [Test]
     [Arguments("modulo(7,3)", "1")]
     [Arguments("modulo(10,3)", "1")]
@@ -100,7 +98,6 @@ public class MathFunctionUnitTests: BaseUnitTest
 
         await Assert.That(result).IsEqualTo(expected);
     }
-	*/
 
 	/*
 		Not yet Implemented.

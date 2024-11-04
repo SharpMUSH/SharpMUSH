@@ -15,7 +15,7 @@ public partial class Functions
 	private static readonly Regex TimeSpanFormatMatchRegex = TimeSpanFormatMatch();
 	private static readonly Regex NameListPatternRegex = NameListPattern();
 
-	private static MString NoParseDefaultNoParseArgument(Dictionary<string,CallState> args, int item, MString defaultValue)
+	private static MString NoParseDefaultNoParseArgument(Dictionary<string, CallState> args, int item, MString defaultValue)
 	{
 		if (args.Count - 1 < item || string.IsNullOrWhiteSpace(args[item.ToString()].Message?.ToString()))
 		{
@@ -68,7 +68,7 @@ public partial class Functions
 			.Select(x => int.Parse(MModule.plainText(x.Value.Message)))
 			.Aggregate(aggregateFunction).ToString(CultureInfo.InvariantCulture)));
 
-	private static ValueTask<CallState> ValidateIntegerAndEvaluate(Dictionary<string,CallState> args,
+	private static ValueTask<CallState> ValidateIntegerAndEvaluate(Dictionary<string, CallState> args,
 		Func<IEnumerable<int>, MString> aggregateFunction)
 		=> ValueTask.FromResult<CallState>(new(aggregateFunction(args.Select(x => int.Parse(MModule.plainText(x.Value.Message!))))
 			.ToString()));
@@ -82,13 +82,16 @@ public partial class Functions
 	private static ValueTask<CallState> EvaluateDecimal(Dictionary<string, CallState> args, Func<decimal, decimal> func)
 		=> ValueTask.FromResult<CallState>(new(func(decimal.Parse(MModule.plainText(args["0"].Message))).ToString()));
 
+	private static ValueTask<CallState> EvaluateDecimalToInteger(Dictionary<string, CallState> args, Func<decimal, int> func)
+	=> ValueTask.FromResult<CallState>(new(func(decimal.Parse(MModule.plainText(args["0"].Message))).ToString()));
+
 	private static ValueTask<CallState> EvaluateDouble(Dictionary<string, CallState> args, Func<double, double> func)
 		=> ValueTask.FromResult<CallState>(new(func(double.Parse(MModule.plainText(args["0"].Message))).ToString()));
 
 	private static ValueTask<CallState> EvaluateInteger(Dictionary<string, CallState> args, Func<int, int> func)
 		=> ValueTask.FromResult<CallState>(new(func(int.Parse(MModule.plainText(args["0"].Message))).ToString()));
 
-	private static ValueTask<CallState> ValidateDecimalAndEvaluatePairwise(this Dictionary<string,CallState> args,
+	private static ValueTask<CallState> ValidateDecimalAndEvaluatePairwise(this Dictionary<string, CallState> args,
 		Func<(decimal, decimal), bool> func)
 	{
 		if (args.Count < 2)
@@ -156,11 +159,11 @@ public partial class Functions
 				"S" => time.ToString("s"),
 				// Week of the year from 1rst Sunday
 				"U" => string.Empty, // TODO: This
-				// Day of the week. 0 = Sunday
+														 // Day of the week. 0 = Sunday
 				"w" => time.DayOfWeek.ToString(),
 				// Week of the year from 1rst Monday
 				"W" => string.Empty, // TODO: This
-				// Date 
+														 // Date 
 				"x" => time.ToString("d"),
 				// Time
 				"X" => time.DateTime.ToShortTimeString(),
