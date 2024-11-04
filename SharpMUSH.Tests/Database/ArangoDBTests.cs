@@ -54,6 +54,25 @@ public class ArangoDBTests : BaseUnitTest
 	}
 
 	[Test]
+	public async Task SetAndOverrideAnAttribute()
+	{
+		
+		var playerOne = (await _database!.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var playerOneDBRef = new DBRef(playerOne!.Object.Key);
+
+		await _database.SetAttributeAsync(playerOneDBRef, ["Two", "Layers"], "Layer", playerOne);
+		var existingLayer = (await _database.GetAttributeAsync(playerOneDBRef, ["Two", "Layers"]))!.ToList();
+
+		await Assert.That(existingLayer.Last().Value.ToString()).IsEqualTo("Layer");
+
+		await Task.Delay(500); // TODO: This is there to avoid write-write conflicts.
+		await _database.SetAttributeAsync(playerOneDBRef, ["Two", "Layers"], "Layer2", playerOne);
+		var overwrittenLayer = (await _database.GetAttributeAsync(playerOneDBRef, ["Two", "Layers"]))!.ToList();
+
+		await Assert.That(overwrittenLayer.Last().Value.ToString()).IsEqualTo("Layer2");
+	}
+
+	[Test]
 	// [Repeat(10)] // Exclusive Locks are needed first. Otherwise there will be write-write errors. 
 	public async Task SetAndGetAnAttribute()
 	{
