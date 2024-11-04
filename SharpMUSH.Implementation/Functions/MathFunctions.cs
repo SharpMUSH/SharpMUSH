@@ -23,7 +23,7 @@ public static partial class Functions
 
 	[SharpFunction(Name = "div", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.IntegersOnly)]
 	public static ValueTask<CallState> Div(IMUSHCodeParser parser, SharpFunctionAttribute _2) {
-		if (parser.CurrentState.Arguments.Any(x => decimal.TryParse(MModule.plainText(x.Value.Message), out var num) && num == 0))
+		if (parser.CurrentState.Arguments.Skip(1).Any(x => decimal.TryParse(MModule.plainText(x.Value.Message), out var num) && num == 0))
 		{
 			return ValueTask.FromResult(new CallState(Errors.ErrorDivideByZero));
 		}
