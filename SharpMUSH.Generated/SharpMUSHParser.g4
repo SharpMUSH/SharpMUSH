@@ -161,8 +161,7 @@ beginGenericText:
     escapedText
     | ansi
     | { inFunction == 0 }? CPAREN
-    | { !inCommandMatch }? RSPACE
-    | { inFunction > 0}? RSPACE
+    | { !inCommandMatch || inFunction > 0 }? RSPACE
     | { !inCommandList || inBraceDepth > 0 }? SEMICOLON
     | { (!lookingForCommandArgCommas && inFunction == 0) || inBraceDepth > 0 }? COMMAWS
     | { !lookingForCommandArgEquals }? EQUALS
