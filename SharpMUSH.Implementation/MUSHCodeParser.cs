@@ -125,6 +125,22 @@ public class MUSHCodeParser(
 		return visitor.Visit(chatContext);
 	}
 
+	public Func<ValueTask<CallState?>> CommandListParseVisitor(MString text)
+	{
+		var plaintext = MModule.plainText(text);
+		AntlrInputStreamSpan inputStream = new(plaintext);
+		SharpMUSHLexer sharpLexer = new(inputStream);
+		CommonTokenStream commonTokenStream = new(sharpLexer);
+		SharpMUSHParser sharpParser = new(commonTokenStream);
+		sharpParser.Trace = true;
+		sharpParser.AddErrorListener(new DiagnosticErrorListener(true));
+		sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.SLL;
+		SharpMUSHParser.StartCommandStringContext chatContext = sharpParser.startCommandString();
+		SharpMUSHParserVisitor visitor = new(this, text);
+
+		return () => visitor.Visit(chatContext);
+	}
+
 	/// <summary>
 	/// This is the main entry point for commands run by a player.
 	/// </summary>

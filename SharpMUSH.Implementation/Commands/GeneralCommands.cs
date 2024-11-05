@@ -89,11 +89,14 @@ public static partial class Commands
 		parser.CurrentState.IterationRegisters.Push(wrappedIteration);
 		var command = parser.CurrentState.Arguments["1"].Message!;
 
+		var visitorFunction = parser.CommandListParseVisitor(command);
 		foreach (var item in list)
 		{
 			wrappedIteration.Value = item!;
 			wrappedIteration.Iteration++;
-			await parser.CommandListParse(command);
+			// TODO: This should not need parsing each time.
+			// Just Evaluation by getting the Context and Visiting the Children multiple times.
+			await visitorFunction();			
 		}
 
 		parser.CurrentState.IterationRegisters.Pop();
