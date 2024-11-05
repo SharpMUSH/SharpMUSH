@@ -307,16 +307,16 @@ public class ArangoDatabase(
 
 	public SharpObject? GetParent(string id)
 		=> arangoDB.Query.ExecuteAsync<SharpObject>(handle,
-			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphParents} RETURN v").Result.FirstOrDefault();
+			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphParents} RETURN v", cache: true).Result.FirstOrDefault();
 
 	public IEnumerable<SharpObject> GetParents(string id)
 		=> arangoDB.Query.ExecuteAsync<SharpObject>(handle,
-			$"FOR v IN 1 OUTBOUND {id} GRAPH {DatabaseConstants.graphParents} RETURN v").Result;
+			$"FOR v IN 1 OUTBOUND {id} GRAPH {DatabaseConstants.graphParents} RETURN v", cache: true).Result;
 
 	private AnySharpContainer GetHome(string id)
 	{
 		var homeId = arangoDB.Query.ExecuteAsync<string>(handle,
-			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphHomes} RETURN v._id").Result.First();
+			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphHomes} RETURN v._id", cache: true).Result.First();
 		var homeObject = GetObjectNodeAsync(homeId).Result;
 
 		return homeObject.Match<AnySharpContainer>(
@@ -351,7 +351,7 @@ public class ArangoDatabase(
 
 		var startVertex = obj.Id;
 		var res = (await arangoDB.Query.ExecuteAsync<dynamic>(handle,
-			$"FOR v IN 1..1 INBOUND {startVertex} GRAPH {DatabaseConstants.graphObjects} RETURN v")).FirstOrDefault();
+			$"FOR v IN 1..1 INBOUND {startVertex} GRAPH {DatabaseConstants.graphObjects} RETURN v", cache: true)).FirstOrDefault();
 
 		if (res is null) return new None();
 
@@ -406,13 +406,13 @@ public class ArangoDatabase(
 		if (dbID.StartsWith(DatabaseConstants.objects))
 		{
 			query = await arangoDB.Query.ExecuteAsync<dynamic>(handle,
-				$"FOR v IN 0..1 INBOUND {dbID} GRAPH {DatabaseConstants.graphObjects} RETURN v");
+				$"FOR v IN 0..1 INBOUND {dbID} GRAPH {DatabaseConstants.graphObjects} RETURN v", cache: true);
 			query.Reverse();
 		}
 		else
 		{
 			query = await arangoDB.Query.ExecuteAsync<dynamic>(handle,
-				$"FOR v IN 0..1 OUTBOUND {dbID} GRAPH {DatabaseConstants.graphObjects} RETURN v");
+				$"FOR v IN 0..1 OUTBOUND {dbID} GRAPH {DatabaseConstants.graphObjects} RETURN v", cache: true);
 		}
 
 		var res = query.First();
@@ -692,7 +692,7 @@ public class ArangoDatabase(
 	public async Task<IEnumerable<AnySharpObject>> GetNearbyObjectsAsync(DBRef obj)
 	{
 		var self = (await GetObjectNodeAsync(obj)).WithoutNone();
-		var location = await GetLocationAsync(self);
+		var location = self.Where;
 
 		return
 		[
