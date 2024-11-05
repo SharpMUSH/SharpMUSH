@@ -50,7 +50,7 @@ public class AttributeService(ISharpDatabase db, IPermissionService ps, ICommand
 				return new None();
 			}
 
-			curObj = curObj.Parent();
+			curObj = curObj.Parent.Value;
 		}
 
 		return new None();
@@ -59,7 +59,7 @@ public class AttributeService(ISharpDatabase db, IPermissionService ps, ICommand
 	public ValueTask<SharpAttributesOrError> GetVisibleAttributesAsync(AnySharpObject executor, AnySharpObject obj)
 	{
 		var actualObject = obj.Object();
-		var attributes = actualObject.Attributes();
+		var attributes = actualObject.Attributes.Value;
 
 		return ValueTask.FromResult((SharpAttributesOrError)attributes.Where(x => ps.CanViewAttribute(executor, obj, x)).ToArray());
 	}

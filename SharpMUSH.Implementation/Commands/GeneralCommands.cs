@@ -156,7 +156,7 @@ public static partial class Commands
 		// TODO: Pass value into NAMEFORMAT
 		await parser.NotifyService.Notify(enactor,
 			$"{MModule.markupSingle2(Ansi.Create(foreground: StringExtensions.rgb(Color.White)), MModule.single(name))}" +
-			$"(#{viewingObject.DBRef.Number}{string.Join(string.Empty, viewingObject.Flags().Select(x => x.Symbol))})");
+			$"(#{viewingObject.DBRef.Number}{string.Join(string.Empty, viewingObject.Flags.Value.Select(x => x.Symbol))})");
 		// TODO: Pass value into DESCFORMAT
 		await parser.NotifyService.Notify(enactor, description.ToString());
 		// parser.NotifyService.Notify(enactor, $"Location: {location}");
@@ -220,16 +220,16 @@ public static partial class Commands
 				error => MModule.empty());
 
 		await parser.NotifyService.Notify(enactor, $"{name.Hilight()}" +
-																							 $"(#{obj.DBRef.Number}{string.Join(string.Empty, obj.Flags().Select(x => x.Symbol))})");
+																							 $"(#{obj.DBRef.Number}{string.Join(string.Empty, obj.Flags.Value.Select(x => x.Symbol))})");
 		await parser.NotifyService.Notify(enactor,
-			$"Type: {obj.Type} Flags: {string.Join(" ", obj.Flags().Select(x => x.Name))}");
+			$"Type: {obj.Type} Flags: {string.Join(" ", obj.Flags.Value.Select(x => x.Name))}");
 		await parser.NotifyService.Notify(enactor, description.ToString());
 		await parser.NotifyService.Notify(enactor, $"Owner: {ownerName.Hilight()}" +
-																							 $"(#{obj.DBRef.Number}{string.Join(string.Empty, ownerObj.Flags().Select(x => x.Symbol))})");
+																							 $"(#{obj.DBRef.Number}{string.Join(string.Empty, ownerObj.Flags.Value.Select(x => x.Symbol))})");
 		// TODO: Zone & Money
-		await parser.NotifyService.Notify(enactor, $"Parent: {obj.Parent()?.Name ?? "*NOTHING*"}");
+		await parser.NotifyService.Notify(enactor, $"Parent: {obj.Parent.Value?.Name ?? "*NOTHING*"}");
 		// TODO: LOCK LIST
-		await parser.NotifyService.Notify(enactor, $"Powers: {string.Join(" ", obj.Powers().Select(x => x.Name))}");
+		await parser.NotifyService.Notify(enactor, $"Powers: {string.Join(" ", obj.Powers.Value.Select(x => x.Name))}");
 		// TODO: Channels
 		// TODO: Warnings Checked
 

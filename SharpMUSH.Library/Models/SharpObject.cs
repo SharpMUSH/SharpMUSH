@@ -29,20 +29,20 @@ public class SharpObject
 
 	// RELATIONSHIP
 	[JsonIgnore]
-	public required Func<IEnumerable<SharpPower>> Powers { get; set; }
+	public required Lazy<IEnumerable<SharpPower>> Powers { get; set; }
 
 	// RELATIONSHIP
 	[JsonIgnore]
-	public required Func<IEnumerable<SharpAttribute>> Attributes { get; set; }
+	public required Lazy<IEnumerable<SharpAttribute>> Attributes { get; set; }
 
 	[JsonIgnore]
-	public required Func<IEnumerable<SharpAttribute>> AllAttributes { get; set; }
-
-	// RELATIONSHIP
-	[JsonIgnore]
-	public required Func<IEnumerable<SharpObjectFlag>> Flags { get; set; }
+	public required Lazy<IEnumerable<SharpAttribute>> AllAttributes { get; set; }
 
 	// RELATIONSHIP
 	[JsonIgnore]
-	public required Func<SharpObject?> Parent { get; set; }
+	public required Lazy<IEnumerable<SharpObjectFlag>> Flags { get; set; }
+
+	// RELATIONSHIP
+	[JsonIgnore]
+	public required Lazy<SharpObject?> Parent { get; set; }
 }

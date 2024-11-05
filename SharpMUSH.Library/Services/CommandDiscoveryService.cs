@@ -29,7 +29,7 @@ public partial class CommandDiscoveryService : ICommandDiscoveryService
 			.SelectMany(sharpObj =>
 				cache.GetOrCreate(
 					sharpObj.Object().DBRef,
-					_ => sharpObj.Object().AllAttributes()
+					_ => sharpObj.Object().AllAttributes.Value
 						.Where(attr =>
 							attr.Flags.All(flag => flag.Name != "NO_COMMAND")
 							&& CommandPatternRegex().IsMatch(MModule.plainText(attr.Value)))

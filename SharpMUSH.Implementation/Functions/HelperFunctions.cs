@@ -221,10 +221,10 @@ public partial class Functions
 		});
 
 	public static bool HasObjectFlags(SharpObject obj, SharpObjectFlag flag)
-		=> obj.Flags().Contains(flag);
+		=> obj.Flags.Value.Contains(flag);
 
 	public static bool HasObjectPowers(SharpObject obj, string power) =>
-		obj.Powers().Any(x => x.Name == power || x.Alias == power);
+		obj.Powers.Value.Any(x => x.Name == power || x.Alias == power);
 
 	public static IEnumerable<OneOf<DBRef, string>> NameList(string list)
 		=> NameListPatternRegex.Matches(list).Cast<Match>().Select(x =>

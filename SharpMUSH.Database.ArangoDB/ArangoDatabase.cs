@@ -366,12 +366,12 @@ public class ArangoDatabase(
 			Locks = (obj.Locks ?? []).ToImmutableDictionary(),
 			Id = obj.Id,
 			Key = int.Parse(obj.Key),
-			Flags = () => GetFlags(startVertex),
-			Powers = () => GetPowers(startVertex),
-			Attributes = () => GetAttributes(startVertex),
-			AllAttributes = () => GetAllAttributes(startVertex),
-			Owner = () => GetObjectOwner(startVertex),
-			Parent = () => GetParent(startVertex)
+			Flags = new(() => GetFlags(startVertex)),
+			Powers = new(() => GetPowers(startVertex)),
+			Attributes = new(() => GetAttributes(startVertex)),
+			AllAttributes = new(() => GetAllAttributes(startVertex)),
+			Owner = new(() => GetObjectOwner(startVertex)),
+			Parent = new(() => GetParent(startVertex))
 		};
 
 		return obj.Type switch
@@ -431,12 +431,12 @@ public class ArangoDatabase(
 			ModifiedTime = obj.ModifiedTime,
 			Locks = ImmutableDictionary<string, string>
 				.Empty, // FIX: ((Dictionary<string, string>?)obj.Locks ?? []).ToImmutableDictionary(),
-			Flags = () => GetFlags(objId),
-			Powers = () => GetPowers(objId),
-			Attributes = () => GetAttributes(objId),
-			AllAttributes = () => GetAllAttributes(objId),
-			Owner = () => GetObjectOwner(objId),
-			Parent = () => GetParent(objId)
+			Flags = new(() => GetFlags(objId)),
+			Powers = new(() => GetPowers(objId)),
+			Attributes = new(() => GetAttributes(objId)),
+			AllAttributes = new(() => GetAllAttributes(objId)),
+			Owner = new(() => GetObjectOwner(objId)),
+			Parent = new(() => GetParent(objId))
 		};
 
 		return collection switch
@@ -481,12 +481,12 @@ public class ArangoDatabase(
 				Locks = (obj.Locks ?? []).ToImmutableDictionary(),
 				CreationTime = obj.CreationTime,
 				ModifiedTime = obj.ModifiedTime,
-				Flags = () => GetFlags(obj.Id),
-				Powers = () => GetPowers(obj.Id),
-				Attributes = () => GetAttributes(obj.Id),
-				AllAttributes = () => GetAllAttributes(obj.Id),
-				Owner = () => GetObjectOwner(obj.Id),
-				Parent = () => GetParent(obj.Id)
+				Flags = new(() => GetFlags(obj.Id)),
+				Powers = new(() => GetPowers(obj.Id)),
+				Attributes = new(() => GetAttributes(obj.Id)),
+				AllAttributes = new(() => GetAllAttributes(obj.Id)),
+				Owner = new(() => GetObjectOwner(obj.Id)),
+				Parent = new(() => GetParent(obj.Id))
 			};
 	}
 
