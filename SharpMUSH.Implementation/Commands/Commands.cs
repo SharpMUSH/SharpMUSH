@@ -10,7 +10,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using OneOf.Types;
 using System.Collections.Immutable;
 using System.Diagnostics;
-using Serilog.Core;
+using System.Linq;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -362,26 +362,38 @@ public static partial class Commands
 				? new CallState(argCallState.Arguments!.FirstOrDefault() ?? MModule.empty(), argCallState.Depth)
 				: (await parser.FunctionParse(argCallState.Arguments!.FirstOrDefault() ?? MModule.empty()))!);
 
-			if (nArgs > 1)
+			if (nArgs < 2) return arguments;
+			
+			if (noRsParse || noParse)
 			{
-				if (noRsParse || noParse)
+				arguments.AddRange(argCallState.Arguments!
+					.Skip(1)
+					.Select(x => new CallState(x, argCallState.Depth)));
+			}
+			else
+			{
+				foreach (var argument in argCallState.Arguments!.Skip(1))
 				{
-					arguments.AddRange(argCallState.Arguments![1..]
-						.Select(x => new CallState(x, argCallState.Depth)));
-				}
-				else
-				{
-					arguments.AddRange(
-						await Task.WhenAll(argCallState.Arguments![1..]
-							.Select(async x => (await parser.FunctionParse(x))!)));
+					// This is done to avoid allocation with ValueTask.
+					arguments.Add((await parser.FunctionParse(argument))!);
 				}
 			}
 		}
 		else
 		{
-			arguments.AddRange(noParse
-				? argCallState.Arguments!.Select(x => new CallState(x, argCallState.Depth))
-				: argCallState.Arguments!.Select(x => parser.FunctionParse(x).AsTask().Result).Select(x => x!));
+			if (noParse)
+			{
+				arguments.AddRange(argCallState.Arguments!
+					.Select(x => new CallState(x, argCallState.Depth)));
+			}
+			else
+			{
+				foreach (var argument in argCallState.Arguments!)
+				{
+					// This is done to avoid allocation with ValueTask.
+					arguments.Add((await parser.FunctionParse(argument))!);
+				}
+			}
 		}
 
 		return arguments;
