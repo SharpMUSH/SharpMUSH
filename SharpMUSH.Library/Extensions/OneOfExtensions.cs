@@ -106,15 +106,15 @@ public static class OneOfExtensions
 
 	public static AnySharpContainer Home(this AnySharpContent thing)
 		=> thing.Match(
-			player => player.Home(),
-			exit => exit.Location(),
-			thing => thing.Home());
+			player => player.Home.Value,
+			exit => exit.Location.Value,
+			thing2 => thing2.Home.Value);
 
 	public static AnySharpContainer Location(this AnySharpContent thing)
 		=> thing.Match(
-			player => player.Location(),
-			exit => exit.Home(),
-			thing => thing.Location());
+			player => player.Location.Value,
+			exit => exit.Home.Value,
+			thing2 => thing2.Location.Value);
 
 	public static AnySharpObject Known(this AnyOptionalSharpObject union) =>
 		union.Match<AnySharpObject>(

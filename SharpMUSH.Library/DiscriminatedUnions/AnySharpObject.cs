@@ -14,10 +14,10 @@ public class AnySharpObject : OneOfBase<SharpPlayer, SharpRoom, SharpExit, Sharp
 	public static implicit operator AnySharpObject(SharpThing x) => new(x);
 
 	public AnySharpContainer Where => Match(
-		player => player.Location(),
+		player => player.Location.Value,
 		room => room,
-		exit => exit.Location(),
-		thing => thing.Location()
+		exit => exit.Location.Value,
+		thing => thing.Location.Value
 	);
 
 	public AnySharpContainer MinusExit()

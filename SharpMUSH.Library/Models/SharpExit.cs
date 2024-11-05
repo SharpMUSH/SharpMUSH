@@ -15,9 +15,9 @@ public class SharpExit
 
 	// Relationship
 	[JsonIgnore]
-	public required Func<AnySharpContainer> Location { get; set; } // DESTINATION
+	public required Lazy<AnySharpContainer> Location { get; set; } // DESTINATION
 
 	// Relationship
 	[JsonIgnore]
-	public required Func<AnySharpContainer> Home { get; set; } // SOURCE ROOM
+	public required Lazy<AnySharpContainer> Home { get; set; } // SOURCE ROOM
 }

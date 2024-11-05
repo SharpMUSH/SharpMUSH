@@ -27,16 +27,16 @@ public class AnySharpContent : OneOfBase<SharpPlayer, SharpExit, SharpThing>
 	
 	public AnySharpContainer Location()
 		=> Match(
-			player => player.Location(),
-			exit => exit.Location(),
-			thing => thing.Location()
+			player => player.Location.Value,
+			exit => exit.Location.Value,
+			thing => thing.Location.Value
 		);
 
 
 	public AnySharpContainer Home()
 		=> Match(
-			player => player.Home(),
-			exit => exit.Home(),
-			thing => thing.Home()
+			player => player.Home.Value,
+			exit => exit.Home.Value,
+			thing => thing.Home.Value
 		);
 }

@@ -18,9 +18,9 @@ public class SharpThing
 
 	// Relationship
 	[JsonIgnore]
-	public required Func<AnySharpContainer> Location { get; set; }
+	public required Lazy<AnySharpContainer> Location { get; set; }
 
 	// Relationship
 	[JsonIgnore]
-	public required Func<AnySharpContainer> Home { get; set; }
+	public required Lazy<AnySharpContainer> Home { get; set; }
 }

@@ -377,17 +377,24 @@ public class ArangoDatabase(
 		return obj.Type switch
 		{
 			DatabaseConstants.typeThing => new SharpThing
-			{ Id = id, Object = convertObject, Location = () => GetLocation(id), Home = () => GetHome(id) },
+			{
+				Id = id, Object = convertObject,
+				Location = new Lazy<AnySharpContainer>(() => GetLocation(id)),
+				Home = new Lazy<AnySharpContainer>(() => GetHome(id))
+			},
 			DatabaseConstants.typePlayer => new SharpPlayer
 			{
-				Id = id, Object = convertObject, Aliases = res.Aliases.ToObject<string[]>(), Location = () => GetLocation(id),
-				Home = () => GetHome(id), PasswordHash = res.PasswordHash
+				Id = id, Object = convertObject, Aliases = res.Aliases.ToObject<string[]>(),
+				Location = new Lazy<AnySharpContainer>(() => GetLocation(id)),
+				Home = new Lazy<AnySharpContainer>(() => GetHome(id)),
+				PasswordHash = res.PasswordHash
 			},
 			DatabaseConstants.typeRoom => new SharpRoom { Id = id, Object = convertObject },
 			DatabaseConstants.typeExit => new SharpExit
 			{
-				Id = id, Object = convertObject, Aliases = res.Aliases.ToObject<string[]>(), Location = () => GetLocation(id),
-				Home = () => GetHome(id)
+				Id = id, Object = convertObject, Aliases = res.Aliases.ToObject<string[]>(),
+				Location = new Lazy<AnySharpContainer>(() => GetLocation(id)),
+				Home = new Lazy<AnySharpContainer>(() => GetHome(id))
 			},
 			_ => throw new ArgumentException($"Invalid Object Type found: '{obj.Type}'"),
 		};
@@ -435,17 +442,19 @@ public class ArangoDatabase(
 		return collection switch
 		{
 			DatabaseConstants.things => new SharpThing
-			{ Id = id, Object = convertObject, Location = () => GetLocation(id), Home = () => GetHome(id) },
+				{ Id = id, Object = convertObject, Location = new(() => GetLocation(id)), Home = new(() => GetHome(id)) },
 			DatabaseConstants.players => new SharpPlayer
 			{
-				Id = id, Object = convertObject, Aliases = res.Aliases.ToObject<string[]>(), Location = () => GetLocation(id),
-				Home = () => GetHome(id), PasswordHash = res.PasswordHash
+				Id = id, Object = convertObject, Aliases = res.Aliases.ToObject<string[]>(),
+				Location = new(() => GetLocation(id)),
+				Home = new(() => GetHome(id)), PasswordHash = res.PasswordHash
 			},
 			DatabaseConstants.rooms => new SharpRoom { Id = id, Object = convertObject },
 			DatabaseConstants.exits => new SharpExit
 			{
-				Id = id, Object = convertObject, Aliases = res.Aliases.ToObject<string[]>(), Location = () => GetLocation(id),
-				Home = () => GetHome(id)
+				Id = id, Object = convertObject, Aliases = res.Aliases.ToObject<string[]>(),
+				Location = new(() => GetLocation(id)),
+				Home = new(() => GetHome(id))
 			},
 			_ => throw new ArgumentException($"Invalid Object Type found: '{obj.Type}'"),
 		};
@@ -687,9 +696,9 @@ public class ArangoDatabase(
 
 		return
 		[
-				self,
-				.. (await GetContentsAsync(self.Object().DBRef))!.Select(x => x.WithRoomOption()),
-				.. (await GetContentsAsync(location.Object().DBRef))!.Select(x => x.WithRoomOption()),
+			self,
+			.. (await GetContentsAsync(self.Object().DBRef))!.Select(x => x.WithRoomOption()),
+			.. (await GetContentsAsync(location.Object().DBRef))!.Select(x => x.WithRoomOption()),
 		];
 	}
 
@@ -852,18 +861,19 @@ public class ArangoDatabase(
 	{
 		var oldLocation = enactorObj.Location();
 		var newLocation = GetObjectNode(destination);
-		var edge = (await arangoDB.Query.ExecuteAsync<SharpEdgeQueryResult>(handle, 
-			$"FOR v,e IN 1..1 OUTBOUND {oldLocation.Object().Id} GRAPH {DatabaseConstants.graphLocations} RETURN e")).Single();
+		var edge = (await arangoDB.Query.ExecuteAsync<SharpEdgeQueryResult>(handle,
+				$"FOR v,e IN 1..1 OUTBOUND {oldLocation.Object().Id} GRAPH {DatabaseConstants.graphLocations} RETURN e"))
+			.Single();
 
-		await arangoDB.Graph.Edge.UpdateAsync(handle, 
-			DatabaseConstants.graphLocations, 
-			DatabaseConstants.atLocation, 
+		await arangoDB.Graph.Edge.UpdateAsync(handle,
+			DatabaseConstants.graphLocations,
+			DatabaseConstants.atLocation,
 			edge.Key,
 			new
 			{
 				From = enactorObj.Object().Id,
 				To = newLocation.WithoutNone().Object().Id
-			}, 
+			},
 			waitForSync: true);
 	}
 }
