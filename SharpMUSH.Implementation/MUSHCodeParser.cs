@@ -101,6 +101,7 @@ public class MUSHCodeParser(
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
 		SharpMUSHParser sharpParser = new(commonTokenStream);
+		sharpParser.Trace = true;
 		sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
 		sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL_EXACT_AMBIG_DETECTION;
 		SharpMUSHParser.StartPlainStringContext chatContext = sharpParser.startPlainString();
@@ -116,7 +117,7 @@ public class MUSHCodeParser(
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
 		SharpMUSHParser sharpParser = new(commonTokenStream);
-		// sharpParser.Trace = true;
+		sharpParser.Trace = true;
 		sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
 		sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL_EXACT_AMBIG_DETECTION;
 		SharpMUSHParser.StartCommandStringContext chatContext = sharpParser.startCommandString();
@@ -168,6 +169,7 @@ public class MUSHCodeParser(
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
 		SharpMUSHParser sharpParser = new(commonTokenStream);
+		sharpParser.Trace = true;
 		sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
 		sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL_EXACT_AMBIG_DETECTION;
 		SharpMUSHParser.StartSingleCommandStringContext chatContext = sharpParser.startSingleCommandString();
@@ -188,6 +190,7 @@ public class MUSHCodeParser(
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
 		SharpMUSHParser sharpParser = new(commonTokenStream);
+		sharpParser.Trace = true;
 		sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
 		sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL_EXACT_AMBIG_DETECTION;
 		SharpMUSHParser.StartSingleCommandStringContext chatContext = sharpParser.startSingleCommandString();
@@ -202,6 +205,7 @@ public class MUSHCodeParser(
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
 		SharpMUSHParser sharpParser = new(commonTokenStream);
+		sharpParser.Trace = true;
 		sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
 		sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL_EXACT_AMBIG_DETECTION;
 		SharpMUSHParser.CommaCommandArgsContext chatContext = sharpParser.commaCommandArgs();
@@ -216,6 +220,7 @@ public class MUSHCodeParser(
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
 		SharpMUSHParser sharpParser = new(commonTokenStream);
+		sharpParser.Trace = true;
 		sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
 		sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL_EXACT_AMBIG_DETECTION;
 		SharpMUSHParser.StartPlainSingleCommandArgContext chatContext = sharpParser.startPlainSingleCommandArg();
@@ -230,6 +235,7 @@ public class MUSHCodeParser(
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
 		SharpMUSHParser sharpParser = new(commonTokenStream);
+		sharpParser.Trace = true;
 		sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
 		sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL_EXACT_AMBIG_DETECTION;
 		SharpMUSHParser.StartEqSplitCommandArgsContext chatContext = sharpParser.startEqSplitCommandArgs();
@@ -244,6 +250,7 @@ public class MUSHCodeParser(
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
 		SharpMUSHParser sharpParser = new(commonTokenStream);
+		sharpParser.Trace = true;
 		sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
 		sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL_EXACT_AMBIG_DETECTION;
 		SharpMUSHParser.StartEqSplitCommandContext chatContext = sharpParser.startEqSplitCommand();
