@@ -8,7 +8,7 @@ namespace SharpMUSH.Library.Extensions;
 public static class OneOfExtensions
 {
 	public static SharpObject? Object(this AnyOptionalSharpObject union)
-		=> union.Match(
+		=> union.Match<SharpObject?>(
 			player => player.Object,
 			room => room.Object,
 			exit => exit.Object,

@@ -32,9 +32,16 @@ public record ParserState(
 	string? Handle,
 	ParseMode ParseMode = ParseMode.Default)
 {
-	public AnyOptionalSharpObject ExecutorObject(ISharpDatabase db) => Executor is null ? new None() : db.GetObjectNode(Executor.Value);
-	public AnyOptionalSharpObject EnactorObject(ISharpDatabase db) => Executor is null ? new None() : db.GetObjectNode(Executor.Value);
-	public AnyOptionalSharpObject CallerObject(ISharpDatabase db) => Executor is null ? new None() : db.GetObjectNode(Executor.Value);
+	private AnyOptionalSharpObject? _executorObject;
+	private AnyOptionalSharpObject? _enactorObject;
+	private AnyOptionalSharpObject? _callerObject;
+	
+	public AnyOptionalSharpObject ExecutorObject(ISharpDatabase db) 
+		=> _executorObject ??= Executor is null ? new None() : db.GetObjectNode(Executor.Value);
+	public AnyOptionalSharpObject EnactorObject(ISharpDatabase db) 
+		=> _enactorObject ??= Executor is null ? new None() : db.GetObjectNode(Executor.Value);
+	public AnyOptionalSharpObject CallerObject(ISharpDatabase db) 
+		=> _callerObject ??= Caller is null ? new None() : db.GetObjectNode(Caller.Value);
 
 	public bool AddRegister(string register, MString value)
 	{
