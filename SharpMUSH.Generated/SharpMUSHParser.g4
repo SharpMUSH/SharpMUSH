@@ -57,7 +57,7 @@ commandList: command ({inBraceDepth == 0}? SEMICOLON command)*;
 
 command:
     {inCommandMatch = true;} firstCommandMatch (
-        RSPACE {inCommandMatch = false;} commandRemainder
+        RSPACE+ {inCommandMatch = false;} commandRemainder
     )?
 ;
 
@@ -161,7 +161,7 @@ beginGenericText:
     escapedText
     | ansi
     | { inFunction == 0 }? CPAREN
-    | { !inCommandMatch || inFunction > 0 }? RSPACE
+    | { !inCommandMatch }? RSPACE+
     | { !inCommandList || inBraceDepth > 0 }? SEMICOLON
     | { (!lookingForCommandArgCommas && inFunction == 0) || inBraceDepth > 0 }? COMMAWS
     | { !lookingForCommandArgEquals }? EQUALS
