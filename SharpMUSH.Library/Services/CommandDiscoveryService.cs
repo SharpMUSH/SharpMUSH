@@ -4,7 +4,6 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
-using System.Diagnostics;
 using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Library.Services;
@@ -12,6 +11,9 @@ namespace SharpMUSH.Library.Services;
 public partial class CommandDiscoveryService : ICommandDiscoveryService
 {
 	private static readonly MemoryCache cache = new(new MemoryCacheOptions());
+
+	public void InvalidateCache(DBRef DBReference) 
+		=> cache.Remove(DBReference);
 
 	// TODO: Severe optimization needed. We can't keep scanning all attributes each time we want to do a command match, and do conversions.
 	// We need to cache the results of the conversion and where that object & attribute live.

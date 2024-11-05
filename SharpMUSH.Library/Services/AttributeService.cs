@@ -7,7 +7,7 @@ using OneOf;
 
 namespace SharpMUSH.Library.Services;
 
-public class AttributeService(ISharpDatabase db, IPermissionService ps) : IAttributeService
+public class AttributeService(ISharpDatabase db, IPermissionService ps, ICommandDiscoveryService cs) : IAttributeService
 {
 	public async ValueTask<OptionalSharpAttributeOrError> GetAttributeAsync(
 		AnySharpObject executor,
@@ -109,6 +109,7 @@ public class AttributeService(ISharpDatabase db, IPermissionService ps) : IAttri
 			return new Error<string>(Errors.ErrorAttrSetPermissions);
 		}
 
+		cs.InvalidateCache(obj.Object().DBRef);
 		await db.SetAttributeAsync(obj.Object().DBRef, attrPath, value.ToString(), executor.Object().Owner());
 
 		return new Success();
@@ -144,8 +145,8 @@ public class AttributeService(ISharpDatabase db, IPermissionService ps) : IAttri
 			return new Error<string>(Errors.ErrorAttrSetPermissions);
 		}
 
+		cs.InvalidateCache(obj.Object().DBRef);
 		await db.ClearAttributeAsync(obj.Object().DBRef, attr!.Select(x => x.LongName!).ToArray());
-
 
 		return new Success();
 
