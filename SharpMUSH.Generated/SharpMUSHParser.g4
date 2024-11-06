@@ -161,12 +161,12 @@ beginGenericText:
     escapedText
     | ansi
     | { inFunction == 0 }? CPAREN
-    | { !inCommandMatch }? RSPACE+
+    | { !inCommandMatch }? RSPACE
     | { !inCommandList || inBraceDepth > 0 }? SEMICOLON
     | { (!lookingForCommandArgCommas && inFunction == 0) || inBraceDepth > 0 }? COMMAWS
     | { !lookingForCommandArgEquals }? EQUALS
     | { !lookingForRegisterCaret }? CCARET
-    | (OTHER | ANY_AT_ALL)
+    | (OTHER|ANY_AT_ALL) 
 ;
 
 escapedText: ESCAPE ANY;
