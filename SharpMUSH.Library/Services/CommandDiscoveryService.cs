@@ -13,7 +13,7 @@ public partial class CommandDiscoveryService : ICommandDiscoveryService
 	private static readonly MemoryCache cache = new(new MemoryCacheOptions());
 
 	public void InvalidateCache(DBRef DBReference) 
-		=> cache.Remove(DBReference);
+		=> cache.Remove(DBReference.Number);
 
 	// TODO: Severe optimization needed. We can't keep scanning all attributes each time we want to do a command match, and do conversions.
 	// We need to cache the results of the conversion and where that object & attribute live.
@@ -27,9 +27,7 @@ public partial class CommandDiscoveryService : ICommandDiscoveryService
 		var commandPatternAttributes = objects
 			.Where(x => !x.HasFlag("NO_COMMAND"))
 			.SelectMany(sharpObj =>
-				cache.GetOrCreate(
-					sharpObj.Object().DBRef,
-					_ => sharpObj.Object().AllAttributes.Value
+					sharpObj.Object().AllAttributes.Value
 						.Where(attr =>
 							attr.Flags.All(flag => flag.Name != "NO_COMMAND")
 							&& CommandPatternRegex().IsMatch(MModule.plainText(attr.Value)))
@@ -39,7 +37,6 @@ public partial class CommandDiscoveryService : ICommandDiscoveryService
 								attr.CommandListIndex = match.Length;
 								return (Obj: sharpObj, Attr: attr, Pattern: match);
 							})
-						) ?? []
 					);
 
 		var convertedCommandPatternAttributes = commandPatternAttributes
