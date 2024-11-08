@@ -13,7 +13,7 @@ public class TelnetInputRequestHandler(ILogger<TelnetInputRequestHandler> logger
 	{
 		try
 		{
-			await scheduler.Write(request.Handle, MModule.single(request.Input), null);
+			await scheduler.WriteUserCommand(request.Handle, MModule.single(request.Input), null);
 		}
 		catch (Exception ex)
 		{
