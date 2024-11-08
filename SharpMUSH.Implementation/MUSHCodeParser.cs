@@ -103,12 +103,17 @@ public class MUSHCodeParser(
 		AntlrInputStreamSpan inputStream = new(MModule.plainText(text));
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
-		SharpMUSHParser sharpParser = new(commonTokenStream);
-		// sharpParser.Trace = true;
-		// sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
-		// sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL_EXACT_AMBIG_DETECTION;
-		sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL;
-		SharpMUSHParser.StartPlainStringContext chatContext = sharpParser.startPlainString();
+		SharpMUSHParser sharpParser = new(commonTokenStream)
+		{
+			Interpreter =
+			{
+				// sharpParser.Trace = true;
+				// sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
+				// sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL_EXACT_AMBIG_DETECTION;
+				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL
+			}
+		};
+		var chatContext = sharpParser.startPlainString();
 		SharpMUSHParserVisitor visitor = new(this, text);
 
 		return visitor.Visit(chatContext);
@@ -120,9 +125,14 @@ public class MUSHCodeParser(
 		AntlrInputStreamSpan inputStream = new(plaintext);
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
-		SharpMUSHParser sharpParser = new(commonTokenStream);
-		sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL;
-		SharpMUSHParser.StartCommandStringContext chatContext = sharpParser.startCommandString();
+		SharpMUSHParser sharpParser = new(commonTokenStream)
+		{
+			Interpreter =
+			{
+				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL
+			}
+		};
+		var chatContext = sharpParser.startCommandString();
 		SharpMUSHParserVisitor visitor = new(this, text);
 
 		return visitor.Visit(chatContext);
@@ -134,9 +144,14 @@ public class MUSHCodeParser(
 		AntlrInputStreamSpan inputStream = new(plaintext);
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
-		SharpMUSHParser sharpParser = new(commonTokenStream);
-		sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL;
-		SharpMUSHParser.StartCommandStringContext chatContext = sharpParser.startCommandString();
+		SharpMUSHParser sharpParser = new(commonTokenStream)
+		{
+			Interpreter =
+			{
+				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL
+			}
+		};
+		var chatContext = sharpParser.startCommandString();
 		SharpMUSHParserVisitor visitor = new(this, text);
 
 		return () => visitor.Visit(chatContext);
@@ -168,9 +183,14 @@ public class MUSHCodeParser(
 		AntlrInputStreamSpan inputStream = new(MModule.plainText(text));
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
-		SharpMUSHParser sharpParser = new(commonTokenStream);
-		sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL;
-		SharpMUSHParser.StartSingleCommandStringContext chatContext = sharpParser.startSingleCommandString();
+		SharpMUSHParser sharpParser = new(commonTokenStream)
+		{
+			Interpreter =
+			{
+				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL
+			}
+		};
+		var chatContext = sharpParser.startSingleCommandString();
 		SharpMUSHParserVisitor visitor = new(this, text);
 
 		await visitor.Visit(chatContext);
@@ -187,9 +207,14 @@ public class MUSHCodeParser(
 		AntlrInputStreamSpan inputStream = new(MModule.plainText(text));
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
-		SharpMUSHParser sharpParser = new(commonTokenStream);
-		sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL;
-		SharpMUSHParser.StartSingleCommandStringContext chatContext = sharpParser.startSingleCommandString();
+		SharpMUSHParser sharpParser = new(commonTokenStream)
+		{
+			Interpreter =
+			{
+				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL
+			}
+		};
+		var chatContext = sharpParser.startSingleCommandString();
 		SharpMUSHParserVisitor visitor = new(this, text);
 
 		await visitor.Visit(chatContext);
@@ -200,9 +225,14 @@ public class MUSHCodeParser(
 		AntlrInputStreamSpan inputStream = new(MModule.plainText(text));
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
-		SharpMUSHParser sharpParser = new(commonTokenStream);
-		sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL;
-		SharpMUSHParser.CommaCommandArgsContext chatContext = sharpParser.commaCommandArgs();
+		SharpMUSHParser sharpParser = new(commonTokenStream)
+		{
+			Interpreter =
+			{
+				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL
+			}
+		};
+		var chatContext = sharpParser.commaCommandArgs();
 		SharpMUSHParserVisitor visitor = new(this, text);
 
 		return visitor.Visit(chatContext);
@@ -213,9 +243,14 @@ public class MUSHCodeParser(
 		AntlrInputStreamSpan inputStream = new(MModule.plainText(text));
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
-		SharpMUSHParser sharpParser = new(commonTokenStream);
-		sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL;
-		SharpMUSHParser.StartPlainSingleCommandArgContext chatContext = sharpParser.startPlainSingleCommandArg();
+		SharpMUSHParser sharpParser = new(commonTokenStream)
+		{
+			Interpreter =
+			{
+				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL
+			}
+		};
+		var chatContext = sharpParser.startPlainSingleCommandArg();
 		SharpMUSHParserVisitor visitor = new(this, text);
 
 		return visitor.Visit(chatContext);
@@ -226,9 +261,14 @@ public class MUSHCodeParser(
 		AntlrInputStreamSpan inputStream = new(MModule.plainText(text));
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
-		SharpMUSHParser sharpParser = new(commonTokenStream);
-		sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL;
-		SharpMUSHParser.StartEqSplitCommandArgsContext chatContext = sharpParser.startEqSplitCommandArgs();
+		SharpMUSHParser sharpParser = new(commonTokenStream)
+		{
+			Interpreter =
+			{
+				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL
+			}
+		};
+		var chatContext = sharpParser.startEqSplitCommandArgs();
 		SharpMUSHParserVisitor visitor = new(this, text);
 
 		return visitor.Visit(chatContext);
@@ -239,9 +279,14 @@ public class MUSHCodeParser(
 		AntlrInputStreamSpan inputStream = new(MModule.plainText(text));
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
-		SharpMUSHParser sharpParser = new(commonTokenStream);
-		sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL;
-		SharpMUSHParser.StartEqSplitCommandContext chatContext = sharpParser.startEqSplitCommand();
+		SharpMUSHParser sharpParser = new(commonTokenStream)
+		{
+			Interpreter =
+			{
+				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL
+			}
+		};
+		var chatContext = sharpParser.startEqSplitCommand();
 		SharpMUSHParserVisitor visitor = new(this, text);
 
 		return visitor.Visit(chatContext);

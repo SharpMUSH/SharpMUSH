@@ -21,7 +21,7 @@ public static partial class Substitutions
 			"N" => new(parser.CurrentState.EnactorObject(parser.Database).Object()!.Name), // TODO: CAPPED ENACTOR NAME
 			"~" => new(parser.CurrentState.EnactorObject(parser.Database).Object()!.Name), // TODO: ACCENTED ENACTOR NAME
 			"K" or "k" => new(parser.CurrentState.EnactorObject(parser.Database).Object()!.Name), // TODO: MONIKER ENACTOR NAME
-			"S" or "s" => throw new NotImplementedException(), // TODO: SUBJECT PRONOUN
+			"S" or "s" => new CallState("they"), // TODO: SUBJECT PRONOUN
 			"O" or "o" => throw new NotImplementedException(), // TODO: OBJECT PRONOUN
 			"P" or "p" => throw new NotImplementedException(), // TODO: POSSESSIVE PRONOUN
 			"A" or "a" => throw new NotImplementedException(), // TODO: ABSOLUTE POSSESSIVE PRONOUN
