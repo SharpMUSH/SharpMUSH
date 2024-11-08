@@ -53,21 +53,23 @@ public class MUSHCodeParser(
 	public IImmutableStack<ParserState> State { get; private set; } = ImmutableStack<ParserState>.Empty;
 
 	public MUSHCodeParser(
-	IPasswordService passwordService,
-	IPermissionService permissionService,
-	ISharpDatabase database,
-	IAttributeService attributeService,
-	INotifyService notifyService,
-	ILocateService locateService,
-	ICommandDiscoveryService commandDiscoveryService,
-	ITaskScheduler scheduleService,
-	IConnectionService connectionService,
-	ImmutableStack<ParserState> state) :
-	this(passwordService, permissionService, database, attributeService, notifyService, locateService, commandDiscoveryService, scheduleService, connectionService)
-	=> State = state;
+		IPasswordService passwordService,
+		IPermissionService permissionService,
+		ISharpDatabase database,
+		IAttributeService attributeService,
+		INotifyService notifyService,
+		ILocateService locateService,
+		ICommandDiscoveryService commandDiscoveryService,
+		ITaskScheduler scheduleService,
+		IConnectionService connectionService,
+		ImmutableStack<ParserState> state) :
+		this(passwordService, permissionService, database, attributeService, notifyService, locateService,
+			commandDiscoveryService, scheduleService, connectionService)
+		=> State = state;
 
 	public IMUSHCodeParser FromState(ParserState state) => new MUSHCodeParser(_passwordService, _permissionService,
-		_database, _attributeService, _notifyService, _locateService, _commandDiscoveryService, _scheduleService, _connectionService, state);
+		_database, _attributeService, _notifyService, _locateService, _commandDiscoveryService, _scheduleService,
+		_connectionService, state);
 
 	public IMUSHCodeParser Push(ParserState state)
 	{
@@ -92,7 +94,8 @@ public class MUSHCodeParser(
 		ITaskScheduler scheduleService,
 		IConnectionService connectionService,
 		ParserState state) :
-		this(passwordService, permissionService, database, attributeService, notifyService, locateService, commandDiscoveryService, scheduleService, connectionService)
+		this(passwordService, permissionService, database, attributeService, notifyService, locateService,
+			commandDiscoveryService, scheduleService, connectionService)
 		=> State = [state];
 
 	public ValueTask<CallState?> FunctionParse(MString text)
@@ -101,9 +104,10 @@ public class MUSHCodeParser(
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
 		SharpMUSHParser sharpParser = new(commonTokenStream);
-		sharpParser.Trace = true;
-		sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
-		sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL_EXACT_AMBIG_DETECTION;
+		// sharpParser.Trace = true;
+		// sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
+		// sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL_EXACT_AMBIG_DETECTION;
+		sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL;
 		SharpMUSHParser.StartPlainStringContext chatContext = sharpParser.startPlainString();
 		SharpMUSHParserVisitor visitor = new(this, text);
 
@@ -117,9 +121,7 @@ public class MUSHCodeParser(
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
 		SharpMUSHParser sharpParser = new(commonTokenStream);
-		sharpParser.Trace = true;
-		sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
-		sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL_EXACT_AMBIG_DETECTION;
+		sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL;
 		SharpMUSHParser.StartCommandStringContext chatContext = sharpParser.startCommandString();
 		SharpMUSHParserVisitor visitor = new(this, text);
 
@@ -133,9 +135,7 @@ public class MUSHCodeParser(
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
 		SharpMUSHParser sharpParser = new(commonTokenStream);
-		sharpParser.Trace = true;
-		sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
-		sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL_EXACT_AMBIG_DETECTION;
+		sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL;
 		SharpMUSHParser.StartCommandStringContext chatContext = sharpParser.startCommandString();
 		SharpMUSHParserVisitor visitor = new(this, text);
 
@@ -169,9 +169,7 @@ public class MUSHCodeParser(
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
 		SharpMUSHParser sharpParser = new(commonTokenStream);
-		sharpParser.Trace = true;
-		sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
-		sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL_EXACT_AMBIG_DETECTION;
+		sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL;
 		SharpMUSHParser.StartSingleCommandStringContext chatContext = sharpParser.startSingleCommandString();
 		SharpMUSHParserVisitor visitor = new(this, text);
 
@@ -190,9 +188,7 @@ public class MUSHCodeParser(
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
 		SharpMUSHParser sharpParser = new(commonTokenStream);
-		sharpParser.Trace = true;
-		sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
-		sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL_EXACT_AMBIG_DETECTION;
+		sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL;
 		SharpMUSHParser.StartSingleCommandStringContext chatContext = sharpParser.startSingleCommandString();
 		SharpMUSHParserVisitor visitor = new(this, text);
 
@@ -205,9 +201,7 @@ public class MUSHCodeParser(
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
 		SharpMUSHParser sharpParser = new(commonTokenStream);
-		sharpParser.Trace = true;
-		sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
-		sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL_EXACT_AMBIG_DETECTION;
+		sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL;
 		SharpMUSHParser.CommaCommandArgsContext chatContext = sharpParser.commaCommandArgs();
 		SharpMUSHParserVisitor visitor = new(this, text);
 
@@ -220,9 +214,7 @@ public class MUSHCodeParser(
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
 		SharpMUSHParser sharpParser = new(commonTokenStream);
-		sharpParser.Trace = true;
-		sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
-		sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL_EXACT_AMBIG_DETECTION;
+		sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL;
 		SharpMUSHParser.StartPlainSingleCommandArgContext chatContext = sharpParser.startPlainSingleCommandArg();
 		SharpMUSHParserVisitor visitor = new(this, text);
 
@@ -235,9 +227,7 @@ public class MUSHCodeParser(
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
 		SharpMUSHParser sharpParser = new(commonTokenStream);
-		sharpParser.Trace = true;
-		sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
-		sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL_EXACT_AMBIG_DETECTION;
+		sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL;
 		SharpMUSHParser.StartEqSplitCommandArgsContext chatContext = sharpParser.startEqSplitCommandArgs();
 		SharpMUSHParserVisitor visitor = new(this, text);
 
@@ -250,9 +240,7 @@ public class MUSHCodeParser(
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		CommonTokenStream commonTokenStream = new(sharpLexer);
 		SharpMUSHParser sharpParser = new(commonTokenStream);
-		sharpParser.Trace = true;
-		sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
-		sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL_EXACT_AMBIG_DETECTION;
+		sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL;
 		SharpMUSHParser.StartEqSplitCommandContext chatContext = sharpParser.startEqSplitCommand();
 		SharpMUSHParserVisitor visitor = new(this, text);
 
