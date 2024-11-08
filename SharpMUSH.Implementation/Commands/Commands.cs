@@ -59,12 +59,16 @@ public static partial class Commands
 		CommandContext context,
 		Func<IRuleNode, ValueTask<CallState?>> visitChildren)
 	{
-		var firstCommandMatch = context.firstCommandMatch();
+		var firstCommandMatch = context.evaluationString();
 
 		if (firstCommandMatch?.SourceInterval.Length is null or 0)
 			return new None();
 
 		var command = firstCommandMatch.GetText();
+		if (command.Contains(" "))
+		{
+			command = command[.. command.IndexOf(' ')];
+		}
 
 		if (parser.CurrentState.Handle is not null && command != "IDLE")
 		{
@@ -76,11 +80,11 @@ public static partial class Commands
 		// TODO: Optimize
 		var socketCommandPattern = _commandLibrary.Where(x
 			=> parser.CurrentState.Handle is not null
-				 && x.Key.Equals(command, StringComparison.CurrentCultureIgnoreCase)
-				 && x.Value.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.SOCKET));
+			   && x.Key.Equals(command, StringComparison.CurrentCultureIgnoreCase)
+			   && x.Value.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.SOCKET));
 
 		if (socketCommandPattern.Any() &&
-				_commandLibrary.TryGetValue(command.ToUpper(), out var librarySocketCommandDefinition))
+		    _commandLibrary.TryGetValue(command.ToUpper(), out var librarySocketCommandDefinition))
 		{
 			return await HandleSocketCommandPattern(parser, source, context, command, socketCommandPattern,
 				librarySocketCommandDefinition);
@@ -96,7 +100,7 @@ public static partial class Commands
 		// TODO: Optimize
 		var singleTokenCommandPattern = _commandLibrary.Where(x
 			=> x.Key.Equals(command[..1], StringComparison.CurrentCultureIgnoreCase) &&
-				 x.Value.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.SingleToken));
+			   x.Value.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.SingleToken));
 
 		if (singleTokenCommandPattern.Any())
 		{
@@ -134,7 +138,7 @@ public static partial class Commands
 		var switches = swtch.Split(SLASH).Where(s => !string.IsNullOrWhiteSpace(s));
 
 		if (_commandLibrary.TryGetValue(rootCommand.ToUpper(), out var libraryCommandDefinition)
-				&& !rootCommand.Equals("HUH_COMMAND", StringComparison.CurrentCultureIgnoreCase))
+		    && !rootCommand.Equals("HUH_COMMAND", StringComparison.CurrentCultureIgnoreCase))
 		{
 			return await HandleInternalCommandPattern(parser, source, context, rootCommand, switches,
 				libraryCommandDefinition);
@@ -157,15 +161,17 @@ public static partial class Commands
 			nearbyObjects,
 			source);
 		sw.Stop();
-		
-		await parser.NotifyService.Notify(parser.CurrentState.Handle!, string.Format("Time taken: {0}ms", sw.Elapsed.TotalMilliseconds));
+
+		await parser.NotifyService.Notify(parser.CurrentState.Handle!,
+			string.Format("Time taken: {0}ms", sw.Elapsed.TotalMilliseconds));
 
 
 		if (userDefinedCommandMatches.IsSome())
 		{
 			sw = Stopwatch.StartNew();
 			var res = await HandleUserDefinedCommand(parser, userDefinedCommandMatches.AsValue());
-			await parser.NotifyService.Notify(parser.CurrentState.Handle!, string.Format("Time taken: {0}ms", sw.Elapsed.TotalMilliseconds));
+			await parser.NotifyService.Notify(parser.CurrentState.Handle!,
+				string.Format("Time taken: {0}ms", sw.Elapsed.TotalMilliseconds));
 			return res;
 		}
 
@@ -206,8 +212,8 @@ public static partial class Commands
 			});
 
 			await newParser.CommandListParse(MModule.substring(
-				Attr.CommandListIndex!.Value, 
-				MModule.getLength(Attr.Value) - Attr.CommandListIndex!.Value, 
+				Attr.CommandListIndex!.Value,
+				MModule.getLength(Attr.Value) - Attr.CommandListIndex!.Value,
 				Attr.Value));
 
 			parser.Pop();
@@ -240,7 +246,8 @@ public static partial class Commands
 		{
 			Command = rootCommand,
 			Switches = switches,
-			Arguments = arguments.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value)).ToDictionary(),
+			Arguments = arguments.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value))
+				.ToDictionary(),
 			Function = null
 		});
 		var result = await libraryCommandDefinition.Function.Invoke(parseState);
@@ -261,7 +268,8 @@ public static partial class Commands
 		var newParser = parser.Push(parser.CurrentState with
 		{
 			Command = command,
-			Arguments = arguments.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value)).ToDictionary(),
+			Arguments = arguments.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value))
+				.ToDictionary(),
 			Function = null
 		});
 
@@ -311,31 +319,35 @@ public static partial class Commands
 
 		// Do not parse the argument splitting.
 		parser.Push(parser.CurrentState with { ParseMode = ParseMode.NoParse });
+		var realSubtext = MModule.substring(
+			context.evaluationString().Start.StartIndex,
+			context.evaluationString().Stop.StopIndex - context.evaluationString().Start.StartIndex + 1,
+			source);
+		var spaceInContext = MModule.indexOf(realSubtext, MModule.single(" "));
 
 		// command (space) argument(s)
-		if (context.children.Count > 1)
+		if (spaceInContext != -1)
 		{
-			var start = context.commandRemainder().Start.StartIndex;
-			var len = context.commandRemainder().Stop.StopIndex - context.commandRemainder().Start.StartIndex + 1;
-
+			var remainder = MModule.substring(spaceInContext + 1, MModule.getLength(realSubtext) - spaceInContext, realSubtext);
+			
 			// command arg0 = arg1,still arg 1 
 			if (behavior.HasFlag(Definitions.CommandBehavior.EqSplit) && behavior.HasFlag(Definitions.CommandBehavior.RSArgs))
 			{
-				argCallState = await parser.CommandEqSplitArgsParse(MModule.substring(start, len, source));
+				argCallState = await parser.CommandEqSplitArgsParse(remainder);
 			}
 			// command arg0 = arg1,arg2
 			else if (behavior.HasFlag(Definitions.CommandBehavior.EqSplit))
 			{
-				argCallState = await parser.CommandEqSplitParse(MModule.substring(start, len, source));
+				argCallState = await parser.CommandEqSplitParse(remainder);
 			}
 			// Command arg0,arg1,arg2,arg
 			else if (behavior.HasFlag(Definitions.CommandBehavior.RSArgs))
 			{
-				argCallState = await parser.CommandCommaArgsParse(MModule.substring(start, len, source));
+				argCallState = await parser.CommandCommaArgsParse(remainder);
 			}
 			else
 			{
-				argCallState = await parser.CommandSingleArgParse(MModule.substring(start, len, source));
+				argCallState = await parser.CommandSingleArgParse(remainder);
 			}
 		}
 
@@ -363,7 +375,7 @@ public static partial class Commands
 				: (await parser.FunctionParse(argCallState.Arguments!.FirstOrDefault() ?? MModule.empty()))!);
 
 			if (nArgs < 2) return arguments;
-			
+
 			if (noRsParse || noParse)
 			{
 				arguments.AddRange(argCallState.Arguments!

@@ -21,7 +21,6 @@ EQUALS: '=' WS;
 PERCENT: '%' -> pushMode(SUBSTITUTION);
 SEMICOLON: WS ';' WS;
 OANSI: '\u001B' -> pushMode(ANSI);
-RSPACE: ' ';
 FUNCHAR:
     [a-zA-Z0-9]+ '(' WS
 ; // Lazy way of indicating printable characters. There's more printable characters than this!

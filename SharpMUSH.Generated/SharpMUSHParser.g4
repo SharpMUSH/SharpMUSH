@@ -10,7 +10,6 @@ options {
 @parser::members {
     private int inFunction = 0;
     private int inBraceDepth = 0;
-    private bool inCommandMatch = false;
     private bool inCommandList = false;
     private bool lookingForCommandArgCommas = false;
     private bool lookingForCommandArgEquals = false;
@@ -55,15 +54,7 @@ startPlainString: evaluationString EOF;
 
 commandList: command ({inBraceDepth == 0}? SEMICOLON command)*;
 
-command:
-    {inCommandMatch = true;} firstCommandMatch (
-        RSPACE+ {inCommandMatch = false;} commandRemainder
-    )?
-;
-
-firstCommandMatch: evaluationString;
-
-commandRemainder: evaluationString;
+command: evaluationString;
 
 commaCommandArgs:
     {lookingForCommandArgCommas = true;} singleCommandArg (
@@ -161,7 +152,6 @@ beginGenericText:
     escapedText
     | ansi
     | { inFunction == 0 }? CPAREN
-    | { !inCommandMatch }? RSPACE
     | { !inCommandList || inBraceDepth > 0 }? SEMICOLON
     | { (!lookingForCommandArgCommas && inFunction == 0) || inBraceDepth > 0 }? COMMAWS
     | { !lookingForCommandArgEquals }? EQUALS
