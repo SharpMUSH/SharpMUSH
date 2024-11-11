@@ -202,19 +202,19 @@ public static partial class Commands
 		IEnumerable<(AnySharpObject Obj, SharpAttribute Attr, Dictionary<string, CallState> Arguments)> matches)
 	{
 		// Step 1: Validate if the command can be evaluated (locks)
-		foreach (var (Obj, Attr, Arguments) in matches)
+		foreach (var (obj, attr, arguments) in matches)
 		{
 			var newParser = parser.Push(parser.CurrentState with
 			{
-				CurrentEvaluation = new DBAttribute(Obj.Object().DBRef, Attr.Name),
-				Arguments = Arguments,
+				CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attr.Name),
+				Arguments = arguments,
 				Function = null
 			});
 
 			await newParser.CommandListParse(MModule.substring(
-				Attr.CommandListIndex!.Value,
-				MModule.getLength(Attr.Value) - Attr.CommandListIndex!.Value,
-				Attr.Value));
+				attr.CommandListIndex!.Value,
+				MModule.getLength(attr.Value) - attr.CommandListIndex!.Value,
+				attr.Value));
 
 			parser.Pop();
 		}
@@ -227,7 +227,7 @@ public static partial class Commands
 		var parseState = parser.Push(parser.CurrentState with
 		{
 			Command = "GOTO",
-			Arguments = new() { { "0", new CallState(exit.Object.DBRef.ToString(), 0) } },
+			Arguments = new() { { "0", new (exit.Object.DBRef.ToString(), 0) } },
 			Function = null
 		});
 		var result = await _commandLibrary.Single(x => x.Key == "GOTO").Value.Function.Invoke(parseState);
