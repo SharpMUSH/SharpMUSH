@@ -11,6 +11,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Net.Http.Headers;
 
 namespace SharpMUSH.Database.ArangoDB;
 
@@ -179,6 +180,32 @@ public class ArangoDatabase(
 
 	public AnyOptionalSharpObject GetObjectNode(DBRef dbref)
 		=> GetObjectNodeAsync(dbref).Result;
+
+	public async Task<SharpObjectFlag?> GetObjectFlagAsync(string name)
+		=> (await arangoDB.Query.ExecuteAsync<SharpObjectFlag>(
+			handle,
+			$"FOR v in {DatabaseConstants.objectFlags} FILTER v.Name = $flagName RETURN v",
+			bindVars: new Dictionary<string, object>()
+			{
+				{"flagName", name}
+			},
+			cache: true)).FirstOrDefault();
+
+	public async Task<IEnumerable<SharpObjectFlag>> GetObjectFlagsAsync()
+		=> await arangoDB.Query.ExecuteAsync<SharpObjectFlag>(
+			handle,
+			$"FOR v in {DatabaseConstants.objectFlags} RETURN v",
+			cache: true);
+
+	public Task<bool> SetObjectFlagAsync(DBRef dbref, SharpObjectFlag flag)
+	{
+		throw new NotImplementedException();
+	}
+
+	public Task<bool> UnsetObjectFlagAsync(DBRef dbref, SharpObjectFlag flag)
+	{
+		throw new NotImplementedException();
+	}
 
 	public AnyOptionalSharpObject GetObjectNode(string dbId)
 		=> GetObjectNodeAsync(dbId).Result;
@@ -525,7 +552,7 @@ public class ArangoDatabase(
 			Name = x.Name,
 			Value = x.Value,
 			LongName = x.LongName,
-			Leaves = new( () => GetAttributes(x._id)),
+			Leaves = new(() => GetAttributes(x._id)),
 			Owner = new(() => GetObjectOwner(x._id)),
 			SharpAttributeEntry = new(() => null) // TODO: Fix
 		});
@@ -676,6 +703,33 @@ public class ArangoDatabase(
 
 		return true;
 	}
+
+	public Task<bool> SetAttributeFlagAsync(DBRef dbref, string[] attribute, SharpAttributeFlag flag)
+	{
+		// Do it, and if the flag already existed, rely on the update to just do its thing.
+		
+		throw new NotImplementedException();
+	}
+
+	public Task<bool> UnsetAttributeFlagAsync(DBRef dbref, string[] attribute, SharpAttributeFlag flag)
+	{
+		// Do it, and if the flag wasn't there, rely on the update to just do its thing.
+		
+		throw new NotImplementedException();
+	}
+
+	public async Task<SharpAttributeFlag?> GetAttributeFlagAsync(string flagName)
+		=> (await arangoDB.Query.ExecuteAsync<SharpAttributeFlag>(handle,
+			$"FOR v in {DatabaseConstants.graphAttributeFlags} FILTER v.Name = $flag RETURN v",
+			bindVars: new Dictionary<string, object>
+			{
+				{ "flag", flagName }
+			}, cache: true)).FirstOrDefault();
+
+	public async Task<IEnumerable<SharpAttributeFlag>> GetAttributeFlagsAsync() =>
+		await arangoDB.Query.ExecuteAsync<SharpAttributeFlag>(handle,
+			$"FOR v in {DatabaseConstants.graphAttributeFlags} RETURN v",
+			cache: true);
 
 	public Task<bool> ClearAttributeAsync(DBRef dbref, string[] attribute)
 	{

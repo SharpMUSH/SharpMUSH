@@ -6,6 +6,8 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using System.Drawing;
+using MoreLinq.Extensions;
+using SharpMUSH.Library;
 using CB = SharpMUSH.Implementation.Definitions.CommandBehavior;
 using StringExtensions = ANSILibrary.StringExtensions;
 
@@ -63,6 +65,110 @@ public static partial class Commands
 		return new CallState(thing.ToString());
 	}
 
+	[SharpCommand(Name = "@SET", Behavior = CB.RSArgs, MinArgs = 2, MaxArgs = 2)]
+	public static async ValueTask<Option<CallState>> SetCommand(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		// Step 1: Check if the argument[0] could be an Object/Attribute or is just an Object
+		// Step 2: Locate Object.
+		// Step 3: Check if we have a : in argument[1].
+		// Step 4: Either set an attribute, or set an Attribute Flag, or set an Object Flag.
+
+		var args = parser.CurrentState.Arguments;
+		var split = HelperFunctions.SplitDBRefAndOptionalAttr(MModule.plainText(args["0"].Message!));
+		var enactor = parser.CurrentState.EnactorObject(parser.Database).WithoutNone();
+		var executor = parser.CurrentState.ExecutorObject(parser.Database).WithoutNone();
+
+		if (!split.TryPickT0(out var details, out var _))
+		{
+			return new CallState("#-1 BAD ARGUMENT FORMAT TO @SET");
+		}
+
+		(var dbref, var maybeAttribute) = details;
+
+		var locate = await parser.LocateService.LocateAndNotifyIfInvalid(parser,
+			enactor,
+			executor,
+			dbref,
+			Library.Services.LocateFlags.All);
+
+		if (!locate.IsValid())
+		{
+			return new CallState(locate.IsError ? locate.AsError.Value : Errors.ErrorCantSeeThat);
+		}
+
+		var realLocated = locate.WithoutError().WithoutNone();
+
+		// Attr Set Path
+		if (maybeAttribute is not null)
+		{
+			foreach (var flag in MModule.split(" ", args["2"].Message!))
+			{
+				var plainFlag = MModule.plainText(flag);
+				if (plainFlag.StartsWith("!"))
+				{
+					// TODO: Notify
+					await parser.AttributeService.SetAttributeFlagAsync(executor, realLocated, maybeAttribute, plainFlag);
+				}
+				else
+				{
+					// TODO: Notify
+					await parser.AttributeService.UnsetAttributeFlagAsync(executor, realLocated, maybeAttribute, plainFlag[1..]);
+				}
+			}
+
+			return new CallState(string.Empty);
+		}
+
+		// Attr Flag Path
+		var maybeColonLocation = MModule.indexOf(args["1"].Message!, MModule.single(":"));
+		if (maybeColonLocation > -1)
+		{
+			var arg1 = args["1"].Message!;
+			var attribute = MModule.substring(0, maybeColonLocation, arg1);
+			var content = MModule.substring(maybeColonLocation + 1, MModule.getLength(arg1), arg1);
+
+			var setResult =
+				await parser.AttributeService.SetAttributeAsync(executor, realLocated, MModule.plainText(attribute), content);
+
+			await parser.NotifyService.Notify(enactor,
+				setResult.Match(
+					_ => $"{realLocated.Object().Name}/{args["0"].Message} - Set.",
+					failure => failure.Value)
+			);
+
+			return new CallState(setResult.Match(
+				_ => $"{realLocated.Object().Name}/{args["0"].Message}",
+				failure => failure.Value));
+		}
+
+		// Object Flag Set Path
+		foreach (var flag in MModule.split(" ", args["1"].Message!))
+		{
+			var plainFlag = MModule.plainText(flag);
+			var unset = plainFlag.StartsWith("!");
+			plainFlag = unset ? plainFlag[1..] : plainFlag;
+			// TODO: Permission Check for each flag.
+			// Probably should have a service for this?
+
+			var realFlag = await parser.Database.GetObjectFlagAsync(plainFlag);
+
+			// TODO: Notify
+			if (realFlag is null) continue;
+			
+			// Set Flag	
+			if (unset)
+			{
+				await parser.Database.UnsetObjectFlagAsync(realLocated.Object().DBRef, realFlag);
+			}
+			else
+			{
+				await parser.Database.SetObjectFlagAsync(realLocated.Object().DBRef, realFlag);
+			}
+		}
+
+		throw new NotImplementedException();
+	}
+
 	[SharpCommand(Name = "HUH_COMMAND", Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> HuhCommand(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -96,7 +202,7 @@ public static partial class Commands
 			wrappedIteration.Iteration++;
 			// TODO: This should not need parsing each time.
 			// Just Evaluation by getting the Context and Visiting the Children multiple times.
-			await visitorFunction();			
+			await visitorFunction();
 		}
 
 		parser.CurrentState.IterationRegisters.Pop();
@@ -220,12 +326,12 @@ public static partial class Commands
 				error => MModule.empty());
 
 		await parser.NotifyService.Notify(enactor, $"{name.Hilight()}" +
-																							 $"(#{obj.DBRef.Number}{string.Join(string.Empty, obj.Flags.Value.Select(x => x.Symbol))})");
+		                                           $"(#{obj.DBRef.Number}{string.Join(string.Empty, obj.Flags.Value.Select(x => x.Symbol))})");
 		await parser.NotifyService.Notify(enactor,
 			$"Type: {obj.Type} Flags: {string.Join(" ", obj.Flags.Value.Select(x => x.Name))}");
 		await parser.NotifyService.Notify(enactor, description.ToString());
 		await parser.NotifyService.Notify(enactor, $"Owner: {ownerName.Hilight()}" +
-																							 $"(#{obj.DBRef.Number}{string.Join(string.Empty, ownerObj.Flags.Value.Select(x => x.Symbol))})");
+		                                           $"(#{obj.DBRef.Number}{string.Join(string.Empty, ownerObj.Flags.Value.Select(x => x.Symbol))})");
 		// TODO: Zone & Money
 		await parser.NotifyService.Notify(enactor, $"Parent: {obj.Parent.Value?.Name ?? "*NOTHING*"}");
 		// TODO: LOCK LIST
@@ -254,7 +360,7 @@ public static partial class Commands
 
 		// TODO: Proper carry format.
 		await parser.NotifyService.Notify(enactor, $"Contents: {Environment.NewLine}" +
-																							 $"{string.Join(Environment.NewLine, contentKeys)}");
+		                                           $"{string.Join(Environment.NewLine, contentKeys)}");
 
 		if (!viewing.IsRoom)
 		{
@@ -339,7 +445,8 @@ public static partial class Commands
 	}
 
 
-	[SharpCommand(Name = "@TELEPORT", Behavior = CB.Default | CB.EqSplit, MinArgs = 1, MaxArgs = 2, Switches = ["LIST", "INSIDE", "QUIET"])]
+	[SharpCommand(Name = "@TELEPORT", Behavior = CB.Default | CB.EqSplit, MinArgs = 1, MaxArgs = 2,
+		Switches = ["LIST", "INSIDE", "QUIET"])]
 	public static async ValueTask<Option<CallState>> Teleport(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -365,18 +472,18 @@ public static partial class Commands
 		else
 		{
 			var isDBRef = DBRef.TryParse(toTeleport, out var objToTeleport);
-			toTeleportList = [ isDBRef ? objToTeleport!.Value : toTeleport];
+			toTeleportList = [isDBRef ? objToTeleport!.Value : toTeleport];
 		}
 
 		var toTeleportStringList = toTeleportList.Select(x => x.ToString());
 
 		var destination = await parser.LocateService.LocateAndNotifyIfInvalid(parser,
-																																				enactorObj,
-																																				enactorObj,
-																																				destinationString,
-																																				Library.Services.LocateFlags.All);
+			enactorObj,
+			enactorObj,
+			destinationString,
+			Library.Services.LocateFlags.All);
 
-		if(!destination.IsValid())
+		if (!destination.IsValid())
 		{
 			await parser.NotifyService.Notify(enactor, "You can't go that way.");
 			return CallState.Empty;
@@ -384,7 +491,7 @@ public static partial class Commands
 
 		var validDestination = destination.WithoutError().WithoutNone();
 
-		if(validDestination.IsExit)
+		if (validDestination.IsExit)
 		{
 			// TODO: Implement Teleporting through an Exit.
 			return CallState.Empty;
@@ -394,7 +501,8 @@ public static partial class Commands
 
 		foreach (var obj in toTeleportStringList)
 		{
-			var locateTarget = await parser.LocateService.LocateAndNotifyIfInvalid(parser, enactorObj, enactorObj, obj, Library.Services.LocateFlags.All);
+			var locateTarget = await parser.LocateService.LocateAndNotifyIfInvalid(parser, enactorObj, enactorObj, obj,
+				Library.Services.LocateFlags.All);
 			if (!locateTarget.IsValid() || locateTarget.IsRoom)
 			{
 				await parser.NotifyService.Notify(enactor, Errors.ErrorNotVisible);

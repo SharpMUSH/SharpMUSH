@@ -13,6 +13,7 @@ public static partial class HelperFunctions
 	private static readonly Regex DatabaseReferenceRegex = DatabaseReference();
 	private static readonly Regex DatabaseReferenceWithAttributeRegex = DatabaseReferenceWithAttribute();
 	private static readonly Regex OptionalDatabaseReferenceWithAttributeRegex = OptionalDatabaseReferenceWithAttribute();
+	private static readonly Regex DatabaseReferenceWithOptionalAttributeRegex = DatabaseReferenceWithOptionalAttribute();
 
 	public static bool IsWizard(this AnySharpObject obj)
 		=> obj.Object()!.Flags.Value.Any(x => x.Name == "Wizard");
@@ -107,11 +108,23 @@ public static partial class HelperFunctions
 	
 	public static OneOf<(string? db, string Attribute), bool> SplitOptionalDBRefAndAttr(string DBRefAttr)
 	{
-		var match = DatabaseReferenceWithAttributeRegex.Match(DBRefAttr);
+		var match = OptionalDatabaseReferenceWithAttributeRegex.Match(DBRefAttr);
 		var obj = match.Groups["Object"]?.Value;
 		var attr = match.Groups["Attribute"]?.Value;
 
 		return string.IsNullOrEmpty(attr)
+			? false 
+			: (obj!, attr!);
+	}
+	
+	
+	public static OneOf<(string db, string? Attribute), bool> SplitDBRefAndOptionalAttr(string DBRefAttr)
+	{
+		var match = DatabaseReferenceWithOptionalAttributeRegex.Match(DBRefAttr);
+		var obj = match.Groups["Object"]?.Value;
+		var attr = match.Groups["Attribute"]?.Value;
+
+		return string.IsNullOrEmpty(obj)
 			? false 
 			: (obj!, attr!);
 	}
@@ -147,4 +160,11 @@ public static partial class HelperFunctions
 	/// <returns>A regex that has a named group for the Object and Attribute.</returns>
 	[GeneratedRegex(@"(?:(?<Object>.+?)/)?(?<Attribute>[a-zA-Z1-9@_\-\.`]+)")]
 	private static partial Regex OptionalDatabaseReferenceWithAttribute();
+	
+	/// <summary>
+	/// A regular expression that takes the form of '[Object/]attributeName'.
+	/// </summary>
+	/// <returns>A regex that has a named group for the Object and Attribute.</returns>
+	[GeneratedRegex(@"(?<Object>.+?)(?:/(?<Attribute>[a-zA-Z1-9@_\-\.`]+))")]
+	private static partial Regex DatabaseReferenceWithOptionalAttribute();
 }

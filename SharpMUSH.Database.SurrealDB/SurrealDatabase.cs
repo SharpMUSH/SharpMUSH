@@ -4,7 +4,6 @@ using SharpMUSH.Library.Models;
 using SurrealDb.Net;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Services;
-using SharpMUSH.Database.Models;
 using SharpMUSH.Database.SurrealDB.Models;
 
 namespace SharpMUSH.Database.SurrealDB;
@@ -21,6 +20,11 @@ public class SurrealDatabase(
 	IPasswordService PasswordService
 ) : ISharpDatabase
 {
+	public Task<IEnumerable<SharpAttributeFlag>> GetAttributeFlagsAsync()
+	{
+		throw new NotImplementedException();
+	}
+
 	public Task<bool> ClearAttributeAsync(DBRef dbref, string[] attribute)
 	{
 		Logger.LogCritical("test");
@@ -111,6 +115,26 @@ public class SurrealDatabase(
 		throw new NotImplementedException();
 	}
 
+	public Task<SharpObjectFlag?> GetObjectFlagAsync(string name)
+	{
+		throw new NotImplementedException();
+	}
+
+	public Task<IEnumerable<SharpObjectFlag>> GetObjectFlagsAsync()
+	{
+		throw new NotImplementedException();
+	}
+
+	public Task<bool> SetObjectFlagAsync(DBRef dbref, SharpObjectFlag flag)
+	{
+		throw new NotImplementedException();
+	}
+
+	public Task<bool> UnsetObjectFlagAsync(DBRef dbref, SharpObjectFlag flag)
+	{
+		throw new NotImplementedException();
+	}
+
 	public Task<AnyOptionalSharpObject> GetObjectNodeAsync(DBRef dbref)
 	{
 		throw new NotImplementedException();
@@ -142,6 +166,21 @@ public class SurrealDatabase(
 		}
 
 		public Task<bool> SetAttributeAsync(DBRef dbref, string[] attribute, string value, SharpPlayer owner)
+	{
+		throw new NotImplementedException();
+	}
+
+	public Task<bool> SetAttributeFlagAsync(DBRef dbref, string[] attribute, SharpAttributeFlag flag)
+	{
+		throw new NotImplementedException();
+	}
+
+	public Task<bool> UnsetAttributeFlagAsync(DBRef dbref, string[] attribute, SharpAttributeFlag flag)
+	{
+		throw new NotImplementedException();
+	}
+
+	public Task<SharpAttributeFlag?> GetAttributeFlagAsync(string flagName)
 	{
 		throw new NotImplementedException();
 	}

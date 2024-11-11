@@ -88,6 +88,42 @@ public class AttributeService(ISharpDatabase db, IPermissionService ps, ICommand
 		return attributes.Where(x => ps.CanViewAttribute(executor, obj, x)).ToArray();
 	}
 
+	public async ValueTask<OneOf<Success, Error<string>>> SetAttributeFlagAsync(AnySharpObject executor, AnySharpObject obj, string attribute, string flag)
+	{
+		var returnedAttribute = await GetAttributeAsync(executor, obj, attribute, IAttributeService.AttributeMode.Execute);
+		if (returnedAttribute.IsError)
+		{
+			return returnedAttribute.AsError;
+		}
+		if (returnedAttribute.IsNone)
+		{
+			// TODO: Do this better
+			return new Error<string>("Not Found");
+		}
+
+		// db.SetAttributeFlagAsync();
+
+		throw new NotImplementedException();
+	}
+
+	public async ValueTask<OneOf<Success, Error<string>>> UnsetAttributeFlagAsync(AnySharpObject executor, AnySharpObject obj, string attribute, string flag)
+	{
+		var returnedAttribute = await GetAttributeAsync(executor, obj, attribute, IAttributeService.AttributeMode.Execute);
+		if (returnedAttribute.IsError)
+		{
+			return returnedAttribute.AsError;
+		}
+		if (returnedAttribute.IsNone)
+		{
+			// TODO: Do this better
+			return new Error<string>("Not Found");
+		}
+
+		// db.UnsetAttributeFlagAsync();
+
+		throw new NotImplementedException();
+	}
+
 	public async ValueTask<OneOf<Success, Error<string>>> SetAttributeAsync(AnySharpObject executor,
 																																				 AnySharpObject obj,
 																																				 string attribute,
