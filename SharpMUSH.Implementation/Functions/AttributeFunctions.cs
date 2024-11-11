@@ -17,42 +17,48 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "attrib_set", MaxArgs = 2, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> Attrib_Set(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Attrib_Set(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// TODO: If we have the NoSideFX flag, don't function! 
 		// That should be handled by the parser before it gets here.
 
 		var args = parser.CurrentState.Arguments;
 		var split = HelperFunctions.SplitDBRefAndAttr(MModule.plainText(args["0"].Message!));
+		var enactor = parser.CurrentState.EnactorObject(parser.Database).WithoutNone();
+		var executor = parser.CurrentState.ExecutorObject(parser.Database).WithoutNone();
 
 		if (!split.TryPickT0(out var details, out var _))
 		{
-			return ValueTask.FromResult(new CallState("#-1 BAD ARGUMENT FORMAT TO ATTRIB_SET"));
+			return new CallState("#-1 BAD ARGUMENT FORMAT TO ATTRIB_SET");
 		}
 
 		(var dbref, var attribute) = details;
+		
+		var locate = await parser.LocateService.LocateAndNotifyIfInvalid(parser,
+			enactor,
+			executor,
+			dbref, 
+			Library.Services.LocateFlags.All);
 
-		// TODO: Use Locate
-		// TODO: Confirm attribute is a valid path.
-		// TODO: Confirm attribute exists.
-		// TODO: Confirm Permissions
-
-		// TODO: We have this code in the single token command. We likely can just have a common routine, or use an Attribute Service.
-
-		// Clear on only having 1 arg. 
-		// Write on having 2 args.
-		if (args.Count == 1)
+		// Arguments are getting here in an evaluated state, when they should not be.
+		if (!locate.IsValid())
 		{
-			// Database.Clear.
-		}
-		else
-		{
-			var value = args["0"].Message!.ToString();
-			// TODO: Out of Band message of success, if they are not set QUIET.
-			return ValueTask.FromResult(new CallState(string.Empty));
+			return new CallState(locate.IsError ? locate.AsError.Value : Errors.ErrorCantSeeThat);
 		}
 
-		throw new NotImplementedException();
+		var realLocated = locate.WithoutError().WithoutNone();
+		var contents = args.TryGetValue("1", out var tmpContents) ? tmpContents.Message! : MModule.empty();
+
+		var setResult = await parser.AttributeService.SetAttributeAsync(executor, realLocated, attribute, contents);
+		await parser.NotifyService.Notify(enactor,
+			setResult.Match(
+				_ => $"{realLocated.Object().Name}/{args["0"].Message} - Set.",
+				failure => failure.Value)
+		);
+		
+		return new CallState(setResult.Match(
+			_ => $"{realLocated.Object().Name}/{args["0"].Message}",
+			failure => failure.Value));
 	}
 
 	[SharpFunction(Name = "DEFAULT", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]

@@ -35,7 +35,7 @@ public static partial class Commands
 
 		var locate = await parser.LocateService.LocateAndNotifyIfInvalid(parser,
 			enactor,
-			enactor,
+			executor,
 			args["1"].Message!.ToString(), Library.Services.LocateFlags.All);
 
 		// Arguments are getting here in an evaluated state, when they should not be.
