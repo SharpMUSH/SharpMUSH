@@ -19,13 +19,13 @@ public class SharpAttribute
 
 	// RELATIONSHIP
 	[JsonIgnore]
-	public Func<IEnumerable<SharpAttribute>> Leaves { get; set; }
+	public Lazy<IEnumerable<SharpAttribute>> Leaves { get; set; }
 
 	// RELATIONSHIP
 	[JsonIgnore]
-	public Func<SharpPlayer> Owner { get; set; }
+	public Lazy<SharpPlayer> Owner { get; set; }
 
 	// RELATIONSHIP for quick lookups
 	[JsonIgnore]
-	public Func<SharpAttributeEntry?> SharpAttributeEntry { get; set; }
+	public Lazy<SharpAttributeEntry?> SharpAttributeEntry { get; set; }
 }

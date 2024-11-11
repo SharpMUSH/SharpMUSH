@@ -30,7 +30,8 @@ public static partial class Commands
 	{
 		// This will come in as arg[0] = <attr>, arg[1]: <object> and arg[2] as [value]
 		var args = parser.CurrentState.Arguments;
-		var enactor = (await parser.CurrentState.Enactor!.Value.GetAsync(parser.Database)).WithoutNone();
+		var enactor = parser.CurrentState.EnactorObject(parser.Database).WithoutNone();
+		var executor = parser.CurrentState.ExecutorObject(parser.Database).WithoutNone();
 
 		var locate = await parser.LocateService.LocateAndNotifyIfInvalid(parser,
 			enactor,
@@ -45,16 +46,17 @@ public static partial class Commands
 
 		// TODO: Switch to Clear an attribute! Take note of deeper authorization needed in case of the attribute having leaves.
 		var realLocated = locate.WithoutError().WithoutNone();
-		var attributePath = args["0"].Message!.ToString()!.ToUpper().Split('`');
-		var contents = args.TryGetValue("2", out var tmpContents) ? tmpContents.Message!.ToString() : string.Empty;
-		var callerObj = await parser.CurrentState.Caller!.Value.GetAsync(parser.Database);
-		var callerOwner = callerObj.Object()!.Owner();
+		var contents = args.TryGetValue("2", out var tmpContents) ? tmpContents.Message! : MModule.empty();
 
-		await parser.Database.SetAttributeAsync(realLocated.Object().DBRef, attributePath, contents, callerOwner);
+		var setResult = await parser.AttributeService.SetAttributeAsync(executor, realLocated, MModule.plainText(args["0"].Message!), contents);
+		await parser.NotifyService.Notify(enactor,
+			setResult.Match(
+				_ => $"{realLocated.Object().Name}/{args["0"].Message} - Set.",
+				failure => failure.Value)
+			);
 
-		await parser.NotifyService.Notify(parser.CurrentState.Enactor!.Value,
-			$"{realLocated.Object().Name}/{string.Join("`", attributePath)} - Set.");
-
-		return new CallState(string.Empty);
+		return new CallState(setResult.Match(
+			_ => $"{realLocated.Object().Name}/{args["0"].Message}",
+			_ => string.Empty));
 	}
 }

@@ -244,10 +244,10 @@ public class ArangoDatabase(
 			Flags = GetAttributeFlags(x.Id),
 			Name = x.Name,
 			LongName = x.LongName,
-			Owner = () => GetAttributeOwner(x.Id),
+			Owner = new(() => GetAttributeOwner(x.Id)),
 			Value = MarkupString.MarkupStringModule.single(x.Value), // TODO: Compose and Decompose
-			Leaves = () => GetAttributes(x.Id),
-			SharpAttributeEntry = () => null // TODO: Fix
+			Leaves = new(() => GetAttributes(x.Id)),
+			SharpAttributeEntry = new(() => null) // TODO: Fix
 		});
 
 		return sharpAttributes;
@@ -276,10 +276,10 @@ public class ArangoDatabase(
 			Flags = GetAttributeFlags(x.Id),
 			Name = x.Name,
 			LongName = x.LongName,
-			Owner = () => GetAttributeOwner(x.Id),
+			Owner = new(() => GetAttributeOwner(x.Id)),
 			Value = MarkupString.MarkupStringModule.single(x.Value), // TODO: Compose and Decompose
-			Leaves = () => GetAttributes(x.Id),
-			SharpAttributeEntry = () => null // TODO: Fix
+			Leaves = new(() => GetAttributes(x.Id)),
+			SharpAttributeEntry = new(() => null) // TODO: Fix
 		});
 
 		return sharpAttributes;
@@ -307,7 +307,8 @@ public class ArangoDatabase(
 
 	public SharpObject? GetParent(string id)
 		=> arangoDB.Query.ExecuteAsync<SharpObject>(handle,
-			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphParents} RETURN v", cache: true).Result.FirstOrDefault();
+				$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphParents} RETURN v", cache: true).Result
+			.FirstOrDefault();
 
 	public IEnumerable<SharpObject> GetParents(string id)
 		=> arangoDB.Query.ExecuteAsync<SharpObject>(handle,
@@ -351,7 +352,8 @@ public class ArangoDatabase(
 
 		var startVertex = obj.Id;
 		var res = (await arangoDB.Query.ExecuteAsync<dynamic>(handle,
-			$"FOR v IN 1..1 INBOUND {startVertex} GRAPH {DatabaseConstants.graphObjects} RETURN v", cache: true)).FirstOrDefault();
+				$"FOR v IN 1..1 INBOUND {startVertex} GRAPH {DatabaseConstants.graphObjects} RETURN v", cache: true))
+			.FirstOrDefault();
 
 		if (res is null) return new None();
 
@@ -523,9 +525,9 @@ public class ArangoDatabase(
 			Name = x.Name,
 			Value = x.Value,
 			LongName = x.LongName,
-			Leaves = () => GetAttributes(x._id),
-			Owner = () => GetObjectOwner(x._id),
-			SharpAttributeEntry = () => null // TODO: Fix
+			Leaves = new( () => GetAttributes(x._id)),
+			Owner = new(() => GetObjectOwner(x._id)),
+			SharpAttributeEntry = new(() => null) // TODO: Fix
 		});
 	}
 
@@ -555,9 +557,9 @@ public class ArangoDatabase(
 			Name = x.Name,
 			Value = x.Value,
 			LongName = x.LongName,
-			Leaves = () => GetAttributes(x._id),
-			Owner = () => GetObjectOwner(x._id),
-			SharpAttributeEntry = () => null // TODO: Fix
+			Leaves = new(() => GetAttributes(x._id)),
+			Owner = new(() => GetObjectOwner(x._id)),
+			SharpAttributeEntry = new(() => null) // TODO: Fix
 		}).ToArray();
 	}
 
@@ -593,9 +595,9 @@ public class ArangoDatabase(
 			Flags = GetAttributeFlags(x.Id),
 			Value = MarkupString.MarkupStringModule.single(x.Value), // TODO: Compose and Decompose
 			LongName = x.LongName,
-			Leaves = () => GetAttributes(x.Id),
-			Owner = () => GetAttributeOwner(x.Id),
-			SharpAttributeEntry = () => null // TODO: FIX
+			Leaves = new(() => GetAttributes(x.Id)),
+			Owner = new(() => GetAttributeOwner(x.Id)),
+			SharpAttributeEntry = new(() => null) // TODO: FIX
 		}).ToArray();
 	}
 

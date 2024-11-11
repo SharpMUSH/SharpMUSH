@@ -57,15 +57,15 @@ public class ConnectionService : IConnectionService
 		_sessionState.AddOrUpdate(handle,
 			x => throw new InvalidDataException("Tried to add a new handle during update."),
 			(x, y) => {
-				y.Metadata.AddOrUpdate(key, value, (x, y) => value);
+				y.Metadata.AddOrUpdate(key, value, (_,_) => value);
 				return y; 
 			});
 	}
 
-	public void Register(string handle, Func<byte[],Task> outputFunction, Func<Encoding> encoding, ConcurrentDictionary<string,string>? MetaData = null)
+	public void Register(string handle, Func<byte[],Task> outputFunction, Func<Encoding> encoding, ConcurrentDictionary<string,string>? metaData = null)
 	{
 		_sessionState.AddOrUpdate(handle,
-			x => new IConnectionService.ConnectionData(handle, null, IConnectionService.ConnectionState.Connected, outputFunction, encoding, MetaData ?? 
+			x => new IConnectionService.ConnectionData(handle, null, IConnectionService.ConnectionState.Connected, outputFunction, encoding, metaData ?? 
 				new ConcurrentDictionary<string, string>(new Dictionary<string,string> {
 					{"ConnectionStartTime", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() },
 					{"LastConnectionSignal", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() }})),

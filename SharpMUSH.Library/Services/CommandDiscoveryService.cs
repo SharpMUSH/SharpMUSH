@@ -10,10 +10,10 @@ namespace SharpMUSH.Library.Services;
 
 public partial class CommandDiscoveryService : ICommandDiscoveryService
 {
-	private static readonly MemoryCache cache = new(new MemoryCacheOptions());
+	private static readonly MemoryCache Cache = new(new MemoryCacheOptions());
 
-	public void InvalidateCache(DBRef DBReference) 
-		=> cache.Remove(DBReference.Number);
+	public void InvalidateCache(DBRef dbReference) 
+		=> Cache.Remove(dbReference.Number);
 
 	// TODO: Severe optimization needed. We can't keep scanning all attributes each time we want to do a command match, and do conversions.
 	// We need to cache the results of the conversion and where that object & attribute live.
@@ -60,7 +60,7 @@ public partial class CommandDiscoveryService : ICommandDiscoveryService
 			 Arguments: match.Reg
 				.Matches(MModule.plainText(commandString))
 				.SelectMany(x => x.Groups.Values)
-				.Skip(!match.Attribute.Flags.Any(x => x.Name == "REGEX") ? 1 : 0) // Skip the first Group for Wildcard matches, which is the entire Match
+				.Skip(match.Attribute.Flags.All(x => x.Name != "REGEX") ? 1 : 0) // Skip the first Group for Wildcard matches, which is the entire Match
 				.SelectMany<Group, KeyValuePair<string, MString>>(x => [
 					new KeyValuePair<string, MString>(x.Index.ToString(), MModule.substring(x.Index, x.Length, commandString)),
 					new KeyValuePair<string, MString>(x.Name, MModule.substring(x.Index, x.Length, commandString))

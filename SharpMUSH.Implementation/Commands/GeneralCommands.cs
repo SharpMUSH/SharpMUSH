@@ -246,7 +246,7 @@ public static partial class Commands
 				// TODO: Symbols for Flags. Flags are not just strings!
 				await parser.NotifyService.Notify(enactor,
 					MModule.concat(
-						$"{attr.Name} [#{attr.Owner().Object.DBRef.Number}]: "
+						$"{attr.Name} [#{attr.Owner.Value.Object.DBRef.Number}]: "
 							.Hilight()
 						, attr.Value));
 			}
