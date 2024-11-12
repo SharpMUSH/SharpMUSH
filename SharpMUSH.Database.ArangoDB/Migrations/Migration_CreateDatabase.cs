@@ -509,7 +509,10 @@ namespace SharpMUSH.Database.ArangoDB.Migrations
 								Collection = DatabaseConstants.hasAttribute,
 								To = [DatabaseConstants.attributes],
 								From = [
-									DatabaseConstants.objects,
+									DatabaseConstants.players,
+									DatabaseConstants.things,
+									DatabaseConstants.exits,
+									DatabaseConstants.rooms,
 									DatabaseConstants.attributes
 								]
 							}

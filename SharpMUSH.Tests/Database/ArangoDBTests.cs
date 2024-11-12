@@ -56,10 +56,10 @@ public class ArangoDBTests : BaseUnitTest
 		await Assert.That(playerOne!.Object!.Key).IsEqualTo(1);
 	}
 
-	[Test, Skip("Too fragile.")]
+	[Test]
+	[Repeat(10), NotInParallel]
 	public async Task SetAndOverrideAnAttribute()
 	{
-		
 		var playerOne = (await _database!.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
 		var playerOneDBRef = new DBRef(playerOne!.Object.Key);
 
@@ -68,7 +68,6 @@ public class ArangoDBTests : BaseUnitTest
 
 		await Assert.That(existingLayer.Last().Value.ToString()).IsEqualTo("Layer");
 
-		await Task.Delay(500); // TODO: This is there to avoid write-write conflicts.
 		await _database.SetAttributeAsync(playerOneDBRef, ["Two", "Layers"], "Layer2", playerOne);
 		var overwrittenLayer = (await _database.GetAttributeAsync(playerOneDBRef, ["Two", "Layers"]))!.ToList();
 
@@ -89,8 +88,8 @@ public class ArangoDBTests : BaseUnitTest
 		await Assert.That(flags.Count).IsGreaterThan(0);
 	}
 
-	[Test, Skip("Too fragile.")]
-	// [Repeat(10)] // Exclusive Locks are needed first. Otherwise there will be write-write errors. 
+	[Test]
+	[Repeat(10), NotInParallel] // Exclusive Locks are needed first. Otherwise there will be write-write errors. 
 	public async Task SetAndGetAnAttribute()
 	{
 		var playerOne = (await _database!.GetObjectNodeAsync(new DBRef(1))).AsPlayer;

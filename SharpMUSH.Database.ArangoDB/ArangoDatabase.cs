@@ -187,8 +187,8 @@ public class ArangoDatabase(
 			$"FOR v in @@C1 FILTER v.Name = @flag RETURN v",
 			bindVars: new Dictionary<string, object>
 			{
-				{"@C1", DatabaseConstants.objectFlags},
-				{"flag", name}
+				{ "@C1", DatabaseConstants.objectFlags },
+				{ "flag", name }
 			},
 			cache: true)).FirstOrDefault();
 
@@ -436,7 +436,8 @@ public class ArangoDatabase(
 		if (dbID.StartsWith(DatabaseConstants.objects))
 		{
 			query = await arangoDB.Query.ExecuteAsync<dynamic>(handle,
-				$"FOR v IN 0..1 INBOUND {dbID} GRAPH {DatabaseConstants.graphObjects} RETURN v", cache: true);
+				$"FOR v IN 0..1 INBOUND {dbID} GRAPH {DatabaseConstants.graphObjects} RETURN v",
+				cache: true);
 			query.Reverse();
 		}
 		else
@@ -671,34 +672,39 @@ public class ArangoDatabase(
 		var last = actualResult.Last();
 		string lastId = last._id;
 
+		// Create Path
 		foreach (var nextAttr in remaining.Select((attrName, i) => (value: attrName, i)))
 		{
 			var newOne = await arangoDB.Document.CreateAsync<SharpAttributeCreateRequest, SharpAttributeQueryResult>(
 				transactionHandle, DatabaseConstants.attributes,
-				new SharpAttributeCreateRequest(nextAttr.value.ToUpper(), [], string.Empty,
-					string.Join('`', remaining.Take(nextAttr.i + 1).Select(x => x.ToUpper()))), waitForSync: true);
+				new SharpAttributeCreateRequest(nextAttr.value.ToUpper(), [],
+					(nextAttr.i == remaining.Length - 1)
+						? value
+						: string.Empty,
+					string.Join('`', attribute.SkipLast(remaining.Length - 1 - nextAttr.i).Select(x => x.ToUpper()))),
+				waitForSync: true, exclusive: true);
 
-			await arangoDB.Document.CreateAsync<SharpEdgeCreateRequest, SharpEdgeQueryResult>(transactionHandle,
+			await arangoDB.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.graphAttributes,
 				DatabaseConstants.hasAttribute,
 				new SharpEdgeCreateRequest(lastId, newOne.Id), waitForSync: true);
-
-			await arangoDB.Document.CreateAsync<SharpEdgeCreateRequest, SharpEdgeQueryResult>(transactionHandle,
+			
+			await arangoDB.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.graphAttributeOwners,
 				DatabaseConstants.hasAttributeOwner,
 				new SharpEdgeCreateRequest(newOne.Id, owner.Object.Id!), waitForSync: true);
 
 			lastId = newOne.Id;
 		}
 
-		await arangoDB.Document.UpdateAsync(transactionHandle, DatabaseConstants.attributes, new
+		// Update Path
+		if (remaining.Length == 0)
 		{
-			Key = lastId!.Split("/").Last(),
-			Value = value,
-			LongName = string.Join("`", attribute.Select(x => x.ToUpper()))
-		}, mergeObjects: true, waitForSync: true);
+			await arangoDB.Document.UpdateAsync(transactionHandle, DatabaseConstants.attributes,
+				new { Key = lastId.Split("/")[1], Value = value}, waitForSync: true, exclusive: true, mergeObjects: true);
 
-		await arangoDB.Document.CreateAsync<SharpEdgeCreateRequest, SharpEdgeQueryResult>(transactionHandle,
-			DatabaseConstants.hasAttributeOwner,
-			new SharpEdgeCreateRequest(lastId, owner.Id!), mergeObjects: true, waitForSync: true);
+			await arangoDB.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.graphAttributeOwners,
+				DatabaseConstants.hasAttributeOwner,
+				new SharpEdgeCreateRequest(lastId, owner.Object.Id!), waitForSync: true);
+		}
 
 		await arangoDB.Transaction.CommitAsync(transactionHandle);
 
@@ -708,14 +714,14 @@ public class ArangoDatabase(
 	public Task<bool> SetAttributeFlagAsync(DBRef dbref, string[] attribute, SharpAttributeFlag flag)
 	{
 		// Do it, and if the flag already existed, rely on the update to just do its thing.
-		
+
 		throw new NotImplementedException();
 	}
 
 	public Task<bool> UnsetAttributeFlagAsync(DBRef dbref, string[] attribute, SharpAttributeFlag flag)
 	{
 		// Do it, and if the flag wasn't there, rely on the update to just do its thing.
-		
+
 		throw new NotImplementedException();
 	}
 
@@ -724,7 +730,7 @@ public class ArangoDatabase(
 			$"FOR v in @@C1 FILTER v.Name = @flag RETURN v",
 			bindVars: new Dictionary<string, object>
 			{
-				{ "@C1", DatabaseConstants.attributeFlags},
+				{ "@C1", DatabaseConstants.attributeFlags },
 				{ "flag", flagName }
 			}, cache: true)).FirstOrDefault();
 

@@ -2,5 +2,5 @@
 
 internal static class DatabaseBehaviorConstants
 {
-	internal static int TransactionTimeout = 10;
+	internal static readonly int TransactionTimeout = 9999;
 }
