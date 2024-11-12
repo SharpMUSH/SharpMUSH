@@ -2,6 +2,9 @@
 using SharpMUSH.Library;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using TUnit.Assertions;
+using TUnit.Assertions.Extensions;
+using TUnit.Core;
 
 namespace SharpMUSH.Tests.Database;
 
@@ -70,6 +73,20 @@ public class ArangoDBTests : BaseUnitTest
 		var overwrittenLayer = (await _database.GetAttributeAsync(playerOneDBRef, ["Two", "Layers"]))!.ToList();
 
 		await Assert.That(overwrittenLayer.Last().Value.ToString()).IsEqualTo("Layer2");
+	}
+
+	[Test]
+	public async Task GetAllObjectFlags()
+	{
+		var flags=  await _database!.GetObjectFlagsAsync();
+		await Assert.That(flags.Count).IsGreaterThan(0);
+	}
+	
+	[Test]
+	public async Task GetAllAttributeFlags()
+	{
+		var flags=  await _database!.GetAttributeFlagsAsync();
+		await Assert.That(flags.Count).IsGreaterThan(0);
 	}
 
 	[Test, Skip("Too fragile.")]

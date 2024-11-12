@@ -140,4 +140,17 @@ public class GeneralCommandTests : BaseUnitTest
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<DBRef>(), "Repeat 1 times in this mode b");
 	}
+
+	[Test, Skip("Not Implemented")]
+	public async Task DoFlagSet()
+	{
+		var parser = TestParser(ds: database, ls: new LocateService(), ps: permission);
+		await parser.CommandParse("1", MModule.single("@set #1=DEBUG"));
+
+		var one = await parser.Database.GetObjectNodeAsync(new DBRef(1));
+		var onePlayer = one.AsPlayer;
+		var flags = onePlayer.Object.Flags.Value;
+
+		await Assert.That(flags.Count(x => x.Name == "DEBUG")).IsEqualTo(1);
+	}
 }

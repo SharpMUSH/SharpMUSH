@@ -184,17 +184,18 @@ public class ArangoDatabase(
 	public async Task<SharpObjectFlag?> GetObjectFlagAsync(string name)
 		=> (await arangoDB.Query.ExecuteAsync<SharpObjectFlag>(
 			handle,
-			$"FOR v in {DatabaseConstants.objectFlags} FILTER v.Name = $flagName RETURN v",
-			bindVars: new Dictionary<string, object>()
+			$"FOR v in @@C1 FILTER v.Name = @flag RETURN v",
+			bindVars: new Dictionary<string, object>
 			{
-				{"flagName", name}
+				{"@C1", DatabaseConstants.objectFlags},
+				{"flag", name}
 			},
 			cache: true)).FirstOrDefault();
 
 	public async Task<IEnumerable<SharpObjectFlag>> GetObjectFlagsAsync()
 		=> await arangoDB.Query.ExecuteAsync<SharpObjectFlag>(
 			handle,
-			$"FOR v in {DatabaseConstants.objectFlags} RETURN v",
+			$"FOR v in {DatabaseConstants.objectFlags:@} RETURN v",
 			cache: true);
 
 	public Task<bool> SetObjectFlagAsync(DBRef dbref, SharpObjectFlag flag)
@@ -720,15 +721,16 @@ public class ArangoDatabase(
 
 	public async Task<SharpAttributeFlag?> GetAttributeFlagAsync(string flagName)
 		=> (await arangoDB.Query.ExecuteAsync<SharpAttributeFlag>(handle,
-			$"FOR v in {DatabaseConstants.graphAttributeFlags} FILTER v.Name = $flag RETURN v",
+			$"FOR v in @@C1 FILTER v.Name = @flag RETURN v",
 			bindVars: new Dictionary<string, object>
 			{
+				{ "@C1", DatabaseConstants.attributeFlags},
 				{ "flag", flagName }
 			}, cache: true)).FirstOrDefault();
 
 	public async Task<IEnumerable<SharpAttributeFlag>> GetAttributeFlagsAsync() =>
 		await arangoDB.Query.ExecuteAsync<SharpAttributeFlag>(handle,
-			$"FOR v in {DatabaseConstants.graphAttributeFlags} RETURN v",
+			$"FOR v in {DatabaseConstants.attributeFlags:@} RETURN v",
 			cache: true);
 
 	public Task<bool> ClearAttributeAsync(DBRef dbref, string[] attribute)
