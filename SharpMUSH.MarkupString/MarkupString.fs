@@ -23,12 +23,12 @@ module MarkupStringModule =
         | MarkedupText of Markup
         | Empty
 
-    and MarkupString(markupDetails: MarkupTypes, content: List<Content>) =
+    and MarkupString(markupDetails: MarkupTypes, content: Content list) =
         // TODO: Optimize the ansi strings, so we don't re-initialize at least the exact same tag sequentially.
         [<TailCall>]
         let rec getText (markupStr: MarkupString, outerMarkupType: MarkupTypes) : string =
-            let accumulate (acc: string, items: List<Content>) =
-                let rec loop (acc: string, items: List<Content>) =
+            let accumulate (acc: string, items: Content list) =
+                let rec loop (acc: string, items: Content list) =
                     match items with
                     | [] -> acc
                     | Text str :: tail -> loop (acc + str, tail)
@@ -58,7 +58,7 @@ module MarkupStringModule =
 
         [<TailCall>]
         let findFirstMarkedupText (markupStr: MarkupString) : MarkupTypes =
-            let rec find (content: List<Content>) : MarkupTypes =
+            let rec find (content: Content list) : MarkupTypes =
                 match content with
                 | [] -> Empty
                 | MarkupText mStr :: _ when isMarkedup (mStr.MarkupDetails) -> mStr.MarkupDetails
@@ -141,20 +141,20 @@ module MarkupStringModule =
 
         MarkupString(Empty, (Seq.foldBack2 (fun a b xs -> (MarkupText a) :: (MarkupText b) :: xs) mu delimiters []))
 
-    // [<TailCall>]
-    let plainText (markupStr: MarkupString) : string =
-        let rec loop (content: List<Content>) (acc: string list) =
+    [<TailCall>]
+    let rec plainText (markupStr: MarkupString) : string =
+        let rec loop (content: Content list) (acc: string list) =
             match content with
-            | [] -> System.String.Concat(List.rev acc)
+            | [] -> List.rev acc
             | Text str :: tail -> loop tail (str :: acc)
             | MarkupText mStr :: tail -> loop (mStr.Content @ tail) acc
 
-        loop markupStr.Content []
+        String.Concat(loop markupStr.Content [])
 
     let plainText2 (markupStr: MarkupString) : MarkupString =
         MarkupString(Empty, [ Text(plainText markupStr) ])
 
-    // [<TailCall>]
+    [<TailCall>]
     let rec getLength (markupStr: MarkupString) : int =
         markupStr.Content
         |> List.fold
@@ -173,7 +173,7 @@ module MarkupStringModule =
         let separatorContent =
             match optionalSeparator with
             | Some separator -> [ MarkupText separator ]
-            | None -> [ Text System.String.Empty ]
+            | None -> [ Text String.Empty ]
 
         match originalMarkupStr.MarkupDetails with
         | Empty ->
@@ -233,8 +233,8 @@ module MarkupStringModule =
 
         MarkupString(markupStr.MarkupDetails, substringAux markupStr.Content start length [])
 
-    // [<TailCall>]
-    let indexesOf (markupStr: MarkupString) (search: MarkupString) : seq<int> =
+    [<TailCall>]
+    let rec indexesOf (markupStr: MarkupString) (search: MarkupString) : seq<int> =
         let text = plainText markupStr
         let srch = plainText search
 
@@ -322,7 +322,7 @@ module MarkupStringModule =
         let kindPattern2 = (kindPattern, @"\\\\\\\?", @"\?") |> Regex.Replace
         kindPattern2
 
-    let getWildcardMatch (input: MarkupString) (pattern: MarkupString) : Match * seq<MarkupString> =
+    let getWildcardMatch (input: MarkupString) (pattern: MarkupString) : Match * MarkupString seq =
         let newPattern = getWildcardMatchAsRegex (pattern)
 
         (plainText input, newPattern)
@@ -333,7 +333,7 @@ module MarkupStringModule =
         let newPattern = getWildcardMatchAsRegex (pattern)
         (plainText input, newPattern) |> Regex.IsMatch
 
-    let getWildcardMatches (input: MarkupString) (pattern: MarkupString) : seq<Match * seq<MarkupString>> =
+    let getWildcardMatches (input: MarkupString) (pattern: MarkupString) : (Match * MarkupString seq) seq =
         let newPattern = getWildcardMatchAsRegex (pattern)
 
         (plainText input, newPattern)
@@ -342,7 +342,7 @@ module MarkupStringModule =
         |> Seq.map (fun value ->
             (value, value.Groups |> Seq.map (fun cap -> substring cap.Index cap.Length input)))
 
-    let getRegexpMatches (input: MarkupString) (pattern: MarkupString) : seq<Match * seq<MarkupString>> =
+    let getRegexpMatches (input: MarkupString) (pattern: MarkupString) : (Match * MarkupString seq) seq =
         ((plainText input), (plainText pattern))
         |> Regex.Matches
         |> Seq.cast<Match>
@@ -401,7 +401,7 @@ module ColumnSpec =
         let matchResult = regex.Match(spec)
 
         if not matchResult.Success then
-            raise (ArgumentException(sprintf "Invalid column specification: %s" spec))
+            raise (ArgumentException $"Invalid column specification: %s{spec}")
 
         let justification =
             if matchResult.Groups.[1].Success then
@@ -465,8 +465,8 @@ module TextAligner =
         | Justification.Full -> fullJustify text width fill
         | _ -> text.PadRight(width, fill)
 
-    let partitionWords (spec: ColumnSpec) (colWords: list<string>) : list<string> * list<string> =
-        let rec collectWords (acc: list<string>) (remaining: list<string>) =
+    let partitionWords (spec: ColumnSpec) (colWords: string list) : string list * string list =
+        let rec collectWords (acc: string list) (remaining: string list) =
             match remaining with
             | word :: rest when String.Join(" ", acc @ [ word ]).Length <= spec.Width ->
                 collectWords (acc @ [ word ]) rest
@@ -474,7 +474,7 @@ module TextAligner =
 
         collectWords [] colWords
 
-    let buildRowText (spec: ColumnSpec) (colWords: list<string>) =
+    let buildRowText (spec: ColumnSpec) (colWords: string list) =
         let rowWords, remainingWords = partitionWords spec colWords
         let rowText = String.Join(" ", rowWords)
 
@@ -495,7 +495,7 @@ module TextAligner =
         else
             rowText, remainingWords
 
-    let align (widths: string) (columns: list<string>) (filler: char) (colsep: char) (rowsep: char) =
+    let align (widths: string) (columns: string list) (filler: char) (colsep: char) (rowsep: char) =
         let rowSepString = rowsep |> Char.ToString
 
         let columnSpecs =
