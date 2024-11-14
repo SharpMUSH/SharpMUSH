@@ -24,7 +24,6 @@ At this time, there is no release candidate, as this project is not ready for pr
 ## How to Build and Test
 - Install [.Net 9](https://dotnet.microsoft.com/en-us/download/dotnet/9.0)
 - Install [Docker Desktop](https://www.docker.com/products/docker-desktop/)
-- Install [Java](https://adoptium.net/) (Optional) to change the Parser.
 
 Build with:
 ```bash
