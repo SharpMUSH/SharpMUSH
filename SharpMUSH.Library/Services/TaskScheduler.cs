@@ -35,7 +35,7 @@ public class TaskScheduler : ITaskScheduler
 
 	private record TaskQueue(
 		OneOf<SemaphoreSlim, TimeSpan, None> WaitType,
-		DateTimeOffset entryTime,
+		DateTimeOffset EntryTime,
 		TaskQueueType Type,
 		string? Handle,
 		MString Command,
@@ -90,7 +90,7 @@ public class TaskScheduler : ITaskScheduler
 				case { State: null }:
 					throw new Exception("This should never occur");
 				case { WaitType.IsT1: true }:
-					if (DateTimeOffset.UtcNow - result.entryTime > result.WaitType.AsT1)
+					if (DateTimeOffset.UtcNow - result.EntryTime > result.WaitType.AsT1)
 					{
 						await parser.FromState(result.State).CommandListParse(result.Command);
 					}
