@@ -84,7 +84,7 @@ public class TaskScheduler : ITaskScheduler
 		{
 			switch (result)
 			{
-				case { State: null, Type: TaskQueueType.Socket, Handle: not null }:
+				case { State: null, Type: TaskQueueType.Player | TaskQueueType.Socket, Handle: not null }:
 					await parser.CommandParse(result.Handle, result.Command); // Direct user input.
 					continue;
 				case { State: null }:
