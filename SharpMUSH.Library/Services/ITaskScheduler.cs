@@ -9,5 +9,5 @@ public interface ITaskScheduler
 	ValueTask WriteCommand(MString command, ParserState? state);
 	ValueTask WriteCommandList(MString command, ParserState? state);
 	ValueTask WriteCommandList(MString command, ParserState? state, SemaphoreSlim semaphore);
-	ValueTask WriteCommandList(MString command, ParserState? state, string cron);
+	ValueTask WriteCommandList(MString command, ParserState? state, TimeSpan cron);
 }

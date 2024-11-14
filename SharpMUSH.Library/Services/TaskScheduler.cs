@@ -18,10 +18,10 @@ public class TaskScheduler : ITaskScheduler
 		Player = Object << 1,
 		Socket = Player << 1,
 		InPlace = Socket << 1,
-		NoBreaks = InPlace <<1,
-		PreserveQReg = NoBreaks <<1,
-		ClearQReg = PreserveQReg <<1,
-		PropagateQReg = ClearQReg <<1,
+		NoBreaks = InPlace << 1,
+		PreserveQReg = NoBreaks << 1,
+		ClearQReg = PreserveQReg << 1,
+		PropagateQReg = ClearQReg << 1,
 		NoList = PropagateQReg << 1,
 		Break = NoList << 1,
 		Retry = Break << 1,
@@ -34,7 +34,8 @@ public class TaskScheduler : ITaskScheduler
 	}
 
 	private record TaskQueue(
-		OneOf<SemaphoreSlim, string, None> WaitType,
+		OneOf<SemaphoreSlim, TimeSpan, None> WaitType,
+		DateTimeOffset entryTime,
 		TaskQueueType Type,
 		string? Handle,
 		MString Command,
@@ -42,31 +43,31 @@ public class TaskScheduler : ITaskScheduler
 
 	public async ValueTask WriteUserCommand(string handle, MString command, ParserState? state)
 	{
-		Pipe.Enqueue(new TaskQueue(new None(), TaskQueueType.Player | TaskQueueType.Socket, handle, command, state));
+		Pipe.Enqueue(new TaskQueue(new None(), DateTimeOffset.UtcNow, TaskQueueType.Player | TaskQueueType.Socket, handle, command, state));
 		await ValueTask.CompletedTask;
 	}
 
 	public async ValueTask WriteCommand(MString command, ParserState? state)
 	{
-		Pipe.Enqueue(new TaskQueue(new None(), TaskQueueType.NoList, null, command, state));
+		Pipe.Enqueue(new TaskQueue(new None(), DateTimeOffset.UtcNow, TaskQueueType.NoList, null, command, state));
 		await ValueTask.CompletedTask;
 	}
 
 	public async ValueTask WriteCommandList(MString command, ParserState? state)
 	{
-		Pipe.Enqueue(new TaskQueue(new None(), TaskQueueType.Default, null, command, state));
+		Pipe.Enqueue(new TaskQueue(new None(), DateTimeOffset.UtcNow, TaskQueueType.Default, null, command, state));
 		await ValueTask.CompletedTask;
 	}
 
 	public async ValueTask WriteCommandList(MString command, ParserState? state, SemaphoreSlim semaphore)
 	{
-		Pipe.Enqueue(new TaskQueue(semaphore, TaskQueueType.Default, null, command, state));
+		Pipe.Enqueue(new TaskQueue(semaphore, DateTimeOffset.UtcNow, TaskQueueType.Default, null, command, state));
 		await ValueTask.CompletedTask;
 	}
-	
-	public async ValueTask WriteCommandList(MString command, ParserState? state, string cron)
+
+	public async ValueTask WriteCommandList(MString command, ParserState? state, TimeSpan time)
 	{
-		Pipe.Enqueue(new TaskQueue(cron, TaskQueueType.Default, null, command, state));
+		Pipe.Enqueue(new TaskQueue(time, DateTimeOffset.UtcNow, TaskQueueType.Default, null, command, state));
 		await ValueTask.CompletedTask;
 	}
 
@@ -77,40 +78,40 @@ public class TaskScheduler : ITaskScheduler
 		if (stoppingToken.IsCancellationRequested) return;
 		if (!Pipe.TryDequeue(out var result)) return;
 
-		if (result.WaitType.IsT0 || result.WaitType.IsT1)
-		{
-			throw new NotImplementedException();
-		}
-		
-		if (result.State is not null)
+		var skipStack = new ConcurrentStack<TaskQueue>();
+
+		do
 		{
 			switch (result)
 			{
-				case { Type: TaskQueueType.Socket, Handle: not null }:
-					await parser.FromState(result.State).CommandParse(result.Handle, result.Command);
-					break;
+				case { State: null, Type: TaskQueueType.Socket, Handle: not null }:
+					await parser.CommandParse(result.Handle, result.Command); // Direct user input.
+					continue;
+				case { State: null }:
+					throw new Exception("This should never occur");
+				case { WaitType.IsT1: true }:
+					if (DateTimeOffset.UtcNow - result.entryTime > result.WaitType.AsT1)
+					{
+						await parser.FromState(result.State).CommandListParse(result.Command);
+					}
+					continue;
+				case { WaitType.IsT0: true }:
+					// TODO: Implement Semaphore Wait
+					throw new NotImplementedException("Implement Scheduled Semaphores.");
 				case { Type: TaskQueueType.NoList }:
 					await parser.FromState(result.State).CommandParse(result.Command);
-					break;
+					continue;
 				case { Type: TaskQueueType.Default }:
 					await parser.FromState(result.State).CommandListParse(result.Command);
-					break;
+					continue;
 			}
-		}
-		else
+
+			skipStack.Push(result);
+		} while (Pipe.TryDequeue(out result));
+
+		foreach (var item in skipStack)
 		{
-			switch (result)
-			{
-				case { Type: TaskQueueType.Socket, Handle: not null }:
-					await parser.CommandParse(result.Handle, result.Command);
-					break;
-				case { Type: TaskQueueType.NoList }:
-					await parser.CommandParse(result.Command);
-					break;
-				case { Type: TaskQueueType.Default }:
-					await parser.CommandListParse(result.Command);
-					break;
-			}
+			Pipe.Enqueue(item);
 		}
 	}
 }
