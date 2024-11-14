@@ -13,7 +13,7 @@ public class SchedulerService(ILogger<SchedulerService> logger, ITaskScheduler s
 		{
 			try
 			{
-				await Task.Delay(1, stoppingToken);
+				await Task.Delay(20, stoppingToken);
 				await scheduler.ExecuteAsync(parser, stoppingToken);
 			}
 			catch (Exception ex)
