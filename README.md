@@ -22,7 +22,7 @@ It takes its basis and functionality heavily from PennMUSH and its brethren with
 At this time, there is no release candidate, as this project is not ready for production. You are invited to contribute.
 
 ## How to Build and Test
-- Install [.Net 8](https://dotnet.microsoft.com/en-us/download/dotnet/8.0)
+- Install [.Net 9](https://dotnet.microsoft.com/en-us/download/dotnet/9.0)
 - Install [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 - Install [Java](https://adoptium.net/) (Optional) to change the Parser.
 
