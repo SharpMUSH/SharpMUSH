@@ -57,7 +57,7 @@ public class ArangoDBTests : BaseUnitTest
 	}
 
 	[Test]
-	[Repeat(10), NotInParallel]
+	[Repeat(10)]
 	public async Task SetAndOverrideAnAttribute()
 	{
 		var playerOne = (await _database!.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
@@ -89,7 +89,7 @@ public class ArangoDBTests : BaseUnitTest
 	}
 
 	[Test]
-	[Repeat(10), NotInParallel] // Exclusive Locks are needed first. Otherwise there will be write-write errors. 
+	[Repeat(10)] // Exclusive Locks are needed first. Otherwise there will be write-write errors. 
 	public async Task SetAndGetAnAttribute()
 	{
 		var playerOne = (await _database!.GetObjectNodeAsync(new DBRef(1))).AsPlayer;

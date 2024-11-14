@@ -54,7 +54,7 @@ public class ArangoDatabase(
 			WaitForSync = true,
 			Collections = new ArangoTransactionScope
 			{
-				Write =
+				Exclusive =
 				[
 					DatabaseConstants.objects,
 					DatabaseConstants.players,
@@ -641,7 +641,7 @@ public class ArangoDatabase(
 			AllowImplicit = false,
 			Collections = new ArangoTransactionScope
 			{
-				Write = [DatabaseConstants.attributes, DatabaseConstants.hasAttribute, DatabaseConstants.hasAttributeOwner],
+				Exclusive = [DatabaseConstants.attributes, DatabaseConstants.hasAttribute, DatabaseConstants.hasAttributeOwner],
 				Read =
 				[
 					DatabaseConstants.attributes, DatabaseConstants.hasAttribute, DatabaseConstants.objects,
@@ -682,7 +682,7 @@ public class ArangoDatabase(
 						? value
 						: string.Empty,
 					string.Join('`', attribute.SkipLast(remaining.Length - 1 - nextAttr.i).Select(x => x.ToUpper()))),
-				waitForSync: true, exclusive: true);
+				waitForSync: true);
 
 			await arangoDB.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.graphAttributes,
 				DatabaseConstants.hasAttribute,
@@ -699,7 +699,7 @@ public class ArangoDatabase(
 		if (remaining.Length == 0)
 		{
 			await arangoDB.Document.UpdateAsync(transactionHandle, DatabaseConstants.attributes,
-				new { Key = lastId.Split("/")[1], Value = value}, waitForSync: true, exclusive: true, mergeObjects: true);
+				new { Key = lastId.Split("/")[1], Value = value}, waitForSync: true, mergeObjects: true);
 
 			await arangoDB.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.graphAttributeOwners,
 				DatabaseConstants.hasAttributeOwner,
