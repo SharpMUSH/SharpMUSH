@@ -11,6 +11,14 @@ public class AnySharpContent : OneOfBase<SharpPlayer, SharpExit, SharpThing>
 	public static implicit operator AnySharpContent(SharpExit x) => new(x);
 	public static implicit operator AnySharpContent(SharpThing x) => new(x);
 
+	public bool IsPlayer => IsT0;
+	public bool IsExit => IsT1;
+	public bool IsThing => IsT2;
+
+	public SharpPlayer AsPlayer => AsT0;
+	public SharpExit AsExit => AsT1;
+	public SharpThing AsThing => AsT2;
+	
 	public AnySharpObject WithRoomOption()
 		=> Match<AnySharpObject>(
 			player => player,

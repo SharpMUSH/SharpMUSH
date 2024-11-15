@@ -34,7 +34,7 @@ public class GeneralCommandTests : BaseUnitTest
 
 		await parser.NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<DBRef>(), expected);
+			.Notify(Arg.Any<AnySharpObject>(), expected);
 	}
 
 	[Test]
@@ -45,7 +45,7 @@ public class GeneralCommandTests : BaseUnitTest
 
 		await parser.NotifyService
 			.Received(Quantity.Exactly(3))
-			.Notify(Arg.Any<DBRef>(), "This is a test");
+			.Notify(Arg.Any<AnySharpObject>(), "This is a test");
 	}
 
 	[Test]
@@ -56,7 +56,7 @@ public class GeneralCommandTests : BaseUnitTest
 
 		await parser.NotifyService
 			.Received(Quantity.Exactly(3))
-			.Notify(Arg.Any<DBRef>(), "This is, a test");
+			.Notify(Arg.Any<AnySharpObject>(), "This is, a test");
 	}
 
 	[Test]
@@ -67,10 +67,10 @@ public class GeneralCommandTests : BaseUnitTest
 
 		await parser.NotifyService
 			.Received(Quantity.Exactly(3))
-			.Notify(Arg.Any<DBRef>(), "This is a test");
+			.Notify(Arg.Any<AnySharpObject>(), "This is a test");
 		await parser.NotifyService
 			.Received(Quantity.Exactly(3))
-			.Notify(Arg.Any<DBRef>(), "This is also a test");
+			.Notify(Arg.Any<AnySharpObject>(), "This is also a test");
 	}
 	
 	[Test]
@@ -81,13 +81,13 @@ public class GeneralCommandTests : BaseUnitTest
 
 		await parser.NotifyService
 			.Received(Quantity.Exactly(3))
-			.Notify(Arg.Any<DBRef>(), "This is a test");
+			.Notify(Arg.Any<AnySharpObject>(), "This is a test");
 		await parser.NotifyService
 			.Received(Quantity.Exactly(3))
-			.Notify(Arg.Any<DBRef>(), "This is also a test");
+			.Notify(Arg.Any<AnySharpObject>(), "This is also a test");
 		await parser.NotifyService
 			.Received(Quantity.Exactly(3))
-			.Notify(Arg.Any<DBRef>(), "Repeat 3 times in this mode.");
+			.Notify(Arg.Any<AnySharpObject>(), "Repeat 3 times in this mode.");
 	}
 	
 	[Test]
@@ -98,10 +98,10 @@ public class GeneralCommandTests : BaseUnitTest
 
 		await parser.NotifyService
 			.Received(Quantity.Exactly(3))
-			.Notify(Arg.Any<DBRef>(), "This is a test");
+			.Notify(Arg.Any<AnySharpObject>(), "This is a test");
 		await parser.NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<DBRef>(), "Repeat 1 times in this mode.");
+			.Notify(Arg.Any<AnySharpObject>(), "Repeat 1 times in this mode.");
 	}
 	
 	[Test]
@@ -112,13 +112,13 @@ public class GeneralCommandTests : BaseUnitTest
 
 		await parser.NotifyService
 			.Received(Quantity.Exactly(6))
-			.Notify(Arg.Any<DBRef>(), "This is a test");
+			.Notify(Arg.Any<AnySharpObject>(), "This is a test");
 		await parser.NotifyService
 			.Received(Quantity.Exactly(2))
-			.Notify(Arg.Any<DBRef>(), "Repeat 2 times in this mode.");
+			.Notify(Arg.Any<AnySharpObject>(), "Repeat 2 times in this mode.");
 	}
 		
-	[Test /*, Skip("Severe parser issue found. It's evaluating before it should be evaluating.") */]
+	[Test, Repeat(10)]
 	public async Task DoListComplex5()
 	{
 		var parser = TestParser(ds: database, ls: new LocateService(), ps: permission);
@@ -126,19 +126,19 @@ public class GeneralCommandTests : BaseUnitTest
 
 		await parser.NotifyService
 			.Received(Quantity.Exactly(2))
-			.Notify(Arg.Any<DBRef>(), "This is a test 1");
+			.Notify(Arg.Any<AnySharpObject>(), "This is a test 1");
 		await parser.NotifyService
 			.Received(Quantity.Exactly(2))
-			.Notify(Arg.Any<DBRef>(), "This is a test 2");
+			.Notify(Arg.Any<AnySharpObject>(), "This is a test 2");
 		await parser.NotifyService
 			.Received(Quantity.Exactly(2))
-			.Notify(Arg.Any<DBRef>(), "This is a test 3");
+			.Notify(Arg.Any<AnySharpObject>(), "This is a test 3");
 		await parser.NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<DBRef>(), "Repeat 1 times in this mode a");
+			.Notify(Arg.Any<AnySharpObject>(), "Repeat 1 times in this mode a");
 		await parser.NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<DBRef>(), "Repeat 1 times in this mode b");
+			.Notify(Arg.Any<AnySharpObject>(), "Repeat 1 times in this mode b");
 	}
 
 	[Test, Skip("Not Implemented")]

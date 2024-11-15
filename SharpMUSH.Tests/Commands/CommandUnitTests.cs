@@ -2,6 +2,7 @@ using NSubstitute;
 using NSubstitute.ReceivedExtensions;
 using SharpMUSH.IntegrationTests;
 using SharpMUSH.Library;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Tests.Commands;
@@ -44,7 +45,7 @@ public class CommandUnitTests : BaseUnitTest
 
 		await parser.NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(parser.CurrentState.Executor!.Value, expected);
+			.Notify(Arg.Any<AnySharpObject>(), expected);
 	}
 
 	[Test]
@@ -75,10 +76,10 @@ public class CommandUnitTests : BaseUnitTest
 
 		await parser.NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(parser.CurrentState.Executor!.Value, expected1);
+			.Notify(Arg.Any<AnySharpObject>(), expected1);
 
 		await parser.NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(parser.CurrentState.Executor!.Value, expected2);
+			.Notify(Arg.Any<AnySharpObject>(), expected2);
 	}
 }

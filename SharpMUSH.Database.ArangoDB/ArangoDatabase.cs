@@ -359,15 +359,16 @@ public class ArangoDatabase(
 	private AnySharpContainer GetLocation(string id)
 	{
 		var locationId = arangoDB.Query.ExecuteAsync<string>(handle,
-			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphLocations} RETURN v._id").Result.First();
+			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphLocations} RETURN v._id",
+			cache: true).Result.First();
 		var locationObject = GetObjectNodeAsync(locationId).Result;
 
 		return locationObject.Match<AnySharpContainer>(
 			player => player,
 			room => room,
-			exit => throw new Exception("Invalid Location found"),
+			_ => throw new Exception("Invalid Location found"),
 			thing => thing,
-			none => throw new Exception("Invalid Location found"));
+			_ => throw new Exception("Invalid Location found"));
 	}
 
 	public async Task<AnyOptionalSharpObject> GetObjectNodeAsync(DBRef dbref)

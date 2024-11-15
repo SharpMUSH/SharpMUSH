@@ -25,5 +25,6 @@ public class AnyOptionalSharpObjectOrError : OneOfBase<SharpPlayer, SharpRoom, S
 	public SharpRoom AsRoom => AsT1;
 	public SharpExit AsExit => AsT2;
 	public SharpThing AsThing => AsT3;
+	public OneOf.Types.None AsNone => AsT4;
 	public OneOf.Types.Error<string> AsError => AsT5;
 }

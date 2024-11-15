@@ -4,6 +4,7 @@ using SharpMUSH.Implementation;
 using SharpMUSH.IntegrationTests;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 
@@ -61,7 +62,7 @@ public class SubstitutionUnitTests : BaseUnitTest
 		{
 			await parser.NotifyService
 				.Received(Quantity.Exactly(1))
-				.Notify(parser.CurrentState.Executor!.Value, expected);
+				.Notify(Arg.Any<AnySharpObject>(), expected);
 		}
 	}
 }

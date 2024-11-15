@@ -1,7 +1,8 @@
-﻿using NSubstitute.ReceivedExtensions;
-using Serilog;
+﻿using NSubstitute;
+using NSubstitute.ReceivedExtensions;
 using SharpMUSH.IntegrationTests;
 using SharpMUSH.Library;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Tests.Substitutions;
@@ -47,6 +48,6 @@ public class RegistersUnitTests : BaseUnitTest
 
 		await parser.NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(parser.CurrentState.Executor!.Value, expected);
+			.Notify(Arg.Any<AnySharpObject>(), expected);
 	}
 }

@@ -382,11 +382,11 @@ public static partial class Commands
 			return new CallState(string.Empty);
 		}
 
-		var notification = args["1"]!.Message!.ToString();
-		var targetListText = MModule.plainText(args["0"]!.Message!);
+		var notification = args["1"].Message!.ToString();
+		var targetListText = MModule.plainText(args["0"].Message!);
 		var nameListTargets = Functions.Functions.NameList(targetListText);
 
-		var enactor = parser.Database.GetObjectNode(parser.CurrentState.Executor!.Value).Known();
+		var enactor = parser.CurrentState.ExecutorObject(parser.Database).Known();
 
 		foreach (var target in nameListTargets)
 		{
@@ -396,7 +396,7 @@ public static partial class Commands
 
 			if (locateTarget.IsValid())
 			{
-				await parser.NotifyService.Notify(locateTarget.WithoutError().Known().Object().DBRef, notification);
+				await parser.NotifyService.Notify(locateTarget.WithoutError().Known(), notification);
 			}
 		}
 
