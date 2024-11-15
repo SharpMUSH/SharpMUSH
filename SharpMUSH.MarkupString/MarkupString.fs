@@ -92,17 +92,17 @@ module MarkupStringModule =
             let postfix (markupType: MarkupTypes) : string =
                 match markupType with
                 | MarkedupText markup -> markup.Postfix
-                | Empty -> System.String.Empty
+                | Empty -> String.Empty
 
             let prefix (markupType: MarkupTypes) : string =
                 match markupType with
                 | MarkedupText markup -> markup.Prefix
-                | Empty -> System.String.Empty
+                | Empty -> String.Empty
 
             let optimize (markupType: MarkupTypes) (text: string) : string =
                 match markupType with
                 | MarkedupText markup -> markup.Optimize text
-                | Empty -> System.String.Empty
+                | Empty -> String.Empty
 
             let firstMarkedupTextType = findFirstMarkedupText this
 
@@ -125,7 +125,7 @@ module MarkupStringModule =
         MarkupString(MarkedupText markupDetails, [ MarkupText mu ])
 
     let markupMultiple (markupDetails: Markup, mu: seq<MarkupString>) : MarkupString =
-        MarkupString(MarkedupText markupDetails, mu |> Seq.map (fun x -> MarkupText x) |> Seq.toList)
+        MarkupString(MarkedupText markupDetails, mu |> Seq.map MarkupText |> Seq.toList)
 
     let single (str: string) : MarkupString = MarkupString(Empty, [ Text str ])
 
@@ -192,7 +192,7 @@ module MarkupStringModule =
     [<TailCall>]
     let rec substring (start: int) (length: int) (markupStr: MarkupString) : MarkupString =
         let inline extractText str start length =
-            if length <= 0 || str = System.String.Empty then
+            if length <= 0 || str = String.Empty then
                 None
             else
                 Some(str.Substring(start, min (str.Length - start) length))
@@ -312,7 +312,7 @@ module MarkupStringModule =
                     let start = indexes |> Seq.head
                     let ed = indexes |> Seq.last
                     substring start (ed - start) x)
-
+    
     let getWildcardMatchAsRegex (pattern: MarkupString) : string =
         let escapedPattern = (pattern |> plainText |> Regex.Escape)
         let concatPattern = [| "^"; escapedPattern; "$" |] |> String.Concat
@@ -420,13 +420,13 @@ module ColumnSpec =
             if matchResult.Groups.[3].Success then
                 matchResult.Groups.[3].Value
             else
-                ""
+                String.Empty
 
         let ansi =
             if matchResult.Groups.[4].Success then
                 matchResult.Groups.[4].Value.Trim('(', ')')
             else
-                ""
+                String.Empty
 
         { Width = width
           Justification = justification
@@ -488,7 +488,6 @@ module TextAligner =
                 let truncatedWord =
                     remainingWords.[0].Substring(0, min availableWidth remainingWords.[0].Length)
 
-                let remaining = remainingWords.[0].Substring(truncatedWord.Length)
                 rowText + truncatedWord, truncatedWord :: remainingWords.Tail
             else
                 rowText, remainingWords
@@ -545,7 +544,7 @@ module TextAligner =
                             if String.IsNullOrEmpty(spec.Ansi) then
                                 justified
                             else
-                                sprintf "%s%s" spec.Ansi justified
+                                $"%s{spec.Ansi}%s{justified}"
 
                         justifiedText,
                         (if spec.Options.Contains('`') && rowText = "" then

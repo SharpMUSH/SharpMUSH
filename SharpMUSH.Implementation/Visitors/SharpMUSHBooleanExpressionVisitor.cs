@@ -135,7 +135,9 @@ public class SharpMUSHBooleanExpressionVisitor(ISharpDatabase database, Paramete
 					Flags = Enumerable.Empty<SharpAttributeFlag>(),
 					Value = MModule.single(Guid.NewGuid().ToString()),
 					LongName = string.Empty,
+					Owner = new( () => (SharpPlayer)null!),
 					Leaves = new(Enumerable.Empty<SharpAttribute>),
+					SharpAttributeEntry = new (() => null)
 				}).Value == MModule.single(value);
 
 		return Expression.Invoke(expr, gated);

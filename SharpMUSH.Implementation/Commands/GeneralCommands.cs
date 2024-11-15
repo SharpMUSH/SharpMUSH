@@ -26,7 +26,7 @@ public static partial class Commands
 		}
 
 		var notification = args["0"].Message!.ToString();
-		var enactor = parser.CurrentState.Enactor!.Value;
+		var enactor = parser.CurrentState.EnactorObject(parser.Database).WithoutNone();
 		await parser.NotifyService.Notify(enactor, notification);
 
 		return new None();
@@ -172,7 +172,7 @@ public static partial class Commands
 	[SharpCommand(Name = "HUH_COMMAND", Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> HuhCommand(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var enactor = parser.CurrentState.Enactor!.Value;
+		var enactor = parser.CurrentState.EnactorObject(parser.Database).WithoutNone();
 		await parser.NotifyService.Notify(enactor, "Huh?  (Type \"help\" for help.)");
 		return new None();
 	}
@@ -181,7 +181,7 @@ public static partial class Commands
 		Switches = ["CLEARREGS", "DELIMIT", "INLINE", "INPLACE", "LOCALIZE", "NOBREAK", "NOTIFY"])]
 	public static async ValueTask<Option<CallState>> DoList(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var enactor = parser.CurrentState.Enactor!.Value;
+		var enactor = parser.CurrentState.EnactorObject(parser.Database).WithoutNone();
 
 		if (parser.CurrentState.Arguments.Count < 2)
 		{
@@ -196,18 +196,19 @@ public static partial class Commands
 		var command = parser.CurrentState.Arguments["1"].Message!;
 
 		var visitorFunction = parser.CommandListParseVisitor(command);
+		var lastCallState = CallState.Empty;
 		foreach (var item in list)
 		{
 			wrappedIteration.Value = item!;
 			wrappedIteration.Iteration++;
 			// TODO: This should not need parsing each time.
 			// Just Evaluation by getting the Context and Visiting the Children multiple times.
-			await visitorFunction();
+			lastCallState = await visitorFunction();
 		}
 
 		parser.CurrentState.IterationRegisters.Pop();
 
-		return new None();
+		return lastCallState!;
 	}
 
 	[SharpCommand(Name = "LOOK", Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
@@ -216,7 +217,7 @@ public static partial class Commands
 		// TODO: Consult CONFORMAT, DESCFORMAT, INAMEFORMAT, NAMEFORMAT, etc.
 
 		var args = parser.CurrentState.Arguments;
-		var enactor = parser.CurrentState.Enactor!.Value.Get(parser.Database).WithoutNone();
+		var enactor = parser.CurrentState.EnactorObject(parser.Database).WithoutNone();
 		AnyOptionalSharpObject viewing = new None();
 
 		if (args.Count == 1)
@@ -235,7 +236,7 @@ public static partial class Commands
 		}
 		else
 		{
-			viewing = (await parser.Database.GetLocationAsync(enactor.Object().DBRef, 1)).WithExitOption();
+			viewing = (await parser.Database.GetLocationAsync(enactor.Object().DBRef)).WithExitOption();
 		}
 
 		if (viewing.IsNone())
@@ -247,8 +248,7 @@ public static partial class Commands
 		var viewingObject = viewing.Object()!;
 
 		var name = viewingObject.Name;
-		var location = viewingObject.Key;
-		var contentKeys = contents.Select(x => x.Object()!.Name).ToList();
+		var contentKeys = contents.Select(x => x.Object().Name).ToList();
 		var exitKeys = await parser.Database.GetExitsAsync(viewingObject.DBRef) ?? [];
 		var description = (await parser.AttributeService.GetAttributeAsync(enactor, viewing.Known(), "DESCRIBE",
 				Library.Services.IAttributeService.AttributeMode.Read, false))
@@ -256,8 +256,8 @@ public static partial class Commands
 				attr => MModule.getLength(attr.Value) == 0
 					? MModule.single("There is nothing to see here")
 					: attr.Value,
-				none => MModule.single("There is nothing to see here"),
-				error => MModule.empty());
+				_ => MModule.single("There is nothing to see here"),
+				_ => MModule.empty());
 
 		// TODO: Pass value into NAMEFORMAT
 		await parser.NotifyService.Notify(enactor,
@@ -279,7 +279,7 @@ public static partial class Commands
 	public static async ValueTask<Option<CallState>> Examine(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var enactor = parser.CurrentState.Enactor!.Value.Get(parser.Database).WithoutNone();
+		var enactor = parser.CurrentState.EnactorObject(parser.Database).WithoutNone();
 		AnyOptionalSharpObject viewing = new None();
 
 		// TODO: Implement the version of this command that takes an attribute pattern!
@@ -407,7 +407,7 @@ public static partial class Commands
 	public static async ValueTask<Option<CallState>> Goto(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var enactor = parser.CurrentState.Enactor!.Value;
+		var enactor = parser.CurrentState.EnactorObject(parser.Database).WithoutNone();
 		var enactorObj = parser.CurrentState.EnactorObject(parser.Database).Known();
 		if (args.Count < 1)
 		{
@@ -450,7 +450,7 @@ public static partial class Commands
 	public static async ValueTask<Option<CallState>> Teleport(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var enactor = parser.CurrentState.Enactor!.Value;
+		var enactor = parser.CurrentState.EnactorObject(parser.Database).WithoutNone();
 
 		// If /list - Arg0 can contain multiple SharpObject
 		// If not, Arg0 is a singular object

@@ -39,7 +39,7 @@ public record ParserState(
 	public AnyOptionalSharpObject ExecutorObject(ISharpDatabase db) 
 		=> _executorObject ??= Executor is null ? new None() : db.GetObjectNode(Executor.Value);
 	public AnyOptionalSharpObject EnactorObject(ISharpDatabase db) 
-		=> _enactorObject ??= Executor is null ? new None() : db.GetObjectNode(Executor.Value);
+		=> _enactorObject ??= Enactor is null ? new None() : db.GetObjectNode(Enactor.Value);
 	public AnyOptionalSharpObject CallerObject(ISharpDatabase db) 
 		=> _callerObject ??= Caller is null ? new None() : db.GetObjectNode(Caller.Value);
 
