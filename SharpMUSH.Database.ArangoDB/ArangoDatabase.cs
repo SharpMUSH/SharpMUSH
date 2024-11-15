@@ -23,7 +23,7 @@ public class ArangoDatabase(
 	IPasswordService passwordService // TODO: This doesn't belong in the database layer
 ) : ISharpDatabase
 {
-	public async Task Migrate()
+	public async ValueTask Migrate()
 	{
 		logger.LogInformation("Migrating Database");
 
@@ -43,7 +43,7 @@ public class ArangoDatabase(
 		logger.LogInformation("Migration Completed.");
 	}
 
-	public async Task<DBRef> CreatePlayerAsync(string name, string password, DBRef location)
+	public async ValueTask<DBRef> CreatePlayerAsync(string name, string password, DBRef location)
 	{
 		var time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 		var objectLocation = await GetObjectNodeAsync(location);
@@ -119,7 +119,7 @@ public class ArangoDatabase(
 		return new DBRef(int.Parse(obj.Key), time);
 	}
 
-	public async Task<DBRef> CreateRoomAsync(string name, SharpPlayer creator)
+	public async ValueTask<DBRef> CreateRoomAsync(string name, SharpPlayer creator)
 	{
 		var time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
@@ -135,7 +135,7 @@ public class ArangoDatabase(
 		return new DBRef(int.Parse(obj.Key), time);
 	}
 
-	public async Task<DBRef> CreateThingAsync(string name, AnySharpContainer location, SharpPlayer creator)
+	public async ValueTask<DBRef> CreateThingAsync(string name, AnySharpContainer location, SharpPlayer creator)
 	{
 		var time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
@@ -158,7 +158,7 @@ public class ArangoDatabase(
 		return new DBRef(int.Parse(obj.Key), time);
 	}
 
-	public async Task<DBRef> CreateExitAsync(string name, AnySharpContainer location, SharpPlayer creator)
+	public async ValueTask<DBRef> CreateExitAsync(string name, AnySharpContainer location, SharpPlayer creator)
 	{
 		var time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
@@ -181,7 +181,7 @@ public class ArangoDatabase(
 	public AnyOptionalSharpObject GetObjectNode(DBRef dbref)
 		=> GetObjectNodeAsync(dbref).Result;
 
-	public async Task<SharpObjectFlag?> GetObjectFlagAsync(string name)
+	public async ValueTask<SharpObjectFlag?> GetObjectFlagAsync(string name)
 		=> (await arangoDB.Query.ExecuteAsync<SharpObjectFlag>(
 			handle,
 			$"FOR v in @@C1 FILTER v.Name = @flag RETURN v",
@@ -192,18 +192,18 @@ public class ArangoDatabase(
 			},
 			cache: true)).FirstOrDefault();
 
-	public async Task<IEnumerable<SharpObjectFlag>> GetObjectFlagsAsync()
+	public async ValueTask<IEnumerable<SharpObjectFlag>> GetObjectFlagsAsync()
 		=> await arangoDB.Query.ExecuteAsync<SharpObjectFlag>(
 			handle,
 			$"FOR v in {DatabaseConstants.objectFlags:@} RETURN v",
 			cache: true);
 
-	public Task<bool> SetObjectFlagAsync(DBRef dbref, SharpObjectFlag flag)
+	public ValueTask<bool> SetObjectFlagAsync(DBRef dbref, SharpObjectFlag flag)
 	{
 		throw new NotImplementedException();
 	}
 
-	public Task<bool> UnsetObjectFlagAsync(DBRef dbref, SharpObjectFlag flag)
+	public ValueTask<bool> UnsetObjectFlagAsync(DBRef dbref, SharpObjectFlag flag)
 	{
 		throw new NotImplementedException();
 	}
@@ -231,7 +231,7 @@ public class ArangoDatabase(
 		=> arangoDB.Query.ExecuteAsync<SharpObjectFlag>(handle,
 			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphFlags} RETURN v").Result;
 
-	private async Task<IEnumerable<SharpAttributeFlag>> GetAttributeFlagsAsync(string id)
+	private async ValueTask<IEnumerable<SharpAttributeFlag>> GetAttributeFlagsAsync(string id)
 	{
 		var result = await arangoDB.Query.ExecuteAsync<SharpAttributeFlagQueryResult>(handle,
 			$"FOR v in 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.graphAttributeFlags} RETURN v",
@@ -371,7 +371,7 @@ public class ArangoDatabase(
 			_ => throw new Exception("Invalid Location found"));
 	}
 
-	public async Task<AnyOptionalSharpObject> GetObjectNodeAsync(DBRef dbref)
+	public async ValueTask<AnyOptionalSharpObject> GetObjectNodeAsync(DBRef dbref)
 	{
 		var obj = await arangoDB.Document.GetAsync<SharpObjectQueryResult>(handle, DatabaseConstants.objects,
 			dbref.Number.ToString());
@@ -431,7 +431,7 @@ public class ArangoDatabase(
 		};
 	}
 
-	private async Task<AnyOptionalSharpObject> GetObjectNodeAsync(string dbID)
+	private async ValueTask<AnyOptionalSharpObject> GetObjectNodeAsync(string dbID)
 	{
 		ArangoList<dynamic>? query;
 		if (dbID.StartsWith(DatabaseConstants.objects))
@@ -492,7 +492,7 @@ public class ArangoDatabase(
 		};
 	}
 
-	public async Task<SharpObject?> GetBaseObjectNodeAsync(DBRef dbref)
+	public async ValueTask<SharpObject?> GetBaseObjectNodeAsync(DBRef dbref)
 	{
 		var obj = await arangoDB.Document.GetAsync<SharpObjectQueryResult>(handle, DatabaseConstants.objects,
 			dbref.Number.ToString());
@@ -522,7 +522,7 @@ public class ArangoDatabase(
 			};
 	}
 
-	public async Task<IEnumerable<SharpAttribute>?> GetAttributesAsync(DBRef dbref, string attribute_pattern)
+	public async ValueTask<IEnumerable<SharpAttribute>?> GetAttributesAsync(DBRef dbref, string attribute_pattern)
 	{
 		var startVertex = $"{DatabaseConstants.objects}/{dbref.Number}";
 		var result = await arangoDB.Query.ExecuteAsync<dynamic>(handle, $"RETURN DOCUMENT({startVertex})");
@@ -561,7 +561,7 @@ public class ArangoDatabase(
 		});
 	}
 
-	public async Task<IEnumerable<SharpAttribute>?> GetAttributesRegexAsync(DBRef dbref, string attribute_pattern)
+	public async ValueTask<IEnumerable<SharpAttribute>?> GetAttributesRegexAsync(DBRef dbref, string attribute_pattern)
 	{
 		var startVertex = $"{DatabaseConstants.objects}/{dbref.Number}";
 		var result = await arangoDB.Query.ExecuteAsync<dynamic>(handle, $"RETURN DOCUMENT({startVertex})");
@@ -593,14 +593,14 @@ public class ArangoDatabase(
 		}).ToArray();
 	}
 
-	public async Task SetLockAsync(SharpObject target, string lockName, string lockString)
+	public async ValueTask SetLockAsync(SharpObject target, string lockName, string lockString)
 		=> await arangoDB.Document.UpdateAsync(handle, DatabaseConstants.objects, new
 		{
 			target.Key,
 			Locks = target.Locks.Add(lockName, lockString)
 		}, mergeObjects: true);
 
-	public async Task<IEnumerable<SharpAttribute>?> GetAttributeAsync(DBRef dbref, params string[] attribute)
+	public async ValueTask<IEnumerable<SharpAttribute>?> GetAttributeAsync(DBRef dbref, params string[] attribute)
 	{
 		var startVertex = $"{DatabaseConstants.objects}/{dbref.Number}";
 
@@ -631,7 +631,7 @@ public class ArangoDatabase(
 		}).ToArray();
 	}
 
-	public async Task<bool> SetAttributeAsync(DBRef dbref, string[] attribute, string value, SharpPlayer owner)
+	public async ValueTask<bool> SetAttributeAsync(DBRef dbref, string[] attribute, string value, SharpPlayer owner)
 	{
 		ArgumentException.ThrowIfNullOrEmpty(owner?.Id);
 
@@ -712,21 +712,21 @@ public class ArangoDatabase(
 		return true;
 	}
 
-	public Task<bool> SetAttributeFlagAsync(DBRef dbref, string[] attribute, SharpAttributeFlag flag)
+	public ValueTask<bool> SetAttributeFlagAsync(DBRef dbref, string[] attribute, SharpAttributeFlag flag)
 	{
 		// Do it, and if the flag already existed, rely on the update to just do its thing.
 
 		throw new NotImplementedException();
 	}
 
-	public Task<bool> UnsetAttributeFlagAsync(DBRef dbref, string[] attribute, SharpAttributeFlag flag)
+	public ValueTask<bool> UnsetAttributeFlagAsync(DBRef dbref, string[] attribute, SharpAttributeFlag flag)
 	{
 		// Do it, and if the flag wasn't there, rely on the update to just do its thing.
 
 		throw new NotImplementedException();
 	}
 
-	public async Task<SharpAttributeFlag?> GetAttributeFlagAsync(string flagName)
+	public async ValueTask<SharpAttributeFlag?> GetAttributeFlagAsync(string flagName)
 		=> (await arangoDB.Query.ExecuteAsync<SharpAttributeFlag>(handle,
 			$"FOR v in @@C1 FILTER v.Name = @flag RETURN v",
 			bindVars: new Dictionary<string, object>
@@ -735,26 +735,26 @@ public class ArangoDatabase(
 				{ "flag", flagName }
 			}, cache: true)).FirstOrDefault();
 
-	public async Task<IEnumerable<SharpAttributeFlag>> GetAttributeFlagsAsync() =>
+	public async ValueTask<IEnumerable<SharpAttributeFlag>> GetAttributeFlagsAsync() =>
 		await arangoDB.Query.ExecuteAsync<SharpAttributeFlag>(handle,
 			$"FOR v in {DatabaseConstants.attributeFlags:@} RETURN v",
 			cache: true);
 
-	public Task<bool> ClearAttributeAsync(DBRef dbref, string[] attribute)
+	public ValueTask<bool> ClearAttributeAsync(DBRef dbref, string[] attribute)
 	{
 		// Set the contents to empty.
 
 		throw new NotImplementedException();
 	}
 
-	public Task<bool> WipeAttributeAsync(DBRef dbref, string[] attribute)
+	public ValueTask<bool> WipeAttributeAsync(DBRef dbref, string[] attribute)
 	{
 		// Wipe a list of attributes. We assume the calling code figured out the permissions part.
 
 		throw new NotImplementedException();
 	}
 
-	public async Task<IEnumerable<AnySharpObject>> GetNearbyObjectsAsync(DBRef obj)
+	public async ValueTask<IEnumerable<AnySharpObject>> GetNearbyObjectsAsync(DBRef obj)
 	{
 		var self = (await GetObjectNodeAsync(obj)).WithoutNone();
 		var location = self.Where;
@@ -773,7 +773,7 @@ public class ArangoDatabase(
 	/// <param name="obj">Location</param>
 	/// <param name="depth">Depth</param>
 	/// <returns>The deepest findable object based on depth</returns>
-	public async Task<AnyOptionalSharpContainer> GetLocationAsync(DBRef obj, int depth = 1)
+	public async ValueTask<AnyOptionalSharpContainer> GetLocationAsync(DBRef obj, int depth = 1)
 	{
 		var baseObject = await GetObjectNodeAsync(obj);
 		if (baseObject.IsT4) return new None();
@@ -796,10 +796,10 @@ public class ArangoDatabase(
 		return trueLocation;
 	}
 
-	public async Task<AnySharpContainer> GetLocationAsync(AnySharpObject obj, int depth = 1) =>
+	public async ValueTask<AnySharpContainer> GetLocationAsync(AnySharpObject obj, int depth = 1) =>
 		(await GetLocationAsync(obj.Object().DBRef, depth)).WithoutNone();
 
-	public async Task<IEnumerable<AnySharpContent>?> GetContentsAsync(DBRef obj)
+	public async ValueTask<IEnumerable<AnySharpContent>?> GetContentsAsync(DBRef obj)
 	{
 		var baseObject = await GetObjectNodeAsync(obj);
 		if (baseObject.IsT4) return null;
@@ -825,7 +825,7 @@ public class ArangoDatabase(
 		return result;
 	}
 
-	public async Task<IEnumerable<AnySharpContent>?> GetContentsAsync(AnyOptionalSharpObject node)
+	public async ValueTask<IEnumerable<AnySharpContent>?> GetContentsAsync(AnyOptionalSharpObject node)
 	{
 		var startVertex = node.Id();
 
@@ -842,7 +842,6 @@ public class ArangoDatabase(
 		string[] ids = query.Select(x => (string)x._id).ToArray();
 		var objects = await Task.WhenAll(ids.Select(async x => await GetObjectNodeAsync(x)));
 
-
 		var result = objects.Select(x => x.Match<AnySharpContent>(
 			player => player,
 			room => throw new Exception("Invalid Contents found"),
@@ -853,8 +852,33 @@ public class ArangoDatabase(
 
 		return result;
 	}
+	public async ValueTask<IEnumerable<AnySharpContent>> GetContentsAsync(AnySharpObject node)
+	{
+		var startVertex = node.Id();
 
-	public async Task<IEnumerable<SharpExit>?> GetExitsAsync(DBRef obj)
+		const string locationQuery =
+			$"FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.graphLocations} RETURN v";
+		var query = await arangoDB.Query.ExecuteAsync<dynamic>(handle, $"{locationQuery}",
+			new Dictionary<string, object>
+			{
+				{ "startVertex", startVertex! }
+			});
+
+		string[] ids = (query ?? Enumerable.Empty<dynamic>()).Select(x => (string)x._id).ToArray();
+		var objects = await Task.WhenAll(ids.Select(async x => await GetObjectNodeAsync(x)));
+
+		var result = objects.Select(x => x.Match<AnySharpContent>(
+			player => player,
+			_ => throw new Exception("Invalid Contents found"),
+			exit => exit,
+			thing => thing,
+			_ => throw new Exception("Invalid Contents found")
+		));
+
+		return result;
+	}
+
+	public async ValueTask<IEnumerable<SharpExit>?> GetExitsAsync(DBRef obj)
 	{
 		var baseObject = await GetObjectNodeAsync(obj);
 		if (baseObject.IsT4) return null;
@@ -879,7 +903,7 @@ public class ArangoDatabase(
 		return result;
 	}
 
-	public async Task<IEnumerable<SharpExit>?> GetExitsAsync(AnyOptionalSharpContainer node)
+	public async ValueTask<IEnumerable<SharpExit>?> GetExitsAsync(AnyOptionalSharpContainer node)
 	{
 		var startVertex = node.Id();
 		if (startVertex is null) return null;
@@ -904,7 +928,7 @@ public class ArangoDatabase(
 		return result;
 	}
 
-	public async Task<IEnumerable<SharpPlayer>> GetPlayerByNameAsync(string name)
+	public async ValueTask<IEnumerable<SharpPlayer>> GetPlayerByNameAsync(string name)
 	{
 		// TODO: Look up by Alias.
 		var query = await arangoDB.Query.ExecuteAsync<dynamic>(handle,
@@ -922,7 +946,7 @@ public class ArangoDatabase(
 		return query.Select(x => GetObjectNode((string)x._id).AsPlayer);
 	}
 
-	public async Task MoveObject(AnySharpContent enactorObj, DBRef destination)
+	public async ValueTask MoveObject(AnySharpContent enactorObj, DBRef destination)
 	{
 		var oldLocation = enactorObj.Location();
 		var newLocation = GetObjectNode(destination);

@@ -20,23 +20,23 @@ public class SurrealDatabase(
 	IPasswordService PasswordService
 ) : ISharpDatabase
 {
-	public Task<IEnumerable<SharpAttributeFlag>> GetAttributeFlagsAsync()
+	public ValueTask<IEnumerable<SharpAttributeFlag>> GetAttributeFlagsAsync()
 	{
 		throw new NotImplementedException();
 	}
 
-	public Task<bool> ClearAttributeAsync(DBRef dbref, string[] attribute)
+	public ValueTask<bool> ClearAttributeAsync(DBRef dbref, string[] attribute)
 	{
 		Logger.LogCritical("test");
 		throw new NotImplementedException();
 	}
 
-	public Task<DBRef> CreateExitAsync(string name, AnySharpContainer location, SharpPlayer creator)
+	public ValueTask<DBRef> CreateExitAsync(string name, AnySharpContainer location, SharpPlayer creator)
 	{
 		throw new NotImplementedException();
 	}
 
-	public async Task<DBRef> CreatePlayerAsync(string name, string password, DBRef location)
+	public async ValueTask<DBRef> CreatePlayerAsync(string name, string password, DBRef location)
 	{
 		var time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
@@ -50,62 +50,67 @@ public class SurrealDatabase(
 		return createdDBRef;
 	}
 
-	public Task<DBRef> CreateRoomAsync(string name, SharpPlayer creator)
+	public ValueTask<DBRef> CreateRoomAsync(string name, SharpPlayer creator)
 	{
 		throw new NotImplementedException();
 	}
 
-	public Task<DBRef> CreateThingAsync(string name, AnySharpContainer location, SharpPlayer creator)
+	public ValueTask<DBRef> CreateThingAsync(string name, AnySharpContainer location, SharpPlayer creator)
 	{
 		throw new NotImplementedException();
 	}
 
-	public Task<IEnumerable<SharpAttribute>?> GetAttributeAsync(DBRef dbref, params string[] attribute)
+	public ValueTask<IEnumerable<SharpAttribute>?> GetAttributeAsync(DBRef dbref, params string[] attribute)
 	{
 		throw new NotImplementedException();
 	}
 
-	public Task<IEnumerable<SharpAttribute>?> GetAttributesAsync(DBRef dbref, string attribute_pattern)
+	public ValueTask<IEnumerable<SharpAttribute>?> GetAttributesAsync(DBRef dbref, string attribute_pattern)
 	{
 		throw new NotImplementedException();
 	}
 
-	public Task<SharpObject?> GetBaseObjectNodeAsync(DBRef dbref)
+	public ValueTask<SharpObject?> GetBaseObjectNodeAsync(DBRef dbref)
 	{
 		throw new NotImplementedException();
 	}
 
-	public Task<IEnumerable<AnySharpContent>?> GetContentsAsync(DBRef obj)
+	public ValueTask<IEnumerable<AnySharpContent>?> GetContentsAsync(DBRef obj)
 	{
 		throw new NotImplementedException();
 	}
 
-	public Task<IEnumerable<AnySharpContent>?> GetContentsAsync(AnyOptionalSharpObject node)
+	public ValueTask<IEnumerable<AnySharpContent>?> GetContentsAsync(AnyOptionalSharpObject node)
 	{
 		throw new NotImplementedException();
 	}
 
-	public Task<IEnumerable<SharpExit>?> GetExitsAsync(DBRef obj)
+	public ValueTask<IEnumerable<AnySharpContent>> GetContentsAsync(AnySharpObject node)
 	{
 		throw new NotImplementedException();
 	}
 
-	public Task<IEnumerable<SharpExit>?> GetExitsAsync(AnyOptionalSharpContainer node)
+	public ValueTask<IEnumerable<SharpExit>?> GetExitsAsync(DBRef obj)
 	{
 		throw new NotImplementedException();
 	}
 
-	public Task<AnyOptionalSharpContainer> GetLocationAsync(DBRef obj, int depth = 1)
+	public ValueTask<IEnumerable<SharpExit>?> GetExitsAsync(AnyOptionalSharpContainer node)
 	{
 		throw new NotImplementedException();
 	}
 
-	public Task<AnySharpContainer> GetLocationAsync(AnySharpObject obj, int depth = 1)
+	public ValueTask<AnyOptionalSharpContainer> GetLocationAsync(DBRef obj, int depth = 1)
 	{
 		throw new NotImplementedException();
 	}
 
-	public Task<IEnumerable<AnySharpObject>> GetNearbyObjectsAsync(DBRef obj)
+	public ValueTask<AnySharpContainer> GetLocationAsync(AnySharpObject obj, int depth = 1)
+	{
+		throw new NotImplementedException();
+	}
+
+	public ValueTask<IEnumerable<AnySharpObject>> GetNearbyObjectsAsync(DBRef obj)
 	{
 		throw new NotImplementedException();
 	}
@@ -115,27 +120,27 @@ public class SurrealDatabase(
 		throw new NotImplementedException();
 	}
 
-	public Task<SharpObjectFlag?> GetObjectFlagAsync(string name)
+	public ValueTask<SharpObjectFlag?> GetObjectFlagAsync(string name)
 	{
 		throw new NotImplementedException();
 	}
 
-	public Task<IEnumerable<SharpObjectFlag>> GetObjectFlagsAsync()
+	public ValueTask<IEnumerable<SharpObjectFlag>> GetObjectFlagsAsync()
 	{
 		throw new NotImplementedException();
 	}
 
-	public Task<bool> SetObjectFlagAsync(DBRef dbref, SharpObjectFlag flag)
+	public ValueTask<bool> SetObjectFlagAsync(DBRef dbref, SharpObjectFlag flag)
 	{
 		throw new NotImplementedException();
 	}
 
-	public Task<bool> UnsetObjectFlagAsync(DBRef dbref, SharpObjectFlag flag)
+	public ValueTask<bool> UnsetObjectFlagAsync(DBRef dbref, SharpObjectFlag flag)
 	{
 		throw new NotImplementedException();
 	}
 
-	public Task<AnyOptionalSharpObject> GetObjectNodeAsync(DBRef dbref)
+	public ValueTask<AnyOptionalSharpObject> GetObjectNodeAsync(DBRef dbref)
 	{
 		throw new NotImplementedException();
 	}
@@ -150,47 +155,47 @@ public class SurrealDatabase(
 		throw new NotImplementedException();
 	}
 
-	public Task<IEnumerable<SharpPlayer>> GetPlayerByNameAsync(string name)
+	public ValueTask<IEnumerable<SharpPlayer>> GetPlayerByNameAsync(string name)
 	{
 		throw new NotImplementedException();
 	}
 
-	public Task Migrate()
+	public ValueTask Migrate()
 	{
 		throw new NotImplementedException();
 	}
 
-		public Task MoveObject(AnySharpContent enactorObj, DBRef destination)
+		public ValueTask MoveObject(AnySharpContent enactorObj, DBRef destination)
 		{
 				throw new NotImplementedException();
 		}
 
-		public Task<bool> SetAttributeAsync(DBRef dbref, string[] attribute, string value, SharpPlayer owner)
+		public ValueTask<bool> SetAttributeAsync(DBRef dbref, string[] attribute, string value, SharpPlayer owner)
 	{
 		throw new NotImplementedException();
 	}
 
-	public Task<bool> SetAttributeFlagAsync(DBRef dbref, string[] attribute, SharpAttributeFlag flag)
+	public ValueTask<bool> SetAttributeFlagAsync(DBRef dbref, string[] attribute, SharpAttributeFlag flag)
 	{
 		throw new NotImplementedException();
 	}
 
-	public Task<bool> UnsetAttributeFlagAsync(DBRef dbref, string[] attribute, SharpAttributeFlag flag)
+	public ValueTask<bool> UnsetAttributeFlagAsync(DBRef dbref, string[] attribute, SharpAttributeFlag flag)
 	{
 		throw new NotImplementedException();
 	}
 
-	public Task<SharpAttributeFlag?> GetAttributeFlagAsync(string flagName)
+	public ValueTask<SharpAttributeFlag?> GetAttributeFlagAsync(string flagName)
 	{
 		throw new NotImplementedException();
 	}
 
-	public Task SetLockAsync(SharpObject target, string lockName, string lockString)
+	public ValueTask SetLockAsync(SharpObject target, string lockName, string lockString)
 	{
 		throw new NotImplementedException();
 	}
 
-	public Task<bool> WipeAttributeAsync(DBRef dbref, string[] attribute)
+	public ValueTask<bool> WipeAttributeAsync(DBRef dbref, string[] attribute)
 	{
 		throw new NotImplementedException();
 	}

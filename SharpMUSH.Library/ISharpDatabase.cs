@@ -5,21 +5,21 @@ namespace SharpMUSH.Library;
 
 public interface ISharpDatabase
 {
-	Task Migrate();
+	ValueTask Migrate();
 
-	Task<DBRef> CreatePlayerAsync(string name, string password, DBRef location);
+	ValueTask<DBRef> CreatePlayerAsync(string name, string password, DBRef location);
 
-	Task<DBRef> CreateRoomAsync(string name, SharpPlayer creator);
+	ValueTask<DBRef> CreateRoomAsync(string name, SharpPlayer creator);
 
-	Task<DBRef> CreateThingAsync(string name, AnySharpContainer location, SharpPlayer creator);
+	ValueTask<DBRef> CreateThingAsync(string name, AnySharpContainer location, SharpPlayer creator);
 
-	Task<DBRef> CreateExitAsync(string name, AnySharpContainer location, SharpPlayer creator);
+	ValueTask<DBRef> CreateExitAsync(string name, AnySharpContainer location, SharpPlayer creator);
 
-	Task SetLockAsync(SharpObject target, string lockName, string lockString);
+	ValueTask SetLockAsync(SharpObject target, string lockName, string lockString);
 
-	Task<IEnumerable<SharpAttribute>?> GetAttributeAsync(DBRef dbref, params string[] attribute);
+	ValueTask<IEnumerable<SharpAttribute>?> GetAttributeAsync(DBRef dbref, params string[] attribute);
 	
-	Task<IEnumerable<SharpAttribute>?> GetAttributesAsync(DBRef dbref, string attribute_pattern);
+	ValueTask<IEnumerable<SharpAttribute>?> GetAttributesAsync(DBRef dbref, string attribute_pattern);
 
 	/// <summary>
 	/// Get the Object represented by a Database Reference Number.
@@ -27,7 +27,7 @@ public interface ISharpDatabase
 	/// </summary>
 	/// <param name="dbref">Database Reference Number</param>
 	/// <returns>A OneOf over the object being returned</returns>
-	Task<AnyOptionalSharpObject> GetObjectNodeAsync(DBRef dbref);
+	ValueTask<AnyOptionalSharpObject> GetObjectNodeAsync(DBRef dbref);
 
 	AnyOptionalSharpObject GetObjectNode(DBRef dbref);
 
@@ -36,13 +36,13 @@ public interface ISharpDatabase
 	/// </summary>
 	/// <param name="name">Flag name</param>
 	/// <returns>A SharpObjectFlag, or null if it does not exist</returns>
-	Task<SharpObjectFlag?> GetObjectFlagAsync(string name);
+	ValueTask<SharpObjectFlag?> GetObjectFlagAsync(string name);
 	
 	/// <summary>
 	/// Get all known Object Flags
 	/// </summary>
 	/// <returns>A list of all SharpObjectFlags</returns>
-	Task<IEnumerable<SharpObjectFlag>> GetObjectFlagsAsync();
+	ValueTask<IEnumerable<SharpObjectFlag>> GetObjectFlagsAsync();
 
 
 	/// <summary>
@@ -51,7 +51,7 @@ public interface ISharpDatabase
 	/// <param name="dbref">Database Reference Number</param>
 	/// <param name="flag">Flag</param>
 	/// <returns>Success or Failure</returns>
-	Task<bool> SetObjectFlagAsync(DBRef dbref, SharpObjectFlag flag);
+	ValueTask<bool> SetObjectFlagAsync(DBRef dbref, SharpObjectFlag flag);
 
 	/// <summary>
 	/// Unset an Object flag.
@@ -59,16 +59,16 @@ public interface ISharpDatabase
 	/// <param name="dbref">Database Reference Number</param>
 	/// <param name="flag">Flag</param>
 	/// <returns>Success or Failure</returns>
-	Task<bool> UnsetObjectFlagAsync(DBRef dbref, SharpObjectFlag flag);
+	ValueTask<bool> UnsetObjectFlagAsync(DBRef dbref, SharpObjectFlag flag);
 
 	
 	SharpObject? GetParent(string id);
 
 	IEnumerable<SharpObject> GetParents(string id);
 
-	Task<SharpObject?> GetBaseObjectNodeAsync(DBRef dbref);
+	ValueTask<SharpObject?> GetBaseObjectNodeAsync(DBRef dbref);
 
-	Task<IEnumerable<SharpPlayer>> GetPlayerByNameAsync(string name);
+	ValueTask<IEnumerable<SharpPlayer>> GetPlayerByNameAsync(string name);
 
 	/// <summary>
 	/// Set an attribute. This does not do any checks, as that is up to the functionality itself.
@@ -77,7 +77,7 @@ public interface ISharpDatabase
 	/// <param name="attribute">Attribute Path.</param>
 	/// <param name="value">The value to place into the attribute</param>
 	/// <returns>Success or Failure</returns>
-	Task<bool> SetAttributeAsync(DBRef dbref, string[] attribute, string value, SharpPlayer owner);
+	ValueTask<bool> SetAttributeAsync(DBRef dbref, string[] attribute, string value, SharpPlayer owner);
 
 	/// <summary>
 	/// Set an attribute flag. This does not do any checks, as that is up to the functionality itself.
@@ -86,7 +86,7 @@ public interface ISharpDatabase
 	/// <param name="attribute">Attribute Path.</param>
 	/// <param name="flag">Flag</param>
 	/// <returns>Success or Failure</returns>
-	Task<bool> SetAttributeFlagAsync(DBRef dbref, string[] attribute, SharpAttributeFlag flag);
+	ValueTask<bool> SetAttributeFlagAsync(DBRef dbref, string[] attribute, SharpAttributeFlag flag);
 
 	/// <summary>
 	/// Set an attribute flag. This does not do any checks, as that is up to the functionality itself.
@@ -95,20 +95,20 @@ public interface ISharpDatabase
 	/// <param name="attribute">Attribute Path.</param>
 	/// <param name="flag">Flag</param>
 	/// <returns>Success or Failure</returns>
-	Task<bool> UnsetAttributeFlagAsync(DBRef dbref, string[] attribute, SharpAttributeFlag flag);
+	ValueTask<bool> UnsetAttributeFlagAsync(DBRef dbref, string[] attribute, SharpAttributeFlag flag);
 
 	/// <summary>
 	/// Set an attribute. This does not do any checks, as that is up to the functionality itself.
 	/// </summary>
 	/// <param name="flagName">Flag</param>
 	/// <returns>Success or Failure</returns>
-	Task<SharpAttributeFlag?> GetAttributeFlagAsync(string flagName);
+	ValueTask<SharpAttributeFlag?> GetAttributeFlagAsync(string flagName);
 
 	/// <summary>
 	/// Set an attribute. This does not do any checks, as that is up to the functionality itself.
 	/// </summary>
 	/// <returns>Success or Failure</returns>
-	Task<IEnumerable<SharpAttributeFlag>> GetAttributeFlagsAsync();
+	ValueTask<IEnumerable<SharpAttributeFlag>> GetAttributeFlagsAsync();
 
 	/// <summary>
 	/// Sets an attribute to string.Empty, or if it has no children, removes it entirely.
@@ -117,7 +117,7 @@ public interface ISharpDatabase
 	/// <param name="dbref">Database Reference Number</param>
 	/// <param name="attribute">Attribute Path.</param>
 	/// <returns>Success or Failure</returns>
-	Task<bool> ClearAttributeAsync(DBRef dbref, string[] attribute);
+	ValueTask<bool> ClearAttributeAsync(DBRef dbref, string[] attribute);
 
 	/// <summary>
 	/// Wipe an attribute and all of its children.
@@ -126,21 +126,23 @@ public interface ISharpDatabase
 	/// <param name="dbref">Database Reference Number</param>
 	/// <param name="attribute">Attribute Path.</param>
 	/// <returns>Success or Failure</returns>
-	Task<bool> WipeAttributeAsync(DBRef dbref, string[] attribute);
+	ValueTask<bool> WipeAttributeAsync(DBRef dbref, string[] attribute);
 
-	Task<IEnumerable<AnySharpObject>> GetNearbyObjectsAsync(DBRef obj);
+	ValueTask<IEnumerable<AnySharpObject>> GetNearbyObjectsAsync(DBRef obj);
 	
-	Task<AnyOptionalSharpContainer> GetLocationAsync(DBRef obj, int depth = 1);
+	ValueTask<AnyOptionalSharpContainer> GetLocationAsync(DBRef obj, int depth = 1);
 	
-	Task<AnySharpContainer> GetLocationAsync(AnySharpObject obj, int depth = 1);
+	ValueTask<AnySharpContainer> GetLocationAsync(AnySharpObject obj, int depth = 1);
 
-	Task<IEnumerable<AnySharpContent>?> GetContentsAsync(DBRef obj);
+	ValueTask<IEnumerable<AnySharpContent>?> GetContentsAsync(DBRef obj);
 
-	Task<IEnumerable<AnySharpContent>?> GetContentsAsync(AnyOptionalSharpObject node);
+	ValueTask<IEnumerable<AnySharpContent>?> GetContentsAsync(AnyOptionalSharpObject node);
+	
+	ValueTask<IEnumerable<AnySharpContent>> GetContentsAsync(AnySharpObject node);
 
-	Task<IEnumerable<SharpExit>?> GetExitsAsync(DBRef obj);
+	ValueTask<IEnumerable<SharpExit>?> GetExitsAsync(DBRef obj);
 
-	Task<IEnumerable<SharpExit>?> GetExitsAsync(AnyOptionalSharpContainer node);
+	ValueTask<IEnumerable<SharpExit>?> GetExitsAsync(AnyOptionalSharpContainer node);
 
-	Task MoveObject(AnySharpContent enactorObj, DBRef destination);
+	ValueTask MoveObject(AnySharpContent enactorObj, DBRef destination);
 }
