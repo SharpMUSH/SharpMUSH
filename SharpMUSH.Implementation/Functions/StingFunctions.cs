@@ -19,12 +19,14 @@ public static partial class Functions
 	[SharpFunction(Name = "strcat", Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Concat(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(new(parser.CurrentState.Arguments
+			.OrderBy(x => int.Parse(x.Key))
 			.Select(x => x.Value.Message)
 			.Aggregate((x, y) => MModule.concat(x, y))));
 
 	[SharpFunction(Name = "cat", Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Cat(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(new(parser.CurrentState.Arguments
+			.OrderBy(x => int.Parse(x.Key))
 			.Select(x => x.Value.Message)
 			.Aggregate((x, y) => MModule.concat(x, y, MModule.single(" ")))));
 

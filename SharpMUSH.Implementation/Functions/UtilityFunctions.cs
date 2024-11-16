@@ -334,8 +334,8 @@ public partial class Functions
 		var everythingIsOkay = true;
 
 		// TODO: Check if MarkupString is properly Immutable. If not, make it Immutable!
-		var currentRegisters = parser.CurrentState.Registers.Peek();
-		var newRegisters = currentRegisters.ToDictionary(k => k.Key, kv => kv.Value);
+		var validPeek = parser.CurrentState.Registers.TryPeek(out var currentRegisters);
+		var newRegisters = currentRegisters!.ToDictionary(k => k.Key, kv => kv.Value);
 		parser.CurrentState.Registers.Push(newRegisters);
 
 		for (var i = 0; i < parser.CurrentState.Arguments.Count - 1; i += 2)
@@ -349,14 +349,12 @@ public partial class Functions
 		{
 			// TODO: Warning: .Last may be dangerous on Arguments in case of named arguments?
 			var parsed = await parser.FunctionParse(parser.CurrentState.Arguments.Last().Value.Message!);
-			_ = parser.CurrentState.Registers.Pop();
+			_ = parser.CurrentState.Registers.TryPop(out _);
 			return parsed!;
 		}
-		else
-		{
-			_ = parser.CurrentState.Registers.Pop();
-			return new CallState("#-1 REGISTER NAME INVALID");
-		}
+
+		_ = parser.CurrentState.Registers.TryPop(out _);
+		return new CallState("#-1 REGISTER NAME INVALID");
 	}
 
 	[SharpFunction(Name = "LINK", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -374,7 +372,8 @@ public partial class Functions
 	[SharpFunction(Name = "LISTQ", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> ListQ(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		return ValueTask.FromResult(new CallState(string.Join(" ", parser.CurrentState.Registers.Peek().Keys)));
+		_ = parser.CurrentState.Registers.TryPeek(out var kv);
+		return ValueTask.FromResult(new CallState(string.Join(" ", kv!.Keys)));
 	}
 
 	[SharpFunction(Name = "LSET", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -549,14 +548,16 @@ public partial class Functions
 	{
 		if (parser.CurrentState.Arguments.Count == 0)
 		{
-			parser.CurrentState.Registers.Peek().Clear();
+			var canPeek =parser.CurrentState.Registers.TryPeek(out var peek);
+			peek!.Clear();
 		}
 		else
 		{
 			var registers = MModule.plainText(parser.CurrentState.Arguments["0"].Message).Split(" ");
 			foreach (var r in registers)
 			{
-				parser.CurrentState.Registers.Peek().TryRemove(r);
+				var canPeek = parser.CurrentState.Registers.TryPeek(out var peek);
+				peek!.TryRemove(r);
 			}
 		}
 

@@ -387,10 +387,10 @@ public partial class Functions
 		parser.Push(parser.CurrentState with 
 		{ 
 			CurrentEvaluation = new DBAttribute(actualObject.Object().DBRef, get.Name),
-			Arguments = parser.CurrentState.Arguments.Skip(1)
+			Arguments = new(parser.CurrentState.Arguments.Skip(1)
 				.Select(
 					(value,i) => new KeyValuePair<string,CallState>(i.ToString(), value.Value))
-				.ToDictionary()
+				.ToDictionary())
 		});
 
 		var parsed = await parser.FunctionParse(get.Value);

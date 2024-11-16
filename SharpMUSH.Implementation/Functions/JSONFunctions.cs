@@ -1,4 +1,5 @@
-﻿using SharpMUSH.Implementation.Definitions;
+﻿using System.Collections.Concurrent;
+using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Definitions;
 using System.Text.Json;
@@ -7,7 +8,7 @@ namespace SharpMUSH.Implementation.Functions;
 
 public partial class Functions
 {
-	public static Dictionary<string, Func<Dictionary<string,CallState>, ValueTask<CallState>>> JsonFunctions = new()
+	public static Dictionary<string, Func<ConcurrentDictionary<string,CallState>, ValueTask<CallState>>> JsonFunctions = new()
 	{
 		{"null", NullJSON},
 		{"boolean", BooleanJSON}
@@ -33,12 +34,12 @@ public partial class Functions
 			? await fun(parser.CurrentState.Arguments)
 			: new CallState(MModule.single("#-1 Invalid Type"));
 
-	private static ValueTask<CallState> NullJSON(Dictionary<string, CallState> args)
-		=> (args.Count > 2)
+	private static ValueTask<CallState> NullJSON(ConcurrentDictionary<string, CallState> args)
+		=> args.Count > 2
 			? ValueTask.FromResult(new CallState(string.Format(Errors.ErrorTooManyArguments, "json", 2, args.Count)))
 			: ValueTask.FromResult(new CallState("null"));
 
-	private static ValueTask<CallState> BooleanJSON(Dictionary<string, CallState> args)
+	private static ValueTask<CallState> BooleanJSON(ConcurrentDictionary<string, CallState> args)
 	{
 		if (args.Count != 2)
 		{
@@ -49,7 +50,7 @@ public partial class Functions
 
 		return entry switch
 		{
-			not "1" or "0" or "false" or "true" => ValueTask.FromResult(new CallState("#-1 INVALD VALUE")),
+			not "1" and not "0" and not "false" and not "true" => ValueTask.FromResult(new CallState("#-1 INVALD VALUE")),
 			_ => ValueTask.FromResult(new CallState(entry is "1" or "true" ? "true" : "false"))
 		};
 	}

@@ -48,9 +48,12 @@ public static partial class Substitutions
 	}
 
 	private static CallState HandleRegistrySymbol(CallState symbol, IMUSHCodeParser parser)
-		=> parser.CurrentState.Registers.Peek().TryGetValue(MModule.plainText(symbol.Message).ToUpper(), out var value)
+	{
+		var peek = parser.CurrentState.Registers.TryPeek(out var curVal);
+		return curVal!.TryGetValue(MModule.plainText(symbol.Message).ToUpper(), out var value)
 			? new CallState(value)
 			: new CallState(string.Empty);
+	}
 
 	// Symbol Example: %vw --> vw
 	private static CallState HandleVWX(CallState symbol, IMUSHCodeParser parser)

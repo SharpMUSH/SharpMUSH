@@ -51,7 +51,7 @@ public static partial class Functions
 			libraryMatch = _functionLibrary[name];
 		}
 
-		(var attribute, var function) = libraryMatch;
+		var (attribute, function) = libraryMatch;
 
 		var currentStack = parser.State;
 		var currentState = parser.CurrentState;
@@ -158,7 +158,7 @@ public static partial class Functions
 			Function: name,
 			Command: null,
 			Switches: [],
-			Arguments: refinedArguments.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value)).ToDictionary(),
+			Arguments: new(refinedArguments.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value)).ToDictionary()),
 			Executor: currentState.Executor,
 			Enactor: currentState.Enactor,
 			Caller: currentState.Caller,

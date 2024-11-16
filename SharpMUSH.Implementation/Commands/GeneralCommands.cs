@@ -206,7 +206,7 @@ public static partial class Commands
 			lastCallState = await visitorFunction();
 		}
 
-		parser.CurrentState.IterationRegisters.Pop();
+		parser.CurrentState.IterationRegisters.TryPop(out _);
 
 		return lastCallState!;
 	}

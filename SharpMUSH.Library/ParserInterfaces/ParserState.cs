@@ -1,4 +1,5 @@
-﻿using OneOf.Types;
+﻿using System.Collections.Concurrent;
+using OneOf.Types;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.DiscriminatedUnions;
 
@@ -18,14 +19,14 @@ public class IterationWrapper<T>
 }
 
 public record ParserState(
-	Stack<Dictionary<string, MString>> Registers,
-	Stack<IterationWrapper<MString>> IterationRegisters,
-	Stack<Dictionary<string, MString>> RegexRegisters,
+	ConcurrentStack<Dictionary<string, MString>> Registers,
+	ConcurrentStack<IterationWrapper<MString>> IterationRegisters,
+	ConcurrentStack<Dictionary<string, MString>> RegexRegisters,
 	DBAttribute? CurrentEvaluation,
 	string? Function,
 	string? Command,
 	IEnumerable<string> Switches,
-	Dictionary<string, CallState> Arguments,
+	ConcurrentDictionary<string, CallState> Arguments,
 	DBRef? Executor,
 	DBRef? Enactor,
 	DBRef? Caller,
@@ -47,8 +48,12 @@ public record ParserState(
 	{
 		// TODO: Validate Register Pattern
 
-		var top = Registers.Peek();
-		if (!top.TryAdd(register, value))
+		var canPeek = Registers.TryPeek(out var top);
+		if (!canPeek)
+		{
+			throw new Exception("Could not peek!");
+		}
+		if (!top!.TryAdd(register, value))
 		{
 			top[register] = value;
 		}

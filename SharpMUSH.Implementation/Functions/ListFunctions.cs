@@ -116,7 +116,7 @@ public partial class Functions
 			}
 		}
 
-		parser.CurrentState.IterationRegisters.Pop();
+		parser.CurrentState.IterationRegisters.TryPop(out _);
 
 		return new CallState(MModule.multipleWithDelimiter(sep, result));
 	}
@@ -190,7 +190,8 @@ public partial class Functions
 
 		var executor = parser.CurrentState.ExecutorObject(parser.Database).Known();
 		var enactor = parser.CurrentState.EnactorObject(parser.Database).Known();
-		var objAttr = HelperFunctions.SplitOptionalDBRefAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message!));
+		var objAttr =
+			HelperFunctions.SplitOptionalDBRefAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message!));
 		if (objAttr is { IsT1: true, AsT1: false })
 		{
 			return new CallState(Errors.ErrorObjectAttributeString);
@@ -240,7 +241,10 @@ public partial class Functions
 		var result = new List<MString>();
 		foreach (var item in list)
 		{
-			parser.Push(parser.CurrentState with { Arguments = new() { { "0", new CallState(item) } } });
+			parser.Push(parser.CurrentState with
+			{
+				Arguments = new(new Dictionary<string, CallState> { { "0", new CallState(item) } })
+			});
 			result.Add((await parser.FunctionParse(attrValue))!.Message!);
 			parser.Pop();
 		}

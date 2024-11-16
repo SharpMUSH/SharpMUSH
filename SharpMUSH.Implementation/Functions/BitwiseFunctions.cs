@@ -9,7 +9,7 @@ public partial class Functions
 
 	[SharpFunction(Name = "baseconv", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> BaseConv(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValidateIntegerAndEvaluate(parser.CurrentState.Arguments.Skip(1).ToDictionary(), 
+		=> ValidateIntegerAndEvaluate(new(parser.CurrentState.Arguments.Skip(1).ToDictionary()), 
 		(IEnumerable<int> x) =>
 		{
 			var input = MModule.plainText(parser.CurrentState.Arguments.ElementAt(0).Value.Message!);

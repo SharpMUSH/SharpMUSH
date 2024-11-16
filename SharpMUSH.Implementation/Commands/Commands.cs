@@ -207,7 +207,7 @@ public static partial class Commands
 			var newParser = parser.Push(parser.CurrentState with
 			{
 				CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attr.Name),
-				Arguments = arguments,
+				Arguments = new (arguments),
 				Function = null
 			});
 
@@ -227,7 +227,7 @@ public static partial class Commands
 		var parseState = parser.Push(parser.CurrentState with
 		{
 			Command = "GOTO",
-			Arguments = new() { { "0", new (exit.Object.DBRef.ToString(), 0) } },
+			Arguments = new (new Dictionary<string, CallState> { { "0", new (exit.Object.DBRef.ToString(), 0) } }),
 			Function = null
 		});
 		var result = await _commandLibrary.Single(x => x.Key == "GOTO").Value.Function.Invoke(parseState);
@@ -246,8 +246,8 @@ public static partial class Commands
 		{
 			Command = rootCommand,
 			Switches = switches,
-			Arguments = arguments.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value))
-				.ToDictionary(),
+			Arguments = new(arguments.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value))
+				.ToDictionary()),
 			Function = null
 		});
 		var result = await libraryCommandDefinition.Function.Invoke(parseState);
@@ -268,8 +268,8 @@ public static partial class Commands
 		var newParser = parser.Push(parser.CurrentState with
 		{
 			Command = command,
-			Arguments = arguments.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value))
-				.ToDictionary(),
+			Arguments = new(arguments.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value))
+				.ToDictionary()),
 			Function = null
 		});
 
@@ -295,10 +295,10 @@ public static partial class Commands
 			parser.CurrentState with
 			{
 				Command = singleRootCommand,
-				Arguments = ImmutableDictionary<string, CallState>.Empty
+				Arguments = new(ImmutableDictionary<string, CallState>.Empty
 					.Add("0", new CallState(rest))
 					.AddRange(arguments.Select((value, i) => new KeyValuePair<string, CallState>((i + 1).ToString(), value)))
-					.ToDictionary(),
+					.ToDictionary()),
 				Function = null
 			}
 		);
