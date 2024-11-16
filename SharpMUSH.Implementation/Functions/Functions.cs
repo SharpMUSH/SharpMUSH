@@ -129,6 +129,7 @@ public static partial class Functions
 		}
 		else
 		{
+			// BUG: Something odd is happening with the first evaluation here for arguments. Sometimes resulting in empty strings?
 			refinedArguments = args.Select(x => new CallState(stripAnsi
 					? MModule.plainText2(MModule.substring(x.Start.StartIndex, context.Stop?.StopIndex is null ? 0 : (x.Stop.StopIndex - x.Start.StartIndex + 1), source))
 					: MModule.substring(x.Start.StartIndex, context.Stop?.StopIndex is null ? 0 : (x.Stop.StopIndex - x.Start.StartIndex + 1), source),
