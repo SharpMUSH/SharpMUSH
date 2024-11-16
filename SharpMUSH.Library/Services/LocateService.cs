@@ -54,8 +54,8 @@ public partial class LocateService : ILocateService
 		}
 
 		var match = await LocateMatch(parser, executor, looker, flags, name, (flags & LocateFlags.UseLastIfAmbiguous) != 0);
-		if (match.IsT5) return match.AsT5;
-		if (match.IsT4) return new None();
+		if (match.IsError) return match.AsError;
+		if (match.IsNone) return match.AsNone;
 
 		var result = match.WithoutError().WithoutNone();
 		var location = FriendlyWhereIs(result);
@@ -320,8 +320,8 @@ public partial class LocateService : ILocateService
 					Matched(parser, true, exact, final, curr, rightType, looker, where, cur, bestMatch, flags);
 
 				if (flow == ControlFlow.Break) break;
-				else if (flow == ControlFlow.Continue) continue;
-				else if (flow == ControlFlow.Return) return (bestMatch, final, curr, rightType, exact, ControlFlow.Return);
+				if (flow == ControlFlow.Continue) continue;
+				if (flow == ControlFlow.Return) return (bestMatch, final, curr, rightType, exact, ControlFlow.Return);
 			}
 			else if (!parser.PermissionService.CanInteract(cur, looker, Library.Services.IPermissionService.InteractType.Match))
 			{
@@ -335,8 +335,8 @@ public partial class LocateService : ILocateService
 					Matched(parser, true, exact, final, curr, rightType, looker, where, cur, bestMatch, flags);
 
 				if (flow == ControlFlow.Break) break;
-				else if (flow == ControlFlow.Continue) continue;
-				else if (flow == ControlFlow.Return) return (bestMatch, final, curr, rightType, exact, ControlFlow.Return);
+				if (flow == ControlFlow.Continue) continue;
+				if (flow == ControlFlow.Return) return (bestMatch, final, curr, rightType, exact, ControlFlow.Return);
 			}
 			else if (!flags.HasFlag(LocateFlags.NoPartialMatches)
 			         && !cur.IsExit
@@ -346,8 +346,8 @@ public partial class LocateService : ILocateService
 					Matched(parser, false, exact, final, curr, rightType, looker, where, cur, bestMatch, flags);
 
 				if (flow == ControlFlow.Break) break;
-				else if (flow == ControlFlow.Continue) continue;
-				else if (flow == ControlFlow.Return) return (bestMatch, final, curr, rightType, exact, ControlFlow.Return);
+				if (flow == ControlFlow.Continue) continue;
+				if (flow == ControlFlow.Return) return (bestMatch, final, curr, rightType, exact, ControlFlow.Return);
 			}
 		}
 
@@ -363,19 +363,15 @@ public partial class LocateService : ILocateService
 		if (TypePreferences(flags).Contains(thing1.Object()!.Type) && !TypePreferences(flags).Contains(thing2.Object()!.Type)) return thing1;
 		else if (TypePreferences(flags).Contains(thing2.Object()!.Type)) return thing2;
 
-		if (flags.HasFlag(LocateFlags.PreferLockPass))
+		if (!flags.HasFlag(LocateFlags.PreferLockPass)) return thing2;
+		var key = parser.PermissionService.CouldDoIt(who, thing1, null);
+
+		return key switch
 		{
-			var key = parser.PermissionService.CouldDoIt(who, thing1, null);
-			if (!key && parser.PermissionService.CouldDoIt(who, thing2, null))
-			{
-				return thing2;
-			}
-			else if (key && !parser.PermissionService.CouldDoIt(who, thing2, null))
-			{
-				return thing1;
-			}
-		}
-		return thing2;
+			false when parser.PermissionService.CouldDoIt(who, thing2, null) => thing2,
+			true when !parser.PermissionService.CouldDoIt(who, thing2, null) => thing1,
+			_ => thing2
+		};
 	}
 
 	public static (AnyOptionalSharpObjectOrError BestMatch, int Final, int Curr, int RightType, bool Exact, ControlFlow c) Matched(
@@ -398,7 +394,7 @@ public partial class LocateService : ILocateService
 		}
 		if (final != 0)
 		{
-			AnyOptionalSharpObject bm = ChooseThing(parser, looker, flags, bestMatch.WithoutError(), cur.WithNoneOption());
+			var bm = ChooseThing(parser, looker, flags, bestMatch.WithoutError(), cur.WithNoneOption());
 			if (bm.WithoutNone().Object().DBRef != cur.Object().DBRef)
 			{
 				return (new None(), final, curr, right_type, exact, ControlFlow.Continue);
@@ -449,16 +445,18 @@ public partial class LocateService : ILocateService
 	{
 		if (thing.IsRoom) return null;
 		var minusRoom = thing.MinusRoom();
-		if (thing.IsExit) return OneOfExtensions.Home(minusRoom).Object()?.DBRef;
-		else return OneOfExtensions.Location(minusRoom).Object()?.DBRef;
+		return thing.IsExit 
+			? minusRoom.Home().Object().DBRef 
+			: minusRoom.Location().Object().DBRef;
 	}
 
 	public static AnySharpContainer FriendlyWhereIs(AnySharpObject thing)
 	{
-		if (thing.IsRoom) return thing.AsT1;
+		if (thing.IsRoom) return thing.AsRoom;
 		var minusRoom = thing.MinusRoom();
-		if (thing.IsExit) return minusRoom.Home();
-		else return minusRoom.Location();
+		return thing.IsExit 
+			? minusRoom.Home() 
+			: minusRoom.Location();
 	}
 
 	public static bool Nearby(

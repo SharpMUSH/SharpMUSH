@@ -109,8 +109,8 @@ public class MUSHCodeParser(
 			{
 				// sharpParser.Trace = true;
 				// sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
-				// sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL_EXACT_AMBIG_DETECTION;
-				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL
+				// sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.SLL_EXACT_AMBIG_DETECTION;
+				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.SLL
 			}
 		};
 		var chatContext = sharpParser.startPlainString();
@@ -129,7 +129,7 @@ public class MUSHCodeParser(
 		{
 			Interpreter =
 			{
-				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL
+				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.SLL
 			}
 		};
 		var chatContext = sharpParser.startCommandString();
@@ -148,7 +148,7 @@ public class MUSHCodeParser(
 		{
 			Interpreter =
 			{
-				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL
+				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.SLL
 			}
 		};
 		var chatContext = sharpParser.startCommandString();
@@ -187,7 +187,7 @@ public class MUSHCodeParser(
 		{
 			Interpreter =
 			{
-				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL
+				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.SLL
 			}
 		};
 		var chatContext = sharpParser.startSingleCommandString();
@@ -199,7 +199,6 @@ public class MUSHCodeParser(
 	/// <summary>
 	/// This is the main entry point for commands run by a player.
 	/// </summary>
-	/// <param name="handle">The handle that identifies the connection.</param>
 	/// <param name="text">The text to parse.</param>
 	/// <returns>A completed task.</returns>
 	public async ValueTask CommandParse(MString text)
@@ -211,7 +210,7 @@ public class MUSHCodeParser(
 		{
 			Interpreter =
 			{
-				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL
+				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.SLL
 			}
 		};
 		var chatContext = sharpParser.startSingleCommandString();
@@ -229,7 +228,7 @@ public class MUSHCodeParser(
 		{
 			Interpreter =
 			{
-				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL
+				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.SLL
 			}
 		};
 		var chatContext = sharpParser.commaCommandArgs();
@@ -247,7 +246,7 @@ public class MUSHCodeParser(
 		{
 			Interpreter =
 			{
-				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL
+				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.SLL
 			}
 		};
 		var chatContext = sharpParser.startPlainSingleCommandArg();
@@ -265,7 +264,7 @@ public class MUSHCodeParser(
 		{
 			Interpreter =
 			{
-				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL
+				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.SLL
 			}
 		};
 		var chatContext = sharpParser.startEqSplitCommandArgs();
@@ -283,7 +282,7 @@ public class MUSHCodeParser(
 		{
 			Interpreter =
 			{
-				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL
+				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.SLL
 			}
 		};
 		var chatContext = sharpParser.startEqSplitCommand();
