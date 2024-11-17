@@ -22,13 +22,11 @@ public static partial class Functions
 		AggregateDecimals(parser.CurrentState.Arguments, (acc, sub) => acc * sub);
 
 	[SharpFunction(Name = "div", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.IntegersOnly)]
-	public static ValueTask<CallState> Div(IMUSHCodeParser parser, SharpFunctionAttribute _2) {
-		if (parser.CurrentState.Arguments.Skip(1).Any(x => decimal.TryParse(MModule.plainText(x.Value.Message), out var num) && num == 0))
-		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorDivideByZero));
-		}
-		return AggregateIntegers(parser.CurrentState.Arguments, (acc, sub) => acc / sub);
-	}
+	public static ValueTask<CallState> Div(IMUSHCodeParser parser, SharpFunctionAttribute _2) => 
+		parser.CurrentState.Arguments.Skip(1).Any(x 
+				=> decimal.TryParse(MModule.plainText(x.Value.Message), out var num) && num == 0) 
+			? ValueTask.FromResult(new CallState(Errors.ErrorDivideByZero)) 
+			: AggregateIntegers(parser.CurrentState.Arguments, (acc, sub) => acc / sub);
 
 	[SharpFunction(Name = "fdiv", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
 	public static ValueTask<CallState> FDiv(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>

@@ -111,6 +111,10 @@ public static partial class Functions
 
 		if (!attribute.Flags.HasFlag(FunctionFlags.NoParse))
 		{
+			// BUG: Something odd is happening with the first evaluation here for arguments.
+			// Sometimes resulting in empty strings?
+			// It seems to carry, in my testing, the arg of the previous command. 
+			// It also looked like the stack did not properly get popped.
 			refinedArguments = (await Task.WhenAll(args
 					.Select(async x => new CallState(
 						stripAnsi
