@@ -11,6 +11,7 @@ using OneOf.Types;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
+using DotNext.Threading.Tasks;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -111,7 +112,6 @@ public static partial class Commands
 		// Step 3: Check exit Aliases
 		if (executorObject.IsContent)
 		{
-			var what = executorObject.AsContent;
 			var locate = await parser.LocateService.Locate(
 				parser,
 				executorObject,

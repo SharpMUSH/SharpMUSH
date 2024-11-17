@@ -158,7 +158,7 @@ public partial class LocateService : ILocateService
 		var abs = HelperFunctions.ParseDBRef(name);
 		if (abs.IsSome())
 		{
-			var absObject = parser.Database.GetObjectNode(abs.AsValue());
+			var absObject = await parser.Database.GetObjectNodeAsync(abs.AsValue());
 			match = absObject.WithErrorOption();
 			if (!match.IsT4 && (flags & LocateFlags.AbsoluteMatch) != 0)
 			{

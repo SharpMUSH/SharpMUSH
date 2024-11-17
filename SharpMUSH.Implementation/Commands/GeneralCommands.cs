@@ -195,7 +195,6 @@ public static partial class Commands
 		parser.CurrentState.IterationRegisters.Push(wrappedIteration);
 		var command = parser.CurrentState.Arguments["1"].Message!;
 
-		var visitorFunction = parser.CommandListParseVisitor(command);
 		var lastCallState = CallState.Empty;
 		foreach (var item in list)
 		{
@@ -203,7 +202,7 @@ public static partial class Commands
 			wrappedIteration.Iteration++;
 			// TODO: This should not need parsing each time.
 			// Just Evaluation by getting the Context and Visiting the Children multiple times.
-			lastCallState = await visitorFunction();
+			lastCallState = await parser.CommandListParse(command);
 		}
 
 		parser.CurrentState.IterationRegisters.TryPop(out _);
