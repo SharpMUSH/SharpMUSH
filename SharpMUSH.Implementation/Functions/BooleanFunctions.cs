@@ -61,11 +61,19 @@ public static partial class Functions
 			new(parser.CurrentState.Arguments.Select(x => x.Value.Message!).Any(Predicates.Falsey) ? "1" : "0"));
 
 	[SharpFunction(Name = "cnand", Flags = FunctionFlags.Regular | FunctionFlags.NoParse)]
-	public static ValueTask<CallState> CNand(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValueTask.FromResult<CallState>(new(parser.CurrentState.Arguments.Select(x => x.Value.Message!)
-			.Any(m => Predicates.Falsey(parser.FunctionParse(m).AsTask().Result!.Message!))
-			? "0"
-			: "1"));
+	public static async ValueTask<CallState> CNand(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		foreach (var m in parser.CurrentState.Arguments.Select(x => x.Value.Message!))
+		{
+			var parsed = await parser.FunctionParse(m);
+			if (Predicates.Falsey(parsed!.Message!))
+			{
+				return new("1");
+			}
+		}
+
+		return new("0");
+	}
 
 	[SharpFunction(Name = "neq", Flags = FunctionFlags.Regular | FunctionFlags.DecimalsOnly)]
 	public static ValueTask<CallState> Neq(IMUSHCodeParser parser, SharpFunctionAttribute _2)
