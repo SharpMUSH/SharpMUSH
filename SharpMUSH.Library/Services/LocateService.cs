@@ -188,7 +188,7 @@ public partial class LocateService : ILocateService
 			if (flags.HasFlag(LocateFlags.MatchObjectsInLookerInventory | LocateFlags.MatchRemoteContents))
 			{
 				var contents = parser.Database
-					.GetContentsAsync(where.WithNoneOption())
+					.GetContentsAsync(where.WithNoneOption()).AsTask()
 					.GetAwaiter().GetResult()!
 					.Select(x => x.WithRoomOption());
 				(bestMatch, final, curr, right_type, exact, c) =
@@ -202,7 +202,7 @@ public partial class LocateService : ILocateService
 			    && location.Object().DBRef != where.Object().DBRef)
 			{
 				var contents = parser.Database
-					.GetContentsAsync(location.WithExitOption().WithNoneOption())
+					.GetContentsAsync(location.WithExitOption().WithNoneOption()).AsTask()
 					.GetAwaiter().GetResult()!
 					.Select(x => x.WithRoomOption());
 				(bestMatch, final, curr, right_type, exact, c) =
@@ -226,7 +226,7 @@ public partial class LocateService : ILocateService
 					    && !flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation | LocateFlags.OnlyMatchObjectsInLookerInventory))
 					{
 						var exits = parser.Database
-							.GetContentsAsync(Library.Definitions.Configurable.MasterRoom)
+							.GetContentsAsync(Library.Definitions.Configurable.MasterRoom).AsTask()
 							.GetAwaiter().GetResult()!
 							.Where(x => x.IsT1)!
 							.Select(x => x.WithRoomOption());
@@ -238,7 +238,7 @@ public partial class LocateService : ILocateService
 					if (location.IsRoom)
 					{
 						var exits = parser.Database
-							.GetContentsAsync(location.WithExitOption().WithNoneOption())
+							.GetContentsAsync(location.WithExitOption().WithNoneOption()).AsTask()
 							.GetAwaiter().GetResult()!
 							.Where(x => x.IsT1)
 							.Select(x => x.WithRoomOption());
@@ -261,7 +261,7 @@ public partial class LocateService : ILocateService
 				    && ((location.Object().DBRef != where.Object().DBRef) || !flags.HasFlag(LocateFlags.ExitsPreference)))
 				{
 					var exits = parser.Database
-						.GetContentsAsync(where.WithNoneOption())
+						.GetContentsAsync(where.WithNoneOption()).AsTask()
 						.GetAwaiter().GetResult()!
 						.Where(x => x.IsT1)
 						.Select(x => x.WithRoomOption());
