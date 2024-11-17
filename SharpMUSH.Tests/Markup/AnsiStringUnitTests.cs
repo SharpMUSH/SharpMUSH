@@ -93,7 +93,7 @@ public class AnsiStringUnitTests : BaseUnitTest
 	[MethodDataSource(typeof(Data.Split), nameof(Data.Split.SplitData))]
 	public async Task Split((AnsiString str, string delimiter, AnsiString[] expected) data)
 	{
-		(AnsiString str, string delimiter, AnsiString[] expected) = data;
+		var (str, delimiter, expected) = data;
 		var result = A.split(delimiter, str);
 
 		foreach (var (expectedItem, resultItem) in expected.Zip(result))

@@ -27,7 +27,7 @@ public static partial class Commands
 			typeof(Commands)
 				.GetMethods()
 				.Select(m => (Method: m,
-					Attribute: m.GetCustomAttribute(typeof(SharpCommandAttribute), false) as SharpCommandAttribute))
+					Attribute: m.GetCustomAttribute<SharpCommandAttribute>(false)))
 				.Where(x => x.Attribute is not null)
 				.Select(y =>
 					new KeyValuePair<string, (MethodInfo Method, SharpCommandAttribute Attribute)>(y.Attribute!.Name,
@@ -40,7 +40,7 @@ public static partial class Commands
 				Function)>(
 				key: knownCommand.Key,
 				value: (knownCommand.Value.Attribute,
-					p => (ValueTask<Option<CallState>>)knownCommand.Value.Method.Invoke(null,
+					async p => await (ValueTask<Option<CallState>>)knownCommand.Value.Method.Invoke(null,
 						[p, knownCommand.Value.Attribute])!))));
 
 	/// <summary>
