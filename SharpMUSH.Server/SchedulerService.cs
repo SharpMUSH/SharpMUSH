@@ -7,13 +7,14 @@ namespace SharpMUSH.Server;
 
 public class SchedulerService(ILogger<SchedulerService> logger, ITaskScheduler scheduler, IMUSHCodeParser parser) : BackgroundService
 {
+	private readonly PeriodicTimer _timer = new(TimeSpan.FromMilliseconds(1));
+	
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 	{
-		while (!stoppingToken.IsCancellationRequested)
+		while (await _timer.WaitForNextTickAsync(stoppingToken))
 		{
 			try
 			{
-				await Task.Delay(20, stoppingToken);
 				await scheduler.ExecuteAsync(parser, stoppingToken);
 			}
 			catch (Exception ex)
