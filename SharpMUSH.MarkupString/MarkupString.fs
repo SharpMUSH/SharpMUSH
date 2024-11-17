@@ -1,5 +1,6 @@
 ﻿namespace MarkupString
 
+open System.Collections.Generic
 open System.Text.Json
 open System.Text.RegularExpressions
 open System.Linq
@@ -51,6 +52,19 @@ module MarkupStringModule =
                 | Empty -> str.Wrap(innerText)
                 | MarkedupText outerMarkup -> str.WrapAndRestore(innerText, outerMarkup)
 
+        [<TailCall>]
+        let rec length() : int =
+            let rec getLengthInternal (internalContent: Content list) : int =
+                internalContent
+                |> List.fold
+                    (fun acc item ->
+                        acc
+                        + (match item with
+                           | Text str -> str.Length
+                           | MarkupText mStr -> getLengthInternal mStr.Content))
+                    0
+            getLengthInternal(content)
+                
         let isMarkedup (m: MarkupTypes) =
             match m with
             | MarkedupText _ -> true
@@ -75,10 +89,15 @@ module MarkupStringModule =
         // TODO: Preferably this would use some sort of simple parser.
         let fromConvertableString (markupString: string) : MarkupString =
             MarkupString(Empty, [ Text markupString ])
-
+        
+        let len : Lazy<int> = Lazy<int>(length)
+        
         member val MarkupDetails = markupDetails with get, set
+        
         member val Content = content with get, set
-
+        
+        member val Length = len.Value
+        
         member this.Serialize() =
             JsonSerializer.Serialize(this, JsonSerializerOptions(PropertyNamingPolicy = JsonNamingPolicy.CamelCase))
 
@@ -156,14 +175,7 @@ module MarkupStringModule =
 
     [<TailCall>]
     let rec getLength (markupStr: MarkupString) : int =
-        markupStr.Content
-        |> List.fold
-            (fun acc item ->
-                acc
-                + (match item with
-                   | Text str -> str.Length
-                   | MarkupText mStr -> getLength mStr))
-            0
+        markupStr.Length
 
     let concat
         (originalMarkupStr: MarkupString)
