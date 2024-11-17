@@ -25,6 +25,7 @@ public partial interface IMUSHCodeParser
 	ValueTask CommandParse(MString text);
 	ValueTask<CallState?> CommandSingleArgParse(MString text);
 	ValueTask<CallState?> FunctionParse(MString text);
+	IMUSHCodeParser Empty();
 	IMUSHCodeParser Push(ParserState state);
 	IMUSHCodeParser FromState(ParserState state);
 }

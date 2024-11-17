@@ -56,7 +56,7 @@ public record MUSHCodeParser(
 		_database, _attributeService, _notifyService, _locateService, _commandDiscoveryService, _scheduleService,
 		_connectionService, state);
 
-	public IMUSHCodeParser Empty => this with { State = ImmutableStack<ParserState>.Empty };
+	public IMUSHCodeParser Empty() => this with { State = ImmutableStack<ParserState>.Empty };
 
 	public IMUSHCodeParser Push(ParserState state) => this with { State = State.Push(state) };
 

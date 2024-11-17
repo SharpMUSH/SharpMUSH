@@ -85,7 +85,7 @@ public class TaskScheduler : ITaskScheduler
 			switch (result)
 			{
 				case { State: null, Type: TaskQueueType.Player | TaskQueueType.Socket, Handle: not null }:
-					await parser.CommandParse(result.Handle, result.Command); // Direct user input.
+					await parser.Empty().CommandParse(result.Handle, result.Command); // Direct user input.
 					continue;
 				case { State: null }:
 					throw new Exception("This should never occur");

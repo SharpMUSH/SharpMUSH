@@ -106,10 +106,6 @@ public static partial class Functions
 
 		if (!attribute.Flags.HasFlag(FunctionFlags.NoParse))
 		{
-			// BUG: Something odd is happening with the first evaluation here for arguments.
-			// Sometimes resulting in empty strings?
-			// It seems to carry, in my testing, the arg of the previous command. 
-			// It also looked like the stack did not properly get popped.
 			refinedArguments = (await Task.WhenAll(args
 					.Select(async x => new CallState(
 						stripAnsi
@@ -128,7 +124,6 @@ public static partial class Functions
 		}
 		else
 		{
-			// BUG: Something odd is happening with the first evaluation here for arguments. Sometimes resulting in empty strings?
 			refinedArguments = args.Select(x => new CallState(stripAnsi
 					? MModule.plainText2(MModule.substring(x.Start.StartIndex, context.Stop?.StopIndex is null ? 0 : (x.Stop.StopIndex - x.Start.StartIndex + 1), source))
 					: MModule.substring(x.Start.StartIndex, context.Stop?.StopIndex is null ? 0 : (x.Stop.StopIndex - x.Start.StartIndex + 1), source),
