@@ -13,13 +13,13 @@ public class SharpMUSHBooleanExpressionVisitor(ISharpDatabase database, Paramete
 	protected override Expression AggregateResult(Expression aggregate, Expression nextResult)
 		=> new Expression[] { aggregate, nextResult }.First(x => x is not null);
 
-	private readonly Expression<Func<AnySharpObject, string, bool>> hasFlag = (dbRef, flag)
+	private readonly Expression<Func<AnySharpObject, string, bool>> _hasFlag = (dbRef, flag)
 		=> dbRef.Object().Flags.Value.Any(x => x.Name == flag || x.Symbol == flag);
 
-	private readonly Expression<Func<AnySharpObject, string, bool>> hasPower = (dbRef, power)
+	private readonly Expression<Func<AnySharpObject, string, bool>> _hasPower = (dbRef, power)
 		=> dbRef.Object().Powers.Value.Any(x => x.Name == power || x.Alias == power);
 
-	private readonly Expression<Func<AnySharpObject, string, bool>> isType = (dbRef, type)
+	private readonly Expression<Func<AnySharpObject, string, bool>> _isType = (dbRef, type)
 		=> dbRef.Object().Type == type;
 
 	private static readonly string[] defaultStringArrayValue = [];
@@ -78,13 +78,13 @@ public class SharpMUSHBooleanExpressionVisitor(ISharpDatabase database, Paramete
 	}
 
 	public override Expression VisitBitFlagExpr(SharpMUSHBoolExpParser.BitFlagExprContext context)
-		=> Expression.Invoke(hasFlag, unlocker, Expression.Constant(context.@string().GetText().ToUpper().Trim()));
+		=> Expression.Invoke(_hasFlag, unlocker, Expression.Constant(context.@string().GetText().ToUpper().Trim()));
 
 	public override Expression VisitBitPowerExpr(SharpMUSHBoolExpParser.BitPowerExprContext context)
-		=> Expression.Invoke(hasPower, unlocker, Expression.Constant(context.@string().GetText().ToUpper().Trim()));
+		=> Expression.Invoke(_hasPower, unlocker, Expression.Constant(context.@string().GetText().ToUpper().Trim()));
 
 	public override Expression VisitBitTypeExpr(SharpMUSHBoolExpParser.BitTypeExprContext context)
-		=> Expression.Invoke(isType, unlocker, Expression.Constant(context.@string().GetText().ToUpper().Trim()));
+		=> Expression.Invoke(_isType, unlocker, Expression.Constant(context.@string().GetText().ToUpper().Trim()));
 
 	public override Expression VisitChannelExpr(SharpMUSHBoolExpParser.ChannelExprContext context)
 	{

@@ -9,18 +9,18 @@ namespace SharpMUSH.Implementation.Commands;
 
 public static partial class Commands
 {
-	private readonly static Regex ConnectionPatternRegex = ConnectionPattern();
+	private static readonly Regex ConnectionPatternRegex = ConnectionPattern();
 
 	[SharpCommand(Name = "WHO", Behavior = Definitions.CommandBehavior.SOCKET | Definitions.CommandBehavior.NoParse, MinArgs = 0, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> WHO(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		_ = parser.State;
-		var everyone = parser.ConnectionService.GetAll();
-		var fmt = "{0,-18} {1,10} {2,6}  {3,-32}";
+		// TODO: Get All needs to do a Permission Check for the user.
+		var everyone = parser.ConnectionService.GetAll().ToList();
+		const string fmt = "{0,-18} {1,10} {2,6}  {3,-32}";
 		var header = string.Format(fmt, "Player Name", "On For", "Idle", "Doing");
-		var players = everyone.Where(player => player.Ref.HasValue).Select(player =>
+		var players = await Task.WhenAll(everyone.Where(player => player.Ref.HasValue).Select(async player =>
 		{
-			var name = parser.Database.GetBaseObjectNodeAsync(player.Ref!.Value).GetAwaiter().GetResult();
+			var name = await parser.Database.GetBaseObjectNodeAsync(player.Ref!.Value);
 			var onFor = DateTimeOffset.UtcNow - DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(player.Metadata["ConnectionStartTime"]));
 			var idleFor = DateTimeOffset.UtcNow - DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(player.Metadata["LastConnectionSignal"]));
 			return string.Format(
@@ -29,8 +29,8 @@ public static partial class Commands
 				Functions.Functions.TimeString(onFor, accuracy: 3),
 				Functions.Functions.TimeString(idleFor),
 				"Nothing");
-		});
-		var footer = $"{everyone.Count()} players logged in.";
+		}));
+		var footer = $"{everyone.Count} players logged in.";
 
 		var message = $"{header}{Environment.NewLine}{string.Join(Environment.NewLine, players)}{Environment.NewLine}{footer}";
 
@@ -59,18 +59,18 @@ public static partial class Commands
 		var username = match.Groups["User"].Value;
 		var password = match.Groups["Password"].Value;
 
-		var nameItems = Functions.Functions.NameList(username);
+		var nameItems = Functions.Functions.NameList(username).ToList();
 
-		if(!nameItems.Any())
+		if(nameItems.Count == 0)
 		{
 			await parser.NotifyService.Notify(parser.CurrentState.Handle!, "Could not find that player.");
 			return new None();
 		}
 
 		var nameItem = nameItems.First();
-		var foundDB = nameItem.Match(
-			dbref => parser.Database.GetObjectNodeAsync(dbref).Result.TryPickT0(out var player, out var _) ? player : null,
-			name => parser.Database.GetPlayerByNameAsync(name).Result.FirstOrDefault());
+		var foundDB = await nameItem.Match(
+			async dbref => (await parser.Database.GetObjectNodeAsync(dbref)).TryPickT0(out var player, out _) ? player : null,
+			async name => (await parser.Database.GetPlayerByNameAsync(name)).FirstOrDefault());
 
 		if (foundDB is null)
 		{
@@ -79,7 +79,7 @@ public static partial class Commands
 		}
 
 		// TODO: Step 1: Locate player trough Locator Function.
-		var validPassword = parser.PasswordService.PasswordIsValid($"#{foundDB!.Object!.Key}:{foundDB.Object.CreationTime}", password, foundDB.PasswordHash);
+		var validPassword = parser.PasswordService.PasswordIsValid($"#{foundDB.Object.Key}:{foundDB.Object.CreationTime}", password, foundDB.PasswordHash);
 
 		if(!validPassword && !string.IsNullOrEmpty(foundDB.PasswordHash))
 		{
@@ -90,7 +90,7 @@ public static partial class Commands
 		// TODO: Step 3: Confirm there is no SiteLock.
 		// TODO: Step 4: Bind object in the ConnectionService.
 		parser.ConnectionService.Bind(parser.CurrentState.Handle!, 
-			new DBRef(foundDB!.Object!.Key!, foundDB!.Object!.CreationTime));
+			new DBRef(foundDB.Object.Key, foundDB!.Object!.CreationTime));
 
 		// TODO: Step 5: Trigger OnConnect Event in EventService.
 		await parser.NotifyService.Notify(parser.CurrentState.Handle!, "Connected!");
