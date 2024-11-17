@@ -35,7 +35,7 @@ public static partial class Substitutions
 			_ => new(symbol),
 		};
 
-	public static CallState ParseComplexSubstitution(CallState? symbol, IMUSHCodeParser parser,
+	public static async ValueTask<CallState> ParseComplexSubstitution(CallState? symbol, IMUSHCodeParser parser,
 		ComplexSubstitutionSymbolContext context)
 	{
 		ArgumentNullException.ThrowIfNull(symbol);
@@ -43,7 +43,7 @@ public static partial class Substitutions
 		if (context.REG_NUM() is not null) return HandleRegistrySymbol(symbol, parser);
 		if (context.ITEXT_NUM() is not null) return HandleITextNumber(symbol, parser);
 		if (context.STEXT_NUM() is not null) return HandleSTextNumber(symbol, parser);
-		if (context.VWX() is not null) return HandleVWX(symbol, parser);
+		if (context.VWX() is not null) return await HandleVWX(symbol, parser);
 		return HandleRegistrySymbol(symbol, parser);
 	}
 
@@ -56,14 +56,14 @@ public static partial class Substitutions
 	}
 
 	// Symbol Example: %vw --> vw
-	private static CallState HandleVWX(CallState symbol, IMUSHCodeParser parser)
+	private static async ValueTask<CallState> HandleVWX(CallState symbol, IMUSHCodeParser parser)
 	{
 		var db = parser.Database;
 		var attrService = parser.AttributeService;
 		var executor = parser.CurrentState.ExecutorObject(db).Known();
 
-		var val = attrService.GetAttributeAsync(executor, executor, symbol.Message!.ToString(),
-			IAttributeService.AttributeMode.Read, true).AsTask().Result;
+		var val = await attrService.GetAttributeAsync(executor, executor, symbol.Message!.ToString(),
+			IAttributeService.AttributeMode.Read, true);
 
 		return val.Match(
 			attr => new CallState(attr.Value),

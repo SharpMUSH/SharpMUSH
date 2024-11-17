@@ -150,17 +150,15 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source)
 		if (complexSubstitutionSymbol is not null)
 		{
 			var state = await VisitChildren(context);
-			return Substitutions.Substitutions.ParseComplexSubstitution(state, parser, complexSubstitutionSymbol);
+			return await Substitutions.Substitutions.ParseComplexSubstitution(state, parser, complexSubstitutionSymbol);
 		}
-		else if (simpleSubstitutionSymbol is not null)
+		if (simpleSubstitutionSymbol is not null)
 		{
 			return Substitutions.Substitutions.ParseSimpleSubstitution(simpleSubstitutionSymbol.GetText(), parser,
 				simpleSubstitutionSymbol);
 		}
-		else
-		{
-			return await base.VisitChildren(context) ?? new(textContents, context.Depth());
-		}
+			
+		return await base.VisitChildren(context) ?? new(textContents, context.Depth());
 	}
 
 	public override async ValueTask<CallState?> VisitCommand([NotNull] CommandContext context)
@@ -172,7 +170,7 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source)
 		return (await Commands.Commands.EvaluateCommands(parser, source, context, base.VisitChildren))
 			.Match(
 				x => x,
-				x => (CallState?)null);
+				_ => null as CallState);
 	}
 
 	public override async ValueTask<CallState?> VisitStartCommandString(
