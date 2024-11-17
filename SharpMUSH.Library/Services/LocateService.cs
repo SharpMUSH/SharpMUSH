@@ -276,16 +276,16 @@ public partial class LocateService : ILocateService
 		{
 			return new None();
 		}
-		else if (final == 0 && curr > 1)
-		{
-			if (right_type != 1 && !flags.HasFlag(LocateFlags.UseLastIfAmbiguous))
-			{
-				return new Error<string>(Errors.ErrorAmbiguous);
-			}
-			return bestMatch;
-		}
 
-		return new None();
+		if (final != 0 || curr <= 1) return new None();
+		
+		if (right_type != 1 && !flags.HasFlag(LocateFlags.UseLastIfAmbiguous))
+		{
+			return new Error<string>(Errors.ErrorAmbiguous);
+		}
+		
+		return bestMatch;
+
 	}
 
 	public static (AnyOptionalSharpObjectOrError BestMatch, int Final, int Curr, int RightType, bool Exact, ControlFlow c) Match_List(
@@ -356,12 +356,13 @@ public partial class LocateService : ILocateService
 
 	public static AnyOptionalSharpObject ChooseThing(IMUSHCodeParser parser, AnySharpObject who, LocateFlags flags, AnyOptionalSharpObject thing1, AnyOptionalSharpObject thing2)
 	{
+		// TODO: Fix this. This is silly code.
 		if (thing1.IsNone() && thing2.IsNone()) return thing1.IsNone() ? thing2 : thing1;
-		else if (thing1.IsNone()) return thing2;
-		else if (thing2.IsNone()) return thing1;
+		if (thing1.IsNone()) return thing2;
+		if (thing2.IsNone()) return thing1;
 
 		if (TypePreferences(flags).Contains(thing1.Object()!.Type) && !TypePreferences(flags).Contains(thing2.Object()!.Type)) return thing1;
-		else if (TypePreferences(flags).Contains(thing2.Object()!.Type)) return thing2;
+		if (TypePreferences(flags).Contains(thing2.Object()!.Type)) return thing2;
 
 		if (!flags.HasFlag(LocateFlags.PreferLockPass)) return thing2;
 		var key = parser.PermissionService.CouldDoIt(who, thing1, null);
