@@ -384,7 +384,7 @@ public partial class Functions
 
 		var get = maybeAttr.AsAttribute;
 
-		parser.Push(parser.CurrentState with 
+		var newParser = parser.Push(parser.CurrentState with 
 		{ 
 			CurrentEvaluation = new DBAttribute(actualObject.Object().DBRef, get.Name),
 			Arguments = new(parser.CurrentState.Arguments.Skip(1)
@@ -393,9 +393,7 @@ public partial class Functions
 				.ToDictionary())
 		});
 
-		var parsed = await parser.FunctionParse(get.Value);
-
-		parser.Pop();
+		var parsed = await newParser.FunctionParse(get.Value);
 
 		return parsed!;
 	}

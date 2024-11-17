@@ -66,14 +66,12 @@ public static partial class Functions
 		/* Validation, this should probably go into its own function! */
 		if (args.Length > attribute.MaxArgs)
 		{
-			parser.Pop();
 			// Better Error Needed.
 			return new CallState(Errors.ErrorArgRange, context.Depth());
 		}
 
 		if (args.Length < attribute.MinArgs)
 		{
-			parser.Pop();
 			return new CallState(string.Format(Errors.ErrorTooFewArguments, name, attribute.MinArgs, args.Length), contextDepth);
 		}
 
@@ -91,19 +89,16 @@ public static partial class Functions
 		// But each RefinedArguments call will create a new call to this FunctionParser without depth info.
 		if (contextDepth > Configurable.MaxCallDepth)
 		{
-			parser.Pop();
 			return new CallState(Errors.ErrorCall, contextDepth);
 		}
 
 		if (stackDepth > Configurable.MaxFunctionDepth)
 		{
-			parser.Pop();
 			return new CallState(Errors.ErrorInvoke, stackDepth);
 		}
 
 		if (recursionDepth > Configurable.MaxRecursionDepth)
 		{
-			parser.Pop();
 			return new CallState(Errors.ErrorRecursion, recursionDepth);
 		}
 
@@ -155,7 +150,7 @@ public static partial class Functions
 		}
 
 		// TODO: Consider adding the ParserContexts as Arguments, so that Evaluation can be more optimized.
-		parser.Push(new ParserState(
+		var newParser = parser.Push(new ParserState(
 			Registers: currentState.Registers,
 			IterationRegisters: currentState.IterationRegisters,
 			RegexRegisters: currentState.RegexRegisters,
@@ -170,8 +165,8 @@ public static partial class Functions
 			Handle: currentState.Handle
 		));
 
-		var result = await function(parser) with { Depth = contextDepth };
-		parser.Pop();
+		var result = await function(newParser) with { Depth = contextDepth };
+		
 		return result;
 	}
 

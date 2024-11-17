@@ -12,7 +12,7 @@ namespace SharpMUSH.Implementation;
 /// Provides the parser.
 /// Each call is Synchronous, and stateful at this time.
 /// </summary>
-public class MUSHCodeParser(
+public record MUSHCodeParser(
 	IPasswordService _passwordService,
 	IPermissionService _permissionService,
 	ISharpDatabase _database,
@@ -50,38 +50,15 @@ public class MUSHCodeParser(
 	/// 
 	/// Time to start drawing a tree to make sure we put things in the right spots.
 	/// </summary>
-	public IImmutableStack<ParserState> State { get; private set; } = ImmutableStack<ParserState>.Empty;
-
-	public MUSHCodeParser(
-		IPasswordService passwordService,
-		IPermissionService permissionService,
-		ISharpDatabase database,
-		IAttributeService attributeService,
-		INotifyService notifyService,
-		ILocateService locateService,
-		ICommandDiscoveryService commandDiscoveryService,
-		ITaskScheduler scheduleService,
-		IConnectionService connectionService,
-		ImmutableStack<ParserState> state) :
-		this(passwordService, permissionService, database, attributeService, notifyService, locateService,
-			commandDiscoveryService, scheduleService, connectionService)
-		=> State = state;
+	public IImmutableStack<ParserState> State { get; private init; } = ImmutableStack<ParserState>.Empty;
 
 	public IMUSHCodeParser FromState(ParserState state) => new MUSHCodeParser(_passwordService, _permissionService,
 		_database, _attributeService, _notifyService, _locateService, _commandDiscoveryService, _scheduleService,
 		_connectionService, state);
 
-	public IMUSHCodeParser Push(ParserState state)
-	{
-		State = State.Push(state);
-		return this;
-	}
+	public IMUSHCodeParser Empty => this with { State = ImmutableStack<ParserState>.Empty };
 
-	public IMUSHCodeParser Pop()
-	{
-		State = State.Pop();
-		return this;
-	}
+	public IMUSHCodeParser Push(ParserState state) => this with { State = State.Push(state) };
 
 	public MUSHCodeParser(
 		IPasswordService passwordService,
@@ -166,7 +143,7 @@ public class MUSHCodeParser(
 	public async ValueTask CommandParse(string handle, MString text)
 	{
 		var handleId = ConnectionService.Get(handle);
-		State = State.Push(new ParserState(
+		var newParser = Push(new ParserState(
 			Registers: new([[]]),
 			IterationRegisters: new(),
 			RegexRegisters: new(),
@@ -191,7 +168,7 @@ public class MUSHCodeParser(
 			}
 		};
 		var chatContext = sharpParser.startSingleCommandString();
-		SharpMUSHParserVisitor visitor = new(this, text);
+		SharpMUSHParserVisitor visitor = new(newParser, text);
 
 		await visitor.Visit(chatContext);
 	}

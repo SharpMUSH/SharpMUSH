@@ -241,12 +241,11 @@ public partial class Functions
 		var result = new List<MString>();
 		foreach (var item in list)
 		{
-			parser.Push(parser.CurrentState with
+			var newParser = parser.Push(parser.CurrentState with
 			{
 				Arguments = new(new Dictionary<string, CallState> { { "0", new CallState(item) } })
 			});
-			result.Add((await parser.FunctionParse(attrValue))!.Message!);
-			parser.Pop();
+			result.Add((await newParser.FunctionParse(attrValue))!.Message!);
 		}
 
 		return new CallState(MModule.multipleWithDelimiter(sep, result));
