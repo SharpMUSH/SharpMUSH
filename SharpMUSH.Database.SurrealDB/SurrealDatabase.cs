@@ -165,7 +165,7 @@ public class SurrealDatabase(
 		throw new NotImplementedException();
 	}
 
-		public ValueTask MoveObject(AnySharpContent enactorObj, DBRef destination)
+		public ValueTask MoveObjectAsync(AnySharpContent enactorObj, DBRef destination)
 		{
 				throw new NotImplementedException();
 		}

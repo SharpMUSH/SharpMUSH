@@ -144,5 +144,5 @@ public interface ISharpDatabase
 
 	ValueTask<IEnumerable<SharpExit>?> GetExitsAsync(AnyOptionalSharpContainer node);
 
-	ValueTask MoveObject(AnySharpContent enactorObj, DBRef destination);
+	ValueTask MoveObjectAsync(AnySharpContent enactorObj, DBRef destination);
 }

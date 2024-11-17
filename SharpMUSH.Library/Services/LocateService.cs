@@ -187,9 +187,8 @@ public partial class LocateService : ILocateService
 		{
 			if (flags.HasFlag(LocateFlags.MatchObjectsInLookerInventory | LocateFlags.MatchRemoteContents))
 			{
-				var contents = parser.Database
-					.GetContentsAsync(where.WithNoneOption()).AsTask()
-					.GetAwaiter().GetResult()!
+				var contents = (await parser.Database
+					.GetContentsAsync(where.WithNoneOption()))!
 					.Select(x => x.WithRoomOption());
 				(bestMatch, final, curr, right_type, exact, c) =
 					Match_List(parser, contents, looker, where, bestMatch, exact, final, curr, right_type, flags, name);
@@ -201,9 +200,9 @@ public partial class LocateService : ILocateService
 			    && !flags.HasFlag(LocateFlags.MatchRemoteContents)
 			    && location.Object().DBRef != where.Object().DBRef)
 			{
-				var contents = parser.Database
-					.GetContentsAsync(location.WithExitOption().WithNoneOption()).AsTask()
-					.GetAwaiter().GetResult()!
+				var maybeContents = await parser.Database
+					.GetContentsAsync(location.WithExitOption().WithNoneOption()); 
+				var contents = maybeContents!
 					.Select(x => x.WithRoomOption());
 				(bestMatch, final, curr, right_type, exact, c) =
 					Match_List(parser, contents, looker, where, bestMatch, exact, final, curr, right_type, flags, name);
@@ -225,11 +224,9 @@ public partial class LocateService : ILocateService
 					if (flags.HasFlag(LocateFlags.All)
 					    && !flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation | LocateFlags.OnlyMatchObjectsInLookerInventory))
 					{
-						var exits = parser.Database
-							.GetContentsAsync(Library.Definitions.Configurable.MasterRoom).AsTask()
-							.GetAwaiter().GetResult()!
-							.Where(x => x.IsT1)!
-							.Select(x => x.WithRoomOption());
+						var exits = (await parser.Database
+							.GetExitsAsync(Library.Definitions.Configurable.MasterRoom))!
+							.Select(x => new AnySharpObject(x));
 
 						(bestMatch, final, curr, right_type, exact, c) = Match_List(parser, exits, looker, where, bestMatch, exact, final, curr, right_type, flags, name);
 						if (c == ControlFlow.Break) break;
@@ -237,11 +234,9 @@ public partial class LocateService : ILocateService
 					}
 					if (location.IsRoom)
 					{
-						var exits = parser.Database
-							.GetContentsAsync(location.WithExitOption().WithNoneOption()).AsTask()
-							.GetAwaiter().GetResult()!
-							.Where(x => x.IsT1)
-							.Select(x => x.WithRoomOption());
+						var exits = (await parser.Database
+							.GetExitsAsync(location.WithNoneOption()))!
+							.Select(x => new AnySharpObject(x));
 						(bestMatch, final, curr, right_type, exact, c) = Match_List(parser, exits, looker, where, bestMatch, exact, final, curr, right_type, flags, name);
 						if (c == ControlFlow.Break) break;
 						if (c == ControlFlow.Return) break;
@@ -260,11 +255,9 @@ public partial class LocateService : ILocateService
 				    && where.IsRoom
 				    && ((location.Object().DBRef != where.Object().DBRef) || !flags.HasFlag(LocateFlags.ExitsPreference)))
 				{
-					var exits = parser.Database
-						.GetContentsAsync(where.WithNoneOption()).AsTask()
-						.GetAwaiter().GetResult()!
-						.Where(x => x.IsT1)
-						.Select(x => x.WithRoomOption());
+					var exits = (await parser.Database
+						.GetExitsAsync(where.AsContainer.WithNoneOption()))!
+						.Select(x => new AnySharpObject(x));
 
 					(bestMatch, final, curr, right_type, exact, c) = Match_List(parser, exits, looker, where, bestMatch, exact, final, curr, right_type, flags, name);
 				}

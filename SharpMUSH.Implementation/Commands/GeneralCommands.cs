@@ -438,7 +438,7 @@ public static partial class Commands
 			return CallState.Empty;
 		}
 
-		await parser.Database.MoveObject(enactorObj.AsContent, destination);
+		await parser.Database.MoveObjectAsync(enactorObj.AsContent, destination);
 
 		return new CallState(destination.ToString());
 	}
@@ -516,7 +516,7 @@ public static partial class Commands
 				continue;
 			}
 
-			await parser.Database.MoveObject(targetContent, destinationContainer.Object().DBRef);
+			await parser.Database.MoveObjectAsync(targetContent, destinationContainer.Object().DBRef);
 			// TODO: Notify the target that they have been teleported - if Quiet switch is not present.
 			// TODO: Evaluate room verbs upon teleportation.
 			// TODO: If the target is a player, force a LOOK

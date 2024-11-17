@@ -946,10 +946,10 @@ public class ArangoDatabase(
 		return query.Select(x => GetObjectNode((string)x._id).AsPlayer);
 	}
 
-	public async ValueTask MoveObject(AnySharpContent enactorObj, DBRef destination)
+	public async ValueTask MoveObjectAsync(AnySharpContent enactorObj, DBRef destination)
 	{
 		var oldLocation = enactorObj.Location();
-		var newLocation = GetObjectNode(destination);
+		var newLocation = await GetObjectNodeAsync(destination);
 		var edge = (await arangoDB.Query.ExecuteAsync<SharpEdgeQueryResult>(handle,
 				$"FOR v,e IN 1..1 OUTBOUND {oldLocation.Object().Id} GRAPH {DatabaseConstants.graphLocations} RETURN e"))
 			.Single();

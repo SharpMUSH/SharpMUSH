@@ -20,8 +20,10 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source)
 	protected override async ValueTask<CallState?> AggregateResult(ValueTask<CallState?> aggregate,
 		ValueTask<CallState?> nextResult)
 	{
-		var agg = await aggregate;
-		var next = await nextResult;
+		await ValueTask.CompletedTask;
+		// BUG: These two are evaluating out of order sometimes if not run as non-async.
+		var agg = aggregate.ConfigureAwait(false).GetAwaiter().GetResult();
+		var next = nextResult.ConfigureAwait(false).GetAwaiter().GetResult();
 		if (agg?.Arguments is not null || next?.Arguments is not null)
 		{
 			return (agg ?? next!) with
@@ -183,15 +185,14 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source)
 		       ?? new CallState(text, context.Depth());
 	}
 
-	public override ValueTask<CallState?> VisitCommandList([NotNull] CommandListContext context)
+	public override async ValueTask<CallState?> VisitCommandList([NotNull] CommandListContext context)
 	{
 		var text = MModule.substring(context.Start.StartIndex,
 			context.Stop?.StopIndex is null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source);
 		Log.Logger.Information("VisitCommandList: {Text}", text);
 		
-		// BUG: Something odd is going on. Why does this need to run in Synchronous context to get the correct order of execution?
-		return ValueTask.FromResult<CallState?>(base.VisitChildren(context).AsTask().ConfigureAwait(false).GetAwaiter().GetResult()
-		       ?? new CallState(text, context.Depth()));
+		return await base.VisitChildren(context)
+		       ?? new CallState(text, context.Depth());
 	}
 
 	public override async ValueTask<CallState?> VisitStartSingleCommandString(
