@@ -170,6 +170,11 @@ public class SurrealDatabase(
 				throw new NotImplementedException();
 		}
 
+		public ValueTask<AnySharpContainer> GetLocationAsync(string id, int depth = 1)
+		{
+			throw new NotImplementedException();
+		}
+
 		public ValueTask<bool> SetAttributeAsync(DBRef dbref, string[] attribute, string value, SharpPlayer owner)
 	{
 		throw new NotImplementedException();

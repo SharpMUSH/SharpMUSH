@@ -24,6 +24,7 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source)
 		// BUG: These two are evaluating out of order sometimes if not run as non-async.
 		var agg = aggregate.ConfigureAwait(false).GetAwaiter().GetResult();
 		var next = nextResult.ConfigureAwait(false).GetAwaiter().GetResult();
+		
 		if (agg?.Arguments is not null || next?.Arguments is not null)
 		{
 			return (agg ?? next!) with

@@ -145,4 +145,12 @@ public interface ISharpDatabase
 	ValueTask<IEnumerable<SharpExit>?> GetExitsAsync(AnyOptionalSharpContainer node);
 
 	ValueTask MoveObjectAsync(AnySharpContent enactorObj, DBRef destination);
+
+	/// <summary>
+	/// Gets the location of an object, at X depth, with 0 returning the same object, and -1 going until it can't go deeper.
+	/// </summary>
+	/// <param name="id">Location ID</param>
+	/// <param name="depth">Depth</param>
+	/// <returns>The deepest findable object based on depth</returns>
+	ValueTask<AnySharpContainer> GetLocationAsync(string id, int depth = 1);
 }
