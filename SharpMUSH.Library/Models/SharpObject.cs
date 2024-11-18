@@ -25,7 +25,7 @@ public class SharpObject
 
 	// RELATIONSHIP
 	[JsonIgnore]
-	public required Func<SharpPlayer> Owner { get; set; }
+	public required Lazy<SharpPlayer> Owner { get; set; }
 
 	// RELATIONSHIP
 	[JsonIgnore]

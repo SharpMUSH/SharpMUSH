@@ -60,7 +60,7 @@ public static partial class Commands
 		var name = MModule.plainText(args["0"].Message!);
 		var executor = parser.CurrentState.ExecutorObject(parser.Database).Known();
 
-		var thing = await parser.Database.CreateThingAsync(name, executor.Where, executor.Object()!.Owner());
+		var thing = await parser.Database.CreateThingAsync(name, executor.Where, executor.Object()!.Owner.Value);
 
 		return new CallState(thing.ToString());
 	}
@@ -309,7 +309,7 @@ public static partial class Commands
 		var contents = await parser.Database.GetContentsAsync(viewing);
 
 		var obj = viewing.Object()!;
-		var ownerObj = obj.Owner()!.Object;
+		var ownerObj = obj.Owner.Value.Object;
 		var name = obj.Name;
 		var ownerName = ownerObj.Name;
 		var location = obj.Key;

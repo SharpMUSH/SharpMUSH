@@ -28,7 +28,7 @@ public class TelnetServer : ConnectionHandler
 
 		// TODO: This does not belong here. A 'main thread' is needed to migrate this, before allowing telnet connections.
 		_logger.LogInformation("Starting Database");
-		database.Migrate();
+		database.Migrate().AsTask().Wait();
 	}
 
 	public override async Task OnConnectedAsync(ConnectionContext connection)

@@ -13,14 +13,7 @@ public class SchedulerService(ILogger<SchedulerService> logger, ITaskScheduler s
 	{
 		while (await _timer.WaitForNextTickAsync(stoppingToken))
 		{
-			try
-			{
-				await scheduler.ExecuteAsync(parser, stoppingToken);
-			}
-			catch (Exception ex)
-			{
-				logger.LogCritical(ex, nameof(ExecuteAsync));
-			}
+			await scheduler.ExecuteAsync(parser, stoppingToken);
 		}
 	}
 }

@@ -6,7 +6,6 @@ namespace SharpMUSH.Library.Services;
 
 public class ConnectionService : IConnectionService
 {
-
 	private readonly ConcurrentDictionary<string, IConnectionService.ConnectionData> _sessionState = [];
 	private readonly List<Action<(string Handle, DBRef? Ref, IConnectionService.ConnectionState OldState, IConnectionService.ConnectionState NewState)>> _handlers = [];
 
@@ -62,7 +61,7 @@ public class ConnectionService : IConnectionService
 			});
 	}
 
-	public void Register(string handle, Func<byte[],Task> outputFunction, Func<Encoding> encoding, ConcurrentDictionary<string,string>? metaData = null)
+	public void Register(string handle, Func<byte[], ValueTask> outputFunction, Func<Encoding> encoding, ConcurrentDictionary<string,string>? metaData = null)
 	{
 		_sessionState.AddOrUpdate(handle,
 			x => new IConnectionService.ConnectionData(handle, null, IConnectionService.ConnectionState.Connected, outputFunction, encoding, metaData ?? 

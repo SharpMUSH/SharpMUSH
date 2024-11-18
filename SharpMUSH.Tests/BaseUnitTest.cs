@@ -38,8 +38,8 @@ public class BaseUnitTest
 			Serializer = new ArangoNewtonsoftSerializer(new ArangoNewtonsoftDefaultContractResolver())
 		};
 
-		var TestServer = new Infrastructure(config);
-		var database = TestServer.Services.GetService(typeof(ISharpDatabase)) as ISharpDatabase;
+		var testServer = new Infrastructure(config);
+		var database = testServer.Services.GetService(typeof(ISharpDatabase)) as ISharpDatabase;
 
 		try
 		{
@@ -51,7 +51,7 @@ public class BaseUnitTest
 			Log.Fatal(ex, "Failed to migrate database");
 		}
 		
-		return (database!,TestServer);
+		return (database!,testServer);
 	}
 
 	public static IBooleanExpressionParser BooleanExpressionTestParser(ISharpDatabase database)
@@ -77,7 +77,7 @@ public class BaseUnitTest
 
 		// This needs adjustments, as the Database won't agree with the Milliseconds.
 		var simpleConnectionService = new ConnectionService();
-		simpleConnectionService.Register("1", (x) => Task.CompletedTask, () => Encoding.UTF8);
+		simpleConnectionService.Register("1", x => ValueTask.CompletedTask, () => Encoding.UTF8);
 		simpleConnectionService.Bind("1", one);
 
 		return new MUSHCodeParser(

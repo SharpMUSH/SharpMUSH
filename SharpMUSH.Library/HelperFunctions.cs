@@ -83,12 +83,12 @@ public static partial class HelperFunctions
 	public static bool Inheritable(this AnySharpObject obj)
 		=> obj.IsPlayer
 				|| obj.HasFlag("Trust")
-				|| obj.Object().Owner().Object.Flags.Value.Any(x => x.Name == "Trust")
+				|| obj.Object().Owner.Value.Object.Flags.Value.Any(x => x.Name == "Trust")
 				|| IsWizard(obj);
 
 	public static bool Owns(this AnySharpObject who,
 															 AnySharpObject what)
-		=> who.Object()!.Owner().Object.Id == what.Object()!.Owner().Object.Id;
+		=> who.Object()!.Owner.Value.Object.Id == what.Object()!.Owner.Value.Object.Id;
 
 	/// <summary>
 	/// Takes the pattern of '#DBREF/attribute' and splits it out if possible.

@@ -380,13 +380,13 @@ public class ArangoDatabase(
 		if (dbref.CreationMilliseconds is not null && obj.CreationTime != dbref.CreationMilliseconds) return new None();
 
 		var startVertex = obj.Id;
-		var res = (await arangoDB.Query.ExecuteAsync<dynamic>(handle,
+		var res = (await arangoDB.Query.ExecuteAsync<SharpObjectQueryResult>(handle,
 				$"FOR v IN 1..1 INBOUND {startVertex} GRAPH {DatabaseConstants.graphObjects} RETURN v", cache: true))
 			.FirstOrDefault();
 
 		if (res is null) return new None();
 
-		string id = res._id;
+		var id = res.Id;
 
 		var convertObject = new SharpObject()
 		{
@@ -415,7 +415,7 @@ public class ArangoDatabase(
 			},
 			DatabaseConstants.typePlayer => new SharpPlayer
 			{
-				Id = id, Object = convertObject, Aliases = res.Aliases.ToObject<string[]>(),
+				Id = id, Object = convertObject, Aliases = res.Aliases,
 				Location = new Lazy<AnySharpContainer>(() => GetLocation(id)),
 				Home = new Lazy<AnySharpContainer>(() => GetHome(id)),
 				PasswordHash = res.PasswordHash
@@ -423,7 +423,7 @@ public class ArangoDatabase(
 			DatabaseConstants.typeRoom => new SharpRoom { Id = id, Object = convertObject },
 			DatabaseConstants.typeExit => new SharpExit
 			{
-				Id = id, Object = convertObject, Aliases = res.Aliases.ToObject<string[]>(),
+				Id = id, Object = convertObject, Aliases = res.Aliases,
 				Location = new Lazy<AnySharpContainer>(() => GetLocation(id)),
 				Home = new Lazy<AnySharpContainer>(() => GetHome(id))
 			},

@@ -146,7 +146,7 @@ public class AttributeService(ISharpDatabase db, IPermissionService ps, ICommand
 		}
 
 		cs.InvalidateCache(obj.Object().DBRef);
-		await db.SetAttributeAsync(obj.Object().DBRef, attrPath, value.ToString(), executor.Object().Owner());
+		await db.SetAttributeAsync(obj.Object().DBRef, attrPath, value.ToString(), executor.Object().Owner.Value);
 
 		return new Success();
 	}
