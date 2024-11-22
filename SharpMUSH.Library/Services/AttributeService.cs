@@ -1,13 +1,17 @@
-﻿using OneOf.Types;
+﻿using MediatR;
+using OneOf.Types;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Definitions;
 using OneOf;
+using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Library.Services;
 
-public class AttributeService(ISharpDatabase db, IPermissionService ps, ICommandDiscoveryService cs) : IAttributeService
+public class AttributeService(IMediator mediator, IPermissionService ps, ICommandDiscoveryService cs)
+	: IAttributeService
 {
 	public async ValueTask<OptionalSharpAttributeOrError> GetAttributeAsync(
 		AnySharpObject executor,
@@ -36,12 +40,13 @@ public class AttributeService(ISharpDatabase db, IPermissionService ps, ICommand
 
 		while (curObj is not null)
 		{
-			var attr = (await db.GetAttributeAsync(obj.Object().DBRef, attributePath))?.ToArray();
+			var attr = await mediator.Send(new GetAttributeQuery(obj.Object().DBRef, attributePath));
+			var attrArr = attr?.ToArray();
 
-			if (attr?.Length == attributePath.Length)
+			if (attrArr?.Length == attributePath.Length)
 			{
-				return permissionPredicate(executor, obj, attr)
-					? attr.Last()
+				return permissionPredicate(executor, obj, attrArr)
+					? attrArr.Last()
 					: new Error<string>(permissionFailureType);
 			}
 
@@ -61,40 +66,40 @@ public class AttributeService(ISharpDatabase db, IPermissionService ps, ICommand
 		var actualObject = obj.Object();
 		var attributes = actualObject.Attributes.Value;
 
-		return ValueTask.FromResult((SharpAttributesOrError)attributes.Where(x => ps.CanViewAttribute(executor, obj, x)).ToArray());
+		return ValueTask.FromResult(
+			(SharpAttributesOrError)attributes.Where(x => ps.CanViewAttribute(executor, obj, x)).ToArray());
 	}
 
 	public async ValueTask<SharpAttributesOrError> GetAttributePatternAsync(AnySharpObject executor,
-																																				  AnySharpObject obj,
-																																				  string attributePattern,
-																																				  IAttributeService.AttributePatternMode mode)
+		AnySharpObject obj,
+		string attributePattern,
+		IAttributeService.AttributePatternMode mode)
 	{
 		// TODO: Implement Pattern Modes
 		// TODO: GetAttributesAsync should return the full Path, not the final attribute.
 		// TODO: CanViewAttribute needs to be able to Memoize during a list check, as it's likely to be called multiple times.
 		var attributes = mode switch
 		{
-			IAttributeService.AttributePatternMode.Exact => await db.GetAttributesAsync(obj.Object().DBRef, attributePattern),
-			IAttributeService.AttributePatternMode.Wildcard => await db.GetAttributesAsync(obj.Object().DBRef, attributePattern),
-			IAttributeService.AttributePatternMode.Regex => await db.GetAttributesAsync(obj.Object().DBRef, attributePattern),
+			IAttributeService.AttributePatternMode.Exact => await mediator.Send(new GetAttributesQuery(obj.Object().DBRef, attributePattern)),
+			IAttributeService.AttributePatternMode.Wildcard => await mediator.Send(new GetAttributesQuery(obj.Object().DBRef, attributePattern)), 
+			IAttributeService.AttributePatternMode.Regex => await mediator.Send(new GetAttributesQuery(obj.Object().DBRef, attributePattern)),
 			_ => throw new InvalidOperationException(nameof(IAttributeService.AttributePatternMode))
 		};
 
-		if (attributes is null)
-		{
-			return Enumerable.Empty<SharpAttribute>().ToArray();
-		}
-
-		return attributes.Where(x => ps.CanViewAttribute(executor, obj, x)).ToArray();
+		return attributes is null 
+			? Enumerable.Empty<SharpAttribute>().ToArray() 
+			: attributes.Where(x => ps.CanViewAttribute(executor, obj, x)).ToArray();
 	}
 
-	public async ValueTask<OneOf<Success, Error<string>>> SetAttributeFlagAsync(AnySharpObject executor, AnySharpObject obj, string attribute, string flag)
+	public async ValueTask<OneOf<Success, Error<string>>> SetAttributeFlagAsync(AnySharpObject executor,
+		AnySharpObject obj, string attribute, string flag)
 	{
 		var returnedAttribute = await GetAttributeAsync(executor, obj, attribute, IAttributeService.AttributeMode.Execute);
 		if (returnedAttribute.IsError)
 		{
 			return returnedAttribute.AsError;
 		}
+
 		if (returnedAttribute.IsNone)
 		{
 			// TODO: Do this better
@@ -106,13 +111,15 @@ public class AttributeService(ISharpDatabase db, IPermissionService ps, ICommand
 		throw new NotImplementedException();
 	}
 
-	public async ValueTask<OneOf<Success, Error<string>>> UnsetAttributeFlagAsync(AnySharpObject executor, AnySharpObject obj, string attribute, string flag)
+	public async ValueTask<OneOf<Success, Error<string>>> UnsetAttributeFlagAsync(AnySharpObject executor,
+		AnySharpObject obj, string attribute, string flag)
 	{
 		var returnedAttribute = await GetAttributeAsync(executor, obj, attribute, IAttributeService.AttributeMode.Execute);
 		if (returnedAttribute.IsError)
 		{
 			return returnedAttribute.AsError;
 		}
+
 		if (returnedAttribute.IsNone)
 		{
 			// TODO: Do this better
@@ -125,9 +132,9 @@ public class AttributeService(ISharpDatabase db, IPermissionService ps, ICommand
 	}
 
 	public async ValueTask<OneOf<Success, Error<string>>> SetAttributeAsync(AnySharpObject executor,
-																																				 AnySharpObject obj,
-																																				 string attribute,
-																																				 MString value)
+		AnySharpObject obj,
+		string attribute,
+		MString value)
 	{
 		if (!ps.Controls(executor, obj))
 		{
@@ -135,7 +142,7 @@ public class AttributeService(ISharpDatabase db, IPermissionService ps, ICommand
 		}
 
 		var attrPath = attribute.Split("`");
-		var attr = await db.GetAttributeAsync(obj.Object().DBRef, attrPath);
+		var attr = await mediator.Send(new GetAttributeQuery(obj.Object().DBRef, attrPath));
 
 		// TODO: Fix, object permissions also needed.
 		var permission = attr?.All(x => ps.CanSet(executor, obj, x)) ?? true;
@@ -146,7 +153,8 @@ public class AttributeService(ISharpDatabase db, IPermissionService ps, ICommand
 		}
 
 		cs.InvalidateCache(obj.Object().DBRef);
-		await db.SetAttributeAsync(obj.Object().DBRef, attrPath, value.ToString(), executor.Object().Owner.Value);
+		await mediator.Send(new SetAttributeCommand(obj.Object().DBRef, attrPath, value.ToString(),
+			executor.Object().Owner.Value));
 
 		return new Success();
 	}
@@ -161,9 +169,9 @@ public class AttributeService(ISharpDatabase db, IPermissionService ps, ICommand
 	/// <returns></returns>
 	/// <exception cref="NotImplementedException"></exception>
 	public async ValueTask<OneOf<Success, Error<string>>> ClearAttributeAsync(AnySharpObject executor,
-																																					 AnySharpObject obj,
-																																					 string attributePattern,
-																																					 IAttributeService.AttributeClearMode mode)
+		AnySharpObject obj,
+		string attributePattern,
+		IAttributeService.AttributeClearMode mode)
 	{
 		await ValueTask.CompletedTask;
 
@@ -172,9 +180,10 @@ public class AttributeService(ISharpDatabase db, IPermissionService ps, ICommand
 			return new Error<string>(Errors.ErrorAttrSetPermissions);
 		}
 
-		var attr = await db.GetAttributesAsync(obj.Object().DBRef, attributePattern);
+		var attr = await mediator.Send(new GetAttributesQuery(obj.Object().DBRef, attributePattern));
+		var attrArr = attr?.ToArray();
 
-		var permission = attr?.All(x => ps.CanSet(executor, obj, x)) ?? true;
+		var permission = attrArr?.All(x => ps.CanSet(executor, obj, x)) ?? true;
 
 		if (!permission)
 		{
@@ -182,10 +191,8 @@ public class AttributeService(ISharpDatabase db, IPermissionService ps, ICommand
 		}
 
 		cs.InvalidateCache(obj.Object().DBRef);
-		await db.ClearAttributeAsync(obj.Object().DBRef, attr!.Select(x => x.LongName!).ToArray());
+		await mediator.Send(new ClearAttributeCommand(obj.Object().DBRef, attrArr!.Select(x => x.LongName!).ToArray()));
 
 		return new Success();
-
-		throw new NotImplementedException();
 	}
 }

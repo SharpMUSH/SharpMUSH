@@ -8,6 +8,7 @@ using Testcontainers.ArangoDb;
 using SharpMUSH.Library.Models;
 using System.Text;
 using MediatR;
+using Microsoft.Testing.Platform.Services;
 using SharpMUSH.Library;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Implementation;
@@ -45,22 +46,60 @@ public class BaseUnitTest
 		try
 		{
 			await database!.Migrate();
-
 		}
 		catch (Exception ex)
 		{
 			Log.Fatal(ex, "Failed to migrate database");
 		}
-		
-		return (database!,testServer);
+
+		return (database!, testServer);
 	}
 
 	public static IBooleanExpressionParser BooleanExpressionTestParser(ISharpDatabase database)
 		=> new BooleanExpressionParser(database);
 
+	public static async Task<IMUSHCodeParser> FullTestParser()
+	{
+		var (database, integrationServer) = await IntegrationServer();
+
+		var one = new DBRef(1, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+		var realOne = await database.GetObjectNodeAsync(new DBRef(1));
+
+		var simpleConnectionService = new ConnectionService();
+		simpleConnectionService.Register("1", x => ValueTask.CompletedTask, () => Encoding.UTF8);
+		simpleConnectionService.Bind("1", one);
+
+		return new MUSHCodeParser(
+			(IPasswordService)integrationServer.Services.GetService(typeof(IPasswordService))!, 
+			(IPermissionService)integrationServer.Services.GetService(typeof(IPermissionService))!,
+			database,
+			(IAttributeService)integrationServer.Services.GetService(typeof(IAttributeService))!,
+			(INotifyService)integrationServer.Services.GetService(typeof(INotifyService))!,
+			(ILocateService)integrationServer.Services.GetService(typeof(ILocateService))!,
+			(ICommandDiscoveryService)integrationServer.Services.GetService(typeof(ICommandDiscoveryService))!,
+			(ITaskScheduler)integrationServer.Services.GetService(typeof(ITaskScheduler))!,
+			simpleConnectionService,
+			(IMediator)integrationServer.Services.GetService(typeof(IMediator))!,
+			state: new ParserState(
+				Registers: new([[]]),
+				IterationRegisters: new(),
+				RegexRegisters: new(),
+				CurrentEvaluation: null,
+				Function: null,
+				Command: "think",
+				Switches: [],
+				Arguments: [],
+				Executor: one,
+				Enactor: one,
+				Caller: one,
+				Handle: "1"
+			));
+	}
+
 	public static IMUSHCodeParser TestParser(
 		IPasswordService? pws = null,
-		IPermissionService? ps = null, // Permission Service needs the parser... this is circular. So we need to use the Mediator Pattern.
+		IPermissionService? ps =
+			null, // Permission Service needs the parser... this is circular. So we need to use the Mediator Pattern.
 		ISharpDatabase? ds = null,
 		IAttributeService? at = null,
 		INotifyService? ns = null,

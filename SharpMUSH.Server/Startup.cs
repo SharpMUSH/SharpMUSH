@@ -1,4 +1,5 @@
 ﻿using Core.Arango;
+using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
@@ -8,6 +9,7 @@ using Serilog;
 using SharpMUSH.Database.ArangoDB;
 using SharpMUSH.Implementation;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Behaviors;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using TaskScheduler = SharpMUSH.Library.Services.TaskScheduler;
@@ -48,7 +50,10 @@ public class Startup(ArangoConfiguration config)
 		services.AddMediatR(cfg =>
 		{
 			cfg.RegisterServicesFromAssemblyContaining<MUSHCodeParser>();
+			cfg.RegisterServicesFromAssemblyContaining<ISharpDatabase>();
 			cfg.RegisterServicesFromAssemblyContaining<Startup>();
+			cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(QueryCachingBehavior<,>));   
+			cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(CacheInvalidationBehavior<,>));
 		});
 		services.BuildServiceProvider();
 	}

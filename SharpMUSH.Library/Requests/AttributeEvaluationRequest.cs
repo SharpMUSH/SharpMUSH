@@ -2,6 +2,6 @@
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 
-namespace SharpMUSH.Implementation.Requests;
+namespace SharpMUSH.Library.Requests;
 
 public record AttributeEvaluationRequest(ParserState State, DBAttribute Attribute, DBRef Evaluee) : INotification;

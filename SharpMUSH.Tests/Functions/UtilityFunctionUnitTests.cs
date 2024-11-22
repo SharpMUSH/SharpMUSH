@@ -1,28 +1,26 @@
 ﻿using SharpMUSH.Library;
+using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Tests.Functions;
 
 public class UtilityFunctionUnitTests : BaseUnitTest
 {
-	private static ISharpDatabase? database;
+	private static IMUSHCodeParser? parser;
 
 	[Before(Class)]
 	public static async Task OneTimeSetup()
 	{
-		database = (await IntegrationServer()).Database;
+		parser = await FullTestParser();
 	}
 
 	[Test]
 	public async Task PCreate()
 	{
-		var parser = TestParser(
-			ds: database, 
-			pws: new PasswordService(new Microsoft.AspNetCore.Identity.PasswordHasher<string>()));
-		var result = (await parser.FunctionParse(MModule.single("pcreate(John,SomePassword)")))?.Message?.ToString()!;
+		var result = (await parser!.FunctionParse(MModule.single("pcreate(John,SomePassword)")))?.Message?.ToString()!;
 
 		var a = HelperFunctions.ParseDBRef(result).AsValue();
-		var db = await database!.GetObjectNodeAsync(a);
+		var db = await parser.Database!.GetObjectNodeAsync(a);
 		var player = db!.AsPlayer;
 
 		await Assert.That(parser.PasswordService.PasswordIsValid(result, "SomePassword", player.PasswordHash)).IsTrue();

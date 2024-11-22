@@ -13,6 +13,8 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Net.Http.Headers;
 using MarkupString;
+using MediatR;
+using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Database.ArangoDB;
 
@@ -21,6 +23,7 @@ public class ArangoDatabase(
 	ILogger<ArangoDatabase> logger,
 	IArangoContext arangoDB,
 	ArangoHandle handle,
+	IMediator mediator,
 	IPasswordService passwordService // TODO: This doesn't belong in the database layer
 ) : ISharpDatabase
 {
@@ -357,21 +360,6 @@ public class ArangoDatabase(
 			none => throw new Exception("Invalid Location found"));
 	}
 
-	private AnySharpContainer GetLocation(string id)
-	{
-		var locationId = arangoDB.Query.ExecuteAsync<string>(handle,
-			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphLocations} RETURN v._id",
-			cache: true).ConfigureAwait(false).GetAwaiter().GetResult().First();
-		var locationObject = GetObjectNodeAsync(locationId).ConfigureAwait(false).GetAwaiter().GetResult();
-
-		return locationObject.Match<AnySharpContainer>(
-			player => player,
-			room => room,
-			_ => throw new Exception("Invalid Location found"),
-			thing => thing,
-			_ => throw new Exception("Invalid Location found"));
-	}
-
 	public async ValueTask<AnyOptionalSharpObject> GetObjectNodeAsync(DBRef dbref)
 	{
 		var obj = await arangoDB.Document.GetAsync<SharpObjectQueryResult>(handle, DatabaseConstants.objects,
@@ -411,13 +399,13 @@ public class ArangoDatabase(
 			DatabaseConstants.typeThing => new SharpThing
 			{
 				Id = id, Object = convertObject,
-				Location = new Lazy<AnySharpContainer>(() => GetLocation(id)),
+				Location = new Lazy<AnySharpContainer>(() => mediator.Send(new GetCertainLocationQuery(id)).Result),
 				Home = new Lazy<AnySharpContainer>(() => GetHome(id))
 			},
 			DatabaseConstants.typePlayer => new SharpPlayer
 			{
 				Id = id, Object = convertObject, Aliases = res.Aliases,
-				Location = new Lazy<AnySharpContainer>(() => GetLocation(id)),
+				Location = new Lazy<AnySharpContainer>(() => mediator.Send(new GetCertainLocationQuery(id)).Result),
 				Home = new Lazy<AnySharpContainer>(() => GetHome(id)),
 				PasswordHash = res.PasswordHash
 			},
@@ -425,7 +413,7 @@ public class ArangoDatabase(
 			DatabaseConstants.typeExit => new SharpExit
 			{
 				Id = id, Object = convertObject, Aliases = res.Aliases,
-				Location = new Lazy<AnySharpContainer>(() => GetLocation(id)),
+				Location = new Lazy<AnySharpContainer>(() => mediator.Send(new GetCertainLocationQuery(id)).Result),
 				Home = new Lazy<AnySharpContainer>(() => GetHome(id))
 			},
 			_ => throw new ArgumentException($"Invalid Object Type found: '{obj.Type}'"),
@@ -475,18 +463,22 @@ public class ArangoDatabase(
 		return collection switch
 		{
 			DatabaseConstants.things => new SharpThing
-				{ Id = id, Object = convertObject, Location = new(() => GetLocation(id)), Home = new(() => GetHome(id)) },
+			{
+				Id = id, Object = convertObject, 
+				Location = new(() => mediator.Send(new GetCertainLocationQuery(id)).Result),
+				Home = new(() => GetHome(id))
+			},
 			DatabaseConstants.players => new SharpPlayer
 			{
 				Id = id, Object = convertObject, Aliases = res.Aliases.ToObject<string[]>(),
-				Location = new(() => GetLocation(id)),
+				Location = new(() => mediator.Send(new GetCertainLocationQuery(id)).Result),
 				Home = new(() => GetHome(id)), PasswordHash = res.PasswordHash
 			},
 			DatabaseConstants.rooms => new SharpRoom { Id = id, Object = convertObject },
 			DatabaseConstants.exits => new SharpExit
 			{
 				Id = id, Object = convertObject, Aliases = res.Aliases.ToObject<string[]>(),
-				Location = new(() => GetLocation(id)),
+				Location = new(() => mediator.Send(new GetCertainLocationQuery(id)).Result),
 				Home = new(() => GetHome(id))
 			},
 			_ => throw new ArgumentException($"Invalid Object Type found: '{obj.Type}'"),
