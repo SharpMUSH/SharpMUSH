@@ -5,7 +5,7 @@ using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Server;
 
-public class SchedulerService(ILogger<SchedulerService> logger, ITaskScheduler scheduler, IMUSHCodeParser parser) : BackgroundService
+public class SchedulerService(ITaskScheduler scheduler, IMUSHCodeParser parser) : BackgroundService
 {
 	private readonly PeriodicTimer _timer = new(TimeSpan.FromMilliseconds(1));
 	
