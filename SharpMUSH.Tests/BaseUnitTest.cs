@@ -7,6 +7,7 @@ using SharpMUSH.IntegrationTests;
 using Testcontainers.ArangoDb;
 using SharpMUSH.Library.Models;
 using System.Text;
+using MediatR;
 using SharpMUSH.Library;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Implementation;
@@ -66,7 +67,8 @@ public class BaseUnitTest
 		ILocateService? ls = null,
 		ICommandDiscoveryService? cd = null,
 		ITaskScheduler? qs = null,
-		IConnectionService? cs = null)
+		IConnectionService? cs = null,
+		IMediator? ms = null)
 	{
 		var one = new DBRef(1, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
 		if (ds is not null)
@@ -90,6 +92,7 @@ public class BaseUnitTest
 			cd ?? Substitute.For<ICommandDiscoveryService>(),
 			qs ?? Substitute.For<ITaskScheduler>(),
 			cs ?? simpleConnectionService,
+			ms ?? Substitute.For<IMediator>(),
 			state: new ParserState(
 				Registers: new([[]]),
 				IterationRegisters: new(),

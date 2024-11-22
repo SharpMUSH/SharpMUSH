@@ -1,4 +1,5 @@
-﻿using ANSILibrary;
+﻿using System.Drawing;
+using ANSILibrary;
 using DotNext.Collections.Generic;
 using MarkupString;
 using SharpMUSH.Implementation.Definitions;
@@ -6,6 +7,8 @@ using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using System.Text.RegularExpressions;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Queries.Database;
 using static ANSILibrary.ANSI;
 
 namespace SharpMUSH.Implementation.Functions;
@@ -17,16 +20,16 @@ public partial class Functions
 	public static async ValueTask<CallState> PCreate(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var location = await parser.Database.GetObjectNodeAsync(new Library.Models.DBRef
+		var location = await parser.Mediator.Send(new GetObjectNodeQuery(new Library.Models.DBRef
 		{
 			Number = Configurable.PlayerStart
-		});
+		}));
 
 		var trueLocation = location.Match(
-			player => player.Object!.Key,
-			room => room.Object!.Key,
-			exit => exit.Object!.Key,
-			thing => thing.Object!.Key,
+			player => player.Object.Key,
+			room => room.Object.Key,
+			exit => exit.Object.Key,
+			thing => thing.Object.Key,
 			none => -1);
 
 		var created = await parser.Database.CreatePlayerAsync(
@@ -59,7 +62,8 @@ public partial class Functions
 			var curHilight = false;
 			if (code.StartsWith(['#']) || code.StartsWith("/#"))
 			{
-				// Hex.
+				// TODO: Handle background.
+				foreground = AnsiColor.NewRGB(ColorTranslator.FromHtml(code[1..].ToString()));
 				continue;
 			}
 			if (code.StartsWith(['+']) && !code.StartsWith("+xterm"))

@@ -4,6 +4,7 @@ using SharpMUSH.Library;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using System.Collections.Immutable;
+using MediatR;
 using Serilog;
 
 namespace SharpMUSH.Implementation;
@@ -21,7 +22,8 @@ public record MUSHCodeParser(
 	ILocateService _locateService,
 	ICommandDiscoveryService _commandDiscoveryService,
 	ITaskScheduler _scheduleService,
-	IConnectionService _connectionService) : IMUSHCodeParser
+	IConnectionService _connectionService,
+	IMediator _mediator) : IMUSHCodeParser
 {
 	public IPasswordService PasswordService => _passwordService;
 
@@ -40,6 +42,8 @@ public record MUSHCodeParser(
 
 	public IConnectionService ConnectionService => _connectionService;
 
+	public IMediator Mediator => _mediator;
+
 	public ParserState CurrentState => State.Peek();
 
 	/// <summary>
@@ -51,10 +55,10 @@ public record MUSHCodeParser(
 	/// Time to start drawing a tree to make sure we put things in the right spots.
 	/// </summary>
 	public IImmutableStack<ParserState> State { get; private init; } = ImmutableStack<ParserState>.Empty;
-
+	
 	public IMUSHCodeParser FromState(ParserState state) => new MUSHCodeParser(_passwordService, _permissionService,
 		_database, _attributeService, _notifyService, _locateService, _commandDiscoveryService, _scheduleService,
-		_connectionService, state);
+		_connectionService, _mediator, state);
 
 	public IMUSHCodeParser Empty() => this with { State = ImmutableStack<ParserState>.Empty };
 
@@ -70,9 +74,10 @@ public record MUSHCodeParser(
 		ICommandDiscoveryService commandDiscoveryService,
 		ITaskScheduler scheduleService,
 		IConnectionService connectionService,
+		IMediator mediator,
 		ParserState state) :
 		this(passwordService, permissionService, database, attributeService, notifyService, locateService,
-			commandDiscoveryService, scheduleService, connectionService)
+			commandDiscoveryService, scheduleService, connectionService, mediator)
 		=> State = [state];
 
 	public ValueTask<CallState?> FunctionParse(MString text)

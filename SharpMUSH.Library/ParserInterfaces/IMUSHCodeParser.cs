@@ -1,9 +1,10 @@
 ﻿using SharpMUSH.Library.Services;
 using System.Collections.Immutable;
+using MediatR;
 
 namespace SharpMUSH.Library.ParserInterfaces;
 
-public partial interface IMUSHCodeParser
+public interface IMUSHCodeParser
 {
 	IConnectionService ConnectionService { get; }
 	ParserState CurrentState { get; }
@@ -16,6 +17,7 @@ public partial interface IMUSHCodeParser
 	ITaskScheduler Scheduler { get; }
 	ICommandDiscoveryService CommandDiscoveryService { get; }
 	IImmutableStack<ParserState> State { get; }
+	IMediator Mediator { get; }
 	ValueTask<CallState?> CommandCommaArgsParse(MString text);
 	ValueTask<CallState?> CommandEqSplitArgsParse(MString text);
 	ValueTask<CallState?> CommandEqSplitParse(MString text);
