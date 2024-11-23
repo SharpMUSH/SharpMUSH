@@ -1,7 +1,21 @@
+using NSubstitute;
+using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services;
+
 namespace SharpMUSH.Tests.Parser;
 
 public class FunctionUnitTests : BaseUnitTest
 {
+	private static IMUSHCodeParser? _parser;
+
+	[Before(Class)]
+	public static async Task OneTimeSetup()
+	{
+		_parser = await TestParser(
+			ns: Substitute.For<INotifyService>()
+		);
+	}
+	
 	[Test]
 	[Arguments("strcat(strcat(),wi`th a[strcat(strcat(strcat(depth of 5)))])","wi`th adepth of 5")]
 	// [Arguments("strcat(strcat(dog)", "strcat(dog")] // Currently Illegal according to the Parser. Fix maybe needed.
@@ -17,8 +31,7 @@ public class FunctionUnitTests : BaseUnitTest
 	public async Task Test(string str, string? expected = null)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var parser = await TestParser();
-		var result = (await parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await _parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
 
 		Console.WriteLine(string.Join("", result));
 

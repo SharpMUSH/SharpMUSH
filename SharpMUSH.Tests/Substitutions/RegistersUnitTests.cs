@@ -1,25 +1,21 @@
 ﻿using NSubstitute;
 using NSubstitute.ReceivedExtensions;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Tests.Substitutions;
 
 public class RegistersUnitTests : BaseUnitTest
 {
-	private static Infrastructure? infrastructure;
+	private static IMUSHCodeParser? _parser;
 
 	[Before(Class)]
 	public static async Task OneTimeSetup()
 	{
-		(_,infrastructure) = await IntegrationServer();
-	}
-	
-	[After(Class)]
-	public static async Task OneTimeTeardown()
-	{
-		await Task.Delay(1);
-		infrastructure!.Dispose();
+		_parser = await TestParser(
+			ns: Substitute.For<INotifyService>()
+		);
 	}
 
 	[Test]
@@ -31,18 +27,15 @@ public class RegistersUnitTests : BaseUnitTest
 	// [Arguments("think %wv", "")] // TODO: Requires full server Integration
 	// [Arguments("think %vv", "")] // TODO: Requires full server Integration
 	// [Arguments("think %xv", "")] // TODO: Requires full server Integration
-	[Arguments("think %i0", "#-1 OUT OF RANGE")]
-	[Arguments("think %$0", "#-1 OUT OF RANGE")]
+	[Arguments("think %i0 1", "#-1 OUT OF RANGE 1")]
+	[Arguments("think %$0 2", "#-1 OUT OF RANGE 2")]
 	public async Task Test(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
 		
-		var parser = await TestParser(
-			ns: Substitute.For<INotifyService>()
-		);
-		await parser.CommandParse("1", MModule.single(str));
+		await _parser!.CommandParse("1", MModule.single(str));
 
-		await parser.NotifyService
+		await _parser!.NotifyService
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), expected);
 	}

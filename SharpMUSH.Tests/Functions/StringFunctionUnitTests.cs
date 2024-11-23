@@ -1,12 +1,25 @@
 ﻿using ANSILibrary;
 using Serilog;
 using System.Text;
+using NSubstitute;
+using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services;
 using A = MarkupString.MarkupStringModule;
 
 namespace SharpMUSH.Tests.Functions;
 
 public class StringFunctionUnitTests : BaseUnitTest
 {
+	private static IMUSHCodeParser? _parser;
+	
+	[Before(Class)]
+	public static async Task OneTimeSetup()
+	{
+		_parser = await TestParser(
+			ns: Substitute.For<INotifyService>()
+		);
+	}
+	
 	[Test]
 	[Arguments("ansi(r,red)", "red", (byte)31, null)]
 	[Arguments("ansi(hr,red)", "red", (byte)1, (byte)31)]
@@ -16,11 +29,10 @@ public class StringFunctionUnitTests : BaseUnitTest
 	{
 		Console.WriteLine("Testing: {0}", str);
 		var expectedBytes = expectedByte2 is null
-			? new byte[] { expectedByte1 }
-			: new byte[] { expectedByte1, expectedByte2.Value };
+			? new[] { expectedByte1 }
+			: new[] { expectedByte1, expectedByte2.Value };
 
-		var parser = await TestParser();
-		var result = (await parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await _parser!.FunctionParse(MModule.single(str)))?.Message!;
 
 		var color = StringExtensions.ansiBytes(expectedBytes);
 		var markup = MarkupString.MarkupImplementation.AnsiMarkup.Create(foreground: color);
@@ -53,8 +65,7 @@ public class StringFunctionUnitTests : BaseUnitTest
 			? new byte[] { expectedByte1 }
 			: new byte[] { expectedByte1, expectedByte2.Value };
 
-		var parser = await TestParser();
-		var result = (await parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await _parser!.FunctionParse(MModule.single(str)))?.Message!;
 
 		var color = StringExtensions.ansiBytes(expectedBytes);
 		var markup = MarkupString.MarkupImplementation.AnsiMarkup.Create(background: color);
