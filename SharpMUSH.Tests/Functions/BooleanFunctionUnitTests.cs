@@ -15,7 +15,7 @@ public class BooleanFunctionUnitTests : BaseUnitTest
 	{
 		Console.WriteLine("Testing: {0}", str);
 
-		var parser = TestParser();
+		var parser = await TestParser();
 		var result = (await parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
 
 		await Assert.That(result).IsEqualTo(expected);
@@ -30,7 +30,7 @@ public class BooleanFunctionUnitTests : BaseUnitTest
 	{
 		Console.WriteLine("Testing: {0}", str);
 
-		var parser = TestParser();
+		var parser = await TestParser();
 		var result = (await parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
 
 		await Assert.That(result).IsEqualTo(expected);
@@ -45,7 +45,7 @@ public class BooleanFunctionUnitTests : BaseUnitTest
 	{
 		Console.WriteLine("Testing: {0}", str);
 
-		var parser = TestParser();
+		var parser = await TestParser();
 		var result = (await parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
 
 		await Assert.That(result).IsEqualTo(expected);

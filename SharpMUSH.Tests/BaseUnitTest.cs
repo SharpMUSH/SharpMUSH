@@ -3,7 +3,6 @@ using SharpMUSH.Library.Services;
 using NSubstitute;
 using Core.Arango.Serialization.Newtonsoft;
 using Core.Arango;
-using SharpMUSH.IntegrationTests;
 using Testcontainers.ArangoDb;
 using SharpMUSH.Library.Models;
 using System.Text;
@@ -95,7 +94,7 @@ public class BaseUnitTest
 			));
 	}
 
-	public static IMUSHCodeParser TestParser(
+	public async static ValueTask<IMUSHCodeParser> TestParser(
 		IPasswordService? pws = null,
 		IPermissionService? ps =
 			null, // Permission Service needs the parser... this is circular. So we need to use the Mediator Pattern.
@@ -111,7 +110,7 @@ public class BaseUnitTest
 		var one = new DBRef(1, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
 		if (ds is not null)
 		{
-			var realOne = ds!.GetObjectNode(new DBRef(1));
+			var realOne = await ds!.GetObjectNodeAsync(new DBRef(1));
 			one = realOne.Object()!.DBRef;
 		}
 

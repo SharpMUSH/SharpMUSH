@@ -10,6 +10,7 @@ using MoreLinq.Extensions;
 using SharpMUSH.Library;
 using CB = SharpMUSH.Implementation.Definitions.CommandBehavior;
 using StringExtensions = ANSILibrary.StringExtensions;
+using SharpMUSH.Library.Commands.Database;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -26,7 +27,7 @@ public static partial class Commands
 		}
 
 		var notification = args["0"].Message!.ToString();
-		var enactor = parser.CurrentState.EnactorObject(parser.Database).WithoutNone();
+		var enactor = (await parser.CurrentState.EnactorObject(parser.Database)).WithoutNone();
 		await parser.NotifyService.Notify(enactor, notification);
 
 		return new None();
@@ -43,7 +44,7 @@ public static partial class Commands
 		var name = MModule.plainText(args["0"].Message!);
 		var password = MModule.plainText(args["1"].Message!);
 
-		var player = await parser.Database.CreatePlayerAsync(name, password, parser.CurrentState.Executor!.Value);
+		var player = await parser.Mediator.Send(new CreatePlayerCommand(name, password, parser.CurrentState.Executor!.Value));
 
 		return new CallState(player.ToString());
 	}
@@ -58,9 +59,9 @@ public static partial class Commands
 		// TODO: Validate Name 
 		var args = parser.CurrentState.Arguments;
 		var name = MModule.plainText(args["0"].Message!);
-		var executor = parser.CurrentState.ExecutorObject(parser.Database).Known();
+		var executor = (await parser.CurrentState.ExecutorObject(parser.Database)).Known();
 
-		var thing = await parser.Database.CreateThingAsync(name, executor.Where, executor.Object()!.Owner.Value);
+		var thing = await parser.Mediator.Send(new CreateThingCommand(name, executor.Where, executor.Object()!.Owner.Value));
 
 		return new CallState(thing.ToString());
 	}
@@ -75,8 +76,8 @@ public static partial class Commands
 
 		var args = parser.CurrentState.Arguments;
 		var split = HelperFunctions.SplitDBRefAndOptionalAttr(MModule.plainText(args["0"].Message!));
-		var enactor = parser.CurrentState.EnactorObject(parser.Database).WithoutNone();
-		var executor = parser.CurrentState.ExecutorObject(parser.Database).WithoutNone();
+		var enactor = (await parser.CurrentState.EnactorObject(parser.Database)).WithoutNone();
+		var executor = (await parser.CurrentState.ExecutorObject(parser.Database)).WithoutNone();
 
 		if (!split.TryPickT0(out var details, out var _))
 		{
@@ -104,7 +105,7 @@ public static partial class Commands
 			foreach (var flag in MModule.split(" ", args["2"].Message!))
 			{
 				var plainFlag = MModule.plainText(flag);
-				if (plainFlag.StartsWith("!"))
+				if (plainFlag.StartsWith('!'))
 				{
 					// TODO: Notify
 					await parser.AttributeService.SetAttributeFlagAsync(executor, realLocated, maybeAttribute, plainFlag);
@@ -172,7 +173,7 @@ public static partial class Commands
 	[SharpCommand(Name = "HUH_COMMAND", Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> HuhCommand(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var enactor = parser.CurrentState.EnactorObject(parser.Database).WithoutNone();
+		var enactor = (await parser.CurrentState.EnactorObject(parser.Database)).WithoutNone();
 		await parser.NotifyService.Notify(enactor, "Huh?  (Type \"help\" for help.)");
 		return new None();
 	}
@@ -181,7 +182,7 @@ public static partial class Commands
 		Switches = ["CLEARREGS", "DELIMIT", "INLINE", "INPLACE", "LOCALIZE", "NOBREAK", "NOTIFY"])]
 	public static async ValueTask<Option<CallState>> DoList(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var enactor = parser.CurrentState.EnactorObject(parser.Database).WithoutNone();
+		var enactor = (await parser.CurrentState.EnactorObject(parser.Database)).WithoutNone();
 
 		if (parser.CurrentState.Arguments.Count < 2)
 		{
@@ -216,7 +217,7 @@ public static partial class Commands
 		// TODO: Consult CONFORMAT, DESCFORMAT, INAMEFORMAT, NAMEFORMAT, etc.
 
 		var args = parser.CurrentState.Arguments;
-		var enactor = parser.CurrentState.EnactorObject(parser.Database).WithoutNone();
+		var enactor = (await parser.CurrentState.EnactorObject(parser.Database)).WithoutNone();
 		AnyOptionalSharpObject viewing = new None();
 
 		if (args.Count == 1)
@@ -278,7 +279,7 @@ public static partial class Commands
 	public static async ValueTask<Option<CallState>> Examine(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var enactor = parser.CurrentState.EnactorObject(parser.Database).WithoutNone();
+		var enactor = (await parser.CurrentState.EnactorObject(parser.Database)).WithoutNone();
 		AnyOptionalSharpObject viewing = new None();
 
 		// TODO: Implement the version of this command that takes an attribute pattern!
@@ -385,7 +386,7 @@ public static partial class Commands
 		var targetListText = MModule.plainText(args["0"].Message!);
 		var nameListTargets = Functions.Functions.NameList(targetListText);
 
-		var enactor = parser.CurrentState.ExecutorObject(parser.Database).Known();
+		var enactor = (await parser.CurrentState.ExecutorObject(parser.Database)).Known();
 
 		foreach (var target in nameListTargets)
 		{
@@ -406,8 +407,8 @@ public static partial class Commands
 	public static async ValueTask<Option<CallState>> Goto(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var enactor = parser.CurrentState.EnactorObject(parser.Database).WithoutNone();
-		var enactorObj = parser.CurrentState.EnactorObject(parser.Database).Known();
+		var enactor = (await parser.CurrentState.EnactorObject(parser.Database)).WithoutNone();
+		var enactorObj = (await parser.CurrentState.EnactorObject(parser.Database)).Known();
 		if (args.Count < 1)
 		{
 			await parser.NotifyService.Notify(enactor, "You can't go that way.");
@@ -449,7 +450,7 @@ public static partial class Commands
 	public static async ValueTask<Option<CallState>> Teleport(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var enactor = parser.CurrentState.EnactorObject(parser.Database).WithoutNone();
+		var enactor = (await parser.CurrentState.EnactorObject(parser.Database)).WithoutNone();
 
 		// If /list - Arg0 can contain multiple SharpObject
 		// If not, Arg0 is a singular object
@@ -457,7 +458,7 @@ public static partial class Commands
 		// If Arg1 does not exist, Arg0 is the Destination for the Enactor.
 		// Otherwise, Arg1 is the Destination for the Arg0.
 
-		var enactorObj = parser.CurrentState.EnactorObject(parser.Database).Known();
+		var enactorObj = (await parser.CurrentState.EnactorObject(parser.Database)).Known();
 		var destinationString = MModule.plainText(args.Count == 1 ? args["0"].Message : args["1"].Message);
 		var toTeleport = MModule.plainText(args.Count == 1 ? MModule.single(enactor.ToString()) : args["0"].Message);
 

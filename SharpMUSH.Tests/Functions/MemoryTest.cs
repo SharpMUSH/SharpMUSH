@@ -19,7 +19,7 @@ public class MemoryTest : BaseUnitTest
 		}
 		var str = sb.ToString();
 
-		var parser = TestParser();
+		var parser = await TestParser();
 		var result = (await parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
 
 		await Assert

@@ -1,5 +1,4 @@
-﻿using SharpMUSH.IntegrationTests;
-using SharpMUSH.Library;
+﻿using SharpMUSH.Library;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using TUnit.Assertions;

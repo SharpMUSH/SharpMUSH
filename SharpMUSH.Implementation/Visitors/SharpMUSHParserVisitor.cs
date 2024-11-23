@@ -157,7 +157,7 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source)
 		}
 		if (simpleSubstitutionSymbol is not null)
 		{
-			return Substitutions.Substitutions.ParseSimpleSubstitution(simpleSubstitutionSymbol.GetText(), parser,
+			return await Substitutions.Substitutions.ParseSimpleSubstitution(simpleSubstitutionSymbol.GetText(), parser,
 				simpleSubstitutionSymbol);
 		}
 			

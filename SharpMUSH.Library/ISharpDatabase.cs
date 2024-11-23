@@ -29,8 +29,6 @@ public interface ISharpDatabase
 	/// <returns>A OneOf over the object being returned</returns>
 	ValueTask<AnyOptionalSharpObject> GetObjectNodeAsync(DBRef dbref);
 
-	AnyOptionalSharpObject GetObjectNode(DBRef dbref);
-
 	/// <summary>
 	/// Get an Object Flag by name, if it exists.
 	/// </summary>
@@ -61,10 +59,9 @@ public interface ISharpDatabase
 	/// <returns>Success or Failure</returns>
 	ValueTask<bool> UnsetObjectFlagAsync(DBRef dbref, SharpObjectFlag flag);
 
-	
-	SharpObject? GetParent(string id);
+	ValueTask<SharpObject?> GetParentAsync(string id);
 
-	IEnumerable<SharpObject> GetParents(string id);
+	ValueTask<IEnumerable<SharpObject>> GetParentsAsync(string id);
 
 	ValueTask<SharpObject?> GetBaseObjectNodeAsync(DBRef dbref);
 

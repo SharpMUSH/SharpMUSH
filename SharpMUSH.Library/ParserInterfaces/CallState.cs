@@ -2,12 +2,12 @@
 
 public record CallState(MString? Message, int Depth, MString[]? Arguments, Func<Task<MString?>> ParsedMessage)
 {
-	public CallState(MString? Message, int Depth) 
+	public CallState(MString? Message, int Depth)
 		: this(Message ?? MModule.empty(), Depth, null, () => Task.FromResult(Message))
 	{
 	}
 
-	public CallState(MString? Message) 
+	public CallState(MString? Message)
 		: this(Message ?? MModule.empty(), 0, null, () => Task.FromResult(Message))
 	{
 	}
@@ -40,6 +40,6 @@ public record CallState(MString? Message, int Depth, MString[]? Arguments, Func<
 	{
 	}
 
-	public static readonly CallState EmptyArgument = new CallState(MModule.empty(), 0, [], () => Task.FromResult(MModule.empty())!);
-	public static readonly CallState Empty = new CallState(MModule.empty(), 0, null, () => Task.FromResult(MModule.empty())!);
+	public static readonly CallState EmptyArgument = new(MModule.empty(), 0, [], () => Task.FromResult(MModule.empty())!);
+	public static readonly CallState Empty = new(MModule.empty(), 0, null, () => Task.FromResult(MModule.empty())!);
 }

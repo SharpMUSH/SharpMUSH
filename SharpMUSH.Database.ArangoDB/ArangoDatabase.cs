@@ -9,9 +9,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services;
-using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Net.Http.Headers;
 using MarkupString;
 using Mediator;
 using SharpMUSH.Library.Queries.Database;
@@ -182,9 +180,6 @@ public class ArangoDatabase(
 		return new DBRef(int.Parse(obj.Key), time);
 	}
 
-	public AnyOptionalSharpObject GetObjectNode(DBRef dbref)
-		=> GetObjectNodeAsync(dbref).Result;
-
 	public async ValueTask<SharpObjectFlag?> GetObjectFlagAsync(string name)
 		=> (await arangoDB.Query.ExecuteAsync<SharpObjectFlag>(
 			handle,
@@ -212,13 +207,11 @@ public class ArangoDatabase(
 		throw new NotImplementedException();
 	}
 
-	public AnyOptionalSharpObject GetObjectNode(string dbId)
-		=> GetObjectNodeAsync(dbId).Result;
-
-	private IEnumerable<SharpPower> GetPowers(string id)
+	private async ValueTask<IEnumerable<SharpPower>> GetPowersAsync(string id)
 	{
-		var result = arangoDB.Query.ExecuteAsync<SharpPowerQueryResult>(handle,
-			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphPowers} RETURN v").Result;
+		var result = await arangoDB.Query.ExecuteAsync<SharpPowerQueryResult>(handle,
+			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphPowers} RETURN v");
+
 		return result.Select(x => new SharpPower()
 		{
 			Alias = x.Alias,
@@ -231,9 +224,9 @@ public class ArangoDatabase(
 		});
 	}
 
-	private IEnumerable<SharpObjectFlag> GetFlags(string id)
-		=> arangoDB.Query.ExecuteAsync<SharpObjectFlag>(handle,
-			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphFlags} RETURN v").Result;
+	private async ValueTask<IEnumerable<SharpObjectFlag>> GetFlagsAsync(string id)
+		=> await arangoDB.Query.ExecuteAsync<SharpObjectFlag>(handle,
+			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphFlags} RETURN v");
 
 	private async ValueTask<IEnumerable<SharpAttributeFlag>> GetAttributeFlagsAsync(string id)
 	{
@@ -250,42 +243,10 @@ public class ArangoDatabase(
 			});
 	}
 
-	private IEnumerable<SharpAttributeFlag> GetAttributeFlags(string id) =>
-		GetAttributeFlagsAsync(id).Result;
+	private async ValueTask<IEnumerable<SharpAttributeFlag>> GetAttributeFlags(string id) =>
+		await GetAttributeFlagsAsync(id);
 
-	private IEnumerable<SharpAttribute> GetAttributes(string id)
-	{
-		// This only works for when we get a non-attribute as our ID.
-		// Adjustment is needed if we get an attribute ID.
-		IEnumerable<SharpAttributeQueryResult> sharpAttributeResults;
-		if (id.StartsWith(DatabaseConstants.attributes))
-		{
-			sharpAttributeResults = arangoDB.Query.ExecuteAsync<SharpAttributeQueryResult>(handle,
-				$"FOR v IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.graphAttributes} RETURN v",
-				new Dictionary<string, object>() { { "startVertex", id } }).Result;
-		}
-		else
-		{
-			sharpAttributeResults = arangoDB.Query.ExecuteAsync<SharpAttributeQueryResult>(handle,
-				$"LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.graphObjects} RETURN v) FOR v IN 1..1 OUTBOUND start GRAPH {DatabaseConstants.graphAttributes} RETURN v",
-				new Dictionary<string, object>() { { "startVertex", id } }).Result;
-		}
-
-		var sharpAttributes = sharpAttributeResults.Select(x => new SharpAttribute()
-		{
-			Flags = GetAttributeFlags(x.Id),
-			Name = x.Name,
-			LongName = x.LongName,
-			Owner = new(() => GetAttributeOwner(x.Id)),
-			Value = MarkupString.MarkupStringModule.single(x.Value), // TODO: Compose and Decompose
-			Leaves = new(() => GetAttributes(x.Id)),
-			SharpAttributeEntry = new(() => null) // TODO: Fix
-		});
-
-		return sharpAttributes;
-	}
-
-	private IEnumerable<SharpAttribute> GetAllAttributes(string id)
+	private async ValueTask<IEnumerable<SharpAttribute>> GetAllAttributesAsync(string id)
 	{
 		// This only works for when we get a non-attribute as our ID.
 		// Adjustment is needed if we get an attribute ID.
@@ -294,63 +255,63 @@ public class ArangoDatabase(
 		{
 			sharpAttributeResults = arangoDB.Query.ExecuteAsync<SharpAttributeQueryResult>(handle,
 				$"FOR v IN 1..999 OUTBOUND @startVertex GRAPH {DatabaseConstants.graphAttributes} RETURN v",
-				new Dictionary<string, object>() { { "startVertex", id } }).Result;
+				new Dictionary<string, object>() { { "startVertex", id } }).ConfigureAwait(false).GetAwaiter().GetResult();
 		}
 		else
 		{
 			sharpAttributeResults = arangoDB.Query.ExecuteAsync<SharpAttributeQueryResult>(handle,
 				$"LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.graphObjects} RETURN v) FOR v IN 1..999 OUTBOUND start GRAPH {DatabaseConstants.graphAttributes} RETURN v",
-				new Dictionary<string, object>() { { "startVertex", id } }).Result;
+				new Dictionary<string, object>() { { "startVertex", id } }).ConfigureAwait(false).GetAwaiter().GetResult();
 		}
 
-		var sharpAttributes = sharpAttributeResults.Select(x => new SharpAttribute()
+		var sharpAttributes = sharpAttributeResults.Select(async x => new SharpAttribute()
 		{
-			Flags = GetAttributeFlags(x.Id),
+			Flags = await GetAttributeFlagsAsync(x.Id),
 			Name = x.Name,
 			LongName = x.LongName,
-			Owner = new(() => GetAttributeOwner(x.Id)),
-			Value = MarkupString.MarkupStringModule.single(x.Value), // TODO: Compose and Decompose
-			Leaves = new(() => GetAttributes(x.Id)),
+			Owner = new(() => GetAttributeOwnerAsync(x.Id).AsTask().Result),
+			Value = MarkupStringModule.single(x.Value), // TODO: Compose and Decompose
+			Leaves = new(() => GetTopLevelAttributesAsync(x.Id).AsTask().Result),
 			SharpAttributeEntry = new(() => null) // TODO: Fix
 		});
 
-		return sharpAttributes;
+		return await Task.WhenAll(sharpAttributes);
 	}
 
-	private SharpPlayer GetObjectOwner(string id)
+	private async ValueTask<SharpPlayer> GetObjectOwnerAsync(string id)
 	{
-		var owner = arangoDB.Query.ExecuteAsync<SharpPlayerQueryResult>(handle,
-			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphObjectOwners} RETURN v").Result.First();
+		var owner = (await arangoDB.Query.ExecuteAsync<SharpPlayerQueryResult>(handle,
+			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphObjectOwners} RETURN v")).First();
 
-		var populatedOwner = GetObjectNodeAsync(owner.Id).Result;
+		var populatedOwner = await GetObjectNodeAsync(owner.Id);
 
 		return populatedOwner.AsPlayer;
 	}
 
-	private SharpPlayer GetAttributeOwner(string id)
+	private async ValueTask<SharpPlayer> GetAttributeOwnerAsync(string id)
 	{
-		var owner = arangoDB.Query.ExecuteAsync<SharpObjectQueryResult>(handle,
-			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphAttributeOwners} RETURN v").Result.First();
+		var owner = (await arangoDB.Query.ExecuteAsync<SharpObjectQueryResult>(handle,
+			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphAttributeOwners} RETURN v")).First();
 
-		var populatedOwner = GetObjectNodeAsync(owner.Id).Result;
+		var populatedOwner = await GetObjectNodeAsync(owner.Id);
 
 		return populatedOwner.AsPlayer;
 	}
 
-	public SharpObject? GetParent(string id)
-		=> arangoDB.Query.ExecuteAsync<SharpObject>(handle,
-				$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphParents} RETURN v", cache: true).Result
+	public async ValueTask<SharpObject?> GetParentAsync(string id)
+		=> (await arangoDB.Query.ExecuteAsync<SharpObject>(handle,
+				$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphParents} RETURN v", cache: true))
 			.FirstOrDefault();
 
-	public IEnumerable<SharpObject> GetParents(string id)
-		=> arangoDB.Query.ExecuteAsync<SharpObject>(handle,
-			$"FOR v IN 1 OUTBOUND {id} GRAPH {DatabaseConstants.graphParents} RETURN v", cache: true).Result;
+	public async ValueTask<IEnumerable<SharpObject>> GetParentsAsync(string id)
+		=> await arangoDB.Query.ExecuteAsync<SharpObject>(handle,
+			$"FOR v IN 1 OUTBOUND {id} GRAPH {DatabaseConstants.graphParents} RETURN v", cache: true);
 
-	private AnySharpContainer GetHome(string id)
+	private async ValueTask<AnySharpContainer> GetHomeAsync(string id)
 	{
-		var homeId = arangoDB.Query.ExecuteAsync<string>(handle,
-			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphHomes} RETURN v._id", cache: true).Result.First();
-		var homeObject = GetObjectNodeAsync(homeId).Result;
+		var homeId = (await arangoDB.Query.ExecuteAsync<string>(handle,
+			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphHomes} RETURN v._id", cache: true)).First();
+		var homeObject = await GetObjectNodeAsync(homeId);
 
 		return homeObject.Match<AnySharpContainer>(
 			player => player,
@@ -386,12 +347,12 @@ public class ArangoDatabase(
 			Locks = (obj.Locks ?? []).ToImmutableDictionary(),
 			Id = obj.Id,
 			Key = int.Parse(obj.Key),
-			Flags = new(() => GetFlags(startVertex)),
-			Powers = new(() => GetPowers(startVertex)),
-			Attributes = new(() => GetAttributes(startVertex)),
-			AllAttributes = new(() => GetAllAttributes(startVertex)),
-			Owner = new(() => GetObjectOwner(startVertex)),
-			Parent = new(() => GetParent(startVertex))
+			Flags = new(() => GetFlagsAsync(startVertex).AsTask().Result),
+			Powers = new(() => GetPowersAsync(startVertex).AsTask().Result),
+			Attributes = new(() => GetTopLevelAttributesAsync(startVertex).AsTask().Result),
+			AllAttributes = new(() => GetAllAttributesAsync(startVertex).AsTask().Result),
+			Owner = new(() => GetObjectOwnerAsync(startVertex).AsTask().Result),
+			Parent = new(() => GetParentAsync(startVertex).AsTask().Result)
 		};
 
 		return obj.Type switch
@@ -399,22 +360,22 @@ public class ArangoDatabase(
 			DatabaseConstants.typeThing => new SharpThing
 			{
 				Id = id, Object = convertObject,
-				Location = new Lazy<AnySharpContainer>(() => mediator.Send(new GetCertainLocationQuery(id)).Result),
-				Home = new Lazy<AnySharpContainer>(() => GetHome(id))
+				Location = new Lazy<AnySharpContainer>(() => mediator.Send(new GetCertainLocationQuery(id)).AsTask().Result),
+				Home = new Lazy<AnySharpContainer>(() => GetHomeAsync(id).AsTask().Result)
 			},
 			DatabaseConstants.typePlayer => new SharpPlayer
 			{
 				Id = id, Object = convertObject, Aliases = res.Aliases,
-				Location = new Lazy<AnySharpContainer>(() => mediator.Send(new GetCertainLocationQuery(id)).Result),
-				Home = new Lazy<AnySharpContainer>(() => GetHome(id)),
+				Location = new Lazy<AnySharpContainer>(() => mediator.Send(new GetCertainLocationQuery(id)).AsTask().Result),
+				Home = new Lazy<AnySharpContainer>(() => GetHomeAsync(id).AsTask().Result),
 				PasswordHash = res.PasswordHash
 			},
 			DatabaseConstants.typeRoom => new SharpRoom { Id = id, Object = convertObject },
 			DatabaseConstants.typeExit => new SharpExit
 			{
 				Id = id, Object = convertObject, Aliases = res.Aliases,
-				Location = new Lazy<AnySharpContainer>(() => mediator.Send(new GetCertainLocationQuery(id)).Result),
-				Home = new Lazy<AnySharpContainer>(() => GetHome(id))
+				Location = new Lazy<AnySharpContainer>(() => mediator.Send(new GetCertainLocationQuery(id)).AsTask().Result),
+				Home = new Lazy<AnySharpContainer>(() => GetHomeAsync(id).AsTask().Result)
 			},
 			_ => throw new ArgumentException($"Invalid Object Type found: '{obj.Type}'"),
 		};
@@ -441,7 +402,7 @@ public class ArangoDatabase(
 
 		string id = res._id;
 		string objId = obj._id;
-		string collection = id.Split("/")[0];
+		var collection = id.Split("/")[0];
 		var convertObject = new SharpObject
 		{
 			Id = objId,
@@ -452,34 +413,34 @@ public class ArangoDatabase(
 			ModifiedTime = obj.ModifiedTime,
 			Locks = ImmutableDictionary<string, string>
 				.Empty, // FIX: ((Dictionary<string, string>?)obj.Locks ?? []).ToImmutableDictionary(),
-			Flags = new(() => GetFlags(objId)),
-			Powers = new(() => GetPowers(objId)),
-			Attributes = new(() => GetAttributes(objId)),
-			AllAttributes = new(() => GetAllAttributes(objId)),
-			Owner = new(() => GetObjectOwner(objId)),
-			Parent = new(() => GetParent(objId))
+			Flags = new(() => GetFlagsAsync(objId).AsTask().Result),
+			Powers = new(() => GetPowersAsync(objId).AsTask().Result),
+			Attributes = new(() => GetTopLevelAttributesAsync(objId).AsTask().Result),
+			AllAttributes = new(() => GetAllAttributesAsync(objId).AsTask().Result),
+			Owner = new(() => GetObjectOwnerAsync(objId).AsTask().Result),
+			Parent = new(() => GetParentAsync(objId).AsTask().Result)
 		};
 
 		return collection switch
 		{
 			DatabaseConstants.things => new SharpThing
 			{
-				Id = id, Object = convertObject, 
-				Location = new(() => mediator.Send(new GetCertainLocationQuery(id)).Result),
-				Home = new(() => GetHome(id))
+				Id = id, Object = convertObject,
+				Location = new(() => mediator.Send(new GetCertainLocationQuery(id)).AsTask().Result),
+				Home = new(() => GetHomeAsync(id).AsTask().Result)
 			},
 			DatabaseConstants.players => new SharpPlayer
 			{
 				Id = id, Object = convertObject, Aliases = res.Aliases.ToObject<string[]>(),
-				Location = new(() => mediator.Send(new GetCertainLocationQuery(id)).Result),
-				Home = new(() => GetHome(id)), PasswordHash = res.PasswordHash
+				Location = new(() => mediator.Send(new GetCertainLocationQuery(id)).AsTask().Result),
+				Home = new(() => GetHomeAsync(id).AsTask().Result), PasswordHash = res.PasswordHash
 			},
 			DatabaseConstants.rooms => new SharpRoom { Id = id, Object = convertObject },
 			DatabaseConstants.exits => new SharpExit
 			{
 				Id = id, Object = convertObject, Aliases = res.Aliases.ToObject<string[]>(),
-				Location = new(() => mediator.Send(new GetCertainLocationQuery(id)).Result),
-				Home = new(() => GetHome(id))
+				Location = new(() => mediator.Send(new GetCertainLocationQuery(id)).AsTask().Result),
+				Home = new(() => GetHomeAsync(id).AsTask().Result)
 			},
 			_ => throw new ArgumentException($"Invalid Object Type found: '{obj.Type}'"),
 		};
@@ -506,13 +467,45 @@ public class ArangoDatabase(
 				Locks = (obj.Locks ?? []).ToImmutableDictionary(),
 				CreationTime = obj.CreationTime,
 				ModifiedTime = obj.ModifiedTime,
-				Flags = new(() => GetFlags(obj.Id)),
-				Powers = new(() => GetPowers(obj.Id)),
-				Attributes = new(() => GetAttributes(obj.Id)),
-				AllAttributes = new(() => GetAllAttributes(obj.Id)),
-				Owner = new(() => GetObjectOwner(obj.Id)),
-				Parent = new(() => GetParent(obj.Id))
+				Flags = new(() => GetFlagsAsync(obj.Id).AsTask().Result),
+				Powers = new(() => GetPowersAsync(obj.Id).AsTask().Result),
+				Attributes = new(() => GetTopLevelAttributesAsync(obj.Id).AsTask().Result),
+				AllAttributes = new(() => GetAllAttributesAsync(obj.Id).AsTask().Result),
+				Owner = new(() => GetObjectOwnerAsync(obj.Id).AsTask().Result),
+				Parent = new(() => GetParentAsync(obj.Id).AsTask().Result)
 			};
+	}
+
+	private async ValueTask<IEnumerable<SharpAttribute>> GetTopLevelAttributesAsync(string id)
+	{
+		// This only works for when we get a non-attribute as our ID.
+		// Adjustment is needed if we get an attribute ID.
+		IEnumerable<SharpAttributeQueryResult> sharpAttributeResults;
+		if (id.StartsWith(DatabaseConstants.attributes))
+		{
+			sharpAttributeResults = await arangoDB.Query.ExecuteAsync<SharpAttributeQueryResult>(handle,
+				$"FOR v IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.graphAttributes} RETURN v",
+				new Dictionary<string, object>() { { "startVertex", id } });
+		}
+		else
+		{
+			sharpAttributeResults = await arangoDB.Query.ExecuteAsync<SharpAttributeQueryResult>(handle,
+				$"LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.graphObjects} RETURN v) FOR v IN 1..1 OUTBOUND start GRAPH {DatabaseConstants.graphAttributes} RETURN v",
+				new Dictionary<string, object>() { { "startVertex", id } });
+		}
+
+		var sharpAttributes = sharpAttributeResults.Select(async x => new SharpAttribute()
+		{
+			Flags = await GetAttributeFlagsAsync(x.Id),
+			Name = x.Name,
+			LongName = x.LongName,
+			Owner = new(() => GetAttributeOwnerAsync(x.Id).AsTask().Result),
+			Value = MarkupString.MarkupStringModule.single(x.Value), // TODO: Compose and Decompose
+			Leaves = new(() => GetTopLevelAttributesAsync(x.Id).AsTask().Result),
+			SharpAttributeEntry = new(() => null) // TODO: Fix
+		});
+
+		return await Task.WhenAll(sharpAttributes);
 	}
 
 	public async ValueTask<IEnumerable<SharpAttribute>?> GetAttributesAsync(DBRef dbref, string attribute_pattern)
@@ -543,16 +536,16 @@ public class ArangoDatabase(
 				{ "pattern", pattern }
 			});
 
-		return result2.Select(x => new SharpAttribute
+		return await Task.WhenAll(result2.Select(async x => new SharpAttribute
 		{
-			Flags = GetAttributeFlags(x.Id),
+			Flags = await GetAttributeFlagsAsync(x.Id),
 			Name = x.Name,
 			Value = MarkupStringModule.single(x.Value),
 			LongName = x.LongName,
-			Leaves = new(() => GetAttributes(x.Id)),
-			Owner = new(() => GetObjectOwner(x.Id)),
+			Leaves = new(() => GetTopLevelAttributesAsync(x.Id).AsTask().Result),
+			Owner = new(() => GetObjectOwnerAsync(x.Id).AsTask().Result),
 			SharpAttributeEntry = new(() => null) // TODO: Fix
-		});
+		}));
 	}
 
 	public async ValueTask<IEnumerable<SharpAttribute>?> GetAttributesRegexAsync(DBRef dbref, string attribute_pattern)
@@ -576,16 +569,16 @@ public class ArangoDatabase(
 				{ "pattern", attribute_pattern }
 			});
 
-		return result2.Select(x => new SharpAttribute
+		return await Task.WhenAll(result2.Select(async x => new SharpAttribute
 		{
-			Flags = GetAttributeFlags(x.Id),
+			Flags = await GetAttributeFlagsAsync(x.Id),
 			Name = x.Name,
 			Value = MarkupStringModule.single(x.Value),
 			LongName = x.LongName,
-			Leaves = new(() => GetAttributes(x.Id)),
-			Owner = new(() => GetObjectOwner(x.Id)),
+			Leaves = new(() => GetTopLevelAttributesAsync(x.Id).AsTask().Result),
+			Owner = new(() => GetObjectOwnerAsync(x.Id).AsTask().Result),
 			SharpAttributeEntry = new(() => null) // TODO: Fix
-		}).ToArray();
+		}));
 	}
 
 	public async ValueTask SetLockAsync(SharpObject target, string lockName, string lockString)
@@ -614,16 +607,16 @@ public class ArangoDatabase(
 
 		if (result.Count < attribute.Length) return null;
 
-		return result.Select(x => new SharpAttribute()
+		return await Task.WhenAll(result.Select(async x => new SharpAttribute()
 		{
 			Name = x.Name,
-			Flags = GetAttributeFlags(x.Id),
+			Flags = await GetAttributeFlagsAsync(x.Id),
 			Value = MarkupString.MarkupStringModule.single(x.Value), // TODO: Compose and Decompose
 			LongName = x.LongName,
-			Leaves = new(() => GetAttributes(x.Id)),
-			Owner = new(() => GetAttributeOwner(x.Id)),
+			Leaves = new(() => GetTopLevelAttributesAsync(x.Id).AsTask().Result),
+			Owner = new(() => GetAttributeOwnerAsync(x.Id).AsTask().Result),
 			SharpAttributeEntry = new(() => null) // TODO: FIX
-		}).ToArray();
+		}));
 	}
 
 	public async ValueTask<bool> SetAttributeAsync(DBRef dbref, string[] attribute, string value, SharpPlayer owner)

@@ -30,8 +30,8 @@ public static partial class Commands
 	{
 		// This will come in as arg[0] = <attr>, arg[1]: <object> and arg[2] as [value]
 		var args = parser.CurrentState.Arguments;
-		var enactor = parser.CurrentState.EnactorObject(parser.Database).WithoutNone();
-		var executor = parser.CurrentState.ExecutorObject(parser.Database).WithoutNone();
+		var enactor = (await parser.CurrentState.EnactorObject(parser.Database)).WithoutNone();
+		var executor = (await parser.CurrentState.ExecutorObject(parser.Database)).WithoutNone();
 
 		var locate = await parser.LocateService.LocateAndNotifyIfInvalid(parser,
 			enactor,

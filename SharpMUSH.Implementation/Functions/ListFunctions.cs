@@ -188,8 +188,8 @@ public partial class Functions
 		// Arg2: Delim
 		// Arg3: Sep
 
-		var executor = parser.CurrentState.ExecutorObject(parser.Database).Known();
-		var enactor = parser.CurrentState.EnactorObject(parser.Database).Known();
+		var executor = (await parser.CurrentState.ExecutorObject(parser.Database)).Known();
+		var enactor = (await parser.CurrentState.EnactorObject(parser.Database)).Known();
 		var objAttr =
 			HelperFunctions.SplitOptionalDBRefAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message!));
 		if (objAttr is { IsT1: true, AsT1: false })

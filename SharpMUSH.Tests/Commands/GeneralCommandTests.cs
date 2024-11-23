@@ -29,7 +29,7 @@ public class GeneralCommandTests : BaseUnitTest
 	public async Task Test(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var parser = TestParser(ds: database, ls: new LocateService(), ps: permission);
+		var parser = await TestParser(ds: database, ls: new LocateService(), ps: permission);
 		await parser.CommandParse("1", MModule.single(str));
 
 		await parser.NotifyService
@@ -40,7 +40,7 @@ public class GeneralCommandTests : BaseUnitTest
 	[Test]
 	public async Task DoListSimple()
 	{
-		var parser = TestParser(ds: database, ls: new LocateService(), ps: permission);
+		var parser = await TestParser(ds: database, ls: new LocateService(), ps: permission);
 		await parser.CommandParse("1", MModule.single("@dolist 1 2 3=@pemit #1=This is a test"));
 
 		await parser.NotifyService
@@ -51,7 +51,7 @@ public class GeneralCommandTests : BaseUnitTest
 	[Test]
 	public async Task DoListSimple2()
 	{
-		var parser = TestParser(ds: database, ls: new LocateService(), ps: permission);
+		var parser = await TestParser(ds: database, ls: new LocateService(), ps: permission);
 		await parser.CommandParse("1", MModule.single("@dolist 1 2 3=@pemit #1={This is, a test};"));
 
 		await parser.NotifyService
@@ -62,7 +62,7 @@ public class GeneralCommandTests : BaseUnitTest
 	[Test]
 	public async Task DoListComplex()
 	{
-		var parser = TestParser(ds: database, ls: new LocateService(), ps: permission);
+		var parser = await TestParser(ds: database, ls: new LocateService(), ps: permission);
 		await parser.CommandParse("1", MModule.single("@dolist 1 2 3={@pemit #1=This is a test; @pemit #1=This is also a test}"));
 
 		await parser.NotifyService
@@ -76,7 +76,7 @@ public class GeneralCommandTests : BaseUnitTest
 	[Test]
 	public async Task DoListComplex2()
 	{
-		var parser = TestParser(ds: database, ls: new LocateService(), ps: permission);
+		var parser = await TestParser(ds: database, ls: new LocateService(), ps: permission);
 		await parser.CommandParse("1", MModule.single("@dolist 1 2 3={@pemit #1=This is a test; @pemit #1=This is also a test}; @pemit #1=Repeat 3 times in this mode."));
 
 		await parser.NotifyService
@@ -93,7 +93,7 @@ public class GeneralCommandTests : BaseUnitTest
 	[Test]
 	public async Task DoListComplex3()
 	{
-		var parser = TestParser(ds: database, ls: new LocateService(), ps: permission);
+		var parser = await TestParser(ds: database, ls: new LocateService(), ps: permission);
 		await parser.CommandParse("1", MModule.single("@dolist 1={@dolist 1 2 3=@pemit #1=This is a test}; @pemit #1=Repeat 1 times in this mode."));
 
 		await parser.NotifyService
@@ -107,7 +107,7 @@ public class GeneralCommandTests : BaseUnitTest
 	[Test]
 	public async Task DoListComplex4()
 	{
-		var parser = TestParser(ds: database, ls: new LocateService(), ps: permission);
+		var parser = await TestParser(ds: database, ls: new LocateService(), ps: permission);
 		await parser.CommandParse("1", MModule.single("@dolist 1 2={@dolist 1 2 3=@pemit #1=This is a test}; @pemit #1=Repeat 2 times in this mode."));
 
 		await parser.NotifyService
@@ -121,7 +121,7 @@ public class GeneralCommandTests : BaseUnitTest
 	[Test, Repeat(10)]
 	public async Task DoListComplex5()
 	{
-		var parser = TestParser(ds: database, ls: new LocateService(), ps: permission);
+		var parser = await TestParser(ds: database, ls: new LocateService(), ps: permission);
 		await parser.CommandParse("1", MModule.single("@dolist a b={@dolist 1 2 3=@pemit #1=This is a test %i0}; @pemit #1=Repeat 1 times in this mode %i0"));
 
 		await parser.NotifyService
@@ -144,7 +144,7 @@ public class GeneralCommandTests : BaseUnitTest
 	[Test, Skip("Not Implemented")]
 	public async Task DoFlagSet()
 	{
-		var parser = TestParser(ds: database, ls: new LocateService(), ps: permission);
+		var parser = await TestParser(ds: database, ls: new LocateService(), ps: permission);
 		await parser.CommandParse("1", MModule.single("@set #1=DEBUG"));
 
 		var one = await parser.Database.GetObjectNodeAsync(new DBRef(1));

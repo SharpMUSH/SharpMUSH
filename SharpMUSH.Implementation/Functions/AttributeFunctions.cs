@@ -24,8 +24,8 @@ public partial class Functions
 
 		var args = parser.CurrentState.Arguments;
 		var split = HelperFunctions.SplitDBRefAndAttr(MModule.plainText(args["0"].Message!));
-		var enactor = parser.CurrentState.EnactorObject(parser.Database).WithoutNone();
-		var executor = parser.CurrentState.ExecutorObject(parser.Database).WithoutNone();
+		var enactor = (await parser.CurrentState.EnactorObject(parser.Database)).WithoutNone();
+		var executor = (await parser.CurrentState.ExecutorObject(parser.Database)).WithoutNone();
 
 		if (!split.TryPickT0(out var details, out var _))
 		{
@@ -92,7 +92,7 @@ public partial class Functions
 		}
 
 		var (dbref, attribute) = dbrefAndAttr.AsT0;
-		var executor = parser.CurrentState.ExecutorObject(parser.Database).WithoutNone();
+		var executor = (await parser.CurrentState.ExecutorObject(parser.Database)).WithoutNone();
 		var maybeDBref = await parser.LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, dbref, Library.Services.LocateFlags.All);
 
 		if (!maybeDBref.IsValid())

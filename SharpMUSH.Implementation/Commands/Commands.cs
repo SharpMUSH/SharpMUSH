@@ -106,7 +106,7 @@ public static partial class Commands
 			return await HandleSingleTokenCommandPattern(parser, source, context, command, singleTokenCommandPattern);
 		}
 
-		var executorObject = parser.CurrentState.ExecutorObject(parser.Database).WithoutNone();
+		var executorObject = (await parser.CurrentState.ExecutorObject(parser.Database)).WithoutNone();
 		// Step 3: Check exit Aliases
 		if (executorObject.IsContent)
 		{

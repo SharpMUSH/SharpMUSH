@@ -19,7 +19,7 @@ public class StringFunctionUnitTests : BaseUnitTest
 			? new byte[] { expectedByte1 }
 			: new byte[] { expectedByte1, expectedByte2.Value };
 
-		var parser = TestParser();
+		var parser = await TestParser();
 		var result = (await parser.FunctionParse(MModule.single(str)))?.Message!;
 
 		var color = StringExtensions.ansiBytes(expectedBytes);
@@ -53,7 +53,7 @@ public class StringFunctionUnitTests : BaseUnitTest
 			? new byte[] { expectedByte1 }
 			: new byte[] { expectedByte1, expectedByte2.Value };
 
-		var parser = TestParser();
+		var parser = await TestParser();
 		var result = (await parser.FunctionParse(MModule.single(str)))?.Message!;
 
 		var color = StringExtensions.ansiBytes(expectedBytes);

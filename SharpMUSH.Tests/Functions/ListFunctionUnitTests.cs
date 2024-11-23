@@ -12,7 +12,7 @@ public class ListFunctionUnitTests : BaseUnitTest
 	[Arguments("iter(1|2|3,iter(1 2 3,add(%i0,%i1)),|,-)", "2 3 4-3 4 5-4 5 6")]
 	public async Task IterationValue(string function, string expected)
 	{
-		var parser = TestParser();
+		var parser = await TestParser();
 		var result = (await parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
@@ -24,7 +24,7 @@ public class ListFunctionUnitTests : BaseUnitTest
 	[Arguments("iter(1|2|3,iter(1 2 3,add(%$0,%i1)),|,-)", "2 2 2-4 4 4-6 6 6")]
 	public async Task IterationNumber(string function, string expected)
 	{
-		var parser = TestParser();
+		var parser = await TestParser();
 		var result = (await parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
@@ -40,7 +40,7 @@ public class ListFunctionUnitTests : BaseUnitTest
 	// TODO: Why does putting [ibreak()] at the start of the contents cause a different evaluation?
 	public async Task IterationBreak(string function, string expected)
 	{
-		var parser = TestParser();
+		var parser = await TestParser();
 		var result = (await parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
@@ -54,7 +54,7 @@ public class ListFunctionUnitTests : BaseUnitTest
 	[Arguments("rest(1|2|3,|)","2|3")]
 	public async Task Rest(string function, string expected)
 	{
-		var parser = TestParser();
+		var parser = await TestParser();
 		var result = (await parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
@@ -68,7 +68,7 @@ public class ListFunctionUnitTests : BaseUnitTest
 	[Arguments("last(1|2|3,|)","3")]
 	public async Task Last(string function, string expected)
 	{
-		var parser = TestParser();
+		var parser = await TestParser();
 		var result = (await parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}

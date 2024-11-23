@@ -17,7 +17,7 @@ public class FunctionUnitTests : BaseUnitTest
 	public async Task Test(string str, string? expected = null)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var parser = TestParser();
+		var parser = await TestParser();
 		var result = (await parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
 
 		Console.WriteLine(string.Join("", result));

@@ -50,6 +50,6 @@ public static class MemoryCacheExtensions
 		);
 		var entries = field?.GetValue(cache) as IDictionary<object, object>;
 
-		return entries?.Keys.OfType<T>() ?? Enumerable.Empty<T>();
+		return entries?.Keys.OfType<T>() ?? [];
 	}
 }
