@@ -80,7 +80,6 @@ public class BaseUnitTest
 		return new MUSHCodeParser(
 			pws ?? (IPasswordService)integrationServer.Services.GetService(typeof(IPasswordService))!,
 			ps ?? (IPermissionService)integrationServer.Services.GetService(typeof(IPermissionService))!,
-			database,
 			at ?? (IAttributeService)integrationServer.Services.GetService(typeof(IAttributeService))!,
 			ns ?? (INotifyService)integrationServer.Services.GetService(typeof(INotifyService))!,
 			ls ?? (ILocateService)integrationServer.Services.GetService(typeof(ILocateService))!,

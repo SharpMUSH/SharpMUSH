@@ -188,8 +188,8 @@ public partial class LocateService : ILocateService
 		{
 			if (flags.HasFlag(LocateFlags.MatchObjectsInLookerInventory | LocateFlags.MatchRemoteContents) && where.IsContainer)
 			{
-				var contents = (await parser.Mediator.Send(new GetContentsQuery(where.AsContainer)))
-					.Select(x => x.WithRoomOption());
+				var contents = (await parser.Mediator.Send(new GetContentsQuery(where.AsContainer)))?
+					.Select(x => x.WithRoomOption()) ?? [];
 				(bestMatch, final, curr, right_type, exact, c) =
 					Match_List(parser, contents, looker, where, bestMatch, exact, final, curr, right_type, flags, name);
 				if (c == ControlFlow.Break) break;
@@ -223,8 +223,7 @@ public partial class LocateService : ILocateService
 					if (flags.HasFlag(LocateFlags.All)
 					    && !flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation | LocateFlags.OnlyMatchObjectsInLookerInventory))
 					{
-						var exits = (await parser.Database
-							.GetExitsAsync(Library.Definitions.Configurable.MasterRoom))!
+						var exits = (await parser.Mediator.Send(new GetExitsQuery(Configurable.MasterRoom)))
 							.Select(x => new AnySharpObject(x));
 
 						(bestMatch, final, curr, right_type, exact, c) = Match_List(parser, exits, looker, where, bestMatch, exact, final, curr, right_type, flags, name);
@@ -233,8 +232,7 @@ public partial class LocateService : ILocateService
 					}
 					if (location.IsRoom)
 					{
-						var exits = (await parser.Database
-							.GetExitsAsync(location))!
+						var exits = (await parser.Mediator.Send(new GetExitsQuery(location)))
 							.Select(x => new AnySharpObject(x));
 						(bestMatch, final, curr, right_type, exact, c) = Match_List(parser, exits, looker, where, bestMatch, exact, final, curr, right_type, flags, name);
 						if (c == ControlFlow.Break) break;
@@ -254,9 +252,7 @@ public partial class LocateService : ILocateService
 				    && where.IsRoom
 				    && ((location.Object().DBRef != where.Object().DBRef) || !flags.HasFlag(LocateFlags.ExitsPreference)))
 				{
-					var exits = (await parser.Database
-						.GetExitsAsync(where.AsRoom))!
-						.Select(x => new AnySharpObject(x));
+					var exits = (await parser.Mediator.Send(new GetExitsQuery(where.AsContainer)))?.Select(x => new AnySharpObject(x)) ?? [];
 
 					(bestMatch, final, curr, right_type, exact, c) = Match_List(parser, exits, looker, where, bestMatch, exact, final, curr, right_type, flags, name);
 				}

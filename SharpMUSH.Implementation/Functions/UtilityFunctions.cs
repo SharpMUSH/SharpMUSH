@@ -10,6 +10,7 @@ using System.Text.RegularExpressions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Queries.Database;
 using static ANSILibrary.ANSI;
+using SharpMUSH.Library.Commands.Database;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -32,10 +33,10 @@ public partial class Functions
 			thing => thing.Object.Key,
 			none => -1);
 
-		var created = await parser.Database.CreatePlayerAsync(
+		var created = await parser.Mediator.Send(new CreatePlayerCommand(
 			args["0"].Message!.ToString(),
 			args["1"].Message!.ToString(),
-			new Library.Models.DBRef(trueLocation == -1 ? 1 : trueLocation));
+			new Library.Models.DBRef(trueLocation == -1 ? 1 : trueLocation)));
 
 		return new CallState($"#{created.Number}:{created.CreationMilliseconds}");
 	}
@@ -236,7 +237,7 @@ public partial class Functions
 		}
 
 		var dbRef = dbRefConversion.AsValue();
-		var objectInfo = await parser.Database.GetObjectNodeAsync(dbRef);
+		var objectInfo = await parser.Mediator.Send(new GetObjectNodeQuery(dbRef));
 		if (!objectInfo!.IsPlayer)
 		{
 			return new CallState("#-1 NO SUCH PLAYER");
@@ -290,7 +291,7 @@ public partial class Functions
 	{
 		var parsed = HelperFunctions.ParseDBRef(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
 		if (parsed.IsNone()) return new("0");
-		return new CallState(!(await parser.Database.GetObjectNodeAsync(parsed.AsValue())).IsNone);
+		return new CallState(!(await parser.Mediator.Send(new GetObjectNodeQuery(parsed.AsValue()))).IsNone);
 	}
 
 	[SharpFunction(Name = "ISINT", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]

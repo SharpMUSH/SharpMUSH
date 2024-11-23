@@ -10,13 +10,12 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using OneOf.Types;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Implementation.Commands;
 
 public static partial class Commands
 {
-	private const char SLASH = '/';
-
 	private static readonly
 		Dictionary<string, (SharpCommandAttribute Attribute, Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Function)>
 		_commandLibrary = [];
@@ -106,7 +105,7 @@ public static partial class Commands
 			return await HandleSingleTokenCommandPattern(parser, source, context, command, singleTokenCommandPattern);
 		}
 
-		var executorObject = (await parser.CurrentState.ExecutorObject(parser.Database)).WithoutNone();
+		var executorObject = (await parser.CurrentState.ExecutorObject(parser.Mediator)).WithoutNone();
 		// Step 3: Check exit Aliases
 		if (executorObject.IsContent)
 		{
@@ -129,11 +128,11 @@ public static partial class Commands
 
 		// TODO: Optimize
 		// TODO: Get the Switches and send them along as a list of items!
-		var slashIndex = command.IndexOf(SLASH);
+		var slashIndex = command.IndexOf('/');
 		var rootCommand =
 			command[..(slashIndex > -1 ? slashIndex : command.Length)];
 		var swtch = command[(slashIndex > -1 ? slashIndex : command.Length)..];
-		var switches = swtch.Split(SLASH).Where(s => !string.IsNullOrWhiteSpace(s));
+		var switches = swtch.Split('/').Where(s => !string.IsNullOrWhiteSpace(s));
 
 		if (_commandLibrary.TryGetValue(rootCommand.ToUpper(), out var libraryCommandDefinition)
 		    && !rootCommand.Equals("HUH_COMMAND", StringComparison.CurrentCultureIgnoreCase))
@@ -151,7 +150,7 @@ public static partial class Commands
 		// Optimistic that the command still exists, until we try and it no longer does?
 		// What's the best way to retrieve the Regex or Wildcard pattern and transform it? 
 		// It needs to take an area to search in. So this is definitely its own service.
-		var nearbyObjects = await parser.Database.GetNearbyObjectsAsync(executorObject.Object().DBRef);
+		var nearbyObjects = await parser.Mediator.Send(new GetNearbyObjectsQuery(executorObject.Object().DBRef));
 
 		Stopwatch sw = Stopwatch.StartNew();
 		var userDefinedCommandMatches = parser.CommandDiscoveryService.MatchUserDefinedCommand(

@@ -16,7 +16,6 @@ namespace SharpMUSH.Implementation;
 public record MUSHCodeParser(
 	IPasswordService _passwordService,
 	IPermissionService _permissionService,
-	ISharpDatabase _database,
 	IAttributeService _attributeService,
 	INotifyService _notifyService,
 	ILocateService _locateService,
@@ -33,7 +32,6 @@ public record MUSHCodeParser(
 
 	public ILocateService LocateService => _locateService;
 
-	public ISharpDatabase Database => _database;
 	public ICommandDiscoveryService CommandDiscoveryService => _commandDiscoveryService;
 
 	public ITaskScheduler Scheduler => _scheduleService;
@@ -57,7 +55,7 @@ public record MUSHCodeParser(
 	public IImmutableStack<ParserState> State { get; private init; } = ImmutableStack<ParserState>.Empty;
 	
 	public IMUSHCodeParser FromState(ParserState state) => new MUSHCodeParser(_passwordService, _permissionService,
-		_database, _attributeService, _notifyService, _locateService, _commandDiscoveryService, _scheduleService,
+		_attributeService, _notifyService, _locateService, _commandDiscoveryService, _scheduleService,
 		_connectionService, _mediator, state);
 
 	public IMUSHCodeParser Empty() => this with { State = ImmutableStack<ParserState>.Empty };
@@ -67,7 +65,6 @@ public record MUSHCodeParser(
 	public MUSHCodeParser(
 		IPasswordService passwordService,
 		IPermissionService permissionService,
-		ISharpDatabase database,
 		IAttributeService attributeService,
 		INotifyService notifyService,
 		ILocateService locateService,
@@ -76,7 +73,7 @@ public record MUSHCodeParser(
 		IConnectionService connectionService,
 		IMediator mediator,
 		ParserState state) :
-		this(passwordService, permissionService, database, attributeService, notifyService, locateService,
+		this(passwordService, permissionService, attributeService, notifyService, locateService,
 			commandDiscoveryService, scheduleService, connectionService, mediator)
 		=> State = [state];
 

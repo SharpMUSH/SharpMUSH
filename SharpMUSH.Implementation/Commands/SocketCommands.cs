@@ -3,6 +3,7 @@ using Serilog;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Implementation.Commands;
@@ -20,7 +21,7 @@ public static partial class Commands
 		var header = string.Format(fmt, "Player Name", "On For", "Idle", "Doing");
 		var players = await Task.WhenAll(everyone.Where(player => player.Ref.HasValue).Select(async player =>
 		{
-			var name = await parser.Database.GetBaseObjectNodeAsync(player.Ref!.Value);
+			var name = await parser.Mediator.Send(new GetBaseObjectNodeQuery(player.Ref!.Value));
 			var onFor = DateTimeOffset.UtcNow - DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(player.Metadata["ConnectionStartTime"]));
 			var idleFor = DateTimeOffset.UtcNow - DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(player.Metadata["LastConnectionSignal"]));
 			return string.Format(
@@ -69,8 +70,8 @@ public static partial class Commands
 
 		var nameItem = nameItems.First();
 		var foundDB = await nameItem.Match(
-			async dbref => (await parser.Database.GetObjectNodeAsync(dbref)).TryPickT0(out var player, out _) ? player : null,
-			async name => (await parser.Database.GetPlayerByNameAsync(name)).FirstOrDefault());
+			async dbref => (await parser.Mediator.Send(new GetObjectNodeQuery(dbref))).TryPickT0(out var player, out _) ? player : null,
+			async name => (await parser.Mediator.Send(new GetPlayerQuery(name))).FirstOrDefault());
 
 		if (foundDB is null)
 		{

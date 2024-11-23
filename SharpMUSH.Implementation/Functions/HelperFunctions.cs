@@ -7,6 +7,7 @@ using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -235,10 +236,10 @@ public partial class Functions
 
 	public static async ValueTask<IEnumerable<SharpPlayer?>> PopulatedNameList(IMUSHCodeParser parser, string list)
 		=> await Task.WhenAll(NameList(list).Select(x => x.Match(
-			async dbref => (await parser.Database.GetObjectNodeAsync(dbref)).TryPickT0(out var player, out var _)
+			async dbref => (await parser.Mediator.Send(new GetObjectNodeQuery(dbref))).TryPickT0(out var player, out var _)
 				? player
 				: null,
-			async name => (await parser.Database.GetPlayerByNameAsync(name)).FirstOrDefault())));
+			async name => (await parser.Mediator.Send(new GetPlayerQuery(name))).FirstOrDefault())));
 
 	/// <summary>
 	/// A regular expression that matches one or more names in a list format.

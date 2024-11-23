@@ -1,5 +1,6 @@
 ﻿using SharpMUSH.Library;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Tests.Functions;
@@ -20,7 +21,7 @@ public class UtilityFunctionUnitTests : BaseUnitTest
 		var result = (await _parser!.FunctionParse(MModule.single("pcreate(John,SomePassword)")))?.Message?.ToString()!;
 
 		var a = HelperFunctions.ParseDBRef(result).AsValue();
-		var db = await _parser.Database!.GetObjectNodeAsync(a);
+		var db = await _parser.Mediator.Send(new GetObjectNodeQuery(a));
 		var player = db!.AsPlayer;
 
 		await Assert.That(_parser.PasswordService.PasswordIsValid(result, "SomePassword", player.PasswordHash)).IsTrue();

@@ -3,6 +3,7 @@ using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -64,7 +65,7 @@ public partial class Functions
 		// TODO: USE LOCATE
 		if (obj.IsNone()) return new CallState(false);
 
-		var actualObj = await parser.Database.GetObjectNodeAsync(obj.AsValue());
+		var actualObj = await parser.Mediator.Send(new GetObjectNodeQuery(obj.AsValue()));
 		// TODO: Notify
 		if (actualObj.IsNone()) return new CallState(false);
 
@@ -79,7 +80,7 @@ public partial class Functions
 		// TODO: USE LOCATE
 		if (obj.IsNone()) return new CallState(false, Errors.ErrorNotVisible);
 			
-		var actualObj = await parser.Database.GetObjectNodeAsync(obj.AsValue());
+		var actualObj = await parser.Mediator.Send(new GetObjectNodeQuery(obj.AsValue()));
 		// TODO: Notify
 		if (actualObj.IsNone()) return new CallState(false);
 

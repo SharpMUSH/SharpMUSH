@@ -49,7 +49,7 @@ public interface ISharpDatabase
 	/// <param name="dbref">Database Reference Number</param>
 	/// <param name="flag">Flag</param>
 	/// <returns>Success or Failure</returns>
-	ValueTask<bool> SetObjectFlagAsync(DBRef dbref, SharpObjectFlag flag);
+	ValueTask<bool> SetObjectFlagAsync(AnySharpObject dbref, SharpObjectFlag flag);
 
 	/// <summary>
 	/// Unset an Object flag.
@@ -57,7 +57,7 @@ public interface ISharpDatabase
 	/// <param name="dbref">Database Reference Number</param>
 	/// <param name="flag">Flag</param>
 	/// <returns>Success or Failure</returns>
-	ValueTask<bool> UnsetObjectFlagAsync(DBRef dbref, SharpObjectFlag flag);
+	ValueTask<bool> UnsetObjectFlagAsync(AnySharpObject dbref, SharpObjectFlag flag);
 
 	ValueTask<SharpObject?> GetParentAsync(string id);
 
@@ -126,7 +126,9 @@ public interface ISharpDatabase
 	ValueTask<bool> WipeAttributeAsync(DBRef dbref, string[] attribute);
 
 	ValueTask<IEnumerable<AnySharpObject>> GetNearbyObjectsAsync(DBRef obj);
-	
+
+	ValueTask<IEnumerable<AnySharpObject>> GetNearbyObjectsAsync(AnySharpObject obj);
+
 	ValueTask<AnyOptionalSharpContainer> GetLocationAsync(DBRef obj, int depth = 1);
 	
 	ValueTask<AnySharpContainer> GetLocationAsync(AnySharpObject obj, int depth = 1);
@@ -137,9 +139,9 @@ public interface ISharpDatabase
 
 	ValueTask<IEnumerable<SharpExit>?> GetExitsAsync(DBRef obj);
 
-	ValueTask<IEnumerable<SharpExit>?> GetExitsAsync(AnySharpContainer node);
+	ValueTask<IEnumerable<SharpExit>> GetExitsAsync(AnySharpContainer node);
 
-	ValueTask MoveObjectAsync(AnySharpContent enactorObj, DBRef destination);
+	ValueTask MoveObjectAsync(AnySharpContent enactorObj, AnySharpContainer destination);
 
 	/// <summary>
 	/// Gets the location of an object, at X depth, with 0 returning the same object, and -1 going until it can't go deeper.

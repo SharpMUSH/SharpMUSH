@@ -197,14 +197,24 @@ public class ArangoDatabase(
 			$"FOR v in {DatabaseConstants.objectFlags:@} RETURN v",
 			cache: true);
 
-	public ValueTask<bool> SetObjectFlagAsync(DBRef dbref, SharpObjectFlag flag)
+	public async ValueTask<bool> SetObjectFlagAsync(AnySharpObject target, SharpObjectFlag flag)
 	{
-		throw new NotImplementedException();
+		await arangoDB.Document.UpdateAsync(handle, DatabaseConstants.objects, new
+		{
+			target.Object().Key,
+			Value = target.Object().Flags.Value.ToImmutableArray().Add(flag)
+		});
+		return true;
 	}
 
-	public ValueTask<bool> UnsetObjectFlagAsync(DBRef dbref, SharpObjectFlag flag)
+	public async ValueTask<bool> UnsetObjectFlagAsync(AnySharpObject target, SharpObjectFlag flag)
 	{
-		throw new NotImplementedException();
+		await arangoDB.Document.UpdateAsync(handle, DatabaseConstants.objects, new
+		{
+			target.Object().Key,
+			Value = target.Object().Flags.Value.ToImmutableArray().Remove(flag)
+		});
+		return true;
 	}
 
 	private async ValueTask<IEnumerable<SharpPower>> GetPowersAsync(string id)
@@ -755,6 +765,18 @@ public class ArangoDatabase(
 		];
 	}
 
+	public async ValueTask<IEnumerable<AnySharpObject>> GetNearbyObjectsAsync(AnySharpObject obj)
+	{
+		var location = obj.Where;
+
+		return
+		[
+			obj,
+			.. (await GetContentsAsync(obj.Object().DBRef))!.Select(x => x.WithRoomOption()),
+			.. (await GetContentsAsync(location.Object().DBRef))!.Select(x => x.WithRoomOption()),
+		];
+	}
+
 	/// <summary>
 	/// Gets the location of an object, at X depth, with 0 returning the same object, and -1 going until it can't go deeper.
 	/// </summary>
@@ -932,10 +954,10 @@ public class ArangoDatabase(
 		return await Task.WhenAll(query.Select(GetObjectNodeAsync).Select(async x => (await x).AsPlayer));
 	}
 
-	public async ValueTask MoveObjectAsync(AnySharpContent enactorObj, DBRef destination)
+	public async ValueTask MoveObjectAsync(AnySharpContent enactorObj, AnySharpContainer destination)
 	{
 		var oldLocation = enactorObj.Location();
-		var newLocation = await GetObjectNodeAsync(destination);
+		var newLocation = destination;
 		var edge = (await arangoDB.Query.ExecuteAsync<SharpEdgeQueryResult>(handle,
 				$"FOR v,e IN 1..1 OUTBOUND {oldLocation.Object().Id} GRAPH {DatabaseConstants.graphLocations} RETURN e"))
 			.Single();
@@ -947,7 +969,7 @@ public class ArangoDatabase(
 			new
 			{
 				From = enactorObj.Object().Id,
-				To = newLocation.WithoutNone().Object().Id
+				To = newLocation.Object().Id
 			},
 			waitForSync: true);
 	}

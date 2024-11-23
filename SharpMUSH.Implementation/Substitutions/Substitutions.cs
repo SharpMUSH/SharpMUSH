@@ -17,17 +17,17 @@ public static partial class Substitutions
 			"T" or "t" => new("\t"),
 			"#" => new($"#{parser.CurrentState.Enactor!.Value.Number}"),
 			":" => new($"#{parser.CurrentState.Enactor!.Value}"),
-			"n" => new((await parser.CurrentState.EnactorObject(parser.Database)).Object()!.Name),
-			"N" => new((await parser.CurrentState.EnactorObject(parser.Database)).Object()!.Name), // TODO: CAPPED ENACTOR NAME
-			"~" => new((await parser.CurrentState.EnactorObject(parser.Database)).Object()!.Name), // TODO: ACCENTED ENACTOR NAME
-			"K" or "k" => new((await parser.CurrentState.EnactorObject(parser.Database)).Object()!.Name), // TODO: MONIKER ENACTOR NAME
+			"n" => new((await parser.CurrentState.EnactorObject(parser.Mediator)).Object()!.Name),
+			"N" => new((await parser.CurrentState.EnactorObject(parser.Mediator)).Object()!.Name), // TODO: CAPPED ENACTOR NAME
+			"~" => new((await parser.CurrentState.EnactorObject(parser.Mediator)).Object()!.Name), // TODO: ACCENTED ENACTOR NAME
+			"K" or "k" => new((await parser.CurrentState.EnactorObject(parser.Mediator)).Object()!.Name), // TODO: MONIKER ENACTOR NAME
 			"S" or "s" => new CallState("they"), // TODO: SUBJECT PRONOUN
 			"O" or "o" => throw new NotImplementedException(), // TODO: OBJECT PRONOUN
 			"P" or "p" => throw new NotImplementedException(), // TODO: POSSESSIVE PRONOUN
 			"A" or "a" => throw new NotImplementedException(), // TODO: ABSOLUTE POSSESSIVE PRONOUN
 			"@" => new($"#{parser.CurrentState.Caller!.Value.Number}"),
 			"!" => new($"#{parser.CurrentState.Executor!.Value.Number}"),
-			"L" or "l" => new((await parser.CurrentState.ExecutorObject(parser.Database)).WithoutNone().Where.Object().DBRef.ToString()), // TODO: LOCATION OF EXECUTOR
+			"L" or "l" => new((await parser.CurrentState.ExecutorObject(parser.Mediator)).WithoutNone().Where.Object().DBRef.ToString()), // TODO: LOCATION OF EXECUTOR
 			"C" or "c" => throw new NotImplementedException(), // TODO: LAST COMMAND BEFORE EVALUATION
 			"U" or "u" => throw new NotImplementedException(), // TODO: LAST COMMAND AFTER EVALUATION
 			"?" => new(parser.State.Count().ToString()),
@@ -58,9 +58,8 @@ public static partial class Substitutions
 	// Symbol Example: %vw --> vw
 	private static async ValueTask<CallState> HandleVWX(CallState symbol, IMUSHCodeParser parser)
 	{
-		var db = parser.Database;
 		var attrService = parser.AttributeService;
-		var executor = (await parser.CurrentState.ExecutorObject(db)).Known();
+		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
 
 		var val = await attrService.GetAttributeAsync(executor, executor, symbol.Message!.ToString(),
 			IAttributeService.AttributeMode.Read, true);

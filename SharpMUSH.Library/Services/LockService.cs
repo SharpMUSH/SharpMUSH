@@ -3,12 +3,16 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.DiscriminatedUnions;
+using Mediator;
+using SharpMUSH.Library.Commands.Database;
 
 namespace SharpMUSH.Library.Services;
 
-public class LockService(IBooleanExpressionParser bep) : ILockService
+public class LockService(IBooleanExpressionParser bep, IMediator med) : ILockService
 {
-	private static readonly ConcurrentCache<(DBRef, LockType), Func<AnySharpObject, AnySharpObject, bool>> CachedLockString 
+#pragma warning disable CS0618 // Type or member is obsolete
+		private static readonly ConcurrentCache<(DBRef, LockType), Func<AnySharpObject, AnySharpObject, bool>> CachedLockString
+#pragma warning restore CS0618 // Type or member is obsolete
 		= new(100, CacheEvictionPolicy.LFU);
 
 	// TODO: Optimize #TRUE calls, we don't need to cache those.
@@ -34,7 +38,6 @@ public class LockService(IBooleanExpressionParser bep) : ILockService
 			=> gated.Select(g => CachedLockString.GetOrAdd((g.Object().DBRef, standardType), bep.Compile(Get(standardType, g)), out var _)(g, unlocker));
 
 	public bool Set(
-		ISharpDatabase db,
 		LockType standardType,
 		string lockString,
 		AnySharpObject lockee)
@@ -43,7 +46,7 @@ public class LockService(IBooleanExpressionParser bep) : ILockService
 		if (!bep.Validate(lockString, lockee)) return false;
 
 		CachedLockString.AddOrUpdate((lockee.Object().DBRef, standardType), bep.Compile(lockString), out var _);
-		db.SetLockAsync(lockee.Object(), standardType.ToString(), lockString).AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
+		_ = med.Send(new SetLockCommand(lockee.Object(), standardType.ToString(), lockString)).AsTask().Result;
 
 		return true;
 	}

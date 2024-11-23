@@ -2,6 +2,7 @@
 using SharpMUSH.Library;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -18,7 +19,7 @@ public partial class Functions
 		}
 
 		var dbRef = dbRefConversion.AsValue();
-		var objectInfo = await parser.Database.GetObjectNodeAsync(dbRef);
+		var objectInfo = await parser.Mediator.Send(new GetObjectNodeQuery(dbRef));
 
 		// TODO: Check the type, as an Exit doesn't return the right thing or Loc on a Location Search.
 		// It has a few things that return different results.
@@ -293,7 +294,7 @@ public partial class Functions
 			return new CallState("#-1");
 		}
 
-		var contents = await parser.Database.GetContentsAsync(dbRefConversion.AsValue());
+		var contents = await parser.Mediator.Send(new GetContentsQuery(dbRefConversion.AsValue()));
 		if (contents is null)
 		{
 			await parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, "I can't see that here.");

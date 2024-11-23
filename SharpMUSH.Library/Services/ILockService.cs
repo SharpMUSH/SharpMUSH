@@ -9,5 +9,5 @@ public interface ILockService
 
 	bool Evaluate(LockType standardType, AnySharpObject gated, AnySharpObject unlocker);
 
-	bool Set(ISharpDatabase db, LockType standardType, string lockString, AnySharpObject lockee);
+	bool Set(LockType standardType, string lockString, AnySharpObject lockee);
 }

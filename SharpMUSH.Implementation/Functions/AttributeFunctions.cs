@@ -4,6 +4,7 @@ using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using System.Collections.Immutable;
 
 namespace SharpMUSH.Implementation.Functions;
@@ -24,8 +25,8 @@ public partial class Functions
 
 		var args = parser.CurrentState.Arguments;
 		var split = HelperFunctions.SplitDBRefAndAttr(MModule.plainText(args["0"].Message!));
-		var enactor = (await parser.CurrentState.EnactorObject(parser.Database)).WithoutNone();
-		var executor = (await parser.CurrentState.ExecutorObject(parser.Database)).WithoutNone();
+		var enactor = (await parser.CurrentState.EnactorObject(parser.Mediator)).WithoutNone();
+		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).WithoutNone();
 
 		if (!split.TryPickT0(out var details, out var _))
 		{
@@ -92,7 +93,7 @@ public partial class Functions
 		}
 
 		var (dbref, attribute) = dbrefAndAttr.AsT0;
-		var executor = (await parser.CurrentState.ExecutorObject(parser.Database)).WithoutNone();
+		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).WithoutNone();
 		var maybeDBref = await parser.LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, dbref, Library.Services.LocateFlags.All);
 
 		if (!maybeDBref.IsValid())
@@ -355,7 +356,7 @@ public partial class Functions
 
 		var (dbref, attribute) = dbrefAndAttr.AsT0;
 
-		var executor = (await parser.Database.GetObjectNodeAsync(parser.CurrentState.Executor!.Value)).WithoutNone();
+		var executor = (await parser.Mediator.Send(new GetObjectNodeQuery(parser.CurrentState.Executor!.Value))).WithoutNone();
 		var maybeDBref = await parser.LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, dbref, Library.Services.LocateFlags.All);
 
 		if (!maybeDBref.IsValid())

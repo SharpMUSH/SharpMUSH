@@ -118,6 +118,11 @@ public class SurrealDatabase(
 				throw new NotImplementedException();
 		}
 
+		public ValueTask<IEnumerable<AnySharpObject>> GetNearbyObjectsAsync(AnySharpObject obj)
+		{
+				throw new NotImplementedException();
+		}
+
 		public ValueTask<SharpObjectFlag?> GetObjectFlagAsync(string name)
 		{
 				throw new NotImplementedException();
@@ -158,6 +163,11 @@ public class SurrealDatabase(
 				throw new NotImplementedException();
 		}
 
+		public ValueTask MoveObjectAsync(AnySharpContent enactorObj, AnySharpContainer destination)
+		{
+				throw new NotImplementedException();
+		}
+
 		public ValueTask<bool> SetAttributeAsync(DBRef dbref, string[] attribute, string value, SharpPlayer owner)
 		{
 				throw new NotImplementedException();
@@ -173,7 +183,7 @@ public class SurrealDatabase(
 				throw new NotImplementedException();
 		}
 
-		public ValueTask<bool> SetObjectFlagAsync(DBRef dbref, SharpObjectFlag flag)
+		public ValueTask<bool> SetObjectFlagAsync(AnySharpObject dbref, SharpObjectFlag flag)
 		{
 				throw new NotImplementedException();
 		}
@@ -183,7 +193,7 @@ public class SurrealDatabase(
 				throw new NotImplementedException();
 		}
 
-		public ValueTask<bool> UnsetObjectFlagAsync(DBRef dbref, SharpObjectFlag flag)
+		public ValueTask<bool> UnsetObjectFlagAsync(AnySharpObject dbref, SharpObjectFlag flag)
 		{
 				throw new NotImplementedException();
 		}

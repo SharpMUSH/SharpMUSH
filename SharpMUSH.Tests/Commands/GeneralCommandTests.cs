@@ -3,6 +3,7 @@ using NSubstitute.ReceivedExtensions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Tests.Commands;
@@ -132,7 +133,7 @@ public class GeneralCommandTests : BaseUnitTest
 	{
 		await _parser!.CommandParse("1", MModule.single("@set #1=DEBUG"));
 
-		var one = await _parser.Database.GetObjectNodeAsync(new DBRef(1));
+		var one = await _parser.Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
 		var onePlayer = one.AsPlayer;
 		var flags = onePlayer.Object.Flags.Value;
 

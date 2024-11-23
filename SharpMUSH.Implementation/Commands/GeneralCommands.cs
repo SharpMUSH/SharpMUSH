@@ -28,7 +28,7 @@ public static partial class Commands
 		}
 
 		var notification = args["0"].Message!.ToString();
-		var enactor = (await parser.CurrentState.EnactorObject(parser.Database)).WithoutNone();
+		var enactor = (await parser.CurrentState.EnactorObject(parser.Mediator)).WithoutNone();
 		await parser.NotifyService.Notify(enactor, notification);
 
 		return new None();
@@ -60,7 +60,7 @@ public static partial class Commands
 		// TODO: Validate Name 
 		var args = parser.CurrentState.Arguments;
 		var name = MModule.plainText(args["0"].Message!);
-		var executor = (await parser.CurrentState.ExecutorObject(parser.Database)).Known();
+		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
 
 		var thing = await parser.Mediator.Send(new CreateThingCommand(name, executor.Where, executor.Object()!.Owner.Value));
 
@@ -77,8 +77,8 @@ public static partial class Commands
 
 		var args = parser.CurrentState.Arguments;
 		var split = HelperFunctions.SplitDBRefAndOptionalAttr(MModule.plainText(args["0"].Message!));
-		var enactor = (await parser.CurrentState.EnactorObject(parser.Database)).WithoutNone();
-		var executor = (await parser.CurrentState.ExecutorObject(parser.Database)).WithoutNone();
+		var enactor = (await parser.CurrentState.EnactorObject(parser.Mediator)).WithoutNone();
+		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).WithoutNone();
 
 		if (!split.TryPickT0(out var details, out var _))
 		{
@@ -152,7 +152,7 @@ public static partial class Commands
 			// TODO: Permission Check for each flag.
 			// Probably should have a service for this?
 
-			var realFlag = await parser.Database.GetObjectFlagAsync(plainFlag);
+			var realFlag = await parser.Mediator.Send(new GetObjectFlagQuery(plainFlag));
 
 			// TODO: Notify
 			if (realFlag is null) continue;
@@ -160,11 +160,11 @@ public static partial class Commands
 			// Set Flag	
 			if (unset)
 			{
-				await parser.Database.UnsetObjectFlagAsync(realLocated.Object().DBRef, realFlag);
+				await parser.Mediator.Send(new UnsetObjectFlagCommand(realLocated, realFlag));
 			}
 			else
 			{
-				await parser.Database.SetObjectFlagAsync(realLocated.Object().DBRef, realFlag);
+				await parser.Mediator.Send(new SetObjectFlagCommand(realLocated, realFlag));
 			}
 		}
 
@@ -174,7 +174,7 @@ public static partial class Commands
 	[SharpCommand(Name = "HUH_COMMAND", Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> HuhCommand(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var enactor = (await parser.CurrentState.EnactorObject(parser.Database)).WithoutNone();
+		var enactor = (await parser.CurrentState.EnactorObject(parser.Mediator)).WithoutNone();
 		await parser.NotifyService.Notify(enactor, "Huh?  (Type \"help\" for help.)");
 		return new None();
 	}
@@ -183,7 +183,7 @@ public static partial class Commands
 		Switches = ["CLEARREGS", "DELIMIT", "INLINE", "INPLACE", "LOCALIZE", "NOBREAK", "NOTIFY"])]
 	public static async ValueTask<Option<CallState>> DoList(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var enactor = (await parser.CurrentState.EnactorObject(parser.Database)).WithoutNone();
+		var enactor = (await parser.CurrentState.EnactorObject(parser.Mediator)).WithoutNone();
 
 		if (parser.CurrentState.Arguments.Count < 2)
 		{
@@ -218,7 +218,7 @@ public static partial class Commands
 		// TODO: Consult CONFORMAT, DESCFORMAT, INAMEFORMAT, NAMEFORMAT, etc.
 
 		var args = parser.CurrentState.Arguments;
-		var enactor = (await parser.CurrentState.EnactorObject(parser.Database)).WithoutNone();
+		var enactor = (await parser.CurrentState.EnactorObject(parser.Mediator)).WithoutNone();
 		AnyOptionalSharpObject viewing = new None();
 
 		if (args.Count == 1)
@@ -245,12 +245,12 @@ public static partial class Commands
 			return new None();
 		}
 
-		var contents = viewing.IsExit ? [] : (await parser.Database.GetContentsAsync(viewing.WithoutNone().AsContainer))!.ToList();
+		var contents = viewing.IsExit ? [] : (await parser.Mediator.Send(new GetContentsQuery(viewing.WithoutNone().AsContainer)))!.ToList();
 		var viewingObject = viewing.Object()!;
 
 		var name = viewingObject.Name;
 		var contentKeys = contents.Select(x => x.Object().Name).ToList();
-		var exitKeys = await parser.Database.GetExitsAsync(viewingObject.DBRef) ?? [];
+		var exitKeys = await parser.Mediator.Send(new GetExitsQuery(viewingObject.DBRef)) ?? [];
 		var description = (await parser.AttributeService.GetAttributeAsync(enactor, viewing.Known(), "DESCRIBE",
 				Library.Services.IAttributeService.AttributeMode.Read, false))
 			.Match(
@@ -280,7 +280,7 @@ public static partial class Commands
 	public static async ValueTask<Option<CallState>> Examine(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var enactor = (await parser.CurrentState.EnactorObject(parser.Database)).WithoutNone();
+		var enactor = (await parser.CurrentState.EnactorObject(parser.Mediator)).WithoutNone();
 		AnyOptionalSharpObject viewing = new None();
 
 		// TODO: Implement the version of this command that takes an attribute pattern!
@@ -300,7 +300,7 @@ public static partial class Commands
 		}
 		else
 		{
-			viewing = (await parser.Database.GetLocationAsync(enactor.Object().DBRef, 1)).WithExitOption();
+			viewing = (await parser.Mediator.Send(new GetLocationQuery(enactor.Object().DBRef, 1))).WithExitOption();
 		}
 
 		if (viewing.IsNone())
@@ -316,7 +316,7 @@ public static partial class Commands
 		var ownerName = ownerObj.Name;
 		var location = obj.Key;
 		var contentKeys = contents!.Select(x => x.Object()!.Name);
-		var exitKeys = (await parser.Database.GetExitsAsync(obj.DBRef))?.FirstOrDefault();
+		var exitKeys = (await parser.Mediator.Send(new GetExitsQuery(obj.DBRef)))?.FirstOrDefault();
 		var description = (await parser.AttributeService.GetAttributeAsync(enactor, viewing.Known(), "DESCRIBE",
 				Library.Services.IAttributeService.AttributeMode.Read, false))
 			.Match(
@@ -387,7 +387,7 @@ public static partial class Commands
 		var targetListText = MModule.plainText(args["0"].Message!);
 		var nameListTargets = Functions.Functions.NameList(targetListText);
 
-		var enactor = (await parser.CurrentState.ExecutorObject(parser.Database)).Known();
+		var enactor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
 
 		foreach (var target in nameListTargets)
 		{
@@ -408,8 +408,8 @@ public static partial class Commands
 	public static async ValueTask<Option<CallState>> Goto(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var enactor = (await parser.CurrentState.EnactorObject(parser.Database)).WithoutNone();
-		var enactorObj = (await parser.CurrentState.EnactorObject(parser.Database)).Known();
+		var enactor = (await parser.CurrentState.EnactorObject(parser.Mediator)).WithoutNone();
+		var enactorObj = (await parser.CurrentState.EnactorObject(parser.Mediator)).Known();
 		if (args.Count < 1)
 		{
 			await parser.NotifyService.Notify(enactor, "You can't go that way.");
@@ -431,8 +431,7 @@ public static partial class Commands
 
 		var exitObj = exit.WithoutError().WithoutNone().AsExit;
 		// TODO: Check if the exit has a destination attribute.
-		var destinationObj = exitObj.Home.Value;
-		var destination = exitObj.Home.Value.Object().DBRef;
+		var destination = exitObj.Home.Value;
 
 		if (!parser.PermissionService.CanGoto(enactorObj, exitObj, exitObj.Home.Value))
 		{
@@ -440,7 +439,7 @@ public static partial class Commands
 			return CallState.Empty;
 		}
 
-		await parser.Database.MoveObjectAsync(enactorObj.AsContent, destination);
+		await parser.Mediator.Send(new MoveObjectCommand(enactorObj.AsContent, destination));
 
 		return new CallState(destination.ToString());
 	}
@@ -451,7 +450,7 @@ public static partial class Commands
 	public static async ValueTask<Option<CallState>> Teleport(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var enactor = (await parser.CurrentState.EnactorObject(parser.Database)).WithoutNone();
+		var enactor = (await parser.CurrentState.EnactorObject(parser.Mediator)).WithoutNone();
 
 		// If /list - Arg0 can contain multiple SharpObject
 		// If not, Arg0 is a singular object
@@ -459,7 +458,7 @@ public static partial class Commands
 		// If Arg1 does not exist, Arg0 is the Destination for the Enactor.
 		// Otherwise, Arg1 is the Destination for the Arg0.
 
-		var enactorObj = (await parser.CurrentState.EnactorObject(parser.Database)).Known();
+		var enactorObj = (await parser.CurrentState.EnactorObject(parser.Mediator)).Known();
 		var destinationString = MModule.plainText(args.Count == 1 ? args["0"].Message : args["1"].Message);
 		var toTeleport = MModule.plainText(args.Count == 1 ? MModule.single(enactor.ToString()) : args["0"].Message);
 
@@ -518,7 +517,7 @@ public static partial class Commands
 				continue;
 			}
 
-			await parser.Database.MoveObjectAsync(targetContent, destinationContainer.Object().DBRef);
+			await parser.Mediator.Send(new MoveObjectCommand(targetContent, destinationContainer));
 			// TODO: Notify the target that they have been teleported - if Quiet switch is not present.
 			// TODO: Evaluate room verbs upon teleportation.
 			// TODO: If the target is a player, force a LOOK

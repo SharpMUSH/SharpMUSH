@@ -2,6 +2,8 @@
 using OneOf.Types;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.DiscriminatedUnions;
+using Mediator;
+using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Library.ParserInterfaces;
 
@@ -37,12 +39,12 @@ public record ParserState(
 	private AnyOptionalSharpObject? _enactorObject;
 	private AnyOptionalSharpObject? _callerObject;
 	
-	public async ValueTask<AnyOptionalSharpObject> ExecutorObject(ISharpDatabase db) 
-		=> _executorObject ??= Executor is null ? new None() : await db.GetObjectNodeAsync(Executor.Value);
-	public async ValueTask<AnyOptionalSharpObject> EnactorObject(ISharpDatabase db) 
-		=> _enactorObject ??= Enactor is null ? new None() : await db.GetObjectNodeAsync(Enactor.Value);
-	public async ValueTask<AnyOptionalSharpObject> CallerObject(ISharpDatabase db) 
-		=> _callerObject ??= Caller is null ? new None() : await db.GetObjectNodeAsync(Caller.Value);
+	public async ValueTask<AnyOptionalSharpObject> ExecutorObject(IMediator mediator) 
+		=> _executorObject ??= Executor is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Executor.Value));
+	public async ValueTask<AnyOptionalSharpObject> EnactorObject(IMediator mediator) 
+		=> _enactorObject ??= Enactor is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Enactor.Value));
+	public async ValueTask<AnyOptionalSharpObject> CallerObject(IMediator mediator) 
+		=> _callerObject ??= Caller is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Caller.Value));
 
 	public bool AddRegister(string register, MString value)
 	{
