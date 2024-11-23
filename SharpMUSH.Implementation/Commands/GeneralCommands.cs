@@ -11,6 +11,7 @@ using SharpMUSH.Library;
 using CB = SharpMUSH.Implementation.Definitions.CommandBehavior;
 using StringExtensions = ANSILibrary.StringExtensions;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -21,7 +22,7 @@ public static partial class Commands
 	{
 		var args = parser.CurrentState.Arguments;
 
-		if (args.Count < 1)
+		if (args.IsEmpty)
 		{
 			return new None();
 		}
@@ -236,7 +237,7 @@ public static partial class Commands
 		}
 		else
 		{
-			viewing = (await parser.Database.GetLocationAsync(enactor.Object().DBRef)).WithExitOption();
+			viewing = (await parser.Mediator.Send(new GetCertainLocationQuery(enactor.Id()!))).WithExitOption().WithNoneOption();
 		}
 
 		if (viewing.IsNone())
@@ -244,7 +245,7 @@ public static partial class Commands
 			return new None();
 		}
 
-		var contents = (await parser.Database.GetContentsAsync(viewing))!.ToList();
+		var contents = viewing.IsExit ? [] : (await parser.Database.GetContentsAsync(viewing.WithoutNone().AsContainer))!.ToList();
 		var viewingObject = viewing.Object()!;
 
 		var name = viewingObject.Name;
@@ -307,7 +308,7 @@ public static partial class Commands
 			return new None();
 		}
 
-		var contents = await parser.Database.GetContentsAsync(viewing);
+		var contents = viewing.IsExit ? [] : await parser.Mediator.Send(new GetContentsQuery(viewing.Known().AsContainer));
 
 		var obj = viewing.Object()!;
 		var ownerObj = obj.Owner.Value.Object;

@@ -839,21 +839,19 @@ public class ArangoDatabase(
 		return await Task.WhenAll(result);
 	}
 
-	public async ValueTask<IEnumerable<AnySharpContent>?> GetContentsAsync(AnyOptionalSharpObject node)
+	public async ValueTask<IEnumerable<AnySharpContent>?> GetContentsAsync(AnySharpContainer node)
 	{
-		var startVertex = node.Id();
-
-		if (startVertex is null) return null;
+		var startVertex = node.Id;
 
 		const string locationQuery =
 			$"FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.graphLocations} RETURN v";
 		var query = await arangoDB.Query.ExecuteAsync<dynamic>(handle, $"{locationQuery}",
 			new Dictionary<string, object>
 			{
-				{ "startVertex", startVertex! }
+				{ "startVertex", startVertex }
 			});
 
-		string[] ids = query.Select(x => (string)x._id).ToArray();
+		var ids = query.Select(x => (string)x._id).ToArray();
 		var objects = await Task.WhenAll(ids.Select(async x => await GetObjectNodeAsync(x)));
 
 		var result = objects.Select(x => x.Match<AnySharpContent>(
@@ -862,32 +860,6 @@ public class ArangoDatabase(
 			exit => exit,
 			thing => thing,
 			none => throw new Exception("Invalid Contents found")
-		));
-
-		return result;
-	}
-
-	public async ValueTask<IEnumerable<AnySharpContent>> GetContentsAsync(AnySharpObject node)
-	{
-		var startVertex = node.Id();
-
-		const string locationQuery =
-			$"FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.graphLocations} RETURN v";
-		var query = await arangoDB.Query.ExecuteAsync<SharpObjectQueryResult>(handle, $"{locationQuery}",
-			new Dictionary<string, object>
-			{
-				{ "startVertex", startVertex! }
-			});
-
-		var ids = (query ?? Enumerable.Empty<SharpObjectQueryResult>()).Select(x => x.Id);
-		var objects = await Task.WhenAll(ids.Select(async x => await GetObjectNodeAsync(x)));
-
-		var result = objects.Select(x => x.Match<AnySharpContent>(
-			player => player,
-			_ => throw new Exception("Invalid Contents found"),
-			exit => exit,
-			thing => thing,
-			_ => throw new Exception("Invalid Contents found")
 		));
 
 		return result;
@@ -918,10 +890,9 @@ public class ArangoDatabase(
 		return await Task.WhenAll(result);
 	}
 
-	public async ValueTask<IEnumerable<SharpExit>?> GetExitsAsync(AnyOptionalSharpContainer node)
+	public async ValueTask<IEnumerable<SharpExit>> GetExitsAsync(AnySharpContainer node)
 	{
-		var startVertex = node.Id();
-		if (startVertex is null) return null;
+		var startVertex = node.Id;
 
 		const string exitQuery = $"FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.graphExits} RETURN v";
 		var query = await arangoDB.Query.ExecuteAsync<SharpObjectQueryResult>(handle, $"{exitQuery}",

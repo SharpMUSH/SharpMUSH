@@ -4,6 +4,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Library.Services;
@@ -129,7 +130,7 @@ public partial class LocateService : ILocateService
 		    && (flags.HasFlag(LocateFlags.PlayersPreference) || flags.HasFlag(LocateFlags.NoTypePreference)))
 		{
 			// TODO: Fix Async
-			var maybeMatch = (await parser.Database.GetPlayerByNameAsync(name)).FirstOrDefault();
+			var maybeMatch = (await parser.Mediator.Send(new GetPlayerQuery(name))).FirstOrDefault();
 			match = maybeMatch is null
 				? new None()
 				: maybeMatch;
@@ -158,7 +159,7 @@ public partial class LocateService : ILocateService
 		var abs = HelperFunctions.ParseDBRef(name);
 		if (abs.IsSome())
 		{
-			var absObject = await parser.Database.GetObjectNodeAsync(abs.AsValue());
+			var absObject = await parser.Mediator.Send(new GetObjectNodeQuery(abs.AsValue()));
 			match = absObject.WithErrorOption();
 			if (!match.IsT4 && (flags & LocateFlags.AbsoluteMatch) != 0)
 			{
@@ -185,10 +186,9 @@ public partial class LocateService : ILocateService
 
 		while (true)
 		{
-			if (flags.HasFlag(LocateFlags.MatchObjectsInLookerInventory | LocateFlags.MatchRemoteContents))
+			if (flags.HasFlag(LocateFlags.MatchObjectsInLookerInventory | LocateFlags.MatchRemoteContents) && where.IsContainer)
 			{
-				var contents = (await parser.Database
-					.GetContentsAsync(where.WithNoneOption()))!
+				var contents = (await parser.Mediator.Send(new GetContentsQuery(where.AsContainer)))
 					.Select(x => x.WithRoomOption());
 				(bestMatch, final, curr, right_type, exact, c) =
 					Match_List(parser, contents, looker, where, bestMatch, exact, final, curr, right_type, flags, name);
@@ -200,10 +200,9 @@ public partial class LocateService : ILocateService
 			    && !flags.HasFlag(LocateFlags.MatchRemoteContents)
 			    && location.Object().DBRef != where.Object().DBRef)
 			{
-				var maybeContents = await parser.Database
-					.GetContentsAsync(location.WithExitOption().WithNoneOption()); 
-				var contents = maybeContents!
-					.Select(x => x.WithRoomOption());
+				var maybeContents = await parser.Mediator.Send(new GetContentsQuery(location)); 
+				var contents = maybeContents?
+					.Select(x => x.WithRoomOption()) ?? [];
 				(bestMatch, final, curr, right_type, exact, c) =
 					Match_List(parser, contents, looker, where, bestMatch, exact, final, curr, right_type, flags, name);
 				if (c == ControlFlow.Break) break;
@@ -235,7 +234,7 @@ public partial class LocateService : ILocateService
 					if (location.IsRoom)
 					{
 						var exits = (await parser.Database
-							.GetExitsAsync(location.WithNoneOption()))!
+							.GetExitsAsync(location))!
 							.Select(x => new AnySharpObject(x));
 						(bestMatch, final, curr, right_type, exact, c) = Match_List(parser, exits, looker, where, bestMatch, exact, final, curr, right_type, flags, name);
 						if (c == ControlFlow.Break) break;
@@ -256,7 +255,7 @@ public partial class LocateService : ILocateService
 				    && ((location.Object().DBRef != where.Object().DBRef) || !flags.HasFlag(LocateFlags.ExitsPreference)))
 				{
 					var exits = (await parser.Database
-						.GetExitsAsync(where.AsContainer.WithNoneOption()))!
+						.GetExitsAsync(where.AsRoom))!
 						.Select(x => new AnySharpObject(x));
 
 					(bestMatch, final, curr, right_type, exact, c) = Match_List(parser, exits, looker, where, bestMatch, exact, final, curr, right_type, flags, name);

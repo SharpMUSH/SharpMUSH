@@ -83,12 +83,7 @@ public class SurrealDatabase(
 				throw new NotImplementedException();
 		}
 
-		public ValueTask<IEnumerable<AnySharpContent>?> GetContentsAsync(AnyOptionalSharpObject node)
-		{
-				throw new NotImplementedException();
-		}
-
-		public ValueTask<IEnumerable<AnySharpContent>> GetContentsAsync(AnySharpObject node)
+		public ValueTask<IEnumerable<AnySharpContent>?> GetContentsAsync(AnySharpContainer node)
 		{
 				throw new NotImplementedException();
 		}
@@ -98,7 +93,7 @@ public class SurrealDatabase(
 				throw new NotImplementedException();
 		}
 
-		public ValueTask<IEnumerable<SharpExit>?> GetExitsAsync(AnyOptionalSharpContainer node)
+		public ValueTask<IEnumerable<SharpExit>?> GetExitsAsync(AnySharpContainer node)
 		{
 				throw new NotImplementedException();
 		}

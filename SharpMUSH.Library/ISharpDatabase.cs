@@ -133,13 +133,11 @@ public interface ISharpDatabase
 
 	ValueTask<IEnumerable<AnySharpContent>?> GetContentsAsync(DBRef obj);
 
-	ValueTask<IEnumerable<AnySharpContent>?> GetContentsAsync(AnyOptionalSharpObject node);
-	
-	ValueTask<IEnumerable<AnySharpContent>> GetContentsAsync(AnySharpObject node);
+	ValueTask<IEnumerable<AnySharpContent>?> GetContentsAsync(AnySharpContainer node);
 
 	ValueTask<IEnumerable<SharpExit>?> GetExitsAsync(DBRef obj);
 
-	ValueTask<IEnumerable<SharpExit>?> GetExitsAsync(AnyOptionalSharpContainer node);
+	ValueTask<IEnumerable<SharpExit>?> GetExitsAsync(AnySharpContainer node);
 
 	ValueTask MoveObjectAsync(AnySharpContent enactorObj, DBRef destination);
 
