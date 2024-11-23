@@ -5,7 +5,7 @@ using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class CreatePlayerCommandHandler(ISharpDatabase database) : IRequestHandler<CreatePlayerCommand, DBRef>
+public class CreatePlayerCommandHandler(ISharpDatabase database) : ICommandHandler<CreatePlayerCommand, DBRef>
 {
 	public async ValueTask<DBRef> Handle(CreatePlayerCommand request, CancellationToken cancellationToken)
 	{

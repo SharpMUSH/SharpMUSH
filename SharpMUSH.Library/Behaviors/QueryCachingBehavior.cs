@@ -7,7 +7,7 @@ namespace SharpMUSH.Library.Behaviors;
 
 public class QueryCachingBehavior<TRequest, TResponse>(IMemoryCache cache)
 	: IPipelineBehavior<TRequest, TResponse>
-	where TRequest : IRequest<TResponse>, ICacheable
+	where TRequest : IQuery<TResponse>, ICacheable
 {
 	private readonly TimeSpan _cacheDuration = TimeSpan.FromMinutes(5);
 

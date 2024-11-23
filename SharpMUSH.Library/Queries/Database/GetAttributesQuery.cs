@@ -4,4 +4,4 @@ using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Queries.Database;
 
-public record GetAttributesQuery(DBRef DBRef, string Pattern) : IRequest<IEnumerable<SharpAttribute>?>, ICacheable;
+public record GetAttributesQuery(DBRef DBRef, string Pattern) : IQuery<IEnumerable<SharpAttribute>?>, ICacheable;

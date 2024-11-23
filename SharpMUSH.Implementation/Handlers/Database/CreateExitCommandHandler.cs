@@ -5,7 +5,7 @@ using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class CreateExitCommandHandler(ISharpDatabase database) : IRequestHandler<CreateExitCommand, DBRef>
+public class CreateExitCommandHandler(ISharpDatabase database) : ICommandHandler<CreateExitCommand, DBRef>
 {
 	public async ValueTask<DBRef> Handle(CreateExitCommand request, CancellationToken cancellationToken)
 	{

@@ -4,7 +4,7 @@ using SharpMUSH.Library.Commands.Database;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class SetAttributeCommandHandler(ISharpDatabase database) : IRequestHandler<SetAttributeCommand, bool>
+public class SetAttributeCommandHandler(ISharpDatabase database) : ICommandHandler<SetAttributeCommand, bool>
 {
 	public async ValueTask<bool> Handle(SetAttributeCommand request, CancellationToken cancellationToken)
 	{

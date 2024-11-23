@@ -4,7 +4,7 @@ using SharpMUSH.Library.Commands.Database;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class SetLockCommandHandler(ISharpDatabase database) : IRequestHandler<SetLockCommand>
+public class SetLockCommandHandler(ISharpDatabase database) : ICommandHandler<SetLockCommand>
 {
 	public async ValueTask<Unit> Handle(SetLockCommand request, CancellationToken cancellationToken)
 	{

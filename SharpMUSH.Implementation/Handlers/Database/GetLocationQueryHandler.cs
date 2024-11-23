@@ -7,7 +7,7 @@ using SharpMUSH.Library.Queries.Database;
 namespace SharpMUSH.Implementation.Handlers.Database;
 
 public class GetLocationQueryHandler(ISharpDatabase database)
-	: IRequestHandler<GetLocationQuery, AnyOptionalSharpContainer>
+	: IQueryHandler<GetLocationQuery, AnyOptionalSharpContainer>
 {
 	public async ValueTask<AnyOptionalSharpContainer> Handle(GetLocationQuery request, CancellationToken cancellationToken)
 	{
@@ -16,7 +16,7 @@ public class GetLocationQueryHandler(ISharpDatabase database)
 }
 
 public class GetCertainLocationQueryHandler(ISharpDatabase database)
-	: IRequestHandler<GetCertainLocationQuery, AnySharpContainer>
+	: IQueryHandler<GetCertainLocationQuery, AnySharpContainer>
 {
 	public async ValueTask<AnySharpContainer> Handle(GetCertainLocationQuery request, CancellationToken cancellationToken)
 	{

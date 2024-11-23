@@ -5,4 +5,4 @@ using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Queries.Database;
 
-public record GetContentsQuery(DBRef DBRef) : IRequest<IEnumerable<AnySharpContent>?>, ICacheable;
+public record GetContentsQuery(DBRef DBRef) : IQuery<IEnumerable<AnySharpContent>?>, ICacheable;

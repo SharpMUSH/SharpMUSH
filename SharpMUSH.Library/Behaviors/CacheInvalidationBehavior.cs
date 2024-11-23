@@ -5,7 +5,7 @@ using SharpMUSH.Library.Attributes;
 namespace SharpMUSH.Library.Behaviors;
 
 public class CacheInvalidationBehavior<TRequest, TResponse>(IMemoryCache cache) : IPipelineBehavior<TRequest, TResponse>
-	where TRequest : IRequest<TResponse>, ICacheable
+	where TRequest : ICommand<TResponse>, ICacheInvalidating
 {
 		public async ValueTask<TResponse> Handle(
 		TRequest message,
