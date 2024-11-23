@@ -1,10 +1,7 @@
 ﻿using NSubstitute;
 using NSubstitute.ReceivedExtensions;
-using SharpMUSH.Implementation;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Extensions;
-using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Tests.Parser;
@@ -51,9 +48,7 @@ public class SubstitutionUnitTests : BaseUnitTest
 		Console.WriteLine("Testing: {0}", str);
 
 		var parser = await TestParser(
-			ds: database,
-			ps: infrastructure!.Services.GetService(typeof(IPermissionService)) as IPermissionService,
-			ls: infrastructure!.Services.GetService(typeof(ILocateService)) as ILocateService
+			ns: Substitute.For<INotifyService>()
 			);
 		await parser!.CommandParse("1", MModule.single(str));
 

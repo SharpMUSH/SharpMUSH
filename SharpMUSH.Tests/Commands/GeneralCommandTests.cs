@@ -1,6 +1,5 @@
 ﻿using NSubstitute;
 using NSubstitute.ReceivedExtensions;
-using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services;
@@ -9,28 +8,14 @@ namespace SharpMUSH.Tests.Commands;
 
 public class GeneralCommandTests : BaseUnitTest
 {
-	private static ISharpDatabase? database;
-	private static IPermissionService? permission;
-
-	[Before(Class)]
-	public static async Task OneTimeSetup()
-	{
-		database = (await IntegrationServer()).Database;		
-		
-		permission = Substitute.For<IPermissionService>();
-		permission.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>()).Returns(true);
-		permission.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>()).Returns(true);
-		permission.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<IPermissionService.InteractType>()).Returns(true);
-	}
-
 	[Test]
 	[Arguments("@pemit #1=This is a test", "This is a test")]
 	[Arguments("@pemit #1=This is a test;", "This is a test;")]
 	public async Task Test(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var parser = await TestParser(ds: database, ls: new LocateService(), ps: permission);
-		await parser.CommandParse("1", MModule.single(str));
+		var parser = await TestParser(ns: Substitute.For<INotifyService>());
+		await parser!.CommandParse("1", MModule.single(str));
 
 		await parser.NotifyService
 			.Received(Quantity.Exactly(1))
@@ -40,8 +25,8 @@ public class GeneralCommandTests : BaseUnitTest
 	[Test]
 	public async Task DoListSimple()
 	{
-		var parser = await TestParser(ds: database, ls: new LocateService(), ps: permission);
-		await parser.CommandParse("1", MModule.single("@dolist 1 2 3=@pemit #1=This is a test"));
+		var parser = await TestParser(ns: Substitute.For<INotifyService>());
+		await parser!.CommandParse("1", MModule.single("@dolist 1 2 3=@pemit #1=This is a test"));
 
 		await parser.NotifyService
 			.Received(Quantity.Exactly(3))
@@ -51,8 +36,8 @@ public class GeneralCommandTests : BaseUnitTest
 	[Test]
 	public async Task DoListSimple2()
 	{
-		var parser = await TestParser(ds: database, ls: new LocateService(), ps: permission);
-		await parser.CommandParse("1", MModule.single("@dolist 1 2 3=@pemit #1={This is, a test};"));
+		var parser = await TestParser(ns: Substitute.For<INotifyService>());
+		await parser!.CommandParse("1", MModule.single("@dolist 1 2 3=@pemit #1={This is, a test};"));
 
 		await parser.NotifyService
 			.Received(Quantity.Exactly(3))
@@ -62,8 +47,8 @@ public class GeneralCommandTests : BaseUnitTest
 	[Test]
 	public async Task DoListComplex()
 	{
-		var parser = await TestParser(ds: database, ls: new LocateService(), ps: permission);
-		await parser.CommandParse("1", MModule.single("@dolist 1 2 3={@pemit #1=This is a test; @pemit #1=This is also a test}"));
+		var parser = await TestParser(ns: Substitute.For<INotifyService>());
+		await parser!.CommandParse("1", MModule.single("@dolist 1 2 3={@pemit #1=This is a test; @pemit #1=This is also a test}"));
 
 		await parser.NotifyService
 			.Received(Quantity.Exactly(3))
@@ -76,8 +61,8 @@ public class GeneralCommandTests : BaseUnitTest
 	[Test]
 	public async Task DoListComplex2()
 	{
-		var parser = await TestParser(ds: database, ls: new LocateService(), ps: permission);
-		await parser.CommandParse("1", MModule.single("@dolist 1 2 3={@pemit #1=This is a test; @pemit #1=This is also a test}; @pemit #1=Repeat 3 times in this mode."));
+		var parser = await TestParser(ns: Substitute.For<INotifyService>());
+		await parser!.CommandParse("1", MModule.single("@dolist 1 2 3={@pemit #1=This is a test; @pemit #1=This is also a test}; @pemit #1=Repeat 3 times in this mode."));
 
 		await parser.NotifyService
 			.Received(Quantity.Exactly(3))
@@ -93,8 +78,8 @@ public class GeneralCommandTests : BaseUnitTest
 	[Test]
 	public async Task DoListComplex3()
 	{
-		var parser = await TestParser(ds: database, ls: new LocateService(), ps: permission);
-		await parser.CommandParse("1", MModule.single("@dolist 1={@dolist 1 2 3=@pemit #1=This is a test}; @pemit #1=Repeat 1 times in this mode."));
+		var parser = await TestParser(ns: Substitute.For<INotifyService>());
+		await parser!.CommandParse("1", MModule.single("@dolist 1={@dolist 1 2 3=@pemit #1=This is a test}; @pemit #1=Repeat 1 times in this mode."));
 
 		await parser.NotifyService
 			.Received(Quantity.Exactly(3))
@@ -107,8 +92,8 @@ public class GeneralCommandTests : BaseUnitTest
 	[Test]
 	public async Task DoListComplex4()
 	{
-		var parser = await TestParser(ds: database, ls: new LocateService(), ps: permission);
-		await parser.CommandParse("1", MModule.single("@dolist 1 2={@dolist 1 2 3=@pemit #1=This is a test}; @pemit #1=Repeat 2 times in this mode."));
+		var parser = await TestParser(ns: Substitute.For<INotifyService>());
+		await parser!.CommandParse("1", MModule.single("@dolist 1 2={@dolist 1 2 3=@pemit #1=This is a test}; @pemit #1=Repeat 2 times in this mode."));
 
 		await parser.NotifyService
 			.Received(Quantity.Exactly(6))
@@ -121,8 +106,8 @@ public class GeneralCommandTests : BaseUnitTest
 	[Test, Repeat(10)]
 	public async Task DoListComplex5()
 	{
-		var parser = await TestParser(ds: database, ls: new LocateService(), ps: permission);
-		await parser.CommandParse("1", MModule.single("@dolist a b={@dolist 1 2 3=@pemit #1=This is a test %i0}; @pemit #1=Repeat 1 times in this mode %i0"));
+		var parser = await TestParser(ns: Substitute.For<INotifyService>());
+		await parser!.CommandParse("1", MModule.single("@dolist a b={@dolist 1 2 3=@pemit #1=This is a test %i0}; @pemit #1=Repeat 1 times in this mode %i0"));
 
 		await parser.NotifyService
 			.Received(Quantity.Exactly(2))
@@ -144,8 +129,8 @@ public class GeneralCommandTests : BaseUnitTest
 	[Test, Skip("Not Implemented")]
 	public async Task DoFlagSet()
 	{
-		var parser = await TestParser(ds: database, ls: new LocateService(), ps: permission);
-		await parser.CommandParse("1", MModule.single("@set #1=DEBUG"));
+		var parser = await TestParser(ns: Substitute.For<INotifyService>());
+		await parser!.CommandParse("1", MModule.single("@set #1=DEBUG"));
 
 		var one = await parser.Database.GetObjectNodeAsync(new DBRef(1));
 		var onePlayer = one.AsPlayer;

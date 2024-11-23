@@ -11,7 +11,7 @@ public class UtilityFunctionUnitTests : BaseUnitTest
 	[Before(Class)]
 	public static async Task OneTimeSetup()
 	{
-		parser = await FullTestParser();
+		parser = await TestParser();
 	}
 
 	[Test]

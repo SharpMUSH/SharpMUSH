@@ -56,48 +56,9 @@ public class BaseUnitTest
 	public static IBooleanExpressionParser BooleanExpressionTestParser(ISharpDatabase database)
 		=> new BooleanExpressionParser(database);
 
-	public static async Task<IMUSHCodeParser> FullTestParser()
-	{
-		var (database, integrationServer) = await IntegrationServer();
-
-		var one = new DBRef(1, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
-		var realOne = await database.GetObjectNodeAsync(new DBRef(1));
-
-		var simpleConnectionService = new ConnectionService();
-		simpleConnectionService.Register("1", x => ValueTask.CompletedTask, () => Encoding.UTF8);
-		simpleConnectionService.Bind("1", one);
-
-		return new MUSHCodeParser(
-			(IPasswordService)integrationServer.Services.GetService(typeof(IPasswordService))!, 
-			(IPermissionService)integrationServer.Services.GetService(typeof(IPermissionService))!,
-			database,
-			(IAttributeService)integrationServer.Services.GetService(typeof(IAttributeService))!,
-			(INotifyService)integrationServer.Services.GetService(typeof(INotifyService))!,
-			(ILocateService)integrationServer.Services.GetService(typeof(ILocateService))!,
-			(ICommandDiscoveryService)integrationServer.Services.GetService(typeof(ICommandDiscoveryService))!,
-			(ITaskScheduler)integrationServer.Services.GetService(typeof(ITaskScheduler))!,
-			simpleConnectionService,
-			(IMediator)integrationServer.Services.GetService(typeof(IMediator))!,
-			state: new ParserState(
-				Registers: new([[]]),
-				IterationRegisters: new(),
-				RegexRegisters: new(),
-				CurrentEvaluation: null,
-				Function: null,
-				Command: "think",
-				Switches: [],
-				Arguments: [],
-				Executor: one,
-				Enactor: one,
-				Caller: one,
-				Handle: "1"
-			));
-	}
-
-	public async static ValueTask<IMUSHCodeParser> TestParser(
+	public static async Task<IMUSHCodeParser> TestParser(
 		IPasswordService? pws = null,
-		IPermissionService? ps =
-			null, // Permission Service needs the parser... this is circular. So we need to use the Mediator Pattern.
+		IPermissionService? ps = null, // Permission Service needs the parser... this is circular. So we need to use the Mediator Pattern.
 		ISharpDatabase? ds = null,
 		IAttributeService? at = null,
 		INotifyService? ns = null,
@@ -107,29 +68,26 @@ public class BaseUnitTest
 		IConnectionService? cs = null,
 		IMediator? ms = null)
 	{
-		var one = new DBRef(1, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
-		if (ds is not null)
-		{
-			var realOne = await ds!.GetObjectNodeAsync(new DBRef(1));
-			one = realOne.Object()!.DBRef;
-		}
+		var (database, integrationServer) = await IntegrationServer();
 
-		// This needs adjustments, as the Database won't agree with the Milliseconds.
+		var realOne = await database.GetObjectNodeAsync(new DBRef(1));
+		var one = realOne.Object()!.DBRef;
+
 		var simpleConnectionService = new ConnectionService();
 		simpleConnectionService.Register("1", x => ValueTask.CompletedTask, () => Encoding.UTF8);
 		simpleConnectionService.Bind("1", one);
 
 		return new MUSHCodeParser(
-			pws ?? Substitute.For<IPasswordService>(),
-			ps ?? Substitute.For<IPermissionService>(),
-			ds ?? Substitute.For<ISharpDatabase>(),
-			at ?? Substitute.For<IAttributeService>(),
-			ns ?? Substitute.For<INotifyService>(),
-			ls ?? Substitute.For<ILocateService>(),
-			cd ?? Substitute.For<ICommandDiscoveryService>(),
-			qs ?? Substitute.For<ITaskScheduler>(),
-			cs ?? simpleConnectionService,
-			ms ?? Substitute.For<IMediator>(),
+			pws ?? (IPasswordService)integrationServer.Services.GetService(typeof(IPasswordService))!,
+			ps ?? (IPermissionService)integrationServer.Services.GetService(typeof(IPermissionService))!,
+			database,
+			at ?? (IAttributeService)integrationServer.Services.GetService(typeof(IAttributeService))!,
+			ns ?? (INotifyService)integrationServer.Services.GetService(typeof(INotifyService))!,
+			ls ?? (ILocateService)integrationServer.Services.GetService(typeof(ILocateService))!,
+			cd ?? (ICommandDiscoveryService)integrationServer.Services.GetService(typeof(ICommandDiscoveryService))!,
+			qs ?? (ITaskScheduler)integrationServer.Services.GetService(typeof(ITaskScheduler))!,
+			simpleConnectionService,
+			ms ?? (IMediator)integrationServer.Services.GetService(typeof(IMediator))!,
 			state: new ParserState(
 				Registers: new([[]]),
 				IterationRegisters: new(),

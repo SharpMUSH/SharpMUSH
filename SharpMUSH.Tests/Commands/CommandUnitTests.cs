@@ -1,6 +1,5 @@
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
-using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Services;
 
@@ -36,9 +35,7 @@ public class CommandUnitTests : BaseUnitTest
 	{
 		Console.WriteLine("Testing: {0}", str);
 		var parser = await TestParser(
-			ds: infrastructure!.Services.GetService(typeof(ISharpDatabase)) as ISharpDatabase,
-			ps: infrastructure!.Services.GetService(typeof(IPermissionService)) as IPermissionService,
-			ls: infrastructure!.Services.GetService(typeof(ILocateService)) as ILocateService
+			ns: Substitute.For<INotifyService>()
 		);
 		await parser.CommandParse("1", MModule.single(str));
 
@@ -67,9 +64,7 @@ public class CommandUnitTests : BaseUnitTest
 	{
 		Console.WriteLine("Testing: {0}", str);
 		var parser = await TestParser(
-			ds: infrastructure!.Services.GetService(typeof(ISharpDatabase)) as ISharpDatabase,
-			ps: infrastructure!.Services.GetService(typeof(IPermissionService)) as IPermissionService,
-			ls: infrastructure!.Services.GetService(typeof(ILocateService)) as ILocateService
+			ns: Substitute.For<INotifyService>()
 		);
 		await parser.CommandListParse(MModule.single(str));
 
