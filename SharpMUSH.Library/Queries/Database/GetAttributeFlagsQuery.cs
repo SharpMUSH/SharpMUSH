@@ -4,5 +4,4 @@ using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Queries.Database;
 
-[CacheableQuery]
-public record GetAttributeFlagsQuery() : IRequest<IEnumerable<SharpAttributeFlag>>;
+public record GetAttributeFlagsQuery() : IRequest<IEnumerable<SharpAttributeFlag>>, ICacheable;

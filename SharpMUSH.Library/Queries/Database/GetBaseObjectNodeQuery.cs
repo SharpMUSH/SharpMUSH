@@ -4,5 +4,4 @@ using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Queries.Database;
 
-[CacheableQuery]
-public record GetBaseObjectNodeQuery(DBRef DBRef) : IRequest<SharpObject?>;
+public record GetBaseObjectNodeQuery(DBRef DBRef) : IRequest<SharpObject?>, ICacheable;

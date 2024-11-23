@@ -1,10 +1,11 @@
 using Mediator;
 using Microsoft.Extensions.Caching.Memory;
+using SharpMUSH.Library.Attributes;
 
 namespace SharpMUSH.Library.Behaviors;
 
 public class CacheInvalidationBehavior<TRequest, TResponse>(IMemoryCache cache) : IPipelineBehavior<TRequest, TResponse>
-	where TRequest : IRequest<TResponse>
+	where TRequest : IRequest<TResponse>, ICacheable
 {
 		public async ValueTask<TResponse> Handle(
 		TRequest message,
@@ -14,6 +15,7 @@ public class CacheInvalidationBehavior<TRequest, TResponse>(IMemoryCache cache) 
 	{
 		var response = await next(message, cancellationToken);
 
+		/*
 		// If this is a command (not a query), invalidate relevant cache entries
 		if (message.GetType().Namespace?.Contains("Commands") == true)
 		{
@@ -32,7 +34,7 @@ public class CacheInvalidationBehavior<TRequest, TResponse>(IMemoryCache cache) 
 				}
 			}
 		}
-
+		*/
 		return response;
 	}
 }

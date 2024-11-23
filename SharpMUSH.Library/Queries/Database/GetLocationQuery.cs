@@ -5,8 +5,6 @@ using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Queries.Database;
 
-[CacheableQuery]
-public record GetLocationQuery(DBRef DBRef, int Depth = 1) : IRequest<AnyOptionalSharpContainer>;
+public record GetLocationQuery(DBRef DBRef, int Depth = 1) : IRequest<AnyOptionalSharpContainer>, ICacheable;
 
-[CacheableQuery]
-public record GetCertainLocationQuery(string Key, int Depth = 1) : IRequest<AnySharpContainer>;
+public record GetCertainLocationQuery(string Key, int Depth = 1) : IRequest<AnySharpContainer>, ICacheable;

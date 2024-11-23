@@ -10,8 +10,6 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using OneOf.Types;
 using System.Collections.Immutable;
 using System.Diagnostics;
-using System.Linq;
-using DotNext.Threading.Tasks;
 
 namespace SharpMUSH.Implementation.Commands;
 
