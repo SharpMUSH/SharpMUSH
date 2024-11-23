@@ -1,4 +1,4 @@
-using MediatR;
+using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
@@ -9,7 +9,7 @@ namespace SharpMUSH.Implementation.Handlers.Database;
 public class GetLocationQueryHandler(ISharpDatabase database)
 	: IRequestHandler<GetLocationQuery, AnyOptionalSharpContainer>
 {
-	public async Task<AnyOptionalSharpContainer> Handle(GetLocationQuery request, CancellationToken cancellationToken)
+	public async ValueTask<AnyOptionalSharpContainer> Handle(GetLocationQuery request, CancellationToken cancellationToken)
 	{
 		return await database.GetLocationAsync(request.DBRef, request.Depth);
 	}
@@ -18,7 +18,7 @@ public class GetLocationQueryHandler(ISharpDatabase database)
 public class GetCertainLocationQueryHandler(ISharpDatabase database)
 	: IRequestHandler<GetCertainLocationQuery, AnySharpContainer>
 {
-	public async Task<AnySharpContainer> Handle(GetCertainLocationQuery request, CancellationToken cancellationToken)
+	public async ValueTask<AnySharpContainer> Handle(GetCertainLocationQuery request, CancellationToken cancellationToken)
 	{
 		return await database.GetLocationAsync(request.Key, request.Depth);
 	}

@@ -12,9 +12,9 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <Compile Remove="ANTLR4\**" />
-	  <EmbeddedResource Remove="ANTLR4\**" />
-	  <None Remove="ANTLR4\**" />
+	  <Compile Remove="gen\**" />
+	  <EmbeddedResource Remove="gen\**" />
+	  <None Remove="gen\**" />
 	</ItemGroup>
 	
   <ItemGroup>

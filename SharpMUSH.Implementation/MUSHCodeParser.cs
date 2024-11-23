@@ -4,7 +4,7 @@ using SharpMUSH.Library;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using System.Collections.Immutable;
-using MediatR;
+using Mediator;
 using Serilog;
 
 namespace SharpMUSH.Implementation;

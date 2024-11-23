@@ -1,4 +1,4 @@
-using MediatR;
+using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 
@@ -6,7 +6,7 @@ namespace SharpMUSH.Implementation.Handlers.Database;
 
 public class ClearAttributeCommandHandler(ISharpDatabase database) : IRequestHandler<ClearAttributeCommand, bool>
 {
-	public async Task<bool> Handle(ClearAttributeCommand request, CancellationToken cancellationToken)
+	public async ValueTask<bool> Handle(ClearAttributeCommand request, CancellationToken cancellationToken)
     {
         return await database.ClearAttributeAsync(request.DBRef, request.Attribute);
     }

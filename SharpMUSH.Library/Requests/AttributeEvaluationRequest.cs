@@ -1,4 +1,4 @@
-﻿using MediatR;
+﻿using Mediator;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 

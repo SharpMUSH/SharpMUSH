@@ -1,6 +1,6 @@
 ﻿using SharpMUSH.Library.Services;
 using System.Collections.Immutable;
-using MediatR;
+using Mediator;
 
 namespace SharpMUSH.Library.ParserInterfaces;
 

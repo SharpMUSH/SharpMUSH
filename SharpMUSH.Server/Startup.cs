@@ -1,5 +1,5 @@
 ﻿using Core.Arango;
-using MediatR;
+using Mediator;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
@@ -33,7 +33,8 @@ public class Startup(ArangoConfiguration config)
 		services.AddSingleton<ISharpDatabase, ArangoDatabase>();
 		services.AddSingleton<PasswordHasher<string>, PasswordHasher<string>>(
 			_ => new PasswordHasher<string>()
-		);	
+		);
+		services.AddMemoryCache();
 		services.AddSingleton<IPasswordService, PasswordService>();
 		services.AddSingleton<IPermissionService, PermissionService>();
 		services.AddSingleton<INotifyService, NotifyService>();
@@ -47,14 +48,9 @@ public class Startup(ArangoConfiguration config)
 		services.AddSingleton(new ArangoHandle("CurrentSharpMUSHWorld"));
 		services.AddScoped<IMUSHCodeParser, MUSHCodeParser>();
 		services.AddHostedService<SchedulerService>();
-		services.AddMediatR(cfg =>
-		{
-			cfg.RegisterServicesFromAssemblyContaining<MUSHCodeParser>();
-			cfg.RegisterServicesFromAssemblyContaining<ISharpDatabase>();
-			cfg.RegisterServicesFromAssemblyContaining<Startup>();
-			cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(QueryCachingBehavior<,>));   
-			cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(CacheInvalidationBehavior<,>));
-		});
+		services.AddMediator();
+		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(QueryCachingBehavior<,>));
+		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(CacheInvalidationBehavior<,>));
 		services.BuildServiceProvider();
 	}
 

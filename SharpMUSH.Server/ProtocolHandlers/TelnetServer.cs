@@ -1,6 +1,6 @@
 ﻿using System.IO.Pipelines;
 using System.Text;
-using MediatR;
+using Mediator;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library;

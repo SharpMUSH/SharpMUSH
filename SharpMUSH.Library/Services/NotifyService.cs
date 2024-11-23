@@ -4,7 +4,7 @@ using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Services;
 
-// TODO: Convert to MediatR Notification Handler.
+// TODO: Convert to Mediator Notification Handler.
 public class NotifyService(IConnectionService _connectionService) : INotifyService
 {
 	public async Task Notify(DBRef who, MString what)

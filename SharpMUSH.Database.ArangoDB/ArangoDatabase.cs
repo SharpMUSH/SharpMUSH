@@ -13,7 +13,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Net.Http.Headers;
 using MarkupString;
-using MediatR;
+using Mediator;
 using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Database.ArangoDB;

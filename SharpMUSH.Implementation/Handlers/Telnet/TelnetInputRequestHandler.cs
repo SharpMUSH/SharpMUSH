@@ -1,4 +1,4 @@
-﻿using MediatR;
+﻿using Mediator;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Requests;
@@ -9,7 +9,7 @@ namespace SharpMUSH.Implementation.Handlers.Telnet;
 public class TelnetInputRequestHandler(ILogger<TelnetInputRequestHandler> logger, ITaskScheduler scheduler)
 	: INotificationHandler<TelnetInputRequest>
 {
-	public async Task Handle(TelnetInputRequest request, CancellationToken ct)
+	public async ValueTask Handle(TelnetInputRequest request, CancellationToken ct)
 	{
 		try
 		{

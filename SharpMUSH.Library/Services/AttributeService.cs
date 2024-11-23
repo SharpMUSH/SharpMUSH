@@ -1,4 +1,4 @@
-﻿using MediatR;
+﻿using Mediator;
 using OneOf.Types;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;

@@ -1,4 +1,4 @@
-using MediatR;
+using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
@@ -8,8 +8,13 @@ namespace SharpMUSH.Implementation.Handlers.Database;
 public class GetAttributeQueryHandler(ISharpDatabase database)
 	: IRequestHandler<GetAttributeQuery, IEnumerable<SharpAttribute>?>
 {
-	public async Task<IEnumerable<SharpAttribute>?> Handle(GetAttributeQuery request, CancellationToken cancellationToken)
-	{
-		return await database.GetAttributeAsync(request.DBRef, request.Attribute).AsTask();
-	}
+	public async ValueTask<IEnumerable<SharpAttribute>?> Handle(GetAttributeQuery request, CancellationToken cancellationToken) 
+		=> await database.GetAttributeAsync(request.DBRef, request.Attribute);
+}
+
+public class GetAttributesQueryHandler(ISharpDatabase database)
+	: IRequestHandler<GetAttributesQuery, IEnumerable<SharpAttribute>?>
+{
+	public async ValueTask<IEnumerable<SharpAttribute>?> Handle(GetAttributesQuery request, CancellationToken cancellationToken) 
+		=> await database.GetAttributesAsync(request.DBRef, request.Pattern);
 }
