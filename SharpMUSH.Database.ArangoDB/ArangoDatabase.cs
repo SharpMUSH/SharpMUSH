@@ -994,4 +994,9 @@ public class ArangoDatabase(
 			},
 			waitForSync: true);
 	}
+
+		ValueTask<bool> ISharpDatabase.UnsetAttributeFlagAsync(SharpAttribute attr, SharpAttributeFlag flag)
+		{
+				throw new NotImplementedException();
+		}
 }
