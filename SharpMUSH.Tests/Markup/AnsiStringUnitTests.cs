@@ -140,7 +140,7 @@ public class AnsiStringUnitTests : BaseUnitTest
 		await Assert.That(deserialized.ToString()).IsEquatableOrEqualTo(original.ToString());
 	}
 
-	[Test, Skip("Fails due to Deserialize not re-populating the Color struct for AnsiColor.")]
+	[Test]
 	public async Task SerializationRgb()
 	{
 		var original = A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "red");
@@ -150,7 +150,6 @@ public class AnsiStringUnitTests : BaseUnitTest
 
 		await Assert.That(deserialized.ToString()).IsEquatableOrEqualTo(original.ToString());
 	}
-
 
 	[Test]
 	public async Task SerializationNull()

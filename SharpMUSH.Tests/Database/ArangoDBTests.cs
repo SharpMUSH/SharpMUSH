@@ -75,7 +75,7 @@ public class ArangoDBTests : BaseUnitTest
 		await Assert.That(overwrittenLayer.Last().Value.ToString()).IsEqualTo("Layer2");
 	}
 
-	[Test, Skip("Not yet supported, due to the Markup Abstract Class.")]
+	[Test]
 	public async Task StoreAnsiInAttribute()
 	{
 		var playerOne = (await _database!.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
@@ -85,10 +85,7 @@ public class ArangoDBTests : BaseUnitTest
 		await _database.SetAttributeAsync(playerOneDBRef, ["Two", "Layers"], ansiString, playerOne);
 		var existingLayer = (await _database.GetAttributeAsync(playerOneDBRef, ["Two", "Layers"]))!.ToList();
 
-		var resultBytes = Encoding.Unicode.GetBytes(existingLayer.First().Value.ToString());
-		var expectedBytes = Encoding.Unicode.GetBytes(ansiString.ToString());
-
-		await Assert.That(resultBytes).IsEqualTo(expectedBytes);
+		await Assert.That(existingLayer.Last().Value.ToString()).IsEquatableOrEqualTo(ansiString.ToString());
 	}
 
 	[Test]

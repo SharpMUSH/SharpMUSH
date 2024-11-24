@@ -7,6 +7,7 @@ open System
 open MarkupString.MarkupImplementation
 open System.Text.Json.Serialization
 open FSharpPlus
+open System.Drawing
 
 module MarkupStringModule =
     type Content =
@@ -21,6 +22,13 @@ module MarkupStringModule =
     and MarkupTypes = // TODO: Consider using built-in option type.
         | MarkedupText of Markup
         | Empty
+
+    and ColorJsonConverter() =
+        inherit JsonConverter<System.Drawing.Color>() 
+            override _.Read(reader, _typeToConvert, _options) =
+                ColorTranslator.FromHtml(reader.GetString())
+            override _.Write(writer, value, opts) =
+                writer.WriteStringValue($"#{value.R:X2}{value.G:X2}{value.B:X2}".ToLower())
 
     and MarkupString(markupDetails: MarkupTypes, content: Content list) =
         // TODO: Optimize the ansi strings, so we don't re-initialize at least the exact same tag sequentially.
@@ -138,7 +146,10 @@ module MarkupStringModule =
     let multipleWithDelimiter (delimiter: MarkupString) (mu: MarkupString seq) : MarkupString =
         mu |> Seq.intersperse delimiter |> multiple
         
-    let serializationOptions = JsonFSharpOptions.Default().ToJsonSerializerOptions()
+    let serializationOptions = 
+      let serializeOption = JsonFSharpOptions.Default().ToJsonSerializerOptions()
+      serializeOption.Converters.Add(ColorJsonConverter())
+      serializeOption
 
     let serialize(markupStr: MarkupString) : string = 
         JsonSerializer.Serialize(markupStr, serializationOptions)
