@@ -7,6 +7,7 @@ open System.Runtime.InteropServices
 open System
 open MarkupString.MarkupImplementation
 open System.Text.Json.Serialization
+open FSharpPlus
 
 module MarkupStringModule =
     open MarkupImplementation
@@ -43,7 +44,7 @@ module MarkupStringModule =
 
                 loop (acc, items)
 
-            let innerText = accumulate (System.String.Empty, markupStr.Content)
+            let innerText = accumulate (String.Empty, markupStr.Content)
 
             match markupStr.MarkupDetails with
             | Empty -> innerText
@@ -83,39 +84,39 @@ module MarkupStringModule =
             | _ -> find markupStr.Content
         
         let len : Lazy<int> = Lazy<int>(length)
-        
+
         member val MarkupDetails = markupDetails with get, set
         
         member val Content = content with get, set
         
         member val Length = len.Value
 
-        override this.ToString() =
-            let postfix (markupType: MarkupTypes) : string =
+        override this.ToString() : string = 
+          let postfix (markupType: MarkupTypes) : string =
                 match markupType with
                 | MarkedupText markup -> markup.Postfix
                 | Empty -> String.Empty
 
-            let prefix (markupType: MarkupTypes) : string =
-                match markupType with
-                | MarkedupText markup -> markup.Prefix
-                | Empty -> String.Empty
+          let prefix (markupType: MarkupTypes) : string =
+              match markupType with
+              | MarkedupText markup -> markup.Prefix
+              | Empty -> String.Empty
 
-            let optimize (markupType: MarkupTypes) (text: string) : string =
-                match markupType with
-                | MarkedupText markup -> markup.Optimize text
-                | Empty -> String.Empty
+          let optimize (markupType: MarkupTypes) (text: string) : string =
+              match markupType with
+              | MarkedupText markup -> markup.Optimize text
+              | Empty -> String.Empty
 
-            let firstMarkedupTextType = findFirstMarkedupText this
+          let firstMarkedupTextType = findFirstMarkedupText this
 
-            match firstMarkedupTextType with
-            | Empty -> getText (this, Empty)
-            | _ ->
-                optimize
-                    firstMarkedupTextType
-                    (prefix (firstMarkedupTextType)
-                     + getText (this, Empty)
-                     + postfix (firstMarkedupTextType))
+          match firstMarkedupTextType with
+          | Empty -> getText (this, Empty)
+          | _ ->
+              optimize
+                  firstMarkedupTextType
+                  (prefix (firstMarkedupTextType)
+                    + getText (this, Empty)
+                    + postfix (firstMarkedupTextType))
 
     let (|MarkupStringPattern|) (markupStr: MarkupString) =
         (markupStr.MarkupDetails, markupStr.Content)
@@ -138,9 +139,7 @@ module MarkupStringModule =
         MarkupString(Empty, [ Text System.String.Empty ])
 
     let multipleWithDelimiter (delimiter: MarkupString) (mu: MarkupString seq) : MarkupString =
-        let delimiters = Enumerable.Repeat(delimiter, mu |> Seq.length).Skip(1).Append(empty())
-
-        MarkupString(Empty, (Seq.foldBack2 (fun a b xs -> (MarkupText a) :: (MarkupText b) :: xs) mu delimiters []))
+        mu |> Seq.intersperse delimiter |> multiple
         
     let serializationOptions =
         JsonFSharpOptions.Default()
@@ -191,9 +190,7 @@ module MarkupStringModule =
             MarkupString(Empty, combinedContent)
         | _ ->
             let combinedContent =
-                [ MarkupText originalMarkupStr ]
-                @ separatorContent
-                @ [ MarkupText newMarkupStr ]
+                [ MarkupText originalMarkupStr ] @ separatorContent @ [ MarkupText newMarkupStr ]
 
             MarkupString(Empty, combinedContent)
 
@@ -325,51 +322,39 @@ module MarkupStringModule =
     type private QuestionPatternRegex = FSharp.Text.RegexProvider.Regex< @"(?<!\\)\\\?" >
     type private KindPatternRegex = FSharp.Text.RegexProvider.Regex< @"\\\\\\\*" >
     type private KindPattern2Regex = FSharp.Text.RegexProvider.Regex< @"\\\\\\\?" >
-    let private globPatternReplacement(x) = @"(.*?)"
-    let private questionPatternReplacement(x) = @"(.)"
-    let private kindPatternReplacement(x) = @"\*"
-    let private kindPattern2Replacement(x) = @"\?"
     
     let getWildcardMatchAsRegex (pattern: MarkupString) : string =
       let applyRegexPattern(pat: string) =
-        pat       
-        |> fun (x) -> (x, globPatternReplacement)     |> GlobPatternRegex().TypedReplace
-        |> fun (x) -> (x, questionPatternReplacement) |> QuestionPatternRegex().TypedReplace
-        |> fun (x) -> (x, kindPatternReplacement)     |> KindPatternRegex().TypedReplace
-        |> fun (x) -> (x, kindPattern2Replacement)    |> KindPattern2Regex().TypedReplace
+        pat
+        |> fun (x) -> GlobPatternRegex().TypedReplace(x, konst @"(.*?)")
+        |> fun (x) -> QuestionPatternRegex().TypedReplace(x, konst @"(.)")
+        |> fun (x) -> KindPatternRegex().TypedReplace(x, konst @"\*")
+        |> fun (x) -> KindPattern2Regex().TypedReplace(x, konst @"\?")
 
       pattern 
       |> plainText 
       |> Regex.Escape
       |> fun x -> $"^{x}$"
       |> applyRegexPattern
-
-    let getWildcardMatch (input: MarkupString) (pattern: MarkupString) : Match * MarkupString seq =
-        let newPattern = getWildcardMatchAsRegex (pattern)
-
-        (plainText input, newPattern)
-        |> Regex.Match
-        |> (fun value -> (value, value.Groups |> Seq.map (fun cap -> substring cap.Index cap.Length input)))
     
     let isWildcardMatch (input: MarkupString) (pattern: MarkupString) : bool =
         let newPattern = getWildcardMatchAsRegex (pattern)
         (plainText input, newPattern) |> Regex.IsMatch
+    
+    let getMatches (input: MarkupString) (pattern: string) : (Match * MarkupString seq) seq =
+        let captureToString (captureGroup: Group) = substring captureGroup.Index captureGroup.Length input
+        let allMatches (mtch: Match) = (mtch, mtch.Groups |> Seq.map captureToString)
 
-    let getWildcardMatches (input: MarkupString) (pattern: MarkupString) : (Match * MarkupString seq) seq =
-        let newPattern = getWildcardMatchAsRegex (pattern)
-
-        (plainText input, newPattern)
+        ((plainText input), pattern)
         |> Regex.Matches
         |> Seq.cast<Match>
-        |> Seq.map (fun value ->
-            (value, value.Groups |> Seq.map (fun cap -> substring cap.Index cap.Length input)))
+        |> Seq.map allMatches
 
     let getRegexpMatches (input: MarkupString) (pattern: MarkupString) : (Match * MarkupString seq) seq =
-        ((plainText input), (plainText pattern))
-        |> Regex.Matches
-        |> Seq.cast<Match>
-        |> Seq.map (fun value ->
-            (value, value.Groups |> Seq.map (fun cap -> substring cap.Index cap.Length input)))
+        getMatches input (plainText pattern)
+
+    let getWildcardMatches (input: MarkupString) (pattern: MarkupString) : (Match * MarkupString seq) seq =
+        getMatches input (getWildcardMatchAsRegex pattern)
 
     [<TailCall>]
     let rec split (delimiter: string) (markupStr: MarkupString) : MarkupString[] =
@@ -387,7 +372,6 @@ module MarkupStringModule =
                            findDelimiters text (idx + 1)
 
         let fullText = plainText markupStr
-
         let delimiterPositions = findDelimiters fullText 0
 
         let rec buildSplits positions lastPos segments =

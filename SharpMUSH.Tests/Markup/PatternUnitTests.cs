@@ -36,7 +36,7 @@ public class PatternUnitTests
 	[Arguments("abc*ghi", "abc\\*ghi", "abc*ghi")]
 	public async Task TestWildcardMatch(string input, string pattern, string expectedResult)
 	{
-		var result = MModule.getWildcardMatch(MModule.single(input), MModule.single(pattern));
+		var result = MModule.getWildcardMatches(MModule.single(input), MModule.single(pattern)).First();
 		await Assert
 			.That(result.Item2.First().ToString())
 			.IsEqualTo(expectedResult);
