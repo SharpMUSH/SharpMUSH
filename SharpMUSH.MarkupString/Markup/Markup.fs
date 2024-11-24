@@ -2,10 +2,10 @@
 
 open System.Runtime.InteropServices
 open ANSILibrary.ANSI
+open System.Text.Json.Serialization
 
 module MarkupImplementation =
   open ANSILibrary
-  open System.Text.Json.Serialization
   
   [<Struct>]
   type AnsiStructure =
@@ -24,8 +24,7 @@ module MarkupImplementation =
       Underlined: bool;
       StrikeThrough: bool;
     }
-
-  
+    
   [<JsonDerivedType(typeof<NeutralMarkup>, "Neutral")>]
   [<JsonDerivedType(typeof<AnsiMarkup>, "Ansi")>]
   type Markup =
@@ -79,7 +78,7 @@ module MarkupImplementation =
 
     static member applyDetails (details: AnsiStructure) (text: string) =
         StringExtensions.toANSI text
-        |> (fun t -> match details.LinkUrl with | null -> t | url -> StringExtensions.linkANSI t url)
+        |> (fun t -> match details.LinkUrl with | null -> t | url -> if url.Length <> 0 then StringExtensions.linkANSI t url else t)
         |> (fun t -> match details.Foreground with | AnsiColor.NoAnsi -> t | fg -> StringExtensions.colorANSI t fg)
         |> (fun t -> match details.Background with | AnsiColor.NoAnsi -> t | bg -> StringExtensions.backgroundANSI t bg)
         |> (fun t -> if details.Blink then StringExtensions.blinkANSI(t) else t)
