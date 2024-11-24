@@ -2,7 +2,6 @@
 
 open System.Text.Json
 open System.Text.RegularExpressions
-open System.Linq
 open System.Runtime.InteropServices
 open System
 open MarkupString.MarkupImplementation

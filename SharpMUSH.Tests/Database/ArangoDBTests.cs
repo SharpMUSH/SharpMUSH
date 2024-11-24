@@ -1,9 +1,11 @@
 ﻿using SharpMUSH.Library;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
-using TUnit.Assertions;
+using System.Drawing;
+using System.Text;
 using TUnit.Assertions.Extensions;
-using TUnit.Core;
+using A = MarkupString.MarkupStringModule;
+using M = MarkupString.MarkupImplementation.AnsiMarkup;
 
 namespace SharpMUSH.Tests.Database;
 
@@ -71,6 +73,22 @@ public class ArangoDBTests : BaseUnitTest
 		var overwrittenLayer = (await _database.GetAttributeAsync(playerOneDBRef, ["Two", "Layers"]))!.ToList();
 
 		await Assert.That(overwrittenLayer.Last().Value.ToString()).IsEqualTo("Layer2");
+	}
+
+	[Test, Skip("Not yet supported, due to the Markup Abstract Class.")]
+	public async Task StoreAnsiInAttribute()
+	{
+		var playerOne = (await _database!.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var playerOneDBRef = new DBRef(playerOne!.Object.Key);
+
+		var ansiString = A.markupSingle(M.Create(foreground: ANSILibrary.StringExtensions.rgb(Color.Red)), "red");
+		await _database.SetAttributeAsync(playerOneDBRef, ["Two", "Layers"], ansiString, playerOne);
+		var existingLayer = (await _database.GetAttributeAsync(playerOneDBRef, ["Two", "Layers"]))!.ToList();
+
+		var resultBytes = Encoding.Unicode.GetBytes(existingLayer.First().Value.ToString());
+		var expectedBytes = Encoding.Unicode.GetBytes(ansiString.ToString());
+
+		await Assert.That(resultBytes).IsEqualTo(expectedBytes);
 	}
 
 	[Test]

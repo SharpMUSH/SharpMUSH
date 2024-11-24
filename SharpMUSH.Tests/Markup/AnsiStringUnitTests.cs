@@ -14,18 +14,18 @@ public class AnsiStringUnitTests : BaseUnitTest
 	[MethodDataSource(typeof(Data.Concat), nameof(Data.Concat.ConcatData))]
 	public async Task Concat((AnsiString strA, AnsiString strB, AnsiString expected) data)
 	{
-		(AnsiString strA, AnsiString strB, AnsiString expected) = data;
+		(var strA, var strB, var expected) = data;
 		var result = A.concat(strA, strB);
 
 		Log.Logger.Information("Result: {Result}{NewLine}Expected: {Expected}", result, Environment.NewLine, expected);
 		var resultBytes = Encoding.Unicode.GetBytes(result.ToString());
 		var expectedBytes = Encoding.Unicode.GetBytes(expected.ToString());
 		
-		foreach(var bt in resultBytes.Zip(expectedBytes))
+		foreach(var (First, Second) in resultBytes.Zip(expectedBytes))
 		{		
 			await Assert
-				.That(bt.First)
-				.IsEqualTo(bt.Second); 
+				.That(First)
+				.IsEqualTo(Second); 
 		}
 	}
 		
@@ -33,7 +33,7 @@ public class AnsiStringUnitTests : BaseUnitTest
 	[MethodDataSource(typeof(Data.Substring), nameof(Data.Substring.SubstringData))]
 	public async Task Substring((AnsiString str, int start, AnsiString expected) data)
 	{
-		(AnsiString str, int start, AnsiString expected) = data;
+		var (str, start, expected) = data;
 		var result = A.substring(start, A.getLength(str) - start, str);
 
 		Log.Logger.Information("Result: {Result}{NewLine}Expected: {Expected}", result, Environment.NewLine, expected);
@@ -41,11 +41,11 @@ public class AnsiStringUnitTests : BaseUnitTest
 		var resultBytes = Encoding.Unicode.GetBytes(result.ToString());
 		var expectedBytes = Encoding.Unicode.GetBytes(expected.ToString());
 		
-		foreach(var bt in resultBytes.Zip(expectedBytes))
+		foreach(var (First, Second) in resultBytes.Zip(expectedBytes))
 		{		
 			await Assert
-				.That(bt.First)
-				.IsEqualTo(bt.Second); 
+				.That(First)
+				.IsEqualTo(Second); 
 		}
 	}
 		
@@ -53,7 +53,7 @@ public class AnsiStringUnitTests : BaseUnitTest
 	[MethodDataSource(typeof(Data.InsertAt), nameof(Data.InsertAt.InsertAtData))]
 	public async Task InsertAt((AnsiString str, int index, AnsiString insert, AnsiString expected) data)
 	{
-		(AnsiString str, int index, AnsiString insert, AnsiString expected) = data;
+		var (str, index, insert, expected) = data;
 		var result = A.insertAt(str, insert, index);
 
 		Log.Logger.Information("Result: {Result}{NewLine}Expected: {Expected}", result, Environment.NewLine, expected);
@@ -61,11 +61,11 @@ public class AnsiStringUnitTests : BaseUnitTest
 		var resultBytes = Encoding.Unicode.GetBytes(result.ToString());
 		var expectedBytes = Encoding.Unicode.GetBytes(expected.ToString());
 		
-		foreach(var bt in resultBytes.Zip(expectedBytes))
+		foreach(var (First, Second) in resultBytes.Zip(expectedBytes))
 		{		
 			await Assert
-				.That(bt.First)
-				.IsEqualTo(bt.Second); 
+				.That(First)
+				.IsEqualTo(Second); 
 		}
 	}
 
@@ -73,7 +73,7 @@ public class AnsiStringUnitTests : BaseUnitTest
 	[MethodDataSource(typeof(Data.Substring), nameof(Data.Substring.SubstringLengthData))]
 	public async Task SubstringLength((AnsiString str, int length, AnsiString expected) data)
 	{
-		(AnsiString str, int length, AnsiString expected) = data;
+		var (str, length, expected) = data;
 		var result = A.substring(0, length, str);
 
 		Log.Logger.Information("Result: {Result}{NewLine}Expected: {Expected}", result, Environment.NewLine, expected);
@@ -81,11 +81,11 @@ public class AnsiStringUnitTests : BaseUnitTest
 		var resultBytes = Encoding.Unicode.GetBytes(result.ToString());
 		var expectedBytes = Encoding.Unicode.GetBytes(expected.ToString());
 		
-		foreach(var bt in resultBytes.Zip(expectedBytes))
+		foreach(var (First, Second) in resultBytes.Zip(expectedBytes))
 		{		
 			await Assert
-				.That(bt.First)
-				.IsEqualTo(bt.Second); 
+				.That(First)
+				.IsEqualTo(Second); 
 		}
 	}
 
@@ -106,11 +106,11 @@ public class AnsiStringUnitTests : BaseUnitTest
 			var resultBytes = Encoding.Unicode.GetBytes(resultItem.ToString());
 			var expectedBytes = Encoding.Unicode.GetBytes(expectedItem.ToString());
 		
-			foreach(var bt in resultBytes.Zip(expectedBytes))
+			foreach(var (First, Second) in resultBytes.Zip(expectedBytes))
 			{
 				await Assert
-					.That(bt.First)
-					.IsEqualTo(bt.Second); 
+					.That(First)
+					.IsEqualTo(Second); 
 			} 
 		}
 	}
