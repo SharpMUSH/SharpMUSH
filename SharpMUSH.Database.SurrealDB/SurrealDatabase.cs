@@ -173,7 +173,7 @@ public class SurrealDatabase(
 				throw new NotImplementedException();
 		}
 
-		public ValueTask<bool> SetAttributeFlagAsync(DBRef dbref, string[] attribute, SharpAttributeFlag flag)
+		public ValueTask<bool> SetAttributeFlagAsync(SharpObject dbref, string[] attribute, SharpAttributeFlag flag)
 		{
 				throw new NotImplementedException();
 		}
@@ -188,7 +188,7 @@ public class SurrealDatabase(
 				throw new NotImplementedException();
 		}
 
-		public ValueTask<bool> UnsetAttributeFlagAsync(DBRef dbref, string[] attribute, SharpAttributeFlag flag)
+		public ValueTask<bool> UnsetAttributeFlagAsync(SharpObject dbref, string[] attribute, SharpAttributeFlag flag)
 		{
 				throw new NotImplementedException();
 		}

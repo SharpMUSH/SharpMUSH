@@ -83,7 +83,7 @@ public interface ISharpDatabase
 		/// <param name="attribute">Attribute Path.</param>
 		/// <param name="flag">Flag</param>
 		/// <returns>Success or Failure</returns>
-		ValueTask<bool> SetAttributeFlagAsync(DBRef dbref, string[] attribute, SharpAttributeFlag flag);
+		ValueTask<bool> SetAttributeFlagAsync(SharpObject dbref, string[] attribute, SharpAttributeFlag flag);
 
 		/// <summary>
 		/// Set an attribute flag. This does not do any checks, as that is up to the functionality itself.
@@ -92,7 +92,7 @@ public interface ISharpDatabase
 		/// <param name="attribute">Attribute Path.</param>
 		/// <param name="flag">Flag</param>
 		/// <returns>Success or Failure</returns>
-		ValueTask<bool> UnsetAttributeFlagAsync(DBRef dbref, string[] attribute, SharpAttributeFlag flag);
+		ValueTask<bool> UnsetAttributeFlagAsync(SharpObject dbref, string[] attribute, SharpAttributeFlag flag);
 
 		/// <summary>
 		/// Set an attribute. This does not do any checks, as that is up to the functionality itself.
