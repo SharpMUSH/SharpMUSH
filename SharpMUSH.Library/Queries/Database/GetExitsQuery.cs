@@ -6,4 +6,4 @@ using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Queries.Database;
 
-public record GetExitsQuery(OneOf<DBRef,AnySharpContainer> DBRef) : IQuery<IEnumerable<SharpExit>>, ICacheable;
+public record GetExitsQuery(OneOf<DBRef, AnySharpContainer> DBRef) : IQuery<IEnumerable<SharpExit>>, ICacheable;

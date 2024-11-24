@@ -2,10 +2,10 @@
 
 namespace SharpMUSH.Database.SurrealDB.Models;
 
-public record SharpSurrealObjectCreateRequest(int? Id, string Name, string Type, Dictionary<string, string> Locks, long CreationTime, long ModifiedTime) 
+public record SharpSurrealObjectCreateRequest(int? Id, string Name, string Type, Dictionary<string, string> Locks, long CreationTime, long ModifiedTime)
 	: SharpObjectCreateRequest(Name, Type, Locks, CreationTime, ModifiedTime);
 
-public record SharpSurrealPlayerCreateRequest(int? Id, string[]? Aliases, string PasswordHash) 
+public record SharpSurrealPlayerCreateRequest(int? Id, string[]? Aliases, string PasswordHash)
 	: SharpPlayerCreateRequest(Aliases, PasswordHash);
 
 public record SharpSurrealExitCreateRequest(int? Id, string[]? Aliases)

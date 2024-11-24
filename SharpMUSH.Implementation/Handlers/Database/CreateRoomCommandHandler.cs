@@ -7,8 +7,8 @@ namespace SharpMUSH.Implementation.Handlers.Database;
 
 public class CreateRoomCommandHandler(ISharpDatabase database) : ICommandHandler<CreateRoomCommand, DBRef>
 {
-	public async ValueTask<DBRef> Handle(CreateRoomCommand request, CancellationToken cancellationToken)
-	{
-		return await database.CreateRoomAsync(request.Name, request.Creator);
-	}
+		public async ValueTask<DBRef> Handle(CreateRoomCommand request, CancellationToken cancellationToken)
+		{
+				return await database.CreateRoomAsync(request.Name, request.Creator);
+		}
 }

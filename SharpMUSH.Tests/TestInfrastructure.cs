@@ -1,12 +1,12 @@
-﻿using Microsoft.AspNetCore;
+﻿using Core.Arango;
+using Microsoft.AspNetCore;
+using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
-using Microsoft.AspNetCore.Connections;
+using Serilog;
+using Serilog.Sinks.SystemConsole.Themes;
 using SharpMUSH.Server;
 using SharpMUSH.Server.ProtocolHandlers;
-using Serilog.Sinks.SystemConsole.Themes;
-using Serilog;
-using Core.Arango;
 
 namespace SharpMUSH.Tests;
 

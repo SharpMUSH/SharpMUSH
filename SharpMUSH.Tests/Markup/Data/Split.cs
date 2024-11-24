@@ -1,5 +1,5 @@
-﻿using System.Drawing;
-using ANSILibrary;
+﻿using ANSILibrary;
+using System.Drawing;
 using A = MarkupString.MarkupStringModule;
 using M = MarkupString.MarkupImplementation.AnsiMarkup;
 
@@ -7,9 +7,9 @@ namespace SharpMUSH.Tests.Markup.Data;
 
 internal static class Split
 {
-	public static IEnumerable<(MString str, string delimiter, MString[] expected)> SplitData() =>
-	[
-		(
+		public static IEnumerable<(MString str, string delimiter, MString[] expected)> SplitData() =>
+		[
+			(
 			A.concat(A.single("con"), A.single(";cat")), ";",
 			new[]
 			{
@@ -80,5 +80,5 @@ internal static class Split
 				A.single("at")
 			}
 		)
-	];
+		];
 }

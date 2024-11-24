@@ -7,8 +7,8 @@ namespace SharpMUSH.Implementation.Handlers.Database;
 
 public class CreateExitCommandHandler(ISharpDatabase database) : ICommandHandler<CreateExitCommand, DBRef>
 {
-	public async ValueTask<DBRef> Handle(CreateExitCommand request, CancellationToken cancellationToken)
-	{
-		return await database.CreateExitAsync(request.Name, request.Location, request.Creator);
-	}
+		public async ValueTask<DBRef> Handle(CreateExitCommand request, CancellationToken cancellationToken)
+		{
+				return await database.CreateExitAsync(request.Name, request.Location, request.Creator);
+		}
 }

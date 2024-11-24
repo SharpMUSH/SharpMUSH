@@ -1,11 +1,10 @@
-﻿using SharpMUSH.Library;
+﻿using MarkupString;
+using SharpMUSH.Database.SurrealDB.Models;
+using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
-using SurrealDb.Net;
-using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Services;
-using SharpMUSH.Database.SurrealDB.Models;
-using MarkupString;
+using SurrealDb.Net;
 
 namespace SharpMUSH.Database.SurrealDB;
 
@@ -31,18 +30,18 @@ public class SurrealDatabase(
 		}
 
 		public async ValueTask<DBRef> CreatePlayerAsync(string name, string password, DBRef location)
-	{
-		var time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+		{
+				var time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-		var createdObject = await SDBC.Create(DatabaseConstants.objects, 
-			new SharpSurrealObjectCreateRequest((int?)null, name, DatabaseConstants.typePlayer, [], time, time));
-		var createdDBRef = new DBRef(createdObject.Id!.Value, time);
-		
-		await SDBC.Create(DatabaseConstants.players, 
-			new SharpSurrealPlayerCreateRequest((int?)null, [], PasswordService.HashPassword(createdDBRef.ToString(), password)));
+				var createdObject = await SDBC.Create(DatabaseConstants.objects,
+					new SharpSurrealObjectCreateRequest((int?)null, name, DatabaseConstants.typePlayer, [], time, time));
+				var createdDBRef = new DBRef(createdObject.Id!.Value, time);
 
-		return createdDBRef;
-	}
+				await SDBC.Create(DatabaseConstants.players,
+					new SharpSurrealPlayerCreateRequest((int?)null, [], PasswordService.HashPassword(createdDBRef.ToString(), password)));
+
+				return createdDBRef;
+		}
 
 		public ValueTask<DBRef> CreateRoomAsync(string name, SharpPlayer creator)
 		{

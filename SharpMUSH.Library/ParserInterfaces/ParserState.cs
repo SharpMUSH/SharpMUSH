@@ -1,23 +1,23 @@
-﻿using System.Collections.Concurrent;
+﻿using Mediator;
 using OneOf.Types;
-using SharpMUSH.Library.Models;
 using SharpMUSH.Library.DiscriminatedUnions;
-using Mediator;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
+using System.Collections.Concurrent;
 
 namespace SharpMUSH.Library.ParserInterfaces;
 
 public enum ParseMode
 {
-	Default,
-	NoParse
+		Default,
+		NoParse
 }
 
 public class IterationWrapper<T>
 {
-	public required T Value { get; set; }
-	public uint Iteration { get; set; } = 0;
-	public bool Break { get; set; } = false;
+		public required T Value { get; set; }
+		public uint Iteration { get; set; } = 0;
+		public bool Break { get; set; } = false;
 }
 
 public record ParserState(
@@ -35,31 +35,31 @@ public record ParserState(
 	string? Handle,
 	ParseMode ParseMode = ParseMode.Default)
 {
-	private AnyOptionalSharpObject? _executorObject;
-	private AnyOptionalSharpObject? _enactorObject;
-	private AnyOptionalSharpObject? _callerObject;
-	
-	public async ValueTask<AnyOptionalSharpObject> ExecutorObject(IMediator mediator) 
-		=> _executorObject ??= Executor is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Executor.Value));
-	public async ValueTask<AnyOptionalSharpObject> EnactorObject(IMediator mediator) 
-		=> _enactorObject ??= Enactor is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Enactor.Value));
-	public async ValueTask<AnyOptionalSharpObject> CallerObject(IMediator mediator) 
-		=> _callerObject ??= Caller is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Caller.Value));
+		private AnyOptionalSharpObject? _executorObject;
+		private AnyOptionalSharpObject? _enactorObject;
+		private AnyOptionalSharpObject? _callerObject;
 
-	public bool AddRegister(string register, MString value)
-	{
-		// TODO: Validate Register Pattern
+		public async ValueTask<AnyOptionalSharpObject> ExecutorObject(IMediator mediator)
+			=> _executorObject ??= Executor is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Executor.Value));
+		public async ValueTask<AnyOptionalSharpObject> EnactorObject(IMediator mediator)
+			=> _enactorObject ??= Enactor is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Enactor.Value));
+		public async ValueTask<AnyOptionalSharpObject> CallerObject(IMediator mediator)
+			=> _callerObject ??= Caller is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Caller.Value));
 
-		var canPeek = Registers.TryPeek(out var top);
-		if (!canPeek)
+		public bool AddRegister(string register, MString value)
 		{
-			throw new Exception("Could not peek!");
-		}
-		if (!top!.TryAdd(register, value))
-		{
-			top[register] = value;
-		}
+				// TODO: Validate Register Pattern
 
-		return true;
-	}
+				var canPeek = Registers.TryPeek(out var top);
+				if (!canPeek)
+				{
+						throw new Exception("Could not peek!");
+				}
+				if (!top!.TryAdd(register, value))
+				{
+						top[register] = value;
+				}
+
+				return true;
+		}
 }

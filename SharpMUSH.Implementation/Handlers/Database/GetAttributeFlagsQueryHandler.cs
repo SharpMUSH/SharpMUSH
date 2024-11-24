@@ -8,9 +8,9 @@ namespace SharpMUSH.Implementation.Handlers.Database;
 public class GetAttributeFlagsQueryHandler(ISharpDatabase database)
 	: IQueryHandler<GetAttributeFlagsQuery, IEnumerable<SharpAttributeFlag>>
 {
-	public async ValueTask<IEnumerable<SharpAttributeFlag>> Handle(GetAttributeFlagsQuery request,
-		CancellationToken cancellationToken)
-	{
-		return await database.GetAttributeFlagsAsync();
-	}
+		public async ValueTask<IEnumerable<SharpAttributeFlag>> Handle(GetAttributeFlagsQuery request,
+			CancellationToken cancellationToken)
+		{
+				return await database.GetAttributeFlagsAsync();
+		}
 }
