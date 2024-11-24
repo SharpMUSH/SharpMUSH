@@ -140,10 +140,22 @@ public class AnsiStringUnitTests : BaseUnitTest
 		await Assert.That(deserialized.ToString()).IsEquatableOrEqualTo(original.ToString());
 	}
 
-	[Test, Skip("Fails due to Abstract Markup")]
-	public async Task Serialization()
+	[Test, Skip("Fails due to Deserialize not re-populating the Color struct for AnsiColor.")]
+	public async Task SerializationRgb()
 	{
 		var original = A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "red");
+
+		var serialized = MModule.serialize(original);
+		var deserialized = MModule.deserialize(serialized);
+
+		await Assert.That(deserialized.ToString()).IsEquatableOrEqualTo(original.ToString());
+	}
+
+
+	[Test]
+	public async Task SerializationNull()
+	{
+		var original = A.markupSingle(M.Create(foreground: null), "red");
 
 		var serialized = MModule.serialize(original);
 		var deserialized = MModule.deserialize(serialized);
