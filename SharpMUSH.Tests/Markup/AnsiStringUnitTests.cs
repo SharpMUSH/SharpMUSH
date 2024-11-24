@@ -128,15 +128,26 @@ public class AnsiStringUnitTests : BaseUnitTest
 		await Assert.That(redAnsiString.ToString()).IsEqualTo("\u001b[31mred\u001b[0m");
 		// Assert.AreEqual("\u001b[32mwoo\u001b[0m", complexAnsiString.ToString());
 	}
-	
+
 	[Test]
-	public async Task Serialization()
+	public async Task SimpleSerialization()
 	{
 		var original = A.single("red");
 
 		var serialized = MModule.serialize(original);
 		var deserialized = MModule.deserialize(serialized);
-		
+
+		await Assert.That(deserialized.ToString()).IsEquatableOrEqualTo(original.ToString());
+	}
+
+	[Test, Skip("Fails due to Abstract Markup")]
+	public async Task Serialization()
+	{
+		var original = A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "red");
+
+		var serialized = MModule.serialize(original);
+		var deserialized = MModule.deserialize(serialized);
+
 		await Assert.That(deserialized.ToString()).IsEquatableOrEqualTo(original.ToString());
 	}
 }
