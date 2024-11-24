@@ -7,6 +7,7 @@ open System.Linq
 open System.Runtime.InteropServices
 open System
 open MarkupString.MarkupImplementation
+open System.Text.Json.Serialization
 
 module MarkupStringModule =
     open MarkupImplementation
@@ -81,14 +82,6 @@ module MarkupStringModule =
             match markupStr.MarkupDetails with
             | MarkedupText m -> markupStr.MarkupDetails
             | _ -> find markupStr.Content
-
-        // TODO: A version of GetText that creates a new ASCII type string and compresses in the Markup Information.
-        let toConvertableString (markupStr: MarkupString) : string = getText (markupStr, Empty)
-
-        // TODO: This should decompile the string into a valid MarkupString, assuming it's a valid string.
-        // TODO: Preferably this would use some sort of simple parser.
-        let fromConvertableString (markupString: string) : MarkupString =
-            MarkupString(Empty, [ Text markupString ])
         
         let len : Lazy<int> = Lazy<int>(length)
         
@@ -97,15 +90,6 @@ module MarkupStringModule =
         member val Content = content with get, set
         
         member val Length = len.Value
-        
-        member this.Serialize() =
-            JsonSerializer.Serialize(this, JsonSerializerOptions(PropertyNamingPolicy = JsonNamingPolicy.CamelCase))
-
-        member this.Deserialize(jsonString: string) =
-            JsonSerializer.Deserialize<MarkupString>(
-                jsonString,
-                JsonSerializerOptions(PropertyNamingPolicy = JsonNamingPolicy.CamelCase)
-            )
 
         override this.ToString() =
             let postfix (markupType: MarkupTypes) : string =
@@ -159,6 +143,20 @@ module MarkupStringModule =
             Enumerable.Repeat(delimiter, mu |> Seq.length).Skip(1).Append(empty ())
 
         MarkupString(Empty, (Seq.foldBack2 (fun a b xs -> (MarkupText a) :: (MarkupText b) :: xs) mu delimiters []))
+        
+    let serializationOptions =
+        JsonFSharpOptions.Default()
+            .ToJsonSerializerOptions()
+
+    let serialize(markupStr: MarkupString) : string = 
+        JsonSerializer.Serialize(markupStr, serializationOptions)
+
+    let deserialize (markupString: string) : MarkupString = 
+      if markupString.Length = 0 
+      then 
+        empty()
+      else 
+        JsonSerializer.Deserialize(markupString, serializationOptions)
 
     [<TailCall>]
     let rec plainText (markupStr: MarkupString) : string =

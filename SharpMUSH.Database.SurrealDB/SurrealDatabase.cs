@@ -5,6 +5,7 @@ using SurrealDb.Net;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Database.SurrealDB.Models;
+using MarkupString;
 
 namespace SharpMUSH.Database.SurrealDB;
 
@@ -168,7 +169,7 @@ public class SurrealDatabase(
 				throw new NotImplementedException();
 		}
 
-		public ValueTask<bool> SetAttributeAsync(DBRef dbref, string[] attribute, string value, SharpPlayer owner)
+		public ValueTask<bool> SetAttributeAsync(DBRef dbref, string[] attribute, MarkupStringModule.MarkupString value, SharpPlayer owner)
 		{
 				throw new NotImplementedException();
 		}

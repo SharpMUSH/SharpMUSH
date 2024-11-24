@@ -129,14 +129,14 @@ public class AnsiStringUnitTests : BaseUnitTest
 		// Assert.AreEqual("\u001b[32mwoo\u001b[0m", complexAnsiString.ToString());
 	}
 	
-	[Test, Skip("Discriminated Unions cannot be deserialized without an extra library. WIP.")]
+	[Test]
 	public async Task Serialization()
 	{
 		var original = A.single("red");
 
-		var serialized = original.Serialize();
-		var deserialized = original.Deserialize(serialized);
+		var serialized = MModule.serialize(original);
+		var deserialized = MModule.deserialize(serialized);
 		
-		await Assert.That(deserialized).IsEquatableOrEqualTo(original);
+		await Assert.That(deserialized.ToString()).IsEquatableOrEqualTo(original.ToString());
 	}
 }

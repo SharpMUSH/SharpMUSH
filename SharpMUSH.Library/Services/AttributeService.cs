@@ -153,7 +153,7 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		}
 
 		cs.InvalidateCache(obj.Object().DBRef);
-		await mediator.Send(new SetAttributeCommand(obj.Object().DBRef, attrPath, value.ToString(),
+		await mediator.Send(new SetAttributeCommand(obj.Object().DBRef, attrPath, value,
 			executor.Object().Owner.Value));
 
 		return new Success();

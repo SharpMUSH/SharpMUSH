@@ -280,7 +280,7 @@ public class ArangoDatabase(
 			Name = x.Name,
 			LongName = x.LongName,
 			Owner = new(() => GetAttributeOwnerAsync(x.Id).AsTask().Result),
-			Value = MarkupStringModule.single(x.Value), // TODO: Compose and Decompose
+			Value = MarkupStringModule.deserialize(x.Value),
 			Leaves = new(() => GetTopLevelAttributesAsync(x.Id).AsTask().Result),
 			SharpAttributeEntry = new(() => null) // TODO: Fix
 		});
@@ -510,7 +510,7 @@ public class ArangoDatabase(
 			Name = x.Name,
 			LongName = x.LongName,
 			Owner = new(() => GetAttributeOwnerAsync(x.Id).AsTask().Result),
-			Value = MarkupString.MarkupStringModule.single(x.Value), // TODO: Compose and Decompose
+			Value = MarkupStringModule.deserialize(x.Value),
 			Leaves = new(() => GetTopLevelAttributesAsync(x.Id).AsTask().Result),
 			SharpAttributeEntry = new(() => null) // TODO: Fix
 		});
@@ -550,7 +550,7 @@ public class ArangoDatabase(
 		{
 			Flags = await GetAttributeFlagsAsync(x.Id),
 			Name = x.Name,
-			Value = MarkupStringModule.single(x.Value),
+			Value = MarkupStringModule.deserialize(x.Value),
 			LongName = x.LongName,
 			Leaves = new(() => GetTopLevelAttributesAsync(x.Id).AsTask().Result),
 			Owner = new(() => GetObjectOwnerAsync(x.Id).AsTask().Result),
@@ -583,7 +583,7 @@ public class ArangoDatabase(
 		{
 			Flags = await GetAttributeFlagsAsync(x.Id),
 			Name = x.Name,
-			Value = MarkupStringModule.single(x.Value),
+			Value = MarkupStringModule.deserialize(x.Value),
 			LongName = x.LongName,
 			Leaves = new(() => GetTopLevelAttributesAsync(x.Id).AsTask().Result),
 			Owner = new(() => GetObjectOwnerAsync(x.Id).AsTask().Result),
@@ -621,7 +621,7 @@ public class ArangoDatabase(
 		{
 			Name = x.Name,
 			Flags = await GetAttributeFlagsAsync(x.Id),
-			Value = MarkupString.MarkupStringModule.single(x.Value), // TODO: Compose and Decompose
+			Value = MarkupStringModule.deserialize(x.Value), 
 			LongName = x.LongName,
 			Leaves = new(() => GetTopLevelAttributesAsync(x.Id).AsTask().Result),
 			Owner = new(() => GetAttributeOwnerAsync(x.Id).AsTask().Result),
@@ -629,7 +629,7 @@ public class ArangoDatabase(
 		}));
 	}
 
-	public async ValueTask<bool> SetAttributeAsync(DBRef dbref, string[] attribute, string value, SharpPlayer owner)
+	public async ValueTask<bool> SetAttributeAsync(DBRef dbref, string[] attribute, MarkupStringModule.MarkupString value, SharpPlayer owner)
 	{
 		ArgumentException.ThrowIfNullOrEmpty(owner?.Id);
 
@@ -678,7 +678,7 @@ public class ArangoDatabase(
 				transactionHandle, DatabaseConstants.attributes,
 				new SharpAttributeCreateRequest(nextAttr.value.ToUpper(), [],
 					(nextAttr.i == remaining.Length - 1)
-						? value
+						? MarkupStringModule.serialize(value)
 						: string.Empty,
 					string.Join('`', attribute.SkipLast(remaining.Length - 1 - nextAttr.i).Select(x => x.ToUpper()))),
 				waitForSync: true);
@@ -698,7 +698,7 @@ public class ArangoDatabase(
 		if (remaining.Length == 0)
 		{
 			await arangoDB.Document.UpdateAsync(transactionHandle, DatabaseConstants.attributes,
-				new { Key = lastId.Split("/")[1], Value = value }, waitForSync: true, mergeObjects: true);
+				new { Key = lastId.Split('/')[1], Value = MarkupStringModule.serialize(value) }, waitForSync: true, mergeObjects: true);
 
 			await arangoDB.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.graphAttributeOwners,
 				DatabaseConstants.hasAttributeOwner,

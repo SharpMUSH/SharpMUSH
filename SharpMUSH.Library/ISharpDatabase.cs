@@ -74,7 +74,7 @@ public interface ISharpDatabase
 	/// <param name="attribute">Attribute Path.</param>
 	/// <param name="value">The value to place into the attribute</param>
 	/// <returns>Success or Failure</returns>
-	ValueTask<bool> SetAttributeAsync(DBRef dbref, string[] attribute, string value, SharpPlayer owner);
+	ValueTask<bool> SetAttributeAsync(DBRef dbref, string[] attribute, MString value, SharpPlayer owner);
 
 	/// <summary>
 	/// Set an attribute flag. This does not do any checks, as that is up to the functionality itself.

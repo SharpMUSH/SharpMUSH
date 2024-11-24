@@ -62,12 +62,12 @@ public class ArangoDBTests : BaseUnitTest
 		var playerOne = (await _database!.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
 		var playerOneDBRef = new DBRef(playerOne!.Object.Key);
 
-		await _database.SetAttributeAsync(playerOneDBRef, ["Two", "Layers"], "Layer", playerOne);
+		await _database.SetAttributeAsync(playerOneDBRef, ["Two", "Layers"], MModule.single("Layer"), playerOne);
 		var existingLayer = (await _database.GetAttributeAsync(playerOneDBRef, ["Two", "Layers"]))!.ToList();
 
 		await Assert.That(existingLayer.Last().Value.ToString()).IsEqualTo("Layer");
 
-		await _database.SetAttributeAsync(playerOneDBRef, ["Two", "Layers"], "Layer2", playerOne);
+		await _database.SetAttributeAsync(playerOneDBRef, ["Two", "Layers"], MModule.single("Layer2"), playerOne);
 		var overwrittenLayer = (await _database.GetAttributeAsync(playerOneDBRef, ["Two", "Layers"]))!.ToList();
 
 		await Assert.That(overwrittenLayer.Last().Value.ToString()).IsEqualTo("Layer2");
@@ -99,13 +99,13 @@ public class ArangoDBTests : BaseUnitTest
 
 		var playerOneDBRef = new DBRef(playerOne!.Object.Key);
 
-		await _database.SetAttributeAsync(playerOneDBRef, ["SingleLayer"], "Single", playerOne);
-		await _database.SetAttributeAsync(playerOneDBRef, ["Two"], "Twin", playerOne);
-		await _database.SetAttributeAsync(playerOneDBRef, ["Two", "Layers"], "Layer", playerOne);
-		await _database.SetAttributeAsync(playerOneDBRef, ["Two", "Leaves"], "Leaf", playerOne);
-		await _database.SetAttributeAsync(playerOneDBRef, ["Two", "Leaves2"], "Leaf2", playerOne);
-		await _database.SetAttributeAsync(playerOneDBRef, ["Three", "Layers", "Deep"], "Deep1", playerOne);
-		await _database.SetAttributeAsync(playerOneDBRef, ["Three", "Layers", "Deep2"], "Deeper", playerOne);
+		await _database.SetAttributeAsync(playerOneDBRef, ["SingleLayer"], MModule.single("Single"), playerOne);
+		await _database.SetAttributeAsync(playerOneDBRef, ["Two"], MModule.single("Twin"), playerOne);
+		await _database.SetAttributeAsync(playerOneDBRef, ["Two", "Layers"], MModule.single("Layer"), playerOne);
+		await _database.SetAttributeAsync(playerOneDBRef, ["Two", "Leaves"], MModule.single("Leaf"), playerOne);
+		await _database.SetAttributeAsync(playerOneDBRef, ["Two", "Leaves2"], MModule.single("Leaf2"), playerOne);
+		await _database.SetAttributeAsync(playerOneDBRef, ["Three", "Layers", "Deep"], MModule.single("Deep1"), playerOne);
+		await _database.SetAttributeAsync(playerOneDBRef, ["Three", "Layers", "Deep2"], MModule.single("Deeper"), playerOne);
 
 		var existingSingle = (await _database.GetAttributeAsync(playerOneDBRef, ["SingleLayer"]))?.ToList();
 		var existingLayer = (await _database.GetAttributeAsync(playerOneDBRef, ["Two", "Layers"]))?.ToList();
