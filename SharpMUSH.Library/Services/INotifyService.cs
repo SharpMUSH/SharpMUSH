@@ -5,19 +5,34 @@ namespace SharpMUSH.Library.Services;
 
 public interface INotifyService
 {
-		Task Notify(DBRef who, MString what);
+	enum NotificationType
+	{
+		Emit,
+		Say,
+		Pose,
+		SemiPose,
+		Announce,
+		NSEmit,
+		NSSay,
+		NSPose,
+		NSSemiPose,
+		NSAnnounce
+	}
 
-		Task Notify(AnySharpObject who, MString what);
+	// TODO: Add a 'sender' for Noisy etc rules.
+	Task Notify(DBRef who, MString what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
 
-		Task Notify(string handle, MString what);
+	Task Notify(AnySharpObject who, MString what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
 
-		Task Notify(string[] handles, MString what);
+	Task Notify(string handle, MString what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
 
-		Task Notify(DBRef who, string what);
+	Task Notify(string[] handles, MString what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
 
-		Task Notify(AnySharpObject who, string what);
+	Task Notify(DBRef who, string what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
 
-		Task Notify(string handle, string what);
+	Task Notify(AnySharpObject who, string what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
 
-		Task Notify(string[] handles, string what);
+	Task Notify(string handle, string what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
+
+	Task Notify(string[] handles, string what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
 }

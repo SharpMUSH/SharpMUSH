@@ -51,31 +51,31 @@ public partial class Functions
 					return MModule.single(result == string.Empty ? "0" : result);
 			});
 
-		[SharpFunction(Name = "band", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+		[SharpFunction(Name = "band", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.PositiveIntegersOnly)]
 		public static ValueTask<CallState> BAnd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 			=> AggregateIntegers(parser.CurrentState.Arguments, (x, y) => x & y);
 
-		[SharpFunction(Name = "bnand", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+		[SharpFunction(Name = "bnand", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.PositiveIntegersOnly)]
 		public static ValueTask<CallState> BNand(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 			=> AggregateIntegers(parser.CurrentState.Arguments, (x, y) => ~(x & y));
 
-		[SharpFunction(Name = "bnot", MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+		[SharpFunction(Name = "bnot", MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.PositiveIntegersOnly)]
 		public static ValueTask<CallState> BNot(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 			=> EvaluateInteger(parser.CurrentState.Arguments, x => ~x);
 
-		[SharpFunction(Name = "bor", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+		[SharpFunction(Name = "bor", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.PositiveIntegersOnly)]
 		public static ValueTask<CallState> Bor(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 			=> AggregateIntegers(parser.CurrentState.Arguments, (x, y) => x | y);
 
-		[SharpFunction(Name = "bxor", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+		[SharpFunction(Name = "bxor", Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.PositiveIntegersOnly)]
 		public static ValueTask<CallState> BXor(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 			=> AggregateIntegers(parser.CurrentState.Arguments, (x, y) => x ^ y);
 
-		[SharpFunction(Name = "shr", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+		[SharpFunction(Name = "shr", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.PositiveIntegersOnly)]
 		public static ValueTask<CallState> ShR(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 			=> AggregateIntegers(parser.CurrentState.Arguments, (x, y) => x >> y);
 
-		[SharpFunction(Name = "shl", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+		[SharpFunction(Name = "shl", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.PositiveIntegersOnly)]
 		public static ValueTask<CallState> ShL(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 			=> AggregateIntegers(parser.CurrentState.Arguments, (x, y) => x << y);
 }

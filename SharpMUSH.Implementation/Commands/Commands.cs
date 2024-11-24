@@ -115,6 +115,7 @@ public static partial class Commands
 							executorObject,
 							command,
 							LocateFlags.ExitsInTheRoomOfLooker);
+
 						if (locate.IsExit)
 						{
 								var exit = locate.AsExit;
