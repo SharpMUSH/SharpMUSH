@@ -18,7 +18,7 @@ public interface ISharpDatabase
 	ValueTask SetLockAsync(SharpObject target, string lockName, string lockString);
 
 	ValueTask<IEnumerable<SharpAttribute>?> GetAttributeAsync(DBRef dbref, params string[] attribute);
-	
+
 	ValueTask<IEnumerable<SharpAttribute>?> GetAttributesAsync(DBRef dbref, string attribute_pattern);
 
 	/// <summary>
@@ -35,7 +35,7 @@ public interface ISharpDatabase
 	/// <param name="name">Flag name</param>
 	/// <returns>A SharpObjectFlag, or null if it does not exist</returns>
 	ValueTask<SharpObjectFlag?> GetObjectFlagAsync(string name);
-	
+
 	/// <summary>
 	/// Get all known Object Flags
 	/// </summary>
@@ -130,7 +130,7 @@ public interface ISharpDatabase
 	ValueTask<IEnumerable<AnySharpObject>> GetNearbyObjectsAsync(AnySharpObject obj);
 
 	ValueTask<AnyOptionalSharpContainer> GetLocationAsync(DBRef obj, int depth = 1);
-	
+
 	ValueTask<AnySharpContainer> GetLocationAsync(AnySharpObject obj, int depth = 1);
 
 	ValueTask<IEnumerable<AnySharpContent>?> GetContentsAsync(DBRef obj);

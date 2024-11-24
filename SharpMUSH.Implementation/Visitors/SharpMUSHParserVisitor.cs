@@ -20,10 +20,8 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source)
 	protected override async ValueTask<CallState?> AggregateResult(ValueTask<CallState?> aggregate,
 		ValueTask<CallState?> nextResult)
 	{
-		await ValueTask.CompletedTask;
-		// BUG: These two are evaluating out of order sometimes if not run as non-async.
-		var agg = aggregate.ConfigureAwait(false).GetAwaiter().GetResult();
-		var next = nextResult.ConfigureAwait(false).GetAwaiter().GetResult();
+		var agg = await aggregate;
+		var next = await nextResult;
 		
 		if (agg?.Arguments is not null || next?.Arguments is not null)
 		{

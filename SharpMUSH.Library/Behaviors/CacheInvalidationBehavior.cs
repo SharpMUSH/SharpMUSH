@@ -7,13 +7,18 @@ namespace SharpMUSH.Library.Behaviors;
 public class CacheInvalidationBehavior<TRequest, TResponse>(IMemoryCache cache) : IPipelineBehavior<TRequest, TResponse>
 	where TRequest : ICommand<TResponse>, ICacheInvalidating
 {
-		public async ValueTask<TResponse> Handle(
+	public async ValueTask<TResponse> Handle(
 		TRequest message,
 		CancellationToken cancellationToken,
 		MessageHandlerDelegate<TRequest, TResponse> next
 	)
 	{
 		var response = await next(message, cancellationToken);
+
+		foreach (var item in ((MemoryCache)cache).GetKeys<string>())
+		{
+			cache.Remove(item);
+		}
 
 		/*
 		// If this is a command (not a query), invalidate relevant cache entries
