@@ -2,23 +2,21 @@
 
 open System
 open System.Drawing  
-open System.IO
-open System.Text.Json
 
 // Converted and heavily changed from: https://github.com/WilliamRagstad/ANSIConsole/blob/main/ANSIConsole/
 module ANSI =
   type AnsiColor = 
-    | RGB of rgb : Color 
-    | ANSI of ansiCode : byte []
+    | RGB of System.Drawing.Color 
+    | ANSI of byte array
     | NoAnsi
 
   /// The ASCII escape character (decimal 27).
-  let ESC = "\u001b"
+  let private ESC = "\u001b"
 
   /// Introduces a control sequence that uses 8-bit characters.
-  let CSI = ESC + "[" 
+  let private CSI = ESC + "[" 
 
-  let SGR (codes: byte []) =
+  let private SGR (codes: byte array) =
     CSI + (codes |> Array.map string |> String.concat ";") + "m"
 
   let Clear = SGR [|0uy|]
@@ -36,6 +34,7 @@ module ANSI =
       | RGB rgb -> SGR [|38uy; 2uy; rgb.R; rgb.G; rgb.B|]
       | ANSI ansi -> SGR ansi
       | NoAnsi -> ""
+
   let Background (color: AnsiColor) = 
     match color with 
       | RGB rgb -> SGR [|48uy; 2uy; rgb.R; rgb.G; rgb.B|]
@@ -64,15 +63,6 @@ type ANSIFormatting =
 
 type ANSIString(text: string, hyperlink: string option, colorForeground: AnsiColor option, colorBackground: AnsiColor option, opacity: float option, formatting: ANSIFormatting) =
   new(text: string) = ANSIString(text, None, None, None, None, ANSIFormatting.None)
-
-  member this.Serialize() =
-    let options = JsonSerializerOptions(PropertyNamingPolicy = JsonNamingPolicy.CamelCase)
-    JsonSerializer.Serialize(this, options)
-
-  static member Deserialize(jsonString: string) =
-    let options = JsonSerializerOptions(PropertyNamingPolicy = JsonNamingPolicy.CamelCase)
-    JsonSerializer.Deserialize<ANSIString>(jsonString, options)
-  
   member this.Text = text
   member this.Hyperlink = hyperlink
   member this.ColorForeground = colorForeground
@@ -213,7 +203,7 @@ module StringExtensions =
   
   let rgb (color: Color) = RGB color
   let ansiByte (color: byte) = ANSI [|color|]
-  let ansiBytes (color: byte[]) = ANSI color
+  let ansiBytes (color: byte array) = ANSI color
 
   let background (text: string) (color: AnsiColor) = toANSI text |> fun t -> t.SetBackgroundColor(color)
   let backgroundANSI (text: ANSIString) (color: AnsiColor) = text.SetBackgroundColor(color)

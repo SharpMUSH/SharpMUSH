@@ -140,7 +140,7 @@ public class AnsiStringUnitTests : BaseUnitTest
 		await Assert.That(deserialized.ToString()).IsEquatableOrEqualTo(original.ToString());
 	}
 
-	[Test, Skip("Fails due to Abstract Markup")]
+	[Test]
 	public async Task Serialization()
 	{
 		var original = A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "red");

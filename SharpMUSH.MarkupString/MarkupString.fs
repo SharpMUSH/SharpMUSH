@@ -9,8 +9,6 @@ open System.Text.Json.Serialization
 open FSharpPlus
 
 module MarkupStringModule =
-    open MarkupImplementation
-
     type Content =
         | Text of string
         | MarkupText of MarkupString
@@ -140,9 +138,7 @@ module MarkupStringModule =
     let multipleWithDelimiter (delimiter: MarkupString) (mu: MarkupString seq) : MarkupString =
         mu |> Seq.intersperse delimiter |> multiple
         
-    let serializationOptions =
-        JsonFSharpOptions.Default()
-            .ToJsonSerializerOptions()
+    let serializationOptions = JsonFSharpOptions.Default().ToJsonSerializerOptions()
 
     let serialize(markupStr: MarkupString) : string = 
         JsonSerializer.Serialize(markupStr, serializationOptions)

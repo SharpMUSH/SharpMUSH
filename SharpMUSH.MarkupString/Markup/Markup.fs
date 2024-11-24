@@ -5,6 +5,7 @@ open ANSILibrary.ANSI
 
 module MarkupImplementation =
   open ANSILibrary
+  open System.Text.Json.Serialization
   
   [<Struct>]
   type AnsiStructure =
@@ -24,6 +25,9 @@ module MarkupImplementation =
       StrikeThrough: bool;
     }
 
+  
+  [<JsonDerivedType(typeof<NeutralMarkup>, "Neutral")>]
+  [<JsonDerivedType(typeof<AnsiMarkup>, "Ansi")>]
   type Markup =
       abstract member Wrap: string -> string
       abstract member WrapAndRestore: string * Markup -> string
@@ -31,7 +35,7 @@ module MarkupImplementation =
       abstract member Postfix: string
       abstract member Optimize: string -> string
     
-  type NeutralMarkup() =
+  and NeutralMarkup() =
     interface Markup with
       member this.Postfix: string = System.String.Empty
       member this.Prefix: string = System.String.Empty
@@ -39,7 +43,7 @@ module MarkupImplementation =
       member this.WrapAndRestore(text: string, _: Markup): string = text
       member this.Optimize(text: string): string = text
 
-  type AnsiMarkup(details: AnsiStructure) =
+  and AnsiMarkup(details: AnsiStructure) =
     member val Details = details with get
     
     static member Create(
@@ -59,8 +63,8 @@ module MarkupImplementation =
       {
         Foreground = defaultArg foreground AnsiColor.NoAnsi
         Background = defaultArg background AnsiColor.NoAnsi
-        LinkText = defaultArg linkText null
-        LinkUrl = defaultArg linkUrl null
+        LinkText = defaultArg linkText System.String.Empty
+        LinkUrl = defaultArg linkUrl System.String.Empty
         Blink = defaultArg blink false
         Bold = defaultArg bold false
         Clear = defaultArg clear false
