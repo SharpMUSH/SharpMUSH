@@ -138,9 +138,8 @@ module MarkupStringModule =
     let empty () : MarkupString =
         MarkupString(Empty, [ Text System.String.Empty ])
 
-    let multipleWithDelimiter (delimiter: MarkupString) (mu: seq<MarkupString>) : MarkupString =
-        let delimiters =
-            Enumerable.Repeat(delimiter, mu |> Seq.length).Skip(1).Append(empty ())
+    let multipleWithDelimiter (delimiter: MarkupString) (mu: MarkupString seq) : MarkupString =
+        let delimiters = Enumerable.Repeat(delimiter, mu |> Seq.length).Skip(1).Append(empty())
 
         MarkupString(Empty, (Seq.foldBack2 (fun a b xs -> (MarkupText a) :: (MarkupText b) :: xs) mu delimiters []))
         
