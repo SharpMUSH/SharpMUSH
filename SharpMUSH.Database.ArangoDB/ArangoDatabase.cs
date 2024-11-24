@@ -717,13 +717,16 @@ public class ArangoDatabase(
 		if (attrInfo is null) return false;
 		var attr = attrInfo.Last();
 
+		await SetAttributeFlagAsync(attr, flag);
+		return true;
+	}
+
+	public async ValueTask SetAttributeFlagAsync(SharpAttribute attr, SharpAttributeFlag flag) =>
 		await arangoDB.Document.UpdateAsync(handle, DatabaseConstants.attributes, new
 		{
 			attr.Key,
 			Value = attr.Flags.ToImmutableArray().Add(flag)
 		});
-		return true;
-	}
 
 	public async ValueTask<bool> UnsetAttributeFlagAsync(SharpObject dbref, string[] attribute, SharpAttributeFlag flag)
 	{
@@ -731,16 +734,19 @@ public class ArangoDatabase(
 		if (attrInfo is null) return false;
 		var attr = attrInfo.Last();
 
+		await UnsetAttributeFlagAsync(attr, flag);
+		return true;
+	}
+
+	public async ValueTask UnsetAttributeFlagAsync(SharpAttribute attr, SharpAttributeFlag flag) =>
 		await arangoDB.Document.UpdateAsync(handle, DatabaseConstants.attributes, new
 		{
 			attr.Key,
 			Value = attr.Flags.ToImmutableArray().Remove(flag)
 		});
-		return true;
-	}
 
-	public async ValueTask<SharpAttributeFlag?> GetAttributeFlagAsync(string flagName)
-		=> (await arangoDB.Query.ExecuteAsync<SharpAttributeFlag>(handle,
+	public async ValueTask<SharpAttributeFlag?> GetAttributeFlagAsync(string flagName) =>
+		(await arangoDB.Query.ExecuteAsync<SharpAttributeFlag>(handle,
 			$"FOR v in @@C1 FILTER v.Name = @flag RETURN v",
 			bindVars: new Dictionary<string, object>
 			{
