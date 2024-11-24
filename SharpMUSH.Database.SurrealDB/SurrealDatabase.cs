@@ -93,7 +93,7 @@ public class SurrealDatabase(
 				throw new NotImplementedException();
 		}
 
-		public ValueTask<IEnumerable<SharpExit>?> GetExitsAsync(AnySharpContainer node)
+		public ValueTask<IEnumerable<SharpExit>> GetExitsAsync(AnySharpContainer node)
 		{
 				throw new NotImplementedException();
 		}
