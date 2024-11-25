@@ -234,7 +234,7 @@ public class ArangoDatabase(
 		});
 	}
 
-	private async ValueTask<IEnumerable<SharpObjectFlag>> GetFlagsAsync(string id)
+	public async ValueTask<IEnumerable<SharpObjectFlag>> GetObjectFlagsAsync(string id)
 		=> await arangoDB.Query.ExecuteAsync<SharpObjectFlag>(handle,
 			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphFlags} RETURN v");
 
@@ -355,7 +355,7 @@ public class ArangoDatabase(
 			Locks = (obj.Locks ?? []).ToImmutableDictionary(),
 			Id = obj.Id,
 			Key = int.Parse(obj.Key),
-			Flags = new(() => GetFlagsAsync(startVertex).AsTask().Result),
+			Flags = new(() => mediator.Send(new GetObjectFlagsQuery(startVertex)).AsTask().Result!),
 			Powers = new(() => GetPowersAsync(startVertex).AsTask().Result),
 			Attributes = new(() => GetTopLevelAttributesAsync(startVertex).AsTask().Result),
 			AllAttributes = new(() => GetAllAttributesAsync(startVertex).AsTask().Result),
@@ -420,7 +420,7 @@ public class ArangoDatabase(
 			CreationTime = obj.CreationTime,
 			ModifiedTime = obj.ModifiedTime,
 			Locks = ImmutableDictionary<string, string>.Empty, // FIX: ((Dictionary<string, string>?)obj.Locks ?? []).ToImmutableDictionary(),
-			Flags = new(() => GetFlagsAsync(objId).AsTask().Result),
+			Flags = new(() => GetObjectFlagsAsync(objId).AsTask().Result),
 			Powers = new(() => GetPowersAsync(objId).AsTask().Result),
 			Attributes = new(() => GetTopLevelAttributesAsync(objId).AsTask().Result),
 			AllAttributes = new(() => GetAllAttributesAsync(objId).AsTask().Result),
@@ -474,7 +474,7 @@ public class ArangoDatabase(
 				Locks = (obj.Locks ?? []).ToImmutableDictionary(),
 				CreationTime = obj.CreationTime,
 				ModifiedTime = obj.ModifiedTime,
-				Flags = new(() => GetFlagsAsync(obj.Id).AsTask().Result),
+				Flags = new(() => GetObjectFlagsAsync(obj.Id).AsTask().Result),
 				Powers = new(() => GetPowersAsync(obj.Id).AsTask().Result),
 				Attributes = new(() => GetTopLevelAttributesAsync(obj.Id).AsTask().Result),
 				AllAttributes = new(() => GetAllAttributesAsync(obj.Id).AsTask().Result),

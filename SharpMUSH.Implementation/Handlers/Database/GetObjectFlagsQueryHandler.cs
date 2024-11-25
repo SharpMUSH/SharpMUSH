@@ -5,10 +5,10 @@ using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class GetObjectFlagsQueryHandler(ISharpDatabase database)
-	: IQueryHandler<GetObjectFlagsQuery, IEnumerable<SharpObjectFlag>>
+public class GetAllObjectFlagsQueryHandler(ISharpDatabase database)
+	: IQueryHandler<GetAllObjectFlagsQuery, IEnumerable<SharpObjectFlag>>
 {
-		public async ValueTask<IEnumerable<SharpObjectFlag>> Handle(GetObjectFlagsQuery request,
+		public async ValueTask<IEnumerable<SharpObjectFlag>> Handle(GetAllObjectFlagsQuery request,
 			CancellationToken cancellationToken)
 		{
 				return await database.GetObjectFlagsAsync();
@@ -18,9 +18,19 @@ public class GetObjectFlagsQueryHandler(ISharpDatabase database)
 public class GetObjectFlagQueryHandler(ISharpDatabase database)
 	: IQueryHandler<GetObjectFlagQuery, SharpObjectFlag?>
 {
-		public async ValueTask<SharpObjectFlag?> Handle(GetObjectFlagQuery request,
-			CancellationToken cancellationToken)
-		{
-				return await database.GetObjectFlagAsync(request.FlagName);
-		}
+	public async ValueTask<SharpObjectFlag?> Handle(GetObjectFlagQuery request,
+		CancellationToken cancellationToken)
+	{
+		return await database.GetObjectFlagAsync(request.FlagName);
+	}
+}
+
+public class GetObjectFlagsQueryHandler(ISharpDatabase database)
+	: IQueryHandler<GetObjectFlagsQuery, IEnumerable<SharpObjectFlag>?>
+{
+	public async ValueTask<IEnumerable<SharpObjectFlag>?> Handle(GetObjectFlagsQuery request,
+		CancellationToken cancellationToken)
+	{
+		return await database.GetObjectFlagsAsync(request.Id);
+	}
 }
