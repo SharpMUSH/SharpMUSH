@@ -9,6 +9,6 @@ public class SharpCommandAttribute : Attribute
 	public int MinArgs { get; set; } = 0;
 	public int MaxArgs { get; set; } = 32;
 	public string CommandLock { get; set; } = string.Empty;
-	public CommandBehavior Behavior { get; set; }
-	public string[]? Switches { get; set; }
+	public CommandBehavior Behavior { get; set; } = CommandBehavior.Default;
+	public string[]? Switches { get; set; } = [];
 }
