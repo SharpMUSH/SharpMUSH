@@ -133,7 +133,12 @@ public class SurrealDatabase(
 		throw new NotImplementedException();
 	}
 
-	public ValueTask<AnyOptionalSharpObject> GetObjectNodeAsync(DBRef dbref)
+		public ValueTask<IEnumerable<SharpObjectFlag>> GetObjectFlagsAsync(string id)
+		{
+				throw new NotImplementedException();
+		}
+
+		public ValueTask<AnyOptionalSharpObject> GetObjectNodeAsync(DBRef dbref)
 	{
 		throw new NotImplementedException();
 	}
