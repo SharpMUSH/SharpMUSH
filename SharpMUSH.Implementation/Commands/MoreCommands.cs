@@ -120,7 +120,7 @@ internal class MoreCommands
 		throw new NotImplementedException();
 	}
 
-	[SharpCommand(Name = "EMPTY", Switches = [], Behavior = CB.Player | CB.Thing | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	[SharpCommand(Name = "EMPTY", Switches = [], CommandLock = "(TYPE^PLAYER|TYPE^THING)&!FLAG^GAGGED", Behavior = CB.Player | CB.Thing | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> EMPTY(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		await ValueTask.CompletedTask;
