@@ -15,10 +15,10 @@ public enum CommandBehavior
 		NoGuest = 256,
 		Player = 512,
 		Switches = 1024,
-		Rs_Brace = 2048,
+		RSBrace = 2048,
 		Thing = 4096,
 		Internal = 8192,
-		Nop = 16384,
+		NoOp = 16384,
 		God = 32768,
 		Args = 65536
 }

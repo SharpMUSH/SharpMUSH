@@ -34,143 +34,6 @@ public static partial class Commands
 				return new None();
 		}
 
-		/// <remarks>
-		/// Creating on the DBRef is not implemented.
-		/// </remarks>
-		[SharpCommand(Name = "@PCREATE", Behavior = CB.Default, MinArgs = 2, MaxArgs = 3)]
-		public static async ValueTask<Option<CallState>> PCreate(IMUSHCodeParser parser, SharpCommandAttribute _2)
-		{
-				// TODO: Validate Name and Passwords
-				var args = parser.CurrentState.Arguments;
-				var name = MModule.plainText(args["0"].Message!);
-				var password = MModule.plainText(args["1"].Message!);
-
-				var player = await parser.Mediator.Send(new CreatePlayerCommand(name, password, parser.CurrentState.Executor!.Value));
-
-				return new CallState(player.ToString());
-		}
-
-		/// <remarks>
-		/// Creating on the DBRef is not implemented.
-		/// TODO: Using the Cost is not implemented.
-		/// </remarks>
-		[SharpCommand(Name = "@CREATE", Behavior = CB.Default, MinArgs = 1, MaxArgs = 3)]
-		public static async ValueTask<Option<CallState>> Create(IMUSHCodeParser parser, SharpCommandAttribute _2)
-		{
-				// TODO: Validate Name 
-				var args = parser.CurrentState.Arguments;
-				var name = MModule.plainText(args["0"].Message!);
-				var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
-
-				var thing = await parser.Mediator.Send(new CreateThingCommand(name, executor.Where, executor.Object()!.Owner.Value));
-
-				return new CallState(thing.ToString());
-		}
-
-		[SharpCommand(Name = "@SET", Behavior = CB.RSArgs, MinArgs = 2, MaxArgs = 2)]
-		public static async ValueTask<Option<CallState>> SetCommand(IMUSHCodeParser parser, SharpCommandAttribute _2)
-		{
-				// Step 1: Check if the argument[0] could be an Object/Attribute or is just an Object
-				// Step 2: Locate Object.
-				// Step 3: Check if we have a : in argument[1].
-				// Step 4: Either set an attribute, or set an Attribute Flag, or set an Object Flag.
-
-				var args = parser.CurrentState.Arguments;
-				var split = HelperFunctions.SplitDBRefAndOptionalAttr(MModule.plainText(args["0"].Message!));
-				var enactor = (await parser.CurrentState.EnactorObject(parser.Mediator)).WithoutNone();
-				var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).WithoutNone();
-
-				if (!split.TryPickT0(out var details, out var _))
-				{
-						return new CallState("#-1 BAD ARGUMENT FORMAT TO @SET");
-				}
-
-				(var dbref, var maybeAttribute) = details;
-
-				var locate = await parser.LocateService.LocateAndNotifyIfInvalid(parser,
-					enactor,
-					executor,
-					dbref,
-					Library.Services.LocateFlags.All);
-
-				if (!locate.IsValid())
-				{
-						return new CallState(locate.IsError ? locate.AsError.Value : Errors.ErrorCantSeeThat);
-				}
-
-				var realLocated = locate.WithoutError().WithoutNone();
-
-				// Attr Set Path
-				if (maybeAttribute is not null)
-				{
-						foreach (var flag in MModule.split(" ", args["2"].Message!))
-						{
-								var plainFlag = MModule.plainText(flag);
-								if (plainFlag.StartsWith('!'))
-								{
-										// TODO: Notify
-										await parser.AttributeService.SetAttributeFlagAsync(executor, realLocated, maybeAttribute, plainFlag);
-								}
-								else
-								{
-										// TODO: Notify
-										await parser.AttributeService.UnsetAttributeFlagAsync(executor, realLocated, maybeAttribute, plainFlag[1..]);
-								}
-						}
-
-						return new CallState(string.Empty);
-				}
-
-				// Attr Flag Path
-				var maybeColonLocation = MModule.indexOf(args["1"].Message!, MModule.single(":"));
-				if (maybeColonLocation > -1)
-				{
-						var arg1 = args["1"].Message!;
-						var attribute = MModule.substring(0, maybeColonLocation, arg1);
-						var content = MModule.substring(maybeColonLocation + 1, MModule.getLength(arg1), arg1);
-
-						var setResult =
-							await parser.AttributeService.SetAttributeAsync(executor, realLocated, MModule.plainText(attribute), content);
-
-						await parser.NotifyService.Notify(enactor,
-							setResult.Match(
-								_ => $"{realLocated.Object().Name}/{args["0"].Message} - Set.",
-								failure => failure.Value)
-						);
-
-						return new CallState(setResult.Match(
-							_ => $"{realLocated.Object().Name}/{args["0"].Message}",
-							failure => failure.Value));
-				}
-
-				// Object Flag Set Path
-				foreach (var flag in MModule.split(" ", args["1"].Message!))
-				{
-						var plainFlag = MModule.plainText(flag);
-						var unset = plainFlag.StartsWith("!");
-						plainFlag = unset ? plainFlag[1..] : plainFlag;
-						// TODO: Permission Check for each flag.
-						// Probably should have a service for this?
-
-						var realFlag = await parser.Mediator.Send(new GetObjectFlagQuery(plainFlag));
-
-						// TODO: Notify
-						if (realFlag is null) continue;
-
-						// Set Flag	
-						if (unset)
-						{
-								await parser.Mediator.Send(new UnsetObjectFlagCommand(realLocated, realFlag));
-						}
-						else
-						{
-								await parser.Mediator.Send(new SetObjectFlagCommand(realLocated, realFlag));
-						}
-				}
-
-				throw new NotImplementedException();
-		}
-
 		[SharpCommand(Name = "HUH_COMMAND", Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
 		public static async ValueTask<Option<CallState>> HuhCommand(IMUSHCodeParser parser, SharpCommandAttribute _2)
 		{
@@ -530,5 +393,390 @@ public static partial class Commands
 				}
 
 				return new CallState(destination.ToString());
-		}
+	}
+
+	[SharpCommand(Name = "@CEMIT", Switches = ["NOEVAL", "NOISY", "SILENT", "SPOOF"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> CEMIT(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@FIND", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> FIND(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@HALT", Switches = ["ALL", "NOEVAL", "PID"], Behavior = CB.Default | CB.EqSplit | CB.RSBrace, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> HALT(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@NOTIFY", Switches = ["ALL", "ANY", "SETQ"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> NOTIFY(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@NSPROMPT", Switches = ["SILENT", "NOISY", "NOEVAL"], Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> NSPROMPT(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@PEMIT", Switches = ["LIST", "CONTENTS", "SILENT", "NOISY", "NOEVAL", "PORT", "SPOOF"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> PEMIT(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@SCAN", Switches = ["ROOM", "SELF", "ZONE", "GLOBALS"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> SCAN(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@SWITCH", Switches = ["NOTIFY", "FIRST", "ALL", "REGEXP", "INPLACE", "INLINE", "LOCALIZE", "CLEARREGS", "NOBREAK"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> SWITCH(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@WAIT", Switches = ["PID", "UNTIL"], Behavior = CB.Default | CB.EqSplit | CB.RSNoParse | CB.RSBrace, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> WAIT(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@COMMAND", Switches = ["ADD", "ALIAS", "CLONE", "DELETE", "EqSplit", "LSARGS", "RSARGS", "NOEVAL", "ON", "OFF", "QUIET", "ENABLE", "DISABLE", "RESTRICT", "NOPARSE", "RSNoParse"], Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> COMMAND(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@DRAIN", Switches = ["ALL", "ANY"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> DRAIN(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@FORCE", Switches = ["NOEVAL", "INPLACE", "INLINE", "LOCALIZE", "CLEARREGS", "NOBREAK"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged | CB.RSBrace, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> FORCE(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@IFELSE", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> IFELSE(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@NSEMIT", Switches = ["ROOM", "NOEVAL", "SILENT"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> NSEMIT(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@NSREMIT", Switches = ["LIST", "NOEVAL", "NOISY", "SILENT"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> NSREMIT(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@PROMPT", Switches = ["SILENT", "NOISY", "NOEVAL", "SPOOF"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> PROMPT(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@SEARCH", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> SEARCH(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@TELEPORT", Switches = ["SILENT", "INSIDE", "LIST"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> TELEPORT(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@WHEREIS", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> WHEREIS(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@BREAK", Switches = ["INLINE", "QUEUED"], Behavior = CB.Default | CB.EqSplit | CB.RSNoParse | CB.RSBrace, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> BREAK(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@CONFIG", Switches = ["SET", "SAVE", "LOWERCASE", "LIST"], Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> CONFIG(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@EDIT", Switches = ["FIRST", "CHECK", "QUIET", "REGEXP", "NOCASE", "ALL"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> EDIT(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@FUNCTION", Switches = ["ALIAS", "BUILTIN", "CLONE", "DELETE", "ENABLE", "DISABLE", "PRESERVE", "RESTORE", "RESTRICT"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> FUNCTION(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@LEMIT", Switches = ["NOEVAL", "NOISY", "SILENT", "SPOOF"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> LEMIT(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@NSLEMIT", Switches = ["NOEVAL", "NOISY", "SILENT"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> NSLEMIT(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@NSZEMIT", Switches = ["NOISY", "SILENT"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> NSZEMIT(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@PS", Switches = ["ALL", "SUMMARY", "COUNT", "QUICK", "DEBUG"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> PS(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@SELECT", Switches = ["NOTIFY", "REGEXP", "INPLACE", "INLINE", "LOCALIZE", "CLEARREGS", "NOBREAK"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> SELECT(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@TRIGGER", Switches = ["CLEARREGS", "SPOOF", "INLINE", "NOBREAK", "LOCALIZE", "INPLACE", "MATCH"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> TRIGGER(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@ZEMIT", Switches = ["NOISY", "SILENT"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> ZEMIT(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@CHANNEL", Switches = ["LIST", "ADD", "DELETE", "RENAME", "MOGRIFIER", "NAME", "PRIVS", "QUIET", "DECOMPILE", "DESCRIBE", "CHOWN", "WIPE", "MUTE", "UNMUTE", "GAG", "UNGAG", "HIDE", "UNHIDE", "WHAT", "TITLE", "BRIEF", "RECALL", "BUFFER", "COMBINE", "UNCOMBINE", "ON", "JOIN", "OFF", "LEAVE", "WHO"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged | CB.RSArgs, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> CHANNEL(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@DECOMPILE", Switches = ["DB", "NAME", "PREFIX", "TF", "FLAGS", "ATTRIBS", "SKIPDEFAULTS"], Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> DECOMPILE(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@EMIT", Switches = ["NOEVAL", "SPOOF"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> EMIT(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@LISTMOTD", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> LISTMOTD(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@NSOEMIT", Switches = ["NOEVAL"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> NSOEMIT(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@OEMIT", Switches = ["NOEVAL", "SPOOF"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> OEMIT(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@REMIT", Switches = ["LIST", "NOEVAL", "NOISY", "SILENT", "SPOOF"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> REMIT(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@STATS", Switches = ["CHUNKS", "FREESPACE", "PAGING", "REGIONS", "TABLES", "FLAGS"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> STATS(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@VERB", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> VERB(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@CHAT", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> CHAT(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@ENTRANCES", Switches = ["EXITS", "THINGS", "PLAYERS", "ROOMS"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> ENTRANCES(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@GREP", Switches = ["LIST", "PRINT", "ILIST", "IPRINT", "REGEXP", "WILD", "NOCASE", "PARENT"], Behavior = CB.Default | CB.EqSplit | CB.RSNoParse | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> GREP(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@INCLUDE", Switches = ["LOCALIZE", "CLEARREGS", "NOBREAK"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> INCLUDE(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@MAIL", Switches = ["NOEVAL", "NOSIG", "STATS", "CSTATS", "DSTATS", "FSTATS", "DEBUG", "NUKE", "FOLDERS", "UNFOLDER", "LIST", "READ", "UNREAD", "CLEAR", "UNCLEAR", "STATUS", "PURGE", "FILE", "TAG", "UNTAG", "FWD", "FORWARD", "SEND", "SILENT", "URGENT", "REVIEW", "RETRACT"], Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> MAIL(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@NSPEMIT", Switches = ["LIST", "SILENT", "NOISY", "NOEVAL"], Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> NSPEMIT(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@PASSWORD", Switches = [], Behavior = CB.Player | CB.EqSplit | CB.NoParse | CB.RSNoParse | CB.NoGuest, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> PASSWORD(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@RESTART", Switches = ["ALL"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> RESTART(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@SWEEP", Switches = ["CONNECTED", "HERE", "INVENTORY", "EXITS"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> SWEEP(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@VERSION", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> VERSION(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@RETRY", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> RETRY(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@ASSERT", Switches = ["INLINE", "QUEUED"], Behavior = CB.Default | CB.EqSplit | CB.RSNoParse | CB.RSBrace, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> ASSERT(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@ATTRIBUTE", Switches = ["ACCESS", "DELETE", "RENAME", "RETROACTIVE", "LIMIT", "ENUM", "DECOMPILE"], Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> ATTRIBUTE(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@SKIP", Switches = ["IFELSE"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> SKIP(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@MESSAGE", Switches = ["NOEVAL", "SPOOF", "NOSPOOF", "REMIT", "OEMIT", "SILENT", "NOISY"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> MESSAGE(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@NSCEMIT", Switches = ["NOEVAL", "NOISY", "SILENT"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> NSCEMIT(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
 }
