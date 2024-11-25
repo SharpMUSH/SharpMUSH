@@ -430,13 +430,6 @@ public static partial class Commands
 		throw new NotImplementedException();
 	}
 
-	[SharpCommand(Name = "@PEMIT", Switches = ["LIST", "CONTENTS", "SILENT", "NOISY", "NOEVAL", "PORT", "SPOOF"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
-	public static async ValueTask<Option<CallState>> PEMIT(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
-	}
-
 	[SharpCommand(Name = "@SCAN", Switches = ["ROOM", "SELF", "ZONE", "GLOBALS"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> SCAN(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -509,13 +502,6 @@ public static partial class Commands
 
 	[SharpCommand(Name = "@SEARCH", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> SEARCH(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
-	}
-
-	[SharpCommand(Name = "@TELEPORT", Switches = ["SILENT", "INSIDE", "LIST"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
-	public static async ValueTask<Option<CallState>> TELEPORT(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		await ValueTask.CompletedTask;
 		throw new NotImplementedException();
