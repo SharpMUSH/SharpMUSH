@@ -12,7 +12,7 @@ namespace SharpMUSH.Implementation.Functions;
 public partial class Functions
 {
 	[SharpFunction(Name = "emit", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
-	public static async ValueTask<CallState> emit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Emit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.ExecutorObject(parser.Mediator);
 		var contents = await parser.Mediator.Send(new GetContentsQuery(executor.WithoutNone().Where)) ?? [];
@@ -32,7 +32,8 @@ public partial class Functions
 			}
 		}
 
-		return new CallState(string.Join(" ", heard.Select(x => x.ToString())));
+		// return new CallState(string.Join(" ", heard.Select(x => x.ToString())));
+		return CallState.Empty;
 	}
 
 	[SharpFunction(Name = "LEMIT", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
@@ -48,7 +49,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "nsemit", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
-	public static async ValueTask<CallState> nsemit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> NSEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// TODO: Can No Spoof?
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).WithoutNone();
@@ -73,7 +74,8 @@ public partial class Functions
 			}
 		}
 
-		return new CallState(string.Join(" ", heard.Select(x => x.ToString())));
+		// string.Join(" ", heard.Select(x => x.ToString()))
+		return CallState.Empty;
 	}
 
 	[SharpFunction(Name = "NSLEMIT", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]

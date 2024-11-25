@@ -402,10 +402,12 @@ type Justification =
     | Paragraph
 
 type ColumnSpec =
-    { Width: int
+    { 
+      Width: int
       Justification: Justification
       Options: string
-      Ansi: string }
+      Ansi: string 
+    }
 
 module ColumnSpec =
     let parse (spec: string) : ColumnSpec =

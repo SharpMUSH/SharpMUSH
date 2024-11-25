@@ -9,6 +9,11 @@ public class NotifyService(IConnectionService _connectionService) : INotifyServi
 {
 	public async Task Notify(DBRef who, MString what, AnySharpObject sender, NotificationType type = NotificationType.Announce)
 	{
+		if(MModule.getLength(what) == 0)
+		{
+			return;
+		}
+
 		var list = _connectionService.Get(who);
 
 		try
@@ -26,6 +31,11 @@ public class NotifyService(IConnectionService _connectionService) : INotifyServi
 
 	public async Task Notify(string handle, MString what, AnySharpObject sender, NotificationType type = NotificationType.Announce)
 	{
+		if (MModule.getLength(what) == 0)
+		{
+			return;
+		}
+
 		var item = _connectionService.Get(handle);
 
 		try
@@ -37,6 +47,11 @@ public class NotifyService(IConnectionService _connectionService) : INotifyServi
 
 	public async Task Notify(string[] handles, MString what, AnySharpObject sender, NotificationType type = NotificationType.Announce)
 	{
+		if (MModule.getLength(what) == 0)
+		{
+			return;
+		}
+
 		var list = handles.Select(_connectionService.Get);
 
 		try
@@ -51,6 +66,11 @@ public class NotifyService(IConnectionService _connectionService) : INotifyServi
 
 	public async Task Notify(DBRef who, string what, AnySharpObject sender, NotificationType type = NotificationType.Announce)
 	{
+		if (what.Length == 0)
+		{
+			return;
+		}
+
 		var list = _connectionService.Get(who);
 
 		try
@@ -68,6 +88,11 @@ public class NotifyService(IConnectionService _connectionService) : INotifyServi
 
 	public async Task Notify(string handle, string what, AnySharpObject sender, NotificationType type = NotificationType.Announce)
 	{
+		if (what.Length == 0)
+		{
+			return;
+		}
+
 		var item = _connectionService.Get(handle);
 
 		try
@@ -79,6 +104,11 @@ public class NotifyService(IConnectionService _connectionService) : INotifyServi
 
 	public async Task Notify(string[] handles, string what, AnySharpObject sender, NotificationType type = NotificationType.Announce)
 	{
+		if (what.Length == 0)
+		{
+			return;
+		}
+
 		var list = handles.Select(_connectionService.Get);
 
 		try
