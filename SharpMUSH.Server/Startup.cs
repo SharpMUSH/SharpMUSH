@@ -26,7 +26,7 @@ public class Startup(ArangoConfiguration config)
 				{
 						logging.ClearProviders();
 						logging.AddSerilog();
-						logging.SetMinimumLevel(LogLevel.Debug);
+						logging.SetMinimumLevel(LogLevel.Trace);
 				});
 
 				services.AddArango((x) => config.ConnectionString);

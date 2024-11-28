@@ -25,6 +25,7 @@ public record ParserState(
 	ConcurrentStack<IterationWrapper<MString>> IterationRegisters,
 	ConcurrentStack<Dictionary<string, MString>> RegexRegisters,
 	DBAttribute? CurrentEvaluation,
+	int? ParserFunctionDepth,
 	string? Function,
 	string? Command,
 	IEnumerable<string> Switches,
@@ -41,8 +42,10 @@ public record ParserState(
 
 		public async ValueTask<AnyOptionalSharpObject> ExecutorObject(IMediator mediator)
 			=> _executorObject ??= Executor is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Executor.Value));
+
 		public async ValueTask<AnyOptionalSharpObject> EnactorObject(IMediator mediator)
 			=> _enactorObject ??= Enactor is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Enactor.Value));
+
 		public async ValueTask<AnyOptionalSharpObject> CallerObject(IMediator mediator)
 			=> _callerObject ??= Caller is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Caller.Value));
 

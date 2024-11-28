@@ -150,6 +150,7 @@ public static partial class Functions
 					IterationRegisters: currentState.IterationRegisters,
 					RegexRegisters: currentState.RegexRegisters,
 					CurrentEvaluation: currentState.CurrentEvaluation,
+					ParserFunctionDepth: parser.CurrentState.ParserFunctionDepth + 1,
 					Function: name,
 					Command: null,
 					Switches: [],

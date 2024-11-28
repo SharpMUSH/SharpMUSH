@@ -32,12 +32,12 @@ public class MemoryTest : BaseUnitTest
 		var sb = new StringBuilder();
 		foreach (var _ in Enumerable.Range(0, 10))
 		{
-			sb.Append("add(1,");
+			sb.Append("[add(1,");
 		}
 		sb.Append('1');
 		foreach (var _ in Enumerable.Range(0, 10))
 		{
-			sb.Append(')');
+			sb.Append(")]");
 		}
 		var str = sb.ToString();
 

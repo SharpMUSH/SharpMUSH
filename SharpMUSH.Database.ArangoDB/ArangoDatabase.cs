@@ -355,7 +355,7 @@ public class ArangoDatabase(
 			Locks = (obj.Locks ?? []).ToImmutableDictionary(),
 			Id = obj.Id,
 			Key = int.Parse(obj.Key),
-			Flags = new(() => mediator.Send(new GetObjectFlagsQuery(startVertex)).AsTask().Result),
+			Flags = new(() => mediator.Send(new GetObjectFlagsQuery(startVertex)).AsTask().Result ?? []),
 			Powers = new(() => GetPowersAsync(startVertex).AsTask().Result),
 			Attributes = new(() => GetTopLevelAttributesAsync(startVertex).AsTask().Result),
 			AllAttributes = new(() => GetAllAttributesAsync(startVertex).AsTask().Result),
