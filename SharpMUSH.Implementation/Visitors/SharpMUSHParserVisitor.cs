@@ -53,7 +53,9 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source)
 		var functionName = context.funName().GetText().TrimEnd()[..^1];
 		var arguments = context.funArguments()?.funArgument() ?? Enumerable.Empty<FunArgumentContext>().ToArray();
 
-		// Log.Logger.Information("VisitFunction: Fun: {Text}, Args: {Args}", functionName, arguments?.Select(x => x.GetText()));
+		await parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, MModule.single(
+			$"#{parser.CurrentState.Caller!.Value.Number}! {new string(' ', parser.CurrentState.ParserFunctionDepth!.Value)}{context.GetText()} :"));
+
 		var result = await Functions.Functions.CallFunction(functionName.ToLower(), source, parser, context, arguments!, this);
 
 		await parser.NotifyService.Notify(parser.CurrentState.Caller!.Value, MModule.single(
@@ -115,18 +117,18 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source)
 	{
 		if (parser.CurrentState.ParseMode != ParseMode.NoParse)
 		{
+			var text = context.GetText();
+
+			await parser.NotifyService.Notify(parser.CurrentState.Caller!.Value,
+				$"#{parser.CurrentState.Caller!.Value.Number}! {new string(' ', parser.CurrentState.ParserFunctionDepth!.Value)}{text} :");
+
 			var resultQ = await base.VisitChildren(context)
 						 ?? new(
 							 MModule.substring(context.Start.StartIndex,
 								 context.Stop?.StopIndex is null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source),
 							 context.Depth());
 
-			var text = context.GetText();
 
-			/*
-			await parser.NotifyService.Notify(parser.CurrentState.Caller!.Value,
-				$"#{parser.CurrentState.Caller!.Value.Number}! {new string(' ', parser.CurrentState.ParserFunctionDepth!.Value)}{text} => {text.TrimStart('[').TrimEnd(']')}");
-			*/
 			return resultQ;
 		}
 
