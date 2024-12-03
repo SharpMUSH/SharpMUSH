@@ -1,4 +1,5 @@
-﻿using SharpMUSH.Library.DiscriminatedUnions;
+﻿using OneOf;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Services;
@@ -20,19 +21,11 @@ public interface INotifyService
 	}
 
 	// TODO: Add a 'sender' for Noisy etc rules.
-	Task Notify(DBRef who, MString what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
+	ValueTask Notify(DBRef who, OneOf<MString,string> what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
 
-	Task Notify(AnySharpObject who, MString what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
+	ValueTask Notify(AnySharpObject who, OneOf<MString, string> what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
 
-	Task Notify(string handle, MString what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
+	ValueTask Notify(string handle, OneOf<MString, string> what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
 
-	Task Notify(string[] handles, MString what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
-
-	Task Notify(DBRef who, string what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
-
-	Task Notify(AnySharpObject who, string what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
-
-	Task Notify(string handle, string what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
-
-	Task Notify(string[] handles, string what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
+	ValueTask Notify(string[] handles, OneOf<MString, string> what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
 }

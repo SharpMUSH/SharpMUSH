@@ -1,123 +1,66 @@
-﻿using SharpMUSH.Library.DiscriminatedUnions;
+﻿using OneOf;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using static SharpMUSH.Library.Services.INotifyService;
 
 namespace SharpMUSH.Library.Services;
 
+/// <summary>
+/// Notifies objects and sends telnet data.
+/// </summary>
+/// <remarks>
+/// Intentionally not awaiting Telnet ValueTasks here, as we don't need to wait for the output to complete.
+/// </remarks>
+/// <param name="_connectionService">Connection Service</param>
 public class NotifyService(IConnectionService _connectionService) : INotifyService
 {
-	public async Task Notify(DBRef who, MString what, AnySharpObject? sender, NotificationType type = NotificationType.Announce)
+	public async ValueTask Notify(DBRef who, OneOf<MString, string> what, AnySharpObject? sender, NotificationType type = NotificationType.Announce)
 	{
-		if(MModule.getLength(what) == 0)
+		await ValueTask.CompletedTask;
+
+		if (what.Match(
+			markupString => MModule.getLength(markupString) == 0,
+			str => str.Length == 0
+			))
 		{
 			return;
 		}
 
 		var list = _connectionService.Get(who);
 
-		try
+		foreach (var item in list)
 		{
-			foreach (var item in list)
-			{
-				await (item?.OutputFunction(item.Encoding().GetBytes(what.ToString())) ?? ValueTask.CompletedTask);
-			}
+			_ = item?.OutputFunction(what.Match(
+				markupString => item.Encoding().GetBytes(markupString.ToString()),
+				str => item.Encoding().GetBytes(str)));
 		}
-		catch { }
 	}
 
-	public Task Notify(AnySharpObject who, MString what, AnySharpObject? sender, NotificationType type = NotificationType.Announce)
+	public ValueTask Notify(AnySharpObject who, OneOf<MString, string> what, AnySharpObject? sender, NotificationType type = NotificationType.Announce)
 		=> Notify(who.Object().DBRef, what, sender, type);
 
-	public async Task Notify(string handle, MString what, AnySharpObject? sender, NotificationType type = NotificationType.Announce)
+	public async ValueTask Notify(string handle, OneOf<MString, string> what, AnySharpObject? sender, NotificationType type = NotificationType.Announce)
+		=> await Notify([handle], what, sender, type);
+
+	public async ValueTask Notify(string[] handles, OneOf<MString, string> what, AnySharpObject? sender, NotificationType type = NotificationType.Announce)
 	{
-		if (MModule.getLength(what) == 0)
-		{
-			return;
-		}
-
-		var item = _connectionService.Get(handle);
-
-		try
-		{
-			await (item?.OutputFunction(item.Encoding().GetBytes(what.ToString())) ?? ValueTask.CompletedTask);
-		}
-		catch { }
-	}
-
-	public async Task Notify(string[] handles, MString what, AnySharpObject? sender, NotificationType type = NotificationType.Announce)
-	{
-		if (MModule.getLength(what) == 0)
+		await ValueTask.CompletedTask;
+		if (what.Match(
+			markupString => MModule.getLength(markupString) == 0,
+			str => str.Length == 0
+			))
 		{
 			return;
 		}
 
 		var list = handles.Select(_connectionService.Get);
 
-		try
+		foreach (var item in list)
 		{
-			foreach (var item in list)
-			{
-				await (item?.OutputFunction(item!.Encoding().GetBytes(what.ToString())) ?? ValueTask.CompletedTask);
-			}
+			_ = item?.OutputFunction(what.Match(
+				markupString => item.Encoding().GetBytes(markupString.ToString()),
+				str => item.Encoding().GetBytes(str)));
 		}
-		catch { }
-	}
-
-	public async Task Notify(DBRef who, string what, AnySharpObject? sender, NotificationType type = NotificationType.Announce)
-	{
-		if (what.Length == 0)
-		{
-			return;
-		}
-
-		var list = _connectionService.Get(who);
-
-		try
-		{
-			foreach (var item in list)
-			{
-				await (item?.OutputFunction(item.Encoding().GetBytes(what)) ?? ValueTask.CompletedTask);
-			}
-		}
-		catch { }
-	}
-
-	public Task Notify(AnySharpObject who, string what, AnySharpObject? sender, NotificationType type = NotificationType.Announce)
-		=> Notify(who.Object().DBRef, what, sender, type);
-
-	public async Task Notify(string handle, string what, AnySharpObject? sender, NotificationType type = NotificationType.Announce)
-	{
-		if (what.Length == 0)
-		{
-			return;
-		}
-
-		var item = _connectionService.Get(handle);
-
-		try
-		{
-			await (item?.OutputFunction(item.Encoding().GetBytes(what)) ?? ValueTask.CompletedTask);
-		}
-		catch { }
-	}
-
-	public async Task Notify(string[] handles, string what, AnySharpObject? sender, NotificationType type = NotificationType.Announce)
-	{
-		if (what.Length == 0)
-		{
-			return;
-		}
-
-		var list = handles.Select(_connectionService.Get);
-
-		try
-		{
-			foreach (var item in list)
-			{
-				await (item?.OutputFunction(item!.Encoding().GetBytes(what)) ?? ValueTask.CompletedTask);
-			}
-		}
-		catch { }
 	}
 }
