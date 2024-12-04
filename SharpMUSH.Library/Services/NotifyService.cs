@@ -15,16 +15,14 @@ namespace SharpMUSH.Library.Services;
 /// <param name="_connectionService">Connection Service</param>
 public class NotifyService(IConnectionService _connectionService) : INotifyService
 {
-	public async ValueTask Notify(DBRef who, OneOf<MString, string> what, AnySharpObject? sender, NotificationType type = NotificationType.Announce)
+	public ValueTask Notify(DBRef who, OneOf<MString, string> what, AnySharpObject? sender, NotificationType type = NotificationType.Announce)
 	{
-		await ValueTask.CompletedTask;
-
 		if (what.Match(
 			markupString => MModule.getLength(markupString) == 0,
 			str => str.Length == 0
 			))
 		{
-			return;
+			return ValueTask.CompletedTask;
 		}
 
 		var list = _connectionService.Get(who);
@@ -35,6 +33,7 @@ public class NotifyService(IConnectionService _connectionService) : INotifyServi
 				markupString => item.Encoding().GetBytes(markupString.ToString()),
 				str => item.Encoding().GetBytes(str)));
 		}
+		return ValueTask.CompletedTask;
 	}
 
 	public ValueTask Notify(AnySharpObject who, OneOf<MString, string> what, AnySharpObject? sender, NotificationType type = NotificationType.Announce)
@@ -43,15 +42,14 @@ public class NotifyService(IConnectionService _connectionService) : INotifyServi
 	public async ValueTask Notify(string handle, OneOf<MString, string> what, AnySharpObject? sender, NotificationType type = NotificationType.Announce)
 		=> await Notify([handle], what, sender, type);
 
-	public async ValueTask Notify(string[] handles, OneOf<MString, string> what, AnySharpObject? sender, NotificationType type = NotificationType.Announce)
+	public ValueTask Notify(string[] handles, OneOf<MString, string> what, AnySharpObject? sender, NotificationType type = NotificationType.Announce)
 	{
-		await ValueTask.CompletedTask;
 		if (what.Match(
 			markupString => MModule.getLength(markupString) == 0,
 			str => str.Length == 0
 			))
 		{
-			return;
+			return ValueTask.CompletedTask;
 		}
 
 		var list = handles.Select(_connectionService.Get);
@@ -62,5 +60,7 @@ public class NotifyService(IConnectionService _connectionService) : INotifyServi
 				markupString => item.Encoding().GetBytes(markupString.ToString()),
 				str => item.Encoding().GetBytes(str)));
 		}
+
+		return ValueTask.CompletedTask;
 	}
 }
