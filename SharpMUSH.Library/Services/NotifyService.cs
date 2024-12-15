@@ -33,6 +33,7 @@ public class NotifyService(IConnectionService _connectionService) : INotifyServi
 				markupString => item.Encoding().GetBytes(markupString.ToString()),
 				str => item.Encoding().GetBytes(str)));
 		}
+
 		return ValueTask.CompletedTask;
 	}
 
