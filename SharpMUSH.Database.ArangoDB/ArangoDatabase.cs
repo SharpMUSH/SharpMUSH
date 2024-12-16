@@ -160,14 +160,14 @@ public class ArangoDatabase(
 		return new DBRef(int.Parse(obj.Key), time);
 	}
 
-	public async ValueTask<DBRef> CreateExitAsync(string name, AnySharpContainer location, SharpPlayer creator)
+	public async ValueTask<DBRef> CreateExitAsync(string name, string[] aliases, AnySharpContainer location, SharpPlayer creator)
 	{
 		var time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
 		var obj = await arangoDB.Document.CreateAsync<SharpObjectCreateRequest, SharpObjectQueryResult>(handle,
 			DatabaseConstants.objects,
 			new SharpObjectCreateRequest(name, DatabaseConstants.typeExit, [], time, time));
-		var exit = await arangoDB.Document.CreateAsync(handle, DatabaseConstants.exits, new SharpExitCreateRequest([]));
+		var exit = await arangoDB.Document.CreateAsync(handle, DatabaseConstants.exits, new SharpExitCreateRequest(aliases));
 
 		var idx = location.Object()!.Id!;
 

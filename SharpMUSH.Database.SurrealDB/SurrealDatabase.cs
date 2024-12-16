@@ -24,7 +24,7 @@ public class SurrealDatabase(
 		throw new NotImplementedException();
 	}
 
-	public ValueTask<DBRef> CreateExitAsync(string name, AnySharpContainer location, SharpPlayer creator)
+	public ValueTask<DBRef> CreateExitAsync(string name, string[] Aliases, AnySharpContainer location, SharpPlayer creator)
 	{
 		throw new NotImplementedException();
 	}

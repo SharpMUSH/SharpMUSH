@@ -233,11 +233,49 @@ public static partial class Commands
 		throw new NotImplementedException();
 	}
 
-	[SharpCommand(Name = "@DIG", Switches = ["TELEPORT"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	[SharpCommand(Name = "@DIG", Switches = ["TELEPORT"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 1, MaxArgs = 6)]
 	public static async ValueTask<Option<CallState>> DIG(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		// NOTE: We discard arguments 4-6.
+		var executorBase = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
+		var executor = executorBase.Object()!;
+		var roomName = parser.CurrentState.Arguments["0"].Message!;
+		var exitTo = parser.CurrentState.Arguments["1"]?.Message;
+		var exitFrom = parser.CurrentState.Arguments["2"]?.Message;
+
+
+		if (string.IsNullOrWhiteSpace(parser.CurrentState.Arguments["0"].Message!.ToString()))
+		{
+			await parser.NotifyService.Notify(executor.DBRef, "Dig what?");
+			return new CallState("#-1 NO ROOM NAME SPECIFIED");
+		}
+
+		// TODO: Permissions
+
+		// CREATE ROOM
+		var response = await parser.Mediator.Send(new CreateRoomCommand(MModule.plainText(parser.CurrentState.Arguments["0"].Message!), executor.Owner.Value));
+		await parser.NotifyService.Notify(executor.DBRef, "Room created.");
+
+		if (!string.IsNullOrWhiteSpace(exitTo?.ToString()))
+		{
+			var exitToName = MModule.plainText(exitTo!).Split(";");
+
+			await parser.Mediator.Send(new CreateExitCommand(exitToName.First(), exitToName.Skip(1).ToArray(), executorBase.Where, executor.Owner.Value));
+			
+			await parser.NotifyService.Notify(executor.DBRef, "Exit created.");
+		}
+
+		if (!string.IsNullOrWhiteSpace(exitFrom?.ToString()))
+		{
+			var exitFromName = MModule.plainText(exitFrom!).Split(";");
+			var newRoomObject = await parser.Mediator.Send(new GetObjectNodeQuery(response));
+
+			await parser.Mediator.Send(new CreateExitCommand(exitFromName.First(), exitFromName.Skip(1).ToArray(), newRoomObject.AsRoom, executor.Owner.Value));
+			
+			await parser.NotifyService.Notify(executor.DBRef, "Exit created.");
+		}
+
+		return new CallState(response.ToString());
 	}
 
 	[SharpCommand(Name = "@LOCK", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.Switches | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]

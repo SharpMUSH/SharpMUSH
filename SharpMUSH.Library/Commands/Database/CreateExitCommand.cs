@@ -5,4 +5,4 @@ using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Commands.Database;
 
-public record CreateExitCommand(string Name, AnySharpContainer Location, SharpPlayer Creator) : ICommand<DBRef>, ICacheInvalidating;
+public record CreateExitCommand(string Name, string[] Aliases, AnySharpContainer Location, SharpPlayer Creator) : ICommand<DBRef>, ICacheInvalidating;

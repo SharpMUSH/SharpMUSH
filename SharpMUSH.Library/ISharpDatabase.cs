@@ -13,7 +13,7 @@ public interface ISharpDatabase
 
 	ValueTask<DBRef> CreateThingAsync(string name, AnySharpContainer location, SharpPlayer creator);
 
-	ValueTask<DBRef> CreateExitAsync(string name, AnySharpContainer location, SharpPlayer creator);
+	ValueTask<DBRef> CreateExitAsync(string name, string[] aliases, AnySharpContainer location, SharpPlayer creator);
 
 	ValueTask SetLockAsync(SharpObject target, string lockName, string lockString);
 
