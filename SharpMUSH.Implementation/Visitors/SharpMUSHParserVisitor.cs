@@ -17,27 +17,21 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source)
 {
 	protected override ValueTask<CallState?> DefaultResult => ValueTask.FromResult(default(CallState?));
 
-	protected override async ValueTask<CallState?> AggregateResult(ValueTask<CallState?> aggregate,
-		ValueTask<CallState?> nextResult)
-	{
-		var agg = await aggregate;
-		var next = await nextResult;
-
-		if (agg?.Arguments is not null || next?.Arguments is not null)
+	protected override async ValueTask<CallState?> AggregateResult(ValueTask<CallState?> aggregate, ValueTask<CallState?> nextResult)
+		=> (await aggregate, await nextResult) switch
 		{
-			return (agg ?? next!) with
-			{
-				Arguments = (agg?.Arguments ?? Enumerable.Empty<MString>()).Concat(next?.Arguments ?? Enumerable.Empty<MString>()).ToArray()
-			};
-		}
-
-		if (agg?.Message is not null && next?.Message is not null)
-		{
-			return agg with { Message = MModule.concat(agg.Message, next.Message) };
-		}
-
-		return agg ?? next;
-	}
+			({ Arguments: not null } agg, { Arguments: not null } next)
+				=> agg with { Arguments = [.. agg.Arguments, .. next.Arguments] },
+			({ Arguments: not null } agg, { Arguments: null })
+				=> agg,
+			({ Arguments: null }, { Arguments: not null } next)
+				=> next,
+			({ Message: not null } agg, { Message: not null } next)
+				=> agg with { Message = MModule.concat(agg.Message, next.Message) },
+			(var agg, null) => agg,
+			(null, var next) => next,
+			(var agg, _) => agg
+		};
 
 	public override async ValueTask<CallState?> VisitFunction([NotNull] FunctionContext context)
 	{
