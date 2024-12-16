@@ -236,6 +236,17 @@ public static partial class Commands
 	[SharpCommand(Name = "@DIG", Switches = ["TELEPORT"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 1, MaxArgs = 6)]
 	public static async ValueTask<Option<CallState>> DIG(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		// TODO: Fix verbiage for Notify
+		/*
+		  Room Name created with room number 1255.
+			Opened exit #1254
+			Trying to link...
+			Linked exit #1254 to #1255
+			Opened exit #1256
+			Trying to link...
+			Linked exit #1256 to #452
+		 */
+
 		// NOTE: We discard arguments 4-6.
 		var executorBase = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
 		var executor = executorBase.Object()!;
