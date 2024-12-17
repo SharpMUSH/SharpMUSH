@@ -128,17 +128,42 @@ public class GeneralCommandTests : BaseUnitTest
 			.Notify(Arg.Any<AnySharpObject>(), "15 Repeat 1 times in this mode b");
 	}
 
-	[Test, Skip("Command Match Failure")]
+	[Test]
 	public async Task DoDigForCommandlistCheck()
 	{
-		await _parser!.CommandParse("1", MModule.single("@dig Jim=Exit;ExitAlias,ExitBack;ExitAliasBack"));
+		await _parser!.CommandParse("1", MModule.single("@dig Bar Room=Exit;ExitAlias,ExitBack;ExitAliasBack"));
 
 		await _parser.NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), "Room Created.");
+			.Notify(Arg.Any<DBRef>(), "Bar Room created with room number #3.");
+		await _parser.NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<DBRef>(), "Linked exit #4 to #3");
 		await _parser.NotifyService
 			.Received(Quantity.Exactly(2))
-			.Notify(Arg.Any<AnySharpObject>(), "Exit Created.");
+			.Notify(Arg.Any<DBRef>(), "Trying to link...");
+		await _parser.NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<DBRef>(), "Linked exit #5 to #0");
+	}
+
+	[Test, DependsOn(nameof(DoDigForCommandlistCheck))]
+	public async Task DoDigForCommandlistCheck2()
+	{
+		await _parser!.CommandListParse(MModule.single("@dig Foo Room={Exit;ExitAlias},{ExitBack;ExitAliasBack}"));
+
+		await _parser.NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<DBRef>(), "Foo Room created with room number #6.");
+		await _parser.NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<DBRef>(), "Linked exit #7 to #6");
+		await _parser.NotifyService
+			.Received(Quantity.Exactly(4))
+			.Notify(Arg.Any<DBRef>(), "Trying to link...");
+		await _parser.NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<DBRef>(), "Linked exit #8 to #0");
 	}
 
 	[Test, Skip("Not Implemented")]

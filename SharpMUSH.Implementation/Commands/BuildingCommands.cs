@@ -251,9 +251,10 @@ public static partial class Commands
 		var executorBase = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
 		var executor = executorBase.Object()!;
 		var roomName = parser.CurrentState.Arguments["0"].Message!;
-		var exitTo = parser.CurrentState.Arguments["1"]?.Message;
-		var exitFrom = parser.CurrentState.Arguments["2"]?.Message;
-
+		parser.CurrentState.Arguments.TryGetValue("1", out var exitToCallState);
+		parser.CurrentState.Arguments.TryGetValue("2", out var exitFromCallState);
+		var exitTo = exitToCallState?.Message;
+		var exitFrom = exitFromCallState?.Message;	
 
 		if (string.IsNullOrWhiteSpace(parser.CurrentState.Arguments["0"].Message!.ToString()))
 		{
@@ -264,16 +265,17 @@ public static partial class Commands
 		// TODO: Permissions
 
 		// CREATE ROOM
-		var response = await parser.Mediator.Send(new CreateRoomCommand(MModule.plainText(parser.CurrentState.Arguments["0"].Message!), executor.Owner.Value));
-		await parser.NotifyService.Notify(executor.DBRef, "Room created.");
+		var response = await parser.Mediator.Send(new CreateRoomCommand(MModule.plainText(roomName), executor.Owner.Value));
+		await parser.NotifyService.Notify(executor.DBRef, $"{roomName} created with room number #{response.Number}.");
 
 		if (!string.IsNullOrWhiteSpace(exitTo?.ToString()))
 		{
 			var exitToName = MModule.plainText(exitTo!).Split(";");
 
-			await parser.Mediator.Send(new CreateExitCommand(exitToName.First(), exitToName.Skip(1).ToArray(), executorBase.Where, executor.Owner.Value));
-			
-			await parser.NotifyService.Notify(executor.DBRef, "Exit created.");
+			var toExitResponse = await parser.Mediator.Send(new CreateExitCommand(exitToName.First(), exitToName.Skip(1).ToArray(), executorBase.Where, executor.Owner.Value));
+			await parser.NotifyService.Notify(executor.DBRef, $"Opened exit #{toExitResponse.Number}");
+			await parser.NotifyService.Notify(executor.DBRef, "Trying to link...");
+			await parser.NotifyService.Notify(executor.DBRef, $"Linked exit #{toExitResponse.Number} to #{response.Number}");
 		}
 
 		if (!string.IsNullOrWhiteSpace(exitFrom?.ToString()))
@@ -281,9 +283,11 @@ public static partial class Commands
 			var exitFromName = MModule.plainText(exitFrom!).Split(";");
 			var newRoomObject = await parser.Mediator.Send(new GetObjectNodeQuery(response));
 
-			await parser.Mediator.Send(new CreateExitCommand(exitFromName.First(), exitFromName.Skip(1).ToArray(), newRoomObject.AsRoom, executor.Owner.Value));
+			var fromExitResponse = await parser.Mediator.Send(new CreateExitCommand(exitFromName.First(), exitFromName.Skip(1).ToArray(), newRoomObject.AsRoom, executor.Owner.Value));
 			
-			await parser.NotifyService.Notify(executor.DBRef, "Exit created.");
+			await parser.NotifyService.Notify(executor.DBRef, $"Opened exit #{fromExitResponse.Number}");
+			await parser.NotifyService.Notify(executor.DBRef, "Trying to link...");
+			await parser.NotifyService.Notify(executor.DBRef, $"Linked exit #{fromExitResponse.Number} to #{executorBase.Where.Object().DBRef.Number}");
 		}
 
 		return new CallState(response.ToString());
