@@ -12,11 +12,12 @@ public class AttributeFunctionUnitTests : BaseUnitTest
 	}
 
 	[Test]
+	[NotInParallel]
 	[Arguments("[attrib_set(%!/attribute,ZAP!)][get(%!/attribute)]", "ZAP!")]
 	[Arguments("[attrib_set(%!/attribute,ansi(hr,ZAP!))][get(%!/attribute)]", "\e[1;31mZAP!\e[0m")]
 	public async Task SetAndGet(string input, string expected)
 	{
 		var result = await _parser!.FunctionParse(MModule.single(input));
-		await Assert.That($"{result!.Message}").IsEqualTo(expected);
+		await Assert.That(result!.Message!.ToString()).IsEqualTo(expected);
 	}
 }
