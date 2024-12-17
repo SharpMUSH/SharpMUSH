@@ -6,118 +6,122 @@ namespace SharpMUSH.Library.Services;
 
 public class PermissionService(ILockService lockService) : IPermissionService
 {
-		public bool CanSet(AnySharpObject executor, AnySharpObject target, SharpAttribute attribute)
-		{
-				return true; // TODO: Implement
-		}
+	public bool CanSet(AnySharpObject executor, AnySharpObject target, params SharpAttribute[] attribute)
+	{
+		if(!Controls(executor, target)) return false;
 
-		public bool Controls(AnySharpObject executor, AnySharpObject target, SharpAttribute attribute)
-			=> Controls(executor, target); // TODO: Implement
+		return !(!executor.IsGod() 
+			&& (!executor.IsWizard() 
+				|| (!attribute[^1].IsWizard() 
+					&& (!attribute[^1].IsLocked() 
+						|| attribute[^1].Owner.Value == target.Object().Owner.Value))));
+	}
 
-		// TODO: Confirm Implementation
-		// TODO: Optimize for lists.
-		public bool CanViewAttribute(AnySharpObject viewer, AnySharpObject target, params SharpAttribute[] attribute)
-			=> CanExamine(viewer, target) || attribute.Last().IsVisual();
+	public bool Controls(AnySharpObject executor, AnySharpObject target, params SharpAttribute[] attribute)
+		=> Controls(executor, target); // TODO: Implement
 
-		// TODO: Confirm Implementation.
-		// TODO: Optimize for lists.
-		public bool CanExecuteAttribute(AnySharpObject viewer, AnySharpObject target, params SharpAttribute[] attribute)
-			=> CanEvalAttr(viewer, target, attribute.Last());
+	// TODO: Confirm Implementation
+	// TODO: Optimize for lists.
+	public bool CanViewAttribute(AnySharpObject viewer, AnySharpObject target, params SharpAttribute[] attribute)
+		=> CanExamine(viewer, target) || attribute.Last().IsVisual();
 
-		public bool Controls(AnySharpObject who, AnySharpObject target)
-		{
-				if (who.HasPower("guest"))
-						return false;
+	// TODO: Confirm Implementation.
+	// TODO: Optimize for lists.
+	public bool CanExecuteAttribute(AnySharpObject viewer, AnySharpObject target, params SharpAttribute[] attribute)
+		=> CanEvalAttr(viewer, target, attribute.Last());
 
-				if (who.Id() == target.Id())
-						return true;
+	public bool Controls(AnySharpObject who, AnySharpObject target)
+	{
+		if (who.HasPower("guest"))
+			return false;
 
-				if (who.IsGod())
-						return true;
+		if (who.Id() == target.Id())
+			return true;
 
-				if (target.IsGod())
-						return false;
+		if (who.IsGod())
+			return true;
 
-				if (who.IsWizard())
-						return true;
+		if (target.IsGod())
+			return false;
 
-				if (target.IsWizard() || (target.IsPriv() && !who.IsPriv()))
-						return false;
+		if (who.IsWizard())
+			return true;
 
-				if (who.IsMistrust())
-						return false;
+		if (target.IsWizard() || (target.IsPriv() && !who.IsPriv()))
+			return false;
 
-				if (who.Owns(target) && (!target.Inheritable() || who.Inheritable()))
-						return true;
+		if (who.IsMistrust())
+			return false;
 
-				if (target.Inheritable() || target.IsPlayer)
-						return false;
+		if (who.Owns(target) && (!target.Inheritable() || who.Inheritable()))
+			return true;
 
-				/* TODO: Zone Master items here.*/
-				/*
-					if (!ZONE_CONTROL_ZMP && (Zone(what) != NOTHING) &&
-							eval_lock(who, Zone(what), Zone_Lock))
-						return 1;
+		if (target.Inheritable() || target.IsPlayer)
+			return false;
 
-					if (ZMaster(Owner(what)) && !IsPlayer(what) &&
-							eval_lock(who, Owner(what), Zone_Lock))
-						return 1;
-				*/
+		/* TODO: Zone Master items here.*/
+		/*
+			if (!ZONE_CONTROL_ZMP && (Zone(what) != NOTHING) &&
+					eval_lock(who, Zone(what), Zone_Lock))
+				return 1;
 
-				return lockService.Evaluate(LockType.Control, target, who);
-		}
+			if (ZMaster(Owner(what)) && !IsPlayer(what) &&
+					eval_lock(who, Owner(what), Zone_Lock))
+				return 1;
+		*/
 
-		public bool CanExamine(AnySharpObject examiner, AnySharpObject examinee)
-			=> examiner.Object().DBRef == examinee.Object().DBRef
-				 || Controls(examiner, examinee)
-				 || examiner.IsSee_All()
-				 || (examinee.IsVisual() && lockService.Evaluate(LockType.Examine, examinee, examiner));
+		return lockService.Evaluate(LockType.Control, target, who);
+	}
 
-		public bool CanInteract(AnySharpObject from, AnySharpObject to, IPermissionService.InteractType type)
-		{
-				if (from == to || from.IsRoom || to.IsRoom) return true;
+	public bool CanExamine(AnySharpObject examiner, AnySharpObject examinee)
+		=> examiner.Object().DBRef == examinee.Object().DBRef
+			 || Controls(examiner, examinee)
+			 || examiner.IsSee_All()
+			 || (examinee.IsVisual() && lockService.Evaluate(LockType.Examine, examinee, examiner));
 
-				var fromStep = from.MinusRoom();
-				var toStep = to.MinusRoom();
+	public bool CanInteract(AnySharpObject from, AnySharpObject to, IPermissionService.InteractType type)
+	{
+		if (from == to || from.IsRoom || to.IsRoom) return true;
 
-				if (type == IPermissionService.InteractType.Hear && !lockService.Evaluate(LockType.Interact, to, from))
-						return false;
+		var fromStep = from.MinusRoom();
+		var toStep = to.MinusRoom();
 
-				if (fromStep.Object().Id == toStep.Location().Object().Id
-						|| toStep.Object().Id == fromStep.Location().Object().Id
-						|| Controls(to, from))
-						return true;
+		if (type == IPermissionService.InteractType.Hear && !lockService.Evaluate(LockType.Interact, to, from))
+			return false;
 
-				return true;
-		}
+		if (fromStep.Object().Id == toStep.Location().Object().Id
+				|| toStep.Object().Id == fromStep.Location().Object().Id
+				|| Controls(to, from))
+			return true;
 
-		public static bool CanEval(
-			AnySharpObject evaluator,
-			AnySharpObject evaluationTarget)
-			=> !evaluationTarget.IsPriv()
-				 || evaluator.IsGod()
-				 || ((evaluator.IsWizard()
-							|| (evaluator.IsRoyalty() && !evaluationTarget.IsWizard()))
-						 && !evaluationTarget.IsGod());
+		return true;
+	}
 
-		public static bool CanEvalAttr(
-			AnySharpObject evaluator,
-			AnySharpObject evaluationTarget,
-			SharpAttribute attribute)
-			=> CanEval(evaluator, evaluationTarget)
-				 || attribute.IsPublic();
+	public static bool CanEval(AnySharpObject evaluator, AnySharpObject evaluationTarget)
+		=> !evaluationTarget.IsPriv()
+			 || evaluator.IsGod()
+			 || ((evaluator.IsWizard()
+						|| (evaluator.IsRoyalty() && !evaluationTarget.IsWizard()))
+					 && !evaluationTarget.IsGod());
 
-		public bool CouldDoIt(AnySharpObject who, AnyOptionalSharpObject thing1, string? what)
-		{
-				throw new NotImplementedException();
-		}
+	public static bool CanEvalAttr(
+		AnySharpObject evaluator,
+		AnySharpObject evaluationTarget,
+		SharpAttribute attribute)
+		=> CanEval(evaluator, evaluationTarget)
+			 || attribute.IsPublic();
 
-		public bool CanGoto(AnySharpObject who, SharpExit exit, AnySharpContainer destination)
-		{
-				// TODO: Implement
-				var _ = who;
-				var _2 = exit;
-				var _3 = destination;
-				return true;
-		}
+	public bool CouldDoIt(AnySharpObject who, AnyOptionalSharpObject thing1, string? what)
+	{
+		throw new NotImplementedException();
+	}
+
+	public bool CanGoto(AnySharpObject who, SharpExit exit, AnySharpContainer destination)
+	{
+		// TODO: Implement
+		var _ = who;
+		var _2 = exit;
+		var _3 = destination;
+		return true;
+	}
 }

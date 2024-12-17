@@ -10,9 +10,9 @@ public interface IPermissionService
 				See, Hear, Match, Presence
 		}
 
-		public bool CanSet(AnySharpObject executor, AnySharpObject target, SharpAttribute attribute);
+		public bool CanSet(AnySharpObject executor, AnySharpObject target, params SharpAttribute[] attribute);
 
-		public bool Controls(AnySharpObject executor, AnySharpObject target, SharpAttribute attribute);
+		public bool Controls(AnySharpObject executor, AnySharpObject target, params SharpAttribute[] attribute);
 
 		public bool Controls(AnySharpObject executor, AnySharpObject target);
 

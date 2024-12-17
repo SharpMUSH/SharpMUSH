@@ -1,5 +1,4 @@
 ﻿using Antlr4.Runtime.Misc;
-using Serilog;
 using SharpMUSH.Library.ParserInterfaces;
 using static SharpMUSHParser;
 
