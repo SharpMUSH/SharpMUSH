@@ -45,8 +45,8 @@ public class CommandUnitTests : BaseUnitTest
 			"36",
 			"57")]
 		[Arguments("think [ansi(hr,red)];think [ansi(hg,green)]",
-			"\u001b[1;31mred\u001b[0m",
-			"\u001b[1;32mgreen\u001b[0m")]
+			"\e[1;31mred\e[0m",
+			"\e[1;32mgreen\e[0m")]
 		[Arguments("think Command1 Arg;think Command2 Arg",
 			"Command1 Arg",
 			"Command2 Arg")]

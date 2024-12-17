@@ -20,11 +20,11 @@ COMMAWS: WS ',' WS;
 EQUALS: WS '=' WS;
 PERCENT: '%' -> pushMode(SUBSTITUTION);
 SEMICOLON: WS ';' WS;
-OANSI: '\u001B' -> pushMode(ANSI);
+OANSI: '\u001b' -> pushMode(ANSI);
 FUNCHAR:
     [a-zA-Z0-9_]+ '(' WS
 ; // Lazy way of indicating printable characters. There's more printable characters than this!
-OTHER: ~('\\' | '[' | ']' | '{' | '}' | '(' | ')' | '<' | '>' | ',' | '%' | '$' | ';' | ':' | '\u001B' | ' ' | '=')+;
+OTHER: ~('\\' | '[' | ']' | '{' | '}' | '(' | ')' | '<' | '>' | ',' | '%' | '$' | ';' | ':' | '\u001b' | ' ' | '=')+;
 ANY_AT_ALL: .+?;
 
 // --------------- SUBSTITUTION MODE -------------

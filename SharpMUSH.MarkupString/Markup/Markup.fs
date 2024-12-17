@@ -12,8 +12,8 @@ module MarkupImplementation =
     {
       Foreground: AnsiColor;
       Background: AnsiColor;
-      LinkText: string;
-      LinkUrl: string;
+      LinkText: string option;
+      LinkUrl: string option;
       Blink: bool;
       Bold: bool;
       Clear: bool;
@@ -62,8 +62,8 @@ module MarkupImplementation =
       {
         Foreground = defaultArg foreground AnsiColor.NoAnsi
         Background = defaultArg background AnsiColor.NoAnsi
-        LinkText = defaultArg linkText System.String.Empty
-        LinkUrl = defaultArg linkUrl System.String.Empty
+        LinkText = defaultArg linkText Some System.String.Empty
+        LinkUrl = defaultArg linkUrl Some System.String.Empty
         Blink = defaultArg blink false
         Bold = defaultArg bold false
         Clear = defaultArg clear false
@@ -78,7 +78,7 @@ module MarkupImplementation =
 
     static member applyDetails (details: AnsiStructure) (text: string) =
         StringExtensions.toANSI text
-        |> (fun t -> match details.LinkUrl with | null -> t | url -> if url.Length <> 0 then StringExtensions.linkANSI t url else t)
+        |> (fun t -> match details.LinkUrl with | None -> t | Some url -> if url.Length <> 0 then StringExtensions.linkANSI t url else t)
         |> (fun t -> match details.Foreground with | AnsiColor.NoAnsi -> t | fg -> StringExtensions.colorANSI t fg)
         |> (fun t -> match details.Background with | AnsiColor.NoAnsi -> t | bg -> StringExtensions.backgroundANSI t bg)
         |> (fun t -> if details.Blink then StringExtensions.blinkANSI(t) else t)

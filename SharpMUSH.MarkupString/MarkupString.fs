@@ -159,7 +159,7 @@ module MarkupStringModule =
       then 
         empty()
       else 
-        JsonSerializer.Deserialize(markupString, serializationOptions)
+       JsonSerializer.Deserialize(markupString, serializationOptions)
 
     [<TailCall>]
     let rec plainText (markupStr: MarkupString) : string =

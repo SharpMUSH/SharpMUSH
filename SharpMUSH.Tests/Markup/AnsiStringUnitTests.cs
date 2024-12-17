@@ -124,9 +124,9 @@ public class AnsiStringUnitTests : BaseUnitTest
 				// var complexAnsiString = A.markupSingle(M.Create(foreground: StringExtensions.ansiByte(32)),"green");
 
 				await Assert.That(simpleString.ToString()).IsEqualTo("red");
-				await Assert.That(redString.ToString()).IsEqualTo("\u001b[38;2;255;0;0mred\u001b[0m");
-				await Assert.That(redAnsiString.ToString()).IsEqualTo("\u001b[31mred\u001b[0m");
-				// Assert.AreEqual("\u001b[32mwoo\u001b[0m", complexAnsiString.ToString());
+				await Assert.That(redString.ToString()).IsEqualTo("\e[38;2;255;0;0mred\e[0m");
+				await Assert.That(redAnsiString.ToString()).IsEqualTo("\e[31mred\e[0m");
+				// Assert.AreEqual("\e[32mwoo\e[0m", complexAnsiString.ToString());
 		}
 
 		[Test]
