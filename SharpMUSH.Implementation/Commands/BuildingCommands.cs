@@ -263,6 +263,7 @@ public static partial class Commands
 		}
 
 		// TODO: Permissions
+		// CAN DIG?
 
 		// CREATE ROOM
 		var response = await parser.Mediator.Send(new CreateRoomCommand(MModule.plainText(roomName), executor.Owner.Value));
@@ -271,6 +272,8 @@ public static partial class Commands
 		if (!string.IsNullOrWhiteSpace(exitTo?.ToString()))
 		{
 			var exitToName = MModule.plainText(exitTo!).Split(";");
+			// CAN CREATE EXIT HERE?
+			// CAN LINK TO DESTINATION?
 
 			var toExitResponse = await parser.Mediator.Send(new CreateExitCommand(exitToName.First(), exitToName.Skip(1).ToArray(), executorBase.Where, executor.Owner.Value));
 			await parser.NotifyService.Notify(executor.DBRef, $"Opened exit #{toExitResponse.Number}");
@@ -280,6 +283,9 @@ public static partial class Commands
 
 		if (!string.IsNullOrWhiteSpace(exitFrom?.ToString()))
 		{
+			// CAN CREATE EXIT THERE?
+			// CAN LINK BACK TO CURRENT ROOM?
+
 			var exitFromName = MModule.plainText(exitFrom!).Split(";");
 			var newRoomObject = await parser.Mediator.Send(new GetObjectNodeQuery(response));
 
