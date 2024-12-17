@@ -4,7 +4,7 @@
 public enum FunctionFlags
 {
 		Regular = 0,
-		NoParse = 1 << 0, // Implemented
+		NoParse = 1 << 0,
 		Literal = 1 << 1,
 		Arg_Mask = 1 << 2,
 		Disabled = 1 << 3,

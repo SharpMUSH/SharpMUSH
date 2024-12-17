@@ -61,7 +61,7 @@ public static class DatabaseConstants
 		public static readonly string[] typesAll = [typeRoom, typePlayer, typeExit, typeThing];
 
 		public static readonly string[] permissionsWizard = ["wizard"];
-		public static readonly string[] permissionsRoyalty = ["wizard"];
+		public static readonly string[] permissionsRoyalty = ["royalty"];
 		public static readonly string[] permissionsTrusted = ["trusted"];
 		public static readonly string[] permissionsLog = ["log"];
 		public static readonly string[] permissionsODark = ["odark"];
