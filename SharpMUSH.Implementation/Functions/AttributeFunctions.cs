@@ -16,7 +16,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "attrib_set", MaxArgs = 2, Flags = FunctionFlags.Regular)]
-	public static async ValueTask<CallState> Attrib_Set(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Attrib_Set(IMUSHCodeParser parser, SharpFunctionAttribute functionAttribute)
 	{
 		// TODO: If we have the NoSideFX flag, don't function! 
 		// That should be handled by the parser before it gets here.
@@ -56,7 +56,7 @@ public partial class Functions
 		);
 
 		return new CallState(setResult.Match(
-			_ => $"{realLocated.Object().Name}/{args["0"].Message}",
+			_ => string.Empty, // $"{realLocated.Object().Name}/{args["0"].Message}",
 			failure => failure.Value));
 	}
 

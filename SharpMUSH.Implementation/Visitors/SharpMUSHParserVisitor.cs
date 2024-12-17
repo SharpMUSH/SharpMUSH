@@ -16,8 +16,8 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source)
 {
 	protected override ValueTask<CallState?> DefaultResult => ValueTask.FromResult(default(CallState?));
 
-	protected override async ValueTask<CallState?> AggregateResult(ValueTask<CallState?> aggregate, ValueTask<CallState?> nextResult)
-		=> (await aggregate, await nextResult) switch
+	protected override ValueTask<CallState?> AggregateResult(ValueTask<CallState?> aggregate, ValueTask<CallState?> nextResult)
+		=> ValueTask.FromResult((aggregate.AsTask().GetAwaiter().GetResult(), nextResult.AsTask().GetAwaiter().GetResult()) switch
 		{
 			(null, null) => null,
 			({ Arguments: not null } agg, { Arguments: not null } next)
@@ -25,7 +25,7 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source)
 			({ Message: not null } agg, { Message: not null } next)
 				=> agg with { Message = MModule.concat(agg.Message, next.Message) },
 			(var agg, var next) => agg ?? next
-		};
+		});
 
 	public override async ValueTask<CallState?> VisitFunction([NotNull] FunctionContext context)
 	{

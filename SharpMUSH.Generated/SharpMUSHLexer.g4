@@ -22,7 +22,7 @@ PERCENT: '%' -> pushMode(SUBSTITUTION);
 SEMICOLON: WS ';' WS;
 OANSI: '\u001B' -> pushMode(ANSI);
 FUNCHAR:
-    [a-zA-Z0-9]+ '(' WS
+    [a-zA-Z0-9_]+ '(' WS
 ; // Lazy way of indicating printable characters. There's more printable characters than this!
 OTHER: ~('\\' | '[' | ']' | '{' | '}' | '(' | ')' | '<' | '>' | ',' | '%' | '$' | ';' | ':' | '\u001B' | ' ' | '=')+;
 ANY_AT_ALL: .+?;
