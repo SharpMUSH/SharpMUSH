@@ -119,6 +119,18 @@ module MarkupStringModule =
 
         let strVal : Lazy<string> = Lazy<string>(toString)
 
+        [<TailCall>]
+        let rec toPlainText() : string =
+            let rec loop (content: Content list) (acc: string list) =
+                match content with
+                | [] -> List.rev acc
+                | Text str :: tail -> loop tail (str :: acc)
+                | MarkupText mStr :: tail -> loop (mStr.Content @ tail) acc
+
+            String.Concat(loop ms.Content [])
+
+        let plainStrVal : Lazy<string> = Lazy<string>(toPlainText)
+
         member val MarkupDetails = markupDetails with get, set
         
         member val Content = content with get, set
@@ -126,6 +138,8 @@ module MarkupStringModule =
         member val Length = len.Value
 
         override this.ToString() : string = strVal.Value
+
+        member this.ToPlainText() : string = plainStrVal.Value
 
     let (|MarkupStringPattern|) (markupStr: MarkupString) =
         (markupStr.MarkupDetails, markupStr.Content)
@@ -166,17 +180,11 @@ module MarkupStringModule =
        JsonSerializer.Deserialize(markupString, serializationOptions)
 
     [<TailCall>]
-    let rec plainText (markupStr: MarkupString) : string =
-        let rec loop (content: Content list) (acc: string list) =
-            match content with
-            | [] -> List.rev acc
-            | Text str :: tail -> loop tail (str :: acc)
-            | MarkupText mStr :: tail -> loop (mStr.Content @ tail) acc
-
-        String.Concat(loop markupStr.Content [])
+    let rec plainText (markupStr: MarkupString) : string = 
+      markupStr.ToPlainText()
 
     let plainText2 (markupStr: MarkupString) : MarkupString =
-        MarkupString(Empty, [ Text(plainText markupStr) ])
+        MarkupString(Empty, [ Text(markupStr.ToPlainText()) ])
 
     [<TailCall>]
     let rec getLength (markupStr: MarkupString) : int =
