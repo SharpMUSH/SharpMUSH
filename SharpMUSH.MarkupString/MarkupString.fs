@@ -30,7 +30,7 @@ module MarkupStringModule =
             override _.Write(writer, value, opts) =
                 writer.WriteStringValue($"#{value.R:X2}{value.G:X2}{value.B:X2}".ToLower())
 
-    and MarkupString(markupDetails: MarkupTypes, content: Content list) =
+    and MarkupString(markupDetails: MarkupTypes, content: Content list) as ms =
         // TODO: Optimize the ansi strings, so we don't re-initialize at least the exact same tag sequentially.
         [<TailCall>]
         let rec getText (markupStr: MarkupString, outerMarkupType: MarkupTypes) : string =
@@ -90,13 +90,7 @@ module MarkupStringModule =
         
         let len : Lazy<int> = Lazy<int>(length)
 
-        member val MarkupDetails = markupDetails with get, set
-        
-        member val Content = content with get, set
-        
-        member val Length = len.Value
-
-        override this.ToString() : string = 
+        let toString() : string = 
           let postfix (markupType: MarkupTypes) : string =
                 match markupType with
                 | MarkedupText markup -> markup.Postfix
@@ -112,16 +106,26 @@ module MarkupStringModule =
               | MarkedupText markup -> markup.Optimize text
               | Empty -> String.Empty
 
-          let firstMarkedupTextType = findFirstMarkedupText this
+          let firstMarkedupTextType = findFirstMarkedupText ms
 
           match firstMarkedupTextType with
-          | Empty -> getText (this, Empty)
+          | Empty -> getText (ms, Empty)
           | _ ->
               optimize
                   firstMarkedupTextType
                   (prefix (firstMarkedupTextType)
-                    + getText (this, Empty)
+                    + getText (ms, Empty)
                     + postfix (firstMarkedupTextType))
+
+        let strVal : Lazy<string> = Lazy<string>(toString)
+
+        member val MarkupDetails = markupDetails with get, set
+        
+        member val Content = content with get, set
+        
+        member val Length = len.Value
+
+        override this.ToString() : string = strVal.Value
 
     let (|MarkupStringPattern|) (markupStr: MarkupString) =
         (markupStr.MarkupDetails, markupStr.Content)
