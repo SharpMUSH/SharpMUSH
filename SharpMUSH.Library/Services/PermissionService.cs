@@ -10,11 +10,19 @@ public class PermissionService(ILockService lockService) : IPermissionService
 	{
 		if(!Controls(executor, target)) return false;
 
+		var compressedAttribute = attribute[^1] with 
+		{ 
+			Flags = attribute.SelectMany(a => a.Flags)
+											 .Where(x => x.Inheritable == true)
+											 .DistinctBy(x => x.Name)
+		};
+
 		return !(!executor.IsGod() 
-			&& (!executor.IsWizard() 
-				|| (!attribute[^1].IsWizard() 
-					&& (!attribute[^1].IsLocked() 
-						|| attribute[^1].Owner.Value == target.Object().Owner.Value))));
+			// && (It's Internal // SAFE when we care about SAFE)
+			|| !(executor.IsWizard()
+				|| (!compressedAttribute.IsWizard()
+					&& (!compressedAttribute.IsLocked() 
+						|| compressedAttribute.Owner.Value == target.Object().Owner.Value))));
 	}
 
 	public bool Controls(AnySharpObject executor, AnySharpObject target, params SharpAttribute[] attribute)

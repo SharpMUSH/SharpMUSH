@@ -27,4 +27,9 @@ public class SharpAttributeFlag
 	/// Indicates this is an internally used flag and cannot be deleted.
 	/// </summary>
 	public required bool System { get; set; }
+
+	/// <summary>
+	/// Indicates whether or not the flag is inherited in an attribute tree.
+	/// </summary>
+	public required bool Inheritable { get; set; }
 }

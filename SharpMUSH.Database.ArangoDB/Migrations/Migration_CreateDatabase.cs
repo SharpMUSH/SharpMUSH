@@ -1077,140 +1077,160 @@ namespace SharpMUSH.Database.ArangoDB.Migrations
 				{
 					Name = "no_command",
 					Symbol = "$",
-					System = true
+					System = true,
+					Inheritable = true
 				}).Result,
 				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
 				new
 				{
 					Name = "no_inherit",
 					Symbol = "i",
-					System = true
+					System = true,
+					Inheritable = true
 				}).Result,
 				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
 				new
 				{
 					Name = "no_clone",
 					Symbol = "c",
-					System = true
+					System = true,
+					Inheritable = true
 				}).Result,
 				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
 				new
 				{
 					Name = "mortal_dark",
 					Symbol = "m",
-					System = true
+					System = true,
+					Inheritable = true
 				}).Result,
 				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
 				new
 				{
 					Name = "wizard",
 					Symbol = "w",
-					System = true
+					System = true,
+					Inheritable = true
 				}).Result,
 				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
 				new
 				{
 					Name = "veiled",
 					Symbol = "V",
-					System = true
+					System = true,
+					Inheritable = true
 				}).Result,
 				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
 				new
 				{
 					Name = "nearby",
 					Symbol = "n",
-					System = true
+					System = true,
+					Inheritable = true
 				}).Result,
 				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
 				new
 				{
 					Name = "locked",
 					Symbol = "+",
-					System = true
+					System = true,
+					Inheritable = true
 				}).Result,
 				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
 				new
 				{
 					Name = "safe",
 					Symbol = "S",
-					System = true
+					System = true,
+					Inheritable = true
 				}).Result,
 				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
 				new
 				{
 					Name = "visual",
 					Symbol = "v",
-					System = true
+					System = true,
+					Inheritable = false
 				}).Result,
 				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
 				new
 				{
 					Name = "public",
 					Symbol = "p",
-					System = true
+					System = true,
+					Inheritable = false
 				}).Result,
 				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
 				new
 				{
 					Name = "debug",
 					Symbol = "b",
-					System = true
+					System = true,
+					Inheritable = true
 				}).Result,
 				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
 				new
 				{
 					Name = "no_debug",
 					Symbol = "B",
-					System = true
+					System = true,
+					Inheritable = true
 				}).Result,
 				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
 				new
 				{
 					Name = "regexp",
 					Symbol = "R",
-					System = true
+					System = true,
+					Inheritable = false
 				}).Result,
 				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
 				new
 				{
 					Name = "case",
 					Symbol = "C",
-					System = true
+					System = true,
+					Inheritable = false
 				}).Result,
 				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
 				new
 				{
 					Name = "nospace",
 					Symbol = "s",
-					System = true
+					System = true,
+					Inheritable = true
 				}).Result,
 				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
 				new
 				{
 					Name = "noname",
 					Symbol = "N",
-					System = true
+					System = true,
+					Inheritable = true
 				}).Result,
 				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
 				new
 				{
 					Name = "aahear",
 					Symbol = "A",
-					System = true
+					System = true,
+					Inheritable = false
 				}).Result,
 				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
 				new
 				{
 					Name = "amhear",
 					Symbol = "M",
-					System = true
+					System = true,
+					Inheritable = false
 				}).Result,
 				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
 				new
 				{
 					Name = "quiet",
 					Symbol = "Q",
-					System = true
+					System = true,
+					Inheritable = false
 				}).Result,
 				// TODO: Consider if this is needed for our purposes at all.
 				migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
@@ -1218,7 +1238,8 @@ namespace SharpMUSH.Database.ArangoDB.Migrations
 				{
 					Name = "branch",
 					Symbol = "`",
-					System = true
+					System = true,
+					Inheritable = false
 				}).Result
 		];
 

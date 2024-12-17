@@ -249,6 +249,7 @@ public class ArangoDatabase(
 				Name = x.Name,
 				Symbol = x.Symbol,
 				System = x.System,
+				Inheritable = x.Inheritable,
 				Id = x.Id
 			});
 	}
@@ -260,27 +261,29 @@ public class ArangoDatabase(
 		IEnumerable<SharpAttributeQueryResult> sharpAttributeResults;
 		if (id.StartsWith(DatabaseConstants.attributes))
 		{
-			sharpAttributeResults = arangoDB.Query.ExecuteAsync<SharpAttributeQueryResult>(handle,
+			sharpAttributeResults = await arangoDB.Query.ExecuteAsync<SharpAttributeQueryResult>(handle,
 				$"FOR v IN 1..999 OUTBOUND @startVertex GRAPH {DatabaseConstants.graphAttributes} RETURN v",
-				new Dictionary<string, object>() { { "startVertex", id } }).ConfigureAwait(false).GetAwaiter().GetResult();
+				new Dictionary<string, object>() { { "startVertex", id } });
 		}
 		else
 		{
-			sharpAttributeResults = arangoDB.Query.ExecuteAsync<SharpAttributeQueryResult>(handle,
+			sharpAttributeResults = await arangoDB.Query.ExecuteAsync<SharpAttributeQueryResult>(handle,
 				$"LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.graphObjects} RETURN v) FOR v IN 1..999 OUTBOUND start GRAPH {DatabaseConstants.graphAttributes} RETURN v",
-				new Dictionary<string, object>() { { "startVertex", id } }).ConfigureAwait(false).GetAwaiter().GetResult();
+				new Dictionary<string, object>() { { "startVertex", id } });
 		}
 
-		var sharpAttributes = sharpAttributeResults.Select(async x => new SharpAttribute
+		var sharpAttributes = sharpAttributeResults.Select(async x => 
+			new SharpAttribute(
+				Key:x.Key, 
+				Name: x.Name, 
+				Flags: await GetAttributeFlagsAsync(x.Id), 
+				CommandListIndex: null, 
+				LongName: x.LongName,
+				Leaves: new(() => GetTopLevelAttributesAsync(x.Id).AsTask().Result), 
+				Owner: new(() => GetAttributeOwnerAsync(x.Id).AsTask().Result), 
+				SharpAttributeEntry: new(() => null))
 		{
-			Key = x.Key,
-			Flags = await GetAttributeFlagsAsync(x.Id),
-			Name = x.Name,
-			LongName = x.LongName,
-			Owner = new(() => GetAttributeOwnerAsync(x.Id).AsTask().Result),
-			Value = MarkupStringModule.deserialize(x.Value),
-			Leaves = new(() => GetTopLevelAttributesAsync(x.Id).AsTask().Result),
-			SharpAttributeEntry = new(() => null) // TODO: Fix
+			Value = MarkupStringModule.deserialize(x.Value)
 		});
 
 		return await Task.WhenAll(sharpAttributes);
@@ -501,16 +504,9 @@ public class ArangoDatabase(
 				new Dictionary<string, object>() { { "startVertex", id } });
 		}
 
-		var sharpAttributes = sharpAttributeResults.Select(async x => new SharpAttribute
+		var sharpAttributes = sharpAttributeResults.Select(async x => new SharpAttribute(x.Key, x.Name, await GetAttributeFlagsAsync(x.Id), null, x.LongName, new(() => GetTopLevelAttributesAsync(x.Id).AsTask().Result), new(() => GetAttributeOwnerAsync(x.Id).AsTask().Result), new(() => null))
 		{
-			Key = x.Key,
-			Flags = await GetAttributeFlagsAsync(x.Id),
-			Name = x.Name,
-			LongName = x.LongName,
-			Owner = new(() => GetAttributeOwnerAsync(x.Id).AsTask().Result),
-			Value = MarkupStringModule.deserialize(x.Value),
-			Leaves = new(() => GetTopLevelAttributesAsync(x.Id).AsTask().Result),
-			SharpAttributeEntry = new(() => null) // TODO: Fix
+			Value = MarkupStringModule.deserialize(x.Value)
 		});
 
 		return await Task.WhenAll(sharpAttributes);
@@ -544,16 +540,9 @@ public class ArangoDatabase(
 						{ "pattern", pattern }
 			});
 
-		return await Task.WhenAll(result2.Select(async x => new SharpAttribute
+		return await Task.WhenAll(result2.Select(async x => new SharpAttribute(x.Key, x.Name, await GetAttributeFlagsAsync(x.Id), null, x.LongName, new(() => GetTopLevelAttributesAsync(x.Id).AsTask().Result), new(() => GetObjectOwnerAsync(x.Id).AsTask().Result), new(() => null))
 		{
-			Key = x.Key,
-			Flags = await GetAttributeFlagsAsync(x.Id),
-			Name = x.Name,
-			Value = MarkupStringModule.deserialize(x.Value),
-			LongName = x.LongName,
-			Leaves = new(() => GetTopLevelAttributesAsync(x.Id).AsTask().Result),
-			Owner = new(() => GetObjectOwnerAsync(x.Id).AsTask().Result),
-			SharpAttributeEntry = new(() => null) // TODO: Fix
+			Value = MarkupStringModule.deserialize(x.Value)
 		}));
 	}
 
@@ -578,16 +567,9 @@ public class ArangoDatabase(
 						{ "pattern", attribute_pattern }
 			});
 
-		return await Task.WhenAll(result2.Select(async x => new SharpAttribute
+		return await Task.WhenAll(result2.Select(async x => new SharpAttribute(x.Key, x.Name, await GetAttributeFlagsAsync(x.Id), null, x.LongName, new(() => GetTopLevelAttributesAsync(x.Id).AsTask().Result), new(() => GetObjectOwnerAsync(x.Id).AsTask().Result), new(() => null))
 		{
-			Key = x.Key,
-			Flags = await GetAttributeFlagsAsync(x.Id),
-			Name = x.Name,
-			Value = MarkupStringModule.deserialize(x.Value),
-			LongName = x.LongName,
-			Leaves = new(() => GetTopLevelAttributesAsync(x.Id).AsTask().Result),
-			Owner = new(() => GetObjectOwnerAsync(x.Id).AsTask().Result),
-			SharpAttributeEntry = new(() => null) // TODO: Fix
+			Value = MarkupStringModule.deserialize(x.Value)
 		}));
 	}
 
@@ -617,16 +599,9 @@ public class ArangoDatabase(
 
 		if (result.Count < attribute.Length) return null;
 
-		return await Task.WhenAll(result.Select(async x => new SharpAttribute()
+		return await Task.WhenAll(result.Select(async x => new SharpAttribute(x.Key, x.Name, await GetAttributeFlagsAsync(x.Id), null, x.LongName, new(() => GetTopLevelAttributesAsync(x.Id).AsTask().Result), new(() => GetAttributeOwnerAsync(x.Id).AsTask().Result), new(() => null))
 		{
-			Key = x.Key,
-			Name = x.Name,
-			Flags = await GetAttributeFlagsAsync(x.Id),
-			Value = MarkupStringModule.deserialize(x.Value),
-			LongName = x.LongName,
-			Leaves = new(() => GetTopLevelAttributesAsync(x.Id).AsTask().Result),
-			Owner = new(() => GetAttributeOwnerAsync(x.Id).AsTask().Result),
-			SharpAttributeEntry = new(() => null) // TODO: FIX
+			Value = MarkupStringModule.deserialize(x.Value)
 		}));
 	}
 
