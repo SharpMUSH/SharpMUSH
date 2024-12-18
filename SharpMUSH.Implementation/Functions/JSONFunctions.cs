@@ -81,7 +81,7 @@ public partial class Functions
 		}
 
 		var entry = MModule.plainText(args["1"].Message);
-		if(!decimal.TryParse(entry, out var value))
+		if (!decimal.TryParse(entry, out var value))
 		{
 			return ValueTask.FromResult(new CallState(Errors.ErrorNumber));
 		}
@@ -96,9 +96,19 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState(string.Format(Errors.ErrorWrongArgumentsRange, "json", 2, int.MaxValue, args.Count)));
 		}
 
-		var sortedArgs = args.AsReadOnly().OrderBy(x => int.Parse(x.Key)).Select(x => x.Value.Message!.ToString()).Skip(1);
+		try
+		{
+			var sortedArgs = args.AsReadOnly()
+													 .OrderBy(x => int.Parse(x.Key))
+													 .Select(x => JsonDocument.Parse(x.Value.Message!.ToString()).RootElement)
+													 .Skip(1);
 
-		return ValueTask.FromResult(new CallState(JsonSerializer.Serialize(sortedArgs)));
+			return ValueTask.FromResult(new CallState(JsonSerializer.Serialize(sortedArgs)));
+		}
+		catch (JsonException)
+		{
+			return ValueTask.FromResult(new CallState(string.Format(Errors.ErrorBadArgumentFormat, "json")));
+		}
 	}
 
 	private static ValueTask<CallState> ObjectJSON(ConcurrentDictionary<string, CallState> args)
@@ -110,21 +120,27 @@ public partial class Functions
 
 		if (args.Count % 2 == 0)
 		{
-			return ValueTask.FromResult(new CallState(string.Format(Errors.ErrorGotEvenArgs,"json")));
+			return ValueTask.FromResult(new CallState(string.Format(Errors.ErrorGotEvenArgs, "json")));
 		}
 
 		var sortedArgs = args.AsReadOnly().OrderBy(x => int.Parse(x.Key)).Select(x => x.Value.Message!.ToString()).Skip(1);
 		var chunkedArgs = sortedArgs.Chunk(2);
 		var duplicateKeys = chunkedArgs.Select(x => x[0]).Duplicates();
-		
+
 		if (duplicateKeys.Any())
 		{
 			return ValueTask.FromResult(new CallState($"#-1 DUPLICATE KEYS: {string.Join(", ", duplicateKeys)}"));
 		}
 
-		var dictionary = chunkedArgs.ToDictionary(x => x.First(), x => x.Last());
-
-		return ValueTask.FromResult(new CallState(JsonSerializer.Serialize(dictionary)));
+		try
+		{
+			var dictionary = chunkedArgs.ToDictionary(x => x.First(), x => JsonDocument.Parse(x.Last()).RootElement);
+			return ValueTask.FromResult(new CallState(JsonSerializer.Serialize(dictionary)));
+		}
+		catch (JsonException)
+		{
+			return ValueTask.FromResult(new CallState(string.Format(Errors.ErrorBadArgumentFormat, "json")));
+		}
 	}
 
 	[SharpFunction(Name = "json_map", MinArgs = 2, MaxArgs = 33, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
