@@ -8,8 +8,15 @@ public partial class Functions
 	[SharpFunction(Name = "HTML", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly)]
 	public static ValueTask<CallState> html(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		// TODO: This probably needs to be more complex than that.
+		return new ValueTask<CallState>(new CallState(
+			MModule.concat(
+				MModule.concat(
+					MModule.single("<"),
+					parser.CurrentState.Arguments["1"].Message),
+				MModule.single(">"))));
 	}
+
 	[SharpFunction(Name = "TAG", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> tag(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{

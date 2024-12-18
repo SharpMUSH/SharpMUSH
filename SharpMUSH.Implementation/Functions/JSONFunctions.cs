@@ -1,4 +1,5 @@
-﻿using SharpMUSH.Implementation.Definitions;
+﻿using MoreLinq;
+using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using System.Collections.Concurrent;
@@ -11,7 +12,12 @@ public partial class Functions
 	public static Dictionary<string, Func<ConcurrentDictionary<string, CallState>, ValueTask<CallState>>> JsonFunctions = new()
 	{
 		{"null", NullJSON},
-		{"boolean", BooleanJSON}
+		{"boolean", BooleanJSON},
+		{"string", StringJSON },
+		{"markupstring", StringJSON }, // TODO: In PennMUSH, this uses their internal markup instead. This currently has no meaning for us yet.
+		{"number", NumberJSON },
+		{"array", ArrayJSON },
+		{"object", ObjectJSON }
 	};
 
 	[SharpFunction(Name = "isjson", MaxArgs = 1, Flags = FunctionFlags.Regular)]
@@ -28,10 +34,10 @@ public partial class Functions
 		}
 	}
 
-	[SharpFunction(Name = "json", Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "json", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
 	public static async ValueTask<CallState> JSON(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> JsonFunctions.TryGetValue(MModule.plainText(parser.CurrentState.Arguments["0"].Message!).ToLower(), out var fun)
-			? await fun(parser.CurrentState.Arguments)
+		=> JsonFunctions.TryGetValue(MModule.plainText(parser.CurrentState.Arguments["0"].Message!).ToLower(), out var jsonFunction)
+			? await jsonFunction(parser.CurrentState.Arguments)
 			: new CallState(MModule.single("#-1 Invalid Type"));
 
 	private static ValueTask<CallState> NullJSON(ConcurrentDictionary<string, CallState> args)
@@ -55,26 +61,90 @@ public partial class Functions
 		};
 	}
 
-	[SharpFunction(Name = "JSON", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> json(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	private static ValueTask<CallState> StringJSON(ConcurrentDictionary<string, CallState> args)
 	{
-		throw new NotImplementedException();
+		if (args.Count != 2)
+		{
+			return ValueTask.FromResult(new CallState(string.Format(Errors.ErrorWrongArgumentsRange, "json", 2, 2, args.Count)));
+		}
+
+		var entry = args["1"].Message;
+
+		return ValueTask.FromResult(new CallState(JsonSerializer.Serialize(entry!.ToString())));
 	}
-	[SharpFunction(Name = "JSON_MAP", MinArgs = 2, MaxArgs = 33, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+
+	private static ValueTask<CallState> NumberJSON(ConcurrentDictionary<string, CallState> args)
+	{
+		if (args.Count != 2)
+		{
+			return ValueTask.FromResult(new CallState(string.Format(Errors.ErrorWrongArgumentsRange, "json", 2, 2, args.Count)));
+		}
+
+		var entry = MModule.plainText(args["1"].Message);
+		if(!decimal.TryParse(entry, out var value))
+		{
+			return ValueTask.FromResult(new CallState(Errors.ErrorNumber));
+		}
+
+		return ValueTask.FromResult(new CallState(JsonSerializer.Serialize(value)));
+	}
+
+	private static ValueTask<CallState> ArrayJSON(ConcurrentDictionary<string, CallState> args)
+	{
+		if (args.Count < 2)
+		{
+			return ValueTask.FromResult(new CallState(string.Format(Errors.ErrorWrongArgumentsRange, "json", 2, int.MaxValue, args.Count)));
+		}
+
+		var sortedArgs = args.AsReadOnly().OrderBy(x => int.Parse(x.Key)).Select(x => x.Value.Message!.ToString()).Skip(1);
+
+		return ValueTask.FromResult(new CallState(JsonSerializer.Serialize(sortedArgs)));
+	}
+
+	private static ValueTask<CallState> ObjectJSON(ConcurrentDictionary<string, CallState> args)
+	{
+		if (args.Count < 3)
+		{
+			return ValueTask.FromResult(new CallState(string.Format(Errors.ErrorWrongArgumentsRange, "json", 2, int.MaxValue, args.Count)));
+		}
+
+		if (args.Count % 2 == 0)
+		{
+			return ValueTask.FromResult(new CallState(string.Format(Errors.ErrorGotEvenArgs,"json")));
+		}
+
+		var sortedArgs = args.AsReadOnly().OrderBy(x => int.Parse(x.Key)).Select(x => x.Value.Message!.ToString()).Skip(1);
+		var chunkedArgs = sortedArgs.Chunk(2);
+		var duplicateKeys = chunkedArgs.Select(x => x[0]).Duplicates();
+		
+		if (duplicateKeys.Any())
+		{
+			return ValueTask.FromResult(new CallState($"#-1 DUPLICATE KEYS: {string.Join(", ", duplicateKeys)}"));
+		}
+
+		var dictionary = chunkedArgs.ToDictionary(x => x.First(), x => x.Last());
+
+		return ValueTask.FromResult(new CallState(JsonSerializer.Serialize(dictionary)));
+	}
+
+	[SharpFunction(Name = "json_map", MinArgs = 2, MaxArgs = 33, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> json_map(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
-	[SharpFunction(Name = "JSON_MOD", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+
+	[SharpFunction(Name = "json_mod", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> json_mod(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
-	[SharpFunction(Name = "JSON_QUERY", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+
+	[SharpFunction(Name = "json_query", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> json_query(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
+
 	[SharpFunction(Name = "OOB", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> oob(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
