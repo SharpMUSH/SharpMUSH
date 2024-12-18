@@ -16,7 +16,7 @@ public static partial class Functions
 	public static ValueTask<CallState> Cand(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(new(parser.CurrentState.Arguments
 			.Select(x => x.Value.Message!)
-			.All(m => Predicates.Truthy(parser.FunctionParse(m).AsTask().Result!.Message!))
+			.All(m => parser.FunctionParse(m).AsTask().Result!.Message.Truthy())
 			? "0"
 			: "1"));
 
@@ -24,7 +24,7 @@ public static partial class Functions
 	public static ValueTask<CallState> Cor(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(new(parser.CurrentState.Arguments
 			.Select(x => x.Value.Message!)
-			.Any(m => Predicates.Truthy(parser.FunctionParse(m).AsTask().Result!.Message!))
+			.Any(m => parser.FunctionParse(m).AsTask().Result!.Message.Truthy())
 			? "1"
 			: "0"));
 
@@ -66,7 +66,7 @@ public static partial class Functions
 		foreach (var m in parser.CurrentState.Arguments.Select(x => x.Value.Message!))
 		{
 			var parsed = await parser.FunctionParse(m);
-			if (Predicates.Falsey(parsed!.Message!))
+			if (parsed!.Message.Falsey())
 			{
 				return new("1");
 			}
@@ -90,13 +90,13 @@ public static partial class Functions
 	[SharpFunction(Name = "ncor", Flags = FunctionFlags.Regular | FunctionFlags.NoParse)]
 	public static ValueTask<CallState> NCor(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(new(parser.CurrentState.Arguments.Select(x => x.Value.Message!)
-			.All(m => Predicates.Falsey(parser.FunctionParse(m).AsTask().Result!.Message!))
+			.All(m => parser.FunctionParse(m).AsTask().Result!.Message.Falsey())
 			? "1"
 			: "0"));
 
 	[SharpFunction(Name = "not", Flags = FunctionFlags.Regular, MinArgs = 1, MaxArgs = 1)]
 	public static ValueTask<CallState> Not(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValueTask.FromResult<CallState>(new(Predicates.Falsey(parser.CurrentState.Arguments.First().Value.Message!)
+		=> ValueTask.FromResult<CallState>(new(parser.CurrentState.Arguments.First().Value.Message.Falsey()
 			? "1"
 			: "0"));
 
@@ -108,7 +108,9 @@ public static partial class Functions
 	[SharpFunction(Name = "t", Flags = FunctionFlags.Regular, MinArgs = 0, MaxArgs = 1)]
 	public static ValueTask<CallState> T(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(
-			new(Predicates.Truthy(parser.CurrentState.Arguments.FirstOrDefault().Value.Message!) ? "1" : "0"));
+			new(parser.CurrentState.Arguments.FirstOrDefault().Value.Message.Truthy() 
+				? "1" 
+				: "0"));
 
 	[SharpFunction(Name = "xor", Flags = FunctionFlags.Regular | FunctionFlags.NoParse)]
 	public static ValueTask<CallState> Xor(IMUSHCodeParser parser, SharpFunctionAttribute _2)

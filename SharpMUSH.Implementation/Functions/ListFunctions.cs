@@ -97,7 +97,7 @@ public partial class Functions
 		var first = parser.CurrentState.Arguments
 			.OrderBy(x => int.Parse(x.Key))
 			.Select(x => x.Value)
-			.FirstOrDefault(x => Predicates.Truthy(x.ParsedMessage().GetAwaiter().GetResult()!), CallState.Empty);
+			.FirstOrDefault(x => x.ParsedMessage().ConfigureAwait(false).GetAwaiter().GetResult().Truthy(), CallState.Empty);
 
 		return first;
 	}

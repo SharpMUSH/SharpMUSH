@@ -11,3 +11,9 @@ public static class Predicates
 	public static bool Falsey(MString text)
 		=> !Truthy(text);
 }
+
+public static class PredicateExtensions
+{
+	public static bool Truthy(this MString? text) => Predicates.Truthy(text ?? MModule.empty());
+	public static bool Falsey(this MString? text) => Predicates.Falsey(text ?? MModule.empty());
+}
