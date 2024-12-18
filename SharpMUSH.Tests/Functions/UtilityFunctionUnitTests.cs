@@ -1,6 +1,7 @@
 ﻿using SharpMUSH.Library;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Tests.Commands;
 
 namespace SharpMUSH.Tests.Functions;
 
@@ -14,7 +15,7 @@ public class UtilityFunctionUnitTests : BaseUnitTest
 		_parser = await TestParser();
 	}
 
-	[Test]
+	[Test, DependsOn<GeneralCommandTests>]
 	public async Task PCreate()
 	{
 		var result = (await _parser!.FunctionParse(MModule.single("pcreate(John,SomePassword)")))?.Message?.ToString()!;

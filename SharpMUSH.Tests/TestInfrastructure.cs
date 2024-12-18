@@ -28,4 +28,9 @@ public class Infrastructure : TestServer
 			.UseStartup(x => new Startup(acnf))
 			.UseEnvironment("test")
 			.UseKestrel(options => options.ListenLocalhost(4202, builder => builder.UseConnectionHandler<TelnetServer>()));
+
+	public new void Dispose()
+	{
+
+	}
 }

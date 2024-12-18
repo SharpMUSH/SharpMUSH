@@ -21,35 +21,53 @@ public class BaseUnitTest
 			.MinimumLevel.Debug()
 			.CreateLogger();
 
-	public static async Task<(ISharpDatabase Database, Infrastructure Infrastructure)> IntegrationServer()
+	protected static ArangoDbContainer? Container;
+	protected static Infrastructure? Infrastructure;
+	protected static ISharpDatabase? Database;
+
+	[After(Assembly)]
+	public static async Task DisposeAssembly()
 	{
-		var container = new ArangoDbBuilder()
+		await Task.CompletedTask;
+		Infrastructure!.Dispose();
+	}
+
+	[Before(Assembly)]
+	public static async Task SetupAssembly()
+	{
+		Container = new ArangoDbBuilder()
 			.WithImage("arangodb:latest")
 			.WithPassword("password")
 			.Build();
 
-		await container.StartAsync()
+		await Container.StartAsync()
 			.ConfigureAwait(false);
 
 		var config = new ArangoConfiguration()
 		{
-			ConnectionString = $"Server={container.GetTransportAddress()};User=root;Realm=;Password=password;",
+			ConnectionString = $"Server={Container!.GetTransportAddress()};User=root;Realm=;Password=password;",
 			Serializer = new ArangoNewtonsoftSerializer(new ArangoNewtonsoftDefaultContractResolver())
 		};
 
-		var testServer = new Infrastructure(config);
-		var database = testServer.Services.GetService(typeof(ISharpDatabase)) as ISharpDatabase;
+		Infrastructure = new Infrastructure(config);
+
+		Database = Infrastructure!.Services.GetService(typeof(ISharpDatabase)) as ISharpDatabase;
 
 		try
 		{
-			await database!.Migrate();
+			await Database!.Migrate();
 		}
 		catch (Exception ex)
 		{
 			Log.Fatal(ex, "Failed to migrate database");
 		}
+	}
 
-		return (database!, testServer);
+	public static async Task<(ISharpDatabase Database, Infrastructure Infrastructure)> IntegrationServer()
+	{
+		await Task.CompletedTask;
+
+		return (Database!, Infrastructure!);
 	}
 
 	public static IBooleanExpressionParser BooleanExpressionTestParser(ISharpDatabase database)
