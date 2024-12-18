@@ -11,9 +11,21 @@ namespace SharpMUSH.Implementation.Functions;
 public partial class Functions
 {
 	[SharpFunction(Name = "ELEMENTS", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> elements(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> elements(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		await Task.CompletedTask;
+
+		var listArg = parser.CurrentState.Arguments["0"].Message;
+		var numbersArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+		var delimiter = NoParseDefaultNoParseArgument(parser.CurrentState.Arguments, 2, MModule.single(" "));
+		var sep = NoParseDefaultNoParseArgument(parser.CurrentState.Arguments, 3, delimiter);
+
+		var list = MModule.split2(delimiter, listArg);
+		var numbers = numbersArg.Split(" ");
+
+		var result = list.Where((item, i) => numbers!.Contains(i.ToString()));
+
+		return new CallState(MModule.multipleWithDelimiter(sep, result));
 	}
 
 	[SharpFunction(Name = "ELIST", MinArgs = 1, MaxArgs = 5, Flags = FunctionFlags.Regular)]
@@ -23,9 +35,35 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "EXTRACT", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> extract(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> extract(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		await Task.CompletedTask;
+
+		var listArg = parser.CurrentState.Arguments["0"].Message;
+		var first = NoParseDefaultNoParseArgument(parser.CurrentState.Arguments, 1, MModule.single("1")).ToPlainText();
+		var length = NoParseDefaultNoParseArgument(parser.CurrentState.Arguments, 2, MModule.single("1")).ToPlainText();
+		var delimiter = NoParseDefaultNoParseArgument(parser.CurrentState.Arguments, 3, MModule.single(" "));
+
+		if (!int.TryParse(first, out var firstNumber))
+		{
+			// TODO: Indicate arg number.
+			return new CallState(Errors.ErrorInteger);
+		}
+		if (!int.TryParse(length, out var lengthNumber))
+		{
+			// TODO: Indicate arg number.
+			return new CallState(Errors.ErrorInteger);
+		}
+
+		var list = MModule.split2(delimiter, listArg);
+		var range = firstNumber > 0
+			? list.Skip(firstNumber - 1)
+			: Enumerable.TakeLast(list, Math.Abs(firstNumber));
+		var result = lengthNumber > 0
+			? range.Take(lengthNumber)
+			: Enumerable.TakeLast(range, Math.Abs(lengthNumber));
+
+		return new CallState(MModule.multipleWithDelimiter(delimiter, result));
 	}
 
 	[SharpFunction(Name = "FILTER", MinArgs = 2, MaxArgs = 35, Flags = FunctionFlags.Regular)]
@@ -52,20 +90,20 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "FIRSTOF", MinArgs = 0, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
-	public static ValueTask<CallState> firstof(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> firstof(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		await Task.CompletedTask;
+
+		var first = parser.CurrentState.Arguments
+			.OrderBy(x => int.Parse(x.Key))
+			.Select(x => x.Value)
+			.FirstOrDefault(x => Predicates.Truthy(x.ParsedMessage().GetAwaiter().GetResult()!), CallState.Empty);
+
+		return first;
 	}
 
 	[SharpFunction(Name = "FOLD", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> fold(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		throw new NotImplementedException();
-	}
-
-	[SharpFunction(Name = "FOLDERSTATS", MinArgs = 0, MaxArgs = 2,
-		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> folderstats(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
@@ -257,7 +295,6 @@ public partial class Functions
 		var globPattern = MModule.plainText(parser.CurrentState.Arguments["1"].Message)!;
 		var regPattern = globPattern.GlobToRegex();
 
-
 		throw new NotImplementedException();
 	}
 
@@ -357,9 +394,19 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "SHUFFLE", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> shuffle(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> shuffle(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		await Task.CompletedTask;
+
+		var listArg = parser.CurrentState.Arguments["0"].Message;
+		var delimiter = NoParseDefaultNoParseArgument(parser.CurrentState.Arguments, 1, MModule.single(" "));
+		var sep = NoParseDefaultNoParseArgument(parser.CurrentState.Arguments, 2, delimiter);
+
+		var list = MModule.split2(delimiter, listArg);
+		var shuffled = list.Shuffle();
+		var result = MModule.multipleWithDelimiter(sep, shuffled);
+
+		return new CallState(result);
 	}
 
 	[SharpFunction(Name = "SORT", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular)]
@@ -381,9 +428,27 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "SPLICE", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> splice(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> splice(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		await Task.CompletedTask;
+		var listArg = parser.CurrentState.Arguments["0"].Message;
+		var list2Arg = parser.CurrentState.Arguments["1"].Message;
+		var wordArg = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
+		var delimiter = NoParseDefaultNoParseArgument(parser.CurrentState.Arguments, 3, MModule.single(" "));
+
+		var list = MModule.split2(delimiter, listArg);
+		var list2 = MModule.split2(delimiter, list2Arg);
+
+		if (list.Length != list2.Length)
+		{
+			return new CallState("#-1 NUMBER OF WORDS MUST BE EQUAL");
+		}
+
+		var zippedList = list.Zip(list2);
+		var spliced = zippedList.Select(pair => pair.First.ToPlainText() == wordArg ? pair.Second : pair.First);
+		var result = MModule.multipleWithDelimiter(delimiter, spliced);
+
+		return new CallState(result);
 	}
 
 	[SharpFunction(Name = "STEP", MinArgs = 3, MaxArgs = 5, Flags = FunctionFlags.Regular)]
@@ -420,17 +485,9 @@ public partial class Functions
 	public static async ValueTask<CallState> ListCount(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var delim = await NoParseDefaultEvaluatedArgument(parser, 2, " ");
-		var list = MModule.split2(
-			delim,
-			(await parser.CurrentState.Arguments["0"].ParsedMessage())!);
+		var list = MModule.split2(delim, (await parser.CurrentState.Arguments["0"].ParsedMessage())!);
 
 		return new CallState(list.Length.ToString());
-	}
-
-	[SharpFunction(Name = "VDIM", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> vdim(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		throw new NotImplementedException();
 	}
 
 	[SharpFunction(Name = "LINSERT", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular)]

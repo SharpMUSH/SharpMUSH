@@ -429,4 +429,13 @@ public static partial class Functions
 	[SharpFunction(Name = "vunit", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> vunit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> SingleVectorOperation(parser, Vector.OnesComplement);
+
+	[SharpFunction(Name = "vdim", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public static ValueTask<CallState> vdim(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> ValueTask.FromResult(new CallState(
+			MModule.split2(
+				NoParseDefaultNoParseArgument(parser.CurrentState.Arguments, 1, MModule.single(" ")),
+				parser.CurrentState.Arguments["0"].Message).Length.ToString()
+			));
+
 }
