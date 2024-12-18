@@ -272,19 +272,19 @@ public class ArangoDatabase(
 				new Dictionary<string, object>() { { "startVertex", id } });
 		}
 
-		var sharpAttributes = sharpAttributeResults.Select(async x => 
+		var sharpAttributes = sharpAttributeResults.Select(async x =>
 			new SharpAttribute(
-				Key:x.Key, 
-				Name: x.Name, 
-				Flags: await GetAttributeFlagsAsync(x.Id), 
-				CommandListIndex: null, 
+				Key: x.Key,
+				Name: x.Name,
+				Flags: await GetAttributeFlagsAsync(x.Id),
+				CommandListIndex: null,
 				LongName: x.LongName,
-				Leaves: new(() => GetTopLevelAttributesAsync(x.Id).AsTask().Result), 
-				Owner: new(() => GetAttributeOwnerAsync(x.Id).AsTask().Result), 
+				Leaves: new(() => GetTopLevelAttributesAsync(x.Id).AsTask().Result),
+				Owner: new(() => GetAttributeOwnerAsync(x.Id).AsTask().Result),
 				SharpAttributeEntry: new(() => null))
-		{
-			Value = MarkupStringModule.deserialize(x.Value)
-		});
+			{
+				Value = MarkupStringModule.deserialize(x.Value)
+			});
 
 		return await Task.WhenAll(sharpAttributes);
 	}
@@ -970,8 +970,8 @@ public class ArangoDatabase(
 			waitForSync: true);
 	}
 
-		ValueTask<bool> ISharpDatabase.UnsetAttributeFlagAsync(SharpAttribute attr, SharpAttributeFlag flag)
-		{
-				throw new NotImplementedException();
-		}
+	ValueTask<bool> ISharpDatabase.UnsetAttributeFlagAsync(SharpAttribute attr, SharpAttributeFlag flag)
+	{
+		throw new NotImplementedException();
+	}
 }

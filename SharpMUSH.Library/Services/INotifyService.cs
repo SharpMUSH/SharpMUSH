@@ -21,7 +21,7 @@ public interface INotifyService
 	}
 
 	// TODO: Add a 'sender' for Noisy etc rules.
-	ValueTask Notify(DBRef who, OneOf<MString,string> what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
+	ValueTask Notify(DBRef who, OneOf<MString, string> what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
 
 	ValueTask Notify(AnySharpObject who, OneOf<MString, string> what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
 

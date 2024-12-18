@@ -254,7 +254,7 @@ public static partial class Commands
 		parser.CurrentState.Arguments.TryGetValue("1", out var exitToCallState);
 		parser.CurrentState.Arguments.TryGetValue("2", out var exitFromCallState);
 		var exitTo = exitToCallState?.Message;
-		var exitFrom = exitFromCallState?.Message;	
+		var exitFrom = exitFromCallState?.Message;
 
 		if (string.IsNullOrWhiteSpace(parser.CurrentState.Arguments["0"].Message!.ToString()))
 		{
@@ -290,7 +290,7 @@ public static partial class Commands
 			var newRoomObject = await parser.Mediator.Send(new GetObjectNodeQuery(response));
 
 			var fromExitResponse = await parser.Mediator.Send(new CreateExitCommand(exitFromName.First(), exitFromName.Skip(1).ToArray(), newRoomObject.AsRoom, executor.Owner.Value));
-			
+
 			await parser.NotifyService.Notify(executor.DBRef, $"Opened exit #{fromExitResponse.Number}");
 			await parser.NotifyService.Notify(executor.DBRef, "Trying to link...");
 			await parser.NotifyService.Notify(executor.DBRef, $"Linked exit #{fromExitResponse.Number} to #{executorBase.Where.Object().DBRef.Number}");

@@ -10,7 +10,7 @@ public class SetAttributeFlagCommandHandler(ISharpDatabase database) : ICommandH
 	{
 		await database.SetAttributeFlagAsync(request.Target, request.Flag);
 		return true;
-		}
+	}
 }
 
 public class UnsetAttributeFlagCommandHandler(ISharpDatabase database) : ICommandHandler<UnsetAttributeFlagCommand, bool>

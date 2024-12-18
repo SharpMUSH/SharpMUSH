@@ -5,9 +5,9 @@ namespace SharpMUSH.Library.Services;
 
 public interface ILockService
 {
-		bool Evaluate(string lockString, AnySharpObject gated, AnySharpObject unlocker);
+	bool Evaluate(string lockString, AnySharpObject gated, AnySharpObject unlocker);
 
-		bool Evaluate(LockType standardType, AnySharpObject gated, AnySharpObject unlocker);
+	bool Evaluate(LockType standardType, AnySharpObject gated, AnySharpObject unlocker);
 
-		bool Set(LockType standardType, string lockString, AnySharpObject lockee);
+	bool Set(LockType standardType, string lockString, AnySharpObject lockee);
 }

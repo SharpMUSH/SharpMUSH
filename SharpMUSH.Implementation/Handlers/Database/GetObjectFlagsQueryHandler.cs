@@ -8,11 +8,11 @@ namespace SharpMUSH.Implementation.Handlers.Database;
 public class GetAllObjectFlagsQueryHandler(ISharpDatabase database)
 	: IQueryHandler<GetAllObjectFlagsQuery, IEnumerable<SharpObjectFlag>>
 {
-		public async ValueTask<IEnumerable<SharpObjectFlag>> Handle(GetAllObjectFlagsQuery request,
-			CancellationToken cancellationToken)
-		{
-				return await database.GetObjectFlagsAsync();
-		}
+	public async ValueTask<IEnumerable<SharpObjectFlag>> Handle(GetAllObjectFlagsQuery request,
+		CancellationToken cancellationToken)
+	{
+		return await database.GetObjectFlagsAsync();
+	}
 }
 
 public class GetObjectFlagQueryHandler(ISharpDatabase database)

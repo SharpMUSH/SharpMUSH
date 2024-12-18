@@ -8,15 +8,15 @@ namespace SharpMUSH.Implementation.Handlers.Telnet;
 public class TelnetInputRequestHandler(ILogger<TelnetInputRequestHandler> logger, ITaskScheduler scheduler)
 	: INotificationHandler<TelnetInputRequest>
 {
-		public async ValueTask Handle(TelnetInputRequest request, CancellationToken ct)
+	public async ValueTask Handle(TelnetInputRequest request, CancellationToken ct)
+	{
+		try
 		{
-				try
-				{
-						await scheduler.WriteUserCommand(request.Handle, MModule.single(request.Input), null);
-				}
-				catch (Exception ex)
-				{
-						logger.LogCritical(ex, nameof(TelnetInputRequest));
-				}
+			await scheduler.WriteUserCommand(request.Handle, MModule.single(request.Input), null);
 		}
+		catch (Exception ex)
+		{
+			logger.LogCritical(ex, nameof(TelnetInputRequest));
+		}
+	}
 }

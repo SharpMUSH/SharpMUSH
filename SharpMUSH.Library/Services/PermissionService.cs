@@ -8,20 +8,20 @@ public class PermissionService(ILockService lockService) : IPermissionService
 {
 	public bool CanSet(AnySharpObject executor, AnySharpObject target, params SharpAttribute[] attribute)
 	{
-		if(!Controls(executor, target)) return false;
+		if (!Controls(executor, target)) return false;
 
-		var compressedAttribute = attribute[^1] with 
-		{ 
+		var compressedAttribute = attribute[^1] with
+		{
 			Flags = attribute.SelectMany(a => a.Flags)
 											 .Where(x => x.Inheritable == true)
 											 .DistinctBy(x => x.Name)
 		};
 
-		return !(!executor.IsGod() 
+		return !(!executor.IsGod()
 			// && (It's Internal // SAFE when we care about SAFE)
 			|| !(executor.IsWizard()
 				|| (!compressedAttribute.IsWizard()
-					&& (!compressedAttribute.IsLocked() 
+					&& (!compressedAttribute.IsLocked()
 						|| compressedAttribute.Owner.Value == target.Object().Owner.Value))));
 	}
 

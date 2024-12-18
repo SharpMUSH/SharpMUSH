@@ -9,15 +9,15 @@ namespace SharpMUSH.Library.ParserInterfaces;
 
 public enum ParseMode
 {
-		Default,
-		NoParse
+	Default,
+	NoParse
 }
 
 public class IterationWrapper<T>
 {
-		public required T Value { get; set; }
-		public uint Iteration { get; set; } = 0;
-		public bool Break { get; set; } = false;
+	public required T Value { get; set; }
+	public uint Iteration { get; set; } = 0;
+	public bool Break { get; set; } = false;
 }
 
 public record ParserState(
@@ -36,33 +36,33 @@ public record ParserState(
 	string? Handle,
 	ParseMode ParseMode = ParseMode.Default)
 {
-		private AnyOptionalSharpObject? _executorObject;
-		private AnyOptionalSharpObject? _enactorObject;
-		private AnyOptionalSharpObject? _callerObject;
+	private AnyOptionalSharpObject? _executorObject;
+	private AnyOptionalSharpObject? _enactorObject;
+	private AnyOptionalSharpObject? _callerObject;
 
-		public async ValueTask<AnyOptionalSharpObject> ExecutorObject(IMediator mediator)
-			=> _executorObject ??= Executor is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Executor.Value));
+	public async ValueTask<AnyOptionalSharpObject> ExecutorObject(IMediator mediator)
+		=> _executorObject ??= Executor is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Executor.Value));
 
-		public async ValueTask<AnyOptionalSharpObject> EnactorObject(IMediator mediator)
-			=> _enactorObject ??= Enactor is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Enactor.Value));
+	public async ValueTask<AnyOptionalSharpObject> EnactorObject(IMediator mediator)
+		=> _enactorObject ??= Enactor is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Enactor.Value));
 
-		public async ValueTask<AnyOptionalSharpObject> CallerObject(IMediator mediator)
-			=> _callerObject ??= Caller is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Caller.Value));
+	public async ValueTask<AnyOptionalSharpObject> CallerObject(IMediator mediator)
+		=> _callerObject ??= Caller is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Caller.Value));
 
-		public bool AddRegister(string register, MString value)
+	public bool AddRegister(string register, MString value)
+	{
+		// TODO: Validate Register Pattern
+
+		var canPeek = Registers.TryPeek(out var top);
+		if (!canPeek)
 		{
-				// TODO: Validate Register Pattern
-
-				var canPeek = Registers.TryPeek(out var top);
-				if (!canPeek)
-				{
-						throw new Exception("Could not peek!");
-				}
-				if (!top!.TryAdd(register, value))
-				{
-						top[register] = value;
-				}
-
-				return true;
+			throw new Exception("Could not peek!");
 		}
+		if (!top!.TryAdd(register, value))
+		{
+			top[register] = value;
+		}
+
+		return true;
+	}
 }

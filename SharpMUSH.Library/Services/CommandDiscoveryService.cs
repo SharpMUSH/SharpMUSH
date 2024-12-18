@@ -34,7 +34,7 @@ public partial class CommandDiscoveryService : ICommandDiscoveryService
 						.Select(attr =>
 							{
 								var match = CommandPatternRegex().Match(MModule.plainText(attr.Value));
-								return (Obj: sharpObj, Attr: attr with { CommandListIndex = match.Length}, Pattern: match);
+								return (Obj: sharpObj, Attr: attr with { CommandListIndex = match.Length }, Pattern: match);
 							})
 					);
 

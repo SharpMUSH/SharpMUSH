@@ -6,60 +6,60 @@ namespace SharpMUSH.Library.DiscriminatedUnions;
 [GenerateOneOf]
 public class AnySharpObject : OneOfBase<SharpPlayer, SharpRoom, SharpExit, SharpThing>
 {
-		public AnySharpObject(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> input) : base(input) { }
-		public static implicit operator AnySharpObject(SharpPlayer x) => new(x);
-		public static implicit operator AnySharpObject(SharpRoom x) => new(x);
-		public static implicit operator AnySharpObject(SharpExit x) => new(x);
-		public static implicit operator AnySharpObject(SharpThing x) => new(x);
+	public AnySharpObject(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> input) : base(input) { }
+	public static implicit operator AnySharpObject(SharpPlayer x) => new(x);
+	public static implicit operator AnySharpObject(SharpRoom x) => new(x);
+	public static implicit operator AnySharpObject(SharpExit x) => new(x);
+	public static implicit operator AnySharpObject(SharpThing x) => new(x);
 
-		public AnySharpContainer Where => Match(
-			player => player.Location.Value,
+	public AnySharpContainer Where => Match(
+		player => player.Location.Value,
+		room => room,
+		exit => exit.Location.Value,
+		thing => thing.Location.Value
+	);
+
+	public AnySharpContainer MinusExit()
+		=> Match<AnySharpContainer>(
+			player => player,
 			room => room,
-			exit => exit.Location.Value,
-			thing => thing.Location.Value
+			exit => throw new ArgumentException("Cannot convert an exit to a non-exit."),
+			thing => thing
 		);
 
-		public AnySharpContainer MinusExit()
-			=> Match<AnySharpContainer>(
-				player => player,
-				room => room,
-				exit => throw new ArgumentException("Cannot convert an exit to a non-exit."),
-				thing => thing
-			);
-
-		public AnySharpContent MinusRoom()
-			=> Match<AnySharpContent>(
-				player => player,
-				room => throw new ArgumentException("Cannot convert an room to a non-room."),
-				exit => exit,
-				thing => thing
-			);
-
-		public bool IsPlayer => IsT0;
-		public bool IsRoom => IsT1;
-		public bool IsExit => IsT2;
-		public bool IsThing => IsT3;
-
-		public bool IsContent => IsPlayer || IsExit || IsThing;
-
-		public AnySharpContent AsContent => this.Match<AnySharpContent>(
+	public AnySharpContent MinusRoom()
+		=> Match<AnySharpContent>(
 			player => player,
-			room => throw new ArgumentException("Cannot convert a room to content."),
+			room => throw new ArgumentException("Cannot convert an room to a non-room."),
 			exit => exit,
 			thing => thing
 		);
 
-		public AnySharpContainer AsContainer => this.Match<AnySharpContainer>(
-			player => player,
-			room => room,
-			exit => throw new ArgumentException("Cannot convert an exit to container."),
-			thing => thing
-		);
+	public bool IsPlayer => IsT0;
+	public bool IsRoom => IsT1;
+	public bool IsExit => IsT2;
+	public bool IsThing => IsT3;
 
-		public bool IsContainer => IsPlayer || IsRoom || IsThing;
+	public bool IsContent => IsPlayer || IsExit || IsThing;
 
-		public SharpPlayer AsPlayer => AsT0;
-		public SharpRoom AsRoom => AsT1;
-		public SharpExit AsExit => AsT2;
-		public SharpThing AsThing => AsT3;
+	public AnySharpContent AsContent => this.Match<AnySharpContent>(
+		player => player,
+		room => throw new ArgumentException("Cannot convert a room to content."),
+		exit => exit,
+		thing => thing
+	);
+
+	public AnySharpContainer AsContainer => this.Match<AnySharpContainer>(
+		player => player,
+		room => room,
+		exit => throw new ArgumentException("Cannot convert an exit to container."),
+		thing => thing
+	);
+
+	public bool IsContainer => IsPlayer || IsRoom || IsThing;
+
+	public SharpPlayer AsPlayer => AsT0;
+	public SharpRoom AsRoom => AsT1;
+	public SharpExit AsExit => AsT2;
+	public SharpThing AsThing => AsT3;
 }

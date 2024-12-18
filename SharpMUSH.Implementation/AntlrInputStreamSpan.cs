@@ -6,7 +6,7 @@ namespace SharpMUSH.Implementation;
 internal class AntlrInputStreamSpan(string input, string sourceName) : ICharStream, IIntStream
 {
 	private readonly char[] _data = input.ToCharArray();
-	
+
 	private readonly int n = input.Length;
 
 	private int p = 0;
@@ -45,7 +45,7 @@ internal class AntlrInputStreamSpan(string input, string sourceName) : ICharStre
 			return string.Empty;
 		}
 
-		return Data.Slice(a,count).ToString();
+		return Data.Slice(a, count).ToString();
 	}
 
 	public int LA(int i)

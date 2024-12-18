@@ -166,5 +166,5 @@ public interface ISharpDatabase
 	/// <param name="depth">Depth</param>
 	/// <returns>The deepest findable object based on depth</returns>
 	ValueTask<AnySharpContainer> GetLocationAsync(string id, int depth = 1);
-		ValueTask<IEnumerable<SharpObjectFlag>> GetObjectFlagsAsync(string id);
+	ValueTask<IEnumerable<SharpObjectFlag>> GetObjectFlagsAsync(string id);
 }

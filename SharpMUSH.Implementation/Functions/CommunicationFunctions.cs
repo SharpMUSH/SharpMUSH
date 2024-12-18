@@ -25,9 +25,9 @@ public partial class Functions
 				heard.Add(obj.Object().DBRef);
 
 				await parser.NotifyService.Notify(
-					obj.WithRoomOption(), 
-					parser.CurrentState.Arguments["0"].Message!, 
-					executor.WithoutNone(), 
+					obj.WithRoomOption(),
+					parser.CurrentState.Arguments["0"].Message!,
+					executor.WithoutNone(),
 					INotifyService.NotificationType.Emit);
 			}
 		}
@@ -54,7 +54,7 @@ public partial class Functions
 		// TODO: Can No Spoof?
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).WithoutNone();
 		var spoofType = executor.HasPower("NOSPOOF") || executor.IsWizard() || executor.IsGod()
-			? INotifyService.NotificationType.NSEmit 
+			? INotifyService.NotificationType.NSEmit
 			: INotifyService.NotificationType.Emit;
 
 		var contents = await parser.Mediator.Send(new GetContentsQuery(executor.Where)) ?? [];
