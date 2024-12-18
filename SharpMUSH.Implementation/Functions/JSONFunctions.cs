@@ -123,9 +123,9 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState(string.Format(Errors.ErrorGotEvenArgs, "json")));
 		}
 
-		var sortedArgs = args.AsReadOnly().OrderBy(x => int.Parse(x.Key)).Select(x => x.Value.Message!.ToString()).Skip(1);
+		var sortedArgs = args.AsReadOnly().OrderBy(x => int.Parse(x.Key)).Select(x => x.Value.Message!).Skip(1);
 		var chunkedArgs = sortedArgs.Chunk(2);
-		var duplicateKeys = chunkedArgs.Select(x => x[0]).Duplicates();
+		var duplicateKeys = chunkedArgs.Select(x => x[0].ToPlainText()).Duplicates();
 
 		if (duplicateKeys.Any())
 		{
@@ -134,7 +134,7 @@ public partial class Functions
 
 		try
 		{
-			var dictionary = chunkedArgs.ToDictionary(x => x.First(), x => JsonDocument.Parse(x.Last()).RootElement);
+			var dictionary = chunkedArgs.ToDictionary(x => x[0].ToPlainText(), x => JsonDocument.Parse(x[1].ToString()).RootElement);
 			return ValueTask.FromResult(new CallState(JsonSerializer.Serialize(dictionary)));
 		}
 		catch (JsonException)
