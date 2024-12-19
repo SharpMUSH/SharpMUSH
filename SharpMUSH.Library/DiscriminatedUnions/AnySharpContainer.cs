@@ -32,6 +32,12 @@ public class AnySharpContainer : OneOfBase<SharpPlayer, SharpRoom, SharpThing>
 		thing => thing.Id!
 	);
 
+	public AnySharpContainer Location => Match(
+		player => player.Location.Value,
+		room => room,
+		thing => thing.Location.Value
+	);
+
 	public bool IsPlayer => IsT0;
 	public bool IsRoom => IsT1;
 	public bool IsThing => IsT2;

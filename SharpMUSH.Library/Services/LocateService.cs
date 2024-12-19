@@ -6,6 +6,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using System.Text.RegularExpressions;
+using static MarkupString.MarkupStringModule;
 
 namespace SharpMUSH.Library.Services;
 
@@ -440,14 +441,25 @@ public partial class LocateService : ILocateService
 			: minusRoom.Location().Object().DBRef;
 	}
 
-	public static AnySharpContainer FriendlyWhereIs(AnySharpObject thing)
+	public AnySharpContainer Room(AnySharpObject content)
 	{
-		if (thing.IsRoom) return thing.AsRoom;
-		var minusRoom = thing.MinusRoom();
-		return thing.IsExit
-			? minusRoom.Home()
-			: minusRoom.Location();
+		var currentLocation = FriendlyWhereIs(content);
+
+		// REMARKS: This does not protect against loops. Better make sure loops can't happen!
+		while (currentLocation.Id != currentLocation.Location.Id)
+		{
+			currentLocation = currentLocation.Location;
+		}
+
+		return currentLocation;
 	}
+
+	public static AnySharpContainer FriendlyWhereIs(AnySharpObject thing) => thing.Match(
+			player => player.Location.Value,
+			room => room,
+			exit => exit.Home.Value,
+			thing => thing.Location.Value
+		);
 
 	public static bool Nearby(
 		AnySharpObject obj1,

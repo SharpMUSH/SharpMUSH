@@ -1,5 +1,4 @@
 ﻿using SharpMUSH.Implementation.Definitions;
-using SharpMUSH.Library;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -32,14 +31,31 @@ public partial class Functions
 			}
 		}
 
-		// return new CallState(string.Join(" ", heard.Select(x => x.ToString())));
 		return CallState.Empty;
 	}
 
-	[SharpFunction(Name = "LEMIT", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> lemit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "lemit", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
+	public static async ValueTask<CallState> lemit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.ExecutorObject(parser.Mediator);
+		var contents = await parser.Mediator.Send(new GetContentsQuery(parser.LocateService.Room(executor.WithoutNone()))) ?? [];
+		var heard = new List<DBRef>();
+
+		foreach (var obj in contents)
+		{
+			if (parser.PermissionService.CanInteract(obj.WithRoomOption(), executor.WithoutNone(), InteractType.Hear))
+			{
+				heard.Add(obj.Object().DBRef);
+
+				await parser.NotifyService.Notify(
+					obj.WithRoomOption(),
+					parser.CurrentState.Arguments["0"].Message!,
+					executor.WithoutNone(),
+					INotifyService.NotificationType.Emit);
+			}
+		}
+
+		return CallState.Empty;
 	}
 
 	[SharpFunction(Name = "MESSAGE", MinArgs = 3, MaxArgs = 14, Flags = FunctionFlags.Regular)]
@@ -51,9 +67,8 @@ public partial class Functions
 	[SharpFunction(Name = "nsemit", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 	public static async ValueTask<CallState> NSEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// TODO: Can No Spoof?
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).WithoutNone();
-		var spoofType = executor.HasPower("NOSPOOF") || executor.IsWizard() || executor.IsGod()
+		var spoofType = parser.PermissionService.CanNoSpoof(executor)
 			? INotifyService.NotificationType.NSEmit
 			: INotifyService.NotificationType.Emit;
 
@@ -74,14 +89,35 @@ public partial class Functions
 			}
 		}
 
-		// string.Join(" ", heard.Select(x => x.ToString()))
 		return CallState.Empty;
 	}
 
-	[SharpFunction(Name = "NSLEMIT", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> nslemit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "nslemit", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
+	public static async ValueTask<CallState> nslemit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).WithoutNone();
+		var spoofType = parser.PermissionService.CanNoSpoof(executor)
+			? INotifyService.NotificationType.NSEmit
+			: INotifyService.NotificationType.Emit;
+
+		var contents = await parser.Mediator.Send(new GetContentsQuery(parser.LocateService.Room(executor))) ?? [];
+		var heard = new List<DBRef>();
+
+		foreach (var obj in contents)
+		{
+			if (parser.PermissionService.CanInteract(obj.WithRoomOption(), executor, InteractType.Hear))
+			{
+				heard.Add(obj.Object().DBRef);
+
+				await parser.NotifyService.Notify(
+					obj.WithRoomOption(),
+					parser.CurrentState.Arguments["0"].Message!,
+					executor,
+					spoofType);
+			}
+		}
+
+		return CallState.Empty;
 	}
 
 	[SharpFunction(Name = "NSOEMIT", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
@@ -140,30 +176,6 @@ public partial class Functions
 
 	[SharpFunction(Name = "ZEMIT", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> zemit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		throw new NotImplementedException();
-	}
-
-	[SharpFunction(Name = "CBUFFER", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> cinfo(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		throw new NotImplementedException();
-	}
-
-	[SharpFunction(Name = "CDESC", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> cdesc(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		throw new NotImplementedException();
-	}
-
-	[SharpFunction(Name = "CMSGS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> cmsg(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		throw new NotImplementedException();
-	}
-
-	[SharpFunction(Name = "CUSERS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> cusers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}

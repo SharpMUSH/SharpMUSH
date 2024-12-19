@@ -49,4 +49,6 @@ public interface ILocateService
 		AnySharpObject executor,
 		string name,
 		LocateFlags flags);
+
+	public AnySharpContainer Room(AnySharpObject content);
 }

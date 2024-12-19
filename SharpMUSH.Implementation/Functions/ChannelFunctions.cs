@@ -70,4 +70,28 @@ public partial class Functions
 	{
 		throw new NotImplementedException();
 	}
+
+	[SharpFunction(Name = "CBUFFER", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
+	public static ValueTask<CallState> cinfo(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		throw new NotImplementedException();
+	}
+
+	[SharpFunction(Name = "CDESC", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
+	public static ValueTask<CallState> cdesc(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		throw new NotImplementedException();
+	}
+
+	[SharpFunction(Name = "CMSGS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public static ValueTask<CallState> cmsg(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		throw new NotImplementedException();
+	}
+
+	[SharpFunction(Name = "CUSERS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public static ValueTask<CallState> cusers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		throw new NotImplementedException();
+	}
 }

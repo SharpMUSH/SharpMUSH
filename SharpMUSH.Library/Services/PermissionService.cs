@@ -132,4 +132,7 @@ public class PermissionService(ILockService lockService) : IPermissionService
 		var _3 = destination;
 		return true;
 	}
+
+	public bool CanNoSpoof(AnySharpObject executor)
+		=> executor.HasPower("NOSPOOF") || executor.IsWizard() || executor.IsGod();
 }
