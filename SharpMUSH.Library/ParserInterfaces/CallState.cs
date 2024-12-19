@@ -3,14 +3,12 @@
 public record CallState(MString? Message, int Depth, MString[]? Arguments, Func<Task<MString?>> ParsedMessage)
 {
 	public CallState(MString? Message, int Depth)
-		: this(Message ?? MModule.empty(), Depth, null, () => Task.FromResult(Message))
-	{
-	}
+		: this(Message ?? MModule.empty(), Depth, null, () => Task.FromResult(Message)) { }
 
 	public CallState(MString? Message)
-		: this(Message ?? MModule.empty(), 0, null, () => Task.FromResult(Message))
-	{
-	}
+		: this(Message ?? MModule.empty(), 0, null, () => Task.FromResult(Message)) { }
+
+	public CallState(int Message) : this(Message.ToString()) { }
 
 	public CallState(string Message)
 		: this(
