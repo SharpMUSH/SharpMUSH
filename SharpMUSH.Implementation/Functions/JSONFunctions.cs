@@ -63,7 +63,7 @@ public partial class Functions
 		var json = args["0"].Message!.ToString();
 		var action = args["1"].Message!.ToPlainText().ToLower();
 		var path = args["2"].Message!.ToPlainText();
-		var json2 = args.Count > 3 ? args["3"].Message!.ToString() : null;
+		var json2 = args.Count > 3 ? args["3"].Message?.ToString() : null;
 
 		try
 		{

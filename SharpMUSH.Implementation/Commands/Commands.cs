@@ -225,9 +225,8 @@ public static partial class Commands
 			Arguments = new(new Dictionary<string, CallState> { { "0", new(exit.Object.DBRef.ToString(), 0) } }),
 			Function = null
 		});
-		var result = await _commandLibrary.Single(x => x.Key == "GOTO").Value.Function.Invoke(newParser);
-
-		return result;
+		
+		return await _commandLibrary.Single(x => x.Key == "GOTO").Value.Function.Invoke(newParser);
 	}
 
 	private static async ValueTask<Option<CallState>> HandleInternalCommandPattern(IMUSHCodeParser parser, MString source,
@@ -245,9 +244,8 @@ public static partial class Commands
 				.ToDictionary()),
 			Function = null
 		});
-		var result = await libraryCommandDefinition.Function.Invoke(newParser);
 
-		return result;
+		return await libraryCommandDefinition.Function.Invoke(newParser);
 	}
 
 	private static async ValueTask<Option<CallState>> HandleSocketCommandPattern(IMUSHCodeParser parser, MString source,
@@ -268,9 +266,7 @@ public static partial class Commands
 		});
 
 		// Run as Socket Command. 
-		var result = await socketCommandPattern.First().Value.Function.Invoke(newParser);
-
-		return result;
+		return await socketCommandPattern.First().Value.Function.Invoke(newParser);
 	}
 
 	private static async ValueTask<Option<CallState>> HandleSingleTokenCommandPattern(IMUSHCodeParser parser,
@@ -296,9 +292,7 @@ public static partial class Commands
 			}
 		);
 
-		var result = await singleLibraryCommandDefinition.Function.Invoke(newParser);
-
-		return result;
+		return await singleLibraryCommandDefinition.Function.Invoke(newParser);
 	}
 
 	private static async ValueTask<List<CallState>> ArgumentSplit(IMUSHCodeParser parser, MString source,
