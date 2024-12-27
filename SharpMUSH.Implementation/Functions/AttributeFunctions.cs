@@ -329,11 +329,68 @@ public partial class Functions
 	{
 		throw new NotImplementedException();
 	}
+	
 	[SharpFunction(Name = "UDEFAULT", MinArgs = 2, MaxArgs = 34, Flags = FunctionFlags.NoParse)]
-	public static ValueTask<CallState> udefault(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> udefault(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var dbrefAndAttr = HelperFunctions.SplitDBRefAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+
+		if (dbrefAndAttr is { IsT1: true, AsT1: false })
+		{
+			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
+		}
+
+		var (dbref, attribute) = dbrefAndAttr.AsT0;
+
+		var executor = (await parser.Mediator.Send(new GetObjectNodeQuery(parser.CurrentState.Executor!.Value))).WithoutNone();
+		var maybeDBref = await parser.LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, dbref, Library.Services.LocateFlags.All);
+
+		if (!maybeDBref.IsValid())
+		{
+			return new CallState(maybeDBref.IsError ? maybeDBref.AsError.Value : Errors.ErrorCantSeeThat);
+		}
+
+		var actualObject = maybeDBref.WithoutError().WithoutNone();
+
+		var maybeAttr = await parser.AttributeService.GetAttributeAsync(
+			executor,
+			actualObject,
+			attribute,
+			mode: Library.Services.IAttributeService.AttributeMode.Execute,
+			parent: false);
+
+		if (maybeAttr.IsError)
+		{
+			return new CallState(maybeAttr.AsError.Value);
+		}
+
+		var orderedArguments = parser.CurrentState.Arguments.OrderBy(x => int.Parse(x.Key))
+			.Skip(1);
+		
+		if (maybeAttr.IsNone)
+		{
+			return new CallState(await orderedArguments.Last().Value.ParsedMessage());
+		}
+		
+		var get = maybeAttr.AsAttribute;
+
+		var newParser = parser.Push(parser.CurrentState with
+		{
+			CurrentEvaluation = new DBAttribute(actualObject.Object().DBRef, get.Name),
+			Arguments = new(orderedArguments
+				.SkipLast(1)
+				.Select(
+					(value, i) => new KeyValuePair<string, CallState>(
+						i.ToString(), 
+						new CallState(value.Value.ParsedMessage().GetAwaiter().GetResult())))
+				.ToDictionary())
+		});
+
+		var parsed = await newParser.FunctionParse(get.Value);
+
+		return parsed!;
 	}
+	
 	[SharpFunction(Name = "ULDEFAULT", MinArgs = 2, MaxArgs = 34, Flags = FunctionFlags.NoParse | FunctionFlags.Localize)]
 	public static ValueTask<CallState> uldefault(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -343,8 +400,6 @@ public partial class Functions
 	[SharpFunction(Name = "ufun", MinArgs = 1, MaxArgs = 33, Flags = FunctionFlags.Regular)]
 	public static async ValueTask<CallState> Ufun(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// TODO: Fix all of this.
-
 		var dbrefAndAttr = HelperFunctions.SplitDBRefAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
 
 		if (dbrefAndAttr.IsT1 && dbrefAndAttr.AsT1 == false)
