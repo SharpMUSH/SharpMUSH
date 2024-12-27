@@ -29,6 +29,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.Database.ArangoDB
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.Database.SurrealDB", "SharpMUSH.Database.SurrealDB\SharpMUSH.Database.SurrealDB.csproj", "{F6BE4408-98A2-4D5B-9EBC-4615D7230E79}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.Documentation", "SharpMUSH.Documentation\SharpMUSH.Documentation.csproj", "{86850F51-1866-497F-98EF-07EC00918294}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -71,6 +73,10 @@ Global
 		{F6BE4408-98A2-4D5B-9EBC-4615D7230E79}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F6BE4408-98A2-4D5B-9EBC-4615D7230E79}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F6BE4408-98A2-4D5B-9EBC-4615D7230E79}.Release|Any CPU.Build.0 = Release|Any CPU
+		{86850F51-1866-497F-98EF-07EC00918294}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{86850F51-1866-497F-98EF-07EC00918294}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{86850F51-1866-497F-98EF-07EC00918294}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{86850F51-1866-497F-98EF-07EC00918294}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
