@@ -7,26 +7,22 @@ internal class AntlrInputStreamSpan(string input, string sourceName) : ICharStre
 {
 	private readonly char[] _data = input.ToCharArray();
 
-	private readonly int n = input.Length;
-
-	private int p = 0;
-
 	private ReadOnlySpan<char> Data => _data;
 
-	public int Index => p;
-
-	public int Size => n;
+	public int Index { get; private set; }
+	
+	public int Size { get; } = input.Length;
 
 	public string SourceName => sourceName;
 
 	public void Consume()
 	{
-		if (p >= n)
+		if (Index >= Size)
 		{
 			throw new InvalidOperationException("cannot consume EOF");
 		}
 
-		p++;
+		Index++;
 	}
 
 	[return: NotNull]
@@ -34,13 +30,13 @@ internal class AntlrInputStreamSpan(string input, string sourceName) : ICharStre
 	{
 		var a = interval.a;
 		var num = interval.b;
-		if (num >= n)
+		if (num >= Size)
 		{
-			num = n - 1;
+			num = Size - 1;
 		}
 
 		var count = num - a + 1;
-		if (a >= n)
+		if (a >= Size)
 		{
 			return string.Empty;
 		}
@@ -58,39 +54,36 @@ internal class AntlrInputStreamSpan(string input, string sourceName) : ICharStre
 		if (i < 0)
 		{
 			i++;
-			if (p + i - 1 < 0)
+			if (Index + i - 1 < 0)
 			{
 				return -1;
 			}
 		}
 
-		if (p + i - 1 >= n)
+		if (Index + i - 1 >= Size)
 		{
 			return -1;
 		}
 
-		return Data[p + i - 1];
+		return Data[Index + i - 1];
 	}
 
-	public int Mark()
-	{
-		return -1;
-	}
+	public int Mark() => -1;
 
-	public void Release(int marker)
+	public void Release(int marker) 
 	{
 	}
 
 	public void Seek(int index)
 	{
-		if (index <= p)
+		if (index <= Index)
 		{
-			p = index;
+			Index = index;
 			return;
 		}
 
-		index = Math.Min(index, n);
-		while (p < index)
+		index = Math.Min(index, Size);
+		while (Index < index)
 		{
 			Consume();
 		}

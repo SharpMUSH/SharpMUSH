@@ -44,9 +44,7 @@ module MarkupStringModule =
                             match markupStr.MarkupDetails with
                             | Empty -> getText (mStr, outerMarkupType)
                             | MarkedupText _ -> getText (mStr, markupStr.MarkupDetails)
-
                         loop (acc + inner, tail)
-
                 loop (acc, items)
 
             let innerText = accumulate (String.Empty, markupStr.Content)
@@ -454,10 +452,12 @@ module ColumnSpec =
             else
                 String.Empty
 
-        { Width = width
+        {
+          Width = width
           Justification = justification
           Options = options
-          Ansi = ansi }
+          Ansi = ansi
+        }
 
 module TextAligner =
     let fullJustify (text: string) (width: int) (fill: char) : string =
@@ -472,12 +472,9 @@ module TextAligner =
                 let totalSpaces = width - text.Length + words.Length - 1
                 let spaceBetweenWords = totalSpaces / (words.Length - 1)
                 let extraSpaces = totalSpaces % (words.Length - 1)
-
                 let spaces =
                     Array.init (words.Length - 1) (fun i -> spaceBetweenWords + (if i < extraSpaces then 1 else 0))
-
                 let z = Seq.zip words spaces
-
                 let intermediate =
                     Seq.fold (fun acc (word, space) -> acc + word + String(' ', space)) "" z
 
@@ -551,21 +548,17 @@ module TextAligner =
                     |> List.mapi (fun i colWords ->
                         let spec = columnSpecs.[i]
                         let rowText, remainingWords = buildRowText spec colWords
-
                         let rowText =
                             if spec.Options.Contains('x') then
                                 rowText.Substring(0, Math.Min(spec.Width, rowText.Length))
                             else
                                 rowText
-
                         let rowText =
                             if rowText.Length < spec.Width && spec.Options.Contains('.') then
                                 rowText.PadRight(spec.Width, ' ')
                             else
                                 rowText
-
                         let justified = justify spec.Justification rowText spec.Width filler
-
                         let justifiedText =
                             if String.IsNullOrEmpty(spec.Ansi) then
                                 justified

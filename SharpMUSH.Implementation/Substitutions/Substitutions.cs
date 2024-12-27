@@ -97,7 +97,6 @@ public static partial class Substitutions
 
 		if (maxCount <= symbolNumber)
 		{
-			// TODO: Investigate visits from DoListComplex5 getting here.
 			return new CallState(Errors.ErrorRange); // TODO: Fix Value
 		}
 
