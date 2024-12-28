@@ -17,10 +17,11 @@ public partial class Helpfiles(DirectoryInfo directory)
 
 	public static OneOf<Dictionary<string,string>, Error<string>> Index(FileInfo file)
 	{
-		if (!file.Exists)
+		/*if (!file.Exists)
 		{
 			return new Error<string>($"File {file.FullName} does not exist.");
 		}
+		*/
 
 		var dict = new Dictionary<string, string>();
 
