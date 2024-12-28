@@ -26,21 +26,16 @@ public partial class Helpfiles(DirectoryInfo directory)
 
 		using var openText = file.OpenText();
 		
-		var textBody = openText.ReadToEnd();
+		var textBody = openText.ReadToEnd().Replace("\r\n","\n");
 		var matches = Indexes().Matches(textBody);
 
-		Console.WriteLine($"STARTING INDEX MATCHING FOR {matches.Count} MATCHES");
 		foreach (Match match in matches)
 		{
-			Console.WriteLine("INDEX MATCH");
-			var indexes = match.Groups["Indexes"].Captures.Select(x => x.Value);
+			var indexes = match.Groups["Indexes"].Captures.Select(x => x.Value.Trim());
 			var body = match.Groups["Body"].Value;
-			Console.WriteLine($"INDEX MATCH INDEXES: {string.Join(", ", indexes)}");
-			Console.WriteLine($"INDEX MATCH BODY: {body}");
 
 			foreach (var index in indexes)
 			{
-				Console.WriteLine($"INDEX MATCH ADDING: {index}");
 				dict.Add(index, body);
 			}
 		}
@@ -48,6 +43,6 @@ public partial class Helpfiles(DirectoryInfo directory)
 		return dict;
 	}
 
-	[GeneratedRegex(@"(?:^& (?<Indexes>.+)\r\n)+(?<Body>(?:[^&].*\n)+)", RegexOptions.Compiled | RegexOptions.Multiline)]
+	[GeneratedRegex(@"(?:^& (?<Indexes>.+)\n)+(?<Body>(?:[^&].*\n)+)", RegexOptions.Compiled | RegexOptions.Multiline)]
 	private static partial Regex Indexes();
 }
