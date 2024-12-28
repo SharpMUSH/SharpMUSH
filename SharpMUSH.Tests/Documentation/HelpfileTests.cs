@@ -9,6 +9,8 @@ public class HelpfileTests
 		var fileString = Path.Combine(currentDirectory, "Documentation", "Testfile", "pennattr.hlp");
 		var fileInfo = new FileInfo(fileString);
 		Console.WriteLine($"Helpfile Tests registering directory: {fileInfo.DirectoryName}");
+		Console.WriteLine($"Helpfile Tests registering files: {string.Join(" - ",Directory.EnumerateFiles(fileInfo.DirectoryName!).ToList())}");
+		
 		var maybeIndexes = SharpMUSH.Documentation.Helpfiles.Index(fileInfo);
 
 		await Assert.That(maybeIndexes.IsT1).IsNotEqualTo(true);
