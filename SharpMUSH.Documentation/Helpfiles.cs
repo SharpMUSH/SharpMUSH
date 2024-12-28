@@ -17,16 +17,17 @@ public partial class Helpfiles(DirectoryInfo directory)
 
 	public static OneOf<Dictionary<string,string>, Error<string>> Index(FileInfo file)
 	{
-		/*if (!file.Exists)
+		if (!file.Exists)
 		{
 			return new Error<string>($"File {file.FullName} does not exist.");
 		}
-		*/
 
 		var dict = new Dictionary<string, string>();
 
 		using var openText = file.OpenText();
+		
 		var textBody = openText.ReadToEnd();
+		Console.WriteLine($"TEXTBODY: {textBody}");
 		
 		var matches = Indexes().Matches(textBody);
 
