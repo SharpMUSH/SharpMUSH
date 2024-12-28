@@ -6,12 +6,32 @@ namespace SharpMUSH.Documentation;
 
 public partial class Helpfiles(DirectoryInfo directory)
 {
+	public Dictionary<string, string> IndexedHelp { get; } = [];
+
 	public void Index()
 	{
 		var files = directory.GetFiles("*.hlp");
+		
 		foreach (var file in files)
 		{
-			Index(file);	
+			 var maybeIndexedFile = Index(file);
+			 if (maybeIndexedFile.IsT1)
+			 {
+				 // TODO: LOGGING
+				 continue;
+			 }
+
+			 var indexedFile = maybeIndexedFile.AsT0;
+			 
+			 foreach (var kv in indexedFile)
+			 {
+				 if (IndexedHelp.ContainsKey(kv.Key))
+				 {
+					 // TODO: LOGGING
+					 continue;
+				 }
+				 IndexedHelp.Add(kv.Key, kv.Value);
+			 }
 		}
 	}
 
