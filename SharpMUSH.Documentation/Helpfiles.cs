@@ -43,6 +43,6 @@ public partial class Helpfiles(DirectoryInfo directory)
 		return dict;
 	}
 
-	[GeneratedRegex(@"(?:^& (?<Indexes>.+)\\r\\n)+(?<Body>.+)", RegexOptions.Compiled | RegexOptions.Multiline)]
+	[GeneratedRegex(@"(?:^& (?<Indexes>.+)\r\n)+(?<Body>(?:[^&].*\n)+)", RegexOptions.Compiled | RegexOptions.Multiline)]
 	private static partial Regex Indexes();
 }
