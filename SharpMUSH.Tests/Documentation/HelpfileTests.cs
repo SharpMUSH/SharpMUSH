@@ -9,6 +9,7 @@ public class HelpfileTests
 		var fileString = Path.Combine(currentDirectory, "..", "..", "..", "..", "SharpMUSH.Documentation", "Helpfiles",
 			"PennMUSH", "pennattr.hlp");
 		var fileInfo = new FileInfo(fileString);
+		Console.WriteLine($"Helpfile Tests registering directory: {fileInfo.DirectoryName}");
 		var maybeIndexes = SharpMUSH.Documentation.Helpfiles.Index(fileInfo);
 
 		await Assert.That(maybeIndexes.IsT1).IsNotEqualTo(true);
