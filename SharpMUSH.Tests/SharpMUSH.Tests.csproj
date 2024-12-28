@@ -35,4 +35,10 @@
     <ProjectReference Include="..\SharpMUSH.Server\SharpMUSH.Server.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Documentation\Testfile\pennattr.hlp">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
