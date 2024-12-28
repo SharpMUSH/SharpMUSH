@@ -36,9 +36,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Documentation\Testfile\pennattr.hlp">
+    <Content Include="..\SharpMUSH.Documentation\Helpfiles\PennMUSH\pennattr.hlp">
+      <Link>Documentation\Testfile\pennattr.hlp</Link>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
+    </Content>
+    <Content Include="..\SharpMUSH.Documentation\Helpfiles\PennMUSH\pennchat.hlp">
+      <Link>Documentation\Testfile\pennchat.hlp</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>
