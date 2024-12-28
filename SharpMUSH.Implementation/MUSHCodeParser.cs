@@ -12,34 +12,16 @@ namespace SharpMUSH.Implementation;
 /// Each call is Synchronous, and stateful at this time.
 /// </summary>
 public record MUSHCodeParser(
-	IPasswordService _passwordService,
-	IPermissionService _permissionService,
-	IAttributeService _attributeService,
-	INotifyService _notifyService,
-	ILocateService _locateService,
-	ICommandDiscoveryService _commandDiscoveryService,
-	ITaskScheduler _scheduleService,
-	IConnectionService _connectionService,
-	IMediator _mediator) : IMUSHCodeParser
+	IPasswordService PasswordService,
+	IPermissionService PermissionService,
+	IAttributeService AttributeService,
+	INotifyService NotifyService,
+	ILocateService LocateService,
+	ICommandDiscoveryService CommandDiscoveryService,
+	ITaskScheduler Scheduler,
+	IConnectionService ConnectionService,
+	IMediator Mediator) : IMUSHCodeParser
 {
-	public IPasswordService PasswordService => _passwordService;
-
-	public IPermissionService PermissionService => _permissionService;
-
-	public IAttributeService AttributeService => _attributeService;
-
-	public ILocateService LocateService => _locateService;
-
-	public ICommandDiscoveryService CommandDiscoveryService => _commandDiscoveryService;
-
-	public ITaskScheduler Scheduler => _scheduleService;
-
-	public INotifyService NotifyService => _notifyService;
-
-	public IConnectionService ConnectionService => _connectionService;
-
-	public IMediator Mediator => _mediator;
-
 	public ParserState CurrentState => State.Peek();
 
 	/// <summary>
@@ -52,9 +34,9 @@ public record MUSHCodeParser(
 	/// </summary>
 	public IImmutableStack<ParserState> State { get; private init; } = ImmutableStack<ParserState>.Empty;
 
-	public IMUSHCodeParser FromState(ParserState state) => new MUSHCodeParser(_passwordService, _permissionService,
-		_attributeService, _notifyService, _locateService, _commandDiscoveryService, _scheduleService,
-		_connectionService, _mediator, state);
+	public IMUSHCodeParser FromState(ParserState state) => new MUSHCodeParser(PasswordService, PermissionService,
+		AttributeService, NotifyService, LocateService, CommandDiscoveryService, Scheduler,
+		ConnectionService, Mediator, state);
 
 	public IMUSHCodeParser Empty() => this with { State = ImmutableStack<ParserState>.Empty };
 
