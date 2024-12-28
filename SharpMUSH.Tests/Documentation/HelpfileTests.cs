@@ -1,7 +1,29 @@
-﻿namespace SharpMUSH.Tests.Documentation;
+﻿using SharpMUSH.Documentation;
+
+namespace SharpMUSH.Tests.Documentation;
 
 public class HelpfileTests
 {
+	[Test]
+	[Arguments("ATTRIBUTE TREES")]
+	[Arguments("ATTR TREES")]
+	[Arguments("ATTRIB TREES")]
+	[Arguments("`")]
+	[Arguments("@CEMIT")]
+	[Arguments("@NSCEMIT")]
+	[Arguments("CEMIT()")]
+	[Arguments("NSCEMIT()")]
+	public async Task CanIndex(string expectedIndex)
+	{
+		var currentDirectory = Directory.GetCurrentDirectory();
+		var dirString = Path.Combine(currentDirectory, "Documentation", "Testfile");
+		var helpFiles = new Helpfiles(new DirectoryInfo(dirString));
+
+		helpFiles.Index();
+
+		await Assert.That(helpFiles.IndexedHelp).ContainsKey(expectedIndex);
+	}
+
 	[Test]
 	[Arguments("pennattr.hlp", new[] { "ATTRIBUTE TREES", "ATTR TREES", "ATTRIB TREES", "`" })]
 	[Arguments("pennchat.hlp", new[] { "@CEMIT", "@NSCEMIT", "CEMIT()", "NSCEMIT()" })]
