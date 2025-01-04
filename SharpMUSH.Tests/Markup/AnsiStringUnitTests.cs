@@ -14,7 +14,7 @@ public class AnsiStringUnitTests : BaseUnitTest
 	[MethodDataSource(typeof(Data.Concat), nameof(Data.Concat.ConcatData))]
 	public async Task Concat((AnsiString strA, AnsiString strB, AnsiString expected) data)
 	{
-		(var strA, var strB, var expected) = data;
+		var (strA, strB, expected) = data;
 		var result = A.concat(strA, strB);
 
 		Log.Logger.Information("Result: {Result}{NewLine}Expected: {Expected}", result, Environment.NewLine, expected);
@@ -41,11 +41,35 @@ public class AnsiStringUnitTests : BaseUnitTest
 		var resultBytes = Encoding.Unicode.GetBytes(result.ToString());
 		var expectedBytes = Encoding.Unicode.GetBytes(expected.ToString());
 
-		foreach (var (First, Second) in resultBytes.Zip(expectedBytes))
+		foreach (var (resultByte, expectedByte) in resultBytes.Zip(expectedBytes))
 		{
 			await Assert
-				.That(First)
-				.IsEqualTo(Second);
+				.That(resultByte)
+				.IsEqualTo(expectedByte);
+		}
+	}
+
+	[Test]
+	[MethodDataSource(typeof(Data.Pad), nameof(Data.Pad.PadData))]
+	public async Task Pad(
+		(AnsiString input, AnsiString padStr, int width, MModule.PadType padType, MModule.TruncationType truncType,
+			AnsiString expected) data)
+	{
+		var (input, padStr, width, padType, truncType, expected) = data;
+
+		// Call the Pad method
+		var result = MModule.pad(input, padStr, width, padType, truncType);
+
+		Log.Logger.Information("Result: {Result}{NewLine}Expected: {Expected}", result.ToString(), Environment.NewLine,
+			expected.ToString());
+
+		// Convert result and expected to bytes for detailed verification
+		var resultBytes = Encoding.Unicode.GetBytes(result.ToString());
+		var expectedBytes = Encoding.Unicode.GetBytes(expected.ToString());
+
+		foreach (var (resultByte, expectedByte) in resultBytes.Zip(expectedBytes))
+		{
+			await Assert.That(resultByte).IsEqualTo(expectedByte);
 		}
 	}
 
@@ -98,7 +122,8 @@ public class AnsiStringUnitTests : BaseUnitTest
 
 		foreach (var (expectedItem, resultItem) in expected.Zip(result))
 		{
-			Log.Logger.Information("Result: {Result}{NewLine}Expected: {Expected}", resultItem, Environment.NewLine, expectedItem);
+			Log.Logger.Information("Result: {Result}{NewLine}Expected: {Expected}", resultItem, Environment.NewLine,
+				expectedItem);
 		}
 
 		foreach (var (expectedItem, resultItem) in expected.Zip(result))
