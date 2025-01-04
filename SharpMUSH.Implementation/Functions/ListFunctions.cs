@@ -90,8 +90,8 @@ public partial class Functions
 		return ValueTask.FromResult(new CallState(first));
 	}
 
-	[SharpFunction(Name = "FIRSTOF", MinArgs = 0, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
-	public static async ValueTask<CallState> firstof(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "firstof", MinArgs = 0, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
+	public static async ValueTask<CallState> FirstOf(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		await Task.CompletedTask;
 
