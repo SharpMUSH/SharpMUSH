@@ -97,6 +97,7 @@ public class MathFunctionUnitTests : BaseUnitTest
 	[Arguments("modulo(7,3)", "1")]
 	[Arguments("modulo(10,3)", "1")]
 	[Arguments("modulo(-7,3)", "-1")]
+	[Arguments("mod(-7,3)", "-1")] // Alias Test
 	[Arguments("modulo(10,0)", "#-1 DIVIDE BY ZERO")]
 	public async Task Mod(string str, string expected)
 	{

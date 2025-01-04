@@ -20,7 +20,7 @@ public static class Configurable
 	/// <summary>
 	/// Historically, MU*s use the old SEX attribute for this for Compatibility reasons.
 	/// </summary>
-	public const string GenderAttribute = "GENDER";
+	public const string? GenderAttribute = "SEX";
 
 	/// <summary>
 	/// Overrides the behavior of %p. Expects the style: '#5/SUB`POSSESSIVE`PRONOUN'.
@@ -29,7 +29,7 @@ public static class Configurable
 	/// 
 	/// Defaults to he/she/it/they as poss()
 	/// </summary>
-	public const string PossessivePronounFunction = "";
+	public const string? PossessivePronounFunction = "";
 
 	/// <summary>
 	/// Overrides the behavior of %a. Expects the style: '#5/SUB`ABS_POSSESSIVE`PRONOUN'.
@@ -37,7 +37,7 @@ public static class Configurable
 	/// 
 	/// Defaults to his/hers/its/theirs as aposs()
 	/// </summary>
-	public const string AbsolutePossessivePronounFunction = "";
+	public const string? AbsolutePossessivePronounFunction = "";
 
 
 	/// <summary>
@@ -46,7 +46,7 @@ public static class Configurable
 	/// 
 	/// Defaults to him, her, it, them as obj()
 	/// </summary>
-	public const string ObjectivePronounFunction = "";
+	public const string? ObjectivePronounFunction = "";
 
 	/// <summary>
 	/// Overrides the behavior of %s. Expects the style: '#5/SUB`SUBJECTIVE`PRONOUN'.
@@ -54,5 +54,42 @@ public static class Configurable
 	/// 
 	/// Defaults to he, she, it, they as subj()
 	/// </summary>
-	public const string SubjectivePronounFunction = "";
+	public const string? SubjectivePronounFunction = "";
+
+	public static readonly Dictionary<string, string[]> FunctionAliases = new()
+	{
+		{ "atrlock", ["attrlock"] },
+		{ "iter", ["parse"] },
+		{ "lsearch", ["search"] },
+		{ "lstats", ["stats"] },
+		{ "lthings", ["lobjects"] },
+		{ "lvthings", ["lvobjects"] },
+		{ "modulo", ["mod", "modulus"] },
+		{ "nattr", ["attrcnt"] },
+		{ "nattrp", ["attrpcnt"] },
+		{ "nthings", ["nobjects"] },
+		{ "nvthings", ["nvobjects"] },
+		{ "randword", ["pickrand"] },
+		{ "soundslike", ["soundlike"] },
+		{ "textfile", ["dynhelp"] },
+		{ "trunc", ["val"] },
+		{ "ufun", ["u"] },
+		{ "xthings", ["xobjects"] },
+		{ "xvthings", ["xvobjects"] }
+	};
+
+	public static readonly Dictionary<string, string[]> CommandAliases = new()
+	{
+		{ "@atrlock", ["@attrlock"] },
+		{ "@atrchown", ["@attrchown"] },
+		{ "@edit", ["@gedit"] },
+		{ "@ifelse", ["@if"] },
+		{ "@switch", ["@sw"] },
+		{ "get", ["take"] },
+		{ "goto", ["move"] },
+		{ "inventory", ["i"] },
+		{ "look", ["l"] },
+		{ "page", ["p"] },
+		{ "whisper", ["w"] }
+	};
 }

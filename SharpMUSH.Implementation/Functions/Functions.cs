@@ -11,19 +11,34 @@ namespace SharpMUSH.Implementation.Functions;
 
 public static partial class Functions
 {
-	private static readonly Dictionary<string, (SharpFunctionAttribute Attribute, Func<IMUSHCodeParser, ValueTask<CallState>> Function)> _functionLibrary = [];
-	private static readonly Dictionary<string, (MethodInfo Method, SharpFunctionAttribute Attribute)> _knownBuiltInMethods = typeof(Functions)
-		.GetMethods()
-		.Select(m => (Method: m, Attribute: m.GetCustomAttribute(typeof(SharpFunctionAttribute), false) as SharpFunctionAttribute))
-		.Where(x => x.Attribute is not null)
-		.Select(y => new KeyValuePair<string, (MethodInfo Method, SharpFunctionAttribute Attribute)>(y.Attribute!.Name, (y.Method, y.Attribute!)))
-		.ToDictionary();
+	private static readonly
+		Dictionary<string, (SharpFunctionAttribute Attribute, Func<IMUSHCodeParser, ValueTask<CallState>> Function)>
+		_functionLibrary = [];
+
+	private static readonly Dictionary<string, (MethodInfo Method, SharpFunctionAttribute Attribute)>
+		_knownBuiltInMethods = typeof(Functions)
+			.GetMethods()
+			.Select(m => (Method: m,
+				Attribute: m.GetCustomAttribute(typeof(SharpFunctionAttribute), false) as SharpFunctionAttribute))
+			.Where(x => x.Attribute is not null)
+			.SelectMany(y =>
+				(Configurable.FunctionAliases.TryGetValue(y.Attribute!.Name, out var aliases)
+					? aliases.Select(alias =>
+						new KeyValuePair<string, (MethodInfo Method, SharpFunctionAttribute Attribute)>(alias,
+							(y.Method, y.Attribute!)))
+					: [])
+				.Append(new KeyValuePair<string, (MethodInfo Method, SharpFunctionAttribute Attribute)>(y.Attribute.Name,
+					(y.Method, y.Attribute!))))
+			.ToDictionary();
 
 	static Functions()
 	{
 		foreach (var knownMethod in _knownBuiltInMethods)
 		{
-			_functionLibrary.Add(knownMethod.Key, (knownMethod.Value.Attribute, new Func<IMUSHCodeParser, ValueTask<CallState>>(p => (ValueTask<CallState>)knownMethod.Value.Method.Invoke(null, [p, knownMethod.Value.Attribute])!)));
+			_functionLibrary.Add(knownMethod.Key,
+				(knownMethod.Value.Attribute,
+					new Func<IMUSHCodeParser, ValueTask<CallState>>(p =>
+						(ValueTask<CallState>)knownMethod.Value.Method.Invoke(null, [p, knownMethod.Value.Attribute])!)));
 		}
 	}
 
@@ -36,7 +51,8 @@ public static partial class Functions
 	/// <param name="context">Function Context for Depth</param>
 	/// <param name="args">Arguments</param>
 	/// <returns>The resulting CallState.</returns>
-	public static async ValueTask<CallState> CallFunction(string name, MString source, IMUSHCodeParser parser, FunctionContext context, FunArgumentContext[] args, SharpMUSHParserVisitor visitor)
+	public static async ValueTask<CallState> CallFunction(string name, MString source, IMUSHCodeParser parser,
+		FunctionContext context, FunArgumentContext[] args, SharpMUSHParserVisitor visitor)
 	{
 		if (!_functionLibrary.TryGetValue(name, out var libraryMatch))
 		{
@@ -72,7 +88,8 @@ public static partial class Functions
 
 		if (args.Length < attribute.MinArgs)
 		{
-			return new CallState(string.Format(Errors.ErrorTooFewArguments, name, attribute.MinArgs, args.Length), contextDepth);
+			return new CallState(string.Format(Errors.ErrorTooFewArguments, name, attribute.MinArgs, args.Length),
+				contextDepth);
 		}
 
 		if (((attribute.Flags & FunctionFlags.UnEvenArgsOnly) != 0) && (args.Length % 2 == 0))
@@ -120,13 +137,16 @@ public static partial class Functions
 				MModule.substring(context.Start.StartIndex, context.Stop.StopIndex - context.Start.StartIndex + 1, source),
 				contextDepth,
 				null,
-				async () => (await visitor.VisitChildren(context) ?? CallState.Empty with { Depth = context.Depth() }).Message!);
+				async () => (await visitor.VisitChildren(context) ?? CallState.Empty with { Depth = context.Depth() })
+					.Message!);
 		}
 		else
 		{
 			refinedArguments = args.Select(x => new CallState(stripAnsi
-					? MModule.plainText2(MModule.substring(x.Start.StartIndex, context.Stop?.StopIndex is null ? 0 : (x.Stop.StopIndex - x.Start.StartIndex + 1), source))
-					: MModule.substring(x.Start.StartIndex, context.Stop?.StopIndex is null ? 0 : (x.Stop.StopIndex - x.Start.StartIndex + 1), source),
+						? MModule.plainText2(MModule.substring(x.Start.StartIndex,
+							context.Stop?.StopIndex is null ? 0 : (x.Stop.StopIndex - x.Start.StartIndex + 1), source))
+						: MModule.substring(x.Start.StartIndex,
+							context.Stop?.StopIndex is null ? 0 : (x.Stop.StopIndex - x.Start.StartIndex + 1), source),
 					x.Depth(), null,
 					async () => stripAnsi
 						? (await visitor.VisitChildren(x))!.Message
@@ -135,11 +155,14 @@ public static partial class Functions
 				.ToList();
 		}
 
-		if (attribute.Flags.HasFlag(FunctionFlags.DecimalsOnly) && refinedArguments.Any(a => !decimal.TryParse(MModule.plainText(a?.Message ?? MModule.empty()), out _)))
+		if (attribute.Flags.HasFlag(FunctionFlags.DecimalsOnly) && refinedArguments.Any(a =>
+			    !decimal.TryParse(MModule.plainText(a?.Message ?? MModule.empty()), out _)))
 		{
 			return new CallState(attribute.MaxArgs > 1 ? Errors.ErrorNumbers : Errors.ErrorNumber);
 		}
-		if (attribute.Flags.HasFlag(FunctionFlags.IntegersOnly) && refinedArguments.Any(a => !int.TryParse(MModule.plainText(a?.Message ?? MModule.empty()), out _)))
+
+		if (attribute.Flags.HasFlag(FunctionFlags.IntegersOnly) && refinedArguments.Any(a =>
+			    !int.TryParse(MModule.plainText(a?.Message ?? MModule.empty()), out _)))
 		{
 			return new CallState(attribute.MaxArgs > 1 ? Errors.ErrorIntegers : Errors.ErrorInteger);
 		}
@@ -154,7 +177,8 @@ public static partial class Functions
 			Function: name,
 			Command: null,
 			Switches: [],
-			Arguments: new(refinedArguments.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value)).ToDictionary()),
+			Arguments: new(refinedArguments.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value))
+				.ToDictionary()),
 			Executor: currentState.Executor,
 			Enactor: currentState.Enactor,
 			Caller: currentState.Caller,
@@ -166,7 +190,8 @@ public static partial class Functions
 		return result;
 	}
 
-	private static Option<(SharpFunctionAttribute, Func<IMUSHCodeParser, ValueTask<CallState>>)> DiscoverBuiltInFunction(string name)
+	private static Option<(SharpFunctionAttribute, Func<IMUSHCodeParser, ValueTask<CallState>>)>
+		DiscoverBuiltInFunction(string name)
 	{
 		if (!_knownBuiltInMethods.TryGetValue(name, out var result))
 			return new None();
@@ -190,6 +215,7 @@ public static partial class Functions
 	/// <param name="attr">Function Attributes that describe behavior</param>
 	/// <param name="func">Function to run when this is called</param>
 	/// <returns>True if could be added. False if the name already existed.</returns>
-	public static bool AddFunction(string name, SharpFunctionAttribute attr, Func<IMUSHCodeParser, ValueTask<CallState>> func) =>
+	public static bool AddFunction(string name, SharpFunctionAttribute attr,
+		Func<IMUSHCodeParser, ValueTask<CallState>> func) =>
 		_functionLibrary.TryAdd(name.ToLower(), (attr, func));
 }
