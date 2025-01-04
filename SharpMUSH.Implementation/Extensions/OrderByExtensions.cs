@@ -37,35 +37,32 @@ public static class OrderByExtensions
 		Func<MString, string> keySelector,
 		IMUSHCodeParser parser, string order)
 	{
-		var descending = order.StartsWith('-');	
+		var descending = order.StartsWith('-');
 		var workedOrder = descending ? order[1..] : order;
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
+		var direction = descending ? OrderByDirection.Descending : OrderByDirection.Ascending;
 
 		// TODO: Special 'attr:' and 'attri:' types.
 		return workedOrder switch
 		{
-			"a" => source.OrderBy(keySelector, StringComparer.Ordinal,
-				descending ? OrderByDirection.Descending : OrderByDirection.Ascending),
-			"i" => source.OrderBy(keySelector, StringComparer.OrdinalIgnoreCase,
-				descending ? OrderByDirection.Descending : OrderByDirection.Ascending),
-			"d" => source.OrderBy(key => parser.LocateService.Locate(parser, executor, executor, keySelector(key), LocateFlags.All)
-					.AsTask().GetAwaiter().GetResult()
-					.Match(
-						player => player.Object.DBRef.Number,
-						room => room.Object.DBRef.Number,
-						exit => exit.Object.DBRef.Number,
-						thing => thing.Object.DBRef.Number,
-						_ => -1,
-						_ => -1
-					),
-				descending ? OrderByDirection.Descending : OrderByDirection.Ascending),
-			"n" => source.OrderBy(key => int.TryParse(keySelector(key), out var value) ? value : -1,
-				descending ? OrderByDirection.Descending : OrderByDirection.Ascending),
-			"f" => source.OrderBy(key => decimal.TryParse(keySelector(key), out var value) ? value : -1,
-				descending ? OrderByDirection.Descending : OrderByDirection.Ascending),
-			"m" => source.OrderBy(keySelector, StringComparer.OrdinalIgnoreCase.WithNaturalSort(),
-				descending ? OrderByDirection.Descending : OrderByDirection.Ascending),
-			"name" => source.OrderBy(key => parser.LocateService.Locate(parser, executor, executor, keySelector(key), LocateFlags.All)
+			"a" => source.OrderBy(keySelector, StringComparer.Ordinal, direction),
+			"i" => source.OrderBy(keySelector, StringComparer.OrdinalIgnoreCase, direction),
+			"d" => source.OrderBy(key => parser.LocateService
+				.Locate(parser, executor, executor, keySelector(key), LocateFlags.All)
+				.AsTask().GetAwaiter().GetResult()
+				.Match(
+					player => player.Object.DBRef.Number,
+					room => room.Object.DBRef.Number,
+					exit => exit.Object.DBRef.Number,
+					thing => thing.Object.DBRef.Number,
+					_ => -1,
+					_ => -1
+				), direction),
+			"n" => source.OrderBy(key => int.TryParse(keySelector(key), out var value) ? value : -1, direction),
+			"f" => source.OrderBy(key => decimal.TryParse(keySelector(key), out var value) ? value : -1, direction),
+			"m" => source.OrderBy(keySelector, StringComparer.OrdinalIgnoreCase.WithNaturalSort(), direction),
+			"name" => source.OrderBy(key => parser.LocateService
+				.Locate(parser, executor, executor, keySelector(key), LocateFlags.All)
 				.AsTask().GetAwaiter().GetResult()
 				.Match(
 					player => player.Object.Name,
@@ -74,8 +71,9 @@ public static class OrderByExtensions
 					thing => thing.Object.Name,
 					_ => keySelector(key),
 					_ => keySelector(key)
-				), StringComparer.Ordinal, descending ? OrderByDirection.Descending : OrderByDirection.Ascending),
-			"namei" => source.OrderBy(key => parser.LocateService.Locate(parser, executor, executor, keySelector(key), LocateFlags.All)
+				), StringComparer.Ordinal, direction),
+			"namei" => source.OrderBy(key => parser.LocateService
+					.Locate(parser, executor, executor, keySelector(key), LocateFlags.All)
 					.AsTask().GetAwaiter().GetResult()
 					.Match(
 						player => player.Object.Name,
@@ -85,30 +83,35 @@ public static class OrderByExtensions
 						_ => keySelector(key),
 						_ => keySelector(key)
 					), StringComparer.OrdinalIgnoreCase,
-				descending ? OrderByDirection.Descending : OrderByDirection.Ascending),
-			"conn" => source.OrderBy(key => parser.LocateService.Locate(parser, executor, executor, keySelector(key), LocateFlags.All)
+				direction),
+			"conn" => source.OrderBy(key => parser.LocateService
+					.Locate(parser, executor, executor, keySelector(key), LocateFlags.All)
 					.AsTask().GetAwaiter().GetResult()
 					.Match(
-						player => parser.ConnectionService.Get(player.Object.DBRef).FirstOrDefault()?.Connected ?? TimeSpan.MaxValue,
+						player => parser.ConnectionService.Get(player.Object.DBRef).FirstOrDefault()?.Connected ??
+						          TimeSpan.MaxValue,
 						_ => TimeSpan.MaxValue,
 						_ => TimeSpan.MaxValue,
 						_ => TimeSpan.MaxValue,
 						_ => TimeSpan.MaxValue,
 						_ => TimeSpan.MaxValue
 					),
-				descending ? OrderByDirection.Descending : OrderByDirection.Ascending),
-			"idle" => source.OrderBy(key => parser.LocateService.Locate(parser, executor, executor, keySelector(key), LocateFlags.All)
+				direction),
+			"idle" => source.OrderBy(key => parser.LocateService
+					.Locate(parser, executor, executor, keySelector(key), LocateFlags.All)
 					.AsTask().GetAwaiter().GetResult()
 					.Match(
-						player => parser.ConnectionService.Get(player.Object.DBRef).FirstOrDefault()?.Connected ?? TimeSpan.MaxValue,
+						player => parser.ConnectionService.Get(player.Object.DBRef).FirstOrDefault()?.Connected ??
+						          TimeSpan.MaxValue,
 						_ => TimeSpan.MaxValue,
 						_ => TimeSpan.MaxValue,
 						_ => TimeSpan.MaxValue,
 						_ => TimeSpan.MaxValue,
 						_ => TimeSpan.MaxValue
 					),
-				descending ? OrderByDirection.Descending : OrderByDirection.Ascending),
-			"owner" => source.OrderBy(key => parser.LocateService.Locate(parser, executor, executor, keySelector(key), LocateFlags.All)
+				direction),
+			"owner" => source.OrderBy(key => parser.LocateService
+					.Locate(parser, executor, executor, keySelector(key), LocateFlags.All)
 					.AsTask().GetAwaiter().GetResult()
 					.Match(
 						player => player.Object.Owner.Value.Object.DBRef.Number,
@@ -118,8 +121,9 @@ public static class OrderByExtensions
 						_ => -1,
 						_ => -1
 					),
-				descending ? OrderByDirection.Descending : OrderByDirection.Ascending),
-			"loc" => source.OrderBy(key => parser.LocateService.Locate(parser, executor, executor, keySelector(key), LocateFlags.All)
+				direction),
+			"loc" => source.OrderBy(key => parser.LocateService
+					.Locate(parser, executor, executor, keySelector(key), LocateFlags.All)
 					.AsTask().GetAwaiter().GetResult()
 					.Match(
 						player => player.Location.Value.Object().DBRef.Number,
@@ -129,8 +133,9 @@ public static class OrderByExtensions
 						_ => -1,
 						_ => -1
 					),
-				descending ? OrderByDirection.Descending : OrderByDirection.Ascending),
-			"ctime" => source.OrderBy(key => parser.LocateService.Locate(parser, executor, executor, keySelector(key), LocateFlags.All)
+				direction),
+			"ctime" => source.OrderBy(key => parser.LocateService
+					.Locate(parser, executor, executor, keySelector(key), LocateFlags.All)
 					.AsTask().GetAwaiter().GetResult()
 					.Match(
 						player => player.Object.CreationTime,
@@ -140,8 +145,9 @@ public static class OrderByExtensions
 						_ => -1,
 						_ => -1
 					),
-				descending ? OrderByDirection.Descending : OrderByDirection.Ascending),
-			"mtime" => source.OrderBy(key => parser.LocateService.Locate(parser, executor, executor, keySelector(key), LocateFlags.All)
+				direction),
+			"mtime" => source.OrderBy(key => parser.LocateService
+					.Locate(parser, executor, executor, keySelector(key), LocateFlags.All)
 					.AsTask().GetAwaiter().GetResult()
 					.Match(
 						player => player.Object.ModifiedTime,
@@ -150,12 +156,12 @@ public static class OrderByExtensions
 						thing => thing.Object.ModifiedTime,
 						_ => -1,
 						_ => -1
-					), 
-				descending ? OrderByDirection.Descending : OrderByDirection.Ascending),
+					),
+				direction),
 			"lattr" => source.OrderBy(keySelector, StringComparer.OrdinalIgnoreCase.WithNaturalSort(),
-				descending ? OrderByDirection.Descending : OrderByDirection.Ascending),
+				direction),
 			_ => source.OrderBy(keySelector, StringComparer.OrdinalIgnoreCase,
-				descending ? OrderByDirection.Descending : OrderByDirection.Ascending)
+				direction)
 		};
 	}
 }
