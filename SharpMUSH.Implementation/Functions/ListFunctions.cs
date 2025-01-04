@@ -429,7 +429,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "splice", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular)]
-	public static async ValueTask<CallState> splice(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Splice(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		await Task.CompletedTask;
 		var listArg = parser.CurrentState.Arguments["0"].Message;
@@ -458,10 +458,16 @@ public partial class Functions
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "STRFIRSTOF", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
-	public static ValueTask<CallState> strfirstof(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "strfirstof", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
+	public static ValueTask<CallState> StringFirstOf(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var orderedArgs = parser.CurrentState.Arguments.OrderBy(x
+			=> int.Parse(x.Key)).ToList();
+		var firstOne = orderedArgs.FirstOrDefault(x
+				=> string.IsNullOrEmpty(x.Value.ParsedMessage().GetAwaiter().GetResult()!.ToPlainText()),
+			orderedArgs.Last());
+
+		return ValueTask.FromResult(new CallState(firstOne.Value.Message));
 	}
 
 	[SharpFunction(Name = "table", MinArgs = 1, MaxArgs = 5, Flags = FunctionFlags.Regular)]
@@ -486,7 +492,7 @@ public partial class Functions
 		{
 			return new CallState("#-1 INVALID FIELD WIDTH");
 		}
-		
+
 		if (!int.TryParse(lineWidthArg, out var lineWidth))
 		{
 			return new CallState("#-1 INVALID LINE WIDTH");
