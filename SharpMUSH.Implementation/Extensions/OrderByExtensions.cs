@@ -34,13 +34,23 @@ public static class OrderByExtensions
 
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
 
+		// TODO: Special 'attr:' and 'attri:' types.
 		return workedOrder switch
 		{
 			"a" => source.OrderBy(keySelector, StringComparer.Ordinal,
 				descending ? OrderByDirection.Descending : OrderByDirection.Ascending),
 			"i" => source.OrderBy(keySelector, StringComparer.OrdinalIgnoreCase,
 				descending ? OrderByDirection.Descending : OrderByDirection.Ascending),
-			"d" => source.OrderBy(keySelector, StringComparer.OrdinalIgnoreCase,
+			"d" => source.OrderBy(key => parser.LocateService.Locate(parser, executor, executor, keySelector(key), LocateFlags.All)
+					.AsTask().GetAwaiter().GetResult()
+					.Match(
+						player => player.Object.DBRef.Number,
+						room => room.Object.DBRef.Number,
+						exit => exit.Object.DBRef.Number,
+						thing => thing.Object.DBRef.Number,
+						_ => -1,
+						_ => -1
+					),
 				descending ? OrderByDirection.Descending : OrderByDirection.Ascending),
 			"n" => source.OrderBy(key => int.TryParse(keySelector(key), out var value) ? value : -1,
 				descending ? OrderByDirection.Descending : OrderByDirection.Ascending),
