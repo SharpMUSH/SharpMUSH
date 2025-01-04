@@ -21,7 +21,7 @@ public class GeneralCommandTests : BaseUnitTest
 	[Test]
 	[Arguments("@pemit #1=1 This is a test", "1 This is a test")]
 	[Arguments("@pemit #1=2 This is a test;", "2 This is a test;")]
-	public async Task Test(string str, string expected)
+	public async Task SimpleCommandParse(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
 		await _parser!.CommandParse("1", MModule.single(str));
@@ -29,6 +29,14 @@ public class GeneralCommandTests : BaseUnitTest
 		await _parser.NotifyService
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), expected);
+	}
+	
+	[Test]
+	[Arguments("l"), Skip("Not yet implemented properly")]
+	public async Task CommandAliasRuns(string str)
+	{
+		Console.WriteLine("Testing: {0}", str);
+		await _parser!.CommandParse("1", MModule.single(str));
 	}
 
 	[Test]

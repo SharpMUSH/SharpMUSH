@@ -10,6 +10,7 @@ using SharpMUSH.Library.Services;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Reflection;
+using SharpMUSH.Library.Definitions;
 using static SharpMUSHParser;
 
 namespace SharpMUSH.Implementation.Commands;
@@ -27,9 +28,14 @@ public static partial class Commands
 				.Select(m => (Method: m,
 					Attribute: m.GetCustomAttribute<SharpCommandAttribute>(false)))
 				.Where(x => x.Attribute is not null)
-				.Select(y =>
-					new KeyValuePair<string, (MethodInfo Method, SharpCommandAttribute Attribute)>(y.Attribute!.Name,
-						(y.Method, y.Attribute!)))
+				.SelectMany(y =>
+					(Configurable.CommandAliases.TryGetValue(y.Attribute!.Name, out var aliases)
+						? aliases.Select(alias =>
+							new KeyValuePair<string, (MethodInfo Method, SharpCommandAttribute Attribute)>(alias,
+								(y.Method, y.Attribute!)))
+						: [])
+					.Append(new KeyValuePair<string, (MethodInfo Method, SharpCommandAttribute Attribute)>(y.Attribute.Name,
+						(y.Method, y.Attribute!))))
 				.ToDictionary();
 
 	static Commands()
