@@ -447,10 +447,10 @@ public partial class Functions
 			executor,
 			actualObject,
 			attribute,
-			mode: Library.Services.IAttributeService.AttributeMode.Execute,
+			mode: IAttributeService.AttributeMode.Execute,
 			parent: false);
 
-		var orderedArguments = parser.CurrentState.Arguments.OrderBy(x => int.Parse(x.Key))
+		var orderedArguments = parser.CurrentState.ArgumentsOrdered
 			.Skip(1);
 
 		switch (maybeAttr)

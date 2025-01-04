@@ -9,6 +9,7 @@ using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using System.Collections.Concurrent;
+using System.Collections.Immutable;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
@@ -16,7 +17,7 @@ namespace SharpMUSH.Implementation.Functions;
 
 public partial class Functions
 {
-	private static readonly Dictionary<string, Func<ConcurrentDictionary<string, CallState>, ValueTask<CallState>>> JsonFunctions = new()
+	private static readonly Dictionary<string, Func<ImmutableSortedDictionary<string, CallState>, ValueTask<CallState>>> JsonFunctions = new()
 	{
 		{"null", JsonHelpers.NullJSON},
 		{"boolean", JsonHelpers.BooleanJSON},
@@ -30,7 +31,7 @@ public partial class Functions
 	[SharpFunction(Name = "json", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
 	public static async ValueTask<CallState> JSON(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> JsonFunctions.TryGetValue(MModule.plainText(parser.CurrentState.Arguments["0"].Message!).ToLower(), out var jsonFunction)
-			? await jsonFunction(parser.CurrentState.Arguments)
+			? await jsonFunction(parser.CurrentState.ArgumentsOrdered)
 			: new CallState(MModule.single("#-1 Invalid Type"));
 
 
@@ -59,7 +60,7 @@ public partial class Functions
 	{
 		await ValueTask.CompletedTask;
 
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentsOrdered;
 		var json = args["0"].Message!.ToString();
 		var action = args["1"].Message!.ToPlainText().ToLower();
 		var path = args["2"].Message!.ToPlainText();
@@ -110,7 +111,7 @@ public partial class Functions
 	public static async ValueTask<CallState> json_query(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		await Task.CompletedTask;
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentsOrdered;
 		if (args.IsEmpty)
 		{
 			return new CallState(string.Format(Errors.ErrorWrongArgumentsRange, "json_query", 1, int.MaxValue, args.Count));

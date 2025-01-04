@@ -95,8 +95,7 @@ public partial class Functions
 	{
 		await Task.CompletedTask;
 
-		var first = parser.CurrentState.Arguments
-			.OrderBy(x => int.Parse(x.Key))
+		var first = parser.CurrentState.ArgumentsOrdered
 			.Select(x => x.Value)
 			.FirstOrDefault(x => x.ParsedMessage().ConfigureAwait(false).GetAwaiter().GetResult().Truthy(), CallState.Empty);
 
@@ -461,8 +460,7 @@ public partial class Functions
 	[SharpFunction(Name = "strfirstof", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
 	public static ValueTask<CallState> StringFirstOf(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var orderedArgs = parser.CurrentState.Arguments.OrderBy(x
-			=> int.Parse(x.Key)).ToList();
+		var orderedArgs = parser.CurrentState.ArgumentsOrdered;
 		var firstOne = orderedArgs.FirstOrDefault(x
 				=> !string.IsNullOrEmpty(x.Value.ParsedMessage().GetAwaiter().GetResult()!.ToPlainText()),
 			orderedArgs.Last());
@@ -472,8 +470,7 @@ public partial class Functions
 	[SharpFunction(Name = "strallof", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> StringAllOf(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var orderedArgs = parser.CurrentState.Arguments.OrderBy(x
-			=> int.Parse(x.Key)).ToList();
+		var orderedArgs = parser.CurrentState.ArgumentsOrdered;
 		var allOf = Enumerable.SkipLast(orderedArgs, 1)
 			.Select(x => x.Value.Message!)
 			.Where(x => !string.IsNullOrEmpty(x.ToPlainText()));

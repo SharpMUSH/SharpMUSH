@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Collections.Immutable;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Json.Path;
@@ -10,12 +11,12 @@ namespace SharpMUSH.Implementation.Functions;
 
 public static class JsonHelpers
 {
-	public static ValueTask<CallState> NullJSON(ConcurrentDictionary<string, CallState> args)
+	public static ValueTask<CallState> NullJSON(ImmutableSortedDictionary<string, CallState> args)
 		=> args.Count > 2
 			? ValueTask.FromResult(new CallState(string.Format(Errors.ErrorTooManyArguments, "json", 2, args.Count)))
 			: ValueTask.FromResult(new CallState("null"));
 
-	public static ValueTask<CallState> BooleanJSON(ConcurrentDictionary<string, CallState> args)
+	public static ValueTask<CallState> BooleanJSON(ImmutableSortedDictionary<string, CallState> args)
 	{
 		if (args.Count != 2)
 		{
@@ -31,7 +32,7 @@ public static class JsonHelpers
 		};
 	}
 
-	public static ValueTask<CallState> StringJSON(ConcurrentDictionary<string, CallState> args)
+	public static ValueTask<CallState> StringJSON(ImmutableSortedDictionary<string, CallState> args)
 	{
 		if (args.Count != 2)
 		{
@@ -43,7 +44,7 @@ public static class JsonHelpers
 		return ValueTask.FromResult(new CallState(JsonSerializer.Serialize(entry!.ToString())));
 	}
 
-	public static ValueTask<CallState> NumberJSON(ConcurrentDictionary<string, CallState> args)
+	public static ValueTask<CallState> NumberJSON(ImmutableSortedDictionary<string, CallState> args)
 	{
 		if (args.Count != 2)
 		{
@@ -59,7 +60,7 @@ public static class JsonHelpers
 		return ValueTask.FromResult(new CallState(JsonSerializer.Serialize(value)));
 	}
 
-	public static ValueTask<CallState> ArrayJSON(ConcurrentDictionary<string, CallState> args)
+	public static ValueTask<CallState> ArrayJSON(ImmutableSortedDictionary<string, CallState> args)
 	{
 		if (args.Count < 2)
 		{
@@ -68,10 +69,9 @@ public static class JsonHelpers
 
 		try
 		{
-			var sortedArgs = args.AsReadOnly()
-				.OrderBy(x => int.Parse(x.Key))
-				.Select(x => JsonDocument.Parse(x.Value.Message!.ToString()).RootElement)
-				.Skip(1);
+			var sortedArgs = args
+				.Skip(1)
+				.Select(x => JsonDocument.Parse(x.Value.Message!.ToString()).RootElement);
 
 			return ValueTask.FromResult(new CallState(JsonSerializer.Serialize(sortedArgs)));
 		}
@@ -81,7 +81,7 @@ public static class JsonHelpers
 		}
 	}
 
-	public static ValueTask<CallState> ObjectJSON(ConcurrentDictionary<string, CallState> args)
+	public static ValueTask<CallState> ObjectJSON(ImmutableSortedDictionary<string, CallState> args)
 	{
 		if (args.Count < 3)
 		{
@@ -93,9 +93,9 @@ public static class JsonHelpers
 			return ValueTask.FromResult(new CallState(string.Format(Errors.ErrorGotEvenArgs, "json")));
 		}
 
-		var sortedArgs = args.AsReadOnly().OrderBy(x => int.Parse(x.Key)).Select(x => x.Value.Message!).Skip(1);
-		var chunkedArgs = sortedArgs.Chunk(2);
-		var duplicateKeys = chunkedArgs.Select(x => x[0].ToPlainText()).Duplicates();
+		var sortedArgs = args.Select(x => x.Value.Message!).Skip(1);
+		var chunkedArgs = sortedArgs.Chunk(2).ToList();
+		var duplicateKeys = chunkedArgs.Select(x => x[0].ToPlainText()).Duplicates().ToList();
 
 		if (duplicateKeys.Any())
 		{

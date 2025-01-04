@@ -4,6 +4,8 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using System.Collections.Concurrent;
+using System.Collections.Immutable;
+using System.Collections.Specialized;
 
 namespace SharpMUSH.Library.ParserInterfaces;
 
@@ -49,6 +51,11 @@ public record ParserState(
 	public async ValueTask<AnyOptionalSharpObject> CallerObject(IMediator mediator)
 		=> _callerObject ??= Caller is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Caller.Value));
 
+	public ImmutableSortedDictionary<string, CallState> ArgumentsOrdered => Arguments
+		.Where(x => int.TryParse(x.Key, out _))
+		.OrderBy(x => int.Parse(x.Key))
+		.ToImmutableSortedDictionary();
+
 	public bool AddRegister(string register, MString value)
 	{
 		// TODO: Validate Register Pattern
@@ -58,6 +65,7 @@ public record ParserState(
 		{
 			throw new Exception("Could not peek!");
 		}
+
 		if (!top!.TryAdd(register, value))
 		{
 			top[register] = value;
