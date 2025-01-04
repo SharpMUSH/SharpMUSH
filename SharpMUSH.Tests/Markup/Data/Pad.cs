@@ -61,5 +61,14 @@ public static class Pad
 			A.TruncationType.Overflow,
 			A.single("...Centered....")
 		);
+		
+		yield return (
+			A.single("Centered"),
+			A.single("."),
+			1,
+			A.PadType.Center,
+			A.TruncationType.Overflow,
+			A.single("Centered")
+		);
 	}
 }
