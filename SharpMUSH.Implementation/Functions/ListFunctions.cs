@@ -464,10 +464,23 @@ public partial class Functions
 		var orderedArgs = parser.CurrentState.Arguments.OrderBy(x
 			=> int.Parse(x.Key)).ToList();
 		var firstOne = orderedArgs.FirstOrDefault(x
-				=> string.IsNullOrEmpty(x.Value.ParsedMessage().GetAwaiter().GetResult()!.ToPlainText()),
+				=> !string.IsNullOrEmpty(x.Value.ParsedMessage().GetAwaiter().GetResult()!.ToPlainText()),
 			orderedArgs.Last());
-
 		return ValueTask.FromResult(new CallState(firstOne.Value.Message));
+	}
+
+	[SharpFunction(Name = "strallof", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
+	public static ValueTask<CallState> StringAllOf(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var orderedArgs = parser.CurrentState.Arguments.OrderBy(x
+			=> int.Parse(x.Key)).ToList();
+		var allOf = Enumerable.SkipLast(orderedArgs, 1)
+			.Select(x => x.Value.Message!)
+			.Where(x => !string.IsNullOrEmpty(x.ToPlainText()));
+		var result = MModule.multipleWithDelimiter(
+			orderedArgs.Last().Value.Message!,
+			allOf);
+		return ValueTask.FromResult(new CallState(result));
 	}
 
 	[SharpFunction(Name = "table", MinArgs = 1, MaxArgs = 5, Flags = FunctionFlags.Regular)]
