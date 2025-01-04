@@ -541,7 +541,7 @@ public partial class Functions
 	public static async ValueTask<CallState> WordPosition(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		await Task.CompletedTask;
-		
+
 		var listArg = parser.CurrentState.Arguments["0"].Message;
 		var numberArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 		var delimiter = NoParseDefaultNoParseArgument(parser.CurrentState.Arguments, 2, " ");
@@ -550,7 +550,7 @@ public partial class Functions
 		{
 			return new CallState(Errors.ErrorUInteger);
 		}
-		
+
 		var list = MModule.split2(delimiter, listArg);
 		var lengths = list.Select(x => x.Length).ToList();
 
@@ -573,9 +573,23 @@ public partial class Functions
 		return new CallState(list.Length.ToString());
 	}
 
-	[SharpFunction(Name = "LINSERT", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> insert(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "linsert", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular)]
+	public static async ValueTask<CallState> ListInsert(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		await Task.CompletedTask;
+
+		var listArg = parser.CurrentState.Arguments["0"].Message;
+		var positionArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+		var newItemArg = parser.CurrentState.Arguments["2"].Message;
+		var delimiter = NoParseDefaultNoParseArgument(parser.CurrentState.Arguments, 3, " ");
+
+		if (!int.TryParse(positionArg, out var position))
+		{
+			return new CallState(Errors.ErrorUInteger);
+		}
+
+		var list = MModule.split2(delimiter, listArg);
+		var result = list.Insert([newItemArg], position);
+		return new CallState(MModule.multipleWithDelimiter(delimiter, result));
 	}
 }
