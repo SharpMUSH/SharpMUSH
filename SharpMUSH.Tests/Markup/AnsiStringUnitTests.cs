@@ -12,7 +12,7 @@ public class AnsiStringUnitTests : BaseUnitTest
 {
 	[Test]
 	[MethodDataSource(typeof(Data.Concat), nameof(Data.Concat.ConcatData))]
-	public static async Task Concat((AnsiString strA, AnsiString strB, AnsiString expected) data)
+	public async Task Concat((AnsiString strA, AnsiString strB, AnsiString expected) data)
 	{
 		(var strA, var strB, var expected) = data;
 		var result = A.concat(strA, strB);
@@ -31,7 +31,7 @@ public class AnsiStringUnitTests : BaseUnitTest
 
 	[Test]
 	[MethodDataSource(typeof(Data.Substring), nameof(Data.Substring.SubstringData))]
-	public static async Task Substring((AnsiString str, int start, AnsiString expected) data)
+	public async Task Substring((AnsiString str, int start, AnsiString expected) data)
 	{
 		var (str, start, expected) = data;
 		var result = A.substring(start, A.getLength(str) - start, str);
@@ -51,7 +51,7 @@ public class AnsiStringUnitTests : BaseUnitTest
 
 	[Test]
 	[MethodDataSource(typeof(Data.InsertAt), nameof(Data.InsertAt.InsertAtData))]
-	public static async Task InsertAt((AnsiString str, int index, AnsiString insert, AnsiString expected) data)
+	public async Task InsertAt((AnsiString str, int index, AnsiString insert, AnsiString expected) data)
 	{
 		var (str, index, insert, expected) = data;
 		var result = A.insertAt(str, insert, index);
@@ -71,7 +71,7 @@ public class AnsiStringUnitTests : BaseUnitTest
 
 	[Test]
 	[MethodDataSource(typeof(Data.Substring), nameof(Data.Substring.SubstringLengthData))]
-	public static async Task SubstringLength((AnsiString str, int length, AnsiString expected) data)
+	public async Task SubstringLength((AnsiString str, int length, AnsiString expected) data)
 	{
 		var (str, length, expected) = data;
 		var result = A.substring(0, length, str);
@@ -91,7 +91,7 @@ public class AnsiStringUnitTests : BaseUnitTest
 
 	[Test]
 	[MethodDataSource(typeof(Data.Split), nameof(Data.Split.SplitData))]
-	public static async Task Split((AnsiString str, string delimiter, AnsiString[] expected) data)
+	public async Task Split((AnsiString str, string delimiter, AnsiString[] expected) data)
 	{
 		var (str, delimiter, expected) = data;
 		var result = A.split(delimiter, str);
@@ -116,7 +116,7 @@ public class AnsiStringUnitTests : BaseUnitTest
 	}
 
 	[Test]
-	public static async Task Simple()
+	public async Task Simple()
 	{
 		var simpleString = A.single("red");
 		var redString = A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "red");
@@ -130,7 +130,7 @@ public class AnsiStringUnitTests : BaseUnitTest
 	}
 
 	[Test]
-	public static async Task SimpleSerialization()
+	public async Task SimpleSerialization()
 	{
 		var original = A.single("red");
 
@@ -141,7 +141,7 @@ public class AnsiStringUnitTests : BaseUnitTest
 	}
 
 	[Test]
-	public static async Task SerializationRgb()
+	public async Task SerializationRgb()
 	{
 		var original = A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "red");
 
@@ -152,7 +152,7 @@ public class AnsiStringUnitTests : BaseUnitTest
 	}
 
 	[Test]
-	public static async Task SerializationNull()
+	public async Task SerializationNull()
 	{
 		var original = A.markupSingle(M.Create(foreground: null), "red");
 
