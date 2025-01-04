@@ -374,45 +374,6 @@ public partial class Functions
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "SETDIFF", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> setmanip(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		throw new NotImplementedException();
-	}
-
-	[SharpFunction(Name = "SETINTER", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> setinter(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		throw new NotImplementedException();
-	}
-
-	[SharpFunction(Name = "SETSYMDIFF", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> setsmydiff(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		throw new NotImplementedException();
-	}
-
-	[SharpFunction(Name = "SETUNION", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> setunion(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var args = parser.CurrentState.Arguments;
-		var list1 = args["0"].Message;
-		var list2 = args["1"].Message;
-		var delimiter = NoParseDefaultNoParseArgument(args, 2, MModule.single(" "));
-		var sortType = NoParseDefaultNoParseArgument(args, 3, MModule.single("m"));
-		var outputSeparator = NoParseDefaultNoParseArgument(args, 4, delimiter);
-
-		var aList1 = MModule.split2(delimiter, list1);
-		var aList2 = MModule.split2(delimiter, list2);
-
-		var result = aList1
-			.Concat(aList2)
-			.DistinctBy(MModule.plainText)
-			.Aggregate((aggregated, next) => MModule.concat(aggregated, next));
-
-		return new ValueTask<CallState>(new CallState(result));
-	}
-
 	[SharpFunction(Name = "SUBJ", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> subj(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{

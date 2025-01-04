@@ -1,5 +1,4 @@
-﻿using MoreLinq.Extensions;
-using SharpMUSH.Implementation.Definitions;
+﻿using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
@@ -403,7 +402,7 @@ public partial class Functions
 		var sep = NoParseDefaultNoParseArgument(parser.CurrentState.Arguments, 2, delimiter);
 
 		var list = MModule.split2(delimiter, listArg);
-		var shuffled = list.Shuffle();
+		var shuffled = MoreLinq.Extensions.ShuffleExtension.Shuffle(list);
 		var result = MModule.multipleWithDelimiter(sep, shuffled);
 
 		return new CallState(result);
@@ -586,7 +585,46 @@ public partial class Functions
 		}
 
 		var list = MModule.split2(delimiter, listArg);
-		var result = list.Insert([newItemArg], position);
+		var result = MoreLinq.Extensions.InsertExtension.Insert(list, [newItemArg], position);
 		return new CallState(MModule.multipleWithDelimiter(delimiter, result));
+	}
+	
+	[SharpFunction(Name = "SETUNION", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular)]
+	public static ValueTask<CallState> setunion(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var args = parser.CurrentState.Arguments;
+		var list1 = args["0"].Message;
+		var list2 = args["1"].Message;
+		var delimiter = NoParseDefaultNoParseArgument(args, 2, MModule.single(" "));
+		var sortType = NoParseDefaultNoParseArgument(args, 3, MModule.single("m"));
+		var outputSeparator = NoParseDefaultNoParseArgument(args, 4, delimiter);
+
+		var aList1 = MModule.split2(delimiter, list1);
+		var aList2 = MModule.split2(delimiter, list2);
+
+		var result = aList1
+			.Concat(aList2)
+			.DistinctBy(MModule.plainText)
+			.OrderBy(MModule.plainText, Comparer<string>.Default); // Fix: Sorting.
+			
+		return ValueTask.FromResult(new CallState(MModule.multipleWithDelimiter(outputSeparator, result)));	
+	}
+	
+	[SharpFunction(Name = "SETDIFF", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular)]
+	public static ValueTask<CallState> setmanip(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		throw new NotImplementedException();
+	}
+
+	[SharpFunction(Name = "SETINTER", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular)]
+	public static ValueTask<CallState> setinter(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		throw new NotImplementedException();
+	}
+
+	[SharpFunction(Name = "SETSYMDIFF", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular)]
+	public static ValueTask<CallState> setsmydiff(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		throw new NotImplementedException();
 	}
 }
