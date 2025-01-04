@@ -80,16 +80,16 @@ public static class Configurable
 
 	public static readonly Dictionary<string, string[]> CommandAliases = new()
 	{
-		{ "@atrlock", ["@attrlock"] },
-		{ "@atrchown", ["@attrchown"] },
-		{ "@edit", ["@gedit"] },
-		{ "@ifelse", ["@if"] },
-		{ "@switch", ["@sw"] },
-		{ "get", ["take"] },
-		{ "goto", ["move"] },
-		{ "inventory", ["i"] },
-		{ "look", ["l"] },
-		{ "page", ["p"] },
-		{ "whisper", ["w"] }
+		{ "@ATRLOCK", ["@attrlock"] },
+		{ "@ATRCHOWN", ["@attrchown"] },
+		{ "@EDIT", ["@gedit"] },
+		{ "@IFELSE", ["@if"] },
+		{ "@SWITCH", ["@sw"] },
+		{ "GET", ["take"] },
+		{ "GOTO", ["move"] },
+		{ "INVENTORY", ["i"] },
+		{ "LOOK", ["l"] },
+		{ "PAGE", ["p"] },
+		{ "WHISPER", ["w"] }
 	};
 }
