@@ -537,10 +537,31 @@ public partial class Functions
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "WORDPOS", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> wordpos(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "wordpos", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public static async ValueTask<CallState> WordPosition(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		await Task.CompletedTask;
+		
+		var listArg = parser.CurrentState.Arguments["0"].Message;
+		var numberArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+		var delimiter = NoParseDefaultNoParseArgument(parser.CurrentState.Arguments, 2, " ");
+
+		if (!int.TryParse(numberArg, out var number))
+		{
+			return new CallState(Errors.ErrorUInteger);
+		}
+		
+		var list = MModule.split2(delimiter, listArg);
+		var lengths = list.Select(x => x.Length).ToList();
+
+		if (number > lengths.Sum())
+		{
+			return new CallState("#-1 WORD NUMBER OUT OF RANGE");
+		}
+
+		var i = 0;
+		var result = lengths.TakeWhile(x => (i += x) <= number).Count();
+		return new CallState(result);
 	}
 
 	[SharpFunction(Name = "words", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
