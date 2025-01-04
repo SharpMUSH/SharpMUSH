@@ -6,7 +6,14 @@ namespace SharpMUSH.Library.Services;
 
 public interface IConnectionService
 {
-	enum ConnectionState { Error, None, Connected, LoggedIn, Disconnected }
+	enum ConnectionState
+	{
+		Error,
+		None,
+		Connected,
+		LoggedIn,
+		Disconnected
+	}
 
 	public record ConnectionData(
 		string Handle,
@@ -15,9 +22,21 @@ public interface IConnectionService
 		Func<byte[], ValueTask> OutputFunction,
 		Func<Encoding> Encoding,
 		ConcurrentDictionary<string, string> Metadata
-	);
+	)
+	{
+		public TimeSpan? Connected => State == ConnectionState.Connected
+			? DateTimeOffset.UtcNow -
+			  DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(Metadata["ConnectionStartTime"]))
+			: null;
 
-	void Register(string handle, Func<byte[], ValueTask> outputFunction, Func<Encoding> encoding, ConcurrentDictionary<string, string>? MetaData = null);
+		public TimeSpan? Idle => State == ConnectionState.Connected
+			? DateTimeOffset.UtcNow -
+			  DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(Metadata["LastConnectionSignal"]))
+			: null;
+	}
+
+	void Register(string handle, Func<byte[], ValueTask> outputFunction, Func<Encoding> encoding,
+		ConcurrentDictionary<string, string>? MetaData = null);
 
 	void Bind(string handle, DBRef player);
 

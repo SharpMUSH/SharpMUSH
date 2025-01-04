@@ -22,13 +22,13 @@ public static partial class Commands
 		var players = await Task.WhenAll(everyone.Where(player => player.Ref.HasValue).Select(async player =>
 		{
 			var name = await parser.Mediator.Send(new GetBaseObjectNodeQuery(player.Ref!.Value));
-			var onFor = DateTimeOffset.UtcNow - DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(player.Metadata["ConnectionStartTime"]));
-			var idleFor = DateTimeOffset.UtcNow - DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(player.Metadata["LastConnectionSignal"]));
+			var onFor = player.Connected;
+			var idleFor = player.Idle;
 			return string.Format(
 				fmt,
 				name!.Name,
-				Functions.Functions.TimeString(onFor, accuracy: 3),
-				Functions.Functions.TimeString(idleFor),
+				Functions.Functions.TimeString(onFor!.Value, accuracy: 3),
+				Functions.Functions.TimeString(idleFor!.Value),
 				"Nothing");
 		}));
 		var footer = $"{everyone.Count} players logged in.";

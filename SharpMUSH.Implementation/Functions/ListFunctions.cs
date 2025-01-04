@@ -1,4 +1,5 @@
 ﻿using SharpMUSH.Implementation.Definitions;
+using SharpMUSH.Implementation.Extensions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
@@ -590,7 +591,7 @@ public partial class Functions
 	}
 	
 	[SharpFunction(Name = "SETUNION", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> setunion(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> setunion(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
 		var list1 = args["0"].Message;
@@ -602,12 +603,12 @@ public partial class Functions
 		var aList1 = MModule.split2(delimiter, list1);
 		var aList2 = MModule.split2(delimiter, list2);
 
-		var result = aList1
+		var result = await aList1
 			.Concat(aList2)
 			.DistinctBy(MModule.plainText)
-			.OrderBy(MModule.plainText, Comparer<string>.Default); // Fix: Sorting.
+			.OrderByAsync(x => x.ToPlainText(), parser, sortType.ToPlainText());
 			
-		return ValueTask.FromResult(new CallState(MModule.multipleWithDelimiter(outputSeparator, result)));	
+		return new CallState(MModule.multipleWithDelimiter(outputSeparator, result));	
 	}
 	
 	[SharpFunction(Name = "SETDIFF", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular)]
