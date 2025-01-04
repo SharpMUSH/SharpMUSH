@@ -46,9 +46,9 @@ public partial class CommandDiscoveryService : ICommandDiscoveryService
 							MModule.single(x.Pattern.Value.Remove(x.Pattern.Length - 1, 1).Remove(0, 1))))));
 
 		var matchedCommandPatternAttributes = convertedCommandPatternAttributes
-			.Where(x => x.Reg.IsMatch(MModule.plainText(commandString)));
+			.Where(x => x.Reg.IsMatch(MModule.plainText(commandString))).ToList();
 
-		if (!matchedCommandPatternAttributes.Any())
+		if (matchedCommandPatternAttributes.Count == 0)
 		{
 			return new None();
 		}

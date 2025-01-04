@@ -169,7 +169,6 @@ public static partial class Commands
 		await parser.NotifyService.Notify(parser.CurrentState.Handle!,
 			string.Format("Time taken: {0}ms", sw.Elapsed.TotalMilliseconds));
 
-
 		if (userDefinedCommandMatches.IsSome())
 		{
 			sw = Stopwatch.StartNew();
