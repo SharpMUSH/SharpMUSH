@@ -8,30 +8,37 @@ namespace SharpMUSH.Implementation.Extensions;
 
 public static class OrderByExtensions
 {
+	/// <summary>
+	/// Orders a collection of MarkupStrings (based on a MarkupString -> string keySelector) based on the Order Type passed.
+	/// </summary>
+	/// <param name="source">Source collection</param>
+	/// <param name="keySelector">Selector that translates to non-ansi plaintext for comparison</param>
+	/// <param name="parser">Parser</param>
+	/// <param name="order">Order string</param>
+	/// <code>
+	///  a       Sorts lexicographically (Maybe case-sensitive).
+	///  i       Sorts lexicographically (Always case-insensitive).
+	///  d       Sorts dbrefs.
+	///  n       Sorts integer numbers.
+	///  f       Sorts decimal numbers.
+	///  m       Sorts strings with embedded numbers and dbrefs (as names).
+	///  name    Sorts dbrefs by their names. (Maybe case-sensitive)
+	///  namei   Sorts dbrefs by their names. (Always case-insensitive)
+	///  conn    Sorts dbrefs by their connection time.
+	///  idle    Sorts dbrefs by their idle time.
+	///  owner   Sorts dbrefs by their owner dbrefs.
+	///  loc     Sorts dbrefs by their location dbref.
+	///  ctime   Sorts dbrefs by their creation time.
+	///  mtime   Sorts dbrefs by their modification time.
+	///  lattr   Sorts attribute names.
+	/// </code>
+	/// <returns>An Ordered Enumerable</returns>
 	public static async ValueTask<IOrderedEnumerable<MString>> OrderByAsync(this IEnumerable<MString> source,
 		Func<MString, string> keySelector,
 		IMUSHCodeParser parser, string order)
 	{
 		var descending = order.StartsWith('-');	
 		var workedOrder = descending ? order[1..] : order;
-		/*
-			   a       Sorts lexicographically (Maybe case-sensitive).
-			   i       Sorts lexicographically (Always case-insensitive).
-			   d       Sorts dbrefs.
-			   n       Sorts integer numbers.
-			   f       Sorts decimal numbers.
-			   m       Sorts strings with embedded numbers and dbrefs (as names).
-			   name    Sorts dbrefs by their names. (Maybe case-sensitive)
-			   namei   Sorts dbrefs by their names. (Always case-insensitive)
-			   conn    Sorts dbrefs by their connection time.
-			   idle    Sorts dbrefs by their idle time.
-			   owner   Sorts dbrefs by their owner dbrefs.
-			   loc     Sorts dbrefs by their location dbref.
-			   ctime   Sorts dbrefs by their creation time.
-			   mtime   Sorts dbrefs by their modification time.
-			   lattr   Sorts attribute names.
-		 */
-
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
 
 		// TODO: Special 'attr:' and 'attri:' types.
