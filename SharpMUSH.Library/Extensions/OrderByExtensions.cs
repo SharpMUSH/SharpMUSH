@@ -1,10 +1,9 @@
 ﻿using MoreLinq;
 using NaturalSort.Extension;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 
-namespace SharpMUSH.Implementation.Extensions;
+namespace SharpMUSH.Library.Extensions;
 
 public static class OrderByExtensions
 {

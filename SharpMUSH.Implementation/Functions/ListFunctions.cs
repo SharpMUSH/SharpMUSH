@@ -1,5 +1,4 @@
 ﻿using SharpMUSH.Implementation.Definitions;
-using SharpMUSH.Implementation.Extensions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
