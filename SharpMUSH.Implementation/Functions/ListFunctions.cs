@@ -49,6 +49,7 @@ public partial class Functions
 			// TODO: Indicate arg number.
 			return new CallState(Errors.ErrorInteger);
 		}
+
 		if (!int.TryParse(length, out var lengthNumber))
 		{
 			// TODO: Indicate arg number.
@@ -464,9 +465,51 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "TABLE", MinArgs = 1, MaxArgs = 5, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> table(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> table(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		await ValueTask.CompletedTask;
+
+		var listArg = parser.CurrentState.Arguments["0"].Message;
+		var fieldWidthArg = NoParseDefaultNoParseArgument(parser.CurrentState.Arguments, 1, "10").ToPlainText();
+		var lineWidthArg = NoParseDefaultNoParseArgument(parser.CurrentState.Arguments, 2, "78").ToPlainText();
+		var delimiterArg = NoParseDefaultNoParseArgument(parser.CurrentState.Arguments, 3, " ");
+		var separatorArg = NoParseDefaultNoParseArgument(parser.CurrentState.Arguments, 4, " ");
+		var fieldAlignment = "<";
+
+		if (fieldWidthArg.StartsWith('<') || fieldWidthArg.StartsWith('>') || fieldWidthArg.StartsWith('-'))
+		{
+			fieldAlignment = fieldWidthArg[..1];
+			fieldWidthArg = fieldWidthArg[1..];
+		}
+
+		if (!int.TryParse(fieldWidthArg, out var fieldWidth))
+		{
+			return new CallState("#-1 INVALID FIELD WIDTH");
+		}
+		
+		if (!int.TryParse(lineWidthArg, out var lineWidth))
+		{
+			return new CallState("#-1 INVALID LINE WIDTH");
+		}
+
+		var fieldsPerLine = lineWidth / fieldWidth;
+		var list = MModule.split2(delimiterArg, listArg);
+		var resultFields = list.Select(x =>
+			MModule.pad(x,
+				MModule.single(" "),
+				fieldWidth,
+				fieldAlignment switch
+				{
+					">" => MModule.PadType.Right,
+					"-" => MModule.PadType.Center,
+					_ => MModule.PadType.Left
+				}, MModule.TruncationType.Truncate));
+
+		var lines = resultFields.Chunk(fieldsPerLine);
+		var linesWithSeparators = lines.Select(x => MModule.multipleWithDelimiter(separatorArg, x));
+		var result = MModule.multipleWithDelimiter(MModule.single("\n"), linesWithSeparators);
+
+		return new CallState(result);
 	}
 
 	[SharpFunction(Name = "UNIQUE", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular)]

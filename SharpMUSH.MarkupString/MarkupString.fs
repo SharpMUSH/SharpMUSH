@@ -19,16 +19,27 @@ module MarkupStringModule =
         | TrimEnd
         | TrimBoth
 
+    and PadType =
+        | Left
+        | Right
+        | Center
+
+    and TruncationType =
+        | Truncate
+        | Overflow
+
     and MarkupTypes = // TODO: Consider using built-in option type.
         | MarkedupText of Markup
         | Empty
 
     and ColorJsonConverter() =
-        inherit JsonConverter<System.Drawing.Color>() 
-            override _.Read(reader, _typeToConvert, _options) =
-                ColorTranslator.FromHtml(reader.GetString())
-            override _.Write(writer, value, opts) =
-                writer.WriteStringValue($"#{value.R:X2}{value.G:X2}{value.B:X2}".ToLower())
+        inherit JsonConverter<System.Drawing.Color>()
+
+        override _.Read(reader, _typeToConvert, _options) =
+            ColorTranslator.FromHtml(reader.GetString())
+
+        override _.Write(writer, value, opts) =
+            writer.WriteStringValue($"#{value.R:X2}{value.G:X2}{value.B:X2}".ToLower())
 
     and MarkupString(markupDetails: MarkupTypes, content: Content list) as ms =
         // TODO: Optimize the ansi strings, so we don't re-initialize at least the exact same tag sequentially.
@@ -44,7 +55,9 @@ module MarkupStringModule =
                             match markupStr.MarkupDetails with
                             | Empty -> getText (mStr, outerMarkupType)
                             | MarkedupText _ -> getText (mStr, markupStr.MarkupDetails)
+
                         loop (acc + inner, tail)
+
                 loop (acc, items)
 
             let innerText = accumulate (String.Empty, markupStr.Content)
@@ -57,7 +70,7 @@ module MarkupStringModule =
                 | MarkedupText outerMarkup -> str.WrapAndRestore(innerText, outerMarkup)
 
         [<TailCall>]
-        let rec length() : int =
+        let rec length () : int =
             let rec getLengthInternal (internalContent: Content list) : int =
                 internalContent
                 |> List.fold
@@ -67,8 +80,9 @@ module MarkupStringModule =
                            | Text str -> str.Length
                            | MarkupText mStr -> getLengthInternal mStr.Content))
                     0
-            getLengthInternal(content)
-                
+
+            getLengthInternal (content)
+
         let isMarkedup (m: MarkupTypes) =
             match m with
             | MarkedupText _ -> true
@@ -85,40 +99,40 @@ module MarkupStringModule =
             match markupStr.MarkupDetails with
             | MarkedupText m -> markupStr.MarkupDetails
             | _ -> find markupStr.Content
-        
-        let len : Lazy<int> = Lazy<int>(length)
 
-        let toString() : string = 
-          let postfix (markupType: MarkupTypes) : string =
+        let len: Lazy<int> = Lazy<int>(length)
+
+        let toString () : string =
+            let postfix (markupType: MarkupTypes) : string =
                 match markupType with
                 | MarkedupText markup -> markup.Postfix
                 | Empty -> String.Empty
 
-          let prefix (markupType: MarkupTypes) : string =
-              match markupType with
-              | MarkedupText markup -> markup.Prefix
-              | Empty -> String.Empty
+            let prefix (markupType: MarkupTypes) : string =
+                match markupType with
+                | MarkedupText markup -> markup.Prefix
+                | Empty -> String.Empty
 
-          let optimize (markupType: MarkupTypes) (text: string) : string =
-              match markupType with
-              | MarkedupText markup -> markup.Optimize text
-              | Empty -> String.Empty
+            let optimize (markupType: MarkupTypes) (text: string) : string =
+                match markupType with
+                | MarkedupText markup -> markup.Optimize text
+                | Empty -> String.Empty
 
-          let firstMarkedupTextType = findFirstMarkedupText ms
+            let firstMarkedupTextType = findFirstMarkedupText ms
 
-          match firstMarkedupTextType with
-          | Empty -> getText (ms, Empty)
-          | _ ->
-              optimize
-                  firstMarkedupTextType
-                  (prefix (firstMarkedupTextType)
-                    + getText (ms, Empty)
-                    + postfix (firstMarkedupTextType))
+            match firstMarkedupTextType with
+            | Empty -> getText (ms, Empty)
+            | _ ->
+                optimize
+                    firstMarkedupTextType
+                    (prefix (firstMarkedupTextType)
+                     + getText (ms, Empty)
+                     + postfix (firstMarkedupTextType))
 
-        let strVal : Lazy<string> = Lazy<string>(toString)
+        let strVal: Lazy<string> = Lazy<string>(toString)
 
         [<TailCall>]
-        let rec toPlainText() : string =
+        let rec toPlainText () : string =
             let rec loop (content: Content list) (acc: string list) =
                 match content with
                 | [] -> List.rev acc
@@ -127,12 +141,12 @@ module MarkupStringModule =
 
             String.Concat(loop ms.Content [])
 
-        let plainStrVal : Lazy<string> = Lazy<string>(toPlainText)
+        let plainStrVal: Lazy<string> = Lazy<string>(toPlainText)
 
         member val MarkupDetails = markupDetails with get, set
-        
+
         member val Content = content with get, set
-        
+
         member val Length = len.Value
 
         override this.ToString() : string = strVal.Value
@@ -161,32 +175,29 @@ module MarkupStringModule =
 
     let multipleWithDelimiter (delimiter: MarkupString) (mu: MarkupString seq) : MarkupString =
         mu |> Seq.intersperse delimiter |> multiple
-        
-    let serializationOptions = 
-      let serializeOption = JsonFSharpOptions.Default().ToJsonSerializerOptions()
-      serializeOption.Converters.Add(ColorJsonConverter())
-      serializeOption
 
-    let serialize(markupStr: MarkupString) : string = 
+    let serializationOptions =
+        let serializeOption = JsonFSharpOptions.Default().ToJsonSerializerOptions()
+        serializeOption.Converters.Add(ColorJsonConverter())
+        serializeOption
+
+    let serialize (markupStr: MarkupString) : string =
         JsonSerializer.Serialize(markupStr, serializationOptions)
 
-    let deserialize (markupString: string) : MarkupString = 
-      if markupString.Length = 0 
-      then 
-        empty()
-      else 
-       JsonSerializer.Deserialize(markupString, serializationOptions)
+    let deserialize (markupString: string) : MarkupString =
+        if markupString.Length = 0 then
+            empty ()
+        else
+            JsonSerializer.Deserialize(markupString, serializationOptions)
 
     [<TailCall>]
-    let rec plainText (markupStr: MarkupString) : string = 
-      markupStr.ToPlainText()
+    let rec plainText (markupStr: MarkupString) : string = markupStr.ToPlainText()
 
     let plainText2 (markupStr: MarkupString) : MarkupString =
         MarkupString(Empty, [ Text(markupStr.ToPlainText()) ])
 
     [<TailCall>]
-    let rec getLength (markupStr: MarkupString) : int =
-        markupStr.Length
+    let rec getLength (markupStr: MarkupString) : int = markupStr.Length
 
     let concat
         (originalMarkupStr: MarkupString)
@@ -206,7 +217,9 @@ module MarkupStringModule =
             MarkupString(Empty, combinedContent)
         | _ ->
             let combinedContent =
-                [ MarkupText originalMarkupStr ] @ separatorContent @ [ MarkupText newMarkupStr ]
+                [ MarkupText originalMarkupStr ]
+                @ separatorContent
+                @ [ MarkupText newMarkupStr ]
 
             MarkupString(Empty, combinedContent)
 
@@ -333,33 +346,100 @@ module MarkupStringModule =
                     let start = indexes |> Seq.head
                     let ed = indexes |> Seq.last
                     substring start (ed - start) x)
-    
+
+    [<TailCall>]
+    let rec repeat (markupStr: MarkupString) (count: int) (aggregator: MarkupString) =
+        if count <= 0 then
+            aggregator
+        else
+            repeat markupStr (count - 1) (concat aggregator markupStr None)
+
+    let pad
+        (markupStr: MarkupString)
+        (padStr: MarkupString)
+        (width: int)
+        (padType: PadType)
+        (truncType: TruncationType)
+        : MarkupString =
+        let len = getLength markupStr
+        let padLen = getLength padStr
+        let lengthToPad = width - len
+        let repeatCount = (lengthToPad / padLen) + 1
+
+        if lengthToPad <= 0 then
+            match truncType with
+            | Overflow -> markupStr
+            | Truncate -> substring 0 lengthToPad markupStr
+        else
+            match padType, truncType with
+            | Right, Overflow ->
+                repeat padStr repeatCount (empty ())
+                |> substring 0 lengthToPad
+                |> fun x -> concat markupStr x None
+            | Right, Truncate ->
+                repeat padStr repeatCount (empty ())
+                |> substring 0 lengthToPad
+                |> fun x -> concat markupStr x None
+                |> substring 0 width
+            | Left, Overflow ->
+                repeat padStr repeatCount (empty ())
+                |> substring 0 lengthToPad
+                |> fun x -> concat x markupStr None
+            | Left, Truncate ->
+                repeat padStr repeatCount (empty ())
+                |> substring 0 lengthToPad
+                |> fun x -> concat x markupStr None
+                |> substring 0 width
+            | Center, Overflow ->
+                let leftPadLength = lengthToPad / 2
+                let rightPadLength = lengthToPad - leftPadLength
+
+                let padding =
+                    repeat padStr ((width / padLen) + 1) (empty ()) |> substring 0 lengthToPad
+
+                let leftPad = substring 0 leftPadLength padding
+                let rightPad = substring leftPadLength rightPadLength padding
+
+                concat leftPad markupStr None |> fun x -> concat x rightPad None
+            | Center, Truncate ->
+                let leftPadLength = lengthToPad / 2
+                let rightPadLength = lengthToPad - leftPadLength
+
+                let padding =
+                    repeat padStr ((width / padLen) + 1) (empty ()) |> substring 0 lengthToPad
+
+                let leftPad = substring 0 leftPadLength padding
+                let rightPad = substring leftPadLength rightPadLength padding
+
+                concat leftPad markupStr None
+                |> fun x -> concat x rightPad None
+                |> substring 0 width
+
     type private GlobPatternRegex = FSharp.Text.RegexProvider.Regex< @"(?<!\\)\\\*" >
     type private QuestionPatternRegex = FSharp.Text.RegexProvider.Regex< @"(?<!\\)\\\?" >
     type private KindPatternRegex = FSharp.Text.RegexProvider.Regex< @"\\\\\\\*" >
     type private KindPattern2Regex = FSharp.Text.RegexProvider.Regex< @"\\\\\\\?" >
-    
-    let getWildcardMatchAsRegex (pattern: MarkupString) : string =
-      let applyRegexPattern(pat: string) =
-        pat
-        |> fun (x) -> GlobPatternRegex().TypedReplace(x, konst @"(.*?)")
-        |> fun (x) -> QuestionPatternRegex().TypedReplace(x, konst @"(.)")
-        |> fun (x) -> KindPatternRegex().TypedReplace(x, konst @"\*")
-        |> fun (x) -> KindPattern2Regex().TypedReplace(x, konst @"\?")
 
-      pattern 
-      |> plainText 
-      |> Regex.Escape
-      |> fun x -> $"^{x}$"
-      |> applyRegexPattern
-    
+    let getWildcardMatchAsRegex (pattern: MarkupString) : string =
+        let applyRegexPattern (pat: string) =
+            pat
+            |> fun x -> GlobPatternRegex().TypedReplace(x, konst @"(.*?)")
+            |> fun x -> QuestionPatternRegex().TypedReplace(x, konst @"(.)")
+            |> fun x -> KindPatternRegex().TypedReplace(x, konst @"\*")
+            |> fun x -> KindPattern2Regex().TypedReplace(x, konst @"\?")
+
+        pattern |> plainText |> Regex.Escape |> (fun x -> $"^{x}$") |> applyRegexPattern
+
     let isWildcardMatch (input: MarkupString) (pattern: MarkupString) : bool =
         let newPattern = getWildcardMatchAsRegex (pattern)
         (plainText input, newPattern) |> Regex.IsMatch
-    
+
     let getMatches (input: MarkupString) (pattern: string) : (Match * MarkupString seq) seq =
-        let captureToString (captureGroup: Group) = substring captureGroup.Index captureGroup.Length input
-        let allMatches (mtch: Match) = (mtch, mtch.Groups |> Seq.map captureToString)
+        let captureToString (captureGroup: Group) =
+            substring captureGroup.Index captureGroup.Length input
+
+        let allMatches (mtch: Match) =
+            (mtch, mtch.Groups |> Seq.map captureToString)
 
         ((plainText input), pattern)
         |> Regex.Matches
@@ -412,12 +492,10 @@ type Justification =
     | Paragraph
 
 type ColumnSpec =
-    { 
-      Width: int
+    { Width: int
       Justification: Justification
       Options: string
-      Ansi: string 
-    }
+      Ansi: string }
 
 module ColumnSpec =
     let parse (spec: string) : ColumnSpec =
@@ -452,12 +530,10 @@ module ColumnSpec =
             else
                 String.Empty
 
-        {
-          Width = width
+        { Width = width
           Justification = justification
           Options = options
-          Ansi = ansi
-        }
+          Ansi = ansi }
 
 module TextAligner =
     let fullJustify (text: string) (width: int) (fill: char) : string =
@@ -472,9 +548,12 @@ module TextAligner =
                 let totalSpaces = width - text.Length + words.Length - 1
                 let spaceBetweenWords = totalSpaces / (words.Length - 1)
                 let extraSpaces = totalSpaces % (words.Length - 1)
+
                 let spaces =
                     Array.init (words.Length - 1) (fun i -> spaceBetweenWords + (if i < extraSpaces then 1 else 0))
+
                 let z = Seq.zip words spaces
+
                 let intermediate =
                     Seq.fold (fun acc (word, space) -> acc + word + String(' ', space)) "" z
 
@@ -548,17 +627,21 @@ module TextAligner =
                     |> List.mapi (fun i colWords ->
                         let spec = columnSpecs.[i]
                         let rowText, remainingWords = buildRowText spec colWords
+
                         let rowText =
                             if spec.Options.Contains('x') then
                                 rowText.Substring(0, Math.Min(spec.Width, rowText.Length))
                             else
                                 rowText
+
                         let rowText =
                             if rowText.Length < spec.Width && spec.Options.Contains('.') then
                                 rowText.PadRight(spec.Width, ' ')
                             else
                                 rowText
+
                         let justified = justify spec.Justification rowText spec.Width filler
+
                         let justifiedText =
                             if String.IsNullOrEmpty(spec.Ansi) then
                                 justified
