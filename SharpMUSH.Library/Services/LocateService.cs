@@ -6,7 +6,6 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using System.Text.RegularExpressions;
-using static MarkupString.MarkupStringModule;
 
 namespace SharpMUSH.Library.Services;
 
@@ -19,10 +18,10 @@ public partial class LocateService : ILocateService
 	public async ValueTask<AnyOptionalSharpObjectOrError> LocateAndNotifyIfInvalid(IMUSHCodeParser parser, AnySharpObject looker, AnySharpObject executor, string name, LocateFlags flags)
 	{
 		var loc = await Locate(parser, looker, executor, name, flags);
-		var caller = await parser.CurrentState.CallerObject(parser.Mediator)!;
+		var caller = await parser.CurrentState.CallerObject(parser.Mediator);
 		if (!loc.IsValid())
 		{
-			await parser.NotifyService.Notify(executor, loc.IsError ? loc.AsError.Value : "I can't see that here", caller.WithoutNone(), INotifyService.NotificationType.Announce);
+			await parser.NotifyService.Notify(executor, loc.IsError ? loc.AsError.Value : "I can't see that here", caller.WithoutNone());
 		}
 		return loc;
 	}
@@ -64,7 +63,7 @@ public partial class LocateService : ILocateService
 		var location = FriendlyWhereIs(result);
 
 		if (parser.PermissionService.CanExamine(executor, location.WithExitOption()) ||
-				((!result.IsDarkLegal() || location.WithExitOption().IsLight() || result.IsLight()) && parser.PermissionService.CanInteract(result, executor, Library.Services.IPermissionService.InteractType.See)))
+				((!result.IsDarkLegal() || location.WithExitOption().IsLight() || result.IsLight()) && parser.PermissionService.CanInteract(result, executor, IPermissionService.InteractType.See)))
 		{
 			return result.WithNoneOption().WithErrorOption();
 		}
@@ -93,7 +92,7 @@ public partial class LocateService : ILocateService
 		{
 			location = where.MinusExit();
 		}
-		if (where.IsExit)
+		else if (where.IsExit)
 		{
 			location = where.MinusRoom().Home();
 		}
@@ -254,7 +253,7 @@ public partial class LocateService : ILocateService
 						&& where.IsRoom
 						&& ((location.Object().DBRef != where.Object().DBRef) || !flags.HasFlag(LocateFlags.ExitsPreference)))
 				{
-					var exits = (await parser.Mediator.Send(new GetExitsQuery(where.AsContainer)))?.Select(x => new AnySharpObject(x)) ?? [];
+					var exits = (await parser.Mediator.Send(new GetExitsQuery(where.AsContainer))).Select(x => new AnySharpObject(x));
 
 					(bestMatch, final, curr, right_type, exact, c) = Match_List(parser, exits, looker, where, bestMatch, exact, final, curr, right_type, flags, name);
 				}
@@ -313,9 +312,9 @@ public partial class LocateService : ILocateService
 				if (flow == ControlFlow.Continue) continue;
 				if (flow == ControlFlow.Return) return (bestMatch, final, curr, rightType, exact, ControlFlow.Return);
 			}
-			else if (!parser.PermissionService.CanInteract(cur, looker, Library.Services.IPermissionService.InteractType.Match))
+			else if (!parser.PermissionService.CanInteract(cur, looker, IPermissionService.InteractType.Match))
 			{
-				continue;
+				// continue;
 			}
 			else if (cur.IsPlayer && cur.AsPlayer.Aliases!.Contains(name)
 							 || (!cur.IsExit
@@ -454,7 +453,7 @@ public partial class LocateService : ILocateService
 		return currentLocation;
 	}
 
-	public static AnySharpContainer FriendlyWhereIs(AnySharpObject thing) => thing.Match(
+	public static AnySharpContainer FriendlyWhereIs(AnySharpObject obj) => obj.Match(
 			player => player.Location.Value,
 			room => room,
 			exit => exit.Home.Value,
@@ -473,7 +472,7 @@ public partial class LocateService : ILocateService
 
 		var loc2 = FriendlyWhereIs(obj2).Object().DBRef;
 
-		return (loc2 == obj1.Object()!.DBRef) || (loc2 == loc1);
+		return loc2 == obj1.Object().DBRef || loc2 == loc1;
 	}
 
 	public static IEnumerable<string> TypePreferences(LocateFlags flags) =>

@@ -6,7 +6,6 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using CB = SharpMUSH.Implementation.Definitions.CommandBehavior;
-using StringExtensions = ANSILibrary.StringExtensions;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -60,7 +59,7 @@ public static partial class Commands
 		var name = MModule.plainText(args["0"].Message!);
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
 
-		var thing = await parser.Mediator.Send(new CreateThingCommand(name, executor.Where, executor.Object()!.Owner.Value));
+		var thing = await parser.Mediator.Send(new CreateThingCommand(name, executor.Where, executor.Object().Owner.Value));
 
 		return new CallState(thing.ToString());
 	}
@@ -249,7 +248,7 @@ public static partial class Commands
 
 		// NOTE: We discard arguments 4-6.
 		var executorBase = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
-		var executor = executorBase.Object()!;
+		var executor = executorBase.Object();
 		var roomName = parser.CurrentState.Arguments["0"].Message!;
 		parser.CurrentState.Arguments.TryGetValue("1", out var exitToCallState);
 		parser.CurrentState.Arguments.TryGetValue("2", out var exitFromCallState);
@@ -271,7 +270,7 @@ public static partial class Commands
 
 		if (!string.IsNullOrWhiteSpace(exitTo?.ToString()))
 		{
-			var exitToName = MModule.plainText(exitTo!).Split(";");
+			var exitToName = MModule.plainText(exitTo).Split(";");
 			// CAN CREATE EXIT HERE?
 			// CAN LINK TO DESTINATION?
 
@@ -286,7 +285,7 @@ public static partial class Commands
 			// CAN CREATE EXIT THERE?
 			// CAN LINK BACK TO CURRENT ROOM?
 
-			var exitFromName = MModule.plainText(exitFrom!).Split(";");
+			var exitFromName = MModule.plainText(exitFrom).Split(";");
 			var newRoomObject = await parser.Mediator.Send(new GetObjectNodeQuery(response));
 
 			var fromExitResponse = await parser.Mediator.Send(new CreateExitCommand(exitFromName.First(), exitFromName.Skip(1).ToArray(), newRoomObject.AsRoom, executor.Owner.Value));
