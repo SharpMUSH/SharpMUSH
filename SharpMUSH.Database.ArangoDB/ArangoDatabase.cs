@@ -70,17 +70,15 @@ public class ArangoDatabase(
 
 		var transactionHandle = await arangoDB.Transaction.BeginAsync(handle, transaction);
 
-		var obj = await arangoDB.Document.CreateAsync<SharpObjectCreateRequest, SharpObjectQueryResult>(
-			transactionHandle,
-			DatabaseConstants.objects,
-			new SharpObjectCreateRequest(
+		var obj = await arangoDB.Graph.Vertex.CreateAsync<SharpObjectCreateRequest, SharpObjectQueryResult>(
+			transactionHandle, DatabaseConstants.graphObjects,
+			DatabaseConstants.objects, new SharpObjectCreateRequest(
 				name,
 				DatabaseConstants.typePlayer,
 				[],
 				time,
 				time
-			),
-			returnNew: true);
+			), returnNew: true);
 
 		var hashedPassword = passwordService.HashPassword($"#{obj.New.Key}:{obj.New.CreationTime}", password);
 
@@ -90,7 +88,7 @@ public class ArangoDatabase(
 			new SharpPlayerCreateRequest([], hashedPassword));
 
 		await arangoDB.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.graphObjects, DatabaseConstants.isObject,
-			new SharpEdgeCreateRequest(playerResult.Id, obj.Id));
+			new SharpEdgeCreateRequest(playerResult.Id, obj.New.Id));
 
 		await arangoDB.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.graphObjectOwners,
 			DatabaseConstants.hasObjectOwner, new SharpEdgeCreateRequest(playerResult.Id, playerResult.Id));
@@ -111,7 +109,7 @@ public class ArangoDatabase(
 
 		await arangoDB.Transaction.CommitAsync(transactionHandle);
 
-		return new DBRef(int.Parse(obj.Key), time);
+		return new DBRef(int.Parse(obj.New.Key), time);
 	}
 
 	public async ValueTask<DBRef> CreateRoomAsync(string name, SharpPlayer creator)
