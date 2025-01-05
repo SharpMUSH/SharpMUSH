@@ -150,6 +150,14 @@ public class ArangoDatabase(
 		return new DBRef(int.Parse(obj.Key), time);
 	}
 
+	public async ValueTask<bool> LinkExitAsync(SharpExit exit, AnySharpContainer location)
+	{
+		await arangoDB.Graph.Edge.CreateAsync(handle, DatabaseConstants.graphHomes, DatabaseConstants.hasHome,
+			new SharpEdgeCreateRequest(exit.Id!, location.Id));
+		
+		return true;
+	} 
+
 	public async ValueTask<DBRef> CreateExitAsync(string name, string[] aliases, AnySharpContainer location,
 		SharpPlayer creator)
 	{
@@ -165,8 +173,8 @@ public class ArangoDatabase(
 			new SharpEdgeCreateRequest(exit.Id, obj.Id));
 		await arangoDB.Graph.Edge.CreateAsync(handle, DatabaseConstants.graphLocations, DatabaseConstants.atLocation,
 			new SharpEdgeCreateRequest(exit.Id, location.Id));
-		await arangoDB.Graph.Edge.CreateAsync(handle, DatabaseConstants.graphHomes, DatabaseConstants.hasHome,
-			new SharpEdgeCreateRequest(exit.Id, location.Id));
+		/* await arangoDB.Graph.Edge.CreateAsync(handle, DatabaseConstants.graphHomes, DatabaseConstants.hasHome,
+			new SharpEdgeCreateRequest(exit.Id, location.Id)); */
 		await arangoDB.Graph.Edge.CreateAsync(handle, DatabaseConstants.graphObjectOwners, DatabaseConstants.hasObjectOwner,
 			new SharpEdgeCreateRequest(obj.Id, creator.Id!));
 
@@ -972,7 +980,7 @@ public class ArangoDatabase(
 			DatabaseConstants.graphLocations,
 			DatabaseConstants.atLocation,
 			edge.Key,
-			new
+			new 
 			{
 				From = enactorObj.Id,
 				To = newLocation.Id

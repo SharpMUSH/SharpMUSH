@@ -277,6 +277,12 @@ public static partial class Commands
 			var toExitResponse = await parser.Mediator.Send(new CreateExitCommand(exitToName.First(), exitToName.Skip(1).ToArray(), executorBase.Where, executor.Owner.Value));
 			await parser.NotifyService.Notify(executor.DBRef, $"Opened exit #{toExitResponse.Number}");
 			await parser.NotifyService.Notify(executor.DBRef, "Trying to link...");
+
+			var newRoomObject = await parser.Mediator.Send(new GetObjectNodeQuery(response));
+			var newExitObject = await parser.Mediator.Send(new GetObjectNodeQuery(toExitResponse));
+			
+			await parser.Mediator.Send(new LinkExitCommand(newExitObject.AsExit, newRoomObject.AsRoom));
+			
 			await parser.NotifyService.Notify(executor.DBRef, $"Linked exit #{toExitResponse.Number} to #{response.Number}");
 		}
 
@@ -289,9 +295,13 @@ public static partial class Commands
 			var newRoomObject = await parser.Mediator.Send(new GetObjectNodeQuery(response));
 
 			var fromExitResponse = await parser.Mediator.Send(new CreateExitCommand(exitFromName.First(), exitFromName.Skip(1).ToArray(), newRoomObject.AsRoom, executor.Owner.Value));
+			var newExitObject = await parser.Mediator.Send(new GetObjectNodeQuery(fromExitResponse));
 
 			await parser.NotifyService.Notify(executor.DBRef, $"Opened exit #{fromExitResponse.Number}");
 			await parser.NotifyService.Notify(executor.DBRef, "Trying to link...");
+			
+			await parser.Mediator.Send(new LinkExitCommand(newExitObject.AsExit, newRoomObject.AsRoom));
+			
 			await parser.NotifyService.Notify(executor.DBRef, $"Linked exit #{fromExitResponse.Number} to #{executorBase.Where.Object().DBRef.Number}");
 		}
 
