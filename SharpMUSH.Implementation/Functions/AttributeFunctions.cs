@@ -18,7 +18,8 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "attrib_set", MaxArgs = 2, Flags = FunctionFlags.Regular)]
-	public static async ValueTask<CallState> Attrib_Set(IMUSHCodeParser parser, SharpFunctionAttribute functionAttribute)
+	public static async ValueTask<CallState> AttributeSet(IMUSHCodeParser parser,
+		SharpFunctionAttribute functionAttribute)
 	{
 		// TODO: If we have the NoSideFX flag, don't function! 
 		// That should be handled by the parser before it gets here.
@@ -33,13 +34,13 @@ public partial class Functions
 			return new CallState("#-1 BAD ARGUMENT FORMAT TO ATTRIB_SET");
 		}
 
-		(var dbref, var attribute) = details;
+		var (dbref, attribute) = details;
 
 		var locate = await parser.LocateService.LocateAndNotifyIfInvalid(parser,
 			enactor,
 			executor,
 			dbref,
-			Library.Services.LocateFlags.All);
+			LocateFlags.All);
 
 		// Arguments are getting here in an evaluated state, when they should not be.
 		if (!locate.IsValid())
@@ -90,7 +91,7 @@ public partial class Functions
 		}
 
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).WithoutNone();
-		
+
 		// Locate and get flags from Object -- or attribute flags. See pattern in Owner().
 		throw new NotImplementedException();
 	}
@@ -473,7 +474,7 @@ public partial class Functions
 			executor,
 			actualObject,
 			attribute,
-			mode: Library.Services.IAttributeService.AttributeMode.Execute,
+			mode: IAttributeService.AttributeMode.Execute,
 			parent: false);
 
 		switch (maybeAttr)
@@ -579,7 +580,7 @@ public partial class Functions
 			return new CallState(maybeDBref.IsError ? maybeDBref.AsError.Value : Errors.ErrorCantSeeThat);
 		}
 
-		var actualObject = maybeDBref.WithoutError().WithoutNone()!;
+		var actualObject = maybeDBref.WithoutError().WithoutNone();
 
 		var maybeAttr = await parser.AttributeService.GetAttributeAsync(
 			executor,
