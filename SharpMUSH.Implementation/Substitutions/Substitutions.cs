@@ -27,7 +27,7 @@ public static partial class Substitutions
 			"A" or "a" => throw new NotImplementedException(), // TODO: ABSOLUTE POSSESSIVE PRONOUN
 			"@" => new($"#{parser.CurrentState.Caller!.Value.Number}"),
 			"!" => new($"#{parser.CurrentState.Executor!.Value.Number}"),
-			"L" or "l" => new((await parser.CurrentState.ExecutorObject(parser.Mediator)).WithoutNone().Where.Object().DBRef.ToString()), // TODO: LOCATION OF EXECUTOR
+			"L" or "l" => new($"#{(await parser.CurrentState.ExecutorObject(parser.Mediator)).WithoutNone().Where.Object().DBRef.Number.ToString()}"),
 			"C" or "c" => throw new NotImplementedException(), // TODO: LAST COMMAND BEFORE EVALUATION
 			"U" or "u" => throw new NotImplementedException(), // TODO: LAST COMMAND AFTER EVALUATION
 			"?" => new(parser.State.Count().ToString()),

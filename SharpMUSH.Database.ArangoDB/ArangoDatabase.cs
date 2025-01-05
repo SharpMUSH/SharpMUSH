@@ -175,7 +175,7 @@ public class ArangoDatabase(
 			new SharpEdgeCreateRequest(exit.Id, obj.Id));
 		await arangoDB.Document.CreateAsync(handle, DatabaseConstants.hasHome, new SharpEdgeCreateRequest(exit.Id, idx));
 		await arangoDB.Document.CreateAsync(handle, DatabaseConstants.hasObjectOwner,
-			new SharpEdgeCreateRequest(exit.Id, idx));
+			new SharpEdgeCreateRequest(exit.Id, creator.Id!));
 
 		return new DBRef(int.Parse(obj.Key), time);
 	}
