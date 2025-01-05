@@ -89,15 +89,11 @@ public class ArangoDatabase(
 			DatabaseConstants.players,
 			new SharpPlayerCreateRequest([], hashedPassword));
 
-		await arangoDB.Document.CreateAsync(
-			transactionHandle,
-			DatabaseConstants.isObject,
+		await arangoDB.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.graphObjects, DatabaseConstants.isObject,
 			new SharpEdgeCreateRequest(playerResult.Id, obj.Id));
 
-		await arangoDB.Document.CreateAsync(
-			transactionHandle,
-			DatabaseConstants.hasObjectOwner,
-			new SharpEdgeCreateRequest(playerResult.Id, playerResult.Id));
+		await arangoDB.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.graphObjectOwners,
+			DatabaseConstants.hasObjectOwner, new SharpEdgeCreateRequest(playerResult.Id, playerResult.Id));
 
 		var idx = objectLocation.Match(
 			player => player.Id,
@@ -106,14 +102,11 @@ public class ArangoDatabase(
 			thing => thing.Id,
 			none => throw new ArgumentException("A player must have a valid creation location!"));
 
-		await arangoDB.Document.CreateAsync(
-			transactionHandle,
-			DatabaseConstants.atLocation,
-			new SharpEdgeCreateRequest(playerResult.Id, idx!));
+		await arangoDB.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.graphLocations,
+			DatabaseConstants.atLocation, new SharpEdgeCreateRequest(playerResult.Id, idx!));
 
-		await arangoDB.Document.CreateAsync(
-			transactionHandle,
-			DatabaseConstants.hasHome,
+		// TODO: This should use a Default Home, which should be passed down from above.
+		await arangoDB.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.graphHomes, DatabaseConstants.hasHome,
 			new SharpEdgeCreateRequest(playerResult.Id, idx!));
 
 		await arangoDB.Transaction.CommitAsync(transactionHandle);
@@ -129,10 +122,10 @@ public class ArangoDatabase(
 			new SharpObjectCreateRequest(name, DatabaseConstants.typeRoom, [], time, time));
 		var room = await arangoDB.Document.CreateAsync(handle, DatabaseConstants.rooms, new SharpRoomCreateRequest());
 
-		await arangoDB.Document.CreateAsync(handle, DatabaseConstants.isObject,
+		await arangoDB.Graph.Edge.CreateAsync(handle, DatabaseConstants.graphObjects, DatabaseConstants.isObject,
 			new SharpEdgeCreateRequest(room.Id, obj.Id));
-		await arangoDB.Document.CreateAsync(handle, DatabaseConstants.hasObjectOwner,
-			new SharpEdgeCreateRequest(room.Id, creator.Id!));
+		await arangoDB.Graph.Edge.CreateAsync(handle, DatabaseConstants.graphObjectOwners, DatabaseConstants.hasObjectOwner,
+			new SharpEdgeCreateRequest(obj.Id, creator.Id!));
 
 		return new DBRef(int.Parse(obj.Key), time);
 	}
@@ -146,16 +139,15 @@ public class ArangoDatabase(
 			new SharpObjectCreateRequest(name, DatabaseConstants.typeThing, [], time, time));
 		var thing = await arangoDB.Document.CreateAsync(handle, DatabaseConstants.things, new SharpThingCreateRequest([]));
 
-		await arangoDB.Document.CreateAsync(handle, DatabaseConstants.isObject,
+		await arangoDB.Graph.Edge.CreateAsync(handle, DatabaseConstants.graphObjects, DatabaseConstants.isObject,
 			new SharpEdgeCreateRequest(thing.Id, obj.Id));
-
-		var idx = location.Id;
-
-		await arangoDB.Document.CreateAsync(handle, DatabaseConstants.atLocation,
-			new SharpEdgeCreateRequest(thing.Id, idx));
-		await arangoDB.Document.CreateAsync(handle, DatabaseConstants.hasHome, new SharpEdgeCreateRequest(thing.Id, idx));
-		await arangoDB.Document.CreateAsync(handle, DatabaseConstants.hasObjectOwner,
-			new SharpEdgeCreateRequest(thing.Id, creator.Id!));
+		await arangoDB.Graph.Edge.CreateAsync(handle, DatabaseConstants.graphLocations, DatabaseConstants.atLocation,
+			new SharpEdgeCreateRequest(thing.Id, location.Id));
+		// TODO: Fix, this should use a default home location, passed down to this.
+		await arangoDB.Graph.Edge.CreateAsync(handle, DatabaseConstants.graphHomes, DatabaseConstants.hasHome,
+			new SharpEdgeCreateRequest(thing.Id, location.Id));
+		await arangoDB.Graph.Edge.CreateAsync(handle, DatabaseConstants.graphObjectOwners, DatabaseConstants.hasObjectOwner,
+			new SharpEdgeCreateRequest(obj.Id, creator.Id!));
 
 		return new DBRef(int.Parse(obj.Key), time);
 	}
@@ -175,7 +167,8 @@ public class ArangoDatabase(
 			new SharpEdgeCreateRequest(exit.Id, obj.Id));
 		await arangoDB.Graph.Edge.CreateAsync(handle, DatabaseConstants.graphLocations, DatabaseConstants.atLocation,
 			new SharpEdgeCreateRequest(exit.Id, location.Id));
-		// await arangoDB.Graph.Edge.CreateAsync(handle, DatabaseConstants.graphHomes, DatabaseConstants.hasHome, new SharpEdgeCreateRequest(exit.Id, idx));
+		await arangoDB.Graph.Edge.CreateAsync(handle, DatabaseConstants.graphHomes, DatabaseConstants.hasHome,
+			new SharpEdgeCreateRequest(exit.Id, location.Id));
 		await arangoDB.Graph.Edge.CreateAsync(handle, DatabaseConstants.graphObjectOwners, DatabaseConstants.hasObjectOwner,
 			new SharpEdgeCreateRequest(obj.Id, creator.Id!));
 
