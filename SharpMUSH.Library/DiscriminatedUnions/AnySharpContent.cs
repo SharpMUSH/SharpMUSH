@@ -6,7 +6,10 @@ namespace SharpMUSH.Library.DiscriminatedUnions;
 [GenerateOneOf]
 public class AnySharpContent : OneOfBase<SharpPlayer, SharpExit, SharpThing>
 {
-	public AnySharpContent(OneOf<SharpPlayer, SharpExit, SharpThing> input) : base(input) { }
+	public AnySharpContent(OneOf<SharpPlayer, SharpExit, SharpThing> input) : base(input)
+	{
+	}
+
 	public static implicit operator AnySharpContent(SharpPlayer x) => new(x);
 	public static implicit operator AnySharpContent(SharpExit x) => new(x);
 	public static implicit operator AnySharpContent(SharpThing x) => new(x);
@@ -18,6 +21,12 @@ public class AnySharpContent : OneOfBase<SharpPlayer, SharpExit, SharpThing>
 	public SharpPlayer AsPlayer => AsT0;
 	public SharpExit AsExit => AsT1;
 	public SharpThing AsThing => AsT2;
+
+	public string Id
+		=> Match(
+			player => player.Id,
+			exit => exit.Id,
+			thing => thing.Id)!;
 
 	public AnySharpObject WithRoomOption()
 		=> Match<AnySharpObject>(

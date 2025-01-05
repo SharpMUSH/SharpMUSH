@@ -963,10 +963,9 @@ public class ArangoDatabase(
 
 	public async ValueTask MoveObjectAsync(AnySharpContent enactorObj, AnySharpContainer destination)
 	{
-		var oldLocation = enactorObj.Location();
 		var newLocation = destination;
 		var edge = (await arangoDB.Query.ExecuteAsync<SharpEdgeQueryResult>(handle,
-				$"FOR v,e IN 1..1 OUTBOUND {oldLocation.Object().Id} GRAPH {DatabaseConstants.graphLocations} RETURN e"))
+				$"FOR v,e IN 1..1 OUTBOUND {enactorObj.Id} GRAPH {DatabaseConstants.graphLocations} RETURN e"))
 			.Single();
 
 		await arangoDB.Graph.Edge.UpdateAsync(handle,
@@ -975,8 +974,8 @@ public class ArangoDatabase(
 			edge.Key,
 			new
 			{
-				From = enactorObj.Object().Id,
-				To = newLocation.Object().Id
+				From = enactorObj.Id,
+				To = newLocation.Id
 			},
 			waitForSync: true);
 	}

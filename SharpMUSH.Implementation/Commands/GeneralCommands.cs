@@ -301,7 +301,6 @@ public static partial class Commands
 
 		if (!exit.IsValid())
 		{
-			await parser.NotifyService.Notify(enactor, "You can't go that way.");
 			return CallState.Empty;
 		}
 
