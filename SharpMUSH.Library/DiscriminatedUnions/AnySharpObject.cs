@@ -19,6 +19,13 @@ public class AnySharpObject : OneOfBase<SharpPlayer, SharpRoom, SharpExit, Sharp
 		thing => thing.Location.Value
 	);
 
+	public string[] Aliases => Match(
+		player => player.Aliases,
+		room => room.Aliases,
+		exit => exit.Aliases,
+		thing => thing.Aliases
+	) ?? [];
+
 	public AnySharpContainer MinusExit()
 		=> Match<AnySharpContainer>(
 			player => player,
