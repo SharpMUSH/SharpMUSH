@@ -160,22 +160,24 @@ public class ArangoDatabase(
 		return new DBRef(int.Parse(obj.Key), time);
 	}
 
-	public async ValueTask<DBRef> CreateExitAsync(string name, string[] aliases, AnySharpContainer location, SharpPlayer creator)
+	public async ValueTask<DBRef> CreateExitAsync(string name, string[] aliases, AnySharpContainer location,
+		SharpPlayer creator)
 	{
 		var time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
 		var obj = await arangoDB.Document.CreateAsync<SharpObjectCreateRequest, SharpObjectQueryResult>(handle,
 			DatabaseConstants.objects,
 			new SharpObjectCreateRequest(name, DatabaseConstants.typeExit, [], time, time));
-		var exit = await arangoDB.Document.CreateAsync(handle, DatabaseConstants.exits, new SharpExitCreateRequest(aliases));
+		var exit = await arangoDB.Document.CreateAsync(handle, DatabaseConstants.exits,
+			new SharpExitCreateRequest(aliases));
 
-		var idx = location.Object()!.Id!;
-
-		await arangoDB.Document.CreateAsync(handle, DatabaseConstants.isObject,
+		await arangoDB.Graph.Edge.CreateAsync(handle, DatabaseConstants.graphObjects, DatabaseConstants.isObject,
 			new SharpEdgeCreateRequest(exit.Id, obj.Id));
-		await arangoDB.Document.CreateAsync(handle, DatabaseConstants.hasHome, new SharpEdgeCreateRequest(exit.Id, idx));
-		await arangoDB.Document.CreateAsync(handle, DatabaseConstants.hasObjectOwner,
-			new SharpEdgeCreateRequest(exit.Id, creator.Id!));
+		await arangoDB.Graph.Edge.CreateAsync(handle, DatabaseConstants.graphLocations, DatabaseConstants.atLocation,
+			new SharpEdgeCreateRequest(exit.Id, location.Id));
+		// await arangoDB.Graph.Edge.CreateAsync(handle, DatabaseConstants.graphHomes, DatabaseConstants.hasHome, new SharpEdgeCreateRequest(exit.Id, idx));
+		await arangoDB.Graph.Edge.CreateAsync(handle, DatabaseConstants.graphObjectOwners, DatabaseConstants.hasObjectOwner,
+			new SharpEdgeCreateRequest(obj.Id, creator.Id!));
 
 		return new DBRef(int.Parse(obj.Key), time);
 	}
@@ -422,7 +424,8 @@ public class ArangoDatabase(
 			Type = obj.Type,
 			CreationTime = obj.CreationTime,
 			ModifiedTime = obj.ModifiedTime,
-			Locks = ImmutableDictionary<string, string>.Empty, // FIX: ((Dictionary<string, string>?)obj.Locks ?? []).ToImmutableDictionary(),
+			Locks = ImmutableDictionary<string, string>
+				.Empty, // FIX: ((Dictionary<string, string>?)obj.Locks ?? []).ToImmutableDictionary(),
 			Flags = new(() => GetObjectFlagsAsync(objId).AsTask().Result),
 			Powers = new(() => GetPowersAsync(objId).AsTask().Result),
 			Attributes = new(() => GetTopLevelAttributesAsync(objId).AsTask().Result),
@@ -504,10 +507,13 @@ public class ArangoDatabase(
 				new Dictionary<string, object>() { { "startVertex", id } });
 		}
 
-		var sharpAttributes = sharpAttributeResults.Select(async x => new SharpAttribute(x.Key, x.Name, await GetAttributeFlagsAsync(x.Id), null, x.LongName, new(() => GetTopLevelAttributesAsync(x.Id).AsTask().Result), new(() => GetAttributeOwnerAsync(x.Id).AsTask().Result), new(() => null))
-		{
-			Value = MarkupStringModule.deserialize(x.Value)
-		});
+		var sharpAttributes = sharpAttributeResults.Select(async x =>
+			new SharpAttribute(x.Key, x.Name, await GetAttributeFlagsAsync(x.Id), null, x.LongName,
+				new(() => GetTopLevelAttributesAsync(x.Id).AsTask().Result),
+				new(() => GetAttributeOwnerAsync(x.Id).AsTask().Result), new(() => null))
+			{
+				Value = MarkupStringModule.deserialize(x.Value)
+			});
 
 		return await Task.WhenAll(sharpAttributes);
 	}
@@ -515,7 +521,8 @@ public class ArangoDatabase(
 	public async ValueTask<IEnumerable<SharpAttribute>?> GetAttributesAsync(DBRef dbref, string attribute_pattern)
 	{
 		var startVertex = $"{DatabaseConstants.objects}/{dbref.Number}";
-		var result = await arangoDB.Query.ExecuteAsync<SharpObjectQueryResult>(handle, $"RETURN DOCUMENT({startVertex})", cache: true);
+		var result =
+			await arangoDB.Query.ExecuteAsync<SharpObjectQueryResult>(handle, $"RETURN DOCUMENT({startVertex})", cache: true);
 		var pattern = attribute_pattern.Replace("_", "\\_").Replace("%", "\\%").Replace("?", "_").Replace("*", "%");
 
 		if (!result.Any())
@@ -536,20 +543,24 @@ public class ArangoDatabase(
 		var result2 = await arangoDB.Query.ExecuteAsync<SharpAttributeQueryResult>(handle, query,
 			new Dictionary<string, object>()
 			{
-						{ "startVertex", startVertex },
-						{ "pattern", pattern }
+				{ "startVertex", startVertex },
+				{ "pattern", pattern }
 			});
 
-		return await Task.WhenAll(result2.Select(async x => new SharpAttribute(x.Key, x.Name, await GetAttributeFlagsAsync(x.Id), null, x.LongName, new(() => GetTopLevelAttributesAsync(x.Id).AsTask().Result), new(() => GetObjectOwnerAsync(x.Id).AsTask().Result), new(() => null))
-		{
-			Value = MarkupStringModule.deserialize(x.Value)
-		}));
+		return await Task.WhenAll(result2.Select(async x =>
+			new SharpAttribute(x.Key, x.Name, await GetAttributeFlagsAsync(x.Id), null, x.LongName,
+				new(() => GetTopLevelAttributesAsync(x.Id).AsTask().Result),
+				new(() => GetObjectOwnerAsync(x.Id).AsTask().Result), new(() => null))
+			{
+				Value = MarkupStringModule.deserialize(x.Value)
+			}));
 	}
 
 	public async ValueTask<IEnumerable<SharpAttribute>?> GetAttributesRegexAsync(DBRef dbref, string attribute_pattern)
 	{
 		var startVertex = $"{DatabaseConstants.objects}/{dbref.Number}";
-		var result = await arangoDB.Query.ExecuteAsync<SharpObjectQueryResult>(handle, $"RETURN DOCUMENT({startVertex})", cache: true);
+		var result =
+			await arangoDB.Query.ExecuteAsync<SharpObjectQueryResult>(handle, $"RETURN DOCUMENT({startVertex})", cache: true);
 
 		if (!result.Any())
 		{
@@ -563,14 +574,17 @@ public class ArangoDatabase(
 		var result2 = await arangoDB.Query.ExecuteAsync<SharpAttributeQueryResult>(handle, query,
 			new Dictionary<string, object>()
 			{
-						{ "startVertex", startVertex },
-						{ "pattern", attribute_pattern }
+				{ "startVertex", startVertex },
+				{ "pattern", attribute_pattern }
 			});
 
-		return await Task.WhenAll(result2.Select(async x => new SharpAttribute(x.Key, x.Name, await GetAttributeFlagsAsync(x.Id), null, x.LongName, new(() => GetTopLevelAttributesAsync(x.Id).AsTask().Result), new(() => GetObjectOwnerAsync(x.Id).AsTask().Result), new(() => null))
-		{
-			Value = MarkupStringModule.deserialize(x.Value)
-		}));
+		return await Task.WhenAll(result2.Select(async x =>
+			new SharpAttribute(x.Key, x.Name, await GetAttributeFlagsAsync(x.Id), null, x.LongName,
+				new(() => GetTopLevelAttributesAsync(x.Id).AsTask().Result),
+				new(() => GetObjectOwnerAsync(x.Id).AsTask().Result), new(() => null))
+			{
+				Value = MarkupStringModule.deserialize(x.Value)
+			}));
 	}
 
 	public async ValueTask SetLockAsync(SharpObject target, string lockName, string lockString)
@@ -599,13 +613,16 @@ public class ArangoDatabase(
 
 		if (result.Count < attribute.Length) return null;
 
-		return await Task.WhenAll(result.Select(async x => new SharpAttribute(x.Key, x.Name, await GetAttributeFlagsAsync(x.Id), null, x.LongName, new(() => GetTopLevelAttributesAsync(x.Id).AsTask().Result), new(() => GetAttributeOwnerAsync(x.Id).AsTask().Result), new(() => null))
+		return await Task.WhenAll(result.Select(async x => new SharpAttribute(x.Key, x.Name,
+			await GetAttributeFlagsAsync(x.Id), null, x.LongName, new(() => GetTopLevelAttributesAsync(x.Id).AsTask().Result),
+			new(() => GetAttributeOwnerAsync(x.Id).AsTask().Result), new(() => null))
 		{
 			Value = MarkupStringModule.deserialize(x.Value)
 		}));
 	}
 
-	public async ValueTask<bool> SetAttributeAsync(DBRef dbref, string[] attribute, MarkupStringModule.MarkupString value, SharpPlayer owner)
+	public async ValueTask<bool> SetAttributeAsync(DBRef dbref, string[] attribute, MarkupStringModule.MarkupString value,
+		SharpPlayer owner)
 	{
 		ArgumentException.ThrowIfNullOrEmpty(owner?.Id);
 
@@ -674,7 +691,8 @@ public class ArangoDatabase(
 		if (remaining.Length == 0)
 		{
 			await arangoDB.Document.UpdateAsync(transactionHandle, DatabaseConstants.attributes,
-				new { Key = lastId.Split('/')[1], Value = MarkupStringModule.serialize(value) }, waitForSync: true, mergeObjects: true);
+				new { Key = lastId.Split('/')[1], Value = MarkupStringModule.serialize(value) }, waitForSync: true,
+				mergeObjects: true);
 
 			await arangoDB.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.graphAttributeOwners,
 				DatabaseConstants.hasAttributeOwner,

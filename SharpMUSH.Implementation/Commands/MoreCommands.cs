@@ -155,13 +155,6 @@ internal class MoreCommands
 		throw new NotImplementedException();
 	}
 
-	[SharpCommand(Name = "GOTO", Switches = [], Behavior = CB.Player | CB.Thing, MinArgs = 0, MaxArgs = 0)]
-	public static async ValueTask<Option<CallState>> GOTO(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
-	}
-
 	[SharpCommand(Name = "HOME", Switches = [], Behavior = CB.Player | CB.Thing, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> HOME(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{

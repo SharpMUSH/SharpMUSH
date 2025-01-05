@@ -16,7 +16,7 @@ public class RoomsAndMovementTests : BaseUnitTest
 		_parser = await TestParser(ns: Substitute.For<INotifyService>());
 	}
 
-	[Test,Skip("Traversal not working.")]
+	[Test, Skip("Exits need more work to implement.")]
 	[DependsOn<GeneralCommandTests>(nameof(GeneralCommandTests.DoDigForCommandlistCheck2))]
 	public async Task DigAndMoveTest()
 	{

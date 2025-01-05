@@ -9,6 +9,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using System.Drawing;
+using SharpMUSH.Library.Services;
 using CB = SharpMUSH.Implementation.Definitions.CommandBehavior;
 using StringExtensions = ANSILibrary.StringExtensions;
 
@@ -290,7 +291,7 @@ public static partial class Commands
 			enactorObj,
 			enactorObj,
 			args["0"]!.Message!.ToString(),
-			Library.Services.LocateFlags.ExitsInTheRoomOfLooker);
+			LocateFlags.ExitsInTheRoomOfLooker | LocateFlags.ExitsPreference);
 
 		if (!exit.IsValid())
 		{
