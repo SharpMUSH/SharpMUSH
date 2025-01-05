@@ -17,57 +17,55 @@ public partial class Functions
 		var contents = await parser.Mediator.Send(new GetContentsQuery(executor.WithoutNone().Where)) ?? [];
 		var heard = new List<DBRef>();
 
-		foreach (var obj in contents)
+		foreach (var obj in contents
+			         .Where(obj =>
+				         parser.PermissionService.CanInteract(obj.WithRoomOption(), executor.WithoutNone(), InteractType.Hear)))
 		{
-			if (parser.PermissionService.CanInteract(obj.WithRoomOption(), executor.WithoutNone(), InteractType.Hear))
-			{
-				heard.Add(obj.Object().DBRef);
+			heard.Add(obj.Object().DBRef);
 
-				await parser.NotifyService.Notify(
-					obj.WithRoomOption(),
-					parser.CurrentState.Arguments["0"].Message!,
-					executor.WithoutNone(),
-					INotifyService.NotificationType.Emit);
-			}
+			await parser.NotifyService.Notify(
+				obj.WithRoomOption(),
+				parser.CurrentState.Arguments["0"].Message!,
+				executor.WithoutNone(),
+				INotifyService.NotificationType.Emit);
 		}
 
 		return CallState.Empty;
 	}
 
 	[SharpFunction(Name = "lemit", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
-	public static async ValueTask<CallState> lemit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> LocationEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.ExecutorObject(parser.Mediator);
-		var contents = await parser.Mediator.Send(new GetContentsQuery(parser.LocateService.Room(executor.WithoutNone()))) ?? [];
+		var contents =
+			await parser.Mediator.Send(new GetContentsQuery(parser.LocateService.Room(executor.Known()))) ?? [];
 		var heard = new List<DBRef>();
 
-		foreach (var obj in contents)
+		foreach (var obj in contents.Where(obj =>
+			         parser.PermissionService.CanInteract(obj.WithRoomOption(), executor.Known(), InteractType.Hear)))
 		{
-			if (parser.PermissionService.CanInteract(obj.WithRoomOption(), executor.WithoutNone(), InteractType.Hear))
-			{
-				heard.Add(obj.Object().DBRef);
+			heard.Add(obj.Object().DBRef);
 
-				await parser.NotifyService.Notify(
-					obj.WithRoomOption(),
-					parser.CurrentState.Arguments["0"].Message!,
-					executor.WithoutNone(),
-					INotifyService.NotificationType.Emit);
-			}
+			await parser.NotifyService.Notify(
+				obj.WithRoomOption(),
+				parser.CurrentState.Arguments["0"].Message!,
+				executor.WithoutNone(),
+				INotifyService.NotificationType.Emit);
 		}
 
 		return CallState.Empty;
 	}
 
-	[SharpFunction(Name = "MESSAGE", MinArgs = 3, MaxArgs = 14, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> message(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "message", MinArgs = 3, MaxArgs = 14, Flags = FunctionFlags.Regular)]
+	public static ValueTask<CallState> Message(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
 	[SharpFunction(Name = "nsemit", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
-	public static async ValueTask<CallState> NSEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> NoSpoofEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).WithoutNone();
+		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
 		var spoofType = parser.PermissionService.CanNoSpoof(executor)
 			? INotifyService.NotificationType.NSEmit
 			: INotifyService.NotificationType.Emit;
@@ -93,7 +91,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "nslemit", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
-	public static async ValueTask<CallState> nslemit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> NoSpoofLocationEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).WithoutNone();
 		var spoofType = parser.PermissionService.CanNoSpoof(executor)

@@ -112,7 +112,7 @@ module MarkupImplementation =
                         let escapeCode = acc.Substring(escapeCodeStartIndex, escapeCodeEndIndex - escapeCodeStartIndex + 1)
                         if escapeCode = currentEscapeCode then
                             let updatedText = acc.Remove(escapeCodeStartIndex, escapeCodeEndIndex - escapeCodeStartIndex + 1)
-                            optimizeImpl updatedText (escapeCodeStartIndex) currentEscapeCode
+                            optimizeImpl updatedText escapeCodeStartIndex currentEscapeCode
                         else
                             optimizeImpl acc (escapeCodeEndIndex + 1) escapeCode
         optimizeImpl text 0 System.String.Empty 
@@ -135,7 +135,7 @@ module MarkupImplementation =
                 |> (fun t -> if markup.Details.Underlined then StringExtensions.underlinedANSI(t) else t)
                 |> (fun t -> if markup.Details.StrikeThrough then StringExtensions.strikeThroughANSI(t) else t)
                 |> (fun t -> if markup.Details.Inverted then StringExtensions.invertedANSI(t) else t)
-            | _ -> raise (new System.Exception("Unknown markup type"))
+            | _ -> raise (System.Exception "Unknown markup type")
         (AnsiMarkup.applyDetails details text).ToString() + restoreDetailsF(outerDetails).ToString()
 
       override this.Wrap (text: string) : string =

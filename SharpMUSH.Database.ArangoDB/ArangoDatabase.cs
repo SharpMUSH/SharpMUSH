@@ -894,14 +894,15 @@ public class ArangoDatabase(
 
 	public async ValueTask<IEnumerable<SharpExit>?> GetExitsAsync(DBRef obj)
 	{
+		// This is bad code. We can't use graphExits for this.
 		var baseObject = await GetObjectNodeAsync(obj);
-		if (baseObject.IsT4) return null;
+		if (baseObject.IsNone) return null;
 
 		const string exitQuery = $"FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.graphExits} RETURN v";
-		var query = await arangoDB.Query.ExecuteAsync<SharpObjectQueryResult>(handle, $"{exitQuery}",
+		var query = await arangoDB.Query.ExecuteAsync<SharpObjectQueryResult>(handle, exitQuery,
 			new Dictionary<string, object>
 			{
-				{ "startVertex", baseObject.Object()!.Id! }
+				{ "startVertex", baseObject.Known().Id()! }
 			});
 		var result = query
 			.Select(x => x.Id)
@@ -919,13 +920,14 @@ public class ArangoDatabase(
 
 	public async ValueTask<IEnumerable<SharpExit>> GetExitsAsync(AnySharpContainer node)
 	{
+		// This is bad code. We can't use graphExits for this.
 		var startVertex = node.Id;
 
 		const string exitQuery = $"FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.graphExits} RETURN v";
-		var query = await arangoDB.Query.ExecuteAsync<SharpObjectQueryResult>(handle, $"{exitQuery}",
+		var query = await arangoDB.Query.ExecuteAsync<SharpObjectQueryResult>(handle, exitQuery,
 			new Dictionary<string, object>
 			{
-				{ "startVertex", startVertex! }
+				{ "startVertex", startVertex }
 			});
 		var result = query
 			.Select(x => x.Id)

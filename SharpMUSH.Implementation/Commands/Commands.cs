@@ -84,11 +84,11 @@ public static partial class Commands
 		// TODO: Optimize
 		var socketCommandPattern = _commandLibrary.Where(x
 			=> parser.CurrentState.Handle is not null
-				 && x.Key.Equals(command, StringComparison.CurrentCultureIgnoreCase)
-				 && x.Value.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.SOCKET));
+			   && x.Key.Equals(command, StringComparison.CurrentCultureIgnoreCase)
+			   && x.Value.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.SOCKET));
 
 		if (socketCommandPattern.Any() &&
-				_commandLibrary.TryGetValue(command.ToUpper(), out var librarySocketCommandDefinition))
+		    _commandLibrary.TryGetValue(command.ToUpper(), out var librarySocketCommandDefinition))
 		{
 			return await HandleSocketCommandPattern(parser, source, context, command, socketCommandPattern,
 				librarySocketCommandDefinition);
@@ -104,7 +104,7 @@ public static partial class Commands
 		// TODO: Optimize
 		var singleTokenCommandPattern = _commandLibrary.Where(x
 			=> x.Key.Equals(command[..1], StringComparison.CurrentCultureIgnoreCase) &&
-				 x.Value.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.SingleToken));
+			   x.Value.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.SingleToken));
 
 		if (singleTokenCommandPattern.Any())
 		{
@@ -120,7 +120,11 @@ public static partial class Commands
 				executorObject,
 				executorObject,
 				command,
-				LocateFlags.ExitsInTheRoomOfLooker);
+				LocateFlags.ExitsInTheRoomOfLooker 
+				| LocateFlags.EnglishStyleMatching 
+				| LocateFlags.ExitsPreference 
+				| LocateFlags.OnlyMatchTypePreference 
+				| LocateFlags.FailIfNotPreferred);
 
 			if (locate.IsExit)
 			{
@@ -142,7 +146,7 @@ public static partial class Commands
 		var switches = swtch.Split('/').Where(s => !string.IsNullOrWhiteSpace(s));
 
 		if (_commandLibrary.TryGetValue(rootCommand.ToUpper(), out var libraryCommandDefinition)
-				&& !rootCommand.Equals("HUH_COMMAND", StringComparison.CurrentCultureIgnoreCase))
+		    && !rootCommand.Equals("HUH_COMMAND", StringComparison.CurrentCultureIgnoreCase))
 		{
 			return await HandleInternalCommandPattern(parser, source, context, rootCommand, switches,
 				libraryCommandDefinition);
@@ -230,7 +234,7 @@ public static partial class Commands
 			Arguments = new(new Dictionary<string, CallState> { { "0", new(exit.Object.DBRef.ToString(), 0) } }),
 			Function = null
 		});
-		
+
 		return await _commandLibrary.Single(x => x.Key == "GOTO").Value.Function.Invoke(newParser);
 	}
 
@@ -319,7 +323,8 @@ public static partial class Commands
 		// command (space) argument(s)
 		if (spaceInContext != -1)
 		{
-			var remainder = MModule.substring(spaceInContext + 1, MModule.getLength(realSubtext) - spaceInContext, realSubtext);
+			var remainder =
+				MModule.substring(spaceInContext + 1, MModule.getLength(realSubtext) - spaceInContext, realSubtext);
 
 			// command arg0 = arg1,still arg 1 
 			if (behavior.HasFlag(Definitions.CommandBehavior.EqSplit) && behavior.HasFlag(Definitions.CommandBehavior.RSArgs))

@@ -33,12 +33,12 @@ module MarkupStringModule =
         | Empty
 
     and ColorJsonConverter() =
-        inherit JsonConverter<System.Drawing.Color>()
+        inherit JsonConverter<Color>()
 
         override _.Read(reader, _typeToConvert, _options) =
             ColorTranslator.FromHtml(reader.GetString())
 
-        override _.Write(writer, value, opts) =
+        override _.Write(writer, value, _) =
             writer.WriteStringValue($"#{value.R:X2}{value.G:X2}{value.B:X2}".ToLower())
 
     and MarkupString(markupDetails: MarkupTypes, content: Content list) as ms =
@@ -81,7 +81,7 @@ module MarkupStringModule =
                            | MarkupText mStr -> getLengthInternal mStr.Content))
                     0
 
-            getLengthInternal (content)
+            getLengthInternal content
 
         let isMarkedup (m: MarkupTypes) =
             match m with
@@ -93,11 +93,11 @@ module MarkupStringModule =
             let rec find (content: Content list) : MarkupTypes =
                 match content with
                 | [] -> Empty
-                | MarkupText mStr :: _ when isMarkedup (mStr.MarkupDetails) -> mStr.MarkupDetails
+                | MarkupText mStr :: _ when isMarkedup mStr.MarkupDetails -> mStr.MarkupDetails
                 | _ :: tail -> find tail
 
             match markupStr.MarkupDetails with
-            | MarkedupText m -> markupStr.MarkupDetails
+            | MarkedupText _ -> markupStr.MarkupDetails
             | _ -> find markupStr.Content
 
         let len: Lazy<int> = Lazy<int>(length)
@@ -125,9 +125,9 @@ module MarkupStringModule =
             | _ ->
                 optimize
                     firstMarkedupTextType
-                    (prefix (firstMarkedupTextType)
+                    (prefix firstMarkedupTextType
                      + getText (ms, Empty)
-                     + postfix (firstMarkedupTextType))
+                     + postfix firstMarkedupTextType)
 
         let strVal: Lazy<string> = Lazy<string>(toString)
 
@@ -168,10 +168,10 @@ module MarkupStringModule =
     let single (str: string) : MarkupString = MarkupString(Empty, [ Text str ])
 
     let multiple (mu: seq<MarkupString>) : MarkupString =
-        MarkupString(Empty, mu |> Seq.map (fun x -> MarkupText x) |> Seq.toList)
+        MarkupString(Empty, mu |> Seq.map MarkupText |> Seq.toList)
 
     let empty () : MarkupString =
-        MarkupString(Empty, [ Text System.String.Empty ])
+        MarkupString(Empty, [ Text String.Empty ])
 
     let multipleWithDelimiter (delimiter: MarkupString) (mu: MarkupString seq) : MarkupString =
         mu |> Seq.intersperse delimiter |> multiple
@@ -255,14 +255,14 @@ module MarkupStringModule =
                         let subLength = getLength subMarkup
 
                         if subLength > 0 then
-                            substringAux tail (0) (length - subLength) (MarkupText subMarkup :: acc)
+                            substringAux tail 0 (length - subLength) (MarkupText subMarkup :: acc)
                         else
                             substringAux tail (start - strLen) length acc
                     else
                         substringAux tail (start - strLen) length acc
                 | _ ->
                     raise (
-                        System.InvalidOperationException "Encountered unexpected content type in substring operation."
+                        InvalidOperationException "Encountered unexpected content type in substring operation."
                     )
 
         MarkupString(markupStr.MarkupDetails, substringAux markupStr.Content start length [])
@@ -279,7 +279,7 @@ module MarkupStringModule =
                 | foundPos ->
                     let newAcc = foundPos :: acc
 
-                    if srch <> System.String.Empty then
+                    if srch <> String.Empty then
                         findDelimiters (foundPos + srch.Length) newAcc
                     else
                         findDelimiters (foundPos + 1) newAcc
@@ -431,7 +431,7 @@ module MarkupStringModule =
         pattern |> plainText |> Regex.Escape |> (fun x -> $"^{x}$") |> applyRegexPattern
 
     let isWildcardMatch (input: MarkupString) (pattern: MarkupString) : bool =
-        let newPattern = getWildcardMatchAsRegex (pattern)
+        let newPattern = getWildcardMatchAsRegex pattern
         (plainText input, newPattern) |> Regex.IsMatch
 
     let getMatches (input: MarkupString) (pattern: string) : (Match * MarkupString seq) seq =
@@ -462,7 +462,7 @@ module MarkupStringModule =
                 | -1 -> []
                 | idx ->
                     idx
-                    :: if (delimiter <> System.String.Empty) then
+                    :: if (delimiter <> String.Empty) then
                            findDelimiters text (idx + delimiter.Length)
                        else
                            findDelimiters text (idx + 1)
@@ -482,7 +482,7 @@ module MarkupStringModule =
 
         buildSplits delimiterPositions 0 [] |> Array.ofList
 
-    let split2 (delimiter: MarkupString) (markupStr: MarkupString) = split (plainText delimiter) (markupStr)
+    let split2 (delimiter: MarkupString) (markupStr: MarkupString) = split (plainText delimiter) markupStr
 
 type Justification =
     | Left
@@ -499,15 +499,15 @@ type ColumnSpec =
 
 module ColumnSpec =
     let parse (spec: string) : ColumnSpec =
-        let regex = new Regex(@"^([<>=_])?(\d+)([.`'$xX#]*)(\(.+\))?$")
+        let regex = Regex(@"^([<>=_])?(\d+)([.`'$xX#]*)(\(.+\))?$")
         let matchResult = regex.Match(spec)
 
         if not matchResult.Success then
             raise (ArgumentException $"Invalid column specification: %s{spec}")
 
         let justification =
-            if matchResult.Groups.[1].Success then
-                match matchResult.Groups.[1].Value with
+            if matchResult.Groups[1].Success then
+                match matchResult.Groups[1].Value with
                 | "<" -> Justification.Left
                 | "=" -> Justification.Paragraph
                 | ">" -> Justification.Right
@@ -516,17 +516,17 @@ module ColumnSpec =
             else
                 Justification.Left
 
-        let width = int matchResult.Groups.[2].Value
+        let width = int matchResult.Groups[2].Value
 
         let options =
-            if matchResult.Groups.[3].Success then
-                matchResult.Groups.[3].Value
+            if matchResult.Groups[3].Success then
+                matchResult.Groups[3].Value
             else
                 String.Empty
 
         let ansi =
-            if matchResult.Groups.[4].Success then
-                matchResult.Groups.[4].Value.Trim('(', ')')
+            if matchResult.Groups[4].Success then
+                matchResult.Groups[4].Value.Trim('(', ')')
             else
                 String.Empty
 
@@ -557,7 +557,7 @@ module TextAligner =
                 let intermediate =
                     Seq.fold (fun acc (word, space) -> acc + word + String(' ', space)) "" z
 
-                intermediate + words.[words.Length - 1]
+                intermediate + words[words.Length - 1]
 
     let justify (justification: Justification) (text: string) (width: int) (fill: char) : string =
         match justification with
@@ -588,7 +588,7 @@ module TextAligner =
 
             if availableWidth > 0 then
                 let truncatedWord =
-                    remainingWords.[0].Substring(0, min availableWidth remainingWords.[0].Length)
+                    remainingWords[0].Substring(0, min availableWidth remainingWords.[0].Length)
 
                 rowText + truncatedWord, truncatedWord :: remainingWords.Tail
             else
@@ -625,7 +625,7 @@ module TextAligner =
                 let newText =
                     columnText
                     |> List.mapi (fun i colWords ->
-                        let spec = columnSpecs.[i]
+                        let spec = columnSpecs[i]
                         let rowText, remainingWords = buildRowText spec colWords
 
                         let rowText =

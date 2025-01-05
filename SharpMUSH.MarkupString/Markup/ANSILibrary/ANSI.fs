@@ -6,7 +6,7 @@ open System.Drawing
 // Converted and heavily changed from: https://github.com/WilliamRagstad/ANSIConsole/blob/main/ANSIConsole/
 module ANSI =
   type AnsiColor = 
-    | RGB of System.Drawing.Color 
+    | RGB of Color 
     | ANSI of byte array
     | NoAnsi
 
@@ -41,11 +41,11 @@ module ANSI =
       | ANSI ansi -> SGR ansi
       | NoAnsi -> ""
 
-  let Hyperlink (text: string, link: string) = sprintf "\u001b]8;;%s\a%s\u001b]8;;\a" link text
+  let Hyperlink (text: string, link: string) = $"\u001b]8;;%s{link}\a%s{text}\u001b]8;;\a"
 
 open ANSI
 
-[<System.Flags>]
+[<Flags>]
 type ANSIFormatting =
     | None = 0
     | Bold = 1          
@@ -122,39 +122,39 @@ type ANSIString(text: string, hyperlink: string option, colorForeground: AnsiCol
     let initialResult = text
     let resultWithCase =
         initialResult
-        |> applyFormatting ANSIFormatting.UpperCase (fun r -> r.ToUpper())
-        |> applyFormatting ANSIFormatting.LowerCase (fun r -> r.ToLower())
+        |> applyFormatting ANSIFormatting.UpperCase _.ToUpper()
+        |> applyFormatting ANSIFormatting.LowerCase _.ToLower()
 
     let resultWithFormatting =
         resultWithCase
-        |> applyFormatting ANSIFormatting.Bold (fun r -> ANSI.Bold + r)
-        |> applyFormatting ANSIFormatting.Faint (fun r -> ANSI.Faint + r)
-        |> applyFormatting ANSIFormatting.Italic (fun r -> ANSI.Italic + r)
-        |> applyFormatting ANSIFormatting.Underlined (fun r -> ANSI.Underlined + r)
-        |> applyFormatting ANSIFormatting.Overlined (fun r -> ANSI.Overlined + r)
-        |> applyFormatting ANSIFormatting.Blink (fun r -> ANSI.Blink + r)
-        |> applyFormatting ANSIFormatting.Inverted (fun r -> ANSI.Inverted + r)
-        |> applyFormatting ANSIFormatting.StrikeThrough (fun r -> ANSI.StrikeThrough + r)
+        |> applyFormatting ANSIFormatting.Bold (fun r -> Bold + r)
+        |> applyFormatting ANSIFormatting.Faint (fun r -> Faint + r)
+        |> applyFormatting ANSIFormatting.Italic (fun r -> Italic + r)
+        |> applyFormatting ANSIFormatting.Underlined (fun r -> Underlined + r)
+        |> applyFormatting ANSIFormatting.Overlined (fun r -> Overlined + r)
+        |> applyFormatting ANSIFormatting.Blink (fun r -> Blink + r)
+        |> applyFormatting ANSIFormatting.Inverted (fun r -> Inverted + r)
+        |> applyFormatting ANSIFormatting.StrikeThrough (fun r -> StrikeThrough + r)
 
-    let resultWithColors = applyColor ANSI.Foreground resultWithFormatting
+    let resultWithColors = applyColor Foreground resultWithFormatting
     let resultWithBackground =
         match colorBackground with
-        | Some bg -> ANSI.Background(bg) + resultWithColors
+        | Some bg -> Background(bg) + resultWithColors
         | None -> resultWithColors
 
     let resultWithHyperlink =
         match hyperlink with
-        | Some link -> ANSI.Hyperlink(resultWithBackground, link)
+        | Some link -> Hyperlink(resultWithBackground, link)
         | None -> resultWithBackground
 
     let finalResult =
-        if formatting.HasFlag(ANSIFormatting.TrueClear) then resultWithHyperlink + ANSI.Clear 
+        if formatting.HasFlag(ANSIFormatting.TrueClear) then resultWithHyperlink + Clear 
         else resultWithHyperlink
 
     // TODO: This needs to be changed. The clear needs to affect the span, so should be ahead of the resultWithHyperlink, 
     // But it also needs to be restored to the previous state. Which means we have to specifically restore colors afterwards.
     // We can do a manual reset, and have a separate call for a True Clear.
-    if formatting.HasFlag(ANSIFormatting.Clear) then ANSI.Clear + finalResult
+    if formatting.HasFlag(ANSIFormatting.Clear) then Clear + finalResult
     else finalResult 
 
 module StringExtensions =
@@ -205,15 +205,15 @@ module StringExtensions =
   let ansiByte (color: byte) = ANSI [|color|]
   let ansiBytes (color: byte array) = ANSI color
 
-  let background (text: string) (color: AnsiColor) = toANSI text |> fun t -> t.SetBackgroundColor(color)
+  let background (text: string) (color: AnsiColor) = toANSI text |> _.SetBackgroundColor(color)
   let backgroundANSI (text: ANSIString) (color: AnsiColor) = text.SetBackgroundColor(color)
 
-  let opacity (text: string) (percent: int) = toANSI text |> fun t -> t.SetOpacity((float)percent / 100.0)
-  let opacityANSI (text: ANSIString) (percent: int) = text.SetOpacity((float)percent / 100.0)
+  let opacity (text: string) (percent: int) = toANSI text |> _.SetOpacity(float percent / 100.0)
+  let opacityANSI (text: ANSIString) (percent: int) = text.SetOpacity(float percent / 100.0)
 
-  let blink (text: string) = toANSI text |> fun t -> t.AddFormatting(ANSIFormatting.Blink)
+  let blink (text: string) = toANSI text |> _.AddFormatting(ANSIFormatting.Blink)
   let blinkANSI (text: ANSIString) = text.AddFormatting(ANSIFormatting.Blink)
 
-  let link (text: string) (url: string) = toANSI text |> fun t -> t.SetHyperlink(url)
+  let link (text: string) (url: string) = toANSI text |> _.SetHyperlink(url)
   let linkANSI (text: ANSIString) (url: string) = text.SetHyperlink(url)
-  let linkSimple (text: string) = toANSI text |> fun t -> t.SetHyperlink(text)
+  let linkSimple (text: string) = toANSI text |> _.SetHyperlink(text)

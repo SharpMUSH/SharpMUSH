@@ -169,13 +169,6 @@ internal class MoreCommands
 		throw new NotImplementedException();
 	}
 
-	[SharpCommand(Name = "LOOK", Switches = ["OUTSIDE", "OPAQUE"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
-	public static async ValueTask<Option<CallState>> LOOK(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
-	}
-
 	[SharpCommand(Name = "LEAVE", Switches = [], Behavior = CB.Player | CB.Thing, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> LEAVE(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{

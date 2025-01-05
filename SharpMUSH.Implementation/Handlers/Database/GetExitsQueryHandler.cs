@@ -10,7 +10,7 @@ public class GetExitsQueryHandler(ISharpDatabase database)
 {
 	public async ValueTask<IEnumerable<SharpExit>?> Handle(GetExitsQuery request, CancellationToken cancellationToken)
 		=> await request.DBRef.Match<ValueTask<IEnumerable<SharpExit>?>>(
-			database.GetExitsAsync,
+			async dbref  => await database.GetExitsAsync(dbref),
 			async obj => await database.GetExitsAsync(obj)
 			);
 }

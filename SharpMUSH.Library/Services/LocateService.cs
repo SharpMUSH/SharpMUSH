@@ -33,24 +33,21 @@ public partial class LocateService : ILocateService
 		string name,
 		LocateFlags flags)
 	{
-		if ((flags &
-				 ~(LocateFlags.PreferLockPass
-					 | LocateFlags.FailIfNotPreferred
-					 | LocateFlags.NoPartialMatches
-					 | LocateFlags.OnlyMatchLookerControlledObjects)) != 0)
+		if (!flags.HasFlag(LocateFlags.PreferLockPass) 
+		    && !flags.HasFlag(LocateFlags.FailIfNotPreferred)
+		    && !flags.HasFlag(LocateFlags.NoPartialMatches)
+		    && !flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation))
 		{
-			flags |= (LocateFlags.All | LocateFlags.MatchAgainstLookerLocationName | LocateFlags.ExitsInsideOfLooker);
+			flags |= LocateFlags.All | LocateFlags.MatchAgainstLookerLocationName | LocateFlags.ExitsInsideOfLooker;
 		}
 
-		if (((flags &
-					(LocateFlags.MatchObjectsInLookerLocation
-					 | LocateFlags.MatchObjectsInLookerLocation
-					 | LocateFlags.MatchObjectsInLookerInventory
-					 | LocateFlags.MatchHereForLookerLocation
-					 | LocateFlags.ExitsPreference
-					 | LocateFlags.ExitsInsideOfLooker)) != 0) &&
-				(!Nearby(executor, looker) && !executor.IsSee_All() && !parser.PermissionService.Controls(executor, looker))
-			 )
+		if ((flags.HasFlag(LocateFlags.MatchObjectsInLookerLocation)
+		    || flags.HasFlag(LocateFlags.MatchObjectsInLookerInventory)
+		    || flags.HasFlag(LocateFlags.MatchHereForLookerLocation)
+		    || flags.HasFlag(LocateFlags.MatchHereForLookerLocation)
+		    || flags.HasFlag(LocateFlags.ExitsPreference)
+		    || flags.HasFlag(LocateFlags.ExitsInsideOfLooker)) &&
+		    !Nearby(executor, looker) && !executor.IsSee_All() && !parser.PermissionService.Controls(executor, looker))
 		{
 			return new Error<string>("#-1 NOT PERMITTED TO EVALUATE ON LOOKER");
 		}
@@ -224,8 +221,9 @@ public partial class LocateService : ILocateService
 					if (flags.HasFlag(LocateFlags.All)
 							&& !flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation | LocateFlags.OnlyMatchObjectsInLookerInventory))
 					{
-						var exits = (await parser.Mediator.Send(new GetExitsQuery(Configurable.MasterRoom)))
-							.Select(x => new AnySharpObject(x));
+						var exits = (await parser.Mediator.Send(new GetContentsQuery(Configurable.MasterRoom)))!
+							.Where(x => x.IsExit)
+							.Select(x => new AnySharpObject(x.AsExit));
 
 						(bestMatch, final, curr, right_type, exact, c) = Match_List(parser, exits, looker, where, bestMatch, exact, final, curr, right_type, flags, name);
 						if (c == ControlFlow.Break) break;
@@ -233,8 +231,9 @@ public partial class LocateService : ILocateService
 					}
 					if (location.IsRoom)
 					{
-						var exits = (await parser.Mediator.Send(new GetExitsQuery(location)))
-							.Select(x => new AnySharpObject(x));
+						var exits = (await parser.Mediator.Send(new GetContentsQuery(location)))!
+							.Where(x => x.IsExit)
+							.Select(x => new AnySharpObject(x.AsExit));
 						(bestMatch, final, curr, right_type, exact, c) = Match_List(parser, exits, looker, where, bestMatch, exact, final, curr, right_type, flags, name);
 						if (c == ControlFlow.Break) break;
 						if (c == ControlFlow.Return) break;
@@ -253,7 +252,9 @@ public partial class LocateService : ILocateService
 						&& where.IsRoom
 						&& ((location.Object().DBRef != where.Object().DBRef) || !flags.HasFlag(LocateFlags.ExitsPreference)))
 				{
-					var exits = (await parser.Mediator.Send(new GetExitsQuery(where.AsContainer))).Select(x => new AnySharpObject(x));
+					var exits = (await parser.Mediator.Send(new GetContentsQuery(where.AsContainer)))!
+						.Where(x => x.IsExit)
+						.Select(x => new AnySharpObject(x.AsExit));
 
 					(bestMatch, final, curr, right_type, exact, c) = Match_List(parser, exits, looker, where, bestMatch, exact, final, curr, right_type, flags, name);
 				}
@@ -290,7 +291,7 @@ public partial class LocateService : ILocateService
 		LocateFlags flags,
 		string name)
 	{
-		ControlFlow flow;
+		ControlFlow flow = ControlFlow.Break;
 
 		foreach (var item in list)
 		{
@@ -340,7 +341,7 @@ public partial class LocateService : ILocateService
 			}
 		}
 
-		return (bestMatch, final, curr, rightType, exact, ControlFlow.Break);
+		return (bestMatch, final, curr, rightType, exact,  flow == ControlFlow.Break ? ControlFlow.Break : ControlFlow.Continue);
 	}
 
 	public static AnyOptionalSharpObject ChooseThing(IMUSHCodeParser parser, AnySharpObject who, LocateFlags flags, AnyOptionalSharpObject thing1, AnyOptionalSharpObject thing2)
