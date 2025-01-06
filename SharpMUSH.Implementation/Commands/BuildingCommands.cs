@@ -300,7 +300,7 @@ public static partial class Commands
 			await parser.NotifyService.Notify(executor.DBRef, $"Opened exit #{fromExitResponse.Number}");
 			await parser.NotifyService.Notify(executor.DBRef, "Trying to link...");
 			
-			await parser.Mediator.Send(new LinkExitCommand(newExitObject.AsExit, newRoomObject.AsRoom));
+			await parser.Mediator.Send(new LinkExitCommand(newExitObject.AsExit, executorBase.Where));
 			
 			await parser.NotifyService.Notify(executor.DBRef, $"Linked exit #{fromExitResponse.Number} to #{executorBase.Where.Object().DBRef.Number}");
 		}

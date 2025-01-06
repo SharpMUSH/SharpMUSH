@@ -25,10 +25,10 @@ public class RoomsAndMovementTests : BaseUnitTest
 		await _parser!.CommandParse("1", MModule.single("goto Forward"));
 		await _parser!.CommandParse("1", MModule.single("think %l"));
 		await _parser!.CommandParse("1", MModule.single("goto Backward"));
-		// await _parser!.CommandParse("1", MModule.single("think %l"));
+		await _parser!.CommandParse("1", MModule.single("think %l"));
 		
 		await _parser.NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(Quantity.Exactly(2))
 			.Notify(Arg.Any<AnySharpObject>(), "#0");
 		await _parser.NotifyService
 			.Received(Quantity.Exactly(1))

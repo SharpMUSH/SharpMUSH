@@ -154,7 +154,6 @@ public class ArangoDatabase(
 	{
 		await arangoDB.Graph.Edge.CreateAsync(handle, DatabaseConstants.graphHomes, DatabaseConstants.hasHome,
 			new SharpEdgeCreateRequest(exit.Id!, location.Id));
-		
 		return true;
 	} 
 
