@@ -13,8 +13,6 @@ public class CacheInvalidationBehavior<TRequest, TResponse>(IMemoryCache cache) 
 		MessageHandlerDelegate<TRequest, TResponse> next
 	)
 	{
-		var response = await next(message, cancellationToken);
-
 		foreach (var item in ((MemoryCache)cache).GetKeys<string>())
 		{
 			cache.Remove(item);
@@ -40,7 +38,7 @@ public class CacheInvalidationBehavior<TRequest, TResponse>(IMemoryCache cache) 
 			}
 		}
 		*/
-		return response;
+		return await next(message, cancellationToken);
 	}
 }
 

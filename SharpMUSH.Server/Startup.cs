@@ -49,8 +49,8 @@ public class Startup(ArangoConfiguration config)
 		services.AddScoped<IMUSHCodeParser, MUSHCodeParser>();
 		services.AddHostedService<SchedulerService>();
 		services.AddMediator();
-		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(QueryCachingBehavior<,>));
 		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(CacheInvalidationBehavior<,>));
+		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(QueryCachingBehavior<,>));
 		services.BuildServiceProvider();
 	}
 

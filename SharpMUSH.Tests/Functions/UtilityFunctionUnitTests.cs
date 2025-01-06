@@ -15,7 +15,7 @@ public class UtilityFunctionUnitTests : BaseUnitTest
 		_parser = await TestParser();
 	}
 
-	[Test, DependsOn<GeneralCommandTests>]
+	[Test, DependsOn<RoomsAndMovementTests>(nameof(RoomsAndMovementTests.DigAndMoveTest))]
 	public async Task PCreate()
 	{
 		var result = (await _parser!.FunctionParse(MModule.single("pcreate(John,SomePassword)")))?.Message?.ToString()!;
