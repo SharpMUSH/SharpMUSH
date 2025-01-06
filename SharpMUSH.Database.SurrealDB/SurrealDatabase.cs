@@ -29,6 +29,11 @@ public class SurrealDatabase(
 		throw new NotImplementedException();
 	}
 
+	public ValueTask<bool> LinkExitAsync(SharpExit exit, AnySharpContainer location)
+	{
+		throw new NotImplementedException();
+	}
+
 	public async ValueTask<DBRef> CreatePlayerAsync(string name, string password, DBRef location)
 	{
 		var time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();

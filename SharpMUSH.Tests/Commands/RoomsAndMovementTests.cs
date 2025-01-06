@@ -25,6 +25,7 @@ public class RoomsAndMovementTests : BaseUnitTest
 		await _parser!.CommandParse("1", MModule.single("goto Forward"));
 		await _parser!.CommandParse("1", MModule.single("think %l"));
 		await _parser!.CommandParse("1", MModule.single("goto Backward"));
+		// await _parser!.CommandParse("1", MModule.single("think %l"));
 		
 		await _parser.NotifyService
 			.Received(Quantity.Exactly(1))
