@@ -21,17 +21,17 @@ public class RoomsAndMovementTests : BaseUnitTest
 	public async Task DigAndMoveTest()
 	{
 		await _parser!.CommandParse("1", MModule.single("@dig NewRoom=Forward;F,Backward;B"));
+		await _parser!.CommandParse("1", MModule.single("think %l"));
 		await _parser!.CommandParse("1", MModule.single("goto Forward"));
 		await _parser!.CommandParse("1", MModule.single("think %l"));
 		await _parser!.CommandParse("1", MModule.single("goto Backward"));
-		await _parser!.CommandParse("1", MModule.single("think %l"));
 		
 		await _parser.NotifyService
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), "#0");
 		await _parser.NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), "#7");
+			.Notify(Arg.Any<AnySharpObject>(), "#9");
 	}
 	
 }
