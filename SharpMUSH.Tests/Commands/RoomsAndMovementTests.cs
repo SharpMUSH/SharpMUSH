@@ -17,7 +17,7 @@ public class RoomsAndMovementTests : BaseUnitTest
 	}
 
 	[Test]
-	[DependsOn<GeneralCommandTests>(nameof(GeneralCommandTests.DoDigForCommandlistCheck2))]
+	[DependsOn<GeneralCommandTests>]
 	public async Task DigAndMoveTest()
 	{
 		if(_parser is null) throw new Exception("Parser is null");
