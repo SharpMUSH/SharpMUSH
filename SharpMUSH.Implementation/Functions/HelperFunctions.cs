@@ -85,13 +85,13 @@ public partial class Functions
 		=> ValueTask.FromResult<CallState>(new(func(decimal.Parse(MModule.plainText(args["0"].Message))).ToString()));
 
 	private static ValueTask<CallState> EvaluateDecimalToInteger(ConcurrentDictionary<string, CallState> args, Func<decimal, int> func)
-	=> ValueTask.FromResult<CallState>(new(func(decimal.Parse(MModule.plainText(args["0"].Message))).ToString()));
+	=> ValueTask.FromResult<CallState>(new(func(decimal.Parse(MModule.plainText(args["0"].Message)))));
 
 	private static ValueTask<CallState> EvaluateDouble(ConcurrentDictionary<string, CallState> args, Func<double, double> func)
-		=> ValueTask.FromResult<CallState>(new(func(double.Parse(MModule.plainText(args["0"].Message))).ToString()));
+		=> ValueTask.FromResult<CallState>(new(func(double.Parse(MModule.plainText(args["0"].Message)))));
 
 	private static ValueTask<CallState> EvaluateInteger(ConcurrentDictionary<string, CallState> args, Func<int, int> func)
-		=> ValueTask.FromResult<CallState>(new(func(int.Parse(MModule.plainText(args["0"].Message))).ToString()));
+		=> ValueTask.FromResult<CallState>(new(func(int.Parse(MModule.plainText(args["0"].Message)))));
 
 	private static ValueTask<CallState> ValidateDecimalAndEvaluatePairwise(this ConcurrentDictionary<string, CallState> args,
 		Func<(decimal, decimal), bool> func)
@@ -180,7 +180,7 @@ public partial class Functions
 				_ => string.Empty,
 			});
 
-	public static string TimeSpanFormat(DateTimeOffset time, string format)
+	public static string TimeSpanFormat(TimeSpan time, string format)
 		=> TimeFormatMatchRegex.Replace(format, match =>
 		{
 			var character = match.Groups["Character"];
@@ -193,29 +193,17 @@ public partial class Functions
 			return character.Value switch
 			{
 				// The number of seconds
-				"s" => string.Empty,
-				// The number of seconds
-				"S" => string.Empty,
+				"s" or "S" => time.Seconds.ToString(),
 				// The number of minutes
-				"m" => string.Empty,
-				// The number of minutes
-				"M" => string.Empty,
+				"m" or "M" => time.Minutes.ToString(),
 				// The number of weeks
-				"w" => string.Empty,
-				// The number of weeks
-				"W" => string.Empty,
+				"w" or "W" => (time.Days / 7).ToString(),
 				// The number of hours
-				"h" => string.Empty,
-				// The number of hours
-				"H" => string.Empty,
+				"h" or "H" => time.Hours.ToString(),
 				// The number of days
-				"d" => string.Empty,
-				// The number of days
-				"D" => string.Empty,
+				"d" or "D" => time.Days.ToString(),
 				// The number of 365-day years 
-				"y" => string.Empty,
-				// The number of 365-day years
-				"Y" => string.Empty,
+				"y" or "Y" => (time.Days / 365).ToString(),
 				// $ character
 				"$" => "$",
 				_ => string.Empty,
@@ -229,7 +217,7 @@ public partial class Functions
 		obj.Powers.Value.Any(x => x.Name == power || x.Alias == power);
 
 	public static IEnumerable<OneOf<DBRef, string>> NameList(string list)
-		=> NameListPatternRegex.Matches(list).Cast<Match>().Select(x =>
+		=> NameListPatternRegex.Matches(list).Select(x =>
 			!string.IsNullOrWhiteSpace(x.Groups["DBRef"].Value)
 				? OneOf<DBRef, string>.FromT0(HelperFunctions.ParseDBRef(x.Groups["DBRef"].Value).AsValue())
 				: OneOf<DBRef, string>.FromT1(x.Groups["User"].Value));

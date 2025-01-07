@@ -1,4 +1,6 @@
-﻿namespace SharpMUSH.Library.ParserInterfaces;
+﻿using System.Globalization;
+
+namespace SharpMUSH.Library.ParserInterfaces;
 
 public record CallState(MString? Message, int Depth, MString[]? Arguments, Func<Task<MString?>> ParsedMessage)
 {
@@ -9,6 +11,10 @@ public record CallState(MString? Message, int Depth, MString[]? Arguments, Func<
 		: this(Message ?? MModule.empty(), 0, null, () => Task.FromResult(Message)) { }
 
 	public CallState(int Message) : this(Message.ToString()) { }
+
+	public CallState(double Message) : this(Message.ToString(CultureInfo.InvariantCulture)) { }
+
+	public CallState(decimal Message) : this(Message.ToString(CultureInfo.InvariantCulture)) { }
 
 	public CallState(string Message)
 		: this(
