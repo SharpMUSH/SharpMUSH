@@ -39,11 +39,11 @@ public class SurrealDatabase(
 		var time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
 		var createdObject = await SDBC.Create(DatabaseConstants.objects,
-			new SharpSurrealObjectCreateRequest((int?)null, name, DatabaseConstants.typePlayer, [], time, time));
+			new SharpSurrealObjectCreateRequest(null, name, DatabaseConstants.typePlayer, [], time, time));
 		var createdDBRef = new DBRef(createdObject.Id!.Value, time);
 
 		await SDBC.Create(DatabaseConstants.players,
-			new SharpSurrealPlayerCreateRequest((int?)null, [], PasswordService.HashPassword(createdDBRef.ToString(), password)));
+			new SharpSurrealPlayerCreateRequest(null, [], PasswordService.HashPassword(createdDBRef.ToString(), password)));
 
 		return createdDBRef;
 	}

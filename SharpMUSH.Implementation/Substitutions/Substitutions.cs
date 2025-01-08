@@ -49,7 +49,7 @@ public static partial class Substitutions
 
 	private static CallState HandleRegistrySymbol(CallState symbol, IMUSHCodeParser parser)
 	{
-		var peek = parser.CurrentState.Registers.TryPeek(out var curVal);
+		parser.CurrentState.Registers.TryPeek(out var curVal);
 		return curVal!.TryGetValue(MModule.plainText(symbol.Message).ToUpper(), out var value)
 			? new CallState(value)
 			: new CallState(string.Empty);
@@ -61,8 +61,11 @@ public static partial class Substitutions
 		var attrService = parser.AttributeService;
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
 
-		var val = await attrService.GetAttributeAsync(executor, executor, symbol.Message!.ToString(),
-			IAttributeService.AttributeMode.Read, true);
+		var val = await attrService.GetAttributeAsync(
+			executor, 
+			executor, 
+			symbol.Message!.ToString(),
+			IAttributeService.AttributeMode.Read);
 
 		return val.Match(
 			attr => new CallState(attr.Value),

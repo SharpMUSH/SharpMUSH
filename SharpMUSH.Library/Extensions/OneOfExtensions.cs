@@ -13,7 +13,7 @@ public static class OneOfExtensions
 			room => room.Object,
 			exit => exit.Object,
 			thing => thing.Object,
-			none => null
+			_ => null
 		);
 
 	public static SharpObject Object(this AnySharpContainer union) =>
@@ -31,11 +31,11 @@ public static class OneOfExtensions
 		);
 
 	public static SharpObject? Object(this AnyOptionalSharpContainer union)
-		=> union.Match(
+		=> union.Match<SharpObject?>(
 			player => player.Object,
 			room => room.Object,
 			thing => thing.Object,
-			none => (SharpObject?)null
+			_ => null
 		);
 
 	public static SharpObject Object(this AnySharpObject union)
@@ -91,7 +91,7 @@ public static class OneOfExtensions
 			room => room,
 			exit => exit,
 			thing => thing,
-			none => throw new ArgumentException("Cannot convert an None to a non-None value.")
+			_ => throw new ArgumentException("Cannot convert an None to a non-None value.")
 		);
 
 	public static AnyOptionalSharpObject WithoutError(this AnyOptionalSharpObjectOrError union)
@@ -101,7 +101,7 @@ public static class OneOfExtensions
 			exit => exit,
 			thing => thing,
 			none => none,
-			error => throw new ArgumentException("Cannot convert an Error to a non-Error value.")
+			_ => throw new ArgumentException("Cannot convert an Error to a non-Error value.")
 		);
 
 	public static AnySharpContainer Home(this AnySharpContent thing)
@@ -122,7 +122,7 @@ public static class OneOfExtensions
 			room => room,
 			exit => exit,
 			thing => thing,
-			none => throw new ArgumentNullException(nameof(union)));
+			_ => throw new ArgumentNullException(nameof(union)));
 
 	public static OneOf<SharpObject, None> ObjectOption(this AnyOptionalSharpObject union) =>
 		union.Match<OneOf<SharpObject, None>>(
@@ -130,7 +130,7 @@ public static class OneOfExtensions
 			room => room.Object,
 			exit => exit.Object,
 			thing => thing.Object,
-			none => new None()
+			_ => new None()
 		);
 
 	public static string? Id(this AnyOptionalSharpObject union) =>
@@ -139,7 +139,7 @@ public static class OneOfExtensions
 			room => room.Id,
 			exit => exit.Id,
 			thing => thing.Id,
-			none => null
+			_ => null
 		);
 
 	public static string? Id(this AnyOptionalSharpContainer union) =>
@@ -147,7 +147,7 @@ public static class OneOfExtensions
 			player => player.Id,
 			room => room.Id,
 			thing => thing.Id,
-			none => null
+			_ => null
 		);
 
 	public static string? Id(this AnySharpObject union) =>
