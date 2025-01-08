@@ -1,7 +1,7 @@
 ﻿namespace SharpMUSH.Configuration.Options;
 
 public class CompatibilityOptions(
-	bool NullEqZero = true,
+	bool NullEqualsZero = true,
 	bool TinyBooleans = false,
 	bool TinyTrimFun = false,
 	bool TinyMath = false,

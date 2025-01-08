@@ -1,6 +1,7 @@
 ﻿namespace SharpMUSH.Configuration;
 
+[AttributeUsage(AttributeTargets.Parameter)]
 public class PennConfigAttribute : Attribute
 {
-	public string Name { get; set; }
+	public required string Name { get; set; }
 }
