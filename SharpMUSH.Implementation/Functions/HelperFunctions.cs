@@ -8,6 +8,7 @@ using SharpMUSH.Library.Queries.Database;
 using System.Collections.Concurrent;
 using System.Globalization;
 using System.Text.RegularExpressions;
+using SharpMUSH.Library.Extensions;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -79,10 +80,10 @@ public partial class Functions
 		Func<decimal, decimal, decimal> aggregateFunction) =>
 		ValueTask.FromResult<CallState>(new(Math.Floor(args
 			.Select(x => decimal.Parse(string.Join(string.Empty, MModule.plainText(x.Value.Message))))
-			.Aggregate(aggregateFunction)).ToString()));
+			.Aggregate(aggregateFunction)).ToString(CultureInfo.InvariantCulture)));
 
 	private static ValueTask<CallState> EvaluateDecimal(ConcurrentDictionary<string, CallState> args, Func<decimal, decimal> func)
-		=> ValueTask.FromResult<CallState>(new(func(decimal.Parse(MModule.plainText(args["0"].Message))).ToString()));
+		=> ValueTask.FromResult<CallState>(new(func(decimal.Parse(MModule.plainText(args["0"].Message))).ToString(CultureInfo.InvariantCulture)));
 
 	private static ValueTask<CallState> EvaluateDecimalToInteger(ConcurrentDictionary<string, CallState> args, Func<decimal, int> func)
 	=> ValueTask.FromResult<CallState>(new(func(decimal.Parse(MModule.plainText(args["0"].Message)))));
@@ -160,12 +161,12 @@ public partial class Functions
 				// Seconds after the minute
 				"S" => time.ToString("s"),
 				// Week of the year from 1rst Sunday
-				"U" => string.Empty, // TODO: This
-														 // Day of the week. 0 = Sunday
+				"U" => $"{(time - time.FirstOfYear(DayOfWeek.Sunday)).Days / 7}",
+				// Day of the week. 0 = Sunday
 				"w" => time.DayOfWeek.ToString(),
 				// Week of the year from 1rst Monday
-				"W" => string.Empty, // TODO: This
-														 // Date 
+				"W" => $"{(time - time.FirstOfYear(DayOfWeek.Monday)).Days / 7}",
+				// Date 
 				"x" => time.ToString("d"),
 				// Time
 				"X" => time.DateTime.ToShortTimeString(),
@@ -187,8 +188,8 @@ public partial class Functions
 			var adjustment = match.Groups["Adjustment"].Success
 				? match.Groups["Adjustment"].Value
 				: null;
-			var pad = adjustment?.Contains('x') ?? false;
-			var append = adjustment?.Contains('z') ?? false;
+			// var pad = adjustment?.Contains('x') ?? false;
+			// var append = adjustment?.Contains('z') ?? false;
 
 			return character.Value switch
 			{
