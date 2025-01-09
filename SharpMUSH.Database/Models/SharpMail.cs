@@ -3,7 +3,7 @@
 public record SharpMailQueryResult(
 	string Id,
 	string Key,
-	int DateSent,
+	long DateSent,
 	bool? Fresh,
 	bool? Read,
 	bool? Tagged,
