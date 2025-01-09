@@ -1,6 +1,6 @@
 ﻿namespace SharpMUSH.Configuration.Options;
 
 public record FunctionOptions(
-	bool SaferUserFunctions,
-	bool FunctionSideEffects
+	[PennConfig(Name = "safer_ufun")] bool SaferUserFunctions,
+	[PennConfig(Name = "fun_sideeffects")] bool FunctionSideEffects
 );
