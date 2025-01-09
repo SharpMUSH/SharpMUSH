@@ -9,57 +9,18 @@ namespace SharpMUSH.Configuration;
 
 public partial class ReadPennMUSHConfig : IOptionsFactory<PennMUSHOptions>
 {
-	private static bool Boolean(string value, bool fallback) =>
-		string.IsNullOrWhiteSpace(value)
-			? fallback
-			: value is "-1" or "0" or "false";
-
-	private static string RequiredString(string value, string fallback) =>
-		string.IsNullOrWhiteSpace(value)
-			? fallback
-			: value;
-
-	private static string? String(string value, string? fallback) =>
-		string.IsNullOrWhiteSpace(value)
-			? fallback
-			: value;
-	
-	private static uint UnsignedInteger(string value, uint fallback) =>
-		string.IsNullOrWhiteSpace(value)
-			? fallback
-			: uint.TryParse(value, out var result)
-				? result
-				: fallback;
-
-
-	private static int Integer(string value, int fallback) =>
-		string.IsNullOrWhiteSpace(value)
-			? fallback
-			: int.TryParse(value, out var result)
-				? result
-				: fallback;
-
-	private static uint? DatabaseReference(string value, uint? fallback) =>
-		string.IsNullOrWhiteSpace(value)
-			? fallback
-			: uint.TryParse(value, out var result)
-				? result
-				: fallback;
-
-	private static uint RequiredDatabaseReference(string value, uint fallback) =>
-		UnsignedInteger(value, fallback);
-
 	public PennMUSHOptions Create(string filename)
 	{
 		var keys = typeof(PennMUSHOptions)
 			.GetProperties()
-			.Select(property => property.GetType())
+			.Select(property => property.PropertyType)
 			.SelectMany(configType => configType
 				.GetProperties()
-				.Where(property => property.CustomAttributes.Any())
-				.SelectMany(configProperty => configProperty
+				.Select(configProperty => configProperty
 					.GetCustomAttributes<PennConfigAttribute>()
-					.Select(attribute => (configProperty, attribute)))).ToImmutableHashSet();
+					.Select(attribute => (configProperty, attribute))
+					.FirstOrDefault()
+				)).ToImmutableHashSet();
 
 		var propertyDictionary = keys.ToDictionary(
 			key => key.configProperty.Name,
@@ -304,6 +265,46 @@ public partial class ReadPennMUSHConfig : IOptionsFactory<PennMUSHOptions>
 		string Get(string key) => configDictionary[propertyDictionary[key]];
 	}
 
-	[GeneratedRegex(@"^(?<Key>.+)\s+(?<Value>.+)\s*$")]
+	private static bool Boolean(string value, bool fallback) =>
+		string.IsNullOrWhiteSpace(value)
+			? fallback
+			: value is "-1" or "0" or "false";
+
+	private static string RequiredString(string value, string fallback) =>
+		string.IsNullOrWhiteSpace(value)
+			? fallback
+			: value;
+
+	private static string? String(string value, string? fallback) =>
+		string.IsNullOrWhiteSpace(value)
+			? fallback
+			: value;
+
+	private static uint UnsignedInteger(string value, uint fallback) =>
+		string.IsNullOrWhiteSpace(value)
+			? fallback
+			: uint.TryParse(value, out var result)
+				? result
+				: fallback;
+
+
+	private static int Integer(string value, int fallback) =>
+		string.IsNullOrWhiteSpace(value)
+			? fallback
+			: int.TryParse(value, out var result)
+				? result
+				: fallback;
+
+	private static uint? DatabaseReference(string value, uint? fallback) =>
+		string.IsNullOrWhiteSpace(value)
+			? fallback
+			: uint.TryParse(value, out var result)
+				? result
+				: fallback;
+
+	private static uint RequiredDatabaseReference(string value, uint fallback) =>
+		UnsignedInteger(value, fallback);
+
+	[GeneratedRegex(@"^(?<Key>[^\s]+)\s+(?<Value>.+)\s*$")]
 	private static partial Regex KeyValueSplittingRegex();
 }

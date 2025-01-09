@@ -27,6 +27,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\SharpMUSH.Configuration\SharpMUSH.Configuration.csproj" />
     <ProjectReference Include="..\SharpMUSH.Database.ArangoDB\SharpMUSH.Database.ArangoDB.csproj" />
     <ProjectReference Include="..\SharpMUSH.Database\SharpMUSH.Database.csproj" />
     <ProjectReference Include="..\SharpMUSH.Documentation\SharpMUSH.Documentation.csproj" />
@@ -40,10 +41,13 @@
       <Link>Documentation\Testfile\pennattr.hlp</Link>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="..\SharpMUSH.Documentation\Helpfiles\PennMUSH\pennchat.hlp">
-      <Link>Documentation\Testfile\pennchat.hlp</Link>
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
+		<Content Include="..\SharpMUSH.Documentation\Helpfiles\PennMUSH\pennchat.hlp">
+			<Link>Documentation\Testfile\pennchat.hlp</Link>
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Include="Configuration\Testfile\mushcnf.dst">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
   </ItemGroup>
 
 </Project>

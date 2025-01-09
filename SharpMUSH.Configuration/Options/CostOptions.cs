@@ -1,11 +1,11 @@
 ﻿namespace SharpMUSH.Configuration.Options;
 
 public record CostOptions(
-	[PennConfig(Name = "object_cost")] uint ObjectCost,
-	[PennConfig(Name = "exit_cost")] uint ExitCost,
-	[PennConfig(Name = "link_cost")] uint LinkCost,
-	[PennConfig(Name = "room_cost")] uint RoomCost,
-	[PennConfig(Name = "queue_cost")] uint QueueCost,
-	[PennConfig(Name = "quota_cost")] uint QuotaCost,
-	[PennConfig(Name = "find_cost")] uint FindCost
+	[property: PennConfig(Name = "object_cost")] uint ObjectCost,
+	[property: PennConfig(Name = "exit_cost")] uint ExitCost,
+	[property: PennConfig(Name = "link_cost")] uint LinkCost,
+	[property: PennConfig(Name = "room_cost")] uint RoomCost,
+	[property: PennConfig(Name = "queue_cost")] uint QueueCost,
+	[property: PennConfig(Name = "quota_cost")] uint QuotaCost,
+	[property: PennConfig(Name = "find_cost")] uint FindCost
 );
