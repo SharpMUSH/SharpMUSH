@@ -3,8 +3,8 @@ using Core.Arango.Migration;
 using Core.Arango.Protocol;
 using SharpMUSH.Library.Models;
 
-namespace SharpMUSH.Database.ArangoDB.Migrations
-{
+namespace SharpMUSH.Database.ArangoDB.Migrations;
+
 /// <summary>
 /// Creates the basic database, containing Player #1 (God), Room 0, and Room 2.
 /// This should not use the Sharp class definitions, because it should be unmarried to their definitions.
@@ -20,807 +20,807 @@ public class Migration_CreateDatabase : IArangoMigration
 	public async Task Up(IArangoMigrator migrator, ArangoHandle handle)
 	{
 		await migrator.ApplyStructureAsync(handle, new ArangoStructure()
-		{
-			Collections =
-			[
-				new() {
-					Collection = new ArangoCollection
-					{
-						Name = DatabaseConstants.objects,
-						Type = ArangoCollectionType.Document,
-						KeyOptions = new ArangoKeyOptions()
-						{
-							AllowUserKeys = true,
-							Type = ArangoKeyType.Autoincrement,
-							Increment = 1,
-							Offset = 0
-						},
-						Schema = new ArangoSchema()
-						{
-							Rule = new {
-								type = DatabaseConstants.typeObject,
-								properties = new {
-									Name = new { type = DatabaseConstants.typeString },
-									Type = new { type = DatabaseConstants.typeString },
-									Locks = new { type = DatabaseConstants.typeObject },
-									CreationTime = new { type = DatabaseConstants.typeNumber },
-									ModifiedTime = new { type = DatabaseConstants.typeNumber },
-								},
-								required = (string[])[nameof(SharpObject.Name), nameof(SharpObject.Type)],
-								additionalProperties = true
-							}
-						},
-						WaitForSync = true
-					},
-					Indices =
-					[
-						new()
-						{
-							Fields = [nameof(SharpObject.Name)]
-						}
-					]
-				},
-			new()
 			{
-				Collection = new ArangoCollection
-				{
-					Name = DatabaseConstants.things,
-					Type = ArangoCollectionType.Document,
-					WaitForSync = true,
-					Schema = new ArangoSchema()
-					{
-						Rule = new {
-							type = DatabaseConstants.typeObject,
-							properties = new
+				Collections =
+				[
+					new() {
+						Collection = new ArangoCollection
+						{
+							Name = DatabaseConstants.objects,
+							Type = ArangoCollectionType.Document,
+							KeyOptions = new ArangoKeyOptions()
 							{
-								Aliases = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } },
+								AllowUserKeys = true,
+								Type = ArangoKeyType.Autoincrement,
+								Increment = 1,
+								Offset = 0
+							},
+							Schema = new ArangoSchema()
+							{
+								Rule = new {
+									type = DatabaseConstants.typeObject,
+									properties = new {
+										Name = new { type = DatabaseConstants.typeString },
+										Type = new { type = DatabaseConstants.typeString },
+										Locks = new { type = DatabaseConstants.typeObject },
+										CreationTime = new { type = DatabaseConstants.typeNumber },
+										ModifiedTime = new { type = DatabaseConstants.typeNumber },
+									},
+									required = (string[])[nameof(SharpObject.Name), nameof(SharpObject.Type)],
+									additionalProperties = true
+								}
+							},
+							WaitForSync = true
+						},
+						Indices =
+						[
+							new()
+							{
+								Fields = [nameof(SharpObject.Name)]
 							}
-						}
+						]
+					},
+					new()
+					{
+						Collection = new ArangoCollection
+						{
+							Name = DatabaseConstants.things,
+							Type = ArangoCollectionType.Document,
+							WaitForSync = true,
+							Schema = new ArangoSchema()
+							{
+								Rule = new {
+									type = DatabaseConstants.typeObject,
+									properties = new
+									{
+										Aliases = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } },
+									}
+								}
 
-					}
-				},
-				Indices =
-					[
-						new()
-						{
-							Fields = [nameof(SharpThing.Aliases)]
-						}
-					]
-			},
-			new()
-			{
-				Collection = new ArangoCollection
-				{
-					Name = DatabaseConstants.rooms,
-					Type = ArangoCollectionType.Document,
-					WaitForSync = true
-				}
-			},
-			new()
-			{
-				Collection = new ArangoCollection
-				{
-					Name = DatabaseConstants.exits,
-					Type = ArangoCollectionType.Document,
-					WaitForSync = true,
-					Schema = new ArangoSchema()
-					{
-						Rule = new {
-							type = DatabaseConstants.typeObject,
-							properties = new
-							{
-								Aliases = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } }
 							}
-						}
-					}
-				}
-			},
-			new()
-			{
-				Collection = new ArangoCollection
-				{
-					Name = DatabaseConstants.players,
-					Type = ArangoCollectionType.Document,
-					WaitForSync = true,
-					Schema = new ArangoSchema()
-					{
-						Rule = new {
-							type = DatabaseConstants.typeObject,
-							properties = new
-							{
-								PasswordHash = new { type = DatabaseConstants.typeString },
-								Aliases = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } }
-							},
-							required = (string[])[nameof(SharpPlayer.PasswordHash)]
-						}
-					}
-				},
-				Indices =
-					[
-						new()
-						{
-							Fields = [nameof(SharpPlayer.Aliases)]
-						}
-					]
-			},
-			new()
-			{
-				Collection = new ArangoCollection
-				{
-					Name = DatabaseConstants.objectFlags,
-					Type = ArangoCollectionType.Document,
-					WaitForSync = true,
-					Schema = new ArangoSchema()
-					{
-						Rule = new {
-							type = DatabaseConstants.typeObject,
-							properties = new
-							{
-								Name = new { type = DatabaseConstants.typeString },
-								Symbol = new { type = DatabaseConstants.typeString, multipleOf = 1 },
-								Aliases = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } },
-								System = new {type = DatabaseConstants.typeBoolean },
-								SetPermissions = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } },
-								UnsetPermissions = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } },
-								TypeRestrictions = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } }
-							},
-							required = (string[])[
-								nameof(SharpObjectFlag.Name),
-								nameof(SharpObjectFlag.System),
-								nameof(SharpObjectFlag.TypeRestrictions)
-									]
-						}
-					}
-				}
-			},
-			new()
-			{
-				Collection = new ArangoCollection
-				{
-					Name = DatabaseConstants.attributeFlags,
-					Type = ArangoCollectionType.Document,
-					WaitForSync = true,
-					Schema = new ArangoSchema()
-					{
-						Rule = new {
-							type = DatabaseConstants.typeObject,
-							properties = new
-							{
-								Name = new { type = DatabaseConstants.typeString },
-								Symbol = new { type = DatabaseConstants.typeString, multipleOf = 1 },
-								System = new {type = DatabaseConstants.typeBoolean },
-							},
-							required = (string[])[
-								nameof(SharpObjectFlag.Name),
-								nameof(SharpObjectFlag.System),
-								nameof(SharpObjectFlag.Symbol)
-							]
-						}
-					}
-				}
-			},
-			new()
-			{
-				Collection = new ArangoCollection
-				{
-					Name = DatabaseConstants.objectPowers,
-					Type = ArangoCollectionType.Document,
-					WaitForSync = true,
-					Schema = new ArangoSchema()
-					{
-						Rule = new {
-							type = DatabaseConstants.typeObject,
-							properties = new
-							{
-								Name = new { type = DatabaseConstants.typeString },
-								Symbol = new { type = DatabaseConstants.typeString, multipleOf = 1 },
-								System = new { type = DatabaseConstants.typeBoolean },
-								SetPermissions = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } },
-								UnsetPermissions = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } },
-								TypeRestrictions = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } }
-							},
-							required = (string[])[
-								nameof(SharpPower.Name),
-								nameof(SharpPower.TypeRestrictions)
-									]
-						}
-					}
-				}
-			},
-			new()
-			{
-				Collection = new ArangoCollection
-				{
-					Name = DatabaseConstants.attributes,
-					Type = ArangoCollectionType.Document,
-					WaitForSync = true,
-					Schema = new ArangoSchema()
-					{
-						Rule = new {
-							type = DatabaseConstants.typeObject,
-							properties = new
-							{
-								Name = new { type = DatabaseConstants.typeString },
-								LongName = new { type = DatabaseConstants.typeString },
-							},
-							required = (string[])[nameof(SharpAttribute.Name)]
-						}
-					}
-				},
-				Indices =
-					[
-						new()
-						{
-							Fields = [nameof(SharpAttribute.LongName)],
-							Type = ArangoIndexType.Inverted
 						},
-						new()
-						{
-							Fields = [nameof(SharpAttribute.LongName)],
-							Type = ArangoIndexType.Persistent
-						}
-					]
-			},
-			new()
-			{
-				Collection = new ArangoCollection
-				{
-					Name = DatabaseConstants.attributeEntries,
-					Type = ArangoCollectionType.Document,
-					WaitForSync = true,
-					Schema = new ArangoSchema()
-					{
-						Rule = new {
-							type = DatabaseConstants.typeObject,
-							properties = new
+						Indices =
+						[
+							new()
 							{
-								Name = new { type = DatabaseConstants.typeString },
-								DefaultFlags = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } },
-								Limit = new { type = DatabaseConstants.typeString },
-								Enum = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } }
+								Fields = [nameof(SharpThing.Aliases)]
+							}
+						]
+					},
+					new()
+					{
+						Collection = new ArangoCollection
+						{
+							Name = DatabaseConstants.rooms,
+							Type = ArangoCollectionType.Document,
+							WaitForSync = true
+						}
+					},
+					new()
+					{
+						Collection = new ArangoCollection
+						{
+							Name = DatabaseConstants.exits,
+							Type = ArangoCollectionType.Document,
+							WaitForSync = true,
+							Schema = new ArangoSchema()
+							{
+								Rule = new {
+									type = DatabaseConstants.typeObject,
+									properties = new
+									{
+										Aliases = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } }
+									}
+								}
+							}
+						}
+					},
+					new()
+					{
+						Collection = new ArangoCollection
+						{
+							Name = DatabaseConstants.players,
+							Type = ArangoCollectionType.Document,
+							WaitForSync = true,
+							Schema = new ArangoSchema()
+							{
+								Rule = new {
+									type = DatabaseConstants.typeObject,
+									properties = new
+									{
+										PasswordHash = new { type = DatabaseConstants.typeString },
+										Aliases = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } }
+									},
+									required = (string[])[nameof(SharpPlayer.PasswordHash)]
+								}
+							}
+						},
+						Indices =
+						[
+							new()
+							{
+								Fields = [nameof(SharpPlayer.Aliases)]
+							}
+						]
+					},
+					new()
+					{
+						Collection = new ArangoCollection
+						{
+							Name = DatabaseConstants.objectFlags,
+							Type = ArangoCollectionType.Document,
+							WaitForSync = true,
+							Schema = new ArangoSchema()
+							{
+								Rule = new {
+									type = DatabaseConstants.typeObject,
+									properties = new
+									{
+										Name = new { type = DatabaseConstants.typeString },
+										Symbol = new { type = DatabaseConstants.typeString, multipleOf = 1 },
+										Aliases = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } },
+										System = new {type = DatabaseConstants.typeBoolean },
+										SetPermissions = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } },
+										UnsetPermissions = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } },
+										TypeRestrictions = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } }
+									},
+									required = (string[])[
+										nameof(SharpObjectFlag.Name),
+										nameof(SharpObjectFlag.System),
+										nameof(SharpObjectFlag.TypeRestrictions)
+									]
+								}
+							}
+						}
+					},
+					new()
+					{
+						Collection = new ArangoCollection
+						{
+							Name = DatabaseConstants.attributeFlags,
+							Type = ArangoCollectionType.Document,
+							WaitForSync = true,
+							Schema = new ArangoSchema()
+							{
+								Rule = new {
+									type = DatabaseConstants.typeObject,
+									properties = new
+									{
+										Name = new { type = DatabaseConstants.typeString },
+										Symbol = new { type = DatabaseConstants.typeString, multipleOf = 1 },
+										System = new {type = DatabaseConstants.typeBoolean },
+									},
+									required = (string[])[
+										nameof(SharpObjectFlag.Name),
+										nameof(SharpObjectFlag.System),
+										nameof(SharpObjectFlag.Symbol)
+									]
+								}
+							}
+						}
+					},
+					new()
+					{
+						Collection = new ArangoCollection
+						{
+							Name = DatabaseConstants.objectPowers,
+							Type = ArangoCollectionType.Document,
+							WaitForSync = true,
+							Schema = new ArangoSchema()
+							{
+								Rule = new {
+									type = DatabaseConstants.typeObject,
+									properties = new
+									{
+										Name = new { type = DatabaseConstants.typeString },
+										Symbol = new { type = DatabaseConstants.typeString, multipleOf = 1 },
+										System = new { type = DatabaseConstants.typeBoolean },
+										SetPermissions = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } },
+										UnsetPermissions = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } },
+										TypeRestrictions = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } }
+									},
+									required = (string[])[
+										nameof(SharpPower.Name),
+										nameof(SharpPower.TypeRestrictions)
+									]
+								}
+							}
+						}
+					},
+					new()
+					{
+						Collection = new ArangoCollection
+						{
+							Name = DatabaseConstants.attributes,
+							Type = ArangoCollectionType.Document,
+							WaitForSync = true,
+							Schema = new ArangoSchema()
+							{
+								Rule = new {
+									type = DatabaseConstants.typeObject,
+									properties = new
+									{
+										Name = new { type = DatabaseConstants.typeString },
+										LongName = new { type = DatabaseConstants.typeString },
+									},
+									required = (string[])[nameof(SharpAttribute.Name)]
+								}
+							}
+						},
+						Indices =
+						[
+							new()
+							{
+								Fields = [nameof(SharpAttribute.LongName)],
+								Type = ArangoIndexType.Inverted
 							},
-							required = (string[])[nameof(SharpAttributeEntry.Name)]
-						}
-					}
-				},
-				Indices =
-					[
-						new()
-						{
-							Fields = [nameof(SharpAttributeEntry.Name)]
-						}
-					]
-			},
-			new()
-			{
-				Collection = new ArangoCollection
-				{
-					Name = DatabaseConstants.functions,
-					Type = ArangoCollectionType.Document,
-					WaitForSync = true,
-					Schema = new ArangoSchema()
-					{
-						Rule = new
-						{
-								type = DatabaseConstants.typeObject,
-								properties = new {
-									Name = new { type = DatabaseConstants.typeString },
-									Alias = new { type = DatabaseConstants.typeString },
-									RestrictedErrorMessage = new { type = DatabaseConstants.typeString },
-									Traits = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } },
-									MinArgs = new { type = DatabaseConstants.typeNumber, multipleOf = 1 },
-									MaxArgs = new { type = DatabaseConstants.typeNumber, multipleOf = 1 },
-									Restrictions = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } }
-								},
-								required = (string[])[
-										nameof(SharpFunction.Name),
-									nameof(SharpFunction.MinArgs),
-									nameof(SharpFunction.MaxArgs),
-									nameof(SharpFunction.Restrictions),
-									nameof(SharpFunction.Traits)
-										]
-						}
-					}
-				},
-				Indices =
-					[
-						new() { Fields = [ nameof(SharpFunction.Name) ] },
-						new() { Fields = [ nameof(SharpFunction.Traits) ] },
-						new() { Fields = [ nameof(SharpFunction.Alias) ] },
-						new() { Fields = [ nameof(SharpFunction.Enabled) ] },
-					]
-			},
-				new()
-				{
-					Collection = new ArangoCollection
-					{
-						Name = DatabaseConstants.commands,
-						Type = ArangoCollectionType.Document,
-						WaitForSync = true,
-						Schema = new ArangoSchema
-						{
-							Rule = new {
-								type = DatabaseConstants.typeObject,
-								properties = new
-								{
-									Name = new { type = DatabaseConstants.typeString },
-									Aliases = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } },
-									Limit = new { type = DatabaseConstants.typeString },
-									Enum = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } }
-								},
-								required = (string[])[nameof(SharpCommand.Name)]
-							}
-						}
-					},
-					Indices =
-					[
-						new() { Fields = [nameof(SharpCommand.Name)] },
-						new() { Fields = [nameof(SharpCommand.Alias)] }
-					]
-				},
-				new()
-				{
-					Collection = new ArangoCollection
-					{
-						Name = DatabaseConstants.mails,
-						Type = ArangoCollectionType.Document,
-						WaitForSync = true,
-						Schema = new ArangoSchema
-						{
-							Rule = new {
-								type = DatabaseConstants.typeObject,
-								properties = new
-								{
-									DateSent = new { type = DatabaseConstants.typeNumber },
-									Fresh = new { type = DatabaseConstants.typeBoolean },
-									Read = new { type = DatabaseConstants.typeBoolean },
-									Tagged = new { type = DatabaseConstants.typeBoolean },
-									Urgent = new { type = DatabaseConstants.typeBoolean },
-									Cleared = new { type = DatabaseConstants.typeBoolean },
-									Folder = new { type = DatabaseConstants.typeString },
-									Content = new { type = DatabaseConstants.typeString },
-									Subject = new { type = DatabaseConstants.typeString },
-								},
-								required = (string[])["Subject", "Content", "DateSent", "Fresh", "Read", "Folder"]
-							}
-						}
-					},
-					Indices =
-					[
-						new() { Fields = ["Folder"] },
-					]
-				},
-				
-				new()
-				{
-					Collection = new ArangoCollection
-					{
-						Name = DatabaseConstants.channels,
-						Type = ArangoCollectionType.Document,
-						WaitForSync = true,
-						Schema = new ArangoSchema
-						{
-							Rule = new {
-								type = DatabaseConstants.typeObject,
-								properties = new
-								{
-									Name = new { type = DatabaseConstants.typeString },
-									Description = new { type = DatabaseConstants.typeString },
-									Privs = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } },
-									JoinLock = new { type = DatabaseConstants.typeString },
-									SpeakLock = new { type = DatabaseConstants.typeString },
-									SeeLock = new { type = DatabaseConstants.typeString },
-									HideLock = new { type = DatabaseConstants.typeString },
-									ModLock = new { type = DatabaseConstants.typeString },
-								},
-								required = (string[])["Name", "Privs"]
-							}
-						}
-					},
-					Indices =
-					[
-						new() { Fields = ["Folder"] },
-					]
-				},
-			new()
-			{
-				Collection = new ArangoCollection
-				{
-					Name = DatabaseConstants.atLocation,
-					Type = ArangoCollectionType.Edge,
-					WaitForSync = true
-				}
-			},
-			new()
-			{
-				Collection = new ArangoCollection
-				{
-					Name = DatabaseConstants.hasHome,
-					Type = ArangoCollectionType.Edge,
-					WaitForSync = true
-				}
-			},
-			new()
-			{
-				Collection = new ArangoCollection
-				{
-					Name = DatabaseConstants.hasExit,
-					Type = ArangoCollectionType.Edge,
-					WaitForSync = true
-				}
-			},
-			new()
-			{
-				Collection = new ArangoCollection
-				{
-					Name = DatabaseConstants.hasFlags,
-					Type = ArangoCollectionType.Edge,
-					WaitForSync = true
-				}
-			},
-			new()
-			{
-				Collection = new ArangoCollection
-				{
-					Name = DatabaseConstants.hasAttribute,
-					Type = ArangoCollectionType.Edge,
-					WaitForSync = true
-				}
-			},
-			new()
-			{
-				Collection = new ArangoCollection
-				{
-					Name = DatabaseConstants.hasAttributeFlag,
-					Type = ArangoCollectionType.Edge,
-					WaitForSync = true
-				}
-			},
-			new()
-			{
-				Collection = new ArangoCollection
-				{
-					Name = DatabaseConstants.hasObjectOwner,
-					Type = ArangoCollectionType.Edge,
-					WaitForSync = true
-				}
-			},
-			new()
-			{
-				Collection = new ArangoCollection
-				{
-					Name = DatabaseConstants.hasAttributeOwner,
-					Type = ArangoCollectionType.Edge,
-					WaitForSync = true
-				}
-			}, 
-				new()
-				{
-					Collection = new ArangoCollection
-					{
-						Name = DatabaseConstants.onChannel,
-						Type = ArangoCollectionType.Edge,
-						WaitForSync = true,
-						Schema = new ArangoSchema()
-						{
-							Rule = new
+							new()
 							{
-								properties = new
+								Fields = [nameof(SharpAttribute.LongName)],
+								Type = ArangoIndexType.Persistent
+							}
+						]
+					},
+					new()
+					{
+						Collection = new ArangoCollection
+						{
+							Name = DatabaseConstants.attributeEntries,
+							Type = ArangoCollectionType.Document,
+							WaitForSync = true,
+							Schema = new ArangoSchema()
+							{
+								Rule = new {
+									type = DatabaseConstants.typeObject,
+									properties = new
+									{
+										Name = new { type = DatabaseConstants.typeString },
+										DefaultFlags = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } },
+										Limit = new { type = DatabaseConstants.typeString },
+										Enum = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } }
+									},
+									required = (string[])[nameof(SharpAttributeEntry.Name)]
+								}
+							}
+						},
+						Indices =
+						[
+							new()
+							{
+								Fields = [nameof(SharpAttributeEntry.Name)]
+							}
+						]
+					},
+					new()
+					{
+						Collection = new ArangoCollection
+						{
+							Name = DatabaseConstants.functions,
+							Type = ArangoCollectionType.Document,
+							WaitForSync = true,
+							Schema = new ArangoSchema()
+							{
+								Rule = new
 								{
-									Gagged = new { type = DatabaseConstants.typeBoolean },
-									Mute = new { type = DatabaseConstants.typeBoolean },
-									Hide = new { type = DatabaseConstants.typeBoolean },
-									Combine = new { type = DatabaseConstants.typeBoolean },
-									Title = new { type = DatabaseConstants.typeBoolean }
+									type = DatabaseConstants.typeObject,
+									properties = new {
+										Name = new { type = DatabaseConstants.typeString },
+										Alias = new { type = DatabaseConstants.typeString },
+										RestrictedErrorMessage = new { type = DatabaseConstants.typeString },
+										Traits = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } },
+										MinArgs = new { type = DatabaseConstants.typeNumber, multipleOf = 1 },
+										MaxArgs = new { type = DatabaseConstants.typeNumber, multipleOf = 1 },
+										Restrictions = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } }
+									},
+									required = (string[])[
+										nameof(SharpFunction.Name),
+										nameof(SharpFunction.MinArgs),
+										nameof(SharpFunction.MaxArgs),
+										nameof(SharpFunction.Restrictions),
+										nameof(SharpFunction.Traits)
+									]
+								}
+							}
+						},
+						Indices =
+						[
+							new() { Fields = [ nameof(SharpFunction.Name) ] },
+							new() { Fields = [ nameof(SharpFunction.Traits) ] },
+							new() { Fields = [ nameof(SharpFunction.Alias) ] },
+							new() { Fields = [ nameof(SharpFunction.Enabled) ] },
+						]
+					},
+					new()
+					{
+						Collection = new ArangoCollection
+						{
+							Name = DatabaseConstants.commands,
+							Type = ArangoCollectionType.Document,
+							WaitForSync = true,
+							Schema = new ArangoSchema
+							{
+								Rule = new {
+									type = DatabaseConstants.typeObject,
+									properties = new
+									{
+										Name = new { type = DatabaseConstants.typeString },
+										Aliases = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } },
+										Limit = new { type = DatabaseConstants.typeString },
+										Enum = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } }
+									},
+									required = (string[])[nameof(SharpCommand.Name)]
+								}
+							}
+						},
+						Indices =
+						[
+							new() { Fields = [nameof(SharpCommand.Name)] },
+							new() { Fields = [nameof(SharpCommand.Alias)] }
+						]
+					},
+					new()
+					{
+						Collection = new ArangoCollection
+						{
+							Name = DatabaseConstants.mails,
+							Type = ArangoCollectionType.Document,
+							WaitForSync = true,
+							Schema = new ArangoSchema
+							{
+								Rule = new {
+									type = DatabaseConstants.typeObject,
+									properties = new
+									{
+										DateSent = new { type = DatabaseConstants.typeNumber },
+										Fresh = new { type = DatabaseConstants.typeBoolean },
+										Read = new { type = DatabaseConstants.typeBoolean },
+										Tagged = new { type = DatabaseConstants.typeBoolean },
+										Urgent = new { type = DatabaseConstants.typeBoolean },
+										Cleared = new { type = DatabaseConstants.typeBoolean },
+										Folder = new { type = DatabaseConstants.typeString },
+										Content = new { type = DatabaseConstants.typeString },
+										Subject = new { type = DatabaseConstants.typeString },
+									},
+									required = (string[])["Subject", "Content", "DateSent", "Fresh", "Read", "Folder"]
+								}
+							}
+						},
+						Indices =
+						[
+							new() { Fields = ["Folder"] },
+						]
+					},
+					
+					new()
+					{
+						Collection = new ArangoCollection
+						{
+							Name = DatabaseConstants.channels,
+							Type = ArangoCollectionType.Document,
+							WaitForSync = true,
+							Schema = new ArangoSchema
+							{
+								Rule = new {
+									type = DatabaseConstants.typeObject,
+									properties = new
+									{
+										Name = new { type = DatabaseConstants.typeString },
+										Description = new { type = DatabaseConstants.typeString },
+										Privs = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } },
+										JoinLock = new { type = DatabaseConstants.typeString },
+										SpeakLock = new { type = DatabaseConstants.typeString },
+										SeeLock = new { type = DatabaseConstants.typeString },
+										HideLock = new { type = DatabaseConstants.typeString },
+										ModLock = new { type = DatabaseConstants.typeString },
+									},
+									required = (string[])["Name", "Privs"]
+								}
+							}
+						},
+						Indices =
+						[
+							new() { Fields = ["Folder"] },
+						]
+					},
+					new()
+					{
+						Collection = new ArangoCollection
+						{
+							Name = DatabaseConstants.atLocation,
+							Type = ArangoCollectionType.Edge,
+							WaitForSync = true
+						}
+					},
+					new()
+					{
+						Collection = new ArangoCollection
+						{
+							Name = DatabaseConstants.hasHome,
+							Type = ArangoCollectionType.Edge,
+							WaitForSync = true
+						}
+					},
+					new()
+					{
+						Collection = new ArangoCollection
+						{
+							Name = DatabaseConstants.hasExit,
+							Type = ArangoCollectionType.Edge,
+							WaitForSync = true
+						}
+					},
+					new()
+					{
+						Collection = new ArangoCollection
+						{
+							Name = DatabaseConstants.hasFlags,
+							Type = ArangoCollectionType.Edge,
+							WaitForSync = true
+						}
+					},
+					new()
+					{
+						Collection = new ArangoCollection
+						{
+							Name = DatabaseConstants.hasAttribute,
+							Type = ArangoCollectionType.Edge,
+							WaitForSync = true
+						}
+					},
+					new()
+					{
+						Collection = new ArangoCollection
+						{
+							Name = DatabaseConstants.hasAttributeFlag,
+							Type = ArangoCollectionType.Edge,
+							WaitForSync = true
+						}
+					},
+					new()
+					{
+						Collection = new ArangoCollection
+						{
+							Name = DatabaseConstants.hasObjectOwner,
+							Type = ArangoCollectionType.Edge,
+							WaitForSync = true
+						}
+					},
+					new()
+					{
+						Collection = new ArangoCollection
+						{
+							Name = DatabaseConstants.hasAttributeOwner,
+							Type = ArangoCollectionType.Edge,
+							WaitForSync = true
+						}
+					}, 
+					new()
+					{
+						Collection = new ArangoCollection
+						{
+							Name = DatabaseConstants.onChannel,
+							Type = ArangoCollectionType.Edge,
+							WaitForSync = true,
+							Schema = new ArangoSchema()
+							{
+								Rule = new
+								{
+									properties = new
+									{
+										Gagged = new { type = DatabaseConstants.typeBoolean },
+										Mute = new { type = DatabaseConstants.typeBoolean },
+										Hide = new { type = DatabaseConstants.typeBoolean },
+										Combine = new { type = DatabaseConstants.typeBoolean },
+										Title = new { type = DatabaseConstants.typeBoolean }
+									}
+								}
+							}
+						}
+					},
+					new()
+					{
+						Collection = new ArangoCollection
+						{
+							Name = DatabaseConstants.sentMail,
+							Type = ArangoCollectionType.Edge,
+							WaitForSync = true,
+						}
+					},
+					new()
+					{
+						Collection = new ArangoCollection
+						{
+							Name = DatabaseConstants.ownsChannel,
+							Type = ArangoCollectionType.Edge,
+							WaitForSync = true,
+						}
+					},
+					new()
+					{
+						Collection = new ArangoCollection
+						{
+							Name = DatabaseConstants.receivedMail,
+							Type = ArangoCollectionType.Edge,
+							WaitForSync = true,
+						}
+					},
+					new()
+					{
+						Collection = new ArangoCollection
+						{
+							Name = DatabaseConstants.hasHook,
+							Type = ArangoCollectionType.Edge,
+							WaitForSync = true,
+							Schema = new ArangoSchema()
+							{
+								Rule = new {
+									properties = new
+									{
+										Type = new { type = DatabaseConstants.typeString }
+									},
+									required = (string[])[nameof(SharpHookEdge.Type)]
 								}
 							}
 						}
 					}
-				},
-				new()
-				{
-					Collection = new ArangoCollection
+				],
+				Graphs =
+				[
+					new()
 					{
-						Name = DatabaseConstants.sentMail,
-						Type = ArangoCollectionType.Edge,
-						WaitForSync = true,
-					}
-				},
-				new()
-				{
-					Collection = new ArangoCollection
-					{
-						Name = DatabaseConstants.ownsChannel,
-						Type = ArangoCollectionType.Edge,
-						WaitForSync = true,
-					}
-				},
-				new()
-				{
-					Collection = new ArangoCollection
-					{
-						Name = DatabaseConstants.receivedMail,
-						Type = ArangoCollectionType.Edge,
-						WaitForSync = true,
-					}
-				},
-			new()
-			{
-				Collection = new ArangoCollection
-				{
-					Name = DatabaseConstants.hasHook,
-					Type = ArangoCollectionType.Edge,
-					WaitForSync = true,
-					Schema = new ArangoSchema()
-					{
-						Rule = new {
-							properties = new
+						EdgeDefinitions =
+						[
+							new ArangoEdgeDefinition()
 							{
-								Type = new { type = DatabaseConstants.typeString }
+								Collection = DatabaseConstants.isObject,
+								To = [DatabaseConstants.objects],
+								From = [
+									DatabaseConstants.things,
+									DatabaseConstants.players,
+									DatabaseConstants.rooms,
+									DatabaseConstants.exits
+								]
+							}
+						],
+						Name = DatabaseConstants.graphObjects
+					},
+					new()
+					{
+						EdgeDefinitions =
+						[
+							new ArangoEdgeDefinition()
+							{
+								Collection = DatabaseConstants.hasPowers,
+								To = [DatabaseConstants.objectPowers],
+								From = [
+									DatabaseConstants.objects
+								]
+							}
+						],
+						Name = DatabaseConstants.graphPowers
+					},
+					new()
+					{
+						EdgeDefinitions =
+						[
+							new ArangoEdgeDefinition()
+							{
+								Collection = DatabaseConstants.hasFlags,
+								To = [DatabaseConstants.objectFlags],
+								From = [
+									DatabaseConstants.objects
+								]
+							}
+						],
+						Name = DatabaseConstants.graphFlags
+					},
+					new()
+					{
+						EdgeDefinitions =
+						[
+							new ArangoEdgeDefinition()
+							{
+								Collection = DatabaseConstants.hasAttribute,
+								To = [DatabaseConstants.attributes],
+								From = [
+									DatabaseConstants.players,
+									DatabaseConstants.things,
+									DatabaseConstants.exits,
+									DatabaseConstants.rooms,
+									DatabaseConstants.attributes
+								]
+							}
+						],
+						Name = DatabaseConstants.graphAttributes
+					},
+					new()
+					{
+						EdgeDefinitions =
+						[
+							new ArangoEdgeDefinition()
+							{
+								Collection = DatabaseConstants.hasAttributeFlag,
+								To = [DatabaseConstants.attributeFlags],
+								From = [
+									DatabaseConstants.attributes
+								]
+							}
+						],
+						Name = DatabaseConstants.graphAttributeFlags
+					},
+					new()
+					{
+						EdgeDefinitions =
+						[
+							new ArangoEdgeDefinition()
+							{
+								Collection = DatabaseConstants.atLocation,
+								To = [
+									DatabaseConstants.rooms,
+									DatabaseConstants.things,
+									DatabaseConstants.players
+								],
+								From = [
+									DatabaseConstants.exits,
+									DatabaseConstants.things,
+									DatabaseConstants.players
+								]
+							}
+						],
+						Name = DatabaseConstants.graphLocations,
+					},
+					new()
+					{
+						EdgeDefinitions =
+						[
+							new ArangoEdgeDefinition()
+							{
+								Collection = DatabaseConstants.hasHome,
+								To = [
+									DatabaseConstants.rooms,
+									DatabaseConstants.things,
+									DatabaseConstants.players
+								],
+								From = [
+									DatabaseConstants.exits,
+									DatabaseConstants.things,
+									DatabaseConstants.players
+								]
+							}
+						],
+						Name = DatabaseConstants.graphHomes
+					},
+					new()
+					{
+						EdgeDefinitions =
+						[
+							new ArangoEdgeDefinition()
+							{
+								Collection = DatabaseConstants.hasExit,
+								To = [
+									DatabaseConstants.exits,
+								],
+								From = [
+									DatabaseConstants.rooms,
+									DatabaseConstants.things,
+									DatabaseConstants.players
+								]
+							}
+						],
+						Name = DatabaseConstants.graphExits
+					},
+					new()
+					{
+						EdgeDefinitions =
+						[
+							new ArangoEdgeDefinition()
+							{
+								Collection = DatabaseConstants.hasObjectOwner,
+								To = [
+									DatabaseConstants.players
+								],
+								From = [
+									DatabaseConstants.objects
+								]
+							}
+						],
+						Name = DatabaseConstants.graphObjectOwners
+					},
+					new()
+					{
+						EdgeDefinitions =
+						[
+							new ArangoEdgeDefinition()
+							{
+								Collection = DatabaseConstants.hasAttributeOwner,
+								To = [
+									DatabaseConstants.objects
+								],
+								From = [
+									DatabaseConstants.attributes
+								]
+							}
+						],
+						Name = DatabaseConstants.graphAttributeOwners
+					},
+					new()
+					{
+						EdgeDefinitions =
+						[
+							new ArangoEdgeDefinition()
+							{
+								Collection = DatabaseConstants.hasParent,
+								To = [
+									DatabaseConstants.objects
+								],
+								From = [
+									DatabaseConstants.objects
+								]
+							}
+						],
+						Name = DatabaseConstants.graphParents
+					},
+					new()
+					{
+						EdgeDefinitions =
+						[
+							new ArangoEdgeDefinition()
+							{
+								Collection = DatabaseConstants.ownsChannel,
+								To = [
+									DatabaseConstants.channels
+								],
+								From = [
+									DatabaseConstants.players
+								]
 							},
-							required = (string[])[nameof(SharpHookEdge.Type)]
-						}
+							new ArangoEdgeDefinition()
+							{
+								Collection = DatabaseConstants.onChannel,
+								To = [
+									DatabaseConstants.channels
+								],
+								From = [
+									DatabaseConstants.objects
+								]
+							}
+						],
+						Name = DatabaseConstants.graphChannels
+					},
+					new()
+					{
+						EdgeDefinitions =
+						[
+							new ArangoEdgeDefinition()
+							{
+								Collection = DatabaseConstants.receivedMail,
+								To = [
+									DatabaseConstants.mails
+								],
+								From = [
+									DatabaseConstants.players
+								]
+							},
+							new ArangoEdgeDefinition()
+							{
+								Collection = DatabaseConstants.sentMail,
+								To = [
+									DatabaseConstants.mails
+								],
+								From = [
+									DatabaseConstants.objects
+								]
+							}
+						],
+						Name = DatabaseConstants.graphMail
 					}
-				}
-			}
-		],
-			Graphs =
-			[
-				new()
-				{
-					EdgeDefinitions =
-					[
-						new ArangoEdgeDefinition()
-						{
-							Collection = DatabaseConstants.isObject,
-							To = [DatabaseConstants.objects],
-							From = [
-								DatabaseConstants.things,
-								DatabaseConstants.players,
-								DatabaseConstants.rooms,
-								DatabaseConstants.exits
-								]
-						}
-					],
-					Name = DatabaseConstants.graphObjects
-				},
-				new()
-				{
-					EdgeDefinitions =
-					[
-						new ArangoEdgeDefinition()
-						{
-							Collection = DatabaseConstants.hasPowers,
-							To = [DatabaseConstants.objectPowers],
-							From = [
-								DatabaseConstants.objects
-								]
-						}
-					],
-					Name = DatabaseConstants.graphPowers
-				},
-				new()
-				{
-					EdgeDefinitions =
-					[
-						new ArangoEdgeDefinition()
-						{
-							Collection = DatabaseConstants.hasFlags,
-							To = [DatabaseConstants.objectFlags],
-							From = [
-								DatabaseConstants.objects
-							]
-						}
-					],
-					Name = DatabaseConstants.graphFlags
-				},
-				new()
-				{
-					EdgeDefinitions =
-					[
-						new ArangoEdgeDefinition()
-						{
-							Collection = DatabaseConstants.hasAttribute,
-							To = [DatabaseConstants.attributes],
-							From = [
-								DatabaseConstants.players,
-								DatabaseConstants.things,
-								DatabaseConstants.exits,
-								DatabaseConstants.rooms,
-								DatabaseConstants.attributes
-							]
-						}
-					],
-					Name = DatabaseConstants.graphAttributes
-				},
-				new()
-				{
-					EdgeDefinitions =
-					[
-						new ArangoEdgeDefinition()
-						{
-							Collection = DatabaseConstants.hasAttributeFlag,
-							To = [DatabaseConstants.attributeFlags],
-							From = [
-								DatabaseConstants.attributes
-							]
-						}
-					],
-					Name = DatabaseConstants.graphAttributeFlags
-				},
-				new()
-				{
-					EdgeDefinitions =
-					[
-						new ArangoEdgeDefinition()
-						{
-							Collection = DatabaseConstants.atLocation,
-							To = [
-								DatabaseConstants.rooms,
-								DatabaseConstants.things,
-								DatabaseConstants.players
-								],
-							From = [
-								DatabaseConstants.exits,
-								DatabaseConstants.things,
-								DatabaseConstants.players
-								]
-						}
-					],
-					Name = DatabaseConstants.graphLocations,
-				},
-				new()
-				{
-					EdgeDefinitions =
-					[
-						new ArangoEdgeDefinition()
-						{
-							Collection = DatabaseConstants.hasHome,
-							To = [
-								DatabaseConstants.rooms,
-								DatabaseConstants.things,
-								DatabaseConstants.players
-							],
-							From = [
-								DatabaseConstants.exits,
-								DatabaseConstants.things,
-								DatabaseConstants.players
-							]
-						}
-					],
-					Name = DatabaseConstants.graphHomes
-				},
-				new()
-				{
-					EdgeDefinitions =
-					[
-						new ArangoEdgeDefinition()
-						{
-							Collection = DatabaseConstants.hasExit,
-							To = [
-								DatabaseConstants.exits,
-							],
-							From = [
-								DatabaseConstants.rooms,
-								DatabaseConstants.things,
-								DatabaseConstants.players
-							]
-						}
-					],
-					Name = DatabaseConstants.graphExits
-				},
-				new()
-				{
-					EdgeDefinitions =
-					[
-						new ArangoEdgeDefinition()
-						{
-							Collection = DatabaseConstants.hasObjectOwner,
-							To = [
-								DatabaseConstants.players
-								],
-							From = [
-								DatabaseConstants.objects
-								]
-						}
-					],
-					Name = DatabaseConstants.graphObjectOwners
-				},
-				new()
-				{
-					EdgeDefinitions =
-					[
-						new ArangoEdgeDefinition()
-						{
-							Collection = DatabaseConstants.hasAttributeOwner,
-							To = [
-								DatabaseConstants.objects
-								],
-							From = [
-								DatabaseConstants.attributes
-								]
-						}
-					],
-					Name = DatabaseConstants.graphAttributeOwners
-				},
-				new()
-				{
-					EdgeDefinitions =
-					[
-						new ArangoEdgeDefinition()
-						{
-							Collection = DatabaseConstants.hasParent,
-							To = [
-								DatabaseConstants.objects
-							],
-							From = [
-								DatabaseConstants.objects
-							]
-						}
-					],
-					Name = DatabaseConstants.graphParents
-				},
-				new()
-				{
-					EdgeDefinitions =
-					[
-						new ArangoEdgeDefinition()
-						{
-							Collection = DatabaseConstants.ownsChannel,
-							To = [
-								DatabaseConstants.channels
-							],
-							From = [
-								DatabaseConstants.players
-							]
-						},
-						new ArangoEdgeDefinition()
-						{
-							Collection = DatabaseConstants.onChannel,
-							To = [
-								DatabaseConstants.channels
-							],
-							From = [
-								DatabaseConstants.objects
-							]
-						}
-					],
-					Name = DatabaseConstants.graphChannels
-				},
-				new()
-				{
-					EdgeDefinitions =
-					[
-						new ArangoEdgeDefinition()
-						{
-							Collection = DatabaseConstants.receivedMail,
-							To = [
-								DatabaseConstants.mails
-							],
-							From = [
-								DatabaseConstants.players
-							]
-						},
-						new ArangoEdgeDefinition()
-						{
-							Collection = DatabaseConstants.sentMail,
-							To = [
-								DatabaseConstants.mails
-							],
-							From = [
-								DatabaseConstants.objects
-							]
-						}
-					],
-					Name = DatabaseConstants.graphMail
-				}
-			]
-		},
-		new ArangoMigrationOptions
-		{
-			DryRun = false,
-			Notify = x => Console.WriteLine("Migration Change: {0}: {1} - {2}", x.Name, x.Object, x.State)
-		});
+				]
+			},
+			new ArangoMigrationOptions
+			{
+				DryRun = false,
+				Notify = x => Console.WriteLine("Migration Change: {0}: {1} - {2}", x.Name, x.Object, x.State)
+			});
 
 
 		/// The stuff below this is not running for some reason.
@@ -882,359 +882,359 @@ public class Migration_CreateDatabase : IArangoMigration
 	}
 
 	private static List<ArangoUpdateResult<ArangoVoid>> CreateInitialPowers(IArangoMigrator migrator,
-					ArangoHandle handle) =>
+		ArangoHandle handle) =>
 	[
 		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
-						new
-						{
-										Name = "Boot",
-										System = true,
-										TypeRestrictions = DatabaseConstants.typesAll,
-										SetPermissions = DatabaseConstants.permissionsWizard
-														.Union(DatabaseConstants.permissionsLog),
-										UnsetPermissions = DatabaseConstants.permissionsWizard
-						}).Result,
+			new
+			{
+				Name = "Boot",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesAll,
+				SetPermissions = DatabaseConstants.permissionsWizard
+					.Union(DatabaseConstants.permissionsLog),
+				UnsetPermissions = DatabaseConstants.permissionsWizard
+			}).Result,
 		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
-						new
-						{
-										Name = "Builder",
-										System = true,
-										TypeRestrictions = DatabaseConstants.typesAll,
-										SetPermissions = DatabaseConstants.permissionsWizard
-														.Union(DatabaseConstants.permissionsLog),
-										UnsetPermissions = DatabaseConstants.permissionsWizard
-						}).Result,
+			new
+			{
+				Name = "Builder",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesAll,
+				SetPermissions = DatabaseConstants.permissionsWizard
+					.Union(DatabaseConstants.permissionsLog),
+				UnsetPermissions = DatabaseConstants.permissionsWizard
+			}).Result,
 		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
-						new
-						{
-										Name = "Can_Dark",
-										System = true,
-										TypeRestrictions = DatabaseConstants.typesPlayer,
-										SetPermissions = DatabaseConstants.permissionsWizard
-														.Union(DatabaseConstants.permissionsLog)
-						}).Result,
+			new
+			{
+				Name = "Can_Dark",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesPlayer,
+				SetPermissions = DatabaseConstants.permissionsWizard
+					.Union(DatabaseConstants.permissionsLog)
+			}).Result,
 		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
-						new
-						{
-										Name = "Can_HTTP",
-										System = true,
-										TypeRestrictions = DatabaseConstants.typesAll,
-										SetPermissions = DatabaseConstants.permissionsWizard
-														.Union(DatabaseConstants.permissionsLog)
-						}).Result,
+			new
+			{
+				Name = "Can_HTTP",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesAll,
+				SetPermissions = DatabaseConstants.permissionsWizard
+					.Union(DatabaseConstants.permissionsLog)
+			}).Result,
 		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
-						new
-						{
-										Name = "Can_Spoof",
-										System = true,
-										Aliases = (string[])["Can_nspemit"],
-										TypeRestrictions = DatabaseConstants.typesAll,
-										SetPermissions = DatabaseConstants.permissionsWizard
-														.Union(DatabaseConstants.permissionsLog),
-										UnsetPermissions = DatabaseConstants.permissionsWizard
-						}).Result,
+			new
+			{
+				Name = "Can_Spoof",
+				System = true,
+				Aliases = (string[])["Can_nspemit"],
+				TypeRestrictions = DatabaseConstants.typesAll,
+				SetPermissions = DatabaseConstants.permissionsWizard
+					.Union(DatabaseConstants.permissionsLog),
+				UnsetPermissions = DatabaseConstants.permissionsWizard
+			}).Result,
 		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
-						new
-						{
-										Name = "Chat_Privs",
-										System = true,
-										Aliases = (string[])["Can_nspemit"],
-										TypeRestrictions = DatabaseConstants.typesAll,
-										SetPermissions = DatabaseConstants.permissionsWizard
-														.Union(DatabaseConstants.permissionsLog),
-										UnsetPermissions = DatabaseConstants.permissionsWizard
-						}).Result,
+			new
+			{
+				Name = "Chat_Privs",
+				System = true,
+				Aliases = (string[])["Can_nspemit"],
+				TypeRestrictions = DatabaseConstants.typesAll,
+				SetPermissions = DatabaseConstants.permissionsWizard
+					.Union(DatabaseConstants.permissionsLog),
+				UnsetPermissions = DatabaseConstants.permissionsWizard
+			}).Result,
 		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
-						new
-						{
-										Name = "Debit",
-										System = true,
-										Aliases = (string[])["Steal_Money"],
-										TypeRestrictions = DatabaseConstants.typesAll,
-										SetPermissions = DatabaseConstants.permissionsWizard
-														.Union(DatabaseConstants.permissionsLog),
-						}).Result,
+			new
+			{
+				Name = "Debit",
+				System = true,
+				Aliases = (string[])["Steal_Money"],
+				TypeRestrictions = DatabaseConstants.typesAll,
+				SetPermissions = DatabaseConstants.permissionsWizard
+					.Union(DatabaseConstants.permissionsLog),
+			}).Result,
 		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
-						new
-						{
-										Name = "Functions",
-										System = true,
-										TypeRestrictions = DatabaseConstants.typesAll,
-										SetPermissions = DatabaseConstants.permissionsWizard
-														.Union(DatabaseConstants.permissionsLog),
-										UnsetPermissions = DatabaseConstants.permissionsWizard
-						}).Result,
+			new
+			{
+				Name = "Functions",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesAll,
+				SetPermissions = DatabaseConstants.permissionsWizard
+					.Union(DatabaseConstants.permissionsLog),
+				UnsetPermissions = DatabaseConstants.permissionsWizard
+			}).Result,
 		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
-						new
-						{
-										Name = "Guest",
-										System = true,
-										TypeRestrictions = DatabaseConstants.typesAll,
-										SetPermissions = DatabaseConstants.permissionsWizard
-														.Union(DatabaseConstants.permissionsLog),
-										UnsetPermissions = DatabaseConstants.permissionsWizard
-						}).Result,
+			new
+			{
+				Name = "Guest",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesAll,
+				SetPermissions = DatabaseConstants.permissionsWizard
+					.Union(DatabaseConstants.permissionsLog),
+				UnsetPermissions = DatabaseConstants.permissionsWizard
+			}).Result,
 		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
-						new
-						{
-										Name = "Halt",
-										System = true,
-										TypeRestrictions = DatabaseConstants.typesAll,
-										SetPermissions = DatabaseConstants.permissionsWizard
-														.Union(DatabaseConstants.permissionsLog),
-										UnsetPermissions = DatabaseConstants.permissionsWizard
-						}).Result,
+			new
+			{
+				Name = "Halt",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesAll,
+				SetPermissions = DatabaseConstants.permissionsWizard
+					.Union(DatabaseConstants.permissionsLog),
+				UnsetPermissions = DatabaseConstants.permissionsWizard
+			}).Result,
 		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
-						new
-						{
-										Name = "Hide",
-										System = true,
-										TypeRestrictions = DatabaseConstants.typesAll,
-										SetPermissions = DatabaseConstants.permissionsWizard
-														.Union(DatabaseConstants.permissionsLog),
-										UnsetPermissions = DatabaseConstants.permissionsWizard
-						}).Result,
+			new
+			{
+				Name = "Hide",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesAll,
+				SetPermissions = DatabaseConstants.permissionsWizard
+					.Union(DatabaseConstants.permissionsLog),
+				UnsetPermissions = DatabaseConstants.permissionsWizard
+			}).Result,
 		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
-						new
-						{
-										Name = "Hook",
-										System = true,
-										TypeRestrictions = DatabaseConstants.typesAll,
-										SetPermissions = DatabaseConstants.permissionsWizard
-														.Union(DatabaseConstants.permissionsLog)
-						}).Result,
+			new
+			{
+				Name = "Hook",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesAll,
+				SetPermissions = DatabaseConstants.permissionsWizard
+					.Union(DatabaseConstants.permissionsLog)
+			}).Result,
 		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
-						new
-						{
-										Name = "Idle",
-										System = true,
-										TypeRestrictions = DatabaseConstants.typesAll,
-										SetPermissions = DatabaseConstants.permissionsWizard
-														.Union(DatabaseConstants.permissionsLog),
-										UnsetPermissions = DatabaseConstants.permissionsWizard
-						}).Result,
+			new
+			{
+				Name = "Idle",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesAll,
+				SetPermissions = DatabaseConstants.permissionsWizard
+					.Union(DatabaseConstants.permissionsLog),
+				UnsetPermissions = DatabaseConstants.permissionsWizard
+			}).Result,
 		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
-						new
-						{
-										Name = "Immortal",
-										System = true,
-										TypeRestrictions = DatabaseConstants.typesAll,
-										SetPermissions = DatabaseConstants.permissionsWizard
-														.Union(DatabaseConstants.permissionsLog),
-										UnsetPermissions = DatabaseConstants.permissionsWizard
-						}).Result,
+			new
+			{
+				Name = "Immortal",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesAll,
+				SetPermissions = DatabaseConstants.permissionsWizard
+					.Union(DatabaseConstants.permissionsLog),
+				UnsetPermissions = DatabaseConstants.permissionsWizard
+			}).Result,
 		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
-						new
-						{
-										Name = "Link_Anywhere",
-										System = true,
-										TypeRestrictions = DatabaseConstants.typesAll,
-										SetPermissions = DatabaseConstants.permissionsWizard
-														.Union(DatabaseConstants.permissionsLog),
-										UnsetPermissions = DatabaseConstants.permissionsWizard
-						}).Result,
+			new
+			{
+				Name = "Link_Anywhere",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesAll,
+				SetPermissions = DatabaseConstants.permissionsWizard
+					.Union(DatabaseConstants.permissionsLog),
+				UnsetPermissions = DatabaseConstants.permissionsWizard
+			}).Result,
 		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
-						new
-						{
-										Name = "Login",
-										System = true,
-										TypeRestrictions = DatabaseConstants.typesAll,
-										SetPermissions = DatabaseConstants.permissionsWizard
-														.Union(DatabaseConstants.permissionsLog),
-										UnsetPermissions = DatabaseConstants.permissionsWizard
-						}).Result,
+			new
+			{
+				Name = "Login",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesAll,
+				SetPermissions = DatabaseConstants.permissionsWizard
+					.Union(DatabaseConstants.permissionsLog),
+				UnsetPermissions = DatabaseConstants.permissionsWizard
+			}).Result,
 		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
-						new
-						{
-										Name = "Long_Fingers",
-										System = true,
-										TypeRestrictions = DatabaseConstants.typesAll,
-										SetPermissions = DatabaseConstants.permissionsWizard
-														.Union(DatabaseConstants.permissionsLog),
-										UnsetPermissions = DatabaseConstants.permissionsWizard
-						}).Result,
+			new
+			{
+				Name = "Long_Fingers",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesAll,
+				SetPermissions = DatabaseConstants.permissionsWizard
+					.Union(DatabaseConstants.permissionsLog),
+				UnsetPermissions = DatabaseConstants.permissionsWizard
+			}).Result,
 		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
-						new
-						{
-										Name = "Many_Attribs",
-										System = true,
-										TypeRestrictions = DatabaseConstants.typesAll,
-										SetPermissions = DatabaseConstants.permissionsWizard
-														.Union(DatabaseConstants.permissionsLog)
-						}).Result,
+			new
+			{
+				Name = "Many_Attribs",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesAll,
+				SetPermissions = DatabaseConstants.permissionsWizard
+					.Union(DatabaseConstants.permissionsLog)
+			}).Result,
 		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
-						new
-						{
-										Name = "No_Pay",
-										System = true,
-										TypeRestrictions = DatabaseConstants.typesAll,
-										SetPermissions = DatabaseConstants.permissionsWizard
-														.Union(DatabaseConstants.permissionsLog),
-										UnsetPermissions = DatabaseConstants.permissionsWizard
-						}).Result,
+			new
+			{
+				Name = "No_Pay",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesAll,
+				SetPermissions = DatabaseConstants.permissionsWizard
+					.Union(DatabaseConstants.permissionsLog),
+				UnsetPermissions = DatabaseConstants.permissionsWizard
+			}).Result,
 		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
-						new
-						{
-										Name = "No_Quota",
-										System = true,
-										Aliases = (string[])["Free_Quota"],
-										TypeRestrictions = DatabaseConstants.typesAll,
-										SetPermissions = DatabaseConstants.permissionsWizard
-														.Union(DatabaseConstants.permissionsLog),
-										UnsetPermissions = DatabaseConstants.permissionsWizard
-						}).Result,
+			new
+			{
+				Name = "No_Quota",
+				System = true,
+				Aliases = (string[])["Free_Quota"],
+				TypeRestrictions = DatabaseConstants.typesAll,
+				SetPermissions = DatabaseConstants.permissionsWizard
+					.Union(DatabaseConstants.permissionsLog),
+				UnsetPermissions = DatabaseConstants.permissionsWizard
+			}).Result,
 		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
-						new
-						{
-										Name = "Open_Anywhere",
-										System = true,
-										TypeRestrictions = DatabaseConstants.typesAll,
-										SetPermissions = DatabaseConstants.permissionsWizard
-														.Union(DatabaseConstants.permissionsLog),
-										UnsetPermissions = DatabaseConstants.permissionsWizard
-						}).Result,
+			new
+			{
+				Name = "Open_Anywhere",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesAll,
+				SetPermissions = DatabaseConstants.permissionsWizard
+					.Union(DatabaseConstants.permissionsLog),
+				UnsetPermissions = DatabaseConstants.permissionsWizard
+			}).Result,
 		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
-						new
-						{
-										Name = "Pemit_All",
-										System = true,
-										TypeRestrictions = DatabaseConstants.typesAll,
-										SetPermissions = DatabaseConstants.permissionsWizard
-														.Union(DatabaseConstants.permissionsLog),
-										UnsetPermissions = DatabaseConstants.permissionsWizard
-						}).Result,
+			new
+			{
+				Name = "Pemit_All",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesAll,
+				SetPermissions = DatabaseConstants.permissionsWizard
+					.Union(DatabaseConstants.permissionsLog),
+				UnsetPermissions = DatabaseConstants.permissionsWizard
+			}).Result,
 		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
-						new
-						{
-										Name = "Pick_DBRefs",
-										System = true,
-										TypeRestrictions = DatabaseConstants.typesAll,
-										SetPermissions = DatabaseConstants.permissionsWizard
-														.Union(DatabaseConstants.permissionsLog),
-										UnsetPermissions = DatabaseConstants.permissionsWizard
-						}).Result,
+			new
+			{
+				Name = "Pick_DBRefs",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesAll,
+				SetPermissions = DatabaseConstants.permissionsWizard
+					.Union(DatabaseConstants.permissionsLog),
+				UnsetPermissions = DatabaseConstants.permissionsWizard
+			}).Result,
 		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
-						new
-						{
-										Name = "Player_Create",
-										System = true,
-										TypeRestrictions = DatabaseConstants.typesAll,
-										SetPermissions = DatabaseConstants.permissionsWizard
-														.Union(DatabaseConstants.permissionsLog),
-										UnsetPermissions = DatabaseConstants.permissionsWizard
-						}).Result,
+			new
+			{
+				Name = "Player_Create",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesAll,
+				SetPermissions = DatabaseConstants.permissionsWizard
+					.Union(DatabaseConstants.permissionsLog),
+				UnsetPermissions = DatabaseConstants.permissionsWizard
+			}).Result,
 		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
-						new
-						{
-										Name = "Poll",
-										System = true,
-										TypeRestrictions = DatabaseConstants.typesAll,
-										SetPermissions = DatabaseConstants.permissionsWizard
-														.Union(DatabaseConstants.permissionsLog),
-										UnsetPermissions = DatabaseConstants.permissionsWizard
-						}).Result,
+			new
+			{
+				Name = "Poll",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesAll,
+				SetPermissions = DatabaseConstants.permissionsWizard
+					.Union(DatabaseConstants.permissionsLog),
+				UnsetPermissions = DatabaseConstants.permissionsWizard
+			}).Result,
 		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
-						new
-						{
-										Name = "Pueblo_Send",
-										System = true,
-										TypeRestrictions = DatabaseConstants.typesAll,
-										SetPermissions = DatabaseConstants.permissionsWizard
-														.Union(DatabaseConstants.permissionsLog),
-										UnsetPermissions = DatabaseConstants.permissionsWizard
-						}).Result,
+			new
+			{
+				Name = "Pueblo_Send",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesAll,
+				SetPermissions = DatabaseConstants.permissionsWizard
+					.Union(DatabaseConstants.permissionsLog),
+				UnsetPermissions = DatabaseConstants.permissionsWizard
+			}).Result,
 		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
-						new
-						{
-										Name = "Queue",
-										System = true,
-										TypeRestrictions = DatabaseConstants.typesAll,
-										SetPermissions = DatabaseConstants.permissionsWizard
-														.Union(DatabaseConstants.permissionsLog),
-										UnsetPermissions = DatabaseConstants.permissionsWizard
-						}).Result,
+			new
+			{
+				Name = "Queue",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesAll,
+				SetPermissions = DatabaseConstants.permissionsWizard
+					.Union(DatabaseConstants.permissionsLog),
+				UnsetPermissions = DatabaseConstants.permissionsWizard
+			}).Result,
 		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
-						new
-						{
-										Name = "Search",
-										System = true,
-										TypeRestrictions = DatabaseConstants.typesAll,
-										SetPermissions = DatabaseConstants.permissionsWizard
-														.Union(DatabaseConstants.permissionsLog),
-										UnsetPermissions = DatabaseConstants.permissionsWizard
-						}).Result,
+			new
+			{
+				Name = "Search",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesAll,
+				SetPermissions = DatabaseConstants.permissionsWizard
+					.Union(DatabaseConstants.permissionsLog),
+				UnsetPermissions = DatabaseConstants.permissionsWizard
+			}).Result,
 		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
-						new
-						{
-										Name = "See_All",
-										System = true,
-										TypeRestrictions = DatabaseConstants.typesAll,
-										SetPermissions = DatabaseConstants.permissionsWizard
-														.Union(DatabaseConstants.permissionsLog),
-										UnsetPermissions = DatabaseConstants.permissionsWizard
-						}).Result,
+			new
+			{
+				Name = "See_All",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesAll,
+				SetPermissions = DatabaseConstants.permissionsWizard
+					.Union(DatabaseConstants.permissionsLog),
+				UnsetPermissions = DatabaseConstants.permissionsWizard
+			}).Result,
 		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
-						new
-						{
-										Name = "See_Queue",
-										System = true,
-										TypeRestrictions = DatabaseConstants.typesAll,
-										SetPermissions = DatabaseConstants.permissionsWizard
-														.Union(DatabaseConstants.permissionsLog),
-										UnsetPermissions = DatabaseConstants.permissionsWizard
-						}).Result,
+			new
+			{
+				Name = "See_Queue",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesAll,
+				SetPermissions = DatabaseConstants.permissionsWizard
+					.Union(DatabaseConstants.permissionsLog),
+				UnsetPermissions = DatabaseConstants.permissionsWizard
+			}).Result,
 		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
-						new
-						{
-										Name = "See_OOB",
-										System = true,
-										TypeRestrictions = DatabaseConstants.typesAll,
-										SetPermissions = DatabaseConstants.permissionsWizard
-														.Union(DatabaseConstants.permissionsLog),
-										UnsetPermissions = DatabaseConstants.permissionsWizard
-						}).Result,
+			new
+			{
+				Name = "See_OOB",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesAll,
+				SetPermissions = DatabaseConstants.permissionsWizard
+					.Union(DatabaseConstants.permissionsLog),
+				UnsetPermissions = DatabaseConstants.permissionsWizard
+			}).Result,
 		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
-						new
-						{
-										Name = "SQL_OK",
-										System = true,
-										TypeRestrictions = DatabaseConstants.typesAll,
-										SetPermissions = DatabaseConstants.permissionsWizard
-														.Union(DatabaseConstants.permissionsLog),
-										UnsetPermissions = DatabaseConstants.permissionsWizard
-						}).Result,
+			new
+			{
+				Name = "SQL_OK",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesAll,
+				SetPermissions = DatabaseConstants.permissionsWizard
+					.Union(DatabaseConstants.permissionsLog),
+				UnsetPermissions = DatabaseConstants.permissionsWizard
+			}).Result,
 		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
-						new
-						{
-										Name = "Tport_Anything",
-										System = true,
-										Aliases = (string[])["tel_anything"],
-										TypeRestrictions = DatabaseConstants.typesAll,
-										SetPermissions = DatabaseConstants.permissionsWizard
-														.Union(DatabaseConstants.permissionsLog),
-										UnsetPermissions = DatabaseConstants.permissionsWizard
-						}).Result,
+			new
+			{
+				Name = "Tport_Anything",
+				System = true,
+				Aliases = (string[])["tel_anything"],
+				TypeRestrictions = DatabaseConstants.typesAll,
+				SetPermissions = DatabaseConstants.permissionsWizard
+					.Union(DatabaseConstants.permissionsLog),
+				UnsetPermissions = DatabaseConstants.permissionsWizard
+			}).Result,
 		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
-						new
-						{
-										Name = "Tport_Anywhere",
-										System = true,
-										Aliases = (string[])["tel_anywhere"],
-										TypeRestrictions = DatabaseConstants.typesAll,
-										SetPermissions = DatabaseConstants.permissionsWizard
-														.Union(DatabaseConstants.permissionsLog),
-										UnsetPermissions = DatabaseConstants.permissionsWizard
-						}).Result,
+			new
+			{
+				Name = "Tport_Anywhere",
+				System = true,
+				Aliases = (string[])["tel_anywhere"],
+				TypeRestrictions = DatabaseConstants.typesAll,
+				SetPermissions = DatabaseConstants.permissionsWizard
+					.Union(DatabaseConstants.permissionsLog),
+				UnsetPermissions = DatabaseConstants.permissionsWizard
+			}).Result,
 		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
-						new
-						{
-										Name = "Unkillable",
-										System = true,
-										TypeRestrictions = DatabaseConstants.typesAll,
-										SetPermissions = DatabaseConstants.permissionsWizard
-														.Union(DatabaseConstants.permissionsLog),
-										UnsetPermissions = DatabaseConstants.permissionsWizard
-						}).Result
+			new
+			{
+				Name = "Unkillable",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesAll,
+				SetPermissions = DatabaseConstants.permissionsWizard
+					.Union(DatabaseConstants.permissionsLog),
+				UnsetPermissions = DatabaseConstants.permissionsWizard
+			}).Result
 	];
 
 	private static List<ArangoUpdateResult<ArangoVoid>> CreateInitialAttributeFlags(IArangoMigrator migrator,
@@ -1248,7 +1248,7 @@ public class Migration_CreateDatabase : IArangoMigration
 				System = true,
 				Inheritable = true
 			}).Result,
-			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
 			new
 			{
 				Name = "no_inherit",
@@ -1256,7 +1256,7 @@ public class Migration_CreateDatabase : IArangoMigration
 				System = true,
 				Inheritable = true
 			}).Result,
-			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
 			new
 			{
 				Name = "no_clone",
@@ -1264,7 +1264,7 @@ public class Migration_CreateDatabase : IArangoMigration
 				System = true,
 				Inheritable = true
 			}).Result,
-			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
 			new
 			{
 				Name = "mortal_dark",
@@ -1272,7 +1272,7 @@ public class Migration_CreateDatabase : IArangoMigration
 				System = true,
 				Inheritable = true
 			}).Result,
-			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
 			new
 			{
 				Name = "wizard",
@@ -1280,7 +1280,7 @@ public class Migration_CreateDatabase : IArangoMigration
 				System = true,
 				Inheritable = true
 			}).Result,
-			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
 			new
 			{
 				Name = "veiled",
@@ -1288,7 +1288,7 @@ public class Migration_CreateDatabase : IArangoMigration
 				System = true,
 				Inheritable = true
 			}).Result,
-			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
 			new
 			{
 				Name = "nearby",
@@ -1296,7 +1296,7 @@ public class Migration_CreateDatabase : IArangoMigration
 				System = true,
 				Inheritable = true
 			}).Result,
-			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
 			new
 			{
 				Name = "locked",
@@ -1304,7 +1304,7 @@ public class Migration_CreateDatabase : IArangoMigration
 				System = true,
 				Inheritable = true
 			}).Result,
-			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
 			new
 			{
 				Name = "safe",
@@ -1312,7 +1312,7 @@ public class Migration_CreateDatabase : IArangoMigration
 				System = true,
 				Inheritable = true
 			}).Result,
-			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
 			new
 			{
 				Name = "visual",
@@ -1320,7 +1320,7 @@ public class Migration_CreateDatabase : IArangoMigration
 				System = true,
 				Inheritable = false
 			}).Result,
-			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
 			new
 			{
 				Name = "public",
@@ -1328,7 +1328,7 @@ public class Migration_CreateDatabase : IArangoMigration
 				System = true,
 				Inheritable = false
 			}).Result,
-			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
 			new
 			{
 				Name = "debug",
@@ -1336,7 +1336,7 @@ public class Migration_CreateDatabase : IArangoMigration
 				System = true,
 				Inheritable = true
 			}).Result,
-			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
 			new
 			{
 				Name = "no_debug",
@@ -1344,7 +1344,7 @@ public class Migration_CreateDatabase : IArangoMigration
 				System = true,
 				Inheritable = true
 			}).Result,
-			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
 			new
 			{
 				Name = "regexp",
@@ -1352,7 +1352,7 @@ public class Migration_CreateDatabase : IArangoMigration
 				System = true,
 				Inheritable = false
 			}).Result,
-			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
 			new
 			{
 				Name = "case",
@@ -1360,7 +1360,7 @@ public class Migration_CreateDatabase : IArangoMigration
 				System = true,
 				Inheritable = false
 			}).Result,
-			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
 			new
 			{
 				Name = "nospace",
@@ -1368,7 +1368,7 @@ public class Migration_CreateDatabase : IArangoMigration
 				System = true,
 				Inheritable = true
 			}).Result,
-			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
 			new
 			{
 				Name = "noname",
@@ -1376,7 +1376,7 @@ public class Migration_CreateDatabase : IArangoMigration
 				System = true,
 				Inheritable = true
 			}).Result,
-			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
 			new
 			{
 				Name = "aahear",
@@ -1384,7 +1384,7 @@ public class Migration_CreateDatabase : IArangoMigration
 				System = true,
 				Inheritable = false
 			}).Result,
-			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
 			new
 			{
 				Name = "amhear",
@@ -1392,7 +1392,7 @@ public class Migration_CreateDatabase : IArangoMigration
 				System = true,
 				Inheritable = false
 			}).Result,
-			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
 			new
 			{
 				Name = "quiet",
@@ -1400,8 +1400,8 @@ public class Migration_CreateDatabase : IArangoMigration
 				System = true,
 				Inheritable = false
 			}).Result,
-			// TODO: Consider if this is needed for our purposes at all.
-			migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+		// TODO: Consider if this is needed for our purposes at all.
+		migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
 			new
 			{
 				Name = "branch",
@@ -1877,5 +1877,4 @@ public class Migration_CreateDatabase : IArangoMigration
 	{
 		throw new NotImplementedException();
 	}
-}
 }
