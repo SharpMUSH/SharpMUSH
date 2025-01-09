@@ -1,9 +1,9 @@
 ﻿namespace SharpMUSH.Configuration.Options;
 
-public class CompatibilityOptions(
-	bool NullEqualsZero = true,
-	bool TinyBooleans = false,
-	bool TinyTrimFun = false,
-	bool TinyMath = false,
-	bool SilentPEmit = false
+public record CompatibilityOptions(
+	[PennConfig(Name = "null_eq_zero")] bool NullEqualsZero,
+	[PennConfig(Name = "tiny_booleans")]bool TinyBooleans,
+	[PennConfig(Name = "tiny_trim_fun")]bool TinyTrimFun,
+	[PennConfig(Name = "tiny_math")]bool TinyMath,
+	[PennConfig(Name = "silent_pemit")]bool SilentPEmit
 );

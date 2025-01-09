@@ -1,13 +1,13 @@
 ﻿namespace SharpMUSH.Configuration.Options;
 
 public record DumpOptions(
-	bool ForkingDump = true,
-	string? DumpMessage = "Saving database. Game may freeze for a few moments.",
-	string? DumpComplete = "Save complete.",
-	string? DumpWarning1Min = "Database save in 1 minute.",
-	string? DumpWarning5Min = "Database save in 5 minutes.",
-	string DumpInterval = "4h",
-	string WarningInterval = "1h",
-	string PurgeInterval = "10m1s",
-	string DatabaseCheckInterval = "9m59s"
+	[PennConfig(Name = "forking_dump")] bool ForkingDump,
+	[PennConfig(Name = "dump_message")] string? DumpMessage,
+	[PennConfig(Name = "dump_complete")] string? DumpComplete,
+	[PennConfig(Name = "dump_warning_1m")] string? DumpWarning1Min,
+	[PennConfig(Name = "dump_warning_5m")] string? DumpWarning5Min,
+	[PennConfig(Name = "dump_interval")] string DumpInterval,
+	[PennConfig(Name = "warning_interval")] string WarningInterval,
+	[PennConfig(Name = "purge_interval")] string PurgeInterval,
+	[PennConfig(Name = "database_check_interval")] string DatabaseCheckInterval
 );
