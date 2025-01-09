@@ -1,6 +1,6 @@
 ﻿namespace SharpMUSH.Configuration.Options;
 
-public class MessageOptions(
+public record MessageOptions(
 	string ConnectFile = "connect.txt",
 	string MessageOfTheDayFile = "motd.txt",
 	string WizMessageOfTheDayFile = "wizmotd.txt",
