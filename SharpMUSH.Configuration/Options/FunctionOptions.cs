@@ -2,5 +2,5 @@
 
 public record FunctionOptions(
 	[property: PennConfig(Name = "safer_ufun")] bool SaferUserFunctions,
-	[property: PennConfig(Name = "fun_sideeffects")] bool FunctionSideEffects
+	[property: PennConfig(Name = "function_side_effects")] bool FunctionSideEffects
 );

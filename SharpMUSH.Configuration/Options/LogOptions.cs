@@ -10,6 +10,6 @@ public record LogOptions(
 	[property: PennConfig(Name = "chkpt_log")] string CheckpointLog,
 	[property: PennConfig(Name = "trace_log")] string TraceLog,
 	[property: PennConfig(Name = "connect_log")] string ConnectLog,
-	[property: PennConfig(Name = "memory_check")] bool MemoryCheck,
+	[property: PennConfig(Name = "mem_check")] bool MemoryCheck,
 	[property: PennConfig(Name = "use_connlog")] bool UseConnLog
 );

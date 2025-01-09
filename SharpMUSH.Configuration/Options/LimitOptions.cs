@@ -3,7 +3,7 @@
 public record LimitOptions(
 	[property: PennConfig(Name = "max_aliases")] uint MaxAliases,
 	[property: PennConfig(Name = "max_dbref")] uint? MaxDbReference,
-	[property: PennConfig(Name = "max_attrsperobj")] uint MaxAttributesPerObj,
+	[property: PennConfig(Name = "max_attrs_per_obj")] uint MaxAttributesPerObj,
 	[property: PennConfig(Name = "max_logins")] uint MaxLogins,
 	[property: PennConfig(Name = "max_guests")] int MaxGuests,
 	[property: PennConfig(Name = "max_named_qregs")] uint MaxNamedQRegisters,
@@ -27,8 +27,8 @@ public record LimitOptions(
 	[property: PennConfig(Name = "function_recursion_limit")] uint FunctionRecursionLimit,
 	[property: PennConfig(Name = "function_invocation_limit")] uint FunctionInvocationLimit,
 	[property: PennConfig(Name = "call_limit")] uint CallLimit,
-	[property: PennConfig(Name = "player_namelen")] uint PlayerNameLen,
-	[property: PennConfig(Name = "queue_entry_cputime")] uint QueueEntryCpuTime,
+	[property: PennConfig(Name = "player_name_len")] uint PlayerNameLen,
+	[property: PennConfig(Name = "queue_entry_cpu_time")] uint QueueEntryCpuTime,
 	[property: PennConfig(Name = "use_quota")] bool UseQuota,
 	[property: PennConfig(Name = "chunk_migrate")] uint ChunkMigrate
 );
