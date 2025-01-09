@@ -42,7 +42,7 @@ public class Program
 	public static IWebHostBuilder CreateWebHostBuilder(ArangoConfiguration arangoConfig) =>
 			WebHost
 					.CreateDefaultBuilder()
-					.UseStartup(x => new Startup(arangoConfig))
+					.UseStartup(_ => new Startup(arangoConfig))
 					.UseKestrel(options =>
 							options.ListenLocalhost(
 									4202,

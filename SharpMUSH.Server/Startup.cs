@@ -29,7 +29,7 @@ public class Startup(ArangoConfiguration config)
 			logging.SetMinimumLevel(LogLevel.Trace);
 		});
 
-		services.AddArango((x) => config.ConnectionString);
+		services.AddArango(_ => config.ConnectionString);
 		services.AddSingleton<ISharpDatabase, ArangoDatabase>();
 		services.AddSingleton<PasswordHasher<string>, PasswordHasher<string>>(
 			_ => new PasswordHasher<string>()
