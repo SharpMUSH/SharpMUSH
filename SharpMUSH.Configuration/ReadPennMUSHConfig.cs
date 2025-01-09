@@ -14,11 +14,16 @@ public partial class ReadPennMUSHConfig : IOptionsFactory<PennMUSHOptions>
 			? fallback
 			: value is "-1" or "0" or "false";
 
-	private static string String(string value, string fallback) =>
+	private static string RequiredString(string value, string fallback) =>
 		string.IsNullOrWhiteSpace(value)
 			? fallback
 			: value;
 
+	private static string? String(string value, string? fallback) =>
+		string.IsNullOrWhiteSpace(value)
+			? fallback
+			: value;
+	
 	private static uint UnsignedInteger(string value, uint fallback) =>
 		string.IsNullOrWhiteSpace(value)
 			? fallback
@@ -119,8 +124,8 @@ public partial class ReadPennMUSHConfig : IOptionsFactory<PennMUSHOptions>
 				Boolean(Get(nameof(CompatibilityOptions.SilentPEmit)), false)
 			),
 			new CosmeticOptions(
-				String(Get(nameof(CosmeticOptions.MoneySingular)), "Penny").Trim(),
-				String(Get(nameof(CosmeticOptions.MoneyPlural)), "Pennies").Trim(),
+				RequiredString(Get(nameof(CosmeticOptions.MoneySingular)), "Penny").Trim(),
+				RequiredString(Get(nameof(CosmeticOptions.MoneyPlural)), "Pennies").Trim(),
 				Boolean(Get(nameof(CosmeticOptions.PlayerNameSpaces)), true),
 				Boolean(Get(nameof(CosmeticOptions.AnsiNames)), true),
 				Boolean(Get(nameof(CosmeticOptions.OnlyAsciiInNames)), true),
@@ -131,9 +136,9 @@ public partial class ReadPennMUSHConfig : IOptionsFactory<PennMUSHOptions>
 				Boolean(Get(nameof(CosmeticOptions.PageAliases)), false),
 				Boolean(Get(nameof(CosmeticOptions.FlagsOnExamine)), true),
 				Boolean(Get(nameof(CosmeticOptions.ExaminePublicAttributes)), true),
-				String(Get(nameof(CosmeticOptions.WizardWallPrefix)), "Broadcast:").Trim(),
-				String(Get(nameof(CosmeticOptions.RoyaltyWallPrefix)), "Admin:").Trim(),
-				String(Get(nameof(CosmeticOptions.WallPrefix)), "Announcement:").Trim(),
+				RequiredString(Get(nameof(CosmeticOptions.WizardWallPrefix)), "Broadcast:").Trim(),
+				RequiredString(Get(nameof(CosmeticOptions.RoyaltyWallPrefix)), "Admin:").Trim(),
+				RequiredString(Get(nameof(CosmeticOptions.WallPrefix)), "Announcement:").Trim(),
 				Boolean(Get(nameof(CosmeticOptions.AnnounceConnects)), true),
 				Boolean(Get(nameof(CosmeticOptions.ChatStripQuote)), true)
 			),
@@ -163,14 +168,14 @@ public partial class ReadPennMUSHConfig : IOptionsFactory<PennMUSHOptions>
 			),
 			new DumpOptions(
 				Boolean(Get(nameof(DumpOptions.ForkingDump)), true),
-				String(Get(nameof(DumpOptions.DumpMessage)), "Saving Database. Game may freeze for a moment."),
-				String(Get(nameof(DumpOptions.DumpComplete)), "Save complete."),
-				String(Get(nameof(DumpOptions.DumpWarning1Min)), "Database Save in 1 minute."),
-				String(Get(nameof(DumpOptions.DumpWarning5Min)), "Database Save in 5 minutes."),
-				String(Get(nameof(DumpOptions.DumpInterval)), "4h"),
-				String(Get(nameof(DumpOptions.WarningInterval)), "1h"),
-				String(Get(nameof(DumpOptions.PurgeInterval)), "10m1s"),
-				String(Get(nameof(DumpOptions.DatabaseCheckInterval)), "9m59s")
+				RequiredString(Get(nameof(DumpOptions.DumpMessage)), "Saving Database. Game may freeze for a moment."),
+				RequiredString(Get(nameof(DumpOptions.DumpComplete)), "Save complete."),
+				RequiredString(Get(nameof(DumpOptions.DumpWarning1Min)), "Database Save in 1 minute."),
+				RequiredString(Get(nameof(DumpOptions.DumpWarning5Min)), "Database Save in 5 minutes."),
+				RequiredString(Get(nameof(DumpOptions.DumpInterval)), "4h"),
+				RequiredString(Get(nameof(DumpOptions.WarningInterval)), "1h"),
+				RequiredString(Get(nameof(DumpOptions.PurgeInterval)), "10m1s"),
+				RequiredString(Get(nameof(DumpOptions.DatabaseCheckInterval)), "9m59s")
 			),
 			new FileOptions(
 				InputDatabase: "ignored",
@@ -181,24 +186,24 @@ public partial class ReadPennMUSHConfig : IOptionsFactory<PennMUSHOptions>
 				CompressSuffix: "ignored",
 				CompressProgram: "ignored",
 				UnCompressProgram: "ignored",
-				String(Get(nameof(FileOptions.AccessFile)), "access.cnf"),
-				String(Get(nameof(FileOptions.NamesFile)), "names.cnf"),
+				RequiredString(Get(nameof(FileOptions.AccessFile)), "access.cnf"),
+				RequiredString(Get(nameof(FileOptions.NamesFile)), "names.cnf"),
 				ChunkSwapFile: "ignored",
 				ChunkSwapInitialSize: "ignored",
 				ChunkCacheMemory: "ignored",
-				String(Get(nameof(FileOptions.SSLPrivateKeyFile)), string.Empty),
-				String(Get(nameof(FileOptions.SSLCertificateFile)), string.Empty),
-				String(Get(nameof(FileOptions.SSLCAFile)), string.Empty),
-				String(Get(nameof(FileOptions.SSLCADirectory)), string.Empty),
-				String(Get(nameof(FileOptions.DictionaryFile)), string.Empty),
-				String(Get(nameof(FileOptions.ColorsFile)), "colors.json")
+				RequiredString(Get(nameof(FileOptions.SSLPrivateKeyFile)), string.Empty),
+				RequiredString(Get(nameof(FileOptions.SSLCertificateFile)), string.Empty),
+				RequiredString(Get(nameof(FileOptions.SSLCAFile)), string.Empty),
+				RequiredString(Get(nameof(FileOptions.SSLCADirectory)), string.Empty),
+				RequiredString(Get(nameof(FileOptions.DictionaryFile)), string.Empty),
+				RequiredString(Get(nameof(FileOptions.ColorsFile)), "colors.json")
 			),
 			new FlagOptions(
-				PlayerFlags: String(Get(nameof(FlagOptions.PlayerFlags)), "enter_ok ansi no_command").Split(' '),
-				RoomFlags: String(Get(nameof(FlagOptions.RoomFlags)), "no_command").Split(' '),
-				ThingFlags: String(Get(nameof(FlagOptions.ThingFlags)), "").Split(' '),
-				ExitFlags: String(Get(nameof(FlagOptions.ExitFlags)), "no_command").Split(' '),
-				ChannelFlags: String(Get(nameof(FlagOptions.ChannelFlags)), "player").Split(' ')
+				PlayerFlags: RequiredString(Get(nameof(FlagOptions.PlayerFlags)), "enter_ok ansi no_command").Split(' '),
+				RoomFlags: RequiredString(Get(nameof(FlagOptions.RoomFlags)), "no_command").Split(' '),
+				ThingFlags: RequiredString(Get(nameof(FlagOptions.ThingFlags)), "").Split(' '),
+				ExitFlags: RequiredString(Get(nameof(FlagOptions.ExitFlags)), "no_command").Split(' '),
+				ChannelFlags: RequiredString(Get(nameof(FlagOptions.ChannelFlags)), "player").Split(' ')
 			),
 			new FunctionOptions(
 				SaferUserFunctions: Boolean(Get(nameof(FunctionOptions.FunctionSideEffects)), true),
@@ -240,55 +245,55 @@ public partial class ReadPennMUSHConfig : IOptionsFactory<PennMUSHOptions>
 				UseSyslog: Boolean(Get(nameof(LogOptions.UseSyslog)), false),
 				LogCommands: Boolean(Get(nameof(LogOptions.LogCommands)), false),
 				LogForces: Boolean(Get(nameof(LogOptions.LogForces)), true),
-				ErrorLog: String(Get(nameof(LogOptions.ErrorLog)), "log/netmush.log"),
-				CommandLog: String(Get(nameof(LogOptions.CommandLog)), "log/command.log"),
-				WizardLog: String(Get(nameof(LogOptions.WizardLog)), "log/wizard.log"),
-				CheckpointLog: String(Get(nameof(LogOptions.CheckpointLog)), "log/checkpoint.log"),
-				TraceLog: String(Get(nameof(LogOptions.TraceLog)), "log/trace.log"),
-				ConnectLog: String(Get(nameof(LogOptions.ConnectLog)), "log/connect.log"),
+				ErrorLog: RequiredString(Get(nameof(LogOptions.ErrorLog)), "log/netmush.log"),
+				CommandLog: RequiredString(Get(nameof(LogOptions.CommandLog)), "log/command.log"),
+				WizardLog: RequiredString(Get(nameof(LogOptions.WizardLog)), "log/wizard.log"),
+				CheckpointLog: RequiredString(Get(nameof(LogOptions.CheckpointLog)), "log/checkpoint.log"),
+				TraceLog: RequiredString(Get(nameof(LogOptions.TraceLog)), "log/trace.log"),
+				ConnectLog: RequiredString(Get(nameof(LogOptions.ConnectLog)), "log/connect.log"),
 				MemoryCheck: Boolean(Get(nameof(LogOptions.MemoryCheck)), false),
 				UseConnLog: Boolean(Get(nameof(LogOptions.UseConnLog)), true)
 			),
 			new MessageOptions(
-				ConnectFile: String(Get(nameof(MessageOptions.ConnectFile)), "connect.txt"),
-				MessageOfTheDayFile: String(Get(nameof(MessageOptions.MessageOfTheDayFile)), "motd.txt"),
-				WizMessageOfTheDayFile: String(Get(nameof(MessageOptions.WizMessageOfTheDayFile)), "wizmotd.txt"),
-				NewUserFile: String(Get(nameof(MessageOptions.NewUserFile)), "newuser.txt"),
-				RegisterCreateFile: String(Get(nameof(MessageOptions.RegisterCreateFile)), "register.txt"),
-				QuitFile: String(Get(nameof(MessageOptions.QuitFile)), "quit.txt"),
-				DownFile: String(Get(nameof(MessageOptions.DownFile)), "down.txt"),
-				FullFile: String(Get(nameof(MessageOptions.FullFile)), "full.txt"),
-				GuestFile: String(Get(nameof(MessageOptions.GuestFile)), "guest.txt"),
-				WhoFile: String(Get(nameof(MessageOptions.WhoFile)), "who.txt"),
-				ConnectHtmlFile: String(Get(nameof(MessageOptions.ConnectHtmlFile)), "connect.html"),
-				MessageOfTheDayHtmlFile: String(Get(nameof(MessageOptions.MessageOfTheDayHtmlFile)), "motd.html"),
-				WizMessageOfTheDayHtmlFile: String(Get(nameof(MessageOptions.WizMessageOfTheDayHtmlFile)), "wizmotd.html"),
-				NewUserHtmlFile: String(Get(nameof(MessageOptions.NewUserHtmlFile)), "newuser.html"),
-				RegisterCreateHtmlFile: String(Get(nameof(MessageOptions.RegisterCreateHtmlFile)), "register.html"),
-				QuitHtmlFile: String(Get(nameof(MessageOptions.QuitHtmlFile)), "quit.html"),
-				DownHtmlFile: String(Get(nameof(MessageOptions.DownHtmlFile)), "down.html"),
-				FullHtmlFile: String(Get(nameof(MessageOptions.FullHtmlFile)), "full.html"),
-				GuestHtmlFile: String(Get(nameof(MessageOptions.GuestHtmlFile)), "guest.html"),
-				WhoHtmlFile: String(Get(nameof(MessageOptions.WhoHtmlFile)), "who.html"),
-				IndexHtmlFile: String(Get(nameof(MessageOptions.IndexHtmlFile)), "index.html")
+				ConnectFile: RequiredString(Get(nameof(MessageOptions.ConnectFile)), "connect.txt"),
+				MessageOfTheDayFile: RequiredString(Get(nameof(MessageOptions.MessageOfTheDayFile)), "motd.txt"),
+				WizMessageOfTheDayFile: RequiredString(Get(nameof(MessageOptions.WizMessageOfTheDayFile)), "wizmotd.txt"),
+				NewUserFile: RequiredString(Get(nameof(MessageOptions.NewUserFile)), "newuser.txt"),
+				RegisterCreateFile: RequiredString(Get(nameof(MessageOptions.RegisterCreateFile)), "register.txt"),
+				QuitFile: RequiredString(Get(nameof(MessageOptions.QuitFile)), "quit.txt"),
+				DownFile: RequiredString(Get(nameof(MessageOptions.DownFile)), "down.txt"),
+				FullFile: RequiredString(Get(nameof(MessageOptions.FullFile)), "full.txt"),
+				GuestFile: RequiredString(Get(nameof(MessageOptions.GuestFile)), "guest.txt"),
+				WhoFile: RequiredString(Get(nameof(MessageOptions.WhoFile)), "who.txt"),
+				ConnectHtmlFile: RequiredString(Get(nameof(MessageOptions.ConnectHtmlFile)), "connect.html"),
+				MessageOfTheDayHtmlFile: RequiredString(Get(nameof(MessageOptions.MessageOfTheDayHtmlFile)), "motd.html"),
+				WizMessageOfTheDayHtmlFile: RequiredString(Get(nameof(MessageOptions.WizMessageOfTheDayHtmlFile)), "wizmotd.html"),
+				NewUserHtmlFile: RequiredString(Get(nameof(MessageOptions.NewUserHtmlFile)), "newuser.html"),
+				RegisterCreateHtmlFile: RequiredString(Get(nameof(MessageOptions.RegisterCreateHtmlFile)), "register.html"),
+				QuitHtmlFile: RequiredString(Get(nameof(MessageOptions.QuitHtmlFile)), "quit.html"),
+				DownHtmlFile: RequiredString(Get(nameof(MessageOptions.DownHtmlFile)), "down.html"),
+				FullHtmlFile: RequiredString(Get(nameof(MessageOptions.FullHtmlFile)), "full.html"),
+				GuestHtmlFile: RequiredString(Get(nameof(MessageOptions.GuestHtmlFile)), "guest.html"),
+				WhoHtmlFile: RequiredString(Get(nameof(MessageOptions.WhoHtmlFile)), "who.html"),
+				IndexHtmlFile: RequiredString(Get(nameof(MessageOptions.IndexHtmlFile)), "index.html")
 			),
 			new NetConfig(
-				MudName: String(Get(nameof(NetConfig.MudName)), "SharpMUSH"),
+				MudName: RequiredString(Get(nameof(NetConfig.MudName)), "SharpMUSH"),
 				MudUrl: String(Get(nameof(NetConfig.MudUrl)), null),
 				IpAddr: String(Get(nameof(NetConfig.IpAddr)), null),
 				SslIpAddr: String(Get(nameof(NetConfig.SslIpAddr)), null),
 				Port: UnsignedInteger(Get(nameof(NetConfig.Port)), 4201),
 				SslPort: UnsignedInteger(Get(nameof(NetConfig.SslPort)), 4202),
-				SocketFile: String(Get(nameof(NetConfig.SocketFile)), "netmush.sock"),
+				SocketFile: RequiredString(Get(nameof(NetConfig.SocketFile)), "netmush.sock"),
 				UseWs: Boolean(Get(nameof(NetConfig.UseWs)), true),
-				WsUrl: String(Get(nameof(NetConfig.WsUrl)), "/wsclient"),
+				WsUrl: RequiredString(Get(nameof(NetConfig.WsUrl)), "/wsclient"),
 				UseDns: Boolean(Get(nameof(NetConfig.UseDns)), true),
 				Logins: Boolean(Get(nameof(NetConfig.Logins)), true),
 				PlayerCreation: Boolean(Get(nameof(NetConfig.PlayerCreation)), true),
 				Guests: Boolean(Get(nameof(NetConfig.Guests)), true),
 				Pueblo: Boolean(Get(nameof(NetConfig.Pueblo)), true),
 				SqlPlatform: String(Get(nameof(NetConfig.SqlPlatform)), null),
-				SqlHost: String(Get(nameof(NetConfig.SqlHost)), "localhost"),
+				SqlHost: RequiredString(Get(nameof(NetConfig.SqlHost)), "localhost"),
 				JsonUnsafeUnescape: Boolean(Get(nameof(NetConfig.JsonUnsafeUnescape)), false),
 				SslRequireClientCert: Boolean(Get(nameof(NetConfig.SslRequireClientCert)), false)
 			)

@@ -15,7 +15,7 @@ public record NetConfig(
 	bool PlayerCreation = true,
 	bool Guests = true,
 	bool Pueblo = true,
-	string SqlPlatform = "mysql",
+	string? SqlPlatform = "mysql",
 	string SqlHost = "localhost",
 	bool JsonUnsafeUnescape = true,
 	bool SslRequireClientCert = false
