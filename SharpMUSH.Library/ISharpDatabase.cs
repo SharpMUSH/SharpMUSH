@@ -14,7 +14,7 @@ public interface ISharpDatabase
 	ValueTask<DBRef> CreateThingAsync(string name, AnySharpContainer location, SharpPlayer creator);
 
 	ValueTask<DBRef> CreateExitAsync(string name, string[] aliases, AnySharpContainer location, SharpPlayer creator);
-	
+
 	ValueTask<bool> LinkExitAsync(SharpExit exit, AnySharpContainer location);
 
 	ValueTask SetLockAsync(SharpObject target, string lockName, string lockString);
@@ -168,5 +168,14 @@ public interface ISharpDatabase
 	/// <param name="depth">Depth</param>
 	/// <returns>The deepest findable object based on depth</returns>
 	ValueTask<AnySharpContainer> GetLocationAsync(string id, int depth = 1);
+
 	ValueTask<IEnumerable<SharpObjectFlag>> GetObjectFlagsAsync(string id);
+
+	ValueTask<IEnumerable<SharpMail>> GetIncomingMailsAsync(SharpPlayer id, string folder);
+
+	ValueTask<SharpMail?> GetIncomingMailAsync(SharpPlayer id, string folder, int mail);
+
+	ValueTask<IEnumerable<SharpMail>> GetSentMailsAsync(SharpObject id);
+	
+	ValueTask<string[]> GetMailFoldersAsync(SharpPlayer id);
 }

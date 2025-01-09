@@ -9,7 +9,7 @@ public class SharpMail
 	public required bool Urgent { get; set; }
 	public required bool Cleared { get; set; }
 	public required string Folder { get; set; }
-	public required string Content { get; set; }
-	public required string Subject { get; set; }
+	public required MString Content { get; set; }
+	public required MString Subject { get; set; }
 	public required Lazy<SharpObject> From { get; set; }
 }

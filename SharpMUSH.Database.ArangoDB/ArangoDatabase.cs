@@ -238,6 +238,58 @@ public class ArangoDatabase(
 		=> await arangoDb.Query.ExecuteAsync<SharpObjectFlag>(handle,
 			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphFlags} RETURN v");
 
+	public async ValueTask<IEnumerable<SharpMail>> GetIncomingMailsAsync(SharpPlayer id, string folder)
+	{
+		var results = await arangoDb.Query.ExecuteAsync<SharpMailQueryResult>(handle, 
+			$"FOR v IN 1..1 OUTBOUND {id.Id} GRAPH {DatabaseConstants.graphMail} FILTER v.Folder == {folder} RETURN v");
+
+		var convertedResults = results.Select(x => new SharpMail{
+			DateSent = DateTimeOffset.FromUnixTimeMilliseconds(x.DateSent),
+			Content = MarkupStringModule.deserialize(x.Content),
+			Subject = MarkupStringModule.deserialize(x.Subject),
+			Folder = x.Folder,
+			Cleared = x.Cleared ?? false,
+			Fresh = x.Fresh ?? true,
+			Read = x.Read ?? false,
+			Tagged = x.Tagged ?? false,
+			Urgent = x.Urgent ?? false,
+			From = new Lazy<SharpObject>(() => (SharpObject)null) // TODO: Implement Method or adjust query!
+		});
+
+		return convertedResults;
+	}
+
+	public async ValueTask<SharpMail?> GetIncomingMailAsync(SharpPlayer id, string folder, int mail)
+	{
+		var results = await arangoDb.Query.ExecuteAsync<SharpMailQueryResult>(handle, 
+			$"FOR v IN 1..1 OUTBOUND {id.Id} GRAPH {DatabaseConstants.graphMail} FILTER v.Folder == {folder} LIMIT {mail},1 RETURN v");
+
+		var convertedResults = results.Select(x => new SharpMail{
+			DateSent = DateTimeOffset.FromUnixTimeMilliseconds(x.DateSent),
+			Content = MarkupStringModule.deserialize(x.Content),
+			Subject = MarkupStringModule.deserialize(x.Subject),
+			Folder = x.Folder,
+			Cleared = x.Cleared ?? false,
+			Fresh = x.Fresh ?? true,
+			Read = x.Read ?? false,
+			Tagged = x.Tagged ?? false,
+			Urgent = x.Urgent ?? false,
+			From = new Lazy<SharpObject>(() => (SharpObject)null) // TODO: Implement Method or adjust query!
+		});
+
+		return convertedResults.FirstOrDefault();
+	}
+
+	public ValueTask<IEnumerable<SharpMail>> GetSentMailsAsync(SharpObject id)
+	{
+		throw new NotImplementedException();
+	}
+
+	public ValueTask<string[]> GetMailFoldersAsync(SharpPlayer id)
+	{
+		throw new NotImplementedException();
+	}
+
 	private async ValueTask<IEnumerable<SharpAttributeFlag>> GetAttributeFlagsAsync(string id)
 	{
 		var result = await arangoDb.Query.ExecuteAsync<SharpAttributeFlagQueryResult>(handle,
