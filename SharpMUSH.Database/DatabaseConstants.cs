@@ -14,6 +14,8 @@ public static class DatabaseConstants
 	public const string objectPowers = "node_object_powers";
 	public const string attributeEntries = "node_attribute_entries";
 	public const string attributeFlags = "node_attribute_flags";
+	public const string channels = "node_channels";
+	public const string mails = "node_mails";
 
 	public const string isObject = "edge_is_object";
 	public const string atLocation = "edge_at_location";
@@ -27,6 +29,10 @@ public static class DatabaseConstants
 	public const string hasAttributeFlag = "edge_has_attribute_flag";
 	public const string hasHook = "edge_has_hook";
 	public const string hasAttributeOwner = "edge_has_attribute_owner";
+	public const string ownsChannel = "edge_owns_channel";
+	public const string onChannel = "edge_has_channel";
+	public const string sentMail = "edge_sent_mail";
+	public const string receivedMail = "edge_received_mail";
 
 	public const string graphObjects = "graph_objects";
 	public const string graphPowers = "graph_powers";
@@ -39,6 +45,8 @@ public static class DatabaseConstants
 	public const string graphParents = "graph_parents";
 	public const string graphObjectOwners = "graph_object_owners";
 	public const string graphAttributeOwners = "graph_attribute_owners";
+	public const string graphChannels = "graph_channels";
+	public const string graphMail = "graph_mail";
 
 	public const string typeObject = "object";
 	public const string typeString = "string";
