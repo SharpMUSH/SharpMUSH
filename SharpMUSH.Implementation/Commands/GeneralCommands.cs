@@ -757,7 +757,7 @@ public static partial class Commands
 	public static async ValueTask<Option<CallState>> Mail(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var arg0 = parser.CurrentState.Arguments["0"].Message;
-		var arg1 = parser.CurrentState.Arguments["0"].Message;
+		var arg1 = parser.CurrentState.Arguments["1"].Message;
 		var switches = parser.CurrentState.Switches.ToArray();
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
 		var caller = (await parser.CurrentState.CallerObject(parser.Mediator)).Known();
