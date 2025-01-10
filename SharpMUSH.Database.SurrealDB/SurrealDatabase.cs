@@ -143,11 +143,24 @@ public class SurrealDatabase(
 		throw new NotImplementedException();
 	}
 
+	/// <summary>
+	/// Retrieves all incoming mails for a player from a specific folder.
+	/// </summary>
+	/// <param name="id">The player whose mails to retrieve</param>
+	/// <param name="folder">The mail folder to search in</param>
+	/// <returns>A collection of mail messages from the specified folder</returns>
 	public ValueTask<IEnumerable<SharpMail>> GetIncomingMailsAsync(SharpPlayer id, string folder)
 	{
 		throw new NotImplementedException();
 	}
 
+	/// <summary>
+	/// Retrieves a specific incoming mail for a player from a specific folder.
+	/// </summary>
+	/// <param name="id">The player whose mail to retrieve</param>
+	/// <param name="folder">The mail folder to search in</param>
+	/// <param name="mail">The index of the mail to retrieve</param>
+	/// <returns>The requested mail message if found; otherwise, null</returns>
 	public ValueTask<SharpMail?> GetIncomingMailAsync(SharpPlayer id, string folder, int mail)
 	{
 		throw new NotImplementedException();
