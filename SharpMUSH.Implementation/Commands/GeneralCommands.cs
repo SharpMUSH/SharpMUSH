@@ -876,7 +876,7 @@ public static partial class Commands
 			// Mail Read
 		}
 
-		if (switches.Contains("LIST") || arg0?.Length == 0 && arg1?.Length == 0)
+		if (switches.Contains("LIST") || (arg0?.Length == 0 && arg1?.Length == 0))
 		{
 			// List mail
 		}
