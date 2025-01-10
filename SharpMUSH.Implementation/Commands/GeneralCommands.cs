@@ -766,7 +766,7 @@ public static partial class Commands
 		if (switches.Except(sendSwitches).Any() && switches.Length > 1)
 		{
 			await parser.NotifyService.Notify(executor, "Error: Too many switches passed to @mail.", caller);
-			return new CallState(Errors.ErrorTooManyRegs);
+			return new CallState(Errors.ErrorTooManySwitches);
 		}
 
 		if (!switches.Contains("NOEVAL"))
