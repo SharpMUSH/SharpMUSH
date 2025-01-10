@@ -835,7 +835,6 @@ public static partial class Commands
 			// Mail Stats on Player with Read/Unread
 		}
 
-		
 		if (switches.Contains("FSTATS"))
 		{
 			// Mail Stats on Player with Read/Unread with Space Usage
@@ -866,12 +865,12 @@ public static partial class Commands
 			// Mail Forward
 		}
 		
-		if (switches.Contains("SEND") || arg1 != null)
+		if (switches.Intersect(["SEND", "URGENT", "SILENT", "NOSIG"]).Any() || arg1?.Length != 0)
 		{
 			// Mail Send
 		}
 
-		if (switches.Contains("READ") || arg1 == null)
+		if (switches.Contains("READ") || arg1?.Length == 0)
 		{
 			// Mail Read
 		}
