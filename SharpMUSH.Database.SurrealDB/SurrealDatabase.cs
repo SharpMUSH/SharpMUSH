@@ -153,17 +153,36 @@ public class SurrealDatabase(
 		throw new NotImplementedException();
 	}
 
+	/// <summary>
+	/// Retrieves all mails sent from a sender to a specific recipient.
+	/// </summary>
+	/// <param name="sender">The object that sent the mails.</param>
+	/// <param name="recipient">The player who received the mails.</param>
+	/// <returns>A collection of sent mail messages.</returns>
 	public ValueTask<IEnumerable<SharpMail>> GetSentMailsAsync(SharpObject sender, SharpPlayer recipient)
 	{
 		throw new NotImplementedException();
 	}
 
+	/// <summary>
+	/// Retrieves a specific mail sent from a sender to a recipient.
+	/// </summary>
+	/// <param name="sender">The object that sent the mail.</param>
+	/// <param name="recipient">The player who received the mail.</param>
+	/// <param name="mail">The index of the mail to retrieve.</param>
+	/// <returns>The requested mail message if found; otherwise, null.</returns>
 	public ValueTask<SharpMail?> GetSentMailAsync(SharpObject sender, SharpPlayer recipient, int mail)
 	{
 		throw new NotImplementedException();
 	}
 
-	public ValueTask<IEnumerable<SharpMail>> GetSentMailsAsync(SharpObject Sender, SharpObject Recipient)
+	/// <summary>
+	/// Retrieves all mails sent between two objects.
+	/// </summary>
+	/// <param name="sender">The object that sent the mails.</param>
+	/// <param name="recipient">The object that received the mails.</param>
+	/// <returns>A collection of mail messages.</returns>
+	public ValueTask<IEnumerable<SharpMail>> GetSentMailsAsync(SharpObject sender, SharpObject recipient)
 	{
 		throw new NotImplementedException();
 	}
