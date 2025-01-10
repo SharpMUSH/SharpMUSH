@@ -1,4 +1,5 @@
-﻿using MoreLinq.Extensions;
+﻿using System.Collections.Immutable;
+using MoreLinq.Extensions;
 using OneOf;
 using OneOf.Types;
 using SharpMUSH.Library.Commands.Database;
@@ -752,10 +753,134 @@ public static partial class Commands
 			"NOEVAL", "NOSIG", "STATS", "CSTATS", "DSTATS", "FSTATS", "DEBUG", "NUKE", "FOLDERS", "UNFOLDER", "LIST", "READ",
 			"UNREAD", "CLEAR", "UNCLEAR", "STATUS", "PURGE", "FILE", "TAG", "UNTAG", "FWD", "FORWARD", "SEND", "SILENT",
 			"URGENT", "REVIEW", "RETRACT"
-		], Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 0)]
-	public static async ValueTask<Option<CallState>> MAIL(IMUSHCodeParser parser, SharpCommandAttribute _2)
+		], Behavior = CB.Default | CB.EqSplit | CB.NoParse, MinArgs = 0, MaxArgs = 2)]
+	public static async ValueTask<Option<CallState>> Mail(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
+		var arg0 = parser.CurrentState.Arguments["0"].Message;
+		var arg1 = parser.CurrentState.Arguments["0"].Message;
+		var switches = parser.CurrentState.Switches.ToArray();
+		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
+		var caller = (await parser.CurrentState.CallerObject(parser.Mediator)).Known();
+		string[] sendSwitches = ["SEND", "URGENT", "NOSIG", "SILENT", "NOEVAL"];
+
+		if (switches.Except(sendSwitches).Any() && switches.Length > 1)
+		{
+			await parser.NotifyService.Notify(executor, "Error: Too many switches passed to @mail.", caller);
+			return new CallState(Errors.ErrorTooManyRegs);
+		}
+
+		if (!switches.Contains("NOEVAL"))
+		{
+			arg0 = await parser.CurrentState.Arguments["0"].ParsedMessage();
+			arg1 = await parser.CurrentState.Arguments["1"].ParsedMessage();
+		}
+
+		if (switches.Contains("FOLDER"))
+		{
+			// Mail Folder
+		}
+		
+		if (switches.Contains("UNFOLDER"))
+		{
+			// Mail Folder
+		}
+		
+		if (switches.Contains("FILE"))
+		{
+			// Mail Folder
+		}
+
+		if (switches.Contains("CLEAR"))
+		{
+			// Clear items in mail list 
+		}
+		
+		if (switches.Contains("UNCLEAR"))
+		{
+			// Clear items in mail list 
+		}
+		
+		if (switches.Contains("TAG"))
+		{
+			// Clear items in mail list 
+		}
+		
+		if (switches.Contains("UNTAG"))
+		{
+			// Clear items in mail list 
+		}
+		
+		if (switches.Contains("UNREAD"))
+		{
+			// Clear items in mail list 
+		}
+		
+		if (switches.Contains("STATUS"))
+		{
+			// Clear items in mail list 
+		}
+		
+		if (switches.Contains("CSTATS"))
+		{
+			// Mail Stats
+		}
+
+		if (switches.Contains("STATS"))
+		{
+			// Mail Stats on Player
+		}
+
+		if (switches.Contains("DSTATS"))
+		{
+			// Mail Stats on Player with Read/Unread
+		}
+
+		
+		if (switches.Contains("FSTATS"))
+		{
+			// Mail Stats on Player with Read/Unread with Space Usage
+		}
+
+		if (switches.Contains("DEBUG"))
+		{
+			// Mail Database Sanity Check
+		}
+		
+		if(switches.Contains("NUKE"))
+		{
+			// Erase all Mail sent to a player
+		}
+
+		if (switches.Contains("REVIEW"))
+		{
+			// List Mail sent from person to User
+		}
+
+		if (switches.Contains("RETRACT"))
+		{
+			// Retract a Mail from other user's inbox if unread 
+		}
+		
+		if (switches.Contains("FWD"))
+		{
+			// Mail Forward
+		}
+		
+		if (switches.Contains("SEND") || arg1 != null)
+		{
+			// Mail Send
+		}
+
+		if (switches.Contains("READ") || arg1 == null)
+		{
+			// Mail Read
+		}
+
+		if (switches.Contains("LIST") || arg0?.Length == 0 && arg1?.Length == 0)
+		{
+			// List mail
+		}
+		
 		throw new NotImplementedException();
 	}
 
