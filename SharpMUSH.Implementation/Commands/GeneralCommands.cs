@@ -10,6 +10,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using System.Drawing;
+using SharpMUSH.Implementation.Commands.MailCommand;
 using SharpMUSH.Library.Services;
 using CB = SharpMUSH.Implementation.Definitions.CommandBehavior;
 using StringExtensions = ANSILibrary.StringExtensions;
@@ -781,112 +782,36 @@ public static partial class Commands
 			arg1 = arg1CallState?.Message;
 		}
 
-		if (switches.Contains("FOLDER"))
+		var response = switches switch
 		{
-			// Mail Folder
-		}
-		
-		if (switches.Contains("UNFOLDER"))
-		{
-			// Mail Folder
-		}
-		
-		if (switches.Contains("FILE"))
-		{
-			// Mail Folder
-		}
+			[.., "FOLDER"] => FolderMail.Handle(),			// Mail Folder
+			[.., "UNFOLDER"] => FolderMail.Handle(),			// Mail Folder
+			[.., "FILE"] => FolderMail.Handle(), // Move Mail to Mail Folder
+			[.., "CLEAR"] => StatusMail.Handle(), // Clear items in mail list
+			[.., "UNCLEAR"] => StatusMail.Handle(), // Clear items in mail list
+			[.., "TAG"] => StatusMail.Handle(), // Tag items in mail list
+			[.., "UNTAG"] => StatusMail.Handle(), // Tag items in mail list
+			[.., "UNREAD"] => StatusMail.Handle(), // Set items in mail list as unread
+			[.., "STATUS"] => StatusMail.Handle(), // Set items' status in mail list
+			[.., "CSTATS"] => StatsMail.Handle(), // Mail Stats
+			[.., "STATS"] => StatsMail.Handle(), // Mail Stats on Player
+			[.., "DSTATS"] => StatsMail.Handle(), // Mail Stats on Player with Read/Unread
+			[.., "FSTATS"] => StatsMail.Handle(), // Mail Stats on Player with Read/Unread with Space Usage
+			[.., "DEBUG"] => AdminMail.Handle(), // Mail Database Sanity Check
+			[.., "NUKE"] => AdminMail.Handle(), // Erase all Mail sent to a player
+			[.., "REVIEW"] => ReviewMail.Handle(), // List Mail sent from person to User
+			[.., "RETRACT"] => RetractMail.Handle(), // Retract a Mail from other user's inbox if unread
+			[.., "FWD"] => ForwardMail.Handle(), // Mail Forward
+			[.., "SEND"] or [.., "URGENT"] or [.., "SILENT"] or [.., "NOSIG"] => SendMail.Handle(), // Mail Send
+			[] when arg0?.Length != 0 => SendMail.Handle(), // Mail Send
+			[.., "READ"] => ReadMail.Handle(parser, arg0, arg1, switches), // Mail Read
+			[] when  arg1?.Length == 0 => ReadMail.Handle(parser, arg0, arg1, switches), // Mail Read
+			[.., "LIST"] => ListMail.Handle(), // List mail
+			[] when arg0?.Length == 0 && arg1?.Length == 0 => ListMail.Handle(), // List mail
+			_ => MModule.single("#-1 UNKNOWN STATE")
+		};
 
-		if (switches.Contains("CLEAR"))
-		{
-			// Clear items in mail list 
-		}
-		
-		if (switches.Contains("UNCLEAR"))
-		{
-			// Clear items in mail list 
-		}
-		
-		if (switches.Contains("TAG"))
-		{
-			// Clear items in mail list 
-		}
-		
-		if (switches.Contains("UNTAG"))
-		{
-			// Clear items in mail list 
-		}
-		
-		if (switches.Contains("UNREAD"))
-		{
-			// Clear items in mail list 
-		}
-		
-		if (switches.Contains("STATUS"))
-		{
-			// Clear items in mail list 
-		}
-		
-		if (switches.Contains("CSTATS"))
-		{
-			// Mail Stats
-		}
-
-		if (switches.Contains("STATS"))
-		{
-			// Mail Stats on Player
-		}
-
-		if (switches.Contains("DSTATS"))
-		{
-			// Mail Stats on Player with Read/Unread
-		}
-
-		if (switches.Contains("FSTATS"))
-		{
-			// Mail Stats on Player with Read/Unread with Space Usage
-		}
-
-		if (switches.Contains("DEBUG"))
-		{
-			// Mail Database Sanity Check
-		}
-		
-		if(switches.Contains("NUKE"))
-		{
-			// Erase all Mail sent to a player
-		}
-
-		if (switches.Contains("REVIEW"))
-		{
-			// List Mail sent from person to User
-		}
-
-		if (switches.Contains("RETRACT"))
-		{
-			// Retract a Mail from other user's inbox if unread 
-		}
-		
-		if (switches.Contains("FWD"))
-		{
-			// Mail Forward
-		}
-		
-		if (switches.Intersect(["SEND", "URGENT", "SILENT", "NOSIG"]).Any() || arg1?.Length != 0)
-		{
-			// Mail Send
-		}
-
-		if (switches.Contains("READ") || arg1?.Length == 0)
-		{
-			// Mail Read
-		}
-
-		if (switches.Contains("LIST") || (arg0?.Length == 0 && arg1?.Length == 0))
-		{
-			// List mail
-		}
-		
-		throw new NotImplementedException();
+		return new CallState(response);
 	}
 
 	[SharpCommand(Name = "@NSPEMIT", Switches = ["LIST", "SILENT", "NOISY", "NOEVAL"], Behavior = CB.Default | CB.EqSplit,
