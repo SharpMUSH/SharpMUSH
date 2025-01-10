@@ -757,7 +757,7 @@ public static partial class Commands
 	public static async ValueTask<Option<CallState>> Mail(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var arg0 = parser.CurrentState.Arguments["0"].Message;
-		var arg1 = parser.CurrentState.Arguments["0"].Message;
+		var arg1 = parser.CurrentState.Arguments["1"].Message;
 		var switches = parser.CurrentState.Switches.ToArray();
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
 		var caller = (await parser.CurrentState.CallerObject(parser.Mediator)).Known();
@@ -766,7 +766,7 @@ public static partial class Commands
 		if (switches.Except(sendSwitches).Any() && switches.Length > 1)
 		{
 			await parser.NotifyService.Notify(executor, "Error: Too many switches passed to @mail.", caller);
-			return new CallState(Errors.ErrorTooManyRegs);
+			return new CallState(Errors.ErrorTooManySwitches);
 		}
 
 		if (!switches.Contains("NOEVAL"))
@@ -875,7 +875,7 @@ public static partial class Commands
 			// Mail Read
 		}
 
-		if (switches.Contains("LIST") || arg0?.Length == 0 && arg1?.Length == 0)
+		if (switches.Contains("LIST") || (arg0?.Length == 0 && arg1?.Length == 0))
 		{
 			// List mail
 		}
