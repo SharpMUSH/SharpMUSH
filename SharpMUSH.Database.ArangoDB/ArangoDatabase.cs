@@ -238,6 +238,23 @@ public class ArangoDatabase(
 		=> await arangoDb.Query.ExecuteAsync<SharpObjectFlag>(handle,
 			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphFlags} RETURN v");
 
+	public ValueTask<IEnumerable<SharpMail>> GetSentMailsAsync(SharpObject sender, SharpPlayer recipient)
+	{
+		throw new NotImplementedException();
+	}
+
+	public ValueTask<SharpMail?> GetSentMailAsync(SharpObject sender, SharpPlayer recipient, int mail)
+	{
+		throw new NotImplementedException();
+	}
+
+	public async ValueTask<string[]> GetMailFoldersAsync(SharpPlayer id)
+	{
+		var results = await arangoDb.Query.ExecuteAsync<string>(handle, 
+			$"FOR v IN 1..1 OUTBOUND {id.Id} GRAPH {DatabaseConstants.graphMail} RETURN DISTINCT(v.Folder)");
+		return results.ToArray();
+	}
+	
 	public async ValueTask<IEnumerable<SharpMail>> GetIncomingMailsAsync(SharpPlayer id, string folder)
 	{
 		var results = await arangoDb.Query.ExecuteAsync<SharpMailQueryResult>(handle, 
@@ -253,10 +270,37 @@ public class ArangoDatabase(
 			Read = x.Read ?? false,
 			Tagged = x.Tagged ?? false,
 			Urgent = x.Urgent ?? false,
-			From = new Lazy<SharpObject>(() => (SharpObject)null) // TODO: Implement Method or adjust query!
+			From = new Lazy<AnyOptionalSharpObject>(() => MailFromAsync(x.Id).AsTask().GetAwaiter().GetResult()) // TODO: Implement Method or adjust query!
 		});
 
 		return convertedResults;
+	}
+
+	private async ValueTask<AnyOptionalSharpObject> MailFromAsync(string id)
+	{
+		var edges = await arangoDb.Query.ExecuteAsync<SharpEdgeQueryResult>(handle, 
+			$"FOR v,e IN 1..1 OUTBOUND id GRAPH {DatabaseConstants.graphMail} LIMIT 1,1 RETURN v");
+		var edge = edges.First();
+		return await GetObjectNodeAsync(edge!.To);
+	}
+
+	public async ValueTask SendMailAsync(SharpObject from, SharpPlayer to, SharpMail mail)
+	{
+		var transaction = await arangoDb.Transaction.BeginAsync(handle, new ArangoTransaction()
+		{
+			Collections = new ArangoTransactionScope
+			{
+				Exclusive = [DatabaseConstants.mails, DatabaseConstants.receivedMail, DatabaseConstants.senderOfMail],
+			}
+		});
+		
+		var mailResult = await arangoDb.Graph.Vertex.CreateAsync<SharpMail, SharpMailQueryResult>(transaction, DatabaseConstants.graphMail, DatabaseConstants.mails, mail);
+		var id = mailResult.New.Id;
+		
+		await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.graphMail, DatabaseConstants.receivedMail, new SharpEdgeCreateRequest(to.Id!, id));
+		await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.graphMail, DatabaseConstants.senderOfMail, new SharpEdgeCreateRequest(id, from.Id!));
+		
+		await arangoDb.Transaction.CommitAsync(transaction);
 	}
 
 	public async ValueTask<SharpMail?> GetIncomingMailAsync(SharpPlayer id, string folder, int mail)
@@ -274,20 +318,10 @@ public class ArangoDatabase(
 			Read = x.Read ?? false,
 			Tagged = x.Tagged ?? false,
 			Urgent = x.Urgent ?? false,
-			From = new Lazy<SharpObject>(() => (SharpObject)null) // TODO: Implement Method or adjust query!
+			From = new Lazy<AnyOptionalSharpObject>(() => MailFromAsync(x.Id).AsTask().GetAwaiter().GetResult()) // TODO: Implement Method or adjust query!
 		});
 
 		return convertedResults.FirstOrDefault();
-	}
-
-	public ValueTask<IEnumerable<SharpMail>> GetSentMailsAsync(SharpObject id)
-	{
-		throw new NotImplementedException();
-	}
-
-	public ValueTask<string[]> GetMailFoldersAsync(SharpPlayer id)
-	{
-		throw new NotImplementedException();
 	}
 
 	private async ValueTask<IEnumerable<SharpAttributeFlag>> GetAttributeFlagsAsync(string id)

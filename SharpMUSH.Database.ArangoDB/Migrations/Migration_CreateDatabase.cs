@@ -521,7 +521,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					{
 						Collection = new ArangoCollection
 						{
-							Name = DatabaseConstants.sentMail,
+							Name = DatabaseConstants.senderOfMail,
 							Type = ArangoCollectionType.Edge,
 							WaitForSync = true,
 						}
@@ -803,12 +803,12 @@ public class Migration_CreateDatabase : IArangoMigration
 							},
 							new ArangoEdgeDefinition()
 							{
-								Collection = DatabaseConstants.sentMail,
+								Collection = DatabaseConstants.senderOfMail,
 								To = [
-									DatabaseConstants.mails
+									DatabaseConstants.objects
 								],
 								From = [
-									DatabaseConstants.objects
+									DatabaseConstants.mails
 								]
 							}
 						],

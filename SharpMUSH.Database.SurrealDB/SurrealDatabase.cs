@@ -153,12 +153,27 @@ public class SurrealDatabase(
 		throw new NotImplementedException();
 	}
 
-	public ValueTask<IEnumerable<SharpMail>> GetSentMailsAsync(SharpObject id)
+	public ValueTask<IEnumerable<SharpMail>> GetSentMailsAsync(SharpObject sender, SharpPlayer recipient)
+	{
+		throw new NotImplementedException();
+	}
+
+	public ValueTask<SharpMail?> GetSentMailAsync(SharpObject sender, SharpPlayer recipient, int mail)
+	{
+		throw new NotImplementedException();
+	}
+
+	public ValueTask<IEnumerable<SharpMail>> GetSentMailsAsync(SharpObject Sender, SharpObject Recipient)
 	{
 		throw new NotImplementedException();
 	}
 
 	public ValueTask<string[]> GetMailFoldersAsync(SharpPlayer id)
+	{
+		throw new NotImplementedException();
+	}
+
+	public ValueTask SendMailAsync(SharpObject from, SharpPlayer to, SharpMail mail)
 	{
 		throw new NotImplementedException();
 	}

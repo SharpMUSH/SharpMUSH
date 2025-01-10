@@ -1,4 +1,6 @@
-﻿namespace SharpMUSH.Library.Models;
+﻿using SharpMUSH.Library.DiscriminatedUnions;
+
+namespace SharpMUSH.Library.Models;
 
 public class SharpMail
 {
@@ -11,5 +13,5 @@ public class SharpMail
 	public required string Folder { get; set; }
 	public required MString Content { get; set; }
 	public required MString Subject { get; set; }
-	public required Lazy<SharpObject> From { get; set; }
+	public required Lazy<AnyOptionalSharpObject> From { get; set; }
 }

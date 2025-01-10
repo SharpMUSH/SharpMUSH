@@ -1,0 +1,33 @@
+﻿using Mediator;
+using SharpMUSH.Library;
+using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Queries.Database;
+
+namespace SharpMUSH.Implementation.Handlers.Database;
+
+public class GetMailQueryHandler(ISharpDatabase database) : IQueryHandler<GetMailQuery, SharpMail?>
+{
+	public async ValueTask<SharpMail?> Handle(GetMailQuery query, CancellationToken cancellationToken) =>
+		await database.GetIncomingMailAsync(query.Player, query.Folder, query.Mail);
+}
+
+public class GetMailListQueryHandler(ISharpDatabase database) : IQueryHandler<GetMailListQuery, IEnumerable<SharpMail>>
+{
+	public async ValueTask<IEnumerable<SharpMail>>
+		Handle(GetMailListQuery query, CancellationToken cancellationToken) =>
+		await database.GetIncomingMailsAsync(query.Player, query.Folder);
+}
+
+public class GetSentMailQueryHandler(ISharpDatabase database) : IQueryHandler<GetSentMailQuery, SharpMail?>
+{
+	public async ValueTask<SharpMail?> Handle(GetSentMailQuery query, CancellationToken cancellationToken) =>
+		await database.GetSentMailAsync(query.Sender, query.Recipient, query.Mail);
+}
+
+public class GetSentMailListQueryHandler(ISharpDatabase database)
+	: IQueryHandler<GetSentMailListQuery, IEnumerable<SharpMail>>
+{
+	public async ValueTask<IEnumerable<SharpMail>>
+		Handle(GetSentMailListQuery query, CancellationToken cancellationToken) =>
+		await database.GetSentMailsAsync(query.Sender, query.Recipient);
+}

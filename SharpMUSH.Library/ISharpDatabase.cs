@@ -175,7 +175,11 @@ public interface ISharpDatabase
 
 	ValueTask<SharpMail?> GetIncomingMailAsync(SharpPlayer id, string folder, int mail);
 
-	ValueTask<IEnumerable<SharpMail>> GetSentMailsAsync(SharpObject id);
-	
+	ValueTask<IEnumerable<SharpMail>> GetSentMailsAsync(SharpObject sender, SharpPlayer recipient);
+
+	ValueTask<SharpMail?> GetSentMailAsync(SharpObject sender, SharpPlayer recipient, int mail);
+
 	ValueTask<string[]> GetMailFoldersAsync(SharpPlayer id);
+	
+	ValueTask SendMailAsync(SharpObject from, SharpPlayer to, SharpMail mail);
 }
