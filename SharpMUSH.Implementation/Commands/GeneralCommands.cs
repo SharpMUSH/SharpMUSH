@@ -97,8 +97,8 @@ public static partial class Commands
 				parser,
 				enactor,
 				enactor,
-				args["0"]!.Message!.ToString(),
-				Library.Services.LocateFlags.All);
+				args["0"].Message!.ToString(),
+				LocateFlags.All);
 
 			if (locate.IsValid())
 			{
@@ -164,7 +164,7 @@ public static partial class Commands
 				enactor,
 				enactor,
 				args["0"]!.Message!.ToString(),
-				Library.Services.LocateFlags.All);
+				LocateFlags.All);
 
 			if (locate.IsValid())
 			{
@@ -756,8 +756,9 @@ public static partial class Commands
 		], Behavior = CB.Default | CB.EqSplit | CB.NoParse, MinArgs = 0, MaxArgs = 2)]
 	public static async ValueTask<Option<CallState>> Mail(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var arg0 = parser.CurrentState.Arguments["0"].Message;
-		var arg1 = parser.CurrentState.Arguments["1"].Message;
+		parser.CurrentState.Arguments.TryGetValue("0", out var arg0CallState);
+		parser.CurrentState.Arguments.TryGetValue("1", out var arg1CallState);
+		MString? arg0, arg1;
 		var switches = parser.CurrentState.Switches.ToArray();
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
 		var caller = (await parser.CurrentState.CallerObject(parser.Mediator)).Known();
@@ -771,8 +772,13 @@ public static partial class Commands
 
 		if (!switches.Contains("NOEVAL"))
 		{
-			arg0 = await parser.CurrentState.Arguments["0"].ParsedMessage();
-			arg1 = await parser.CurrentState.Arguments["1"].ParsedMessage();
+			arg0 = await (arg0CallState?.ParsedMessage() ?? Task.FromResult<MString?>(null));
+			arg1 = await (arg1CallState?.ParsedMessage() ?? Task.FromResult<MString?>(null));
+		}
+		else
+		{
+			arg0 = arg0CallState?.Message;
+			arg1 = arg1CallState?.Message;
 		}
 
 		if (switches.Contains("FOLDER"))
