@@ -784,30 +784,31 @@ public static partial class Commands
 
 		var response = switches switch
 		{
-			[.., "FOLDER"] => FolderMail.Handle(),			// Mail Folder
-			[.., "UNFOLDER"] => FolderMail.Handle(),			// Mail Folder
-			[.., "FILE"] => FolderMail.Handle(), // Move Mail to Mail Folder
-			[.., "CLEAR"] => StatusMail.Handle(), // Clear items in mail list
-			[.., "UNCLEAR"] => StatusMail.Handle(), // Clear items in mail list
-			[.., "TAG"] => StatusMail.Handle(), // Tag items in mail list
-			[.., "UNTAG"] => StatusMail.Handle(), // Tag items in mail list
-			[.., "UNREAD"] => StatusMail.Handle(), // Set items in mail list as unread
-			[.., "STATUS"] => StatusMail.Handle(), // Set items' status in mail list
-			[.., "CSTATS"] => StatsMail.Handle(), // Mail Stats
-			[.., "STATS"] => StatsMail.Handle(), // Mail Stats on Player
-			[.., "DSTATS"] => StatsMail.Handle(), // Mail Stats on Player with Read/Unread
-			[.., "FSTATS"] => StatsMail.Handle(), // Mail Stats on Player with Read/Unread with Space Usage
-			[.., "DEBUG"] => AdminMail.Handle(), // Mail Database Sanity Check
-			[.., "NUKE"] => AdminMail.Handle(), // Erase all Mail sent to a player
-			[.., "REVIEW"] => ReviewMail.Handle(), // List Mail sent from person to User
-			[.., "RETRACT"] => RetractMail.Handle(), // Retract a Mail from other user's inbox if unread
-			[.., "FWD"] => ForwardMail.Handle(), // Mail Forward
-			[.., "SEND"] or [.., "URGENT"] or [.., "SILENT"] or [.., "NOSIG"] => SendMail.Handle(), // Mail Send
-			[] when arg0?.Length != 0 => SendMail.Handle(), // Mail Send
-			[.., "READ"] => ReadMail.Handle(parser, arg0, arg1, switches), // Mail Read
-			[] when  arg1?.Length == 0 => ReadMail.Handle(parser, arg0, arg1, switches), // Mail Read
-			[.., "LIST"] => ListMail.Handle(), // List mail
-			[] when arg0?.Length == 0 && arg1?.Length == 0 => ListMail.Handle(), // List mail
+			[.., "FOLDER"] => await FolderMail.Handle(parser, arg0, arg1, switches),
+			[.., "UNFOLDER"] => await FolderMail.Handle(parser, arg0, arg1, switches),
+			[.., "FILE"] => await FolderMail.Handle(parser, arg0, arg1, switches), 
+			[.., "CLEAR"] => await StatusMail.Handle(parser, arg0, arg1, switches), 
+			[.., "UNCLEAR"] => await StatusMail.Handle(parser, arg0, arg1, switches), 
+			[.., "TAG"] => await StatusMail.Handle(parser, arg0, arg1, switches), 
+			[.., "UNTAG"] => await StatusMail.Handle(parser, arg0, arg1, switches), 
+			[.., "UNREAD"] => await StatusMail.Handle(parser, arg0, arg1, switches), 
+			[.., "STATUS"] => await StatusMail.Handle(parser, arg0, arg1, switches), 
+			[.., "CSTATS"] => await StatsMail.Handle(parser, arg0, arg1, switches), 
+			[.., "STATS"] => await StatsMail.Handle(parser, arg0, arg1, switches), 
+			[.., "DSTATS"] => await StatsMail.Handle(parser, arg0, arg1, switches), 
+			[.., "FSTATS"] => await StatsMail.Handle(parser, arg0, arg1, switches), 
+			[.., "DEBUG"] => await AdminMail.Handle(parser, arg0, arg1, switches), 
+			[.., "NUKE"] => await AdminMail.Handle(parser, arg0, arg1, switches), 
+			[.., "REVIEW"] => await ReviewMail.Handle(parser, arg0, arg1, switches), 
+			[.., "RETRACT"] => await RetractMail.Handle(parser, arg0, arg1, switches), 
+			[.., "FWD"] => await ForwardMail.Handle(parser, arg0, arg1, switches), 
+			[.., "SEND"] or [.., "URGENT"] or [.., "SILENT"] or [.., "NOSIG"] or []
+				when arg0?.Length != 0 && arg1?.Length != 0 
+					=> await SendMail.Handle(parser, arg0!, arg1!, switches), 
+			[.., "READ"] => await ReadMail.Handle(parser, arg0, arg1, switches), 
+			[] when  arg1?.Length == 0 => await ReadMail.Handle(parser, arg0, arg1, switches), 
+			[.., "LIST"] => await ListMail.Handle(parser, arg0, arg1, switches), 
+			[] when arg0?.Length == 0 && arg1?.Length == 0 => await ListMail.Handle(parser, arg0, arg1, switches), 
 			_ => MModule.single("#-1 UNKNOWN STATE")
 		};
 

@@ -6,6 +6,12 @@ namespace SharpMUSH.Library.Services;
 
 public class PermissionService(ILockService lockService) : IPermissionService
 {
+	public bool PassesLock(AnySharpObject who, AnySharpObject target, string lockString)
+		=> lockService.Evaluate(lockString, target, who);
+	
+	public bool PassesLock(AnySharpObject who, AnySharpObject target, LockType lockType)
+		=> lockService.Evaluate(lockType, target, who);
+	
 	public bool CanSet(AnySharpObject executor, AnySharpObject target, params SharpAttribute[] attribute)
 	{
 		if (!Controls(executor, target)) return false;
