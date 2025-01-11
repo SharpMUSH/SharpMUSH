@@ -45,7 +45,7 @@ public static class ListMail
 			mailList = await parser.Mediator.Send(new GetMailListQuery(executor.AsPlayer, "INBOX"));
 		}
 		
-		ErrorOrMailList filteredList = msgList switch
+		ErrorOrMailList filteredList = msgList.AsSpan() switch
 		{
 			_ when msgList.Contains(' ')
 				=> new Error<string>("MAIL: Invalid message specification"),
