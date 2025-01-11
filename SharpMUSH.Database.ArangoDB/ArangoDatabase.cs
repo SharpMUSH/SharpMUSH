@@ -298,15 +298,13 @@ public class ArangoDatabase(
 
 		return convertedResults;
 	}
-
 	private async ValueTask<AnyOptionalSharpObject> MailFromAsync(string id)
 	{
 		var edges = await arangoDb.Query.ExecuteAsync<SharpEdgeQueryResult>(handle, 
-			$"FOR v,e IN 1..1 OUTBOUND id GRAPH {DatabaseConstants.graphMail} LIMIT 1,1 RETURN v");
+			$"FOR v,e IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphMail} LIMIT 1,1 RETURN v");
 		var edge = edges.First();
 		return await GetObjectNodeAsync(edge!.To);
 	}
-
 	public async ValueTask SendMailAsync(SharpObject from, SharpPlayer to, SharpMail mail)
 	{
 		var transaction = await arangoDb.Transaction.BeginAsync(handle, new ArangoTransaction()
