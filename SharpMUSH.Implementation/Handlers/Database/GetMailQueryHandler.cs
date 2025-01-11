@@ -18,6 +18,13 @@ public class GetMailListQueryHandler(ISharpDatabase database) : IQueryHandler<Ge
 		await database.GetIncomingMailsAsync(query.Player, query.Folder);
 }
 
+public class GetAllMailListQueryHandler(ISharpDatabase database) : IQueryHandler<GetAllMailListQuery, IEnumerable<SharpMail>>
+{
+	public async ValueTask<IEnumerable<SharpMail>>
+		Handle(GetAllMailListQuery query, CancellationToken cancellationToken) =>
+		await database.GetAllIncomingMailsAsync(query.Player);
+}
+
 public class GetSentMailQueryHandler(ISharpDatabase database) : IQueryHandler<GetSentMailQuery, SharpMail?>
 {
 	public async ValueTask<SharpMail?> Handle(GetSentMailQuery query, CancellationToken cancellationToken) =>

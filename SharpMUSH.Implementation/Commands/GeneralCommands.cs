@@ -786,29 +786,31 @@ public static partial class Commands
 		{
 			[.., "FOLDER"] => await FolderMail.Handle(parser, arg0, arg1, switches),
 			[.., "UNFOLDER"] => await FolderMail.Handle(parser, arg0, arg1, switches),
-			[.., "FILE"] => await FolderMail.Handle(parser, arg0, arg1, switches), 
-			[.., "CLEAR"] => await StatusMail.Handle(parser, arg0, arg1, switches), 
-			[.., "UNCLEAR"] => await StatusMail.Handle(parser, arg0, arg1, switches), 
-			[.., "TAG"] => await StatusMail.Handle(parser, arg0, arg1, switches), 
-			[.., "UNTAG"] => await StatusMail.Handle(parser, arg0, arg1, switches), 
-			[.., "UNREAD"] => await StatusMail.Handle(parser, arg0, arg1, switches), 
-			[.., "STATUS"] => await StatusMail.Handle(parser, arg0, arg1, switches), 
-			[.., "CSTATS"] => await StatsMail.Handle(parser, arg0, arg1, switches), 
-			[.., "STATS"] => await StatsMail.Handle(parser, arg0, arg1, switches), 
-			[.., "DSTATS"] => await StatsMail.Handle(parser, arg0, arg1, switches), 
-			[.., "FSTATS"] => await StatsMail.Handle(parser, arg0, arg1, switches), 
-			[.., "DEBUG"] => await AdminMail.Handle(parser, arg0, arg1, switches), 
-			[.., "NUKE"] => await AdminMail.Handle(parser, arg0, arg1, switches), 
-			[.., "REVIEW"] => await ReviewMail.Handle(parser, arg0, arg1, switches), 
-			[.., "RETRACT"] => await RetractMail.Handle(parser, arg0, arg1, switches), 
-			[.., "FWD"] => await ForwardMail.Handle(parser, arg0, arg1, switches), 
+			[.., "FILE"] => await FolderMail.Handle(parser, arg0, arg1, switches),
+			[.., "CLEAR"] => await StatusMail.Handle(parser, arg0, arg1, switches),
+			[.., "UNCLEAR"] => await StatusMail.Handle(parser, arg0, arg1, switches),
+			[.., "TAG"] => await StatusMail.Handle(parser, arg0, arg1, switches),
+			[.., "UNTAG"] => await StatusMail.Handle(parser, arg0, arg1, switches),
+			[.., "UNREAD"] => await StatusMail.Handle(parser, arg0, arg1, switches),
+			[.., "STATUS"] => await StatusMail.Handle(parser, arg0, arg1, switches),
+			[.., "CSTATS"] => await StatsMail.Handle(parser, arg0, arg1, switches),
+			[.., "STATS"] => await StatsMail.Handle(parser, arg0, arg1, switches),
+			[.., "DSTATS"] => await StatsMail.Handle(parser, arg0, arg1, switches),
+			[.., "FSTATS"] => await StatsMail.Handle(parser, arg0, arg1, switches),
+			[.., "DEBUG"] => await AdminMail.Handle(parser, arg0, arg1, switches),
+			[.., "NUKE"] => await AdminMail.Handle(parser, arg0, arg1, switches),
+			[.., "REVIEW"] => await ReviewMail.Handle(parser, arg0, arg1, switches),
+			[.., "RETRACT"] => await RetractMail.Handle(parser, arg0, arg1, switches),
+			[.., "FWD"] => await ForwardMail.Handle(parser, arg0, arg1, switches),
 			[.., "SEND"] or [.., "URGENT"] or [.., "SILENT"] or [.., "NOSIG"] or []
-				when arg0?.Length != 0 && arg1?.Length != 0 
-					=> await SendMail.Handle(parser, arg0!, arg1!, switches), 
-			[.., "READ"] => await ReadMail.Handle(parser, arg0!, switches), 
-			[] when  arg1?.Length == 0 => await ReadMail.Handle(parser, arg0!, switches), 
-			[.., "LIST"] => await ListMail.Handle(parser, arg0, arg1, switches), 
-			[] when arg0?.Length == 0 && arg1?.Length == 0 => await ListMail.Handle(parser, arg0, arg1, switches), 
+				when arg0?.Length != 0 && arg1?.Length != 0
+				=> await SendMail.Handle(parser, arg0!, arg1!, switches),
+			[.., "READ"] when int.TryParse(arg0?.ToPlainText(), out var number)
+				=> await ReadMail.Handle(parser, number, switches),
+			[] when arg1?.Length == 0 && int.TryParse(arg0!.ToPlainText(), out var number)
+				=> await ReadMail.Handle(parser, number, switches),
+			[.., "LIST"] => await ListMail.Handle(parser, arg0, arg1, switches),
+			[] when arg0?.Length == 0 && arg1?.Length == 0 => await ListMail.Handle(parser, arg0, arg1, switches),
 			_ => MModule.single("#-1 UNKNOWN STATE")
 		};
 

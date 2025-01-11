@@ -255,6 +255,28 @@ public class ArangoDatabase(
 		return results.ToArray();
 	}
 	
+	public async ValueTask<IEnumerable<SharpMail>> GetAllIncomingMailsAsync(SharpPlayer id)
+	{
+		var results = await arangoDb.Query.ExecuteAsync<SharpMailQueryResult>(handle, 
+			$"FOR v IN 1..1 OUTBOUND {id.Id} GRAPH {DatabaseConstants.graphMail} RETURN v");
+
+		var convertedResults = results.Select(x => new SharpMail{
+			DateSent = DateTimeOffset.FromUnixTimeMilliseconds(x.DateSent),
+			Content = MarkupStringModule.deserialize(x.Content),
+			Subject = MarkupStringModule.deserialize(x.Subject),
+			Folder = x.Folder,
+			Cleared = x.Cleared ?? false,
+			Fresh = x.Fresh ?? true,
+			Read = x.Read ?? false,
+			Forwarded = x.Forwarded ?? false,
+			Tagged = x.Tagged ?? false,
+			Urgent = x.Urgent ?? false,
+			From = new Lazy<AnyOptionalSharpObject>(() => MailFromAsync(x.Id).AsTask().GetAwaiter().GetResult()) // TODO: Implement Method or adjust query!
+		});
+
+		return convertedResults;
+	}
+	
 	public async ValueTask<IEnumerable<SharpMail>> GetIncomingMailsAsync(SharpPlayer id, string folder)
 	{
 		var results = await arangoDb.Query.ExecuteAsync<SharpMailQueryResult>(handle, 
@@ -266,6 +288,7 @@ public class ArangoDatabase(
 			Subject = MarkupStringModule.deserialize(x.Subject),
 			Folder = x.Folder,
 			Cleared = x.Cleared ?? false,
+			Forwarded = x.Forwarded ?? false,
 			Fresh = x.Fresh ?? true,
 			Read = x.Read ?? false,
 			Tagged = x.Tagged ?? false,
@@ -314,6 +337,7 @@ public class ArangoDatabase(
 			Subject = MarkupStringModule.deserialize(x.Subject),
 			Folder = x.Folder,
 			Cleared = x.Cleared ?? false,
+			Forwarded = x.Forwarded ?? false,
 			Fresh = x.Fresh ?? true,
 			Read = x.Read ?? false,
 			Tagged = x.Tagged ?? false,

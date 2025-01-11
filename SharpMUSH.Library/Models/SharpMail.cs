@@ -9,6 +9,7 @@ public class SharpMail
 	public required bool Read { get; set; }
 	public required bool Tagged { get; set; }
 	public required bool Urgent { get; set; }
+	public required bool Forwarded { get; set; }
 	public required bool Cleared { get; set; }
 	public required string Folder { get; set; }
 	public required MString Content { get; set; }

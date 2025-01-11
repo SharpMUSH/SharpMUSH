@@ -8,6 +8,7 @@ public record SharpMailQueryResult(
 	bool? Read,
 	bool? Tagged,
 	bool? Urgent,
+	bool? Forwarded,
 	bool? Cleared,
 	string Folder,
 	string Content,

@@ -5,6 +5,8 @@ namespace SharpMUSH.Library.Queries.Database;
 
 public record GetMailListQuery(SharpPlayer Player, string Folder) : IQuery<IEnumerable<SharpMail>>;
 
+public record GetAllMailListQuery(SharpPlayer Player) : IQuery<IEnumerable<SharpMail>>;
+
 public record GetMailQuery(SharpPlayer Player, int Mail, string Folder) : IQuery<SharpMail?>;
 
 public record GetSentMailListQuery(SharpObject Sender, SharpPlayer Recipient) : IQuery<IEnumerable<SharpMail>>;

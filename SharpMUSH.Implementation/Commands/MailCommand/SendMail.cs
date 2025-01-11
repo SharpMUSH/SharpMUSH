@@ -47,6 +47,7 @@ public static class SendMail
 			Tagged = false,
 			Urgent = urgent,
 			Cleared = false,
+			Forwarded = false,
 			Folder = "INBOX", // TODO: Should adjust based on each players' preferences
 			Content = message,
 			Subject = subject,
