@@ -375,6 +375,7 @@ public class Migration_CreateDatabase : IArangoMigration
 										Fresh = new { type = DatabaseConstants.typeBoolean },
 										Read = new { type = DatabaseConstants.typeBoolean },
 										Tagged = new { type = DatabaseConstants.typeBoolean },
+										Forwarded = new { type = DatabaseConstants.typeBoolean },
 										Urgent = new { type = DatabaseConstants.typeBoolean },
 										Cleared = new { type = DatabaseConstants.typeBoolean },
 										Folder = new { type = DatabaseConstants.typeString },
