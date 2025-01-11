@@ -265,12 +265,12 @@ public class ArangoDatabase(
 			Content = MarkupStringModule.deserialize(x.Content),
 			Subject = MarkupStringModule.deserialize(x.Subject),
 			Folder = x.Folder,
-			Cleared = x.Cleared ?? false,
-			Fresh = x.Fresh ?? true,
-			Read = x.Read ?? false,
-			Forwarded = x.Forwarded ?? false,
-			Tagged = x.Tagged ?? false,
-			Urgent = x.Urgent ?? false,
+			Cleared = x.Cleared,
+			Fresh = x.Fresh,
+			Read = x.Read,
+			Forwarded = x.Forwarded,
+			Tagged = x.Tagged,
+			Urgent = x.Urgent,
 			From = new Lazy<AnyOptionalSharpObject>(() => MailFromAsync(x.Id).AsTask().GetAwaiter().GetResult()) // TODO: Implement Method or adjust query!
 		});
 
@@ -287,12 +287,12 @@ public class ArangoDatabase(
 			Content = MarkupStringModule.deserialize(x.Content),
 			Subject = MarkupStringModule.deserialize(x.Subject),
 			Folder = x.Folder,
-			Cleared = x.Cleared ?? false,
-			Forwarded = x.Forwarded ?? false,
-			Fresh = x.Fresh ?? true,
-			Read = x.Read ?? false,
-			Tagged = x.Tagged ?? false,
-			Urgent = x.Urgent ?? false,
+			Cleared = x.Cleared,
+			Forwarded = x.Forwarded,
+			Fresh = x.Fresh,
+			Read = x.Read,
+			Tagged = x.Tagged,
+			Urgent = x.Urgent,
 			From = new Lazy<AnyOptionalSharpObject>(() => MailFromAsync(x.Id).AsTask().GetAwaiter().GetResult()) // TODO: Implement Method or adjust query!
 		});
 
@@ -314,9 +314,22 @@ public class ArangoDatabase(
 				Exclusive = [DatabaseConstants.mails, DatabaseConstants.receivedMail, DatabaseConstants.senderOfMail],
 			}
 		});
+
+		var newMail = new SharpMailCreateRequest(
+			DateSent: mail.DateSent.ToUnixTimeMilliseconds(),
+			Content: MarkupStringModule.serialize(mail.Content),
+			Subject: MarkupStringModule.serialize(mail.Subject),
+			Folder: mail.Folder,
+			Fresh: mail.Fresh,
+			Read: mail.Read,
+			Cleared: mail.Cleared,
+			Forwarded: mail.Forwarded,
+			Tagged: mail.Tagged,
+			Urgent: mail.Urgent
+		);
 		
-		var mailResult = await arangoDb.Graph.Vertex.CreateAsync<SharpMail, SharpMailQueryResult>(transaction, DatabaseConstants.graphMail, DatabaseConstants.mails, mail);
-		var id = mailResult.New.Id;
+		var mailResult = await arangoDb.Graph.Vertex.CreateAsync<SharpMailCreateRequest, SharpMailQueryResult>(transaction, DatabaseConstants.graphMail, DatabaseConstants.mails, newMail);
+		var id = mailResult.Vertex.Id;
 		
 		await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.graphMail, DatabaseConstants.receivedMail, new SharpEdgeCreateRequest(to.Id!, id));
 		await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.graphMail, DatabaseConstants.senderOfMail, new SharpEdgeCreateRequest(id, from.Id!));
@@ -334,12 +347,12 @@ public class ArangoDatabase(
 			Content = MarkupStringModule.deserialize(x.Content),
 			Subject = MarkupStringModule.deserialize(x.Subject),
 			Folder = x.Folder,
-			Cleared = x.Cleared ?? false,
-			Forwarded = x.Forwarded ?? false,
-			Fresh = x.Fresh ?? true,
-			Read = x.Read ?? false,
-			Tagged = x.Tagged ?? false,
-			Urgent = x.Urgent ?? false,
+			Cleared = x.Cleared,
+			Forwarded = x.Forwarded,
+			Fresh = x.Fresh,
+			Read = x.Read,
+			Tagged = x.Tagged,
+			Urgent = x.Urgent,
 			From = new Lazy<AnyOptionalSharpObject>(() => MailFromAsync(x.Id).AsTask().GetAwaiter().GetResult()) // TODO: Implement Method or adjust query!
 		});
 

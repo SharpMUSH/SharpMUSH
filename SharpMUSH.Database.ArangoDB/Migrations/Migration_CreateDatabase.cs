@@ -382,7 +382,18 @@ public class Migration_CreateDatabase : IArangoMigration
 										Content = new { type = DatabaseConstants.typeString },
 										Subject = new { type = DatabaseConstants.typeString },
 									},
-									required = (string[])["Subject", "Content", "DateSent", "Fresh", "Read", "Folder"]
+									required = (string[])[
+										nameof(SharpMail.DateSent), 
+										nameof(SharpMail.Fresh),
+										nameof(SharpMail.Read),
+										nameof(SharpMail.Tagged),
+										nameof(SharpMail.Forwarded),
+										nameof(SharpMail.Urgent),
+										nameof(SharpMail.Cleared),
+										nameof(SharpMail.Folder),
+										nameof(SharpMail.Content),
+										nameof(SharpMail.Subject)
+									]
 								}
 							}
 						},

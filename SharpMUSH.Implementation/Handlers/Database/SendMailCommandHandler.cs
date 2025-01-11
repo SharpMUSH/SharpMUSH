@@ -9,6 +9,6 @@ public class SendMailCommandHandler(ISharpDatabase database)  : ICommandHandler<
 	public async ValueTask<Unit> Handle(SendMailCommand command, CancellationToken cancellationToken)
 	{
 		await database.SendMailAsync(command.Sender, command.Recipient, command.Mail);
-		throw new NotImplementedException();
+		return Unit.Value;
 	}
 }

@@ -1,4 +1,7 @@
-﻿using OneOf;
+﻿using System.Globalization;
+using DotNext;
+using Humanizer;
+using OneOf;
 using OneOf.Types;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -10,9 +13,7 @@ namespace SharpMUSH.Implementation.Commands.MailCommand;
 [GenerateOneOf]
 public class ErrorOrMailList : OneOfBase<Error<string>, SharpMail[]>
 {
-	private ErrorOrMailList(OneOf<Error<string>, SharpMail[]> input) : base(input)
-	{
-	}
+	private ErrorOrMailList(OneOf<Error<string>, SharpMail[]> input) : base(input) { }
 
 	public bool IsError => IsT0;
 
@@ -44,13 +45,13 @@ public static class ListMail
 		{
 			mailList = await parser.Mediator.Send(new GetMailListQuery(executor.AsPlayer, "INBOX"));
 		}
-		
-		ErrorOrMailList filteredList = msgList.AsSpan() switch
+
+		ErrorOrMailList filteredList = msgList switch
 		{
 			_ when msgList.Contains(' ')
 				=> new Error<string>("MAIL: Invalid message specification"),
 			['*', .. var person] // TODO: Fix this to use a Locate() to find the person.
-				=> mailList.Where(x => x.From.Value.Object()?.DBRef == executor.Object().DBRef).ToArray(),
+				=> mailList.Where(x => x.From.Value.Object()?.Name.StartsWith(person) ?? false).ToArray(),
 			['~', .. var days] when int.TryParse(days, out var exactDay)
 				=> mailList.Where(x => x.DateSent.Date == DateTime.Today.AddDays(-exactDay)).ToArray(),
 			['>', .. var days] when int.TryParse(days, out var afterDay)
@@ -71,15 +72,17 @@ public static class ListMail
 				=> mailList.ToArray(),
 			_ when rangeSplit.Length == 2
 			       && int.TryParse(rangeSplit[0], out var left) && int.TryParse(rangeSplit[1], out var right)
-				=> mailList.Skip(left-1).Take(right - left).ToArray(),
+				=> mailList.Skip(left - 1).Take(right - left).ToArray(),
 			_ when rangeSplit.Length == 2
 			       && int.TryParse(rangeSplit[0], out var left) && !int.TryParse(rangeSplit[1], out _)
-				=> mailList.Skip(left-1).ToArray(),
+				=> mailList.Skip(left - 1).ToArray(),
 			_ when rangeSplit.Length == 2
 			       && !int.TryParse(rangeSplit[0], out _) && int.TryParse(rangeSplit[1], out var right)
 				=> mailList.Take(right).ToArray(),
 			_ when int.TryParse(msgList, out var specificMessage)
 				=> mailList.Skip(specificMessage).Take(1).ToArray(),
+			[] when msgList.Length == 0
+				=> mailList.ToArray(),
 			_ => new Error<string>("MAIL: Invalid message specification")
 		};
 
@@ -90,6 +93,13 @@ public static class ListMail
 		}
 
 		var list = filteredList.AsT1;
+		
+		if (list.IsNullOrEmpty())
+		{
+			await parser.NotifyService.Notify(executor, "MAIL: You have no matching mail in that mail folder.");
+			return MModule.single("MAIL: You have no matching mail in that mail folder.");
+		}
+		
 		foreach (var folder in list.GroupBy(x => x.Folder))
 		{
 			var center = MModule.pad(
@@ -111,17 +121,19 @@ public static class ListMail
 		return MModule.empty();
 	}
 
-	private static MString DisplayMailLine(SharpMail arg1, int arg2)
+	private static MString DisplayMailLine(SharpMail mail, int arg2)
 	{
-		var read = arg1.Read ? "-" : "N";
-		var cleared = arg1.Cleared ? "C" : "-";
-		var urgent = arg1.Urgent ? "U" : "-";
-		var forwarded = arg1.Forwarded ? "F" : "-";
-		var tagged = arg1.Tagged ? "+" : "-";
-		// TODO: Fix date format. Ex: Mon Sep 18 19:00
-		// TODO: PennMUSH adds a * in front of a sender if they are currently online.
+		var read = mail.Read ? "-" : "N";
+		var cleared = mail.Cleared ? "C" : "-";
+		var urgent = mail.Urgent ? "U" : "-";
+		var forwarded = mail.Forwarded ? "F" : "-";
+		var tagged = mail.Tagged ? "+" : "-";
+		var date = mail.DateSent.ToString("ddd MMM dd HH:mm", CultureInfo.InvariantCulture);
+		var fromName = mail.From.Value.Object()?.Name.Truncate(14);
+		var subject = mail.Subject.ToString().Truncate(30);
+
 		var result =
-			$"[{read}{cleared}{urgent}{forwarded}{tagged}]  {arg2,5} {arg1.From.Value.Object()?.Name,14} {arg1.Subject,30} {arg1.DateSent:M/d/yy,16}]";
+			$"[{read}{cleared}{urgent}{forwarded}{tagged}]  {arg2,5} {fromName,14} {subject,30} {date,16}]";
 		return MModule.single(result);
 	}
 }

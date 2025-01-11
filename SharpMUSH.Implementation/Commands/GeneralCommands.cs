@@ -807,10 +807,10 @@ public static partial class Commands
 				=> await SendMail.Handle(parser, arg0!, arg1!, switches),
 			[.., "READ"] when int.TryParse(arg0?.ToPlainText(), out var number)
 				=> await ReadMail.Handle(parser, number, switches),
-			[] when arg1?.Length == 0 && int.TryParse(arg0!.ToPlainText(), out var number)
+			[] when (arg1?.Length ?? 0) == 0 && int.TryParse(arg0!.ToPlainText(), out var number)
 				=> await ReadMail.Handle(parser, number, switches),
 			[.., "LIST"] => await ListMail.Handle(parser, arg0, arg1, switches),
-			[] when arg0?.Length == 0 && arg1?.Length == 0 => await ListMail.Handle(parser, arg0, arg1, switches),
+			[] when (arg0?.Length ?? 0) == 0 && (arg1?.Length ?? 0) == 0 => await ListMail.Handle(parser, arg0, arg1, switches),
 			_ => MModule.single("#-1 UNKNOWN STATE")
 		};
 

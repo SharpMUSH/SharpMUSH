@@ -29,7 +29,7 @@ public static class ReadMail
 
 		if (actualMail is null)
 		{
-			await parser.NotifyService.Notify(executor, $"You do not have a mail with number: {messageNumber}");
+			await parser.NotifyService.Notify(executor, $"MAIL: You do not have a mail with number: {messageNumber}");
 		}
 
 		var messageBuilder = new List<MString>

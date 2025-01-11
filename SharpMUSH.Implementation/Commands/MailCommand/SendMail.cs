@@ -58,17 +58,17 @@ public static class SendMail
 		{
 			if (!parser.PermissionService.PassesLock(sender, player, LockType.Mail))
 			{
-				await parser.NotifyService.Notify(sender, $"{player.Object.Name} does not wish to receive mail from you.");
+				await parser.NotifyService.Notify(sender, $"MAIL: {player.Object.Name} does not wish to receive mail from you.");
 				continue;
 			}
 				
 			await parser.Mediator.Send(new SendMailCommand(sender.Object(), player, mail));
-			await parser.NotifyService.Notify(sender, $"You sent a message to {player.Object.Name}.");
+			await parser.NotifyService.Notify(sender, $"MAIL: You sent a message to {player.Object.Name}.");
 
 			if (!silent)
 			{
 				var mailList = await parser.Mediator.Send(new GetMailListQuery(player, "INBOX"));
-				await parser.NotifyService.Notify(player, $"You have received a message ({mailList.Count() + 1}) from {sender.Object().Name}.");
+				await parser.NotifyService.Notify(player, $"MAIL: You have received a message ({mailList.Count() + 1}) from {sender.Object().Name}.");
 			}
 			
 			// TODO: If AMAIL is config true, and AMAIL &attribute is set on the target, trigger it.
