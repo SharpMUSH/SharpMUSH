@@ -71,13 +71,13 @@ public static class ListMail
 				=> mailList.ToArray(),
 			_ when rangeSplit.Length == 2
 			       && int.TryParse(rangeSplit[0], out var left) && int.TryParse(rangeSplit[1], out var right)
-				=> mailList.ToArray()[left..right],
+				=> mailList.Skip(left-1).Take(right - left).ToArray(),
 			_ when rangeSplit.Length == 2
 			       && int.TryParse(rangeSplit[0], out var left) && !int.TryParse(rangeSplit[1], out _)
-				=> mailList.ToArray()[left..],
+				=> mailList.Skip(left-1).ToArray(),
 			_ when rangeSplit.Length == 2
 			       && !int.TryParse(rangeSplit[0], out _) && int.TryParse(rangeSplit[1], out var right)
-				=> mailList.ToArray()[..right],
+				=> mailList.Take(right).ToArray(),
 			_ when int.TryParse(msgList, out var specificMessage)
 				=> mailList.Skip(specificMessage).Take(1).ToArray(),
 			_ => new Error<string>("MAIL: Invalid message specification")
