@@ -51,12 +51,11 @@ public static class ReadMail
 				await parser.NotifyService.Notify(executor, $"You do not have a mail with number: {messageNumber}");
 			}
 
-			// TODO: Line up Date, Folder, Message 
 			var messageBuilder = new List<MString>
 			{
 				line,
 				MModule.single($"From: {actualMail!.From.Value.Object()!.Name}"),
-				MModule.single($"Date: {actualMail.DateSent:F} Folder: {actualMail.Folder} Message: {messageNumber}"),
+				MModule.single($"Date: {actualMail.DateSent:F,25} Folder: {actualMail.Folder,40} Message: {messageNumber,5}"),
 				MModule.single($"Status: {(actualMail.Read ? "Read" : "Unread")}"),
 				MModule.concat(MModule.single("Subject: "),actualMail.Subject),
 				line,
