@@ -55,8 +55,8 @@ public static class ReadMail
 			var messageBuilder = new List<MString>
 			{
 				line,
-				MModule.single($"From: {executor.Object().Name}"),
-				MModule.single($"Date: {actualMail!.DateSent:F} Folder: {actualMail.Folder} Message: {messageNumber}"),
+				MModule.single($"From: {actualMail!.From.Value.Object()!.Name}"),
+				MModule.single($"Date: {actualMail.DateSent:F} Folder: {actualMail.Folder} Message: {messageNumber}"),
 				MModule.single($"Status: {(actualMail.Read ? "Read" : "Unread")}"),
 				MModule.concat(MModule.single("Subject: "),actualMail.Subject),
 				line,
@@ -65,7 +65,8 @@ public static class ReadMail
 			};
 			
 			successfulReads.Add(msg);
-			await parser.NotifyService.Notify(executor, MModule.multipleWithDelimiter(MModule.single("\n"), messageBuilder));
+			var output = MModule.multipleWithDelimiter(MModule.single("\n"), messageBuilder);
+			await parser.NotifyService.Notify(executor, output);
 		}
 		
 		return MModule.single(string.Join(' ', successfulReads));
