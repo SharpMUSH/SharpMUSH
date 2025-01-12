@@ -589,7 +589,7 @@ module TextAligner =
 
             if availableWidth > 0 then
                 let truncatedWord =
-                    remainingWords[0].Substring(0, min availableWidth remainingWords.[0].Length)
+                    remainingWords[0].Substring(0, min availableWidth remainingWords[0].Length)
 
                 rowText + truncatedWord, truncatedWord :: remainingWords.Tail
             else

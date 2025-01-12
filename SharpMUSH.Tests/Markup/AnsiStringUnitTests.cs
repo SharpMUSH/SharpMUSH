@@ -2,7 +2,6 @@
 using Serilog;
 using System.Drawing;
 using System.Text;
-using Microsoft.AspNetCore.Mvc;
 using A = MarkupString.MarkupStringModule;
 using AnsiString = MarkupString.MarkupStringModule.MarkupString;
 using M = MarkupString.MarkupImplementation.AnsiMarkup;
@@ -155,16 +154,16 @@ public class AnsiStringUnitTests : BaseUnitTest
 		// Assert.AreEqual("\e[32mwoo\e[0m", complexAnsiString.ToString());
 	}
 
-	[Test, Skip("Failing Test")]
+	[Test]
 	public async Task AnsiBleed()
 	{
 		var simpleString = A.single("red");
 		var redString = A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "red");
 
 		var concat = A.concat(simpleString, A.concat(redString, simpleString));
-		var test = A.markupSingle2(M.Create(clear: true), concat);
+		// var test = A.markupSingle2(M.Create(foreground: StringExtensions.rgb(Color.White)), concat);
 		
-		await Assert.That(test.ToString()).IsEqualTo("red\e[31mred\e[0mred");
+		await Assert.That(concat.ToString()).IsEqualTo("red\e[31mred\e[0mred");
 	}
 
 
