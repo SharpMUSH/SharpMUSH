@@ -96,6 +96,7 @@ module MarkupImplementation =
 
       override this.Prefix: string = System.String.Empty
 
+      // TODO: Move to ANSI.fs somehow - this doesn't belong here.
       [<TailCall>]
       override this.Optimize (text: string) : string =
         let rec optimizeImpl (acc: string) (currentIndex: int) (currentEscapeCode: string) : string =
