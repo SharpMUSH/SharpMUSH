@@ -88,6 +88,7 @@ module MarkupStringModule =
             | MarkedupText _ -> true
             | Empty -> false
 
+        // BUG: This is not correctly matching the first MarkedUp Text
         [<TailCall>]
         let findFirstMarkedupText (markupStr: MarkupString) : MarkupTypes =
             let rec find (content: Content list) : MarkupTypes =
