@@ -140,4 +140,4 @@ module MarkupImplementation =
         (AnsiMarkup.applyDetails details text).ToString() + restoreDetailsF(outerDetails).ToString()
 
       override this.Wrap (text: string) : string =
-        (AnsiMarkup.applyDetails details text).ToString()
+        StringExtensions.endWithTrueClear((AnsiMarkup.applyDetails details text).ToString()).ToString()

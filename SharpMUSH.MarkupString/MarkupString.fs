@@ -208,12 +208,14 @@ module MarkupStringModule =
         let separatorContent =
             match optionalSeparator with
             | Some separator -> [ MarkupText separator ]
-            | None -> [ Text String.Empty ]
+            | None -> []
 
         match originalMarkupStr.MarkupDetails with
         | Empty ->
             let combinedContent =
-                originalMarkupStr.Content @ separatorContent @ [ MarkupText newMarkupStr ]
+                originalMarkupStr.Content
+                @ separatorContent
+                @ [ MarkupText newMarkupStr ]
 
             MarkupString(Empty, combinedContent)
         | _ ->
@@ -315,7 +317,8 @@ module MarkupStringModule =
         else
             let before = substring 0 index input
             let after = substring index (len - index) input
-            concat (concat before insert None) after None
+            let wrappedInsert = MarkupString (before.MarkupDetails, [MarkupText insert]) 
+            concat (concat before wrappedInsert None) after None
 
     let trim (markupStr: MarkupString) (trimStr: MarkupString) (trimType: TrimType) : MarkupString =
         let trimStrLen = getLength trimStr

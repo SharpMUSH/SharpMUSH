@@ -157,13 +157,15 @@ public class AnsiStringUnitTests : BaseUnitTest
 	[Test]
 	public async Task AnsiBleed()
 	{
-		var simpleString = A.single("red");
-		var redString = A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "red");
+		var normalString1 = A.single("n1");
+		var normalString2 = A.single("n2");
+		var redString = A.markupSingle(M.Create(foreground: StringExtensions.ansiByte(31)), "red");
 
-		var concat = A.concat(simpleString, A.concat(redString, simpleString));
+		var concat = A.concat(normalString1, A.concat(redString, normalString2));
+		var result = concat.ToString();
 		// var test = A.markupSingle2(M.Create(foreground: StringExtensions.rgb(Color.White)), concat);
 		
-		await Assert.That(concat.ToString()).IsEqualTo("red\e[31mred\e[0mred");
+		await Assert.That(result).IsEqualTo("n1\e[31mred\e[0mn2");
 	}
 
 

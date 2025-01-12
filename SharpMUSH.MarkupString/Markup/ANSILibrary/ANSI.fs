@@ -154,6 +154,7 @@ type ANSIString(text: string, hyperlink: string option, colorForeground: AnsiCol
     // TODO: This needs to be changed. The clear needs to affect the span, so should be ahead of the resultWithHyperlink, 
     // But it also needs to be restored to the previous state. Which means we have to specifically restore colors afterwards.
     // We can do a manual reset, and have a separate call for a True Clear.
+    // There is an ANSI Bleed bug here as well!
     if formatting.HasFlag(ANSIFormatting.Clear) then Clear + finalResult
     else finalResult 
 
