@@ -13,7 +13,9 @@ namespace SharpMUSH.Implementation.Commands.MailCommand;
 [GenerateOneOf]
 public class ErrorOrMailList : OneOfBase<Error<string>, SharpMail[]>
 {
-	private ErrorOrMailList(OneOf<Error<string>, SharpMail[]> input) : base(input) { }
+	private ErrorOrMailList(OneOf<Error<string>, SharpMail[]> input) : base(input)
+	{
+	}
 
 	public bool IsError => IsT0;
 
@@ -93,13 +95,13 @@ public static class ListMail
 		}
 
 		var list = filteredList.AsT1;
-		
+
 		if (list.IsNullOrEmpty())
 		{
 			await parser.NotifyService.Notify(executor, "MAIL: You have no matching mail in that mail folder.");
 			return MModule.single("MAIL: You have no matching mail in that mail folder.");
 		}
-		
+
 		foreach (var folder in list.GroupBy(x => x.Folder))
 		{
 			var center = MModule.pad(
@@ -129,11 +131,11 @@ public static class ListMail
 		var forwarded = mail.Forwarded ? "F" : "-";
 		var tagged = mail.Tagged ? "+" : "-";
 		var date = mail.DateSent.ToString("ddd MMM dd HH:mm", CultureInfo.InvariantCulture);
-		var fromName = mail.From.Value.Object()?.Name.Truncate(14);
+		var fromName = mail.From.Value.Object()?.Name.Truncate(15);
 		var subject = mail.Subject.ToString().Truncate(30);
 
 		var result =
-			$"[{read}{cleared}{urgent}{forwarded}{tagged}]  {arg2,5} {fromName,14} {subject,30} {date,16}]";
+			$"[{read}{cleared}{urgent}{forwarded}{tagged}]  {arg2 + 1,-5} {fromName,-15} {subject,-30} {date,-16}";
 		return MModule.single(result);
 	}
 }

@@ -26,7 +26,7 @@ public static class SendMail
 			: MModule.substring(0, Math.Min(20, subjectAndMessage.Length), subjectAndMessage);
 		
 		var message = subjectBodySplit > -1
-			? MModule.substring(subjectBodySplit, subjectAndMessage.Length - subjectBodySplit, subjectAndMessage) 
+			? MModule.substring(subjectBodySplit + 1, subjectAndMessage.Length - subjectBodySplit, subjectAndMessage) 
 			: subjectAndMessage;
 		
 		if (!noSignature)
