@@ -2,7 +2,6 @@
 using Serilog;
 using System.Drawing;
 using System.Text;
-using Microsoft.AspNetCore.Mvc;
 using A = MarkupString.MarkupStringModule;
 using AnsiString = MarkupString.MarkupStringModule.MarkupString;
 using M = MarkupString.MarkupImplementation.AnsiMarkup;
@@ -85,6 +84,7 @@ public class AnsiStringUnitTests : BaseUnitTest
 
 		var resultBytes = Encoding.Unicode.GetBytes(result.ToString());
 		var expectedBytes = Encoding.Unicode.GetBytes(expected.ToString());
+		
 
 		foreach (var (First, Second) in resultBytes.Zip(expectedBytes))
 		{
@@ -155,18 +155,31 @@ public class AnsiStringUnitTests : BaseUnitTest
 		// Assert.AreEqual("\e[32mwoo\e[0m", complexAnsiString.ToString());
 	}
 
-	[Test, Skip("Failing Test")]
+	[Test]
 	public async Task AnsiBleed()
 	{
-		var simpleString = A.single("red");
+		var normalString1 = A.single("n1");
+		var normalString2 = A.single("n2");
+		var redString = A.markupSingle(M.Create(foreground: StringExtensions.ansiByte(31)), "red");
+
+		var concat = A.concat(normalString1, A.concat(redString, normalString2));
+		var result = concat.ToString();
+		
+		await Assert.That(result).IsEqualTo("n1\e[31mred\e[0mn2");
+	}
+	
+	[Test]
+	public async Task AnsiBleedRgb()
+	{
+		var normalString1 = A.single("n1");
+		var normalString2 = A.single("n2");
 		var redString = A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "red");
 
-		var concat = A.concat(simpleString, A.concat(redString, simpleString));
-		var test = A.markupSingle2(M.Create(clear: true), concat);
+		var concat = A.concat(normalString1, A.concat(redString, normalString2));
+		var result = concat.ToString();
 		
-		await Assert.That(test.ToString()).IsEqualTo("red\e[31mred\e[0mred");
+		await Assert.That(result).IsEqualTo("n1\e[38;2;255;0;0mred\e[0mn2");
 	}
-
 
 	[Test]
 	public async Task SimpleSerialization()

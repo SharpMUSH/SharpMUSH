@@ -24,6 +24,14 @@ internal static class Concat
 				A.markupSingle2(M.Create(foreground: StringExtensions.rgb(Color.Red)), A.single("red")),
 				A.markupSingle2(M.Create(foreground: StringExtensions.rgb(Color.Blue)), A.single("cat"))
 			])),
+		(A.markupSingle2(M.Create(foreground: StringExtensions.rgb(Color.Red)), A.single("red")),
+			A.concat(A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Blue)), "cat"),
+				A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "reallyred")),
+			A.multiple([
+				A.markupSingle2(M.Create(foreground: StringExtensions.rgb(Color.Red)), A.single("red")),
+				A.markupSingle2(M.Create(foreground: StringExtensions.rgb(Color.Blue)), A.single("cat")),
+				A.markupSingle2(M.Create(foreground: StringExtensions.rgb(Color.Red)), A.single("reallyred"))
+			])),
 		(A.markupSingle2(M.Create(clear: true), A.single("clear")),
 			A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Blue)), "cat"),
 			A.multiple([

@@ -94,8 +94,14 @@ module MarkupStringModule =
             let rec find (content: Content list) : MarkupTypes =
                 match content with
                 | [] -> Empty
-                | MarkupText mStr :: _ when isMarkedup mStr.MarkupDetails -> mStr.MarkupDetails
-                | _ :: tail -> find tail
+                | MarkupText mStr :: _ when isMarkedup mStr.MarkupDetails
+                     -> mStr.MarkupDetails
+                | MarkupText a :: tail
+                     -> match (find a.Content, find tail) with
+                            | MarkedupText res, _ -> MarkedupText res
+                            | _, MarkedupText res -> MarkedupText res
+                            | _ -> Empty
+                | _ -> Empty
 
             match markupStr.MarkupDetails with
             | MarkedupText _ -> markupStr.MarkupDetails
@@ -208,12 +214,14 @@ module MarkupStringModule =
         let separatorContent =
             match optionalSeparator with
             | Some separator -> [ MarkupText separator ]
-            | None -> [ Text String.Empty ]
+            | None -> []
 
         match originalMarkupStr.MarkupDetails with
         | Empty ->
             let combinedContent =
-                originalMarkupStr.Content @ separatorContent @ [ MarkupText newMarkupStr ]
+                originalMarkupStr.Content
+                @ separatorContent
+                @ [ MarkupText newMarkupStr ]
 
             MarkupString(Empty, combinedContent)
         | _ ->
@@ -315,7 +323,8 @@ module MarkupStringModule =
         else
             let before = substring 0 index input
             let after = substring index (len - index) input
-            concat (concat before insert None) after None
+            let wrappedInsert = MarkupString (before.MarkupDetails, [MarkupText insert]) 
+            concat (concat before wrappedInsert None) after None
 
     let trim (markupStr: MarkupString) (trimStr: MarkupString) (trimType: TrimType) : MarkupString =
         let trimStrLen = getLength trimStr
@@ -589,7 +598,7 @@ module TextAligner =
 
             if availableWidth > 0 then
                 let truncatedWord =
-                    remainingWords[0].Substring(0, min availableWidth remainingWords.[0].Length)
+                    remainingWords[0].Substring(0, min availableWidth remainingWords[0].Length)
 
                 rowText + truncatedWord, truncatedWord :: remainingWords.Tail
             else

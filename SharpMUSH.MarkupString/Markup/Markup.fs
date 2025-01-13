@@ -1,6 +1,7 @@
 ﻿namespace MarkupString
 
 open System.Runtime.InteropServices
+open System.Text.RegularExpressions
 open ANSILibrary.ANSI
 open System.Text.Json.Serialization
 
@@ -99,6 +100,13 @@ module MarkupImplementation =
       // TODO: Move to ANSI.fs somehow - this doesn't belong here.
       [<TailCall>]
       override this.Optimize (text: string) : string =
+        let pattern = @"(?<Pattern>(?:\u001b[^m]*m)+)(?<Body1>[^\u001b]+)\u001b\[0m\1(?<Body2>[^\u001b]+)\u001b\[0m"
+        let rec optimizeRepeatedPattern (acc: string) : string =
+            if not(Regex.Match(acc, pattern).Success)
+            then acc
+            else optimizeRepeatedPattern (Regex.Replace(acc, pattern, "${Pattern}${Body1}${Body2}\u001b[0m"))
+        let optimizeRepeatedClear (acc: string) : string =
+            acc.Replace("]0m]0m","]0m") 
         let rec optimizeImpl (acc: string) (currentIndex: int) (currentEscapeCode: string) : string =
             if currentIndex >= acc.Length - 1 then
                 acc
@@ -106,6 +114,10 @@ module MarkupImplementation =
                 match acc.IndexOf("\u001b[", currentIndex, System.StringComparison.Ordinal) with
                 | -1 -> acc
                 | escapeCodeStartIndex ->
+                    // TODO: Implement a case that turns:
+                    // this: `[38;2;255;0;0mre[0m[38;2;255;0;0ma[0m[38;2;255;0;0md[0m`
+                    // into: [38;2;255;0;0mread[0m
+                    // By recognizing that a pattern is the same as a previous pattern, and removing the duplicate in-between 'poles'.
                     let escapeCodeEndIndex = acc.IndexOf("m", escapeCodeStartIndex, System.StringComparison.Ordinal)
                     if escapeCodeEndIndex = -1 then
                         acc
@@ -116,7 +128,9 @@ module MarkupImplementation =
                             optimizeImpl updatedText escapeCodeStartIndex currentEscapeCode
                         else
                             optimizeImpl acc (escapeCodeEndIndex + 1) escapeCode
-        optimizeImpl text 0 System.String.Empty 
+        optimizeImpl text 0 System.String.Empty
+        |> optimizeRepeatedPattern
+        |> optimizeRepeatedClear
 
       override this.WrapAndRestore (text: string, outerDetails: Markup) : string =
         let restoreDetailsF (restoreDetails: Markup) =
@@ -140,4 +154,4 @@ module MarkupImplementation =
         (AnsiMarkup.applyDetails details text).ToString() + restoreDetailsF(outerDetails).ToString()
 
       override this.Wrap (text: string) : string =
-        (AnsiMarkup.applyDetails details text).ToString()
+        StringExtensions.endWithTrueClear((AnsiMarkup.applyDetails details text).ToString()).ToString()
