@@ -84,6 +84,7 @@ public class AnsiStringUnitTests : BaseUnitTest
 
 		var resultBytes = Encoding.Unicode.GetBytes(result.ToString());
 		var expectedBytes = Encoding.Unicode.GetBytes(expected.ToString());
+		
 
 		foreach (var (First, Second) in resultBytes.Zip(expectedBytes))
 		{
@@ -166,7 +167,19 @@ public class AnsiStringUnitTests : BaseUnitTest
 		
 		await Assert.That(result).IsEqualTo("n1\e[31mred\e[0mn2");
 	}
+	
+	[Test]
+	public async Task AnsiBleedRgb()
+	{
+		var normalString1 = A.single("n1");
+		var normalString2 = A.single("n2");
+		var redString = A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "red");
 
+		var concat = A.concat(normalString1, A.concat(redString, normalString2));
+		var result = concat.ToString();
+		
+		await Assert.That(result).IsEqualTo("n1\e[38;2;255;0;0mred\e[0mn2");
+	}
 
 	[Test]
 	public async Task SimpleSerialization()

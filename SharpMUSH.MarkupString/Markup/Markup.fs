@@ -106,6 +106,10 @@ module MarkupImplementation =
                 match acc.IndexOf("\u001b[", currentIndex, System.StringComparison.Ordinal) with
                 | -1 -> acc
                 | escapeCodeStartIndex ->
+                    // TODO: Implement a case that turns:
+                    // this: `[38;2;255;0;0mre[0m[38;2;255;0;0ma[0m[38;2;255;0;0md[0m`
+                    // into: [38;2;255;0;0mread[0m
+                    // By recognizing that a pattern is the same as a previous pattern, and removing the duplicate in-between 'poles'.
                     let escapeCodeEndIndex = acc.IndexOf("m", escapeCodeStartIndex, System.StringComparison.Ordinal)
                     if escapeCodeEndIndex = -1 then
                         acc
@@ -116,7 +120,7 @@ module MarkupImplementation =
                             optimizeImpl updatedText escapeCodeStartIndex currentEscapeCode
                         else
                             optimizeImpl acc (escapeCodeEndIndex + 1) escapeCode
-        optimizeImpl text 0 System.String.Empty 
+        (optimizeImpl text 0 System.String.Empty).Replace("]0m]0m","]0m") 
 
       override this.WrapAndRestore (text: string, outerDetails: Markup) : string =
         let restoreDetailsF (restoreDetails: Markup) =

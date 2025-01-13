@@ -94,8 +94,14 @@ module MarkupStringModule =
             let rec find (content: Content list) : MarkupTypes =
                 match content with
                 | [] -> Empty
-                | MarkupText mStr :: _ when isMarkedup mStr.MarkupDetails -> mStr.MarkupDetails
-                | _ :: tail -> find tail
+                | MarkupText mStr :: _ when isMarkedup mStr.MarkupDetails
+                     -> mStr.MarkupDetails
+                | MarkupText a :: tail
+                     -> match (find a.Content, find tail) with
+                            | MarkedupText res, _ -> MarkedupText res
+                            | _, MarkedupText res -> MarkedupText res
+                            | _ -> Empty
+                | _ -> Empty
 
             match markupStr.MarkupDetails with
             | MarkedupText _ -> markupStr.MarkupDetails
