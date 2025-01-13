@@ -163,7 +163,6 @@ public class AnsiStringUnitTests : BaseUnitTest
 
 		var concat = A.concat(normalString1, A.concat(redString, normalString2));
 		var result = concat.ToString();
-		// var test = A.markupSingle2(M.Create(foreground: StringExtensions.rgb(Color.White)), concat);
 		
 		await Assert.That(result).IsEqualTo("n1\e[31mred\e[0mn2");
 	}
