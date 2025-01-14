@@ -16,6 +16,7 @@ public static class ReadMail
 		if (actualMail is null)
 		{
 			await parser.NotifyService.Notify(executor, $"MAIL: You do not have a mail with number: {messageNumber}");
+			return MModule.single("#-1 NO SUCH MAIL");
 		}
 		
 		// TODO: Mark mail as Read (and no longer fresh)
