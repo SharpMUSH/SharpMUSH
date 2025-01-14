@@ -260,7 +260,15 @@ public class ArangoDatabase(
 		var results = await arangoDb.Query.ExecuteAsync<SharpMailQueryResult>(handle, 
 			$"FOR v IN 1..1 OUTBOUND {id.Id} GRAPH {DatabaseConstants.graphMail} RETURN v");
 
-		var convertedResults = results.Select(x => new SharpMail{
+		var convertedResults = results.Select(ConvertMailQueryResult);
+
+		return convertedResults;
+	}
+
+	private SharpMail ConvertMailQueryResult(SharpMailQueryResult x)
+	{
+		return new SharpMail
+		{
 			DateSent = DateTimeOffset.FromUnixTimeMilliseconds(x.DateSent),
 			Content = MarkupStringModule.deserialize(x.Content),
 			Subject = MarkupStringModule.deserialize(x.Subject),
@@ -272,29 +280,15 @@ public class ArangoDatabase(
 			Tagged = x.Tagged,
 			Urgent = x.Urgent,
 			From = new Lazy<AnyOptionalSharpObject>(() => MailFromAsync(x.Id).AsTask().GetAwaiter().GetResult()) // TODO: Implement Method or adjust query!
-		});
-
-		return convertedResults;
+		};
 	}
-	
+
 	public async ValueTask<IEnumerable<SharpMail>> GetIncomingMailsAsync(SharpPlayer id, string folder)
 	{
 		var results = await arangoDb.Query.ExecuteAsync<SharpMailQueryResult>(handle, 
 			$"FOR v IN 1..1 OUTBOUND {id.Id} GRAPH {DatabaseConstants.graphMail} FILTER v.Folder == {folder} RETURN v");
 
-		var convertedResults = results.Select(x => new SharpMail{
-			DateSent = DateTimeOffset.FromUnixTimeMilliseconds(x.DateSent),
-			Content = MarkupStringModule.deserialize(x.Content),
-			Subject = MarkupStringModule.deserialize(x.Subject),
-			Folder = x.Folder,
-			Cleared = x.Cleared,
-			Forwarded = x.Forwarded,
-			Fresh = x.Fresh,
-			Read = x.Read,
-			Tagged = x.Tagged,
-			Urgent = x.Urgent,
-			From = new Lazy<AnyOptionalSharpObject>(() => MailFromAsync(x.Id).AsTask().GetAwaiter().GetResult()) // TODO: Implement Method or adjust query!
-		});
+		var convertedResults = results.Select(ConvertMailQueryResult);
 
 		return convertedResults;
 	}
@@ -343,19 +337,7 @@ public class ArangoDatabase(
 		var results = await arangoDb.Query.ExecuteAsync<SharpMailQueryResult>(handle, 
 			$"FOR v IN 1..1 OUTBOUND {id.Id} GRAPH {DatabaseConstants.graphMail} FILTER v.Folder == {folder} LIMIT {mail},1 RETURN v");
 
-		var convertedResults = results.Select(x => new SharpMail{
-			DateSent = DateTimeOffset.FromUnixTimeMilliseconds(x.DateSent),
-			Content = MarkupStringModule.deserialize(x.Content),
-			Subject = MarkupStringModule.deserialize(x.Subject),
-			Folder = x.Folder,
-			Cleared = x.Cleared,
-			Forwarded = x.Forwarded,
-			Fresh = x.Fresh,
-			Read = x.Read,
-			Tagged = x.Tagged,
-			Urgent = x.Urgent,
-			From = new Lazy<AnyOptionalSharpObject>(() => MailFromAsync(x.Id).AsTask().GetAwaiter().GetResult()) // TODO: Implement Method or adjust query!
-		});
+		var convertedResults = results.Select(ConvertMailQueryResult);
 
 		return convertedResults.FirstOrDefault();
 	}
