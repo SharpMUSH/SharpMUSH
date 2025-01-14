@@ -249,7 +249,7 @@ public static partial class Commands
 		var newParser = parser.Push(parser.CurrentState with
 		{
 			Command = rootCommand,
-			Switches = switches,
+			Switches = switches.Select(x => x.ToUpper()),
 			Arguments = new(arguments.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value))
 				.ToDictionary()),
 			Function = null

@@ -805,12 +805,10 @@ public static partial class Commands
 			[.., "SEND"] or [.., "URGENT"] or [.., "SILENT"] or [.., "NOSIG"] or []
 				when arg0?.Length != 0 && arg1?.Length != 0
 				=> await SendMail.Handle(parser, arg0!, arg1!, switches),
-			[.., "READ"] when int.TryParse(arg0?.ToPlainText(), out var number)
-				=> await ReadMail.Handle(parser, number, switches),
-			[] when (arg1?.Length ?? 0) == 0 && int.TryParse(arg0!.ToPlainText(), out var number)
-				=> await ReadMail.Handle(parser, number, switches),
-			[.., "LIST"] => await ListMail.Handle(parser, arg0, arg1, switches),
-			[] when (arg0?.Length ?? 0) == 0 && (arg1?.Length ?? 0) == 0 => await ListMail.Handle(parser, arg0, arg1, switches),
+			[.., "READ"] or [] when (arg1?.Length ?? 0) == 0 && int.TryParse(arg0?.ToPlainText(), out var number)
+				=> await ReadMail.Handle(parser, Math.Max(0,number - 1), switches),
+			[.., "LIST"] or [] when (arg1?.Length ?? 0) == 0 
+				=> await ListMail.Handle(parser, arg0, arg1, switches),
 			_ => MModule.single("#-1 UNKNOWN STATE")
 		};
 

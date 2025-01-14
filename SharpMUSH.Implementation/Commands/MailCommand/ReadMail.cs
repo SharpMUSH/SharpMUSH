@@ -10,12 +10,12 @@ public static class ReadMail
 	{
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
 		var line = MModule.repeat(MModule.single("-"), 78, MModule.empty());
-
+		
 		var actualMail = await parser.Mediator.Send(new GetMailQuery(executor.AsPlayer, messageNumber, "INBOX"));
 
 		if (actualMail is null)
 		{
-			await parser.NotifyService.Notify(executor, $"MAIL: You do not have a mail with number: {messageNumber}");
+			await parser.NotifyService.Notify(executor, $"MAIL: You do not have a mail with number: {messageNumber + 1}");
 			return MModule.single("#-1 NO SUCH MAIL");
 		}
 		
@@ -32,7 +32,7 @@ public static class ReadMail
 		{
 			line,   
 			MModule.single($"From: {actualMail.From.Value.Object()!.Name}"),
-			MModule.single($"Date: {dateline,-20} Folder: {actualMail.Folder,-20} Message: {messageNumber,5}"),
+			MModule.single($"Date: {dateline,-20} Folder: {actualMail.Folder,-20} Message: {messageNumber + 1,5}"),
 			MModule.single($"Status: {(actualMail.Read ? "Read" : "Unread")}"),
 			MModule.concat(MModule.single("Subject: "), actualMail.Subject),
 			line,
