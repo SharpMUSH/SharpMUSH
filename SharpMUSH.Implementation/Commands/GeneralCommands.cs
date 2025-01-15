@@ -799,7 +799,8 @@ public static partial class Commands
 			[.., "FSTATS"] => await StatsMail.Handle(parser, arg0, arg1, switches),
 			[.., "DEBUG"] => await AdminMail.Handle(parser, arg0, arg1, switches),
 			[.., "NUKE"] => await AdminMail.Handle(parser, arg0, arg1, switches),
-			[.., "REVIEW"] => await ReviewMail.Handle(parser, arg0, arg1, switches),
+			[.., "REVIEW"] when (arg1?.Length ?? 0) != 0 && int.TryParse(arg1?.ToPlainText(), out var number) 
+				=> await ReviewMail.Handle(parser, arg0, Math.Max(0,number - 1), switches),
 			[.., "RETRACT"] => await RetractMail.Handle(parser, arg0, arg1, switches),
 			[.., "FWD"] => await ForwardMail.Handle(parser, arg0, arg1, switches),
 			[.., "SEND"] or [.., "URGENT"] or [.., "SILENT"] or [.., "NOSIG"] or []
