@@ -12,3 +12,12 @@ public class SendMailCommandHandler(ISharpDatabase database)  : ICommandHandler<
 		return Unit.Value;
 	}
 }
+
+public class UpdateMailCommandHandler(ISharpDatabase database) : ICommandHandler<UpdateMailCommand>
+{
+	public async ValueTask<Unit> Handle(UpdateMailCommand command, CancellationToken cancellationToken)
+	{
+		await database.UpdateMailAsync(command.Mail.Id!, command.Update);
+		return Unit.Value;
+	}
+}

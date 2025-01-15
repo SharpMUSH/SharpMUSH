@@ -5,6 +5,7 @@ namespace SharpMUSH.Library.Models;
 
 public class SharpMail
 {
+	[JsonIgnore] public string? Id { get; set; }
 	public required DateTimeOffset DateSent { get; set; }
 	public required bool Fresh { get; set; }
 	public required bool Read { get; set; }
@@ -15,6 +16,5 @@ public class SharpMail
 	public required string Folder { get; set; }
 	public required MString Content { get; set; }
 	public required MString Subject { get; set; }
-	[JsonIgnore] 
-	public required Lazy<AnyOptionalSharpObject> From { get; set; }
+	[JsonIgnore] public required Lazy<AnyOptionalSharpObject> From { get; set; }
 }

@@ -1,4 +1,5 @@
-﻿using SharpMUSH.Library.Extensions;
+﻿using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 
@@ -19,8 +20,6 @@ public static class ReadMail
 			return MModule.single("#-1 NO SUCH MAIL");
 		}
 		
-		// TODO: Mark mail as Read (and no longer fresh)
-
 		var dateline = MModule.pad(
 			MModule.single(actualMail!.DateSent.ToString("ddd MMM dd HH:mm yyyy")),
 			MModule.single(" "),
@@ -36,13 +35,15 @@ public static class ReadMail
 			MModule.single($"Status: {(actualMail.Read ? "Read" : "Unread")}"),
 			MModule.concat(MModule.single("Subject: "), actualMail.Subject),
 			line,
-			actualMail.Content, // BUG: discovered bug - ansi is bleeding.
+			actualMail.Content,
 			line
 		};
 
 		var output = MModule.multipleWithDelimiter(MModule.single("\n"), messageBuilder);
 		await parser.NotifyService.Notify(executor, output);
 
+		await parser.Mediator.Send(new UpdateMailCommand(actualMail, MailUpdate.ReadEdit(true)));
+		
 		return output;
 	}
 }

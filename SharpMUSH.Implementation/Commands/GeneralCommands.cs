@@ -192,7 +192,7 @@ public static partial class Commands
 		var contentKeys = contents!.Select(x => x.Object()!.Name);
 		var exitKeys = (await parser.Mediator.Send(new GetExitsQuery(obj.DBRef)))?.FirstOrDefault();
 		var description = (await parser.AttributeService.GetAttributeAsync(enactor, viewing.Known(), "DESCRIBE",
-				Library.Services.IAttributeService.AttributeMode.Read, false))
+				IAttributeService.AttributeMode.Read, false))
 			.Match(
 				attr => MModule.getLength(attr.Value) == 0
 					? MModule.single("There is nothing to see here")
@@ -267,7 +267,7 @@ public static partial class Commands
 		{
 			var targetString = target.Match(dbref => dbref.ToString(), str => str);
 			var locateTarget = await parser.LocateService.LocateAndNotifyIfInvalid(parser, enactor, enactor, targetString,
-				Library.Services.LocateFlags.All);
+				LocateFlags.All);
 
 			if (locateTarget.IsValid())
 			{
@@ -358,7 +358,7 @@ public static partial class Commands
 			enactorObj,
 			enactorObj,
 			destinationString,
-			Library.Services.LocateFlags.All);
+			LocateFlags.All);
 
 		if (!destination.IsValid())
 		{
@@ -379,7 +379,7 @@ public static partial class Commands
 		foreach (var obj in toTeleportStringList)
 		{
 			var locateTarget = await parser.LocateService.LocateAndNotifyIfInvalid(parser, enactorObj, enactorObj, obj,
-				Library.Services.LocateFlags.All);
+				LocateFlags.All);
 			if (!locateTarget.IsValid() || locateTarget.IsRoom)
 			{
 				await parser.NotifyService.Notify(enactor, Errors.ErrorNotVisible);
@@ -787,12 +787,12 @@ public static partial class Commands
 			[.., "FOLDER"] => await FolderMail.Handle(parser, arg0, arg1, switches),
 			[.., "UNFOLDER"] => await FolderMail.Handle(parser, arg0, arg1, switches),
 			[.., "FILE"] => await FolderMail.Handle(parser, arg0, arg1, switches),
-			[.., "CLEAR"] => await StatusMail.Handle(parser, arg0, arg1, switches),
-			[.., "UNCLEAR"] => await StatusMail.Handle(parser, arg0, arg1, switches),
-			[.., "TAG"] => await StatusMail.Handle(parser, arg0, arg1, switches),
-			[.., "UNTAG"] => await StatusMail.Handle(parser, arg0, arg1, switches),
-			[.., "UNREAD"] => await StatusMail.Handle(parser, arg0, arg1, switches),
-			[.., "STATUS"] => await StatusMail.Handle(parser, arg0, arg1, switches),
+			[.., "CLEAR"] => await StatusMail.Handle(parser, arg0, arg1, "CLEAR"),
+			[.., "UNCLEAR"] => await StatusMail.Handle(parser, arg0, arg1, "UNCLEAR"),
+			[.., "TAG"] => await StatusMail.Handle(parser, arg0, arg1, "TAG"),
+			[.., "UNTAG"] => await StatusMail.Handle(parser, arg0, arg1, "UNTAG"),
+			[.., "UNREAD"] => await StatusMail.Handle(parser, arg0, arg1, "UNREAD"),
+			[.., "STATUS"] => await StatusMail.Handle(parser, arg0, arg1, "STATUS"),
 			[.., "CSTATS"] => await StatsMail.Handle(parser, arg0, arg1, switches),
 			[.., "STATS"] => await StatsMail.Handle(parser, arg0, arg1, switches),
 			[.., "DSTATS"] => await StatsMail.Handle(parser, arg0, arg1, switches),

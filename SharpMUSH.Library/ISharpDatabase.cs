@@ -1,4 +1,5 @@
-﻿using SharpMUSH.Library.DiscriminatedUnions;
+﻿using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library;
@@ -184,4 +185,6 @@ public interface ISharpDatabase
 	ValueTask<string[]> GetMailFoldersAsync(SharpPlayer id);
 	
 	ValueTask SendMailAsync(SharpObject from, SharpPlayer to, SharpMail mail);
+	
+	ValueTask UpdateMailAsync(string mailId, MailUpdate commandMail);
 }

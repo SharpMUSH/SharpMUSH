@@ -13,6 +13,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using System.Collections.Immutable;
+using SharpMUSH.Library.Commands.Database;
 
 namespace SharpMUSH.Database.ArangoDB;
 
@@ -250,14 +251,14 @@ public class ArangoDatabase(
 
 	public async ValueTask<string[]> GetMailFoldersAsync(SharpPlayer id)
 	{
-		var results = await arangoDb.Query.ExecuteAsync<string>(handle, 
+		var results = await arangoDb.Query.ExecuteAsync<string>(handle,
 			$"FOR v IN 1..1 OUTBOUND {id.Id} GRAPH {DatabaseConstants.graphMail} RETURN DISTINCT(v.Folder)");
 		return results.ToArray();
 	}
-	
+
 	public async ValueTask<IEnumerable<SharpMail>> GetAllIncomingMailsAsync(SharpPlayer id)
 	{
-		var results = await arangoDb.Query.ExecuteAsync<SharpMailQueryResult>(handle, 
+		var results = await arangoDb.Query.ExecuteAsync<SharpMailQueryResult>(handle,
 			$"FOR v IN 1..1 OUTBOUND {id.Id} GRAPH {DatabaseConstants.graphMail} RETURN v");
 
 		var convertedResults = results.Select(ConvertMailQueryResult);
@@ -269,6 +270,7 @@ public class ArangoDatabase(
 	{
 		return new SharpMail
 		{
+			Id = x.Id,
 			DateSent = DateTimeOffset.FromUnixTimeMilliseconds(x.DateSent),
 			Content = MarkupStringModule.deserialize(x.Content),
 			Subject = MarkupStringModule.deserialize(x.Subject),
@@ -279,27 +281,29 @@ public class ArangoDatabase(
 			Forwarded = x.Forwarded,
 			Tagged = x.Tagged,
 			Urgent = x.Urgent,
-			From = new Lazy<AnyOptionalSharpObject>(() => MailFromAsync(x.Id).AsTask().GetAwaiter().GetResult()) // TODO: Implement Method or adjust query!
+			From = new Lazy<AnyOptionalSharpObject>(() =>
+				MailFromAsync(x.Id).AsTask().GetAwaiter().GetResult()) // TODO: Implement Method or adjust query!
 		};
 	}
 
 	public async ValueTask<IEnumerable<SharpMail>> GetIncomingMailsAsync(SharpPlayer id, string folder)
 	{
-		var results = await arangoDb.Query.ExecuteAsync<SharpMailQueryResult>(handle, 
+		var results = await arangoDb.Query.ExecuteAsync<SharpMailQueryResult>(handle,
 			$"FOR v IN 1..1 OUTBOUND {id.Id} GRAPH {DatabaseConstants.graphMail} FILTER v.Folder == {folder} RETURN v");
 
 		var convertedResults = results.Select(ConvertMailQueryResult);
 
 		return convertedResults;
 	}
+
 	private async ValueTask<AnyOptionalSharpObject> MailFromAsync(string id)
 	{
-		var edges = await arangoDb.Query.ExecuteAsync<SharpEdgeQueryResult>(handle, 
+		var edges = await arangoDb.Query.ExecuteAsync<SharpEdgeQueryResult>(handle,
 			$"FOR v,e IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphMail} RETURN e");
 		var edge = edges.First();
 		return await GetObjectNodeAsync(edge!.To);
 	}
-	
+
 	public async ValueTask SendMailAsync(SharpObject from, SharpPlayer to, SharpMail mail)
 	{
 		var transaction = await arangoDb.Transaction.BeginAsync(handle, new ArangoTransaction()
@@ -322,19 +326,47 @@ public class ArangoDatabase(
 			Tagged: mail.Tagged,
 			Urgent: mail.Urgent
 		);
-		
-		var mailResult = await arangoDb.Graph.Vertex.CreateAsync<SharpMailCreateRequest, SharpMailQueryResult>(transaction, DatabaseConstants.graphMail, DatabaseConstants.mails, newMail);
+
+		var mailResult = await arangoDb.Graph.Vertex.CreateAsync<SharpMailCreateRequest, SharpMailQueryResult>(transaction,
+			DatabaseConstants.graphMail, DatabaseConstants.mails, newMail);
 		var id = mailResult.Vertex.Id;
-		
-		await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.graphMail, DatabaseConstants.receivedMail, new SharpEdgeCreateRequest(to.Id!, id));
-		await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.graphMail, DatabaseConstants.senderOfMail, new SharpEdgeCreateRequest(id, from.Id!));
-		
+
+		await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.graphMail, DatabaseConstants.receivedMail,
+			new SharpEdgeCreateRequest(to.Id!, id));
+		await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.graphMail, DatabaseConstants.senderOfMail,
+			new SharpEdgeCreateRequest(id, from.Id!));
+
 		await arangoDb.Transaction.CommitAsync(transaction);
+	}
+
+	public async ValueTask UpdateMailAsync(string mailId, MailUpdate commandMail)
+	{
+		var key = mailId.Split("/")[1];
+
+		switch (commandMail)
+		{
+			case { IsReadEdit: true }:
+				await arangoDb.Graph.Vertex.UpdateAsync(handle, DatabaseConstants.graphMail, DatabaseConstants.mails,
+					key, new { Read = commandMail.AsReadEdit, Fresh = false });
+				return;
+			case { IsClearEdit: true }:
+				await arangoDb.Graph.Vertex.UpdateAsync(handle, DatabaseConstants.graphMail, DatabaseConstants.mails,
+					key, new { Read = commandMail.AsClearEdit });
+				return;
+			case { IsTaggedEdit: true }:
+				await arangoDb.Graph.Vertex.UpdateAsync(handle, DatabaseConstants.graphMail, DatabaseConstants.mails,
+					key, new { Urgent = commandMail.AsTaggedEdit });
+				return;
+			case { IsUrgentEdit: true }:
+				await arangoDb.Graph.Vertex.UpdateAsync(handle, DatabaseConstants.graphMail, DatabaseConstants.mails,
+					key, new { Urgent = commandMail.AsUrgentEdit });
+				return;
+		}
 	}
 
 	public async ValueTask<SharpMail?> GetIncomingMailAsync(SharpPlayer id, string folder, int mail)
 	{
-		var results = await arangoDb.Query.ExecuteAsync<SharpMailQueryResult>(handle, 
+		var results = await arangoDb.Query.ExecuteAsync<SharpMailQueryResult>(handle,
 			$"FOR v IN 1..1 OUTBOUND {id.Id} GRAPH {DatabaseConstants.graphMail} FILTER v.Folder == {folder} LIMIT {mail},1 RETURN v");
 
 		var convertedResults = results.Select(ConvertMailQueryResult);
