@@ -28,6 +28,7 @@ public static class Errors
 	public const string ErrorArgRange = "#-1 ARGUMENT OUT OF RANGE";
 	public const string ErrorBadRegName = "#-1 REGISTER NAME INVALID";
 	public const string ErrorTooManyRegs = "#-1 TOO MANY REGISTERS";
+	public const string ErrorTooManySwitches = "#-1 TOO MANY SWITCHES, OR A BAD COMBINATION OF SWITCHES";
 	public const string ErrorCantSeeThat = "#-1 CAN'T SEE THAT HERE";
 	public const string ErrorNoSuchFunction = "#-1 COULD NOT FIND FUNCTION: {0}";
 	public const string ErrorTooFewArguments = "#-1 FUNCTION ({0}) EXPECTS AT LEAST {1} ARGUMENTS BUT GOT {2}";

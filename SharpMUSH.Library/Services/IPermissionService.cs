@@ -10,6 +10,10 @@ public interface IPermissionService
 		See, Hear, Match, Presence
 	}
 
+	public bool PassesLock(AnySharpObject who, AnySharpObject target, string lockString);
+
+	public bool PassesLock(AnySharpObject who, AnySharpObject target, LockType lockType);
+	
 	public bool CanSet(AnySharpObject executor, AnySharpObject target, params SharpAttribute[] attribute);
 
 	public bool Controls(AnySharpObject executor, AnySharpObject target, params SharpAttribute[] attribute);

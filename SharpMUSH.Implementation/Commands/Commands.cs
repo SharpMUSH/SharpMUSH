@@ -56,6 +56,7 @@ public static partial class Commands
 	/// there would be a need for some way of passing on secondary data.
 	/// </remarks>
 	/// <param name="parser">Parser with state.</param>
+	/// <param name="source">Original string</param>
 	/// <param name="context">Command Context</param>
 	/// <param name="visitChildren">Parser function to visit children.</param>
 	/// <returns>An empty Call State</returns>
@@ -85,7 +86,7 @@ public static partial class Commands
 		var socketCommandPattern = _commandLibrary.Where(x
 			=> parser.CurrentState.Handle is not null
 			   && x.Key.Equals(command, StringComparison.CurrentCultureIgnoreCase)
-			   && x.Value.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.SOCKET));
+			   && x.Value.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.SOCKET)).ToList();
 
 		if (socketCommandPattern.Any() &&
 		    _commandLibrary.TryGetValue(command.ToUpper(), out var librarySocketCommandDefinition))
@@ -104,7 +105,7 @@ public static partial class Commands
 		// TODO: Optimize
 		var singleTokenCommandPattern = _commandLibrary.Where(x
 			=> x.Key.Equals(command[..1], StringComparison.CurrentCultureIgnoreCase) &&
-			   x.Value.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.SingleToken));
+			   x.Value.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.SingleToken)).ToList();
 
 		if (singleTokenCommandPattern.Any())
 		{
@@ -171,14 +172,14 @@ public static partial class Commands
 		sw.Stop();
 
 		await parser.NotifyService.Notify(parser.CurrentState.Handle!,
-			string.Format("Time taken: {0}ms", sw.Elapsed.TotalMilliseconds));
+			$"Time taken: {sw.Elapsed.TotalMilliseconds}ms");
 
 		if (userDefinedCommandMatches.IsSome())
 		{
 			sw = Stopwatch.StartNew();
 			var res = await HandleUserDefinedCommand(parser, userDefinedCommandMatches.AsValue());
 			await parser.NotifyService.Notify(parser.CurrentState.Handle!,
-				string.Format("Time taken: {0}ms", sw.Elapsed.TotalMilliseconds));
+				$"Time taken: {sw.Elapsed.TotalMilliseconds}ms");
 			return res;
 		}
 
@@ -248,7 +249,7 @@ public static partial class Commands
 		var newParser = parser.Push(parser.CurrentState with
 		{
 			Command = rootCommand,
-			Switches = switches,
+			Switches = switches.Select(x => x.ToUpper()),
 			Arguments = new(arguments.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value))
 				.ToDictionary()),
 			Function = null
@@ -373,7 +374,13 @@ public static partial class Commands
 			{
 				arguments.AddRange(argCallState.Arguments!
 					.Skip(1)
-					.Select(x => new CallState(x, argCallState.Depth)));
+					// TODO: Implement Parsed Message alt
+					.Select(x => 
+						new CallState(x, 
+							argCallState.Depth, 
+							null, 
+							async () => 
+								(await parser.FunctionParse(x))!.Message!)));
 			}
 			else
 			{

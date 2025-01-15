@@ -1,4 +1,5 @@
-﻿using MoreLinq.Extensions;
+﻿using System.Collections.Immutable;
+using MoreLinq.Extensions;
 using OneOf;
 using OneOf.Types;
 using SharpMUSH.Library.Commands.Database;
@@ -9,6 +10,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using System.Drawing;
+using SharpMUSH.Implementation.Commands.MailCommand;
 using SharpMUSH.Library.Services;
 using CB = SharpMUSH.Implementation.Definitions.CommandBehavior;
 using StringExtensions = ANSILibrary.StringExtensions;
@@ -96,8 +98,8 @@ public static partial class Commands
 				parser,
 				enactor,
 				enactor,
-				args["0"]!.Message!.ToString(),
-				Library.Services.LocateFlags.All);
+				args["0"].Message!.ToString(),
+				LocateFlags.All);
 
 			if (locate.IsValid())
 			{
@@ -163,7 +165,7 @@ public static partial class Commands
 				enactor,
 				enactor,
 				args["0"]!.Message!.ToString(),
-				Library.Services.LocateFlags.All);
+				LocateFlags.All);
 
 			if (locate.IsValid())
 			{
@@ -190,7 +192,7 @@ public static partial class Commands
 		var contentKeys = contents!.Select(x => x.Object()!.Name);
 		var exitKeys = (await parser.Mediator.Send(new GetExitsQuery(obj.DBRef)))?.FirstOrDefault();
 		var description = (await parser.AttributeService.GetAttributeAsync(enactor, viewing.Known(), "DESCRIBE",
-				Library.Services.IAttributeService.AttributeMode.Read, false))
+				IAttributeService.AttributeMode.Read, false))
 			.Match(
 				attr => MModule.getLength(attr.Value) == 0
 					? MModule.single("There is nothing to see here")
@@ -265,7 +267,7 @@ public static partial class Commands
 		{
 			var targetString = target.Match(dbref => dbref.ToString(), str => str);
 			var locateTarget = await parser.LocateService.LocateAndNotifyIfInvalid(parser, enactor, enactor, targetString,
-				Library.Services.LocateFlags.All);
+				LocateFlags.All);
 
 			if (locateTarget.IsValid())
 			{
@@ -356,7 +358,7 @@ public static partial class Commands
 			enactorObj,
 			enactorObj,
 			destinationString,
-			Library.Services.LocateFlags.All);
+			LocateFlags.All);
 
 		if (!destination.IsValid())
 		{
@@ -377,7 +379,7 @@ public static partial class Commands
 		foreach (var obj in toTeleportStringList)
 		{
 			var locateTarget = await parser.LocateService.LocateAndNotifyIfInvalid(parser, enactorObj, enactorObj, obj,
-				Library.Services.LocateFlags.All);
+				LocateFlags.All);
 			if (!locateTarget.IsValid() || locateTarget.IsRoom)
 			{
 				await parser.NotifyService.Notify(enactor, Errors.ErrorNotVisible);
@@ -752,11 +754,66 @@ public static partial class Commands
 			"NOEVAL", "NOSIG", "STATS", "CSTATS", "DSTATS", "FSTATS", "DEBUG", "NUKE", "FOLDERS", "UNFOLDER", "LIST", "READ",
 			"UNREAD", "CLEAR", "UNCLEAR", "STATUS", "PURGE", "FILE", "TAG", "UNTAG", "FWD", "FORWARD", "SEND", "SILENT",
 			"URGENT", "REVIEW", "RETRACT"
-		], Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 0)]
-	public static async ValueTask<Option<CallState>> MAIL(IMUSHCodeParser parser, SharpCommandAttribute _2)
+		], Behavior = CB.Default | CB.EqSplit | CB.NoParse, MinArgs = 0, MaxArgs = 2)]
+	public static async ValueTask<Option<CallState>> Mail(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		parser.CurrentState.Arguments.TryGetValue("0", out var arg0CallState);
+		parser.CurrentState.Arguments.TryGetValue("1", out var arg1CallState);
+		MString? arg0, arg1;
+		var switches = parser.CurrentState.Switches.ToArray();
+		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
+		var caller = (await parser.CurrentState.CallerObject(parser.Mediator)).Known();
+		string[] sendSwitches = ["SEND", "URGENT", "NOSIG", "SILENT", "NOEVAL"];
+
+		if (switches.Except(sendSwitches).Any() && switches.Length > 1)
+		{
+			await parser.NotifyService.Notify(executor, "Error: Too many switches passed to @mail.", caller);
+			return new CallState(Errors.ErrorTooManySwitches);
+		}
+
+		if (!switches.Contains("NOEVAL"))
+		{
+			arg0 = await (arg0CallState?.ParsedMessage() ?? Task.FromResult<MString?>(null));
+			arg1 = await (arg1CallState?.ParsedMessage() ?? Task.FromResult<MString?>(null));
+		}
+		else
+		{
+			arg0 = arg0CallState?.Message;
+			arg1 = arg1CallState?.Message;
+		}
+
+		var response = switches switch
+		{
+			[.., "FOLDER"] => await FolderMail.Handle(parser, arg0, arg1, switches),
+			[.., "UNFOLDER"] => await FolderMail.Handle(parser, arg0, arg1, switches),
+			[.., "FILE"] => await FolderMail.Handle(parser, arg0, arg1, switches),
+			[.., "CLEAR"] => await StatusMail.Handle(parser, arg0, arg1, "CLEAR"),
+			[.., "UNCLEAR"] => await StatusMail.Handle(parser, arg0, arg1, "UNCLEAR"),
+			[.., "TAG"] => await StatusMail.Handle(parser, arg0, arg1, "TAG"),
+			[.., "UNTAG"] => await StatusMail.Handle(parser, arg0, arg1, "UNTAG"),
+			[.., "UNREAD"] => await StatusMail.Handle(parser, arg0, arg1, "UNREAD"),
+			[.., "STATUS"] => await StatusMail.Handle(parser, arg0, arg1, "STATUS"),
+			[.., "CSTATS"] => await StatsMail.Handle(parser, arg0, arg1, switches),
+			[.., "STATS"] => await StatsMail.Handle(parser, arg0, arg1, switches),
+			[.., "DSTATS"] => await StatsMail.Handle(parser, arg0, arg1, switches),
+			[.., "FSTATS"] => await StatsMail.Handle(parser, arg0, arg1, switches),
+			[.., "DEBUG"] => await AdminMail.Handle(parser, arg0, arg1, switches),
+			[.., "NUKE"] => await AdminMail.Handle(parser, arg0, arg1, switches),
+			[.., "REVIEW"] when (arg1?.Length ?? 0) != 0 && int.TryParse(arg1?.ToPlainText(), out var number) 
+				=> await ReviewMail.Handle(parser, arg0, Math.Max(0,number - 1), switches),
+			[.., "RETRACT"] => await RetractMail.Handle(parser, arg0, arg1, switches),
+			[.., "FWD"] => await ForwardMail.Handle(parser, arg0, arg1, switches),
+			[.., "SEND"] or [.., "URGENT"] or [.., "SILENT"] or [.., "NOSIG"] or []
+				when arg0?.Length != 0 && arg1?.Length != 0
+				=> await SendMail.Handle(parser, arg0!, arg1!, switches),
+			[.., "READ"] or [] when (arg1?.Length ?? 0) == 0 && int.TryParse(arg0?.ToPlainText(), out var number)
+				=> await ReadMail.Handle(parser, Math.Max(0,number - 1), switches),
+			[.., "LIST"] or [] when (arg1?.Length ?? 0) == 0 
+				=> await ListMail.Handle(parser, arg0, arg1, switches),
+			_ => MModule.single("#-1 UNKNOWN STATE")
+		};
+
+		return new CallState(response);
 	}
 
 	[SharpCommand(Name = "@NSPEMIT", Switches = ["LIST", "SILENT", "NOISY", "NOEVAL"], Behavior = CB.Default | CB.EqSplit,
