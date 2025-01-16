@@ -11,6 +11,14 @@ It takes its basis and functionality heavily from PennMUSH and its brethren with
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/SharpMUSH/SharpMUSH/dotnet.yml?style=for-the-badge)](https://github.com/SharpMUSH/SharpMUSH/actions/workflows/dotnet.yml)
 [![Discord](https://img.shields.io/discord/1216626296642343044?style=for-the-badge&refresh=1)](https://discord.gg/jYErRbqaC9)
 
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+
 # Why SharpMUSH
 SharpMUSH is a modern iteration of the time tested MUSH frameworks. It provides a layer of compatibility for PennMUSH for transferability, and building a modern tech landscape around it that does away with many of the limitations that have made MUSHes harder use, without losing what makes them great.
 
