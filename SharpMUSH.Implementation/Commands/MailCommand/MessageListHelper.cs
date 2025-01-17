@@ -12,9 +12,7 @@ namespace SharpMUSH.Implementation.Commands.MailCommand;
 [GenerateOneOf]
 public class ErrorOrMailList : OneOfBase<Error<string>, SharpMail[]>
 {
-	private ErrorOrMailList(OneOf<Error<string>, SharpMail[]> input) : base(input)
-	{
-	}
+	private ErrorOrMailList(OneOf<Error<string>, SharpMail[]> input) : base(input) { }
 
 	public bool IsError => IsT0;
 	public string AsError => AsT0.Value;
@@ -29,13 +27,15 @@ public static class MessageListHelper
 	public static async ValueTask<string> CurrentMailFolder(IMUSHCodeParser parser, AnySharpObject executor)
 	{
 		var mailData = await parser.ObjectDataService.GetExpandedDataAsync<ExpandedMailData>(executor.Object(), typeof(ExpandedMailData));
-		
-		if (mailData == null)
+
+		if (mailData != null)
 		{
-			mailData = new ExpandedMailData();
-			await parser.ObjectDataService.SetExpandedDataAsync(executor.Object(), typeof(ExpandedMailData), mailData);
-		}		
-		
+			return mailData.ActiveFolder;
+		}
+
+		mailData = new ExpandedMailData(Folders: ["INBOX"], ActiveFolder: "INBOX");
+		await parser.ObjectDataService.SetExpandedDataAsync(executor.Object(), typeof(ExpandedMailData), mailData);
+
 		return mailData.ActiveFolder;
 	}
 	
@@ -57,7 +57,7 @@ public static class MessageListHelper
 		}
 		else
 		{
-			var currentFolder = await MessageListHelper.CurrentMailFolder(parser, executor);
+			var currentFolder = await CurrentMailFolder(parser, executor);
 			mailList = await parser.Mediator.Send(new GetMailListQuery(executor.AsPlayer, currentFolder));
 		}
 
@@ -66,7 +66,11 @@ public static class MessageListHelper
 			_ when msgList.Contains(' ')
 				=> new Error<string>("MAIL: Invalid message specification"),
 			['*', .. var person] // TODO: Fix this to use a Locate() to find the person.
-				=> mailList.Where(x => x.From.Value.Object()?.Name.StartsWith(person) ?? false).ToArray(),
+				=> await mailList.ToAsyncEnumerable()
+					.WhereAwait(async x => 
+						(await x.From.WithCancellation(CancellationToken.None))
+						.Object()?.Name.StartsWith(person) ?? false)
+					.ToArrayAsync(),
 			['~', .. var days] when int.TryParse(days, out var exactDay)
 				=> mailList.Where(x => x.DateSent >= DateTimeOffset.UtcNow.AddDays(-exactDay-1) 
 				                       && x.DateSent <=  DateTimeOffset.UtcNow.AddDays(-exactDay)).ToArray(),

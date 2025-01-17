@@ -42,10 +42,13 @@ public static class ListMail
 				MModule.PadType.Center,
 				MModule.TruncationType.Truncate);
 
+			var folderTask = folder.Select(async (mail, i) => await DisplayMailLine(mail, i));
+			var completedFolderTask = await Task.WhenAll(folderTask);
+			
 			MString[] builder =
 			[
 				center,
-				.. folder.Select(DisplayMailLine).ToArray(),
+				.. completedFolderTask,
 				line
 			];
 			await parser.NotifyService.Notify(executor, MModule.multipleWithDelimiter(MModule.single("\n"), builder));
@@ -54,7 +57,7 @@ public static class ListMail
 		return MModule.empty();
 	}
 
-	private static MString DisplayMailLine(SharpMail mail, int arg2)
+	private static async ValueTask<MString> DisplayMailLine(SharpMail mail, int arg2)
 	{
 		var read = mail.Read ? "-" : "N";
 		var cleared = mail.Cleared ? "C" : "-";
@@ -62,7 +65,7 @@ public static class ListMail
 		var forwarded = mail.Forwarded ? "F" : "-";
 		var tagged = mail.Tagged ? "+" : "-";
 		var date = mail.DateSent.ToString("ddd MMM dd HH:mm", CultureInfo.InvariantCulture);
-		var fromName = mail.From.Value.Object()?.Name.Truncate(15);
+		var fromName = (await mail.From.WithCancellation(CancellationToken.None)).Object()!.Name.Truncate(15);
 		var subject = mail.Subject.ToString().Truncate(30);
 
 		var result =

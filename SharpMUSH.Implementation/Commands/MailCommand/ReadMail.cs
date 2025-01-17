@@ -22,16 +22,17 @@ public static class ReadMail
 		}
 		
 		var dateline = MModule.pad(
-			MModule.single(actualMail!.DateSent.ToString("ddd MMM dd HH:mm yyyy")),
+			MModule.single(actualMail.DateSent.ToString("ddd MMM dd HH:mm yyyy")),
 			MModule.single(" "),
 			25,
 			MModule.PadType.Right,
 			MModule.TruncationType.Truncate);
 
+		var mailFrom = await actualMail.From.WithCancellation(CancellationToken.None);
 		var messageBuilder = new List<MString>
 		{
 			line,   
-			MModule.single($"From: {actualMail.From.Value.Object()!.Name}"),
+			MModule.single($"From: {mailFrom.Object()!.Name}"),
 			MModule.single($"Date: {dateline,-20} Folder: {actualMail.Folder,-20} Message: {messageNumber + 1,5}"),
 			MModule.single($"Status: {(actualMail.Read ? "Read" : "Unread")}"),
 			MModule.concat(MModule.single("Subject: "), actualMail.Subject),

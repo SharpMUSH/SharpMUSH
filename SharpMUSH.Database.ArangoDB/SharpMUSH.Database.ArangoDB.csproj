@@ -10,4 +10,8 @@
     <ProjectReference Include="..\SharpMUSH.Database\SharpMUSH.Database.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="DotNext.Threading" Version="5.17.2" />
+  </ItemGroup>
+
 </Project>

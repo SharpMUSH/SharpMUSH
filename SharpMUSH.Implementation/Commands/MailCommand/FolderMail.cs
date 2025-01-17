@@ -22,30 +22,30 @@ public class FolderMail
 				var unread = folderMailList.Count(x => !x.Read);
 				var cleared = folderMailList.Count(x => x.Cleared);
 				var totalMail = folderMailList.Length;
-				
-				await parser.NotifyService.Notify(executor, 
+
+				await parser.NotifyService.Notify(executor,
 					$"MAIL: {totalMail} messages in folder {currentFolder} ({unread} unread, {cleared} cleared).");
-				await parser.NotifyService.Notify(executor, 
+				await parser.NotifyService.Notify(executor,
 					$"MAIL: Current folder is {currentFolder}.");
 				return MModule.single(unread.ToString());
-			
+
 			case ["FOLDER"] when (arg0, arg1) is ({ } folder, null):
 				await parser.ObjectDataService.SetExpandedDataAsync(executor.Object(), typeof(ExpandedMailData),
-					new ExpandedMailData(ActiveFolder: folder.ToPlainText()));
+					new ExpandedMailData(Folders: [], ActiveFolder: folder.ToPlainText()));
 				break;
-			
+
 			case ["FOLDER"] when (arg0, arg1) is ({ } folder, { } newName):
 				//         This command gives <folder#> a name. 
 				// TODO: Consider making 'mail folder' a Vertex type.
 				// TODO: Consider a better command
 				break;
-			
+
 			case ["UNFOLDER"] when (arg0, arg1) is (null, null):
 				//         This command removes a folder's name
 				// TODO: Consider making 'mail folder' a Vertex type.
 				// TODO: Consider a better command
 				break;
-			
+
 			case ["FILE"] when (arg0, arg1) is ({ } msgList, { } folder):
 				//   @mail/file <msg-list>=<folder#>
 				// This command moves all messages in msg-list from the current folder to a new folder, <folder#>.
@@ -55,10 +55,11 @@ public class FolderMail
 					await parser.NotifyService.Notify(executor, maybeList.AsError);
 					return MModule.single(maybeList.AsError);
 				}
+
 				var list = maybeList.AsMailList;
 				// TODO: Move each to the correct folder.
 				return folder;
-			
+
 			default:
 				await parser.NotifyService.Notify(executor, "Invalid arguments for @mail folder command.");
 				return MModule.single("#-1 Invalid arguments for @mail folder command.");

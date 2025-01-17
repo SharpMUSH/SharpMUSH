@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using DotNext.Threading;
+using Newtonsoft.Json;
 using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Library.Models;
@@ -16,5 +17,5 @@ public class SharpMail
 	public required string Folder { get; set; }
 	public required MString Content { get; set; }
 	public required MString Subject { get; set; }
-	[JsonIgnore] public required Lazy<AnyOptionalSharpObject> From { get; set; }
+	[JsonIgnore] public required AsyncLazy<AnyOptionalSharpObject> From { get; set; }
 }

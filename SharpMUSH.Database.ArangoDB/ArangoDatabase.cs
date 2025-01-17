@@ -14,6 +14,7 @@ using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using System.Collections.Immutable;
 using System.Text.Json;
+using DotNext.Threading;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SharpMUSH.Library.Commands.Database;
@@ -283,10 +284,7 @@ public class ArangoDatabase(
 	{
 		var results = await arangoDb.Query.ExecuteAsync<SharpMailQueryResult>(handle,
 			$"FOR v IN 1..1 OUTBOUND {id.Id} GRAPH {DatabaseConstants.graphMail} RETURN v");
-
-		var convertedResults = results.Select(ConvertMailQueryResult);
-
-		return convertedResults;
+		return results.Select(ConvertMailQueryResult);
 	}
 
 	private SharpMail ConvertMailQueryResult(SharpMailQueryResult x)
@@ -304,8 +302,7 @@ public class ArangoDatabase(
 			Forwarded = x.Forwarded,
 			Tagged = x.Tagged,
 			Urgent = x.Urgent,
-			From = new Lazy<AnyOptionalSharpObject>(() =>
-				MailFromAsync(x.Id).AsTask().GetAwaiter().GetResult()) // TODO: Implement Method or adjust query!
+			From = new AsyncLazy<AnyOptionalSharpObject>(async ct => await MailFromAsync(x.Id)) // TODO: Implement Method or adjust query!
 		};
 	}
 
@@ -403,18 +400,12 @@ public class ArangoDatabase(
 		var result = await arangoDb.Query.ExecuteAsync<dynamic>(handle,
 			$"FOR v,e IN 1..1 OUTBOUND {sharpObjectId} GRAPH {DatabaseConstants.graphObjectData} RETURN v");
 
-		if (result.FirstOrDefault()?._key is string vertexKey)
+		var first = result.FirstOrDefault(); 
+		if (first?.ContainsKey("_key") ?? false)
 		{
-			var updateJson = new Dictionary<string, object>
-			{
-				{ "Key", vertexKey },
-				{ dataType, data }
-			};
-
-			await arangoDb.Document.UpdateAsync(handle,
-				DatabaseConstants.objectData,
-				updateJson,
-				mergeObjects: true);
+			var vertexKey = (string)first!["_key"];
+			await arangoDb.Graph.Vertex.UpdateAsync(handle, DatabaseConstants.graphObjectData, DatabaseConstants.objectData,
+				vertexKey, new Dictionary<string,object>{{ dataType, data }});
 			return;
 		}
 
@@ -437,8 +428,8 @@ public class ArangoDatabase(
 	{
 		// Get the edge that leads to it, otherwise we will have to create one.
 		var result = await arangoDb.Query.ExecuteAsync<JObject>(handle,
-			$"FOR v IN 1..1 OUTBOUND {sharpObjectId} GRAPH {DatabaseConstants.graphObjectData} RETURN v.{dataType}");
-		var resultingValue = result.FirstOrDefault();		
+			$"FOR v IN 1..1 OUTBOUND {sharpObjectId} GRAPH {DatabaseConstants.graphObjectData} RETURN v");
+		var resultingValue = result.FirstOrDefault()?.GetValue(dataType);
 		return resultingValue?.ToString(Formatting.None);
 	}
 

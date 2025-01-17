@@ -1,4 +1,5 @@
-﻿using SharpMUSH.Library.Commands.Database;
+﻿using DotNext.Threading;
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -51,7 +52,11 @@ public static class SendMail
 			Folder = "INBOX", // All mail goes to the INBOX!
 			Content = message,
 			Subject = subject,
-			From = new Lazy<AnyOptionalSharpObject>(sender.WithNoneOption),
+			From = new AsyncLazy<AnyOptionalSharpObject>(async _ =>
+			{
+				await ValueTask.CompletedTask;
+				return sender.WithNoneOption();
+			}),
 		};
 
 		foreach (var player in knownPlayerList)
