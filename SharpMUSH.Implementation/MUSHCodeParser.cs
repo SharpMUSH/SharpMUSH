@@ -17,13 +17,14 @@ public record MUSHCodeParser(
 	IAttributeService AttributeService,
 	INotifyService NotifyService,
 	ILocateService LocateService,
+	IExpandedObjectDataService ObjectDataService,
 	ICommandDiscoveryService CommandDiscoveryService,
 	ITaskScheduler Scheduler,
 	IConnectionService ConnectionService,
 	IMediator Mediator) : IMUSHCodeParser
 {
 	public ParserState CurrentState => State.Peek();
-
+	
 	/// <summary>
 	/// Stack may not be needed if we can bring ParserState into the custom Visitors.
 	/// 
@@ -35,7 +36,7 @@ public record MUSHCodeParser(
 	public IImmutableStack<ParserState> State { get; private init; } = ImmutableStack<ParserState>.Empty;
 
 	public IMUSHCodeParser FromState(ParserState state) => new MUSHCodeParser(PasswordService, PermissionService,
-		AttributeService, NotifyService, LocateService, CommandDiscoveryService, Scheduler,
+		AttributeService, NotifyService, LocateService, ObjectDataService, CommandDiscoveryService, Scheduler,
 		ConnectionService, Mediator, state);
 
 	public IMUSHCodeParser Empty() => this with { State = ImmutableStack<ParserState>.Empty };
@@ -48,13 +49,14 @@ public record MUSHCodeParser(
 		IAttributeService attributeService,
 		INotifyService notifyService,
 		ILocateService locateService,
+		IExpandedObjectDataService objectDataService,
 		ICommandDiscoveryService commandDiscoveryService,
 		ITaskScheduler scheduleService,
 		IConnectionService connectionService,
 		IMediator mediator,
 		ParserState state) :
 		this(passwordService, permissionService, attributeService, notifyService, locateService,
-			commandDiscoveryService, scheduleService, connectionService, mediator)
+			objectDataService, commandDiscoveryService, scheduleService, connectionService, mediator)
 		=> State = [state];
 
 	public ValueTask<CallState?> FunctionParse(MString text)
