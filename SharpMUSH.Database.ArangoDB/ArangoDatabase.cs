@@ -247,6 +247,11 @@ public class ArangoDatabase(
 		throw new NotImplementedException();
 	}
 
+	public ValueTask<IEnumerable<SharpMail>> GetAllSentMailsAsync(SharpObject sender)
+	{
+		throw new NotImplementedException();	
+	}
+
 	public ValueTask<SharpMail?> GetSentMailAsync(SharpObject sender, SharpPlayer recipient, int mail)
 	{
 		throw new NotImplementedException();

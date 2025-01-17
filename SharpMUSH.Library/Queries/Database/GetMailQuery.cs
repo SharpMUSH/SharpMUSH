@@ -11,4 +11,6 @@ public record GetMailQuery(SharpPlayer Player, int Mail, string Folder) : IQuery
 
 public record GetSentMailListQuery(SharpObject Sender, SharpPlayer Recipient) : IQuery<IEnumerable<SharpMail>>;
 
+public record GetAllSentMailListQuery(SharpObject Sender) : IQuery<IEnumerable<SharpMail>>;
+
 public record GetSentMailQuery(SharpObject Sender, int Mail, SharpPlayer Recipient) : IQuery<SharpMail?>;

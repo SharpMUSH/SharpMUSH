@@ -24,11 +24,12 @@ public static class ReviewMail
 			return MModule.single("#-1 NO SUCH PLAYER");
 		}
 		
-		var target = actualPlayer.AsPlayer; // Turn into Player
-		var mailList = await parser.Mediator.Send(new GetAllMailListQuery(target!));
-
+		// TODO: See if it's a Message List, or a single Mail, or checking all your own Sent mail.
 		
-		// TODO: Filter.
+		var target = actualPlayer.AsPlayer; // Turn into Player
+		var mailList = await parser.Mediator.Send(new GetSentMailListQuery(executor.Object(), target));
+		
+		// TODO: Mail List Filter?
 		foreach (var actualMail in mailList)
 		{
 			var dateline = MModule.pad(
@@ -52,9 +53,6 @@ public static class ReviewMail
 
 			var output = MModule.multipleWithDelimiter(MModule.single("\n"), messageBuilder);
 			await parser.NotifyService.Notify(executor, output);
-
-			await parser.Mediator.Send(new UpdateMailCommand(actualMail, MailUpdate.ReadEdit(true)));
-			
 		}
 		
 		return MModule.empty();

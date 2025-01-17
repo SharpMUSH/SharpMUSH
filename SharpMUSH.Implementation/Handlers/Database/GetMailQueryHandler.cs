@@ -38,3 +38,11 @@ public class GetSentMailListQueryHandler(ISharpDatabase database)
 		Handle(GetSentMailListQuery query, CancellationToken cancellationToken) =>
 		await database.GetSentMailsAsync(query.Sender, query.Recipient);
 }
+
+public class GetAllSentMailListQueryHandler(ISharpDatabase database)
+	: IQueryHandler<GetAllSentMailListQuery, IEnumerable<SharpMail>>
+{
+	public async ValueTask<IEnumerable<SharpMail>>
+		Handle(GetAllSentMailListQuery query, CancellationToken cancellationToken) =>
+		await database.GetAllSentMailsAsync(query.Sender);
+}
