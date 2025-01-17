@@ -13,6 +13,7 @@ public interface IMUSHCodeParser
 	IPasswordService PasswordService { get; }
 	IPermissionService PermissionService { get; }
 	ILocateService LocateService { get; }
+	IExpandedObjectDataService ObjectDataService { get; }
 	ITaskScheduler Scheduler { get; }
 	ICommandDiscoveryService CommandDiscoveryService { get; }
 	IImmutableStack<ParserState> State { get; }
