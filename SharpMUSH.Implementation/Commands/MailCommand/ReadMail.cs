@@ -11,8 +11,9 @@ public static class ReadMail
 	{
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
 		var line = MModule.repeat(MModule.single("-"), 78, MModule.empty());
+		var folder = await MessageListHelper.CurrentMailFolder(parser, executor);
 		
-		var actualMail = await parser.Mediator.Send(new GetMailQuery(executor.AsPlayer, messageNumber, "INBOX"));
+		var actualMail = await parser.Mediator.Send(new GetMailQuery(executor.AsPlayer, messageNumber, folder));
 
 		if (actualMail is null)
 		{

@@ -48,7 +48,7 @@ public static class SendMail
 			Urgent = urgent,
 			Cleared = false,
 			Forwarded = false,
-			Folder = "INBOX", // TODO: Should adjust based on each players' preferences
+			Folder = "INBOX", // All mail goes to the INBOX!
 			Content = message,
 			Subject = subject,
 			From = new Lazy<AnyOptionalSharpObject>(sender.WithNoneOption),

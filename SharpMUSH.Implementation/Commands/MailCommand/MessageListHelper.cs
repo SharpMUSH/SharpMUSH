@@ -1,6 +1,7 @@
 ﻿using OneOf;
 using OneOf.Types;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -25,6 +26,19 @@ public class ErrorOrMailList : OneOfBase<Error<string>, SharpMail[]>
 
 public static class MessageListHelper
 {
+	public static async ValueTask<string> CurrentMailFolder(IMUSHCodeParser parser, AnySharpObject executor)
+	{
+		var mailData = await parser.ObjectDataService.GetExpandedDataAsync<ExpandedMailData>(executor.Object(), typeof(ExpandedMailData));
+		
+		if (mailData == null)
+		{
+			mailData = new ExpandedMailData();
+			await parser.ObjectDataService.SetExpandedDataAsync(executor.Object(), typeof(ExpandedMailData), mailData);
+		}		
+		
+		return mailData.ActiveFolder;
+	}
+	
 	public static async ValueTask<ErrorOrMailList>  Handle(IMUSHCodeParser parser, MString? arg0, AnySharpObject executor)
 	{
 		var msgList = arg0?.ToPlainText().Trim().ToLower() ?? "folder";
@@ -43,7 +57,8 @@ public static class MessageListHelper
 		}
 		else
 		{
-			mailList = await parser.Mediator.Send(new GetMailListQuery(executor.AsPlayer, "INBOX"));
+			var currentFolder = await MessageListHelper.CurrentMailFolder(parser, executor);
+			mailList = await parser.Mediator.Send(new GetMailListQuery(executor.AsPlayer, currentFolder));
 		}
 
 		ErrorOrMailList filteredList = msgList switch
