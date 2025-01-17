@@ -11,7 +11,6 @@ namespace SharpMUSH.Implementation.Commands;
 
 public static partial class Commands
 {
-
 	[SharpCommand(Name = "@ATRLOCK", Switches = [], Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> ATRLOCK(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
