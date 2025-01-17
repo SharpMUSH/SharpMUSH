@@ -33,6 +33,30 @@ public class Startup(ArangoConfiguration config)
 		services.AddSingleton<ISharpDatabase, ArangoDatabase>();
 		services.AddSingleton<PasswordHasher<string>, PasswordHasher<string>>(
 			_ => new PasswordHasher<string>()
+			/*
+			 * TODO: PasswordHasher may not be compatible with PennMUSH Passwords. 
+			 * PBKDF2 with HMAC-SHA512, 128-bit salt, 256-bit subkey, 100000 iterations.
+			 * 
+			 * PennMUSH uses SHA1 in password_hash.
+			 * It is stored as: V:ALGO:HASH:TIMESTAMP
+			 *
+			 * V is the version number (Currently 2), ALGO is the digest algorithm
+			 * used (Default is SHA1), HASH is the hashed password. TIMESTAMP is
+			 * when it was set. If fields are added, the version gets bumped.
+			 *
+			 * HASH is salted; the first two characters of the hashed password are
+			 * randomly chosen characters that are added to the start of the
+			 * plaintext password before it's hashed. This way two characters with
+			 * the same password will have different hashed ones.
+			 *
+			 * Salt: abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789
+			 * [0-61][0-61]
+			 *
+			 * This is not considered secure enough for SharpMUSH purposes, so should
+			 * be reset after import. But this is not something that can be done in an
+			 * automated way, so SHA1 and 512 should both be supported for Check_Password.
+			 * Only 512 should be used for Set.
+			 */
 		);
 		services.AddMemoryCache();
 		services.AddSingleton<IPasswordService, PasswordService>();

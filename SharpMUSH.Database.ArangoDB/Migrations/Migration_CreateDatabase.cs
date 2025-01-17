@@ -100,6 +100,15 @@ public class Migration_CreateDatabase : IArangoMigration
 					{
 						Collection = new ArangoCollection
 						{
+							Name = DatabaseConstants.objectData,
+							Type = ArangoCollectionType.Document,
+							WaitForSync = true
+						}
+					},
+					new()
+					{
+						Collection = new ArangoCollection
+						{
 							Name = DatabaseConstants.exits,
 							Type = ArangoCollectionType.Document,
 							WaitForSync = true,
@@ -447,6 +456,15 @@ public class Migration_CreateDatabase : IArangoMigration
 					{
 						Collection = new ArangoCollection
 						{
+							Name = DatabaseConstants.hasObjectData,
+							Type = ArangoCollectionType.Edge,
+							WaitForSync = true
+						}
+					},
+					new()
+					{
+						Collection = new ArangoCollection
+						{
 							Name = DatabaseConstants.hasHome,
 							Type = ArangoCollectionType.Edge,
 							WaitForSync = true
@@ -625,6 +643,21 @@ public class Migration_CreateDatabase : IArangoMigration
 							}
 						],
 						Name = DatabaseConstants.graphFlags
+					},
+					new()
+					{
+						EdgeDefinitions =
+						[
+							new ArangoEdgeDefinition()
+							{
+								Collection = DatabaseConstants.hasObjectData,
+								To = [DatabaseConstants.objectData],
+								From = [
+									DatabaseConstants.objects
+								]
+							}
+						],
+						Name = DatabaseConstants.graphObjectData
 					},
 					new()
 					{

@@ -13,6 +13,9 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using System.Collections.Immutable;
+using System.Text.Json;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using SharpMUSH.Library.Commands.Database;
 
 namespace SharpMUSH.Database.ArangoDB;
@@ -372,6 +375,51 @@ public class ArangoDatabase(
 		var convertedResults = results.Select(ConvertMailQueryResult);
 
 		return convertedResults.FirstOrDefault();
+    }
+
+	public async Task SetExpandedObjectData(string sharpObjectId, string dataType, dynamic data)
+	{
+		// Get the edge that leads to it, otherwise we will have to create one.
+		var result = await arangoDb.Query.ExecuteAsync<dynamic>(handle,
+			$"FOR v,e IN 1..1 OUTBOUND {sharpObjectId} GRAPH {DatabaseConstants.graphObjectData} RETURN v");
+
+		if (result.FirstOrDefault()?._key is string vertexKey)
+		{
+			var updateJson = new Dictionary<string, object>
+			{
+				{ "Key", vertexKey },
+				{ dataType, data }
+			};
+
+			await arangoDb.Document.UpdateAsync(handle,
+				DatabaseConstants.objectData,
+				updateJson,
+				mergeObjects: true);
+			return;
+		}
+
+		var newJson = new Dictionary<string, object> { { dataType, data } };
+
+		var newVertex = await arangoDb.Graph.Vertex.CreateAsync<dynamic, dynamic>(handle,
+			DatabaseConstants.graphObjectData,
+			DatabaseConstants.objectData,
+			newJson);
+
+		await arangoDb.Graph.Edge.CreateAsync(handle,
+			DatabaseConstants.graphObjectData,
+			DatabaseConstants.hasObjectData, new SharpEdgeCreateRequest(
+				From: sharpObjectId,
+				To: (string)newVertex.Vertex._id)
+		);
+	}
+
+	public async ValueTask<string?> GetExpandedObjectData(string sharpObjectId, string dataType)
+	{
+		// Get the edge that leads to it, otherwise we will have to create one.
+		var result = await arangoDb.Query.ExecuteAsync<JObject>(handle,
+			$"FOR v IN 1..1 OUTBOUND {sharpObjectId} GRAPH {DatabaseConstants.graphObjectData} RETURN v.{dataType}");
+		var resultingValue = result.FirstOrDefault();		
+		return resultingValue?.ToString(Formatting.None);
 	}
 
 	private async ValueTask<IEnumerable<SharpAttributeFlag>> GetAttributeFlagsAsync(string id)

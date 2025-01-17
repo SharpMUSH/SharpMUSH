@@ -8,8 +8,8 @@ using SurrealDb.Net;
 
 namespace SharpMUSH.Database.SurrealDB;
 
-/*
- 
+/* 
+
 /// <summary>
 /// SurrealDB is not getting implemented until the library supports Transactions.
 /// </summary>
@@ -19,8 +19,5 @@ namespace SharpMUSH.Database.SurrealDB;
 public class SurrealDatabase(
 	SurrealDbClient SDBC,
 	IPasswordService PasswordService
-) // : ISharpDatabase
-{
-}
-
+) : ISharpDatabase
 */
