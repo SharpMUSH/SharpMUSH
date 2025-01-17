@@ -169,4 +169,20 @@ public interface ISharpDatabase
 	/// <returns>The deepest findable object based on depth</returns>
 	ValueTask<AnySharpContainer> GetLocationAsync(string id, int depth = 1);
 	ValueTask<IEnumerable<SharpObjectFlag>> GetObjectFlagsAsync(string id);
+	
+	/// <summary>
+	/// Sets expanded data for a SharpObject, that does not fit on the light-weight nature of a SharpObject or Attributes.
+	/// </summary>
+	/// <param name="sharpObjectId">Database Id</param>
+	/// <param name="dataType">Type being stored. Each Type gets its own storage.</param>
+	/// <param name="data">Json body to set.</param>
+	Task SetExpandedObjectData(string sharpObjectId, string dataType, dynamic data);
+
+	/// <summary>
+	/// Gets the Expanded Object Data for a SharpObject. 
+	/// </summary>
+	/// <param name="sharpObjectId">Database Id</param>
+	/// <param name="dataType">Type being queried. Each Type gets its ow n storage.</param>
+	/// <returns>A Json String with the data stored within.</returns>
+	ValueTask<string?> GetExpandedObjectData(string sharpObjectId, string dataType);
 }

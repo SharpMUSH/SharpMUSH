@@ -3,6 +3,7 @@
 public static class DatabaseConstants
 {
 	public const string objects = "node_objects";
+	public const string objectData = "node_object_data";
 	public const string players = "node_players";
 	public const string rooms = "node_rooms";
 	public const string things = "node_things";
@@ -19,6 +20,7 @@ public static class DatabaseConstants
 
 	public const string isObject = "edge_is_object";
 	public const string atLocation = "edge_at_location";
+	public const string hasObjectData = "edge_has_object_data";
 	public const string hasObjectOwner = "edge_has_object_owner";
 	public const string hasParent = "edge_has_parent";
 	public const string hasHome = "edge_has_home";
@@ -35,6 +37,7 @@ public static class DatabaseConstants
 	public const string receivedMail = "edge_received_mail";
 
 	public const string graphObjects = "graph_objects";
+	public const string graphObjectData = "graph_object_data";
 	public const string graphPowers = "graph_powers";
 	public const string graphFlags = "graph_flags";
 	public const string graphAttributes = "graph_attributes";
