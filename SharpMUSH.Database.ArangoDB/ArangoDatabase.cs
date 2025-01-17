@@ -242,19 +242,34 @@ public class ArangoDatabase(
 		=> await arangoDb.Query.ExecuteAsync<SharpObjectFlag>(handle,
 			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphFlags} RETURN v");
 
-	public ValueTask<IEnumerable<SharpMail>> GetSentMailsAsync(SharpObject sender, SharpPlayer recipient)
+	public async ValueTask<IEnumerable<SharpMail>> GetSentMailsAsync(SharpObject sender, SharpPlayer recipient)
 	{
-		throw new NotImplementedException();
+		var results = await arangoDb.Query.ExecuteAsync<SharpMailQueryResult>(handle,
+			$"FOR path IN 1..1 INBOUND ALL_SHORTEST_PATH {recipient.Id} TO {sender.Id} GRAPH {DatabaseConstants.graphMail} RETURN path.vertices[1]");
+
+		var convertedResults = results.Select(ConvertMailQueryResult);
+
+		return convertedResults;
 	}
 
-	public ValueTask<IEnumerable<SharpMail>> GetAllSentMailsAsync(SharpObject sender)
+	public async ValueTask<IEnumerable<SharpMail>> GetAllSentMailsAsync(SharpObject id)
 	{
-		throw new NotImplementedException();	
+		var results = await arangoDb.Query.ExecuteAsync<SharpMailQueryResult>(handle,
+			$"FOR v IN 1..1 INBOUND {id.Id} GRAPH {DatabaseConstants.graphMail} RETURN v");
+
+		var convertedResults = results.Select(ConvertMailQueryResult);
+
+		return convertedResults;
 	}
 
-	public ValueTask<SharpMail?> GetSentMailAsync(SharpObject sender, SharpPlayer recipient, int mail)
+	public async ValueTask<SharpMail?> GetSentMailAsync(SharpObject sender, SharpPlayer recipient, int mail)
 	{
-		throw new NotImplementedException();
+		var results = await arangoDb.Query.ExecuteAsync<SharpMailQueryResult>(handle,
+			$"FOR path IN 1..1 INBOUND ALL_SHORTEST_PATH {recipient.Id} TO {sender.Id} GRAPH {DatabaseConstants.graphMail} RETURN path.vertices[1]");
+
+		var convertedResults = results.Select(ConvertMailQueryResult).Skip(mail).Take(1);
+
+		return convertedResults.FirstOrDefault();
 	}
 
 	public async ValueTask<string[]> GetMailFoldersAsync(SharpPlayer id)
