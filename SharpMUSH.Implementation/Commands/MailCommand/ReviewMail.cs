@@ -25,14 +25,14 @@ public static class ReviewMail
 		
 		// TODO: See if it's a Message List, or a single Mail, or checking all your own Sent mail.
 		
-		var target = actualPlayer.AsPlayer; // Turn into Player
+		var target = actualPlayer.AsPlayer; 
 		var mailList = await parser.Mediator.Send(new GetSentMailListQuery(executor.Object(), target));
 		
 		// TODO: Mail List Filter?
 		foreach (var actualMail in mailList)
 		{
 			var dateline = MModule.pad(
-				MModule.single(actualMail!.DateSent.ToString("ddd MMM dd HH:mm yyyy")),
+				MModule.single(actualMail.DateSent.ToString("ddd MMM dd HH:mm yyyy")),
 				MModule.single(" "),
 				25,
 				MModule.PadType.Right,

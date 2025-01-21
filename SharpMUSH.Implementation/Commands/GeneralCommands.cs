@@ -782,35 +782,37 @@ public static partial class Commands
 			arg1 = arg1CallState?.Message;
 		}
 
-		var response = switches switch
+		var response = switches.AsSpan() switch
 		{
-			[.., "FOLDER"] => await FolderMail.Handle(parser, arg0, arg1, switches),
-			[.., "UNFOLDER"] => await FolderMail.Handle(parser, arg0, arg1, switches),
-			[.., "FILE"] => await FolderMail.Handle(parser, arg0, arg1, switches),
-			[.., "CLEAR"] => await StatusMail.Handle(parser, arg0, arg1, "CLEAR"),
-			[.., "UNCLEAR"] => await StatusMail.Handle(parser, arg0, arg1, "UNCLEAR"),
-			[.., "TAG"] => await StatusMail.Handle(parser, arg0, arg1, "TAG"),
-			[.., "UNTAG"] => await StatusMail.Handle(parser, arg0, arg1, "UNTAG"),
-			[.., "UNREAD"] => await StatusMail.Handle(parser, arg0, arg1, "UNREAD"),
-			[.., "STATUS"] => await StatusMail.Handle(parser, arg0, arg1, "STATUS"),
-			[.., "CSTATS"] => await StatsMail.Handle(parser, arg0, switches),
-			[.., "STATS"] => await StatsMail.Handle(parser, arg0, switches),
-			[.., "DSTATS"] => await StatsMail.Handle(parser, arg0, switches),
-			[.., "FSTATS"] => await StatsMail.Handle(parser, arg0, switches),
+			[.., "FOLDER"] when executor.IsPlayer => await FolderMail.Handle(parser, arg0, arg1, switches),
+			[.., "UNFOLDER"] when executor.IsPlayer => await FolderMail.Handle(parser, arg0, arg1, switches),
+			[.., "FILE"] when executor.IsPlayer => await FolderMail.Handle(parser, arg0, arg1, switches),
+			[.., "CLEAR"] when executor.IsPlayer => await StatusMail.Handle(parser, arg0, arg1, "CLEAR"),
+			[.., "UNCLEAR"] when executor.IsPlayer => await StatusMail.Handle(parser, arg0, arg1, "UNCLEAR"),
+			[.., "TAG"] when executor.IsPlayer => await StatusMail.Handle(parser, arg0, arg1, "TAG"),
+			[.., "UNTAG"] when executor.IsPlayer => await StatusMail.Handle(parser, arg0, arg1, "UNTAG"),
+			[.., "UNREAD"] when executor.IsPlayer => await StatusMail.Handle(parser, arg0, arg1, "UNREAD"),
+			[.., "STATUS"] when executor.IsPlayer => await StatusMail.Handle(parser, arg0, arg1, "STATUS"),
+			[.., "CSTATS"] when executor.IsPlayer => await StatsMail.Handle(parser, arg0, switches),
+			[.., "STATS"] when executor.IsPlayer => await StatsMail.Handle(parser, arg0, switches),
+			[.., "DSTATS"] when executor.IsPlayer => await StatsMail.Handle(parser, arg0, switches),
+			[.., "FSTATS"] when executor.IsPlayer => await StatsMail.Handle(parser, arg0, switches),
 			[.., "DEBUG"] => await AdminMail.Handle(parser, arg0, arg1, switches),
 			[.., "NUKE"] => await AdminMail.Handle(parser, arg0, arg1, switches),
 			[.., "REVIEW"] when (arg1?.Length ?? 0) != 0 && int.TryParse(arg1?.ToPlainText(), out var number) 
 				=> await ReviewMail.Handle(parser, arg0, Math.Max(0,number - 1), switches),
-			[.., "RETRACT"] => await RetractMail.Handle(parser, arg0, arg1, switches),
-			[.., "FWD"] => await ForwardMail.Handle(parser, arg0, arg1, switches),
+			[.., "RETRACT"] when !string.IsNullOrWhiteSpace(arg0?.ToPlainText()) && !string.IsNullOrWhiteSpace(arg1?.ToPlainText()) 
+				=> await RetractMail.Handle(parser, arg0.ToPlainText(), arg1.ToPlainText()),
+			[.., "FWD"] when executor.IsPlayer && int.TryParse(arg0?.ToPlainText(), out var number) && !string.IsNullOrWhiteSpace(arg1?.ToPlainText()) 
+				=> await ForwardMail.Handle(parser, number, arg1.ToPlainText()),
 			[.., "SEND"] or [.., "URGENT"] or [.., "SILENT"] or [.., "NOSIG"] or []
 				when arg0?.Length != 0 && arg1?.Length != 0
 				=> await SendMail.Handle(parser, arg0!, arg1!, switches),
-			[.., "READ"] or [] when (arg1?.Length ?? 0) == 0 && int.TryParse(arg0?.ToPlainText(), out var number)
+			[.., "READ"] or [] when executor.IsPlayer && (arg1?.Length ?? 0) == 0 && int.TryParse(arg0?.ToPlainText(), out var number)
 				=> await ReadMail.Handle(parser, Math.Max(0,number - 1), switches),
-			[.., "LIST"] or [] when (arg1?.Length ?? 0) == 0 
+			[.., "LIST"] or [] when executor.IsPlayer && (arg1?.Length ?? 0) == 0 
 				=> await ListMail.Handle(parser, arg0, arg1, switches),
-			_ => MModule.single("#-1 UNKNOWN STATE")
+			_ => MModule.single("#-1 BAD ARGUMENTS TO MAIL COMMAND")
 		};
 
 		return new CallState(response);

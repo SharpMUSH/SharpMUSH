@@ -1,5 +1,6 @@
 ﻿using System.Collections.Immutable;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
@@ -22,12 +23,19 @@ public static class AdminMail
 		switch (switches)
 		{
 			case [.., "DEBUG"]:
+				// At this time, this serves no purpose in SharpMUSH.
 				await parser.NotifyService.Notify(executor, "MAIL: NOTHING TO DEBUG");
 				return MModule.empty();
-			case [.., "NUKE"] when executor.IsPlayer:
-				var mail = (await parser.Mediator.Send(new GetAllMailListQuery(executor.AsPlayer))).ToImmutableArray();
-				// TODO: Implement database and Mediator command & command handler to delete mail.
-				return MModule.single(mail.Length.ToString());
+			case [.., "NUKE"] when executor.IsGod():
+				// TODO: This deletes one's own mail, not all mail on the server.
+				// A new command is needed.
+				var mailList = (await parser.Mediator.Send(new GetAllMailListQuery(executor.AsPlayer))).ToImmutableArray();
+				foreach (var mail in mailList)
+				{
+					await parser.Mediator.Send(new DeleteMailCommand(mail));
+				}
+				await parser.NotifyService.Notify(executor, "MAIL: Mail deleted.");
+				return MModule.single(mailList.Length.ToString());
 			default: 
 				await parser.NotifyService.Notify(executor, "Invalid arguments for @mail admin command.");
 				return MModule.single("#-1 Invalid arguments for @mail admin command.");
