@@ -21,3 +21,30 @@ public class UpdateMailCommandHandler(ISharpDatabase database) : ICommandHandler
 		return Unit.Value;
 	}
 }
+
+public class DeleteMailHandler(ISharpDatabase database) : ICommandHandler<DeleteMailCommand>
+{
+	public async ValueTask<Unit> Handle(DeleteMailCommand command, CancellationToken cancellationToken)
+	{
+		await database.DeleteMailAsync(command.Mail.Id!);
+		return Unit.Value;
+	}
+}
+
+public class RenameMailFolderHandler(ISharpDatabase database) : ICommandHandler<RenameMailFolderCommand>
+{
+	public async ValueTask<Unit> Handle(RenameMailFolderCommand command, CancellationToken cancellationToken)
+	{
+		await database.RenameMailFolderAsync(command.Owner, command.FolderName, command.NewFolderName);
+		return Unit.Value;
+	}
+}
+
+public class MoveMailFolderHandler(ISharpDatabase database) : ICommandHandler<MoveMailFolderCommand>
+{
+	public async ValueTask<Unit> Handle(MoveMailFolderCommand command, CancellationToken cancellationToken)
+	{
+		await database.MoveMailFolderAsync(command.Mail.Id!, command.NewFolderName);
+		return Unit.Value;
+	}
+}

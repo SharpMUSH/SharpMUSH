@@ -1,4 +1,6 @@
-﻿using Mediator;
+﻿using System.Text.Json;
+using System.Text.Json.Serialization;
+using Mediator;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
@@ -7,18 +9,25 @@ namespace SharpMUSH.Library.Services;
 
 public class ExpandedObjectDataService(IMediator mediator) : IExpandedObjectDataService
 {
-	public async ValueTask<T?> GetExpandedDataAsync<T>(SharpObject obj, Type type)
+	private readonly JsonSerializerOptions _jsonSerializerOptionForNull = new()
 	{
-		var result = await mediator.Send(new ExpandedDataQuery(obj, type.Name));
-		if (result is null) return default;
-		
+		DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+	};
+
+	private readonly JsonSerializerOptions _jsonSerializerOptionForOthers = new();
+
+	public async ValueTask<T?> GetExpandedDataAsync<T>(SharpObject obj) where T : class
+	{
+		var result = await mediator.Send(new ExpandedDataQuery(obj, typeof(T).Name));
+		if (result is null) return null;
+
 		var conversion = System.Text.Json.JsonSerializer.Deserialize<T>(result);
-		return conversion ?? default;
+		return conversion;
 	}
 
-	public async ValueTask SetExpandedDataAsync<T>(SharpObject obj, Type type, T data)
+	public async ValueTask SetExpandedDataAsync<T>(T data, SharpObject obj, bool ignoreNull = false) where T : class
 	{
-		var json = System.Text.Json.JsonSerializer.Serialize(obj);
-		await mediator.Send(new SetExpandedDataCommand(obj, type.Name, json));
+		var json = JsonSerializer.Serialize(data, ignoreNull ? _jsonSerializerOptionForNull : _jsonSerializerOptionForOthers);
+		await mediator.Send(new SetExpandedDataCommand(obj, typeof(T).Name, json));
 	}
 }

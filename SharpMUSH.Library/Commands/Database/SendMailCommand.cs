@@ -8,6 +8,12 @@ public record SendMailCommand(SharpObject Sender, SharpPlayer Recipient, SharpMa
 
 public record UpdateMailCommand(SharpMail Mail, MailUpdate Update) : ICommand;
 
+public record DeleteMailCommand(SharpMail Mail) : ICommand;
+
+public record RenameMailFolderCommand(SharpPlayer Owner, string FolderName, string NewFolderName) : ICommand;
+
+public record MoveMailFolderCommand(SharpMail Mail, string NewFolderName) : ICommand;
+
 [GenerateOneOf]
 public class MailUpdate : OneOfBase<bool?, bool?, bool?, bool?>
 {

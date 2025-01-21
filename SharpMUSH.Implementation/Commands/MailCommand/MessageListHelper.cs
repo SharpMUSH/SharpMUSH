@@ -12,12 +12,14 @@ namespace SharpMUSH.Implementation.Commands.MailCommand;
 [GenerateOneOf]
 public class ErrorOrMailList : OneOfBase<Error<string>, SharpMail[]>
 {
-	private ErrorOrMailList(OneOf<Error<string>, SharpMail[]> input) : base(input) { }
+	private ErrorOrMailList(OneOf<Error<string>, SharpMail[]> input) : base(input)
+	{
+	}
 
 	public bool IsError => IsT0;
 	public string AsError => AsT0.Value;
 	public SharpMail[] AsMailList => AsT1;
-	
+
 	public static implicit operator ErrorOrMailList(Error<string> x) => new(x);
 	public static implicit operator ErrorOrMailList(SharpMail[] x) => new(x);
 }
@@ -26,20 +28,20 @@ public static class MessageListHelper
 {
 	public static async ValueTask<string> CurrentMailFolder(IMUSHCodeParser parser, AnySharpObject executor)
 	{
-		var mailData = await parser.ObjectDataService.GetExpandedDataAsync<ExpandedMailData>(executor.Object(), typeof(ExpandedMailData));
+		var mailData = await parser.ObjectDataService.GetExpandedDataAsync<ExpandedMailData>(executor.Object());
 
-		if (mailData != null)
+		if (mailData?.ActiveFolder != null)
 		{
-			return mailData.ActiveFolder;
+			return mailData.ActiveFolder!;
 		}
 
 		mailData = new ExpandedMailData(Folders: ["INBOX"], ActiveFolder: "INBOX");
-		await parser.ObjectDataService.SetExpandedDataAsync(executor.Object(), typeof(ExpandedMailData), mailData);
+		await parser.ObjectDataService.SetExpandedDataAsync(mailData, executor.Object());
 
-		return mailData.ActiveFolder;
+		return mailData.ActiveFolder!;
 	}
-	
-	public static async ValueTask<ErrorOrMailList>  Handle(IMUSHCodeParser parser, MString? arg0, AnySharpObject executor)
+
+	public static async ValueTask<ErrorOrMailList> Handle(IMUSHCodeParser parser, MString? arg0, AnySharpObject executor)
 	{
 		var msgList = arg0?.ToPlainText().Trim().ToLower() ?? "folder";
 		var folderSplit = msgList.Split(':');
@@ -67,13 +69,13 @@ public static class MessageListHelper
 				=> new Error<string>("MAIL: Invalid message specification"),
 			['*', .. var person] // TODO: Fix this to use a Locate() to find the person.
 				=> await mailList.ToAsyncEnumerable()
-					.WhereAwait(async x => 
+					.WhereAwait(async x =>
 						(await x.From.WithCancellation(CancellationToken.None))
 						.Object()?.Name.StartsWith(person) ?? false)
 					.ToArrayAsync(),
 			['~', .. var days] when int.TryParse(days, out var exactDay)
-				=> mailList.Where(x => x.DateSent >= DateTimeOffset.UtcNow.AddDays(-exactDay-1) 
-				                       && x.DateSent <=  DateTimeOffset.UtcNow.AddDays(-exactDay)).ToArray(),
+				=> mailList.Where(x => x.DateSent >= DateTimeOffset.UtcNow.AddDays(-exactDay - 1)
+				                       && x.DateSent <= DateTimeOffset.UtcNow.AddDays(-exactDay)).ToArray(),
 			['>', .. var days] when int.TryParse(days, out var afterDay)
 				=> mailList.Where(x => x.DateSent >= DateTimeOffset.UtcNow.AddDays(-afterDay)).ToArray(),
 			['<', .. var days] when int.TryParse(days, out var beforeDay)
@@ -105,7 +107,7 @@ public static class MessageListHelper
 				=> mailList.ToArray(),
 			_ => new Error<string>("MAIL: Invalid message specification")
 		};
-		
+
 		return filteredList;
 	}
 }
