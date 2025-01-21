@@ -1,4 +1,6 @@
 ﻿using System.Collections.Immutable;
+using SharpMUSH.Library;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -11,6 +13,12 @@ public static class AdminMail
 	{
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
 
+		if (!(executor.IsGod() || executor.IsWizard()))
+		{
+			await parser.NotifyService.Notify(executor, Errors.ErrorPerm);
+			return MModule.single(Errors.ErrorPerm);
+		}
+		
 		switch (switches)
 		{
 			case [.., "DEBUG"]:
