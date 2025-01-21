@@ -288,8 +288,7 @@ public class ArangoDatabase(
 	}
 
 	private SharpMail ConvertMailQueryResult(SharpMailQueryResult x)
-	{
-		return new SharpMail
+		=> new()
 		{
 			Id = x.Id,
 			DateSent = DateTimeOffset.FromUnixTimeMilliseconds(x.DateSent),
@@ -302,26 +301,28 @@ public class ArangoDatabase(
 			Forwarded = x.Forwarded,
 			Tagged = x.Tagged,
 			Urgent = x.Urgent,
-			From = new AsyncLazy<AnyOptionalSharpObject>(async ct => await MailFromAsync(x.Id)) // TODO: Implement Method or adjust query!
+			From = new AsyncLazy<AnyOptionalSharpObject>(async ct =>
+				await MailFromAsync(x.Id))
 		};
-	}
 
 	public async ValueTask<IEnumerable<SharpMail>> GetIncomingMailsAsync(SharpPlayer id, string folder)
 	{
 		var results = await arangoDb.Query.ExecuteAsync<SharpMailQueryResult>(handle,
 			$"FOR v IN 1..1 OUTBOUND {id.Id} GRAPH {DatabaseConstants.graphMail} FILTER v.Folder == {folder} RETURN v");
 
-		var convertedResults = results.Select(ConvertMailQueryResult);
-
-		return convertedResults;
+		return results.Select(ConvertMailQueryResult);
 	}
 
 	private async ValueTask<AnyOptionalSharpObject> MailFromAsync(string id)
 	{
 		var edges = await arangoDb.Query.ExecuteAsync<SharpEdgeQueryResult>(handle,
 			$"FOR v,e IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphMail} RETURN e");
-		var edge = edges.First();
-		return await GetObjectNodeAsync(edge!.To);
+
+		return edges switch
+		{
+			null or [] => new None(),
+			[var edge, ..] => await GetObjectNodeAsync(edge.From)
+		};
 	}
 
 	public async ValueTask SendMailAsync(SharpObject from, SharpPlayer to, SharpMail mail)
@@ -392,7 +393,7 @@ public class ArangoDatabase(
 		var convertedResults = results.Select(ConvertMailQueryResult);
 
 		return convertedResults.FirstOrDefault();
-    }
+	}
 
 	public async Task SetExpandedObjectData(string sharpObjectId, string dataType, dynamic data)
 	{
@@ -400,12 +401,12 @@ public class ArangoDatabase(
 		var result = await arangoDb.Query.ExecuteAsync<dynamic>(handle,
 			$"FOR v,e IN 1..1 OUTBOUND {sharpObjectId} GRAPH {DatabaseConstants.graphObjectData} RETURN v");
 
-		var first = result.FirstOrDefault(); 
+		var first = result.FirstOrDefault();
 		if (first?.ContainsKey("_key") ?? false)
 		{
 			var vertexKey = (string)first!["_key"];
 			await arangoDb.Graph.Vertex.UpdateAsync(handle, DatabaseConstants.graphObjectData, DatabaseConstants.objectData,
-				vertexKey, new Dictionary<string,object>{{ dataType, data }});
+				vertexKey, new Dictionary<string, object> { { dataType, data } });
 			return;
 		}
 
