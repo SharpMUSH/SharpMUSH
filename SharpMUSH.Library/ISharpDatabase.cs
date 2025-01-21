@@ -189,6 +189,12 @@ public interface ISharpDatabase
 	ValueTask SendMailAsync(SharpObject from, SharpPlayer to, SharpMail mail);
 	
 	ValueTask UpdateMailAsync(string mailId, MailUpdate commandMail);
+	
+	ValueTask DeleteMailAsync(string mailId);
+	
+	ValueTask RenameMailFolderAsync(SharpPlayer player, string folder, string newFolder);
+	
+	ValueTask MoveMailFolderAsync(string mailId, string newFolder);
 		
 	/// <summary>
 	/// Sets expanded data for a SharpObject, that does not fit on the light-weight nature of a SharpObject or Attributes.

@@ -35,6 +35,7 @@ public class FolderMail
 				break;
 
 			case ["FOLDER"] when (arg0, arg1) is ({ } folder, { } newName):
+				// DB call to rename FolderA to FolderB exists, but needs a Mediator version.
 				//         This command gives <folder#> a name. 
 				// TODO: Consider making 'mail folder' a Vertex type.
 				// TODO: Consider a better command
@@ -57,6 +58,10 @@ public class FolderMail
 				}
 
 				var list = maybeList.AsMailList;
+				foreach (var mail in list)
+				{
+					// Need to add the call to the Mediator. The database call exists.
+				}
 				// TODO: Move each to the correct folder.
 				return folder;
 

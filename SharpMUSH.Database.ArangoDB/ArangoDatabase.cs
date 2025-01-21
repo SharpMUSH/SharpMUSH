@@ -385,6 +385,23 @@ public class ArangoDatabase(
 		}
 	}
 
+	public async ValueTask DeleteMailAsync(string mailId)
+	{
+		var key = mailId.Split("/")[1];
+		await arangoDb.Graph.Vertex.RemoveAsync(handle, DatabaseConstants.graphMail, DatabaseConstants.mails, key);
+	}
+
+	public async ValueTask RenameMailFolderAsync(SharpPlayer player, string folder, string newFolder)
+	{
+		var list = await GetIncomingMailsAsync(player, folder);
+		var updates = list.Select(x => new { Key = x.Id!.Split("/")[1], Folder = newFolder });
+		await arangoDb.Document.UpdateManyAsync(handle, DatabaseConstants.mails, updates);
+	}
+
+	public async ValueTask MoveMailFolderAsync(string mailId, string newFolder)
+		=> await arangoDb.Graph.Vertex.UpdateAsync(handle, DatabaseConstants.graphMail, DatabaseConstants.mails,
+			mailId.Split("/")[1], new { Folder = newFolder });
+
 	public async ValueTask<SharpMail?> GetIncomingMailAsync(SharpPlayer id, string folder, int mail)
 	{
 		var results = await arangoDb.Query.ExecuteAsync<SharpMailQueryResult>(handle,
