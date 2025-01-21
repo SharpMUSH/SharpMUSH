@@ -110,4 +110,65 @@ public static class MessageListHelper
 
 		return filteredList;
 	}
+	
+	public static async ValueTask<ErrorOrMailList> HandleSent(IMUSHCodeParser parser, MString? arg0, AnySharpObject executor, SharpPlayer target)
+	{
+		var msgList = arg0?.ToPlainText().Trim().ToLower() ?? "folder";
+		var folderSplit = msgList.Split(':');
+		var rangeSplit = msgList.Split('-');
+		IEnumerable<SharpMail> mailList;
+
+		if (folderSplit.Length == 2 && !string.IsNullOrWhiteSpace(folderSplit[0]))
+		{
+			mailList = await parser.Mediator.Send(new GetSentMailListQuery(executor.Object(), target));
+			msgList = folderSplit[1];
+		}
+		else if (msgList == "all")
+		{
+			mailList = await parser.Mediator.Send(new GetAllSentMailListQuery(executor.Object()));
+		}
+		else
+		{
+			mailList = await parser.Mediator.Send(new GetSentMailListQuery(executor.Object(), target));
+		}
+
+		ErrorOrMailList filteredList = msgList switch
+		{
+			_ when msgList.Contains(' ')
+				=> new Error<string>("MAIL: Invalid message specification"),
+			['~', .. var days] when int.TryParse(days, out var exactDay)
+				=> mailList.Where(x => x.DateSent >= DateTimeOffset.UtcNow.AddDays(-exactDay - 1)
+				                       && x.DateSent <= DateTimeOffset.UtcNow.AddDays(-exactDay)).ToArray(),
+			['>', .. var days] when int.TryParse(days, out var afterDay)
+				=> mailList.Where(x => x.DateSent >= DateTimeOffset.UtcNow.AddDays(-afterDay)).ToArray(),
+			['<', .. var days] when int.TryParse(days, out var beforeDay)
+				=> mailList.Where(x => x.DateSent <= DateTimeOffset.UtcNow.AddDays(-beforeDay)).ToArray(),
+			"read"
+				=> mailList.Where(x => x.Read).ToArray(),
+			"unread"
+				=> mailList.Where(x => !x.Read).ToArray(),
+			"cleared"
+				=> mailList.Where(x => x.Cleared).ToArray(),
+			"tagged"
+				=> mailList.Where(x => x.Tagged).ToArray(),
+			"urgent"
+				=> mailList.Where(x => x.Urgent).ToArray(),
+			_ when rangeSplit.Length == 2
+			       && int.TryParse(rangeSplit[0], out var left) && int.TryParse(rangeSplit[1], out var right)
+				=> mailList.Skip(left - 1).Take(right - left).ToArray(),
+			_ when rangeSplit.Length == 2
+			       && int.TryParse(rangeSplit[0], out var left) && !int.TryParse(rangeSplit[1], out _)
+				=> mailList.Skip(left - 1).ToArray(),
+			_ when rangeSplit.Length == 2
+			       && !int.TryParse(rangeSplit[0], out _) && int.TryParse(rangeSplit[1], out var right)
+				=> mailList.Take(right).ToArray(),
+			_ when int.TryParse(msgList, out var specificMessage)
+				=> mailList.Skip(specificMessage).Take(1).ToArray(),
+			[] when msgList.Length == 0
+				=> mailList.ToArray(),
+			_ => new Error<string>("MAIL: Invalid message specification")
+		};
+
+		return filteredList;
+	}
 }

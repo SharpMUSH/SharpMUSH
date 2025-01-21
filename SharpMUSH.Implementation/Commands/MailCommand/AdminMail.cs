@@ -25,7 +25,7 @@ public static class AdminMail
 			case [.., "DEBUG"]:
 				// At this time, this serves no purpose in SharpMUSH.
 				await parser.NotifyService.Notify(executor, "MAIL: NOTHING TO DEBUG");
-				return MModule.empty();
+				return MModule.single("MAIL: NOTHING TO DEBUG");
 			case [.., "NUKE"] when executor.IsGod():
 				// TODO: This deletes one's own mail, not all mail on the server.
 				// A new command is needed.

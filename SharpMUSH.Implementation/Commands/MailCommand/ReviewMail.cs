@@ -7,30 +7,45 @@ namespace SharpMUSH.Implementation.Commands.MailCommand;
 
 public static class ReviewMail
 {
-	public static async ValueTask<MString>  Handle(IMUSHCodeParser parser, MString? arg0, int messageNumber, string[] switches)
+	public static async ValueTask<MString>  Handle(IMUSHCodeParser parser, MString? arg0, MString? msgListArg, string[] switches)
 	{
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
 		var line = MModule.repeat(MModule.single("-"), 78, MModule.empty());
-		var name = arg0?.ToPlainText() ?? "";
+		var name = arg0?.ToPlainText() ?? "all";
 		
-		var actualPlayer = await parser.LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, name,
-			LocateFlags.PlayersPreference | LocateFlags.MatchWildCardForPlayerName |
-			LocateFlags.MatchOptionalWildCardForPlayerName | LocateFlags.OnlyMatchTypePreference);
+		var target = executor.AsPlayer;
 
-		if (!actualPlayer.IsPlayer)
+		if (string.IsNullOrWhiteSpace(arg0?.ToPlainText()))
 		{
-			await parser.NotifyService.Notify(executor, $"MAIL: {name} not found.");
-			return MModule.single("#-1 NO SUCH PLAYER");
+			var actualPlayer = await parser.LocateService.LocateAndNotifyIfInvalid(parser, 
+				executor, executor, name,
+				LocateFlags.PlayersPreference |
+				LocateFlags.MatchWildCardForPlayerName |
+				LocateFlags.MatchOptionalWildCardForPlayerName |
+				LocateFlags.OnlyMatchTypePreference);
+
+			if (!actualPlayer.IsPlayer)
+			{
+				await parser.NotifyService.Notify(executor, $"MAIL: {name} not found.");
+				return MModule.single("#-1 NO SUCH PLAYER");
+			}
+		
+			target = actualPlayer.AsPlayer;
 		}
 		
-		// TODO: See if it's a Message List, or a single Mail, or checking all your own Sent mail.
+		var maybeMailList = await MessageListHelper.Handle(parser, msgListArg, target);
 		
-		var target = actualPlayer.AsPlayer; 
-		var mailList = await parser.Mediator.Send(new GetSentMailListQuery(executor.Object(), target));
+		if (!maybeMailList.IsError)
+		{
+			return MModule.single(maybeMailList.AsError);
+		}
 		
-		// TODO: Mail List Filter?
+		var mailList = maybeMailList.AsMailList;
+		var i = 0;
+		
 		foreach (var actualMail in mailList)
 		{
+			i++;
 			var dateline = MModule.pad(
 				MModule.single(actualMail.DateSent.ToString("ddd MMM dd HH:mm yyyy")),
 				MModule.single(" "),
@@ -43,7 +58,7 @@ public static class ReviewMail
 			{
 				line,
 				MModule.single($"From: {mailFrom.Object()!.Name}"),
-				MModule.single($"Date: {dateline,-20} Folder: {actualMail.Folder,-20} Message: {messageNumber + 1,5}"),
+				MModule.single($"Date: {dateline,-20} Folder: {actualMail.Folder,-20} Message: {i,5}"),
 				MModule.single($"Status: {(actualMail.Read ? "Read" : "Unread")}"),
 				MModule.concat(MModule.single("Subject: "), actualMail.Subject),
 				line,

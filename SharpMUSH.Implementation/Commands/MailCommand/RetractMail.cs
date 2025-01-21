@@ -14,16 +14,16 @@ public static class RetractMail
 			executor, executor, target,
 			LocateFlags.PlayersPreference | LocateFlags.OnlyMatchTypePreference);
 
-		var sentMails = await MessageListHelper.Handle(parser, MModule.single(msgList), executor);
+		if (!maybeLocate.IsValid())
+		{
+			return MModule.single("#-1 NO SUCH PLAYER");
+		}
+
+		var sentMails = await MessageListHelper.Handle(parser, MModule.single(msgList), maybeLocate.AsPlayer);
 		
 		if (!sentMails.IsError)
 		{
 			return MModule.single(sentMails.AsError);
-		}
-
-		if (!maybeLocate.IsValid())
-		{
-			return MModule.single("#-1 NO SUCH PLAYER");
 		}
 		
 		var foundMailList = sentMails.AsMailList;
