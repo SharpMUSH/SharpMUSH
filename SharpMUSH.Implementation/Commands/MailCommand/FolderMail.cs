@@ -30,13 +30,13 @@ public static class FolderMail
 				return await SetCurrentMailFolder(parser, folderInfo, folder, executor);
 
 			case ["FOLDER"] when (arg0, arg1) is ({ } folder, { } newName):
-				return await RenameMailFolder(parser, arg0, arg1, folder, executor, executorPlayer, newName, folderInfo);
+				return await RenameMailFolder(parser, folder, executor, executorPlayer, newName, folderInfo);
 
 			case ["UNFOLDER"] when (arg0, arg1) is ({ } folder, null):
-				return await UnMailFolder(parser, arg0, executorPlayer, folder, executor, folderInfo);
+				return await UnMailFolder(parser, executorPlayer, folder, executor, folderInfo);
 
 			case ["FILE"] when (arg0, arg1) is ({ } msgList, { } folder):
-				return await MoveToMailFolder(parser, arg1, msgList, executor, folder, folderInfo);
+				return await MoveToMailFolder(parser, msgList, executor, folder, folderInfo);
 
 			default:
 				await parser.NotifyService.Notify(executor, "Invalid arguments for @mail folder command.");
@@ -44,7 +44,7 @@ public static class FolderMail
 		}
 	}
 
-	private static async Task<MString> MoveToMailFolder(IMUSHCodeParser parser, MString arg1, MString msgList,
+	private static async Task<MString> MoveToMailFolder(IMUSHCodeParser parser, MString msgList,
 		AnySharpObject executor, MString folder, ExpandedMailData? folderInfo)
 	{
 		var maybeList = await MessageListHelper.Handle(parser, msgList, executor);
@@ -65,7 +65,7 @@ public static class FolderMail
 			new ExpandedMailData(
 				Folders: (folderInfo?.Folders ?? [])
 				.ToImmutableHashSet()
-				.Add(arg1.ToPlainText())
+				.Add(folder.ToPlainText())
 				.ToArray()),
 			executor.Object(), 
 			ignoreNull: true);
@@ -73,7 +73,7 @@ public static class FolderMail
 		return folder;
 	}
 
-	private static async Task<MString> UnMailFolder(IMUSHCodeParser parser, MString arg0, SharpPlayer executorPlayer, MString folder,
+	private static async Task<MString> UnMailFolder(IMUSHCodeParser parser, SharpPlayer executorPlayer, MString folder,
 		AnySharpObject executor, ExpandedMailData? folderInfo)
 	{
 		await parser.Mediator.Send(new RenameMailFolderCommand(executorPlayer, folder.ToPlainText(), "INBOX"));
@@ -82,14 +82,14 @@ public static class FolderMail
 			new ExpandedMailData(
 				Folders: (folderInfo?.Folders ?? [])
 				.ToImmutableArray()
-				.Remove(arg0.ToPlainText())
+				.Remove(folder.ToPlainText())
 				.ToArray()),
 			executor.Object(), 
 			ignoreNull: true);
 		return MModule.single("");
 	}
 
-	private static async Task<MString> RenameMailFolder(IMUSHCodeParser parser, MString arg0, MString arg1, MString folder,
+	private static async Task<MString> RenameMailFolder(IMUSHCodeParser parser, MString folder,
 		AnySharpObject executor, SharpPlayer executorPlayer, MString newName, ExpandedMailData? folderInfo)
 	{
 		if (folder.ToPlainText().Equals("INBOX", StringComparison.InvariantCultureIgnoreCase))
@@ -105,7 +105,7 @@ public static class FolderMail
 			new ExpandedMailData(
 				Folders: (folderInfo?.Folders ?? [])
 				.ToImmutableHashSet()
-				.Remove(arg0.ToPlainText()).Add(arg1.ToPlainText())
+				.Remove(folder.ToPlainText()).Add(newName.ToPlainText())
 				.ToArray()),
 			executor.Object(), 
 			ignoreNull: true);

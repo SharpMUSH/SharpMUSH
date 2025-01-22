@@ -21,7 +21,7 @@ public static class RetractMail
 
 		var sentMails = await MessageListHelper.Handle(parser, MModule.single(msgList), maybeLocate.AsPlayer);
 		
-		if (!sentMails.IsError)
+		if (sentMails.IsError)
 		{
 			return MModule.single(sentMails.AsError);
 		}

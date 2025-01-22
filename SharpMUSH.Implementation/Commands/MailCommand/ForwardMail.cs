@@ -1,5 +1,6 @@
 ﻿using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
@@ -21,6 +22,12 @@ public static class ForwardMail
 		}
 		
 		var targetPlayer = maybeLocate.AsPlayer;
+		
+		if (!parser.PermissionService.PassesLock(executor, targetPlayer, LockType.Mail))
+		{
+			return MModule.single($"MAIL: {targetPlayer.Object.Name} does not wish to receive mail from you.");
+		}
+		
 		var mail = await parser.Mediator.Send(new GetMailQuery(executor.AsPlayer, mailNumber, currentFolder));
 
 		if (mail is null)
