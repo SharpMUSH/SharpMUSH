@@ -10,7 +10,7 @@ namespace SharpMUSH.Implementation.Commands.MailCommand;
 
 public static class AdminMail
 {
-	public static async ValueTask<MString> Handle(IMUSHCodeParser parser, MString? arg0, MString? arg1, string[] switches)
+	public static async ValueTask<MString> Handle(IMUSHCodeParser parser, string[] switches)
 	{
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
 

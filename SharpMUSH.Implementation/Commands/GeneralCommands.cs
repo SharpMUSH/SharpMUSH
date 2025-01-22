@@ -797,14 +797,14 @@ public static partial class Commands
 			[.., "STATS"] when executor.IsPlayer => await StatsMail.Handle(parser, arg0, switches),
 			[.., "DSTATS"] when executor.IsPlayer => await StatsMail.Handle(parser, arg0, switches),
 			[.., "FSTATS"] when executor.IsPlayer => await StatsMail.Handle(parser, arg0, switches),
-			[.., "DEBUG"] => await AdminMail.Handle(parser, arg0, arg1, switches),
-			[.., "NUKE"] => await AdminMail.Handle(parser, arg0, arg1, switches),
+			[.., "DEBUG"] => await AdminMail.Handle(parser, switches),
+			[.., "NUKE"] => await AdminMail.Handle(parser, switches),
 			[.., "REVIEW"] when (arg0?.Length ?? 0) != 0 && (arg1?.Length ?? 0) != 0 
 				=> await ReviewMail.Handle(parser, arg0, arg1, switches),
-			[.., "RETRACT"] when !string.IsNullOrWhiteSpace(arg0?.ToPlainText()) && !string.IsNullOrWhiteSpace(arg1?.ToPlainText()) 
-				=> await RetractMail.Handle(parser, arg0.ToPlainText(), arg1.ToPlainText()),
-			[.., "FWD"] when executor.IsPlayer && int.TryParse(arg0?.ToPlainText(), out var number) && !string.IsNullOrWhiteSpace(arg1?.ToPlainText()) 
-				=> await ForwardMail.Handle(parser, number, arg1.ToPlainText()),
+			[.., "RETRACT"] when  (arg0?.Length ?? 0) != 0 &&  (arg1?.Length ?? 0) != 0  
+				=> await RetractMail.Handle(parser, arg0!.ToPlainText(), arg1!.ToPlainText()),
+			[.., "FWD"] when executor.IsPlayer && int.TryParse(arg0?.ToPlainText(), out var number) &&  (arg1?.Length ?? 0) != 0  
+				=> await ForwardMail.Handle(parser, number, arg1!.ToPlainText()),
 			[.., "SEND"] or [.., "URGENT"] or [.., "SILENT"] or [.., "NOSIG"] or []
 				when arg0?.Length != 0 && arg1?.Length != 0
 				=> await SendMail.Handle(parser, arg0!, arg1!, switches),
