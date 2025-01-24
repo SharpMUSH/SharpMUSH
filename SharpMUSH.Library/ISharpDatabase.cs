@@ -1,4 +1,5 @@
-﻿using SharpMUSH.Library.DiscriminatedUnions;
+﻿using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library;
@@ -14,7 +15,7 @@ public interface ISharpDatabase
 	ValueTask<DBRef> CreateThingAsync(string name, AnySharpContainer location, SharpPlayer creator);
 
 	ValueTask<DBRef> CreateExitAsync(string name, string[] aliases, AnySharpContainer location, SharpPlayer creator);
-	
+
 	ValueTask<bool> LinkExitAsync(SharpExit exit, AnySharpContainer location);
 
 	ValueTask SetLockAsync(SharpObject target, string lockName, string lockString);
@@ -168,8 +169,33 @@ public interface ISharpDatabase
 	/// <param name="depth">Depth</param>
 	/// <returns>The deepest findable object based on depth</returns>
 	ValueTask<AnySharpContainer> GetLocationAsync(string id, int depth = 1);
+
 	ValueTask<IEnumerable<SharpObjectFlag>> GetObjectFlagsAsync(string id);
+
+	ValueTask<IEnumerable<SharpMail>> GetIncomingMailsAsync(SharpPlayer id, string folder);
+
+	ValueTask<IEnumerable<SharpMail>> GetAllIncomingMailsAsync(SharpPlayer id);
+
+	ValueTask<SharpMail?> GetIncomingMailAsync(SharpPlayer id, string folder, int mail);
+
+	ValueTask<IEnumerable<SharpMail>> GetSentMailsAsync(SharpObject sender, SharpPlayer recipient);
 	
+	ValueTask<IEnumerable<SharpMail>> GetAllSentMailsAsync(SharpObject sender);
+
+	ValueTask<SharpMail?> GetSentMailAsync(SharpObject sender, SharpPlayer recipient, int mail);
+
+	ValueTask<string[]> GetMailFoldersAsync(SharpPlayer id);
+	
+	ValueTask SendMailAsync(SharpObject from, SharpPlayer to, SharpMail mail);
+	
+	ValueTask UpdateMailAsync(string mailId, MailUpdate commandMail);
+	
+	ValueTask DeleteMailAsync(string mailId);
+	
+	ValueTask RenameMailFolderAsync(SharpPlayer player, string folder, string newFolder);
+	
+	ValueTask MoveMailFolderAsync(string mailId, string newFolder);
+		
 	/// <summary>
 	/// Sets expanded data for a SharpObject, that does not fit on the light-weight nature of a SharpObject or Attributes.
 	/// </summary>
@@ -185,4 +211,5 @@ public interface ISharpDatabase
 	/// <param name="dataType">Type being queried. Each Type gets its ow n storage.</param>
 	/// <returns>A Json String with the data stored within.</returns>
 	ValueTask<string?> GetExpandedObjectData(string sharpObjectId, string dataType);
+
 }

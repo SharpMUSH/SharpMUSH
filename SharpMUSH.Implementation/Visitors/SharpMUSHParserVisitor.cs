@@ -25,7 +25,7 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source)
 				=> agg with { Arguments = [.. agg.Arguments, .. next.Arguments] },
 			({ Message: not null } agg, { Message: not null } next)
 				=> agg with { Message = MModule.concat(agg.Message, next.Message) },
-			(var agg, var next)
+			var (agg, next)
 				=> agg ?? next
 		});
 

@@ -4,6 +4,6 @@ namespace SharpMUSH.Library.Services;
 
 public interface IExpandedObjectDataService
 {
-	public ValueTask<T?> GetExpandedDataAsync<T>(SharpObject obj, Type type);
-	public ValueTask SetExpandedDataAsync<T>(SharpObject obj, Type type, T data);
+	public ValueTask<T?> GetExpandedDataAsync<T>(SharpObject obj) where T: class;
+	public ValueTask SetExpandedDataAsync<T>(T data, SharpObject obj, bool ignoreNull = false) where T: class;
 }

@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="DotNext" Version="5.17.2" />
+    <PackageReference Include="DotNext.Threading" Version="5.17.2" />
     <PackageReference Include="Mediator.Abstractions" Version="2.1.7" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.0" />
     <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="9.0.0" />
@@ -16,6 +17,7 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="OneOf" Version="3.0.271" />
     <PackageReference Include="OneOf.SourceGenerator" Version="3.0.271" />
+    <PackageReference Include="System.Linq.Async" Version="6.0.1" />
     <PackageReference Include="TelnetNegotiationCore" Version="1.0.9" />
   </ItemGroup>
 

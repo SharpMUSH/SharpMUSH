@@ -1,4 +1,5 @@
-﻿using MoreLinq;
+﻿using DotNext.Collections.Generic;
+using MoreLinq;
 using NaturalSort.Extension;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
@@ -7,6 +8,25 @@ namespace SharpMUSH.Library.Extensions;
 
 public static class OrderByExtensions
 {
+	public static IOrderedAsyncEnumerable<TSource> OrderByAwait<TSource, TKey>(
+		this IAsyncEnumerable<TSource> source,
+		Func<TSource, ValueTask<TKey>> keySelector, OrderByDirection direction = OrderByDirection.Ascending)
+	{
+		return direction == OrderByDirection.Ascending
+			? source.OrderByAwait(keySelector)
+			: source.OrderByDescendingAwait(keySelector);
+	}
+
+	public static IOrderedAsyncEnumerable<TSource> OrderByAwait<TSource, TKey>(
+		this IAsyncEnumerable<TSource> source,
+		Func<TSource, ValueTask<TKey>> keySelector,
+		IComparer<TKey> comparer, OrderByDirection direction = OrderByDirection.Ascending)
+	{
+		return direction == OrderByDirection.Ascending
+			? source.OrderByAwait(keySelector, comparer)
+			: source.OrderByDescendingAwait(keySelector, comparer);
+	}
+
 	/// <summary>
 	/// Orders a collection of MarkupStrings (based on a MarkupString -> string keySelector) based on the Order Type passed.
 	/// </summary>
@@ -32,7 +52,7 @@ public static class OrderByExtensions
 	///  lattr   Sorts attribute names.
 	/// </code>
 	/// <returns>An Ordered Enumerable</returns>
-	public static async ValueTask<IOrderedEnumerable<MString>> OrderByAsync(this IEnumerable<MString> source,
+	public static async ValueTask<MString[]> OrderByAsync(this IEnumerable<MString> source,
 		Func<MString, string> keySelector,
 		IMUSHCodeParser parser, string order)
 	{
@@ -44,11 +64,10 @@ public static class OrderByExtensions
 		// TODO: Special 'attr:' and 'attri:' types.
 		return workedOrder switch
 		{
-			"a" => source.OrderBy(keySelector, StringComparer.Ordinal, direction),
-			"i" => source.OrderBy(keySelector, StringComparer.OrdinalIgnoreCase, direction),
-			"d" => source.OrderBy(key => parser.LocateService
-				.Locate(parser, executor, executor, keySelector(key), LocateFlags.All)
-				.AsTask().GetAwaiter().GetResult()
+			"a" => source.OrderBy(keySelector, StringComparer.Ordinal, direction).ToArray(),
+			"i" => source.OrderBy(keySelector, StringComparer.OrdinalIgnoreCase, direction).ToArray(),
+			"d" => await Collection.ToAsyncEnumerable(source).OrderByAwait(async key => (await parser.LocateService
+					.Locate(parser, executor, executor, keySelector(key), LocateFlags.All))
 				.Match(
 					player => player.Object.DBRef.Number,
 					room => room.Object.DBRef.Number,
@@ -56,13 +75,12 @@ public static class OrderByExtensions
 					thing => thing.Object.DBRef.Number,
 					_ => -1,
 					_ => -1
-				), direction),
-			"n" => source.OrderBy(key => int.TryParse(keySelector(key), out var value) ? value : -1, direction),
-			"f" => source.OrderBy(key => decimal.TryParse(keySelector(key), out var value) ? value : -1, direction),
-			"m" => source.OrderBy(keySelector, StringComparer.OrdinalIgnoreCase.WithNaturalSort(), direction),
-			"name" => source.OrderBy(key => parser.LocateService
-				.Locate(parser, executor, executor, keySelector(key), LocateFlags.All)
-				.AsTask().GetAwaiter().GetResult()
+				), direction).ToArrayAsync(CancellationToken.None),
+			"n" => source.OrderBy(key => int.TryParse(keySelector(key), out var value) ? value : -1, direction).ToArray(),
+			"f" => source.OrderBy(key => decimal.TryParse(keySelector(key), out var value) ? value : -1, direction).ToArray(),
+			"m" => source.OrderBy(keySelector, StringComparer.OrdinalIgnoreCase.WithNaturalSort(), direction).ToArray(),
+			"name" => await Collection.ToAsyncEnumerable(source).OrderByAwait(async key 
+				=> (await parser.LocateService.Locate(parser, executor, executor, keySelector(key), LocateFlags.All))
 				.Match(
 					player => player.Object.Name,
 					room => room.Object.Name,
@@ -70,10 +88,9 @@ public static class OrderByExtensions
 					thing => thing.Object.Name,
 					_ => keySelector(key),
 					_ => keySelector(key)
-				), StringComparer.Ordinal, direction),
-			"namei" => source.OrderBy(key => parser.LocateService
-					.Locate(parser, executor, executor, keySelector(key), LocateFlags.All)
-					.AsTask().GetAwaiter().GetResult()
+				), StringComparer.Ordinal, direction).ToArrayAsync(CancellationToken.None),
+			"namei" => await Collection.ToAsyncEnumerable(source).OrderByAwait(async key 
+					=> (await parser.LocateService.Locate(parser, executor, executor, keySelector(key), LocateFlags.All))
 					.Match(
 						player => player.Object.Name,
 						room => room.Object.Name,
@@ -82,10 +99,9 @@ public static class OrderByExtensions
 						_ => keySelector(key),
 						_ => keySelector(key)
 					), StringComparer.OrdinalIgnoreCase,
-				direction),
-			"conn" => source.OrderBy(key => parser.LocateService
-					.Locate(parser, executor, executor, keySelector(key), LocateFlags.All)
-					.AsTask().GetAwaiter().GetResult()
+				direction).ToArrayAsync(CancellationToken.None),
+			"conn" => await Collection.ToAsyncEnumerable(source).OrderByAwait(async key 
+					=> (await parser.LocateService.Locate(parser, executor, executor, keySelector(key), LocateFlags.All))
 					.Match(
 						player => parser.ConnectionService.Get(player.Object.DBRef).FirstOrDefault()?.Connected ??
 						          TimeSpan.MaxValue,
@@ -95,10 +111,9 @@ public static class OrderByExtensions
 						_ => TimeSpan.MaxValue,
 						_ => TimeSpan.MaxValue
 					),
-				direction),
-			"idle" => source.OrderBy(key => parser.LocateService
-					.Locate(parser, executor, executor, keySelector(key), LocateFlags.All)
-					.AsTask().GetAwaiter().GetResult()
+				direction).ToArrayAsync(CancellationToken.None),
+			"idle" => await Collection.ToAsyncEnumerable(source).OrderByAwait(async key 
+					=> (await parser.LocateService.Locate(parser, executor, executor, keySelector(key), LocateFlags.All))
 					.Match(
 						player => parser.ConnectionService.Get(player.Object.DBRef).FirstOrDefault()?.Connected ??
 						          TimeSpan.MaxValue,
@@ -108,10 +123,9 @@ public static class OrderByExtensions
 						_ => TimeSpan.MaxValue,
 						_ => TimeSpan.MaxValue
 					),
-				direction),
-			"owner" => source.OrderBy(key => parser.LocateService
-					.Locate(parser, executor, executor, keySelector(key), LocateFlags.All)
-					.AsTask().GetAwaiter().GetResult()
+				direction).ToArrayAsync(CancellationToken.None),
+			"owner" => await Collection.ToAsyncEnumerable(source).OrderByAwait(async key 
+					=> (await parser.LocateService.Locate(parser, executor, executor, keySelector(key), LocateFlags.All))
 					.Match(
 						player => player.Object.Owner.Value.Object.DBRef.Number,
 						room => room.Object.Owner.Value.Object.DBRef.Number,
@@ -120,10 +134,9 @@ public static class OrderByExtensions
 						_ => -1,
 						_ => -1
 					),
-				direction),
-			"loc" => source.OrderBy(key => parser.LocateService
-					.Locate(parser, executor, executor, keySelector(key), LocateFlags.All)
-					.AsTask().GetAwaiter().GetResult()
+				direction).ToArrayAsync(CancellationToken.None),
+			"loc" => await Collection.ToAsyncEnumerable(source).OrderByAwait(async key 
+					=> (await parser.LocateService.Locate(parser, executor, executor, keySelector(key), LocateFlags.All))
 					.Match(
 						player => player.Location.Value.Object().DBRef.Number,
 						room => room.Object.DBRef.Number,
@@ -132,10 +145,9 @@ public static class OrderByExtensions
 						_ => -1,
 						_ => -1
 					),
-				direction),
-			"ctime" => source.OrderBy(key => parser.LocateService
-					.Locate(parser, executor, executor, keySelector(key), LocateFlags.All)
-					.AsTask().GetAwaiter().GetResult()
+				direction).ToArrayAsync(CancellationToken.None),
+			"ctime" => await Collection.ToAsyncEnumerable(source).OrderByAwait(async key 
+					=> (await parser.LocateService.Locate(parser, executor, executor, keySelector(key), LocateFlags.All))
 					.Match(
 						player => player.Object.CreationTime,
 						room => room.Object.CreationTime,
@@ -144,10 +156,9 @@ public static class OrderByExtensions
 						_ => -1,
 						_ => -1
 					),
-				direction),
-			"mtime" => source.OrderBy(key => parser.LocateService
-					.Locate(parser, executor, executor, keySelector(key), LocateFlags.All)
-					.AsTask().GetAwaiter().GetResult()
+				direction).ToArrayAsync(CancellationToken.None),
+			"mtime" => await Collection.ToAsyncEnumerable(source).OrderByAwait(async key 
+					=> (await parser.LocateService.Locate(parser, executor, executor, keySelector(key), LocateFlags.All))
 					.Match(
 						player => player.Object.ModifiedTime,
 						room => room.Object.ModifiedTime,
@@ -156,11 +167,11 @@ public static class OrderByExtensions
 						_ => -1,
 						_ => -1
 					),
-				direction),
+				direction).ToArrayAsync(CancellationToken.None),
 			"lattr" => source.OrderBy(keySelector, StringComparer.OrdinalIgnoreCase.WithNaturalSort(),
-				direction),
+				direction).ToArray(),
 			_ => source.OrderBy(keySelector, StringComparer.OrdinalIgnoreCase,
-				direction)
+				direction).ToArray()
 		};
 	}
 }
