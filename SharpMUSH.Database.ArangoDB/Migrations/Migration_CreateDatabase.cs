@@ -606,7 +606,7 @@ public class Migration_CreateDatabase : IArangoMigration
 							{
 								Collection = DatabaseConstants.IsObject,
 								To = [DatabaseConstants.Objects],
-								From = [.. DatabaseConstants.vertexesAll]
+								From = [.. DatabaseConstants.verticesAll]
 							}
 						],
 						Name = DatabaseConstants.GraphObjects
@@ -665,7 +665,7 @@ public class Migration_CreateDatabase : IArangoMigration
 								Collection = DatabaseConstants.HasAttribute,
 								To = [DatabaseConstants.Attributes],
 								From = [
-									.. DatabaseConstants.vertexesAll,
+									.. DatabaseConstants.verticesAll,
 									DatabaseConstants.Attributes
 								]
 							}
@@ -694,8 +694,8 @@ public class Migration_CreateDatabase : IArangoMigration
 							new ArangoEdgeDefinition()
 							{
 								Collection = DatabaseConstants.AtLocation,
-								To = [.. DatabaseConstants.vertexesContainer],
-								From = [.. DatabaseConstants.vertexesContent]
+								To = [.. DatabaseConstants.verticesContainer],
+								From = [.. DatabaseConstants.verticesContent]
 							}
 						],
 						Name = DatabaseConstants.GraphLocations,
@@ -707,8 +707,8 @@ public class Migration_CreateDatabase : IArangoMigration
 							new ArangoEdgeDefinition()
 							{
 								Collection = DatabaseConstants.HasHome,
-								To = [.. DatabaseConstants.vertexesContainer],
-								From = [.. DatabaseConstants.vertexesContent]
+								To = [.. DatabaseConstants.verticesContainer],
+								From = [.. DatabaseConstants.verticesContent]
 							}
 						],
 						Name = DatabaseConstants.GraphHomes
@@ -723,7 +723,7 @@ public class Migration_CreateDatabase : IArangoMigration
 								To = [
 									DatabaseConstants.Exits,
 								],
-								From = [.. DatabaseConstants.vertexesContainer]
+								From = [.. DatabaseConstants.verticesContainer]
 							}
 						],
 						Name = DatabaseConstants.GraphExits

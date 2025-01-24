@@ -18,9 +18,9 @@ public static class DatabaseConstants
 	public const string Channels = "node_channels";
 	public const string Mails = "node_mails";
 	
-	public static readonly string[] vertexesContainer = [Rooms, Players, Things];
-	public static readonly string[] vertexesContent = [Players, Exits, Things];
-	public static readonly string[] vertexesAll = [Rooms, Players, Exits, Things];
+	public static readonly string[] verticesContainer = [Rooms, Players, Things];
+	public static readonly string[] verticesContent = [Players, Exits, Things];
+	public static readonly string[] verticesAll = [Rooms, Players, Exits, Things];
 
 	public const string IsObject = "edge_is_object";
 	public const string AtLocation = "edge_at_location";
@@ -42,7 +42,7 @@ public static class DatabaseConstants
 
 	/// <summary>
 	/// Describes the relationship between actualized types and their objects.
-	/// <see cref="vertexesAll"/> -> <see cref="IsObject"/> -> <see cref="Objects"/>
+	/// <see cref="verticesAll"/> -> <see cref="IsObject"/> -> <see cref="Objects"/>
 	/// </summary>
 	public const string GraphObjects = "graph_objects";
 	/// <summary>
@@ -63,7 +63,7 @@ public static class DatabaseConstants
 	/// <summary>
 	/// Describes the relationship between realized objects and their attributes, and attributes and their branches.
 	/// TODO: This should be objects and attributes, but arangoDb gives trouble for some reason.
-	/// <see cref="vertexesAll"/> -> <see cref="HasAttribute"/> -> <see cref="Attributes"/>
+	/// <see cref="verticesAll"/> -> <see cref="HasAttribute"/> -> <see cref="Attributes"/>
 	/// <see cref="Attributes"/> -> <see cref="HasAttribute"/> -> <see cref="Attributes"/>
 	/// </summary>
 	public const string GraphAttributes = "graph_attributes";
@@ -74,17 +74,17 @@ public static class DatabaseConstants
 	public const string GraphAttributeFlags = "graph_attribute_flags";
 	/// <summary>
 	/// Describes the relationship between contents and their container locations.
-	/// <see cref="vertexesContent"/> -> <see cref="AtLocation"/> -> <see cref="vertexesContainer"/>
+	/// <see cref="verticesContent"/> -> <see cref="AtLocation"/> -> <see cref="verticesContainer"/>
 	/// </summary>
 	public const string GraphLocations = "graph_locations";
 	/// <summary>
 	/// Describes the relationship between container objects and their exits.
-	/// <see cref="vertexesContainer"/> -> <see cref="HasExit"/> -> <see cref="Exits"/>
+	/// <see cref="verticesContainer"/> -> <see cref="HasExit"/> -> <see cref="Exits"/>
 	/// </summary>
 	public const string GraphExits = "graph_exits";
 	/// <summary>
 	/// Describes the relationship between contents and their container objects.
-	/// <see cref="vertexesContent"/> -> <see cref="HasHome"/> -> <see cref="vertexesContainer"/>
+	/// <see cref="verticesContent"/> -> <see cref="HasHome"/> -> <see cref="verticesContainer"/>
 	/// </summary>
 	public const string GraphHomes = "graph_homes";
 	/// <summary>
