@@ -1,15 +1,17 @@
-﻿using Newtonsoft.Json;
+﻿using DotNext.Threading;
+using Newtonsoft.Json;
+using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Library.Models;
 
 public class SharpChannel
 {
 	[JsonIgnore]
-	public string Id { get; set; }
+	public string? Id { get; set; }
 	public required string Name { get; set; }
 	public string Description { get; set; } = string.Empty;	
-	public required Lazy<SharpPlayer> Owner { get; set; }
-	public required Func<IEnumerable<SharpObject>> Members { get; set; }
+	public required AsyncLazy<SharpPlayer> Owner { get; set; }
+	public required AsyncLazy<IEnumerable<AnySharpObject>> Members { get; set; }
 	public required string[] Privs { get; set; }
 	public string JoinLock { get; set; } = string.Empty;
 	public string SpeakLock { get; set; } = string.Empty;

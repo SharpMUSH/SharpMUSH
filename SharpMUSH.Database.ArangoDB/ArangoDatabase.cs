@@ -13,11 +13,12 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using System.Collections.Immutable;
-using System.Text.Json;
+using DotNext.Collections.Generic;
 using DotNext.Threading;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SharpMUSH.Library.Commands.Database;
+using AsyncEnumerable = System.Linq.AsyncEnumerable;
 
 namespace SharpMUSH.Database.ArangoDB;
 
@@ -30,6 +31,8 @@ public class ArangoDatabase(
 	IPasswordService passwordService // TODO: This doesn't belong in the database layer
 ) : ISharpDatabase
 {
+	private const string StartVertex = "startVertex";
+
 	public async ValueTask Migrate()
 	{
 		logger.LogInformation("Migrating Database");
@@ -63,12 +66,12 @@ public class ArangoDatabase(
 			{
 				Exclusive =
 				[
-					DatabaseConstants.objects,
-					DatabaseConstants.players,
-					DatabaseConstants.isObject,
-					DatabaseConstants.hasObjectOwner,
-					DatabaseConstants.atLocation,
-					DatabaseConstants.hasHome
+					DatabaseConstants.Objects,
+					DatabaseConstants.Players,
+					DatabaseConstants.IsObject,
+					DatabaseConstants.HasObjectOwner,
+					DatabaseConstants.AtLocation,
+					DatabaseConstants.HasHome
 				]
 			}
 		};
@@ -76,10 +79,10 @@ public class ArangoDatabase(
 		var transactionHandle = await arangoDb.Transaction.BeginAsync(handle, transaction);
 
 		var obj = await arangoDb.Graph.Vertex.CreateAsync<SharpObjectCreateRequest, SharpObjectQueryResult>(
-			transactionHandle, DatabaseConstants.graphObjects,
-			DatabaseConstants.objects, new SharpObjectCreateRequest(
+			transactionHandle, DatabaseConstants.GraphObjects,
+			DatabaseConstants.Objects, new SharpObjectCreateRequest(
 				name,
-				DatabaseConstants.typePlayer,
+				DatabaseConstants.TypePlayer,
 				[],
 				time,
 				time
@@ -89,14 +92,14 @@ public class ArangoDatabase(
 
 		var playerResult = await arangoDb.Document.CreateAsync<SharpPlayerCreateRequest, SharpPlayerQueryResult>(
 			transactionHandle,
-			DatabaseConstants.players,
+			DatabaseConstants.Players,
 			new SharpPlayerCreateRequest([], hashedPassword));
 
-		await arangoDb.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.graphObjects, DatabaseConstants.isObject,
+		await arangoDb.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.GraphObjects, DatabaseConstants.IsObject,
 			new SharpEdgeCreateRequest(playerResult.Id, obj.New.Id));
 
-		await arangoDb.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.graphObjectOwners,
-			DatabaseConstants.hasObjectOwner, new SharpEdgeCreateRequest(playerResult.Id, playerResult.Id));
+		await arangoDb.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.GraphObjectOwners,
+			DatabaseConstants.HasObjectOwner, new SharpEdgeCreateRequest(playerResult.Id, playerResult.Id));
 
 		var idx = objectLocation.Match(
 			player => player.Id,
@@ -105,11 +108,11 @@ public class ArangoDatabase(
 			thing => thing.Id,
 			_ => throw new ArgumentException("A player must have a valid creation location!"));
 
-		await arangoDb.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.graphLocations,
-			DatabaseConstants.atLocation, new SharpEdgeCreateRequest(playerResult.Id, idx!));
+		await arangoDb.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.GraphLocations,
+			DatabaseConstants.AtLocation, new SharpEdgeCreateRequest(playerResult.Id, idx!));
 
 		// TODO: This should use a Default Home, which should be passed down from above.
-		await arangoDb.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.graphHomes, DatabaseConstants.hasHome,
+		await arangoDb.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.GraphHomes, DatabaseConstants.HasHome,
 			new SharpEdgeCreateRequest(playerResult.Id, idx!));
 
 		await arangoDb.Transaction.CommitAsync(transactionHandle);
@@ -121,13 +124,13 @@ public class ArangoDatabase(
 	{
 		var time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-		var obj = await arangoDb.Document.CreateAsync(handle, DatabaseConstants.objects,
-			new SharpObjectCreateRequest(name, DatabaseConstants.typeRoom, [], time, time));
-		var room = await arangoDb.Document.CreateAsync(handle, DatabaseConstants.rooms, new SharpRoomCreateRequest());
+		var obj = await arangoDb.Document.CreateAsync(handle, DatabaseConstants.Objects,
+			new SharpObjectCreateRequest(name, DatabaseConstants.TypeRoom, [], time, time));
+		var room = await arangoDb.Document.CreateAsync(handle, DatabaseConstants.Rooms, new SharpRoomCreateRequest());
 
-		await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.graphObjects, DatabaseConstants.isObject,
+		await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphObjects, DatabaseConstants.IsObject,
 			new SharpEdgeCreateRequest(room.Id, obj.Id));
-		await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.graphObjectOwners, DatabaseConstants.hasObjectOwner,
+		await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphObjectOwners, DatabaseConstants.HasObjectOwner,
 			new SharpEdgeCreateRequest(obj.Id, creator.Id!));
 
 		return new DBRef(int.Parse(obj.Key), time);
@@ -138,18 +141,18 @@ public class ArangoDatabase(
 		var time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
 		var obj = await arangoDb.Document.CreateAsync<SharpObjectCreateRequest, SharpObjectQueryResult>(handle,
-			DatabaseConstants.objects,
-			new SharpObjectCreateRequest(name, DatabaseConstants.typeThing, [], time, time));
-		var thing = await arangoDb.Document.CreateAsync(handle, DatabaseConstants.things, new SharpThingCreateRequest([]));
+			DatabaseConstants.Objects,
+			new SharpObjectCreateRequest(name, DatabaseConstants.TypeThing, [], time, time));
+		var thing = await arangoDb.Document.CreateAsync(handle, DatabaseConstants.Things, new SharpThingCreateRequest([]));
 
-		await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.graphObjects, DatabaseConstants.isObject,
+		await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphObjects, DatabaseConstants.IsObject,
 			new SharpEdgeCreateRequest(thing.Id, obj.Id));
-		await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.graphLocations, DatabaseConstants.atLocation,
+		await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphLocations, DatabaseConstants.AtLocation,
 			new SharpEdgeCreateRequest(thing.Id, location.Id));
 		// TODO: Fix, this should use a default home location, passed down to this.
-		await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.graphHomes, DatabaseConstants.hasHome,
+		await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphHomes, DatabaseConstants.HasHome,
 			new SharpEdgeCreateRequest(thing.Id, location.Id));
-		await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.graphObjectOwners, DatabaseConstants.hasObjectOwner,
+		await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphObjectOwners, DatabaseConstants.HasObjectOwner,
 			new SharpEdgeCreateRequest(obj.Id, creator.Id!));
 
 		return new DBRef(int.Parse(obj.Key), time);
@@ -157,7 +160,7 @@ public class ArangoDatabase(
 
 	public async ValueTask<bool> LinkExitAsync(SharpExit exit, AnySharpContainer location)
 	{
-		await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.graphHomes, DatabaseConstants.hasHome,
+		await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphHomes, DatabaseConstants.HasHome,
 			new SharpEdgeCreateRequest(exit.Id!, location.Id));
 		return true;
 	}
@@ -168,18 +171,18 @@ public class ArangoDatabase(
 		var time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
 		var obj = await arangoDb.Document.CreateAsync<SharpObjectCreateRequest, SharpObjectQueryResult>(handle,
-			DatabaseConstants.objects,
-			new SharpObjectCreateRequest(name, DatabaseConstants.typeExit, [], time, time));
-		var exit = await arangoDb.Document.CreateAsync(handle, DatabaseConstants.exits,
+			DatabaseConstants.Objects,
+			new SharpObjectCreateRequest(name, DatabaseConstants.TypeExit, [], time, time));
+		var exit = await arangoDb.Document.CreateAsync(handle, DatabaseConstants.Exits,
 			new SharpExitCreateRequest(aliases));
 
-		await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.graphObjects, DatabaseConstants.isObject,
+		await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphObjects, DatabaseConstants.IsObject,
 			new SharpEdgeCreateRequest(exit.Id, obj.Id));
-		await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.graphLocations, DatabaseConstants.atLocation,
+		await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphLocations, DatabaseConstants.AtLocation,
 			new SharpEdgeCreateRequest(exit.Id, location.Id));
 		/* await arangoDB.Graph.Edge.CreateAsync(handle, DatabaseConstants.graphHomes, DatabaseConstants.hasHome,
 			new SharpEdgeCreateRequest(exit.Id, location.Id)); */
-		await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.graphObjectOwners, DatabaseConstants.hasObjectOwner,
+		await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphObjectOwners, DatabaseConstants.HasObjectOwner,
 			new SharpEdgeCreateRequest(obj.Id, creator.Id!));
 
 		return new DBRef(int.Parse(obj.Key), time);
@@ -191,7 +194,7 @@ public class ArangoDatabase(
 			$"FOR v in @@C1 FILTER v.Name = @flag RETURN v",
 			bindVars: new Dictionary<string, object>
 			{
-				{ "@C1", DatabaseConstants.objectFlags },
+				{ "@C1", DatabaseConstants.ObjectFlags },
 				{ "flag", name }
 			},
 			cache: true)).FirstOrDefault();
@@ -199,12 +202,12 @@ public class ArangoDatabase(
 	public async ValueTask<IEnumerable<SharpObjectFlag>> GetObjectFlagsAsync()
 		=> await arangoDb.Query.ExecuteAsync<SharpObjectFlag>(
 			handle,
-			$"FOR v in {DatabaseConstants.objectFlags:@} RETURN v",
+			$"FOR v in {DatabaseConstants.ObjectFlags:@} RETURN v",
 			cache: true);
 
 	public async ValueTask<bool> SetObjectFlagAsync(AnySharpObject target, SharpObjectFlag flag)
 	{
-		await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.objects, new
+		await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Objects, new
 		{
 			target.Object().Key,
 			Value = target.Object().Flags.Value.ToImmutableArray().Add(flag)
@@ -214,7 +217,7 @@ public class ArangoDatabase(
 
 	public async ValueTask<bool> UnsetObjectFlagAsync(AnySharpObject target, SharpObjectFlag flag)
 	{
-		await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.objects, new
+		await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Objects, new
 		{
 			target.Object().Key,
 			Value = target.Object().Flags.Value.ToImmutableArray().Remove(flag)
@@ -225,7 +228,7 @@ public class ArangoDatabase(
 	private async ValueTask<IEnumerable<SharpPower>> GetPowersAsync(string id)
 	{
 		var result = await arangoDb.Query.ExecuteAsync<SharpPowerQueryResult>(handle,
-			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphPowers} RETURN v");
+			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphPowers} RETURN v");
 
 		return result.Select(x => new SharpPower()
 		{
@@ -241,12 +244,12 @@ public class ArangoDatabase(
 
 	public async ValueTask<IEnumerable<SharpObjectFlag>> GetObjectFlagsAsync(string id)
 		=> await arangoDb.Query.ExecuteAsync<SharpObjectFlag>(handle,
-			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphFlags} RETURN v");
+			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphFlags} RETURN v");
 
 	public async ValueTask<IEnumerable<SharpMail>> GetSentMailsAsync(SharpObject sender, SharpPlayer recipient)
 	{
 		var results = await arangoDb.Query.ExecuteAsync<SharpMailQueryResult>(handle,
-			$"FOR path IN 1..1 INBOUND ALL_SHORTEST_PATH {recipient.Id} TO {sender.Id} GRAPH {DatabaseConstants.graphMail} RETURN path.vertices[1]");
+			$"FOR path IN 1..1 INBOUND ALL_SHORTEST_PATH {recipient.Id} TO {sender.Id} GRAPH {DatabaseConstants.GraphMail} RETURN path.vertices[1]");
 
 		var convertedResults = results.Select(ConvertMailQueryResult);
 
@@ -256,7 +259,7 @@ public class ArangoDatabase(
 	public async ValueTask<IEnumerable<SharpMail>> GetAllSentMailsAsync(SharpObject id)
 	{
 		var results = await arangoDb.Query.ExecuteAsync<SharpMailQueryResult>(handle,
-			$"FOR v IN 1..1 INBOUND {id.Id} GRAPH {DatabaseConstants.graphMail} RETURN v");
+			$"FOR v IN 1..1 INBOUND {id.Id} GRAPH {DatabaseConstants.GraphMail} RETURN v");
 
 		var convertedResults = results.Select(ConvertMailQueryResult);
 
@@ -266,7 +269,7 @@ public class ArangoDatabase(
 	public async ValueTask<SharpMail?> GetSentMailAsync(SharpObject sender, SharpPlayer recipient, int mail)
 	{
 		var results = await arangoDb.Query.ExecuteAsync<SharpMailQueryResult>(handle,
-			$"FOR path IN 1..1 INBOUND ALL_SHORTEST_PATH {recipient.Id} TO {sender.Id} GRAPH {DatabaseConstants.graphMail} RETURN path.vertices[1]");
+			$"FOR path IN 1..1 INBOUND ALL_SHORTEST_PATH {recipient.Id} TO {sender.Id} GRAPH {DatabaseConstants.GraphMail} RETURN path.vertices[1]");
 
 		var convertedResults = results.Select(ConvertMailQueryResult).Skip(mail).Take(1);
 
@@ -276,14 +279,14 @@ public class ArangoDatabase(
 	public async ValueTask<string[]> GetMailFoldersAsync(SharpPlayer id)
 	{
 		var results = await arangoDb.Query.ExecuteAsync<string>(handle,
-			$"FOR v IN 1..1 OUTBOUND {id.Id} GRAPH {DatabaseConstants.graphMail} RETURN DISTINCT(v.Folder)");
+			$"FOR v IN 1..1 OUTBOUND {id.Id} GRAPH {DatabaseConstants.GraphMail} RETURN DISTINCT(v.Folder)");
 		return results.ToArray();
 	}
 
 	public async ValueTask<IEnumerable<SharpMail>> GetAllIncomingMailsAsync(SharpPlayer id)
 	{
 		var results = await arangoDb.Query.ExecuteAsync<SharpMailQueryResult>(handle,
-			$"FOR v IN 1..1 OUTBOUND {id.Id} GRAPH {DatabaseConstants.graphMail} RETURN v");
+			$"FOR v IN 1..1 OUTBOUND {id.Id} GRAPH {DatabaseConstants.GraphMail} RETURN v");
 		return results.Select(ConvertMailQueryResult);
 	}
 
@@ -301,14 +304,14 @@ public class ArangoDatabase(
 			Forwarded = x.Forwarded,
 			Tagged = x.Tagged,
 			Urgent = x.Urgent,
-			From = new AsyncLazy<AnyOptionalSharpObject>(async ct =>
+			From = new AsyncLazy<AnyOptionalSharpObject>(async _ =>
 				await MailFromAsync(x.Id))
 		};
 
 	public async ValueTask<IEnumerable<SharpMail>> GetIncomingMailsAsync(SharpPlayer id, string folder)
 	{
 		var results = await arangoDb.Query.ExecuteAsync<SharpMailQueryResult>(handle,
-			$"FOR v IN 1..1 OUTBOUND {id.Id} GRAPH {DatabaseConstants.graphMail} FILTER v.Folder == {folder} RETURN v");
+			$"FOR v IN 1..1 OUTBOUND {id.Id} GRAPH {DatabaseConstants.GraphMail} FILTER v.Folder == {folder} RETURN v");
 
 		return results.Select(ConvertMailQueryResult);
 	}
@@ -316,7 +319,7 @@ public class ArangoDatabase(
 	private async ValueTask<AnyOptionalSharpObject> MailFromAsync(string id)
 	{
 		var edges = await arangoDb.Query.ExecuteAsync<SharpEdgeQueryResult>(handle,
-			$"FOR v,e IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphMail} RETURN e");
+			$"FOR v,e IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphMail} RETURN e");
 
 		return edges switch
 		{
@@ -331,7 +334,7 @@ public class ArangoDatabase(
 		{
 			Collections = new ArangoTransactionScope
 			{
-				Exclusive = [DatabaseConstants.mails, DatabaseConstants.receivedMail, DatabaseConstants.senderOfMail],
+				Exclusive = [DatabaseConstants.Mails, DatabaseConstants.ReceivedMail, DatabaseConstants.SenderOfMail],
 			}
 		});
 
@@ -349,12 +352,12 @@ public class ArangoDatabase(
 		);
 
 		var mailResult = await arangoDb.Graph.Vertex.CreateAsync<SharpMailCreateRequest, SharpMailQueryResult>(transaction,
-			DatabaseConstants.graphMail, DatabaseConstants.mails, newMail);
+			DatabaseConstants.GraphMail, DatabaseConstants.Mails, newMail);
 		var id = mailResult.Vertex.Id;
 
-		await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.graphMail, DatabaseConstants.receivedMail,
+		await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.GraphMail, DatabaseConstants.ReceivedMail,
 			new SharpEdgeCreateRequest(to.Id!, id));
-		await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.graphMail, DatabaseConstants.senderOfMail,
+		await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.GraphMail, DatabaseConstants.SenderOfMail,
 			new SharpEdgeCreateRequest(id, from.Id!));
 
 		await arangoDb.Transaction.CommitAsync(transaction);
@@ -367,19 +370,19 @@ public class ArangoDatabase(
 		switch (commandMail)
 		{
 			case { IsReadEdit: true }:
-				await arangoDb.Graph.Vertex.UpdateAsync(handle, DatabaseConstants.graphMail, DatabaseConstants.mails,
+				await arangoDb.Graph.Vertex.UpdateAsync(handle, DatabaseConstants.GraphMail, DatabaseConstants.Mails,
 					key, new { Read = commandMail.AsReadEdit, Fresh = false });
 				return;
 			case { IsClearEdit: true }:
-				await arangoDb.Graph.Vertex.UpdateAsync(handle, DatabaseConstants.graphMail, DatabaseConstants.mails,
+				await arangoDb.Graph.Vertex.UpdateAsync(handle, DatabaseConstants.GraphMail, DatabaseConstants.Mails,
 					key, new { Read = commandMail.AsClearEdit });
 				return;
 			case { IsTaggedEdit: true }:
-				await arangoDb.Graph.Vertex.UpdateAsync(handle, DatabaseConstants.graphMail, DatabaseConstants.mails,
+				await arangoDb.Graph.Vertex.UpdateAsync(handle, DatabaseConstants.GraphMail, DatabaseConstants.Mails,
 					key, new { Urgent = commandMail.AsTaggedEdit });
 				return;
 			case { IsUrgentEdit: true }:
-				await arangoDb.Graph.Vertex.UpdateAsync(handle, DatabaseConstants.graphMail, DatabaseConstants.mails,
+				await arangoDb.Graph.Vertex.UpdateAsync(handle, DatabaseConstants.GraphMail, DatabaseConstants.Mails,
 					key, new { Urgent = commandMail.AsUrgentEdit });
 				return;
 		}
@@ -388,24 +391,24 @@ public class ArangoDatabase(
 	public async ValueTask DeleteMailAsync(string mailId)
 	{
 		var key = mailId.Split("/")[1];
-		await arangoDb.Graph.Vertex.RemoveAsync(handle, DatabaseConstants.graphMail, DatabaseConstants.mails, key);
+		await arangoDb.Graph.Vertex.RemoveAsync(handle, DatabaseConstants.GraphMail, DatabaseConstants.Mails, key);
 	}
 
 	public async ValueTask RenameMailFolderAsync(SharpPlayer player, string folder, string newFolder)
 	{
 		var list = await GetIncomingMailsAsync(player, folder);
 		var updates = list.Select(x => new { Key = x.Id!.Split("/")[1], Folder = newFolder });
-		await arangoDb.Document.UpdateManyAsync(handle, DatabaseConstants.mails, updates);
+		await arangoDb.Document.UpdateManyAsync(handle, DatabaseConstants.Mails, updates);
 	}
 
 	public async ValueTask MoveMailFolderAsync(string mailId, string newFolder)
-		=> await arangoDb.Graph.Vertex.UpdateAsync(handle, DatabaseConstants.graphMail, DatabaseConstants.mails,
+		=> await arangoDb.Graph.Vertex.UpdateAsync(handle, DatabaseConstants.GraphMail, DatabaseConstants.Mails,
 			mailId.Split("/")[1], new { Folder = newFolder });
 
 	public async ValueTask<SharpMail?> GetIncomingMailAsync(SharpPlayer id, string folder, int mail)
 	{
 		var results = await arangoDb.Query.ExecuteAsync<SharpMailQueryResult>(handle,
-			$"FOR v IN 1..1 OUTBOUND {id.Id} GRAPH {DatabaseConstants.graphMail} FILTER v.Folder == {folder} LIMIT {mail},1 RETURN v");
+			$"FOR v IN 1..1 OUTBOUND {id.Id} GRAPH {DatabaseConstants.GraphMail} FILTER v.Folder == {folder} LIMIT {mail},1 RETURN v");
 
 		var convertedResults = results.Select(ConvertMailQueryResult);
 
@@ -416,13 +419,13 @@ public class ArangoDatabase(
 	{
 		// Get the edge that leads to it, otherwise we will have to create one.
 		var result = await arangoDb.Query.ExecuteAsync<dynamic>(handle,
-			$"FOR v,e IN 1..1 OUTBOUND {sharpObjectId} GRAPH {DatabaseConstants.graphObjectData} RETURN v");
+			$"FOR v,e IN 1..1 OUTBOUND {sharpObjectId} GRAPH {DatabaseConstants.GraphObjectData} RETURN v");
 
 		var first = result.FirstOrDefault();
 		if (first?.ContainsKey("_key") ?? false)
 		{
 			var vertexKey = (string)first!["_key"];
-			await arangoDb.Graph.Vertex.UpdateAsync(handle, DatabaseConstants.graphObjectData, DatabaseConstants.objectData,
+			await arangoDb.Graph.Vertex.UpdateAsync(handle, DatabaseConstants.GraphObjectData, DatabaseConstants.ObjectData,
 				vertexKey, new Dictionary<string, object> { { dataType, data } });
 			return;
 		}
@@ -430,13 +433,13 @@ public class ArangoDatabase(
 		var newJson = new Dictionary<string, object> { { dataType, data } };
 
 		var newVertex = await arangoDb.Graph.Vertex.CreateAsync<dynamic, dynamic>(handle,
-			DatabaseConstants.graphObjectData,
-			DatabaseConstants.objectData,
+			DatabaseConstants.GraphObjectData,
+			DatabaseConstants.ObjectData,
 			newJson);
 
 		await arangoDb.Graph.Edge.CreateAsync(handle,
-			DatabaseConstants.graphObjectData,
-			DatabaseConstants.hasObjectData, new SharpEdgeCreateRequest(
+			DatabaseConstants.GraphObjectData,
+			DatabaseConstants.HasObjectData, new SharpEdgeCreateRequest(
 				From: sharpObjectId,
 				To: (string)newVertex.Vertex._id)
 		);
@@ -446,7 +449,7 @@ public class ArangoDatabase(
 	{
 		// Get the edge that leads to it, otherwise we will have to create one.
 		var result = await arangoDb.Query.ExecuteAsync<JObject>(handle,
-			$"FOR v IN 1..1 OUTBOUND {sharpObjectId} GRAPH {DatabaseConstants.graphObjectData} RETURN v");
+			$"FOR v IN 1..1 OUTBOUND {sharpObjectId} GRAPH {DatabaseConstants.GraphObjectData} RETURN v");
 		var resultingValue = result.FirstOrDefault()?.GetValue(dataType);
 		return resultingValue?.ToString(Formatting.None);
 	}
@@ -455,11 +458,29 @@ public class ArangoDatabase(
 	{
 		var result = await arangoDb.Query.ExecuteAsync<SharpChannelQueryResult>(
 			handle,
-			$"FOR v IN {DatabaseConstants.channels} RETURN v");
+			$"FOR v IN {DatabaseConstants.Channels} RETURN v");
 		return result.Select(SharpChannelQueryToSharpChannel);
 	}
 
-	private static SharpChannel SharpChannelQueryToSharpChannel(SharpChannelQueryResult x)
+	private async ValueTask<SharpPlayer> GetChannelOwnerAsync(string channelId)
+	{
+		var vertexes = await arangoDb.Query.ExecuteAsync<string>(handle,
+			$"FOR v IN 1..1 OUTBOUND {channelId} GRAPH {DatabaseConstants.GraphChannels} RETURN v._id");
+		var vertex = vertexes.First();
+		var owner = await GetObjectNodeAsync(vertex);
+		return owner.AsPlayer;
+	}
+
+	private async ValueTask<IEnumerable<AnySharpObject>> GetChannelMembersAsync(string channelId)
+	{
+		var vertexes = await arangoDb.Query.ExecuteAsync<string>(handle,
+			$"FOR v IN 1..1 INBOUND {channelId} GRAPH {DatabaseConstants.GraphChannels} RETURN v._id");
+
+		return await AsyncEnumerable.ToAsyncEnumerable(vertexes)
+			.SelectAwait(async x => (await GetObjectNodeAsync(x)).Known()).ToArrayAsync(CancellationToken.None);
+	}
+
+	private SharpChannel SharpChannelQueryToSharpChannel(SharpChannelQueryResult x)
 	{
 		return new SharpChannel
 		{
@@ -472,8 +493,8 @@ public class ArangoDatabase(
 			SeeLock = x.SeeLock,
 			HideLock = x.HideLock,
 			ModLock = x.ModLock,
-			Owner = null,
-			Members = null
+			Owner = new AsyncLazy<SharpPlayer>(async _ => await GetChannelOwnerAsync(x.Id)),
+			Members = new AsyncLazy<IEnumerable<AnySharpObject>>(async _ => await GetChannelMembersAsync(x.Id))
 		};
 	}
 
@@ -481,15 +502,15 @@ public class ArangoDatabase(
 	{
 		var result = await arangoDb.Query.ExecuteAsync<SharpChannelQueryResult>(
 			handle,
-			$"FOR v IN {DatabaseConstants.channels} FILTER v.Name = {name} RETURN v");
+			$"FOR v IN {DatabaseConstants.Channels} FILTER v.Name = {name} RETURN v");
 		return result?.Select(SharpChannelQueryToSharpChannel).FirstOrDefault();
 	}
 
 	public async ValueTask<IEnumerable<SharpChannel>> GetMemberChannelsAsync(AnySharpObject obj)
 	{
 		var result = await arangoDb.Query.ExecuteAsync<SharpChannelQueryResult>(handle,
-			$"FOR v in 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.onChannel} RETURN v",
-			new Dictionary<string, object> { { "startVertex", obj.Object().Id! } });
+			$"FOR v in 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.OnChannel} RETURN v",
+			new Dictionary<string, object> { { StartVertex, obj.Object().Id! } });
 		return result.Select(SharpChannelQueryToSharpChannel);
 	}
 
@@ -500,7 +521,7 @@ public class ArangoDatabase(
 			{
 				Collections = new ArangoTransactionScope
 				{
-					Exclusive = [DatabaseConstants.channels, DatabaseConstants.ownsChannel, DatabaseConstants.onChannel]
+					Exclusive = [DatabaseConstants.Channels, DatabaseConstants.OwnerOfChannel, DatabaseConstants.OnChannel]
 				}
 			}
 		);
@@ -511,49 +532,102 @@ public class ArangoDatabase(
 		);
 
 		var createdChannel = await arangoDb.Graph.Vertex.CreateAsync<SharpChannelCreateRequest, SharpChannelQueryResult>(
-			transaction, DatabaseConstants.graphChannels, DatabaseConstants.channels, newChannel);
+			transaction, DatabaseConstants.GraphChannels, DatabaseConstants.Channels, newChannel);
 
-		await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.graphChannels, DatabaseConstants.ownsChannel,
-			new SharpEdgeCreateRequest(owner.Id!, createdChannel.New.Id));
-		await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.graphChannels, DatabaseConstants.onChannel,
+		await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.GraphChannels,
+			DatabaseConstants.OwnerOfChannel,
+			new SharpEdgeCreateRequest(createdChannel.New.Id, owner.Id!));
+		await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.GraphChannels, DatabaseConstants.OnChannel,
 			new SharpEdgeCreateRequest(owner.Id!, createdChannel.New.Id));
 
 		await arangoDb.Transaction.CommitAsync(transaction);
 	}
 
-	public ValueTask UpdateChannelAsync(SharpChannel channel, string? Name, string? Description, string[]? Privs,
-		string? JoinLock,
-		string? SpeakLock, string? SeeLock, string? HideLock, string? ModLock)
-	{
-		throw new NotImplementedException();
-	}
+	public async ValueTask UpdateChannelAsync(SharpChannel channel, string? name, string? description, string[]? privs,
+		string? joinLock, string? speakLock, string? seeLock, string? hideLock, string? modLock)
+		=> await arangoDb.Graph.Vertex.UpdateAsync(handle,
+			DatabaseConstants.GraphChannels, DatabaseConstants.Channels, channel.Id,
+			new
+			{
+				Name = name ?? channel.Name,
+				Description = description ?? channel.Description,
+				Privs = privs ?? channel.Privs,
+				JoinLock = joinLock ?? channel.JoinLock,
+				SpeakLock = speakLock ?? channel.SpeakLock,
+				SeeLock = seeLock ?? channel.SeeLock,
+				HideLock = hideLock ?? channel.HideLock,
+				ModLock = modLock ?? channel.ModLock
+			});
 
 	public async ValueTask DeleteChannelAsync(SharpChannel channel) =>
-		await arangoDb.Graph.Vertex.RemoveAsync(handle, DatabaseConstants.graphChannels, DatabaseConstants.channels,
+		await arangoDb.Graph.Vertex.RemoveAsync(handle, DatabaseConstants.GraphChannels, DatabaseConstants.Channels,
 			channel.Id);
 
 	public async ValueTask AddUserToChannelAsync(SharpChannel channel, AnySharpObject obj) =>
-		await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.graphChannels, DatabaseConstants.onChannel,
-			new SharpEdgeCreateRequest(channel.Id, obj.Object().Id!));
+		await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphChannels, DatabaseConstants.OnChannel,
+			new SharpEdgeCreateRequest(channel.Id!, obj.Object().Id!));
 
 	public async ValueTask RemoveUserFromChannelAsync(SharpChannel channel, AnySharpObject obj)
 	{
-		// TODO: Get Key
-		await arangoDb.Graph.Edge.RemoveAsync<dynamic>(handle, DatabaseConstants.graphChannels, DatabaseConstants.onChannel,
-			"");
+		var result = await arangoDb.Query.ExecuteAsync<SharpEdgeQueryResult>(handle,
+			$"FOR v IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.OnChannel} RETURN v",
+			new Dictionary<string, object> { { StartVertex, obj.Object().Id! } }
+		);
+
+		var singleResult = result?.FirstOrDefault();
+		if (singleResult is null) return;
+
+		await arangoDb.Graph.Edge.RemoveAsync<dynamic>(handle,
+			DatabaseConstants.GraphChannels, DatabaseConstants.OnChannel,
+			singleResult.Key);
 	}
 
-	public ValueTask UpdateChannelUserStatusAsync(SharpChannel channel, AnySharpObject obj, SharpChannelStatus status)
+	public async ValueTask UpdateChannelUserStatusAsync(SharpChannel channel, AnySharpObject obj,
+		SharpChannelStatus status)
 	{
-		// TODO: Get Key
-		throw new NotImplementedException();
+		var result = await arangoDb.Query.ExecuteAsync<SharpEdgeQueryResult>(handle,
+			$"FOR v IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.OnChannel} RETURN v",
+			new Dictionary<string, object> { { StartVertex, obj.Object().Id! } }
+		);
+
+		var singleResult = result?.FirstOrDefault();
+		if (singleResult is null) return;
+
+		var updates = new List<KeyValuePair<string, object>>();
+		if (status.Combine is not null)
+		{
+			updates.Add(new KeyValuePair<string, object>(nameof(status.Combine), status.Combine));
+		}
+
+		if (status.Gagged is not null)
+		{
+			updates.Add(new KeyValuePair<string, object>(nameof(status.Gagged), status.Gagged));
+		}
+
+		if (status.Hide is not null)
+		{
+			updates.Add(new KeyValuePair<string, object>(nameof(status.Hide), status.Hide));
+		}
+
+		if (status.Mute is not null)
+		{
+			updates.Add(new KeyValuePair<string, object>(nameof(status.Mute), status.Mute));
+		}
+
+		if (status.Title is not null)
+		{
+			updates.Add(new KeyValuePair<string, object>(nameof(status.Title), status.Title));
+		}
+
+		await arangoDb.Graph.Edge.UpdateAsync(handle, DatabaseConstants.GraphChannels, DatabaseConstants.OnChannel,
+			singleResult.Key, updates);
 	}
 
 	private async ValueTask<IEnumerable<SharpAttributeFlag>> GetAttributeFlagsAsync(string id)
 	{
 		var result = await arangoDb.Query.ExecuteAsync<SharpAttributeFlagQueryResult>(handle,
-			$"FOR v in 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.graphAttributeFlags} RETURN v",
-			new Dictionary<string, object>() { { "startVertex", id } });
+			$"FOR v in 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributeFlags} RETURN v",
+			new Dictionary<string, object> { { StartVertex, id } });
 		return result.Select(x =>
 			new SharpAttributeFlag()
 			{
@@ -570,17 +644,17 @@ public class ArangoDatabase(
 		// This only works for when we get a non-attribute as our ID.
 		// Adjustment is needed if we get an attribute ID.
 		IEnumerable<SharpAttributeQueryResult> sharpAttributeResults;
-		if (id.StartsWith(DatabaseConstants.attributes))
+		if (id.StartsWith(DatabaseConstants.Attributes))
 		{
 			sharpAttributeResults = await arangoDb.Query.ExecuteAsync<SharpAttributeQueryResult>(handle,
-				$"FOR v IN 1..999 OUTBOUND @startVertex GRAPH {DatabaseConstants.graphAttributes} RETURN v",
-				new Dictionary<string, object>() { { "startVertex", id } });
+				$"FOR v IN 1..999 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} RETURN v",
+				new Dictionary<string, object>() { { StartVertex, id } });
 		}
 		else
 		{
 			sharpAttributeResults = await arangoDb.Query.ExecuteAsync<SharpAttributeQueryResult>(handle,
-				$"LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.graphObjects} RETURN v) FOR v IN 1..999 OUTBOUND start GRAPH {DatabaseConstants.graphAttributes} RETURN v",
-				new Dictionary<string, object>() { { "startVertex", id } });
+				$"LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphObjects} RETURN v) FOR v IN 1..999 OUTBOUND start GRAPH {DatabaseConstants.GraphAttributes} RETURN v",
+				new Dictionary<string, object>() { { StartVertex, id } });
 		}
 
 		var sharpAttributes = sharpAttributeResults.Select(async x =>
@@ -603,7 +677,7 @@ public class ArangoDatabase(
 	private async ValueTask<SharpPlayer> GetObjectOwnerAsync(string id)
 	{
 		var owner = (await arangoDb.Query.ExecuteAsync<SharpPlayerQueryResult>(handle,
-			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphObjectOwners} RETURN v")).First();
+			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphObjectOwners} RETURN v")).First();
 
 		var populatedOwner = await GetObjectNodeAsync(owner.Id);
 
@@ -613,7 +687,7 @@ public class ArangoDatabase(
 	private async ValueTask<SharpPlayer> GetAttributeOwnerAsync(string id)
 	{
 		var owner = (await arangoDb.Query.ExecuteAsync<SharpObjectQueryResult>(handle,
-			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphAttributeOwners} RETURN v")).First();
+			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphAttributeOwners} RETURN v")).First();
 
 		var populatedOwner = await GetObjectNodeAsync(owner.Id);
 
@@ -622,17 +696,17 @@ public class ArangoDatabase(
 
 	public async ValueTask<SharpObject?> GetParentAsync(string id)
 		=> (await arangoDb.Query.ExecuteAsync<SharpObject>(handle,
-				$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphParents} RETURN v", cache: true))
+				$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphParents} RETURN v", cache: true))
 			.FirstOrDefault();
 
 	public async ValueTask<IEnumerable<SharpObject>> GetParentsAsync(string id)
 		=> await arangoDb.Query.ExecuteAsync<SharpObject>(handle,
-			$"FOR v IN 1 OUTBOUND {id} GRAPH {DatabaseConstants.graphParents} RETURN v", cache: true);
+			$"FOR v IN 1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphParents} RETURN v", cache: true);
 
 	private async ValueTask<AnySharpContainer> GetHomeAsync(string id)
 	{
 		var homeId = (await arangoDb.Query.ExecuteAsync<string>(handle,
-			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.graphHomes} RETURN v._id", cache: true)).First();
+			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphHomes} RETURN v._id", cache: true)).First();
 		var homeObject = await GetObjectNodeAsync(homeId);
 
 		return homeObject.Match<AnySharpContainer>(
@@ -645,7 +719,7 @@ public class ArangoDatabase(
 
 	public async ValueTask<AnyOptionalSharpObject> GetObjectNodeAsync(DBRef dbref)
 	{
-		var obj = await arangoDb.Document.GetAsync<SharpObjectQueryResult>(handle, DatabaseConstants.objects,
+		var obj = await arangoDb.Document.GetAsync<SharpObjectQueryResult>(handle, DatabaseConstants.Objects,
 			dbref.Number.ToString());
 
 		if (obj is null) return new None();
@@ -653,7 +727,7 @@ public class ArangoDatabase(
 
 		var startVertex = obj.Id;
 		var res = (await arangoDb.Query.ExecuteAsync<SharpObjectQueryResult>(handle,
-				$"FOR v IN 1..1 INBOUND {startVertex} GRAPH {DatabaseConstants.graphObjects} RETURN v", cache: true))
+				$"FOR v IN 1..1 INBOUND {startVertex} GRAPH {DatabaseConstants.GraphObjects} RETURN v", cache: true))
 			.FirstOrDefault();
 
 		if (res is null) return new None();
@@ -679,21 +753,21 @@ public class ArangoDatabase(
 
 		return obj.Type switch
 		{
-			DatabaseConstants.typeThing => new SharpThing
+			DatabaseConstants.TypeThing => new SharpThing
 			{
 				Id = id, Object = convertObject,
 				Location = new Lazy<AnySharpContainer>(() => mediator.Send(new GetCertainLocationQuery(id)).AsTask().Result),
 				Home = new Lazy<AnySharpContainer>(() => GetHomeAsync(id).AsTask().Result)
 			},
-			DatabaseConstants.typePlayer => new SharpPlayer
+			DatabaseConstants.TypePlayer => new SharpPlayer
 			{
 				Id = id, Object = convertObject, Aliases = res.Aliases,
 				Location = new Lazy<AnySharpContainer>(() => mediator.Send(new GetCertainLocationQuery(id)).AsTask().Result),
 				Home = new Lazy<AnySharpContainer>(() => GetHomeAsync(id).AsTask().Result),
 				PasswordHash = res.PasswordHash
 			},
-			DatabaseConstants.typeRoom => new SharpRoom { Id = id, Object = convertObject },
-			DatabaseConstants.typeExit => new SharpExit
+			DatabaseConstants.TypeRoom => new SharpRoom { Id = id, Object = convertObject },
+			DatabaseConstants.TypeExit => new SharpExit
 			{
 				Id = id, Object = convertObject, Aliases = res.Aliases,
 				Location = new Lazy<AnySharpContainer>(() => mediator.Send(new GetCertainLocationQuery(id)).AsTask().Result),
@@ -706,17 +780,17 @@ public class ArangoDatabase(
 	private async ValueTask<AnyOptionalSharpObject> GetObjectNodeAsync(string dbId)
 	{
 		ArangoList<dynamic>? query;
-		if (dbId.StartsWith(DatabaseConstants.objects))
+		if (dbId.StartsWith(DatabaseConstants.Objects))
 		{
 			query = await arangoDb.Query.ExecuteAsync<dynamic>(handle,
-				$"FOR v IN 0..1 INBOUND {dbId} GRAPH {DatabaseConstants.graphObjects} RETURN v",
+				$"FOR v IN 0..1 INBOUND {dbId} GRAPH {DatabaseConstants.GraphObjects} RETURN v",
 				cache: true);
 			query.Reverse();
 		}
 		else
 		{
 			query = await arangoDb.Query.ExecuteAsync<dynamic>(handle,
-				$"FOR v IN 0..1 OUTBOUND {dbId} GRAPH {DatabaseConstants.graphObjects} RETURN v", cache: true);
+				$"FOR v IN 0..1 OUTBOUND {dbId} GRAPH {DatabaseConstants.GraphObjects} RETURN v", cache: true);
 		}
 
 		var res = query.First();
@@ -745,20 +819,20 @@ public class ArangoDatabase(
 
 		return collection switch
 		{
-			DatabaseConstants.things => new SharpThing
+			DatabaseConstants.Things => new SharpThing
 			{
 				Id = id, Object = convertObject,
 				Location = new(() => mediator.Send(new GetCertainLocationQuery(id)).AsTask().Result),
 				Home = new(() => GetHomeAsync(id).AsTask().Result)
 			},
-			DatabaseConstants.players => new SharpPlayer
+			DatabaseConstants.Players => new SharpPlayer
 			{
 				Id = id, Object = convertObject, Aliases = res.Aliases.ToObject<string[]>(),
 				Location = new(() => mediator.Send(new GetCertainLocationQuery(id)).AsTask().Result),
 				Home = new(() => GetHomeAsync(id).AsTask().Result), PasswordHash = res.PasswordHash
 			},
-			DatabaseConstants.rooms => new SharpRoom { Id = id, Object = convertObject },
-			DatabaseConstants.exits => new SharpExit
+			DatabaseConstants.Rooms => new SharpRoom { Id = id, Object = convertObject },
+			DatabaseConstants.Exits => new SharpExit
 			{
 				Id = id, Object = convertObject, Aliases = res.Aliases.ToObject<string[]>(),
 				Location = new(() => mediator.Send(new GetCertainLocationQuery(id)).AsTask().Result),
@@ -770,7 +844,7 @@ public class ArangoDatabase(
 
 	public async ValueTask<SharpObject?> GetBaseObjectNodeAsync(DBRef dbref)
 	{
-		var obj = await arangoDb.Document.GetAsync<SharpObjectQueryResult>(handle, DatabaseConstants.objects,
+		var obj = await arangoDb.Document.GetAsync<SharpObjectQueryResult>(handle, DatabaseConstants.Objects,
 			dbref.Number.ToString());
 
 		if (dbref.CreationMilliseconds.HasValue && obj.CreationTime != dbref.CreationMilliseconds)
@@ -803,17 +877,17 @@ public class ArangoDatabase(
 		// This only works for when we get a non-attribute as our ID.
 		// Adjustment is needed if we get an attribute ID.
 		IEnumerable<SharpAttributeQueryResult> sharpAttributeResults;
-		if (id.StartsWith(DatabaseConstants.attributes))
+		if (id.StartsWith(DatabaseConstants.Attributes))
 		{
 			sharpAttributeResults = await arangoDb.Query.ExecuteAsync<SharpAttributeQueryResult>(handle,
-				$"FOR v IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.graphAttributes} RETURN v",
-				new Dictionary<string, object>() { { "startVertex", id } });
+				$"FOR v IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} RETURN v",
+				new Dictionary<string, object>() { { StartVertex, id } });
 		}
 		else
 		{
 			sharpAttributeResults = await arangoDb.Query.ExecuteAsync<SharpAttributeQueryResult>(handle,
-				$"LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.graphObjects} RETURN v) FOR v IN 1..1 OUTBOUND start GRAPH {DatabaseConstants.graphAttributes} RETURN v",
-				new Dictionary<string, object>() { { "startVertex", id } });
+				$"LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphObjects} RETURN v) FOR v IN 1..1 OUTBOUND start GRAPH {DatabaseConstants.GraphAttributes} RETURN v",
+				new Dictionary<string, object>() { { StartVertex, id } });
 		}
 
 		var sharpAttributes = sharpAttributeResults.Select(async x =>
@@ -829,7 +903,7 @@ public class ArangoDatabase(
 
 	public async ValueTask<IEnumerable<SharpAttribute>?> GetAttributesAsync(DBRef dbref, string attributePattern)
 	{
-		var startVertex = $"{DatabaseConstants.objects}/{dbref.Number}";
+		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 		var result =
 			await arangoDb.Query.ExecuteAsync<SharpObjectQueryResult>(handle, $"RETURN DOCUMENT({startVertex})", cache: true);
 		var pattern = attributePattern.Replace("_", "\\_").Replace("%", "\\%").Replace("?", "_").Replace("*", "%");
@@ -847,12 +921,12 @@ public class ArangoDatabase(
 		// OPTIONS { indexHint: "inverted_index_name", forceIndexHint: true }
 		// This doesn't seem like it can be done on a GRAPH query?
 		const string query =
-			$"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.graphAttributes} FILTER v.LongName LIKE @pattern RETURN v";
+			$"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName LIKE @pattern RETURN v";
 
 		var result2 = await arangoDb.Query.ExecuteAsync<SharpAttributeQueryResult>(handle, query,
-			new Dictionary<string, object>()
+			new Dictionary<string, object>
 			{
-				{ "startVertex", startVertex },
+				{ StartVertex, startVertex },
 				{ "pattern", pattern }
 			});
 
@@ -867,7 +941,7 @@ public class ArangoDatabase(
 
 	public async ValueTask<IEnumerable<SharpAttribute>?> GetAttributesRegexAsync(DBRef dbref, string attributePattern)
 	{
-		var startVertex = $"{DatabaseConstants.objects}/{dbref.Number}";
+		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 		var result =
 			await arangoDb.Query.ExecuteAsync<SharpObjectQueryResult>(handle, $"RETURN DOCUMENT({startVertex})", cache: true);
 
@@ -878,12 +952,12 @@ public class ArangoDatabase(
 
 		// TODO: Create an Inverted Index on LongName.
 		var query =
-			$"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.graphAttributes} FILTER v.LongName =~ @pattern RETURN v";
+			$"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName =~ @pattern RETURN v";
 
 		var result2 = await arangoDb.Query.ExecuteAsync<SharpAttributeQueryResult>(handle, query,
 			new Dictionary<string, object>()
 			{
-				{ "startVertex", startVertex },
+				{ StartVertex, startVertex },
 				{ "pattern", attributePattern }
 			});
 
@@ -897,7 +971,7 @@ public class ArangoDatabase(
 	}
 
 	public async ValueTask SetLockAsync(SharpObject target, string lockName, string lockString)
-		=> await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.objects, new
+		=> await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Objects, new
 		{
 			target.Key,
 			Locks = target.Locks.Add(lockName, lockString)
@@ -905,18 +979,18 @@ public class ArangoDatabase(
 
 	public async ValueTask<IEnumerable<SharpAttribute>?> GetAttributeAsync(DBRef dbref, params string[] attribute)
 	{
-		var startVertex = $"{DatabaseConstants.objects}/{dbref.Number}";
+		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 
 		const string let =
-			$"LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.graphObjects} RETURN v)";
+			$"LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphObjects} RETURN v)";
 		const string query =
-			$"{let} FOR v,e,p IN 1..@max OUTBOUND start GRAPH {DatabaseConstants.graphAttributes} PRUNE condition = NTH(@attr,LENGTH(p.edges)-1) != v.Name FILTER !condition RETURN v";
+			$"{let} FOR v,e,p IN 1..@max OUTBOUND start GRAPH {DatabaseConstants.GraphAttributes} PRUNE condition = NTH(@attr,LENGTH(p.edges)-1) != v.Name FILTER !condition RETURN v";
 
 		var result = await arangoDb.Query.ExecuteAsync<SharpAttributeQueryResult>(handle, query,
 			new Dictionary<string, object>()
 			{
 				{ "attr", attribute.Select(x => x.ToUpper()) },
-				{ "startVertex", startVertex },
+				{ StartVertex, startVertex },
 				{ "max", attribute.Length }
 			});
 
@@ -942,27 +1016,27 @@ public class ArangoDatabase(
 			AllowImplicit = false,
 			Collections = new ArangoTransactionScope
 			{
-				Exclusive = [DatabaseConstants.attributes, DatabaseConstants.hasAttribute, DatabaseConstants.hasAttributeOwner],
+				Exclusive = [DatabaseConstants.Attributes, DatabaseConstants.HasAttribute, DatabaseConstants.HasAttributeOwner],
 				Read =
 				[
-					DatabaseConstants.attributes, DatabaseConstants.hasAttribute, DatabaseConstants.objects,
-					DatabaseConstants.isObject, DatabaseConstants.players, DatabaseConstants.rooms, DatabaseConstants.things,
-					DatabaseConstants.exits
+					DatabaseConstants.Attributes, DatabaseConstants.HasAttribute, DatabaseConstants.Objects,
+					DatabaseConstants.IsObject, DatabaseConstants.Players, DatabaseConstants.Rooms, DatabaseConstants.Things,
+					DatabaseConstants.Exits
 				]
 			}
 		});
 
-		var startVertex = $"{DatabaseConstants.objects}/{dbref.Number}";
+		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 		const string let1 =
-			$"LET start = (FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.graphObjects} RETURN v)";
+			$"LET start = (FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphObjects} RETURN v)";
 		const string let2 =
-			$"LET foundAttributes = (FOR v,e,p IN 1..@max OUTBOUND FIRST(start) GRAPH {DatabaseConstants.graphAttributes} PRUNE condition = NTH(@attr,LENGTH(p.edges)-1) != v.Name FILTER !condition RETURN v)";
+			$"LET foundAttributes = (FOR v,e,p IN 1..@max OUTBOUND FIRST(start) GRAPH {DatabaseConstants.GraphAttributes} PRUNE condition = NTH(@attr,LENGTH(p.edges)-1) != v.Name FILTER !condition RETURN v)";
 		const string query = $"{let1} {let2} RETURN APPEND(start, foundAttributes)";
 
 		var result = await arangoDb.Query.ExecuteAsync<dynamic[]>(handle, query, new Dictionary<string, object>
 		{
 			{ "attr", attribute.Select(x => x.ToUpper()) },
-			{ "startVertex", startVertex },
+			{ StartVertex, startVertex },
 			{ "max", attribute.Length }
 		});
 
@@ -977,20 +1051,20 @@ public class ArangoDatabase(
 		foreach (var nextAttr in remaining.Select((attrName, i) => (value: attrName, i)))
 		{
 			var newOne = await arangoDb.Document.CreateAsync<SharpAttributeCreateRequest, SharpAttributeQueryResult>(
-				transactionHandle, DatabaseConstants.attributes,
+				transactionHandle, DatabaseConstants.Attributes,
 				new SharpAttributeCreateRequest(nextAttr.value.ToUpper(), [],
-					(nextAttr.i == remaining.Length - 1)
+					nextAttr.i == remaining.Length - 1
 						? MarkupStringModule.serialize(value)
 						: string.Empty,
 					string.Join('`', attribute.SkipLast(remaining.Length - 1 - nextAttr.i).Select(x => x.ToUpper()))),
 				waitForSync: true);
 
-			await arangoDb.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.graphAttributes,
-				DatabaseConstants.hasAttribute,
+			await arangoDb.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.GraphAttributes,
+				DatabaseConstants.HasAttribute,
 				new SharpEdgeCreateRequest(lastId, newOne.Id), waitForSync: true);
 
-			await arangoDb.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.graphAttributeOwners,
-				DatabaseConstants.hasAttributeOwner,
+			await arangoDb.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.GraphAttributeOwners,
+				DatabaseConstants.HasAttributeOwner,
 				new SharpEdgeCreateRequest(newOne.Id, owner.Object.Id!), waitForSync: true);
 
 			lastId = newOne.Id;
@@ -999,12 +1073,12 @@ public class ArangoDatabase(
 		// Update Path
 		if (remaining.Length == 0)
 		{
-			await arangoDb.Document.UpdateAsync(transactionHandle, DatabaseConstants.attributes,
+			await arangoDb.Document.UpdateAsync(transactionHandle, DatabaseConstants.Attributes,
 				new { Key = lastId.Split('/')[1], Value = MarkupStringModule.serialize(value) }, waitForSync: true,
 				mergeObjects: true);
 
-			await arangoDb.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.graphAttributeOwners,
-				DatabaseConstants.hasAttributeOwner,
+			await arangoDb.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.GraphAttributeOwners,
+				DatabaseConstants.HasAttributeOwner,
 				new SharpEdgeCreateRequest(lastId, owner.Object.Id!), waitForSync: true);
 		}
 
@@ -1024,7 +1098,7 @@ public class ArangoDatabase(
 	}
 
 	public async ValueTask SetAttributeFlagAsync(SharpAttribute attr, SharpAttributeFlag flag) =>
-		await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.attributes, new
+		await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Attributes, new
 		{
 			attr.Key,
 			Value = attr.Flags.ToImmutableArray().Add(flag)
@@ -1041,7 +1115,7 @@ public class ArangoDatabase(
 	}
 
 	public async ValueTask UnsetAttributeFlagAsync(SharpAttribute attr, SharpAttributeFlag flag) =>
-		await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.attributes, new
+		await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Attributes, new
 		{
 			attr.Key,
 			Value = attr.Flags.ToImmutableArray().Remove(flag)
@@ -1052,13 +1126,13 @@ public class ArangoDatabase(
 			"FOR v in @@C1 FILTER v.Name = @flag RETURN v",
 			bindVars: new Dictionary<string, object>
 			{
-				{ "@C1", DatabaseConstants.attributeFlags },
+				{ "@C1", DatabaseConstants.AttributeFlags },
 				{ "flag", flagName }
 			}, cache: true)).FirstOrDefault();
 
 	public async ValueTask<IEnumerable<SharpAttributeFlag>> GetAttributeFlagsAsync() =>
 		await arangoDb.Query.ExecuteAsync<SharpAttributeFlag>(handle,
-			$"FOR v in {DatabaseConstants.attributeFlags:@} RETURN v",
+			$"FOR v in {DatabaseConstants.AttributeFlags:@} RETURN v",
 			cache: true);
 
 	public ValueTask<bool> ClearAttributeAsync(DBRef dbref, string[] attribute)
@@ -1113,10 +1187,10 @@ public class ArangoDatabase(
 
 		var variableDepth = depth == -1 ? "0" : $"0..{depth}";
 		var locationQuery =
-			$"FOR v IN {variableDepth} OUTBOUND @startVertex GRAPH {DatabaseConstants.graphLocations} RETURN v._id";
+			$"FOR v IN {variableDepth} OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphLocations} RETURN v._id";
 		var query = await arangoDb.Query.ExecuteAsync<string>(handle, locationQuery, new Dictionary<string, object>()
 		{
-			{ "startVertex", baseObject.Id()! }
+			{ StartVertex, baseObject.Id()! }
 		});
 		var locationBaseObj = await GetObjectNodeAsync(query.Last());
 		var trueLocation = locationBaseObj.Match<AnyOptionalSharpContainer>(
@@ -1139,10 +1213,10 @@ public class ArangoDatabase(
 	{
 		var variableDepth = depth == -1 ? "0" : $"0..{depth}";
 		var locationQuery =
-			$"FOR v IN {variableDepth} OUTBOUND @startVertex GRAPH {DatabaseConstants.graphLocations} RETURN v._id";
+			$"FOR v IN {variableDepth} OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphLocations} RETURN v._id";
 		var query = await arangoDb.Query.ExecuteAsync<string>(handle, locationQuery, new Dictionary<string, object>()
 		{
-			{ "startVertex", id }
+			{ StartVertex, id }
 		});
 		var locationBaseObj = await GetObjectNodeAsync(query.Last());
 		var trueLocation = locationBaseObj.Match<AnySharpContainer>(
@@ -1164,11 +1238,11 @@ public class ArangoDatabase(
 		if (baseObject.IsNone) return null;
 
 		const string locationQuery =
-			$"FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.graphLocations} RETURN v._id";
+			$"FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphLocations} RETURN v._id";
 		var query = await arangoDb.Query.ExecuteAsync<string>(handle, $"{locationQuery}",
 			new Dictionary<string, object>
 			{
-				{ "startVertex", baseObject.Object()!.Id! }
+				{ StartVertex, baseObject.Object()!.Id! }
 			});
 		var result = query
 			.Select(x => x)
@@ -1189,11 +1263,11 @@ public class ArangoDatabase(
 		var startVertex = node.Id;
 
 		const string locationQuery =
-			$"FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.graphLocations} RETURN v";
+			$"FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphLocations} RETURN v";
 		var query = await arangoDb.Query.ExecuteAsync<dynamic>(handle, $"{locationQuery}",
 			new Dictionary<string, object>
 			{
-				{ "startVertex", startVertex }
+				{ StartVertex, startVertex }
 			});
 
 		var ids = query.Select(x => (string)x._id).ToArray();
@@ -1216,11 +1290,11 @@ public class ArangoDatabase(
 		var baseObject = await GetObjectNodeAsync(obj);
 		if (baseObject.IsNone) return null;
 
-		const string exitQuery = $"FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.graphExits} RETURN v";
+		const string exitQuery = $"FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphExits} RETURN v";
 		var query = await arangoDb.Query.ExecuteAsync<SharpObjectQueryResult>(handle, exitQuery,
 			new Dictionary<string, object>
 			{
-				{ "startVertex", baseObject.Known().Id()! }
+				{ StartVertex, baseObject.Known().Id()! }
 			});
 		var result = query
 			.Select(x => x.Id)
@@ -1241,11 +1315,11 @@ public class ArangoDatabase(
 		// This is bad code. We can't use graphExits for this.
 		var startVertex = node.Id;
 
-		const string exitQuery = $"FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.graphExits} RETURN v";
+		const string exitQuery = $"FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphExits} RETURN v";
 		var query = await arangoDb.Query.ExecuteAsync<SharpObjectQueryResult>(handle, exitQuery,
 			new Dictionary<string, object>
 			{
-				{ "startVertex", startVertex }
+				{ StartVertex, startVertex }
 			});
 		var result = query
 			.Select(x => x.Id)
@@ -1265,11 +1339,11 @@ public class ArangoDatabase(
 	{
 		// TODO: Look up by Alias.
 		var query = await arangoDb.Query.ExecuteAsync<string>(handle,
-			$"FOR v IN {DatabaseConstants.objects} FILTER v.Type == @type && v.Name == @name RETURN v._id",
+			$"FOR v IN {DatabaseConstants.Objects} FILTER v.Type == @type && v.Name == @name RETURN v._id",
 			bindVars: new Dictionary<string, object>
 			{
 				{ "name", name },
-				{ "type", DatabaseConstants.typePlayer }
+				{ "type", DatabaseConstants.TypePlayer }
 			});
 
 		// TODO: Edit to return multiple players and let the above layer figure out which one it wants.
@@ -1281,19 +1355,18 @@ public class ArangoDatabase(
 
 	public async ValueTask MoveObjectAsync(AnySharpContent enactorObj, AnySharpContainer destination)
 	{
-		var newLocation = destination;
 		var edge = (await arangoDb.Query.ExecuteAsync<SharpEdgeQueryResult>(handle,
-				$"FOR v,e IN 1..1 OUTBOUND {enactorObj.Id} GRAPH {DatabaseConstants.graphLocations} RETURN e"))
+				$"FOR v,e IN 1..1 OUTBOUND {enactorObj.Id} GRAPH {DatabaseConstants.GraphLocations} RETURN e"))
 			.Single();
 
 		await arangoDb.Graph.Edge.UpdateAsync(handle,
-			DatabaseConstants.graphLocations,
-			DatabaseConstants.atLocation,
+			DatabaseConstants.GraphLocations,
+			DatabaseConstants.AtLocation,
 			edge.Key,
 			new
 			{
 				From = enactorObj.Id,
-				To = newLocation.Id
+				To = destination.Id
 			},
 			waitForSync: true);
 	}
