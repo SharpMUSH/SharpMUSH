@@ -451,6 +451,104 @@ public class ArangoDatabase(
 		return resultingValue?.ToString(Formatting.None);
 	}
 
+	public async ValueTask<IEnumerable<SharpChannel>> GetAllChannelsAsync()
+	{
+		var result = await arangoDb.Query.ExecuteAsync<SharpChannelQueryResult>(
+			handle,
+			$"FOR v IN {DatabaseConstants.channels} RETURN v");
+		return result.Select(SharpChannelQueryToSharpChannel);
+	}
+
+	private static SharpChannel SharpChannelQueryToSharpChannel(SharpChannelQueryResult x)
+	{
+		return new SharpChannel
+		{
+			Id = x.Id,
+			Name = x.Name,
+			Description = x.Description,
+			Privs = x.Privs,
+			JoinLock = x.JoinLock,
+			SpeakLock = x.SpeakLock,
+			SeeLock = x.SeeLock,
+			HideLock = x.HideLock,
+			ModLock = x.ModLock,
+			Owner = null,
+			Members = null
+		};
+	}
+
+	public async ValueTask<SharpChannel?> GetChannelAsync(string name)
+	{
+		var result = await arangoDb.Query.ExecuteAsync<SharpChannelQueryResult>(
+			handle,
+			$"FOR v IN {DatabaseConstants.channels} FILTER v.Name = {name} RETURN v");
+		return result?.Select(SharpChannelQueryToSharpChannel).FirstOrDefault();
+	}
+
+	public async ValueTask<IEnumerable<SharpChannel>> GetMemberChannelsAsync(AnySharpObject obj)
+	{
+		var result = await arangoDb.Query.ExecuteAsync<SharpChannelQueryResult>(handle,
+			$"FOR v in 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.onChannel} RETURN v",
+			new Dictionary<string, object> { { "startVertex", obj.Object().Id! } });
+		return result.Select(SharpChannelQueryToSharpChannel);
+	}
+
+	public async ValueTask CreateChannelAsync(SharpChannel channel, SharpPlayer owner)
+	{
+		var transaction = await arangoDb.Transaction.BeginAsync(handle,
+			new ArangoTransaction
+			{
+				Collections = new ArangoTransactionScope
+				{
+					Exclusive = [DatabaseConstants.channels, DatabaseConstants.ownsChannel, DatabaseConstants.onChannel]
+				}
+			}
+		);
+
+		var newChannel = new SharpChannelCreateRequest(
+			Name: channel.Name,
+			Privs: channel.Privs
+		);
+
+		var createdChannel = await arangoDb.Graph.Vertex.CreateAsync<SharpChannelCreateRequest, SharpChannelQueryResult>(
+			transaction, DatabaseConstants.graphChannels, DatabaseConstants.channels, newChannel);
+
+		await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.graphChannels, DatabaseConstants.ownsChannel,
+			new SharpEdgeCreateRequest(owner.Id!, createdChannel.New.Id));
+		await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.graphChannels, DatabaseConstants.onChannel,
+			new SharpEdgeCreateRequest(owner.Id!, createdChannel.New.Id));
+
+		await arangoDb.Transaction.CommitAsync(transaction);
+	}
+
+	public ValueTask UpdateChannelAsync(SharpChannel channel, string? Name, string? Description, string[]? Privs,
+		string? JoinLock,
+		string? SpeakLock, string? SeeLock, string? HideLock, string? ModLock)
+	{
+		throw new NotImplementedException();
+	}
+
+	public async ValueTask DeleteChannelAsync(SharpChannel channel) =>
+		await arangoDb.Graph.Vertex.RemoveAsync(handle, DatabaseConstants.graphChannels, DatabaseConstants.channels,
+			channel.Id);
+
+	public async ValueTask AddUserToChannelAsync(SharpChannel channel, AnySharpObject obj) =>
+		await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.graphChannels, DatabaseConstants.onChannel,
+			new SharpEdgeCreateRequest(channel.Id, obj.Object().Id!));
+
+	public async ValueTask RemoveUserFromChannelAsync(SharpChannel channel, AnySharpObject obj)
+	{
+		// TODO: Get Key
+		await arangoDb.Graph.Edge.RemoveAsync<dynamic>(handle, DatabaseConstants.graphChannels, DatabaseConstants.onChannel,
+			"");
+	}
+
+	public ValueTask UpdateChannelUserStatusAsync(SharpChannel channel, AnySharpObject obj, SharpChannelStatus status)
+	{
+		// TODO: Get Key
+		throw new NotImplementedException();
+	}
+
 	private async ValueTask<IEnumerable<SharpAttributeFlag>> GetAttributeFlagsAsync(string id)
 	{
 		var result = await arangoDb.Query.ExecuteAsync<SharpAttributeFlagQueryResult>(handle,

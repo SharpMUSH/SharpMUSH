@@ -212,4 +212,29 @@ public interface ISharpDatabase
 	/// <returns>A Json String with the data stored within.</returns>
 	ValueTask<string?> GetExpandedObjectData(string sharpObjectId, string dataType);
 
+	ValueTask<IEnumerable<SharpChannel>> GetAllChannelsAsync();
+	
+	ValueTask<SharpChannel?> GetChannelAsync(string name);
+	
+	ValueTask<IEnumerable<SharpChannel>> GetMemberChannelsAsync(AnySharpObject obj);
+
+	ValueTask CreateChannelAsync(SharpChannel channel, SharpPlayer owner);
+	
+	ValueTask UpdateChannelAsync(SharpChannel channel,
+		string? Name,
+		string? Description,
+		string[]? Privs,
+		string? JoinLock,
+		string? SpeakLock,
+		string? SeeLock,
+		string? HideLock,
+		string? ModLock);
+	
+	ValueTask DeleteChannelAsync(SharpChannel channel);
+
+	ValueTask AddUserToChannelAsync(SharpChannel channel, AnySharpObject obj);
+	
+	ValueTask RemoveUserFromChannelAsync(SharpChannel channel, AnySharpObject obj);
+	
+	ValueTask UpdateChannelUserStatusAsync(SharpChannel channel, AnySharpObject obj, SharpChannelStatus status);
 }

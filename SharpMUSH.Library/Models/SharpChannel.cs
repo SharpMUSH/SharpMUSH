@@ -1,7 +1,11 @@
-﻿namespace SharpMUSH.Library.Models;
+﻿using Newtonsoft.Json;
+
+namespace SharpMUSH.Library.Models;
 
 public class SharpChannel
 {
+	[JsonIgnore]
+	public string Id { get; set; }
 	public required string Name { get; set; }
 	public string Description { get; set; } = string.Empty;	
 	public required Lazy<SharpPlayer> Owner { get; set; }
@@ -14,11 +18,11 @@ public class SharpChannel
 	public string ModLock { get; set; } = string.Empty;
 }
 
-public class ChannelStatus
+public class SharpChannelStatus
 {
-	public required bool Gagged { get; set; } = false;
-	public required bool Mute { get; set; } = false;
-	public required bool Hide { get; set; } = false;
-	public required bool Combine { get; set; } = false;
-	public required string Title { get; set; } = string.Empty;
+	public bool? Gagged { get; set; }
+	public bool? Mute { get; set; }
+	public bool? Hide { get; set; }
+	public bool? Combine { get; set; }
+	public string? Title { get; set; }
 }
