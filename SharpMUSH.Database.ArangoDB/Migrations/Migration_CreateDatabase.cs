@@ -73,7 +73,8 @@ public class Migration_CreateDatabase : IArangoMigration
 									type = DatabaseConstants.TypeObject,
 									properties = new
 									{
-										Aliases = new { type = DatabaseConstants.TypeArray, items = new { type = DatabaseConstants.TypeString } },
+										Aliases = new { type = DatabaseConstants.TypeArray, 
+											items = new { type = DatabaseConstants.TypeString } },
 									}
 								}
 
@@ -118,7 +119,8 @@ public class Migration_CreateDatabase : IArangoMigration
 									type = DatabaseConstants.TypeObject,
 									properties = new
 									{
-										Aliases = new { type = DatabaseConstants.TypeArray, items = new { type = DatabaseConstants.TypeString } }
+										Aliases = new { type = DatabaseConstants.TypeArray, 
+											items = new { type = DatabaseConstants.TypeString } }
 									}
 								}
 							}
@@ -604,7 +606,7 @@ public class Migration_CreateDatabase : IArangoMigration
 							{
 								Collection = DatabaseConstants.IsObject,
 								To = [DatabaseConstants.Objects],
-								From = [.. DatabaseConstants.typesAll]
+								From = [.. DatabaseConstants.vertexesAll]
 							}
 						],
 						Name = DatabaseConstants.GraphObjects
@@ -663,7 +665,7 @@ public class Migration_CreateDatabase : IArangoMigration
 								Collection = DatabaseConstants.HasAttribute,
 								To = [DatabaseConstants.Attributes],
 								From = [
-									.. DatabaseConstants.typesAll,
+									.. DatabaseConstants.vertexesAll,
 									DatabaseConstants.Attributes
 								]
 							}
@@ -692,8 +694,8 @@ public class Migration_CreateDatabase : IArangoMigration
 							new ArangoEdgeDefinition()
 							{
 								Collection = DatabaseConstants.AtLocation,
-								To = [.. DatabaseConstants.typesContainer],
-								From = [.. DatabaseConstants.typesContent]
+								To = [.. DatabaseConstants.vertexesContainer],
+								From = [.. DatabaseConstants.vertexesContent]
 							}
 						],
 						Name = DatabaseConstants.GraphLocations,
@@ -705,8 +707,8 @@ public class Migration_CreateDatabase : IArangoMigration
 							new ArangoEdgeDefinition()
 							{
 								Collection = DatabaseConstants.HasHome,
-								To = [.. DatabaseConstants.typesContainer],
-								From = [.. DatabaseConstants.typesContent]
+								To = [.. DatabaseConstants.vertexesContainer],
+								From = [.. DatabaseConstants.vertexesContent]
 							}
 						],
 						Name = DatabaseConstants.GraphHomes
@@ -721,7 +723,7 @@ public class Migration_CreateDatabase : IArangoMigration
 								To = [
 									DatabaseConstants.Exits,
 								],
-								From = [.. DatabaseConstants.typesContainer]
+								From = [.. DatabaseConstants.vertexesContainer]
 							}
 						],
 						Name = DatabaseConstants.GraphExits

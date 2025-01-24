@@ -1065,7 +1065,7 @@ public class ArangoDatabase(
 
 			await arangoDb.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.GraphAttributeOwners,
 				DatabaseConstants.HasAttributeOwner,
-				new SharpEdgeCreateRequest(newOne.Id, owner.Object.Id!), waitForSync: true);
+				new SharpEdgeCreateRequest(newOne.Id, owner.Id!), waitForSync: true);
 
 			lastId = newOne.Id;
 		}
@@ -1079,7 +1079,7 @@ public class ArangoDatabase(
 
 			await arangoDb.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.GraphAttributeOwners,
 				DatabaseConstants.HasAttributeOwner,
-				new SharpEdgeCreateRequest(lastId, owner.Object.Id!), waitForSync: true);
+				new SharpEdgeCreateRequest(lastId, owner.Id!), waitForSync: true);
 		}
 
 		await arangoDb.Transaction.CommitAsync(transactionHandle);
