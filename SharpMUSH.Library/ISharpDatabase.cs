@@ -6,22 +6,73 @@ namespace SharpMUSH.Library;
 
 public interface ISharpDatabase
 {
+	/// <summary>
+	/// Initialize the Database, and Upgrade as needed.
+	/// </summary>
 	ValueTask Migrate();
 
+	/// <summary>
+	/// Create a new player.
+	/// </summary>
+	/// <param name="name">Player name</param>
+	/// <param name="password">Player password</param>
+	/// <param name="location">Location to create it in</param>
+	/// <returns>New player <see cref="DBRef"/></returns>
 	ValueTask<DBRef> CreatePlayerAsync(string name, string password, DBRef location);
 
+	/// <summary>
+	/// Create a new room.
+	/// </summary>
+	/// <param name="name">Room Name</param>
+	/// <param name="creator">Room Player-Creator</param>
+	/// <returns>New room <see cref="DBRef"/></returns>
 	ValueTask<DBRef> CreateRoomAsync(string name, SharpPlayer creator);
 
+	/// <summary>
+	/// Create a new thing.
+	/// </summary>
+	/// <param name="name">Thing name</param>
+	/// <param name="location">Location to create it in</param>
+	/// <param name="creator">Owner to the thing</param>
+	/// <returns>New thing <see cref="DBRef"/></returns>
 	ValueTask<DBRef> CreateThingAsync(string name, AnySharpContainer location, SharpPlayer creator);
 
+	/// <summary>
+	/// Create a new exit.
+	/// </summary>
+	/// <param name="name">Exit name</param>
+	/// <param name="aliases">Exit Aliases</param>
+	/// <param name="location">Location for the Exit</param>
+	/// <param name="creator">Owner to the exit</param>
+	/// <returns>New thing <see cref="DBRef"/></returns>
 	ValueTask<DBRef> CreateExitAsync(string name, string[] aliases, AnySharpContainer location, SharpPlayer creator);
 
+	/// <summary>
+	/// Link an exit to a destination location.
+	/// </summary>
+	/// <param name="exit"><see cref="SharpExit"/></param>
+	/// <param name="location"><see cref="AnySharpContainer"/></param>
+	/// <returns>Success if all elements existed and were able to be linked</returns>
 	ValueTask<bool> LinkExitAsync(SharpExit exit, AnySharpContainer location);
 
+	/// <summary>
+	/// Set the lock of an object.
+	/// </summary>
+	/// <param name="target">What object to lock</param>
+	/// <param name="lockName">The name of the lock</param>
+	/// <param name="lockString">The string of the Lock</param>
 	ValueTask SetLockAsync(SharpObject target, string lockName, string lockString);
 
+	/// <summary>
+	/// Get the attribute value of an object's attribute.
+	/// </summary>
+	/// <param name="dbref">DBRef of an object to get the attributes for</param>
+	/// <param name="attribute">Attribute Path - uses attribute leaves</param>
+	/// <returns>The <see cref="SharpAttribute"/> hierarchy, with the last attribute being the final leaf.</returns>
 	ValueTask<IEnumerable<SharpAttribute>?> GetAttributeAsync(DBRef dbref, params string[] attribute);
 
+	// TODO: Consider the return value, as an attribute pattern returns multiple attributes.
+	// These should return full attribute paths, so likely IEnumerable<IEnumerable<SharpAttribute>>.
 	ValueTask<IEnumerable<SharpAttribute>?> GetAttributesAsync(DBRef dbref, string attribute_pattern);
 
 	/// <summary>
@@ -45,7 +96,6 @@ public interface ISharpDatabase
 	/// <returns>A list of all SharpObjectFlags</returns>
 	ValueTask<IEnumerable<SharpObjectFlag>> GetObjectFlagsAsync();
 
-
 	/// <summary>
 	/// Set an Object Flag.
 	/// </summary>
@@ -62,8 +112,18 @@ public interface ISharpDatabase
 	/// <returns>Success or Failure</returns>
 	ValueTask<bool> UnsetObjectFlagAsync(AnySharpObject dbref, SharpObjectFlag flag);
 
+	/// <summary>
+	/// Get the parent of an object.
+	/// </summary>
+	/// <param name="id">Child ID</param>
+	/// <returns>The representing parent</returns>
 	ValueTask<SharpObject?> GetParentAsync(string id);
 
+	/// <summary>
+	/// Get the parent of an object.
+	/// </summary>
+	/// <param name="id">Child ID</param>
+	/// <returns>The full representing parent chain</returns>
 	ValueTask<IEnumerable<SharpObject>> GetParentsAsync(string id);
 
 	ValueTask<SharpObject?> GetBaseObjectNodeAsync(DBRef dbref);

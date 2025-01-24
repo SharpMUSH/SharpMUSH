@@ -44,6 +44,7 @@ public class SharpObject
 	public required Lazy<IEnumerable<SharpObjectFlag>> Flags { get; set; }
 
 	// RELATIONSHIP
+	// TODO: Consider using AnySharpObject instead of SharpObject
 	[JsonIgnore]
 	public required Lazy<SharpObject?> Parent { get; set; }
 }
