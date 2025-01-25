@@ -58,7 +58,7 @@ public class ArangoDatabase(
 		var time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 		var objectLocation = await GetObjectNodeAsync(location);
 
-		var transaction = new ArangoTransaction()
+		var transaction = new ArangoTransaction
 		{
 			LockTimeout = DatabaseBehaviorConstants.TransactionTimeout,
 			WaitForSync = true,
@@ -498,8 +498,8 @@ public class ArangoDatabase(
 		return new SharpChannel
 		{
 			Id = x.Id,
-			Name = x.Name,
-			Description = x.Description,
+			Name = MarkupStringModule.deserialize(x.Name),
+			Description = MarkupStringModule.deserialize(x.Description),
 			Privs = x.Privs,
 			JoinLock = x.JoinLock,
 			SpeakLock = x.SpeakLock,
@@ -540,7 +540,7 @@ public class ArangoDatabase(
 		);
 
 		var newChannel = new SharpChannelCreateRequest(
-			Name: channel.Name,
+			Name: MarkupStringModule.serialize(channel.Name),
 			Privs: channel.Privs
 		);
 
@@ -556,14 +556,15 @@ public class ArangoDatabase(
 		await arangoDb.Transaction.CommitAsync(transaction);
 	}
 
-	public async ValueTask UpdateChannelAsync(SharpChannel channel, string? name, string? description, string[]? privs,
+	public async ValueTask UpdateChannelAsync(SharpChannel channel, MarkupString.MarkupStringModule.MarkupString? name, 
+		MarkupString.MarkupStringModule.MarkupString? description, string[]? privs,
 		string? joinLock, string? speakLock, string? seeLock, string? hideLock, string? modLock)
 		=> await arangoDb.Graph.Vertex.UpdateAsync(handle,
 			DatabaseConstants.GraphChannels, DatabaseConstants.Channels, channel.Id,
 			new
 			{
-				Name = name ?? channel.Name,
-				Description = description ?? channel.Description,
+				Name = MarkupStringModule.serialize(name) ?? MarkupStringModule.serialize(channel.Name),
+				Description = MarkupStringModule.serialize(description) ?? MarkupStringModule.serialize(channel.Description),
 				Privs = privs ?? channel.Privs,
 				JoinLock = joinLock ?? channel.JoinLock,
 				SpeakLock = speakLock ?? channel.SpeakLock,

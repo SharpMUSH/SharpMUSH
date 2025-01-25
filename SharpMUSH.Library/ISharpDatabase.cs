@@ -281,8 +281,8 @@ public interface ISharpDatabase
 	ValueTask CreateChannelAsync(SharpChannel channel, SharpPlayer owner);
 	
 	ValueTask UpdateChannelAsync(SharpChannel channel,
-		string? Name,
-		string? Description,
+		MString? Name,
+		MString? Description,
 		string[]? Privs,
 		string? JoinLock,
 		string? SpeakLock,

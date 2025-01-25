@@ -19,10 +19,10 @@ public static partial class Commands
 {
 	private static readonly
 		Dictionary<string, (SharpCommandAttribute Attribute, Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Function)>
-		_commandLibrary = [];
+		CommandLibrary = [];
 
 	private static readonly Dictionary<string, (MethodInfo Method, SharpCommandAttribute Attribute)>
-		_knownBuiltInCommands =
+		KnownBuiltInCommands =
 			typeof(Commands)
 				.GetMethods()
 				.Select(m => (Method: m,
@@ -39,7 +39,7 @@ public static partial class Commands
 				.ToDictionary();
 
 	static Commands()
-		=> _commandLibrary.AddAll(_knownBuiltInCommands.Select(knownCommand =>
+		=> CommandLibrary.AddAll(KnownBuiltInCommands.Select(knownCommand =>
 			new KeyValuePair<string, (SharpCommandAttribute Attribute, Func<IMUSHCodeParser, ValueTask<Option<CallState>>>
 				Function)>(
 				key: knownCommand.Key,
@@ -83,13 +83,13 @@ public static partial class Commands
 
 		// Step 1: Check if it's a SOCKET command
 		// TODO: Optimize
-		var socketCommandPattern = _commandLibrary.Where(x
+		var socketCommandPattern = CommandLibrary.Where(x
 			=> parser.CurrentState.Handle is not null
 			   && x.Key.Equals(command, StringComparison.CurrentCultureIgnoreCase)
 			   && x.Value.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.SOCKET)).ToList();
 
 		if (socketCommandPattern.Any() &&
-		    _commandLibrary.TryGetValue(command.ToUpper(), out var librarySocketCommandDefinition))
+		    CommandLibrary.TryGetValue(command.ToUpper(), out var librarySocketCommandDefinition))
 		{
 			return await HandleSocketCommandPattern(parser, source, context, command, socketCommandPattern,
 				librarySocketCommandDefinition);
@@ -103,36 +103,23 @@ public static partial class Commands
 
 		// Step2a: Check for the channel single-token command.
 
-		if (command[..1] == "@")
+		if (command[..1] == "+")
 		{
 			var channels = await parser.Mediator.Send(new GetChannelListQuery());
 			var check = command[1..];
+
+			var channel = channels.FirstOrDefault(x =>
+				x.Name.ToPlainText().StartsWith(check, StringComparison.CurrentCultureIgnoreCase));
 			
-			var channel = channels.FirstOrDefault(x => x.Name.StartsWith(check, StringComparison.CurrentCultureIgnoreCase));
-			if (channel is not null)
+			if (channel is not null && !context.evaluationString().IsEmpty)
 			{
-				var rest = MModule.substring(
-					context.evaluationString().Start.StartIndex,
-					context.evaluationString().Stop.StopIndex - context.evaluationString().Start.StartIndex + 1,
-					source);
-				
-				var chatParser = parser.Push(parser.CurrentState with
-				{
-					Command = "@CHAT",
-					Arguments = new(new Dictionary<string, CallState>
-					{
-						{ "0", new CallState(channel.Name) },
-						{ "1", new CallState(rest) }
-					})
-				});
-				
-				return await _commandLibrary["@CHAT"].Function.Invoke(chatParser);
+				return await HandleChannelCommand(parser, channel, context, source);
 			}
 		}
-		
+
 		// Step 2b: Check for a single-token command
 		// TODO: Optimize
-		var singleTokenCommandPattern = _commandLibrary.Where(x
+		var singleTokenCommandPattern = CommandLibrary.Where(x
 			=> x.Key.Equals(command[..1], StringComparison.CurrentCultureIgnoreCase) &&
 			   x.Value.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.SingleToken)).ToList();
 
@@ -150,10 +137,10 @@ public static partial class Commands
 				executorObject,
 				executorObject,
 				command,
-				LocateFlags.ExitsInTheRoomOfLooker 
-				| LocateFlags.EnglishStyleMatching 
-				| LocateFlags.ExitsPreference 
-				| LocateFlags.OnlyMatchTypePreference 
+				LocateFlags.ExitsInTheRoomOfLooker
+				| LocateFlags.EnglishStyleMatching
+				| LocateFlags.ExitsPreference
+				| LocateFlags.OnlyMatchTypePreference
 				| LocateFlags.FailIfNotPreferred);
 
 			if (locate.IsExit)
@@ -175,7 +162,7 @@ public static partial class Commands
 		var swtch = command[(slashIndex > -1 ? slashIndex : command.Length)..];
 		var switches = swtch.Split('/').Where(s => !string.IsNullOrWhiteSpace(s));
 
-		if (_commandLibrary.TryGetValue(rootCommand.ToUpper(), out var libraryCommandDefinition)
+		if (CommandLibrary.TryGetValue(rootCommand.ToUpper(), out var libraryCommandDefinition)
 		    && !rootCommand.Equals("HUH_COMMAND", StringComparison.CurrentCultureIgnoreCase))
 		{
 			return await HandleInternalCommandPattern(parser, source, context, rootCommand, switches,
@@ -228,9 +215,30 @@ public static partial class Commands
 			Function = null
 		});
 
-		var huhCommand = await _commandLibrary["HUH_COMMAND"].Function.Invoke(newParser);
+		var huhCommand = await CommandLibrary["HUH_COMMAND"].Function.Invoke(newParser);
 
 		return huhCommand;
+	}
+
+	private static async Task<Option<CallState>> HandleChannelCommand(IMUSHCodeParser parser, SharpChannel channel,
+		CommandContext context, MString source)
+	{
+		var rest = MModule.substring(
+			context.evaluationString().Start.StartIndex,
+			context.evaluationString().Stop.StopIndex - context.evaluationString().Start.StartIndex + 1,
+			source);
+
+		var chatParser = parser.Push(parser.CurrentState with
+		{
+			Command = "@CHAT",
+			Arguments = new(new Dictionary<string, CallState>
+			{
+				{ "0", new CallState(channel.Name) },
+				{ "1", new CallState(rest) }
+			})
+		});
+
+		return await CommandLibrary["@CHAT"].Function.Invoke(chatParser);
 	}
 
 	private static async Task<Option<CallState>> HandleUserDefinedCommand(
@@ -265,7 +273,7 @@ public static partial class Commands
 			Function = null
 		});
 
-		return await _commandLibrary.Single(x => x.Key == "GOTO").Value.Function.Invoke(newParser);
+		return await CommandLibrary.Single(x => x.Key == "GOTO").Value.Function.Invoke(newParser);
 	}
 
 	private static async ValueTask<Option<CallState>> HandleInternalCommandPattern(IMUSHCodeParser parser, MString source,
@@ -404,11 +412,11 @@ public static partial class Commands
 				arguments.AddRange(argCallState.Arguments!
 					.Skip(1)
 					// TODO: Implement Parsed Message alt
-					.Select(x => 
-						new CallState(x, 
-							argCallState.Depth, 
-							null, 
-							async () => 
+					.Select(x =>
+						new CallState(x,
+							argCallState.Depth,
+							null,
+							async () =>
 								(await parser.FunctionParse(x))!.Message!)));
 			}
 			else

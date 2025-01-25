@@ -10,8 +10,8 @@ public record CreateChannelCommand(
 
 public record UpdateChannelCommand(
 	SharpChannel Channel,
-	string? Name,
-	string? Description,
+	MString? Name,
+	MString? Description,
 	string[]? Privs,
 	string? JoinLock,
 	string? SpeakLock,

@@ -718,10 +718,32 @@ public static partial class Commands
 
 	[SharpCommand(Name = "@CHAT", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0,
 		MaxArgs = 0)]
-	public static async ValueTask<Option<CallState>> CHAT(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public static async ValueTask<Option<CallState>> Chat(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var arg0Check = parser.CurrentState.Arguments.TryGetValue("0", out var arg0CallState);
+		var arg1Check = parser.CurrentState.Arguments.TryGetValue("1", out var arg1CallState);
+		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();		
+		
+		if (!arg0Check || !arg1Check)
+		{
+			await parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, "#-1 Don't you have anything to say?");
+			return new CallState("#-1 Don't you have anything to say?");
+		}
+
+		var channelName = arg0CallState!.Message!.ToPlainText();
+		var message = arg1CallState!.Message!;
+		var channel = await parser.Mediator.Send(new GetChannelQuery(channelName));
+		var channelMembers = await channel!.Members.WithCancellation(CancellationToken.None);
+		
+		foreach(var member in channelMembers)
+		{
+			var canInteract = parser.PermissionService.CanInteract(member, executor, IPermissionService.InteractType.Hear);
+			if (!canInteract) continue;
+
+			await parser.NotifyService.Notify(member, MModule.multiple([MModule.single("<"), channel.Name, MModule.single("> "), message]), executor);
+		}
+		
+		return new CallState(string.Empty);
 	}
 
 	[SharpCommand(Name = "@ENTRANCES", Switches = ["EXITS", "THINGS", "PLAYERS", "ROOMS"],

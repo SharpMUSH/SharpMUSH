@@ -8,8 +8,8 @@ public class SharpChannel
 {
 	[JsonIgnore]
 	public string? Id { get; set; }
-	public required string Name { get; set; }
-	public string Description { get; set; } = string.Empty;	
+	public required MString Name { get; set; }
+	public MString Description { get; set; } = MModule.empty();	
 	public required AsyncLazy<SharpPlayer> Owner { get; set; }
 	public required AsyncLazy<IEnumerable<AnySharpObject>> Members { get; set; }
 	public required string[] Privs { get; set; }
