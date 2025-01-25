@@ -489,6 +489,9 @@ public class ArangoDatabase(
 		var vertexes = await arangoDb.Query.ExecuteAsync<string>(handle,
 			$"FOR v IN 1..1 INBOUND {channelId} GRAPH {DatabaseConstants.GraphChannels} RETURN v._id");
 
+		// TODO: This should return both the member, and their status in the channel.
+		// This is important as it allows it to check whether or not they are Gagged or need the channel Combined.
+		
 		return await AsyncEnumerable.ToAsyncEnumerable(vertexes)
 			.SelectAwait(async x => (await GetObjectNodeAsync(x)).Known()).ToArrayAsync(CancellationToken.None);
 	}

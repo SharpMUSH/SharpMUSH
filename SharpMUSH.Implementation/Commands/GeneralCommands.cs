@@ -1,6 +1,4 @@
-﻿using System.Collections.Immutable;
-using MoreLinq.Extensions;
-using OneOf;
+﻿using OneOf;
 using OneOf.Types;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
@@ -164,7 +162,7 @@ public static partial class Commands
 				parser,
 				enactor,
 				enactor,
-				args["0"]!.Message!.ToString(),
+				args["0"].Message!.ToString(),
 				LocateFlags.All);
 
 			if (locate.IsValid())
@@ -174,7 +172,7 @@ public static partial class Commands
 		}
 		else
 		{
-			viewing = (await parser.Mediator.Send(new GetLocationQuery(enactor.Object().DBRef, 1))).WithExitOption();
+			viewing = (await parser.Mediator.Send(new GetLocationQuery(enactor.Object().DBRef))).WithExitOption();
 		}
 
 		if (viewing.IsNone())
@@ -189,8 +187,8 @@ public static partial class Commands
 		var name = obj.Name;
 		var ownerName = ownerObj.Name;
 		var location = obj.Key;
-		var contentKeys = contents!.Select(x => x.Object()!.Name);
-		var exitKeys = (await parser.Mediator.Send(new GetExitsQuery(obj.DBRef)))?.FirstOrDefault();
+		var contentKeys = contents!.Select(x => x.Object().Name);
+		var exitKeys = (await parser.Mediator.Send(new GetExitsQuery(obj.DBRef))).FirstOrDefault();
 		var description = (await parser.AttributeService.GetAttributeAsync(enactor, viewing.Known(), "DESCRIBE",
 				IAttributeService.AttributeMode.Read, false))
 			.Match(
@@ -294,7 +292,7 @@ public static partial class Commands
 			parser,
 			enactorObj,
 			enactorObj,
-			args["0"]!.Message!.ToString(),
+			args["0"].Message!.ToString(),
 			LocateFlags.ExitsInTheRoomOfLooker
 			| LocateFlags.EnglishStyleMatching
 			| LocateFlags.ExitsPreference
