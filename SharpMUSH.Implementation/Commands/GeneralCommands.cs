@@ -188,7 +188,7 @@ public static partial class Commands
 		var ownerName = ownerObj.Name;
 		var location = obj.Key;
 		var contentKeys = contents!.Select(x => x.Object().Name);
-		var exitKeys = (await parser.Mediator.Send(new GetExitsQuery(obj.DBRef))).FirstOrDefault();
+		var exitKeys = (await parser.Mediator.Send(new GetExitsQuery(obj.DBRef))).FirstOrDefault() ?? Array.Empty<string>();
 		var description = (await parser.AttributeService.GetAttributeAsync(enactor, viewing.Known(), "DESCRIBE",
 				IAttributeService.AttributeMode.Read, false))
 			.Match(
