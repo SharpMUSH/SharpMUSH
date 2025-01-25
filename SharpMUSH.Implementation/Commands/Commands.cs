@@ -101,13 +101,42 @@ public static partial class Commands
 			return new None();
 		}
 
-		// Step 2: Check for a single-token command
+		// Step2a: Check for the channel single-token command.
+
+		if (command[..1] == "@")
+		{
+			var channels = await parser.Mediator.Send(new GetChannelListQuery());
+			var check = command[1..];
+			
+			var channel = channels.FirstOrDefault(x => x.Name.StartsWith(check, StringComparison.CurrentCultureIgnoreCase));
+			if (channel is not null)
+			{
+				var rest = MModule.substring(
+					context.evaluationString().Start.StartIndex,
+					context.evaluationString().Stop.StopIndex - context.evaluationString().Start.StartIndex + 1,
+					source);
+				
+				var chatParser = parser.Push(parser.CurrentState with
+				{
+					Command = "@CHAT",
+					Arguments = new(new Dictionary<string, CallState>
+					{
+						{ "0", new CallState(channel.Name) },
+						{ "1", new CallState(rest) }
+					})
+				});
+				
+				return await _commandLibrary["@CHAT"].Function.Invoke(chatParser);
+			}
+		}
+		
+		// Step 2b: Check for a single-token command
 		// TODO: Optimize
 		var singleTokenCommandPattern = _commandLibrary.Where(x
 			=> x.Key.Equals(command[..1], StringComparison.CurrentCultureIgnoreCase) &&
 			   x.Value.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.SingleToken)).ToList();
 
-		if (singleTokenCommandPattern.Any())
+		if (singleTokenCommandPattern.Count != 0)
 		{
 			return await HandleSingleTokenCommandPattern(parser, source, context, command, singleTokenCommandPattern);
 		}
