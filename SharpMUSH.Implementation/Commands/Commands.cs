@@ -199,7 +199,6 @@ public static partial class Commands
 			return res;
 		}
 
-
 		// Step 10: Zone Exit Name and Aliases
 		// Step 11: Zone Master User Defined Commands
 		// Step 12: User Defined commands on the location itself.

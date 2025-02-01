@@ -708,7 +708,7 @@ public static partial class Commands
 
 	[SharpCommand(Name = "@VERB", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs, MinArgs = 0,
 		MaxArgs = 0)]
-	public static async ValueTask<Option<CallState>> VERB(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public static async ValueTask<Option<CallState>> Verb(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		await ValueTask.CompletedTask;
 		throw new NotImplementedException();
@@ -720,8 +720,8 @@ public static partial class Commands
 	{
 		var arg0Check = parser.CurrentState.Arguments.TryGetValue("0", out var arg0CallState);
 		var arg1Check = parser.CurrentState.Arguments.TryGetValue("1", out var arg1CallState);
-		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();		
-		
+		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
+
 		if (!arg0Check || !arg1Check)
 		{
 			await parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, "#-1 Don't you have anything to say?");
@@ -732,21 +732,24 @@ public static partial class Commands
 		var message = arg1CallState!.Message!;
 		var channel = await parser.Mediator.Send(new GetChannelQuery(channelName));
 		var channelMembers = await channel!.Members.WithCancellation(CancellationToken.None);
-		
-		foreach(var member in channelMembers)
+
+		foreach (var (member, status) in channelMembers)
 		{
+			if (status.Gagged ?? false) continue;
+			
 			var canInteract = parser.PermissionService.CanInteract(member, executor, IPermissionService.InteractType.Hear);
 			if (!canInteract) continue;
 
-			await parser.NotifyService.Notify(member, MModule.multiple([MModule.single("<"), channel.Name, MModule.single("> "), message]), executor);
+			await parser.NotifyService.Notify(member,
+				MModule.multiple([MModule.single("<"), channel.Name, MModule.single("> "), status.Title, MModule.single(" "), message]), executor);
 		}
-		
+
 		return new CallState(string.Empty);
 	}
 
 	[SharpCommand(Name = "@ENTRANCES", Switches = ["EXITS", "THINGS", "PLAYERS", "ROOMS"],
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
-	public static async ValueTask<Option<CallState>> ENTRANCES(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public static async ValueTask<Option<CallState>> Entrances(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		await ValueTask.CompletedTask;
 		throw new NotImplementedException();
@@ -819,18 +822,20 @@ public static partial class Commands
 			[.., "FSTATS"] when executor.IsPlayer => await StatsMail.Handle(parser, arg0, switches),
 			[.., "DEBUG"] => await AdminMail.Handle(parser, switches),
 			[.., "NUKE"] => await AdminMail.Handle(parser, switches),
-			[.., "REVIEW"] when (arg0?.Length ?? 0) != 0 && (arg1?.Length ?? 0) != 0 
+			[.., "REVIEW"] when (arg0?.Length ?? 0) != 0 && (arg1?.Length ?? 0) != 0
 				=> await ReviewMail.Handle(parser, arg0, arg1, switches),
-			[.., "RETRACT"] when  (arg0?.Length ?? 0) != 0 &&  (arg1?.Length ?? 0) != 0  
+			[.., "RETRACT"] when (arg0?.Length ?? 0) != 0 && (arg1?.Length ?? 0) != 0
 				=> await RetractMail.Handle(parser, arg0!.ToPlainText(), arg1!.ToPlainText()),
-			[.., "FWD"] when executor.IsPlayer && int.TryParse(arg0?.ToPlainText(), out var number) &&  (arg1?.Length ?? 0) != 0  
+			[.., "FWD"] when executor.IsPlayer && int.TryParse(arg0?.ToPlainText(), out var number) &&
+			                 (arg1?.Length ?? 0) != 0
 				=> await ForwardMail.Handle(parser, number, arg1!.ToPlainText()),
 			[.., "SEND"] or [.., "URGENT"] or [.., "SILENT"] or [.., "NOSIG"] or []
 				when arg0?.Length != 0 && arg1?.Length != 0
 				=> await SendMail.Handle(parser, arg0!, arg1!, switches),
-			[.., "READ"] or [] when executor.IsPlayer && (arg1?.Length ?? 0) == 0 && int.TryParse(arg0?.ToPlainText(), out var number)
-				=> await ReadMail.Handle(parser, Math.Max(0,number - 1), switches),
-			[.., "LIST"] or [] when executor.IsPlayer && (arg1?.Length ?? 0) == 0 
+			[.., "READ"] or [] when executor.IsPlayer && (arg1?.Length ?? 0) == 0 &&
+			                        int.TryParse(arg0?.ToPlainText(), out var number)
+				=> await ReadMail.Handle(parser, Math.Max(0, number - 1), switches),
+			[.., "LIST"] or [] when executor.IsPlayer && (arg1?.Length ?? 0) == 0
 				=> await ListMail.Handle(parser, arg0, arg1, switches),
 			_ => MModule.single("#-1 BAD ARGUMENTS TO MAIL COMMAND")
 		};

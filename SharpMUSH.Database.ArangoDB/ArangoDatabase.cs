@@ -15,6 +15,7 @@ using SharpMUSH.Library.Services;
 using System.Collections.Immutable;
 using DotNext.Collections.Generic;
 using DotNext.Threading;
+using FSharpPlus.Control;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SharpMUSH.Library.Commands.Database;
@@ -484,16 +485,23 @@ public class ArangoDatabase(
 		return owner.AsPlayer;
 	}
 
-	private async ValueTask<IEnumerable<AnySharpObject>> GetChannelMembersAsync(string channelId)
+	private async ValueTask<IEnumerable<(AnySharpObject Member, SharpChannelStatus Status)>> GetChannelMembersAsync(string channelId)
 	{
-		var vertexes = await arangoDb.Query.ExecuteAsync<string>(handle,
-			$"FOR v IN 1..1 INBOUND {channelId} GRAPH {DatabaseConstants.GraphChannels} RETURN v._id");
+		var vertexes = await arangoDb.Query.ExecuteAsync<(string Id, SharpChannelUserStatusQueryResult Status)>(handle,
+			$"FOR v IN 1..1 INBOUND {channelId} GRAPH {DatabaseConstants.GraphChannels} RETURN {{Id: v._id, Status: e}}");
 
-		// TODO: This should return both the member, and their status in the channel.
-		// This is important as it allows it to check whether or not they are Gagged or need the channel Combined.
-		
 		return await AsyncEnumerable.ToAsyncEnumerable(vertexes)
-			.SelectAwait(async x => (await GetObjectNodeAsync(x)).Known()).ToArrayAsync(CancellationToken.None);
+			.SelectAwait(async x => 
+				((
+					await GetObjectNodeAsync(x.Id)).Known(),
+					new SharpChannelStatus(
+						Combine: x.Status.Combine, 
+						Gagged: x.Status.Gagged, 
+						Hide: x.Status.Hide,
+						Mute: x.Status.Mute,
+						Title: MarkupStringModule.deserialize(x.Status.Title)
+				)))
+			.ToArrayAsync(CancellationToken.None);
 	}
 
 	private SharpChannel SharpChannelQueryToSharpChannel(SharpChannelQueryResult x)
@@ -510,7 +518,7 @@ public class ArangoDatabase(
 			HideLock = x.HideLock,
 			ModLock = x.ModLock,
 			Owner = new AsyncLazy<SharpPlayer>(async _ => await GetChannelOwnerAsync(x.Id)),
-			Members = new AsyncLazy<IEnumerable<AnySharpObject>>(async _ => await GetChannelMembersAsync(x.Id))
+			Members = new AsyncLazy<IEnumerable<(AnySharpObject,SharpChannelStatus)>>(async _ => await GetChannelMembersAsync(x.Id) )
 		};
 	}
 
@@ -611,29 +619,29 @@ public class ArangoDatabase(
 		if (singleResult is null) return;
 
 		var updates = new List<KeyValuePair<string, object>>();
-		if (status.Combine is not null)
+		if (status.Combine is { } combine)
 		{
-			updates.Add(new KeyValuePair<string, object>(nameof(status.Combine), status.Combine));
+			updates.Add(new KeyValuePair<string, object>(nameof(status.Combine), combine));
 		}
 
-		if (status.Gagged is not null)
+		if (status.Gagged is { } gagged)
 		{
-			updates.Add(new KeyValuePair<string, object>(nameof(status.Gagged), status.Gagged));
+			updates.Add(new KeyValuePair<string, object>(nameof(status.Gagged), gagged));
 		}
 
-		if (status.Hide is not null)
+		if (status.Hide is { } hide)
 		{
-			updates.Add(new KeyValuePair<string, object>(nameof(status.Hide), status.Hide));
+			updates.Add(new KeyValuePair<string, object>(nameof(status.Hide), hide));
 		}
 
-		if (status.Mute is not null)
+		if (status.Mute is {} mute)
 		{
-			updates.Add(new KeyValuePair<string, object>(nameof(status.Mute), status.Mute));
+			updates.Add(new KeyValuePair<string, object>(nameof(status.Mute), mute));
 		}
 
-		if (status.Title is not null)
+		if (status.Title is {} title)
 		{
-			updates.Add(new KeyValuePair<string, object>(nameof(status.Title), status.Title));
+			updates.Add(new KeyValuePair<string, object>(nameof(status.Title), MarkupStringModule.serialize(title)));
 		}
 
 		await arangoDb.Graph.Edge.UpdateAsync(handle, DatabaseConstants.GraphChannels, DatabaseConstants.OnChannel,

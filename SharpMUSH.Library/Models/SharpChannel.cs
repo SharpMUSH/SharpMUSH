@@ -11,7 +11,7 @@ public class SharpChannel
 	public required MString Name { get; set; }
 	public MString Description { get; set; } = MModule.empty();	
 	public required AsyncLazy<SharpPlayer> Owner { get; set; }
-	public required AsyncLazy<IEnumerable<AnySharpObject>> Members { get; set; }
+	public required AsyncLazy<IEnumerable<(AnySharpObject Member,SharpChannelStatus Status)>> Members { get; set; }
 	public required string[] Privs { get; set; }
 	public string JoinLock { get; set; } = string.Empty;
 	public string SpeakLock { get; set; } = string.Empty;
@@ -20,11 +20,4 @@ public class SharpChannel
 	public string ModLock { get; set; } = string.Empty;
 }
 
-public class SharpChannelStatus
-{
-	public bool? Gagged { get; set; }
-	public bool? Mute { get; set; }
-	public bool? Hide { get; set; }
-	public bool? Combine { get; set; }
-	public string? Title { get; set; }
-}
+public record SharpChannelStatus(bool? Combine, bool? Gagged, bool? Hide, bool? Mute, MString? Title);
