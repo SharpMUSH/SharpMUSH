@@ -538,7 +538,7 @@ public class ArangoDatabase(
 		return result.Select(SharpChannelQueryToSharpChannel);
 	}
 
-	public async ValueTask CreateChannelAsync(SharpChannel channel, SharpPlayer owner)
+	public async ValueTask CreateChannelAsync(MarkupString.MarkupStringModule.MarkupString channel, string[] privs, SharpPlayer owner)
 	{
 		var transaction = await arangoDb.Transaction.BeginAsync(handle,
 			new ArangoTransaction
@@ -551,8 +551,8 @@ public class ArangoDatabase(
 		);
 
 		var newChannel = new SharpChannelCreateRequest(
-			Name: MarkupStringModule.serialize(channel.Name),
-			Privs: channel.Privs
+			Name: MarkupStringModule.serialize(channel),
+			Privs: privs
 		);
 
 		var createdChannel = await arangoDb.Graph.Vertex.CreateAsync<SharpChannelCreateRequest, SharpChannelQueryResult>(
@@ -701,20 +701,20 @@ public class ArangoDatabase(
 
 	private async ValueTask<SharpPlayer> GetObjectOwnerAsync(string id)
 	{
-		var owner = (await arangoDb.Query.ExecuteAsync<SharpPlayerQueryResult>(handle,
-			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphObjectOwners} RETURN v")).First();
+		var owner = (await arangoDb.Query.ExecuteAsync<string>(handle,
+			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphObjectOwners} RETURN v._id")).First();
 
-		var populatedOwner = await GetObjectNodeAsync(owner.Id);
+		var populatedOwner = await GetObjectNodeAsync(owner);
 
 		return populatedOwner.AsPlayer;
 	}
 
 	private async ValueTask<SharpPlayer> GetAttributeOwnerAsync(string id)
 	{
-		var owner = (await arangoDb.Query.ExecuteAsync<SharpObjectQueryResult>(handle,
-			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphAttributeOwners} RETURN v")).First();
+		var owner = (await arangoDb.Query.ExecuteAsync<string>(handle,
+			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphAttributeOwners} RETURN v._id")).First();
 
-		var populatedOwner = await GetObjectNodeAsync(owner.Id);
+		var populatedOwner = await GetObjectNodeAsync(owner);
 
 		return populatedOwner.AsPlayer;
 	}

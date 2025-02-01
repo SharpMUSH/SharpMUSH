@@ -10,7 +10,8 @@ public record SharpChannelQueryResult(
 	string SpeakLock,
 	string SeeLock,
 	string HideLock,
-	string ModLock
+	string ModLock,
+	int Buffer
 );
 
 public record SharpChannelCreateRequest(
@@ -27,7 +28,8 @@ public record SharpChannelUpdateRequest(
 	string? SpeakLock,
 	string? SeeLock,
 	string? HideLock,
-	string? ModLock
+	string? ModLock,
+	int? Buffer
 );
 
 public record SharpChannelUserStatusQueryResult(

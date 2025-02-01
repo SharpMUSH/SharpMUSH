@@ -8,6 +8,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using System.Drawing;
+using SharpMUSH.Implementation.Commands.ChannelCommand;
 using SharpMUSH.Implementation.Commands.MailCommand;
 using SharpMUSH.Library.Services;
 using CB = SharpMUSH.Implementation.Definitions.CommandBehavior;
@@ -645,10 +646,66 @@ public static partial class Commands
 			"WIPE", "MUTE", "UNMUTE", "GAG", "UNGAG", "HIDE", "UNHIDE", "WHAT", "TITLE", "BRIEF", "RECALL", "BUFFER",
 			"COMBINE", "UNCOMBINE", "ON", "JOIN", "OFF", "LEAVE", "WHO"
 		], Behavior = CB.Default | CB.EqSplit | CB.NoGagged | CB.RSArgs, MinArgs = 0, MaxArgs = 0)]
-	public static async ValueTask<Option<CallState>> CHANNEL(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public static async ValueTask<Option<CallState>> Channel(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		/*
+		    @channel/list[/on|/off][/quiet] [<prefix>]
+			  @channel/what [<prefix>]
+			  @channel/who <channel>
+			  @channel/on <channel>[=<player>]
+			  @channel/off <channel>[=<player>]  
+			  @channel/gag [<channel>][=<yes|no>]
+				@channel/mute [<channel>][=<yes|no>]
+				@channel/hide [<channel>][=<yes|no>]
+				@channel/combine [<channel>][=<yes|no>]
+			  @channel/title <channel>[=<message>]
+			  @channel/recall[/quiet] <channel>[=<lines|duration>[, <start line>]]  @channel/add <channel>[=<privs>]
+			  @channel/privs <channel>=<privs>
+			  @channel/describe <channel>=<description>
+			  @channel/buffer <channel>=<lines>
+			  @channel/decompile[/brief] <prefix>  
+			  @channel/chown <channel>=<new owner>
+				@channel/rename <channel>=<new name>
+				@channel/wipe <channel>
+				@channel/delete <channel>  
+				@channel/mogrifier <channel>=<object>
+		 */
+		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known(); 
+		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches.ToArray();
+
+		if (switches.Contains("QUIET") && (!switches.Contains("LIST") || !switches.Contains("RECALL")))
+		{
+			return new CallState("CHAT: INCORRECT COMBINATION OF SWITCHES");
+		}
+		
+		// TODO: Channel Visibility on most of these commands.
+		
+		return switches switch
+		{
+			[.., "LIST"] => await ChannelList.Handle(parser, args["0"].Message!, args["1"].Message!, switches),
+			["WHAT"] => await ChannelWhat.Handle(parser, args["0"].Message!, switches),
+			["WHO"] => await ChannelWho.Handle(parser, args["0"].Message!, switches),
+			["ON"] => await ChannelOn.Handle(parser, args["0"].Message!, args["1"].Message!, switches),
+			["OFF"] => await ChannelOff.Handle(parser, args["0"].Message!, args["1"].Message!, switches),
+			["GAG"] => await ChannelGag.Handle(parser, args["0"].Message!, args["1"].Message!, switches),
+			["MUTE"] => await ChannelMute.Handle(parser, args["0"].Message!, args["1"].Message!, switches),
+			["HIDE"] => await ChannelHide.Handle(parser, args["0"].Message!, args["1"].Message!, switches),
+			["COMBINE"] => await ChannelCombine.Handle(parser, args["0"].Message!, args["1"].Message!, switches),
+			["TITLE"] => await ChannelTitle.Handle(parser, args["0"].Message!, args["1"].Message!, switches),
+			[.., "RECALL"] => await ChannelRecall.Handle(parser, args["0"].Message!, args["1"].Message!, switches),
+			["ADD"] => await ChannelAdd.Handle(parser, args["0"].Message!, args["1"].Message!, switches),
+			["PRIVS"] => await ChannelPrivs.Handle(parser, args["0"].Message!, args["1"].Message!, switches),
+			["DESCRIBE"] => await ChannelDescribe.Handle(parser, args["0"].Message!, args["1"].Message!, switches),
+			["BUFFER"] => await ChannelBuffer.Handle(parser, args["0"].Message!, args["1"].Message!, switches),
+			[.., "DECOMPILE"] => await ChannelDecompile.Handle(parser, args["0"].Message!, args["1"].Message!, switches),
+			["CHOWN"] => await ChannelChown.Handle(parser, args["0"].Message!, args["1"].Message!, switches),
+			["RENAME"] => await ChannelRename.Handle(parser, args["0"].Message!, args["1"].Message!, switches),
+			["WIPE"] => await ChannelWipe.Handle(parser, args["0"].Message!, args["1"].Message!, switches),
+			["DELETE"] => await ChannelDelete.Handle(parser, args["0"].Message!, args["1"].Message!, switches),
+			["MOGRIFIER"] => await ChannelMogrifier.Handle(parser, args["0"].Message!, args["1"].Message!, switches),
+			_ => new CallState("What do you want to do with the channel?")
+		};
 	}
 
 	[SharpCommand(Name = "@DECOMPILE", Switches = ["DB", "NAME", "PREFIX", "TF", "FLAGS", "ATTRIBS", "SKIPDEFAULTS"],

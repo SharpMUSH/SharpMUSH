@@ -5,7 +5,8 @@ using SharpMUSH.Library.Models;
 namespace SharpMUSH.Library.Commands.Database;
 
 public record CreateChannelCommand(
-	SharpChannel Channel, 
+	MString Channel,
+	string[] Privs,
 	SharpPlayer Owner) : ICommand;
 
 public record UpdateChannelCommand(
@@ -17,7 +18,8 @@ public record UpdateChannelCommand(
 	string? SpeakLock,
 	string? SeeLock,
 	string? HideLock,
-	string? ModLock) : ICommand;
+	string? ModLock,
+	int? Buffer) : ICommand;
 
 public record DeleteChannelCommand(SharpChannel Channel) : ICommand;
 

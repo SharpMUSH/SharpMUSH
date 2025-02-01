@@ -8,7 +8,7 @@ public class CreateChannelCommandHandler(ISharpDatabase database) : ICommandHand
 {
 	public async ValueTask<Unit> Handle(CreateChannelCommand request, CancellationToken cancellationToken)
 	{
-		await database.CreateChannelAsync(request.Channel, request.Owner);
+		await database.CreateChannelAsync(request.Channel, request.Privs, request.Owner);
 		return Unit.Value;
 	}
 }

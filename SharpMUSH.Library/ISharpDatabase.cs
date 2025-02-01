@@ -278,7 +278,7 @@ public interface ISharpDatabase
 	
 	ValueTask<IEnumerable<SharpChannel>> GetMemberChannelsAsync(AnySharpObject obj);
 
-	ValueTask CreateChannelAsync(SharpChannel channel, SharpPlayer owner);
+	ValueTask CreateChannelAsync(MString name, string[] privs, SharpPlayer owner);
 	
 	ValueTask UpdateChannelAsync(SharpChannel channel,
 		MString? Name,
