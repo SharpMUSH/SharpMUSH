@@ -8,10 +8,10 @@ public class PermissionService(ILockService lockService) : IPermissionService
 {
 	public bool PassesLock(AnySharpObject who, AnySharpObject target, string lockString)
 		=> lockService.Evaluate(lockString, target, who);
-	
+
 	public bool PassesLock(AnySharpObject who, AnySharpObject target, LockType lockType)
 		=> lockService.Evaluate(lockType, target, who);
-	
+
 	public bool CanSet(AnySharpObject executor, AnySharpObject target, params SharpAttribute[] attribute)
 	{
 		if (!Controls(executor, target)) return false;
@@ -19,16 +19,16 @@ public class PermissionService(ILockService lockService) : IPermissionService
 		var compressedAttribute = attribute[^1] with
 		{
 			Flags = attribute.SelectMany(a => a.Flags)
-											 .Where(x => x.Inheritable == true)
-											 .DistinctBy(x => x.Name)
+				.Where(x => x.Inheritable == true)
+				.DistinctBy(x => x.Name)
 		};
 
 		return !(!executor.IsGod()
-			// && (It's Internal // SAFE when we care about SAFE)
-			|| !(executor.IsWizard()
-				|| (!compressedAttribute.IsWizard()
-					&& (!compressedAttribute.IsLocked()
-						|| compressedAttribute.Owner.Value == target.Object().Owner.Value))));
+		         // && (It's Internal // SAFE when we care about SAFE)
+		         || !(executor.IsWizard()
+		              || (!compressedAttribute.IsWizard()
+		                  && (!compressedAttribute.IsLocked()
+		                      || compressedAttribute.Owner.Value == target.Object().Owner.Value))));
 	}
 
 	public bool Controls(AnySharpObject executor, AnySharpObject target, params SharpAttribute[] attribute)
@@ -89,9 +89,9 @@ public class PermissionService(ILockService lockService) : IPermissionService
 
 	public bool CanExamine(AnySharpObject examiner, AnySharpObject examinee)
 		=> examiner.Object().DBRef == examinee.Object().DBRef
-			 || Controls(examiner, examinee)
-			 || examiner.IsSee_All()
-			 || (examinee.IsVisual() && lockService.Evaluate(LockType.Examine, examinee, examiner));
+		   || Controls(examiner, examinee)
+		   || examiner.IsSee_All()
+		   || (examinee.IsVisual() && lockService.Evaluate(LockType.Examine, examinee, examiner));
 
 	public bool CanInteract(AnySharpObject from, AnySharpObject to, IPermissionService.InteractType type)
 	{
@@ -104,8 +104,8 @@ public class PermissionService(ILockService lockService) : IPermissionService
 			return false;
 
 		if (fromStep.Object().Id == toStep.Location().Object().Id
-				|| toStep.Object().Id == fromStep.Location().Object().Id
-				|| Controls(to, from))
+		    || toStep.Object().Id == fromStep.Location().Object().Id
+		    || Controls(to, from))
 			return true;
 
 		return true;
@@ -113,17 +113,17 @@ public class PermissionService(ILockService lockService) : IPermissionService
 
 	public static bool CanEval(AnySharpObject evaluator, AnySharpObject evaluationTarget)
 		=> !evaluationTarget.IsPriv()
-			 || evaluator.IsGod()
-			 || ((evaluator.IsWizard()
-						|| (evaluator.IsRoyalty() && !evaluationTarget.IsWizard()))
-					 && !evaluationTarget.IsGod());
+		   || evaluator.IsGod()
+		   || ((evaluator.IsWizard()
+		        || (evaluator.IsRoyalty() && !evaluationTarget.IsWizard()))
+		       && !evaluationTarget.IsGod());
 
 	public static bool CanEvalAttr(
 		AnySharpObject evaluator,
 		AnySharpObject evaluationTarget,
 		SharpAttribute attribute)
 		=> CanEval(evaluator, evaluationTarget)
-			 || attribute.IsPublic();
+		   || attribute.IsPublic();
 
 	public bool CouldDoIt(AnySharpObject who, AnyOptionalSharpObject thing1, string? what)
 	{
@@ -138,6 +138,73 @@ public class PermissionService(ILockService lockService) : IPermissionService
 		var _3 = destination;
 		return true;
 	}
+
+	public bool ChannelOkType(AnySharpObject target, SharpChannel channel)
+		=> channel.Privs.Contains("Player") && target.IsPlayer
+		   || channel.Privs.Contains("Object") && target.IsThing;
+
+	public bool ChannelStandardCan(AnySharpObject target, string[] channelType)
+		=> !channelType.Contains("Disabled")
+		   && (!channelType.Contains("Wizard")
+		       || target.IsWizard())
+		   && (!channelType.Contains("Admin")
+		       || target.HasPower("CHAT_PRIVS")
+		       || target.IsPriv());
+
+	public bool ChannelCanPrivate(AnySharpObject target, SharpChannel channel)
+		=> !target.IsWizard()
+		   || ChannelStandardCan(target, channel.Privs);
+
+	public bool ChannelCanAccess(AnySharpObject target, SharpChannel channel)
+		=> ChannelStandardCan(target, channel.Privs);
+
+	public bool ChannelCanJoin(AnySharpObject target, SharpChannel channel)
+		=> ChannelCanAccess(target, channel) && lockService.Evaluate(channel.JoinLock, channel, target);
+
+	public bool ChannelCanSpeak(AnySharpObject target, SharpChannel channel)
+		=> ChannelCanAccess(target, channel) && lockService.Evaluate(channel.SpeakLock, channel, target);
+
+	public bool ChannelCanCemit(AnySharpObject target, SharpChannel channel)
+		=> !channel.Privs.Contains("NoCemit") && ChannelCanSpeak(target, channel);
+
+	public async ValueTask<bool> ChannelCanModifyAsync(AnySharpObject target, SharpChannel channel) =>
+		target.IsWizard()
+		|| (await channel.Owner.WithCancellation(CancellationToken.None)).Id == target.Id()
+		|| (
+			!target.HasPower("guest")
+			&& ChannelCanAccess(target, channel)
+			&& lockService.Evaluate(channel.ModLock, channel, target)
+		);
+
+	public async ValueTask<bool> ChannelCanSeeAsync(AnySharpObject target, SharpChannel channel)
+		=> target.IsPriv()
+		   || target.IsSee_All()
+		   || (
+			   ChannelCanAccess(target, channel)
+			   && lockService.Evaluate(channel.SeeLock, channel, target)
+		   )
+		   || (
+			   (await channel.Members.WithCancellation(CancellationToken.None))
+			   .Any(x => x.Member.Id() == target.Id())
+			   && ChannelCanSpeak(target, channel)
+		   );
+
+	public bool ChannelCanHide(AnySharpObject target, SharpChannel channel)
+		=> target.CanHide()
+		   || (
+			   channel.Privs.Contains("CanHide")
+			   && ChannelCanAccess(target, channel)
+			   && lockService.Evaluate(channel.HideLock, channel, target)
+		   );
+
+	public async ValueTask<bool> ChannelCanNukeAsync(AnySharpObject target, SharpChannel channel)
+		=> target.IsWizard()
+		   || (await channel.Owner.WithCancellation(CancellationToken.None)).Id == target.Object().Owner.Value.Id;
+
+	public async ValueTask<bool> ChannelCanDecomposeAsync(AnySharpObject target, SharpChannel channel)
+		=> target.IsSee_All()
+		|| (await channel.Owner.WithCancellation(CancellationToken.None)).Id == target.Id()
+		|| await ChannelCanModifyAsync(target, channel);
 
 	public bool CanNoSpoof(AnySharpObject executor)
 		=> executor.HasPower("NOSPOOF") || executor.IsWizard() || executor.IsGod();
