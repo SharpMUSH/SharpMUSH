@@ -12,12 +12,12 @@ public static class ChannelAdd
 	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString channelName, MString privileges, string[] switches)
 	{
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
-		var channel = await parser.Mediator.Send(new GetChannelQuery(channelName.ToPlainText()));
-
-		if (channel is not null)
+		
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, channelName, true);
+		if (!maybeChannel.IsError)
 		{
-			await parser.NotifyService.Notify(executor, "Channel already exists.");
-			return new CallState("Channel already exists.");
+			await parser.NotifyService.Notify(executor, "CHAT: Channel already exists.");
+			return new CallState("#-1 Channel already exists.");
 		}
 
 		// TODO: Add a check for the executor's privileges to create a channel.

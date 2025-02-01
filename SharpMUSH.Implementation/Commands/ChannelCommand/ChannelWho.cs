@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 
@@ -7,14 +8,31 @@ public static class ChannelWho
 {
 	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString channelName, string[] switches)
 	{
-		var channel = await parser.Mediator.Send(new GetChannelQuery(channelName.ToPlainText()));
-		if (channel is null)
+		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, channelName, notify: true);
+		if (maybeChannel.IsError)
 		{
-			return new CallState("#-1 No such channel.");
+			return maybeChannel.AsError.Value;
 		}
 
+		var channel = maybeChannel.AsChannel;
+
 		var members = await channel.Members.WithCancellation(CancellationToken.None);
-		var memberList = members.Select(x => x.Member).ToList();
+		var memberArray = members.ToArray();
+
+
+		var delimitedMembers = MModule.multipleWithDelimiter(MModule.single(", "),
+			memberArray.Select(x => MModule.single(x.Member.Object().Name)));
+		
+		var memberOutput =
+			MModule.multiple([
+				MModule.single("Members of channel <"), channel.Name, MModule.single("> are:\n"),
+				delimitedMembers
+			]);
+
+		await parser.NotifyService.Notify(executor, memberOutput);
+
+		var memberList = memberArray.Select(x => x.Member.Object().DBRef).ToList();
 		return new CallState(string.Join(", ", memberList));
 	}
 }
