@@ -27,6 +27,8 @@ public class LockService(IBooleanExpressionParser bep, IMediator med) : ILockSer
 
 	public bool Evaluate(string lockString, SharpChannel gatedChannel, AnySharpObject unlocker)
 	{
+		var compile = bep.Compile(lockString);
+		return true;
 		throw new NotImplementedException();
 	}
 
