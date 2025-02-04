@@ -25,11 +25,4 @@ jobs:
     - name: Build
       run: dotnet build --no-restore
     - name: Test
-      run: dotnet run --project SharpMUSH.Tests --no-build --verbosity normal --report-trx --report-trx-filename test-results.trx --results-directory TestResults
-    - name: Test Reporter
-      uses: dorny/test-reporter@v1.9.1
-      if: success() || failure()              # Run this step even if previous step failed
-      with:
-        name: Test Results                    # Name of the check run which will be created
-        path: TestResults/test-results.trx    # Path to test results
-        reporter: dotnet-trx                  # Format of test results
+      run: dotnet run --project SharpMUSH.Tests --no-build --verbosity normal
