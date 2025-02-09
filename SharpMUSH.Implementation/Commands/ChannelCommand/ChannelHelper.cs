@@ -1,4 +1,4 @@
-using Mediator;
+using System.Collections.ObjectModel;
 using OneOf;
 using OneOf.Types;
 using SharpMUSH.Library.Extensions;
@@ -23,12 +23,81 @@ public class ChannelOrError : OneOfBase<SharpChannel, Error<CallState>>
 	public Error<CallState> AsError => AsT1;
 }
 
+public class PrivilegeOrError : OneOfBase<string[], Error<string[]>>
+{
+	public PrivilegeOrError(string[] channel) : base(channel)
+	{
+	}
+
+	public PrivilegeOrError(Error<string[]> error) : base(error)
+	{
+	}
+
+	public bool IsError => IsT1;
+	public string[] AsPrivileges => AsT0;
+	public Error<string[]> AsError => AsT1;
+}
+
 public static class ChannelHelper
 {
+	private static readonly ReadOnlyDictionary<string, char> ChannelPrivileges = new(
+		new Dictionary<string, char>(StringComparer.OrdinalIgnoreCase)
+		{
+			{ "Disabled", 'D' },
+			{ "Player", 'P' },
+			{ "Admin", 'A' },
+			{ "Wizard", 'W' },
+			{ "Thing", 'T' },
+			{ "Object", 'O' },
+			{ "Quiet", 'Q' },
+			{ "Open", 'o' },
+			{ "Hide_Ok", 'H' },
+			{ "NoTitles", 'T' },
+			{ "NoNames", 'N' },
+			{ "NoCemit", 'C' },
+			{ "Interact", 'I' }
+		});
+
+	private static readonly ReadOnlyDictionary<char, string?> ChannelPrivilegesReverse =
+		new(ChannelPrivileges.ToDictionary(x => x.Value, string? (x) => x.Key));
+
+	public static PrivilegeOrError StringToChannelPrivileges(MString channelName)
+	{
+		var plainText = channelName.ToPlainText();
+		var list = plainText
+			.Split(' ')
+			.Where(x => !string.IsNullOrWhiteSpace(x))
+			.ToArray();
+
+		var badList = list.Where(x => x.Length == 1
+			? !ChannelPrivilegesReverse.ContainsKey(x.ToUpper()[0])
+			: !ChannelPrivileges.ContainsKey(x)).ToArray();
+
+		if (badList.Length != 0)
+		{
+			return new PrivilegeOrError(new Error<string[]>(badList));
+		}
+
+		var validatedList = list.Select(x => x.Length == 1
+				? ChannelPrivilegesReverse.GetValueOrDefault(x.ToUpper()[0], null)
+				: (ChannelPrivileges.ContainsKey(x) ? x : null))
+			.Where(x => x != null).ToArray();
+
+		return new PrivilegeOrError(validatedList!);
+	}
+
+	public static bool IsValidChannelName(MString channelName)
+	{
+		var plainText = channelName.ToPlainText();
+		return !plainText.Contains(' ');
+		// TODO: Channel Name Length Check
+		// TODO: We don't do a 'Printable' check here, because we want to support multiple languages.
+	}
+
 	public static async ValueTask<ChannelOrError> GetChannelOrError(
 		IMUSHCodeParser parser,
 		MString channelName,
-		bool notify)
+		bool notify = false)
 	{
 		var channel = await parser.Mediator.Send(new GetChannelQuery(channelName.ToPlainText()));
 
@@ -44,7 +113,7 @@ public static class ChannelHelper
 			{
 				return new ChannelOrError(new Error<CallState>(new CallState("#-1 Channel not found.")));
 			}
-			case ({} foundChannel, _):
+			case ({ } foundChannel, _):
 			{
 				return new ChannelOrError(foundChannel);
 			}

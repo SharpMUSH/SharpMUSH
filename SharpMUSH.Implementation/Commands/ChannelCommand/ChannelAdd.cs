@@ -1,4 +1,5 @@
 using System.Threading.Channels;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -12,6 +13,12 @@ public static class ChannelAdd
 	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString channelName, MString privileges, string[] switches)
 	{
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
+		var executorOwner = executor.Object().Owner.Value;
+		if (executor.IsGuest())
+		{
+			await parser.NotifyService.Notify(executor, "Guests may not modify channels.");
+			return new CallState("#-1 Guests may not modify channels.");
+		}
 		
 		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, channelName, true);
 		if (!maybeChannel.IsError)
@@ -20,12 +27,27 @@ public static class ChannelAdd
 			return new CallState("#-1 Channel already exists.");
 		}
 
-		// TODO: Add a check for the executor's privileges to create a channel.
-		// TODO: Add a check for the executor's 'cost' requirements to create a channel.
-		// TODO: Add a check to confirm the privs are valid.
-		var parsedPrivileges = privileges.ToPlainText().Split(" ");
+		if (!ChannelHelper.IsValidChannelName(channelName))
+		{
+			await parser.NotifyService.Notify(executor, "Invalid channel name.");
+			return new CallState("#-1 Invalid channel name.");
+		}
 		
-		await parser.Mediator.Send(new CreateChannelCommand(channelName, parsedPrivileges, executor.Object().Owner.Value));
+		// TODO: Add a check for the executor's 'cost' requirements to create a channel.
+		if (!executor.IsPriv() && true /* Check Channel Ownership Number */)
+		{
+			await parser.NotifyService.Notify(executor, "#-1 You have too many channels.");
+			return new CallState("#-1 You have too many channels.");
+		}
+
+		var parsedPrivileges = ChannelHelper.StringToChannelPrivileges(privileges);
+		if (parsedPrivileges.IsError)
+		{
+			await parser.NotifyService.Notify(executor, $"Invalid privileges: {string.Join(", ", parsedPrivileges.AsError.Value)}.");
+			return new CallState("#-1 Invalid privileges.");
+		}
+		
+		await parser.Mediator.Send(new CreateChannelCommand(channelName, parsedPrivileges.AsPrivileges, executorOwner));
 
 		await parser.NotifyService.Notify(executor, "Channel has been created.");
 		return new CallState("Channel has been created.");
