@@ -9,6 +9,9 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using System.Text;
+using Docker.DotNet.Models;
+using Microsoft.Extensions.Options;
+using SharpMUSH.Configuration.Options;
 using Testcontainers.ArangoDb;
 
 namespace SharpMUSH.Tests;
@@ -48,8 +51,9 @@ public class BaseUnitTest
 			ConnectionString = $"Server={Container!.GetTransportAddress()};User=root;Realm=;Password=password;",
 			Serializer = new ArangoNewtonsoftSerializer(new ArangoNewtonsoftDefaultContractResolver())
 		};
-
-		Infrastructure = new Infrastructure(config);
+		
+		var configFile = Path.Combine(Directory.GetCurrentDirectory(), "Configuration", "Testfile", "mushcnf.dst");
+		Infrastructure = new Infrastructure(config, configFile);
 
 		Database = Infrastructure!.Services.GetService(typeof(ISharpDatabase)) as ISharpDatabase;
 
@@ -74,6 +78,7 @@ public class BaseUnitTest
 		=> new BooleanExpressionParser(database);
 
 	public static async Task<IMUSHCodeParser> TestParser(
+		IOptionsMonitor<PennMUSHOptions>? opts = null,
 		IPasswordService? pws = null,
 		IPermissionService? ps = null, // Permission Service needs the parser... this is circular. So we need to use the Mediator Pattern.
 		ISharpDatabase? ds = null,
@@ -96,6 +101,7 @@ public class BaseUnitTest
 		simpleConnectionService.Bind("1", one);
 
 		return new MUSHCodeParser(
+			opts ?? (IOptionsMonitor<PennMUSHOptions>)integrationServer.Services.GetService(typeof(IOptionsMonitor<PennMUSHOptions>))!,
 			pws ?? (IPasswordService)integrationServer.Services.GetService(typeof(IPasswordService))!,
 			ps ?? (IPermissionService)integrationServer.Services.GetService(typeof(IPermissionService))!,
 			at ?? (IAttributeService)integrationServer.Services.GetService(typeof(IAttributeService))!,

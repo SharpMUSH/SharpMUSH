@@ -2,16 +2,25 @@
 
 namespace SharpMUSH.Tests.Configuration;
 
-public class ConfigurationTests
+public class ConfigurationTests : BaseUnitTest
 {
 	[Test]
 	public async Task ParseConfigurationFile()
 	{
-		var configReader = new ReadPennMUSHConfig();
-		var currentDirectory = Directory.GetCurrentDirectory();
-		var options = configReader.Create(Path.Combine(currentDirectory, "Configuration", "Testfile", "mushcnf.dst"));
+		var configFile = Path.Combine(Directory.GetCurrentDirectory(), "Configuration", "Testfile", "mushcnf.dst");
+		var configReader = new ReadPennMushConfig(configFile);
+		var options = configReader.Create(string.Empty);
 
 		await Assert.That(options.Chat.ChatTokenAlias).IsEqualTo('+');
 		await Assert.That(options.Net.MudName).IsEqualTo("PennMUSH Emulation by SharpMUSH");
 	}
+
+	[Test]
+	public async Task CanUseOptionsFromServer()
+	{
+		var parser = await TestParser();
+
+		await Assert.That(parser.Configuration.CurrentValue.Chat.ChatTokenAlias).IsEqualTo('+');
+		await Assert.That(parser.Configuration.CurrentValue.Net.MudName).IsEqualTo("PennMUSH Emulation by SharpMUSH");
+	} 
 }

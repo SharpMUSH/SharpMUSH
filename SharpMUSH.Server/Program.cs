@@ -30,19 +30,21 @@ public class Program
 		await container.StartAsync()
 			.ConfigureAwait(false);
 
-		var config = new ArangoConfiguration()
+		var config = new ArangoConfiguration
 		{
 			ConnectionString = $"Server={container.GetTransportAddress()};User=root;Realm=;Password=password;",
 			Serializer = new ArangoNewtonsoftSerializer(new ArangoNewtonsoftDefaultContractResolver())
 		};
+		
+		var configFile = Path.Combine(Directory.GetCurrentDirectory(), "mushcnf.dst");
 
-		await CreateWebHostBuilder(config).Build().RunAsync();
+		await CreateWebHostBuilder(config, configFile).Build().RunAsync();
 	}
 
-	public static IWebHostBuilder CreateWebHostBuilder(ArangoConfiguration arangoConfig) =>
+	public static IWebHostBuilder CreateWebHostBuilder(ArangoConfiguration arangoConfig, string configFile) =>
 			WebHost
 					.CreateDefaultBuilder()
-					.UseStartup(_ => new Startup(arangoConfig))
+					.UseStartup(_ => new Startup(arangoConfig, configFile))
 					.UseKestrel(options =>
 							options.ListenLocalhost(
 									4202,

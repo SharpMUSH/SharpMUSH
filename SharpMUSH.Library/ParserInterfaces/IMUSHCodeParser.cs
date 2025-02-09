@@ -1,11 +1,14 @@
 ﻿using Mediator;
 using SharpMUSH.Library.Services;
 using System.Collections.Immutable;
+using Microsoft.Extensions.Options;
+using SharpMUSH.Configuration.Options;
 
 namespace SharpMUSH.Library.ParserInterfaces;
 
 public interface IMUSHCodeParser
 {
+	IOptionsMonitor<PennMUSHOptions> Configuration { get; }
 	IConnectionService ConnectionService { get; }
 	ParserState CurrentState { get; }
 	IAttributeService AttributeService { get; }

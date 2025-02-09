@@ -7,9 +7,9 @@ using FileOptions = SharpMUSH.Configuration.Options.FileOptions;
 
 namespace SharpMUSH.Configuration;
 
-public partial class ReadPennMUSHConfig : IOptionsFactory<PennMUSHOptions>
+public partial class ReadPennMushConfig(string ConfigFile) : IOptionsFactory<PennMUSHOptions>
 {
-	public PennMUSHOptions Create(string filename)
+	public PennMUSHOptions Create(string _)
 	{
 		var keys = typeof(PennMUSHOptions)
 			.GetProperties()
@@ -31,7 +31,7 @@ public partial class ReadPennMUSHConfig : IOptionsFactory<PennMUSHOptions>
 
 		var splitter = KeyValueSplittingRegex();
 
-		var text = File.ReadAllLines(filename);
+		var text = File.ReadAllLines(ConfigFile);
 
 		// TODO: Use a Regex to split the values.
 		foreach (var configLine in text
@@ -44,8 +44,9 @@ public partial class ReadPennMUSHConfig : IOptionsFactory<PennMUSHOptions>
 		}
 
 		// This is a lot of dupe work. This can likely be done with a proper bit of Reflection. 
-		var work = new PennMUSHOptions(
-			new AttributeOptions(
+		var work = new PennMUSHOptions()
+		{
+			Attribute = new AttributeOptions(
 				Boolean(Get(nameof(AttributeOptions.ADestroy)), false),
 				Boolean(Get(nameof(AttributeOptions.AMail)), false),
 				Boolean(Get(nameof(AttributeOptions.PlayerListen)), true),
@@ -56,7 +57,7 @@ public partial class ReadPennMUSHConfig : IOptionsFactory<PennMUSHOptions>
 				Boolean(Get(nameof(AttributeOptions.ReverseShs)), true),
 				Boolean(Get(nameof(AttributeOptions.EmptyAttributes)), true)
 			),
-			new ChatOptions(
+			Chat = new ChatOptions(
 				Get(nameof(ChatOptions.ChatTokenAlias)).FirstOrDefault('+'),
 				Boolean(Get(nameof(ChatOptions.UseMuxComm)), true),
 				UnsignedInteger(Get(nameof(ChatOptions.MaxChannels)), 200),
@@ -65,7 +66,7 @@ public partial class ReadPennMUSHConfig : IOptionsFactory<PennMUSHOptions>
 				Boolean(Get(nameof(ChatOptions.NoisyCEmit)), false),
 				UnsignedInteger(Get(nameof(ChatOptions.ChannelTitleLength)), 80)
 			),
-			new CommandOptions(
+			Command = new CommandOptions(
 				Boolean(Get(nameof(CommandOptions.NoisyWhisper)), false),
 				Boolean(Get(nameof(CommandOptions.PossessiveGet)), true),
 				Boolean(Get(nameof(CommandOptions.PossessiveGetD)), false),
@@ -77,14 +78,14 @@ public partial class ReadPennMUSHConfig : IOptionsFactory<PennMUSHOptions>
 				Boolean(Get(nameof(CommandOptions.DestroyPossessions)), true),
 				RequiredDatabaseReference(Get(nameof(CommandOptions.ProbateJudge)), 1)
 			),
-			new CompatibilityOptions(
+			Compatibility = new CompatibilityOptions(
 				Boolean(Get(nameof(CompatibilityOptions.NullEqualsZero)), true),
 				Boolean(Get(nameof(CompatibilityOptions.TinyBooleans)), false),
 				Boolean(Get(nameof(CompatibilityOptions.TinyTrimFun)), false),
 				Boolean(Get(nameof(CompatibilityOptions.TinyMath)), false),
 				Boolean(Get(nameof(CompatibilityOptions.SilentPEmit)), false)
 			),
-			new CosmeticOptions(
+			Cosmetic = new CosmeticOptions(
 				RequiredString(Get(nameof(CosmeticOptions.MoneySingular)), "Penny").Trim(),
 				RequiredString(Get(nameof(CosmeticOptions.MoneyPlural)), "Pennies").Trim(),
 				Boolean(Get(nameof(CosmeticOptions.PlayerNameSpaces)), true),
@@ -103,7 +104,7 @@ public partial class ReadPennMUSHConfig : IOptionsFactory<PennMUSHOptions>
 				Boolean(Get(nameof(CosmeticOptions.AnnounceConnects)), true),
 				Boolean(Get(nameof(CosmeticOptions.ChatStripQuote)), true)
 			),
-			new CostOptions(
+			Cost = new CostOptions(
 				UnsignedInteger(Get(nameof(CostOptions.ObjectCost)), 10),
 				UnsignedInteger(Get(nameof(CostOptions.ExitCost)), 1),
 				UnsignedInteger(Get(nameof(CostOptions.LinkCost)), 1),
@@ -112,7 +113,7 @@ public partial class ReadPennMUSHConfig : IOptionsFactory<PennMUSHOptions>
 				UnsignedInteger(Get(nameof(CostOptions.QuotaCost)), 1),
 				UnsignedInteger(Get(nameof(CostOptions.FindCost)), 100)
 			),
-			new DatabaseOptions(
+			Database = new DatabaseOptions(
 				RequiredDatabaseReference(Get(nameof(DatabaseOptions.PlayerStart)), 0),
 				RequiredDatabaseReference(Get(nameof(DatabaseOptions.MasterRoom)), 2),
 				RequiredDatabaseReference(Get(nameof(DatabaseOptions.BaseRoom)), 0),
@@ -127,7 +128,7 @@ public partial class ReadPennMUSHConfig : IOptionsFactory<PennMUSHOptions>
 				DatabaseReference(Get(nameof(DatabaseOptions.HttpHandler)), null),
 				UnsignedInteger(Get(nameof(DatabaseOptions.HttpRequestsPerSecond)), 30)
 			),
-			new DumpOptions(
+			Dump = new DumpOptions(
 				Boolean(Get(nameof(DumpOptions.ForkingDump)), true),
 				RequiredString(Get(nameof(DumpOptions.DumpMessage)), "Saving Database. Game may freeze for a moment."),
 				RequiredString(Get(nameof(DumpOptions.DumpComplete)), "Save complete."),
@@ -138,7 +139,7 @@ public partial class ReadPennMUSHConfig : IOptionsFactory<PennMUSHOptions>
 				RequiredString(Get(nameof(DumpOptions.PurgeInterval)), "10m1s"),
 				RequiredString(Get(nameof(DumpOptions.DatabaseCheckInterval)), "9m59s")
 			),
-			new FileOptions(
+			File = new FileOptions(
 				InputDatabase: "ignored",
 				OutputDatabase: "ignored",
 				CrashDatabase: "ignored",
@@ -159,18 +160,18 @@ public partial class ReadPennMUSHConfig : IOptionsFactory<PennMUSHOptions>
 				RequiredString(Get(nameof(FileOptions.DictionaryFile)), string.Empty),
 				RequiredString(Get(nameof(FileOptions.ColorsFile)), "colors.json")
 			),
-			new FlagOptions(
+			Flag = new FlagOptions(
 				PlayerFlags: RequiredString(Get(nameof(FlagOptions.PlayerFlags)), "enter_ok ansi no_command").Split(' '),
 				RoomFlags: RequiredString(Get(nameof(FlagOptions.RoomFlags)), "no_command").Split(' '),
 				ThingFlags: RequiredString(Get(nameof(FlagOptions.ThingFlags)), "").Split(' '),
 				ExitFlags: RequiredString(Get(nameof(FlagOptions.ExitFlags)), "no_command").Split(' '),
 				ChannelFlags: RequiredString(Get(nameof(FlagOptions.ChannelFlags)), "player").Split(' ')
 			),
-			new FunctionOptions(
+			Function = new FunctionOptions(
 				SaferUserFunctions: Boolean(Get(nameof(FunctionOptions.FunctionSideEffects)), true),
 				FunctionSideEffects: Boolean(Get(nameof(FunctionOptions.FunctionSideEffects)), true)
 			),
-			new LimitOptions(
+			Limit = new LimitOptions(
 				UnsignedInteger(Get(nameof(LimitOptions.MaxAliases)), 3),
 				DatabaseReference(Get(nameof(LimitOptions.MaxDbReference)), null),
 				UnsignedInteger(Get(nameof(LimitOptions.MaxAttributesPerObj)), 2048),
@@ -202,7 +203,7 @@ public partial class ReadPennMUSHConfig : IOptionsFactory<PennMUSHOptions>
 				Boolean(Get(nameof(LimitOptions.UseQuota)), true),
 				UnsignedInteger(Get(nameof(LimitOptions.ChunkMigrate)), 150)
 			),
-			new LogOptions(
+			Log = new LogOptions(
 				Boolean(Get(nameof(LogOptions.UseSyslog)), false),
 				Boolean(Get(nameof(LogOptions.LogCommands)), false),
 				Boolean(Get(nameof(LogOptions.LogForces)), true),
@@ -215,7 +216,7 @@ public partial class ReadPennMUSHConfig : IOptionsFactory<PennMUSHOptions>
 				Boolean(Get(nameof(LogOptions.MemoryCheck)), false),
 				Boolean(Get(nameof(LogOptions.UseConnLog)), true)
 			),
-			new MessageOptions(
+			Message = new MessageOptions(
 				RequiredString(Get(nameof(MessageOptions.ConnectFile)), "connect.txt"),
 				RequiredString(Get(nameof(MessageOptions.MessageOfTheDayFile)), "motd.txt"),
 				RequiredString(Get(nameof(MessageOptions.WizMessageOfTheDayFile)), "wizmotd.txt"),
@@ -238,7 +239,7 @@ public partial class ReadPennMUSHConfig : IOptionsFactory<PennMUSHOptions>
 				RequiredString(Get(nameof(MessageOptions.WhoHtmlFile)), "who.html"),
 				RequiredString(Get(nameof(MessageOptions.IndexHtmlFile)), "index.html")
 			),
-			new NetConfig(
+			Net = new NetConfig(
 				RequiredString(Get(nameof(NetConfig.MudName)), "SharpMUSH"),
 				String(Get(nameof(NetConfig.MudUrl)), null),
 				String(Get(nameof(NetConfig.IpAddr)), null),
@@ -258,7 +259,7 @@ public partial class ReadPennMUSHConfig : IOptionsFactory<PennMUSHOptions>
 				Boolean(Get(nameof(NetConfig.JsonUnsafeUnescape)), false),
 				Boolean(Get(nameof(NetConfig.SslRequireClientCert)), false)
 			)
-		);
+		};
 
 		return work;
 
