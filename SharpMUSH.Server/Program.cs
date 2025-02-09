@@ -35,20 +35,25 @@ public class Program
 			ConnectionString = $"Server={container.GetTransportAddress()};User=root;Realm=;Password=password;",
 			Serializer = new ArangoNewtonsoftSerializer(new ArangoNewtonsoftDefaultContractResolver())
 		};
-		
+
 		var configFile = Path.Combine(Directory.GetCurrentDirectory(), "mushcnf.dst");
+		
+		if (!File.Exists(configFile))
+		{
+			throw new FileNotFoundException($"Configuration file not found: {configFile}");
+		}
 
 		await CreateWebHostBuilder(config, configFile).Build().RunAsync();
 	}
 
 	public static IWebHostBuilder CreateWebHostBuilder(ArangoConfiguration arangoConfig, string configFile) =>
-			WebHost
-					.CreateDefaultBuilder()
-					.UseStartup(_ => new Startup(arangoConfig, configFile))
-					.UseKestrel(options =>
-							options.ListenLocalhost(
-									4202,
-									builder => builder.UseConnectionHandler<TelnetServer>()
-							)
-					);
+		WebHost
+			.CreateDefaultBuilder()
+			.UseStartup(_ => new Startup(arangoConfig, configFile))
+			.UseKestrel(options =>
+				options.ListenLocalhost(
+					4202,
+					builder => builder.UseConnectionHandler<TelnetServer>()
+				)
+			);
 }

@@ -7,10 +7,11 @@ using FileOptions = SharpMUSH.Configuration.Options.FileOptions;
 
 namespace SharpMUSH.Configuration;
 
-public partial class ReadPennMushConfig(string ConfigFile) : IOptionsFactory<PennMUSHOptions>
+public partial class ReadPennMushConfig(string configFile) : IOptionsFactory<PennMUSHOptions>
 {
 	public PennMUSHOptions Create(string _)
 	{
+		string[] text;
 		var keys = typeof(PennMUSHOptions)
 			.GetProperties()
 			.Select(property => property.PropertyType)
@@ -30,9 +31,16 @@ public partial class ReadPennMushConfig(string ConfigFile) : IOptionsFactory<Pen
 			_ => string.Empty);
 
 		var splitter = KeyValueSplittingRegex();
-
-		var text = File.ReadAllLines(ConfigFile);
-
+		
+		try
+		{
+			text = File.ReadAllLines(configFile);
+		}
+		catch (Exception ex) when (ex is FileNotFoundException or IOException)
+		{
+			throw;
+		}
+		
 		// TODO: Use a Regex to split the values.
 		foreach (var configLine in text
 			         .Where(line => configDictionary.Keys.Any(line.Trim().StartsWith))
@@ -168,7 +176,7 @@ public partial class ReadPennMushConfig(string ConfigFile) : IOptionsFactory<Pen
 				ChannelFlags: RequiredString(Get(nameof(FlagOptions.ChannelFlags)), "player").Split(' ')
 			),
 			Function = new FunctionOptions(
-				SaferUserFunctions: Boolean(Get(nameof(FunctionOptions.FunctionSideEffects)), true),
+				SaferUserFunctions: Boolean(Get(nameof(FunctionOptions.SaferUserFunctions)), true),
 				FunctionSideEffects: Boolean(Get(nameof(FunctionOptions.FunctionSideEffects)), true)
 			),
 			Limit = new LimitOptions(
