@@ -7,7 +7,7 @@ public class ConfigurationTests : BaseUnitTest
 	[Test]
 	public async Task ParseConfigurationFile()
 	{
-		var configFile = Path.Combine(Directory.GetCurrentDirectory(), "Configuration", "Testfile", "mushcnf.dst");
+		var configFile = Path.Combine(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst");
 		var configReader = new ReadPennMushConfig(configFile);
 		var options = configReader.Create(string.Empty);
 

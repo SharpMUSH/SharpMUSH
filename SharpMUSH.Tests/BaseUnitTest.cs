@@ -52,7 +52,7 @@ public class BaseUnitTest
 			Serializer = new ArangoNewtonsoftSerializer(new ArangoNewtonsoftDefaultContractResolver())
 		};
 		
-		var configFile = Path.Combine(Directory.GetCurrentDirectory(), "Configuration", "Testfile", "mushcnf.dst");
+		var configFile = Path.Combine(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst");
 		Infrastructure = new Infrastructure(config, configFile);
 
 		Database = Infrastructure!.Services.GetService(typeof(ISharpDatabase)) as ISharpDatabase;
