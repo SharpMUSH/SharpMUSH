@@ -36,7 +36,7 @@ public class Program
 			Serializer = new ArangoNewtonsoftSerializer(new ArangoNewtonsoftDefaultContractResolver())
 		};
 
-		var configFile = Path.Combine(Directory.GetCurrentDirectory(), "mushcnf.dst");
+		var configFile = Path.Combine(AppContext.BaseDirectory, "mushcnf.dst");
 		
 		if (!File.Exists(configFile))
 		{
