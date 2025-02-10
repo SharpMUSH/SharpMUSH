@@ -14,7 +14,7 @@
 # Name of your MUSH. Please change this.
 mud_name PennMUSH Emulation by SharpMUSH
 
-# The web address of your MUSH. If this is nonempty, people attempting to
+# The web address of your MUSH. If this is nonempty, people attemping to
 # connect to your MUSH with a web browser will be redirected to this
 # URL. Set to the address of a web client, or your MUSH's website.
 # mud_url http://www.pennmush.org
