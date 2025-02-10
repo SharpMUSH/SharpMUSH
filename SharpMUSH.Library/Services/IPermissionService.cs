@@ -34,4 +34,27 @@ public interface IPermissionService
 
 	bool CanGoto(AnySharpObject who, SharpExit exit, AnySharpContainer destnation);
 
+	bool ChannelOkType(AnySharpObject target, SharpChannel channel);
+	
+	bool ChannelStandardCan(AnySharpObject target, string[] channelType);
+	
+	bool ChannelCanPrivate(AnySharpObject target, SharpChannel channel);
+	
+	bool ChannelCanAccess(AnySharpObject target, SharpChannel channel);
+	
+	bool ChannelCanJoin(AnySharpObject target, SharpChannel channel);
+	
+	bool ChannelCanSpeak(AnySharpObject target, SharpChannel channel);
+	
+	bool ChannelCanCemit(AnySharpObject target, SharpChannel channel);
+	
+	ValueTask<bool> ChannelCanModifyAsync(AnySharpObject target, SharpChannel channel);
+	
+	ValueTask<bool> ChannelCanSeeAsync(AnySharpObject target, SharpChannel channel);
+	
+	bool ChannelCanHide(AnySharpObject target, SharpChannel channel);
+	
+	ValueTask<bool> ChannelCanNukeAsync(AnySharpObject target, SharpChannel channel);
+	
+	ValueTask<bool> ChannelCanDecomposeAsync(AnySharpObject target, SharpChannel channel);
 }

@@ -101,6 +101,7 @@ public class ArangoDBTests : BaseUnitTest
 	}
 
 	[Test]
+	[NotInParallel]
 	[Repeat(10)] // Exclusive Locks are needed first. Otherwise there will be write-write errors. 
 	public async Task SetAndGetAnAttribute()
 	{

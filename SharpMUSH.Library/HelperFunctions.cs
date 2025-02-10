@@ -70,7 +70,10 @@ public static partial class HelperFunctions
 
 	// This may belong in the Permission Service.
 	public static bool CanDark(this AnySharpObject obj)
-		=> obj.HasPower("Can_Dark") || obj.IsWizard();
+		=> obj.HasPower("Dark") || obj.IsWizard();
+	
+	public static bool CanHide(this AnySharpObject obj)
+		=> obj.HasPower("Hide") || obj.IsPriv();
 
 	public static DBRef? Ancestor(this AnySharpObject obj)
 		=> obj.IsOrphan() ? null : obj.Match(
