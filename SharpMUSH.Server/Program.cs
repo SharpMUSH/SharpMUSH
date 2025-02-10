@@ -30,23 +30,30 @@ public class Program
 		await container.StartAsync()
 			.ConfigureAwait(false);
 
-		var config = new ArangoConfiguration()
+		var config = new ArangoConfiguration
 		{
 			ConnectionString = $"Server={container.GetTransportAddress()};User=root;Realm=;Password=password;",
 			Serializer = new ArangoNewtonsoftSerializer(new ArangoNewtonsoftDefaultContractResolver())
 		};
 
-		await CreateWebHostBuilder(config).Build().RunAsync();
+		var configFile = Path.Combine(AppContext.BaseDirectory, "mushcnf.dst");
+		
+		if (!File.Exists(configFile))
+		{
+			throw new FileNotFoundException($"Configuration file not found: {configFile}");
+		}
+
+		await CreateWebHostBuilder(config, configFile).Build().RunAsync();
 	}
 
-	public static IWebHostBuilder CreateWebHostBuilder(ArangoConfiguration arangoConfig) =>
-			WebHost
-					.CreateDefaultBuilder()
-					.UseStartup(_ => new Startup(arangoConfig))
-					.UseKestrel(options =>
-							options.ListenLocalhost(
-									4202,
-									builder => builder.UseConnectionHandler<TelnetServer>()
-							)
-					);
+	public static IWebHostBuilder CreateWebHostBuilder(ArangoConfiguration arangoConfig, string configFile) =>
+		WebHost
+			.CreateDefaultBuilder()
+			.UseStartup(_ => new Startup(arangoConfig, configFile))
+			.UseKestrel(options =>
+				options.ListenLocalhost(
+					4202,
+					builder => builder.UseConnectionHandler<TelnetServer>()
+				)
+			);
 }

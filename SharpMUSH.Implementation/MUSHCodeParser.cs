@@ -4,6 +4,8 @@ using SharpMUSH.Implementation.Visitors;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using System.Collections.Immutable;
+using Microsoft.Extensions.Options;
+using SharpMUSH.Configuration.Options;
 
 namespace SharpMUSH.Implementation;
 
@@ -12,6 +14,7 @@ namespace SharpMUSH.Implementation;
 /// Each call is Synchronous, and stateful at this time.
 /// </summary>
 public record MUSHCodeParser(
+	IOptionsMonitor<PennMUSHOptions> Configuration,
 	IPasswordService PasswordService,
 	IPermissionService PermissionService,
 	IAttributeService AttributeService,
@@ -35,7 +38,7 @@ public record MUSHCodeParser(
 	/// </summary>
 	public IImmutableStack<ParserState> State { get; private init; } = ImmutableStack<ParserState>.Empty;
 
-	public IMUSHCodeParser FromState(ParserState state) => new MUSHCodeParser(PasswordService, PermissionService,
+	public IMUSHCodeParser FromState(ParserState state) => new MUSHCodeParser(Configuration, PasswordService, PermissionService,
 		AttributeService, NotifyService, LocateService, ObjectDataService, CommandDiscoveryService, Scheduler,
 		ConnectionService, Mediator, state);
 
@@ -44,6 +47,7 @@ public record MUSHCodeParser(
 	public IMUSHCodeParser Push(ParserState state) => this with { State = State.Push(state) };
 
 	public MUSHCodeParser(
+		IOptionsMonitor<PennMUSHOptions> config,
 		IPasswordService passwordService,
 		IPermissionService permissionService,
 		IAttributeService attributeService,
@@ -55,7 +59,7 @@ public record MUSHCodeParser(
 		IConnectionService connectionService,
 		IMediator mediator,
 		ParserState state) :
-		this(passwordService, permissionService, attributeService, notifyService, locateService,
+		this(config, passwordService, permissionService, attributeService, notifyService, locateService,
 			objectDataService, commandDiscoveryService, scheduleService, connectionService, mediator)
 		=> State = [state];
 
