@@ -32,9 +32,15 @@ public static class ChannelAdd
 			await parser.NotifyService.Notify(executor, "Invalid channel name.");
 			return new CallState("#-1 Invalid channel name.");
 		}
+
+		var allChannels = await parser.Mediator.Send(new GetChannelListQuery());
+		var ownedChannels = await allChannels
+			.ToAsyncEnumerable()
+			.WhereAwait(async x => 
+				(await x.Owner.WithCancellation(CancellationToken.None)).Id == executorOwner.Id)
+			.CountAsync();
 		
-		// TODO: Add a check for the executor's 'cost' requirements to create a channel.
-		if (!executor.IsPriv() && true /* Check Channel Ownership Number */)
+		if (!executor.IsPriv() && ownedChannels >= parser.Configuration.CurrentValue.Chat.MaxChannels)
 		{
 			await parser.NotifyService.Notify(executor, "#-1 You have too many channels.");
 			return new CallState("#-1 You have too many channels.");

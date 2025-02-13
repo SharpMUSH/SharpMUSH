@@ -2,28 +2,40 @@ using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
 public static class ChannelChown
 {
-	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString channelName, MString newOwner, string[] switches)
+	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString channelName, MString newOwner,
+		string[] switches)
 	{
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
-		var channel = await parser.Mediator.Send(new GetChannelQuery(channelName.ToPlainText()));
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, channelName, true);
 
-		if (channel is null)
+		if (maybeChannel.IsError)
 		{
-			return new CallState("Channel not found.");
+			return maybeChannel.AsError.Value;
 		}
 
-		// TODO: Use Locate()
-		var newOwnerObject = await parser.Mediator.Send(new GetPlayerQuery(newOwner.ToPlainText()));
-		if (newOwnerObject is null)
+		var channel = maybeChannel.AsChannel;
+
+		var locate = await parser.LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, newOwner.ToPlainText(),
+			LocateFlags.PlayersPreference
+			| LocateFlags.OnlyMatchTypePreference
+			| LocateFlags.MatchOptionalWildCardForPlayerName);
+
+		switch (locate)
 		{
-			return new CallState("New owner not found.");
+			case { IsError: true }:
+				return new CallState(locate.AsError.Value);
+			case { IsNone: true }:
+				return new CallState("#-1 PLAYER NOT FOUND");
 		}
-		
+
+		var newOwnerObject = locate.AsPlayer;
+
 		// TODO: This needs a new command.
 		// await parser.Mediator.Send(new UpdateChannelCommand(channel));
 
