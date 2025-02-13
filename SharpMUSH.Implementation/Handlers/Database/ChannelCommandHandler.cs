@@ -57,3 +57,12 @@ public class UpdateChannelUserStatusCommandHandler(ISharpDatabase database) : IC
 		return Unit.Value;
 	}
 }
+
+public class UpdateChannelOwnerCommandHandler(ISharpDatabase database) : ICommandHandler<UpdateChannelOwnerCommand>
+{
+	public async ValueTask<Unit> Handle(UpdateChannelOwnerCommand request, CancellationToken cancellationToken)
+	{
+		await database.UpdateChannelOwnerAsync(request.Channel, request.Player);
+		return Unit.Value;
+	}
+}

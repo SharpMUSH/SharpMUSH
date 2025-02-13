@@ -9,6 +9,8 @@ public record CreateChannelCommand(
 	string[] Privs,
 	SharpPlayer Owner) : ICommand;
 
+public record UpdateChannelOwnerCommand(SharpChannel Channel, SharpPlayer Player) : ICommand;
+
 public record UpdateChannelCommand(
 	SharpChannel Channel,
 	MString? Name,

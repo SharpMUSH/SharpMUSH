@@ -290,6 +290,8 @@ public interface ISharpDatabase
 		string? HideLock,
 		string? ModLock);
 	
+	ValueTask UpdateChannelOwnerAsync(SharpChannel channel, SharpPlayer newOwner);
+	
 	ValueTask DeleteChannelAsync(SharpChannel channel);
 
 	ValueTask AddUserToChannelAsync(SharpChannel channel, AnySharpObject obj);

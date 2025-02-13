@@ -1,7 +1,6 @@
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
-using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Implementation.Commands.ChannelCommand;
@@ -18,6 +17,8 @@ public static class ChannelChown
 		{
 			return maybeChannel.AsError.Value;
 		}
+		
+		// TODO: PERMISSION CHECK
 
 		var channel = maybeChannel.AsChannel;
 
@@ -36,9 +37,10 @@ public static class ChannelChown
 
 		var newOwnerObject = locate.AsPlayer;
 
-		// TODO: This needs a new command.
-		// await parser.Mediator.Send(new UpdateChannelCommand(channel));
+		await parser.Mediator.Send(new UpdateChannelOwnerCommand(channel, newOwnerObject));
 
-		return new CallState("Channel owner has been updated.");
+		var output = MModule.multiple([MModule.single("CHAT: "), MModule.single(executor.Object().Name), MModule.single(" is the new owner of "), channel.Name]);
+		await parser.NotifyService.Notify(executor, output);
+		return new CallState(string.Empty);
 	}
 }

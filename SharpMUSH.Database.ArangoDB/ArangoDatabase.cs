@@ -156,7 +156,8 @@ public class ArangoDatabase(
 		var obj = await arangoDb.Document.CreateAsync<SharpObjectCreateRequest, SharpObjectQueryResult>(transaction,
 			DatabaseConstants.Objects,
 			new SharpObjectCreateRequest(name, DatabaseConstants.TypeThing, [], time, time));
-		var thing = await arangoDb.Document.CreateAsync(transaction, DatabaseConstants.Things, new SharpThingCreateRequest([]));
+		var thing = await arangoDb.Document.CreateAsync(transaction, DatabaseConstants.Things,
+			new SharpThingCreateRequest([]));
 
 		await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.GraphObjects, DatabaseConstants.IsObject,
 			new SharpEdgeCreateRequest(thing.Id, obj.Id));
@@ -165,7 +166,8 @@ public class ArangoDatabase(
 		// TODO: Fix, this should use a default home location, passed down to this.
 		await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.GraphHomes, DatabaseConstants.HasHome,
 			new SharpEdgeCreateRequest(thing.Id, location.Id));
-		await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.GraphObjectOwners, DatabaseConstants.HasObjectOwner,
+		await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.GraphObjectOwners,
+			DatabaseConstants.HasObjectOwner,
 			new SharpEdgeCreateRequest(obj.Id, creator.Id!));
 
 		await arangoDb.Transaction.CommitAsync(transaction);
@@ -485,22 +487,23 @@ public class ArangoDatabase(
 		return owner.AsPlayer;
 	}
 
-	private async ValueTask<IEnumerable<(AnySharpObject Member, SharpChannelStatus Status)>> GetChannelMembersAsync(string channelId)
+	private async ValueTask<IEnumerable<(AnySharpObject Member, SharpChannelStatus Status)>> GetChannelMembersAsync(
+		string channelId)
 	{
 		var vertexes = await arangoDb.Query.ExecuteAsync<(string Id, SharpChannelUserStatusQueryResult Status)>(handle,
 			$"FOR v IN 1..1 INBOUND {channelId} GRAPH {DatabaseConstants.GraphChannels} RETURN {{Id: v._id, Status: e}}");
 
 		return await AsyncEnumerable.ToAsyncEnumerable(vertexes)
-			.SelectAwait(async x => 
+			.SelectAwait(async x =>
 				((
-					await GetObjectNodeAsync(x.Id)).Known(),
+						await GetObjectNodeAsync(x.Id)).Known(),
 					new SharpChannelStatus(
-						Combine: x.Status.Combine, 
-						Gagged: x.Status.Gagged, 
+						Combine: x.Status.Combine,
+						Gagged: x.Status.Gagged,
 						Hide: x.Status.Hide,
 						Mute: x.Status.Mute,
 						Title: MarkupStringModule.deserialize(x.Status.Title)
-				)))
+					)))
 			.ToArrayAsync(CancellationToken.None);
 	}
 
@@ -518,7 +521,8 @@ public class ArangoDatabase(
 			HideLock = x.HideLock,
 			ModLock = x.ModLock,
 			Owner = new AsyncLazy<SharpPlayer>(async _ => await GetChannelOwnerAsync(x.Id)),
-			Members = new AsyncLazy<IEnumerable<(AnySharpObject,SharpChannelStatus)>>(async _ => await GetChannelMembersAsync(x.Id) )
+			Members = new AsyncLazy<IEnumerable<(AnySharpObject, SharpChannelStatus)>>(async _ =>
+				await GetChannelMembersAsync(x.Id))
 		};
 	}
 
@@ -538,7 +542,8 @@ public class ArangoDatabase(
 		return result.Select(SharpChannelQueryToSharpChannel);
 	}
 
-	public async ValueTask CreateChannelAsync(MarkupString.MarkupStringModule.MarkupString channel, string[] privs, SharpPlayer owner)
+	public async ValueTask CreateChannelAsync(MarkupString.MarkupStringModule.MarkupString channel, string[] privs,
+		SharpPlayer owner)
 	{
 		var transaction = await arangoDb.Transaction.BeginAsync(handle,
 			new ArangoTransaction
@@ -567,7 +572,7 @@ public class ArangoDatabase(
 		await arangoDb.Transaction.CommitAsync(transaction);
 	}
 
-	public async ValueTask UpdateChannelAsync(SharpChannel channel, MarkupString.MarkupStringModule.MarkupString? name, 
+	public async ValueTask UpdateChannelAsync(SharpChannel channel, MarkupString.MarkupStringModule.MarkupString? name,
 		MarkupString.MarkupStringModule.MarkupString? description, string[]? privs,
 		string? joinLock, string? speakLock, string? seeLock, string? hideLock, string? modLock)
 		=> await arangoDb.Graph.Vertex.UpdateAsync(handle,
@@ -583,6 +588,16 @@ public class ArangoDatabase(
 				HideLock = hideLock ?? channel.HideLock,
 				ModLock = modLock ?? channel.ModLock
 			});
+
+	public async ValueTask UpdateChannelOwnerAsync(SharpChannel channel, SharpPlayer newOwner)
+	{
+		var response = await arangoDb.Query.ExecuteAsync<string>(handle,
+			$"FOR v,e IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.OwnerOfChannel} RETURN e._id",
+			new Dictionary<string, object> { { StartVertex, channel.Id! } });
+		var ownerEdge = response.First();
+		await arangoDb.Graph.Edge.UpdateAsync(handle, DatabaseConstants.GraphChannels, DatabaseConstants.OwnerOfChannel,
+			ownerEdge, new { To = newOwner.Id });
+	}
 
 	public async ValueTask DeleteChannelAsync(SharpChannel channel) =>
 		await arangoDb.Graph.Vertex.RemoveAsync(handle, DatabaseConstants.GraphChannels, DatabaseConstants.Channels,
@@ -634,12 +649,12 @@ public class ArangoDatabase(
 			updates.Add(new KeyValuePair<string, object>(nameof(status.Hide), hide));
 		}
 
-		if (status.Mute is {} mute)
+		if (status.Mute is { } mute)
 		{
 			updates.Add(new KeyValuePair<string, object>(nameof(status.Mute), mute));
 		}
 
-		if (status.Title is {} title)
+		if (status.Title is { } title)
 		{
 			updates.Add(new KeyValuePair<string, object>(nameof(status.Title), MarkupStringModule.serialize(title)));
 		}
