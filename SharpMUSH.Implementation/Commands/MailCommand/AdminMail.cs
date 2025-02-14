@@ -14,7 +14,7 @@ public static class AdminMail
 	{
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
 
-		if (!(executor.IsGod() || executor.IsWizard()))
+		if (!(executor.IsGod() || await executor.IsWizard()))
 		{
 			await parser.NotifyService.Notify(executor, Errors.ErrorPerm);
 			return MModule.single(Errors.ErrorPerm);

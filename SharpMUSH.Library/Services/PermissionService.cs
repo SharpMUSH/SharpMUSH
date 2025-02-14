@@ -8,45 +8,46 @@ public class PermissionService(ILockService lockService) : IPermissionService
 {
 	public bool PassesLock(AnySharpObject who, AnySharpObject target, string lockString)
 		=> lockService.Evaluate(lockString, target, who);
-	
+
 	public bool PassesLock(AnySharpObject who, AnySharpObject target, LockType lockType)
 		=> lockService.Evaluate(lockType, target, who);
-	
-	public bool CanSet(AnySharpObject executor, AnySharpObject target, params SharpAttribute[] attribute)
+
+	public async ValueTask<bool> CanSet(AnySharpObject executor, AnySharpObject target, params SharpAttribute[] attribute)
 	{
-		if (!Controls(executor, target)) return false;
+		if (!await Controls(executor, target)) return false;
 
 		var compressedAttribute = attribute[^1] with
 		{
 			Flags = attribute.SelectMany(a => a.Flags)
-											 .Where(x => x.Inheritable == true)
-											 .DistinctBy(x => x.Name)
+				.Where(x => x.Inheritable == true)
+				.DistinctBy(x => x.Name)
 		};
 
 		return !(!executor.IsGod()
-			// && (It's Internal // SAFE when we care about SAFE)
-			|| !(executor.IsWizard()
-				|| (!compressedAttribute.IsWizard()
-					&& (!compressedAttribute.IsLocked()
-						|| compressedAttribute.Owner.Value == target.Object().Owner.Value))));
+		         // && (It's Internal // SAFE when we care about SAFE)
+		         || !(await executor.IsWizard()
+		              || (!compressedAttribute.IsWizard()
+		                  && (!compressedAttribute.IsLocked()
+		                      || await compressedAttribute.Owner.WithCancellation(CancellationToken.None) ==
+		                      await target.Object().Owner.WithCancellation(CancellationToken.None)))));
 	}
 
-	public bool Controls(AnySharpObject executor, AnySharpObject target, params SharpAttribute[] attribute)
+	public ValueTask<bool> Controls(AnySharpObject executor, AnySharpObject target, params SharpAttribute[] attribute)
 		=> Controls(executor, target); // TODO: Implement
 
 	// TODO: Confirm Implementation
 	// TODO: Optimize for lists.
-	public bool CanViewAttribute(AnySharpObject viewer, AnySharpObject target, params SharpAttribute[] attribute)
-		=> CanExamine(viewer, target) || attribute.Last().IsVisual();
+	public async ValueTask<bool> CanViewAttribute(AnySharpObject viewer, AnySharpObject target, params SharpAttribute[] attribute)
+		=> await CanExamine(viewer, target) || attribute.Last().IsVisual();
 
 	// TODO: Confirm Implementation.
 	// TODO: Optimize for lists.
-	public bool CanExecuteAttribute(AnySharpObject viewer, AnySharpObject target, params SharpAttribute[] attribute)
+	public ValueTask<bool> CanExecuteAttribute(AnySharpObject viewer, AnySharpObject target, params SharpAttribute[] attribute)
 		=> CanEvalAttr(viewer, target, attribute.Last());
 
-	public bool Controls(AnySharpObject who, AnySharpObject target)
+	public async ValueTask<bool> Controls(AnySharpObject who, AnySharpObject target)
 	{
-		if (who.HasPower("guest"))
+		if (await who.HasPower("guest"))
 			return false;
 
 		if (who.Id() == target.Id())
@@ -58,19 +59,19 @@ public class PermissionService(ILockService lockService) : IPermissionService
 		if (target.IsGod())
 			return false;
 
-		if (who.IsWizard())
+		if (await who.IsWizard())
 			return true;
 
-		if (target.IsWizard() || (target.IsPriv() && !who.IsPriv()))
+		if (await target.IsWizard() || (await target.IsPriv() && !await who.IsPriv()))
 			return false;
 
-		if (who.IsMistrust())
+		if (await who.IsMistrust())
 			return false;
 
-		if (who.Owns(target) && (!target.Inheritable() || who.Inheritable()))
+		if (await who.Owns(target) && (!await target.Inheritable() || await who.Inheritable()))
 			return true;
 
-		if (target.Inheritable() || target.IsPlayer)
+		if (await target.Inheritable() || target.IsPlayer)
 			return false;
 
 		/* TODO: Zone Master items here.*/
@@ -87,15 +88,15 @@ public class PermissionService(ILockService lockService) : IPermissionService
 		return lockService.Evaluate(LockType.Control, target, who);
 	}
 
-	public bool CanExamine(AnySharpObject examiner, AnySharpObject examinee)
+	public async ValueTask<bool> CanExamine(AnySharpObject examiner, AnySharpObject examinee)
 		=> examiner.Object().DBRef == examinee.Object().DBRef
-			 || Controls(examiner, examinee)
-			 || examiner.IsSee_All()
-			 || (examinee.IsVisual() && lockService.Evaluate(LockType.Examine, examinee, examiner));
+		   || await Controls(examiner, examinee)
+		   || await examiner.IsSee_All()
+		   || (await examinee.IsVisual() && lockService.Evaluate(LockType.Examine, examinee, examiner));
 
-	public bool CanInteract(AnySharpObject from, AnySharpObject to, IPermissionService.InteractType type)
+	public async ValueTask<bool> CanInteract(AnySharpObject from, AnySharpObject to, IPermissionService.InteractType type)
 	{
-		if (from == to || from.IsRoom || to.IsRoom) return true;
+		if (from.Id() == to.Id() || from.IsRoom || to.IsRoom) return true;
 
 		var fromStep = from.MinusRoom();
 		var toStep = to.MinusRoom();
@@ -103,42 +104,42 @@ public class PermissionService(ILockService lockService) : IPermissionService
 		if (type == IPermissionService.InteractType.Hear && !lockService.Evaluate(LockType.Interact, to, from))
 			return false;
 
-		if (fromStep.Object().Id == toStep.Location().Object().Id
-				|| toStep.Object().Id == fromStep.Location().Object().Id
-				|| Controls(to, from))
+		if (fromStep.Object().Id == (await toStep.Location()).Object().Id
+		    || toStep.Object().Id == (await fromStep.Location()).Object().Id
+		    || await Controls(to, from))
 			return true;
 
 		return true;
 	}
 
-	public static bool CanEval(AnySharpObject evaluator, AnySharpObject evaluationTarget)
-		=> !evaluationTarget.IsPriv()
-			 || evaluator.IsGod()
-			 || ((evaluator.IsWizard()
-						|| (evaluator.IsRoyalty() && !evaluationTarget.IsWizard()))
-					 && !evaluationTarget.IsGod());
+	public static async ValueTask<bool> CanEval(AnySharpObject evaluator, AnySharpObject evaluationTarget)
+		=> !await evaluationTarget.IsPriv()
+		   || evaluator.IsGod()
+		   || ((await evaluator.IsWizard()
+		        || (await evaluator.IsRoyalty() && !await evaluationTarget.IsWizard()))
+		       && !evaluationTarget.IsGod());
 
-	public static bool CanEvalAttr(
+	public static async ValueTask<bool> CanEvalAttr(
 		AnySharpObject evaluator,
 		AnySharpObject evaluationTarget,
 		SharpAttribute attribute)
-		=> CanEval(evaluator, evaluationTarget)
-			 || attribute.IsPublic();
+		=> await CanEval(evaluator, evaluationTarget)
+		   || attribute.IsPublic();
 
-	public bool CouldDoIt(AnySharpObject who, AnyOptionalSharpObject thing1, string? what)
+	public ValueTask<bool> CouldDoIt(AnySharpObject who, AnyOptionalSharpObject thing1, string? what)
 	{
 		throw new NotImplementedException();
 	}
 
-	public bool CanGoto(AnySharpObject who, SharpExit exit, AnySharpContainer destination)
+	public ValueTask<bool> CanGoto(AnySharpObject who, SharpExit exit, AnySharpContainer destination)
 	{
 		// TODO: Implement
 		var _ = who;
 		var _2 = exit;
 		var _3 = destination;
-		return true;
+		return ValueTask.FromResult(true);
 	}
 
-	public bool CanNoSpoof(AnySharpObject executor)
-		=> executor.HasPower("NOSPOOF") || executor.IsWizard() || executor.IsGod();
+	public async ValueTask<bool> CanNoSpoof(AnySharpObject executor)
+		=> await executor.HasPower("NOSPOOF") || await executor.IsWizard() || executor.IsGod();
 }

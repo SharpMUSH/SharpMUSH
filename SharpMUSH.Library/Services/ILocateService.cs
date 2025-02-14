@@ -50,5 +50,5 @@ public interface ILocateService
 		string name,
 		LocateFlags flags);
 
-	public AnySharpContainer Room(AnySharpObject content);
+	public ValueTask<AnySharpContainer> Room(AnySharpObject content);
 }

@@ -18,21 +18,24 @@ public static partial class Commands
 		throw new NotImplementedException();
 	}
 
-	[SharpCommand(Name = "@CPATTR", Switches = ["CONVERT", "NOFLAGCOPY"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs, MinArgs = 0, MaxArgs = 0)]
+	[SharpCommand(Name = "@CPATTR", Switches = ["CONVERT", "NOFLAGCOPY"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs,
+		MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> CPATTR(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		await ValueTask.CompletedTask;
 		throw new NotImplementedException();
 	}
 
-	[SharpCommand(Name = "@MVATTR", Switches = ["CONVERT", "NOFLAGCOPY"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs, MinArgs = 0, MaxArgs = 0)]
+	[SharpCommand(Name = "@MVATTR", Switches = ["CONVERT", "NOFLAGCOPY"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs,
+		MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> MVATTR(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		await ValueTask.CompletedTask;
 		throw new NotImplementedException();
 	}
 
-	[SharpCommand(Name = "@RECYCLE", Switches = ["OVERRIDE"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	[SharpCommand(Name = "@RECYCLE", Switches = ["OVERRIDE"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0,
+		MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> RECYCLE(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		await ValueTask.CompletedTask;
@@ -58,7 +61,10 @@ public static partial class Commands
 		var name = MModule.plainText(args["0"].Message!);
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
 
-		var thing = await parser.Mediator.Send(new CreateThingCommand(name, executor.Where, executor.Object().Owner.Value));
+		var thing = await parser.Mediator.Send(new CreateThingCommand(name,
+			await executor.Where(),
+			await executor.Object()
+				.Owner.WithCancellation(CancellationToken.None)));
 
 		return new CallState(thing.ToString());
 	}
@@ -70,7 +76,8 @@ public static partial class Commands
 		throw new NotImplementedException();
 	}
 
-	[SharpCommand(Name = "@NAME", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.NoGagged | CB.NoGuest, MinArgs = 0, MaxArgs = 0)]
+	[SharpCommand(Name = "@NAME", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.NoGagged | CB.NoGuest,
+		MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> NAME(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		await ValueTask.CompletedTask;
@@ -182,7 +189,8 @@ public static partial class Commands
 	}
 
 
-	[SharpCommand(Name = "@CHOWN", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	[SharpCommand(Name = "@CHOWN", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0,
+		MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> CHOWN(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		await ValueTask.CompletedTask;
@@ -196,7 +204,8 @@ public static partial class Commands
 		throw new NotImplementedException();
 	}
 
-	[SharpCommand(Name = "@LINK", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	[SharpCommand(Name = "@LINK", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0,
+		MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> LINK(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		await ValueTask.CompletedTask;
@@ -224,14 +233,16 @@ public static partial class Commands
 		throw new NotImplementedException();
 	}
 
-	[SharpCommand(Name = "@CHZONE", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	[SharpCommand(Name = "@CHZONE", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged,
+		MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> CHZONE(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		await ValueTask.CompletedTask;
 		throw new NotImplementedException();
 	}
 
-	[SharpCommand(Name = "@DIG", Switches = ["TELEPORT"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 1, MaxArgs = 6)]
+	[SharpCommand(Name = "@DIG", Switches = ["TELEPORT"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged,
+		MinArgs = 1, MaxArgs = 6)]
 	public static async ValueTask<Option<CallState>> DIG(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// TODO: Fix verbiage for Notify
@@ -264,7 +275,8 @@ public static partial class Commands
 		// CAN DIG?
 
 		// CREATE ROOM
-		var response = await parser.Mediator.Send(new CreateRoomCommand(MModule.plainText(roomName), executor.Owner.Value));
+		var response = await parser.Mediator.Send(new CreateRoomCommand(MModule.plainText(roomName),
+			await executor.Owner.WithCancellation(CancellationToken.None)));
 		await parser.NotifyService.Notify(executor.DBRef, $"{roomName} created with room number #{response.Number}.");
 
 		if (!string.IsNullOrWhiteSpace(exitTo?.ToString()))
@@ -273,15 +285,17 @@ public static partial class Commands
 			// CAN CREATE EXIT HERE?
 			// CAN LINK TO DESTINATION?
 
-			var toExitResponse = await parser.Mediator.Send(new CreateExitCommand(exitToName.First(), exitToName.Skip(1).ToArray(), executorBase.Where, executor.Owner.Value));
+			var toExitResponse = await parser.Mediator.Send(new CreateExitCommand(exitToName.First(),
+				exitToName.Skip(1).ToArray(), await executorBase.Where(),
+				await executor.Owner.WithCancellation(CancellationToken.None)));
 			await parser.NotifyService.Notify(executor.DBRef, $"Opened exit #{toExitResponse.Number}");
 			await parser.NotifyService.Notify(executor.DBRef, "Trying to link...");
 
 			var newRoomObject = await parser.Mediator.Send(new GetObjectNodeQuery(response));
 			var newExitObject = await parser.Mediator.Send(new GetObjectNodeQuery(toExitResponse));
-			
+
 			await parser.Mediator.Send(new LinkExitCommand(newExitObject.AsExit, newRoomObject.AsRoom));
-			
+
 			await parser.NotifyService.Notify(executor.DBRef, $"Linked exit #{toExitResponse.Number} to #{response.Number}");
 		}
 
@@ -293,42 +307,49 @@ public static partial class Commands
 			var exitFromName = MModule.plainText(exitFrom).Split(";");
 			var newRoomObject = await parser.Mediator.Send(new GetObjectNodeQuery(response));
 
-			var fromExitResponse = await parser.Mediator.Send(new CreateExitCommand(exitFromName.First(), exitFromName.Skip(1).ToArray(), newRoomObject.AsRoom, executor.Owner.Value));
+			var fromExitResponse = await parser.Mediator.Send(new CreateExitCommand(exitFromName.First(),
+				exitFromName.Skip(1).ToArray(), newRoomObject.AsRoom, await executor.Owner.WithCancellation(CancellationToken.None)));
 			var newExitObject = await parser.Mediator.Send(new GetObjectNodeQuery(fromExitResponse));
 
 			await parser.NotifyService.Notify(executor.DBRef, $"Opened exit #{fromExitResponse.Number}");
 			await parser.NotifyService.Notify(executor.DBRef, "Trying to link...");
-			
-			await parser.Mediator.Send(new LinkExitCommand(newExitObject.AsExit, executorBase.Where));
-			
-			await parser.NotifyService.Notify(executor.DBRef, $"Linked exit #{fromExitResponse.Number} to #{executorBase.Where.Object().DBRef.Number}");
+
+			var where = await executorBase.Where();
+			await parser.Mediator.Send(new LinkExitCommand(newExitObject.AsExit, where));
+
+			await parser.NotifyService.Notify(executor.DBRef,
+				$"Linked exit #{fromExitResponse.Number} to #{where.Object().DBRef.Number}");
 		}
 
 		return new CallState(response.ToString());
 	}
 
-	[SharpCommand(Name = "@LOCK", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.Switches | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	[SharpCommand(Name = "@LOCK", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.Switches | CB.NoGagged,
+		MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> LOCK(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		await ValueTask.CompletedTask;
 		throw new NotImplementedException();
 	}
 
-	[SharpCommand(Name = "@UNLOCK", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.Switches | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	[SharpCommand(Name = "@UNLOCK", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.Switches | CB.NoGagged,
+		MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> UNLOCK(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		await ValueTask.CompletedTask;
 		throw new NotImplementedException();
 	}
 
-	[SharpCommand(Name = "@OPEN", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	[SharpCommand(Name = "@OPEN", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged,
+		MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> OPEN(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		await ValueTask.CompletedTask;
 		throw new NotImplementedException();
 	}
 
-	[SharpCommand(Name = "@CLONE", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	[SharpCommand(Name = "@CLONE", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged,
+		MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> CLONE(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		await ValueTask.CompletedTask;
