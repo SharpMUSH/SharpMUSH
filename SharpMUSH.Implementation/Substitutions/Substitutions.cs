@@ -8,32 +8,45 @@ namespace SharpMUSH.Implementation.Substitutions;
 
 public static partial class Substitutions
 {
-	public static async ValueTask<CallState> ParseSimpleSubstitution(string symbol, IMUSHCodeParser parser, SubstitutionSymbolContext _)
+	public static async ValueTask<CallState> ParseSimpleSubstitution(string symbol, IMUSHCodeParser parser,
+		SubstitutionSymbolContext _)
 		=> symbol switch
 		{
-			"0" or "1" or "2" or "3" or "4" or "5" or "6" or "7" or "8" or "9" => new((parser.CurrentState.Arguments.TryGetValue(symbol, out var tmpCS) ? tmpCS.Message : MModule.empty())),
+			"0" or "1" or "2" or "3" or "4" or "5" or "6" or "7" or "8" or "9" => new(
+				(parser.CurrentState.Arguments.TryGetValue(symbol, out var tmpCS) ? tmpCS.Message : MModule.empty())),
 			"B" or "b" => new(" "),
 			"R" or "r" => new(Environment.NewLine),
 			"T" or "t" => new("\t"),
 			"#" => new($"#{parser.CurrentState.Enactor!.Value.Number}"),
 			":" => new($"#{parser.CurrentState.Enactor!.Value}"),
 			"n" => new((await parser.CurrentState.EnactorObject(parser.Mediator)).Object()!.Name),
-			"N" => new((await parser.CurrentState.EnactorObject(parser.Mediator)).Object()!.Name), // TODO: CAPPED ENACTOR NAME
-			"~" => new((await parser.CurrentState.EnactorObject(parser.Mediator)).Object()!.Name), // TODO: ACCENTED ENACTOR NAME
-			"K" or "k" => new((await parser.CurrentState.EnactorObject(parser.Mediator)).Object()!.Name), // TODO: MONIKER ENACTOR NAME
+			"N" => new((await parser.CurrentState.EnactorObject(parser.Mediator)).Object()!
+				.Name), // TODO: CAPPED ENACTOR NAME
+			"~" => new((await parser.CurrentState.EnactorObject(parser.Mediator)).Object()!
+				.Name), // TODO: ACCENTED ENACTOR NAME
+			"K" or "k" => new((await parser.CurrentState.EnactorObject(parser.Mediator)).Object()!
+				.Name), // TODO: MONIKER ENACTOR NAME
 			"S" or "s" => new CallState("they"), // TODO: SUBJECT PRONOUN
 			"O" or "o" => throw new NotImplementedException(), // TODO: OBJECT PRONOUN
 			"P" or "p" => throw new NotImplementedException(), // TODO: POSSESSIVE PRONOUN
 			"A" or "a" => throw new NotImplementedException(), // TODO: ABSOLUTE POSSESSIVE PRONOUN
 			"@" => new($"#{parser.CurrentState.Caller!.Value.Number}"),
 			"!" => new($"#{parser.CurrentState.Executor!.Value.Number}"),
-			"L" or "l" => new($"#{(await parser.CurrentState.ExecutorObject(parser.Mediator)).WithoutNone().Where.Object().DBRef.Number.ToString()}"),
+			"L" or "l" => new(await GetLocationDBRefString(parser)),
 			"C" or "c" => throw new NotImplementedException(), // TODO: LAST COMMAND BEFORE EVALUATION
 			"U" or "u" => throw new NotImplementedException(), // TODO: LAST COMMAND AFTER EVALUATION
 			"?" => new(parser.State.Count().ToString()),
 			"+" => new(parser.CurrentState.Arguments.Count.ToString()),
 			_ => new(symbol),
 		};
+
+	private static async ValueTask<string> GetLocationDBRefString(IMUSHCodeParser parser)
+	{
+		var executor = await parser.CurrentState.ExecutorObject(parser.Mediator);
+		var location = await executor.WithoutNone().Where();
+		var locationDBRef = location.Object().DBRef.Number.ToString();
+		return $"#{locationDBRef}";
+	}
 
 	public static async ValueTask<CallState> ParseComplexSubstitution(CallState? symbol, IMUSHCodeParser parser,
 		ComplexSubstitutionSymbolContext context)
@@ -62,8 +75,8 @@ public static partial class Substitutions
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
 
 		var val = await attrService.GetAttributeAsync(
-			executor, 
-			executor, 
+			executor,
+			executor,
 			symbol.Message!.ToString(),
 			IAttributeService.AttributeMode.Read);
 

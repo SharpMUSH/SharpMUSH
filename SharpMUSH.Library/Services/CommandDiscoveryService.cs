@@ -19,15 +19,16 @@ public partial class CommandDiscoveryService : ICommandDiscoveryService
 	// We need to cache the results of the conversion and where that object & attribute live.
 	// We don't need to care for the Cache Building if that command was used, we can immediately cache all commands.
 	// CONSIDERATION: Do we also need a possible Database-Scan for all commands, and cache them?
-	public Option<IEnumerable<(AnySharpObject SObject, SharpAttribute Attribute, Dictionary<string, CallState> Arguments)>> MatchUserDefinedCommand(
+	public async ValueTask<Option<IEnumerable<(AnySharpObject SObject, SharpAttribute Attribute, Dictionary<string, CallState> Arguments)>>> MatchUserDefinedCommand(
 		IMUSHCodeParser parser,
 		IEnumerable<AnySharpObject> objects,
 		MString commandString)
 	{
-		var commandPatternAttributes = objects
-			.Where(x => !x.HasFlag("NO_COMMAND"))
-			.SelectMany(sharpObj =>
-					sharpObj.Object().AllAttributes.Value
+		var commandPatternAttributes = await objects
+			.ToAsyncEnumerable()
+			.WhereAwait(async x => !await x.HasFlag("NO_COMMAND"))
+			.SelectManyAwait<AnySharpObject,(AnySharpObject Obj, SharpAttribute Attr, Match Pattern)>(async sharpObj =>
+					(await sharpObj.Object().AllAttributes.WithCancellation(CancellationToken.None))
 						.Where(attr =>
 							attr.Flags.All(flag => flag.Name != "NO_COMMAND")
 							&& CommandPatternRegex().IsMatch(MModule.plainText(attr.Value)))
@@ -36,7 +37,9 @@ public partial class CommandDiscoveryService : ICommandDiscoveryService
 								var match = CommandPatternRegex().Match(MModule.plainText(attr.Value));
 								return (Obj: sharpObj, Attr: attr with { CommandListIndex = match.Length }, Pattern: match);
 							})
-					);
+						.ToAsyncEnumerable() 
+					)
+			.ToArrayAsync();
 
 		var convertedCommandPatternAttributes = commandPatternAttributes
 			.Select(x =>

@@ -16,67 +16,70 @@ public static partial class HelperFunctions
 	private static readonly Regex OptionalDatabaseReferenceWithAttributeRegex = OptionalDatabaseReferenceWithAttribute();
 	private static readonly Regex DatabaseReferenceWithOptionalAttributeRegex = DatabaseReferenceWithOptionalAttribute();
 
-	public static bool IsWizard(this AnySharpObject obj)
-		=> obj.Object()!.Flags.Value.Any(x => x.Name == "Wizard");
+	public static async ValueTask<bool> IsWizard(this AnySharpObject obj)
+		=> (await obj.Object().Flags.WithCancellation(CancellationToken.None)).Any(x => x.Name == "Wizard");
 
-	public static bool IsRoyalty(this AnySharpObject obj)
-		=> obj.Object()!.Flags.Value.Any(x => x.Name == "Royalty");
+	public static async ValueTask<bool> IsRoyalty(this AnySharpObject obj)
+		=> (await obj.Object().Flags.WithCancellation(CancellationToken.None)).Any(x => x.Name == "Royalty");
 
-	public static bool IsMistrust(this AnySharpObject obj)
-		=> obj.Object()!.Flags.Value.Any(x => x.Name == "Mistrust");
+	public static async ValueTask<bool> IsMistrust(this AnySharpObject obj)
+		=> (await obj.Object().Flags.WithCancellation(CancellationToken.None)).Any(x => x.Name == "Mistrust");
 
 	public static bool IsGod(this AnySharpObject obj)
-		=> obj.Object()!.Key! == 1;
+		=> obj.Object().Key == 1;
 
-	public static bool IsPriv(this AnySharpObject obj)
-		=> IsGod(obj) || IsWizard(obj) || IsRoyalty(obj);
+	public static async ValueTask<bool> IsPriv(this AnySharpObject obj)
+		=> IsGod(obj) || await IsWizard(obj) || await IsRoyalty(obj);
 
-	public static bool IsSee_All(this AnySharpObject obj)
-		=> IsPriv(obj) || obj.HasPower("See_All");
+	public static async ValueTask<bool> IsSee_All(this AnySharpObject obj)
+		=> await IsPriv(obj) || await obj.HasPower("See_All");
 
-	public static bool IsGuest(this AnySharpObject obj)
-		=> obj.HasPower("Guest");
+	public static async ValueTask<bool> IsGuest(this AnySharpObject obj)
+		=> await obj.HasPower("Guest");
 
-	public static bool IsVisual(this AnySharpObject obj)
-		=> obj.HasPower("Visual");
+	public static async ValueTask<bool> IsVisual(this AnySharpObject obj)
+		=> await obj.HasPower("Visual");
 
-	public static bool IsDark(this AnySharpObject obj)
-		=> obj.HasPower("Dark");
+	public static async ValueTask<bool> IsDark(this AnySharpObject obj)
+		=> await obj.HasPower("Dark");
 
-	public static bool IsLight(this AnySharpObject obj)
-		=> obj.HasPower("Light");
+	public static async ValueTask<bool> IsLight(this AnySharpObject obj)
+		=> await obj.HasPower("Light");
 
-	public static bool IsDarkLegal(this AnySharpObject obj)
-		=> obj.IsDark() && (obj.CanDark() || !obj.IsAlive());
+	public static async ValueTask<bool> IsDarkLegal(this AnySharpObject obj)
+		=> await obj.IsDark() && (await obj.CanDark() || !await obj.IsAlive());
 
-	public static bool IsAudible(this AnySharpObject obj)
-		=> obj.HasPower("Audible");
+	public static async ValueTask<bool> IsAudible(this AnySharpObject obj)
+		=> await obj.HasPower("Audible");
 
-	public static bool IsOrphan(this AnySharpObject obj)
-		=> obj.HasPower("Orphan");
+	public static async ValueTask<bool> IsOrphan(this AnySharpObject obj)
+		=> await obj.HasPower("Orphan");
 
-	public static bool IsAlive(this AnySharpObject obj)
-		=> obj.IsPlayer || IsPuppet(obj) ||
-		   (IsAudible(obj) && obj.Object().Attributes.Value.Any(x => x.Name == "FORWARDLIST"));
+	public static async ValueTask<bool> IsAlive(this AnySharpObject obj)
+		=> obj.IsPlayer 
+		   || await IsPuppet(obj) 
+		   || (await IsAudible(obj) && (await obj.Object().Attributes.WithCancellation(CancellationToken.None))
+			   .Any(x => x.Name == "FORWARDLIST"));
 
-	public static bool IsPuppet(this AnySharpObject obj)
-		=> obj.HasPower("Puppet");
+	public static async ValueTask<bool> IsPuppet(this AnySharpObject obj)
+		=> await obj.HasPower("Puppet");
 
-	public static bool HasPower(this AnySharpObject obj, string power)
-		=> obj.Object().Powers.Value.Any(x => x.Name == power || x.Alias == power);
+	public static async ValueTask<bool> HasPower(this AnySharpObject obj, string power)
+		=> (await obj.Object().Powers.WithCancellation(CancellationToken.None))
+			.Any(x => x.Name == power || x.Alias == power);
 
-	public static bool HasLongFingers(this AnySharpObject obj)
-		=> obj.IsPriv() || obj.HasPower("Long_Fingers");
+	public static async ValueTask<bool> HasLongFingers(this AnySharpObject obj)
+		=> await obj.IsPriv() || await obj.HasPower("Long_Fingers");
 
-	public static bool HasFlag(this AnySharpObject obj, string flag)
-		=> obj.Object().Flags.Value.Any(x => x.Name == flag);
+	public static async ValueTask<bool> HasFlag(this AnySharpObject obj, string flag)
+		=> (await obj.Object().Flags.WithCancellation(CancellationToken.None)).Any(x => x.Name == flag);
 
 	// This may belong in the Permission Service.
-	public static bool CanDark(this AnySharpObject obj)
-		=> obj.HasPower("Can_Dark") || obj.IsWizard();
+	public static async ValueTask<bool> CanDark(this AnySharpObject obj)
+		=> await obj.HasPower("Can_Dark") || await obj.IsWizard();
 
-	public static DBRef? Ancestor(this AnySharpObject obj, IMUSHCodeParser parser)
-		=> obj.IsOrphan()
+	public static async ValueTask<DBRef?> Ancestor(this AnySharpObject obj, IMUSHCodeParser parser)
+		=> await obj.IsOrphan()
 			? null
 			: obj.Match(
 				_ => parser.Configuration.CurrentValue.Database.AncestorPlayer == null
@@ -93,64 +96,66 @@ public static partial class HelperFunctions
 					: new DBRef(Convert.ToInt32(parser.Configuration.CurrentValue.Database.AncestorThing))
 			);
 
-	public static bool Inheritable(this AnySharpObject obj)
+	public static async ValueTask<bool> Inheritable(this AnySharpObject obj)
 		=> obj.IsPlayer
-		   || obj.HasFlag("Trust")
-		   || obj.Object().Owner.Value.Object.Flags.Value.Any(x => x.Name == "Trust")
-		   || IsWizard(obj);
+		   || await obj.HasFlag("Trust")
+		   || (await (await obj.Object().Owner.WithCancellation(CancellationToken.None))
+			   .Object.Flags.WithCancellation(CancellationToken.None)).Any(x => x.Name == "Trust")
+		   || await IsWizard(obj);
 
-	public static bool Owns(this AnySharpObject who,
+	public static async ValueTask<bool> Owns(this AnySharpObject who,
 		AnySharpObject what)
-		=> who.Object()!.Owner.Value.Object.Id == what.Object()!.Owner.Value.Object.Id;
+		=> (await who.Object().Owner.WithCancellation(CancellationToken.None)).Object.Id ==
+		   (await what.Object().Owner.WithCancellation(CancellationToken.None)).Object.Id;
 
 	/// <summary>
 	/// Takes the pattern of '#DBREF/attribute' and splits it out if possible.
 	/// </summary>
-	/// <param name="dbrefAttr">#DBREF/Attribute</param>
+	/// <param name="DBRefAttr">#DBREF/Attribute</param>
 	/// <returns>False if it could not be split. DBRef & Attribute if it could.</returns>
 	public static OneOf<(string db, string Attribute), bool> SplitDBRefAndAttr(string DBRefAttr)
 	{
 		var match = DatabaseReferenceWithAttributeRegex.Match(DBRefAttr);
-		var obj = match.Groups["Object"]?.Value;
-		var attr = match.Groups["Attribute"]?.Value;
+		var obj = match.Groups["Object"].Value;
+		var attr = match.Groups["Attribute"].Value;
 
 		return string.IsNullOrEmpty(attr) || string.IsNullOrEmpty(obj)
 			? false
-			: (obj!, attr!);
+			: (obj, attr);
 	}
 
 	public static OneOf<(string? db, string Attribute), bool> SplitOptionalDBRefAndAttr(string DBRefAttr)
 	{
 		var match = OptionalDatabaseReferenceWithAttributeRegex.Match(DBRefAttr);
-		var obj = match.Groups["Object"]?.Value;
-		var attr = match.Groups["Attribute"]?.Value;
+		var obj = match.Groups["Object"].Value;
+		var attr = match.Groups["Attribute"].Value;
 
 		return string.IsNullOrEmpty(attr)
 			? false
-			: (obj!, attr!);
+			: (obj, attr);
 	}
 
 
 	public static OneOf<(string db, string? Attribute), bool> SplitDBRefAndOptionalAttr(string DBRefAttr)
 	{
 		var match = DatabaseReferenceWithOptionalAttributeRegex.Match(DBRefAttr);
-		var obj = match.Groups["Object"]?.Value;
-		var attr = match.Groups["Attribute"]?.Value;
+		var obj = match.Groups["Object"].Value;
+		var attr = match.Groups["Attribute"].Value;
 
 		return string.IsNullOrEmpty(obj)
 			? false
-			: (obj!, attr!);
+			: (obj, attr);
 	}
 
 	public static Option<DBRef> ParseDBRef(string dbrefStr)
 	{
 		var match = DatabaseReferenceRegex.Match(dbrefStr);
-		var dbref = match.Groups["DatabaseNumber"]?.Value;
-		var cTime = match.Groups["CreationTimestamp"]?.Value;
+		var dbref = match.Groups["DatabaseNumber"].Value;
+		var cTime = match.Groups["CreationTimestamp"].Value;
 
 		return string.IsNullOrEmpty(dbref)
 			? new None()
-			: new DBRef(int.Parse(dbref!), string.IsNullOrWhiteSpace(cTime) ? null : long.Parse(cTime));
+			: new DBRef(int.Parse(dbref), string.IsNullOrWhiteSpace(cTime) ? null : long.Parse(cTime));
 	}
 
 	/// <summary>

@@ -275,7 +275,7 @@ public partial class Functions
 
 		if (dbrefAndMaybeArg.AsT0.Attribute is not null)
 		{
-			return new CallState(actualObject.Object().Owner.Value.Object.DBRef.ToString());
+			return new CallState((await actualObject.Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef.ToString());
 		}
 
 		var attribute = dbrefAndMaybeArg.AsT0.Attribute!;
@@ -287,7 +287,7 @@ public partial class Functions
 		{
 			{ IsNone: true } => new CallState(Errors.ErrorNoSuchAttribute),
 			{ IsError: true } => new CallState(attributeObject.AsError.Value),
-			_ => new CallState(attributeObject.AsAttribute.Owner.Value.Object.DBRef.ToString())
+			_ => new CallState((await attributeObject.AsAttribute.Owner.WithCancellation(CancellationToken.None))!.Object.DBRef.ToString())
 		};
 	}
 

@@ -32,10 +32,10 @@ public class AnySharpContainer : OneOfBase<SharpPlayer, SharpRoom, SharpThing>
 		thing => thing.Id!
 	);
 
-	public AnySharpContainer Location => Match(
-		player => player.Location.Value,
-		room => room,
-		thing => thing.Location.Value
+	public async ValueTask<AnySharpContainer> Location() => await Match<ValueTask<AnySharpContainer>>(
+		async player => await player.Location.WithCancellation(CancellationToken.None),
+		async room => await ValueTask.FromResult(room),
+		async thing => await thing.Location.WithCancellation(CancellationToken.None)
 	);
 
 	public bool IsPlayer => IsT0;

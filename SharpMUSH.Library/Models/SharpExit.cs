@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using DotNext.Threading;
+using Newtonsoft.Json;
 using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Library.Models;
@@ -14,9 +15,9 @@ public class SharpExit
 
 	// Relationship
 	[JsonIgnore]
-	public required Lazy<AnySharpContainer> Location { get; set; } // DESTINATION
+	public required AsyncLazy<AnySharpContainer> Location { get; set; } // DESTINATION
 
 	// Relationship
 	[JsonIgnore]
-	public required Lazy<AnySharpContainer> Home { get; set; } // SOURCE ROOM
+	public required AsyncLazy<AnySharpContainer> Home { get; set; } // SOURCE ROOM
 }
