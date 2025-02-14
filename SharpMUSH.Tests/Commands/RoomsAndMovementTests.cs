@@ -21,6 +21,12 @@ public class RoomsAndMovementTests : BaseUnitTest
 	public async Task DigAndMoveTest()
 	{
 		if(_parser is null) throw new Exception("Parser is null");
+		// line 1:33 reportAttemptingFullContext d=9 (explicitEvaluationString), input='=Forward;F,Backward;B'
+		// line 1:31 reportContextSensitivity d=9 (explicitEvaluationString), input=';'
+		// This is in single command mode, this should not care about ;s for full context.
+
+		// line 1:33 reportAttemptingFullContext d=9 (explicitEvaluationString), input=',Backward;B'
+		// line 1:22 reportContextSensitivity d=9 (explicitEvaluationString), input=','
 		await _parser.CommandParse("1", MModule.single("@dig NewRoom=Forward;F,Backward;B"));
 		await _parser.CommandParse("1", MModule.single("think %l"));
 		await _parser.CommandParse("1", MModule.single("goto Forward"));

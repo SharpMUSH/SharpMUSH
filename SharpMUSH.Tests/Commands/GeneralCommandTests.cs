@@ -117,6 +117,8 @@ public class GeneralCommandTests : BaseUnitTest
 	[Test]
 	public async Task DoListComplex5()
 	{
+		// line 1:31 reportAttemptingFullContext d=9 (explicitEvaluationString), input='=14 This is a test %i0'
+		// line 1:9 reportContextSensitivity d=9 (explicitEvaluationString), input='='
 		await _parser!.CommandParse("1", MModule.single("@dolist a b={@dolist 1 2 3=@pemit #1=14 This is a test %i0}; @pemit #1=15 Repeat 1 times in this mode %i0"));
 
 		await _parser.NotifyService
