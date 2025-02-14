@@ -425,16 +425,19 @@ public partial class Functions
 
 		var get = maybeAttr.AsAttribute;
 
+		var arguments = await orderedArguments
+			.SkipLast(1)
+			.ToAsyncEnumerable()
+			.SelectAwait(
+				async (value, i) => new KeyValuePair<string, CallState>(
+					i.ToString(),
+					new CallState(await value.Value.ParsedMessage())))
+			.ToArrayAsync();
+		
 		var newParser = parser.Push(parser.CurrentState with
 		{
 			CurrentEvaluation = new DBAttribute(actualObject.Object().DBRef, get.Name),
-			Arguments = new(orderedArguments
-				.SkipLast(1)
-				.Select(
-					(value, i) => new KeyValuePair<string, CallState>(
-						i.ToString(),
-						new CallState(value.Value.ParsedMessage().GetAwaiter().GetResult())))
-				.ToDictionary())
+			Arguments = new(arguments.ToDictionary())
 		});
 
 		return (await newParser.FunctionParse(get.Value))!;
