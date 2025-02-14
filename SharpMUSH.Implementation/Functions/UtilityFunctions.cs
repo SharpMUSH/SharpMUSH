@@ -22,7 +22,7 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var location = await parser.Mediator.Send(new GetObjectNodeQuery(new Library.Models.DBRef
 		{
-			Number = Configurable.PlayerStart
+			Number = Convert.ToInt32(parser.Configuration.CurrentValue.Database.PlayerStart)
 		}));
 
 		var trueLocation = location.Match(

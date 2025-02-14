@@ -236,7 +236,8 @@ public partial class LocateService : ILocateService
 					    && !flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation |
 					                      LocateFlags.OnlyMatchObjectsInLookerInventory))
 					{
-						var exits = (await parser.Mediator.Send(new GetContentsQuery(Configurable.MasterRoom)))!
+						var masterRoom = new DBRef(Convert.ToInt32(parser.Configuration.CurrentValue.Database.MasterRoom));
+						var exits = (await parser.Mediator.Send(new GetContentsQuery(masterRoom)) ?? [])
 							.Where(x => x.IsExit)
 							.Select(x => new AnySharpObject(x.AsExit));
 

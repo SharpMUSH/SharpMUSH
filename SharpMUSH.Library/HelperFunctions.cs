@@ -5,6 +5,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using System.Text.RegularExpressions;
+using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Library;
 
@@ -50,11 +51,13 @@ public static partial class HelperFunctions
 
 	public static bool IsAudible(this AnySharpObject obj)
 		=> obj.HasPower("Audible");
+
 	public static bool IsOrphan(this AnySharpObject obj)
 		=> obj.HasPower("Orphan");
 
 	public static bool IsAlive(this AnySharpObject obj)
-		=> obj.IsPlayer || IsPuppet(obj) || (IsAudible(obj) && obj.Object().Attributes.Value.Any(x => x.Name == "FORWARDLIST"));
+		=> obj.IsPlayer || IsPuppet(obj) ||
+		   (IsAudible(obj) && obj.Object().Attributes.Value.Any(x => x.Name == "FORWARDLIST"));
 
 	public static bool IsPuppet(this AnySharpObject obj)
 		=> obj.HasPower("Puppet");
@@ -72,22 +75,32 @@ public static partial class HelperFunctions
 	public static bool CanDark(this AnySharpObject obj)
 		=> obj.HasPower("Can_Dark") || obj.IsWizard();
 
-	public static DBRef? Ancestor(this AnySharpObject obj)
-		=> obj.IsOrphan() ? null : obj.Match(
-				player => Configurable.AncestorPlayer,
-				room => Configurable.AncestorRoom,
-				exit => Configurable.AncestorExit,
-				thing => Configurable.AncestorThing
+	public static DBRef? Ancestor(this AnySharpObject obj, IMUSHCodeParser parser)
+		=> obj.IsOrphan()
+			? null
+			: obj.Match(
+				_ => parser.Configuration.CurrentValue.Database.AncestorPlayer == null
+					? null
+					: new DBRef(Convert.ToInt32(parser.Configuration.CurrentValue.Database.AncestorPlayer)),
+				_ => parser.Configuration.CurrentValue.Database.AncestorRoom == null
+					? null
+					: new DBRef(Convert.ToInt32(parser.Configuration.CurrentValue.Database.AncestorRoom)),
+				_ => parser.Configuration.CurrentValue.Database.AncestorExit == null
+					? null
+					: new DBRef(Convert.ToInt32(parser.Configuration.CurrentValue.Database.AncestorExit)),
+				_ => parser.Configuration.CurrentValue.Database.AncestorThing == null
+					? (DBRef?)null
+					: new DBRef(Convert.ToInt32(parser.Configuration.CurrentValue.Database.AncestorThing))
 			);
 
 	public static bool Inheritable(this AnySharpObject obj)
 		=> obj.IsPlayer
-				|| obj.HasFlag("Trust")
-				|| obj.Object().Owner.Value.Object.Flags.Value.Any(x => x.Name == "Trust")
-				|| IsWizard(obj);
+		   || obj.HasFlag("Trust")
+		   || obj.Object().Owner.Value.Object.Flags.Value.Any(x => x.Name == "Trust")
+		   || IsWizard(obj);
 
 	public static bool Owns(this AnySharpObject who,
-															 AnySharpObject what)
+		AnySharpObject what)
 		=> who.Object()!.Owner.Value.Object.Id == what.Object()!.Owner.Value.Object.Id;
 
 	/// <summary>

@@ -104,17 +104,18 @@ public static partial class Functions
 
 		// TODO: Reconsider where this is. We Push down below, after we have the refined arguments.
 		// But each RefinedArguments call will create a new call to this FunctionParser without depth info.
-		if (contextDepth > Configurable.MaxCallDepth)
+		if (contextDepth > parser.Configuration.CurrentValue.Limit.CallLimit)
 		{
+			// TODO: Context Depth is not the correct value to use here.
 			return new CallState(Errors.ErrorCall, contextDepth);
 		}
 
-		if (stackDepth > Configurable.MaxFunctionDepth)
+		if (stackDepth > parser.Configuration.CurrentValue.Limit.MaxDepth)
 		{
 			return new CallState(Errors.ErrorInvoke, stackDepth);
 		}
 
-		if (recursionDepth > Configurable.MaxRecursionDepth)
+		if (recursionDepth > parser.Configuration.CurrentValue.Limit.FunctionRecursionLimit)
 		{
 			return new CallState(Errors.ErrorRecursion, recursionDepth);
 		}
