@@ -178,7 +178,8 @@ public static partial class Functions
 			Function: name,
 			Command: null,
 			Switches: [],
-			Arguments: new(refinedArguments.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value))
+			Arguments: new(refinedArguments.Select((value, i) =>
+					new KeyValuePair<string, CallState>(i.ToString(), value))
 				.ToDictionary()),
 			Executor: currentState.Executor,
 			Enactor: currentState.Enactor,
