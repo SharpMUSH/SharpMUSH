@@ -275,7 +275,7 @@ public partial class Functions
 
 		if (dbrefAndMaybeArg.AsT0.Attribute is not null)
 		{
-			return new CallState(actualObject.Object().Owner.Value.Object.DBRef.ToString());
+			return new CallState((await actualObject.Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef.ToString());
 		}
 
 		var attribute = dbrefAndMaybeArg.AsT0.Attribute!;
@@ -287,7 +287,7 @@ public partial class Functions
 		{
 			{ IsNone: true } => new CallState(Errors.ErrorNoSuchAttribute),
 			{ IsError: true } => new CallState(attributeObject.AsError.Value),
-			_ => new CallState(attributeObject.AsAttribute.Owner.Value.Object.DBRef.ToString())
+			_ => new CallState((await attributeObject.AsAttribute.Owner.WithCancellation(CancellationToken.None))!.Object.DBRef.ToString())
 		};
 	}
 
@@ -425,16 +425,19 @@ public partial class Functions
 
 		var get = maybeAttr.AsAttribute;
 
+		var arguments = await orderedArguments
+			.SkipLast(1)
+			.ToAsyncEnumerable()
+			.SelectAwait(
+				async (value, i) => new KeyValuePair<string, CallState>(
+					i.ToString(),
+					new CallState(await value.Value.ParsedMessage())))
+			.ToArrayAsync();
+		
 		var newParser = parser.Push(parser.CurrentState with
 		{
 			CurrentEvaluation = new DBAttribute(actualObject.Object().DBRef, get.Name),
-			Arguments = new(orderedArguments
-				.SkipLast(1)
-				.Select(
-					(value, i) => new KeyValuePair<string, CallState>(
-						i.ToString(),
-						new CallState(value.Value.ParsedMessage().GetAwaiter().GetResult())))
-				.ToDictionary())
+			Arguments = new(arguments.ToDictionary())
 		});
 
 		return (await newParser.FunctionParse(get.Value))!;

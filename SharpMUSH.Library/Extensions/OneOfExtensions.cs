@@ -104,17 +104,17 @@ public static class OneOfExtensions
 			_ => throw new ArgumentException("Cannot convert an Error to a non-Error value.")
 		);
 
-	public static AnySharpContainer Home(this AnySharpContent thing)
-		=> thing.Match(
-			player => player.Home.Value,
-			exit => exit.Location.Value,
-			thing2 => thing2.Home.Value);
+	public static async ValueTask<AnySharpContainer> Home(this AnySharpContent thing)
+		=> await thing.Match(
+			async player => await player.Home.WithCancellation(CancellationToken.None),
+			async exit => await exit.Location.WithCancellation(CancellationToken.None),
+			async thing2 => await thing2.Home.WithCancellation(CancellationToken.None));
 
-	public static AnySharpContainer Location(this AnySharpContent thing)
-		=> thing.Match(
-			player => player.Location.Value,
-			exit => exit.Home.Value,
-			thing2 => thing2.Location.Value);
+	public static async ValueTask<AnySharpContainer> Location(this AnySharpContent thing)
+		=> await thing.Match(
+			async player => await player.Location.WithCancellation(CancellationToken.None),
+			async exit => await exit.Home.WithCancellation(CancellationToken.None),
+			async thing2 => await thing2.Location.WithCancellation(CancellationToken.None));
 
 	public static AnySharpObject Known(this AnyOptionalSharpObject union) =>
 		union.Match<AnySharpObject>(

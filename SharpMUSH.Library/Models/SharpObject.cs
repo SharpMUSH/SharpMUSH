@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using System.Collections.Immutable;
+using DotNext.Threading;
 using FSharpPlus.Control;
 
 namespace SharpMUSH.Library.Models;
@@ -26,24 +27,24 @@ public class SharpObject
 
 	// RELATIONSHIP
 	[JsonIgnore]
-	public required Lazy<SharpPlayer> Owner { get; set; }
+	public required AsyncLazy<SharpPlayer> Owner { get; set; }
 
 	// RELATIONSHIP
 	[JsonIgnore]
-	public required Lazy<IEnumerable<SharpPower>> Powers { get; set; }
+	public required AsyncLazy<IEnumerable<SharpPower>> Powers { get; set; }
 
 	// RELATIONSHIP
 	[JsonIgnore]
-	public required Lazy<IEnumerable<SharpAttribute>> Attributes { get; set; }
+	public required AsyncLazy<IEnumerable<SharpAttribute>> Attributes { get; set; }
 
 	[JsonIgnore]
-	public required Lazy<IEnumerable<SharpAttribute>> AllAttributes { get; set; }
-
-	// RELATIONSHIP
-	[JsonIgnore]
-	public required Lazy<IEnumerable<SharpObjectFlag>> Flags { get; set; }
+	public required AsyncLazy<IEnumerable<SharpAttribute>> AllAttributes { get; set; }
 
 	// RELATIONSHIP
 	[JsonIgnore]
-	public required Lazy<SharpObject?> Parent { get; set; }
+	public required AsyncLazy<IEnumerable<SharpObjectFlag>> Flags { get; set; }
+
+	// RELATIONSHIP
+	[JsonIgnore]
+	public required AsyncLazy<SharpObject?> Parent { get; set; }
 }

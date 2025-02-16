@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using DotNext.Threading;
+using Newtonsoft.Json;
 
 namespace SharpMUSH.Library.Models;
 
@@ -8,9 +9,9 @@ public record SharpAttribute(
 	IEnumerable<SharpAttributeFlag> Flags,
 	int? CommandListIndex,
 	[property: JsonIgnore] string? LongName,
-	[property: JsonIgnore] Lazy<IEnumerable<SharpAttribute>> Leaves,
-	[property: JsonIgnore] Lazy<SharpPlayer> Owner,
-	[property: JsonIgnore] Lazy<SharpAttributeEntry?> SharpAttributeEntry)
+	[property: JsonIgnore] AsyncLazy<IEnumerable<SharpAttribute>> Leaves,
+	[property: JsonIgnore] AsyncLazy<SharpPlayer?> Owner,
+	[property: JsonIgnore] AsyncLazy<SharpAttributeEntry?> SharpAttributeEntry)
 {
 	public MString Value { get; set; } = MModule.empty();
 }

@@ -18,7 +18,8 @@ public partial class Functions
 	private static readonly Regex TimeSpanFormatMatchRegex = TimeSpanFormatMatch();
 	private static readonly Regex NameListPatternRegex = NameListPattern();
 
-	private static MString NoParseDefaultNoParseArgument(ConcurrentDictionary<string, CallState> args, int item, MString defaultValue)
+	private static MString NoParseDefaultNoParseArgument(ConcurrentDictionary<string, CallState> args, int item,
+		MString defaultValue)
 	{
 		if (args.Count - 1 < item || string.IsNullOrWhiteSpace(args[item.ToString()].Message?.ToString()))
 		{
@@ -28,7 +29,8 @@ public partial class Functions
 		return args[item.ToString()].Message!;
 	}
 
-	private static MString NoParseDefaultNoParseArgument(ConcurrentDictionary<string, CallState> args, int item, string defaultValue)
+	private static MString NoParseDefaultNoParseArgument(ConcurrentDictionary<string, CallState> args, int item,
+		string defaultValue)
 		=> NoParseDefaultNoParseArgument(args, item, MModule.single(defaultValue));
 
 	private static async ValueTask<MString> NoParseDefaultEvaluatedArgument(IMUSHCodeParser parser, int item,
@@ -66,15 +68,17 @@ public partial class Functions
 			.Select(x => decimal.Parse(MModule.plainText(x.Value.Message)))
 			.Aggregate(aggregateFunction).ToString(CultureInfo.InvariantCulture)));
 
-	private static ValueTask<CallState> AggregateIntegers(ConcurrentDictionary<string, CallState> args, Func<int, int, int> aggregateFunction) =>
+	private static ValueTask<CallState> AggregateIntegers(ConcurrentDictionary<string, CallState> args,
+		Func<int, int, int> aggregateFunction) =>
 		ValueTask.FromResult<CallState>(new(args
 			.Select(x => int.Parse(MModule.plainText(x.Value.Message)))
 			.Aggregate(aggregateFunction).ToString(CultureInfo.InvariantCulture)));
 
 	private static ValueTask<CallState> ValidateIntegerAndEvaluate(ConcurrentDictionary<string, CallState> args,
 		Func<IEnumerable<int>, MString> aggregateFunction)
-		=> ValueTask.FromResult<CallState>(new(aggregateFunction(args.Select(x => int.Parse(MModule.plainText(x.Value.Message!))))
-			.ToString()));
+		=> ValueTask.FromResult<CallState>(new(
+			aggregateFunction(args.Select(x => int.Parse(MModule.plainText(x.Value.Message!))))
+				.ToString()));
 
 	private static ValueTask<CallState> AggregateDecimalToInt(ConcurrentDictionary<string, CallState> args,
 		Func<decimal, decimal, decimal> aggregateFunction) =>
@@ -82,19 +86,24 @@ public partial class Functions
 			.Select(x => decimal.Parse(string.Join(string.Empty, MModule.plainText(x.Value.Message))))
 			.Aggregate(aggregateFunction)).ToString(CultureInfo.InvariantCulture)));
 
-	private static ValueTask<CallState> EvaluateDecimal(ConcurrentDictionary<string, CallState> args, Func<decimal, decimal> func)
-		=> ValueTask.FromResult<CallState>(new(func(decimal.Parse(MModule.plainText(args["0"].Message))).ToString(CultureInfo.InvariantCulture)));
+	private static ValueTask<CallState> EvaluateDecimal(ConcurrentDictionary<string, CallState> args,
+		Func<decimal, decimal> func)
+		=> ValueTask.FromResult<CallState>(new(func(decimal.Parse(MModule.plainText(args["0"].Message)))
+			.ToString(CultureInfo.InvariantCulture)));
 
-	private static ValueTask<CallState> EvaluateDecimalToInteger(ConcurrentDictionary<string, CallState> args, Func<decimal, int> func)
-	=> ValueTask.FromResult<CallState>(new(func(decimal.Parse(MModule.plainText(args["0"].Message)))));
+	private static ValueTask<CallState> EvaluateDecimalToInteger(ConcurrentDictionary<string, CallState> args,
+		Func<decimal, int> func)
+		=> ValueTask.FromResult<CallState>(new(func(decimal.Parse(MModule.plainText(args["0"].Message)))));
 
-	private static ValueTask<CallState> EvaluateDouble(ConcurrentDictionary<string, CallState> args, Func<double, double> func)
+	private static ValueTask<CallState> EvaluateDouble(ConcurrentDictionary<string, CallState> args,
+		Func<double, double> func)
 		=> ValueTask.FromResult<CallState>(new(func(double.Parse(MModule.plainText(args["0"].Message)))));
 
 	private static ValueTask<CallState> EvaluateInteger(ConcurrentDictionary<string, CallState> args, Func<int, int> func)
 		=> ValueTask.FromResult<CallState>(new(func(int.Parse(MModule.plainText(args["0"].Message)))));
 
-	private static ValueTask<CallState> ValidateDecimalAndEvaluatePairwise(this ConcurrentDictionary<string, CallState> args,
+	private static ValueTask<CallState> ValidateDecimalAndEvaluatePairwise(
+		this ConcurrentDictionary<string, CallState> args,
 		Func<(decimal, decimal), bool> func)
 	{
 		if (args.Count < 2)
@@ -211,11 +220,13 @@ public partial class Functions
 			};
 		});
 
-	public static bool HasObjectFlags(SharpObject obj, SharpObjectFlag flag)
-		=> obj.Flags.Value.Contains(flag);
+	public static async ValueTask<bool> HasObjectFlags(SharpObject obj, SharpObjectFlag flag)
+		=> (await obj.Flags.WithCancellation(CancellationToken.None))
+			.Contains(flag);
 
-	public static bool HasObjectPowers(SharpObject obj, string power) =>
-		obj.Powers.Value.Any(x => x.Name == power || x.Alias == power);
+	public static async ValueTask<bool> HasObjectPowers(SharpObject obj, string power) =>
+		(await obj.Powers.WithCancellation(CancellationToken.None))
+		.Any(x => x.Name == power || x.Alias == power);
 
 	public static IEnumerable<OneOf<DBRef, string>> NameList(string list)
 		=> NameListPatternRegex.Matches(list).Select(x =>

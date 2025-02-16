@@ -14,12 +14,16 @@ public partial class Functions
 	public static async ValueTask<CallState> Emit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.ExecutorObject(parser.Mediator);
-		var contents = await parser.Mediator.Send(new GetContentsQuery(executor.WithoutNone().Where)) ?? [];
+		var contents = await parser.Mediator.Send(new GetContentsQuery(await executor.WithoutNone().Where())) ?? [];
 		var heard = new List<DBRef>();
 
-		foreach (var obj in contents
-			         .Where(obj =>
-				         parser.PermissionService.CanInteract(obj.WithRoomOption(), executor.WithoutNone(), InteractType.Hear)))
+		var interactableContents = await contents
+			.ToAsyncEnumerable()
+			.WhereAwait(async obj =>
+				await parser.PermissionService.CanInteract(obj.WithRoomOption(), executor.WithoutNone(), InteractType.Hear))
+			.ToArrayAsync();
+
+		foreach (var obj in interactableContents)
 		{
 			heard.Add(obj.Object().DBRef);
 
@@ -38,11 +42,15 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.ExecutorObject(parser.Mediator);
 		var contents =
-			await parser.Mediator.Send(new GetContentsQuery(parser.LocateService.Room(executor.Known()))) ?? [];
+			await parser.Mediator.Send(new GetContentsQuery(await parser.LocateService.Room(executor.Known()))) ?? [];
 		var heard = new List<DBRef>();
 
-		foreach (var obj in contents.Where(obj =>
-			         parser.PermissionService.CanInteract(obj.WithRoomOption(), executor.Known(), InteractType.Hear)))
+		var interactableContents = await contents.ToAsyncEnumerable()
+			.WhereAwait(async obj =>
+				await parser.PermissionService.CanInteract(obj.WithRoomOption(), executor.WithoutNone(), InteractType.Hear))
+			.ToArrayAsync();
+
+		foreach (var obj in interactableContents)
 		{
 			heard.Add(obj.Object().DBRef);
 
@@ -66,16 +74,16 @@ public partial class Functions
 	public static async ValueTask<CallState> NoSpoofEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
-		var spoofType = parser.PermissionService.CanNoSpoof(executor)
+		var spoofType = await parser.PermissionService.CanNoSpoof(executor)
 			? INotifyService.NotificationType.NSEmit
 			: INotifyService.NotificationType.Emit;
 
-		var contents = await parser.Mediator.Send(new GetContentsQuery(executor.Where)) ?? [];
+		var contents = await parser.Mediator.Send(new GetContentsQuery(await executor.Where())) ?? [];
 		var heard = new List<DBRef>();
 
 		foreach (var obj in contents)
 		{
-			if (parser.PermissionService.CanInteract(obj.WithRoomOption(), executor, InteractType.Hear))
+			if (await parser.PermissionService.CanInteract(obj.WithRoomOption(), executor, InteractType.Hear))
 			{
 				heard.Add(obj.Object().DBRef);
 
@@ -94,16 +102,16 @@ public partial class Functions
 	public static async ValueTask<CallState> NoSpoofLocationEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).WithoutNone();
-		var spoofType = parser.PermissionService.CanNoSpoof(executor)
+		var spoofType = await parser.PermissionService.CanNoSpoof(executor)
 			? INotifyService.NotificationType.NSEmit
 			: INotifyService.NotificationType.Emit;
 
-		var contents = await parser.Mediator.Send(new GetContentsQuery(parser.LocateService.Room(executor))) ?? [];
+		var contents = await parser.Mediator.Send(new GetContentsQuery(await parser.LocateService.Room(executor))) ?? [];
 		var heard = new List<DBRef>();
 
 		foreach (var obj in contents)
 		{
-			if (parser.PermissionService.CanInteract(obj.WithRoomOption(), executor, InteractType.Hear))
+			if (await parser.PermissionService.CanInteract(obj.WithRoomOption(), executor, InteractType.Hear))
 			{
 				heard.Add(obj.Object().DBRef);
 

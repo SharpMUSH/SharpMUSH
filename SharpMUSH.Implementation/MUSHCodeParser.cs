@@ -27,7 +27,7 @@ public record MUSHCodeParser(
 	IMediator Mediator) : IMUSHCodeParser
 {
 	public ParserState CurrentState => State.Peek();
-	
+
 	/// <summary>
 	/// Stack may not be needed if we can bring ParserState into the custom Visitors.
 	/// 
@@ -38,7 +38,8 @@ public record MUSHCodeParser(
 	/// </summary>
 	public IImmutableStack<ParserState> State { get; private init; } = ImmutableStack<ParserState>.Empty;
 
-	public IMUSHCodeParser FromState(ParserState state) => new MUSHCodeParser(Configuration, PasswordService, PermissionService,
+	public IMUSHCodeParser FromState(ParserState state) => new MUSHCodeParser(Configuration, PasswordService,
+		PermissionService,
 		AttributeService, NotifyService, LocateService, ObjectDataService, CommandDiscoveryService, Scheduler,
 		ConnectionService, Mediator, state);
 

@@ -42,18 +42,18 @@ public class AnySharpContent : OneOfBase<SharpPlayer, SharpExit, SharpThing>
 			thing => thing
 		);
 
-	public AnySharpContainer Location()
-		=> Match(
-			player => player.Location.Value,
-			exit => exit.Location.Value,
-			thing => thing.Location.Value
+	public async ValueTask<AnySharpContainer> Location()
+		=> await Match(
+			async player => await player.Location.WithCancellation(CancellationToken.None),
+			async exit => await exit.Location.WithCancellation(CancellationToken.None),
+			async thing => await thing.Location.WithCancellation(CancellationToken.None)
 		);
 
 
-	public AnySharpContainer Home()
-		=> Match(
-			player => player.Home.Value,
-			exit => exit.Home.Value,
-			thing => thing.Home.Value
+	public async ValueTask<AnySharpContainer> Home()
+		=> await Match(
+			async player => await player.Home.WithCancellation(CancellationToken.None),
+			async exit => await exit.Home.WithCancellation(CancellationToken.None),
+			async thing => await thing.Home.WithCancellation(CancellationToken.None)
 		);
 }

@@ -1,4 +1,5 @@
-﻿using Mediator;
+﻿using System.Collections.Immutable;
+using Mediator;
 using Microsoft.FSharp.Core;
 using OneOf;
 using OneOf.Types;
@@ -26,7 +27,7 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		var curObj = obj.Object();
 		var attributePath = attribute.Split('`');
 
-		Func<AnySharpObject, AnySharpObject, SharpAttribute[], bool> permissionPredicate = mode switch
+		Func<AnySharpObject, AnySharpObject, SharpAttribute[], ValueTask<bool>> permissionPredicate = mode switch
 		{
 			IAttributeService.AttributeMode.Read => ps.CanViewAttribute,
 			IAttributeService.AttributeMode.Execute => ps.CanExecuteAttribute,
@@ -46,7 +47,7 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 
 			if (attrArr?.Length == attributePath.Length)
 			{
-				return permissionPredicate(executor, obj, attrArr)
+				return await permissionPredicate(executor, obj, attrArr)
 					? attrArr.Last()
 					: new Error<string>(permissionFailureType);
 			}
@@ -56,37 +57,40 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 				return new None();
 			}
 
-			curObj = curObj.Parent.Value;
+			curObj = await curObj.Parent.WithCancellation(CancellationToken.None);
 		}
 
 		return new None();
 	}
 
-	public ValueTask<SharpAttributesOrError> GetVisibleAttributesAsync(AnySharpObject executor, AnySharpObject obj, int depth = 1)
+	public async ValueTask<SharpAttributesOrError> GetVisibleAttributesAsync(AnySharpObject executor, AnySharpObject obj,
+		int depth = 1)
 	{
 		var actualObject = obj.Object();
-		var attributes = actualObject.Attributes.Value;
+		var attributes = await actualObject.Attributes.WithCancellation(CancellationToken.None);
 
-		if (depth <= 1)
-		{
-			return ValueTask.FromResult<SharpAttributesOrError>(attributes.Where(x => ps.CanViewAttribute(executor, obj, x)).ToArray());
-		}
-		else
-		{
-			return ValueTask.FromResult<SharpAttributesOrError>(GetVisibleAttributesAsync(attributes, executor, obj, depth).ToArray());
-		}
+		return depth <= 1
+			? await attributes.ToAsyncEnumerable().WhereAwait(async x => await ps.CanViewAttribute(executor, obj, x))
+				.ToArrayAsync()
+			: (await GetVisibleAttributesAsync(attributes, executor, obj, depth))
+			.ToArray();
 	}
 
-	public List<SharpAttribute> GetVisibleAttributesAsync(IEnumerable<SharpAttribute> attributes, AnySharpObject executor, AnySharpObject obj, int depth = 1)
+	public async ValueTask<ImmutableList<SharpAttribute>> GetVisibleAttributesAsync(
+		IEnumerable<SharpAttribute> attributes, AnySharpObject executor, AnySharpObject obj, int depth = 1)
 	{
 		if (depth == 0) return [];
 
-		var visibleList = attributes.Where(x => ps.CanViewAttribute(executor, obj, x)).ToList();
+		var visibleList = (await attributes.ToAsyncEnumerable().WhereAwait(x => ps.CanViewAttribute(executor, obj, x))
+				.ToListAsync())
+			.ToImmutableList();
 
 		foreach (var attribute in visibleList)
 		{
-			var subAttributes = GetVisibleAttributesAsync(attribute.Leaves.Value, executor, obj, depth - 1);
-			visibleList.AddRange(subAttributes);
+			var subAttributes =
+				await GetVisibleAttributesAsync(await attribute.Leaves.WithCancellation(CancellationToken.None), executor, obj,
+					depth - 1);
+			visibleList = visibleList.AddRange(subAttributes);
 		}
 
 		return visibleList;
@@ -102,15 +106,18 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		// TODO: CanViewAttribute needs to be able to Memoize during a list check, as it's likely to be called multiple times.
 		var attributes = mode switch
 		{
-			IAttributeService.AttributePatternMode.Exact => await mediator.Send(new GetAttributesQuery(obj.Object().DBRef, attributePattern)),
-			IAttributeService.AttributePatternMode.Wildcard => await mediator.Send(new GetAttributesQuery(obj.Object().DBRef, attributePattern)),
-			IAttributeService.AttributePatternMode.Regex => await mediator.Send(new GetAttributesQuery(obj.Object().DBRef, attributePattern)),
+			IAttributeService.AttributePatternMode.Exact => await mediator.Send(
+				new GetAttributesQuery(obj.Object().DBRef, attributePattern)),
+			IAttributeService.AttributePatternMode.Wildcard => await mediator.Send(
+				new GetAttributesQuery(obj.Object().DBRef, attributePattern)),
+			IAttributeService.AttributePatternMode.Regex => await mediator.Send(
+				new GetAttributesQuery(obj.Object().DBRef, attributePattern)),
 			_ => throw new InvalidOperationException(nameof(IAttributeService.AttributePatternMode))
 		};
 
 		return attributes is null
 			? Enumerable.Empty<SharpAttribute>().ToArray()
-			: attributes.Where(x => ps.CanViewAttribute(executor, obj, x)).ToArray();
+			: await attributes.ToAsyncEnumerable().WhereAwait(async x => await ps.CanViewAttribute(executor, obj, x)).ToArrayAsync();
 	}
 
 	public async ValueTask<OneOf<Success, Error<string>>> SetAttributeFlagAsync(AnySharpObject executor,
@@ -128,7 +135,8 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 			return new Error<string>("Not Found");
 		}
 
-		var returnedFlag = (await mediator.Send(new GetAttributeFlagsQuery())).Where(x => x.Name == flag || x.Symbol == flag);
+		var returnedFlag =
+			(await mediator.Send(new GetAttributeFlagsQuery())).Where(x => x.Name == flag || x.Symbol == flag);
 		if (!returnedFlag.Any())
 		{
 			return new Error<string>("Flag Found");
@@ -155,7 +163,8 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 			return new Error<string>("Not Found");
 		}
 
-		var returnedFlag = (await mediator.Send(new GetAttributeFlagsQuery())).Where(x => x.Name == flag || x.Symbol == flag);
+		var returnedFlag =
+			(await mediator.Send(new GetAttributeFlagsQuery())).Where(x => x.Name == flag || x.Symbol == flag);
 		if (!returnedFlag.Any())
 		{
 			return new Error<string>("Flag Found");
@@ -172,7 +181,7 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		string attribute,
 		MString value)
 	{
-		if (!ps.Controls(executor, obj))
+		if (!await ps.Controls(executor, obj))
 		{
 			return new Error<string>(Errors.ErrorAttrSetPermissions);
 		}
@@ -180,8 +189,8 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		var attrPath = attribute.Split('`');
 		var attr = await mediator.Send(new GetAttributeQuery(obj.Object().DBRef, attrPath));
 
-		// TODO: Fix, object permissions also needed.
-		var permission = attr?.All(x => ps.CanSet(executor, obj, x)) ?? true;
+		// TODO: Fix, object permissions also neede  d.
+		var permission = attr == null || await attr.ToAsyncEnumerable().AllAwaitAsync(async x => await ps.CanSet(executor, obj, x));
 
 		if (!permission)
 		{
@@ -190,7 +199,7 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 
 		cs.InvalidateCache(obj.Object().DBRef);
 		await mediator.Send(new SetAttributeCommand(obj.Object().DBRef, attrPath, value,
-			executor.Object().Owner.Value));
+			await executor.Object().Owner.WithCancellation(CancellationToken.None)));
 
 		return new Success();
 	}
@@ -211,7 +220,7 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 	{
 		await ValueTask.CompletedTask;
 
-		if (!ps.Controls(executor, obj))
+		if (!await ps.Controls(executor, obj))
 		{
 			return new Error<string>(Errors.ErrorAttrSetPermissions);
 		}
@@ -219,7 +228,7 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		var attr = await mediator.Send(new GetAttributesQuery(obj.Object().DBRef, attributePattern));
 		var attrArr = attr?.ToArray();
 
-		var permission = attrArr?.All(x => ps.CanSet(executor, obj, x)) ?? true;
+		var permission = attrArr == null || await attrArr.ToAsyncEnumerable().AllAwaitAsync(async x => await ps.CanSet(executor, obj, x));
 
 		if (!permission)
 		{
