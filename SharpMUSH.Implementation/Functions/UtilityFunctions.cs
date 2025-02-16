@@ -342,17 +342,18 @@ public partial class Functions
 		var newRegisters = currentRegisters!.ToDictionary(k => k.Key, kv => kv.Value);
 		parser.CurrentState.Registers.Push(newRegisters);
 
-		for (var i = 0; i < parser.CurrentState.Arguments.Count - 1; i += 2)
+		var numberedArguments = parser.CurrentState.ArgumentsOrdered;
+
+		for (var i = 0; i < numberedArguments.Count - 1; i += 2)
 		{
 			everythingIsOkay &= parser.CurrentState.AddRegister(
-				parser.CurrentState.Arguments[i.ToString()].Message!.ToString().ToUpper(),
-				parser.CurrentState.Arguments[(i + 1).ToString()].Message!);
+				numberedArguments[i.ToString()].Message!.ToString().ToUpper(),
+				numberedArguments[(i + 1).ToString()].Message!);
 		}
 
 		if (everythingIsOkay)
 		{
-			// TODO: Warning: .Last may be dangerous on Arguments in case of named arguments?
-			var parsed = await parser.FunctionParse(parser.CurrentState.Arguments.Last().Value.Message!);
+			var parsed = await parser.FunctionParse(numberedArguments.Last().Value.Message!);
 			_ = parser.CurrentState.Registers.TryPop(out _);
 			return parsed!;
 		}
@@ -386,7 +387,7 @@ public partial class Functions
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "null", MinArgs = 0, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "null", MinArgs = 0, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular )]
 	public static ValueTask<CallState> Null(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult(CallState.Empty);
 
@@ -412,11 +413,13 @@ public partial class Functions
 	{
 		throw new NotImplementedException();
 	}
+	
 	[SharpFunction(Name = "RENDER", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Render(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
+	
 	[SharpFunction(Name = "S", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 	public static async ValueTask<CallState> S(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> (await parser.FunctionParse(parser.CurrentState.Arguments.Last().Value.Message!))!;
@@ -432,11 +435,13 @@ public partial class Functions
 	{
 		var everythingIsOkay = true;
 
-		for (var i = 0; i < parser.CurrentState.Arguments.Count; i += 2)
+		var numberedArguments = parser.CurrentState.ArgumentsOrdered;
+		
+		for (var i = 0; i < numberedArguments.Count; i += 2)
 		{
 			everythingIsOkay &= parser.CurrentState.AddRegister(
-				parser.CurrentState.Arguments[i.ToString()].Message!.ToString().ToUpper(),
-				parser.CurrentState.Arguments[(i + 1).ToString()].Message!);
+				numberedArguments[i.ToString()].Message!.ToString().ToUpper(),
+				numberedArguments[(i + 1).ToString()].Message!);
 		}
 
 		if (everythingIsOkay)
@@ -454,16 +459,18 @@ public partial class Functions
 	{
 		var everythingIsOkay = true;
 
-		for (var i = 0; i < parser.CurrentState.Arguments.Count; i += 2)
+		var numberedArguments = parser.CurrentState.ArgumentsOrdered;
+		
+		for (var i = 0; i < numberedArguments.Count; i += 2)
 		{
 			everythingIsOkay &= parser.CurrentState.AddRegister(
-				parser.CurrentState.Arguments[$"{i}"].Message!.ToString().ToUpper(),
-				parser.CurrentState.Arguments[$"{i + 1}"].Message!);
+				numberedArguments[$"{i}"].Message!.ToString().ToUpper(),
+				numberedArguments[$"{i + 1}"].Message!);
 		}
 
 		if (everythingIsOkay)
 		{
-			return ValueTask.FromResult(new CallState(parser.CurrentState.Arguments["1"].Message!));
+			return ValueTask.FromResult(new CallState(numberedArguments["1"].Message!));
 		}
 		else
 		{

@@ -59,7 +59,7 @@ public record ParserState(
 	public bool AddRegister(string register, MString value)
 	{
 		// TODO: Validate Register Pattern
-
+ 
 		var canPeek = Registers.TryPeek(out var top);
 		if (!canPeek)
 		{
