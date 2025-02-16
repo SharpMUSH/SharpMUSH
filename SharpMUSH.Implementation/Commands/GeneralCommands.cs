@@ -136,7 +136,7 @@ public static partial class Commands
 		// TODO: Pass value into NAMEFORMAT
 		await parser.NotifyService.Notify(enactor,
 			$"{MModule.markupSingle2(Ansi.Create(foreground: StringExtensions.rgb(Color.White)), MModule.single(name))}" +
-			$"(#{viewingObject.DBRef.Number}{string.Join(string.Empty, viewingObject.Flags.Value.Select(x => x.Symbol))})");
+			$"(#{viewingObject.DBRef.Number}{string.Join(string.Empty, (await viewingObject.Flags.WithCancellation(CancellationToken.None)).Select(x => x.Symbol))})");
 		// TODO: Pass value into DESCFORMAT
 		await parser.NotifyService.Notify(enactor, description.ToString());
 		// parser.NotifyService.Notify(enactor, $"Location: {location}");
@@ -184,7 +184,7 @@ public static partial class Commands
 		var contents = viewing.IsExit ? [] : await parser.Mediator.Send(new GetContentsQuery(viewing.Known().AsContainer));
 
 		var obj = viewing.Object()!;
-		var ownerObj = obj.Owner.Value.Object;
+		var ownerObj = (await obj.Owner.WithCancellation(CancellationToken.None)).Object;
 		var name = obj.Name;
 		var ownerName = ownerObj.Name;
 		var location = obj.Key;
@@ -199,17 +199,22 @@ public static partial class Commands
 				none => MModule.single("There is nothing to see here"),
 				error => MModule.empty());
 
+		var objFlags = (await obj.Flags.WithCancellation(CancellationToken.None)).ToArray();
+		var ownerObjFlags = (await ownerObj.Flags.WithCancellation(CancellationToken.None)).ToArray();
+		var objParent = await obj.Parent.WithCancellation(CancellationToken.None);
+		var objPowers = await obj.Powers.WithCancellation(CancellationToken.None);
+
 		await parser.NotifyService.Notify(enactor, $"{name.Hilight()}" +
-		                                           $"(#{obj.DBRef.Number}{string.Join(string.Empty, obj.Flags.Value.Select(x => x.Symbol))})");
+		                                           $"(#{obj.DBRef.Number}{string.Join(string.Empty, objFlags.Select(x => x.Symbol))})");
 		await parser.NotifyService.Notify(enactor,
-			$"Type: {obj.Type} Flags: {string.Join(" ", obj.Flags.Value.Select(x => x.Name))}");
+			$"Type: {obj.Type} Flags: {string.Join(" ", objFlags.Select(x => x.Name))}");
 		await parser.NotifyService.Notify(enactor, description.ToString());
 		await parser.NotifyService.Notify(enactor, $"Owner: {ownerName.Hilight()}" +
-		                                           $"(#{obj.DBRef.Number}{string.Join(string.Empty, ownerObj.Flags.Value.Select(x => x.Symbol))})");
+		                                           $"(#{obj.DBRef.Number}{string.Join(string.Empty, ownerObjFlags.Select(x => x.Symbol))})");
 		// TODO: Zone & Money
-		await parser.NotifyService.Notify(enactor, $"Parent: {obj.Parent.Value?.Name ?? "*NOTHING*"}");
+		await parser.NotifyService.Notify(enactor, $"Parent: {objParent?.Name ?? "*NOTHING*"}");
 		// TODO: LOCK LIST
-		await parser.NotifyService.Notify(enactor, $"Powers: {string.Join(" ", obj.Powers.Value.Select(x => x.Name))}");
+		await parser.NotifyService.Notify(enactor, $"Powers: {string.Join(" ", objPowers.Select(x => x.Name))}");
 		// TODO: Channels
 		// TODO: Warnings Checked
 
@@ -226,7 +231,7 @@ public static partial class Commands
 				// TODO: Symbols for Flags. Flags are not just strings!
 				await parser.NotifyService.Notify(enactor,
 					MModule.concat(
-						$"{attr.Name} [#{attr.Owner.Value.Object.DBRef.Number}]: "
+						$"{attr.Name} [#{(await attr.Owner.WithCancellation(CancellationToken.None))!.Object.DBRef.Number}]: "
 							.Hilight()
 						, attr.Value));
 			}
@@ -239,8 +244,9 @@ public static partial class Commands
 		if (!viewing.IsRoom)
 		{
 			// TODO: Proper Format.
-			await parser.NotifyService.Notify(enactor, $"Home: {viewing.Known().MinusRoom().Home().Object().Name}");
-			await parser.NotifyService.Notify(enactor, $"Location: {viewing.Known().MinusRoom().Location().Object().Name}");
+			await parser.NotifyService.Notify(enactor, $"Home: {(await viewing.Known().MinusRoom().Home()).Object().Name}");
+			await parser.NotifyService.Notify(enactor,
+				$"Location: {(await viewing.Known().MinusRoom().Location()).Object().Name}");
 		}
 
 		return new CallState(obj.DBRef.ToString());
@@ -307,9 +313,10 @@ public static partial class Commands
 
 		var exitObj = exit.WithoutError().WithoutNone().AsExit;
 		// TODO: Check if the exit has a destination attribute.
-		var destination = exitObj.Home.Value;
+		var destination = await exitObj.Home.WithCancellation(CancellationToken.None);
 
-		if (!parser.PermissionService.CanGoto(enactorObj, exitObj, exitObj.Home.Value))
+		if (!await parser.PermissionService.CanGoto(enactorObj, exitObj,
+			    await exitObj.Home.WithCancellation(CancellationToken.None)))
 		{
 			await parser.NotifyService.Notify(enactor, "You can't go that way.");
 			return CallState.Empty;
@@ -387,7 +394,7 @@ public static partial class Commands
 
 			var target = locateTarget.WithoutError().WithoutNone();
 			var targetContent = target.AsContent;
-			if (!parser.PermissionService.Controls(enactorObj, target))
+			if (!await parser.PermissionService.Controls(enactorObj, target))
 			{
 				await parser.NotifyService.Notify(enactor, Errors.ErrorCannotTeleport);
 				continue;
@@ -653,7 +660,7 @@ public static partial class Commands
 			  @channel/what [<prefix>]
 			  @channel/who <channel>
 			  @channel/on <channel>[=<player>]
-			  @channel/off <channel>[=<player>]  
+			  @channel/off <channel>[=<player>]
 			  @channel/gag [<channel>][=<yes|no>]
 				@channel/mute [<channel>][=<yes|no>]
 				@channel/hide [<channel>][=<yes|no>]
@@ -663,14 +670,14 @@ public static partial class Commands
 			  @channel/privs <channel>=<privs>
 			  @channel/describe <channel>=<description>
 			  @channel/buffer <channel>=<lines>
-			  @channel/decompile[/brief] <prefix>  
+			  @channel/decompile[/brief] <prefix>
 			  @channel/chown <channel>=<new owner>
 				@channel/rename <channel>=<new name>
 				@channel/wipe <channel>
-				@channel/delete <channel>  
+				@channel/delete <channel>
 				@channel/mogrifier <channel>=<object>
 		 */
-		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known(); 
+		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches.ToArray();
 
@@ -678,9 +685,9 @@ public static partial class Commands
 		{
 			return new CallState("CHAT: INCORRECT COMBINATION OF SWITCHES");
 		}
-		
+
 		// TODO: Channel Visibility on most of these commands.
-		
+
 		return switches switch
 		{
 			[.., "LIST"] => await ChannelList.Handle(parser, args["0"].Message!, args["1"].Message!, switches),
@@ -793,12 +800,15 @@ public static partial class Commands
 		foreach (var (member, status) in channelMembers)
 		{
 			if (status.Gagged ?? false) continue;
-			
-			var canInteract = parser.PermissionService.CanInteract(member, executor, IPermissionService.InteractType.Hear);
+
+			var canInteract =
+				await parser.PermissionService.CanInteract(member, executor, IPermissionService.InteractType.Hear);
 			if (!canInteract) continue;
 
 			await parser.NotifyService.Notify(member,
-				MModule.multiple([MModule.single("<"), channel.Name, MModule.single("> "), status.Title, MModule.single(" "), message]), executor);
+				MModule.multiple([
+					MModule.single("<"), channel.Name, MModule.single("> "), status.Title, MModule.single(" "), message
+				]), executor);
 		}
 
 		return new CallState(string.Empty);

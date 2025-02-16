@@ -18,7 +18,7 @@ public static class StatsMail
 
 		if (!string.IsNullOrEmpty(arg0?.ToPlainText()))
 		{
-			if (!(executor.IsGod() || executor.IsWizard()))
+			if (!(executor.IsGod() || await executor.IsWizard()))
 			{
 				await parser.NotifyService.Notify(executor, Errors.ErrorPerm);
 				return MModule.single(Errors.ErrorPerm);

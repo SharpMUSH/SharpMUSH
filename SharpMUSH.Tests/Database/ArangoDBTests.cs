@@ -151,7 +151,7 @@ public class ArangoDBTests : BaseUnitTest
 		await Assert.That(existingDeep1.Skip(1).First().LongName).IsEqualTo("THREE`LAYERS");
 		await Assert.That(existingDeep2.Skip(1).First().LongName).IsEqualTo("THREE`LAYERS");
 
-		var attributes = obj.Object()!.Attributes.Value;
+		var attributes = await obj.Object()!.Attributes.WithCancellation(CancellationToken.None);
 
 		foreach (var attribute in attributes)
 		{

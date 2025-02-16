@@ -12,11 +12,11 @@ public class AnySharpObject : OneOfBase<SharpPlayer, SharpRoom, SharpExit, Sharp
 	public static implicit operator AnySharpObject(SharpExit x) => new(x);
 	public static implicit operator AnySharpObject(SharpThing x) => new(x);
 
-	public AnySharpContainer Where => Match(
-		player => player.Location.Value,
-		room => room,
-		exit => exit.Location.Value,
-		thing => thing.Location.Value
+	public async ValueTask<AnySharpContainer> Where() => await Match<ValueTask<AnySharpContainer>>(
+		async player => await player.Location.WithCancellation(CancellationToken.None),
+		async room => await ValueTask.FromResult(room),
+		async exit => await exit.Location.WithCancellation(CancellationToken.None),
+		async thing => await thing.Location.WithCancellation(CancellationToken.None)
 	);
 
 	public string[] Aliases => Match(
@@ -49,14 +49,14 @@ public class AnySharpObject : OneOfBase<SharpPlayer, SharpRoom, SharpExit, Sharp
 
 	public bool IsContent => IsPlayer || IsExit || IsThing;
 
-	public AnySharpContent AsContent => this.Match<AnySharpContent>(
+	public AnySharpContent AsContent => Match<AnySharpContent>(
 		player => player,
 		room => throw new ArgumentException("Cannot convert a room to content."),
 		exit => exit,
 		thing => thing
 	);
 
-	public AnySharpContainer AsContainer => this.Match<AnySharpContainer>(
+	public AnySharpContainer AsContainer => Match<AnySharpContainer>(
 		player => player,
 		room => room,
 		exit => throw new ArgumentException("Cannot convert an exit to container."),

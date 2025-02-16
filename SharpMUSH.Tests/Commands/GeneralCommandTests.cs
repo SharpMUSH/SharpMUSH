@@ -181,7 +181,7 @@ public class GeneralCommandTests : BaseUnitTest
 
 		var one = await _parser.Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
 		var onePlayer = one.AsPlayer;
-		var flags = onePlayer.Object.Flags.Value;
+		var flags = await onePlayer.Object.Flags.WithCancellation(CancellationToken.None);
 
 		await Assert.That(flags.Count(x => x.Name == "DEBUG")).IsEqualTo(1);
 	}

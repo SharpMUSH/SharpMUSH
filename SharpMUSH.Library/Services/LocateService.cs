@@ -56,7 +56,7 @@ public partial class LocateService : ILocateService
 		     || flags.HasFlag(LocateFlags.MatchHereForLookerLocation)
 		     || flags.HasFlag(LocateFlags.ExitsPreference)
 		     || flags.HasFlag(LocateFlags.ExitsInsideOfLooker)) &&
-		    !Nearby(executor, looker) && !executor.IsSee_All() && !parser.PermissionService.Controls(executor, looker))
+		    !await Nearby(executor, looker) && !await executor.IsSee_All() && !await parser.PermissionService.Controls(executor, looker))
 		{
 			return new Error<string>("#-1 NOT PERMITTED TO EVALUATE ON LOOKER");
 		}
@@ -66,11 +66,11 @@ public partial class LocateService : ILocateService
 		if (match.IsNone) return match.AsNone;
 
 		var result = match.WithoutError().WithoutNone();
-		var location = FriendlyWhereIs(result);
+		var location = await FriendlyWhereIs(result);
 
-		if (parser.PermissionService.CanExamine(executor, location.WithExitOption()) ||
-		    ((!result.IsDarkLegal() || location.WithExitOption().IsLight() || result.IsLight()) &&
-		     parser.PermissionService.CanInteract(result, executor, IPermissionService.InteractType.See)))
+		if (await parser.PermissionService.CanExamine(executor, location.WithExitOption()) ||
+		    ((!await result.IsDarkLegal() || await location.WithExitOption().IsLight() || await result.IsLight()) &&
+		     await parser.PermissionService.CanInteract(result, executor, IPermissionService.InteractType.See)))
 		{
 			return result.WithNoneOption().WithErrorOption();
 		}
@@ -101,11 +101,11 @@ public partial class LocateService : ILocateService
 		}
 		else if (where.IsExit)
 		{
-			location = where.MinusRoom().Home();
+			location = await where.MinusRoom().Home();
 		}
 		else
 		{
-			location = FriendlyWhereIs(where);
+			location = await FriendlyWhereIs(where);
 		}
 
 		if (true // !flags.HasFlag(LocateFlags.NoTypePreference) // TODO: Incorrect check.
@@ -114,7 +114,7 @@ public partial class LocateService : ILocateService
 		    && name.Equals("me", StringComparison.InvariantCultureIgnoreCase))
 		{
 			if (!flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
-			    && parser.PermissionService.Controls(looker, where))
+			    && await parser.PermissionService.Controls(looker, where))
 			{
 				return where.WithNoneOption().WithErrorOption();
 			}
@@ -127,9 +127,9 @@ public partial class LocateService : ILocateService
 		    && name.Equals("here", StringComparison.InvariantCultureIgnoreCase))
 		{
 			if (!flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
-			    && parser.PermissionService.Controls(looker, where))
+			    && await parser.PermissionService.Controls(looker, where))
 			{
-				return FriendlyWhereIs(where).WithExitOption().WithNoneOption().WithErrorOption();
+				return (await FriendlyWhereIs(where)).WithExitOption().WithNoneOption().WithErrorOption();
 			}
 
 			return new Error<string>(Errors.ErrorPerm);
@@ -147,13 +147,13 @@ public partial class LocateService : ILocateService
 			if (maybeMatch is not null && flags.HasFlag(LocateFlags.MatchObjectsInLookerInventory))
 			{
 				if (!flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation)
-				    || looker.HasLongFingers()
-				    || Nearby(looker, match.WithoutError().WithoutNone())
-				    || parser.PermissionService.Controls(looker, match.WithoutError().WithoutNone()))
+				    || await looker.HasLongFingers()
+				    || await Nearby(looker, match.WithoutError().WithoutNone())
+				    || await parser.PermissionService.Controls(looker, match.WithoutError().WithoutNone()))
 				{
 					// TODO: This doesn't look right.
 					if (!flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
-					    && parser.PermissionService.Controls(looker, where))
+					    && await parser.PermissionService.Controls(looker, where))
 					{
 						return match;
 					}
@@ -173,12 +173,12 @@ public partial class LocateService : ILocateService
 			if (!match.IsT4 && (flags & LocateFlags.AbsoluteMatch) != 0)
 			{
 				if (!flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation)
-				    || looker.HasLongFingers()
-				    || (Nearby(looker, match.WithoutError().WithoutNone())
-				        || parser.PermissionService.Controls(looker, match.WithoutError().WithoutNone())))
+				    || await looker.HasLongFingers()
+				    || (await Nearby(looker, match.WithoutError().WithoutNone())
+				        || await parser.PermissionService.Controls(looker, match.WithoutError().WithoutNone())))
 				{
 					if (!(flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
-					      && !parser.PermissionService.Controls(looker, where)))
+					      && !await parser.PermissionService.Controls(looker, where)))
 					{
 						return match;
 					}
@@ -201,7 +201,7 @@ public partial class LocateService : ILocateService
 				var contents = (await parser.Mediator.Send(new GetContentsQuery(where.AsContainer)))?
 					.Select(x => x.WithRoomOption()) ?? [];
 				(bestMatch, final, curr, right_type, exact, c) =
-					Match_List(parser, contents, looker, where, bestMatch, exact, final, curr, right_type, flags, name);
+					await Match_List(parser, contents, looker, where, bestMatch, exact, final, curr, right_type, flags, name);
 				if (c == ControlFlow.Break) break;
 				if (c == ControlFlow.Return) break;
 			}
@@ -214,7 +214,7 @@ public partial class LocateService : ILocateService
 				var contents = maybeContents?
 					.Select(x => x.WithRoomOption()) ?? [];
 				(bestMatch, final, curr, right_type, exact, c) =
-					Match_List(parser, contents, looker, where, bestMatch, exact, final, curr, right_type, flags, name);
+					await Match_List(parser, contents, looker, where, bestMatch, exact, final, curr, right_type, flags, name);
 				if (c == ControlFlow.Break) break;
 				if (c == ControlFlow.Return) break;
 			}
@@ -236,11 +236,12 @@ public partial class LocateService : ILocateService
 					    && !flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation |
 					                      LocateFlags.OnlyMatchObjectsInLookerInventory))
 					{
-						var exits = (await parser.Mediator.Send(new GetContentsQuery(Configurable.MasterRoom)))!
+						var masterRoom = new DBRef(Convert.ToInt32(parser.Configuration.CurrentValue.Database.MasterRoom));
+						var exits = (await parser.Mediator.Send(new GetContentsQuery(masterRoom)) ?? [])
 							.Where(x => x.IsExit)
 							.Select(x => new AnySharpObject(x.AsExit));
 
-						(bestMatch, final, curr, right_type, exact, c) = Match_List(parser, exits, looker, where, bestMatch, exact,
+						(bestMatch, final, curr, right_type, exact, c) = await Match_List(parser, exits, looker, where, bestMatch, exact,
 							final, curr, right_type, flags, name);
 						if (c == ControlFlow.Break) break;
 						if (c == ControlFlow.Return) break;
@@ -251,7 +252,7 @@ public partial class LocateService : ILocateService
 						var exits = (await parser.Mediator.Send(new GetContentsQuery(location)))!
 							.Where(x => x.IsExit)
 							.Select(x => new AnySharpObject(x.AsExit));
-						(bestMatch, final, curr, right_type, exact, c) = Match_List(parser, exits, looker, where, bestMatch, exact,
+						(bestMatch, final, curr, right_type, exact, c) = await Match_List(parser, exits, looker, where, bestMatch, exact,
 							final, curr, right_type, flags, name);
 						if (c == ControlFlow.Break) break;
 						if (c == ControlFlow.Return) break;
@@ -261,7 +262,7 @@ public partial class LocateService : ILocateService
 
 			if (flags.HasFlag(LocateFlags.MatchObjectsInLookerInventory))
 			{
-				(bestMatch, final, curr, right_type, exact, c) = Match_List(parser, [location.WithExitOption()], looker, where,
+				(bestMatch, final, curr, right_type, exact, c) = await Match_List(parser, [location.WithExitOption()], looker, where,
 					bestMatch, exact, final, curr, right_type, flags, name);
 				if (c == ControlFlow.Break) break;
 				if (c == ControlFlow.Return) break;
@@ -277,7 +278,7 @@ public partial class LocateService : ILocateService
 						.Where(x => x.IsExit)
 						.Select(x => new AnySharpObject(x.AsExit));
 
-					(bestMatch, final, curr, right_type, exact, c) = Match_List(parser, exits, looker, where, bestMatch, exact,
+					(bestMatch, final, curr, right_type, exact, c) = await Match_List(parser, exits, looker, where, bestMatch, exact,
 						final, curr, right_type, flags, name);
 				}
 			}
@@ -300,7 +301,7 @@ public partial class LocateService : ILocateService
 		return bestMatch;
 	}
 
-	public static (AnyOptionalSharpObjectOrError BestMatch, int Final, int Curr, int RightType, bool Exact, ControlFlow c)
+	public static async ValueTask<(AnyOptionalSharpObjectOrError BestMatch, int Final, int Curr, int RightType, bool Exact, ControlFlow c)>
 		Match_List(
 			IMUSHCodeParser parser,
 			IEnumerable<AnySharpObject> list,
@@ -331,13 +332,13 @@ public partial class LocateService : ILocateService
 			if (abs.IsSome() && cur.Object().DBRef == abs.AsValue())
 			{
 				(bestMatch, final, curr, rightType, exact, flow) =
-					Matched(parser, true, exact, final, curr, rightType, looker, where, cur, bestMatch, flags);
+					await Matched(parser, true, exact, final, curr, rightType, looker, where, cur, bestMatch, flags);
 
 				if (flow == ControlFlow.Break) break;
 				if (flow == ControlFlow.Continue) continue;
 				if (flow == ControlFlow.Return) return (bestMatch, final, curr, rightType, exact, ControlFlow.Return);
 			}
-			else if (!parser.PermissionService.CanInteract(cur, looker, IPermissionService.InteractType.Match))
+			else if (!await parser.PermissionService.CanInteract(cur, looker, IPermissionService.InteractType.Match))
 			{
 				// continue;
 			}
@@ -348,7 +349,7 @@ public partial class LocateService : ILocateService
 			  || (!cur.IsExit && !string.Equals(cur.Object().Name, name, StringComparison.OrdinalIgnoreCase)))
 			{
 				(bestMatch, final, curr, rightType, exact, flow) =
-					Matched(parser, true, exact, final, curr, rightType, looker, where, cur, bestMatch, flags);
+					await Matched(parser, true, exact, final, curr, rightType, looker, where, cur, bestMatch, flags);
 
 				if (flow == ControlFlow.Break) break;
 				if (flow == ControlFlow.Continue) continue;
@@ -359,7 +360,7 @@ public partial class LocateService : ILocateService
 			         && cur.Object().Name.Equals(name, StringComparison.OrdinalIgnoreCase))
 			{
 				(bestMatch, final, curr, rightType, exact, flow) =
-					Matched(parser, false, exact, final, curr, rightType, looker, where, cur, bestMatch, flags);
+					await Matched(parser, false, exact, final, curr, rightType, looker, where, cur, bestMatch, flags);
 
 				if (flow == ControlFlow.Break) break;
 				if (flow == ControlFlow.Continue) continue;
@@ -371,7 +372,7 @@ public partial class LocateService : ILocateService
 			flow == ControlFlow.Break ? ControlFlow.Break : ControlFlow.Continue);
 	}
 
-	public static AnyOptionalSharpObject ChooseThing(IMUSHCodeParser parser, AnySharpObject who, LocateFlags flags,
+	public static async ValueTask<AnyOptionalSharpObject> ChooseThing(IMUSHCodeParser parser, AnySharpObject who, LocateFlags flags,
 		AnyOptionalSharpObject thing1, AnyOptionalSharpObject thing2)
 	{
 		// TODO: Fix this. This is silly code.
@@ -384,17 +385,17 @@ public partial class LocateService : ILocateService
 		if (TypePreferences(flags).Contains(thing2.Object()!.Type)) return thing2;
 
 		if (!flags.HasFlag(LocateFlags.PreferLockPass)) return thing2;
-		var key = parser.PermissionService.CouldDoIt(who, thing1, null);
+		var key = await parser.PermissionService.CouldDoIt(who, thing1, null);
 
 		return key switch
 		{
-			false when parser.PermissionService.CouldDoIt(who, thing2, null) => thing2,
-			true when !parser.PermissionService.CouldDoIt(who, thing2, null) => thing1,
+			false when await parser.PermissionService.CouldDoIt(who, thing2, null) => thing2,
+			true when !await parser.PermissionService.CouldDoIt(who, thing2, null) => thing1,
 			_ => thing2
 		};
 	}
 
-	public static (AnyOptionalSharpObjectOrError BestMatch, int Final, int Curr, int RightType, bool Exact, ControlFlow c)
+	public static async ValueTask<(AnyOptionalSharpObjectOrError BestMatch, int Final, int Curr, int RightType, bool Exact, ControlFlow c)>
 		Matched(
 			IMUSHCodeParser parser,
 			bool full,
@@ -409,14 +410,14 @@ public partial class LocateService : ILocateService
 			LocateFlags flags)
 	{
 		if (!(!flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
-		      && parser.PermissionService.Controls(looker, where)))
+		      && await parser.PermissionService.Controls(looker, where)))
 		{
 			return (new Error<string>(Errors.ErrorPerm), final, curr, right_type, exact, ControlFlow.Continue);
 		}
 
 		if (final == 0) // Not doing an English Match.
 		{
-			bestMatch = ChooseThing(parser, looker, flags, bestMatch.WithoutError(), cur.WithNoneOption()).WithErrorOption();
+			bestMatch = (await ChooseThing(parser, looker, flags, bestMatch.WithoutError(), cur.WithNoneOption())).WithErrorOption();
 			if (bestMatch.IsValid() && bestMatch.WithoutError().WithoutNone().Object().DBRef != cur.Object().DBRef)
 			{
 				return (bestMatch, final, curr, right_type, exact, ControlFlow.Continue);
@@ -462,46 +463,46 @@ public partial class LocateService : ILocateService
 	}
 
 
-	public static DBRef? WhereIs(AnySharpObject thing)
+	public static async ValueTask<DBRef?> WhereIs(AnySharpObject thing)
 	{
 		if (thing.IsRoom) return null;
 		var minusRoom = thing.MinusRoom();
 		return thing.IsExit
-			? minusRoom.Home().Object().DBRef
-			: minusRoom.Location().Object().DBRef;
+			? (await minusRoom.Home()).Object().DBRef
+			: (await minusRoom.Location()).Object().DBRef;
 	}
 
-	public AnySharpContainer Room(AnySharpObject content)
+	public async ValueTask<AnySharpContainer> Room(AnySharpObject content)
 	{
-		var currentLocation = FriendlyWhereIs(content);
+		var currentLocation = await FriendlyWhereIs(content);
 
 		// REMARKS: This does not protect against loops. Better make sure loops can't happen!
-		while (currentLocation.Id != currentLocation.Location.Id)
+		while (currentLocation.Id != (await currentLocation.Location()).Id)
 		{
-			currentLocation = currentLocation.Location;
+			currentLocation = await currentLocation.Location();
 		}
 
 		return currentLocation;
 	}
 
-	public static AnySharpContainer FriendlyWhereIs(AnySharpObject obj) => obj.Match(
-		player => player.Location.Value,
-		room => room,
-		exit => exit.Home.Value,
-		thing => thing.Location.Value
+	public static async ValueTask<AnySharpContainer> FriendlyWhereIs(AnySharpObject obj) => await obj.Match(
+		async player => await player.Location.WithCancellation(CancellationToken.None),
+		async room => await ValueTask.FromResult<AnySharpContainer>(room),
+		async exit => await exit.Home.WithCancellation(CancellationToken.None),
+		async thing => await thing.Location.WithCancellation(CancellationToken.None)
 	);
 
-	public static bool Nearby(
+	public static async ValueTask<bool> Nearby(
 		AnySharpObject obj1,
 		AnySharpObject obj2)
 	{
 		if (obj1.IsRoom && obj2.IsRoom) return false;
 
-		var loc1 = FriendlyWhereIs(obj1).Object().DBRef;
+		var loc1 = (await FriendlyWhereIs(obj1)).Object().DBRef;
 
 		if (loc1 == obj2.Object().DBRef) return true;
 
-		var loc2 = FriendlyWhereIs(obj2).Object().DBRef;
+		var loc2 = (await FriendlyWhereIs(obj2)).Object().DBRef;
 
 		return loc2 == obj1.Object().DBRef || loc2 == loc1;
 	}

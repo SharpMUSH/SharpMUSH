@@ -12,10 +12,10 @@ public class SharpMUSHBooleanExpressionVisitor(ISharpDatabase database, Paramete
 		=> new Expression[] { aggregate, nextResult }.First(x => x is not null);
 
 	private readonly Expression<Func<AnySharpObject, string, bool>> _hasFlag = (dbRef, flag)
-		=> dbRef.Object().Flags.Value.Any(x => x.Name == flag || x.Symbol == flag);
+		=> dbRef.Object().Flags.WithCancellation(CancellationToken.None).GetAwaiter().GetResult().Any(x => x.Name == flag || x.Symbol == flag);
 
 	private readonly Expression<Func<AnySharpObject, string, bool>> _hasPower = (dbRef, power)
-		=> dbRef.Object().Powers.Value.Any(x => x.Name == power || x.Alias == power);
+		=> dbRef.Object().Powers.WithCancellation(CancellationToken.None).GetAwaiter().GetResult().Any(x => x.Name == power || x.Alias == power);
 
 	private readonly Expression<Func<AnySharpObject, string, bool>> _isType = (dbRef, type)
 		=> dbRef.Object().Type == type;
@@ -135,9 +135,9 @@ public class SharpMUSHBooleanExpressionVisitor(ISharpDatabase database, Paramete
 					Enumerable.Empty<SharpAttributeFlag>(),
 					null,
 					string.Empty,
-					new(Enumerable.Empty<SharpAttribute>),
-					new(() => null!),
-					new(() => null))
+					new(_ => Task.FromResult(Enumerable.Empty<SharpAttribute>()), false),
+					new(_ => Task.FromResult<SharpPlayer?>(null), false),
+					new(_ => Task.FromResult<SharpAttributeEntry?>(null), false))
 				{
 					Value = MModule.single(Guid.NewGuid().ToString())
 				}).Value == MModule.single(value);

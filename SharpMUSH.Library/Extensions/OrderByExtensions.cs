@@ -127,23 +127,23 @@ public static class OrderByExtensions
 			"owner" => await Collection.ToAsyncEnumerable(source).OrderByAwait(async key 
 					=> (await parser.LocateService.Locate(parser, executor, executor, keySelector(key), LocateFlags.All))
 					.Match(
-						player => player.Object.Owner.Value.Object.DBRef.Number,
-						room => room.Object.Owner.Value.Object.DBRef.Number,
-						exit => exit.Object.Owner.Value.Object.DBRef.Number,
-						thing => thing.Object.Owner.Value.Object.DBRef.Number,
-						_ => -1,
-						_ => -1
+						async player => (await player.Object.Owner.WithCancellation(CancellationToken.None)).Object.DBRef.Number,
+						async room => (await room.Object.Owner.WithCancellation(CancellationToken.None)).Object.DBRef.Number,
+						async exit => (await exit.Object.Owner.WithCancellation(CancellationToken.None)).Object.DBRef.Number,
+						async thing => (await thing.Object.Owner.WithCancellation(CancellationToken.None)).Object.DBRef.Number,
+						async _ => await ValueTask.FromResult(-1),
+						async _ => await ValueTask.FromResult(-1)
 					),
 				direction).ToArrayAsync(CancellationToken.None),
 			"loc" => await Collection.ToAsyncEnumerable(source).OrderByAwait(async key 
 					=> (await parser.LocateService.Locate(parser, executor, executor, keySelector(key), LocateFlags.All))
 					.Match(
-						player => player.Location.Value.Object().DBRef.Number,
-						room => room.Object.DBRef.Number,
-						exit => exit.Location.Value.Object().DBRef.Number,
-						thing => thing.Location.Value.Object().DBRef.Number,
-						_ => -1,
-						_ => -1
+						async player => (await player.Location.WithCancellation(CancellationToken.None)).Object().DBRef.Number,
+						async room => await ValueTask.FromResult(room.Object.DBRef.Number),
+						async exit => (await exit.Location.WithCancellation(CancellationToken.None)).Object().DBRef.Number,
+						async thing => (await thing.Location.WithCancellation(CancellationToken.None)).Object().DBRef.Number,
+						async _ => await ValueTask.FromResult(-1),
+						async _ => await ValueTask.FromResult(-1)
 					),
 				direction).ToArrayAsync(CancellationToken.None),
 			"ctime" => await Collection.ToAsyncEnumerable(source).OrderByAwait(async key 

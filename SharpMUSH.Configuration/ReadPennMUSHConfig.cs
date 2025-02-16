@@ -63,7 +63,12 @@ public partial class ReadPennMushConfig(string configFile) : IOptionsFactory<Pen
 				Boolean(Get(nameof(AttributeOptions.ReadRemoteDesc)), false),
 				Boolean(Get(nameof(AttributeOptions.RoomConnects)), true),
 				Boolean(Get(nameof(AttributeOptions.ReverseShs)), true),
-				Boolean(Get(nameof(AttributeOptions.EmptyAttributes)), true)
+				Boolean(Get(nameof(AttributeOptions.EmptyAttributes)), true),
+				String(Get(nameof(AttributeOptions.GenderAttribute)), "SEX"),
+				String(Get(nameof(AttributeOptions.PossessivePronounAttribute)), null),
+				String(Get(nameof(AttributeOptions.AbsolutePossessivePronounAttribute)), null),
+				String(Get(nameof(AttributeOptions.ObjectivePronounAttribute)), null),
+				String(Get(nameof(AttributeOptions.SubjectivePronounAttribute)), null)
 			),
 			Chat = new ChatOptions(
 				Get(nameof(ChatOptions.ChatTokenAlias)).FirstOrDefault('+'),
@@ -205,7 +210,7 @@ public partial class ReadPennMushConfig(string configFile) : IOptionsFactory<Pen
 				UnsignedInteger(Get(nameof(LimitOptions.QueueChunk)), 3),
 				UnsignedInteger(Get(nameof(LimitOptions.FunctionRecursionLimit)), 100),
 				UnsignedInteger(Get(nameof(LimitOptions.FunctionInvocationLimit)), 100000),
-				UnsignedInteger(Get(nameof(LimitOptions.CallLimit)), 100),
+				UnsignedInteger(Get(nameof(LimitOptions.CallLimit)), 1000),
 				UnsignedInteger(Get(nameof(LimitOptions.PlayerNameLen)), 21),
 				UnsignedInteger(Get(nameof(LimitOptions.QueueEntryCpuTime)), 1000),
 				Boolean(Get(nameof(LimitOptions.UseQuota)), true),

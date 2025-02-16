@@ -13,8 +13,8 @@ public static class ChannelAdd
 	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString channelName, MString privileges, string[] switches)
 	{
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
-		var executorOwner = executor.Object().Owner.Value;
-		if (executor.IsGuest())
+		var executorOwner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
+		if (await executor.IsGuest())
 		{
 			await parser.NotifyService.Notify(executor, "Guests may not modify channels.");
 			return new CallState("#-1 Guests may not modify channels.");
@@ -40,7 +40,7 @@ public static class ChannelAdd
 				(await x.Owner.WithCancellation(CancellationToken.None)).Id == executorOwner.Id)
 			.CountAsync();
 		
-		if (!executor.IsPriv() && ownedChannels >= parser.Configuration.CurrentValue.Chat.MaxChannels)
+		if (!await executor.IsPriv() && ownedChannels >= parser.Configuration.CurrentValue.Chat.MaxChannels)
 		{
 			await parser.NotifyService.Notify(executor, "#-1 You have too many channels.");
 			return new CallState("#-1 You have too many channels.");
