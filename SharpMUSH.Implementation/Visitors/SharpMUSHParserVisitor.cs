@@ -31,20 +31,6 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source)
 		return result;
 	}
 
-	protected override async ValueTask<CallState?> AggregateResult(ValueTask<CallState?> aggregate,
-		ValueTask<CallState?> nextResult)
-		=> (await aggregate, await nextResult) switch
-		{
-			(null, null)
-				=> null,
-			({ Arguments: not null } agg, { Arguments: not null } next)
-				=> agg with { Arguments = [.. agg.Arguments, .. next.Arguments] },
-			({ Message: not null } agg, { Message: not null } next)
-				=> agg with { Message = MModule.concat(agg.Message, next.Message) },
-			var (agg, next)
-				=> agg ?? next
-		};
-	
 	private static CallState? AggregateResult(CallState? aggregate,
 		CallState? nextResult)
 		=> (aggregate, nextResult) switch
