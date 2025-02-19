@@ -19,12 +19,12 @@
   <ItemGroup>
     <PackageReference Include="Antlr4.Runtime.Standard" Version="4.13.1" />
     <PackageReference Include="DotNext" Version="5.18.0" />
-    <PackageReference Include="DotNext.Metaprogramming" Version="5.17.2" />
+    <PackageReference Include="DotNext.Metaprogramming" Version="5.18.0" />
     <PackageReference Include="Humanizer.Core" Version="2.14.1" />
     <PackageReference Include="JsonPatch.Net" Version="3.3.0" />
     <PackageReference Include="JsonPath.Net" Version="2.1.1" />
     <PackageReference Include="Mediator.Abstractions" Version="2.1.7" />
-    <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="9.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="9.0.2" />
     <PackageReference Include="morelinq" Version="4.4.0" />
     <PackageReference Include="OneOf" Version="3.0.271" />
     <PackageReference Include="Serilog" Version="4.2.0" />
