@@ -5,6 +5,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using System.Text;
 using A = MarkupString.MarkupStringModule;
+using StringExtensions = ANSILibrary.StringExtensions;
 
 namespace SharpMUSH.Tests.Functions;
 

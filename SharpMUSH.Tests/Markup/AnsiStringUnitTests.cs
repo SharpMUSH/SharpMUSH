@@ -5,6 +5,7 @@ using System.Text;
 using A = MarkupString.MarkupStringModule;
 using AnsiString = MarkupString.MarkupStringModule.MarkupString;
 using M = MarkupString.MarkupImplementation.AnsiMarkup;
+using StringExtensions = ANSILibrary.StringExtensions;
 
 namespace SharpMUSH.Tests.Markup;
 
