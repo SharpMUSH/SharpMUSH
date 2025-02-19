@@ -18,7 +18,7 @@ public class FunctionUnitTests : BaseUnitTest
 
 	[Test]
 	[Arguments("strcat(strcat(),wi`th a[strcat(strcat(strcat(depth of 5)))])", "wi`th adepth of 5")]
-	// [Arguments("strcat(strcat(dog)", "strcat(dog")] // Currently Illegal according to the Parser. Fix maybe needed.
+	[Arguments("strcat(strcat(dog)", "strcat(dog")] // Currently Illegal according to the Parser. Fix needed.
 	[Arguments("strcat(foo\\,dog)", "foo,dog")]
 	[Arguments("strcat(foo\\\\,dog)", "foo\\dog")]
 	[Arguments("strcat(foo,-dog))", "foo-dog)")]
