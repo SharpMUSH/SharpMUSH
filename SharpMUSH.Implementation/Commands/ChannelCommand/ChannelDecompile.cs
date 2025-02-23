@@ -1,3 +1,4 @@
+using SharpMUSH.Library;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -6,15 +7,25 @@ namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
 public static class ChannelDecompile
 {
-	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString prefix, MString brief, string[] switches)
+	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString channelName, MString brief, string[] switches)
 	{
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
-		var channels = await parser.Mediator.Send(new GetChannelQuery(prefix.ToPlainText()));
-
-		if (channels is null)
+		if (await executor.IsGuest())
 		{
-			return new CallState("No channels found.");
+			await parser.NotifyService.Notify(executor, "Guests may not modify channels.");
+			return new CallState("#-1 Guests may not modify channels.");
 		}
+		
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, channelName, true);
+
+		if (maybeChannel.IsError)
+		{
+			await parser.NotifyService.Notify(executor, maybeChannel.AsError.Value.Message!);
+			return maybeChannel.AsError.Value;
+		}
+
+		var channel = maybeChannel.AsChannel;
+
 		
 		// TODO: Implement the rest of the command.
 		await parser.NotifyService.Notify(executor, string.Empty, executor);

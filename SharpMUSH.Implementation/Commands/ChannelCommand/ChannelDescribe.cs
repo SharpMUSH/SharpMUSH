@@ -1,3 +1,4 @@
+using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
@@ -10,17 +11,22 @@ public static class ChannelDescribe
 	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString channelName, MString description, string[] switches)
 	{
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
-		var channel = await parser.Mediator.Send(new GetChannelQuery(channelName.ToPlainText()));
-
-		if (channel is null)
+		if (await executor.IsGuest())
 		{
-			return new CallState("Channel not found.");
+			await parser.NotifyService.Notify(executor, "Guests may not modify channels.");
+			return new CallState("#-1 Guests may not modify channels.");
+		}
+		
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, channelName, true);
+
+		if (maybeChannel.IsError)
+		{
+			await parser.NotifyService.Notify(executor, maybeChannel.AsError.Value.Message!);
+			return maybeChannel.AsError.Value;
 		}
 
-		if (!channel.Id!.Equals(executor.Id()))
-		{
-			return new CallState("You are not the owner of the channel.");
-		}
+		var channel = maybeChannel.AsChannel;
+
 
 		await parser.Mediator.Send(new UpdateChannelCommand(channel,
 			null, 

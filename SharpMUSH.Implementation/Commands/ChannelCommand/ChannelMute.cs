@@ -1,3 +1,4 @@
+using SharpMUSH.Library;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -9,15 +10,24 @@ public static class ChannelMute
 	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString channelName, MString playerName, string[] switches)
 	{
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
-		var channel = await parser.Mediator.Send(new GetChannelQuery(channelName.ToPlainText()));
-		var players = await parser.Mediator.Send(new GetPlayerQuery(playerName.ToPlainText()));
-		var player = players.FirstOrDefault();
-		
-		if (channel is null)
+		if (await executor.IsGuest())
 		{
-			return new CallState("Channel not found.");
+			await parser.NotifyService.Notify(executor, "Guests may not modify channels.");
+			return new CallState("#-1 Guests may not modify channels.");
+		}
+		
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, channelName, true);
+
+		if (maybeChannel.IsError)
+		{
+			await parser.NotifyService.Notify(executor, maybeChannel.AsError.Value.Message!);
+			return maybeChannel.AsError.Value;
 		}
 
+		var channel = maybeChannel.AsChannel;
+
+		var players = await parser.Mediator.Send(new GetPlayerQuery(playerName.ToPlainText()));
+		var player = players.FirstOrDefault();
 		if (player is null)
 		{
 			return new CallState("Player not found.");

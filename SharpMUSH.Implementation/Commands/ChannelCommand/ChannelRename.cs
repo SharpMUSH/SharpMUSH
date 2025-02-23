@@ -1,3 +1,4 @@
+using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
@@ -10,12 +11,21 @@ public static class ChannelRename
 	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString channelName, MString newChannelName, string[] switches)
 	{
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
-		var channel = await parser.Mediator.Send(new GetChannelQuery(channelName.ToPlainText()));
-
-		if (channel is null)
+		if (await executor.IsGuest())
 		{
-			return new CallState("Channel not found.");
+			await parser.NotifyService.Notify(executor, "Guests may not modify channels.");
+			return new CallState("#-1 Guests may not modify channels.");
 		}
+		
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, channelName, true);
+
+		if (maybeChannel.IsError)
+		{
+			await parser.NotifyService.Notify(executor, maybeChannel.AsError.Value.Message!);
+			return maybeChannel.AsError.Value;
+		}
+
+		var channel = maybeChannel.AsChannel;
 
 		var owner = await channel.Owner.WithCancellation(CancellationToken.None);
 		if (!owner.Id!.Equals(executor.Id()))

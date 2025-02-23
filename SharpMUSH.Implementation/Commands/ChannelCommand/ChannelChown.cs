@@ -1,3 +1,4 @@
+using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
@@ -11,16 +12,23 @@ public static class ChannelChown
 		string[] switches)
 	{
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
+		if (await executor.IsGuest())
+		{
+			await parser.NotifyService.Notify(executor, "Guests may not modify channels.");
+			return new CallState("#-1 Guests may not modify channels.");
+		}
+		
 		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, channelName, true);
 
 		if (maybeChannel.IsError)
 		{
+			await parser.NotifyService.Notify(executor, maybeChannel.AsError.Value.Message!);
 			return maybeChannel.AsError.Value;
 		}
-		
-		// TODO: PERMISSION CHECK
 
 		var channel = maybeChannel.AsChannel;
+		
+		// TODO: PERMISSION CHECK
 
 		var locate = await parser.LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, newOwner.ToPlainText(),
 			LocateFlags.PlayersPreference

@@ -1,3 +1,4 @@
+using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
@@ -11,14 +12,22 @@ public static class ChannelBuffer
 	{
 		// TODO: How the heck are we going to handle Channel Buffers?
 		// Channel Buffer can likely sit in a temporary file. Only lost on shutdown, not reboot?
-		
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
-		var channel = await parser.Mediator.Send(new GetChannelQuery(channelName.ToPlainText()));
-
-		if (channel is null)
+		if (await executor.IsGuest())
 		{
-			return new CallState("Channel not found.");
+			await parser.NotifyService.Notify(executor, "Guests may not modify channels.");
+			return new CallState("#-1 Guests may not modify channels.");
 		}
+		
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, channelName, true);
+
+		if (maybeChannel.IsError)
+		{
+			await parser.NotifyService.Notify(executor, maybeChannel.AsError.Value.Message!);
+			return maybeChannel.AsError.Value;
+		}
+		
+		var channel = maybeChannel.AsChannel;
 
 		var owner = await channel.Owner.WithCancellation(CancellationToken.None); 
 		
