@@ -29,10 +29,8 @@ public static class ChannelCombine
 		var channel = maybeChannel.AsChannel;
 
 
-		var locate = await parser.LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, playerName.ToPlainText(),
-			LocateFlags.PlayersPreference
-			| LocateFlags.OnlyMatchTypePreference
-			| LocateFlags.MatchOptionalWildCardForPlayerName);
+		var locate =
+			await parser.LocateService.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, playerName.ToPlainText());
 
 		switch (locate)
 		{

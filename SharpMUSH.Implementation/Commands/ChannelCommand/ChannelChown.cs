@@ -32,10 +32,8 @@ public static class ChannelChown
 			return new CallState("You cannot modify this channel.");
 		}
 
-		var locate = await parser.LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, newOwner.ToPlainText(),
-			LocateFlags.PlayersPreference
-			| LocateFlags.OnlyMatchTypePreference
-			| LocateFlags.MatchOptionalWildCardForPlayerName);
+		var locate =
+			await parser.LocateService.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, newOwner.ToPlainText());
 
 		switch (locate)
 		{
