@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using OneOf;
 using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -61,6 +62,14 @@ public static class ChannelHelper
 	private static readonly ReadOnlyDictionary<char, string?> ChannelPrivilegesReverse =
 		new(ChannelPrivileges.ToDictionary(x => x.Value, string? (x) => x.Key));
 
+	public static async ValueTask<bool> IsMemberOfChannel(AnySharpObject member, SharpChannel channel)
+		=> (await channel.Members.WithCancellation(CancellationToken.None))
+			.Any(x => x.Member.Id() == member.Id());
+	
+	public static async ValueTask<(AnySharpObject Member,SharpChannelStatus Status)?> ChannelMemberStatus(AnySharpObject member, SharpChannel channel)
+		=> (await channel.Members.WithCancellation(CancellationToken.None))
+			.FirstOrDefault(x => x.Member.Id() == member.Id());
+	
 	public static PrivilegeOrError StringToChannelPrivileges(MString channelName)
 	{
 		var plainText = channelName.ToPlainText();

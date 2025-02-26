@@ -14,7 +14,6 @@ public static class ChannelHide
 		var player = players.FirstOrDefault();
 		
 		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, channelName, true);
-
 		if (maybeChannel.IsError)
 		{
 			return maybeChannel.AsError.Value;
