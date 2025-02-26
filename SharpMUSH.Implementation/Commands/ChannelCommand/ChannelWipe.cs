@@ -1,6 +1,7 @@
 using SharpMUSH.Library;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
@@ -24,8 +25,7 @@ public static class ChannelWipe
 
 		var channel = maybeChannel.AsChannel;
 
-		var owner = await channel.Owner.WithCancellation(CancellationToken.None);
-		if (!owner.Id!.Equals(executor.Id()))
+		if (await parser.PermissionService.ChannelCanModifyAsync(executor, channel))
 		{
 			return new CallState("You are not the owner of the channel.");
 		}
