@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -9,9 +10,31 @@ public static class ChannelList
 	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString arg0, MString arg1, string[] switches)
 	{
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
-		var caller = (await parser.CurrentState.CallerObject(parser.Mediator)).Known();
 		var channels = await parser.Mediator.Send(new GetChannelListQuery());
-		var channelList = channels.Select(channel => channel.Name);
+
+		var quietSwitch = switches.Contains("QUIET");
+		var onSwitch = switches.Contains("ON");
+		var offSwitch = switches.Contains("OFF");
+
+		// Switches: On, Off, Or Quiet. On/off are exclusive.
+		if (onSwitch && offSwitch)
+		{
+			await parser.NotifyService.Notify(executor, "You can only use one of /on or /off.");
+			return new CallState(Errors.ErrorTooManySwitches);
+		}
+
+		var channelList = await channels
+			.ToAsyncEnumerable()
+			.WhereAwait(async x => await parser.PermissionService.ChannelCanSeeAsync(executor,x))
+			.WhereAwait(async x => !offSwitch || (await x.Members.WithCancellation(CancellationToken.None))
+				.All(m => m.Member.Object().Id != executor.Object().Id))
+			.WhereAwait(async x => !onSwitch || (await x.Members.WithCancellation(CancellationToken.None))
+				.Any(m => m.Member.Object().Id == executor.Object().Id))
+			.Select(channel => quietSwitch 
+				? channel.Name
+				: MModule.concat(MModule.single("Name: "), channel.Name))
+			.ToArrayAsync();
+		
 		return new CallState(MModule.multiple(channelList));
 	}
 }
