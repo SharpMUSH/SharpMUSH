@@ -19,7 +19,6 @@ public static class ChannelWipe
 
 		if (maybeChannel.IsError)
 		{
-			await parser.NotifyService.Notify(executor, maybeChannel.AsError.Value.Message!);
 			return maybeChannel.AsError.Value;
 		}
 

@@ -20,7 +20,6 @@ public static class ChannelMute
 
 		if (maybeChannel.IsError)
 		{
-			await parser.NotifyService.Notify(executor, maybeChannel.AsError.Value.Message!);
 			return maybeChannel.AsError.Value;
 		}
 

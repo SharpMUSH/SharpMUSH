@@ -21,7 +21,6 @@ public static class ChannelPrivs
 
 		if (maybeChannel.IsError)
 		{
-			await parser.NotifyService.Notify(executor, maybeChannel.AsError.Value.Message!);
 			return maybeChannel.AsError.Value;
 		}
 
