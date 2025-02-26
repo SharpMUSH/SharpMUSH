@@ -13,7 +13,7 @@ public static class ChannelDescribe
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
 		if (await executor.IsGuest())
 		{
-			await parser.NotifyService.Notify(executor, "Guests may not modify channels.");
+			await parser.NotifyService.Notify(executor, "CHAT: Guests may not modify channels.");
 			return new CallState("#-1 Guests may not modify channels.");
 		}
 		

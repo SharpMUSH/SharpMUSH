@@ -16,7 +16,7 @@ public static class ChannelAdd
 		var executorOwner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
 		if (await executor.IsGuest())
 		{
-			await parser.NotifyService.Notify(executor, "Guests may not modify channels.");
+			await parser.NotifyService.Notify(executor, "CHAT: Guests may not modify channels.");
 			return new CallState("#-1 Guests may not modify channels.");
 		}
 		
