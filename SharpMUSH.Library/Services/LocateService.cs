@@ -78,6 +78,18 @@ public partial class LocateService : ILocateService
 		return new None();
 	}
 
+	public ValueTask<AnyOptionalSharpObjectOrError> LocatePlayerAndNotifyIfInvalid(IMUSHCodeParser parser, AnySharpObject looker, AnySharpObject executor,
+		string name) =>
+		LocateAndNotifyIfInvalid(parser, looker, executor, name,
+			LocateFlags.PlayersPreference | LocateFlags.OnlyMatchTypePreference | LocateFlags.EnglishStyleMatching |
+			LocateFlags.MatchOptionalWildCardForPlayerName);
+
+	public ValueTask<AnyOptionalSharpObjectOrError> LocatePlayer(IMUSHCodeParser parser, AnySharpObject looker, AnySharpObject executor, string name)
+		=>
+			Locate(parser, looker, executor, name,
+				LocateFlags.PlayersPreference | LocateFlags.OnlyMatchTypePreference | LocateFlags.EnglishStyleMatching |
+				LocateFlags.MatchOptionalWildCardForPlayerName);
+	
 	private static async ValueTask<AnyOptionalSharpObjectOrError> LocateMatch(
 		IMUSHCodeParser parser,
 		AnySharpObject looker,

@@ -13,18 +13,19 @@ public static class ChannelOn
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
 		var targetName = arg1.ToPlainText();
 
-		var maybeTarget = await parser.LocateService.Locate(parser, executor, executor, targetName, LocateFlags.PlayersPreference | LocateFlags.OnlyMatchTypePreference | LocateFlags.MatchOptionalWildCardForPlayerName);
+		var maybeTarget = await parser.LocateService.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, targetName);
 
-		if (maybeTarget.IsError)
+		switch (maybeTarget)
 		{
-			await parser.NotifyService.Notify(executor, maybeTarget.AsError.Value);
-			return new CallState(maybeTarget.AsError.Value);
+			case {IsError: true}: 
+				return new CallState(maybeTarget.AsError.Value);
+			case {IsNone: true}:
+				return new CallState("#-1 PLAYER NOT FOUND");
 		}
 
 		var target = maybeTarget.AsAnyObject;
-		
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, channelName, true);
 
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, channelName, true);
 		if (maybeChannel.IsError)
 		{
 			return maybeChannel.AsError.Value;
