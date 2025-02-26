@@ -32,7 +32,6 @@ public static class ChannelHide
 		{
 			return new CallState("Player is not a member of the channel.");
 		}
-
 		if (status.Hide ?? false)
 		{
 			return new CallState("Player is already hidden.");
