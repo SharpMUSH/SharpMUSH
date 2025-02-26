@@ -21,12 +21,15 @@ public static class ChannelMogrifier
 
 		if (maybeChannel.IsError)
 		{
-			await parser.NotifyService.Notify(executor, maybeChannel.AsError.Value.Message!);
 			return maybeChannel.AsError.Value;
 		}
 
 		var channel = maybeChannel.AsChannel;
 
+		if (await parser.PermissionService.ChannelCanModifyAsync(executor, channel))
+		{
+			return new CallState("You cannot modify this channel.");
+		}
 
 		// TODO: Locate Object
 		var locate = new { };

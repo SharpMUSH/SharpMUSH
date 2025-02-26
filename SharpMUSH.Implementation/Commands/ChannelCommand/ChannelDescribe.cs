@@ -27,6 +27,10 @@ public static class ChannelDescribe
 
 		var channel = maybeChannel.AsChannel;
 
+		if (await parser.PermissionService.ChannelCanModifyAsync(executor, channel))
+		{
+			return new CallState("You cannot modify this channel.");
+		}
 
 		await parser.Mediator.Send(new UpdateChannelCommand(channel,
 			null, 

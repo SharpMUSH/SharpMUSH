@@ -9,12 +9,14 @@ public static class ChannelRecall
 	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString channelName, MString lines, string[] switches)
 	{
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
-		var channel = await parser.Mediator.Send(new GetChannelQuery(channelName.ToPlainText()));
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, channelName, true);
 
-		if (channel is null)
+		if (maybeChannel.IsError)
 		{
-			return new CallState("Channel not found.");
+			return maybeChannel.AsError.Value;
 		}
+
+		var channel = maybeChannel.AsChannel;
 
 		var members = await channel.Members.WithCancellation(CancellationToken.None);
 		var (member,status) = members.FirstOrDefault(x => x.Member.Id() == executor.Id());

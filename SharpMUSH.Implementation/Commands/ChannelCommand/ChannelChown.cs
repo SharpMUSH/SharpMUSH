@@ -22,13 +22,15 @@ public static class ChannelChown
 
 		if (maybeChannel.IsError)
 		{
-			await parser.NotifyService.Notify(executor, maybeChannel.AsError.Value.Message!);
 			return maybeChannel.AsError.Value;
 		}
 
 		var channel = maybeChannel.AsChannel;
 		
-		// TODO: PERMISSION CHECK
+		if (await parser.PermissionService.ChannelCanModifyAsync(executor, channel))
+		{
+			return new CallState("You cannot modify this channel.");
+		}
 
 		var locate = await parser.LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, newOwner.ToPlainText(),
 			LocateFlags.PlayersPreference

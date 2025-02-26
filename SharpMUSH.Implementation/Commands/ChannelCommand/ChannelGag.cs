@@ -6,21 +6,21 @@ namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
 public static class ChannelGag
 {
-	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString arg0, MString arg1, string[] switches)
+	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString channelName, MString arg1, string[] switches)
 	{
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
 		var caller = (await parser.CurrentState.CallerObject(parser.Mediator)).Known();
-		var channelName = arg0.ToPlainText();
-		var channel = await parser.Mediator.Send(new GetChannelQuery(channelName!));
 		var target = arg1.ToPlainText();
 		var targetPlayers = await parser.Mediator.Send(new GetPlayerQuery(target!));
 		var targetPlayer = targetPlayers.FirstOrDefault();
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, channelName, true);
 
-		if (channel is null)
+		if (maybeChannel.IsError)
 		{
-			await parser.NotifyService.Notify(executor, "Channel not found.", caller);
-			return new CallState("Channel not found.");
+			return maybeChannel.AsError.Value;
 		}
+
+		var channel = maybeChannel.AsChannel;
 
 		if (targetPlayer is null)
 		{

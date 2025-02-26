@@ -10,14 +10,17 @@ public static class ChannelHide
 	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString channelName, MString playerName, string[] switches)
 	{
 		// var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
-		var channel = await parser.Mediator.Send(new GetChannelQuery(channelName.ToPlainText()));
 		var players = await parser.Mediator.Send(new GetPlayerQuery(playerName.ToPlainText()));
 		var player = players.FirstOrDefault();
 		
-		if (channel is null)
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, channelName, true);
+
+		if (maybeChannel.IsError)
 		{
-			return new CallState("Channel not found.");
+			return maybeChannel.AsError.Value;
 		}
+
+		var channel = maybeChannel.AsChannel;
 
 		if (player is null)
 		{

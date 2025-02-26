@@ -1,8 +1,6 @@
 using SharpMUSH.Library;
-using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
-using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 

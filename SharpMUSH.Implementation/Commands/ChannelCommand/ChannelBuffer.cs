@@ -23,18 +23,14 @@ public static class ChannelBuffer
 
 		if (maybeChannel.IsError)
 		{
-			await parser.NotifyService.Notify(executor, maybeChannel.AsError.Value.Message!);
 			return maybeChannel.AsError.Value;
 		}
 		
 		var channel = maybeChannel.AsChannel;
 
-		var owner = await channel.Owner.WithCancellation(CancellationToken.None); 
-		
-		// TODO: This should be a controls check?
-		if (!owner.Id!.Equals(executor.Object().Id))
+		if (await parser.PermissionService.ChannelCanModifyAsync(executor, channel))
 		{
-			return new CallState("You are not the owner of the channel.");
+			return new CallState("You cannot modify this channel.");
 		}
 
 		if (!int.TryParse(lines.ToPlainText(), out var linesInt))

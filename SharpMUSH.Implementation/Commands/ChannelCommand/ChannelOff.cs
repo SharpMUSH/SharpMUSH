@@ -7,19 +7,22 @@ namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 public static class ChannelOff
 {
 	// TODO: Turn Off, not On
-	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString arg0, MString arg1, string[] switches)
+	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString channelName, MString arg1, string[] switches)
 	{
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
-		var channelName = arg0.ToPlainText();
 		var targetName = arg1.ToPlainText();
 		// TODO: Use Locate
 		var target = await parser.Mediator.Send(new GetPlayerQuery(targetName));
-		var channel = await parser.Mediator.Send(new GetChannelQuery(channelName));
-		if (channel is null)
+		
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, channelName, true);
+
+		if (maybeChannel.IsError)
 		{
-			await parser.NotifyService.Notify(executor, $"#-1 Channel {channelName} not found.");
-			return new CallState("#-1 Channel not found.");
+			return maybeChannel.AsError.Value;
 		}
+
+		var channel = maybeChannel.AsChannel;
+
 
 		if (!target.Any())
 		{
