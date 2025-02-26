@@ -6,22 +6,29 @@ namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
 public static class ChannelOn
 {
-	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString channelName, MString arg1, string[] switches)
+	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString channelName, MString? arg1,
+		string[] switches)
 	{
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
-		var targetName = arg1.ToPlainText();
+		var target = executor;
 
-		var maybeTarget = await parser.LocateService.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, targetName);
-
-		switch (maybeTarget)
+		if (arg1 is not null)
 		{
-			case {IsError: true}: 
-				return new CallState(maybeTarget.AsError.Value);
-			case {IsNone: true}:
-				return new CallState("#-1 PLAYER NOT FOUND");
-		}
+			var targetName = arg1.ToPlainText();
 
-		var target = maybeTarget.AsAnyObject;
+			var maybeTarget =
+				await parser.LocateService.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, targetName);
+
+			switch (maybeTarget)
+			{
+				case { IsError: true }:
+					return new CallState(maybeTarget.AsError.Value);
+				case { IsNone: true }:
+					return new CallState("#-1 PLAYER NOT FOUND");
+			}
+
+			target = maybeTarget.AsAnyObject;
+		}
 
 		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, channelName, true);
 		if (maybeChannel.IsError)
@@ -34,7 +41,7 @@ public static class ChannelOn
 		// TODO: Announce Channel Join
 		await parser.Mediator.Send(new AddUserToChannelCommand(channel, target));
 
-		await parser.NotifyService.Notify(executor, $"CHAT: {targetName} has been added to {channelName}.");
-		return new CallState($"{targetName} has been added to {channelName}.");
+		await parser.NotifyService.Notify(executor, $"CHAT: {target.Object().Name} has been added to {channelName}.");
+		return new CallState($"{target.Object().Name} has been added to {channelName}.");
 	}
 }
