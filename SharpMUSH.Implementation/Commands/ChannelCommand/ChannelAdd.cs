@@ -10,7 +10,7 @@ namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
 public static class ChannelAdd
 {
-	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString channelName, MString privileges, string[] switches)
+	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString channelName, MString privileges)
 	{
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
 		var executorOwner = await executor.Object().Owner.WithCancellation(CancellationToken.None);

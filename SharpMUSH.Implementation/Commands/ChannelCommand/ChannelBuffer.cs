@@ -8,7 +8,7 @@ namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
 public static class ChannelBuffer
 {
-	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString channelName, MString lines, string[] switches)
+	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString channelName, MString lines)
 	{
 		// TODO: How the heck are we going to handle Channel Buffers?
 		// Channel Buffer can likely sit in a temporary file. Only lost on shutdown, not reboot?

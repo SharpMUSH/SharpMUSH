@@ -8,8 +8,7 @@ namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
 public static class ChannelChown
 {
-	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString channelName, MString newOwner,
-		string[] switches)
+	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString channelName, MString newOwner)
 	{
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
 		if (await executor.IsGuest())

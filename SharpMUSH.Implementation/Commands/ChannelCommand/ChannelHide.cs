@@ -1,5 +1,6 @@
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 
@@ -7,39 +8,49 @@ namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
 public static class ChannelHide
 {
-	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString channelName, MString playerName, string[] switches)
+	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString? channelName, MString? yesNo)
 	{
-		// var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
-		var players = await parser.Mediator.Send(new GetPlayerQuery(playerName.ToPlainText()));
-		var player = players.FirstOrDefault();
-		
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, channelName, true);
-		if (maybeChannel.IsError)
+		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
+		IEnumerable<SharpChannel> channels;
+
+		if (channelName != null)
 		{
-			return maybeChannel.AsError.Value;
+			channels = await parser.Mediator.Send(new GetChannelListQuery());
+		}
+		else
+		{
+			var maybeChannel = await ChannelHelper.GetChannelOrError(parser, channelName!, true);
+			if (maybeChannel.IsError)
+			{
+				return maybeChannel.AsError.Value;
+			}
+
+			channels = [maybeChannel.AsChannel];
 		}
 
-		var channel = maybeChannel.AsChannel;
-
-		if (player is null)
+		foreach (var channel in channels)
 		{
-			return new CallState("Player not found.");
+			var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(executor, channel);
+
+			if (maybeMemberStatus is null)
+			{
+				return new CallState($"CHAT: You are not a member of {channel.Name.ToPlainText()}.");
+			}
+
+			var member = maybeMemberStatus.Value.Member;
+			var status = maybeMemberStatus.Value.Status;
+
+			if (status.Hide ?? false)
+			{
+				return new CallState($"CHAT: You are already hidden on {channel.Name.ToPlainText()}.");
+			}
+
+			await parser.Mediator.Send(new UpdateChannelUserStatusCommand(
+				channel, member, status with { Hide = true }));
+
+			return new CallState($"CHAT: You have been hidden on {channel.Name.ToPlainText()}.");
 		}
 
-		var members = await channel.Members.WithCancellation(CancellationToken.None);
-		var (member,status) = members.FirstOrDefault(x => x.Member.Id() == player.Id);
-		if (member is null)
-		{
-			return new CallState("Player is not a member of the channel.");
-		}
-		if (status.Hide ?? false)
-		{
-			return new CallState("Player is already hidden.");
-		}
-
-		await parser.Mediator.Send(new UpdateChannelUserStatusCommand(
-			channel, member, status with { Hide = true }));
-
-		return new CallState("Player has been hidden.");
+		return new CallState("");
 	}
 }

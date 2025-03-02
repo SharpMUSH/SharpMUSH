@@ -6,8 +6,7 @@ namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
 public static class ChannelOn
 {
-	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString channelName, MString? arg1,
-		string[] switches)
+	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString channelName, MString? arg1)
 	{
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
 		var target = executor;

@@ -8,7 +8,7 @@ namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
 public static class ChannelMogrifier
 {
-	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString channelName, MString objectName, string[] switches)
+	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString channelName, MString objectName)
 	{
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
 		if (await executor.IsGuest())
@@ -16,7 +16,7 @@ public static class ChannelMogrifier
 			await parser.NotifyService.Notify(executor, "CHAT: Guests may not modify channels.");
 			return new CallState("#-1 Guests may not modify channels.");
 		}
-		
+
 		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, channelName, true);
 
 		if (maybeChannel.IsError)
