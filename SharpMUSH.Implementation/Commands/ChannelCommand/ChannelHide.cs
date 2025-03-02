@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -13,6 +14,12 @@ public static class ChannelHide
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		ImmutableArray<SharpChannel> channels;
+
+		if (await executor.IsGuest())
+		{
+			await parser.NotifyService.Notify(executor, "CHAT: Guests may not modify channels.");
+			return new CallState("#-1 Guests may not modify channels.");
+		}
 
 		var yesNoString = yesNo?.ToPlainText();
 		if (yesNoString is not null && !(yesNoString.Equals("yes", StringComparison.InvariantCultureIgnoreCase) ||
@@ -45,19 +52,24 @@ public static class ChannelHide
 
 			if (maybeMemberStatus is null)
 			{
-				return new CallState($"CHAT: You are not a member of {channel.Name.ToPlainText()}.");
+				await parser.NotifyService.Notify(executor, $"CHAT: You are not a member of {channel.Name.ToPlainText()}.");
 			}
 
-			var member = maybeMemberStatus.Value.Member;
-			var status = maybeMemberStatus.Value.Status;
+			var status = maybeMemberStatus?.Status;
 
-			if (status.Hide ?? false == hideOn)
+			if (status?.Hide ?? false == hideOn)
 			{
 				return new CallState($"CHAT: You are already in that hide state on {channel.Name.ToPlainText()}.");
 			}
 
 			await parser.Mediator.Send(new UpdateChannelUserStatusCommand(
-				channel, member, status with { Hide = hideOn }));
+				channel, executor, new SharpChannelStatus(
+					null,
+					null,
+					hideOn,
+					null,
+					null
+				)));
 
 			if (hideOn)
 			{

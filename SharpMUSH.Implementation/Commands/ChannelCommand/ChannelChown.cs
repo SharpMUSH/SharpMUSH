@@ -28,7 +28,7 @@ public static class ChannelChown
 		
 		if (await parser.PermissionService.ChannelCanModifyAsync(executor, channel))
 		{
-			return new CallState("You cannot modify this channel.");
+			return new CallState("#-1 YOU CANNOT MODIFY THIS CHANNEL.");
 		}
 
 		var locate =
