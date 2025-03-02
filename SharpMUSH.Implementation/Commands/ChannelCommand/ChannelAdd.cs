@@ -12,7 +12,7 @@ public static class ChannelAdd
 {
 	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString channelName, MString privileges)
 	{
-		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		var executorOwner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
 		if (await executor.IsGuest())
 		{

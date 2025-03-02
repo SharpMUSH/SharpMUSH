@@ -8,7 +8,7 @@ public static class ChannelRecall
 {
 	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString channelName, MString lines, string[] switches)
 	{
-		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, channelName, true);
 
 		if (maybeChannel.IsError)

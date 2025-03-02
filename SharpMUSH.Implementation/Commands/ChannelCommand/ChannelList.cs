@@ -9,7 +9,7 @@ public static class ChannelList
 {
 	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString arg0, MString arg1, string[] switches)
 	{
-		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		var channels = await parser.Mediator.Send(new GetChannelListQuery());
 
 		var quietSwitch = switches.Contains("QUIET");

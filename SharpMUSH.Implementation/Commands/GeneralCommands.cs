@@ -701,10 +701,14 @@ public static partial class Commands
 			["COMBINE"] => await ChannelCombine.Handle(parser, args["0"].Message!, args["1"].Message!),
 			["TITLE"] => await ChannelTitle.Handle(parser, args["0"].Message!, args["1"].Message!),
 			[.., "RECALL"] => await ChannelRecall.Handle(parser, args["0"].Message!, args["1"].Message!, switches),
-			["ADD"] => await ChannelAdd.Handle(parser, args["0"].Message!, args["1"].Message!),
-			["PRIVS"] => await ChannelPrivs.Handle(parser, args["0"].Message!, args["1"].Message!),
-			["DESCRIBE"] => await ChannelDescribe.Handle(parser, args["0"].Message!, args["1"].Message!),
-			["BUFFER"] => await ChannelBuffer.Handle(parser, args["0"].Message!, args["1"].Message!),
+			["ADD"] when args.ContainsKey("0") && args.ContainsKey("1")
+				=> await ChannelAdd.Handle(parser, args["0"].Message!, args["1"].Message!),
+			["PRIVS"] when args.ContainsKey("0") && args.ContainsKey("1")
+				=> await ChannelPrivs.Handle(parser, args["0"].Message!, args["1"].Message!),
+			["DESCRIBE"] when args.ContainsKey("0") && args.ContainsKey("1")
+				=> await ChannelDescribe.Handle(parser, args["0"].Message!, args["1"].Message!),
+			["BUFFER"] when args.ContainsKey("0") && args.ContainsKey("1")
+				=> await ChannelBuffer.Handle(parser, args["0"].Message!, args["1"].Message!),
 			[.., "DECOMPILE"] => await ChannelDecompile.Handle(parser, args["0"].Message!, args["1"].Message!, switches),
 			["CHOWN"] => await ChannelChown.Handle(parser, args["0"].Message!, args["1"].Message!),
 			["RENAME"] => await ChannelRename.Handle(parser, args["0"].Message!, args["1"].Message!),

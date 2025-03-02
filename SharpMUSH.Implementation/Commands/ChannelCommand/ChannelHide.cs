@@ -11,7 +11,7 @@ public static class ChannelHide
 {
 	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString? channelName, MString? yesNo)
 	{
-		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		ImmutableArray<SharpChannel> channels;
 
 		var yesNoString = yesNo?.ToPlainText();

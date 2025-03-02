@@ -9,7 +9,7 @@ public static class ChannelWipe
 {
 	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString channelName, MString message)
 	{
-		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		if (await executor.IsGuest())
 		{
 			await parser.NotifyService.Notify(executor, "CHAT: Guests may not modify channels.");

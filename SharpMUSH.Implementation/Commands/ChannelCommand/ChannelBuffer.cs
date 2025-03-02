@@ -12,7 +12,8 @@ public static class ChannelBuffer
 	{
 		// TODO: How the heck are we going to handle Channel Buffers?
 		// Channel Buffer can likely sit in a temporary file. Only lost on shutdown, not reboot?
-		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
+		// Can run this purely through Logging - and allows easier access to it.
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		if (await executor.IsGuest())
 		{
 			await parser.NotifyService.Notify(executor, "CHAT: Guests may not modify channels.");

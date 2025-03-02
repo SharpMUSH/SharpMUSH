@@ -8,7 +8,7 @@ public static class ChannelOff
 {
 	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString channelName, MString? arg1)
 	{
-		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		var target = executor;
 
 		if (arg1 is not null)

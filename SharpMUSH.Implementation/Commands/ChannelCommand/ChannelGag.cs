@@ -8,7 +8,7 @@ public static class ChannelGag
 {
 	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString channelName, MString arg1, string[] switches)
 	{
-		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		var caller = (await parser.CurrentState.CallerObject(parser.Mediator)).Known();
 		var target = arg1.ToPlainText();
 		var targetPlayers = await parser.Mediator.Send(new GetPlayerQuery(target!));
