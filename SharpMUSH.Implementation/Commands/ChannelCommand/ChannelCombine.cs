@@ -18,7 +18,7 @@ public static class ChannelCombine
 		{
 			await parser.NotifyService.Notify(executor, "CHAT: Guests may not modify channels.");
 			return new CallState("#-1 Guests may not modify channels.");
-		}
+		} 
 		
 		var yesNoString = yesNo?.ToPlainText();
 		if (yesNoString is not null && !(yesNoString.Equals("yes", StringComparison.InvariantCultureIgnoreCase) ||
