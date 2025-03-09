@@ -10,6 +10,7 @@ using SharpMUSH.Library.Services;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Reflection;
+using Serilog;
 using SharpMUSH.Library.Definitions;
 using static SharpMUSHParser;
 
@@ -64,144 +65,153 @@ public static partial class Commands
 		CommandContext context,
 		Func<IRuleNode, ValueTask<CallState?>> visitChildren)
 	{
-		var firstCommandMatch = context.evaluationString();
-
-		if (firstCommandMatch?.SourceInterval.Length is null or 0)
-			return new None();
-
-		var command = firstCommandMatch.GetText();
-		if (command.Contains(' '))
+		try
 		{
-			command = command[..command.IndexOf(' ')];
-		}
+			var firstCommandMatch = context.evaluationString();
 
-		if (parser.CurrentState.Handle is not null && command != "IDLE")
-		{
-			parser.ConnectionService.Update(parser.CurrentState.Handle, "LastConnectionSignal",
-				DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString());
-		}
+			if (firstCommandMatch?.SourceInterval.Length is null or 0)
+				return new None();
 
-		// Step 1: Check if it's a SOCKET command
-		// TODO: Optimize
-		var socketCommandPattern = _commandLibrary.Where(x
-			=> parser.CurrentState.Handle is not null
-			   && x.Key.Equals(command, StringComparison.CurrentCultureIgnoreCase)
-			   && x.Value.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.SOCKET)).ToList();
-
-		if (socketCommandPattern.Any() &&
-		    _commandLibrary.TryGetValue(command.ToUpper(), out var librarySocketCommandDefinition))
-		{
-			return await HandleSocketCommandPattern(parser, source, context, command, socketCommandPattern,
-				librarySocketCommandDefinition);
-		}
-
-		if (parser.CurrentState.Executor is null && parser.CurrentState.Handle is not null)
-		{
-			await parser.NotifyService.Notify(parser.CurrentState.Handle, "No such command available at login.");
-			return new None();
-		}
-
-		// Step 2: Check for a single-token command
-		// TODO: Optimize
-		var singleTokenCommandPattern = _commandLibrary.Where(x
-			=> x.Key.Equals(command[..1], StringComparison.CurrentCultureIgnoreCase) &&
-			   x.Value.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.SingleToken)).ToList();
-
-		if (singleTokenCommandPattern.Any())
-		{
-			return await HandleSingleTokenCommandPattern(parser, source, context, command, singleTokenCommandPattern);
-		}
-
-		var executorObject = (await parser.CurrentState.ExecutorObject(parser.Mediator)).WithoutNone();
-		// Step 3: Check exit Aliases
-		if (executorObject.IsContent)
-		{
-			var locate = await parser.LocateService.Locate(
-				parser,
-				executorObject,
-				executorObject,
-				command,
-				LocateFlags.ExitsInTheRoomOfLooker 
-				| LocateFlags.EnglishStyleMatching 
-				| LocateFlags.ExitsPreference 
-				| LocateFlags.OnlyMatchTypePreference 
-				| LocateFlags.FailIfNotPreferred);
-
-			if (locate.IsExit)
+			var command = firstCommandMatch.GetText();
+			if (command.Contains(' '))
 			{
-				var exit = locate.AsExit;
-				return await HandleGoCommandPattern(parser, exit);
+				command = command[..command.IndexOf(' ')];
 			}
-		}
 
-		// Step 4: Check if we are setting an attribute: &... -- we're just treating this as a Single Token Command for now.
-		// Who would rely on a room alias being & anyway?
-		// Step 5: Check @COMMAND in command library
+			if (parser.CurrentState.Handle is not null && command != "IDLE")
+			{
+				parser.ConnectionService.Update(parser.CurrentState.Handle, "LastConnectionSignal",
+					DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString());
+			}
 
-		// TODO: Optimize
-		// TODO: Get the Switches and send them along as a list of items!
-		var slashIndex = command.IndexOf('/');
-		var rootCommand =
-			command[..(slashIndex > -1 ? slashIndex : command.Length)];
-		var swtch = command[(slashIndex > -1 ? slashIndex : command.Length)..];
-		var switches = swtch.Split('/').Where(s => !string.IsNullOrWhiteSpace(s));
+			// Step 1: Check if it's a SOCKET command
+			// TODO: Optimize
+			var socketCommandPattern = _commandLibrary.Where(x
+				=> parser.CurrentState.Handle is not null
+				   && x.Key.Equals(command, StringComparison.CurrentCultureIgnoreCase)
+				   && x.Value.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.SOCKET)).ToList();
 
-		if (_commandLibrary.TryGetValue(rootCommand.ToUpper(), out var libraryCommandDefinition)
-		    && !rootCommand.Equals("HUH_COMMAND", StringComparison.CurrentCultureIgnoreCase))
-		{
-			return await HandleInternalCommandPattern(parser, source, context, rootCommand, switches,
-				libraryCommandDefinition);
-		}
+			if (socketCommandPattern.Any() &&
+			    _commandLibrary.TryGetValue(command.ToUpper(), out var librarySocketCommandDefinition))
+			{
+				return await HandleSocketCommandPattern(parser, source, context, command, socketCommandPattern,
+					librarySocketCommandDefinition);
+			}
 
-		// Step 6: Check @attribute setting
-		// Step 7: Enter Aliases
-		// Step 8: Leave Aliases
-		// Step 9: User Defined Commands nearby
-		// -- This is going to be a very important place to Cache the commands.
-		// A caching strategy is going to be reliant on the Attribute Service.
-		// Optimistic that the command still exists, until we try and it no longer does?
-		// What's the best way to retrieve the Regex or Wildcard pattern and transform it? 
-		// It needs to take an area to search in. So this is definitely its own service.
-		var nearbyObjects = await parser.Mediator.Send(new GetNearbyObjectsQuery(executorObject.Object().DBRef));
+			if (parser.CurrentState.Executor is null && parser.CurrentState.Handle is not null)
+			{
+				await parser.NotifyService.Notify(parser.CurrentState.Handle, "No such command available at login.");
+				return new None();
+			}
 
-		var sw = Stopwatch.StartNew();
-		var userDefinedCommandMatches = await parser.CommandDiscoveryService.MatchUserDefinedCommand(
-			parser,
-			nearbyObjects,
-			source);
-		sw.Stop();
+			// Step 2: Check for a single-token command
+			// TODO: Optimize
+			var singleTokenCommandPattern = _commandLibrary.Where(x
+				=> x.Key.Equals(command[..1], StringComparison.CurrentCultureIgnoreCase) &&
+				   x.Value.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.SingleToken)).ToList();
 
-		await parser.NotifyService.Notify(parser.CurrentState.Handle!,
-			$"Time taken: {sw.Elapsed.TotalMilliseconds}ms");
+			if (singleTokenCommandPattern.Any())
+			{
+				return await HandleSingleTokenCommandPattern(parser, source, context, command, singleTokenCommandPattern);
+			}
 
-		if (userDefinedCommandMatches.IsSome())
-		{
-			sw = Stopwatch.StartNew();
-			var res = await HandleUserDefinedCommand(parser, userDefinedCommandMatches.AsValue());
+			var executorObject = (await parser.CurrentState.ExecutorObject(parser.Mediator)).WithoutNone();
+			// Step 3: Check exit Aliases
+			if (executorObject.IsContent)
+			{
+				var locate = await parser.LocateService.Locate(
+					parser,
+					executorObject,
+					executorObject,
+					command,
+					LocateFlags.ExitsInTheRoomOfLooker
+					| LocateFlags.EnglishStyleMatching
+					| LocateFlags.ExitsPreference
+					| LocateFlags.OnlyMatchTypePreference
+					| LocateFlags.FailIfNotPreferred);
+
+				if (locate.IsExit)
+				{
+					var exit = locate.AsExit;
+					return await HandleGoCommandPattern(parser, exit);
+				}
+			}
+
+			// Step 4: Check if we are setting an attribute: &... -- we're just treating this as a Single Token Command for now.
+			// Who would rely on a room alias being & anyway?
+			// Step 5: Check @COMMAND in command library
+
+			// TODO: Optimize
+			// TODO: Get the Switches and send them along as a list of items!
+			var slashIndex = command.IndexOf('/');
+			var rootCommand =
+				command[..(slashIndex > -1 ? slashIndex : command.Length)];
+			var swtch = command[(slashIndex > -1 ? slashIndex : command.Length)..];
+			var switches = swtch.Split('/').Where(s => !string.IsNullOrWhiteSpace(s));
+
+			if (_commandLibrary.TryGetValue(rootCommand.ToUpper(), out var libraryCommandDefinition)
+			    && !rootCommand.Equals("HUH_COMMAND", StringComparison.CurrentCultureIgnoreCase))
+			{
+				return await HandleInternalCommandPattern(parser, source, context, rootCommand, switches,
+					libraryCommandDefinition);
+			}
+
+			// Step 6: Check @attribute setting
+			// Step 7: Enter Aliases
+			// Step 8: Leave Aliases
+			// Step 9: User Defined Commands nearby
+			// -- This is going to be a very important place to Cache the commands.
+			// A caching strategy is going to be reliant on the Attribute Service.
+			// Optimistic that the command still exists, until we try and it no longer does?
+			// What's the best way to retrieve the Regex or Wildcard pattern and transform it? 
+			// It needs to take an area to search in. So this is definitely its own service.
+			var nearbyObjects = await parser.Mediator.Send(new GetNearbyObjectsQuery(executorObject.Object().DBRef));
+
+			var sw = Stopwatch.StartNew();
+			var userDefinedCommandMatches = await parser.CommandDiscoveryService.MatchUserDefinedCommand(
+				parser,
+				nearbyObjects,
+				source);
+			sw.Stop();
+
 			await parser.NotifyService.Notify(parser.CurrentState.Handle!,
 				$"Time taken: {sw.Elapsed.TotalMilliseconds}ms");
-			return res;
+
+			if (userDefinedCommandMatches.IsSome())
+			{
+				sw = Stopwatch.StartNew();
+				var res = await HandleUserDefinedCommand(parser, userDefinedCommandMatches.AsValue());
+				await parser.NotifyService.Notify(parser.CurrentState.Handle!,
+					$"Time taken: {sw.Elapsed.TotalMilliseconds}ms");
+				return res;
+			}
+
+
+			// Step 10: Zone Exit Name and Aliases
+			// Step 11: Zone Master User Defined Commands
+			// Step 12: User Defined commands on the location itself.
+			// Step 13: User defined commands on the player's personal zone.
+			// Step 14: Global Exits
+			// Step 15: Global User-defined commands
+			// Step 16: HUH_COMMAND is run
+
+			var newParser = parser.Push(parser.CurrentState with
+			{
+				Command = "HUH_COMMAND",
+				Arguments = [],
+				Function = null
+			});
+
+			var huhCommand = await _commandLibrary["HUH_COMMAND"].Function.Invoke(newParser);
+
+			return huhCommand;
 		}
-
-
-		// Step 10: Zone Exit Name and Aliases
-		// Step 11: Zone Master User Defined Commands
-		// Step 12: User Defined commands on the location itself.
-		// Step 13: User defined commands on the player's personal zone.
-		// Step 14: Global Exits
-		// Step 15: Global User-defined commands
-		// Step 16: HUH_COMMAND is run
-
-		var newParser = parser.Push(parser.CurrentState with
+		catch (Exception ex)
 		{
-			Command = "HUH_COMMAND",
-			Arguments = [],
-			Function = null
-		});
-
-		var huhCommand = await _commandLibrary["HUH_COMMAND"].Function.Invoke(newParser);
-
-		return huhCommand;
+			Log.Logger.Fatal(ex, "Error in EvaluateCommands");
+			await parser.NotifyService.Notify(parser.CurrentState.Handle!, "FATAL SharpMUSH error in EvaluateCommands");
+			return new CallState("FATAL SharpMUSH error in EvaluateCommands");
+		}
 	}
 
 	private static async Task<Option<CallState>> HandleUserDefinedCommand(
