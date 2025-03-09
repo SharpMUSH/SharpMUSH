@@ -1,9 +1,11 @@
 ﻿using Core.Arango;
 using Core.Arango.Serialization.Newtonsoft;
+using Core.Arango.Serilog;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Hosting;
 using Serilog;
+using Serilog.Sinks.PeriodicBatching;
 using Serilog.Sinks.SystemConsole.Themes;
 using SharpMUSH.Server.ProtocolHandlers;
 using Testcontainers.ArangoDb;
@@ -14,7 +16,7 @@ public class Program
 {
 	public static async Task Main()
 	{
-		new LoggerConfiguration()
+		Log.Logger = new LoggerConfiguration()
 			.Enrich.FromLogContext()
 			.WriteTo.Console(theme: AnsiConsoleTheme.Code)
 			.MinimumLevel.Debug()
@@ -36,8 +38,24 @@ public class Program
 			Serializer = new ArangoNewtonsoftSerializer(new ArangoNewtonsoftDefaultContractResolver())
 		};
 
+		Log.Logger = new LoggerConfiguration()
+			.Enrich.FromLogContext()
+			.WriteTo.Console(theme: AnsiConsoleTheme.Code)
+			.WriteTo.Sink(new PeriodicBatchingSink(
+				new ArangoSerilogSink(new ArangoContext(config), "logs", "logs"),
+				new()
+				{
+					BatchSizeLimit = 1000,
+					QueueLimit = 100000,
+					Period = TimeSpan.FromSeconds(2),
+					EagerlyEmitFirstEvent = true,
+				}
+			))
+			.MinimumLevel.Debug()
+			.CreateLogger();
+
 		var configFile = Path.Combine(AppContext.BaseDirectory, "mushcnf.dst");
-		
+
 		if (!File.Exists(configFile))
 		{
 			throw new FileNotFoundException($"Configuration file not found: {configFile}");

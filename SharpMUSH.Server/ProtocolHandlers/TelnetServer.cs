@@ -18,7 +18,8 @@ public class TelnetServer : ConnectionHandler
 	private readonly IPublisher _publisher;
 	private readonly MSSPConfig _msspConfig = new() { Name = "SharpMUSH", UTF_8 = true };
 
-	public TelnetServer(ILogger<TelnetServer> logger, ISharpDatabase database, IConnectionService connectionService, IPublisher publisher)
+	public TelnetServer(ILogger<TelnetServer> logger, ISharpDatabase database, IConnectionService connectionService,
+		IPublisher publisher)
 	{
 		Console.OutputEncoding = Encoding.UTF8;
 		_logger = logger;
@@ -28,6 +29,7 @@ public class TelnetServer : ConnectionHandler
 		// TODO: This does not belong here. A 'main thread' is needed to migrate this, before allowing telnet connections.
 		_logger.LogInformation("Starting Database");
 		database.Migrate().AsTask().Wait();
+		(database as ISharpDatabaseWithLogging)?.SetupLogging().AsTask().Wait();
 	}
 
 	public override async Task OnConnectedAsync(ConnectionContext connection)
@@ -38,28 +40,37 @@ public class TelnetServer : ConnectionHandler
 				new UpdateMSDPRequest(connection.ConnectionId, resetVar), ct)));
 
 		var telnet = await new TelnetInterpreter(TelnetInterpreter.TelnetMode.Server, _logger)
-		{
-			CallbackOnSubmitAsync = async (byteArray, encoding, _)
-				=> await _publisher.Publish(
-					new TelnetInputRequest(connection.ConnectionId, encoding.GetString(byteArray)), ct),
-			SignalOnGMCPAsync = async moduleAndInfo
-				=> await _publisher.Publish(
-					new SignalGMCPRequest(connection.ConnectionId, moduleAndInfo.Package, moduleAndInfo.Info), ct),
-			SignalOnMSSPAsync = async msspConfig
-				=> await _publisher.Publish(
-					new UpdateMSSPRequest(connection.ConnectionId, msspConfig), ct),
-			SignalOnNAWSAsync = async (newHeight, newWidth)
-				=> await _publisher.Publish(
-					new UpdateNAWSRequest(connection.ConnectionId, newHeight, newWidth), ct),
-			SignalOnMSDPAsync = MSDPHandler.HandleAsync,
-			CallbackNegotiationAsync = async byteArray =>
 			{
-				try { await connection.Transport.Output.WriteAsync(byteArray, ct); }
-				catch (ObjectDisposedException ode) { _logger.LogError(ode, "{ConnectionId} Stream has been closed", connection.ConnectionId); }
-				catch (Exception ex) { _logger.LogError(ex, "{ConnectionId} Unexpected Exception occurred", connection.ConnectionId); }
-			},
-			CharsetOrder = [Encoding.GetEncoding("utf-8"), Encoding.GetEncoding("iso-8859-1")]
-		}
+				CallbackOnSubmitAsync = async (byteArray, encoding, _)
+					=> await _publisher.Publish(
+						new TelnetInputRequest(connection.ConnectionId, encoding.GetString(byteArray)), ct),
+				SignalOnGMCPAsync = async moduleAndInfo
+					=> await _publisher.Publish(
+						new SignalGMCPRequest(connection.ConnectionId, moduleAndInfo.Package, moduleAndInfo.Info), ct),
+				SignalOnMSSPAsync = async msspConfig
+					=> await _publisher.Publish(
+						new UpdateMSSPRequest(connection.ConnectionId, msspConfig), ct),
+				SignalOnNAWSAsync = async (newHeight, newWidth)
+					=> await _publisher.Publish(
+						new UpdateNAWSRequest(connection.ConnectionId, newHeight, newWidth), ct),
+				SignalOnMSDPAsync = MSDPHandler.HandleAsync,
+				CallbackNegotiationAsync = async byteArray =>
+				{
+					try
+					{
+						await connection.Transport.Output.WriteAsync(byteArray, ct);
+					}
+					catch (ObjectDisposedException ode)
+					{
+						_logger.LogError(ode, "{ConnectionId} Stream has been closed", connection.ConnectionId);
+					}
+					catch (Exception ex)
+					{
+						_logger.LogError(ex, "{ConnectionId} Unexpected Exception occurred", connection.ConnectionId);
+					}
+				},
+				CharsetOrder = [Encoding.GetEncoding("utf-8"), Encoding.GetEncoding("iso-8859-1")]
+			}
 			.RegisterMSSPConfig(() => _msspConfig)
 			.BuildAsync();
 
@@ -81,8 +92,14 @@ public class TelnetServer : ConnectionHandler
 				connection.Transport.Input.AdvanceTo(result.Buffer.End);
 			}
 		}
-		catch (ConnectionResetException) { /* Disconnected while evaluating. That's fine. It just means someone closed their client. */ }
-		catch (Exception) { _logger.LogDebug("Connection {ConnectionId} disconnected unexpectedly.", connection.ConnectionId); }
+		catch (ConnectionResetException)
+		{
+			/* Disconnected while evaluating. That's fine. It just means someone closed their client. */
+		}
+		catch (Exception)
+		{
+			_logger.LogDebug("Connection {ConnectionId} disconnected unexpectedly.", connection.ConnectionId);
+		}
 
 		_connectionService.Disconnect(connection.ConnectionId);
 	}

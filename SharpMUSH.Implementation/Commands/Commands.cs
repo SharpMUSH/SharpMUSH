@@ -81,19 +81,19 @@ public static partial class Commands
 				DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString());
 		}
 
-		// Step 1: Check if it's a SOCKET command
-		// TODO: Optimize
-		var socketCommandPattern = CommandLibrary.Where(x
-			=> parser.CurrentState.Handle is not null
-			   && x.Key.Equals(command, StringComparison.CurrentCultureIgnoreCase)
-			   && x.Value.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.SOCKET)).ToList();
+			// Step 1: Check if it's a SOCKET command
+			// TODO: Optimize
+			var socketCommandPattern = CommandLibrary.Where(x
+				=> parser.CurrentState.Handle is not null
+				   && x.Key.Equals(command, StringComparison.CurrentCultureIgnoreCase)
+				   && x.Value.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.SOCKET)).ToList();
 
-		if (socketCommandPattern.Any() &&
-		    CommandLibrary.TryGetValue(command.ToUpper(), out var librarySocketCommandDefinition))
-		{
-			return await HandleSocketCommandPattern(parser, source, context, command, socketCommandPattern,
-				librarySocketCommandDefinition);
-		}
+			if (socketCommandPattern.Any() &&
+			    CommandLibrary.TryGetValue(command.ToUpper(), out var librarySocketCommandDefinition))
+			{
+				return await HandleSocketCommandPattern(parser, source, context, command, socketCommandPattern,
+					librarySocketCommandDefinition);
+			}
 
 		if (parser.CurrentState.Executor is null && parser.CurrentState.Handle is not null)
 		{
@@ -101,7 +101,7 @@ public static partial class Commands
 			return new None();
 		}
 
-		// Step2a: Check for the channel single-token command.
+			// Step2a: Check for the channel single-token command.
 
 		if (command[..1] == "+")
 		{
@@ -118,30 +118,30 @@ public static partial class Commands
 		}
 
 		// Step 2b: Check for a single-token command
-		// TODO: Optimize
-		var singleTokenCommandPattern = CommandLibrary.Where(x
-			=> x.Key.Equals(command[..1], StringComparison.CurrentCultureIgnoreCase) &&
-			   x.Value.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.SingleToken)).ToList();
+			// TODO: Optimize
+			var singleTokenCommandPattern = CommandLibrary.Where(x
+				=> x.Key.Equals(command[..1], StringComparison.CurrentCultureIgnoreCase) &&
+				   x.Value.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.SingleToken)).ToList();
 
-		if (singleTokenCommandPattern.Count != 0)
-		{
-			return await HandleSingleTokenCommandPattern(parser, source, context, command, singleTokenCommandPattern);
-		}
+			if (singleTokenCommandPattern.Count != 0)
+			{
+				return await HandleSingleTokenCommandPattern(parser, source, context, command, singleTokenCommandPattern);
+			}
 
-		var executorObject = (await parser.CurrentState.ExecutorObject(parser.Mediator)).WithoutNone();
-		// Step 3: Check exit Aliases
-		if (executorObject.IsContent)
-		{
-			var locate = await parser.LocateService.Locate(
-				parser,
-				executorObject,
-				executorObject,
-				command,
-				LocateFlags.ExitsInTheRoomOfLooker
-				| LocateFlags.EnglishStyleMatching
-				| LocateFlags.ExitsPreference
-				| LocateFlags.OnlyMatchTypePreference
-				| LocateFlags.FailIfNotPreferred);
+			var executorObject = (await parser.CurrentState.ExecutorObject(parser.Mediator)).WithoutNone();
+			// Step 3: Check exit Aliases
+			if (executorObject.IsContent)
+			{
+				var locate = await parser.LocateService.Locate(
+					parser,
+					executorObject,
+					executorObject,
+					command,
+					LocateFlags.ExitsInTheRoomOfLooker
+					| LocateFlags.EnglishStyleMatching
+					| LocateFlags.ExitsPreference
+					| LocateFlags.OnlyMatchTypePreference
+					| LocateFlags.FailIfNotPreferred);
 
 			if (locate.IsExit)
 			{
@@ -162,12 +162,12 @@ public static partial class Commands
 		var swtch = command[(slashIndex > -1 ? slashIndex : command.Length)..];
 		var switches = swtch.Split('/').Where(s => !string.IsNullOrWhiteSpace(s));
 
-		if (CommandLibrary.TryGetValue(rootCommand.ToUpper(), out var libraryCommandDefinition)
-		    && !rootCommand.Equals("HUH_COMMAND", StringComparison.CurrentCultureIgnoreCase))
-		{
-			return await HandleInternalCommandPattern(parser, source, context, rootCommand, switches,
-				libraryCommandDefinition);
-		}
+			if (CommandLibrary.TryGetValue(rootCommand.ToUpper(), out var libraryCommandDefinition)
+			    && !rootCommand.Equals("HUH_COMMAND", StringComparison.CurrentCultureIgnoreCase))
+			{
+				return await HandleInternalCommandPattern(parser, source, context, rootCommand, switches,
+					libraryCommandDefinition);
+			}
 
 		// Step 6: Check @attribute setting
 		// Step 7: Enter Aliases
@@ -214,7 +214,7 @@ public static partial class Commands
 			Function = null
 		});
 
-		var huhCommand = await CommandLibrary["HUH_COMMAND"].Function.Invoke(newParser);
+			var huhCommand = await CommandLibrary["HUH_COMMAND"].Function.Invoke(newParser);
 
 		return huhCommand;
 	}
