@@ -16,13 +16,12 @@ public class Program
 {
 	public static async Task Main()
 	{
-		
 		Log.Logger = new LoggerConfiguration()
 			.Enrich.FromLogContext()
 			.WriteTo.Console(theme: AnsiConsoleTheme.Code)
 			.MinimumLevel.Debug()
 			.CreateLogger();
-		
+
 		var container = new ArangoDbBuilder()
 			// .WithReuse(true)
 			.WithLabel("reuse-id", "SharpMUSH")
@@ -43,13 +42,13 @@ public class Program
 			.Enrich.FromLogContext()
 			.WriteTo.Console(theme: AnsiConsoleTheme.Code)
 			.WriteTo.Sink(new PeriodicBatchingSink(
-				new ArangoSerilogSink(new ArangoContext(config)),
+				new ArangoSerilogSink(new ArangoContext(config), "logs", "logs"),
 				new()
 				{
 					BatchSizeLimit = 1000,
 					QueueLimit = 100000,
 					Period = TimeSpan.FromSeconds(2),
-					EagerlyEmitFirstEvent = true
+					EagerlyEmitFirstEvent = true,
 				}
 			))
 			.MinimumLevel.Debug()

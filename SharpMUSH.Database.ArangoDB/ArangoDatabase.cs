@@ -28,7 +28,7 @@ public class ArangoDatabase(
 	ArangoHandle handle,
 	IMediator mediator,
 	IPasswordService passwordService // TODO: This doesn't belong in the database layer
-) : ISharpDatabase
+) : ISharpDatabase, ISharpDatabaseWithLogging
 {
 	public async ValueTask Migrate()
 	{
@@ -1208,5 +1208,21 @@ public class ArangoDatabase(
 	ValueTask<bool> ISharpDatabase.UnsetAttributeFlagAsync(SharpAttribute attr, SharpAttributeFlag flag)
 	{
 		throw new NotImplementedException();
+	}
+
+	public async ValueTask SetupLogging()
+	{
+		await arangoDb.Index.CreateAsync("logs", "logs", new ArangoIndex()
+		{
+			Name = "Level",
+			Fields = ["Level"],
+			Type = ArangoIndexType.Persistent
+		});
+		await arangoDb.Index.CreateAsync("logs", "logs", new ArangoIndex()
+		{
+			Name = "Timestamp",
+			Fields = ["Timestamp"],
+			Type = ArangoIndexType.Persistent
+		});
 	}
 }
