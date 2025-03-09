@@ -49,6 +49,18 @@ public interface ILocateService
 		AnySharpObject executor,
 		string name,
 		LocateFlags flags);
+	
+	public ValueTask<AnyOptionalSharpObjectOrError> LocatePlayerAndNotifyIfInvalid(
+		IMUSHCodeParser parser,
+		AnySharpObject looker,
+		AnySharpObject executor,
+		string name);
+
+	public ValueTask<AnyOptionalSharpObjectOrError> LocatePlayer(
+		IMUSHCodeParser parser,
+		AnySharpObject looker,
+		AnySharpObject executor,
+		string name);
 
 	public ValueTask<AnySharpContainer> Room(AnySharpObject content);
 }

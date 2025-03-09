@@ -78,6 +78,9 @@ public static partial class HelperFunctions
 	public static async ValueTask<bool> CanDark(this AnySharpObject obj)
 		=> await obj.HasPower("Can_Dark") || await obj.IsWizard();
 
+	public static async ValueTask<bool> CanHide(this AnySharpObject obj)
+		=> await obj.HasPower("Hide") || await obj.IsPriv();
+		
 	public static async ValueTask<DBRef?> Ancestor(this AnySharpObject obj, IMUSHCodeParser parser)
 		=> await obj.IsOrphan()
 			? null

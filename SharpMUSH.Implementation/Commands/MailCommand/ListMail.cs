@@ -42,13 +42,12 @@ public static class ListMail
 				MModule.PadType.Center,
 				MModule.TruncationType.Truncate);
 
-			var folderTask = folder.Select(async (mail, i) => await DisplayMailLine(mail, i));
-			var completedFolderTask = await Task.WhenAll(folderTask);
+			var folderTasks = await folder.ToAsyncEnumerable().SelectAwait(DisplayMailLine).ToArrayAsync();
 			
 			MString[] builder =
 			[
 				center,
-				.. completedFolderTask,
+				.. folderTasks,
 				line
 			];
 			await parser.NotifyService.Notify(executor, MModule.multipleWithDelimiter(MModule.single("\n"), builder));

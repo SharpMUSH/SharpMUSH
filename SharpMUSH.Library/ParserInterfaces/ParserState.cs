@@ -6,6 +6,7 @@ using SharpMUSH.Library.Queries.Database;
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Collections.Specialized;
+using SharpMUSH.Library.Extensions;
 
 namespace SharpMUSH.Library.ParserInterfaces;
 
@@ -50,6 +51,15 @@ public record ParserState(
 
 	public async ValueTask<AnyOptionalSharpObject> CallerObject(IMediator mediator)
 		=> _callerObject ??= Caller is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Caller.Value));
+
+	public async ValueTask<AnySharpObject> KnownExecutorObject(IMediator mediator)
+		=> (await ExecutorObject(mediator)).Known();
+
+	public async ValueTask<AnySharpObject> KnownEnactorObject(IMediator mediator)
+		=> (await EnactorObject(mediator)).Known();
+
+	public async ValueTask<AnySharpObject> KnownCallerObject(IMediator mediator)
+		=> (await CallerObject(mediator)).Known();
 
 	public ImmutableSortedDictionary<string, CallState> ArgumentsOrdered => Arguments
 		.Where(x => int.TryParse(x.Key, out _))
