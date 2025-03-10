@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="DotNext" Version="5.18.0" />
+    <PackageReference Include="DotNext" Version="5.19.1" />
     <PackageReference Include="DotNext.Threading" Version="5.18.1" />
     <PackageReference Include="Mediator.Abstractions" Version="2.1.7" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.2" />
