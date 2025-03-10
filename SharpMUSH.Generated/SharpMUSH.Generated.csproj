@@ -19,7 +19,7 @@
 	
   <ItemGroup>
     <PackageReference Include="Antlr4.Runtime.Standard" Version="4.13.1" />
-		<PackageReference Include="Antlr4BuildTasks" Version="12.9.0" PrivateAssets="all" IncludeAssets="build" />
+		<PackageReference Include="Antlr4BuildTasks" Version="12.10.0" PrivateAssets="all" IncludeAssets="build" />
 		<Antlr4 Include="SharpMUSHLexer.g4" />
 		<Antlr4 Include="SharpMUSHBoolExpLexer.g4" />
 		<Antlr4 Include="SharpMUSHParser.g4" />
