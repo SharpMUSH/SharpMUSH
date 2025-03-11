@@ -59,7 +59,8 @@ public static class ChannelHide
 
 			if (status?.Hide ?? false == hideOn)
 			{
-				return new CallState($"CHAT: You are already in that hide state on {channel.Name.ToPlainText()}.");
+			    await parser.NotifyService.Notify(executor, $"CHAT: You are already in that hide state on {channel.Name.ToPlainText()}.");
+			    continue;
 			}
 
 			await parser.Mediator.Send(new UpdateChannelUserStatusCommand(
