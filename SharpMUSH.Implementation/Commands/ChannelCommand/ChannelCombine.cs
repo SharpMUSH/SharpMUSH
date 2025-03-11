@@ -28,13 +28,13 @@ public static class ChannelCombine
 			return new CallState("#-1 INVALID OPTION");
 		}
 		
-		if (channelName != null)
+		if (channelName == null)
 		{
 			channels = [..await parser.Mediator.Send(new GetChannelListQuery())];
 		}
 		else
 		{
-			var maybeChannel = await ChannelHelper.GetChannelOrError(parser, channelName!, true);
+			var maybeChannel = await ChannelHelper.GetChannelOrError(parser, channelName, true);
 			if (maybeChannel.IsError)
 			{
 				return maybeChannel.AsError.Value;
