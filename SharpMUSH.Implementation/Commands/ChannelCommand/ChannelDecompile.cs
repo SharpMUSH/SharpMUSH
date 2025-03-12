@@ -30,7 +30,7 @@ public static class ChannelDecompile
 			return new CallState("You cannot modify this channel.");
 		}
 		
-		await parser.NotifyService.Notify(executor, string.Empty, executor);
+		await parser.NotifyService.Notify(executor, "NOT YET IMPLEMENTED", executor);
 
 		return new CallState(string.Empty);
 	}
