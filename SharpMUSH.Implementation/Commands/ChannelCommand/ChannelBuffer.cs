@@ -1,8 +1,6 @@
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
-using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
@@ -10,9 +8,6 @@ public static class ChannelBuffer
 {
 	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString channelName, MString lines)
 	{
-		// TODO: How the heck are we going to handle Channel Buffers?
-		// Channel Buffer can likely sit in a temporary file. Only lost on shutdown, not reboot?
-		// Can run this purely through Logging - and allows easier access to it.
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		if (await executor.IsGuest())
 		{

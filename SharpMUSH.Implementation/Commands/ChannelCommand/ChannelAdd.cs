@@ -27,7 +27,7 @@ public static class ChannelAdd
 			return new CallState("#-1 Channel already exists.");
 		}
 
-		if (!ChannelHelper.IsValidChannelName(channelName))
+		if (!ChannelHelper.IsValidChannelName(parser, channelName))
 		{
 			await parser.NotifyService.Notify(executor, "Invalid channel name.");
 			return new CallState("#-1 Invalid channel name.");

@@ -95,12 +95,11 @@ public static class ChannelHelper
 		return new PrivilegeOrError(validatedList!);
 	}
 
-	public static bool IsValidChannelName(MString channelName)
+	public static bool IsValidChannelName(IMUSHCodeParser parser, MString channelName)
 	{
 		var plainText = channelName.ToPlainText();
-		return !plainText.Contains(' ');
-		// TODO: Channel Name Length Check
-		// TODO: We don't do a 'Printable' check here, because we want to support multiple languages.
+		return parser.Configuration.CurrentValue.Chat.ChannelTitleLength < plainText.Length && 
+		       !plainText.Contains(' ');
 	}
 
 	public static async ValueTask<ChannelOrError> GetChannelOrError(
