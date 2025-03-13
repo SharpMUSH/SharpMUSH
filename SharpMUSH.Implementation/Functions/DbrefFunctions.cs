@@ -392,21 +392,30 @@ public partial class Functions
 	[SharpFunction(Name = "LCON", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> lcon(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var dbRefConversion = HelperFunctions.ParseDBRef(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
-		if (dbRefConversion.IsNone())
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var maybeLocate = await parser.LocateService.LocateAndNotifyIfInvalid(parser,
+			executor,
+			executor,
+			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
+			LocateFlags.All);
+
+		switch (maybeLocate)
 		{
-			await parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, "I can't see that here.");
-			return new CallState("#-1");
+			case { IsError: true }:
+				return new CallState(maybeLocate.AsError.Value);
+			case { IsNone: true }:
+				return new CallState(Errors.ErrorNotVisible);
 		}
 
-		var contents = await parser.Mediator.Send(new GetContentsQuery(dbRefConversion.AsValue()));
-		if (contents is null)
+		var locate = maybeLocate.AsAnyObject;
+		if (!locate.IsContainer)
 		{
-			await parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, "I can't see that here.");
-			return new CallState("#-1");
+			return new CallState("#-1 EXITS CANNOT CONTAIN THINGS");
 		}
 
-		return new CallState(string.Join(" ", contents!.Select(x => x.Object()!.DBRef.ToString())));
+		var contents = await locate.AsContainer.Content(parser);
+
+		return new CallState(string.Join(" ", contents.Select(x => x.Object().DBRef.ToString())));
 	}
 
 	[SharpFunction(Name = "LEXITS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
