@@ -174,6 +174,7 @@ public static partial class Commands
 		// Step 6: Check @attribute setting
 		// Step 7: Enter Aliases
 		// Step 8: Leave Aliases
+
 		// Step 9: User Defined Commands nearby
 		// -- This is going to be a very important place to Cache the commands.
 		// A caching strategy is going to be reliant on the Attribute Service.
@@ -182,33 +183,52 @@ public static partial class Commands
 		// It needs to take an area to search in. So this is definitely its own service.
 		var nearbyObjects = await parser.Mediator.Send(new GetNearbyObjectsQuery(executorObject.Object().DBRef));
 
-		var sw = Stopwatch.StartNew();
 		var userDefinedCommandMatches = await parser.CommandDiscoveryService.MatchUserDefinedCommand(
 			parser,
 			nearbyObjects,
 			source);
-		sw.Stop();
-
-		await parser.NotifyService.Notify(parser.CurrentState.Handle!,
-			$"Time taken: {sw.Elapsed.TotalMilliseconds}ms");
 
 		if (userDefinedCommandMatches.IsSome())
 		{
-			sw = Stopwatch.StartNew();
-			var res = await HandleUserDefinedCommand(parser, userDefinedCommandMatches.AsValue());
-			await parser.NotifyService.Notify(parser.CurrentState.Handle!,
-				$"Time taken: {sw.Elapsed.TotalMilliseconds}ms");
-			return res;
+			return await HandleUserDefinedCommand(parser, userDefinedCommandMatches.AsValue());
 		}
 
 		// Step 10: Zone Exit Name and Aliases
 		// Step 11: Zone Master User Defined Commands
 		// Step 12: User Defined commands on the location itself.
+		if (executorObject.IsContent)
+		{
+			var userDefinedCommandMatchesOnLocation = await parser.CommandDiscoveryService.MatchUserDefinedCommand(
+				parser,
+				[(await executorObject.AsContent.Location()).WithExitOption()],
+				source);
+
+			if (userDefinedCommandMatchesOnLocation.IsSome())
+			{
+				return await HandleUserDefinedCommand(parser, userDefinedCommandMatchesOnLocation.AsValue());
+			}
+		}
+
 		// Step 13: User defined commands on the player's personal zone.
 		// Step 14: Global Exits
 		// Step 15: Global User-defined commands
-		// Step 16: HUH_COMMAND is run
+		var goConfig = parser.Configuration.CurrentValue.Database.MasterRoom;
+		var maybeGlobalObject = await parser.Mediator.Send(new GetObjectNodeQuery(new DBRef(Convert.ToInt32(goConfig))));
+		var globalObject = maybeGlobalObject.Known();
+		var globalObjectContent = (await globalObject.AsContainer.Content(parser))
+			.Select(x => x.WithRoomOption());
 
+		var userDefinedCommandMatchesOnGlobal = await parser.CommandDiscoveryService.MatchUserDefinedCommand(
+			parser,
+			[globalObject, .. globalObjectContent],
+			source);
+
+		if (userDefinedCommandMatchesOnGlobal.IsSome())
+		{
+			return await HandleUserDefinedCommand(parser, userDefinedCommandMatchesOnGlobal.AsValue());
+		}
+
+		// Step 16: HUH_COMMAND is run
 		var newParser = parser.Push(parser.CurrentState with
 		{
 			Command = "HUH_COMMAND",

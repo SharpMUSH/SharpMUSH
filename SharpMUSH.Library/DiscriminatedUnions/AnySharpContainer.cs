@@ -1,12 +1,17 @@
 ﻿using OneOf;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Library.DiscriminatedUnions;
 
 [GenerateOneOf]
 public class AnySharpContainer : OneOfBase<SharpPlayer, SharpRoom, SharpThing>
 {
-	public AnySharpContainer(OneOf<SharpPlayer, SharpRoom, SharpThing> input) : base(input) { }
+	public AnySharpContainer(OneOf<SharpPlayer, SharpRoom, SharpThing> input) : base(input)
+	{
+	}
+
 	public static implicit operator AnySharpContainer(SharpPlayer x) => new(x);
 	public static implicit operator AnySharpContainer(SharpRoom x) => new(x);
 	public static implicit operator AnySharpContainer(SharpThing x) => new(x);
@@ -37,6 +42,9 @@ public class AnySharpContainer : OneOfBase<SharpPlayer, SharpRoom, SharpThing>
 		async room => await ValueTask.FromResult(room),
 		async thing => await thing.Location.WithCancellation(CancellationToken.None)
 	);
+
+	public async ValueTask<IEnumerable<AnySharpContent>> Content(IMUSHCodeParser parser) =>
+		await parser.Mediator.Send(new GetContentsQuery(this)) ?? [];
 
 	public bool IsPlayer => IsT0;
 	public bool IsRoom => IsT1;
