@@ -522,7 +522,9 @@ public class ArangoDatabase(
 			ModLock = x.ModLock,
 			Owner = new AsyncLazy<SharpPlayer>(async _ => await GetChannelOwnerAsync(x.Id)),
 			Members = new AsyncLazy<IEnumerable<(AnySharpObject, SharpChannelStatus)>>(async _ =>
-				await GetChannelMembersAsync(x.Id))
+				await GetChannelMembersAsync(x.Id)),
+			Mogrifier = x.Mogrifier,
+			Buffer = x.Buffer
 		};
 	}
 

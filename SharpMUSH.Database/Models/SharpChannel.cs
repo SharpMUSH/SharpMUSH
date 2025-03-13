@@ -11,6 +11,7 @@ public record SharpChannelQueryResult(
 	string SeeLock,
 	string HideLock,
 	string ModLock,
+	string Mogrifier,
 	int Buffer
 );
 
