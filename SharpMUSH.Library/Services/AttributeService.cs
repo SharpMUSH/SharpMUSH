@@ -136,14 +136,15 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		}
 
 		var returnedFlag =
-			(await mediator.Send(new GetAttributeFlagsQuery())).Where(x => x.Name == flag || x.Symbol == flag);
-		if (!returnedFlag.Any())
+			(await mediator.Send(new GetAttributeFlagsQuery())).Where(x => x.Name == flag || x.Symbol == flag).ToArray();
+		
+		if (returnedFlag.Length == 0)
 		{
 			return new Error<string>("Flag Found");
 		}
 
 		// TODO: What if it's already set?
-		await mediator.Send(new SetAttributeFlagCommand(returnedAttribute.AsAttribute, returnedFlag.First()));
+		await mediator.Send(new SetAttributeFlagCommand(obj.Object().DBRef, returnedAttribute.AsAttribute, returnedFlag.First()));
 
 		return new Success();
 	}
@@ -164,14 +165,15 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		}
 
 		var returnedFlag =
-			(await mediator.Send(new GetAttributeFlagsQuery())).Where(x => x.Name == flag || x.Symbol == flag);
-		if (!returnedFlag.Any())
+			(await mediator.Send(new GetAttributeFlagsQuery())).Where(x => x.Name == flag || x.Symbol == flag).ToArray();
+		
+		if (returnedFlag.Length == 0)
 		{
 			return new Error<string>("Flag Found");
 		}
 
 		// TODO: What if it's already set?
-		await mediator.Send(new UnsetAttributeFlagCommand(returnedAttribute.AsAttribute, returnedFlag.First()));
+		await mediator.Send(new UnsetAttributeFlagCommand(obj.Object().DBRef, returnedAttribute.AsAttribute, returnedFlag.First()));
 
 		return new Success();
 	}

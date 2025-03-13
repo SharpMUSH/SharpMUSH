@@ -4,4 +4,8 @@ using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Commands.Database;
 
-public record CreatePlayerCommand(string Name, string Password, DBRef Location) : ICommand<DBRef>, ICacheInvalidating;
+public record CreatePlayerCommand(string Name, string Password, DBRef Location) : ICommand<DBRef>, ICacheInvalidating
+{
+	public string[] CacheKeys => [Location.ToString()];
+	public string[] CacheTags => ["object-contents", "object-list", "player-list"];
+}

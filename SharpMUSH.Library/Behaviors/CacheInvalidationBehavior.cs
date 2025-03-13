@@ -1,4 +1,5 @@
 using Mediator;
+using MoreLinq;
 using SharpMUSH.Library.Attributes;
 using ZiggyCreatures.Caching.Fusion;
 
@@ -13,9 +14,13 @@ public class CacheInvalidationBehavior<TRequest, TResponse>(IFusionCache cache) 
 		MessageHandlerDelegate<TRequest, TResponse> next
 	)
 	{
-		await cache.ClearAsync(token: cancellationToken);
+		await foreach(var key in message.CacheKeys.ToAsyncEnumerable().WithCancellation(cancellationToken))
+		{
+			await cache.RemoveAsync(key, token: cancellationToken);
+		}
 		
-		// TODO: Use Cache 'tags' in order to better query and clear items.
+		await cache.RemoveByTagAsync(message.CacheTags, token: cancellationToken);
+		
 		return await next(message, cancellationToken);
 	}
 }

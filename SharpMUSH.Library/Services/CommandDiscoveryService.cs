@@ -8,7 +8,7 @@ using ZiggyCreatures.Caching.Fusion;
 
 namespace SharpMUSH.Library.Services;
 
-public partial class CommandDiscoveryService(FusionCache cache) : ICommandDiscoveryService
+public partial class CommandDiscoveryService(IFusionCache cache) : ICommandDiscoveryService
 {
 	public void InvalidateCache(DBRef dbReference)
 		=> cache.Remove(dbReference.ToString());
