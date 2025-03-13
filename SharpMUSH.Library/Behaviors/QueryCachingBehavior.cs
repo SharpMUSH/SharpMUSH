@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Mediator;
 using SharpMUSH.Library.Attributes;
 using ZiggyCreatures.Caching.Fusion;
@@ -16,15 +17,23 @@ public class QueryCachingBehavior<TRequest, TResponse>(IFusionCache cache)
 		MessageHandlerDelegate<TRequest, TResponse> next
 	)
 	{
-		var tryGet = await cache.TryGetAsync<TResponse>(message.CacheKey, token: cancellationToken);
-		if (tryGet.HasValue)
+		/*try
 		{
-			return tryGet.Value;
+			if (message.CacheTags.Length > 0)
+			{
+				return await cache.GetOrSetAsync(message.CacheKey, await next(message, cancellationToken),
+					tags: message.CacheTags, token: cancellationToken);
+			}
+
+			return await cache.GetOrSetAsync(message.CacheKey, await next(message, cancellationToken),
+				token: cancellationToken);
 		}
-
-		var response = await next(message, cancellationToken);
-		await cache.SetAsync(message.CacheKey, response, _cacheDuration, tags: message.CacheTags, token: cancellationToken);
-
-		return response;
+		catch (Exception e)
+		{
+			Debugger.Break();
+			System.Console.WriteLine("BEEEEE");
+			throw;
+		}*/
+		return await next(message, cancellationToken);
 	}
 }

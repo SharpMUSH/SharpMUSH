@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Mediator;
 using MoreLinq;
 using SharpMUSH.Library.Attributes;
@@ -14,15 +15,27 @@ public class CacheInvalidationBehavior<TRequest, TResponse>(IFusionCache cache) 
 		MessageHandlerDelegate<TRequest, TResponse> next
 	)
 	{
-		await foreach(var key in message.CacheKeys.ToAsyncEnumerable().WithCancellation(cancellationToken))
+		/*
+		try
 		{
-			await cache.RemoveAsync(key, token: cancellationToken);
-		}
+			await foreach (var key in message.CacheKeys.ToAsyncEnumerable().WithCancellation(cancellationToken))
+			{
+				await cache.RemoveAsync(key, token: cancellationToken);
+			}
 
-		if (message.CacheTags.Length != 0)
-		{
-			await cache.RemoveByTagAsync(message.CacheTags, token: cancellationToken);
+			if (message.CacheTags.Length != 0)
+			{
+				await cache.RemoveByTagAsync(message.CacheTags, token: cancellationToken);
+			}
+
+			return await next(message, cancellationToken);
 		}
+		catch (Exception e)
+		{
+			Debugger.Break();
+			System.Console.WriteLine("AHHHH");
+			throw;
+		}*/
 		
 		return await next(message, cancellationToken);
 	}

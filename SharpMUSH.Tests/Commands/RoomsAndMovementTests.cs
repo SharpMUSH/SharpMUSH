@@ -38,5 +38,4 @@ public class RoomsAndMovementTests : BaseUnitTest
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), "#0 back");
 	}
-	
 }

@@ -8,4 +8,8 @@ public record GetObjectFlagQuery(string FlagName) : IQuery<SharpObjectFlag?>/*, 
 
 public record GetObjectFlagsQuery(string Id) : IQuery<IEnumerable<SharpObjectFlag>?>/*, ICacheable*/;
 
-public record GetAllObjectFlagsQuery() : IQuery<IEnumerable<SharpObjectFlag>>/*, ICacheable*/;
+public record GetAllObjectFlagsQuery() : IQuery<IEnumerable<SharpObjectFlag>>, ICacheable
+{
+	public string CacheKey => "global:ObjectFlagsList";
+	public string[] CacheTags => [Definitions.CacheTags.FlagList];
+}
