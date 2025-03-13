@@ -45,21 +45,18 @@ public partial class Functions
 	public static async ValueTask<CallState> Children(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
-		var maybeLocate = await parser.LocateService.LocateAndNotifyIfInvalid(parser,
+		var maybeLocate = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
 			executor,
 			executor,
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
 			LocateFlags.All);
 
-		switch (maybeLocate)
+		if (maybeLocate.IsError)
 		{
-			case { IsError: true }:
-				return new CallState(maybeLocate.AsError.Value);
-			case { IsNone: true }:
-				return new CallState(Errors.ErrorNotVisible);
+			return maybeLocate.AsError;
 		}
 
-		var locate = maybeLocate.AsAnyObject;
+		var locate = maybeLocate.AsSharpObject;
 		var children = await locate.Object().Children.WithCancellation(CancellationToken.None);
 
 		return new CallState(string.Join(" ", children.Select(x => x.DBRef.ToString())));
@@ -69,21 +66,18 @@ public partial class Functions
 	public static async ValueTask<CallState> Con(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
-		var maybeLocate = await parser.LocateService.LocateAndNotifyIfInvalid(parser,
+		var maybeLocate = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
 			executor,
 			executor,
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
 			LocateFlags.All);
 
-		switch (maybeLocate)
+		if (maybeLocate.IsError)
 		{
-			case { IsError: true }:
-				return new CallState(maybeLocate.AsError.Value);
-			case { IsNone: true }:
-				return new CallState(Errors.ErrorNotVisible);
+			return maybeLocate.AsError;
 		}
 
-		var locate = maybeLocate.AsAnyObject;
+		var locate = maybeLocate.AsSharpObject;
 
 		if (!locate.IsContainer)
 		{
@@ -393,21 +387,18 @@ public partial class Functions
 	public static async ValueTask<CallState> lcon(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
-		var maybeLocate = await parser.LocateService.LocateAndNotifyIfInvalid(parser,
+		var maybeLocate = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
 			executor,
 			executor,
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
 			LocateFlags.All);
 
-		switch (maybeLocate)
+		if (maybeLocate.IsError)
 		{
-			case { IsError: true }:
-				return new CallState(maybeLocate.AsError.Value);
-			case { IsNone: true }:
-				return new CallState(Errors.ErrorNotVisible);
+			return maybeLocate.AsError;
 		}
 
-		var locate = maybeLocate.AsAnyObject;
+		var locate = maybeLocate.AsSharpObject;
 		if (!locate.IsContainer)
 		{
 			return new CallState("#-1 EXITS CANNOT CONTAIN THINGS");

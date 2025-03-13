@@ -12,16 +12,21 @@ public static class ForwardMail
 	public static async ValueTask<MString>  Handle(IMUSHCodeParser parser, int mailNumber, string target)
 	{
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
-		var maybeLocate = await parser.LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, target,
+		var maybeLocate = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, target,
 			LocateFlags.PlayersPreference | LocateFlags.OnlyMatchTypePreference);
 		var currentFolder = await MessageListHelper.CurrentMailFolder(parser, executor);
 		
-		if (!maybeLocate.IsValid())
+		if (maybeLocate.IsError)
 		{
-			return MModule.single("#-1 NO SUCH PLAYER");
+			return maybeLocate.AsError.Message!;
+		}
+
+		if (!maybeLocate.AsSharpObject.IsPlayer)
+		{
+			return MModule.single("MAIL: Cannot forward to non-player.");
 		}
 		
-		var targetPlayer = maybeLocate.AsPlayer;
+		var targetPlayer = maybeLocate.AsSharpObject.AsPlayer;
 		
 		if (!parser.PermissionService.PassesLock(executor, targetPlayer, LockType.Mail))
 		{

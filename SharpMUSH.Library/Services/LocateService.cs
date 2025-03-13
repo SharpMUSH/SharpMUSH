@@ -35,6 +35,23 @@ public partial class LocateService : ILocateService
 		return loc;
 	}
 
+	public async ValueTask<AnySharpObjectOrErrorCallState> LocateAndNotifyIfInvalidWithCallState(IMUSHCodeParser parser, AnySharpObject looker, AnySharpObject executor,
+		string name, LocateFlags flags)
+	{
+		var loc = await Locate(parser, looker, executor, name, flags);
+		var caller = await parser.CurrentState.CallerObject(parser.Mediator);
+		if (!loc.IsValid())
+		{
+			await parser.NotifyService.Notify(executor, loc.IsError ? loc.AsError.Value : "I can't see that here",
+				caller.WithoutNone());
+			var callStateMessage = loc.IsError ? loc.AsError.Value : Errors.ErrorCantSeeThat; 
+
+			return new Error<CallState>(new CallState(callStateMessage));
+		}
+
+		return loc.AsAnyObject;
+	}
+
 	public async ValueTask<AnyOptionalSharpObjectOrError> Locate(
 		IMUSHCodeParser parser,
 		AnySharpObject looker,

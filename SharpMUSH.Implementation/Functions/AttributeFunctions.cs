@@ -396,14 +396,14 @@ public partial class Functions
 		var executor =
 			(await parser.Mediator.Send(new GetObjectNodeQuery(parser.CurrentState.Executor!.Value))).WithoutNone();
 		var maybeDBref =
-			await parser.LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, dbref, LocateFlags.All);
+			await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, dbref, LocateFlags.All);
 
-		if (!maybeDBref.IsValid())
+		if (maybeDBref.IsError)
 		{
-			return new CallState(maybeDBref.IsError ? maybeDBref.AsError.Value : Errors.ErrorCantSeeThat);
+			return maybeDBref.AsError;
 		}
 
-		var actualObject = maybeDBref.WithoutError().WithoutNone();
+		var actualObject = maybeDBref.AsSharpObject;
 
 		var maybeAttr = await parser.AttributeService.GetAttributeAsync(
 			executor,

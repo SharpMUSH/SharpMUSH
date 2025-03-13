@@ -102,20 +102,20 @@ public static partial class Commands
 			return new CallState("#-1 BAD ARGUMENT FORMAT TO @SET");
 		}
 
-		(var dbref, var maybeAttribute) = details;
+		var (dbref, maybeAttribute) = details;
 
-		var locate = await parser.LocateService.LocateAndNotifyIfInvalid(parser,
+		var locate = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
 			enactor,
 			executor,
 			dbref,
 			Library.Services.LocateFlags.All);
 
-		if (!locate.IsValid())
+		if (locate.IsError)
 		{
-			return new CallState(locate.IsError ? locate.AsError.Value : Errors.ErrorCantSeeThat);
+			return locate.AsError;
 		}
 
-		var realLocated = locate.WithoutError().WithoutNone();
+		var realLocated = locate.AsSharpObject;
 
 		// Attr Set Path
 		if (maybeAttribute is not null)

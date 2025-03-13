@@ -34,17 +34,14 @@ public static class ChannelMogrifier
 
 		// TODO: Locate Object
 		var objectString = obj.ToPlainText();
-		var maybeLocate = await parser.LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, objectString, LocateFlags.All);
+		var maybeLocate = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, objectString, LocateFlags.All);
 
-		switch (maybeLocate)
+		if (maybeLocate.IsError)
 		{
-			case { IsError: true}:
-				return new CallState(maybeLocate.AsError.Value);
-			case { IsNone: true}:
-				return new CallState("#-1 Object not found.");
+			return maybeLocate.AsError;
 		}
 
-		var locate = maybeLocate.AsAnyObject;
+		var locate = maybeLocate.AsSharpObject;
 
 		await parser.Mediator.Send(new UpdateChannelCommand(channel, 
 			null, 

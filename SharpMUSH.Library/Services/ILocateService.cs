@@ -43,6 +43,13 @@ public interface ILocateService
 		string name,
 		LocateFlags flags);
 
+	public ValueTask<AnySharpObjectOrErrorCallState> LocateAndNotifyIfInvalidWithCallState(
+		IMUSHCodeParser parser,
+		AnySharpObject looker,
+		AnySharpObject executor,
+		string name,
+		LocateFlags flags);
+
 	public ValueTask<AnyOptionalSharpObjectOrError> Locate(
 		IMUSHCodeParser parser,
 		AnySharpObject looker,
