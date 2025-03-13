@@ -19,19 +19,6 @@ public record SharpChannelCreateRequest(
 	string[] Privs
 );
 
-public record SharpChannelUpdateRequest(
-	string Key,
-	string? Name,
-	string? Description,
-	string[]? Privs,
-	string? JoinLock,
-	string? SpeakLock,
-	string? SeeLock,
-	string? HideLock,
-	string? ModLock,
-	int? Buffer
-);
-
 public record SharpChannelUserStatusQueryResult(
 	bool Gagged,
 	bool Mute,

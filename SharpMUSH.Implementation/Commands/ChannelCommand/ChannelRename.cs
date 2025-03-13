@@ -1,3 +1,4 @@
+using SharpMUSH.Database.Models;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Extensions;
@@ -16,7 +17,7 @@ public static class ChannelRename
 			await parser.NotifyService.Notify(executor, "CHAT: Guests may not modify channels.");
 			return new CallState("#-1 Guests may not modify channels.");
 		}
-		
+
 		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, channelName, true);
 
 		if (maybeChannel.IsError)
@@ -31,9 +32,27 @@ public static class ChannelRename
 			return new CallState("You are not the owner of the channel.");
 		}
 
-		channel.Name = newChannelName;
-		// await parser.Mediator.Send(new UpdateChannelCommand(channel));
+		var isValid = ChannelHelper.IsValidChannelName(parser, newChannelName);
+		if (!isValid)
+		{
+			await parser.NotifyService.Notify(executor, "CHAT: Invalid channel name.");
+			return new CallState("#-1 CHAT: Invalid channel name.");
+		}
 
-		return new CallState("Channel name has been updated.");
+		await parser.Mediator.Send(new UpdateChannelCommand(channel,
+			newChannelName,
+			null,
+			null,
+			null,
+			null,
+			null,
+			null,
+			null,
+			null,
+			null
+		));
+
+		await parser.NotifyService.Notify(executor, "CHAT: Renamed channel.");
+		return new CallState("Renamed channel.");
 	}
 }
