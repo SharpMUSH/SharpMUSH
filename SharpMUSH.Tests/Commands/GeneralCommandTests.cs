@@ -14,15 +14,16 @@ public class GeneralCommandTests : BaseUnitTest
 	private static IMUSHCodeParser? _parser;
 
 	[Before(Class)]
-	public static async Task OneTimeSetup()
+	public static async ValueTask OneTimeSetup()
 	{
 		_parser = await TestParser(ns: Substitute.For<INotifyService>());
+		await Task.Delay(1000);
 	}
 
 	[Test]
 	[Arguments("@pemit #1=1 This is a test", "1 This is a test")]
 	[Arguments("@pemit #1=2 This is a test;", "2 This is a test;")]
-	public async Task SimpleCommandParse(string str, string expected)
+	public async ValueTask SimpleCommandParse(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
 		await _parser!.CommandParse("1", MModule.single(str));
@@ -34,14 +35,14 @@ public class GeneralCommandTests : BaseUnitTest
 
 	[Test]
 	[Arguments("l"), Skip("Not yet implemented properly")]
-	public async Task CommandAliasRuns(string str)
+	public async ValueTask CommandAliasRuns(string str)
 	{
 		Console.WriteLine("Testing: {0}", str);
 		await _parser!.CommandParse("1", MModule.single(str));
 	}
 
 	[Test]
-	public async Task DoListSimple()
+	public async ValueTask DoListSimple()
 	{
 		await _parser!.CommandParse("1", MModule.single("@dolist 1 2 3=@pemit #1=3 This is a test"));
 
@@ -51,7 +52,7 @@ public class GeneralCommandTests : BaseUnitTest
 	}
 
 	[Test]
-	public async Task DoListSimple2()
+	public async ValueTask DoListSimple2()
 	{
 		await _parser!.CommandParse("1", MModule.single("@dolist 1 2 3=@pemit #1={4 This is, a test};"));
 
@@ -61,7 +62,7 @@ public class GeneralCommandTests : BaseUnitTest
 	}
 
 	[Test]
-	public async Task DoListComplex()
+	public async ValueTask DoListComplex()
 	{
 		await _parser!.CommandParse("1",
 			MModule.single("@dolist 1 2 3={@pemit #1=5 This is a test; @pemit #1=6 This is also a test}"));
@@ -75,7 +76,7 @@ public class GeneralCommandTests : BaseUnitTest
 	}
 
 	[Test]
-	public async Task DoListComplex2()
+	public async ValueTask DoListComplex2()
 	{
 		await _parser!.CommandParse("1",
 			MModule.single(
@@ -93,7 +94,7 @@ public class GeneralCommandTests : BaseUnitTest
 	}
 
 	[Test]
-	public async Task DoListComplex3()
+	public async ValueTask DoListComplex3()
 	{
 		await _parser!.CommandParse("1",
 			MModule.single(
@@ -108,7 +109,7 @@ public class GeneralCommandTests : BaseUnitTest
 	}
 
 	[Test]
-	public async Task DoListComplex4()
+	public async ValueTask DoListComplex4()
 	{
 		await _parser!.CommandParse("1",
 			MModule.single(
@@ -123,7 +124,7 @@ public class GeneralCommandTests : BaseUnitTest
 	}
 
 	[Test]
-	public async Task DoListComplex5()
+	public async ValueTask DoListComplex5()
 	{
 		await _parser!.CommandParse("1",
 			MModule.single(
@@ -147,7 +148,7 @@ public class GeneralCommandTests : BaseUnitTest
 	}
 
 	[Test]
-	public async Task DoDigForCommandlistCheck()
+	public async ValueTask DoDigForCommandlistCheck()
 	{
 		await _parser!.CommandParse("1", MModule.single("@dig Bar Room=Exit;ExitAlias,ExitBack;ExitAliasBack"));
 
@@ -166,7 +167,7 @@ public class GeneralCommandTests : BaseUnitTest
 	}
 
 	[Test, DependsOn(nameof(DoDigForCommandlistCheck))]
-	public async Task DoDigForCommandlistCheck2()
+	public async ValueTask DoDigForCommandlistCheck2()
 	{
 		await _parser!.CommandListParse(MModule.single("@dig Foo Room={Exit;ExitAlias},{ExitBack;ExitAliasBack}"));
 
@@ -185,7 +186,7 @@ public class GeneralCommandTests : BaseUnitTest
 	}
 
 	[Test, Skip("Not Implemented")]
-	public async Task DoFlagSet()
+	public async ValueTask DoFlagSet()
 	{
 		await _parser!.CommandParse("1", MModule.single("@set #1=DEBUG"));
 
