@@ -747,6 +747,10 @@ public class ArangoDatabase(
 				$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphParents} RETURN v", cache: true))
 			.FirstOrDefault();
 
+	private async ValueTask<IEnumerable<SharpObject?>> GetChildrenAsync(string id)
+		=> await arangoDb.Query.ExecuteAsync<SharpObject>(handle,
+			$"FOR v IN 1..1 INBOUND {id} GRAPH {DatabaseConstants.GraphParents} RETURN v", cache: true) ?? [];
+
 	public async ValueTask<IEnumerable<SharpObject>> GetParentsAsync(string id)
 		=> await arangoDb.Query.ExecuteAsync<SharpObject>(handle,
 			$"FOR v IN 1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphParents} RETURN v", cache: true);
@@ -796,7 +800,8 @@ public class ArangoDatabase(
 			Attributes = new(async ct => await GetTopLevelAttributesAsync(startVertex)),
 			AllAttributes = new(async ct => await GetAllAttributesAsync(startVertex)),
 			Owner = new(async ct => await GetObjectOwnerAsync(startVertex)),
-			Parent = new(async ct => await GetParentAsync(startVertex))
+			Parent = new(async ct => await GetParentAsync(startVertex)),
+			Children = new(async ct => (await GetChildrenAsync(startVertex))!)
 		};
 
 		return obj.Type switch
@@ -818,7 +823,7 @@ public class ArangoDatabase(
 			DatabaseConstants.TypeExit => new SharpExit
 			{
 				Id = id, Object = convertObject, Aliases = res.Aliases,
-				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id))),
+				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id), ct)),
 				Home = new (async ct => await GetHomeAsync(id))
 			},
 			_ => throw new ArgumentException($"Invalid Object Type found: '{obj.Type}'")
@@ -862,7 +867,8 @@ public class ArangoDatabase(
 			Attributes = new(async ct => await GetTopLevelAttributesAsync(objId)),
 			AllAttributes = new(async ct => await GetAllAttributesAsync(objId)),
 			Owner = new(async ct => await GetObjectOwnerAsync(objId)),
-			Parent = new(async ct => await GetParentAsync(objId))
+			Parent = new(async ct => await GetParentAsync(objId)),
+			Children = new(async ct => (await GetChildrenAsync(objId))!)
 		};
 
 		return collection switch
@@ -916,7 +922,8 @@ public class ArangoDatabase(
 				Attributes = new(async ct => await GetTopLevelAttributesAsync(obj.Id)),
 				AllAttributes = new(async ct => await GetAllAttributesAsync(obj.Id)),
 				Owner = new(async ct => await GetObjectOwnerAsync(obj.Id)),
-				Parent = new(async ct => await GetParentAsync(obj.Id))
+				Parent = new(async ct => await GetParentAsync(obj.Id)),
+				Children = new(async ct => (await GetChildrenAsync(obj.Id))!)
 			};
 	}
 

@@ -48,4 +48,9 @@ public class SharpObject
 	// TODO: Consider using AnySharpObject instead of SharpObject
 	[JsonIgnore]
 	public required AsyncLazy<SharpObject?> Parent { get; set; }
+	
+	// RELATIONSHIP
+	// TODO: Consider using AnySharpObject instead of SharpObject
+	[JsonIgnore]
+	public required AsyncLazy<IEnumerable<SharpObject>> Children { get; set; }
 }
