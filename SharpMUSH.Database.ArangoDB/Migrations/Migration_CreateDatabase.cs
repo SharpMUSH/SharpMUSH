@@ -26,7 +26,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					new() {
 						Collection = new ArangoCollection
 						{
-							Name = DatabaseConstants.objects,
+							Name = DatabaseConstants.Objects,
 							Type = ArangoCollectionType.Document,
 							KeyOptions = new ArangoKeyOptions()
 							{
@@ -38,13 +38,13 @@ public class Migration_CreateDatabase : IArangoMigration
 							Schema = new ArangoSchema()
 							{
 								Rule = new {
-									type = DatabaseConstants.typeObject,
+									type = DatabaseConstants.TypeObject,
 									properties = new {
-										Name = new { type = DatabaseConstants.typeString },
-										Type = new { type = DatabaseConstants.typeString },
-										Locks = new { type = DatabaseConstants.typeObject },
-										CreationTime = new { type = DatabaseConstants.typeNumber },
-										ModifiedTime = new { type = DatabaseConstants.typeNumber },
+										Name = new { type = DatabaseConstants.TypeString },
+										Type = new { type = DatabaseConstants.TypeString },
+										Locks = new { type = DatabaseConstants.TypeObject },
+										CreationTime = new { type = DatabaseConstants.TypeNumber },
+										ModifiedTime = new { type = DatabaseConstants.TypeNumber },
 									},
 									required = (string[])[nameof(SharpObject.Name), nameof(SharpObject.Type)],
 									additionalProperties = true
@@ -64,16 +64,17 @@ public class Migration_CreateDatabase : IArangoMigration
 					{
 						Collection = new ArangoCollection
 						{
-							Name = DatabaseConstants.things,
+							Name = DatabaseConstants.Things,
 							Type = ArangoCollectionType.Document,
 							WaitForSync = true,
 							Schema = new ArangoSchema()
 							{
 								Rule = new {
-									type = DatabaseConstants.typeObject,
+									type = DatabaseConstants.TypeObject,
 									properties = new
 									{
-										Aliases = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } },
+										Aliases = new { type = DatabaseConstants.TypeArray, 
+											items = new { type = DatabaseConstants.TypeString } },
 									}
 								}
 
@@ -91,7 +92,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					{
 						Collection = new ArangoCollection
 						{
-							Name = DatabaseConstants.rooms,
+							Name = DatabaseConstants.Rooms,
 							Type = ArangoCollectionType.Document,
 							WaitForSync = true
 						}
@@ -100,7 +101,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					{
 						Collection = new ArangoCollection
 						{
-							Name = DatabaseConstants.objectData,
+							Name = DatabaseConstants.ObjectData,
 							Type = ArangoCollectionType.Document,
 							WaitForSync = true
 						}
@@ -109,16 +110,17 @@ public class Migration_CreateDatabase : IArangoMigration
 					{
 						Collection = new ArangoCollection
 						{
-							Name = DatabaseConstants.exits,
+							Name = DatabaseConstants.Exits,
 							Type = ArangoCollectionType.Document,
 							WaitForSync = true,
 							Schema = new ArangoSchema()
 							{
 								Rule = new {
-									type = DatabaseConstants.typeObject,
+									type = DatabaseConstants.TypeObject,
 									properties = new
 									{
-										Aliases = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } }
+										Aliases = new { type = DatabaseConstants.TypeArray, 
+											items = new { type = DatabaseConstants.TypeString } }
 									}
 								}
 							}
@@ -128,17 +130,17 @@ public class Migration_CreateDatabase : IArangoMigration
 					{
 						Collection = new ArangoCollection
 						{
-							Name = DatabaseConstants.players,
+							Name = DatabaseConstants.Players,
 							Type = ArangoCollectionType.Document,
 							WaitForSync = true,
 							Schema = new ArangoSchema()
 							{
 								Rule = new {
-									type = DatabaseConstants.typeObject,
+									type = DatabaseConstants.TypeObject,
 									properties = new
 									{
-										PasswordHash = new { type = DatabaseConstants.typeString },
-										Aliases = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } }
+										PasswordHash = new { type = DatabaseConstants.TypeString },
+										Aliases = new { type = DatabaseConstants.TypeArray, items = new { type = DatabaseConstants.TypeString } }
 									},
 									required = (string[])[nameof(SharpPlayer.PasswordHash)]
 								}
@@ -156,22 +158,22 @@ public class Migration_CreateDatabase : IArangoMigration
 					{
 						Collection = new ArangoCollection
 						{
-							Name = DatabaseConstants.objectFlags,
+							Name = DatabaseConstants.ObjectFlags,
 							Type = ArangoCollectionType.Document,
 							WaitForSync = true,
 							Schema = new ArangoSchema()
 							{
 								Rule = new {
-									type = DatabaseConstants.typeObject,
+									type = DatabaseConstants.TypeObject,
 									properties = new
 									{
-										Name = new { type = DatabaseConstants.typeString },
-										Symbol = new { type = DatabaseConstants.typeString, multipleOf = 1 },
-										Aliases = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } },
-										System = new {type = DatabaseConstants.typeBoolean },
-										SetPermissions = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } },
-										UnsetPermissions = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } },
-										TypeRestrictions = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } }
+										Name = new { type = DatabaseConstants.TypeString },
+										Symbol = new { type = DatabaseConstants.TypeString, multipleOf = 1 },
+										Aliases = new { type = DatabaseConstants.TypeArray, items = new { type = DatabaseConstants.TypeString } },
+										System = new {type = DatabaseConstants.TypeBoolean },
+										SetPermissions = new { type = DatabaseConstants.TypeArray, items = new { type = DatabaseConstants.TypeString } },
+										UnsetPermissions = new { type = DatabaseConstants.TypeArray, items = new { type = DatabaseConstants.TypeString } },
+										TypeRestrictions = new { type = DatabaseConstants.TypeArray, items = new { type = DatabaseConstants.TypeString } }
 									},
 									required = (string[])[
 										nameof(SharpObjectFlag.Name),
@@ -186,18 +188,18 @@ public class Migration_CreateDatabase : IArangoMigration
 					{
 						Collection = new ArangoCollection
 						{
-							Name = DatabaseConstants.attributeFlags,
+							Name = DatabaseConstants.AttributeFlags,
 							Type = ArangoCollectionType.Document,
 							WaitForSync = true,
 							Schema = new ArangoSchema()
 							{
 								Rule = new {
-									type = DatabaseConstants.typeObject,
+									type = DatabaseConstants.TypeObject,
 									properties = new
 									{
-										Name = new { type = DatabaseConstants.typeString },
-										Symbol = new { type = DatabaseConstants.typeString, multipleOf = 1 },
-										System = new {type = DatabaseConstants.typeBoolean },
+										Name = new { type = DatabaseConstants.TypeString },
+										Symbol = new { type = DatabaseConstants.TypeString, multipleOf = 1 },
+										System = new {type = DatabaseConstants.TypeBoolean },
 									},
 									required = (string[])[
 										nameof(SharpObjectFlag.Name),
@@ -212,21 +214,21 @@ public class Migration_CreateDatabase : IArangoMigration
 					{
 						Collection = new ArangoCollection
 						{
-							Name = DatabaseConstants.objectPowers,
+							Name = DatabaseConstants.ObjectPowers,
 							Type = ArangoCollectionType.Document,
 							WaitForSync = true,
 							Schema = new ArangoSchema()
 							{
 								Rule = new {
-									type = DatabaseConstants.typeObject,
+									type = DatabaseConstants.TypeObject,
 									properties = new
 									{
-										Name = new { type = DatabaseConstants.typeString },
-										Symbol = new { type = DatabaseConstants.typeString, multipleOf = 1 },
-										System = new { type = DatabaseConstants.typeBoolean },
-										SetPermissions = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } },
-										UnsetPermissions = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } },
-										TypeRestrictions = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } }
+										Name = new { type = DatabaseConstants.TypeString },
+										Symbol = new { type = DatabaseConstants.TypeString, multipleOf = 1 },
+										System = new { type = DatabaseConstants.TypeBoolean },
+										SetPermissions = new { type = DatabaseConstants.TypeArray, items = new { type = DatabaseConstants.TypeString } },
+										UnsetPermissions = new { type = DatabaseConstants.TypeArray, items = new { type = DatabaseConstants.TypeString } },
+										TypeRestrictions = new { type = DatabaseConstants.TypeArray, items = new { type = DatabaseConstants.TypeString } }
 									},
 									required = (string[])[
 										nameof(SharpPower.Name),
@@ -240,17 +242,17 @@ public class Migration_CreateDatabase : IArangoMigration
 					{
 						Collection = new ArangoCollection
 						{
-							Name = DatabaseConstants.attributes,
+							Name = DatabaseConstants.Attributes,
 							Type = ArangoCollectionType.Document,
 							WaitForSync = true,
 							Schema = new ArangoSchema()
 							{
 								Rule = new {
-									type = DatabaseConstants.typeObject,
+									type = DatabaseConstants.TypeObject,
 									properties = new
 									{
-										Name = new { type = DatabaseConstants.typeString },
-										LongName = new { type = DatabaseConstants.typeString },
+										Name = new { type = DatabaseConstants.TypeString },
+										LongName = new { type = DatabaseConstants.TypeString },
 									},
 									required = (string[])[nameof(SharpAttribute.Name)]
 								}
@@ -274,19 +276,19 @@ public class Migration_CreateDatabase : IArangoMigration
 					{
 						Collection = new ArangoCollection
 						{
-							Name = DatabaseConstants.attributeEntries,
+							Name = DatabaseConstants.AttributeEntries,
 							Type = ArangoCollectionType.Document,
 							WaitForSync = true,
 							Schema = new ArangoSchema()
 							{
 								Rule = new {
-									type = DatabaseConstants.typeObject,
+									type = DatabaseConstants.TypeObject,
 									properties = new
 									{
-										Name = new { type = DatabaseConstants.typeString },
-										DefaultFlags = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } },
-										Limit = new { type = DatabaseConstants.typeString },
-										Enum = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } }
+										Name = new { type = DatabaseConstants.TypeString },
+										DefaultFlags = new { type = DatabaseConstants.TypeArray, items = new { type = DatabaseConstants.TypeString } },
+										Limit = new { type = DatabaseConstants.TypeString },
+										Enum = new { type = DatabaseConstants.TypeArray, items = new { type = DatabaseConstants.TypeString } }
 									},
 									required = (string[])[nameof(SharpAttributeEntry.Name)]
 								}
@@ -304,22 +306,22 @@ public class Migration_CreateDatabase : IArangoMigration
 					{
 						Collection = new ArangoCollection
 						{
-							Name = DatabaseConstants.functions,
+							Name = DatabaseConstants.Functions,
 							Type = ArangoCollectionType.Document,
 							WaitForSync = true,
 							Schema = new ArangoSchema()
 							{
 								Rule = new
 								{
-									type = DatabaseConstants.typeObject,
+									type = DatabaseConstants.TypeObject,
 									properties = new {
-										Name = new { type = DatabaseConstants.typeString },
-										Alias = new { type = DatabaseConstants.typeString },
-										RestrictedErrorMessage = new { type = DatabaseConstants.typeString },
-										Traits = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } },
-										MinArgs = new { type = DatabaseConstants.typeNumber, multipleOf = 1 },
-										MaxArgs = new { type = DatabaseConstants.typeNumber, multipleOf = 1 },
-										Restrictions = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } }
+										Name = new { type = DatabaseConstants.TypeString },
+										Alias = new { type = DatabaseConstants.TypeString },
+										RestrictedErrorMessage = new { type = DatabaseConstants.TypeString },
+										Traits = new { type = DatabaseConstants.TypeArray, items = new { type = DatabaseConstants.TypeString } },
+										MinArgs = new { type = DatabaseConstants.TypeNumber, multipleOf = 1 },
+										MaxArgs = new { type = DatabaseConstants.TypeNumber, multipleOf = 1 },
+										Restrictions = new { type = DatabaseConstants.TypeArray, items = new { type = DatabaseConstants.TypeString } }
 									},
 									required = (string[])[
 										nameof(SharpFunction.Name),
@@ -343,19 +345,19 @@ public class Migration_CreateDatabase : IArangoMigration
 					{
 						Collection = new ArangoCollection
 						{
-							Name = DatabaseConstants.commands,
+							Name = DatabaseConstants.Commands,
 							Type = ArangoCollectionType.Document,
 							WaitForSync = true,
 							Schema = new ArangoSchema
 							{
 								Rule = new {
-									type = DatabaseConstants.typeObject,
+									type = DatabaseConstants.TypeObject,
 									properties = new
 									{
-										Name = new { type = DatabaseConstants.typeString },
-										Aliases = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } },
-										Limit = new { type = DatabaseConstants.typeString },
-										Enum = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } }
+										Name = new { type = DatabaseConstants.TypeString },
+										Aliases = new { type = DatabaseConstants.TypeArray, items = new { type = DatabaseConstants.TypeString } },
+										Limit = new { type = DatabaseConstants.TypeString },
+										Enum = new { type = DatabaseConstants.TypeArray, items = new { type = DatabaseConstants.TypeString } }
 									},
 									required = (string[])[nameof(SharpCommand.Name)]
 								}
@@ -371,25 +373,25 @@ public class Migration_CreateDatabase : IArangoMigration
 					{
 						Collection = new ArangoCollection
 						{
-							Name = DatabaseConstants.mails,
+							Name = DatabaseConstants.Mails,
 							Type = ArangoCollectionType.Document,
 							WaitForSync = true,
 							Schema = new ArangoSchema
 							{
 								Rule = new {
-									type = DatabaseConstants.typeObject,
+									type = DatabaseConstants.TypeObject,
 									properties = new
 									{
-										DateSent = new { type = DatabaseConstants.typeNumber },
-										Fresh = new { type = DatabaseConstants.typeBoolean },
-										Read = new { type = DatabaseConstants.typeBoolean },
-										Tagged = new { type = DatabaseConstants.typeBoolean },
-										Forwarded = new { type = DatabaseConstants.typeBoolean },
-										Urgent = new { type = DatabaseConstants.typeBoolean },
-										Cleared = new { type = DatabaseConstants.typeBoolean },
-										Folder = new { type = DatabaseConstants.typeString },
-										Content = new { type = DatabaseConstants.typeString },
-										Subject = new { type = DatabaseConstants.typeString },
+										DateSent = new { type = DatabaseConstants.TypeNumber },
+										Fresh = new { type = DatabaseConstants.TypeBoolean },
+										Read = new { type = DatabaseConstants.TypeBoolean },
+										Tagged = new { type = DatabaseConstants.TypeBoolean },
+										Forwarded = new { type = DatabaseConstants.TypeBoolean },
+										Urgent = new { type = DatabaseConstants.TypeBoolean },
+										Cleared = new { type = DatabaseConstants.TypeBoolean },
+										Folder = new { type = DatabaseConstants.TypeString },
+										Content = new { type = DatabaseConstants.TypeString },
+										Subject = new { type = DatabaseConstants.TypeString },
 									},
 									required = (string[])[
 										nameof(SharpMail.DateSent), 
@@ -408,7 +410,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						},
 						Indices =
 						[
-							new() { Fields = ["Folder"] },
+							new() { Fields = [nameof(SharpMail.Folder)] },
 						]
 					},
 					
@@ -416,38 +418,38 @@ public class Migration_CreateDatabase : IArangoMigration
 					{
 						Collection = new ArangoCollection
 						{
-							Name = DatabaseConstants.channels,
+							Name = DatabaseConstants.Channels,
 							Type = ArangoCollectionType.Document,
 							WaitForSync = true,
 							Schema = new ArangoSchema
 							{
 								Rule = new {
-									type = DatabaseConstants.typeObject,
+									type = DatabaseConstants.TypeObject,
 									properties = new
 									{
-										Name = new { type = DatabaseConstants.typeString },
-										Description = new { type = DatabaseConstants.typeString },
-										Privs = new { type = DatabaseConstants.typeArray, items = new { type = DatabaseConstants.typeString } },
-										JoinLock = new { type = DatabaseConstants.typeString },
-										SpeakLock = new { type = DatabaseConstants.typeString },
-										SeeLock = new { type = DatabaseConstants.typeString },
-										HideLock = new { type = DatabaseConstants.typeString },
-										ModLock = new { type = DatabaseConstants.typeString },
+										Name = new { type = DatabaseConstants.TypeString },
+										Description = new { type = DatabaseConstants.TypeString },
+										Privs = new { type = DatabaseConstants.TypeArray, items = new { type = DatabaseConstants.TypeString } },
+										JoinLock = new { type = DatabaseConstants.TypeString },
+										SpeakLock = new { type = DatabaseConstants.TypeString },
+										SeeLock = new { type = DatabaseConstants.TypeString },
+										HideLock = new { type = DatabaseConstants.TypeString },
+										ModLock = new { type = DatabaseConstants.TypeString },
 									},
-									required = (string[])["Name", "Privs"]
+									required = (string[])[nameof(SharpChannel.Name), nameof(SharpChannel.Privs)]
 								}
 							}
 						},
 						Indices =
 						[
-							new() { Fields = ["Folder"] },
+							new() { Fields = [nameof(SharpChannel.Name)] },
 						]
 					},
 					new()
 					{
 						Collection = new ArangoCollection
 						{
-							Name = DatabaseConstants.atLocation,
+							Name = DatabaseConstants.AtLocation,
 							Type = ArangoCollectionType.Edge,
 							WaitForSync = true
 						}
@@ -456,7 +458,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					{
 						Collection = new ArangoCollection
 						{
-							Name = DatabaseConstants.hasObjectData,
+							Name = DatabaseConstants.HasObjectData,
 							Type = ArangoCollectionType.Edge,
 							WaitForSync = true
 						}
@@ -465,7 +467,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					{
 						Collection = new ArangoCollection
 						{
-							Name = DatabaseConstants.hasHome,
+							Name = DatabaseConstants.HasHome,
 							Type = ArangoCollectionType.Edge,
 							WaitForSync = true
 						}
@@ -474,7 +476,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					{
 						Collection = new ArangoCollection
 						{
-							Name = DatabaseConstants.hasExit,
+							Name = DatabaseConstants.HasExit,
 							Type = ArangoCollectionType.Edge,
 							WaitForSync = true
 						}
@@ -483,7 +485,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					{
 						Collection = new ArangoCollection
 						{
-							Name = DatabaseConstants.hasFlags,
+							Name = DatabaseConstants.HasFlags,
 							Type = ArangoCollectionType.Edge,
 							WaitForSync = true
 						}
@@ -492,7 +494,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					{
 						Collection = new ArangoCollection
 						{
-							Name = DatabaseConstants.hasAttribute,
+							Name = DatabaseConstants.HasAttribute,
 							Type = ArangoCollectionType.Edge,
 							WaitForSync = true
 						}
@@ -501,7 +503,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					{
 						Collection = new ArangoCollection
 						{
-							Name = DatabaseConstants.hasAttributeFlag,
+							Name = DatabaseConstants.HasAttributeFlag,
 							Type = ArangoCollectionType.Edge,
 							WaitForSync = true
 						}
@@ -510,7 +512,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					{
 						Collection = new ArangoCollection
 						{
-							Name = DatabaseConstants.hasObjectOwner,
+							Name = DatabaseConstants.HasObjectOwner,
 							Type = ArangoCollectionType.Edge,
 							WaitForSync = true
 						}
@@ -519,7 +521,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					{
 						Collection = new ArangoCollection
 						{
-							Name = DatabaseConstants.hasAttributeOwner,
+							Name = DatabaseConstants.HasAttributeOwner,
 							Type = ArangoCollectionType.Edge,
 							WaitForSync = true
 						}
@@ -528,7 +530,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					{
 						Collection = new ArangoCollection
 						{
-							Name = DatabaseConstants.onChannel,
+							Name = DatabaseConstants.OnChannel,
 							Type = ArangoCollectionType.Edge,
 							WaitForSync = true,
 							Schema = new ArangoSchema()
@@ -537,11 +539,11 @@ public class Migration_CreateDatabase : IArangoMigration
 								{
 									properties = new
 									{
-										Gagged = new { type = DatabaseConstants.typeBoolean },
-										Mute = new { type = DatabaseConstants.typeBoolean },
-										Hide = new { type = DatabaseConstants.typeBoolean },
-										Combine = new { type = DatabaseConstants.typeBoolean },
-										Title = new { type = DatabaseConstants.typeBoolean }
+										Gagged = new { type = DatabaseConstants.TypeBoolean },
+										Mute = new { type = DatabaseConstants.TypeBoolean },
+										Hide = new { type = DatabaseConstants.TypeBoolean },
+										Combine = new { type = DatabaseConstants.TypeBoolean },
+										Title = new { type = DatabaseConstants.TypeBoolean }
 									}
 								}
 							}
@@ -551,7 +553,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					{
 						Collection = new ArangoCollection
 						{
-							Name = DatabaseConstants.senderOfMail,
+							Name = DatabaseConstants.SenderOfMail,
 							Type = ArangoCollectionType.Edge,
 							WaitForSync = true,
 						}
@@ -560,7 +562,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					{
 						Collection = new ArangoCollection
 						{
-							Name = DatabaseConstants.ownsChannel,
+							Name = DatabaseConstants.OwnerOfChannel,
 							Type = ArangoCollectionType.Edge,
 							WaitForSync = true,
 						}
@@ -569,7 +571,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					{
 						Collection = new ArangoCollection
 						{
-							Name = DatabaseConstants.receivedMail,
+							Name = DatabaseConstants.ReceivedMail,
 							Type = ArangoCollectionType.Edge,
 							WaitForSync = true,
 						}
@@ -578,7 +580,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					{
 						Collection = new ArangoCollection
 						{
-							Name = DatabaseConstants.hasHook,
+							Name = DatabaseConstants.HasHook,
 							Type = ArangoCollectionType.Edge,
 							WaitForSync = true,
 							Schema = new ArangoSchema()
@@ -586,7 +588,7 @@ public class Migration_CreateDatabase : IArangoMigration
 								Rule = new {
 									properties = new
 									{
-										Type = new { type = DatabaseConstants.typeString }
+										Type = new { type = DatabaseConstants.TypeString }
 									},
 									required = (string[])[nameof(SharpHookEdge.Type)]
 								}
@@ -602,17 +604,12 @@ public class Migration_CreateDatabase : IArangoMigration
 						[
 							new ArangoEdgeDefinition()
 							{
-								Collection = DatabaseConstants.isObject,
-								To = [DatabaseConstants.objects],
-								From = [
-									DatabaseConstants.things,
-									DatabaseConstants.players,
-									DatabaseConstants.rooms,
-									DatabaseConstants.exits
-								]
+								Collection = DatabaseConstants.IsObject,
+								To = [DatabaseConstants.Objects],
+								From = [.. DatabaseConstants.verticesAll]
 							}
 						],
-						Name = DatabaseConstants.graphObjects
+						Name = DatabaseConstants.GraphObjects
 					},
 					new()
 					{
@@ -620,14 +617,14 @@ public class Migration_CreateDatabase : IArangoMigration
 						[
 							new ArangoEdgeDefinition()
 							{
-								Collection = DatabaseConstants.hasPowers,
-								To = [DatabaseConstants.objectPowers],
+								Collection = DatabaseConstants.HasPowers,
+								To = [DatabaseConstants.ObjectPowers],
 								From = [
-									DatabaseConstants.objects
+									DatabaseConstants.Objects
 								]
 							}
 						],
-						Name = DatabaseConstants.graphPowers
+						Name = DatabaseConstants.GraphPowers
 					},
 					new()
 					{
@@ -635,14 +632,14 @@ public class Migration_CreateDatabase : IArangoMigration
 						[
 							new ArangoEdgeDefinition()
 							{
-								Collection = DatabaseConstants.hasFlags,
-								To = [DatabaseConstants.objectFlags],
+								Collection = DatabaseConstants.HasFlags,
+								To = [DatabaseConstants.ObjectFlags],
 								From = [
-									DatabaseConstants.objects
+									DatabaseConstants.Objects
 								]
 							}
 						],
-						Name = DatabaseConstants.graphFlags
+						Name = DatabaseConstants.GraphFlags
 					},
 					new()
 					{
@@ -650,14 +647,14 @@ public class Migration_CreateDatabase : IArangoMigration
 						[
 							new ArangoEdgeDefinition()
 							{
-								Collection = DatabaseConstants.hasObjectData,
-								To = [DatabaseConstants.objectData],
+								Collection = DatabaseConstants.HasObjectData,
+								To = [DatabaseConstants.ObjectData],
 								From = [
-									DatabaseConstants.objects
+									DatabaseConstants.Objects
 								]
 							}
 						],
-						Name = DatabaseConstants.graphObjectData
+						Name = DatabaseConstants.GraphObjectData
 					},
 					new()
 					{
@@ -665,18 +662,15 @@ public class Migration_CreateDatabase : IArangoMigration
 						[
 							new ArangoEdgeDefinition()
 							{
-								Collection = DatabaseConstants.hasAttribute,
-								To = [DatabaseConstants.attributes],
+								Collection = DatabaseConstants.HasAttribute,
+								To = [DatabaseConstants.Attributes],
 								From = [
-									DatabaseConstants.players,
-									DatabaseConstants.things,
-									DatabaseConstants.exits,
-									DatabaseConstants.rooms,
-									DatabaseConstants.attributes
+									.. DatabaseConstants.verticesAll,
+									DatabaseConstants.Attributes
 								]
 							}
 						],
-						Name = DatabaseConstants.graphAttributes
+						Name = DatabaseConstants.GraphAttributes
 					},
 					new()
 					{
@@ -684,14 +678,14 @@ public class Migration_CreateDatabase : IArangoMigration
 						[
 							new ArangoEdgeDefinition()
 							{
-								Collection = DatabaseConstants.hasAttributeFlag,
-								To = [DatabaseConstants.attributeFlags],
+								Collection = DatabaseConstants.HasAttributeFlag,
+								To = [DatabaseConstants.AttributeFlags],
 								From = [
-									DatabaseConstants.attributes
+									DatabaseConstants.Attributes
 								]
 							}
 						],
-						Name = DatabaseConstants.graphAttributeFlags
+						Name = DatabaseConstants.GraphAttributeFlags
 					},
 					new()
 					{
@@ -699,20 +693,57 @@ public class Migration_CreateDatabase : IArangoMigration
 						[
 							new ArangoEdgeDefinition()
 							{
-								Collection = DatabaseConstants.atLocation,
+								Collection = DatabaseConstants.AtLocation,
+								To = [.. DatabaseConstants.verticesContainer],
+								From = [.. DatabaseConstants.verticesContent]
+							}
+						],
+						Name = DatabaseConstants.GraphLocations,
+					},
+					new()
+					{
+						EdgeDefinitions =
+						[
+							new ArangoEdgeDefinition()
+							{
+								Collection = DatabaseConstants.HasHome,
+								To = [.. DatabaseConstants.verticesContainer],
+								From = [.. DatabaseConstants.verticesContent]
+							}
+						],
+						Name = DatabaseConstants.GraphHomes
+					},
+					new()
+					{
+						EdgeDefinitions =
+						[
+							new ArangoEdgeDefinition()
+							{
+								Collection = DatabaseConstants.HasExit,
 								To = [
-									DatabaseConstants.rooms,
-									DatabaseConstants.things,
-									DatabaseConstants.players
+									DatabaseConstants.Exits,
+								],
+								From = [.. DatabaseConstants.verticesContainer]
+							}
+						],
+						Name = DatabaseConstants.GraphExits
+					},
+					new()
+					{
+						EdgeDefinitions =
+						[
+							new ArangoEdgeDefinition()
+							{
+								Collection = DatabaseConstants.HasObjectOwner,
+								To = [
+									DatabaseConstants.Players
 								],
 								From = [
-									DatabaseConstants.exits,
-									DatabaseConstants.things,
-									DatabaseConstants.players
+									DatabaseConstants.Objects
 								]
 							}
 						],
-						Name = DatabaseConstants.graphLocations,
+						Name = DatabaseConstants.GraphObjectOwners
 					},
 					new()
 					{
@@ -720,20 +751,16 @@ public class Migration_CreateDatabase : IArangoMigration
 						[
 							new ArangoEdgeDefinition()
 							{
-								Collection = DatabaseConstants.hasHome,
+								Collection = DatabaseConstants.HasAttributeOwner,
 								To = [
-									DatabaseConstants.rooms,
-									DatabaseConstants.things,
-									DatabaseConstants.players
+									DatabaseConstants.Players
 								],
 								From = [
-									DatabaseConstants.exits,
-									DatabaseConstants.things,
-									DatabaseConstants.players
+									DatabaseConstants.Attributes
 								]
 							}
 						],
-						Name = DatabaseConstants.graphHomes
+						Name = DatabaseConstants.GraphAttributeOwners
 					},
 					new()
 					{
@@ -741,18 +768,16 @@ public class Migration_CreateDatabase : IArangoMigration
 						[
 							new ArangoEdgeDefinition()
 							{
-								Collection = DatabaseConstants.hasExit,
+								Collection = DatabaseConstants.HasParent,
 								To = [
-									DatabaseConstants.exits,
+									DatabaseConstants.Objects
 								],
 								From = [
-									DatabaseConstants.rooms,
-									DatabaseConstants.things,
-									DatabaseConstants.players
+									DatabaseConstants.Objects
 								]
 							}
 						],
-						Name = DatabaseConstants.graphExits
+						Name = DatabaseConstants.GraphParents
 					},
 					new()
 					{
@@ -760,77 +785,26 @@ public class Migration_CreateDatabase : IArangoMigration
 						[
 							new ArangoEdgeDefinition()
 							{
-								Collection = DatabaseConstants.hasObjectOwner,
+								Collection = DatabaseConstants.OwnerOfChannel,
 								To = [
-									DatabaseConstants.players
+									DatabaseConstants.Players
 								],
 								From = [
-									DatabaseConstants.objects
-								]
-							}
-						],
-						Name = DatabaseConstants.graphObjectOwners
-					},
-					new()
-					{
-						EdgeDefinitions =
-						[
-							new ArangoEdgeDefinition()
-							{
-								Collection = DatabaseConstants.hasAttributeOwner,
-								To = [
-									DatabaseConstants.objects
-								],
-								From = [
-									DatabaseConstants.attributes
-								]
-							}
-						],
-						Name = DatabaseConstants.graphAttributeOwners
-					},
-					new()
-					{
-						EdgeDefinitions =
-						[
-							new ArangoEdgeDefinition()
-							{
-								Collection = DatabaseConstants.hasParent,
-								To = [
-									DatabaseConstants.objects
-								],
-								From = [
-									DatabaseConstants.objects
-								]
-							}
-						],
-						Name = DatabaseConstants.graphParents
-					},
-					new()
-					{
-						EdgeDefinitions =
-						[
-							new ArangoEdgeDefinition()
-							{
-								Collection = DatabaseConstants.ownsChannel,
-								To = [
-									DatabaseConstants.channels
-								],
-								From = [
-									DatabaseConstants.players
+									DatabaseConstants.Channels
 								]
 							},
 							new ArangoEdgeDefinition()
 							{
-								Collection = DatabaseConstants.onChannel,
+								Collection = DatabaseConstants.OnChannel,
 								To = [
-									DatabaseConstants.channels
+									DatabaseConstants.Channels
 								],
 								From = [
-									DatabaseConstants.objects
+									DatabaseConstants.Objects
 								]
 							}
 						],
-						Name = DatabaseConstants.graphChannels
+						Name = DatabaseConstants.GraphChannels
 					},
 					new()
 					{
@@ -838,26 +812,26 @@ public class Migration_CreateDatabase : IArangoMigration
 						[
 							new ArangoEdgeDefinition()
 							{
-								Collection = DatabaseConstants.receivedMail,
+								Collection = DatabaseConstants.ReceivedMail,
 								To = [
-									DatabaseConstants.mails
+									DatabaseConstants.Mails
 								],
 								From = [
-									DatabaseConstants.players
+									DatabaseConstants.Players
 								]
 							},
 							new ArangoEdgeDefinition()
 							{
-								Collection = DatabaseConstants.senderOfMail,
+								Collection = DatabaseConstants.SenderOfMail,
 								To = [
-									DatabaseConstants.objects
+									DatabaseConstants.Objects
 								],
 								From = [
-									DatabaseConstants.mails
+									DatabaseConstants.Mails
 								]
 							}
 						],
-						Name = DatabaseConstants.graphMail
+						Name = DatabaseConstants.GraphMail
 					}
 				]
 			},
@@ -873,38 +847,38 @@ public class Migration_CreateDatabase : IArangoMigration
 		/// The exception is a Schema Failure.
 
 		/* Create Room Zero */
-		var roomZeroObj = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objects, new
+		var roomZeroObj = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.Objects, new
 		{
 			_key = 0.ToString(),
 			Name = "Room Zero",
-			Type = DatabaseConstants.typeRoom,
+			Type = DatabaseConstants.TypeRoom,
 			CreationTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
 			ModifiedTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
 		});
-		var roomZeroRoom = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.rooms, new { });
+		var roomZeroRoom = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.Rooms, new { });
 
 		/* Create Player One */
-		var playerOneObj = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objects, new
+		var playerOneObj = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.Objects, new
 		{
 			_key = 1.ToString(),
 			Name = "God",
-			Type = DatabaseConstants.typePlayer,
+			Type = DatabaseConstants.TypePlayer,
 			CreationTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
 			ModifiedTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
 		});
 
 		/* Create Room Zero */
-		var roomTwoObj = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objects, new
+		var roomTwoObj = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.Objects, new
 		{
 			_key = 2.ToString(),
 			Name = "Master Room",
-			Type = DatabaseConstants.typeRoom,
+			Type = DatabaseConstants.TypeRoom,
 			CreationTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
 			ModifiedTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
 		});
-		var roomTwoRoom = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.rooms, new { });
+		var roomTwoRoom = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.Rooms, new { });
 
-		var playerOnePlayer = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.players, new
+		var playerOnePlayer = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.Players, new
 		{
 			Aliases = Array.Empty<string>(),
 			PasswordHash = string.Empty
@@ -915,21 +889,21 @@ public class Migration_CreateDatabase : IArangoMigration
 		var powers = await CreateInitialPowers(migrator, handle);
 		var wizard = flags[18];
 
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.isObject, new SharpEdge { From = roomTwoRoom.Id, To = roomTwoObj.Id });
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.isObject, new SharpEdge { From = roomZeroRoom.Id, To = roomZeroObj.Id });
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.isObject, new SharpEdge { From = playerOnePlayer.Id, To = playerOneObj.Id });
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.atLocation, new SharpEdge { From = playerOnePlayer.Id, To = roomZeroRoom.Id });
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.hasHome, new SharpEdge { From = playerOnePlayer.Id, To = roomZeroRoom.Id });
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.hasObjectOwner, new SharpEdge { From = roomTwoObj.Id, To = playerOnePlayer.Id });
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.hasObjectOwner, new SharpEdge { From = roomZeroObj.Id, To = playerOnePlayer.Id });
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.hasObjectOwner, new SharpEdge { From = playerOneObj.Id, To = playerOnePlayer.Id });
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.hasFlags, new SharpEdge { From = playerOneObj.Id, To = wizard.Id });
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.IsObject, new SharpEdge { From = roomTwoRoom.Id, To = roomTwoObj.Id });
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.IsObject, new SharpEdge { From = roomZeroRoom.Id, To = roomZeroObj.Id });
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.IsObject, new SharpEdge { From = playerOnePlayer.Id, To = playerOneObj.Id });
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AtLocation, new SharpEdge { From = playerOnePlayer.Id, To = roomZeroRoom.Id });
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasHome, new SharpEdge { From = playerOnePlayer.Id, To = roomZeroRoom.Id });
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasObjectOwner, new SharpEdge { From = roomTwoObj.Id, To = playerOnePlayer.Id });
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasObjectOwner, new SharpEdge { From = roomZeroObj.Id, To = playerOnePlayer.Id });
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasObjectOwner, new SharpEdge { From = playerOneObj.Id, To = playerOnePlayer.Id });
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasFlags, new SharpEdge { From = playerOneObj.Id, To = wizard.Id });
 	}
 
 	private static async Task<List<ArangoUpdateResult<ArangoVoid>>> CreateInitialPowers(IArangoMigrator migrator,
 		ArangoHandle handle) =>
 	[
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
 			new
 			{
 				Name = "Boot",
@@ -939,7 +913,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					.Union(DatabaseConstants.permissionsLog),
 				UnsetPermissions = DatabaseConstants.permissionsWizard
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
 			new
 			{
 				Name = "Builder",
@@ -949,7 +923,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					.Union(DatabaseConstants.permissionsLog),
 				UnsetPermissions = DatabaseConstants.permissionsWizard
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
 			new
 			{
 				Name = "Can_Dark",
@@ -958,7 +932,7 @@ public class Migration_CreateDatabase : IArangoMigration
 				SetPermissions = DatabaseConstants.permissionsWizard
 					.Union(DatabaseConstants.permissionsLog)
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
 			new
 			{
 				Name = "Can_HTTP",
@@ -967,7 +941,7 @@ public class Migration_CreateDatabase : IArangoMigration
 				SetPermissions = DatabaseConstants.permissionsWizard
 					.Union(DatabaseConstants.permissionsLog)
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
 			new
 			{
 				Name = "Can_Spoof",
@@ -978,7 +952,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					.Union(DatabaseConstants.permissionsLog),
 				UnsetPermissions = DatabaseConstants.permissionsWizard
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
 			new
 			{
 				Name = "Chat_Privs",
@@ -989,7 +963,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					.Union(DatabaseConstants.permissionsLog),
 				UnsetPermissions = DatabaseConstants.permissionsWizard
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
 			new
 			{
 				Name = "Debit",
@@ -999,7 +973,7 @@ public class Migration_CreateDatabase : IArangoMigration
 				SetPermissions = DatabaseConstants.permissionsWizard
 					.Union(DatabaseConstants.permissionsLog),
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
 			new
 			{
 				Name = "Functions",
@@ -1009,7 +983,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					.Union(DatabaseConstants.permissionsLog),
 				UnsetPermissions = DatabaseConstants.permissionsWizard
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
 			new
 			{
 				Name = "Guest",
@@ -1019,7 +993,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					.Union(DatabaseConstants.permissionsLog),
 				UnsetPermissions = DatabaseConstants.permissionsWizard
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
 			new
 			{
 				Name = "Halt",
@@ -1029,7 +1003,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					.Union(DatabaseConstants.permissionsLog),
 				UnsetPermissions = DatabaseConstants.permissionsWizard
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
 			new
 			{
 				Name = "Hide",
@@ -1039,7 +1013,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					.Union(DatabaseConstants.permissionsLog),
 				UnsetPermissions = DatabaseConstants.permissionsWizard
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
 			new
 			{
 				Name = "Hook",
@@ -1048,7 +1022,7 @@ public class Migration_CreateDatabase : IArangoMigration
 				SetPermissions = DatabaseConstants.permissionsWizard
 					.Union(DatabaseConstants.permissionsLog)
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
 			new
 			{
 				Name = "Idle",
@@ -1058,7 +1032,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					.Union(DatabaseConstants.permissionsLog),
 				UnsetPermissions = DatabaseConstants.permissionsWizard
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
 			new
 			{
 				Name = "Immortal",
@@ -1068,7 +1042,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					.Union(DatabaseConstants.permissionsLog),
 				UnsetPermissions = DatabaseConstants.permissionsWizard
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
 			new
 			{
 				Name = "Link_Anywhere",
@@ -1078,7 +1052,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					.Union(DatabaseConstants.permissionsLog),
 				UnsetPermissions = DatabaseConstants.permissionsWizard
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
 			new
 			{
 				Name = "Login",
@@ -1088,7 +1062,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					.Union(DatabaseConstants.permissionsLog),
 				UnsetPermissions = DatabaseConstants.permissionsWizard
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
 			new
 			{
 				Name = "Long_Fingers",
@@ -1098,7 +1072,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					.Union(DatabaseConstants.permissionsLog),
 				UnsetPermissions = DatabaseConstants.permissionsWizard
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
 			new
 			{
 				Name = "Many_Attribs",
@@ -1107,7 +1081,7 @@ public class Migration_CreateDatabase : IArangoMigration
 				SetPermissions = DatabaseConstants.permissionsWizard
 					.Union(DatabaseConstants.permissionsLog)
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
 			new
 			{
 				Name = "No_Pay",
@@ -1117,7 +1091,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					.Union(DatabaseConstants.permissionsLog),
 				UnsetPermissions = DatabaseConstants.permissionsWizard
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
 			new
 			{
 				Name = "No_Quota",
@@ -1128,7 +1102,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					.Union(DatabaseConstants.permissionsLog),
 				UnsetPermissions = DatabaseConstants.permissionsWizard
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
 			new
 			{
 				Name = "Open_Anywhere",
@@ -1138,7 +1112,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					.Union(DatabaseConstants.permissionsLog),
 				UnsetPermissions = DatabaseConstants.permissionsWizard
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
 			new
 			{
 				Name = "Pemit_All",
@@ -1148,7 +1122,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					.Union(DatabaseConstants.permissionsLog),
 				UnsetPermissions = DatabaseConstants.permissionsWizard
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
 			new
 			{
 				Name = "Pick_DBRefs",
@@ -1158,7 +1132,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					.Union(DatabaseConstants.permissionsLog),
 				UnsetPermissions = DatabaseConstants.permissionsWizard
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
 			new
 			{
 				Name = "Player_Create",
@@ -1168,7 +1142,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					.Union(DatabaseConstants.permissionsLog),
 				UnsetPermissions = DatabaseConstants.permissionsWizard
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
 			new
 			{
 				Name = "Poll",
@@ -1178,7 +1152,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					.Union(DatabaseConstants.permissionsLog),
 				UnsetPermissions = DatabaseConstants.permissionsWizard
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
 			new
 			{
 				Name = "Pueblo_Send",
@@ -1188,7 +1162,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					.Union(DatabaseConstants.permissionsLog),
 				UnsetPermissions = DatabaseConstants.permissionsWizard
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
 			new
 			{
 				Name = "Queue",
@@ -1198,7 +1172,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					.Union(DatabaseConstants.permissionsLog),
 				UnsetPermissions = DatabaseConstants.permissionsWizard
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
 			new
 			{
 				Name = "Search",
@@ -1208,7 +1182,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					.Union(DatabaseConstants.permissionsLog),
 				UnsetPermissions = DatabaseConstants.permissionsWizard
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
 			new
 			{
 				Name = "See_All",
@@ -1218,7 +1192,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					.Union(DatabaseConstants.permissionsLog),
 				UnsetPermissions = DatabaseConstants.permissionsWizard
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
 			new
 			{
 				Name = "See_Queue",
@@ -1228,7 +1202,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					.Union(DatabaseConstants.permissionsLog),
 				UnsetPermissions = DatabaseConstants.permissionsWizard
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
 			new
 			{
 				Name = "See_OOB",
@@ -1238,7 +1212,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					.Union(DatabaseConstants.permissionsLog),
 				UnsetPermissions = DatabaseConstants.permissionsWizard
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
 			new
 			{
 				Name = "SQL_OK",
@@ -1248,7 +1222,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					.Union(DatabaseConstants.permissionsLog),
 				UnsetPermissions = DatabaseConstants.permissionsWizard
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
 			new
 			{
 				Name = "Tport_Anything",
@@ -1259,7 +1233,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					.Union(DatabaseConstants.permissionsLog),
 				UnsetPermissions = DatabaseConstants.permissionsWizard
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
 			new
 			{
 				Name = "Tport_Anywhere",
@@ -1270,7 +1244,7 @@ public class Migration_CreateDatabase : IArangoMigration
 					.Union(DatabaseConstants.permissionsLog),
 				UnsetPermissions = DatabaseConstants.permissionsWizard
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectPowers,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
 			new
 			{
 				Name = "Unkillable",
@@ -1285,7 +1259,7 @@ public class Migration_CreateDatabase : IArangoMigration
 	private async static Task<List<ArangoUpdateResult<ArangoVoid>>> CreateInitialAttributeFlags(IArangoMigrator migrator,
 		ArangoHandle handle) =>
 	[
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeFlags,
 			new
 			{
 				Name = "no_command",
@@ -1293,7 +1267,7 @@ public class Migration_CreateDatabase : IArangoMigration
 				System = true,
 				Inheritable = true
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeFlags,
 			new
 			{
 				Name = "no_inherit",
@@ -1301,7 +1275,7 @@ public class Migration_CreateDatabase : IArangoMigration
 				System = true,
 				Inheritable = true
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeFlags,
 			new
 			{
 				Name = "no_clone",
@@ -1309,7 +1283,7 @@ public class Migration_CreateDatabase : IArangoMigration
 				System = true,
 				Inheritable = true
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeFlags,
 			new
 			{
 				Name = "mortal_dark",
@@ -1317,7 +1291,7 @@ public class Migration_CreateDatabase : IArangoMigration
 				System = true,
 				Inheritable = true
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeFlags,
 			new
 			{
 				Name = "wizard",
@@ -1325,7 +1299,7 @@ public class Migration_CreateDatabase : IArangoMigration
 				System = true,
 				Inheritable = true
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeFlags,
 			new
 			{
 				Name = "veiled",
@@ -1333,7 +1307,7 @@ public class Migration_CreateDatabase : IArangoMigration
 				System = true,
 				Inheritable = true
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeFlags,
 			new
 			{
 				Name = "nearby",
@@ -1341,7 +1315,7 @@ public class Migration_CreateDatabase : IArangoMigration
 				System = true,
 				Inheritable = true
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeFlags,
 			new
 			{
 				Name = "locked",
@@ -1349,7 +1323,7 @@ public class Migration_CreateDatabase : IArangoMigration
 				System = true,
 				Inheritable = true
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeFlags,
 			new
 			{
 				Name = "safe",
@@ -1357,7 +1331,7 @@ public class Migration_CreateDatabase : IArangoMigration
 				System = true,
 				Inheritable = true
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeFlags,
 			new
 			{
 				Name = "visual",
@@ -1365,7 +1339,7 @@ public class Migration_CreateDatabase : IArangoMigration
 				System = true,
 				Inheritable = false
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeFlags,
 			new
 			{
 				Name = "public",
@@ -1373,7 +1347,7 @@ public class Migration_CreateDatabase : IArangoMigration
 				System = true,
 				Inheritable = false
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeFlags,
 			new
 			{
 				Name = "debug",
@@ -1381,7 +1355,7 @@ public class Migration_CreateDatabase : IArangoMigration
 				System = true,
 				Inheritable = true
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeFlags,
 			new
 			{
 				Name = "no_debug",
@@ -1389,7 +1363,7 @@ public class Migration_CreateDatabase : IArangoMigration
 				System = true,
 				Inheritable = true
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeFlags,
 			new
 			{
 				Name = "regexp",
@@ -1397,7 +1371,7 @@ public class Migration_CreateDatabase : IArangoMigration
 				System = true,
 				Inheritable = false
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeFlags,
 			new
 			{
 				Name = "case",
@@ -1405,7 +1379,7 @@ public class Migration_CreateDatabase : IArangoMigration
 				System = true,
 				Inheritable = false
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeFlags,
 			new
 			{
 				Name = "nospace",
@@ -1413,7 +1387,7 @@ public class Migration_CreateDatabase : IArangoMigration
 				System = true,
 				Inheritable = true
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeFlags,
 			new
 			{
 				Name = "noname",
@@ -1421,7 +1395,7 @@ public class Migration_CreateDatabase : IArangoMigration
 				System = true,
 				Inheritable = true
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeFlags,
 			new
 			{
 				Name = "aahear",
@@ -1429,7 +1403,7 @@ public class Migration_CreateDatabase : IArangoMigration
 				System = true,
 				Inheritable = false
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeFlags,
 			new
 			{
 				Name = "amhear",
@@ -1437,7 +1411,7 @@ public class Migration_CreateDatabase : IArangoMigration
 				System = true,
 				Inheritable = false
 			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeFlags,
 			new
 			{
 				Name = "quiet",
@@ -1446,7 +1420,7 @@ public class Migration_CreateDatabase : IArangoMigration
 				Inheritable = false
 			}),
 		// TODO: Consider if this is needed for our purposes at all.
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.attributeFlags,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeFlags,
 			new
 			{
 				Name = "branch",
@@ -1460,35 +1434,35 @@ public class Migration_CreateDatabase : IArangoMigration
 	private static async Task<List<ArangoUpdateResult<ArangoVoid>>> CreateInitialFlags(IArangoMigrator migrator,
 		ArangoHandle handle) =>
 	[
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "ABODE",
 			Symbol = "A",
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesRoom
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "ANSI",
 			Symbol = "A",
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesPlayer
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "CHOWN_OK",
 			Symbol = "C",
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesContainer
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "DARK",
 			Symbol = "D",
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesAll
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "FIXED",
 			Symbol = "F",
@@ -1497,21 +1471,21 @@ public class Migration_CreateDatabase : IArangoMigration
 			UnsetPermissions = DatabaseConstants.permissionsWizard,
 			TypeRestrictions = DatabaseConstants.typesPlayer
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "FLOATING",
 			Symbol = "F",
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesRoom
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "HAVEN",
 			Symbol = "H",
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesPlayer
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "TRUST",
 			Symbol = "I",
@@ -1521,7 +1495,7 @@ public class Migration_CreateDatabase : IArangoMigration
 			UnsetPermissions = DatabaseConstants.permissionsTrusted,
 			TypeRestrictions = DatabaseConstants.typesAll
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "JUDGE",
 			Symbol = "J",
@@ -1530,7 +1504,7 @@ public class Migration_CreateDatabase : IArangoMigration
 			UnsetPermissions = DatabaseConstants.permissionsRoyalty,
 			TypeRestrictions = DatabaseConstants.typesPlayer
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "JUMP_OK",
 			Symbol = "J",
@@ -1538,14 +1512,14 @@ public class Migration_CreateDatabase : IArangoMigration
 			Aliases = (string[])["TEL-OK", "TEL_OK", "TELOK"],
 			TypeRestrictions = DatabaseConstants.typesRoom
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "LINK_OK",
 			Symbol = "L",
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesAll
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "MONITOR",
 			Symbol = "M",
@@ -1553,7 +1527,7 @@ public class Migration_CreateDatabase : IArangoMigration
 			Aliases = (string[])["LISTENER", "WATCHER"],
 			TypeRestrictions = DatabaseConstants.typesContainer
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "NO_LEAVE",
 			Symbol = "N",
@@ -1561,42 +1535,42 @@ public class Migration_CreateDatabase : IArangoMigration
 			Aliases = (string[])["NOLEAVE"],
 			TypeRestrictions = DatabaseConstants.typesThing
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "NO_TEL",
 			Symbol = "N",
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesRoom
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "OPAQUE",
 			Symbol = "O",
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesAll
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "QUIET",
 			Symbol = "Q",
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesAll
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "UNFINDABLE",
 			Symbol = "U",
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesAll
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "VISUAL",
 			Symbol = "V",
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesAll
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "WIZARD",
 			Symbol = "W",
@@ -1608,14 +1582,14 @@ public class Migration_CreateDatabase : IArangoMigration
 			UnsetPermissions = DatabaseConstants.permissionsTrusted
 				.Union(DatabaseConstants.permissionsWizard),
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "SAFE",
 			Symbol = "X",
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesAll
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "SHARED",
 			Symbol = "Z",
@@ -1623,7 +1597,7 @@ public class Migration_CreateDatabase : IArangoMigration
 			Aliases = (string[])["ZONE"],
 			TypeRestrictions = DatabaseConstants.typesPlayer
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "Z_TEL",
 			Symbol = "Z",
@@ -1631,7 +1605,7 @@ public class Migration_CreateDatabase : IArangoMigration
 			TypeRestrictions = DatabaseConstants.typesRoom
 				.Union(DatabaseConstants.typesThing)
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "LISTEN_PARENT",
 			Symbol = "^",
@@ -1640,7 +1614,7 @@ public class Migration_CreateDatabase : IArangoMigration
 			TypeRestrictions = DatabaseConstants.typesPlayer
 				.Union(DatabaseConstants.typesThing).Union(DatabaseConstants.typesRoom)
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "NOACCENTS",
 			Symbol = "~",
@@ -1648,7 +1622,7 @@ public class Migration_CreateDatabase : IArangoMigration
 			TypeRestrictions = DatabaseConstants.typesPlayer
 				.Union(DatabaseConstants.typesThing).Union(DatabaseConstants.typesRoom)
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "UNREGISTERED",
 			Symbol = "?",
@@ -1657,7 +1631,7 @@ public class Migration_CreateDatabase : IArangoMigration
 			SetPermissions = DatabaseConstants.permissionsRoyalty,
 			UnsetPermissions = DatabaseConstants.permissionsRoyalty
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "NOSPOOF",
 			Symbol = "\"",
@@ -1666,14 +1640,14 @@ public class Migration_CreateDatabase : IArangoMigration
 			SetPermissions = DatabaseConstants.permissionsODark,
 			UnSetPermissions = DatabaseConstants.permissionsODark
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "AUDIBLE",
 			Symbol = "a",
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesAll
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "DEBUG",
 			Aliases = (string[])["TRACE"],
@@ -1681,7 +1655,7 @@ public class Migration_CreateDatabase : IArangoMigration
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesAll
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "DESTROY_OK",
 			Aliases = (string[])["DEST_OK"],
@@ -1689,14 +1663,14 @@ public class Migration_CreateDatabase : IArangoMigration
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesThing
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "ENTER_OK",
 			Symbol = "e",
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesAll
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "GAGGED",
 			Symbol = "g",
@@ -1705,21 +1679,21 @@ public class Migration_CreateDatabase : IArangoMigration
 			SetPermissions = DatabaseConstants.permissionsWizard,
 			UnSetPermissions = DatabaseConstants.permissionsWizard
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "HALT",
 			Symbol = "h",
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesAll
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "ORPHAN",
 			Symbol = "i",
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesAll
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "JURY_OK",
 			Aliases = (string[])["JURYOK"],
@@ -1729,21 +1703,21 @@ public class Migration_CreateDatabase : IArangoMigration
 			SetPermissions = DatabaseConstants.permissionsRoyalty,
 			UnSetPermissions = DatabaseConstants.permissionsRoyalty
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "KEEPALIVE",
 			Symbol = "k",
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesPlayer
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "LIGHT",
 			Symbol = "l",
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesAll
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "MISTRUST",
 			Symbol = "m",
@@ -1752,7 +1726,7 @@ public class Migration_CreateDatabase : IArangoMigration
 			SetPermissions = DatabaseConstants.permissionsTrusted,
 			UnSetPermissions = DatabaseConstants.permissionsTrusted
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "MISTRUST",
 			Aliases = (string[])["MYOPIC"],
@@ -1762,7 +1736,7 @@ public class Migration_CreateDatabase : IArangoMigration
 			SetPermissions = DatabaseConstants.permissionsTrusted,
 			UnSetPermissions = DatabaseConstants.permissionsTrusted
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "NO_COMMAND",
 			Aliases = (string[])["NOCOMMAND"],
@@ -1770,7 +1744,7 @@ public class Migration_CreateDatabase : IArangoMigration
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesAll
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "ON_VACATION",
 			Aliases = (string[])["ONVACATION","ON-VACATION"],
@@ -1778,7 +1752,7 @@ public class Migration_CreateDatabase : IArangoMigration
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesPlayer
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "PUPPET",
 			Symbol = "P",
@@ -1786,7 +1760,7 @@ public class Migration_CreateDatabase : IArangoMigration
 			TypeRestrictions = DatabaseConstants.typesThing
 				.Union(DatabaseConstants.typesRoom)
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "ROYALTY",
 			Symbol = "r",
@@ -1798,7 +1772,7 @@ public class Migration_CreateDatabase : IArangoMigration
 			UnSetPermissions = DatabaseConstants.permissionsTrusted
 				.Union(DatabaseConstants.permissionsRoyalty)
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "SUSPECT",
 			Symbol = "s",
@@ -1810,21 +1784,21 @@ public class Migration_CreateDatabase : IArangoMigration
 			UnSetPermissions = DatabaseConstants.permissionsWizard
 				.Union(DatabaseConstants.permissionsMDark)
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "TRANSPARENT",
 			Symbol = "t",
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesAll
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "VERBOSE",
 			Symbol = "v",
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesAll,
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "NO_WARN",
 			Aliases = (string[])["NOWARN"],
@@ -1832,7 +1806,7 @@ public class Migration_CreateDatabase : IArangoMigration
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesAll,
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "CLOUDY",
 			Aliases = (string[])["TERSE"],
@@ -1840,7 +1814,7 @@ public class Migration_CreateDatabase : IArangoMigration
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesExit,
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "CHAN_USEFIRSTMATCH",
 			Aliases = (string[])["CHAN_FIRSTMATCH","CHAN_MATCHFIRST"],
@@ -1849,28 +1823,28 @@ public class Migration_CreateDatabase : IArangoMigration
 			SetPermissions = DatabaseConstants.permissionsTrusted,
 			UnSetPermissions = DatabaseConstants.permissionsTrusted
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "HEAR_CONNECT",
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesPlayer,
 			SetPermissions = DatabaseConstants.permissionsRoyalty
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "HEAVY",
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesAll,
 			SetPermissions = DatabaseConstants.permissionsRoyalty
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "LOUD",
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesPlayer,
 			SetPermissions = DatabaseConstants.permissionsRoyalty
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "NO_LOG",
 			System = true,
@@ -1881,7 +1855,7 @@ public class Migration_CreateDatabase : IArangoMigration
 			UnSetPermissions = DatabaseConstants.permissionsWizard
 				.Union(DatabaseConstants.permissionsMDark)
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "PARANOID",
 			System = true,
@@ -1889,20 +1863,20 @@ public class Migration_CreateDatabase : IArangoMigration
 			SetPermissions = DatabaseConstants.permissionsODark,
 			UnSetPermissions = DatabaseConstants.permissionsODark
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "TRACK_MONEY",
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesPlayer,
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "XTERM256",
 			Aliases = (string[])["XTERM","COLOR256"],
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesPlayer
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "MONIKER",
 			System = true,
@@ -1910,7 +1884,7 @@ public class Migration_CreateDatabase : IArangoMigration
 			SetPermissions = DatabaseConstants.permissionsRoyalty,
 			UnSetPermissions = DatabaseConstants.permissionsRoyalty
 		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.objectFlags, new
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "OPEN_OK",
 			System = true,

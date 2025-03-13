@@ -1,6 +1,4 @@
-﻿using System.Collections.Immutable;
-using MoreLinq.Extensions;
-using OneOf;
+﻿using OneOf;
 using OneOf.Types;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
@@ -10,7 +8,9 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using System.Drawing;
+using SharpMUSH.Implementation.Commands.ChannelCommand;
 using SharpMUSH.Implementation.Commands.MailCommand;
+using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services;
 using CB = SharpMUSH.Implementation.Definitions.CommandBehavior;
 using StringExtensions = ANSILibrary.StringExtensions;
@@ -164,7 +164,7 @@ public static partial class Commands
 				parser,
 				enactor,
 				enactor,
-				args["0"]!.Message!.ToString(),
+				args["0"].Message!.ToString(),
 				LocateFlags.All);
 
 			if (locate.IsValid())
@@ -174,7 +174,7 @@ public static partial class Commands
 		}
 		else
 		{
-			viewing = (await parser.Mediator.Send(new GetLocationQuery(enactor.Object().DBRef, 1))).WithExitOption();
+			viewing = (await parser.Mediator.Send(new GetLocationQuery(enactor.Object().DBRef))).WithExitOption();
 		}
 
 		if (viewing.IsNone())
@@ -189,8 +189,8 @@ public static partial class Commands
 		var name = obj.Name;
 		var ownerName = ownerObj.Name;
 		var location = obj.Key;
-		var contentKeys = contents!.Select(x => x.Object()!.Name);
-		var exitKeys = (await parser.Mediator.Send(new GetExitsQuery(obj.DBRef)))?.FirstOrDefault();
+		var contentKeys = contents!.Select(x => x.Object().Name);
+		var exitKeys = await parser.Mediator.Send(new GetExitsQuery(obj.DBRef));
 		var description = (await parser.AttributeService.GetAttributeAsync(enactor, viewing.Known(), "DESCRIBE",
 				IAttributeService.AttributeMode.Read, false))
 			.Match(
@@ -202,8 +202,8 @@ public static partial class Commands
 
 		var objFlags = (await obj.Flags.WithCancellation(CancellationToken.None)).ToArray();
 		var ownerObjFlags = (await ownerObj.Flags.WithCancellation(CancellationToken.None)).ToArray();
-		var objParent = await obj.Parent.WithCancellation(CancellationToken.None); 
-		var objPowers = await obj.Powers.WithCancellation(CancellationToken.None); 
+		var objParent = await obj.Parent.WithCancellation(CancellationToken.None);
+		var objPowers = await obj.Powers.WithCancellation(CancellationToken.None);
 
 		await parser.NotifyService.Notify(enactor, $"{name.Hilight()}" +
 		                                           $"(#{obj.DBRef.Number}{string.Join(string.Empty, objFlags.Select(x => x.Symbol))})");
@@ -246,7 +246,8 @@ public static partial class Commands
 		{
 			// TODO: Proper Format.
 			await parser.NotifyService.Notify(enactor, $"Home: {(await viewing.Known().MinusRoom().Home()).Object().Name}");
-			await parser.NotifyService.Notify(enactor, $"Location: {(await viewing.Known().MinusRoom().Location()).Object().Name}");
+			await parser.NotifyService.Notify(enactor,
+				$"Location: {(await viewing.Known().MinusRoom().Location()).Object().Name}");
 		}
 
 		return new CallState(obj.DBRef.ToString());
@@ -299,7 +300,7 @@ public static partial class Commands
 			parser,
 			enactorObj,
 			enactorObj,
-			args["0"]!.Message!.ToString(),
+			args["0"].Message!.ToString(),
 			LocateFlags.ExitsInTheRoomOfLooker
 			| LocateFlags.EnglishStyleMatching
 			| LocateFlags.ExitsPreference
@@ -315,7 +316,8 @@ public static partial class Commands
 		// TODO: Check if the exit has a destination attribute.
 		var destination = await exitObj.Home.WithCancellation(CancellationToken.None);
 
-		if (!await parser.PermissionService.CanGoto(enactorObj, exitObj, await exitObj.Home.WithCancellation(CancellationToken.None)))
+		if (!await parser.PermissionService.CanGoto(enactorObj, exitObj,
+			    await exitObj.Home.WithCancellation(CancellationToken.None)))
 		{
 			await parser.NotifyService.Notify(enactor, "You can't go that way.");
 			return CallState.Empty;
@@ -652,10 +654,70 @@ public static partial class Commands
 			"WIPE", "MUTE", "UNMUTE", "GAG", "UNGAG", "HIDE", "UNHIDE", "WHAT", "TITLE", "BRIEF", "RECALL", "BUFFER",
 			"COMBINE", "UNCOMBINE", "ON", "JOIN", "OFF", "LEAVE", "WHO"
 		], Behavior = CB.Default | CB.EqSplit | CB.NoGagged | CB.RSArgs, MinArgs = 0, MaxArgs = 0)]
-	public static async ValueTask<Option<CallState>> CHANNEL(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public static async ValueTask<Option<CallState>> Channel(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		/*
+		    @channel/list[/on|/off][/quiet] [<prefix>]
+			  @channel/what [<prefix>]
+			  @channel/who <channel>
+			  @channel/on <channel>[=<player>]
+			  @channel/off <channel>[=<player>]
+			  @channel/gag [<channel>][=<yes|no>]
+				@channel/mute [<channel>][=<yes|no>]
+				@channel/hide [<channel>][=<yes|no>]
+				@channel/combine [<channel>][=<yes|no>]
+			  @channel/title <channel>[=<message>]
+			  @channel/recall[/quiet] <channel>[=<lines|duration>[, <start line>]]  @channel/add <channel>[=<privs>]
+			  @channel/privs <channel>=<privs>
+			  @channel/describe <channel>=<description>
+			  @channel/buffer <channel>=<lines>
+			  @channel/decompile[/brief] <prefix>
+			  @channel/chown <channel>=<new owner>
+				@channel/rename <channel>=<new name>
+				@channel/wipe <channel>
+				@channel/delete <channel>
+				@channel/mogrifier <channel>=<object>
+		 */
+		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
+		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches.ToArray();
+
+		if (switches.Contains("QUIET") && (!switches.Contains("LIST") || !switches.Contains("RECALL")))
+		{
+			return new CallState("CHAT: INCORRECT COMBINATION OF SWITCHES");
+		}
+
+		// TODO: Channel Visibility on most of these commands.
+
+		return switches switch
+		{
+			[.., "LIST"] => await ChannelList.Handle(parser, args["0"].Message!, args["1"].Message!, switches),
+			["WHAT"] => await ChannelWhat.Handle(parser, args["0"].Message!),
+			["WHO"] => await ChannelWho.Handle(parser, args["0"].Message!),
+			["ON"] or ["JOIN"] => await ChannelOn.Handle(parser, args["0"].Message!, args["1"].Message),
+			["OFF"] or ["LEAVE"] => await ChannelOff.Handle(parser, args["0"].Message!, args["1"].Message),
+			["GAG"] => await ChannelGag.Handle(parser, args["0"].Message!, args["1"].Message!, switches),
+			["MUTE"] => await ChannelMute.Handle(parser, args["0"].Message!, args["1"].Message!),
+			["HIDE"] => await ChannelHide.Handle(parser, args["0"].Message!, args["1"].Message!),
+			["COMBINE"] => await ChannelCombine.Handle(parser, args["0"].Message!, args["1"].Message!),
+			["TITLE"] => await ChannelTitle.Handle(parser, args["0"].Message!, args["1"].Message!),
+			[.., "RECALL"] => await ChannelRecall.Handle(parser, args["0"].Message!, args["1"].Message!, switches),
+			["ADD"] when args.ContainsKey("0") && args.ContainsKey("1")
+				=> await ChannelAdd.Handle(parser, args["0"].Message!, args["1"].Message!),
+			["PRIVS"] when args.ContainsKey("0") && args.ContainsKey("1")
+				=> await ChannelPrivs.Handle(parser, args["0"].Message!, args["1"].Message!),
+			["DESCRIBE"] when args.ContainsKey("0") && args.ContainsKey("1")
+				=> await ChannelDescribe.Handle(parser, args["0"].Message!, args["1"].Message!),
+			["BUFFER"] when args.ContainsKey("0") && args.ContainsKey("1")
+				=> await ChannelBuffer.Handle(parser, args["0"].Message!, args["1"].Message!),
+			[.., "DECOMPILE"] => await ChannelDecompile.Handle(parser, args["0"].Message!, args["1"].Message!, switches),
+			["CHOWN"] => await ChannelChown.Handle(parser, args["0"].Message!, args["1"].Message!),
+			["RENAME"] => await ChannelRename.Handle(parser, args["0"].Message!, args["1"].Message!),
+			["WIPE"] => await ChannelWipe.Handle(parser, args["0"].Message!, args["1"].Message!),
+			["DELETE"] => await ChannelDelete.Handle(parser, args["0"].Message!, args["1"].Message!),
+			["MOGRIFIER"] => await ChannelMogrifier.Handle(parser, args["0"].Message!, args["1"].Message!),
+			_ => new CallState("What do you want to do with the channel?")
+		};
 	}
 
 	[SharpCommand(Name = "@DECOMPILE", Switches = ["DB", "NAME", "PREFIX", "TF", "FLAGS", "ATTRIBS", "SKIPDEFAULTS"],
@@ -715,7 +777,7 @@ public static partial class Commands
 
 	[SharpCommand(Name = "@VERB", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs, MinArgs = 0,
 		MaxArgs = 0)]
-	public static async ValueTask<Option<CallState>> VERB(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public static async ValueTask<Option<CallState>> Verb(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		await ValueTask.CompletedTask;
 		throw new NotImplementedException();
@@ -723,15 +785,57 @@ public static partial class Commands
 
 	[SharpCommand(Name = "@CHAT", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0,
 		MaxArgs = 0)]
-	public static async ValueTask<Option<CallState>> CHAT(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public static async ValueTask<Option<CallState>> Chat(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var arg0Check = parser.CurrentState.Arguments.TryGetValue("0", out var arg0CallState);
+		var arg1Check = parser.CurrentState.Arguments.TryGetValue("1", out var arg1CallState);
+		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
+
+		if (!arg0Check || !arg1Check)
+		{
+			await parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, "#-1 Don't you have anything to say?");
+			return new CallState("#-1 Don't you have anything to say?");
+		}
+
+		var channelName = arg0CallState!.Message!;
+		var message = arg1CallState!.Message!;
+		
+		// TODO: Use standardized method.
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, channelName, true);
+		
+		if (maybeChannel.IsError)
+		{
+			return maybeChannel.AsError.Value;
+		}
+
+		var channel = maybeChannel.AsChannel;
+
+		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(executor, channel);
+		
+		if(maybeMemberStatus is null)
+		{
+			return new CallState("You are not a member of that channel.");
+		}
+
+		var (_, status) = maybeMemberStatus.Value;
+		
+		await parser.Mediator.Send(new ChannelMessageRequest(
+			channel, 
+			executor.WithNoneOption(), 
+			INotifyService.NotificationType.Emit, 
+			message, 
+			status.Title ?? MModule.empty(),
+			MModule.single(executor.Object().Name),
+			MModule.single("says"),
+			[]
+			));
+
+		return new CallState(string.Empty);
 	}
 
 	[SharpCommand(Name = "@ENTRANCES", Switches = ["EXITS", "THINGS", "PLAYERS", "ROOMS"],
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
-	public static async ValueTask<Option<CallState>> ENTRANCES(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public static async ValueTask<Option<CallState>> Entrances(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		await ValueTask.CompletedTask;
 		throw new NotImplementedException();
@@ -804,18 +908,20 @@ public static partial class Commands
 			[.., "FSTATS"] when executor.IsPlayer => await StatsMail.Handle(parser, arg0, switches),
 			[.., "DEBUG"] => await AdminMail.Handle(parser, switches),
 			[.., "NUKE"] => await AdminMail.Handle(parser, switches),
-			[.., "REVIEW"] when (arg0?.Length ?? 0) != 0 && (arg1?.Length ?? 0) != 0 
+			[.., "REVIEW"] when (arg0?.Length ?? 0) != 0 && (arg1?.Length ?? 0) != 0
 				=> await ReviewMail.Handle(parser, arg0, arg1, switches),
-			[.., "RETRACT"] when  (arg0?.Length ?? 0) != 0 &&  (arg1?.Length ?? 0) != 0  
+			[.., "RETRACT"] when (arg0?.Length ?? 0) != 0 && (arg1?.Length ?? 0) != 0
 				=> await RetractMail.Handle(parser, arg0!.ToPlainText(), arg1!.ToPlainText()),
-			[.., "FWD"] when executor.IsPlayer && int.TryParse(arg0?.ToPlainText(), out var number) &&  (arg1?.Length ?? 0) != 0  
+			[.., "FWD"] when executor.IsPlayer && int.TryParse(arg0?.ToPlainText(), out var number) &&
+			                 (arg1?.Length ?? 0) != 0
 				=> await ForwardMail.Handle(parser, number, arg1!.ToPlainText()),
 			[.., "SEND"] or [.., "URGENT"] or [.., "SILENT"] or [.., "NOSIG"] or []
 				when arg0?.Length != 0 && arg1?.Length != 0
 				=> await SendMail.Handle(parser, arg0!, arg1!, switches),
-			[.., "READ"] or [] when executor.IsPlayer && (arg1?.Length ?? 0) == 0 && int.TryParse(arg0?.ToPlainText(), out var number)
-				=> await ReadMail.Handle(parser, Math.Max(0,number - 1), switches),
-			[.., "LIST"] or [] when executor.IsPlayer && (arg1?.Length ?? 0) == 0 
+			[.., "READ"] or [] when executor.IsPlayer && (arg1?.Length ?? 0) == 0 &&
+			                        int.TryParse(arg0?.ToPlainText(), out var number)
+				=> await ReadMail.Handle(parser, Math.Max(0, number - 1), switches),
+			[.., "LIST"] or [] when executor.IsPlayer && (arg1?.Length ?? 0) == 0
 				=> await ListMail.Handle(parser, arg0, arg1, switches),
 			_ => MModule.single("#-1 BAD ARGUMENTS TO MAIL COMMAND")
 		};
