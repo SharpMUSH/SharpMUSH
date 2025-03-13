@@ -16,16 +16,14 @@ public class QueryCachingBehavior<TRequest, TResponse>(IFusionCache cache)
 		MessageHandlerDelegate<TRequest, TResponse> next
 	)
 	{
-		var cacheKey = $"{message.GetType().Name}:{message.GetHashCode()}";
-
-		var tryGet = await cache.TryGetAsync<TResponse>(cacheKey, token: cancellationToken);
+		var tryGet = await cache.TryGetAsync<TResponse>(message.CacheKey, token: cancellationToken);
 		if (tryGet.HasValue)
 		{
 			return tryGet.Value;
 		}
 
 		var response = await next(message, cancellationToken);
-		await cache.SetAsync(cacheKey, response, _cacheDuration, token: cancellationToken);
+		await cache.SetAsync(message.CacheKey, response, _cacheDuration, tags: message.CacheTags, token: cancellationToken);
 
 		return response;
 	}
