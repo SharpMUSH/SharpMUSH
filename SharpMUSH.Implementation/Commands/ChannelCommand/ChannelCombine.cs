@@ -52,11 +52,12 @@ public static class ChannelCombine
 			if (maybeMemberStatus is null)
 			{
 				await parser.NotifyService.Notify(executor, $"CHAT: You are not a member of {channel.Name.ToPlainText()}.");
+				return new CallState("#-1 YOU ARE NOT A MEMBER OF THAT CHANNEL");
 			}
 
-			var status = maybeMemberStatus?.Status;
+			var status = maybeMemberStatus.Value.Status;
 
-			if (status?.Combine ?? false == combineOn)
+			if ((status.Combine ?? false) == combineOn)
 			{
 				return new CallState($"CHAT: You are already in that combination state on {channel.Name.ToPlainText()}.");
 			}

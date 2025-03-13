@@ -30,7 +30,7 @@ public static class ChannelGag
 			return new CallState("#-1 INVALID OPTION");
 		}
 
-		if (channelName != null)
+		if (channelName is null)
 		{
 			channels = [..await parser.Mediator.Send(new GetChannelListQuery())];
 		}
@@ -54,11 +54,12 @@ public static class ChannelGag
 			if (maybeMemberStatus is null)
 			{
 				await parser.NotifyService.Notify(executor, $"CHAT: You are not a member of {channel.Name.ToPlainText()}.");
+				return new CallState("#-1 YOU ARE NOT A MEMBER OF THAT CHANNEL");
 			}
 
-			var status = maybeMemberStatus?.Status;
+			var status = maybeMemberStatus.Value.Status;
 
-			if (status?.Hide ?? false == gagOn)
+			if ((status.Hide ?? false) == gagOn)
 			{
 			    await parser.NotifyService.Notify(executor, $"CHAT: You are already in that gag state on {channel.Name.ToPlainText()}.");
 			    continue;
