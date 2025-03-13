@@ -1,5 +1,6 @@
 ﻿using NSubstitute;
 using NSubstitute.ReceivedExtensions;
+using Serilog;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -30,7 +31,7 @@ public class GeneralCommandTests : BaseUnitTest
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), expected);
 	}
-	
+
 	[Test]
 	[Arguments("l"), Skip("Not yet implemented properly")]
 	public async Task CommandAliasRuns(string str)
@@ -62,7 +63,8 @@ public class GeneralCommandTests : BaseUnitTest
 	[Test]
 	public async Task DoListComplex()
 	{
-		await _parser!.CommandParse("1", MModule.single("@dolist 1 2 3={@pemit #1=5 This is a test; @pemit #1=6 This is also a test}"));
+		await _parser!.CommandParse("1",
+			MModule.single("@dolist 1 2 3={@pemit #1=5 This is a test; @pemit #1=6 This is also a test}"));
 
 		await _parser.NotifyService
 			.Received(Quantity.Exactly(3))
@@ -75,7 +77,9 @@ public class GeneralCommandTests : BaseUnitTest
 	[Test]
 	public async Task DoListComplex2()
 	{
-		await _parser!.CommandParse("1", MModule.single("@dolist 1 2 3={@pemit #1=7 This is a test; @pemit #1=8 This is also a test}; @pemit #1=9 Repeat 3 times in this mode."));
+		await _parser!.CommandParse("1",
+			MModule.single(
+				"@dolist 1 2 3={@pemit #1=7 This is a test; @pemit #1=8 This is also a test}; @pemit #1=9 Repeat 3 times in this mode."));
 
 		await _parser.NotifyService
 			.Received(Quantity.Exactly(3))
@@ -91,7 +95,9 @@ public class GeneralCommandTests : BaseUnitTest
 	[Test]
 	public async Task DoListComplex3()
 	{
-		await _parser!.CommandParse("1", MModule.single("@dolist 1={@dolist 1 2 3=@pemit #1=10 This is a test}; @pemit #1=11 Repeat 1 times in this mode."));
+		await _parser!.CommandParse("1",
+			MModule.single(
+				"@dolist 1={@dolist 1 2 3=@pemit #1=10 This is a test}; @pemit #1=11 Repeat 1 times in this mode."));
 
 		await _parser.NotifyService
 			.Received(Quantity.Exactly(3))
@@ -104,7 +110,9 @@ public class GeneralCommandTests : BaseUnitTest
 	[Test]
 	public async Task DoListComplex4()
 	{
-		await _parser!.CommandParse("1", MModule.single("@dolist 1 2={@dolist 1 2 3=@pemit #1=12 This is a test}; @pemit #1=13 Repeat 2 times in this mode."));
+		await _parser!.CommandParse("1",
+			MModule.single(
+				"@dolist 1 2={@dolist 1 2 3=@pemit #1=12 This is a test}; @pemit #1=13 Repeat 2 times in this mode."));
 
 		await _parser.NotifyService
 			.Received(Quantity.Exactly(6))
@@ -117,7 +125,9 @@ public class GeneralCommandTests : BaseUnitTest
 	[Test]
 	public async Task DoListComplex5()
 	{
-		await _parser!.CommandParse("1", MModule.single("@dolist a b={@dolist 1 2 3=@pemit #1=14 This is a test %i0}; @pemit #1=15 Repeat 1 times in this mode %i0"));
+		await _parser!.CommandParse("1",
+			MModule.single(
+				"@dolist a b={@dolist 1 2 3=@pemit #1=14 This is a test %i0}; @pemit #1=15 Repeat 1 times in this mode %i0"));
 
 		await _parser.NotifyService
 			.Received(Quantity.Exactly(2))

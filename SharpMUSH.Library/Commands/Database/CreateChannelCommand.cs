@@ -1,4 +1,5 @@
 ﻿using Mediator;
+using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 
@@ -7,7 +8,12 @@ namespace SharpMUSH.Library.Commands.Database;
 public record CreateChannelCommand(
 	MString Channel,
 	string[] Privs,
-	SharpPlayer Owner) : ICommand;
+	SharpPlayer Owner) : ICommand, ICacheInvalidating
+{
+	// Add a $ at the end to make sure it cannot conflict with object DBRefs.
+	public string[] CacheKeys => [$"channels:{Channel.ToPlainText()}$"];
+	public string[] CacheTags => [Definitions.CacheTags.ChannelList];
+}
 
 public record UpdateChannelOwnerCommand(SharpChannel Channel, SharpPlayer Player) : ICommand;
 

@@ -18,8 +18,11 @@ public class CacheInvalidationBehavior<TRequest, TResponse>(IFusionCache cache) 
 		{
 			await cache.RemoveAsync(key, token: cancellationToken);
 		}
-		
-		await cache.RemoveByTagAsync(message.CacheTags, token: cancellationToken);
+
+		if (message.CacheTags.Length != 0)
+		{
+			await cache.RemoveByTagAsync(message.CacheTags, token: cancellationToken);
+		}
 		
 		return await next(message, cancellationToken);
 	}

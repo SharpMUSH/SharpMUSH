@@ -6,12 +6,10 @@ using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Commands.Database;
 
-public record MoveObjectCommand(AnySharpContent Target, AnySharpContainer Destination) : ICommand<DBRef>, ICacheInvalidating
+public record MoveObjectCommand(AnySharpContent Target, AnySharpContainer Destination)
+	: ICommand<DBRef>, ICacheInvalidating
 {
 	public string[] CacheKeys => [Target.Object().DBRef.ToString(), Destination.Object().DBRef.ToString()];
 
-	public string[] CacheTags =>
-	[
-		Definitions.CacheTags.ObjectContents
-	];
+	public string[] CacheTags => [Definitions.CacheTags.ObjectContents];
 }

@@ -7,5 +7,5 @@ namespace SharpMUSH.Library.Commands.Database;
 public record UnsetAttributeFlagCommand(DBRef DbRef, SharpAttribute Target, SharpAttributeFlag Flag) : ICommand<bool>, ICacheInvalidating
 {
 	public string[] CacheKeys => [DbRef.ToString()];
-	public string[] CacheTags => [Definitions.CacheTags.ObjectAttributes];
+	public string[] CacheTags => [];
 }

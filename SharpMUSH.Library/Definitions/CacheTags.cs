@@ -12,4 +12,5 @@ public static class CacheTags
 	public const string ObjectList = "object-list";
 	public const string ObjectLocks = "object-locks";
 	public const string ObjectFlags = "object-flags";
+	public const string ChannelList = "channel-list";
 }

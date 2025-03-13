@@ -8,5 +8,5 @@ namespace SharpMUSH.Library.Commands.Database;
 public record ClearAttributeCommand(DBRef DBRef, string[] Attribute) : ICommand<bool>, ICacheInvalidating
 {
 	public string[] CacheKeys => [DBRef.ToString()];
-	public string[] CacheTags => [Definitions.CacheTags.ObjectAttributes];
+	public string[] CacheTags => [];
 }

@@ -2,6 +2,6 @@
 
 public interface ICacheable
 {
-	string CacheKey { get; init; }
-	string[] CacheTags { get; init; }
+	string CacheKey { get; }
+	string[] CacheTags { get; }
 }
