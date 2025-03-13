@@ -288,7 +288,9 @@ public interface ISharpDatabase
 		string? SpeakLock,
 		string? SeeLock,
 		string? HideLock,
-		string? ModLock);
+		string? ModLock,
+		string? Mogrifier,
+		int? Buffer);
 	
 	ValueTask UpdateChannelOwnerAsync(SharpChannel channel, SharpPlayer newOwner);
 	

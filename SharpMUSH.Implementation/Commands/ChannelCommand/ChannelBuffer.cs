@@ -44,6 +44,7 @@ public static class ChannelBuffer
 			null,
 			null,
 			null,
+			null, 
 			Buffer: linesInt));
 
 		return new CallState("Channel buffer has been updated.");

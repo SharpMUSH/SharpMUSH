@@ -40,6 +40,7 @@ public static class ChannelDescribe
           			null,
 			null,
 			null,
+			null, 
 			null));
 
 		return new CallState("Channel description has been updated.");

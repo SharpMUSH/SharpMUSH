@@ -574,19 +574,25 @@ public class ArangoDatabase(
 
 	public async ValueTask UpdateChannelAsync(SharpChannel channel, MarkupString.MarkupStringModule.MarkupString? name,
 		MarkupString.MarkupStringModule.MarkupString? description, string[]? privs,
-		string? joinLock, string? speakLock, string? seeLock, string? hideLock, string? modLock)
+		string? joinLock, string? speakLock, string? seeLock, string? hideLock, string? modLock, string? mogrifier, int? buffer)
 		=> await arangoDb.Graph.Vertex.UpdateAsync(handle,
 			DatabaseConstants.GraphChannels, DatabaseConstants.Channels, channel.Id,
 			new
 			{
-				Name = MarkupStringModule.serialize(name) ?? MarkupStringModule.serialize(channel.Name),
-				Description = MarkupStringModule.serialize(description) ?? MarkupStringModule.serialize(channel.Description),
+				Name = name is not null 
+					? MarkupStringModule.serialize(name) 
+					: MarkupStringModule.serialize(channel.Name),
+				Description = description is not null 
+					? MarkupStringModule.serialize(description)
+					: MarkupStringModule.serialize(channel.Description),
 				Privs = privs ?? channel.Privs,
 				JoinLock = joinLock ?? channel.JoinLock,
 				SpeakLock = speakLock ?? channel.SpeakLock,
 				SeeLock = seeLock ?? channel.SeeLock,
 				HideLock = hideLock ?? channel.HideLock,
-				ModLock = modLock ?? channel.ModLock
+				ModLock = modLock ?? channel.ModLock,
+				Buffer = buffer ?? channel.Buffer,
+				Mogrifier = mogrifier ?? channel.Mogrifier
 			});
 
 	public async ValueTask UpdateChannelOwnerAsync(SharpChannel channel, SharpPlayer newOwner)

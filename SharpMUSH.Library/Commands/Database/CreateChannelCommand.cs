@@ -20,7 +20,8 @@ public record UpdateChannelCommand(
 	string? SpeakLock,
 	string? SeeLock,
 	string? HideLock,
-	string? ModLock,
+	string? ModLock, 
+	string? Mogrifier,
 	int? Buffer) : ICommand;
 
 public record DeleteChannelCommand(SharpChannel Channel) : ICommand;

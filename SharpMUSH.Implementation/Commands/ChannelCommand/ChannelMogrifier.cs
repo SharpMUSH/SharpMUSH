@@ -3,12 +3,13 @@ using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
 public static class ChannelMogrifier
 {
-	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString channelName, MString objectName)
+	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString channelName, MString obj)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		if (await executor.IsGuest())
@@ -32,18 +33,31 @@ public static class ChannelMogrifier
 		}
 
 		// TODO: Locate Object
-		var locate = new { };
-		var objectNameString = objectName.ToPlainText();
-		// var obj = await parser.Mediator.Send(new GetObjectQuery(objectNameString));
+		var objectString = obj.ToPlainText();
+		var maybeLocate = await parser.LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, objectString, LocateFlags.All);
 
-		if (locate is null)
+		switch (maybeLocate)
 		{
-			return new CallState("Object not found.");
+			case { IsError: true}:
+				return new CallState(maybeLocate.AsError.Value);
+			case { IsNone: true}:
+				return new CallState("#-1 Object not found.");
 		}
 
-		// channel.Mogrifier = object.Id;
-		// await parser.Mediator.Send(new UpdateChannelCommand(channel));
+		var locate = maybeLocate.AsAnyObject;
 
-		return new CallState("Channel mogrifier has been updated.");
+		await parser.Mediator.Send(new UpdateChannelCommand(channel, 
+			null, 
+			null, 
+			null, 
+			null, 
+			null, 
+			null, 
+			null,
+			null,
+			locate.Object().DBRef.ToString(), 
+			null));
+		
+		return new CallState("Channel Mogrifier has been updated.");
 	}
 }

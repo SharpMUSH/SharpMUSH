@@ -18,6 +18,7 @@ public class SharpChannel
 	public string HideLock { get; set; } = string.Empty;
 	public string ModLock { get; set; } = string.Empty;
 	public int Buffer { get; set; } = 0;
+	public string Mogrifier { get; set; } = string.Empty;
 }
 
 public record SharpChannelStatus(bool? Combine, bool? Gagged, bool? Hide, bool? Mute, MString? Title);

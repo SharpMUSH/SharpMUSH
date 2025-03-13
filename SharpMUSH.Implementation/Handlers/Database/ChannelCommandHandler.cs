@@ -17,7 +17,17 @@ public class UpdateChannelCommandHandler(ISharpDatabase database) : ICommandHand
 {
 	public async ValueTask<Unit> Handle(UpdateChannelCommand request, CancellationToken cancellationToken)
 	{
-		await database.UpdateChannelAsync(request.Channel, request.Name, request.Description, request.Privs, request.JoinLock, request.SpeakLock, request.SeeLock, request.HideLock, request.ModLock);
+		await database.UpdateChannelAsync(request.Channel,
+			request.Name,
+			request.Description,
+			request.Privs,
+			request.JoinLock,
+			request.SpeakLock,
+			request.SeeLock,
+			request.HideLock,
+			request.ModLock,
+			request.Mogrifier,
+			request.Buffer);
 		return Unit.Value;
 	}
 }

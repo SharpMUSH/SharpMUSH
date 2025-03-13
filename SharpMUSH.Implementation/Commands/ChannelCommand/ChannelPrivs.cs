@@ -42,12 +42,13 @@ public static class ChannelPrivs
 		await parser.Mediator.Send(new UpdateChannelCommand(channel,
 			null, 
 			null,
-			privilegeList.AsPrivileges,
+			Privs: privilegeList.AsPrivileges,
 			null,
 			null,
 			null,
 			null,
 			null,
+			null, 
 			null));
 
 		return new CallState("CHAT: Channel privileges have been updated.");
