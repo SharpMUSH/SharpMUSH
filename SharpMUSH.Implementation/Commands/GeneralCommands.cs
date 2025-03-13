@@ -10,6 +10,7 @@ using SharpMUSH.Library.Queries.Database;
 using System.Drawing;
 using SharpMUSH.Implementation.Commands.ChannelCommand;
 using SharpMUSH.Implementation.Commands.MailCommand;
+using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services;
 using CB = SharpMUSH.Implementation.Definitions.CommandBehavior;
 using StringExtensions = ANSILibrary.StringExtensions;
@@ -796,24 +797,38 @@ public static partial class Commands
 			return new CallState("#-1 Don't you have anything to say?");
 		}
 
-		var channelName = arg0CallState!.Message!.ToPlainText();
+		var channelName = arg0CallState!.Message!;
 		var message = arg1CallState!.Message!;
-		var channel = await parser.Mediator.Send(new GetChannelQuery(channelName));
-		var channelMembers = await channel!.Members.WithCancellation(CancellationToken.None);
-
-		foreach (var (member, status) in channelMembers)
+		
+		// TODO: Use standardized method.
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, channelName, true);
+		
+		if (maybeChannel.IsError)
 		{
-			if (status.Gagged ?? false) continue;
-
-			var canInteract =
-				await parser.PermissionService.CanInteract(member, executor, IPermissionService.InteractType.Hear);
-			if (!canInteract) continue;
-
-			await parser.NotifyService.Notify(member,
-				MModule.multiple([
-					MModule.single("<"), channel.Name, MModule.single("> "), status.Title, MModule.single(" "), message
-				]), executor);
+			return maybeChannel.AsError.Value;
 		}
+
+		var channel = maybeChannel.AsChannel;
+
+		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(executor, channel);
+		
+		if(maybeMemberStatus is null)
+		{
+			return new CallState("You are not a member of that channel.");
+		}
+
+		var (_, status) = maybeMemberStatus.Value;
+		
+		await parser.Mediator.Send(new ChannelMessageRequest(
+			channel, 
+			executor.WithNoneOption(), 
+			INotifyService.NotificationType.Emit, 
+			message, 
+			status.Title ?? MModule.empty(),
+			MModule.single(executor.Object().Name),
+			MModule.single("says"),
+			[]
+			));
 
 		return new CallState(string.Empty);
 	}
