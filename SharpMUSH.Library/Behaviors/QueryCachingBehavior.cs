@@ -17,23 +17,10 @@ public class QueryCachingBehavior<TRequest, TResponse>(IFusionCache cache)
 		MessageHandlerDelegate<TRequest, TResponse> next
 	)
 	{
-		/*try
-		{
-			if (message.CacheTags.Length > 0)
-			{
-				return await cache.GetOrSetAsync(message.CacheKey, await next(message, cancellationToken),
-					tags: message.CacheTags, token: cancellationToken);
-			}
-
-			return await cache.GetOrSetAsync(message.CacheKey, await next(message, cancellationToken),
+		return message.CacheTags.Length > 0
+			? await cache.GetOrSetAsync(message.CacheKey, await next(message, cancellationToken),
+				tags: message.CacheTags, token: cancellationToken)
+			: await cache.GetOrSetAsync(message.CacheKey, await next(message, cancellationToken),
 				token: cancellationToken);
-		}
-		catch (Exception e)
-		{
-			Debugger.Break();
-			System.Console.WriteLine("BEEEEE");
-			throw;
-		}*/
-		return await next(message, cancellationToken);
 	}
 }

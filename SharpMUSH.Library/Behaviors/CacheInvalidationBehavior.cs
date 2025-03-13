@@ -15,28 +15,16 @@ public class CacheInvalidationBehavior<TRequest, TResponse>(IFusionCache cache) 
 		MessageHandlerDelegate<TRequest, TResponse> next
 	)
 	{
-		/*
-		try
+		await foreach (var key in message.CacheKeys.ToAsyncEnumerable().WithCancellation(cancellationToken))
 		{
-			await foreach (var key in message.CacheKeys.ToAsyncEnumerable().WithCancellation(cancellationToken))
-			{
-				await cache.RemoveAsync(key, token: cancellationToken);
-			}
-
-			if (message.CacheTags.Length != 0)
-			{
-				await cache.RemoveByTagAsync(message.CacheTags, token: cancellationToken);
-			}
-
-			return await next(message, cancellationToken);
+			await cache.RemoveAsync(key, token: cancellationToken);
 		}
-		catch (Exception e)
+
+		if (message.CacheTags.Length != 0)
 		{
-			Debugger.Break();
-			System.Console.WriteLine("AHHHH");
-			throw;
-		}*/
-		
+			await cache.RemoveByTagAsync(message.CacheTags, token: cancellationToken);
+		}
+
 		return await next(message, cancellationToken);
 	}
 }
