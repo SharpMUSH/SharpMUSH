@@ -6,7 +6,7 @@ namespace SharpMUSH.Library.Commands.Database;
 
 public record CreateRoomCommand(string Name, SharpPlayer Creator) : ICommand<DBRef>, ICacheInvalidating
 {
-	public string[] CacheKeys => [$"object:{Creator.Object.DBRef}"];
+	public string[] CacheKeys => [Creator.Object.DBRef.ToString()];
 
 	public string[] CacheTags =>
 	[

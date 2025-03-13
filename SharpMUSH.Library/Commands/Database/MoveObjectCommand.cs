@@ -9,12 +9,7 @@ namespace SharpMUSH.Library.Commands.Database;
 public record MoveObjectCommand(AnySharpContent Target, AnySharpContainer Destination)
 	: ICommand<DBRef>, ICacheInvalidating
 {
-	public string[] CacheKeys => [
-		$"object-contents:{Target.Object().DBRef}",
-		$"object-contents:{Destination.Object().DBRef}",
-		$"object:{Target.Object().DBRef}",
-		$"object:{Destination.Object().DBRef}"
-	];
+	public string[] CacheKeys => [Target.Object().DBRef.ToString(), Destination.Object().DBRef.ToString()];
 
 	public string[] CacheTags => [Definitions.CacheTags.ObjectContents];
 }

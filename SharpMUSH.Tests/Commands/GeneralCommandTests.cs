@@ -147,7 +147,6 @@ public class GeneralCommandTests : BaseUnitTest
 	}
 
 	[Test]
-	[NotInParallel]
 	public async Task DoDigForCommandlistCheck()
 	{
 		await _parser!.CommandParse("1", MModule.single("@dig Bar Room=Exit;ExitAlias,ExitBack;ExitAliasBack"));

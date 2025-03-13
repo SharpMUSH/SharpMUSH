@@ -6,8 +6,7 @@ namespace SharpMUSH.Library.Commands.Database;
 
 public record CreatePlayerCommand(string Name, string Password, DBRef Location) : ICommand<DBRef>, ICacheInvalidating
 {
-	public string[] CacheKeys => [$"object-contents:{Location}"];
-	
+	public string[] CacheKeys => [Location.ToString()];
 	public string[] CacheTags => [
 		Definitions.CacheTags.ObjectContents,
 		Definitions.CacheTags.ObjectOwnership,

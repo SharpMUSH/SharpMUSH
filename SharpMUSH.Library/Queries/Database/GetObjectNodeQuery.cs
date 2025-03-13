@@ -5,8 +5,4 @@ using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Queries.Database;
 
-public record GetObjectNodeQuery(DBRef DBRef) : IQuery<AnyOptionalSharpObject>/*, ICacheable*/
-{
-	// public string CacheKey => $"object:{DBRef}";
-	// public string[] CacheTags => [];
-}
+public record GetObjectNodeQuery(DBRef DBRef) : IQuery<AnyOptionalSharpObject>/*, ICacheable*/;

@@ -6,6 +6,6 @@ namespace SharpMUSH.Library.Commands.Database;
 
 public record SetAttributeCommand(DBRef DBRef, string[] Attribute, MString Value, SharpPlayer Owner) : ICommand<bool>, ICacheInvalidating
 {
-	public string[] CacheKeys => [$"attribute:{DBRef}:{string.Join("`", Attribute)})"];
+	public string[] CacheKeys => [DBRef.ToString()];
 	public string[] CacheTags => []; // [Definitions.CacheTags.ObjectAttributes];
 }
