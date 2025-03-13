@@ -16,8 +16,7 @@ public class GeneralCommandTests : BaseUnitTest
 	[Before(Class)]
 	public static async ValueTask OneTimeSetup()
 	{
-		_parser = await TestParser(ns: Substitute.For<INotifyService>());
-		await Task.Delay(1000);
+			_parser = await TestParser(ns: Substitute.For<INotifyService>());
 	}
 
 	[Test]
