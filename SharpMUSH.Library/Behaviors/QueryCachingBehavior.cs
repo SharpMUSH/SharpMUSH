@@ -1,11 +1,10 @@
-using DotNext.Collections.Generic;
 using Mediator;
-using Microsoft.Extensions.Caching.Memory;
 using SharpMUSH.Library.Attributes;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace SharpMUSH.Library.Behaviors;
 
-public class QueryCachingBehavior<TRequest, TResponse>(IMemoryCache cache)
+public class QueryCachingBehavior<TRequest, TResponse>(IFusionCache cache)
 	: IPipelineBehavior<TRequest, TResponse>
 	where TRequest : IQuery<TResponse>, ICacheable
 {
@@ -19,11 +18,14 @@ public class QueryCachingBehavior<TRequest, TResponse>(IMemoryCache cache)
 	{
 		var cacheKey = $"{message.GetType().Name}:{message.GetHashCode()}";
 
-		if (cache.TryGetValue(cacheKey, out TResponse? cachedResponse))
-			return cachedResponse!;
+		var tryGet = await cache.TryGetAsync<TResponse>(cacheKey, token: cancellationToken);
+		if (tryGet.HasValue)
+		{
+			return tryGet.Value;
+		}
 
 		var response = await next(message, cancellationToken);
-		cache.Set(cacheKey, response, _cacheDuration);
+		await cache.SetAsync(cacheKey, response, _cacheDuration, token: cancellationToken);
 
 		return response;
 	}

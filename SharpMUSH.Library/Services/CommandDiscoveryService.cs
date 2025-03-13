@@ -1,19 +1,17 @@
-﻿using Microsoft.Extensions.Caching.Memory;
-using OneOf.Types;
+﻿using OneOf.Types;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using System.Text.RegularExpressions;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace SharpMUSH.Library.Services;
 
-public partial class CommandDiscoveryService : ICommandDiscoveryService
+public partial class CommandDiscoveryService(FusionCache cache) : ICommandDiscoveryService
 {
-	private static readonly MemoryCache Cache = new(new MemoryCacheOptions());
-
 	public void InvalidateCache(DBRef dbReference)
-		=> Cache.Remove(dbReference.Number);
+		=> cache.Remove(dbReference.ToString());
 
 	// TODO: Severe optimization needed. We can't keep scanning all attributes each time we want to do a command match, and do conversions.
 	// We need to cache the results of the conversion and where that object & attribute live.

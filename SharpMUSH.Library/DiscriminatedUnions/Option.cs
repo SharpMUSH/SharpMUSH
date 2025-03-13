@@ -14,7 +14,7 @@ public partial class Option<T> : OneOfBase<T, None>
 
 	public bool TryGetValue(out T? value)
 	{
-		value = (IsT0 ? AsT0 : default);
+		value = IsT0 ? AsT0 : default;
 		return IsT0;
 	}
 }

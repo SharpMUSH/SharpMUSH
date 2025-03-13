@@ -61,7 +61,7 @@ public class Startup(ArangoConfiguration config, string configFile)
 			 * Only 512 should be used for Set.
 			 */
 		);
-		services.AddMemoryCache();
+		services.AddFusionCache();
 		services.AddSingleton<IPasswordService, PasswordService>();
 		services.AddSingleton<IPermissionService, PermissionService>();
 		services.AddSingleton<INotifyService, NotifyService>();
