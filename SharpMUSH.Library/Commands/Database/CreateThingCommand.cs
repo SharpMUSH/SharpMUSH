@@ -8,7 +8,7 @@ namespace SharpMUSH.Library.Commands.Database;
 
 public record CreateThingCommand(string Name, AnySharpContainer Where, SharpPlayer Owner) : ICommand<DBRef>, ICacheInvalidating
 {
-	public string[] CacheKeys => [Where.Object().DBRef.ToString()];
+	public string[] CacheKeys => [$"object-contents:{Where.Object().DBRef}",$"object:{Owner.Object.DBRef}"];
 	
 	public string[] CacheTags => [
 		Definitions.CacheTags.ObjectList, 

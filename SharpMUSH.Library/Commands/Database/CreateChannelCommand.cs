@@ -10,8 +10,7 @@ public record CreateChannelCommand(
 	string[] Privs,
 	SharpPlayer Owner) : ICommand, ICacheInvalidating
 {
-	// Add a $ at the end to make sure it cannot conflict with object DBRefs.
-	public string[] CacheKeys => [$"channels:{Channel.ToPlainText()}$"];
+	public string[] CacheKeys => [$"channel:{Channel.ToPlainText()}"];
 	public string[] CacheTags => [Definitions.CacheTags.ChannelList];
 }
 
