@@ -96,9 +96,12 @@ public static class ChannelHelper
 	}
 
 	public static bool IsValidChannelName(IMUSHCodeParser parser, MString channelName) 
-		=> parser.Configuration.CurrentValue.Chat.ChannelTitleLength >= channelName.ToPlainText().Length 
-		   && channelName.ToPlainText().Length > 3 
-		   && !channelName.ToPlainText().Contains(' ');
+	=> IsValidChannelName(parser, channelName.ToPlainText());
+	
+	public static bool IsValidChannelName(IMUSHCodeParser parser, string channelName) 
+		=> parser.Configuration.CurrentValue.Chat.ChannelTitleLength >= channelName.Length 
+		   && channelName.Length > 3 
+		   && !channelName.Contains(' ');
 
 	public static async ValueTask<ChannelOrError> GetChannelOrError(
 		IMUSHCodeParser parser,
