@@ -23,8 +23,6 @@ public class SimpleFunctionCalls : BaseBenchmark
 	[Arguments(25)]
 	[Arguments(50)]
 	[Arguments(100)]
-	[Arguments(150)]
-	[Arguments(200)]
 	public async Task Depth(int depth)
 	{
 		var sb = new StringBuilder();
