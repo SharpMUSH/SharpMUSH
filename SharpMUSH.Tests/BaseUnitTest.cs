@@ -9,7 +9,6 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using System.Text;
-using Docker.DotNet.Models;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
 using Testcontainers.ArangoDb;

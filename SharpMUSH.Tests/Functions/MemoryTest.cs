@@ -26,6 +26,7 @@ public class MemoryTest : BaseUnitTest
 			.That(result)
 			.IsEqualTo("201");
 	}
+	
 	[Test]
 	public async Task SmallDepth()
 	{
