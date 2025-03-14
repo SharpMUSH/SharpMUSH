@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Serilog;
+using Serilog.Events;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Database.ArangoDB;
@@ -28,11 +29,12 @@ public class Startup(ArangoConfiguration config, string configFile)
 		services.AddLogging(logging =>
 		{
 			logging.ClearProviders();
-			logging.AddSerilog();
-			logging.SetMinimumLevel(LogLevel.Trace);
+			logging.AddSerilog(new LoggerConfiguration()
+				.MinimumLevel.Override("ZiggyCreatures.Caching.Fusion", LogEventLevel.Verbose)
+				.MinimumLevel.Debug()
+				.CreateLogger());
 		});
 
-		services.AddArango(_ => config.ConnectionString);
 		services.AddSingleton<ISharpDatabase, ArangoDatabase>();
 		services.AddSingleton<PasswordHasher<string>, PasswordHasher<string>>(
 			_ => new PasswordHasher<string>()
@@ -61,7 +63,6 @@ public class Startup(ArangoConfiguration config, string configFile)
 			 * Only 512 should be used for Set.
 			 */
 		);
-		services.AddFusionCache();
 		services.AddSingleton<IPasswordService, PasswordService>();
 		services.AddSingleton<IPermissionService, PermissionService>();
 		services.AddSingleton<INotifyService, NotifyService>();
@@ -73,15 +74,17 @@ public class Startup(ArangoConfiguration config, string configFile)
 		services.AddSingleton<ILockService, LockService>();
 		services.AddSingleton<IBooleanExpressionParser, BooleanExpressionParser>();
 		services.AddSingleton<ICommandDiscoveryService, CommandDiscoveryService>();
-		services.AddSingleton(new ArangoHandle("CurrentSharpMUSHWorld"));
-		services.AddScoped<IMUSHCodeParser, MUSHCodeParser>();
-		services.AddHostedService<SchedulerService>();
-		services.AddMediator();
+		services.AddSingleton<IOptionsFactory<PennMUSHOptions>, ReadPennMushConfig>(_ => new ReadPennMushConfig(configFile));
 		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(CacheInvalidationBehavior<,>));
 		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(QueryCachingBehavior<,>));
-		services.BuildServiceProvider();
-		services.AddSingleton<IOptionsFactory<PennMUSHOptions>, ReadPennMushConfig>(_ => new ReadPennMushConfig(configFile));
+		services.AddSingleton(new ArangoHandle("CurrentSharpMUSHWorld"));
+		services.AddHostedService<SchedulerService>();
+		services.AddScoped<IMUSHCodeParser, MUSHCodeParser>();
 		services.AddOptions<PennMUSHOptions>();
+		services.AddMediator();
+		services.AddFusionCache();
+		services.AddArango(_ => config.ConnectionString);
+		services.BuildServiceProvider();
 	}
 
 	// This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
