@@ -1438,17 +1438,6 @@ public class ArangoDatabase(
 
 	public async ValueTask SetupLogging()
 	{
-		await arangoDb.Index.CreateAsync("logs", "logs", new ArangoIndex()
-		{
-			Name = "Level",
-			Fields = ["Level"],
-			Type = ArangoIndexType.Persistent
-		});
-		await arangoDb.Index.CreateAsync("logs", "logs", new ArangoIndex()
-		{
-			Name = "Timestamp",
-			Fields = ["Timestamp"],
-			Type = ArangoIndexType.Persistent
-		});
+		await ValueTask.CompletedTask;
 	}
 }

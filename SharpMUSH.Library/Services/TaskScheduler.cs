@@ -107,7 +107,7 @@ public class TaskScheduler : ITaskScheduler
 			}
 
 			skipStack.Push(result);
-		} while (Pipe.TryDequeue(out result));
+		} while (Pipe.TryDequeue(out result) && !stoppingToken.IsCancellationRequested);
 
 		foreach (var item in skipStack)
 		{

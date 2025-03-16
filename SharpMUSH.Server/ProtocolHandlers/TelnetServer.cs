@@ -32,6 +32,11 @@ public class TelnetServer : ConnectionHandler
 		(database as ISharpDatabaseWithLogging)?.SetupLogging().AsTask().Wait();
 	}
 
+	/// <summary>
+	/// TODO: Something in this sector is holding up the thread when the console is being quit.
+	/// It's likely that the Connection.Closed is not the same as the Console.Closed.
+	/// </summary>
+	/// <param name="connection"></param>
 	public override async Task OnConnectedAsync(ConnectionContext connection)
 	{
 		var ct = connection.ConnectionClosed;
@@ -78,9 +83,9 @@ public class TelnetServer : ConnectionHandler
 
 		try
 		{
-			while (!connection.ConnectionClosed.IsCancellationRequested)
+			while (!ct.IsCancellationRequested)
 			{
-				var result = await connection.Transport.Input.ReadAsync(connection.ConnectionClosed);
+				var result = await connection.Transport.Input.ReadAsync(ct);
 
 				foreach (var segment in result.Buffer)
 				{

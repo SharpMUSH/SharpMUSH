@@ -42,7 +42,13 @@ public class Program
 			.Enrich.FromLogContext()
 			.WriteTo.Console(theme: AnsiConsoleTheme.Code)
 			.WriteTo.Sink(new PeriodicBatchingSink(
-				new ArangoSerilogSink(new ArangoContext(config), "logs", "logs"),
+				new ArangoSerilogSink(new ArangoContext(config), 
+					"logs", 
+					"logs",
+					ArangoSerilogSink.LoggingRenderStrategy.StoreTemplate,
+					true, 
+					true, 
+					true),
 				new()
 				{
 					BatchSizeLimit = 1000,
