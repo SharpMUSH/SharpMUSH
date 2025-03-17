@@ -16,7 +16,7 @@ public enum FunctionFlags
 	GodOnly = 1 << 9,
 	BuiltIn = 1 << 10,
 	Override = 1 << 11,
-	NoSideFX = 1 << 12,
+	HasSideFX = 1 << 12,
 	LogName = 1 << 13,
 	LogArgs = 1 << 14,
 	Localize = 1 << 15,

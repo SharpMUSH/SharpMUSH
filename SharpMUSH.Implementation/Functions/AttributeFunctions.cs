@@ -18,13 +18,15 @@ public partial class Functions
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "attrib_set", MaxArgs = 2, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "attrib_set", MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX)]
 	public static async ValueTask<CallState> AttributeSet(IMUSHCodeParser parser,
 		SharpFunctionAttribute functionAttribute)
 	{
-		// TODO: If we have the NoSideFX flag, don't function! 
-		// That should be handled by the parser before it gets here.
-
+		if(parser.Configuration.CurrentValue.Function.FunctionSideEffects)
+		{
+			return new CallState(Errors.ErrorNoSideFX);
+		}
+		
 		var args = parser.CurrentState.Arguments;
 		var split = HelperFunctions.SplitDBRefAndAttr(MModule.plainText(args["0"].Message!));
 		var enactor = (await parser.CurrentState.EnactorObject(parser.Mediator)).WithoutNone();
@@ -423,8 +425,14 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "SET", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> set(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> set(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		await ValueTask.CompletedTask;
+		if(parser.Configuration.CurrentValue.Function.FunctionSideEffects)
+		{
+			return new CallState(Errors.ErrorNoSideFX);
+		}
+		
 		throw new NotImplementedException();
 	}
 
