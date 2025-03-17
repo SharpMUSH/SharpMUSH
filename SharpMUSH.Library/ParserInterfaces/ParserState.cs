@@ -19,8 +19,8 @@ public enum ParseMode
 public class IterationWrapper<T>
 {
 	public required T Value { get; set; }
-	public uint Iteration { get; set; } = 0;
-	public bool Break { get; set; } = false;
+	public required uint Iteration { get; set; }
+	public required bool Break { get; set; }
 }
 
 /// <summary>
@@ -108,11 +108,21 @@ public record ParserState(
 	public async ValueTask<AnySharpObject> KnownCallerObject(IMediator mediator)
 		=> (await CallerObject(mediator)).Known();
 
+	/// <summary>
+	/// Just the numbered arguments, %0-%9 etc., in numerical order. This excludes named arguments.
+	/// </summary>
 	public ImmutableSortedDictionary<string, CallState> ArgumentsOrdered => Arguments
 		.Where(x => int.TryParse(x.Key, out _))
 		.OrderBy(x => int.Parse(x.Key))
 		.ToImmutableSortedDictionary();
 
+	/// <summary>
+	/// Add a register value to the Register stack.
+	/// </summary>
+	/// <param name="register">Register string.</param>
+	/// <param name="value">Value.</param>
+	/// <returns>Success if it was a valid register.</returns>
+	/// <exception cref="Exception">If we somehow failed to peek. Fatal.</exception>
 	public bool AddRegister(string register, MString value)
 	{
 		// TODO: Validate Register Pattern

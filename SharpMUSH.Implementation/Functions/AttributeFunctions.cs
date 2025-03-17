@@ -79,7 +79,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "EVAL", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
-	public static async ValueTask<CallState> eval(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Eval(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var dbrefAndAttr = HelperFunctions.SplitDBRefAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
 
@@ -119,15 +119,13 @@ public partial class Functions
 
 		var get = maybeAttr.AsAttribute;
 
-		// TODO: Consideration - this wants the Arguments from the level above this.
-		// That requires us to be able to get its value. We can't do that right now.
+		var top2 = parser.State.Take(2).ToArray();
+		var lastArguments = top2.Length > 1 ? top2.Last().Arguments : [];
+		
 		var newParser = parser.Push(parser.CurrentState with
 		{
 			CurrentEvaluation = new DBAttribute(actualObject.Object().DBRef, get.Name),
-			Arguments = new(parser.CurrentState.Arguments.Skip(1)
-				.Select(
-					(value, i) => new KeyValuePair<string, CallState>(i.ToString(), value.Value))
-				.ToDictionary()),
+			Arguments = lastArguments,
 			Enactor = parser.CurrentState.Executor
 		});
 
@@ -135,7 +133,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "FLAGS", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static async ValueTask<CallState> flags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Flags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		if (string.IsNullOrWhiteSpace(parser.CurrentState.Arguments["0"].Message!.ToPlainText()))
 		{
@@ -143,10 +141,12 @@ public partial class Functions
 			return new CallState(string.Join(" ", allFlags));
 		}
 
+		// TODO: Implement version that looks at attribute flags.
+		// TODO: Implement locate() and look at the player, after checking permissions.
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).WithoutNone();
+		var flags = await executor.Object().Flags.WithCancellation(CancellationToken.None);
 
-		// Locate and get flags from Object -- or attribute flags. See pattern in Owner().
-		throw new NotImplementedException();
+		return new CallState(String.Join(" ", flags.Select(x => x.Name)));
 	}
 
 	[SharpFunction(Name = "get", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -239,6 +239,8 @@ public partial class Functions
 	[SharpFunction(Name = "HASFLAG", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> hasflag(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		// hasflag(<object>[/<attrib>], <flag>)
+		// Must look at full name, or alias.
 		throw new NotImplementedException();
 	}
 
@@ -347,6 +349,8 @@ public partial class Functions
 	[SharpFunction(Name = "POSS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> poss(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		// Should consider the Config for Possessive Form.
+		// parser.Configuration.CurrentValue.Attribute.PossessivePronounAttribute
 		throw new NotImplementedException();
 	}
 
