@@ -10,6 +10,7 @@ using SharpMUSH.Library.Queries.Database;
 using System.Drawing;
 using SharpMUSH.Implementation.Commands.ChannelCommand;
 using SharpMUSH.Implementation.Commands.MailCommand;
+using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services;
 using CB = SharpMUSH.Implementation.Definitions.CommandBehavior;
@@ -819,7 +820,7 @@ public static partial class Commands
 
 		var (_, status) = maybeMemberStatus.Value;
 		
-		await parser.Mediator.Send(new ChannelMessageRequest(
+		await parser.Mediator.Send(new ChannelMessageNotification(
 			channel, 
 			executor.WithNoneOption(), 
 			INotifyService.NotificationType.Emit, 

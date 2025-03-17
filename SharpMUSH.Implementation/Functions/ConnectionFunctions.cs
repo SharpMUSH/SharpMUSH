@@ -1,4 +1,5 @@
 ﻿using SharpMUSH.Implementation.Definitions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Implementation.Functions;
@@ -189,8 +190,20 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "HEIGHT", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> height(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Height(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+
+		var data = parser.ConnectionService.Get(executor.Object().DBRef).ToArray();
+		if (data.Length == 0)
+		{
+			return new CallState("#-1");
+		}
+
+		var mostActive = data.OrderBy(x => x.Idle).First();
+		var height = mostActive.Metadata["HEIGHT"];
+
+
 		throw new NotImplementedException();
 	}
 

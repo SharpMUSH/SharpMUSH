@@ -1,14 +1,15 @@
 using Mediator;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Implementation.Handlers;
 
-public class ChannelMessageRequestHandler(IMUSHCodeParser parser): INotificationHandler<ChannelMessageRequest>
+public class ChannelMessageRequestHandler(IMUSHCodeParser parser): INotificationHandler<ChannelMessageNotification>
 {
-	public async ValueTask Handle(ChannelMessageRequest notification, CancellationToken cancellationToken)
+	public async ValueTask Handle(ChannelMessageNotification notification, CancellationToken cancellationToken)
 	{
 		var channelMembers = await notification.Channel.Members.WithCancellation(cancellationToken);
 		var chanName = notification.Channel.Name;

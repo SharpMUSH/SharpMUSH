@@ -5,6 +5,7 @@ using SharpMUSH.Library;
 using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services;
 using System.Text;
+using SharpMUSH.Library.Notifications;
 using TelnetNegotiationCore.Handlers;
 using TelnetNegotiationCore.Interpreters;
 using TelnetNegotiationCore.Models;
@@ -42,22 +43,22 @@ public class TelnetServer : ConnectionHandler
 		var ct = connection.ConnectionClosed;
 		var MSDPHandler = new MSDPServerHandler(new MSDPServerModel(async resetVar
 			=> await _publisher.Publish(
-				new UpdateMSDPRequest(connection.ConnectionId, resetVar), ct)));
+				new UpdateMSDPNotification(connection.ConnectionId, resetVar), ct)));
 
 		var telnet = await new TelnetInterpreter(TelnetInterpreter.TelnetMode.Server, _logger)
 			{
 				CallbackOnSubmitAsync = async (byteArray, encoding, _)
 					=> await _publisher.Publish(
-						new TelnetInputRequest(connection.ConnectionId, encoding.GetString(byteArray)), ct),
+						new TelnetInputNotification(connection.ConnectionId, encoding.GetString(byteArray)), ct),
 				SignalOnGMCPAsync = async moduleAndInfo
 					=> await _publisher.Publish(
-						new SignalGMCPRequest(connection.ConnectionId, moduleAndInfo.Package, moduleAndInfo.Info), ct),
+						new SignalGMCPNotification(connection.ConnectionId, moduleAndInfo.Package, moduleAndInfo.Info), ct),
 				SignalOnMSSPAsync = async msspConfig
 					=> await _publisher.Publish(
-						new UpdateMSSPRequest(connection.ConnectionId, msspConfig), ct),
+						new UpdateMSSPNotification(connection.ConnectionId, msspConfig), ct),
 				SignalOnNAWSAsync = async (newHeight, newWidth)
 					=> await _publisher.Publish(
-						new UpdateNAWSRequest(connection.ConnectionId, newHeight, newWidth), ct),
+						new UpdateNAWSNotification(connection.ConnectionId, newHeight, newWidth), ct),
 				SignalOnMSDPAsync = MSDPHandler.HandleAsync,
 				CallbackNegotiationAsync = async byteArray =>
 				{
