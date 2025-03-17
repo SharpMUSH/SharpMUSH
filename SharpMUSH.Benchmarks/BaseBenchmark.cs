@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text;
 using BenchmarkDotNet.Attributes;
 using Core.Arango;
@@ -81,14 +82,14 @@ public class BaseBenchmark
 		var one = realOne.Object()!.DBRef;
 
 		var simpleConnectionService = new ConnectionService();
-		simpleConnectionService.Register("1", x => ValueTask.CompletedTask, () => Encoding.UTF8);
+		simpleConnectionService.Register("1", _ => ValueTask.CompletedTask, () => Encoding.UTF8);
 		simpleConnectionService.Bind("1", one);
 
 		var parser = (IMUSHCodeParser)integrationServer.Services.GetService(typeof(IMUSHCodeParser))!;
 		return parser.FromState(new ParserState(
-			Registers: new([[]]),
-			IterationRegisters: new(),
-			RegexRegisters: new(),
+			Registers: new ConcurrentStack<Dictionary<string, MString>>([[]]),
+			IterationRegisters: new ConcurrentStack<IterationWrapper<MString>>(),
+			RegexRegisters: new ConcurrentStack<Dictionary<string, MString>>(),
 			CurrentEvaluation: null,
 			0,
 			Function: null,

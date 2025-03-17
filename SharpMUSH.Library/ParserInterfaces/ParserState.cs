@@ -23,6 +23,23 @@ public class IterationWrapper<T>
 	public bool Break { get; set; } = false;
 }
 
+/// <summary>
+/// A layer or Parser State
+/// </summary>
+/// <param name="Registers">The current standard registers (%0, %1, named arguments)</param>
+/// <param name="IterationRegisters">The current iteration registers: %i0, #@, etc</param>
+/// <param name="RegexRegisters">The current regex registers, %$0 and named ones.</param>
+/// <param name="CurrentEvaluation">The current evaluation context</param>
+/// <param name="ParserFunctionDepth">The function depth.</param>
+/// <param name="Function">Function name being evaluated</param>
+/// <param name="Command">Command name being evaluated</param>
+/// <param name="Switches">Switches for the command being evaluated</param>
+/// <param name="Arguments">The arguments to the command or function</param>
+/// <param name="Executor">The executor of a command is the object actually carrying out the command or running the code: %!</param>
+/// <param name="Enactor">The enactor is the object which causes something to happen: %# or %:</param>
+/// <param name="Caller">The caller is the object which causes an attribute to be evaluated (for instance, by using ufun() or a similar function): %@</param>
+/// <param name="Handle">The telnet handle running the command.</param>
+/// <param name="ParseMode">Parse mode, in case we need to NoParse.</param>
 public record ParserState(
 	ConcurrentStack<Dictionary<string, MString>> Registers,
 	ConcurrentStack<IterationWrapper<MString>> IterationRegisters,
@@ -43,21 +60,51 @@ public record ParserState(
 	private AnyOptionalSharpObject? _enactorObject;
 	private AnyOptionalSharpObject? _callerObject;
 
+	/// <summary>
+	/// The executor of a command is the object actually carrying out the command or running the code: %!
+	/// </summary>
+	/// <param name="mediator">Mediator to get the object node with.</param>
+	/// <returns>A ValueTask containing either a SharpObject, or None.</returns>
 	public async ValueTask<AnyOptionalSharpObject> ExecutorObject(IMediator mediator)
 		=> _executorObject ??= Executor is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Executor.Value));
 
+	/// <summary>
+	/// The enactor is the object which causes something to happen: %# or %:
+	/// </summary>
+	/// <param name="mediator">Mediator to get the object node with.</param>
+	/// <returns>A ValueTask containing either a SharpObject, or None.</returns>
 	public async ValueTask<AnyOptionalSharpObject> EnactorObject(IMediator mediator)
 		=> _enactorObject ??= Enactor is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Enactor.Value));
 
+	/// <summary>
+	/// The caller is the object which causes an attribute to be evaluated (for instance, by using ufun() or a similar function): %@
+	/// </summary>
+	/// <param name="mediator">Mediator to get the object node with.</param>
+	/// <returns>A ValueTask containing either a SharpObject, or None.</returns>
 	public async ValueTask<AnyOptionalSharpObject> CallerObject(IMediator mediator)
 		=> _callerObject ??= Caller is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Caller.Value));
-
+	
+	/// <summary>
+	/// The executor of a command is the object actually carrying out the command or running the code: %!
+	/// </summary>
+	/// <param name="mediator">Mediator to get the object node with.</param>
+	/// <returns>A ValueTask containing either a SharpObject, or it will throw.</returns>
 	public async ValueTask<AnySharpObject> KnownExecutorObject(IMediator mediator)
 		=> (await ExecutorObject(mediator)).Known();
-
+	
+	/// <summary>
+	/// The enactor is the object which causes something to happen: %# or %:
+	/// </summary>
+	/// <param name="mediator">Mediator to get the object node with.</param>
+	/// <returns>A ValueTask containing either a SharpObject, or it will throw.</returns>
 	public async ValueTask<AnySharpObject> KnownEnactorObject(IMediator mediator)
 		=> (await EnactorObject(mediator)).Known();
-
+	
+	/// <summary>
+	/// The caller is the object which causes an attribute to be evaluated (for instance, by using ufun() or a similar function): %@
+	/// </summary>
+	/// <param name="mediator">Mediator to get the object node with.</param>
+	/// <returns>A ValueTask containing either a SharpObject, or it will throw.</returns>
 	public async ValueTask<AnySharpObject> KnownCallerObject(IMediator mediator)
 		=> (await CallerObject(mediator)).Known();
 

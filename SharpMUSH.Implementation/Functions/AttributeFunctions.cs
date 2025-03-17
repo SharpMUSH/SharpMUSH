@@ -1,4 +1,5 @@
-﻿using Core.Arango.Protocol;
+﻿using System.Collections.Concurrent;
+using Core.Arango.Protocol;
 using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
@@ -66,19 +67,71 @@ public partial class Functions
 	[SharpFunction(Name = "DEFAULT", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
 	public static ValueTask<CallState> Default(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		// default([<obj>/]<attr>[, ... ,[<objN>]/<attrN>], <default>)
 		throw new NotImplementedException();
 	}
 
 	[SharpFunction(Name = "EDEFAULT", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.NoParse)]
 	public static ValueTask<CallState> edefault(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		// edefault([<obj>/]<attr>, <default case>)
 		throw new NotImplementedException();
 	}
 
 	[SharpFunction(Name = "EVAL", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> eval(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> eval(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var dbrefAndAttr = HelperFunctions.SplitDBRefAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+
+		if (dbrefAndAttr is { IsT1: true, AsT1: false })
+		{
+			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
+		}
+
+		var (dbref, attribute) = dbrefAndAttr.AsT0;
+
+		var executor =
+			(await parser.Mediator.Send(new GetObjectNodeQuery(parser.CurrentState.Executor!.Value))).WithoutNone();
+		var maybeDBref =
+			await parser.LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, dbref, LocateFlags.All);
+
+		if (!maybeDBref.IsValid())
+		{
+			return new CallState(maybeDBref.IsError ? maybeDBref.AsError.Value : Errors.ErrorCantSeeThat);
+		}
+
+		var actualObject = maybeDBref.WithoutError().WithoutNone();
+
+		var maybeAttr = await parser.AttributeService.GetAttributeAsync(
+			executor,
+			actualObject,
+			attribute,
+			mode: IAttributeService.AttributeMode.Execute,
+			parent: false);
+
+		switch (maybeAttr)
+		{
+			case { IsNone: true }:
+				return new CallState(Errors.ErrorNoSuchAttribute);
+			case { IsError : true }:
+				return new CallState(maybeAttr.AsError.Value);
+		}
+
+		var get = maybeAttr.AsAttribute;
+
+		// TODO: Consideration - this wants the Arguments from the level above this.
+		// That requires us to be able to get its value. We can't do that right now.
+		var newParser = parser.Push(parser.CurrentState with
+		{
+			CurrentEvaluation = new DBAttribute(actualObject.Object().DBRef, get.Name),
+			Arguments = new(parser.CurrentState.Arguments.Skip(1)
+				.Select(
+					(value, i) => new KeyValuePair<string, CallState>(i.ToString(), value.Value))
+				.ToDictionary()),
+			Enactor = parser.CurrentState.Executor
+		});
+
+		return (await newParser.FunctionParse(get.Value))!;
 	}
 
 	[SharpFunction(Name = "FLAGS", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -493,7 +546,7 @@ public partial class Functions
 		var newParser = parser.Push(parser.CurrentState with
 		{
 			CurrentEvaluation = new DBAttribute(actualObject.Object().DBRef, get.Name),
-			Arguments = new(parser.CurrentState.Arguments.Skip(1)
+			Arguments = new ConcurrentDictionary<string, CallState>(parser.CurrentState.Arguments.Skip(1)
 				.Select(
 					(value, i) => new KeyValuePair<string, CallState>(i.ToString(), value.Value))
 				.ToDictionary())
