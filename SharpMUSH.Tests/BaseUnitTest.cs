@@ -9,6 +9,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using System.Text;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
 using Testcontainers.ArangoDb;
@@ -101,6 +102,7 @@ public class BaseUnitTest
 		simpleConnectionService.Bind("1", one);
 
 		return new MUSHCodeParser(
+			(integrationServer.Services.GetService(typeof(ILogger<MUSHCodeParser>)) as ILogger<MUSHCodeParser>)!,
 			opts ?? (IOptionsMonitor<PennMUSHOptions>)integrationServer.Services.GetService(typeof(IOptionsMonitor<PennMUSHOptions>))!,
 			pws ?? (IPasswordService)integrationServer.Services.GetService(typeof(IPasswordService))!,
 			ps ?? (IPermissionService)integrationServer.Services.GetService(typeof(IPermissionService))!,

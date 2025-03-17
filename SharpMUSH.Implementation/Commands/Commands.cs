@@ -10,7 +10,6 @@ using SharpMUSH.Library.Services;
 using System.Collections.Immutable;
 using System.Reflection;
 using Microsoft.Extensions.Logging;
-using SharpMUSH.Implementation.Visitors;
 using SharpMUSH.Library.Definitions;
 using static SharpMUSHParser;
 
@@ -61,7 +60,7 @@ public static partial class Commands
 	/// <param name="context">Command Context</param>
 	/// <param name="visitChildren">Parser function to visit children.</param>
 	/// <returns>An empty Call State</returns>
-	public static async ValueTask<Option<CallState>> EvaluateCommands(IMUSHCodeParser parser, MString source,
+	public static async ValueTask<Option<CallState>> EvaluateCommands(ILogger logger, IMUSHCodeParser parser, MString source,
 		CommandContext context,
 		Func<IRuleNode, ValueTask<CallState?>> visitChildren)
 	{

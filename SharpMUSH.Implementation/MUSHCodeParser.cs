@@ -4,6 +4,7 @@ using SharpMUSH.Implementation.Visitors;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using System.Collections.Immutable;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
 
@@ -14,6 +15,7 @@ namespace SharpMUSH.Implementation;
 /// Each call is Synchronous, and stateful at this time.
 /// </summary>
 public record MUSHCodeParser(
+	ILogger<MUSHCodeParser> Logger,
 	IOptionsMonitor<PennMUSHOptions> Configuration,
 	IPasswordService PasswordService,
 	IPermissionService PermissionService,
@@ -38,7 +40,7 @@ public record MUSHCodeParser(
 	/// </summary>
 	public IImmutableStack<ParserState> State { get; private init; } = ImmutableStack<ParserState>.Empty;
 
-	public IMUSHCodeParser FromState(ParserState state) => new MUSHCodeParser(Configuration, PasswordService,
+	public IMUSHCodeParser FromState(ParserState state) => new MUSHCodeParser(Logger, Configuration, PasswordService,
 		PermissionService,
 		AttributeService, NotifyService, LocateService, ObjectDataService, CommandDiscoveryService, Scheduler,
 		ConnectionService, Mediator, state);
@@ -48,6 +50,7 @@ public record MUSHCodeParser(
 	public IMUSHCodeParser Push(ParserState state) => this with { State = State.Push(state) };
 
 	public MUSHCodeParser(
+		ILogger<MUSHCodeParser> logger,
 		IOptionsMonitor<PennMUSHOptions> config,
 		IPasswordService passwordService,
 		IPermissionService permissionService,
@@ -60,7 +63,7 @@ public record MUSHCodeParser(
 		IConnectionService connectionService,
 		IMediator mediator,
 		ParserState state) :
-		this(config, passwordService, permissionService, attributeService, notifyService, locateService,
+		this(logger, config, passwordService, permissionService, attributeService, notifyService, locateService,
 			objectDataService, commandDiscoveryService, scheduleService, connectionService, mediator)
 		=> State = [state];
 
@@ -80,7 +83,7 @@ public record MUSHCodeParser(
 			}
 		};
 		var chatContext = sharpParser.startPlainString();
-		SharpMUSHParserVisitor visitor = new(this, text);
+		SharpMUSHParserVisitor visitor = new(Logger, this, text);
 
 		return visitor.Visit(chatContext);
 	}
@@ -99,7 +102,7 @@ public record MUSHCodeParser(
 			}
 		};
 		var chatContext = sharpParser.startCommandString();
-		SharpMUSHParserVisitor visitor = new(this, text);
+		SharpMUSHParserVisitor visitor = new(Logger, this, text);
 
 		return visitor.Visit(chatContext);
 	}
@@ -118,7 +121,7 @@ public record MUSHCodeParser(
 			}
 		};
 		var chatContext = sharpParser.startCommandString();
-		SharpMUSHParserVisitor visitor = new(this, text);
+		SharpMUSHParserVisitor visitor = new(Logger, this, text);
 
 		return () => visitor.Visit(chatContext);
 	}
@@ -158,7 +161,7 @@ public record MUSHCodeParser(
 			}
 		};
 		var chatContext = sharpParser.startSingleCommandString();
-		SharpMUSHParserVisitor visitor = new(newParser, text);
+		SharpMUSHParserVisitor visitor = new(Logger, newParser, text);
 
 		await visitor.Visit(chatContext);
 	}
@@ -181,7 +184,7 @@ public record MUSHCodeParser(
 			}
 		};
 		var chatContext = sharpParser.startSingleCommandString();
-		SharpMUSHParserVisitor visitor = new(this, text);
+		SharpMUSHParserVisitor visitor = new(Logger, this, text);
 
 		await visitor.Visit(chatContext);
 	}
@@ -199,7 +202,7 @@ public record MUSHCodeParser(
 			}
 		};
 		var chatContext = sharpParser.commaCommandArgs();
-		SharpMUSHParserVisitor visitor = new(this, text);
+		SharpMUSHParserVisitor visitor = new(Logger, this, text);
 
 		return visitor.Visit(chatContext);
 	}
@@ -217,7 +220,7 @@ public record MUSHCodeParser(
 			}
 		};
 		var chatContext = sharpParser.startPlainSingleCommandArg();
-		SharpMUSHParserVisitor visitor = new(this, text);
+		SharpMUSHParserVisitor visitor = new(Logger, this, text);
 
 		return visitor.Visit(chatContext);
 	}
@@ -235,7 +238,7 @@ public record MUSHCodeParser(
 			}
 		};
 		var chatContext = sharpParser.startEqSplitCommandArgs();
-		SharpMUSHParserVisitor visitor = new(this, text);
+		SharpMUSHParserVisitor visitor = new(Logger, this, text);
 
 		return visitor.Visit(chatContext);
 	}
@@ -253,7 +256,7 @@ public record MUSHCodeParser(
 			}
 		};
 		var chatContext = sharpParser.startEqSplitCommand();
-		SharpMUSHParserVisitor visitor = new(this, text);
+		SharpMUSHParserVisitor visitor = new(Logger, this, text);
 
 		return visitor.Visit(chatContext);
 	}

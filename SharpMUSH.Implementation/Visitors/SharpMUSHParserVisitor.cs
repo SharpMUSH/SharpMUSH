@@ -1,5 +1,6 @@
 ﻿using Antlr4.Runtime.Misc;
 using Antlr4.Runtime.Tree;
+using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.ParserInterfaces;
 using static SharpMUSHParser;
 
@@ -12,7 +13,7 @@ namespace SharpMUSH.Implementation.Visitors;
 /// </summary>
 /// <param name="parser">The Parser, so that inner functions can force a parser-call.</param>
 /// <param name="source">The original MarkupString. A plain GetText is not good enough to get the proper value back.</param>
-public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source)
+public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MString source)
 	: SharpMUSHParserBaseVisitor<ValueTask<CallState?>>
 {
 	protected override ValueTask<CallState?> DefaultResult => ValueTask.FromResult<CallState?>(null);
@@ -28,6 +29,7 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source)
 			var nextResult = await node.GetChild(i).Accept(this);
 			result = AggregateResult(result, nextResult);
 		}
+
 		return result;
 	}
 
@@ -59,7 +61,7 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source)
 			$"#{parser.CurrentState.Caller!.Value.Number}! {new string(' ', parser.CurrentState.ParserFunctionDepth!.Value)}{context.GetText()} :"));
 
 		var result =
-			await Functions.Functions.CallFunction(functionName.ToLower(), source, parser, context, arguments!, this);
+			await Functions.Functions.CallFunction(logger, functionName.ToLower(), source, parser, context, arguments!, this);
 
 		await parser.NotifyService.Notify(parser.CurrentState.Caller!.Value, MModule.single(
 			$"#{parser.CurrentState.Caller!.Value.Number}! {new string(' ', parser.CurrentState.ParserFunctionDepth!.Value)}{context.GetText()} => {result.Message}"));
@@ -199,32 +201,32 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source)
 	}
 
 	public override async ValueTask<CallState?> VisitCommand([NotNull] CommandContext context)
-	{
-		var text = MModule.substring(context.Start.StartIndex,
-			context.Stop?.StopIndex is null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source);
-		// Log.Logger.Information("VisitCommand: {Text}", text);
-
-		return (await Commands.Commands.EvaluateCommands(parser, source, context, VisitChildren))
-			.Match(
+		=> (await Commands.Commands.EvaluateCommands(logger, parser, source, context, VisitChildren))
+			.Match<CallState?>(
 				x => x,
-				_ => null as CallState);
-	}
+				_ => null);
 
 	public override async ValueTask<CallState?> VisitStartCommandString(
 		[NotNull] StartCommandStringContext context)
 	{
-		var text = MModule.substring(context.Start.StartIndex,
-			context.Stop?.StopIndex is null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source);
-		// Log.Logger.Information("VisitCommandString: {Text}", text);
+		var text = MModule.substring(
+			context.Start.StartIndex,
+			context.Stop?.StopIndex is null
+				? 0
+				: context.Stop.StopIndex - context.Start.StartIndex + 1,
+			source);
 		return await VisitChildren(context)
 		       ?? new CallState(text, context.Depth());
 	}
 
 	public override async ValueTask<CallState?> VisitCommandList([NotNull] CommandListContext context)
 	{
-		var text = MModule.substring(context.Start.StartIndex,
-			context.Stop?.StopIndex is null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source);
-		// Log.Logger.Information("VisitCommandList: {Text}", text);
+		var text = MModule.substring(
+			context.Start.StartIndex,
+			context.Stop?.StopIndex is null 
+				? 0 
+				: context.Stop.StopIndex - context.Start.StartIndex + 1, 
+			source);
 
 		return await VisitChildren(context)
 		       ?? new CallState(text, context.Depth());
@@ -235,14 +237,15 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source)
 	{
 		var text = MModule.substring(context.Start.StartIndex,
 			context.Stop?.StopIndex is null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source);
-		// Log.Logger.Information("VisitSingleCommandString: {Text}", text);
 		return await VisitChildren(context) ?? new CallState(text, context.Depth());
 	}
 
 	public override async ValueTask<CallState?> VisitEscapedText([NotNull] EscapedTextContext context)
 		=> await VisitChildren(context)
-		   ?? new(
-			   MModule.substring(context.Start.StartIndex + 1, context.Stop.StopIndex - context.Start.StartIndex + 1 - 1,
+		   ?? new CallState(
+			   MModule.substring(
+							context.Start.StartIndex + 1, 
+							context.Stop.StopIndex - context.Start.StartIndex + 1 - 1,
 				   source), context.Depth());
 
 	/// <summary>
@@ -260,7 +263,9 @@ public class SharpMUSHParserVisitor(IMUSHCodeParser parser, MString source)
 			context.Depth(),
 			[
 				MModule.substring(context.Start.StartIndex,
-					context.Stop?.StopIndex is null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source)
+					context.Stop?.StopIndex is null 
+						? 0 
+						: context.Stop.StopIndex - context.Start.StartIndex + 1, source)
 			],
 			() => Task.FromResult<MString?>(null)));
 
