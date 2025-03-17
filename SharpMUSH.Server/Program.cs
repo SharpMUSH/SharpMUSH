@@ -67,10 +67,14 @@ public class Program
 			throw new FileNotFoundException($"Configuration file not found: {configFile}");
 		}
 
-		await CreateWebHostBuilder(config, configFile).Build().RunAsync();
+		var webHost = CreateWebHostBuilder(config, configFile).Build(); 
+		await webHost.RunAsync();
+		
+		webHost.Dispose();
+		await container.DisposeAsync();
 	}
 
-	public static IWebHostBuilder CreateWebHostBuilder(ArangoConfiguration arangoConfig, string configFile) =>
+	private static IWebHostBuilder CreateWebHostBuilder(ArangoConfiguration arangoConfig, string configFile) =>
 		WebHost
 			.CreateDefaultBuilder()
 			.UseStartup(_ => new Startup(arangoConfig, configFile))

@@ -89,7 +89,7 @@ public class TelnetServer : ConnectionHandler
 
 				foreach (var segment in result.Buffer)
 				{
-					await telnet.InterpretByteArrayAsync([.. segment.Span]);
+					await telnet.InterpretByteArrayAsync(segment);
 				}
 
 				if (result.IsCompleted) break;
