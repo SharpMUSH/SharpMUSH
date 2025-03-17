@@ -8,9 +8,9 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using System.Collections.Immutable;
-using System.Diagnostics;
 using System.Reflection;
-using SharpMUSH.Implementation.Commands.ChannelCommand;
+using Microsoft.Extensions.Logging;
+using SharpMUSH.Implementation.Visitors;
 using SharpMUSH.Library.Definitions;
 using static SharpMUSHParser;
 
