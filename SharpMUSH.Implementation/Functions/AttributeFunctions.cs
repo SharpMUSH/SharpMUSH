@@ -109,19 +109,16 @@ public partial class Functions
 			mode: IAttributeService.AttributeMode.Execute,
 			parent: false);
 
-		switch (maybeAttr)
+		if (!maybeAttr.IsAttribute)
 		{
-			case { IsNone: true }:
-				return new CallState(Errors.ErrorNoSuchAttribute);
-			case { IsError : true }:
-				return new CallState(maybeAttr.AsError.Value);
+			return maybeAttr.AsCallStateError;
 		}
 
 		var get = maybeAttr.AsAttribute;
 
 		var top2 = parser.State.Take(2).ToArray();
 		var lastArguments = top2.Length > 1 ? top2.Last().Arguments : [];
-		
+
 		var newParser = parser.Push(parser.CurrentState with
 		{
 			CurrentEvaluation = new DBAttribute(actualObject.Object().DBRef, get.Name),
@@ -162,14 +159,14 @@ public partial class Functions
 		var (dbref, attribute) = dbrefAndAttr.AsT0;
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).WithoutNone();
 		var maybeDBref =
-			await parser.LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, dbref, LocateFlags.All);
+			await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, dbref, LocateFlags.All);
 
-		if (!maybeDBref.IsValid())
+		if (maybeDBref.IsError)
 		{
-			return new CallState(maybeDBref.IsError ? maybeDBref.AsError.Value : Errors.ErrorCantSeeThat);
+			return maybeDBref.AsError;
 		}
 
-		var actualObject = maybeDBref.WithoutError().WithoutNone()!;
+		var actualObject = maybeDBref.AsSharpObject;
 
 		var maybeAttr = await parser.AttributeService.GetAttributeAsync(
 			executor,
@@ -310,7 +307,7 @@ public partial class Functions
 			return new CallState(Errors.ErrorCantSeeThat);
 		}
 
-		var locatedObject = await parser.LocateService.LocateAndNotifyIfInvalid(
+		var locatedObject = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(
 			parser,
 			executor,
 			executor,
@@ -318,19 +315,17 @@ public partial class Functions
 			LocateFlags.All
 		);
 
-		switch (locatedObject)
+		if (locatedObject.IsError)
 		{
-			case { IsNone: true }:
-				return new CallState(Errors.ErrorCantSeeThat);
-			case { IsError: true }:
-				return new CallState(locatedObject.AsError.Value);
+			return locatedObject.AsError;
 		}
 
-		var actualObject = locatedObject.WithoutError().WithoutNone();
+		var actualObject = locatedObject.AsSharpObject;
 
 		if (dbrefAndMaybeArg.AsT0.Attribute is not null)
 		{
-			return new CallState((await actualObject.Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef.ToString());
+			return new CallState((await actualObject.Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef
+				.ToString());
 		}
 
 		var attribute = dbrefAndMaybeArg.AsT0.Attribute!;
@@ -342,7 +337,8 @@ public partial class Functions
 		{
 			{ IsNone: true } => new CallState(Errors.ErrorNoSuchAttribute),
 			{ IsError: true } => new CallState(attributeObject.AsError.Value),
-			_ => new CallState((await attributeObject.AsAttribute.Owner.WithCancellation(CancellationToken.None))!.Object.DBRef.ToString())
+			_ => new CallState((await attributeObject.AsAttribute.Owner.WithCancellation(CancellationToken.None))!.Object
+				.DBRef.ToString())
 		};
 	}
 
@@ -453,7 +449,8 @@ public partial class Functions
 		var executor =
 			(await parser.Mediator.Send(new GetObjectNodeQuery(parser.CurrentState.Executor!.Value))).WithoutNone();
 		var maybeDBref =
-			await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, dbref, LocateFlags.All);
+			await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, dbref,
+				LocateFlags.All);
 
 		if (maybeDBref.IsError)
 		{
@@ -472,12 +469,9 @@ public partial class Functions
 		var orderedArguments = parser.CurrentState.ArgumentsOrdered
 			.Skip(1);
 
-		switch (maybeAttr)
+		if (!maybeAttr.IsAttribute)
 		{
-			case { IsNone: true }:
-				return new CallState(Errors.ErrorNoSuchAttribute);
-			case { IsError: true }:
-				return new CallState(maybeAttr.AsError.Value);
+			return maybeAttr.AsCallStateError;
 		}
 
 		var get = maybeAttr.AsAttribute;
@@ -490,7 +484,7 @@ public partial class Functions
 					i.ToString(),
 					new CallState(await value.Value.ParsedMessage())))
 			.ToArrayAsync();
-		
+
 		var newParser = parser.Push(parser.CurrentState with
 		{
 			CurrentEvaluation = new DBAttribute(actualObject.Object().DBRef, get.Name),
@@ -537,12 +531,9 @@ public partial class Functions
 			mode: IAttributeService.AttributeMode.Execute,
 			parent: false);
 
-		switch (maybeAttr)
+		if (!maybeAttr.IsAttribute)
 		{
-			case { IsNone: true }:
-				return new CallState(Errors.ErrorNoSuchAttribute);
-			case { IsError : true }:
-				return new CallState(maybeAttr.AsError.Value);
+			return maybeAttr.AsCallStateError;
 		}
 
 		var get = maybeAttr.AsAttribute;

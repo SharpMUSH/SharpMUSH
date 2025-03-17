@@ -1,5 +1,7 @@
 ﻿using OneOf;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Library.DiscriminatedUnions;
 
@@ -17,4 +19,13 @@ public class OptionalSharpAttributeOrError(OneOf<SharpAttribute, OneOf.Types.Non
 
 	public SharpAttribute AsAttribute => AsT0;
 	public OneOf.Types.Error<string> AsError => AsT2;
+
+	public CallState AsCallStateError => IsT1
+		? new CallState(Errors.ErrorNoSuchAttribute)
+		: new CallState(AsT2.Value);
+
+	public CallState AsCallState => Match(
+		attribute => new CallState(AsT0.Value),
+		none => new CallState(Errors.ErrorNoSuchAttribute),
+		error => new CallState(AsT2.Value));
 }
