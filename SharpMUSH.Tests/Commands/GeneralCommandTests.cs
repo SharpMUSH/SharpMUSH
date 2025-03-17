@@ -11,13 +11,8 @@ namespace SharpMUSH.Tests.Commands;
 
 public class GeneralCommandTests : BaseUnitTest
 {
-	private static IMUSHCodeParser? _parser;
-
-	[Before(Class)]
-	public static async ValueTask OneTimeSetup()
-	{
-			_parser = await TestParser(ns: Substitute.For<INotifyService>());
-	}
+	private static IMUSHCodeParser _parser = TestParser(ns: Substitute.For<INotifyService>())
+		.ConfigureAwait(false).GetAwaiter().GetResult();
 
 	[Test]
 	[Arguments("@pemit #1=1 This is a test", "1 This is a test")]
