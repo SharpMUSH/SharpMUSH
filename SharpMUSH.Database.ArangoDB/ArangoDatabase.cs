@@ -473,8 +473,11 @@ public class ArangoDatabase(
 	public async ValueTask<IEnumerable<SharpChannel>> GetAllChannelsAsync()
 	{
 		var result = await arangoDb.Query.ExecuteAsync<SharpChannelQueryResult>(
-			handle,
-			$"FOR v IN {DatabaseConstants.Channels} RETURN v");
+			handle, "FOR v IN @@C RETURN v",
+			bindVars: new Dictionary<string, object>
+			{
+				{ "@C", DatabaseConstants.Channels }
+			});
 		return result.Select(SharpChannelQueryToSharpChannel);
 	}
 
@@ -532,7 +535,11 @@ public class ArangoDatabase(
 	{
 		var result = await arangoDb.Query.ExecuteAsync<SharpChannelQueryResult>(
 			handle,
-			$"FOR v IN {DatabaseConstants.Channels} FILTER v.Name = {name} RETURN v");
+			$"FOR v IN @@c FILTER v.Name = {name} RETURN v",
+			bindVars: new Dictionary<string, object>
+			{
+				{ "@c", DatabaseConstants.Channels }
+			});
 		return result?.Select(SharpChannelQueryToSharpChannel).FirstOrDefault();
 	}
 
@@ -576,15 +583,16 @@ public class ArangoDatabase(
 
 	public async ValueTask UpdateChannelAsync(SharpChannel channel, MarkupString.MarkupStringModule.MarkupString? name,
 		MarkupString.MarkupStringModule.MarkupString? description, string[]? privs,
-		string? joinLock, string? speakLock, string? seeLock, string? hideLock, string? modLock, string? mogrifier, int? buffer)
+		string? joinLock, string? speakLock, string? seeLock, string? hideLock, string? modLock, string? mogrifier,
+		int? buffer)
 		=> await arangoDb.Graph.Vertex.UpdateAsync(handle,
 			DatabaseConstants.GraphChannels, DatabaseConstants.Channels, channel.Id,
 			new
 			{
-				Name = name is not null 
-					? MarkupStringModule.serialize(name) 
+				Name = name is not null
+					? MarkupStringModule.serialize(name)
 					: MarkupStringModule.serialize(channel.Name),
-				Description = description is not null 
+				Description = description is not null
 					? MarkupStringModule.serialize(description)
 					: MarkupStringModule.serialize(channel.Description),
 				Privs = privs ?? channel.Privs,
@@ -824,7 +832,7 @@ public class ArangoDatabase(
 			{
 				Id = id, Object = convertObject, Aliases = res.Aliases,
 				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id), ct)),
-				Home = new (async ct => await GetHomeAsync(id))
+				Home = new(async ct => await GetHomeAsync(id))
 			},
 			_ => throw new ArgumentException($"Invalid Object Type found: '{obj.Type}'")
 		};
@@ -948,7 +956,7 @@ public class ArangoDatabase(
 		var sharpAttributes = sharpAttributeResults.Select(async x =>
 			new SharpAttribute(x.Key, x.Name, await GetAttributeFlagsAsync(x.Id), null, x.LongName,
 				new(async ct => await GetTopLevelAttributesAsync(x.Id)),
-				new(async ct => await GetAttributeOwnerAsync(x.Id)), 
+				new(async ct => await GetAttributeOwnerAsync(x.Id)),
 				new(async ct => await Task.FromResult<SharpAttributeEntry?>(null)))
 			{
 				Value = MarkupStringModule.deserialize(x.Value)
@@ -989,7 +997,7 @@ public class ArangoDatabase(
 		return await Task.WhenAll(result2.Select(async x =>
 			new SharpAttribute(x.Key, x.Name, await GetAttributeFlagsAsync(x.Id), null, x.LongName,
 				new(async ct => await GetTopLevelAttributesAsync(x.Id)),
-				new(async ct => await GetObjectOwnerAsync(x.Id)), 
+				new(async ct => await GetObjectOwnerAsync(x.Id)),
 				new(async ct => await Task.FromResult<SharpAttributeEntry?>(null)))
 			{
 				Value = MarkupStringModule.deserialize(x.Value)
@@ -1021,7 +1029,7 @@ public class ArangoDatabase(
 		return await Task.WhenAll(result2.Select(async x =>
 			new SharpAttribute(x.Key, x.Name, await GetAttributeFlagsAsync(x.Id), null, x.LongName,
 				new(async ct => await GetTopLevelAttributesAsync(x.Id)),
-				new(async ct => await GetObjectOwnerAsync(x.Id)), 
+				new(async ct => await GetObjectOwnerAsync(x.Id)),
 				new(async ct => await Task.FromResult<SharpAttributeEntry?>(null)))
 			{
 				Value = MarkupStringModule.deserialize(x.Value)
@@ -1055,9 +1063,9 @@ public class ArangoDatabase(
 		if (result.Count < attribute.Length) return null;
 
 		return await Task.WhenAll(result.Select(async x => new SharpAttribute(x.Key, x.Name,
-			await GetAttributeFlagsAsync(x.Id), null, x.LongName, 
+			await GetAttributeFlagsAsync(x.Id), null, x.LongName,
 			new(async ct => await GetTopLevelAttributesAsync(x.Id)),
-			new(async ct => await GetObjectOwnerAsync(x.Id)), 
+			new(async ct => await GetObjectOwnerAsync(x.Id)),
 			new(async ct => await Task.FromResult<SharpAttributeEntry?>(null)))
 		{
 			Value = MarkupStringModule.deserialize(x.Value)
