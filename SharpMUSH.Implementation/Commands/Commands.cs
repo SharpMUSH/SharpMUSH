@@ -272,7 +272,8 @@ public static partial class Commands
 			{
 				CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attr.Name),
 				Arguments = new(arguments),
-				Function = null
+				Function = null,
+				Executor = obj.Object().DBRef
 			});
 
 			await newParser.CommandListParse(MModule.substring(
@@ -289,7 +290,10 @@ public static partial class Commands
 		var newParser = parser.Push(parser.CurrentState with
 		{
 			Command = "GOTO",
-			Arguments = new(new Dictionary<string, CallState> { { "0", new(exit.Object.DBRef.ToString(), 0) } }),
+			Arguments = new(new Dictionary<string, CallState>
+			{
+				{ "0", new CallState(exit.Object.DBRef.ToString(), 0) }
+			}),
 			Function = null
 		});
 
