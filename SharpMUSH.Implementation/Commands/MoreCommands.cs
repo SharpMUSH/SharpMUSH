@@ -284,14 +284,6 @@ public static partial class Commands
 		throw new NotImplementedException();
 	}
 
-	[SharpCommand(Name = "ATTRIB_SET", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.NoGagged | CB.Internal,
-		MinArgs = 0, MaxArgs = 0)]
-	public static async ValueTask<Option<CallState>> ATTRIB_SET(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
-	}
-
 	[SharpCommand(Name = "WARN_ON_MISSING", Switches = [], Behavior = CB.Default | CB.NoParse | CB.Internal | CB.NoOp,
 		MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> WARN_ON_MISSING(IMUSHCodeParser parser, SharpCommandAttribute _2)

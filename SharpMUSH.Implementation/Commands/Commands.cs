@@ -60,7 +60,8 @@ public static partial class Commands
 	/// <param name="context">Command Context</param>
 	/// <param name="visitChildren">Parser function to visit children.</param>
 	/// <returns>An empty Call State</returns>
-	public static async ValueTask<Option<CallState>> EvaluateCommands(ILogger logger, IMUSHCodeParser parser, MString source,
+	public static async ValueTask<Option<CallState>> EvaluateCommands(ILogger logger, IMUSHCodeParser parser,
+		MString source,
 		CommandContext context,
 		Func<IRuleNode, ValueTask<CallState?>> visitChildren)
 	{
@@ -70,12 +71,14 @@ public static partial class Commands
 			return new None();
 
 		var command = firstCommandMatch.GetText();
-		if (command.Contains(' '))
+
+		var spaceIndex = command.AsSpan().IndexOf(' ');
+		if (spaceIndex == -1)
 		{
-			command = command[..command.IndexOf(' ')];
+			command = command[..spaceIndex];
 		}
 
-		if (parser.CurrentState.Handle is not null && command != "IDLE")
+		if (parser.CurrentState.Handle is not null && command == "IDLE")
 		{
 			parser.ConnectionService.Update(parser.CurrentState.Handle, "LastConnectionSignal",
 				DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString());
@@ -157,7 +160,7 @@ public static partial class Commands
 
 		// TODO: Optimize
 		// TODO: Get the Switches and send them along as a list of items!
-		var slashIndex = command.IndexOf('/');
+		var slashIndex = command.AsSpan().IndexOf('/');
 		var rootCommand =
 			command[..(slashIndex > -1 ? slashIndex : command.Length)];
 		var swtch = command[(slashIndex > -1 ? slashIndex : command.Length)..];
