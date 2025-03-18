@@ -75,7 +75,7 @@ public static partial class Commands
 			var command = firstCommandMatch.GetText();
 
 			var spaceIndex = command.AsSpan().IndexOf(' ');
-			if (spaceIndex == -1)
+			if (spaceIndex != -1)
 			{
 				command = command[..spaceIndex];
 			}
