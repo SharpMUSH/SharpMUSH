@@ -10,6 +10,7 @@ using SharpMUSH.Library.Queries.Database;
 using System.Drawing;
 using SharpMUSH.Implementation.Commands.ChannelCommand;
 using SharpMUSH.Implementation.Commands.MailCommand;
+using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services;
@@ -46,8 +47,8 @@ public static partial class Commands
 	[SharpCommand(Name = "HUH_COMMAND", Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> HuhCommand(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var enactor = (await parser.CurrentState.EnactorObject(parser.Mediator)).WithoutNone();
-		await parser.NotifyService.Notify(enactor, "Huh?  (Type \"help\" for help.)");
+		var executor = await parser.CurrentState.KnownEnactorObject(parser.Mediator);
+		await parser.NotifyService.Notify(executor, "Huh?  (Type \"help\" for help.)");
 		return new None();
 	}
 
@@ -348,7 +349,7 @@ public static partial class Commands
 		var destinationString = MModule.plainText(args.Count == 1 ? args["0"].Message : args["1"].Message);
 		var toTeleport = MModule.plainText(args.Count == 1 ? MModule.single(enactor.ToString()) : args["0"].Message);
 
-		var isList = parser.CurrentState.Switches.Contains("list");
+		var isList = parser.CurrentState.Switches.Contains("LIST");
 
 		var toTeleportList = Enumerable.Empty<OneOf<DBRef, string>>();
 		if (isList)
@@ -512,11 +513,22 @@ public static partial class Commands
 	}
 
 	[SharpCommand(Name = "@IFELSE", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse,
-		MinArgs = 0, MaxArgs = 0)]
+		MinArgs = 2, MaxArgs = 3)]
 	public static async ValueTask<Option<CallState>> IFELSE(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var parsedIfElse = await parser.CurrentState.Arguments["0"].ParsedMessage();
+		var truthy = Predicates.Truthy(parsedIfElse!);
+
+		if (truthy)
+		{
+			await parser.CommandListParse(parser.CurrentState.Arguments["1"].Message!);
+		}
+		else if (parser.CurrentState.Arguments.TryGetValue("2", out var arg2))
+		{
+			await parser.CommandListParse(arg2.Message!);
+		}
+		
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@NSEMIT", Switches = ["ROOM", "NOEVAL", "SILENT"], Behavior = CB.Default | CB.NoGagged,

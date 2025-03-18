@@ -1,4 +1,5 @@
-﻿using SharpMUSH.Library.DiscriminatedUnions;
+﻿using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using CB = SharpMUSH.Implementation.Definitions.CommandBehavior;
 
@@ -297,8 +298,9 @@ public static partial class Commands
 	public static async ValueTask<Option<CallState>> UNIMPLEMENTED_COMMAND(IMUSHCodeParser parser,
 		SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownEnactorObject(parser.Mediator);
+		await parser.NotifyService.Notify(executor, "Huh?  (Type \"help\" for help.)");
+		return new None();
 	}
 
 	[SharpCommand(Name = "ADDCOM", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0,

@@ -9,11 +9,12 @@ public static partial class Functions
 	public static ValueTask<CallState> After(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var fullString = args["0"]!.Message;
-		var search = args["1"]!.Message;
+		var fullString = args["0"].Message;
+		var search = args["1"].Message;
 		var idx = MModule.indexOf(fullString, search);
-
-		return ValueTask.FromResult<CallState>(new(MModule.substring(idx, MModule.getLength(fullString) - idx, args["0"].Message)));
+		var result = MModule.substring(idx, MModule.getLength(fullString) - idx, args["0"].Message);
+		
+		return ValueTask.FromResult(new CallState(result));
 	}
 
 	[SharpFunction(Name = "SPEAK", MinArgs = 2, MaxArgs = 7, Flags = FunctionFlags.Regular)]
@@ -191,10 +192,23 @@ public static partial class Functions
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "IF", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.NoParse)]
-	public static ValueTask<CallState> If(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "if", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.NoParse)]
+	public static async ValueTask<CallState> If(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var parsedIfElse = await parser.CurrentState.Arguments["0"].ParsedMessage();
+		var truthy = Predicates.Truthy(parsedIfElse!);
+		var result = CallState.Empty;
+		
+		if (truthy)
+		{
+			result = await parser.FunctionParse(parser.CurrentState.Arguments["1"].Message!);
+		}
+		else if (parser.CurrentState.Arguments.TryGetValue("2", out var arg2))
+		{
+			result = await parser.FunctionParse(arg2.Message!);
+		}
+		
+		return result!;
 	}
 
 	[SharpFunction(Name = "IFELSE", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.NoParse)]
