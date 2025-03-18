@@ -65,182 +65,190 @@ public static partial class Commands
 		CommandContext context,
 		Func<IRuleNode, ValueTask<CallState?>> visitChildren)
 	{
-		var firstCommandMatch = context.evaluationString();
-
-		if (firstCommandMatch?.SourceInterval.Length is null or 0)
-			return new None();
-
-		var command = firstCommandMatch.GetText();
-
-		var spaceIndex = command.AsSpan().IndexOf(' ');
-		if (spaceIndex == -1)
+		try
 		{
-			command = command[..spaceIndex];
-		}
+			var firstCommandMatch = context.evaluationString();
 
-		if (parser.CurrentState.Handle is not null && command == "IDLE")
-		{
-			parser.ConnectionService.Update(parser.CurrentState.Handle, "LastConnectionSignal",
-				DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString());
-		}
+			if (firstCommandMatch?.SourceInterval.Length is null or 0)
+				return new None();
 
-		// Step 1: Check if it's a SOCKET command
-		// TODO: Optimize
-		var socketCommandPattern = CommandLibrary.Where(x
-			=> parser.CurrentState.Handle is not null
-			   && x.Key.Equals(command, StringComparison.CurrentCultureIgnoreCase)
-			   && x.Value.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.SOCKET)).ToList();
+			var command = firstCommandMatch.GetText();
 
-		if (socketCommandPattern.Any() &&
-		    CommandLibrary.TryGetValue(command.ToUpper(), out var librarySocketCommandDefinition))
-		{
-			return await HandleSocketCommandPattern(parser, source, context, command, socketCommandPattern,
-				librarySocketCommandDefinition);
-		}
-
-		if (parser.CurrentState.Executor is null && parser.CurrentState.Handle is not null)
-		{
-			await parser.NotifyService.Notify(parser.CurrentState.Handle, "No such command available at login.");
-			return new None();
-		}
-
-		// Step2a: Check for the channel single-token command.
-
-		// TODO: Better channel name matching within the channel helper.
-		if (command[..1] == parser.Configuration.CurrentValue.Chat.ChatTokenAlias.ToString())
-		{
-			var channels = await parser.Mediator.Send(new GetChannelListQuery());
-			var check = command[1..];
-
-			var channel = channels.FirstOrDefault(x =>
-				x.Name.ToPlainText().StartsWith(check, StringComparison.CurrentCultureIgnoreCase));
-
-			if (channel is not null && !context.evaluationString().IsEmpty)
+			var spaceIndex = command.AsSpan().IndexOf(' ');
+			if (spaceIndex == -1)
 			{
-				return await HandleChannelCommand(parser, channel, context, source);
+				command = command[..spaceIndex];
 			}
-		}
 
-		// Step 2b: Check for a single-token command
-		// TODO: Optimize
-		var singleTokenCommandPattern = CommandLibrary.Where(x
-			=> x.Key.Equals(command[..1], StringComparison.CurrentCultureIgnoreCase) &&
-			   x.Value.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.SingleToken)).ToList();
-
-		if (singleTokenCommandPattern.Count != 0)
-		{
-			return await HandleSingleTokenCommandPattern(parser, source, context, command, singleTokenCommandPattern);
-		}
-
-		var executorObject = (await parser.CurrentState.ExecutorObject(parser.Mediator)).WithoutNone();
-		// Step 3: Check exit Aliases
-		if (executorObject.IsContent)
-		{
-			var locate = await parser.LocateService.Locate(
-				parser,
-				executorObject,
-				executorObject,
-				command,
-				LocateFlags.ExitsInTheRoomOfLooker
-				| LocateFlags.EnglishStyleMatching
-				| LocateFlags.ExitsPreference
-				| LocateFlags.OnlyMatchTypePreference
-				| LocateFlags.FailIfNotPreferred);
-
-			if (locate.IsExit)
+			if (parser.CurrentState.Handle is not null && command == "IDLE")
 			{
-				var exit = locate.AsExit;
-				return await HandleGoCommandPattern(parser, exit);
+				parser.ConnectionService.Update(parser.CurrentState.Handle, "LastConnectionSignal",
+					DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString());
 			}
-		}
 
-		// Step 4: Check if we are setting an attribute: &... -- we're just treating this as a Single Token Command for now.
-		// Who would rely on a room alias being & anyway?
-		// Step 5: Check @COMMAND in command library
+			// Step 1: Check if it's a SOCKET command
+			// TODO: Optimize
+			var socketCommandPattern = CommandLibrary.Where(x
+				=> parser.CurrentState.Handle is not null
+				   && x.Key.Equals(command, StringComparison.CurrentCultureIgnoreCase)
+				   && x.Value.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.SOCKET)).ToList();
 
-		// TODO: Optimize
-		// TODO: Get the Switches and send them along as a list of items!
-		var slashIndex = command.AsSpan().IndexOf('/');
-		var rootCommand =
-			command[..(slashIndex > -1 ? slashIndex : command.Length)];
-		var swtch = command[(slashIndex > -1 ? slashIndex : command.Length)..];
-		var switches = swtch.Split('/').Where(s => !string.IsNullOrWhiteSpace(s));
+			if (socketCommandPattern.Any() &&
+			    CommandLibrary.TryGetValue(command.ToUpper(), out var librarySocketCommandDefinition))
+			{
+				return await HandleSocketCommandPattern(parser, source, context, command, socketCommandPattern,
+					librarySocketCommandDefinition);
+			}
 
-		if (CommandLibrary.TryGetValue(rootCommand.ToUpper(), out var libraryCommandDefinition)
-		    && !rootCommand.Equals("HUH_COMMAND", StringComparison.CurrentCultureIgnoreCase))
-		{
-			return await HandleInternalCommandPattern(parser, source, context, rootCommand, switches,
-				libraryCommandDefinition);
-		}
+			if (parser.CurrentState.Executor is null && parser.CurrentState.Handle is not null)
+			{
+				await parser.NotifyService.Notify(parser.CurrentState.Handle, "No such command available at login.");
+				return new None();
+			}
 
-		// Step 6: Check @attribute setting
-		// Step 7: Enter Aliases
-		// Step 8: Leave Aliases
+			// Step2a: Check for the channel single-token command.
 
-		// Step 9: User Defined Commands nearby
-		// -- This is going to be a very important place to Cache the commands.
-		// A caching strategy is going to be reliant on the Attribute Service.
-		// Optimistic that the command still exists, until we try and it no longer does?
-		// What's the best way to retrieve the Regex or Wildcard pattern and transform it? 
-		// It needs to take an area to search in. So this is definitely its own service.
-		var nearbyObjects = await parser.Mediator.Send(new GetNearbyObjectsQuery(executorObject.Object().DBRef));
+			// TODO: Better channel name matching within the channel helper.
+			if (command[..1] == parser.Configuration.CurrentValue.Chat.ChatTokenAlias.ToString())
+			{
+				var channels = await parser.Mediator.Send(new GetChannelListQuery());
+				var check = command[1..];
 
-		var userDefinedCommandMatches = await parser.CommandDiscoveryService.MatchUserDefinedCommand(
-			parser,
-			nearbyObjects,
-			source);
+				var channel = channels.FirstOrDefault(x =>
+					x.Name.ToPlainText().StartsWith(check, StringComparison.CurrentCultureIgnoreCase));
 
-		if (userDefinedCommandMatches.IsSome())
-		{
-			return await HandleUserDefinedCommand(parser, userDefinedCommandMatches.AsValue());
-		}
+				if (channel is not null && !context.evaluationString().IsEmpty)
+				{
+					return await HandleChannelCommand(parser, channel, context, source);
+				}
+			}
 
-		// Step 10: Zone Exit Name and Aliases
-		// Step 11: Zone Master User Defined Commands
-		// Step 12: User Defined commands on the location itself.
-		if (executorObject.IsContent)
-		{
-			var userDefinedCommandMatchesOnLocation = await parser.CommandDiscoveryService.MatchUserDefinedCommand(
+			// Step 2b: Check for a single-token command
+			// TODO: Optimize
+			var singleTokenCommandPattern = CommandLibrary.Where(x
+				=> x.Key.Equals(command[..1], StringComparison.CurrentCultureIgnoreCase) &&
+				   x.Value.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.SingleToken)).ToList();
+
+			if (singleTokenCommandPattern.Count != 0)
+			{
+				return await HandleSingleTokenCommandPattern(parser, source, context, command, singleTokenCommandPattern);
+			}
+
+			var executorObject = (await parser.CurrentState.ExecutorObject(parser.Mediator)).WithoutNone();
+			// Step 3: Check exit Aliases
+			if (executorObject.IsContent)
+			{
+				var locate = await parser.LocateService.Locate(
+					parser,
+					executorObject,
+					executorObject,
+					command,
+					LocateFlags.ExitsInTheRoomOfLooker
+					| LocateFlags.EnglishStyleMatching
+					| LocateFlags.ExitsPreference
+					| LocateFlags.OnlyMatchTypePreference
+					| LocateFlags.FailIfNotPreferred);
+
+				if (locate.IsExit)
+				{
+					var exit = locate.AsExit;
+					return await HandleGoCommandPattern(parser, exit);
+				}
+			}
+
+			// Step 4: Check if we are setting an attribute: &... -- we're just treating this as a Single Token Command for now.
+			// Who would rely on a room alias being & anyway?
+			// Step 5: Check @COMMAND in command library
+
+			// TODO: Optimize
+			// TODO: Get the Switches and send them along as a list of items!
+			var slashIndex = command.AsSpan().IndexOf('/');
+			var rootCommand =
+				command[..(slashIndex > -1 ? slashIndex : command.Length)];
+			var swtch = command[(slashIndex > -1 ? slashIndex : command.Length)..];
+			var switches = swtch.Split('/').Where(s => !string.IsNullOrWhiteSpace(s));
+
+			if (CommandLibrary.TryGetValue(rootCommand.ToUpper(), out var libraryCommandDefinition)
+			    && !rootCommand.Equals("HUH_COMMAND", StringComparison.CurrentCultureIgnoreCase))
+			{
+				return await HandleInternalCommandPattern(parser, source, context, rootCommand, switches,
+					libraryCommandDefinition);
+			}
+
+			// Step 6: Check @attribute setting
+			// Step 7: Enter Aliases
+			// Step 8: Leave Aliases
+
+			// Step 9: User Defined Commands nearby
+			// -- This is going to be a very important place to Cache the commands.
+			// A caching strategy is going to be reliant on the Attribute Service.
+			// Optimistic that the command still exists, until we try and it no longer does?
+			// What's the best way to retrieve the Regex or Wildcard pattern and transform it? 
+			// It needs to take an area to search in. So this is definitely its own service.
+			var nearbyObjects = await parser.Mediator.Send(new GetNearbyObjectsQuery(executorObject.Object().DBRef));
+
+			var userDefinedCommandMatches = await parser.CommandDiscoveryService.MatchUserDefinedCommand(
 				parser,
-				[(await executorObject.AsContent.Location()).WithExitOption()],
+				nearbyObjects,
 				source);
 
-			if (userDefinedCommandMatchesOnLocation.IsSome())
+			if (userDefinedCommandMatches.IsSome())
 			{
-				return await HandleUserDefinedCommand(parser, userDefinedCommandMatchesOnLocation.AsValue());
+				return await HandleUserDefinedCommand(parser, userDefinedCommandMatches.AsValue());
 			}
+
+			// Step 10: Zone Exit Name and Aliases
+			// Step 11: Zone Master User Defined Commands
+			// Step 12: User Defined commands on the location itself.
+			if (executorObject.IsContent)
+			{
+				var userDefinedCommandMatchesOnLocation = await parser.CommandDiscoveryService.MatchUserDefinedCommand(
+					parser,
+					[(await executorObject.AsContent.Location()).WithExitOption()],
+					source);
+
+				if (userDefinedCommandMatchesOnLocation.IsSome())
+				{
+					return await HandleUserDefinedCommand(parser, userDefinedCommandMatchesOnLocation.AsValue());
+				}
+			}
+
+			// Step 13: User defined commands on the player's personal zone.
+			// Step 14: Global Exits
+			// Step 15: Global User-defined commands
+			var goConfig = parser.Configuration.CurrentValue.Database.MasterRoom;
+			var maybeGlobalObject = await parser.Mediator.Send(new GetObjectNodeQuery(new DBRef(Convert.ToInt32(goConfig))));
+			var globalObject = maybeGlobalObject.Known();
+			var globalObjectContent = (await globalObject.AsContainer.Content(parser))
+				.Select(x => x.WithRoomOption());
+
+			var userDefinedCommandMatchesOnGlobal = await parser.CommandDiscoveryService.MatchUserDefinedCommand(
+				parser,
+				[globalObject, .. globalObjectContent],
+				source);
+
+			if (userDefinedCommandMatchesOnGlobal.IsSome())
+			{
+				return await HandleUserDefinedCommand(parser, userDefinedCommandMatchesOnGlobal.AsValue());
+			}
+
+			// Step 16: HUH_COMMAND is run
+			var newParser = parser.Push(parser.CurrentState with
+			{
+				Command = "HUH_COMMAND",
+				Arguments = [],
+				Function = null
+			});
+
+			var huhCommand = await CommandLibrary["HUH_COMMAND"].Function.Invoke(newParser);
+
+			return huhCommand;
 		}
-
-		// Step 13: User defined commands on the player's personal zone.
-		// Step 14: Global Exits
-		// Step 15: Global User-defined commands
-		var goConfig = parser.Configuration.CurrentValue.Database.MasterRoom;
-		var maybeGlobalObject = await parser.Mediator.Send(new GetObjectNodeQuery(new DBRef(Convert.ToInt32(goConfig))));
-		var globalObject = maybeGlobalObject.Known();
-		var globalObjectContent = (await globalObject.AsContainer.Content(parser))
-			.Select(x => x.WithRoomOption());
-
-		var userDefinedCommandMatchesOnGlobal = await parser.CommandDiscoveryService.MatchUserDefinedCommand(
-			parser,
-			[globalObject, .. globalObjectContent],
-			source);
-
-		if (userDefinedCommandMatchesOnGlobal.IsSome())
+		catch (Exception ex)
 		{
-			return await HandleUserDefinedCommand(parser, userDefinedCommandMatchesOnGlobal.AsValue());
+			logger.LogError(ex, nameof(EvaluateCommands));
+			return CallState.Empty;
 		}
-
-		// Step 16: HUH_COMMAND is run
-		var newParser = parser.Push(parser.CurrentState with
-		{
-			Command = "HUH_COMMAND",
-			Arguments = [],
-			Function = null
-		});
-
-		var huhCommand = await CommandLibrary["HUH_COMMAND"].Function.Invoke(newParser);
-
-		return huhCommand;
 	}
 
 	private static async Task<Option<CallState>> HandleChannelCommand(IMUSHCodeParser parser, SharpChannel channel,
