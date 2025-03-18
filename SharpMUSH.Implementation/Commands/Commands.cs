@@ -55,6 +55,7 @@ public static partial class Commands
 	/// But if one wanted to implement an @pipe command that can pass a result from say, an @dig command, 
 	/// there would be a need for some way of passing on secondary data.
 	/// </remarks>
+	/// <param name="logger">Logger</param>
 	/// <param name="parser">Parser with state.</param>
 	/// <param name="source">Original string</param>
 	/// <param name="context">Command Context</param>

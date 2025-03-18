@@ -111,12 +111,15 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 			context.Depth());
 
 	public override async ValueTask<CallState?> VisitBracePattern(
-		[NotNull] BracePatternContext context) =>
-		await VisitChildren(context)
-		?? new(
-			MModule.substring(context.Start.StartIndex,
-				context.Stop?.StopIndex is null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source),
-			context.Depth());
+		[NotNull] BracePatternContext context)
+	{
+		// This is not being hit when BracePattern is being consumed for some reason.
+		return await VisitChildren(context)
+		       ?? new(
+			       MModule.substring(context.Start.StartIndex,
+				       context.Stop?.StopIndex is null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source),
+			       context.Depth());
+	}
 
 	public override async ValueTask<CallState?> VisitBracketPattern(
 		[NotNull] BracketPatternContext context)
@@ -258,6 +261,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	public override ValueTask<CallState?> VisitSingleCommandArg([NotNull] SingleCommandArgContext context)
+	// TODO: --- THE REASON WE ARE NOT HITTING BRACE PATTERN VISITOR IS HERE!
 		=> ValueTask.FromResult<CallState?>(new(
 			null,
 			context.Depth(),

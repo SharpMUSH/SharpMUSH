@@ -8,12 +8,14 @@ options {
 }
 
 @parser::members {
-    private int inFunction = 0;
-    private int inBraceDepth = 0;
-    private bool inCommandList = false;
-    private bool lookingForCommandArgCommas = false;
-    private bool lookingForCommandArgEquals = false;
-    private bool lookingForRegisterCaret = false;
+    public int inFunction = 0;
+    public int inBraceDepth = 0;
+    public bool inCommandList = false;
+    public bool lookingForCommandArgCommas = false;
+    public bool lookingForCommandArgEquals = false;
+    public bool lookingForRegisterCaret = false;
+    
+    public int InBraceDepth() => inBraceDepth;
 }
 
 /*
@@ -85,7 +87,7 @@ explicitEvaluationStringConcatenatedRepeat:
 ;
 
 bracePattern:
-    OBRACE { ++inBraceDepth; } explicitEvaluationString*? CBRACE { --inBraceDepth; }
+    OBRACE { ++inBraceDepth; } explicitEvaluationString? CBRACE { --inBraceDepth; }
 ;
 
 bracketPattern:
