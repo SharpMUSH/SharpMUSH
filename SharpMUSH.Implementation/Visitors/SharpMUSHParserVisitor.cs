@@ -24,7 +24,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 	{
 		var result = await DefaultResult;
 		var childCount = node.ChildCount;
-		for (var i = 0; i < childCount /* && *ShouldVisitNextChild(node, result) */; ++i)
+		for (var i = 0; i < childCount /* && ShouldVisitNextChild(node, result) */; ++i)
 		{
 			var nextResult = await node.GetChild(i).Accept(this);
 			result = AggregateResult(result, nextResult);
@@ -32,7 +32,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 
 		return result;
 	}
-
+	
 	private static CallState? AggregateResult(CallState? aggregate,
 		CallState? nextResult)
 		=> (aggregate, nextResult) switch
@@ -51,7 +51,8 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 	{
 		if (parser.CurrentState.ParseMode == ParseMode.NoParse)
 		{
-			return await VisitChildren(context) ?? new CallState(context.GetText());
+			var a = await VisitChildren(context);
+			return new CallState(context.GetText());
 		}
 
 		var functionName = context.funName().GetText().TrimEnd()[..^1];
@@ -68,6 +69,12 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 
 		return result;
 	}
+
+	public override ValueTask<CallState?> VisitFunName([NotNull] SharpMUSHParser.FunNameContext context)
+	{
+		return ValueTask.FromResult<CallState?>(new CallState(context.GetText()));
+	}
+
 
 	public override async ValueTask<CallState?> VisitEvaluationString(
 		[NotNull] EvaluationStringContext context) => await VisitChildren(context) ?? new(
@@ -210,6 +217,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 		{
 			return await VisitChildren(context) ?? new CallState(context.GetText());
 		}
+
 		return (await Commands.Commands.EvaluateCommands(logger, parser, source, context, VisitChildren))
 			.Match<CallState?>(
 				x => x,
@@ -276,8 +284,9 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 		return new CallState(
 			Message: null,
 			context.Depth(),
-			Arguments: [
-				visitedChildren?.Message ?? 
+			Arguments:
+			[
+				visitedChildren?.Message ??
 				MModule.substring(context.Start.StartIndex,
 					context.Stop?.StopIndex is null
 						? 0

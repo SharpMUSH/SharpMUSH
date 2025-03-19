@@ -29,6 +29,8 @@ public class CommandUnitTests : BaseUnitTest
 		"Command1 Arg;think Command2 Arg")]
 	public async Task Test(string str, string expected)
 	{
+		// TODO: We need eval vs noparse evaluation.
+		// NoParse is currently not running the command. So let's use NoEval instead for that.
 		Console.WriteLine("Testing: {0}", str);
 		await _parser!.CommandParse("1", MModule.single(str));
 

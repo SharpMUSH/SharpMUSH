@@ -13,12 +13,12 @@ public static partial class Commands
 	{
 		var newParser = parser.Push(parser.CurrentState with { ParseMode = ParseMode.NoParse });
 		// TODO: There is likely a better way to pick this up where this left off, instead of re-parsing.
-		await newParser.CommandParse(
-			MModule.concat(
-				MModule.concat(
-					parser.CurrentState.Arguments["0"].Message!,
-						MModule.single(" ")),
-					parser.CurrentState.Arguments["1"].Message!));
+		var oldCommand = MModule.multipleWithDelimiter(MModule.single(" "),
+		[
+			parser.CurrentState.Arguments["0"].Message!,
+			parser.CurrentState.Arguments["1"].Message!
+		]);
+		await newParser.CommandParse(oldCommand);
 
 		return new CallState(string.Empty);
 	}
@@ -48,12 +48,14 @@ public static partial class Commands
 		var realLocated = locate.WithoutError().WithoutNone();
 		var contents = args.TryGetValue("2", out var tmpContents) ? tmpContents.Message! : MModule.empty();
 
-		var setResult = await parser.AttributeService.SetAttributeAsync(executor, realLocated, MModule.plainText(args["0"].Message!), contents);
+		var setResult =
+			await parser.AttributeService.SetAttributeAsync(executor, realLocated, MModule.plainText(args["0"].Message!),
+				contents);
 		await parser.NotifyService.Notify(enactor,
 			setResult.Match(
 				_ => $"{realLocated.Object().Name}/{args["0"].Message} - Set.",
 				failure => failure.Value)
-			);
+		);
 
 		return new CallState(setResult.Match(
 			_ => $"{realLocated.Object().Name}/{args["0"].Message}",
