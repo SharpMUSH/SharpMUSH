@@ -13,7 +13,7 @@ namespace SharpMUSH.Implementation.Visitors;
 /// </summary>
 /// <param name="parser">The Parser, so that inner functions can force a parser-call.</param>
 /// <param name="source">The original MarkupString. A plain GetText is not good enough to get the proper value back.</param>
-public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MString source)
+public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MString source, Func<int> braceDepth)
 	: SharpMUSHParserBaseVisitor<ValueTask<CallState?>>
 {
 	protected override ValueTask<CallState?> DefaultResult => ValueTask.FromResult<CallState?>(null);
@@ -32,7 +32,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 
 		return result;
 	}
-	
+
 	private static CallState? AggregateResult(CallState? aggregate,
 		CallState? nextResult)
 		=> (aggregate, nextResult) switch
@@ -120,12 +120,40 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 	public override async ValueTask<CallState?> VisitBracePattern(
 		[NotNull] BracePatternContext context)
 	{
-		// This is not being hit when BracePattern is being consumed for some reason.
-		return await VisitChildren(context)
-		       ?? new(
-			       MModule.substring(context.Start.StartIndex,
-				       context.Stop?.StopIndex is null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source),
-			       context.Depth());
+		var bd = braceDepth();
+
+		if (bd == 0)
+		{
+			// This is not being hit when BracePattern is being consumed for some reason.
+			return await VisitChildren(context)
+			       ?? new(
+				       MModule.substring(context.Start.StartIndex,
+					       context.Stop?.StopIndex is null
+						       ? 0
+						       : context.Stop.StopIndex - context.Start.StartIndex + 1, source),
+				       context.Depth());
+		}
+
+		var vc = await VisitChildren(context);
+
+		if (vc is null)
+		{
+			return new CallState(
+				MModule.substring(context.Start.StartIndex,
+					context.Stop?.StopIndex is null
+						? 0
+						: context.Stop.StopIndex - context.Start.StartIndex + 1, source),
+				context.Depth());
+		}
+
+		return vc with
+		{
+			Message = MModule.multiple([
+				MModule.single("{"),
+				vc.Message,
+				MModule.single("}")
+			])
+		};
 	}
 
 	public override async ValueTask<CallState?> VisitBracketPattern(
@@ -139,7 +167,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 				$"#{parser.CurrentState.Caller!.Value.Number}! {new string(' ', parser.CurrentState.ParserFunctionDepth!.Value)}{text} :");
 
 			var resultQ = await VisitChildren(context)
-			              ?? new(
+			              ?? new CallState(
 				              MModule.substring(context.Start.StartIndex,
 					              context.Stop?.StopIndex is null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1),
 					              source),
@@ -152,9 +180,11 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 		var result = await VisitChildren(context);
 		if (result == null)
 		{
-			return new(
+			return new CallState(
 				MModule.substring(context.Start.StartIndex,
-					context.Stop?.StopIndex is null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source),
+					context.Stop?.StopIndex is null
+						? 0
+						: context.Stop.StopIndex - context.Start.StartIndex + 1, source),
 				context.Depth());
 		}
 
