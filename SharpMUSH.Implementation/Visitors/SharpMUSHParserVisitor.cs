@@ -49,9 +49,9 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 
 	public override async ValueTask<CallState?> VisitFunction([NotNull] FunctionContext context)
 	{
-		if (parser.CurrentState.ParseMode == ParseMode.NoParse)
+		if (parser.CurrentState.ParseMode is ParseMode.NoParse or ParseMode.NoEval)
 		{
-			var a = await VisitChildren(context);
+			// var a = await VisitChildren(context);
 			return new CallState(context.GetText());
 		}
 
@@ -131,7 +131,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 	public override async ValueTask<CallState?> VisitBracketPattern(
 		[NotNull] BracketPatternContext context)
 	{
-		if (parser.CurrentState.ParseMode != ParseMode.NoParse)
+		if (parser.CurrentState.ParseMode is not ParseMode.NoParse and not ParseMode.NoEval)
 		{
 			var text = context.GetText();
 
@@ -186,7 +186,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 	public override async ValueTask<CallState?> VisitValidSubstitution(
 		[NotNull] ValidSubstitutionContext context)
 	{
-		if (parser.CurrentState.ParseMode == ParseMode.NoParse)
+		if (parser.CurrentState.ParseMode is ParseMode.NoParse or ParseMode.NoEval)
 		{
 			// TODO: This does not work in the case of a QREG with an evaluationstring in it.
 			return new CallState("%" + context.GetText());
