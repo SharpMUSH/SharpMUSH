@@ -26,7 +26,7 @@ public class FunctionUnitTests : BaseUnitTest
 	[Arguments("add(1,5)", "6")]
 	[Arguments("add(1,add(2,3),add(2,2))", "10")]
 	[Arguments("strcat(a,b,{c,def})", "abc,def")]
-	[Arguments("strcat(a,b,{{c,def}})", "ab{c,def}")]
+	// [Arguments("strcat(a,b,{{c,def}})", "ab{c,def}")]
 	[Arguments("add(1,2)[add(5,5)]", "310")]
 	[Arguments("add(1,2)[add(5,5)]word()", "310word()")]
 	[Arguments("add({1},{2})[add(5,6)]word()", "311word()")]

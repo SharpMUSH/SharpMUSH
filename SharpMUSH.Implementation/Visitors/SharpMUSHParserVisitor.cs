@@ -134,26 +134,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 				       context.Depth());
 		}
 
-		var vc = await VisitChildren(context);
-
-		if (vc is null)
-		{
-			return new CallState(
-				MModule.substring(context.Start.StartIndex,
-					context.Stop?.StopIndex is null
-						? 0
-						: context.Stop.StopIndex - context.Start.StartIndex + 1, source),
-				context.Depth());
-		}
-
-		return vc with
-		{
-			Message = MModule.multiple([
-				MModule.single("{"),
-				vc.Message,
-				MModule.single("}")
-			])
-		};
+		throw new Exception("This should not be hit.");
 	}
 
 	public override async ValueTask<CallState?> VisitBracketPattern(

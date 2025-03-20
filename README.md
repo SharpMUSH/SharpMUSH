@@ -35,6 +35,13 @@ SharpMUSH is a modern iteration of the time tested MUSH frameworks. It provides 
 * Dropped support for non-standard Pueblo items, such as Panes.
 * One way database transfers - SharpMUSH provides a tool to take a PennMUSH database and stores it in its own. It does not provide a way to go back beyond decompiling.
 
+## Incompatibilities
+SharpMUSH does away with some of the more unique aspects of PennMUSH parser curiosities.
+* No support for unbalanced parenthesis.
+  * In PennMUSH, the following is legal. It is not in SharpMUSH: 
+    * `think add(1,2` -> `3`
+    * `think add(1,2))` -> `3)`
+
 ## Future
 * Direct web integrations, such as Scene Sys and a webclient integration.
 * Modern development tools such as syntax highlighting and multi line editing of MUSHcode in Command or Function mode.
@@ -54,7 +61,7 @@ dotnet build
 
 Run the tests with:
 ```bash
-dotnet Test
+dotnet test
 ```
 
 The main entrypoint to set as a Startup Project is SharpMUSH.Server
