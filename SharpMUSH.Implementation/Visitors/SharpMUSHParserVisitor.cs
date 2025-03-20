@@ -16,6 +16,8 @@ namespace SharpMUSH.Implementation.Visitors;
 public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MString source, Func<int> braceDepth)
 	: SharpMUSHParserBaseVisitor<ValueTask<CallState?>>
 {
+	private int braceDepthCounter = 0;
+
 	protected override ValueTask<CallState?> DefaultResult => ValueTask.FromResult<CallState?>(null);
 
 	public override async ValueTask<CallState?> Visit(IParseTree tree) => await tree.Accept(this);
@@ -120,21 +122,40 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 	public override async ValueTask<CallState?> VisitBracePattern(
 		[NotNull] BracePatternContext context)
 	{
-		var bd = braceDepth();
+		_ = braceDepth; // Ignore and discard later.
+		braceDepthCounter++;
 
-		if (bd == 0)
+		CallState? result = null;
+		var vc = await VisitChildren(context);
+
+		if (braceDepthCounter <= 1)
 		{
 			// This is not being hit when BracePattern is being consumed for some reason.
-			return await VisitChildren(context)
-			       ?? new(
-				       MModule.substring(context.Start.StartIndex,
-					       context.Stop?.StopIndex is null
-						       ? 0
-						       : context.Stop.StopIndex - context.Start.StartIndex + 1, source),
-				       context.Depth());
+			result = vc ?? new CallState(
+				MModule.substring(context.Start.StartIndex,
+					context.Stop?.StopIndex is null
+						? 0
+						: context.Stop.StopIndex - context.Start.StartIndex + 1, source),
+				context.Depth());
+		}
+		else
+		{
+			result = vc is not null
+				? vc with {Message = MModule.multiple([
+					MModule.single("{"),
+					vc.Message,
+					MModule.single("}")
+				])}
+				: new CallState(
+					MModule.substring(context.Start.StartIndex,
+						context.Stop?.StopIndex is null
+							? 0
+							: context.Stop.StopIndex - context.Start.StartIndex + 1, source),
+					context.Depth());
 		}
 
-		throw new Exception("This should not be hit.");
+		braceDepthCounter--;
+		return result;
 	}
 
 	public override async ValueTask<CallState?> VisitBracketPattern(
