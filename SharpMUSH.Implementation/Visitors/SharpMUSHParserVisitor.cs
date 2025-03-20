@@ -13,7 +13,7 @@ namespace SharpMUSH.Implementation.Visitors;
 /// </summary>
 /// <param name="parser">The Parser, so that inner functions can force a parser-call.</param>
 /// <param name="source">The original MarkupString. A plain GetText is not good enough to get the proper value back.</param>
-public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MString source, Func<int> braceDepth)
+public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MString source)
 	: SharpMUSHParserBaseVisitor<ValueTask<CallState?>>
 {
 	private int braceDepthCounter = 0;
@@ -122,7 +122,6 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 	public override async ValueTask<CallState?> VisitBracePattern(
 		[NotNull] BracePatternContext context)
 	{
-		_ = braceDepth; // Ignore and discard later.
 		braceDepthCounter++;
 
 		CallState? result = null;
@@ -309,8 +308,6 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 	/// <return>The visitor result.</return>
 	public override async ValueTask<CallState?> VisitSingleCommandArg([NotNull] SingleCommandArgContext context)
 	{
-		// TODO: --- THE REASON WE ARE NOT HITTING BRACE PATTERN VISITOR IS HERE!
-
 		var visitedChildren = await VisitChildren(context);
 
 		return new CallState(

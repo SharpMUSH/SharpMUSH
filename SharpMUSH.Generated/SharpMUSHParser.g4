@@ -14,13 +14,10 @@ options {
     public bool lookingForCommandArgCommas = false;
     public bool lookingForCommandArgEquals = false;
     public bool lookingForRegisterCaret = false;
-    
-    public int InBraceDepth() => inBraceDepth;
 }
 
 /*
  * Parser Rules  
- * TODO: Support {} behavior in functions and commands.
  */
 
 // Start a single command, as run by a player.

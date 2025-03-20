@@ -84,7 +84,7 @@ public record MUSHCodeParser(
 		};
 
 		var chatContext = sharpParser.startPlainString();
-		SharpMUSHParserVisitor visitor = new(Logger, this, text, sharpParser.InBraceDepth);
+		SharpMUSHParserVisitor visitor = new(Logger, this, text);
 
 		return visitor.Visit(chatContext);
 	}
@@ -103,7 +103,7 @@ public record MUSHCodeParser(
 			}
 		};
 		var chatContext = sharpParser.startCommandString();
-		SharpMUSHParserVisitor visitor = new(Logger, this, text, sharpParser.InBraceDepth);
+		SharpMUSHParserVisitor visitor = new(Logger, this, text);
 
 		return visitor.Visit(chatContext);
 	}
@@ -122,7 +122,7 @@ public record MUSHCodeParser(
 			}
 		};
 		var chatContext = sharpParser.startCommandString();
-		SharpMUSHParserVisitor visitor = new(Logger, this, text, sharpParser.InBraceDepth);
+		SharpMUSHParserVisitor visitor = new(Logger, this, text);
 
 		return () => visitor.Visit(chatContext);
 	}
@@ -162,7 +162,7 @@ public record MUSHCodeParser(
 			}
 		};
 		var chatContext = sharpParser.startSingleCommandString();
-		SharpMUSHParserVisitor visitor = new(Logger, newParser, text, sharpParser.InBraceDepth);
+		SharpMUSHParserVisitor visitor = new(Logger, newParser, text);
 
 		await visitor.Visit(chatContext);
 	}
@@ -185,7 +185,7 @@ public record MUSHCodeParser(
 			}
 		};
 		var chatContext = sharpParser.startSingleCommandString();
-		SharpMUSHParserVisitor visitor = new(Logger, this, text, sharpParser.InBraceDepth);
+		SharpMUSHParserVisitor visitor = new(Logger, this, text);
 
 		await visitor.Visit(chatContext);
 	}
@@ -203,7 +203,7 @@ public record MUSHCodeParser(
 			}
 		};
 		var chatContext = sharpParser.commaCommandArgs();
-		SharpMUSHParserVisitor visitor = new(Logger, this, text, sharpParser.InBraceDepth);
+		SharpMUSHParserVisitor visitor = new(Logger, this, text);
 
 		return visitor.Visit(chatContext);
 	}
@@ -221,7 +221,7 @@ public record MUSHCodeParser(
 			}
 		};
 		var chatContext = sharpParser.startPlainSingleCommandArg();
-		SharpMUSHParserVisitor visitor = new(Logger, this, text, sharpParser.InBraceDepth);
+		SharpMUSHParserVisitor visitor = new(Logger, this, text);
 
 		return visitor.Visit(chatContext);
 	}
@@ -243,7 +243,7 @@ public record MUSHCodeParser(
 		sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
 
 		var chatContext = sharpParser.startEqSplitCommandArgs();
-		SharpMUSHParserVisitor visitor = new(Logger, this, text, sharpParser.InBraceDepth);
+		SharpMUSHParserVisitor visitor = new(Logger, this, text);
 
 		return visitor.Visit(chatContext);
 	}
@@ -261,7 +261,7 @@ public record MUSHCodeParser(
 			}
 		};
 		var chatContext = sharpParser.startEqSplitCommand();
-		SharpMUSHParserVisitor visitor = new(Logger, this, text, sharpParser.InBraceDepth);
+		SharpMUSHParserVisitor visitor = new(Logger, this, text);
 
 		return visitor.Visit(chatContext);
 	}
