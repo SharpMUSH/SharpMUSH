@@ -420,7 +420,7 @@ public partial class Functions
 		throw new NotImplementedException();
 	}
 	
-	[SharpFunction(Name = "S", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "s", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 	public static async ValueTask<CallState> S(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> (await parser.FunctionParse(parser.CurrentState.Arguments.Last().Value.Message!))!;
 

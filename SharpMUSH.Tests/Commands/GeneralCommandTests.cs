@@ -198,6 +198,16 @@ public class GeneralCommandTests : BaseUnitTest
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<DBRef>(), "Linked exit #8 to #0");
 	}
+	
+	[Test]
+	public async ValueTask SpicyFunctionCall()
+	{
+		await Parser.CommandListParse(MModule.single("&foo me=ucstr; think [get(me/foo)](bar)"));
+
+		await Parser.NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<DBRef>(), "BAR");
+	}
 
 	[Test, Skip("Not Implemented")]
 	public async ValueTask DoFlagSet()
