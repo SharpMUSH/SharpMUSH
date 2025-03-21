@@ -144,6 +144,24 @@ public class GeneralCommandTests : BaseUnitTest
 	}
 
 	[Test]
+	public async ValueTask DoListComplex6()
+	{
+		await Parser.CommandParse("1",
+			MModule.single(
+				"@dolist a b={@dolist 1 2 3={@ifelse eq(%i0,1)=think %i0 is 1; @ifelse eq(%i0,2)=think %i0 is 2,think {%i0 is 1, or 3}}}"));
+
+		await Parser.NotifyService
+			.Received(Quantity.Exactly(2))
+			.Notify(Arg.Any<AnySharpObject>(), "3 is 1, or 3");
+		await Parser.NotifyService
+			.Received(Quantity.Exactly(2))
+			.Notify(Arg.Any<AnySharpObject>(), "1 is 1");
+		await Parser.NotifyService
+			.Received(Quantity.Exactly(2))
+			.Notify(Arg.Any<AnySharpObject>(), "2 is 2");
+	}
+
+	[Test]
 	public async ValueTask DoDigForCommandlistCheck()
 	{
 		await Parser.CommandParse("1", MModule.single("@dig Bar Room=Exit;ExitAlias,ExitBack;ExitAliasBack"));

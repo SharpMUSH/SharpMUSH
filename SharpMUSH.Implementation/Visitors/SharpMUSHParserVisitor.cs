@@ -16,7 +16,7 @@ namespace SharpMUSH.Implementation.Visitors;
 public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MString source)
 	: SharpMUSHParserBaseVisitor<ValueTask<CallState?>>
 {
-	private int braceDepthCounter = 0;
+	private int _braceDepthCounter = 0;
 
 	protected override ValueTask<CallState?> DefaultResult => ValueTask.FromResult<CallState?>(null);
 
@@ -122,12 +122,12 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 	public override async ValueTask<CallState?> VisitBracePattern(
 		[NotNull] BracePatternContext context)
 	{
-		braceDepthCounter++;
+		_braceDepthCounter++;
 
 		CallState? result = null;
 		var vc = await VisitChildren(context);
 
-		if (braceDepthCounter <= 1)
+		if (_braceDepthCounter <= 1)
 		{
 			// This is not being hit when BracePattern is being consumed for some reason.
 			result = vc ?? new CallState(
@@ -153,7 +153,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 					context.Depth());
 		}
 
-		braceDepthCounter--;
+		_braceDepthCounter--;
 		return result;
 	}
 
@@ -325,7 +325,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 	}
 
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="SharpMUSHParser.eqsplitCommandArgs"/>.
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.startEqSplitCommandArgs"/>.
 	/// <para>
 	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
 	/// on <paramref name="context"/>.
@@ -344,7 +344,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 	}
 
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="SharpMUSHParser.eqsplitCommand"/>.
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.startEqSplitCommand"/>.
 	/// <para>
 	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
 	/// on <paramref name="context"/>.

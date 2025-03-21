@@ -107,6 +107,19 @@ public class MathFunctionUnitTests : BaseUnitTest
 
 		await Assert.That(result).IsEqualTo(expected);
 	}
+	
+	[Test]
+	[Arguments("eq(1,2)", "0")]
+	[Arguments("eq(1,1)", "1")]
+	[Arguments("eq(wood,1)", "#-1 ARGUMENTS MUST BE NUMBERS")]
+	public async Task Eq(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+
+		var result = (await _parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
 
 	/*
 		Not yet Implemented.

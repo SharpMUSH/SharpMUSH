@@ -22,7 +22,7 @@ public class CommandFlowUnitTests: BaseUnitTest
 	[Arguments("@ifelse 1={@pemit #1=4 True},{@pemit #2=4 False}", "4 True")]
 	[Arguments("@ifelse 0={@pemit #1=5 True},{@pemit #2=5 False}", "5 False")]
 	[Arguments("@ifelse 1={@pemit #1=6 True}", "6 True")]
-	public async ValueTask IfElse(string str, string expected)
+	public async ValueTask fElse(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
 		await Parser.CommandListParse(MModule.single(str));

@@ -33,9 +33,9 @@ public static partial class Functions
 	[SharpFunction(Name = "eq", Flags = FunctionFlags.Regular | FunctionFlags.DecimalsOnly)]
 	public static ValueTask<CallState> Eq(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(new(
-			parser.CurrentState.Arguments.All(x => x.Value.Message == parser.CurrentState.Arguments["0"].Message)
-				? "0"
-				: "1"));
+			parser.CurrentState.Arguments.All(x => x.Value.Message?.ToPlainText() == parser.CurrentState.Arguments["0"].Message?.ToPlainText())
+				? "1"
+				: "0"));
 
 	[SharpFunction(Name = "gt", MinArgs = 2,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
