@@ -199,7 +199,7 @@ public class GeneralCommandTests : BaseUnitTest
 			.Notify(Arg.Any<DBRef>(), "Linked exit #8 to #0");
 	}
 	
-	[Test, Skip("Not yet implemented")]
+	[Test]
 	public async ValueTask SpicyFunctionCall()
 	{
 		await Parser.CommandListParse(MModule.single("&foo me=ucstr; think [get(me/foo)](bar)"));
