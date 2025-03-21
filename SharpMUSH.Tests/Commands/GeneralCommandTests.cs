@@ -203,10 +203,15 @@ public class GeneralCommandTests : BaseUnitTest
 	public async ValueTask SpicyFunctionCall()
 	{
 		await Parser.CommandListParse(MModule.single("&foo me=ucstr; think [get(me/foo)](bar)"));
+		await Parser.CommandListParse(MModule.single("&foo me=ucstr; think [[get(me/foo)](foobar)]"));
 
 		await Parser.NotifyService
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<DBRef>(), "BAR");
+		
+		await Parser.NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<DBRef>(), "FOOBAR");
 	}
 
 	[Test, Skip("Not Implemented")]
