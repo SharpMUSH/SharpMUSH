@@ -202,8 +202,9 @@ public class GeneralCommandTests : BaseUnitTest
 	[Test]
 	public async ValueTask SpicyFunctionCall()
 	{
-		await Parser.CommandListParse(MModule.single("&foo me=ucstr; think [get(me/foo)](bar)"));
-		await Parser.CommandListParse(MModule.single("&foo me=ucstr; think [[get(me/foo)](foobar)]"));
+		await Parser.CommandParse("1", MModule.single("&foo me=ucstr"));
+		await Parser.CommandParse("1", MModule.single("think [get(me/foo)](bar)"));
+		await Parser.CommandParse("1", MModule.single("think [[get(me/foo)](foobar)]"));
 
 		await Parser.NotifyService
 			.Received(Quantity.Exactly(1))
