@@ -35,7 +35,7 @@ public class RegistersUnitTests : BaseUnitTest
 
 		await _parser!.CommandParse("1", MModule.single(str));
 
-		await _parser!.NotifyService
+		await _parser.NotifyService
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), expected);
 	}

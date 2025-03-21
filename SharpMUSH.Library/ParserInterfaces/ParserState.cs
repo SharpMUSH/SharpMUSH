@@ -13,7 +13,8 @@ namespace SharpMUSH.Library.ParserInterfaces;
 public enum ParseMode
 {
 	Default,
-	NoParse
+	NoParse,
+	NoEval
 }
 
 public class IterationWrapper<T>
