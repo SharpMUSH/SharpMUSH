@@ -17,9 +17,9 @@ public class UnusualUnitTests : BaseUnitTest
 	{
 		Console.WriteLine("Testing: {0}", str);
 
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message;
 
 		Console.WriteLine("Result: {0}", result);
-		await Assert.That(result).IsEqualTo(expected);
+		await Assert.That(result!.ToPlainText()).IsEqualTo(expected);
 	}
 }
