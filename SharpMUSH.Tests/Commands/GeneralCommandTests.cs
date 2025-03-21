@@ -214,6 +214,21 @@ public class GeneralCommandTests : BaseUnitTest
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<DBRef>(), "FOOBAR");
 	}
+	
+	[Test]
+	public async ValueTask SpicyFunctionCall2()
+	{
+		await Parser.CommandListParse(MModule.single("think setq(1,ucstr); think %q<1>(bar)"));
+		await Parser.CommandListParse(MModule.single("think setq(1,ucstr); think [%q<1>(foobar)]"));
+
+		await Parser.NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<DBRef>(), "BAR");
+		
+		await Parser.NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<DBRef>(), "FOOBAR");
+	}
 
 	[Test, Skip("Not Implemented")]
 	public async ValueTask DoFlagSet()
