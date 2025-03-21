@@ -199,14 +199,45 @@ public class GeneralCommandTests : BaseUnitTest
 			.Notify(Arg.Any<DBRef>(), "Linked exit #8 to #0");
 	}
 	
-	[Test, Skip("Not yet implemented")]
+	[Test]
 	public async ValueTask SpicyFunctionCall()
 	{
-		await Parser.CommandListParse(MModule.single("&foo me=ucstr; think [get(me/foo)](bar)"));
+		await Parser.CommandParse("1", MModule.single("&foo me=ucstr"));
+		await Parser.CommandParse("1", MModule.single("think [get(me/foo)](bar1)"));
+		await Parser.CommandParse("1", MModule.single("think [[get(me/foo)](foobar2)]"));
 
 		await Parser.NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<DBRef>(), "BAR");
+			.Notify(Arg.Any<DBRef>(), "BAR1");
+		
+		await Parser.NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<DBRef>(), "FOOBAR2");
+	}
+	
+	[Test]
+	public async ValueTask SpicyFunctionCall2()
+	{
+		await Parser.CommandListParse(MModule.single("think setq(1,ucstr); think %q<1>(bar3)"));
+		await Parser.CommandListParse(MModule.single("think setq(1,ucstr); think [%q<1>(foobar4)]"));
+
+		await Parser.NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<DBRef>(), "BAR3");
+		
+		await Parser.NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<DBRef>(), "FOOBAR4");
+	}
+
+	[Test]
+	public async ValueTask SpicyCommandCall()
+	{
+		await Parser.CommandListParse(MModule.single("think setq(cmd,think); %q<cmd> FOOBAR5"));
+
+		await Parser.NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<DBRef>(), "FOOBAR5");
 	}
 
 	[Test, Skip("Not Implemented")]
