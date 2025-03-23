@@ -83,7 +83,7 @@ public static partial class Commands
 		throw new NotImplementedException();
 	}
 
-	[SharpCommand(Name = "@SET", Behavior = CB.RSArgs, MinArgs = 2, MaxArgs = 2)]
+	[SharpCommand(Name = "@SET", Behavior = CB.RSArgs | CB.EqSplit, MinArgs = 2, MaxArgs = 2)]
 	public static async ValueTask<Option<CallState>> SetCommand(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// Step 1: Check if the argument[0] could be an Object/Attribute or is just an Object
@@ -116,10 +116,10 @@ public static partial class Commands
 
 		var realLocated = locate.AsSharpObject;
 
-		// Attr Set Path
-		if (maybeAttribute is not null)
+		// Attr Flag Path
+		if (!string.IsNullOrEmpty(maybeAttribute))
 		{
-			foreach (var flag in MModule.split(" ", args["2"].Message!))
+			foreach (var flag in MModule.split(" ", args["1"].Message!))
 			{
 				var plainFlag = MModule.plainText(flag);
 				if (plainFlag.StartsWith('!'))
@@ -137,7 +137,7 @@ public static partial class Commands
 			return new CallState(string.Empty);
 		}
 
-		// Attr Flag Path
+		// Attr Set Path
 		var maybeColonLocation = MModule.indexOf(args["1"].Message!, MModule.single(":"));
 		if (maybeColonLocation > -1)
 		{
@@ -163,15 +163,16 @@ public static partial class Commands
 		foreach (var flag in MModule.split(" ", args["1"].Message!))
 		{
 			var plainFlag = MModule.plainText(flag);
-			var unset = plainFlag.StartsWith("!");
+			var unset = plainFlag.StartsWith('!');
 			plainFlag = unset ? plainFlag[1..] : plainFlag;
 			// TODO: Permission Check for each flag.
 			// Probably should have a service for this?
 
 			var realFlag = await parser.Mediator.Send(new GetObjectFlagQuery(plainFlag));
 
-			// TODO: Notify
 			if (realFlag is null) continue;
+
+			await parser.NotifyService.Notify(executor, $"Flag: {realFlag} Set.");
 
 			// Set Flag	
 			if (unset)
@@ -184,7 +185,7 @@ public static partial class Commands
 			}
 		}
 
-		throw new NotImplementedException();
+		return CallState.Empty;
 	}
 
 

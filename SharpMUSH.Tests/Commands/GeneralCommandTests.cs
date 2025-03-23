@@ -1,6 +1,5 @@
 ﻿using NSubstitute;
 using NSubstitute.ReceivedExtensions;
-using Serilog;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -209,7 +208,7 @@ public class GeneralCommandTests : BaseUnitTest
 			.Notify(Arg.Any<DBRef>(), "BAR");
 	}
 
-	[Test, Skip("Not Implemented")]
+	[Test]	 
 	public async ValueTask DoFlagSet()
 	{
 		await Parser.CommandParse("1", MModule.single("@set #1=DEBUG"));

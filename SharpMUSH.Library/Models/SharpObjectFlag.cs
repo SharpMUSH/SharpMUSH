@@ -4,7 +4,6 @@ namespace SharpMUSH.Library.Models;
 
 public class SharpObjectFlag
 {
-
 	[JsonIgnore]
 	public string? Id { get; set; }
 

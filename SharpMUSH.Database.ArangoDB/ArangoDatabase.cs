@@ -205,39 +205,48 @@ public class ArangoDatabase(
 	}
 
 	public async ValueTask<SharpObjectFlag?> GetObjectFlagAsync(string name)
-		=> (await arangoDb.Query.ExecuteAsync<SharpObjectFlag>(
+		=> (await arangoDb.Query.ExecuteAsync<SharpObjectFlagQueryResult>(
 			handle,
-			$"FOR v in @@C1 FILTER v.Name = @flag RETURN v",
+			$"FOR v in @@C1 FILTER v.Name == @flag RETURN v",
 			bindVars: new Dictionary<string, object>
 			{
 				{ "@C1", DatabaseConstants.ObjectFlags },
 				{ "flag", name }
 			},
-			cache: true)).FirstOrDefault();
+			cache: true)).Select(SharpObjectFlagQueryToSharpChannel).FirstOrDefault();
 
 	public async ValueTask<IEnumerable<SharpObjectFlag>> GetObjectFlagsAsync()
-		=> await arangoDb.Query.ExecuteAsync<SharpObjectFlag>(
+		=> (await arangoDb.Query.ExecuteAsync<SharpObjectFlagQueryResult>(
 			handle,
 			$"FOR v in {DatabaseConstants.ObjectFlags:@} RETURN v",
-			cache: true);
+			cache: true)).Select(SharpObjectFlagQueryToSharpChannel);
 
+	private async ValueTask<string?> GetObjectFlagEdge(AnySharpObject target, SharpObjectFlag flag)
+	{
+		var result = await arangoDb.Query.ExecuteAsync<SharpEdgeQueryResult>(handle,
+			$"FOR v,e IN 1..1 OUTBOUND {target.Object().Id} GRAPH {DatabaseConstants.GraphFlags} FILTER v._id == {flag.Id} RETURN e._id");
+		return result.FirstOrDefault()?.Id;
+	}
+	
 	public async ValueTask<bool> SetObjectFlagAsync(AnySharpObject target, SharpObjectFlag flag)
 	{
-		await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Objects, new
-		{
-			target.Object().Key,
-			Value = (await target.Object().Flags.WithCancellation(CancellationToken.None)).ToImmutableArray().Add(flag)
-		});
+		var edge = await GetObjectFlagEdge(target, flag);
+		if (edge is not null) return false;
+		
+		await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphFlags, DatabaseConstants.HasFlags,
+			new SharpEdgeCreateRequest(target.Object().Id!, flag.Id!));
+
 		return true;
 	}
 
 	public async ValueTask<bool> UnsetObjectFlagAsync(AnySharpObject target, SharpObjectFlag flag)
 	{
-		await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Objects, new
-		{
-			target.Object().Key,
-			Value = (await target.Object().Flags.WithCancellation(CancellationToken.None)).ToImmutableArray().Remove(flag)
-		});
+		var edge = await GetObjectFlagEdge(target, flag);
+		if (edge == null) return false;
+		
+		await arangoDb.Graph.Edge.RemoveAsync<string>(handle, DatabaseConstants.GraphFlags, DatabaseConstants.HasFlags,
+			edge);
+
 		return true;
 	}
 
@@ -259,8 +268,9 @@ public class ArangoDatabase(
 	}
 
 	public async ValueTask<IEnumerable<SharpObjectFlag>> GetObjectFlagsAsync(string id)
-		=> await arangoDb.Query.ExecuteAsync<SharpObjectFlag>(handle,
-			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphFlags} RETURN v");
+		=> (await arangoDb.Query.ExecuteAsync<SharpObjectFlagQueryResult>(handle,
+			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphFlags} RETURN v"))
+			.Select(SharpObjectFlagQueryToSharpChannel);
 
 	public async ValueTask<IEnumerable<SharpMail>> GetSentMailsAsync(SharpObject sender, SharpPlayer recipient)
 	{
@@ -679,6 +689,21 @@ public class ArangoDatabase(
 			singleResult.Key, updates);
 	}
 
+	private SharpObjectFlag SharpObjectFlagQueryToSharpChannel(SharpObjectFlagQueryResult x)
+	{
+		return new SharpObjectFlag
+		{
+			Id = x.Id,
+			Name = x.Name,
+			Symbol = x.Symbol,
+			System = x.system, 
+			SetPermissions = x.SetPermissions,
+			UnsetPermissions = x.UnsetPermissions,
+			Aliases = x.Aliases,
+			TypeRestrictions = x.TypeRestrictions
+		};
+	}
+	
 	private async ValueTask<IEnumerable<SharpAttributeFlag>> GetAttributeFlagsAsync(string id)
 	{
 		var result = await arangoDb.Query.ExecuteAsync<SharpAttributeFlagQueryResult>(handle,
@@ -1191,7 +1216,7 @@ public class ArangoDatabase(
 
 	public async ValueTask<SharpAttributeFlag?> GetAttributeFlagAsync(string flagName) =>
 		(await arangoDb.Query.ExecuteAsync<SharpAttributeFlag>(handle,
-			"FOR v in @@C1 FILTER v.Name = @flag RETURN v",
+			"FOR v in @@C1 FILTER v.Name == @flag RETURN v",
 			bindVars: new Dictionary<string, object>
 			{
 				{ "@C1", DatabaseConstants.AttributeFlags },
