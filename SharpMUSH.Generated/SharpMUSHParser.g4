@@ -70,17 +70,13 @@ evaluationString:
 ;
 
 explicitEvaluationString:
-    bracePattern explicitEvaluationStringConcatenatedRepeat*
-    | bracketPattern explicitEvaluationStringConcatenatedRepeat*
-    | PERCENT validSubstitution explicitEvaluationStringConcatenatedRepeat*
-    | beginGenericText explicitEvaluationStringConcatenatedRepeat*
-;
-
-explicitEvaluationStringConcatenatedRepeat:
-    bracePattern
-    | bracketPattern
-    | PERCENT validSubstitution
-    | genericText
+    (bracePattern|bracketPattern|beginGenericText|PERCENT validSubstitution) 
+    (
+      bracePattern
+      | bracketPattern
+      | PERCENT validSubstitution
+      | genericText
+    )*
 ;
 
 bracePattern:

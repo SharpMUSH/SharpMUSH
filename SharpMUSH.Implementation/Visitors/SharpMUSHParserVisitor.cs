@@ -111,14 +111,6 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 		return result;
 	}
 
-	public override async ValueTask<CallState?> VisitExplicitEvaluationStringConcatenatedRepeat(
-		[NotNull] ExplicitEvaluationStringConcatenatedRepeatContext context) =>
-		await VisitChildren(context)
-		?? new(
-			MModule.substring(context.Start.StartIndex,
-				context.Stop?.StopIndex is null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source),
-			context.Depth());
-
 	public override async ValueTask<CallState?> VisitBracePattern(
 		[NotNull] BracePatternContext context)
 	{

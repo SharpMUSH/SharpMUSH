@@ -235,7 +235,7 @@ public record MUSHCodeParser(
 		{
 			Interpreter =
 			{
-				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL_EXACT_AMBIG_DETECTION
+				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL
 			}
 		};
 
