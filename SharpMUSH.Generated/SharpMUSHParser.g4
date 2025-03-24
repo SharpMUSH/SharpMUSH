@@ -103,7 +103,7 @@ validSubstitution:
 ;
 
 complexSubstitutionSymbol: (
-        REG_STARTCARET {lookingForRegisterCaret = true;} explicitEvaluationString*? CCARET {lookingForRegisterCaret = false;
+        REG_STARTCARET {lookingForRegisterCaret = true;} explicitEvaluationString CCARET {lookingForRegisterCaret = false;
             }
         | REG_NUM
         | ITEXT_NUM
