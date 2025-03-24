@@ -65,14 +65,14 @@ commaCommandArgs:
 singleCommandArg: evaluationString;
 
 evaluationString:
-    function explicitEvaluationString?
+      function explicitEvaluationString?
     | explicitEvaluationString
 ;
 
 explicitEvaluationString:
     (bracePattern|bracketPattern|beginGenericText|PERCENT validSubstitution) 
     (
-      bracePattern
+        bracePattern
       | bracketPattern
       | PERCENT validSubstitution
       | genericText
@@ -89,7 +89,7 @@ bracketPattern:
 
 funName:
     FUNCHAR {++inFunction;}
-; // TODO: A Substitution can be inside of a funName to create a function name. The same goes for [] calls.
+;
 
 function: funName funArguments? CPAREN {--inFunction;} ;
 
@@ -103,8 +103,7 @@ validSubstitution:
 ;
 
 complexSubstitutionSymbol: (
-        REG_STARTCARET {lookingForRegisterCaret = true;} explicitEvaluationString CCARET {lookingForRegisterCaret = false;
-            }
+        REG_STARTCARET {lookingForRegisterCaret = true;} explicitEvaluationString CCARET {lookingForRegisterCaret = false;}
         | REG_NUM
         | ITEXT_NUM
         | ITEXT_LAST
@@ -144,14 +143,12 @@ substitutionSymbol: (
 genericText: beginGenericText | FUNCHAR;
 
 beginGenericText:
-    escapedText
-    | { inFunction == 0 }? CPAREN
+    { inFunction == 0 }? CPAREN
     | { !inCommandList || inBraceDepth > 0 }? SEMICOLON
     | { (!lookingForCommandArgCommas && inFunction == 0) || inBraceDepth > 0 }? COMMAWS
     | { !lookingForCommandArgEquals }? EQUALS
     | { !lookingForRegisterCaret }? CCARET
-    | (OTHER|ANY_AT_ALL) 
-    | ansi
+    | (escapedText|OTHER|ANY_AT_ALL|ansi) 
 ;
 
 escapedText: ESCAPE ANY;

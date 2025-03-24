@@ -60,14 +60,14 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 		var functionName = context.funName().GetText().TrimEnd()[..^1];
 		var arguments = context.funArguments()?.funArgument() ?? Enumerable.Empty<FunArgumentContext>().ToArray();
 
-		await parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, MModule.single(
-			$"#{parser.CurrentState.Caller!.Value.Number}! {new string(' ', parser.CurrentState.ParserFunctionDepth!.Value)}{context.GetText()} :"));
+		/* await parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, MModule.single(
+			$"#{parser.CurrentState.Caller!.Value.Number}! {new string(' ', parser.CurrentState.ParserFunctionDepth!.Value)}{context.GetText()} :")); */
 
 		var result =
 			await Functions.Functions.CallFunction(logger, functionName.ToLower(), source, parser, context, arguments!, this);
 
-		await parser.NotifyService.Notify(parser.CurrentState.Caller!.Value, MModule.single(
-			$"#{parser.CurrentState.Caller!.Value.Number}! {new string(' ', parser.CurrentState.ParserFunctionDepth!.Value)}{context.GetText()} => {result.Message}"));
+		/* await parser.NotifyService.Notify(parser.CurrentState.Caller!.Value, MModule.single(
+			$"#{parser.CurrentState.Caller!.Value.Number}! {new string(' ', parser.CurrentState.ParserFunctionDepth!.Value)}{context.GetText()} => {result.Message}")); */
 
 		return result;
 	}
@@ -87,28 +87,26 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 	public override async ValueTask<CallState?> VisitExplicitEvaluationString(
 		[NotNull] ExplicitEvaluationStringContext context)
 	{
-		var isGenericText = context.beginGenericText() is not null;
+		/* var isGenericText = context.beginGenericText() is not null;
 
 		if (!isGenericText)
 		{
 			await parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, MModule.single(
 				$"#{parser.CurrentState.Caller!.Value.Number}! {new string(' ', parser.CurrentState.ParserFunctionDepth!.Value)}{context.GetText()} :"));
-		}
+		} */
 
-		var result = await VisitChildren(context)
+		return await VisitChildren(context)
 		             ?? new(
 			             MModule.substring(context.Start.StartIndex,
 				             context.Stop?.StopIndex is null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1),
 				             source),
 			             context.Depth());
 
-		if (!isGenericText)
+		/* if (!isGenericText)
 		{
 			await parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, MModule.single(
 				$"#{parser.CurrentState.Caller!.Value.Number}! {new string(' ', parser.CurrentState.ParserFunctionDepth!.Value)}{context.GetText()} => {result.Message}"));
-		}
-
-		return result;
+		} */
 	}
 
 	public override async ValueTask<CallState?> VisitBracePattern(
