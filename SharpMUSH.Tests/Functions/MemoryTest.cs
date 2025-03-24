@@ -1,4 +1,6 @@
 ﻿using System.Text;
+using MoreLinq.Extensions;
+using TUnit.Assertions.AssertConditions.Throws;
 
 namespace SharpMUSH.Tests.Functions;
 
@@ -48,6 +50,32 @@ public class MemoryTest : BaseUnitTest
 		await Assert
 			.That(result)
 			.IsEqualTo("11");
+	}
+	
+	[Test]
+	public async Task HeavyMemoryUsage()
+	{
+		var longstring = new string('1', 1024*5*1024);
+		var sb = new StringBuilder();
+		
+		foreach (var _ in Enumerable.Range(0, 100))
+		{
+			sb.Append($"[strcat(1,");
+		}
+		sb.Append(longstring);
+		foreach (var _ in Enumerable.Range(0, 100))
+		{
+			sb.Append(")]");
+		}
+		var str = sb.ToString();
+		var len = str.Length;
+
+		var parser = await TestParser();
+
+		await Assert.That(async () => await parser.FunctionParse(MModule.single(str))).ThrowsNothing();
+
+		var result = await parser.FunctionParse(MModule.single(str));
+		Console.WriteLine(result);
 	}
 }
 
