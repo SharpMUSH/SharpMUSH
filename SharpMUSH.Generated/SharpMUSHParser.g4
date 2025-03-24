@@ -93,7 +93,7 @@ funName:
 
 function: funName funArguments? CPAREN {--inFunction;} ;
 
-funArguments: funArgument ({inBraceDepth == 0}? COMMAWS funArgument)*?;
+funArguments: funArgument ({inBraceDepth == 0}? COMMAWS funArgument)*;
 
 funArgument: evaluationString;
 
@@ -145,13 +145,13 @@ genericText: beginGenericText | FUNCHAR;
 
 beginGenericText:
     escapedText
-    | ansi
     | { inFunction == 0 }? CPAREN
     | { !inCommandList || inBraceDepth > 0 }? SEMICOLON
     | { (!lookingForCommandArgCommas && inFunction == 0) || inBraceDepth > 0 }? COMMAWS
     | { !lookingForCommandArgEquals }? EQUALS
     | { !lookingForRegisterCaret }? CCARET
     | (OTHER|ANY_AT_ALL) 
+    | ansi
 ;
 
 escapedText: ESCAPE ANY;
