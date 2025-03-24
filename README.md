@@ -41,6 +41,11 @@ SharpMUSH does away with some of the more unique aspects of PennMUSH parser curi
   * In PennMUSH, the following is legal. It is not in SharpMUSH: 
     * `think add(1,2` -> `3`
     * `think add(1,2))` -> `3)`
+* No support for full recursion parsing.
+  * In PennMUSH, TinyMUX, etc, you can do the following:
+    * `&fn me=ucstr; think [v(fn)](foo)` -> `FOO`.
+  * This is an awesome feature of MUSH-likes, but we explicitly do not support this, as it makes the parser non-deterministic and harder to maintain. Most Softcode does not rely on this behavior.
+  * SharpMUSH introduces `callfn` and `@callcmd` to replace this loss.
 
 ## Future
 * Direct web integrations, such as Scene Sys and a webclient integration.
