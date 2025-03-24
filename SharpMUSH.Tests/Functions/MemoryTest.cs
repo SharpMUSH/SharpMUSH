@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using MoreLinq.Extensions;
+using SharpMUSH.Library.ParserInterfaces;
 using TUnit.Assertions.AssertConditions.Throws;
 
 namespace SharpMUSH.Tests.Functions;
@@ -52,10 +53,22 @@ public class MemoryTest : BaseUnitTest
 			.IsEqualTo("11");
 	}
 	
-	[Test]
-	public async Task HeavyMemoryUsage()
+	[Test, Timeout(30*1000), NotInParallel]
+	[Arguments(4)]
+	[Arguments(8)]
+	[Arguments(16)]
+	[Arguments(32)]
+	[Arguments(64)]
+	[Arguments(128)]
+	[Arguments(256)]
+	[Arguments(512)]
+	[Arguments(1024)]
+	[Arguments(2048)]
+	[Arguments(4096)]
+	[Arguments(8192)]
+	public async Task HeavyMemoryUsage(int kb, CancellationToken ct)
 	{
-		var longstring = new string('1', 1024*5*1024);
+		var longstring = new string('1', 1024*kb);
 		var sb = new StringBuilder();
 		
 		foreach (var _ in Enumerable.Range(0, 100))
@@ -72,10 +85,11 @@ public class MemoryTest : BaseUnitTest
 
 		var parser = await TestParser();
 
-		await Assert.That(async () => await parser.FunctionParse(MModule.single(str))).ThrowsNothing();
-
-		var result = await parser.FunctionParse(MModule.single(str));
-		Console.WriteLine(result);
+		await Assert.That(async () => {
+			var result = await parser.FunctionParse(MModule.single(str));
+			var strResult = result!.Message?.ToString();
+			Console.WriteLine(strResult);
+		}).ThrowsNothing();
 	}
 }
 
