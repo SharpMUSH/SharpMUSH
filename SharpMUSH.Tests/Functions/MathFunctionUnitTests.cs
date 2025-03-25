@@ -53,7 +53,8 @@ public class MathFunctionUnitTests : BaseUnitTest
 	[Arguments("lnum(0,5)", "0 1 2 3 4 5")]
 	[Arguments("lnum(0,5,|)", "0|1|2|3|4|5")]
 	[Arguments("lnum(0,5,|,2)", "0|2|4")]
-	[Arguments("lnum(0,5,,5)", "0 5")]
+	[Arguments("lnum(0,5,,5)", "05")]
+	[Arguments("lnum(0,5,-,5)", "0-5")]
 	public async Task LNum(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);

@@ -21,7 +21,7 @@ public partial class Functions
 	private static MString NoParseDefaultNoParseArgument(ConcurrentDictionary<string, CallState> args, int item,
 		MString defaultValue)
 	{
-		if (args.Count - 1 < item || string.IsNullOrWhiteSpace(args[item.ToString()].Message?.ToString()))
+		if (args.Count - 1 < item || item == 0 && string.IsNullOrEmpty(args[item.ToString()]?.Message?.ToString()) || args[item.ToString()].Message?.ToString() is null)
 		{
 			return defaultValue;
 		}

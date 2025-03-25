@@ -43,7 +43,8 @@ public class TaskScheduler : ITaskScheduler
 
 	public async ValueTask WriteUserCommand(string handle, MString command, ParserState? state)
 	{
-		Pipe.Enqueue(new TaskQueue(new None(), DateTimeOffset.UtcNow, TaskQueueType.Player | TaskQueueType.Socket, handle, command, state));
+		Pipe.Enqueue(new TaskQueue(new None(), DateTimeOffset.UtcNow, TaskQueueType.Player | TaskQueueType.Socket, handle,
+			command, state));
 		await ValueTask.CompletedTask;
 	}
 

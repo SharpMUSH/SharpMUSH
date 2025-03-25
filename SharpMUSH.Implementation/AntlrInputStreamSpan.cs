@@ -1,5 +1,6 @@
 ﻿using Antlr4.Runtime;
 using Antlr4.Runtime.Misc;
+using System.Runtime.CompilerServices;
 
 namespace SharpMUSH.Implementation;
 
@@ -10,22 +11,19 @@ internal class AntlrInputStreamSpan(string input, string sourceName) : ICharStre
 	private ReadOnlySpan<char> Data => _data;
 
 	public int Index { get; private set; }
-	
+
 	public int Size { get; } = input.Length;
 
 	public string SourceName => sourceName;
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public void Consume()
 	{
-		if (Index >= Size)
-		{
-			throw new InvalidOperationException("cannot consume EOF");
-		}
-
 		Index++;
 	}
 
 	[return: NotNull]
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public string GetText(Interval interval)
 	{
 		var a = interval.a;
@@ -35,15 +33,15 @@ internal class AntlrInputStreamSpan(string input, string sourceName) : ICharStre
 			num = Size - 1;
 		}
 
-		var count = num - a + 1;
 		if (a >= Size)
 		{
 			return string.Empty;
 		}
 
-		return Data.Slice(a, count).ToString();
+		return Data[a..(num+1)].ToString();
 	}
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public int LA(int i)
 	{
 		if (i == 0)
@@ -70,9 +68,7 @@ internal class AntlrInputStreamSpan(string input, string sourceName) : ICharStre
 
 	public int Mark() => -1;
 
-	public void Release(int marker) 
-	{
-	}
+	public void Release(int marker) { }
 
 	public void Seek(int index)
 	{

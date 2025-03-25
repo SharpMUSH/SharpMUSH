@@ -15,7 +15,7 @@ public class BooleanExpressionParser(ISharpDatabase database) : IBooleanExpressi
 	{
 		AntlrInputStreamSpan inputStream = new(text, nameof(Compile));
 		SharpMUSHBoolExpLexer sharpLexer = new(inputStream);
-		CommonTokenStream commonTokenStream = new(sharpLexer);
+		BufferedTokenSpanStream commonTokenStream = new(sharpLexer);
 		SharpMUSHBoolExpParser sharpParser = new(commonTokenStream);
 		var chatContext = sharpParser.@lock();
 		var parameter = Expression.Parameter(typeof(AnySharpObject), "gated");
@@ -30,7 +30,7 @@ public class BooleanExpressionParser(ISharpDatabase database) : IBooleanExpressi
 	{
 		AntlrInputStreamSpan inputStream = new(text, nameof(Validate));
 		SharpMUSHBoolExpLexer sharpLexer = new(inputStream);
-		CommonTokenStream commonTokenStream = new(sharpLexer);
+		BufferedTokenSpanStream commonTokenStream = new(sharpLexer);
 		SharpMUSHBoolExpParser sharpParser = new(commonTokenStream);
 		var chatContext = sharpParser.@lock();
 		SharpMUSHBooleanExpressionValidationVisitor visitor = new(lockee);

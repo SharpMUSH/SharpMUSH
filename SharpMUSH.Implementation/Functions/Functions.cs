@@ -55,7 +55,7 @@ public static partial class Functions
 	/// <param name="visitor"></param>
 	/// <returns>The resulting CallState.</returns>
 	public static async ValueTask<CallState> CallFunction(ILogger logger, string name, MString source, IMUSHCodeParser parser,
-		FunctionContext context, FunArgumentContext[] args, SharpMUSHParserVisitor visitor)
+		FunctionContext context, EvaluationStringContext[] args, SharpMUSHParserVisitor visitor)
 	{
 		try
 		{
