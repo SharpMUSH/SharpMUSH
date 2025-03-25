@@ -54,6 +54,7 @@ public class MemoryTest : BaseUnitTest
 	}
 
 	[Test, Timeout(30 * 1000), NotInParallel]
+	[Explicit] // Only run locally. This is a waste of time for automated builds.
 	[Arguments(4)]
 	[Arguments(8)]
 	[Arguments(16)]
@@ -93,7 +94,7 @@ public class MemoryTest : BaseUnitTest
 	}
 
 	[Test, Timeout(30 * 1000), NotInParallel]
-	[Explicit("Only run locally. This is a waste of time for automated builds.")]
+	[Explicit] // Only run locally. This is a waste of time for automated builds.
 	[Arguments(4)]
 	[Arguments(8)]
 	[Arguments(16)]

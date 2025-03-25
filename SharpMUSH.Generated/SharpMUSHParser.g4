@@ -148,7 +148,7 @@ beginGenericText:
     | { (!lookingForCommandArgCommas && inFunction == 0) || inBraceDepth > 0 }? COMMAWS
     | { !lookingForCommandArgEquals }? EQUALS
     | { !lookingForRegisterCaret }? CCARET
-    | (escapedText|OTHER|ANY_AT_ALL|ansi) 
+    | (escapedText|OTHER|ansi|ANY_AT_ALL) 
 ;
 
 escapedText: ESCAPE ANY;
