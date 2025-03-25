@@ -87,13 +87,11 @@ bracketPattern:
     OBRACK evaluationString CBRACK
 ;
 
-funName:
-    FUNCHAR {++inFunction;}
+function: 
+    FUNCHAR {++inFunction;} 
+    (evaluationString ({inBraceDepth == 0}? COMMAWS evaluationString)*)?
+    CPAREN {--inFunction;} 
 ;
-
-function: funName funArguments? CPAREN {--inFunction;} ;
-
-funArguments: evaluationString ({inBraceDepth == 0}? COMMAWS evaluationString)*;
 
 validSubstitution:
     complexSubstitutionSymbol
