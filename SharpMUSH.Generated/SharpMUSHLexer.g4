@@ -22,10 +22,10 @@ PERCENT: '%' -> pushMode(SUBSTITUTION);
 SEMICOLON: WS ';' WS;
 OANSI: '\u001b' -> pushMode(ANSI);
 FUNCHAR: [a-zA-Z0-9_`]+ '(' WS ; 
+OPAREN: '(' WS;
 
 // Greedy way of grabbing non-special characters which the parser does not care about, and can thus fast-forward through.
 OTHER: ~('\\' | '[' | ']' | '{' | '}' | '(' | ')' | '>' | ',' | '=' | '%' | ';' | '\u001b' )+;
-ANY_AT_ALL: .+?;
 
 // --------------- SUBSTITUTION MODE -------------
 // TODO: Remove all the single-character cases, and let the code itself figure out what they are.

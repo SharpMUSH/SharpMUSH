@@ -143,12 +143,12 @@ substitutionSymbol: (
 genericText: beginGenericText | FUNCHAR;
 
 beginGenericText:
-    { inFunction == 0 }? CPAREN
+      { inFunction == 0 }? CPAREN
     | { !inCommandList || inBraceDepth > 0 }? SEMICOLON
     | { (!lookingForCommandArgCommas && inFunction == 0) || inBraceDepth > 0 }? COMMAWS
     | { !lookingForCommandArgEquals }? EQUALS
     | { !lookingForRegisterCaret }? CCARET
-    | (escapedText|OTHER|ansi|ANY_AT_ALL) 
+    | (escapedText|OPAREN|OTHER|ansi) 
 ;
 
 escapedText: ESCAPE ANY;
