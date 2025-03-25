@@ -79,14 +79,11 @@ public class MemoryTest : BaseUnitTest
 			sb.Append(")");
 		}
 		var str = sb.ToString();
-		var len = str.Length;
 
 		var parser = await TestParser();
 
 		await Assert.That(async () => {
 			var result = await parser.FunctionParse(MModule.single(str));
-			var strResult = result!.Message?.ToString();
-			Console.WriteLine(strResult);
 		}).ThrowsNothing();
 	}
 
@@ -118,14 +115,11 @@ public class MemoryTest : BaseUnitTest
 			sb.Append(")]");
 		}
 		var str = sb.ToString();
-		var len = str.Length;
 
 		var parser = await TestParser();
 
 		await Assert.That(async () => {
 			var result = await parser.FunctionParse(MModule.single(str));
-			var strResult = result!.Message?.ToString();
-			Console.WriteLine(strResult);
 		}).ThrowsNothing();
 	}
 }
