@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Connections;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library;
-using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services;
 using System.Text;
 using SharpMUSH.Library.Notifications;
@@ -95,7 +94,7 @@ public class TelnetServer : ConnectionHandler
 
 				if (result.IsCompleted) break;
 
-				connection.Transport.Input.AdvanceTo(result.Buffer.End);
+				connection.Transport.Input.AdvanceTo(result.Buffer.End, result.Buffer.End);
 			}
 		}
 		catch (ConnectionResetException)

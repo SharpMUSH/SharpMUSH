@@ -370,7 +370,7 @@ function_invocation_limit 25000
 # speaking, you won't ever see more than 8192 recursions, so that's
 # probably an upper limit, but most sane code shouldn't need more
 # than a couple hundred. Setting it to '0' means unlimited.
-call_limit 100
+call_limit 50000000
 
 # The maximum number of milliseconds of CPU time that a single queue entry
 # is allowed to use before aborting. Setting this to a low number will
