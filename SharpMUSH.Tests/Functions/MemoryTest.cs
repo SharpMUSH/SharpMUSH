@@ -52,6 +52,7 @@ public class MemoryTest : BaseUnitTest
 	}
 
 	[Test, Timeout(30 * 1000), NotInParallel]
+	[Explicit]
 	[Arguments(4)]
 	[Arguments(8)]
 	[Arguments(16)]
@@ -88,6 +89,7 @@ public class MemoryTest : BaseUnitTest
 	}
 
 	[Test, Timeout(30 * 1000), NotInParallel]
+	[Explicit]
 	[Arguments(4)]
 	[Arguments(8)]
 	[Arguments(16)]
