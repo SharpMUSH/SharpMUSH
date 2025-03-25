@@ -79,8 +79,8 @@ public record MUSHCodeParser(
 			{
 				// sharpParser.Trace = true;
 				// sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
-				// sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL_EXACT_AMBIG_DETECTION;
-				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL_EXACT_AMBIG_DETECTION
+				// sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL;
+				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL
 			},
 			Trace = true
 		};
@@ -248,9 +248,6 @@ public record MUSHCodeParser(
 				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL
 			}
 		};
-
-		sharpParser.Trace = true;
-		sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
 
 		var chatContext = sharpParser.startEqSplitCommandArgs();
 		SharpMUSHParserVisitor visitor = new(Logger, this, text);

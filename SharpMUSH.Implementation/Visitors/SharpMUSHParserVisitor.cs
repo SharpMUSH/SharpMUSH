@@ -151,10 +151,10 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 	{
 		if (parser.CurrentState.ParseMode is not ParseMode.NoParse and not ParseMode.NoEval)
 		{
-			var text = context.GetText();
-
+			/*
 			await parser.NotifyService.Notify(parser.CurrentState.Caller!.Value,
 				$"#{parser.CurrentState.Caller!.Value.Number}! {new string(' ', parser.CurrentState.ParserFunctionDepth!.Value)}{text} :");
+			*/
 
 			var resultQ = await VisitChildren(context)
 			              ?? new CallState(
