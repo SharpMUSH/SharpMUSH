@@ -10,7 +10,7 @@ internal class AntlrInputStreamSpan(string input, string sourceName) : ICharStre
 	private ReadOnlySpan<char> Data => _data;
 
 	public int Index { get; private set; }
-	
+
 	public int Size { get; } = input.Length;
 
 	public string SourceName => sourceName;
@@ -65,14 +65,12 @@ internal class AntlrInputStreamSpan(string input, string sourceName) : ICharStre
 			return -1;
 		}
 
-		return Data[Index + i - 1 ];
+		return Data[Index + i - 1];
 	}
 
 	public int Mark() => -1;
 
-	public void Release(int marker) 
-	{
-	}
+	public void Release(int marker) { }
 
 	public void Seek(int index)
 	{

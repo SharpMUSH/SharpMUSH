@@ -24,7 +24,11 @@ namespace SharpMUSH.Implementation
 		//     is set to true .
 		protected internal List<IToken> tokens = new(100);
 
-		protected internal Span<IToken> Tokens => tokens.ToArray().AsSpan();
+		protected internal IToken[]? TokenArray;
+		
+		protected internal Span<IToken> Tokens => fetchedEOF 
+			? TokenArray.AsSpan() 
+			: tokens.ToArray().AsSpan();
 
 		//
 		// Summary:
@@ -80,7 +84,10 @@ namespace SharpMUSH.Implementation
 
 		public virtual void Consume()
 		{
-			bool flag = p >= 0 && ((!fetchedEOF) ? (p < tokens.Count) : (p < tokens.Count - 1));
+			var flag = p >= 0 && ((!fetchedEOF) 
+				? (p < tokens.Count) 
+				: (p < tokens.Count - 1));
+
 			if (!flag && LA(1) == -1)
 			{
 				throw new InvalidOperationException("cannot consume EOF");
@@ -122,7 +129,7 @@ namespace SharpMUSH.Implementation
 				return 0;
 			}
 
-			for (int i = 0; i < n; i++)
+			for (var i = 0; i < n; i++)
 			{
 				IToken token = _tokenSource.NextToken();
 
@@ -136,6 +143,7 @@ namespace SharpMUSH.Implementation
 				if (token.Type == -1)
 				{
 					fetchedEOF = true;
+					TokenArray = [.. tokens];
 					return i + 1;
 				}
 			}
@@ -217,14 +225,14 @@ namespace SharpMUSH.Implementation
 				return Lb(-k);
 			}
 
-			int num = p + k - 1;
+			var num = p + k - 1;
 			Sync(num);
-			if (num >= tokens.Count)
+			if (num >= Tokens.Length)
 			{
-				return tokens[^1];
+				return Tokens[^1];
 			}
 
-			return tokens[num];
+			return Tokens[num];
 		}
 
 		//
@@ -275,6 +283,7 @@ namespace SharpMUSH.Implementation
 			tokens.Clear();
 			p = -1;
 			fetchedEOF = false;
+			TokenArray = null;
 		}
 
 		public virtual IList<IToken>? GetTokens()
