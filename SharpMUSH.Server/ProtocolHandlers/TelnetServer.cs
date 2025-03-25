@@ -17,6 +17,7 @@ public class TelnetServer : ConnectionHandler
 	private readonly IConnectionService _connectionService;
 	private readonly IPublisher _publisher;
 	private readonly MSSPConfig _msspConfig = new() { Name = "SharpMUSH", UTF_8 = true };
+	private readonly SemaphoreSlim semaphoreSlimForWriter = new(1, 1);
 
 	public TelnetServer(ILogger<TelnetServer> logger, ISharpDatabase database, IConnectionService connectionService,
 		IPublisher publisher)
@@ -63,7 +64,15 @@ public class TelnetServer : ConnectionHandler
 				{
 					try
 					{
-						await connection.Transport.Output.WriteAsync(byteArray, ct);
+						await semaphoreSlimForWriter.WaitAsync();
+						try
+						{
+							await connection.Transport.Output.WriteAsync(byteArray.AsMemory(), ct);
+						}
+						finally
+						{
+							semaphoreSlimForWriter.Release();
+						}
 					}
 					catch (ObjectDisposedException ode)
 					{
@@ -93,8 +102,8 @@ public class TelnetServer : ConnectionHandler
 				}
 
 				if (result.IsCompleted) break;
-
 				connection.Transport.Input.AdvanceTo(result.Buffer.End, result.Buffer.End);
+			
 			}
 		}
 		catch (ConnectionResetException)
