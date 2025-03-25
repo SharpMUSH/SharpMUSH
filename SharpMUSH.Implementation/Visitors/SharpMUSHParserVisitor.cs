@@ -58,7 +58,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 		}
 
 		var functionName = context.funName().GetText().TrimEnd()[..^1];
-		var arguments = context.funArguments()?.funArgument() ?? Enumerable.Empty<FunArgumentContext>().ToArray();
+		var arguments = context.funArguments()?.evaluationString() ?? Enumerable.Empty<EvaluationStringContext>().ToArray();
 
 		/* await parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, MModule.single(
 			$"#{parser.CurrentState.Caller!.Value.Number}! {new string(' ', parser.CurrentState.ParserFunctionDepth!.Value)}{context.GetText()} :")); */

@@ -80,9 +80,11 @@ public record MUSHCodeParser(
 				// sharpParser.Trace = true;
 				// sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
 				// sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL_EXACT_AMBIG_DETECTION;
-				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL
-			}
+				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL_EXACT_AMBIG_DETECTION
+			},
+			Trace = true
 		};
+		sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
 
 		var chatContext = sharpParser.startPlainString();
 		SharpMUSHParserVisitor visitor = new(Logger, this, text);

@@ -93,9 +93,7 @@ funName:
 
 function: funName funArguments? CPAREN {--inFunction;} ;
 
-funArguments: funArgument ({inBraceDepth == 0}? COMMAWS funArgument)*;
-
-funArgument: evaluationString;
+funArguments: evaluationString ({inBraceDepth == 0}? COMMAWS evaluationString)*;
 
 validSubstitution:
     complexSubstitutionSymbol

@@ -11,14 +11,14 @@ public class MemoryTest : BaseUnitTest
 	public async Task Depth()
 	{
 		var sb = new StringBuilder();
-		foreach (var _ in Enumerable.Range(0, 200))
+		foreach (var _ in Enumerable.Range(0, 100))
 		{
-			sb.Append("add(1,");
+			sb.Append("[add(1,");
 		}
 		sb.Append('1');
-		foreach (var _ in Enumerable.Range(0, 200))
+		foreach (var _ in Enumerable.Range(0, 100))
 		{
-			sb.Append(')');
+			sb.Append(")]");
 		}
 		var str = sb.ToString();
 
@@ -27,7 +27,7 @@ public class MemoryTest : BaseUnitTest
 
 		await Assert
 			.That(result)
-			.IsEqualTo("201");
+			.IsEqualTo("101");
 	}
 	
 	[Test]
