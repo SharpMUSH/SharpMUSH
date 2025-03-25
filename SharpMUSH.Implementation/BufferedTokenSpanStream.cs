@@ -2,6 +2,7 @@
 using Antlr4.Runtime.Sharpen;
 using Antlr4.Runtime;
 using System.Text;
+using System.ComponentModel.DataAnnotations;
 
 namespace SharpMUSH.Implementation
 {
@@ -22,6 +23,8 @@ namespace SharpMUSH.Implementation
 		//     a complete view of the input once Antlr4.Runtime.BufferedTokenStream.fetchedEOF
 		//     is set to true .
 		protected internal List<IToken> tokens = new(100);
+
+		protected internal Span<IToken> Tokens => tokens.ToArray().AsSpan();
 
 		//
 		// Summary:
@@ -164,15 +167,16 @@ namespace SharpMUSH.Implementation
 			}
 
 			LazyInit();
-			IList<IToken> list = new List<IToken>();
 			if (stop >= tokens.Count)
 			{
 				stop = tokens.Count - 1;
 			}
 
-			for (int i = start; i <= stop; i++)
+			var span = Tokens[start..stop];
+			var list = new List<IToken>(span.Length);
+
+			foreach (var token in span)
 			{
-				IToken token = tokens[i];
 				if (token.Type == -1)
 				{
 					break;
@@ -217,7 +221,7 @@ namespace SharpMUSH.Implementation
 			Sync(num);
 			if (num >= tokens.Count)
 			{
-				return tokens[tokens.Count - 1];
+				return tokens[^1];
 			}
 
 			return tokens[num];
@@ -243,10 +247,7 @@ namespace SharpMUSH.Implementation
 		//     method, the current stream index should not be changed. For example, Antlr4.Runtime.CommonTokenStream
 		//     overrides this method to ensure that the seek target is always an on-channel
 		//     token.
-		protected internal virtual int AdjustSeekIndex(int i)
-		{
-			return i;
-		}
+		protected internal virtual int AdjustSeekIndex(int i) => i;
 
 		protected internal void LazyInit()
 		{
@@ -304,13 +305,21 @@ namespace SharpMUSH.Implementation
 				return null;
 			}
 
-			IList<IToken>? list = new List<IToken>();
-			for (int i = start; i <= stop; i++)
+			var span = Tokens[start..stop];
+			var list = new List<IToken>(span.Length);
+
+			if (types == null)
 			{
-				IToken token = tokens[i];
-				if (types == null || types.Get(token.Type))
+				list.AddRange(span);
+			}
+			else
+			{
+				foreach (var token in span)
 				{
-					list.Add(token);
+					if (types.Get(token.Type))
+					{
+						list.Add(token);
+					}
 				}
 			}
 
@@ -345,7 +354,7 @@ namespace SharpMUSH.Implementation
 				return Size - 1;
 			}
 
-			IToken token = tokens[i];
+			var token = tokens[i];
 			while (token.Channel != channel)
 			{
 				if (token.Type == -1)
@@ -462,20 +471,27 @@ namespace SharpMUSH.Implementation
 
 		protected internal virtual IList<IToken>? FilterForChannel(int from, int to, int channel)
 		{
-			IList<IToken> list = new List<IToken>();
-			for (int i = from; i <= to; i++)
+			var span = Tokens[from..to];
+			var list = new List<IToken>(span.Length);
+
+			if (channel != -1)
 			{
-				IToken token = tokens[i];
-				if (channel == -1)
+				foreach (var token in span)
+				{
+					if (token.Channel == channel)
+					{
+						list.Add(token);
+					}
+				}
+			}
+			else
+			{
+				foreach (var token in span)
 				{
 					if (token.Channel != 0)
 					{
 						list.Add(token);
 					}
-				}
-				else if (token.Channel == channel)
-				{
-					list.Add(token);
 				}
 			}
 
@@ -503,8 +519,8 @@ namespace SharpMUSH.Implementation
 		[return: NotNull]
 		public virtual string GetText(Interval interval)
 		{
-			int a = interval.a;
-			int num = interval.b;
+			var a = interval.a;
+			var num = interval.b;
 			if (a < 0 || num < 0)
 			{
 				return string.Empty;
@@ -516,10 +532,11 @@ namespace SharpMUSH.Implementation
 				num = tokens.Count - 1;
 			}
 
-			StringBuilder stringBuilder = new StringBuilder();
-			for (int i = a; i <= num; i++)
+			var span = Tokens[a..num];
+			var stringBuilder = new StringBuilder();
+			
+			foreach (var token in span)
 			{
-				IToken token = tokens[i];
 				if (token.Type == -1)
 				{
 					break;
@@ -557,7 +574,7 @@ namespace SharpMUSH.Implementation
 		public virtual void Fill()
 		{
 			LazyInit();
-			int num = 1000;
+			var num = 1000;
 			while (Fetch(num) >= num)
 			{
 			}

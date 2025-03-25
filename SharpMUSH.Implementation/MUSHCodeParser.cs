@@ -71,8 +71,8 @@ public record MUSHCodeParser(
 	{
 		AntlrInputStreamSpan inputStream = new(MModule.plainText(text), nameof(FunctionParse));
 		SharpMUSHLexer sharpLexer = new(inputStream);
-		CommonTokenSpanStream CommonTokenSpanStream = new(sharpLexer);
-		SharpMUSHParser sharpParser = new(CommonTokenSpanStream)
+		BufferedTokenSpanStream BufferedTokenSpanStream = new(sharpLexer);
+		SharpMUSHParser sharpParser = new(BufferedTokenSpanStream)
 		{
 			Interpreter =
 			{
@@ -94,8 +94,8 @@ public record MUSHCodeParser(
 		var plaintext = MModule.plainText(text);
 		AntlrInputStreamSpan inputStream = new(plaintext, nameof(CommandListParse));
 		SharpMUSHLexer sharpLexer = new(inputStream);
-		CommonTokenSpanStream CommonTokenSpanStream = new(sharpLexer);
-		SharpMUSHParser sharpParser = new(CommonTokenSpanStream)
+		BufferedTokenSpanStream BufferedTokenSpanStream = new(sharpLexer);
+		SharpMUSHParser sharpParser = new(BufferedTokenSpanStream)
 		{
 			Interpreter =
 			{
@@ -113,8 +113,8 @@ public record MUSHCodeParser(
 		var plaintext = MModule.plainText(text);
 		AntlrInputStreamSpan inputStream = new(plaintext, nameof(CommandListParseVisitor));
 		SharpMUSHLexer sharpLexer = new(inputStream);
-		CommonTokenSpanStream CommonTokenSpanStream = new(sharpLexer);
-		SharpMUSHParser sharpParser = new(CommonTokenSpanStream)
+		BufferedTokenSpanStream BufferedTokenSpanStream = new(sharpLexer);
+		SharpMUSHParser sharpParser = new(BufferedTokenSpanStream)
 		{
 			Interpreter =
 			{
@@ -153,8 +153,8 @@ public record MUSHCodeParser(
 
 		AntlrInputStreamSpan inputStream = new(MModule.plainText(text), nameof(CommandParse));
 		SharpMUSHLexer sharpLexer = new(inputStream);
-		CommonTokenSpanStream CommonTokenSpanStream = new(sharpLexer);
-		SharpMUSHParser sharpParser = new(CommonTokenSpanStream)
+		BufferedTokenSpanStream BufferedTokenSpanStream = new(sharpLexer);
+		SharpMUSHParser sharpParser = new(BufferedTokenSpanStream)
 		{
 			Interpreter =
 			{
@@ -176,8 +176,8 @@ public record MUSHCodeParser(
 	{
 		AntlrInputStreamSpan inputStream = new(MModule.plainText(text), nameof(CommandParse));
 		SharpMUSHLexer sharpLexer = new(inputStream);
-		CommonTokenSpanStream CommonTokenSpanStream = new(sharpLexer);
-		SharpMUSHParser sharpParser = new(CommonTokenSpanStream)
+		BufferedTokenSpanStream BufferedTokenSpanStream = new(sharpLexer);
+		SharpMUSHParser sharpParser = new(BufferedTokenSpanStream)
 		{
 			Interpreter =
 			{
@@ -194,8 +194,8 @@ public record MUSHCodeParser(
 	{
 		AntlrInputStreamSpan inputStream = new(MModule.plainText(text), nameof(CommandCommaArgsParse));
 		SharpMUSHLexer sharpLexer = new(inputStream);
-		CommonTokenSpanStream CommonTokenSpanStream = new(sharpLexer);
-		SharpMUSHParser sharpParser = new(CommonTokenSpanStream)
+		BufferedTokenSpanStream BufferedTokenSpanStream = new(sharpLexer);
+		SharpMUSHParser sharpParser = new(BufferedTokenSpanStream)
 		{
 			Interpreter =
 			{
@@ -212,8 +212,8 @@ public record MUSHCodeParser(
 	{
 		AntlrInputStreamSpan inputStream = new(MModule.plainText(text), nameof(CommandSingleArgParse));
 		SharpMUSHLexer sharpLexer = new(inputStream);
-		CommonTokenSpanStream CommonTokenSpanStream = new(sharpLexer);
-		SharpMUSHParser sharpParser = new(CommonTokenSpanStream)
+		BufferedTokenSpanStream BufferedTokenSpanStream = new(sharpLexer);
+		SharpMUSHParser sharpParser = new(BufferedTokenSpanStream)
 		{
 			Interpreter =
 			{
@@ -230,8 +230,8 @@ public record MUSHCodeParser(
 	{
 		AntlrInputStreamSpan inputStream = new(MModule.plainText(text), nameof(CommandEqSplitArgsParse));
 		SharpMUSHLexer sharpLexer = new(inputStream);
-		CommonTokenSpanStream CommonTokenSpanStream = new(sharpLexer);
-		SharpMUSHParser sharpParser = new(CommonTokenSpanStream)
+		BufferedTokenSpanStream BufferedTokenSpanStream = new(sharpLexer);
+		SharpMUSHParser sharpParser = new(BufferedTokenSpanStream)
 		{
 			Interpreter =
 			{
@@ -252,8 +252,8 @@ public record MUSHCodeParser(
 	{
 		AntlrInputStreamSpan inputStream = new(MModule.plainText(text), nameof(CommandEqSplitParse));
 		SharpMUSHLexer sharpLexer = new(inputStream);
-		CommonTokenSpanStream CommonTokenSpanStream = new(sharpLexer);
-		SharpMUSHParser sharpParser = new(CommonTokenSpanStream)
+		BufferedTokenSpanStream BufferedTokenSpanStream = new(sharpLexer);
+		SharpMUSHParser sharpParser = new(BufferedTokenSpanStream)
 		{
 			Interpreter =
 			{
