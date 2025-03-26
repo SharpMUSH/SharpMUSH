@@ -17,6 +17,7 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="OneOf" Version="3.0.271" />
     <PackageReference Include="OneOf.SourceGenerator" Version="3.0.271" />
+    <PackageReference Include="Quartz.Lambda" Version="1.0.5" />
     <PackageReference Include="System.Linq.Async" Version="6.0.1" />
     <PackageReference Include="TelnetNegotiationCore" Version="1.1.0" />
     <PackageReference Include="ZiggyCreatures.FusionCache" Version="2.1.0" />

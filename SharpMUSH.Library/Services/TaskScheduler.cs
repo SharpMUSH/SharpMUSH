@@ -1,14 +1,14 @@
-﻿using OneOf;
-using OneOf.Types;
-using SharpMUSH.Library.ParserInterfaces;
-using System.Collections.Concurrent;
+﻿using SharpMUSH.Library.ParserInterfaces;
+using Quartz;
+using Quartz.Lambda;
 
 namespace SharpMUSH.Library.Services;
 
 /// <summary>
-/// Should be a Background Task
+/// IMushCodeParser is a circular dependency here, so we can't use it!
+/// Either we use a Mediator here, or make the TaskScheduler itself a Mediator target for the Parser.
 /// </summary>
-public class TaskScheduler : ITaskScheduler
+public class TaskScheduler(IMUSHCodeParser parser, ISchedulerFactory schedulerFactory) : ITaskScheduler
 {
 	[Flags]
 	private enum TaskQueueType
@@ -33,86 +33,66 @@ public class TaskScheduler : ITaskScheduler
 		Recurse = InPlace | NoBreaks | PreserveQReg
 	}
 
-	private record TaskQueue(
-		OneOf<SemaphoreSlim, TimeSpan, None> WaitType,
-		DateTimeOffset EntryTime,
-		TaskQueueType Type,
-		string? Handle,
-		MString Command,
-		ParserState? State);
-
 	public async ValueTask WriteUserCommand(string handle, MString command, ParserState? state)
 	{
-		Pipe.Enqueue(new TaskQueue(new None(), DateTimeOffset.UtcNow, TaskQueueType.Player | TaskQueueType.Socket, handle,
-			command, state));
-		await ValueTask.CompletedTask;
+		var scheduler = await schedulerFactory.GetScheduler();
+		if (state is null)
+		{
+			await scheduler.ScheduleJob(() => parser.Empty().CommandParse(handle, command).AsTask(),
+				builder => builder.StartNow().WithSimpleSchedule(x => x.WithRepeatCount(0)));
+			return;
+		}
+
+		await scheduler.ScheduleJob(() => parser.FromState(state).CommandParse(handle, command).AsTask(),
+			builder => builder.StartNow().WithSimpleSchedule(x => x.WithRepeatCount(0)));
 	}
 
 	public async ValueTask WriteCommand(MString command, ParserState? state)
 	{
-		Pipe.Enqueue(new TaskQueue(new None(), DateTimeOffset.UtcNow, TaskQueueType.NoList, null, command, state));
-		await ValueTask.CompletedTask;
+		var scheduler = await schedulerFactory.GetScheduler();
+		if (state is null)
+		{
+			await scheduler.ScheduleJob(() => parser.Empty().CommandParse(command).AsTask(),
+				builder => builder.StartNow().WithSimpleSchedule(x => x.WithRepeatCount(0)));
+			return;
+		}
+
+		await scheduler.ScheduleJob(() => parser.FromState(state).CommandParse(command).AsTask(),
+			builder => builder.StartNow().WithSimpleSchedule(x => x.WithRepeatCount(0)));
 	}
 
 	public async ValueTask WriteCommandList(MString command, ParserState? state)
 	{
-		Pipe.Enqueue(new TaskQueue(new None(), DateTimeOffset.UtcNow, TaskQueueType.Default, null, command, state));
-		await ValueTask.CompletedTask;
+		var scheduler = await schedulerFactory.GetScheduler();
+		if (state is null)
+		{
+			await scheduler.ScheduleJob(() => parser.Empty().CommandListParse(command).AsTask(),
+				builder => builder.StartNow().WithSimpleSchedule(x => x.WithRepeatCount(0)));
+			return;
+		}
+
+		await scheduler.ScheduleJob(() => parser.FromState(state).CommandListParse(command).AsTask(),
+			builder => builder.StartNow().WithSimpleSchedule(x => x.WithRepeatCount(0)));
+
+		return;
 	}
 
-	public async ValueTask WriteCommandList(MString command, ParserState? state, SemaphoreSlim semaphore)
+	public ValueTask WriteCommandList(MString command, ParserState? state, SemaphoreSlim semaphore)
 	{
-		Pipe.Enqueue(new TaskQueue(semaphore, DateTimeOffset.UtcNow, TaskQueueType.Default, null, command, state));
-		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
 	}
 
 	public async ValueTask WriteCommandList(MString command, ParserState? state, TimeSpan time)
 	{
-		Pipe.Enqueue(new TaskQueue(time, DateTimeOffset.UtcNow, TaskQueueType.Default, null, command, state));
-		await ValueTask.CompletedTask;
-	}
-
-	private ConcurrentQueue<TaskQueue> Pipe { get; } = new();
-
-	public async Task ExecuteAsync(IMUSHCodeParser parser, CancellationToken stoppingToken)
-	{
-		if (stoppingToken.IsCancellationRequested) return;
-		if (!Pipe.TryDequeue(out var result)) return;
-
-		var skipStack = new ConcurrentStack<TaskQueue>();
-
-		do
+		var scheduler = await schedulerFactory.GetScheduler();
+		if (state is null)
 		{
-			switch (result)
-			{
-				case { State: null, Type: TaskQueueType.Player | TaskQueueType.Socket, Handle: not null }:
-					await parser.Empty().CommandParse(result.Handle, result.Command); // Direct user input.
-					continue;
-				case { State: null }:
-					throw new Exception("This should never occur");
-				case { WaitType.IsT1: true }:
-					if (DateTimeOffset.UtcNow - result.EntryTime > result.WaitType.AsT1)
-					{
-						await parser.FromState(result.State).CommandListParse(result.Command);
-					}
-					continue;
-				case { WaitType.IsT0: true }:
-					// TODO: Implement Semaphore Wait
-					throw new NotImplementedException("Implement Scheduled Semaphores.");
-				case { Type: TaskQueueType.NoList }:
-					await parser.FromState(result.State).CommandParse(result.Command);
-					continue;
-				case { Type: TaskQueueType.Default }:
-					await parser.FromState(result.State).CommandListParse(result.Command);
-					continue;
-			}
-
-			skipStack.Push(result);
-		} while (Pipe.TryDequeue(out result) && !stoppingToken.IsCancellationRequested);
-
-		foreach (var item in skipStack)
-		{
-			Pipe.Enqueue(item);
+			await scheduler.ScheduleJob(() => parser.Empty().CommandListParse(command).AsTask(),
+				builder => builder.StartAt(DateTimeOffset.UtcNow + time).WithSimpleSchedule(x => x.WithRepeatCount(0)));
+			return;
 		}
+
+		await scheduler.ScheduleJob(() => parser.FromState(state).CommandListParse(command).AsTask(),
+			builder => builder.StartAt(DateTimeOffset.UtcNow + time).WithSimpleSchedule(x => x.WithRepeatCount(0)));
 	}
 }

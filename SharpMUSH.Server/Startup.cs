@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Quartz;
+using Quartz.AspNetCore;
 using Serilog;
 using Serilog.Events;
 using SharpMUSH.Configuration;
@@ -78,12 +80,17 @@ public class Startup(ArangoConfiguration config, string configFile)
 		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(CacheInvalidationBehavior<,>));
 		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(QueryCachingBehavior<,>));
 		services.AddSingleton(new ArangoHandle("CurrentSharpMUSHWorld"));
-		services.AddHostedService<SchedulerService>();
+		// services.AddHostedService<SchedulerService>();
 		services.AddScoped<IMUSHCodeParser, MUSHCodeParser>();
 		services.AddOptions<PennMUSHOptions>();
 		services.AddMediator();
 		services.AddFusionCache();
 		services.AddArango(_ => config.ConnectionString);
+		services.AddQuartz(x =>
+		{
+			x.UseInMemoryStore();
+		});
+		services.AddQuartzHostedService();
 		services.BuildServiceProvider();
 	}
 

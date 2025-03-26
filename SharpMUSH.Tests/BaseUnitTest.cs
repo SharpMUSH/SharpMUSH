@@ -87,7 +87,6 @@ public class BaseUnitTest
 		ILocateService? ls = null,
 		IExpandedObjectDataService? eo = null,
 		ICommandDiscoveryService? cd = null,
-		ITaskScheduler? qs = null,
 		IConnectionService? cs = null,
 		IMediator? ms = null)
 	{
@@ -111,7 +110,6 @@ public class BaseUnitTest
 			ls ?? (ILocateService)integrationServer.Services.GetService(typeof(ILocateService))!,
 			eo ?? (IExpandedObjectDataService)integrationServer.Services.GetService(typeof(IExpandedObjectDataService))!,
 			cd ?? (ICommandDiscoveryService)integrationServer.Services.GetService(typeof(ICommandDiscoveryService))!,
-			qs ?? (ITaskScheduler)integrationServer.Services.GetService(typeof(ITaskScheduler))!,
 			simpleConnectionService,
 			ms ?? (IMediator)integrationServer.Services.GetService(typeof(IMediator))!,
 			state: new ParserState(
