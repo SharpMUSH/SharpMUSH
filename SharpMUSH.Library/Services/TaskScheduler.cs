@@ -12,7 +12,7 @@ namespace SharpMUSH.Library.Services;
 public class TaskScheduler(IMUSHCodeParser parser, ISchedulerFactory schedulerFactory) : ITaskScheduler
 {
 	private readonly IScheduler _scheduler = schedulerFactory.GetScheduler().GetAwaiter().GetResult();
-	
+
 	[Flags]
 	private enum TaskQueueType
 	{
@@ -36,93 +36,63 @@ public class TaskScheduler(IMUSHCodeParser parser, ISchedulerFactory schedulerFa
 		Recurse = InPlace | NoBreaks | PreserveQReg
 	}
 
-	public async ValueTask WriteUserCommand(string handle, MString command, ParserState? state)
+	public async ValueTask WriteUserCommand(string handle, MString command, ParserState state)
 	{
-		if (state is null)
-		{
-			await _scheduler.ScheduleJob(() => parser.Empty().CommandParse(handle, command).AsTask(),
-				builder => 
-					builder
-						.StartNow()
-						.WithSimpleSchedule(x => x.WithRepeatCount(0))
-						.WithDescription($"UserCommand: {handle} {command}")
-						.WithIdentity($"handle:{handle}-{Guid.NewGuid()}")
-			);
-			return;
-		}
-
 		await _scheduler.ScheduleJob(() => parser.FromState(state).CommandParse(handle, command).AsTask(),
-			builder => 
+			builder =>
+				builder
+					.StartNow()
+					.WithSimpleSchedule(x => x.WithRepeatCount(0))
+					.WithIdentity($"handle:{handle}-{Guid.NewGuid()}")
+		);
+	}
+
+	public async ValueTask WriteCommand(MString command, ParserState state)
+	{
+		await _scheduler.ScheduleJob(() => parser.FromState(state).CommandParse(command).AsTask(),
+			builder =>
 				builder
 					.StartNow()
 					.WithSimpleSchedule(x => x.WithRepeatCount(0))
 					.WithIdentity($"dbref:{state.Executor}-{Guid.NewGuid()}")
-				
 		);
 	}
 
-	public async ValueTask WriteCommand(MString command, ParserState? state)
+	public async ValueTask WriteCommandList(MString command, ParserState state)
 	{
-		if (state is null)
-		{
-			await _scheduler.ScheduleJob(() => parser.Empty().CommandParse(command).AsTask(),
-				builder => builder.StartNow().WithSimpleSchedule(x => x.WithRepeatCount(0)));
-			return;
-		}
-
-		await _scheduler.ScheduleJob(() => parser.FromState(state).CommandParse(command).AsTask(),
-			builder => builder.StartNow().WithSimpleSchedule(x => x.WithRepeatCount(0)));
+		await _scheduler.ScheduleJob(() => parser.FromState(state).CommandListParse(command).AsTask(),
+			builder => builder
+				.StartNow()
+				.WithSimpleSchedule(x => x.WithRepeatCount(0))
+				.WithIdentity($"dbref:{state.Executor}-{Guid.NewGuid()}")
+		);
 	}
 
-	public async ValueTask WriteCommandList(MString command, ParserState? state)
+	public async ValueTask WriteCommandList(MString command, ParserState state, SemaphoreSlim semaphore)
 	{
-		if (state is null)
-		{
-			await _scheduler.ScheduleJob(() => parser.Empty().CommandListParse(command).AsTask(),
-				builder => builder.StartNow().WithSimpleSchedule(x => x.WithRepeatCount(0)));
-			return;
-		}
-
 		await _scheduler.ScheduleJob(() => parser.FromState(state).CommandListParse(command).AsTask(),
-			builder => builder.StartNow().WithSimpleSchedule(x => x.WithRepeatCount(0)));
+			builder => builder
+				.StartNow()
+				.WithSimpleSchedule(x => x.WithRepeatCount(0))
+				.WithIdentity($"dbref:{state.Executor}-{Guid.NewGuid()}"));
 	}
 
-	public async ValueTask WriteCommandList(MString command, ParserState? state, SemaphoreSlim semaphore)
+	public async ValueTask WriteCommandList(MString command, ParserState state, SemaphoreSlim semaphore,
+		TimeSpan timeout)
 	{
-		if (state is null)
-		{
-			await _scheduler.ScheduleJob(() => parser.Empty().CommandListParse(command).AsTask(),
-				builder => builder.StartNow().WithSimpleSchedule(x => x.WithRepeatCount(0)));
-			return;
-		}
-
 		await _scheduler.ScheduleJob(() => parser.FromState(state).CommandListParse(command).AsTask(),
-			builder => builder.StartNow().WithSimpleSchedule(x => x.WithRepeatCount(0)));
-	}
-	
-	public async ValueTask WriteCommandList(MString command, ParserState? state, SemaphoreSlim semaphore, TimeSpan timeout)
-	{
-		if (state is null)
-		{
-			await _scheduler.ScheduleJob(() => parser.Empty().CommandListParse(command).AsTask(),
-				builder => builder.StartNow().WithSimpleSchedule(x => x.WithRepeatCount(0)));
-			return;
-		}
-
-		await _scheduler.ScheduleJob(() => parser.FromState(state).CommandListParse(command).AsTask(),
-			builder => builder.StartNow().WithSimpleSchedule(x => x.WithRepeatCount(0)));
+			builder => builder
+				.StartNow()
+				.WithSimpleSchedule(x => x.WithRepeatCount(0))
+				.WithIdentity($"dbref:{state.Executor}-{Guid.NewGuid()}"));
 	}
 
-	public async ValueTask WriteCommandList(MString command, ParserState? state, TimeSpan delay)
+	public async ValueTask WriteCommandList(MString command, ParserState state, TimeSpan delay)
 	{
-		if (state is null)
-		{
-			await _scheduler.ScheduleJob(() => parser.Empty().CommandListParse(command).AsTask(),
-				builder => builder.StartAt(DateTimeOffset.UtcNow + delay).WithSimpleSchedule(x => x.WithRepeatCount(0)));
-			return;
-		}
-
 		await _scheduler.ScheduleJob(() => parser.FromState(state).CommandListParse(command).AsTask(),
-			builder => builder.StartAt(DateTimeOffset.UtcNow + delay).WithSimpleSchedule(x => x.WithRepeatCount(0)));
+			builder => builder
+				.StartAt(DateTimeOffset.UtcNow + delay)
+				.WithSimpleSchedule(x => x.WithRepeatCount(0))
+				.WithIdentity($"dbref:{state.Executor}-{Guid.NewGuid()}"));
 	}
 }

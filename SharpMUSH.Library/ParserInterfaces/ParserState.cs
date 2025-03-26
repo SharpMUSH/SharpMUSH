@@ -61,6 +61,22 @@ public record ParserState(
 	private AnyOptionalSharpObject? _enactorObject;
 	private AnyOptionalSharpObject? _callerObject;
 
+	public static ParserState Empty => new(
+		new ConcurrentStack<Dictionary<string, MString>>(),
+		new ConcurrentStack<IterationWrapper<MString>>(),
+		new ConcurrentStack<Dictionary<string, MString>>(),
+		null,
+		null,
+		null,
+		null,
+		[],
+		new ConcurrentDictionary<string, CallState>(),
+		null,
+		null,
+		null,
+		null,
+		ParseMode.Default);
+	
 	/// <summary>
 	/// The executor of a command is the object actually carrying out the command or running the code: %!
 	/// </summary>
