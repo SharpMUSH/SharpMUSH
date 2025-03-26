@@ -73,26 +73,47 @@ public class TaskScheduler(IMUSHCodeParser parser, ISchedulerFactory schedulerFa
 
 		await scheduler.ScheduleJob(() => parser.FromState(state).CommandListParse(command).AsTask(),
 			builder => builder.StartNow().WithSimpleSchedule(x => x.WithRepeatCount(0)));
-
-		return;
 	}
 
-	public ValueTask WriteCommandList(MString command, ParserState? state, SemaphoreSlim semaphore)
-	{
-		throw new NotImplementedException();
-	}
-
-	public async ValueTask WriteCommandList(MString command, ParserState? state, TimeSpan time)
+	public async ValueTask WriteCommandList(MString command, ParserState? state, SemaphoreSlim semaphore)
 	{
 		var scheduler = await schedulerFactory.GetScheduler();
 		if (state is null)
 		{
 			await scheduler.ScheduleJob(() => parser.Empty().CommandListParse(command).AsTask(),
-				builder => builder.StartAt(DateTimeOffset.UtcNow + time).WithSimpleSchedule(x => x.WithRepeatCount(0)));
+				builder => builder.StartNow().WithSimpleSchedule(x => x.WithRepeatCount(0)));
 			return;
 		}
 
 		await scheduler.ScheduleJob(() => parser.FromState(state).CommandListParse(command).AsTask(),
-			builder => builder.StartAt(DateTimeOffset.UtcNow + time).WithSimpleSchedule(x => x.WithRepeatCount(0)));
+			builder => builder.StartNow().WithSimpleSchedule(x => x.WithRepeatCount(0)));
+	}
+	
+	public async ValueTask WriteCommandList(MString command, ParserState? state, SemaphoreSlim semaphore, TimeSpan timeout)
+	{
+		var scheduler = await schedulerFactory.GetScheduler();
+		if (state is null)
+		{
+			await scheduler.ScheduleJob(() => parser.Empty().CommandListParse(command).AsTask(),
+				builder => builder.StartNow().WithSimpleSchedule(x => x.WithRepeatCount(0)));
+			return;
+		}
+
+		await scheduler.ScheduleJob(() => parser.FromState(state).CommandListParse(command).AsTask(),
+			builder => builder.StartNow().WithSimpleSchedule(x => x.WithRepeatCount(0)));
+	}
+
+	public async ValueTask WriteCommandList(MString command, ParserState? state, TimeSpan delay)
+	{
+		var scheduler = await schedulerFactory.GetScheduler();
+		if (state is null)
+		{
+			await scheduler.ScheduleJob(() => parser.Empty().CommandListParse(command).AsTask(),
+				builder => builder.StartAt(DateTimeOffset.UtcNow + delay).WithSimpleSchedule(x => x.WithRepeatCount(0)));
+			return;
+		}
+
+		await scheduler.ScheduleJob(() => parser.FromState(state).CommandListParse(command).AsTask(),
+			builder => builder.StartAt(DateTimeOffset.UtcNow + delay).WithSimpleSchedule(x => x.WithRepeatCount(0)));
 	}
 }
