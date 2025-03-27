@@ -38,11 +38,11 @@
 
   <ItemGroup>
     <Content Include="..\SharpMUSH.Documentation\Helpfiles\PennMUSH\pennattr.txt">
-      <Link>Documentation\Testfile\pennattr.hlp</Link>
+      <Link>Documentation\Testfile\pennattr.txt</Link>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
 		<Content Include="..\SharpMUSH.Documentation\Helpfiles\PennMUSH\pennchat.txt">
-			<Link>Documentation\Testfile\pennchat.hlp</Link>
+			<Link>Documentation\Testfile\pennchat.txt</Link>
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</Content>
 		<Content Include="Configuration\Testfile\mushcnf.dst">
