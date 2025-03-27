@@ -3,6 +3,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using Quartz;
 using Quartz.Impl.Matchers;
 using Quartz.Lambda;
+using Quartz.Util;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Services;
@@ -59,6 +60,7 @@ public class TaskScheduler(IMUSHCodeParser parser, ISchedulerFactory schedulerFa
 				.WithIdentity($"dbref:{state.Executor}-{Guid.NewGuid()}", EnqueueGroup)
 		);
 
+	// TODO: HOW TO SEMAPHORE?
 	public async ValueTask WriteCommandList(MString command, ParserState state, SemaphoreSlim semaphore) =>
 		await _scheduler.ScheduleJob(() => parser.FromState(state).CommandListParse(command).AsTask(),
 			builder => builder
@@ -66,6 +68,7 @@ public class TaskScheduler(IMUSHCodeParser parser, ISchedulerFactory schedulerFa
 				.WithSimpleSchedule(x => x.WithRepeatCount(0))
 				.WithIdentity($"dbref:{state.Executor}-{Guid.NewGuid()}", SemaphoreGroup));
 
+	// TODO: HOW TO SEMAPHORE?
 	public async ValueTask WriteCommandList(MString command, ParserState state, SemaphoreSlim semaphore,
 		TimeSpan timeout) =>
 		await _scheduler.ScheduleJob(() => parser.FromState(state).CommandListParse(command).AsTask(),
@@ -81,19 +84,27 @@ public class TaskScheduler(IMUSHCodeParser parser, ISchedulerFactory schedulerFa
 				.WithSimpleSchedule(x => x.WithRepeatCount(0))
 				.WithIdentity($"dbref:{state.Executor}-{Guid.NewGuid()}", DelayGroup));
 
-	public async IAsyncEnumerable<(string,IAsyncEnumerable<DateTimeOffset>)> GetAllTasks()
+	public async IAsyncEnumerable<(string Group, (DateTimeOffset, OneOf.OneOf<string, DBRef>)[])> GetAllTasks()
 	{
 		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup());
 		var keyTriggers = keys.ToAsyncEnumerable()
 			.SelectAwait(async triggerKey => await _scheduler.GetTrigger(triggerKey))
-			.GroupBy(trigger => trigger.JobKey.Group, trigger => trigger.FinalFireTimeUtc!.Value);
+			.GroupBy(trigger => trigger.JobKey.Group, trigger => (trigger.FinalFireTimeUtc!.Value, trigger.Key.Name));
 		await foreach (var key in keyTriggers)
 		{
-			yield return (key.Key, key);
+			var translate = new Func<string, string>(x =>
+				x.Replace("dbref:", "").Replace("handle:", "").TakeWhile(x => x != '-').ToString()!);
+
+			yield return (key.Key, await key.Select(x => (
+				x.Value,
+				DBRef.TryParse(translate(x.Name), out var dbref)
+					? OneOf.OneOf<string, DBRef>.FromT1(dbref!.Value)
+					: OneOf.OneOf<string, DBRef>.FromT0(x.Name)
+			)).ToArrayAsync());
 		}
 	}
 
-	public async IAsyncEnumerable<(string,IAsyncEnumerable<DateTimeOffset>)> GetTasks(string handle)
+	public async IAsyncEnumerable<(string Group, DateTimeOffset[])> GetTasks(string handle)
 	{
 		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup());
 		var keyTriggers = keys.ToAsyncEnumerable()
@@ -102,11 +113,11 @@ public class TaskScheduler(IMUSHCodeParser parser, ISchedulerFactory schedulerFa
 			.GroupBy(trigger => trigger.JobKey.Group, trigger => trigger.FinalFireTimeUtc!.Value);
 		await foreach (var key in keyTriggers)
 		{
-			yield return (key.Key, key);
+			yield return (key.Key, await key.ToArrayAsync());
 		}
 	}
 
-	public async IAsyncEnumerable<(string,IAsyncEnumerable<DateTimeOffset>)> GetTasks(DBRef obj) 
+	public async IAsyncEnumerable<(string Group, DateTimeOffset[])> GetTasks(DBRef obj)
 	{
 		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup());
 		var keyTriggers = keys.ToAsyncEnumerable()
@@ -115,7 +126,7 @@ public class TaskScheduler(IMUSHCodeParser parser, ISchedulerFactory schedulerFa
 			.GroupBy(trigger => trigger.JobKey.Group, trigger => trigger.FinalFireTimeUtc!.Value);
 		await foreach (var key in keyTriggers)
 		{
-			yield return (key.Key, key);
+			yield return (key.Key, await key.ToArrayAsync());
 		}
 	}
 }
