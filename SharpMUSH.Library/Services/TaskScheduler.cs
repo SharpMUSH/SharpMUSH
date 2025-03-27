@@ -60,22 +60,36 @@ public class TaskScheduler(IMUSHCodeParser parser, ISchedulerFactory schedulerFa
 				.WithIdentity($"dbref:{state.Executor}-{Guid.NewGuid()}", EnqueueGroup)
 		);
 
-	// TODO: HOW TO SEMAPHORE?
-	public async ValueTask WriteCommandList(MString command, ParserState state, SemaphoreSlim semaphore) =>
+	public async ValueTask WriteCommandList(MString command, ParserState state, DbRefAttribute dbRefAttribute,
+		int oldValue)
+	{
 		await _scheduler.ScheduleJob(() => parser.FromState(state).CommandListParse(command).AsTask(),
 			builder => builder
 				.StartNow()
 				.WithSimpleSchedule(x => x.WithRepeatCount(0))
 				.WithIdentity($"dbref:{state.Executor}-{Guid.NewGuid()}", SemaphoreGroup));
+	}
 
-	// TODO: HOW TO SEMAPHORE?
-	public async ValueTask WriteCommandList(MString command, ParserState state, SemaphoreSlim semaphore,
-		TimeSpan timeout) =>
+	public async ValueTask WriteCommandList(MString command, ParserState state, DbRefAttribute dbRefAttribute,
+		int oldValue,
+		TimeSpan timeout)
+	{
 		await _scheduler.ScheduleJob(() => parser.FromState(state).CommandListParse(command).AsTask(),
 			builder => builder
 				.StartNow()
 				.WithSimpleSchedule(x => x.WithRepeatCount(0))
 				.WithIdentity($"dbref:{state.Executor}-{Guid.NewGuid()}", SemaphoreGroup));
+	}
+
+	public async ValueTask Notify(DbRefAttribute dbAttribute, int oldValue)
+	{
+		await ValueTask.CompletedTask;
+	}
+
+	public async ValueTask Drain(DbRefAttribute dbAttribute)
+	{
+		await ValueTask.CompletedTask;
+	}
 
 	public async ValueTask WriteCommandList(MString command, ParserState state, TimeSpan delay) =>
 		await _scheduler.ScheduleJob(() => parser.FromState(state).CommandListParse(command).AsTask(),

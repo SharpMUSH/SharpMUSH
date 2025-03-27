@@ -28,7 +28,7 @@ public partial class Functions
 		}
 		
 		var args = parser.CurrentState.Arguments;
-		var split = HelperFunctions.SplitDBRefAndAttr(MModule.plainText(args["0"].Message!));
+		var split = HelperFunctions.SplitObjectAndAttr(MModule.plainText(args["0"].Message!));
 		var enactor = (await parser.CurrentState.EnactorObject(parser.Mediator)).WithoutNone();
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).WithoutNone();
 
@@ -83,7 +83,7 @@ public partial class Functions
 	[SharpFunction(Name = "EVAL", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
 	public static async ValueTask<CallState> Eval(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var dbrefAndAttr = HelperFunctions.SplitDBRefAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+		var dbrefAndAttr = HelperFunctions.SplitObjectAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
 
 		if (dbrefAndAttr is { IsT1: true, AsT1: false })
 		{
@@ -151,7 +151,7 @@ public partial class Functions
 	[SharpFunction(Name = "get", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> Get(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var dbrefAndAttr = HelperFunctions.SplitDBRefAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+		var dbrefAndAttr = HelperFunctions.SplitObjectAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
 
 		if (dbrefAndAttr is { IsT1: true, AsT1: false })
 		{
@@ -445,7 +445,7 @@ public partial class Functions
 	[SharpFunction(Name = "UDEFAULT", MinArgs = 2, MaxArgs = 34, Flags = FunctionFlags.NoParse)]
 	public static async ValueTask<CallState> UDefault(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var dbrefAndAttr = HelperFunctions.SplitDBRefAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+		var dbrefAndAttr = HelperFunctions.SplitObjectAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
 
 		if (dbrefAndAttr is { IsT1: true, AsT1: false })
 		{
@@ -511,7 +511,7 @@ public partial class Functions
 	[SharpFunction(Name = "ufun", MinArgs = 1, MaxArgs = 33, Flags = FunctionFlags.Regular)]
 	public static async ValueTask<CallState> UFun(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var dbrefAndAttr = HelperFunctions.SplitDBRefAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+		var dbrefAndAttr = HelperFunctions.SplitObjectAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
 
 		if (dbrefAndAttr is { IsT1: true, AsT1: false })
 		{

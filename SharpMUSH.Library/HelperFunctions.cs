@@ -56,8 +56,8 @@ public static partial class HelperFunctions
 		=> await obj.HasPower("Orphan");
 
 	public static async ValueTask<bool> IsAlive(this AnySharpObject obj)
-		=> obj.IsPlayer 
-		   || await IsPuppet(obj) 
+		=> obj.IsPlayer
+		   || await IsPuppet(obj)
 		   || (await IsAudible(obj) && (await obj.Object().Attributes.WithCancellation(CancellationToken.None))
 			   .Any(x => x.Name == "FORWARDLIST"));
 
@@ -80,7 +80,7 @@ public static partial class HelperFunctions
 
 	public static async ValueTask<bool> CanHide(this AnySharpObject obj)
 		=> await obj.HasPower("Hide") || await obj.IsPriv();
-		
+
 	public static async ValueTask<DBRef?> Ancestor(this AnySharpObject obj, IMUSHCodeParser parser)
 		=> await obj.IsOrphan()
 			? null
@@ -114,12 +114,31 @@ public static partial class HelperFunctions
 	/// <summary>
 	/// Takes the pattern of '#DBREF/attribute' and splits it out if possible.
 	/// </summary>
-	/// <param name="DBRefAttr">#DBREF/Attribute</param>
-	/// <returns>False if it could not be split. DBRef & Attribute if it could.</returns>
-	public static OneOf<(string db, string Attribute), bool> SplitDBRefAndAttr(string DBRefAttr)
+	/// <param name="dbReferenceAttr">#DBREF/Attribute</param>
+	/// <returns><see cref="DbRefAttribute"/> if it is a valid DbRef/Attribute format. Otherwise, <see cref="None"/>.</returns>
+	public static Option<DbRefAttribute> SplitDBRefAndAttr(string dbReferenceAttr)
 	{
-		var match = DatabaseReferenceWithAttributeRegex.Match(DBRefAttr);
+		var match = DatabaseReferenceWithAttributeRegex.Match(dbReferenceAttr);
 		var obj = match.Groups["Object"].Value;
+		
+		// TODO: Validate Attribute Pattern!
+		var attr = match.Groups["Attribute"].Value;
+
+		return !string.IsNullOrEmpty(attr) && DBRef.TryParse(obj, out var dbRef)
+				? new DbRefAttribute(dbRef!.Value, attr.ToUpper().Split("`").ToArray())
+				: new None()
+			;
+	}
+	
+	/// </summary>
+	/// <param name="objectAttr">#DBREF/Attribute</param>
+	/// <returns>False if it could not be split. DBRef & Attribute if it could.</returns>
+	public static OneOf<(string db, string Attribute), bool> SplitObjectAndAttr(string objectAttr)
+	{
+		var match = DatabaseReferenceWithAttributeRegex.Match(objectAttr);
+		var obj = match.Groups["Object"].Value;
+		
+		// TODO: Validate Attribute Pattern!
 		var attr = match.Groups["Attribute"].Value;
 
 		return string.IsNullOrEmpty(attr) || string.IsNullOrEmpty(obj)
@@ -127,10 +146,12 @@ public static partial class HelperFunctions
 			: (obj, attr);
 	}
 
-	public static OneOf<(string? db, string Attribute), bool> SplitOptionalDBRefAndAttr(string DBRefAttr)
+	public static OneOf<(string? db, string Attribute), bool> SplitOptionalObjectAndAttr(string ObjectAttr)
 	{
-		var match = OptionalDatabaseReferenceWithAttributeRegex.Match(DBRefAttr);
+		var match = OptionalDatabaseReferenceWithAttributeRegex.Match(ObjectAttr);
 		var obj = match.Groups["Object"].Value;
+		
+		// TODO: Validate Attribute Pattern!
 		var attr = match.Groups["Attribute"].Value;
 
 		return string.IsNullOrEmpty(attr)
@@ -143,6 +164,8 @@ public static partial class HelperFunctions
 	{
 		var match = DatabaseReferenceWithOptionalAttributeRegex.Match(DBRefAttr);
 		var obj = match.Groups["Object"].Value;
+		
+		// TODO: Validate Attribute Pattern!
 		var attr = match.Groups["Attribute"].Value;
 
 		return string.IsNullOrEmpty(obj)
@@ -172,7 +195,7 @@ public static partial class HelperFunctions
 	/// A regular expression that takes the form of 'Object/attributeName'.
 	/// </summary>
 	/// <returns>A regex that has a named group for the Object and Attribute.</returns>
-	[GeneratedRegex(@"(?<Object>[^/]+)/(?<Attribute>[a-zA-Z1-9@_\-\.`]+)")]
+	[GeneratedRegex(@"#(?<Object>\d+(:\d+))/(?<Attribute>[a-zA-Z1-9@_\-\.`]+)")]
 	private static partial Regex DatabaseReferenceWithAttribute();
 
 	/// <summary>
