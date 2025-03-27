@@ -1,6 +1,9 @@
-﻿using SharpMUSH.Library.ParserInterfaces;
+﻿using System.Collections.Immutable;
+using SharpMUSH.Library.ParserInterfaces;
 using Quartz;
+using Quartz.Impl.Matchers;
 using Quartz.Lambda;
+using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Services;
 
@@ -36,63 +39,69 @@ public class TaskScheduler(IMUSHCodeParser parser, ISchedulerFactory schedulerFa
 		Recurse = InPlace | NoBreaks | PreserveQReg
 	}
 
-	public async ValueTask WriteUserCommand(string handle, MString command, ParserState state)
-	{
+	public async ValueTask WriteUserCommand(string handle, MString command, ParserState state) =>
 		await _scheduler.ScheduleJob(() => parser.FromState(state).CommandParse(handle, command).AsTask(),
-			builder =>
-				builder
-					.StartNow()
-					.WithSimpleSchedule(x => x.WithRepeatCount(0))
-					.WithIdentity($"handle:{handle}-{Guid.NewGuid()}")
+			builder => builder
+				.StartNow()
+				.WithSimpleSchedule(x => x.WithRepeatCount(0))
+				.WithIdentity($"handle:{handle}-{Guid.NewGuid()}")
 		);
-	}
 
-	public async ValueTask WriteCommand(MString command, ParserState state)
-	{
+	public async ValueTask WriteCommand(MString command, ParserState state) =>
 		await _scheduler.ScheduleJob(() => parser.FromState(state).CommandParse(command).AsTask(),
-			builder =>
-				builder
-					.StartNow()
-					.WithSimpleSchedule(x => x.WithRepeatCount(0))
-					.WithIdentity($"dbref:{state.Executor}-{Guid.NewGuid()}")
+			builder => builder
+				.StartNow()
+				.WithSimpleSchedule(x => x.WithRepeatCount(0))
+				.WithIdentity($"dbref:{state.Executor}-{Guid.NewGuid()}")
 		);
-	}
 
-	public async ValueTask WriteCommandList(MString command, ParserState state)
-	{
+	public async ValueTask WriteCommandList(MString command, ParserState state) =>
 		await _scheduler.ScheduleJob(() => parser.FromState(state).CommandListParse(command).AsTask(),
 			builder => builder
 				.StartNow()
 				.WithSimpleSchedule(x => x.WithRepeatCount(0))
 				.WithIdentity($"dbref:{state.Executor}-{Guid.NewGuid()}")
 		);
-	}
 
-	public async ValueTask WriteCommandList(MString command, ParserState state, SemaphoreSlim semaphore)
-	{
+	public async ValueTask WriteCommandList(MString command, ParserState state, SemaphoreSlim semaphore) =>
 		await _scheduler.ScheduleJob(() => parser.FromState(state).CommandListParse(command).AsTask(),
 			builder => builder
 				.StartNow()
 				.WithSimpleSchedule(x => x.WithRepeatCount(0))
 				.WithIdentity($"dbref:{state.Executor}-{Guid.NewGuid()}"));
-	}
 
 	public async ValueTask WriteCommandList(MString command, ParserState state, SemaphoreSlim semaphore,
-		TimeSpan timeout)
-	{
+		TimeSpan timeout) =>
 		await _scheduler.ScheduleJob(() => parser.FromState(state).CommandListParse(command).AsTask(),
 			builder => builder
 				.StartNow()
 				.WithSimpleSchedule(x => x.WithRepeatCount(0))
 				.WithIdentity($"dbref:{state.Executor}-{Guid.NewGuid()}"));
-	}
 
-	public async ValueTask WriteCommandList(MString command, ParserState state, TimeSpan delay)
-	{
+	public async ValueTask WriteCommandList(MString command, ParserState state, TimeSpan delay) =>
 		await _scheduler.ScheduleJob(() => parser.FromState(state).CommandListParse(command).AsTask(),
 			builder => builder
 				.StartAt(DateTimeOffset.UtcNow + delay)
 				.WithSimpleSchedule(x => x.WithRepeatCount(0))
 				.WithIdentity($"dbref:{state.Executor}-{Guid.NewGuid()}"));
-	}
+
+	public async IAsyncEnumerable<string> GetAllTasks() =>
+		(await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup()))
+		.ToAsyncEnumerable()
+		.Select(async x => await _scheduler.GetTrigger(x))
+		.Select(x => x.Result.FinalFireTimeUtc.ToString()!);
+
+	public async IAsyncEnumerable<string> GetTasks(string handle) =>
+		(await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup()))
+		.ToAsyncEnumerable()
+		.Where(x => x.Name.StartsWith($"handle:{handle}"))
+		.Select(async x => await _scheduler.GetTrigger(x))
+		.Select(x => x.Result.FinalFireTimeUtc.ToString()!);
+
+	public async IAsyncEnumerable<string> GetTasks(DBRef obj) =>
+		(await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup()))
+		.ToAsyncEnumerable()
+		.Where(x => x.Name.StartsWith($"dbref:{obj}"))
+		.Select(async x => await _scheduler.GetTrigger(x))
+		.Select(x => x.Result.FinalFireTimeUtc.ToString()!);
 }

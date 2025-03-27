@@ -1,4 +1,5 @@
-﻿using SharpMUSH.Library.ParserInterfaces;
+﻿using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Library.Services;
 
@@ -50,4 +51,10 @@ public interface ITaskScheduler
 	/// <param name="state">A ParserState to ensure valid parsing.</param>
 	/// <param name="delay">Timeout after which the command is re-queued as a regular command to be immediately run.</param>
 	ValueTask WriteCommandList(MString command, ParserState state, TimeSpan delay);
+
+	IAsyncEnumerable<string> GetAllTasks();
+	
+	IAsyncEnumerable<string> GetTasks(string handle);
+	
+	IAsyncEnumerable<string> GetTasks(DBRef obj);
 }
