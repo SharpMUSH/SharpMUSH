@@ -14,13 +14,6 @@ public interface ITaskScheduler
 	ValueTask WriteUserCommand(string handle, MString command, ParserState state);
 	
 	/// <summary>
-	/// Write a single command to the scheduler, to be immediately executed when the scheduler runs.
-	/// </summary>
-	/// <param name="command">The command to run.</param>
-	/// <param name="state">A ParserState to ensure valid parsing.</param>
-	ValueTask WriteCommand(MString command, ParserState state);
-	
-	/// <summary>
 	/// Write a commandlist to the scheduler, to be immediately executed when the scheduler runs.
 	/// </summary>
 	/// <param name="command">The command to run.</param>
@@ -52,9 +45,9 @@ public interface ITaskScheduler
 	/// <param name="delay">Timeout after which the command is re-queued as a regular command to be immediately run.</param>
 	ValueTask WriteCommandList(MString command, ParserState state, TimeSpan delay);
 
-	IAsyncEnumerable<string> GetAllTasks();
+	IAsyncEnumerable<(string,IAsyncEnumerable<DateTimeOffset>)> GetAllTasks();
 	
-	IAsyncEnumerable<string> GetTasks(string handle);
+	IAsyncEnumerable<(string,IAsyncEnumerable<DateTimeOffset>)> GetTasks(string handle);
 	
-	IAsyncEnumerable<string> GetTasks(DBRef obj);
+	IAsyncEnumerable<(string,IAsyncEnumerable<DateTimeOffset>)> GetTasks(DBRef obj);
 }
