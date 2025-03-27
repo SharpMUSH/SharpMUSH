@@ -10,4 +10,8 @@
       <PackageReference Include="OneOf" Version="3.0.271" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="Helpfiles\SharpMUSH\" />
+    </ItemGroup>
+
 </Project>
