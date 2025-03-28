@@ -1,6 +1,6 @@
 # SharpMUSH
 <img align="left" width="300em" src="./Solution Files/Logo.svg" alt="A sharp logo for SharpMUSH."/>
-SharpMUSH is modern iteration of a style of _text-based role-playing_ servers referred to as '**MUSHes**' or 'MU\*' written with more modern needs in mind.
+SharpMUSH is modern iteration of a style of <em>text-based role-playing</em> servers referred to as '<b>MUSHes</b>' or '<b>MU*</b>' written with more modern needs in mind.
 <br/>
 It takes its basis and functionality heavily from PennMUSH and its brethren with the intent of a compatibility layer.
 
