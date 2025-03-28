@@ -2,6 +2,7 @@
 <img align="left" width="300em" src="./Solution Files/Logo.svg" alt="A sharp logo for SharpMUSH."/>
 SharpMUSH is modern iteration of a style of <em>text-based role-playing</em> servers referred to as '<b>MUSHes</b>' or '<b>MU*</b>' written with more modern needs in mind.
 <br/>
+<br/>
 It takes its basis and functionality heavily from PennMUSH and its brethren with the intent of a compatibility layer.
 
 ![F#](https://img.shields.io/badge/f%23-%23239120.svg?style=for-the-badge&logo=c-sharp&logoColor=white)
