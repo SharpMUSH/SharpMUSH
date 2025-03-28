@@ -13,6 +13,7 @@ public static partial class HelperFunctions
 {
 	private static readonly Regex DatabaseReferenceRegex = DatabaseReference();
 	private static readonly Regex DatabaseReferenceWithAttributeRegex = DatabaseReferenceWithAttribute();
+	private static readonly Regex ObjectWithAttributeRegex = ObjectWithAttribute();
 	private static readonly Regex OptionalDatabaseReferenceWithAttributeRegex = OptionalDatabaseReferenceWithAttribute();
 	private static readonly Regex DatabaseReferenceWithOptionalAttributeRegex = DatabaseReferenceWithOptionalAttribute();
 
@@ -130,12 +131,14 @@ public static partial class HelperFunctions
 			;
 	}
 	
+	/// <summary>
+	/// Takes the pattern of '#DBREF/attribute' and splits it out if possible.
 	/// </summary>
 	/// <param name="objectAttr">#DBREF/Attribute</param>
-	/// <returns>False if it could not be split. DBRef & Attribute if it could.</returns>
+	/// <returns><see cref="DbRefAttribute"/> if it is a valid DbRef/Attribute format. Otherwise, <see cref="None"/>.</returns>
 	public static OneOf<(string db, string Attribute), bool> SplitObjectAndAttr(string objectAttr)
 	{
-		var match = DatabaseReferenceWithAttributeRegex.Match(objectAttr);
+		var match = ObjectWithAttributeRegex.Match(objectAttr);
 		var obj = match.Groups["Object"].Value;
 		
 		// TODO: Validate Attribute Pattern!
@@ -197,6 +200,13 @@ public static partial class HelperFunctions
 	/// <returns>A regex that has a named group for the Object and Attribute.</returns>
 	[GeneratedRegex(@"#(?<Object>\d+(:\d+))/(?<Attribute>[a-zA-Z1-9@_\-\.`]+)")]
 	private static partial Regex DatabaseReferenceWithAttribute();
+	
+	/// <summary>
+	/// A regular expression that takes the form of 'Object/attributeName'.
+	/// </summary>
+	/// <returns>A regex that has a named group for the Object and Attribute.</returns>
+	[GeneratedRegex(@"(?<Object>[^/]+)/(?<Attribute>[a-zA-Z1-9@_\-\.`]+)")]
+	private static partial Regex ObjectWithAttribute();
 
 	/// <summary>
 	/// A regular expression that takes the form of '[Object/]attributeName'.
