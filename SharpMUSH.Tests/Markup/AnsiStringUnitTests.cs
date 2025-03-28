@@ -214,4 +214,14 @@ public class AnsiStringUnitTests : BaseUnitTest
 
 		await Assert.That(deserialized.ToString()).IsEquatableOrEqualTo(original.ToString());
 	}
+	
+	[Test]
+	public async Task GetLength()
+	{
+		var original = A.markupSingle(M.Create(foreground: null), "red");
+		var original2 = A.markupSingle(M.Create(foreground: null), "");
+
+		await Assert.That(MModule.getLength(original)).IsEqualTo("red".Length);
+		await Assert.That(MModule.getLength(original2)).IsEqualTo("".Length);
+	}
 }

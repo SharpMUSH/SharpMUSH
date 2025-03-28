@@ -40,8 +40,8 @@ public static partial class Commands
 
 		var output = args["0"].Message!;
 		
-		await parser.NotifyService.Notify(executor, output);
-		return new CallState(output);
+		await parser.NotifyService.Notify(executor, output.ToString());
+		return new None();
 	}
 
 	[SharpCommand(Name = "HUH_COMMAND", Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
@@ -92,15 +92,15 @@ public static partial class Commands
 		// TODO: Consult CONFORMAT, DESCFORMAT, INAMEFORMAT, NAMEFORMAT, etc.
 
 		var args = parser.CurrentState.Arguments;
-		var enactor = (await parser.CurrentState.EnactorObject(parser.Mediator)).WithoutNone();
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		AnyOptionalSharpObject viewing = new None();
 
 		if (args.Count == 1)
 		{
 			var locate = await parser.LocateService.LocateAndNotifyIfInvalid(
 				parser,
-				enactor,
-				enactor,
+				executor,
+				executor,
 				args["0"].Message!.ToString(),
 				LocateFlags.All);
 
@@ -111,7 +111,7 @@ public static partial class Commands
 		}
 		else
 		{
-			viewing = (await parser.Mediator.Send(new GetCertainLocationQuery(enactor.Id()!))).WithExitOption()
+			viewing = (await parser.Mediator.Send(new GetCertainLocationQuery(executor.Id()!))).WithExitOption()
 				.WithNoneOption();
 		}
 
@@ -128,7 +128,7 @@ public static partial class Commands
 		var name = viewingObject.Name;
 		var contentKeys = contents.Where(x => x.IsPlayer || x.IsThing).Select(x => x.Object().Name).ToList();
 		var exitKeys = contents.Where(x => x.IsExit).Select(x => x.Object().Name).ToList();
-		var description = (await parser.AttributeService.GetAttributeAsync(enactor, viewing.Known(), "DESCRIBE",
+		var description = (await parser.AttributeService.GetAttributeAsync(executor, viewing.Known(), "DESCRIBE",
 				IAttributeService.AttributeMode.Read, false))
 			.Match(
 				attr => MModule.getLength(attr.Value) == 0
@@ -138,16 +138,16 @@ public static partial class Commands
 				_ => MModule.empty());
 
 		// TODO: Pass value into NAMEFORMAT
-		await parser.NotifyService.Notify(enactor,
+		await parser.NotifyService.Notify(executor,
 			$"{MModule.markupSingle2(Ansi.Create(foreground: StringExtensions.rgb(Color.White)), MModule.single(name))}" +
 			$"(#{viewingObject.DBRef.Number}{string.Join(string.Empty, (await viewingObject.Flags.WithCancellation(CancellationToken.None)).Select(x => x.Symbol))})");
 		// TODO: Pass value into DESCFORMAT
-		await parser.NotifyService.Notify(enactor, description.ToString());
+		await parser.NotifyService.Notify(executor, description.ToString());
 		// parser.NotifyService.Notify(enactor, $"Location: {location}");
 		// TODO: Pass value into CONFORMAT
-		await parser.NotifyService.Notify(enactor, $"Contents: {string.Join(Environment.NewLine, contentKeys)}");
+		await parser.NotifyService.Notify(executor, $"Contents: {string.Join(Environment.NewLine, contentKeys)}");
 		// TODO: Pass value into EXITFORMAT
-		await parser.NotifyService.Notify(enactor,
+		await parser.NotifyService.Notify(executor,
 			$"Exits: {string.Join(Environment.NewLine, string.Join(", ", exitKeys))}");
 
 		return new CallState(viewingObject.DBRef.ToString());
@@ -185,7 +185,9 @@ public static partial class Commands
 			return new None();
 		}
 
-		var contents = viewing.IsExit ? [] : await parser.Mediator.Send(new GetContentsQuery(viewing.Known().AsContainer));
+		var contents = viewing.IsExit 
+			? [] 
+			: await parser.Mediator.Send(new GetContentsQuery(viewing.Known().AsContainer));
 
 		var obj = viewing.Object()!;
 		var ownerObj = (await obj.Owner.WithCancellation(CancellationToken.None)).Object;
@@ -291,18 +293,17 @@ public static partial class Commands
 	public static async ValueTask<Option<CallState>> Goto(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var enactor = (await parser.CurrentState.EnactorObject(parser.Mediator)).WithoutNone();
-		var enactorObj = (await parser.CurrentState.EnactorObject(parser.Mediator)).Known();
-		if (args.Count < 1)
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		if (args.IsEmpty)
 		{
-			await parser.NotifyService.Notify(enactor, "You can't go that way.");
+			await parser.NotifyService.Notify(executor, "You can't go that way.");
 			return CallState.Empty;
 		}
 
 		var exit = await parser.LocateService.LocateAndNotifyIfInvalid(
 			parser,
-			enactorObj,
-			enactorObj,
+			executor,
+			executor,
 			args["0"].Message!.ToString(),
 			LocateFlags.ExitsInTheRoomOfLooker
 			| LocateFlags.EnglishStyleMatching
@@ -319,14 +320,14 @@ public static partial class Commands
 		// TODO: Check if the exit has a destination attribute.
 		var destination = await exitObj.Home.WithCancellation(CancellationToken.None);
 
-		if (!await parser.PermissionService.CanGoto(enactorObj, exitObj,
+		if (!await parser.PermissionService.CanGoto(executor, exitObj,
 			    await exitObj.Home.WithCancellation(CancellationToken.None)))
 		{
-			await parser.NotifyService.Notify(enactor, "You can't go that way.");
+			await parser.NotifyService.Notify(executor, "You can't go that way.");
 			return CallState.Empty;
 		}
 
-		await parser.Mediator.Send(new MoveObjectCommand(enactorObj.AsContent, destination));
+		await parser.Mediator.Send(new MoveObjectCommand(executor.AsContent, destination));
 
 		return new CallState(destination.ToString());
 	}
@@ -337,7 +338,7 @@ public static partial class Commands
 	public static async ValueTask<Option<CallState>> Teleport(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var enactor = (await parser.CurrentState.EnactorObject(parser.Mediator)).WithoutNone();
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 
 		// If /list - Arg0 can contain multiple SharpObject
 		// If not, Arg0 is a singular object
@@ -345,9 +346,8 @@ public static partial class Commands
 		// If Arg1 does not exist, Arg0 is the Destination for the Enactor.
 		// Otherwise, Arg1 is the Destination for the Arg0.
 
-		var enactorObj = (await parser.CurrentState.EnactorObject(parser.Mediator)).Known();
 		var destinationString = MModule.plainText(args.Count == 1 ? args["0"].Message : args["1"].Message);
-		var toTeleport = MModule.plainText(args.Count == 1 ? MModule.single(enactor.ToString()) : args["0"].Message);
+		var toTeleport = MModule.plainText(args.Count == 1 ? MModule.single(executor.ToString()) : args["0"].Message);
 
 		var isList = parser.CurrentState.Switches.Contains("LIST");
 
@@ -365,14 +365,14 @@ public static partial class Commands
 		var toTeleportStringList = toTeleportList.Select(x => x.ToString());
 
 		var destination = await parser.LocateService.LocateAndNotifyIfInvalid(parser,
-			enactorObj,
-			enactorObj,
+			executor,
+			executor,
 			destinationString,
 			LocateFlags.All);
 
 		if (!destination.IsValid())
 		{
-			await parser.NotifyService.Notify(enactor, "You can't go that way.");
+			await parser.NotifyService.Notify(executor, "You can't go that way.");
 			return CallState.Empty;
 		}
 
@@ -388,19 +388,19 @@ public static partial class Commands
 
 		foreach (var obj in toTeleportStringList)
 		{
-			var locateTarget = await parser.LocateService.LocateAndNotifyIfInvalid(parser, enactorObj, enactorObj, obj,
+			var locateTarget = await parser.LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, obj,
 				LocateFlags.All);
 			if (!locateTarget.IsValid() || locateTarget.IsRoom)
 			{
-				await parser.NotifyService.Notify(enactor, Errors.ErrorNotVisible);
+				await parser.NotifyService.Notify(executor, Errors.ErrorNotVisible);
 				continue;
 			}
 
 			var target = locateTarget.WithoutError().WithoutNone();
 			var targetContent = target.AsContent;
-			if (!await parser.PermissionService.Controls(enactorObj, target))
+			if (!await parser.PermissionService.Controls(executor, target))
 			{
-				await parser.NotifyService.Notify(enactor, Errors.ErrorCannotTeleport);
+				await parser.NotifyService.Notify(executor, Errors.ErrorCannotTeleport);
 				continue;
 			}
 
