@@ -218,8 +218,8 @@ public class AnsiStringUnitTests : BaseUnitTest
 	[Test]
 	public async Task GetLength()
 	{
-		var original = A.markupSingle(M.Create(foreground: null), "red");
-		var original2 = A.markupSingle(M.Create(foreground: null), "");
+		var original = A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "red");
+		var original2 = A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "");
 
 		await Assert.That(MModule.getLength(original)).IsEqualTo("red".Length);
 		await Assert.That(MModule.getLength(original2)).IsEqualTo("".Length);
