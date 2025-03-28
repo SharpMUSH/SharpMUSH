@@ -30,6 +30,7 @@ public static partial class Commands
 	[SharpCommand(Name = "THINK", Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> Think(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		var args = parser.CurrentState.Arguments;
 
 		if (args.IsEmpty)
@@ -37,11 +38,10 @@ public static partial class Commands
 			return new None();
 		}
 
-		var notification = args["0"].Message!.ToString();
-		var enactor = (await parser.CurrentState.EnactorObject(parser.Mediator)).WithoutNone();
-		await parser.NotifyService.Notify(enactor, notification);
-
-		return new None();
+		var output = args["0"].Message!;
+		
+		await parser.NotifyService.Notify(executor, output);
+		return new CallState(output);
 	}
 
 	[SharpCommand(Name = "HUH_COMMAND", Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
