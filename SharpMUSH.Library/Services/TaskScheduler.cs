@@ -1,10 +1,9 @@
-﻿using System.Collections.Immutable;
-using SharpMUSH.Library.ParserInterfaces;
+﻿using SharpMUSH.Library.ParserInterfaces;
 using Quartz;
 using Quartz.Impl.Matchers;
 using Quartz.Lambda;
-using Quartz.Util;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Models.SchedulerModels;
 
 namespace SharpMUSH.Library.Services;
 
@@ -63,32 +62,96 @@ public class TaskScheduler(IMUSHCodeParser parser, ISchedulerFactory schedulerFa
 	public async ValueTask WriteCommandList(MString command, ParserState state, DbRefAttribute dbRefAttribute,
 		int oldValue)
 	{
-		await _scheduler.ScheduleJob(() => parser.FromState(state).CommandListParse(command).AsTask(),
-			builder => builder
-				.StartNow()
+		if (oldValue < 0)
+		{
+			await WriteCommandList(command, state);
+			return;
+		}
+		
+		await _scheduler.ScheduleJob(
+			JobBuilder
+				.CreateForAsync<SemaphoreTask>()
+				.SetJobData(new JobDataMap((IDictionary<string, object>)new Dictionary<string, object>
+				{
+					{ "Command", command },
+					{ "State", state },
+				}))
+				.Build(),
+			TriggerBuilder.Create()
 				.WithSimpleSchedule(x => x.WithRepeatCount(0))
-				.WithIdentity($"dbref:{state.Executor}-{Guid.NewGuid()}", SemaphoreGroup));
+				.WithIdentity(
+					$"dbref:{state.Executor}-{Guid.NewGuid()}",
+					$"{SemaphoreGroup}:{dbRefAttribute}").Build());
 	}
 
 	public async ValueTask WriteCommandList(MString command, ParserState state, DbRefAttribute dbRefAttribute,
 		int oldValue,
 		TimeSpan timeout)
 	{
-		await _scheduler.ScheduleJob(() => parser.FromState(state).CommandListParse(command).AsTask(),
-			builder => builder
-				.StartNow()
+		if (oldValue < 0)
+		{
+			await WriteCommandList(command, state);
+			return;
+		}
+		
+		await _scheduler.ScheduleJob(
+			JobBuilder
+				.CreateForAsync<SemaphoreTask>()
+				.SetJobData(new JobDataMap((IDictionary<string, object>)new Dictionary<string, object>
+				{
+					{ "Command", command },
+					{ "State", state },
+				}))
+				.Build(),
+			TriggerBuilder.Create()
 				.WithSimpleSchedule(x => x.WithRepeatCount(0))
-				.WithIdentity($"dbref:{state.Executor}-{Guid.NewGuid()}", SemaphoreGroup));
+				.StartAt(DateTimeOffset.Now + timeout)
+				.WithIdentity(
+					$"dbref:{state.Executor}-{Guid.NewGuid()}",
+					$"{SemaphoreGroup}:{dbRefAttribute}").Build());
 	}
 
 	public async ValueTask Notify(DbRefAttribute dbAttribute, int oldValue)
 	{
-		await ValueTask.CompletedTask;
+		var semaphoresForObject = await _scheduler
+			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals($"{SemaphoreGroup}:{dbAttribute}"));
+
+		if (oldValue < 0)
+		{
+			var immediatelyRun = semaphoresForObject.Take(0 - oldValue).ToAsyncEnumerable();
+			await foreach (var trigger in immediatelyRun)
+			{
+				try
+				{
+					var to = await _scheduler.GetTrigger(trigger, CancellationToken.None);
+					var job = to.JobKey;
+					await _scheduler.TriggerJob(job);
+				}
+				catch
+				{
+					// Intentionally do nothing for that job. It likely no longer exists somehow.
+				}
+			}
+		}
 	}
 
 	public async ValueTask Drain(DbRefAttribute dbAttribute)
 	{
-		await ValueTask.CompletedTask;
+		var semaphoresForObject = await _scheduler
+			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals($"{SemaphoreGroup}:{dbAttribute}"));
+
+		await _scheduler.UnscheduleJobs(semaphoresForObject);
+	}
+
+	public async ValueTask Halt(DBRef dbRef)
+	{
+		var delayed = await _scheduler
+			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupStartsWith($"{DelayGroup}:{dbRef}"));
+		await _scheduler.UnscheduleJobs(delayed);
+
+		var enqueued = await _scheduler
+			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupStartsWith($"{EnqueueGroup}:{dbRef}"));
+		await _scheduler.UnscheduleJobs(enqueued);
 	}
 
 	public async ValueTask WriteCommandList(MString command, ParserState state, TimeSpan delay) =>

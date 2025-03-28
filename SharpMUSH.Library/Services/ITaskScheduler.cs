@@ -78,4 +78,10 @@ public interface ITaskScheduler
 	/// </summary>
 	/// <param name="dbAttribute">DbRef and Attribute with a value</param>
 	ValueTask Drain(DbRefAttribute dbAttribute);
+	
+	/// <summary>
+	/// Removes all non-Semaphore jobs related to a DBRef from executing immediately.
+	/// </summary>
+	/// <param name="dbRef">DbRef</param>
+	ValueTask Halt(DBRef dbRef);
 }
