@@ -227,7 +227,7 @@ public partial class Functions
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
 		var enactor = (await parser.CurrentState.EnactorObject(parser.Mediator)).Known();
 		var objAttr =
-			HelperFunctions.SplitOptionalDBRefAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message!));
+			HelperFunctions.SplitOptionalObjectAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message!));
 		if (objAttr is { IsT1: true, AsT1: false })
 		{
 			return new CallState(Errors.ErrorObjectAttributeString);

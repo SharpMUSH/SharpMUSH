@@ -24,7 +24,6 @@ public record MUSHCodeParser(
 	ILocateService LocateService,
 	IExpandedObjectDataService ObjectDataService,
 	ICommandDiscoveryService CommandDiscoveryService,
-	ITaskScheduler Scheduler,
 	IConnectionService ConnectionService,
 	IMediator Mediator) : IMUSHCodeParser
 {
@@ -42,7 +41,7 @@ public record MUSHCodeParser(
 
 	public IMUSHCodeParser FromState(ParserState state) => new MUSHCodeParser(Logger, Configuration, PasswordService,
 		PermissionService,
-		AttributeService, NotifyService, LocateService, ObjectDataService, CommandDiscoveryService, Scheduler,
+		AttributeService, NotifyService, LocateService, ObjectDataService, CommandDiscoveryService,
 		ConnectionService, Mediator, state);
 
 	public IMUSHCodeParser Empty() => this with { State = ImmutableStack<ParserState>.Empty };
@@ -59,12 +58,11 @@ public record MUSHCodeParser(
 		ILocateService locateService,
 		IExpandedObjectDataService objectDataService,
 		ICommandDiscoveryService commandDiscoveryService,
-		ITaskScheduler scheduleService,
 		IConnectionService connectionService,
 		IMediator mediator,
 		ParserState state) :
 		this(logger, config, passwordService, permissionService, attributeService, notifyService, locateService,
-			objectDataService, commandDiscoveryService, scheduleService, connectionService, mediator)
+			objectDataService, commandDiscoveryService, connectionService, mediator)
 		=> State = [state];
 
 	public ValueTask<CallState?> FunctionParse(MString text)

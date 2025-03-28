@@ -1,7 +1,7 @@
 ﻿using Mediator;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Notifications;
-using SharpMUSH.Library.Requests;
+using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Implementation.Handlers.Telnet;
@@ -13,7 +13,10 @@ public class TelnetInputRequestHandler(ILogger<TelnetInputRequestHandler> logger
 	{
 		try
 		{
-			await scheduler.WriteUserCommand(request.Handle, MModule.single(request.Input), null);
+			await scheduler.WriteUserCommand(
+				handle: request.Handle,
+				command: MModule.single(request.Input),
+				state: ParserState.Empty with { Handle = request.Handle });
 		}
 		catch (Exception ex)
 		{

@@ -1,15 +1,25 @@
-﻿using OneOf;
-using OneOf.Types;
-using SharpMUSH.Library.ParserInterfaces;
-using System.Collections.Concurrent;
+﻿using SharpMUSH.Library.ParserInterfaces;
+using Quartz;
+using Quartz.Impl.Matchers;
+using Quartz.Lambda;
+using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Models.SchedulerModels;
 
 namespace SharpMUSH.Library.Services;
 
 /// <summary>
-/// Should be a Background Task
+/// Task scheduler, schedules items onto the queue.
 /// </summary>
-public class TaskScheduler : ITaskScheduler
+/// <param name="parser"></param>
+/// <param name="schedulerFactory"></param>
+public class TaskScheduler(IMUSHCodeParser parser, ISchedulerFactory schedulerFactory) : ITaskScheduler
 {
+	private readonly IScheduler _scheduler = schedulerFactory.GetScheduler().GetAwaiter().GetResult();
+	public const string DirectInputGroup = "direct-input";
+	public const string EnqueueGroup = "enqueue";
+	public const string SemaphoreGroup = "semaphore";
+	public const string DelayGroup = "delay";
+
 	[Flags]
 	private enum TaskQueueType
 	{
@@ -33,86 +43,167 @@ public class TaskScheduler : ITaskScheduler
 		Recurse = InPlace | NoBreaks | PreserveQReg
 	}
 
-	private record TaskQueue(
-		OneOf<SemaphoreSlim, TimeSpan, None> WaitType,
-		DateTimeOffset EntryTime,
-		TaskQueueType Type,
-		string? Handle,
-		MString Command,
-		ParserState? State);
+	public async ValueTask WriteUserCommand(string handle, MString command, ParserState state) =>
+		await _scheduler.ScheduleJob(() => parser.FromState(state).CommandParse(handle, command).AsTask(),
+			builder => builder
+				.StartNow()
+				.WithSimpleSchedule(x => x.WithRepeatCount(0))
+				.WithIdentity($"handle:{handle}-{Guid.NewGuid()}", DirectInputGroup)
+		);
 
-	public async ValueTask WriteUserCommand(string handle, MString command, ParserState? state)
+	public async ValueTask WriteCommandList(MString command, ParserState state) =>
+		await _scheduler.ScheduleJob(() => parser.FromState(state).CommandListParse(command).AsTask(),
+			builder => builder
+				.StartNow()
+				.WithSimpleSchedule(x => x.WithRepeatCount(0))
+				.WithIdentity($"dbref:{state.Executor}-{Guid.NewGuid()}", EnqueueGroup)
+		);
+
+	public async ValueTask WriteCommandList(MString command, ParserState state, DbRefAttribute dbRefAttribute,
+		int oldValue)
 	{
-		Pipe.Enqueue(new TaskQueue(new None(), DateTimeOffset.UtcNow, TaskQueueType.Player | TaskQueueType.Socket, handle,
-			command, state));
-		await ValueTask.CompletedTask;
-	}
-
-	public async ValueTask WriteCommand(MString command, ParserState? state)
-	{
-		Pipe.Enqueue(new TaskQueue(new None(), DateTimeOffset.UtcNow, TaskQueueType.NoList, null, command, state));
-		await ValueTask.CompletedTask;
-	}
-
-	public async ValueTask WriteCommandList(MString command, ParserState? state)
-	{
-		Pipe.Enqueue(new TaskQueue(new None(), DateTimeOffset.UtcNow, TaskQueueType.Default, null, command, state));
-		await ValueTask.CompletedTask;
-	}
-
-	public async ValueTask WriteCommandList(MString command, ParserState? state, SemaphoreSlim semaphore)
-	{
-		Pipe.Enqueue(new TaskQueue(semaphore, DateTimeOffset.UtcNow, TaskQueueType.Default, null, command, state));
-		await ValueTask.CompletedTask;
-	}
-
-	public async ValueTask WriteCommandList(MString command, ParserState? state, TimeSpan time)
-	{
-		Pipe.Enqueue(new TaskQueue(time, DateTimeOffset.UtcNow, TaskQueueType.Default, null, command, state));
-		await ValueTask.CompletedTask;
-	}
-
-	private ConcurrentQueue<TaskQueue> Pipe { get; } = new();
-
-	public async Task ExecuteAsync(IMUSHCodeParser parser, CancellationToken stoppingToken)
-	{
-		if (stoppingToken.IsCancellationRequested) return;
-		if (!Pipe.TryDequeue(out var result)) return;
-
-		var skipStack = new ConcurrentStack<TaskQueue>();
-
-		do
+		if (oldValue < 0)
 		{
-			switch (result)
+			await WriteCommandList(command, state);
+			return;
+		}
+		
+		await _scheduler.ScheduleJob(
+			JobBuilder
+				.CreateForAsync<SemaphoreTask>()
+				.SetJobData(new JobDataMap((IDictionary<string, object>)new Dictionary<string, object>
+				{
+					{ "Command", command },
+					{ "State", state },
+				}))
+				.Build(),
+			TriggerBuilder.Create()
+				.WithSimpleSchedule(x => x.WithRepeatCount(0))
+				.WithIdentity(
+					$"dbref:{state.Executor}-{Guid.NewGuid()}",
+					$"{SemaphoreGroup}:{dbRefAttribute}").Build());
+	}
+
+	public async ValueTask WriteCommandList(MString command, ParserState state, DbRefAttribute dbRefAttribute,
+		int oldValue,
+		TimeSpan timeout)
+	{
+		if (oldValue < 0)
+		{
+			await WriteCommandList(command, state);
+			return;
+		}
+		
+		await _scheduler.ScheduleJob(
+			JobBuilder
+				.CreateForAsync<SemaphoreTask>()
+				.SetJobData(new JobDataMap((IDictionary<string, object>)new Dictionary<string, object>
+				{
+					{ "Command", command },
+					{ "State", state },
+				}))
+				.Build(),
+			TriggerBuilder.Create()
+				.WithSimpleSchedule(x => x.WithRepeatCount(0))
+				.StartAt(DateTimeOffset.Now + timeout)
+				.WithIdentity(
+					$"dbref:{state.Executor}-{Guid.NewGuid()}",
+					$"{SemaphoreGroup}:{dbRefAttribute}").Build());
+	}
+
+	public async ValueTask Notify(DbRefAttribute dbAttribute, int oldValue)
+	{
+		var semaphoresForObject = await _scheduler
+			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals($"{SemaphoreGroup}:{dbAttribute}"));
+
+		if (oldValue < 0)
+		{
+			var immediatelyRun = semaphoresForObject.Take(0 - oldValue).ToAsyncEnumerable();
+			await foreach (var trigger in immediatelyRun)
 			{
-				case { State: null, Type: TaskQueueType.Player | TaskQueueType.Socket, Handle: not null }:
-					await parser.Empty().CommandParse(result.Handle, result.Command); // Direct user input.
-					continue;
-				case { State: null }:
-					throw new Exception("This should never occur");
-				case { WaitType.IsT1: true }:
-					if (DateTimeOffset.UtcNow - result.EntryTime > result.WaitType.AsT1)
-					{
-						await parser.FromState(result.State).CommandListParse(result.Command);
-					}
-					continue;
-				case { WaitType.IsT0: true }:
-					// TODO: Implement Semaphore Wait
-					throw new NotImplementedException("Implement Scheduled Semaphores.");
-				case { Type: TaskQueueType.NoList }:
-					await parser.FromState(result.State).CommandParse(result.Command);
-					continue;
-				case { Type: TaskQueueType.Default }:
-					await parser.FromState(result.State).CommandListParse(result.Command);
-					continue;
+				try
+				{
+					var to = await _scheduler.GetTrigger(trigger, CancellationToken.None);
+					var job = to.JobKey;
+					await _scheduler.TriggerJob(job);
+				}
+				catch
+				{
+					// Intentionally do nothing for that job. It likely no longer exists somehow.
+				}
 			}
+		}
+	}
 
-			skipStack.Push(result);
-		} while (Pipe.TryDequeue(out result) && !stoppingToken.IsCancellationRequested);
+	public async ValueTask Drain(DbRefAttribute dbAttribute)
+	{
+		var semaphoresForObject = await _scheduler
+			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals($"{SemaphoreGroup}:{dbAttribute}"));
 
-		foreach (var item in skipStack)
+		await _scheduler.UnscheduleJobs(semaphoresForObject);
+	}
+
+	public async ValueTask Halt(DBRef dbRef)
+	{
+		var delayed = await _scheduler
+			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupStartsWith($"{DelayGroup}:{dbRef}"));
+		await _scheduler.UnscheduleJobs(delayed);
+
+		var enqueued = await _scheduler
+			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupStartsWith($"{EnqueueGroup}:{dbRef}"));
+		await _scheduler.UnscheduleJobs(enqueued);
+	}
+
+	public async ValueTask WriteCommandList(MString command, ParserState state, TimeSpan delay) =>
+		await _scheduler.ScheduleJob(() => parser.FromState(state).CommandListParse(command).AsTask(),
+			builder => builder
+				.StartAt(DateTimeOffset.UtcNow + delay)
+				.WithSimpleSchedule(x => x.WithRepeatCount(0))
+				.WithIdentity($"dbref:{state.Executor}-{Guid.NewGuid()}", DelayGroup));
+
+	public async IAsyncEnumerable<(string Group, (DateTimeOffset, OneOf.OneOf<string, DBRef>)[])> GetAllTasks()
+	{
+		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup());
+		var keyTriggers = keys.ToAsyncEnumerable()
+			.SelectAwait(async triggerKey => await _scheduler.GetTrigger(triggerKey))
+			.GroupBy(trigger => trigger.JobKey.Group, trigger => (trigger.FinalFireTimeUtc!.Value, trigger.Key.Name));
+		await foreach (var key in keyTriggers)
 		{
-			Pipe.Enqueue(item);
+			var translate = new Func<string, string>(x =>
+				x.Replace("dbref:", "").Replace("handle:", "").TakeWhile(x => x != '-').ToString()!);
+
+			yield return (key.Key, await key.Select(x => (
+				x.Value,
+				DBRef.TryParse(translate(x.Name), out var dbref)
+					? OneOf.OneOf<string, DBRef>.FromT1(dbref!.Value)
+					: OneOf.OneOf<string, DBRef>.FromT0(x.Name)
+			)).ToArrayAsync());
+		}
+	}
+
+	public async IAsyncEnumerable<(string Group, DateTimeOffset[])> GetTasks(string handle)
+	{
+		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup());
+		var keyTriggers = keys.ToAsyncEnumerable()
+			.Where(x => x.Name.StartsWith($"handle:{handle}"))
+			.SelectAwait(async triggerKey => await _scheduler.GetTrigger(triggerKey))
+			.GroupBy(trigger => trigger.JobKey.Group, trigger => trigger.FinalFireTimeUtc!.Value);
+		await foreach (var key in keyTriggers)
+		{
+			yield return (key.Key, await key.ToArrayAsync());
+		}
+	}
+
+	public async IAsyncEnumerable<(string Group, DateTimeOffset[])> GetTasks(DBRef obj)
+	{
+		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup());
+		var keyTriggers = keys.ToAsyncEnumerable()
+			.Where(triggerKey => triggerKey.Name.StartsWith($"dbref:{obj}"))
+			.SelectAwait(async triggerKey => await _scheduler.GetTrigger(triggerKey))
+			.GroupBy(trigger => trigger.JobKey.Group, trigger => trigger.FinalFireTimeUtc!.Value);
+		await foreach (var key in keyTriggers)
+		{
+			yield return (key.Key, await key.ToArrayAsync());
 		}
 	}
 }

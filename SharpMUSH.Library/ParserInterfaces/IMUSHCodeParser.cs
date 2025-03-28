@@ -17,7 +17,6 @@ public interface IMUSHCodeParser
 	IPermissionService PermissionService { get; }
 	ILocateService LocateService { get; }
 	IExpandedObjectDataService ObjectDataService { get; }
-	ITaskScheduler Scheduler { get; }
 	ICommandDiscoveryService CommandDiscoveryService { get; }
 	IImmutableStack<ParserState> State { get; }
 	IMediator Mediator { get; }

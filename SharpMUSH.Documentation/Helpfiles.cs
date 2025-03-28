@@ -10,7 +10,7 @@ public partial class Helpfiles(DirectoryInfo directory)
 
 	public void Index()
 	{
-		var files = directory.GetFiles("*.hlp");
+		var files = directory.GetFiles("*.txt");
 		
 		foreach (var file in files)
 		{

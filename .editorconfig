@@ -26,7 +26,6 @@ dotnet_naming_rule.private_constants_rule.severity = suggestion
 dotnet_naming_rule.private_constants_rule.style = error_upper_camel_case_style
 dotnet_naming_rule.private_constants_rule.symbols = private_constants_symbols
 dotnet_naming_style.error_upper_camel_case_style.capitalization = pascal_case
-dotnet_naming_style.error_upper_camel_case_style.required_prefix = Error
 dotnet_naming_symbols.private_constants_symbols.applicable_accessibilities = private
 dotnet_naming_symbols.private_constants_symbols.applicable_kinds = field
 dotnet_naming_symbols.private_constants_symbols.required_modifiers = const
