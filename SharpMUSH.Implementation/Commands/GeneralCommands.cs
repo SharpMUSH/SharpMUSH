@@ -447,6 +447,15 @@ public static partial class Commands
 		MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> NOTIFY(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		/*
+		 *
+		 *     /first - (default) Notify the first command waiting on the indicated
+              semaphore (or the first <count> commands).
+			     /all   - Notify all commands waiting on the semaphore and reset the
+			              semaphore count to zero.  <count> is ignored.
+			     /quiet - Suppress the 'Notified.' message associated with the command.
+		 * 
+		 */
 		await ValueTask.CompletedTask;
 		throw new NotImplementedException();
 	}

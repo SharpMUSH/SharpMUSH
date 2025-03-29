@@ -67,7 +67,7 @@ public class TaskScheduler(IMUSHCodeParser parser, ISchedulerFactory schedulerFa
 			await WriteCommandList(command, state);
 			return;
 		}
-		
+
 		await _scheduler.ScheduleJob(
 			JobBuilder
 				.CreateForAsync<SemaphoreTask>()
@@ -93,7 +93,7 @@ public class TaskScheduler(IMUSHCodeParser parser, ISchedulerFactory schedulerFa
 			await WriteCommandList(command, state);
 			return;
 		}
-		
+
 		await _scheduler.ScheduleJob(
 			JobBuilder
 				.CreateForAsync<SemaphoreTask>()
@@ -131,6 +131,27 @@ public class TaskScheduler(IMUSHCodeParser parser, ISchedulerFactory schedulerFa
 				{
 					// Intentionally do nothing for that job. It likely no longer exists somehow.
 				}
+			}
+		}
+	}
+
+	public async ValueTask NotifyAll(DbRefAttribute dbAttribute)
+	{
+		var semaphoresForObject = await _scheduler
+			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals($"{SemaphoreGroup}:{dbAttribute}"));
+
+		var immediatelyRun = semaphoresForObject.ToAsyncEnumerable();
+		await foreach (var trigger in immediatelyRun)
+		{
+			try
+			{
+				var to = await _scheduler.GetTrigger(trigger, CancellationToken.None);
+				var job = to.JobKey;
+				await _scheduler.TriggerJob(job);
+			}
+			catch
+			{
+				// Intentionally do nothing for that job. It likely no longer exists somehow.
 			}
 		}
 	}

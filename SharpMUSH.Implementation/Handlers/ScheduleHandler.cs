@@ -31,6 +31,14 @@ public class ScheduleNotifyHandler(ITaskScheduler scheduler) : IRequestHandler<N
 	}
 }
 
+public class ScheduleNotifyAllHandler(ITaskScheduler scheduler) : IRequestHandler<NotifyAllSemaphoreRequest>
+{
+	public async ValueTask<Unit> Handle(NotifyAllSemaphoreRequest request, CancellationToken cancellationToken)
+	{
+		await scheduler.NotifyAll(request.DbRefAttribute);
+		return await Unit.ValueTask;
+	}
+}
 
 public class ScheduleDrainHandler(ITaskScheduler scheduler) : IRequestHandler<DrainSemaphoreRequest>
 {

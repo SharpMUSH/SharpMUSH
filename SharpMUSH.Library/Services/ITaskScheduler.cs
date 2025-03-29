@@ -74,6 +74,12 @@ public interface ITaskScheduler
 	ValueTask Notify(DbRefAttribute dbAttribute, int oldValue);
 
 	/// <summary>
+	/// Notify a Semaphore trigger to trigger all waiting jobs.
+	/// </summary>
+	/// <param name="dbAttribute">DbRef and Attribute with a value</param>
+	ValueTask NotifyAll(DbRefAttribute dbAttribute);
+	
+	/// <summary>
 	/// Drains a series of Jobs, removing them from jobs to be performed.
 	/// </summary>
 	/// <param name="dbAttribute">DbRef and Attribute with a value</param>
