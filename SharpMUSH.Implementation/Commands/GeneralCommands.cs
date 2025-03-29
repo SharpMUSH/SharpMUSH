@@ -11,6 +11,7 @@ using System.Drawing;
 using SharpMUSH.Implementation.Commands.ChannelCommand;
 using SharpMUSH.Implementation.Commands.MailCommand;
 using SharpMUSH.Implementation.Definitions;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services;
@@ -39,7 +40,7 @@ public static partial class Commands
 		}
 
 		var output = args["0"].Message!;
-		
+
 		await parser.NotifyService.Notify(executor, output.ToString());
 		return new None();
 	}
@@ -78,7 +79,7 @@ public static partial class Commands
 			wrappedIteration.Iteration++;
 			// TODO: This should not need parsing each time.
 			// Just Evaluation by getting the Context and Visiting the Children multiple times.
-			lastCallState =  await visitorFunc();
+			lastCallState = await visitorFunc();
 		}
 
 		parser.CurrentState.IterationRegisters.TryPop(out _);
@@ -185,8 +186,8 @@ public static partial class Commands
 			return new None();
 		}
 
-		var contents = viewing.IsExit 
-			? [] 
+		var contents = viewing.IsExit
+			? []
 			: await parser.Mediator.Send(new GetContentsQuery(viewing.Known().AsContainer));
 
 		var obj = viewing.Object()!;
@@ -443,21 +444,92 @@ public static partial class Commands
 		throw new NotImplementedException();
 	}
 
-	[SharpCommand(Name = "@NOTIFY", Switches = ["ALL", "ANY", "SETQ"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs,
-		MinArgs = 0, MaxArgs = 0)]
+	[SharpCommand(Name = "@NOTIFY", Switches = ["ALL", "ANY", "SETQ", "QUIET"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs,
+		MinArgs = 0, MaxArgs = int.MaxValue)]
 	public static async ValueTask<Option<CallState>> NOTIFY(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		/*
-		 *
-		 *     /first - (default) Notify the first command waiting on the indicated
-              semaphore (or the first <count> commands).
-			     /all   - Notify all commands waiting on the semaphore and reset the
-			              semaphore count to zero.  <count> is ignored.
-			     /quiet - Suppress the 'Notified.' message associated with the command.
-		 * 
-		 */
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var switches = parser.CurrentState.Switches.Except(["QUIET"]).ToArray();
+		var notifyType = "ANY";
+		var args = parser.CurrentState.Arguments;
+
+		if (args.IsEmpty || string.IsNullOrEmpty(args["0"].Message?.ToPlainText()))
+		{
+			await parser.NotifyService.Notify(executor, "You must specify an object to use for the semaphore.");
+			return new None();
+		}
+
+		switch (switches)
+		{
+			case ["ALL"]:
+				notifyType = "ALL";
+				break;
+			case ["ANY"]:
+				notifyType = "ANY";
+				break;
+			case ["SETQ"]:
+				notifyType = "SETQ";
+				break;
+			default:
+				return new CallState(Errors.ErrorTooManySwitches);
+		}
+
+		var objectAndAttribute = HelperFunctions.SplitDBRefAndOptionalAttr(args["0"].Message!.ToPlainText());
+		if (objectAndAttribute.IsT1 && objectAndAttribute.AsT1 == false)
+		{
+			await parser.NotifyService.Notify(executor,
+				"You must specify a valid object with an optional valid attribute to use for the semaphore.");
+			return new None();
+		}
+
+		var (db, maybeAttributeString) = objectAndAttribute.AsT0;
+		var maybeObject = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor,
+			db, LocateFlags.All);
+
+		if (maybeObject.IsError) return maybeObject.AsError;
+		var objectToNotify = maybeObject.AsSharpObject;
+
+		string attribute = "SEMAPHORE";
+		if (!string.IsNullOrEmpty(maybeAttributeString))
+		{
+			attribute = maybeAttributeString;
+		}
+
+		var attributeContents = await parser.AttributeService.GetAttributeAsync(executor, objectToNotify, attribute,
+			IAttributeService.AttributeMode.Execute, false);
+
+		if (attributeContents.IsError)
+		{
+			return new CallState(attributeContents.AsError.Value);
+		}
+
+		int oldSemaphoreCount = 0;
+		if (attributeContents.IsAttribute &&
+		    int.TryParse(attributeContents.AsAttribute.Value.ToPlainText(), out var semaphoreCount))
+		{
+			oldSemaphoreCount = semaphoreCount;
+		}
+
+		var dbRefAttribute = new DbRefAttribute(objectToNotify.Object().DBRef, attribute.Split("`"));
+
+		switch (notifyType)
+		{
+			// TODO: Handle <number> case.
+			case "ANY":
+				await parser.Mediator.Send(new NotifySemaphoreRequest(dbRefAttribute, oldSemaphoreCount));
+				await parser.AttributeService.SetAttributeAsync(executor, objectToNotify, attribute,
+					MModule.single((oldSemaphoreCount - 1).ToString()));
+				break;
+			case "ALL":
+				await parser.Mediator.Send(new NotifyAllSemaphoreRequest(dbRefAttribute));
+				await parser.AttributeService.SetAttributeAsync(executor, objectToNotify, attribute,
+					MModule.single(0.ToString()));
+				break;
+		}
+		
+		// TODO: Handle SETQ case, as it affects the State of an already-queued Job.
+
+		return new None();
 	}
 
 	[SharpCommand(Name = "@NSPROMPT", Switches = ["SILENT", "NOISY", "NOEVAL"], Behavior = CB.Default | CB.EqSplit,
@@ -536,7 +608,7 @@ public static partial class Commands
 		{
 			await parser.CommandListParse(arg2.Message!);
 		}
-		
+
 		return CallState.Empty;
 	}
 
@@ -822,10 +894,10 @@ public static partial class Commands
 
 		var channelName = arg0CallState!.Message!;
 		var message = arg1CallState!.Message!;
-		
+
 		// TODO: Use standardized method.
 		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, channelName, true);
-		
+
 		if (maybeChannel.IsError)
 		{
 			return maybeChannel.AsError.Value;
@@ -834,24 +906,24 @@ public static partial class Commands
 		var channel = maybeChannel.AsChannel;
 
 		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(executor, channel);
-		
-		if(maybeMemberStatus is null)
+
+		if (maybeMemberStatus is null)
 		{
 			return new CallState("You are not a member of that channel.");
 		}
 
 		var (_, status) = maybeMemberStatus.Value;
-		
+
 		await parser.Mediator.Send(new ChannelMessageNotification(
-			channel, 
-			executor.WithNoneOption(), 
-			INotifyService.NotificationType.Emit, 
-			message, 
+			channel,
+			executor.WithNoneOption(),
+			INotifyService.NotificationType.Emit,
+			message,
 			status.Title ?? MModule.empty(),
 			MModule.single(executor.Object().Name),
 			MModule.single("says"),
 			[]
-			));
+		));
 
 		return new CallState(string.Empty);
 	}
