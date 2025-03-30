@@ -444,7 +444,8 @@ public static partial class Commands
 		throw new NotImplementedException();
 	}
 
-	[SharpCommand(Name = "@NOTIFY", Switches = ["ALL", "ANY", "SETQ", "QUIET"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs,
+	[SharpCommand(Name = "@NOTIFY", Switches = ["ALL", "ANY", "SETQ", "QUIET"],
+		Behavior = CB.Default | CB.EqSplit | CB.RSArgs,
 		MinArgs = 0, MaxArgs = int.MaxValue)]
 	public static async ValueTask<Option<CallState>> NOTIFY(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -526,7 +527,7 @@ public static partial class Commands
 					MModule.single(0.ToString()));
 				break;
 		}
-		
+
 		// TODO: Handle SETQ case, as it affects the State of an already-queued Job.
 
 		return new None();
@@ -566,12 +567,12 @@ public static partial class Commands
 		 *  @wait[/until] <time>=<command_list>
 				@wait <object>=<command_list>
 				@wait[/until] <object>/<time>=<command_list>
-		 
+
 		 *  @wait/pid <pid>=<seconds>
 				@wait/pid <pid>=[+-]<adjustment>
 				@wait/pid/until <pid>=<time>
 		 */
-		
+
 		await ValueTask.CompletedTask;
 		throw new NotImplementedException();
 	}
@@ -847,11 +848,12 @@ public static partial class Commands
 		var interactableContents = contents
 			.ToAsyncEnumerable()
 			.WhereAwait(async obj =>
-				await parser.PermissionService.CanInteract(obj.WithRoomOption(), executor.WithoutNone(), IPermissionService.InteractType.Hear));
+				await parser.PermissionService.CanInteract(obj.WithRoomOption(), executor.WithoutNone(),
+					IPermissionService.InteractType.Hear));
 
 		// TODO: Implement NoEval.
 		// TODO: Implement Spoof.
-		
+
 		await foreach (var obj in interactableContents)
 		{
 			await parser.NotifyService.Notify(
@@ -1091,8 +1093,20 @@ public static partial class Commands
 	[SharpCommand(Name = "@VERSION", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> VERSION(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+
+		// TODO: Last Restarted
+		var result = MModule.multipleWithDelimiter(
+			MModule.single(Environment.NewLine),
+			[
+				MModule.concat(MModule.single("You are connected to "), MModule.single(parser.Configuration.CurrentValue.Net.MudName)),
+				MModule.concat(MModule.single("Address: "), MModule.single(parser.Configuration.CurrentValue.Net.MudUrl)),
+				MModule.single("SharpMUSH version 0")
+			]);
+
+		await parser.NotifyService.Notify(executor, result);
+
+		return new CallState(result);
 	}
 
 	[SharpCommand(Name = "@RETRY", Switches = [],
