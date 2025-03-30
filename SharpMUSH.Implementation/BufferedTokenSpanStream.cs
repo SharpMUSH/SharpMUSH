@@ -167,7 +167,7 @@ namespace SharpMUSH.Implementation
 		//
 		// Remarks:
 		//     Get all tokens from start..stop inclusively.
-		public virtual IList<IToken>? Get(int start, int stop)
+		public virtual List<IToken>? Get(int start, int stop)
 		{
 			if (start < 0 || stop < 0)
 			{
@@ -286,12 +286,12 @@ namespace SharpMUSH.Implementation
 			TokenArray = null;
 		}
 
-		public virtual IList<IToken>? GetTokens()
+		public virtual List<IToken>? GetTokens()
 		{
 			return tokens;
 		}
 
-		public virtual IList<IToken>? GetTokens(int start, int stop)
+		public virtual List<IToken>? GetTokens(int start, int stop)
 		{
 			return GetTokens(start, stop, null);
 		}
@@ -301,7 +301,7 @@ namespace SharpMUSH.Implementation
 		//     Given a start and stop index, return a List of all tokens in the token type BitSet
 		//     . Return null if no tokens were found. This method looks at both on and off channel
 		//     tokens.
-		public virtual IList<IToken>? GetTokens(int start, int stop, BitSet? types)
+		public virtual List<IToken>? GetTokens(int start, int stop, BitSet? types)
 		{
 			LazyInit();
 			if (start < 0 || stop >= tokens.Count || stop < 0 || start >= tokens.Count)
@@ -340,7 +340,7 @@ namespace SharpMUSH.Implementation
 			return list;
 		}
 
-		public virtual IList<IToken>? GetTokens(int start, int stop, int ttype)
+		public virtual List<IToken>? GetTokens(int start, int stop, int ttype)
 		{
 			BitSet bitSet = new BitSet(ttype);
 			bitSet.Set(ttype);
@@ -416,7 +416,7 @@ namespace SharpMUSH.Implementation
 		//     Collect all tokens on specified channel to the right of the current token up
 		//     until we see a token on Antlr4.Runtime.Lexer.DefaultTokenChannel or EOF. If channel
 		//     is -1 , find any non default channel token.
-		public virtual IList<IToken>? GetHiddenTokensToRight(int tokenIndex, int channel)
+		public virtual List<IToken>? GetHiddenTokensToRight(int tokenIndex, int channel)
 		{
 			LazyInit();
 			if (tokenIndex < 0 || tokenIndex >= tokens.Count)
@@ -435,7 +435,7 @@ namespace SharpMUSH.Implementation
 		//     Collect all hidden tokens (any off-default channel) to the right of the current
 		//     token up until we see a token on Antlr4.Runtime.Lexer.DefaultTokenChannel or
 		//     EOF.
-		public virtual IList<IToken>? GetHiddenTokensToRight(int tokenIndex)
+		public virtual List<IToken>? GetHiddenTokensToRight(int tokenIndex)
 		{
 			return GetHiddenTokensToRight(tokenIndex, -1);
 		}
@@ -445,7 +445,7 @@ namespace SharpMUSH.Implementation
 		//     Collect all tokens on specified channel to the left of the current token up until
 		//     we see a token on Antlr4.Runtime.Lexer.DefaultTokenChannel . If channel is -1
 		//     , find any non default channel token.
-		public virtual IList<IToken>? GetHiddenTokensToLeft(int tokenIndex, int channel)
+		public virtual List<IToken>? GetHiddenTokensToLeft(int tokenIndex, int channel)
 		{
 			LazyInit();
 			if (tokenIndex < 0 || tokenIndex >= tokens.Count)
@@ -473,12 +473,12 @@ namespace SharpMUSH.Implementation
 		// Summary:
 		//     Collect all hidden tokens (any off-default channel) to the left of the current
 		//     token up until we see a token on Antlr4.Runtime.Lexer.DefaultTokenChannel .
-		public virtual IList<IToken>? GetHiddenTokensToLeft(int tokenIndex)
+		public virtual List<IToken>? GetHiddenTokensToLeft(int tokenIndex)
 		{
 			return GetHiddenTokensToLeft(tokenIndex, -1);
 		}
 
-		protected internal virtual IList<IToken>? FilterForChannel(int from, int to, int channel)
+		protected internal virtual List<IToken>? FilterForChannel(int from, int to, int channel)
 		{
 			var span = Tokens[from..to];
 			var list = new List<IToken>(span.Length);
