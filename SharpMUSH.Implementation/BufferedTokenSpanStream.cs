@@ -1,12 +1,10 @@
 ﻿using Antlr4.Runtime.Misc;
-using Antlr4.Runtime.Sharpen;
 using Antlr4.Runtime;
 using System.Text;
-using System.ComponentModel.DataAnnotations;
 
 namespace SharpMUSH.Implementation
 {
-	public class BufferedTokenSpanStream([NotNull] ITokenSource tokenSource) : ITokenStream, IIntStream
+	public class BufferedTokenSpanStream([NotNull] ITokenSource tokenSource) : ITokenStream
 	{
 		//
 		// Summary:
@@ -84,9 +82,9 @@ namespace SharpMUSH.Implementation
 
 		public virtual void Consume()
 		{
-			var flag = p >= 0 && ((!fetchedEOF) 
-				? (p < tokens.Count) 
-				: (p < tokens.Count - 1));
+			var flag = p >= 0 && (!fetchedEOF 
+				? p < tokens.Count 
+				: p < tokens.Count - 1);
 
 			if (!flag && LA(1) == -1)
 			{
@@ -131,7 +129,7 @@ namespace SharpMUSH.Implementation
 
 			for (var i = 0; i < n; i++)
 			{
-				IToken token = _tokenSource.NextToken();
+				var token = _tokenSource.NextToken();
 
 				if (token is IWritableToken token1)
 				{
@@ -140,12 +138,14 @@ namespace SharpMUSH.Implementation
 
 				tokens.Add(token);
 
-				if (token.Type == -1)
+				if (token.Type != -1)
 				{
-					fetchedEOF = true;
-					TokenArray = [.. tokens];
-					return i + 1;
+					continue;
 				}
+
+				fetchedEOF = true;
+				TokenArray = [.. tokens];
+				return i + 1;
 			}
 
 			return n;
@@ -161,41 +161,6 @@ namespace SharpMUSH.Implementation
 			return tokens[i];
 		}
 
-		//
-		// Summary:
-		//     Get all tokens from start..stop inclusively.
-		//
-		// Remarks:
-		//     Get all tokens from start..stop inclusively.
-		public virtual List<IToken>? Get(int start, int stop)
-		{
-			if (start < 0 || stop < 0)
-			{
-				return null;
-			}
-
-			LazyInit();
-			if (stop >= tokens.Count)
-			{
-				stop = tokens.Count - 1;
-			}
-
-			var span = Tokens[start..stop];
-			var list = new List<IToken>(span.Length);
-
-			foreach (var token in span)
-			{
-				if (token.Type == -1)
-				{
-					break;
-				}
-
-				list.Add(token);
-			}
-
-			return list;
-		}
-
 		public virtual int LA(int i)
 		{
 			return LT(i)?.Type ?? -1;
@@ -203,36 +168,28 @@ namespace SharpMUSH.Implementation
 
 		protected internal virtual IToken? Lb(int k)
 		{
-			if (p - k < 0)
-			{
-				return null;
-			}
-
-			return tokens[p - k];
+			return p - k < 0 
+				? null 
+				: tokens[p - k];
 		}
 
 		[return: NotNull]
 		public virtual IToken? LT(int k)
 		{
 			LazyInit();
-			if (k == 0)
+			switch (k)
 			{
-				return null;
-			}
-
-			if (k < 0)
-			{
-				return Lb(-k);
+				case 0:
+					return null;
+				case < 0:
+					return Lb(-k);
 			}
 
 			var num = p + k - 1;
 			Sync(num);
-			if (num >= Tokens.Length)
-			{
-				return Tokens[^1];
-			}
-
-			return Tokens[num];
+			return num >= Tokens.Length 
+				? Tokens[^1] 
+				: Tokens[num];
 		}
 
 		//
@@ -273,114 +230,6 @@ namespace SharpMUSH.Implementation
 
 		//
 		// Summary:
-		//     Reset this token stream by setting its token source.
-		//
-		// Remarks:
-		//     Reset this token stream by setting its token source.
-		public virtual void SetTokenSource(ITokenSource tokenSource)
-		{
-			_tokenSource = tokenSource;
-			tokens.Clear();
-			p = -1;
-			fetchedEOF = false;
-			TokenArray = null;
-		}
-
-		public virtual List<IToken>? GetTokens()
-		{
-			return tokens;
-		}
-
-		public virtual List<IToken>? GetTokens(int start, int stop)
-		{
-			return GetTokens(start, stop, null);
-		}
-
-		//
-		// Summary:
-		//     Given a start and stop index, return a List of all tokens in the token type BitSet
-		//     . Return null if no tokens were found. This method looks at both on and off channel
-		//     tokens.
-		public virtual List<IToken>? GetTokens(int start, int stop, BitSet? types)
-		{
-			LazyInit();
-			if (start < 0 || stop >= tokens.Count || stop < 0 || start >= tokens.Count)
-			{
-				throw new ArgumentOutOfRangeException("start " + start + " or stop " + stop + " not in 0.." + (tokens.Count - 1));
-			}
-
-			if (start > stop)
-			{
-				return null;
-			}
-
-			var span = Tokens[start..stop];
-			var list = new List<IToken>(span.Length);
-
-			if (types == null)
-			{
-				list.AddRange(span);
-			}
-			else
-			{
-				foreach (var token in span)
-				{
-					if (types.Get(token.Type))
-					{
-						list.Add(token);
-					}
-				}
-			}
-
-			if (list.Count == 0)
-			{
-				list = null;
-			}
-
-			return list;
-		}
-
-		public virtual List<IToken>? GetTokens(int start, int stop, int ttype)
-		{
-			BitSet bitSet = new BitSet(ttype);
-			bitSet.Set(ttype);
-			return GetTokens(start, stop, bitSet);
-		}
-
-		//
-		// Summary:
-		//     Given a starting index, return the index of the next token on channel.
-		//
-		// Remarks:
-		//     Given a starting index, return the index of the next token on channel. Return
-		//     i if tokens[i] is on channel. Return the index of the EOF token if there are
-		//     no tokens on channel between i and EOF.
-		protected internal virtual int NextTokenOnChannel(int i, int channel)
-		{
-			Sync(i);
-			if (i >= Size)
-			{
-				return Size - 1;
-			}
-
-			var token = tokens[i];
-			while (token.Channel != channel)
-			{
-				if (token.Type == -1)
-				{
-					return i;
-				}
-
-				i++;
-				Sync(i);
-				token = tokens[i];
-			}
-
-			return i;
-		}
-
-		//
-		// Summary:
 		//     Given a starting index, return the index of the previous token on channel.
 		//
 		// Remarks:
@@ -399,7 +248,7 @@ namespace SharpMUSH.Implementation
 
 			while (i >= 0)
 			{
-				IToken token = tokens[i];
+				var token = tokens[i];
 				if (token.Type == -1 || token.Channel == channel)
 				{
 					return i;
@@ -409,35 +258,6 @@ namespace SharpMUSH.Implementation
 			}
 
 			return i;
-		}
-
-		//
-		// Summary:
-		//     Collect all tokens on specified channel to the right of the current token up
-		//     until we see a token on Antlr4.Runtime.Lexer.DefaultTokenChannel or EOF. If channel
-		//     is -1 , find any non default channel token.
-		public virtual List<IToken>? GetHiddenTokensToRight(int tokenIndex, int channel)
-		{
-			LazyInit();
-			if (tokenIndex < 0 || tokenIndex >= tokens.Count)
-			{
-				throw new ArgumentOutOfRangeException(tokenIndex + " not in 0.." + (tokens.Count - 1));
-			}
-
-			int num = NextTokenOnChannel(tokenIndex + 1, 0);
-			int from = tokenIndex + 1;
-			int to = ((num != -1) ? num : (Size - 1));
-			return FilterForChannel(from, to, channel);
-		}
-
-		//
-		// Summary:
-		//     Collect all hidden tokens (any off-default channel) to the right of the current
-		//     token up until we see a token on Antlr4.Runtime.Lexer.DefaultTokenChannel or
-		//     EOF.
-		public virtual List<IToken>? GetHiddenTokensToRight(int tokenIndex)
-		{
-			return GetHiddenTokensToRight(tokenIndex, -1);
 		}
 
 		//
@@ -458,15 +278,10 @@ namespace SharpMUSH.Implementation
 				return null;
 			}
 
-			int num = PreviousTokenOnChannel(tokenIndex - 1, 0);
-			if (num == tokenIndex - 1)
-			{
-				return null;
-			}
-
-			int from = num + 1;
-			int to = tokenIndex - 1;
-			return FilterForChannel(from, to, channel);
+			var num = PreviousTokenOnChannel(tokenIndex - 1, 0);
+			return num == tokenIndex - 1 
+				? null 
+				: FilterForChannel(num + 1, tokenIndex - 1, channel);
 		}
 
 		//
@@ -504,12 +319,9 @@ namespace SharpMUSH.Implementation
 				}
 			}
 
-			if (list.Count == 0)
-			{
-				return null;
-			}
-
-			return list;
+			return list.Count == 0 
+				? null 
+				: list;
 		}
 
 		//
@@ -564,14 +376,11 @@ namespace SharpMUSH.Implementation
 		}
 
 		[return: NotNull]
-		public virtual string GetText(IToken start, IToken stop)
+		public virtual string GetText(IToken? start, IToken? stop)
 		{
-			if (start != null && stop != null)
-			{
-				return GetText(Interval.Of(start.TokenIndex, stop.TokenIndex));
-			}
-
-			return string.Empty;
+			return start != null && stop != null 
+				? GetText(Interval.Of(start.TokenIndex, stop.TokenIndex)) 
+				: string.Empty;
 		}
 
 		//
@@ -583,7 +392,7 @@ namespace SharpMUSH.Implementation
 		public virtual void Fill()
 		{
 			LazyInit();
-			var num = 1000;
+			const int num = 1000;
 			while (Fetch(num) >= num)
 			{
 			}
