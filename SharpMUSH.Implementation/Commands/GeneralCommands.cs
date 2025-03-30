@@ -561,6 +561,17 @@ public static partial class Commands
 		Behavior = CB.Default | CB.EqSplit | CB.RSNoParse | CB.RSBrace, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> WAIT(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		/*
+				-- Time is in Seconds.
+		 *  @wait[/until] <time>=<command_list>
+				@wait <object>=<command_list>
+				@wait[/until] <object>/<time>=<command_list>
+		 
+		 *  @wait/pid <pid>=<seconds>
+				@wait/pid <pid>=[+-]<adjustment>
+				@wait/pid/until <pid>=<time>
+		 */
+		
 		await ValueTask.CompletedTask;
 		throw new NotImplementedException();
 	}
@@ -581,6 +592,9 @@ public static partial class Commands
 		MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> DRAIN(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		/*
+		 *   @drain[/any][/all] <object>[/<attribute>][=<number>]
+		 */
 		await ValueTask.CompletedTask;
 		throw new NotImplementedException();
 	}
@@ -827,8 +841,27 @@ public static partial class Commands
 		MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> EMIT(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.ExecutorObject(parser.Mediator);
+		var contents = await parser.Mediator.Send(new GetContentsQuery(await executor.WithoutNone().Where())) ?? [];
+
+		var interactableContents = contents
+			.ToAsyncEnumerable()
+			.WhereAwait(async obj =>
+				await parser.PermissionService.CanInteract(obj.WithRoomOption(), executor.WithoutNone(), IPermissionService.InteractType.Hear));
+
+		// TODO: Implement NoEval.
+		// TODO: Implement Spoof.
+		
+		await foreach (var obj in interactableContents)
+		{
+			await parser.NotifyService.Notify(
+				obj.WithRoomOption(),
+				parser.CurrentState.Arguments["0"].Message!,
+				executor.WithoutNone(),
+				INotifyService.NotificationType.Emit);
+		}
+
+		return parser.CurrentState.Arguments["0"];
 	}
 
 	[SharpCommand(Name = "@LISTMOTD", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
