@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
@@ -7,8 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="DotNext" Version="5.19.1" />
-    <PackageReference Include="DotNext.Threading" Version="5.19.1" />
+    <PackageReference Include="DotNext" Version="5.20.0" />
+    <PackageReference Include="DotNext.Threading" Version="5.20.0" />
     <PackageReference Include="Mediator.Abstractions" Version="2.1.7" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.3" />
     <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="9.0.3" />
