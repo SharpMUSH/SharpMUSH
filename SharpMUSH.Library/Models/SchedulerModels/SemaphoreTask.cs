@@ -10,7 +10,8 @@ internal class SemaphoreTask(IMUSHCodeParser parser): IJob
 		var state = context.MergedJobDataMap.Get("State") as ParserState;
 		var command = context.MergedJobDataMap.Get("Command") as MString;
 
+		await context.Scheduler.UnscheduleJob(context.Trigger.Key);
 		await parser.FromState(state!).CommandListParse(command!);
-		await Task.CompletedTask;
+		await context.Scheduler.DeleteJob(context.JobDetail.Key);
 	}
 }

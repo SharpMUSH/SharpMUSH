@@ -14,6 +14,9 @@ namespace SharpMUSH.Library.Services;
 /// <param name="schedulerFactory"></param>
 public class TaskScheduler(IMUSHCodeParser parser, ISchedulerFactory schedulerFactory) : ITaskScheduler
 {
+	private long _nextPid = 0;
+	private long NextPid() => Interlocked.Increment(ref _nextPid);
+	
 	private readonly IScheduler _scheduler = schedulerFactory.GetScheduler().GetAwaiter().GetResult();
 	public const string DirectInputGroup = "direct-input";
 	public const string EnqueueGroup = "enqueue";
@@ -80,7 +83,7 @@ public class TaskScheduler(IMUSHCodeParser parser, ISchedulerFactory schedulerFa
 			TriggerBuilder.Create()
 				.WithSimpleSchedule(x => x.WithRepeatCount(0))
 				.WithIdentity(
-					$"dbref:{state.Executor}-{Guid.NewGuid()}",
+					$"dbref:{state.Executor}-{NextPid()}",
 					$"{SemaphoreGroup}:{dbRefAttribute}").Build());
 	}
 
@@ -107,7 +110,7 @@ public class TaskScheduler(IMUSHCodeParser parser, ISchedulerFactory schedulerFa
 				.WithSimpleSchedule(x => x.WithRepeatCount(0))
 				.StartAt(DateTimeOffset.Now + timeout)
 				.WithIdentity(
-					$"dbref:{state.Executor}-{Guid.NewGuid()}",
+					$"dbref:{state.Executor}-{NextPid()}",
 					$"{SemaphoreGroup}:{dbRefAttribute}").Build());
 	}
 
@@ -180,7 +183,7 @@ public class TaskScheduler(IMUSHCodeParser parser, ISchedulerFactory schedulerFa
 			builder => builder
 				.StartAt(DateTimeOffset.UtcNow + delay)
 				.WithSimpleSchedule(x => x.WithRepeatCount(0))
-				.WithIdentity($"dbref:{state.Executor}-{Guid.NewGuid()}", DelayGroup));
+				.WithIdentity($"dbref:{state.Executor}-{NextPid()}", DelayGroup));
 
 	public async IAsyncEnumerable<(string Group, (DateTimeOffset, OneOf.OneOf<string, DBRef>)[])> GetAllTasks()
 	{
@@ -191,7 +194,8 @@ public class TaskScheduler(IMUSHCodeParser parser, ISchedulerFactory schedulerFa
 		await foreach (var key in keyTriggers)
 		{
 			var translate = new Func<string, string>(x =>
-				x.Replace("dbref:", "").Replace("handle:", "").TakeWhile(x => x != '-').ToString()!);
+				x.Replace("dbref:", "").Replace("handle:", "")
+					.TakeWhile(c => c != '-').ToString()!);
 
 			yield return (key.Key, await key.Select(x => (
 				x.Value,
