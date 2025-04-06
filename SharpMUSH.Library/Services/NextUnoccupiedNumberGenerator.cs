@@ -36,7 +36,9 @@ public class NextUnoccupiedNumberGenerator(long initial)
 		{
 			if (_unoccupiedNumbers.Count != 0)
 			{
-				yield return _unoccupiedNumbers.Last();
+				var last = _unoccupiedNumbers.Last();
+				_unoccupiedNumbers.Remove(last);
+				yield return last;
 			}
 			else
 			{
