@@ -1,13 +1,28 @@
+using DotNext.Collections.Generic;
+
 namespace SharpMUSH.Library.Services;
 
 public class NextUnoccupiedNumberGenerator(long initial)
 {
-	private readonly Stack<long> _unoccupiedNumbers = [];
-	private long _initial = initial;
+	private readonly SortedSet<long> _unoccupiedNumbers = [];
+	private long _next = initial;
 
 	public void Release(long number)
 	{
-		_unoccupiedNumbers.Push(number);
+		if (number == _next - 1)
+		{
+			var latest = _next - 1;
+			while (_unoccupiedNumbers.LastOrNone() == latest)
+			{
+				_unoccupiedNumbers.Remove(latest);
+				_next = latest;
+				latest--;
+			}
+		}
+		else
+		{
+			_unoccupiedNumbers.Add(number);			
+		}
 	}
 
 	public IEnumerable<long> Get()
@@ -21,13 +36,13 @@ public class NextUnoccupiedNumberGenerator(long initial)
 		{
 			if (_unoccupiedNumbers.Count != 0)
 			{
-				yield return _unoccupiedNumbers.Pop();
+				yield return _unoccupiedNumbers.Last();
 			}
 			else
 			{
-				var oldValue = _initial;
-				var newValue = generator(_initial);
-				_initial = newValue;
+				var oldValue = _next;
+				var newValue = generator(_next);
+				_next = newValue;
 				yield return oldValue;
 			}
 		}
