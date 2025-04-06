@@ -99,6 +99,14 @@ public static partial class Commands
 		return new None();
 	}
 
+	[SharpCommand(Name = "QUIT", Behavior = Definitions.CommandBehavior.SOCKET | Definitions.CommandBehavior.NoParse, MinArgs = 0, MaxArgs = 0)]
+	public static ValueTask<Option<CallState>> Quit(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		// TODO: Display Disconnect Banner.
+		parser.ConnectionService.Disconnect(parser.CurrentState.Handle!);
+		return ValueTask.FromResult<Option<CallState>>(new None());
+	}
+	
 	[GeneratedRegex("^(?<User>\"(?:.+?)\"|(?:.+?))(?:\\s+(?<Password>\\S+))?$")]
 	private static partial Regex ConnectionPattern();
 }
