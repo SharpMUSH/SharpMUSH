@@ -25,7 +25,7 @@ public static partial class Commands
 
 	[SharpCommand(Name = "&", Behavior = CommandBehavior.SingleToken | CommandBehavior.NoParse | CommandBehavior.EqSplit,
 		MinArgs = 2, MaxArgs = 3)]
-	public static async ValueTask<Option<CallState>> Set_Attrib_Ampersand(IMUSHCodeParser parser,
+	public static async ValueTask<Option<CallState>> SetAttribute(IMUSHCodeParser parser,
 		SharpCommandAttribute _2)
 	{
 		// This will come in as arg[0] = <attr>, arg[1]: <object> and arg[2] as [value]
