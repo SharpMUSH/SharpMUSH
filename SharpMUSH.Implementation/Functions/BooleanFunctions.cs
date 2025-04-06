@@ -68,7 +68,7 @@ public static partial class Functions
 		foreach (var m in parser.CurrentState.Arguments.Select(x => x.Value.Message!))
 		{
 			var parsed = await parser.FunctionParse(m);
-			if (parsed!.Message.Falsey())
+			if (parsed!.Message.Falsy())
 			{
 				return new("1");
 			}
@@ -94,13 +94,13 @@ public static partial class Functions
 		=> new(await parser.CurrentState.Arguments
 			.Select(x => x.Value.Message!)
 			.ToAsyncEnumerable()
-			.AllAwaitAsync(async m => (await parser.FunctionParse(m))!.Message.Falsey())
+			.AllAwaitAsync(async m => (await parser.FunctionParse(m))!.Message.Falsy())
 			? "1"
 			: "0");
 
 	[SharpFunction(Name = "not", Flags = FunctionFlags.Regular, MinArgs = 1, MaxArgs = 1)]
 	public static ValueTask<CallState> Not(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValueTask.FromResult<CallState>(new(parser.CurrentState.Arguments.First().Value.Message.Falsey()
+		=> ValueTask.FromResult<CallState>(new(parser.CurrentState.Arguments.First().Value.Message.Falsy()
 			? "1"
 			: "0"));
 
