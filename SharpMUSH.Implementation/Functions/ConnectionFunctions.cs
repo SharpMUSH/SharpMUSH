@@ -57,9 +57,9 @@ public partial class Functions
 	{
 		// TODO: PORT =/= Handle. As a Handle is also a string. Considerations needed.
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		if (int.TryParse(arg0, out var handle))
+		if (int.TryParse(arg0, out var port))
 		{
-			var data2 = parser.ConnectionService.Get(arg0);
+			var data2 = parser.ConnectionService.Get(port);
 			return new CallState(data2?.Idle?.TotalSeconds.ToString(CultureInfo.InvariantCulture) ?? "-1");
 		}
 		

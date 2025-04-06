@@ -49,6 +49,12 @@ public interface IConnectionService
 	/// </summary>
 	/// <param name="handle"></param>
 	ConnectionData? Get(string handle);
+	
+	/// <summary>
+	/// Gets the connection state of a port.
+	/// </summary>
+	/// <param name="port"></param>
+	ConnectionData? Get(int port);
 
 	/// <summary>
 	/// Get all handles connected to the DBRef

@@ -1,5 +1,6 @@
 ﻿using SharpMUSH.Library.Models;
 using System.Collections.Concurrent;
+using System.Globalization;
 using System.Text;
 
 namespace SharpMUSH.Library.Services;
@@ -24,6 +25,9 @@ public class ConnectionService : IConnectionService
 
 	public IConnectionService.ConnectionData? Get(string handle) =>
 		_sessionState.GetValueOrDefault(handle);
+	
+	public IConnectionService.ConnectionData? Get(int port) =>
+		_sessionState.GetValueOrDefault(port.ToString(CultureInfo.InvariantCulture));
 
 	public IEnumerable<IConnectionService.ConnectionData> Get(DBRef reference) =>
 		_sessionState.Values.Where(x => x.Ref.HasValue).Where(x => x.Ref!.Value.Equals(reference));

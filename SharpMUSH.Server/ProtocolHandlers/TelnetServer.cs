@@ -64,7 +64,7 @@ public class TelnetServer : ConnectionHandler
 				{
 					try
 					{
-						await semaphoreSlimForWriter.WaitAsync();
+						await semaphoreSlimForWriter.WaitAsync(ct);
 						try
 						{
 							await connection.Transport.Output.WriteAsync(byteArray.AsMemory(), ct);
