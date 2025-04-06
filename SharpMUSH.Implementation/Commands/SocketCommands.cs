@@ -13,7 +13,7 @@ public static partial class Commands
 	private static readonly Regex ConnectionPatternRegex = ConnectionPattern();
 
 	[SharpCommand(Name = "WHO", Behavior = Definitions.CommandBehavior.SOCKET | Definitions.CommandBehavior.NoParse, MinArgs = 0, MaxArgs = 1)]
-	public static async ValueTask<Option<CallState>> WHO(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public static async ValueTask<Option<CallState>> Who(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// TODO: Get All needs to do a Permission Check for the user.
 		var everyone = parser.ConnectionService.GetAll().ToList();
@@ -47,7 +47,7 @@ public static partial class Commands
 	/// connect "person without a password"
 	/// </example>
 	[SharpCommand(Name = "CONNECT", Behavior = Definitions.CommandBehavior.SOCKET | Definitions.CommandBehavior.NoParse, MinArgs = 1, MaxArgs = 2)]
-	public static async ValueTask<Option<CallState>> CONNECT(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public static async ValueTask<Option<CallState>> Connect(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// Early HUH if already logged in.
 		if (parser.ConnectionService.Get(parser.CurrentState.Handle!)?.Ref is not null)
@@ -95,7 +95,7 @@ public static partial class Commands
 
 		// TODO: Step 5: Trigger OnConnect Event in EventService.
 		await parser.NotifyService.Notify(parser.CurrentState.Handle!, "Connected!");
-		Log.Logger.Debug("Successful login and binding for {@person}", foundDB.Object);
+		Serilog.Log.Logger.Debug("Successful login and binding for {@person}", foundDB.Object);
 		return new None();
 	}
 
