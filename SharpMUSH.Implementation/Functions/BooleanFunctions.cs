@@ -60,7 +60,7 @@ public static partial class Functions
 	[SharpFunction(Name = "nand", Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Nand(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(
-			new(parser.CurrentState.Arguments.Select(x => x.Value.Message!).Any(Predicates.Falsey) ? "1" : "0"));
+			new(parser.CurrentState.Arguments.Select(x => x.Value.Message!).Any(Predicates.Falsy) ? "1" : "0"));
 
 	[SharpFunction(Name = "cnand", Flags = FunctionFlags.Regular | FunctionFlags.NoParse)]
 	public static async ValueTask<CallState> CNand(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -87,7 +87,7 @@ public static partial class Functions
 	[SharpFunction(Name = "nor", Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Nor(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(
-			new(parser.CurrentState.Arguments.Select(x => x.Value.Message!).All(Predicates.Falsey) ? "1" : "0"));
+			new(parser.CurrentState.Arguments.Select(x => x.Value.Message!).All(Predicates.Falsy) ? "1" : "0"));
 
 	[SharpFunction(Name = "ncor", Flags = FunctionFlags.Regular | FunctionFlags.NoParse)]
 	public static async ValueTask<CallState> NCor(IMUSHCodeParser parser, SharpFunctionAttribute _2)

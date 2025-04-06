@@ -8,12 +8,12 @@ public static class Predicates
 		return !string.IsNullOrEmpty(plainText) && !plainText.StartsWith("#-") && plainText is not "0";
 	}
 
-	public static bool Falsey(MString text)
+	public static bool Falsy(MString text)
 		=> !Truthy(text);
 }
 
 public static class PredicateExtensions
 {
 	public static bool Truthy(this MString? text) => Predicates.Truthy(text ?? MModule.empty());
-	public static bool Falsey(this MString? text) => Predicates.Falsey(text ?? MModule.empty());
+	public static bool Falsey(this MString? text) => Predicates.Falsy(text ?? MModule.empty());
 }
