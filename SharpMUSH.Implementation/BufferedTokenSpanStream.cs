@@ -10,7 +10,7 @@ namespace SharpMUSH.Implementation
 		// Summary:
 		//     The Antlr4.Runtime.ITokenSource from which tokens for this stream are fetched.
 		[NotNull]
-		private ITokenSource _tokenSource = tokenSource;
+		private readonly ITokenSource _tokenSource = tokenSource;
 
 		//
 		// Summary:

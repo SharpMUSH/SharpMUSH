@@ -1,4 +1,6 @@
-﻿using SharpMUSH.Implementation.Definitions;
+﻿using System.Globalization;
+using SharpMUSH.Implementation.Definitions;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 
@@ -51,9 +53,28 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "IDLE", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> idlesecs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> IdleSeconds(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		// TODO: PORT =/= Handle. As a Handle is also a string. Considerations needed.
+		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		if (int.TryParse(arg0, out var handle))
+		{
+			var data2 = parser.ConnectionService.Get(arg0);
+			return new CallState(data2?.Idle?.TotalSeconds.ToString(CultureInfo.InvariantCulture) ?? "-1");
+		}
+		
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var maybeLocate = await parser.LocateService.LocatePlayerAndNotifyIfInvalid(parser, executor, executor,
+			arg0);
+		if (maybeLocate.IsNone || maybeLocate.IsError)
+		{
+			return new CallState(maybeLocate.IsNone ? "-1" : maybeLocate.AsError.Value);
+		}
+
+		var locate = maybeLocate.AsPlayer;
+		var data = parser.ConnectionService.Get(locate.Object.DBRef).ToArray();
+
+		return new CallState(data.Min(x => x.Idle?.TotalSeconds).ToString() ?? "-1");
 	}
 
 	[SharpFunction(Name = "IPADDR", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
