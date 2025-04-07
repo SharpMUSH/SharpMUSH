@@ -33,10 +33,14 @@ public interface IConnectionService
 			? DateTimeOffset.UtcNow -
 			  DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(Metadata["LastConnectionSignal"]))
 			: null;
+		
+		public string InternetProtocolAddress => Metadata[nameof(InternetProtocolAddress)];
+		
+		public string ConnectionType => Metadata[nameof(ConnectionType)];
 	}
 
 	void Register(long handle, Func<byte[], ValueTask> outputFunction, Func<Encoding> encoding,
-		ConcurrentDictionary<string, string>? MetaData = null);
+		ConcurrentDictionary<string, string>? metaData = null);
 
 	void Bind(long handle, DBRef player);
 

@@ -1,4 +1,6 @@
-﻿using Mediator;
+﻿using System.Collections.Concurrent;
+using System.Net;
+using Mediator;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library;
@@ -90,7 +92,16 @@ public class TelnetServer : ConnectionHandler
 			.RegisterMSSPConfig(() => _msspConfig)
 			.BuildAsync();
 
-		_connectionService.Register(nextPort, telnet.SendAsync, () => telnet.CurrentEncoding);
+		_connectionService.Register(nextPort,
+			telnet.SendAsync,
+			() => telnet.CurrentEncoding,
+			new ConcurrentDictionary<string, string>(new Dictionary<string, string>()
+			{
+				{ "InternetProtocolAddress", (connection.RemoteEndPoint as IPEndPoint)?.Address.ToString() ?? "Unknown Error" },
+				{ "ConnectionType", "telnet" },
+				{ "ConnectionStartTime", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() },
+				{ "LastConnectionSignal", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() }
+			}));
 
 		try
 		{
@@ -105,7 +116,6 @@ public class TelnetServer : ConnectionHandler
 
 				if (result.IsCompleted) break;
 				connection.Transport.Input.AdvanceTo(result.Buffer.End, result.Buffer.End);
-			
 			}
 		}
 		catch (ConnectionResetException)

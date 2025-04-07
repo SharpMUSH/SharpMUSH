@@ -52,10 +52,9 @@ public partial class Functions
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "IDLE", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "idle", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> IdleSeconds(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// TODO: PORT =/= Handle. As a Handle is also a string. Considerations needed.
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		if (int.TryParse(arg0, out var port))
 		{
