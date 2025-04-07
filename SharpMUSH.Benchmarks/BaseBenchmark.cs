@@ -82,8 +82,8 @@ public class BaseBenchmark
 		var one = realOne.Object()!.DBRef;
 
 		var simpleConnectionService = new ConnectionService();
-		simpleConnectionService.Register("1", _ => ValueTask.CompletedTask, () => Encoding.UTF8);
-		simpleConnectionService.Bind("1", one);
+		simpleConnectionService.Register(1, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
+		simpleConnectionService.Bind(1, one);
 
 		var parser = (IMUSHCodeParser)integrationServer.Services.GetService(typeof(IMUSHCodeParser))!;
 		return parser.FromState(new ParserState(
@@ -99,7 +99,7 @@ public class BaseBenchmark
 			Executor: one,
 			Enactor: one,
 			Caller: one,
-			Handle: "1"
+			Handle: 1
 		));
 	}
 }

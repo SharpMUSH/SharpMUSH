@@ -7,10 +7,10 @@ namespace SharpMUSH.Library.Services;
 
 public class ConnectionService : IConnectionService
 {
-	private readonly ConcurrentDictionary<string, IConnectionService.ConnectionData> _sessionState = [];
-	private readonly List<Action<(string Handle, DBRef? Ref, IConnectionService.ConnectionState OldState, IConnectionService.ConnectionState NewState)>> _handlers = [];
+	private readonly ConcurrentDictionary<long, IConnectionService.ConnectionData> _sessionState = [];
+	private readonly List<Action<(long handle, DBRef? Ref, IConnectionService.ConnectionState OldState, IConnectionService.ConnectionState NewState)>> _handlers = [];
 
-	public void Disconnect(string handle)
+	public void Disconnect(long handle)
 	{
 		var get = Get(handle);
 		if (get is null) return;
@@ -23,22 +23,19 @@ public class ConnectionService : IConnectionService
 		_sessionState.Remove(handle, out _);
 	}
 
-	public IConnectionService.ConnectionData? Get(string handle) =>
+	public IConnectionService.ConnectionData? Get(long handle) =>
 		_sessionState.GetValueOrDefault(handle);
 	
-	public IConnectionService.ConnectionData? Get(int port) =>
-		_sessionState.GetValueOrDefault(port.ToString(CultureInfo.InvariantCulture));
-
 	public IEnumerable<IConnectionService.ConnectionData> Get(DBRef reference) =>
 		_sessionState.Values.Where(x => x.Ref.HasValue).Where(x => x.Ref!.Value.Equals(reference));
 
 	public IEnumerable<IConnectionService.ConnectionData> GetAll() =>
 		_sessionState.Values;
 
-	public void ListenState(Action<(string, DBRef?, IConnectionService.ConnectionState, IConnectionService.ConnectionState)> handler) =>
+	public void ListenState(Action<(long, DBRef?, IConnectionService.ConnectionState, IConnectionService.ConnectionState)> handler) =>
 		_handlers.Add(handler);
 
-	public void Bind(string handle, DBRef player)
+	public void Bind(long handle, DBRef player)
 	{
 		var get = Get(handle);
 		if (get is null) return;
@@ -53,7 +50,7 @@ public class ConnectionService : IConnectionService
 		}
 	}
 
-	public void Update(string handle, string key, string value)
+	public void Update(long handle, string key, string value)
 	{
 		var get = Get(handle);
 		if (get is null) return;
@@ -67,7 +64,7 @@ public class ConnectionService : IConnectionService
 			});
 	}
 
-	public void Register(string handle, Func<byte[], ValueTask> outputFunction, Func<Encoding> encoding, ConcurrentDictionary<string, string>? metaData = null)
+	public void Register(long handle, Func<byte[], ValueTask> outputFunction, Func<Encoding> encoding, ConcurrentDictionary<string, string>? metaData = null)
 	{
 		_sessionState.AddOrUpdate(handle,
 			x => new IConnectionService.ConnectionData(handle, null, IConnectionService.ConnectionState.Connected, outputFunction, encoding, metaData ??

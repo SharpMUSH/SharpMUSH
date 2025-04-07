@@ -38,7 +38,7 @@ public class SubstitutionUnitTests : BaseUnitTest
 	{
 		Console.WriteLine("Testing: {0}", str);
 
-		await _parser!.CommandParse("1", MModule.single(str));
+		await _parser!.CommandParse(1, MModule.single(str));
 
 		if (expected is not null)
 		{

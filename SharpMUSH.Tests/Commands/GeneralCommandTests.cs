@@ -21,7 +21,7 @@ public class GeneralCommandTests : BaseUnitTest
 	public async ValueTask SimpleCommandParse(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		await Parser.CommandParse("1", MModule.single(str));
+		await Parser.CommandParse(1, MModule.single(str));
 
 		await Parser.NotifyService
 			.Received(Quantity.Exactly(1))
@@ -33,13 +33,13 @@ public class GeneralCommandTests : BaseUnitTest
 	public async ValueTask CommandAliasRuns(string str)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		await Parser.CommandParse("1", MModule.single(str));
+		await Parser.CommandParse(1, MModule.single(str));
 	}
 
 	[Test]
 	public async ValueTask DoListSimple()
 	{
-		await Parser.CommandParse("1", MModule.single("@dolist 1 2 3=@pemit #1=3 This is a test"));
+		await Parser.CommandParse(1, MModule.single("@dolist 1 2 3=@pemit #1=3 This is a test"));
 
 		await Parser.NotifyService
 			.Received(Quantity.Exactly(3))
@@ -49,7 +49,7 @@ public class GeneralCommandTests : BaseUnitTest
 	[Test]
 	public async ValueTask DoListSimple2()
 	{
-		await Parser.CommandParse("1", MModule.single("@dolist 1 2 3=@pemit #1={4 This is, a test};"));
+		await Parser.CommandParse(1, MModule.single("@dolist 1 2 3=@pemit #1={4 This is, a test};"));
 
 		await Parser.NotifyService
 			.Received(Quantity.Exactly(3))
@@ -59,7 +59,7 @@ public class GeneralCommandTests : BaseUnitTest
 	[Test]
 	public async ValueTask DoListComplex()
 	{
-		await Parser.CommandParse("1",
+		await Parser.CommandParse(1,
 			MModule.single("@dolist 1 2 3={@pemit #1=5 This is a test; @pemit #1=6 This is also a test}"));
 
 		await Parser.NotifyService
@@ -73,7 +73,7 @@ public class GeneralCommandTests : BaseUnitTest
 	[Test]
 	public async ValueTask DoListComplex2()
 	{
-		await Parser.CommandParse("1",
+		await Parser.CommandParse(1,
 			MModule.single(
 				"@dolist 1 2 3={@pemit #1=7 This is a test; @pemit #1=8 This is also a test}; @pemit #1=9 Repeat 3 times in this mode."));
 
@@ -91,7 +91,7 @@ public class GeneralCommandTests : BaseUnitTest
 	[Test]
 	public async ValueTask DoListComplex3()
 	{
-		await Parser.CommandParse("1",
+		await Parser.CommandParse(1,
 			MModule.single(
 				"@dolist 1={@dolist 1 2 3=@pemit #1=10 This is a test}; @pemit #1=11 Repeat 1 times in this mode."));
 
@@ -106,7 +106,7 @@ public class GeneralCommandTests : BaseUnitTest
 	[Test]
 	public async ValueTask DoListComplex4()
 	{
-		await Parser.CommandParse("1",
+		await Parser.CommandParse(1,
 			MModule.single(
 				"@dolist 1 2={@dolist 1 2 3=@pemit #1=12 This is a test}; @pemit #1=13 Repeat 2 times in this mode."));
 
@@ -121,7 +121,7 @@ public class GeneralCommandTests : BaseUnitTest
 	[Test]
 	public async ValueTask DoListComplex5()
 	{
-		await Parser.CommandParse("1",
+		await Parser.CommandParse(1,
 			MModule.single(
 				"@dolist a b={@dolist 1 2 3=@pemit #1=14 This is a test %i0}; @pemit #1=15 Repeat 1 times in this mode %i0"));
 
@@ -145,7 +145,7 @@ public class GeneralCommandTests : BaseUnitTest
 	[Test]
 	public async ValueTask DoListComplex6()
 	{
-		await Parser.CommandParse("1",
+		await Parser.CommandParse(1,
 			MModule.single(
 				"@dolist a b={@dolist 1 2 3={@ifelse eq(%i0,1)=think %i0 is 1; @ifelse eq(%i0,2)=think %i0 is 2,think {%i0 is 1, or 3}}}"));
 
@@ -163,7 +163,7 @@ public class GeneralCommandTests : BaseUnitTest
 	[Test]
 	public async ValueTask DoDigForCommandlistCheck()
 	{
-		await Parser.CommandParse("1", MModule.single("@dig Bar Room=Exit;ExitAlias,ExitBack;ExitAliasBack"));
+		await Parser.CommandParse(1, MModule.single("@dig Bar Room=Exit;ExitAlias,ExitBack;ExitAliasBack"));
 
 		await Parser.NotifyService
 			.Received(Quantity.Exactly(1))
@@ -211,7 +211,7 @@ public class GeneralCommandTests : BaseUnitTest
 	[Test]	 
 	public async ValueTask DoFlagSet()
 	{
-		await Parser.CommandParse("1", MModule.single("@set #1=DEBUG"));
+		await Parser.CommandParse(1, MModule.single("@set #1=DEBUG"));
 
 		var one = await Parser.Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
 		var onePlayer = one.AsPlayer;

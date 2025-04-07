@@ -97,8 +97,8 @@ public class BaseUnitTest
 		var one = realOne.Object()!.DBRef;
 
 		var simpleConnectionService = new ConnectionService();
-		simpleConnectionService.Register("1", x => ValueTask.CompletedTask, () => Encoding.UTF8);
-		simpleConnectionService.Bind("1", one);
+		simpleConnectionService.Register(1, x => ValueTask.CompletedTask, () => Encoding.UTF8);
+		simpleConnectionService.Bind(1, one);
 
 		return new MUSHCodeParser(
 			(integrationServer.Services.GetService(typeof(ILogger<MUSHCodeParser>)) as ILogger<MUSHCodeParser>)!,
@@ -125,7 +125,7 @@ public class BaseUnitTest
 				Executor: one,
 				Enactor: one,
 				Caller: one,
-				Handle: "1"
+				Handle: 1
 			));
 	}
 }

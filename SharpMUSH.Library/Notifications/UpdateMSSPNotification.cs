@@ -2,4 +2,4 @@
 
 namespace SharpMUSH.Library.Notifications;
 
-public record UpdateMSSPNotification(string Handle, TelnetNegotiationCore.Models.MSSPConfig Config) : INotification;
+public record UpdateMSSPNotification(long handle, TelnetNegotiationCore.Models.MSSPConfig Config) : INotification;

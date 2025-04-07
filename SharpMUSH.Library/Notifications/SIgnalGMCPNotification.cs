@@ -2,4 +2,4 @@
 
 namespace SharpMUSH.Library.Notifications;
 
-public record SignalGMCPNotification(string Handle, string Module, string Writeback) : INotification;
+public record SignalGMCPNotification(long handle, string Module, string Writeback) : INotification;

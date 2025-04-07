@@ -21,12 +21,12 @@ public class RoomsAndMovementTests : BaseUnitTest
 	public async Task DigAndMoveTest()
 	{
 		if(_parser is null) throw new Exception("Parser is null");
-		await _parser.CommandParse("1", MModule.single("@dig NewRoom=Forward;F,Backward;B"));
-		await _parser.CommandParse("1", MModule.single("think %l"));
-		await _parser.CommandParse("1", MModule.single("goto Forward"));
-		await _parser.CommandParse("1", MModule.single("think %l"));
-		await _parser.CommandParse("1", MModule.single("goto Backward"));
-		await _parser.CommandParse("1", MModule.single("think %l back"));
+		await _parser.CommandParse(1, MModule.single("@dig NewRoom=Forward;F,Backward;B"));
+		await _parser.CommandParse(1, MModule.single("think %l"));
+		await _parser.CommandParse(1, MModule.single("goto Forward"));
+		await _parser.CommandParse(1, MModule.single("think %l"));
+		await _parser.CommandParse(1, MModule.single("goto Backward"));
+		await _parser.CommandParse(1, MModule.single("think %l back"));
 		
 		await _parser.NotifyService
 			.Received(Quantity.Exactly(1))

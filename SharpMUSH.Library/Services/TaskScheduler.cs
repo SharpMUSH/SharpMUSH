@@ -46,7 +46,7 @@ public class TaskScheduler(IMUSHCodeParser parser, ISchedulerFactory schedulerFa
 		Recurse = InPlace | NoBreaks | PreserveQReg
 	}
 
-	public async ValueTask WriteUserCommand(string handle, MString command, ParserState state) =>
+	public async ValueTask WriteUserCommand(long handle, MString command, ParserState state) =>
 		await _scheduler.ScheduleJob(() => parser.FromState(state).CommandParse(handle, command).AsTask(),
 			builder => builder
 				.StartNow()
@@ -206,7 +206,7 @@ public class TaskScheduler(IMUSHCodeParser parser, ISchedulerFactory schedulerFa
 		}
 	}
 
-	public async IAsyncEnumerable<(string Group, DateTimeOffset[])> GetTasks(string handle)
+	public async IAsyncEnumerable<(string Group, DateTimeOffset[])> GetTasks(long handle)
 	{
 		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup());
 		var keyTriggers = keys.ToAsyncEnumerable()

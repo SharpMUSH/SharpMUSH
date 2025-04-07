@@ -83,7 +83,7 @@ public static partial class Commands
 
 			if (parser.CurrentState.Handle is not null && command == "IDLE")
 			{
-				parser.ConnectionService.Update(parser.CurrentState.Handle, "LastConnectionSignal",
+				parser.ConnectionService.Update(parser.CurrentState.Handle.Value, "LastConnectionSignal",
 					DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString());
 			}
 
@@ -103,7 +103,7 @@ public static partial class Commands
 
 			if (parser.CurrentState.Executor is null && parser.CurrentState.Handle is not null)
 			{
-				await parser.NotifyService.Notify(parser.CurrentState.Handle, "No such command available at login.");
+				await parser.NotifyService.Notify(parser.CurrentState.Handle.Value, "No such command available at login.");
 				return new None();
 			}
 

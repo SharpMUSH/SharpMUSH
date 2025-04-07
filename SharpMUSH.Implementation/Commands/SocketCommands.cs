@@ -35,7 +35,7 @@ public static partial class Commands
 
 		var message = $"{header}{Environment.NewLine}{string.Join(Environment.NewLine, players)}{Environment.NewLine}{footer}";
 
-		await parser.NotifyService.Notify(handle: parser.CurrentState.Handle!, what: message);
+		await parser.NotifyService.Notify(handle: parser.CurrentState.Handle!.Value, what: message);
 
 		return new None();
 	}
@@ -50,9 +50,9 @@ public static partial class Commands
 	public static async ValueTask<Option<CallState>> Connect(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// Early HUH if already logged in.
-		if (parser.ConnectionService.Get(parser.CurrentState.Handle!)?.Ref is not null)
+		if (parser.ConnectionService.Get(parser.CurrentState.Handle!.Value)?.Ref is not null)
 		{
-			await parser.NotifyService.Notify(parser.CurrentState.Handle!, "Huh?  (Type \"help\" for help.)");
+			await parser.NotifyService.Notify(parser.CurrentState.Handle!.Value, "Huh?  (Type \"help\" for help.)");
 			return new None();
 		}
 
@@ -64,7 +64,7 @@ public static partial class Commands
 
 		if (nameItems.Count == 0)
 		{
-			await parser.NotifyService.Notify(parser.CurrentState.Handle!, "Could not find that player.");
+			await parser.NotifyService.Notify(parser.CurrentState.Handle!.Value, "Could not find that player.");
 			return new None();
 		}
 
@@ -75,7 +75,7 @@ public static partial class Commands
 
 		if (foundDB is null)
 		{
-			await parser.NotifyService.Notify(parser.CurrentState.Handle!, "Could not find that player.");
+			await parser.NotifyService.Notify(parser.CurrentState.Handle!.Value, "Could not find that player.");
 			return new None();
 		}
 
@@ -84,17 +84,17 @@ public static partial class Commands
 
 		if (!validPassword && !string.IsNullOrEmpty(foundDB.PasswordHash))
 		{
-			await parser.NotifyService.Notify(parser.CurrentState.Handle!, "Invalid Password.");
+			await parser.NotifyService.Notify(parser.CurrentState.Handle!.Value, "Invalid Password.");
 			return new None();
 		}
 
 		// TODO: Step 3: Confirm there is no SiteLock.
 		// TODO: Step 4: Bind object in the ConnectionService.
-		parser.ConnectionService.Bind(parser.CurrentState.Handle!,
+		parser.ConnectionService.Bind(parser.CurrentState.Handle!.Value,
 			new DBRef(foundDB.Object.Key, foundDB.Object.CreationTime));
 
 		// TODO: Step 5: Trigger OnConnect Event in EventService.
-		await parser.NotifyService.Notify(parser.CurrentState.Handle!, "Connected!");
+		await parser.NotifyService.Notify(parser.CurrentState.Handle!.Value, "Connected!");
 		Serilog.Log.Logger.Debug("Successful login and binding for {@person}", foundDB.Object);
 		return new None();
 	}
@@ -103,7 +103,7 @@ public static partial class Commands
 	public static ValueTask<Option<CallState>> Quit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// TODO: Display Disconnect Banner.
-		parser.ConnectionService.Disconnect(parser.CurrentState.Handle!);
+		parser.ConnectionService.Disconnect(parser.CurrentState.Handle!.Value);
 		return ValueTask.FromResult<Option<CallState>>(new None());
 	}
 	

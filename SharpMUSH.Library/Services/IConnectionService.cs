@@ -16,7 +16,7 @@ public interface IConnectionService
 	}
 
 	public record ConnectionData(
-		string Handle,
+		long Handle,
 		DBRef? Ref,
 		ConnectionState State,
 		Func<byte[], ValueTask> OutputFunction,
@@ -35,27 +35,21 @@ public interface IConnectionService
 			: null;
 	}
 
-	void Register(string handle, Func<byte[], ValueTask> outputFunction, Func<Encoding> encoding,
+	void Register(long handle, Func<byte[], ValueTask> outputFunction, Func<Encoding> encoding,
 		ConcurrentDictionary<string, string>? MetaData = null);
 
-	void Bind(string handle, DBRef player);
+	void Bind(long handle, DBRef player);
 
-	void Update(string handle, string key, string value);
+	void Update(long handle, string key, string value);
 
-	void Disconnect(string handle);
+	void Disconnect(long handle);
 
 	/// <summary>
 	/// Gets the connection state of a handle.
 	/// </summary>
 	/// <param name="handle"></param>
-	ConnectionData? Get(string handle);
+	ConnectionData? Get(long handle);
 	
-	/// <summary>
-	/// Gets the connection state of a port.
-	/// </summary>
-	/// <param name="port"></param>
-	ConnectionData? Get(int port);
-
 	/// <summary>
 	/// Get all handles connected to the DBRef
 	/// </summary>
@@ -72,5 +66,5 @@ public interface IConnectionService
 	/// Register a handler that listens to connection change events.
 	/// </summary>
 	/// <param name="handler">A handling function.</param>
-	void ListenState(Action<(string, DBRef?, ConnectionState, ConnectionState)> handler);
+	void ListenState(Action<(long, DBRef?, ConnectionState, ConnectionState)> handler);
 }

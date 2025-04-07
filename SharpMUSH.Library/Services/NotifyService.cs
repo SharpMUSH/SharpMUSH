@@ -40,10 +40,10 @@ public class NotifyService(IConnectionService _connectionService) : INotifyServi
 	public ValueTask Notify(AnySharpObject who, OneOf<MString, string> what, AnySharpObject? sender, NotificationType type = NotificationType.Announce)
 		=> Notify(who.Object().DBRef, what, sender, type);
 
-	public async ValueTask Notify(string handle, OneOf<MString, string> what, AnySharpObject? sender, NotificationType type = NotificationType.Announce)
+	public async ValueTask Notify(long handle, OneOf<MString, string> what, AnySharpObject? sender, NotificationType type = NotificationType.Announce)
 		=> await Notify([handle], what, sender, type);
 
-	public ValueTask Notify(string[] handles, OneOf<MString, string> what, AnySharpObject? sender, NotificationType type = NotificationType.Announce)
+	public ValueTask Notify(long[] handles, OneOf<MString, string> what, AnySharpObject? sender, NotificationType type = NotificationType.Announce)
 	{
 		if (what.Match(
 			markupString => MModule.getLength(markupString) == 0,

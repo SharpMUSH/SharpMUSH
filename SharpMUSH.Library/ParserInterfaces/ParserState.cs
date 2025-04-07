@@ -54,7 +54,7 @@ public record ParserState(
 	DBRef? Executor,
 	DBRef? Enactor,
 	DBRef? Caller,
-	string? Handle,
+	long? Handle,
 	ParseMode ParseMode = ParseMode.Default)
 {
 	private AnyOptionalSharpObject? _executorObject;

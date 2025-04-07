@@ -2,4 +2,4 @@
 
 namespace SharpMUSH.Library.Notifications;
 
-public record UpdateMSDPNotification(string Handle, string ResetVariable) : INotification;
+public record UpdateMSDPNotification(long handle, string ResetVariable) : INotification;

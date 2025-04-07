@@ -18,6 +18,7 @@ public class TelnetServer : ConnectionHandler
 	private readonly IPublisher _publisher;
 	private readonly MSSPConfig _msspConfig = new() { Name = "SharpMUSH", UTF_8 = true };
 	private readonly SemaphoreSlim _semaphoreSlimForWriter = new(1, 1);
+	private readonly NextUnoccupiedNumberGenerator _descriptorGenerator = new(0);
 
 	public TelnetServer(ILogger<TelnetServer> logger, ISharpDatabase database, IConnectionService connectionService,
 		IPublisher publisher)
@@ -40,25 +41,26 @@ public class TelnetServer : ConnectionHandler
 	/// <param name="connection"></param>
 	public override async Task OnConnectedAsync(ConnectionContext connection)
 	{
+		var nextPort = _descriptorGenerator.Get().Take(1).First();
 		var ct = connection.ConnectionClosed;
 		var MSDPHandler = new MSDPServerHandler(new MSDPServerModel(async resetVar
 			=> await _publisher.Publish(
-				new UpdateMSDPNotification(connection.ConnectionId, resetVar), ct)));
+				new UpdateMSDPNotification(nextPort, resetVar), ct)));
 
 		var telnet = await new TelnetInterpreter(TelnetInterpreter.TelnetMode.Server, _logger)
 			{
 				CallbackOnSubmitAsync = async (byteArray, encoding, _)
 					=> await _publisher.Publish(
-						new TelnetInputNotification(connection.ConnectionId, encoding.GetString(byteArray)), ct),
+						new TelnetInputNotification(nextPort, encoding.GetString(byteArray)), ct),
 				SignalOnGMCPAsync = async moduleAndInfo
 					=> await _publisher.Publish(
-						new SignalGMCPNotification(connection.ConnectionId, moduleAndInfo.Package, moduleAndInfo.Info), ct),
+						new SignalGMCPNotification(nextPort, moduleAndInfo.Package, moduleAndInfo.Info), ct),
 				SignalOnMSSPAsync = async msspConfig
 					=> await _publisher.Publish(
-						new UpdateMSSPNotification(connection.ConnectionId, msspConfig), ct),
+						new UpdateMSSPNotification(nextPort, msspConfig), ct),
 				SignalOnNAWSAsync = async (newHeight, newWidth)
 					=> await _publisher.Publish(
-						new UpdateNAWSNotification(connection.ConnectionId, newHeight, newWidth), ct),
+						new UpdateNAWSNotification(nextPort, newHeight, newWidth), ct),
 				SignalOnMSDPAsync = MSDPHandler.HandleAsync,
 				CallbackNegotiationAsync = async byteArray =>
 				{
@@ -88,7 +90,7 @@ public class TelnetServer : ConnectionHandler
 			.RegisterMSSPConfig(() => _msspConfig)
 			.BuildAsync();
 
-		_connectionService.Register(connection.ConnectionId, telnet.SendAsync, () => telnet.CurrentEncoding);
+		_connectionService.Register(nextPort, telnet.SendAsync, () => telnet.CurrentEncoding);
 
 		try
 		{
@@ -115,6 +117,6 @@ public class TelnetServer : ConnectionHandler
 			_logger.LogDebug("Connection {ConnectionId} disconnected unexpectedly.", connection.ConnectionId);
 		}
 
-		_connectionService.Disconnect(connection.ConnectionId);
+		_connectionService.Disconnect(nextPort);
 	}
 }

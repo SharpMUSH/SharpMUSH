@@ -33,7 +33,7 @@ public class RegistersUnitTests : BaseUnitTest
 	{
 		Console.WriteLine("Testing: {0}", str);
 
-		await _parser!.CommandParse("1", MModule.single(str));
+		await _parser!.CommandParse(1, MModule.single(str));
 
 		await _parser.NotifyService
 			.Received(Quantity.Exactly(1))

@@ -136,7 +136,7 @@ public record MUSHCodeParser(
 	/// <param name="handle">The handle that identifies the connection.</param>
 	/// <param name="text">The text to parse.</param>
 	/// <returns>A completed task.</returns>
-	public async ValueTask CommandParse(string handle, MString text)
+	public async ValueTask CommandParse(long handle, MString text)
 	{
 		var handleId = ConnectionService.Get(handle);
 		var newParser = Push(new ParserState(

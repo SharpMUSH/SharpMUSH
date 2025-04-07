@@ -11,7 +11,7 @@ public interface ITaskScheduler
 	/// <param name="handle">The identifier for the handle to send to.</param>
 	/// <param name="command">The command to run.</param>
 	/// <param name="state">A ParserState to ensure valid parsing.</param>
-	ValueTask WriteUserCommand(string handle, MString command, ParserState state);
+	ValueTask WriteUserCommand(long handle, MString command, ParserState state);
 
 	/// <summary>
 	/// Write a commandlist to the scheduler, to be immediately executed when the scheduler runs.
@@ -58,7 +58,7 @@ public interface ITaskScheduler
 	/// Normally, these should only be immediate tasks in the case of a handle.
 	/// </summary>
 	/// <returns>An AsyncEnumerable grouped by type, and the time/date they are expected to run by.</returns>
-	IAsyncEnumerable<(string Group, DateTimeOffset[])> GetTasks(string handle);
+	IAsyncEnumerable<(string Group, DateTimeOffset[])> GetTasks(long handle);
 
 	/// <summary>
 	/// Get all Tasks currently running on the scheduler for a DBref, when they are due, and the handle they are associated with.

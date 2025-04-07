@@ -32,7 +32,7 @@ public class CommandUnitTests : BaseUnitTest
 		// TODO: We need eval vs noparse evaluation.
 		// NoParse is currently not running the command. So let's use NoEval instead for that.
 		Console.WriteLine("Testing: {0}", str);
-		await _parser!.CommandParse("1", MModule.single(str));
+		await _parser!.CommandParse(1, MModule.single(str));
 
 		await _parser.NotifyService
 			.Received(Quantity.Exactly(1))
