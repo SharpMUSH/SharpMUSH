@@ -48,14 +48,14 @@ public class BaseUnitTest
 
 		var config = new ArangoConfiguration()
 		{
-			ConnectionString = $"Server={Container!.GetTransportAddress()};User=root;Realm=;Password=password;",
+			ConnectionString = $"Server={Container.GetTransportAddress()};User=root;Realm=;Password=password;",
 			Serializer = new ArangoNewtonsoftSerializer(new ArangoNewtonsoftDefaultContractResolver())
 		};
 		
 		var configFile = Path.Combine(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst");
 		Infrastructure = new Infrastructure(config, configFile);
 
-		Database = Infrastructure!.Services.GetService(typeof(ISharpDatabase)) as ISharpDatabase;
+		Database = Infrastructure.Services.GetService(typeof(ISharpDatabase)) as ISharpDatabase;
 
 		try
 		{
@@ -97,7 +97,7 @@ public class BaseUnitTest
 		var one = realOne.Object()!.DBRef;
 
 		var simpleConnectionService = new ConnectionService();
-		simpleConnectionService.Register(1, x => ValueTask.CompletedTask, () => Encoding.UTF8);
+		simpleConnectionService.Register(1, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
 		simpleConnectionService.Bind(1, one);
 
 		return new MUSHCodeParser(

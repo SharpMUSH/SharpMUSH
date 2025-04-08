@@ -1,6 +1,5 @@
 ﻿using SharpMUSH.Library.Models;
 using System.Collections.Concurrent;
-using System.Globalization;
 using System.Text;
 
 namespace SharpMUSH.Library.Services;
@@ -17,7 +16,7 @@ public class ConnectionService : IConnectionService
 
 		foreach (var handler in _handlers)
 		{
-			handler(new(get.Handle, get.Ref, get.State, IConnectionService.ConnectionState.Disconnected));
+			handler(new ValueTuple<long, DBRef?, IConnectionService.ConnectionState, IConnectionService.ConnectionState>(get.Handle, get.Ref, get.State, IConnectionService.ConnectionState.Disconnected));
 		}
 
 		_sessionState.Remove(handle, out _);
@@ -41,12 +40,12 @@ public class ConnectionService : IConnectionService
 		if (get is null) return;
 
 		_sessionState.AddOrUpdate(handle,
-			x => throw new InvalidDataException("Tried to add a new handle during Login."),
-			(x, y) => y with { Ref = player, State = IConnectionService.ConnectionState.LoggedIn });
+			_ => throw new InvalidDataException("Tried to add a new handle during Login."),
+			(_, y) => y with { Ref = player, State = IConnectionService.ConnectionState.LoggedIn });
 
 		foreach (var handler in _handlers)
 		{
-			handler(new(handle, player, get.State, IConnectionService.ConnectionState.LoggedIn));
+			handler(new ValueTuple<long, DBRef?, IConnectionService.ConnectionState, IConnectionService.ConnectionState>(handle, player, get.State, IConnectionService.ConnectionState.LoggedIn));
 		}
 	}
 
@@ -56,8 +55,8 @@ public class ConnectionService : IConnectionService
 		if (get is null) return;
 
 		_sessionState.AddOrUpdate(handle,
-			x => throw new InvalidDataException("Tried to add a new handle during update."),
-			(x, y) =>
+			_ => throw new InvalidDataException("Tried to add a new handle during update."),
+			(_, y) =>
 			{
 				y.Metadata.AddOrUpdate(key, value, (_, _) => value);
 				return y;
@@ -67,15 +66,15 @@ public class ConnectionService : IConnectionService
 	public void Register(long handle, Func<byte[], ValueTask> outputFunction, Func<Encoding> encoding, ConcurrentDictionary<string, string>? metaData = null)
 	{
 		_sessionState.AddOrUpdate(handle,
-			x => new IConnectionService.ConnectionData(handle, null, IConnectionService.ConnectionState.Connected, outputFunction, encoding, metaData ??
+			_ => new IConnectionService.ConnectionData(handle, null, IConnectionService.ConnectionState.Connected, outputFunction, encoding, metaData ??
 				new ConcurrentDictionary<string, string>(new Dictionary<string, string> {
 					{"ConnectionStartTime", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() },
 					{"LastConnectionSignal", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() }})),
-			(x, y) => throw new InvalidDataException("Tried to replace an existing handle during Register."));
+			(_, _) => throw new InvalidDataException("Tried to replace an existing handle during Register."));
 
 		foreach (var handler in _handlers)
 		{
-			handler(new(handle, null, IConnectionService.ConnectionState.None, IConnectionService.ConnectionState.Connected));
+			handler(new ValueTuple<long, DBRef?, IConnectionService.ConnectionState, IConnectionService.ConnectionState>(handle, null, IConnectionService.ConnectionState.None, IConnectionService.ConnectionState.Connected));
 		}
 	}
 }
