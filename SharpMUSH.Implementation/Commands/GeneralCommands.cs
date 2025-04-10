@@ -8,6 +8,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using System.Drawing;
+using DotNext;
 using SharpMUSH.Implementation.Commands.ChannelCommand;
 using SharpMUSH.Implementation.Commands.MailCommand;
 using SharpMUSH.Implementation.Definitions;
@@ -647,13 +648,52 @@ public static partial class Commands
 		throw new NotImplementedException();
 	}
 
-	[SharpCommand(Name = "@DRAIN", Switches = ["ALL", "ANY"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs, MinArgs = 0,
+	[SharpCommand(Name = "@DRAIN", Switches = ["ALL", "ANY"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs, MinArgs = 1,
 		MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Drain(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		/*
-		 *   @drain[/any][/all] <object>[/<attribute>][=<number>]
-		 */
+		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var arg1 = parser.CurrentState.Arguments.GetValueOrDefault("1")?.Message?.ToPlainText();
+		var switches = parser.CurrentState.Switches.ToArray();
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+
+		if (switches.Length > 1)
+		{
+			await parser.NotifyService.Notify(executor, Errors.ErrorTooManySwitches);
+			return new CallState(Errors.ErrorTooManySwitches);
+		}
+
+		var maybeObjectAndAttribute = HelperFunctions.SplitDBRefAndOptionalAttr(arg0);
+		if (maybeObjectAndAttribute is { IsT1: true, AsT1: false })
+		{
+			await parser.NotifyService.Notify(executor, Errors.ErrorCantSeeThat);
+			return new CallState(Errors.ErrorCantSeeThat);
+		}
+
+		var (target, maybeAttribute) = maybeObjectAndAttribute.AsT0;
+		var maybeObject = await parser.LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, target,
+			LocateFlags.All);
+
+		switch (maybeObject)
+		{
+			case { IsError: true }:
+				return new CallState(maybeObject.AsError.Value);
+			case {IsNone: true}:
+				return new CallState(Errors.ErrorCantSeeThat);
+		}
+		
+		var objectToDrain = maybeObject.AsAnyObject;
+		var maybeFoundAttribute = await
+			parser.AttributeService.GetAttributeAsync(executor, objectToDrain, maybeAttribute ?? "SEMAPHORE", IAttributeService.AttributeMode.Execute);
+
+		if (maybeFoundAttribute.IsError)
+		{
+			await parser.NotifyService.Notify(executor, maybeFoundAttribute.AsError.Value);
+			return new CallState(maybeFoundAttribute.AsError.Value);
+		}
+		
+		// TODO: Implement Draining. With Any and All switches.
+
 		await ValueTask.CompletedTask;
 		throw new NotImplementedException();
 	}
