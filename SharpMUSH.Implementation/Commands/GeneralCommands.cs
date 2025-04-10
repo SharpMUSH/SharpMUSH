@@ -559,7 +559,7 @@ public static partial class Commands
 	}
 
 	[SharpCommand(Name = "@WAIT", Switches = ["PID", "UNTIL"],
-		Behavior = CB.Default | CB.EqSplit | CB.RSNoParse | CB.RSBrace, MinArgs = 0, MaxArgs = 0)]
+		Behavior = CB.Default | CB.EqSplit | CB.RSNoParse | CB.RSBrace, MinArgs = 1, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Wait(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		/*
@@ -572,6 +572,64 @@ public static partial class Commands
 				@wait/pid <pid>=[+-]<adjustment>
 				@wait/pid/until <pid>=<time>
 		 */
+
+		var arg0 = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message?.ToPlainText();
+		var arg1 = parser.CurrentState.Arguments.GetValueOrDefault("1")?.Message?.ToPlainText();
+		var switches = parser.CurrentState.Switches.ToArray();
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+
+		if (switches.Contains("PID"))
+		{
+			if (!int.TryParse(arg0, out var pid))
+			{
+				await parser.NotifyService.Notify(executor, "Invalid PID specified.");
+				return new CallState("#-1 INVALID PID");
+			}
+
+			if (string.IsNullOrEmpty(arg1))
+			{
+				await parser.NotifyService.Notify(executor, "What do you want to do with the process?");
+				return new CallState(string.Format(Errors.ErrorTooFewArguments, "@WAIT", 2, 1));
+			}
+
+			// TODO: Confirm the PID exists, and get the data.
+
+			var timeArg = arg1;
+
+			if (switches.Contains("UNTIL"))
+			{
+				if (!DateTimeOffset.TryParse(timeArg, out var dateTimeOffset))
+				{
+					await parser.NotifyService.Notify(executor, "Invalid time specified.");
+					return new CallState("#-1 INVALID TIME");
+				}
+
+				var until = DateTimeOffset.UtcNow - dateTimeOffset;
+
+				// TODO: Implement changing the PID, if it exists.
+				return new None();
+			}
+
+			if (arg1.StartsWith('+') || arg1.StartsWith('-'))
+			{
+				timeArg = arg1.Skip(1).ToString();
+			}
+
+			if (!long.TryParse(timeArg, out var secs))
+			{
+				await parser.NotifyService.Notify(executor, "Invalid time specified.");
+				return new CallState("#-1 INVALID TIME");
+			}
+
+			if (arg1.StartsWith('+') || arg1.StartsWith('-'))
+			{
+				// TODO: Call Adjustment Call
+				return new None();
+			}
+			
+			// TODO: Call Set Call.
+			return new None();
+		}
 
 		await ValueTask.CompletedTask;
 		throw new NotImplementedException();
@@ -1099,7 +1157,8 @@ public static partial class Commands
 		var result = MModule.multipleWithDelimiter(
 			MModule.single(Environment.NewLine),
 			[
-				MModule.concat(MModule.single("You are connected to "), MModule.single(parser.Configuration.CurrentValue.Net.MudName)),
+				MModule.concat(MModule.single("You are connected to "),
+					MModule.single(parser.Configuration.CurrentValue.Net.MudName)),
 				MModule.concat(MModule.single("Address: "), MModule.single(parser.Configuration.CurrentValue.Net.MudUrl)),
 				MModule.single("SharpMUSH version 0")
 			]);

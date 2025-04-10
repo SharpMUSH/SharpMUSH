@@ -9,6 +9,11 @@ public record QueueCommandListRequest(
 	ParserState State,
 	DbRefAttribute DbRefAttribute,
 	int OldValue) : IRequest;
+
+public record QueueDelayedCommandListRequest(
+	MString Command,
+	ParserState State,
+	TimeSpan Delay) : IRequest;
 	
 public record QueueCommandListWithTimeoutRequest(
 	MString Command,

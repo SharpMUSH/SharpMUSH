@@ -13,6 +13,16 @@ public class ScheduleHandler(ITaskScheduler scheduler) : IRequestHandler<QueueCo
 	}
 }
 
+
+public class DelayedScheduleHandler(ITaskScheduler scheduler) : IRequestHandler<QueueDelayedCommandListRequest>
+{
+	public async ValueTask<Unit> Handle(QueueDelayedCommandListRequest request, CancellationToken cancellationToken)
+	{
+		await scheduler.WriteCommandList(request.Command, request.State, request.Delay);
+		return await Unit.ValueTask;
+	}
+}
+
 public class ScheduleTimeoutHandler(ITaskScheduler scheduler) : IRequestHandler<QueueCommandListWithTimeoutRequest>
 {
 	public async ValueTask<Unit> Handle(QueueCommandListWithTimeoutRequest request, CancellationToken cancellationToken)
