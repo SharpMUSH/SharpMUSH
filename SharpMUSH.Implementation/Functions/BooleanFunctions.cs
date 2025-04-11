@@ -13,7 +13,7 @@ public static partial class Functions
 				: "0"));
 
 	[SharpFunction(Name = "cand", Flags = FunctionFlags.Regular | FunctionFlags.NoParse)]
-	public static async ValueTask<CallState> Cand(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> CancellingAnd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> new(await parser.CurrentState.Arguments
 			.Select(x => x.Value.Message!)
 			.ToAsyncEnumerable()
@@ -22,7 +22,7 @@ public static partial class Functions
 			: "1");
 
 	[SharpFunction(Name = "cor", Flags = FunctionFlags.Regular | FunctionFlags.NoParse)]
-	public static async ValueTask<CallState> Cor(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> CancellingOr(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> new(await parser.CurrentState.Arguments
 			.Select(x => x.Value.Message!)
 			.ToAsyncEnumerable()
@@ -31,7 +31,7 @@ public static partial class Functions
 			: "0");
 
 	[SharpFunction(Name = "eq", Flags = FunctionFlags.Regular | FunctionFlags.DecimalsOnly)]
-	public static ValueTask<CallState> Eq(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> Equals(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(new(
 			parser.CurrentState.Arguments.All(x => x.Value.Message?.ToPlainText() == parser.CurrentState.Arguments["0"].Message?.ToPlainText())
 				? "1"
@@ -39,42 +39,42 @@ public static partial class Functions
 
 	[SharpFunction(Name = "gt", MinArgs = 2,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
-	public static ValueTask<CallState> Gt(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> GreaterThan(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValidateDecimalAndEvaluatePairwise(parser.CurrentState.Arguments, pair => pair.Item1 > pair.Item2);
 
 	[SharpFunction(Name = "gte", MinArgs = 2,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
-	public static ValueTask<CallState> Gte(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> GreaterThanOrEquals(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValidateDecimalAndEvaluatePairwise(parser.CurrentState.Arguments, pair => pair.Item1 >= pair.Item2);
 
 	[SharpFunction(Name = "lt", MinArgs = 2,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
-	public static ValueTask<CallState> Lt(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> LessThan(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValidateDecimalAndEvaluatePairwise(parser.CurrentState.Arguments, pair => pair.Item1 < pair.Item2);
 
 	[SharpFunction(Name = "lte", MinArgs = 2,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
-	public static ValueTask<CallState> Lte(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> LessThanOrEquals(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValidateDecimalAndEvaluatePairwise(parser.CurrentState.Arguments, pair => pair.Item1 <= pair.Item2);
 
 	[SharpFunction(Name = "nand", Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> Nand(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> NegativeAnd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(
 			new(parser.CurrentState.Arguments.Select(x => x.Value.Message!).Any(Predicates.Falsy) ? "1" : "0"));
 
 	[SharpFunction(Name = "cnand", Flags = FunctionFlags.Regular | FunctionFlags.NoParse)]
-	public static async ValueTask<CallState> CNand(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> CancellingNegativeAnd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		foreach (var m in parser.CurrentState.Arguments.Select(x => x.Value.Message!))
 		{
 			var parsed = await parser.FunctionParse(m);
 			if (parsed!.Message.Falsy())
 			{
-				return new("1");
+				return new CallState("1");
 			}
 		}
 
-		return new("0");
+		return new CallState("0");
 	}
 
 	[SharpFunction(Name = "neq", Flags = FunctionFlags.Regular | FunctionFlags.DecimalsOnly)]
