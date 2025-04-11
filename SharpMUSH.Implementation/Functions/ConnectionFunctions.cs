@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using SharpMUSH.Implementation.Definitions;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
@@ -204,9 +205,31 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "PLAYER", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> Player(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Player(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var portString = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
+
+		if (!long.TryParse(portString, out var port))
+		{
+			return new CallState("#-1 INVALID PORT");
+		}
+		
+		var data = parser.ConnectionService.Get(port);
+
+		if (data?.Ref == executor.Object().DBRef)
+		{
+			return new CallState($"#{executor.Object().DBRef.Number}");
+		}
+
+		if (await executor.HasFlag("WIZARD") || await executor.HasFlag("ROYALTY") || await executor.HasPower("SEE_ALL"))
+		{
+			return data is null 
+				? new CallState("#-1 INVALID PORT") 
+				: new CallState($"#{data.Ref?.Number}");
+		}
+
+		return new CallState(Errors.ErrorPerm);
 	}
 
 	[SharpFunction(Name = "HEIGHT", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
