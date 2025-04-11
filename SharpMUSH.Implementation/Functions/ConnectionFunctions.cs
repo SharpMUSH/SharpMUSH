@@ -116,10 +116,28 @@ public partial class Functions
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "LWHO", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> ListWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "lwho", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public static async ValueTask<CallState> ListWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var looker = executor;
+		await ValueTask.CompletedTask;
+		
+		if(!parser.CurrentState.Arguments.IsEmpty)
+		{
+			// var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+			// `-> looker
+			// var arg1 = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+			// `-> 'online', 'offline', 'all'
+		}
+
+		var allConnectionsDbRefs = parser.ConnectionService
+			.GetAll()
+			.Where(x => x.Ref is not null)
+			.Where(x => true) // TODO: Looker CanSee
+			.Select(x => x.Ref!.Value)
+			.Select(x => $"#{x.Number}");
+		return new CallState(string.Join(" ", allConnectionsDbRefs));
 	}
 
 	[SharpFunction(Name = "LWHOID", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
