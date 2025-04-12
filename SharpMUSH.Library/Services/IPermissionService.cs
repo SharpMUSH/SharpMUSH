@@ -34,6 +34,16 @@ public interface IPermissionService
 
 	ValueTask<bool> CanGoto(AnySharpObject who, SharpExit exit, AnySharpContainer destnation);
 
+	ValueTask<bool> CanFind(AnySharpObject viewer, AnySharpObject target);
+	
+	ValueTask<bool> CanSee(AnySharpObject viewer, AnySharpObject target);
+	
+	ValueTask<bool> CanHide(AnySharpObject executor);
+	
+	ValueTask<bool> CanLogin(AnySharpObject executor);
+	
+	ValueTask<bool> CanIdle(AnySharpObject executor);
+	
 	bool ChannelOkType(AnySharpObject target, SharpChannel channel);
 	
 	ValueTask<bool> ChannelStandardCan(AnySharpObject target, string[] channelType);

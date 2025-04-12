@@ -41,6 +41,35 @@ public class PermissionService(ILockService lockService) : IPermissionService
 		params SharpAttribute[] attribute)
 		=> await CanExamine(viewer, target) || attribute.Last().IsVisual();
 
+	public async ValueTask<bool> CanSee(AnySharpObject viewer, AnySharpObject target)
+	{
+		if (await viewer.IsPriv() || await viewer.IsSee_All())
+		{
+			return true;
+		}
+
+		return !await target.IsDark();
+	}
+
+	public async ValueTask<bool> CanHide(AnySharpObject executor) 
+		=> await executor.IsPriv() || await executor.HasPower("HIDE");
+
+	public async ValueTask<bool> CanLogin(AnySharpObject executor)
+		=> await executor.IsPriv() || await executor.HasPower("LOGIN");
+
+	public async ValueTask<bool> CanIdle(AnySharpObject executor)
+		=> await executor.IsPriv() || await executor.HasPower("IDLE");
+
+	public async ValueTask<bool> CanFind(AnySharpObject viewer, AnySharpObject target)
+	{
+		if (await viewer.IsPriv() || await viewer.IsSee_All())
+		{
+			return true;
+		}
+
+		return !await target.HasFlag("UNFINDABLE");
+	}
+
 	// TODO: Confirm Implementation.
 	// TODO: Optimize for lists.
 	public ValueTask<bool> CanExecuteAttribute(AnySharpObject viewer, AnySharpObject target,
