@@ -40,4 +40,7 @@ public readonly struct DbRefAttribute(DBRef dbref, string[] attribute)
 			}
 		}
 	}
+	
+	public static DbRefAttribute Parse(string parse) 
+		=> HelperFunctions.SplitDBRefAndAttr(parse).AsValue();
 }

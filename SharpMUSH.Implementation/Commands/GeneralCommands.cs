@@ -14,6 +14,7 @@ using SharpMUSH.Implementation.Commands.MailCommand;
 using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Notifications;
+using SharpMUSH.Library.Queries;
 using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services;
 using CB = SharpMUSH.Implementation.Definitions.CommandBehavior;
@@ -593,7 +594,14 @@ public static partial class Commands
 				return new CallState(string.Format(Errors.ErrorTooFewArguments, "@WAIT", 2, 1));
 			}
 
-			// TODO: Confirm the PID exists, and get the data.
+			var exists = await parser.Mediator.Send(new ScheduleSemaphoreQuery(pid));
+			var maybeFoundPid = await exists.FirstOrDefaultAsync();
+			
+			if (maybeFoundPid is null)
+			{
+				await parser.NotifyService.Notify(executor, "Invalid PID specified.");
+				return new CallState("#-1 INVALID PID");
+			}
 
 			var timeArg = arg1;
 
@@ -606,9 +614,9 @@ public static partial class Commands
 				}
 
 				var until = DateTimeOffset.UtcNow - dateTimeOffset;
+				await parser.Mediator.Send(new RescheduleSemaphoreRequest(maybeFoundPid.Pid, until));
 
-				// TODO: Implement changing the PID, if it exists.
-				return new None();
+				return new CallState(maybeFoundPid.Pid.ToString());
 			}
 
 			if (arg1.StartsWith('+') || arg1.StartsWith('-'))

@@ -21,7 +21,7 @@ public class ExpandedObjectDataService(IMediator mediator) : IExpandedObjectData
 		var result = await mediator.Send(new ExpandedDataQuery(obj, typeof(T).Name));
 		if (result is null) return null;
 
-		var conversion = System.Text.Json.JsonSerializer.Deserialize<T>(result);
+		var conversion = JsonSerializer.Deserialize<T>(result);
 		return conversion;
 	}
 

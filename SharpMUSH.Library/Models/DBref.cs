@@ -35,4 +35,7 @@ public readonly struct DBRef : IEquatable<DBRef>
 		dbref = parsed.IsSome() ? parsed.AsValue() : default;
 		return parsed.IsSome();
 	}
+	
+	public static DBRef Parse(string value) 
+		=> HelperFunctions.ParseDBRef(value).AsValue();
 }

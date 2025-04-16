@@ -1,4 +1,6 @@
 using Mediator;
+using SharpMUSH.Library.Models.SchedulerModels;
+using SharpMUSH.Library.Queries;
 using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services;
 
@@ -13,6 +15,13 @@ public class ScheduleHandler(ITaskScheduler scheduler) : IRequestHandler<QueueCo
 	}
 }
 
+public class GetScheduledTasksHandler(ITaskScheduler scheduler)
+	: IQueryHandler<ScheduleSemaphoreQuery, IAsyncEnumerable<SemaphoreTaskData>>
+{
+	public ValueTask<IAsyncEnumerable<SemaphoreTaskData>> Handle(ScheduleSemaphoreQuery query,
+		CancellationToken cancellationToken)
+		=> ValueTask.FromResult(query.Query.Match(scheduler.GetSemaphoreTasks, scheduler.GetSemaphoreTasks, scheduler.GetSemaphoreTasks));
+}
 
 public class DelayedScheduleHandler(ITaskScheduler scheduler) : IRequestHandler<QueueDelayedCommandListRequest>
 {
@@ -27,7 +36,8 @@ public class ScheduleTimeoutHandler(ITaskScheduler scheduler) : IRequestHandler<
 {
 	public async ValueTask<Unit> Handle(QueueCommandListWithTimeoutRequest request, CancellationToken cancellationToken)
 	{
-		await scheduler.WriteCommandList(request.Command, request.State, request.DbRefAttribute, request.OldValue, request.Timeout);
+		await scheduler.WriteCommandList(request.Command, request.State, request.DbRefAttribute, request.OldValue,
+			request.Timeout);
 		return await Unit.ValueTask;
 	}
 }
@@ -37,6 +47,15 @@ public class ScheduleNotifyHandler(ITaskScheduler scheduler) : IRequestHandler<N
 	public async ValueTask<Unit> Handle(NotifySemaphoreRequest request, CancellationToken cancellationToken)
 	{
 		await scheduler.Notify(request.DbRefAttribute, request.OldValue);
+		return await Unit.ValueTask;
+	}
+}
+
+public class RescheduleSemaphoreHandler(ITaskScheduler scheduler) : IRequestHandler<RescheduleSemaphoreRequest>
+{
+	public async ValueTask<Unit> Handle(RescheduleSemaphoreRequest request, CancellationToken cancellationToken)
+	{
+		await scheduler.RescheduleSemaphoreTask(request.ProcessIdentifier, request.NewDelay);
 		return await Unit.ValueTask;
 	}
 }

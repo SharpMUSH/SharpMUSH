@@ -9,7 +9,19 @@ namespace SharpMUSH.Library.Services;
 
 /// <summary>
 /// Task scheduler, schedules items onto the queue.
+///
+/// Internally, it uses the 'Group' section to store what type of queue it is, and optionally, DB/Attr Semaphore data.
+/// Internally, it uses the Trigger Key section to store the Executor's Objid and a PID number.
 /// </summary>
+/// <example>
+/// <code>
+/// #5> @wait #7/SEMAPHORE=think 5;
+/// </code>
+/// <code>
+/// Group -> semaphore:#7:1744849096000/SEMAPHORE
+/// Trigger Key -> dbref:#5:1744849081000-16
+/// </code>
+/// </example>
 /// <param name="parser"></param>
 /// <param name="schedulerFactory"></param>
 public class TaskScheduler(IMUSHCodeParser parser, ISchedulerFactory schedulerFactory) : ITaskScheduler
@@ -183,7 +195,7 @@ public class TaskScheduler(IMUSHCodeParser parser, ISchedulerFactory schedulerFa
 			builder => builder
 				.StartAt(DateTimeOffset.UtcNow + delay)
 				.WithSimpleSchedule(x => x.WithRepeatCount(0))
-				.WithIdentity($"dbref:{state.Executor}-{NextPid()}", DelayGroup));
+				.WithIdentity($"dbref:{state.Executor}-{NextPid()}", $"{DelayGroup}:{state.Executor}"));
 
 	public async IAsyncEnumerable<(string Group, (DateTimeOffset, OneOf.OneOf<string, DBRef>)[])> GetAllTasks()
 	{
@@ -206,29 +218,70 @@ public class TaskScheduler(IMUSHCodeParser parser, ISchedulerFactory schedulerFa
 		}
 	}
 
-	public async IAsyncEnumerable<(string Group, DateTimeOffset[])> GetTasks(long handle)
+	public async IAsyncEnumerable<SemaphoreTaskData> GetSemaphoreTasks(DBRef obj)
 	{
-		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup());
+		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupStartsWith($"{SemaphoreGroup}:{obj}"));
 		var keyTriggers = keys.ToAsyncEnumerable()
-			.Where(x => x.Name.StartsWith($"handle:{handle}"))
-			.SelectAwait(async triggerKey => await _scheduler.GetTrigger(triggerKey))
-			.GroupBy(trigger => trigger.JobKey.Group, trigger => trigger.FinalFireTimeUtc!.Value);
+			.SelectAwait(async triggerKey => await MapSemaphoreTaskData(_scheduler, triggerKey));
+		
 		await foreach (var key in keyTriggers)
 		{
-			yield return (key.Key, await key.ToArrayAsync());
+			yield return key;
 		}
 	}
-
-	public async IAsyncEnumerable<(string Group, DateTimeOffset[])> GetTasks(DBRef obj)
+	
+	public async IAsyncEnumerable<SemaphoreTaskData> GetSemaphoreTasks(long pid)
 	{
-		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup());
+		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupStartsWith($"{SemaphoreGroup}:"));
 		var keyTriggers = keys.ToAsyncEnumerable()
-			.Where(triggerKey => triggerKey.Name.StartsWith($"dbref:{obj}"))
-			.SelectAwait(async triggerKey => await _scheduler.GetTrigger(triggerKey))
-			.GroupBy(trigger => trigger.JobKey.Group, trigger => trigger.FinalFireTimeUtc!.Value);
+			.Where(key => key.Name.EndsWith($"-{pid}"))
+			.SelectAwait(async triggerKey => await MapSemaphoreTaskData(_scheduler, triggerKey));
+		
 		await foreach (var key in keyTriggers)
 		{
-			yield return (key.Key, await key.ToArrayAsync());
+			yield return key;
+		}
+	}
+	
+	public async IAsyncEnumerable<SemaphoreTaskData> GetSemaphoreTasks(DbRefAttribute objAttribute)
+	{
+		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals($"{SemaphoreGroup}:{objAttribute}"));
+		var keyTriggers = keys.ToAsyncEnumerable()
+			.SelectAwait(async triggerKey => await MapSemaphoreTaskData(_scheduler, triggerKey));
+		
+		await foreach (var key in keyTriggers)
+		{
+			yield return key;
+		}
+	}
+	
+	private static async ValueTask<SemaphoreTaskData> MapSemaphoreTaskData(IScheduler scheduler, TriggerKey triggerKey)
+	{
+		var trigger = await scheduler.GetTrigger(triggerKey);
+		var job = await scheduler.GetJobDetail(trigger.JobKey);
+		var data = job.JobDataMap;
+		var command = (MString)data["Command"];
+		var state = (ParserState)data["State"];
+		var fireDelay = trigger.FinalFireTimeUtc is null
+			? null
+			: DateTimeOffset.UtcNow - trigger.FinalFireTimeUtc;
+		var semaphoreSourceString = string.Join(':', trigger.JobKey.Group.Split(':').Skip(1)); 
+		var semaphoreSource = DbRefAttribute.Parse(semaphoreSourceString);
+		var pid = long.Parse(triggerKey.Name.Split('-').Last());
+
+		return new SemaphoreTaskData(pid, command, state.Caller!.Value, semaphoreSource, fireDelay);
+	}
+
+	public async ValueTask RescheduleSemaphoreTask(long pid, TimeSpan delay)
+	{
+		var allKeys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupStartsWith($"{SemaphoreGroup}"));
+		
+		// This should return just one or zero, but using it as an iterator simplifies the code.
+		var triggerKeys = allKeys.Where(x => x.Name.EndsWith($"-{pid}"));
+		foreach (var key in triggerKeys)
+		{
+			var trigger = await _scheduler.GetTrigger(key);
+			await _scheduler.RescheduleJob(key, trigger.GetTriggerBuilder().StartAt(DateTimeOffset.UtcNow + delay).Build());
 		}
 	}
 }
