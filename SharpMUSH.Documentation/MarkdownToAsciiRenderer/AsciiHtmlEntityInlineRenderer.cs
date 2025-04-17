@@ -4,8 +4,8 @@ namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 
 public class AsciiHtmlEntityInlineRenderer : AsciiObjectRenderer<HtmlEntityInline>
 {
-	protected override void Write(Documentation.MarkdownToAsciiRenderer.MarkdownToAsciiRenderer renderer, HtmlEntityInline obj)
+	protected override void Write(MarkdownToAsciiRenderer renderer, HtmlEntityInline obj)
 	{
-		throw new NotImplementedException();
+		renderer.Write(obj.Original);
 	}
 }

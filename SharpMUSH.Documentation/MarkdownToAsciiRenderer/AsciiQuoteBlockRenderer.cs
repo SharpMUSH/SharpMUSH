@@ -6,6 +6,6 @@ public class AsciiQuoteBlockRenderer : AsciiObjectRenderer<QuoteBlock>
 {
 	protected override void Write(Documentation.MarkdownToAsciiRenderer.MarkdownToAsciiRenderer renderer, QuoteBlock obj)
 	{
-		throw new NotImplementedException();
+		renderer.WriteLine(renderer.Render(obj).ToString()!);
 	}
 }

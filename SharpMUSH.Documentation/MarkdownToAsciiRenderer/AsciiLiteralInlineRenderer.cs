@@ -6,6 +6,6 @@ public class AsciiLiteralInlineRenderer : AsciiObjectRenderer<LiteralInline>
 {
 	protected override void Write(Documentation.MarkdownToAsciiRenderer.MarkdownToAsciiRenderer renderer, LiteralInline obj)
 	{
-		throw new NotImplementedException();
+		renderer.Write(obj);
 	}
 }

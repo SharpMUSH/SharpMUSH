@@ -6,6 +6,6 @@ public class AsciiParagraphRenderer : AsciiObjectRenderer<ParagraphBlock>
 {
 	protected override void Write(Documentation.MarkdownToAsciiRenderer.MarkdownToAsciiRenderer renderer, ParagraphBlock obj)
 	{
-		throw new NotImplementedException();
+		renderer.WriteLine(renderer.Render(obj).ToString()!);
 	}
 }

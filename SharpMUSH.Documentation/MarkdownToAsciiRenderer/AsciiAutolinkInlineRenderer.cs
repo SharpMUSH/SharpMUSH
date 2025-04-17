@@ -6,6 +6,6 @@ public class AsciiAutolinkInlineRenderer : AsciiObjectRenderer<AutolinkInline>
 {
 	protected override void Write(MarkdownToAsciiRenderer renderer, AutolinkInline obj)
 	{
-		throw new NotImplementedException();
+		renderer.Write(obj.Url);
 	}
 }

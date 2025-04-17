@@ -75,11 +75,3 @@ public class MarkdownToAsciiRenderer : TextRendererBase<MarkdownToAsciiRenderer>
 		return this;
 	}
 }
-
-public class AsciiCodeBlockRenderer : AsciiObjectRenderer<CodeBlock>
-{
-	protected override void Write(MarkdownToAsciiRenderer renderer, CodeBlock obj)
-	{
-		throw new NotImplementedException();
-	}
-}

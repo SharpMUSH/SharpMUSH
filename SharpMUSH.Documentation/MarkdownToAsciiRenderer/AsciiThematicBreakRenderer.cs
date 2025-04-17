@@ -6,6 +6,6 @@ public class AsciiThematicBreakRenderer : AsciiObjectRenderer<ThematicBreakBlock
 {
 	protected override void Write(Documentation.MarkdownToAsciiRenderer.MarkdownToAsciiRenderer renderer, ThematicBreakBlock obj)
 	{
-		throw new NotImplementedException();
+		renderer.WriteLine(renderer.Render(obj).ToString()!);
 	}
 }

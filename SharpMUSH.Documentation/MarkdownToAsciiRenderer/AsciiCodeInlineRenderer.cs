@@ -6,6 +6,6 @@ public class AsciiCodeInlineRenderer : AsciiObjectRenderer<CodeInline>
 {
 	protected override void Write(MarkdownToAsciiRenderer renderer, CodeInline obj)
 	{
-		throw new NotImplementedException();
+		renderer.Write(obj);
 	}
 }

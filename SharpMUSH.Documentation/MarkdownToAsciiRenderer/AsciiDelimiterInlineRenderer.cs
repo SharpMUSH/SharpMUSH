@@ -6,6 +6,6 @@ public class AsciiDelimiterInlineRenderer : AsciiObjectRenderer<DelimiterInline>
 {
 	protected override void Write(MarkdownToAsciiRenderer renderer, DelimiterInline obj)
 	{
-		throw new NotImplementedException();
+		renderer.Write(obj);
 	}
 }

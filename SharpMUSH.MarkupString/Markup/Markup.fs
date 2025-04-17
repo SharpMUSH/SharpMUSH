@@ -63,8 +63,8 @@ module MarkupImplementation =
       {
         Foreground = defaultArg foreground AnsiColor.NoAnsi
         Background = defaultArg background AnsiColor.NoAnsi
-        LinkText = defaultArg linkText Some System.String.Empty
-        LinkUrl = defaultArg linkUrl Some System.String.Empty
+        LinkText = defaultArg linkText (Some System.String.Empty)
+        LinkUrl = defaultArg linkUrl (Some System.String.Empty)
         Blink = defaultArg blink false
         Bold = defaultArg bold false
         Clear = defaultArg clear false

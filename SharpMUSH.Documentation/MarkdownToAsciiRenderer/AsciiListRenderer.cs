@@ -4,8 +4,12 @@ namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 
 public class AsciiListRenderer : AsciiObjectRenderer<ListBlock>
 {
-	protected override void Write(Documentation.MarkdownToAsciiRenderer.MarkdownToAsciiRenderer renderer, ListBlock obj)
+	protected override void Write(MarkdownToAsciiRenderer renderer, ListBlock obj)
 	{
-		throw new NotImplementedException();
+		foreach (var item in obj)
+		{
+			// TODO: Check this.
+			renderer.WriteLine(renderer.Render(item).ToString()!);
+		}
 	}
 }

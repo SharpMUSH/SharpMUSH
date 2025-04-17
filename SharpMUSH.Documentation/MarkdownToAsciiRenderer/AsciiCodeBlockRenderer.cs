@@ -2,9 +2,9 @@ using Markdig.Syntax;
 
 namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 
-public class AsciiHtmlBlockRenderer : AsciiObjectRenderer<HtmlBlock>
+public class AsciiCodeBlockRenderer : AsciiObjectRenderer<CodeBlock>
 {
-	protected override void Write(MarkdownToAsciiRenderer renderer, HtmlBlock obj)
+	protected override void Write(MarkdownToAsciiRenderer renderer, CodeBlock obj)
 	{
 		renderer.WriteLeafRawLines(obj, true, false);
 	}

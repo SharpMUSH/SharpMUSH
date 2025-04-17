@@ -4,8 +4,16 @@ namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 
 public class AsciiHeadingRenderer : AsciiObjectRenderer<HeadingBlock>
 {
-	protected override void Write(Documentation.MarkdownToAsciiRenderer.MarkdownToAsciiRenderer renderer, HeadingBlock obj)
+	protected override void Write(MarkdownToAsciiRenderer renderer, HeadingBlock obj)
 	{
-		throw new NotImplementedException();
+		var contents = obj.ToString() ?? string.Empty;
+		var rendered = obj.Level switch
+		{
+			1 or 2 => MModule.markupSingle(Ansi.Create(underlined: true, bold: true), contents.ToUpper()),
+			3 => MModule.markupSingle(Ansi.Create(underlined: true), contents),
+			_ => MModule.single(contents)
+		};
+
+		renderer.WriteLine(rendered.ToString());
 	}
 }

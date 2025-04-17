@@ -4,8 +4,8 @@ namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 
 public class AsciiLineBreakInlineRenderer : AsciiObjectRenderer<LineBreakInline>
 {
-	protected override void Write(Documentation.MarkdownToAsciiRenderer.MarkdownToAsciiRenderer renderer, LineBreakInline obj)
+	protected override void Write(MarkdownToAsciiRenderer renderer, LineBreakInline obj)
 	{
-		throw new NotImplementedException();
+		renderer.WriteLine(Environment.NewLine);
 	}
 }
