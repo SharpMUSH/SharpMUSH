@@ -561,87 +561,244 @@ public static partial class Commands
 	}
 
 	[SharpCommand(Name = "@WAIT", Switches = ["PID", "UNTIL"],
-		Behavior = CB.Default | CB.EqSplit | CB.RSNoParse | CB.RSBrace, MinArgs = 1, MaxArgs = 0)]
+		Behavior = CB.Default | CB.EqSplit | CB.RSNoParse | CB.RSBrace, MinArgs = 1, MaxArgs = 2)]
 	public static async ValueTask<Option<CallState>> Wait(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		/*
-				-- Time is in Seconds.
-		 *  @wait[/until] <time>=<command_list>
-				@wait <object>=<command_list>
-				@wait[/until] <object>/<time>=<command_list>
-
-		 *  @wait/pid <pid>=<seconds>
-				@wait/pid <pid>=[+-]<adjustment>
-				@wait/pid/until <pid>=<time>
-		 */
-
-		var arg0 = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message?.ToPlainText();
-		var arg1 = parser.CurrentState.Arguments.GetValueOrDefault("1")?.Message?.ToPlainText();
+		var arg0 = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message!.ToPlainText()!;
+		var arg1 = parser.CurrentState.Arguments.GetValueOrDefault("1")?.Message;
 		var switches = parser.CurrentState.Switches.ToArray();
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 
+		/*
+		 *  @wait/pid <pid>=<seconds>
+		 *	@wait/pid <pid>=[+-]<adjustment>
+		 *	@wait/pid/until <pid>=<time>
+		 */
 		if (switches.Contains("PID"))
 		{
-			if (!int.TryParse(arg0, out var pid))
+			return await AtWaitForPid(parser, arg0, executor, arg1?.ToPlainText(), switches);
+		}
+
+		if (arg1 is null)
+		{
+			await parser.NotifyService.Notify(executor, "Command list missing");
+			return new CallState("#-1 MISSING COMMAND LIST ARGUMENT");
+		}
+
+		//  @wait[/until] <time>=<command_list>
+		if (double.TryParse(arg0, out var time))
+		{
+			TimeSpan convertedTime;
+			if (!switches.Contains("UNTIL"))
 			{
-				await parser.NotifyService.Notify(executor, "Invalid PID specified.");
-				return new CallState("#-1 INVALID PID");
+				convertedTime = DateTimeOffset.FromUnixTimeSeconds((long)time) - DateTimeOffset.UtcNow;
+			}
+			else
+			{
+				convertedTime = TimeSpan.FromSeconds(time);
 			}
 
-			if (string.IsNullOrEmpty(arg1))
+			await parser.Mediator.Publish(new QueueDelayedCommandListRequest(arg1, parser.CurrentState, convertedTime));
+			return CallState.Empty;
+		}
+
+		var splitBySlashes = arg0.Split('/');
+
+		// @wait <object>=<command_list>
+		if (splitBySlashes.Length == 1)
+		{
+			var maybeObject = await
+				parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0, LocateFlags.All);
+
+			if (maybeObject.IsError)
 			{
-				await parser.NotifyService.Notify(executor, "What do you want to do with the process?");
-				return new CallState(string.Format(Errors.ErrorTooFewArguments, "@WAIT", 2, 1));
+				return maybeObject.AsError;
 			}
 
-			var exists = await parser.Mediator.Send(new ScheduleSemaphoreQuery(pid));
-			var maybeFoundPid = await exists.FirstOrDefaultAsync();
-			
-			if (maybeFoundPid is null)
+			var located = maybeObject.AsSharpObject;
+			if (!await parser.PermissionService.Controls(executor, located))
 			{
-				await parser.NotifyService.Notify(executor, "Invalid PID specified.");
-				return new CallState("#-1 INVALID PID");
+				await parser.NotifyService.Notify(executor, "Permission Denied.");
+				return new CallState(Errors.ErrorPerm);
 			}
 
-			var timeArg = arg1;
+			await QueueSemaphore(parser, located, ["SEMAPHORE"], arg1);
+			return CallState.Empty;
+		}
 
-			if (switches.Contains("UNTIL"))
+		var maybeLocate =
+			await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, splitBySlashes[0],
+				LocateFlags.All);
+		if (maybeLocate.IsError)
+		{
+			return maybeLocate.AsError;
+		}
+
+		var foundObject = maybeLocate.AsSharpObject;
+		var untilTime = 0.0d;
+
+		switch (splitBySlashes.Length)
+		{
+			// @wait[/until] <object>/<time>=<command_list>
+			// @wait <object>/<attribute>=<command_list>
+			case 2 when switches.Contains("UNTIL"):
 			{
-				if (!DateTimeOffset.TryParse(timeArg, out var dateTimeOffset))
+				if (!double.TryParse(splitBySlashes[1], out untilTime))
 				{
-					await parser.NotifyService.Notify(executor, "Invalid time specified.");
-					return new CallState("#-1 INVALID TIME");
+					await parser.NotifyService.Notify(executor, "Invalid time argument format");
+					return new CallState(string.Format(Errors.ErrorBadArgumentFormat, "TIME ARGUMENT"));
 				}
 
-				var until = DateTimeOffset.UtcNow - dateTimeOffset;
-				await parser.Mediator.Send(new RescheduleSemaphoreRequest(maybeFoundPid.Pid, until));
+				var newUntilTime = DateTimeOffset.FromUnixTimeSeconds((long)untilTime) - DateTimeOffset.UtcNow;
 
-				return new CallState(maybeFoundPid.Pid.ToString());
+				await QueueSemaphoreWithDelay(parser, foundObject, ["SEMAPHORE"], newUntilTime, arg1);
+				return CallState.Empty;
 			}
-
-			if (arg1.StartsWith('+') || arg1.StartsWith('-'))
+			
+			case 2 when double.TryParse(splitBySlashes[1], out untilTime):
+				await QueueSemaphoreWithDelay(parser, foundObject, ["SEMAPHORE"], TimeSpan.FromSeconds(untilTime), arg1);
+				return CallState.Empty;
+			
+			// TODO: Ensure the attribute has the same flags as the SEMAPHORE @attribute, otherwise it can't be used!
+			case 2:
+				await QueueSemaphore(parser, foundObject, splitBySlashes[1].Split('`'), arg1);
+				return CallState.Empty;
+			
+			// @wait[/until] <object>/<attribute>/<time>=<command list>
+			case 3 when !double.TryParse(splitBySlashes[2], out untilTime):
+				await parser.NotifyService.Notify(executor, "Invalid time argument format");
+				return new CallState(string.Format(Errors.ErrorBadArgumentFormat, "TIME ARGUMENT"));
+			// TODO: Validate valid attribute value.
+			
+			case 3 when switches.Contains("UNTIL"):
 			{
-				timeArg = arg1.Skip(1).ToString();
+				var newUntilTime = DateTimeOffset.FromUnixTimeSeconds((long)untilTime) - DateTimeOffset.UtcNow;
+				await QueueSemaphoreWithDelay(parser, foundObject, [splitBySlashes[1]], newUntilTime, arg1);
+				return CallState.Empty;
 			}
+			
+			case 3:
+				await QueueSemaphoreWithDelay(parser, foundObject, [splitBySlashes[1]], TimeSpan.FromSeconds(untilTime), arg1);
+				return CallState.Empty;
+			
+			default:
+				await parser.NotifyService.Notify(executor, "Invalid first argument format");
+				return new CallState(string.Format(Errors.ErrorBadArgumentFormat, "FIRST ARGUMENT"));
+		}
+	}
 
-			if (!long.TryParse(timeArg, out var secs))
+	private static async ValueTask QueueSemaphore(IMUSHCodeParser parser, AnySharpObject located, string[] attribute,
+		MString arg1)
+	{
+		var one = await parser.Mediator.Send(new GetObjectNodeQuery(new DBRef(0)));
+		var attrValues = await parser.Mediator.Send(new GetAttributeQuery(located.Object().DBRef, ["SEMAPHORE"]));
+		var attrValue = attrValues?.FirstOrDefault();
+
+		if (attrValue is null)
+		{
+			await parser.Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single("0"),
+				one.AsPlayer));
+			await parser.Mediator.Publish(new QueueCommandListRequest(arg1, parser.CurrentState,
+				new DbRefAttribute(located.Object().DBRef, attribute), 0));
+		}
+
+		var last = int.Parse(attrValue!.Value.ToPlainText());
+		await parser.Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single($"{last + 1}"),
+			one.AsPlayer));
+		await parser.Mediator.Publish(new QueueCommandListRequest(arg1, parser.CurrentState,
+			new DbRefAttribute(located.Object().DBRef, attribute), last));
+	}
+
+	private static async ValueTask QueueSemaphoreWithDelay(IMUSHCodeParser parser, AnySharpObject located,
+		string[] attribute, TimeSpan delay, MString arg1)
+	{
+		var one = await parser.Mediator.Send(new GetObjectNodeQuery(new DBRef(0)));
+		var attrValues = await parser.Mediator.Send(new GetAttributeQuery(located.Object().DBRef, ["SEMAPHORE"]));
+		var attrValue = attrValues?.FirstOrDefault();
+
+		if (attrValue is null)
+		{
+			await parser.Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single("0"),
+				one.AsPlayer));
+			await parser.Mediator.Publish(new QueueCommandListWithTimeoutRequest(arg1, parser.CurrentState,
+				new DbRefAttribute(located.Object().DBRef, attribute), 0, delay));
+		}
+
+		var last = int.Parse(attrValue!.Value.ToPlainText());
+		await parser.Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single($"{last + 1}"),
+			one.AsPlayer));
+		await parser.Mediator.Publish(new QueueCommandListWithTimeoutRequest(arg1, parser.CurrentState,
+			new DbRefAttribute(located.Object().DBRef, attribute), last, delay));
+	}
+
+	private static async ValueTask<Option<CallState>> AtWaitForPid(IMUSHCodeParser parser, string? arg0,
+		AnySharpObject executor, string? arg1,
+		string[] switches)
+	{
+		if (!int.TryParse(arg0, out var pid))
+		{
+			await parser.NotifyService.Notify(executor, "Invalid PID specified.");
+			return new CallState("#-1 INVALID PID");
+		}
+
+		if (string.IsNullOrEmpty(arg1))
+		{
+			await parser.NotifyService.Notify(executor, "What do you want to do with the process?");
+			return new CallState(string.Format(Errors.ErrorTooFewArguments, "@WAIT", 2, 1));
+		}
+
+		var exists = await parser.Mediator.Send(new ScheduleSemaphoreQuery(pid));
+		var maybeFoundPid = await exists.FirstOrDefaultAsync();
+
+		if (maybeFoundPid is null)
+		{
+			await parser.NotifyService.Notify(executor, "Invalid PID specified.");
+			return new CallState("#-1 INVALID PID");
+		}
+
+		var timeArg = arg1;
+
+		if (switches.Contains("UNTIL"))
+		{
+			if (!DateTimeOffset.TryParse(timeArg, out var dateTimeOffset))
 			{
 				await parser.NotifyService.Notify(executor, "Invalid time specified.");
 				return new CallState("#-1 INVALID TIME");
 			}
 
-			if (arg1.StartsWith('+') || arg1.StartsWith('-'))
-			{
-				// TODO: Call Adjustment Call
-				return new None();
-			}
-			
-			// TODO: Call Set Call.
-			return new None();
+			var until = DateTimeOffset.UtcNow - dateTimeOffset;
+			await parser.Mediator.Send(new RescheduleSemaphoreRequest(maybeFoundPid.Pid, until));
+
+			return new CallState(maybeFoundPid.Pid.ToString());
 		}
 
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		if (arg1.StartsWith('+') || arg1.StartsWith('-'))
+		{
+			timeArg = arg1.Skip(1).ToString();
+		}
+
+		if (!long.TryParse(timeArg, out var secs))
+		{
+			await parser.NotifyService.Notify(executor, "Invalid time specified.");
+			return new CallState("#-1 INVALID TIME");
+		}
+
+		if (arg1.StartsWith('+'))
+		{
+			var until = (maybeFoundPid.RunDelay ?? TimeSpan.Zero) + TimeSpan.FromSeconds(secs);
+			await parser.Mediator.Send(new RescheduleSemaphoreRequest(maybeFoundPid.Pid, until));
+			return new CallState(maybeFoundPid.Pid.ToString());
+		}
+
+		if (arg1.StartsWith('-'))
+		{
+			var until = (maybeFoundPid.RunDelay ?? TimeSpan.Zero) - TimeSpan.FromSeconds(secs);
+			await parser.Mediator.Send(new RescheduleSemaphoreRequest(maybeFoundPid.Pid, until));
+			return new CallState(maybeFoundPid.Pid.ToString());
+		}
+
+		await parser.Mediator.Send(new RescheduleSemaphoreRequest(maybeFoundPid.Pid, TimeSpan.FromSeconds(secs)));
+		return new CallState(maybeFoundPid.Pid.ToString());
 	}
 
 	[SharpCommand(Name = "@COMMAND",
@@ -686,20 +843,21 @@ public static partial class Commands
 		{
 			case { IsError: true }:
 				return new CallState(maybeObject.AsError.Value);
-			case {IsNone: true}:
+			case { IsNone: true }:
 				return new CallState(Errors.ErrorCantSeeThat);
 		}
-		
+
 		var objectToDrain = maybeObject.AsAnyObject;
 		var maybeFoundAttribute = await
-			parser.AttributeService.GetAttributeAsync(executor, objectToDrain, maybeAttribute ?? "SEMAPHORE", IAttributeService.AttributeMode.Execute);
+			parser.AttributeService.GetAttributeAsync(executor, objectToDrain, maybeAttribute ?? "SEMAPHORE",
+				IAttributeService.AttributeMode.Execute);
 
 		if (maybeFoundAttribute.IsError)
 		{
 			await parser.NotifyService.Notify(executor, maybeFoundAttribute.AsError.Value);
 			return new CallState(maybeFoundAttribute.AsError.Value);
 		}
-		
+
 		// TODO: Implement Draining. With Any and All switches.
 
 		await ValueTask.CompletedTask;
