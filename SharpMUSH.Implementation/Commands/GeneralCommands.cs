@@ -654,33 +654,33 @@ public static partial class Commands
 				await QueueSemaphoreWithDelay(parser, foundObject, ["SEMAPHORE"], newUntilTime, arg1);
 				return CallState.Empty;
 			}
-			
+
 			case 2 when double.TryParse(splitBySlashes[1], out untilTime):
 				await QueueSemaphoreWithDelay(parser, foundObject, ["SEMAPHORE"], TimeSpan.FromSeconds(untilTime), arg1);
 				return CallState.Empty;
-			
+
 			// TODO: Ensure the attribute has the same flags as the SEMAPHORE @attribute, otherwise it can't be used!
 			case 2:
 				await QueueSemaphore(parser, foundObject, splitBySlashes[1].Split('`'), arg1);
 				return CallState.Empty;
-			
+
 			// @wait[/until] <object>/<attribute>/<time>=<command list>
 			case 3 when !double.TryParse(splitBySlashes[2], out untilTime):
 				await parser.NotifyService.Notify(executor, "Invalid time argument format");
 				return new CallState(string.Format(Errors.ErrorBadArgumentFormat, "TIME ARGUMENT"));
 			// TODO: Validate valid attribute value.
-			
+
 			case 3 when switches.Contains("UNTIL"):
 			{
 				var newUntilTime = DateTimeOffset.FromUnixTimeSeconds((long)untilTime) - DateTimeOffset.UtcNow;
 				await QueueSemaphoreWithDelay(parser, foundObject, [splitBySlashes[1]], newUntilTime, arg1);
 				return CallState.Empty;
 			}
-			
+
 			case 3:
 				await QueueSemaphoreWithDelay(parser, foundObject, [splitBySlashes[1]], TimeSpan.FromSeconds(untilTime), arg1);
 				return CallState.Empty;
-			
+
 			default:
 				await parser.NotifyService.Notify(executor, "Invalid first argument format");
 				return new CallState(string.Format(Errors.ErrorBadArgumentFormat, "FIRST ARGUMENT"));
@@ -692,7 +692,7 @@ public static partial class Commands
 	{
 		var one = await parser.Mediator.Send(new GetObjectNodeQuery(new DBRef(0)));
 		var attrValues = await parser.Mediator.Send(new GetAttributeQuery(located.Object().DBRef, ["SEMAPHORE"]));
-		var attrValue = attrValues?.FirstOrDefault();
+		var attrValue = attrValues?.LastOrDefault();
 
 		if (attrValue is null)
 		{
@@ -714,7 +714,7 @@ public static partial class Commands
 	{
 		var one = await parser.Mediator.Send(new GetObjectNodeQuery(new DBRef(0)));
 		var attrValues = await parser.Mediator.Send(new GetAttributeQuery(located.Object().DBRef, ["SEMAPHORE"]));
-		var attrValue = attrValues?.FirstOrDefault();
+		var attrValue = attrValues?.LastOrDefault();
 
 		if (attrValue is null)
 		{
@@ -821,6 +821,7 @@ public static partial class Commands
 		var arg1 = parser.CurrentState.Arguments.GetValueOrDefault("1")?.Message?.ToPlainText();
 		var switches = parser.CurrentState.Switches.ToArray();
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var one = await parser.Mediator.Send(new GetObjectNodeQuery(new DBRef(0)));
 
 		if (switches.Length > 1)
 		{
@@ -848,20 +849,45 @@ public static partial class Commands
 		}
 
 		var objectToDrain = maybeObject.AsAnyObject;
-		var maybeFoundAttribute = await
-			parser.AttributeService.GetAttributeAsync(executor, objectToDrain, maybeAttribute ?? "SEMAPHORE",
-				IAttributeService.AttributeMode.Execute);
+		var attribute = maybeAttribute?.Split("`") ?? ["SEMAPHORE"];
 
-		if (maybeFoundAttribute.IsError)
+		//   @drain[/any][/all] <object>[/<attribute>][=<number>]
+		if (maybeAttribute is not null && (switches.Contains("ANY") || switches.Length == 0))
 		{
-			await parser.NotifyService.Notify(executor, maybeFoundAttribute.AsError.Value);
-			return new CallState(maybeFoundAttribute.AsError.Value);
+			var maybeFoundAttributes =
+				await parser.Mediator.Send(new GetAttributeQuery(objectToDrain.Object().DBRef, attribute));
+			var maybeFoundAttribute = maybeFoundAttributes?.LastOrDefault();
+
+			if (maybeFoundAttribute is null)
+			{
+				await parser.Mediator.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, attribute,
+					MModule.single("-1"),
+					one.AsPlayer));
+			}
+
+			await parser.Mediator.Publish(
+				new DrainSemaphoreRequest(new DbRefAttribute(objectToDrain.Object().DBRef, attribute)));
+		}
+		else if (maybeAttribute is null && (switches.Contains("ANY") || switches.Length == 0))
+		{
+			var pids = await parser.Mediator.Send(new ScheduleSemaphoreQuery(objectToDrain.Object().DBRef));
+			await foreach (var uniqueAttribute in pids
+				               .GroupBy(data => string.Join('`', data.SemaphoreSource.Attribute), x => x.SemaphoreSource)
+				               .Select(x => x.FirstAsync()))
+			{
+				var dbRefAttrToDrain = await uniqueAttribute;
+				await parser.Mediator.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, dbRefAttrToDrain.Attribute,
+					MModule.single("-1"),
+					one.AsPlayer));
+				await parser.Mediator.Publish(new DrainSemaphoreRequest(dbRefAttrToDrain));
+			}
+		}
+		else if (switches.Contains("ALL"))
+		{
+			// TODO: Figure out the wording of the helpfile, or go rummaging in the source docs, because something feels funky.
 		}
 
-		// TODO: Implement Draining. With Any and All switches.
-
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@FORCE", Switches = ["NOEVAL", "INPLACE", "INLINE", "LOCALIZE", "CLEARREGS", "NOBREAK"],
