@@ -25,8 +25,8 @@ There are some aliases in place for players more familiar with the MUX comsys - 
 # @chat
 # +
 
-`@chat <channel>=<message>`
-`+<channel> <message>`
+- `@chat <channel>=<message>`
+- `+<channel> <message>`
 
 The `@chat` command is used to speak on channels. Everyone on the channel will see your message, and it will be added to the channel's recall buffer, if it has one. If *<message>* begins with a ':' or ';' it will be posed (or semiposed) instead of spoken. You will usually need to join a channel before you can speak on it.
 
@@ -133,10 +133,10 @@ Normally, when an object attempts to speak on the channel system with @chat, usi
 # CEMIT()
 # NSCEMIT()
 
-`@cemit[/noisy|/silent][/noeval] <channel>=<message>`
-`@nscemit[/noisy|/silent][/noeval] <channel>=<message>`
-`cemit(<channel>, <message>[, <noisy>])`
-`nscemit(<channel>, <message>[, <noisy>])`
+- `@cemit[/noisy|/silent][/noeval] <channel>=<message>`
+- `@nscemit[/noisy|/silent][/noeval] <channel>=<message>`
+- `cemit(<channel>, <message>[, <noisy>])`
+- `nscemit(<channel>, <message>[, <noisy>])`
 
 @cemit emits *<message>* on *<channel>*. It does not include your name. The channel prefix is included if the /noisy switch is given, and omitted if /silent is given - if neither is given, the default behaviour is controlled by the noisy_cemit @config option. The /noeval switch prevents *<message>* from being evaluated.
 
@@ -176,11 +176,11 @@ Help for `@channel` is split into a number of topics. Please see [help @channel 
 # @channel/off
 # @channel/leave
 
-`@channel/list[/on|/off][/quiet] [<prefix>]`
-`@channel/what [<prefix>]`
-`@channel/who <channel>`
-`@channel/on <channel>[=<player>]`
-`@channel/off <channel>[=<player>]`
+- `@channel/list[/on|/off][/quiet] [<prefix>]`
+- `@channel/what [<prefix>]`
+- `@channel/who <channel>`
+- `@channel/on <channel>[=<player>]`
+- `@channel/off <channel>[=<player>]`
 
 `@channel/list` shows a list of all the channels you can see, along with some basic information such as whether you are on the channel, how it's locked, etc. [help @channel list|@channel list] explains the output in detail. If a *<prefix>* is given, only channels whose names begin with *<prefix>* are shown. If the /on switch is given, only channels you've joined are shown. If /off is given, channels you are on will not be shown. The /quiet switch shows just a list of channel names, without any extra information.
 
@@ -199,10 +199,10 @@ Help for `@channel` is split into a number of topics. Please see [help @channel 
 # @channel/combine
 # @channel/uncombine
 
-`@channel/gag [<channel>][=<yes|no>]`
-`@channel/mute [<channel>][=<yes|no>]`
-`@channel/hide [<channel>][=<yes|no>]`
-`@channel/combine [<channel>][=<yes|no>]`
+- `@channel/gag [<channel>][=<yes|no>]`
+- `@channel/mute [<channel>][=<yes|no>]`
+- `@channel/hide [<channel>][=<yes|no>]`
+- `@channel/combine [<channel>][=<yes|no>]`
 
 `@channel/gag` allows you to stay on a channel but stop receiving messages on it. Channels are automatically ungagged when you disconnect. You cannot speak on channels you're gagging unless they have the "open" priv.
 
@@ -227,9 +227,9 @@ For all four of these commands, you can specify a single channel to affect, or o
 # @channel/title
 # @channel/buffer
 
-`@channel/recall[/last] <channel>[=<count>]`
-`@channel/title <channel>=<title>`
-`@channel/buffer <channel>=<size>`
+- `@channel/recall[/last] <channel>[=<count>]`
+- `@channel/title <channel>=<title>`
+- `@channel/buffer <channel>=<size>`
 
 `@channel/recall` displays the last *<count>* messages sent on *<channel>*. If *<count>* is not given, it shows the last 10. The /last switch shows messages starting from the *<count>*th most recent message.
 
@@ -252,15 +252,15 @@ For all four of these commands, you can specify a single channel to affect, or o
 # @channel/wipe
 # @channel/clock
 
-`@channel/add <channel>[=<description>]`
-`@channel/delete <channel>`
-`@channel/mogrifier <channel>=<object>`
-`@channel/chown <channel>=<player>`
-`@channel/name <channel>=<newname>`
-`@channel/desc <channel>=<description>`
-`@channel/privs <channel>=<privlist>`
-`@channel/wipe <channel>`
-`@channel/clock[/on|/off|/clear|/add|/remove|/hide|/unhide|/list] <channel>[=<lock>]`
+- `@channel/add <channel>[=<description>]`
+- `@channel/delete <channel>`
+- `@channel/mogrifier <channel>=<object>`
+- `@channel/chown <channel>=<player>`
+- `@channel/name <channel>=<newname>`
+- `@channel/desc <channel>=<description>`
+- `@channel/privs <channel>=<privlist>`
+- `@channel/wipe <channel>`
+- `@channel/clock[/on|/off|/clear|/add|/remove|/hide|/unhide|/list] <channel>[=<lock>]`
 
 `@channel/add` creates a new channel. You must be able to pay the cost of the channel. The channel's description is optional.
 

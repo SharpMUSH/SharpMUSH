@@ -59,7 +59,7 @@ Attributes can be arranged in a hierarchical tree; these are called "attribute t
 Attribute trees use the backtick (\`) character to separate their components (much as filesystems use / or \\). For example, the following attribute name would be a couple levels down in its tree:
 
 ```
-CHAR\`SKILLS\`PHYSICAL
+CHAR`SKILLS`PHYSICAL
 ```
 
 Attribute names may not start or end with the backtick, and may not contain two backticks in a row.
@@ -78,9 +78,9 @@ Attribute trees provide two immediate benefits. First, they reduce spam when exa
 ```
 examine obj              displays top-level attributes (plus object header)
 examine obj/*            displays top-level attributes
-examine obj/BRANCH\`      displays only attributes immediately under BRANCH
-examine obj/BRANCH\`*     displays only attributes immediately under BRANCH
-examine obj/BRANCH\`**    displays entire tree under BRANCH
+examine obj/BRANCH`      displays only attributes immediately under BRANCH
+examine obj/BRANCH`*     displays only attributes immediately under BRANCH
+examine obj/BRANCH`**    displays entire tree under BRANCH
 examine obj/**           displays all attributes of object
 ```
 
@@ -106,7 +106,7 @@ These properties make attribute trees ideal for data attributes:
 ```
 > &DATA bank = Data for each depositor is stored here, by dbref
 > @set bank/DATA = no_command
-> &DATA\`#30 bank = $2000 savings:$1000 loan @ 5%
+> &DATA`#30 bank = $2000 savings:$1000 loan @ 5%
 ```
 etc.
 
@@ -114,7 +114,7 @@ They're also handy for things like character attributes:
 ```
 > @attribute/access CHAR = wizard mortal_dark no_clone no_inherit
 > &CHAR #30 = Character data
-> &CHAR\`SKILLS #30 = coding:3 documentation:1 obfuscation:5
+> &CHAR`SKILLS #30 = coding:3 documentation:1 obfuscation:5
 ```
 etc.
 
@@ -131,8 +131,8 @@ As usual, children inherit attributes from their parent unless the child has its
 
 ```
 > &BRANCH parent = a branch
-> &BRANCH\`LEAF parent = a leaf
-> &BRANCH\`LEAF child = a new leaf
+> &BRANCH`LEAF parent = a leaf
+> &BRANCH`LEAF child = a new leaf
 ```
 
 In this case, a new BRANCH attribute will be created on the child, so '-[get(child/BRANCH)]-' will return '--'. This may not be what you actually want. In these cases, the pfun() function can be useful:
