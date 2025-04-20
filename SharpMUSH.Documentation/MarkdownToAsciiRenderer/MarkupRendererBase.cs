@@ -9,6 +9,7 @@ namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 public struct MarkupStringContainer
 {
 	public MString Str;
+	public bool Inline;
 }
 
 public class MarkupRendererBase(MarkupStringContainer container) : RendererBase
@@ -32,7 +33,7 @@ public class MarkupRendererBase(MarkupStringContainer container) : RendererBase
 /// <seealso cref="RendererBase" />
 public abstract class MarkupRendererBase<T> : MarkupRendererBase where T : MarkupRendererBase<T>
 {
-	private MarkupStringContainer _container;
+	protected MarkupStringContainer Container;
 
 	private sealed class Indent
 	{
@@ -71,17 +72,18 @@ public abstract class MarkupRendererBase<T> : MarkupRendererBase where T : Marku
 	/// Initializes a new instance of the <see cref="TextRendererBase{T}"/> class.
 	/// </summary>
 	/// <param name="writer">The writer.</param>
-	protected MarkupRendererBase(MarkupStringContainer writer) : base(writer)
+	/// <param name="container">Container for a Markup String.</param>
+	protected MarkupRendererBase(MarkupStringContainer container) : base(container)
 	{
 		// We assume that we are starting as if we previously had a newline
-		_container = writer;
+		Container = container;
 		_previousWasLine = true;
 		_indents = [];
 	}
 
 	protected internal void Reset()
 	{
-		_container.Str = MModule.empty();
+		Container.Str = MModule.empty();
 		ResetInternal();
 	}
 
@@ -103,7 +105,7 @@ public abstract class MarkupRendererBase<T> : MarkupRendererBase where T : Marku
 		if (!_previousWasLine)
 		{
 			_previousWasLine = true;
-			_container.Str = MModule.concat(_container.Str, MModule.single(Environment.NewLine));
+			WriteToContainer(MModule.single(Environment.NewLine));
 		}
 
 		return (T)this;
@@ -153,7 +155,7 @@ public abstract class MarkupRendererBase<T> : MarkupRendererBase where T : Marku
 		{
 			var indent = _indents[i];
 			var indentText = indent.Next();
-			_container.Str = MModule.concat(_container.Str, MModule.single(indentText));
+			WriteToContainer(MModule.single(indentText));
 		}
 	}
 
@@ -163,41 +165,10 @@ public abstract class MarkupRendererBase<T> : MarkupRendererBase where T : Marku
 	/// <param name="content">The content.</param>
 	/// <returns>This instance</returns>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public T Write(string? content)
+	public T Write(MString content)
 	{
 		WriteIndent();
-		_container.Str = MModule.concat(_container.Str, MModule.single(content));
-		return (T)this;
-	}
-
-	/// <summary>
-	/// Writes the specified char repeated a specified number of times.
-	/// </summary>
-	/// <param name="c">The char to write.</param>
-	/// <param name="count">The number of times to write the char.</param>
-	/// <returns>This instance</returns>
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	internal T Write(char c, int count)
-	{
-		WriteIndent();
-
-		for (var i = 0; i < count; i++)
-		{
-			_container.Str = MModule.concat(_container.Str, MModule.single(c.ToString()));
-		}
-
-		return (T)this;
-	}
-
-	/// <summary>
-	/// Writes the specified slice.
-	/// </summary>
-	/// <param name="slice">The slice.</param>
-	/// <returns>This instance</returns>
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public T Write(ref StringSlice slice)
-	{
-		Write(slice.AsSpan());
+		WriteToContainer(content);
 		return (T)this;
 	}
 
@@ -210,39 +181,6 @@ public abstract class MarkupRendererBase<T> : MarkupRendererBase where T : Marku
 	public T Write(StringSlice slice)
 	{
 		Write(slice.AsSpan());
-		return (T)this;
-	}
-
-	/// <summary>
-	/// Writes the specified character.
-	/// </summary>
-	/// <param name="content">The content.</param>
-	/// <returns>This instance</returns>
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public T Write(char content)
-	{
-		WriteIndent();
-		if (content == '\n')
-		{
-			_previousWasLine = true;
-		}
-
-		_container.Str = MModule.concat(_container.Str, MModule.single(content.ToString()));
-
-		return (T)this;
-	}
-
-	/// <summary>
-	/// Writes the specified content.
-	/// </summary>
-	/// <param name="content">The content.</param>
-	/// <param name="offset">The offset.</param>
-	/// <param name="length">The length.</param>
-	/// <returns>This instance</returns>
-	public T Write(string content, int offset, int length)
-	{
-		_container.Str = MModule.concat(_container.Str, MModule.single(content.AsSpan(offset, length).ToString()));
-
 		return (T)this;
 	}
 
@@ -263,17 +201,9 @@ public abstract class MarkupRendererBase<T> : MarkupRendererBase where T : Marku
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	internal void WriteRaw(char content) 
-		=> _container.Str = MModule.concat(_container.Str, MModule.single(content.ToString()));
-
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	internal void WriteRaw(string? content) 
-		=> _container.Str = MModule.concat(_container.Str, MModule.single(content));
-
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	internal void WriteRaw(ReadOnlySpan<char> content) 
-		=> _container.Str = MModule.concat(_container.Str, MModule.single(content.ToString()));
-
+	internal void WriteRaw(ReadOnlySpan<char> content)
+		=> WriteToContainer(MModule.single(content.ToString()));
+	
 	/// <summary>
 	/// Writes a newline.
 	/// </summary>
@@ -282,21 +212,10 @@ public abstract class MarkupRendererBase<T> : MarkupRendererBase where T : Marku
 	public T WriteLine()
 	{
 		WriteIndent();
-		MModule.concat(_container.Str, MModule.single(Environment.NewLine));
-		_previousWasLine = true;
-		return (T)this;
-	}
+		WriteToContainer(MModule.single(Environment.NewLine));
 
-	/// <summary>
-	/// Writes a newline.
-	/// </summary>
-	/// <returns>This instance</returns>
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public T WriteLine(NewLine newLine)
-	{
-		WriteIndent();
-		MModule.concat(_container.Str, MModule.single(newLine.ToString()));
 		_previousWasLine = true;
+		
 		return (T)this;
 	}
 
@@ -310,21 +229,25 @@ public abstract class MarkupRendererBase<T> : MarkupRendererBase where T : Marku
 	{
 		WriteIndent();
 		_previousWasLine = true;
-		MModule.concat(_container.Str, MModule.single(content + Environment.NewLine));
+		
+		WriteToContainer(MModule.single(content + Environment.NewLine));
+
 		return (T)this;
 	}
-
+	
 	/// <summary>
 	/// Writes a content followed by a newline.
 	/// </summary>
 	/// <param name="content">The content.</param>
 	/// <returns>This instance</returns>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public T WriteLine(char content)
+	public T WriteLine(MString content)
 	{
 		WriteIndent();
 		_previousWasLine = true;
-		MModule.concat(_container.Str, MModule.single(content + Environment.NewLine));
+		
+		WriteToContainer(MModule.concat(content,MModule.single(Environment.NewLine)));
+
 		return (T)this;
 	}
 
@@ -338,11 +261,22 @@ public abstract class MarkupRendererBase<T> : MarkupRendererBase where T : Marku
 	{
 		Inline? inline = leafBlock.Inline;
 
+		Container.Inline = true;
 		while (inline != null)
 		{
 			Write(inline);
 			inline = inline.NextSibling;
 		}
+		Container.Inline = false;
+
+		return (T)this;
+	}
+
+	public T WriteToContainer(MString content)
+	{
+		Container.Str = Container.Inline
+			? MModule.insertAt(Container.Str, content, Container.Str.Length)
+			: MModule.concat(Container.Str, content);
 
 		return (T)this;
 	}

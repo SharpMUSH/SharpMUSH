@@ -6,6 +6,6 @@ public class AsciiHtmlEntityInlineRenderer : AsciiObjectRenderer<HtmlEntityInlin
 {
 	protected override void Write(MarkdownToAsciiRenderer renderer, HtmlEntityInline obj)
 	{
-		renderer.Write(obj.Original);
+		renderer.WriteRaw(obj.Original.Text);
 	}
 }

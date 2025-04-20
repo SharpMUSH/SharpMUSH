@@ -12,10 +12,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Helpfiles\SharpMUSH\" />
-    </ItemGroup>
-
-    <ItemGroup>
       <ProjectReference Include="..\SharpMUSH.MarkupString\SharpMUSH.MarkupString.fsproj" />
     </ItemGroup>
 

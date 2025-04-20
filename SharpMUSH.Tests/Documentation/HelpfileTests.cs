@@ -1,4 +1,7 @@
-﻿using SharpMUSH.Documentation;
+﻿using Markdig;
+using Markdig.Extensions.AutoIdentifiers;
+using SharpMUSH.Documentation;
+using SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 
 namespace SharpMUSH.Tests.Documentation;
 
@@ -50,5 +53,27 @@ public class HelpfileTests
 		{
 			await Assert.That(indexes[key]).IsEqualTo(indexes[aliasTest.First()]);
 		}
+	}
+
+	[Test]
+	public async Task MarkdownToMarkup()
+	{
+		var container = new MarkupStringContainer
+		{
+			Str = MModule.empty(),
+			Inline = false
+		};
+
+		var pipeline = new MarkdownPipelineBuilder().UseAutoIdentifiers(AutoIdentifierOptions.GitHub).Build();
+		var renderer = new MarkdownToAsciiRenderer(container);
+		pipeline.Setup(renderer);
+		
+		var markdown = "# Header1 *Bolded*<br/>Test";
+		var doc = Markdown.Parse(markdown, pipeline);
+		container = (MarkupStringContainer)renderer.Render(doc);
+		
+		Console.WriteLine(container.Str.ToString());
+		
+		await Assert.That(container.Str.ToString()).IsEqualTo(MModule.single("a").ToString());
 	}
 }

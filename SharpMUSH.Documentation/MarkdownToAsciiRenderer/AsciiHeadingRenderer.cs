@@ -9,11 +9,14 @@ public class AsciiHeadingRenderer : AsciiObjectRenderer<HeadingBlock>
 		var contents = obj.ToString() ?? string.Empty;
 		var rendered = obj.Level switch
 		{
-			1 or 2 => MModule.markupSingle(Ansi.Create(underlined: true, bold: true), contents.ToUpper()),
-			3 => MModule.markupSingle(Ansi.Create(underlined: true), contents),
-			_ => MModule.single(contents)
+			1 or 2 => MModule.markupSingle(Ansi.Create(underlined: true, bold: true), "<HEADER STYLE>"),
+			3 => MModule.markupSingle(Ansi.Create(underlined: true), "<HEADER STYLE>"),
+			_ => MModule.single("<HEADER STYLE>")
 		};
 
-		renderer.WriteLine(rendered.ToString());
+		renderer.Write(rendered);
+		renderer.WriteLeafInline(obj);
+
+		renderer.EnsureLine();
 	}
 }

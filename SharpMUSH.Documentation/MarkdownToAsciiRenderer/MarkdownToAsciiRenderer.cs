@@ -1,5 +1,6 @@
-using Markdig.Renderers;
 using Markdig.Syntax;
+using System.ComponentModel;
+using System.Xml.Linq;
 
 namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 
@@ -28,6 +29,17 @@ public class MarkdownToAsciiRenderer : MarkupRendererBase<MarkdownToAsciiRendere
 	}
 
 	/// <summary>
+	/// Renders the specified markdown object (returns the <see cref="MarkupStringContainer"/> as a render object).
+	/// </summary>
+	/// <param name="markdownObject">The markdown object.</param>
+	/// <returns></returns>
+	public override object Render(MarkdownObject markdownObject)
+	{
+		Write(markdownObject);
+		return Container;
+	}
+
+	/// <summary>
 	/// Writes the lines of a <see cref="LeafBlock"/>
 	/// </summary>
 	/// <param name="leafBlock">The leaf block.</param>
@@ -41,7 +53,7 @@ public class MarkdownToAsciiRenderer : MarkupRendererBase<MarkdownToAsciiRendere
 		ArgumentNullException.ThrowIfNull(leafBlock);
 
 		var slices = leafBlock.Lines.Lines;
-		
+
 		for (var i = 0; i < slices.Length; i++)
 		{
 			ref var slice = ref slices[i].Slice;
@@ -56,15 +68,7 @@ public class MarkdownToAsciiRenderer : MarkupRendererBase<MarkdownToAsciiRendere
 			}
 
 			var span = slice.AsSpan();
-			if (escape)
-			{
-				// WriteEscape(span, softEscape);
-				Write(span);
-			}
-			else
-			{
-				Write(span);
-			}
+			Write(span);
 
 			if (writeEndOfLines)
 			{
