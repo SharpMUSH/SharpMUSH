@@ -3,9 +3,9 @@ using Markdig.Syntax;
 
 namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 
-public class MarkdownToAsciiRenderer : TextRendererBase<MarkdownToAsciiRenderer>
+public class MarkdownToAsciiRenderer : MarkupRendererBase<MarkdownToAsciiRenderer>
 {
-	public MarkdownToAsciiRenderer(TextWriter writer) : base(writer)
+	public MarkdownToAsciiRenderer(MarkupStringContainer container) : base(container)
 	{
 		ObjectRenderers.Add(new AsciiCodeBlockRenderer());
 		ObjectRenderers.Add(new AsciiListRenderer());
