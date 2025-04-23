@@ -29,6 +29,25 @@ public class AnsiStringUnitTests : BaseUnitTest
 				.IsEqualTo(Second);
 		}
 	}
+	
+	[Test]
+	[MethodDataSource(typeof(Data.ConcatAttach), nameof(Data.ConcatAttach.ConcatAttachData))]
+	public async Task ConcatAttach((AnsiString strA, AnsiString strB, AnsiString expected) data)
+	{
+		var (strA, strB, expected) = data;
+		var result = A.concatAttach(strA, strB);
+
+		Log.Logger.Information("Result: {Result}{NewLine}Expected: {Expected}", result, Environment.NewLine, expected);
+		var resultBytes = Encoding.Unicode.GetBytes(result.ToString());
+		var expectedBytes = Encoding.Unicode.GetBytes(expected.ToString());
+
+		foreach (var (First, Second) in resultBytes.Zip(expectedBytes))
+		{
+			await Assert
+				.That(First)
+				.IsEqualTo(Second);
+		}
+	}
 
 	[Test]
 	[MethodDataSource(typeof(Data.Substring), nameof(Data.Substring.SubstringData))]

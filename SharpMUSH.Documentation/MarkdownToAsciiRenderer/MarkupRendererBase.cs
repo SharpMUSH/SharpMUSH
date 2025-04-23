@@ -275,7 +275,7 @@ public abstract class MarkupRendererBase<T> : MarkupRendererBase where T : Marku
 	public T WriteToContainer(MString content)
 	{
 		Container.Str = Container.Inline
-			? MModule.insertAt(Container.Str, content, Container.Str.Length)
+			? MModule.concatAttach(Container.Str, content)
 			: MModule.concat(Container.Str, content);
 
 		return (T)this;

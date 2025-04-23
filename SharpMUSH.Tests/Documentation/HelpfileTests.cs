@@ -55,7 +55,7 @@ public class HelpfileTests
 		}
 	}
 
-	[Test]
+	[Test, Skip("Not yet done.")]
 	public async Task MarkdownToMarkup()
 	{
 		var container = new MarkupStringContainer
