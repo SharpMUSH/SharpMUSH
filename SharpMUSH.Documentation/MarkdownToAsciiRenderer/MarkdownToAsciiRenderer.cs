@@ -38,6 +38,17 @@ public class MarkdownToAsciiRenderer : MarkupRendererBase<MarkdownToAsciiRendere
 		Write(markdownObject);
 		return Container;
 	}
+	
+	/// <summary>
+	/// Renders the specified markdown object (returns the <see cref="MarkupStringContainer"/> as a render object).
+	/// </summary>
+	/// <param name="markdownObject">The markdown object.</param>
+	/// <returns></returns>
+	public MString RenderToMarkupString(MarkdownObject markdownObject)
+	{
+		Write(markdownObject);
+		return Container.Str;
+	}
 
 	/// <summary>
 	/// Writes the lines of a <see cref="LeafBlock"/>

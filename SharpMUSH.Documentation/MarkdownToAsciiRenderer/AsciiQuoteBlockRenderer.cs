@@ -4,8 +4,10 @@ namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 
 public class AsciiQuoteBlockRenderer : AsciiObjectRenderer<QuoteBlock>
 {
-	protected override void Write(Documentation.MarkdownToAsciiRenderer.MarkdownToAsciiRenderer renderer, QuoteBlock obj)
+	protected override void Write(MarkdownToAsciiRenderer renderer, QuoteBlock obj)
 	{
-		renderer.WriteLine(renderer.Render(obj).ToString()!);
+		renderer.PushIndent("  ");
+		renderer.WriteChildren(obj);
+		renderer.PopIndent();
 	}
 }

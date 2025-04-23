@@ -6,10 +6,8 @@ public class AsciiListRenderer : AsciiObjectRenderer<ListBlock>
 {
 	protected override void Write(MarkdownToAsciiRenderer renderer, ListBlock obj)
 	{
-		foreach (var item in obj)
-		{
-			// TODO: Check this.
-			renderer.WriteLine(renderer.Render(item).ToString()!);
-		}
+		// TODO: Create a Queue on the Renderer for list items.
+		renderer.WriteChildren(obj);
+		// Pop the Queue.
 	}
 }

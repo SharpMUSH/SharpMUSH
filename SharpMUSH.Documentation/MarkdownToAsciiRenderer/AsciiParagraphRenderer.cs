@@ -4,8 +4,8 @@ namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 
 public class AsciiParagraphRenderer : AsciiObjectRenderer<ParagraphBlock>
 {
-	protected override void Write(Documentation.MarkdownToAsciiRenderer.MarkdownToAsciiRenderer renderer, ParagraphBlock obj)
+	protected override void Write(MarkdownToAsciiRenderer renderer, ParagraphBlock obj)
 	{
-		renderer.WriteLine(renderer.Render(obj).ToString()!);
+		renderer.WriteLeafInline(obj);
 	}
 }

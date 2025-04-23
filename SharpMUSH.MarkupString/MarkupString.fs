@@ -235,7 +235,7 @@ module MarkupStringModule =
     let rec concatAttach (originalMarkupStr: MarkupString) (newMarkupStr: MarkupString) 
                      ([<Optional; DefaultParameterValue(null)>] optionalSeparator: MarkupString option) : MarkupString =
         if originalMarkupStr.Content |> List.last |> _.IsText then
-                concat originalMarkupStr newMarkupStr optionalSeparator
+                MarkupString(originalMarkupStr.MarkupDetails, originalMarkupStr.Content @ [MarkupText newMarkupStr])
         else 
             let split = originalMarkupStr.Content |> List.splitAt (originalMarkupStr.Content.Length-1)
             match split with
@@ -243,7 +243,7 @@ module MarkupStringModule =
                 | list, [MarkupText lastElement] -> MarkupString( originalMarkupStr.MarkupDetails, list @ [MarkupText(concatAttach lastElement newMarkupStr optionalSeparator)])
                 | _, [Text _] -> concat originalMarkupStr newMarkupStr optionalSeparator
                 | _ -> failwith "concatAttach should never see an empty list."
-                        
+                
     [<TailCall>]
     let rec substring (start: int) (length: int) (markupStr: MarkupString) : MarkupString =
         let inline extractText str start length =

@@ -1,7 +1,10 @@
-﻿using Markdig;
+﻿using System.Drawing;
+using Markdig;
 using Markdig.Extensions.AutoIdentifiers;
+using MarkupString;
 using SharpMUSH.Documentation;
 using SharpMUSH.Documentation.MarkdownToAsciiRenderer;
+using StringExtensions = ANSILibrary.StringExtensions;
 
 namespace SharpMUSH.Tests.Documentation;
 
@@ -55,7 +58,7 @@ public class HelpfileTests
 		}
 	}
 
-	[Test, Skip("Not yet done.")]
+	[Test]
 	public async Task MarkdownToMarkup()
 	{
 		var container = new MarkupStringContainer
@@ -68,12 +71,25 @@ public class HelpfileTests
 		var renderer = new MarkdownToAsciiRenderer(container);
 		pipeline.Setup(renderer);
 		
-		var markdown = "# Header1 *Bolded*<br/>Test";
+		var markdown = "# Header1 *Bolded*\nNewline?";
+		var headerStyle = MarkupImplementation.AnsiMarkup.Create(underlined: true, bold: true);
+		var boldStyle = MarkupImplementation.AnsiMarkup.Create(bold: true, foreground: StringExtensions.rgb(Color.White));
+		
+		var header = MModule.markupMultiple(headerStyle, 
+			[
+				MModule.single("Header1 "), 
+				MModule.markupMultiple(boldStyle, 
+					[
+						MModule.single("Bolded")
+					])
+			]);
+		var body = MModule.single("Newline?");
+		var expectedResult = MModule.multipleWithDelimiter(MModule.single(Environment.NewLine), [header, body]);
 		var doc = Markdown.Parse(markdown, pipeline);
-		container = (MarkupStringContainer)renderer.Render(doc);
+		var finalResult = renderer.RenderToMarkupString(doc);
 		
-		Console.WriteLine(container.Str.ToString());
+		Console.WriteLine(finalResult.ToString());
 		
-		await Assert.That(container.Str.ToString()).IsEqualTo(MModule.single("a").ToString());
+		await Assert.That(finalResult.ToString()).IsEqualTo(expectedResult.ToString());
 	}
 }
