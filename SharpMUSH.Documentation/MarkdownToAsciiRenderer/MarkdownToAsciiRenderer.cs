@@ -15,6 +15,7 @@ public class MarkdownToAsciiRenderer : MarkupRendererBase<MarkdownToAsciiRendere
 		ObjectRenderers.Add(new AsciiParagraphRenderer());
 		ObjectRenderers.Add(new AsciiQuoteBlockRenderer());
 		ObjectRenderers.Add(new AsciiThematicBreakRenderer());
+		ObjectRenderers.Add(new AsciiTableRenderer());
 
 		// Default inline renderers
 		ObjectRenderers.Add(new AsciiAutolinkInlineRenderer());
