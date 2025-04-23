@@ -7,11 +7,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="DotNext" Version="5.20.0" />
-    <PackageReference Include="DotNext.Threading" Version="5.19.1" />
+    <PackageReference Include="DotNext" Version="5.21.0" />
+    <PackageReference Include="DotNext.Threading" Version="5.21.0" />
     <PackageReference Include="Mediator.Abstractions" Version="2.1.7" />
-    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.3" />
-    <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="9.0.3" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.4" />
+    <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="9.0.4" />
     <PackageReference Include="morelinq" Version="4.4.0" />
     <PackageReference Include="NaturalSort.Extension" Version="4.3.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
@@ -20,7 +20,7 @@
     <PackageReference Include="Quartz.Lambda" Version="1.0.5" />
     <PackageReference Include="System.Linq.Async" Version="6.0.1" />
     <PackageReference Include="TelnetNegotiationCore" Version="1.1.0" />
-    <PackageReference Include="ZiggyCreatures.FusionCache" Version="2.1.0" />
+    <PackageReference Include="ZiggyCreatures.FusionCache" Version="2.2.0" />
   </ItemGroup>
 
   <ItemGroup>

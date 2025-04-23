@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Quartz;
@@ -93,12 +94,27 @@ public class Program
 
 	private static WebApplication ConfigureApp(WebApplication app)
 	{
+		if (app.Environment.IsDevelopment())
+		{
+			app.UseWebAssemblyDebugging();
+		}
+		else
+		{
+			app.UseDeveloperExceptionPage();
+			// app.UseExceptionHandler("/Error");
+			// The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+			app.UseHsts();
+		}
 		app.UseDefaultFiles();
 		app.MapStaticAssets();
 		app.UseHttpsRedirection();
 		app.UseAuthorization();
+		app.UseBlazorFrameworkFiles();
+		app.UseStaticFiles();
+		app.UseRouting();
 		app.MapControllers();
-		app.MapFallbackToFile("/index.html");
+		app.MapFallbackToFile("index.html");
+		app.MapRazorPages();
 
 		return app;
 	}
