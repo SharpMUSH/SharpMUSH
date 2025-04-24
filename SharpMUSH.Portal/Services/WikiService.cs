@@ -1,7 +1,7 @@
 ﻿using OneOf;
 using SharpMUSH.Portal.Models;
 
-namespace SharpMUSH.Portal;
+namespace SharpMUSH.Portal.Services;
 
 public class WikiService
 {

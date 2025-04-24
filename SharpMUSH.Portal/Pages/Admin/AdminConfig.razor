@@ -1,0 +1,17 @@
+﻿@page "/admin/config"
+@using SharpMUSH.Portal.Services
+@inject AdminConfigService AdminConfigService
+
+<MudDataGrid Items=@Options>
+
+</MudDataGrid>
+
+@code {
+    private IEnumerable<object> Options;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Options = AdminConfigService.GetOptions().ToDatagrid();
+        await base.OnInitializedAsync();
+    }
+}

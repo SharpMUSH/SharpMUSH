@@ -1,4 +1,5 @@
 @using SharpMUSH.Portal.Models
+@using SharpMUSH.Portal.Services
 @inject WikiService Wiki
 
 <MudCard Class="WikiContent" Style=@Style Elevation="0">
@@ -25,7 +26,8 @@
         }
         @if (Article is not null)
         {
-            <MudMarkdown Value="@Article?.Content" />
+            @MarkdownHtml
+            // <MudMarkdown Value="@Article?.Content" />
         }
         else
         {
@@ -53,6 +55,14 @@
 
     [Parameter]
     public required Func<Task> ActivateEditMode { get; init; }
+
+    MarkupString MarkdownHtml;
+
+    protected override void OnInitialized()
+    {
+        MarkdownHtml = (MarkupString)Markdig.Markdown.ToHtml(Article?.Content ?? string.Empty);
+        base.OnInitialized();
+    }
 
     private bool DisplayAsHero => Slug.Equals("home", StringComparison.InvariantCultureIgnoreCase);
 

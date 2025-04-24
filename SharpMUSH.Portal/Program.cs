@@ -1,16 +1,16 @@
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
-using MudBlazor;
 using MudBlazor.Services;
 using SharpMUSH.Portal;
 using SharpMUSH.Portal.Authentication;
+using SharpMUSH.Portal.Services;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.Services.AddMudServices();
-builder.Services.AddMudMarkdownServices();
 builder.Services.AddSingleton<Slugify.ISlugHelper, Slugify.SlugHelper>();
 builder.Services.AddSingleton<WikiService>();
+builder.Services.AddSingleton<AdminConfigService>();
 
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");

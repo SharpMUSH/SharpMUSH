@@ -7,12 +7,14 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="AutoBogus" Version="2.13.1" />
+        <PackageReference Include="Markdig" Version="0.41.0" />
         <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="9.0.4" />
         <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="9.0.4" PrivateAssets="all" />
         <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Authentication" Version="9.0.4" />
         <PackageReference Include="MudBlazor" Version="8.5.1" />
-        <PackageReference Include="MudBlazor.Markdown" Version="8.5.1" />
         <PackageReference Include="OneOf" Version="3.0.271" />
+        <PackageReference Include="PSC.Blazor.Components.MarkdownEditor" Version="8.0.8" />
         <PackageReference Include="Slugify.Core" Version="5.1.1" />
     </ItemGroup>
 
@@ -61,6 +63,11 @@
       <_ContentIncludedByDefault Remove="wwwroot\lib\bootstrap\dist\js\bootstrap.js.map" />
       <_ContentIncludedByDefault Remove="wwwroot\lib\bootstrap\dist\js\bootstrap.min.js" />
       <_ContentIncludedByDefault Remove="wwwroot\lib\bootstrap\dist\js\bootstrap.min.js.map" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\SharpMUSH.Configuration\SharpMUSH.Configuration.csproj" />
+      <ProjectReference Include="..\SharpMUSH.Library\SharpMUSH.Library.csproj" />
     </ItemGroup>
 
 </Project>
