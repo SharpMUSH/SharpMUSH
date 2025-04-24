@@ -1,12 +1,6 @@
 ﻿@page "/"
+@using SharpMUSH.Portal.Components
 
 <PageTitle>Home</PageTitle>
 
-<MudPaper>
-    <MudCard>
-        <MudCardHeader>
-            <MudText Align="Align.Center" Typo="Typo.h1">SharpMUSH</MudText>
-        </MudCardHeader>
-        <MudCardMedia Height="500" Image="assets/Logo.svg"/>
-    </MudCard>
-</MudPaper>
+<WikiView Slug="home"/>

@@ -8,16 +8,18 @@
     <base href="/"/>
     <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet"/>
     <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet"/>
+    <link href="_content/MudBlazor.Markdown/MudBlazor.Markdown.min.css" rel="stylesheet" />
+    <link href="css/custom.css" rel="stylesheet" />
     <link rel="icon" type="image/svg" href="assets/Logo.svg"/>
 </head>
 
 <body>
     <div id="app">
-        <div style="position:absolute; top:30vh; width:100%; text-align:center;">
-            <h1>SharpMUSH Portal</h1>
-            <div style="display:flex; gap:10px; justify-content:center; align-items:center">
-                <div class="spinner-border" role="status"></div>
-                The application is loading...
+        <div style="position: fixed; height: 100%; width: 100%; margin: 0; background-color: var(--mud-palette-appbar-background); background-image: var(--mud-palette-navbar-gradient); ">
+            <div style="display: flex; justify-content: center; align-items:center; height:100%; width:100%;">
+                <div class="b-demo-loading">
+                    <img src="assets/Logo.svg" style="height: 500px;" />
+                </div>
             </div>
         </div>
     </div>
@@ -31,6 +33,7 @@
     <script src="_content/Microsoft.AspNetCore.Components.WebAssembly.Authentication/AuthenticationService.js"></script>
     <script src="_framework/blazor.webassembly.js"></script>
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
+    <script src="_content/MudBlazor.Markdown/MudBlazor.Markdown.min.js"></script>
 </body>
 
 </html>

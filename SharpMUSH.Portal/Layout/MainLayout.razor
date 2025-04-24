@@ -1,36 +1,43 @@
 ﻿@using MudBlazor.Utilities
 @inherits LayoutComponentBase
 
-<MudThemeProvider @bind-IsDarkMode="@_isDarkMode" Theme="_theme"/>
+<MudThemeProvider @bind-IsDarkMode="@_isDarkMode" Theme="_theme" />
 
 <MudLayout>
     <MudAppBar Elevation="1" Dense="true">
         <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@(_ => DrawerToggle())" />
         <MudSpacer />
-        <MudIconButton Icon="@Icons.Custom.Brands.GitHub" Color="Color.Inherit" Edge="Edge.End" Href="https://github.com/sharpmush/sharpmush" />
-        <LoginDisplay/>
+        <LoginDisplay />
     </MudAppBar>
     <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
-        <NavMenu/>
+        <NavMenu />
     </MudDrawer>
     <MudMainContent>
         <MudContainer Gutters="true">
             @Body
         </MudContainer>
     </MudMainContent>
+    <MudAppBar Fixed=true Style="height:2.5em;" Bottom=true Dense=true>
+        <ul style="list-style:none; display:inline-flex; justify-content:space-between; width:100%">
+            <li><MudIconButton Style="padding:3px;" Icon="@Icons.Custom.Brands.GitHub" Href="https://github.com/SharpMUSH/SharpMUSH" /></li>
+            <li><MudText Style="color:var(--mud-palette-drawer-text)"> &copy; 2025-@DateTimeOffset.Now.Year SharpMUSH</MudText> </li>
+        </ul>
+    </MudAppBar>
 </MudLayout>
 @code {
 
     private MudTheme _theme = new()
-    {
-        PaletteDark = new PaletteDark
         {
-            AppbarText = MudColor.Parse("#00f5b7"),
-            TextSecondary = MudColor.Parse("#00f5b7"),
-        }
-    };
+            PaletteDark = new PaletteDark
+            {
+                AppbarText = MudColor.Parse("#00f5b7"),
+                TextSecondary = MudColor.Parse("#00f5b7"),
+                Secondary = MudColor.Parse("#00f5b7"),
+                Surface = MudColor.Parse("#242424")
+            }
+        };
     private bool _isDarkMode = true;
-    bool _drawerOpen = true;
+    bool _drawerOpen = false;
 
     void DrawerToggle()
     {

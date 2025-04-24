@@ -1,0 +1,60 @@
+@using SharpMUSH.Portal.Models
+@inject WikiService Wiki
+
+<MudCard Class="WikiContent" Style=@Style Elevation="0">
+    @if (Article is not null)
+    {
+        <MudCardHeader>
+            @if (!DisplayAsHero)
+            {
+                <MudText Align="Align.Center" Typo="Typo.h2" Style="width:100%" Class="mud-text-secondary">@Article.Title</MudText>
+            }
+            <AuthorizeView>
+                <Authorized>
+                    <MudSpacer />
+                    <MudIconButton Edge="Edge.End" OnClick="@ActivateEditMode" Icon="@Icons.Material.Filled.Edit" Color=Color.Secondary Ripple=true />
+                    <MudIconButton Edge="Edge.End" Icon="@Icons.Material.Filled.History" Color=Color.Secondary Ripple=true />
+                </Authorized>
+            </AuthorizeView>
+        </MudCardHeader>
+    }
+    <MudCardContent>
+        @if (Article?.Image is not null)
+        {
+            <MudImage Height="500" Width="500" Src="@Article.Image" />
+        }
+        @if (Article is not null)
+        {
+            <MudMarkdown Value="@Article?.Content" />
+        }
+        else
+        {
+            <MudAlert Severity="@Severity.Info">
+                <AuthorizeView>
+                    <Authorized>
+                        <MudText>This page does not exist yet. You can create it by clicking the button below.</MudText>
+                        <MudButton EndIcon="@Icons.Material.Filled.Create" Color=Color.Secondary Ripple=true>Create this Page!</MudButton>
+                    </Authorized>
+                    <NotAuthorized>
+                        <MudText>Nothing to see here.</MudText>
+                    </NotAuthorized>
+                </AuthorizeView>
+            </MudAlert>
+        }
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter]
+    public required string Slug { get; init; }
+
+    [Parameter]
+    public WikiArticle? Article {get; init;}
+
+    [Parameter]
+    public required Func<Task> ActivateEditMode { get; init; }
+
+    private bool DisplayAsHero => Slug.Equals("home", StringComparison.InvariantCultureIgnoreCase);
+
+    private string Style => $"min-height: calc(100vh - var(--mud-appbar-height)); {(DisplayAsHero ? "background:inherit; text-align:center;" : string.Empty)}";
+}

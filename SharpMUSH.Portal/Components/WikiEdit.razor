@@ -1,0 +1,78 @@
+﻿@using SharpMUSH.Portal.Models
+@inject IJSRuntime JsRuntime
+
+<MudGrid>
+    <MudItem xs="6">
+        <MudPaper>
+            <MudToolBar>
+                <MudIconButton OnClick="@AddBold" Icon="@Icons.Material.Filled.FormatBold" />
+                <MudIconButton OnClick="@AddItalics" Icon="@Icons.Material.Filled.FormatItalic" />
+                <MudIconButton OnClick="@AddHeader" Icon="@Icons.Material.Filled.FormatSize" />
+                <MudIconButton OnClick="@AddLink" Icon="@Icons.Material.Filled.AddLink" />
+            </MudToolBar>
+            <MudDivider />
+            <MudForm Model="Article">
+                <MudTextField InputId="content" @ref=@articleContent Immediate=true T="string" @bind-Value=@Article.Content InputType="InputType.Text" TextChanged="@Test" OnBlur="@Test" Lines="40" />
+            </MudForm>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="6">
+        <MudPaper>
+            <MudMarkdown Value="@Article.Content" />
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+@code {
+    [Parameter]
+    public required WikiArticle Article { get; set; }
+
+    private MudTextField<string> articleContent;
+    private Range<int> CursorPosition = new Range<int>(0, 0);
+
+    private async Task Test()
+    {
+        if (articleContent?.InputReference?.ElementReference is not null)
+        {
+            var pos = await JsRuntime.InvokeAsync<int[]>("getSelectedStart", articleContent.InputReference.ElementReference);
+            CursorPosition.Start = pos[0];
+            CursorPosition.End = pos[1];
+            Console.WriteLine($"test: {CursorPosition.Start},{CursorPosition.End}");
+        }
+        else
+        {
+            CursorPosition.Start = 0;
+            CursorPosition.End = 0;
+            Console.WriteLine($"Not Found.");
+        }
+    }
+
+    private void AddHeader()
+    {
+        Article.Content = Article.Content.Insert(CursorPosition.Start, "\n# Header\n");
+    }
+
+    private void AddItalics()
+    {
+        Article.Content = Article.Content.Insert(CursorPosition.Start, "*");
+        Article.Content = Article.Content.Insert(CursorPosition.End+1, "*");
+    }
+
+    private void AddBold()
+    {
+        Article.Content = Article.Content.Insert(CursorPosition.Start, "**");
+        Article.Content = Article.Content.Insert(CursorPosition.End+1, "**");
+    }
+
+    private void AddLink()
+    {
+        Article.Content = Article.Content.Insert(CursorPosition.Start, "[Text](/wiki/address)");
+    }
+}
+
+<script>
+    window.getSelectedStart = (element) => {
+        console.log(element);
+            return [element.selectionStart, element.selectionEnd];
+        }
+</script>
