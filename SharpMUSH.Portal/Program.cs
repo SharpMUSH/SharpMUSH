@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using MudBlazor;
 using MudBlazor.Services;
 using SharpMUSH.Portal;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.Services.AddMudServices();
+
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 

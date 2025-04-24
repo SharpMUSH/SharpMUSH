@@ -7,36 +7,20 @@
 
 <p>This component demonstrates fetching data from the server.</p>
 
-@if (forecasts == null)
-{
-    <p>
-        <em>Loading...</em>
-    </p>
-}
-else
-{
-    <table class="table">
-        <thead>
-        <tr>
-            <th>Date</th>
-            <th aria-label="Temperature in Celsius">Temp. (C)</th>
-            <th aria-label="Temperature in Farenheit">Temp. (F)</th>
-            <th>Summary</th>
-        </tr>
-        </thead>
-        <tbody>
-        @foreach (var forecast in forecasts)
-        {
-            <tr>
-                <td>@forecast.Date.ToShortDateString()</td>
-                <td>@forecast.TemperatureC</td>
-                <td>@forecast.TemperatureF</td>
-                <td>@forecast.Summary</td>
-            </tr>
-        }
-        </tbody>
-    </table>
-}
+<MudTable Items=forecasts Loading="@(forecasts == null)">
+    <HeaderContent>
+        <MudTh>Date</MudTh>
+        <MudTh>Temp. (C)</MudTh>
+        <MudTh>Temp. (F)</MudTh>
+        <MudTh>Summary</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Date">@context.Date.ToShortDateString()</MudTd>
+        <MudTd>@context.TemperatureC</MudTd>
+        <MudTd>@context.TemperatureF</MudTd>
+        <MudTd>@context.Summary</MudTd>
+    </RowTemplate>
+</MudTable>
 
 @code {
     private WeatherForecast[]? forecasts;
@@ -56,5 +40,4 @@ else
 
         public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
     }
-
 }

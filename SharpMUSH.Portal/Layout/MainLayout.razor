@@ -1,23 +1,35 @@
-﻿@inherits LayoutComponentBase
+﻿@using MudBlazor.Utilities
+@inherits LayoutComponentBase
 
-<MudThemeProvider />
+<MudThemeProvider @bind-IsDarkMode="@_isDarkMode" Theme="_theme"/>
 
 <MudLayout>
-    <MudAppBar Elevation="1">
-        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
-        <MudText Typo="Typo.h5" Class="ml-3">Application</MudText>
+    <MudAppBar Elevation="1" Dense="true">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@(_ => DrawerToggle())" />
         <MudSpacer />
-        <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End" />
+        <MudIconButton Icon="@Icons.Custom.Brands.GitHub" Color="Color.Inherit" Edge="Edge.End" Href="https://github.com/sharpmush/sharpmush" />
+        <LoginDisplay/>
     </MudAppBar>
     <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
-        @*NavMenu*@
-        <LoginDisplay/>
+        <NavMenu/>
     </MudDrawer>
     <MudMainContent>
-        @*Body*@
+        <MudContainer Gutters="true">
+            @Body
+        </MudContainer>
     </MudMainContent>
 </MudLayout>
 @code {
+
+    private MudTheme _theme = new()
+    {
+        PaletteDark = new PaletteDark
+        {
+            AppbarText = MudColor.Parse("#00f5b7"),
+            TextSecondary = MudColor.Parse("#00f5b7"),
+        }
+    };
+    private bool _isDarkMode = true;
     bool _drawerOpen = true;
 
     void DrawerToggle()
