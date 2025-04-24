@@ -5,21 +5,23 @@
     <MudItem xs="6">
         <MudPaper>
             <MudToolBar>
-                <MudIconButton OnClick="@AddBold" Icon="@Icons.Material.Filled.FormatBold" />
-                <MudIconButton OnClick="@AddItalics" Icon="@Icons.Material.Filled.FormatItalic" />
-                <MudIconButton OnClick="@AddHeader" Icon="@Icons.Material.Filled.FormatSize" />
-                <MudIconButton OnClick="@AddLink" Icon="@Icons.Material.Filled.AddLink" />
+                <MudIconButton OnClick="@AddBold" Color="@Color.Secondary" Icon="@Icons.Material.Filled.FormatBold" />
+                <MudIconButton OnClick="@AddItalics" Color="@Color.Secondary" Icon="@Icons.Material.Filled.FormatItalic" />
+                <MudIconButton OnClick="@AddHeader" Color="@Color.Secondary" Icon="@Icons.Material.Filled.FormatSize" />
+                <MudIconButton OnClick="@AddLink" Color="@Color.Secondary" Icon="@Icons.Material.Filled.AddLink" />
+                <MudIconButton Color="@Color.Secondary" Icon="@Icons.Material.Filled.Save" />
             </MudToolBar>
             <MudDivider />
             <MudForm Model="Article">
-                <MudTextField InputId="content" @ref=@articleContent Immediate=true T="string" @bind-Value=@Article.Content InputType="InputType.Text" TextChanged="@Test" OnBlur="@Test" Lines="40" />
+                <MudTextField onscroll="@SetScroll" InputId="content" FullWidth=true @ref=@articleContent Immediate=true T="string" @bind-Value=@Article.Content InputType="InputType.Text" TextChanged="@Test" OnBlur="@Test" Lines="40" />
             </MudForm>
         </MudPaper>
     </MudItem>
     <MudItem xs="6">
-        <MudPaper>
+        <MudToolBar/>
+        <MudElement HtmlTag="div" @bind-Ref=@preview Class="d-flex flex-column overflow-x-auto" Style="height:55em;">
             <MudMarkdown Value="@Article.Content" />
-        </MudPaper>
+        </MudElement>
     </MudItem>
 </MudGrid>
 
@@ -28,6 +30,8 @@
     public required WikiArticle Article { get; set; }
 
     private MudTextField<string> articleContent;
+    private ElementReference preview = new ElementReference();
+
     private Range<int> CursorPosition = new Range<int>(0, 0);
 
     private async Task Test()
@@ -47,6 +51,15 @@
         }
     }
 
+    private async Task SetScroll()
+    {
+        if(articleContent?.InputReference?.ElementReference is not null){
+            
+            var pos = await JsRuntime.InvokeAsync<double>("getElementScrollPercentage", articleContent.InputReference.ElementReference);
+            await JsRuntime.InvokeAsync<Task>("setElementScroll", [preview, pos]);
+        }
+    }
+
     private void AddHeader()
     {
         Article.Content = Article.Content.Insert(CursorPosition.Start, "\n# Header\n");
@@ -54,14 +67,14 @@
 
     private void AddItalics()
     {
+        Article.Content = Article.Content.Insert(CursorPosition.End, "*");
         Article.Content = Article.Content.Insert(CursorPosition.Start, "*");
-        Article.Content = Article.Content.Insert(CursorPosition.End+1, "*");
     }
 
     private void AddBold()
     {
+        Article.Content = Article.Content.Insert(CursorPosition.End, "**");
         Article.Content = Article.Content.Insert(CursorPosition.Start, "**");
-        Article.Content = Article.Content.Insert(CursorPosition.End+1, "**");
     }
 
     private void AddLink()
@@ -75,4 +88,19 @@
         console.log(element);
             return [element.selectionStart, element.selectionEnd];
         }
+</script>
+<script>
+    window.setElementScroll = (element, percentageFraction) =>
+    {
+        let height = element.height;
+        element.scrollTop = element.scrollHeight * percentageFraction;
+    }
+</script>
+<script>
+    window.getElementScrollPercentage = (elm) =>
+    {  
+          var p = elm.parentNode;
+          var result = (elm.scrollTop || p.scrollTop) / (elm.scrollHeight - p.clientHeight );
+          return Number.isNaN(result) ? 0 : result;
+    }
 </script>
