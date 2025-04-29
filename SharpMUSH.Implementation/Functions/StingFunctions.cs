@@ -1,5 +1,7 @@
 ﻿using SharpMUSH.Implementation.Definitions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -18,8 +20,74 @@ public static partial class Functions
 	}
 
 	[SharpFunction(Name = "SPEAK", MinArgs = 2, MaxArgs = 7, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> Speak(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Speak(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		/*
+	speak(<speaker>, <string>[, <say string>[, [<transform obj>/]<transform attr>[, [<isnull obj>/]<isnull attr>[, <open>[, <close>]]]]])
+
+  This function is used to format speech-like constructs, and is capable of transforming text within a speech string; it is useful for implementing "language code" and the like.
+
+  If <speaker> begins with &, the rest of the <speaker> string is treated as the speaker's name, so you can use it for NPCs or tacking on titles (such as with @chatformat). Otherwise, the name of the object <speaker> is used.
+
+  When only <speaker> and <string> are given, this function formats <string> as if it were speech from <speaker>, as follows.
+
+  If <string> is...  the resulting string is...
+  :<pose>            <speaker's name> <pose>
+  ;<pose>            <speaker's name><pose>
+  |<emit>            <emit>
+  <speech>           <speaker's name> says, "<speech>"
+
+  The chat_strip_quote config option affects this function, so if <speech> starts with a leading double quote ("), it may be stripped.
+
+  If <say string> is specified, it is used instead of "says,".
+		 */
+		var args = parser.CurrentState.Arguments;
+		var speaker = args["0"].Message!; // & for direct name!
+		var speakString = args["1"].Message!;
+		var sayString = NoParseDefaultNoParseArgument(args, 2, "says, ");
+		var transformObjAttr = NoParseDefaultNoParseArgument(args, 3, "");
+		var isNullObjAttr = NoParseDefaultNoParseArgument(args, 4, "");
+		var open = NoParseDefaultNoParseArgument(args, 5, "\"");
+		var close = NoParseDefaultNoParseArgument(args, 6, "\"");
+
+		// TODO: This behavior gets re-used, so best to create a HelperFunction for this.
+
+		var messageType = speakString.ToPlainText() switch
+		{
+			[':', .. _] => ':', 
+			[';', .. _] => ';', 
+			['|', .. _] => '|', 
+			_ => '"'   
+		};
+
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var speakerIsLiteral = speaker.ToPlainText().StartsWith('&');
+		var speakerObject = executor;
+		var speakerName = MModule.empty();
+		if (!speakerIsLiteral)
+		{
+			var maybeFound = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, speaker.ToPlainText(), LocateFlags.All);
+			if (maybeFound.IsError)
+			{
+				return maybeFound.AsError;
+			}
+
+			var found = maybeFound.AsSharpObject;
+
+			if (await parser.PermissionService.Controls(executor, found))
+			{
+				speakerObject = found;
+			}
+
+			speakerName = MModule.single(speakerObject.Object().Name);
+		}
+		else
+		{
+			speakerName = MModule.substring(1,speaker.Length-1,speaker);
+		}
+
+				
+		
 		throw new NotImplementedException();
 	}
 

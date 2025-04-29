@@ -10,11 +10,13 @@ public partial class Functions
 	{
 		throw new NotImplementedException();
 	}
+	
 	[SharpFunction(Name = "CEMIT", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> ChannelEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
+	
 	[SharpFunction(Name = "CFLAGS", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> ChannelFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
