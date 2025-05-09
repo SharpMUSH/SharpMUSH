@@ -287,7 +287,7 @@ module MarkupStringModule =
                     )
 
         MarkupString(markupStr.MarkupDetails, substringAux markupStr.Content start length [])
-
+    
     [<TailCall>]
     let rec indexesOf (markupStr: MarkupString) (search: MarkupString) : seq<int> =
         let text = plainText markupStr
@@ -505,6 +505,33 @@ module MarkupStringModule =
         buildSplits delimiterPositions 0 [] |> Array.ofList
 
     let split2 (delimiter: MarkupString) (markupStr: MarkupString) = split (plainText delimiter) markupStr
+
+    [<TailCall>]
+    let rec remove (markupStr: MarkupString) (index: int) (length: int) : MarkupString =
+        let rightStart = index + length
+        let rightEnd = markupStr.Length - rightStart
+        let left = markupStr |> substring 0 index
+        let right = markupStr |> substring rightStart rightEnd
+        (concat left right None)
+    
+    /// <summary>
+    /// Replaces a value in markupStr with the one in replacementStr,
+    /// writing over position 'index' to 'index + length'.
+    /// </summary>
+    /// <param name="markupStr">Original String</param>
+    /// <param name="replacementStr">Replacement String</param>
+    /// <param name="index">Index where to replace</param>
+    /// <param name="length">Length of the area to replace over.</param>
+    [<TailCall>]
+    let rec replace (markupStr: MarkupString) (replacementStr: MarkupString) (index: int) (length: int) : MarkupString =
+        if index >= markupStr.Length then
+            concat markupStr replacementStr None
+        elif index < 0 then
+            concat replacementStr markupStr None
+        else
+            let trueLength = Math.Min(index + length, markupStr.Length) - index 
+            let removed = remove markupStr index trueLength
+            insertAt removed replacementStr index
 
 type Justification =
     | Left

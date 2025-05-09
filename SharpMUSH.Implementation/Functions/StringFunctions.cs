@@ -1,5 +1,12 @@
-﻿using SharpMUSH.Implementation.Definitions;
+﻿using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
+using DotNext.Collections.Generic;
+using SharpMUSH.Implementation.Definitions;
+using SharpMUSH.Library;
+using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 
@@ -7,6 +14,8 @@ namespace SharpMUSH.Implementation.Functions;
 
 public static partial class Functions
 {
+	public static Dictionary<(string, string), Regex> SpeechPatternCache = new();
+
 	[SharpFunction(Name = "after", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> After(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -15,7 +24,7 @@ public static partial class Functions
 		var search = args["1"].Message;
 		var idx = MModule.indexOf(fullString, search);
 		var result = MModule.substring(idx, MModule.getLength(fullString) - idx, args["0"].Message);
-		
+
 		return ValueTask.FromResult(new CallState(result));
 	}
 
@@ -54,19 +63,32 @@ public static partial class Functions
 
 		var messageType = speakString.ToPlainText() switch
 		{
-			[':', .. _] => ':', 
-			[';', .. _] => ';', 
-			['|', .. _] => '|', 
-			_ => '"'   
+			[':', .. _] => INotifyService.NotificationType.Pose,
+			[';', .. _] => INotifyService.NotificationType.SemiPose,
+			['|', .. _] => INotifyService.NotificationType.Emit,
+			_ => INotifyService.NotificationType.Say
+		};
+
+		speakString = speakString.ToPlainText() switch
+		{
+			[':', .. _]
+				or [';', .. _]
+				or ['|', .. _]
+				or ['"', .. _] => MModule.substring(1, speakString.Length - 1, speakString),
+			_ => speakString
 		};
 
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		var speakerIsLiteral = speaker.ToPlainText().StartsWith('&');
+		var hasTransform = !string.IsNullOrWhiteSpace(transformObjAttr.ToPlainText());
+		var hasNull = !string.IsNullOrWhiteSpace(isNullObjAttr.ToPlainText());
 		var speakerObject = executor;
-		var speakerName = MModule.empty();
+		MString speakerName;
+
 		if (!speakerIsLiteral)
 		{
-			var maybeFound = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, speaker.ToPlainText(), LocateFlags.All);
+			var maybeFound = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor,
+				speaker.ToPlainText(), LocateFlags.All);
 			if (maybeFound.IsError)
 			{
 				return maybeFound.AsError;
@@ -83,12 +105,158 @@ public static partial class Functions
 		}
 		else
 		{
-			speakerName = MModule.substring(1,speaker.Length-1,speaker);
+			speakerName = MModule.substring(1, speaker.Length - 1, speaker);
 		}
 
-				
-		
-		throw new NotImplementedException();
+		// If not Emit, use Speakername.
+
+		var concat = MModule.single(string.Empty);
+
+		if (messageType is not INotifyService.NotificationType.Emit)
+		{
+			concat = MModule.concat(concat, speakerName);
+		}
+
+		if (messageType is INotifyService.NotificationType.Pose or INotifyService.NotificationType.Say)
+		{
+			concat = MModule.concat(concat, MModule.single(" "));
+		}
+
+		if (messageType is INotifyService.NotificationType.Say)
+		{
+			concat = MModule.concat(concat, sayString);
+			concat = MModule.concat(concat, open);
+		}
+
+		/*
+		 *   If <transform> is specified (an object/attribute pair or attribute, as with map() and similar functions),
+		 * the speech portions of <string> are passed through the transformation function.
+
+  Speech is delimited by double-quotes (i.e., "text"), or by the specified <open> and <close> strings.
+  For instance, if you wanted <<text>> to denote text to be transformed,
+  you would specify <open> as << and close as >> in the function call.
+  Only the portions of the string between those delimiters are transformed. If <close> is not specified,
+  it defaults to <open>.
+
+  The transformation function receives the speech text as %0, the dbref of <speaker> as %1,
+  and the speech fragment number as %2.
+  For non-say input strings (i.e., for an original <string> beginning with the :, ;, or | tokens),
+  fragments are numbered starting with 1; otherwise,
+  fragments are numbered starting with 0.
+  (A fragment is a chunk of speech text within the overall original input string.)
+		 */
+
+		string? actualTransformAttribute = null;
+		string? actualNullAttribute = null;
+		AnySharpObject? actualTransformationObject = null;
+		AnySharpObject? actualNullObject = null;
+
+		if (hasTransform)
+		{
+			var splitTransform = HelperFunctions.SplitObjectAndAttr(transformObjAttr.ToPlainText());
+
+			if (splitTransform.IsT1)
+			{
+				return new CallState(Errors.ErrorObjectAttributeString);
+			}
+
+			var transformationObject = await
+				parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
+					executor,
+					executor,
+					splitTransform.AsT0.db,
+					LocateFlags.All);
+
+			if (transformationObject.IsError)
+			{
+				return transformationObject.AsError;
+			}
+
+			actualTransformationObject = transformationObject.AsSharpObject;
+			actualTransformAttribute = splitTransform.AsT0.Attribute;
+		}
+
+		if (hasTransform && hasNull)
+		{
+			var splitNull = HelperFunctions.SplitObjectAndAttr(transformObjAttr.ToPlainText());
+
+			if (splitNull.IsT1)
+			{
+				return new CallState(Errors.ErrorObjectAttributeString);
+			}
+
+			actualNullAttribute = splitNull.AsT0.Attribute;
+
+			var nullObject = await
+				parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
+					executor,
+					executor,
+					splitNull.AsT0.db,
+					LocateFlags.All);
+
+			if (nullObject.IsError)
+			{
+				return nullObject.AsError;
+			}
+		}
+
+		if (hasTransform)
+		{
+			var safeOpen = Regex.Escape(open.ToPlainText());
+			var safeClose = Regex.Escape(close.ToPlainText());
+			var pattern = SpeechPatternCache.GetOrAdd((safeOpen, safeClose),
+				_ => new Regex($"{safeOpen}(?<Content>[^{safeClose}]){safeClose}")
+			);
+
+			var contents = pattern.Matches(speakString.ToPlainText());
+			var markupContents = contents
+				.Select(x => x.Groups["Content"]);
+
+			foreach (var markupContent in markupContents)
+			{
+				var content = MModule.substring(markupContent.Index, markupContent.Length, speakString);
+
+				if (actualNullAttribute is not null)
+				{
+					var nullEvaluated = await parser.AttributeService.EvaluateAttributeFunctionAsync(
+						parser, executor, actualNullObject!, actualNullAttribute,
+						new Dictionary<string, CallState>
+						{
+							{ "0", args["0"] },
+							{ "1", new CallState(MModule.single(speakerObject.Object().DBRef.ToString())) },
+							{ "2", new CallState(content) }
+						});
+
+					if (nullEvaluated.Truthy()) continue;
+				}
+
+				var evaluated = await parser.AttributeService.EvaluateAttributeFunctionAsync(
+					parser, executor, actualTransformationObject!, actualTransformAttribute ?? string.Empty,
+					new Dictionary<string, CallState>
+					{
+						{ "0", args["0"] },
+						{ "1", new CallState(MModule.single(speakerObject.Object().DBRef.ToString())) },
+						{ "2", new CallState(content) }
+					});
+
+				speakString = MModule.replace(
+					speakString,
+					evaluated,
+					markupContent.Index,
+					markupContent.Length);
+			}
+		}
+		else
+		{
+			concat = MModule.concat(concat, speakString);
+		}
+
+		if (messageType is INotifyService.NotificationType.Say)
+		{
+			concat = MModule.concat(concat, close);
+		}
+
+		return new CallState(concat);
 	}
 
 	[SharpFunction(Name = "STRINSERT", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular)]
@@ -102,7 +270,7 @@ public static partial class Functions
 	{
 		throw new NotImplementedException();
 	}
-	
+
 	[SharpFunction(Name = "strcat", Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Concat(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(new(parser.CurrentState.ArgumentsOrdered
@@ -133,13 +301,15 @@ public static partial class Functions
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "ALPHAMAX", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "ALPHAMAX", MinArgs = 1, MaxArgs = int.MaxValue,
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> AlphaMax(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "ALPHAMIN", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "ALPHAMIN", MinArgs = 1, MaxArgs = int.MaxValue,
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> AlphaMin(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
@@ -232,15 +402,34 @@ public static partial class Functions
 	[SharpFunction(Name = "FLIP", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Flip(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var arg0 = parser.CurrentState.Arguments["0"].Message;
+		var split = MModule.split("", arg0);
+		return new ValueTask<CallState>(new CallState(MModule.multiple(split.Reverse())));
 	}
 
 	[SharpFunction(Name = "FOREACH", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> ForEach(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		//  foreach([<object>/]<attribute>, <string>[, <start>[, <end>]])
+		
+		var objAttr = parser.CurrentState.Arguments["0"].Message;
+		var str = parser.CurrentState.Arguments["1"].Message;
+		var start = NoParseDefaultNoParseArgument(parser.CurrentState.Arguments, 2, " ");
+		var end = NoParseDefaultNoParseArgument(parser.CurrentState.Arguments, 3, " ");
+		var split = MModule.split("", str);
+
+		var newStr = MModule.empty();
+
+		foreach (var character in split)
+		{
+			// var parserEval = parser.AttributeService.EvaluateAttributeFunctionAsync(parser, executor, obj, attribu)
+			
+			newStr = MModule.concat(newStr, character);
+		}
+
 		throw new NotImplementedException();
 	}
-	
+
 
 	[SharpFunction(Name = "decompose", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Decompose(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -248,7 +437,8 @@ public static partial class Functions
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "FORMDECODE", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "FORMDECODE", MinArgs = 1, MaxArgs = 3,
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> FormDecode(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
@@ -266,7 +456,7 @@ public static partial class Functions
 		var parsedIfElse = await parser.CurrentState.Arguments["0"].ParsedMessage();
 		var truthy = Predicates.Truthy(parsedIfElse!);
 		var result = CallState.Empty;
-		
+
 		if (truthy)
 		{
 			result = await parser.FunctionParse(parser.CurrentState.Arguments["1"].Message!);
@@ -275,7 +465,7 @@ public static partial class Functions
 		{
 			result = await parser.FunctionParse(arg2.Message!);
 		}
-		
+
 		return result!;
 	}
 
@@ -489,7 +679,8 @@ public static partial class Functions
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "TEXTSEARCH", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "TEXTSEARCH", MinArgs = 2, MaxArgs = 3,
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> TextSearch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();

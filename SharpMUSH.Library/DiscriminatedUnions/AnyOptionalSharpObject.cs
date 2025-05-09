@@ -23,4 +23,11 @@ public class AnyOptionalSharpObject : OneOfBase<SharpPlayer, SharpRoom, SharpExi
 	public SharpRoom AsRoom => AsT1;
 	public SharpExit AsExit => AsT2;
 	public SharpThing AsThing => AsT3;
+	public AnySharpObject Known => Match(
+		player => new AnySharpObject(player),
+		room => new AnySharpObject(room),
+		exit => new AnySharpObject(exit),
+		thing => new AnySharpObject(thing),
+		_ => throw new ArgumentOutOfRangeException()
+		);
 }

@@ -1,6 +1,7 @@
 ﻿using OneOf;
 using OneOf.Types;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Library.Services;
 
@@ -38,4 +39,7 @@ public interface IAttributeService
 	ValueTask<OneOf<Success, Error<string>>> SetAttributeFlagAsync(AnySharpObject executor, AnySharpObject obj, string attribute, string flag);
 
 	ValueTask<OneOf<Success, Error<string>>> UnsetAttributeFlagAsync(AnySharpObject executor, AnySharpObject obj, string attribute, string flag);
+
+	ValueTask<MString> EvaluateAttributeFunctionAsync(IMUSHCodeParser parser, AnySharpObject executor, AnySharpObject obj,
+		string attribute, Dictionary<string, CallState> args, bool evalParent = true, bool ignorePermissions = false);
 }

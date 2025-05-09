@@ -1,4 +1,5 @@
-﻿using System.Collections.Immutable;
+﻿using System.Collections.Concurrent;
+using System.Collections.Immutable;
 using Mediator;
 using Microsoft.FSharp.Core;
 using OneOf;
@@ -8,6 +9,7 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Library.Services;
@@ -62,6 +64,40 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 
 		return new None();
 	}
+
+	public async ValueTask<MString> EvaluateAttributeFunctionAsync(IMUSHCodeParser parser, AnySharpObject executor, AnySharpObject obj,
+		string attribute, Dictionary<string, CallState> args, bool evalParent = true, bool ignorePermissions = false)
+	{
+		var realExecutor = executor;
+		
+		if (ignorePermissions)
+		{
+			var maybeOne = await parser.Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
+			realExecutor = maybeOne.Known;
+		}
+		
+		var attr = await GetAttributeAsync(realExecutor, obj, attribute, IAttributeService.AttributeMode.Execute, evalParent);
+		if (attr.IsError)
+		{
+			return MModule.single(attr.AsError.Value);
+		}
+
+		if (attr.IsNone)
+		{
+			return MModule.single(Errors.ErrorNoSuchAttribute);
+		}
+		
+		var state = parser.CurrentState with
+		{
+			Arguments = new ConcurrentDictionary<string, CallState>(args),
+			CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attr.AsAttribute.LongName!),
+		};
+
+		parser.Push(state);
+		var result = await parser.FunctionParse(attr.AsAttribute.Value);
+		_ = parser.State.Pop();
+		return result!.Message!;
+	} 
 
 	public async ValueTask<SharpAttributesOrError> GetVisibleAttributesAsync(AnySharpObject executor, AnySharpObject obj,
 		int depth = 1)

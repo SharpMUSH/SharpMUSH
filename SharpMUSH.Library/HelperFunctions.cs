@@ -132,11 +132,11 @@ public static partial class HelperFunctions
 	}
 	
 	/// <summary>
-	/// Takes the pattern of '#DBREF/attribute' and splits it out if possible.
+	/// Takes the pattern of 'Object/attribute' and splits it out if possible.
 	/// </summary>
-	/// <param name="objectAttr">#DBREF/Attribute</param>
-	/// <returns><see cref="DbRefAttribute"/> if it is a valid DbRef/Attribute format. Otherwise, <see cref="None"/>.</returns>
-	public static OneOf<(string db, string Attribute), bool> SplitObjectAndAttr(string objectAttr)
+	/// <param name="objectAttr">Object/Attribute</param>
+	/// <returns><see cref="DbRefAttribute"/> if it is a valid Object/Attribute format. Otherwise, <see cref="None"/>.</returns>
+	public static OneOf<(string db, string Attribute), None> SplitObjectAndAttr(string objectAttr)
 	{
 		var match = ObjectWithAttributeRegex.Match(objectAttr);
 		var obj = match.Groups["Object"].Value;
@@ -145,7 +145,7 @@ public static partial class HelperFunctions
 		var attr = match.Groups["Attribute"].Value;
 
 		return string.IsNullOrEmpty(attr) || string.IsNullOrEmpty(obj)
-			? false
+			? new None()
 			: (obj, attr);
 	}
 
