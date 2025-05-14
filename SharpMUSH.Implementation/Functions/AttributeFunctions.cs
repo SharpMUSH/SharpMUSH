@@ -85,7 +85,7 @@ public partial class Functions
 	{
 		var dbrefAndAttr = HelperFunctions.SplitObjectAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
 
-		if (dbrefAndAttr is { IsT1: true, AsT1: false })
+		if (dbrefAndAttr is { IsT1: true })
 		{
 			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
 		}
@@ -153,7 +153,7 @@ public partial class Functions
 	{
 		var dbrefAndAttr = HelperFunctions.SplitObjectAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
 
-		if (dbrefAndAttr is { IsT1: true, AsT1: false })
+		if (dbrefAndAttr is { IsT1: true })
 		{
 			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
 		}
@@ -447,7 +447,7 @@ public partial class Functions
 	{
 		var dbrefAndAttr = HelperFunctions.SplitObjectAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
 
-		if (dbrefAndAttr is { IsT1: true, AsT1: false })
+		if (dbrefAndAttr is { IsT1: true })
 		{
 			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
 		}
@@ -513,7 +513,7 @@ public partial class Functions
 	{
 		var dbrefAndAttr = HelperFunctions.SplitObjectAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
 
-		if (dbrefAndAttr is { IsT1: true, AsT1: false })
+		if (dbrefAndAttr is { IsT1: true })
 		{
 			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
 		}
