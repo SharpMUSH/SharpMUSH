@@ -26,7 +26,7 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 	{
 		// TODO: Check if that is a valid attribute format.
 
-		var curObj = obj.Object();
+		var curObj = obj;
 		var attributePath = attribute.Split('`');
 
 		Func<AnySharpObject, AnySharpObject, SharpAttribute[], ValueTask<bool>> permissionPredicate = mode switch
@@ -42,7 +42,7 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 			_ => throw new InvalidOperationException(nameof(IAttributeService.AttributeMode))
 		};
 
-		while (curObj is not null)
+		while (curObj?.Object() is not null)
 		{
 			var attr = await mediator.Send(new GetAttributeQuery(obj.Object().DBRef, attributePath));
 			var attrArr = attr?.ToArray();
@@ -59,24 +59,32 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 				return new None();
 			}
 
-			curObj = await curObj.Parent.WithCancellation(CancellationToken.None);
+			var parent = await curObj.Object().Parent.WithCancellation(CancellationToken.None);
+			if (parent.IsNone)
+			{
+				return new None();
+			}
+			
+			curObj = parent.Known;
 		}
 
 		return new None();
 	}
 
-	public async ValueTask<MString> EvaluateAttributeFunctionAsync(IMUSHCodeParser parser, AnySharpObject executor, AnySharpObject obj,
+	public async ValueTask<MString> EvaluateAttributeFunctionAsync(IMUSHCodeParser parser, AnySharpObject executor,
+		AnySharpObject obj,
 		string attribute, Dictionary<string, CallState> args, bool evalParent = true, bool ignorePermissions = false)
 	{
 		var realExecutor = executor;
-		
+
 		if (ignorePermissions)
 		{
 			var maybeOne = await parser.Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
 			realExecutor = maybeOne.Known;
 		}
-		
-		var attr = await GetAttributeAsync(realExecutor, obj, attribute, IAttributeService.AttributeMode.Execute, evalParent);
+
+		var attr = await GetAttributeAsync(realExecutor, obj, attribute, IAttributeService.AttributeMode.Execute,
+			evalParent);
 		if (attr.IsError)
 		{
 			return MModule.single(attr.AsError.Value);
@@ -86,7 +94,7 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		{
 			return MModule.single(Errors.ErrorNoSuchAttribute);
 		}
-		
+
 		var state = parser.CurrentState with
 		{
 			Arguments = new ConcurrentDictionary<string, CallState>(args),
@@ -97,7 +105,7 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		var result = await parser.FunctionParse(attr.AsAttribute.Value);
 		_ = parser.State.Pop();
 		return result!.Message!;
-	} 
+	}
 
 	public async ValueTask<SharpAttributesOrError> GetVisibleAttributesAsync(AnySharpObject executor, AnySharpObject obj,
 		int depth = 1)
@@ -110,6 +118,57 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 				.ToArrayAsync()
 			: (await GetVisibleAttributesAsync(attributes, executor, obj, depth))
 			.ToArray();
+	}
+
+	public async ValueTask<MString> EvaluateAttributeFunctionAsync(IMUSHCodeParser parser, AnySharpObject executor,
+		MString obj, MString attribute,
+		Dictionary<string, CallState> args, bool evalParent = true, bool ignorePermissions = false)
+	{
+		// #apply evaluations. 
+		if (obj.ToPlainText().StartsWith("#APPLY", StringComparison.InvariantCultureIgnoreCase))
+		{
+			var argN = 1;
+			var after = obj.ToPlainText().Remove(0, 6);
+			if (!string.IsNullOrWhiteSpace(after) && !int.TryParse(after, out argN))
+			{
+				// Invalid argument to #apply 
+				return MModule.single(string.Format(Errors.ErrorBadArgumentFormat, "#APPLY"));
+			}
+
+			var slimArgs = Enumerable
+				.Range(0, argN)
+				.Select(x => x.ToString())
+				.ToDictionary(argK => argK, argK => args[argK]);
+
+			return MModule.single("#-1 NOT YET IMPLEMENTED");
+
+			// Check if proper function name in the attribute section.
+			// Check if enough arguments are being passed to the function based on the number after #apply.
+			// This is where we really need a proper attribute library access layer, similar to commands.
+
+			// CallFunction must be Exposed by IMUSHCodeParser.
+			// Further work needed before this can be implemented properly.
+		}
+
+		// Standard Object/Attribute evaluation.
+		if (!obj.ToPlainText().Equals("#LAMBDA", StringComparison.InvariantCultureIgnoreCase))
+		{
+			return await EvaluateAttributeFunctionAsync(parser, executor, obj, attribute, args, evalParent,
+				ignorePermissions);
+		}
+
+		// #LAMBDA path.
+		var state = parser.CurrentState with
+		{
+			Arguments = new ConcurrentDictionary<string, CallState>(args),
+		};
+
+		parser.Push(state);
+		var result = await parser.FunctionParse(attribute);
+		_ = parser.State.Pop();
+
+		return result!.Message!;
+
 	}
 
 	public async ValueTask<ImmutableList<SharpAttribute>> GetVisibleAttributesAsync(
@@ -153,7 +212,8 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 
 		return attributes is null
 			? Enumerable.Empty<SharpAttribute>().ToArray()
-			: await attributes.ToAsyncEnumerable().WhereAwait(async x => await ps.CanViewAttribute(executor, obj, x)).ToArrayAsync();
+			: await attributes.ToAsyncEnumerable().WhereAwait(async x => await ps.CanViewAttribute(executor, obj, x))
+				.ToArrayAsync();
 	}
 
 	public async ValueTask<OneOf<Success, Error<string>>> SetAttributeFlagAsync(AnySharpObject executor,
@@ -173,14 +233,15 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 
 		var returnedFlag =
 			(await mediator.Send(new GetAttributeFlagsQuery())).Where(x => x.Name == flag || x.Symbol == flag).ToArray();
-		
+
 		if (returnedFlag.Length == 0)
 		{
 			return new Error<string>("Flag Found");
 		}
 
 		// TODO: What if it's already set?
-		await mediator.Send(new SetAttributeFlagCommand(obj.Object().DBRef, returnedAttribute.AsAttribute, returnedFlag.First()));
+		await mediator.Send(new SetAttributeFlagCommand(obj.Object().DBRef, returnedAttribute.AsAttribute,
+			returnedFlag.First()));
 
 		return new Success();
 	}
@@ -202,14 +263,15 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 
 		var returnedFlag =
 			(await mediator.Send(new GetAttributeFlagsQuery())).Where(x => x.Name == flag || x.Symbol == flag).ToArray();
-		
+
 		if (returnedFlag.Length == 0)
 		{
 			return new Error<string>("Flag Found");
 		}
 
 		// TODO: What if it's already set?
-		await mediator.Send(new UnsetAttributeFlagCommand(obj.Object().DBRef, returnedAttribute.AsAttribute, returnedFlag.First()));
+		await mediator.Send(new UnsetAttributeFlagCommand(obj.Object().DBRef, returnedAttribute.AsAttribute,
+			returnedFlag.First()));
 
 		return new Success();
 	}
@@ -228,7 +290,8 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		var attr = await mediator.Send(new GetAttributeQuery(obj.Object().DBRef, attrPath));
 
 		// TODO: Fix, object permissions also neede  d.
-		var permission = attr == null || await attr.ToAsyncEnumerable().AllAwaitAsync(async x => await ps.CanSet(executor, obj, x));
+		var permission = attr == null ||
+		                 await attr.ToAsyncEnumerable().AllAwaitAsync(async x => await ps.CanSet(executor, obj, x));
 
 		if (!permission)
 		{
@@ -266,7 +329,8 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		var attr = await mediator.Send(new GetAttributesQuery(obj.Object().DBRef, attributePattern));
 		var attrArr = attr?.ToArray();
 
-		var permission = attrArr == null || await attrArr.ToAsyncEnumerable().AllAwaitAsync(async x => await ps.CanSet(executor, obj, x));
+		var permission = attrArr == null ||
+		                 await attrArr.ToAsyncEnumerable().AllAwaitAsync(async x => await ps.CanSet(executor, obj, x));
 
 		if (!permission)
 		{

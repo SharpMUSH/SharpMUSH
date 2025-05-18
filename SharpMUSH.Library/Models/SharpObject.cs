@@ -2,6 +2,7 @@
 using System.Collections.Immutable;
 using DotNext.Threading;
 using FSharpPlus.Control;
+using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Library.Models;
 
@@ -47,7 +48,7 @@ public class SharpObject
 	// RELATIONSHIP
 	// TODO: Consider using AnySharpObject instead of SharpObject
 	[JsonIgnore]
-	public required AsyncLazy<SharpObject?> Parent { get; set; }
+	public required AsyncLazy<AnyOptionalSharpObject> Parent { get; set; }
 	
 	// RELATIONSHIP
 	// TODO: Consider using AnySharpObject instead of SharpObject

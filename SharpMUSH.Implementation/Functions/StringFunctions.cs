@@ -1,12 +1,10 @@
-﻿using System.Collections.Concurrent;
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 using DotNext.Collections.Generic;
 using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
-using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 
@@ -14,7 +12,7 @@ namespace SharpMUSH.Implementation.Functions;
 
 public static partial class Functions
 {
-	public static Dictionary<(string, string), Regex> SpeechPatternCache = new();
+	private static readonly Dictionary<(string, string), Regex> SpeechPatternCache = new();
 
 	[SharpFunction(Name = "after", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> After(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -422,6 +420,8 @@ public static partial class Functions
 
 		foreach (var character in split)
 		{
+			// Method Pattern needs to change, attribute must be a native MString to support Lambda, 
+			// so it's easier to do this split in a common code.
 			// var parserEval = parser.AttributeService.EvaluateAttributeFunctionAsync(parser, executor, obj, attribu)
 			
 			newStr = MModule.concat(newStr, character);

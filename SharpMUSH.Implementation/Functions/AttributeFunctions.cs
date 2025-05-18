@@ -3,6 +3,7 @@ using Core.Arango.Protocol;
 using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -513,55 +514,42 @@ public partial class Functions
 	{
 		var dbrefAndAttr = HelperFunctions.SplitObjectAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
 
-		if (dbrefAndAttr is { IsT1: true })
-		{
-			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
-		}
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 
-		var (dbref, attribute) = dbrefAndAttr.AsT0;
-
-		var executor =
-			(await parser.Mediator.Send(new GetObjectNodeQuery(parser.CurrentState.Executor!.Value))).WithoutNone();
-		var maybeDBref =
-			await parser.LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, dbref, LocateFlags.All);
-
-		if (!maybeDBref.IsValid())
-		{
-			return new CallState(maybeDBref.IsError ? maybeDBref.AsError.Value : Errors.ErrorCantSeeThat);
-		}
-
-		var actualObject = maybeDBref.WithoutError().WithoutNone();
-
-		var maybeAttr = await parser.AttributeService.GetAttributeAsync(
-			executor,
-			actualObject,
-			attribute,
-			mode: IAttributeService.AttributeMode.Execute,
-			parent: false);
-
-		if (!maybeAttr.IsAttribute)
-		{
-			return maybeAttr.AsCallStateError;
-		}
-
-		var get = maybeAttr.AsAttribute;
-
-		var newParser = parser.Push(parser.CurrentState with
-		{
-			CurrentEvaluation = new DBAttribute(actualObject.Object().DBRef, get.Name),
-			Arguments = new ConcurrentDictionary<string, CallState>(parser.CurrentState.Arguments.Skip(1)
+		var result = await parser.AttributeService.EvaluateAttributeFunctionAsync(parser, executor, MModule.single(dbrefAndAttr.AsT0.db),
+			MModule.single(dbrefAndAttr.AsT0.Attribute), parser.CurrentState.Arguments.Skip(1)
 				.Select(
 					(value, i) => new KeyValuePair<string, CallState>(i.ToString(), value.Value))
-				.ToDictionary())
-		});
+				.ToDictionary(), true, false);
 
-		return (await newParser.FunctionParse(get.Value))!;
+		return new CallState(result);
 	}
 
 	[SharpFunction(Name = "PFUN", MinArgs = 1, MaxArgs = 33, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> ParentFunction(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> ParentFunction(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var dbrefAndAttr = HelperFunctions.SplitObjectAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var parentObject = await executor.Object().Parent.WithCancellation(CancellationToken.None);
+
+		if (parentObject.IsNone)
+		{
+			return new CallState("#-1 OBJECT HAS NO PARENT");
+		}
+		
+		// TODO: CHECK TRUST AGAINST OBJECT
+		// TODO: Logic should live in EvaluateAttributeFunctionAsync, as it also needs to start considering 
+		// 'INTERNAL' etc attributes, that are not actually inhertable.
+		// Also, debug?
+
+		var result = await parser.AttributeService.EvaluateAttributeFunctionAsync(parser, parentObject.Known, MModule.single(dbrefAndAttr.AsT0.db),
+			MModule.single(dbrefAndAttr.AsT0.Attribute), parser.CurrentState.Arguments.Skip(1)
+				.Select(
+					(value, i) => new KeyValuePair<string, CallState>(i.ToString(), value.Value))
+				.ToDictionary(), true, false);
+
+		return new CallState(result);
 	}
 
 	[SharpFunction(Name = "ULAMBDA", MinArgs = 1, MaxArgs = 33, Flags = FunctionFlags.Regular)]

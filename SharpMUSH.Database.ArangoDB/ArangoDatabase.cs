@@ -775,10 +775,14 @@ public class ArangoDatabase(
 		return populatedOwner.AsPlayer;
 	}
 
-	public async ValueTask<SharpObject?> GetParentAsync(string id)
-		=> (await arangoDb.Query.ExecuteAsync<SharpObject>(handle,
-				$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphParents} RETURN v", cache: true))
+	public async ValueTask<AnyOptionalSharpObject> GetParentAsync(string id)
+	{
+		// TODO: Optimize
+		var parentId = (await arangoDb.Query.ExecuteAsync<int>(handle,
+				$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphParents} RETURN v._key", cache: true))
 			.FirstOrDefault();
+		return await GetObjectNodeAsync(new DBRef(parentId));
+	}
 
 	private async ValueTask<IEnumerable<SharpObject?>> GetChildrenAsync(string id)
 		=> await arangoDb.Query.ExecuteAsync<SharpObject>(handle,

@@ -117,7 +117,7 @@ public interface ISharpDatabase
 	/// </summary>
 	/// <param name="id">Child ID</param>
 	/// <returns>The representing parent</returns>
-	ValueTask<SharpObject?> GetParentAsync(string id);
+	ValueTask<AnyOptionalSharpObject> GetParentAsync(string id);
 
 	/// <summary>
 	/// Get the parent of an object.

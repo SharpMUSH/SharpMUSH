@@ -20,7 +20,7 @@ public static partial class Functions
 		_knownBuiltInMethods = typeof(Functions)
 			.GetMethods()
 			.Select(m => (Method: m,
-				Attribute: m.GetCustomAttribute(typeof(SharpFunctionAttribute), false) as SharpFunctionAttribute))
+				Attribute: m.GetCustomAttribute<SharpFunctionAttribute>(false)))
 			.Where(x => x.Attribute is not null)
 			.SelectMany(y =>
 				(Configurable.FunctionAliases.TryGetValue(y.Attribute!.Name, out var aliases)

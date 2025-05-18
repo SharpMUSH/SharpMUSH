@@ -221,7 +221,7 @@ public static partial class Commands
 		await parser.NotifyService.Notify(enactor, $"Owner: {ownerName.Hilight()}" +
 		                                           $"(#{obj.DBRef.Number}{string.Join(string.Empty, ownerObjFlags.Select(x => x.Symbol))})");
 		// TODO: Zone & Money
-		await parser.NotifyService.Notify(enactor, $"Parent: {objParent?.Name ?? "*NOTHING*"}");
+		await parser.NotifyService.Notify(enactor, $"Parent: {(objParent.IsNone ? "*NOTHING*" : objParent.Known.Object().Name)}");
 		// TODO: LOCK LIST
 		await parser.NotifyService.Notify(enactor, $"Powers: {string.Join(" ", objPowers.Select(x => x.Name))}");
 		// TODO: Channels
