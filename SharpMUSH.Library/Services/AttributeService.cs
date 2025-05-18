@@ -121,15 +121,20 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 	}
 
 	public async ValueTask<MString> EvaluateAttributeFunctionAsync(IMUSHCodeParser parser, AnySharpObject executor,
-		MString obj, MString attribute,
+		MString objAndAttribute,
 		Dictionary<string, CallState> args, bool evalParent = true, bool ignorePermissions = false)
 	{
+		var slash = MModule.indexOf(objAndAttribute, MModule.single("/"));
+		// if slash is -1, but there is text, grab from the executor! This uses the other Evaluation Method.
+		
+		var obj = MModule.substring(0, slash, objAndAttribute)!;
+		var attribute = MModule.substring(slash, objAndAttribute.Length-slash, objAndAttribute)!;
+		
 		// #apply evaluations. 
 		if (obj.ToPlainText().StartsWith("#APPLY", StringComparison.InvariantCultureIgnoreCase))
 		{
 			var argN = 1;
-			var after = obj.ToPlainText().Remove(0, 6);
-			if (!string.IsNullOrWhiteSpace(after) && !int.TryParse(after, out argN))
+			if (!string.IsNullOrWhiteSpace(attribute.ToPlainText()) && !int.TryParse(attribute.ToPlainText(), out argN))
 			{
 				// Invalid argument to #apply 
 				return MModule.single(string.Format(Errors.ErrorBadArgumentFormat, "#APPLY"));
@@ -153,7 +158,7 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		// Standard Object/Attribute evaluation.
 		if (!obj.ToPlainText().Equals("#LAMBDA", StringComparison.InvariantCultureIgnoreCase))
 		{
-			return await EvaluateAttributeFunctionAsync(parser, executor, obj, attribute, args, evalParent,
+			return await EvaluateAttributeFunctionAsync(parser, executor, objAndAttribute, args, evalParent,
 				ignorePermissions);
 		}
 

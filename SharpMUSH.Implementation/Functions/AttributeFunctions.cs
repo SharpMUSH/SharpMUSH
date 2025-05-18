@@ -512,12 +512,11 @@ public partial class Functions
 	[SharpFunction(Name = "ufun", MinArgs = 1, MaxArgs = 33, Flags = FunctionFlags.Regular)]
 	public static async ValueTask<CallState> UserAttributeFunction(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var dbrefAndAttr = HelperFunctions.SplitObjectAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+		var dbrefAndAttr = parser.CurrentState.Arguments["0"].Message!;
 
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 
-		var result = await parser.AttributeService.EvaluateAttributeFunctionAsync(parser, executor, MModule.single(dbrefAndAttr.AsT0.db),
-			MModule.single(dbrefAndAttr.AsT0.Attribute), parser.CurrentState.Arguments.Skip(1)
+		var result = await parser.AttributeService.EvaluateAttributeFunctionAsync(parser, executor, dbrefAndAttr, parser.CurrentState.Arguments.Skip(1)
 				.Select(
 					(value, i) => new KeyValuePair<string, CallState>(i.ToString(), value.Value))
 				.ToDictionary(), true, false);
@@ -528,7 +527,7 @@ public partial class Functions
 	[SharpFunction(Name = "PFUN", MinArgs = 1, MaxArgs = 33, Flags = FunctionFlags.Regular)]
 	public static async ValueTask<CallState> ParentFunction(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var dbrefAndAttr = HelperFunctions.SplitObjectAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+		var dbrefAndAttr = parser.CurrentState.Arguments["0"].Message!;
 
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		var parentObject = await executor.Object().Parent.WithCancellation(CancellationToken.None);
@@ -543,8 +542,9 @@ public partial class Functions
 		// 'INTERNAL' etc attributes, that are not actually inhertable.
 		// Also, debug?
 
-		var result = await parser.AttributeService.EvaluateAttributeFunctionAsync(parser, parentObject.Known, MModule.single(dbrefAndAttr.AsT0.db),
-			MModule.single(dbrefAndAttr.AsT0.Attribute), parser.CurrentState.Arguments.Skip(1)
+		var result = await parser.AttributeService.EvaluateAttributeFunctionAsync(parser, parentObject.Known, 
+			dbrefAndAttr, 
+			parser.CurrentState.Arguments.Skip(1)
 				.Select(
 					(value, i) => new KeyValuePair<string, CallState>(i.ToString(), value.Value))
 				.ToDictionary(), true, false);

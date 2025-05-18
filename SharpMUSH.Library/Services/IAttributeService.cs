@@ -43,7 +43,6 @@ public interface IAttributeService
 	ValueTask<MString> EvaluateAttributeFunctionAsync(IMUSHCodeParser parser, AnySharpObject executor, AnySharpObject obj,
 		string attribute, Dictionary<string, CallState> args, bool evalParent = true, bool ignorePermissions = false);
 	
-	ValueTask<MString> EvaluateAttributeFunctionAsync(IMUSHCodeParser parser, AnySharpObject executor, MString  obj,
-		MString attribute, Dictionary<string, CallState> args, bool evalParent = true, bool ignorePermissions = false);
+	ValueTask<MString> EvaluateAttributeFunctionAsync(IMUSHCodeParser parser, AnySharpObject executor, MString objAndAttribute, Dictionary<string, CallState> args, bool evalParent = true, bool ignorePermissions = false);
 
 }

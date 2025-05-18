@@ -17,7 +17,8 @@ public class LambdaUnitTests : BaseUnitTest
 	}
 
 	[Test]
-	// [Arguments("u(#lambda/add(1,2))", "3")] // NOT YET SUCCESSFUL. Somehow returns EMPTY.
+	[Arguments("u(#lambda/add(1,2))", "3")] // NOT YET SUCCESSFUL. Somehow returns EMPTY.
+	[Arguments("u(#lambda/[add(1,2)])", "3")] 
 	[Arguments("u(#lambda/3)", "3")]
 	[Arguments("3", "3")] 
 	public async Task BasicLambdaTest(string call, string expected)
