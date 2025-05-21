@@ -128,7 +128,7 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		// if slash is -1, but there is text, grab from the executor! This uses the other Evaluation Method.
 		
 		var obj = MModule.substring(0, slash, objAndAttribute)!;
-		var attribute = MModule.substring(slash, objAndAttribute.Length-slash, objAndAttribute)!;
+		var attribute = MModule.substring(slash+1, objAndAttribute.Length-(slash+1), objAndAttribute)!;
 		
 		// #apply evaluations. 
 		if (obj.ToPlainText().StartsWith("#APPLY", StringComparison.InvariantCultureIgnoreCase))
