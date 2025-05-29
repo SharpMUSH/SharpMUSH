@@ -26,6 +26,12 @@ public static partial class Functions
 		return ValueTask.FromResult(new CallState(result));
 	}
 
+	[SharpFunction(Name = "lit", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Literal | FunctionFlags.NoParse)]
+	public static ValueTask<CallState> Lit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		return ValueTask.FromResult(parser.CurrentState.Arguments["0"]);
+	}
+
 	[SharpFunction(Name = "SPEAK", MinArgs = 2, MaxArgs = 7, Flags = FunctionFlags.Regular)]
 	public static async ValueTask<CallState> Speak(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{

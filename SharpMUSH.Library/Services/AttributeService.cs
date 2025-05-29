@@ -1,7 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using Mediator;
-using Microsoft.FSharp.Core;
 using OneOf;
 using OneOf.Types;
 using SharpMUSH.Library.Commands.Database;
@@ -41,8 +40,9 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 			IAttributeService.AttributeMode.Execute => Errors.ErrorAttrEvalPermissions,
 			_ => throw new InvalidOperationException(nameof(IAttributeService.AttributeMode))
 		};
-
-		while (curObj?.Object() is not null)
+		
+		// TODO: This code doesn't quite look right.
+		while (true)
 		{
 			var attr = await mediator.Send(new GetAttributeQuery(obj.Object().DBRef, attributePath));
 			var attrArr = attr?.ToArray();
@@ -67,8 +67,6 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 			
 			curObj = parent.Known;
 		}
-
-		return new None();
 	}
 
 	public async ValueTask<MString> EvaluateAttributeFunctionAsync(IMUSHCodeParser parser, AnySharpObject executor,
@@ -124,11 +122,9 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		MString objAndAttribute,
 		Dictionary<string, CallState> args, bool evalParent = true, bool ignorePermissions = false)
 	{
-		var slash = MModule.indexOf(objAndAttribute, MModule.single("/"));
-		// if slash is -1, but there is text, grab from the executor! This uses the other Evaluation Method.
-		
-		var obj = MModule.substring(0, slash, objAndAttribute)!;
-		var attribute = MModule.substring(slash+1, objAndAttribute.Length-(slash+1), objAndAttribute)!;
+		var split = MModule.split("/", objAndAttribute);
+		var obj = split.First()!;
+		var attribute = MModule.multiple(split.Skip(1))!;
 		
 		// #apply evaluations. 
 		if (obj.ToPlainText().StartsWith("#APPLY", StringComparison.InvariantCultureIgnoreCase))
@@ -152,7 +148,7 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 			// This is where we really need a proper attribute library access layer, similar to commands.
 
 			// CallFunction must be Exposed by IMUSHCodeParser.
-			// Further work needed before this can be implemented properly.
+			// Further work is needed before this can be implemented properly.
 		}
 
 		// Standard Object/Attribute evaluation.
@@ -294,7 +290,7 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		var attrPath = attribute.Split('`');
 		var attr = await mediator.Send(new GetAttributeQuery(obj.Object().DBRef, attrPath));
 
-		// TODO: Fix, object permissions also neede  d.
+		// TODO: Fix, object permissions also needed.
 		var permission = attr == null ||
 		                 await attr.ToAsyncEnumerable().AllAwaitAsync(async x => await ps.CanSet(executor, obj, x));
 
