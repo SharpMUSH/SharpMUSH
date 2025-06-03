@@ -91,7 +91,7 @@ public class BaseBenchmark
 			IterationRegisters: new ConcurrentStack<IterationWrapper<MString>>(),
 			RegexRegisters: new ConcurrentStack<Dictionary<string, MString>>(),
 			CurrentEvaluation: null,
-			0,
+			ParserFunctionDepth: 0,
 			Function: null,
 			Command: "think",
 			Switches: [],

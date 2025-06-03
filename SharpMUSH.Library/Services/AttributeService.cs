@@ -95,7 +95,7 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 
 		var state = parser.CurrentState with
 		{
-			Arguments = new ConcurrentDictionary<string, CallState>(args),
+			Arguments = args,
 			CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attr.AsAttribute.LongName!),
 		};
 
@@ -138,8 +138,7 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 
 			var slimArgs = Enumerable
 				.Range(0, argN)
-				.Select(x => x.ToString())
-				.ToDictionary(argK => argK, argK => args[argK]);
+				.ToDictionary(argK => argK.ToString(), argK => args[argK.ToString()]);
 
 			return MModule.single("#-1 NOT YET IMPLEMENTED");
 
@@ -159,10 +158,7 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		}
 
 		// #LAMBDA path.
-		var state = parser.CurrentState with
-		{
-			Arguments = new ConcurrentDictionary<string, CallState>(args),
-		};
+		var state = parser.CurrentState with { Arguments = args };
 
 		parser.Push(state);
 		var result = await parser.FunctionParse(attribute);

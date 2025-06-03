@@ -117,7 +117,7 @@ public class BaseUnitTest
 				IterationRegisters: new(),
 				RegexRegisters: new(),
 				CurrentEvaluation: null,
-				0,
+				ParserFunctionDepth: 0,
 				Function: null,
 				Command: "think",
 				Switches: [],

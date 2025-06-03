@@ -123,7 +123,7 @@ public partial class Functions
 		var looker = executor;
 		await ValueTask.CompletedTask;
 		
-		if(!parser.CurrentState.Arguments.IsEmpty)
+		if(parser.CurrentState.Arguments.Count > 0)
 		{
 			// var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 			// `-> looker

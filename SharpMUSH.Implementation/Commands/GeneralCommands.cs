@@ -36,7 +36,7 @@ public static partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		var args = parser.CurrentState.Arguments;
 
-		if (args.IsEmpty)
+		if (parser.CurrentState.Arguments.Count == 0)
 		{
 			return new None();
 		}
@@ -297,7 +297,7 @@ public static partial class Commands
 	{
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
-		if (args.IsEmpty)
+		if (parser.CurrentState.Arguments.Count == 0)
 		{
 			await parser.NotifyService.Notify(executor, "You can't go that way.");
 			return CallState.Empty;
@@ -456,7 +456,7 @@ public static partial class Commands
 		var notifyType = "ANY";
 		var args = parser.CurrentState.Arguments;
 
-		if (args.IsEmpty || string.IsNullOrEmpty(args["0"].Message?.ToPlainText()))
+		if ((parser.CurrentState.Arguments.Count == 0) || string.IsNullOrEmpty(args["0"].Message?.ToPlainText()))
 		{
 			await parser.NotifyService.Notify(executor, "You must specify an object to use for the semaphore.");
 			return new None();
