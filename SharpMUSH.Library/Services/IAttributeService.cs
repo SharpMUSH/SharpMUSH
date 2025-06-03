@@ -30,7 +30,7 @@ public interface IAttributeService
 
 	ValueTask<OneOf<Success, Error<string>>> SetAttributeAsync(AnySharpObject executor, AnySharpObject obj, string attribute, MString value);
 
-	ValueTask<OneOf<Success, Error<string>>> ClearAttributeAsync(AnySharpObject executor, AnySharpObject obj, string attribute, AttributeClearMode mode);
+	ValueTask<OneOf<Success, Error<string>>> ClearAttributeAsync(AnySharpObject executor, AnySharpObject obj, string attribute, AttributePatternMode patternMode, AttributeClearMode clearMode);
 
 	ValueTask<SharpAttributesOrError> GetVisibleAttributesAsync(AnySharpObject executor, AnySharpObject obj, int depth = 1);
 

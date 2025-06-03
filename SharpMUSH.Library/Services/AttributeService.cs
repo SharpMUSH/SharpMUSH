@@ -196,20 +196,14 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		// TODO: Implement Pattern Modes
 		// TODO: GetAttributesAsync should return the full Path, not the final attribute.
 		// TODO: CanViewAttribute needs to be able to Memoize during a list check, as it's likely to be called multiple times.
-		var attributes = mode switch
-		{
-			IAttributeService.AttributePatternMode.Exact => await mediator.Send(
-				new GetAttributesQuery(obj.Object().DBRef, attributePattern)),
-			IAttributeService.AttributePatternMode.Wildcard => await mediator.Send(
-				new GetAttributesQuery(obj.Object().DBRef, attributePattern)),
-			IAttributeService.AttributePatternMode.Regex => await mediator.Send(
-				new GetAttributesQuery(obj.Object().DBRef, attributePattern)),
-			_ => throw new InvalidOperationException(nameof(IAttributeService.AttributePatternMode))
-		};
+		var attributes = await mediator.Send(
+			new GetAttributesQuery(obj.Object().DBRef, attributePattern, mode));
 
 		return attributes is null
 			? Enumerable.Empty<SharpAttribute>().ToArray()
-			: await attributes.ToAsyncEnumerable().WhereAwait(async x => await ps.CanViewAttribute(executor, obj, x))
+			: await attributes
+				.ToAsyncEnumerable()
+				.WhereAwait(async x => await ps.CanViewAttribute(executor, obj, x))
 				.ToArrayAsync();
 	}
 
@@ -308,13 +302,15 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 	/// <param name="executor"></param>
 	/// <param name="obj"></param>
 	/// <param name="attributePattern"></param>
-	/// <param name="mode"></param>
+	/// <param name="patternMode"></param>
+	/// <param name="clearMode"></param>
 	/// <returns></returns>
 	/// <exception cref="NotImplementedException"></exception>
 	public async ValueTask<OneOf<Success, Error<string>>> ClearAttributeAsync(AnySharpObject executor,
 		AnySharpObject obj,
 		string attributePattern,
-		IAttributeService.AttributeClearMode mode)
+		IAttributeService.AttributePatternMode patternMode,
+		IAttributeService.AttributeClearMode clearMode)
 	{
 		await ValueTask.CompletedTask;
 
@@ -323,7 +319,7 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 			return new Error<string>(Errors.ErrorAttrSetPermissions);
 		}
 
-		var attr = await mediator.Send(new GetAttributesQuery(obj.Object().DBRef, attributePattern));
+		var attr = await mediator.Send(new GetAttributesQuery(obj.Object().DBRef, attributePattern, patternMode));
 		var attrArr = attr?.ToArray();
 
 		var permission = attrArr == null ||
