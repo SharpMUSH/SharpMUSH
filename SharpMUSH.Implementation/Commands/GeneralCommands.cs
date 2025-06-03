@@ -34,23 +34,21 @@ public static partial class Commands
 	public static async ValueTask<Option<CallState>> Think(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
-		var args = parser.CurrentState.Arguments;
 
 		if (parser.CurrentState.Arguments.Count == 0)
 		{
 			return new None();
 		}
 
-		var output = args["0"].Message!;
-
-		await parser.NotifyService.Notify(executor, output.ToString());
+		await parser.NotifyService.Notify(executor, parser.CurrentState.Arguments["0"].Message!.ToString());
+		
 		return new None();
 	}
 
 	[SharpCommand(Name = "HUH_COMMAND", Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> HuhCommand(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownEnactorObject(parser.Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		await parser.NotifyService.Notify(executor, "Huh?  (Type \"help\" for help.)");
 		return new None();
 	}

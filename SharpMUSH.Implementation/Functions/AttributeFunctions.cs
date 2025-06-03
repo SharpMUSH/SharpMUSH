@@ -30,7 +30,7 @@ public partial class Functions
 		var enactor = (await parser.CurrentState.EnactorObject(parser.Mediator)).WithoutNone();
 		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).WithoutNone();
 
-		if (!split.TryPickT0(out var details, out var _))
+		if (!split.TryPickT0(out var details, out _))
 		{
 			return new CallState("#-1 BAD ARGUMENT FORMAT TO ATTRIB_SET");
 		}
@@ -513,7 +513,8 @@ public partial class Functions
 
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 
-		var result = await parser.AttributeService.EvaluateAttributeFunctionAsync(parser, executor, dbrefAndAttr, parser.CurrentState.Arguments.Skip(1)
+		var result = await parser.AttributeService.EvaluateAttributeFunctionAsync(parser, executor, dbrefAndAttr, 
+			parser.CurrentState.Arguments.Skip(1)
 				.Select(
 					(value, i) => new KeyValuePair<string, CallState>(i.ToString(), value.Value))
 				.ToDictionary(), true, false);

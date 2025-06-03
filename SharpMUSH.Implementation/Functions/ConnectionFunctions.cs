@@ -5,6 +5,7 @@ using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -121,7 +122,6 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		var looker = executor;
-		await ValueTask.CompletedTask;
 		
 		if(parser.CurrentState.Arguments.Count > 0)
 		{
@@ -131,12 +131,15 @@ public partial class Functions
 			// `-> 'online', 'offline', 'all'
 		}
 
-		var allConnectionsDbRefs = parser.ConnectionService
+		var allConnectionsDbRefs = await parser.ConnectionService
 			.GetAll()
 			.Where(x => x.Ref is not null)
-			.Where(x => true) // TODO: Looker CanSee
+			.ToAsyncEnumerable()
+			.WhereAwait(async x => await parser.PermissionService.CanSee(looker, (await parser.Mediator.Send(new GetObjectNodeQuery(x.Ref!.Value))).Known)) // TODO: Looker CanSee
 			.Select(x => x.Ref!.Value)
-			.Select(x => $"#{x.Number}");
+			.Select(x => $"#{x.Number}")
+			.ToArrayAsync();
+		
 		return new CallState(string.Join(" ", allConnectionsDbRefs));
 	}
 
