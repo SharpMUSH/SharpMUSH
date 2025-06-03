@@ -509,15 +509,16 @@ public partial class Functions
 	[SharpFunction(Name = "ufun", MinArgs = 1, MaxArgs = 33, Flags = FunctionFlags.Regular)]
 	public static async ValueTask<CallState> UserAttributeFunction(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var dbrefAndAttr = parser.CurrentState.Arguments["0"].Message!;
-
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 
-		var result = await parser.AttributeService.EvaluateAttributeFunctionAsync(parser, executor, dbrefAndAttr, 
-			parser.CurrentState.Arguments.Skip(1)
+		var result = await parser.AttributeService.EvaluateAttributeFunctionAsync(
+			parser, 
+			executor, 
+			objAndAttribute: parser.CurrentState.Arguments["0"].Message!, 
+			args: parser.CurrentState.Arguments.Skip(1)
 				.Select(
 					(value, i) => new KeyValuePair<string, CallState>(i.ToString(), value.Value))
-				.ToDictionary(), true, false);
+				.ToDictionary());
 
 		return new CallState(result);
 	}
