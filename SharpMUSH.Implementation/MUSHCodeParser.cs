@@ -12,7 +12,7 @@ namespace SharpMUSH.Implementation;
 
 /// <summary>
 /// Provides the parser.
-/// Each call is Synchronous, and stateful at this time.
+/// Each call is Synchronous and Stateful at this time.
 /// </summary>
 public record MUSHCodeParser(
 	ILogger<MUSHCodeParser> Logger,
@@ -67,11 +67,11 @@ public record MUSHCodeParser(
 
 	public ValueTask<CallState?> FunctionParse(MString text)
 	{
-		AntlrInputStreamSpan inputStream = new(MModule.plainText(text), nameof(FunctionParse));
+		AntlrInputStreamSpan inputStream = new(MModule.plainText(text).AsMemory(), nameof(FunctionParse));
 		SharpMUSHLexer sharpLexer = new(inputStream);
-		BufferedTokenSpanStream BufferedTokenSpanStream = new(sharpLexer);
-		BufferedTokenSpanStream.Fill();
-		SharpMUSHParser sharpParser = new(BufferedTokenSpanStream)
+		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
+		bufferedTokenSpanStream.Fill();
+		SharpMUSHParser sharpParser = new(bufferedTokenSpanStream)
 		{
 			Interpreter =
 			{
@@ -93,11 +93,11 @@ public record MUSHCodeParser(
 	public ValueTask<CallState?> CommandListParse(MString text)
 	{
 		var plaintext = MModule.plainText(text);
-		AntlrInputStreamSpan inputStream = new(plaintext, nameof(CommandListParse));
+		AntlrInputStreamSpan inputStream = new(plaintext.AsMemory(), nameof(CommandListParse));
 		SharpMUSHLexer sharpLexer = new(inputStream);
-		BufferedTokenSpanStream BufferedTokenSpanStream = new(sharpLexer);
-		BufferedTokenSpanStream.Fill();
-		SharpMUSHParser sharpParser = new(BufferedTokenSpanStream)
+		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
+		bufferedTokenSpanStream.Fill();
+		SharpMUSHParser sharpParser = new(bufferedTokenSpanStream)
 		{
 			Interpreter =
 			{
@@ -113,11 +113,11 @@ public record MUSHCodeParser(
 	public Func<ValueTask<CallState?>> CommandListParseVisitor(MString text)
 	{
 		var plaintext = MModule.plainText(text);
-		AntlrInputStreamSpan inputStream = new(plaintext, nameof(CommandListParseVisitor));
+		AntlrInputStreamSpan inputStream = new(plaintext.AsMemory(), nameof(CommandListParseVisitor));
 		SharpMUSHLexer sharpLexer = new(inputStream);
-		BufferedTokenSpanStream BufferedTokenSpanStream = new(sharpLexer);
-		BufferedTokenSpanStream.Fill();
-		SharpMUSHParser sharpParser = new(BufferedTokenSpanStream)
+		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
+		bufferedTokenSpanStream.Fill();
+		SharpMUSHParser sharpParser = new(bufferedTokenSpanStream)
 		{
 			Interpreter =
 			{
@@ -154,11 +154,11 @@ public record MUSHCodeParser(
 			Caller: handleId?.Ref,
 			Handle: handle));
 
-		AntlrInputStreamSpan inputStream = new(MModule.plainText(text), nameof(CommandParse));
+		AntlrInputStreamSpan inputStream = new(MModule.plainText(text).AsMemory(), nameof(CommandParse));
 		SharpMUSHLexer sharpLexer = new(inputStream);
-		BufferedTokenSpanStream BufferedTokenSpanStream = new(sharpLexer);
-		BufferedTokenSpanStream.Fill();
-		SharpMUSHParser sharpParser = new(BufferedTokenSpanStream)
+		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
+		bufferedTokenSpanStream.Fill();
+		SharpMUSHParser sharpParser = new(bufferedTokenSpanStream)
 		{
 			Interpreter =
 			{
@@ -178,11 +178,11 @@ public record MUSHCodeParser(
 	/// <returns>A completed task.</returns>
 	public async ValueTask CommandParse(MString text)
 	{
-		AntlrInputStreamSpan inputStream = new(MModule.plainText(text), nameof(CommandParse));
+		AntlrInputStreamSpan inputStream = new(MModule.plainText(text).AsMemory(), nameof(CommandParse));
 		SharpMUSHLexer sharpLexer = new(inputStream);
-		BufferedTokenSpanStream BufferedTokenSpanStream = new(sharpLexer);
-		BufferedTokenSpanStream.Fill();
-		SharpMUSHParser sharpParser = new(BufferedTokenSpanStream)
+		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
+		bufferedTokenSpanStream.Fill();
+		SharpMUSHParser sharpParser = new(bufferedTokenSpanStream)
 		{
 			Interpreter =
 			{
@@ -197,11 +197,11 @@ public record MUSHCodeParser(
 
 	public ValueTask<CallState?> CommandCommaArgsParse(MString text)
 	{
-		AntlrInputStreamSpan inputStream = new(MModule.plainText(text), nameof(CommandCommaArgsParse));
+		AntlrInputStreamSpan inputStream = new(MModule.plainText(text).AsMemory(), nameof(CommandCommaArgsParse));
 		SharpMUSHLexer sharpLexer = new(inputStream);
-		BufferedTokenSpanStream BufferedTokenSpanStream = new(sharpLexer);
-		BufferedTokenSpanStream.Fill();
-		SharpMUSHParser sharpParser = new(BufferedTokenSpanStream)
+		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
+		bufferedTokenSpanStream.Fill();
+		SharpMUSHParser sharpParser = new(bufferedTokenSpanStream)
 		{
 			Interpreter =
 			{
@@ -216,11 +216,11 @@ public record MUSHCodeParser(
 
 	public ValueTask<CallState?> CommandSingleArgParse(MString text)
 	{
-		AntlrInputStreamSpan inputStream = new(MModule.plainText(text), nameof(CommandSingleArgParse));
+		AntlrInputStreamSpan inputStream = new(MModule.plainText(text).AsMemory(), nameof(CommandSingleArgParse));
 		SharpMUSHLexer sharpLexer = new(inputStream);
-		BufferedTokenSpanStream BufferedTokenSpanStream = new(sharpLexer);
-		BufferedTokenSpanStream.Fill();
-		SharpMUSHParser sharpParser = new(BufferedTokenSpanStream)
+		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
+		bufferedTokenSpanStream.Fill();
+		SharpMUSHParser sharpParser = new(bufferedTokenSpanStream)
 		{
 			Interpreter =
 			{
@@ -235,11 +235,11 @@ public record MUSHCodeParser(
 
 	public ValueTask<CallState?> CommandEqSplitArgsParse(MString text)
 	{
-		AntlrInputStreamSpan inputStream = new(MModule.plainText(text), nameof(CommandEqSplitArgsParse));
+		AntlrInputStreamSpan inputStream = new(MModule.plainText(text).AsMemory(), nameof(CommandEqSplitArgsParse));
 		SharpMUSHLexer sharpLexer = new(inputStream);
-		BufferedTokenSpanStream BufferedTokenSpanStream = new(sharpLexer);
-		BufferedTokenSpanStream.Fill();
-		SharpMUSHParser sharpParser = new(BufferedTokenSpanStream)
+		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
+		bufferedTokenSpanStream.Fill();
+		SharpMUSHParser sharpParser = new(bufferedTokenSpanStream)
 		{
 			Interpreter =
 			{
@@ -255,11 +255,11 @@ public record MUSHCodeParser(
 
 	public ValueTask<CallState?> CommandEqSplitParse(MString text)
 	{
-		AntlrInputStreamSpan inputStream = new(MModule.plainText(text), nameof(CommandEqSplitParse));
+		AntlrInputStreamSpan inputStream = new(MModule.plainText(text).AsMemory(), nameof(CommandEqSplitParse));
 		SharpMUSHLexer sharpLexer = new(inputStream);
-		BufferedTokenSpanStream BufferedTokenSpanStream = new(sharpLexer);
-		BufferedTokenSpanStream.Fill();
-		SharpMUSHParser sharpParser = new(BufferedTokenSpanStream)
+		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
+		bufferedTokenSpanStream.Fill();
+		SharpMUSHParser sharpParser = new(bufferedTokenSpanStream)
 		{
 			Interpreter =
 			{

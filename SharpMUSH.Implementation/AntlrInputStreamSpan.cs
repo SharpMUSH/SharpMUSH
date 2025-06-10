@@ -4,11 +4,9 @@ using System.Runtime.CompilerServices;
 
 namespace SharpMUSH.Implementation;
 
-internal class AntlrInputStreamSpan(string input, string sourceName) : ICharStream, IIntStream
+internal class AntlrInputStreamSpan(ReadOnlyMemory<char> input, string sourceName) : ICharStream
 {
-	private readonly char[] _data = input.ToCharArray();
-
-	private ReadOnlySpan<char> Data => _data;
+	private ReadOnlySpan<char> Data => input.Span;
 
 	public int Index { get; private set; }
 
@@ -66,10 +64,13 @@ internal class AntlrInputStreamSpan(string input, string sourceName) : ICharStre
 		return Data[Index + i - 1];
 	}
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public int Mark() => -1;
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public void Release(int marker) { }
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public void Seek(int index)
 	{
 		if (index <= Index)
@@ -79,9 +80,6 @@ internal class AntlrInputStreamSpan(string input, string sourceName) : ICharStre
 		}
 
 		index = Math.Min(index, Size);
-		while (Index < index)
-		{
-			Consume();
-		}
+		Index = index;
 	}
 }
