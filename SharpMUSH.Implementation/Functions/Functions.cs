@@ -6,6 +6,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using System.Reflection;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Library.Services;
 using static SharpMUSHParser;
 
 namespace SharpMUSH.Implementation.Functions;
@@ -13,11 +14,11 @@ namespace SharpMUSH.Implementation.Functions;
 public static partial class Functions
 {
 	private static readonly
-		Dictionary<string, (SharpFunctionAttribute Attribute, Func<IMUSHCodeParser, ValueTask<CallState>> Function)>
-		_functionLibrary = [];
+		LibraryService<string, (SharpFunctionAttribute Attribute, Func<IMUSHCodeParser, ValueTask<CallState>> Function)>
+		FunctionLibrary = [];
 
 	private static readonly Dictionary<string, (MethodInfo Method, SharpFunctionAttribute Attribute)>
-		_knownBuiltInMethods = typeof(Functions)
+		KnownBuiltInMethods = typeof(Functions)
 			.GetMethods()
 			.Select(m => (Method: m,
 				Attribute: m.GetCustomAttribute<SharpFunctionAttribute>(false)))
@@ -34,12 +35,11 @@ public static partial class Functions
 
 	static Functions()
 	{
-		foreach (var knownMethod in _knownBuiltInMethods)
+		foreach (var knownMethod in KnownBuiltInMethods)
 		{
-			_functionLibrary.Add(knownMethod.Key,
-				(knownMethod.Value.Attribute,
-					new Func<IMUSHCodeParser, ValueTask<CallState>>(p =>
-						(ValueTask<CallState>)knownMethod.Value.Method.Invoke(null, [p, knownMethod.Value.Attribute])!)));
+			FunctionLibrary.Add(knownMethod.Key,
+				((knownMethod.Value.Attribute,
+					p => (ValueTask<CallState>)knownMethod.Value.Method.Invoke(null, [p, knownMethod.Value.Attribute])!), true));
 		}
 	}
 
@@ -54,12 +54,13 @@ public static partial class Functions
 	/// <param name="args">Arguments</param>
 	/// <param name="visitor"></param>
 	/// <returns>The resulting CallState.</returns>
-	public static async ValueTask<CallState> CallFunction(ILogger logger, string name, MString source, IMUSHCodeParser parser,
+	public static async ValueTask<CallState> CallFunction(ILogger logger, string name, MString source,
+		IMUSHCodeParser parser,
 		FunctionContext context, EvaluationStringContext[] args, SharpMUSHParserVisitor visitor)
 	{
 		try
 		{
-			if (!_functionLibrary.TryGetValue(name, out var libraryMatch))
+			if (!FunctionLibrary.TryGetValue(name, out var libraryMatch))
 			{
 				var discoveredFunction = DiscoverBuiltInFunction(name);
 
@@ -68,11 +69,11 @@ public static partial class Functions
 					return new CallState(string.Format(Errors.ErrorNoSuchFunction, name), context.Depth());
 				}
 
-				_functionLibrary.Add(name, functionValue);
-				libraryMatch = _functionLibrary[name];
+				FunctionLibrary.Add(name, (functionValue,false));
+				libraryMatch = FunctionLibrary[name];
 			}
 
-			var (attribute, function) = libraryMatch;
+			var (attribute, function) = libraryMatch.LibraryInformation;
 
 			var currentStack = parser.State;
 			var currentState = parser.CurrentState;
@@ -206,7 +207,7 @@ public static partial class Functions
 	private static Option<(SharpFunctionAttribute, Func<IMUSHCodeParser, ValueTask<CallState>>)>
 		DiscoverBuiltInFunction(string name)
 	{
-		if (!_knownBuiltInMethods.TryGetValue(name, out var result))
+		if (!KnownBuiltInMethods.TryGetValue(name, out var result))
 			return new None();
 
 		return (result.Attribute, new Func<IMUSHCodeParser, ValueTask<CallState>>
@@ -219,7 +220,7 @@ public static partial class Functions
 	/// <param name="name">Function to remove.</param>
 	/// <returns>True if it was removed, false if it was not found.</returns>
 	public static bool RemoveFunction(string name) =>
-		_functionLibrary.Remove(name.ToLower());
+		FunctionLibrary.Remove(name.ToLower());
 
 	/// <summary>
 	/// Adds the function to the function library.
@@ -230,5 +231,5 @@ public static partial class Functions
 	/// <returns>True if could be added. False if the name already existed.</returns>
 	public static bool AddFunction(string name, SharpFunctionAttribute attr,
 		Func<IMUSHCodeParser, ValueTask<CallState>> func) =>
-		_functionLibrary.TryAdd(name.ToLower(), (attr, func));
+		FunctionLibrary.TryAdd(name.ToLower(), ((attr, func), false));
 }

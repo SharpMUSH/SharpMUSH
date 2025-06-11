@@ -1,5 +1,4 @@
 ﻿using Antlr4.Runtime.Tree;
-using DotNext.Collections.Generic;
 using OneOf.Types;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -17,42 +16,42 @@ namespace SharpMUSH.Implementation.Commands;
 
 public static partial class Commands
 {
-	private static readonly
-		Dictionary<string, (SharpCommandAttribute Attribute, Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Function)>
-		CommandLibrary = [];
+	private static readonly LibraryService<string, (SharpCommandAttribute Attribute, Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Function)> CommandLibrary;
 
 	private static readonly Dictionary<string, (MethodInfo Method, SharpCommandAttribute Attribute)>
 		KnownBuiltInCommands =
-			typeof(Commands)
-				.GetMethods()
-				.Select(m => (Method: m,
-					Attribute: m.GetCustomAttribute<SharpCommandAttribute>(false)))
-				.Where(x => x.Attribute is not null)
-				.SelectMany(y =>
-					(Configurable.CommandAliases.TryGetValue(y.Attribute!.Name, out var aliases)
-						? aliases.Select(alias =>
-							new KeyValuePair<string, (MethodInfo Method, SharpCommandAttribute Attribute)>(alias,
-								(y.Method, y.Attribute!)))
-						: [])
-					.Append(new KeyValuePair<string, (MethodInfo Method, SharpCommandAttribute Attribute)>(y.Attribute.Name,
-						(y.Method, y.Attribute!))))
-				.ToDictionary();
+				typeof(Commands)
+					.GetMethods()
+					.Select(m => (Method: m,
+						Attribute: m.GetCustomAttribute<SharpCommandAttribute>(false)))
+					.Where(x => x.Attribute is not null)
+					.SelectMany(y =>
+						(Configurable.CommandAliases.TryGetValue(y.Attribute!.Name, out var aliases)
+							? aliases.Select(alias =>
+								new KeyValuePair<string, (MethodInfo Method, SharpCommandAttribute Attribute)>(alias,
+									(y.Method, y.Attribute!)))
+							: [])
+						.Append(new KeyValuePair<string, (MethodInfo Method, SharpCommandAttribute Attribute)>(y.Attribute.Name,
+							(y.Method, y.Attribute!))))
+					.ToDictionary();
 
 	static Commands()
-		=> CommandLibrary.AddAll(KnownBuiltInCommands.Select(knownCommand =>
-			new KeyValuePair<string, (SharpCommandAttribute Attribute, Func<IMUSHCodeParser, ValueTask<Option<CallState>>>
-				Function)>(
-				key: knownCommand.Key,
-				value: (knownCommand.Value.Attribute,
-					async p => await (ValueTask<Option<CallState>>)knownCommand.Value.Method.Invoke(null,
-						[p, knownCommand.Value.Attribute])!))));
+		=> CommandLibrary = LibraryService<string, (SharpCommandAttribute Attribute, Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Function)>
+			.FromDictionary( 
+				KnownBuiltInCommands.Select(knownCommand =>
+					new KeyValuePair<string, (SharpCommandAttribute Attribute, Func<IMUSHCodeParser, ValueTask<Option<CallState>>>
+						Function)>(
+						key: knownCommand.Key,
+						value: (knownCommand.Value.Attribute,
+							async p => await (ValueTask<Option<CallState>>)knownCommand.Value.Method.Invoke(null,
+								[p, knownCommand.Value.Attribute])!))).ToDictionary());
 
 	/// <summary>
 	/// Evaluates the command, with the parser info given.
 	/// </summary>
 	/// <remarks>
 	/// Call State is expected to be empty on return. 
-	/// But if one wanted to implement an @pipe command that can pass a result from say, an @dig command, 
+	/// But if one wanted to implement a @pipe command that can pass a result from say, a @dig command, 
 	/// there would be a need for some way of passing on secondary data.
 	/// </remarks>
 	/// <param name="logger">Logger</param>
@@ -91,14 +90,15 @@ public static partial class Commands
 			// TODO: Optimize
 			var socketCommandPattern = CommandLibrary.Where(x
 				=> parser.CurrentState.Handle is not null
+				   && x.Value.IsSystem
 				   && x.Key.Equals(command, StringComparison.CurrentCultureIgnoreCase)
-				   && x.Value.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.SOCKET)).ToList();
+				   && x.Value.LibraryInformation.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.SOCKET)).ToList();
 
 			if (socketCommandPattern.Any() &&
 			    CommandLibrary.TryGetValue(command.ToUpper(), out var librarySocketCommandDefinition))
 			{
 				return await HandleSocketCommandPattern(parser, source, context, command, socketCommandPattern,
-					librarySocketCommandDefinition);
+					librarySocketCommandDefinition.LibraryInformation);
 			}
 
 			if (parser.CurrentState.Executor is null && parser.CurrentState.Handle is not null)
@@ -107,7 +107,7 @@ public static partial class Commands
 				return new None();
 			}
 
-			// Step2a: Check for the channel single-token command.
+			// Step 2a: Check for the channel single-token command.
 
 			// TODO: Better channel name matching within the channel helper.
 			if (command[..1] == parser.Configuration.CurrentValue.Chat.ChatTokenAlias.ToString())
@@ -127,8 +127,9 @@ public static partial class Commands
 			// Step 2b: Check for a single-token command
 			// TODO: Optimize
 			var singleTokenCommandPattern = CommandLibrary.Where(x
-				=> x.Key.Equals(command[..1], StringComparison.CurrentCultureIgnoreCase) &&
-				   x.Value.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.SingleToken)).ToList();
+				=> x.Key.Equals(command[..1], StringComparison.CurrentCultureIgnoreCase) 
+				   && x.Value.IsSystem 
+				   && x.Value.LibraryInformation.Attribute.Behavior.HasFlag(Definitions.CommandBehavior.SingleToken)).ToList();
 
 			if (singleTokenCommandPattern.Count != 0)
 			{
@@ -173,7 +174,7 @@ public static partial class Commands
 			    && !rootCommand.Equals("HUH_COMMAND", StringComparison.CurrentCultureIgnoreCase))
 			{
 				return await HandleInternalCommandPattern(parser, source, context, rootCommand, switches,
-					libraryCommandDefinition);
+					libraryCommandDefinition.LibraryInformation);
 			}
 
 			// Step 6: Check @attribute setting
@@ -241,7 +242,7 @@ public static partial class Commands
 				Function = null
 			});
 
-			var huhCommand = await CommandLibrary["HUH_COMMAND"].Function.Invoke(newParser);
+			var huhCommand = await CommandLibrary["HUH_COMMAND"].LibraryInformation.Function.Invoke(newParser);
 
 			return huhCommand;
 		}
@@ -263,14 +264,14 @@ public static partial class Commands
 		var chatParser = parser.Push(parser.CurrentState with
 		{
 			Command = "@CHAT",
-			Arguments = new(new Dictionary<string, CallState>
+			Arguments = new Dictionary<string, CallState>
 			{
 				{ "0", new CallState(channel.Name) },
 				{ "1", new CallState(rest) }
-			})
+			}
 		});
 
-		return await CommandLibrary["@CHAT"].Function.Invoke(chatParser);
+		return await CommandLibrary["@CHAT"].LibraryInformation.Function.Invoke(chatParser);
 	}
 
 	private static async Task<Option<CallState>> HandleUserDefinedCommand(
@@ -283,7 +284,7 @@ public static partial class Commands
 			var newParser = parser.Push(parser.CurrentState with
 			{
 				CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attr.Name),
-				Arguments = new(arguments),
+				Arguments = arguments,
 				Function = null,
 				Executor = obj.Object().DBRef
 			});
@@ -302,14 +303,14 @@ public static partial class Commands
 		var newParser = parser.Push(parser.CurrentState with
 		{
 			Command = "GOTO",
-			Arguments = new(new Dictionary<string, CallState>
+			Arguments = new Dictionary<string, CallState>
 			{
 				{ "0", new CallState(exit.Object.DBRef.ToString(), 0) }
-			}),
+			},
 			Function = null
 		});
 
-		return await CommandLibrary.Single(x => x.Key == "GOTO").Value.Function.Invoke(newParser);
+		return await CommandLibrary["GOTO"].LibraryInformation.Function.Invoke(newParser);
 	}
 
 	private static async ValueTask<Option<CallState>> HandleInternalCommandPattern(IMUSHCodeParser parser, MString source,
@@ -323,8 +324,9 @@ public static partial class Commands
 		{
 			Command = rootCommand,
 			Switches = switches.Select(x => x.ToUpper()),
-			Arguments = new(arguments.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value))
-				.ToDictionary()),
+			Arguments = arguments
+				.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value))
+				.ToDictionary(),
 			Function = null
 		});
 
@@ -333,8 +335,8 @@ public static partial class Commands
 
 	private static async ValueTask<Option<CallState>> HandleSocketCommandPattern(IMUSHCodeParser parser, MString source,
 		CommandContext context, string command,
-		IEnumerable<KeyValuePair<string, (SharpCommandAttribute Attribute,
-			Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Function)>> socketCommandPattern,
+		IEnumerable<KeyValuePair<string, ((SharpCommandAttribute Attribute,
+			Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Function) LibraryInformation,bool IsSystem)>> socketCommandPattern,
 		(SharpCommandAttribute Attribute, Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Function)
 			librarySocketCommandDefinition)
 	{
@@ -343,39 +345,40 @@ public static partial class Commands
 		var newParser = parser.Push(parser.CurrentState with
 		{
 			Command = command,
-			Arguments = new(arguments.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value))
-				.ToDictionary()),
+			Arguments = arguments.Select((value, i) => 
+					new KeyValuePair<string, CallState>(i.ToString(), value))
+				.ToDictionary(),
 			Function = null
 		});
 
 		// Run as Socket Command. 
-		return await socketCommandPattern.First().Value.Function.Invoke(newParser);
+		return await socketCommandPattern.First().Value.LibraryInformation.Function.Invoke(newParser);
 	}
 
 	private static async ValueTask<Option<CallState>> HandleSingleTokenCommandPattern(IMUSHCodeParser parser,
 		MString source, CommandContext context, string command,
-		IEnumerable<KeyValuePair<string, (SharpCommandAttribute Attribute,
-			Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Function)>> singleTokenCommandPattern)
+		IEnumerable<KeyValuePair<string, ((SharpCommandAttribute Attribute,
+			Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Function) LibraryInformation,bool IsSystem)>> singleTokenCommandPattern)
 	{
 		var singleRootCommand = command[..1];
 		var rest = command[1..];
 		var singleLibraryCommandDefinition = singleTokenCommandPattern.Single().Value;
 		// TODO: Should Single Commands split? - Getting errors out of this.
-		var arguments = await ArgumentSplit(parser, source, context, singleLibraryCommandDefinition);
+		var arguments = await ArgumentSplit(parser, source, context, singleLibraryCommandDefinition.LibraryInformation);
 
 		var newParser = parser.Push(
 			parser.CurrentState with
 			{
 				Command = singleRootCommand,
-				Arguments = new(ImmutableDictionary<string, CallState>.Empty
+				Arguments = ImmutableDictionary<string, CallState>.Empty
 					.Add("0", new CallState(rest))
 					.AddRange(arguments.Select((value, i) => new KeyValuePair<string, CallState>((i + 1).ToString(), value)))
-					.ToDictionary()),
+					.ToDictionary(),
 				Function = null
 			}
 		);
 
-		return await singleLibraryCommandDefinition.Function.Invoke(newParser);
+		return await singleLibraryCommandDefinition.LibraryInformation.Function.Invoke(newParser);
 	}
 
 	private static async ValueTask<List<CallState>> ArgumentSplit(IMUSHCodeParser parser, MString source,
