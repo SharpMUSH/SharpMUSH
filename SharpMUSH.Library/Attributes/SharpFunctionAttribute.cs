@@ -1,7 +1,6 @@
-﻿
-using SharpMUSH.Implementation.Definitions;
+using SharpMUSH.Library.Definitions;
 
-namespace SharpMUSH.Implementation.Functions;
+namespace SharpMUSH.Library.Attributes;
 
 [AttributeUsage(AttributeTargets.Method)]
 public class SharpFunctionAttribute : Attribute

@@ -7,6 +7,7 @@ using System.Collections.Immutable;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.Attributes;
 
 namespace SharpMUSH.Implementation;
 
@@ -25,6 +26,7 @@ public record MUSHCodeParser(
 	IExpandedObjectDataService ObjectDataService,
 	ICommandDiscoveryService CommandDiscoveryService,
 	IConnectionService ConnectionService,
+	LibraryService<string, Library.Definitions.FunctionDefinition> FunctionLibrary,
 	IMediator Mediator) : IMUSHCodeParser
 {
 	public ParserState CurrentState => State.Peek();
@@ -42,7 +44,7 @@ public record MUSHCodeParser(
 	public IMUSHCodeParser FromState(ParserState state) => new MUSHCodeParser(Logger, Configuration, PasswordService,
 		PermissionService,
 		AttributeService, NotifyService, LocateService, ObjectDataService, CommandDiscoveryService,
-		ConnectionService, Mediator, state);
+		ConnectionService, FunctionLibrary, Mediator, state);
 
 	public IMUSHCodeParser Empty() => this with { State = ImmutableStack<ParserState>.Empty };
 
@@ -59,10 +61,11 @@ public record MUSHCodeParser(
 		IExpandedObjectDataService objectDataService,
 		ICommandDiscoveryService commandDiscoveryService,
 		IConnectionService connectionService,
+		LibraryService<string, Library.Definitions.FunctionDefinition> functionLibrary,
 		IMediator mediator,
 		ParserState state) :
 		this(logger, config, passwordService, permissionService, attributeService, notifyService, locateService,
-			objectDataService, commandDiscoveryService, connectionService, mediator)
+			objectDataService, commandDiscoveryService, connectionService, functionLibrary, mediator)
 		=> State = [state];
 
 	public ValueTask<CallState?> FunctionParse(MString text)

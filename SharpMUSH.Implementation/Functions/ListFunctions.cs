@@ -1,5 +1,6 @@
 ﻿using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;

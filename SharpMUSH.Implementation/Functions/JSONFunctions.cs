@@ -12,6 +12,7 @@ using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using SharpMUSH.Library.Attributes;
 
 namespace SharpMUSH.Implementation.Functions;
 

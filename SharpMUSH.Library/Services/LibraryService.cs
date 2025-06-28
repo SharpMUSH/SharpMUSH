@@ -15,3 +15,6 @@ public class LibraryService<TKey, TValue> : Dictionary<TKey, (TValue LibraryInfo
 		return newDict;
 	}
 }
+
+public class FunctionLibraryService : 
+	LibraryService<string, Definitions.FunctionDefinition> { }

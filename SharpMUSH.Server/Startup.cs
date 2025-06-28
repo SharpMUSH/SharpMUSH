@@ -14,8 +14,10 @@ using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Database.ArangoDB;
 using SharpMUSH.Implementation;
+using SharpMUSH.Implementation.Functions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Behaviors;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using TaskScheduler = SharpMUSH.Library.Services.TaskScheduler;
@@ -76,6 +78,7 @@ public class Startup(ArangoConfiguration config, string configFile)
 		services.AddSingleton<ILockService, LockService>();
 		services.AddSingleton<IBooleanExpressionParser, BooleanExpressionParser>();
 		services.AddSingleton<ICommandDiscoveryService, CommandDiscoveryService>();
+		services.AddSingleton<ILibraryProvider<FunctionDefinition>, Functions>();
 		services.AddSingleton<IOptionsFactory<PennMUSHOptions>, ReadPennMushConfig>(_ => new ReadPennMushConfig(configFile));
 		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(CacheInvalidationBehavior<,>));
 		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(QueryCachingBehavior<,>));

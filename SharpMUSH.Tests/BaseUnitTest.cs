@@ -1,17 +1,18 @@
 ﻿using Core.Arango;
 using Core.Arango.Serialization.Newtonsoft;
 using Mediator;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Serilog;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using System.Text;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using SharpMUSH.Configuration.Options;
 using Testcontainers.ArangoDb;
 
 namespace SharpMUSH.Tests;
@@ -88,6 +89,7 @@ public class BaseUnitTest
 		IExpandedObjectDataService? eo = null,
 		ICommandDiscoveryService? cd = null,
 		IConnectionService? cs = null,
+		LibraryService<string, FunctionDefinition>? fs = null,
 		IMediator? ms = null)
 	{
 		
@@ -111,6 +113,7 @@ public class BaseUnitTest
 			eo ?? (IExpandedObjectDataService)integrationServer.Services.GetService(typeof(IExpandedObjectDataService))!,
 			cd ?? (ICommandDiscoveryService)integrationServer.Services.GetService(typeof(ICommandDiscoveryService))!,
 			simpleConnectionService,
+			fs ?? (LibraryService<string, FunctionDefinition>)integrationServer.Services.GetService(typeof(LibraryService<string, FunctionDefinition>))!,
 			ms ?? (IMediator)integrationServer.Services.GetService(typeof(IMediator))!,
 			state: new ParserState(
 				Registers: new([[]]),
