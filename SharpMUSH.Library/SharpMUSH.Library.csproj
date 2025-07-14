@@ -10,8 +10,8 @@
     <PackageReference Include="DotNext" Version="5.23.0" />
     <PackageReference Include="DotNext.Threading" Version="5.23.0" />
     <PackageReference Include="Mediator.Abstractions" Version="2.1.7" />
-    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.6" />
-    <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="9.0.6" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.7" />
+    <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="9.0.7" />
     <PackageReference Include="morelinq" Version="4.4.0" />
     <PackageReference Include="NaturalSort.Extension" Version="4.3.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
