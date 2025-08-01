@@ -12,15 +12,16 @@ public partial class Commands
 	[SharpCommand(Name = "]", Behavior = CommandBehavior.SingleToken | CommandBehavior.NoParse, MinArgs = 1, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> NoParse(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var newParser = parser.Push(parser.CurrentState with { ParseMode = ParseMode.NoEval });
 		// TODO: There is likely a better way to pick this up where this left off, instead of re-parsing.
 		var oldCommand = MModule.multipleWithDelimiter(MModule.single(" "),
 		[
 			parser.CurrentState.Arguments["0"].Message!,
 			parser.CurrentState.Arguments["1"].Message!
 		]);
-		await newParser.CommandParse(oldCommand);
 
+		await parser.With(s => s with { ParseMode = ParseMode.NoEval },
+			async np => await np.CommandParse(oldCommand));
+		
 		return new CallState(string.Empty);
 	}
 

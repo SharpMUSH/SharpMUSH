@@ -41,7 +41,7 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 			IAttributeService.AttributeMode.Execute => Errors.ErrorAttrEvalPermissions,
 			_ => throw new InvalidOperationException(nameof(IAttributeService.AttributeMode))
 		};
-		
+
 		// TODO: This code doesn't quite look right.
 		while (true)
 		{
@@ -65,7 +65,7 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 			{
 				return new None();
 			}
-			
+
 			curObj = parent.Known;
 		}
 	}
@@ -94,15 +94,15 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 			return MModule.single(Errors.ErrorNoSuchAttribute);
 		}
 
-		var state = parser.CurrentState with
-		{
-			Arguments = args,
-			CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attr.AsAttribute.LongName!),
-		};
+		var result = await parser.With(s =>
+				s with
+				{
+					Arguments = args,
+					CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attr.AsAttribute.LongName!),
+				},
+			async newParser =>
+				await newParser.FunctionParse(attr.AsAttribute.Value));
 
-		parser.Push(state);
-		var result = await parser.FunctionParse(attr.AsAttribute.Value);
-		_ = parser.State.Pop();
 		return result!.Message!;
 	}
 
@@ -128,7 +128,7 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		var attribute = MModule.multiple(split.Skip(1))!;
 		var applyPredicate = obj.ToPlainText().StartsWith("#APPLY", StringComparison.InvariantCultureIgnoreCase);
 		var lambdaPredicate = obj.ToPlainText().StartsWith("#LAMBDA", StringComparison.InvariantCultureIgnoreCase);
-		
+
 		// #apply evaluations. 
 		if (applyPredicate)
 		{
@@ -146,12 +146,14 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 			// TODO: This is skipping function permission checks.
 			if (parser.FunctionLibrary.TryGetValue(obj.ToPlainText().Remove(0, 6).ToLower(), out var applyFunction))
 			{
-				var newParser = parser.Push(parser.CurrentState with { Arguments = slimArgs });
-				var result = (await applyFunction.LibraryInformation.Function.Invoke(newParser)).Message!;
-				_ = newParser.State.Pop();
-				return result;
+				var result = await parser.With(
+					s => s with { Arguments = slimArgs },
+					async np => await applyFunction.LibraryInformation.Function.Invoke(np)
+				);
+
+				return result.Message!;
 			}
-			
+
 			// Check if proper function name in the attribute section.
 			// Check if enough arguments are being passed to the function based on the number after #apply.
 			// This is where we really need a proper attribute library access layer, similar to commands.
@@ -163,15 +165,15 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		// LAMBDA.
 		if (lambdaPredicate)
 		{
-			var newParser = parser.Push(parser.CurrentState with { Arguments = args });
-			var result = await newParser.FunctionParse(attribute);
-			_ = newParser.State.Pop();
-
+			var result = await parser.With(s => s with { Arguments = args },
+				async np => await np.FunctionParse(attribute));
 			return result!.Message!;
 		}
 
 		// Standard Object/Attribute evaluation
-		var maybeObject = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, obj.ToPlainText(), LocateFlags.All);
+		var maybeObject =
+			await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, obj.ToPlainText(),
+				LocateFlags.All);
 
 		return maybeObject switch
 		{

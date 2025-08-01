@@ -227,18 +227,18 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 				Function: name,
 				Command: null,
 				Switches: [],
-				Arguments: new(refinedArguments.Select((value, i) =>
+				Arguments: refinedArguments.Select((value, i) =>
 						new KeyValuePair<string, CallState>(i.ToString(), value))
-					.ToDictionary()),
+					.ToDictionary(),
 				Executor: currentState.Executor,
 				Enactor: currentState.Enactor,
 				Caller: currentState.Caller,
 				Handle: currentState.Handle
 			));
 
-			var result = await function(newParser) with { Depth = contextDepth };
+			var result = await function(newParser);
 
-			return result;
+			return result with { Depth = contextDepth };
 		}
 		catch (Exception ex)
 		{
