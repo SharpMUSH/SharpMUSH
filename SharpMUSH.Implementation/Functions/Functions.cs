@@ -11,10 +11,10 @@ namespace SharpMUSH.Implementation.Functions;
 public partial class Functions : ILibraryProvider<FunctionDefinition>
 {
 	private readonly FunctionLibraryService _functionLibrary = [];
-
+	
 	public LibraryService<string, FunctionDefinition> Get() => _functionLibrary;
 
-	private Functions()
+	public Functions()
 	{
 		var knownBuiltInMethods = typeof(Functions)
 			.GetMethods()

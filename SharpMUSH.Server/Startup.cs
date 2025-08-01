@@ -7,7 +7,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Quartz;
-using Quartz.AspNetCore;
 using Serilog;
 using Serilog.Events;
 using SharpMUSH.Configuration;
@@ -79,6 +78,7 @@ public class Startup(ArangoConfiguration config, string configFile)
 		services.AddSingleton<IBooleanExpressionParser, BooleanExpressionParser>();
 		services.AddSingleton<ICommandDiscoveryService, CommandDiscoveryService>();
 		services.AddSingleton<ILibraryProvider<FunctionDefinition>, Functions>();
+		services.AddSingleton<LibraryService<string, FunctionDefinition>>(x => x.GetService<ILibraryProvider<FunctionDefinition>>()!.Get());
 		services.AddSingleton<IOptionsFactory<PennMUSHOptions>, ReadPennMushConfig>(_ => new ReadPennMushConfig(configFile));
 		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(CacheInvalidationBehavior<,>));
 		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(QueryCachingBehavior<,>));
