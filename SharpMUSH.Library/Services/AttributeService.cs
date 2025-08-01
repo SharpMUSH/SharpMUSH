@@ -124,11 +124,13 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		Dictionary<string, CallState> args, bool evalParent = true, bool ignorePermissions = false)
 	{
 		var split = MModule.split("/", objAndAttribute);
-		var obj = split.First()!;
+		var obj = split.First();
 		var attribute = MModule.multiple(split.Skip(1))!;
+		var applyPredicate = obj.ToPlainText().StartsWith("#APPLY", StringComparison.InvariantCultureIgnoreCase);
+		var lambdaPredicate = obj.ToPlainText().StartsWith("#LAMBDA", StringComparison.InvariantCultureIgnoreCase);
 		
 		// #apply evaluations. 
-		if (obj.ToPlainText().StartsWith("#APPLY", StringComparison.InvariantCultureIgnoreCase))
+		if (applyPredicate)
 		{
 			var argN = 1;
 			if (!string.IsNullOrWhiteSpace(attribute.ToPlainText()) && !int.TryParse(attribute.ToPlainText(), out argN))
@@ -141,8 +143,15 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 				.Range(0, argN)
 				.ToDictionary(argK => argK.ToString(), argK => args[argK.ToString()]);
 
-			return MModule.single("#-1 NOT YET IMPLEMENTED");
-
+			// TODO: This is skipping function permission checks.
+			if (parser.FunctionLibrary.TryGetValue(obj.ToPlainText().Remove(0, 6).ToLower(), out var applyFunction))
+			{
+				var newParser = parser.Push(parser.CurrentState with { Arguments = slimArgs });
+				var result = (await applyFunction.LibraryInformation.Function.Invoke(newParser)).Message!;
+				_ = newParser.State.Pop();
+				return result;
+			}
+			
 			// Check if proper function name in the attribute section.
 			// Check if enough arguments are being passed to the function based on the number after #apply.
 			// This is where we really need a proper attribute library access layer, similar to commands.
@@ -151,22 +160,25 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 			// Further work is needed before this can be implemented properly.
 		}
 
-		// Standard Object/Attribute evaluation.
-		if (!obj.ToPlainText().Equals("#LAMBDA", StringComparison.InvariantCultureIgnoreCase))
+		// LAMBDA.
+		if (lambdaPredicate)
 		{
-			return await EvaluateAttributeFunctionAsync(parser, executor, objAndAttribute, args, evalParent,
-				ignorePermissions);
+			var newParser = parser.Push(parser.CurrentState with { Arguments = args });
+			var result = await newParser.FunctionParse(attribute);
+			_ = newParser.State.Pop();
+
+			return result!.Message!;
 		}
 
-		// #LAMBDA path.
-		var state = parser.CurrentState with { Arguments = args };
+		// Standard Object/Attribute evaluation
+		var maybeObject = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, obj.ToPlainText(), LocateFlags.All);
 
-		parser.Push(state);
-		var result = await parser.FunctionParse(attribute);
-		_ = parser.State.Pop();
-
-		return result!.Message!;
-
+		return maybeObject switch
+		{
+			{ IsError: true } => maybeObject.AsError.Message!,
+			_ => await EvaluateAttributeFunctionAsync(parser, executor, maybeObject.AsSharpObject, attribute.ToPlainText(),
+				args, evalParent, ignorePermissions)
+		};
 	}
 
 	public async ValueTask<ImmutableList<SharpAttribute>> GetVisibleAttributesAsync(
