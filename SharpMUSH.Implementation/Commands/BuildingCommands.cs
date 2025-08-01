@@ -1,14 +1,16 @@
 ﻿using SharpMUSH.Library;
+using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
-using CB = SharpMUSH.Implementation.Definitions.CommandBehavior;
+using SharpMUSH.Library.Services.Interfaces;
+using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 
 namespace SharpMUSH.Implementation.Commands;
 
-public static partial class Commands
+public partial class Commands
 {
 	[SharpCommand(Name = "@RECYCLE", Switches = ["OVERRIDE"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0,
 		MaxArgs = 0)]
@@ -77,7 +79,7 @@ public static partial class Commands
 			enactor,
 			executor,
 			dbref,
-			Library.Services.LocateFlags.All);
+			LocateFlags.All);
 
 		if (locate.IsError)
 		{

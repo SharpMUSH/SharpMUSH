@@ -102,8 +102,7 @@ public partial class Functions
 	private static ValueTask<CallState> EvaluateInteger(Dictionary<string, CallState> args, Func<int, int> func)
 		=> ValueTask.FromResult<CallState>(new(func(int.Parse(MModule.plainText(args["0"].Message)))));
 
-	private static ValueTask<CallState> ValidateDecimalAndEvaluatePairwise(
-		this Dictionary<string, CallState> args,
+	private static ValueTask<CallState> ValidateDecimalAndEvaluatePairwise(Dictionary<string, CallState> args,
 		Func<(decimal, decimal), bool> func)
 	{
 		if (args.Count < 2)

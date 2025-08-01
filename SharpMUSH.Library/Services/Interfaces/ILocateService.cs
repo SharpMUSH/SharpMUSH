@@ -1,7 +1,7 @@
 ﻿using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 
-namespace SharpMUSH.Library.Services;
+namespace SharpMUSH.Library.Services.Interfaces;
 
 [Flags]
 public enum LocateFlags

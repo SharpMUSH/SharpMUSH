@@ -2,15 +2,17 @@
 using DotNext.Collections.Generic;
 using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Functions;
 
-public static partial class Functions
+public partial class Functions
 {
 	private static readonly Dictionary<(string, string), Regex> SpeechPatternCache = new();
 

@@ -1,4 +1,4 @@
-﻿namespace SharpMUSH.Implementation.Definitions;
+﻿namespace SharpMUSH.Library.Definitions;
 
 [Flags]
 public enum CommandBehavior

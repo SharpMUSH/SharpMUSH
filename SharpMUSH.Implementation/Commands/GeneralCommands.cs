@@ -8,21 +8,22 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using System.Drawing;
-using DotNext;
 using SharpMUSH.Implementation.Commands.ChannelCommand;
 using SharpMUSH.Implementation.Commands.MailCommand;
 using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.Queries;
 using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services;
-using CB = SharpMUSH.Implementation.Definitions.CommandBehavior;
+using SharpMUSH.Library.Services.Interfaces;
+using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using StringExtensions = ANSILibrary.StringExtensions;
 
 namespace SharpMUSH.Implementation.Commands;
 
-public static partial class Commands
+public partial class Commands
 {
 	[SharpCommand(Name = "@@", Switches = [], Behavior = CB.Default | CB.NoParse, MinArgs = 0, MaxArgs = 0)]
 	public static ValueTask<Option<CallState>> At(IMUSHCodeParser parser, SharpCommandAttribute _2)

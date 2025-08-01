@@ -3,10 +3,11 @@ using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using System.Numerics;
+using SharpMUSH.Library.Attributes;
 
 namespace SharpMUSH.Implementation.Functions;
 
-public static partial class Functions
+public partial class Functions
 {
 	[SharpFunction(Name = "add", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
 	public static ValueTask<CallState> Add(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>

@@ -9,6 +9,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using System.Drawing;
 using System.Text.RegularExpressions;
+using SharpMUSH.Library.Attributes;
 using static ANSILibrary.ANSI;
 
 namespace SharpMUSH.Implementation.Functions;

@@ -27,6 +27,7 @@
 
   <ItemGroup>
 	  <ProjectReference Include="..\SharpMUSH.Configuration\SharpMUSH.Configuration.csproj" />
+	  <ProjectReference Include="..\SharpMUSH.Generated\SharpMUSH.Generated.csproj" />
 	  <ProjectReference Include="..\SharpMUSH.MarkupString\SharpMUSH.MarkupString.fsproj" />
   </ItemGroup>
 

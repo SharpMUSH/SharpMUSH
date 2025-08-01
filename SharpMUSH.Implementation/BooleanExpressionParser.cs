@@ -13,7 +13,7 @@ public class BooleanExpressionParser(ISharpDatabase database) : IBooleanExpressi
 	// This should occur if a character stop existing, a flag gets removed, etc, and should be unusual.
 	public Func<AnySharpObject, AnySharpObject, bool> Compile(string text)
 	{
-		AntlrInputStreamSpan inputStream = new(text, nameof(Compile));
+		AntlrInputStreamSpan inputStream = new(text.AsMemory(), nameof(Compile));
 		SharpMUSHBoolExpLexer sharpLexer = new(inputStream);
 		BufferedTokenSpanStream commonTokenStream = new(sharpLexer);
 		SharpMUSHBoolExpParser sharpParser = new(commonTokenStream);
@@ -28,7 +28,7 @@ public class BooleanExpressionParser(ISharpDatabase database) : IBooleanExpressi
 
 	public bool Validate(string text, AnySharpObject lockee)
 	{
-		AntlrInputStreamSpan inputStream = new(text, nameof(Validate));
+		AntlrInputStreamSpan inputStream = new(text.AsMemory(), nameof(Validate));
 		SharpMUSHBoolExpLexer sharpLexer = new(inputStream);
 		BufferedTokenSpanStream commonTokenStream = new(sharpLexer);
 		SharpMUSHBoolExpParser sharpParser = new(commonTokenStream);

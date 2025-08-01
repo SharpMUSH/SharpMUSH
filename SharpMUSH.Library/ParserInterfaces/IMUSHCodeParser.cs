@@ -3,6 +3,8 @@ using SharpMUSH.Library.Services;
 using System.Collections.Immutable;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.ParserInterfaces;
 
@@ -20,6 +22,8 @@ public interface IMUSHCodeParser
 	ICommandDiscoveryService CommandDiscoveryService { get; }
 	IImmutableStack<ParserState> State { get; }
 	IMediator Mediator { get; }
+	LibraryService<string, Definitions.FunctionDefinition> FunctionLibrary {get;}
+	LibraryService<string, Definitions.CommandDefinition> CommandLibrary {get;}
 	ValueTask<CallState?> CommandCommaArgsParse(MString text);
 	ValueTask<CallState?> CommandEqSplitArgsParse(MString text);
 	ValueTask<CallState?> CommandEqSplitParse(MString text);

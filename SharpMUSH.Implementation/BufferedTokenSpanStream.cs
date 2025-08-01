@@ -56,7 +56,7 @@ namespace SharpMUSH.Implementation
 
 		public virtual int Index => p;
 
-		public virtual int Size => tokens.Count;
+		public virtual int Size => Tokens.Length;
 
 		public virtual string SourceName => _tokenSource.SourceName;
 
@@ -84,7 +84,7 @@ namespace SharpMUSH.Implementation
 		{
 			var flag = p >= 0 && (!fetchedEOF 
 				? p < tokens.Count 
-				: p < tokens.Count - 1);
+				: p < Tokens.Length - 1);
 
 			if (!flag && LA(1) == -1)
 			{
@@ -103,16 +103,12 @@ namespace SharpMUSH.Implementation
 		//
 		// Returns:
 		//     true if a token is located at index i , otherwise false .
-		protected internal virtual bool Sync(int i)
-		{
-			int num = i - tokens.Count + 1;
-			if (num > 0)
+		protected internal virtual bool Sync(int i) 
+			=> (i - tokens.Count + 1) switch
 			{
-				return Fetch(num) >= num;
-			}
-
-			return true;
-		}
+				var x and > 0 => Fetch(x) >= x,
+				_ => true
+			};
 
 		//
 		// Summary:
@@ -153,12 +149,12 @@ namespace SharpMUSH.Implementation
 
 		public virtual IToken Get(int i)
 		{
-			if (i < 0 || i >= tokens.Count)
+			if (i < 0 || i >= Tokens.Length)
 			{
 				throw new ArgumentOutOfRangeException("token index " + i + " out of range 0.." + (tokens.Count - 1));
 			}
 
-			return tokens[i];
+			return Tokens[i];
 		}
 
 		public virtual int LA(int i)
@@ -170,7 +166,7 @@ namespace SharpMUSH.Implementation
 		{
 			return p - k < 0 
 				? null 
-				: tokens[p - k];
+				: Tokens[p - k];
 		}
 
 		[return: NotNull]
@@ -248,7 +244,7 @@ namespace SharpMUSH.Implementation
 
 			while (i >= 0)
 			{
-				var token = tokens[i];
+				var token = Tokens[i];
 				if (token.Type == -1 || token.Channel == channel)
 				{
 					return i;
@@ -268,9 +264,9 @@ namespace SharpMUSH.Implementation
 		public virtual List<IToken>? GetHiddenTokensToLeft(int tokenIndex, int channel)
 		{
 			LazyInit();
-			if (tokenIndex < 0 || tokenIndex >= tokens.Count)
+			if (tokenIndex < 0 || tokenIndex >= Tokens.Length)
 			{
-				throw new ArgumentOutOfRangeException(tokenIndex + " not in 0.." + (tokens.Count - 1));
+				throw new ArgumentOutOfRangeException(tokenIndex + " not in 0.." + (Tokens.Length - 1));
 			}
 
 			if (tokenIndex == 0)
@@ -348,9 +344,9 @@ namespace SharpMUSH.Implementation
 			}
 
 			LazyInit();
-			if (num >= tokens.Count)
+			if (num >= Tokens.Length)
 			{
-				num = tokens.Count - 1;
+				num = Tokens.Length - 1;
 			}
 
 			var span = Tokens[a..num];

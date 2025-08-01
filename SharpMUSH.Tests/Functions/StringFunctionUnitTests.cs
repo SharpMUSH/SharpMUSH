@@ -4,6 +4,7 @@ using Serilog;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using System.Text;
+using SharpMUSH.Library.Services.Interfaces;
 using A = MarkupString.MarkupStringModule;
 using StringExtensions = ANSILibrary.StringExtensions;
 

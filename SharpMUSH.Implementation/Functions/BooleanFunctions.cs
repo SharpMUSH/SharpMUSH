@@ -1,9 +1,11 @@
 ﻿using SharpMUSH.Implementation.Definitions;
+using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Implementation.Functions;
 
-public static partial class Functions
+public partial class Functions
 {
 	[SharpFunction(Name = "and", Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> And(IMUSHCodeParser parser, SharpFunctionAttribute _2)
