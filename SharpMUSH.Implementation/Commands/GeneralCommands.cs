@@ -17,6 +17,7 @@ using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.Queries;
 using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services;
+using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using StringExtensions = ANSILibrary.StringExtensions;
 

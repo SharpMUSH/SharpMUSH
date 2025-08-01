@@ -7,6 +7,7 @@ using SharpMUSH.Library;
 using SharpMUSH.Library.Services;
 using System.Text;
 using SharpMUSH.Library.Notifications;
+using SharpMUSH.Library.Services.Interfaces;
 using TelnetNegotiationCore.Handlers;
 using TelnetNegotiationCore.Interpreters;
 using TelnetNegotiationCore.Models;

@@ -1,7 +1,7 @@
 ﻿using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 
-namespace SharpMUSH.Library.Services;
+namespace SharpMUSH.Library.Services.Interfaces;
 
 public interface ILockService
 {

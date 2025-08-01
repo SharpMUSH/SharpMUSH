@@ -19,6 +19,7 @@ using FSharpPlus.Control;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Services.Interfaces;
 using AsyncEnumerable = System.Linq.AsyncEnumerable;
 
 namespace SharpMUSH.Database.ArangoDB;

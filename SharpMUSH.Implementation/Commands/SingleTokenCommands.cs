@@ -3,6 +3,7 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -36,7 +37,7 @@ public partial class Commands
 		var locate = await parser.LocateService.LocateAndNotifyIfInvalid(parser,
 			enactor,
 			executor,
-			args["1"].Message!.ToString(), Library.Services.LocateFlags.All);
+			args["1"].Message!.ToString(), LocateFlags.All);
 
 		// Arguments are getting here in an evaluated state, when they should not be.
 		if (!locate.IsValid())

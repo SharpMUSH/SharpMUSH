@@ -5,6 +5,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 
 namespace SharpMUSH.Implementation.Commands;
@@ -78,7 +79,7 @@ public partial class Commands
 			enactor,
 			executor,
 			dbref,
-			Library.Services.LocateFlags.All);
+			LocateFlags.All);
 
 		if (locate.IsError)
 		{

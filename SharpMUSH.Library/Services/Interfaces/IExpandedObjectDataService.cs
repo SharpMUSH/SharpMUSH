@@ -1,6 +1,6 @@
 ﻿using SharpMUSH.Library.Models;
 
-namespace SharpMUSH.Library.Services;
+namespace SharpMUSH.Library.Services.Interfaces;
 
 /// <summary>
 /// Retrieves and Sets Expanded Data.

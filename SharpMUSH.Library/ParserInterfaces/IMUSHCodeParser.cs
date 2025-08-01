@@ -4,6 +4,7 @@ using System.Collections.Immutable;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.ParserInterfaces;
 

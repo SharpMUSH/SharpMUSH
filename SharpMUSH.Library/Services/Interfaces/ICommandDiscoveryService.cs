@@ -2,7 +2,7 @@
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 
-namespace SharpMUSH.Library.Services;
+namespace SharpMUSH.Library.Services.Interfaces;
 
 public interface ICommandDiscoveryService
 {

@@ -2,7 +2,8 @@
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
-using static SharpMUSH.Library.Services.INotifyService;
+using SharpMUSH.Library.Services.Interfaces;
+using static SharpMUSH.Library.Services.Interfaces.INotifyService;
 
 namespace SharpMUSH.Library.Services;
 

@@ -13,6 +13,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using System.Text;
+using SharpMUSH.Library.Services.Interfaces;
 using Testcontainers.ArangoDb;
 
 namespace SharpMUSH.Tests;

@@ -6,7 +6,8 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
-using static SharpMUSH.Library.Services.IPermissionService;
+using SharpMUSH.Library.Services.Interfaces;
+using static SharpMUSH.Library.Services.Interfaces.IPermissionService;
 
 namespace SharpMUSH.Implementation.Functions;
 

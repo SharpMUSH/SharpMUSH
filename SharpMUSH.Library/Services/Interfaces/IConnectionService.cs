@@ -1,8 +1,8 @@
-﻿using SharpMUSH.Library.Models;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Text;
+using SharpMUSH.Library.Models;
 
-namespace SharpMUSH.Library.Services;
+namespace SharpMUSH.Library.Services.Interfaces;
 
 public interface IConnectionService
 {

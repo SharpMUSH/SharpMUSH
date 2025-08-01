@@ -1,4 +1,4 @@
-﻿namespace SharpMUSH.Library.Services;
+﻿namespace SharpMUSH.Library.Services.Interfaces;
 
 public interface IPasswordService
 {
