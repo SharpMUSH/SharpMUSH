@@ -25,9 +25,9 @@
     <PackageReference Include="Serilog.Extensions.Logging" Version="9.0.2" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
 		<PackageReference Include="TelnetNegotiationCore " Version="1.1.0" />
-		<PackageReference Include="System.Configuration.ConfigurationManager" Version="9.0.5" />
-		<PackageReference Include="Testcontainers" Version="4.5.0" />
-		<PackageReference Include="Testcontainers.ArangoDb" Version="4.5.0" />
+		<PackageReference Include="System.Configuration.ConfigurationManager" Version="9.0.7" />
+		<PackageReference Include="Testcontainers" Version="4.6.0" />
+		<PackageReference Include="Testcontainers.ArangoDb" Version="4.6.0" />
   </ItemGroup>
 	
   <ItemGroup>
