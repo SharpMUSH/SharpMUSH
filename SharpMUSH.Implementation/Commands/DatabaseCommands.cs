@@ -1,6 +1,7 @@
+using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
-using CB = SharpMUSH.Implementation.Definitions.CommandBehavior;
+using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 
 namespace SharpMUSH.Implementation.Commands;
 

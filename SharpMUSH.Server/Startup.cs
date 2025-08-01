@@ -13,6 +13,7 @@ using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Database.ArangoDB;
 using SharpMUSH.Implementation;
+using SharpMUSH.Implementation.Commands;
 using SharpMUSH.Implementation.Functions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Behaviors;
@@ -79,6 +80,8 @@ public class Startup(ArangoConfiguration config, string configFile)
 		services.AddSingleton<ICommandDiscoveryService, CommandDiscoveryService>();
 		services.AddSingleton<ILibraryProvider<FunctionDefinition>, Functions>();
 		services.AddSingleton<LibraryService<string, FunctionDefinition>>(x => x.GetService<ILibraryProvider<FunctionDefinition>>()!.Get());
+		services.AddSingleton<ILibraryProvider<CommandDefinition>, Commands>();
+		services.AddSingleton<LibraryService<string, CommandDefinition>>(x => x.GetService<ILibraryProvider<CommandDefinition>>()!.Get());
 		services.AddSingleton<IOptionsFactory<PennMUSHOptions>, ReadPennMushConfig>(_ => new ReadPennMushConfig(configFile));
 		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(CacheInvalidationBehavior<,>));
 		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(QueryCachingBehavior<,>));

@@ -90,6 +90,7 @@ public class BaseUnitTest
 		ICommandDiscoveryService? cd = null,
 		IConnectionService? cs = null,
 		LibraryService<string, FunctionDefinition>? fs = null,
+		LibraryService<string, CommandDefinition>? cds = null,
 		IMediator? ms = null)
 	{
 		
@@ -114,6 +115,7 @@ public class BaseUnitTest
 			cd ?? (ICommandDiscoveryService)integrationServer.Services.GetService(typeof(ICommandDiscoveryService))!,
 			simpleConnectionService,
 			fs ?? (LibraryService<string, FunctionDefinition>)integrationServer.Services.GetService(typeof(LibraryService<string, FunctionDefinition>))!,
+			cds ?? (LibraryService<string, CommandDefinition>)integrationServer.Services.GetService(typeof(LibraryService<string, CommandDefinition>))!,
 			ms ?? (IMediator)integrationServer.Services.GetService(typeof(IMediator))!,
 			state: new ParserState(
 				Registers: new([[]]),

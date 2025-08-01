@@ -1,6 +1,6 @@
-﻿using SharpMUSH.Implementation.Definitions;
+﻿using SharpMUSH.Library.Definitions;
 
-namespace SharpMUSH.Implementation.Commands;
+namespace SharpMUSH.Library.Attributes;
 
 [AttributeUsage(AttributeTargets.Method)]
 public class SharpCommandAttribute : Attribute

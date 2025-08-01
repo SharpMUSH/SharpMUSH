@@ -1,4 +1,4 @@
-﻿using SharpMUSH.Implementation.Definitions;
+﻿using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -6,7 +6,7 @@ using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Implementation.Commands;
 
-public static partial class Commands
+public partial class Commands
 {
 	[SharpCommand(Name = "]", Behavior = CommandBehavior.SingleToken | CommandBehavior.NoParse, MinArgs = 1, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> NoParse(IMUSHCodeParser parser, SharpCommandAttribute _2)

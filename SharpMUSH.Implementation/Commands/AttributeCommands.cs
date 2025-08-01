@@ -1,10 +1,11 @@
-﻿using SharpMUSH.Library.DiscriminatedUnions;
+﻿using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
-using CB = SharpMUSH.Implementation.Definitions.CommandBehavior;
+using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 
 namespace SharpMUSH.Implementation.Commands;
 
-public static partial class Commands
+public partial class Commands
 {
 	[SharpCommand(Name = "@ATRLOCK", Switches = [], Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> AttributeLock(IMUSHCodeParser parser, SharpCommandAttribute _2)

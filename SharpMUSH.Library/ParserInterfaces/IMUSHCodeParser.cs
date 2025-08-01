@@ -22,6 +22,7 @@ public interface IMUSHCodeParser
 	IImmutableStack<ParserState> State { get; }
 	IMediator Mediator { get; }
 	LibraryService<string, Definitions.FunctionDefinition> FunctionLibrary {get;}
+	LibraryService<string, Definitions.CommandDefinition> CommandLibrary {get;}
 	ValueTask<CallState?> CommandCommaArgsParse(MString text);
 	ValueTask<CallState?> CommandEqSplitArgsParse(MString text);
 	ValueTask<CallState?> CommandEqSplitParse(MString text);

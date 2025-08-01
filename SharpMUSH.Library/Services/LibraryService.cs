@@ -18,3 +18,7 @@ public class LibraryService<TKey, TValue> : Dictionary<TKey, (TValue LibraryInfo
 
 public class FunctionLibraryService : 
 	LibraryService<string, Definitions.FunctionDefinition> { }
+	
+
+public class CommandLibraryService : 
+	LibraryService<string, Definitions.CommandDefinition> { }
