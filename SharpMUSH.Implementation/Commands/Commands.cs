@@ -36,7 +36,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		{
 			_commandLibrary.Add(knownMethod.Key,
 				((knownMethod.Value.Attribute,
-					p => (ValueTask<Option<CallState>>)knownMethod.Value.Method.Invoke(null, [p, knownMethod.Value.Attribute])!), true));
+					async p => await (ValueTask<Option<CallState>>)knownMethod.Value.Method.Invoke(null, [p, knownMethod.Value.Attribute])!), true));
 		}
 	}
 }

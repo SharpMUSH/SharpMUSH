@@ -36,7 +36,7 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 		{
 			_functionLibrary.Add(knownMethod.Key,
 				((knownMethod.Value.Attribute,
-					p => (ValueTask<CallState>)knownMethod.Value.Method.Invoke(null, [p, knownMethod.Value.Attribute])!), true));
+					async p => await (ValueTask<CallState>)knownMethod.Value.Method.Invoke(null, [p, knownMethod.Value.Attribute])!), true));
 		}
 	}
 }
