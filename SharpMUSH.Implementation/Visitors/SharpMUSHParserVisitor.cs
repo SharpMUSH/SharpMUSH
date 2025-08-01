@@ -78,27 +78,25 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 		/* await parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, MModule.single(
 			$"#{parser.CurrentState.Caller!.Value.Number}! {new string(' ', parser.CurrentState.ParserFunctionDepth!.Value)}{context.GetText()} :")); */
 		
-		var result = await CallFunction(logger, functionName.ToLower(), source, context, arguments, this);
+		var result = await CallFunction(functionName.ToLower(), source, context, arguments, this);
 
 		/* await parser.NotifyService.Notify(parser.CurrentState.Caller!.Value, MModule.single(
 			$"#{parser.CurrentState.Caller!.Value.Number}! {new string(' ', parser.CurrentState.ParserFunctionDepth!.Value)}{context.GetText()} => {result.Message}")); */
 
 		return result;
 	}
-
 	
 	/// <summary>
 	/// TODO: Optimization needed. We should at least grab the in-built ones at startup.
 	/// TODO: Move this to a Library Service implementation.
 	/// </summary>
-	/// <param name="newLogger"></param>
 	/// <param name="name">Function Name</param>
 	/// <param name="src">The source MarkupString</param>
 	/// <param name="context">Function Context for Depth</param>
 	/// <param name="args">Arguments</param>
 	/// <param name="visitor"></param>
 	/// <returns>The resulting CallState.</returns>
-	public async ValueTask<CallState> CallFunction(ILogger newLogger, string name, MString src,
+	public async ValueTask<CallState> CallFunction(string name, MString src,
 		FunctionContext context, EvaluationStringContext[] args, SharpMUSHParserVisitor visitor)
 	{
 		try
@@ -266,12 +264,11 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 	/// But if one wanted to implement a @pipe command that can pass a result from say, a @dig command, 
 	/// there would be a need for some way of passing on secondary data.
 	/// </remarks>
-	/// <param name="logger">Logger</param>
-	/// <param name="source">Original string</param>
+	/// <param name="src">Original string</param>
 	/// <param name="context">Command Context</param>
 	/// <param name="visitChildren">Parser function to visit children.</param>
 	/// <returns>An empty Call State</returns>
-	public async ValueTask<Option<CallState>> EvaluateCommands(ILogger newLogger, 
+	public async ValueTask<Option<CallState>> EvaluateCommands(
 		MString src,
 		CommandContext context,
 		Func<IRuleNode, ValueTask<CallState?>> visitChildren)
@@ -464,7 +461,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 		}
 	}
 
-	private async Task<Option<CallState>> HandleChannelCommand(IMUSHCodeParser parser, SharpChannel channel,
+	private async Task<Option<CallState>> HandleChannelCommand(IMUSHCodeParser prs, SharpChannel channel,
 		CommandContext context, MString src)
 	{
 		var rest = MModule.substring(
@@ -472,7 +469,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 			context.evaluationString().Stop.StopIndex - context.evaluationString().Start.StartIndex + 1,
 			src);
 
-		var chatParser = parser.Push(parser.CurrentState with
+		var chatParser = prs.Push(prs.CurrentState with
 		{
 			Command = "@CHAT",
 			Arguments = new Dictionary<string, CallState>
@@ -482,17 +479,17 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 			}
 		});
 
-		return await parser.CommandLibrary["@CHAT"].LibraryInformation.Command.Invoke(chatParser);
+		return await chatParser.CommandLibrary["@CHAT"].LibraryInformation.Command.Invoke(chatParser);
 	}
 
 	private async Task<Option<CallState>> HandleUserDefinedCommand(
-		IMUSHCodeParser parser,
+		IMUSHCodeParser prs,
 		IEnumerable<(AnySharpObject Obj, SharpAttribute Attr, Dictionary<string, CallState> Arguments)> matches)
 	{
 		// Step 1: Validate if the command can be evaluated (locks)
 		foreach (var (obj, attr, arguments) in matches)
 		{
-			var newParser = parser.Push(parser.CurrentState with
+			var newParser = prs.Push(prs.CurrentState with
 			{
 				CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attr.Name),
 				Arguments = arguments,
@@ -509,9 +506,9 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 		return CallState.Empty;
 	}
 
-	private async ValueTask<Option<CallState>> HandleGoCommandPattern(IMUSHCodeParser parser, SharpExit exit)
+	private async ValueTask<Option<CallState>> HandleGoCommandPattern(IMUSHCodeParser prs, SharpExit exit)
 	{
-		var newParser = parser.Push(parser.CurrentState with
+		var newParser = prs.Push(prs.CurrentState with
 		{
 			Command = "GOTO",
 			Arguments = new Dictionary<string, CallState>
@@ -521,16 +518,16 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 			Function = null
 		});
 
-		return await parser.CommandLibrary["GOTO"].LibraryInformation.Command.Invoke(newParser);
+		return await newParser.CommandLibrary["GOTO"].LibraryInformation.Command.Invoke(newParser);
 	}
 
-	private static async ValueTask<Option<CallState>> HandleInternalCommandPattern(IMUSHCodeParser parser, MString src,
+	private static async ValueTask<Option<CallState>> HandleInternalCommandPattern(IMUSHCodeParser prs, MString src,
 		CommandContext context, string rootCommand, IEnumerable<string> switches,
 		CommandDefinition libraryCommandDefinition)
 	{
-		var arguments = await ArgumentSplit(parser, src, context, libraryCommandDefinition);
+		var arguments = await ArgumentSplit(prs, src, context, libraryCommandDefinition);
 
-		var newParser = parser.Push(parser.CurrentState with
+		var newParser = prs.Push(prs.CurrentState with
 		{
 			Command = rootCommand,
 			Switches = switches.Select(x => x.ToUpper()),
@@ -543,15 +540,15 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 		return await libraryCommandDefinition.Command.Invoke(newParser);
 	}
 
-	private static async ValueTask<Option<CallState>> HandleSocketCommandPattern(IMUSHCodeParser parser, MString src,
+	private static async ValueTask<Option<CallState>> HandleSocketCommandPattern(IMUSHCodeParser prs, MString src,
 		CommandContext context, string command,
 		IEnumerable<KeyValuePair<string, (CommandDefinition LibraryInformation,bool IsSystem)>> socketCommandPattern,
 		(SharpCommandAttribute Attribute, Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Function)
 			librarySocketCommandDefinition)
 	{
-		var arguments = await ArgumentSplit(parser, src, context, librarySocketCommandDefinition);
+		var arguments = await ArgumentSplit(prs, src, context, librarySocketCommandDefinition);
 
-		var newParser = parser.Push(parser.CurrentState with
+		var newParser = prs.Push(prs.CurrentState with
 		{
 			Command = command,
 			Arguments = arguments.Select((value, i) => 
@@ -564,7 +561,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 		return await socketCommandPattern.First().Value.LibraryInformation.Command.Invoke(newParser);
 	}
 
-	private static async ValueTask<Option<CallState>> HandleSingleTokenCommandPattern(IMUSHCodeParser parser,
+	private static async ValueTask<Option<CallState>> HandleSingleTokenCommandPattern(IMUSHCodeParser prs,
 		MString src, CommandContext context, string command,
 		IEnumerable<KeyValuePair<string, (CommandDefinition LibraryInformation,bool IsSystem)>> singleTokenCommandPattern)
 	{
@@ -572,10 +569,10 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 		var rest = command[1..];
 		var singleLibraryCommandDefinition = singleTokenCommandPattern.Single().Value;
 		// TODO: Should Single Commands split? - Getting errors out of this.
-		var arguments = await ArgumentSplit(parser, src, context, singleLibraryCommandDefinition.LibraryInformation);
+		var arguments = await ArgumentSplit(prs, src, context, singleLibraryCommandDefinition.LibraryInformation);
 
-		var newParser = parser.Push(
-			parser.CurrentState with
+		var newParser = prs.Push(
+			prs.CurrentState with
 			{
 				Command = singleRootCommand,
 				Arguments = ImmutableDictionary<string, CallState>.Empty
@@ -589,7 +586,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 		return await singleLibraryCommandDefinition.LibraryInformation.Command.Invoke(newParser);
 	}
 
-	private static async ValueTask<List<CallState>> ArgumentSplit(IMUSHCodeParser parser, MString src,
+	private static async ValueTask<List<CallState>> ArgumentSplit(IMUSHCodeParser prs, MString src,
 		CommandContext context,
 		(SharpCommandAttribute Attribute, Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Function)
 			libraryCommandDefinition)
@@ -598,7 +595,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 		var behavior = libraryCommandDefinition.Attribute.Behavior;
 
 		// Do not parse the argument splitting.
-		var newNoParseParser = parser.Push(parser.CurrentState with { ParseMode = ParseMode.NoParse });
+		var newNoParseParser = prs.Push(prs.CurrentState with { ParseMode = ParseMode.NoParse });
 		var realSubtext = MModule.substring(
 			context.evaluationString().Start.StartIndex,
 			context.evaluationString().Stop.StopIndex - context.evaluationString().Start.StartIndex + 1,
@@ -650,7 +647,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 		{
 			arguments.Add(noParse
 				? new CallState(argCallState.Arguments!.FirstOrDefault() ?? MModule.empty(), argCallState.Depth)
-				: (await parser.FunctionParse(argCallState.Arguments!.FirstOrDefault() ?? MModule.empty()))!);
+				: (await prs.FunctionParse(argCallState.Arguments!.FirstOrDefault() ?? MModule.empty()))!);
 
 			if (nArgs < 2) return arguments;
 
@@ -664,14 +661,14 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 							argCallState.Depth,
 							null,
 							async () =>
-								(await parser.FunctionParse(x))!.Message!)));
+								(await prs.FunctionParse(x))!.Message!)));
 			}
 			else
 			{
 				foreach (var argument in argCallState.Arguments!.Skip(1))
 				{
 					// This is done to avoid allocation with ValueTask.
-					arguments.Add((await parser.FunctionParse(argument))!);
+					arguments.Add((await prs.FunctionParse(argument))!);
 				}
 			}
 		}
@@ -687,7 +684,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 				foreach (var argument in argCallState.Arguments!)
 				{
 					// This is done to avoid allocation with ValueTask.
-					arguments.Add((await parser.FunctionParse(argument))!);
+					arguments.Add((await prs.FunctionParse(argument))!);
 				}
 			}
 		}
@@ -698,7 +695,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 	
 	
 	public override async ValueTask<CallState?> VisitEvaluationString(
-		[NotNull] EvaluationStringContext context) => await VisitChildren(context) ?? new(
+		[NotNull] EvaluationStringContext context) => await VisitChildren(context) ?? new CallState(
 		MModule.substring(context.Start.StartIndex,
 			context.Stop?.StopIndex is null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source),
 		context.Depth());
@@ -863,7 +860,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 			return await VisitChildren(context) ?? new CallState(context.GetText());
 		}
 
-		return (await EvaluateCommands(logger, source, context, VisitChildren))
+		return (await EvaluateCommands(source, context, VisitChildren))
 			.Match<CallState?>(
 				x => x,
 				_ => null);
