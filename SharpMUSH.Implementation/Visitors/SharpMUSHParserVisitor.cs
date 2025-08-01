@@ -112,7 +112,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 					return new CallState(string.Format(Errors.ErrorNoSuchFunction, name), context.Depth());
 				}
 
-				parser.FunctionLibrary.Add(name, (functionValue,false));
+				parser.FunctionLibrary.Add(name, (functionValue,true));
 				libraryMatch = parser.FunctionLibrary[name];
 			}
 
