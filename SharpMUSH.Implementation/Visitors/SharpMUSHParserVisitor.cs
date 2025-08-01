@@ -250,7 +250,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 	private Option<(SharpFunctionAttribute, Func<IMUSHCodeParser, ValueTask<CallState>>)>
 		DiscoverBuiltInFunction(string name)
 	{
-		if (!parser.FunctionLibrary.TryGetValue(name, out var result) && result.IsSystem)
+		if (!parser.FunctionLibrary.TryGetValue(name, out var result) || !result.IsSystem)
 			return new None();
 
 		return (result.LibraryInformation.Attribute, 

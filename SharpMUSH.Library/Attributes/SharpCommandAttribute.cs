@@ -3,7 +3,7 @@
 namespace SharpMUSH.Library.Attributes;
 
 [AttributeUsage(AttributeTargets.Method)]
-public class SharpCommandAttribute : Attribute
+public sealed class SharpCommandAttribute : Attribute
 {
 	public required string Name { get; set; }
 	public int MinArgs { get; set; } = 0;
