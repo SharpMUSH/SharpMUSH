@@ -18,7 +18,7 @@ public class LambdaUnitTests : BaseUnitTest
 	}
 
 	[Test]
-	[Arguments("u(#lambda/add\\(1\\,2\\))", "3")]
+	[Arguments(@"u(#lambda/add\(1\,2\))", "3")]
 	// [Arguments("u(lit(#lambda/add(1,2)))", "3")] // Long running bug/test found?
 	[Arguments("u(#lambda/[add(1,2)])", "3")] 
 	[Arguments("u(#lambda/3)", "3")]

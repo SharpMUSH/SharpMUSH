@@ -72,12 +72,12 @@ public class MemoryTest : BaseUnitTest
 
 		foreach (var _ in Enumerable.Range(0, 100))
 		{
-			sb.Append($"strcat(1,");
+			sb.Append("strcat(1,");
 		}
 		sb.Append(longstring);
 		foreach (var _ in Enumerable.Range(0, 100))
 		{
-			sb.Append(")");
+			sb.Append(')');
 		}
 		var str = sb.ToString();
 
@@ -109,7 +109,7 @@ public class MemoryTest : BaseUnitTest
 
 		foreach (var _ in Enumerable.Range(0, 100))
 		{
-			sb.Append($"[strcat(1,");
+			sb.Append("[strcat(1,");
 		}
 		sb.Append(longstring);
 		foreach (var _ in Enumerable.Range(0, 100))

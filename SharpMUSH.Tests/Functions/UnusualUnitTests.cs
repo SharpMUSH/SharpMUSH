@@ -13,7 +13,7 @@ public class UnusualUnitTests : BaseUnitTest
 		.GetResult();
 
 	[Test]
-	[Arguments(@"s(ansi\(rG\,ansi(D\,[ansi(y,foo)]\)\))", @"foo")]
+	[Arguments(@"s(ansi\(rG\,ansi(D\,[ansi(y,foo)]\)\))", "foo")]
 	public async Task S(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
