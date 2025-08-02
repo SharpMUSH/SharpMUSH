@@ -1,10 +1,15 @@
-﻿using SharpMUSH.Implementation.Definitions;
+﻿using Antlr4.Runtime;
+using SharpMUSH.Implementation.Definitions;
+using SharpMUSH.Implementation.Handlers;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -68,31 +73,48 @@ public partial class Functions
 	[SharpFunction(Name = "HASPOWER", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> HasPower(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var obj = HelperFunctions.ParseDBRef(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var toLocate = parser.CurrentState.Arguments["0"].Message!;
 		var power = MModule.plainText(parser.CurrentState.Arguments["1"].Message).ToUpper();
-		// TODO: USE LOCATE
-		if (obj.IsNone()) return new CallState(false);
+		var maybeLocate = await
+			parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, toLocate.ToPlainText(),
+				LocateFlags.All);
 
-		var actualObj = await parser.Mediator.Send(new GetObjectNodeQuery(obj.AsValue()));
-		// TODO: Notify
-		if (actualObj.IsNone()) return new CallState(false);
+		if (maybeLocate.IsError)
+		{
+			return maybeLocate.AsError;
+		}
 
-		return new CallState(power.Equals(actualObj.Object()!.Type.ToUpper()));
+		var located = maybeLocate.AsSharpObject;
+		var hasPower = await located.HasPower(power);
+
+		return new CallState(hasPower);
 	}
 
 	[SharpFunction(Name = "HASTYPE", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> HasType(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var obj = HelperFunctions.ParseDBRef(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
-		var typeList = MModule.plainText(parser.CurrentState.Arguments["1"].Message).Split(" ");
-		// TODO: USE LOCATE
-		if (obj.IsNone()) return new CallState(false, Errors.ErrorNotVisible);
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var toLocate = parser.CurrentState.Arguments["0"].Message!;
+		var typeQuery = MModule.plainText(parser.CurrentState.Arguments["1"].Message).ToUpper().Split(" ");
+		var maybeLocate = await
+			parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, toLocate.ToPlainText(),
+				LocateFlags.All);
 
-		var actualObj = await parser.Mediator.Send(new GetObjectNodeQuery(obj.AsValue()));
-		// TODO: Notify
-		if (actualObj.IsNone()) return new CallState(false);
+		if (maybeLocate.IsError)
+		{
+			return maybeLocate.AsError;
+		}
 
-		return new CallState(typeList.Contains(actualObj.Object()!.Type.ToUpper()));
+		if (typeQuery.Any(x => x is not "PLAYER" and not "THING" and not "ROOM" and not "EXIT"))
+		{
+			return new CallState("#-1 NO SUCH TYPE.");
+		}
+
+		var located = maybeLocate.AsSharpObject;
+		var hasType = typeQuery.Any(validType => located.HasType(validType));
+
+		return new CallState(hasType);
 	}
 
 	[SharpFunction(Name = "INAME", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -102,9 +124,39 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "LPIDS", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> LPIDs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> LPIDs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var args = parser.CurrentState.Arguments;
+		var target = NoParseDefaultNoParseArgument(args, 0, "me");
+		var queueTypes = NoParseDefaultNoParseArgument(args, 0, "wait semaphore").ToPlainText().ToUpperInvariant()
+			.Split(" ").Distinct();
+
+		if (queueTypes.Any(type => type is not "WAIT" and not "SEMAPHORE" and not "INDEPENDENT"))
+		{
+			return new CallState("#-1 INVALID QUEUE TYPE.");
+		}
+
+		var maybeLocate = await
+			parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
+				executor, executor, target.ToPlainText(),
+				LocateFlags.All);
+
+		if (maybeLocate.IsError)
+		{
+			return maybeLocate.AsError;
+		}
+
+		var located = maybeLocate.AsSharpObject;
+
+		// TODO: Implement WAIT and INDEPENDENT queue handling
+		var semaphorePids = await parser.Mediator
+			.Send(new ScheduleSemaphoreQuery(located.Object().DBRef));
+
+		var pids = await semaphorePids.Select<SemaphoreTaskData, string>(x => x.Pid.ToString())
+			.ToArrayAsync();
+
+		return new CallState(string.Join(' ', pids));
 	}
 
 	[SharpFunction(Name = "LSTATS", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]

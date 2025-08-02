@@ -69,6 +69,26 @@ public static partial class HelperFunctions
 		=> (await obj.Object().Powers.WithCancellation(CancellationToken.None))
 			.Any(x => x.Name == power || x.Alias == power);
 
+	public static bool HasType(this AnySharpObject obj, string validType) =>
+		validType switch
+		{
+			"PLAYER" => obj.IsPlayer,
+			"THING" => obj.IsThing,
+			"ROOM" => obj.IsRoom,
+			"EXIT" => obj.IsExit,
+			_ => true, 
+		};
+	
+	public static string TypeString(this AnySharpObject obj) =>
+		obj switch
+		{
+			{IsPlayer: true} => "PLAYER",
+			{IsThing: true} => "THING",
+			{IsRoom: true} => "ROOM",
+			{IsExit: true} => "EXIT",
+			_ => "OBJECT"
+		};
+	
 	public static async ValueTask<bool> HasLongFingers(this AnySharpObject obj)
 		=> await obj.IsPriv() || await obj.HasPower("Long_Fingers");
 
