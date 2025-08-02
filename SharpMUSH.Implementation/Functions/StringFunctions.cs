@@ -2,6 +2,7 @@
 using System.Text.RegularExpressions;
 using DotNext.Collections.Generic;
 using Humanizer;
+using Microsoft.FSharp.Core;
 using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
@@ -344,7 +345,19 @@ public partial class Functions
 	[SharpFunction(Name = "CAPSTR", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> CapStr(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var arg0 = parser.CurrentState.Arguments["0"].Message!;
+		
+		if (arg0.Length < 1)
+		{
+			return new ValueTask<CallState>(CallState.Empty);
+		}
+		
+		var leftSide = MModule.substring(0, 1, arg0);
+		var rightSide = MModule.substring(1, arg0.Length - 1, arg0);
+		var capitalized = MModule.apply(leftSide, FuncConvert.FromFunc<string, string>(x => x.ToUpperInvariant()));
+		var concat = MModule.concat(capitalized, rightSide, FSharpOption<MString>.None);
+		
+		return new ValueTask<CallState>(new CallState(concat));
 	}
 
 	[SharpFunction(Name = "CASE", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
@@ -503,7 +516,10 @@ public partial class Functions
 	[SharpFunction(Name = "LCSTR", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> LowerCaseString(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var arg0 = parser.CurrentState.Arguments["0"].Message!;
+		var result = MModule.apply(arg0, FuncConvert.FromFunc<string,string>(x => x.ToLowerInvariant()));
+
+		return new ValueTask<CallState>(new CallState(result));
 	}
 
 	[SharpFunction(Name = "LEFT", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
@@ -712,22 +728,21 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "UCSTR", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> UCStr(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> UpperCaseString(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var arg0 = parser.CurrentState.Arguments["0"].Message!;
+		var result = MModule.apply(arg0, FuncConvert.FromFunc<string,string>(x => x.ToUpperInvariant()));
+
+		return new ValueTask<CallState>(new CallState(result));
 	}
 
 	[SharpFunction(Name = "URLDECODE", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> URLDecode(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		throw new NotImplementedException();
-	}
+	public static ValueTask<CallState> URLDecode(IMUSHCodeParser parser, SharpFunctionAttribute _2) 
+		=> new(new CallState(WebUtility.HtmlDecode(parser.CurrentState.Arguments["0"].Message!.ToPlainText())));
 
 	[SharpFunction(Name = "URLENCODE", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> URLEncode(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		return new ValueTask<CallState>(new CallState(WebUtility.HtmlEncode(parser.CurrentState.Arguments["0"].Message!.ToPlainText())));
-	}
+	public static ValueTask<CallState> URLEncode(IMUSHCodeParser parser, SharpFunctionAttribute _2) 
+		=> new(new CallState(WebUtility.HtmlEncode(parser.CurrentState.Arguments["0"].Message!.ToPlainText())));
 
 	[SharpFunction(Name = "WRAP", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Wrap(IMUSHCodeParser parser, SharpFunctionAttribute _2)

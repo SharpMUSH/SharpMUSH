@@ -182,15 +182,19 @@ module MarkupStringModule =
 
     let multipleWithDelimiter (delimiter: MarkupString) (mu: MarkupString seq) : MarkupString =
         mu |> Seq.intersperse delimiter |> multiple
-    
-    let intersperseFunc sepFunc list = seq {
-        for i, element in list |> Seq.indexed do
-            if i > 0 then yield sepFunc(i)
-            yield element }
-    
+
+    let intersperseFunc sepFunc list =
+        seq {
+            for i, element in list |> Seq.indexed do
+                if i > 0 then
+                    yield sepFunc (i)
+
+                yield element
+        }
+
     let multipleWithDelimiterFunc (delimiterFunc: int -> MarkupString) (mu: MarkupString seq) : MarkupString =
-        mu |> intersperseFunc delimiterFunc |> multiple 
-        
+        mu |> intersperseFunc delimiterFunc |> multiple
+
     let serializationOptions =
         let serializeOption = JsonFSharpOptions.Default().ToJsonSerializerOptions()
         serializeOption.Converters.Add(ColorJsonConverter())
@@ -373,6 +377,15 @@ module MarkupStringModule =
 
     let split2 (delimiter: MarkupString) (markupStr: MarkupString) = split (plainText delimiter) markupStr
 
+    [<TailCall>]
+    let rec apply (str: MarkupString) (transform: string -> string) : MarkupString =
+        let rec mapContent content =
+            content
+            |> List.map (function
+                | Text s -> Text (transform s)
+                | MarkupText m -> MarkupText (apply m transform))
+        MarkupString(str.MarkupDetails, mapContent str.Content)
+    
     let insertAt (input: MarkupString) (insert: MarkupString) (index: int) : MarkupString =
         let len = getLength input
 
@@ -494,10 +507,10 @@ module MarkupStringModule =
                 let space = single " "
                 let minimumFenceWidth = totalSpaces / fences
                 let thickerFences = totalSpaces % fences
-                let fenceStr = (repeat space minimumFenceWidth (empty()))
-                let thickFenceStr = (repeat space (minimumFenceWidth+1) (empty()))
+                let fenceStr = (repeat space minimumFenceWidth (empty ()))
+                let thickFenceStr = (repeat space (minimumFenceWidth + 1) (empty ()))
                 let delFunc = (fun i -> if i <= thickerFences then thickFenceStr else fenceStr)
-                
+
                 multipleWithDelimiterFunc delFunc wordArr
 
     type private GlobPatternRegex = FSharp.Text.RegexProvider.Regex< @"(?<!\\)\\\*" >
@@ -627,12 +640,13 @@ module TextAligner =
         match justification with
         | Justification.Left -> pad text fill width PadType.Right TruncationType.Truncate
         | Justification.Center -> pad text fill width PadType.Center TruncationType.Truncate
-        | Justification.Full ->  pad text fill width PadType.Full TruncationType.Truncate
+        | Justification.Full -> pad text fill width PadType.Full TruncationType.Truncate
         | Justification.Right
         | Justification.Paragraph -> pad text fill width PadType.Left TruncationType.Truncate
 
-    let moreToDo (column: (ColumnSpec * MarkupString) seq) : bool = column |> Seq.exists (fun (x,y) -> y.Length > 0)
-    
+    let moreToDo (column: (ColumnSpec * MarkupString) seq) : bool =
+        column |> Seq.exists (fun (x, y) -> y.Length > 0)
+
     let rec alignFun
         (columns: (ColumnSpec * MarkupString) seq)
         (filler: MarkupString)
@@ -641,14 +655,17 @@ module TextAligner =
         (agg: MarkupString seq)
         : MarkupString =
 
-        if not (moreToDo columns) then multipleWithDelimiter rowSeparator agg
+        if not (moreToDo columns) then
+            multipleWithDelimiter rowSeparator agg
         else
-            let newLine = ((single " "), columns) ||> Seq.fold (fun acc (_,y) -> concat acc y columnSeparator)
+            let newLine =
+                ((single " "), columns)
+                ||> Seq.fold (fun acc (_, y) -> concat acc y columnSeparator)
             // TODO: Need to consume from the Columns
             // TODO: Implement actual logic.
             // Right now this is an infinite recursion loop.
-            alignFun columns filler columnSeparator rowSeparator (Seq.append agg [|newLine|])
-        
+            alignFun columns filler columnSeparator rowSeparator (Seq.append agg [| newLine |])
+
     let align
         (widths: string)
         (columns: MarkupString list)
@@ -656,10 +673,16 @@ module TextAligner =
         (columnSeparator: MarkupString)
         (rowSeparator: MarkupString)
         : MarkupString =
-    
+
         let columnSpecs = ColumnSpec.parseList widths
-        if columnSpecs.Length <> columns.Length then empty() // TODO: Return a better error.
-        elif filler.Length > 0 then single "Filler is too long."
-        elif columnSeparator.Length > 0 then single "columnSeparator is too long."
-        elif rowSeparator.Length > 0 then single "rowSeparator is too long."
-        else alignFun (Seq.zip columnSpecs columns) filler (Some columnSeparator) rowSeparator [||]
+
+        if columnSpecs.Length <> columns.Length then
+            empty () // TODO: Return a better error.
+        elif filler.Length > 0 then
+            single "Filler is too long."
+        elif columnSeparator.Length > 0 then
+            single "columnSeparator is too long."
+        elif rowSeparator.Length > 0 then
+            single "rowSeparator is too long."
+        else
+            alignFun (Seq.zip columnSpecs columns) filler (Some columnSeparator) rowSeparator [||]
