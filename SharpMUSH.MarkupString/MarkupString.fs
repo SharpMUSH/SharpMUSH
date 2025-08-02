@@ -9,6 +9,9 @@ open System.Text.Json.Serialization
 open FSharpPlus
 open System.Drawing
 
+/// <summary>
+/// Provides core types and functions for working with markup-aware strings.
+/// </summary>
 module MarkupStringModule =
     type Content =
         | Text of string
@@ -160,64 +163,138 @@ module MarkupStringModule =
 
         member this.ToPlainText() : string = plainStrVal.Value
 
+    /// <summary>
+    /// Active pattern for extracting markup details and content from a MarkupString.
+    /// </summary>
+    /// <param name="markupStr">The MarkupString to extract from.</param>
     let (|MarkupStringPattern|) (markupStr: MarkupString) =
         (markupStr.MarkupDetails, markupStr.Content)
 
+    /// <summary>
+    /// Creates a MarkupString from a markup and a plain string.
+    /// </summary>
+    /// <param name="markupDetails">The markup to apply.</param>
+    /// <param name="str">The plain string content.</param>
     let markupSingle (markupDetails: Markup, str: string) : MarkupString =
         MarkupString(MarkedupText markupDetails, [ Text str ])
 
+    /// <summary>
+    /// Creates a MarkupString from a markup and another MarkupString.
+    /// </summary>
+    /// <param name="markupDetails">The markup to apply.</param>
+    /// <param name="mu">The MarkupString content.</param>
     let markupSingle2 (markupDetails: Markup, mu: MarkupString) : MarkupString =
         MarkupString(MarkedupText markupDetails, [ MarkupText mu ])
 
+    /// <summary>
+    /// Creates a MarkupString from a markup and a sequence of MarkupStrings.
+    /// </summary>
+    /// <param name="markupDetails">The markup to apply.</param>
+    /// <param name="mu">The sequence of MarkupStrings.</param>
     let markupMultiple (markupDetails: Markup, mu: seq<MarkupString>) : MarkupString =
         MarkupString(MarkedupText markupDetails, mu |> Seq.map MarkupText |> Seq.toList)
 
+    /// <summary>
+    /// Creates a MarkupString from a plain string.
+    /// </summary>
+    /// <param name="str">The plain string content.</param>
     let single (str: string) : MarkupString = MarkupString(Empty, [ Text str ])
 
+    /// <summary>
+    /// Creates a MarkupString from a sequence of MarkupStrings.
+    /// </summary>
+    /// <param name="mu">The sequence of MarkupStrings.</param>
     let multiple (mu: seq<MarkupString>) : MarkupString =
         MarkupString(Empty, mu |> Seq.map MarkupText |> Seq.toList)
 
+    /// <summary>
+    /// Returns an empty MarkupString.
+    /// </summary>
     let empty () : MarkupString =
         MarkupString(Empty, [ Text String.Empty ])
 
+    /// <summary>
+    /// Creates a MarkupString by interspersing a delimiter between elements.
+    /// </summary>
+    /// <param name="delimiter">The delimiter MarkupString.</param>
+    /// <param name="mu">The sequence of MarkupStrings.</param>
     let multipleWithDelimiter (delimiter: MarkupString) (mu: MarkupString seq) : MarkupString =
         mu |> Seq.intersperse delimiter |> multiple
 
+    /// <summary>
+    /// Intersperses a function-generated separator between elements of a list.
+    /// </summary>
+    /// <param name="sepFunc">Function to generate separator MarkupString given index.</param>
+    /// <param name="list">The list to intersperse.</param>
     let intersperseFunc sepFunc list =
         seq {
             for i, element in list |> Seq.indexed do
                 if i > 0 then
-                    yield sepFunc (i)
+                    yield sepFunc i
 
                 yield element
         }
 
+    /// <summary>
+    /// Creates a MarkupString by interspersing a function-generated delimiter between elements.
+    /// </summary>
+    /// <param name="delimiterFunc">Function to generate delimiter MarkupString given index.</param>
+    /// <param name="mu">The sequence of MarkupStrings.</param>
     let multipleWithDelimiterFunc (delimiterFunc: int -> MarkupString) (mu: MarkupString seq) : MarkupString =
         mu |> intersperseFunc delimiterFunc |> multiple
 
+    /// <summary>
+    /// Serialization options for MarkupString, including color support.
+    /// </summary>
     let serializationOptions =
         let serializeOption = JsonFSharpOptions.Default().ToJsonSerializerOptions()
         serializeOption.Converters.Add(ColorJsonConverter())
         serializeOption
 
+    /// <summary>
+    /// Serializes a MarkupString to a JSON string.
+    /// </summary>
+    /// <param name="markupStr">The MarkupString to serialize.</param>
     let serialize (markupStr: MarkupString) : string =
         JsonSerializer.Serialize(markupStr, serializationOptions)
 
+    /// <summary>
+    /// Deserializes a JSON string into a MarkupString.
+    /// </summary>
+    /// <param name="markupString">The JSON string to deserialize.</param>
     let deserialize (markupString: string) : MarkupString =
         if markupString.Length = 0 then
             empty ()
         else
             JsonSerializer.Deserialize(markupString, serializationOptions)
 
+    /// <summary>
+    /// Returns the plain text representation of a MarkupString.
+    /// </summary>
+    /// <param name="markupStr">The MarkupString to extract plain text from.</param>
     [<TailCall>]
     let rec plainText (markupStr: MarkupString) : string = markupStr.ToPlainText()
 
+    /// <summary>
+    /// Returns a MarkupString containing only the plain text of the input.
+    /// </summary>
+    /// <param name="markupStr">The MarkupString to convert.</param>
     let plainText2 (markupStr: MarkupString) : MarkupString =
         MarkupString(Empty, [ Text(markupStr.ToPlainText()) ])
 
+    /// <summary>
+    /// Gets the length of the plain text in a MarkupString.
+    /// </summary>
+    /// <param name="markupStr">The MarkupString to measure.</param>
     [<TailCall>]
     let rec getLength (markupStr: MarkupString) : int = markupStr.Length
 
+    /// <summary>
+    /// Concatenates two MarkupStrings, optionally inserting a separator.
+    /// </summary>
+    /// <param name="originalMarkupStr">The first MarkupString.</param>
+    /// <param name="newMarkupStr">The second MarkupString.</param>
+    /// <param name="optionalSeparator">An optional separator MarkupString.</param>
     let concat
         (originalMarkupStr: MarkupString)
         (newMarkupStr: MarkupString)
@@ -242,6 +319,12 @@ module MarkupStringModule =
 
             MarkupString(Empty, combinedContent)
 
+    /// <summary>
+    /// Concatenates and attaches a MarkupString to another, handling nested structures.
+    /// </summary>
+    /// <param name="originalMarkupStr">The original MarkupString.</param>
+    /// <param name="newMarkupStr">The MarkupString to attach.</param>
+    /// <param name="optionalSeparator">An optional separator MarkupString.</param>
     let rec concatAttach
         (originalMarkupStr: MarkupString)
         (newMarkupStr: MarkupString)
@@ -267,6 +350,12 @@ module MarkupStringModule =
             | _, [ Text _ ] -> concat originalMarkupStr newMarkupStr optionalSeparator
             | _ -> failwith "concatAttach should never see an empty list."
 
+    /// <summary>
+    /// Returns a substring of a MarkupString, preserving markup.
+    /// </summary>
+    /// <param name="start">Start index.</param>
+    /// <param name="length">Length of substring.</param>
+    /// <param name="markupStr">Input MarkupString.</param>
     [<TailCall>]
     let rec substring (start: int) (length: int) (markupStr: MarkupString) : MarkupString =
         let inline extractText str start length =
@@ -308,6 +397,11 @@ module MarkupStringModule =
 
         MarkupString(markupStr.MarkupDetails, substringAux markupStr.Content start length [])
 
+    /// <summary>
+    /// Returns all indexes where a search MarkupString occurs in another MarkupString.
+    /// </summary>
+    /// <param name="markupStr">Input MarkupString.</param>
+    /// <param name="search">Search MarkupString.</param>
     [<TailCall>]
     let rec indexesOf (markupStr: MarkupString) (search: MarkupString) : seq<int> =
         let text = plainText markupStr
@@ -329,6 +423,11 @@ module MarkupStringModule =
 
         findDelimiters 0 []
 
+    /// <summary>
+    /// Returns the first index where a search MarkupString occurs.
+    /// </summary>
+    /// <param name="markupStr">Input MarkupString.</param>
+    /// <param name="search">Search MarkupString.</param>
     [<TailCall>]
     let rec indexOf (markupStr: MarkupString) (search: MarkupString) : int =
         let matches = indexesOf markupStr search
@@ -337,6 +436,11 @@ module MarkupStringModule =
         | _ when Seq.isEmpty matches -> -1
         | _ -> matches |> Seq.head
 
+    /// <summary>
+    /// Returns the last index where a search MarkupString occurs.
+    /// </summary>
+    /// <param name="markupStr">Input MarkupString.</param>
+    /// <param name="search">Search MarkupString.</param>
     [<TailCall>]
     let rec indexOfLast (markupStr: MarkupString) (search: MarkupString) : int =
         let matches = indexesOf markupStr search
@@ -345,6 +449,11 @@ module MarkupStringModule =
         | _ when Seq.isEmpty matches -> -1
         | _ -> matches |> Seq.last
 
+    /// <summary>
+    /// Splits a MarkupString by a string delimiter.
+    /// </summary>
+    /// <param name="delimiter">The delimiter string.</param>
+    /// <param name="markupStr">The MarkupString to split.</param>
     [<TailCall>]
     let rec split (delimiter: string) (markupStr: MarkupString) : MarkupString[] =
         let rec findDelimiters (text: string) (pos: int) =
@@ -375,8 +484,18 @@ module MarkupStringModule =
 
         buildSplits delimiterPositions 0 [] |> Array.ofList
 
+    /// <summary>
+    /// Splits a MarkupString by another MarkupString as delimiter.
+    /// </summary>
+    /// <param name="delimiter">The delimiter MarkupString.</param>
+    /// <param name="markupStr">The MarkupString to split.</param>
     let split2 (delimiter: MarkupString) (markupStr: MarkupString) = split (plainText delimiter) markupStr
 
+    /// <summary>
+    /// Applies a transformation function to the text content of a MarkupString.
+    /// </summary>
+    /// <param name="str">The MarkupString to transform.</param>
+    /// <param name="transform">The transformation function.</param>
     [<TailCall>]
     let rec apply (str: MarkupString) (transform: string -> string) : MarkupString =
         let rec mapContent content =
@@ -386,6 +505,12 @@ module MarkupStringModule =
                 | MarkupText m -> MarkupText (apply m transform))
         MarkupString(str.MarkupDetails, mapContent str.Content)
     
+    /// <summary>
+    /// Inserts a MarkupString at a specified index in another MarkupString.
+    /// </summary>
+    /// <param name="input">The original MarkupString.</param>
+    /// <param name="insert">The MarkupString to insert.</param>
+    /// <param name="index">The index at which to insert.</param>
     let insertAt (input: MarkupString) (insert: MarkupString) (index: int) : MarkupString =
         let len = getLength input
 
@@ -399,6 +524,12 @@ module MarkupStringModule =
             let wrappedInsert = MarkupString(before.MarkupDetails, [ MarkupText insert ])
             concat (concat before wrappedInsert None) after None
 
+    /// <summary>
+    /// Trim a string from the start, end, or both ends based on the specified TrimType.
+    /// </summary>
+    /// <param name="markupStr">Input MarkupString.</param>
+    /// <param name="trimStr">String to trim.</param>
+    /// <param name="trimType">Trim type (start, end, both).</param>
     let trim (markupStr: MarkupString) (trimStr: MarkupString) (trimType: TrimType) : MarkupString =
         let trimStrLen = getLength trimStr
 
@@ -430,6 +561,12 @@ module MarkupStringModule =
                     let ed = indexes |> Seq.last
                     substring start (ed - start) x)
 
+    /// <summary>
+    /// Repeat a MarkupString a specified number of times, concatenating them to the aggregator.
+    /// </summary>
+    /// <param name="markupStr">The MarkupString to repeat.</param>
+    /// <param name="count">The number of times to repeat.</param>
+    /// <param name="aggregator">The initial MarkupString to aggregate into.</param>
     [<TailCall>]
     let rec repeat (markupStr: MarkupString) (count: int) (aggregator: MarkupString) =
         if count <= 0 then
@@ -437,87 +574,141 @@ module MarkupStringModule =
         else
             repeat markupStr (count - 1) (concat aggregator markupStr None)
 
-    let pad
-        (markupStr: MarkupString)
-        (padStr: MarkupString)
-        (width: int)
-        (padType: PadType)
-        (truncType: TruncationType)
-        : MarkupString =
+    /// <summary>
+    /// Centers a MarkupString within a specified width using a padding string on the right.
+    /// </summary>
+    /// <param name="markupStr">Input MarkupString.</param>
+    /// <param name="padStr">Padding MarkupString for left side.</param>
+    /// <param name="padStrRight">Padding MarkupString for right side.</param>
+    /// <param name="width">Total width.</param>
+    /// <param name="truncType">Truncation type.</param>
+    let center2 (markupStr: MarkupString) (padStr: MarkupString) (padStrRight: MarkupString) (width: int) (truncType: TruncationType) : MarkupString =
+        let len = getLength markupStr
+        let padLen = getLength padStr
+        let padLenRight = getLength padStrRight
+        let lengthToPad = width - len
+        let lengthTooLongPredicate = lengthToPad <= 0
+
+        match truncType with
+        | Overflow when lengthTooLongPredicate -> markupStr
+        | Truncate when lengthTooLongPredicate -> substring 0 lengthToPad markupStr 
+        | Overflow ->
+            let leftPadLength = lengthToPad / 2
+            let rightPadLength = lengthToPad - leftPadLength
+
+            let padding =
+                repeat padStr ((width / padLen) + 1) (empty ()) |> substring 0 lengthToPad
+                
+            let paddingRight =
+                repeat padStrRight ((width / padLenRight) + 1) (empty ()) |> substring 0 lengthToPad
+
+            let leftPad = substring 0 leftPadLength padding
+            let rightPad = substring leftPadLength rightPadLength paddingRight
+
+            concat leftPad markupStr None |> fun x -> concat x rightPad None
+        | Truncate ->
+            let leftPadLength = lengthToPad / 2
+            let rightPadLength = lengthToPad - leftPadLength
+
+            let padding =
+                repeat padStr ((width / padLen) + 1) (empty ()) |> substring 0 lengthToPad
+                
+            let paddingRight =
+                repeat padStrRight ((width / padLenRight) + 1) (empty ()) |> substring 0 lengthToPad
+
+            let leftPad = substring 0 leftPadLength padding
+            let rightPad = substring leftPadLength rightPadLength paddingRight
+
+            concat leftPad markupStr None
+            |> fun x -> concat x rightPad None
+            |> substring 0 width
+
+    
+    /// <summary>
+    /// Pads a MarkupString to a specified width using a padding string and pad type.
+    /// </summary>
+    /// <param name="markupStr">Input MarkupString.</param>
+    /// <param name="padStr">Padding MarkupString.</param>
+    /// <param name="width">Total width.</param>
+    /// <param name="padType">Pad type (left, right, center, full).</param>
+    /// <param name="truncType">Truncation type.</param>
+    let pad (markupStr: MarkupString) (padStr: MarkupString) (width: int) (padType: PadType) (truncType: TruncationType) : MarkupString =
         let len = getLength markupStr
         let padLen = getLength padStr
         let lengthToPad = width - len
         let repeatCount = (lengthToPad / padLen) + 1
+        let lengthTooLongPredicate = lengthToPad <= 0
 
-        if lengthToPad <= 0 then
-            match truncType with
-            | Overflow -> markupStr
-            | Truncate -> substring 0 lengthToPad markupStr
-        else
-            match padType, truncType with
-            | Right, Overflow ->
-                repeat padStr repeatCount (empty ())
-                |> substring 0 lengthToPad
-                |> fun x -> concat markupStr x None
-            | Right, Truncate ->
-                repeat padStr repeatCount (empty ())
-                |> substring 0 lengthToPad
-                |> fun x -> concat markupStr x None
-                |> substring 0 width
-            | Left, Overflow ->
-                repeat padStr repeatCount (empty ())
-                |> substring 0 lengthToPad
-                |> fun x -> concat x markupStr None
-            | Left, Truncate ->
-                repeat padStr repeatCount (empty ())
-                |> substring 0 lengthToPad
-                |> fun x -> concat x markupStr None
-                |> substring 0 width
-            | Center, Overflow ->
-                let leftPadLength = lengthToPad / 2
-                let rightPadLength = lengthToPad - leftPadLength
+        match padType, truncType with
+        | _, Overflow when lengthTooLongPredicate -> markupStr
+        | _, Truncate when lengthTooLongPredicate -> substring 0 lengthToPad markupStr
+        | Right, Overflow ->
+            repeat padStr repeatCount (empty ())
+            |> substring 0 lengthToPad
+            |> fun x -> concat markupStr x None
+        | Right, Truncate ->
+            repeat padStr repeatCount (empty ())
+            |> substring 0 lengthToPad
+            |> fun x -> concat markupStr x None
+            |> substring 0 width
+        | Left, Overflow ->
+            repeat padStr repeatCount (empty ())
+            |> substring 0 lengthToPad
+            |> fun x -> concat x markupStr None
+        | Left, Truncate ->
+            repeat padStr repeatCount (empty ())
+            |> substring 0 lengthToPad
+            |> fun x -> concat x markupStr None
+            |> substring 0 width
+        | Center, Overflow ->
+            let leftPadLength = lengthToPad / 2
+            let rightPadLength = lengthToPad - leftPadLength
 
-                let padding =
-                    repeat padStr ((width / padLen) + 1) (empty ()) |> substring 0 lengthToPad
+            let padding =
+                repeat padStr ((width / padLen) + 1) (empty ()) |> substring 0 lengthToPad
 
-                let leftPad = substring 0 leftPadLength padding
-                let rightPad = substring leftPadLength rightPadLength padding
+            let leftPad = substring 0 leftPadLength padding
+            let rightPad = substring leftPadLength rightPadLength padding
 
-                concat leftPad markupStr None |> fun x -> concat x rightPad None
-            | Center, Truncate ->
-                let leftPadLength = lengthToPad / 2
-                let rightPadLength = lengthToPad - leftPadLength
+            concat leftPad markupStr None |> fun x -> concat x rightPad None
+        | Center, Truncate ->
+            let leftPadLength = lengthToPad / 2
+            let rightPadLength = lengthToPad - leftPadLength
 
-                let padding =
-                    repeat padStr ((width / padLen) + 1) (empty ()) |> substring 0 lengthToPad
+            let padding =
+                repeat padStr ((width / padLen) + 1) (empty ()) |> substring 0 lengthToPad
 
-                let leftPad = substring 0 leftPadLength padding
-                let rightPad = substring leftPadLength rightPadLength padding
+            let leftPad = substring 0 leftPadLength padding
+            let rightPad = substring leftPadLength rightPadLength padding
 
-                concat leftPad markupStr None
-                |> fun x -> concat x rightPad None
-                |> substring 0 width
-            // Full Justification requires the Padding String to be a space.
-            | Full, Truncate when markupStr.Length > width -> substring 0 width markupStr
-            | Full, Overflow when markupStr.Length > width -> markupStr
-            | Full, _ ->
-                let wordArr = split " " markupStr
-                let fences = Math.Max(wordArr.Length - 1, 0)
-                let totalSpaces = fences + lengthToPad
-                let space = single " "
-                let minimumFenceWidth = totalSpaces / fences
-                let thickerFences = totalSpaces % fences
-                let fenceStr = (repeat space minimumFenceWidth (empty ()))
-                let thickFenceStr = (repeat space (minimumFenceWidth + 1) (empty ()))
-                let delFunc = (fun i -> if i <= thickerFences then thickFenceStr else fenceStr)
+            concat leftPad markupStr None
+            |> fun x -> concat x rightPad None
+            |> substring 0 width
+        // Full Justification requires the Padding String to be a space.
+        | Full, Truncate when markupStr.Length > width -> substring 0 width markupStr
+        | Full, Overflow when markupStr.Length > width -> markupStr
+        | Full, _ ->
+            let wordArr = split " " markupStr
+            let fences = Math.Max(wordArr.Length - 1, 0)
+            let totalSpaces = fences + lengthToPad
+            let space = single " "
+            let minimumFenceWidth = totalSpaces / fences
+            let thickerFences = totalSpaces % fences
+            let fenceStr = (repeat space minimumFenceWidth (empty ()))
+            let thickFenceStr = (repeat space (minimumFenceWidth + 1) (empty ()))
+            let delFunc = (fun i -> if i <= thickerFences then thickFenceStr else fenceStr)
 
-                multipleWithDelimiterFunc delFunc wordArr
+            multipleWithDelimiterFunc delFunc wordArr
 
     type private GlobPatternRegex = FSharp.Text.RegexProvider.Regex< @"(?<!\\)\\\*" >
     type private QuestionPatternRegex = FSharp.Text.RegexProvider.Regex< @"(?<!\\)\\\?" >
     type private KindPatternRegex = FSharp.Text.RegexProvider.Regex< @"\\\\\\\*" >
     type private KindPattern2Regex = FSharp.Text.RegexProvider.Regex< @"\\\\\\\?" >
 
+    /// <summary>
+    /// Converts a wildcard pattern MarkupString to a regex string.
+    /// </summary>
+    /// <param name="pattern">The wildcard pattern as a MarkupString.</param>
     let getWildcardMatchAsRegex (pattern: MarkupString) : string =
         let applyRegexPattern (pat: string) =
             pat
@@ -528,10 +719,20 @@ module MarkupStringModule =
 
         pattern |> plainText |> Regex.Escape |> (fun x -> $"^{x}$") |> applyRegexPattern
 
+    /// <summary>
+    /// Determines if the input MarkupString matches the wildcard pattern.
+    /// </summary>
+    /// <param name="input">The input MarkupString.</param>
+    /// <param name="pattern">The wildcard pattern MarkupString.</param>
     let isWildcardMatch (input: MarkupString) (pattern: MarkupString) : bool =
         let newPattern = getWildcardMatchAsRegex pattern
         (plainText input, newPattern) |> Regex.IsMatch
 
+    /// <summary>
+    /// Gets regex matches from a MarkupString input and pattern.
+    /// </summary>
+    /// <param name="input">The input MarkupString.</param>
+    /// <param name="pattern">The regex pattern string.</param>
     let getMatches (input: MarkupString) (pattern: string) : (Match * MarkupString seq) seq =
         let captureToString (captureGroup: Group) =
             substring captureGroup.Index captureGroup.Length input
@@ -544,12 +745,28 @@ module MarkupStringModule =
         |> Seq.cast<Match>
         |> Seq.map allMatches
 
+    /// <summary>
+    /// Gets regex matches from a MarkupString input and MarkupString pattern.
+    /// </summary>
+    /// <param name="input">The input MarkupString.</param>
+    /// <param name="pattern">The regex pattern as a MarkupString.</param>
     let getRegexpMatches (input: MarkupString) (pattern: MarkupString) : (Match * MarkupString seq) seq =
         getMatches input (plainText pattern)
 
+    /// <summary>
+    /// Gets wildcard matches from a MarkupString input and pattern.
+    /// </summary>
+    /// <param name="input">The input MarkupString.</param>
+    /// <param name="pattern">The wildcard pattern MarkupString.</param>
     let getWildcardMatches (input: MarkupString) (pattern: MarkupString) : (Match * MarkupString seq) seq =
         getMatches input (getWildcardMatchAsRegex pattern)
 
+    /// <summary>
+    /// Removes a substring from a MarkupString at a given index and length.
+    /// </summary>
+    /// <param name="markupStr">The MarkupString to remove from.</param>
+    /// <param name="index">The starting index to remove.</param>
+    /// <param name="length">The number of characters to remove.</param>
     [<TailCall>]
     let rec remove (markupStr: MarkupString) (index: int) (length: int) : MarkupString =
         let rightStart = index + length
@@ -593,9 +810,16 @@ type ColumnSpec =
       // TODO: Turn string into Markup
       Ansi: string }
 
+/// <summary>
+/// Functions for parsing and handling column specifications for text alignment.
+/// </summary>
 module ColumnSpec =
     let regex = Regex(@"^([<>=_])?(\d+)([\.`'$xX#]*)(?:\((.+)\))?$")
 
+    /// <summary>
+    /// Parses a column specification string into a ColumnSpec record.
+    /// </summary>
+    /// <param name="spec">The column specification string.</param>
     let parse (spec: string) : ColumnSpec =
         let matchResult = regex.Match(spec)
 
@@ -633,9 +857,23 @@ module ColumnSpec =
           Options = options
           Ansi = ansi }
 
+    /// <summary>
+    /// Parses a space-separated list of column specifications.
+    /// </summary>
+    /// <param name="spec">The space-separated column specification string.</param>
     let parseList (spec: string) : ColumnSpec list = spec.Split(' ') |> map parse |> toList
 
+/// <summary>
+/// Provides functions for aligning and justifying text using MarkupString.
+/// </summary>
 module TextAligner =
+    /// <summary>
+    /// Justifies a MarkupString according to the specified justification and width.
+    /// </summary>
+    /// <param name="justification">The justification type.</param>
+    /// <param name="text">The MarkupString to justify.</param>
+    /// <param name="width">The width to justify to.</param>
+    /// <param name="fill">The fill MarkupString.</param>
     let justify (justification: Justification) (text: MarkupString) (width: int) (fill: MarkupString) : MarkupString =
         match justification with
         | Justification.Left -> pad text fill width PadType.Right TruncationType.Truncate
@@ -644,9 +882,21 @@ module TextAligner =
         | Justification.Right
         | Justification.Paragraph -> pad text fill width PadType.Left TruncationType.Truncate
 
+    /// <summary>
+    /// Determines if there is more text to process in any column.
+    /// </summary>
+    /// <param name="column">The sequence of column specs and MarkupStrings.</param>
     let moreToDo (column: (ColumnSpec * MarkupString) seq) : bool =
         column |> Seq.exists (fun (x, y) -> y.Length > 0)
 
+    /// <summary>
+    /// Recursively aligns columns of MarkupStrings according to their specifications.
+    /// </summary>
+    /// <param name="columns">The sequence of column specs and MarkupStrings.</param>
+    /// <param name="filler">The filler MarkupString.</param>
+    /// <param name="columnSeparator">The column separator MarkupString option.</param>
+    /// <param name="rowSeparator">The row separator MarkupString.</param>
+    /// <param name="agg">The sequence of aggregated MarkupStrings.</param>
     let rec alignFun
         (columns: (ColumnSpec * MarkupString) seq)
         (filler: MarkupString)
@@ -666,6 +916,14 @@ module TextAligner =
             // Right now this is an infinite recursion loop.
             alignFun columns filler columnSeparator rowSeparator (Seq.append agg [| newLine |])
 
+    /// <summary>
+    /// Aligns a list of MarkupStrings into columns according to a width specification.
+    /// </summary>
+    /// <param name="widths">Column width specification string.</param>
+    /// <param name="columns">List of MarkupStrings to align.</param>
+    /// <param name="filler">Filler MarkupString.</param>
+    /// <param name="columnSeparator">Column separator MarkupString.</param>
+    /// <param name="rowSeparator">Row separator MarkupString.</param>
     let align
         (widths: string)
         (columns: MarkupString list)

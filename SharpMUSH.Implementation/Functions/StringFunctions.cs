@@ -375,7 +375,20 @@ public partial class Functions
 	[SharpFunction(Name = "CENTER", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Center(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var args = parser.CurrentState.Arguments;
+		var str = parser.CurrentState.Arguments["0"].Message!;
+		var width = parser.CurrentState.Arguments["1"].Message!;
+		var fill = NoParseDefaultNoParseArgument(args, 2, MModule.single(" "));
+		var rightFill = NoParseDefaultNoParseArgument(args, 3, fill);
+
+		if(!int.TryParse(width.ToPlainText(), out var widthInt) || widthInt < 0)
+		{
+			return new ValueTask<CallState>(new CallState(Errors.ErrorPositiveInteger));
+		}
+		
+		var result = MModule.pad(str, fill, widthInt, MModule.PadType.Center, MModule.TruncationType.Overflow);
+
+		return new ValueTask<CallState>(new CallState(result));
 	}
 
 	[SharpFunction(Name = "CHR", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
