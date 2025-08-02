@@ -46,6 +46,8 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.Arguments;
 
+		// TODO: Move this to AnsiMarkup, to get a parsed Markup.
+		// That way, align() has access to it.
 		var foreground = AnsiColor.NoAnsi;
 		var background = AnsiColor.NoAnsi;
 		var blink = false;

@@ -182,7 +182,7 @@ module MarkupStringModule =
 
     let multipleWithDelimiter (delimiter: MarkupString) (mu: MarkupString seq) : MarkupString =
         mu |> Seq.intersperse delimiter |> multiple
-        
+    
     let intersperseFunc sepFunc list = seq {
         for i, element in list |> Seq.indexed do
             if i > 0 then yield sepFunc(i)
@@ -577,6 +577,7 @@ type ColumnSpec =
     { Width: int
       Justification: Justification
       Options: string
+      // TODO: Turn string into Markup
       Ansi: string }
 
 module ColumnSpec =
@@ -619,81 +620,46 @@ module ColumnSpec =
           Options = options
           Ansi = ansi }
 
-    let parseList (spec: string) : ColumnSpec[] = spec.Split(' ') |> map parse
+    let parseList (spec: string) : ColumnSpec list = spec.Split(' ') |> map parse |> toList
 
 module TextAligner =
-    let fullJustify (text: MarkupString) (width: int) (fill: char) : MarkupString =
-        if text.Length >= width then
-            text
-        else
-            let words = split " " text
-            let spaceString = single " "
-
-            if words.Length = 1 then
-                pad text spaceString width PadType.Center TruncationType.Truncate
-            else
-                let totalSpaces = width - text.Length + words.Length - 1
-                let spaceBetweenWords = totalSpaces / (words.Length - 1)
-                let extraSpaces = totalSpaces % (words.Length - 1)
-
-                let spaces =
-                    Array.init (words.Length - 1) (fun i -> spaceBetweenWords + (if i < extraSpaces then 1 else 0))
-
-                let z = Seq.zip words spaces
-
-                // let intermediate =
-                //    Seq.fold (fun acc (word, spaceCount) -> (concat (concat (concat acc word None) (repeat spaceString spaceCount empty()) None) z None))
-
-                // intermediate + words[words.Length - 1]
-                empty ()
-
-    let justify (justification: Justification) (text: MarkupString) (width: int) (fill: char) : MarkupString =
+    let justify (justification: Justification) (text: MarkupString) (width: int) (fill: MarkupString) : MarkupString =
         match justification with
-        | Justification.Left -> pad text (single " ") width PadType.Right TruncationType.Truncate
-        | Justification.Center -> pad text (single " ") width PadType.Center TruncationType.Truncate
-        | Justification.Right -> pad text (single " ") width PadType.Left TruncationType.Truncate
-        | Justification.Full -> fullJustify text width fill
-        | _ -> pad text (single " ") width PadType.Right TruncationType.Truncate
+        | Justification.Left -> pad text fill width PadType.Right TruncationType.Truncate
+        | Justification.Center -> pad text fill width PadType.Center TruncationType.Truncate
+        | Justification.Full ->  pad text fill width PadType.Full TruncationType.Truncate
+        | Justification.Right
+        | Justification.Paragraph -> pad text fill width PadType.Left TruncationType.Truncate
 
-    let partitionWords (spec: ColumnSpec) (colWords: string list) : string list * string list =
-        let rec collectWords (acc: string list) (remaining: string list) =
-            match remaining with
-            | word :: rest when String.Join(" ", acc @ [ word ]).Length <= spec.Width ->
-                collectWords (acc @ [ word ]) rest
-            | _ -> acc, remaining
+    let moreToDo (column: (ColumnSpec * MarkupString) seq) : bool = column |> Seq.exists (fun (x,y) -> y.Length > 0)
+    
+    let rec alignFun
+        (columns: (ColumnSpec * MarkupString) seq)
+        (filler: MarkupString)
+        (columnSeparator: MarkupString option)
+        (rowSeparator: MarkupString)
+        (agg: MarkupString seq)
+        : MarkupString =
 
-        collectWords [] colWords
-
-    let buildRowText (spec: ColumnSpec) (colWords: string list) =
-        let rowWords, remainingWords = partitionWords spec colWords
-        let rowText = String.Join(" ", rowWords)
-
-        if
-            (spec.Options.Contains('x') || spec.Options.Contains('X'))
-            && remainingWords <> []
-        then
-            let availableWidth = spec.Width - rowText.Length
-
-            if availableWidth > 0 then
-                let truncatedWord =
-                    remainingWords[0].Substring(0, min availableWidth remainingWords[0].Length)
-
-                rowText + truncatedWord, truncatedWord :: remainingWords.Tail
-            else
-                rowText, remainingWords
+        if not (moreToDo columns) then multipleWithDelimiter rowSeparator agg
         else
-            rowText, remainingWords
-
+            let newLine = ((single " "), columns) ||> Seq.fold (fun acc (_,y) -> concat acc y columnSeparator)
+            // TODO: Need to consume from the Columns
+            // TODO: Implement actual logic.
+            // Right now this is an infinite recursion loop.
+            alignFun columns filler columnSeparator rowSeparator (Seq.append agg [|newLine|])
+        
     let align
         (widths: string)
         (columns: MarkupString list)
-        (filler: char)
-        (colsep: char)
-        (rowsep: char)
+        (filler: MarkupString)
+        (columnSeparator: MarkupString)
+        (rowSeparator: MarkupString)
         : MarkupString =
-        let rowSepString = rowsep |> Char.ToString
-
-        let columnSpecs = widths |> ColumnSpec.parseList |> Array.toList
-
-        // Implement
-        empty ()
+    
+        let columnSpecs = ColumnSpec.parseList widths
+        if columnSpecs.Length <> columns.Length then empty() // TODO: Return a better error.
+        elif filler.Length > 0 then single "Filler is too long."
+        elif columnSeparator.Length > 0 then single "columnSeparator is too long."
+        elif rowSeparator.Length > 0 then single "rowSeparator is too long."
+        else alignFun (Seq.zip columnSpecs columns) filler (Some columnSeparator) rowSeparator [||]
