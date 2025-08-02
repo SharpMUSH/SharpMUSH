@@ -9,7 +9,7 @@ public static class ReadMail
 {
 	public static async ValueTask<MString> Handle(IMUSHCodeParser parser, int messageNumber, string[] switches)
 	{
-		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		var line = MModule.repeat(MModule.single("-"), 78, MModule.empty());
 		var folder = await MessageListHelper.CurrentMailFolder(parser, executor);
 		

@@ -10,7 +10,7 @@ public static class RetractMail
 {
 	public static async ValueTask<MString> Handle(IMUSHCodeParser parser, string target, string msgList)
 	{
-		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		var maybeLocate = await parser.LocateService.LocateAndNotifyIfInvalid(parser, 
 			executor, executor, target,
 			LocateFlags.PlayersPreference | LocateFlags.OnlyMatchTypePreference);

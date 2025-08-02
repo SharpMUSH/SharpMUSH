@@ -12,7 +12,7 @@ public static class ForwardMail
 {
 	public static async ValueTask<MString>  Handle(IMUSHCodeParser parser, int mailNumber, string target)
 	{
-		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		var maybeLocate = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, target,
 			LocateFlags.PlayersPreference | LocateFlags.OnlyMatchTypePreference);
 		var currentFolder = await MessageListHelper.CurrentMailFolder(parser, executor);

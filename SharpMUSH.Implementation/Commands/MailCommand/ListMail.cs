@@ -14,7 +14,7 @@ public static class ListMail
 {
 	public static async ValueTask<MString> Handle(IMUSHCodeParser parser, MString? arg0, MString? arg1, string[] switches)
 	{
-		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		var line = MModule.repeat(MModule.single("-"), 78, MModule.empty());
 
 		var filteredList = await MessageListHelper.Handle(parser, arg0, executor);

@@ -12,7 +12,7 @@ public static class AdminMail
 {
 	public static async ValueTask<MString> Handle(IMUSHCodeParser parser, string[] switches)
 	{
-		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 
 		if (!(executor.IsGod() || await executor.IsWizard()))
 		{

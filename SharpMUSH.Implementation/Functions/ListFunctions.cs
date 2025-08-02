@@ -226,7 +226,7 @@ public partial class Functions
 		// Arg2: Delim
 		// Arg3: Sep
 
-		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		var enactor = (await parser.CurrentState.EnactorObject(parser.Mediator)).Known();
 		var objAttr =
 			HelperFunctions.SplitOptionalObjectAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message!));

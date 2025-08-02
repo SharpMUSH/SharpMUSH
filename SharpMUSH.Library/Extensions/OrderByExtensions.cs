@@ -59,7 +59,7 @@ public static class OrderByExtensions
 	{
 		var descending = order.StartsWith('-');
 		var workedOrder = descending ? order[1..] : order;
-		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		var direction = descending ? OrderByDirection.Descending : OrderByDirection.Ascending;
 
 		// TODO: Special 'attr:' and 'attri:' types.

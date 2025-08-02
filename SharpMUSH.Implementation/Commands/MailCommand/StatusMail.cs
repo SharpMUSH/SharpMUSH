@@ -14,7 +14,7 @@ public static class StatusMail
 		// These are all types of Mail Updates.
 		// { bool? tag, bool? clear, bool? read, bool? urgent }
 
-		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		var filteredList = await MessageListHelper.Handle(parser, arg0, executor);
 		var statusString = arg1?.ToPlainText().ToUpper();
 		var id = arg0!.ToPlainText();

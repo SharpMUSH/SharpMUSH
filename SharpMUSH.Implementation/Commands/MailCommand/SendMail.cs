@@ -16,7 +16,7 @@ public static class SendMail
 		var silent = switches.Contains("SILENT");
 		var noSignature = switches.Contains("NOSIG");
 		
-		var sender = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
+		var sender = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		
 		var playerList = await Functions.Functions.PopulatedNameList(parser, nameList.ToPlainText()!);
 		var knownPlayerList = playerList.Where(x => x != null).Select(x => x!).ToList();

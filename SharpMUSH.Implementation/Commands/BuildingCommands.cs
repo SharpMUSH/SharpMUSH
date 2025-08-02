@@ -30,7 +30,7 @@ public partial class Commands
 		// TODO: Validate Name 
 		var args = parser.CurrentState.Arguments;
 		var name = MModule.plainText(args["0"].Message!);
-		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 
 		var thing = await parser.Mediator.Send(new CreateThingCommand(name,
 			await executor.Where(),
@@ -222,7 +222,7 @@ public partial class Commands
 		 */
 
 		// NOTE: We discard arguments 4-6.
-		var executorBase = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
+		var executorBase = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		var executor = executorBase.Object();
 		var roomName = parser.CurrentState.Arguments["0"].Message!;
 		parser.CurrentState.Arguments.TryGetValue("1", out var exitToCallState);

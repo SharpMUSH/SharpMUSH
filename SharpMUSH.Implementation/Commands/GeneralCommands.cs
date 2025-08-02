@@ -274,7 +274,7 @@ public partial class Commands
 		var targetListText = MModule.plainText(args["0"].Message!);
 		var nameListTargets = Functions.Functions.NameList(targetListText);
 
-		var enactor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
+		var enactor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 
 		foreach (var target in nameListTargets)
 		{
@@ -1077,7 +1077,7 @@ public partial class Commands
 				@channel/delete <channel>
 				@channel/mogrifier <channel>=<object>
 		 */
-		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches.ToArray();
 
@@ -1131,13 +1131,14 @@ public partial class Commands
 		MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Emit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.ExecutorObject(parser.Mediator);
-		var contents = await parser.Mediator.Send(new GetContentsQuery(await executor.WithoutNone().Where())) ?? [];
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var executorLocation = await executor.Where();
+		var contents = await executorLocation.Content(parser);
 
 		var interactableContents = contents
 			.ToAsyncEnumerable()
 			.WhereAwait(async obj =>
-				await parser.PermissionService.CanInteract(obj.WithRoomOption(), executor.WithoutNone(),
+				await parser.PermissionService.CanInteract(obj.WithRoomOption(), executor,
 					IPermissionService.InteractType.Hear));
 
 		// TODO: Implement NoEval.
@@ -1148,7 +1149,7 @@ public partial class Commands
 			await parser.NotifyService.Notify(
 				obj.WithRoomOption(),
 				parser.CurrentState.Arguments["0"].Message!,
-				executor.WithoutNone(),
+				executor,
 				INotifyService.NotificationType.Emit);
 		}
 
@@ -1208,7 +1209,7 @@ public partial class Commands
 	{
 		var arg0Check = parser.CurrentState.Arguments.TryGetValue("0", out var arg0CallState);
 		var arg1Check = parser.CurrentState.Arguments.TryGetValue("1", out var arg1CallState);
-		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 
 		if (!arg0Check || !arg1Check)
 		{
@@ -1289,7 +1290,7 @@ public partial class Commands
 		parser.CurrentState.Arguments.TryGetValue("1", out var arg1CallState);
 		MString? arg0, arg1;
 		var switches = parser.CurrentState.Switches.ToArray();
-		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		var caller = (await parser.CurrentState.CallerObject(parser.Mediator)).Known();
 		string[] sendSwitches = ["SEND", "URGENT", "NOSIG", "SILENT", "NOEVAL"];
 

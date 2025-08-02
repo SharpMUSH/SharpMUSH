@@ -43,8 +43,8 @@ public static partial class Substitutions
 
 	private static async ValueTask<string> GetLocationDBRefString(IMUSHCodeParser parser)
 	{
-		var executor = await parser.CurrentState.ExecutorObject(parser.Mediator);
-		var location = await executor.WithoutNone().Where();
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var location = await executor.Where();
 		var locationDBRef = location.Object().DBRef.Number.ToString();
 		return $"#{locationDBRef}";
 	}
@@ -73,7 +73,7 @@ public static partial class Substitutions
 	private static async ValueTask<CallState> HandleVWX(CallState symbol, IMUSHCodeParser parser)
 	{
 		var attrService = parser.AttributeService;
-		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 
 		var val = await attrService.GetAttributeAsync(
 			executor,

@@ -25,18 +25,13 @@ public partial class Functions
 				return MModule.single("#-1 Argument 2 must be between 2 and 64.");
 
 			// Validate input according to fromBase
-			foreach (var c in input)
+			if (input.Any(c => Chars.IndexOf(c) >= fromBase))
 			{
-				if (Chars.IndexOf(c) >= fromBase)
-					return MModule.single("Invalid character in the input for the specified fromBase.");
+				return MModule.single("Invalid character in the input for the specified fromBase.");
 			}
 
 			// Convert input to base 10
-			var number = System.Numerics.BigInteger.Zero;
-			foreach (var c in input)
-			{
-				number = number * fromBase + Chars.IndexOf(c);
-			}
+			var number = input.Aggregate(System.Numerics.BigInteger.Zero, (current, c) => current * fromBase + Chars.IndexOf(c));
 
 			// Directly return the number if toBase is 10
 			if (toBase == 10)

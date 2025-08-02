@@ -14,7 +14,7 @@ public static class FolderMail
 {
 	public static async ValueTask<MString> Handle(IMUSHCodeParser parser, MString? arg0, MString? arg1, string[] switches)
 	{
-		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).Known();
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		var executorPlayer = executor.AsPlayer;
 		
 		// TODO: Consider that this is a duplicate call to the ObjectDataService.
