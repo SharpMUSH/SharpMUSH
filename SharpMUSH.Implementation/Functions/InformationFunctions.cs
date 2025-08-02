@@ -167,6 +167,13 @@ public partial class Functions
 		throw new NotImplementedException();
 	}
 
+	[SharpFunction(Name = "TEXTSEARCH", MinArgs = 2, MaxArgs = 3,
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public static ValueTask<CallState> TextSearch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		throw new NotImplementedException();
+	}
+
 	[SharpFunction(Name = "COLORS", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> Colors(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
