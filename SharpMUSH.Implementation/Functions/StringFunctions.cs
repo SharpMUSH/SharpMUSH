@@ -1,5 +1,6 @@
 ﻿using System.Text.RegularExpressions;
 using DotNext.Collections.Generic;
+using Humanizer;
 using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
@@ -417,7 +418,7 @@ public partial class Functions
 	public static ValueTask<CallState> ForEach(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		//  foreach([<object>/]<attribute>, <string>[, <start>[, <end>]])
-		
+
 		var objAttr = parser.CurrentState.Arguments["0"].Message;
 		var str = parser.CurrentState.Arguments["1"].Message;
 		var start = NoParseDefaultNoParseArgument(parser.CurrentState.Arguments, 2, " ");
@@ -431,7 +432,7 @@ public partial class Functions
 			// Method Pattern needs to change, attribute must be a native MString to support Lambda, 
 			// so it's easier to do this split in a common code.
 			// var parserEval = parser.AttributeService.EvaluateAttributeFunctionAsync(parser, executor, obj, attribu)
-			
+
 			newStr = MModule.concat(newStr, character);
 		}
 
@@ -478,13 +479,28 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "IFELSE", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.NoParse)]
-	public static ValueTask<CallState> IfElse(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> IfElse(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var parsedIfElse = await parser.CurrentState.Arguments["0"].ParsedMessage();
+		var ifCase = parser.CurrentState.Arguments["1"].Message!;
+		var elseCase = parser.CurrentState.Arguments["2"].Message!;
+		var truthy = Predicates.Truthy(parsedIfElse!);
+		CallState? result;
+
+		if (truthy)
+		{
+			result = await parser.FunctionParse(ifCase);
+		}
+		else
+		{
+			result = await parser.FunctionParse(elseCase);
+		}
+
+		return result!;
 	}
 
 	[SharpFunction(Name = "LCSTR", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> LCStr(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> LowerCaseString(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
@@ -496,13 +512,13 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "LJUST", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> LJust(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> LeftJustified(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
 	[SharpFunction(Name = "LPOS", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> LPos(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> LeftPosition(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
@@ -540,7 +556,11 @@ public partial class Functions
 	[SharpFunction(Name = "ORDINAL", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> Ordinal(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var numberArg = parser.CurrentState.Arguments["0"].Message!;
+		
+		return !int.TryParse(numberArg.ToPlainText(), out var number) 
+			? new ValueTask<CallState>(new CallState(Errors.ErrorInteger)) 
+			: new ValueTask<CallState>(new CallState(number.ToOrdinalWords()));
 	}
 
 	[SharpFunction(Name = "POS", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -552,7 +572,16 @@ public partial class Functions
 	[SharpFunction(Name = "REPEAT", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Repeat(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var str = parser.CurrentState.Arguments["0"].Message!;
+		var repeatNumberStr = parser.CurrentState.Arguments["1"].Message!;
+
+		if (!int.TryParse(repeatNumberStr.ToPlainText(), out var repeatNumber))
+		{
+			return ValueTask.FromResult(new CallState(Errors.ErrorInteger));
+		}
+
+		var repeat = MModule.repeat(str, repeatNumber, MModule.empty())!;
+		return ValueTask.FromResult(new CallState(repeat));
 	}
 
 	[SharpFunction(Name = "RIGHT", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
@@ -582,13 +611,35 @@ public partial class Functions
 	[SharpFunction(Name = "SPACE", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> Space(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var repeatNumberStr = parser.CurrentState.Arguments["0"].Message!;
+
+		if (!int.TryParse(repeatNumberStr.ToPlainText(), out var repeatNumber))
+		{
+			return ValueTask.FromResult(new CallState(Errors.ErrorInteger));
+		}
+
+		var repeat = MModule.repeat(MModule.single(" "), repeatNumber, MModule.empty())!;
+		return ValueTask.FromResult(new CallState(repeat));
 	}
 
+	// TODO: Make this work for Decimals.
 	[SharpFunction(Name = "SPELLNUM", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> SpellNum(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> SpellNumber(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var numberString = parser.CurrentState.Arguments["0"].Message!;
+		
+		if (!decimal.TryParse(numberString.ToPlainText(), out var repeatNumber))
+		{
+			return ValueTask.FromResult(new CallState(Errors.ErrorInteger));
+		}
+
+		var integral = (int)Math.Truncate(repeatNumber);
+		var fractional = (int)Math.Truncate((repeatNumber - integral) * (10 ^ repeatNumber.Scale));
+		var concat = fractional > 0 
+			? $"{integral.ToWords()} dot {fractional.ToWords()}" 
+			: integral.ToWords();
+		
+		return ValueTask.FromResult(new CallState(concat));
 	}
 
 	[SharpFunction(Name = "SQUISH", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular)]
@@ -606,13 +657,15 @@ public partial class Functions
 	[SharpFunction(Name = "STRIPANSI", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> StripAnsi(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var arg0 = parser.CurrentState.Arguments["0"].Message!;
+		return ValueTask.FromResult(new CallState(arg0.ToPlainText()));
 	}
 
 	[SharpFunction(Name = "STRLEN", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> StrLen(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var arg0 = parser.CurrentState.Arguments["0"].Message!;
+		return ValueTask.FromResult(new CallState(arg0.Length));
 	}
 
 	[SharpFunction(Name = "STRMATCH", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular)]

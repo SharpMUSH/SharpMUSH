@@ -1213,7 +1213,7 @@ public partial class Commands
 
 		if (!arg0Check || !arg1Check)
 		{
-			await parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, "#-1 Don't you have anything to say?");
+			await parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, "Don't you have anything to say?");
 			return new CallState("#-1 Don't you have anything to say?");
 		}
 
@@ -1233,8 +1233,9 @@ public partial class Commands
 		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(executor, channel);
 
 		if (maybeMemberStatus is null)
-		{
-			return new CallState("You are not a member of that channel.");
+		{			
+			await parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, "You are not a member of that channel.");
+			return new CallState("#-1 You are not a member of that channel.");
 		}
 
 		var (_, status) = maybeMemberStatus.Value;
