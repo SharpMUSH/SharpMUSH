@@ -23,6 +23,7 @@ module MarkupStringModule =
         | Left
         | Right
         | Center
+        | Full
 
     and TruncationType =
         | Truncate
@@ -94,13 +95,12 @@ module MarkupStringModule =
             let rec find (content: Content list) : MarkupTypes =
                 match content with
                 | [] -> Empty
-                | MarkupText mStr :: _ when isMarkedup mStr.MarkupDetails
-                     -> mStr.MarkupDetails
-                | MarkupText a :: tail
-                     -> match (find a.Content, find tail) with
-                            | MarkedupText res, _ -> MarkedupText res
-                            | _, MarkedupText res -> MarkedupText res
-                            | _ -> Empty
+                | MarkupText mStr :: _ when isMarkedup mStr.MarkupDetails -> mStr.MarkupDetails
+                | MarkupText a :: tail ->
+                    match (find a.Content, find tail) with
+                    | MarkedupText res, _ -> MarkedupText res
+                    | _, MarkedupText res -> MarkedupText res
+                    | _ -> Empty
                 | _ -> Empty
 
             match markupStr.MarkupDetails with
@@ -182,7 +182,15 @@ module MarkupStringModule =
 
     let multipleWithDelimiter (delimiter: MarkupString) (mu: MarkupString seq) : MarkupString =
         mu |> Seq.intersperse delimiter |> multiple
-
+        
+    let intersperseFunc sepFunc list = seq {
+        for i, element in list |> Seq.indexed do
+            if i > 0 then yield sepFunc(i)
+            yield element }
+    
+    let multipleWithDelimiterFunc (delimiterFunc: int -> MarkupString) (mu: MarkupString seq) : MarkupString =
+        mu |> intersperseFunc delimiterFunc |> multiple 
+        
     let serializationOptions =
         let serializeOption = JsonFSharpOptions.Default().ToJsonSerializerOptions()
         serializeOption.Converters.Add(ColorJsonConverter())
@@ -219,9 +227,7 @@ module MarkupStringModule =
         match originalMarkupStr.MarkupDetails with
         | Empty ->
             let combinedContent =
-                originalMarkupStr.Content
-                @ separatorContent
-                @ [ MarkupText newMarkupStr ]
+                originalMarkupStr.Content @ separatorContent @ [ MarkupText newMarkupStr ]
 
             MarkupString(Empty, combinedContent)
         | _ ->
@@ -232,18 +238,31 @@ module MarkupStringModule =
 
             MarkupString(Empty, combinedContent)
 
-    let rec concatAttach (originalMarkupStr: MarkupString) (newMarkupStr: MarkupString) 
-                     ([<Optional; DefaultParameterValue(null)>] optionalSeparator: MarkupString option) : MarkupString =
+    let rec concatAttach
+        (originalMarkupStr: MarkupString)
+        (newMarkupStr: MarkupString)
+        ([<Optional; DefaultParameterValue(null)>] optionalSeparator: MarkupString option)
+        : MarkupString =
         if originalMarkupStr.Content |> List.last |> _.IsText then
-                MarkupString(originalMarkupStr.MarkupDetails, originalMarkupStr.Content @ [MarkupText newMarkupStr])
-        else 
-            let split = originalMarkupStr.Content |> List.splitAt (originalMarkupStr.Content.Length-1)
+            MarkupString(originalMarkupStr.MarkupDetails, originalMarkupStr.Content @ [ MarkupText newMarkupStr ])
+        else
+            let split =
+                originalMarkupStr.Content |> List.splitAt (originalMarkupStr.Content.Length - 1)
+
             match split with
-                | [MarkupText oneElement], [] -> MarkupString( originalMarkupStr.MarkupDetails, [] @ [MarkupText(concatAttach oneElement newMarkupStr optionalSeparator)])
-                | list, [MarkupText lastElement] -> MarkupString( originalMarkupStr.MarkupDetails, list @ [MarkupText(concatAttach lastElement newMarkupStr optionalSeparator)])
-                | _, [Text _] -> concat originalMarkupStr newMarkupStr optionalSeparator
-                | _ -> failwith "concatAttach should never see an empty list."
-                
+            | [ MarkupText oneElement ], [] ->
+                MarkupString(
+                    originalMarkupStr.MarkupDetails,
+                    [] @ [ MarkupText(concatAttach oneElement newMarkupStr optionalSeparator) ]
+                )
+            | list, [ MarkupText lastElement ] ->
+                MarkupString(
+                    originalMarkupStr.MarkupDetails,
+                    list @ [ MarkupText(concatAttach lastElement newMarkupStr optionalSeparator) ]
+                )
+            | _, [ Text _ ] -> concat originalMarkupStr newMarkupStr optionalSeparator
+            | _ -> failwith "concatAttach should never see an empty list."
+
     [<TailCall>]
     let rec substring (start: int) (length: int) (markupStr: MarkupString) : MarkupString =
         let inline extractText str start length =
@@ -281,13 +300,10 @@ module MarkupStringModule =
                             substringAux tail (start - strLen) length acc
                     else
                         substringAux tail (start - strLen) length acc
-                | _ ->
-                    raise (
-                        InvalidOperationException "Encountered unexpected content type in substring operation."
-                    )
+                | _ -> raise (InvalidOperationException "Encountered unexpected content type in substring operation.")
 
         MarkupString(markupStr.MarkupDetails, substringAux markupStr.Content start length [])
-    
+
     [<TailCall>]
     let rec indexesOf (markupStr: MarkupString) (search: MarkupString) : seq<int> =
         let text = plainText markupStr
@@ -325,6 +341,38 @@ module MarkupStringModule =
         | _ when Seq.isEmpty matches -> -1
         | _ -> matches |> Seq.last
 
+    [<TailCall>]
+    let rec split (delimiter: string) (markupStr: MarkupString) : MarkupString[] =
+        let rec findDelimiters (text: string) (pos: int) =
+            if pos >= text.Length then
+                []
+            else
+                match text.IndexOf(delimiter, pos) with
+                | -1 -> []
+                | idx ->
+                    idx
+                    :: if (delimiter <> String.Empty) then
+                           findDelimiters text (idx + delimiter.Length)
+                       else
+                           findDelimiters text (idx + 1)
+
+        let fullText = plainText markupStr
+        let delimiterPositions = findDelimiters fullText 0
+
+        let rec buildSplits positions lastPos segments =
+            match positions with
+            | [] ->
+                let lastSegment = substring lastPos (fullText.Length - lastPos) markupStr
+                List.rev (lastSegment :: segments)
+            | pos :: tail ->
+                let length = pos - lastPos
+                let segment = substring lastPos length markupStr
+                buildSplits tail (pos + delimiter.Length) (segment :: segments)
+
+        buildSplits delimiterPositions 0 [] |> Array.ofList
+
+    let split2 (delimiter: MarkupString) (markupStr: MarkupString) = split (plainText delimiter) markupStr
+
     let insertAt (input: MarkupString) (insert: MarkupString) (index: int) : MarkupString =
         let len = getLength input
 
@@ -335,7 +383,7 @@ module MarkupStringModule =
         else
             let before = substring 0 index input
             let after = substring index (len - index) input
-            let wrappedInsert = MarkupString (before.MarkupDetails, [MarkupText insert]) 
+            let wrappedInsert = MarkupString(before.MarkupDetails, [ MarkupText insert ])
             concat (concat before wrappedInsert None) after None
 
     let trim (markupStr: MarkupString) (trimStr: MarkupString) (trimType: TrimType) : MarkupString =
@@ -436,6 +484,21 @@ module MarkupStringModule =
                 concat leftPad markupStr None
                 |> fun x -> concat x rightPad None
                 |> substring 0 width
+            // Full Justification requires the Padding String to be a space.
+            | Full, Truncate when markupStr.Length > width -> substring 0 width markupStr
+            | Full, Overflow when markupStr.Length > width -> markupStr
+            | Full, _ ->
+                let wordArr = split " " markupStr
+                let fences = Math.Max(wordArr.Length - 1, 0)
+                let totalSpaces = fences + lengthToPad
+                let space = single " "
+                let minimumFenceWidth = totalSpaces / fences
+                let thickerFences = totalSpaces % fences
+                let fenceStr = (repeat space minimumFenceWidth (empty()))
+                let thickFenceStr = (repeat space (minimumFenceWidth+1) (empty()))
+                let delFunc = (fun i -> if i <= thickerFences then thickFenceStr else fenceStr)
+                
+                multipleWithDelimiterFunc delFunc wordArr
 
     type private GlobPatternRegex = FSharp.Text.RegexProvider.Regex< @"(?<!\\)\\\*" >
     type private QuestionPatternRegex = FSharp.Text.RegexProvider.Regex< @"(?<!\\)\\\?" >
@@ -475,45 +538,13 @@ module MarkupStringModule =
         getMatches input (getWildcardMatchAsRegex pattern)
 
     [<TailCall>]
-    let rec split (delimiter: string) (markupStr: MarkupString) : MarkupString[] =
-        let rec findDelimiters (text: string) (pos: int) =
-            if pos >= text.Length then
-                []
-            else
-                match text.IndexOf(delimiter, pos) with
-                | -1 -> []
-                | idx ->
-                    idx
-                    :: if (delimiter <> String.Empty) then
-                           findDelimiters text (idx + delimiter.Length)
-                       else
-                           findDelimiters text (idx + 1)
-
-        let fullText = plainText markupStr
-        let delimiterPositions = findDelimiters fullText 0
-
-        let rec buildSplits positions lastPos segments =
-            match positions with
-            | [] ->
-                let lastSegment = substring lastPos (fullText.Length - lastPos) markupStr
-                List.rev (lastSegment :: segments)
-            | pos :: tail ->
-                let length = pos - lastPos
-                let segment = substring lastPos length markupStr
-                buildSplits tail (pos + delimiter.Length) (segment :: segments)
-
-        buildSplits delimiterPositions 0 [] |> Array.ofList
-
-    let split2 (delimiter: MarkupString) (markupStr: MarkupString) = split (plainText delimiter) markupStr
-
-    [<TailCall>]
     let rec remove (markupStr: MarkupString) (index: int) (length: int) : MarkupString =
         let rightStart = index + length
         let rightEnd = markupStr.Length - rightStart
         let left = markupStr |> substring 0 index
         let right = markupStr |> substring rightStart rightEnd
         (concat left right None)
-    
+
     /// <summary>
     /// Replaces a value in markupStr with the one in replacementStr,
     /// writing over position 'index' to 'index + length'.
@@ -529,9 +560,11 @@ module MarkupStringModule =
         elif index < 0 then
             concat replacementStr markupStr None
         else
-            let trueLength = Math.Min(index + length, markupStr.Length) - index 
+            let trueLength = Math.Min(index + length, markupStr.Length) - index
             let removed = remove markupStr index trueLength
             insertAt removed replacementStr index
+
+open MarkupStringModule
 
 type Justification =
     | Left
@@ -547,8 +580,9 @@ type ColumnSpec =
       Ansi: string }
 
 module ColumnSpec =
+    let regex = Regex(@"^([<>=_])?(\d+)([\.`'$xX#]*)(?:\((.+)\))?$")
+
     let parse (spec: string) : ColumnSpec =
-        let regex = Regex(@"^([<>=_])?(\d+)([.`'$xX#]*)(\(.+\))?$")
         let matchResult = regex.Match(spec)
 
         if not matchResult.Success then
@@ -561,6 +595,7 @@ module ColumnSpec =
                 | "=" -> Justification.Paragraph
                 | ">" -> Justification.Right
                 | "_" -> Justification.Full
+                | "-" -> Justification.Center
                 | _ -> Justification.Left
             else
                 Justification.Left
@@ -574,8 +609,8 @@ module ColumnSpec =
                 String.Empty
 
         let ansi =
-            if matchResult.Groups[4].Success then
-                matchResult.Groups[4].Value.Trim('(', ')')
+            if matchResult.Groups[5].Success then
+                matchResult.Groups[5].Value
             else
                 String.Empty
 
@@ -584,15 +619,18 @@ module ColumnSpec =
           Options = options
           Ansi = ansi }
 
+    let parseList (spec: string) : ColumnSpec[] = spec.Split(' ') |> map parse
+
 module TextAligner =
-    let fullJustify (text: string) (width: int) (fill: char) : string =
+    let fullJustify (text: MarkupString) (width: int) (fill: char) : MarkupString =
         if text.Length >= width then
             text
         else
-            let words = text.Split([| ' ' |], StringSplitOptions.RemoveEmptyEntries)
+            let words = split " " text
+            let spaceString = single " "
 
             if words.Length = 1 then
-                text.PadRight(width, fill)
+                pad text spaceString width PadType.Center TruncationType.Truncate
             else
                 let totalSpaces = width - text.Length + words.Length - 1
                 let spaceBetweenWords = totalSpaces / (words.Length - 1)
@@ -603,18 +641,19 @@ module TextAligner =
 
                 let z = Seq.zip words spaces
 
-                let intermediate =
-                    Seq.fold (fun acc (word, space) -> acc + word + String(' ', space)) "" z
+                // let intermediate =
+                //    Seq.fold (fun acc (word, spaceCount) -> (concat (concat (concat acc word None) (repeat spaceString spaceCount empty()) None) z None))
 
-                intermediate + words[words.Length - 1]
+                // intermediate + words[words.Length - 1]
+                empty ()
 
-    let justify (justification: Justification) (text: string) (width: int) (fill: char) : string =
+    let justify (justification: Justification) (text: MarkupString) (width: int) (fill: char) : MarkupString =
         match justification with
-        | Justification.Left -> text.PadRight(width, fill)
-        | Justification.Center -> text.PadLeft((width + text.Length) / 2, fill).PadRight(width, fill)
-        | Justification.Right -> text.PadLeft(width, fill)
+        | Justification.Left -> pad text (single " ") width PadType.Right TruncationType.Truncate
+        | Justification.Center -> pad text (single " ") width PadType.Center TruncationType.Truncate
+        | Justification.Right -> pad text (single " ") width PadType.Left TruncationType.Truncate
         | Justification.Full -> fullJustify text width fill
-        | _ -> text.PadRight(width, fill)
+        | _ -> pad text (single " ") width PadType.Right TruncationType.Truncate
 
     let partitionWords (spec: ColumnSpec) (colWords: string list) : string list * string list =
         let rec collectWords (acc: string list) (remaining: string list) =
@@ -645,89 +684,16 @@ module TextAligner =
         else
             rowText, remainingWords
 
-    let align (widths: string) (columns: string list) (filler: char) (colsep: char) (rowsep: char) =
+    let align
+        (widths: string)
+        (columns: MarkupString list)
+        (filler: char)
+        (colsep: char)
+        (rowsep: char)
+        : MarkupString =
         let rowSepString = rowsep |> Char.ToString
 
-        let columnSpecs =
-            widths.Split([| ' ' |], StringSplitOptions.RemoveEmptyEntries)
-            |> Array.map ColumnSpec.parse
-            |> Array.toList
+        let columnSpecs = widths |> ColumnSpec.parseList |> Array.toList
 
-        if columnSpecs.Length <> columns.Length then
-            raise (ArgumentException("Number of columns must match the number of provided widths."))
-
-        let columnText =
-            columns
-            |> List.map (fun col ->
-                col.Split([| '\r'; '\n'; ' ' |], StringSplitOptions.RemoveEmptyEntries)
-                |> Array.toList)
-
-        let rec alignRows acc columnText =
-            let anyNonEmptyColumn = columnText |> List.exists (fun col -> col <> [])
-
-            if not anyNonEmptyColumn then
-                acc
-                |> List.rev
-                |> List.map (String.concat String.Empty)
-                |> String.concat rowSepString
-            else
-                let newText =
-                    columnText
-                    |> List.mapi (fun i colWords ->
-                        let spec = columnSpecs[i]
-                        let rowText, remainingWords = buildRowText spec colWords
-
-                        let rowText =
-                            if spec.Options.Contains('x') then
-                                rowText.Substring(0, Math.Min(spec.Width, rowText.Length))
-                            else
-                                rowText
-
-                        let rowText =
-                            if rowText.Length < spec.Width && spec.Options.Contains('.') then
-                                rowText.PadRight(spec.Width, ' ')
-                            else
-                                rowText
-
-                        let justified = justify spec.Justification rowText spec.Width filler
-
-                        let justifiedText =
-                            if String.IsNullOrEmpty(spec.Ansi) then
-                                justified
-                            else
-                                $"%s{spec.Ansi}%s{justified}"
-
-                        justifiedText,
-                        (if spec.Options.Contains('`') && rowText = "" then
-                             []
-                         else
-                             remainingWords))
-
-                let row = newText |> List.map fst |> String.concat (string colsep)
-                alignRows ([ row ] :: acc) (newText |> List.map snd)
-
-        alignRows [] columnText
-
-    let lalign (widths: string) (colList: string) (delim: char) (filler: char) (colsep: char) (rowsep: char) =
-        let columns =
-            colList.Split([| delim |], StringSplitOptions.RemoveEmptyEntries)
-            |> Array.toList
-
-        align widths columns filler colsep rowsep
-
-(*
-// Sample usage
-[<EntryPoint>]
-let main argv =
-    let widths = "<10 >20 30"
-    let columns = [ "Column1 text"; "Column2 text is longer"; "This is Column3, the longest of all" ]
-
-    let result = TextAligner.align widths columns ' ' ' ' '\n'
-    printfn "%s" result
-
-    let colList = "Column1;Column2;Column3"
-    let result = TextAligner.lalign widths colList ';' ' ' ' ' '\n'
-    printfn "%s" result
-
-    0
-    *)
+        // Implement
+        empty ()

@@ -174,6 +174,18 @@ public class AnsiStringUnitTests : BaseUnitTest
 		await Assert.That(redAnsiString.ToString()).IsEqualTo("\e[31mred\e[0m");
 		// Assert.AreEqual("\e[32mwoo\e[0m", complexAnsiString.ToString());
 	}
+	
+	[Test]
+	public async Task SimpleFullJustification()
+	{
+		var simpleString = A.single("ab de ef de");
+
+		var overflow = A.pad(simpleString, A.single(" "), 15, MModule.PadType.Full, MModule.TruncationType.Overflow);
+		var truncated = A.pad(simpleString, A.single(" "), 15, MModule.PadType.Full, MModule.TruncationType.Truncate);
+
+		await Assert.That(overflow.ToString()).IsEqualTo("ab   de  ef  de");
+		await Assert.That(truncated.ToString()).IsEqualTo("ab   de  ef  de");
+	}
 
 	[Test]
 	public async Task AnsiBleed()
