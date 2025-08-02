@@ -87,18 +87,18 @@ module MarkupStringModule =
 
             getLengthInternal content
 
-        let isMarkedup (m: MarkupTypes) =
+        let isMarkedUp (m: MarkupTypes) =
             match m with
             | MarkedupText _ -> true
             | Empty -> false
 
         // BUG: This is not correctly matching the first MarkedUp Text
         [<TailCall>]
-        let findFirstMarkedupText (markupStr: MarkupString) : MarkupTypes =
+        let findFirstMarkedUpText (markupStr: MarkupString) : MarkupTypes =
             let rec find (content: Content list) : MarkupTypes =
                 match content with
                 | [] -> Empty
-                | MarkupText mStr :: _ when isMarkedup mStr.MarkupDetails -> mStr.MarkupDetails
+                | MarkupText mStr :: _ when isMarkedUp mStr.MarkupDetails -> mStr.MarkupDetails
                 | MarkupText a :: tail ->
                     match (find a.Content, find tail) with
                     | MarkedupText res, _ -> MarkedupText res
@@ -128,7 +128,7 @@ module MarkupStringModule =
                 | MarkedupText markup -> markup.Optimize text
                 | Empty -> String.Empty
 
-            let firstMarkedupTextType = findFirstMarkedupText ms
+            let firstMarkedupTextType = findFirstMarkedUpText ms
 
             match firstMarkedupTextType with
             | Empty -> getText (ms, Empty)
@@ -322,6 +322,10 @@ module MarkupStringModule =
     /// <summary>
     /// Concatenates and attaches a MarkupString to another, handling nested structures.
     /// </summary>
+    /// <remarks>
+    /// This type of concatenation specifically extends the Markup that applies to the
+    /// last element of the original MarkupString to the concatenated value.
+    /// </remarks>
     /// <param name="originalMarkupStr">The original MarkupString.</param>
     /// <param name="newMarkupStr">The MarkupString to attach.</param>
     /// <param name="optionalSeparator">An optional separator MarkupString.</param>
@@ -501,10 +505,11 @@ module MarkupStringModule =
         let rec mapContent content =
             content
             |> List.map (function
-                | Text s -> Text (transform s)
-                | MarkupText m -> MarkupText (apply m transform))
+                | Text s -> Text(transform s)
+                | MarkupText m -> MarkupText(apply m transform))
+
         MarkupString(str.MarkupDetails, mapContent str.Content)
-    
+
     /// <summary>
     /// Inserts a MarkupString at a specified index in another MarkupString.
     /// </summary>
@@ -582,7 +587,13 @@ module MarkupStringModule =
     /// <param name="padStrRight">Padding MarkupString for right side.</param>
     /// <param name="width">Total width.</param>
     /// <param name="truncType">Truncation type.</param>
-    let center2 (markupStr: MarkupString) (padStr: MarkupString) (padStrRight: MarkupString) (width: int) (truncType: TruncationType) : MarkupString =
+    let center2
+        (markupStr: MarkupString)
+        (padStr: MarkupString)
+        (padStrRight: MarkupString)
+        (width: int)
+        (truncType: TruncationType)
+        : MarkupString =
         let len = getLength markupStr
         let padLen = getLength padStr
         let padLenRight = getLength padStrRight
@@ -591,16 +602,17 @@ module MarkupStringModule =
 
         match truncType with
         | Overflow when lengthTooLongPredicate -> markupStr
-        | Truncate when lengthTooLongPredicate -> substring 0 lengthToPad markupStr 
+        | Truncate when lengthTooLongPredicate -> substring 0 lengthToPad markupStr
         | Overflow ->
             let leftPadLength = lengthToPad / 2
             let rightPadLength = lengthToPad - leftPadLength
 
             let padding =
                 repeat padStr ((width / padLen) + 1) (empty ()) |> substring 0 lengthToPad
-                
+
             let paddingRight =
-                repeat padStrRight ((width / padLenRight) + 1) (empty ()) |> substring 0 lengthToPad
+                repeat padStrRight ((width / padLenRight) + 1) (empty ())
+                |> substring 0 lengthToPad
 
             let leftPad = substring 0 leftPadLength padding
             let rightPad = substring leftPadLength rightPadLength paddingRight
@@ -612,9 +624,10 @@ module MarkupStringModule =
 
             let padding =
                 repeat padStr ((width / padLen) + 1) (empty ()) |> substring 0 lengthToPad
-                
+
             let paddingRight =
-                repeat padStrRight ((width / padLenRight) + 1) (empty ()) |> substring 0 lengthToPad
+                repeat padStrRight ((width / padLenRight) + 1) (empty ())
+                |> substring 0 lengthToPad
 
             let leftPad = substring 0 leftPadLength padding
             let rightPad = substring leftPadLength rightPadLength paddingRight
@@ -623,7 +636,7 @@ module MarkupStringModule =
             |> fun x -> concat x rightPad None
             |> substring 0 width
 
-    
+
     /// <summary>
     /// Pads a MarkupString to a specified width using a padding string and pad type.
     /// </summary>
@@ -632,7 +645,13 @@ module MarkupStringModule =
     /// <param name="width">Total width.</param>
     /// <param name="padType">Pad type (left, right, center, full).</param>
     /// <param name="truncType">Truncation type.</param>
-    let pad (markupStr: MarkupString) (padStr: MarkupString) (width: int) (padType: PadType) (truncType: TruncationType) : MarkupString =
+    let pad
+        (markupStr: MarkupString)
+        (padStr: MarkupString)
+        (width: int)
+        (padType: PadType)
+        (truncType: TruncationType)
+        : MarkupString =
         let len = getLength markupStr
         let padLen = getLength padStr
         let lengthToPad = width - len
@@ -810,18 +829,20 @@ type ColumnSpec =
       // TODO: Turn string into Markup
       Ansi: string }
 
+
+
 /// <summary>
 /// Functions for parsing and handling column specifications for text alignment.
 /// </summary>
 module ColumnSpec =
-    let regex = Regex(@"^([<>=_])?(\d+)([\.`'$xX#]*)(?:\((.+)\))?$")
+    type private WidthPatternRegex = FSharp.Text.RegexProvider.Regex< @"^([<>=_])?(\d+)([\.`'$xX#]*)(?:\((.+)\))?$" >
 
     /// <summary>
     /// Parses a column specification string into a ColumnSpec record.
     /// </summary>
     /// <param name="spec">The column specification string.</param>
     let parse (spec: string) : ColumnSpec =
-        let matchResult = regex.Match(spec)
+        let matchResult = WidthPatternRegex().Match(spec)
 
         if not matchResult.Success then
             raise (ArgumentException $"Invalid column specification: %s{spec}")
@@ -887,7 +908,7 @@ module TextAligner =
     /// </summary>
     /// <param name="column">The sequence of column specs and MarkupStrings.</param>
     let moreToDo (column: (ColumnSpec * MarkupString) seq) : bool =
-        column |> Seq.exists (fun (x, y) -> y.Length > 0)
+        column |> Seq.exists (fun (_, y) -> y.Length > 0)
 
     /// <summary>
     /// Recursively aligns columns of MarkupStrings according to their specifications.
