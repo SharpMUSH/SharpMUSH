@@ -386,7 +386,7 @@ public partial class Functions
 			return new ValueTask<CallState>(new CallState(Errors.ErrorPositiveInteger));
 		}
 		
-		var result = MModule.pad(str, fill, widthInt, MModule.PadType.Center, MModule.TruncationType.Overflow);
+		var result = MModule.center2(str, fill, rightFill,  widthInt, MModule.TruncationType.Overflow);
 
 		return new ValueTask<CallState>(new CallState(result));
 	}
