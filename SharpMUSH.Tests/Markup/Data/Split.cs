@@ -6,11 +6,14 @@ using StringExtensions = ANSILibrary.StringExtensions;
 
 namespace SharpMUSH.Tests.Markup.Data;
 
+public record SplitTestData(
+	MString str, string delimiter, MString[] expected);
+
 internal static class Split
 {
-	public static IEnumerable<(MString str, string delimiter, MString[] expected)> SplitData() =>
+	public static IEnumerable<Func<SplitTestData>> SplitData() =>
 	[
-		(
+		() => new (
 			A.concat(A.single("con"), A.single(";cat")), ";",
 			new[]
 			{
@@ -18,7 +21,7 @@ internal static class Split
 				A.single("cat")
 			}
 		),
-		(
+		() => new (
 			A.concat(A.single("wide"), A.single(";;delimiter")), ";;",
 			new[]
 			{
@@ -26,7 +29,7 @@ internal static class Split
 				A.single("delimiter")
 			}
 		),
-		(
+		() => new (
 			A.concat(A.single("wide;"), A.single(";delimiter")), ";;",
 			new[]
 			{
@@ -34,7 +37,7 @@ internal static class Split
 				A.single("delimiter")
 			}
 		),
-		(
+		() => new (
 			A.concat(A.concat(A.single("widest;"), A.single(";")), A.single(";delimiter")), ";;;",
 			new[]
 			{
@@ -42,7 +45,7 @@ internal static class Split
 				A.single("delimiter")
 			}
 		),
-		(
+		() => new (
 			A.concat(A.single("ca"), A.single(";t")), "",
 			new[]
 			{
@@ -53,7 +56,7 @@ internal static class Split
 				A.single("t")
 			}
 		),
-		(
+		() => new (
 			A.concat(A.single(";con"), A.single(";cat;")), ";",
 			new[]
 			{
@@ -63,7 +66,7 @@ internal static class Split
 				A.single("")
 			}
 		),
-		(
+		() => new (
 			A.concat(A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "red"), A.single(";cat")), ";",
 			new[]
 			{
@@ -71,7 +74,7 @@ internal static class Split
 				A.single("cat")
 			}
 		),
-		(
+		() => new (
 			A.concat(A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "r;e;d"), A.single("c;at")), ";",
 			new[]
 			{

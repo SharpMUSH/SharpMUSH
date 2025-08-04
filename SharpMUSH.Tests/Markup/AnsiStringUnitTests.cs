@@ -2,6 +2,7 @@
 using Serilog;
 using System.Drawing;
 using System.Text;
+using SharpMUSH.Tests.Markup.Data;
 using A = MarkupString.MarkupStringModule;
 using AnsiString = MarkupString.MarkupStringModule.MarkupString;
 using M = MarkupString.MarkupImplementation.AnsiMarkup;
@@ -12,8 +13,8 @@ namespace SharpMUSH.Tests.Markup;
 public class AnsiStringUnitTests : BaseUnitTest
 {
 	[Test]
-	[MethodDataSource(typeof(Data.Concat), nameof(Data.Concat.ConcatData))]
-	public async Task Concat((AnsiString strA, AnsiString strB, AnsiString expected) data)
+	[MethodDataSource(typeof(Concat), nameof(Data.Concat.ConcatData))]
+	public async Task Concat(ConcatTestData data)
 	{
 		var (strA, strB, expected) = data;
 		var result = A.concat(strA, strB);
@@ -31,8 +32,8 @@ public class AnsiStringUnitTests : BaseUnitTest
 	}
 	
 	[Test]
-	[MethodDataSource(typeof(Data.ConcatAttach), nameof(Data.ConcatAttach.ConcatAttachData))]
-	public async Task ConcatAttach((AnsiString strA, AnsiString strB, AnsiString expected) data)
+	[MethodDataSource(typeof(ConcatAttach), nameof(Data.ConcatAttach.ConcatAttachData))]
+	public async Task ConcatAttach(ConcatTestData data)
 	{
 		var (strA, strB, expected) = data;
 		var result = A.concatAttach(strA, strB);
@@ -50,8 +51,8 @@ public class AnsiStringUnitTests : BaseUnitTest
 	}
 
 	[Test]
-	[MethodDataSource(typeof(Data.Substring), nameof(Data.Substring.SubstringData))]
-	public async Task Substring((AnsiString str, int start, AnsiString expected) data)
+	[MethodDataSource(typeof(Substring), nameof(Data.Substring.SubstringData))]
+	public async Task Substring(SubstringTestData2 data)
 	{
 		var (str, start, expected) = data;
 		var result = A.substring(start, A.getLength(str) - start, str);
@@ -70,10 +71,9 @@ public class AnsiStringUnitTests : BaseUnitTest
 	}
 
 	[Test]
-	[MethodDataSource(typeof(Data.Pad), nameof(Data.Pad.PadData))]
+	[MethodDataSource(typeof(Pad), nameof(Data.Pad.PadData))]
 	public async Task Pad(
-		(AnsiString input, AnsiString padStr, int width, MModule.PadType padType, MModule.TruncationType truncType,
-			AnsiString expected) data)
+		PadTestData data)
 	{
 		var (input, padStr, width, padType, truncType, expected) = data;
 
@@ -95,7 +95,7 @@ public class AnsiStringUnitTests : BaseUnitTest
 
 	[Test]
 	[MethodDataSource(typeof(Data.InsertAt), nameof(Data.InsertAt.InsertAtData))]
-	public async Task InsertAt((AnsiString str, int index, AnsiString insert, AnsiString expected) data)
+	public async Task InsertAt(InsertAtTestData data)
 	{
 		var (str, index, insert, expected) = data;
 		var result = A.insertAt(str, insert, index);
@@ -115,8 +115,8 @@ public class AnsiStringUnitTests : BaseUnitTest
 	}
 
 	[Test]
-	[MethodDataSource(typeof(Data.Substring), nameof(Data.Substring.SubstringLengthData))]
-	public async Task SubstringLength((AnsiString str, int length, AnsiString expected) data)
+	[MethodDataSource(typeof(Substring), nameof(Data.Substring.SubstringLengthData))]
+	public async Task SubstringLength(SubstringTestData data)
 	{
 		var (str, length, expected) = data;
 		var result = A.substring(0, length, str);
@@ -136,7 +136,7 @@ public class AnsiStringUnitTests : BaseUnitTest
 
 	[Test]
 	[MethodDataSource(typeof(Data.Split), nameof(Data.Split.SplitData))]
-	public async Task Split((AnsiString str, string delimiter, AnsiString[] expected) data)
+	public async Task Split(SplitTestData data)
 	{
 		var (str, delimiter, expected) = data;
 		var result = A.split(delimiter, str);
