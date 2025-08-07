@@ -168,16 +168,16 @@ public class GeneralCommandTests : BaseUnitTest
 
 		await Parser.NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<DBRef>(), "Bar Room created with room number #3.");
+			.Notify(Arg.Any<DBRef>(), "Bar Room created with room number #4.");
 		await Parser.NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<DBRef>(), "Linked exit #4 to #3");
+			.Notify(Arg.Any<DBRef>(), "Linked exit #5 to #4");
 		await Parser.NotifyService
 			.Received(Quantity.Exactly(2))
 			.Notify(Arg.Any<DBRef>(), "Trying to link...");
 		await Parser.NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<DBRef>(), "Linked exit #5 to #0");
+			.Notify(Arg.Any<DBRef>(), "Linked exit #6 to #0");
 	}
 
 	[Test, DependsOn(nameof(DoDigForCommandlistCheck))]
@@ -187,16 +187,40 @@ public class GeneralCommandTests : BaseUnitTest
 
 		await Parser.NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<DBRef>(), "Foo Room created with room number #6.");
+			.Notify(Arg.Any<DBRef>(), "Foo Room created with room number #7.");
 		await Parser.NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<DBRef>(), "Linked exit #7 to #6");
+			.Notify(Arg.Any<DBRef>(), "Linked exit #8 to #7");
 		await Parser.NotifyService
 			.Received(Quantity.Exactly(4))
 			.Notify(Arg.Any<DBRef>(), "Trying to link...");
 		await Parser.NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<DBRef>(), "Linked exit #8 to #0");
+			.Notify(Arg.Any<DBRef>(), "Linked exit #9 to #0");
+	}
+	
+
+	[Test]
+	[DependsOn(nameof(DoDigForCommandlistCheck2))]
+	public async Task DigAndMoveTest()
+	{
+		if(Parser is null) throw new Exception("Parser is null");
+		await Parser.CommandParse(1, MModule.single("@dig NewRoom=Forward;F,Backward;B"));
+		await Parser.CommandParse(1, MModule.single("think %l start"));
+		await Parser.CommandParse(1, MModule.single("goto Forward"));
+		await Parser.CommandParse(1, MModule.single("think %l forward"));
+		await Parser.CommandParse(1, MModule.single("goto Backward"));
+		await Parser.CommandParse(1, MModule.single("think %l back"));
+		
+		await Parser.NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), "#0 start");
+		await Parser.NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), "#10 forward");
+		await Parser.NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), "#0 back");
 	}
 	
 	[Test, Skip("Not yet implemented")]
