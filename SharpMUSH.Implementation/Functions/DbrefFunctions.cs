@@ -407,16 +407,15 @@ public partial class Functions
 	public static async ValueTask<CallState> pmatch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
-		var result = await parser.LocateService.LocatePlayerAndNotifyIfInvalid(parser,
+		var result = await parser.LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser,
 			executor,
 			executor,
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText());
 
 		return result switch
 		{
-			{ IsError: true } => new CallState(result.AsError.Value),
-			{ IsNone: true } => new CallState(Errors.ErrorNotVisible),
-			_ => new CallState(result.AsAnyObject.Object().DBRef.ToString())
+			{ IsError: true } => result.AsError,
+			_ => new CallState(result.AsSharpObject.Object().DBRef)
 		};
 	}
 
@@ -510,6 +509,7 @@ public partial class Functions
 		var locate = maybeLocate.AsSharpObject;
 		if (!locate.IsContainer)
 		{
+			// TODO: Create its own error code for this.
 			return new CallState("#-1 EXITS CANNOT CONTAIN THINGS");
 		}
 

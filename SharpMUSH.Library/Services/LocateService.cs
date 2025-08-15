@@ -101,6 +101,12 @@ public partial class LocateService : ILocateService
 		LocateAndNotifyIfInvalid(parser, looker, executor, name,
 			LocateFlags.PlayersPreference | LocateFlags.OnlyMatchTypePreference | LocateFlags.EnglishStyleMatching |
 			LocateFlags.MatchOptionalWildCardForPlayerName);
+			
+	public ValueTask<AnySharpObjectOrErrorCallState> LocatePlayerAndNotifyIfInvalidWithCallState(IMUSHCodeParser parser, AnySharpObject looker, AnySharpObject executor,
+		string name) =>
+		LocateAndNotifyIfInvalidWithCallState(parser, looker, executor, name,
+			LocateFlags.PlayersPreference | LocateFlags.OnlyMatchTypePreference | LocateFlags.EnglishStyleMatching |
+			LocateFlags.MatchOptionalWildCardForPlayerName);
 
 	public ValueTask<AnyOptionalSharpObjectOrError> LocatePlayer(IMUSHCodeParser parser, AnySharpObject looker, AnySharpObject executor, string name)
 		=>

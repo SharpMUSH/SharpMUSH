@@ -63,6 +63,12 @@ public interface ILocateService
 		AnySharpObject executor,
 		string name);
 
+	public ValueTask<AnySharpObjectOrErrorCallState> LocatePlayerAndNotifyIfInvalidWithCallState(
+		IMUSHCodeParser parser,
+		AnySharpObject looker,
+		AnySharpObject executor,
+		string name);
+
 	public ValueTask<AnyOptionalSharpObjectOrError> LocatePlayer(
 		IMUSHCodeParser parser,
 		AnySharpObject looker,
