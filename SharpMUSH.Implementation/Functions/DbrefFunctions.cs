@@ -209,9 +209,29 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "HOME", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> Home(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Home(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var maybeLocate = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
+			executor,
+			executor,
+			arg0,
+			LocateFlags.All);
+
+		if (maybeLocate.IsError)
+		{
+			return maybeLocate.AsError;
+		}
+
+		if (maybeLocate.AsSharpObject.IsContent)
+		{
+			var home = await maybeLocate.AsSharpObject.AsContent.Home();
+			return new(home.Object().DBRef);
+		}
+
+		// Implement DROP-TO behavior.
+		return new("#-1 DROPTO TO BE IMPLEMENTED");
 	}
 
 	[SharpFunction(Name = "LLOCKFLAGS", MinArgs = 0, MaxArgs = 1,
