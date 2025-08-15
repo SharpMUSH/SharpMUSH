@@ -19,14 +19,14 @@ public partial class Functions
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		var maybeFound = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0, LocateFlags.All);
-		
-		if(maybeFound.IsError)
+
+		if (maybeFound.IsError)
 		{
 			return maybeFound.AsError;
 		}
 
-		var where = await maybeFound.AsSharpObject.Where(); 
-		
+		var where = await maybeFound.AsSharpObject.Where();
+
 		return new CallState(where.Object().DBRef);
 	}
 
@@ -78,9 +78,81 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "CONTROLS", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> Controls(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Controls(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		//   controls(<object>, <victim>[/<attribute>])
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var arg1 = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+
+		var arg1Split = arg1.Split('/');
+		var isAttributeCheck = arg1Split.Length > 1;
+
+		var maybeLocateObject = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
+			executor,
+			executor,
+			arg0,
+			LocateFlags.All);
+
+		if (maybeLocateObject.IsError)
+		{
+			return maybeLocateObject.AsError;
+		}
+
+		var locateObject = maybeLocateObject.AsSharpObject;
+
+		if (isAttributeCheck)
+		{
+			var attributeObj = arg1Split[0];
+			var attribute = string.Join("/", arg1Split.Skip(1));
+			var maybeLocateAttributeObject = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
+				executor,
+				executor,
+				attributeObj,
+				LocateFlags.All);
+
+			if (maybeLocateAttributeObject.IsError)
+			{
+				return maybeLocateAttributeObject.AsError;
+			}
+
+			var attributeObject = maybeLocateAttributeObject.AsSharpObject;
+
+			var locateAttribute = await parser.AttributeService.GetAttributeAsync(executor, attributeObject, attribute, IAttributeService.AttributeMode.Read);
+
+			if (locateAttribute.IsError)
+			{
+				return new CallState(locateAttribute.AsError.Value);
+			}
+			else if (locateAttribute.IsNone)
+			{
+				return new CallState(Errors.ErrorNotVisible);
+			}
+
+			// TODO: This should return an array. This needs changing.
+			var foundAttribute = locateAttribute.AsAttribute;
+
+			var controls = await parser.PermissionService.Controls(locateObject, attributeObject, [foundAttribute]);
+
+			return new CallState(controls);
+		}
+
+		var maybeLocateVictim = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
+			executor,
+			executor,
+			arg1,
+			LocateFlags.All);
+
+		if (maybeLocateVictim.IsError)
+		{
+			return maybeLocateVictim.AsError;
+		}
+
+		var locateVictim = maybeLocateVictim.AsSharpObject;
+
+		var controls = await parser.PermissionService.Controls(locateObject, locateVictim);
+
+		return new CallState(controls);
 	}
 
 	[SharpFunction(Name = "ENTRANCES", MinArgs = 0, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -194,7 +266,7 @@ public partial class Functions
 			.ToAsyncEnumerable()
 			.WhereAwait(async x => await parser.Mediator.Send(new GetBaseObjectNodeQuery(x)) is not null)
 			.ToHashSetAsync();
-		
+
 		// var dbrefListNotExisting = dbrefList.Except(dbrefListExisting); 
 
 		var strListExisting = await strList
@@ -206,7 +278,7 @@ public partial class Functions
 				LocateFlags.All)))
 			.Where(x => x.Item2.IsValid())
 			.ToHashSetAsync();
-		
+
 		// var strListNotExisting = strList.Except(strListExisting.Select(x => x.x));
 
 		var strListAsDbrefs = strListExisting.Select(x => x.Item2.AsAnyObject.Object().DBRef);

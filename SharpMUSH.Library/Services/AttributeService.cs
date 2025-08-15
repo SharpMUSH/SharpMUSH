@@ -68,6 +68,8 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 
 			curObj = parent.Known;
 		}
+
+		// TODO: Currently this only returns the last piece. We should return the full path.
 	}
 
 	public async ValueTask<MString> EvaluateAttributeFunctionAsync(IMUSHCodeParser parser, AnySharpObject executor,
