@@ -1303,8 +1303,8 @@ public partial class Commands
 
 		if (!switches.Contains("NOEVAL"))
 		{
-			arg0 = await (arg0CallState?.ParsedMessage() ?? Task.FromResult<MString?>(null));
-			arg1 = await (arg1CallState?.ParsedMessage() ?? Task.FromResult<MString?>(null));
+			arg0 = await (arg0CallState?.ParsedMessage() ?? ValueTask.FromResult<MString?>(null));
+			arg1 = await (arg1CallState?.ParsedMessage() ?? ValueTask.FromResult<MString?>(null));
 		}
 		else
 		{
