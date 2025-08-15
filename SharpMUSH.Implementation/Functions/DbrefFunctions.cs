@@ -132,9 +132,9 @@ public partial class Functions
 			// TODO: This should return an array. This needs changing.
 			var foundAttribute = locateAttribute.AsAttribute;
 
-			var controls = await parser.PermissionService.Controls(locateObject, attributeObject, [foundAttribute]);
+			var controlsAttribute = await parser.PermissionService.Controls(locateObject, attributeObject, [foundAttribute]);
 
-			return new CallState(controls);
+			return new CallState(controlsAttribute);
 		}
 
 		var maybeLocateVictim = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
@@ -162,9 +162,38 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "EXIT", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> Exit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Exit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var enactor = await parser.CurrentState.KnownEnactorObject(parser.Mediator);
+		var maybeLocate = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
+			executor,
+			executor,
+			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
+			LocateFlags.All);
+
+		if (maybeLocate.IsError)
+		{
+			return maybeLocate.AsError;
+		}
+
+		var locate = maybeLocate.AsSharpObject;
+
+		if (locate.IsPlayer && enactor.Object().DBRef == locate.Object().DBRef)
+		{
+			locate = (await locate.AsPlayer.Location.WithCancellation(CancellationToken.None)).WithExitOption();
+		}
+
+		if (!locate.IsRoom)
+		{
+			// TODO: Create a proper error constant for this.
+			return new CallState("#-1 OBJECT IS NOT A ROOM");
+		}
+
+		var content = await locate.AsContainer.Content(parser);
+		var exits = content.Where(x => x.IsExit).Select(x => x.Object().DBRef);
+
+		return new CallState(exits.Any() ? exits.First().ToString() : "");
 	}
 
 	[SharpFunction(Name = "FOLLOWERS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
