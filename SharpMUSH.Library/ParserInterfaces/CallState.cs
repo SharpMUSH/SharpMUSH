@@ -1,10 +1,21 @@
 ﻿using System.Globalization;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.ParserInterfaces;
 
 public record CallState(MString? Message, int Depth, MString[]? Arguments, Func<Task<MString?>> ParsedMessage)
 {
+    public static implicit operator CallState(MString? m) => new(m);
+    public static implicit operator CallState(DBRef m) => new(m);
+    public static implicit operator CallState(AnySharpObject m) => new(m.Object().DBRef);
+    public static implicit operator CallState(bool m) => new(m);
+    public static implicit operator CallState(int m) => new(m);
+    public static implicit operator CallState(double m) => new(m);
+    public static implicit operator CallState(decimal m) => new(m);
+    public static implicit operator CallState(string m) => new(m);
+
 	public CallState(MString? Message, int Depth)
 		: this(Message ?? MModule.empty(), Depth, null, () => Task.FromResult(Message)) { }
 

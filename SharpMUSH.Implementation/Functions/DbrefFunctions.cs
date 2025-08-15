@@ -25,8 +25,8 @@ public partial class Functions
 		return maybeFound switch
 		{
 			{ IsError: true } => maybeFound.AsError,
-			{ AsSharpObject: { IsContent: true } } => new((await maybeFound.AsSharpObject.AsContent.Location()).Object().DBRef),
-			_ => new(maybeFound.AsSharpObject.AsRoom.Object.DBRef)
+			{ AsSharpObject: { IsContent: true } } => (await maybeFound.AsSharpObject.AsContent.Location()).Object().DBRef,
+			_ => maybeFound.AsSharpObject.AsRoom.Object.DBRef
 		};
 	}
 
@@ -48,7 +48,7 @@ public partial class Functions
 		var locate = maybeLocate.AsSharpObject;
 		var children = await locate.Object().Children.WithCancellation(CancellationToken.None);
 
-		return new CallState(string.Join(" ", children.Select(x => x.DBRef.ToString())));
+		return string.Join(" ", children.Select(x => x.DBRef.ToString()));
 	}
 
 	[SharpFunction(Name = "CON", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -74,7 +74,7 @@ public partial class Functions
 		}
 
 		var contents = await locate.AsContainer.Content(parser);
-		return new CallState(string.Join(" ", contents.Take(1).Select(x => x.Object().DBRef.ToString())));
+		return string.Join(" ", contents.Take(1).Select(x => x.Object().DBRef.ToString()));
 	}
 
 	[SharpFunction(Name = "CONTROLS", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -122,11 +122,11 @@ public partial class Functions
 
 			if (locateAttribute.IsError)
 			{
-				return new CallState(locateAttribute.AsError.Value);
+				return locateAttribute.AsError.Value;
 			}
 			else if (locateAttribute.IsNone)
 			{
-				return new CallState(Errors.ErrorNotVisible);
+				return Errors.ErrorNotVisible;
 			}
 
 			// TODO: This should return an array. This needs changing.
@@ -134,7 +134,7 @@ public partial class Functions
 
 			var controlsAttribute = await parser.PermissionService.Controls(locateObject, attributeObject, [foundAttribute]);
 
-			return new CallState(controlsAttribute);
+			return controlsAttribute;
 		}
 
 		var maybeLocateVictim = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
@@ -152,7 +152,7 @@ public partial class Functions
 
 		var controls = await parser.PermissionService.Controls(locateObject, locateVictim);
 
-		return new CallState(controls);
+		return controls;
 	}
 
 	[SharpFunction(Name = "ENTRANCES", MinArgs = 0, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -187,13 +187,15 @@ public partial class Functions
 		if (!locate.IsRoom)
 		{
 			// TODO: Create a proper error constant for this.
-			return new CallState("#-1 OBJECT IS NOT A ROOM");
+			return "#-1 OBJECT IS NOT A ROOM";
 		}
 
 		var content = await locate.AsContainer.Content(parser);
 		var exits = content.Where(x => x.IsExit).Select(x => x.Object().DBRef);
 
-		return new CallState(exits.Any() ? exits.First().ToString() : "");
+		return exits.Any()
+			? exits.First().ToString() 
+			: string.Empty;
 	}
 
 	[SharpFunction(Name = "FOLLOWERS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -227,11 +229,11 @@ public partial class Functions
 		if (maybeLocate.AsSharpObject.IsContent)
 		{
 			var home = await maybeLocate.AsSharpObject.AsContent.Home();
-			return new(home.Object().DBRef);
+			return home.Object().DBRef;
 		}
 
 		// Implement DROP-TO behavior.
-		return new("#-1 DROPTO TO BE IMPLEMENTED");
+		return "#-1 DROPTO TO BE IMPLEMENTED";
 	}
 
 	[SharpFunction(Name = "LLOCKFLAGS", MinArgs = 0, MaxArgs = 1,
@@ -320,7 +322,7 @@ public partial class Functions
 			list.Add(knownParent.Object().DBRef);
 		}
 
-		return new CallState(string.Join(" ", list));
+		return string.Join(" ", list);
 	}
 
 	[SharpFunction(Name = "LSEARCH", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
@@ -368,7 +370,7 @@ public partial class Functions
 		var theGoodOnes = dbrefListExisting.Union(strListAsDbrefs);
 		// TODO: obj/attr for evaluation of bad results.
 
-		return new CallState(string.Join(" ", theGoodOnes));
+		return string.Join(" ", theGoodOnes);
 	}
 
 	[SharpFunction(Name = "NCHILDREN", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -384,15 +386,15 @@ public partial class Functions
 		switch (maybeLocate)
 		{
 			case { IsError: true }:
-				return new CallState(maybeLocate.AsError.Value);
+				return maybeLocate.AsError.Value;
 			case { IsNone: true }:
-				return new CallState(Errors.ErrorNotVisible);
+				return Errors.ErrorNotVisible;
 		}
 
 		var locate = maybeLocate.AsAnyObject;
 		var children = await locate.Object().Children.WithCancellation(CancellationToken.None);
 
-		return new CallState(children.Count());
+		return children.Count();
 	}
 
 	[SharpFunction(Name = "NEXT", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -420,9 +422,23 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "NUM", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> num(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> num(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var maybeLocate = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
+			executor,
+			executor,
+			arg0,
+			LocateFlags.All);
+
+		if(maybeLocate.IsError)
+		{
+			return maybeLocate.AsError;
+		}
+
+		var locate = maybeLocate.AsSharpObject;
+		return locate.Object().DBRef;
 	}
 
 	[SharpFunction(Name = "NUMVERSION", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]
@@ -449,7 +465,7 @@ public partial class Functions
 		return result switch
 		{
 			{ IsError: true } => result.AsError,
-			_ => new CallState(result.AsSharpObject.Object().DBRef)
+			_ => result.AsSharpObject.Object().DBRef
 		};
 	}
 
@@ -544,12 +560,12 @@ public partial class Functions
 		if (!locate.IsContainer)
 		{
 			// TODO: Create its own error code for this.
-			return new CallState("#-1 EXITS CANNOT CONTAIN THINGS");
+			return "#-1 EXITS CANNOT CONTAIN THINGS";
 		}
 
 		var contents = await locate.AsContainer.Content(parser);
 
-		return new CallState(string.Join(" ", contents.Select(x => x.Object().DBRef.ToString())));
+		return string.Join(" ", contents.Select(x => x.Object().DBRef.ToString()));
 	}
 
 	[SharpFunction(Name = "LEXITS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
