@@ -21,20 +21,12 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		var maybeFound = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0, LocateFlags.All);
 
-		if (maybeFound.IsError)
+		return maybeFound switch
 		{
-			return maybeFound.AsError;
-		}
-
-		if (maybeFound.AsSharpObject.IsContent)
-		{
-			var location = await maybeFound.AsSharpObject.AsContent.Location();
-			return new(location.Object().DBRef);
-		}
-		else
-		{
-			return new(maybeFound.AsSharpObject.AsRoom.Object.DBRef);
-		}
+			{ IsError: true } => maybeFound.AsError,
+			{ AsSharpObject: { IsContent: true } } => new((await maybeFound.AsSharpObject.AsContent.Location()).Object().DBRef),
+			_ => new(maybeFound.AsSharpObject.AsRoom.Object.DBRef)
+		};
 	}
 
 	[SharpFunction(Name = "CHILDREN", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
