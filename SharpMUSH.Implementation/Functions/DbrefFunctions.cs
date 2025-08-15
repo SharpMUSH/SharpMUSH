@@ -5,6 +5,7 @@ using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
@@ -284,9 +285,42 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "LPARENT", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> lparent(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> lparent(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var maybeLocate = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
+			executor,
+			executor,
+			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
+			LocateFlags.All);
+
+		if(maybeLocate.IsError)
+		{
+			return maybeLocate.AsError;
+		}
+
+		var locate = maybeLocate.AsSharpObject;
+		var list = new List<DBRef>();
+
+		while (true)
+		{
+			var parent = await locate.Object().Parent.WithCancellation(CancellationToken.None);
+			if(parent.IsNone)
+			{
+				break;
+			}
+
+			var knownParent = parent.Known;
+			if (!await parser.PermissionService.CanExamine(executor, knownParent))
+			{
+				break;
+			}
+
+			locate = knownParent;
+			list.Add(knownParent.Object().DBRef);
+		}
+
+		return new CallState(string.Join(" ", list));
 	}
 
 	[SharpFunction(Name = "LSEARCH", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
