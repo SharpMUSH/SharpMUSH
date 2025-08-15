@@ -16,31 +16,18 @@ public partial class Functions
 	[SharpFunction(Name = "loc", MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> Loc(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var dbRefConversion = HelperFunctions.ParseDBRef(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
-		if (dbRefConversion.IsNone())
+		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var maybeFound = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0, LocateFlags.All);
+		
+		if(maybeFound.IsError)
 		{
-			await parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, "I can't see that here.");
-			return new CallState("#-1");
+			return maybeFound.AsError;
 		}
 
-		var dbRef = dbRefConversion.AsValue();
-		var objectInfo = await parser.Mediator.Send(new GetObjectNodeQuery(dbRef));
-
-		// TODO: Check the type, as an Exit doesn't return the right thing or Loc on a Location Search.
-		// It has a few things that return different results.
-		// A room returns #-1 if there is no DROP-TO set.
-		var id = objectInfo!.Match(
-			player => player.Id,
-			room => room.Id,
-			exit => exit.Id,
-			thing => thing.Id,
-			none => null
-		);
-
-		// TODO: Do the regular search otherwise.
-		// TODO: Permissions Check?
-
-		throw new NotImplementedException(nameof(Loc));
+		var where = await maybeFound.AsSharpObject.Where(); 
+		
+		return new CallState(where.Object().DBRef);
 	}
 
 	[SharpFunction(Name = "CHILDREN", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]

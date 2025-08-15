@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.ParserInterfaces;
 
@@ -11,6 +12,8 @@ public record CallState(MString? Message, int Depth, MString[]? Arguments, Func<
 		: this(Message ?? MModule.empty(), 0, null, () => Task.FromResult(Message)) { }
 
 	public CallState(int Message) : this(Message.ToString()) { }
+	
+	public CallState(DBRef Message) : this(Message.ToString()) { }
 
 	public CallState(double Message) : this(Message.ToString(CultureInfo.InvariantCulture)) { }
 
