@@ -1,4 +1,5 @@
-﻿using MoreLinq.Extensions;
+﻿using DotNext;
+using MoreLinq.Extensions;
 using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
@@ -25,9 +26,15 @@ public partial class Functions
 			return maybeFound.AsError;
 		}
 
-		var where = await maybeFound.AsSharpObject.Where();
-
-		return new CallState(where.Object().DBRef);
+		if (maybeFound.AsSharpObject.IsContent)
+		{
+			var location = await maybeFound.AsSharpObject.AsContent.Location();
+			return new(location.Object().DBRef);
+		}
+		else
+		{
+			return new(maybeFound.AsSharpObject.AsRoom.Object.DBRef);
+		}
 	}
 
 	[SharpFunction(Name = "CHILDREN", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
