@@ -3,12 +3,14 @@ using A = MarkupString.MarkupStringModule;
 
 namespace SharpMUSH.Tests.Markup.Data;
 
+public record PadTestData(
+	MString input, MString padStr, int width, A.PadType padType, A.TruncationType truncType, MString expected);
+
 public static class Pad
 {
-	public static IEnumerable<(MString input, MString padStr, int width, A.PadType padType, A.TruncationType truncType,
-		MString expected)> PadData()
+	public static IEnumerable<Func<PadTestData>> PadData()
 	{
-		yield return (
+		yield return () => new(
 			A.single("Test"),
 			A.single(" "),
 			10,
@@ -17,7 +19,7 @@ public static class Pad
 			A.single("Test      ")
 		);
 
-		yield return (
+		yield return () => new(
 			A.single("Test"),
 			A.single(" "),
 			10,
@@ -26,7 +28,7 @@ public static class Pad
 			A.single("      Test")
 		);
 
-		yield return (
+		yield return () => new(
 			A.single("Test"),
 			A.single(" "),
 			10,
@@ -35,7 +37,7 @@ public static class Pad
 			A.single("   Test   ")
 		);
 
-		yield return (
+		yield return () => new(
 			A.single("Example"),
 			A.single("-"),
 			10,
@@ -44,7 +46,7 @@ public static class Pad
 			A.single("Example---")
 		);
 
-		yield return (
+		yield return () => new(
 			A.single("LongInputString"),
 			A.single(" "),
 			10,
@@ -53,7 +55,7 @@ public static class Pad
 			A.single("LongInput")
 		);
 
-		yield return (
+		yield return () => new(
 			A.single("Centered"),
 			A.single("."),
 			15,
@@ -62,7 +64,7 @@ public static class Pad
 			A.single("...Centered....")
 		);
 		
-		yield return (
+		yield return () => new(
 			A.single("Centered"),
 			A.single("."),
 			1,

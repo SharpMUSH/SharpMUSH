@@ -6,14 +6,16 @@ using StringExtensions = ANSILibrary.StringExtensions;
 
 namespace SharpMUSH.Tests.Markup.Data;
 
+public record InsertAtTestData(MString str, int index, MString insert, MString expected);
+
 internal static class InsertAt
 {
-	public static IEnumerable<(MString str, int index, MString insert, MString expected)> InsertAtData() =>
+	public static IEnumerable<Func<InsertAtTestData>> InsertAtData() =>
 	[
-		(A.single("RedCat"), 3, A.single("Kitty"), A.single("RedKittyCat")),
-		(A.single("RedCat"), 0, A.single("Kitty"), A.single("KittyRedCat")),
-		(A.single("RedCat"), 6, A.single("Kitty"), A.single("RedCatKitty")),
-		(A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "red"), 2,
+		() => new(A.single("RedCat"), 3, A.single("Kitty"), A.single("RedKittyCat")),
+		() => new(A.single("RedCat"), 0, A.single("Kitty"), A.single("KittyRedCat")),
+		() => new(A.single("RedCat"), 6, A.single("Kitty"), A.single("RedCatKitty")),
+		() => new(A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "red"), 2,
 			A.single("a"), A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "read"))
 		// Functions, but does not Optimize properly yet.
 		// TODO: Investigate why Optimize does not handle this case correctly. Is the code maybe not hitting Optimize?
