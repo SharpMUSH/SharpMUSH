@@ -42,7 +42,7 @@ public partial class Commands
 		}
 
 		await parser.NotifyService.Notify(executor, parser.CurrentState.Arguments["0"].Message!.ToString());
-		
+
 		return new None();
 	}
 
@@ -220,7 +220,8 @@ public partial class Commands
 		await parser.NotifyService.Notify(enactor, $"Owner: {ownerName.Hilight()}" +
 		                                           $"(#{obj.DBRef.Number}{string.Join(string.Empty, ownerObjFlags.Select(x => x.Symbol))})");
 		// TODO: Zone & Money
-		await parser.NotifyService.Notify(enactor, $"Parent: {(objParent.IsNone ? "*NOTHING*" : objParent.Known.Object().Name)}");
+		await parser.NotifyService.Notify(enactor,
+			$"Parent: {(objParent.IsNone ? "*NOTHING*" : objParent.Known.Object().Name)}");
 		// TODO: LOCK LIST
 		await parser.NotifyService.Notify(enactor, $"Powers: {string.Join(" ", objPowers.Select(x => x.Name))}");
 		// TODO: Channels
@@ -920,7 +921,6 @@ public partial class Commands
 		MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> NoSpoofEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		
 		await ValueTask.CompletedTask;
 		throw new NotImplementedException();
 	}
@@ -1128,7 +1128,8 @@ public partial class Commands
 		throw new NotImplementedException();
 	}
 
-	[SharpCommand(Name = "@EMIT", Switches = ["NOEVAL", "SPOOF"], Behavior = CB.Default | CB.RSNoParse | CB.NoGagged, MinArgs = 0,
+	[SharpCommand(Name = "@EMIT", Switches = ["NOEVAL", "SPOOF"], Behavior = CB.Default | CB.RSNoParse | CB.NoGagged,
+		MinArgs = 0,
 		MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Emit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -1142,7 +1143,7 @@ public partial class Commands
 		var message = isNoEvaluation
 			? Functions.Functions.NoParseDefaultNoParseArgument(args, 1, MModule.empty())
 			: await Functions.Functions.NoParseDefaultEvaluatedArgument(parser, 1, MModule.empty());
-			
+
 		var interactableContents = contents
 			.ToAsyncEnumerable()
 			.WhereAwait(async obj =>
@@ -1153,20 +1154,20 @@ public partial class Commands
 		{
 			var canSpoof = await executor.HasPower("CAN_SPOOF");
 			var controlsExecutor = await parser.PermissionService.Controls(executor, enactor));
-			
-			if(!canSpoof && !controlsExecutor)
+
+			if (!canSpoof && !controlsExecutor)
 			{
 				await parser.NotifyService.Notify(executor, "You do not have permission to spoof emits.");
 				return new CallState(Errors.ErrorPerm);
 			}
 		}
-		
+
 		await foreach (var obj in interactableContents)
 		{
 			await parser.NotifyService.Notify(
 				obj.WithRoomOption(),
 				message,
-				isSpoof ? enactor : executor ,
+				isSpoof ? enactor : executor,
 				INotifyService.NotificationType.Emit);
 		}
 
@@ -1180,12 +1181,46 @@ public partial class Commands
 		throw new NotImplementedException();
 	}
 
-	[SharpCommand(Name = "@NSOEMIT", Switches = ["NOEVAL"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0,
+	[SharpCommand(Name = "@NSOEMIT", Switches = ["NOEVAL"],
+		Behavior = CB.Default | CB.EqSplit | CB.NoGagged | CB.RSNoParse, MinArgs = 0,
 		MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> NoSpoofOmitEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var args = parser.CurrentState.Arguments;
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var enactor = await parser.CurrentState.KnownEnactorObject(parser.Mediator);
+		var executorLocation = await executor.Where();
+		var contents = await executorLocation.Content(parser);
+		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
+		var message = isNoEvaluation
+			? Functions.Functions.NoParseDefaultNoParseArgument(args, 1, MModule.empty())
+			: await Functions.Functions.NoParseDefaultEvaluatedArgument(parser, 1, MModule.empty());
+
+		var interactableContents = contents
+			.ToAsyncEnumerable()
+			.WhereAwait(async obj =>
+				await parser.PermissionService.CanInteract(obj.WithRoomOption(), executor,
+					IPermissionService.InteractType.Hear));
+
+		var canSpoof = await executor.HasPower("CAN_SPOOF");
+		var controlsExecutor = await parser.PermissionService.Controls(executor, enactor));
+
+		if (!canSpoof && !controlsExecutor)
+		{
+			await parser.NotifyService.Notify(executor, "You do not have permission to spoof emits.");
+			return new CallState(Errors.ErrorPerm);
+		}
+
+		await foreach (var obj in interactableContents)
+		{
+			await parser.NotifyService.Notify(
+				obj.WithRoomOption(),
+				message,
+				enactor,
+				INotifyService.NotificationType.Emit);
+		}
+
+		return new CallState(message);
 	}
 
 	[SharpCommand(Name = "@OEMIT", Switches = ["NOEVAL", "SPOOF"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged,
@@ -1250,7 +1285,7 @@ public partial class Commands
 		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(executor, channel);
 
 		if (maybeMemberStatus is null)
-		{			
+		{
 			await parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, "You are not a member of that channel.");
 			return new CallState("#-1 You are not a member of that channel.");
 		}
