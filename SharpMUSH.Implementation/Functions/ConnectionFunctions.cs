@@ -1,5 +1,4 @@
-﻿using System.Globalization;
-using OneOf.Types;
+﻿using OneOf.Types;
 using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
@@ -7,6 +6,8 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using System.Globalization;
+using System.Linq;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -121,16 +122,35 @@ public partial class Functions
 	[SharpFunction(Name = "lwho", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> ListWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		//   lwho([<viewer>[, <status>]])
+		var args = parser.CurrentState.Arguments;
+		var arg0 = args.ContainsKey("0") ? parser.CurrentState.Arguments["0"].Message!.ToPlainText() : null;
+		var arg1 = args.ContainsKey("1") ? parser.CurrentState.Arguments["1"].Message!.ToPlainText().Split(" ") : ["offline"];
+
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		var looker = executor;
-		
-		if(parser.CurrentState.Arguments.Count > 0)
+
+		if(arg0 != null)
 		{
-			// var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-			// `-> looker
-			// var arg1 = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-			// `-> 'online', 'offline', 'all'
+			var maybeLocate = await parser.LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0);
+			if(maybeLocate.IsError)
+			{
+				return maybeLocate.AsError;
+			}
+
+			looker = maybeLocate.AsSharpObject;
 		}
+		
+		if(arg1.Length > 1)
+		{
+			return "#-1 INVALID SECOND ARGUMENT";
+		}
+		if (!((string[])["online", "offline", "all"]).Contains(arg1.First()))
+		{
+			return "#-1 INVALID SECOND ARGUMENT";
+		}
+
+		// NEEDED: 'Get All Players'.
 
 		var allConnectionsDbRefs = await parser.ConnectionService
 			.GetAll()
