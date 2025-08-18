@@ -1,4 +1,6 @@
-﻿namespace SharpMUSH.Library.Services.Interfaces;
+﻿using SharpMUSH.Library.Models;
+
+namespace SharpMUSH.Library.Services.Interfaces;
 
 public interface IPasswordService
 {
@@ -18,4 +20,17 @@ public interface IPasswordService
 	/// <param name="hash">Stored Password Hash</param>
 	/// <returns>Success or Failure</returns>
 	bool PasswordIsValid(string user, string pw, string hash);
+
+	/// <summary>
+	/// Sets the password for the user, requiring it to be hashed first.
+	/// </summary>
+	/// <param name="user">SharpPlayer</param>
+	/// <param name="hashedPassword">The hashed password.</param>
+	ValueTask SetPassword(SharpPlayer user, string hashedPassword);
+
+	/// <summary>
+	/// Generates a random password.
+	/// </summary>
+	/// <returns>A random password</returns>
+	string GenerateRandomPassword();
 }

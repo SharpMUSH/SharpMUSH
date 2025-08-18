@@ -1,6 +1,7 @@
 ﻿using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 
@@ -123,8 +124,54 @@ public partial class Commands
 	[SharpCommand(Name = "@NEWPASSWORD", Switches = ["GENERATE"], Behavior = CB.Default | CB.EqSplit | CB.RSNoParse, CommandLock = "FLAG^WIZARD", MinArgs = 0)]
 	public static async ValueTask<Option<CallState>> NewPassword(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		// @newpassword <player>=<password>
+		// @newpassword / generate < player >
+
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var args = parser.CurrentState.Arguments;
+		var arg0 = args["0"].Message!.ToPlainText();
+		var isGenerate = parser.CurrentState.Switches.Contains("GENERATE");
+
+		if (isGenerate && parser.CurrentState.Arguments.Count > 1)
+		{
+			await parser.NotifyService.Notify(
+				executor.Object().DBRef,
+				"@NEWPASSWORD: /GENERATE switch cannot be used with other arguments.");
+		}
+
+		var maybePlayer = await parser.LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0);
+		
+		if(maybePlayer.IsError)
+		{
+			return maybePlayer.AsError;
+		}
+
+		var asPlayer = maybePlayer.AsSharpObject.AsPlayer;
+
+		if (isGenerate)
+		{
+			var generatedPassword = parser.PasswordService.GenerateRandomPassword();
+
+			await parser.Mediator.Send(
+				new SetPlayerPasswordCommand(asPlayer, parser.PasswordService.HashPassword(asPlayer.Object.DBRef.ToString(), generatedPassword)));
+
+			await parser.NotifyService.Notify(
+				executor.Object().DBRef,
+				$"Generated password for {asPlayer.Object.Name}: {generatedPassword}");
+			
+			return new CallState(generatedPassword);
+		}
+
+		var arg1 = args["1"].Message!.ToPlainText();
+		var newHashedPassword = parser.PasswordService.HashPassword(asPlayer.Object.DBRef.ToString(), arg1);
+
+		await parser.Mediator.Send(new SetPlayerPasswordCommand(asPlayer, newHashedPassword));
+
+		await parser.NotifyService.Notify(
+			executor.Object().DBRef,
+			$"Set new password for {asPlayer.Object.Name}: {arg1}");
+
+		return new CallState(arg1);
 	}
 
 	[SharpCommand(Name = "@PURGE", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]

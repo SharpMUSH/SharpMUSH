@@ -1153,7 +1153,7 @@ public partial class Commands
 		if (isSpoof)
 		{
 			var canSpoof = await executor.HasPower("CAN_SPOOF");
-			var controlsExecutor = await parser.PermissionService.Controls(executor, enactor));
+			var controlsExecutor = await parser.PermissionService.Controls(executor, enactor);
 
 			if (!canSpoof && !controlsExecutor)
 			{
@@ -1203,7 +1203,7 @@ public partial class Commands
 					IPermissionService.InteractType.Hear));
 
 		var canSpoof = await executor.HasPower("CAN_SPOOF");
-		var controlsExecutor = await parser.PermissionService.Controls(executor, enactor));
+		var controlsExecutor = await parser.PermissionService.Controls(executor, enactor);
 
 		if (!canSpoof && !controlsExecutor)
 		{
@@ -1414,8 +1414,27 @@ public partial class Commands
 		Behavior = CB.Player | CB.EqSplit | CB.NoParse | CB.RSNoParse | CB.NoGuest, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Password(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var oldPassword = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var newPassword = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+
+		if (!executor.IsPlayer)
+		{
+			await parser.NotifyService.Notify(executor, "Only players have passwords.");
+			return new CallState("#-1 INVALID OBJECT TYPE.");
+		}
+		
+		var isValidPassword = parser.PasswordService.PasswordIsValid(executor.Object().DBRef.ToString(), oldPassword, executor.AsPlayer.PasswordHash);
+		if (!isValidPassword)
+		{
+			await parser.NotifyService.Notify(executor, "Invalid password.");
+			return new CallState("#-1 INVALID PASSWORD.");
+		}
+		
+		var hashedPassword = parser.PasswordService.HashPassword(executor.Object().DBRef.ToString(), newPassword);
+		await parser.PasswordService.SetPassword(executor.AsPlayer, hashedPassword);
+
+		return new CallState(string.Empty);
 	}
 
 	[SharpCommand(Name = "@RESTART", Switches = ["ALL"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
