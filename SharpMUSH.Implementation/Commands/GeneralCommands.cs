@@ -133,9 +133,9 @@ public partial class Commands
 		var description = (await parser.AttributeService.GetAttributeAsync(executor, viewing.Known(), "DESCRIBE",
 				IAttributeService.AttributeMode.Read, false))
 			.Match(
-				attr => MModule.getLength(attr.Value) == 0
+				attr => MModule.getLength(attr.Last().Value) == 0
 					? MModule.single("There is nothing to see here")
-					: attr.Value,
+					: attr.Last().Value,
 				_ => MModule.single("There is nothing to see here"),
 				_ => MModule.empty());
 
@@ -201,9 +201,9 @@ public partial class Commands
 		var description = (await parser.AttributeService.GetAttributeAsync(enactor, viewing.Known(), "DESCRIBE",
 				IAttributeService.AttributeMode.Read, false))
 			.Match(
-				attr => MModule.getLength(attr.Value) == 0
+				attr => MModule.getLength(attr.Last().Value) == 0
 					? MModule.single("There is nothing to see here")
-					: attr.Value,
+					: attr.Last().Value,
 				none => MModule.single("There is nothing to see here"),
 				error => MModule.empty());
 
@@ -507,7 +507,7 @@ public partial class Commands
 
 		int oldSemaphoreCount = 0;
 		if (attributeContents.IsAttribute &&
-		    int.TryParse(attributeContents.AsAttribute.Value.ToPlainText(), out var semaphoreCount))
+		    int.TryParse(attributeContents.AsAttribute.Last().Value.ToPlainText(), out var semaphoreCount))
 		{
 			oldSemaphoreCount = semaphoreCount;
 		}

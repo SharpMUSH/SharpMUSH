@@ -117,7 +117,7 @@ public partial class Functions
 			return maybeAttr.AsCallStateError;
 		}
 
-		var get = maybeAttr.AsAttribute;
+		var get = maybeAttr.AsAttribute.Last();
 
 		var top2 = parser.State.Take(2).ToArray();
 		var lastArguments = top2.Length > 1 ? top2.Last().Arguments : [];
@@ -185,7 +185,7 @@ public partial class Functions
 		{
 			{ IsError: true } => new CallState(maybeAttr.AsError.Value),
 			{ IsNone: true } => new CallState(string.Empty),
-			_ => new CallState(maybeAttr.AsAttribute.Value)
+			_ => new CallState(maybeAttr.AsAttribute.Last().Value)
 		};
 	}
 
@@ -343,7 +343,7 @@ public partial class Functions
 		{
 			{ IsNone: true } => new CallState(Errors.ErrorNoSuchAttribute),
 			{ IsError: true } => new CallState(attributeObject.AsError.Value),
-			_ => new CallState((await attributeObject.AsAttribute.Owner.WithCancellation(CancellationToken.None))!.Object
+			_ => new CallState((await attributeObject.AsAttribute.Last().Owner.WithCancellation(CancellationToken.None))!.Object
 				.DBRef.ToString())
 		};
 	}
@@ -495,7 +495,7 @@ public partial class Functions
 			return maybeAttr.AsCallStateError;
 		}
 
-		var get = maybeAttr.AsAttribute;
+		var get = maybeAttr.AsAttribute.Last();
 
 		var arguments = await orderedArguments
 			.SkipLast(1)
@@ -652,7 +652,7 @@ public partial class Functions
 		{
 			{ IsError: true } => new CallState(maybeAttr.AsError.Value),
 			{ IsNone: true } => new CallState(string.Empty),
-			_ => new CallState(maybeAttr.AsAttribute.Value)
+			_ => new CallState(maybeAttr.AsAttribute.Last().Value)
 		};
 	}
 

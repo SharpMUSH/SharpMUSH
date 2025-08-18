@@ -80,7 +80,6 @@ public partial class Functions
 	[SharpFunction(Name = "CONTROLS", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> Controls(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		//   controls(<object>, <victim>[/<attribute>])
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var arg1 = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
@@ -129,10 +128,9 @@ public partial class Functions
 				return Errors.ErrorNotVisible;
 			}
 
-			// TODO: This should return an array. This needs changing.
 			var foundAttribute = locateAttribute.AsAttribute;
 
-			var controlsAttribute = await parser.PermissionService.Controls(locateObject, attributeObject, [foundAttribute]);
+			var controlsAttribute = await parser.PermissionService.Controls(locateObject, attributeObject, foundAttribute);
 
 			return controlsAttribute;
 		}

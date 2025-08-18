@@ -82,7 +82,7 @@ public static partial class Substitutions
 			IAttributeService.AttributeMode.Read);
 
 		return val.Match(
-			attr => new CallState(attr.Value),
+			attr => new CallState(attr.Last().Value),
 			_ => new CallState(string.Empty),
 			_ => new CallState(string.Empty)
 		);
