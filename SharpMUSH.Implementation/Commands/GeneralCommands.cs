@@ -920,6 +920,7 @@ public partial class Commands
 		MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> NoSpoofEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		
 		await ValueTask.CompletedTask;
 		throw new NotImplementedException();
 	}
@@ -1127,33 +1128,49 @@ public partial class Commands
 		throw new NotImplementedException();
 	}
 
-	[SharpCommand(Name = "@EMIT", Switches = ["NOEVAL", "SPOOF"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0,
+	[SharpCommand(Name = "@EMIT", Switches = ["NOEVAL", "SPOOF"], Behavior = CB.Default | CB.RSNoParse | CB.NoGagged, MinArgs = 0,
 		MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Emit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var enactor = await parser.CurrentState.KnownEnactorObject(parser.Mediator);
 		var executorLocation = await executor.Where();
 		var contents = await executorLocation.Content(parser);
-
+		var isSpoof = parser.CurrentState.Switches.Contains("SPOOF");
+		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
+		var message = isNoEvaluation
+			? Functions.Functions.NoParseDefaultNoParseArgument(args, 1, MModule.empty())
+			: await Functions.Functions.NoParseDefaultEvaluatedArgument(parser, 1, MModule.empty());
+			
 		var interactableContents = contents
 			.ToAsyncEnumerable()
 			.WhereAwait(async obj =>
 				await parser.PermissionService.CanInteract(obj.WithRoomOption(), executor,
 					IPermissionService.InteractType.Hear));
 
-		// TODO: Implement NoEval.
-		// TODO: Implement Spoof.
-
+		if (isSpoof)
+		{
+			var canSpoof = await executor.HasPower("CAN_SPOOF");
+			var controlsExecutor = await parser.PermissionService.Controls(executor, enactor));
+			
+			if(!canSpoof && !controlsExecutor)
+			{
+				await parser.NotifyService.Notify(executor, "You do not have permission to spoof emits.");
+				return new CallState(Errors.ErrorPerm);
+			}
+		}
+		
 		await foreach (var obj in interactableContents)
 		{
 			await parser.NotifyService.Notify(
 				obj.WithRoomOption(),
-				parser.CurrentState.Arguments["0"].Message!,
-				executor,
+				message,
+				isSpoof ? enactor : executor ,
 				INotifyService.NotificationType.Emit);
 		}
 
-		return parser.CurrentState.Arguments["0"];
+		return new CallState(message);
 	}
 
 	[SharpCommand(Name = "@LISTMOTD", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
