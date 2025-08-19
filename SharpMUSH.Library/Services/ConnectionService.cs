@@ -64,10 +64,10 @@ public class ConnectionService : IConnectionService
 			});
 	}
 
-	public void Register(long handle, Func<byte[], ValueTask> outputFunction, Func<Encoding> encoding, ConcurrentDictionary<string, string>? metaData = null)
+	public void Register(long handle, Func<byte[], ValueTask> outputFunction, Func<byte[], ValueTask> promptOutputFunction, Func<Encoding> encoding, ConcurrentDictionary<string, string>? metaData = null)
 	{
 		_sessionState.AddOrUpdate(handle,
-			_ => new IConnectionService.ConnectionData(handle, null, IConnectionService.ConnectionState.Connected, outputFunction, encoding, metaData ??
+			_ => new IConnectionService.ConnectionData(handle, null, IConnectionService.ConnectionState.Connected, outputFunction, promptOutputFunction, encoding, metaData ??
 				new ConcurrentDictionary<string, string>(new Dictionary<string, string> {
 					{"ConnectionStartTime", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() },
 					{"LastConnectionSignal", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() }})),
