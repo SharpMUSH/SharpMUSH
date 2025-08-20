@@ -563,34 +563,81 @@ public partial class Commands
 	{
 		var arg0 = parser.CurrentState.Arguments["0"].Message!;
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
-		var allObjects = await executor.AsContainer.Content(parser);
+		var switches = parser.CurrentState.Switches.Any()
+			? parser.CurrentState.Switches.ToArray()
+			: ["ROOM", "SELF", "ZONE", "GLOBALS"];
 
-		// TODO: Implement proper 'all objects' and switches.
-		var matched =
-			await parser.CommandDiscoveryService.MatchUserDefinedCommand(parser, allObjects.Select(x => x.WithRoomOption()),
-				arg0);
+		List<string> runningOutput = [];
+		// TODO: Permission check on the outputs
+		// -> It does NOT scan objects that you do not control and are not set VISUAL.
 
-		if (matched.IsNone())
+		if (executor.IsContent && switches.Contains("ROOM"))
 		{
-			await parser.NotifyService.Notify(executor, "No matching commands found.");
-			return new CallState("#-1 NO MATCHING COMMANDS FOUND.");
-		}
-		
-		/*
-		 * > Example Output
-		 *Matches on contents of this room:
-			Function Snippet Machine(#9762TV)  [1: #9762/CMD`LIST]
-			Matches on carried objects:
-			Matches on zone master room of location:
-			Matches on objects in the Master Room:
-		 */
-		foreach (var (obj, attr, _) in matched.AsValue())
-		{
-			await parser.NotifyService.Notify(executor, $"{obj.Object().Name}\t[1: #{obj.Object().DBRef.Number}/{attr.LongName}]");
+			var where = await executor.AsContent.Location();
+			var whereContent = await where.Content(parser);
+
+			// notify: Matches on contents of this room:
+			var matchedContent =
+				await parser.CommandDiscoveryService.MatchUserDefinedCommand(parser,
+					whereContent.Select(x => x.WithRoomOption()),
+					arg0);
+
+			if (matchedContent.IsSome())
+			{
+				foreach (var (i, (obj, attr, _)) in matchedContent.AsValue().Index())
+				{
+					runningOutput.Add($"#{obj.Object().DBRef.Number}/{attr.LongName}");
+					await parser.NotifyService.Notify(executor,
+						$"{obj.Object().Name}\t[{i}: #{obj.Object().DBRef.Number}/{attr.LongName}]");
+				}
+			}
 		}
 
-		// TODO: Return something better.
-		return new CallState(string.Empty);
+		if (executor.IsContainer && switches.Contains("SELF"))
+		{
+			var executorContents = await executor.AsContainer.Content(parser);
+
+			// notify: Matches on carried objects:
+			var matchedContent =
+				await parser.CommandDiscoveryService.MatchUserDefinedCommand(parser,
+					executorContents.Select(x => x.WithRoomOption()),
+					arg0);
+
+			if (matchedContent.IsSome())
+			{
+				foreach (var (i, (obj, attr, _)) in matchedContent.AsValue().Index())
+				{
+					runningOutput.Add($"#{obj.Object().DBRef.Number}/{attr.LongName}");
+					await parser.NotifyService.Notify(executor,
+						$"{obj.Object().Name}\t[{i}: #{obj.Object().DBRef.Number}/{attr.LongName}]");
+				}
+			}
+		}
+
+		if (switches.Contains("ZONE"))
+		{
+			// TODO: Zone Match
+		}
+
+		if (switches.Contains("GLOBAL"))
+		{
+			var masterRoom = new DBRef(Convert.ToInt32(parser.Configuration.CurrentValue.Database.MasterRoom));
+			var masterRoomContents = (await parser.Mediator.Send(new GetContentsQuery(masterRoom)) ?? []);
+
+			var masterRoomContent =
+				await parser.CommandDiscoveryService.MatchUserDefinedCommand(parser,
+					masterRoomContents.Select(x => x.WithRoomOption()),
+					arg0);
+
+			foreach (var (i, (obj, attr, _)) in masterRoomContent.AsValue().Index())
+			{
+				runningOutput.Add($"#{obj.Object().DBRef.Number}/{attr.LongName}");
+				await parser.NotifyService.Notify(executor,
+					$"{obj.Object().Name}\t[{i}: #{obj.Object().DBRef.Number}/{attr.LongName}]");
+			}
+		}
+
+		return new CallState(string.Join(" ", runningOutput));
 	}
 
 	[SharpCommand(Name = "@SWITCH",
