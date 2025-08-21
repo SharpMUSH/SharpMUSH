@@ -1478,4 +1478,15 @@ public class ArangoDatabase(
 	{
 		await ValueTask.CompletedTask;
 	}
+
+	public async ValueTask SetPlayerPasswordAsync(SharpPlayer player, string password)
+	{
+		var hashed = passwordService.HashPassword(player.Object.DBRef.ToString(), password);
+
+		await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Players, new
+		{
+			player.Id,
+			PasswordHash = hashed
+		}, mergeObjects: true);
+	}
 }

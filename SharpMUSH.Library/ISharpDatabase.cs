@@ -21,6 +21,13 @@ public interface ISharpDatabase
 	ValueTask<DBRef> CreatePlayerAsync(string name, string password, DBRef location);
 
 	/// <summary>
+	/// Sets a hashed password for a player.
+	/// </summary>
+	/// <param name="player">Player</param>
+	/// <param name="password">plaintext password</param>
+	ValueTask SetPlayerPasswordAsync(SharpPlayer player, string password);
+
+	/// <summary>
 	/// Create a new room.
 	/// </summary>
 	/// <param name="name">Room Name</param>

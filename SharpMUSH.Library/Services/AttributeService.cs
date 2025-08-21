@@ -42,7 +42,7 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 			_ => throw new InvalidOperationException(nameof(IAttributeService.AttributeMode))
 		};
 
-		// TODO: This code doesn't quite look right.
+		// TODO: This code doesn't quite look right. It does not correctly walk the parent chain.
 		while (true)
 		{
 			var attr = await mediator.Send(new GetAttributeQuery(obj.Object().DBRef, attributePath));
@@ -51,7 +51,7 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 			if (attrArr?.Length == attributePath.Length)
 			{
 				return await permissionPredicate(executor, obj, attrArr)
-					? attrArr.Last()
+					? attrArr
 					: new Error<string>(permissionFailureType);
 			}
 
@@ -68,6 +68,8 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 
 			curObj = parent.Known;
 		}
+
+		// TODO: Currently this only returns the last piece. We should return the full path.
 	}
 
 	public async ValueTask<MString> EvaluateAttributeFunctionAsync(IMUSHCodeParser parser, AnySharpObject executor,
@@ -98,10 +100,10 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 				s with
 				{
 					Arguments = args,
-					CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attr.AsAttribute.LongName!),
+					CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attr.AsAttribute.Last().LongName!),
 				},
 			async newParser =>
-				await newParser.FunctionParse(attr.AsAttribute.Value));
+				await newParser.FunctionParse(attr.AsAttribute.Last().Value));
 
 		return result!.Message!;
 	}
@@ -246,7 +248,7 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		}
 
 		// TODO: What if it's already set?
-		await mediator.Send(new SetAttributeFlagCommand(obj.Object().DBRef, returnedAttribute.AsAttribute,
+		await mediator.Send(new SetAttributeFlagCommand(obj.Object().DBRef, returnedAttribute.AsAttribute.Last(),
 			returnedFlag.First()));
 
 		return new Success();
@@ -276,7 +278,7 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		}
 
 		// TODO: What if it's already set?
-		await mediator.Send(new UnsetAttributeFlagCommand(obj.Object().DBRef, returnedAttribute.AsAttribute,
+		await mediator.Send(new UnsetAttributeFlagCommand(obj.Object().DBRef, returnedAttribute.AsAttribute.Last(),
 			returnedFlag.First()));
 
 		return new Success();

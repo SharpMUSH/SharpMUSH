@@ -95,6 +95,7 @@ public class TelnetServer : ConnectionHandler
 
 		_connectionService.Register(nextPort,
 			telnet.SendAsync,
+			telnet.SendPromptAsync,
 			() => telnet.CurrentEncoding,
 			new ConcurrentDictionary<string, string>(new Dictionary<string, string>()
 			{

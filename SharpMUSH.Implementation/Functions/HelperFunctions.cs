@@ -18,7 +18,7 @@ public partial class Functions
 	private static readonly Regex TimeSpanFormatMatchRegex = TimeSpanFormatMatch();
 	private static readonly Regex NameListPatternRegex = NameListPattern();
 
-	private static MString NoParseDefaultNoParseArgument(Dictionary<string, CallState> args, int item,
+	public static MString NoParseDefaultNoParseArgument(Dictionary<string, CallState> args, int item,
 		MString defaultValue)
 	{
 		if (args.Count - 1 < item || item == 0 && string.IsNullOrEmpty(args[item.ToString()]?.Message?.ToString()) || args[item.ToString()].Message?.ToString() is null)
@@ -29,11 +29,11 @@ public partial class Functions
 		return args[item.ToString()].Message!;
 	}
 
-	private static MString NoParseDefaultNoParseArgument(Dictionary<string, CallState> args, int item,
+	public static MString NoParseDefaultNoParseArgument(Dictionary<string, CallState> args, int item,
 		string defaultValue)
 		=> NoParseDefaultNoParseArgument(args, item, MModule.single(defaultValue));
 
-	private static async ValueTask<MString> NoParseDefaultEvaluatedArgument(IMUSHCodeParser parser, int item,
+	public static async ValueTask<MString> NoParseDefaultEvaluatedArgument(IMUSHCodeParser parser, int item,
 		MString defaultValue)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -45,11 +45,11 @@ public partial class Functions
 		return (await args[item.ToString()].ParsedMessage())!;
 	}
 
-	private static ValueTask<MString> NoParseDefaultEvaluatedArgument(IMUSHCodeParser parser, int item,
+	public static ValueTask<MString> NoParseDefaultEvaluatedArgument(IMUSHCodeParser parser, int item,
 		string defaultValue)
 		=> NoParseDefaultEvaluatedArgument(parser, item, MModule.single(defaultValue));
 
-	private static async ValueTask<MString> EvaluatedDefaultEvaluatedArgument(IMUSHCodeParser parser, int item,
+	public static async ValueTask<MString> EvaluatedDefaultEvaluatedArgument(IMUSHCodeParser parser, int item,
 		CallState defaultValue)
 	{
 		var args = parser.CurrentState.Arguments;

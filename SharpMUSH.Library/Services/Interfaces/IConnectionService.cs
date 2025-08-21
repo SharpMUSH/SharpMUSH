@@ -20,6 +20,7 @@ public interface IConnectionService
 		DBRef? Ref,
 		ConnectionState State,
 		Func<byte[], ValueTask> OutputFunction,
+		Func<byte[], ValueTask> PromptOutputFunction,
 		Func<Encoding> Encoding,
 		ConcurrentDictionary<string, string> Metadata
 	)
@@ -39,7 +40,7 @@ public interface IConnectionService
 		public string ConnectionType => Metadata[nameof(ConnectionType)];
 	}
 
-	void Register(long handle, Func<byte[], ValueTask> outputFunction, Func<Encoding> encoding,
+	void Register(long handle, Func<byte[], ValueTask> outputFunction, Func<byte[], ValueTask> promptOutputFunction, Func<Encoding> encoding,
 		ConcurrentDictionary<string, string>? metaData = null);
 
 	void Bind(long handle, DBRef player);

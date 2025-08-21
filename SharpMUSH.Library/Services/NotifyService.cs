@@ -65,4 +65,54 @@ public class NotifyService(IConnectionService _connectionService) : INotifyServi
 
 		return ValueTask.CompletedTask;
 	}
+
+	public ValueTask Prompt(DBRef who, OneOf<MString, string> what, AnySharpObject? sender, NotificationType type = NotificationType.Announce)
+	{
+		if (what.Match(
+			    markupString => MModule.getLength(markupString) == 0,
+			    str => str.Length == 0
+		    ))
+		{
+			return ValueTask.CompletedTask;
+		}
+
+		var list = _connectionService.Get(who);
+
+		foreach (var item in list)
+		{
+			_ = item?.OutputFunction(what.Match(
+				markupString => item.Encoding().GetBytes(markupString.ToString()),
+				str => item.Encoding().GetBytes(str)));
+		}
+
+		return ValueTask.CompletedTask;
+	}
+
+	public ValueTask Prompt(AnySharpObject who, OneOf<MString, string> what, AnySharpObject? sender, NotificationType type = NotificationType.Announce)
+		=> Prompt(who.Object().DBRef, what, sender, type);
+
+	public async ValueTask Prompt(long handle, OneOf<MString, string> what, AnySharpObject? sender, NotificationType type = NotificationType.Announce)
+		=> await Prompt([handle], what, sender, type);
+
+	public ValueTask Prompt(long[] handles, OneOf<MString, string> what, AnySharpObject? sender, NotificationType type = NotificationType.Announce)
+	{
+		if (what.Match(
+			    markupString => MModule.getLength(markupString) == 0,
+			    str => str.Length == 0
+		    ))
+		{
+			return ValueTask.CompletedTask;
+		}
+
+		var list = handles.Select(_connectionService.Get);
+
+		foreach (var item in list)
+		{
+			_ = item?.OutputFunction(what.Match(
+				markupString => item.Encoding().GetBytes(markupString.ToString()),
+				str => item.Encoding().GetBytes(str)));
+		}
+
+		return ValueTask.CompletedTask;
+	}
 }

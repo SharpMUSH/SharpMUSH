@@ -101,7 +101,7 @@ public class BaseUnitTest
 		var one = realOne.Object()!.DBRef;
 
 		var simpleConnectionService = new ConnectionService();
-		simpleConnectionService.Register(1, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
+		simpleConnectionService.Register(1, _ => ValueTask.CompletedTask,  _ => ValueTask.CompletedTask, () => Encoding.UTF8);
 		simpleConnectionService.Bind(1, one);
 
 		return new MUSHCodeParser(

@@ -949,7 +949,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 						? 0
 						: context.Stop.StopIndex - context.Start.StartIndex + 1, source)
 			],
-			ParsedMessage: () => Task.FromResult<MString?>(null));
+			ParsedMessage: () => ValueTask.FromResult<MString?>(null));
 	}
 
 	/// <summary>
@@ -970,7 +970,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 		return new CallState(null,
 			context.Depth(),
 			[baseArg!.Message!, .. commaArgs?.Arguments ?? []],
-			() => Task.FromResult<MString?>(null));
+			() => ValueTask.FromResult<MString?>(null));
 	}
 
 	/// <summary>
@@ -993,7 +993,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 			null,
 			context.Depth(),
 			[baseArg!.Message!, rsArg?.Message ?? MModule.empty()],
-			() => Task.FromResult<MString?>(null));
+			() => ValueTask.FromResult<MString?>(null));
 	}
 
 	/// <summary>
@@ -1011,7 +1011,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 			null,
 			context.Depth(),
 			(await VisitChildren(context))!.Arguments,
-			() => Task.FromResult<MString?>(null));
+			() => ValueTask.FromResult<MString?>(null));
 
 	public override async ValueTask<CallState?> VisitComplexSubstitutionSymbol(
 		[NotNull] ComplexSubstitutionSymbolContext context)

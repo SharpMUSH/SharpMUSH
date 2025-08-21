@@ -270,7 +270,7 @@ public partial class Functions
 		}
 
 		var attr = maybeAttr.AsAttribute;
-		var attrValue = attr.Value;
+		var attrValue = attr.Last().Value;
 		var delim = await NoParseDefaultEvaluatedArgument(parser, 2, MModule.single(" "));
 		var sep = await NoParseDefaultEvaluatedArgument(parser, 3, delim);
 
