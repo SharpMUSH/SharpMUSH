@@ -122,6 +122,7 @@ public class BaseUnitTest
 				Registers: new([[]]),
 				IterationRegisters: new(),
 				RegexRegisters: new(),
+				ExecutionStack: new(),
 				CurrentEvaluation: null,
 				ParserFunctionDepth: 0,
 				Function: null,

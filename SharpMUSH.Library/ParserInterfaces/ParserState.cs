@@ -17,6 +17,11 @@ public enum ParseMode
 	NoEval
 }
 
+public class Execution
+{
+	public required bool CommandListBreak { get; set; } = false;
+}
+
 public class IterationWrapper<T>
 {
 	public required T Value { get; set; }
@@ -45,6 +50,7 @@ public record ParserState(
 	ConcurrentStack<Dictionary<string, MString>> Registers,
 	ConcurrentStack<IterationWrapper<MString>> IterationRegisters,
 	ConcurrentStack<Dictionary<string, MString>> RegexRegisters,
+	ConcurrentStack<Execution> ExecutionStack,
 	DBAttribute? CurrentEvaluation,
 	int? ParserFunctionDepth,
 	string? Function,
@@ -65,6 +71,7 @@ public record ParserState(
 		new ConcurrentStack<Dictionary<string, MString>>(),
 		new ConcurrentStack<IterationWrapper<MString>>(),
 		new ConcurrentStack<Dictionary<string, MString>>(),
+		new ConcurrentStack<Execution>(),
 		null,
 		null,
 		null,

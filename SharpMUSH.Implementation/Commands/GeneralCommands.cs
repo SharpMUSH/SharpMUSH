@@ -1574,6 +1574,7 @@ public partial class Commands
 		Behavior = CB.Default | CB.EqSplit | CB.RSNoParse | CB.RSBrace, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Assert(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		// TODO: Need the ability to insert the tag to abort.
 		await ValueTask.CompletedTask;
 		throw new NotImplementedException();
 	}

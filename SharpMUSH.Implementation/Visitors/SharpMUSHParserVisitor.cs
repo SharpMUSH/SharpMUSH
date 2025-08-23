@@ -220,6 +220,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 				Registers: currentState.Registers,
 				IterationRegisters: currentState.IterationRegisters,
 				RegexRegisters: currentState.RegexRegisters,
+				ExecutionStack: currentState.ExecutionStack,
 				CurrentEvaluation: currentState.CurrentEvaluation,
 				ParserFunctionDepth: parser.CurrentState.ParserFunctionDepth + 1,
 				Function: name,

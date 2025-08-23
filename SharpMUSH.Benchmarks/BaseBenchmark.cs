@@ -90,6 +90,7 @@ public class BaseBenchmark
 			Registers: new ConcurrentStack<Dictionary<string, MString>>([[]]),
 			IterationRegisters: new ConcurrentStack<IterationWrapper<MString>>(),
 			RegexRegisters: new ConcurrentStack<Dictionary<string, MString>>(),
+			ExecutionStack: new ConcurrentStack<Execution>(),
 			CurrentEvaluation: null,
 			ParserFunctionDepth: 0,
 			Function: null,

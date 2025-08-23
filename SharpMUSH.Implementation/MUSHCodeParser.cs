@@ -150,6 +150,7 @@ public record MUSHCodeParser(
 			IterationRegisters: new(),
 			RegexRegisters: new(),
 			CurrentEvaluation: null,
+			ExecutionStack: new(),
 			ParserFunctionDepth: 0,
 			Function: null,
 			Command: MModule.plainText(text),
