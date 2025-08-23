@@ -255,8 +255,8 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 		return (result.LibraryInformation.Attribute, 
 			p => (ValueTask<CallState>)result.LibraryInformation.Function.Method.Invoke(null, [p, result.LibraryInformation.Attribute])!);
 	}
-	
-	
+
+
 	/// <summary>
 	/// Evaluates the command, with the parser info given.
 	/// </summary>
@@ -267,11 +267,13 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 	/// </remarks>
 	/// <param name="src">Original string</param>
 	/// <param name="context">Command Context</param>
+	/// <param name="isCommandList">Whether this command is part of a command list.</param>
 	/// <param name="visitChildren">Parser function to visit children.</param>
 	/// <returns>An empty Call State</returns>
 	public async ValueTask<Option<CallState>> EvaluateCommands(
 		MString src,
 		CommandContext context,
+		bool isCommandList,
 		Func<IRuleNode, ValueTask<CallState?>> visitChildren)
 	{
 		try
@@ -861,7 +863,9 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 			return await VisitChildren(context) ?? new CallState(context.GetText());
 		}
 
-		return (await EvaluateCommands(source, context, VisitChildren))
+		var isCommandList = context.Parent is CommandListContext;
+
+		return (await EvaluateCommands(source, context, isCommandList, VisitChildren))
 			.Match<CallState?>(
 				x => x,
 				_ => null);
