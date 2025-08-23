@@ -289,7 +289,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 				command = command[..spaceIndex];
 			}
 
-			if (parser.CurrentState.Handle is not null && command == "IDLE")
+			if (parser.CurrentState.Handle is not null && command != "IDLE")
 			{
 				parser.ConnectionService.Update(parser.CurrentState.Handle.Value, "LastConnectionSignal",
 					DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString());
