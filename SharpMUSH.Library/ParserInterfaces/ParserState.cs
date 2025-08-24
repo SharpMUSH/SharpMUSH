@@ -10,23 +10,52 @@ using SharpMUSH.Library.Extensions;
 
 namespace SharpMUSH.Library.ParserInterfaces;
 
+/// <summary>
+/// What parsing mode the parser should consider.
+/// </summary>
 public enum ParseMode
 {
+	/// <summary>
+	/// Normal parsing. Parse everything.
+	/// </summary>
 	Default,
+	/// <summary>
+	/// Do not parse argument-splits (commas). This is usually called by {}s. 
+	/// </summary>
 	NoParse,
+	/// <summary>
+	/// Do not evaluate any parameters.
+	/// </summary>
 	NoEval
 }
 
-public class Execution
-{
-	public required bool CommandListBreak { get; set; } = false;
-}
+/// <summary>
+/// Sets execution values pertinent to the parser.
+/// </summary>
+/// <param name="CommandListBreak">Sets whether to stop executing the remainder of the CommandList. This is reset in the SharpMUSHParserVisitor</param>
+public record Execution(bool CommandListBreak = false);
 
 public class IterationWrapper<T>
 {
+	/// <summary>
+	/// The iteration value.
+	/// </summary>
 	public required T Value { get; set; }
+	
+	/// <summary>
+	/// Iteration number.
+	/// </summary>
 	public required uint Iteration { get; set; }
+	
+	/// <summary>
+	/// This is for the break() function iterator.
+	/// </summary>
 	public required bool Break { get; set; }
+	
+	/// <summary>
+	/// NoBreak indicator is to ensure that a CommandListBreak does not also break the Iteration.
+	/// </summary>
+	public required bool NoBreak { get; set; }
 }
 
 /// <summary>

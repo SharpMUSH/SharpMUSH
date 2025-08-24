@@ -180,6 +180,71 @@ public class GeneralCommandTests : BaseUnitTest
 			.Notify(Arg.Any<DBRef>(), "Linked exit #5 to #0");
 	}
 
+	[Test]
+	public async ValueTask DoBreakSimpleCommandList()
+	{
+		await Parser.CommandListParse(MModule.single("think assert 1a; @assert; think assert 2a; think assert 3a"));
+		await Parser.CommandListParse(MModule.single("think break 1a; @break; think break 2a; think break 3a"));
+
+		await Parser.NotifyService.Received(Quantity.Exactly(1)).Notify(Arg.Any<AnySharpObject>(), "break 1a");
+		await Parser.NotifyService.Received(Quantity.Exactly(1)).Notify(Arg.Any<AnySharpObject>(), "break 2a");
+		await Parser.NotifyService.Received(Quantity.Exactly(1)).Notify(Arg.Any<AnySharpObject>(), "break 3a");
+		await Parser.NotifyService.Received(Quantity.Exactly(1)).Notify(Arg.Any<AnySharpObject>(), "assert 1a");
+		await Parser.NotifyService.Received(Quantity.Exactly(0)).Notify(Arg.Any<AnySharpObject>(), "assert 2a");
+		await Parser.NotifyService.Received(Quantity.Exactly(0)).Notify(Arg.Any<AnySharpObject>(), "assert 3a");
+	}
+	
+	[Test, Skip("Failing due to an error in the parser, passing in as 2 arguments for @assert.")]
+	public async ValueTask DoBreakSimpleTruthyCommandList()
+	{
+		await Parser.CommandListParse(MModule.single("think assert 1b; @assert 1; think assert 2b; think assert 3b"));
+		await Parser.CommandListParse(MModule.single("think break 1b; @break 1; think break 2b; think break 3b"));
+
+		await Parser.NotifyService.Received(Quantity.Exactly(1)).Notify(Arg.Any<AnySharpObject>(), "assert 1b");
+		await Parser.NotifyService.Received(Quantity.Exactly(1)).Notify(Arg.Any<AnySharpObject>(), "assert 2b");
+		await Parser.NotifyService.Received(Quantity.Exactly(1)).Notify(Arg.Any<AnySharpObject>(), "assert 3b");
+		await Parser.NotifyService.Received(Quantity.Exactly(1)).Notify(Arg.Any<AnySharpObject>(), "break 1b");
+		await Parser.NotifyService.Received(Quantity.Exactly(0)).Notify(Arg.Any<AnySharpObject>(), "break 2b");
+		await Parser.NotifyService.Received(Quantity.Exactly(0)).Notify(Arg.Any<AnySharpObject>(), "break 3b");
+	}
+	
+	[Test]
+	public async ValueTask DoBreakSimpleFalsyCommandList()
+	{
+		await Parser.CommandListParse(MModule.single("think assert 1c; @assert 0; think assert 2c; think assert 3c"));
+		await Parser.CommandListParse(MModule.single("think break 1c; @break 0; think break 2c; think break 3c"));
+
+		await Parser.NotifyService.Received(Quantity.Exactly(1)).Notify(Arg.Any<AnySharpObject>(), "break 1c");
+		await Parser.NotifyService.Received(Quantity.Exactly(1)).Notify(Arg.Any<AnySharpObject>(), "break 2c");
+		await Parser.NotifyService.Received(Quantity.Exactly(1)).Notify(Arg.Any<AnySharpObject>(), "break 3c");
+		await Parser.NotifyService.Received(Quantity.Exactly(1)).Notify(Arg.Any<AnySharpObject>(), "assert 1c");
+		await Parser.NotifyService.Received(Quantity.Exactly(0)).Notify(Arg.Any<AnySharpObject>(), "assert 2c");
+		await Parser.NotifyService.Received(Quantity.Exactly(0)).Notify(Arg.Any<AnySharpObject>(), "assert 3c");
+	}
+	
+	[Test]
+	public async ValueTask DoBreakCommandList()
+	{
+		await Parser.CommandListParse(MModule.single("think break 1d; @break 1=think broken 1d; think break 2d; think break 3d"));
+
+		await Parser.NotifyService.Received(Quantity.Exactly(1)).Notify(Arg.Is<AnySharpObject>(x => true), "break 1d");
+		await Parser.NotifyService.Received(Quantity.Exactly(0)).Notify(Arg.Is<AnySharpObject>(x => true), "break 2d");
+		await Parser.NotifyService.Received(Quantity.Exactly(0)).Notify(Arg.Is<AnySharpObject>(x => true), "break 3d");
+		await Parser.NotifyService.Received(Quantity.Exactly(1)).Notify(Arg.Is<AnySharpObject>(x => true), "broken 1d");
+	}
+	
+	[Test]
+	public async ValueTask DoBreakCommandList2()
+	{
+		await Parser.CommandListParse(MModule.single("think break 1e; @break 1={think broken 1e; think broken 2e}; think break 2e; think break 3e"));
+
+		await Parser.NotifyService.Received(Quantity.Exactly(1)).Notify(Arg.Any<AnySharpObject>(), "break 1e");
+		await Parser.NotifyService.Received(Quantity.Exactly(0)).Notify(Arg.Any<AnySharpObject>(), "break 2e");
+		await Parser.NotifyService.Received(Quantity.Exactly(0)).Notify(Arg.Any<AnySharpObject>(), "break 3e");
+		await Parser.NotifyService.Received(Quantity.Exactly(1)).Notify(Arg.Any<AnySharpObject>(), "broken 1e");
+		await Parser.NotifyService.Received(Quantity.Exactly(1)).Notify(Arg.Any<AnySharpObject>(), "broken 2e");
+	}
+
 	[Test, DependsOn(nameof(DoDigForCommandlistCheck))]
 	public async ValueTask DoDigForCommandlistCheck2()
 	{

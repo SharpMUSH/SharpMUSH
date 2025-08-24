@@ -132,11 +132,10 @@ public partial class Functions
 	{
 		var listArg = (await parser.CurrentState.Arguments["0"].ParsedMessage())!;
 
-		// TODO: Evaluate delim and sep.
 		var delim = await NoParseDefaultEvaluatedArgument(parser, 2, MModule.single(" "));
 		var sep = await NoParseDefaultEvaluatedArgument(parser, 3, delim);
 		var list = MModule.split2(delim, listArg);
-		var wrappedIteration = new IterationWrapper<MString> { Value = MModule.empty(), Break = false, Iteration = 0 };
+		var wrappedIteration = new IterationWrapper<MString> { Value = MModule.empty(), Break = false, NoBreak = false, Iteration = 0 };
 		var result = new List<MString>();
 
 		parser.CurrentState.IterationRegisters.Push(wrappedIteration);

@@ -40,9 +40,27 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 		var result = await DefaultResult;
 		
 		foreach (var child in Enumerable
-			               .Range(0, node.ChildCount)
-			               .Select(node.GetChild))
+			         .Range(0, node.ChildCount)
+			         .Select(node.GetChild))
 		{
+			result = AggregateResult(result, await child.Accept(this));
+		}
+		
+		return result;
+	}
+	
+	public async ValueTask<CallState?> VisitChildrenOrBreak(IRuleNode node, Func<bool> haltPredicate)
+	{
+		var result = await DefaultResult;
+		
+		foreach (var child in Enumerable
+			         .Range(0, node.ChildCount)
+			         .Select(node.GetChild))
+		{
+			if (haltPredicate())
+			{
+				break;
+			}
 			result = AggregateResult(result, await child.Accept(this));
 		}
 		
@@ -864,7 +882,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 		}
 
 		var isCommandList = context.Parent is CommandListContext;
-
+		
 		return (await EvaluateCommands(source, context, isCommandList, VisitChildren))
 			.Match<CallState?>(
 				x => x,
@@ -889,9 +907,18 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 		return new CallState(text, context.Depth());
 	}
 
+	private bool BreakTriggered() 
+		=> parser.CurrentState.ExecutionStack.TryPeek(out var result) && result.CommandListBreak;
+	
 	public override async ValueTask<CallState?> VisitCommandList([NotNull] CommandListContext context)
 	{
-		var result = await VisitChildren(context);
+		var result = await VisitChildrenOrBreak(context, BreakTriggered);
+
+		if (BreakTriggered())
+		{
+			parser.CurrentState.ExecutionStack.TryPop(out _);
+		}
+		
 		if (result != null)
 		{
 			return result;

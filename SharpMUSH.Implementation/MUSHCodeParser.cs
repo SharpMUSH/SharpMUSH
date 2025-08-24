@@ -86,9 +86,9 @@ public record MUSHCodeParser(
 				// sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL;
 				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL
 			},
-			Trace = true
+			Trace = false
 		};
-		sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
+		// sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
 
 		var chatContext = sharpParser.startPlainString();
 		SharpMUSHParserVisitor visitor = new(Logger, this, text);
@@ -146,11 +146,11 @@ public record MUSHCodeParser(
 	{
 		var handleId = ConnectionService.Get(handle);
 		var newParser = Push(new ParserState(
-			Registers: new([[]]),
-			IterationRegisters: new(),
-			RegexRegisters: new(),
+			Registers: [],
+			IterationRegisters: [],
+			RegexRegisters: [],
 			CurrentEvaluation: null,
-			ExecutionStack: new(),
+			ExecutionStack: [],
 			ParserFunctionDepth: 0,
 			Function: null,
 			Command: MModule.plainText(text),

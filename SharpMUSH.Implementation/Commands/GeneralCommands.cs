@@ -36,12 +36,13 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 
-		if (parser.CurrentState.Arguments.Count > 0)
+		if (parser.CurrentState.Arguments.Count <= 0)
 		{
-			await parser.NotifyService.Notify(executor, parser.CurrentState.Arguments["0"].Message!.ToString());
+			return new None();
 		}
 
-		return new None();
+		await parser.NotifyService.Notify(executor, parser.CurrentState.Arguments["0"].Message!.ToString());
+		return parser.CurrentState.Arguments["0"];
 	}
 
 	[SharpCommand(Name = "HUH_COMMAND", Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
@@ -66,7 +67,7 @@ public partial class Commands
 
 		var list = MModule.split(" ", parser.CurrentState.Arguments["0"].Message!);
 
-		var wrappedIteration = new IterationWrapper<MString> { Value = MModule.empty(), Break = false, Iteration = 0 };
+		var wrappedIteration = new IterationWrapper<MString> { Value = MModule.empty(), Break = false, NoBreak = false, Iteration = 0 };
 		parser.CurrentState.IterationRegisters.Push(wrappedIteration);
 		var command = parser.CurrentState.Arguments["1"].Message!;
 
@@ -1046,11 +1047,34 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@BREAK", Switches = ["INLINE", "QUEUED"],
-		Behavior = CB.Default | CB.EqSplit | CB.RSNoParse | CB.RSBrace, MinArgs = 0, MaxArgs = 0)]
+		Behavior = CB.Default | CB.EqSplit | CB.RSNoParse | CB.RSBrace, MinArgs = 0, MaxArgs = 2)]
 	public static async ValueTask<Option<CallState>> Break(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		// Inline does nothing.
+		var args = parser.CurrentState.Arguments;
+		var nargs = args.Count;
+		switch (nargs)
+		{
+			case 0:
+				parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
+				break;
+			case 1:
+				if (args["0"].Message.Truthy())
+				{
+					parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
+				}
+				return args["0"];
+			case 2:
+				if (args["0"].Message.Truthy())
+				{
+					var command = await args["1"].ParsedMessage();
+					var commandList = parser.CommandListParseVisitor(command!);
+					await commandList();
+					parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
+				}
+				return args["0"];
+		}
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@CONFIG", Switches = ["SET", "SAVE", "LOWERCASE", "LIST"], Behavior = CB.Default | CB.EqSplit,
@@ -1571,12 +1595,34 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@ASSERT", Switches = ["INLINE", "QUEUED"],
-		Behavior = CB.Default | CB.EqSplit | CB.RSNoParse | CB.RSBrace, MinArgs = 0, MaxArgs = 0)]
+		Behavior = CB.Default | CB.EqSplit | CB.RSNoParse | CB.RSBrace, MinArgs = 0, MaxArgs = 2)]
 	public static async ValueTask<Option<CallState>> Assert(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// TODO: Need the ability to insert the tag to abort.
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		// Inline does nothing.
+		var args = parser.CurrentState.Arguments;
+		var nargs = args.Count;
+		switch (nargs)
+		{
+			case 0:
+				// Do nothing.
+				break;
+			case 1:
+				if (args["0"].Message.Falsy())
+				{
+					parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
+				}
+				return args["0"];
+			case 2:
+				if (args["0"].Message.Falsy())
+				{
+					var command = await args["1"].ParsedMessage();
+					var commandList = parser.CommandListParseVisitor(command!);
+					await commandList();
+					parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
+				}
+				return args["0"];
+		}
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@ATTRIBUTE",
