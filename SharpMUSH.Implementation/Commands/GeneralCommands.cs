@@ -981,9 +981,37 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@FORCE", Switches = ["NOEVAL", "INPLACE", "INLINE", "LOCALIZE", "CLEARREGS", "NOBREAK"],
-		Behavior = CB.Default | CB.EqSplit | CB.NoGagged | CB.RSBrace, MinArgs = 0, MaxArgs = 0)]
+		Behavior = CB.Default | CB.EqSplit | CB.NoGagged | CB.RSBrace, MinArgs = 0, MaxArgs = 2)]
 	public static async ValueTask<Option<CallState>> Force(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		var args = parser.CurrentState.Arguments;
+		var objArg = Functions.Functions.NoParseDefaultNoParseArgument(args, 0, MModule.empty());
+		var cmdListArg = Functions.Functions.NoParseDefaultNoParseArgument(args, 1, MModule.empty());
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		
+		var maybeFound =
+			await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, objArg.ToPlainText(), LocateFlags.All);
+
+		if (maybeFound.IsError)
+		{
+			return maybeFound.AsError;
+		}
+
+		var found = maybeFound.AsSharpObject;
+
+		if (!await parser.PermissionService.Controls(executor, found))
+		{
+			await parser.NotifyService.Notify(executor, "Permission denied. You do not control the target.");
+			return new CallState(Errors.ErrorPerm);
+		}
+		
+		if (cmdListArg.Length < 1)
+		{
+			await parser.NotifyService.Notify(executor, "Force them to do what?");
+			// TODO: Introduce Error
+			return new CallState("#-1 NOTHING TO DO");
+		}
+		
 		await ValueTask.CompletedTask;
 		throw new NotImplementedException();
 	}
