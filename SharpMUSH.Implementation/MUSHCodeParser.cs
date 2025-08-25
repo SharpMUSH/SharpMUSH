@@ -146,7 +146,7 @@ public record MUSHCodeParser(
 	{
 		var handleId = ConnectionService.Get(handle);
 		var newParser = Push(new ParserState(
-			Registers: [],
+			Registers: new([[]]),
 			IterationRegisters: [],
 			RegexRegisters: [],
 			CurrentEvaluation: null,
