@@ -1008,12 +1008,13 @@ public partial class Commands
 		if (cmdListArg.Length < 1)
 		{
 			await parser.NotifyService.Notify(executor, "Force them to do what?");
-			// TODO: Introduce Error
-			return new CallState("#-1 NOTHING TO DO");
+			return new CallState(Errors.NothingToDo);
 		}
+
+		await parser.With(state => state with { Executor = found.Object().DBRef },
+			async newParser => await newParser.CommandListParseVisitor(cmdListArg)());
 		
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@IFELSE", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse,
