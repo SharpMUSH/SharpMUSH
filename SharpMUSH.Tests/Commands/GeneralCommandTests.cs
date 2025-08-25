@@ -162,7 +162,7 @@ public class GeneralCommandTests : BaseUnitTest
 	}
 
 	[Test]
-	public async ValueTask DoDigForCommandlistCheck()
+	public async ValueTask DoDigForCommandListCheck()
 	{
 		await Parser.CommandParse(1, MModule.single("@dig Bar Room=Exit;ExitAlias,ExitBack;ExitAliasBack"));
 
@@ -245,8 +245,8 @@ public class GeneralCommandTests : BaseUnitTest
 		await Parser.NotifyService.Received(Quantity.Exactly(1)).Notify(Arg.Any<AnySharpObject>(), "broken 2e");
 	}
 
-	[Test, DependsOn(nameof(DoDigForCommandlistCheck))]
-	public async ValueTask DoDigForCommandlistCheck2()
+	[Test, DependsOn(nameof(DoDigForCommandListCheck))]
+	public async ValueTask DoDigForCommandListCheck2()
 	{
 		await Parser.CommandListParse(MModule.single("@dig Foo Room={Exit;ExitAlias},{ExitBack;ExitAliasBack}"));
 
@@ -262,16 +262,6 @@ public class GeneralCommandTests : BaseUnitTest
 		await Parser.NotifyService
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<DBRef>(), "Linked exit #8 to #0");
-	}
-	
-	[Test, Skip("Not yet implemented")]
-	public async ValueTask SpicyFunctionCall()
-	{
-		await Parser.CommandListParse(MModule.single("&foo me=ucstr; think [get(me/foo)](bar)"));
-
-		await Parser.NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<DBRef>(), "BAR");
 	}
 
 	[Test]	 
