@@ -758,17 +758,17 @@ public partial class Commands
 			case 3 when !double.TryParse(splitBySlashes[2], out untilTime):
 				await parser.NotifyService.Notify(executor, "Invalid time argument format");
 				return new CallState(string.Format(Errors.ErrorBadArgumentFormat, "TIME ARGUMENT"));
+			
 			// TODO: Validate valid attribute value.
-
 			case 3 when switches.Contains("UNTIL"):
 			{
 				var newUntilTime = DateTimeOffset.FromUnixTimeSeconds((long)untilTime) - DateTimeOffset.UtcNow;
-				await QueueSemaphoreWithDelay(parser, foundObject, [splitBySlashes[1]], newUntilTime, arg1);
+				await QueueSemaphoreWithDelay(parser, foundObject, splitBySlashes[1].Split('`'), newUntilTime, arg1);
 				return CallState.Empty;
 			}
 
 			case 3:
-				await QueueSemaphoreWithDelay(parser, foundObject, [splitBySlashes[1]], TimeSpan.FromSeconds(untilTime), arg1);
+				await QueueSemaphoreWithDelay(parser, foundObject, splitBySlashes[1].Split('`'), TimeSpan.FromSeconds(untilTime), arg1);
 				return CallState.Empty;
 
 			default:
@@ -803,7 +803,7 @@ public partial class Commands
 		string[] attribute, TimeSpan delay, MString arg1)
 	{
 		var one = await parser.Mediator.Send(new GetObjectNodeQuery(new DBRef(0)));
-		var attrValues = await parser.Mediator.Send(new GetAttributeQuery(located.Object().DBRef, ["SEMAPHORE"]));
+		var attrValues = await parser.Mediator.Send(new GetAttributeQuery(located.Object().DBRef, attribute));
 		var attrValue = attrValues?.LastOrDefault();
 
 		if (attrValue is null)

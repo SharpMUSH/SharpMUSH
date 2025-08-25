@@ -19,8 +19,8 @@ namespace SharpMUSH.Library.Services;
 /// #5> @wait #7/SEMAPHORE=think 5;
 /// </code>
 /// <code>
-/// Group -> semaphore:#7:1744849096000/SEMAPHORE
-/// Trigger Key -> dbref:#5:1744849081000-16
+/// Group -- semaphore:#7:1744849096000/SEMAPHORE -- semaphore:objid/attribute
+/// Trigger Key -- dbref:#5:1744849081000-16 -- dbref:objid-pid
 /// </code>
 /// </example>
 /// <param name="parser"></param>
@@ -278,8 +278,7 @@ public class TaskScheduler(IMUSHCodeParser parser, ISchedulerFactory schedulerFa
 		var allKeys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupStartsWith($"{SemaphoreGroup}"));
 		
 		// This should return just one or zero, but using it as an iterator simplifies the code.
-		var triggerKeys = allKeys.Where(x => x.Name.EndsWith($"-{pid}"));
-		foreach (var key in triggerKeys)
+		foreach (var key in allKeys.Where(x => x.Name.EndsWith($"-{pid}")))
 		{
 			var trigger = await _scheduler.GetTrigger(key);
 			await _scheduler.RescheduleJob(key, trigger.GetTriggerBuilder().StartAt(DateTimeOffset.UtcNow + delay).Build());
