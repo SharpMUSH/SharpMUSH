@@ -227,10 +227,10 @@ public class GeneralCommandTests : BaseUnitTest
 	{
 		await Parser.CommandListParse(MModule.single("think break 1d; @break 1=think broken 1d; think break 2d; think break 3d"));
 
-		await Parser.NotifyService.Received(Quantity.Exactly(1)).Notify(Arg.Is<AnySharpObject>(x => true), "break 1d");
-		await Parser.NotifyService.Received(Quantity.Exactly(0)).Notify(Arg.Is<AnySharpObject>(x => true), "break 2d");
-		await Parser.NotifyService.Received(Quantity.Exactly(0)).Notify(Arg.Is<AnySharpObject>(x => true), "break 3d");
-		await Parser.NotifyService.Received(Quantity.Exactly(1)).Notify(Arg.Is<AnySharpObject>(x => true), "broken 1d");
+		await Parser.NotifyService.Received(Quantity.Exactly(1)).Notify(Arg.Any<AnySharpObject>(), "break 1d");
+		await Parser.NotifyService.Received(Quantity.Exactly(0)).Notify(Arg.Any<AnySharpObject>(), "break 2d");
+		await Parser.NotifyService.Received(Quantity.Exactly(0)).Notify(Arg.Any<AnySharpObject>(), "break 3d");
+		await Parser.NotifyService.Received(Quantity.Exactly(1)).Notify(Arg.Any<AnySharpObject>(), "broken 1d");
 	}
 	
 	[Test]
