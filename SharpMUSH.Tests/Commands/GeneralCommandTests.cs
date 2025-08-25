@@ -194,7 +194,7 @@ public class GeneralCommandTests : BaseUnitTest
 		await Parser.NotifyService.Received(Quantity.Exactly(0)).Notify(Arg.Any<AnySharpObject>(), "assert 3a");
 	}
 	
-	[Test, Skip("Failing due to an error in the parser, passing in as 2 arguments for @assert.")]
+	[Test]
 	public async ValueTask DoBreakSimpleTruthyCommandList()
 	{
 		await Parser.CommandListParse(MModule.single("think assert 1b; @assert 1; think assert 2b; think assert 3b"));

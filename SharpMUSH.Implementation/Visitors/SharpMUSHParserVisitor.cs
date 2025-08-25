@@ -1020,11 +1020,15 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 		var singleCommandArg = context.singleCommandArg();
 		var baseArg = await VisitChildren(singleCommandArg[0]);
 		var rsArg = singleCommandArg.Length > 1 ? await VisitChildren(singleCommandArg[1]) : null;
+		MString[] args = singleCommandArg.Length > 1
+			? [baseArg!.Message!, rsArg!.Message!]
+			: [baseArg!.Message!];
+		
 		// Log.Logger.Information("VisitEqSplitCommand: C1: {Text} - C2: {Text2}", baseArg?.ToString(), rsArg?.ToString());
 		return new CallState(
 			null,
 			context.Depth(),
-			[baseArg!.Message!, rsArg?.Message ?? MModule.empty()],
+			args,
 			() => ValueTask.FromResult<MString?>(null));
 	}
 
