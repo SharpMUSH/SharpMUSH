@@ -2,17 +2,15 @@ using NSubstitute;
 using NSubstitute.ReceivedExtensions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
-using SharpMUSH.Library.Services;
-using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-public class CommandFlowUnitTests: BaseUnitTest
+public class CommandFlowUnitTests
 {
-	private static readonly IMUSHCodeParser Parser = TestParser(ns: Substitute.For<INotifyService>())
-		.ConfigureAwait(false)
-		.GetAwaiter()
-		.GetResult();
+	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required WebAppFactory WebAppFactoryArg { get; init; }
+
+	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	[Test]
 	[Arguments("@ifelse 1=@pemit #1=1 True,@pemit #2=1 False", "1 True")]

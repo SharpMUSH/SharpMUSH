@@ -4,17 +4,12 @@ using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Functions;
-public class JsonFunctionUnitTests : BaseUnitTest
+public class JsonFunctionUnitTests
 {
-	private static IMUSHCodeParser? _parser;
+	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required WebAppFactory WebAppFactoryArg { get; init; }
 
-	[Before(Class)]
-	public static async Task OneTimeSetup()
-	{
-		_parser = await TestParser(
-			ns: Substitute.For<INotifyService>()
-		);
-	}
+	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
 	[Test]
 	[Arguments("json(string,foo)", "\"foo\"")]
@@ -28,7 +23,7 @@ public class JsonFunctionUnitTests : BaseUnitTest
 	[Arguments("json(array,1,blah)", "#-1 BAD ARGUMENT FORMAT TO json")]
 	public async Task Json(string function, string expected)
 	{
-		var result = (await _parser!.FunctionParse(MModule.single(function)))?.Message!;
+		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
@@ -37,7 +32,7 @@ public class JsonFunctionUnitTests : BaseUnitTest
 	[Arguments("json(object,key,json(string,ansi(hr,foo)))")]
 	public async Task JsonNotABadArgument(string function)
 	{
-		var result = (await _parser!.FunctionParse(MModule.single(function)))?.Message!;
+		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsNotEqualTo("#-1 BAD ARGUMENT FORMAT TO json");
 	}
 }

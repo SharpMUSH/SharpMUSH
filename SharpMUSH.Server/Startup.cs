@@ -25,7 +25,7 @@ using TaskScheduler = SharpMUSH.Library.Services.TaskScheduler;
 
 namespace SharpMUSH.Server;
 
-public class Startup(ArangoConfiguration config, string configFile)
+public class Startup(ArangoConfiguration config, string configFile, INotifyService? notifier)
 {
 	// This method gets called by the runtime. Use this method to add services to the container.
 	// For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
@@ -70,7 +70,14 @@ public class Startup(ArangoConfiguration config, string configFile)
 		);
 		services.AddSingleton<IPasswordService, PasswordService>();
 		services.AddSingleton<IPermissionService, PermissionService>();
-		services.AddSingleton<INotifyService, NotifyService>();
+		if (notifier != null)
+		{
+			services.AddSingleton(notifier);
+		}
+		else
+		{
+			services.AddSingleton<INotifyService, NotifyService>();
+		}
 		services.AddSingleton<ILocateService, LocateService>();
 		services.AddSingleton<IExpandedObjectDataService, ExpandedObjectDataService>();
 		services.AddSingleton<IAttributeService, AttributeService>();

@@ -7,13 +7,12 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-public class RoomsAndMovementTests : BaseUnitTest
+public class RoomsAndMovementTests
 {
-	private static IMUSHCodeParser? _parser;
+	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required WebAppFactory WebAppFactoryArg { get; init; }
 
-	[Before(Class)]
-	public static async Task OneTimeSetup()
-	{
-		_parser = await TestParser(ns: Substitute.For<INotifyService>());
-	}
+	private IMUSHCodeParser Parser => (IMUSHCodeParser)WebAppFactoryArg.Services.GetService(typeof(IMUSHCodeParser))!;
+	
+	// TODO: Add Tests
 }

@@ -9,13 +9,13 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-public class GeneralCommandTests : BaseUnitTest
+public class GeneralCommandTests
 {
-	private static readonly IMUSHCodeParser Parser = TestParser(ns: Substitute.For<INotifyService>())
-		.ConfigureAwait(false)
-		.GetAwaiter()
-		.GetResult();
+	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required WebAppFactory WebAppFactoryArg { get; init; }
 
+	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
+	
 	[Test]
 	[Arguments("@pemit #1=1 This is a test", "1 This is a test")]
 	[Arguments("@pemit #1=2 This is a test;", "2 This is a test;")]

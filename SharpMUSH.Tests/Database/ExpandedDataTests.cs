@@ -4,24 +4,13 @@ using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Tests.Database;
 
-public class ExpandedDataTests : BaseUnitTest
+public class ExpandedDataTests
 {
-	private static Infrastructure? _server;
-	private static ISharpDatabase? _database;
-	
-	[Before(Class)]
-	public static async Task OneTimeSetup()
-	{
-		(_database, _server) = await IntegrationServer();
-	}
-	
-	[After(Class)]
-	public static async Task OneTimeTearDown()
-	{
-		_server!.Dispose();
-		await Task.CompletedTask;
-	}
-	
+	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required WebAppFactory WebAppFactoryArg { get; init; }
+
+	private ISharpDatabase _database => (ISharpDatabase)WebAppFactoryArg.Services.GetService(typeof(ISharpDatabase))!;
+
 	[Test, NotInParallel]
 	public async Task SetAndGetExpandedData()
 	{

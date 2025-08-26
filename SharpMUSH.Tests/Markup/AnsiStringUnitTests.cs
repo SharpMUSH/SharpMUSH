@@ -10,7 +10,7 @@ using StringExtensions = ANSILibrary.StringExtensions;
 
 namespace SharpMUSH.Tests.Markup;
 
-public class AnsiStringUnitTests : BaseUnitTest
+public class AnsiStringUnitTests
 {
 	[Test]
 	[MethodDataSource(typeof(Concat), nameof(Data.Concat.ConcatData))]

@@ -5,17 +5,12 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
-public class BooleanFunctionUnitTests : BaseUnitTest
+public class BooleanFunctionUnitTests
 {
-	private static IMUSHCodeParser? _parser;
+	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required WebAppFactory WebAppFactoryArg { get; init; }
 
-	[Before(Class)]
-	public static async Task OneTimeSetup()
-	{
-		_parser = await TestParser(
-			ns: Substitute.For<INotifyService>()
-		);
-	}
+	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
 	[Test]
 	[Arguments("t(1)", "1")]
@@ -30,7 +25,7 @@ public class BooleanFunctionUnitTests : BaseUnitTest
 	{
 		Console.WriteLine("Testing: {0}", str);
 
-		var result = (await _parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
 
 		await Assert.That(result).IsEqualTo(expected);
 	}
@@ -44,7 +39,7 @@ public class BooleanFunctionUnitTests : BaseUnitTest
 	{
 		Console.WriteLine("Testing: {0}", str);
 
-		var result = (await _parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
 
 		await Assert.That(result).IsEqualTo(expected);
 	}
@@ -58,7 +53,7 @@ public class BooleanFunctionUnitTests : BaseUnitTest
 	{
 		Console.WriteLine("Testing: {0}", str);
 
-		var result = (await _parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
 
 		await Assert.That(result).IsEqualTo(expected);
 	}

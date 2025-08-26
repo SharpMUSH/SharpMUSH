@@ -1,9 +1,15 @@
 ﻿using SharpMUSH.Configuration;
+using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Tests.Configuration;
 
-public class ConfigurationTests : BaseUnitTest
+public class ConfigurationTests
 {
+	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required WebAppFactory WebAppFactoryArg { get; init; }
+
+	private IMUSHCodeParser Parser => (IMUSHCodeParser)WebAppFactoryArg.Services.GetService(typeof(IMUSHCodeParser))!;
+
 	[Test]
 	public async Task ParseConfigurationFile()
 	{
@@ -18,7 +24,7 @@ public class ConfigurationTests : BaseUnitTest
 	[Test]
 	public async Task CanUseOptionsFromServer()
 	{
-		var parser = await TestParser();
+		var parser = Parser;
 
 		await Assert.That(parser.Configuration.CurrentValue.Chat.ChatTokenAlias).IsEqualTo('+');
 		await Assert.That(parser.Configuration.CurrentValue.Net.MudName).IsEqualTo("PennMUSH Emulation by SharpMUSH");

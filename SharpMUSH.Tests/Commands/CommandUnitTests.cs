@@ -2,22 +2,15 @@ using NSubstitute;
 using NSubstitute.ReceivedExtensions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
-using SharpMUSH.Library.Services;
-using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-public class CommandUnitTests : BaseUnitTest
+public class CommandUnitTests
 {
-	private static IMUSHCodeParser? _parser;
+	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required WebAppFactory WebAppFactoryArg { get; init; }
 
-	[Before(Class)]
-	public static async Task OneTimeSetup()
-	{
-		_parser = await TestParser(
-			ns: Substitute.For<INotifyService>()
-			);
-	}
+	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	[Test]
 	[Arguments("think add(1,2)1",
@@ -33,9 +26,9 @@ public class CommandUnitTests : BaseUnitTest
 		// TODO: We need eval vs noparse evaluation.
 		// NoParse is currently not running the command. So let's use NoEval instead for that.
 		Console.WriteLine("Testing: {0}", str);
-		await _parser!.CommandParse(1, MModule.single(str));
+		await Parser!.CommandParse(1, MModule.single(str));
 
-		await _parser.NotifyService
+		await Parser.NotifyService
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), expected);
 	}
@@ -59,13 +52,13 @@ public class CommandUnitTests : BaseUnitTest
 	public async Task TestSingle(string str, string expected1, string expected2)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		await _parser!.CommandListParse(MModule.single(str));
+		await Parser!.CommandListParse(MModule.single(str));
 
-		await _parser.NotifyService
+		await Parser.NotifyService
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), expected1);
 
-		await _parser.NotifyService
+		await Parser.NotifyService
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), expected2);
 	}

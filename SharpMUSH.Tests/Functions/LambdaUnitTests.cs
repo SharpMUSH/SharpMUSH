@@ -5,17 +5,12 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
-public class LambdaUnitTests : BaseUnitTest
+public class LambdaUnitTests 
 {
-	private static IMUSHCodeParser? _parser;
+	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required WebAppFactory WebAppFactoryArg { get; init; }
 
-	[Before(Class)]
-	public static async Task OneTimeSetup()
-	{
-		_parser = await TestParser(
-			ns: Substitute.For<INotifyService>()
-		);
-	}
+	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
 	[Test]
 	[Arguments(@"u(#lambda/add\(1\,2\))", "3")]
@@ -25,7 +20,7 @@ public class LambdaUnitTests : BaseUnitTest
 	[Arguments("3", "3")] 
 	public async Task BasicLambdaTest(string call, string expected)
 	{
-		var res = (await _parser!.FunctionParse(MModule.single(call)))!.Message!;
+		var res = (await Parser!.FunctionParse(MModule.single(call)))!.Message!;
 		await Assert.That(res.ToPlainText()).IsEqualTo(expected);
 	}
 }

@@ -6,16 +6,12 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Parser;
 
-public class SubstitutionUnitTests : BaseUnitTest
+public class SubstitutionUnitTests
 {
-	private static IMUSHCodeParser? _parser;
+	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required WebAppFactory WebAppFactoryArg { get; init; }
 
-	[Before(Class)]
-	public static async Task OneTimeSetup()
-	{
-		_parser = await TestParser(
-			ns: Substitute.For<INotifyService>());
-	}
+	private IMUSHCodeParser Parser => (IMUSHCodeParser)WebAppFactoryArg.Services.GetService(typeof(IMUSHCodeParser))!;
 
 	[Test]
 	[Arguments("think %t", "\t")]
@@ -39,11 +35,11 @@ public class SubstitutionUnitTests : BaseUnitTest
 	{
 		Console.WriteLine("Testing: {0}", str);
 
-		await _parser!.CommandParse(1, MModule.single(str));
+		await Parser!.CommandParse(1, MModule.single(str));
 
 		if (expected is not null)
 		{
-			await _parser.NotifyService
+			await Parser.NotifyService
 				.Notify(Arg.Any<AnySharpObject>(), expected);
 		}
 	}
