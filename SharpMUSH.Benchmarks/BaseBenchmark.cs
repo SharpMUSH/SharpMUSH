@@ -48,7 +48,7 @@ public class BaseBenchmark
 		};
 		
 		var configFile = Path.Combine(AppContext.BaseDirectory, "mushcnf.dst");
-		_infrastructure = new Infrastructure(config, configFile);
+		_infrastructure = new Infrastructure(config, configFile, null);
 
 		_database = _infrastructure!.Services.GetService(typeof(ISharpDatabase)) as ISharpDatabase;
 
