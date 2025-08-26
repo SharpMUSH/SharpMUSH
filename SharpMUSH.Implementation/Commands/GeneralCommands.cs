@@ -864,6 +864,7 @@ public partial class Commands
 				one.AsPlayer));
 			await parser.Mediator.Publish(new QueueCommandListWithTimeoutRequest(arg1, parser.CurrentState,
 				new DbRefAttribute(located.Object().DBRef, attribute), 0, delay));
+			return;
 		}
 
 		var last = int.Parse(attrValue!.Value.ToPlainText());
