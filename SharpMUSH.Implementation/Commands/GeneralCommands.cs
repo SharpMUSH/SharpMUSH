@@ -1673,7 +1673,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@RETRY", Switches = [],
-		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoParse | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Retry(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
@@ -1691,6 +1691,9 @@ public partial class Commands
 		// var retryState = parser.State.Peek();
 		var limit = 1000;
 
+		// ERROR: Left side is not being evaluated, even when ParsedMessage() is called.
+		var test = await predicate.ParsedMessage();
+		
 		while ((await predicate.ParsedMessage()).Truthy() && limit > 0)
 		{
 			// Todo: Parse arguments?

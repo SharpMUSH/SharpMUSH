@@ -106,9 +106,7 @@ public partial class Functions
 
 	[SharpFunction(Name = "inc", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> Inc(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		throw new NotImplementedException();
-	}
+		=> EvaluateDecimal(parser.CurrentState.ArgumentsOrdered, x => x + 1);
 
 	[SharpFunction(Name = "lmath", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> LMath(IMUSHCodeParser parser, SharpFunctionAttribute _2)

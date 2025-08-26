@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using OneOf.Types;
 using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Implementation.Functions;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -222,16 +223,24 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 					.ToList();
 			}
 
-			if (attribute.Flags.HasFlag(FunctionFlags.DecimalsOnly) && refinedArguments.Any(a =>
-				    !decimal.TryParse(MModule.plainText(a.Message ?? MModule.empty()), out _)))
+			if (attribute.Flags.HasFlag(FunctionFlags.DecimalsOnly) 
+			    && !attribute.Flags.HasFlag(FunctionFlags.NoParse)
+			    && refinedArguments.Any(a => !decimal.TryParse(
+				    Functions.Functions.EmptyStringToZero(MModule.plainText(a.Message ?? MModule.empty())), out _)))
 			{
-				return new CallState(attribute.MaxArgs > 1 ? Errors.ErrorNumbers : Errors.ErrorNumber);
+				return new CallState(attribute.MaxArgs > 1 
+					? Errors.ErrorNumbers 
+					: Errors.ErrorNumber);
 			}
-
-			if (attribute.Flags.HasFlag(FunctionFlags.IntegersOnly) && refinedArguments.Any(a =>
-				    !int.TryParse(MModule.plainText(a.Message ?? MModule.empty()), out _)))
+			
+			if (attribute.Flags.HasFlag(FunctionFlags.IntegersOnly) 
+			    && !attribute.Flags.HasFlag(FunctionFlags.NoParse) 
+			    && refinedArguments.Any(a => !int.TryParse(
+				    Functions.Functions.EmptyStringToZero(MModule.plainText(a.Message ?? MModule.empty())) , out _)))
 			{
-				return new CallState(attribute.MaxArgs > 1 ? Errors.ErrorIntegers : Errors.ErrorInteger);
+				return new CallState(attribute.MaxArgs > 1 
+					? Errors.ErrorIntegers 
+					: Errors.ErrorInteger);
 			}
 
 			// TODO: Consider adding the ParserContexts as Arguments, so that Evaluation can be more optimized.

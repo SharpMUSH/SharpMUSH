@@ -102,7 +102,7 @@ public partial class Functions
 	private static ValueTask<CallState> EvaluateInteger(ImmutableSortedDictionary<string, CallState> args, Func<int, int> func)
 		=> ValueTask.FromResult<CallState>(new(func(int.Parse(EmptyStringToZero(MModule.plainText(args["0"].Message))))));
 
-	private static string EmptyStringToZero(string input)
+	public static string EmptyStringToZero(string input)
 		=> string.IsNullOrEmpty(input) ? "0" : input;
 		
 	private static ValueTask<CallState> ValidateDecimalAndEvaluatePairwise(ImmutableSortedDictionary<string, CallState> args,
@@ -121,7 +121,7 @@ public partial class Functions
 
 		return ValueTask.FromResult(doubles.Any(x => !x.IsDouble)
 			? new CallState(Message: Errors.ErrorNumbers)
-			: new CallState(Message: doubles.Select(x => x.Double).Pairwise().Skip(1).SkipWhile(func).Any().ToString()));
+			: new CallState(Message: doubles.Select(x => x.Double).Pairwise().Skip(1).SkipWhile(func).Any() ? "1" : "0"));
 	}
 
 	private static (int, string)[] ExtractArray(TimeSpan span) =>
