@@ -122,6 +122,59 @@ public class MathFunctionUnitTests : BaseUnitTest
 
 		await Assert.That(result).IsEqualTo(expected);
 	}
+	
+	[Test]
+	[Arguments("gt(1,2)", "0")]
+	[Arguments("gt(1,1)", "0")]
+	[Arguments("gt(1,0)", "1")]
+	[Arguments("gt(1,0,0)", "0")]
+	[Arguments("gt(2,1,0)", "1")]
+	[Arguments("gt(2,1,2)", "0")]
+	[Arguments("gt(wood,1)", "#-1 ARGUMENTS MUST BE NUMBERS")]
+	public async Task Gt(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+
+		var result = (await _parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
+	
+	[Test]
+	[Arguments("lt(1,2)", "1")]
+	[Arguments("lt(1,1)", "0")]
+	[Arguments("lt(1,0)", "0")]
+	[Arguments("lt(0,1,2)", "1")]
+	[Arguments("lt(2,1,0)", "0")]
+	[Arguments("lt(2,1,2)", "0")]
+	[Arguments("lt(wood,1)", "#-1 ARGUMENTS MUST BE NUMBERS")]
+	public async Task Lt(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+
+		var result = (await _parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
+	
+	[Test]
+	[Arguments("lte(1,2)", "1")]
+	[Arguments("lte(1,1)", "1")]
+	[Arguments("lte(1,0)", "0")]
+	[Arguments("lte(1,0,0)", "0")]
+	[Arguments("lte(-1,0,0)", "1")]
+	[Arguments("lte(2,1,0)", "0")]
+	[Arguments("lte(1,2,3)", "1")]
+	[Arguments("lte(2,1,2)", "0")]
+	[Arguments("lte(wood,1)", "#-1 ARGUMENTS MUST BE NUMBERS")]
+	public async Task Lte(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+
+		var result = (await _parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
 
 	/*
 		Not yet Implemented.
