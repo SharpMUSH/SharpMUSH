@@ -13,8 +13,8 @@ public class QueryCachingBehavior<TRequest, TResponse>(IFusionCache cache)
 
 	public async ValueTask<TResponse> Handle(
 		TRequest message,
-		CancellationToken cancellationToken,
-		MessageHandlerDelegate<TRequest, TResponse> next
+		MessageHandlerDelegate<TRequest, TResponse> next,
+		CancellationToken cancellationToken
 	)
 	{
 		return message.CacheTags.Length > 0
