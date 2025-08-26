@@ -673,16 +673,16 @@ public partial class Commands
 		Option<MString> defaultArg = new None();
 		var pairs = args.Values.Skip(1).Pairwise();
 		var matched = false;
-		
+
 		if (args.Count % 2 == 0)
 		{
 			defaultArg = args.Last().Value.Message!;
 		}
 
-		foreach (var (expr,action) in pairs)
+		foreach (var (expr, action) in pairs)
 		{
 			if (expr == null) break;
-			
+
 			// TODO: Make this use a glob.
 			if (expr.Message! == strArg)
 			{
@@ -850,7 +850,7 @@ public partial class Commands
 			await parser.NotifyService.Notify(executor, Errors.ErrorInteger);
 			return;
 		}
-		
+
 		await parser.Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single($"{last + 1}"),
 			one.AsPlayer));
 		await parser.Mediator.Publish(new QueueCommandListRequest(arg1, parser.CurrentState,
@@ -879,7 +879,7 @@ public partial class Commands
 			await parser.NotifyService.Notify(executor, Errors.ErrorInteger);
 			return;
 		}
-		
+
 		await parser.Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single($"{last + 1}"),
 			one.AsPlayer));
 		await parser.Mediator.Publish(new QueueCommandListWithTimeoutRequest(arg1, parser.CurrentState,
@@ -1029,7 +1029,7 @@ public partial class Commands
 			var filteredPids = pids
 				.GroupBy(data => string.Join('`', data.SemaphoreSource.Attribute), x => x.SemaphoreSource)
 				.Select(x => x.First());
-			
+
 			await foreach (var uniqueAttribute in filteredPids)
 			{
 				var dbRefAttrToDrain = uniqueAttribute;
@@ -1396,7 +1396,7 @@ public partial class Commands
 
 		var interactableContents = contents
 			.ToAsyncEnumerable()
-			.Where(async (obj,_) =>
+			.Where(async (obj, _) =>
 				await parser.PermissionService.CanInteract(obj.WithRoomOption(), executor,
 					IPermissionService.InteractType.Hear));
 
@@ -1448,7 +1448,7 @@ public partial class Commands
 
 		var interactableContents = contents
 			.ToAsyncEnumerable()
-			.Where(async (obj,_) =>
+			.Where(async (obj, _) =>
 				await parser.PermissionService.CanInteract(obj.WithRoomOption(), executor,
 					IPermissionService.InteractType.Hear));
 
@@ -1679,7 +1679,7 @@ public partial class Commands
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		var predicate = args["0"];
-		
+
 		var peek = parser.State.TakeLast(2);
 		if (peek.Count() != 2)
 		{
@@ -1693,12 +1693,13 @@ public partial class Commands
 
 		while ((await predicate.ParsedMessage()).Truthy() && limit > 0)
 		{
-			// Todo: Parse arguments.
-			await parser.With(state => state with { Arguments = args.Skip(1).ToDictionary() },
+			// Todo: Parse arguments?
+			await parser.With(
+				state => state with { Arguments = args.Skip(1).ToDictionary() },
 				async newParser => await previousCommand.CommandInvoker(newParser));
 			limit--;
 		}
-
+		
 		return new CallState(1000 - limit);
 	}
 

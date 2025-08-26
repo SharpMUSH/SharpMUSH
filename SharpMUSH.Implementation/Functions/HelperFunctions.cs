@@ -65,43 +65,46 @@ public partial class Functions
 	private static ValueTask<CallState> AggregateDecimals(ImmutableSortedDictionary<string, CallState> args,
 		Func<decimal, decimal, decimal> aggregateFunction) =>
 		ValueTask.FromResult<CallState>(args
-			.Select(x => decimal.Parse(MModule.plainText(x.Value.Message)))
+			.Select(x => decimal.Parse(EmptyStringToZero(MModule.plainText(x.Value.Message))))
 			.Aggregate(aggregateFunction).ToString(CultureInfo.InvariantCulture));
 
 	private static ValueTask<CallState> AggregateIntegers(ImmutableSortedDictionary<string, CallState> args,
 		Func<int, int, int> aggregateFunction) =>
 		ValueTask.FromResult<CallState>(args
-			.Select(x => int.Parse(MModule.plainText(x.Value.Message)))
+			.Select(x => int.Parse(EmptyStringToZero(MModule.plainText(x.Value.Message))))
 			.Aggregate(aggregateFunction).ToString(CultureInfo.InvariantCulture));
 
 	private static ValueTask<CallState> ValidateIntegerAndEvaluate(ImmutableSortedDictionary<string, CallState> args,
 		Func<IEnumerable<int>, MString> aggregateFunction)
 		=> ValueTask.FromResult<CallState>(new(
-			aggregateFunction(args.Select(x => int.Parse(MModule.plainText(x.Value.Message!))))
+			aggregateFunction(args.Select(x => int.Parse(EmptyStringToZero(MModule.plainText(x.Value.Message!)))))
 				.ToString()));
 
 	private static ValueTask<CallState> AggregateDecimalToInt(ImmutableSortedDictionary<string, CallState> args,
 		Func<decimal, decimal, decimal> aggregateFunction) =>
 		ValueTask.FromResult<CallState>(new(Math.Floor(args
-			.Select(x => decimal.Parse(string.Join(string.Empty, MModule.plainText(x.Value.Message))))
+			.Select(x => decimal.Parse(string.Join(string.Empty, EmptyStringToZero(MModule.plainText(x.Value.Message)))))
 			.Aggregate(aggregateFunction)).ToString(CultureInfo.InvariantCulture)));
 
 	private static ValueTask<CallState> EvaluateDecimal(ImmutableSortedDictionary<string, CallState> args,
 		Func<decimal, decimal> func)
-		=> ValueTask.FromResult<CallState>(new(func(decimal.Parse(MModule.plainText(args["0"].Message)))
+		=> ValueTask.FromResult<CallState>(new(func(decimal.Parse(EmptyStringToZero(MModule.plainText(args["0"].Message))))
 			.ToString(CultureInfo.InvariantCulture)));
 
 	private static ValueTask<CallState> EvaluateDecimalToInteger(ImmutableSortedDictionary<string, CallState> args,
 		Func<decimal, int> func)
-		=> ValueTask.FromResult<CallState>(new(func(decimal.Parse(MModule.plainText(args["0"].Message)))));
+		=> ValueTask.FromResult<CallState>(new(func(decimal.Parse(EmptyStringToZero(MModule.plainText(args["0"].Message))))));
 
 	private static ValueTask<CallState> EvaluateDouble(ImmutableSortedDictionary<string, CallState> args,
 		Func<double, double> func)
-		=> ValueTask.FromResult<CallState>(new(func(double.Parse(MModule.plainText(args["0"].Message)))));
+		=> ValueTask.FromResult<CallState>(new(func(double.Parse(EmptyStringToZero(MModule.plainText(args["0"].Message))))));
 
 	private static ValueTask<CallState> EvaluateInteger(ImmutableSortedDictionary<string, CallState> args, Func<int, int> func)
-		=> ValueTask.FromResult<CallState>(new(func(int.Parse(MModule.plainText(args["0"].Message)))));
+		=> ValueTask.FromResult<CallState>(new(func(int.Parse(EmptyStringToZero(MModule.plainText(args["0"].Message))))));
 
+	private static string EmptyStringToZero(string input)
+		=> string.IsNullOrEmpty(input) ? "0" : input;
+		
 	private static ValueTask<CallState> ValidateDecimalAndEvaluatePairwise(ImmutableSortedDictionary<string, CallState> args,
 		Func<(decimal, decimal), bool> func)
 	{
@@ -112,7 +115,7 @@ public partial class Functions
 
 		var doubles = args.Select(x =>
 		(
-			IsDouble: decimal.TryParse(string.Join("", MModule.plainText(x.Value.Message)), out var b),
+			IsDouble: decimal.TryParse(string.Join("", EmptyStringToZero(MModule.plainText(x.Value.Message))), out var b),
 			Double: b
 		)).ToList();
 
