@@ -69,7 +69,7 @@ public static class MessageListHelper
 				=> new Error<string>("MAIL: Invalid message specification"),
 			['*', .. var person] // TODO: Fix this to use a Locate() to find the person.
 				=> await mailList.ToAsyncEnumerable()
-					.WhereAwait(async x =>
+					.Where(async (x,_) =>
 						(await x.From.WithCancellation(CancellationToken.None))
 						.Object()?.Name.StartsWith(person) ?? false)
 					.ToArrayAsync(),

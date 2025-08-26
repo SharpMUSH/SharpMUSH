@@ -1026,11 +1026,13 @@ public partial class Commands
 		else if (maybeAttribute is null && (switches.Contains("ANY") || switches.Length == 0))
 		{
 			var pids = await parser.Mediator.Send(new ScheduleSemaphoreQuery(objectToDrain.Object().DBRef));
-			await foreach (var uniqueAttribute in pids
-				               .GroupBy(data => string.Join('`', data.SemaphoreSource.Attribute), x => x.SemaphoreSource)
-				               .Select(x => x.FirstAsync()))
+			var filteredPids = pids
+				.GroupBy(data => string.Join('`', data.SemaphoreSource.Attribute), x => x.SemaphoreSource)
+				.Select(x => x.First());
+			
+			await foreach (var uniqueAttribute in filteredPids)
 			{
-				var dbRefAttrToDrain = await uniqueAttribute;
+				var dbRefAttrToDrain = uniqueAttribute;
 				await parser.Mediator.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, dbRefAttrToDrain.Attribute,
 					MModule.single("-1"),
 					one.AsPlayer));
@@ -1394,7 +1396,7 @@ public partial class Commands
 
 		var interactableContents = contents
 			.ToAsyncEnumerable()
-			.WhereAwait(async obj =>
+			.Where(async (obj,_) =>
 				await parser.PermissionService.CanInteract(obj.WithRoomOption(), executor,
 					IPermissionService.InteractType.Hear));
 
@@ -1446,7 +1448,7 @@ public partial class Commands
 
 		var interactableContents = contents
 			.ToAsyncEnumerable()
-			.WhereAwait(async obj =>
+			.Where(async (obj,_) =>
 				await parser.PermissionService.CanInteract(obj.WithRoomOption(), executor,
 					IPermissionService.InteractType.Hear));
 

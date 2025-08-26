@@ -507,8 +507,8 @@ public class ArangoDatabase(
 		var vertexes = await arangoDb.Query.ExecuteAsync<(string Id, SharpChannelUserStatusQueryResult Status)>(handle,
 			$"FOR v IN 1..1 INBOUND {channelId} GRAPH {DatabaseConstants.GraphChannels} RETURN {{Id: v._id, Status: e}}");
 
-		return await AsyncEnumerable.ToAsyncEnumerable(vertexes)
-			.SelectAwait(async x =>
+		return await vertexes.ToAsyncEnumerable()
+			.Select<(string Id, SharpChannelUserStatusQueryResult Status),(AnySharpObject, SharpChannelStatus)>(async (x, ct) =>
 				((
 						await GetObjectNodeAsync(x.Id)).Known(),
 					new SharpChannelStatus(

@@ -14,6 +14,25 @@ public partial class CommandDiscoveryService(IFusionCache cache) : ICommandDisco
 	public void InvalidateCache(DBRef dbReference)
 		=> cache.Remove(dbReference.ToString());
 
+	private async IAsyncEnumerable<(AnySharpObject Obj, SharpAttribute Attr, Match Pattern)> MatchUserDefinedCommandSelectMany(AnySharpObject sharpObj)
+	{
+		var attributes = await sharpObj.Object().AllAttributes
+			.WithCancellation(CancellationToken.None);
+					
+		var hasNoCommandFlag = attributes.Where(attr =>
+			attr.Flags.All(flag => flag.Name != "NO_COMMAND")
+			&& CommandPatternRegex().IsMatch(attr.Value.ToPlainText()));
+					
+		var selector = hasNoCommandFlag.Select(attr =>
+		{
+			var match = CommandPatternRegex().Match(attr.Value.ToPlainText());
+			return (Obj: sharpObj, Attr: attr with { CommandListIndex = match.Length }, Pattern: match);
+		});
+		
+		foreach(var item in selector)
+			yield return item;
+	}
+	
 	// TODO: Severe optimization needed. We can't keep scanning all attributes each time we want to do a command match, and do conversions.
 	// We need to cache the results of the conversion and where that object & attribute live.
 	// We don't need to care for the Cache Building if that command was used, we can immediately cache all commands.
@@ -25,19 +44,8 @@ public partial class CommandDiscoveryService(IFusionCache cache) : ICommandDisco
 	{
 		var commandPatternAttributes = await objects
 			.ToAsyncEnumerable()
-			.WhereAwait(async x => !await x.HasFlag("NO_COMMAND"))
-			.SelectManyAwait<AnySharpObject,(AnySharpObject Obj, SharpAttribute Attr, Match Pattern)>(async sharpObj =>
-					(await sharpObj.Object().AllAttributes.WithCancellation(CancellationToken.None))
-						.Where(attr =>
-							attr.Flags.All(flag => flag.Name != "NO_COMMAND")
-							&& CommandPatternRegex().IsMatch(MModule.plainText(attr.Value)))
-						.Select(attr =>
-							{
-								var match = CommandPatternRegex().Match(MModule.plainText(attr.Value));
-								return (Obj: sharpObj, Attr: attr with { CommandListIndex = match.Length }, Pattern: match);
-							})
-						.ToAsyncEnumerable() 
-					)
+			.Where(async (x,_) => !await x.HasFlag("NO_COMMAND"))
+			.SelectMany(MatchUserDefinedCommandSelectMany)
 			.ToArrayAsync();
 
 		var convertedCommandPatternAttributes = commandPatternAttributes

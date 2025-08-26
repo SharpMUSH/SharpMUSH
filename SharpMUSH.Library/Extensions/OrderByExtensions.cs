@@ -2,7 +2,6 @@
 using MoreLinq;
 using NaturalSort.Extension;
 using SharpMUSH.Library.ParserInterfaces;
-using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.Extensions;
@@ -11,21 +10,21 @@ public static class OrderByExtensions
 {
 	public static IOrderedAsyncEnumerable<TSource> OrderByAwait<TSource, TKey>(
 		this IAsyncEnumerable<TSource> source,
-		Func<TSource, ValueTask<TKey>> keySelector, OrderByDirection direction = OrderByDirection.Ascending)
+		Func<TSource, CancellationToken, ValueTask<TKey>> keySelector, OrderByDirection direction = OrderByDirection.Ascending)
 	{
 		return direction == OrderByDirection.Ascending
-			? source.OrderByAwait(keySelector)
-			: source.OrderByDescendingAwait(keySelector);
+			? source.OrderBy(keySelector)
+			: source.OrderByDescending(keySelector);
 	}
 
 	public static IOrderedAsyncEnumerable<TSource> OrderByAwait<TSource, TKey>(
 		this IAsyncEnumerable<TSource> source,
-		Func<TSource, ValueTask<TKey>> keySelector,
+		Func<TSource, CancellationToken, ValueTask<TKey>> keySelector,
 		IComparer<TKey> comparer, OrderByDirection direction = OrderByDirection.Ascending)
 	{
 		return direction == OrderByDirection.Ascending
-			? source.OrderByAwait(keySelector, comparer)
-			: source.OrderByDescendingAwait(keySelector, comparer);
+			? source.OrderBy(keySelector, comparer)
+			: source.OrderByDescending(keySelector, comparer);
 	}
 
 	/// <summary>
@@ -67,7 +66,7 @@ public static class OrderByExtensions
 		{
 			"a" => source.OrderBy(keySelector, StringComparer.Ordinal, direction).ToArray(),
 			"i" => source.OrderBy(keySelector, StringComparer.OrdinalIgnoreCase, direction).ToArray(),
-			"d" => await Collection.ToAsyncEnumerable(source).OrderByAwait(async key => (await parser.LocateService
+			"d" => await Collection.ToAsyncEnumerable(source).OrderByAwait(async (key,_) => (await parser.LocateService
 					.Locate(parser, executor, executor, keySelector(key), LocateFlags.All))
 				.Match(
 					player => player.Object.DBRef.Number,
@@ -80,7 +79,7 @@ public static class OrderByExtensions
 			"n" => source.OrderBy(key => int.TryParse(keySelector(key), out var value) ? value : -1, direction).ToArray(),
 			"f" => source.OrderBy(key => decimal.TryParse(keySelector(key), out var value) ? value : -1, direction).ToArray(),
 			"m" => source.OrderBy(keySelector, StringComparer.OrdinalIgnoreCase.WithNaturalSort(), direction).ToArray(),
-			"name" => await Collection.ToAsyncEnumerable(source).OrderByAwait(async key 
+			"name" => await Collection.ToAsyncEnumerable(source).OrderByAwait(async (key,_) 
 				=> (await parser.LocateService.Locate(parser, executor, executor, keySelector(key), LocateFlags.All))
 				.Match(
 					player => player.Object.Name,
@@ -90,7 +89,7 @@ public static class OrderByExtensions
 					_ => keySelector(key),
 					_ => keySelector(key)
 				), StringComparer.Ordinal, direction).ToArrayAsync(CancellationToken.None),
-			"namei" => await Collection.ToAsyncEnumerable(source).OrderByAwait(async key 
+			"namei" => await Collection.ToAsyncEnumerable(source).OrderByAwait(async (key,_) 
 					=> (await parser.LocateService.Locate(parser, executor, executor, keySelector(key), LocateFlags.All))
 					.Match(
 						player => player.Object.Name,
@@ -101,7 +100,7 @@ public static class OrderByExtensions
 						_ => keySelector(key)
 					), StringComparer.OrdinalIgnoreCase,
 				direction).ToArrayAsync(CancellationToken.None),
-			"conn" => await Collection.ToAsyncEnumerable(source).OrderByAwait(async key 
+			"conn" => await Collection.ToAsyncEnumerable(source).OrderByAwait(async (key,_) 
 					=> (await parser.LocateService.Locate(parser, executor, executor, keySelector(key), LocateFlags.All))
 					.Match(
 						player => parser.ConnectionService.Get(player.Object.DBRef).FirstOrDefault()?.Connected ??
@@ -113,7 +112,7 @@ public static class OrderByExtensions
 						_ => TimeSpan.MaxValue
 					),
 				direction).ToArrayAsync(CancellationToken.None),
-			"idle" => await Collection.ToAsyncEnumerable(source).OrderByAwait(async key 
+			"idle" => await Collection.ToAsyncEnumerable(source).OrderByAwait(async (key,_) 
 					=> (await parser.LocateService.Locate(parser, executor, executor, keySelector(key), LocateFlags.All))
 					.Match(
 						player => parser.ConnectionService.Get(player.Object.DBRef).FirstOrDefault()?.Connected ??
@@ -125,7 +124,7 @@ public static class OrderByExtensions
 						_ => TimeSpan.MaxValue
 					),
 				direction).ToArrayAsync(CancellationToken.None),
-			"owner" => await Collection.ToAsyncEnumerable(source).OrderByAwait(async key 
+			"owner" => await Collection.ToAsyncEnumerable(source).OrderByAwait(async (key,_) 
 					=> (await parser.LocateService.Locate(parser, executor, executor, keySelector(key), LocateFlags.All))
 					.Match(
 						async player => (await player.Object.Owner.WithCancellation(CancellationToken.None)).Object.DBRef.Number,
@@ -136,7 +135,7 @@ public static class OrderByExtensions
 						async _ => await ValueTask.FromResult(-1)
 					),
 				direction).ToArrayAsync(CancellationToken.None),
-			"loc" => await Collection.ToAsyncEnumerable(source).OrderByAwait(async key 
+			"loc" => await Collection.ToAsyncEnumerable(source).OrderByAwait(async (key,_) 
 					=> (await parser.LocateService.Locate(parser, executor, executor, keySelector(key), LocateFlags.All))
 					.Match(
 						async player => (await player.Location.WithCancellation(CancellationToken.None)).Object().DBRef.Number,
@@ -147,7 +146,7 @@ public static class OrderByExtensions
 						async _ => await ValueTask.FromResult(-1)
 					),
 				direction).ToArrayAsync(CancellationToken.None),
-			"ctime" => await Collection.ToAsyncEnumerable(source).OrderByAwait(async key 
+			"ctime" => await Collection.ToAsyncEnumerable(source).OrderByAwait(async (key,_) 
 					=> (await parser.LocateService.Locate(parser, executor, executor, keySelector(key), LocateFlags.All))
 					.Match(
 						player => player.Object.CreationTime,
@@ -158,7 +157,7 @@ public static class OrderByExtensions
 						_ => -1
 					),
 				direction).ToArrayAsync(CancellationToken.None),
-			"mtime" => await Collection.ToAsyncEnumerable(source).OrderByAwait(async key 
+			"mtime" => await Collection.ToAsyncEnumerable(source).OrderByAwait(async (key,_) 
 					=> (await parser.LocateService.Locate(parser, executor, executor, keySelector(key), LocateFlags.All))
 					.Match(
 						player => player.Object.ModifiedTime,
