@@ -1676,8 +1676,30 @@ public partial class Commands
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Retry(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var predicate = args["0"];
+		
+		var peek = parser.State.TakeLast(2);
+		if (peek.Count() != 2)
+		{
+			await parser.NotifyService.Notify(executor, "Nothing to retry.");
+			return new CallState("#-1 RETRY: NO COMMAND TO RETRY.");
+		}
+
+		var previousCommand = parser.State.First();
+		// var retryState = parser.State.Peek();
+		var limit = 1000;
+
+		while ((await predicate.ParsedMessage()).Truthy() && limit > 0)
+		{
+			// Todo: Parse arguments.
+			await parser.With(state => state with { Arguments = args.Skip(1).ToDictionary() },
+				async newParser => await previousCommand.CommandInvoker(newParser));
+			limit--;
+		}
+
+		return new CallState(1000 - limit);
 	}
 
 	[SharpCommand(Name = "@ASSERT", Switches = ["INLINE", "QUEUED"],

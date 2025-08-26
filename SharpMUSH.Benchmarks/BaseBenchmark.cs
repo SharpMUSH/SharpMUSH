@@ -3,8 +3,10 @@ using System.Text;
 using BenchmarkDotNet.Attributes;
 using Core.Arango;
 using Core.Arango.Serialization.Newtonsoft;
+using OneOf.Types;
 using Serilog;
 using SharpMUSH.Library;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -95,6 +97,7 @@ public class BaseBenchmark
 			ParserFunctionDepth: 0,
 			Function: null,
 			Command: "think",
+			CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
 			Switches: [],
 			Arguments: [],
 			Executor: one,

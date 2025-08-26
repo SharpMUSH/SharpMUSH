@@ -6,8 +6,10 @@ using SharpMUSH.Library.Services;
 using System.Collections.Immutable;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using OneOf.Types;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation;
@@ -154,6 +156,7 @@ public record MUSHCodeParser(
 			ParserFunctionDepth: 0,
 			Function: null,
 			Command: MModule.plainText(text),
+			CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
 			Switches: [],
 			Arguments: [],
 			Executor: handleId?.Ref,
