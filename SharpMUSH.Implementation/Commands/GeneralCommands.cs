@@ -831,6 +831,7 @@ public partial class Commands
 	private static async ValueTask QueueSemaphore(IMUSHCodeParser parser, AnySharpObject located, string[] attribute,
 		MString arg1)
 	{
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		var one = await parser.Mediator.Send(new GetObjectNodeQuery(new DBRef(0)));
 		var attrValues = await parser.Mediator.Send(new GetAttributeQuery(located.Object().DBRef, ["SEMAPHORE"]));
 		var attrValue = attrValues?.LastOrDefault();
@@ -844,7 +845,12 @@ public partial class Commands
 			return;
 		}
 
-		var last = int.Parse(attrValue!.Value.ToPlainText());
+		if (int.TryParse(attrValue.Value.ToPlainText(), out var last))
+		{
+			await parser.NotifyService.Notify(executor, Errors.ErrorInteger);
+			return;
+		}
+		
 		await parser.Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single($"{last + 1}"),
 			one.AsPlayer));
 		await parser.Mediator.Publish(new QueueCommandListRequest(arg1, parser.CurrentState,
@@ -854,6 +860,7 @@ public partial class Commands
 	private static async ValueTask QueueSemaphoreWithDelay(IMUSHCodeParser parser, AnySharpObject located,
 		string[] attribute, TimeSpan delay, MString arg1)
 	{
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		var one = await parser.Mediator.Send(new GetObjectNodeQuery(new DBRef(0)));
 		var attrValues = await parser.Mediator.Send(new GetAttributeQuery(located.Object().DBRef, attribute));
 		var attrValue = attrValues?.LastOrDefault();
@@ -867,7 +874,12 @@ public partial class Commands
 			return;
 		}
 
-		var last = int.Parse(attrValue!.Value.ToPlainText());
+		if (int.TryParse(attrValue.Value.ToPlainText(), out var last))
+		{
+			await parser.NotifyService.Notify(executor, Errors.ErrorInteger);
+			return;
+		}
+		
 		await parser.Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single($"{last + 1}"),
 			one.AsPlayer));
 		await parser.Mediator.Publish(new QueueCommandListWithTimeoutRequest(arg1, parser.CurrentState,
@@ -1087,7 +1099,7 @@ public partial class Commands
 			await parser.CommandListParse(arg2.Message!);
 		}
 
-		return CallState.Empty;
+		return new CallState(truthy);
 	}
 
 	[SharpCommand(Name = "@NSEMIT", Switches = ["ROOM", "NOEVAL", "SILENT"], Behavior = CB.Default | CB.NoGagged,
@@ -1110,8 +1122,45 @@ public partial class Commands
 		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Prompt(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var args = parser.CurrentState.Arguments;
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+
+		if (args.Count < 2)
+		{
+			return new CallState(string.Empty);
+		}
+
+		var notification = args["1"].Message!.ToString();
+		var targetListText = MModule.plainText(args["0"].Message!);
+		var nameListTargets = Functions.Functions.NameList(targetListText);
+
+		var enactor = await parser.CurrentState.KnownEnactorObject(parser.Mediator);
+
+		foreach (var target in nameListTargets)
+		{
+			var targetString = target.Match(dbref => dbref.ToString(), str => str);
+			var maybeLocateTarget = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, enactor, enactor,
+				targetString,
+				LocateFlags.All);
+
+			if (maybeLocateTarget.IsError)
+			{
+				await parser.NotifyService.Notify(executor, maybeLocateTarget.AsError.Message!);
+				continue;
+			}
+
+			var locateTarget = maybeLocateTarget.AsSharpObject;
+
+			if (!await parser.PermissionService.CanInteract(locateTarget, executor, IPermissionService.InteractType.Hear))
+			{
+				await parser.NotifyService.Notify(executor, $"{locateTarget.Object().Name} does not want to hear from you.");
+				continue;
+			}
+
+			await parser.NotifyService.Prompt(locateTarget, notification);
+		}
+
+		return new None();
 	}
 
 	[SharpCommand(Name = "@SEARCH", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse,
