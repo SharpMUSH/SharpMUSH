@@ -263,6 +263,7 @@ public partial class Commands
 	public static async ValueTask<Option<CallState>> PEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 
 		if (args.Count < 2)
 		{
@@ -273,18 +274,29 @@ public partial class Commands
 		var targetListText = MModule.plainText(args["0"].Message!);
 		var nameListTargets = Functions.Functions.NameList(targetListText);
 
-		var enactor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var enactor = await parser.CurrentState.KnownEnactorObject(parser.Mediator);
 
 		foreach (var target in nameListTargets)
 		{
 			var targetString = target.Match(dbref => dbref.ToString(), str => str);
-			var locateTarget = await parser.LocateService.LocateAndNotifyIfInvalid(parser, enactor, enactor, targetString,
+			var maybeLocateTarget = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, enactor, enactor, targetString,
 				LocateFlags.All);
 
-			if (locateTarget.IsValid())
+			if (maybeLocateTarget.IsError)
 			{
-				await parser.NotifyService.Notify(locateTarget.WithoutError().Known(), notification);
+				await parser.NotifyService.Notify(executor, maybeLocateTarget.AsError.Message!);
+				continue;
 			}
+			
+			var locateTarget = maybeLocateTarget.AsSharpObject;
+			
+			if (!await parser.PermissionService.CanInteract(locateTarget, executor, IPermissionService.InteractType.Hear))
+			{
+				await parser.NotifyService.Notify(executor, $"{locateTarget.Object().Name} does not want to hear from you.");
+				continue;
+			}
+			
+			await parser.NotifyService.Notify(locateTarget, notification);
 		}
 
 		return new None();
