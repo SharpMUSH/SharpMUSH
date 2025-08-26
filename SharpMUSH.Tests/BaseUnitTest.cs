@@ -13,6 +13,8 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using System.Text;
+using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Services.Interfaces;
 using Testcontainers.ArangoDb;
 
@@ -120,13 +122,14 @@ public class BaseUnitTest
 			ms ?? (IMediator)integrationServer.Services.GetService(typeof(IMediator))!,
 			state: new ParserState(
 				Registers: new([[]]),
-				IterationRegisters: new(),
-				RegexRegisters: new(),
-				ExecutionStack: new(),
+				IterationRegisters: [],
+				RegexRegisters: [],
+				ExecutionStack: [],
 				CurrentEvaluation: null,
 				ParserFunctionDepth: 0,
 				Function: null,
 				Command: "think",
+				CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
 				Switches: [],
 				Arguments: [],
 				Executor: one,

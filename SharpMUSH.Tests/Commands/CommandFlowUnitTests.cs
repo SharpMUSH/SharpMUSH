@@ -29,4 +29,17 @@ public class CommandFlowUnitTests: BaseUnitTest
 		await Parser.NotifyService.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), expected);
 	}
+
+	[Test]
+	[Explicit] // Currently failing. Needs investigation.
+	public async ValueTask Retry()
+	{
+		await Parser.CommandListParse(MModule.single("think %0; @retry gt(%0,-1)=dec(%0)"));
+
+		await Parser.NotifyService.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), MModule.single(""));
+		
+		await Parser.NotifyService.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), MModule.single("-1"));
+	}
 }

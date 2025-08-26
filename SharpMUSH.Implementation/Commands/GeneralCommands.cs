@@ -673,16 +673,16 @@ public partial class Commands
 		Option<MString> defaultArg = new None();
 		var pairs = args.Values.Skip(1).Pairwise();
 		var matched = false;
-		
+
 		if (args.Count % 2 == 0)
 		{
 			defaultArg = args.Last().Value.Message!;
 		}
 
-		foreach (var (expr,action) in pairs)
+		foreach (var (expr, action) in pairs)
 		{
 			if (expr == null) break;
-			
+
 			// TODO: Make this use a glob.
 			if (expr.Message! == strArg)
 			{
@@ -850,7 +850,7 @@ public partial class Commands
 			await parser.NotifyService.Notify(executor, Errors.ErrorInteger);
 			return;
 		}
-		
+
 		await parser.Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single($"{last + 1}"),
 			one.AsPlayer));
 		await parser.Mediator.Publish(new QueueCommandListRequest(arg1, parser.CurrentState,
@@ -879,7 +879,7 @@ public partial class Commands
 			await parser.NotifyService.Notify(executor, Errors.ErrorInteger);
 			return;
 		}
-		
+
 		await parser.Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single($"{last + 1}"),
 			one.AsPlayer));
 		await parser.Mediator.Publish(new QueueCommandListWithTimeoutRequest(arg1, parser.CurrentState,
@@ -1029,7 +1029,7 @@ public partial class Commands
 			var filteredPids = pids
 				.GroupBy(data => string.Join('`', data.SemaphoreSource.Attribute), x => x.SemaphoreSource)
 				.Select(x => x.First());
-			
+
 			await foreach (var uniqueAttribute in filteredPids)
 			{
 				var dbRefAttrToDrain = uniqueAttribute;
@@ -1051,7 +1051,7 @@ public partial class Commands
 		Behavior = CB.Default | CB.EqSplit | CB.NoGagged | CB.RSBrace, MinArgs = 0, MaxArgs = 2)]
 	public static async ValueTask<Option<CallState>> Force(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentsOrdered;
 		var objArg = Functions.Functions.NoParseDefaultNoParseArgument(args, 0, MModule.empty());
 		var cmdListArg = Functions.Functions.NoParseDefaultNoParseArgument(args, 1, MModule.empty());
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
@@ -1383,7 +1383,7 @@ public partial class Commands
 		MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Emit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentsOrdered;
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		var enactor = await parser.CurrentState.KnownEnactorObject(parser.Mediator);
 		var executorLocation = await executor.Where();
@@ -1396,7 +1396,7 @@ public partial class Commands
 
 		var interactableContents = contents
 			.ToAsyncEnumerable()
-			.Where(async (obj,_) =>
+			.Where(async (obj, _) =>
 				await parser.PermissionService.CanInteract(obj.WithRoomOption(), executor,
 					IPermissionService.InteractType.Hear));
 
@@ -1436,7 +1436,7 @@ public partial class Commands
 		MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> NoSpoofOmitEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentsOrdered;
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		var enactor = await parser.CurrentState.KnownEnactorObject(parser.Mediator);
 		var executorLocation = await executor.Where();
@@ -1448,7 +1448,7 @@ public partial class Commands
 
 		var interactableContents = contents
 			.ToAsyncEnumerable()
-			.Where(async (obj,_) =>
+			.Where(async (obj, _) =>
 				await parser.PermissionService.CanInteract(obj.WithRoomOption(), executor,
 					IPermissionService.InteractType.Hear));
 
@@ -1676,8 +1676,33 @@ public partial class Commands
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Retry(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var predicate = args["0"];
+
+		var peek = parser.State.TakeLast(2);
+		if (peek.Count() != 2)
+		{
+			await parser.NotifyService.Notify(executor, "Nothing to retry.");
+			return new CallState("#-1 RETRY: NO COMMAND TO RETRY.");
+		}
+
+		var previousCommand = parser.State.First();
+		// var retryState = parser.State.Peek();
+		var limit = 1000;
+
+		while ((await parser.FunctionParse(predicate.Message!))!.Message.Truthy() && limit > 0)
+		{
+			// TODO: I think I need a way to REWIND the stack in the PARSER.
+			// This is going to be tricky.
+			// Todo: Parse arguments?
+			await parser.With(
+				state => state with { Arguments = args.Skip(1).ToDictionary() },
+				async newParser => await previousCommand.CommandInvoker(newParser));
+			limit--;
+		}
+		
+		return new CallState(1000 - limit);
 	}
 
 	[SharpCommand(Name = "@ASSERT", Switches = ["INLINE", "QUEUED"],

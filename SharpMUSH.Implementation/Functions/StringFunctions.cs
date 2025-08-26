@@ -63,7 +63,7 @@ public partial class Functions
 
   If <say string> is specified, it is used instead of "says,".
 		 */
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentsOrdered;
 		var speaker = args["0"].Message!; // & for direct name!
 		var speakString = args["1"].Message!;
 		var sayString = NoParseDefaultNoParseArgument(args, 2, "says, ");
@@ -465,7 +465,7 @@ public partial class Functions
 	[SharpFunction(Name = "CENTER", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Center(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentsOrdered;
 		var str = parser.CurrentState.Arguments["0"].Message!;
 		var width = parser.CurrentState.Arguments["1"].Message!;
 		var fill = NoParseDefaultNoParseArgument(args, 2, MModule.single(" "));
@@ -536,10 +536,11 @@ public partial class Functions
 	{
 		//  foreach([<object>/]<attribute>, <string>[, <start>[, <end>]])
 
-		var objAttr = parser.CurrentState.Arguments["0"].Message;
-		var str = parser.CurrentState.Arguments["1"].Message;
-		var start = NoParseDefaultNoParseArgument(parser.CurrentState.Arguments, 2, " ");
-		var end = NoParseDefaultNoParseArgument(parser.CurrentState.Arguments, 3, " ");
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var objAttr = args["0"].Message;
+		var str = args["1"].Message;
+		var start = NoParseDefaultNoParseArgument(args, 2, " ");
+		var end = NoParseDefaultNoParseArgument(args, 3, " ");
 		var split = MModule.split("", str);
 
 		var newStr = MModule.empty();
