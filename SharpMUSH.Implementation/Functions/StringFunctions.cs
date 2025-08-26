@@ -26,16 +26,20 @@ public partial class Functions
 		var fullString = args["0"].Message;
 		var search = args["1"].Message;
 		var idx = MModule.indexOf(fullString, search);
+
+		if (idx == -1)
+		{
+			return ValueTask.FromResult(new CallState(string.Empty));
+		}
+		
 		var result = MModule.substring(idx, MModule.getLength(fullString) - idx, args["0"].Message);
 
 		return ValueTask.FromResult(new CallState(result));
 	}
 
 	[SharpFunction(Name = "lit", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Literal | FunctionFlags.NoParse)]
-	public static ValueTask<CallState> Lit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		return ValueTask.FromResult(parser.CurrentState.Arguments["0"]);
-	}
+	public static ValueTask<CallState> Lit(IMUSHCodeParser parser, SharpFunctionAttribute _2) 
+		=> ValueTask.FromResult(parser.CurrentState.Arguments["0"]);
 
 	[SharpFunction(Name = "SPEAK", MinArgs = 2, MaxArgs = 7, Flags = FunctionFlags.Regular)]
 	public static async ValueTask<CallState> Speak(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -407,7 +411,19 @@ public partial class Functions
 	[SharpFunction(Name = "BEFORE", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Before(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var args = parser.CurrentState.Arguments;
+		var fullString = args["0"].Message;
+		var search = args["1"].Message;
+		var idx = MModule.indexOf(fullString, search);
+		
+		if(idx == -1) 
+		{
+			return ValueTask.FromResult(new CallState(fullString));
+		}
+		
+		var result = MModule.substring(0, idx, fullString);
+
+		return ValueTask.FromResult(new CallState(result));
 	}
 
 	[SharpFunction(Name = "BRACKETS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
