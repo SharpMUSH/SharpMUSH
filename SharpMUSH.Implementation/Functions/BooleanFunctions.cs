@@ -35,10 +35,7 @@ public partial class Functions
 
 	[SharpFunction(Name = "eq", Flags = FunctionFlags.Regular | FunctionFlags.DecimalsOnly)]
 	public static ValueTask<CallState> Equals(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments.All(x =>
-				x.Value.Message?.ToPlainText() == parser.CurrentState.Arguments["0"].Message?.ToPlainText())
-				? "1"
-				: "0");
+	=> ValidateDecimalAndEvaluatePairwise(parser.CurrentState.ArgumentsOrdered, pair => pair.Item1 == pair.Item2);
 
 	[SharpFunction(Name = "gt", MinArgs = 2,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]

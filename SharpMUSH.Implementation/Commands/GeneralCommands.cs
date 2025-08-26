@@ -1691,8 +1691,6 @@ public partial class Commands
 		// var retryState = parser.State.Peek();
 		var limit = 1000;
 
-		var predicateResult = await parser.FunctionParse(predicate.Message!);
-		
 		while ((await parser.FunctionParse(predicate.Message!))!.Message.Truthy() && limit > 0)
 		{
 			// Todo: Parse arguments?

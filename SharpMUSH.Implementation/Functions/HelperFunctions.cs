@@ -118,10 +118,15 @@ public partial class Functions
 			IsDouble: decimal.TryParse(string.Join("", EmptyStringToZero(MModule.plainText(x.Value.Message))), out var b),
 			Double: b
 		)).ToList();
-
-		return ValueTask.FromResult(doubles.Any(x => !x.IsDouble)
-			? new CallState(Message: Errors.ErrorNumbers)
-			: new CallState(Message: doubles.Select(x => x.Double).Pairwise().Skip(1).SkipWhile(func).Any() ? "1" : "0"));
+		
+		if(doubles.Any(x => !x.IsDouble))
+		{
+			return ValueTask.FromResult<CallState>(Errors.ErrorNumbers);
+		}
+		
+		var result = doubles.Select(x => x.Double).Pairwise().All(func);
+		
+		return new ValueTask<CallState>(result ? "1" : "0");
 	}
 
 	private static (int, string)[] ExtractArray(TimeSpan span) =>

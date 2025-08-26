@@ -34,7 +34,7 @@ public class CommandFlowUnitTests: BaseUnitTest
 	[Explicit] // Currently failing. Needs investigation.
 	public async ValueTask Retry()
 	{
-		await Parser.CommandListParse(MModule.single("think %0; @retry gt(-1,%0)=dec(%0)"));
+		await Parser.CommandListParse(MModule.single("think %0; @retry gt(%0,-1)=dec(%0)"));
 
 		await Parser.NotifyService.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), MModule.single(""));
