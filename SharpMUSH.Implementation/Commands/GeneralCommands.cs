@@ -1051,7 +1051,7 @@ public partial class Commands
 		Behavior = CB.Default | CB.EqSplit | CB.NoGagged | CB.RSBrace, MinArgs = 0, MaxArgs = 2)]
 	public static async ValueTask<Option<CallState>> Force(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentsOrdered;
 		var objArg = Functions.Functions.NoParseDefaultNoParseArgument(args, 0, MModule.empty());
 		var cmdListArg = Functions.Functions.NoParseDefaultNoParseArgument(args, 1, MModule.empty());
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
@@ -1383,7 +1383,7 @@ public partial class Commands
 		MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Emit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentsOrdered;
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		var enactor = await parser.CurrentState.KnownEnactorObject(parser.Mediator);
 		var executorLocation = await executor.Where();
@@ -1436,7 +1436,7 @@ public partial class Commands
 		MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> NoSpoofOmitEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentsOrdered;
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		var enactor = await parser.CurrentState.KnownEnactorObject(parser.Mediator);
 		var executorLocation = await executor.Where();
