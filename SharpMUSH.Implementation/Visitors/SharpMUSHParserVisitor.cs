@@ -223,26 +223,6 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 					.ToList();
 			}
 
-			if (attribute.Flags.HasFlag(FunctionFlags.DecimalsOnly) 
-			    && !attribute.Flags.HasFlag(FunctionFlags.NoParse)
-			    && refinedArguments.Any(a => !decimal.TryParse(
-				    Functions.Functions.EmptyStringToZero(MModule.plainText(a.Message ?? MModule.empty())), out _)))
-			{
-				return new CallState(attribute.MaxArgs > 1 
-					? Errors.ErrorNumbers 
-					: Errors.ErrorNumber);
-			}
-			
-			if (attribute.Flags.HasFlag(FunctionFlags.IntegersOnly) 
-			    && !attribute.Flags.HasFlag(FunctionFlags.NoParse) 
-			    && refinedArguments.Any(a => !int.TryParse(
-				    Functions.Functions.EmptyStringToZero(MModule.plainText(a.Message ?? MModule.empty())) , out _)))
-			{
-				return new CallState(attribute.MaxArgs > 1 
-					? Errors.ErrorIntegers 
-					: Errors.ErrorInteger);
-			}
-
 			// TODO: Consider adding the ParserContexts as Arguments, so that Evaluation can be more optimized.
 			var newParser = parser.Push(new ParserState(
 				Registers: currentState.Registers,
