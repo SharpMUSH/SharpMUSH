@@ -19,7 +19,7 @@ public partial class Functions
 		=> new(await parser.CurrentState.Arguments
 			.Select(x => x.Value.Message!)
 			.ToAsyncEnumerable()
-			.AllAwaitAsync(async m => (await parser.FunctionParse(m))!.Message.Truthy())
+			.AllAsync(async (m,_) => (await parser.FunctionParse(m))!.Message.Truthy())
 			? "0"
 			: "1");
 
@@ -28,7 +28,7 @@ public partial class Functions
 		=> new(await parser.CurrentState.Arguments
 			.Select(x => x.Value.Message!)
 			.ToAsyncEnumerable()
-			.AllAwaitAsync(async m => (await parser.FunctionParse(m))!.Message.Truthy())
+			.AllAsync(async (m,_) => (await parser.FunctionParse(m))!.Message.Truthy())
 			? "1"
 			: "0");
 
@@ -96,7 +96,7 @@ public partial class Functions
 		=> new(await parser.CurrentState.Arguments
 			.Select(x => x.Value.Message!)
 			.ToAsyncEnumerable()
-			.AllAwaitAsync(async m => (await parser.FunctionParse(m))!.Message.Falsy())
+			.AllAsync(async (m,_) => (await parser.FunctionParse(m))!.Message.Falsy())
 			? "1"
 			: "0");
 

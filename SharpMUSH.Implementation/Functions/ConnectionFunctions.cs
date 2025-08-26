@@ -156,7 +156,7 @@ public partial class Functions
 			.GetAll()
 			.Where(x => x.Ref is not null)
 			.ToAsyncEnumerable()
-			.WhereAwait(async x => await parser.PermissionService.CanSee(looker, (await parser.Mediator.Send(new GetObjectNodeQuery(x.Ref!.Value))).Known)) // TODO: Looker CanSee
+			.Where(async (x,_) => await parser.PermissionService.CanSee(looker, (await parser.Mediator.Send(new GetObjectNodeQuery(x.Ref!.Value))).Known)) // TODO: Looker CanSee
 			.Select(x => x.Ref!.Value)
 			.Select(x => $"#{x.Number}")
 			.ToArrayAsync();

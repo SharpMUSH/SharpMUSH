@@ -5,6 +5,7 @@ using Quartz.Lambda;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.Services.Interfaces;
+using TelnetNegotiationCore.Models;
 
 namespace SharpMUSH.Library.Services;
 
@@ -202,7 +203,7 @@ public class TaskScheduler(IMUSHCodeParser parser, ISchedulerFactory schedulerFa
 	{
 		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup());
 		var keyTriggers = keys.ToAsyncEnumerable()
-			.SelectAwait(async triggerKey => await _scheduler.GetTrigger(triggerKey))
+			.Select<TriggerKey, ITrigger>(async (triggerKey, ct) => await _scheduler.GetTrigger(triggerKey, ct))
 			.GroupBy(trigger => trigger.JobKey.Group, trigger => (trigger.FinalFireTimeUtc!.Value, trigger.Key.Name));
 		await foreach (var key in keyTriggers)
 		{
@@ -210,12 +211,12 @@ public class TaskScheduler(IMUSHCodeParser parser, ISchedulerFactory schedulerFa
 				x.Replace("dbref:", "").Replace("handle:", "")
 					.TakeWhile(c => c != '-').ToString()!);
 
-			yield return (key.Key, await key.Select(x => (
+			yield return (key.Key, key.Select(x => (
 				x.Value,
 				DBRef.TryParse(translate(x.Name), out var dbref)
 					? OneOf.OneOf<string, DBRef>.FromT1(dbref!.Value)
 					: OneOf.OneOf<string, DBRef>.FromT0(x.Name)
-			)).ToArrayAsync());
+			)).ToArray());
 		}
 	}
 
@@ -223,7 +224,7 @@ public class TaskScheduler(IMUSHCodeParser parser, ISchedulerFactory schedulerFa
 	{
 		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupStartsWith($"{SemaphoreGroup}:{obj}"));
 		var keyTriggers = keys.ToAsyncEnumerable()
-			.SelectAwait(async triggerKey => await MapSemaphoreTaskData(_scheduler, triggerKey));
+			 .Select<TriggerKey, SemaphoreTaskData>(async (triggerKey,_) => await MapSemaphoreTaskData(_scheduler, triggerKey));
 		
 		await foreach (var key in keyTriggers)
 		{
@@ -236,7 +237,7 @@ public class TaskScheduler(IMUSHCodeParser parser, ISchedulerFactory schedulerFa
 		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupStartsWith($"{SemaphoreGroup}:"));
 		var keyTriggers = keys.ToAsyncEnumerable()
 			.Where(key => key.Name.EndsWith($"-{pid}"))
-			.SelectAwait(async triggerKey => await MapSemaphoreTaskData(_scheduler, triggerKey));
+			.Select<TriggerKey, SemaphoreTaskData>(async (triggerKey,_) => await MapSemaphoreTaskData(_scheduler, triggerKey));
 		
 		await foreach (var key in keyTriggers)
 		{
@@ -248,7 +249,7 @@ public class TaskScheduler(IMUSHCodeParser parser, ISchedulerFactory schedulerFa
 	{
 		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals($"{SemaphoreGroup}:{objAttribute}"));
 		var keyTriggers = keys.ToAsyncEnumerable()
-			.SelectAwait(async triggerKey => await MapSemaphoreTaskData(_scheduler, triggerKey));
+			.Select<TriggerKey, SemaphoreTaskData>(async (triggerKey,_) => await MapSemaphoreTaskData(_scheduler, triggerKey));
 		
 		await foreach (var key in keyTriggers)
 		{

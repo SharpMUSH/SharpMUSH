@@ -22,7 +22,7 @@ public partial class Functions
 
 		var interactableContents = contents
 			.ToAsyncEnumerable()
-			.WhereAwait(async obj =>
+			.Where(async (obj,_) =>
 				await parser.PermissionService.CanInteract(obj.WithRoomOption(), executor, InteractType.Hear));
 
 		await foreach (var obj in interactableContents)
@@ -45,7 +45,7 @@ public partial class Functions
 		var contents = await executorLocation.Content(parser);
 
 		var interactableContents = contents.ToAsyncEnumerable()
-			.WhereAwait(async obj =>
+			.Where(async (obj,_) =>
 				await parser.PermissionService.CanInteract(obj.WithRoomOption(), executor, InteractType.Hear));
 
 		await foreach (var obj in interactableContents)
@@ -111,7 +111,7 @@ public partial class Functions
 
 		await foreach (var obj in contents
 			               .ToAsyncEnumerable()
-			               .WhereAwait(async x 
+			               .Where(async (x,_) 
 				               => await parser.PermissionService.CanInteract(x.WithRoomOption(), executor, InteractType.Hear)))
 		{
 			await parser.NotifyService.Notify(
@@ -137,7 +137,7 @@ public partial class Functions
 
 		await foreach (var obj in contents
 			               .ToAsyncEnumerable()
-			               .WhereAwait(async x 
+			               .Where(async (x,_) 
 				               => await parser.PermissionService.CanInteract(x.WithRoomOption(), executor, InteractType.Hear)))
 		{
 			await parser.NotifyService.Notify(

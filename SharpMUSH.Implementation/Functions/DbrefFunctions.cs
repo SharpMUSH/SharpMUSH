@@ -4,6 +4,7 @@ using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -346,14 +347,14 @@ public partial class Functions
 
 		var dbrefListExisting = await dbrefList
 			.ToAsyncEnumerable()
-			.WhereAwait(async x => await parser.Mediator.Send(new GetBaseObjectNodeQuery(x)) is not null)
+			.Where(async (x,_) => await parser.Mediator.Send(new GetBaseObjectNodeQuery(x)) is not null)
 			.ToHashSetAsync();
 
 		// var dbrefListNotExisting = dbrefList.Except(dbrefListExisting); 
 
 		var strListExisting = await strList
 			.ToAsyncEnumerable()
-			.SelectAwait(async x => (x, await parser.LocateService.Locate(parser,
+			.Select<string,(string x, AnyOptionalSharpObjectOrError)>(async (x,_) => (x, await parser.LocateService.Locate(parser,
 				executor,
 				executor,
 				parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
