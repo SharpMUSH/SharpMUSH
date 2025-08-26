@@ -11,6 +11,7 @@ using System.Drawing;
 using SharpMUSH.Implementation.Commands.ChannelCommand;
 using SharpMUSH.Implementation.Commands.MailCommand;
 using SharpMUSH.Implementation.Definitions;
+using SharpMUSH.Implementation.Tools;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Notifications;
@@ -67,7 +68,8 @@ public partial class Commands
 
 		var list = MModule.split(" ", parser.CurrentState.Arguments["0"].Message!);
 
-		var wrappedIteration = new IterationWrapper<MString> { Value = MModule.empty(), Break = false, NoBreak = false, Iteration = 0 };
+		var wrappedIteration = new IterationWrapper<MString>
+			{ Value = MModule.empty(), Break = false, NoBreak = false, Iteration = 0 };
 		parser.CurrentState.IterationRegisters.Push(wrappedIteration);
 		var command = parser.CurrentState.Arguments["1"].Message!;
 
@@ -279,7 +281,8 @@ public partial class Commands
 		foreach (var target in nameListTargets)
 		{
 			var targetString = target.Match(dbref => dbref.ToString(), str => str);
-			var maybeLocateTarget = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, enactor, enactor, targetString,
+			var maybeLocateTarget = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, enactor, enactor,
+				targetString,
 				LocateFlags.All);
 
 			if (maybeLocateTarget.IsError)
@@ -287,15 +290,15 @@ public partial class Commands
 				await parser.NotifyService.Notify(executor, maybeLocateTarget.AsError.Message!);
 				continue;
 			}
-			
+
 			var locateTarget = maybeLocateTarget.AsSharpObject;
-			
+
 			if (!await parser.PermissionService.CanInteract(locateTarget, executor, IPermissionService.InteractType.Hear))
 			{
 				await parser.NotifyService.Notify(executor, $"{locateTarget.Object().Name} does not want to hear from you.");
 				continue;
 			}
-			
+
 			await parser.NotifyService.Notify(locateTarget, notification);
 		}
 
@@ -367,7 +370,7 @@ public partial class Commands
 		var toTeleportList = Enumerable.Empty<OneOf<DBRef, string>>();
 		if (isList)
 		{
-			Functions.Functions.NameList(toTeleport);
+			toTeleportList = Functions.Functions.NameList(toTeleport);
 		}
 		else
 		{
@@ -547,14 +550,22 @@ public partial class Commands
 		var target = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var message = parser.CurrentState.Arguments["1"].Message!;
 
-		var maybeFound = await parser.LocateService.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, target);
+		var maybeFound =
+			await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, target,
+				LocateFlags.All);
 
 		if (maybeFound.IsError)
 		{
-			return new CallState(maybeFound.AsError);
+			return maybeFound.AsError;
 		}
 
-		var found = maybeFound.AsAnyObject;
+		var found = maybeFound.AsSharpObject;
+
+		if (!await parser.PermissionService.CanInteract(found, executor, IPermissionService.InteractType.Hear))
+		{
+			await parser.NotifyService.Notify(executor, $"{found.Object().Name} does not want to hear from you.");
+			return CallState.Empty;
+		}
 
 		await parser.NotifyService.Prompt(found, message, executor, INotifyService.NotificationType.NSEmit);
 
@@ -646,11 +657,47 @@ public partial class Commands
 
 	[SharpCommand(Name = "@SWITCH",
 		Switches = ["NOTIFY", "FIRST", "ALL", "REGEXP", "INPLACE", "INLINE", "LOCALIZE", "CLEARREGS", "NOBREAK"],
-		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse | CB.NoGagged, MinArgs = 3, MaxArgs = int.MaxValue)]
 	public static async ValueTask<Option<CallState>> Switch(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		//  @switch[/<switch>] <string>=<expr1>, <action1> [,<exprN>, <actionN>]... [,<default>]
+		//  @switch/all runs <action>s for all matching <expr>s. Default for @switch.
+		//  @switch/first runs <action> for the first matching <expr> only. Same as @select, and often the desired behaviour.
+		//	@switch/notify queues "@notify me" after the last <action>. 
+		//	@switch/inline runs all actions in place, instead of creating a new queue entry for them.
+		//	@switch/regexp makes <expr>s case-insensitive regular expressions, not wildcard/glob patterns.
+
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var strArg = args["0"];
+		Option<MString> defaultArg = new None();
+		var pairs = args.Values.Skip(1).Pairwise();
+		var matched = false;
+		
+		if (args.Count % 2 == 0)
+		{
+			defaultArg = args.Last().Value.Message!;
+		}
+
+		foreach (var (expr,action) in pairs)
+		{
+			if (expr == null) break;
+			
+			// TODO: Make this use a glob.
+			if (expr.Message! == strArg)
+			{
+				matched = true;
+				// This is Inline.
+				await parser.CommandListParseVisitor(action.Message!)();
+			}
+		}
+
+		if (defaultArg.IsSome() && !matched)
+		{
+			await parser.CommandListParseVisitor(defaultArg.AsValue())();
+		}
+
+		return new CallState(matched);
 	}
 
 	[SharpCommand(Name = "@WAIT", Switches = ["PID", "UNTIL"],
@@ -761,7 +808,7 @@ public partial class Commands
 			case 3 when !double.TryParse(splitBySlashes[2], out untilTime):
 				await parser.NotifyService.Notify(executor, "Invalid time argument format");
 				return new CallState(string.Format(Errors.ErrorBadArgumentFormat, "TIME ARGUMENT"));
-			
+
 			// TODO: Validate valid attribute value.
 			case 3 when switches.Contains("UNTIL"):
 			{
@@ -771,7 +818,8 @@ public partial class Commands
 			}
 
 			case 3:
-				await QueueSemaphoreWithDelay(parser, foundObject, splitBySlashes[1].Split('`'), TimeSpan.FromSeconds(untilTime), arg1);
+				await QueueSemaphoreWithDelay(parser, foundObject, splitBySlashes[1].Split('`'),
+					TimeSpan.FromSeconds(untilTime), arg1);
 				return CallState.Empty;
 
 			default:
@@ -991,9 +1039,10 @@ public partial class Commands
 		var objArg = Functions.Functions.NoParseDefaultNoParseArgument(args, 0, MModule.empty());
 		var cmdListArg = Functions.Functions.NoParseDefaultNoParseArgument(args, 1, MModule.empty());
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
-		
+
 		var maybeFound =
-			await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, objArg.ToPlainText(), LocateFlags.All);
+			await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, objArg.ToPlainText(),
+				LocateFlags.All);
 
 		if (maybeFound.IsError)
 		{
@@ -1007,7 +1056,7 @@ public partial class Commands
 			await parser.NotifyService.Notify(executor, "Permission denied. You do not control the target.");
 			return new CallState(Errors.ErrorPerm);
 		}
-		
+
 		if (cmdListArg.Length < 1)
 		{
 			await parser.NotifyService.Notify(executor, "Force them to do what?");
@@ -1016,7 +1065,7 @@ public partial class Commands
 
 		await parser.With(state => state with { Executor = found.Object().DBRef },
 			async newParser => await newParser.CommandListParseVisitor(cmdListArg)());
-		
+
 		return CallState.Empty;
 	}
 
@@ -1095,6 +1144,7 @@ public partial class Commands
 				{
 					parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
 				}
+
 				return args["0"];
 			case 2:
 				if (args["0"].Message.Truthy())
@@ -1104,8 +1154,10 @@ public partial class Commands
 					await commandList();
 					parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
 				}
+
 				return args["0"];
 		}
+
 		return CallState.Empty;
 	}
 
@@ -1592,6 +1644,7 @@ public partial class Commands
 				{
 					parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
 				}
+
 				return args["0"];
 			case 2:
 				if (args["0"].Message.Falsy())
@@ -1601,8 +1654,10 @@ public partial class Commands
 					await commandList();
 					parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
 				}
+
 				return args["0"];
 		}
+
 		return CallState.Empty;
 	}
 
