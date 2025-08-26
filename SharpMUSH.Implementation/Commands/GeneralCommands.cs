@@ -1693,6 +1693,8 @@ public partial class Commands
 
 		while ((await parser.FunctionParse(predicate.Message!))!.Message.Truthy() && limit > 0)
 		{
+			// TODO: I think I need a way to REWIND the stack in the PARSER.
+			// This is going to be tricky.
 			// Todo: Parse arguments?
 			await parser.With(
 				state => state with { Arguments = args.Skip(1).ToDictionary() },
