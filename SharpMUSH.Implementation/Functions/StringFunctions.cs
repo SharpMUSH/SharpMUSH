@@ -26,16 +26,20 @@ public partial class Functions
 		var fullString = args["0"].Message;
 		var search = args["1"].Message;
 		var idx = MModule.indexOf(fullString, search);
+
+		if (idx == -1)
+		{
+			return ValueTask.FromResult(new CallState(string.Empty));
+		}
+		
 		var result = MModule.substring(idx, MModule.getLength(fullString) - idx, args["0"].Message);
 
 		return ValueTask.FromResult(new CallState(result));
 	}
 
 	[SharpFunction(Name = "lit", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Literal | FunctionFlags.NoParse)]
-	public static ValueTask<CallState> Lit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		return ValueTask.FromResult(parser.CurrentState.Arguments["0"]);
-	}
+	public static ValueTask<CallState> Lit(IMUSHCodeParser parser, SharpFunctionAttribute _2) 
+		=> ValueTask.FromResult(parser.CurrentState.Arguments["0"]);
 
 	[SharpFunction(Name = "SPEAK", MinArgs = 2, MaxArgs = 7, Flags = FunctionFlags.Regular)]
 	public static async ValueTask<CallState> Speak(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -138,21 +142,21 @@ public partial class Functions
 		}
 
 		/*
-		 *   If <transform> is specified (an object/attribute pair or attribute, as with map() and similar functions),
-		 * the speech portions of <string> are passed through the transformation function.
+		  If <transform> is specified (an object/attribute pair or attribute, as with map() and similar functions),
+		  the speech portions of <string> are passed through the transformation function.
 
-  Speech is delimited by double-quotes (i.e., "text"), or by the specified <open> and <close> strings.
-  For instance, if you wanted <<text>> to denote text to be transformed,
-  you would specify <open> as << and close as >> in the function call.
-  Only the portions of the string between those delimiters are transformed. If <close> is not specified,
-  it defaults to <open>.
+			Speech is delimited by double-quotes (i.e., "text"), or by the specified <open> and <close> strings.
+			For instance, if you wanted <<text>> to denote text to be transformed,
+			you would specify <open> as << and close as >> in the function call.
+			Only the portions of the string between those delimiters are transformed. If <close> is not specified,
+			it defaults to <open>.
 
-  The transformation function receives the speech text as %0, the dbref of <speaker> as %1,
-  and the speech fragment number as %2.
-  For non-say input strings (i.e., for an original <string> beginning with the :, ;, or | tokens),
-  fragments are numbered starting with 1; otherwise,
-  fragments are numbered starting with 0.
-  (A fragment is a chunk of speech text within the overall original input string.)
+			The transformation function receives the speech text as %0, the dbref of <speaker> as %1,
+			and the speech fragment number as %2.
+			For non-say input strings (i.e., for an original <string> beginning with the :, ;, or | tokens),
+			fragments are numbered starting with 1; otherwise,
+			fragments are numbered starting with 0.
+			(A fragment is a chunk of speech text within the overall original input string.)
 		 */
 
 		string? actualTransformAttribute = null;
@@ -314,26 +318,112 @@ public partial class Functions
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> AlphaMax(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var list = parser.CurrentState.ArgumentsOrdered.Values.Select(x => x.Message!.ToPlainText());
+		return ValueTask.FromResult(new CallState(list.Order().First()));
 	}
 
 	[SharpFunction(Name = "ALPHAMIN", MinArgs = 1, MaxArgs = int.MaxValue,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> AlphaMin(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var list = parser.CurrentState.ArgumentsOrdered.Values.Select(x => x.Message!.ToPlainText());
+		return ValueTask.FromResult(new CallState(list.OrderDescending().First()));
 	}
 
+	/// <summary>
+	/// Returns the Indefinite Article ('a' or 'an') of a word.
+	/// </summary>
+	/// <remarks>
+	/// Uses the basic implementation found here: https://stackoverflow.com/a/8044744/1894135
+	/// This is very specific to English. There are many edge cases that are not covered, and better solutions may exist.
+	/// </remarks>
 	[SharpFunction(Name = "ART", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> Art(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Art(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var nounPhrase = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
+		var charList = new[] { 'a', 'e', 'd', 'h', 'i', 'l', 'm', 'n', 'o', 'r', 's', 'x' };
+		await ValueTask.CompletedTask;
+
+		var m = GetWord().Match(nounPhrase);
+
+		if (!m.Success)
+		{
+			return "an";
+		}
+
+		var word = m.Groups[0].Value;
+		var wordLower = word.ToLower();
+		
+		if (new[] { "euler", "heir", "honest", "hono" }.Any(anWord => wordLower.StartsWith(anWord)))
+		{
+			return "an";
+		}
+
+		if (wordLower.StartsWith("hour") && !wordLower.StartsWith("houri"))
+		{
+			return "an";
+		}
+
+		
+		if (wordLower.Length == 1)
+		{
+			return wordLower.IndexOfAny(charList) == 0 
+				? "an" 
+				: "a";
+		}
+
+		if (ArticleRegex().Match(word).Success)
+		{
+			return "an";
+		}
+
+		if (new[] { "^e[uw]", "^onc?e\b", "^uni([^nmd]|mo)", "^u[bcfhjkqrst][aeiou]" }
+		    .Any(regex => Regex.IsMatch(wordLower, regex)))
+		{
+			return "a";
+		}
+
+		if (ArticleRegex2().IsMatch(word))
+		{
+			return "a";
+		}
+		
+		if (word == word.ToUpper())
+		{
+			return wordLower.IndexOfAny(charList) == 0 
+				? "an" 
+				: "a";
+		}
+
+		if (wordLower.IndexOfAny(['a', 'e', 'i', 'o', 'u']) == 0)
+		{
+			return "an";
+		}
+
+		if (ArticleRegex3().IsMatch(wordLower))
+		{
+			return "an";
+		}
+
+		return "a";
 	}
 
 	[SharpFunction(Name = "BEFORE", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Before(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var args = parser.CurrentState.Arguments;
+		var fullString = args["0"].Message;
+		var search = args["1"].Message;
+		var idx = MModule.indexOf(fullString, search);
+		
+		if(idx == -1) 
+		{
+			return ValueTask.FromResult(new CallState(fullString));
+		}
+		
+		var result = MModule.substring(0, idx, fullString);
+
+		return ValueTask.FromResult(new CallState(result));
 	}
 
 	[SharpFunction(Name = "BRACKETS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -346,17 +436,17 @@ public partial class Functions
 	public static ValueTask<CallState> CapStr(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arg0 = parser.CurrentState.Arguments["0"].Message!;
-		
+
 		if (arg0.Length < 1)
 		{
 			return new ValueTask<CallState>(CallState.Empty);
 		}
-		
+
 		var leftSide = MModule.substring(0, 1, arg0);
 		var rightSide = MModule.substring(1, arg0.Length - 1, arg0);
 		var capitalized = MModule.apply(leftSide, FuncConvert.FromFunc<string, string>(x => x.ToUpperInvariant()));
 		var concat = MModule.concat(capitalized, rightSide, FSharpOption<MString>.None);
-		
+
 		return new ValueTask<CallState>(new CallState(concat));
 	}
 
@@ -381,12 +471,12 @@ public partial class Functions
 		var fill = NoParseDefaultNoParseArgument(args, 2, MModule.single(" "));
 		var rightFill = NoParseDefaultNoParseArgument(args, 3, fill);
 
-		if(!int.TryParse(width.ToPlainText(), out var widthInt) || widthInt < 0)
+		if (!int.TryParse(width.ToPlainText(), out var widthInt) || widthInt < 0)
 		{
 			return new ValueTask<CallState>(new CallState(Errors.ErrorPositiveInteger));
 		}
-		
-		var result = MModule.center2(str, fill, rightFill,  widthInt, MModule.TruncationType.Overflow);
+
+		var result = MModule.center2(str, fill, rightFill, widthInt, MModule.TruncationType.Overflow);
 
 		return new ValueTask<CallState>(new CallState(result));
 	}
@@ -530,7 +620,7 @@ public partial class Functions
 	public static ValueTask<CallState> LowerCaseString(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arg0 = parser.CurrentState.Arguments["0"].Message!;
-		var result = MModule.apply(arg0, FuncConvert.FromFunc<string,string>(x => x.ToLowerInvariant()));
+		var result = MModule.apply(arg0, FuncConvert.FromFunc<string, string>(x => x.ToLowerInvariant()));
 
 		return new ValueTask<CallState>(new CallState(result));
 	}
@@ -587,9 +677,9 @@ public partial class Functions
 	public static ValueTask<CallState> Ordinal(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var numberArg = parser.CurrentState.Arguments["0"].Message!;
-		
-		return !int.TryParse(numberArg.ToPlainText(), out var number) 
-			? new ValueTask<CallState>(new CallState(Errors.ErrorInteger)) 
+
+		return !int.TryParse(numberArg.ToPlainText(), out var number)
+			? new ValueTask<CallState>(new CallState(Errors.ErrorInteger))
 			: new ValueTask<CallState>(new CallState(number.ToOrdinalWords()));
 	}
 
@@ -657,7 +747,7 @@ public partial class Functions
 	public static ValueTask<CallState> SpellNumber(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var numberString = parser.CurrentState.Arguments["0"].Message!;
-		
+
 		if (!decimal.TryParse(numberString.ToPlainText(), out var repeatNumber))
 		{
 			return ValueTask.FromResult(new CallState(Errors.ErrorInteger));
@@ -665,10 +755,10 @@ public partial class Functions
 
 		var integral = (int)Math.Truncate(repeatNumber);
 		var fractional = (int)Math.Truncate((repeatNumber - integral) * (10 ^ repeatNumber.Scale));
-		var concat = fractional > 0 
-			? $"{integral.ToWords()} dot {fractional.ToWords()}" 
+		var concat = fractional > 0
+			? $"{integral.ToWords()} dot {fractional.ToWords()}"
 			: integral.ToWords();
-		
+
 		return ValueTask.FromResult(new CallState(concat));
 	}
 
@@ -744,17 +834,17 @@ public partial class Functions
 	public static ValueTask<CallState> UpperCaseString(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arg0 = parser.CurrentState.Arguments["0"].Message!;
-		var result = MModule.apply(arg0, FuncConvert.FromFunc<string,string>(x => x.ToUpperInvariant()));
+		var result = MModule.apply(arg0, FuncConvert.FromFunc<string, string>(x => x.ToUpperInvariant()));
 
 		return new ValueTask<CallState>(new CallState(result));
 	}
 
 	[SharpFunction(Name = "URLDECODE", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> URLDecode(IMUSHCodeParser parser, SharpFunctionAttribute _2) 
+	public static ValueTask<CallState> URLDecode(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> new(new CallState(WebUtility.HtmlDecode(parser.CurrentState.Arguments["0"].Message!.ToPlainText())));
 
 	[SharpFunction(Name = "URLENCODE", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> URLEncode(IMUSHCodeParser parser, SharpFunctionAttribute _2) 
+	public static ValueTask<CallState> URLEncode(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> new(new CallState(WebUtility.HtmlEncode(parser.CurrentState.Arguments["0"].Message!.ToPlainText())));
 
 	[SharpFunction(Name = "WRAP", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
@@ -768,4 +858,16 @@ public partial class Functions
 	{
 		throw new NotImplementedException();
 	}
+
+	[GeneratedRegex(@"\w+")]
+	private static partial Regex GetWord();
+	
+	[GeneratedRegex("(?!FJO|[HLMNS]Y.|RY[EO]|SQU|(F[LR]?|[HL]|MN?|N|RH?|S[CHKLMNPTVW]?|X(YL)?)[AEIOU])[FHLMNRSX][A-Z]")]
+	private static partial Regex ArticleRegex();
+	
+	[GeneratedRegex("^U[NK][AIEO]")]
+	private static partial Regex ArticleRegex2();
+	
+	[GeneratedRegex("^y(b[lor]|cl[ea]|fere|gg|p[ios]|rou|tt)")]
+	private static partial Regex ArticleRegex3();
 }

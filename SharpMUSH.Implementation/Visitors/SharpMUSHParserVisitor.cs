@@ -40,9 +40,27 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 		var result = await DefaultResult;
 		
 		foreach (var child in Enumerable
-			               .Range(0, node.ChildCount)
-			               .Select(node.GetChild))
+			         .Range(0, node.ChildCount)
+			         .Select(node.GetChild))
 		{
+			result = AggregateResult(result, await child.Accept(this));
+		}
+		
+		return result;
+	}
+	
+	public async ValueTask<CallState?> VisitChildrenOrBreak(IRuleNode node, Func<bool> haltPredicate)
+	{
+		var result = await DefaultResult;
+		
+		foreach (var child in Enumerable
+			         .Range(0, node.ChildCount)
+			         .Select(node.GetChild))
+		{
+			if (haltPredicate())
+			{
+				break;
+			}
 			result = AggregateResult(result, await child.Accept(this));
 		}
 		
@@ -220,6 +238,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 				Registers: currentState.Registers,
 				IterationRegisters: currentState.IterationRegisters,
 				RegexRegisters: currentState.RegexRegisters,
+				ExecutionStack: currentState.ExecutionStack,
 				CurrentEvaluation: currentState.CurrentEvaluation,
 				ParserFunctionDepth: parser.CurrentState.ParserFunctionDepth + 1,
 				Function: name,
@@ -254,8 +273,8 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 		return (result.LibraryInformation.Attribute, 
 			p => (ValueTask<CallState>)result.LibraryInformation.Function.Method.Invoke(null, [p, result.LibraryInformation.Attribute])!);
 	}
-	
-	
+
+
 	/// <summary>
 	/// Evaluates the command, with the parser info given.
 	/// </summary>
@@ -266,11 +285,13 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 	/// </remarks>
 	/// <param name="src">Original string</param>
 	/// <param name="context">Command Context</param>
+	/// <param name="isCommandList">Whether this command is part of a command list.</param>
 	/// <param name="visitChildren">Parser function to visit children.</param>
 	/// <returns>An empty Call State</returns>
 	public async ValueTask<Option<CallState>> EvaluateCommands(
 		MString src,
 		CommandContext context,
+		bool isCommandList,
 		Func<IRuleNode, ValueTask<CallState?>> visitChildren)
 	{
 		try
@@ -288,7 +309,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 				command = command[..spaceIndex];
 			}
 
-			if (parser.CurrentState.Handle is not null && command == "IDLE")
+			if (parser.CurrentState.Handle is not null && command != "IDLE")
 			{
 				parser.ConnectionService.Update(parser.CurrentState.Handle.Value, "LastConnectionSignal",
 					DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString());
@@ -860,7 +881,9 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 			return await VisitChildren(context) ?? new CallState(context.GetText());
 		}
 
-		return (await EvaluateCommands(source, context, VisitChildren))
+		var isCommandList = context.Parent is CommandListContext;
+		
+		return (await EvaluateCommands(source, context, isCommandList, VisitChildren))
 			.Match<CallState?>(
 				x => x,
 				_ => null);
@@ -884,9 +907,18 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 		return new CallState(text, context.Depth());
 	}
 
+	private bool BreakTriggered() 
+		=> parser.CurrentState.ExecutionStack.TryPeek(out var result) && result.CommandListBreak;
+	
 	public override async ValueTask<CallState?> VisitCommandList([NotNull] CommandListContext context)
 	{
-		var result = await VisitChildren(context);
+		var result = await VisitChildrenOrBreak(context, BreakTriggered);
+
+		if (BreakTriggered())
+		{
+			parser.CurrentState.ExecutionStack.TryPop(out _);
+		}
+		
 		if (result != null)
 		{
 			return result;
@@ -988,11 +1020,15 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 		var singleCommandArg = context.singleCommandArg();
 		var baseArg = await VisitChildren(singleCommandArg[0]);
 		var rsArg = singleCommandArg.Length > 1 ? await VisitChildren(singleCommandArg[1]) : null;
+		MString[] args = singleCommandArg.Length > 1
+			? [baseArg!.Message!, rsArg!.Message!]
+			: [baseArg!.Message!];
+		
 		// Log.Logger.Information("VisitEqSplitCommand: C1: {Text} - C2: {Text2}", baseArg?.ToString(), rsArg?.ToString());
 		return new CallState(
 			null,
 			context.Depth(),
-			[baseArg!.Message!, rsArg?.Message ?? MModule.empty()],
+			args,
 			() => ValueTask.FromResult<MString?>(null));
 	}
 
