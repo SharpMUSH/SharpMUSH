@@ -251,6 +251,14 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 		catch (Exception ex)
 		{
 			logger.LogError(ex, nameof(CallFunction));
+
+			var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+
+			if (executor.IsGod())
+			{
+				await parser.NotifyService.Notify(executor, $"#-1 INTERNAL SHARPMUSH ERROR:\n{ex}");
+			}
+
 			return CallState.Empty;
 		}
 	}
