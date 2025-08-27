@@ -279,6 +279,21 @@ public interface ISharpDatabase
 	/// <returns>A Json String with the data stored within.</returns>
 	ValueTask<string?> GetExpandedObjectData(string sharpObjectId, string dataType);
 
+	
+	/// <summary>
+	/// Sets expanded data for a SharpObject, for the server as a whole.
+	/// </summary>
+	/// <param name="dataType">Type being stored. Each Type gets its own storage.</param>
+	/// <param name="data">Json body to set.</param>
+	Task SetExpandedServerData(string dataType, dynamic data);
+
+	/// <summary>
+	/// Gets the Expanded Object Data for the server as a whole. 
+	/// </summary>
+	/// <param name="dataType">Type being queried. Each Type gets its ow n storage.</param>
+	/// <returns>A Json String with the data stored within.</returns>
+	ValueTask<string?> GetExpandedServerData(string dataType);
+
 	ValueTask<IEnumerable<SharpChannel>> GetAllChannelsAsync();
 	
 	ValueTask<SharpChannel?> GetChannelAsync(string name);
