@@ -8,11 +8,19 @@ namespace SharpMUSH.Implementation.Functions;
 
 public partial class Functions
 {
-	private const string Chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz+/";
+	/// <summary>
+	/// Base 64 characters for conversion.
+	/// </summary>
+	private const string Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+	
+	/// <summary>
+	/// Base 36 characters for conversion, for PennMUSH compatibility.
+	/// </summary>
+	private const string Chars36 = "0123456789abcdefghijklmnopqrstuvwxyz";
 
 	[SharpFunction(Name = "baseconv", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> BaseConv(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValidateIntegerAndEvaluate(parser.CurrentState.ArgumentsOrdered.Skip(1).ToImmutableSortedDictionary(),
+		=> ValidateIntegerAndEvaluate(parser.CurrentState.ArgumentsOrdered.ToImmutableSortedDictionary(),
 			x =>
 			{
 				var input = MModule.plainText(parser.CurrentState.ArgumentsOrdered.ElementAt(0).Value.Message!);
@@ -25,15 +33,18 @@ public partial class Functions
 				if (toBase is < 2 or > 64)
 					return MModule.single("#-1 Argument 2 must be between 2 and 64.");
 
+				var fromBaseChars = fromBase <= 36 ? Chars36 : Chars;
+				var toBaseChars = toBase <= 36 ? Chars36 : Chars;
+				
 				// Validate input according to fromBase
-				if (input.Any(c => Chars.IndexOf(c) >= fromBase))
+				if (input.Any(c => fromBaseChars.IndexOf(c) >= fromBase))
 				{
-					return MModule.single("Invalid character in the input for the specified fromBase.");
+					return MModule.single("#-1 MALFORMED NUMBER");
 				}
 
 				// Convert input to base 10
 				var number = input.Aggregate(System.Numerics.BigInteger.Zero,
-					(current, c) => current * fromBase + Chars.IndexOf(c));
+					(current, c) => current * fromBase + fromBaseChars.IndexOf(c));
 
 				// Directly return the number if toBase is 10
 				if (toBase == 10)
@@ -43,7 +54,7 @@ public partial class Functions
 				var result = string.Empty;
 				while (number > 0)
 				{
-					result = Chars[(int)(number % toBase)] + result;
+					result = toBaseChars[(int)(number % toBase)] + result;
 					number /= toBase;
 				}
 
