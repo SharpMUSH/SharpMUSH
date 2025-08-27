@@ -238,10 +238,10 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		var data = (await parser.ObjectDataService.GetExpandedServerDataAsync<UptimeData>())!;
-		var upSince = data.StartTime.Humanize();
+		var upSince = data.StartTime;
 		var lastReboot = data.LastRebootTime.Humanize();
 		var reboots = data.Reboots.ToString();
-		var now = DateTimeOffset.UtcNow.Humanize();
+		var now = DateTimeOffset.UtcNow;
 		var nextPurge = (data.NextPurgeTime - DateTimeOffset.Now).Humanize();
 		var nextWarning = (data.NextWarningTime - DateTimeOffset.Now).Humanize();
 		var uptime = (DateTimeOffset.Now - data.StartTime).Humanize();

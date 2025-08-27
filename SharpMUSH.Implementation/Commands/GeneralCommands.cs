@@ -28,10 +28,8 @@ namespace SharpMUSH.Implementation.Commands;
 public partial class Commands
 {
 	[SharpCommand(Name = "@@", Switches = [], Behavior = CB.Default | CB.NoParse, MinArgs = 0, MaxArgs = 0)]
-	public static ValueTask<Option<CallState>> At(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		return ValueTask.FromResult(new Option<CallState>(CallState.Empty));
-	}
+	public static ValueTask<Option<CallState>> At(IMUSHCodeParser parser, SharpCommandAttribute _2) 
+		=> ValueTask.FromResult(new Option<CallState>(CallState.Empty));
 
 	[SharpCommand(Name = "THINK", Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> Think(IMUSHCodeParser parser, SharpCommandAttribute _2)
@@ -333,7 +331,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var exitObj = exit.WithoutError().WithoutNone().AsExit;
+		var exitObj = exit.AsExit;
 		// TODO: Check if the exit has a destination attribute.
 		var destination = await exitObj.Home.WithCancellation(CancellationToken.None);
 
