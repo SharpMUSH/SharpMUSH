@@ -8,6 +8,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using System.Drawing;
+using FSharpPlus.Control;
 using SharpMUSH.Implementation.Commands.ChannelCommand;
 using SharpMUSH.Implementation.Commands.MailCommand;
 using SharpMUSH.Implementation.Definitions;
@@ -1701,7 +1702,7 @@ public partial class Commands
 				async newParser => await previousCommand.CommandInvoker(newParser));
 			limit--;
 		}
-		
+
 		return new CallState(1000 - limit);
 	}
 
@@ -1756,10 +1757,141 @@ public partial class Commands
 		throw new NotImplementedException();
 	}
 
+	// TODO: Handle switches
 	[SharpCommand(Name = "@MESSAGE", Switches = ["NOEVAL", "SPOOF", "NOSPOOF", "REMIT", "OEMIT", "SILENT", "NOISY"],
-		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 3, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Message(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var recipientsArg = args.ElementAtOrDefault(0).Value.Message!;
+		var defmsg = args.ElementAtOrDefault(1).Value.Message!;
+		var objectAttrArg = args.ElementAtOrDefault(2).Value.Message!.ToPlainText();
+		var otherArgs = args
+			.Skip(3)
+			.Select(x => new KeyValuePair<string, CallState>((int.Parse(x.Key) - 3).ToString(), x.Value));
+
+		var recipientNamelist = Functions.Functions.NameList(recipientsArg.ToString());
+
+		var attrObjSplit = objectAttrArg.Split('/');
+		AnySharpObject? objToEvaluate = null;
+		string attrToEvaluate;
+		SharpAttribute[]? pinnedAttribute = null;
+
+		if (attrObjSplit.Length > 1)
+		{
+			var maybeLocateTarget = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor,
+				executor,
+				attrObjSplit[0],
+				LocateFlags.All);
+
+			if (maybeLocateTarget.IsError)
+			{
+				await parser.NotifyService.Notify(executor, maybeLocateTarget.AsError.Message!);
+				return new CallState(Errors.ErrorNotVisible);
+			}
+
+			objToEvaluate = maybeLocateTarget.AsSharpObject;
+			attrToEvaluate = string.Join("/", attrObjSplit.Skip(1));
+
+			var attr = await parser.AttributeService.GetAttributeAsync(executor, objToEvaluate, attrToEvaluate,
+				IAttributeService.AttributeMode.Execute);
+
+			if (attr.IsError)
+			{
+				await parser.NotifyService.Notify(executor, attr.AsCallStateError.Message!);
+				return attr.AsCallStateError;
+			}
+
+			pinnedAttribute = attr.AsAttribute;
+		}
+		else
+		{
+			attrToEvaluate = objectAttrArg;
+		}
+
+		foreach (var target in recipientNamelist)
+		{
+			var targetString = target.Match(dbref => dbref.ToString(), str => str);
+			var maybeLocateTarget = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor,
+				executor,
+				targetString,
+				LocateFlags.All);
+
+			if (maybeLocateTarget.IsError)
+			{
+				await parser.NotifyService.Notify(executor, maybeLocateTarget.AsError.Message!);
+				continue;
+			}
+
+			var locateTarget = maybeLocateTarget.AsSharpObject;
+
+			if (!await parser.PermissionService.CanInteract(locateTarget, executor, IPermissionService.InteractType.Hear))
+			{
+				await parser.NotifyService.Notify(executor, $"{locateTarget.Object().Name} does not want to hear from you.");
+				continue;
+			}
+
+			var finalObjToEvaluate = objToEvaluate ?? locateTarget;
+
+			if (pinnedAttribute != null)
+			{
+				var result = await parser.With(state => state with
+					{
+						Enactor = executor.Object().DBRef,
+						Arguments = otherArgs.ToDictionary()
+					},
+					newParser => newParser.FunctionParse(pinnedAttribute.Last().Value));
+
+				await parser.NotifyService.Notify(locateTarget, result!.Message!);
+			}
+			else
+			{
+				var maybeAttr = await parser.AttributeService.GetAttributeAsync(finalObjToEvaluate, finalObjToEvaluate,
+					attrToEvaluate, IAttributeService.AttributeMode.Execute);
+
+				// Default behavior for not having access or there not being one, is to display the message as is.
+				if (maybeAttr.IsError)
+				{
+					await parser.NotifyService.Notify(locateTarget, defmsg);
+				}
+				else
+				{
+					var result = await parser.With(state => state with
+						{
+							Enactor = executor.Object().DBRef
+						},
+						newParser => newParser.AttributeService.EvaluateAttributeFunctionAsync(newParser, locateTarget,
+							locateTarget, attrToEvaluate, otherArgs.ToDictionary()));
+
+					await parser.NotifyService.Notify(locateTarget, result!);
+				}
+			}
+
+			return CallState.Empty;
+		}
+
+		/*
+		 @message[/<switches>] <recipients>=<defmsg>,[<obj>/]<attr>[,<arg0>[, ... , <arg29>]]]
+
+		  @message is designed for the use of *format messages, such as @pageformat or @chatformat. It is intended for use with @hooking page, @chat, or say/pose/emit, or for coding language systems.
+
+		  For each of the given <recipients>, <obj>/<attr> is evaluated (with up to 30 arguments, as if it was ufun()'d), and the object is shown the result via @pemit. If the attribute does not exist, or you do not have permission to evaluate it, they are shown <defmsg> instead.
+
+		  If <obj> is not given, or is given as "#-2", the attribute will be checked on the recipient.
+
+		  If one of the arguments matches "##", it will be replaced with the dbref of the recipient.
+
+		  Switches:
+		    /noeval   -- none of @message's arguments will be evaluated
+		    /spoof    -- the message will appear to be from the enactor, not the executor. Requires the Can_Spoof @power
+		    /remit    -- works like @remit, treating <recipients> as a list of rooms to send the message to
+		    /oemit    -- works like @oemit, with <recipients> as a list of objects not to emit to. See 'help @oemit' for more info
+		    /nospoof  -- don't show nospoof info, as per @nspemit/@nsremit/@nsoemit
+		    /silent   -- don't show a confirmation message
+		    /noisy    -- show a confirmation message; default depends on the silent_pemit @config option
+		*/
+
 		await ValueTask.CompletedTask;
 		throw new NotImplementedException();
 	}
