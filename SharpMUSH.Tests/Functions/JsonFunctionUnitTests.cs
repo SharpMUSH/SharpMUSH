@@ -23,7 +23,7 @@ public class JsonFunctionUnitTests
 	[Arguments("json(array,1,blah)", "#-1 BAD ARGUMENT FORMAT TO json")]
 	public async Task Json(string function, string expected)
 	{
-		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
@@ -32,7 +32,7 @@ public class JsonFunctionUnitTests
 	[Arguments("json(object,key,json(string,ansi(hr,foo)))")]
 	public async Task JsonNotABadArgument(string function)
 	{
-		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsNotEqualTo("#-1 BAD ARGUMENT FORMAT TO json");
 	}
 }

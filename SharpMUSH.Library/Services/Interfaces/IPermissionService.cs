@@ -1,5 +1,6 @@
 ﻿using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Library.Services.Interfaces;
 
@@ -30,7 +31,7 @@ public interface IPermissionService
 
 	ValueTask<bool> CanNoSpoof(AnySharpObject executor);
 
-	ValueTask<bool> CouldDoIt(AnySharpObject who, AnyOptionalSharpObject thing1, string? what);
+	ValueTask<bool> CouldDoIt(AnySharpObject who, AnyOptionalSharpObject thing1);
 
 	ValueTask<bool> CanGoto(AnySharpObject who, SharpExit exit, AnySharpContainer destnation);
 
