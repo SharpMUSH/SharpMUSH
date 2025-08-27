@@ -238,54 +238,49 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		var data = (await parser.ObjectDataService.GetExpandedServerDataAsync<UptimeData>())!;
-		var upSince = data.StartTime.ToString();
-		var lastReboot = data.LastRebootTime.ToString();
+		var upSince = data.StartTime.Humanize();
+		var lastReboot = data.LastRebootTime.Humanize();
 		var reboots = data.Reboots.ToString();
-		var now = DateTimeOffset.UtcNow.ToString(CultureInfo.InvariantCulture);
-		var nextPurge = data.NextPurgeTime - DateTimeOffset.Now;
-		var nextWarning = data.NextWarningTime - DateTimeOffset.Now;
-		var uptime = DateTimeOffset.Now - data.StartTime;
+		var now = DateTimeOffset.UtcNow.Humanize();
+		var nextPurge = (data.NextPurgeTime - DateTimeOffset.Now).Humanize();
+		var nextWarning = (data.NextWarningTime - DateTimeOffset.Now).Humanize();
+		var uptime = (DateTimeOffset.Now - data.StartTime).Humanize();
 
 		var details = $"""
-		                          Up since: {upSince.Humanize()}
-		                       Last Reboot: {lastReboot.Humanize()}
-		                     Total Reboots: {reboots.Humanize()}
-		                          Time now: {now.Humanize()}
-		                        Next Purge: {nextPurge.Humanize()}
-		                     Next Warnings: {nextWarning.Humanize()}
-		                  SharpMUSH Uptime: {uptime.Humanize()}
+		                          Up since: {upSince}
+		                       Last Reboot: {lastReboot}
+		                     Total Reboots: {reboots}
+		                          Time now: {now}
+		                        Next Purge: {nextPurge}
+		                     Next Warnings: {nextWarning}
+		                  SharpMUSH Uptime: {uptime}
 		               """;
 
 		await parser.NotifyService.Notify(executor, details);
 
-		if(await executor.IsWizard() && !parser.CurrentState.Switches.Contains("MORTAL"))
+		if ((!await executor.IsWizard() && !executor.IsGod()) || parser.CurrentState.Switches.Contains("MORTAL"))
 		{
-			// Process ID
-			// Page Size
-			// Memory Usage
-			// Database Size
-			
-			var process = System.Diagnostics.Process.GetCurrentProcess();
-			var pid = process.Id;
-			var memoryUsage = process.WorkingSet64.Bytes().Humanize("0.00");
-			var peakMemoryUsage = process.PeakWorkingSet64.Bytes().Humanize("0.00");
-			var paged = process.PagedMemorySize64.Bytes().Humanize("0.00");
-			var maxPaged = process.PagedSystemMemorySize64.Bytes().Humanize("0.00");
-			var peakPaged = process.PeakPagedMemorySize64.Bytes().Humanize("0.00");
-			
-			var extra = $"""
-			             
-			                    Process ID: {pid}
-			                  Memory Usage: {memoryUsage}
-			             Peak Memory Usage: {peakMemoryUsage}
-			                  Paged Memory: {paged}
-			              Max Paged Memory: {maxPaged}
-			             Peak Paged Memory: {peakPaged}
-			             """;
-			
-			await parser.NotifyService.Notify(executor, extra);
+			return new CallState(details);
 		}
-		
+			
+		var process = System.Diagnostics.Process.GetCurrentProcess();
+		var pid = process.Id;
+		var memoryUsage = process.WorkingSet64.Bytes().Humanize("0.00");
+		var peakMemoryUsage = process.PeakWorkingSet64.Bytes().Humanize("0.00");
+		var paged = process.PagedMemorySize64.Bytes().Humanize("0.00");
+		var peakPaged = process.PeakPagedMemorySize64.Bytes().Humanize("0.00");
+			
+		var extra = $"""
+
+		                    Process ID: {pid}
+		                  Memory Usage: {memoryUsage}
+		             Peak Memory Usage: {peakMemoryUsage}
+		                  Paged Memory: {paged}
+		             Peak Paged Memory: {peakPaged}
+		             """;
+			
+		await parser.NotifyService.Notify(executor, extra);
+
 		return new CallState(details);
 	}
 

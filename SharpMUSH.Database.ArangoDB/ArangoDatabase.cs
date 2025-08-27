@@ -481,9 +481,9 @@ public class ArangoDatabase(
 		return resultingValue?.ToString(Formatting.None);
 	}
 
-	public async Task SetExpandedServerData(string dataType, dynamic data)
+	public async Task SetExpandedServerData(string dataType, string data)
 	{
-		var newJson = new Dictionary<string, object>
+		var newJson = new Dictionary<string, dynamic>
 		{
 			{ "_key", dataType },
 			{ "data", data }
@@ -497,16 +497,20 @@ public class ArangoDatabase(
 			keepNull: true);
 	}
 
+	public class ArangoDocumentWrapper<T>
+	{
+		public required T Data { get; set; }
+	}
+
 	public async ValueTask<string?> GetExpandedServerData(string dataType)
 	{
 		try
 		{
-			var result = await arangoDb.Document.GetAsync<JObject>(handle,
+			var result = await arangoDb.Document.GetAsync<ArangoDocumentWrapper<string>>(handle,
 				DatabaseConstants.ServerData,
 				dataType);
 
-			var resultingValue = result.GetValue("data");
-			return resultingValue?.ToString(Formatting.None);
+			return result.Data;
 		}
 		catch
 		{

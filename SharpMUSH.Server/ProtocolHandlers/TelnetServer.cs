@@ -23,18 +23,12 @@ public class TelnetServer : ConnectionHandler
 	private readonly SemaphoreSlim _semaphoreSlimForWriter = new(1, 1);
 	private readonly NextUnoccupiedNumberGenerator _descriptorGenerator = new(0);
 
-	public TelnetServer(ILogger<TelnetServer> logger, ISharpDatabase database, IConnectionService connectionService,
-		IPublisher publisher)
+	public TelnetServer(ILogger<TelnetServer> logger, IConnectionService connectionService, IPublisher publisher)
 	{
 		Console.OutputEncoding = Encoding.UTF8;
 		_logger = logger;
 		_connectionService = connectionService;
 		_publisher = publisher;
-
-		// TODO: This does not belong here. A 'main thread' is needed to migrate this, before allowing telnet connections.
-		_logger.LogInformation("Starting Database");
-		database.Migrate().AsTask().Wait();
-		(database as ISharpDatabaseWithLogging)?.SetupLogging().AsTask().Wait();
 	}
 
 	/// <summary>

@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 using Mediator;
+using Newtonsoft.Json.Linq;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
@@ -36,14 +37,16 @@ public class ExpandedObjectDataService(IMediator mediator) : IExpandedObjectData
 	{
 		var result = await mediator.Send(new ExpandedServerDataQuery(typeof(T).Name));
 		if (result is null) return null;
-
+		
 		var conversion = JsonSerializer.Deserialize<T>(result);
 		return conversion;
 	}
 
 	public async ValueTask SetExpandedServerDataAsync<T>(T data, bool ignoreNull = false) where T : class
 	{
-		var json = JsonSerializer.Serialize(data, ignoreNull ? _jsonSerializerOptionForNull : _jsonSerializerOptionForOthers);
+		var json = JsonSerializer.Serialize(data, ignoreNull 
+			? _jsonSerializerOptionForNull 
+			: _jsonSerializerOptionForOthers);
 		await mediator.Send(new SetExpandedServerDataCommand(typeof(T).Name, json));
 	}
 }

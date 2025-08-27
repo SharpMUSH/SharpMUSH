@@ -285,7 +285,7 @@ public interface ISharpDatabase
 	/// </summary>
 	/// <param name="dataType">Type being stored. Each Type gets its own storage.</param>
 	/// <param name="data">Json body to set.</param>
-	Task SetExpandedServerData(string dataType, dynamic data);
+	Task SetExpandedServerData(string dataType, string data);
 
 	/// <summary>
 	/// Gets the Expanded Object Data for the server as a whole. 

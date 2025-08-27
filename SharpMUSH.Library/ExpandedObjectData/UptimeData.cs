@@ -1,5 +1,6 @@
 namespace SharpMUSH.Library.ExpandedObjectData;
 
+[Serializable]
 public record UptimeData(
 	DateTimeOffset StartTime,
 	DateTimeOffset LastRebootTime,

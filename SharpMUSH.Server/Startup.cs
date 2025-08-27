@@ -94,7 +94,6 @@ public class Startup(ArangoConfiguration config, string configFile, INotifyServi
 		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(CacheInvalidationBehavior<,>));
 		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(QueryCachingBehavior<,>));
 		services.AddSingleton(new ArangoHandle("CurrentSharpMUSHWorld"));
-		// services.AddHostedService<SchedulerService>();
 		services.AddScoped<IMUSHCodeParser, MUSHCodeParser>();
 		services.AddOptions<PennMUSHOptions>();
 		services.AddMediator();
@@ -105,6 +104,7 @@ public class Startup(ArangoConfiguration config, string configFile, INotifyServi
 			x.UseInMemoryStore();
 		});
 		services.AddQuartzHostedService();
+		services.AddHostedService<StartupHandler>();
 		services.BuildServiceProvider();
 	}
 
