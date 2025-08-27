@@ -43,12 +43,47 @@ public partial class Commands
 		await ValueTask.CompletedTask;
 		throw new NotImplementedException();
 	}
+	
+	
+	[SharpCommand(Name = "@RWALL", Switches = ["NOEVAL", "EMIT"], Behavior = CB.Default,
+		CommandLock = "FLAG^WIZARD|FLAG^ROYALTY", MinArgs = 0)]
+	public static async ValueTask<Option<CallState>> RoyaltyWall(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{		
+		// TODO: Pipe through SPEAK()
+		var shout = parser.CurrentState.Arguments["0"].Message!;
+		var handles = parser.ConnectionService.GetAll().Select(x => x.Handle);
 
-	[SharpCommand(Name = "@WIZWALL", Switches = ["NOEVAL", "EMIT"], Behavior = CB.Default, CommandLock = "FLAG^WIZARD", MinArgs = 0)]
+		if (!parser.CurrentState.Switches.Contains("EMIT"))
+		{
+			shout = MModule.concat(MModule.single(parser.Configuration.CurrentValue.Cosmetic.RoyaltyWallPrefix + " "), shout);
+		}
+		
+		await foreach (var handle in handles.ToAsyncEnumerable())
+		{
+			await parser.NotifyService.Notify(handle, shout);
+		}
+
+		return new CallState(shout);
+	}
+
+	[SharpCommand(Name = "@WIZWALL", Switches = ["NOEVAL", "EMIT"], Behavior = CB.Default, CommandLock = "FLAG^WIZARD", MinArgs = 1, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> WizardWall(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		// TODO: Pipe through SPEAK()
+		var shout = parser.CurrentState.Arguments["0"].Message!;
+		var handles = parser.ConnectionService.GetAll().Select(x => x.Handle);
+
+		if (!parser.CurrentState.Switches.Contains("EMIT"))
+		{
+			shout = MModule.concat(MModule.single(parser.Configuration.CurrentValue.Cosmetic.WizardWallPrefix + " "), shout);
+		}
+		
+		await foreach (var handle in handles.ToAsyncEnumerable())
+		{
+			await parser.NotifyService.Notify(handle, shout);
+		}
+
+		return new CallState(shout);
 	}
 
 	[SharpCommand(Name = "@ALLQUOTA", Switches = ["QUIET"], Behavior = CB.Default, CommandLock = "FLAG^WIZARD|POWER^QUOTA", MinArgs = 0)]
@@ -242,8 +277,21 @@ public partial class Commands
 	[SharpCommand(Name = "@WALL", Switches = ["NOEVAL", "EMIT"], Behavior = CB.Default, CommandLock = "FLAG^WIZARD ROYALTY|POWER^ANNOUNCE", MinArgs = 0)]
 	public static async ValueTask<Option<CallState>> Wall(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		// TODO: Pipe through SPEAK()
+		var shout = parser.CurrentState.Arguments["0"].Message!;
+		var handles = parser.ConnectionService.GetAll().Select(x => x.Handle);
+
+		if (!parser.CurrentState.Switches.Contains("EMIT"))
+		{
+			shout = MModule.concat(MModule.single(parser.Configuration.CurrentValue.Cosmetic.WallPrefix + " "), shout);
+		}
+		
+		await foreach (var handle in handles.ToAsyncEnumerable())
+		{
+			await parser.NotifyService.Notify(handle, shout);
+		}
+
+		return new CallState(shout);
 	}
 
 	[SharpCommand(Name = "@CHZONEALL", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 0)]

@@ -56,15 +56,6 @@ public partial class Commands
 		throw new NotImplementedException();
 	}
 
-
-	[SharpCommand(Name = "@RWALL", Switches = ["NOEVAL", "EMIT"], Behavior = CB.Default,
-		CommandLock = "FLAG^WIZARD|FLAG^ROYALTY", MinArgs = 0)]
-	public static async ValueTask<Option<CallState>> RoyaltyWall(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
-	}
-
 	[SharpCommand(Name = "@SOCKSET", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.NoGagged | CB.RSArgs,
 		MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> SocketSet(IMUSHCodeParser parser, SharpCommandAttribute _2)
