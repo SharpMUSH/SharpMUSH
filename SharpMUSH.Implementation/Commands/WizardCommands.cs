@@ -1,8 +1,13 @@
-﻿using SharpMUSH.Library.Attributes;
+﻿using System.Globalization;
+using Humanizer;
+using SharpMUSH.Library;
+using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 
 namespace SharpMUSH.Implementation.Commands;
@@ -110,6 +115,11 @@ public partial class Commands
 	[SharpCommand(Name = "@MOTD", Switches = ["CONNECT", "LIST", "WIZARD", "DOWN", "FULL", "CLEAR"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> MessageOfTheDay(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		/*
+			@motd[/<type>] <message>
+			@motd/clear[/<type>]
+			@motd/list
+  */
 		await ValueTask.CompletedTask;
 		throw new NotImplementedException();
 	}
@@ -226,8 +236,57 @@ public partial class Commands
 	[SharpCommand(Name = "@UPTIME", Switches = ["MORTAL"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Uptime(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var data = (await parser.ObjectDataService.GetExpandedServerDataAsync<UptimeData>())!;
+		var upSince = data.StartTime.ToString();
+		var lastReboot = data.LastRebootTime.ToString();
+		var reboots = data.Reboots.ToString();
+		var now = DateTimeOffset.UtcNow.ToString(CultureInfo.InvariantCulture);
+		var nextPurge = data.NextPurgeTime - DateTimeOffset.Now;
+		var nextWarning = data.NextWarningTime - DateTimeOffset.Now;
+		var uptime = DateTimeOffset.Now - data.StartTime;
+
+		var details = $"""
+		                          Up since: {upSince.Humanize()}
+		                       Last Reboot: {lastReboot.Humanize()}
+		                     Total Reboots: {reboots.Humanize()}
+		                          Time now: {now.Humanize()}
+		                        Next Purge: {nextPurge.Humanize()}
+		                     Next Warnings: {nextWarning.Humanize()}
+		                  SharpMUSH Uptime: {uptime.Humanize()}
+		               """;
+
+		await parser.NotifyService.Notify(executor, details);
+
+		if(await executor.IsWizard() && !parser.CurrentState.Switches.Contains("MORTAL"))
+		{
+			// Process ID
+			// Page Size
+			// Memory Usage
+			// Database Size
+			
+			var process = System.Diagnostics.Process.GetCurrentProcess();
+			var memoryUsage = process.WorkingSet64.Bytes().Humanize("0.00");
+			var peakMemoryUsage = process.PeakWorkingSet64.Bytes().Humanize("0.00");
+			var pid = process.Id.ToString();
+			var paged = process.PagedMemorySize64.Bytes().Humanize("0.00");
+			var maxPaged = process.PagedSystemMemorySize64.Bytes().Humanize("0.00");
+			var peakPaged = process.PeakPagedMemorySize64.Bytes().Humanize("0.00");
+			
+			var extra = $"""
+			             
+			                    Process ID: {pid}
+			                  Memory Usage: {memoryUsage}
+			             Peak Memory Usage: {peakMemoryUsage}
+			                  Paged Memory: {paged}
+			              Max Paged Memory: {maxPaged}
+			             Peak Paged Memory: {peakPaged}
+			             """;
+			
+			await parser.NotifyService.Notify(executor, extra);
+		}
+		
+		return new CallState(details);
 	}
 
 	[SharpCommand(Name = "@CHOWNALL", Switches = ["PRESERVE", "THINGS", "ROOMS", "EXITS"], Behavior = CB.Default | CB.EqSplit, CommandLock = "FLAG^WIZARD", MinArgs = 0)]
