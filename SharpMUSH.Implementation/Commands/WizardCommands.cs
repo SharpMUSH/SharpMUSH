@@ -266,9 +266,9 @@ public partial class Commands
 			// Database Size
 			
 			var process = System.Diagnostics.Process.GetCurrentProcess();
+			var pid = process.Id;
 			var memoryUsage = process.WorkingSet64.Bytes().Humanize("0.00");
 			var peakMemoryUsage = process.PeakWorkingSet64.Bytes().Humanize("0.00");
-			var pid = process.Id.ToString();
 			var paged = process.PagedMemorySize64.Bytes().Humanize("0.00");
 			var maxPaged = process.PagedSystemMemorySize64.Bytes().Humanize("0.00");
 			var peakPaged = process.PeakPagedMemorySize64.Bytes().Humanize("0.00");
