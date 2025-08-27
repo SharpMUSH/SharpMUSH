@@ -97,36 +97,90 @@ public partial class Functions
 
 	private static ValueTask<CallState> ValidateIntegerAndEvaluate(ImmutableSortedDictionary<string, CallState> args,
 		Func<IEnumerable<int>, MString> aggregateFunction)
-		=> ValueTask.FromResult<CallState>(
-			aggregateFunction(args
+	{
+		try
+		{
+			return ValueTask.FromResult<CallState>(
+				aggregateFunction(args
 					.Select(x
 						=> int.Parse(EmptyStringToZero(MModule.plainText(x.Value.Message!))))));
+		}
+		catch (Exception)
+		{
+			return ValueTask.FromResult<CallState>(Errors.ErrorIntegers);
+		}
+	}
 
 	private static ValueTask<CallState> AggregateDecimalToInt(ImmutableSortedDictionary<string, CallState> args,
-		Func<decimal, decimal, decimal> aggregateFunction) =>
-		ValueTask.FromResult<CallState>(Math.Floor(args
-			.Select(x
-				=> decimal.Parse(string.Join(string.Empty, EmptyStringToZero(MModule.plainText(x.Value.Message)))))
-			.Aggregate(aggregateFunction)).ToString(CultureInfo.InvariantCulture));
+		Func<decimal, decimal, decimal> aggregateFunction)
+	{
+		try
+		{
+			return ValueTask.FromResult<CallState>(Math.Floor(args
+				.Select(x
+					=> decimal.Parse(string.Join(string.Empty, EmptyStringToZero(MModule.plainText(x.Value.Message)))))
+				.Aggregate(aggregateFunction)).ToString(CultureInfo.InvariantCulture));
+		}
+		catch (Exception)
+		{
+			return ValueTask.FromResult<CallState>(Errors.ErrorNumbers);
+		}
+	}
 
 	private static ValueTask<CallState> EvaluateDecimal(ImmutableSortedDictionary<string, CallState> args,
 		Func<decimal, decimal> func)
-		=> ValueTask.FromResult<CallState>(func(decimal.Parse(EmptyStringToZero(MModule.plainText(args["0"].Message))))
-			.ToString(CultureInfo.InvariantCulture));
+	{
+		try
+		{
+			return ValueTask.FromResult<CallState>(
+				func(decimal.Parse(EmptyStringToZero(MModule.plainText(args["0"].Message)))));
+		}
+		catch (Exception)
+		{
+			return ValueTask.FromResult<CallState>(Errors.ErrorNumber);
+		}
+	}
 
 	private static ValueTask<CallState> EvaluateDecimalToInteger(ImmutableSortedDictionary<string, CallState> args,
 		Func<decimal, int> func)
-		=> ValueTask.FromResult<CallState>(
-			func(decimal.Parse(EmptyStringToZero(MModule.plainText(args["0"].Message)))));
+	{
+		try
+		{
+			return ValueTask.FromResult<CallState>(
+				func(decimal.Parse(EmptyStringToZero(MModule.plainText(args["0"].Message)))));
+		}
+		catch (Exception)
+		{
+			return ValueTask.FromResult<CallState>(Errors.ErrorNumber);
+		}
+	}
 
 	private static ValueTask<CallState> EvaluateDouble(ImmutableSortedDictionary<string, CallState> args,
 		Func<double, double> func)
-		=> ValueTask.FromResult<CallState>(
-			func(double.Parse(EmptyStringToZero(MModule.plainText(args["0"].Message)))));
+	{
+		try
+		{
+			return ValueTask.FromResult<CallState>(
+				func(double.Parse(EmptyStringToZero(MModule.plainText(args["0"].Message)))));
+		}
+		catch (Exception)
+		{
+			return ValueTask.FromResult<CallState>(Errors.ErrorNumber);
+		}
+	}
 
 	private static ValueTask<CallState> EvaluateInteger(ImmutableSortedDictionary<string, CallState> args,
 		Func<int, int> func)
-		=> ValueTask.FromResult<CallState>(func(int.Parse(EmptyStringToZero(MModule.plainText(args["0"].Message)))));
+	{
+		try
+		{
+			return ValueTask.FromResult<CallState>(func(int.Parse(EmptyStringToZero(MModule.plainText(args["0"].Message)))));
+		}
+		catch (Exception)
+		{
+			return ValueTask.FromResult<CallState>(Errors.ErrorInteger);
+		}
+	}
 
 	public static string EmptyStringToZero(string input)
 		=> string.IsNullOrEmpty(input) ? "0" : input;
