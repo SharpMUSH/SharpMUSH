@@ -5,12 +5,12 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
-public class UnusualUnitTests : BaseUnitTest
+public class UnusualUnitTests
 {
-	private static readonly IMUSHCodeParser Parser = TestParser(ns: Substitute.For<INotifyService>())
-		.ConfigureAwait(false)
-		.GetAwaiter()
-		.GetResult();
+	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required WebAppFactory WebAppFactoryArg { get; init; }
+
+	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
 	[Test]
 	[Arguments(@"s(ansi\(rG\,ansi(D\,[ansi(y,foo)]\)\))", "foo")]

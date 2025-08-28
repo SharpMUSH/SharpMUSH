@@ -1,10 +1,16 @@
 ﻿using System.Text;
+using SharpMUSH.Library.ParserInterfaces;
 using TUnit.Assertions.AssertConditions.Throws;
 
 namespace SharpMUSH.Tests.Functions;
 
-public class MemoryTest : BaseUnitTest
+public class MemoryTest
 {
+	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required WebAppFactory WebAppFactoryArg { get; init; }
+
+	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
+
 	[Test]
 	public async Task Depth()
 	{
@@ -20,8 +26,7 @@ public class MemoryTest : BaseUnitTest
 		}
 		var str = sb.ToString();
 
-		var parser = await TestParser();
-		var result = (await parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
 
 		await Assert
 			.That(result)
@@ -43,8 +48,7 @@ public class MemoryTest : BaseUnitTest
 		}
 		var str = sb.ToString();
 
-		var parser = await TestParser();
-		var result = (await parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
 
 		await Assert
 			.That(result)
@@ -81,10 +85,8 @@ public class MemoryTest : BaseUnitTest
 		}
 		var str = sb.ToString();
 
-		var parser = await TestParser();
-
 		await Assert.That(async () => {
-			var result = await parser.FunctionParse(MModule.single(str));
+			var result = await Parser.FunctionParse(MModule.single(str));
 		}).ThrowsNothing();
 	}
 
@@ -118,10 +120,8 @@ public class MemoryTest : BaseUnitTest
 		}
 		var str = sb.ToString();
 
-		var parser = await TestParser();
-
 		await Assert.That(async () => {
-			var result = await parser.FunctionParse(MModule.single(str));
+			var result = await Parser.FunctionParse(MModule.single(str));
 		}).ThrowsNothing();
 	}
 }

@@ -1,18 +1,18 @@
 ﻿using SharpMUSH.Library;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Tests.Parser;
 
-public class BooleanExpressionUnitTests : BaseUnitTest
+public class BooleanExpressionUnitTests
 {
-	private static ISharpDatabase? _database;
+	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required WebAppFactory WebAppFactoryArg { get; init; }
 
-	[Before(Class)]
-	public static async Task OneTimeSetup()
-	{
-		_database = (await IntegrationServer()).Database;
-	}
+	private IBooleanExpressionParser BooleanParser => (IBooleanExpressionParser)WebAppFactoryArg.Services.GetService(typeof(IBooleanExpressionParser))!;
+	
+	private ISharpDatabase Database => (ISharpDatabase)WebAppFactoryArg.Services.GetService(typeof(ISharpDatabase))!;
 
 	[Arguments("!#FALSE", true)]
 	[Arguments("#TRUE", true)]
@@ -36,8 +36,8 @@ public class BooleanExpressionUnitTests : BaseUnitTest
 	[Test]
 	public async Task SimpleExpressions(string input, bool expected)
 	{
-		var bep = BooleanExpressionTestParser(_database!);
-		var dbn = (await _database!.GetObjectNodeAsync(new DBRef(1))).Known();
+		var bep = BooleanParser;
+		var dbn = (await Database!.GetObjectNodeAsync(new DBRef(1))).Known();
 
 		await Assert.That(bep.Validate(input, dbn)).IsTrue();
 		await Assert.That(bep.Compile(input)(dbn, dbn)).IsEqualTo(expected);
@@ -51,8 +51,8 @@ public class BooleanExpressionUnitTests : BaseUnitTest
 	[Test]
 	public async Task TypeExpressions(string input, bool expected)
 	{
-		var bep = BooleanExpressionTestParser(_database!);
-		var dbn = (await _database!.GetObjectNodeAsync(new DBRef(1))).Known();
+		var bep = BooleanParser;
+		var dbn = (await Database!.GetObjectNodeAsync(new DBRef(1))).Known();
 
 		await Assert.That(bep.Validate(input, dbn)).IsTrue();
 		await Assert.That(bep.Compile(input)(dbn, dbn)).IsEqualTo(expected);
@@ -66,8 +66,8 @@ public class BooleanExpressionUnitTests : BaseUnitTest
 	[Test]
 	public async Task TypeValidation(string input, bool expected)
 	{
-		var bep = BooleanExpressionTestParser(_database!);
-		var dbn = (await _database!.GetObjectNodeAsync(new DBRef(1))).Known();
+		var bep = BooleanParser;
+		var dbn = (await Database!.GetObjectNodeAsync(new DBRef(1))).Known();
 
 		await Assert.That(bep.Validate(input, dbn)).IsEqualTo(expected);
 	}

@@ -77,7 +77,7 @@ public class Program
 	private static IWebHostBuilder CreateWebHostBuilder(ArangoConfiguration arangoConfig, string configFile) =>
 		WebHost
 			.CreateDefaultBuilder()
-			.UseStartup(_ => new Startup(arangoConfig, configFile))
+			.UseStartup(_ => new Startup(arangoConfig, configFile, null))
 			.UseKestrel(options =>
 				options.ListenLocalhost(
 					4202,

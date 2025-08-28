@@ -429,6 +429,7 @@ module MarkupStringModule =
 
     /// <summary>
     /// Returns the first index where a search MarkupString occurs.
+    /// Returns -1 if the item is not found.
     /// </summary>
     /// <param name="markupStr">Input MarkupString.</param>
     /// <param name="search">Search MarkupString.</param>

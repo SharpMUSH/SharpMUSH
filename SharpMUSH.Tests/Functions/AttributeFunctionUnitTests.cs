@@ -1,15 +1,12 @@
 ﻿using SharpMUSH.Library.ParserInterfaces;
 namespace SharpMUSH.Tests.Functions;
 
-public class AttributeFunctionUnitTests : BaseUnitTest
+public class AttributeFunctionUnitTests
 {
-	private static IMUSHCodeParser? _parser;
+	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required WebAppFactory WebAppFactoryArg { get; init; }
 
-	[Before(Class)]
-	public static async Task OneTimeSetup()
-	{
-		_parser = await TestParser();
-	}
+	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
 	[Test]
 	[NotInParallel]
@@ -18,7 +15,7 @@ public class AttributeFunctionUnitTests : BaseUnitTest
 	[Arguments("[attrib_set(%!/attribute,ansi(hr,ZIP!))][get(%!/attribute)][attrib_set(%!/attribute,ansi(hr,ZAP!))][get(%!/attribute)]", "\e[1;31mZIP!\e[0m\e[1;31mZAP!\e[0m")]
 	public async Task SetAndGet(string input, string expected)
 	{
-		var result = await _parser!.FunctionParse(MModule.single(input));
+		var result = await Parser.FunctionParse(MModule.single(input));
 		await Assert.That(result!.Message!.ToString()).IsEqualTo(expected);
 	}
 }

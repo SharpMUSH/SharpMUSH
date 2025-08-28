@@ -22,7 +22,7 @@ public partial class Functions
 
 		var interactableContents = contents
 			.ToAsyncEnumerable()
-			.WhereAwait(async obj =>
+			.Where(async (obj,_) =>
 				await parser.PermissionService.CanInteract(obj.WithRoomOption(), executor, InteractType.Hear));
 
 		await foreach (var obj in interactableContents)
@@ -45,7 +45,7 @@ public partial class Functions
 		var contents = await executorLocation.Content(parser);
 
 		var interactableContents = contents.ToAsyncEnumerable()
-			.WhereAwait(async obj =>
+			.Where(async (obj,_) =>
 				await parser.PermissionService.CanInteract(obj.WithRoomOption(), executor, InteractType.Hear));
 
 		await foreach (var obj in interactableContents)
@@ -61,7 +61,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "message", MinArgs = 3, MaxArgs = 14, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> Message(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Message(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		/*
 	MESSAGE()
@@ -83,14 +83,15 @@ public partial class Functions
   Formatted> Backwards Compatability Is Annoying Sometimes
 		 */
 
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		var orderedArgs = parser.CurrentState.ArgumentsOrdered; 
 		var recipients = orderedArgs["0"];
 		var message = orderedArgs["1"];
 		var objectAndAttribute = orderedArgs["2"];
 		var inBetweenArgs = orderedArgs.Skip(3).Take(10);
 		var switches = NoParseDefaultEvaluatedArgument(parser, 13, "");
-
-		var playerList = Functions.PopulatedNameList(parser, recipients.Message!.ToPlainText());
+	
+		var playerList = NameList(recipients.Message!.ToPlainText());
 		
 		// Step 1: Evaluate message into the default object/attribute, pass the arguments into it.
 		// Step 2: Send the message to all that want to hear it.
@@ -111,7 +112,7 @@ public partial class Functions
 
 		await foreach (var obj in contents
 			               .ToAsyncEnumerable()
-			               .WhereAwait(async x 
+			               .Where(async (x,_) 
 				               => await parser.PermissionService.CanInteract(x.WithRoomOption(), executor, InteractType.Hear)))
 		{
 			await parser.NotifyService.Notify(
@@ -137,7 +138,7 @@ public partial class Functions
 
 		await foreach (var obj in contents
 			               .ToAsyncEnumerable()
-			               .WhereAwait(async x 
+			               .Where(async (x,_) 
 				               => await parser.PermissionService.CanInteract(x.WithRoomOption(), executor, InteractType.Hear)))
 		{
 			await parser.NotifyService.Notify(

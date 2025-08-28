@@ -5,26 +5,24 @@ using SharpMUSH.Tests.Commands;
 
 namespace SharpMUSH.Tests.Functions;
 
-public class UtilityFunctionUnitTests : BaseUnitTest
+public class UtilityFunctionUnitTests
 {
-	private static IMUSHCodeParser? _parser;
+	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required WebAppFactory WebAppFactoryArg { get; init; }
 
-	[Before(Class)]
-	public static async Task OneTimeSetup()
-	{
-		_parser = await TestParser();
-	}
+	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
-	[Test, DependsOn<RoomsAndMovementTests>]
+	// , DependsOn<SharpMUSH.Tests.Commands.RoomsAndMovementTests>
+	[Test]
 	public async Task PCreate()
 	{
-		var result = (await _parser!.FunctionParse(MModule.single("pcreate(John,SomePassword)")))?.Message?.ToString()!;
+		var result = (await Parser!.FunctionParse(MModule.single("pcreate(John,SomePassword)")))?.Message?.ToString()!;
 
 		var a = HelperFunctions.ParseDBRef(result).AsValue();
-		var db = await _parser.Mediator.Send(new GetObjectNodeQuery(a));
+		var db = await Parser.Mediator.Send(new GetObjectNodeQuery(a));
 		var player = db!.AsPlayer;
 
-		await Assert.That(_parser.PasswordService.PasswordIsValid(result, "SomePassword", player.PasswordHash)).IsTrue();
-		await Assert.That(_parser.PasswordService.PasswordIsValid(result, "SomePassword2", player.PasswordHash)).IsFalse();
+		await Assert.That(Parser.PasswordService.PasswordIsValid(result, "SomePassword", player.PasswordHash)).IsTrue();
+		await Assert.That(Parser.PasswordService.PasswordIsValid(result, "SomePassword2", player.PasswordHash)).IsFalse();
 	}
 }

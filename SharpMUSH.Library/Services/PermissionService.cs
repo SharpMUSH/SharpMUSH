@@ -1,6 +1,8 @@
-﻿using SharpMUSH.Library.DiscriminatedUnions;
+﻿using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.Services;
@@ -52,7 +54,7 @@ public class PermissionService(ILockService lockService) : IPermissionService
 		return !await target.IsDark();
 	}
 
-	public async ValueTask<bool> CanHide(AnySharpObject executor) 
+	public async ValueTask<bool> CanHide(AnySharpObject executor)
 		=> await executor.IsPriv() || await executor.HasPower("HIDE");
 
 	public async ValueTask<bool> CanLogin(AnySharpObject executor)
@@ -136,6 +138,7 @@ public class PermissionService(ILockService lockService) : IPermissionService
 		if (type == IPermissionService.InteractType.Hear && !lockService.Evaluate(LockType.Interact, to, from))
 			return false;
 
+		// TODO: This looks like this is 'return true or true'.
 		if (fromStep.Object().Id == (await toStep.Location()).Object().Id
 		    || toStep.Object().Id == (await fromStep.Location()).Object().Id
 		    || await Controls(to, from))
@@ -158,14 +161,36 @@ public class PermissionService(ILockService lockService) : IPermissionService
 		=> await CanEval(evaluator, evaluationTarget)
 		   || attribute.IsPublic();
 
-	public ValueTask<bool> CouldDoIt(AnySharpObject who, AnyOptionalSharpObject thing1, string? what)
-	{
-		throw new NotImplementedException();
-	}
+	/// <summary>
+	/// Checks against basic lock.
+	/// </summary>
+	/// <param name="who">Who wants to pass the lock.</param>
+	/// <param name="thing">Against what thing?</param>
+	/// <returns>Whether or not they pass te basic lock.</returns>
+	public ValueTask<bool> CouldDoIt(AnySharpObject who, AnyOptionalSharpObject thing) 
+		=> ValueTask.FromResult( thing switch
+		{
+			{ IsNone: true } => false,
+			_ => PassesLock(who, thing.Known, LockType.Basic)
+		});
 
 	public ValueTask<bool> CanGoto(AnySharpObject who, SharpExit exit, AnySharpContainer destination)
 	{
-		// TODO: Implement
+		/*
+		 // D:\pennmush\src\move.c
+		 // Most details are in do_move (395)
+		 
+      if (!eval_lock_with(player, Location(player), Leave_Lock, pe_info)) {
+        fail_lock(player, Location(player), Leave_Lock,
+                  T("You can't go that way."), NOTHING);
+        return;
+      }
+      
+      // could_doit(player, exit_m, pe_info)
+      
+      
+		 */
+		
 		var _ = who;
 		var _2 = exit;
 		var _3 = destination;
