@@ -343,7 +343,8 @@ public partial class Functions
 		{
 			{ IsNone: true } => new CallState(Errors.ErrorNoSuchAttribute),
 			{ IsError: true } => new CallState(attributeObject.AsError.Value),
-			_ => new CallState((await attributeObject.AsAttribute.Last().Owner.WithCancellation(CancellationToken.None))!.Object
+			_ => new CallState((await attributeObject.AsAttribute.Last().Owner.WithCancellation(CancellationToken.None))!
+				.Object
 				.DBRef.ToString())
 		};
 	}
@@ -500,9 +501,8 @@ public partial class Functions
 		var arguments = await orderedArguments
 			.SkipLast(1)
 			.ToAsyncEnumerable()
-			.SelectAwait(async (value, i) => new KeyValuePair<string, CallState>(
-				i.ToString(),
-				new CallState(await value.Value.ParsedMessage())))
+			.Select(async (value, i, _) =>
+				new KeyValuePair<string, CallState>(i.ToString(), new CallState(await value.Value.ParsedMessage())))
 			.ToArrayAsync();
 
 		var result = await parser.With(s => s with
@@ -511,7 +511,7 @@ public partial class Functions
 				Arguments = arguments.ToDictionary()
 			},
 			async np => await np.FunctionParse(get.Value));
-		
+
 		return result!;
 	}
 

@@ -228,12 +228,12 @@ public class ArangoDatabase(
 			$"FOR v,e IN 1..1 OUTBOUND {target.Object().Id} GRAPH {DatabaseConstants.GraphFlags} FILTER v._id == {flag.Id} RETURN e._id");
 		return result.FirstOrDefault()?.Id;
 	}
-	
+
 	public async ValueTask<bool> SetObjectFlagAsync(AnySharpObject target, SharpObjectFlag flag)
 	{
 		var edge = await GetObjectFlagEdge(target, flag);
 		if (edge is not null) return false;
-		
+
 		await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphFlags, DatabaseConstants.HasFlags,
 			new SharpEdgeCreateRequest(target.Object().Id!, flag.Id!));
 
@@ -244,7 +244,7 @@ public class ArangoDatabase(
 	{
 		var edge = await GetObjectFlagEdge(target, flag);
 		if (edge == null) return false;
-		
+
 		await arangoDb.Graph.Edge.RemoveAsync<string>(handle, DatabaseConstants.GraphFlags, DatabaseConstants.HasFlags,
 			edge);
 
@@ -270,7 +270,7 @@ public class ArangoDatabase(
 
 	public async ValueTask<IEnumerable<SharpObjectFlag>> GetObjectFlagsAsync(string id)
 		=> (await arangoDb.Query.ExecuteAsync<SharpObjectFlagQueryResult>(handle,
-			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphFlags} RETURN v"))
+				$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphFlags} RETURN v"))
 			.Select(SharpObjectFlagQueryToSharpChannel);
 
 	public async ValueTask<IEnumerable<SharpMail>> GetSentMailsAsync(SharpObject sender, SharpPlayer recipient)
@@ -481,6 +481,43 @@ public class ArangoDatabase(
 		return resultingValue?.ToString(Formatting.None);
 	}
 
+	public async Task SetExpandedServerData(string dataType, string data)
+	{
+		var newJson = new Dictionary<string, dynamic>
+		{
+			{ "_key", dataType },
+			{ "data", data }
+		};
+
+		_ = await arangoDb.Document.CreateAsync(handle,
+			DatabaseConstants.ServerData,
+			newJson,
+			overwriteMode: ArangoOverwriteMode.Update,
+			mergeObjects: true,
+			keepNull: true);
+	}
+
+	public class ArangoDocumentWrapper<T>
+	{
+		public required T Data { get; set; }
+	}
+
+	public async ValueTask<string?> GetExpandedServerData(string dataType)
+	{
+		try
+		{
+			var result = await arangoDb.Document.GetAsync<ArangoDocumentWrapper<string>>(handle,
+				DatabaseConstants.ServerData,
+				dataType);
+
+			return result.Data;
+		}
+		catch
+		{
+			return null;
+		}
+	}
+
 	public async ValueTask<IEnumerable<SharpChannel>> GetAllChannelsAsync()
 	{
 		var result = await arangoDb.Query.ExecuteAsync<SharpChannelQueryResult>(
@@ -507,8 +544,9 @@ public class ArangoDatabase(
 		var vertexes = await arangoDb.Query.ExecuteAsync<(string Id, SharpChannelUserStatusQueryResult Status)>(handle,
 			$"FOR v IN 1..1 INBOUND {channelId} GRAPH {DatabaseConstants.GraphChannels} RETURN {{Id: v._id, Status: e}}");
 
-		return await AsyncEnumerable.ToAsyncEnumerable(vertexes)
-			.SelectAwait(async x =>
+		return await vertexes.ToAsyncEnumerable()
+			.Select<(string Id, SharpChannelUserStatusQueryResult Status), (AnySharpObject, SharpChannelStatus
+				)>(async (x, ct) =>
 				((
 						await GetObjectNodeAsync(x.Id)).Known(),
 					new SharpChannelStatus(
@@ -697,14 +735,14 @@ public class ArangoDatabase(
 			Id = x.Id,
 			Name = x.Name,
 			Symbol = x.Symbol,
-			System = x.system, 
+			System = x.system,
 			SetPermissions = x.SetPermissions,
 			UnsetPermissions = x.UnsetPermissions,
 			Aliases = x.Aliases,
 			TypeRestrictions = x.TypeRestrictions
 		};
 	}
-	
+
 	private async ValueTask<IEnumerable<SharpAttributeFlag>> GetAttributeFlagsAsync(string id)
 	{
 		var result = await arangoDb.Query.ExecuteAsync<SharpAttributeFlagQueryResult>(handle,

@@ -7,24 +7,13 @@ using M = MarkupString.MarkupImplementation.AnsiMarkup;
 
 namespace SharpMUSH.Tests.Database;
 
-public class ArangoDBTests : BaseUnitTest
+public class ArangoDBTests
 {
-	private static Infrastructure? _server;
-	private static ISharpDatabase? _database;
+	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required WebAppFactory WebAppFactoryArg { get; init; }
 
-	[Before(Class)]
-	public static async Task OneTimeSetup()
-	{
-		(_database, _server) = await IntegrationServer();
-	}
-
-	[After(Class)]
-	public static async Task OneTimeTearDown()
-	{
-		_server!.Dispose();
-		await Task.CompletedTask;
-	}
-
+	private ISharpDatabase _database => (ISharpDatabase)WebAppFactoryArg.Services.GetService(typeof(ISharpDatabase))!;
+	
 	[Test]
 	public async Task TestRoomZero()
 	{

@@ -10,17 +10,12 @@ using StringExtensions = ANSILibrary.StringExtensions;
 
 namespace SharpMUSH.Tests.Functions;
 
-public class StringFunctionUnitTests : BaseUnitTest
+public class StringFunctionUnitTests 
 {
-	private static IMUSHCodeParser? _parser;
+	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required WebAppFactory WebAppFactoryArg { get; init; }
 
-	[Before(Class)]
-	public static async Task OneTimeSetup()
-	{
-		_parser = await TestParser(
-			ns: Substitute.For<INotifyService>()
-		);
-	}
+	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
 	[Test]
 	[Arguments("ansi(r,red)", "red", (byte)31, null)]
@@ -34,7 +29,7 @@ public class StringFunctionUnitTests : BaseUnitTest
 			? new[] { expectedByte1 }
 			: new[] { expectedByte1, expectedByte2.Value };
 
-		var result = (await _parser!.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message!;
 
 		var color = StringExtensions.ansiBytes(expectedBytes);
 		var markup = MarkupString.MarkupImplementation.AnsiMarkup.Create(foreground: color);
@@ -67,7 +62,7 @@ public class StringFunctionUnitTests : BaseUnitTest
 			? new byte[] { expectedByte1 }
 			: new byte[] { expectedByte1, expectedByte2.Value };
 
-		var result = (await _parser!.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message!;
 
 		var color = StringExtensions.ansiBytes(expectedBytes);
 		var markup = MarkupString.MarkupImplementation.AnsiMarkup.Create(background: color);

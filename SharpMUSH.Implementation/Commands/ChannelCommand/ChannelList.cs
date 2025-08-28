@@ -25,12 +25,12 @@ public static class ChannelList
 
 		var channelList = await channels
 			.ToAsyncEnumerable()
-			.WhereAwait(async x => await parser.PermissionService.ChannelCanSeeAsync(executor,x))
-			.WhereAwait(async x => !offSwitch || (await x.Members.WithCancellation(CancellationToken.None))
+			.Where(async (x,_) => await parser.PermissionService.ChannelCanSeeAsync(executor,x))
+			.Where(async (x,_) => !offSwitch || (await x.Members.WithCancellation(CancellationToken.None))
 				.All(m => m.Member.Object().Id != executor.Object().Id))
-			.WhereAwait(async x => !onSwitch || (await x.Members.WithCancellation(CancellationToken.None))
+			.Where(async (x,_) => !onSwitch || (await x.Members.WithCancellation(CancellationToken.None))
 				.Any(m => m.Member.Object().Id == executor.Object().Id))
-			.Select(channel => quietSwitch 
+			.Select((channel,_) => quietSwitch 
 				? channel.Name
 				: MModule.concat(MModule.single("Name: "), channel.Name))
 			.ToArrayAsync();

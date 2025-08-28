@@ -1,8 +1,7 @@
-using System.Threading.Channels;
+using DotNext.Collections.Generic;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Extensions;
-using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 
@@ -36,7 +35,7 @@ public static class ChannelAdd
 		var allChannels = await parser.Mediator.Send(new GetChannelListQuery());
 		var ownedChannels = await allChannels
 			.ToAsyncEnumerable()
-			.WhereAwait(async x => 
+			.Where(async (x,_) => 
 				(await x.Owner.WithCancellation(CancellationToken.None)).Id == executorOwner.Id)
 			.CountAsync();
 		

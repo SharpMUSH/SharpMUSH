@@ -3,8 +3,10 @@ using System.Text;
 using BenchmarkDotNet.Attributes;
 using Core.Arango;
 using Core.Arango.Serialization.Newtonsoft;
+using OneOf.Types;
 using Serilog;
 using SharpMUSH.Library;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -46,8 +48,8 @@ public class BaseBenchmark
 		};
 		
 		var configFile = Path.Combine(AppContext.BaseDirectory, "mushcnf.dst");
-		_infrastructure = new Infrastructure(config, configFile);
-
+		
+		_infrastructure = new Infrastructure(config, configFile, null);
 		_database = _infrastructure!.Services.GetService(typeof(ISharpDatabase)) as ISharpDatabase;
 
 		try
@@ -64,7 +66,6 @@ public class BaseBenchmark
 	public async ValueTask Cleanup()
 	{
 		await Task.CompletedTask;
-		_infrastructure!.Dispose();
 	}
 
 	private async Task<(ISharpDatabase Database, Infrastructure Infrastructure)> IntegrationServer()
@@ -95,6 +96,7 @@ public class BaseBenchmark
 			ParserFunctionDepth: 0,
 			Function: null,
 			Command: "think",
+			CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
 			Switches: [],
 			Arguments: [],
 			Executor: one,

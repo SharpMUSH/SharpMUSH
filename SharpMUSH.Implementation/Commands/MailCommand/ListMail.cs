@@ -42,7 +42,7 @@ public static class ListMail
 				MModule.PadType.Center,
 				MModule.TruncationType.Truncate);
 
-			var folderTasks = await folder.ToAsyncEnumerable().SelectAwait(DisplayMailLine).ToArrayAsync();
+			var folderTasks = await folder.ToAsyncEnumerable().Select((x,y,_) => DisplayMailLine(x,y)).ToArrayAsync();
 			
 			MString[] builder =
 			[

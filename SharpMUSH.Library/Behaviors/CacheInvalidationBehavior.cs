@@ -9,11 +9,9 @@ namespace SharpMUSH.Library.Behaviors;
 public class CacheInvalidationBehavior<TRequest, TResponse>(IFusionCache cache) : IPipelineBehavior<TRequest, TResponse>
 	where TRequest : ICommand<TResponse>, ICacheInvalidating
 {
-	public async ValueTask<TResponse> Handle(
-		TRequest message,
-		CancellationToken cancellationToken,
-		MessageHandlerDelegate<TRequest, TResponse> next
-	)
+	public async ValueTask<TResponse> Handle(TRequest message, 
+		MessageHandlerDelegate<TRequest, TResponse> next, 
+		CancellationToken cancellationToken)
 	{
 		await foreach (var key in message.CacheKeys.ToAsyncEnumerable().WithCancellation(cancellationToken))
 		{

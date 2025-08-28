@@ -127,7 +127,7 @@ public partial class Functions
 	public static async ValueTask<CallState> LPIDs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentsOrdered;
 		var target = NoParseDefaultNoParseArgument(args, 0, "me");
 		var queueTypes = NoParseDefaultNoParseArgument(args, 0, "wait semaphore").ToPlainText().ToUpperInvariant()
 			.Split(" ").Distinct();

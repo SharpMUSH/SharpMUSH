@@ -1,8 +1,13 @@
-﻿using SharpMUSH.Library.Attributes;
+﻿using System.Globalization;
+using Humanizer;
+using SharpMUSH.Library;
+using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 
 namespace SharpMUSH.Implementation.Commands;
@@ -43,12 +48,47 @@ public partial class Commands
 		await ValueTask.CompletedTask;
 		throw new NotImplementedException();
 	}
+	
+	
+	[SharpCommand(Name = "@RWALL", Switches = ["NOEVAL", "EMIT"], Behavior = CB.Default,
+		CommandLock = "FLAG^WIZARD|FLAG^ROYALTY", MinArgs = 0)]
+	public static async ValueTask<Option<CallState>> RoyaltyWall(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{		
+		// TODO: Pipe through SPEAK()
+		var shout = parser.CurrentState.Arguments["0"].Message!;
+		var handles = parser.ConnectionService.GetAll().Select(x => x.Handle);
 
-	[SharpCommand(Name = "@WIZWALL", Switches = ["NOEVAL", "EMIT"], Behavior = CB.Default, CommandLock = "FLAG^WIZARD", MinArgs = 0)]
+		if (!parser.CurrentState.Switches.Contains("EMIT"))
+		{
+			shout = MModule.concat(MModule.single(parser.Configuration.CurrentValue.Cosmetic.RoyaltyWallPrefix + " "), shout);
+		}
+		
+		await foreach (var handle in handles.ToAsyncEnumerable())
+		{
+			await parser.NotifyService.Notify(handle, shout);
+		}
+
+		return new CallState(shout);
+	}
+
+	[SharpCommand(Name = "@WIZWALL", Switches = ["NOEVAL", "EMIT"], Behavior = CB.Default, CommandLock = "FLAG^WIZARD", MinArgs = 1, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> WizardWall(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		// TODO: Pipe through SPEAK()
+		var shout = parser.CurrentState.Arguments["0"].Message!;
+		var handles = parser.ConnectionService.GetAll().Select(x => x.Handle);
+
+		if (!parser.CurrentState.Switches.Contains("EMIT"))
+		{
+			shout = MModule.concat(MModule.single(parser.Configuration.CurrentValue.Cosmetic.WizardWallPrefix + " "), shout);
+		}
+		
+		await foreach (var handle in handles.ToAsyncEnumerable())
+		{
+			await parser.NotifyService.Notify(handle, shout);
+		}
+
+		return new CallState(shout);
 	}
 
 	[SharpCommand(Name = "@ALLQUOTA", Switches = ["QUIET"], Behavior = CB.Default, CommandLock = "FLAG^WIZARD|POWER^QUOTA", MinArgs = 0)]
@@ -75,6 +115,11 @@ public partial class Commands
 	[SharpCommand(Name = "@MOTD", Switches = ["CONNECT", "LIST", "WIZARD", "DOWN", "FULL", "CLEAR"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> MessageOfTheDay(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		/*
+			@motd[/<type>] <message>
+			@motd/clear[/<type>]
+			@motd/list
+  */
 		await ValueTask.CompletedTask;
 		throw new NotImplementedException();
 	}
@@ -191,8 +236,52 @@ public partial class Commands
 	[SharpCommand(Name = "@UPTIME", Switches = ["MORTAL"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Uptime(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var data = (await parser.ObjectDataService.GetExpandedServerDataAsync<UptimeData>())!;
+		var upSince = data.StartTime.Humanize();
+		var lastReboot = data.LastRebootTime.Humanize();
+		var reboots = data.Reboots.ToString();
+		var now = DateTimeOffset.UtcNow.Humanize();
+		var nextPurge = (data.NextPurgeTime - DateTimeOffset.Now).Humanize();
+		var nextWarning = (data.NextWarningTime - DateTimeOffset.Now).Humanize();
+		var uptime = (DateTimeOffset.Now - data.StartTime).Humanize();
+
+		var details = $"""
+		                          Up since: {upSince}
+		                       Last Reboot: {lastReboot}
+		                     Total Reboots: {reboots}
+		                          Time now: {now}
+		                        Next Purge: {nextPurge}
+		                     Next Warnings: {nextWarning}
+		                  SharpMUSH Uptime: {uptime}
+		               """;
+
+		await parser.NotifyService.Notify(executor, details);
+
+		if ((!await executor.IsWizard() && !executor.IsGod()) || parser.CurrentState.Switches.Contains("MORTAL"))
+		{
+			return new CallState(details);
+		}
+			
+		var process = System.Diagnostics.Process.GetCurrentProcess();
+		var pid = process.Id;
+		var memoryUsage = process.WorkingSet64.Bytes().Humanize("0.00");
+		var peakMemoryUsage = process.PeakWorkingSet64.Bytes().Humanize("0.00");
+		var paged = process.PagedMemorySize64.Bytes().Humanize("0.00");
+		var peakPaged = process.PeakPagedMemorySize64.Bytes().Humanize("0.00");
+			
+		var extra = $"""
+
+		                    Process ID: {pid}
+		                  Memory Usage: {memoryUsage}
+		             Peak Memory Usage: {peakMemoryUsage}
+		                  Paged Memory: {paged}
+		             Peak Paged Memory: {peakPaged}
+		             """;
+			
+		await parser.NotifyService.Notify(executor, extra);
+
+		return new CallState(details);
 	}
 
 	[SharpCommand(Name = "@CHOWNALL", Switches = ["PRESERVE", "THINGS", "ROOMS", "EXITS"], Behavior = CB.Default | CB.EqSplit, CommandLock = "FLAG^WIZARD", MinArgs = 0)]
@@ -242,8 +331,21 @@ public partial class Commands
 	[SharpCommand(Name = "@WALL", Switches = ["NOEVAL", "EMIT"], Behavior = CB.Default, CommandLock = "FLAG^WIZARD ROYALTY|POWER^ANNOUNCE", MinArgs = 0)]
 	public static async ValueTask<Option<CallState>> Wall(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		// TODO: Pipe through SPEAK()
+		var shout = parser.CurrentState.Arguments["0"].Message!;
+		var handles = parser.ConnectionService.GetAll().Select(x => x.Handle);
+
+		if (!parser.CurrentState.Switches.Contains("EMIT"))
+		{
+			shout = MModule.concat(MModule.single(parser.Configuration.CurrentValue.Cosmetic.WallPrefix + " "), shout);
+		}
+		
+		await foreach (var handle in handles.ToAsyncEnumerable())
+		{
+			await parser.NotifyService.Notify(handle, shout);
+		}
+
+		return new CallState(shout);
 	}
 
 	[SharpCommand(Name = "@CHZONEALL", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 0)]

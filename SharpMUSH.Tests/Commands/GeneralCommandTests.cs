@@ -9,13 +9,13 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-public class GeneralCommandTests : BaseUnitTest
+public class GeneralCommandTests
 {
-	private static readonly IMUSHCodeParser Parser = TestParser(ns: Substitute.For<INotifyService>())
-		.ConfigureAwait(false)
-		.GetAwaiter()
-		.GetResult();
+	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required WebAppFactory WebAppFactoryArg { get; init; }
 
+	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
+	
 	[Test]
 	[Arguments("@pemit #1=1 This is a test", "1 This is a test")]
 	[Arguments("@pemit #1=2 This is a test;", "2 This is a test;")]
@@ -162,22 +162,22 @@ public class GeneralCommandTests : BaseUnitTest
 	}
 
 	[Test]
-	public async ValueTask DoDigForCommandlistCheck()
+	public async ValueTask DoDigForCommandListCheck()
 	{
 		await Parser.CommandParse(1, MModule.single("@dig Bar Room=Exit;ExitAlias,ExitBack;ExitAliasBack"));
 
 		await Parser.NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<DBRef>(), "Bar Room created with room number #3.");
+			.Notify(Arg.Any<DBRef>(), "Bar Room created with room number #4.");
 		await Parser.NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<DBRef>(), "Linked exit #4 to #3");
+			.Notify(Arg.Any<DBRef>(), "Linked exit #5 to #4");
 		await Parser.NotifyService
 			.Received(Quantity.Exactly(2))
 			.Notify(Arg.Any<DBRef>(), "Trying to link...");
 		await Parser.NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<DBRef>(), "Linked exit #5 to #0");
+			.Notify(Arg.Any<DBRef>(), "Linked exit #6 to #0");
 	}
 
 	[Test]
@@ -245,33 +245,47 @@ public class GeneralCommandTests : BaseUnitTest
 		await Parser.NotifyService.Received(Quantity.Exactly(1)).Notify(Arg.Any<AnySharpObject>(), "broken 2e");
 	}
 
-	[Test, DependsOn(nameof(DoDigForCommandlistCheck))]
-	public async ValueTask DoDigForCommandlistCheck2()
+	[Test, DependsOn(nameof(DoDigForCommandListCheck))]
+	public async ValueTask DoDigForCommandListCheck2()
 	{
 		await Parser.CommandListParse(MModule.single("@dig Foo Room={Exit;ExitAlias},{ExitBack;ExitAliasBack}"));
 
 		await Parser.NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<DBRef>(), "Foo Room created with room number #6.");
+			.Notify(Arg.Any<DBRef>(), "Foo Room created with room number #7.");
 		await Parser.NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<DBRef>(), "Linked exit #7 to #6");
+			.Notify(Arg.Any<DBRef>(), "Linked exit #8 to #7");
 		await Parser.NotifyService
 			.Received(Quantity.Exactly(4))
 			.Notify(Arg.Any<DBRef>(), "Trying to link...");
 		await Parser.NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<DBRef>(), "Linked exit #8 to #0");
+			.Notify(Arg.Any<DBRef>(), "Linked exit #9 to #0");
 	}
 	
-	[Test, Skip("Not yet implemented")]
-	public async ValueTask SpicyFunctionCall()
-	{
-		await Parser.CommandListParse(MModule.single("&foo me=ucstr; think [get(me/foo)](bar)"));
 
+	[Test]
+	[DependsOn(nameof(DoDigForCommandListCheck2))]
+	public async Task DigAndMoveTest()
+	{
+		if(Parser is null) throw new Exception("Parser is null");
+		await Parser.CommandParse(1, MModule.single("@dig NewRoom=Forward;F,Backward;B"));
+		await Parser.CommandParse(1, MModule.single("think %l start"));
+		await Parser.CommandParse(1, MModule.single("goto Forward"));
+		await Parser.CommandParse(1, MModule.single("think %l forward"));
+		await Parser.CommandParse(1, MModule.single("goto Backward"));
+		await Parser.CommandParse(1, MModule.single("think %l back"));
+		
 		await Parser.NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<DBRef>(), "BAR");
+			.Notify(Arg.Any<AnySharpObject>(), "#0 start");
+		await Parser.NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), "#10 forward");
+		await Parser.NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), "#0 back");
 	}
 
 	[Test]	 

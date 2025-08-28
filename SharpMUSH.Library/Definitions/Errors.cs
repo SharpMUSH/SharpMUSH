@@ -40,4 +40,5 @@ public static class Errors
 	public const string ErrorBadArgumentFormat = "#-1 BAD ARGUMENT FORMAT TO {0}";
 	public const string ErrorAmbiguous = "#-2 I DON'T KNOW WHICH ONE YOU MEAN";
 	public const string NothingToEvaluate = "#-1 NOTHING TO EVALUATE";
+	public const string NothingToDo = "#-1 NOTHING TO DO";
 }

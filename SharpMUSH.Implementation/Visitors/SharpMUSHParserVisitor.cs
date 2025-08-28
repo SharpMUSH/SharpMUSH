@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using OneOf.Types;
 using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Implementation.Functions;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -38,21 +39,21 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 	public override async ValueTask<CallState?> VisitChildren(IRuleNode node)
 	{
 		var result = await DefaultResult;
-		
+
 		foreach (var child in Enumerable
 			         .Range(0, node.ChildCount)
 			         .Select(node.GetChild))
 		{
 			result = AggregateResult(result, await child.Accept(this));
 		}
-		
+
 		return result;
 	}
-	
+
 	public async ValueTask<CallState?> VisitChildrenOrBreak(IRuleNode node, Func<bool> haltPredicate)
 	{
 		var result = await DefaultResult;
-		
+
 		foreach (var child in Enumerable
 			         .Range(0, node.ChildCount)
 			         .Select(node.GetChild))
@@ -61,13 +62,14 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 			{
 				break;
 			}
+
 			result = AggregateResult(result, await child.Accept(this));
 		}
-		
+
 		return result;
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining|MethodImplOptions.AggressiveOptimization)]
+	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
 	private static CallState? AggregateResult(CallState? aggregate,
 		CallState? nextResult)
 		=> (aggregate, nextResult) switch
@@ -95,7 +97,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 
 		/* await parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, MModule.single(
 			$"#{parser.CurrentState.Caller!.Value.Number}! {new string(' ', parser.CurrentState.ParserFunctionDepth!.Value)}{context.GetText()} :")); */
-		
+
 		var result = await CallFunction(functionName.ToLower(), source, context, arguments, this);
 
 		/* await parser.NotifyService.Notify(parser.CurrentState.Caller!.Value, MModule.single(
@@ -103,7 +105,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 
 		return result;
 	}
-	
+
 	/// <summary>
 	/// TODO: Optimization needed. We should at least grab the in-built ones at startup.
 	/// TODO: Move this to a Library Service implementation.
@@ -128,7 +130,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 					return new CallState(string.Format(Errors.ErrorNoSuchFunction, name), context.Depth());
 				}
 
-				parser.FunctionLibrary.Add(name, (functionValue,true));
+				parser.FunctionLibrary.Add(name, (functionValue, true));
 				libraryMatch = parser.FunctionLibrary[name];
 			}
 
@@ -221,18 +223,6 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 					.ToList();
 			}
 
-			if (attribute.Flags.HasFlag(FunctionFlags.DecimalsOnly) && refinedArguments.Any(a =>
-				    !decimal.TryParse(MModule.plainText(a.Message ?? MModule.empty()), out _)))
-			{
-				return new CallState(attribute.MaxArgs > 1 ? Errors.ErrorNumbers : Errors.ErrorNumber);
-			}
-
-			if (attribute.Flags.HasFlag(FunctionFlags.IntegersOnly) && refinedArguments.Any(a =>
-				    !int.TryParse(MModule.plainText(a.Message ?? MModule.empty()), out _)))
-			{
-				return new CallState(attribute.MaxArgs > 1 ? Errors.ErrorIntegers : Errors.ErrorInteger);
-			}
-
 			// TODO: Consider adding the ParserContexts as Arguments, so that Evaluation can be more optimized.
 			var newParser = parser.Push(new ParserState(
 				Registers: currentState.Registers,
@@ -243,6 +233,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 				ParserFunctionDepth: parser.CurrentState.ParserFunctionDepth + 1,
 				Function: name,
 				Command: null,
+				CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
 				Switches: [],
 				Arguments: refinedArguments.Select((value, i) =>
 						new KeyValuePair<string, CallState>(i.ToString(), value))
@@ -260,6 +251,14 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 		catch (Exception ex)
 		{
 			logger.LogError(ex, nameof(CallFunction));
+
+			var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+
+			if (executor.IsGod())
+			{
+				await parser.NotifyService.Notify(executor, $"#-1 INTERNAL SHARPMUSH ERROR:\n{ex}");
+			}
+
 			return CallState.Empty;
 		}
 	}
@@ -270,8 +269,9 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 		if (!parser.FunctionLibrary.TryGetValue(name, out var result) || !result.IsSystem)
 			return new None();
 
-		return (result.LibraryInformation.Attribute, 
-			p => (ValueTask<CallState>)result.LibraryInformation.Function.Method.Invoke(null, [p, result.LibraryInformation.Attribute])!);
+		return (result.LibraryInformation.Attribute,
+			p => (ValueTask<CallState>)result.LibraryInformation.Function.Method.Invoke(null,
+				[p, result.LibraryInformation.Attribute])!);
 	}
 
 
@@ -356,8 +356,8 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 			// Step 2b: Check for a single-token command
 			// TODO: Optimize
 			var singleTokenCommandPattern = parser.CommandLibrary.Where(x
-				=> x.Key.Equals(command[..1], StringComparison.CurrentCultureIgnoreCase) 
-				   && x.Value.IsSystem 
+				=> x.Key.Equals(command[..1], StringComparison.CurrentCultureIgnoreCase)
+				   && x.Value.IsSystem
 				   && x.Value.LibraryInformation.Attribute.Behavior.HasFlag(CommandBehavior.SingleToken)).ToList();
 
 			if (singleTokenCommandPattern.Count != 0)
@@ -555,6 +555,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 			Arguments = arguments
 				.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value))
 				.ToDictionary(),
+			CommandInvoker = libraryCommandDefinition.Command,
 			Function = null
 		});
 
@@ -563,7 +564,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 
 	private static async ValueTask<Option<CallState>> HandleSocketCommandPattern(IMUSHCodeParser prs, MString src,
 		CommandContext context, string command,
-		IEnumerable<KeyValuePair<string, (CommandDefinition LibraryInformation,bool IsSystem)>> socketCommandPattern,
+		IEnumerable<KeyValuePair<string, (CommandDefinition LibraryInformation, bool IsSystem)>> socketCommandPattern,
 		(SharpCommandAttribute Attribute, Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Function)
 			librarySocketCommandDefinition)
 	{
@@ -572,7 +573,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 		var newParser = prs.Push(prs.CurrentState with
 		{
 			Command = command,
-			Arguments = arguments.Select((value, i) => 
+			Arguments = arguments.Select((value, i) =>
 					new KeyValuePair<string, CallState>(i.ToString(), value))
 				.ToDictionary(),
 			Function = null
@@ -584,7 +585,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 
 	private static async ValueTask<Option<CallState>> HandleSingleTokenCommandPattern(IMUSHCodeParser prs,
 		MString src, CommandContext context, string command,
-		IEnumerable<KeyValuePair<string, (CommandDefinition LibraryInformation,bool IsSystem)>> singleTokenCommandPattern)
+		IEnumerable<KeyValuePair<string, (CommandDefinition LibraryInformation, bool IsSystem)>> singleTokenCommandPattern)
 	{
 		var singleRootCommand = command[..1];
 		var rest = command[1..];
@@ -712,9 +713,8 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 
 		return arguments;
 	}
-	
-	
-	
+
+
 	public override async ValueTask<CallState?> VisitEvaluationString(
 		[NotNull] EvaluationStringContext context) => await VisitChildren(context) ?? new CallState(
 		MModule.substring(context.Start.StartIndex,
@@ -882,7 +882,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 		}
 
 		var isCommandList = context.Parent is CommandListContext;
-		
+
 		return (await EvaluateCommands(source, context, isCommandList, VisitChildren))
 			.Match<CallState?>(
 				x => x,
@@ -907,9 +907,9 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 		return new CallState(text, context.Depth());
 	}
 
-	private bool BreakTriggered() 
+	private bool BreakTriggered()
 		=> parser.CurrentState.ExecutionStack.TryPeek(out var result) && result.CommandListBreak;
-	
+
 	public override async ValueTask<CallState?> VisitCommandList([NotNull] CommandListContext context)
 	{
 		var result = await VisitChildrenOrBreak(context, BreakTriggered);
@@ -918,7 +918,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 		{
 			parser.CurrentState.ExecutionStack.TryPop(out _);
 		}
-		
+
 		if (result != null)
 		{
 			return result;
@@ -1023,7 +1023,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 		MString[] args = singleCommandArg.Length > 1
 			? [baseArg!.Message!, rsArg!.Message!]
 			: [baseArg!.Message!];
-		
+
 		// Log.Logger.Information("VisitEqSplitCommand: C1: {Text} - C2: {Text2}", baseArg?.ToString(), rsArg?.ToString());
 		return new CallState(
 			null,

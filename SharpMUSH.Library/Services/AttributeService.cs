@@ -115,7 +115,7 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		var attributes = await actualObject.Attributes.WithCancellation(CancellationToken.None);
 
 		return depth <= 1
-			? await attributes.ToAsyncEnumerable().WhereAwait(async x => await ps.CanViewAttribute(executor, obj, x))
+			? await attributes.ToAsyncEnumerable().Where(async (x, _) => await ps.CanViewAttribute(executor, obj, x))
 				.ToArrayAsync()
 			: (await GetVisibleAttributesAsync(attributes, executor, obj, depth))
 			.ToArray();
@@ -190,7 +190,7 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 	{
 		if (depth == 0) return [];
 
-		var visibleList = (await attributes.ToAsyncEnumerable().WhereAwait(x => ps.CanViewAttribute(executor, obj, x))
+		var visibleList = (await attributes.ToAsyncEnumerable().Where((x, _) => ps.CanViewAttribute(executor, obj, x))
 				.ToListAsync())
 			.ToImmutableList();
 
@@ -220,7 +220,7 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 			? Enumerable.Empty<SharpAttribute>().ToArray()
 			: await attributes
 				.ToAsyncEnumerable()
-				.WhereAwait(async x => await ps.CanViewAttribute(executor, obj, x))
+				.Where(async (x, _) => await ps.CanViewAttribute(executor, obj, x))
 				.ToArrayAsync();
 	}
 
@@ -299,7 +299,7 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 
 		// TODO: Fix, object permissions also needed.
 		var permission = attr == null ||
-		                 await attr.ToAsyncEnumerable().AllAwaitAsync(async x => await ps.CanSet(executor, obj, x));
+		                 await attr.ToAsyncEnumerable().AllAsync(async (x,_) => await ps.CanSet(executor, obj, x));
 
 		if (!permission)
 		{
@@ -340,7 +340,7 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		var attrArr = attr?.ToArray();
 
 		var permission = attrArr == null ||
-		                 await attrArr.ToAsyncEnumerable().AllAwaitAsync(async x => await ps.CanSet(executor, obj, x));
+		                 await attrArr.ToAsyncEnumerable().AllAsync(async (x,_) => await ps.CanSet(executor, obj, x));
 
 		if (!permission)
 		{
