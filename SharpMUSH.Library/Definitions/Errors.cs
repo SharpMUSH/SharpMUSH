@@ -1,4 +1,6 @@
-﻿namespace SharpMUSH.Library.Definitions;
+﻿using SharpMUSH.Library.ParserInterfaces;
+
+namespace SharpMUSH.Library.Definitions;
 
 public static class Errors
 {
@@ -41,4 +43,5 @@ public static class Errors
 	public const string ErrorAmbiguous = "#-2 I DON'T KNOW WHICH ONE YOU MEAN";
 	public const string NothingToEvaluate = "#-1 NOTHING TO EVALUATE";
 	public const string NothingToDo = "#-1 NOTHING TO DO";
+	public const string ExitsCannotContainThings = "#-1 EXITS CANNOT CONTAIN THINGS";
 }

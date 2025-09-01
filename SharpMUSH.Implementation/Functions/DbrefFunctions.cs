@@ -17,17 +17,18 @@ namespace SharpMUSH.Implementation.Functions;
 public partial class Functions
 {
 	[SharpFunction(Name = "loc", MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static async ValueTask<CallState> Loc(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Location(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 
-		return await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0, LocateFlags.All) switch
-		{
-			{ IsError: true, AsError: var error } => error,
-			{ AsSharpObject: { IsContent: true } found } => (await found.AsContent.Location()).Object().DBRef,
-			var container  => container.AsSharpObject.AsRoom.Object.DBRef
-		};
+		return await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0,
+				LocateFlags.All) switch
+			{
+				{ IsError: true, AsError: var error } => error,
+				{ AsSharpObject: { IsContent: true } found } => (await found.AsContent.Location()).Object().DBRef,
+				var container => container.AsSharpObject.AsRoom.Object.DBRef
+			};
 	}
 
 	[SharpFunction(Name = "CHILDREN", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -117,7 +118,8 @@ public partial class Functions
 
 			var attributeObject = maybeLocateAttributeObject.AsSharpObject;
 
-			var locateAttribute = await parser.AttributeService.GetAttributeAsync(executor, attributeObject, attribute, IAttributeService.AttributeMode.Read);
+			var locateAttribute = await parser.AttributeService.GetAttributeAsync(executor, attributeObject, attribute,
+				IAttributeService.AttributeMode.Read);
 
 			if (locateAttribute.IsError)
 			{
@@ -190,9 +192,8 @@ public partial class Functions
 					.ToArray();
 
 				return exits.Length != 0
-					? exits.First().ToString() 
+					? exits.First().ToString()
 					: string.Empty;
-				
 			});
 	}
 
@@ -216,15 +217,16 @@ public partial class Functions
 
 		return await parser.LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, arg0, LocateFlags.All,
-			async found => {
+			async found =>
+			{
 				if (found.IsContent)
 				{
-					var home = await found.AsContent.Home();
-					return home.Object().DBRef;
+					return (await found.AsContent.Home()).Object().DBRef;
 				}
 
 				// Implement DROP-TO behavior.
-				return "#-1 DROPTO TO BE IMPLEMENTED";});
+				return "#-1 DROPTO TO BE IMPLEMENTED";
+			});
 	}
 
 	[SharpFunction(Name = "LLOCKFLAGS", MinArgs = 0, MaxArgs = 1,
@@ -235,7 +237,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "ELOCK", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> ELock(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> EvaluateLock(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
@@ -247,13 +249,15 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "LOCALIZE", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.NoParse)]
-	public static ValueTask<CallState> Localize(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		throw new NotImplementedException();
-	}
+	public static async ValueTask<CallState> Localize(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> await parser
+			   .With(
+				   x => x with { Registers = [] },
+				   newParser => newParser.FunctionParse(parser.CurrentState.Arguments["0"].Message!))
+		   ?? CallState.Empty;
 
 	[SharpFunction(Name = "LOCATE", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> locate(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> Locate(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
@@ -266,19 +270,19 @@ public partial class Functions
 
 	[SharpFunction(Name = "LOCKFILTER", MinArgs = 2, MaxArgs = 3,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> lockfilter(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> LockFilter(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
 	[SharpFunction(Name = "LOCKOWNER", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> lockowner(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> LockOwner(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
 	[SharpFunction(Name = "LPARENT", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static async ValueTask<CallState> lparent(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> ListParents(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		var maybeLocate = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
@@ -287,7 +291,7 @@ public partial class Functions
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
 			LocateFlags.All);
 
-		if(maybeLocate.IsError)
+		if (maybeLocate.IsError)
 		{
 			return maybeLocate.AsError;
 		}
@@ -298,7 +302,7 @@ public partial class Functions
 		while (true)
 		{
 			var parent = await locate.Object().Parent.WithCancellation(CancellationToken.None);
-			if(parent.IsNone)
+			if (parent.IsNone)
 			{
 				break;
 			}
@@ -317,19 +321,19 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "LSEARCH", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> lsearch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> ListSearch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
 	[SharpFunction(Name = "LSEARCHR", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> lsearchr(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> ListSearchRegex(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
 	[SharpFunction(Name = "NAMELIST", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular)]
-	public static async ValueTask<CallState> namelist(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> NameList(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		var namelist = NameList(parser.CurrentState.Arguments["0"].Message!.ToPlainText());
@@ -339,14 +343,15 @@ public partial class Functions
 
 		var dbrefListExisting = await dbrefList
 			.ToAsyncEnumerable()
-			.Where(async (x,_) => await parser.Mediator.Send(new GetBaseObjectNodeQuery(x)) is not null)
+			.Where(async (x, _) => await parser.Mediator.Send(new GetBaseObjectNodeQuery(x)) is not null)
 			.ToHashSetAsync();
 
 		// var dbrefListNotExisting = dbrefList.Except(dbrefListExisting); 
 
 		var strListExisting = await strList
 			.ToAsyncEnumerable()
-			.Select<string,(string x, AnyOptionalSharpObjectOrError)>(async (x,_) => (x, await parser.LocateService.Locate(parser,
+			.Select<string, (string x, AnyOptionalSharpObjectOrError)>(async (x, _) => (x, await parser.LocateService.Locate(
+				parser,
 				executor,
 				executor,
 				parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
@@ -365,275 +370,294 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "NCHILDREN", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static async ValueTask<CallState> nchildren(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> NumberOfChildren(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
-		var maybeLocate = await parser.LocateService.LocateAndNotifyIfInvalid(parser,
-			executor,
-			executor,
-			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
-			LocateFlags.All);
+		var arg1 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
-		switch (maybeLocate)
-		{
-			case { IsError: true }:
-				return maybeLocate.AsError.Value;
-			case { IsNone: true }:
-				return Errors.ErrorNotVisible;
-		}
-
-		var locate = maybeLocate.AsAnyObject;
-		var children = await locate.Object().Children.WithCancellation(CancellationToken.None);
-
-		return children.Count();
+		return await parser.LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
+			parser, executor, executor, arg1, LocateFlags.All,
+			async x =>
+			{
+				var children = await x.Object().Children.WithCancellation(CancellationToken.None);
+				return children.Count();
+			});
 	}
 
 	[SharpFunction(Name = "NEXT", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> next(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> Next(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
 	[SharpFunction(Name = "NEXTDBREF", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> nextdbref(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> NextDbReference(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
 	[SharpFunction(Name = "NLSEARCH", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> nlsearch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> NumberOfListSearch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
 	[SharpFunction(Name = "NSEARCH", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> nsearch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> NumberOfSearch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
 	[SharpFunction(Name = "NUM", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static async ValueTask<CallState> num(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Number(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var maybeLocate = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
+
+		return await parser.LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
+			parser,
 			executor,
 			executor,
 			arg0,
-			LocateFlags.All);
-
-		if(maybeLocate.IsError)
-		{
-			return maybeLocate.AsError;
-		}
-
-		var locate = maybeLocate.AsSharpObject;
-		return locate.Object().DBRef;
+			LocateFlags.All,
+			found =>
+				ValueTask.FromResult<CallState>(found.Object().DBRef));
 	}
 
 	[SharpFunction(Name = "NUMVERSION", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> numversion(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> NumVersion(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
 	[SharpFunction(Name = "PARENT", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> parent(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Parent(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
+		var arg1 = parser.CurrentState.Arguments.ContainsKey("1")
+			? parser.CurrentState.Arguments["1"].Message!.ToPlainText()
+			: null;
+
+		if (arg1 == null)
+		{
+			return await parser.LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
+				parser, executor, executor, arg0, LocateFlags.All,
+				async found =>
+					(await found.Object().Parent.WithCancellation(CancellationToken.None)).Object()
+					?.DBRef.ToString() ?? "");
+		}
+
+		// TODO: Implement setting the new parent and then returning them.
+		return new CallState(Errors.ErrorNoSideFX);
 	}
 
 	[SharpFunction(Name = "PMATCH", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static async ValueTask<CallState> pmatch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> PlayerMatch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
-		var result = await parser.LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser,
-			executor,
-			executor,
-			parser.CurrentState.Arguments["0"].Message!.ToPlainText());
 
-		return result switch
-		{
-			{ IsError: true } => result.AsError,
-			_ => result.AsSharpObject.Object().DBRef
-		};
+		return await parser.LocateService.LocatePlayerAndNotifyIfInvalidWithCallStateFunction(parser,
+			executor,
+			executor,
+			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
+			x => ValueTask.FromResult<CallState>(x.Object.DBRef));
 	}
 
 	[SharpFunction(Name = "RLOC", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> rloc(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> RecursiveLocation(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
 	[SharpFunction(Name = "ROOM", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> room(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Room(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+
+		return await parser.LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+			executor,
+			executor,
+			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
+			LocateFlags.All,
+			async x =>
+				// TODO: This is not a valid implementation of Room()
+				// A helper function for Room() would be helpful.
+				x.IsContent
+						? (await x.AsContent.Location()).Object().DBRef
+						: x.Object().DBRef);
 	}
 
 	[SharpFunction(Name = "WHERE", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> where(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Where(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+
+		return await parser.LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+			executor,
+			executor,
+			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
+			LocateFlags.All,
+			async x =>
+				await x.Match<ValueTask<string>>(
+					async player => (await player.Location.WithCancellation(CancellationToken.None)).Object().DBRef.ToString(), 
+					_ => ValueTask.FromResult<string>("#-1 THIS IS A ROOM"), 
+					// TODO: Exit may need editing
+					async exit => (await exit.Location.WithCancellation(CancellationToken.None)).Object().DBRef.ToString(),
+					async thing => (await thing.Location.WithCancellation(CancellationToken.None)).Object().DBRef.ToString()));
 	}
 
 	[SharpFunction(Name = "ZONE", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> zone(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> Zone(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
 	[SharpFunction(Name = "XTHINGS", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> xthings(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> ExtractThings(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
 	[SharpFunction(Name = "XVCON", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> xvcon(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> ExtractVisualContents(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
 	[SharpFunction(Name = "XVEXITS", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> xvexits(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> ExtractVisualExits(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
 	[SharpFunction(Name = "XVPLAYERS", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> xvplayers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> ExtractVisualPlayers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
 	[SharpFunction(Name = "XVTHINGS", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> xvthings(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> ExtractVisualThings(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
 	[SharpFunction(Name = "XCON", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> xcon(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> ExtractContents(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
 	[SharpFunction(Name = "XEXITS", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> xexits(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> ExtractExits(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
 	[SharpFunction(Name = "XPLAYERS", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> xplayers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> ExtractPlayers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
 	[SharpFunction(Name = "LCON", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static async ValueTask<CallState> lcon(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> ListContents(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
-		var maybeLocate = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
+
+		return await parser.LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
-			LocateFlags.All);
+			LocateFlags.All,
+			async locate =>
+			{
+				if (!locate.IsContainer)
+				{
+					return  Errors.ExitsCannotContainThings;
+				}
 
-		if (maybeLocate.IsError)
-		{
-			return maybeLocate.AsError;
-		}
-
-		var locate = maybeLocate.AsSharpObject;
-		if (!locate.IsContainer)
-		{
-			// TODO: Create its own error code for this.
-			return "#-1 EXITS CANNOT CONTAIN THINGS";
-		}
-
-		var contents = await locate.AsContainer.Content(parser);
-
-		return string.Join(" ", contents.Select(x => x.Object().DBRef.ToString()));
+				return string.Join(" ", (await locate.AsContainer.Content(parser))
+					.Select(x => x.Object().DBRef.ToString()));
+			});
 	}
 
 	[SharpFunction(Name = "LEXITS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> lexits(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> ListExits(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
 	[SharpFunction(Name = "LPLAYERS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> lplayers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> ListPlayers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
 	[SharpFunction(Name = "LTHINGS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> lthings(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> ListThings(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
 	[SharpFunction(Name = "LVCON", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> lvcon(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> ListVisualContents(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
 	[SharpFunction(Name = "LVEXITS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> lvexits(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> ListVisualExits(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
 	[SharpFunction(Name = "LVPLAYERS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> lvplayers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> ListVisualPlayers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
 	[SharpFunction(Name = "LVTHINGS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> lvthings(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> ListVisualThings(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
 	[SharpFunction(Name = "ORFLAGS", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> orflags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> OrFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
 	[SharpFunction(Name = "ORLFLAGS", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> orlflags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> OrListFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
 	[SharpFunction(Name = "ORLPOWERS", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> orlpowers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> OrListPowers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
 	[SharpFunction(Name = "ANDFLAGS", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> andflags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> AndFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
 	[SharpFunction(Name = "ANDLFLAGS", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> andlflags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> AndListFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
 	[SharpFunction(Name = "ANDLPOWERS", MinArgs = 2, MaxArgs = 2,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> andlpowers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> AndListPowers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
@@ -645,43 +669,43 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "NEXITS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> nexits(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> NumberOfExits(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
 	[SharpFunction(Name = "NPLAYERS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> nplayers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> NumberOfPlayers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
 	[SharpFunction(Name = "NTHINGS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> nthings(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> NumberOfThings(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
 	[SharpFunction(Name = "NVCON", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> nvcon(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> NumberOfVisualContents(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
 	[SharpFunction(Name = "NVEXITS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> nvexits(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> NumberOfVisualExits(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
 	[SharpFunction(Name = "NVPLAYERS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> nvplayers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> NumberOfVisualPlayers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
 	[SharpFunction(Name = "NVTHINGS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> nvthings(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> NumberOfVisualThings(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}

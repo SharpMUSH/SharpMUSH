@@ -1380,17 +1380,16 @@ public class ArangoDatabase(
 			{
 				{ StartVertex, baseObject.Object()!.Id! }
 			});
+
 		var result = query
-			.Select(x => x)
-			.Select(GetObjectNodeAsync) // TODO: Optimize to make a single call.
-			.Select(async x => (await x).Match<AnySharpContent>(
+			.Select(async x => (await GetObjectNodeAsync(x)).Match<AnySharpContent>(
 				player => player,
 				_ => throw new Exception("Invalid Contents found"),
 				exit => exit,
 				thing => thing,
 				_ => throw new Exception("Invalid Contents found")
 			));
-
+		
 		return await Task.WhenAll(result);
 	}
 
