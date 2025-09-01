@@ -8,6 +8,8 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using System.Globalization;
 using System.Linq;
+using DotNext.Collections.Generic;
+using AsyncEnumerable = System.Linq.AsyncEnumerable;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -19,11 +21,12 @@ public partial class Functions
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "CMDS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> Commands(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		throw new NotImplementedException();
-	}
+	[SharpFunction(Name = "CMDS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, Restrict = ["admin", "power:see_all"])]
+	public static async ValueTask<CallState> Commands(IMUSHCodeParser parser, SharpFunctionAttribute _2) 
+		=> await ForHandleOrPlayer(parser, parser.CurrentState.Arguments["0"],
+			(_,cd) => ValueTask.FromResult<CallState>(cd.Metadata["CMDS"]),
+			(_,cd) => ValueTask.FromResult<CallState>(cd.Metadata["CMDS"])
+		);
 
 	[SharpFunction(Name = "CONN", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> ConnectedSeconds(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -152,14 +155,13 @@ public partial class Functions
 
 		// NEEDED: 'Get All Players'.
 
-		var allConnectionsDbRefs = await parser.ConnectionService
-			.GetAll()
-			.Where(x => x.Ref is not null)
-			.ToAsyncEnumerable()
-			.Where(async (x,_) => await parser.PermissionService.CanSee(looker, (await parser.Mediator.Send(new GetObjectNodeQuery(x.Ref!.Value))).Known)) // TODO: Looker CanSee
-			.Select(x => x.Ref!.Value)
-			.Select(x => $"#{x.Number}")
-			.ToArrayAsync();
+		var allConnectionsDbRefs = await AsyncEnumerable.ToArrayAsync(parser.ConnectionService
+				.GetAll()
+				.Where(x => x.Ref is not null)
+				.ToAsyncEnumerable()
+				.Where(async (x,_) => await parser.PermissionService.CanSee(looker, (await parser.Mediator.Send(new GetObjectNodeQuery(x.Ref!.Value))).Known)) // TODO: Looker CanSee
+				.Select(x => x.Ref!.Value)
+				.Select(x => $"#{x.Number}"));
 		
 		return new CallState(string.Join(" ", allConnectionsDbRefs));
 	}

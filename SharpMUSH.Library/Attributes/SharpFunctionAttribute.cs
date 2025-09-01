@@ -9,4 +9,5 @@ public class SharpFunctionAttribute : Attribute
 	public int MinArgs { get; set; } = 0;
 	public int MaxArgs { get; set; } = 32;
 	public required FunctionFlags Flags { get; set; } = FunctionFlags.Regular;
+	public string[] Restrict { get; set; } = [];
 }

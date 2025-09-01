@@ -10,6 +10,7 @@ using System.Globalization;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -329,6 +330,36 @@ public partial class Functions
 				: null,
 			async name => (await parser.Mediator.Send(new GetPlayerQuery(name))).FirstOrDefault())));
 
+	public static async ValueTask<CallState> ForHandleOrPlayer(IMUSHCodeParser parser, CallState value, Func<long, IConnectionService.ConnectionData, ValueTask<CallState>> handleFunc, Func<SharpPlayer,IConnectionService.ConnectionData,ValueTask<CallState>> playerFunc)
+	{
+			var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+			var valueText = MModule.plainText(value.Message);
+	
+			var isHandle = long.TryParse(valueText, out var handle);
+			
+			if (isHandle)
+			{
+				var handleData = parser.ConnectionService.Get(handle);
+				if (handleData == null) return new CallState("#-1 That handle is not connected.");
+				
+				return await handleFunc(handle, handleData);
+			}
+	
+			var maybeFound = await parser.LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, valueText);
+	
+			if (maybeFound.IsError)
+			{
+				return maybeFound.AsError;
+			}
+	
+			var found = maybeFound.AsSharpObject.AsPlayer;
+			var foundData = parser.ConnectionService.Get(found.Object.DBRef).FirstOrDefault();
+			
+			if(foundData == null) return new CallState("#-1 That player is not connected.");
+			
+			return await playerFunc(found, foundData);
+	}
+	
 	/// <summary>
 	/// A regular expression that matches one or more names in a list format.
 	/// </summary>
