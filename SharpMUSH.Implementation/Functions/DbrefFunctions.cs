@@ -118,7 +118,7 @@ public partial class Functions
 			{
 				return locateAttribute.AsError.Value;
 			}
-			else if (locateAttribute.IsNone)
+			if (locateAttribute.IsNone)
 			{
 				return Errors.ErrorNotVisible;
 			}
@@ -474,18 +474,17 @@ public partial class Functions
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
 			LocateFlags.All,
 			async x =>
-				// TODO: This is not a valid implementation of Room()
-				// A helper function for Room() would be helpful.
-				x.IsContent
-						? (await x.AsContent.Location()).Object().DBRef
-						: x.Object().DBRef);
+			{
+				var room = await parser.LocateService.Room(x); 
+				return room.Object().DBRef;
+			});
 	}
 
 	[SharpFunction(Name = "WHERE", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> Where(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
-
+		
 		return await parser.LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
@@ -577,21 +576,71 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "LEXITS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> ListExits(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> ListExits(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+
+		return await parser.LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+			executor,
+			executor,
+			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
+			LocateFlags.All,
+			async locate =>
+			{
+				if (!locate.IsContainer)
+				{
+					return  Errors.ExitsCannotContainThings;
+				}
+
+				return string.Join(" ", (await locate.AsContainer.Content(parser))
+					.Where(x => x.IsExit)
+					.Select(x => x.Object().DBRef.ToString()));
+			});
 	}
 
 	[SharpFunction(Name = "LPLAYERS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> ListPlayers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> ListPlayers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+
+		return await parser.LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+			executor,
+			executor,
+			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
+			LocateFlags.All,
+			async locate =>
+			{
+				if (!locate.IsContainer)
+				{
+					return  Errors.ExitsCannotContainThings;
+				}
+
+				return string.Join(" ", (await locate.AsContainer.Content(parser))
+					.Where(x => x.IsPlayer)
+					.Select(x => x.Object().DBRef.ToString()));
+			});
 	}
 
 	[SharpFunction(Name = "LTHINGS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> ListThings(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		throw new NotImplementedException();
+	public static async ValueTask<CallState> ListThings(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+
+		return await parser.LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+			executor,
+			executor,
+			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
+			LocateFlags.All,
+			async locate =>
+			{
+				if (!locate.IsContainer)
+				{
+					return  Errors.ExitsCannotContainThings;
+				}
+
+				return string.Join(" ", (await locate.AsContainer.Content(parser))
+					.Where(x => x.IsThing)
+					.Select(x => x.Object().DBRef.ToString()));
+			});
 	}
 
 	[SharpFunction(Name = "LVCON", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
