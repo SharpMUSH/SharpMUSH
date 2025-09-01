@@ -112,6 +112,42 @@ public interface ISharpDatabase
 	ValueTask<bool> SetObjectFlagAsync(AnySharpObject dbref, SharpObjectFlag flag);
 
 	/// <summary>
+	/// Sets a name on an object.
+	/// </summary>
+	/// <param name="obj">The object to alter</param>
+	/// <param name="value">The value for the field</param>
+	/// <returns>Result</returns>
+	ValueTask SetObjectName(AnySharpObject obj, MString value);
+
+	/// <summary>
+	/// Sets the Home of a content object. The 'home' of a Room is its Drop-To.
+	/// </summary>
+	/// <param name="obj">Object</param>
+	/// <param name="home">New Value</param>
+	ValueTask SetContentHome(AnySharpContent obj, AnySharpContainer home);
+	
+	/// <summary>
+	/// Sets the Location of a content object. 
+	/// </summary>
+	/// <param name="obj">Object</param>
+	/// <param name="location">New Value</param>
+	ValueTask SetContentLocation(AnySharpContent obj, AnySharpContainer location);
+	
+	/// <summary>
+	/// Sets the Parent of an object.
+	/// </summary>
+	/// <param name="obj">Object</param>
+	/// <param name="parent">New Value</param>
+	ValueTask SetObjectParent(AnySharpObject obj, AnySharpObject? parent);
+
+	/// <summary>
+	/// Sets the Owner of an Object to a player.
+	/// </summary>
+	/// <param name="obj">Object</param>
+	/// <param name="owner">New Value</param>
+	ValueTask SetObjectOwner(AnySharpObject obj, SharpPlayer owner);
+
+	/// <summary>
 	/// Unset an Object flag.
 	/// </summary>
 	/// <param name="dbref">Database Reference Number</param>
@@ -175,10 +211,11 @@ public interface ISharpDatabase
 	/// <summary>
 	/// Set an attribute flag. This does not do any checks, as that is up to the functionality itself.
 	/// </summary>
+	/// <param name="attr"></param>
+	/// <param name="flag">Flag</param>
 	/// <param name="dbref">Database Reference Number</param>
 	/// <param name="attribute">Attribute Path.</param>
-	/// <param name="flag">Flag</param>
-	ValueTask<bool> UnsetAttributeFlagAsync(SharpAttribute attr, SharpAttributeFlag flag);
+	ValueTask UnsetAttributeFlagAsync(SharpAttribute attr, SharpAttributeFlag flag);
 
 	/// <summary>
 	/// Set an attribute. This does not do any checks, as that is up to the functionality itself.

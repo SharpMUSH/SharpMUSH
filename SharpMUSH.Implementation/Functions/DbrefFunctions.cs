@@ -431,7 +431,7 @@ public partial class Functions
 		var arg1 = parser.CurrentState.Arguments.ContainsKey("1")
 			? parser.CurrentState.Arguments["1"].Message!.ToPlainText()
 			: null;
-
+		
 		if (arg1 == null)
 		{
 			return await parser.LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(

@@ -48,7 +48,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@NAME", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.NoGagged | CB.NoGuest,
-		MinArgs = 0, MaxArgs = 0)]
+		MinArgs = 2, MaxArgs = 2)]
 	public static async ValueTask<Option<CallState>> Rename(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		await ValueTask.CompletedTask;

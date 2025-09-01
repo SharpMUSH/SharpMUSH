@@ -18,6 +18,7 @@ using DotNext.Threading;
 using FSharpPlus.Control;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Quartz;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using AsyncEnumerable = System.Linq.AsyncEnumerable;
@@ -238,6 +239,79 @@ public class ArangoDatabase(
 			new SharpEdgeCreateRequest(target.Object().Id!, flag.Id!));
 
 		return true;
+	}
+
+	public async ValueTask SetObjectName(AnySharpObject obj, MarkupStringModule.MarkupString value)
+		=> await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Objects,
+			new
+			{
+				Id = obj.Id(),
+				Name = value
+			});
+
+	public async ValueTask SetContentHome(AnySharpContent obj, AnySharpContainer home)
+	{
+		var response = await arangoDb.Query.ExecuteAsync<string>(handle,
+			$"FOR v,e IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphHomes} RETURN e._id",
+			new Dictionary<string, object> { { StartVertex, obj.Id } });
+		
+		var contentEdge = response.First();
+		
+		await arangoDb.Graph.Edge.UpdateAsync(handle, DatabaseConstants.GraphHomes, DatabaseConstants.HasHome,
+			contentEdge, new { To = home.Id });
+	}
+
+	public async ValueTask SetContentLocation(AnySharpContent obj, AnySharpContainer location)
+	{
+		var response = await arangoDb.Query.ExecuteAsync<string>(handle,
+			$"FOR v,e IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphLocations} RETURN e._id",
+			new Dictionary<string, object> { { StartVertex, obj.Id } });
+		
+		var contentEdge = response.First();
+		
+		await arangoDb.Graph.Edge.UpdateAsync(handle, DatabaseConstants.GraphLocations, DatabaseConstants.AtLocation,
+			contentEdge, new { To = location.Id });
+	}
+
+	public async ValueTask SetObjectParent(AnySharpObject obj, AnySharpObject? parent)
+	{
+		var response = await arangoDb.Query.ExecuteAsync<string>(handle,
+			$"FOR v,e IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphParents} RETURN e._id",
+			new Dictionary<string, object> { { StartVertex, obj.Id()! } });
+		
+		var contentEdge = response.FirstOrDefault();
+
+		if (contentEdge == null && parent == null)
+		{
+			return;
+		}
+		if (contentEdge == null && parent != null)
+		{
+			await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphParents, DatabaseConstants.HasParent,
+				new { To = parent.Id() });
+		}
+		else if (parent == null)
+		{
+			await arangoDb.Graph.Edge.RemoveAsync<object>(handle, DatabaseConstants.GraphParents, DatabaseConstants.HasParent,
+				contentEdge);
+		}
+		else
+		{
+			await arangoDb.Graph.Edge.UpdateAsync(handle, DatabaseConstants.GraphParents, DatabaseConstants.HasParent,
+				contentEdge, new { To = parent.Id() });
+		}
+	}
+
+	public async ValueTask SetObjectOwner(AnySharpObject obj, SharpPlayer owner)
+	{
+		var response = await arangoDb.Query.ExecuteAsync<string>(handle,
+			$"FOR v,e IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphObjectOwners} RETURN e._id",
+			new Dictionary<string, object> { { StartVertex, obj.Id()! } });
+		
+		var contentEdge = response.First();
+		
+		await arangoDb.Graph.Edge.UpdateAsync(handle, DatabaseConstants.GraphObjectOwners, DatabaseConstants.HasObjectOwner,
+			contentEdge, new { To = owner.Id });
 	}
 
 	public async ValueTask<bool> UnsetObjectFlagAsync(AnySharpObject target, SharpObjectFlag flag)
@@ -1389,7 +1463,7 @@ public class ArangoDatabase(
 				thing => thing,
 				_ => throw new Exception("Invalid Contents found")
 			));
-		
+
 		return await Task.WhenAll(result);
 	}
 
@@ -1504,11 +1578,6 @@ public class ArangoDatabase(
 				To = destination.Id
 			},
 			waitForSync: true);
-	}
-
-	ValueTask<bool> ISharpDatabase.UnsetAttributeFlagAsync(SharpAttribute attr, SharpAttributeFlag flag)
-	{
-		throw new NotImplementedException();
 	}
 
 	public async ValueTask SetupLogging()
