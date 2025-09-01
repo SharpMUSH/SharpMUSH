@@ -153,6 +153,7 @@ public partial class Functions
 	[SharpFunction(Name = "get", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> Get(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).WithoutNone();
 		var dbrefAndAttr =
 			HelperFunctions.SplitObjectAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
 
@@ -162,31 +163,28 @@ public partial class Functions
 		}
 
 		var (dbref, attribute) = dbrefAndAttr.AsT0;
-		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).WithoutNone();
-		var maybeDBref =
-			await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, dbref,
-				LocateFlags.All);
 
-		if (maybeDBref.IsError)
-		{
-			return maybeDBref.AsError;
-		}
-
-		var actualObject = maybeDBref.AsSharpObject;
-
-		var maybeAttr = await parser.AttributeService.GetAttributeAsync(
+		return await parser.LocateService.LocatePlayerAndNotifyIfInvalidWithCallStateFunction(parser, 
+			executor, 
 			executor,
-			actualObject,
-			attribute,
-			mode: IAttributeService.AttributeMode.Read,
-			parent: false);
+			dbref,
+			async x =>
+			{
+				
+				var maybeAttr = await parser.AttributeService.GetAttributeAsync(
+					executor,
+					x,
+					attribute,
+					mode: IAttributeService.AttributeMode.Read,
+					parent: false);
 
-		return maybeAttr switch
-		{
-			{ IsError: true } => new CallState(maybeAttr.AsError.Value),
-			{ IsNone: true } => new CallState(string.Empty),
-			_ => new CallState(maybeAttr.AsAttribute.Last().Value)
-		};
+				return maybeAttr switch
+				{
+					{ IsError: true } => new CallState(maybeAttr.AsError.Value),
+					{ IsNone: true } => new CallState(string.Empty),
+					_ => new CallState(maybeAttr.AsAttribute.Last().Value)
+				};
+			});
 	}
 
 	[SharpFunction(Name = "GET_EVAL", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]

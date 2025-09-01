@@ -21,13 +21,12 @@ public partial class Functions
 	{
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
-		var maybeFound = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0, LocateFlags.All);
 
-		return maybeFound switch
+		return await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0, LocateFlags.All) switch
 		{
-			{ IsError: true } => maybeFound.AsError,
-			{ AsSharpObject: { IsContent: true } } => (await maybeFound.AsSharpObject.AsContent.Location()).Object().DBRef,
-			_ => maybeFound.AsSharpObject.AsRoom.Object.DBRef
+			{ IsError: true, AsError: var error } => error,
+			{ AsSharpObject: { IsContent: true } found } => (await found.AsContent.Location()).Object().DBRef,
+			var container  => container.AsSharpObject.AsRoom.Object.DBRef
 		};
 	}
 
@@ -165,36 +164,36 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		var enactor = await parser.CurrentState.KnownEnactorObject(parser.Mediator);
-		var maybeLocate = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
+
+		return await parser.LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
-			LocateFlags.All);
+			LocateFlags.All,
+			async locate =>
+			{
+				if (locate.IsPlayer && enactor.Object().DBRef == locate.Object().DBRef)
+				{
+					locate = (await locate.AsPlayer.Location.WithCancellation(CancellationToken.None)).WithExitOption();
+				}
 
-		if (maybeLocate.IsError)
-		{
-			return maybeLocate.AsError;
-		}
+				if (!locate.IsRoom)
+				{
+					// TODO: Create a proper error constant for this.
+					return "#-1 OBJECT IS NOT A ROOM";
+				}
 
-		var locate = maybeLocate.AsSharpObject;
+				// Todo: Turn Content into async enumerable.
+				var exits = (await locate.AsContainer.Content(parser))
+					.Where(x => x.IsExit)
+					.Select(x => x.Object().DBRef)
+					.ToArray();
 
-		if (locate.IsPlayer && enactor.Object().DBRef == locate.Object().DBRef)
-		{
-			locate = (await locate.AsPlayer.Location.WithCancellation(CancellationToken.None)).WithExitOption();
-		}
-
-		if (!locate.IsRoom)
-		{
-			// TODO: Create a proper error constant for this.
-			return "#-1 OBJECT IS NOT A ROOM";
-		}
-
-		var content = await locate.AsContainer.Content(parser);
-		var exits = content.Where(x => x.IsExit).Select(x => x.Object().DBRef);
-
-		return exits.Any()
-			? exits.First().ToString() 
-			: string.Empty;
+				return exits.Length != 0
+					? exits.First().ToString() 
+					: string.Empty;
+				
+			});
 	}
 
 	[SharpFunction(Name = "FOLLOWERS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -214,25 +213,18 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var maybeLocate = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
-			executor,
-			executor,
-			arg0,
-			LocateFlags.All);
 
-		if (maybeLocate.IsError)
-		{
-			return maybeLocate.AsError;
-		}
+		return await parser.LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+			executor, executor, arg0, LocateFlags.All,
+			async found => {
+				if (found.IsContent)
+				{
+					var home = await found.AsContent.Home();
+					return home.Object().DBRef;
+				}
 
-		if (maybeLocate.AsSharpObject.IsContent)
-		{
-			var home = await maybeLocate.AsSharpObject.AsContent.Home();
-			return home.Object().DBRef;
-		}
-
-		// Implement DROP-TO behavior.
-		return "#-1 DROPTO TO BE IMPLEMENTED";
+				// Implement DROP-TO behavior.
+				return "#-1 DROPTO TO BE IMPLEMENTED";});
 	}
 
 	[SharpFunction(Name = "LLOCKFLAGS", MinArgs = 0, MaxArgs = 1,

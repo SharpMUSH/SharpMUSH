@@ -54,6 +54,16 @@ public partial class LocateService : ILocateService
 		return loc.AsAnyObject;
 	}
 
+	public async ValueTask<CallState> LocateAndNotifyIfInvalidWithCallStateFunction(IMUSHCodeParser parser,
+		AnySharpObject looker,
+		AnySharpObject executor, string name, LocateFlags flags, Func<AnySharpObject, ValueTask<CallState>> foundFunc)
+		=> await LocateAndNotifyIfInvalidWithCallState(parser, looker, executor, name, flags) switch
+		{
+			{ IsError: true, AsError: var error } => error,
+			{ IsT0: true, AsSharpObject: var obj } => await foundFunc(obj),
+			_ => throw new InvalidOperationException("Unexpected state in LocateAndNotifyIfInvalidWithCallStateFunction")
+		};
+
 	public async ValueTask<AnyOptionalSharpObjectOrError> Locate(
 		IMUSHCodeParser parser,
 		AnySharpObject looker,
@@ -111,6 +121,16 @@ public partial class LocateService : ILocateService
 		LocateAndNotifyIfInvalidWithCallState(parser, looker, executor, name,
 			LocateFlags.PlayersPreference | LocateFlags.OnlyMatchTypePreference | LocateFlags.EnglishStyleMatching |
 			LocateFlags.MatchOptionalWildCardForPlayerName);
+
+	public async ValueTask<CallState> LocatePlayerAndNotifyIfInvalidWithCallStateFunction(IMUSHCodeParser parser,
+		AnySharpObject looker,
+		AnySharpObject executor, string name, Func<SharpPlayer, ValueTask<CallState>> foundFunc)
+		=> await LocatePlayerAndNotifyIfInvalidWithCallState(parser, looker, executor, name) switch
+		{
+			{ IsError: true, AsError: var error } => error,
+			{ IsT0: true, AsSharpObject: var obj } => await foundFunc(obj.AsPlayer),
+			_ => throw new InvalidOperationException("Unexpected state in LocateAndNotifyIfInvalidWithCallStateFunction")
+		};
 
 	public ValueTask<AnyOptionalSharpObjectOrError> LocatePlayer(IMUSHCodeParser parser, AnySharpObject looker,
 		AnySharpObject executor, string name)
@@ -432,7 +452,7 @@ public partial class LocateService : ILocateService
 
 		if (TypePreferences(flags).Contains(thing1.Object()!.Type) &&
 		    !TypePreferences(flags).Contains(thing2.Object()!.Type)) return thing1;
-		if (TypePreferences(flags).Contains(thing2.Object()!.Type) 
+		if (TypePreferences(flags).Contains(thing2.Object()!.Type)
 		    || !flags.HasFlag(LocateFlags.PreferLockPass)) return thing2;
 
 		var key = await parser.PermissionService.CouldDoIt(who, thing1);

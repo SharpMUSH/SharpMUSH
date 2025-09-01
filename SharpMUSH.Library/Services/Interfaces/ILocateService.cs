@@ -1,4 +1,5 @@
 ﻿using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Library.Services.Interfaces;
@@ -50,6 +51,14 @@ public interface ILocateService
 		string name,
 		LocateFlags flags);
 
+	public ValueTask<CallState> LocateAndNotifyIfInvalidWithCallStateFunction(
+		IMUSHCodeParser parser,
+		AnySharpObject looker,
+		AnySharpObject executor,
+		string name,
+		LocateFlags flags,
+		Func<AnySharpObject, ValueTask<CallState>> foundFunc);
+
 	public ValueTask<AnyOptionalSharpObjectOrError> Locate(
 		IMUSHCodeParser parser,
 		AnySharpObject looker,
@@ -68,6 +77,13 @@ public interface ILocateService
 		AnySharpObject looker,
 		AnySharpObject executor,
 		string name);
+	
+	public ValueTask<CallState> LocatePlayerAndNotifyIfInvalidWithCallStateFunction(
+		IMUSHCodeParser parser,
+		AnySharpObject looker,
+		AnySharpObject executor,
+		string name,
+		Func<SharpPlayer, ValueTask<CallState>> foundFunc);
 
 	public ValueTask<AnyOptionalSharpObjectOrError> LocatePlayer(
 		IMUSHCodeParser parser,
