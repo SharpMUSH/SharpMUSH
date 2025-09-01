@@ -35,47 +35,40 @@ public partial class Functions
 	public static async ValueTask<CallState> Children(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
-		var maybeLocate = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
+		
+		return await parser.LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
-			LocateFlags.All);
-
-		if (maybeLocate.IsError)
-		{
-			return maybeLocate.AsError;
-		}
-
-		var locate = maybeLocate.AsSharpObject;
-		var children = await locate.Object().Children.WithCancellation(CancellationToken.None);
-
-		return string.Join(" ", children.Select(x => x.DBRef.ToString()));
+			LocateFlags.All,
+			async locate =>
+			{
+				var children = await locate.Object().Children.WithCancellation(CancellationToken.None);
+				return string.Join(" ", children.Select(x => x.DBRef.ToString()));
+				
+			} );
 	}
 
 	[SharpFunction(Name = "CON", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> Con(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
-		var maybeLocate = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
+		
+		return await parser.LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
-			LocateFlags.All);
+			LocateFlags.All,
+			async locate =>
+			{
+				if (!locate.IsContainer)
+				{
+					return CallState.Empty;
+				}
 
-		if (maybeLocate.IsError)
-		{
-			return maybeLocate.AsError;
-		}
-
-		var locate = maybeLocate.AsSharpObject;
-
-		if (!locate.IsContainer)
-		{
-			return CallState.Empty;
-		}
-
-		var contents = await locate.AsContainer.Content(parser);
-		return string.Join(" ", contents.Take(1).Select(x => x.Object().DBRef.ToString()));
+				var contents = await locate.AsContainer.Content(parser);
+				return string.Join(" ", contents.Take(1).Select(x => x.Object().DBRef.ToString()));
+			});
 	}
 
 	[SharpFunction(Name = "CONTROLS", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
