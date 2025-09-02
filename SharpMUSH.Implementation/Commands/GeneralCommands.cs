@@ -25,10 +25,8 @@ namespace SharpMUSH.Implementation.Commands;
 public static partial class Commands
 {
 	[SharpCommand(Name = "@@", Switches = [], Behavior = CB.Default | CB.NoParse, MinArgs = 0, MaxArgs = 0)]
-	public static ValueTask<Option<CallState>> At(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		return ValueTask.FromResult(new Option<CallState>(CallState.Empty));
-	}
+	public static ValueTask<Option<CallState>> At(IMUSHCodeParser parser, SharpCommandAttribute _2) 
+		=> ValueTask.FromResult<Option<CallState>>(CallState.Empty);
 
 	[SharpCommand(Name = "THINK", Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> Think(IMUSHCodeParser parser, SharpCommandAttribute _2)
@@ -44,7 +42,7 @@ public static partial class Commands
 		var output = args["0"].Message!;
 
 		await parser.NotifyService.Notify(executor, output.ToString());
-		return new None();
+		return args["0"];
 	}
 
 	[SharpCommand(Name = "HUH_COMMAND", Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
@@ -213,24 +211,35 @@ public static partial class Commands
 		var objParent = await obj.Parent.WithCancellation(CancellationToken.None);
 		var objPowers = await obj.Powers.WithCancellation(CancellationToken.None);
 
-		await parser.NotifyService.Notify(enactor, $"{name.Hilight()}" +
-		                                           $"(#{obj.DBRef.Number}{string.Join(string.Empty, objFlags.Select(x => x.Symbol))})");
-		await parser.NotifyService.Notify(enactor,
-			$"Type: {obj.Type} Flags: {string.Join(" ", objFlags.Select(x => x.Name))}");
-		await parser.NotifyService.Notify(enactor, description.ToString());
-		await parser.NotifyService.Notify(enactor, $"Owner: {ownerName.Hilight()}" +
-		                                           $"(#{obj.DBRef.Number}{string.Join(string.Empty, ownerObjFlags.Select(x => x.Symbol))})");
-		// TODO: Zone & Money
-		await parser.NotifyService.Notify(enactor, $"Parent: {objParent?.Name ?? "*NOTHING*"}");
+		var nameRow = MModule.multiple([
+			name.Hilight(), 
+			MModule.single(" "), 
+			MModule.single($"(#{obj.DBRef.Number}{string.Join(string.Empty, objFlags.Select(x => x.Symbol))})")
+		]);
+		
+		var typeAndFlagsRow = MModule.single($"Type: {obj.Type} Flags: {string.Join(" ", objFlags.Select(x => x.Name))}");
+		var descriptionRow = description;
+		var ownerRow = MModule.single($"Owner: {ownerName.Hilight()}" +
+		                              $"(#{obj.DBRef.Number}{string.Join(string.Empty, ownerObjFlags.Select(x => x.Symbol))})");
+		var parentRow = MModule.single($"Parent: {objParent?.Name ?? "*NOTHING*"}");
 		// TODO: LOCK LIST
-		await parser.NotifyService.Notify(enactor, $"Powers: {string.Join(" ", objPowers.Select(x => x.Name))}");
+		var powersRow = MModule.single($"Powers: {string.Join(" ", objPowers.Select(x => x.Name))}");
 		// TODO: Channels
 		// TODO: Warnings Checked
 
 		// TODO: Match proper date format: Mon Feb 26 18:05:10 2007
-		await parser.NotifyService.Notify(enactor,
-			$"Created: {DateTimeOffset.FromUnixTimeMilliseconds(obj.CreationTime):F}");
+		var createdRow = MModule.single($"Created: {DateTimeOffset.FromUnixTimeMilliseconds(obj.CreationTime):F}");
 
+		await parser.NotifyService.Notify(enactor, MModule.multipleWithDelimiter(MModule.single("\n"), [
+			nameRow,
+			typeAndFlagsRow,
+			descriptionRow,
+			ownerRow,
+			parentRow,
+			powersRow,
+			createdRow
+		]));
+		
 		var atrs = await parser.AttributeService.GetVisibleAttributesAsync(enactor, viewing.Known());
 
 		if (atrs.IsAttribute)
@@ -241,8 +250,8 @@ public static partial class Commands
 				await parser.NotifyService.Notify(enactor,
 					MModule.concat(
 						$"{attr.Name} [#{(await attr.Owner.WithCancellation(CancellationToken.None))!.Object.DBRef.Number}]: "
-							.Hilight()
-						, attr.Value));
+							.Hilight(),
+						attr.Value));
 			}
 		}
 
@@ -255,14 +264,14 @@ public static partial class Commands
 			// TODO: Proper Format.
 			await parser.NotifyService.Notify(enactor, $"Home: {(await viewing.Known().MinusRoom().Home()).Object().Name}");
 			await parser.NotifyService.Notify(enactor,
-				$"Location: {(await viewing.Known().MinusRoom().Location()).Object().Name}");
+				$"Location: {(await viewing.Known().AsContent.Location()).Object().Name}");
 		}
 
 		return new CallState(obj.DBRef.ToString());
 	}
 
 	[SharpCommand(Name = "@PEMIT", Behavior = CB.Default | CB.EqSplit, MinArgs = 1, MaxArgs = 2)]
-	public static async ValueTask<Option<CallState>> PEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public static async ValueTask<Option<CallState>> PlayerEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
 
