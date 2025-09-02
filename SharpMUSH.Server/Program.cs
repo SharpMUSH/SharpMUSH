@@ -66,20 +66,20 @@ public class Program
 		}
 
 		var startup = new Startup(config, configFile, null);
-		var builtProvider = startup.ConfigureServices(builder.Services);
-
-		var app = builder.Build();
-
-		var optionMonitor = (IOptionsMonitor<PennMUSHOptions>)builtProvider.GetService(typeof(IOptionsMonitor<PennMUSHOptions>))!;
-		var netValues = optionMonitor.CurrentValue.Net;
-
+		startup.ConfigureServices(builder.Services);
+		
 		builder.WebHost.ConfigureKestrel((_, options) =>
 		{
+			var optionMonitor = (IOptionsMonitor<PennMUSHOptions>)options.ApplicationServices.GetService(typeof(IOptionsMonitor<PennMUSHOptions>))!;
+			var netValues = optionMonitor.CurrentValue.Net;
+
 			options.ListenAnyIP(Convert.ToInt32(netValues.Port), listenOptions => { listenOptions.UseConnectionHandler<TelnetServer>(); });
 			options.ListenAnyIP(Convert.ToInt32(netValues.PortalPort));
 			options.ListenAnyIP(Convert.ToInt32(netValues.SllPortalPort), o => o.UseHttps());
 		});
-		
+
+		var app = builder.Build();
+
 		await ConfigureApp(app).RunAsync();
 	}
 
@@ -97,10 +97,11 @@ public class Program
 			app.UseHsts();
 		}
 		app.UseDefaultFiles();
-		app.MapStaticAssets();
+		app.UseBlazorFrameworkFiles(); // Serves Blazor framework files and the staticwebassets.endpoints.json manifest
 		app.UseHttpsRedirection();
 		app.UseAuthorization();
 		app.UseBlazorFrameworkFiles();
+		app.MapStaticAssets("SharpMUSH.Portal.staticwebassets.endpoints.json");
 		app.UseStaticFiles();
 		app.UseRouting();
 		app.MapControllers();

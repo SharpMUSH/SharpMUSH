@@ -1,6 +1,7 @@
 ﻿using Core.Arango;
 using Mediator;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,6 +22,7 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Server.ProtocolHandlers;
 using TaskScheduler = SharpMUSH.Library.Services.TaskScheduler;
 
 namespace SharpMUSH.Server;
@@ -29,7 +31,7 @@ public class Startup(ArangoConfiguration config, string configFile, INotifyServi
 {
 	// This method gets called by the runtime. Use this method to add services to the container.
 	// For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
-	public ServiceProvider ConfigureServices(IServiceCollection services)
+	public void ConfigureServices(IServiceCollection services)
 	{
 		services.AddLogging(logging =>
 		{
@@ -103,9 +105,11 @@ public class Startup(ArangoConfiguration config, string configFile, INotifyServi
 		{
 			x.UseInMemoryStore();
 		});
+		services.AddAuthorization();
+		services.AddRazorPages();
+		services.AddControllers();
 		services.AddQuartzHostedService();
 		services.AddHostedService<StartupHandler>();
-		return services.BuildServiceProvider();
 	}
 
 	// This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

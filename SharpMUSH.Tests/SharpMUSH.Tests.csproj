@@ -26,8 +26,8 @@
     <PackageReference Include="NSubstitute" Version="5.3.0" />
     <PackageReference Include="Serilog" Version="4.3.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
-    <PackageReference Include="Testcontainers.ArangoDb" Version="4.6.0" />
-    <PackageReference Include="TUnit" Version="0.57.1" />
+    <PackageReference Include="Testcontainers.ArangoDb" Version="4.7.0" />
+    <PackageReference Include="TUnit" Version="0.57.24" />
   </ItemGroup>
 
   <ItemGroup>
