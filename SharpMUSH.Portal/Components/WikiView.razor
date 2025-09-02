@@ -1,0 +1,51 @@
+@using SharpMUSH.Portal.Models
+@using SharpMUSH.Portal.Services
+@inject WikiService Wiki
+
+
+@if (Mode == WikiMode.View)
+{
+    <WikiDisplay Slug=@Slug Article=@_article ActivateEditMode="ActivateEditMode" />
+}
+else
+{
+    <br/>
+    <WikiEdit Article=@_article/>
+}
+
+@code {
+    public enum WikiMode
+    {
+        View,
+        Edit
+    }
+
+    [Parameter]
+    public required string Slug { get; init; }
+
+    [Parameter]
+    public required WikiMode Mode { get; set; } = WikiMode.View;
+
+    public async Task ActivateEditMode()
+    {
+        await ValueTask.CompletedTask;
+        Mode = WikiMode.Edit;
+    }
+
+    private WikiArticle? _article;
+
+    protected async override Task OnInitializedAsync()
+    {
+        var article = await Wiki.GetWikiArticle(Slug);
+        if (article.IsT0)
+        {
+            _article = article.AsT0;
+        }
+        else
+        {
+            _article = null;
+        }
+
+        await base.OnInitializedAsync();
+    }
+}

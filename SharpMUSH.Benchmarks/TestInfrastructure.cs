@@ -27,6 +27,7 @@ public class Infrastructure : TestServer
 	private static IWebHostBuilder WebHostBuilder(ArangoConfiguration acnf, string configFile, INotifyService? notifier) =>
 		WebHost.CreateDefaultBuilder()
 			.UseStartup(_ => new Startup(acnf, configFile, notifier))
+			.ConfigureServices(x => { })
 			.UseEnvironment("test")
 			.UseKestrel(options => options.ListenLocalhost(4202, builder => builder.UseConnectionHandler<TelnetServer>()));
 }

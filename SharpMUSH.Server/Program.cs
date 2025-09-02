@@ -1,26 +1,43 @@
 ﻿using Core.Arango;
 using Core.Arango.Serialization.Newtonsoft;
 using Core.Arango.Serilog;
-using Microsoft.AspNetCore;
+using Mediator;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Quartz;
 using Serilog;
+using Serilog.Events;
 using Serilog.Sinks.PeriodicBatching;
 using Serilog.Sinks.SystemConsole.Themes;
+using SharpMUSH.Configuration;
+using SharpMUSH.Configuration.Options;
+using SharpMUSH.Database.ArangoDB;
+using SharpMUSH.Implementation;
+using SharpMUSH.Implementation.Commands;
+using SharpMUSH.Implementation.Functions;
+using SharpMUSH.Library;
+using SharpMUSH.Library.Behaviors;
+using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services;
+using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.ProtocolHandlers;
 using Testcontainers.ArangoDb;
+using TaskScheduler = SharpMUSH.Library.Services.TaskScheduler;
 
 namespace SharpMUSH.Server;
 
 public class Program
 {
-	public static async Task Main()
+	public static async Task Main(params string[] args)
 	{
-		Log.Logger = new LoggerConfiguration()
-			.Enrich.FromLogContext()
-			.WriteTo.Console(theme: AnsiConsoleTheme.Code)
-			.MinimumLevel.Debug()
-			.CreateLogger();
+		var builder = WebApplication.CreateBuilder(args);
 
 		var container = new ArangoDbBuilder()
 			// .WithReuse(true)
@@ -29,8 +46,7 @@ public class Program
 			.WithPassword("password")
 			.Build();
 
-		await container.StartAsync()
-			.ConfigureAwait(false);
+		await container.StartAsync();
 
 		var config = new ArangoConfiguration
 		{
@@ -38,18 +54,18 @@ public class Program
 			Serializer = new ArangoNewtonsoftSerializer(new ArangoNewtonsoftDefaultContractResolver())
 		};
 
-		Log.Logger = new LoggerConfiguration()
+		builder.Logging.AddSerilog(new LoggerConfiguration()
 			.Enrich.FromLogContext()
 			.WriteTo.Console(theme: AnsiConsoleTheme.Code)
 			.WriteTo.Sink(new PeriodicBatchingSink(
-				new ArangoSerilogSink(new ArangoContext(config), 
-					"logs", 
+				new ArangoSerilogSink(new ArangoContext(config),
+					"logs",
 					"logs",
 					ArangoSerilogSink.LoggingRenderStrategy.StoreTemplate,
-					true, 
-					true, 
+					true,
+					true,
 					true),
-				new()
+				new PeriodicBatchingSinkOptions
 				{
 					BatchSizeLimit = 1000,
 					QueueLimit = 100000,
@@ -58,7 +74,7 @@ public class Program
 				}
 			))
 			.MinimumLevel.Debug()
-			.CreateLogger();
+			.CreateLogger());
 
 		var configFile = Path.Combine(AppContext.BaseDirectory, "mushcnf.dst");
 
@@ -67,21 +83,45 @@ public class Program
 			throw new FileNotFoundException($"Configuration file not found: {configFile}");
 		}
 
-		var webHost = CreateWebHostBuilder(config, configFile).Build(); 
-		await webHost.RunAsync();
+		builder.WebHost.ConfigureKestrel((_, options) =>
+		{
+			options.ListenAnyIP(4203, listenOptions => { listenOptions.UseConnectionHandler<TelnetServer>(); });
+			options.ListenAnyIP(5117);
+			options.ListenAnyIP(7296, o => o.UseHttps());
+		});
+
+		var startup = new Startup(config, configFile, null);
+		startup.ConfigureServices(builder.Services);
+
+		var app = builder.Build();
 		
-		webHost.Dispose();
-		await container.DisposeAsync();
+		await ConfigureApp(app).RunAsync();
 	}
 
-	private static IWebHostBuilder CreateWebHostBuilder(ArangoConfiguration arangoConfig, string configFile) =>
-		WebHost
-			.CreateDefaultBuilder()
-			.UseStartup(_ => new Startup(arangoConfig, configFile, null))
-			.UseKestrel(options =>
-				options.ListenLocalhost(
-					4202,
-					builder => builder.UseConnectionHandler<TelnetServer>()
-				)
-			);
+	private static WebApplication ConfigureApp(WebApplication app)
+	{
+		if (app.Environment.IsDevelopment())
+		{
+			app.UseWebAssemblyDebugging();
+		}
+		else
+		{
+			app.UseDeveloperExceptionPage();
+			// app.UseExceptionHandler("/Error");
+			// The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+			app.UseHsts();
+		}
+		app.UseDefaultFiles();
+		app.MapStaticAssets();
+		app.UseHttpsRedirection();
+		app.UseAuthorization();
+		app.UseBlazorFrameworkFiles();
+		app.UseStaticFiles();
+		app.UseRouting();
+		app.MapControllers();
+		app.MapFallbackToFile("index.html");
+		app.MapRazorPages();
+		
+		return app;
+	}
 }
