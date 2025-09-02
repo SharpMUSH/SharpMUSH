@@ -1,35 +1,17 @@
 ﻿using Core.Arango;
 using Core.Arango.Serialization.Newtonsoft;
 using Core.Arango.Serilog;
-using Mediator;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Quartz;
 using Serilog;
-using Serilog.Events;
 using Serilog.Sinks.PeriodicBatching;
 using Serilog.Sinks.SystemConsole.Themes;
-using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
-using SharpMUSH.Database.ArangoDB;
-using SharpMUSH.Implementation;
-using SharpMUSH.Implementation.Commands;
-using SharpMUSH.Implementation.Functions;
-using SharpMUSH.Library;
-using SharpMUSH.Library.Behaviors;
-using SharpMUSH.Library.Definitions;
-using SharpMUSH.Library.ParserInterfaces;
-using SharpMUSH.Library.Services;
-using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.ProtocolHandlers;
 using Testcontainers.ArangoDb;
-using TaskScheduler = SharpMUSH.Library.Services.TaskScheduler;
 
 namespace SharpMUSH.Server;
 
@@ -83,17 +65,20 @@ public class Program
 			throw new FileNotFoundException($"Configuration file not found: {configFile}");
 		}
 
-		builder.WebHost.ConfigureKestrel((_, options) =>
-		{
-			options.ListenAnyIP(4203, listenOptions => { listenOptions.UseConnectionHandler<TelnetServer>(); });
-			options.ListenAnyIP(5117);
-			options.ListenAnyIP(7296, o => o.UseHttps());
-		});
-
 		var startup = new Startup(config, configFile, null);
-		startup.ConfigureServices(builder.Services);
+		var builtProvider = startup.ConfigureServices(builder.Services);
 
 		var app = builder.Build();
+
+		var optionMonitor = (IOptionsMonitor<PennMUSHOptions>)builtProvider.GetService(typeof(IOptionsMonitor<PennMUSHOptions>))!;
+		var netValues = optionMonitor.CurrentValue.Net;
+
+		builder.WebHost.ConfigureKestrel((_, options) =>
+		{
+			options.ListenAnyIP(Convert.ToInt32(netValues.Port), listenOptions => { listenOptions.UseConnectionHandler<TelnetServer>(); });
+			options.ListenAnyIP(Convert.ToInt32(netValues.PortalPort));
+			options.ListenAnyIP(Convert.ToInt32(netValues.SllPortalPort), o => o.UseHttps());
+		});
 		
 		await ConfigureApp(app).RunAsync();
 	}

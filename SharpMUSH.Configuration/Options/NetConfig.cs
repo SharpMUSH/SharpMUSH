@@ -7,6 +7,8 @@ public record NetConfig(
 	[property: PennConfig(Name = "ssl_ip_addr")] string? SslIpAddr ,
 	[property: PennConfig(Name = "port")] uint Port ,
 	[property: PennConfig(Name = "ssl_port")] uint SslPort ,
+	[property: PennConfig(Name = "portal_port")] uint PortalPort ,
+	[property: PennConfig(Name = "ssl_portal_port")] uint SllPortalPort ,
 	[property: PennConfig(Name = "socket_file")] string SocketFile ,
 	[property: PennConfig(Name = "use_ws")] bool UseWebsockets ,
 	[property: PennConfig(Name = "ws_url")] string WebsocketUrl ,

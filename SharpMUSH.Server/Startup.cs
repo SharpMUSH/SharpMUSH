@@ -29,7 +29,7 @@ public class Startup(ArangoConfiguration config, string configFile, INotifyServi
 {
 	// This method gets called by the runtime. Use this method to add services to the container.
 	// For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
-	public void ConfigureServices(IServiceCollection services)
+	public ServiceProvider ConfigureServices(IServiceCollection services)
 	{
 		services.AddLogging(logging =>
 		{
@@ -105,7 +105,7 @@ public class Startup(ArangoConfiguration config, string configFile, INotifyServi
 		});
 		services.AddQuartzHostedService();
 		services.AddHostedService<StartupHandler>();
-		services.BuildServiceProvider();
+		return services.BuildServiceProvider();
 	}
 
 	// This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
