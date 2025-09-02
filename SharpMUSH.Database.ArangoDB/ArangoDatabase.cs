@@ -38,22 +38,31 @@ public class ArangoDatabase(
 
 	public async ValueTask Migrate()
 	{
-		logger.LogInformation("Migrating Database");
-
-		var migrator = new ArangoMigrator(arangoDb)
+		try
 		{
-			HistoryCollection = "MigrationHistory"
-		};
+			logger.LogInformation("Migrating Database");
 
-		if (!await migrator.Context.Database.ExistAsync(handle))
-		{
-			await migrator.Context.Database.CreateAsync(handle);
+			var migrator = new ArangoMigrator(arangoDb)
+			{
+				HistoryCollection = "MigrationHistory"
+			};
+
+			if (!await migrator.Context.Database.ExistAsync(handle))
+			{
+				await migrator.Context.Database.CreateAsync(handle);
+			}
+
+			migrator.AddMigrations(typeof(ArangoDatabase).Assembly);
+			await migrator.UpgradeAsync(handle);
+
+			logger.LogInformation("Migration Completed.");
+
 		}
-
-		migrator.AddMigrations(typeof(ArangoDatabase).Assembly);
-		await migrator.UpgradeAsync(handle);
-
-		logger.LogInformation("Migration Completed.");
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Migration Failed. Check details for further information.");
+			throw;
+		}
 	}
 
 	public async ValueTask<DBRef> CreatePlayerAsync(string name, string password, DBRef location)

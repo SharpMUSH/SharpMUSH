@@ -27,7 +27,7 @@ public class RegistersUnitTests
 	{
 		Console.WriteLine("Testing: {0}", str);
 
-		await Parser!.CommandParse(1, MModule.single(str));
+		await Parser.CommandParse(1, MModule.single(str));
 
 		await Parser.NotifyService
 			.Received(Quantity.Exactly(1))

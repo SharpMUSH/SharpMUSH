@@ -4,7 +4,7 @@ public static class DatabaseConstants
 {
 	public const string Objects = "node_objects";
 	public const string ObjectData = "node_object_data";
-	public const string ServerData = "node_object_data";
+	public const string ServerData = "node_server_data";
 	public const string Players = "node_players";
 	public const string Rooms = "node_rooms";
 	public const string Things = "node_things";

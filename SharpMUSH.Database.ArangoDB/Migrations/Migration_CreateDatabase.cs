@@ -101,6 +101,15 @@ public class Migration_CreateDatabase : IArangoMigration
 					{
 						Collection = new ArangoCollection
 						{
+							Name = DatabaseConstants.ServerData,
+							Type = ArangoCollectionType.Document,
+							WaitForSync = true
+						}
+					},
+					new()
+					{
+						Collection = new ArangoCollection
+						{
 							Name = DatabaseConstants.ObjectData,
 							Type = ArangoCollectionType.Document,
 							WaitForSync = true
