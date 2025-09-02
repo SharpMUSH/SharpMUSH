@@ -2,12 +2,12 @@
 @using SharpMUSH.Portal.Services
 @inject AdminConfigService AdminConfigService
 
-<MudDataGrid Items=@Options>
+<MudDataGrid Items="@Options">
 
 </MudDataGrid>
 
 @code {
-    private IEnumerable<object> Options;
+    private IEnumerable<object>? Options { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
