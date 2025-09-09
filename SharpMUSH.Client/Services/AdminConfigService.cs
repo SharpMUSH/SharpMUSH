@@ -1,8 +1,7 @@
 ﻿using AutoBogus;
-using FSharpPlus.Control;
 using SharpMUSH.Configuration.Options;
 
-namespace SharpMUSH.Portal.Services;
+namespace SharpMUSH.Client.Services;
 
 public class AdminConfigService
 {

@@ -1,9 +1,9 @@
 ﻿using Microsoft.AspNetCore.Components.Authorization;
 using System.Security.Claims;
 
-namespace SharpMUSH.Portal.Authentication;
+namespace SharpMUSH.Client.Authentication;
 
-public class DebugAuthStateProvicer : AuthenticationStateProvider
+public class DebugAuthStateProvider : AuthenticationStateProvider
 {
 	public override async Task<AuthenticationState> GetAuthenticationStateAsync()
 	{

@@ -4,15 +4,17 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SharpMUSH.Portal</title>
+    <title>SharpMUSH.Client</title>
     <base href="/" />
     <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" />
     <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
     <link href="/_content/PSC.Blazor.Components.MarkdownEditor/css/markdowneditor.css" rel="stylesheet" />
     <link href="/_content/PSC.Blazor.Components.MarkdownEditor/css/easymde.min.css" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/idea.min.css" rel="stylesheet" />
-    <link href="css/custom.css" rel="stylesheet" />
+    <link rel="preload" id="webassembly" />
     <link rel="icon" type="image/svg" href="assets/Logo.svg" />
+    <link href="css/custom.css" rel="stylesheet" />
+    <script type="importmap"></script>
 </head>
 
 <body>
@@ -20,7 +22,7 @@
         <div style="position: fixed; height: 100%; width: 100%; margin: 0; background-color: var(--mud-palette-appbar-background); background-image: var(--mud-palette-navbar-gradient); ">
             <div style="display: flex; justify-content: center; align-items:center; height:100%; width:100%;">
                 <div class="b-demo-loading">
-                    <img src="assets/Logo.svg" style="height: 500px;" />
+                    <img src="assets/Logo.svg" style="height: 500px;"  alt="Logo"/>
                 </div>
             </div>
         </div>
@@ -31,13 +33,13 @@
         <a href="." class="reload">Reload</a>
         <span class="dismiss">🗙</span>
     </div>
-
     <script src="_content/Microsoft.AspNetCore.Components.WebAssembly.Authentication/AuthenticationService.js"></script>
-    <script src="_framework/blazor.webassembly.js"></script>
-    <script src="_content/MudBlazor/MudBlazor.min.js"></script>
+    <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
+    <script src="_content/MudBlazor/MudBlazor.min.js"></script>   
     <script src="/_content/PSC.Blazor.Components.MarkdownEditor/js/easymde.min.js"></script>
     <script src="/_content/PSC.Blazor.Components.MarkdownEditor/js/markdownEditor.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+
 </body>
 
 </html>

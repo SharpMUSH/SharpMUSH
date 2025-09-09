@@ -35,7 +35,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.Configuration", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.Benchmarks", "SharpMUSH.Benchmarks\SharpMUSH.Benchmarks.csproj", "{F198A72F-B6B9-4709-8DF8-F949AD2EF459}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.Portal", "SharpMUSH.Portal\SharpMUSH.Portal.csproj", "{AE4D9352-5D64-4EBC-8774-09E752E10E91}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.Client", "SharpMUSH.Client\SharpMUSH.Client.csproj", "{2389F0A8-3733-4D75-924D-BB2D77C4374F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -91,10 +91,10 @@ Global
 		{F198A72F-B6B9-4709-8DF8-F949AD2EF459}.Release|Any CPU.Build.0 = Release|Any CPU
 		{F198A72F-B6B9-4709-8DF8-F949AD2EF459}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{F198A72F-B6B9-4709-8DF8-F949AD2EF459}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{AE4D9352-5D64-4EBC-8774-09E752E10E91}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{AE4D9352-5D64-4EBC-8774-09E752E10E91}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{AE4D9352-5D64-4EBC-8774-09E752E10E91}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{AE4D9352-5D64-4EBC-8774-09E752E10E91}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2389F0A8-3733-4D75-924D-BB2D77C4374F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2389F0A8-3733-4D75-924D-BB2D77C4374F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2389F0A8-3733-4D75-924D-BB2D77C4374F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2389F0A8-3733-4D75-924D-BB2D77C4374F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

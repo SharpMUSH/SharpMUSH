@@ -26,16 +26,17 @@
 </MudLayout>
 @code {
 
-    private MudTheme _theme = new()
+    private readonly MudTheme _theme = new()
+    {
+        PaletteDark = new PaletteDark
         {
-            PaletteDark = new PaletteDark
-            {
-                AppbarText = MudColor.Parse("#00f5b7"),
-                TextSecondary = MudColor.Parse("#00f5b7"),
-                Secondary = MudColor.Parse("#00f5b7"),
-                Surface = MudColor.Parse("#242424")
-            }
-        };
+            AppbarText = MudColor.Parse("#00f5b7"),
+            TextSecondary = MudColor.Parse("#00f5b7"),
+            Secondary = MudColor.Parse("#00f5b7"),
+            Surface = MudColor.Parse("#242424")
+        }
+    };
+    
     private bool _isDarkMode = true;
     bool _drawerOpen = false;
 

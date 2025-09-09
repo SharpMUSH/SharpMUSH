@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="AutoBogus" Version="2.13.1" />
+        <PackageReference Include="Markdig" Version="0.41.3" />
+        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.0-preview.7.25380.108"/>
+        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.0-preview.7.25380.108" PrivateAssets="all"/>
+        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Authentication" Version="10.0.0-preview.7.25380.108"/>
+        <PackageReference Include="MudBlazor" Version="8.12.0" />
+        <PackageReference Include="OneOf" Version="3.0.271" />
+        <PackageReference Include="PSC.Blazor.Components.MarkdownEditor" Version="8.0.8" />
+        <PackageReference Include="Slugify.Core" Version="5.1.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <AdditionalFiles Include="Components\WikiDisplay.razor" />
+      <AdditionalFiles Include="Components\WikiEdit.razor" />
+      <AdditionalFiles Include="Components\WikiView.razor" />
+      <AdditionalFiles Include="Pages\Admin\AdminConfig.razor" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\SharpMUSH.Configuration\SharpMUSH.Configuration.csproj" />
+    </ItemGroup>
+
+</Project>

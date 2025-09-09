@@ -2,24 +2,25 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using MudBlazor.Services;
-using SharpMUSH.Portal;
-using SharpMUSH.Portal.Authentication;
-using SharpMUSH.Portal.Services;
+using SharpMUSH.Client;
+using SharpMUSH.Client.Authentication;
+using SharpMUSH.Client.Services;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
+builder.RootComponents.Add<App>("#app");
+builder.RootComponents.Add<HeadOutlet>("head::after");
+
 builder.Services.AddMudServices();
 builder.Services.AddSingleton<Slugify.ISlugHelper, Slugify.SlugHelper>();
 builder.Services.AddSingleton<WikiService>();
 builder.Services.AddSingleton<AdminConfigService>();
 
-builder.RootComponents.Add<App>("#app");
-builder.RootComponents.Add<HeadOutlet>("head::after");
-
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
+
 
 if (builder.HostEnvironment.IsDevelopment())
 {
-	builder.Services.AddScoped<AuthenticationStateProvider, DebugAuthStateProvicer>();
+	builder.Services.AddScoped<AuthenticationStateProvider, DebugAuthStateProvider>();
 }
 else
 {
@@ -30,7 +31,10 @@ else
 		builder.Configuration.Bind("Local", options.ProviderOptions);
 	});
 }
+
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddAuthorizationCore();
 
-await builder.Build().RunAsync();
+var app = builder.Build();
+	
+await app.RunAsync();

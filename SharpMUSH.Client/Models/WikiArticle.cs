@@ -1,4 +1,4 @@
-namespace SharpMUSH.Portal.Models;
+namespace SharpMUSH.Client.Models;
 
 public class WikiArticle
 {
