@@ -1,5 +1,6 @@
 ﻿using Core.Arango;
 using Microsoft.AspNetCore;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
@@ -24,10 +25,16 @@ public class Infrastructure : TestServer
 		Log.Logger = log;
 	}
 
-	private static IWebHostBuilder WebHostBuilder(ArangoConfiguration acnf, string configFile, INotifyService? notifier) =>
-		WebHost.CreateDefaultBuilder()
-			.UseStartup(_ => new Startup(acnf, configFile, notifier))
-			.ConfigureServices(x => { })
+	private static IWebHostBuilder WebHostBuilder(ArangoConfiguration acnf, string configFile, INotifyService? notifier)
+	{
+		var builder = WebApplication.CreateBuilder();
+		var startup = new Startup(acnf, configFile, notifier);
+		startup.ConfigureServices(builder.Services);
+
+		builder.WebHost
 			.UseEnvironment("test")
-			.UseKestrel(options => options.ListenLocalhost(4202, builder => builder.UseConnectionHandler<TelnetServer>()));
+			.UseKestrel(options => options.ListenLocalhost(4202, lo => lo.UseConnectionHandler<TelnetServer>()));
+		
+		return builder.WebHost;
+	}
 }
