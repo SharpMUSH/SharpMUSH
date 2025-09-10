@@ -879,7 +879,12 @@ public class SharpMUSHParserVisitor(ILogger logger,
 
 		if (simpleSubstitutionSymbol is not null)
 		{
-			return await Substitutions.Substitutions.ParseSimpleSubstitution(simpleSubstitutionSymbol.GetText(), parser, Mediator,
+			return await Substitutions.Substitutions.ParseSimpleSubstitution(
+				simpleSubstitutionSymbol.GetText(), 
+				parser, 
+				Mediator,
+				AttributeService, 
+				Configuration,
 				simpleSubstitutionSymbol);
 		}
 

@@ -1,4 +1,7 @@
-﻿using Mediator;
+using Mediator;
+using Humanizer;
+using Microsoft.Extensions.Options;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
@@ -11,36 +14,94 @@ public static partial class Substitutions
 {
 	public static async ValueTask<CallState> ParseSimpleSubstitution(string symbol, IMUSHCodeParser parser,
 		IMediator mediator,
+		IAttributeService attributeService,
+		IOptionsMonitor<PennMUSHOptions> configuration,
 		SubstitutionSymbolContext _)
 		=> symbol switch
 		{
-			"0" or "1" or "2" or "3" or "4" or "5" or "6" or "7" or "8" or "9" => new(
-				(parser.CurrentState.Arguments.TryGetValue(symbol, out var tmpCS) ? tmpCS.Message : MModule.empty())),
-			"B" or "b" => new(" "),
-			"R" or "r" => new(Environment.NewLine),
-			"T" or "t" => new("\t"),
-			"#" => new($"#{parser.CurrentState.Enactor!.Value.Number}"),
-			":" => new($"#{parser.CurrentState.Enactor!.Value}"),
-			"n" => new((await parser.CurrentState.EnactorObject(mediator)).Object()!.Name),
-			"N" => new((await parser.CurrentState.EnactorObject(mediator)).Object()!
-				.Name), // TODO: CAPPED ENACTOR NAME
-			"~" => new((await parser.CurrentState.EnactorObject(mediator)).Object()!
-				.Name), // TODO: ACCENTED ENACTOR NAME
-			"K" or "k" => new((await parser.CurrentState.EnactorObject(mediator)).Object()!
-				.Name), // TODO: MONIKER ENACTOR NAME
-			"S" or "s" => new CallState("they"), // TODO: SUBJECT PRONOUN
-			"O" or "o" => throw new NotImplementedException(), // TODO: OBJECT PRONOUN
-			"P" or "p" => throw new NotImplementedException(), // TODO: POSSESSIVE PRONOUN
-			"A" or "a" => throw new NotImplementedException(), // TODO: ABSOLUTE POSSESSIVE PRONOUN
-			"@" => new($"#{parser.CurrentState.Caller!.Value.Number}"),
-			"!" => new($"#{parser.CurrentState.Executor!.Value.Number}"),
-			"L" or "l" => new(await GetLocationDBRefString(parser, mediator)),
-			"C" or "c" => throw new NotImplementedException(), // TODO: LAST COMMAND BEFORE EVALUATION
-			"U" or "u" => throw new NotImplementedException(), // TODO: LAST COMMAND AFTER EVALUATION
-			"?" => new(parser.State.Count().ToString()),
-			"+" => new(parser.CurrentState.Arguments.Count.ToString()),
-			_ => new(symbol),
+			"0" or "1" or "2" or "3" or "4" or "5" or "6" or "7" or "8" or "9" => 
+				parser.CurrentState.Arguments.TryGetValue(symbol, out var tmpCS) 
+					? tmpCS.Message 
+					: MModule.empty(),
+			"B" or "b" => " ",
+			"R" or "r" => Environment.NewLine,
+			"T" or "t" => "\t",
+			"#" => $"#{parser.CurrentState.Enactor!.Value.Number}",
+			":" => $"#{parser.CurrentState.Enactor!.Value}",
+			"n" => (await parser.CurrentState.EnactorObject(mediator)).Object()!.Name,
+			"N" => (await parser.CurrentState.EnactorObject(mediator)).Object()!.Name.ApplyCase(LetterCasing.Sentence),
+			"~" => (await parser.CurrentState.EnactorObject(mediator)).Object()!.Name, // TODO: ACCENTED ENACTOR NAME
+			"K" or "k" => (await parser.CurrentState.EnactorObject(mediator)).Object()!.Name, // TODO: MONIKER ENACTOR NAME
+			"S" or "s" => 
+				await GetGenderIndicatingAttribute(attributeService, mediator, parser,
+						configuration.CurrentValue.Attribute.SubjectivePronounAttribute ?? "SEX") switch
+				{
+					"M" or "Male" => "he",
+					"F" or "Female" => "she",
+					_ => "they"
+				}, // TODO: SUBJECT PRONOUN CUSTOMIZATION
+			"O" or "o" => 
+				await GetGenderIndicatingAttribute(attributeService, mediator, parser,
+						configuration.CurrentValue.Attribute.ObjectivePronounAttribute ?? "SEX") switch
+					{
+						"M" or "Male" => "him",
+						"F" or "Female" => "her",
+						_ => "their"
+					}, // TODO: OBJECT PRONOUN CUSTOMIZATION
+			"P" or "p" => 
+				await GetGenderIndicatingAttribute(attributeService, mediator, parser,
+						configuration.CurrentValue.Attribute.PossessivePronounAttribute ?? "SEX") switch
+					{
+						"M" or "Male" => "his",
+						"F" or "Female" => "her",
+						_ => "their"
+					}, // TODO: POSSESSIVE PRONOUN CUSTOMIZATION
+			"A" or "a" => 
+				await GetGenderIndicatingAttribute(attributeService, mediator, parser,
+						configuration.CurrentValue.Attribute.AbsolutePossessivePronounAttribute ?? "SEX") switch
+					{
+						"M" or "Male" => "his",
+						"F" or "Female" => "hers",
+						_ => "theirs"
+					}, // TODO: ABSOLUTE POSSESSIVE PRONOUN CUSTOMIZATION
+			"@" => $"#{parser.CurrentState.Caller!.Value.Number}",
+			"!" => $"#{parser.CurrentState.Executor!.Value.Number}",
+			"L" or "l" => await GetLocationDBRefString(parser, mediator),
+			"C" or "c" => LastCommandBeforeEvaluation(parser), // TODO: LAST COMMAND BEFORE EVALUATION
+			"U" or "u" => LastCommandBeforeEvaluation(parser), // TODO: LAST COMMAND AFTER EVALUATION
+			"?" => parser.State.Count().ToString(),
+			"+" => parser.CurrentState.Arguments.Count.ToString(),
+			_ => symbol,
 		};
+
+	private static MString LastCommandBeforeEvaluation(IMUSHCodeParser parser)
+	{
+		try
+		{
+			var getLast = parser.State.ElementAt(-1).Command;
+			return MModule.single(getLast);
+		}
+		catch
+		{
+			return MModule.single(parser.State.Peek().Command ?? "");
+		}
+	}
+
+	private static async ValueTask<string> GetGenderIndicatingAttribute(IAttributeService attributeService,
+		IMediator mediator, IMUSHCodeParser parser, string attr)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
+		
+		var attribute = await attributeService.GetAttributeAsync(
+			executor,
+			executor,
+			attr,
+			IAttributeService.AttributeMode.Read); 
+
+		return attribute.IsAttribute 
+			? attribute.AsAttribute.Last().Value.ToPlainText() 
+			: "N";
+	}
 
 	private static async ValueTask<string> GetLocationDBRefString(IMUSHCodeParser parser, IMediator mediator)
 	{
@@ -74,10 +135,9 @@ public static partial class Substitutions
 	// Symbol Example: %vw --> vw
 	private static async ValueTask<CallState> HandleVWX(CallState symbol, IMUSHCodeParser parser, IMediator mediator, IAttributeService attributeService)
 	{
-		var attrService = attributeService;
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
 
-		var val = await attrService.GetAttributeAsync(
+		var val = await attributeService.GetAttributeAsync(
 			executor,
 			executor,
 			symbol.Message!.ToString(),
