@@ -26,7 +26,7 @@ public class BaseBenchmark
 			.MinimumLevel.Information()
 			.CreateLogger();
 
-	private Infrastructure? _infrastructure;
+	private TestWebApplicationBuilderFactory<SharpMUSH.Server.Program>? _server;
 	private ISharpDatabase? _database;
 	private ArangoDbContainer? _container;
 	
@@ -48,9 +48,9 @@ public class BaseBenchmark
 		};
 		
 		var configFile = Path.Combine(AppContext.BaseDirectory, "mushcnf.dst");
-		
-		_infrastructure = new Infrastructure(config, configFile, null);
-		_database = _infrastructure!.Services.GetService(typeof(ISharpDatabase)) as ISharpDatabase;
+
+		_server = new TestWebApplicationBuilderFactory<SharpMUSH.Server.Program>(config, configFile, null);
+		_database = _server!.Services.GetService(typeof(ISharpDatabase)) as ISharpDatabase;
 
 		try
 		{
@@ -68,11 +68,11 @@ public class BaseBenchmark
 		await Task.CompletedTask;
 	}
 
-	private async Task<(ISharpDatabase Database, Infrastructure Infrastructure)> IntegrationServer()
+	private async Task<(ISharpDatabase Database, TestWebApplicationBuilderFactory<SharpMUSH.Server.Program> Infrastructure)> IntegrationServer()
 	{
 		await Task.CompletedTask;
 
-		return (_database!, _infrastructure!);
+		return (_database!, _server!);
 	}
 
 	protected async Task<IMUSHCodeParser?> TestParser()

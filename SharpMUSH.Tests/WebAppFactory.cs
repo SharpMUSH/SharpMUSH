@@ -19,6 +19,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Server;
 using TUnit.Core.Interfaces;
 
 namespace SharpMUSH.Tests;
@@ -29,7 +30,7 @@ public class WebAppFactory : IAsyncInitializer
 	public required ArangoDbTestServer ArangoDbTestServer { get; init; }
 
 	public IServiceProvider Services => _server!.Services;
-	private TestWebServer? _server;
+	private TestWebApplicationBuilderFactory<Program>? _server;
 	private DBRef _one;
 
 	public IMUSHCodeParser FunctionParser
@@ -128,7 +129,7 @@ public class WebAppFactory : IAsyncInitializer
 
 		var configFile = Path.Combine(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst");
 
-		_server = new TestWebServer(config, configFile, Substitute.For<INotifyService>());
+		_server = new TestWebApplicationBuilderFactory<Program>(config, configFile, Substitute.For<INotifyService>());
 
 		var provider = _server.Services;
 		var connectionService = provider.GetRequiredService<IConnectionService>();

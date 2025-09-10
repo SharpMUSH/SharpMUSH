@@ -96,7 +96,7 @@ public class Startup(ArangoConfiguration config, string configFile, INotifyServi
 		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(CacheInvalidationBehavior<,>));
 		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(QueryCachingBehavior<,>));
 		services.AddSingleton(new ArangoHandle("CurrentSharpMUSHWorld"));
-		services.AddScoped<IMUSHCodeParser, MUSHCodeParser>();
+		services.AddSingleton<IMUSHCodeParser, MUSHCodeParser>();
 		services.AddOptions<PennMUSHOptions>();
 		services.AddMediator();
 		services.AddFusionCache();
