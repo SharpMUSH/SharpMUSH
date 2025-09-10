@@ -31,7 +31,6 @@ public class TestWebServer: Microsoft.AspNetCore.TestHost.TestServer
 		startup.ConfigureServices(builder.Services);
 
 		builder.WebHost
-			.UseEnvironment("test")
 			.UseKestrel(options => options.ListenLocalhost(4202, lo => lo.UseConnectionHandler<TelnetServer>()));
 		
 		return builder.WebHost;
