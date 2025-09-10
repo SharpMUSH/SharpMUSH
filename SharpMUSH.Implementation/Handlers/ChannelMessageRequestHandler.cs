@@ -2,13 +2,12 @@ using Mediator;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.ParserInterfaces;
-using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Handlers;
 
-public class ChannelMessageRequestHandler(IMUSHCodeParser parser): INotificationHandler<ChannelMessageNotification>
+public class ChannelMessageRequestHandler(IPermissionService permissionService, INotifyService notifyService): INotificationHandler<ChannelMessageNotification>
 {
 	public async ValueTask Handle(ChannelMessageNotification notification, CancellationToken cancellationToken)
 	{
@@ -23,12 +22,12 @@ public class ChannelMessageRequestHandler(IMUSHCodeParser parser): INotification
 		{
 			var isGagged = status.Gagged ?? false;
 			var wantsToHear = notification.Source.IsNone ||
-			                  await parser.PermissionService.CanInteract(member, notification.Source.Known(),
+			                  await permissionService.CanInteract(member, notification.Source.Known(),
 				                  IPermissionService.InteractType.Hear);
 
 			if (!isGagged && wantsToHear)
 			{
-				await parser.NotifyService.Notify(member, message);
+				await notifyService.Notify(member, message);
 			}
 		}
 	}

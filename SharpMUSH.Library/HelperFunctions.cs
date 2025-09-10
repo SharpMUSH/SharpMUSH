@@ -5,6 +5,8 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Options;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Library;
@@ -102,22 +104,22 @@ public static partial class HelperFunctions
 	public static async ValueTask<bool> CanHide(this AnySharpObject obj)
 		=> await obj.HasPower("Hide") || await obj.IsPriv();
 
-	public static async ValueTask<DBRef?> Ancestor(this AnySharpObject obj, IMUSHCodeParser parser)
+	public static async ValueTask<DBRef?> Ancestor(this AnySharpObject obj, IOptionsMonitor<PennMUSHOptions> configuration)
 		=> await obj.IsOrphan()
 			? null
 			: obj.Match(
-				_ => parser.Configuration.CurrentValue.Database.AncestorPlayer == null
+				_ => configuration!.CurrentValue.Database.AncestorPlayer == null
 					? null
-					: new DBRef(Convert.ToInt32(parser.Configuration.CurrentValue.Database.AncestorPlayer)),
-				_ => parser.Configuration.CurrentValue.Database.AncestorRoom == null
+					: new DBRef(Convert.ToInt32(configuration!.CurrentValue.Database.AncestorPlayer)),
+				_ => configuration!.CurrentValue.Database.AncestorRoom == null
 					? null
-					: new DBRef(Convert.ToInt32(parser.Configuration.CurrentValue.Database.AncestorRoom)),
-				_ => parser.Configuration.CurrentValue.Database.AncestorExit == null
+					: new DBRef(Convert.ToInt32(configuration!.CurrentValue.Database.AncestorRoom)),
+				_ => configuration!.CurrentValue.Database.AncestorExit == null
 					? null
-					: new DBRef(Convert.ToInt32(parser.Configuration.CurrentValue.Database.AncestorExit)),
-				_ => parser.Configuration.CurrentValue.Database.AncestorThing == null
+					: new DBRef(Convert.ToInt32(configuration!.CurrentValue.Database.AncestorExit)),
+				_ => configuration!.CurrentValue.Database.AncestorThing == null
 					? (DBRef?)null
-					: new DBRef(Convert.ToInt32(parser.Configuration.CurrentValue.Database.AncestorThing))
+					: new DBRef(Convert.ToInt32(configuration!.CurrentValue.Database.AncestorThing))
 			);
 
 	public static async ValueTask<bool> Inheritable(this AnySharpObject obj)

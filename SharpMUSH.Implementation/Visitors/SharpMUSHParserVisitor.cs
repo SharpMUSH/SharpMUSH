@@ -2,8 +2,11 @@
 using System.Runtime.CompilerServices;
 using Antlr4.Runtime.Misc;
 using Antlr4.Runtime.Tree;
+using Mediator;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OneOf.Types;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Implementation.Functions;
 using SharpMUSH.Library;
@@ -27,7 +30,16 @@ namespace SharpMUSH.Implementation.Visitors;
 /// </summary>
 /// <param name="parser">The Parser, so that inner functions can force a parser-call.</param>
 /// <param name="source">The original MarkupString. A plain GetText is not good enough to get the proper value back.</param>
-public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MString source)
+public class SharpMUSHParserVisitor(ILogger logger, 
+	IMUSHCodeParser parser, 
+	IOptionsMonitor<PennMUSHOptions> Configuration, 
+	IMediator Mediator,
+	INotifyService NotifyService,
+	IConnectionService ConnectionService,
+	ILocateService LocateService,
+	ICommandDiscoveryService CommandDiscoveryService,
+	IAttributeService AttributeService,
+	MString source)
 	: SharpMUSHParserBaseVisitor<ValueTask<CallState?>>
 {
 	private int _braceDepthCounter;
@@ -95,12 +107,12 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 		var functionName = context.FUNCHAR().GetText().TrimEnd()[..^1];
 		var arguments = context.evaluationString() ?? Enumerable.Empty<EvaluationStringContext>().ToArray();
 
-		/* await parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, MModule.single(
+		/* await NotifyService!.Notify(parser.CurrentState.Executor!.Value, MModule.single(
 			$"#{parser.CurrentState.Caller!.Value.Number}! {new string(' ', parser.CurrentState.ParserFunctionDepth!.Value)}{context.GetText()} :")); */
 
 		var result = await CallFunction(functionName.ToLower(), source, context, arguments, this);
 
-		/* await parser.NotifyService.Notify(parser.CurrentState.Caller!.Value, MModule.single(
+		/* await NotifyService!.Notify(parser.CurrentState.Caller!.Value, MModule.single(
 			$"#{parser.CurrentState.Caller!.Value.Number}! {new string(' ', parser.CurrentState.ParserFunctionDepth!.Value)}{context.GetText()} => {result.Message}")); */
 
 		return result;
@@ -171,18 +183,18 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 
 			// TODO: Reconsider where this is. We Push down below, after we have the refined arguments.
 			// But each RefinedArguments call will create a new call to this FunctionParser without depth info.
-			if (contextDepth > parser.Configuration.CurrentValue.Limit.CallLimit)
+			if (contextDepth > Configuration!.CurrentValue.Limit.CallLimit)
 			{
 				// TODO: Context Depth is not the correct value to use here.
 				return new CallState(Errors.ErrorCall, contextDepth);
 			}
 
-			if (stackDepth > parser.Configuration.CurrentValue.Limit.MaxDepth)
+			if (stackDepth > Configuration!.CurrentValue.Limit.MaxDepth)
 			{
 				return new CallState(Errors.ErrorInvoke, stackDepth);
 			}
 
-			if (recursionDepth > parser.Configuration.CurrentValue.Limit.FunctionRecursionLimit)
+			if (recursionDepth > Configuration!.CurrentValue.Limit.FunctionRecursionLimit)
 			{
 				return new CallState(Errors.ErrorRecursion, recursionDepth);
 			}
@@ -252,11 +264,11 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 		{
 			logger.LogError(ex, nameof(CallFunction));
 
-			var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+			var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 			if (executor.IsGod())
 			{
-				await parser.NotifyService.Notify(executor, $"#-1 INTERNAL SHARPMUSH ERROR:\n{ex}");
+				await NotifyService!.Notify(executor, $"#-1 INTERNAL SHARPMUSH ERROR:\n{ex}");
 			}
 
 			return CallState.Empty;
@@ -311,7 +323,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 
 			if (parser.CurrentState.Handle is not null && command != "IDLE")
 			{
-				parser.ConnectionService.Update(parser.CurrentState.Handle.Value, "LastConnectionSignal",
+				ConnectionService!.Update(parser.CurrentState.Handle.Value, "LastConnectionSignal",
 					DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString());
 			}
 
@@ -332,16 +344,16 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 
 			if (parser.CurrentState.Executor is null && parser.CurrentState.Handle is not null)
 			{
-				await parser.NotifyService.Notify(parser.CurrentState.Handle.Value, "No such command available at login.");
+				await NotifyService!.Notify(parser.CurrentState.Handle.Value, "No such command available at login.");
 				return new None();
 			}
 
 			// Step 2a: Check for the channel single-token command.
 
 			// TODO: Better channel name matching within the channel helper.
-			if (command[..1] == parser.Configuration.CurrentValue.Chat.ChatTokenAlias.ToString())
+			if (command[..1] == Configuration!.CurrentValue.Chat.ChatTokenAlias.ToString())
 			{
-				var channels = await parser.Mediator.Send(new GetChannelListQuery());
+				var channels = await Mediator!.Send(new GetChannelListQuery());
 				var check = command[1..];
 
 				var channel = channels.FirstOrDefault(x =>
@@ -365,11 +377,11 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 				return await HandleSingleTokenCommandPattern(parser, src, context, command, singleTokenCommandPattern);
 			}
 
-			var executorObject = (await parser.CurrentState.ExecutorObject(parser.Mediator)).WithoutNone();
+			var executorObject = (await parser.CurrentState.ExecutorObject(Mediator!)).WithoutNone();
 			// Step 3: Check exit Aliases
 			if (executorObject.IsContent)
 			{
-				var locate = await parser.LocateService.Locate(
+				var locate = await LocateService!.Locate(
 					parser,
 					executorObject,
 					executorObject,
@@ -416,9 +428,9 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 			// Optimistic that the command still exists, until we try and it no longer does?
 			// What's the best way to retrieve the Regex or Wildcard pattern and transform it? 
 			// It needs to take an area to search in. So this is definitely its own service.
-			var nearbyObjects = await parser.Mediator.Send(new GetNearbyObjectsQuery(executorObject.Object().DBRef));
+			var nearbyObjects = await Mediator!.Send(new GetNearbyObjectsQuery(executorObject.Object().DBRef));
 
-			var userDefinedCommandMatches = await parser.CommandDiscoveryService.MatchUserDefinedCommand(
+			var userDefinedCommandMatches = await CommandDiscoveryService!.MatchUserDefinedCommand(
 				parser,
 				nearbyObjects,
 				src);
@@ -433,7 +445,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 			// Step 12: User Defined commands on the location itself.
 			if (executorObject.IsContent)
 			{
-				var userDefinedCommandMatchesOnLocation = await parser.CommandDiscoveryService.MatchUserDefinedCommand(
+				var userDefinedCommandMatchesOnLocation = await CommandDiscoveryService!.MatchUserDefinedCommand(
 					parser,
 					[(await executorObject.AsContent.Location()).WithExitOption()],
 					src);
@@ -447,13 +459,13 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 			// Step 13: User defined commands on the player's personal zone.
 			// Step 14: Global Exits
 			// Step 15: Global User-defined commands
-			var goConfig = parser.Configuration.CurrentValue.Database.MasterRoom;
-			var maybeGlobalObject = await parser.Mediator.Send(new GetObjectNodeQuery(new DBRef(Convert.ToInt32(goConfig))));
+			var goConfig = Configuration!.CurrentValue.Database.MasterRoom;
+			var maybeGlobalObject = await Mediator!.Send(new GetObjectNodeQuery(new DBRef(Convert.ToInt32(goConfig))));
 			var globalObject = maybeGlobalObject.Known();
-			var globalObjectContent = (await globalObject.AsContainer.Content(parser))
+			var globalObjectContent = (await globalObject.AsContainer.Content(Mediator!))
 				.Select(x => x.WithRoomOption());
 
-			var userDefinedCommandMatchesOnGlobal = await parser.CommandDiscoveryService.MatchUserDefinedCommand(
+			var userDefinedCommandMatchesOnGlobal = await CommandDiscoveryService!.MatchUserDefinedCommand(
 				parser,
 				[globalObject, .. globalObjectContent],
 				src);
@@ -728,7 +740,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 
 		if (!isGenericText)
 		{
-			await parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, MModule.single(
+			await NotifyService!.Notify(parser.CurrentState.Executor!.Value, MModule.single(
 				$"#{parser.CurrentState.Caller!.Value.Number}! {new string(' ', parser.CurrentState.ParserFunctionDepth!.Value)}{context.GetText()} :"));
 		} */
 
@@ -741,7 +753,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 
 		/* if (!isGenericText)
 		{
-			await parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, MModule.single(
+			await NotifyService!.Notify(parser.CurrentState.Executor!.Value, MModule.single(
 				$"#{parser.CurrentState.Caller!.Value.Number}! {new string(' ', parser.CurrentState.ParserFunctionDepth!.Value)}{context.GetText()} => {result.Message}"));
 		} */
 	}
@@ -792,7 +804,7 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 		if (parser.CurrentState.ParseMode is not ParseMode.NoParse and not ParseMode.NoEval)
 		{
 			/*
-			await parser.NotifyService.Notify(parser.CurrentState.Caller!.Value,
+			await NotifyService!.Notify(parser.CurrentState.Caller!.Value,
 				$"#{parser.CurrentState.Caller!.Value.Number}! {new string(' ', parser.CurrentState.ParserFunctionDepth!.Value)}{text} :");
 			*/
 
@@ -862,12 +874,12 @@ public class SharpMUSHParserVisitor(ILogger logger, IMUSHCodeParser parser, MStr
 		if (complexSubstitutionSymbol is not null)
 		{
 			var state = await VisitChildren(context);
-			return await Substitutions.Substitutions.ParseComplexSubstitution(state, parser, complexSubstitutionSymbol);
+			return await Substitutions.Substitutions.ParseComplexSubstitution(state, parser, AttributeService, Mediator, complexSubstitutionSymbol);
 		}
 
 		if (simpleSubstitutionSymbol is not null)
 		{
-			return await Substitutions.Substitutions.ParseSimpleSubstitution(simpleSubstitutionSymbol.GetText(), parser,
+			return await Substitutions.Substitutions.ParseSimpleSubstitution(simpleSubstitutionSymbol.GetText(), parser, Mediator,
 				simpleSubstitutionSymbol);
 		}
 

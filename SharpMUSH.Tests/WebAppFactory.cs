@@ -21,6 +21,7 @@ using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server;
 using TUnit.Core.Interfaces;
+using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace SharpMUSH.Tests;
 
@@ -39,19 +40,10 @@ public class WebAppFactory : IAsyncInitializer
 		{
 			var integrationServer = _server!;
 			return new MUSHCodeParser(
-				(integrationServer.Services.GetService(typeof(ILogger<MUSHCodeParser>)) as ILogger<MUSHCodeParser>)!,
-				(IOptionsMonitor<PennMUSHOptions>)integrationServer.Services.GetService(typeof(IOptionsMonitor<PennMUSHOptions>))!,
-				(IPasswordService)integrationServer.Services.GetService(typeof(IPasswordService))!,
-				(IPermissionService)integrationServer.Services.GetService(typeof(IPermissionService))!,
-				(IAttributeService)integrationServer.Services.GetService(typeof(IAttributeService))!,
-				(INotifyService)integrationServer.Services.GetService(typeof(INotifyService))!,
-				(ILocateService)integrationServer.Services.GetService(typeof(ILocateService))!,
-				(IExpandedObjectDataService)integrationServer.Services.GetService(typeof(IExpandedObjectDataService))!,
-				(ICommandDiscoveryService)integrationServer.Services.GetService(typeof(ICommandDiscoveryService))!,
-				(IConnectionService)integrationServer.Services.GetService(typeof(IConnectionService))!,
-				(LibraryService<string, FunctionDefinition>)integrationServer.Services.GetService(typeof(LibraryService<string, FunctionDefinition>))!,
-				(LibraryService<string, CommandDefinition>)integrationServer.Services.GetService(typeof(LibraryService<string, CommandDefinition>))!,
-				(IMediator)integrationServer.Services.GetService(typeof(IMediator))!,
+				integrationServer.Services.GetRequiredService<ILogger<MUSHCodeParser>>(),
+				integrationServer.Services.GetRequiredService<LibraryService<string, FunctionDefinition>>(),
+				integrationServer.Services.GetRequiredService<LibraryService<string, CommandDefinition>>(),
+				integrationServer.Services,
 				state: new ParserState(
 					Registers: new([[]]),
 					IterationRegisters: [],
@@ -78,19 +70,10 @@ public class WebAppFactory : IAsyncInitializer
 		{
 			var integrationServer = _server!;
 			return new MUSHCodeParser(
-				(integrationServer.Services.GetService(typeof(ILogger<MUSHCodeParser>)) as ILogger<MUSHCodeParser>)!,
-				(IOptionsMonitor<PennMUSHOptions>)integrationServer.Services.GetService(typeof(IOptionsMonitor<PennMUSHOptions>))!,
-				(IPasswordService)integrationServer.Services.GetService(typeof(IPasswordService))!,
-				(IPermissionService)integrationServer.Services.GetService(typeof(IPermissionService))!,
-				(IAttributeService)integrationServer.Services.GetService(typeof(IAttributeService))!,
-				(INotifyService)integrationServer.Services.GetService(typeof(INotifyService))!,
-				(ILocateService)integrationServer.Services.GetService(typeof(ILocateService))!,
-				(IExpandedObjectDataService)integrationServer.Services.GetService(typeof(IExpandedObjectDataService))!,
-				(ICommandDiscoveryService)integrationServer.Services.GetService(typeof(ICommandDiscoveryService))!,
-				(IConnectionService)integrationServer.Services.GetService(typeof(IConnectionService))!,
-				(LibraryService<string, FunctionDefinition>)integrationServer.Services.GetService(typeof(LibraryService<string, FunctionDefinition>))!,
-				(LibraryService<string, CommandDefinition>)integrationServer.Services.GetService(typeof(LibraryService<string, CommandDefinition>))!,
-				(IMediator)integrationServer.Services.GetService(typeof(IMediator))!,
+				integrationServer.Services.GetRequiredService<ILogger<MUSHCodeParser>>(),
+				integrationServer.Services.GetRequiredService<LibraryService<string, FunctionDefinition>>(),
+				integrationServer.Services.GetRequiredService<LibraryService<string, CommandDefinition>>(),
+				integrationServer.Services,
 				state: new ParserState(
 					Registers: new([[]]),
 					IterationRegisters: [],

@@ -73,11 +73,11 @@ public partial class Functions
 	[SharpFunction(Name = "HASPOWER", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> HasPower(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var toLocate = parser.CurrentState.Arguments["0"].Message!;
 		var power = MModule.plainText(parser.CurrentState.Arguments["1"].Message).ToUpper();
 		var maybeLocate = await
-			parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, toLocate.ToPlainText(),
+			LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, toLocate.ToPlainText(),
 				LocateFlags.All);
 
 		if (maybeLocate.IsError)
@@ -94,11 +94,11 @@ public partial class Functions
 	[SharpFunction(Name = "HASTYPE", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> HasType(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var toLocate = parser.CurrentState.Arguments["0"].Message!;
 		var typeQuery = MModule.plainText(parser.CurrentState.Arguments["1"].Message).ToUpper().Split(" ");
 		var maybeLocate = await
-			parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, toLocate.ToPlainText(),
+			LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, toLocate.ToPlainText(),
 				LocateFlags.All);
 
 		if (maybeLocate.IsError)
@@ -126,7 +126,7 @@ public partial class Functions
 	[SharpFunction(Name = "LPIDS", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> LPIDs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var target = NoParseDefaultNoParseArgument(args, 0, "me");
 		var queueTypes = NoParseDefaultNoParseArgument(args, 0, "wait semaphore").ToPlainText().ToUpperInvariant()
@@ -138,7 +138,7 @@ public partial class Functions
 		}
 
 		var maybeLocate = await
-			parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
+			LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
 				executor, executor, target.ToPlainText(),
 				LocateFlags.All);
 
@@ -150,7 +150,7 @@ public partial class Functions
 		var located = maybeLocate.AsSharpObject;
 
 		// TODO: Implement WAIT and INDEPENDENT queue handling
-		var semaphorePids = await parser.Mediator
+		var semaphorePids = await Mediator!
 			.Send(new ScheduleSemaphoreQuery(located.Object().DBRef));
 
 		var pids = await semaphorePids.Select<SemaphoreTaskData, string>(x => x.Pid.ToString())

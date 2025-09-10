@@ -4,6 +4,7 @@ using SharpMUSH.Implementation.Visitors;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using System.Collections.Immutable;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OneOf.Types;
@@ -18,20 +19,10 @@ namespace SharpMUSH.Implementation;
 /// Provides the parser.
 /// Each call is Synchronous and Stateful at this time.
 /// </summary>
-public record MUSHCodeParser(
-	ILogger<MUSHCodeParser> Logger,
-	IOptionsMonitor<PennMUSHOptions> Configuration,
-	IPasswordService PasswordService,
-	IPermissionService PermissionService,
-	IAttributeService AttributeService,
-	INotifyService NotifyService,
-	ILocateService LocateService,
-	IExpandedObjectDataService ObjectDataService,
-	ICommandDiscoveryService CommandDiscoveryService,
-	IConnectionService ConnectionService,
+public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	LibraryService<string, Library.Definitions.FunctionDefinition> FunctionLibrary,
 	LibraryService<string, Library.Definitions.CommandDefinition> CommandLibrary,
-	IMediator Mediator) : IMUSHCodeParser
+	IServiceProvider ServiceProvider) : IMUSHCodeParser
 {
 	public ParserState CurrentState => State.Peek();
 
@@ -45,32 +36,17 @@ public record MUSHCodeParser(
 	/// </summary>
 	public IImmutableStack<ParserState> State { get; private init; } = ImmutableStack<ParserState>.Empty;
 
-	public IMUSHCodeParser FromState(ParserState state) => new MUSHCodeParser(Logger, Configuration, PasswordService,
-		PermissionService,
-		AttributeService, NotifyService, LocateService, ObjectDataService, CommandDiscoveryService,
-		ConnectionService, FunctionLibrary, CommandLibrary, Mediator, state);
+	public IMUSHCodeParser FromState(ParserState state) => new MUSHCodeParser(Logger, FunctionLibrary, CommandLibrary, ServiceProvider, state);
 
 	public IMUSHCodeParser Empty() => this with { State = ImmutableStack<ParserState>.Empty };
 
 	public IMUSHCodeParser Push(ParserState state) => this with { State = State.Push(state) };
 
-	public MUSHCodeParser(
-		ILogger<MUSHCodeParser> logger,
-		IOptionsMonitor<PennMUSHOptions> config,
-		IPasswordService passwordService,
-		IPermissionService permissionService,
-		IAttributeService attributeService,
-		INotifyService notifyService,
-		ILocateService locateService,
-		IExpandedObjectDataService objectDataService,
-		ICommandDiscoveryService commandDiscoveryService,
-		IConnectionService connectionService,
+	public MUSHCodeParser(ILogger<MUSHCodeParser> logger, 
 		LibraryService<string, Library.Definitions.FunctionDefinition> functionLibrary,
 		LibraryService<string, Library.Definitions.CommandDefinition> commandLibrary,
-		IMediator mediator,
-		ParserState state) :
-		this(logger, config, passwordService, permissionService, attributeService, notifyService, locateService,
-			objectDataService, commandDiscoveryService, connectionService, functionLibrary, commandLibrary, mediator)
+		IServiceProvider serviceProvider,
+		ParserState state) : this(logger, functionLibrary, commandLibrary, serviceProvider)
 		=> State = [state];
 
 	public ValueTask<CallState?> FunctionParse(MString text)
@@ -93,7 +69,15 @@ public record MUSHCodeParser(
 		// sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
 
 		var chatContext = sharpParser.startPlainString();
-		SharpMUSHParserVisitor visitor = new(Logger, this, text);
+		SharpMUSHParserVisitor visitor = new(Logger, this, 
+			ServiceProvider.GetRequiredService<IOptionsMonitor<PennMUSHOptions>>(),
+			ServiceProvider.GetRequiredService<IMediator>(),
+			ServiceProvider.GetRequiredService<INotifyService>(),
+			ServiceProvider.GetRequiredService<IConnectionService>(),
+			ServiceProvider.GetRequiredService<ILocateService>(),
+			ServiceProvider.GetRequiredService<ICommandDiscoveryService>(),
+			ServiceProvider.GetRequiredService<IAttributeService>(),
+			text);
 
 		return visitor.Visit(chatContext);
 	}
@@ -113,7 +97,14 @@ public record MUSHCodeParser(
 			}
 		};
 		var chatContext = sharpParser.startCommandString();
-		SharpMUSHParserVisitor visitor = new(Logger, this, text);
+		SharpMUSHParserVisitor visitor = new(Logger, this,
+			ServiceProvider.GetRequiredService<IOptionsMonitor<PennMUSHOptions>>(),
+			ServiceProvider.GetRequiredService<IMediator>(),
+			ServiceProvider.GetRequiredService<INotifyService>(),
+			ServiceProvider.GetRequiredService<IConnectionService>(),
+			ServiceProvider.GetRequiredService<ILocateService>(),
+			ServiceProvider.GetRequiredService<ICommandDiscoveryService>(),
+			ServiceProvider.GetRequiredService<IAttributeService>(), text);
 
 		return visitor.Visit(chatContext);
 	}
@@ -133,7 +124,15 @@ public record MUSHCodeParser(
 			}
 		};
 		var chatContext = sharpParser.startCommandString();
-		SharpMUSHParserVisitor visitor = new(Logger, this, text);
+		
+		SharpMUSHParserVisitor visitor = new(Logger, this, 
+			ServiceProvider.GetRequiredService<IOptionsMonitor<PennMUSHOptions>>(),
+			ServiceProvider.GetRequiredService<IMediator>(),
+			ServiceProvider.GetRequiredService<INotifyService>(),
+			ServiceProvider.GetRequiredService<IConnectionService>(),
+			ServiceProvider.GetRequiredService<ILocateService>(),
+			ServiceProvider.GetRequiredService<ICommandDiscoveryService>(),
+			ServiceProvider.GetRequiredService<IAttributeService>(),text);
 
 		return () => visitor.Visit(chatContext);
 	}
@@ -144,9 +143,9 @@ public record MUSHCodeParser(
 	/// <param name="handle">The handle that identifies the connection.</param>
 	/// <param name="text">The text to parse.</param>
 	/// <returns>A completed task.</returns>
-	public async ValueTask CommandParse(long handle, MString text)
+	public async ValueTask CommandParse(long handle, IConnectionService connectionService, MString text)
 	{
-		var handleId = ConnectionService.Get(handle);
+		var handleId = connectionService.Get(handle);
 		var newParser = Push(new ParserState(
 			Registers: new([[]]),
 			IterationRegisters: [],
@@ -176,7 +175,14 @@ public record MUSHCodeParser(
 			}
 		};
 		var chatContext = sharpParser.startSingleCommandString();
-		SharpMUSHParserVisitor visitor = new(Logger, newParser, text);
+		SharpMUSHParserVisitor visitor = new(Logger, newParser,
+			ServiceProvider.GetRequiredService<IOptionsMonitor<PennMUSHOptions>>(),
+			ServiceProvider.GetRequiredService<IMediator>(),
+			ServiceProvider.GetRequiredService<INotifyService>(),
+			ServiceProvider.GetRequiredService<IConnectionService>(),
+			ServiceProvider.GetRequiredService<ILocateService>(),
+			ServiceProvider.GetRequiredService<ICommandDiscoveryService>(),
+			ServiceProvider.GetRequiredService<IAttributeService>(), text);
 
 		await visitor.Visit(chatContext);
 	}
@@ -200,7 +206,14 @@ public record MUSHCodeParser(
 			}
 		};
 		var chatContext = sharpParser.startSingleCommandString();
-		SharpMUSHParserVisitor visitor = new(Logger, this, text);
+		SharpMUSHParserVisitor visitor = new(Logger, this,
+			ServiceProvider.GetRequiredService<IOptionsMonitor<PennMUSHOptions>>(),
+			ServiceProvider.GetRequiredService<IMediator>(),
+			ServiceProvider.GetRequiredService<INotifyService>(),
+			ServiceProvider.GetRequiredService<IConnectionService>(),
+			ServiceProvider.GetRequiredService<ILocateService>(),
+			ServiceProvider.GetRequiredService<ICommandDiscoveryService>(),
+			ServiceProvider.GetRequiredService<IAttributeService>(), text);
 
 		await visitor.Visit(chatContext);
 	}
@@ -219,7 +232,14 @@ public record MUSHCodeParser(
 			}
 		};
 		var chatContext = sharpParser.commaCommandArgs();
-		SharpMUSHParserVisitor visitor = new(Logger, this, text);
+		SharpMUSHParserVisitor visitor = new(Logger, this,
+			ServiceProvider.GetRequiredService<IOptionsMonitor<PennMUSHOptions>>(),
+			ServiceProvider.GetRequiredService<IMediator>(),
+			ServiceProvider.GetRequiredService<INotifyService>(),
+			ServiceProvider.GetRequiredService<IConnectionService>(),
+			ServiceProvider.GetRequiredService<ILocateService>(),
+			ServiceProvider.GetRequiredService<ICommandDiscoveryService>(),
+			ServiceProvider.GetRequiredService<IAttributeService>(), text);
 
 		return visitor.Visit(chatContext);
 	}
@@ -238,7 +258,14 @@ public record MUSHCodeParser(
 			}
 		};
 		var chatContext = sharpParser.startPlainSingleCommandArg();
-		SharpMUSHParserVisitor visitor = new(Logger, this, text);
+		SharpMUSHParserVisitor visitor = new(Logger, this,
+			ServiceProvider.GetRequiredService<IOptionsMonitor<PennMUSHOptions>>(),
+			ServiceProvider.GetRequiredService<IMediator>(),
+			ServiceProvider.GetRequiredService<INotifyService>(),
+			ServiceProvider.GetRequiredService<IConnectionService>(),
+			ServiceProvider.GetRequiredService<ILocateService>(),
+			ServiceProvider.GetRequiredService<ICommandDiscoveryService>(),
+			ServiceProvider.GetRequiredService<IAttributeService>(), text);
 
 		return visitor.Visit(chatContext);
 	}
@@ -258,7 +285,14 @@ public record MUSHCodeParser(
 		};
 
 		var chatContext = sharpParser.startEqSplitCommandArgs();
-		SharpMUSHParserVisitor visitor = new(Logger, this, text);
+		SharpMUSHParserVisitor visitor = new(Logger, this,
+			ServiceProvider.GetRequiredService<IOptionsMonitor<PennMUSHOptions>>(),
+			ServiceProvider.GetRequiredService<IMediator>(),
+			ServiceProvider.GetRequiredService<INotifyService>(),
+			ServiceProvider.GetRequiredService<IConnectionService>(),
+			ServiceProvider.GetRequiredService<ILocateService>(),
+			ServiceProvider.GetRequiredService<ICommandDiscoveryService>(),
+			ServiceProvider.GetRequiredService<IAttributeService>(), text);
 
 		return visitor.Visit(chatContext);
 	}
@@ -277,7 +311,14 @@ public record MUSHCodeParser(
 			}
 		};
 		var chatContext = sharpParser.startEqSplitCommand();
-		SharpMUSHParserVisitor visitor = new(Logger, this, text);
+		SharpMUSHParserVisitor visitor = new(Logger, this,
+			ServiceProvider.GetRequiredService<IOptionsMonitor<PennMUSHOptions>>(),
+			ServiceProvider.GetRequiredService<IMediator>(),
+			ServiceProvider.GetRequiredService<INotifyService>(),
+			ServiceProvider.GetRequiredService<IConnectionService>(),
+			ServiceProvider.GetRequiredService<ILocateService>(),
+			ServiceProvider.GetRequiredService<ICommandDiscoveryService>(),
+			ServiceProvider.GetRequiredService<IAttributeService>(), text);
 
 		return visitor.Visit(chatContext);
 	}

@@ -1,23 +1,27 @@
+using Mediator;
+using Microsoft.Extensions.Options;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
 public static class ChannelChown
 {
-	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString channelName, MString newOwner)
+	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, MString channelName, MString newOwner)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		if (await executor.IsGuest())
 		{
-			await parser.NotifyService.Notify(executor, "CHAT: Guests may not modify channels.");
+			await NotifyService!.Notify(executor, "CHAT: Guests may not modify channels.");
 			return new CallState("#-1 Guests may not modify channels.");
 		}
 		
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, channelName, true);
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService, PermissionService, Mediator, NotifyService, channelName, true);
 
 		if (maybeChannel.IsError)
 		{
@@ -26,13 +30,13 @@ public static class ChannelChown
 
 		var channel = maybeChannel.AsChannel;
 		
-		if (await parser.PermissionService.ChannelCanModifyAsync(executor, channel))
+		if (await PermissionService!.ChannelCanModifyAsync(executor, channel))
 		{
 			return new CallState("#-1 YOU CANNOT MODIFY THIS CHANNEL.");
 		}
 
 		var locate =
-			await parser.LocateService.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, newOwner.ToPlainText());
+			await LocateService!.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, newOwner.ToPlainText());
 
 		switch (locate)
 		{
@@ -44,10 +48,10 @@ public static class ChannelChown
 
 		var newOwnerObject = locate.AsPlayer;
 
-		await parser.Mediator.Send(new UpdateChannelOwnerCommand(channel, newOwnerObject));
+		await Mediator!.Send(new UpdateChannelOwnerCommand(channel, newOwnerObject));
 
 		var output = MModule.multiple([MModule.single("CHAT: "), MModule.single(newOwnerObject.Object.Name), MModule.single(" is the new owner of "), channel.Name]);
-		await parser.NotifyService.Notify(executor, output);
+		await NotifyService!.Notify(executor, output);
 		return new CallState(string.Empty);
 	}
 }

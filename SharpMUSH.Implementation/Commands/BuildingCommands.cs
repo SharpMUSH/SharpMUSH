@@ -30,9 +30,9 @@ public partial class Commands
 		// TODO: Validate Name 
 		var args = parser.CurrentState.Arguments;
 		var name = MModule.plainText(args["0"].Message!);
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		var thing = await parser.Mediator.Send(new CreateThingCommand(name,
+		var thing = await Mediator!.Send(new CreateThingCommand(name,
 			await executor.Where(),
 			await executor.Object()
 				.Owner.WithCancellation(CancellationToken.None)));
@@ -65,8 +65,8 @@ public partial class Commands
 
 		var args = parser.CurrentState.Arguments;
 		var split = HelperFunctions.SplitDBRefAndOptionalAttr(MModule.plainText(args["0"].Message!));
-		var enactor = (await parser.CurrentState.EnactorObject(parser.Mediator)).WithoutNone();
-		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).WithoutNone();
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).WithoutNone();
+		var executor = (await parser.CurrentState.ExecutorObject(Mediator!)).WithoutNone();
 
 		if (!split.TryPickT0(out var details, out var _))
 		{
@@ -75,7 +75,7 @@ public partial class Commands
 
 		var (dbref, maybeAttribute) = details;
 
-		var locate = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
+		var locate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
 			enactor,
 			executor,
 			dbref,
@@ -97,12 +97,12 @@ public partial class Commands
 				if (plainFlag.StartsWith('!'))
 				{
 					// TODO: Notify
-					await parser.AttributeService.SetAttributeFlagAsync(executor, realLocated, maybeAttribute, plainFlag);
+					await AttributeService!.SetAttributeFlagAsync(executor, realLocated, maybeAttribute, plainFlag);
 				}
 				else
 				{
 					// TODO: Notify
-					await parser.AttributeService.UnsetAttributeFlagAsync(executor, realLocated, maybeAttribute, plainFlag[1..]);
+					await AttributeService!.UnsetAttributeFlagAsync(executor, realLocated, maybeAttribute, plainFlag[1..]);
 				}
 			}
 
@@ -118,9 +118,9 @@ public partial class Commands
 			var content = MModule.substring(maybeColonLocation + 1, MModule.getLength(arg1), arg1);
 
 			var setResult =
-				await parser.AttributeService.SetAttributeAsync(executor, realLocated, MModule.plainText(attribute), content);
+				await AttributeService!.SetAttributeAsync(executor, realLocated, MModule.plainText(attribute), content);
 
-			await parser.NotifyService.Notify(enactor,
+			await NotifyService!.Notify(enactor,
 				setResult.Match(
 					_ => $"{realLocated.Object().Name}/{args["0"].Message} - Set.",
 					failure => failure.Value)
@@ -140,20 +140,20 @@ public partial class Commands
 			// TODO: Permission Check for each flag.
 			// Probably should have a service for this?
 
-			var realFlag = await parser.Mediator.Send(new GetObjectFlagQuery(plainFlag));
+			var realFlag = await Mediator!.Send(new GetObjectFlagQuery(plainFlag));
 
 			if (realFlag is null) continue;
 
-			await parser.NotifyService.Notify(executor, $"Flag: {realFlag} Set.");
+			await NotifyService!.Notify(executor, $"Flag: {realFlag} Set.");
 
 			// Set Flag	
 			if (unset)
 			{
-				await parser.Mediator.Send(new UnsetObjectFlagCommand(realLocated, realFlag));
+				await Mediator!.Send(new UnsetObjectFlagCommand(realLocated, realFlag));
 			}
 			else
 			{
-				await parser.Mediator.Send(new SetObjectFlagCommand(realLocated, realFlag));
+				await Mediator!.Send(new SetObjectFlagCommand(realLocated, realFlag));
 			}
 		}
 
@@ -222,7 +222,7 @@ public partial class Commands
 		 */
 
 		// NOTE: We discard arguments 4-6.
-		var executorBase = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var executorBase = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var executor = executorBase.Object();
 		var roomName = parser.CurrentState.Arguments["0"].Message!;
 		parser.CurrentState.Arguments.TryGetValue("1", out var exitToCallState);
@@ -232,7 +232,7 @@ public partial class Commands
 
 		if (string.IsNullOrWhiteSpace(parser.CurrentState.Arguments["0"].Message!.ToString()))
 		{
-			await parser.NotifyService.Notify(executor.DBRef, "Dig what?");
+			await NotifyService!.Notify(executor.DBRef, "Dig what?");
 			return new CallState("#-1 NO ROOM NAME SPECIFIED");
 		}
 
@@ -240,9 +240,9 @@ public partial class Commands
 		// CAN DIG?
 
 		// CREATE ROOM
-		var response = await parser.Mediator.Send(new CreateRoomCommand(MModule.plainText(roomName),
+		var response = await Mediator!.Send(new CreateRoomCommand(MModule.plainText(roomName),
 			await executor.Owner.WithCancellation(CancellationToken.None)));
-		await parser.NotifyService.Notify(executor.DBRef, $"{roomName} created with room number #{response.Number}.");
+		await NotifyService!.Notify(executor.DBRef, $"{roomName} created with room number #{response.Number}.");
 
 		if (!string.IsNullOrWhiteSpace(exitTo?.ToString()))
 		{
@@ -250,18 +250,18 @@ public partial class Commands
 			// CAN CREATE EXIT HERE?
 			// CAN LINK TO DESTINATION?
 
-			var toExitResponse = await parser.Mediator.Send(new CreateExitCommand(exitToName.First(),
+			var toExitResponse = await Mediator!.Send(new CreateExitCommand(exitToName.First(),
 				exitToName.Skip(1).ToArray(), await executorBase.Where(),
 				await executor.Owner.WithCancellation(CancellationToken.None)));
-			await parser.NotifyService.Notify(executor.DBRef, $"Opened exit #{toExitResponse.Number}");
-			await parser.NotifyService.Notify(executor.DBRef, "Trying to link...");
+			await NotifyService!.Notify(executor.DBRef, $"Opened exit #{toExitResponse.Number}");
+			await NotifyService!.Notify(executor.DBRef, "Trying to link...");
 
-			var newRoomObject = await parser.Mediator.Send(new GetObjectNodeQuery(response));
-			var newExitObject = await parser.Mediator.Send(new GetObjectNodeQuery(toExitResponse));
+			var newRoomObject = await Mediator!.Send(new GetObjectNodeQuery(response));
+			var newExitObject = await Mediator!.Send(new GetObjectNodeQuery(toExitResponse));
 
-			await parser.Mediator.Send(new LinkExitCommand(newExitObject.AsExit, newRoomObject.AsRoom));
+			await Mediator!.Send(new LinkExitCommand(newExitObject.AsExit, newRoomObject.AsRoom));
 
-			await parser.NotifyService.Notify(executor.DBRef, $"Linked exit #{toExitResponse.Number} to #{response.Number}");
+			await NotifyService!.Notify(executor.DBRef, $"Linked exit #{toExitResponse.Number} to #{response.Number}");
 		}
 
 		if (!string.IsNullOrWhiteSpace(exitFrom?.ToString()))
@@ -270,19 +270,19 @@ public partial class Commands
 			// CAN LINK BACK TO CURRENT ROOM?
 
 			var exitFromName = MModule.plainText(exitFrom).Split(";");
-			var newRoomObject = await parser.Mediator.Send(new GetObjectNodeQuery(response));
+			var newRoomObject = await Mediator!.Send(new GetObjectNodeQuery(response));
 
-			var fromExitResponse = await parser.Mediator.Send(new CreateExitCommand(exitFromName.First(),
+			var fromExitResponse = await Mediator!.Send(new CreateExitCommand(exitFromName.First(),
 				exitFromName.Skip(1).ToArray(), newRoomObject.AsRoom, await executor.Owner.WithCancellation(CancellationToken.None)));
-			var newExitObject = await parser.Mediator.Send(new GetObjectNodeQuery(fromExitResponse));
+			var newExitObject = await Mediator!.Send(new GetObjectNodeQuery(fromExitResponse));
 
-			await parser.NotifyService.Notify(executor.DBRef, $"Opened exit #{fromExitResponse.Number}");
-			await parser.NotifyService.Notify(executor.DBRef, "Trying to link...");
+			await NotifyService!.Notify(executor.DBRef, $"Opened exit #{fromExitResponse.Number}");
+			await NotifyService!.Notify(executor.DBRef, "Trying to link...");
 
 			var where = await executorBase.Where();
-			await parser.Mediator.Send(new LinkExitCommand(newExitObject.AsExit, where));
+			await Mediator!.Send(new LinkExitCommand(newExitObject.AsExit, where));
 
-			await parser.NotifyService.Notify(executor.DBRef,
+			await NotifyService!.Notify(executor.DBRef,
 				$"Linked exit #{fromExitResponse.Number} to #{where.Object().DBRef.Number}");
 		}
 

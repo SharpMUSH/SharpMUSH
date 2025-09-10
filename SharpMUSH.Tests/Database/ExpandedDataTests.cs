@@ -1,4 +1,5 @@
-﻿using SharpMUSH.Library;
+﻿using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 
@@ -9,7 +10,7 @@ public class ExpandedDataTests
 	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required WebAppFactory WebAppFactoryArg { get; init; }
 
-	private ISharpDatabase _database => (ISharpDatabase)WebAppFactoryArg.Services.GetService(typeof(ISharpDatabase))!;
+	private ISharpDatabase _database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 
 	[Test, NotInParallel]
 	public async Task SetAndGetExpandedData()

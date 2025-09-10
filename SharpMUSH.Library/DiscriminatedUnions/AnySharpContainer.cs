@@ -1,4 +1,5 @@
-﻿using OneOf;
+﻿using Mediator;
+using OneOf;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -43,8 +44,8 @@ public class AnySharpContainer : OneOfBase<SharpPlayer, SharpRoom, SharpThing>
 		async thing => await thing.Location.WithCancellation(CancellationToken.None)
 	);
 
-	public async ValueTask<IEnumerable<AnySharpContent>> Content(IMUSHCodeParser parser) =>
-		await parser.Mediator.Send(new GetContentsQuery(this)) ?? [];
+	public async ValueTask<IEnumerable<AnySharpContent>> Content(IMediator mediator) =>
+		await mediator.Send(new GetContentsQuery(this)) ?? [];
 
 	public bool IsPlayer => IsT0;
 	public bool IsRoom => IsT1;

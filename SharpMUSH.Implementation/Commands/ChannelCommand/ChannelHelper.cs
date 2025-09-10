@@ -1,11 +1,16 @@
 using System.Collections.ObjectModel;
+using Mediator;
+using Microsoft.Extensions.Options;
 using OneOf;
 using OneOf.Types;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
@@ -65,11 +70,12 @@ public static class ChannelHelper
 	public static async ValueTask<bool> IsMemberOfChannel(AnySharpObject member, SharpChannel channel)
 		=> (await channel.Members.WithCancellation(CancellationToken.None))
 			.Any(x => x.Member.Id() == member.Id());
-	
-	public static async ValueTask<(AnySharpObject Member,SharpChannelStatus Status)?> ChannelMemberStatus(AnySharpObject member, SharpChannel channel)
+
+	public static async ValueTask<(AnySharpObject Member, SharpChannelStatus Status)?> ChannelMemberStatus(
+		AnySharpObject member, SharpChannel channel)
 		=> (await channel.Members.WithCancellation(CancellationToken.None))
 			.FirstOrDefault(x => x.Member.Id() == member.Id());
-	
+
 	public static PrivilegeOrError StringToChannelPrivileges(MString channelName)
 	{
 		var plainText = channelName.ToPlainText();
@@ -95,26 +101,28 @@ public static class ChannelHelper
 		return new PrivilegeOrError(validatedList!);
 	}
 
-	public static bool IsValidChannelName(IMUSHCodeParser parser, MString channelName) 
-	=> IsValidChannelName(parser, channelName.ToPlainText());
-	
-	public static bool IsValidChannelName(IMUSHCodeParser parser, string channelName) 
-		=> parser.Configuration.CurrentValue.Chat.ChannelTitleLength >= channelName.Length 
-		   && channelName.Length > 3 
+	public static bool IsValidChannelName(IOptionsMonitor<PennMUSHOptions> Configuration, MString channelName)
+		=> IsValidChannelName(Configuration!, channelName.ToPlainText());
+
+	public static bool IsValidChannelName(IOptionsMonitor<PennMUSHOptions> Configuration, string channelName)
+		=> Configuration!.CurrentValue.Chat.ChannelTitleLength >= channelName.Length
+		   && channelName.Length > 3
 		   && !channelName.Contains(' ');
 
 	public static async ValueTask<ChannelOrError> GetChannelOrError(
-		IMUSHCodeParser parser,
+		IMUSHCodeParser parser, 
+		ILocateService LocateService, IPermissionService PermissionService, IMediator Mediator,
+		INotifyService NotifyService,
 		MString channelName,
 		bool notify = false)
 	{
-		var channel = await parser.Mediator.Send(new GetChannelQuery(channelName.ToPlainText()));
+		var channel = await Mediator!.Send(new GetChannelQuery(channelName.ToPlainText()));
 
 		switch (channel, notify)
 		{
 			case (null, true):
 			{
-				await parser.NotifyService.Notify(await parser.CurrentState.KnownExecutorObject(parser.Mediator),
+				await NotifyService!.Notify(await parser.CurrentState.KnownExecutorObject(Mediator!),
 					"Channel not found.");
 				return new ChannelOrError(new Error<CallState>(new CallState("#-1 Channel not found.")));
 			}

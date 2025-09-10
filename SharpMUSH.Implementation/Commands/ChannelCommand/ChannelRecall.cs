@@ -1,15 +1,17 @@
+using Mediator;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
 public static class ChannelRecall
 {
-	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString channelName, MString lines, string[] switches)
+	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, MString channelName, MString lines, string[] switches)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, channelName, true);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService, PermissionService, Mediator, NotifyService, channelName, true);
 
 		if (maybeChannel.IsError)
 		{
@@ -35,7 +37,7 @@ public static class ChannelRecall
 		}
 
 		/*
-		var messages = await parser.Mediator.Send(new GetChannelMessagesQuery(channel.Id, linesInt));
+		var messages = await Mediator!.Send(new GetChannelMessagesQuery(channel.Id, linesInt));
 		var messageList = messages.Select(x => x.Message).ToList();
 		var message = MModule.multiple(messageList);
 
@@ -45,7 +47,7 @@ public static class ChannelRecall
 		}
 		*/
 
-		// await parser.NotifyService.Notify(executor, message, executor);
+		// await NotifyService!.Notify(executor, message, executor);
 		return new CallState(string.Empty);
 	}
 }

@@ -17,12 +17,12 @@ public partial class Commands
 	public static async ValueTask<Option<CallState>> Who(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// TODO: Get All needs to do a Permission Check for the user.
-		var everyone = parser.ConnectionService.GetAll().ToList();
+		var everyone = ConnectionService!.GetAll().ToList();
 		const string fmt = "{0,-18} {1,10} {2,6}  {3,-32}";
 		var header = string.Format(fmt, "Player Name", "On For", "Idle", "Doing");
 		var players = await Task.WhenAll(everyone.Where(player => player.Ref.HasValue).Select(async player =>
 		{
-			var name = await parser.Mediator.Send(new GetBaseObjectNodeQuery(player.Ref!.Value));
+			var name = await Mediator!.Send(new GetBaseObjectNodeQuery(player.Ref!.Value));
 			var onFor = player.Connected;
 			var idleFor = player.Idle;
 			return string.Format(
@@ -36,7 +36,7 @@ public partial class Commands
 
 		var message = $"{header}{Environment.NewLine}{string.Join(Environment.NewLine, players)}{Environment.NewLine}{footer}";
 
-		await parser.NotifyService.Notify(handle: parser.CurrentState.Handle!.Value, what: message);
+		await NotifyService!.Notify(handle: parser.CurrentState.Handle!.Value, what: message);
 
 		return new None();
 	}
@@ -51,9 +51,9 @@ public partial class Commands
 	public static async ValueTask<Option<CallState>> Connect(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// Early HUH if already logged in.
-		if (parser.ConnectionService.Get(parser.CurrentState.Handle!.Value)?.Ref is not null)
+		if (ConnectionService!.Get(parser.CurrentState.Handle!.Value)?.Ref is not null)
 		{
-			await parser.NotifyService.Notify(parser.CurrentState.Handle!.Value, "Huh?  (Type \"help\" for help.)");
+			await NotifyService!.Notify(parser.CurrentState.Handle!.Value, "Huh?  (Type \"help\" for help.)");
 			return new None();
 		}
 
@@ -65,37 +65,37 @@ public partial class Commands
 
 		if (nameItems.Count == 0)
 		{
-			await parser.NotifyService.Notify(parser.CurrentState.Handle!.Value, "Could not find that player.");
+			await NotifyService!.Notify(parser.CurrentState.Handle!.Value, "Could not find that player.");
 			return new None();
 		}
 
 		var nameItem = nameItems.First();
 		var foundDB = await nameItem.Match(
-			async dbref => (await parser.Mediator.Send(new GetObjectNodeQuery(dbref))).TryPickT0(out var player, out _) ? player : null,
-			async name => (await parser.Mediator.Send(new GetPlayerQuery(name))).FirstOrDefault());
+			async dbref => (await Mediator!.Send(new GetObjectNodeQuery(dbref))).TryPickT0(out var player, out _) ? player : null,
+			async name => (await Mediator!.Send(new GetPlayerQuery(name))).FirstOrDefault());
 
 		if (foundDB is null)
 		{
-			await parser.NotifyService.Notify(parser.CurrentState.Handle!.Value, "Could not find that player.");
+			await NotifyService!.Notify(parser.CurrentState.Handle!.Value, "Could not find that player.");
 			return new None();
 		}
 
 		// TODO: Step 1: Locate player trough Locator Function.
-		var validPassword = parser.PasswordService.PasswordIsValid($"#{foundDB.Object.Key}:{foundDB.Object.CreationTime}", password, foundDB.PasswordHash);
+		var validPassword = PasswordService!.PasswordIsValid($"#{foundDB.Object.Key}:{foundDB.Object.CreationTime}", password, foundDB.PasswordHash);
 
 		if (!validPassword && !string.IsNullOrEmpty(foundDB.PasswordHash))
 		{
-			await parser.NotifyService.Notify(parser.CurrentState.Handle!.Value, "Invalid Password.");
+			await NotifyService!.Notify(parser.CurrentState.Handle!.Value, "Invalid Password.");
 			return new None();
 		}
 
 		// TODO: Step 3: Confirm there is no SiteLock.
 		// TODO: Step 4: Bind object in the ConnectionService.
-		parser.ConnectionService.Bind(parser.CurrentState.Handle!.Value,
+		ConnectionService!.Bind(parser.CurrentState.Handle!.Value,
 			new DBRef(foundDB.Object.Key, foundDB.Object.CreationTime));
 
 		// TODO: Step 5: Trigger OnConnect Event in EventService.
-		await parser.NotifyService.Notify(parser.CurrentState.Handle!.Value, "Connected!");
+		await NotifyService!.Notify(parser.CurrentState.Handle!.Value, "Connected!");
 		Serilog.Log.Logger.Debug("Successful login and binding for {@person}", foundDB.Object);
 		return new None();
 	}
@@ -104,7 +104,7 @@ public partial class Commands
 	public static ValueTask<Option<CallState>> Quit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// TODO: Display Disconnect Banner.
-		parser.ConnectionService.Disconnect(parser.CurrentState.Handle!.Value);
+		ConnectionService!.Disconnect(parser.CurrentState.Handle!.Value);
 		return ValueTask.FromResult<Option<CallState>>(new None());
 	}
 	

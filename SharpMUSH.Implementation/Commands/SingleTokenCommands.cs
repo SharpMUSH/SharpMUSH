@@ -32,10 +32,10 @@ public partial class Commands
 	{
 		// This will come in as arg[0] = <attr>, arg[1]: <object> and arg[2] as [value]
 		var args = parser.CurrentState.Arguments;
-		var enactor = (await parser.CurrentState.EnactorObject(parser.Mediator)).WithoutNone();
-		var executor = (await parser.CurrentState.ExecutorObject(parser.Mediator)).WithoutNone();
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).WithoutNone();
+		var executor = (await parser.CurrentState.ExecutorObject(Mediator!)).WithoutNone();
 
-		var locate = await parser.LocateService.LocateAndNotifyIfInvalid(parser,
+		var locate = await LocateService!.LocateAndNotifyIfInvalid(parser,
 			enactor,
 			executor,
 			args["1"].Message!.ToString(), LocateFlags.All);
@@ -51,9 +51,9 @@ public partial class Commands
 		var contents = args.TryGetValue("2", out var tmpContents) ? tmpContents.Message! : MModule.empty();
 
 		var setResult =
-			await parser.AttributeService.SetAttributeAsync(executor, realLocated, MModule.plainText(args["0"].Message!),
+			await AttributeService!.SetAttributeAsync(executor, realLocated, MModule.plainText(args["0"].Message!),
 				contents);
-		await parser.NotifyService.Notify(enactor,
+		await NotifyService!.Notify(enactor,
 			setResult.Match(
 				_ => $"{realLocated.Object().Name}/{args["0"].Message} - Set.",
 				failure => failure.Value)

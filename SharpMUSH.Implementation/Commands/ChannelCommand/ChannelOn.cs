@@ -1,14 +1,16 @@
+using Mediator;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
 public static class ChannelOn
 {
-	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString channelName, MString? arg1)
+	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, MString channelName, MString? arg1)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var target = executor;
 
 		if (arg1 is not null)
@@ -16,7 +18,7 @@ public static class ChannelOn
 			var targetName = arg1.ToPlainText();
 
 			var maybeTarget =
-				await parser.LocateService.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, targetName);
+				await LocateService!.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, targetName);
 
 			switch (maybeTarget)
 			{
@@ -29,7 +31,7 @@ public static class ChannelOn
 			target = maybeTarget.AsAnyObject;
 		}
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, channelName, true);
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService, PermissionService, Mediator, NotifyService, channelName, true);
 		if (maybeChannel.IsError)
 		{
 			return maybeChannel.AsError.Value;
@@ -38,9 +40,9 @@ public static class ChannelOn
 		var channel = maybeChannel.AsChannel;
 
 		// TODO: Announce Channel Join
-		await parser.Mediator.Send(new AddUserToChannelCommand(channel, target));
+		await Mediator!.Send(new AddUserToChannelCommand(channel, target));
 
-		await parser.NotifyService.Notify(executor, $"CHAT: {target.Object().Name} has been added to {channelName}.");
+		await NotifyService!.Notify(executor, $"CHAT: {target.Object().Name} has been added to {channelName}.");
 		return new CallState($"{target.Object().Name} has been added to {channelName}.");
 	}
 }

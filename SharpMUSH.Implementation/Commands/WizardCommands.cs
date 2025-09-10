@@ -56,16 +56,16 @@ public partial class Commands
 	{		
 		// TODO: Pipe through SPEAK()
 		var shout = parser.CurrentState.Arguments["0"].Message!;
-		var handles = parser.ConnectionService.GetAll().Select(x => x.Handle);
+		var handles = ConnectionService!.GetAll().Select(x => x.Handle);
 
 		if (!parser.CurrentState.Switches.Contains("EMIT"))
 		{
-			shout = MModule.concat(MModule.single(parser.Configuration.CurrentValue.Cosmetic.RoyaltyWallPrefix + " "), shout);
+			shout = MModule.concat(MModule.single(Configuration!.CurrentValue.Cosmetic.RoyaltyWallPrefix + " "), shout);
 		}
 		
 		await foreach (var handle in handles.ToAsyncEnumerable())
 		{
-			await parser.NotifyService.Notify(handle, shout);
+			await NotifyService!.Notify(handle, shout);
 		}
 
 		return new CallState(shout);
@@ -76,16 +76,16 @@ public partial class Commands
 	{
 		// TODO: Pipe through SPEAK()
 		var shout = parser.CurrentState.Arguments["0"].Message!;
-		var handles = parser.ConnectionService.GetAll().Select(x => x.Handle);
+		var handles = ConnectionService!.GetAll().Select(x => x.Handle);
 
 		if (!parser.CurrentState.Switches.Contains("EMIT"))
 		{
-			shout = MModule.concat(MModule.single(parser.Configuration.CurrentValue.Cosmetic.WizardWallPrefix + " "), shout);
+			shout = MModule.concat(MModule.single(Configuration!.CurrentValue.Cosmetic.WizardWallPrefix + " "), shout);
 		}
 		
 		await foreach (var handle in handles.ToAsyncEnumerable())
 		{
-			await parser.NotifyService.Notify(handle, shout);
+			await NotifyService!.Notify(handle, shout);
 		}
 
 		return new CallState(shout);
@@ -172,19 +172,19 @@ public partial class Commands
 		// @newpassword <player>=<password>
 		// @newpassword / generate < player >
 
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 		var arg0 = args["0"].Message!.ToPlainText();
 		var isGenerate = parser.CurrentState.Switches.Contains("GENERATE");
 
 		if (isGenerate && parser.CurrentState.Arguments.Count > 1)
 		{
-			await parser.NotifyService.Notify(
+			await NotifyService!.Notify(
 				executor.Object().DBRef,
 				"@NEWPASSWORD: /GENERATE switch cannot be used with other arguments.");
 		}
 
-		var maybePlayer = await parser.LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0);
+		var maybePlayer = await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0);
 		
 		if(maybePlayer.IsError)
 		{
@@ -195,12 +195,12 @@ public partial class Commands
 
 		if (isGenerate)
 		{
-			var generatedPassword = parser.PasswordService.GenerateRandomPassword();
+			var generatedPassword = PasswordService!.GenerateRandomPassword();
 
-			await parser.Mediator.Send(
-				new SetPlayerPasswordCommand(asPlayer, parser.PasswordService.HashPassword(asPlayer.Object.DBRef.ToString(), generatedPassword)));
+			await Mediator!.Send(
+				new SetPlayerPasswordCommand(asPlayer, PasswordService!.HashPassword(asPlayer.Object.DBRef.ToString(), generatedPassword)));
 
-			await parser.NotifyService.Notify(
+			await NotifyService!.Notify(
 				executor.Object().DBRef,
 				$"Generated password for {asPlayer.Object.Name}: {generatedPassword}");
 			
@@ -208,11 +208,11 @@ public partial class Commands
 		}
 
 		var arg1 = args["1"].Message!.ToPlainText();
-		var newHashedPassword = parser.PasswordService.HashPassword(asPlayer.Object.DBRef.ToString(), arg1);
+		var newHashedPassword = PasswordService!.HashPassword(asPlayer.Object.DBRef.ToString(), arg1);
 
-		await parser.Mediator.Send(new SetPlayerPasswordCommand(asPlayer, newHashedPassword));
+		await Mediator!.Send(new SetPlayerPasswordCommand(asPlayer, newHashedPassword));
 
-		await parser.NotifyService.Notify(
+		await NotifyService!.Notify(
 			executor.Object().DBRef,
 			$"Set new password for {asPlayer.Object.Name}: {arg1}");
 
@@ -236,8 +236,8 @@ public partial class Commands
 	[SharpCommand(Name = "@UPTIME", Switches = ["MORTAL"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Uptime(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
-		var data = (await parser.ObjectDataService.GetExpandedServerDataAsync<UptimeData>())!;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var data = (await ObjectDataService!.GetExpandedServerDataAsync<UptimeData>())!;
 		var upSince = data.StartTime;
 		var lastReboot = data.LastRebootTime.Humanize();
 		var reboots = data.Reboots.ToString();
@@ -256,7 +256,7 @@ public partial class Commands
 		                  SharpMUSH Uptime: {uptime}
 		               """;
 
-		await parser.NotifyService.Notify(executor, details);
+		await NotifyService!.Notify(executor, details);
 
 		if ((!await executor.IsWizard() && !executor.IsGod()) || parser.CurrentState.Switches.Contains("MORTAL"))
 		{
@@ -279,7 +279,7 @@ public partial class Commands
 		             Peak Paged Memory: {peakPaged}
 		             """;
 			
-		await parser.NotifyService.Notify(executor, extra);
+		await NotifyService!.Notify(executor, extra);
 
 		return new CallState(details);
 	}
@@ -309,7 +309,7 @@ public partial class Commands
 		var name = MModule.plainText(args["0"].Message!);
 		var password = MModule.plainText(args["1"].Message!);
 
-		var player = await parser.Mediator.Send(new CreatePlayerCommand(name, password, parser.CurrentState.Executor!.Value));
+		var player = await Mediator!.Send(new CreatePlayerCommand(name, password, parser.CurrentState.Executor!.Value));
 
 		return new CallState(player.ToString());
 	}
@@ -333,16 +333,16 @@ public partial class Commands
 	{
 		// TODO: Pipe through SPEAK()
 		var shout = parser.CurrentState.Arguments["0"].Message!;
-		var handles = parser.ConnectionService.GetAll().Select(x => x.Handle);
+		var handles = ConnectionService!.GetAll().Select(x => x.Handle);
 
 		if (!parser.CurrentState.Switches.Contains("EMIT"))
 		{
-			shout = MModule.concat(MModule.single(parser.Configuration.CurrentValue.Cosmetic.WallPrefix + " "), shout);
+			shout = MModule.concat(MModule.single(Configuration!.CurrentValue.Cosmetic.WallPrefix + " "), shout);
 		}
 		
 		await foreach (var handle in handles.ToAsyncEnumerable())
 		{
-			await parser.NotifyService.Notify(handle, shout);
+			await NotifyService!.Notify(handle, shout);
 		}
 
 		return new CallState(shout);

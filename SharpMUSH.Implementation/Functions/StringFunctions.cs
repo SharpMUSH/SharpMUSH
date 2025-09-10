@@ -91,7 +91,7 @@ public partial class Functions
 			_ => speakString
 		};
 
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var speakerIsLiteral = speaker.ToPlainText().StartsWith('&');
 		var hasTransform = !string.IsNullOrWhiteSpace(transformObjAttr.ToPlainText());
 		var hasNull = !string.IsNullOrWhiteSpace(isNullObjAttr.ToPlainText());
@@ -100,7 +100,7 @@ public partial class Functions
 
 		if (!speakerIsLiteral)
 		{
-			var maybeFound = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor,
+			var maybeFound = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor,
 				speaker.ToPlainText(), LocateFlags.All);
 			if (maybeFound.IsError)
 			{
@@ -109,7 +109,7 @@ public partial class Functions
 
 			var found = maybeFound.AsSharpObject;
 
-			if (await parser.PermissionService.Controls(executor, found))
+			if (await PermissionService!.Controls(executor, found))
 			{
 				speakerObject = found;
 			}
@@ -174,7 +174,7 @@ public partial class Functions
 			}
 
 			var transformationObject = await
-				parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
+				LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
 					executor,
 					executor,
 					splitTransform.AsT0.db,
@@ -201,7 +201,7 @@ public partial class Functions
 			actualNullAttribute = splitNull.AsT0.Attribute;
 
 			var nullObject = await
-				parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
+				LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
 					executor,
 					executor,
 					splitNull.AsT0.db,
@@ -231,7 +231,7 @@ public partial class Functions
 
 				if (actualNullAttribute is not null)
 				{
-					var nullEvaluated = await parser.AttributeService.EvaluateAttributeFunctionAsync(
+					var nullEvaluated = await AttributeService!.EvaluateAttributeFunctionAsync(
 						parser, executor, actualNullObject!, actualNullAttribute,
 						new Dictionary<string, CallState>
 						{
@@ -243,7 +243,7 @@ public partial class Functions
 					if (nullEvaluated.Truthy()) continue;
 				}
 
-				var evaluated = await parser.AttributeService.EvaluateAttributeFunctionAsync(
+				var evaluated = await AttributeService!.EvaluateAttributeFunctionAsync(
 					parser, executor, actualTransformationObject!, actualTransformAttribute ?? string.Empty,
 					new Dictionary<string, CallState>
 					{
@@ -549,7 +549,7 @@ public partial class Functions
 		{
 			// Method Pattern needs to change, attribute must be a native MString to support Lambda, 
 			// so it's easier to do this split in a common code.
-			// var parserEval = parser.AttributeService.EvaluateAttributeFunctionAsync(parser, executor, obj, attribu)
+			// var parserEval = AttributeService!.EvaluateAttributeFunctionAsync(parser, executor, obj, attribu)
 
 			newStr = MModule.concat(newStr, character);
 		}

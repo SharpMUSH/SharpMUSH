@@ -26,7 +26,7 @@ namespace SharpMUSH.Library.Services;
 /// </example>
 /// <param name="parser"></param>
 /// <param name="schedulerFactory"></param>
-public class TaskScheduler(IMUSHCodeParser parser, ISchedulerFactory schedulerFactory) : ITaskScheduler
+public class TaskScheduler(IMUSHCodeParser parser, IConnectionService connectionService, ISchedulerFactory schedulerFactory) : ITaskScheduler
 {
 	private long _nextPid = 0;
 	private long NextPid() => Interlocked.Increment(ref _nextPid);
@@ -61,7 +61,7 @@ public class TaskScheduler(IMUSHCodeParser parser, ISchedulerFactory schedulerFa
 	}
 
 	public async ValueTask WriteUserCommand(long handle, MString command, ParserState state) =>
-		await _scheduler.ScheduleJob(() => parser.FromState(state).CommandParse(handle, command).AsTask(),
+		await _scheduler.ScheduleJob(() => parser.FromState(state).CommandParse(handle, connectionService, command).AsTask(),
 			builder => builder
 				.StartNow()
 				.WithSimpleSchedule(x => x.WithRepeatCount(0))

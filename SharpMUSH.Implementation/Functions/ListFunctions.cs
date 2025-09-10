@@ -230,8 +230,8 @@ public partial class Functions
 		// Arg2: Delim
 		// Arg3: Sep
 
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
-		var enactor = (await parser.CurrentState.EnactorObject(parser.Mediator)).Known();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known();
 		var objAttr =
 			HelperFunctions.SplitOptionalObjectAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message!));
 		if (objAttr is { IsT1: true, AsT1: false })
@@ -242,7 +242,7 @@ public partial class Functions
 		var (dbref, attrName) = objAttr.AsT0;
 		dbref ??= executor.ToString();
 
-		var locate = await parser.LocateService.LocateAndNotifyIfInvalid(
+		var locate = await LocateService!.LocateAndNotifyIfInvalid(
 			parser,
 			enactor,
 			executor,
@@ -256,7 +256,7 @@ public partial class Functions
 
 		var located = locate.WithoutError().WithoutNone();
 
-		var maybeAttr = await parser.AttributeService.GetAttributeAsync(
+		var maybeAttr = await AttributeService!.GetAttributeAsync(
 			executor,
 			located,
 			attrName,
@@ -618,7 +618,7 @@ public partial class Functions
 		var result = await aList1
 			.Concat(aList2)
 			.DistinctBy(MModule.plainText)
-			.OrderByAsync(x => x.ToPlainText(), parser, sortType.ToPlainText());
+			.OrderByAsync(x => x.ToPlainText(), parser, Mediator!, LocateService!, ConnectionService!, sortType.ToPlainText());
 			
 		return new CallState(MModule.multipleWithDelimiter(outputSeparator, result));	
 	}

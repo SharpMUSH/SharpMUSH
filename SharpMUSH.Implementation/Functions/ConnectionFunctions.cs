@@ -31,18 +31,18 @@ public partial class Functions
 	[SharpFunction(Name = "CONN", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> ConnectedSeconds(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
 		if (int.TryParse(arg0, out var port))
 		{
 			// TODO: CanSee in case of Dark.
 			
-			var data2 = parser.ConnectionService.Get(port);
+			var data2 = ConnectionService!.Get(port);
 			return new CallState(data2?.Connected?.TotalSeconds.ToString(CultureInfo.InvariantCulture) ?? "-1");
 		}
 		
-		var maybeLocate = await parser.LocateService.LocatePlayerAndNotifyIfInvalid(parser, executor, executor,
+		var maybeLocate = await LocateService!.LocatePlayerAndNotifyIfInvalid(parser, executor, executor,
 			arg0);
 		if (maybeLocate.IsNone || maybeLocate.IsError)
 		{
@@ -52,7 +52,7 @@ public partial class Functions
 		var located = maybeLocate.AsPlayer;
 		
 		// TODO: CanSee in case of Dark.
-		var data = parser.ConnectionService.Get(located.Object.DBRef).ToArray().First();
+		var data = ConnectionService!.Get(located.Object.DBRef).ToArray().First();
 		return new CallState(data.Connected?.TotalSeconds.ToString(CultureInfo.InvariantCulture) ?? "-1");
 	}
 
@@ -85,18 +85,18 @@ public partial class Functions
 	[SharpFunction(Name = "idle", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> IdleSeconds(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
 		if (int.TryParse(arg0, out var port))
 		{
 			// TODO: CanSee in case of Dark.
 			
-			var data2 = parser.ConnectionService.Get(port);
+			var data2 = ConnectionService!.Get(port);
 			return new CallState(data2?.Idle?.TotalSeconds.ToString(CultureInfo.InvariantCulture) ?? "-1");
 		}
 		
-		var maybeLocate = await parser.LocateService.LocatePlayerAndNotifyIfInvalid(parser, executor, executor,
+		var maybeLocate = await LocateService!.LocatePlayerAndNotifyIfInvalid(parser, executor, executor,
 			arg0);
 		if (maybeLocate.IsNone || maybeLocate.IsError)
 		{
@@ -104,7 +104,7 @@ public partial class Functions
 		}
 
 		var locate = maybeLocate.AsPlayer;
-		var data = parser.ConnectionService.Get(locate.Object.DBRef).ToArray();
+		var data = ConnectionService!.Get(locate.Object.DBRef).ToArray();
 
 		// TODO: CanSee in case of Dark.
 		return new CallState(data.Min(x => x.Idle?.TotalSeconds).ToString() ?? "-1");
@@ -130,12 +130,12 @@ public partial class Functions
 		var arg0 = args.ContainsKey("0") ? parser.CurrentState.Arguments["0"].Message!.ToPlainText() : null;
 		var arg1 = args.ContainsKey("1") ? parser.CurrentState.Arguments["1"].Message!.ToPlainText().Split(" ") : ["offline"];
 
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var looker = executor;
 
 		if(arg0 != null)
 		{
-			var maybeLocate = await parser.LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0);
+			var maybeLocate = await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0);
 			if(maybeLocate.IsError)
 			{
 				return maybeLocate.AsError;
@@ -155,11 +155,11 @@ public partial class Functions
 
 		// NEEDED: 'Get All Players'.
 
-		var allConnectionsDbRefs = await AsyncEnumerable.ToArrayAsync(parser.ConnectionService
+		var allConnectionsDbRefs = await AsyncEnumerable.ToArrayAsync(ConnectionService!
 				.GetAll()
 				.Where(x => x.Ref is not null)
 				.ToAsyncEnumerable()
-				.Where(async (x,_) => await parser.PermissionService.CanSee(looker, (await parser.Mediator.Send(new GetObjectNodeQuery(x.Ref!.Value))).Known)) // TODO: Looker CanSee
+				.Where(async (x,_) => await PermissionService!.CanSee(looker, (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value))).Known)) // TODO: Looker CanSee
 				.Select(x => x.Ref!.Value)
 				.Select(x => $"#{x.Number}"));
 		
@@ -278,7 +278,7 @@ public partial class Functions
 	[SharpFunction(Name = "PLAYER", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> Player(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var portString = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
 
 		if (!long.TryParse(portString, out var port))
@@ -286,7 +286,7 @@ public partial class Functions
 			return new CallState("#-1 INVALID PORT");
 		}
 		
-		var data = parser.ConnectionService.Get(port);
+		var data = ConnectionService!.Get(port);
 
 		if (data?.Ref == executor.Object().DBRef)
 		{
@@ -306,11 +306,11 @@ public partial class Functions
 	[SharpFunction(Name = "HEIGHT", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> Height(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		// TODO: Look up the player object
 		
-		var data = parser.ConnectionService.Get(executor.Object().DBRef).ToArray();
+		var data = ConnectionService!.Get(executor.Object().DBRef).ToArray();
 		if (data.Length == 0)
 		{
 			return new CallState("#-1");

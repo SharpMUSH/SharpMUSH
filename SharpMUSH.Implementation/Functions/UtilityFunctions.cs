@@ -21,9 +21,9 @@ public partial class Functions
 	public static async ValueTask<CallState> PCreate(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var location = await parser.Mediator.Send(new GetObjectNodeQuery(new Library.Models.DBRef
+		var location = await Mediator!.Send(new GetObjectNodeQuery(new Library.Models.DBRef
 		{
-			Number = Convert.ToInt32(parser.Configuration.CurrentValue.Database.PlayerStart)
+			Number = Convert.ToInt32(Configuration!.CurrentValue.Database.PlayerStart)
 		}));
 
 		var trueLocation = location.Match(
@@ -33,7 +33,7 @@ public partial class Functions
 			thing => thing.Object.Key,
 			none => -1);
 
-		var created = await parser.Mediator.Send(new CreatePlayerCommand(
+		var created = await Mediator!.Send(new CreatePlayerCommand(
 			args["0"].Message!.ToString(),
 			args["1"].Message!.ToString(),
 			new Library.Models.DBRef(trueLocation == -1 ? 1 : trueLocation)));
@@ -234,12 +234,12 @@ public partial class Functions
 		var dbRefConversion = HelperFunctions.ParseDBRef(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
 		if (dbRefConversion.IsNone())
 		{
-			await parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, "I can't see that here.");
+			await NotifyService!.Notify(parser.CurrentState.Executor!.Value, "I can't see that here.");
 			return new CallState("#-1 NO SUCH PLAYER");
 		}
 
 		var dbRef = dbRefConversion.AsValue();
-		var objectInfo = await parser.Mediator.Send(new GetObjectNodeQuery(dbRef));
+		var objectInfo = await Mediator!.Send(new GetObjectNodeQuery(dbRef));
 		if (!objectInfo!.IsPlayer)
 		{
 			return new CallState("#-1 NO SUCH PLAYER");
@@ -247,7 +247,7 @@ public partial class Functions
 
 		var player = objectInfo.AsPlayer;
 
-		var result = parser.PasswordService.PasswordIsValid(
+		var result = PasswordService!.PasswordIsValid(
 			$"#{player!.Object!.Key}:{player!.Object!.CreationTime}",
 			parser.CurrentState.Arguments["1"].Message!.ToString(),
 			player.PasswordHash);
@@ -293,7 +293,7 @@ public partial class Functions
 	{
 		var parsed = HelperFunctions.ParseDBRef(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
 		if (parsed.IsNone()) return new("0");
-		return new CallState(!(await parser.Mediator.Send(new GetObjectNodeQuery(parsed.AsValue()))).IsNone);
+		return new CallState(!(await Mediator!.Send(new GetObjectNodeQuery(parsed.AsValue()))).IsNone);
 	}
 
 	[SharpFunction(Name = "ISINT", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]

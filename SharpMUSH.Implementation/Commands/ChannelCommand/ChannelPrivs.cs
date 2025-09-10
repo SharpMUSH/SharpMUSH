@@ -1,24 +1,26 @@
+using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
 public static class ChannelPrivs
 {
-	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString channelName, MString privs)
+	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, MString channelName, MString privs)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		if (await executor.IsGuest())
 		{
-			await parser.NotifyService.Notify(executor, "CHAT: Guests may not modify channels.");
+			await NotifyService!.Notify(executor, "CHAT: Guests may not modify channels.");
 			return new CallState("#-1 Guests may not modify channels.");
 		}
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, channelName, true);
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService, PermissionService, Mediator, NotifyService, channelName, true);
 
 		if (maybeChannel.IsError)
 		{
@@ -27,7 +29,7 @@ public static class ChannelPrivs
 
 		var channel = maybeChannel.AsChannel;
 
-		if (await parser.PermissionService.ChannelCanModifyAsync(executor, channel))
+		if (await PermissionService!.ChannelCanModifyAsync(executor, channel))
 		{
 			return new CallState("You are not the owner of the channel.");
 		}
@@ -35,11 +37,11 @@ public static class ChannelPrivs
 		var privilegeList = ChannelHelper.StringToChannelPrivileges(privs);
 		if (privilegeList.IsError)
 		{
-			await parser.NotifyService.Notify(executor,
+			await NotifyService!.Notify(executor,
 				$"CHAT: Invalid channel privileges(s):  {string.Join(",", privilegeList.AsError.Value)}");
 		}
 		
-		await parser.Mediator.Send(new UpdateChannelCommand(channel,
+		await Mediator!.Send(new UpdateChannelCommand(channel,
 			null, 
 			null,
 			Privs: privilegeList.AsPrivileges,

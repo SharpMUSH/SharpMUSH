@@ -16,18 +16,18 @@ public partial class Functions
 	[SharpFunction(Name = "emit", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 	public static async ValueTask<CallState> Emit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var executorLocation = await executor.Where();
-		var contents = await executorLocation.Content(parser);
+		var contents = await executorLocation.Content(Mediator!);
 
 		var interactableContents = contents
 			.ToAsyncEnumerable()
 			.Where(async (obj,_) =>
-				await parser.PermissionService.CanInteract(obj.WithRoomOption(), executor, InteractType.Hear));
+				await PermissionService!.CanInteract(obj.WithRoomOption(), executor, InteractType.Hear));
 
 		await foreach (var obj in interactableContents)
 		{
-			await parser.NotifyService.Notify(
+			await NotifyService!.Notify(
 				obj.WithRoomOption(),
 				parser.CurrentState.Arguments["0"].Message!,
 				executor,
@@ -40,17 +40,17 @@ public partial class Functions
 	[SharpFunction(Name = "lemit", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 	public static async ValueTask<CallState> LocationEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var executorLocation = await executor.Where();
-		var contents = await executorLocation.Content(parser);
+		var contents = await executorLocation.Content(Mediator!);
 
 		var interactableContents = contents.ToAsyncEnumerable()
 			.Where(async (obj,_) =>
-				await parser.PermissionService.CanInteract(obj.WithRoomOption(), executor, InteractType.Hear));
+				await PermissionService!.CanInteract(obj.WithRoomOption(), executor, InteractType.Hear));
 
 		await foreach (var obj in interactableContents)
 		{
-			await parser.NotifyService.Notify(
+			await NotifyService!.Notify(
 				obj.WithRoomOption(),
 				parser.CurrentState.Arguments["0"].Message!,
 				executor,
@@ -83,7 +83,7 @@ public partial class Functions
   Formatted> Backwards Compatability Is Annoying Sometimes
 		 */
 
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var orderedArgs = parser.CurrentState.ArgumentsOrdered; 
 		var recipients = orderedArgs["0"];
 		var message = orderedArgs["1"];
@@ -102,20 +102,20 @@ public partial class Functions
 	[SharpFunction(Name = "nsemit", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 	public static async ValueTask<CallState> NoSpoofEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
-		var spoofType = await parser.PermissionService.CanNoSpoof(executor)
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var spoofType = await PermissionService!.CanNoSpoof(executor)
 			? INotifyService.NotificationType.NSEmit
 			: INotifyService.NotificationType.Emit;
 
 		var executorLocation = await executor.Where();
-		var contents = await executorLocation.Content(parser);
+		var contents = await executorLocation.Content(Mediator!);
 
 		await foreach (var obj in contents
 			               .ToAsyncEnumerable()
 			               .Where(async (x,_) 
-				               => await parser.PermissionService.CanInteract(x.WithRoomOption(), executor, InteractType.Hear)))
+				               => await PermissionService!.CanInteract(x.WithRoomOption(), executor, InteractType.Hear)))
 		{
-			await parser.NotifyService.Notify(
+			await NotifyService!.Notify(
 				obj.WithRoomOption(),
 				parser.CurrentState.Arguments["0"].Message!,
 				executor,
@@ -128,20 +128,20 @@ public partial class Functions
 	[SharpFunction(Name = "nslemit", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 	public static async ValueTask<CallState> NoSpoofLocationEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
-		var spoofType = await parser.PermissionService.CanNoSpoof(executor)
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var spoofType = await PermissionService!.CanNoSpoof(executor)
 			? INotifyService.NotificationType.NSEmit
 			: INotifyService.NotificationType.Emit;
 
 		var executorLocation = await executor.Where();
-		var contents = await executorLocation.Content(parser);
+		var contents = await executorLocation.Content(Mediator!);
 
 		await foreach (var obj in contents
 			               .ToAsyncEnumerable()
 			               .Where(async (x,_) 
-				               => await parser.PermissionService.CanInteract(x.WithRoomOption(), executor, InteractType.Hear)))
+				               => await PermissionService!.CanInteract(x.WithRoomOption(), executor, InteractType.Hear)))
 		{
-			await parser.NotifyService.Notify(
+			await NotifyService!.Notify(
 				obj.WithRoomOption(),
 				parser.CurrentState.Arguments["0"].Message!,
 				executor,

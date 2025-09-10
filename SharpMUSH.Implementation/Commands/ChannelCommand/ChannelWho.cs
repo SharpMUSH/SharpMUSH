@@ -1,15 +1,17 @@
+using Mediator;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
 public static class ChannelWho
 {
-	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString channelName)
+	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, MString channelName)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, channelName, notify: true);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService, PermissionService, Mediator, NotifyService, channelName, notify: true);
 		if (maybeChannel.IsError)
 		{
 			return maybeChannel.AsError.Value;
@@ -30,7 +32,7 @@ public static class ChannelWho
 				delimitedMembers
 			]);
 
-		await parser.NotifyService.Notify(executor, memberOutput);
+		await NotifyService!.Notify(executor, memberOutput);
 
 		var memberList = memberArray.Select(x => x.Member.Object().DBRef).ToList();
 		return new CallState(string.Join(", ", memberList));

@@ -1,27 +1,30 @@
 ﻿using System.Globalization;
 using DotNext;
 using Humanizer;
+using Mediator;
 using OneOf;
 using OneOf.Types;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Commands.MailCommand;
 
 public static class ListMail
 {
-	public static async ValueTask<MString> Handle(IMUSHCodeParser parser, MString? arg0, MString? arg1, string[] switches)
+	public static async ValueTask<MString> Handle(IMUSHCodeParser parser, IExpandedObjectDataService objectDataService, IMediator? mediator, INotifyService? notifyService, MString? arg0, MString? arg1, string[] switches)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(mediator!);
 		var line = MModule.repeat(MModule.single("-"), 78, MModule.empty());
 
-		var filteredList = await MessageListHelper.Handle(parser, arg0, executor);
+		var filteredList = await MessageListHelper.Handle(parser, objectDataService, mediator, notifyService, arg0, executor);
 
 		if (filteredList.IsError)
 		{
-			await parser.NotifyService.Notify(executor, filteredList.AsT0.Value);
+			await notifyService!.Notify(executor, filteredList.AsT0.Value);
 			return MModule.single(filteredList.AsT0.Value);
 		}
 
@@ -29,7 +32,7 @@ public static class ListMail
 
 		if (list.IsNullOrEmpty())
 		{
-			await parser.NotifyService.Notify(executor, "MAIL: You have no matching mail in that mail folder.");
+			await notifyService!.Notify(executor, "MAIL: You have no matching mail in that mail folder.");
 			return MModule.single("MAIL: You have no matching mail in that mail folder.");
 		}
 
@@ -50,7 +53,7 @@ public static class ListMail
 				.. folderTasks,
 				line
 			];
-			await parser.NotifyService.Notify(executor, MModule.multipleWithDelimiter(MModule.single("\n"), builder));
+			await notifyService!.Notify(executor, MModule.multipleWithDelimiter(MModule.single("\n"), builder));
 		}
 
 		return MModule.empty();

@@ -1,4 +1,7 @@
-﻿using SharpMUSH.Configuration;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using SharpMUSH.Configuration;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Tests.Configuration;
@@ -7,8 +10,9 @@ public class ConfigurationTests
 {
 	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required WebAppFactory WebAppFactoryArg { get; init; }
-
-	private IMUSHCodeParser Parser => (IMUSHCodeParser)WebAppFactoryArg.Services.GetService(typeof(IMUSHCodeParser))!;
+	private IOptionsMonitor<PennMUSHOptions> Configuration => WebAppFactoryArg.Services.GetRequiredService<IOptionsMonitor<PennMUSHOptions>>();
+	
+	private IMUSHCodeParser Parser => WebAppFactoryArg.Services.GetRequiredService<IMUSHCodeParser>();
 
 	[Test]
 	public async Task ParseConfigurationFile()
@@ -26,7 +30,7 @@ public class ConfigurationTests
 	{
 		var parser = Parser;
 
-		await Assert.That(parser.Configuration.CurrentValue.Chat.ChatTokenAlias).IsEqualTo('+');
-		await Assert.That(parser.Configuration.CurrentValue.Net.MudName).IsEqualTo("PennMUSH Emulation by SharpMUSH");
+		await Assert.That(Configuration!.CurrentValue.Chat.ChatTokenAlias).IsEqualTo('+');
+		await Assert.That(Configuration!.CurrentValue.Net.MudName).IsEqualTo("PennMUSH Emulation by SharpMUSH");
 	} 
 }

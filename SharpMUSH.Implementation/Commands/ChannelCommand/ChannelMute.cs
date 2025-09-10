@@ -1,24 +1,26 @@
+using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
 public static class ChannelMute
 {
-	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString channelName, MString playerName)
+	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, MString channelName, MString playerName)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		if (await executor.IsGuest())
 		{
-			await parser.NotifyService.Notify(executor, "CHAT: Guests may not modify channels.");
+			await NotifyService!.Notify(executor, "CHAT: Guests may not modify channels.");
 			return new CallState("#-1 Guests may not modify channels.");
 		}
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, channelName, true);
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService, PermissionService, Mediator, NotifyService, channelName, true);
 		if (maybeChannel.IsError)
 		{
 			return maybeChannel.AsError.Value;
@@ -26,7 +28,7 @@ public static class ChannelMute
 
 		var channel = maybeChannel.AsChannel;
 
-		var players = await parser.Mediator.Send(new GetPlayerQuery(playerName.ToPlainText()));
+		var players = await Mediator!.Send(new GetPlayerQuery(playerName.ToPlainText()));
 		var player = players.FirstOrDefault();
 		if (player is null)
 		{
@@ -46,7 +48,7 @@ public static class ChannelMute
 			return new CallState("Player is already muted.");
 		}
 
-		await parser.Mediator.Send(new UpdateChannelUserStatusCommand(channel, executor,
+		await Mediator!.Send(new UpdateChannelUserStatusCommand(channel, executor,
 			new SharpChannelStatus(
 				null,
 				null,

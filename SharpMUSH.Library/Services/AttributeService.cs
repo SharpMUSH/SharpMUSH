@@ -14,7 +14,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.Services;
 
-public class AttributeService(IMediator mediator, IPermissionService ps, ICommandDiscoveryService cs)
+public class AttributeService(IMediator mediator, IPermissionService ps, ICommandDiscoveryService cs, ILocateService locateService)
 	: IAttributeService
 {
 	public async ValueTask<OptionalSharpAttributeOrError> GetAttributeAsync(
@@ -80,7 +80,7 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 
 		if (ignorePermissions)
 		{
-			var maybeOne = await parser.Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
+			var maybeOne = await mediator!.Send(new GetObjectNodeQuery(new DBRef(1)));
 			realExecutor = maybeOne.Known;
 		}
 
@@ -174,7 +174,7 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 
 		// Standard Object/Attribute evaluation
 		var maybeObject =
-			await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, obj.ToPlainText(),
+			await locateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, obj.ToPlainText(),
 				LocateFlags.All);
 
 		return maybeObject switch

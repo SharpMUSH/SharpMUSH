@@ -1,4 +1,5 @@
-﻿using NSubstitute;
+﻿using Microsoft.Extensions.DependencyInjection;
+using NSubstitute;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
@@ -11,7 +12,11 @@ public class SubstitutionUnitTests
 	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required WebAppFactory WebAppFactoryArg { get; init; }
 
-	private IMUSHCodeParser Parser => (IMUSHCodeParser)WebAppFactoryArg.Services.GetService(typeof(IMUSHCodeParser))!;
+	private IMUSHCodeParser Parser => WebAppFactoryArg.Services.GetRequiredService<IMUSHCodeParser>();
+
+	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
+
+	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>(); 
 
 	[Test]
 	[Arguments("think %t", "\t")]
@@ -35,12 +40,11 @@ public class SubstitutionUnitTests
 	{
 		Console.WriteLine("Testing: {0}", str);
 
-		await Parser!.CommandParse(1, MModule.single(str));
+		await Parser!.CommandParse(1, ConnectionService, MModule.single(str));
 
 		if (expected is not null)
 		{
-			await Parser.NotifyService
-				.Notify(Arg.Any<AnySharpObject>(), expected);
+			await NotifyService.Notify(Arg.Any<AnySharpObject>(), expected, null, INotifyService.NotificationType.Announce);
 		}
 	}
 }

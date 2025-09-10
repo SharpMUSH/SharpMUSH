@@ -1,21 +1,26 @@
-﻿using SharpMUSH.Library.Commands.Database;
+﻿using Mediator;
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
-using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Commands.MailCommand;
 
 public static class ForwardMail
 {
-	public static async ValueTask<MString>  Handle(IMUSHCodeParser parser, int mailNumber, string target)
+	public static async ValueTask<MString>  Handle(IMUSHCodeParser parser,
+		IExpandedObjectDataService objectDataService,
+		ILocateService? locateService, 
+		IPermissionService? permissionService,
+		IMediator? mediator, 
+		int mailNumber, string target)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
-		var maybeLocate = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, target,
+		var executor = await parser.CurrentState.KnownExecutorObject(mediator!);
+		var maybeLocate = await locateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, target,
 			LocateFlags.PlayersPreference | LocateFlags.OnlyMatchTypePreference);
-		var currentFolder = await MessageListHelper.CurrentMailFolder(parser, executor);
+		var currentFolder = await MessageListHelper.CurrentMailFolder(parser, objectDataService, executor);
 		
 		if (maybeLocate.IsError)
 		{
@@ -29,12 +34,12 @@ public static class ForwardMail
 		
 		var targetPlayer = maybeLocate.AsSharpObject.AsPlayer;
 		
-		if (!parser.PermissionService.PassesLock(executor, targetPlayer, LockType.Mail))
+		if (!permissionService!.PassesLock(executor, targetPlayer, LockType.Mail))
 		{
 			return MModule.single($"MAIL: {targetPlayer.Object.Name} does not wish to receive mail from you.");
 		}
 		
-		var mail = await parser.Mediator.Send(new GetMailQuery(executor.AsPlayer, mailNumber, currentFolder));
+		var mail = await mediator!.Send(new GetMailQuery(executor.AsPlayer, mailNumber, currentFolder));
 
 		if (mail is null)
 		{
@@ -45,7 +50,7 @@ public static class ForwardMail
 		mail.Subject = MModule.concat(MModule.single("Fwd: "), mail.Subject);
 		mail.DateSent = DateTimeOffset.UtcNow;
 		
-		await parser.Mediator.Send(new SendMailCommand(executor.Object(), targetPlayer, mail));
+		await mediator!.Send(new SendMailCommand(executor.Object(), targetPlayer, mail));
 		
 		return MModule.single(targetPlayer.Object.DBRef.ToString());
 	}

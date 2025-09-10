@@ -1,3 +1,4 @@
+using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Extensions;
@@ -10,16 +11,16 @@ namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
 public static class ChannelMogrifier
 {
-	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString channelName, MString obj)
+	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, MString channelName, MString obj)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		if (await executor.IsGuest())
 		{
-			await parser.NotifyService.Notify(executor, "CHAT: Guests may not modify channels.");
+			await NotifyService!.Notify(executor, "CHAT: Guests may not modify channels.");
 			return new CallState("#-1 Guests may not modify channels.");
 		}
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, channelName, true);
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService, PermissionService, Mediator, NotifyService, channelName, true);
 
 		if (maybeChannel.IsError)
 		{
@@ -28,14 +29,14 @@ public static class ChannelMogrifier
 
 		var channel = maybeChannel.AsChannel;
 
-		if (await parser.PermissionService.ChannelCanModifyAsync(executor, channel))
+		if (await PermissionService!.ChannelCanModifyAsync(executor, channel))
 		{
 			return new CallState("You cannot modify this channel.");
 		}
 
 		// TODO: Locate Object
 		var objectString = obj.ToPlainText();
-		var maybeLocate = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, objectString, LocateFlags.All);
+		var maybeLocate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, objectString, LocateFlags.All);
 
 		if (maybeLocate.IsError)
 		{
@@ -44,7 +45,7 @@ public static class ChannelMogrifier
 
 		var locate = maybeLocate.AsSharpObject;
 
-		await parser.Mediator.Send(new UpdateChannelCommand(channel, 
+		await Mediator!.Send(new UpdateChannelCommand(channel, 
 			null, 
 			null, 
 			null, 

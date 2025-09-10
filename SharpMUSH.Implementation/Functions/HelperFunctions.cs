@@ -325,27 +325,27 @@ public partial class Functions
 
 	public static async ValueTask<IEnumerable<SharpPlayer?>> PopulatedNameList(IMUSHCodeParser parser, string list)
 		=> await Task.WhenAll(NameList(list).Select(x => x.Match(
-			async dbref => (await parser.Mediator.Send(new GetObjectNodeQuery(dbref))).TryPickT0(out var player, out var _)
+			async dbref => (await Mediator!.Send(new GetObjectNodeQuery(dbref))).TryPickT0(out var player, out var _)
 				? player
 				: null,
-			async name => (await parser.Mediator.Send(new GetPlayerQuery(name))).FirstOrDefault())));
+			async name => (await Mediator!.Send(new GetPlayerQuery(name))).FirstOrDefault())));
 
 	public static async ValueTask<CallState> ForHandleOrPlayer(IMUSHCodeParser parser, CallState value, Func<long, IConnectionService.ConnectionData, ValueTask<CallState>> handleFunc, Func<SharpPlayer,IConnectionService.ConnectionData,ValueTask<CallState>> playerFunc)
 	{
-			var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+			var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 			var valueText = MModule.plainText(value.Message);
 	
 			var isHandle = long.TryParse(valueText, out var handle);
 			
 			if (isHandle)
 			{
-				var handleData = parser.ConnectionService.Get(handle);
+				var handleData = ConnectionService!.Get(handle);
 				if (handleData == null) return new CallState("#-1 That handle is not connected.");
 				
 				return await handleFunc(handle, handleData);
 			}
 	
-			var maybeFound = await parser.LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, valueText);
+			var maybeFound = await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, valueText);
 	
 			if (maybeFound.IsError)
 			{
@@ -353,7 +353,7 @@ public partial class Functions
 			}
 	
 			var found = maybeFound.AsSharpObject.AsPlayer;
-			var foundData = parser.ConnectionService.Get(found.Object.DBRef).FirstOrDefault();
+			var foundData = ConnectionService!.Get(found.Object.DBRef).FirstOrDefault();
 			
 			if(foundData == null) return new CallState("#-1 That player is not connected.");
 			

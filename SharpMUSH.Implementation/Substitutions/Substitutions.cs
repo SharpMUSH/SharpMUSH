@@ -1,7 +1,7 @@
-﻿using SharpMUSH.Library.Definitions;
+﻿using Mediator;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
-using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using static SharpMUSHParser;
 
@@ -10,6 +10,7 @@ namespace SharpMUSH.Implementation.Substitutions;
 public static partial class Substitutions
 {
 	public static async ValueTask<CallState> ParseSimpleSubstitution(string symbol, IMUSHCodeParser parser,
+		IMediator mediator,
 		SubstitutionSymbolContext _)
 		=> symbol switch
 		{
@@ -20,12 +21,12 @@ public static partial class Substitutions
 			"T" or "t" => new("\t"),
 			"#" => new($"#{parser.CurrentState.Enactor!.Value.Number}"),
 			":" => new($"#{parser.CurrentState.Enactor!.Value}"),
-			"n" => new((await parser.CurrentState.EnactorObject(parser.Mediator)).Object()!.Name),
-			"N" => new((await parser.CurrentState.EnactorObject(parser.Mediator)).Object()!
+			"n" => new((await parser.CurrentState.EnactorObject(mediator)).Object()!.Name),
+			"N" => new((await parser.CurrentState.EnactorObject(mediator)).Object()!
 				.Name), // TODO: CAPPED ENACTOR NAME
-			"~" => new((await parser.CurrentState.EnactorObject(parser.Mediator)).Object()!
+			"~" => new((await parser.CurrentState.EnactorObject(mediator)).Object()!
 				.Name), // TODO: ACCENTED ENACTOR NAME
-			"K" or "k" => new((await parser.CurrentState.EnactorObject(parser.Mediator)).Object()!
+			"K" or "k" => new((await parser.CurrentState.EnactorObject(mediator)).Object()!
 				.Name), // TODO: MONIKER ENACTOR NAME
 			"S" or "s" => new CallState("they"), // TODO: SUBJECT PRONOUN
 			"O" or "o" => throw new NotImplementedException(), // TODO: OBJECT PRONOUN
@@ -33,7 +34,7 @@ public static partial class Substitutions
 			"A" or "a" => throw new NotImplementedException(), // TODO: ABSOLUTE POSSESSIVE PRONOUN
 			"@" => new($"#{parser.CurrentState.Caller!.Value.Number}"),
 			"!" => new($"#{parser.CurrentState.Executor!.Value.Number}"),
-			"L" or "l" => new(await GetLocationDBRefString(parser)),
+			"L" or "l" => new(await GetLocationDBRefString(parser, mediator)),
 			"C" or "c" => throw new NotImplementedException(), // TODO: LAST COMMAND BEFORE EVALUATION
 			"U" or "u" => throw new NotImplementedException(), // TODO: LAST COMMAND AFTER EVALUATION
 			"?" => new(parser.State.Count().ToString()),
@@ -41,15 +42,16 @@ public static partial class Substitutions
 			_ => new(symbol),
 		};
 
-	private static async ValueTask<string> GetLocationDBRefString(IMUSHCodeParser parser)
+	private static async ValueTask<string> GetLocationDBRefString(IMUSHCodeParser parser, IMediator mediator)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
 		var location = await executor.Where();
 		var locationDBRef = location.Object().DBRef.Number.ToString();
 		return $"#{locationDBRef}";
 	}
 
 	public static async ValueTask<CallState> ParseComplexSubstitution(CallState? symbol, IMUSHCodeParser parser,
+		IAttributeService attributeService, IMediator mediator,
 		ComplexSubstitutionSymbolContext context)
 	{
 		ArgumentNullException.ThrowIfNull(symbol);
@@ -57,7 +59,7 @@ public static partial class Substitutions
 		if (context.REG_NUM() is not null) return HandleRegistrySymbol(symbol, parser);
 		if (context.ITEXT_NUM() is not null) return HandleITextNumber(symbol, parser);
 		if (context.STEXT_NUM() is not null) return HandleSTextNumber(symbol, parser);
-		if (context.VWX() is not null) return await HandleVWX(symbol, parser);
+		if (context.VWX() is not null) return await HandleVWX(symbol, parser, mediator, attributeService);
 		return HandleRegistrySymbol(symbol, parser);
 	}
 
@@ -70,10 +72,10 @@ public static partial class Substitutions
 	}
 
 	// Symbol Example: %vw --> vw
-	private static async ValueTask<CallState> HandleVWX(CallState symbol, IMUSHCodeParser parser)
+	private static async ValueTask<CallState> HandleVWX(CallState symbol, IMUSHCodeParser parser, IMediator mediator, IAttributeService attributeService)
 	{
-		var attrService = parser.AttributeService;
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var attrService = attributeService;
+		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
 
 		var val = await attrService.GetAttributeAsync(
 			executor,

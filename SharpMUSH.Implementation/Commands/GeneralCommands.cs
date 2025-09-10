@@ -34,22 +34,22 @@ public partial class Commands
 	[SharpCommand(Name = "THINK", Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> Think(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		if (parser.CurrentState.Arguments.Count <= 0)
 		{
 			return new None();
 		}
 
-		await parser.NotifyService.Notify(executor, parser.CurrentState.Arguments["0"].Message!.ToString());
+		await NotifyService!.Notify(executor, parser.CurrentState.Arguments["0"].Message!.ToString());
 		return parser.CurrentState.Arguments["0"];
 	}
 
 	[SharpCommand(Name = "HUH_COMMAND", Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> HuhCommand(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
-		await parser.NotifyService.Notify(executor, "Huh?  (Type \"help\" for help.)");
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		await NotifyService!.Notify(executor, "Huh?  (Type \"help\" for help.)");
 		return new CallState("#-1 HUH");
 	}
 
@@ -57,11 +57,11 @@ public partial class Commands
 		Switches = ["CLEARREGS", "DELIMIT", "INLINE", "INPLACE", "LOCALIZE", "NOBREAK", "NOTIFY"])]
 	public static async ValueTask<Option<CallState>> DoList(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var enactor = (await parser.CurrentState.EnactorObject(parser.Mediator)).WithoutNone();
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).WithoutNone();
 
 		if (parser.CurrentState.Arguments.Count < 2)
 		{
-			await parser.NotifyService.Notify(enactor, "What do you want to do with the list?");
+			await NotifyService!.Notify(enactor, "What do you want to do with the list?");
 			return new None();
 		}
 
@@ -95,12 +95,12 @@ public partial class Commands
 		// TODO: Consult CONFORMAT, DESCFORMAT, INAMEFORMAT, NAMEFORMAT, etc.
 
 		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		AnyOptionalSharpObject viewing = new None();
 
 		if (args.Count == 1)
 		{
-			var locate = await parser.LocateService.LocateAndNotifyIfInvalid(
+			var locate = await LocateService!.LocateAndNotifyIfInvalid(
 				parser,
 				executor,
 				executor,
@@ -114,7 +114,7 @@ public partial class Commands
 		}
 		else
 		{
-			viewing = (await parser.Mediator.Send(new GetCertainLocationQuery(executor.Id()!))).WithExitOption()
+			viewing = (await Mediator!.Send(new GetCertainLocationQuery(executor.Id()!))).WithExitOption()
 				.WithNoneOption();
 		}
 
@@ -125,13 +125,13 @@ public partial class Commands
 
 		var contents = viewing.IsExit
 			? []
-			: (await parser.Mediator.Send(new GetContentsQuery(viewing.WithoutNone().AsContainer)))!.ToList();
+			: (await Mediator!.Send(new GetContentsQuery(viewing.WithoutNone().AsContainer)))!.ToList();
 		var viewingObject = viewing.Object()!;
 
 		var name = viewingObject.Name;
 		var contentKeys = contents.Where(x => x.IsPlayer || x.IsThing).Select(x => x.Object().Name).ToList();
 		var exitKeys = contents.Where(x => x.IsExit).Select(x => x.Object().Name).ToList();
-		var description = (await parser.AttributeService.GetAttributeAsync(executor, viewing.Known(), "DESCRIBE",
+		var description = (await AttributeService!.GetAttributeAsync(executor, viewing.Known(), "DESCRIBE",
 				IAttributeService.AttributeMode.Read, false))
 			.Match(
 				attr => MModule.getLength(attr.Last().Value) == 0
@@ -141,16 +141,16 @@ public partial class Commands
 				_ => MModule.empty());
 
 		// TODO: Pass value into NAMEFORMAT
-		await parser.NotifyService.Notify(executor,
+		await NotifyService!.Notify(executor,
 			$"{MModule.markupSingle2(Ansi.Create(foreground: StringExtensions.rgb(Color.White)), MModule.single(name))}" +
 			$"(#{viewingObject.DBRef.Number}{string.Join(string.Empty, (await viewingObject.Flags.WithCancellation(CancellationToken.None)).Select(x => x.Symbol))})");
 		// TODO: Pass value into DESCFORMAT
-		await parser.NotifyService.Notify(executor, description.ToString());
-		// parser.NotifyService.Notify(enactor, $"Location: {location}");
+		await NotifyService!.Notify(executor, description.ToString());
+		// NotifyService!.Notify(enactor, $"Location: {location}");
 		// TODO: Pass value into CONFORMAT
-		await parser.NotifyService.Notify(executor, $"Contents: {string.Join(Environment.NewLine, contentKeys)}");
+		await NotifyService!.Notify(executor, $"Contents: {string.Join(Environment.NewLine, contentKeys)}");
 		// TODO: Pass value into EXITFORMAT
-		await parser.NotifyService.Notify(executor,
+		await NotifyService!.Notify(executor,
 			$"Exits: {string.Join(Environment.NewLine, string.Join(", ", exitKeys))}");
 
 		return new CallState(viewingObject.DBRef.ToString());
@@ -160,13 +160,13 @@ public partial class Commands
 	public static async ValueTask<Option<CallState>> Examine(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var enactor = (await parser.CurrentState.EnactorObject(parser.Mediator)).WithoutNone();
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).WithoutNone();
 		AnyOptionalSharpObject viewing = new None();
 
 		// TODO: Implement the version of this command that takes an attribute pattern!
 		if (args.Count == 1)
 		{
-			var locate = await parser.LocateService.LocateAndNotifyIfInvalid(
+			var locate = await LocateService!.LocateAndNotifyIfInvalid(
 				parser,
 				enactor,
 				enactor,
@@ -179,7 +179,7 @@ public partial class Commands
 			}
 		}
 
-		viewing = (await parser.Mediator.Send(new GetLocationQuery(enactor.Object().DBRef))).WithExitOption();
+		viewing = (await Mediator!.Send(new GetLocationQuery(enactor.Object().DBRef))).WithExitOption();
 
 		if (viewing.IsNone())
 		{
@@ -188,7 +188,7 @@ public partial class Commands
 
 		var contents = viewing.IsExit
 			? []
-			: await parser.Mediator.Send(new GetContentsQuery(viewing.Known().AsContainer));
+			: await Mediator!.Send(new GetContentsQuery(viewing.Known().AsContainer));
 
 		var obj = viewing.Object()!;
 		var ownerObj = (await obj.Owner.WithCancellation(CancellationToken.None)).Object;
@@ -196,8 +196,8 @@ public partial class Commands
 		var ownerName = ownerObj.Name;
 		var location = obj.Key;
 		var contentKeys = contents!.Select(x => x.Object().Name);
-		var exitKeys = await parser.Mediator.Send(new GetExitsQuery(obj.DBRef));
-		var description = (await parser.AttributeService.GetAttributeAsync(enactor, viewing.Known(), "DESCRIBE",
+		var exitKeys = await Mediator!.Send(new GetExitsQuery(obj.DBRef));
+		var description = (await AttributeService!.GetAttributeAsync(enactor, viewing.Known(), "DESCRIBE",
 				IAttributeService.AttributeMode.Read, false))
 			.Match(
 				attr => MModule.getLength(attr.Last().Value) == 0
@@ -230,7 +230,7 @@ public partial class Commands
 		// TODO: Match proper date format: Mon Feb 26 18:05:10 2007
 		var createdRow = MModule.single($"Created: {DateTimeOffset.FromUnixTimeMilliseconds(obj.CreationTime):F}");
 
-		await parser.NotifyService.Notify(enactor, MModule.multipleWithDelimiter(MModule.single("\n"), [
+		await NotifyService!.Notify(enactor, MModule.multipleWithDelimiter(MModule.single("\n"), [
 			nameRow,
 			typeAndFlagsRow,
 			descriptionRow,
@@ -240,14 +240,14 @@ public partial class Commands
 			createdRow
 		]));
 		
-		var atrs = await parser.AttributeService.GetVisibleAttributesAsync(enactor, viewing.Known());
+		var atrs = await AttributeService!.GetVisibleAttributesAsync(enactor, viewing.Known());
 
 		if (atrs.IsAttribute)
 		{
 			foreach (var attr in atrs.AsAttributes)
 			{
 				// TODO: Symbols for Flags. Flags are not just strings!
-				await parser.NotifyService.Notify(enactor,
+				await NotifyService!.Notify(enactor,
 					MModule.concat(
 						$"{attr.Name} [#{(await attr.Owner.WithCancellation(CancellationToken.None))!.Object.DBRef.Number}]: "
 							.Hilight(),
@@ -256,14 +256,14 @@ public partial class Commands
 		}
 
 		// TODO: Proper carry format.
-		await parser.NotifyService.Notify(enactor, $"Contents: {Environment.NewLine}" +
+		await NotifyService!.Notify(enactor, $"Contents: {Environment.NewLine}" +
 		                                           $"{string.Join(Environment.NewLine, contentKeys)}");
 
 		if (!viewing.IsRoom)
 		{
 			// TODO: Proper Format.
-			await parser.NotifyService.Notify(enactor, $"Home: {(await viewing.Known().MinusRoom().Home()).Object().Name}");
-			await parser.NotifyService.Notify(enactor,
+			await NotifyService!.Notify(enactor, $"Home: {(await viewing.Known().MinusRoom().Home()).Object().Name}");
+			await NotifyService!.Notify(enactor,
 				$"Location: {(await viewing.Known().AsContent.Location()).Object().Name}");
 		}
 
@@ -274,7 +274,7 @@ public partial class Commands
 	public static async ValueTask<Option<CallState>> PlayerEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		if (args.Count < 2)
 		{
@@ -285,30 +285,30 @@ public partial class Commands
 		var targetListText = MModule.plainText(args["0"].Message!);
 		var nameListTargets = Functions.Functions.NameList(targetListText);
 
-		var enactor = await parser.CurrentState.KnownEnactorObject(parser.Mediator);
+		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
 
 		foreach (var target in nameListTargets)
 		{
 			var targetString = target.Match(dbref => dbref.ToString(), str => str);
-			var maybeLocateTarget = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, enactor, enactor,
+			var maybeLocateTarget = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, enactor, enactor,
 				targetString,
 				LocateFlags.All);
 
 			if (maybeLocateTarget.IsError)
 			{
-				await parser.NotifyService.Notify(executor, maybeLocateTarget.AsError.Message!);
+				await NotifyService!.Notify(executor, maybeLocateTarget.AsError.Message!);
 				continue;
 			}
 
 			var locateTarget = maybeLocateTarget.AsSharpObject;
 
-			if (!await parser.PermissionService.CanInteract(locateTarget, executor, IPermissionService.InteractType.Hear))
+			if (!await PermissionService!.CanInteract(locateTarget, executor, IPermissionService.InteractType.Hear))
 			{
-				await parser.NotifyService.Notify(executor, $"{locateTarget.Object().Name} does not want to hear from you.");
+				await NotifyService!.Notify(executor, $"{locateTarget.Object().Name} does not want to hear from you.");
 				continue;
 			}
 
-			await parser.NotifyService.Notify(locateTarget, notification);
+			await NotifyService!.Notify(locateTarget, notification);
 		}
 
 		return new None();
@@ -318,14 +318,14 @@ public partial class Commands
 	public static async ValueTask<Option<CallState>> GoTo(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		if (parser.CurrentState.Arguments.Count == 0)
 		{
-			await parser.NotifyService.Notify(executor, "You can't go that way.");
+			await NotifyService!.Notify(executor, "You can't go that way.");
 			return CallState.Empty;
 		}
 
-		var exit = await parser.LocateService.LocateAndNotifyIfInvalid(
+		var exit = await LocateService!.LocateAndNotifyIfInvalid(
 			parser,
 			executor,
 			executor,
@@ -345,14 +345,14 @@ public partial class Commands
 		// TODO: Check if the exit has a destination attribute.
 		var destination = await exitObj.Home.WithCancellation(CancellationToken.None);
 
-		if (!await parser.PermissionService.CanGoto(executor, exitObj,
+		if (!await PermissionService!.CanGoto(executor, exitObj,
 			    await exitObj.Home.WithCancellation(CancellationToken.None)))
 		{
-			await parser.NotifyService.Notify(executor, "You can't go that way.");
+			await NotifyService!.Notify(executor, "You can't go that way.");
 			return CallState.Empty;
 		}
 
-		await parser.Mediator.Send(new MoveObjectCommand(executor.AsContent, destination));
+		await Mediator!.Send(new MoveObjectCommand(executor.AsContent, destination));
 
 		return new CallState(destination.ToString());
 	}
@@ -363,7 +363,7 @@ public partial class Commands
 	public static async ValueTask<Option<CallState>> Teleport(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		// If /list - Arg0 can contain multiple SharpObject
 		// If not, Arg0 is a singular object
@@ -389,7 +389,7 @@ public partial class Commands
 
 		var toTeleportStringList = toTeleportList.Select(x => x.ToString());
 
-		var destination = await parser.LocateService.LocateAndNotifyIfInvalid(parser,
+		var destination = await LocateService!.LocateAndNotifyIfInvalid(parser,
 			executor,
 			executor,
 			destinationString,
@@ -397,7 +397,7 @@ public partial class Commands
 
 		if (!destination.IsValid())
 		{
-			await parser.NotifyService.Notify(executor, "You can't go that way.");
+			await NotifyService!.Notify(executor, "You can't go that way.");
 			return CallState.Empty;
 		}
 
@@ -413,23 +413,23 @@ public partial class Commands
 
 		foreach (var obj in toTeleportStringList)
 		{
-			var locateTarget = await parser.LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, obj,
+			var locateTarget = await LocateService!.LocateAndNotifyIfInvalid(parser, executor, executor, obj,
 				LocateFlags.All);
 			if (!locateTarget.IsValid() || locateTarget.IsRoom)
 			{
-				await parser.NotifyService.Notify(executor, Errors.ErrorNotVisible);
+				await NotifyService!.Notify(executor, Errors.ErrorNotVisible);
 				continue;
 			}
 
 			var target = locateTarget.WithoutError().WithoutNone();
 			var targetContent = target.AsContent;
-			if (!await parser.PermissionService.Controls(executor, target))
+			if (!await PermissionService!.Controls(executor, target))
 			{
-				await parser.NotifyService.Notify(executor, Errors.ErrorCannotTeleport);
+				await NotifyService!.Notify(executor, Errors.ErrorCannotTeleport);
 				continue;
 			}
 
-			await parser.Mediator.Send(new MoveObjectCommand(targetContent, destinationContainer));
+			await Mediator!.Send(new MoveObjectCommand(targetContent, destinationContainer));
 			// TODO: Notify the target that they have been teleported - if Quiet switch is not present.
 			// TODO: Evaluate room verbs upon teleportation.
 			// TODO: If the target is a player, force a LOOK
@@ -465,14 +465,14 @@ public partial class Commands
 		MinArgs = 0, MaxArgs = int.MaxValue)]
 	public static async ValueTask<Option<CallState>> Notify(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var switches = parser.CurrentState.Switches.Except(["QUIET"]).ToArray();
 		var notifyType = "ANY";
 		var args = parser.CurrentState.Arguments;
 
 		if ((parser.CurrentState.Arguments.Count == 0) || string.IsNullOrEmpty(args["0"].Message?.ToPlainText()))
 		{
-			await parser.NotifyService.Notify(executor, "You must specify an object to use for the semaphore.");
+			await NotifyService!.Notify(executor, "You must specify an object to use for the semaphore.");
 			return new None();
 		}
 
@@ -494,13 +494,13 @@ public partial class Commands
 		var objectAndAttribute = HelperFunctions.SplitDBRefAndOptionalAttr(args["0"].Message!.ToPlainText());
 		if (objectAndAttribute.IsT1 && objectAndAttribute.AsT1 == false)
 		{
-			await parser.NotifyService.Notify(executor,
+			await NotifyService!.Notify(executor,
 				"You must specify a valid object with an optional valid attribute to use for the semaphore.");
 			return new None();
 		}
 
 		var (db, maybeAttributeString) = objectAndAttribute.AsT0;
-		var maybeObject = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor,
+		var maybeObject = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor,
 			db, LocateFlags.All);
 
 		if (maybeObject.IsError) return maybeObject.AsError;
@@ -512,7 +512,7 @@ public partial class Commands
 			attribute = maybeAttributeString;
 		}
 
-		var attributeContents = await parser.AttributeService.GetAttributeAsync(executor, objectToNotify, attribute,
+		var attributeContents = await AttributeService!.GetAttributeAsync(executor, objectToNotify, attribute,
 			IAttributeService.AttributeMode.Execute, false);
 
 		if (attributeContents.IsError)
@@ -533,13 +533,13 @@ public partial class Commands
 		{
 			// TODO: Handle <number> case.
 			case "ANY":
-				await parser.Mediator.Send(new NotifySemaphoreRequest(dbRefAttribute, oldSemaphoreCount));
-				await parser.AttributeService.SetAttributeAsync(executor, objectToNotify, attribute,
+				await Mediator!.Send(new NotifySemaphoreRequest(dbRefAttribute, oldSemaphoreCount));
+				await AttributeService!.SetAttributeAsync(executor, objectToNotify, attribute,
 					MModule.single((oldSemaphoreCount - 1).ToString()));
 				break;
 			case "ALL":
-				await parser.Mediator.Send(new NotifyAllSemaphoreRequest(dbRefAttribute));
-				await parser.AttributeService.SetAttributeAsync(executor, objectToNotify, attribute,
+				await Mediator!.Send(new NotifyAllSemaphoreRequest(dbRefAttribute));
+				await AttributeService!.SetAttributeAsync(executor, objectToNotify, attribute,
 					MModule.single(0.ToString()));
 				break;
 		}
@@ -555,12 +555,12 @@ public partial class Commands
 	{
 		// TODO: Noisy, Silent, NoEval
 
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var target = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var message = parser.CurrentState.Arguments["1"].Message!;
 
 		var maybeFound =
-			await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, target,
+			await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, target,
 				LocateFlags.All);
 
 		if (maybeFound.IsError)
@@ -570,13 +570,13 @@ public partial class Commands
 
 		var found = maybeFound.AsSharpObject;
 
-		if (!await parser.PermissionService.CanInteract(found, executor, IPermissionService.InteractType.Hear))
+		if (!await PermissionService!.CanInteract(found, executor, IPermissionService.InteractType.Hear))
 		{
-			await parser.NotifyService.Notify(executor, $"{found.Object().Name} does not want to hear from you.");
+			await NotifyService!.Notify(executor, $"{found.Object().Name} does not want to hear from you.");
 			return CallState.Empty;
 		}
 
-		await parser.NotifyService.Prompt(found, message, executor, INotifyService.NotificationType.NSEmit);
+		await NotifyService!.Prompt(found, message, executor, INotifyService.NotificationType.NSEmit);
 
 		return new CallState(message);
 	}
@@ -586,7 +586,7 @@ public partial class Commands
 	public static async ValueTask<Option<CallState>> Scan(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var arg0 = parser.CurrentState.Arguments["0"].Message!;
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var switches = parser.CurrentState.Switches.Any()
 			? parser.CurrentState.Switches.ToArray()
 			: ["ROOM", "SELF", "ZONE", "GLOBALS"];
@@ -598,11 +598,11 @@ public partial class Commands
 		if (executor.IsContent && switches.Contains("ROOM"))
 		{
 			var where = await executor.AsContent.Location();
-			var whereContent = await where.Content(parser);
+			var whereContent = await where.Content(Mediator!);
 
 			// notify: Matches on contents of this room:
 			var matchedContent =
-				await parser.CommandDiscoveryService.MatchUserDefinedCommand(parser,
+				await CommandDiscoveryService!.MatchUserDefinedCommand(parser,
 					whereContent.Select(x => x.WithRoomOption()),
 					arg0);
 
@@ -611,7 +611,7 @@ public partial class Commands
 				foreach (var (i, (obj, attr, _)) in matchedContent.AsValue().Index())
 				{
 					runningOutput.Add($"#{obj.Object().DBRef.Number}/{attr.LongName}");
-					await parser.NotifyService.Notify(executor,
+					await NotifyService!.Notify(executor,
 						$"{obj.Object().Name}\t[{i}: #{obj.Object().DBRef.Number}/{attr.LongName}]");
 				}
 			}
@@ -619,11 +619,11 @@ public partial class Commands
 
 		if (executor.IsContainer && switches.Contains("SELF"))
 		{
-			var executorContents = await executor.AsContainer.Content(parser);
+			var executorContents = await executor.AsContainer.Content(Mediator!);
 
 			// notify: Matches on carried objects:
 			var matchedContent =
-				await parser.CommandDiscoveryService.MatchUserDefinedCommand(parser,
+				await CommandDiscoveryService!.MatchUserDefinedCommand(parser,
 					executorContents.Select(x => x.WithRoomOption()),
 					arg0);
 
@@ -632,7 +632,7 @@ public partial class Commands
 				foreach (var (i, (obj, attr, _)) in matchedContent.AsValue().Index())
 				{
 					runningOutput.Add($"#{obj.Object().DBRef.Number}/{attr.LongName}");
-					await parser.NotifyService.Notify(executor,
+					await NotifyService!.Notify(executor,
 						$"{obj.Object().Name}\t[{i}: #{obj.Object().DBRef.Number}/{attr.LongName}]");
 				}
 			}
@@ -645,18 +645,18 @@ public partial class Commands
 
 		if (switches.Contains("GLOBAL"))
 		{
-			var masterRoom = new DBRef(Convert.ToInt32(parser.Configuration.CurrentValue.Database.MasterRoom));
-			var masterRoomContents = (await parser.Mediator.Send(new GetContentsQuery(masterRoom)) ?? []);
+			var masterRoom = new DBRef(Convert.ToInt32(Configuration!.CurrentValue.Database.MasterRoom));
+			var masterRoomContents = (await Mediator!.Send(new GetContentsQuery(masterRoom)) ?? []);
 
 			var masterRoomContent =
-				await parser.CommandDiscoveryService.MatchUserDefinedCommand(parser,
+				await CommandDiscoveryService!.MatchUserDefinedCommand(parser,
 					masterRoomContents.Select(x => x.WithRoomOption()),
 					arg0);
 
 			foreach (var (i, (obj, attr, _)) in masterRoomContent.AsValue().Index())
 			{
 				runningOutput.Add($"#{obj.Object().DBRef.Number}/{attr.LongName}");
-				await parser.NotifyService.Notify(executor,
+				await NotifyService!.Notify(executor,
 					$"{obj.Object().Name}\t[{i}: #{obj.Object().DBRef.Number}/{attr.LongName}]");
 			}
 		}
@@ -677,7 +677,7 @@ public partial class Commands
 		//	@switch/regexp makes <expr>s case-insensitive regular expressions, not wildcard/glob patterns.
 
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var strArg = args["0"];
 		Option<MString> defaultArg = new None();
 		var pairs = args.Values.Skip(1).Pairwise();
@@ -716,7 +716,7 @@ public partial class Commands
 		var arg0 = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message!.ToPlainText()!;
 		var arg1 = parser.CurrentState.Arguments.GetValueOrDefault("1")?.Message;
 		var switches = parser.CurrentState.Switches.ToArray();
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		/*
 		 *  @wait/pid <pid>=<seconds>
@@ -730,7 +730,7 @@ public partial class Commands
 
 		if (arg1 is null)
 		{
-			await parser.NotifyService.Notify(executor, "Command list missing");
+			await NotifyService!.Notify(executor, "Command list missing");
 			return new CallState("#-1 MISSING COMMAND LIST ARGUMENT");
 		}
 
@@ -747,7 +747,7 @@ public partial class Commands
 				convertedTime = TimeSpan.FromSeconds(time);
 			}
 
-			await parser.Mediator.Publish(new QueueDelayedCommandListRequest(arg1, parser.CurrentState, convertedTime));
+			await Mediator!.Publish(new QueueDelayedCommandListRequest(arg1, parser.CurrentState, convertedTime));
 			return CallState.Empty;
 		}
 
@@ -757,7 +757,7 @@ public partial class Commands
 		if (splitBySlashes.Length == 1)
 		{
 			var maybeObject = await
-				parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0, LocateFlags.All);
+				LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0, LocateFlags.All);
 
 			if (maybeObject.IsError)
 			{
@@ -765,9 +765,9 @@ public partial class Commands
 			}
 
 			var located = maybeObject.AsSharpObject;
-			if (!await parser.PermissionService.Controls(executor, located))
+			if (!await PermissionService!.Controls(executor, located))
 			{
-				await parser.NotifyService.Notify(executor, "Permission Denied.");
+				await NotifyService!.Notify(executor, "Permission Denied.");
 				return new CallState(Errors.ErrorPerm);
 			}
 
@@ -776,7 +776,7 @@ public partial class Commands
 		}
 
 		var maybeLocate =
-			await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, splitBySlashes[0],
+			await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, splitBySlashes[0],
 				LocateFlags.All);
 		if (maybeLocate.IsError)
 		{
@@ -794,7 +794,7 @@ public partial class Commands
 			{
 				if (!double.TryParse(splitBySlashes[1], out untilTime))
 				{
-					await parser.NotifyService.Notify(executor, "Invalid time argument format");
+					await NotifyService!.Notify(executor, "Invalid time argument format");
 					return new CallState(string.Format(Errors.ErrorBadArgumentFormat, "TIME ARGUMENT"));
 				}
 
@@ -815,7 +815,7 @@ public partial class Commands
 
 			// @wait[/until] <object>/<attribute>/<time>=<command list>
 			case 3 when !double.TryParse(splitBySlashes[2], out untilTime):
-				await parser.NotifyService.Notify(executor, "Invalid time argument format");
+				await NotifyService!.Notify(executor, "Invalid time argument format");
 				return new CallState(string.Format(Errors.ErrorBadArgumentFormat, "TIME ARGUMENT"));
 
 			// TODO: Validate valid attribute value.
@@ -832,7 +832,7 @@ public partial class Commands
 				return CallState.Empty;
 
 			default:
-				await parser.NotifyService.Notify(executor, "Invalid first argument format");
+				await NotifyService!.Notify(executor, "Invalid first argument format");
 				return new CallState(string.Format(Errors.ErrorBadArgumentFormat, "FIRST ARGUMENT"));
 		}
 	}
@@ -840,58 +840,58 @@ public partial class Commands
 	private static async ValueTask QueueSemaphore(IMUSHCodeParser parser, AnySharpObject located, string[] attribute,
 		MString arg1)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
-		var one = await parser.Mediator.Send(new GetObjectNodeQuery(new DBRef(0)));
-		var attrValues = await parser.Mediator.Send(new GetAttributeQuery(located.Object().DBRef, ["SEMAPHORE"]));
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var one = await Mediator!.Send(new GetObjectNodeQuery(new DBRef(0)));
+		var attrValues = await Mediator!.Send(new GetAttributeQuery(located.Object().DBRef, ["SEMAPHORE"]));
 		var attrValue = attrValues?.LastOrDefault();
 
 		if (attrValue is null)
 		{
-			await parser.Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single("0"),
+			await Mediator!.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single("0"),
 				one.AsPlayer));
-			await parser.Mediator.Publish(new QueueCommandListRequest(arg1, parser.CurrentState,
+			await Mediator!.Publish(new QueueCommandListRequest(arg1, parser.CurrentState,
 				new DbRefAttribute(located.Object().DBRef, attribute), 0));
 			return;
 		}
 
 		if (int.TryParse(attrValue.Value.ToPlainText(), out var last))
 		{
-			await parser.NotifyService.Notify(executor, Errors.ErrorInteger);
+			await NotifyService!.Notify(executor, Errors.ErrorInteger);
 			return;
 		}
 
-		await parser.Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single($"{last + 1}"),
+		await Mediator!.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single($"{last + 1}"),
 			one.AsPlayer));
-		await parser.Mediator.Publish(new QueueCommandListRequest(arg1, parser.CurrentState,
+		await Mediator!.Publish(new QueueCommandListRequest(arg1, parser.CurrentState,
 			new DbRefAttribute(located.Object().DBRef, attribute), last));
 	}
 
 	private static async ValueTask QueueSemaphoreWithDelay(IMUSHCodeParser parser, AnySharpObject located,
 		string[] attribute, TimeSpan delay, MString arg1)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
-		var one = await parser.Mediator.Send(new GetObjectNodeQuery(new DBRef(0)));
-		var attrValues = await parser.Mediator.Send(new GetAttributeQuery(located.Object().DBRef, attribute));
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var one = await Mediator!.Send(new GetObjectNodeQuery(new DBRef(0)));
+		var attrValues = await Mediator!.Send(new GetAttributeQuery(located.Object().DBRef, attribute));
 		var attrValue = attrValues?.LastOrDefault();
 
 		if (attrValue is null)
 		{
-			await parser.Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single("0"),
+			await Mediator!.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single("0"),
 				one.AsPlayer));
-			await parser.Mediator.Publish(new QueueCommandListWithTimeoutRequest(arg1, parser.CurrentState,
+			await Mediator!.Publish(new QueueCommandListWithTimeoutRequest(arg1, parser.CurrentState,
 				new DbRefAttribute(located.Object().DBRef, attribute), 0, delay));
 			return;
 		}
 
 		if (int.TryParse(attrValue.Value.ToPlainText(), out var last))
 		{
-			await parser.NotifyService.Notify(executor, Errors.ErrorInteger);
+			await NotifyService!.Notify(executor, Errors.ErrorInteger);
 			return;
 		}
 
-		await parser.Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single($"{last + 1}"),
+		await Mediator!.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single($"{last + 1}"),
 			one.AsPlayer));
-		await parser.Mediator.Publish(new QueueCommandListWithTimeoutRequest(arg1, parser.CurrentState,
+		await Mediator!.Publish(new QueueCommandListWithTimeoutRequest(arg1, parser.CurrentState,
 			new DbRefAttribute(located.Object().DBRef, attribute), last, delay));
 	}
 
@@ -901,22 +901,22 @@ public partial class Commands
 	{
 		if (!int.TryParse(arg0, out var pid))
 		{
-			await parser.NotifyService.Notify(executor, "Invalid PID specified.");
+			await NotifyService!.Notify(executor, "Invalid PID specified.");
 			return new CallState("#-1 INVALID PID");
 		}
 
 		if (string.IsNullOrEmpty(arg1))
 		{
-			await parser.NotifyService.Notify(executor, "What do you want to do with the process?");
+			await NotifyService!.Notify(executor, "What do you want to do with the process?");
 			return new CallState(string.Format(Errors.ErrorTooFewArguments, "@WAIT", 2, 1));
 		}
 
-		var exists = await parser.Mediator.Send(new ScheduleSemaphoreQuery(pid));
+		var exists = await Mediator!.Send(new ScheduleSemaphoreQuery(pid));
 		var maybeFoundPid = await exists.FirstOrDefaultAsync();
 
 		if (maybeFoundPid is null)
 		{
-			await parser.NotifyService.Notify(executor, "Invalid PID specified.");
+			await NotifyService!.Notify(executor, "Invalid PID specified.");
 			return new CallState("#-1 INVALID PID");
 		}
 
@@ -926,12 +926,12 @@ public partial class Commands
 		{
 			if (!DateTimeOffset.TryParse(timeArg, out var dateTimeOffset))
 			{
-				await parser.NotifyService.Notify(executor, "Invalid time specified.");
+				await NotifyService!.Notify(executor, "Invalid time specified.");
 				return new CallState("#-1 INVALID TIME");
 			}
 
 			var until = DateTimeOffset.UtcNow - dateTimeOffset;
-			await parser.Mediator.Send(new RescheduleSemaphoreRequest(maybeFoundPid.Pid, until));
+			await Mediator!.Send(new RescheduleSemaphoreRequest(maybeFoundPid.Pid, until));
 
 			return new CallState(maybeFoundPid.Pid.ToString());
 		}
@@ -943,25 +943,25 @@ public partial class Commands
 
 		if (!long.TryParse(timeArg, out var secs))
 		{
-			await parser.NotifyService.Notify(executor, "Invalid time specified.");
+			await NotifyService!.Notify(executor, "Invalid time specified.");
 			return new CallState("#-1 INVALID TIME");
 		}
 
 		if (arg1.StartsWith('+'))
 		{
 			var until = (maybeFoundPid.RunDelay ?? TimeSpan.Zero) + TimeSpan.FromSeconds(secs);
-			await parser.Mediator.Send(new RescheduleSemaphoreRequest(maybeFoundPid.Pid, until));
+			await Mediator!.Send(new RescheduleSemaphoreRequest(maybeFoundPid.Pid, until));
 			return new CallState(maybeFoundPid.Pid.ToString());
 		}
 
 		if (arg1.StartsWith('-'))
 		{
 			var until = (maybeFoundPid.RunDelay ?? TimeSpan.Zero) - TimeSpan.FromSeconds(secs);
-			await parser.Mediator.Send(new RescheduleSemaphoreRequest(maybeFoundPid.Pid, until));
+			await Mediator!.Send(new RescheduleSemaphoreRequest(maybeFoundPid.Pid, until));
 			return new CallState(maybeFoundPid.Pid.ToString());
 		}
 
-		await parser.Mediator.Send(new RescheduleSemaphoreRequest(maybeFoundPid.Pid, TimeSpan.FromSeconds(secs)));
+		await Mediator!.Send(new RescheduleSemaphoreRequest(maybeFoundPid.Pid, TimeSpan.FromSeconds(secs)));
 		return new CallState(maybeFoundPid.Pid.ToString());
 	}
 
@@ -984,24 +984,24 @@ public partial class Commands
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var arg1 = parser.CurrentState.Arguments.GetValueOrDefault("1")?.Message?.ToPlainText();
 		var switches = parser.CurrentState.Switches.ToArray();
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
-		var one = await parser.Mediator.Send(new GetObjectNodeQuery(new DBRef(0)));
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var one = await Mediator!.Send(new GetObjectNodeQuery(new DBRef(0)));
 
 		if (switches.Length > 1)
 		{
-			await parser.NotifyService.Notify(executor, Errors.ErrorTooManySwitches);
+			await NotifyService!.Notify(executor, Errors.ErrorTooManySwitches);
 			return new CallState(Errors.ErrorTooManySwitches);
 		}
 
 		var maybeObjectAndAttribute = HelperFunctions.SplitDBRefAndOptionalAttr(arg0);
 		if (maybeObjectAndAttribute is { IsT1: true, AsT1: false })
 		{
-			await parser.NotifyService.Notify(executor, Errors.ErrorCantSeeThat);
+			await NotifyService!.Notify(executor, Errors.ErrorCantSeeThat);
 			return new CallState(Errors.ErrorCantSeeThat);
 		}
 
 		var (target, maybeAttribute) = maybeObjectAndAttribute.AsT0;
-		var maybeObject = await parser.LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, target,
+		var maybeObject = await LocateService!.LocateAndNotifyIfInvalid(parser, executor, executor, target,
 			LocateFlags.All);
 
 		switch (maybeObject)
@@ -1019,22 +1019,22 @@ public partial class Commands
 		if (maybeAttribute is not null && (switches.Contains("ANY") || switches.Length == 0))
 		{
 			var maybeFoundAttributes =
-				await parser.Mediator.Send(new GetAttributeQuery(objectToDrain.Object().DBRef, attribute));
+				await Mediator!.Send(new GetAttributeQuery(objectToDrain.Object().DBRef, attribute));
 			var maybeFoundAttribute = maybeFoundAttributes?.LastOrDefault();
 
 			if (maybeFoundAttribute is null)
 			{
-				await parser.Mediator.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, attribute,
+				await Mediator!.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, attribute,
 					MModule.single("-1"),
 					one.AsPlayer));
 			}
 
-			await parser.Mediator.Publish(
+			await Mediator!.Publish(
 				new DrainSemaphoreRequest(new DbRefAttribute(objectToDrain.Object().DBRef, attribute)));
 		}
 		else if (maybeAttribute is null && (switches.Contains("ANY") || switches.Length == 0))
 		{
-			var pids = await parser.Mediator.Send(new ScheduleSemaphoreQuery(objectToDrain.Object().DBRef));
+			var pids = await Mediator!.Send(new ScheduleSemaphoreQuery(objectToDrain.Object().DBRef));
 			var filteredPids = pids
 				.GroupBy(data => string.Join('`', data.SemaphoreSource.Attribute), x => x.SemaphoreSource)
 				.Select(x => x.First());
@@ -1042,10 +1042,10 @@ public partial class Commands
 			await foreach (var uniqueAttribute in filteredPids)
 			{
 				var dbRefAttrToDrain = uniqueAttribute;
-				await parser.Mediator.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, dbRefAttrToDrain.Attribute,
+				await Mediator!.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, dbRefAttrToDrain.Attribute,
 					MModule.single("-1"),
 					one.AsPlayer));
-				await parser.Mediator.Publish(new DrainSemaphoreRequest(dbRefAttrToDrain));
+				await Mediator!.Publish(new DrainSemaphoreRequest(dbRefAttrToDrain));
 			}
 		}
 		else if (switches.Contains("ALL"))
@@ -1063,10 +1063,10 @@ public partial class Commands
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var objArg = Functions.Functions.NoParseDefaultNoParseArgument(args, 0, MModule.empty());
 		var cmdListArg = Functions.Functions.NoParseDefaultNoParseArgument(args, 1, MModule.empty());
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		var maybeFound =
-			await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, objArg.ToPlainText(),
+			await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, objArg.ToPlainText(),
 				LocateFlags.All);
 
 		if (maybeFound.IsError)
@@ -1076,15 +1076,15 @@ public partial class Commands
 
 		var found = maybeFound.AsSharpObject;
 
-		if (!await parser.PermissionService.Controls(executor, found))
+		if (!await PermissionService!.Controls(executor, found))
 		{
-			await parser.NotifyService.Notify(executor, "Permission denied. You do not control the target.");
+			await NotifyService!.Notify(executor, "Permission denied. You do not control the target.");
 			return new CallState(Errors.ErrorPerm);
 		}
 
 		if (cmdListArg.Length < 1)
 		{
-			await parser.NotifyService.Notify(executor, "Force them to do what?");
+			await NotifyService!.Notify(executor, "Force them to do what?");
 			return new CallState(Errors.NothingToDo);
 		}
 
@@ -1134,7 +1134,7 @@ public partial class Commands
 	public static async ValueTask<Option<CallState>> Prompt(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		if (args.Count < 2)
 		{
@@ -1145,30 +1145,30 @@ public partial class Commands
 		var targetListText = MModule.plainText(args["0"].Message!);
 		var nameListTargets = Functions.Functions.NameList(targetListText);
 
-		var enactor = await parser.CurrentState.KnownEnactorObject(parser.Mediator);
+		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
 
 		foreach (var target in nameListTargets)
 		{
 			var targetString = target.Match(dbref => dbref.ToString(), str => str);
-			var maybeLocateTarget = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, enactor, enactor,
+			var maybeLocateTarget = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, enactor, enactor,
 				targetString,
 				LocateFlags.All);
 
 			if (maybeLocateTarget.IsError)
 			{
-				await parser.NotifyService.Notify(executor, maybeLocateTarget.AsError.Message!);
+				await NotifyService!.Notify(executor, maybeLocateTarget.AsError.Message!);
 				continue;
 			}
 
 			var locateTarget = maybeLocateTarget.AsSharpObject;
 
-			if (!await parser.PermissionService.CanInteract(locateTarget, executor, IPermissionService.InteractType.Hear))
+			if (!await PermissionService!.CanInteract(locateTarget, executor, IPermissionService.InteractType.Hear))
 			{
-				await parser.NotifyService.Notify(executor, $"{locateTarget.Object().Name} does not want to hear from you.");
+				await NotifyService!.Notify(executor, $"{locateTarget.Object().Name} does not want to hear from you.");
 				continue;
 			}
 
-			await parser.NotifyService.Prompt(locateTarget, notification);
+			await NotifyService!.Prompt(locateTarget, notification);
 		}
 
 		return new None();
@@ -1337,7 +1337,7 @@ public partial class Commands
 				@channel/delete <channel>
 				@channel/mogrifier <channel>=<object>
 		 */
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches.ToArray();
 
@@ -1350,31 +1350,31 @@ public partial class Commands
 
 		return switches switch
 		{
-			[.., "LIST"] => await ChannelCommand.ChannelList.Handle(parser, args["0"].Message!, args["1"].Message!, switches),
-			["WHAT"] => await ChannelWhat.Handle(parser, args["0"].Message!),
-			["WHO"] => await ChannelWho.Handle(parser, args["0"].Message!),
-			["ON"] or ["JOIN"] => await ChannelOn.Handle(parser, args["0"].Message!, args["1"].Message),
-			["OFF"] or ["LEAVE"] => await ChannelOff.Handle(parser, args["0"].Message!, args["1"].Message),
-			["GAG"] => await ChannelGag.Handle(parser, args["0"].Message!, args["1"].Message!, switches),
-			["MUTE"] => await ChannelMute.Handle(parser, args["0"].Message!, args["1"].Message!),
-			["HIDE"] => await ChannelHide.Handle(parser, args["0"].Message!, args["1"].Message!),
-			["COMBINE"] => await ChannelCombine.Handle(parser, args["0"].Message!, args["1"].Message!),
-			["TITLE"] => await ChannelTitle.Handle(parser, args["0"].Message!, args["1"].Message!),
-			[.., "RECALL"] => await ChannelRecall.Handle(parser, args["0"].Message!, args["1"].Message!, switches),
+			[.., "LIST"] => await ChannelCommand.ChannelList.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, args["0"].Message!, args["1"].Message!, switches),
+			["WHAT"] => await ChannelWhat.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, args["0"].Message!),
+			["WHO"] => await ChannelWho.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, args["0"].Message!),
+			["ON"] or ["JOIN"] => await ChannelOn.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!,  args["0"].Message!, args["1"].Message),
+			["OFF"] or ["LEAVE"] => await ChannelOff.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, args["0"].Message!, args["1"].Message),
+			["GAG"] => await ChannelGag.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, args["0"].Message!, args["1"].Message!, switches),
+			["MUTE"] => await ChannelMute.Handle(parser,LocateService!, PermissionService!, Mediator!, NotifyService!,  args["0"].Message!, args["1"].Message!),
+			["HIDE"] => await ChannelHide.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, args["0"].Message!, args["1"].Message!),
+			["COMBINE"] => await ChannelCombine.Handle(parser,LocateService!, PermissionService!, Mediator!, NotifyService!,  args["0"].Message!, args["1"].Message!),
+			["TITLE"] => await ChannelTitle.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, args["0"].Message!, args["1"].Message!),
+			[.., "RECALL"] => await ChannelRecall.Handle(parser,LocateService!, PermissionService!, Mediator!, NotifyService!,  args["0"].Message!, args["1"].Message!, switches),
 			["ADD"] when args.ContainsKey("0") && args.ContainsKey("1")
-				=> await ChannelAdd.Handle(parser, args["0"].Message!, args["1"].Message!),
+				=> await ChannelAdd.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, Configuration!, args["0"].Message!, args["1"].Message!),
 			["PRIVS"] when args.ContainsKey("0") && args.ContainsKey("1")
-				=> await ChannelPrivs.Handle(parser, args["0"].Message!, args["1"].Message!),
+				=> await ChannelPrivs.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, args["0"].Message!, args["1"].Message!),
 			["DESCRIBE"] when args.ContainsKey("0") && args.ContainsKey("1")
-				=> await ChannelDescribe.Handle(parser, args["0"].Message!, args["1"].Message!),
+				=> await ChannelDescribe.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, args["0"].Message!, args["1"].Message!),
 			["BUFFER"] when args.ContainsKey("0") && args.ContainsKey("1")
-				=> await ChannelBuffer.Handle(parser, args["0"].Message!, args["1"].Message!),
-			[.., "DECOMPILE"] => await ChannelDecompile.Handle(parser, args["0"].Message!, args["1"].Message!, switches),
-			["CHOWN"] => await ChannelChown.Handle(parser, args["0"].Message!, args["1"].Message!),
-			["RENAME"] => await ChannelRename.Handle(parser, args["0"].Message!, args["1"].Message!),
-			["WIPE"] => await ChannelWipe.Handle(parser, args["0"].Message!, args["1"].Message!),
-			["DELETE"] => await ChannelDelete.Handle(parser, args["0"].Message!, args["1"].Message!),
-			["MOGRIFIER"] => await ChannelMogrifier.Handle(parser, args["0"].Message!, args["1"].Message!),
+				=> await ChannelBuffer.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, Configuration!, args["0"].Message!, args["1"].Message!),
+			[.., "DECOMPILE"] => await ChannelDecompile.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, args["0"].Message!, args["1"].Message!, switches),
+			["CHOWN"] => await ChannelChown.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, args["0"].Message!, args["1"].Message!),
+			["RENAME"] => await ChannelRename.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, Configuration!, args["0"].Message!, args["1"].Message!),
+			["WIPE"] => await ChannelWipe.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, args["0"].Message!, args["1"].Message!),
+			["DELETE"] => await ChannelDelete.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, args["0"].Message!, args["1"].Message!),
+			["MOGRIFIER"] => await ChannelMogrifier.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, args["0"].Message!, args["1"].Message!),
 			_ => new CallState("What do you want to do with the channel?")
 		};
 	}
@@ -1393,10 +1393,10 @@ public partial class Commands
 	public static async ValueTask<Option<CallState>> Emit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
-		var enactor = await parser.CurrentState.KnownEnactorObject(parser.Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
 		var executorLocation = await executor.Where();
-		var contents = await executorLocation.Content(parser);
+		var contents = await executorLocation.Content(Mediator!);
 		var isSpoof = parser.CurrentState.Switches.Contains("SPOOF");
 		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
 		var message = isNoEvaluation
@@ -1406,24 +1406,24 @@ public partial class Commands
 		var interactableContents = contents
 			.ToAsyncEnumerable()
 			.Where(async (obj, _) =>
-				await parser.PermissionService.CanInteract(obj.WithRoomOption(), executor,
+				await PermissionService!.CanInteract(obj.WithRoomOption(), executor,
 					IPermissionService.InteractType.Hear));
 
 		if (isSpoof)
 		{
 			var canSpoof = await executor.HasPower("CAN_SPOOF");
-			var controlsExecutor = await parser.PermissionService.Controls(executor, enactor);
+			var controlsExecutor = await PermissionService!.Controls(executor, enactor);
 
 			if (!canSpoof && !controlsExecutor)
 			{
-				await parser.NotifyService.Notify(executor, "You do not have permission to spoof emits.");
+				await NotifyService!.Notify(executor, "You do not have permission to spoof emits.");
 				return new CallState(Errors.ErrorPerm);
 			}
 		}
 
 		await foreach (var obj in interactableContents)
 		{
-			await parser.NotifyService.Notify(
+			await NotifyService!.Notify(
 				obj.WithRoomOption(),
 				message,
 				isSpoof ? enactor : executor,
@@ -1446,10 +1446,10 @@ public partial class Commands
 	public static async ValueTask<Option<CallState>> NoSpoofOmitEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
-		var enactor = await parser.CurrentState.KnownEnactorObject(parser.Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
 		var executorLocation = await executor.Where();
-		var contents = await executorLocation.Content(parser);
+		var contents = await executorLocation.Content(Mediator!);
 		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
 		var message = isNoEvaluation
 			? Functions.Functions.NoParseDefaultNoParseArgument(args, 1, MModule.empty())
@@ -1458,21 +1458,21 @@ public partial class Commands
 		var interactableContents = contents
 			.ToAsyncEnumerable()
 			.Where(async (obj, _) =>
-				await parser.PermissionService.CanInteract(obj.WithRoomOption(), executor,
+				await PermissionService!.CanInteract(obj.WithRoomOption(), executor,
 					IPermissionService.InteractType.Hear));
 
 		var canSpoof = await executor.HasPower("CAN_SPOOF");
-		var controlsExecutor = await parser.PermissionService.Controls(executor, enactor);
+		var controlsExecutor = await PermissionService!.Controls(executor, enactor);
 
 		if (!canSpoof && !controlsExecutor)
 		{
-			await parser.NotifyService.Notify(executor, "You do not have permission to spoof emits.");
+			await NotifyService!.Notify(executor, "You do not have permission to spoof emits.");
 			return new CallState(Errors.ErrorPerm);
 		}
 
 		await foreach (var obj in interactableContents)
 		{
-			await parser.NotifyService.Notify(
+			await NotifyService!.Notify(
 				obj.WithRoomOption(),
 				message,
 				enactor,
@@ -1551,13 +1551,13 @@ public partial class Commands
 		parser.CurrentState.Arguments.TryGetValue("1", out var arg1CallState);
 		MString? arg0, arg1;
 		var switches = parser.CurrentState.Switches.ToArray();
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
-		var caller = (await parser.CurrentState.CallerObject(parser.Mediator)).Known();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var caller = (await parser.CurrentState.CallerObject(Mediator!)).Known();
 		string[] sendSwitches = ["SEND", "URGENT", "NOSIG", "SILENT", "NOEVAL"];
 
 		if (switches.Except(sendSwitches).Any() && switches.Length > 1)
 		{
-			await parser.NotifyService.Notify(executor, "Error: Too many switches passed to @mail.", caller);
+			await NotifyService!.Notify(executor, "Error: Too many switches passed to @mail.", caller);
 			return new CallState(Errors.ErrorTooManySwitches);
 		}
 
@@ -1574,36 +1574,36 @@ public partial class Commands
 
 		var response = switches.AsSpan() switch
 		{
-			[.., "FOLDER"] when executor.IsPlayer => await FolderMail.Handle(parser, arg0, arg1, switches),
-			[.., "UNFOLDER"] when executor.IsPlayer => await FolderMail.Handle(parser, arg0, arg1, switches),
-			[.., "FILE"] when executor.IsPlayer => await FolderMail.Handle(parser, arg0, arg1, switches),
-			[.., "CLEAR"] when executor.IsPlayer => await StatusMail.Handle(parser, arg0, arg1, "CLEAR"),
-			[.., "UNCLEAR"] when executor.IsPlayer => await StatusMail.Handle(parser, arg0, arg1, "UNCLEAR"),
-			[.., "TAG"] when executor.IsPlayer => await StatusMail.Handle(parser, arg0, arg1, "TAG"),
-			[.., "UNTAG"] when executor.IsPlayer => await StatusMail.Handle(parser, arg0, arg1, "UNTAG"),
-			[.., "UNREAD"] when executor.IsPlayer => await StatusMail.Handle(parser, arg0, arg1, "UNREAD"),
-			[.., "STATUS"] when executor.IsPlayer => await StatusMail.Handle(parser, arg0, arg1, "STATUS"),
-			[.., "CSTATS"] when executor.IsPlayer => await StatsMail.Handle(parser, arg0, switches),
-			[.., "STATS"] when executor.IsPlayer => await StatsMail.Handle(parser, arg0, switches),
-			[.., "DSTATS"] when executor.IsPlayer => await StatsMail.Handle(parser, arg0, switches),
-			[.., "FSTATS"] when executor.IsPlayer => await StatsMail.Handle(parser, arg0, switches),
-			[.., "DEBUG"] => await AdminMail.Handle(parser, switches),
-			[.., "NUKE"] => await AdminMail.Handle(parser, switches),
+			[.., "FOLDER"] when executor.IsPlayer => await FolderMail.Handle(parser, ObjectDataService!, Mediator!, NotifyService!, arg0, arg1, switches),
+			[.., "UNFOLDER"] when executor.IsPlayer => await FolderMail.Handle(parser, ObjectDataService!, Mediator!, NotifyService!, arg0, arg1, switches),
+			[.., "FILE"] when executor.IsPlayer => await FolderMail.Handle(parser, ObjectDataService!, Mediator!, NotifyService!, arg0, arg1, switches),
+			[.., "CLEAR"] when executor.IsPlayer => await StatusMail.Handle(parser, ObjectDataService!, Mediator!, NotifyService!, arg0, arg1, "CLEAR"),
+			[.., "UNCLEAR"] when executor.IsPlayer => await StatusMail.Handle(parser, ObjectDataService!, Mediator!, NotifyService!, arg0, arg1, "UNCLEAR"),
+			[.., "TAG"] when executor.IsPlayer => await StatusMail.Handle(parser, ObjectDataService!, Mediator!, NotifyService!, arg0, arg1, "TAG"),
+			[.., "UNTAG"] when executor.IsPlayer => await StatusMail.Handle(parser, ObjectDataService!, Mediator!, NotifyService!, arg0, arg1, "UNTAG"),
+			[.., "UNREAD"] when executor.IsPlayer => await StatusMail.Handle(parser, ObjectDataService!, Mediator!, NotifyService!, arg0, arg1, "UNREAD"),
+			[.., "STATUS"] when executor.IsPlayer => await StatusMail.Handle(parser, ObjectDataService!, Mediator!, NotifyService!, arg0, arg1, "STATUS"),
+			[.., "CSTATS"] when executor.IsPlayer => await StatsMail.Handle(parser, ObjectDataService!, LocateService!, Mediator!, NotifyService!, arg0, switches),
+			[.., "STATS"] when executor.IsPlayer => await StatsMail.Handle(parser, ObjectDataService!, LocateService!, Mediator!, NotifyService!, arg0, switches),
+			[.., "DSTATS"] when executor.IsPlayer => await StatsMail.Handle(parser, ObjectDataService!, LocateService!, Mediator!, NotifyService!, arg0, switches),
+			[.., "FSTATS"] when executor.IsPlayer => await StatsMail.Handle(parser, ObjectDataService!, LocateService!, Mediator!, NotifyService!, arg0, switches),
+			[.., "DEBUG"] => await AdminMail.Handle(parser, Mediator!, NotifyService!, switches),
+			[.., "NUKE"] => await AdminMail.Handle(parser, Mediator!, NotifyService!, switches),
 			[.., "REVIEW"] when (arg0?.Length ?? 0) != 0 && (arg1?.Length ?? 0) != 0
-				=> await ReviewMail.Handle(parser, arg0, arg1, switches),
+				=> await ReviewMail.Handle(parser, LocateService!, ObjectDataService!, Mediator!, NotifyService!, arg0, arg1, switches),
 			[.., "RETRACT"] when (arg0?.Length ?? 0) != 0 && (arg1?.Length ?? 0) != 0
-				=> await RetractMail.Handle(parser, arg0!.ToPlainText(), arg1!.ToPlainText()),
+				=> await RetractMail.Handle(parser, ObjectDataService!, LocateService!, Mediator!, NotifyService!, arg0!.ToPlainText(), arg1!.ToPlainText()),
 			[.., "FWD"] when executor.IsPlayer && int.TryParse(arg0?.ToPlainText(), out var number) &&
 			                 (arg1?.Length ?? 0) != 0
-				=> await ForwardMail.Handle(parser, number, arg1!.ToPlainText()),
+				=> await ForwardMail.Handle(parser, ObjectDataService!, LocateService!, PermissionService!, Mediator!, number, arg1!.ToPlainText()),
 			[.., "SEND"] or [.., "URGENT"] or [.., "SILENT"] or [.., "NOSIG"] or []
 				when arg0?.Length != 0 && arg1?.Length != 0
-				=> await SendMail.Handle(parser, arg0!, arg1!, switches),
+				=> await SendMail.Handle(parser, PermissionService!, ObjectDataService!, Mediator!, NotifyService!, arg0!, arg1!, switches),
 			[.., "READ"] or [] when executor.IsPlayer && (arg1?.Length ?? 0) == 0 &&
 			                        int.TryParse(arg0?.ToPlainText(), out var number)
-				=> await ReadMail.Handle(parser, Math.Max(0, number - 1), switches),
+				=> await ReadMail.Handle(parser, ObjectDataService!, Mediator!, NotifyService!, Math.Max(0, number - 1), switches),
 			[.., "LIST"] or [] when executor.IsPlayer && (arg1?.Length ?? 0) == 0
-				=> await ListMail.Handle(parser, arg0, arg1, switches),
+				=> await ListMail.Handle(parser, ObjectDataService!, Mediator!, NotifyService!, arg0, arg1, switches),
 			_ => MModule.single("#-1 BAD ARGUMENTS TO MAIL COMMAND")
 		};
 
@@ -1622,26 +1622,26 @@ public partial class Commands
 		Behavior = CB.Player | CB.EqSplit | CB.NoParse | CB.RSNoParse | CB.NoGuest, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Password(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var oldPassword = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var newPassword = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
 		if (!executor.IsPlayer)
 		{
-			await parser.NotifyService.Notify(executor, "Only players have passwords.");
+			await NotifyService!.Notify(executor, "Only players have passwords.");
 			return new CallState("#-1 INVALID OBJECT TYPE.");
 		}
 
-		var isValidPassword = parser.PasswordService.PasswordIsValid(executor.Object().DBRef.ToString(), oldPassword,
+		var isValidPassword = PasswordService!.PasswordIsValid(executor.Object().DBRef.ToString(), oldPassword,
 			executor.AsPlayer.PasswordHash);
 		if (!isValidPassword)
 		{
-			await parser.NotifyService.Notify(executor, "Invalid password.");
+			await NotifyService!.Notify(executor, "Invalid password.");
 			return new CallState("#-1 INVALID PASSWORD.");
 		}
 
-		var hashedPassword = parser.PasswordService.HashPassword(executor.Object().DBRef.ToString(), newPassword);
-		await parser.PasswordService.SetPassword(executor.AsPlayer, hashedPassword);
+		var hashedPassword = PasswordService!.HashPassword(executor.Object().DBRef.ToString(), newPassword);
+		await PasswordService!.SetPassword(executor.AsPlayer, hashedPassword);
 
 		return new CallState(string.Empty);
 	}
@@ -1664,19 +1664,19 @@ public partial class Commands
 	[SharpCommand(Name = "@VERSION", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Version(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		// TODO: Last Restarted
 		var result = MModule.multipleWithDelimiter(
 			MModule.single(Environment.NewLine),
 			[
 				MModule.concat(MModule.single("You are connected to "),
-					MModule.single(parser.Configuration.CurrentValue.Net.MudName)),
-				MModule.concat(MModule.single("Address: "), MModule.single(parser.Configuration.CurrentValue.Net.MudUrl)),
+					MModule.single(Configuration!.CurrentValue.Net.MudName)),
+				MModule.concat(MModule.single("Address: "), MModule.single(Configuration!.CurrentValue.Net.MudUrl)),
 				MModule.single("SharpMUSH version 0")
 			]);
 
-		await parser.NotifyService.Notify(executor, result);
+		await NotifyService!.Notify(executor, result);
 
 		return new CallState(result);
 	}
@@ -1686,13 +1686,13 @@ public partial class Commands
 	public static async ValueTask<Option<CallState>> Retry(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var predicate = args["0"];
 
 		var peek = parser.State.TakeLast(2);
 		if (peek.Count() != 2)
 		{
-			await parser.NotifyService.Notify(executor, "Nothing to retry.");
+			await NotifyService!.Notify(executor, "Nothing to retry.");
 			return new CallState("#-1 RETRY: NO COMMAND TO RETRY.");
 		}
 
@@ -1770,7 +1770,7 @@ public partial class Commands
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 3, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Message(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var recipientsArg = args.ElementAtOrDefault(0).Value.Message!;
 		var defmsg = args.ElementAtOrDefault(1).Value.Message!;
@@ -1788,26 +1788,26 @@ public partial class Commands
 
 		if (attrObjSplit.Length > 1)
 		{
-			var maybeLocateTarget = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor,
+			var maybeLocateTarget = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor,
 				executor,
 				attrObjSplit[0],
 				LocateFlags.All);
 
 			if (maybeLocateTarget.IsError)
 			{
-				await parser.NotifyService.Notify(executor, maybeLocateTarget.AsError.Message!);
+				await NotifyService!.Notify(executor, maybeLocateTarget.AsError.Message!);
 				return new CallState(Errors.ErrorNotVisible);
 			}
 
 			objToEvaluate = maybeLocateTarget.AsSharpObject;
 			attrToEvaluate = string.Join("/", attrObjSplit.Skip(1));
 
-			var attr = await parser.AttributeService.GetAttributeAsync(executor, objToEvaluate, attrToEvaluate,
+			var attr = await AttributeService!.GetAttributeAsync(executor, objToEvaluate, attrToEvaluate,
 				IAttributeService.AttributeMode.Execute);
 
 			if (attr.IsError)
 			{
-				await parser.NotifyService.Notify(executor, attr.AsCallStateError.Message!);
+				await NotifyService!.Notify(executor, attr.AsCallStateError.Message!);
 				return attr.AsCallStateError;
 			}
 
@@ -1821,22 +1821,22 @@ public partial class Commands
 		foreach (var target in recipientNamelist)
 		{
 			var targetString = target.Match(dbref => dbref.ToString(), str => str);
-			var maybeLocateTarget = await parser.LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor,
+			var maybeLocateTarget = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor,
 				executor,
 				targetString,
 				LocateFlags.All);
 
 			if (maybeLocateTarget.IsError)
 			{
-				await parser.NotifyService.Notify(executor, maybeLocateTarget.AsError.Message!);
+				await NotifyService!.Notify(executor, maybeLocateTarget.AsError.Message!);
 				continue;
 			}
 
 			var locateTarget = maybeLocateTarget.AsSharpObject;
 
-			if (!await parser.PermissionService.CanInteract(locateTarget, executor, IPermissionService.InteractType.Hear))
+			if (!await PermissionService!.CanInteract(locateTarget, executor, IPermissionService.InteractType.Hear))
 			{
-				await parser.NotifyService.Notify(executor, $"{locateTarget.Object().Name} does not want to hear from you.");
+				await NotifyService!.Notify(executor, $"{locateTarget.Object().Name} does not want to hear from you.");
 				continue;
 			}
 
@@ -1851,17 +1851,17 @@ public partial class Commands
 					},
 					newParser => newParser.FunctionParse(pinnedAttribute.Last().Value));
 
-				await parser.NotifyService.Notify(locateTarget, result!.Message!);
+				await NotifyService!.Notify(locateTarget, result!.Message!);
 			}
 			else
 			{
-				var maybeAttr = await parser.AttributeService.GetAttributeAsync(finalObjToEvaluate, finalObjToEvaluate,
+				var maybeAttr = await AttributeService!.GetAttributeAsync(finalObjToEvaluate, finalObjToEvaluate,
 					attrToEvaluate, IAttributeService.AttributeMode.Execute);
 
 				// Default behavior for not having access or there not being one, is to display the message as is.
 				if (maybeAttr.IsError)
 				{
-					await parser.NotifyService.Notify(locateTarget, defmsg);
+					await NotifyService!.Notify(locateTarget, defmsg);
 				}
 				else
 				{
@@ -1869,10 +1869,10 @@ public partial class Commands
 						{
 							Enactor = executor.Object().DBRef
 						},
-						newParser => newParser.AttributeService.EvaluateAttributeFunctionAsync(newParser, locateTarget,
+						newParser => AttributeService!.EvaluateAttributeFunctionAsync(newParser, locateTarget,
 							locateTarget, attrToEvaluate, otherArgs.ToDictionary()));
 
-					await parser.NotifyService.Notify(locateTarget, result!);
+					await NotifyService!.Notify(locateTarget, result!);
 				}
 			}
 

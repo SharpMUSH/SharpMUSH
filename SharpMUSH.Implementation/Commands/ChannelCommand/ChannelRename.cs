@@ -1,24 +1,25 @@
-using SharpMUSH.Database.Models;
+using Mediator;
+using Microsoft.Extensions.Options;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
-using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
 public static class ChannelRename
 {
-	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString channelName, MString newChannelName)
+	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, IOptionsMonitor<PennMUSHOptions> Configuration, MString channelName, MString newChannelName)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		if (await executor.IsGuest())
 		{
-			await parser.NotifyService.Notify(executor, "CHAT: Guests may not modify channels.");
+			await NotifyService!.Notify(executor, "CHAT: Guests may not modify channels.");
 			return new CallState("#-1 Guests may not modify channels.");
 		}
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, channelName, true);
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService, PermissionService, Mediator, NotifyService, channelName, true);
 
 		if (maybeChannel.IsError)
 		{
@@ -27,19 +28,19 @@ public static class ChannelRename
 
 		var channel = maybeChannel.AsChannel;
 
-		if (await parser.PermissionService.ChannelCanModifyAsync(executor, channel))
+		if (await PermissionService!.ChannelCanModifyAsync(executor, channel))
 		{
 			return new CallState("You are not the owner of the channel.");
 		}
 
-		var isValid = ChannelHelper.IsValidChannelName(parser, newChannelName);
+		var isValid = ChannelHelper.IsValidChannelName(Configuration, newChannelName);
 		if (!isValid)
 		{
-			await parser.NotifyService.Notify(executor, "CHAT: Invalid channel name.");
+			await NotifyService!.Notify(executor, "CHAT: Invalid channel name.");
 			return new CallState("#-1 CHAT: Invalid channel name.");
 		}
 
-		await parser.Mediator.Send(new UpdateChannelCommand(channel,
+		await Mediator!.Send(new UpdateChannelCommand(channel,
 			newChannelName,
 			null,
 			null,
@@ -52,7 +53,7 @@ public static class ChannelRename
 			null
 		));
 
-		await parser.NotifyService.Notify(executor, "CHAT: Renamed channel.");
+		await NotifyService!.Notify(executor, "CHAT: Renamed channel.");
 		return new CallState("Renamed channel.");
 	}
 }

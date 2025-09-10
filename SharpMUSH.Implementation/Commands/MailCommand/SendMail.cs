@@ -1,22 +1,25 @@
 ﻿using DotNext.Threading;
+using Mediator;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Commands.MailCommand;
 
 public static class SendMail
 {
-	public static async ValueTask<MString> Handle(IMUSHCodeParser parser, MString nameList, MString subjectAndMessage, string[] switches)
+	public static async ValueTask<MString> Handle(IMUSHCodeParser parser, IPermissionService permissionService, IExpandedObjectDataService objectDataService, IMediator mediator, INotifyService notifyService, MString nameList, MString subjectAndMessage, string[] switches)
 	{
 		var urgent = switches.Contains("URGENT");
 		var silent = switches.Contains("SILENT");
 		var noSignature = switches.Contains("NOSIG");
 		
-		var sender = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var sender = await parser.CurrentState.KnownExecutorObject(mediator!);
 		
 		var playerList = await Functions.Functions.PopulatedNameList(parser, nameList.ToPlainText()!);
 		var knownPlayerList = playerList.Where(x => x != null).Select(x => x!).ToList();
@@ -32,7 +35,7 @@ public static class SendMail
 		
 		if (!noSignature)
 		{
-			var attribute = await parser.Mediator.Send(new GetAttributeQuery(sender.Object().DBRef, ["MAILSIGNATURE"]));
+			var attribute = await mediator!.Send(new GetAttributeQuery(sender.Object().DBRef, ["MAILSIGNATURE"]));
 			var attributeValue = attribute?.FirstOrDefault()?.Value;
 			if (attributeValue != null)
 			{
@@ -61,19 +64,19 @@ public static class SendMail
 
 		foreach (var player in knownPlayerList)
 		{
-			if (!parser.PermissionService.PassesLock(sender, player, LockType.Mail))
+			if (!permissionService!.PassesLock(sender, player, LockType.Mail))
 			{
-				await parser.NotifyService.Notify(sender, $"MAIL: {player.Object.Name} does not wish to receive mail from you.");
+				await notifyService!.Notify(sender, $"MAIL: {player.Object.Name} does not wish to receive mail from you.");
 				continue;
 			}
 				
-			await parser.Mediator.Send(new SendMailCommand(sender.Object(), player, mail));
-			await parser.NotifyService.Notify(sender, $"MAIL: You sent a message to {player.Object.Name}.");
+			await mediator!.Send(new SendMailCommand(sender.Object(), player, mail));
+			await notifyService!.Notify(sender, $"MAIL: You sent a message to {player.Object.Name}.");
 
 			if (!silent)
 			{
-				var mailList = await parser.Mediator.Send(new GetMailListQuery(player, "INBOX"));
-				await parser.NotifyService.Notify(player, $"MAIL: You have received a message ({mailList.Count()}) from {sender.Object().Name}.");
+				var mailList = await mediator!.Send(new GetMailListQuery(player, "INBOX"));
+				await notifyService!.Notify(player, $"MAIL: You have received a message ({mailList.Count()}) from {sender.Object().Name}.");
 			}
 			
 			// TODO: If AMAIL is config true, and AMAIL &attribute is set on the target, trigger it.

@@ -3,6 +3,7 @@ using System.Text;
 using BenchmarkDotNet.Attributes;
 using Core.Arango;
 using Core.Arango.Serialization.Newtonsoft;
+using Microsoft.Extensions.DependencyInjection;
 using OneOf.Types;
 using Serilog;
 using SharpMUSH.Library;
@@ -50,7 +51,7 @@ public class BaseBenchmark
 		var configFile = Path.Combine(AppContext.BaseDirectory, "mushcnf.dst");
 
 		_server = new TestWebApplicationBuilderFactory<SharpMUSH.Server.Program>(config, configFile, null);
-		_database = _server!.Services.GetService(typeof(ISharpDatabase)) as ISharpDatabase;
+		_database = _server!.Services.GetRequiredService<ISharpDatabase>();
 
 		try
 		{
@@ -86,7 +87,7 @@ public class BaseBenchmark
 		simpleConnectionService.Register(1, _ => ValueTask.CompletedTask,  _ => ValueTask.CompletedTask, () => Encoding.UTF8);
 		simpleConnectionService.Bind(1, one);
 
-		var parser = (IMUSHCodeParser)integrationServer.Services.GetService(typeof(IMUSHCodeParser))!;
+		var parser = integrationServer.Services.GetRequiredService<IMUSHCodeParser>();
 		return parser.FromState(new ParserState(
 			Registers: new ConcurrentStack<Dictionary<string, MString>>([[]]),
 			IterationRegisters: new ConcurrentStack<IterationWrapper<MString>>(),

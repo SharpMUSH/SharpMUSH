@@ -1,9 +1,5 @@
-﻿using NSubstitute;
-using NSubstitute.ReceivedExtensions;
-using SharpMUSH.Library.DiscriminatedUnions;
+﻿using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.ParserInterfaces;
-using SharpMUSH.Library.Services;
-using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -12,7 +8,7 @@ public class RoomsAndMovementTests
 	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required WebAppFactory WebAppFactoryArg { get; init; }
 
-	private IMUSHCodeParser Parser => (IMUSHCodeParser)WebAppFactoryArg.Services.GetService(typeof(IMUSHCodeParser))!;
+	private IMUSHCodeParser Parser => WebAppFactoryArg.Services.GetRequiredService<IMUSHCodeParser>();
 	
 	// TODO: Add Tests
 }

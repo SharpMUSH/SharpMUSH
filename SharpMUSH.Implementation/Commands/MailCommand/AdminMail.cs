@@ -1,22 +1,24 @@
 ﻿using System.Collections.Immutable;
+using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Commands.MailCommand;
 
 public static class AdminMail
 {
-	public static async ValueTask<MString> Handle(IMUSHCodeParser parser, string[] switches)
+	public static async ValueTask<MString> Handle(IMUSHCodeParser parser, IMediator? mediator, INotifyService? notifyService, string[] switches)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(mediator!);
 
 		if (!(executor.IsGod() || await executor.IsWizard()))
 		{
-			await parser.NotifyService.Notify(executor, Errors.ErrorPerm);
+			await notifyService!.Notify(executor, Errors.ErrorPerm);
 			return MModule.single(Errors.ErrorPerm);
 		}
 		
@@ -24,20 +26,20 @@ public static class AdminMail
 		{
 			case [.., "DEBUG"]:
 				// At this time, this serves no purpose in SharpMUSH.
-				await parser.NotifyService.Notify(executor, "MAIL: NOTHING TO DEBUG");
+				await notifyService!.Notify(executor, "MAIL: NOTHING TO DEBUG");
 				return MModule.single("MAIL: NOTHING TO DEBUG");
 			case [.., "NUKE"] when executor.IsGod():
 				// TODO: This deletes one's own mail, not all mail on the server.
 				// A new command is needed.
-				var mailList = (await parser.Mediator.Send(new GetAllMailListQuery(executor.AsPlayer))).ToImmutableArray();
+				var mailList = (await mediator!.Send(new GetAllMailListQuery(executor.AsPlayer))).ToImmutableArray();
 				foreach (var mail in mailList)
 				{
-					await parser.Mediator.Send(new DeleteMailCommand(mail));
+					await mediator!.Send(new DeleteMailCommand(mail));
 				}
-				await parser.NotifyService.Notify(executor, "MAIL: Mail deleted.");
+				await notifyService!.Notify(executor, "MAIL: Mail deleted.");
 				return MModule.single(mailList.Length.ToString());
 			default: 
-				await parser.NotifyService.Notify(executor, "Invalid arguments for @mail admin command.");
+				await notifyService!.Notify(executor, "Invalid arguments for @mail admin command.");
 				return MModule.single("#-1 Invalid arguments for @mail admin command.");
 		}
 	}

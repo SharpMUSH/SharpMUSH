@@ -1,21 +1,26 @@
+using Mediator;
+using Microsoft.Extensions.Options;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
 public static class ChannelBuffer
 {
-	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, MString channelName, MString lines)
+	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, IOptionsMonitor<PennMUSHOptions> Configuration, MString channelName, MString lines)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		if (await executor.IsGuest())
 		{
-			await parser.NotifyService.Notify(executor, "CHAT: Guests may not modify channels.");
+			await NotifyService!.Notify(executor, "CHAT: Guests may not modify channels.");
 			return new CallState("#-1 Guests may not modify channels.");
 		}
 		
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, channelName, true);
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService, PermissionService, Mediator, NotifyService, channelName, true);
 
 		if (maybeChannel.IsError)
 		{
@@ -24,7 +29,7 @@ public static class ChannelBuffer
 		
 		var channel = maybeChannel.AsChannel;
 
-		if (await parser.PermissionService.ChannelCanModifyAsync(executor, channel))
+		if (await PermissionService!.ChannelCanModifyAsync(executor, channel))
 		{
 			return new CallState("You cannot modify this channel.");
 		}
@@ -34,7 +39,7 @@ public static class ChannelBuffer
 			return new CallState("Invalid number of lines.");
 		}
 
-		await parser.Mediator.Send(new UpdateChannelCommand(
+		await Mediator!.Send(new UpdateChannelCommand(
 			Channel: channel,
 			null,
 			null,

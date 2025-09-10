@@ -290,8 +290,8 @@ public partial class Commands
 	public static async ValueTask<Option<CallState>> UnimplementedCommand(IMUSHCodeParser parser,
 		SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownEnactorObject(parser.Mediator);
-		await parser.NotifyService.Notify(executor, "Huh?  (Type \"help\" for help.)");
+		var executor = await parser.CurrentState.KnownEnactorObject(Mediator!);
+		await NotifyService!.Notify(executor, "Huh?  (Type \"help\" for help.)");
 		return new None();
 	}
 

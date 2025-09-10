@@ -4,6 +4,7 @@ using Core.Arango.Serilog;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Serilog;
@@ -70,7 +71,7 @@ public class Program
 		
 		builder.WebHost.ConfigureKestrel((_, options) =>
 		{
-			var optionMonitor = (IOptionsMonitor<PennMUSHOptions>)options.ApplicationServices.GetService(typeof(IOptionsMonitor<PennMUSHOptions>))!;
+			var optionMonitor = options.ApplicationServices.GetRequiredService<IOptionsMonitor<PennMUSHOptions>>();
 			var netValues = optionMonitor.CurrentValue.Net;
 
 			options.ListenAnyIP(Convert.ToInt32(netValues.Port), listenOptions => { listenOptions.UseConnectionHandler<TelnetServer>(); });

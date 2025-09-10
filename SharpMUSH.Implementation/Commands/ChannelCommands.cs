@@ -1,3 +1,4 @@
+using Mediator;
 using SharpMUSH.Implementation.Commands.ChannelCommand;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
@@ -7,7 +8,7 @@ using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 
-namespace SharpMUSH.Implementation.Commands.MailCommand;
+namespace SharpMUSH.Implementation.Commands;
 
 public partial class Commands
 {
@@ -25,11 +26,11 @@ public partial class Commands
 	{
 		var arg0Check = parser.CurrentState.Arguments.TryGetValue("0", out var arg0CallState);
 		var arg1Check = parser.CurrentState.Arguments.TryGetValue("1", out var arg1CallState);
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		if (!arg0Check || !arg1Check)
 		{
-			await parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, "Don't you have anything to say?");
+			await NotifyService!.Notify(parser.CurrentState.Executor!.Value, "Don't you have anything to say?");
 			return new CallState("#-1 Don't you have anything to say?");
 		}
 
@@ -37,7 +38,7 @@ public partial class Commands
 		var message = arg1CallState!.Message!;
 
 		// TODO: Use standardized method.
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, channelName, true);
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, channelName, true);
 
 		if (maybeChannel.IsError)
 		{
@@ -50,13 +51,13 @@ public partial class Commands
 
 		if (maybeMemberStatus is null)
 		{
-			await parser.NotifyService.Notify(parser.CurrentState.Executor!.Value, "You are not a member of that channel.");
+			await NotifyService!.Notify(parser.CurrentState.Executor!.Value, "You are not a member of that channel.");
 			return new CallState("#-1 You are not a member of that channel.");
 		}
 
 		var (_, status) = maybeMemberStatus.Value;
 
-		await parser.Mediator.Send(new ChannelMessageNotification(
+		await Mediator!.Send(new ChannelMessageNotification(
 			channel,
 			executor.WithNoneOption(),
 			INotifyService.NotificationType.Emit,

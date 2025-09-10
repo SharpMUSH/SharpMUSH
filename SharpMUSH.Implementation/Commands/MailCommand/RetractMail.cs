@@ -1,17 +1,17 @@
-﻿using SharpMUSH.Library.Commands.Database;
+﻿using Mediator;
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
-using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Commands.MailCommand;
 
 public static class RetractMail
 {
-	public static async ValueTask<MString> Handle(IMUSHCodeParser parser, string target, string msgList)
+	public static async ValueTask<MString> Handle(IMUSHCodeParser parser, IExpandedObjectDataService objectDataService, ILocateService locateService, IMediator mediator, INotifyService notifyService, string target, string msgList)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(parser.Mediator);
-		var maybeLocate = await parser.LocateService.LocateAndNotifyIfInvalid(parser, 
+		var executor = await parser.CurrentState.KnownExecutorObject(mediator!);
+		var maybeLocate = await locateService!.LocateAndNotifyIfInvalid(parser, 
 			executor, executor, target,
 			LocateFlags.PlayersPreference | LocateFlags.OnlyMatchTypePreference);
 
@@ -20,7 +20,7 @@ public static class RetractMail
 			return MModule.single("#-1 NO SUCH PLAYER");
 		}
 
-		var sentMails = await MessageListHelper.Handle(parser, MModule.single(msgList), maybeLocate.AsPlayer);
+		var sentMails = await MessageListHelper.Handle(parser, objectDataService, mediator, notifyService, MModule.single(msgList), maybeLocate.AsPlayer);
 		
 		if (sentMails.IsError)
 		{
@@ -33,11 +33,11 @@ public static class RetractMail
 		{
 			if (!mail.Fresh)
 			{
-				await parser.NotifyService.Notify(executor, "MAIL: Mail already read.");
+				await notifyService!.Notify(executor, "MAIL: Mail already read.");
 				continue;
 			}
 			
-			await parser.Mediator.Send(new DeleteMailCommand(mail));
+			await mediator!.Send(new DeleteMailCommand(mail));
 		}
 
 		return MModule.single(foundMailList.Length.ToString());

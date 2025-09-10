@@ -1,7 +1,9 @@
+using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -9,6 +11,10 @@ public class CommandUnitTests
 {
 	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required WebAppFactory WebAppFactoryArg { get; init; }
+
+	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
+
+	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
@@ -26,9 +32,9 @@ public class CommandUnitTests
 		// TODO: We need eval vs noparse evaluation.
 		// NoParse is currently not running the command. So let's use NoEval instead for that.
 		Console.WriteLine("Testing: {0}", str);
-		await Parser!.CommandParse(1, MModule.single(str));
+		await Parser!.CommandParse(1, ConnectionService, MModule.single(str));
 
-		await Parser.NotifyService
+		await NotifyService!
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), expected);
 	}
@@ -54,11 +60,11 @@ public class CommandUnitTests
 		Console.WriteLine("Testing: {0}", str);
 		await Parser!.CommandListParse(MModule.single(str));
 
-		await Parser.NotifyService
+		await NotifyService!
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), expected1);
 
-		await Parser.NotifyService
+		await NotifyService!
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), expected2);
 	}
