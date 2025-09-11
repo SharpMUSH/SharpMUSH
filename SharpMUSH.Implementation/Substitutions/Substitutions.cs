@@ -33,7 +33,7 @@ public static partial class Substitutions
 			"~" => (await parser.CurrentState.EnactorObject(mediator)).Object()!.Name, // TODO: ACCENTED ENACTOR NAME
 			"K" or "k" => (await parser.CurrentState.EnactorObject(mediator)).Object()!.Name, // TODO: MONIKER ENACTOR NAME
 			"S" or "s" => 
-				await GetGenderIndicatingAttribute(attributeService, mediator, parser,
+				await GetPronounIndicatingAttribute(attributeService, mediator, parser,
 						configuration.CurrentValue.Attribute.SubjectivePronounAttribute ?? "SEX") switch
 				{
 					"M" or "Male" => "he",
@@ -41,7 +41,7 @@ public static partial class Substitutions
 					_ => "they"
 				}, // TODO: SUBJECT PRONOUN CUSTOMIZATION
 			"O" or "o" => 
-				await GetGenderIndicatingAttribute(attributeService, mediator, parser,
+				await GetPronounIndicatingAttribute(attributeService, mediator, parser,
 						configuration.CurrentValue.Attribute.ObjectivePronounAttribute ?? "SEX") switch
 					{
 						"M" or "Male" => "him",
@@ -49,7 +49,7 @@ public static partial class Substitutions
 						_ => "their"
 					}, // TODO: OBJECT PRONOUN CUSTOMIZATION
 			"P" or "p" => 
-				await GetGenderIndicatingAttribute(attributeService, mediator, parser,
+				await GetPronounIndicatingAttribute(attributeService, mediator, parser,
 						configuration.CurrentValue.Attribute.PossessivePronounAttribute ?? "SEX") switch
 					{
 						"M" or "Male" => "his",
@@ -57,7 +57,7 @@ public static partial class Substitutions
 						_ => "their"
 					}, // TODO: POSSESSIVE PRONOUN CUSTOMIZATION
 			"A" or "a" => 
-				await GetGenderIndicatingAttribute(attributeService, mediator, parser,
+				await GetPronounIndicatingAttribute(attributeService, mediator, parser,
 						configuration.CurrentValue.Attribute.AbsolutePossessivePronounAttribute ?? "SEX") switch
 					{
 						"M" or "Male" => "his",
@@ -87,7 +87,7 @@ public static partial class Substitutions
 		}
 	}
 
-	private static async ValueTask<string> GetGenderIndicatingAttribute(IAttributeService attributeService,
+	private static async ValueTask<string> GetPronounIndicatingAttribute(IAttributeService attributeService,
 		IMediator mediator, IMUSHCodeParser parser, string attr)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);

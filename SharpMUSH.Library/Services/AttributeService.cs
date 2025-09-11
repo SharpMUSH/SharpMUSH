@@ -208,13 +208,14 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 	public async ValueTask<SharpAttributesOrError> GetAttributePatternAsync(AnySharpObject executor,
 		AnySharpObject obj,
 		string attributePattern,
+		bool checkParents,
 		IAttributeService.AttributePatternMode mode)
 	{
 		// TODO: Implement Pattern Modes
 		// TODO: GetAttributesAsync should return the full Path, not the final attribute.
 		// TODO: CanViewAttribute needs to be able to Memoize during a list check, as it's likely to be called multiple times.
 		var attributes = await mediator.Send(
-			new GetAttributesQuery(obj.Object().DBRef, attributePattern, mode));
+			new GetAttributesQuery(obj.Object().DBRef, attributePattern, checkParents, mode));
 
 		return attributes is null
 			? Enumerable.Empty<SharpAttribute>().ToArray()
@@ -336,7 +337,7 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 			return new Error<string>(Errors.ErrorAttrSetPermissions);
 		}
 
-		var attr = await mediator.Send(new GetAttributesQuery(obj.Object().DBRef, attributePattern, patternMode));
+		var attr = await mediator.Send(new GetAttributesQuery(obj.Object().DBRef, attributePattern, false, patternMode));
 		var attrArr = attr?.ToArray();
 
 		var permission = attrArr == null ||

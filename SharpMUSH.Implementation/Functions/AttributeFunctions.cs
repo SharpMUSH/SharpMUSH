@@ -88,15 +88,15 @@ public partial class Functions
 				var args = top2.Length > 1
 					? top2.Last().Arguments
 					: [];
-				
+
 				return await parser.With(s => s with
 					{
 						Enactor = parser.CurrentState.Executor
 					},
 					async newParser => await AttributeService!.EvaluateAttributeFunctionAsync(
-						newParser, 
-						executor, 
-						actualObject, 
+						newParser,
+						executor,
+						actualObject,
 						attribute,
 						args));
 			});
@@ -156,9 +156,40 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "GET_EVAL", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> GetEval(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> GetEval(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var dbrefAndAttr =
+			HelperFunctions.SplitObjectAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+
+		if (dbrefAndAttr is { IsT1: true }) // IsNone
+		{
+			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
+		}
+
+		var (dbref, attribute) = dbrefAndAttr.AsT0;
+
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, dbref,
+			LocateFlags.All,
+			async actualObject =>
+			{
+				var top2 = parser.State.Take(2).ToArray();
+				var args = top2.Length > 1
+					? top2.Last().Arguments
+					: [];
+
+				return await parser.With(s => s with
+					{
+						Enactor = parser.CurrentState.Executor
+					},
+					async newParser => await AttributeService!.EvaluateAttributeFunctionAsync(
+						newParser,
+						executor,
+						actualObject,
+						attribute,
+						args));
+			});
 	}
 
 	[SharpFunction(Name = "GREP", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular)]
@@ -214,33 +245,147 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "LATTR", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> ListAttributes(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> ListAttributes(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var dbrefAndAttr =
+			HelperFunctions.SplitObjectAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+
+		if (dbrefAndAttr is { IsT1: true }) // IsNone
+		{
+			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
+		}
+
+		var (obj, attributePattern) = dbrefAndAttr.AsT0;
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, obj,
+			LocateFlags.All,
+			async found =>
+			{
+				var attributes = await Mediator!.Send(new GetAttributesQuery(found.Object().DBRef, attributePattern,
+					false, IAttributeService.AttributePatternMode.Wildcard));
+
+				return string.Join(" ", attributes?.Select(x => x.LongName) ?? []);
+			});
 	}
 
 	[SharpFunction(Name = "LATTRP", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> ListAttributesParent(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> ListAttributesParent(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var dbrefAndAttr =
+			HelperFunctions.SplitObjectAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+
+		if (dbrefAndAttr is { IsT1: true }) // IsNone
+		{
+			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
+		}
+
+		var (obj, attributePattern) = dbrefAndAttr.AsT0;
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, obj,
+			LocateFlags.All,
+			async found =>
+			{
+				var attributes = await Mediator!.Send(new GetAttributesQuery(found.Object().DBRef, attributePattern,
+					true, IAttributeService.AttributePatternMode.Wildcard));
+
+				return string.Join(" ", attributes?.Select(x => x.LongName) ?? []);
+			});
 	}
 
 	[SharpFunction(Name = "LFLAGS", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> ListFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> ListFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		if (parser.CurrentState.Arguments.Count == 0)
+		{
+			// List all flags known to the server
+			var flags = await Mediator!.Send(new GetAllObjectFlagsQuery());
+			return string.Join(" ", flags.Select(x => x.Name));
+		}
+
+		// List flags on an object or the object attribute
+		var dbrefAndAttr =
+			HelperFunctions.SplitDBRefAndOptionalAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+
+		if (dbrefAndAttr is { IsT1: true }) // IsNone
+		{
+			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
+		}
+
+		var (obj, attributePattern) = dbrefAndAttr.AsT0;
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+			parser, executor, executor, obj, LocateFlags.All,
+			async found =>
+			{
+				// Object Flags
+				if (attributePattern is null)
+				{
+					var flags = await found.Object().Flags.WithCancellation(CancellationToken.None);
+					return string.Join(" ", flags.Select(x => x.Name));
+				}
+
+				// Attribute Flags
+				var attr = await AttributeService!.GetAttributeAsync(
+					executor, found, attributePattern, IAttributeService.AttributeMode.Read, false);
+
+				return attr.Match(
+					attribute => string.Join(" ", attribute.Last().Flags.Select(x => x.Name)),
+					_ => Errors.ErrorNoSuchAttribute,
+					error => error.Value);
+			});
 	}
 
 	[SharpFunction(Name = "NATTR", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> NumberAttributes(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> NumberAttributes(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var dbrefAndAttr =
+			HelperFunctions.SplitObjectAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+
+		if (dbrefAndAttr is { IsT1: true }) // IsNone
+		{
+			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
+		}
+
+		var (obj, attributePattern) = dbrefAndAttr.AsT0;
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, obj,
+			LocateFlags.All,
+			async found =>
+			{
+				var attributes = await Mediator!.Send(new GetAttributesQuery(found.Object().DBRef, attributePattern,
+					false, IAttributeService.AttributePatternMode.Wildcard));
+
+				return attributes?.Count() ?? 0;
+			});
 	}
 
 	[SharpFunction(Name = "NATTRP", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> NumberAttributesParent(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> NumberAttributesParent(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var dbrefAndAttr =
+			HelperFunctions.SplitObjectAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+
+		if (dbrefAndAttr is { IsT1: true }) // IsNone
+		{
+			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
+		}
+
+		var (obj, attributePattern) = dbrefAndAttr.AsT0;
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, obj,
+			LocateFlags.All,
+			async found =>
+			{
+				var attributes = await Mediator!.Send(new GetAttributesQuery(found.Object().DBRef, attributePattern,
+					true, IAttributeService.AttributePatternMode.Wildcard));
+
+				return attributes?.Count() ?? 0;
+			});
 	}
 
 	[SharpFunction(Name = "OBJ", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -279,40 +424,36 @@ public partial class Functions
 			return new CallState(Errors.ErrorCantSeeThat);
 		}
 
-		var locatedObject = await LocateService!.LocateAndNotifyIfInvalidWithCallState(
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser,
 			executor,
 			executor,
 			dbrefAndMaybeArg.AsT0.db,
-			LocateFlags.All
+			LocateFlags.All,
+			async actualObject =>
+			{
+				if (dbrefAndMaybeArg.AsT0.Attribute is null)
+				{
+					var objOwner = await actualObject.Object().Owner.WithCancellation(CancellationToken.None);
+					return new CallState(objOwner.Object.DBRef
+						.ToString());
+				}
+
+				var attribute = dbrefAndMaybeArg.AsT0.Attribute!;
+
+				var attributeObject = await AttributeService!.GetAttributeAsync(executor, executor, attribute,
+					IAttributeService.AttributeMode.Read, false);
+
+				return attributeObject switch
+				{
+					{ IsNone: true } => new CallState(Errors.ErrorNoSuchAttribute),
+					{ IsError: true } => new CallState(attributeObject.AsError.Value),
+					{ AsAttribute: var attr } => (await attr.Last().Owner.WithCancellation(CancellationToken.None))!
+						.Object
+						.DBRef.ToString()
+				};
+			}
 		);
-
-		if (locatedObject.IsError)
-		{
-			return locatedObject.AsError;
-		}
-
-		var actualObject = locatedObject.AsSharpObject;
-
-		if (dbrefAndMaybeArg.AsT0.Attribute is not null)
-		{
-			return new CallState((await actualObject.Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef
-				.ToString());
-		}
-
-		var attribute = dbrefAndMaybeArg.AsT0.Attribute!;
-
-		var attributeObject = await AttributeService!.GetAttributeAsync(executor, executor, attribute,
-			IAttributeService.AttributeMode.Read, false);
-
-		return attributeObject switch
-		{
-			{ IsNone: true } => new CallState(Errors.ErrorNoSuchAttribute),
-			{ IsError: true } => new CallState(attributeObject.AsError.Value),
-			_ => new CallState((await attributeObject.AsAttribute.Last().Owner.WithCancellation(CancellationToken.None))!
-				.Object
-				.DBRef.ToString())
-		};
 	}
 
 	[SharpFunction(Name = "POSS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
