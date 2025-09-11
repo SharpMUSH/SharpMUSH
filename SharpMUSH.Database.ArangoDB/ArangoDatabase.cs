@@ -900,10 +900,15 @@ public class ArangoDatabase(
 	public async ValueTask<AnyOptionalSharpObject> GetParentAsync(string id)
 	{
 		// TODO: Optimize
-		var parentId = (await arangoDb.Query.ExecuteAsync<int>(handle,
+		var parentId = (await arangoDb.Query.ExecuteAsync<dynamic>(handle,
 				$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphParents} RETURN v._key", cache: true))
 			.FirstOrDefault();
-		return await GetObjectNodeAsync(new DBRef(parentId));
+		if (parentId == null)
+		{
+			return new None();
+		}
+		
+		return await GetObjectNodeAsync(new DBRef(parentId._id));
 	}
 
 	private async ValueTask<IEnumerable<SharpObject?>> GetChildrenAsync(string id)
