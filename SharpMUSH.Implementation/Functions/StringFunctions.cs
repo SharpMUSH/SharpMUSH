@@ -66,11 +66,11 @@ public partial class Functions
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var speaker = args["0"].Message!; // & for direct name!
 		var speakString = args["1"].Message!;
-		var sayString = NoParseDefaultNoParseArgument(args, 2, "says, ");
-		var transformObjAttr = NoParseDefaultNoParseArgument(args, 3, "");
-		var isNullObjAttr = NoParseDefaultNoParseArgument(args, 4, "");
-		var open = NoParseDefaultNoParseArgument(args, 5, "\"");
-		var close = NoParseDefaultNoParseArgument(args, 6, "\"");
+		var sayString = Common.ArgHelpers.NoParseDefaultNoParseArgument(args, 2, "says, ");
+		var transformObjAttr = Common.ArgHelpers.NoParseDefaultNoParseArgument(args, 3, "");
+		var isNullObjAttr = Common.ArgHelpers.NoParseDefaultNoParseArgument(args, 4, "");
+		var open = Common.ArgHelpers.NoParseDefaultNoParseArgument(args, 5, "\"");
+		var close = Common.ArgHelpers.NoParseDefaultNoParseArgument(args, 6, "\"");
 
 		// TODO: This behavior gets re-used, so best to create a HelperFunction for this.
 
@@ -468,8 +468,8 @@ public partial class Functions
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var str = parser.CurrentState.Arguments["0"].Message!;
 		var width = parser.CurrentState.Arguments["1"].Message!;
-		var fill = NoParseDefaultNoParseArgument(args, 2, MModule.single(" "));
-		var rightFill = NoParseDefaultNoParseArgument(args, 3, fill);
+		var fill = Common.ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MModule.single(" "));
+		var rightFill = Common.ArgHelpers.NoParseDefaultNoParseArgument(args, 3, fill);
 
 		if (!int.TryParse(width.ToPlainText(), out var widthInt) || widthInt < 0)
 		{
@@ -539,8 +539,8 @@ public partial class Functions
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var objAttr = args["0"].Message;
 		var str = args["1"].Message;
-		var start = NoParseDefaultNoParseArgument(args, 2, " ");
-		var end = NoParseDefaultNoParseArgument(args, 3, " ");
+		var start = Common.ArgHelpers.NoParseDefaultNoParseArgument(args, 2, " ");
+		var end = Common.ArgHelpers.NoParseDefaultNoParseArgument(args, 3, " ");
 		var split = MModule.split("", str);
 
 		var newStr = MModule.empty();

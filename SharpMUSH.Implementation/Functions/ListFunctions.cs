@@ -19,8 +19,8 @@ public partial class Functions
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var listArg = args["0"].Message;
 		var numbersArg = args["1"].Message!.ToPlainText();
-		var delimiter = NoParseDefaultNoParseArgument(args, 2, MModule.single(" "));
-		var sep = NoParseDefaultNoParseArgument(args, 3, delimiter);
+		var delimiter = Common.ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MModule.single(" "));
+		var sep = Common.ArgHelpers.NoParseDefaultNoParseArgument(args, 3, delimiter);
 
 		var list = MModule.split2(delimiter, listArg);
 		var numbers = numbersArg.Split(" ");
@@ -43,9 +43,9 @@ public partial class Functions
 
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var listArg = args["0"].Message;
-		var first = NoParseDefaultNoParseArgument(args, 1, MModule.single("1")).ToPlainText();
-		var length = NoParseDefaultNoParseArgument(args, 2, MModule.single("1")).ToPlainText();
-		var delimiter = NoParseDefaultNoParseArgument(args, 3, MModule.single(" "));
+		var first = Common.ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.single("1")).ToPlainText();
+		var length = Common.ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MModule.single("1")).ToPlainText();
+		var delimiter = Common.ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MModule.single(" "));
 
 		if (!int.TryParse(first, out var firstNumber))
 		{
@@ -86,7 +86,7 @@ public partial class Functions
 	public static ValueTask<CallState> FirstInList(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var delim = NoParseDefaultNoParseArgument(args, 1, MModule.single(" "));
+		var delim = Common.ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.single(" "));
 		var listArg = parser.CurrentState.Arguments["0"].Message;
 		var list = MModule.split2(delim, listArg);
 		var first = list.FirstOrDefault() ?? MModule.empty();
@@ -135,8 +135,8 @@ public partial class Functions
 	{
 		var listArg = (await parser.CurrentState.Arguments["0"].ParsedMessage())!;
 
-		var delim = await NoParseDefaultEvaluatedArgument(parser, 2, MModule.single(" "));
-		var sep = await NoParseDefaultEvaluatedArgument(parser, 3, delim);
+		var delim = await Common.ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MModule.single(" "));
+		var sep = await Common.ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, delim);
 		var list = MModule.split2(delim, listArg);
 		var wrappedIteration = new IterationWrapper<MString> { Value = MModule.empty(), Break = false, NoBreak = false, Iteration = 0 };
 		var result = new List<MString>();
@@ -178,7 +178,7 @@ public partial class Functions
 	public static ValueTask<CallState> IBreak(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var iterDepth = NoParseDefaultNoParseArgument(args, 0, MModule.single("0"));
+		var iterDepth = Common.ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.single("0"));
 		var iterNumber = int.Parse(iterDepth.ToString());
 		var maxCount = parser.CurrentState.IterationRegisters.Count;
 
@@ -208,7 +208,7 @@ public partial class Functions
 	public static ValueTask<CallState> Last(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var delim = NoParseDefaultNoParseArgument(args, 1, MModule.single(" "));
+		var delim = Common.ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.single(" "));
 		var listArg = parser.CurrentState.Arguments["0"].Message;
 		var list = MModule.split2(delim, listArg);
 		var last = list.LastOrDefault() ?? MModule.empty();
@@ -275,8 +275,8 @@ public partial class Functions
 
 		var attr = maybeAttr.AsAttribute;
 		var attrValue = attr.Last().Value;
-		var delim = await NoParseDefaultEvaluatedArgument(parser, 2, MModule.single(" "));
-		var sep = await NoParseDefaultEvaluatedArgument(parser, 3, delim);
+		var delim = await Common.ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MModule.single(" "));
+		var sep = await Common.ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, delim);
 
 		var list = MModule.split2(delim, parser.CurrentState.Arguments["1"].Message!);
 
@@ -369,7 +369,7 @@ public partial class Functions
 	public static ValueTask<CallState> Rest(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var delim = NoParseDefaultNoParseArgument(args, 1, " ");
+		var delim = Common.ArgHelpers.NoParseDefaultNoParseArgument(args, 1, " ");
 		var list = MModule.split2(delim, parser.CurrentState.Arguments["0"].Message);
 
 		return ValueTask.FromResult(new CallState(MModule.multipleWithDelimiter(delim, list.Skip(1))));
@@ -390,8 +390,8 @@ public partial class Functions
 	[SharpFunction(Name = "revwords", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular)]
 	public static async ValueTask<CallState> ReverseList(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var delim = await NoParseDefaultEvaluatedArgument(parser, 2, " ");
-		var sep = await NoParseDefaultEvaluatedArgument(parser, 3, delim);
+		var delim = await Common.ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, " ");
+		var sep = await Common.ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, delim);
 		var list = MModule.split2(
 			delim,
 			(await parser.CurrentState.Arguments["0"].ParsedMessage())!);
@@ -406,8 +406,8 @@ public partial class Functions
 
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var listArg = args["0"].Message;
-		var delimiter = NoParseDefaultNoParseArgument(args, 1, MModule.single(" "));
-		var sep = NoParseDefaultNoParseArgument(args, 2, delimiter);
+		var delimiter = Common.ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.single(" "));
+		var sep = Common.ArgHelpers.NoParseDefaultNoParseArgument(args, 2, delimiter);
 
 		var list = MModule.split2(delimiter, listArg);
 		var shuffled = MoreLinq.Extensions.ShuffleExtension.Shuffle(list);
@@ -443,7 +443,7 @@ public partial class Functions
 		var listArg = args["0"].Message;
 		var list2Arg = args["1"].Message;
 		var wordArg = args["2"].Message!.ToPlainText();
-		var delimiter = NoParseDefaultNoParseArgument(args, 3, MModule.single(" "));
+		var delimiter = Common.ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MModule.single(" "));
 
 		var list = MModule.split2(delimiter, listArg);
 		var list2 = MModule.split2(delimiter, list2Arg);
@@ -496,10 +496,10 @@ public partial class Functions
 
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var listArg = args["0"].Message;
-		var fieldWidthArg = NoParseDefaultNoParseArgument(args, 1, "10").ToPlainText();
-		var lineWidthArg = NoParseDefaultNoParseArgument(args, 2, "78").ToPlainText();
-		var delimiterArg = NoParseDefaultNoParseArgument(args, 3, " ");
-		var separatorArg = NoParseDefaultNoParseArgument(args, 4, " ");
+		var fieldWidthArg = Common.ArgHelpers.NoParseDefaultNoParseArgument(args, 1, "10").ToPlainText();
+		var lineWidthArg = Common.ArgHelpers.NoParseDefaultNoParseArgument(args, 2, "78").ToPlainText();
+		var delimiterArg = Common.ArgHelpers.NoParseDefaultNoParseArgument(args, 3, " ");
+		var separatorArg = Common.ArgHelpers.NoParseDefaultNoParseArgument(args, 4, " ");
 		var fieldAlignment = "<";
 
 		if (fieldWidthArg.StartsWith('<') || fieldWidthArg.StartsWith('>') || fieldWidthArg.StartsWith('-'))
@@ -552,7 +552,7 @@ public partial class Functions
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var listArg = args["0"].Message;
 		var numberArg = args["1"].Message!.ToPlainText();
-		var delimiter = NoParseDefaultNoParseArgument(args, 2, " ");
+		var delimiter = Common.ArgHelpers.NoParseDefaultNoParseArgument(args, 2, " ");
 
 		if (!int.TryParse(numberArg, out var number))
 		{
@@ -575,7 +575,7 @@ public partial class Functions
 	[SharpFunction(Name = "words", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> ListCount(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var delim = await NoParseDefaultEvaluatedArgument(parser, 2, " ");
+		var delim = await Common.ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, " ");
 		var list = MModule.split2(delim, (await parser.CurrentState.Arguments["0"].ParsedMessage())!);
 
 		return new CallState(list.Length.ToString());
@@ -590,7 +590,7 @@ public partial class Functions
 		var listArg = args["0"].Message;
 		var positionArg = args["1"].Message!.ToPlainText();
 		var newItemArg = args["2"].Message;
-		var delimiter = NoParseDefaultNoParseArgument(args, 3, " ");
+		var delimiter = Common.ArgHelpers.NoParseDefaultNoParseArgument(args, 3, " ");
 
 		if (!int.TryParse(positionArg, out var position))
 		{
@@ -608,9 +608,9 @@ public partial class Functions
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var list1 = args["0"].Message;
 		var list2 = args["1"].Message;
-		var delimiter = NoParseDefaultNoParseArgument(args, 2, MModule.single(" "));
-		var sortType = NoParseDefaultNoParseArgument(args, 3, MModule.single("m"));
-		var outputSeparator = NoParseDefaultNoParseArgument(args, 4, delimiter);
+		var delimiter = Common.ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MModule.single(" "));
+		var sortType = Common.ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MModule.single("m"));
+		var outputSeparator = Common.ArgHelpers.NoParseDefaultNoParseArgument(args, 4, delimiter);
 
 		var aList1 = MModule.split2(delimiter, list1);
 		var aList2 = MModule.split2(delimiter, list2);

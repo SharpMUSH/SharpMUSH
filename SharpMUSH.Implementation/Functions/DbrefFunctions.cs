@@ -11,6 +11,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Implementation;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -329,14 +330,14 @@ public partial class Functions
 	public static async ValueTask<CallState> NameList(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var namelist = NameList(parser.CurrentState.Arguments["0"].Message!.ToPlainText());
+		var namelist = Common.ArgHelpers.NameList(parser.CurrentState.Arguments["0"].Message!.ToPlainText());
 		var (almostDbrefList, almostStrList) = namelist.Partition(x => x.IsT0);
 		var dbrefList = Enumerable.ToHashSet(almostDbrefList.Select(x => x.AsT0));
 		var strList = Enumerable.ToHashSet(almostStrList.Select(x => x.AsT1));
 
 		var dbrefListExisting = await dbrefList
 			.ToAsyncEnumerable()
-			.Where(async (x, _) => await Mediator!.Send(new GetBaseObjectNodeQuery(x)) is not null)
+			.Where(async (x, ct) => await Mediator!.Send(new GetBaseObjectNodeQuery(x), ct) is not null)
 			.ToHashSetAsync();
 
 		// var dbrefListNotExisting = dbrefList.Except(dbrefListExisting); 

@@ -2,6 +2,7 @@ using Mediator;
 using Humanizer;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
@@ -33,7 +34,7 @@ public static partial class Substitutions
 			"~" => (await parser.CurrentState.EnactorObject(mediator)).Object()!.Name, // TODO: ACCENTED ENACTOR NAME
 			"K" or "k" => (await parser.CurrentState.EnactorObject(mediator)).Object()!.Name, // TODO: MONIKER ENACTOR NAME
 			"S" or "s" => 
-				await GetPronounIndicatingAttribute(attributeService, mediator, parser,
+				await AttributeHelpers.GetPronounIndicatingAttribute(attributeService, mediator, parser,
 						configuration.CurrentValue.Attribute.SubjectivePronounAttribute ?? "SEX") switch
 				{
 					"M" or "Male" => "he",
@@ -41,7 +42,7 @@ public static partial class Substitutions
 					_ => "they"
 				}, // TODO: SUBJECT PRONOUN CUSTOMIZATION
 			"O" or "o" => 
-				await GetPronounIndicatingAttribute(attributeService, mediator, parser,
+				await AttributeHelpers.GetPronounIndicatingAttribute(attributeService, mediator, parser,
 						configuration.CurrentValue.Attribute.ObjectivePronounAttribute ?? "SEX") switch
 					{
 						"M" or "Male" => "him",
@@ -49,7 +50,7 @@ public static partial class Substitutions
 						_ => "their"
 					}, // TODO: OBJECT PRONOUN CUSTOMIZATION
 			"P" or "p" => 
-				await GetPronounIndicatingAttribute(attributeService, mediator, parser,
+				await AttributeHelpers.GetPronounIndicatingAttribute(attributeService, mediator, parser,
 						configuration.CurrentValue.Attribute.PossessivePronounAttribute ?? "SEX") switch
 					{
 						"M" or "Male" => "his",
@@ -57,7 +58,7 @@ public static partial class Substitutions
 						_ => "their"
 					}, // TODO: POSSESSIVE PRONOUN CUSTOMIZATION
 			"A" or "a" => 
-				await GetPronounIndicatingAttribute(attributeService, mediator, parser,
+				await AttributeHelpers.GetPronounIndicatingAttribute(attributeService, mediator, parser,
 						configuration.CurrentValue.Attribute.AbsolutePossessivePronounAttribute ?? "SEX") switch
 					{
 						"M" or "Male" => "his",
@@ -85,22 +86,6 @@ public static partial class Substitutions
 		{
 			return MModule.single(parser.State.Peek().Command ?? "");
 		}
-	}
-
-	private static async ValueTask<string> GetPronounIndicatingAttribute(IAttributeService attributeService,
-		IMediator mediator, IMUSHCodeParser parser, string attr)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
-		
-		var attribute = await attributeService.GetAttributeAsync(
-			executor,
-			executor,
-			attr,
-			IAttributeService.AttributeMode.Read); 
-
-		return attribute.IsAttribute 
-			? attribute.AsAttribute.Last().Value.ToPlainText() 
-			: "N";
 	}
 
 	private static async ValueTask<string> GetLocationDBRefString(IMUSHCodeParser parser, IMediator mediator)

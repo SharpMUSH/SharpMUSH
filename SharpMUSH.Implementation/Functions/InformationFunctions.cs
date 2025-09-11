@@ -128,8 +128,8 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var target = NoParseDefaultNoParseArgument(args, 0, "me");
-		var queueTypes = NoParseDefaultNoParseArgument(args, 0, "wait semaphore").ToPlainText().ToUpperInvariant()
+		var target = Common.ArgHelpers.NoParseDefaultNoParseArgument(args, 0, "me");
+		var queueTypes = Common.ArgHelpers.NoParseDefaultNoParseArgument(args, 0, "wait semaphore").ToPlainText().ToUpperInvariant()
 			.Split(" ").Distinct();
 
 		if (queueTypes.Any(type => type is not "WAIT" and not "SEMAPHORE" and not "INDEPENDENT"))

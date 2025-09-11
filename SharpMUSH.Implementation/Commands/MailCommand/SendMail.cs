@@ -6,7 +6,6 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
-using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Commands.MailCommand;
@@ -21,7 +20,7 @@ public static class SendMail
 		
 		var sender = await parser.CurrentState.KnownExecutorObject(mediator!);
 		
-		var playerList = await Functions.Functions.PopulatedNameList(parser, nameList.ToPlainText()!);
+		var playerList = await Common.ArgHelpers.PopulatedNameList(mediator!, nameList.ToPlainText()!);
 		var knownPlayerList = playerList.Where(x => x != null).Select(x => x!).ToList();
 		var subjectBodySplit = MModule.indexOf(subjectAndMessage, MModule.single("/"));
 		

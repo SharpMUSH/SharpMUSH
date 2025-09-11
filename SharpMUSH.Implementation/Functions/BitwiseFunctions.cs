@@ -1,6 +1,4 @@
-﻿using System.Collections.Immutable;
-using SharpMUSH.Implementation.Definitions;
-using SharpMUSH.Library.Attributes;
+﻿using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 
@@ -20,7 +18,7 @@ public partial class Functions
 
 	[SharpFunction(Name = "baseconv", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> BaseConv(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValidateIntegerAndEvaluate(parser.CurrentState.ArgumentsOrdered.ToImmutableSortedDictionary(),
+		=> Common.ArgHelpers.ValidateIntegerAndEvaluate(parser.CurrentState.ArgumentsOrdered,
 			x =>
 			{
 				var input = MModule.plainText(parser.CurrentState.ArgumentsOrdered.ElementAt(0).Value.Message!);
@@ -64,35 +62,35 @@ public partial class Functions
 	[SharpFunction(Name = "band",
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.PositiveIntegersOnly)]
 	public static ValueTask<CallState> BAnd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> AggregateIntegers(parser.CurrentState.ArgumentsOrdered, (x, y) => x & y);
+		=> Common.ArgHelpers.AggregateIntegers(parser.CurrentState.ArgumentsOrdered, (x, y) => x & y);
 
 	[SharpFunction(Name = "bnand",
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.PositiveIntegersOnly)]
 	public static ValueTask<CallState> BNand(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> AggregateIntegers(parser.CurrentState.ArgumentsOrdered, (x, y) => ~(x & y));
+		=> Common.ArgHelpers.AggregateIntegers(parser.CurrentState.ArgumentsOrdered, (x, y) => ~(x & y));
 
 	[SharpFunction(Name = "bnot", MaxArgs = 1,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.PositiveIntegersOnly)]
 	public static ValueTask<CallState> BNot(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> EvaluateInteger(parser.CurrentState.ArgumentsOrdered, x => ~x);
+		=> Common.ArgHelpers.EvaluateInteger(parser.CurrentState.ArgumentsOrdered, x => ~x);
 
 	[SharpFunction(Name = "bor",
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.PositiveIntegersOnly)]
 	public static ValueTask<CallState> Bor(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> AggregateIntegers(parser.CurrentState.ArgumentsOrdered, (x, y) => x | y);
+		=> Common.ArgHelpers.AggregateIntegers(parser.CurrentState.ArgumentsOrdered, (x, y) => x | y);
 
 	[SharpFunction(Name = "bxor",
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.PositiveIntegersOnly)]
 	public static ValueTask<CallState> BXor(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> AggregateIntegers(parser.CurrentState.ArgumentsOrdered, (x, y) => x ^ y);
+		=> Common.ArgHelpers.AggregateIntegers(parser.CurrentState.ArgumentsOrdered, (x, y) => x ^ y);
 
 	[SharpFunction(Name = "shr", MinArgs = 2, MaxArgs = 2,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.PositiveIntegersOnly)]
 	public static ValueTask<CallState> ShR(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> AggregateIntegers(parser.CurrentState.ArgumentsOrdered, (x, y) => x >> y);
+		=> Common.ArgHelpers.AggregateIntegers(parser.CurrentState.ArgumentsOrdered, (x, y) => x >> y);
 
 	[SharpFunction(Name = "shl", MinArgs = 2, MaxArgs = 2,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.PositiveIntegersOnly)]
 	public static ValueTask<CallState> ShL(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> AggregateIntegers(parser.CurrentState.ArgumentsOrdered, (x, y) => x << y);
+		=> Common.ArgHelpers.AggregateIntegers(parser.CurrentState.ArgumentsOrdered, (x, y) => x << y);
 }

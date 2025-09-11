@@ -283,7 +283,7 @@ public partial class Commands
 
 		var notification = args["1"].Message!.ToString();
 		var targetListText = MModule.plainText(args["0"].Message!);
-		var nameListTargets = Functions.Functions.NameList(targetListText);
+		var nameListTargets = Common.ArgHelpers.NameList(targetListText);
 
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
 
@@ -379,7 +379,7 @@ public partial class Commands
 		var toTeleportList = Enumerable.Empty<OneOf<DBRef, string>>();
 		if (isList)
 		{
-			toTeleportList = Functions.Functions.NameList(toTeleport);
+			toTeleportList = Common.ArgHelpers.NameList(toTeleport);
 		}
 		else
 		{
@@ -1061,8 +1061,8 @@ public partial class Commands
 	public static async ValueTask<Option<CallState>> Force(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var objArg = Functions.Functions.NoParseDefaultNoParseArgument(args, 0, MModule.empty());
-		var cmdListArg = Functions.Functions.NoParseDefaultNoParseArgument(args, 1, MModule.empty());
+		var objArg = Common.ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.empty());
+		var cmdListArg = Common.ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.empty());
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		var maybeFound =
@@ -1143,7 +1143,7 @@ public partial class Commands
 
 		var notification = args["1"].Message!.ToString();
 		var targetListText = MModule.plainText(args["0"].Message!);
-		var nameListTargets = Functions.Functions.NameList(targetListText);
+		var nameListTargets = Common.ArgHelpers.NameList(targetListText);
 
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
 
@@ -1400,8 +1400,8 @@ public partial class Commands
 		var isSpoof = parser.CurrentState.Switches.Contains("SPOOF");
 		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
 		var message = isNoEvaluation
-			? Functions.Functions.NoParseDefaultNoParseArgument(args, 1, MModule.empty())
-			: await Functions.Functions.NoParseDefaultEvaluatedArgument(parser, 1, MModule.empty());
+			? Common.ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.empty())
+			: await Common.ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, MModule.empty());
 
 		var interactableContents = contents
 			.ToAsyncEnumerable()
@@ -1452,8 +1452,8 @@ public partial class Commands
 		var contents = await executorLocation.Content(Mediator!);
 		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
 		var message = isNoEvaluation
-			? Functions.Functions.NoParseDefaultNoParseArgument(args, 1, MModule.empty())
-			: await Functions.Functions.NoParseDefaultEvaluatedArgument(parser, 1, MModule.empty());
+			? Common.ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.empty())
+			: await Common.ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, MModule.empty());
 
 		var interactableContents = contents
 			.ToAsyncEnumerable()
@@ -1779,7 +1779,7 @@ public partial class Commands
 			.Skip(3)
 			.Select(x => new KeyValuePair<string, CallState>((int.Parse(x.Key) - 3).ToString(), x.Value));
 
-		var recipientNamelist = Functions.Functions.NameList(recipientsArg.ToString());
+		var recipientNamelist = Common.ArgHelpers.NameList(recipientsArg.ToString());
 
 		var attrObjSplit = objectAttrArg.Split('/');
 		AnySharpObject? objToEvaluate = null;

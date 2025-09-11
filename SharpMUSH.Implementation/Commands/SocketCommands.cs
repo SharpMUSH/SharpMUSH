@@ -6,6 +6,7 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Queries.Database;
 using System.Text.RegularExpressions;
 using SharpMUSH.Library.Attributes;
+using SharpMUSH.Implementation;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -28,8 +29,8 @@ public partial class Commands
 			return string.Format(
 				fmt,
 				name!.Name,
-				Functions.Functions.TimeString(onFor!.Value, accuracy: 3),
-				Functions.Functions.TimeString(idleFor!.Value),
+				Common.TimeHelpers.TimeString(onFor!.Value, accuracy: 3),
+				Common.TimeHelpers.TimeString(idleFor!.Value),
 				"Nothing");
 		}));
 		var footer = $"{everyone.Count} players logged in.";
@@ -61,7 +62,7 @@ public partial class Commands
 		var username = match.Groups["User"].Value;
 		var password = match.Groups["Password"].Value;
 
-		var nameItems = Functions.Functions.NameList(username).ToList();
+		var nameItems = Common.ArgHelpers.NameList(username).ToList();
 
 		if (nameItems.Count == 0)
 		{
