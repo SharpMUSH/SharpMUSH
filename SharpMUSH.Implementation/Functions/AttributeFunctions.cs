@@ -1,4 +1,5 @@
-﻿using SharpMUSH.Implementation.Definitions;
+﻿using SharpMUSH.Implementation.Common;
+using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
@@ -12,9 +13,22 @@ namespace SharpMUSH.Implementation.Functions;
 public partial class Functions
 {
 	[SharpFunction(Name = "APOSS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> aposs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> aposs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, arg0,
+			LocateFlags.All,
+			async onObject => await AttributeHelpers.GetPronoun(AttributeService!, Mediator!, parser, onObject,
+				Configuration!.CurrentValue.Attribute.GenderAttribute,
+				Configuration!.CurrentValue.Attribute.AbsolutePossessivePronounAttribute,
+				x => x switch
+				{
+					"M" or "Male" => "his",
+					"F" or "Female" => "hers",
+					_ => "theirs"
+				}));
 	}
 
 	[SharpFunction(Name = "attrib_set", MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX)]
@@ -389,9 +403,22 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "OBJ", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> ObjectivePronoun(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> ObjectivePronoun(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, arg0,
+			LocateFlags.All,
+			async onObject => await AttributeHelpers.GetPronoun(AttributeService!, Mediator!, parser, onObject,
+				Configuration!.CurrentValue.Attribute.GenderAttribute,
+				Configuration!.CurrentValue.Attribute.ObjectivePronounAttribute,
+				x => x switch
+				{
+					"M" or "Male" => "him",
+					"F" or "Female" => "her",
+					_ => "them"
+				}));
 	}
 
 	[SharpFunction(Name = "OBJEVAL", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.NoParse)]
@@ -457,11 +484,22 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "POSS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> poss(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> poss(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// Should consider the Config for Possessive Form.
-		// Configuration!.CurrentValue.Attribute.PossessivePronounAttribute
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, arg0,
+			LocateFlags.All,
+			async onObject => await AttributeHelpers.GetPronoun(AttributeService!, Mediator!, parser, onObject,
+				Configuration!.CurrentValue.Attribute.GenderAttribute,
+				Configuration!.CurrentValue.Attribute.PossessivePronounAttribute,
+				x => x switch
+				{
+					"M" or "Male" => "his",
+					"F" or "Female" => "her",
+					_ => "their"
+				}));
 	}
 
 	[SharpFunction(Name = "REGEDIT", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
@@ -557,9 +595,22 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "SUBJ", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> SubjectivePronoun(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> SubjectivePronoun(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, arg0,
+			LocateFlags.All,
+			async onObject => await AttributeHelpers.GetPronoun(AttributeService!, Mediator!, parser, onObject,
+				Configuration!.CurrentValue.Attribute.GenderAttribute,
+				Configuration!.CurrentValue.Attribute.SubjectivePronounAttribute,
+				x => x switch
+				{
+					"M" or "Male" => "he",
+					"F" or "Female" => "she",
+					_ => "they"
+				}));
 	}
 
 	[SharpFunction(Name = "UDEFAULT", MinArgs = 2, MaxArgs = 34, Flags = FunctionFlags.NoParse)]

@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -17,31 +18,31 @@ public class AttributeHelpers
 		IAttributeService attributeService,
 		IMediator mediator,
 		IMUSHCodeParser parser,
+		AnySharpObject onObject,
 		string? genderAttribute,
 		string? pronounAttribute,
 		Func<string, string> defaultEvaluator)
 	{
-		var ga = await GetGenderAttribute(attributeService, mediator, parser, genderAttribute);
+		var ga = await GetGenderAttribute(attributeService, mediator, parser, onObject, genderAttribute);
 		return await EvaluatePronounIndicatingAttribute(attributeService, mediator, parser, pronounAttribute,
 			defaultEvaluator(ga));
 	}
 
 	/// <summary>
-	/// Gets the gender attribute that indicates the pronoun. This is typically 'SEX'.
+	/// Gets the gender attribute that indicates the pronoun. This is typically 'SEX' for legacy reasons.
 	/// </summary>
 	/// <param name="attributeService"></param>
 	/// <param name="mediator"></param>
 	/// <param name="parser"></param>
+	/// <param name="onObject"></param>
 	/// <param name="attr"></param>
 	/// <returns></returns>
 	private static async ValueTask<string> GetGenderAttribute(IAttributeService attributeService,
-		IMediator mediator, IMUSHCodeParser parser, string? attr)
+		IMediator mediator, IMUSHCodeParser parser, AnySharpObject onObject, string? attr)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
-
 		var attribute = await attributeService.GetAttributeAsync(
-			executor,
-			executor,
+			onObject,
+			onObject,
 			string.IsNullOrWhiteSpace(attr) ? "SEX" : attr,
 			IAttributeService.AttributeMode.Read);
 

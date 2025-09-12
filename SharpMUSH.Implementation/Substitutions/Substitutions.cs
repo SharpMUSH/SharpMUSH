@@ -35,6 +35,7 @@ public static partial class Substitutions
 			"K" or "k" => (await parser.CurrentState.EnactorObject(mediator)).Object()!.Name, // TODO: MONIKER ENACTOR NAME
 			"S" or "s" =>
 				await AttributeHelpers.GetPronoun(attributeService, mediator, parser,
+					await parser.CurrentState.KnownExecutorObject(mediator),
 					configuration.CurrentValue.Attribute.GenderAttribute,
 					configuration.CurrentValue.Attribute.SubjectivePronounAttribute,
 					x => x switch
@@ -44,15 +45,17 @@ public static partial class Substitutions
 						_ => "they"
 					}),
 			"O" or "o" => await AttributeHelpers.GetPronoun(attributeService, mediator, parser,
+				await parser.CurrentState.KnownExecutorObject(mediator),
 				configuration.CurrentValue.Attribute.GenderAttribute,
 				configuration.CurrentValue.Attribute.ObjectivePronounAttribute,
 				x => x switch
 				{
-					"M" or "Male" => "he",
-					"F" or "Female" => "she",
-					_ => "they"
+					"M" or "Male" => "him",
+					"F" or "Female" => "her",
+					_ => "them"
 				}),
 			"P" or "p" => await AttributeHelpers.GetPronoun(attributeService, mediator, parser,
+				await parser.CurrentState.KnownExecutorObject(mediator),
 				configuration.CurrentValue.Attribute.GenderAttribute,
 				configuration.CurrentValue.Attribute.PossessivePronounAttribute,
 				x => x switch
@@ -62,6 +65,7 @@ public static partial class Substitutions
 					_ => "their"
 				}),
 			"A" or "a" => await AttributeHelpers.GetPronoun(attributeService, mediator, parser,
+				await parser.CurrentState.KnownExecutorObject(mediator),
 				configuration.CurrentValue.Attribute.GenderAttribute,
 				configuration.CurrentValue.Attribute.AbsolutePossessivePronounAttribute,
 				x => x switch
