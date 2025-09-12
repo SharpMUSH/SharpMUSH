@@ -84,7 +84,7 @@ public static partial class Substitutions
 			_ => symbol,
 		};
 
-	private static MString LastCommandBeforeEvaluation(IMUSHCodeParser parser)
+	public static MString LastCommandBeforeEvaluation(IMUSHCodeParser parser)
 	{
 		try
 		{
