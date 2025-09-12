@@ -1159,6 +1159,44 @@ public class ArangoDatabase(
 				Value = MarkupStringModule.deserialize(x.Value)
 			}));
 	}
+	public async ValueTask<IEnumerable<SharpAttribute>?> GetAttributesByRegexAsync(DBRef dbref, string attributePattern)
+	{
+		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
+		var result =
+			await arangoDb.Query.ExecuteAsync<SharpObjectQueryResult>(handle, $"RETURN DOCUMENT({startVertex})", cache: true);
+		var pattern = attributePattern;
+
+		if (!result.Any())
+		{
+			return null;
+		}
+
+		// TODO: This is a lazy implementation and does not appropriately support the ` section of pattern matching for attribute trees.
+		// TODO: A pattern with a wildcard can match multiple levels of attributes.
+		// This means it can also match attributes deeper in its structure that need to be reported on.
+		// It already does this right now. But not in a sorted manner!
+
+		// OPTIONS { indexHint: "inverted_index_name", forceIndexHint: true }
+		// This doesn't seem like it can be done on a GRAPH query?
+		const string query =
+			$"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName LIKE @pattern RETURN v";
+
+		var result2 = await arangoDb.Query.ExecuteAsync<SharpAttributeQueryResult>(handle, query,
+			new Dictionary<string, object>
+			{
+				{ StartVertex, startVertex },
+				{ "pattern", pattern }
+			});
+
+		return await Task.WhenAll(result2.Select(async x =>
+			new SharpAttribute(x.Key, x.Name, await GetAttributeFlagsAsync(x.Id), null, x.LongName,
+				new(async ct => await GetTopLevelAttributesAsync(x.Id)),
+				new(async ct => await GetObjectOwnerAsync(x.Id)),
+				new(async ct => await Task.FromResult<SharpAttributeEntry?>(null)))
+			{
+				Value = MarkupStringModule.deserialize(x.Value)
+			}));
+	}
 
 	public async ValueTask<IEnumerable<SharpAttribute>?> GetAttributesRegexAsync(DBRef dbref, string attributePattern)
 	{
@@ -1171,9 +1209,7 @@ public class ArangoDatabase(
 			return null;
 		}
 
-		// TODO: Create an Inverted Index on LongName.
-		var query =
-			$"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName =~ @pattern RETURN v";
+		const string query = $"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName =~ @pattern RETURN v";
 
 		var result2 = await arangoDb.Query.ExecuteAsync<SharpAttributeQueryResult>(handle, query,
 			new Dictionary<string, object>()

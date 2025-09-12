@@ -81,6 +81,7 @@ public interface ISharpDatabase
 	// TODO: Consider the return value, as an attribute pattern returns multiple attributes.
 	// These should return full attribute paths, so likely IEnumerable<IEnumerable<SharpAttribute>>.
 	ValueTask<IEnumerable<SharpAttribute>?> GetAttributesAsync(DBRef dbref, string attribute_pattern);
+	ValueTask<IEnumerable<SharpAttribute>?> GetAttributesByRegexAsync(DBRef dbref, string attribute_pattern);
 
 	/// <summary>
 	/// Get the Object represented by a Database Reference Number.
