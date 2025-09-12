@@ -1,4 +1,5 @@
-﻿using SharpMUSH.Implementation.Common;
+﻿using System.Reflection;
+using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
@@ -856,7 +857,7 @@ public partial class Functions
 			"c" or "C" => Substitutions.Substitutions.LastCommandBeforeEvaluation(parser),
 			var number when int.TryParse(number, out _) => parser.StateHistory(2)
 				.Match(
-					state => state.ArgumentsOrdered.TryGetValue(number, out var value) 
+					state => state.ArgumentsOrdered.TryGetValue(number, out var value)
 						? value.Message
 						: MModule.empty(),
 					_ => MModule.empty()),
@@ -871,10 +872,8 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "VERSION", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> Version(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		throw new NotImplementedException();
-	}
+	public static ValueTask<CallState> Version(IMUSHCodeParser parser, SharpFunctionAttribute _2) 
+		=> ValueTask.FromResult<CallState>(Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? string.Empty);
 
 	[SharpFunction(Name = "VISIBLE", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> Visible(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -887,6 +886,7 @@ public partial class Functions
 		If <object>, <victim>, or <attribute> is invalid, the function returns 0.
 
 		 */
+		
 		throw new NotImplementedException();
 	}
 

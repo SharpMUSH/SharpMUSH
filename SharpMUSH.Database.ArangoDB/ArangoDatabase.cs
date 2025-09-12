@@ -13,6 +13,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using System.Collections.Immutable;
+using System.Text.RegularExpressions;
 using DotNext.Collections.Generic;
 using DotNext.Threading;
 using FSharpPlus.Control;
@@ -26,7 +27,7 @@ using AsyncEnumerable = System.Linq.AsyncEnumerable;
 namespace SharpMUSH.Database.ArangoDB;
 
 // TODO: Unit of Work / Transaction around all of this! Otherwise it risks the stability of the Database.
-public class ArangoDatabase(
+public partial class ArangoDatabase(
 	ILogger<ArangoDatabase> logger,
 	IArangoContext arangoDb,
 	ArangoHandle handle,
@@ -1126,22 +1127,24 @@ public class ArangoDatabase(
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 		var result =
 			await arangoDb.Query.ExecuteAsync<SharpObjectQueryResult>(handle, $"RETURN DOCUMENT({startVertex})", cache: true);
-		var pattern = attributePattern.Replace("_", "\\_").Replace("%", "\\%").Replace("?", "_").Replace("*", "%");
-
+		
+		var pattern = WildcardToRegex().Replace(attributePattern, m => m.Value switch
+		{
+			"*" => "[^`]*",
+			"**" => ".*",
+			"?" => ".",
+			_ => $"\\{m.Value}"
+		} );
+		
 		if (!result.Any())
 		{
 			return null;
 		}
 
-		// TODO: This is a lazy implementation and does not appropriately support the ` section of pattern matching for attribute trees.
-		// TODO: A pattern with a wildcard can match multiple levels of attributes.
-		// This means it can also match attributes deeper in its structure that need to be reported on.
-		// It already does this right now. But not in a sorted manner!
-
 		// OPTIONS { indexHint: "inverted_index_name", forceIndexHint: true }
 		// This doesn't seem like it can be done on a GRAPH query?
 		const string query =
-			$"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName LIKE @pattern RETURN v";
+			$"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName =~ @pattern RETURN v";
 
 		var result2 = await arangoDb.Query.ExecuteAsync<SharpAttributeQueryResult>(handle, query,
 			new Dictionary<string, object>
@@ -1645,4 +1648,7 @@ public class ArangoDatabase(
 			PasswordHash = hashed
 		}, mergeObjects: true);
 	}
+
+	[GeneratedRegex("[.*+?^${}()|[\\]/]")]
+	private static partial Regex WildcardToRegex();
 }
