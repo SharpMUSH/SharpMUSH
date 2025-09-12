@@ -854,8 +854,12 @@ public partial class Functions
 			"n" or "N" => (await parser.CurrentState.KnownEnactorObject(Mediator!)).Object().Name,
 			"l" or "L" => (await (await parser.CurrentState.KnownEnactorObject(Mediator!)).Where()).Object().DBRef,
 			"c" or "C" => Substitutions.Substitutions.LastCommandBeforeEvaluation(parser),
-			// TODO: This needs to look up one above in the stack, not the current state.
-			var number when int.TryParse(number, out var integer) => parser.CurrentState.Arguments[integer.ToString()],
+			var number when int.TryParse(number, out _) => parser.StateHistory(2)
+				.Match(
+					state => state.ArgumentsOrdered.TryGetValue(number, out var value) 
+						? value.Message
+						: MModule.empty(),
+					_ => MModule.empty()),
 			_ => Errors.ErrorRange
 		};
 	}

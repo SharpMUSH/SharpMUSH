@@ -37,6 +37,19 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	public IImmutableStack<ParserState> State { get; private init; } = ImmutableStack<ParserState>.Empty;
 
 	public IMUSHCodeParser FromState(ParserState state) => new MUSHCodeParser(Logger, FunctionLibrary, CommandLibrary, ServiceProvider, state);
+	
+	public Option<ParserState> StateHistory(uint index)
+	{
+		try
+		{
+			var a = State.Take((int)index);
+			return a.Last();
+		}
+		catch
+		{
+			return new None();
+		}
+	}
 
 	public IMUSHCodeParser Empty() => this with { State = ImmutableStack<ParserState>.Empty };
 

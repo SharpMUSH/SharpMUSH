@@ -84,18 +84,10 @@ public static partial class Substitutions
 			_ => symbol,
 		};
 
-	public static MString LastCommandBeforeEvaluation(IMUSHCodeParser parser)
-	{
-		try
-		{
-			var getLast = parser.State.ElementAt(-1).Command;
-			return MModule.single(getLast);
-		}
-		catch
-		{
-			return MModule.single(parser.State.Peek().Command ?? "");
-		}
-	}
+	public static MString LastCommandBeforeEvaluation(IMUSHCodeParser parser) =>
+		MModule.single(parser.StateHistory(2).Match(
+			state => state.Command,
+			_ => string.Empty));
 
 	private static async ValueTask<string> GetLocationDBRefString(IMUSHCodeParser parser, IMediator mediator)
 	{
