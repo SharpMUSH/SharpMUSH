@@ -20,9 +20,9 @@ public static partial class Substitutions
 		SubstitutionSymbolContext _)
 		=> symbol switch
 		{
-			"0" or "1" or "2" or "3" or "4" or "5" or "6" or "7" or "8" or "9" => 
-				parser.CurrentState.Arguments.TryGetValue(symbol, out var tmpCS) 
-					? tmpCS.Message 
+			"0" or "1" or "2" or "3" or "4" or "5" or "6" or "7" or "8" or "9" =>
+				parser.CurrentState.Arguments.TryGetValue(symbol, out var tmpCs)
+					? tmpCs.Message
 					: MModule.empty(),
 			"B" or "b" => " ",
 			"R" or "r" => Environment.NewLine,
@@ -33,38 +33,43 @@ public static partial class Substitutions
 			"N" => (await parser.CurrentState.EnactorObject(mediator)).Object()!.Name.ApplyCase(LetterCasing.Sentence),
 			"~" => (await parser.CurrentState.EnactorObject(mediator)).Object()!.Name, // TODO: ACCENTED ENACTOR NAME
 			"K" or "k" => (await parser.CurrentState.EnactorObject(mediator)).Object()!.Name, // TODO: MONIKER ENACTOR NAME
-			"S" or "s" => 
-				await AttributeHelpers.GetPronounIndicatingAttribute(attributeService, mediator, parser,
-						configuration.CurrentValue.Attribute.SubjectivePronounAttribute ?? "SEX") switch
+			"S" or "s" =>
+				await AttributeHelpers.GetPronoun(attributeService, mediator, parser,
+					configuration.CurrentValue.Attribute.GenderAttribute,
+					configuration.CurrentValue.Attribute.SubjectivePronounAttribute,
+					x => x switch
+					{
+						"M" or "Male" => "he",
+						"F" or "Female" => "she",
+						_ => "they"
+					}),
+			"O" or "o" => await AttributeHelpers.GetPronoun(attributeService, mediator, parser,
+				configuration.CurrentValue.Attribute.GenderAttribute,
+				configuration.CurrentValue.Attribute.ObjectivePronounAttribute,
+				x => x switch
 				{
 					"M" or "Male" => "he",
 					"F" or "Female" => "she",
 					_ => "they"
-				}, // TODO: SUBJECT PRONOUN CUSTOMIZATION
-			"O" or "o" => 
-				await AttributeHelpers.GetPronounIndicatingAttribute(attributeService, mediator, parser,
-						configuration.CurrentValue.Attribute.ObjectivePronounAttribute ?? "SEX") switch
-					{
-						"M" or "Male" => "him",
-						"F" or "Female" => "her",
-						_ => "their"
-					}, // TODO: OBJECT PRONOUN CUSTOMIZATION
-			"P" or "p" => 
-				await AttributeHelpers.GetPronounIndicatingAttribute(attributeService, mediator, parser,
-						configuration.CurrentValue.Attribute.PossessivePronounAttribute ?? "SEX") switch
-					{
-						"M" or "Male" => "his",
-						"F" or "Female" => "her",
-						_ => "their"
-					}, // TODO: POSSESSIVE PRONOUN CUSTOMIZATION
-			"A" or "a" => 
-				await AttributeHelpers.GetPronounIndicatingAttribute(attributeService, mediator, parser,
-						configuration.CurrentValue.Attribute.AbsolutePossessivePronounAttribute ?? "SEX") switch
-					{
-						"M" or "Male" => "his",
-						"F" or "Female" => "hers",
-						_ => "theirs"
-					}, // TODO: ABSOLUTE POSSESSIVE PRONOUN CUSTOMIZATION
+				}),
+			"P" or "p" => await AttributeHelpers.GetPronoun(attributeService, mediator, parser,
+				configuration.CurrentValue.Attribute.GenderAttribute,
+				configuration.CurrentValue.Attribute.PossessivePronounAttribute,
+				x => x switch
+				{
+					"M" or "Male" => "his",
+					"F" or "Female" => "her",
+					_ => "their"
+				}),
+			"A" or "a" => await AttributeHelpers.GetPronoun(attributeService, mediator, parser,
+				configuration.CurrentValue.Attribute.GenderAttribute,
+				configuration.CurrentValue.Attribute.AbsolutePossessivePronounAttribute,
+				x => x switch
+				{
+					"M" or "Male" => "his",
+					"F" or "Female" => "hers",
+					_ => "theirs"
+				}),
 			"@" => $"#{parser.CurrentState.Caller!.Value.Number}",
 			"!" => $"#{parser.CurrentState.Executor!.Value.Number}",
 			"L" or "l" => await GetLocationDBRefString(parser, mediator),
@@ -101,7 +106,7 @@ public static partial class Substitutions
 		ComplexSubstitutionSymbolContext context)
 	{
 		ArgumentNullException.ThrowIfNull(symbol);
-
+		
 		if (context.REG_NUM() is not null) return HandleRegistrySymbol(symbol, parser);
 		if (context.ITEXT_NUM() is not null) return HandleITextNumber(symbol, parser);
 		if (context.STEXT_NUM() is not null) return HandleSTextNumber(symbol, parser);
@@ -118,7 +123,8 @@ public static partial class Substitutions
 	}
 
 	// Symbol Example: %vw --> vw
-	private static async ValueTask<CallState> HandleVWX(CallState symbol, IMUSHCodeParser parser, IMediator mediator, IAttributeService attributeService)
+	private static async ValueTask<CallState> HandleVWX(CallState symbol, IMUSHCodeParser parser, IMediator mediator,
+		IAttributeService attributeService)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
 
