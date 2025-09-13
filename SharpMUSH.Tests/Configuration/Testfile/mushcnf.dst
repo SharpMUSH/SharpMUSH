@@ -829,7 +829,7 @@ silent_pemit no
 # PennMUSH uses the SEX attribute to determine pronoun.
 # Change this if you want to use a different attribute.
 # Make sure it exists as an @attrib for easier use for the players.
-gender_attr sex
+gender_attr GENDER
 
 # enable the adestroy attribute, triggered when an object is nuked?
 adestroy no

@@ -1,4 +1,7 @@
-﻿using SharpMUSH.Library.ParserInterfaces;
+﻿using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services.Interfaces;
+
 namespace SharpMUSH.Tests.Functions;
 
 public class AttributeFunctionUnitTests
@@ -7,6 +10,7 @@ public class AttributeFunctionUnitTests
 	public required WebAppFactory WebAppFactoryArg { get; init; }
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
+	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 
 	[Test]
 	[NotInParallel]
@@ -18,4 +22,38 @@ public class AttributeFunctionUnitTests
 		var result = await Parser.FunctionParse(MModule.single(input));
 		await Assert.That(result!.Message!.ToString()).IsEqualTo(expected);
 	}
+
+	[Test]
+	[Arguments("%s", "they")]
+	[Arguments("%a", "theirs")]
+	[Arguments("%p", "their")]
+	[Arguments("%o", "them")]
+	[Arguments("subj(%#)", "they")]
+	[Arguments("aposs(%#)", "theirs")]
+	[Arguments("poss(%#)", "their")]
+	[Arguments("obj(%#)", "them")]
+	public async Task GenderTest1(string input, string expected)
+	{
+		var result = await Parser.FunctionParse(MModule.single(input));
+		await Assert.That(result!.Message!.ToString()).IsEqualTo(expected);
+	}
+	
+	[Test]
+	[DependsOn(nameof(GenderTest1))]
+	[Arguments("%s", "she")]
+	[Arguments("%a", "hers")]
+	[Arguments("%p", "her")]
+	[Arguments("%o", "her")]
+	[Arguments("subj(%#)", "she")]
+	[Arguments("aposs(%#)", "hers")]
+	[Arguments("poss(%#)", "her")]
+	[Arguments("obj(%#)", "her")]
+	public async Task GenderTest2(string input, string expected)
+	{
+		await Parser.CommandParse(1,ConnectionService, MModule.single("&GENDER me=F"));
+		
+		var result = await Parser.FunctionParse(MModule.single(input));
+		await Assert.That(result!.Message!.ToString()).IsEqualTo(expected);
+	}
+
 }
