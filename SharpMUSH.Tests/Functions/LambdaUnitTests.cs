@@ -14,7 +14,7 @@ public class LambdaUnitTests
 
 	[Test]
 	[Arguments(@"u(#lambda/add\(1\,2\))", "3")]
-	// [Arguments("u(lit(#lambda/add(1,2)))", "3")] // Long running bug/test found?
+	// [Arguments("u(lit(#lambda/add(1,2)))", "3")] TODO: Failing test -> #-2 I DON'T KNOW WHICH ONE YOU MEAN)
 	[Arguments("u(#lambda/[add(1,2)])", "3")] 
 	[Arguments("u(#lambda/3)", "3")]
 	[Arguments("3", "3")] 
