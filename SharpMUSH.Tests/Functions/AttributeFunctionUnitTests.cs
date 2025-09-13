@@ -55,5 +55,22 @@ public class AttributeFunctionUnitTests
 		var result = await Parser.FunctionParse(MModule.single(input));
 		await Assert.That(result!.Message!.ToString()).IsEqualTo(expected);
 	}
-
+	
+	[Test]
+	[DependsOn(nameof(GenderTest2))]
+	[Arguments("%s", "he")]
+	[Arguments("%a", "his")]
+	[Arguments("%p", "his")]
+	[Arguments("%o", "him")]
+	[Arguments("subj(%#)", "he")]
+	[Arguments("aposs(%#)", "his")]
+	[Arguments("poss(%#)", "his")]
+	[Arguments("obj(%#)", "him")]
+	public async Task GenderTest3(string input, string expected)
+	{
+		await Parser.CommandParse(1,ConnectionService, MModule.single("&GENDER me=M"));
+		
+		var result = await Parser.FunctionParse(MModule.single(input));
+		await Assert.That(result!.Message!.ToString()).IsEqualTo(expected);
+	}
 }
