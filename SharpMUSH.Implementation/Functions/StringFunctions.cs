@@ -921,9 +921,20 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "STRDELETE", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> StrDelete(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> StrDelete(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		await ValueTask.CompletedTask;
+		var str = parser.CurrentState.Arguments["0"].Message!;
+		var first = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+		var len = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
+
+		if (!int.TryParse(first, out var index) 
+		    || !int.TryParse(len, out var length))
+		{
+			return Errors.ErrorInteger;
+		}
+		
+		return MModule.remove(str, index, length);
 	}
 
 	[GeneratedRegex(@"\w+")]
