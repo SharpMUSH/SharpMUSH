@@ -172,16 +172,12 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "MUDNAME", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> MudName(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		throw new NotImplementedException();
-	}
+	public static ValueTask<CallState> MudName(IMUSHCodeParser parser, SharpFunctionAttribute _2) 
+		=> ValueTask.FromResult<CallState>(Configuration!.CurrentValue.Net.MudName);
 
 	[SharpFunction(Name = "MUDURL", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> MudURL(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		throw new NotImplementedException();
-	}
+		=> ValueTask.FromResult<CallState>(Configuration!.CurrentValue.Net.MudUrl ?? "");
 
 	[SharpFunction(Name = "NAME", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> Name(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -202,10 +198,8 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "PLAYERMEM", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> PlayerMem(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		throw new NotImplementedException();
-	}
+	public static ValueTask<CallState> PlayerMem(IMUSHCodeParser parser, SharpFunctionAttribute _2) 
+		=> ValueTask.FromResult<CallState>(0);
 
 	[SharpFunction(Name = "QUOTA", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> Quota(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -214,9 +208,12 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "TYPE", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> Type(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Type(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, 
+			executor, executor, arg0, LocateFlags.All, found => found.TypeString());
 	}
 
 	[SharpFunction(Name = "TEXTSEARCH", MinArgs = 2, MaxArgs = 3,

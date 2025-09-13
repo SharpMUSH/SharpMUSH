@@ -31,14 +31,14 @@ public partial class Functions
 		{
 			return ValueTask.FromResult(new CallState(string.Empty));
 		}
-		
+
 		var result = MModule.substring(idx, MModule.getLength(fullString) - idx, args["0"].Message);
 
 		return ValueTask.FromResult(new CallState(result));
 	}
 
 	[SharpFunction(Name = "lit", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Literal | FunctionFlags.NoParse)]
-	public static ValueTask<CallState> Lit(IMUSHCodeParser parser, SharpFunctionAttribute _2) 
+	public static ValueTask<CallState> Lit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult(parser.CurrentState.Arguments["0"]);
 
 	[SharpFunction(Name = "SPEAK", MinArgs = 2, MaxArgs = 7, Flags = FunctionFlags.Regular)]
@@ -353,7 +353,7 @@ public partial class Functions
 
 		var word = m.Groups[0].Value;
 		var wordLower = word.ToLower();
-		
+
 		if (new[] { "euler", "heir", "honest", "hono" }.Any(anWord => wordLower.StartsWith(anWord)))
 		{
 			return "an";
@@ -364,11 +364,11 @@ public partial class Functions
 			return "an";
 		}
 
-		
+
 		if (wordLower.Length == 1)
 		{
-			return wordLower.IndexOfAny(charList) == 0 
-				? "an" 
+			return wordLower.IndexOfAny(charList) == 0
+				? "an"
 				: "a";
 		}
 
@@ -387,11 +387,11 @@ public partial class Functions
 		{
 			return "a";
 		}
-		
+
 		if (word == word.ToUpper())
 		{
-			return wordLower.IndexOfAny(charList) == 0 
-				? "an" 
+			return wordLower.IndexOfAny(charList) == 0
+				? "an"
 				: "a";
 		}
 
@@ -415,12 +415,12 @@ public partial class Functions
 		var fullString = args["0"].Message;
 		var search = args["1"].Message;
 		var idx = MModule.indexOf(fullString, search);
-		
-		if(idx == -1) 
+
+		if (idx == -1)
 		{
 			return ValueTask.FromResult(new CallState(fullString));
 		}
-		
+
 		var result = MModule.substring(0, idx, fullString);
 
 		return ValueTask.FromResult(new CallState(result));
@@ -813,22 +813,79 @@ public partial class Functions
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "TRIM", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "trim", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Trim(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var arg0 = parser.CurrentState.Arguments["0"].Message!;
+		var arg1 = parser.CurrentState.Arguments.TryGetValue(
+			Configuration!.CurrentValue.Compatibility.TinyTrimFun 
+				? "1" 
+				: "2", out var arg1Value)
+			? arg1Value.Message
+			: MModule.single(" ");
+		;
+		var arg2 = parser.CurrentState.Arguments.TryGetValue(
+			Configuration!.CurrentValue.Compatibility.TinyTrimFun 
+				? "2" 
+				: "1", out var arg2Value)
+			? arg2Value.Message!.ToPlainText()
+			: "b";
+
+		var trimType = arg2 switch
+		{
+			"l" => MModule.TrimType.TrimStart,
+			"r" => MModule.TrimType.TrimEnd,
+			_ => MModule.TrimType.TrimBoth,
+		};
+
+		return ValueTask.FromResult<CallState>(
+			MModule.trim(arg0, arg1, trimType));
 	}
 
-	[SharpFunction(Name = "TRIMPENN", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "trimpenn", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> TrimPenn(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var arg0 = parser.CurrentState.Arguments["0"].Message!;
+		var arg1 = parser.CurrentState.Arguments.TryGetValue("1", out var arg1Value)
+			? arg1Value.Message
+			: MModule.single(" ");
+		;
+		var arg2 = parser.CurrentState.Arguments.TryGetValue("2", out var arg2Value)
+			? arg2Value.Message!.ToPlainText()
+			: "b";
+
+		var trimType = arg2 switch
+		{
+			"l" => MModule.TrimType.TrimStart,
+			"r" => MModule.TrimType.TrimEnd,
+			_ => MModule.TrimType.TrimBoth,
+		};
+
+		return ValueTask.FromResult<CallState>(
+			MModule.trim(arg0, arg1, trimType));
 	}
 
-	[SharpFunction(Name = "TRIMTINY", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "trimtiny", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> trimTiny(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var arg0 = parser.CurrentState.Arguments["0"].Message!;
+		var arg1 = parser.CurrentState.Arguments.TryGetValue("2", out var arg1Value)
+			? arg1Value.Message
+			: MModule.single(" ");
+		;
+		var arg2 = parser.CurrentState.Arguments.TryGetValue("1", out var arg2Value)
+			? arg2Value.Message!.ToPlainText()
+			: "b";
+
+		var trimType = arg2 switch
+		{
+			"l" => MModule.TrimType.TrimStart,
+			"r" => MModule.TrimType.TrimEnd,
+			_ => MModule.TrimType.TrimBoth,
+		};
+
+		return ValueTask.FromResult<CallState>(
+			MModule.trim(arg0, arg1, trimType));
 	}
 
 	[SharpFunction(Name = "UCSTR", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
@@ -851,6 +908,15 @@ public partial class Functions
 	[SharpFunction(Name = "WRAP", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Wrap(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		/*  wrap(<string>, <width>[, <first line width>[, <line separator>]])
+
+  This function takes <string> and splits it into lines containing no more than <width> characters each. If <first line width> is given, the first line may have a different width. If <line separator> is given, it is inserted between each line; by default the separator is a newline (%r).
+
+  Examples:
+    > @desc here=wrap(Wrapped paragraph, 72)
+    > @desc here=wrap([space(4)]Indented paragraph, 72)
+    > @desc here=iter(wrap(Hanging indent, 72, 76, %r), switch(#@, >1, space(4))%i0, %r, %r)
+*/
 		throw new NotImplementedException();
 	}
 
@@ -862,13 +928,13 @@ public partial class Functions
 
 	[GeneratedRegex(@"\w+")]
 	private static partial Regex GetWord();
-	
+
 	[GeneratedRegex("(?!FJO|[HLMNS]Y.|RY[EO]|SQU|(F[LR]?|[HL]|MN?|N|RH?|S[CHKLMNPTVW]?|X(YL)?)[AEIOU])[FHLMNRSX][A-Z]")]
 	private static partial Regex ArticleRegex();
-	
+
 	[GeneratedRegex("^U[NK][AIEO]")]
 	private static partial Regex ArticleRegex2();
-	
+
 	[GeneratedRegex("^y(b[lor]|cl[ea]|fere|gg|p[ios]|rou|tt)")]
 	private static partial Regex ArticleRegex3();
 }

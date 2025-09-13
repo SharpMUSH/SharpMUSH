@@ -32,26 +32,28 @@ public enum LocateFlags
 	EnglishStyleMatching = MatchOptionalWildCardForPlayerName << 1,
 	NoPartialMatches = EnglishStyleMatching << 1,
 	OnlyMatchLookerControlledObjects = NoPartialMatches << 1,
-	All = (MatchMeForLooker | MatchHereForLookerLocation | AbsoluteMatch | MatchOptionalWildCardForPlayerName | MatchObjectsInLookerLocation | MatchObjectsInLookerInventory | ExitsInTheRoomOfLooker | EnglishStyleMatching)
+
+	All = (MatchMeForLooker | MatchHereForLookerLocation | AbsoluteMatch | MatchOptionalWildCardForPlayerName |
+	       MatchObjectsInLookerLocation | MatchObjectsInLookerInventory | ExitsInTheRoomOfLooker | EnglishStyleMatching)
 }
 
 public interface ILocateService
 {
-	public ValueTask<AnyOptionalSharpObjectOrError> LocateAndNotifyIfInvalid(
+	ValueTask<AnyOptionalSharpObjectOrError> LocateAndNotifyIfInvalid(
 		IMUSHCodeParser parser,
 		AnySharpObject looker,
 		AnySharpObject executor,
 		string name,
 		LocateFlags flags);
 
-	public ValueTask<AnySharpObjectOrErrorCallState> LocateAndNotifyIfInvalidWithCallState(
+	ValueTask<AnySharpObjectOrErrorCallState> LocateAndNotifyIfInvalidWithCallState(
 		IMUSHCodeParser parser,
 		AnySharpObject looker,
 		AnySharpObject executor,
 		string name,
 		LocateFlags flags);
 
-	public ValueTask<CallState> LocateAndNotifyIfInvalidWithCallStateFunction(
+	ValueTask<CallState> LocateAndNotifyIfInvalidWithCallStateFunction(
 		IMUSHCodeParser parser,
 		AnySharpObject looker,
 		AnySharpObject executor,
@@ -59,37 +61,45 @@ public interface ILocateService
 		LocateFlags flags,
 		Func<AnySharpObject, ValueTask<CallState>> foundFunc);
 
-	public ValueTask<AnyOptionalSharpObjectOrError> Locate(
+	ValueTask<CallState> LocateAndNotifyIfInvalidWithCallStateFunction(
+		IMUSHCodeParser parser,
+		AnySharpObject looker,
+		AnySharpObject executor,
+		string name,
+		LocateFlags flags,
+		Func<AnySharpObject, CallState> foundFunc);
+
+	ValueTask<AnyOptionalSharpObjectOrError> Locate(
 		IMUSHCodeParser parser,
 		AnySharpObject looker,
 		AnySharpObject executor,
 		string name,
 		LocateFlags flags);
-	
-	public ValueTask<AnyOptionalSharpObjectOrError> LocatePlayerAndNotifyIfInvalid(
+
+	ValueTask<AnyOptionalSharpObjectOrError> LocatePlayerAndNotifyIfInvalid(
 		IMUSHCodeParser parser,
 		AnySharpObject looker,
 		AnySharpObject executor,
 		string name);
 
-	public ValueTask<AnySharpObjectOrErrorCallState> LocatePlayerAndNotifyIfInvalidWithCallState(
+	ValueTask<AnySharpObjectOrErrorCallState> LocatePlayerAndNotifyIfInvalidWithCallState(
 		IMUSHCodeParser parser,
 		AnySharpObject looker,
 		AnySharpObject executor,
 		string name);
-	
-	public ValueTask<CallState> LocatePlayerAndNotifyIfInvalidWithCallStateFunction(
+
+	ValueTask<CallState> LocatePlayerAndNotifyIfInvalidWithCallStateFunction(
 		IMUSHCodeParser parser,
 		AnySharpObject looker,
 		AnySharpObject executor,
 		string name,
 		Func<SharpPlayer, ValueTask<CallState>> foundFunc);
 
-	public ValueTask<AnyOptionalSharpObjectOrError> LocatePlayer(
+	ValueTask<AnyOptionalSharpObjectOrError> LocatePlayer(
 		IMUSHCodeParser parser,
 		AnySharpObject looker,
 		AnySharpObject executor,
 		string name);
 
-	public ValueTask<AnySharpContainer> Room(AnySharpObject content);
+	ValueTask<AnySharpContainer> Room(AnySharpObject content);
 }

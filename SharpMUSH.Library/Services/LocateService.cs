@@ -70,6 +70,17 @@ public partial class LocateService(IMediator mediator,
 			_ => throw new InvalidOperationException("Unexpected state in LocateAndNotifyIfInvalidWithCallStateFunction")
 		};
 
+	
+	public async ValueTask<CallState> LocateAndNotifyIfInvalidWithCallStateFunction(IMUSHCodeParser parser,
+		AnySharpObject looker,
+		AnySharpObject executor, string name, LocateFlags flags, Func<AnySharpObject, CallState> foundFunc)
+		=> await LocateAndNotifyIfInvalidWithCallState(parser, looker, executor, name, flags) switch
+		{
+			{ IsError: true, AsError: var error } => error,
+			{ IsT0: true, AsSharpObject: var obj } => foundFunc(obj),
+			_ => throw new InvalidOperationException("Unexpected state in LocateAndNotifyIfInvalidWithCallStateFunction")
+		};
+
 	public async ValueTask<AnyOptionalSharpObjectOrError> Locate(
 		IMUSHCodeParser parser,
 		AnySharpObject looker,
