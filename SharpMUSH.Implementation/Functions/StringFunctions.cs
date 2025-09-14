@@ -684,13 +684,16 @@ public partial class Functions
 			: new ValueTask<CallState>(new CallState(number.ToOrdinalWords()));
 	}
 
-	[SharpFunction(Name = "POS", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> Pos(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "pos", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public static ValueTask<CallState> StringPosition(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var arg0 = parser.CurrentState.Arguments["0"].Message!;
+		var arg1 = parser.CurrentState.Arguments["1"].Message!;
+
+		return new ValueTask<CallState>(MModule.indexOf(arg0, arg1) + 1);
 	}
 
-	[SharpFunction(Name = "REPEAT", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "repeat", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Repeat(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var str = parser.CurrentState.Arguments["0"].Message!;
@@ -705,31 +708,31 @@ public partial class Functions
 		return ValueTask.FromResult(new CallState(repeat));
 	}
 
-	[SharpFunction(Name = "RIGHT", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "right", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Right(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "RJUST", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "rjust", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> RJust(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "SCRAMBLE", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "scramble", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Scramble(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "SECURE", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "secure", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Secure(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "SPACE", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "space", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> Space(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var repeatNumberStr = parser.CurrentState.Arguments["0"].Message!;
@@ -743,8 +746,7 @@ public partial class Functions
 		return ValueTask.FromResult(new CallState(repeat));
 	}
 
-	// TODO: Make this work for Decimals.
-	[SharpFunction(Name = "SPELLNUM", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "spellnum", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> SpellNumber(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var numberString = parser.CurrentState.Arguments["0"].Message!;
@@ -775,22 +777,16 @@ public partial class Functions
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "STRIPANSI", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> StripAnsi(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var arg0 = parser.CurrentState.Arguments["0"].Message!;
-		return ValueTask.FromResult(new CallState(arg0.ToPlainText()));
-	}
+	[SharpFunction(Name = "stripansi", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public static ValueTask<CallState> StripAnsi(IMUSHCodeParser parser, SharpFunctionAttribute _2) 
+		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments["0"].Message!.ToPlainText());
 
-	[SharpFunction(Name = "STRLEN", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> StrLen(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var arg0 = parser.CurrentState.Arguments["0"].Message!;
-		return ValueTask.FromResult(new CallState(arg0.Length));
-	}
+	[SharpFunction(Name = "strlen", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
+	public static ValueTask<CallState> StringLen(IMUSHCodeParser parser, SharpFunctionAttribute _2) 
+		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments["0"].Message!.Length);
 
 	[SharpFunction(Name = "STRMATCH", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> StrMatch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> StringMatch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
@@ -802,12 +798,12 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "SWITCHALL", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
-	public static ValueTask<CallState> Switchall(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> SwitchAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "TR", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "tr", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Tr(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
@@ -888,7 +884,7 @@ public partial class Functions
 			MModule.trim(arg0, arg1, trimType));
 	}
 
-	[SharpFunction(Name = "UCSTR", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "ucstr", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> UpperCaseString(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arg0 = parser.CurrentState.Arguments["0"].Message!;
@@ -897,30 +893,52 @@ public partial class Functions
 		return new ValueTask<CallState>(new CallState(result));
 	}
 
-	[SharpFunction(Name = "URLDECODE", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "urldecode", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> URLDecode(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> new(new CallState(WebUtility.HtmlDecode(parser.CurrentState.Arguments["0"].Message!.ToPlainText())));
 
-	[SharpFunction(Name = "URLENCODE", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "urlencode", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> URLEncode(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> new(new CallState(WebUtility.HtmlEncode(parser.CurrentState.Arguments["0"].Message!.ToPlainText())));
 
-	[SharpFunction(Name = "WRAP", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> Wrap(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "wrap", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
+	public static async ValueTask<CallState> Wrap(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		/*  wrap(<string>, <width>[, <first line width>[, <line separator>]])
+		await ValueTask.CompletedTask;
+		var str = parser.CurrentState.Arguments["0"].Message!;
+		var width = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+		var firstLineWidth = parser.CurrentState.Arguments.TryGetValue("2", out var arg2Value)
+			? arg2Value.Message!.ToPlainText()
+			: width;
+		var lineSeparator = parser.CurrentState.Arguments.TryGetValue("3", out var arg3Value)
+			? arg3Value.Message!.ToPlainText()
+			: "\n";
 
-  This function takes <string> and splits it into lines containing no more than <width> characters each. If <first line width> is given, the first line may have a different width. If <line separator> is given, it is inserted between each line; by default the separator is a newline (%r).
+		var strlen = str.Length;
 
-  Examples:
-    > @desc here=wrap(Wrapped paragraph, 72)
-    > @desc here=wrap([space(4)]Indented paragraph, 72)
-    > @desc here=iter(wrap(Hanging indent, 72, 76, %r), switch(#@, >1, space(4))%i0, %r, %r)
-*/
-		throw new NotImplementedException();
+		if (!int.TryParse(width, out var widthInt) 
+		    || !int.TryParse(firstLineWidth, out var firstLineInt))
+		{
+			return Errors.ErrorInteger;
+		}
+		
+		var firstLine = MModule.substring(0, firstLineInt, str)!;
+		
+		var remainingLength = strlen - firstLine.Length;
+		if (remainingLength <= 0)
+		{
+			return firstLine;
+		}
+
+		var list = Enumerable
+			.Range(1, remainingLength / widthInt + 2)
+			.Select(line => MModule.substring(line * widthInt, widthInt, str)!)
+			.Prepend(firstLine);
+		
+		return string.Join(lineSeparator, list);
 	}
 
-	[SharpFunction(Name = "STRDELETE", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "strdelete", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular)]
 	public static async ValueTask<CallState> StrDelete(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		await ValueTask.CompletedTask;
