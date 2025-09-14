@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Text;
 using System.Text.RegularExpressions;
 using DotNext.Collections.Generic;
 using Humanizer;
@@ -481,10 +482,24 @@ public partial class Functions
 		return new ValueTask<CallState>(new CallState(result));
 	}
 
-	[SharpFunction(Name = "CHR", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> Chr(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "chr", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public static ValueTask<CallState> Char(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
+		
+		if (!int.TryParse(arg0, out var charInt) || charInt < 0)
+		{
+			return new ValueTask<CallState>(new CallState(Errors.ErrorPositiveInteger));
+		}
+
+		try
+		{
+			return ValueTask.FromResult<CallState>(char.ConvertFromUtf32(charInt));
+		}
+		catch (ArgumentOutOfRangeException)
+		{
+			return new ValueTask<CallState>(new CallState(Errors.ErrorArgRange));
+		}
 	}
 
 	[SharpFunction(Name = "COMP", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -626,16 +641,35 @@ public partial class Functions
 		return new ValueTask<CallState>(new CallState(result));
 	}
 
-	[SharpFunction(Name = "LEFT", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "left", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Left(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var str = parser.CurrentState.Arguments["0"].Message!;
+		var len = parser.CurrentState.Arguments["1"].Message!.ToPlainText()!;
+
+		if (!int.TryParse(len, out var strlen) || strlen < 0)
+		{
+			return ValueTask.FromResult<CallState>(Errors.ErrorPositiveInteger);
+		}
+
+		return ValueTask.FromResult<CallState>(MModule.substring(0, int.Min(strlen, str.Length), str));
 	}
 
-	[SharpFunction(Name = "LJUST", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> LeftJustified(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "ljust", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
+	public static ValueTask<CallState> LeftJustifyString(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var str = parser.CurrentState.Arguments["0"].Message!;
+		var width = parser.CurrentState.Arguments["1"].Message!.ToPlainText()!;
+		var fill = Common.ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2,
+			MModule.single(" "));
+
+		if (!int.TryParse(width, out var widthInt) || widthInt < 0)
+		{
+			return new ValueTask<CallState>(Errors.ErrorPositiveInteger);
+		}
+
+		return ValueTask.FromResult<CallState>(MModule.pad(str, fill, widthInt, MModule.PadType.Right,
+			MModule.TruncationType.Overflow));
 	}
 
 	[SharpFunction(Name = "LPOS", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -711,13 +745,35 @@ public partial class Functions
 	[SharpFunction(Name = "right", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Right(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var str = parser.CurrentState.Arguments["0"].Message!;
+		var len = parser.CurrentState.Arguments["1"].Message!.ToPlainText()!;
+
+		if (!int.TryParse(len, out var strlen) || strlen < 0)
+		{
+			return ValueTask.FromResult<CallState>(Errors.ErrorPositiveInteger);
+		}
+
+		var startPos = int.Max(0, str.Length - strlen);
+		var maxLength = str.Length - startPos;
+
+		return ValueTask.FromResult<CallState>(MModule.substring(startPos, maxLength, str));
 	}
 
 	[SharpFunction(Name = "rjust", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> RJust(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> RightJustifyString(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var str = parser.CurrentState.Arguments["0"].Message!;
+		var width = parser.CurrentState.Arguments["1"].Message!.ToPlainText()!;
+		var fill = Common.ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2,
+			MModule.single(" "));
+
+		if (!int.TryParse(width, out var widthInt) || widthInt < 0)
+		{
+			return new ValueTask<CallState>(Errors.ErrorPositiveInteger);
+		}
+
+		return ValueTask.FromResult<CallState>(MModule.pad(str, fill, widthInt, MModule.PadType.Left,
+			MModule.TruncationType.Overflow));
 	}
 
 	[SharpFunction(Name = "scramble", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
@@ -778,11 +834,11 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "stripansi", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> StripAnsi(IMUSHCodeParser parser, SharpFunctionAttribute _2) 
+	public static ValueTask<CallState> StripAnsi(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments["0"].Message!.ToPlainText());
 
 	[SharpFunction(Name = "strlen", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> StringLen(IMUSHCodeParser parser, SharpFunctionAttribute _2) 
+	public static ValueTask<CallState> StringLen(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments["0"].Message!.Length);
 
 	[SharpFunction(Name = "STRMATCH", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular)]
@@ -814,15 +870,15 @@ public partial class Functions
 	{
 		var arg0 = parser.CurrentState.Arguments["0"].Message!;
 		var arg1 = parser.CurrentState.Arguments.TryGetValue(
-			Configuration!.CurrentValue.Compatibility.TinyTrimFun 
-				? "1" 
+			Configuration!.CurrentValue.Compatibility.TinyTrimFun
+				? "1"
 				: "2", out var arg1Value)
 			? arg1Value.Message
 			: MModule.single(" ");
 		;
 		var arg2 = parser.CurrentState.Arguments.TryGetValue(
-			Configuration!.CurrentValue.Compatibility.TinyTrimFun 
-				? "2" 
+			Configuration!.CurrentValue.Compatibility.TinyTrimFun
+				? "2"
 				: "1", out var arg2Value)
 			? arg2Value.Message!.ToPlainText()
 			: "b";
@@ -916,14 +972,14 @@ public partial class Functions
 
 		var strlen = str.Length;
 
-		if (!int.TryParse(width, out var widthInt) 
+		if (!int.TryParse(width, out var widthInt)
 		    || !int.TryParse(firstLineWidth, out var firstLineInt))
 		{
 			return Errors.ErrorInteger;
 		}
-		
+
 		var firstLine = MModule.substring(0, firstLineInt, str)!;
-		
+
 		var remainingLength = strlen - firstLine.Length;
 		if (remainingLength <= 0)
 		{
@@ -934,7 +990,7 @@ public partial class Functions
 			.Range(1, remainingLength / widthInt + 2)
 			.Select(line => MModule.substring(line * widthInt, widthInt, str)!)
 			.Prepend(firstLine);
-		
+
 		return string.Join(lineSeparator, list);
 	}
 
@@ -946,12 +1002,12 @@ public partial class Functions
 		var first = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 		var len = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
 
-		if (!int.TryParse(first, out var index) 
+		if (!int.TryParse(first, out var index)
 		    || !int.TryParse(len, out var length))
 		{
 			return Errors.ErrorInteger;
 		}
-		
+
 		return MModule.remove(str, index, length);
 	}
 
