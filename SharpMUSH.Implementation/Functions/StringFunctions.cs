@@ -1,4 +1,6 @@
-﻿using System.Net;
+﻿using System.Globalization;
+using System.Net;
+using System.Text;
 using System.Text.RegularExpressions;
 using DotNext.Collections.Generic;
 using Humanizer;
@@ -485,7 +487,7 @@ public partial class Functions
 	public static ValueTask<CallState> Char(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
-		
+
 		if (!int.TryParse(arg0, out var charInt) || charInt < 0)
 		{
 			return new ValueTask<CallState>(new CallState(Errors.ErrorPositiveInteger));
@@ -532,14 +534,14 @@ public partial class Functions
 		{
 			return Errors.ErrorArgRange;
 		}
-		
-		if(arg0.Equals("LIST", StringComparison.InvariantCultureIgnoreCase))
+
+		if (arg0.Equals("LIST", StringComparison.InvariantCultureIgnoreCase))
 		{
 			return string.Join(" ", CryptoHelpers.hashAlgorithms.Keys);
 		}
 
-		return CryptoHelpers.hashAlgorithms.Keys.Contains(arg0) 
-			? CryptoHelpers.Digest(arg0, arg1!).AsT0 
+		return CryptoHelpers.hashAlgorithms.Keys.Contains(arg0)
+			? CryptoHelpers.Digest(arg0, arg1!).AsT0
 			: Errors.ErrorArgRange;
 	}
 
@@ -810,7 +812,9 @@ public partial class Functions
 	[SharpFunction(Name = "scramble", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Scramble(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var arg0 = parser.CurrentState.Arguments["0"].Message!;
+		var split = MModule.split("", arg0).Shuffle();
+		return ValueTask.FromResult<CallState>(string.Join("", split));
 	}
 
 	[SharpFunction(Name = "secure", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
@@ -855,13 +859,46 @@ public partial class Functions
 	[SharpFunction(Name = "SQUISH", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Squish(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var arg0 = parser.CurrentState.Arguments["0"].Message!;
+		var arg1 = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1,
+			MModule.single(" "));
+
+		var arg0Plain = arg0.ToPlainText()!;
+
+		// Not an exact match. PennMUSH is conscious of the ANSI to look for.
+		// Also, this technically acts more like a replace than a true squish.
+		var regex = new Regex($"{Regex.Escape(arg1.ToPlainText())}+");
+
+		return ValueTask.FromResult<CallState>(regex.Matches(arg0Plain)
+			.Reverse()
+			.Aggregate(arg0, (current, match) => MModule.replace(current, arg1, match.Index, match.Length)));
+	}
+
+	private static string RemoveDiacritics(string text)
+	{
+		if (string.IsNullOrWhiteSpace(text))
+			return text;
+
+		// Normalize the string to Unicode Normalization Form D (NFD).
+		// In NFD, accented characters are decomposed into a base character and combining diacritical marks.
+		text = text.Normalize(NormalizationForm.FormD);
+
+		// Filter out the combining diacritical marks (NonSpacingMark category).
+		var chars = text.Where(c => CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark).ToArray();
+
+		// Create a new string from the filtered characters and normalize it back to Form C (NFC)
+		// to recompose any characters that might have been decomposed but are not diacritics.
+		return new string(chars).Normalize(NormalizationForm.FormC);
 	}
 
 	[SharpFunction(Name = "STRIPACCENTS", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> StripAccents(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		// We do nothing with arg1 for SharpMUSH.
+		var arg0 = parser.CurrentState.Arguments["0"].Message!;
+
+		var func = FuncConvert.FromFunc<string, string>(RemoveDiacritics);
+		return ValueTask.FromResult<CallState>(MModule.apply(arg0, func));
 	}
 
 	[SharpFunction(Name = "stripansi", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -890,7 +927,7 @@ public partial class Functions
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "tr", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "TR", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Tr(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
