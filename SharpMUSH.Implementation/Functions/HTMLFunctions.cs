@@ -7,7 +7,7 @@ namespace SharpMUSH.Implementation.Functions;
 
 public partial class Functions
 {
-	[SharpFunction(Name = "HTML", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly)]
+	[SharpFunction(Name = "html", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly)]
 	public static ValueTask<CallState> html(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// TODO: This probably needs to be more complex than that.

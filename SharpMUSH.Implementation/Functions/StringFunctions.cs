@@ -1,9 +1,9 @@
 ﻿using System.Net;
-using System.Text;
 using System.Text.RegularExpressions;
 using DotNext.Collections.Generic;
 using Humanizer;
 using Microsoft.FSharp.Core;
+using SharpMUSH.Implementation.Common;
 using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
@@ -11,7 +11,6 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
-using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Functions;
@@ -287,15 +286,15 @@ public partial class Functions
 
 	[SharpFunction(Name = "strcat", Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Concat(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValueTask.FromResult<CallState>(new(parser.CurrentState.ArgumentsOrdered
+		=> ValueTask.FromResult<CallState>(parser.CurrentState.ArgumentsOrdered
 			.Select(x => x.Value.Message)
-			.Aggregate((x, y) => MModule.concat(x, y))));
+			.Aggregate((x, y) => MModule.concat(x, y)));
 
 	[SharpFunction(Name = "cat", Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Cat(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValueTask.FromResult<CallState>(new(parser.CurrentState.ArgumentsOrdered
+		=> ValueTask.FromResult<CallState>(parser.CurrentState.ArgumentsOrdered
 			.Select(x => x.Value.Message)
-			.Aggregate((x, y) => MModule.concat(x, y, MModule.single(" ")))));
+			.Aggregate((x, y) => MModule.concat(x, y, MModule.single(" "))));
 
 	[SharpFunction(Name = "ACCENT", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Accent(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -520,10 +519,28 @@ public partial class Functions
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "DIGEST", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> Digest(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "digest", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular)]
+	public static async ValueTask<CallState> Digest(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		await ValueTask.CompletedTask;
+		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!.ToUpperInvariant();
+		var arg1 = parser.CurrentState.Arguments.TryGetValue("1", out var result)
+			? result.Message!
+			: null;
+
+		if (arg1 == null && !arg0.Equals("LIST", StringComparison.InvariantCultureIgnoreCase))
+		{
+			return Errors.ErrorArgRange;
+		}
+		
+		if(arg0.Equals("LIST", StringComparison.InvariantCultureIgnoreCase))
+		{
+			return string.Join(" ", CryptoHelpers.hashAlgorithms.Keys);
+		}
+
+		return CryptoHelpers.hashAlgorithms.Keys.Contains(arg0) 
+			? CryptoHelpers.Digest(arg0, arg1!).AsT0 
+			: Errors.ErrorArgRange;
 	}
 
 	[SharpFunction(Name = "EDIT", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]

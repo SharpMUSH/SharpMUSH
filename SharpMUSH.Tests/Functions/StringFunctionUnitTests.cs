@@ -48,6 +48,14 @@ public class StringFunctionUnitTests
 				.IsEqualTo(bt.Second);
 		}
 	}
+	
+	[Test]
+	[Arguments("digest(md5,rawr)", "56742fd94d4e8f8b22d592186c12a9c5")]
+	public async Task Digest(string str, string expectedText)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);		
+	}
 
 	[Test]
 	[Arguments("ansi(R,red)", "red", (byte)41, null)]
@@ -81,4 +89,6 @@ public class StringFunctionUnitTests
 				.IsEqualTo(bt.Second);
 		}
 	}
+	
+	
 }
