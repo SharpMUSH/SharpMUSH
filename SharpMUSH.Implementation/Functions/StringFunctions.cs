@@ -543,7 +543,7 @@ public partial class Functions
 			: Errors.ErrorArgRange;
 	}
 
-	[SharpFunction(Name = "EDIT", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "edit", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Edit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
@@ -555,7 +555,7 @@ public partial class Functions
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "FLIP", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "flip", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Flip(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arg0 = parser.CurrentState.Arguments["0"].Message;
@@ -563,7 +563,7 @@ public partial class Functions
 		return new ValueTask<CallState>(new CallState(MModule.multiple(split.Reverse())));
 	}
 
-	[SharpFunction(Name = "FOREACH", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "foreach", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> ForEach(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		//  foreach([<object>/]<attribute>, <string>[, <start>[, <end>]])
@@ -628,7 +628,7 @@ public partial class Functions
 		return result!;
 	}
 
-	[SharpFunction(Name = "IFELSE", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.NoParse)]
+	[SharpFunction(Name = "ifelse", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.NoParse)]
 	public static async ValueTask<CallState> IfElse(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var parsedIfElse = await parser.CurrentState.Arguments["0"].ParsedMessage();
@@ -649,7 +649,7 @@ public partial class Functions
 		return result!;
 	}
 
-	[SharpFunction(Name = "LCSTR", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "lcstr", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> LowerCaseString(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arg0 = parser.CurrentState.Arguments["0"].Message!;
@@ -701,10 +701,24 @@ public partial class Functions
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "MID", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "mid", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Mid(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var str = parser.CurrentState.Arguments["0"].Message!;
+		var first = parser.CurrentState.Arguments["1"].Message!.ToPlainText()!;
+		var length = parser.CurrentState.Arguments["2"].Message!.ToPlainText()!;
+
+		if (!int.TryParse(first, out var firstInt)
+		    || firstInt < 0
+		    || !int.TryParse(length, out var lengthInt))
+		{
+			return new ValueTask<CallState>(Errors.ErrorPositiveInteger);
+		}
+
+		var strLength = str.Length;
+		var midlen = lengthInt < 0 ? strLength + lengthInt : lengthInt;
+
+		return ValueTask.FromResult<CallState>(MModule.substring(firstInt, midlen, str));
 	}
 
 	[SharpFunction(Name = "NCOND", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
