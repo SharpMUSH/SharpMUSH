@@ -1,16 +1,29 @@
 ﻿using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Functions;
 
 public partial class Functions
 {
 	[SharpFunction(Name = "CTIME", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> CTime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> CreationTime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var targetArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var utc = parser.CurrentState.Arguments.ContainsKey("1") && parser.CurrentState.Arguments["1"].Message!.Truthy();
+		
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetArg, LocateFlags.All,
+			found => utc 
+				? found.Object().CreationTime.ToString()
+				: DateTimeOffset
+					.FromUnixTimeMilliseconds(found.Object().CreationTime)
+					.ToLocalTime()
+					.ToUnixTimeMilliseconds()
+					.ToString());
 	}
 
 	[SharpFunction(Name = "ISDAYLIGHT", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular)]
