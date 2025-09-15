@@ -6,6 +6,8 @@ public static class Errors
 {
 	public const string ErrorNoSideFX = "#-1 SIDE EFFECTS DISABLED FOR THIS FUNCTION";
 	public const string ErrorInteger = "#-1 ARGUMENT MUST BE INTEGER";
+	public const string ErrorNoSuchTimezone = "#-1 NO SUCH TIMEZONE";
+	public const string ErrorTimeInteger = "#-1 TIME INTEGER OUT OF RANGE";
 	public const string ErrorPositiveInteger = "#-1 ARGUMENT MUST BE POSITIVE INTEGER";
 	public const string ErrorIntegers = "#-1 ARGUMENTS MUST BE INTEGERS";
 	public const string ErrorUInteger = "#-1 ARGUMENT MUST BE POSITIVE INTEGER";
