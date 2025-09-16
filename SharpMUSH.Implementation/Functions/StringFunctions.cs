@@ -7,6 +7,7 @@ using Humanizer;
 using Microsoft.FSharp.Core;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Implementation.Definitions;
+using SharpMUSH.Implementation.Tools;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
@@ -453,15 +454,46 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "CASE", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
-	public static ValueTask<CallState> Case(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Case(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var arg0 = await parser.CurrentState.Arguments["0"].ParsedMessage();
+		var args = parser.CurrentState.ArgumentsOrdered.Skip(1).SkipLast(1).Pairwise();
+		var defaultValue = parser.CurrentState.ArgumentsOrdered.Last();
+
+		foreach (var (expressionKv, listKv) in args)
+		{
+			var expression = await expressionKv.Value.ParsedMessage();
+
+			if (arg0!.ToPlainText() == expression!.ToPlainText())
+			{
+				return await listKv.Value.ParsedMessage();
+			}
+		}
+
+		return await defaultValue.Value.ParsedMessage();
 	}
 
 	[SharpFunction(Name = "CASEALL", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
-	public static ValueTask<CallState> CaseAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> CaseAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var arg0 = await parser.CurrentState.Arguments["0"].ParsedMessage();
+		var args = parser.CurrentState.ArgumentsOrdered.Skip(1).SkipLast(1).Pairwise();
+		var defaultValue = parser.CurrentState.ArgumentsOrdered.Last();
+		var list = new List<MString?>();
+		
+		foreach (var (expressionKv, listKv) in args)
+		{
+			var expression = await expressionKv.Value.ParsedMessage();
+
+			if (arg0!.ToPlainText() == expression!.ToPlainText())
+			{
+				list.Add(await listKv.Value.ParsedMessage());
+			}
+		}
+
+		return list.Count != 0 
+			? MModule.multiple(list) 
+			: await defaultValue.Value.ParsedMessage();
 	}
 
 	[SharpFunction(Name = "CENTER", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
@@ -915,16 +947,88 @@ public partial class Functions
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "SWITCH", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
-	public static ValueTask<CallState> Switch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "switch", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
+	public static async ValueTask<CallState> Switch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var arg0 = await parser.CurrentState.Arguments["0"].ParsedMessage();
+		var args = parser.CurrentState.ArgumentsOrdered.Skip(1).SkipLast(1).Pairwise();
+		var defaultValue = parser.CurrentState.ArgumentsOrdered.Last();
+
+		foreach (var (expressionKv, listKv) in args)
+		{
+			var expression = await expressionKv.Value.ParsedMessage();
+
+			if (MModule.isWildcardMatch(arg0, expression))
+			{
+				return await listKv.Value.ParsedMessage();
+			}
+
+			if (!expression!.ToPlainText().StartsWith('>') && !expression.ToPlainText().StartsWith('<'))
+			{
+				continue;
+			}
+
+			var gt = expression.ToPlainText()[0] == '>';
+
+			if (!decimal.TryParse(expression.ToPlainText()[1..], out var decimalExpression)
+			    || !decimal.TryParse(arg0!.ToPlainText(), out var arg0AsDecimal))
+			{
+				continue;
+			}
+
+			if (gt 
+				    ? decimalExpression > arg0AsDecimal 
+				    : decimalExpression < arg0AsDecimal)
+			{
+				return await listKv.Value.ParsedMessage();
+			}
+		}
+
+		return await defaultValue.Value.ParsedMessage();
 	}
 
-	[SharpFunction(Name = "SWITCHALL", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
-	public static ValueTask<CallState> SwitchAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "switchall", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
+	public static async ValueTask<CallState> SwitchAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var arg0 = await parser.CurrentState.Arguments["0"].ParsedMessage();
+		var args = parser.CurrentState.ArgumentsOrdered.Skip(1).SkipLast(1).Pairwise();
+		var defaultValue = parser.CurrentState.ArgumentsOrdered.Last();
+		var resultList = new List<MString?>();
+		
+		foreach (var (expressionKv, listKv) in args)
+		{
+			var expression = await expressionKv.Value.ParsedMessage();
+
+			if (MModule.isWildcardMatch(arg0, expression))
+			{
+				resultList.Add(await listKv.Value.ParsedMessage());
+				continue;
+			}
+
+			if (!expression!.ToPlainText().StartsWith('>') && !expression.ToPlainText().StartsWith('<'))
+			{
+				continue;
+			}
+
+			var gt = expression.ToPlainText()[0] == '>';
+
+			if (!decimal.TryParse(expression.ToPlainText()[1..], out var decimalExpression)
+			    || !decimal.TryParse(arg0!.ToPlainText(), out var arg0AsDecimal))
+			{
+				continue;
+			}
+
+			if (gt 
+				    ? decimalExpression > arg0AsDecimal 
+				    : decimalExpression < arg0AsDecimal)
+			{
+				resultList.Add(await listKv.Value.ParsedMessage());
+			}
+		}
+
+		return resultList.Count != 0 
+			? MModule.multiple(resultList)
+			: await defaultValue.Value.ParsedMessage();
 	}
 
 	[SharpFunction(Name = "TR", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular)]
@@ -986,7 +1090,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "trimtiny", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> trimTiny(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> TrimTiny(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arg0 = parser.CurrentState.Arguments["0"].Message!;
 		var arg1 = parser.CurrentState.Arguments.TryGetValue("2", out var arg1Value)
