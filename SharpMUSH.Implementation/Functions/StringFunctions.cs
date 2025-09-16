@@ -453,7 +453,7 @@ public partial class Functions
 		return new ValueTask<CallState>(new CallState(concat));
 	}
 
-	[SharpFunction(Name = "CASE", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
+	[SharpFunction(Name = "CASE", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse | FunctionFlags.UnEvenArgsOnly)]
 	public static async ValueTask<CallState> Case(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arg0 = await parser.CurrentState.Arguments["0"].ParsedMessage();
@@ -473,10 +473,11 @@ public partial class Functions
 		return await defaultValue.Value.ParsedMessage();
 	}
 
-	[SharpFunction(Name = "CASEALL", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
+	[SharpFunction(Name = "CASEALL", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse | FunctionFlags.UnEvenArgsOnly)]
 	public static async ValueTask<CallState> CaseAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arg0 = await parser.CurrentState.Arguments["0"].ParsedMessage();
+
 		var args = parser.CurrentState.ArgumentsOrdered.Skip(1).SkipLast(1).Pairwise();
 		var defaultValue = parser.CurrentState.ArgumentsOrdered.Last();
 		var list = new List<MString?>();
@@ -947,7 +948,7 @@ public partial class Functions
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "switch", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
+	[SharpFunction(Name = "switch", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse | FunctionFlags.UnEvenArgsOnly)]
 	public static async ValueTask<CallState> Switch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arg0 = await parser.CurrentState.Arguments["0"].ParsedMessage();
@@ -987,7 +988,7 @@ public partial class Functions
 		return await defaultValue.Value.ParsedMessage();
 	}
 
-	[SharpFunction(Name = "switchall", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
+	[SharpFunction(Name = "switchall", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse | FunctionFlags.UnEvenArgsOnly)]
 	public static async ValueTask<CallState> SwitchAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arg0 = await parser.CurrentState.Arguments["0"].ParsedMessage();
