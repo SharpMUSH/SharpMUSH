@@ -1,5 +1,5 @@
-﻿using DotNext.Threading;
-using Newtonsoft.Json;
+﻿using System.Text.Json.Serialization;
+using DotNext.Threading;
 
 namespace SharpMUSH.Library.Models;
 

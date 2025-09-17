@@ -1,10 +1,9 @@
-﻿using Newtonsoft.Json;
+﻿using System.Text.Json.Serialization;
 
 namespace SharpMUSH.Library.Models;
 
 public class SharpRoom
 {
-
 	[JsonIgnore]
 	public string? Id { get; set; }
 	

@@ -1,7 +1,6 @@
-﻿using Newtonsoft.Json;
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
+using System.Text.Json.Serialization;
 using DotNext.Threading;
-using FSharpPlus.Control;
 using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Library.Models;
@@ -11,7 +10,7 @@ public class SharpObject
 	[JsonIgnore]
 	public string? Id { get; set; }
 
-	[JsonProperty("_key")]
+	[JsonPropertyName("_key")]
 	public int Key { get; set; }
 
 	public DBRef DBRef => new(Key, CreationTime);
