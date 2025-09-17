@@ -138,7 +138,8 @@ public partial class Functions
 		var delim = await Common.ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MModule.single(" "));
 		var sep = await Common.ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, delim);
 		var list = MModule.split2(delim, listArg);
-		var wrappedIteration = new IterationWrapper<MString> { Value = MModule.empty(), Break = false, NoBreak = false, Iteration = 0 };
+		var wrappedIteration = new IterationWrapper<MString>
+			{ Value = MModule.empty(), Break = false, NoBreak = false, Iteration = 0 };
 		var result = new List<MString>();
 
 		parser.CurrentState.IterationRegisters.Push(wrappedIteration);
@@ -285,7 +286,8 @@ public partial class Functions
 		{
 			var newParser = parser.Push(parser.CurrentState with
 			{
-				Arguments = new(new Dictionary<string, CallState> { { "0", new CallState(item) } })
+				Arguments = new Dictionary<string, CallState> { { "0", new CallState(item) } },
+				EnvironmentRegisters = new Dictionary<string, CallState> { { "0", new CallState(item) } }
 			});
 			result.Add((await newParser.FunctionParse(attrValue))!.Message!);
 		}
@@ -438,7 +440,7 @@ public partial class Functions
 	public static async ValueTask<CallState> Splice(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		await Task.CompletedTask;
-		
+
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var listArg = args["0"].Message;
 		var list2Arg = args["1"].Message;
@@ -601,7 +603,7 @@ public partial class Functions
 		var result = MoreLinq.Extensions.InsertExtension.Insert(list, [newItemArg], position);
 		return new CallState(MModule.multipleWithDelimiter(delimiter, result));
 	}
-	
+
 	[SharpFunction(Name = "SETUNION", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular)]
 	public static async ValueTask<CallState> setunion(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -618,11 +620,12 @@ public partial class Functions
 		var result = await aList1
 			.Concat(aList2)
 			.DistinctBy(MModule.plainText)
-			.OrderByAsync(x => x.ToPlainText(), parser, Mediator!, LocateService!, ConnectionService!, sortType.ToPlainText());
-			
-		return new CallState(MModule.multipleWithDelimiter(outputSeparator, result));	
+			.OrderByAsync(x => x.ToPlainText(), parser, Mediator!, LocateService!, ConnectionService!,
+				sortType.ToPlainText());
+
+		return new CallState(MModule.multipleWithDelimiter(outputSeparator, result));
 	}
-	
+
 	[SharpFunction(Name = "SETDIFF", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> setmanip(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{

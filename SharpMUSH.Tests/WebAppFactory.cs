@@ -1,15 +1,12 @@
 using System.Text;
 using Core.Arango;
 using Core.Arango.Serialization.Newtonsoft;
-using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using NSubstitute;
 using OneOf.Types;
 using Serilog;
 using Serilog.Sinks.SystemConsole.Themes;
-using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
@@ -21,7 +18,6 @@ using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server;
 using TUnit.Core.Interfaces;
-using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace SharpMUSH.Tests;
 
@@ -49,6 +45,7 @@ public class WebAppFactory : IAsyncInitializer
 					IterationRegisters: [],
 					RegexRegisters: [],
 					ExecutionStack: [],
+					EnvironmentRegisters: [],
 					CurrentEvaluation: null,
 					ParserFunctionDepth: 0,
 					Function: null,
@@ -79,6 +76,7 @@ public class WebAppFactory : IAsyncInitializer
 					IterationRegisters: [],
 					RegexRegisters: [],
 					ExecutionStack: [],
+					EnvironmentRegisters: [],
 					CurrentEvaluation: null,
 					ParserFunctionDepth: 0,
 					Function: null,

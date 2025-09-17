@@ -1,13 +1,11 @@
 ﻿using OneOf;
 using OneOf.Types;
-using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
-using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Library;
 
@@ -108,18 +106,18 @@ public static partial class HelperFunctions
 		=> await obj.IsOrphan()
 			? null
 			: obj.Match(
-				_ => configuration!.CurrentValue.Database.AncestorPlayer == null
+				_ => configuration.CurrentValue.Database.AncestorPlayer == null
 					? null
-					: new DBRef(Convert.ToInt32(configuration!.CurrentValue.Database.AncestorPlayer)),
-				_ => configuration!.CurrentValue.Database.AncestorRoom == null
+					: new DBRef(Convert.ToInt32(configuration.CurrentValue.Database.AncestorPlayer)),
+				_ => configuration.CurrentValue.Database.AncestorRoom == null
 					? null
-					: new DBRef(Convert.ToInt32(configuration!.CurrentValue.Database.AncestorRoom)),
-				_ => configuration!.CurrentValue.Database.AncestorExit == null
+					: new DBRef(Convert.ToInt32(configuration.CurrentValue.Database.AncestorRoom)),
+				_ => configuration.CurrentValue.Database.AncestorExit == null
 					? null
-					: new DBRef(Convert.ToInt32(configuration!.CurrentValue.Database.AncestorExit)),
-				_ => configuration!.CurrentValue.Database.AncestorThing == null
+					: new DBRef(Convert.ToInt32(configuration.CurrentValue.Database.AncestorExit)),
+				_ => configuration.CurrentValue.Database.AncestorThing == null
 					? (DBRef?)null
-					: new DBRef(Convert.ToInt32(configuration!.CurrentValue.Database.AncestorThing))
+					: new DBRef(Convert.ToInt32(configuration.CurrentValue.Database.AncestorThing))
 			);
 
 	public static async ValueTask<bool> Inheritable(this AnySharpObject obj)

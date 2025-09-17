@@ -715,7 +715,8 @@ public partial class Functions
 				return (await parser.With(s => s with
 					{
 						CurrentEvaluation = new DBAttribute(actualObject.Object().DBRef, get.Name),
-						Arguments = arguments.ToDictionary()
+						Arguments = arguments.ToDictionary(),
+						EnvironmentRegisters = arguments.ToDictionary(),
 					},
 					async np => await np.FunctionParse(get.Value)))!;
 			});
@@ -768,6 +769,7 @@ public partial class Functions
 					{
 						CurrentEvaluation = new DBAttribute(actualObject.Object().DBRef, get.Name),
 						Arguments = arguments.ToDictionary(),
+						EnvironmentRegisters = arguments.ToDictionary(),
 						Registers = []
 					},
 					async np => await np.FunctionParse(get.Value)))!;

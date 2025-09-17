@@ -21,8 +21,8 @@ public static partial class Substitutions
 		=> symbol switch
 		{
 			"0" or "1" or "2" or "3" or "4" or "5" or "6" or "7" or "8" or "9" =>
-				parser.CurrentState.Arguments.TryGetValue(symbol, out var tmpCs)
-					? tmpCs.Message
+				parser.CurrentState.EnvironmentRegisters.TryGetValue(symbol, out var tmpCs)
+					? tmpCs.Message!
 					: MModule.empty(),
 			"B" or "b" => " ",
 			"R" or "r" => Environment.NewLine,
@@ -76,11 +76,11 @@ public static partial class Substitutions
 				}),
 			"@" => $"#{parser.CurrentState.Caller!.Value.Number}",
 			"!" => $"#{parser.CurrentState.Executor!.Value.Number}",
-			"L" or "l" => await GetLocationDBRefString(parser, mediator),
+			"L" or "l" => await GetLocationDbRefString(parser, mediator),
 			"C" or "c" => LastCommandBeforeEvaluation(parser), // TODO: LAST COMMAND BEFORE EVALUATION
 			"U" or "u" => LastCommandBeforeEvaluation(parser), // TODO: LAST COMMAND AFTER EVALUATION
 			"?" => parser.State.Count().ToString(),
-			"+" => parser.CurrentState.Arguments.Count.ToString(),
+			"+" => parser.CurrentState.EnvironmentRegisters.Count.ToString(),
 			_ => symbol,
 		};
 
@@ -89,12 +89,12 @@ public static partial class Substitutions
 			state => state.Command,
 			_ => string.Empty));
 
-	private static async ValueTask<string> GetLocationDBRefString(IMUSHCodeParser parser, IMediator mediator)
+	private static async ValueTask<string> GetLocationDbRefString(IMUSHCodeParser parser, IMediator mediator)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
 		var location = await executor.Where();
-		var locationDBRef = location.Object().DBRef.Number.ToString();
-		return $"#{locationDBRef}";
+		var locationDbRef = location.Object().DBRef.Number.ToString();
+		return $"#{locationDbRef}";
 	}
 
 	public static async ValueTask<CallState> ParseComplexSubstitution(CallState? symbol, IMUSHCodeParser parser,

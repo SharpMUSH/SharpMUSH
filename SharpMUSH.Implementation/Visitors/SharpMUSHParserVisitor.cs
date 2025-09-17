@@ -242,6 +242,7 @@ public class SharpMUSHParserVisitor(ILogger logger,
 				RegexRegisters: currentState.RegexRegisters,
 				ExecutionStack: currentState.ExecutionStack,
 				CurrentEvaluation: currentState.CurrentEvaluation,
+				EnvironmentRegisters: currentState.EnvironmentRegisters,
 				ParserFunctionDepth: parser.CurrentState.ParserFunctionDepth + 1,
 				Function: name,
 				Command: null,
@@ -525,6 +526,7 @@ public class SharpMUSHParserVisitor(ILogger logger,
 			var newParser = prs.Push(prs.CurrentState with
 			{
 				CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attr.Name),
+				EnvironmentRegisters = arguments,
 				Arguments = arguments,
 				Function = null,
 				Executor = obj.Object().DBRef

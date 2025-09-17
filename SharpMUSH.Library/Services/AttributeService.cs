@@ -149,7 +149,7 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 			if (parser.FunctionLibrary.TryGetValue(obj.ToPlainText().Remove(0, 6).ToLower(), out var applyFunction))
 			{
 				var result = await parser.With(
-					s => s with { Arguments = slimArgs },
+					s => s with { Arguments = slimArgs, EnvironmentRegisters = slimArgs },
 					async np => await applyFunction.LibraryInformation.Function.Invoke(np)
 				);
 
