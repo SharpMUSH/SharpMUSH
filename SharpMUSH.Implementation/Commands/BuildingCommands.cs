@@ -1,4 +1,5 @@
-﻿using SharpMUSH.Library;
+﻿using FSharpPlus.Internals;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -7,6 +8,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
+using Errors = SharpMUSH.Library.Definitions.Errors;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -51,8 +53,69 @@ public partial class Commands
 		MinArgs = 2, MaxArgs = 2)]
 	public static async ValueTask<Option<CallState>> Rename(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var target = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
+		var name = parser.CurrentState.Arguments["1"].Message!;
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, target,
+			LocateFlags.All,
+			async found =>
+			{
+				if (!await PermissionService!.Controls(executor, found))
+				{
+					return Errors.ErrorPerm;
+				}
+
+				switch (found)
+				{
+					case { IsThing: true } or { IsRoom: true }:
+						await Mediator!.Send(new SetNameCommand(found, name));
+						return found.Object().DBRef;
+
+					case { IsPlayer: true }:
+						var tryFindPlayerByName = (await Mediator!.Send(new GetPlayerQuery(name.ToPlainText()))).ToArray();
+						if (tryFindPlayerByName.Any(x => x.Object.Name.Equals(name.ToPlainText(), StringComparison.InvariantCultureIgnoreCase)))
+						{
+							return "#-1 PLAYER NAME ALREADY IN USE.";
+						}
+
+						var playerSplit = MModule.split(";", name);
+
+						await Mediator!.Send(new SetNameCommand(found, playerSplit.First()));
+
+						if (playerSplit.Length <= 1)
+						{
+							return found.Object().DBRef;
+						}
+
+						var aliases = playerSplit.Skip(1).Select(x => x.ToPlainText()).ToArray();
+
+						if (tryFindPlayerByName
+						    .SelectMany(x => x.Aliases ?? [])
+						    .Intersect(aliases, StringComparer.InvariantCultureIgnoreCase)
+						    .Any())
+						{
+							return "#-1 PLAYER ALIAS ALREADY IN USE.";
+						}
+
+						await AttributeService!.SetAttributeAsync(executor, found, "ALIAS",
+							MModule.multipleWithDelimiter(MModule.single(";"), aliases.Select(MModule.single)));
+
+						return found.Object().DBRef;
+
+					default:
+						var split = MModule.split(";", name);
+						await Mediator!.Send(new SetNameCommand(found, split.First()));
+						if (split.Length > 1)
+						{
+							await AttributeService!.SetAttributeAsync(executor, found, "ALIAS",
+								MModule.multipleWithDelimiter(MModule.single(";"), split.Skip(1)));
+						}
+
+						return found.Object().DBRef;
+				}
+			}
+		);
 	}
 
 	[SharpCommand(Name = "@SET", Behavior = CB.RSArgs | CB.EqSplit, MinArgs = 2, MaxArgs = 2)]
@@ -273,7 +336,8 @@ public partial class Commands
 			var newRoomObject = await Mediator!.Send(new GetObjectNodeQuery(response));
 
 			var fromExitResponse = await Mediator!.Send(new CreateExitCommand(exitFromName.First(),
-				exitFromName.Skip(1).ToArray(), newRoomObject.AsRoom, await executor.Owner.WithCancellation(CancellationToken.None)));
+				exitFromName.Skip(1).ToArray(), newRoomObject.AsRoom,
+				await executor.Owner.WithCancellation(CancellationToken.None)));
 			var newExitObject = await Mediator!.Send(new GetObjectNodeQuery(fromExitResponse));
 
 			await NotifyService!.Notify(executor.DBRef, $"Opened exit #{fromExitResponse.Number}");
