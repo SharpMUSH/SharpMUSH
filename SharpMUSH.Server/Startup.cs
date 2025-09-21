@@ -89,6 +89,7 @@ public class Startup(ArangoConfiguration config, string configFile, INotifyServi
 		services.AddSingleton<IBooleanExpressionParser, BooleanExpressionParser>();
 		services.AddSingleton<ICommandDiscoveryService, CommandDiscoveryService>();
 		services.AddSingleton<ILibraryProvider<FunctionDefinition>, Functions>();
+		services.AddSingleton<IValidateService, ValidateService>();
 		services.AddSingleton<LibraryService<string, FunctionDefinition>>(x => x.GetService<ILibraryProvider<FunctionDefinition>>()!.Get());
 		services.AddSingleton<ILibraryProvider<CommandDefinition>, Commands>();
 		services.AddSingleton<LibraryService<string, CommandDefinition>>(x => x.GetService<ILibraryProvider<CommandDefinition>>()!.Get());
