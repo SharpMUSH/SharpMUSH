@@ -1,6 +1,3 @@
-
-
-
 parser grammar SharpMUSHParser;
 
 options {
@@ -45,7 +42,7 @@ startEqSplitCommand:
     )? EOF
 ; 
 
-// Start looking fora single-argument command value, by parsing the argument.
+// Start looking for a single-argument command value, by parsing the argument.
 startPlainSingleCommandArg: singleCommandArg EOF;
 
 // Start looking for a plain string. These may start with a function call.

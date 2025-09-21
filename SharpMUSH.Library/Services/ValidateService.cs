@@ -16,9 +16,10 @@ public partial class ValidateService(IMediator mediator, IOptionsMonitor<PennMUS
 {
 	public async ValueTask<bool> Valid(IValidateService.ValidationType type, MString value,
 		OneOf.OneOf<AnySharpObject, SharpAttributeEntry>? target = null)
-	{
-		return type switch
+		=> type switch
 		{
+			_ when value.Length == 0
+				=> false,
 			IValidateService.ValidationType.Name
 				=> ValidateName(value),
 			IValidateService.ValidationType.PlayerName when target is { IsT0: true }
@@ -26,7 +27,7 @@ public partial class ValidateService(IMediator mediator, IOptionsMonitor<PennMUS
 			IValidateService.ValidationType.PlayerAlias when target is { IsT0: true }
 				=> ValidatePlayerAlias(value, target.Value.AsT0),
 			IValidateService.ValidationType.AttributeName
-				=> ValidAttributeName(value),
+				=> ValidAttributeNameRegex().IsMatch(value.ToPlainText()),
 			IValidateService.ValidationType.AttributeValue when target is { IsT1: true }
 				=> ValidateAttributeValue(value, target.Value.AsT1),
 			IValidateService.ValidationType.ColorName
@@ -34,42 +35,137 @@ public partial class ValidateService(IMediator mediator, IOptionsMonitor<PennMUS
 			IValidateService.ValidationType.AnsiCode
 				=> true,
 			IValidateService.ValidationType.CommandName
-				=> true,
+				=> ValidCommandNameRegex().IsMatch(value.ToPlainText()),
 			IValidateService.ValidationType.LockKey
 				=> true,
 			IValidateService.ValidationType.LockType
+				=> ValidateLockType(value),
+			IValidateService.ValidationType.BoolExp
 				=> true,
 			IValidateService.ValidationType.FlagName
-				=> true,
+				=> ValidAttributeNameRegex().IsMatch(value.ToPlainText()),
 			IValidateService.ValidationType.PowerName
-				=> true,
+				=> ValidAttributeNameRegex().IsMatch(value.ToPlainText()),
 			IValidateService.ValidationType.ChannelName
-				=> true,
+				=> ChannelNameRegex().IsMatch(value.ToPlainText()),
 			IValidateService.ValidationType.Password
-				=> true,
+				=> PasswordRegex().IsMatch(value.ToPlainText()),
 			IValidateService.ValidationType.QRegisterName
-				=> true,
+				=> ValidAttributeNameRegex().IsMatch(value.ToPlainText()) && value.ToPlainText()[0] != '-',
 			IValidateService.ValidationType.Timezone
 				=> TimeZoneInfo.TryFindSystemTimeZoneById(value.ToPlainText(), out _),
 			IValidateService.ValidationType.FunctionName
-				=> true,
+				=> FunctionNameRegex().IsMatch(value.ToPlainText()),
 			_
 				=> throw new InvalidEnumArgumentException(type.ToString())
 		};
-	}
 
-	private bool ValidateAttributeValue(MString value, SharpAttributeEntry attribute)
+	private bool ValidateLockType(MString value)
 	{
+		/*
+/** Check to see that the lock type is a valid type. Valid types are either:
+ * 1) in the lock table of standard lock types,
+ * 2) prefixed with "user:", a valid attr name and don't contain '|' chars
+ * 3) the name of an already-existing lock set on 'thing'
+ * It was previously stated that '|' in lock names interfered with the db
+ * reading routines; I (MG) don't believe that's the case any longer, though.
+ * \param player the enactor, for notification.
+ * \param thing object on which to check the lock.
+ * \param silent skip specific error notifications to player?
+ * \param name name of lock type.
+ * \retval NULL invalid lock type
+ * \retval locktype the name of the valid lock type, minus user: prefix
+ * /
+lock_type
+check_lock_type(dbref player, dbref thing, lock_type name, bool silent)
+{
+  lock_type ll;
+  char *user_name;
+  char *colon;
+
+  /* Special-case for basic locks. * /
+  if (!name || !*name)
+    return Basic_Lock;
+
+  /* Normal locks. * /
+  ll = match_lock(name);
+  if (ll != NULL)
+    return ll;
+
+  /* If the lock is set, it's allowed, whether it exists normally or not. * /
+  if (getlock(thing, name) != TRUE_BOOLEXP)
+    return name;
+
+  /* Check to see if it's a well-formed user-defined lock. * /
+  if (!string_prefix(name, "User:")) {
+    if (!silent)
+      notify(player, T("Unknown lock type."));
+    return NULL;
+  }
+  if (strchr(name, '|')) {
+    if (!silent)
+      notify(player, T("The character \'|\' may not be used in lock names."));
+    return NULL;
+  }
+  colon = strchr(name, ':') + 1;
+  user_name = strupper(colon);
+
+  if (!good_atr_name(user_name)) {
+    if (!silent)
+      notify(player, T("That is not a valid lock name."));
+    return NULL;
+  }
+
+  return colon;
+}*/
 		throw new NotImplementedException();
 	}
 
-	[GeneratedRegex("^[ !\"#%&()&+,\\-./0-9A-Z:;<>=?@`_]$")]
+	[GeneratedRegex(@"^\P{C}+$")]
+	private partial Regex ChannelNameRegex();
+
+	[GeneratedRegex(@"^\P{C}+$")]
+	private partial Regex PasswordRegex();
+
+	[GeneratedRegex(@"^[^:;""#\\&\]\p{C}]\P{C}*$")]
+	private partial Regex FunctionNameRegex();
+
+	private static bool CheckAttributeRegex(string name, string regex, string value)
+	{
+		// TODO: Cache by name.
+		var reg = new Regex(regex);
+		return reg.IsMatch(value);
+	}
+
+	/// <summary>
+	/// Checks if an attribute value is valid against a SharpAttributeEntry.
+	/// TODO: Caching & ensuring enum can do globbing.
+	/// CONSIDER: Probably should do a LENGTH check as well.
+	/// </summary>
+	/// <param name="value">Value</param>
+	/// <param name="attribute">Attribute Entry</param>
+	/// <returns>True or false</returns>
+	private bool ValidateAttributeValue(MString value, SharpAttributeEntry attribute) =>
+		attribute switch
+		{
+			{ Limit: null } and { Enum: null } => true,
+			{ Limit: not null } and { Enum: not null }
+				=> attribute.Enum.Contains(value.ToPlainText())
+				   && CheckAttributeRegex(attribute.Name, attribute.Limit, value.ToPlainText()),
+			{ Enum: not null }
+				=> attribute.Enum.Contains(value.ToPlainText()),
+			{ Limit: not null }
+				=> CheckAttributeRegex(attribute.Name, attribute.Limit, value.ToPlainText()),
+			_ => false
+		};
+
+	[GeneratedRegex("^[!\"#%&()&+,\\-./0-9A-Z:;<>=?@`_]+$")]
 	private static partial Regex ValidAttributeNameRegex();
 
-	private bool ValidAttributeName(MString value)
-		=> ValidAttributeNameRegex().IsMatch(value.ToPlainText());
+	[GeneratedRegex("^[^:;\"#\\\\&\\]\\[\\p{C}]+$")]
+	private static partial Regex ValidCommandNameRegex();
 
-	private bool ValidatePlayerAlias(MString value, AnySharpObject target)
+	private static bool ValidatePlayerAlias(MString value, AnySharpObject target)
 	{
 		throw new NotImplementedException();
 	}
@@ -94,10 +190,10 @@ public partial class ValidateService(IMediator mediator, IOptionsMonitor<PennMUS
 		}
 
 		// TODO: Forbidden names
-		
+
 		var tryFindPlayerByName = (await mediator.Send(new GetPlayerQuery(plainName)))
 			.Where(x => x.Object.DBRef != target.Object().DBRef);
-		
+
 		if (tryFindPlayerByName.Any(x => x.Object.Name.Equals(plainName, StringComparison.InvariantCultureIgnoreCase)))
 		{
 			return false;
@@ -106,41 +202,24 @@ public partial class ValidateService(IMediator mediator, IOptionsMonitor<PennMUS
 		return true;
 	}
 
+	[GeneratedRegex(@"[^ \[\]%\\=&\|][\[\]%\\=&\|]*?[^ \[\]%\\=&\|]?$")]
+	private partial Regex NameRegex();
+
 	private bool ValidateName(MString value)
 	{
-		/*
-  if (!name || !*name)
-    return 0;
+		var plain = value.ToPlainText();
+		var magicCookie = new HashSet<string>((string[])["me", "here", "!", "home"]);
 
-  /* No leading spaces * /
-  if (isspace(*name))
-    return 0;
+		if (!NameRegex().IsMatch(plain))
+		{
+			return false;
+		}
 
-  /* only printable characters * /
-  for (p = name; p && *p; p++) {
-    if (!char_isprint(*p))
-      return 0;
-    if (ONLY_ASCII_NAMES && *p > 127)
-      return 0;
-    if (strchr("[]%\\=&|", *p))
-      return 0;
-  }
+		if (magicCookie.Contains(plain))
+		{
+			return false;
+		}
 
-  /* No trailing spaces * /
-  p--;
-  if (isspace(*p))
-    return 0;
-
-  /* Not too long * /
-  if (strlen(name) >= OBJECT_NAME_LIMIT)
-    return 0;
-
-  /* No magic cookies * /
-  return (name && *name && *name != LOOKUP_TOKEN && *name != NUMBER_TOKEN &&
-          *name != NOT_TOKEN && (is_exit || strcasecmp(name, "me")) &&
-          strcasecmp(name, "home") && strcasecmp(name, "here"));
-*/
-
-		throw new NotImplementedException();
+		return plain.EnumerateRunes().All(x => x.IsAscii);
 	}
 }

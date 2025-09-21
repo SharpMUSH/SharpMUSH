@@ -21,11 +21,11 @@ EQUALS: WS '=' WS;
 PERCENT: '%' -> pushMode(SUBSTITUTION);
 SEMICOLON: WS ';' WS;
 OANSI: '\u001b' -> pushMode(ANSI);
-FUNCHAR: [a-zA-Z0-9_`]+ '(' WS ; 
+FUNCHAR: [0-9a-zA-Z_~]+ '(' WS ; 
 OPAREN: '(' WS;
 
 // Greedy way of grabbing non-special characters which the parser does not care about, and can thus fast-forward through.
-OTHER: ~('\\' | '[' | ']' | '{' | '}' | '(' | ')' | '>' | ',' | '=' | '%' | ';' | '\u001b' )+;
+OTHER: ~( '\\' | '[' | ']' | '{' | '}' | '(' | ')' | '>' | ',' | '=' | '%' | ';' | '\u001b' )+;
 
 // --------------- SUBSTITUTION MODE -------------
 // TODO: Remove all the single-character cases, and let the code itself figure out what they are.

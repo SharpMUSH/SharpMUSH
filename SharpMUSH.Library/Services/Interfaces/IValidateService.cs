@@ -23,7 +23,8 @@ public interface IValidateService
 		ChannelName,
 		Timezone,
 		LockType,
-		LockKey
+		LockKey,
+		BoolExp
 	}
 	
 	ValueTask<bool> Valid(ValidationType type, MString value, OneOf.OneOf<AnySharpObject, SharpAttributeEntry>? target = null);
