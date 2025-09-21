@@ -1597,11 +1597,11 @@ public partial class ArangoDatabase(
 		return await Task.WhenAll(result);
 	}
 
-	public async ValueTask<IEnumerable<SharpPlayer>> GetPlayerByNameAsync(string name)
+	public async ValueTask<IEnumerable<SharpPlayer>> GetPlayerByNameOrAliasAsync(string name)
 	{
 		// TODO: Look up by Alias.
 		var query = await arangoDb.Query.ExecuteAsync<string>(handle,
-			$"FOR v IN {DatabaseConstants.Objects} FILTER v.Type == @type && v.Name == @name RETURN v._id",
+			$"FOR v IN {DatabaseConstants.Objects} FILTER v.Type == @type && (v.Name == @name || @name IN v.Aliases) RETURN v._id",
 			bindVars: new Dictionary<string, object>
 			{
 				{ "name", name },

@@ -172,7 +172,7 @@ public interface ISharpDatabase
 
 	ValueTask<SharpObject?> GetBaseObjectNodeAsync(DBRef dbref);
 
-	ValueTask<IEnumerable<SharpPlayer>> GetPlayerByNameAsync(string name);
+	ValueTask<IEnumerable<SharpPlayer>> GetPlayerByNameOrAliasAsync(string name);
 
 	/// <summary>
 	/// Set an attribute. This does not do any checks, as that is up to the functionality itself.
