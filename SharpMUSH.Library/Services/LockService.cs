@@ -9,8 +9,97 @@ using ZiggyCreatures.Caching.Fusion;
 
 namespace SharpMUSH.Library.Services;
 
+
 public class LockService(IFusionCache cache, IBooleanExpressionParser bep, IMediator med) : ILockService
 {
+	public Dictionary<string, (string, LockFlags)> LockPrivileges { get; } = new()
+	{
+		{"visual", ("v", LockFlags.Visual)},
+		{"no_inherit", ("n", LockFlags.Private)},
+		{"no_clone", ("c", LockFlags.NoClone)},
+		{"wizard", ("w", LockFlags.Wizard)},
+		{"owner", ("o", LockFlags.Owner)},
+		{"locked", ("l", LockFlags.Locked)}
+	};
+	
+	public Dictionary<string, LockFlags> SystemLocks { get; } = new()
+	{
+		{"Basic", LockFlags.Private},
+		{"Enter", LockFlags.Private},
+		{"Use", LockFlags.Private},
+		{"Zone", LockFlags.Private},
+		{"Page", LockFlags.Private},
+		{"Teleport", LockFlags.Private},
+		{"Speech", LockFlags.Private},
+		{"Listen", LockFlags.Private},
+		{"Command", LockFlags.Private},
+		{"Parent", LockFlags.Private},
+		{"Link", LockFlags.Private},
+		{"Leave", LockFlags.Private},
+		{"Drop", LockFlags.Private},
+		{"Give", LockFlags.Private},
+		{"From", LockFlags.Private},
+		{"Pay", LockFlags.Private},
+		{"Receive", LockFlags.Private},
+		{"Mail", LockFlags.Private},
+		{"Follow", LockFlags.Private},
+		{"Examine", LockFlags.Private},
+		{"Chzone", LockFlags.Private},
+		{"Forward", LockFlags.Private},
+		{"Control", LockFlags.Private},
+		{"Dropto", LockFlags.Private},
+		{"Destroy", LockFlags.Private},
+		{"Interact", LockFlags.Private},
+		{"MailForward", LockFlags.Private},
+		{"Take", LockFlags.Private},
+		{"Open", LockFlags.Private},
+		{"Filter", LockFlags.Private},
+		{"InFilter", LockFlags.Private},
+		{"DropIn", LockFlags.Private},
+		{"Chown", LockFlags.Private},
+	};
+	
+	[Flags]
+	public enum LockFlags
+	{
+		/// <summary>
+		/// Anyone can see this lock with lock()/elock()
+		/// </summary> 
+		Visual, 
+		/// <summary>
+		/// This lock doesn't get inherited
+		/// </summary>
+		Private, 
+		/// <summary>
+		/// Only wizards can set/unset this lock
+		/// </summary>
+		Wizard,
+		/// <summary>
+		/// Only the lock's owner can set/unset it
+		/// </summary>
+		Locked,
+		/// <summary>
+		/// This lock isn't copied in @clone
+		/// </summary>
+		NoClone,
+		/// <summary>
+		/// This lock doesn't have an \@a-action for success.
+		/// </summary>
+		NoSuccessAction,
+		/// <summary>
+		/// This lock doesn't have an \@a-action for failure
+		/// </summary>
+		NoFailureAction,
+		/// <summary>
+		/// Lock can only be set/unset by object's owner
+		/// </summary>
+		Owner,
+		/// <summary>
+		/// Use default flags when setting lock
+		/// </summary>
+		Default
+	}
+	
 	// TODO: Optimize #TRUE calls, we don't need to cache those.
 	public static string Get(LockType standardType, AnySharpObject lockee)
 		=> lockee.Object().Locks.GetValueOrDefault(standardType.ToString(), "#TRUE");

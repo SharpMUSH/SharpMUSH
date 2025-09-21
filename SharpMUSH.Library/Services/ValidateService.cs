@@ -11,7 +11,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.Services;
 
-public partial class ValidateService(IMediator mediator, IOptionsMonitor<PennMUSHOptions> configuration)
+public partial class ValidateService(IMediator mediator, IOptionsMonitor<PennMUSHOptions> configuration, ILockService lockService)
 	: IValidateService
 {
 	public async ValueTask<bool> Valid(IValidateService.ValidationType type, MString value,
