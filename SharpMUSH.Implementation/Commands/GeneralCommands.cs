@@ -317,6 +317,8 @@ public partial class Commands
 	[SharpCommand(Name = "GOTO", Behavior = CB.Default, MinArgs = 1, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> GoTo(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		// TODO: Ensure they cannot go into an object that is within themselves.
+
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		if (parser.CurrentState.Arguments.Count == 0)

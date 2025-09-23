@@ -409,6 +409,7 @@ public partial class Commands
 	[SharpCommand(Name = "@PARENT", Switches = [], Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Parent(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		// REMINDER: Avoid loops.
 		await ValueTask.CompletedTask;
 		throw new NotImplementedException();
 	}
