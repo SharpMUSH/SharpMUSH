@@ -10,3 +10,9 @@ public record LinkExitCommand(SharpExit Exit, AnySharpContainer Location) : ICom
 	public string[] CacheKeys => [$"object:{Exit.Object.DBRef}"];
 	public string[] CacheTags => [];
 }
+
+public record UnlinkExitCommand(SharpExit Exit) : ICommand<bool>, ICacheInvalidating
+{
+	public string[] CacheKeys => [$"object:{Exit.Object.DBRef}"];
+	public string[] CacheTags => [];
+}

@@ -1,4 +1,5 @@
 ﻿using FSharpPlus.Internals;
+using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
@@ -45,8 +46,27 @@ public partial class Commands
 	[SharpCommand(Name = "@FIRSTEXIT", Switches = [], Behavior = CB.Default | CB.Args, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> FirstExit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.ArgumentsOrdered;
+
+		await foreach (var exit in args.ToAsyncEnumerable())
+		{
+			// TODO: CONTROL check -- you cannot modify exits in that room.
+			await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+				executor, executor, exit.Value.Message!.ToPlainText(),
+				LocateFlags.ExitsInTheRoomOfLooker | LocateFlags.ExitsPreference,
+				async o =>
+				{
+					var oldData = o.AsExit;
+					var oldLocation = await oldData.Location.WithCancellation(CancellationToken.None);
+					await Mediator!.Send(new UnlinkExitCommand(oldData));
+					await Mediator!.Send(new LinkExitCommand(oldData, oldLocation));
+					return CallState.Empty;
+				}
+			);
+		}
+
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@NAME", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.NoGagged | CB.NoGuest,
@@ -74,7 +94,8 @@ public partial class Commands
 
 					case { IsPlayer: true }:
 						var tryFindPlayerByName = (await Mediator!.Send(new GetPlayerQuery(name.ToPlainText()))).ToArray();
-						if (tryFindPlayerByName.Any(x => x.Object.Name.Equals(name.ToPlainText(), StringComparison.InvariantCultureIgnoreCase)))
+						if (tryFindPlayerByName.Any(x =>
+							    x.Object.Name.Equals(name.ToPlainText(), StringComparison.InvariantCultureIgnoreCase)))
 						{
 							return "#-1 PLAYER NAME ALREADY IN USE.";
 						}

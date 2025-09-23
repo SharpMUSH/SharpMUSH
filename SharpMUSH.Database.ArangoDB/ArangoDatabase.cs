@@ -193,6 +193,22 @@ public partial class ArangoDatabase(
 		return true;
 	}
 
+	public async ValueTask<bool> UnlinkExitAsync(SharpExit exit)
+	{
+		var result = await arangoDb.Query.ExecuteAsync<SharpEdgeQueryResult>(handle, 
+			$"FOR v ,eIN 1..1 INBOUND {exit.Id} GRAPH {DatabaseConstants.GraphHomes} RETURN e");
+		
+		if (!result.Any())
+		{
+			return false;
+		}
+
+		await arangoDb.Graph.Edge.RemoveAsync<object>(handle, 
+			DatabaseConstants.GraphHomes, DatabaseConstants.HasHome, result.First().Key);
+		
+		return true;
+	}
+
 	public async ValueTask<DBRef> CreateExitAsync(string name, string[] aliases, AnySharpContainer location,
 		SharpPlayer creator)
 	{

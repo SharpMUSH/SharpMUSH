@@ -63,6 +63,13 @@ public interface ISharpDatabase
 	ValueTask<bool> LinkExitAsync(SharpExit exit, AnySharpContainer location);
 
 	/// <summary>
+	/// Unlink an exit from its destination location. Does not clear the DESTINATION / EXITTO attribute.
+	/// </summary>
+	/// <param name="exit"><see cref="SharpExit"/></param>
+	/// <returns>Success if the element still existed and could be unlinked.</returns>
+	ValueTask<bool> UnlinkExitAsync(SharpExit exit);
+
+	/// <summary>
 	/// Set the lock of an object.
 	/// </summary>
 	/// <param name="target">What object to lock</param>
