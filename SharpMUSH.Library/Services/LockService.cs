@@ -141,6 +141,9 @@ public class LockService(IFusionCache cache, IBooleanExpressionParser bep, IMedi
 			cache.GetOrSet($"lock:{g.Object().DBRef}:{standardType.ToString()}", bep.Compile(Get(standardType, g)))(g,
 				unlocker));
 
+	public bool Validate(string lockString, AnySharpObject lockee) 
+		=> bep.Validate(lockString, lockee);
+
 	public bool Set(
 		LockType standardType,
 		string lockString,

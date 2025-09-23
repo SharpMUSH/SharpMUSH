@@ -11,7 +11,10 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.Services;
 
-public partial class ValidateService(IMediator mediator, IOptionsMonitor<PennMUSHOptions> configuration, ILockService lockService)
+public partial class ValidateService(
+	IMediator mediator,
+	IOptionsMonitor<PennMUSHOptions> configuration,
+	ILockService lockService)
 	: IValidateService
 {
 	public async ValueTask<bool> Valid(IValidateService.ValidationType type, MString value,
@@ -36,12 +39,12 @@ public partial class ValidateService(IMediator mediator, IOptionsMonitor<PennMUS
 				=> true,
 			IValidateService.ValidationType.CommandName
 				=> ValidCommandNameRegex().IsMatch(value.ToPlainText()),
-			IValidateService.ValidationType.LockKey
-				=> true,
+			IValidateService.ValidationType.LockKey when target is { IsT0: true }
+				=> lockService.Validate(value.ToPlainText(), target.Value.AsT0),
 			IValidateService.ValidationType.LockType
 				=> ValidateLockType(value),
 			IValidateService.ValidationType.BoolExp
-				=> true,
+				=> ValidateLockType(value),
 			IValidateService.ValidationType.FlagName
 				=> ValidAttributeNameRegex().IsMatch(value.ToPlainText()),
 			IValidateService.ValidationType.PowerName

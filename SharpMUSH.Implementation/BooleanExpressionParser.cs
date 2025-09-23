@@ -26,9 +26,15 @@ public class BooleanExpressionParser(ISharpDatabase database) : IBooleanExpressi
 		return Expression.Lambda<Func<AnySharpObject, AnySharpObject, bool>>(expression, parameter, parameter2).Compile();
 	}
 
-	public bool Validate(string text, AnySharpObject lockee)
+	/// <summary>
+	/// Validate that the expression is valid.
+	/// </summary>
+	/// <param name="expression"></param>
+	/// <param name="lockee">Person to lock.</param>
+	/// <returns>Valid or not.</returns>
+	public bool Validate(string expression, AnySharpObject lockee)
 	{
-		AntlrInputStreamSpan inputStream = new(text.AsMemory(), nameof(Validate));
+		AntlrInputStreamSpan inputStream = new(expression.AsMemory(), nameof(Validate));
 		SharpMUSHBoolExpLexer sharpLexer = new(inputStream);
 		BufferedTokenSpanStream commonTokenStream = new(sharpLexer);
 		SharpMUSHBoolExpParser sharpParser = new(commonTokenStream);
