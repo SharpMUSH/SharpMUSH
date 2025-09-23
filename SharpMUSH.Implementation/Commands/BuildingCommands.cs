@@ -142,11 +142,6 @@ public partial class Commands
 	[SharpCommand(Name = "@SET", Behavior = CB.RSArgs | CB.EqSplit, MinArgs = 2, MaxArgs = 2)]
 	public static async ValueTask<Option<CallState>> SetCommand(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// Step 1: Check if the argument[0] could be an Object/Attribute or is just an Object
-		// Step 2: Locate Object.
-		// Step 3: Check if we have a : in argument[1].
-		// Step 4: Either set an attribute, or set an Attribute Flag, or set an Object Flag.
-
 		var args = parser.CurrentState.Arguments;
 		var split = HelperFunctions.SplitDBRefAndOptionalAttr(MModule.plainText(args["0"].Message!));
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).WithoutNone();
@@ -180,12 +175,10 @@ public partial class Commands
 				var plainFlag = MModule.plainText(flag);
 				if (plainFlag.StartsWith('!'))
 				{
-					// TODO: Notify
 					await AttributeService!.SetAttributeFlagAsync(executor, realLocated, maybeAttribute, plainFlag);
 				}
 				else
 				{
-					// TODO: Notify
 					await AttributeService!.UnsetAttributeFlagAsync(executor, realLocated, maybeAttribute, plainFlag[1..]);
 				}
 			}

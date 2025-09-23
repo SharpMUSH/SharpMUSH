@@ -14,7 +14,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.Services;
 
-public class AttributeService(IMediator mediator, IPermissionService ps, ICommandDiscoveryService cs, ILocateService locateService)
+public class AttributeService(IMediator mediator, IPermissionService ps, ICommandDiscoveryService cs, ILocateService locateService, INotifyService notifyService)
 	: IAttributeService
 {
 	public async ValueTask<OptionalSharpAttributeOrError> GetAttributeAsync(
@@ -252,6 +252,9 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		await mediator.Send(new SetAttributeFlagCommand(obj.Object().DBRef, returnedAttribute.AsAttribute.Last(),
 			returnedFlag.First()));
 
+		await notifyService.Notify(executor, 
+			$"Flag {returnedFlag.First().Name} set on attribute {returnedAttribute.AsAttribute.Last().LongName}", obj);
+
 		return new Success();
 	}
 
@@ -278,9 +281,12 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 			return new Error<string>("Flag Found");
 		}
 
-		// TODO: What if it's already set?
+		// TODO: What if it's not already set?
 		await mediator.Send(new UnsetAttributeFlagCommand(obj.Object().DBRef, returnedAttribute.AsAttribute.Last(),
 			returnedFlag.First()));
+		
+		await notifyService.Notify(executor, 
+			$"Flag {returnedFlag.First().Name} unset from attribute {returnedAttribute.AsAttribute.Last().LongName}", obj);
 
 		return new Success();
 	}
@@ -310,6 +316,9 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		cs.InvalidateCache(obj.Object().DBRef);
 		await mediator.Send(new SetAttributeCommand(obj.Object().DBRef, attrPath, value,
 			await executor.Object().Owner.WithCancellation(CancellationToken.None)));
+		
+		await notifyService.Notify(executor, 
+			$"Attribute {attrPath} SET.", obj);
 
 		return new Success();
 	}
@@ -340,17 +349,22 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		var attr = await mediator.Send(new GetAttributesQuery(obj.Object().DBRef, attributePattern, false, patternMode));
 		var attrArr = attr?.ToArray();
 
-		var permission = attrArr == null ||
-		                 await attrArr.ToAsyncEnumerable().AllAsync(async (x,_) => await ps.CanSet(executor, obj, x));
-
-		if (!permission)
+		if (!(attrArr == null ||
+		      await attrArr.ToAsyncEnumerable().AllAsync(async (x,_) => await ps.CanSet(executor, obj, x))))
 		{
 			return new Error<string>(Errors.ErrorAttrSetPermissions);
 		}
 
 		cs.InvalidateCache(obj.Object().DBRef);
+
 		await mediator.Send(new ClearAttributeCommand(obj.Object().DBRef, attrArr!.Select(x => x.LongName!).ToArray()));
 
+		foreach (var attrDone in attrArr!)
+		{
+			await notifyService.Notify(executor, 
+				$"Attribute {attrDone.LongName} CLEARED.", obj);
+		}
+		
 		return new Success();
 	}
 }
