@@ -28,7 +28,7 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 		
 		var startup = new Startup(acnf, configFile, notifier);
 
-		builder.ConfigureServices(x => startup.ConfigureServices(x));
+		builder.ConfigureServices(startup.ConfigureServices);
 
 		builder.UseKestrel(options 
 			=> options.ListenLocalhost(4202, lo => lo.UseConnectionHandler<TelnetServer>()));

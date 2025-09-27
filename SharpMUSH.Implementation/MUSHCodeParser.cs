@@ -1,5 +1,4 @@
-﻿using Antlr4.Runtime;
-using Mediator;
+﻿using Mediator;
 using SharpMUSH.Implementation.Visitors;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
@@ -9,9 +8,9 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OneOf.Types;
 using SharpMUSH.Configuration.Options;
-using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Services.Interfaces;
+using Antlr4.Runtime;
 
 namespace SharpMUSH.Implementation;
 
@@ -22,6 +21,7 @@ namespace SharpMUSH.Implementation;
 public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	LibraryService<string, Library.Definitions.FunctionDefinition> FunctionLibrary,
 	LibraryService<string, Library.Definitions.CommandDefinition> CommandLibrary,
+	IOptionsMonitor<PennMUSHOptions> Configuration,
 	IServiceProvider ServiceProvider) : IMUSHCodeParser
 {
 	public ParserState CurrentState => State.Peek();
@@ -36,7 +36,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	/// </summary>
 	public IImmutableStack<ParserState> State { get; private init; } = ImmutableStack<ParserState>.Empty;
 
-	public IMUSHCodeParser FromState(ParserState state) => new MUSHCodeParser(Logger, FunctionLibrary, CommandLibrary, ServiceProvider, state);
+	public IMUSHCodeParser FromState(ParserState state) => new MUSHCodeParser(Logger, FunctionLibrary, CommandLibrary, Configuration, ServiceProvider, state);
 	
 	public Option<ParserState> StateHistory(uint index)
 	{
@@ -58,8 +58,9 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	public MUSHCodeParser(ILogger<MUSHCodeParser> logger, 
 		LibraryService<string, Library.Definitions.FunctionDefinition> functionLibrary,
 		LibraryService<string, Library.Definitions.CommandDefinition> commandLibrary,
+		IOptionsMonitor<PennMUSHOptions> config,
 		IServiceProvider serviceProvider,
-		ParserState state) : this(logger, functionLibrary, commandLibrary, serviceProvider)
+		ParserState state) : this(logger, functionLibrary, commandLibrary, config, serviceProvider)
 		=> State = [state];
 
 	public ValueTask<CallState?> FunctionParse(MString text)
@@ -72,14 +73,14 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		{
 			Interpreter =
 			{
-				// sharpParser.Trace = true;
-				// sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
-				// sharpParser.Interpreter.PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL;
 				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL
 			},
-			Trace = false
+			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
 		};
-		// sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
+		if(Configuration.CurrentValue.Debug.DebugSharpParser)
+		{
+			sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
+		}
 
 		var chatContext = sharpParser.startPlainString();
 		SharpMUSHParserVisitor visitor = new(Logger, this, 
@@ -107,8 +108,14 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			Interpreter =
 			{
 				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL
-			}
+			},
+			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
 		};
+		if (Configuration.CurrentValue.Debug.DebugSharpParser)
+		{
+			sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
+		}
+
 		var chatContext = sharpParser.startCommandString();
 		SharpMUSHParserVisitor visitor = new(Logger, this,
 			ServiceProvider.GetRequiredService<IOptionsMonitor<PennMUSHOptions>>(),
@@ -134,8 +141,14 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			Interpreter =
 			{
 				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL
-			}
+			},
+			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
 		};
+		if (Configuration.CurrentValue.Debug.DebugSharpParser)
+		{
+			sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
+		}
+
 		var chatContext = sharpParser.startCommandString();
 		
 		SharpMUSHParserVisitor visitor = new(Logger, this, 
@@ -186,8 +199,14 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			Interpreter =
 			{
 				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL
-			}
+			},
+			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
 		};
+		if (Configuration.CurrentValue.Debug.DebugSharpParser)
+		{
+			sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
+		}
+
 		var chatContext = sharpParser.startSingleCommandString();
 		SharpMUSHParserVisitor visitor = new(Logger, newParser,
 			ServiceProvider.GetRequiredService<IOptionsMonitor<PennMUSHOptions>>(),
@@ -217,8 +236,14 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			Interpreter =
 			{
 				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL
-			}
+			},
+			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
 		};
+		if (Configuration.CurrentValue.Debug.DebugSharpParser)
+		{
+			sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
+		}
+
 		var chatContext = sharpParser.startSingleCommandString();
 		SharpMUSHParserVisitor visitor = new(Logger, this,
 			ServiceProvider.GetRequiredService<IOptionsMonitor<PennMUSHOptions>>(),
@@ -243,8 +268,14 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			Interpreter =
 			{
 				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL
-			}
+			},
+			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
 		};
+		if (Configuration.CurrentValue.Debug.DebugSharpParser)
+		{
+			sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
+		}
+
 		var chatContext = sharpParser.commaCommandArgs();
 		SharpMUSHParserVisitor visitor = new(Logger, this,
 			ServiceProvider.GetRequiredService<IOptionsMonitor<PennMUSHOptions>>(),
@@ -269,8 +300,14 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			Interpreter =
 			{
 				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL
-			}
+			},
+			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
 		};
+		if (Configuration.CurrentValue.Debug.DebugSharpParser)
+		{
+			sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
+		}
+
 		var chatContext = sharpParser.startPlainSingleCommandArg();
 		SharpMUSHParserVisitor visitor = new(Logger, this,
 			ServiceProvider.GetRequiredService<IOptionsMonitor<PennMUSHOptions>>(),
@@ -295,8 +332,13 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			Interpreter =
 			{
 				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL
-			}
+			},
+			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
 		};
+		if (Configuration.CurrentValue.Debug.DebugSharpParser)
+		{
+			sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
+		}
 
 		var chatContext = sharpParser.startEqSplitCommandArgs();
 		SharpMUSHParserVisitor visitor = new(Logger, this,
@@ -322,8 +364,14 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			Interpreter =
 			{
 				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL
-			}
+			},
+			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
 		};
+		if (Configuration.CurrentValue.Debug.DebugSharpParser)
+		{
+			sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
+		}
+
 		var chatContext = sharpParser.startEqSplitCommand();
 		SharpMUSHParserVisitor visitor = new(Logger, this,
 			ServiceProvider.GetRequiredService<IOptionsMonitor<PennMUSHOptions>>(),

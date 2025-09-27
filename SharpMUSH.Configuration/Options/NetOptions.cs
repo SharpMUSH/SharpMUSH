@@ -1,6 +1,6 @@
 ﻿namespace SharpMUSH.Configuration.Options;
 
-public record NetConfig(
+public record NetOptions(
 	[property: PennConfig(Name = "mud_name")] string MudName ,
 	[property: PennConfig(Name = "mud_url")] string? MudUrl ,
 	[property: PennConfig(Name = "ip_addr")] string? IpAddr ,

@@ -1035,3 +1035,11 @@ include alias.cnf
 ###
 include restrict.cnf
 
+####
+#### DEBUG OPTIONS
+####
+
+# If true, the parser will log debugging information to the trace
+# This is extremely verbose, and should only be used when instructed 
+# to use by the developers of SharpMUSH
+debug_sharpparser false

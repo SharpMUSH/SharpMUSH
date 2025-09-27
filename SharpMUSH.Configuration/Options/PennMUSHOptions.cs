@@ -16,5 +16,6 @@ public record PennMUSHOptions
 	public required LimitOptions Limit { get; init; }
 	public required LogOptions Log { get; init; }
 	public required MessageOptions Message { get; init; }
-	public required NetConfig Net { get; init; }
+	public required NetOptions Net { get; init; }
+	public required DebugOptions Debug { get; init; }
 };

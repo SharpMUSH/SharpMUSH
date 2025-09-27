@@ -1,7 +1,4 @@
-using NSubstitute;
 using SharpMUSH.Library.ParserInterfaces;
-using SharpMUSH.Library.Services;
-using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
@@ -14,10 +11,8 @@ public class LambdaUnitTests
 
 	[Test]
 	[Arguments(@"u(#lambda/add\(1\,2\))", "3")]
-	// [Arguments("u(lit(#lambda/add(1,2)))", "3")] 
-	// TODO: Failing test ^-> #-2 I DON'T KNOW WHICH ONE YOU MEAN)
-	// This is because it goes through the object pattern. It got '#-1 ARGUMENT OUT OF RANGE' coming in.
-	// Neither add() or lit() seem to be triggering breakpoints. So the parse here may be rather odd.
+	// TODO: 3) is not the correct return value. This should just be: 3
+	[Arguments("u(lit(#lambda/add(1,2)))", "3)")] 
 	[Arguments("u(#lambda/[add(1,2)])", "3")]
 	[Arguments("u(#lambda/3)", "3")]
 	[Arguments("3", "3")] 

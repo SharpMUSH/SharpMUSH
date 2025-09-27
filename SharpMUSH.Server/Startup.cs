@@ -89,15 +89,15 @@ public class Startup(ArangoConfiguration config, string configFile, INotifyServi
 		services.AddSingleton<IBooleanExpressionParser, BooleanExpressionParser>();
 		services.AddSingleton<ICommandDiscoveryService, CommandDiscoveryService>();
 		services.AddSingleton<ILibraryProvider<FunctionDefinition>, Functions>();
-		services.AddSingleton<IValidateService, ValidateService>();
-		services.AddSingleton<LibraryService<string, FunctionDefinition>>(x => x.GetService<ILibraryProvider<FunctionDefinition>>()!.Get());
 		services.AddSingleton<ILibraryProvider<CommandDefinition>, Commands>();
-		services.AddSingleton<LibraryService<string, CommandDefinition>>(x => x.GetService<ILibraryProvider<CommandDefinition>>()!.Get());
+		services.AddSingleton(x => x.GetService<ILibraryProvider<FunctionDefinition>>()!.Get());
+		services.AddSingleton(x => x.GetService<ILibraryProvider<CommandDefinition>>()!.Get());
 		services.AddSingleton<IOptionsFactory<PennMUSHOptions>, ReadPennMushConfig>(_ => new ReadPennMushConfig(configFile));
 		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(CacheInvalidationBehavior<,>));
 		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(QueryCachingBehavior<,>));
 		services.AddSingleton(new ArangoHandle("CurrentSharpMUSHWorld"));
 		services.AddSingleton<IMUSHCodeParser, MUSHCodeParser>();
+		services.AddSingleton<IValidateService, ValidateService>();
 		services.AddOptions<PennMUSHOptions>();
 		services.AddMediator();
 		services.AddFusionCache();

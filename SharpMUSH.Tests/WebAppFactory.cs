@@ -3,10 +3,12 @@ using Core.Arango;
 using Core.Arango.Serialization.Newtonsoft;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using NSubstitute;
 using OneOf.Types;
 using Serilog;
 using Serilog.Sinks.SystemConsole.Themes;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
@@ -39,6 +41,7 @@ public class WebAppFactory : IAsyncInitializer
 				integrationServer.Services.GetRequiredService<ILogger<MUSHCodeParser>>(),
 				integrationServer.Services.GetRequiredService<LibraryService<string, FunctionDefinition>>(),
 				integrationServer.Services.GetRequiredService<LibraryService<string, CommandDefinition>>(),
+				integrationServer.Services.GetRequiredService<IOptionsMonitor<PennMUSHOptions>>(),
 				integrationServer.Services,
 				state: new ParserState(
 					Registers: new([[]]),
@@ -70,6 +73,7 @@ public class WebAppFactory : IAsyncInitializer
 				integrationServer.Services.GetRequiredService<ILogger<MUSHCodeParser>>(),
 				integrationServer.Services.GetRequiredService<LibraryService<string, FunctionDefinition>>(),
 				integrationServer.Services.GetRequiredService<LibraryService<string, CommandDefinition>>(),
+				integrationServer.Services.GetRequiredService<IOptionsMonitor<PennMUSHOptions>>(),
 				integrationServer.Services,
 				state: new ParserState(
 					Registers: new([[]]),

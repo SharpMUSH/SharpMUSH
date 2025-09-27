@@ -252,27 +252,30 @@ public partial class ReadPennMushConfig(string configFile) : IOptionsFactory<Pen
 				RequiredString(Get(nameof(MessageOptions.WhoHtmlFile)), "who.html"),
 				RequiredString(Get(nameof(MessageOptions.IndexHtmlFile)), "index.html")
 			),
-			Net = new NetConfig(
-				RequiredString(Get(nameof(NetConfig.MudName)), "SharpMUSH"),
-				String(Get(nameof(NetConfig.MudUrl)), null),
-				String(Get(nameof(NetConfig.IpAddr)), null),
-				String(Get(nameof(NetConfig.SslIpAddr)), null),
-				UnsignedInteger(Get(nameof(NetConfig.Port)), 4203),
-				UnsignedInteger(Get(nameof(NetConfig.SslPort)), 4202),
-				UnsignedInteger(Get(nameof(NetConfig.PortalPort)), 5117),
-				UnsignedInteger(Get(nameof(NetConfig.SllPortalPort)), 7296),
-				RequiredString(Get(nameof(NetConfig.SocketFile)), "netmush.sock"),
-				Boolean(Get(nameof(NetConfig.UseWebsockets)), true),
-				RequiredString(Get(nameof(NetConfig.WebsocketUrl)), "/wsclient"),
-				Boolean(Get(nameof(NetConfig.UseDns)), true),
-				Boolean(Get(nameof(NetConfig.Logins)), true),
-				Boolean(Get(nameof(NetConfig.PlayerCreation)), true),
-				Boolean(Get(nameof(NetConfig.Guests)), true),
-				Boolean(Get(nameof(NetConfig.Pueblo)), true),
-				String(Get(nameof(NetConfig.SqlPlatform)), null),
-				RequiredString(Get(nameof(NetConfig.SqlHost)), "localhost"),
-				Boolean(Get(nameof(NetConfig.JsonUnsafeUnescape)), false),
-				Boolean(Get(nameof(NetConfig.SslRequireClientCert)), false)
+			Net = new NetOptions(
+				RequiredString(Get(nameof(NetOptions.MudName)), "SharpMUSH"),
+				String(Get(nameof(NetOptions.MudUrl)), null),
+				String(Get(nameof(NetOptions.IpAddr)), null),
+				String(Get(nameof(NetOptions.SslIpAddr)), null),
+				UnsignedInteger(Get(nameof(NetOptions.Port)), 4203),
+				UnsignedInteger(Get(nameof(NetOptions.SslPort)), 4202),
+				UnsignedInteger(Get(nameof(NetOptions.PortalPort)), 5117),
+				UnsignedInteger(Get(nameof(NetOptions.SllPortalPort)), 7296),
+				RequiredString(Get(nameof(NetOptions.SocketFile)), "netmush.sock"),
+				Boolean(Get(nameof(NetOptions.UseWebsockets)), true),
+				RequiredString(Get(nameof(NetOptions.WebsocketUrl)), "/wsclient"),
+				Boolean(Get(nameof(NetOptions.UseDns)), true),
+				Boolean(Get(nameof(NetOptions.Logins)), true),
+				Boolean(Get(nameof(NetOptions.PlayerCreation)), true),
+				Boolean(Get(nameof(NetOptions.Guests)), true),
+				Boolean(Get(nameof(NetOptions.Pueblo)), true),
+				String(Get(nameof(NetOptions.SqlPlatform)), null),
+				RequiredString(Get(nameof(NetOptions.SqlHost)), "localhost"),
+				Boolean(Get(nameof(NetOptions.JsonUnsafeUnescape)), false),
+				Boolean(Get(nameof(NetOptions.SslRequireClientCert)), false)
+			),
+			Debug = new DebugOptions(
+				Boolean(Get(nameof(DebugOptions.DebugSharpParser)), false)
 			)
 		};
 
@@ -284,7 +287,7 @@ public partial class ReadPennMushConfig(string configFile) : IOptionsFactory<Pen
 	private static bool Boolean(string value, bool fallback) =>
 		string.IsNullOrWhiteSpace(value)
 			? fallback
-			: value is "-1" or "0" or "false";
+			: value is not ("-1" or "0" or "false" or "no");
 
 	private static string RequiredString(string value, string fallback) =>
 		string.IsNullOrWhiteSpace(value)

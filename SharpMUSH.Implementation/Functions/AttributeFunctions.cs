@@ -34,7 +34,7 @@ public partial class Functions
 	[SharpFunction(Name = "attrib_set", MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX)]
 	public static async ValueTask<CallState> AttributeSet(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (Configuration!.CurrentValue.Function.FunctionSideEffects)
+		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
 		{
 			return new CallState(Errors.ErrorNoSideFX);
 		}
@@ -639,7 +639,7 @@ public partial class Functions
 	public static async ValueTask<CallState> Set(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		await ValueTask.CompletedTask;
-		if (Configuration!.CurrentValue.Function.FunctionSideEffects)
+		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
 		{
 			return new CallState(Errors.ErrorNoSideFX);
 		}
