@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Mediator;
 using SharpMUSH.Library.Attributes;
 using ZiggyCreatures.Caching.Fusion;
@@ -9,8 +8,6 @@ public class QueryCachingBehavior<TRequest, TResponse>(IFusionCache cache)
 	: IPipelineBehavior<TRequest, TResponse>
 	where TRequest : IQuery<TResponse>, ICacheable
 {
-	private readonly TimeSpan _cacheDuration = TimeSpan.FromMinutes(5);
-
 	public async ValueTask<TResponse> Handle(
 		TRequest message,
 		MessageHandlerDelegate<TRequest, TResponse> next,

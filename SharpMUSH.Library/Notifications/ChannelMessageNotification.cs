@@ -1,7 +1,6 @@
 using Mediator;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
-using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.Notifications;

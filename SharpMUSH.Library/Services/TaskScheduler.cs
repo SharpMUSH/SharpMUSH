@@ -5,7 +5,6 @@ using Quartz.Lambda;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.Services.Interfaces;
-using TelnetNegotiationCore.Models;
 
 namespace SharpMUSH.Library.Services;
 
