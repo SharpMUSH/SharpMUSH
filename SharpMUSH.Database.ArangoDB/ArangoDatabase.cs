@@ -324,6 +324,10 @@ public partial class ArangoDatabase(
 		}
 	}
 
+	// Todo: Separate SET and UNSET better.
+	public async ValueTask UnsetObjectParent(AnySharpObject obj) 
+		=> await SetObjectParent(obj, null);
+
 	public async ValueTask SetObjectOwner(AnySharpObject obj, SharpPlayer owner)
 	{
 		var response = await arangoDb.Query.ExecuteAsync<string>(handle,
@@ -1248,6 +1252,13 @@ public partial class ArangoDatabase(
 		{
 			target.Key,
 			Locks = target.Locks.Add(lockName, lockString)
+		}, mergeObjects: true);
+
+	public async ValueTask UnsetLockAsync(SharpObject target, string lockName)
+		=> await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Objects, new
+		{
+			target.Key,
+			Locks = target.Locks.Remove(lockName)
 		}, mergeObjects: true);
 
 	public async ValueTask<IEnumerable<SharpAttribute>?> GetAttributeAsync(DBRef dbref, params string[] attribute)

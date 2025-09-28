@@ -9,3 +9,9 @@ public record SetLockCommand(SharpObject Target, string LockName, string LockStr
 	public string[] CacheKeys => [$"object:{Target.DBRef}"];
 	public string[] CacheTags => [];
 }
+
+public record UnsetLockCommand(SharpObject Target, string LockName) : ICommand, ICacheInvalidating
+{
+	public string[] CacheKeys => [$"object:{Target.DBRef}"];
+	public string[] CacheTags => [];
+}

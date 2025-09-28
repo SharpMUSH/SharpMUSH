@@ -76,6 +76,13 @@ public interface ISharpDatabase
 	/// <param name="lockName">The name of the lock</param>
 	/// <param name="lockString">The string of the Lock</param>
 	ValueTask SetLockAsync(SharpObject target, string lockName, string lockString);
+	
+	/// <summary>
+	/// Unset the lock of an object.
+	/// </summary>
+	/// <param name="target">What object to lock</param>
+	/// <param name="lockName">The name of the lock</param>
+	ValueTask UnsetLockAsync(SharpObject target, string lockName);
 
 	/// <summary>
 	/// Get the attribute value of an object's attribute.
@@ -147,6 +154,12 @@ public interface ISharpDatabase
 	/// <param name="obj">Object</param>
 	/// <param name="parent">New Value</param>
 	ValueTask SetObjectParent(AnySharpObject obj, AnySharpObject? parent);
+	
+	/// <summary>
+	/// Sets the Parent of an object.
+	/// </summary>
+	/// <param name="obj">Object</param>
+	ValueTask UnsetObjectParent(AnySharpObject obj);
 
 	/// <summary>
 	/// Sets the Owner of an Object to a player.

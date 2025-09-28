@@ -48,3 +48,12 @@ public class SetObjectParentCommandHandler(ISharpDatabase database) : ICommandHa
 		return Unit.Value;
 	}
 }
+
+public class UnsetObjectParentCommandHandler(ISharpDatabase database) : ICommandHandler<UnsetObjectParentCommand, Unit>
+{
+	public async ValueTask<Unit> Handle(UnsetObjectParentCommand request, CancellationToken cancellationToken)
+	{
+		await database.UnsetObjectParent(request.Target);
+		return Unit.Value;
+	}
+}

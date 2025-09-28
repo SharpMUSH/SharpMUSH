@@ -12,3 +12,11 @@ public class SetLockCommandHandler(ISharpDatabase database) : ICommandHandler<Se
 		return new Unit();
 	}
 }
+public class UnsetLockCommandHandler(ISharpDatabase database) : ICommandHandler<UnsetLockCommand>
+{
+	public async ValueTask<Unit> Handle(UnsetLockCommand request, CancellationToken cancellationToken)
+	{
+		await database.UnsetLockAsync(request.Target, request.LockName);
+		return new Unit();
+	}
+}
