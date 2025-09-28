@@ -22,12 +22,11 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Server.ProtocolHandlers;
 using TaskScheduler = SharpMUSH.Library.Services.TaskScheduler;
 
 namespace SharpMUSH.Server;
 
-public class Startup(ArangoConfiguration config, string configFile, INotifyService? notifier)
+public class Startup(ArangoConfiguration config, string configFile, string colorFile, INotifyService? notifier)
 {
 	// This method gets called by the runtime. Use this method to add services to the container.
 	// For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
@@ -93,12 +92,14 @@ public class Startup(ArangoConfiguration config, string configFile, INotifyServi
 		services.AddSingleton(x => x.GetService<ILibraryProvider<FunctionDefinition>>()!.Get());
 		services.AddSingleton(x => x.GetService<ILibraryProvider<CommandDefinition>>()!.Get());
 		services.AddSingleton<IOptionsFactory<PennMUSHOptions>, ReadPennMushConfig>(_ => new ReadPennMushConfig(configFile));
+		services.AddSingleton<IOptionsFactory<ColorsOptions>, ReadColorsOptionsFactory>(_ => new ReadColorsOptionsFactory(colorFile));
 		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(CacheInvalidationBehavior<,>));
 		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(QueryCachingBehavior<,>));
 		services.AddSingleton(new ArangoHandle("CurrentSharpMUSHWorld"));
 		services.AddSingleton<IMUSHCodeParser, MUSHCodeParser>();
 		services.AddSingleton<IValidateService, ValidateService>();
 		services.AddOptions<PennMUSHOptions>();
+		services.AddOptions<ColorsOptions>();
 		services.AddMediator();
 		services.AddFusionCache();
 		services.AddArango(_ => config.ConnectionString);

@@ -13,6 +13,7 @@ namespace SharpMUSH.Tests;
 public class TestWebApplicationBuilderFactory<TProgram>(
 		ArangoConfiguration acnf, 
 		string configFile, 
+		string colorFile,
 		INotifyService? notifier): 
 	WebApplicationFactory<TProgram> where TProgram : class
 {
@@ -26,11 +27,11 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 		
 		Log.Logger = log;
 		
-		var startup = new Startup(acnf, configFile, notifier);
+		var startup = new Startup(acnf, configFile, colorFile, notifier);
 
 		builder.ConfigureServices(startup.ConfigureServices);
 
 		builder.UseKestrel(options 
-			=> options.ListenLocalhost(4202, lo => lo.UseConnectionHandler<TelnetServer>()));
+			=> options.ListenLocalhost(4203, lo => lo.UseConnectionHandler<TelnetServer>()));
 	}
 }

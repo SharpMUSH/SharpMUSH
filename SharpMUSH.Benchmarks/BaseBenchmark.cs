@@ -49,8 +49,9 @@ public class BaseBenchmark
 		};
 		
 		var configFile = Path.Combine(AppContext.BaseDirectory, "mushcnf.dst");
+		var colorFile = Path.Combine(AppContext.BaseDirectory, "colors.json");
 
-		_server = new TestWebApplicationBuilderFactory<SharpMUSH.Server.Program>(config, configFile, null);
+		_server = new TestWebApplicationBuilderFactory<Server.Program>(config, configFile, colorFile, null);
 		_database = _server!.Services.GetRequiredService<ISharpDatabase>();
 
 		try

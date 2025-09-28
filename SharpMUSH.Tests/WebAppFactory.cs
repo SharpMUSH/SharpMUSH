@@ -114,7 +114,9 @@ public class WebAppFactory : IAsyncInitializer
 
 		var configFile = Path.Combine(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst");
 
-		_server = new TestWebApplicationBuilderFactory<Program>(config, configFile, Substitute.For<INotifyService>());
+		var colorFile = Path.Combine(AppContext.BaseDirectory, "colors.json");
+
+		_server = new TestWebApplicationBuilderFactory<Program>(config, configFile, colorFile, Substitute.For<INotifyService>());
 
 		var provider = _server.Services;
 		var connectionService = provider.GetRequiredService<IConnectionService>();
