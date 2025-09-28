@@ -1,13 +1,14 @@
-﻿using System.Collections.Immutable;
-using System.Reflection;
-using System.Text.RegularExpressions;
+﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
+using System.Collections.Immutable;
+using System.Reflection;
+using System.Text.RegularExpressions;
 using FileOptions = SharpMUSH.Configuration.Options.FileOptions;
 
 namespace SharpMUSH.Configuration;
 
-public partial class ReadPennMushConfig(string configFile) : IOptionsFactory<PennMUSHOptions>
+public partial class ReadPennMushConfig(ILogger<ReadPennMushConfig> Logger, string configFile) : IOptionsFactory<PennMUSHOptions>
 {
 	public PennMUSHOptions Create(string _)
 	{
@@ -38,6 +39,7 @@ public partial class ReadPennMushConfig(string configFile) : IOptionsFactory<Pen
 		}
 		catch (Exception ex) when (ex is FileNotFoundException or IOException)
 		{
+			Logger.LogCritical(ex, nameof(Create));
 			throw;
 		}
 		

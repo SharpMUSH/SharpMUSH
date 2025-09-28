@@ -1,10 +1,12 @@
 ﻿using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
 using SharpMUSH.Configuration.Options;
 using System.Text.Json;
 
+
 namespace SharpMUSH.Configuration;
 
-public class ReadColorsOptionsFactory(string Name) : IOptionsFactory<ColorsOptions>
+public class ReadColorsOptionsFactory(ILogger<ReadColorsOptionsFactory> Logger, string Name) : IOptionsFactory<ColorsOptions>
 {
 	public ColorsOptions Create(string _)
 	{
@@ -15,6 +17,7 @@ public class ReadColorsOptionsFactory(string Name) : IOptionsFactory<ColorsOptio
 		}
 		catch (Exception ex) when (ex is FileNotFoundException or IOException)
 		{
+			Logger.LogCritical(ex, nameof(Create));
 			throw;
 		}
 
@@ -25,9 +28,9 @@ public class ReadColorsOptionsFactory(string Name) : IOptionsFactory<ColorsOptio
 			return new ColorsOptions(colorIdentities!);
 
 		}
-		catch
+		catch(Exception ex)
 		{
-			// Should add logging: ex
+			Logger.LogCritical(ex, nameof(Create));
 			throw;
 		}
 	}

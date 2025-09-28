@@ -91,8 +91,10 @@ public class Startup(ArangoConfiguration config, string configFile, string color
 		services.AddSingleton<ILibraryProvider<CommandDefinition>, Commands>();
 		services.AddSingleton(x => x.GetService<ILibraryProvider<FunctionDefinition>>()!.Get());
 		services.AddSingleton(x => x.GetService<ILibraryProvider<CommandDefinition>>()!.Get());
-		services.AddSingleton<IOptionsFactory<PennMUSHOptions>, ReadPennMushConfig>(_ => new ReadPennMushConfig(configFile));
-		services.AddSingleton<IOptionsFactory<ColorsOptions>, ReadColorsOptionsFactory>(_ => new ReadColorsOptionsFactory(colorFile));
+		services.AddSingleton<IOptionsFactory<PennMUSHOptions>, ReadPennMushConfig>(x 
+			=> new ReadPennMushConfig(x.GetRequiredService<ILogger<ReadPennMushConfig>>(), configFile));
+		services.AddSingleton<IOptionsFactory<ColorsOptions>, ReadColorsOptionsFactory>(x 
+			=> new ReadColorsOptionsFactory(x.GetRequiredService<ILogger<ReadColorsOptionsFactory>>(), colorFile));
 		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(CacheInvalidationBehavior<,>));
 		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(QueryCachingBehavior<,>));
 		services.AddSingleton(new ArangoHandle("CurrentSharpMUSHWorld"));

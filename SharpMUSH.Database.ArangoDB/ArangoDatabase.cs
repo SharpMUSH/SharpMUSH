@@ -11,18 +11,14 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
-using SharpMUSH.Library.Services;
 using System.Collections.Immutable;
 using System.Text.RegularExpressions;
 using DotNext.Collections.Generic;
 using DotNext.Threading;
-using FSharpPlus.Control;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Quartz;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Services.Interfaces;
-using AsyncEnumerable = System.Linq.AsyncEnumerable;
 
 namespace SharpMUSH.Database.ArangoDB;
 
