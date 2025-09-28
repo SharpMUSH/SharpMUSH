@@ -11,7 +11,8 @@ public class LambdaUnitTests
 
 	[Test]
 	[Arguments(@"u(#lambda/add\(1\,2\))", "3")]
-	// TODO: 3) is not the correct return value. This should just be: 3
+	// CONSIDER: 3) is not the correct return value. This should just be: 3
+	// However, this is how our parser should handle this. 
 	[Arguments("u(lit(#lambda/add(1,2)))", "3)")] 
 	[Arguments("u(#lambda/[add(1,2)])", "3")]
 	[Arguments("u(#lambda/3)", "3")]
