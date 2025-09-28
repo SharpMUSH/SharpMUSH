@@ -17,16 +17,22 @@
       <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.0-rc.1.25451.107" />
     </ItemGroup>
 
-    <ItemGroup>
-      <Content Update="mushcnf.dst">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </Content>
-    </ItemGroup>
+	<ItemGroup>
+		<Content Update="mushcnf.dst">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<None Update="mushcnf.dst">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
 
-    <ItemGroup>
-      <None Update="mushcnf.dst">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
-    </ItemGroup>
+	<ItemGroup>
+		<Content Update="colors.json">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<None Update="colors.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
 
 </Project>
