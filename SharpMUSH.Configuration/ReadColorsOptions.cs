@@ -25,7 +25,7 @@ public class ReadColorsOptionsFactory(string Name) : IOptionsFactory<ColorsOptio
 			return new ColorsOptions(colorIdentities!);
 
 		}
-		catch(Exception ex)
+		catch
 		{
 			// Should add logging: ex
 			throw;
