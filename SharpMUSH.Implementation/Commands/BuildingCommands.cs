@@ -8,6 +8,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using System.ComponentModel.DataAnnotations;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using Errors = SharpMUSH.Library.Definitions.Errors;
 
@@ -406,12 +407,31 @@ public partial class Commands
 		throw new NotImplementedException();
 	}
 
-	[SharpCommand(Name = "@PARENT", Switches = [], Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 0)]
+	[SharpCommand(Name = "@PARENT", Switches = [], Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 2)]
 	public static async ValueTask<Option<CallState>> Parent(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// REMINDER: Avoid loops.
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		/*  @parent <object>[=<parent>]
+	
+		This command sets the parent of <object> to <parent>. If no <parent> is given, or <parent> is "none", <object>'s parent is cleared. 
+		You must control <object>, and must either control <parent> or it must be set LINK_OK and you must pass its @lock/parent.*/
+
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+				executor, executor, args["0"].Message!.ToPlainText(), LocateFlags.All,
+				async o =>
+				{
+					if(args.Count == 1)
+					{
+						await Mediator!.Send(new UnsetObjectParentCommand(o));
+					}
+
+					// TODO: Ensure there's no parent loop, or would not create a loop.
+
+					return CallState.Empty;
+				}
+			);
 	}
 
 	[SharpCommand(Name = "@UNLINK", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
