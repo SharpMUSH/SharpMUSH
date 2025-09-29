@@ -10,8 +10,7 @@ public record SharpMailCreateRequest(
 	bool Cleared,
 	string Folder,
 	string Content,
-	string Subject
-	);
+	string Subject);
 
 public record SharpMailQueryResult(
 	string Id,

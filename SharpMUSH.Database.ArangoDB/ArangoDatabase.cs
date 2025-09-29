@@ -835,7 +835,7 @@ public partial class ArangoDatabase(
 			Id = x.Id,
 			Name = x.Name,
 			Symbol = x.Symbol,
-			System = x.system,
+			System = x.System,
 			SetPermissions = x.SetPermissions,
 			UnsetPermissions = x.UnsetPermissions,
 			Aliases = x.Aliases,
