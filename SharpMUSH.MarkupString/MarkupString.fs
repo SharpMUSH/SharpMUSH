@@ -848,7 +848,7 @@ type ColumnSpec =
 /// Functions for parsing and handling column specifications for text alignment.
 /// </summary>
 module ColumnSpec =
-    type private WidthPatternRegex = FSharp.Text.RegexProvider.Regex< @"^([<>=_])?(\d+)([\.`'$xX#]*)(?:\((.+)\))?$" >
+    type private WidthPatternRegex = FSharp.Text.RegexProvider.Regex< @"^([<>=_\-])?(\d+)([\.`'$xX#]*)(?:\((.+)\))?$" >
 
     /// <summary>
     /// Parses a column specification string into a ColumnSpec record.
@@ -1067,14 +1067,8 @@ ALIGN()
             else text.Length
 
         let lineText = substring 0 splitPoint text
-        let remainderStart = if rowSepIndex >= 0 && rowSepIndex = splitPoint then splitPoint + 2 else splitPoint
-        let remainder = 
-            if remainderStart < text.Length then 
-                substring remainderStart (text.Length - remainderStart) text 
-            else 
-                empty ()
-
-        (lineText, applyRepeatOption spec text remainder)
+        // In truncate (x) mode we discard the remainder so that only one row is output.
+        (lineText, empty ())
 
     /// <summary>
     /// Extracts one line from a MarkupString based on column width and truncation settings.
@@ -1124,7 +1118,9 @@ ALIGN()
             |> (fun opts -> if spec.Options.HasFlag(ColumnOptions.NoFill) then opts ||| ColumnOptions.NoFill else opts)
             |> (fun opts -> if spec.Options.HasFlag(ColumnOptions.NoColSep) then opts ||| ColumnOptions.NoColSep else opts)
 
-        let newLeftSpec = { leftSpec with Width = leftSpec.Width + spec.Width; Options = newOptions }
+        // Subtract two from the merged width to remove the extra space.
+        let newWidth = leftSpec.Width + spec.Width - 2
+        let newLeftSpec = { leftSpec with Width = newWidth; Options = newOptions }
         columns.[index - 1] <- (newLeftSpec, leftText)
         columns.[index] <- (spec, empty ())
         columns
