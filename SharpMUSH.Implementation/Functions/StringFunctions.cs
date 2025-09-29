@@ -343,9 +343,9 @@ public partial class Functions
 		
 		return TextAligner.align(widths,
 			list,
-			filler: remainder.Skip(1).FirstOrDefault(MModule.single(" ")), 
-			columnSeparator: remainder.Skip(2).FirstOrDefault(MModule.single(" ")), 
-			rowSeparator: remainder.Skip(3).FirstOrDefault(MModule.single(Environment.NewLine)));
+			filler: remainder.Skip(0).FirstOrDefault(MModule.single(" ")), 
+			columnSeparator: remainder.Skip(1).FirstOrDefault(MModule.single(" ")), 
+			rowSeparator: remainder.Skip(2).FirstOrDefault(MModule.single(Environment.NewLine)));
 	}	
 
 	[SharpFunction(Name = "LALIGN", MinArgs = 2, MaxArgs = 6, Flags = FunctionFlags.Regular)]

@@ -1063,26 +1063,56 @@ ALIGN()
 
                 (lineText, finalRemainder)
             else
-                let splitPoint = 
-                    if rowSepIndex >= 0 && rowSepIndex <= spec.Width then
-                        rowSepIndex
-                    else if text.Length > spec.Width then
-                        spec.Width
-                    else
-                        text.Length
+                // Handle text wrapping for normal (non-truncated) columns
+                if rowSepIndex >= 0 && rowSepIndex < spec.Width then
+                    // There's an explicit newline within the column width
+                    let lineText = substring 0 rowSepIndex text
+                    let remainder = 
+                        if rowSepIndex + 2 < text.Length then 
+                            substring (rowSepIndex + 2) (text.Length - rowSepIndex - 2) text 
+                        else 
+                            empty ()
 
-                let lineText = substring 0 splitPoint text
-                let remainderStart = if rowSepIndex >= 0 && rowSepIndex = splitPoint then splitPoint + 2 else splitPoint
-                let remainder = if remainderStart < text.Length then substring remainderStart (text.Length - remainderStart) text else empty ()
+                    let finalRemainder = 
+                        if spec.Options.HasFlag(ColumnOptions.Repeat) && remainder.Length = 0 && text.Length > 0 then
+                            text
+                        else
+                            remainder
 
-                // Handle Repeat option: if remainder is empty but Repeat is set, return original text
-                let finalRemainder = 
-                    if spec.Options.HasFlag(ColumnOptions.Repeat) && remainder.Length = 0 && text.Length > 0 then
-                        text
-                    else
-                        remainder
+                    (lineText, finalRemainder)
+                elif text.Length <= spec.Width then
+                    // Text fits within the column width
+                    let finalRemainder = 
+                        if spec.Options.HasFlag(ColumnOptions.Repeat) && text.Length > 0 then
+                            text
+                        else
+                            empty ()
+                    (text, finalRemainder)
+                else
+                    // Text exceeds column width, need to wrap at word boundary
+                    // Find the last space within or before the column width
+                    let mutable splitPoint = spec.Width
+                    let mutable foundSpace = false
 
-                (lineText, finalRemainder)
+                    for i in (spec.Width) .. -1 .. 0 do
+                        if not foundSpace && i < plainTextStr.Length && plainTextStr.[i] = ' ' then
+                            splitPoint <- i
+                            foundSpace <- true
+
+                    // If no space found, split at column width
+                    if not foundSpace then
+                        splitPoint <- spec.Width
+
+                    let lineText = substring 0 splitPoint text
+                    // Skip the space when extracting the remainder
+                    let remainderStart = if foundSpace && splitPoint < text.Length then splitPoint + 1 else splitPoint
+                    let remainder = 
+                        if remainderStart < text.Length then 
+                            substring remainderStart (text.Length - remainderStart) text 
+                        else 
+                            empty ()
+
+                    (lineText, remainder)
 
     /// <summary>
     /// Processes column merging logic when a column is empty.
