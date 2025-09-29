@@ -318,15 +318,15 @@ public partial class Functions
 		var widths = args["0"].Message!.ToPlainText();
 
 		var expectedColumnCount = widths.Split(' ').Length;
-		var maxAllowedColumnCount = actualColumnArgCount - 3;
+		var minRequiredColumnCount = actualColumnArgCount - 3;
 		
 		switch (expectedColumnCount)
 		{
 			case 0:
 				return "No widths provided.";
-			case var _ when expectedColumnCount > maxAllowedColumnCount:
+			case var _ when expectedColumnCount > actualColumnArgCount:
 				return "Too many widths, not enough columns.";
-			case var _ when expectedColumnCount < actualColumnArgCount:
+			case var _ when expectedColumnCount < minRequiredColumnCount:
 				return "Too few widths, too many columns.";
 		}
 
@@ -336,7 +336,7 @@ public partial class Functions
 			.Select( x => x.Value.Message!);
 		
 		var remainder = args
-			.Skip(1 + expectedColumnCount - actualColumnArgCount).Select(x => x.Value.Message!)
+			.Skip(1 + expectedColumnCount).Select(x => x.Value.Message!)
 			.ToArray();
 
 		var list = FSharpList.Create<MString>(columnArguments.ToArray());

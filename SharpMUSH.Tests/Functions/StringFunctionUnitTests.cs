@@ -56,6 +56,17 @@ public class StringFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);		
 	}
+	
+	
+	[Test]
+	[Arguments("align(30 30,a,b)", "a                              b                             ")]
+	[Arguments("align(>30 30,a,b)", "                             a b                             ")]
+	[Arguments("align(>30 >30,a,b)", "                             a                              b")]
+	public async Task Align(string str, string expectedText)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);		
+	}
 
 	[Test]
 	[Arguments("ansi(R,red)", "red", (byte)41, null)]
@@ -89,6 +100,4 @@ public class StringFunctionUnitTests
 				.IsEqualTo(bt.Second);
 		}
 	}
-	
-	
 }
