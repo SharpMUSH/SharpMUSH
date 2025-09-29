@@ -907,10 +907,22 @@ module TextAligner =
     /// <summary>
     /// Determines if there is more text to process in any column.
     /// </summary>
-    /// <param name="column">The sequence of column specs and MarkupStrings.</param>
-    let moreToDo (column: (ColumnSpec * MarkupString) seq) : bool =
-        column |> Seq.exists (fun (_, y) -> y.Length > 0)
+    /// <param name="columns">The sequence of column specs and MarkupStrings.</param>
+    let moreToDo (columns: (ColumnSpec * MarkupString) seq) : bool =
+        columns |> Seq.exists (fun (_, y) -> y.Length > 0)
 
+    let doLine
+        (columns: (ColumnSpec * MarkupString) seq)
+        (filler: MarkupString)
+        (columnSeparator: MarkupString option)
+        (rowSeparator: MarkupString)
+        : (ColumnSpec * MarkupString) seq * MarkupString =
+        // return the remainder after usage
+        let a = columns |> Seq.map (fun (spec,str) ->
+            (spec,substring 0 spec.Width str)) 
+        let b = single "" // Return the next 'line'
+        (a,b)
+    
     /// <summary>
     /// Recursively aligns columns of MarkupStrings according to their specifications.
     /// </summary>
@@ -930,13 +942,16 @@ module TextAligner =
         if not (moreToDo columns) then
             multipleWithDelimiter rowSeparator agg
         else
-            let newLine =
-                ((single " "), columns)
-                ||> Seq.fold (fun acc (_, y) -> concat acc y columnSeparator)
+            let remainder, newText = doLine columns filler columnSeparator rowSeparator 
+            //
+            // let newLine =
+            //    ((single " "), columns)
+            //    ||> Seq.fold (fun acc (_, y) -> concat acc y columnSeparator)
+            //
             // TODO: Need to consume from the Columns
             // TODO: Implement actual logic.
             // Right now this is an infinite recursion loop.
-            alignFun columns filler columnSeparator rowSeparator (Seq.append agg [| newLine |])
+            alignFun remainder filler columnSeparator rowSeparator (Seq.append agg [| newText |])
 
     /// <summary>
     /// Aligns a list of MarkupStrings into columns according to a width specification.
