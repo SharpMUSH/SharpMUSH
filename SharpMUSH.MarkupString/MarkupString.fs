@@ -823,10 +823,21 @@ type Justification =
     | Full
     | Paragraph
 
+[<Flags>]
+type ColumnOptions =
+    | Default = 0
+    | Repeat = 1
+    | MergeToLeft = 2
+    | MergeToRight = 4
+    | NoFill = 8
+    | Truncate = 16
+    | TruncateV2 = 32
+    | NoColSep = 64
+    
 type ColumnSpec =
     { Width: int
       Justification: Justification
-      Options: string
+      Options: ColumnOptions
       // TODO: Turn string into Markup
       Ansi: string }
 
@@ -849,7 +860,9 @@ module ColumnSpec =
             raise (ArgumentException $"Invalid column specification: %s{spec}")
 
         let justification =
-            if matchResult.Groups[1].Success then
+            if not matchResult.Groups[1].Success then
+                Justification.Left
+            else
                 match matchResult.Groups[1].Value with
                 | "<" -> Justification.Left
                 | "=" -> Justification.Paragraph
@@ -857,22 +870,37 @@ module ColumnSpec =
                 | "_" -> Justification.Full
                 | "-" -> Justification.Center
                 | _ -> Justification.Left
-            else
-                Justification.Left
-
-        let width = int matchResult.Groups[2].Value
 
         let options =
-            if matchResult.Groups[3].Success then
-                matchResult.Groups[3].Value
+            if not matchResult.Groups[3].Success then
+                ColumnOptions.Default
             else
-                String.Empty
+                let optionStr = matchResult.Groups[3].Value
+                optionStr |> Seq.fold (fun result c ->
+                    let flag = 
+                        match c with
+                        | '.' -> ColumnOptions.Repeat
+                        | '`' -> ColumnOptions.MergeToLeft
+                        | '\'' -> ColumnOptions.MergeToRight
+                        | '$' -> ColumnOptions.NoFill
+                        | 'x' -> ColumnOptions.Truncate
+                        | 'X' -> ColumnOptions.TruncateV2
+                        | '#' -> ColumnOptions.NoColSep
+                        | _ -> ColumnOptions.Default
+                    
+                    if flag <> ColumnOptions.Default then
+                        result ||| flag
+                    else
+                        result
+                ) ColumnOptions.Default
+        
+        let width = int matchResult.Groups[2].Value
 
         let ansi =
-            if matchResult.Groups[5].Success then
-                matchResult.Groups[5].Value
-            else
+            if not matchResult.Groups[5].Success then
                 String.Empty
+            else
+                matchResult.Groups[5].Value
 
         { Width = width
           Justification = justification
@@ -889,6 +917,82 @@ module ColumnSpec =
 /// Provides functions for aligning and justifying text using MarkupString.
 /// </summary>
 module TextAligner =
+
+(*
+ALIGN()
+  align(<widths>, <col>[, ... , <colN>[, <filler>[, <colsep>[, <rowsep>]]]])
+  lalign(<widths>, <colList>[, <delim>[, <filler>[, <colsep>[, <rowsep>]]]])
+
+  Creates columns of text, each column designated by <col> arguments. Each <col> is individually wrapped inside its own column, allowing for easy creation of book pages, newsletters, or the like. In lalign(), <colList> is a <delim>-separated list of the columns.
+
+  <widths> is a space-separated list of column widths. '10 10 10' for the widths argument specifies that there are 3 columns, each 10 spaces wide. You can alter the behavior of a column in multiple ways. (Check 'help align2' for more details)
+
+  <filler> is a single character that, if given, is the character used to fill empty columns and remaining spaces. <colsep>, if given, is inserted between every column, on every row. <rowsep>, if given, is inserted between every line. By default, <filler> and <colsep> are a space, and <rowsep> is a newline.
+
+  You can modify column behavior within align(). The basic format is:
+
+  [justification]Width[options][(ansi)]
+
+  Justification: Placing one of these characters before the width alters the spacing for this column (e.g: <30). Defaults to < (left-justify).
+    < Left-justify       - Center-justify        > Right-justify
+    _ Full-justify       = Paragraph-justify
+
+  Other options: Adding these after the width will alter the column's behaviour in some situtations
+    . Repeat for as long as there is non-repeating text in another column.
+    ` When this column runs out of text, merge with the column to the left
+    ' When this column runs out of text, merge with the column to the right
+    $ nofill: Don't use filler after the text. If this is combined with merge-left, the column to its left inherits the 'nofill' when merged.
+    x Truncate each (%r-separated) row instead of wrapping at the colwidth
+    X Truncate the entire column at the end of the first row instead of wrapping
+    # Don't add a <colsep> after this column. If combined with merge-left, the column to its left inherits this when merged.
+
+  Ansi: Place ansi characters (as defined in 'help ansi()') within ()s to define a column's ansi markup.
+
+  Examples:
+
+    > &line me=align(<3 10 20$,([ljust(get(%0/sex),1,,1)]), name(%0),name(loc(%0)))
+    > th iter(lwho(),u(line,##),%b,%r)
+      (M) Walker     Tree
+      (M) Ashen-Shug Apartment 306
+          ar
+      (F) Jane Doe   Nowhere
+
+    > &line me=align(<3 10X 20X$,([ljust(get(%0/sex),1,,1)]), name(%0),name(loc(%0)))
+    > th iter(lwho(),u(line,##),%b,%r)
+      (M) Walker     Tree
+      (M) Ashen-Shug Apartment 306
+      (F) Jane Doe   Nowhere
+
+    > &haiku me = Alignment function,%rIt justifies your writing,%rBut the words still suck.%rLuke
+
+    > th [align(5 -40 5,,[repeat(-,40)]%r[u(haiku)]%r[repeat(-,40)],,%b,+)]
+
+         +----------------------------------------+
+         +          Alignment function,           +
+         +       It justifies your writing,       +
+         +       But the words still suck.        +
+         +                  Luke                  +
+         +----------------------------------------+
+
+  > &dropcap me=%b_______%r|__%b%b%b__|%r%b%b%b|%b|%r%b%b%b|_|
+  > &story me=%r'was the night before Christmas, when all through the house%rNot a creature was stirring, not even a mouse.%rThe stockings were hung by the chimney with care,%rIn hopes that St Nicholas soon would be there.
+  > th align(9'(ch) 68, u(dropcap), u(story))
+
+   _______
+  |__   __| 'was the night before Christmas, when all through the house
+     | |    Not a creature was stirring, not even a mouse.
+     |_|    The stockings were hung by the chimney with care,
+  In hopes that St Nicholas soon would be there.
+
+  The dropcap 'T' will be in ANSI cyan-highlight, and merges with the 'story'
+  column.
+
+  > th align(>15 60,Walker,Staff & Developer,x,x)
+  xxxxxxxxxWalkerxStaff & Developerxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  > th align(>15 60$,Walker,Staff & Developer,x,x)
+  xxxxxxxxxWalkerxStaff & Developer
+    *)
+    
     /// <summary>
     /// Justifies a MarkupString according to the specified justification and width.
     /// </summary>
@@ -905,6 +1009,17 @@ module TextAligner =
         | Justification.Paragraph -> pad text fill width PadType.Left TruncationType.Truncate
 
     /// <summary>
+    /// Justifies a column and returns the spec & string to output.
+    /// TODO: Should also return how much text length has been taken / remains.
+    /// </summary>
+    /// <param name="filler">Filler to be used when justifying</param>
+    let justifyColumn
+        ((spec, str): ColumnSpec * MarkupString)
+        (filler: MarkupString)
+        : ColumnSpec * MarkupString =
+        (spec, justify spec.Justification str spec.Width filler)
+
+    /// <summary>
     /// Determines if there is more text to process in any column.
     /// </summary>
     /// <param name="columns">The sequence of column specs and MarkupStrings.</param>
@@ -914,15 +1029,16 @@ module TextAligner =
     let doLine
         (columns: (ColumnSpec * MarkupString) seq)
         (filler: MarkupString)
-        (columnSeparator: MarkupString option)
-        (rowSeparator: MarkupString)
+        (columnSeparator: MarkupString)
         : (ColumnSpec * MarkupString) seq * MarkupString =
+        // Start by seeing if the Column Spec needs altering due to a Merge.
+        
+
         // return the remainder after usage
-        let a = columns |> Seq.map (fun (spec,str) ->
-            (spec,substring 0 spec.Width str)) 
-        let b = single "" // Return the next 'line'
-        (a,b)
-    
+        let a = columns |> Seq.map (fun x -> justifyColumn x filler)
+        let b = multipleWithDelimiter columnSeparator [||] // Return the next 'line'
+        (columns, b)
+
     /// <summary>
     /// Recursively aligns columns of MarkupStrings according to their specifications.
     /// </summary>
@@ -934,7 +1050,7 @@ module TextAligner =
     let rec alignFun
         (columns: (ColumnSpec * MarkupString) seq)
         (filler: MarkupString)
-        (columnSeparator: MarkupString option)
+        (columnSeparator: MarkupString)
         (rowSeparator: MarkupString)
         (agg: MarkupString seq)
         : MarkupString =
@@ -942,7 +1058,7 @@ module TextAligner =
         if not (moreToDo columns) then
             multipleWithDelimiter rowSeparator agg
         else
-            let remainder, newText = doLine columns filler columnSeparator rowSeparator 
+            let remainder, newText = doLine columns filler columnSeparator
             //
             // let newLine =
             //    ((single " "), columns)
@@ -980,4 +1096,4 @@ module TextAligner =
         elif rowSeparator.Length > 0 then
             single "rowSeparator is too long."
         else
-            alignFun (Seq.zip columnSpecs columns) filler (Some columnSeparator) rowSeparator [||]
+            alignFun (Seq.zip columnSpecs columns) filler columnSeparator rowSeparator [||]
