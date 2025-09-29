@@ -918,7 +918,6 @@ module ColumnSpec =
 /// Provides functions for aligning and justifying text using MarkupString.
 /// </summary>
 module TextAligner =
-
 (*
 ALIGN()
   align(<widths>, <col>[, ... , <colN>[, <filler>[, <colsep>[, <rowsep>]]]])
@@ -994,186 +993,210 @@ ALIGN()
   xxxxxxxxxWalkerxStaff & Developer
     *)
     
-    /// <summary>
-    /// Justifies a MarkupString according to the specified justification and width.
-    /// </summary>
-    /// <param name="justification">The justification type.</param>
-    /// <param name="text">The MarkupString to justify.</param>
-    /// <param name="width">The width to justify to.</param>
-    /// <param name="fill">The fill MarkupString.</param>
-    let justify (justification: Justification) (text: MarkupString) (width: int) (fill: MarkupString) : MarkupString =
-        match justification with
-        | Justification.Left -> pad text fill width PadType.Right TruncationType.Truncate
-        | Justification.Center -> pad text fill width PadType.Center TruncationType.Truncate
-        | Justification.Full -> pad text fill width PadType.Full TruncationType.Truncate
-        | Justification.Right
-        | Justification.Paragraph -> pad text fill width PadType.Left TruncationType.Truncate
+    type private ColumnState = ColumnSpec * MarkupString
+    type private LineResult = ColumnSpec * MarkupString * MarkupString
 
     /// <summary>
-    /// Justifies a column and returns the spec & string to output.
-    /// TODO: Should also return how much text length has been taken / remains.
+    /// Finds the best word-wrap point in text within the specified width.
+    /// Returns the split position and whether a space was found.
     /// </summary>
-    /// <param name="filler">Filler to be used when justifying</param>
-    let justifyColumn
-        ((spec, str): ColumnSpec * MarkupString)
-        (filler: MarkupString)
-        : ColumnSpec * MarkupString =
-        (spec, justify spec.Justification str spec.Width filler)
+    let private findWrapPoint (text: string) (width: int) : int * bool =
+        let mutable splitPoint = width
+        let mutable foundSpace = false
+
+        for i in width .. -1 .. 0 do
+            if not foundSpace && i < text.Length && text.[i] = ' ' then
+                splitPoint <- i
+                foundSpace <- true
+
+        (splitPoint, foundSpace)
 
     /// <summary>
-    /// Determines if there is more text to process in any column.
+    /// Handles extraction with Repeat option logic.
     /// </summary>
-    /// <param name="columns">The sequence of column specs and MarkupStrings.</param>
-    let moreToDo (columns: (ColumnSpec * MarkupString) seq) : bool =
-        columns 
-        |> Seq.exists (fun (spec, text) -> 
-            text.Length > 0 && not (spec.Options.HasFlag(ColumnOptions.Repeat)))
+    let private applyRepeatOption (spec: ColumnSpec) (text: MarkupString) (remainder: MarkupString) : MarkupString =
+        if spec.Options.HasFlag(ColumnOptions.Repeat) && remainder.Length = 0 && text.Length > 0 then
+            text
+        else
+            remainder
+
+    /// <summary>
+    /// Extracts a line when text has an explicit newline.
+    /// </summary>
+    let private extractLineWithNewline (spec: ColumnSpec) (text: MarkupString) (rowSepIndex: int) : MarkupString * MarkupString =
+        let lineText = substring 0 rowSepIndex text
+        let remainder = 
+            if rowSepIndex + 2 < text.Length then 
+                substring (rowSepIndex + 2) (text.Length - rowSepIndex - 2) text 
+            else 
+                empty ()
+
+        (lineText, applyRepeatOption spec text remainder)
+
+    /// <summary>
+    /// Extracts a line when text fits within column width.
+    /// </summary>
+    let private extractLineFitting (spec: ColumnSpec) (text: MarkupString) : MarkupString * MarkupString =
+        let remainder = if spec.Options.HasFlag(ColumnOptions.Repeat) then text else empty ()
+        (text, remainder)
+
+    /// <summary>
+    /// Extracts a line when text needs word wrapping.
+    /// </summary>
+    let private extractLineWithWrap (spec: ColumnSpec) (text: MarkupString) (plainText: string) : MarkupString * MarkupString =
+        let splitPoint, foundSpace = findWrapPoint plainText spec.Width
+        let splitPoint = if not foundSpace then spec.Width else splitPoint
+
+        let lineText = substring 0 splitPoint text
+        let remainderStart = if foundSpace && splitPoint < text.Length then splitPoint + 1 else splitPoint
+        let remainder = 
+            if remainderStart < text.Length then 
+                substring remainderStart (text.Length - remainderStart) text 
+            else 
+                empty ()
+
+        (lineText, applyRepeatOption spec text remainder)
+
+    /// <summary>
+    /// Extracts a line for truncation mode.
+    /// </summary>
+    let private extractLineTruncated (spec: ColumnSpec) (text: MarkupString) (plainText: string) (rowSepIndex: int) : MarkupString * MarkupString =
+        let splitPoint = 
+            if rowSepIndex >= 0 && rowSepIndex < spec.Width then rowSepIndex
+            elif text.Length > spec.Width then spec.Width
+            else text.Length
+
+        let lineText = substring 0 splitPoint text
+        let remainderStart = if rowSepIndex >= 0 && rowSepIndex = splitPoint then splitPoint + 2 else splitPoint
+        let remainder = 
+            if remainderStart < text.Length then 
+                substring remainderStart (text.Length - remainderStart) text 
+            else 
+                empty ()
+
+        (lineText, applyRepeatOption spec text remainder)
 
     /// <summary>
     /// Extracts one line from a MarkupString based on column width and truncation settings.
     /// Returns (extracted line, remainder).
     /// </summary>
     let extractLine (spec: ColumnSpec) (text: MarkupString) : MarkupString * MarkupString =
-        if text.Length = 0 then
-            (empty (), empty ())
-        elif spec.Options.HasFlag(ColumnOptions.TruncateV2) then
-            (text, empty ())
-        else
+        match text.Length, spec.Options.HasFlag(ColumnOptions.TruncateV2) with
+        | 0, _ -> (empty (), empty ())
+        | _, true -> (text, empty ())
+        | _ ->
             let plainTextStr = plainText text
             let rowSepIndex = plainTextStr.IndexOf(Environment.NewLine)
 
             if spec.Options.HasFlag(ColumnOptions.Truncate) then
-                let splitPoint = 
-                    if rowSepIndex >= 0 && rowSepIndex < spec.Width then
-                        rowSepIndex
-                    else if text.Length > spec.Width then
-                        spec.Width
-                    else
-                        text.Length
-
-                let lineText = substring 0 splitPoint text
-                let remainderStart = if rowSepIndex >= 0 && rowSepIndex = splitPoint then splitPoint + 2 else splitPoint
-                let remainder = if remainderStart < text.Length then substring remainderStart (text.Length - remainderStart) text else empty ()
-
-                // Handle Repeat option: if remainder is empty but Repeat is set, return original text
-                let finalRemainder = 
-                    if spec.Options.HasFlag(ColumnOptions.Repeat) && remainder.Length = 0 && text.Length > 0 then
-                        text
-                    else
-                        remainder
-
-                (lineText, finalRemainder)
+                extractLineTruncated spec text plainTextStr rowSepIndex
+            elif rowSepIndex >= 0 && rowSepIndex < spec.Width then
+                extractLineWithNewline spec text rowSepIndex
+            elif text.Length <= spec.Width then
+                extractLineFitting spec text
             else
-                // Handle text wrapping for normal (non-truncated) columns
-                if rowSepIndex >= 0 && rowSepIndex < spec.Width then
-                    // There's an explicit newline within the column width
-                    let lineText = substring 0 rowSepIndex text
-                    let remainder = 
-                        if rowSepIndex + 2 < text.Length then 
-                            substring (rowSepIndex + 2) (text.Length - rowSepIndex - 2) text 
-                        else 
-                            empty ()
+                extractLineWithWrap spec text plainTextStr
 
-                    let finalRemainder = 
-                        if spec.Options.HasFlag(ColumnOptions.Repeat) && remainder.Length = 0 && text.Length > 0 then
-                            text
-                        else
-                            remainder
+    // ===== Column Justification =====
 
-                    (lineText, finalRemainder)
-                elif text.Length <= spec.Width then
-                    // Text fits within the column width
-                    let finalRemainder = 
-                        if spec.Options.HasFlag(ColumnOptions.Repeat) && text.Length > 0 then
-                            text
-                        else
-                            empty ()
-                    (text, finalRemainder)
-                else
-                    // Text exceeds column width, need to wrap at word boundary
-                    // Find the last space within or before the column width
-                    let mutable splitPoint = spec.Width
-                    let mutable foundSpace = false
+    /// <summary>
+    /// Justifies a MarkupString according to the specified justification and width.
+    /// </summary>
+    let justify (justification: Justification) (text: MarkupString) (width: int) (fill: MarkupString) : MarkupString =
+        let padType = 
+            match justification with
+            | Justification.Left -> PadType.Right
+            | Justification.Center -> PadType.Center
+            | Justification.Full -> PadType.Full
+            | Justification.Right | Justification.Paragraph -> PadType.Left
 
-                    for i in (spec.Width) .. -1 .. 0 do
-                        if not foundSpace && i < plainTextStr.Length && plainTextStr.[i] = ' ' then
-                            splitPoint <- i
-                            foundSpace <- true
+        pad text fill width padType TruncationType.Truncate
 
-                    // If no space found, split at column width
-                    if not foundSpace then
-                        splitPoint <- spec.Width
+    // ===== Column Merging =====
 
-                    let lineText = substring 0 splitPoint text
-                    // Skip the space when extracting the remainder
-                    let remainderStart = if foundSpace && splitPoint < text.Length then splitPoint + 1 else splitPoint
-                    let remainder = 
-                        if remainderStart < text.Length then 
-                            substring remainderStart (text.Length - remainderStart) text 
-                        else 
-                            empty ()
+    /// <summary>
+    /// Merges a column to the left, inheriting options.
+    /// </summary>
+    let private mergeColumnLeft (columns: ColumnState array) (index: int) (spec: ColumnSpec) : ColumnState array =
+        let leftSpec, leftText = columns.[index - 1]
+        let newOptions = 
+            leftSpec.Options
+            |> (fun opts -> if spec.Options.HasFlag(ColumnOptions.NoFill) then opts ||| ColumnOptions.NoFill else opts)
+            |> (fun opts -> if spec.Options.HasFlag(ColumnOptions.NoColSep) then opts ||| ColumnOptions.NoColSep else opts)
 
-                    // Handle Repeat option: if remainder is empty but Repeat is set, return original text
-                    let finalRemainder = 
-                        if spec.Options.HasFlag(ColumnOptions.Repeat) && remainder.Length = 0 && text.Length > 0 then
-                            text
-                        else
-                            remainder
+        let newLeftSpec = { leftSpec with Width = leftSpec.Width + spec.Width; Options = newOptions }
+        columns.[index - 1] <- (newLeftSpec, leftText)
+        columns.[index] <- (spec, empty ())
+        columns
 
-                    (lineText, finalRemainder)
+    /// <summary>
+    /// Merges a column to the right.
+    /// </summary>
+    let private mergeColumnRight (columns: ColumnState array) (index: int) (spec: ColumnSpec) : ColumnState array =
+        let rightSpec, rightText = columns.[index + 1]
+        let newRightSpec = { rightSpec with Width = rightSpec.Width + spec.Width }
+        columns.[index + 1] <- (newRightSpec, rightText)
+        columns.[index] <- (spec, empty ())
+        columns
 
     /// <summary>
     /// Processes column merging logic when a column is empty.
     /// </summary>
-    let handleMerging 
-        (columns: (ColumnSpec * MarkupString) array) 
-        (index: int) 
-        : (ColumnSpec * MarkupString) array =
-
+    let private handleMerging (columns: ColumnState array) (index: int) : ColumnState array =
         let spec, text = columns.[index]
 
-        if text.Length > 0 then
-            columns
-        elif spec.Options.HasFlag(ColumnOptions.MergeToLeft) && index > 0 then
-            // Merge this column's width to the left
-            let leftSpec, leftText = columns.[index - 1]
-            let newLeftSpec = 
-                { leftSpec with 
-                    Width = leftSpec.Width + spec.Width
-                    Options = 
-                        (if spec.Options.HasFlag(ColumnOptions.NoFill) then 
-                            leftSpec.Options ||| ColumnOptions.NoFill 
-                         else leftSpec.Options) |||
-                        (if spec.Options.HasFlag(ColumnOptions.NoColSep) then
-                            ColumnOptions.NoColSep
-                         else ColumnOptions.Default) }
-            columns.[index - 1] <- (newLeftSpec, leftText)
-            columns.[index] <- (spec, empty ())
-            columns
-        elif spec.Options.HasFlag(ColumnOptions.MergeToRight) && index < columns.Length - 1 then
-            // Merge this column's width to the right
-            let rightSpec, rightText = columns.[index + 1]
-            let newRightSpec = 
-                { rightSpec with 
-                    Width = rightSpec.Width + spec.Width }
-            columns.[index + 1] <- (newRightSpec, rightText)
-            columns.[index] <- (spec, empty ())
-            columns
-        else
-            columns
+        match text.Length, spec.Options with
+        | 0, opts when opts.HasFlag(ColumnOptions.MergeToLeft) && index > 0 -> 
+            mergeColumnLeft columns index spec
+        | 0, opts when opts.HasFlag(ColumnOptions.MergeToRight) && index < columns.Length - 1 -> 
+            mergeColumnRight columns index spec
+        | _ -> columns
 
-    let doLine
-        (columns: (ColumnSpec * MarkupString) seq)
-        (filler: MarkupString)
-        (columnSeparator: MarkupString)
-        : (ColumnSpec * MarkupString) seq * MarkupString =
+    // ===== Line Processing =====
+
+    /// <summary>
+    /// Determines if there is more text to process in any column.
+    /// </summary>
+    let private moreToDo (columns: ColumnState seq) : bool =
+        columns 
+        |> Seq.exists (fun (spec, text) -> 
+            text.Length > 0 && not (spec.Options.HasFlag(ColumnOptions.Repeat)))
+
+    /// <summary>
+    /// Justifies a single column line with proper handling of NoFill option.
+    /// </summary>
+    let private justifyColumnLine (spec: ColumnSpec) (line: MarkupString) (filler: MarkupString) : MarkupString =
+        if line.Length = 0 && spec.Options.HasFlag(ColumnOptions.NoFill) then
+            line
+        else
+            justify spec.Justification line spec.Width filler
+
+    /// <summary>
+    /// Builds output parts array with column separators.
+    /// </summary>
+    let private buildOutputParts (lineResults: LineResult array) (columnSeparator: MarkupString) (filler: MarkupString) : MarkupString array =
+        lineResults
+        |> Array.mapi (fun i (spec, _, line) ->
+            let justifiedLine = justifyColumnLine spec line filler
+            let needsSeparator = 
+                i < lineResults.Length - 1 && 
+                not (spec.Options.HasFlag(ColumnOptions.NoColSep))
+
+            if needsSeparator then [| justifiedLine; columnSeparator |]
+            else [| justifiedLine |])
+        |> Array.concat
+
+    /// <summary>
+    /// Processes one line across all columns, returning remainders and the formatted line.
+    /// </summary>
+    let private doLine (columns: ColumnState seq) (filler: MarkupString) (columnSeparator: MarkupString) 
+        : ColumnState seq * MarkupString =
 
         let columnsArray = columns |> Seq.toArray
 
         // Handle merging for empty columns
         let mergedColumns = 
-            columnsArray 
-            |> Array.mapi (fun i _ -> i)
+            [| 0 .. columnsArray.Length - 1 |]
             |> Array.fold handleMerging columnsArray
 
         // Extract one line from each column
@@ -1183,78 +1206,57 @@ ALIGN()
                 let line, remainder = extractLine spec text
                 (spec, remainder, line))
 
-        // Build the output line with justification
-        let outputParts = 
-            lineResults
-            |> Array.mapi (fun i (spec, _, line) ->
-                let justifiedLine = 
-                    if line.Length = 0 && spec.Options.HasFlag(ColumnOptions.NoFill) then
-                        line
-                    else
-                        justify spec.Justification line spec.Width filler
-
-                let needsSeparator = 
-                    i < lineResults.Length - 1 && 
-                    not (spec.Options.HasFlag(ColumnOptions.NoColSep))
-
-                if needsSeparator then
-                    [| justifiedLine; columnSeparator |]
-                else
-                    [| justifiedLine |])
-            |> Array.concat
-
+        // Build output line with justification and separators
+        let outputParts = buildOutputParts lineResults columnSeparator filler
         let outputLine = multiple outputParts
         let remainders = lineResults |> Array.map (fun (spec, rem, _) -> (spec, rem))
 
         (remainders, outputLine)
 
+    // ===== Main Alignment Function =====
+
     /// <summary>
-    /// Recursively aligns columns of MarkupStrings according to their specifications.
+    /// Recursively processes columns until no more text remains.
     /// </summary>
-    /// <param name="columns">The sequence of column specs and MarkupStrings.</param>
-    /// <param name="filler">The filler MarkupString.</param>
-    /// <param name="columnSeparator">The column separator MarkupString option.</param>
-    /// <param name="rowSeparator">The row separator MarkupString.</param>
-    /// <param name="agg">The sequence of aggregated MarkupStrings.</param>
-    let rec alignFun
-        (columns: (ColumnSpec * MarkupString) seq)
-        (filler: MarkupString)
-        (columnSeparator: MarkupString)
-        (rowSeparator: MarkupString)
-        (agg: MarkupString seq)
-        : MarkupString =
+    let rec private alignLoop (columns: ColumnState seq) (filler: MarkupString) (columnSeparator: MarkupString)
+        (rowSeparator: MarkupString) (accumulator: MarkupString list) : MarkupString =
 
         if not (moreToDo columns) then
-            multipleWithDelimiter rowSeparator agg
+            accumulator 
+            |> List.rev 
+            |> Seq.ofList
+            |> multipleWithDelimiter rowSeparator
         else
-            let remainder, newText = doLine columns filler columnSeparator
-            alignFun remainder filler columnSeparator rowSeparator (Seq.append agg [| newText |])
+            let remainder, newLine = doLine columns filler columnSeparator
+            alignLoop remainder filler columnSeparator rowSeparator (newLine :: accumulator)
+
+    /// <summary>
+    /// Validates alignment parameters.
+    /// </summary>
+    let private validateParameters (columnSpecs: ColumnSpec list) (columns: MarkupString list) 
+        (filler: MarkupString) (columnSeparator: MarkupString) (rowSeparator: MarkupString) : Result<unit, string> =
+
+        if columnSpecs.Length <> columns.Length then
+            Error "Column count mismatch"
+        elif filler.Length > 1 then
+            Error "Filler is too long"
+        elif columnSeparator.Length < 0 then
+            Error "Column separator is invalid"
+        elif rowSeparator.Length < 0 then
+            Error "Row separator is invalid"
+        else
+            Ok ()
 
     /// <summary>
     /// Aligns a list of MarkupStrings into columns according to a width specification.
     /// </summary>
-    /// <param name="widths">Column width specification string.</param>
-    /// <param name="columns">List of MarkupStrings to align.</param>
-    /// <param name="filler">Filler MarkupString.</param>
-    /// <param name="columnSeparator">Column separator MarkupString.</param>
-    /// <param name="rowSeparator">Row separator MarkupString.</param>
-    let align
-        (widths: string)
-        (columns: MarkupString list)
-        (filler: MarkupString)
-        (columnSeparator: MarkupString)
-        (rowSeparator: MarkupString)
-        : MarkupString =
+    let align (widths: string) (columns: MarkupString list) (filler: MarkupString) 
+        (columnSeparator: MarkupString) (rowSeparator: MarkupString) : MarkupString =
 
         let columnSpecs = ColumnSpec.parseList widths
 
-        if columnSpecs.Length <> columns.Length then
-            empty () // TODO: Return a better error.
-        elif filler.Length > 1 then
-            single "Filler is too long."
-        elif columnSeparator.Length < 0 then
-            single "columnSeparator is invalid."
-        elif rowSeparator.Length < 0 then
-            single "rowSeparator is invalid."
-        else
-            alignFun (Seq.zip columnSpecs columns) filler columnSeparator rowSeparator [||]
+        match validateParameters columnSpecs columns filler columnSeparator rowSeparator with
+        | Error msg -> single msg
+        | Ok () ->
+            Seq.zip columnSpecs columns
+            |> fun cols -> alignLoop cols filler columnSeparator rowSeparator []
