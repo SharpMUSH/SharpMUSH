@@ -1053,7 +1053,15 @@ ALIGN()
                 let lineText = substring 0 splitPoint text
                 let remainderStart = if rowSepIndex >= 0 && rowSepIndex = splitPoint then splitPoint + 2 else splitPoint
                 let remainder = if remainderStart < text.Length then substring remainderStart (text.Length - remainderStart) text else empty ()
-                (lineText, remainder)
+
+                // Handle Repeat option: if remainder is empty but Repeat is set, return original text
+                let finalRemainder = 
+                    if spec.Options.HasFlag(ColumnOptions.Repeat) && remainder.Length = 0 && text.Length > 0 then
+                        text
+                    else
+                        remainder
+
+                (lineText, finalRemainder)
             else
                 let splitPoint = 
                     if rowSepIndex >= 0 && rowSepIndex <= spec.Width then
@@ -1066,7 +1074,15 @@ ALIGN()
                 let lineText = substring 0 splitPoint text
                 let remainderStart = if rowSepIndex >= 0 && rowSepIndex = splitPoint then splitPoint + 2 else splitPoint
                 let remainder = if remainderStart < text.Length then substring remainderStart (text.Length - remainderStart) text else empty ()
-                (lineText, remainder)
+
+                // Handle Repeat option: if remainder is empty but Repeat is set, return original text
+                let finalRemainder = 
+                    if spec.Options.HasFlag(ColumnOptions.Repeat) && remainder.Length = 0 && text.Length > 0 then
+                        text
+                    else
+                        remainder
+
+                (lineText, finalRemainder)
 
     /// <summary>
     /// Processes column merging logic when a column is empty.
