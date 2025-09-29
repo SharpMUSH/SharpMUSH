@@ -1082,12 +1082,13 @@ ALIGN()
             let plainTextStr = plainText text
             let rowSepIndex = plainTextStr.IndexOf(Environment.NewLine)
 
+            // If Truncate flag is set, always use the truncate branch to output a single row.
             if spec.Options.HasFlag(ColumnOptions.Truncate) then
                 extractLineTruncated spec text plainTextStr rowSepIndex
-            elif rowSepIndex >= 0 && rowSepIndex < spec.Width then
-                extractLineWithNewline spec text rowSepIndex
             elif text.Length <= spec.Width then
                 extractLineFitting spec text
+            elif rowSepIndex >= 0 && rowSepIndex < spec.Width then
+                extractLineWithNewline spec text rowSepIndex
             else
                 extractLineWithWrap spec text plainTextStr
 
@@ -1130,7 +1131,8 @@ ALIGN()
     /// </summary>
     let private mergeColumnRight (columns: ColumnState array) (index: int) (spec: ColumnSpec) : ColumnState array =
         let rightSpec, rightText = columns.[index + 1]
-        let newRightSpec = { rightSpec with Width = rightSpec.Width + spec.Width }
+        // Add an extra space to the merged width so that the gap is as expected.
+        let newRightSpec = { rightSpec with Width = rightSpec.Width + spec.Width + 1 }
         columns.[index + 1] <- (newRightSpec, rightText)
         columns.[index] <- (spec, empty ())
         columns
@@ -1160,9 +1162,10 @@ ALIGN()
 
     /// <summary>
     /// Justifies a single column line with proper handling of NoFill option.
+    /// If NoFill is set, the text is not padded beyond its natural length.
     /// </summary>
     let private justifyColumnLine (spec: ColumnSpec) (line: MarkupString) (filler: MarkupString) : MarkupString =
-        if line.Length = 0 && spec.Options.HasFlag(ColumnOptions.NoFill) then
+        if spec.Options.HasFlag(ColumnOptions.NoFill) then
             line
         else
             justify spec.Justification line spec.Width filler
@@ -1174,11 +1177,23 @@ ALIGN()
         lineResults
         |> Array.mapi (fun i (spec, _, line) ->
             let justifiedLine = justifyColumnLine spec line filler
+            // For columns after the first, if the previous column had the MergeToRight flag,
+            // prepend extra padding (equal to its specified width) to the separator.
+            let separatorWithExtra =
+                if i > 0 then
+                    let prevSpec = (lineResults.[i-1] |> fun (s,_,_) -> s)
+                    if prevSpec.Options.HasFlag(ColumnOptions.MergeToRight) then
+                        let extraPadding = single (String.replicate prevSpec.Width " ")
+                        concat extraPadding columnSeparator None
+                    else
+                        columnSeparator
+                else
+                    columnSeparator
             let needsSeparator = 
                 i < lineResults.Length - 1 && 
                 not (spec.Options.HasFlag(ColumnOptions.NoColSep))
 
-            if needsSeparator then [| justifiedLine; columnSeparator |]
+            if needsSeparator then [| justifiedLine; separatorWithExtra |]
             else [| justifiedLine |])
         |> Array.concat
 
@@ -1202,10 +1217,16 @@ ALIGN()
                 let line, remainder = extractLine spec text
                 (spec, remainder, line))
 
+        // Filter out merged (empty) columns that have MergeToLeft or MergeToRight flags
+        let filteredLineResults = 
+            lineResults 
+            |> Array.filter (fun (spec, _, line) -> 
+                not (line.Length = 0 && (spec.Options.HasFlag(ColumnOptions.MergeToLeft) || spec.Options.HasFlag(ColumnOptions.MergeToRight))))
+
         // Build output line with justification and separators
-        let outputParts = buildOutputParts lineResults columnSeparator filler
+        let outputParts = buildOutputParts filteredLineResults columnSeparator filler
         let outputLine = multiple outputParts
-        let remainders = lineResults |> Array.map (fun (spec, rem, _) -> (spec, rem))
+        let remainders = filteredLineResults |> Array.map (fun (spec, rem, _) -> (spec, rem))
 
         (remainders, outputLine)
 
