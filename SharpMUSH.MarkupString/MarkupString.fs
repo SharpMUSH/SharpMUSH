@@ -1024,20 +1024,116 @@ ALIGN()
     /// </summary>
     /// <param name="columns">The sequence of column specs and MarkupStrings.</param>
     let moreToDo (columns: (ColumnSpec * MarkupString) seq) : bool =
-        columns |> Seq.exists (fun (_, y) -> y.Length > 0)
+        columns 
+        |> Seq.exists (fun (spec, text) -> 
+            text.Length > 0 && not (spec.Options.HasFlag(ColumnOptions.Repeat)))
+
+    /// <summary>
+    /// Extracts one line from a MarkupString based on column width and truncation settings.
+    /// Returns (extracted line, remainder).
+    /// </summary>
+    let extractLine (spec: ColumnSpec) (text: MarkupString) : MarkupString * MarkupString =
+        if text.Length = 0 then
+            (empty (), empty ())
+        elif spec.Options.HasFlag(ColumnOptions.TruncateV2) then
+            // X option: Take entire column as single line, no wrapping
+            (text, empty ())
+        elif spec.Options.HasFlag(ColumnOptions.Truncate) then
+            // x option: Take up to width, split at rowsep if present
+            let lineText = if text.Length > spec.Width then substring 0 spec.Width text else text
+            let remainder = if text.Length > spec.Width then substring spec.Width (text.Length - spec.Width) text else empty ()
+            (lineText, remainder)
+        else
+            // Normal wrapping: take up to width characters
+            let lineText = if text.Length > spec.Width then substring 0 spec.Width text else text
+            let remainder = if text.Length > spec.Width then substring spec.Width (text.Length - spec.Width) text else empty ()
+            (lineText, remainder)
+
+    /// <summary>
+    /// Processes column merging logic when a column is empty.
+    /// </summary>
+    let handleMerging 
+        (columns: (ColumnSpec * MarkupString) array) 
+        (index: int) 
+        : (ColumnSpec * MarkupString) array =
+
+        let spec, text = columns.[index]
+
+        if text.Length > 0 then
+            columns
+        elif spec.Options.HasFlag(ColumnOptions.MergeToLeft) && index > 0 then
+            // Merge this column's width to the left
+            let leftSpec, leftText = columns.[index - 1]
+            let newLeftSpec = 
+                { leftSpec with 
+                    Width = leftSpec.Width + spec.Width
+                    Options = 
+                        (if spec.Options.HasFlag(ColumnOptions.NoFill) then 
+                            leftSpec.Options ||| ColumnOptions.NoFill 
+                         else leftSpec.Options) |||
+                        (if spec.Options.HasFlag(ColumnOptions.NoColSep) then
+                            ColumnOptions.NoColSep
+                         else ColumnOptions.Default) }
+            columns.[index - 1] <- (newLeftSpec, leftText)
+            columns.[index] <- (spec, empty ())
+            columns
+        elif spec.Options.HasFlag(ColumnOptions.MergeToRight) && index < columns.Length - 1 then
+            // Merge this column's width to the right
+            let rightSpec, rightText = columns.[index + 1]
+            let newRightSpec = 
+                { rightSpec with 
+                    Width = rightSpec.Width + spec.Width }
+            columns.[index + 1] <- (newRightSpec, rightText)
+            columns.[index] <- (spec, empty ())
+            columns
+        else
+            columns
 
     let doLine
         (columns: (ColumnSpec * MarkupString) seq)
         (filler: MarkupString)
         (columnSeparator: MarkupString)
         : (ColumnSpec * MarkupString) seq * MarkupString =
-        // Start by seeing if the Column Spec needs altering due to a Merge.
-        
 
-        // return the remainder after usage
-        let a = columns |> Seq.map (fun x -> justifyColumn x filler)
-        let b = multipleWithDelimiter columnSeparator [||] // Return the next 'line'
-        (columns, b)
+        let columnsArray = columns |> Seq.toArray
+
+        // Handle merging for empty columns
+        let mergedColumns = 
+            columnsArray 
+            |> Array.mapi (fun i _ -> i)
+            |> Array.fold (fun cols idx -> handleMerging cols idx) columnsArray
+
+        // Extract one line from each column
+        let lineResults = 
+            mergedColumns 
+            |> Array.map (fun (spec, text) ->
+                let line, remainder = extractLine spec text
+                (spec, remainder, line))
+
+        // Build the output line with justification
+        let outputParts = 
+            lineResults
+            |> Array.mapi (fun i (spec, _, line) ->
+                let justifiedLine = 
+                    if line.Length = 0 && spec.Options.HasFlag(ColumnOptions.NoFill) then
+                        line
+                    else
+                        justify spec.Justification line spec.Width filler
+
+                let needsSeparator = 
+                    i < lineResults.Length - 1 && 
+                    not (spec.Options.HasFlag(ColumnOptions.NoColSep))
+
+                if needsSeparator then
+                    [| justifiedLine; columnSeparator |]
+                else
+                    [| justifiedLine |])
+            |> Array.concat
+
+        let outputLine = multiple outputParts
+        let remainders = lineResults |> Array.map (fun (spec, rem, _) -> (spec, rem))
+
+        (remainders, outputLine)
 
     /// <summary>
     /// Recursively aligns columns of MarkupStrings according to their specifications.
@@ -1059,14 +1155,6 @@ ALIGN()
             multipleWithDelimiter rowSeparator agg
         else
             let remainder, newText = doLine columns filler columnSeparator
-            //
-            // let newLine =
-            //    ((single " "), columns)
-            //    ||> Seq.fold (fun acc (_, y) -> concat acc y columnSeparator)
-            //
-            // TODO: Need to consume from the Columns
-            // TODO: Implement actual logic.
-            // Right now this is an infinite recursion loop.
             alignFun remainder filler columnSeparator rowSeparator (Seq.append agg [| newText |])
 
     /// <summary>
@@ -1089,11 +1177,11 @@ ALIGN()
 
         if columnSpecs.Length <> columns.Length then
             empty () // TODO: Return a better error.
-        elif filler.Length > 0 then
+        elif filler.Length > 1 then
             single "Filler is too long."
-        elif columnSeparator.Length > 0 then
-            single "columnSeparator is too long."
-        elif rowSeparator.Length > 0 then
-            single "rowSeparator is too long."
+        elif columnSeparator.Length < 0 then
+            single "columnSeparator is invalid."
+        elif rowSeparator.Length < 0 then
+            single "rowSeparator is invalid."
         else
             alignFun (Seq.zip columnSpecs columns) filler columnSeparator rowSeparator [||]

@@ -4,6 +4,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 using DotNext.Collections.Generic;
 using Humanizer;
+using MarkupString;
+using Microsoft.FSharp.Collections;
 using Microsoft.FSharp.Core;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Implementation.Definitions;
@@ -307,10 +309,43 @@ public partial class Functions
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "ALIGN", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> Align(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "align", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
+	public static async ValueTask<CallState> Align(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		await ValueTask.CompletedTask;
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var actualColumnArgCount = args.Count - 1;
+		var widths = args["0"].Message!.ToPlainText();
+
+		var expectedColumnCount = widths.Split(' ').Length;
+		var maxAllowedColumnCount = actualColumnArgCount - 3;
+		
+		switch (expectedColumnCount)
+		{
+			case 0:
+				return "No widths provided.";
+			case var _ when expectedColumnCount > maxAllowedColumnCount:
+				return "Too many widths, not enough columns.";
+			case var _ when expectedColumnCount < actualColumnArgCount:
+				return "Too few widths, too many columns.";
+		}
+
+		var columnArguments = args
+			.Skip(1)
+			.SkipLast(expectedColumnCount - actualColumnArgCount)
+			.Select( x => x.Value.Message!);
+		
+		var remainder = args
+			.Skip(1 + expectedColumnCount - actualColumnArgCount).Select(x => x.Value.Message!)
+			.ToArray();
+
+		var list = FSharpList.Create<MString>(columnArguments.ToArray());
+		
+		return TextAligner.align(widths,
+			list,
+			filler: remainder.Skip(1).FirstOrDefault(MModule.single(" ")), 
+			columnSeparator: remainder.Skip(2).FirstOrDefault(MModule.single(" ")), 
+			rowSeparator: remainder.Skip(3).FirstOrDefault(MModule.single(Environment.NewLine)));
 	}
 
 	[SharpFunction(Name = "LALIGN", MinArgs = 2, MaxArgs = 6, Flags = FunctionFlags.Regular)]
