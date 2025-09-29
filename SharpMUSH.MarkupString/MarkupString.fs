@@ -661,7 +661,8 @@ module MarkupStringModule =
 
         match padType, truncType with
         | _, Overflow when lengthTooLongPredicate -> markupStr
-        | _, Truncate when lengthTooLongPredicate -> substring 0 lengthToPad markupStr
+        | _, Truncate when lengthToPad = 0 -> markupStr
+        | _, Truncate when lengthTooLongPredicate -> substring 0 width markupStr
         | Right, Overflow ->
             repeat padStr repeatCount (empty ())
             |> substring 0 lengthToPad
@@ -1112,7 +1113,14 @@ ALIGN()
                         else 
                             empty ()
 
-                    (lineText, remainder)
+                    // Handle Repeat option: if remainder is empty but Repeat is set, return original text
+                    let finalRemainder = 
+                        if spec.Options.HasFlag(ColumnOptions.Repeat) && remainder.Length = 0 && text.Length > 0 then
+                            text
+                        else
+                            remainder
+
+                    (lineText, finalRemainder)
 
     /// <summary>
     /// Processes column merging logic when a column is empty.

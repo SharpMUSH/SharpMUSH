@@ -72,5 +72,68 @@ public static class Pad
 			A.TruncationType.Overflow,
 			A.single("Centered")
 		);
+
+		// Regression tests for bug where pad with Truncate mode and text length == width
+		// would call substring(0, 0) and return empty string instead of the original text
+
+		// Single character at exact width with Truncate - Right padding
+		yield return () => new(
+			A.single("|"),
+			A.single(" "),
+			1,
+			A.PadType.Right,
+			A.TruncationType.Truncate,
+			A.single("|")
+		);
+
+		// Single character at exact width with Truncate - Left padding
+		yield return () => new(
+			A.single("|"),
+			A.single(" "),
+			1,
+			A.PadType.Left,
+			A.TruncationType.Truncate,
+			A.single("|")
+		);
+
+		// Single character at exact width with Truncate - Center padding
+		yield return () => new(
+			A.single("X"),
+			A.single(" "),
+			1,
+			A.PadType.Center,
+			A.TruncationType.Truncate,
+			A.single("X")
+		);
+
+		// Multi-character at exact width with Truncate - Right padding
+		yield return () => new(
+			A.single("Test"),
+			A.single(" "),
+			4,
+			A.PadType.Right,
+			A.TruncationType.Truncate,
+			A.single("Test")
+		);
+
+		// Multi-character at exact width with Truncate - Left padding
+		yield return () => new(
+			A.single("Test"),
+			A.single(" "),
+			4,
+			A.PadType.Left,
+			A.TruncationType.Truncate,
+			A.single("Test")
+		);
+
+		// Multi-character at exact width with Truncate - Center padding
+		yield return () => new(
+			A.single("Word"),
+			A.single("-"),
+			4,
+			A.PadType.Center,
+			A.TruncationType.Truncate,
+			A.single("Word")
+		);
 	}
 }
