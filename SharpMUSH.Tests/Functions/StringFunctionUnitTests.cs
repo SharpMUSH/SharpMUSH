@@ -59,9 +59,16 @@ public class StringFunctionUnitTests
 	
 	
 	[Test]
-	[Arguments("align(30 30,a,b)", "a                              b                             ")]
-	[Arguments("align(>30 30,a,b)", "                             a b                             ")]
-	[Arguments("align(>30 >30,a,b)", "                             a                              b")]
+	[Arguments("align(30 30,a,b)", 
+		"a                              b                             ")]
+	[Arguments("align(5 5,a1%ra2,b1)", 
+		"a1    b1   \r\na2         ")]
+	[Arguments("align(5 5,a1%ra2,b1%rb2%rb3)", 
+		"a1    b1   \r\na2    b2   \r\n      b3   ")]
+	[Arguments("align(>30 30,a,b)", 
+		"                             a b                             ")]
+	[Arguments("align(>30 >30,a,b)", 
+		"                             a                              b")]
 	public async Task Align(string str, string expectedText)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;

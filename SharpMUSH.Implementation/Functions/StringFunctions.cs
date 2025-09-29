@@ -346,7 +346,7 @@ public partial class Functions
 			filler: remainder.Skip(1).FirstOrDefault(MModule.single(" ")), 
 			columnSeparator: remainder.Skip(2).FirstOrDefault(MModule.single(" ")), 
 			rowSeparator: remainder.Skip(3).FirstOrDefault(MModule.single(Environment.NewLine)));
-	}
+	}	
 
 	[SharpFunction(Name = "LALIGN", MinArgs = 2, MaxArgs = 6, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> LAlign(IMUSHCodeParser parser, SharpFunctionAttribute _2)

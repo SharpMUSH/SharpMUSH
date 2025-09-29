@@ -1036,18 +1036,37 @@ ALIGN()
         if text.Length = 0 then
             (empty (), empty ())
         elif spec.Options.HasFlag(ColumnOptions.TruncateV2) then
-            // X option: Take entire column as single line, no wrapping
             (text, empty ())
-        elif spec.Options.HasFlag(ColumnOptions.Truncate) then
-            // x option: Take up to width, split at rowsep if present
-            let lineText = if text.Length > spec.Width then substring 0 spec.Width text else text
-            let remainder = if text.Length > spec.Width then substring spec.Width (text.Length - spec.Width) text else empty ()
-            (lineText, remainder)
         else
-            // Normal wrapping: take up to width characters
-            let lineText = if text.Length > spec.Width then substring 0 spec.Width text else text
-            let remainder = if text.Length > spec.Width then substring spec.Width (text.Length - spec.Width) text else empty ()
-            (lineText, remainder)
+            let plainTextStr = plainText text
+            let rowSepIndex = plainTextStr.IndexOf(Environment.NewLine)
+
+            if spec.Options.HasFlag(ColumnOptions.Truncate) then
+                let splitPoint = 
+                    if rowSepIndex >= 0 && rowSepIndex < spec.Width then
+                        rowSepIndex
+                    else if text.Length > spec.Width then
+                        spec.Width
+                    else
+                        text.Length
+
+                let lineText = substring 0 splitPoint text
+                let remainderStart = if rowSepIndex >= 0 && rowSepIndex = splitPoint then splitPoint + 2 else splitPoint
+                let remainder = if remainderStart < text.Length then substring remainderStart (text.Length - remainderStart) text else empty ()
+                (lineText, remainder)
+            else
+                let splitPoint = 
+                    if rowSepIndex >= 0 && rowSepIndex <= spec.Width then
+                        rowSepIndex
+                    else if text.Length > spec.Width then
+                        spec.Width
+                    else
+                        text.Length
+
+                let lineText = substring 0 splitPoint text
+                let remainderStart = if rowSepIndex >= 0 && rowSepIndex = splitPoint then splitPoint + 2 else splitPoint
+                let remainder = if remainderStart < text.Length then substring remainderStart (text.Length - remainderStart) text else empty ()
+                (lineText, remainder)
 
     /// <summary>
     /// Processes column merging logic when a column is empty.
@@ -1101,7 +1120,7 @@ ALIGN()
         let mergedColumns = 
             columnsArray 
             |> Array.mapi (fun i _ -> i)
-            |> Array.fold (fun cols idx -> handleMerging cols idx) columnsArray
+            |> Array.fold handleMerging columnsArray
 
         // Extract one line from each column
         let lineResults = 
