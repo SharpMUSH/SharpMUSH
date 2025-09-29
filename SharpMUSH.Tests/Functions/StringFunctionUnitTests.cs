@@ -69,6 +69,8 @@ public class StringFunctionUnitTests
 		"a1       b1\r\na2       b2\r\n         b3")]
 	[Arguments("align(5. >5,a1,b1%rb2%rb3)", 
 		"a1       b1\r\na1       b2\r\na1       b3")]
+	[Arguments("align(5 >5.,a1%ra2%ra3,b1)", 
+		"a1       b1\r\na2       b1\r\na3       b1")]
 	[Arguments("align(>30 30,a,b)", 
 		"                             a b                             ")]
 	[Arguments("align(>30 >30,a,b)", 
