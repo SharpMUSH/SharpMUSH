@@ -1,7 +1,9 @@
 ﻿using OneOf.Types;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 
 namespace SharpMUSH.Implementation.Commands;
@@ -196,11 +198,37 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "POSE", Switches = ["NOEVAL", "NOSPACE"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0,
-		MaxArgs = 0)]
+		MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> Pose(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executorLocation = await executor.Where();
+		var contents = await executorLocation.Content(Mediator!);
+		var isNoSpace = parser.CurrentState.Switches.Contains("NOSPACE");
+		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
+		var message = isNoEvaluation
+			? Common.ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.empty())
+			: await Common.ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, MModule.empty());
+
+		var interactableContents = contents
+			.ToAsyncEnumerable()
+			.Where(async (obj, _) =>
+				await PermissionService!.CanInteract(obj.WithRoomOption(), executor,
+					IPermissionService.InteractType.Hear));
+
+		await foreach (var obj in interactableContents)
+		{
+			await NotifyService!.Notify(
+				obj.WithRoomOption(),
+				isNoSpace
+					? MModule.trim(message, MModule.single(" "), MModule.TrimType.TrimStart)
+					: message,
+				executor,
+				INotifyService.NotificationType.Pose);
+		}
+
+		return new CallState(message);
 	}
 
 	[SharpCommand(Name = "SCORE", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
@@ -213,16 +241,62 @@ public partial class Commands
 	[SharpCommand(Name = "SAY", Switches = ["NOEVAL"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Say(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executorLocation = await executor.Where();
+		var contents = await executorLocation.Content(Mediator!);
+		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
+		var message = isNoEvaluation
+			? Common.ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.empty())
+			: await Common.ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, MModule.empty());
+
+		var interactableContents = contents
+			.ToAsyncEnumerable()
+			.Where(async (obj, _) =>
+				await PermissionService!.CanInteract(obj.WithRoomOption(), executor,
+					IPermissionService.InteractType.Hear));
+
+		await foreach (var obj in interactableContents)
+		{
+			await NotifyService!.Notify(
+				obj.WithRoomOption(),
+				message,
+				executor,
+				INotifyService.NotificationType.Say);
+		}
+
+		return new CallState(message);
 	}
 
 	[SharpCommand(Name = "SEMIPOSE", Switches = ["NOEVAL"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0,
 		MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> SemiPose(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executorLocation = await executor.Where();
+		var contents = await executorLocation.Content(Mediator!);
+		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
+		var message = isNoEvaluation
+			? Common.ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.empty())
+			: await Common.ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, MModule.empty());
+
+		var interactableContents = contents
+			.ToAsyncEnumerable()
+			.Where(async (obj, _) =>
+				await PermissionService!.CanInteract(obj.WithRoomOption(), executor,
+					IPermissionService.InteractType.Hear));
+
+		await foreach (var obj in interactableContents)
+		{
+			await NotifyService!.Notify(
+				obj.WithRoomOption(),
+				message,
+				executor,
+				INotifyService.NotificationType.SemiPose);
+		}
+
+		return new CallState(message);
 	}
 
 	[SharpCommand(Name = "TEACH", Switches = ["LIST"], Behavior = CB.Default | CB.NoParse, MinArgs = 0, MaxArgs = 0)]
@@ -293,42 +367,5 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownEnactorObject(Mediator!);
 		await NotifyService!.Notify(executor, "Huh?  (Type \"help\" for help.)");
 		return new None();
-	}
-
-	[SharpCommand(Name = "ADDCOM", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0,
-		MaxArgs = 0)]
-	public static async ValueTask<Option<CallState>> AddCom(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
-	}
-
-	[SharpCommand(Name = "DELCOM", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
-	public static async ValueTask<Option<CallState>> DeleteCom(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
-	}
-
-	[SharpCommand(Name = "@CLIST", Switches = ["FULL"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
-	public static async ValueTask<Option<CallState>> ChannelList(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
-	}
-
-	[SharpCommand(Name = "COMTITLE", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0,
-		MaxArgs = 0)]
-	public static async ValueTask<Option<CallState>> ComTitle(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
-	}
-
-	[SharpCommand(Name = "COMLIST", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
-	public static async ValueTask<Option<CallState>> ComList(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
 	}
 }

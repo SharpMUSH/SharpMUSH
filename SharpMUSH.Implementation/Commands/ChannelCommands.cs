@@ -168,4 +168,41 @@ public partial class Commands
 
 		return new CallState(string.Empty);
 	}
+	
+	[SharpCommand(Name = "ADDCOM", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0,
+		MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> AddCom(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "DELCOM", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> DeleteCom(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@CLIST", Switches = ["FULL"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> ChannelList(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "COMTITLE", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0,
+		MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> ComTitle(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "COMLIST", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	public static async ValueTask<Option<CallState>> ComList(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
 }
