@@ -12,6 +12,7 @@ using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Implementation;
+using SharpMUSH.Library.Commands.Database;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -424,13 +425,14 @@ public partial class Functions
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "PARENT", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "parent", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> Parent(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
-		var arg1 = parser.CurrentState.Arguments.ContainsKey("1")
-			? parser.CurrentState.Arguments["1"].Message!.ToPlainText()
+		var args = parser.CurrentState.Arguments;
+		var arg0 = args["0"].Message!.ToPlainText()!;
+		var arg1 = args.TryGetValue("1", out var value)
+			? value.Message!.ToPlainText()
 			: null;
 		
 		if (arg1 == null)
@@ -442,11 +444,53 @@ public partial class Functions
 					?.DBRef.ToString() ?? "");
 		}
 
-		// TODO: Implement setting the new parent and then returning them.
-		return new CallState(Errors.ErrorNoSideFX);
+		if (Configuration!.CurrentValue.Function.FunctionSideEffects == false)
+		{
+			return Errors.ErrorNoSideFX;
+		}
+		
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+			executor, executor, args["0"].Message!.ToPlainText(), LocateFlags.All,
+			async target =>
+			{
+				if (!await PermissionService!.Controls(executor, target))
+				{
+					return Errors.ErrorPerm;
+				}
+				
+				switch(args)
+				{
+					case { Count: 1 }:
+					case { Count: 2 } when args["1"].Message!.ToPlainText().Equals("none", StringComparison.InvariantCultureIgnoreCase): 
+						await Mediator!.Send(new UnsetObjectParentCommand(target));
+						return CallState.Empty;
+					default: 
+						return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
+							parser, executor, executor, args["1"].Message!.ToPlainText(), LocateFlags.All,
+							async newParent =>
+							{
+								if (!await PermissionService.Controls(executor, newParent) 
+								    || (!await target.HasFlag("LINK_OK") 
+								        && !PermissionService.PassesLock(executor, newParent, LockType.Parent)))
+								{
+									return Errors.ErrorPerm;
+								}
+
+								if (!await HelperFunctions.SafeToAddParent(target, newParent))
+								{
+									return CallState.Empty;
+								}
+									
+								await Mediator!.Send(new SetObjectParentCommand(target, newParent));
+								return CallState.Empty;
+							}
+						);
+				}
+			}
+		);
 	}
 
-	[SharpFunction(Name = "PMATCH", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "pmatch", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> PlayerMatch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -464,7 +508,7 @@ public partial class Functions
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "ROOM", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "room", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> Room(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -481,7 +525,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "WHERE", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "where", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> Where(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -576,7 +620,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "LEXITS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "lexits", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> ListExits(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -599,7 +643,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "LPLAYERS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "lplayers", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> ListPlayers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -622,7 +666,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "LTHINGS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "lthings", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> ListThings(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 

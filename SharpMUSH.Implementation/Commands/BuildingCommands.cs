@@ -447,7 +447,7 @@ public partial class Commands
 										return Errors.ErrorPerm;
 									}
 
-									if (!await SafeToAddParent(target, newParent))
+									if (!await HelperFunctions.SafeToAddParent(target, newParent))
 									{
 										await NotifyService!.Notify(executor, "Cannot add parent to loop.");
 										return CallState.Empty;
@@ -461,26 +461,7 @@ public partial class Commands
 				}
 			);
 	}
-
-	/// <summary>
-	/// This function detects any chance of a loop in the parent chain.
-	/// </summary>
-	/// <param name="start"></param>
-	/// <param name="newParent"></param>
-	/// <returns>Whether there's a loop or not</returns>
-	private static async ValueTask<bool> SafeToAddParent(AnySharpObject start, AnySharpObject newParent)
-	{
-		var newParentDbRef = newParent.Object().DBRef;
-		
-		if ((await start.Object().Parent.WithCancellation(CancellationToken.None)).Object()!.DBRef == newParentDbRef)
-		{
-			return true;
-		}
-		
-		var children = await start.Object().Children.WithCancellation(CancellationToken.None);
-		
-		return children.All(x => x.DBRef != newParentDbRef);
-	}
+	
 
 	[SharpCommand(Name = "@UNLINK", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Unlink(IMUSHCodeParser parser, SharpCommandAttribute _2)

@@ -182,6 +182,25 @@ public static partial class HelperFunctions
 			: (obj, attr);
 	}
 
+	/// <summary>
+	/// This function detects any chance of a loop in the parent chain.
+	/// </summary>
+	/// <param name="start"></param>
+	/// <param name="newParent"></param>
+	/// <returns>Whether there's a loop or not</returns>
+	public static async ValueTask<bool> SafeToAddParent(AnySharpObject start, AnySharpObject newParent)
+	{
+		var newParentDbRef = newParent.Object().DBRef;
+		
+		if ((await start.Object().Parent.WithCancellation(CancellationToken.None)).Object()!.DBRef == newParentDbRef)
+		{
+			return true;
+		}
+		
+		var children = await start.Object().Children.WithCancellation(CancellationToken.None);
+		
+		return children.All(x => x.DBRef != newParentDbRef);
+	}
 
 	public static OneOf<(string db, string? Attribute), bool> SplitDBRefAndOptionalAttr(string DBRefAttr)
 	{
