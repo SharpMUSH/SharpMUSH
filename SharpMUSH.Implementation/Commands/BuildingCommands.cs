@@ -9,6 +9,8 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using System.ComponentModel.DataAnnotations;
+using OneOf.Types;
+using SharpMUSH.Library.Models;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using Errors = SharpMUSH.Library.Definitions.Errors;
 
@@ -31,7 +33,7 @@ public partial class Commands
 	[SharpCommand(Name = "@CREATE", Behavior = CB.Default, MinArgs = 1, MaxArgs = 3)]
 	public static async ValueTask<Option<CallState>> Create(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// TODO: Validate Name 
+		// TODO: Validate Name
 		var args = parser.CurrentState.Arguments;
 		var name = MModule.plainText(args["0"].Message!);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -52,7 +54,7 @@ public partial class Commands
 
 		await foreach (var exit in args.ToAsyncEnumerable())
 		{
-			// TODO: CONTROL check -- you cannot modify exits in that room.
+			// TODO: CONTROL check -- you cannot modify exits in that room
 			await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 				executor, executor, exit.Value.Message!.ToPlainText(),
 				LocateFlags.ExitsInTheRoomOfLooker | LocateFlags.ExitsPreference,
@@ -148,7 +150,7 @@ public partial class Commands
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).WithoutNone();
 		var executor = (await parser.CurrentState.ExecutorObject(Mediator!)).WithoutNone();
 
-		if (!split.TryPickT0(out var details, out var _))
+		if (!split.TryPickT0(out var details, out _))
 		{
 			return new CallState("#-1 BAD ARGUMENT FORMAT TO @SET");
 		}
@@ -214,9 +216,12 @@ public partial class Commands
 		{
 			var plainFlag = MModule.plainText(flag);
 			var unset = plainFlag.StartsWith('!');
-			plainFlag = unset ? plainFlag[1..] : plainFlag;
+			plainFlag = unset 
+				? plainFlag[1..] 
+				: plainFlag;
 			// TODO: Permission Check for each flag.
 			// Probably should have a service for this?
+			// CANSETFLAG?
 
 			var realFlag = await Mediator!.Send(new GetObjectFlagQuery(plainFlag));
 
@@ -410,28 +415,71 @@ public partial class Commands
 	[SharpCommand(Name = "@PARENT", Switches = [], Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 2)]
 	public static async ValueTask<Option<CallState>> Parent(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		/*  @parent <object>[=<parent>]
-	
-		This command sets the parent of <object> to <parent>. If no <parent> is given, or <parent> is "none", <object>'s parent is cleared. 
-		You must control <object>, and must either control <parent> or it must be set LINK_OK and you must pass its @lock/parent.*/
-
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 				executor, executor, args["0"].Message!.ToPlainText(), LocateFlags.All,
-				async o =>
+				async target =>
 				{
-					if(args.Count == 1)
+					if (!await PermissionService!.Controls(executor, target))
 					{
-						await Mediator!.Send(new UnsetObjectParentCommand(o));
+						await NotifyService!.Notify(executor, Errors.ErrorPerm);
+						return Errors.ErrorPerm;
 					}
+					
+					switch(args)
+					{
+						case { Count: 1 }:
+						case { Count: 2 } when args["1"].Message!.ToPlainText().Equals("none", StringComparison.InvariantCultureIgnoreCase): 
+							await Mediator!.Send(new UnsetObjectParentCommand(target));
+							return CallState.Empty;
+						default: 
+							return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
+								parser, executor, executor, args["1"].Message!.ToPlainText(), LocateFlags.All,
+								async newParent =>
+								{
+									if (!await PermissionService.Controls(executor, newParent) 
+									    || (!await target.HasFlag("LINK_OK") 
+									    && !PermissionService.PassesLock(executor, newParent, LockType.Parent)))
+									{
+										await NotifyService!.Notify(executor, Errors.ErrorPerm);
+										return Errors.ErrorPerm;
+									}
 
-					// TODO: Ensure there's no parent loop, or would not create a loop.
-
-					return CallState.Empty;
+									if (!await SafeToAddParent(target, newParent))
+									{
+										await NotifyService!.Notify(executor, "Cannot add parent to loop.");
+										return CallState.Empty;
+									}
+									
+									await Mediator!.Send(new SetObjectParentCommand(target, newParent));
+									return CallState.Empty;
+								}
+							);
+					}
 				}
 			);
+	}
+
+	/// <summary>
+	/// This function detects any chance of a loop in the parent chain.
+	/// </summary>
+	/// <param name="start"></param>
+	/// <param name="newParent"></param>
+	/// <returns>Whether there's a loop or not</returns>
+	private static async ValueTask<bool> SafeToAddParent(AnySharpObject start, AnySharpObject newParent)
+	{
+		var newParentDbRef = newParent.Object().DBRef;
+		
+		if ((await start.Object().Parent.WithCancellation(CancellationToken.None)).Object()!.DBRef == newParentDbRef)
+		{
+			return true;
+		}
+		
+		var children = await start.Object().Children.WithCancellation(CancellationToken.None);
+		
+		return children.All(x => x.DBRef != newParentDbRef);
 	}
 
 	[SharpCommand(Name = "@UNLINK", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
