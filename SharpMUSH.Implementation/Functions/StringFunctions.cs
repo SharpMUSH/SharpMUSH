@@ -1,12 +1,11 @@
-﻿using System.Collections.Immutable;
-using System.Globalization;
+﻿using System.Globalization;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Web;
 using DotNext.Collections.Generic;
 using Humanizer;
 using MarkupString;
-using Microsoft.FSharp.Collections;
 using Microsoft.FSharp.Core;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Implementation.Definitions;
@@ -565,7 +564,7 @@ public partial class Functions
 			return new ValueTask<CallState>(new CallState(Errors.ErrorPositiveInteger));
 		}
 
-		var result = MModule.center2(str, fill, rightFill, widthInt, MarkupStringModule.TruncationType.Overflow);
+		var result = MModule.center2(str, fill, rightFill, widthInt, MModule.TruncationType.Overflow);
 
 		return new ValueTask<CallState>(new CallState(result));
 	}
@@ -714,7 +713,18 @@ public partial class Functions
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> FormDecode(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
+		var arg1 = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, "").ToPlainText()!;
+		var arg2 = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, " ").ToPlainText()!;
+
+		return ValueTask.FromResult<CallState>((arg0, arg1, arg2) switch
+		{
+			(var str, "", var outSep) 
+				=> string.Join(outSep, HttpUtility.ParseQueryString(str)),
+			var (str, field, outSep) 
+				=> string.Join(outSep,HttpUtility.ParseQueryString(str).GetValues(field) ?? []),
+		});
 	}
 
 	[SharpFunction(Name = "HMAC", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular)]
@@ -805,15 +815,18 @@ public partial class Functions
 			return new ValueTask<CallState>(Errors.ErrorPositiveInteger);
 		}
 
-		return ValueTask.FromResult<CallState>(MModule.pad(str, fill, widthInt, MarkupStringModule.PadType.Right,
-			MarkupStringModule.TruncationType.Overflow));
+		return ValueTask.FromResult<CallState>(MModule.pad(str, fill, widthInt, MModule.PadType.Right,
+			MModule.TruncationType.Overflow));
 	}
 
 	[SharpFunction(Name = "LPOS", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> LeftPosition(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		throw new NotImplementedException();
-	}
+	public static ValueTask<CallState> ListPositions(IMUSHCodeParser parser, SharpFunctionAttribute _2) 
+		=> ValueTask.FromResult<CallState>(
+			string.Join(" ", 
+				MModule.indexesOf(
+						parser.CurrentState.Arguments["0"].Message!, 
+						parser.CurrentState.Arguments["1"].Message!)
+					.Select(x => x.ToString())));
 
 	[SharpFunction(Name = "MERGE", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Merge(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -836,9 +849,9 @@ public partial class Functions
 		}
 
 		var strLength = str.Length;
-		var midlen = lengthInt < 0 ? strLength + lengthInt : lengthInt;
+		var midLength = lengthInt < 0 ? strLength + lengthInt : lengthInt;
 
-		return ValueTask.FromResult<CallState>(MModule.substring(firstInt, midlen, str));
+		return ValueTask.FromResult<CallState>(MModule.substring(firstInt, midLength, str));
 	}
 
 	[SharpFunction(Name = "NCOND", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
@@ -853,10 +866,13 @@ public partial class Functions
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "ORD", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> Ord(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "ord", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public static ValueTask<CallState> CharacterOrdinance(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
+		return arg0.Length is > 1 or < 0 
+			? new ValueTask<CallState>("#-1 ARGUMENT MUST BE A SINGLE CHARACTER") 
+			: ValueTask.FromResult<CallState>(arg0.EnumerateRunes().First().Value);
 	}
 
 	[SharpFunction(Name = "ORDINAL", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -923,8 +939,8 @@ public partial class Functions
 			return new ValueTask<CallState>(Errors.ErrorPositiveInteger);
 		}
 
-		return ValueTask.FromResult<CallState>(MModule.pad(str, fill, widthInt, MarkupStringModule.PadType.Left,
-			MarkupStringModule.TruncationType.Overflow));
+		return ValueTask.FromResult<CallState>(MModule.pad(str, fill, widthInt, MModule.PadType.Left,
+			MModule.TruncationType.Overflow));
 	}
 
 	[SharpFunction(Name = "scramble", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
@@ -936,19 +952,22 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "secure", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> Secure(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		throw new NotImplementedException();
-	}
+	public static ValueTask<CallState> Secure(IMUSHCodeParser parser, SharpFunctionAttribute _2) 
+		=> ValueTask.FromResult<CallState>(MModule.apply(parser.CurrentState.Arguments["0"].Message!,
+			FSharpFunc<string, string>.FromConverter(x => x switch
+			{
+				"%" or ";" or "[" or "]" or "(" or ")" or "{" or "}" or "$" or "," or "^" => " ",
+				_ => x
+			})));
 
 	[SharpFunction(Name = "space", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> Space(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var repeatNumberStr = parser.CurrentState.Arguments["0"].Message!;
 
-		if (!int.TryParse(repeatNumberStr.ToPlainText(), out var repeatNumber))
+		if (!int.TryParse(repeatNumberStr.ToPlainText(), out var repeatNumber) || repeatNumber < 0)
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorInteger));
+			return ValueTask.FromResult(new CallState(Errors.ErrorPositiveInteger));
 		}
 
 		var repeat = MModule.repeat(MModule.single(" "), repeatNumber, MModule.empty())!;
@@ -997,16 +1016,12 @@ public partial class Functions
 		if (string.IsNullOrWhiteSpace(text))
 			return text;
 
-		// Normalize the string to Unicode Normalization Form D (NFD).
-		// In NFD, accented characters are decomposed into a base character and combining diacritical marks.
-		text = text.Normalize(NormalizationForm.FormD);
-
-		// Filter out the combining diacritical marks (NonSpacingMark category).
-		var chars = text.Where(c => CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark).ToArray();
-
-		// Create a new string from the filtered characters and normalize it back to Form C (NFC)
-		// to recompose any characters that might have been decomposed but are not diacritics.
-		return new string(chars).Normalize(NormalizationForm.FormC);
+		return new string(text
+				.Normalize(NormalizationForm.FormD)
+				.Where(c => CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
+				.ToArray()
+				.AsSpan())
+			.Normalize(NormalizationForm.FormC);
 	}
 
 	[SharpFunction(Name = "STRIPACCENTS", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular)]
@@ -1145,9 +1160,9 @@ public partial class Functions
 
 		var trimType = arg2 switch
 		{
-			"l" => MarkupStringModule.TrimType.TrimStart,
-			"r" => MarkupStringModule.TrimType.TrimEnd,
-			_ => MarkupStringModule.TrimType.TrimBoth,
+			"l" => MModule.TrimType.TrimStart,
+			"r" => MModule.TrimType.TrimEnd,
+			_ => MModule.TrimType.TrimBoth,
 		};
 
 		return ValueTask.FromResult<CallState>(
@@ -1168,9 +1183,9 @@ public partial class Functions
 
 		var trimType = arg2 switch
 		{
-			"l" => MarkupStringModule.TrimType.TrimStart,
-			"r" => MarkupStringModule.TrimType.TrimEnd,
-			_ => MarkupStringModule.TrimType.TrimBoth,
+			"l" => MModule.TrimType.TrimStart,
+			"r" => MModule.TrimType.TrimEnd,
+			_ => MModule.TrimType.TrimBoth,
 		};
 
 		return ValueTask.FromResult<CallState>(
@@ -1191,9 +1206,9 @@ public partial class Functions
 
 		var trimType = arg2 switch
 		{
-			"l" => MarkupStringModule.TrimType.TrimStart,
-			"r" => MarkupStringModule.TrimType.TrimEnd,
-			_ => MarkupStringModule.TrimType.TrimBoth,
+			"l" => MModule.TrimType.TrimStart,
+			"r" => MModule.TrimType.TrimEnd,
+			_ => MModule.TrimType.TrimBoth,
 		};
 
 		return ValueTask.FromResult<CallState>(
@@ -1206,7 +1221,7 @@ public partial class Functions
 		var arg0 = parser.CurrentState.Arguments["0"].Message!;
 		var result = MModule.apply(arg0, FuncConvert.FromFunc<string, string>(x => x.ToUpperInvariant()));
 
-		return new ValueTask<CallState>(new CallState(result));
+		return new ValueTask<CallState>(result);
 	}
 
 	[SharpFunction(Name = "urldecode", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
