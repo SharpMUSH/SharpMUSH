@@ -74,6 +74,8 @@ public class StringFunctionUnitTests
 		"                             a b                             ")]
 	[Arguments("align(>30 >30,a,b)", 
 		"                             a                              b")]
+	[Arguments("align(3,123 1 1 1 1)", 
+		"123\n1 1\n1 1")]
 	public async Task Align(string str, string expectedText)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
