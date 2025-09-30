@@ -677,23 +677,30 @@ public partial class Functions
 
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var objAttr = args["0"].Message;
-		var str = args["1"].Message;
-		var start = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, " ");
-		var end = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, " ");
-		var split = MModule.split("", str);
+		var str = args["1"].Message!;
+		var start = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, "0").ToPlainText();
+		var end = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, str.Length.ToString()).ToPlainText();
 
-		var newStr = MModule.empty();
-
-		foreach (var character in split)
+		if (!int.TryParse(start, out var startInt) || !int.TryParse(end, out var endInt))
 		{
-			// Method Pattern needs to change, attribute must be a native MString to support Lambda, 
-			// so it's easier to do this split in a common code.
-			// var parserEval = AttributeService!.EvaluateAttributeFunctionAsync(parser, executor, obj, attribu)
-
-			newStr = MModule.concat(newStr, character);
+			return ValueTask.FromResult<CallState>(Errors.ErrorInteger);
+		}
+		
+		if(startInt < 0 || endInt < 0)
+		{
+			return ValueTask.FromResult<CallState>(Errors.ErrorPositiveInteger);
 		}
 
-		throw new NotImplementedException();
+		endInt = Math.Min(endInt, str.Length);
+		
+		var left = MModule.substring(startInt, endInt - startInt, str);
+		var right = MModule.substring(endInt, str.Length - endInt, str);
+		var remainder = MModule.substring(endInt - startInt, str.Length - endInt + startInt, str);
+
+		// TODO: MModule.apply2 over the remainder to apply the function to each character.
+		// Will have to create a new apply function for this.
+		
+		return ValueTask.FromResult<CallState>(MModule.multiple([left, remainder, right]));
 	}
 
 
