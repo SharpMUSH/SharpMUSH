@@ -101,6 +101,7 @@ public class Startup(ArangoConfiguration config, string configFile, string color
 		services.AddSingleton<IValidateService, ValidateService>();
 		services.AddOptions<PennMUSHOptions>();
 		services.AddOptions<ColorsOptions>();
+		services.AddHttpClient();
 		services.AddMediator();
 		services.AddFusionCache();
 		services.AddArango(_ => config.ConnectionString);

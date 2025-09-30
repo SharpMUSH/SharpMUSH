@@ -23,7 +23,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 	private static IPasswordService? PasswordService { get; set; }
 	private static IConnectionService? ConnectionService { get; set; }
 	private static IExpandedObjectDataService? ObjectDataService { get; set; }
-
+	private static IHttpClientFactory? HttpClientFactory { get; set; }
+	
 	private readonly CommandLibraryService _commandLibrary = [];
 
 	public LibraryService<string, CommandDefinition> Get() => _commandLibrary;
@@ -37,7 +38,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		IOptionsMonitor<PennMUSHOptions> configuration, 
 		IPasswordService passwordService,
 		IConnectionService connectionService,
-		IExpandedObjectDataService objectDataService)
+		IExpandedObjectDataService objectDataService,
+		IHttpClientFactory httpClientFactory)
 	{
 		Mediator = mediator;
 		LocateService = locateService;
@@ -49,6 +51,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		PasswordService = passwordService;
 		ConnectionService = connectionService;
 		ObjectDataService = objectDataService;
+		HttpClientFactory = httpClientFactory;
 
 		var knownBuiltInMethods =
 			typeof(Commands)
