@@ -918,7 +918,7 @@ module ColumnSpec =
 /// Provides functions for aligning and justifying text using MarkupString.
 /// </summary>
 module TextAligner =
-(*
+    (*
 ALIGN()
   align(<widths>, <col>[, ... , <colN>[, <filler>[, <colsep>[, <rowsep>]]]])
   lalign(<widths>, <colList>[, <delim>[, <filler>[, <colsep>[, <rowsep>]]]])
@@ -1105,50 +1105,58 @@ ALIGN()
     /// <summary>
     /// Merges a column to the left, inheriting options.
     /// </summary>
-    let private mergeColumnLeft (columns: ColumnState array) (index: int) (spec: ColumnSpec) : ColumnState array =
-        let leftSpec, leftText = columns.[index - 1]
-        let newOptions = 
-            leftSpec.Options
-            |> (fun opts -> if spec.Options.HasFlag(ColumnOptions.NoFill) then opts ||| ColumnOptions.NoFill else opts)
-            |> (fun opts -> if spec.Options.HasFlag(ColumnOptions.NoColSep) then opts ||| ColumnOptions.NoColSep else opts)
-
-        // Subtract two from the merged width to remove the extra space.
-        let newWidth = leftSpec.Width + spec.Width - 2
-        let newLeftSpec = { leftSpec with Width = newWidth; Options = newOptions }
-        columns.[index - 1] <- (newLeftSpec, leftText)
-        columns.[index] <- (spec, empty ())
+    let private mergeColumnLeft (columns: seq<ColumnState>) (index: int) (spec: ColumnSpec) : seq<ColumnState> =
         columns
+        |> Seq.mapi (fun i (s, t) ->
+            if i = index - 1 then
+                let newOptions =
+                    let leftSpec, _ = Seq.item (index - 1) columns
+                    leftSpec.Options
+                    |> (fun opts -> if spec.Options.HasFlag(ColumnOptions.NoFill) then opts ||| ColumnOptions.NoFill else opts)
+                    |> (fun opts -> if spec.Options.HasFlag(ColumnOptions.NoColSep) then opts ||| ColumnOptions.NoColSep else opts)
+                let leftSpec, leftText = Seq.item (index - 1) columns
+                let newWidth = leftSpec.Width + spec.Width - 2
+                ({ leftSpec with Width = newWidth; Options = newOptions }, leftText)
+            elif i = index then
+                (spec, empty ())
+            else
+                (s, t)
+        )
 
     /// <summary>
     /// Merges a column to the right.
     /// </summary>
-    let private mergeColumnRight (columns: ColumnState array) (index: int) (spec: ColumnSpec) : ColumnState array =
-        let rightSpec, rightText = columns.[index + 1]
-        // Add an extra space to the merged width so that the gap is as expected.
-        let newRightSpec = { rightSpec with Width = rightSpec.Width + spec.Width + 1 }
-        columns.[index + 1] <- (newRightSpec, rightText)
-        columns.[index] <- (spec, empty ())
+    let private mergeColumnRight (columns: seq<ColumnState>) (index: int) (spec: ColumnSpec) : seq<ColumnState> =
         columns
+        |> Seq.mapi (fun i (s, t) ->
+            if i = index + 1 then
+                let rightSpec, rightText = Seq.item (index + 1) columns
+                let newRightSpec = { rightSpec with Width = rightSpec.Width + spec.Width + 1 }
+                (newRightSpec, rightText)
+            elif i = index then
+                (spec, empty ())
+            else
+                (s, t)
+        )
 
     /// <summary>
     /// Processes column merging logic when a column is empty.
     /// </summary>
-    let private handleMerging (columns: ColumnState array) (index: int) : ColumnState array =
-        let spec, text = columns.[index]
-
+    let private handleMerging (columns: seq<ColumnState>) (index: int) : seq<ColumnState> =
+        let spec, text = Seq.item index columns
         match text.Length, spec.Options with
-        | 0, opts when opts.HasFlag(ColumnOptions.MergeToLeft) && index > 0 -> 
+        | 0, opts when opts.HasFlag(ColumnOptions.MergeToLeft) && index > 0 ->
             mergeColumnLeft columns index spec
-        | 0, opts when opts.HasFlag(ColumnOptions.MergeToRight) && index < columns.Length - 1 -> 
+        | 0, opts when opts.HasFlag(ColumnOptions.MergeToRight) && index < Seq.length columns - 1 ->
             mergeColumnRight columns index spec
         | _ -> columns
 
     /// <summary>
     /// Determines if there is more text to process in any column.
     /// </summary>
-    let private moreToDo (columns: ColumnState seq) : bool =
-        columns 
-        |> Seq.exists (fun (spec, text) -> 
+    let private moreToDo (columns: seq<ColumnState>) : bool =
+        columns
+        |> Seq.exists (fun (spec, text) ->
             text.Length > 0 && not (spec.Options.HasFlag(ColumnOptions.Repeat)))
 
     /// <summary>
@@ -1162,17 +1170,18 @@ ALIGN()
             justify spec.Justification line spec.Width filler
 
     /// <summary>
-    /// Builds output parts array with column separators.
+    /// Builds output parts sequence with column separators.
     /// </summary>
-    let private buildOutputParts (lineResults: LineResult array) (columnSeparator: MarkupString) (filler: MarkupString) : MarkupString array =
+    let private buildOutputParts (lineResults: seq<LineResult>) (columnSeparator: MarkupString) (filler: MarkupString) : seq<MarkupString> =
         lineResults
-        |> Array.mapi (fun i (spec, _, line) ->
+        |> Seq.mapi (fun i (spec, _, line) ->
             let justifiedLine = justifyColumnLine spec line filler
-            // For columns after the first, if the previous column had the MergeToRight flag,
-            // prepend extra padding (equal to its specified width) to the separator.
+            let needsSeparator =
+                i < Seq.length lineResults - 1 &&
+                not (spec.Options.HasFlag(ColumnOptions.NoColSep))
             let separatorWithExtra =
                 if i > 0 then
-                    let prevSpec = (lineResults.[i-1] |> fun (s,_,_) -> s)
+                    let prevSpec = lineResults |> Seq.item (i - 1) |> fun (s,_,_) -> s
                     if prevSpec.Options.HasFlag(ColumnOptions.MergeToRight) then
                         let extraPadding = single (String.replicate prevSpec.Width " ")
                         concat extraPadding columnSeparator None
@@ -1180,65 +1189,57 @@ ALIGN()
                         columnSeparator
                 else
                     columnSeparator
-            let needsSeparator = 
-                i < lineResults.Length - 1 && 
-                not (spec.Options.HasFlag(ColumnOptions.NoColSep))
-
-            if needsSeparator then [| justifiedLine; separatorWithExtra |]
-            else [| justifiedLine |])
-        |> Array.concat
+            seq {
+                yield justifiedLine
+                if needsSeparator then yield separatorWithExtra
+            }
+        )
+        |> Seq.concat
 
     /// <summary>
     /// Processes one line across all columns, returning remainders and the formatted line.
     /// </summary>
-    let private doLine (columns: ColumnState seq) (filler: MarkupString) (columnSeparator: MarkupString) 
-        : ColumnState seq * MarkupString =
+    let private doLine (columns: seq<ColumnState>) (filler: MarkupString) (columnSeparator: MarkupString)
+        : seq<ColumnState> * MarkupString =
 
-        let columnsArray = columns |> Seq.toArray
+        let mergedColumns =
+            Seq.fold (fun cols i -> handleMerging cols i) columns [0 .. Seq.length columns - 1]
 
-        let mergedColumns = 
-            [| 0 .. columnsArray.Length - 1 |]
-            |> Array.fold handleMerging columnsArray
-
-        let lineResults = 
-            mergedColumns 
-            |> Array.map (fun (spec, text) ->
+        let lineResults =
+            mergedColumns
+            |> Seq.map (fun (spec, text) ->
                 let line, remainder = extractLine spec text
                 (spec, remainder, line))
 
-        let filteredLineResults = 
-            lineResults 
-            |> Array.filter (fun (spec, _, line) -> 
+        let filteredLineResults =
+            lineResults
+            |> Seq.filter (fun (spec, _, line) ->
                 not (line.Length = 0 && (spec.Options.HasFlag(ColumnOptions.MergeToLeft) || spec.Options.HasFlag(ColumnOptions.MergeToRight))))
 
-        // Build output line with justification and separators
         let outputParts = buildOutputParts filteredLineResults columnSeparator filler
         let outputLine = multiple outputParts
-        let remainders = filteredLineResults |> Array.map (fun (spec, rem, _) -> (spec, rem))
+        let remainders = filteredLineResults |> Seq.map (fun (spec, rem, _) -> (spec, rem))
 
         (remainders, outputLine)
-
-    // ===== Main Alignment Function =====
 
     /// <summary>
     /// Recursively processes columns until no more text remains.
     /// </summary>
-    let rec private alignLoop (columns: ColumnState seq) (filler: MarkupString) (columnSeparator: MarkupString)
-        (rowSeparator: MarkupString) (accumulator: MarkupString list) : MarkupString =
+    let rec private alignLoop (columns: seq<ColumnState>) (filler: MarkupString) (columnSeparator: MarkupString)
+        (rowSeparator: MarkupString) (accumulator: seq<MarkupString>) : MarkupString =
 
         if not (moreToDo columns) then
-            accumulator 
-            |> List.rev 
-            |> Seq.ofList
+            accumulator
+            |> Seq.rev
             |> multipleWithDelimiter rowSeparator
         else
             let remainder, newLine = doLine columns filler columnSeparator
-            alignLoop remainder filler columnSeparator rowSeparator (newLine :: accumulator)
+            alignLoop remainder filler columnSeparator rowSeparator (Seq.append (seq { yield newLine }) accumulator)
 
     /// <summary>
     /// Validates alignment parameters.
     /// </summary>
-    let private validateParameters (columnSpecs: ColumnSpec list) (columns: MarkupString list) 
+    let private validateParameters (columnSpecs: ColumnSpec list) (columns: MarkupString list)
         (filler: MarkupString) (columnSeparator: MarkupString) (rowSeparator: MarkupString) : Result<unit, string> =
 
         if columnSpecs.Length <> columns.Length then
@@ -1255,7 +1256,7 @@ ALIGN()
     /// <summary>
     /// Aligns a list of MarkupStrings into columns according to a width specification.
     /// </summary>
-    let align (widths: string) (columns: MarkupString list) (filler: MarkupString) 
+    let align (widths: string) (columns: MarkupString list) (filler: MarkupString)
         (columnSeparator: MarkupString) (rowSeparator: MarkupString) : MarkupString =
 
         let columnSpecs = ColumnSpec.parseList widths
@@ -1264,4 +1265,4 @@ ALIGN()
         | Error msg -> single msg
         | Ok () ->
             Seq.zip columnSpecs columns
-            |> fun cols -> alignLoop cols filler columnSeparator rowSeparator []
+            |> fun cols -> alignLoop cols filler columnSeparator rowSeparator Seq.empty
