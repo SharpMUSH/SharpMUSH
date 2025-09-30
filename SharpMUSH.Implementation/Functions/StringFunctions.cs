@@ -670,10 +670,11 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "foreach", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> ForEach(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> ForEach(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		//  foreach([<object>/]<attribute>, <string>[, <start>[, <end>]])
 
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var objAttr = args["0"].Message;
 		var str = args["1"].Message!;
@@ -682,24 +683,25 @@ public partial class Functions
 
 		if (!int.TryParse(start, out var startInt) || !int.TryParse(end, out var endInt))
 		{
-			return ValueTask.FromResult<CallState>(Errors.ErrorInteger);
+			return Errors.ErrorInteger;
 		}
 		
 		if(startInt < 0 || endInt < 0)
 		{
-			return ValueTask.FromResult<CallState>(Errors.ErrorPositiveInteger);
+			return Errors.ErrorPositiveInteger;
 		}
 
+		// DO Object and Attribute split here.
+		
 		endInt = Math.Min(endInt, str.Length);
 		
 		var left = MModule.substring(startInt, endInt - startInt, str);
 		var right = MModule.substring(endInt, str.Length - endInt, str);
 		var remainder = MModule.substring(endInt - startInt, str.Length - endInt + startInt, str);
 
-		// TODO: MModule.apply2 over the remainder to apply the function to each character.
-		// Will have to create a new apply function for this.
+		// TODO: MModule.apply2 over the remainder to apply the attribute-function to each character.
 		
-		return ValueTask.FromResult<CallState>(MModule.multiple([left, remainder, right]));
+		return MModule.multiple([left, remainder, right]);
 	}
 
 

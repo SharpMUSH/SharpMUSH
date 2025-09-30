@@ -510,6 +510,21 @@ module MarkupStringModule =
                 | MarkupText m -> MarkupText(apply m transform))
 
         MarkupString(str.MarkupDetails, mapContent str.Content)
+        
+    /// <summary>
+    /// Applies a transformation function to the text content of a MarkupString.
+    /// </summary>
+    /// <param name="str">The MarkupString to transform.</param>
+    /// <param name="transform">The transformation function.</param>
+    [<TailCall>]
+    let rec apply2 (str: MarkupString) (transform: MarkupString -> MarkupString) : MarkupString =
+        let rec mapContent content =
+            content
+            |> List.map (function
+                | Text s -> MarkupText (transform (single s))
+                | MarkupText m -> MarkupText (apply2 m transform))
+
+        MarkupString(str.MarkupDetails, mapContent str.Content)
 
     /// <summary>
     /// Inserts a MarkupString at a specified index in another MarkupString.
