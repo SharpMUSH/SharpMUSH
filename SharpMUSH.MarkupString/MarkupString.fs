@@ -1137,7 +1137,7 @@ ALIGN()
     /// <summary>
     /// Merges a column to the left, inheriting options.
     /// </summary>
-    let private mergeColumnLeft (columns: seq<ColumnState>) (index: int) (spec: ColumnSpec) : seq<ColumnState> =
+    let private mergeColumnLeft (columns: ColumnState seq) (index: int) (spec: ColumnSpec) : ColumnState seq =
         columns
         |> Seq.mapi (fun i (s, t) ->
             if i = index - 1 then
@@ -1171,7 +1171,7 @@ ALIGN()
     /// <summary>
     /// Merges a column to the right.
     /// </summary>
-    let private mergeColumnRight (columns: seq<ColumnState>) (index: int) (spec: ColumnSpec) : seq<ColumnState> =
+    let private mergeColumnRight (columns: ColumnState seq) (index: int) (spec: ColumnSpec) : ColumnState seq =
         columns
         |> Seq.mapi (fun i (s, t) ->
             if i = index + 1 then
@@ -1190,7 +1190,7 @@ ALIGN()
     /// <summary>
     /// Processes column merging logic when a column is empty.
     /// </summary>
-    let private handleMerging (columns: seq<ColumnState>) (index: int) : seq<ColumnState> =
+    let private handleMerging (columns: ColumnState seq) (index: int) : ColumnState seq =
         let spec, text = Seq.item index columns
 
         match text.Length, spec.Options with
@@ -1202,7 +1202,7 @@ ALIGN()
     /// <summary>
     /// Determines if there is more text to process in any column.
     /// </summary>
-    let private moreToDo (columns: seq<ColumnState>) : bool =
+    let private moreToDo (columns: ColumnState seq) : bool =
         columns
         |> Seq.exists (fun (spec, text) -> text.Length > 0 && not (spec.Options.HasFlag(ColumnOptions.Repeat)))
 
@@ -1220,10 +1220,10 @@ ALIGN()
     /// Builds output parts sequence with column separators.
     /// </summary>
     let private buildOutputParts
-        (lineResults: seq<LineResult>)
+        (lineResults: LineResult seq)
         (columnSeparator: MarkupString)
         (filler: MarkupString)
-        : seq<MarkupString> =
+        : MarkupString seq =
         lineResults
         |> Seq.mapi (fun i (spec, _, line) ->
             let justifiedLine = justifyColumnLine spec line filler
@@ -1256,10 +1256,10 @@ ALIGN()
     /// Processes one line across all columns, returning remainders and the formatted line.
     /// </summary>
     let private doLine
-        (columns: seq<ColumnState>)
+        (columns: ColumnState seq)
         (filler: MarkupString)
         (columnSeparator: MarkupString)
-        : seq<ColumnState> * MarkupString =
+        : ColumnState seq * MarkupString =
 
         let mergedColumns =
             Seq.fold handleMerging columns [ 0 .. Seq.length columns - 1 ]
@@ -1289,11 +1289,11 @@ ALIGN()
     /// Recursively processes columns until no more text remains.
     /// </summary>
     let rec private alignLoop
-        (columns: seq<ColumnState>)
+        (columns: ColumnState seq)
         (filler: MarkupString)
         (columnSeparator: MarkupString)
         (rowSeparator: MarkupString)
-        (accumulator: seq<MarkupString>)
+        (accumulator: MarkupString seq)
         : MarkupString =
 
         if not (moreToDo columns) then
@@ -1306,21 +1306,21 @@ ALIGN()
     /// Validates alignment parameters.
     /// </summary>
     let private validateParameters
-        (columnSpecs: ColumnSpec list)
-        (columns: MarkupString list)
+        (columnSpecs: ColumnSpec seq)
+        (columns: MarkupString seq)
         (filler: MarkupString)
         : Result<unit, string> =
 
-        if columnSpecs.Length <> columns.Length then
+        if Seq.length columnSpecs <> Seq.length columns then
             Error "#-1 COLUMN COUNT MISMATCH"
         elif filler.Length > 1 then
             Error "#-1 FILLER MUST BE ONE CHARACTER"
-        elif columnSpecs |> List.exists (fun spec -> spec.Width <= 0) then
+        elif columnSpecs |> Seq.exists (fun spec -> spec.Width <= 0) then
             Error "#-1 CANNOT HAVE COLUMNS OF NEGATIVE SIZE"
-        elif columnSpecs |> List.exists (fun spec -> spec.Width > 5_000_000) then
+        elif columnSpecs |> Seq.exists (fun spec -> spec.Width > 5_000_000) then
             Error "#-1 CANNOT HAVE COLUMNS THAT LARGE"
         elif
-            columnSpecs |> List.exists (fun spec ->
+            columnSpecs |> Seq.exists (fun spec ->
                 (spec.Options.HasFlag ColumnOptions.Repeat)
                 && ((spec.Options.HasFlag ColumnOptions.Truncate)
                     || (spec.Options.HasFlag ColumnOptions.TruncateV2)))
@@ -1334,7 +1334,7 @@ ALIGN()
     /// </summary>
     let align
         (widths: string)
-        (columns: MarkupString list)
+        (columns: MarkupString seq)
         (filler: MarkupString)
         (columnSeparator: MarkupString)
         (rowSeparator: MarkupString)

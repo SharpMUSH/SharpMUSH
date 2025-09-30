@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System.Collections.Immutable;
+using System.Globalization;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -340,10 +341,8 @@ public partial class Functions
 			.Skip(1 + expectedColumnCount).Select(x => x.Value.Message!)
 			.ToArray();
 
-		var list = FSharpList.Create<MString>(columnArguments.ToArray());
-
 		return TextAligner.align(widths,
-			list,
+			columnArguments,
 			filler: remainder.Skip(0).FirstOrDefault(MModule.single(" ")),
 			columnSeparator: remainder.Skip(1).FirstOrDefault(MModule.single(" ")),
 			rowSeparator: remainder.Skip(2).FirstOrDefault(MModule.single("\n")));
@@ -370,8 +369,7 @@ public partial class Functions
 			0 => "#-1 INVALID ALIGN STRING",
 			_ when expectedColumnCount > actualColumnArgCount => "#-1 NOT ENOUGH COLUMNS FOR ALIGN",
 			_ when expectedColumnCount < minRequiredColumnCount => "#-1 TOO MANY COLUMNS FOR ALIGN",
-			_ => TextAligner.align(widths, FSharpList.Create<MString>(MModule.split2(colDelim, cols)), filler,
-				columnSeparator, rowSeparator)
+			_ => TextAligner.align(widths, MModule.split2(colDelim, cols), filler, columnSeparator, rowSeparator)
 		};
 	}
 
@@ -433,11 +431,12 @@ public partial class Functions
 				: "a";
 		}
 
-		if (ArticleRegex().Match(word).Success)
+		if (ArticleRegex().IsMatch(word))
 		{
 			return "an";
 		}
 
+		// Todo: Turn into compiled regexs.
 		if (new[] { "^e[uw]", "^onc?e\b", "^uni([^nmd]|mo)", "^u[bcfhjkqrst][aeiou]" }
 		    .Any(regex => Regex.IsMatch(wordLower, regex)))
 		{
@@ -461,12 +460,7 @@ public partial class Functions
 			return "an";
 		}
 
-		if (ArticleRegex3().IsMatch(wordLower))
-		{
-			return "an";
-		}
-
-		return "a";
+		return ArticleRegex3().IsMatch(wordLower) ? "an" : "a";
 	}
 
 	[SharpFunction(Name = "BEFORE", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
