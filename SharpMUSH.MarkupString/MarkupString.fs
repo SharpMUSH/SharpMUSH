@@ -1026,7 +1026,6 @@ ALIGN()
     let private extractLineWithNewline (spec: ColumnSpec) (text: MarkupString) (rowSepIndex: int) : MarkupString * MarkupString =
         let lineText = substring 0 rowSepIndex text
         let remainder = 
-            // Do not include the newline in the output, just split and continue
             if rowSepIndex + 1 < text.Length then 
                 substring (rowSepIndex + 1) (text.Length - (rowSepIndex + 1)) text 
             else 
@@ -1144,8 +1143,6 @@ ALIGN()
             mergeColumnRight columns index spec
         | _ -> columns
 
-    // ===== Line Processing =====
-
     /// <summary>
     /// Determines if there is more text to process in any column.
     /// </summary>
@@ -1199,19 +1196,16 @@ ALIGN()
 
         let columnsArray = columns |> Seq.toArray
 
-        // Handle merging for empty columns
         let mergedColumns = 
             [| 0 .. columnsArray.Length - 1 |]
             |> Array.fold handleMerging columnsArray
 
-        // Extract one line from each column
         let lineResults = 
             mergedColumns 
             |> Array.map (fun (spec, text) ->
                 let line, remainder = extractLine spec text
                 (spec, remainder, line))
 
-        // Filter out merged (empty) columns that have MergeToLeft or MergeToRight flags
         let filteredLineResults = 
             lineResults 
             |> Array.filter (fun (spec, _, line) -> 
