@@ -92,8 +92,8 @@ public class StringFunctionUnitTests
 		Console.WriteLine("Testing: {0}", str);
 
 		var expectedBytes = expectedByte2 is null
-			? new byte[] { expectedByte1 }
-			: new byte[] { expectedByte1, expectedByte2.Value };
+			? new[] { expectedByte1 }
+			: new[] { expectedByte1, expectedByte2.Value };
 
 		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message!;
 
