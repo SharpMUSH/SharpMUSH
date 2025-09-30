@@ -34,11 +34,11 @@ public class AlignUnitTests
 	{
 		// Column count mismatch
 		var result1 = CallAlign("10 10", [A.single("a")], A.single(" "), A.single(" "), A.single("\n"));
-		await Assert.That(result1.ToPlainText()).IsEqualTo("Column count mismatch");
+		await Assert.That(result1.ToPlainText()).IsEqualTo("#-1 COLUMN COUNT MISMATCH");
 
 		// Filler too long
 		var result2 = CallAlign("10", [A.single("a")], A.single("--"), A.single(" "), A.single("\n"));
-		await Assert.That(result2.ToPlainText()).IsEqualTo("Filler is too long");
+		await Assert.That(result2.ToPlainText()).IsEqualTo("#-1 FILLER MUST BE ONE CHARACTER");
 	}
 
 	[Test]
@@ -67,8 +67,8 @@ public class AlignUnitTests
 		// All lines should start and end with |
 		foreach (var line in lines)
 		{
-			await Assert.That(line.StartsWith("|")).IsTrue();
-			await Assert.That(line.EndsWith("|")).IsTrue();
+			await Assert.That(line).StartsWith("|");
+			await Assert.That(line).EndsWith("|");
 		}
 	}
 

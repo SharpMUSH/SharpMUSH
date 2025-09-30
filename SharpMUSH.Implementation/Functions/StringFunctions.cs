@@ -323,11 +323,11 @@ public partial class Functions
 		switch (expectedColumnCount)
 		{
 			case 0:
-				return "No widths provided.";
+				return "#-1 INVALID ALIGN STRING";
 			case var _ when expectedColumnCount > actualColumnArgCount:
-				return "Too many widths, not enough columns.";
+				return "#-1 NOT ENOUGH COLUMNS FOR ALIGN";
 			case var _ when expectedColumnCount < minRequiredColumnCount:
-				return "Too few widths, too many columns.";
+				return "#-1 TOO MANY COLUMNS FOR ALIGN";
 		}
 
 		var columnArguments = args
