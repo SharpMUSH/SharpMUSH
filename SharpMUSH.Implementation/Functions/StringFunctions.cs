@@ -349,10 +349,30 @@ public partial class Functions
 			rowSeparator: remainder.Skip(2).FirstOrDefault(MModule.single("\n")));
 	}
 
-	[SharpFunction(Name = "LALIGN", MinArgs = 2, MaxArgs = 6, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> LAlign(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "lalign", MinArgs = 2, MaxArgs = 6, Flags = FunctionFlags.Regular)]
+	public static async ValueTask<CallState> ListAlign(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		await ValueTask.CompletedTask;
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var widths = args["0"].Message!.ToPlainText()!;
+		var cols = args["1"].Message!;
+		var colDelim = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.single(" "));
+		var filler = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MModule.single(" "));
+		var columnSeparator = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MModule.single(" "));
+		var rowSeparator = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, MModule.single("\n"));
+		
+		var actualColumnArgCount = args.Count - 1;
+		var expectedColumnCount = widths.Split(' ').Length;
+		var minRequiredColumnCount = actualColumnArgCount - 3;
+
+		return expectedColumnCount switch
+		{
+			0 => "#-1 INVALID ALIGN STRING",
+			_ when expectedColumnCount > actualColumnArgCount => "#-1 NOT ENOUGH COLUMNS FOR ALIGN",
+			_ when expectedColumnCount < minRequiredColumnCount => "#-1 TOO MANY COLUMNS FOR ALIGN",
+			_ => TextAligner.align(widths, FSharpList.Create<MString>(MModule.split2(colDelim, cols)), filler,
+				columnSeparator, rowSeparator)
+		};
 	}
 
 	[SharpFunction(Name = "ALPHAMAX", MinArgs = 1, MaxArgs = int.MaxValue,
