@@ -1082,7 +1082,6 @@ ALIGN()
             let plainTextStr = plainText text
             let rowSepIndex = plainTextStr.IndexOf(Environment.NewLine)
 
-            // If Truncate flag is set, always use the truncate branch to output a single row.
             if spec.Options.HasFlag(ColumnOptions.Truncate) then
                 extractLineTruncated spec text plainTextStr rowSepIndex
             elif text.Length <= spec.Width then
@@ -1091,8 +1090,6 @@ ALIGN()
                 extractLineWithNewline spec text rowSepIndex
             else
                 extractLineWithWrap spec text plainTextStr
-
-    // ===== Column Justification =====
 
     /// <summary>
     /// Justifies a MarkupString according to the specified justification and width.
@@ -1106,8 +1103,6 @@ ALIGN()
             | Justification.Right | Justification.Paragraph -> PadType.Left
 
         pad text fill width padType TruncationType.Truncate
-
-    // ===== Column Merging =====
 
     /// <summary>
     /// Merges a column to the left, inheriting options.
