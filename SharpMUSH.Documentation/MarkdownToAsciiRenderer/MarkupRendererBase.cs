@@ -105,7 +105,7 @@ public abstract class MarkupRendererBase<T> : MarkupRendererBase where T : Marku
 		if (!_previousWasLine)
 		{
 			_previousWasLine = true;
-			WriteToContainer(MModule.single(Environment.NewLine));
+			WriteToContainer(MModule.single("\n"));
 		}
 
 		return (T)this;
@@ -212,7 +212,7 @@ public abstract class MarkupRendererBase<T> : MarkupRendererBase where T : Marku
 	public T WriteLine()
 	{
 		WriteIndent();
-		WriteToContainer(MModule.single(Environment.NewLine));
+		WriteToContainer(MModule.single("\n"));
 
 		_previousWasLine = true;
 		
@@ -230,7 +230,7 @@ public abstract class MarkupRendererBase<T> : MarkupRendererBase where T : Marku
 		WriteIndent();
 		_previousWasLine = true;
 		
-		WriteToContainer(MModule.single(content + Environment.NewLine));
+		WriteToContainer(MModule.single(content + "\n"));
 
 		return (T)this;
 	}
@@ -246,7 +246,7 @@ public abstract class MarkupRendererBase<T> : MarkupRendererBase where T : Marku
 		WriteIndent();
 		_previousWasLine = true;
 		
-		WriteToContainer(MModule.concat(content,MModule.single(Environment.NewLine)));
+		WriteToContainer(MModule.concat(content,MModule.single("\n")));
 
 		return (T)this;
 	}

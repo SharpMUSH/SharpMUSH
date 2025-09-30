@@ -345,7 +345,7 @@ public partial class Functions
 			list,
 			filler: remainder.Skip(0).FirstOrDefault(MModule.single(" ")), 
 			columnSeparator: remainder.Skip(1).FirstOrDefault(MModule.single(" ")), 
-			rowSeparator: remainder.Skip(2).FirstOrDefault(MModule.single(Environment.NewLine)));
+			rowSeparator: remainder.Skip(2).FirstOrDefault(MModule.single("\n")));
 	}	
 
 	[SharpFunction(Name = "LALIGN", MinArgs = 2, MaxArgs = 6, Flags = FunctionFlags.Regular)]

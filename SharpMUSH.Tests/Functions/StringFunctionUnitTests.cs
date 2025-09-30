@@ -62,17 +62,17 @@ public class StringFunctionUnitTests
 	[Arguments("align(30 30,a,b)", 
 		"a                              b                             ")]
 	[Arguments("align(5 5,a1%ra2,b1)", 
-		"a1    b1   \r\na2         ")]
+		"a1    b1   \na2         ")]
 	[Arguments("align(5 5,a1%ra2,b1%rb2%rb3)", 
-		"a1    b1   \r\na2    b2   \r\n      b3   ")]
+		"a1    b1   \na2    b2   \n      b3   ")]
 	[Arguments("align(1. 5 1.,|,this is a test,|)", 
-		"| this  |\r\n| is a  |\r\n| test  |")]
+		"| this  |\n| is a  |\n| test  |")]
 	[Arguments("align(5 >5,a1%ra2,b1%rb2%rb3)", 
-		"a1       b1\r\na2       b2\r\n         b3")]
+		"a1       b1\na2       b2\n         b3")]
 	[Arguments("align(5. >5,a1,b1%rb2%rb3)", 
-		"a1       b1\r\na1       b2\r\na1       b3")]
+		"a1       b1\na1       b2\na1       b3")]
 	[Arguments("align(5 >5.,a1%ra2%ra3,b1)", 
-		"a1       b1\r\na2       b1\r\na3       b1")]
+		"a1       b1\na2       b1\na3       b1")]
 	[Arguments("align(>30 30,a,b)", 
 		"                             a b                             ")]
 	[Arguments("align(>30 >30,a,b)", 

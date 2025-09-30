@@ -148,10 +148,10 @@ public partial class Commands
 		await NotifyService!.Notify(executor, description.ToString());
 		// NotifyService!.Notify(enactor, $"Location: {location}");
 		// TODO: Pass value into CONFORMAT
-		await NotifyService!.Notify(executor, $"Contents: {string.Join(Environment.NewLine, contentKeys)}");
+		await NotifyService!.Notify(executor, $"Contents: {string.Join("\n", contentKeys)}");
 		// TODO: Pass value into EXITFORMAT
 		await NotifyService!.Notify(executor,
-			$"Exits: {string.Join(Environment.NewLine, string.Join(", ", exitKeys))}");
+			$"Exits: {string.Join("\n", string.Join(", ", exitKeys))}");
 
 		return new CallState(viewingObject.DBRef.ToString());
 	}
@@ -256,8 +256,8 @@ public partial class Commands
 		}
 
 		// TODO: Proper carry format.
-		await NotifyService!.Notify(enactor, $"Contents: {Environment.NewLine}" +
-		                                           $"{string.Join(Environment.NewLine, contentKeys)}");
+		await NotifyService!.Notify(enactor, $"Contents: \n" +
+		                                           $"{string.Join("\n", contentKeys)}");
 
 		if (!viewing.IsRoom)
 		{
@@ -1670,7 +1670,7 @@ public partial class Commands
 
 		// TODO: Last Restarted
 		var result = MModule.multipleWithDelimiter(
-			MModule.single(Environment.NewLine),
+			MModule.single("\n"),
 			[
 				MModule.concat(MModule.single("You are connected to "),
 					MModule.single(Configuration!.CurrentValue.Net.MudName)),

@@ -25,7 +25,7 @@ public static partial class Substitutions
 					? tmpCs.Message!
 					: MModule.empty(),
 			"B" or "b" => " ",
-			"R" or "r" => Environment.NewLine,
+			"R" or "r" => "\n",
 			"T" or "t" => "\t",
 			"#" => $"#{parser.CurrentState.Enactor!.Value.Number}",
 			":" => $"#{parser.CurrentState.Enactor!.Value}",

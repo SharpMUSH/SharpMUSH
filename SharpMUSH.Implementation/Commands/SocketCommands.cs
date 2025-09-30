@@ -35,7 +35,7 @@ public partial class Commands
 		}));
 		var footer = $"{everyone.Count} players logged in.";
 
-		var message = $"{header}{Environment.NewLine}{string.Join(Environment.NewLine, players)}{Environment.NewLine}{footer}";
+		var message = $"{header}\n{string.Join('\n', players)}\n{footer}";
 
 		await NotifyService!.Notify(handle: parser.CurrentState.Handle!.Value, what: message);
 

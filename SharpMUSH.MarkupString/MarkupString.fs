@@ -1000,12 +1000,12 @@ ALIGN()
     /// Finds the best word-wrap point in text within the specified width.
     /// Returns the split position and whether a space was found.
     /// </summary>
-    let private findWrapPoint (text: string) (width: int) : int * bool =
+    let private findWrapPoint (text: MarkupString) (width: int) : int * bool =
         let mutable splitPoint = width
         let mutable foundSpace = false
 
         for i in width .. -1 .. 0 do
-            if not foundSpace && i < text.Length && text.[i] = ' ' then
+            if not foundSpace && i < text.Length && (plainText (substring i 1 text)) = " " then
                 splitPoint <- i
                 foundSpace <- true
 
@@ -1026,11 +1026,11 @@ ALIGN()
     let private extractLineWithNewline (spec: ColumnSpec) (text: MarkupString) (rowSepIndex: int) : MarkupString * MarkupString =
         let lineText = substring 0 rowSepIndex text
         let remainder = 
-            if rowSepIndex + 2 < text.Length then 
-                substring (rowSepIndex + 2) (text.Length - rowSepIndex - 2) text 
+            // Do not include the newline in the output, just split and continue
+            if rowSepIndex + 1 < text.Length then 
+                substring (rowSepIndex + 1) (text.Length - (rowSepIndex + 1)) text 
             else 
                 empty ()
-
         (lineText, applyRepeatOption spec text remainder)
 
     /// <summary>
@@ -1043,8 +1043,8 @@ ALIGN()
     /// <summary>
     /// Extracts a line when text needs word wrapping.
     /// </summary>
-    let private extractLineWithWrap (spec: ColumnSpec) (text: MarkupString) (plainText: string) : MarkupString * MarkupString =
-        let splitPoint, foundSpace = findWrapPoint plainText spec.Width
+    let private extractLineWithWrap (spec: ColumnSpec) (text: MarkupString) : MarkupString * MarkupString =
+        let splitPoint, foundSpace = findWrapPoint text spec.Width
         let splitPoint = if not foundSpace then spec.Width else splitPoint
 
         let lineText = substring 0 splitPoint text
@@ -1060,7 +1060,7 @@ ALIGN()
     /// <summary>
     /// Extracts a line for truncation mode.
     /// </summary>
-    let private extractLineTruncated (spec: ColumnSpec) (text: MarkupString) (plainText: string) (rowSepIndex: int) : MarkupString * MarkupString =
+    let private extractLineTruncated (spec: ColumnSpec) (text: MarkupString) (rowSepIndex: int) : MarkupString * MarkupString =
         let splitPoint = 
             if rowSepIndex >= 0 && rowSepIndex < spec.Width then rowSepIndex
             elif text.Length > spec.Width then spec.Width
@@ -1079,17 +1079,16 @@ ALIGN()
         | 0, _ -> (empty (), empty ())
         | _, true -> (text, empty ())
         | _ ->
-            let plainTextStr = plainText text
-            let rowSepIndex = plainTextStr.IndexOf(Environment.NewLine)
-
-            if spec.Options.HasFlag(ColumnOptions.Truncate) then
-                extractLineTruncated spec text plainTextStr rowSepIndex
+            let rowSepIndex = indexOf text (single "\n")
+            // Always prefer explicit newline if present, regardless of width
+            if rowSepIndex >= 0 && rowSepIndex < spec.Width then
+                extractLineWithNewline spec text rowSepIndex
+            elif spec.Options.HasFlag(ColumnOptions.Truncate) then
+                extractLineTruncated spec text rowSepIndex
             elif text.Length <= spec.Width then
                 extractLineFitting spec text
-            elif rowSepIndex >= 0 && rowSepIndex < spec.Width then
-                extractLineWithNewline spec text rowSepIndex
             else
-                extractLineWithWrap spec text plainTextStr
+                extractLineWithWrap spec text
 
     /// <summary>
     /// Justifies a MarkupString according to the specified justification and width.

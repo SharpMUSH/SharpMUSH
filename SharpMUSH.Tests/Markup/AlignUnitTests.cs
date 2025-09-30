@@ -24,7 +24,7 @@ public class AlignUnitTests
 
 		Log.Logger.Information("Widths: {Widths}", widths);
 		Log.Logger.Information("Result: {Result}{NewLine}Expected: {Expected}", 
-			result.ToPlainText(), Environment.NewLine, expected.ToPlainText());
+			result.ToPlainText(), "\n", expected.ToPlainText());
 
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected.ToPlainText());
 	}
@@ -33,11 +33,11 @@ public class AlignUnitTests
 	public async Task AlignWithInvalidParameters()
 	{
 		// Column count mismatch
-		var result1 = CallAlign("10 10", [A.single("a")], A.single(" "), A.single(" "), A.single(Environment.NewLine));
+		var result1 = CallAlign("10 10", [A.single("a")], A.single(" "), A.single(" "), A.single("\n"));
 		await Assert.That(result1.ToPlainText()).IsEqualTo("Column count mismatch");
 
 		// Filler too long
-		var result2 = CallAlign("10", [A.single("a")], A.single("--"), A.single(" "), A.single(Environment.NewLine));
+		var result2 = CallAlign("10", [A.single("a")], A.single("--"), A.single(" "), A.single("\n"));
 		await Assert.That(result2.ToPlainText()).IsEqualTo("Filler is too long");
 	}
 
@@ -45,8 +45,8 @@ public class AlignUnitTests
 	public async Task AlignWithExplicitNewlines()
 	{
 		// Test that explicit newlines in text are handled correctly
-		var result = CallAlign("10", [A.single("line1\r\nline2\r\nline3")], A.single(" "), A.single(" "), A.single(Environment.NewLine));
-		var expected = "line1     \r\nline2     \r\nline3     ";
+		var result = CallAlign("10", [A.single("line1\nline2\nline3")], A.single(" "), A.single(" "), A.single("\n"));
+		var expected = "line1     \nline2     \nline3     ";
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -56,13 +56,13 @@ public class AlignUnitTests
 		// Test repeat columns with varying content lengths
 		var result = CallAlign(
 			"1. 20 1.",
-			[A.single("|"), A.single("short\r\nmedium text\r\nvery long content here"), A.single("|")],
+			[A.single("|"), A.single("short\nmedium text\nvery long content here"), A.single("|")],
 			A.single(" "),
 			A.single(" "),
-			A.single(Environment.NewLine)
+			A.single("\n")
 		);
 
-		var lines = result.ToPlainText().Split(new[] { "\r\n" }, StringSplitOptions.None);
+		var lines = result.ToPlainText().Split(new[] { "\n" }, StringSplitOptions.None);
 
 		// All lines should start and end with |
 		foreach (var line in lines)
@@ -97,7 +97,7 @@ public class AlignUnitTests
 			[A.single("A"), A.single("B"), A.single("C")],
 			A.single(" "),
 			A.single("|"),
-			A.single(Environment.NewLine)
+			A.single("\n")
 		);
 
 		// First column should not have separator after it
@@ -114,7 +114,7 @@ public class AlignUnitTests
 			[A.single("one two three four")],
 			A.single(" "),
 			A.single(" "),
-			A.single(Environment.NewLine)
+			A.single("\n")
 		);
 
 		var resultText = result.ToPlainText();

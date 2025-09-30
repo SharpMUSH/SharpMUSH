@@ -21,28 +21,28 @@ public static class Align
 			[A.single("a"), A.single("b")],
 			A.single(" "),
 			A.single(" "),
-			A.single(Environment.NewLine),
+			A.single("\n"),
 			A.single("a                              b                             ")
 		);
 
 		// Multiple rows with word wrapping
 		yield return () => new(
 			"5 5",
-			[A.single("a1\r\na2"), A.single("b1")],
+			[A.single("a1\na2"), A.single("b1")],
 			A.single(" "),
 			A.single(" "),
-			A.single(Environment.NewLine),
-			A.single("a1    b1   \r\na2         ")
+			A.single("\n"),
+			A.single("a1    b1   \na2         ")
 		);
 
 		// Uneven rows
 		yield return () => new(
 			"5 5",
-			[A.single("a1\r\na2"), A.single("b1\r\nb2\r\nb3")],
+			[A.single("a1\na2"), A.single("b1\nb2\nb3")],
 			A.single(" "),
 			A.single(" "),
-			A.single(Environment.NewLine),
-			A.single("a1    b1   \r\na2    b2   \r\n      b3   ")
+			A.single("\n"),
+			A.single("a1    b1   \na2    b2   \n      b3   ")
 		);
 
 		// Repeat option with word wrapping
@@ -51,38 +51,38 @@ public static class Align
 			[A.single("|"), A.single("this is a test"), A.single("|")],
 			A.single(" "),
 			A.single(" "),
-			A.single(Environment.NewLine),
-			A.single("| this  |\r\n| is a  |\r\n| test  |")
+			A.single("\n"),
+			A.single("| this  |\n| is a  |\n| test  |")
 		);
 
 		// Right justification
 		yield return () => new(
 			"5 >5",
-			[A.single("a1\r\na2"), A.single("b1\r\nb2\r\nb3")],
+			[A.single("a1\na2"), A.single("b1\nb2\nb3")],
 			A.single(" "),
 			A.single(" "),
-			A.single(Environment.NewLine),
-			A.single("a1       b1\r\na2       b2\r\n         b3")
+			A.single("\n"),
+			A.single("a1       b1\na2       b2\n         b3")
 		);
 
 		// Left column with repeat, right column with multiple rows
 		yield return () => new(
 			"5. >5",
-			[A.single("a1"), A.single("b1\r\nb2\r\nb3")],
+			[A.single("a1"), A.single("b1\nb2\nb3")],
 			A.single(" "),
 			A.single(" "),
-			A.single(Environment.NewLine),
-			A.single("a1       b1\r\na1       b2\r\na1       b3")
+			A.single("\n"),
+			A.single("a1       b1\na1       b2\na1       b3")
 		);
 
 		// Right column with repeat
 		yield return () => new(
 			"5 >5.",
-			[A.single("a1\r\na2\r\na3"), A.single("b1")],
+			[A.single("a1\na2\na3"), A.single("b1")],
 			A.single(" "),
 			A.single(" "),
-			A.single(Environment.NewLine),
-			A.single("a1       b1\r\na2       b1\r\na3       b1")
+			A.single("\n"),
+			A.single("a1       b1\na2       b1\na3       b1")
 		);
 
 		// Right alignment, two columns
@@ -91,7 +91,7 @@ public static class Align
 			[A.single("a"), A.single("b")],
 			A.single(" "),
 			A.single(" "),
-			A.single(Environment.NewLine),
+			A.single("\n"),
 			A.single("                             a b                             ")
 		);
 
@@ -101,7 +101,7 @@ public static class Align
 			[A.single("a"), A.single("b")],
 			A.single(" "),
 			A.single(" "),
-			A.single(Environment.NewLine),
+			A.single("\n"),
 			A.single("                             a                              b")
 		);
 
@@ -111,7 +111,7 @@ public static class Align
 			[A.single("test")],
 			A.single(" "),
 			A.single(" "),
-			A.single(Environment.NewLine),
+			A.single("\n"),
 			A.single("   test   ")
 		);
 
@@ -121,7 +121,7 @@ public static class Align
 			[A.single("Walker"), A.single("Staff & Developer")],
 			A.single("x"),
 			A.single("x"),
-			A.single(Environment.NewLine),
+			A.single("\n"),
 			A.single("xxxxxxxxxWalkerxStaff & Developer")
 		);
 
@@ -131,7 +131,7 @@ public static class Align
 			[A.single("abc"), A.single("def")],
 			A.single("-"),
 			A.single(" "),
-			A.single(Environment.NewLine),
+			A.single("\n"),
 			A.single("abc------- def-------")
 		);
 
@@ -141,14 +141,14 @@ public static class Align
 			[A.single("aa"), A.single("bb")],
 			A.single(" "),
 			A.single("|"),
-			A.single(Environment.NewLine),
+			A.single("\n"),
 			A.single("aa   |bb   ")
 		);
 
 		// Custom row separator
 		yield return () => new(
 			"5 5",
-			[A.single("a1\r\na2"), A.single("b1\r\nb2")],
+			[A.single("a1\na2"), A.single("b1\nb2")],
 			A.single(" "),
 			A.single(" "),
 			A.single(" / "),
@@ -161,7 +161,7 @@ public static class Align
 			[A.single("This is a very long text"), A.single("Another long text here")],
 			A.single(" "),
 			A.single(" "),
-			A.single(Environment.NewLine),
+			A.single("\n"),
 			A.single("This  Anoth")
 		);
 
@@ -171,7 +171,7 @@ public static class Align
 			[A.single("This is a very long text that wraps"), A.single("Another very long text")],
 			A.single(" "),
 			A.single(" "),
-			A.single(Environment.NewLine),
+			A.single("\n"),
 			A.single("This is a  Another ve")
 		);
 
@@ -181,7 +181,7 @@ public static class Align
 			[A.single("abc"), A.single("def")],
 			A.single(" "),
 			A.single("|"),
-			A.single(Environment.NewLine),
+			A.single("\n"),
 			A.single("abc  def  ")
 		);
 
@@ -191,7 +191,7 @@ public static class Align
 			[A.single("hello world test")],
 			A.single(" "),
 			A.single(" "),
-			A.single(Environment.NewLine),
+			A.single("\n"),
 			A.single("hello   world   test")
 		);
 
@@ -203,7 +203,7 @@ public static class Align
 			[A.single("aaa"), A.single(""), A.single("bbb")],
 			A.single(" "),
 			A.single(" "),
-			A.single(Environment.NewLine),
+			A.single("\n"),
 			A.single("aaa            bbb       ")
 		);
 		*/
@@ -216,7 +216,7 @@ public static class Align
 			[A.single("aaa"), A.single(""), A.single("bbb")],
 			A.single(" "),
 			A.single(" "),
-			A.single(Environment.NewLine),
+			A.single("\n"),
 			A.single("aaa              bbb       ")
 		);
 		*/
@@ -227,7 +227,7 @@ public static class Align
 			[A.single("+"), A.single("Header"), A.single("+")],
 			A.single("-"),
 			A.single(""),
-			A.single(Environment.NewLine),
+			A.single("\n"),
 			A.single("+Header--+")
 		);
 
@@ -237,8 +237,8 @@ public static class Align
 			[A.single("This is a test of word wrapping")],
 			A.single(" "),
 			A.single(" "),
-			A.single(Environment.NewLine),
-			A.single("This is a \r\ntest of   \r\nword      \r\nwrapping  ")
+			A.single("\n"),
+			A.single("This is a \ntest of   \nword      \nwrapping  ")
 		);
 
 		// Edge case: Empty column
@@ -247,7 +247,7 @@ public static class Align
 			[A.single(""), A.single("text")],
 			A.single(" "),
 			A.single(" "),
-			A.single(Environment.NewLine),
+			A.single("\n"),
 			A.single("           text      ")
 		);
 
@@ -257,7 +257,7 @@ public static class Align
 			[A.single("a"), A.single("b"), A.single("c")],
 			A.single(" "),
 			A.single(" "),
-			A.single(Environment.NewLine),
+			A.single("\n"),
 			A.single("a b c")
 		);
 
@@ -267,8 +267,8 @@ public static class Align
 			[A.single(">>"), A.single("The quick brown fox jumps"), A.single("<<")],
 			A.single(" "),
 			A.single(" "),
-			A.single(Environment.NewLine),
-			A.single(">> The quick    <<\r\n>> brown fox    <<\r\n>> jumps        <<")
+			A.single("\n"),
+			A.single(">> The quick    <<\n>> brown fox    <<\n>> jumps        <<")
 		);
 
 		// Three columns with different justifications
@@ -277,7 +277,7 @@ public static class Align
 			[A.single("left"), A.single("center"), A.single("right")],
 			A.single(" "),
 			A.single("|"),
-			A.single(Environment.NewLine),
+			A.single("\n"),
 			A.single("left      |  center  |     right")
 		);
 
@@ -287,7 +287,7 @@ public static class Align
 			[A.single("text")],
 			A.single(" "),
 			A.single(" "),
-			A.single(Environment.NewLine),
+			A.single("\n"),
 			A.single("           text")
 		);
 	}
