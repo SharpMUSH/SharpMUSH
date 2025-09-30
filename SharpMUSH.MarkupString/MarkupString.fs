@@ -1262,7 +1262,7 @@ ALIGN()
         : seq<ColumnState> * MarkupString =
 
         let mergedColumns =
-            Seq.fold (fun cols i -> handleMerging cols i) columns [ 0 .. Seq.length columns - 1 ]
+            Seq.fold handleMerging columns [ 0 .. Seq.length columns - 1 ]
 
         let lineResults =
             mergedColumns

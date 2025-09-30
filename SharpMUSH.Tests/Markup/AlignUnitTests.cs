@@ -1,5 +1,4 @@
 using Serilog;
-using System.Text;
 using MarkupString;
 using SharpMUSH.Tests.Markup.Data;
 using A = MarkupString.MarkupStringModule;
@@ -62,7 +61,7 @@ public class AlignUnitTests
 			A.single("\n")
 		);
 
-		var lines = result.ToPlainText().Split(new[] { "\n" }, StringSplitOptions.None);
+		var lines = result.ToPlainText().Split(["\n"], StringSplitOptions.None);
 
 		// All lines should start and end with |
 		foreach (var line in lines)
