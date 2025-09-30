@@ -1,16 +1,17 @@
 ﻿using OneOf;
+using OneOf.Types;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.DiscriminatedUnions;
 
 [GenerateOneOf]
-public class AnyOptionalSharpContainer : OneOfBase<SharpPlayer, SharpRoom, SharpThing, OneOf.Types.None>
+public class AnyOptionalSharpContainer : OneOfBase<SharpPlayer, SharpRoom, SharpThing, None>
 {
-	public AnyOptionalSharpContainer(OneOf<SharpPlayer, SharpRoom, SharpThing, OneOf.Types.None> input) : base(input) { }
+	public AnyOptionalSharpContainer(OneOf<SharpPlayer, SharpRoom, SharpThing, None> input) : base(input) { }
 	public static implicit operator AnyOptionalSharpContainer(SharpPlayer x) => new(x);
 	public static implicit operator AnyOptionalSharpContainer(SharpRoom x) => new(x);
 	public static implicit operator AnyOptionalSharpContainer(SharpThing x) => new(x);
-	public static implicit operator AnyOptionalSharpContainer(OneOf.Types.None x) => new(x);
+	public static implicit operator AnyOptionalSharpContainer(None x) => new(x);
 
 	public bool IsPlayer => IsT0;
 	public bool IsRoom => IsT1;

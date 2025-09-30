@@ -1,10 +1,11 @@
-﻿using SharpMUSH.Library;
+﻿using System.Drawing;
+using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
-using System.Drawing;
-using Microsoft.Extensions.DependencyInjection;
 using A = MarkupString.MarkupStringModule;
 using M = MarkupString.MarkupImplementation.AnsiMarkup;
+using StringExtensions = ANSILibrary.StringExtensions;
 
 namespace SharpMUSH.Tests.Database;
 
@@ -69,7 +70,7 @@ public class ArangoDBTests
 		var playerOne = (await Database!.GetObjectNodeAsync(new DBRef(1)));
 		var playerOneDBRef = playerOne.Object()!.DBRef;
 
-		var ansiString = A.markupSingle(M.Create(foreground: ANSILibrary.StringExtensions.rgb(Color.Red)), "red");
+		var ansiString = A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "red");
 		await Database.SetAttributeAsync(playerOneDBRef, ["Two", "Layers"], ansiString, playerOne.AsPlayer);
 		var existingLayer = (await Database.GetAttributeAsync(playerOneDBRef, ["Two", "Layers"]))!;
 

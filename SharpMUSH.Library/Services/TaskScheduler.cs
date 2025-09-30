@@ -1,9 +1,10 @@
-﻿using SharpMUSH.Library.ParserInterfaces;
+﻿using OneOf;
 using Quartz;
 using Quartz.Impl.Matchers;
 using Quartz.Lambda;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.SchedulerModels;
+using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.Services;
@@ -198,7 +199,7 @@ public class TaskScheduler(IMUSHCodeParser parser, IConnectionService connection
 				.WithSimpleSchedule(x => x.WithRepeatCount(0))
 				.WithIdentity($"dbref:{state.Executor}-{NextPid()}", $"{DelayGroup}:{state.Executor}"));
 
-	public async IAsyncEnumerable<(string Group, (DateTimeOffset, OneOf.OneOf<string, DBRef>)[])> GetAllTasks()
+	public async IAsyncEnumerable<(string Group, (DateTimeOffset, OneOf<string, DBRef>)[])> GetAllTasks()
 	{
 		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup());
 		var keyTriggers = keys.ToAsyncEnumerable()
@@ -213,8 +214,8 @@ public class TaskScheduler(IMUSHCodeParser parser, IConnectionService connection
 			yield return (key.Key, key.Select(x => (
 				x.Value,
 				DBRef.TryParse(translate(x.Name), out var dbref)
-					? OneOf.OneOf<string, DBRef>.FromT1(dbref!.Value)
-					: OneOf.OneOf<string, DBRef>.FromT0(x.Name)
+					? OneOf<string, DBRef>.FromT1(dbref!.Value)
+					: OneOf<string, DBRef>.FromT0(x.Name)
 			)).ToArray());
 		}
 	}

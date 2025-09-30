@@ -1,6 +1,4 @@
-﻿using SharpMUSH.Library.ParserInterfaces;
-
-namespace SharpMUSH.Library.Definitions;
+﻿namespace SharpMUSH.Library.Definitions;
 
 public static class Errors
 {

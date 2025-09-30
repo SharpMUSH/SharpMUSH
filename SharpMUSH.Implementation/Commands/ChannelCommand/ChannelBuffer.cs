@@ -4,7 +4,6 @@ using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.ParserInterfaces;
-using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Commands.ChannelCommand;

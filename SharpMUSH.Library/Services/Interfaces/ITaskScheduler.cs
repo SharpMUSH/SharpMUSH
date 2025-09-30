@@ -1,4 +1,5 @@
-﻿using SharpMUSH.Library.Models;
+﻿using OneOf;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.ParserInterfaces;
 
@@ -52,7 +53,7 @@ public interface ITaskScheduler
 	/// Get all Tasks currently running on the scheduler, when they are due, and the handle they are associated with.
 	/// </summary>
 	/// <returns>An AsyncEnumerable grouped by type, with either a <see cref="string"/> handle or <see cref="DBRef"/>, and the time/date they are expected to run by.</returns>
-	IAsyncEnumerable<(string Group, (DateTimeOffset, OneOf.OneOf<string, DBRef>)[])> GetAllTasks();
+	IAsyncEnumerable<(string Group, (DateTimeOffset, OneOf<string, DBRef>)[])> GetAllTasks();
 
 	/// <summary>
 	/// Get all Tasks currently running on the scheduler for a pid, when they are due, and the handle they are associated with.

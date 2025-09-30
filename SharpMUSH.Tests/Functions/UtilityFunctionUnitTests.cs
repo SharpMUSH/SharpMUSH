@@ -4,7 +4,6 @@ using SharpMUSH.Library;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Tests.Commands;
 
 namespace SharpMUSH.Tests.Functions;
 

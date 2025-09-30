@@ -1,11 +1,11 @@
-﻿using OneOf;
+﻿using System.Text.RegularExpressions;
+using Microsoft.Extensions.Options;
+using OneOf;
 using OneOf.Types;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
-using System.Text.RegularExpressions;
-using Microsoft.Extensions.Options;
-using SharpMUSH.Configuration.Options;
 
 namespace SharpMUSH.Library;
 

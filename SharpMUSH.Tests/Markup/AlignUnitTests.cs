@@ -1,5 +1,6 @@
-using Serilog;
 using MarkupString;
+using Microsoft.FSharp.Collections;
+using Serilog;
 using SharpMUSH.Tests.Markup.Data;
 using A = MarkupString.MarkupStringModule;
 
@@ -9,7 +10,7 @@ public class AlignUnitTests
 {
 	private static MString CallAlign(string widths, MString[] columns, MString filler, MString columnSeparator, MString rowSeparator)
 	{
-		var columnsList = Microsoft.FSharp.Collections.ListModule.OfArray(columns);
+		var columnsList = ListModule.OfArray(columns);
 		return TextAligner.align(widths, columnsList, filler, columnSeparator, rowSeparator);
 	}
 

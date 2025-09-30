@@ -1,12 +1,12 @@
-﻿using OneOf.Types;
+﻿using System.Text.RegularExpressions;
+using OneOf.Types;
+using SharpMUSH.Implementation.Common;
+using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
-using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Queries.Database;
-using System.Text.RegularExpressions;
-using SharpMUSH.Library.Attributes;
-using SharpMUSH.Implementation;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -29,8 +29,8 @@ public partial class Commands
 			return string.Format(
 				fmt,
 				name!.Name,
-				Common.TimeHelpers.TimeString(onFor!.Value, accuracy: 3),
-				Common.TimeHelpers.TimeString(idleFor!.Value),
+				TimeHelpers.TimeString(onFor!.Value, accuracy: 3),
+				TimeHelpers.TimeString(idleFor!.Value),
 				"Nothing");
 		}));
 		var footer = $"{everyone.Count} players logged in.";
@@ -62,7 +62,7 @@ public partial class Commands
 		var username = match.Groups["User"].Value;
 		var password = match.Groups["Password"].Value;
 
-		var nameItems = Common.ArgHelpers.NameList(username).ToList();
+		var nameItems = ArgHelpers.NameList(username).ToList();
 
 		if (nameItems.Count == 0)
 		{

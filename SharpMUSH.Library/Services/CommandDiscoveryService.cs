@@ -1,9 +1,9 @@
-﻿using OneOf.Types;
+﻿using System.Text.RegularExpressions;
+using OneOf.Types;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
-using System.Text.RegularExpressions;
 using SharpMUSH.Library.Services.Interfaces;
 using ZiggyCreatures.Caching.Fusion;
 

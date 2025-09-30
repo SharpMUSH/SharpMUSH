@@ -1,6 +1,4 @@
 using Mediator;
-using Microsoft.Extensions.Options;
-using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;

@@ -1,14 +1,9 @@
-﻿using SharpMUSH.Implementation.Definitions;
-using SharpMUSH.Library;
+﻿using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
-using SharpMUSH.Library.Queries.Database;
-using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using static SharpMUSH.Library.Services.Interfaces.IPermissionService;
-using SharpMUSH.Implementation;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -90,9 +85,9 @@ public partial class Functions
 		var message = orderedArgs["1"];
 		var objectAndAttribute = orderedArgs["2"];
 		var inBetweenArgs = orderedArgs.Skip(3).Take(10);
-		var switches = Common.ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 13, "");
+		var switches = ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 13, "");
 	
-		var playerList = Common.ArgHelpers.NameList(recipients.Message!.ToPlainText());
+		var playerList = ArgHelpers.NameList(recipients.Message!.ToPlainText());
 		
 		// Step 1: Evaluate message into the default object/attribute, pass the arguments into it.
 		// Step 2: Send the message to all that want to hear it.

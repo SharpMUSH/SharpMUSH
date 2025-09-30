@@ -1,4 +1,6 @@
-﻿using SharpMUSH.Library.Attributes;
+﻿using System.Numerics;
+using SharpMUSH.Implementation.Common;
+using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 
@@ -18,7 +20,7 @@ public partial class Functions
 
 	[SharpFunction(Name = "baseconv", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> BaseConv(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> Common.ArgHelpers.ValidateIntegerAndEvaluate(parser.CurrentState.ArgumentsOrdered,
+		=> ArgHelpers.ValidateIntegerAndEvaluate(parser.CurrentState.ArgumentsOrdered,
 			x =>
 			{
 				var input = MModule.plainText(parser.CurrentState.ArgumentsOrdered.ElementAt(0).Value.Message!);
@@ -41,7 +43,7 @@ public partial class Functions
 				}
 
 				// Convert input to base 10
-				var number = input.Aggregate(System.Numerics.BigInteger.Zero,
+				var number = input.Aggregate(BigInteger.Zero,
 					(current, c) => current * fromBase + fromBaseChars.IndexOf(c));
 
 				// Directly return the number if toBase is 10
@@ -62,35 +64,35 @@ public partial class Functions
 	[SharpFunction(Name = "band",
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.PositiveIntegersOnly)]
 	public static ValueTask<CallState> BAnd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> Common.ArgHelpers.AggregateIntegers(parser.CurrentState.ArgumentsOrdered, (x, y) => x & y);
+		=> ArgHelpers.AggregateIntegers(parser.CurrentState.ArgumentsOrdered, (x, y) => x & y);
 
 	[SharpFunction(Name = "bnand",
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.PositiveIntegersOnly)]
 	public static ValueTask<CallState> BNand(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> Common.ArgHelpers.AggregateIntegers(parser.CurrentState.ArgumentsOrdered, (x, y) => ~(x & y));
+		=> ArgHelpers.AggregateIntegers(parser.CurrentState.ArgumentsOrdered, (x, y) => ~(x & y));
 
 	[SharpFunction(Name = "bnot", MaxArgs = 1,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.PositiveIntegersOnly)]
 	public static ValueTask<CallState> BNot(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> Common.ArgHelpers.EvaluateInteger(parser.CurrentState.ArgumentsOrdered, x => ~x);
+		=> ArgHelpers.EvaluateInteger(parser.CurrentState.ArgumentsOrdered, x => ~x);
 
 	[SharpFunction(Name = "bor",
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.PositiveIntegersOnly)]
 	public static ValueTask<CallState> Bor(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> Common.ArgHelpers.AggregateIntegers(parser.CurrentState.ArgumentsOrdered, (x, y) => x | y);
+		=> ArgHelpers.AggregateIntegers(parser.CurrentState.ArgumentsOrdered, (x, y) => x | y);
 
 	[SharpFunction(Name = "bxor",
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.PositiveIntegersOnly)]
 	public static ValueTask<CallState> BXor(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> Common.ArgHelpers.AggregateIntegers(parser.CurrentState.ArgumentsOrdered, (x, y) => x ^ y);
+		=> ArgHelpers.AggregateIntegers(parser.CurrentState.ArgumentsOrdered, (x, y) => x ^ y);
 
 	[SharpFunction(Name = "shr", MinArgs = 2, MaxArgs = 2,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.PositiveIntegersOnly)]
 	public static ValueTask<CallState> ShR(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> Common.ArgHelpers.AggregateIntegers(parser.CurrentState.ArgumentsOrdered, (x, y) => x >> y);
+		=> ArgHelpers.AggregateIntegers(parser.CurrentState.ArgumentsOrdered, (x, y) => x >> y);
 
 	[SharpFunction(Name = "shl", MinArgs = 2, MaxArgs = 2,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.PositiveIntegersOnly)]
 	public static ValueTask<CallState> ShL(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> Common.ArgHelpers.AggregateIntegers(parser.CurrentState.ArgumentsOrdered, (x, y) => x << y);
+		=> ArgHelpers.AggregateIntegers(parser.CurrentState.ArgumentsOrdered, (x, y) => x << y);
 }

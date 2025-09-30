@@ -2,13 +2,9 @@
 using DotNext;
 using Humanizer;
 using Mediator;
-using OneOf;
-using OneOf.Types;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
-using SharpMUSH.Library.Queries.Database;
-using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Commands.MailCommand;

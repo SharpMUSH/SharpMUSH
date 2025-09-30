@@ -27,7 +27,7 @@ public class BaseBenchmark
 			.MinimumLevel.Information()
 			.CreateLogger();
 
-	private TestWebApplicationBuilderFactory<SharpMUSH.Server.Program>? _server;
+	private TestWebApplicationBuilderFactory<Server.Program>? _server;
 	private ISharpDatabase? _database;
 	private ArangoDbContainer? _container;
 	
@@ -70,7 +70,7 @@ public class BaseBenchmark
 		await Task.CompletedTask;
 	}
 
-	private async Task<(ISharpDatabase Database, TestWebApplicationBuilderFactory<SharpMUSH.Server.Program> Infrastructure)> IntegrationServer()
+	private async Task<(ISharpDatabase Database, TestWebApplicationBuilderFactory<Server.Program> Infrastructure)> IntegrationServer()
 	{
 		await Task.CompletedTask;
 

@@ -1,6 +1,6 @@
-﻿using Antlr4.Runtime.Misc;
+﻿using System.Text;
 using Antlr4.Runtime;
-using System.Text;
+using Antlr4.Runtime.Misc;
 
 namespace SharpMUSH.Implementation
 {

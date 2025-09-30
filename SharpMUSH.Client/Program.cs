@@ -5,13 +5,14 @@ using MudBlazor.Services;
 using SharpMUSH.Client;
 using SharpMUSH.Client.Authentication;
 using SharpMUSH.Client.Services;
+using Slugify;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
 builder.Services.AddMudServices();
-builder.Services.AddSingleton<Slugify.ISlugHelper, Slugify.SlugHelper>();
+builder.Services.AddSingleton<ISlugHelper, SlugHelper>();
 builder.Services.AddSingleton<WikiService>();
 builder.Services.AddSingleton<AdminConfigService>();
 

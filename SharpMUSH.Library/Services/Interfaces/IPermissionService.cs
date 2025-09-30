@@ -1,25 +1,24 @@
 ﻿using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
-using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Library.Services.Interfaces;
 
 public interface IPermissionService
 {
-	public enum InteractType
+	enum InteractType
 	{
 		See, Hear, Match, Presence
 	}
 
-	public bool PassesLock(AnySharpObject who, AnySharpObject target, string lockString);
+	bool PassesLock(AnySharpObject who, AnySharpObject target, string lockString);
 
-	public bool PassesLock(AnySharpObject who, AnySharpObject target, LockType lockType);
-	
-	public ValueTask<bool> CanSet(AnySharpObject executor, AnySharpObject target, params SharpAttribute[] attribute);
+	bool PassesLock(AnySharpObject who, AnySharpObject target, LockType lockType);
 
-	public ValueTask<bool> Controls(AnySharpObject executor, AnySharpObject target, params SharpAttribute[] attribute);
+	ValueTask<bool> CanSet(AnySharpObject executor, AnySharpObject target, params SharpAttribute[] attribute);
 
-	public ValueTask<bool> Controls(AnySharpObject executor, AnySharpObject target);
+	ValueTask<bool> Controls(AnySharpObject executor, AnySharpObject target, params SharpAttribute[] attribute);
+
+	ValueTask<bool> Controls(AnySharpObject executor, AnySharpObject target);
 
 	ValueTask<bool> CanExamine(AnySharpObject examiner, AnySharpObject examinee);
 

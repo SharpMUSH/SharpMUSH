@@ -1,16 +1,18 @@
-﻿using Mediator;
-using SharpMUSH.Implementation.Visitors;
-using SharpMUSH.Library.ParserInterfaces;
-using SharpMUSH.Library.Services;
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
+using Antlr4.Runtime;
+using Antlr4.Runtime.Atn;
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OneOf.Types;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Implementation.Visitors;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
-using Antlr4.Runtime;
 
 namespace SharpMUSH.Implementation;
 
@@ -19,8 +21,8 @@ namespace SharpMUSH.Implementation;
 /// Each call is Synchronous and Stateful at this time.
 /// </summary>
 public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
-	LibraryService<string, Library.Definitions.FunctionDefinition> FunctionLibrary,
-	LibraryService<string, Library.Definitions.CommandDefinition> CommandLibrary,
+	LibraryService<string, FunctionDefinition> FunctionLibrary,
+	LibraryService<string, CommandDefinition> CommandLibrary,
 	IOptionsMonitor<PennMUSHOptions> Configuration,
 	IServiceProvider ServiceProvider) : IMUSHCodeParser
 {
@@ -56,8 +58,8 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	public IMUSHCodeParser Push(ParserState state) => this with { State = State.Push(state) };
 
 	public MUSHCodeParser(ILogger<MUSHCodeParser> logger, 
-		LibraryService<string, Library.Definitions.FunctionDefinition> functionLibrary,
-		LibraryService<string, Library.Definitions.CommandDefinition> commandLibrary,
+		LibraryService<string, FunctionDefinition> functionLibrary,
+		LibraryService<string, CommandDefinition> commandLibrary,
 		IOptionsMonitor<PennMUSHOptions> config,
 		IServiceProvider serviceProvider,
 		ParserState state) : this(logger, functionLibrary, commandLibrary, config, serviceProvider)
@@ -73,7 +75,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		{
 			Interpreter =
 			{
-				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL
+				PredictionMode = PredictionMode.LL
 			},
 			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
 		};
@@ -107,7 +109,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		{
 			Interpreter =
 			{
-				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL
+				PredictionMode = PredictionMode.LL
 			},
 			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
 		};
@@ -140,7 +142,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		{
 			Interpreter =
 			{
-				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL
+				PredictionMode = PredictionMode.LL
 			},
 			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
 		};
@@ -198,7 +200,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		{
 			Interpreter =
 			{
-				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL
+				PredictionMode = PredictionMode.LL
 			},
 			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
 		};
@@ -235,7 +237,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		{
 			Interpreter =
 			{
-				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL
+				PredictionMode = PredictionMode.LL
 			},
 			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
 		};
@@ -267,7 +269,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		{
 			Interpreter =
 			{
-				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL
+				PredictionMode = PredictionMode.LL
 			},
 			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
 		};
@@ -299,7 +301,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		{
 			Interpreter =
 			{
-				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL
+				PredictionMode = PredictionMode.LL
 			},
 			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
 		};
@@ -331,7 +333,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		{
 			Interpreter =
 			{
-				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL
+				PredictionMode = PredictionMode.LL
 			},
 			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
 		};
@@ -363,7 +365,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		{
 			Interpreter =
 			{
-				PredictionMode = Antlr4.Runtime.Atn.PredictionMode.LL
+				PredictionMode = PredictionMode.LL
 			},
 			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
 		};

@@ -1,16 +1,12 @@
-﻿using OneOf.Types;
-using SharpMUSH.Implementation.Definitions;
+﻿using System.Globalization;
+using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
-using System.Globalization;
-using System.Linq;
-using DotNext.Collections.Generic;
 using AsyncEnumerable = System.Linq.AsyncEnumerable;
-using SharpMUSH.Implementation;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -24,7 +20,7 @@ public partial class Functions
 
 	[SharpFunction(Name = "CMDS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, Restrict = ["admin", "power:see_all"])]
 	public static async ValueTask<CallState> Commands(IMUSHCodeParser parser, SharpFunctionAttribute _2) 
-		=> await Common.ArgHelpers.ForHandleOrPlayer(parser, Mediator!, ConnectionService!, LocateService!, parser.CurrentState.Arguments["0"],
+		=> await ArgHelpers.ForHandleOrPlayer(parser, Mediator!, ConnectionService!, LocateService!, parser.CurrentState.Arguments["0"],
 			(_,cd) => ValueTask.FromResult<CallState>(cd.Metadata["CMDS"]),
 			(_,cd) => ValueTask.FromResult<CallState>(cd.Metadata["CMDS"])
 		);

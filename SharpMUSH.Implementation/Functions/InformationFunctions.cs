@@ -1,6 +1,4 @@
-﻿using Antlr4.Runtime;
-using SharpMUSH.Implementation.Definitions;
-using SharpMUSH.Implementation.Handlers;
+﻿using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
@@ -8,7 +6,6 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries;
-using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Functions;
@@ -128,8 +125,8 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var target = Common.ArgHelpers.NoParseDefaultNoParseArgument(args, 0, "me");
-		var queueTypes = Common.ArgHelpers.NoParseDefaultNoParseArgument(args, 0, "wait semaphore").ToPlainText().ToUpperInvariant()
+		var target = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, "me");
+		var queueTypes = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, "wait semaphore").ToPlainText().ToUpperInvariant()
 			.Split(" ").Distinct();
 
 		if (queueTypes.Any(type => type is not "WAIT" and not "SEMAPHORE" and not "INDEPENDENT"))

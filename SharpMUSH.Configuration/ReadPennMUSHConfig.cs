@@ -1,9 +1,9 @@
-﻿using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using SharpMUSH.Configuration.Options;
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using SharpMUSH.Configuration.Options;
 using FileOptions = SharpMUSH.Configuration.Options.FileOptions;
 
 namespace SharpMUSH.Configuration;

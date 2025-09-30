@@ -1,10 +1,8 @@
-﻿using ANSILibrary;
-using Serilog;
-using System.Drawing;
+﻿using System.Drawing;
 using System.Text;
+using Serilog;
 using SharpMUSH.Tests.Markup.Data;
 using A = MarkupString.MarkupStringModule;
-using AnsiString = MarkupString.MarkupStringModule.MarkupString;
 using M = MarkupString.MarkupImplementation.AnsiMarkup;
 using StringExtensions = ANSILibrary.StringExtensions;
 
@@ -94,7 +92,7 @@ public class AnsiStringUnitTests
 	}
 
 	[Test]
-	[MethodDataSource(typeof(Data.InsertAt), nameof(Data.InsertAt.InsertAtData))]
+	[MethodDataSource(typeof(InsertAt), nameof(Data.InsertAt.InsertAtData))]
 	public async Task InsertAt(InsertAtTestData data)
 	{
 		var (str, index, insert, expected) = data;
@@ -135,7 +133,7 @@ public class AnsiStringUnitTests
 	}
 
 	[Test]
-	[MethodDataSource(typeof(Data.Split), nameof(Data.Split.SplitData))]
+	[MethodDataSource(typeof(Split), nameof(Data.Split.SplitData))]
 	public async Task Split(SplitTestData data)
 	{
 		var (str, delimiter, expected) = data;

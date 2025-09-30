@@ -1,5 +1,5 @@
 ﻿using OneOf.Types;
-using SharpMUSH.Library;
+using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
@@ -208,8 +208,8 @@ public partial class Commands
 		var isNoSpace = parser.CurrentState.Switches.Contains("NOSPACE");
 		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
 		var message = isNoEvaluation
-			? Common.ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.empty())
-			: await Common.ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, MModule.empty());
+			? ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.empty())
+			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, MModule.empty());
 
 		var interactableContents = contents
 			.ToAsyncEnumerable()
@@ -247,8 +247,8 @@ public partial class Commands
 		var contents = await executorLocation.Content(Mediator!);
 		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
 		var message = isNoEvaluation
-			? Common.ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.empty())
-			: await Common.ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, MModule.empty());
+			? ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.empty())
+			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, MModule.empty());
 
 		var interactableContents = contents
 			.ToAsyncEnumerable()
@@ -278,8 +278,8 @@ public partial class Commands
 		var contents = await executorLocation.Content(Mediator!);
 		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
 		var message = isNoEvaluation
-			? Common.ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.empty())
-			: await Common.ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, MModule.empty());
+			? ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.empty())
+			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, MModule.empty());
 
 		var interactableContents = contents
 			.ToAsyncEnumerable()

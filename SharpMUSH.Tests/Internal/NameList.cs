@@ -1,4 +1,5 @@
 ﻿using SharpMUSH.Implementation.Common;
+using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Tests.Internal;
 
@@ -23,7 +24,7 @@ public class NameList
 
 		await Assert
 			.That(result.Single().AsT0)
-			.IsEquatableOrEqualTo(new Library.Models.DBRef(expected));
+			.IsEquatableOrEqualTo(new DBRef(expected));
 	}
 
 	[Test]
@@ -34,6 +35,6 @@ public class NameList
 
 		await Assert
 			.That(result.Single().AsT0)
-			.IsEquatableOrEqualTo(new Library.Models.DBRef(expectedDbRef, expectedTimestamp));
+			.IsEquatableOrEqualTo(new DBRef(expectedDbRef, expectedTimestamp));
 	}
 }

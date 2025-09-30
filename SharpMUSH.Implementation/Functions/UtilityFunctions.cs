@@ -1,15 +1,15 @@
-﻿using ANSILibrary;
+﻿using System.Drawing;
+using System.Text.RegularExpressions;
+using ANSILibrary;
 using DotNext.Collections.Generic;
 using MarkupString;
-using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
-using System.Drawing;
-using System.Text.RegularExpressions;
-using SharpMUSH.Library.Attributes;
 using static ANSILibrary.ANSI;
 
 namespace SharpMUSH.Implementation.Functions;
@@ -21,7 +21,7 @@ public partial class Functions
 	public static async ValueTask<CallState> PCreate(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var location = await Mediator!.Send(new GetObjectNodeQuery(new Library.Models.DBRef
+		var location = await Mediator!.Send(new GetObjectNodeQuery(new DBRef
 		{
 			Number = Convert.ToInt32(Configuration!.CurrentValue.Database.PlayerStart)
 		}));
@@ -36,7 +36,7 @@ public partial class Functions
 		var created = await Mediator!.Send(new CreatePlayerCommand(
 			args["0"].Message!.ToString(),
 			args["1"].Message!.ToString(),
-			new Library.Models.DBRef(trueLocation == -1 ? 1 : trueLocation)));
+			new DBRef(trueLocation == -1 ? 1 : trueLocation)));
 
 		return new CallState($"#{created.Number}:{created.CreationMilliseconds}");
 	}

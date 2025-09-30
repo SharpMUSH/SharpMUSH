@@ -1,5 +1,6 @@
 ﻿using DotNext.Threading;
 using Mediator;
+using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -20,7 +21,7 @@ public static class SendMail
 		
 		var sender = await parser.CurrentState.KnownExecutorObject(mediator!);
 		
-		var playerList = await Common.ArgHelpers.PopulatedNameList(mediator!, nameList.ToPlainText()!);
+		var playerList = await ArgHelpers.PopulatedNameList(mediator!, nameList.ToPlainText()!);
 		var knownPlayerList = playerList.Where(x => x != null).Select(x => x!).ToList();
 		var subjectBodySplit = MModule.indexOf(subjectAndMessage, MModule.single("/"));
 		

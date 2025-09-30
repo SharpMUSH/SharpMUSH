@@ -1,4 +1,5 @@
-﻿using Mediator;
+﻿using System.Text.Json;
+using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 
@@ -8,7 +9,7 @@ public class ExpandedDataCommandHandler(ISharpDatabase database) : ICommandHandl
 {
 	public async ValueTask<Unit> Handle(SetExpandedDataCommand command, CancellationToken cancellationToken)
 	{
-		var dynamicObject = System.Text.Json.JsonSerializer.Deserialize<dynamic>(command.Json);
+		var dynamicObject = JsonSerializer.Deserialize<dynamic>(command.Json);
 		await database.SetExpandedObjectData(command.SharpObject.Id!, command.TypeName, dynamicObject);
 		return Unit.Value;
 	}

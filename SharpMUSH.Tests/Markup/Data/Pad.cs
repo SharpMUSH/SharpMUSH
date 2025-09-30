@@ -1,10 +1,9 @@
-﻿using ANSILibrary;
-using A = MarkupString.MarkupStringModule;
+﻿using A = MarkupString.MarkupStringModule;
 
 namespace SharpMUSH.Tests.Markup.Data;
 
 public record PadTestData(
-	MString input, MString padStr, int width, A.PadType padType, A.TruncationType truncType, MString expected);
+	MString input, MString padStr, int width, MModule.PadType padType, MModule.TruncationType truncType, MString expected);
 
 public static class Pad
 {
@@ -14,8 +13,8 @@ public static class Pad
 			A.single("Test"),
 			A.single(" "),
 			10,
-			A.PadType.Right,
-			A.TruncationType.Overflow,
+			MModule.PadType.Right,
+			MModule.TruncationType.Overflow,
 			A.single("Test      ")
 		);
 
@@ -23,8 +22,8 @@ public static class Pad
 			A.single("Test"),
 			A.single(" "),
 			10,
-			A.PadType.Left,
-			A.TruncationType.Overflow,
+			MModule.PadType.Left,
+			MModule.TruncationType.Overflow,
 			A.single("      Test")
 		);
 
@@ -32,8 +31,8 @@ public static class Pad
 			A.single("Test"),
 			A.single(" "),
 			10,
-			A.PadType.Center,
-			A.TruncationType.Overflow,
+			MModule.PadType.Center,
+			MModule.TruncationType.Overflow,
 			A.single("   Test   ")
 		);
 
@@ -41,8 +40,8 @@ public static class Pad
 			A.single("Example"),
 			A.single("-"),
 			10,
-			A.PadType.Right,
-			A.TruncationType.Truncate,
+			MModule.PadType.Right,
+			MModule.TruncationType.Truncate,
 			A.single("Example---")
 		);
 
@@ -50,8 +49,8 @@ public static class Pad
 			A.single("LongInputString"),
 			A.single(" "),
 			10,
-			A.PadType.Right,
-			A.TruncationType.Truncate,
+			MModule.PadType.Right,
+			MModule.TruncationType.Truncate,
 			A.single("LongInput")
 		);
 
@@ -59,8 +58,8 @@ public static class Pad
 			A.single("Centered"),
 			A.single("."),
 			15,
-			A.PadType.Center,
-			A.TruncationType.Overflow,
+			MModule.PadType.Center,
+			MModule.TruncationType.Overflow,
 			A.single("...Centered....")
 		);
 		
@@ -68,8 +67,8 @@ public static class Pad
 			A.single("Centered"),
 			A.single("."),
 			1,
-			A.PadType.Center,
-			A.TruncationType.Overflow,
+			MModule.PadType.Center,
+			MModule.TruncationType.Overflow,
 			A.single("Centered")
 		);
 
@@ -81,8 +80,8 @@ public static class Pad
 			A.single("|"),
 			A.single(" "),
 			1,
-			A.PadType.Right,
-			A.TruncationType.Truncate,
+			MModule.PadType.Right,
+			MModule.TruncationType.Truncate,
 			A.single("|")
 		);
 
@@ -91,8 +90,8 @@ public static class Pad
 			A.single("|"),
 			A.single(" "),
 			1,
-			A.PadType.Left,
-			A.TruncationType.Truncate,
+			MModule.PadType.Left,
+			MModule.TruncationType.Truncate,
 			A.single("|")
 		);
 
@@ -101,8 +100,8 @@ public static class Pad
 			A.single("X"),
 			A.single(" "),
 			1,
-			A.PadType.Center,
-			A.TruncationType.Truncate,
+			MModule.PadType.Center,
+			MModule.TruncationType.Truncate,
 			A.single("X")
 		);
 
@@ -111,8 +110,8 @@ public static class Pad
 			A.single("Test"),
 			A.single(" "),
 			4,
-			A.PadType.Right,
-			A.TruncationType.Truncate,
+			MModule.PadType.Right,
+			MModule.TruncationType.Truncate,
 			A.single("Test")
 		);
 
@@ -121,8 +120,8 @@ public static class Pad
 			A.single("Test"),
 			A.single(" "),
 			4,
-			A.PadType.Left,
-			A.TruncationType.Truncate,
+			MModule.PadType.Left,
+			MModule.TruncationType.Truncate,
 			A.single("Test")
 		);
 
@@ -131,8 +130,8 @@ public static class Pad
 			A.single("Word"),
 			A.single("-"),
 			4,
-			A.PadType.Center,
-			A.TruncationType.Truncate,
+			MModule.PadType.Center,
+			MModule.TruncationType.Truncate,
 			A.single("Word")
 		);
 	}

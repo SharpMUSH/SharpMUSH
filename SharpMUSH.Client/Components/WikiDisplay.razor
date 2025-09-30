@@ -1,3 +1,4 @@
+@using Markdig
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Services
 @inject WikiService Wiki
@@ -60,7 +61,7 @@
 
     protected override void OnInitialized()
     {
-        MarkdownHtml = (MarkupString)Markdig.Markdown.ToHtml(Article?.Content ?? string.Empty);
+        MarkdownHtml = (MarkupString)Markdown.ToHtml(Article?.Content ?? string.Empty);
         base.OnInitialized();
     }
 

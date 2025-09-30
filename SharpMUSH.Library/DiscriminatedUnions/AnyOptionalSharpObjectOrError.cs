@@ -1,14 +1,15 @@
 ﻿using OneOf;
+using OneOf.Types;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.DiscriminatedUnions;
 
 [GenerateOneOf]
-public class AnyOptionalSharpObjectOrError : OneOfBase<SharpPlayer, SharpRoom, SharpExit, SharpThing, OneOf.Types.None,
-	OneOf.Types.Error<string>>
+public class AnyOptionalSharpObjectOrError : OneOfBase<SharpPlayer, SharpRoom, SharpExit, SharpThing, None,
+	Error<string>>
 {
 	public AnyOptionalSharpObjectOrError(
-		OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, OneOf.Types.None, OneOf.Types.Error<string>> input) :
+		OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None, Error<string>> input) :
 		base(input)
 	{
 	}
@@ -17,8 +18,8 @@ public class AnyOptionalSharpObjectOrError : OneOfBase<SharpPlayer, SharpRoom, S
 	public static implicit operator AnyOptionalSharpObjectOrError(SharpRoom x) => new(x);
 	public static implicit operator AnyOptionalSharpObjectOrError(SharpExit x) => new(x);
 	public static implicit operator AnyOptionalSharpObjectOrError(SharpThing x) => new(x);
-	public static implicit operator AnyOptionalSharpObjectOrError(OneOf.Types.None x) => new(x);
-	public static implicit operator AnyOptionalSharpObjectOrError(OneOf.Types.Error<string> x) => new(x);
+	public static implicit operator AnyOptionalSharpObjectOrError(None x) => new(x);
+	public static implicit operator AnyOptionalSharpObjectOrError(Error<string> x) => new(x);
 
 	public bool IsPlayer => IsT0;
 	public bool IsRoom => IsT1;
@@ -40,6 +41,6 @@ public class AnyOptionalSharpObjectOrError : OneOfBase<SharpPlayer, SharpRoom, S
 		_ => throw new ArgumentOutOfRangeException(),
 		_ => throw new ArgumentOutOfRangeException());
 
-	public OneOf.Types.None AsNone => AsT4;
-	public OneOf.Types.Error<string> AsError => AsT5;
+	public None AsNone => AsT4;
+	public Error<string> AsError => AsT5;
 }

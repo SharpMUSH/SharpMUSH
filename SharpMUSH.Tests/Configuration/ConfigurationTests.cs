@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using NSubstitute;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.ParserInterfaces;
@@ -19,7 +20,7 @@ public class ConfigurationTests
 	public async Task ParseConfigurationFile()
 	{
 		var configFile = Path.Combine(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst");
-		var configReader = new ReadPennMushConfig(NSubstitute.Substitute.For<ILogger<ReadPennMushConfig>>(), configFile);
+		var configReader = new ReadPennMushConfig(Substitute.For<ILogger<ReadPennMushConfig>>(), configFile);
 		var options = configReader.Create(string.Empty);
 
 		await Assert.That(options.Chat.ChatTokenAlias).IsEqualTo('+');

@@ -1,3 +1,4 @@
+using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 
@@ -27,5 +28,5 @@ public interface IValidateService
 		BoolExp
 	}
 	
-	ValueTask<bool> Valid(ValidationType type, MString value, OneOf.OneOf<AnySharpObject, SharpAttributeEntry>? target = null);
+	ValueTask<bool> Valid(ValidationType type, MString value, OneOf<AnySharpObject, SharpAttributeEntry>? target = null);
 }

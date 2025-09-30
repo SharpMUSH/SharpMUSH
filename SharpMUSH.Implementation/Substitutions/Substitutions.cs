@@ -1,5 +1,5 @@
-using Mediator;
 using Humanizer;
+using Mediator;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation.Common;

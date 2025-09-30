@@ -1,10 +1,7 @@
-﻿using ANSILibrary;
-using NSubstitute;
+﻿using System.Text;
+using MarkupString;
 using Serilog;
 using SharpMUSH.Library.ParserInterfaces;
-using SharpMUSH.Library.Services;
-using System.Text;
-using SharpMUSH.Library.Services.Interfaces;
 using A = MarkupString.MarkupStringModule;
 using StringExtensions = ANSILibrary.StringExtensions;
 
@@ -32,7 +29,7 @@ public class StringFunctionUnitTests
 		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message!;
 
 		var color = StringExtensions.ansiBytes(expectedBytes);
-		var markup = MarkupString.MarkupImplementation.AnsiMarkup.Create(foreground: color);
+		var markup = MarkupImplementation.AnsiMarkup.Create(foreground: color);
 		var markedUpString = A.markupSingle2(markup, A.single(expectedText));
 
 		Log.Logger.Information("Result: {Result}{NewLine}Expected: {Expected}", result, Environment.NewLine,
@@ -99,7 +96,7 @@ public class StringFunctionUnitTests
 		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message!;
 
 		var color = StringExtensions.ansiBytes(expectedBytes);
-		var markup = MarkupString.MarkupImplementation.AnsiMarkup.Create(background: color);
+		var markup = MarkupImplementation.AnsiMarkup.Create(background: color);
 		var markedUpString = A.markupSingle2(markup, A.single(expectedText));
 
 		Log.Logger.Information("Result: {Result}{NewLine}Expected: {Expected}", result, Environment.NewLine,

@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Text.RegularExpressions;
 using Mediator;
 using Microsoft.Extensions.Options;
+using OneOf;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -18,7 +19,7 @@ public partial class ValidateService(
 	: IValidateService
 {
 	public async ValueTask<bool> Valid(IValidateService.ValidationType type, MString value,
-		OneOf.OneOf<AnySharpObject, SharpAttributeEntry>? target = null)
+		OneOf<AnySharpObject, SharpAttributeEntry>? target = null)
 		=> type switch
 		{
 			_ when value.Length == 0

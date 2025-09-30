@@ -1,7 +1,5 @@
 using Mediator;
 using SharpMUSH.Library.Notifications;
-using SharpMUSH.Library.Requests;
-using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Handlers.Telnet;

@@ -1,12 +1,12 @@
 using SharpMUSH.Implementation.Commands.ChannelCommand;
-using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Notifications;
+using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
-using SharpMUSH.Library;
 
 namespace SharpMUSH.Implementation.Commands;
 

@@ -1,3 +1,5 @@
+using SharpMUSH.Library.Definitions;
+
 namespace SharpMUSH.Library.Services;
 
 public class LibraryService<TKey, TValue> : Dictionary<TKey, (TValue LibraryInformation, bool IsSystem)>
@@ -17,8 +19,8 @@ public class LibraryService<TKey, TValue> : Dictionary<TKey, (TValue LibraryInfo
 }
 
 public class FunctionLibraryService : 
-	LibraryService<string, Definitions.FunctionDefinition> { }
+	LibraryService<string, FunctionDefinition> { }
 	
 
 public class CommandLibraryService : 
-	LibraryService<string, Definitions.CommandDefinition> { }
+	LibraryService<string, CommandDefinition> { }

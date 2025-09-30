@@ -1,23 +1,22 @@
-﻿using Core.Arango;
+﻿using System.Collections.Immutable;
+using System.Text.RegularExpressions;
+using Core.Arango;
 using Core.Arango.Migration;
 using Core.Arango.Protocol;
+using DotNext.Threading;
 using MarkupString;
 using Mediator;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using OneOf.Types;
 using SharpMUSH.Database.Models;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
-using System.Collections.Immutable;
-using System.Text.RegularExpressions;
-using DotNext.Collections.Generic;
-using DotNext.Threading;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Database.ArangoDB;
@@ -700,7 +699,7 @@ public partial class ArangoDatabase(
 		return result.Select(SharpChannelQueryToSharpChannel);
 	}
 
-	public async ValueTask CreateChannelAsync(MarkupString.MarkupStringModule.MarkupString channel, string[] privs,
+	public async ValueTask CreateChannelAsync(MarkupStringModule.MarkupString channel, string[] privs,
 		SharpPlayer owner)
 	{
 		var transaction = await arangoDb.Transaction.BeginAsync(handle,
@@ -730,8 +729,8 @@ public partial class ArangoDatabase(
 		await arangoDb.Transaction.CommitAsync(transaction);
 	}
 
-	public async ValueTask UpdateChannelAsync(SharpChannel channel, MarkupString.MarkupStringModule.MarkupString? name,
-		MarkupString.MarkupStringModule.MarkupString? description, string[]? privs,
+	public async ValueTask UpdateChannelAsync(SharpChannel channel, MarkupStringModule.MarkupString? name,
+		MarkupStringModule.MarkupString? description, string[]? privs,
 		string? joinLock, string? speakLock, string? seeLock, string? hideLock, string? modLock, string? mogrifier,
 		int? buffer)
 		=> await arangoDb.Graph.Vertex.UpdateAsync(handle,

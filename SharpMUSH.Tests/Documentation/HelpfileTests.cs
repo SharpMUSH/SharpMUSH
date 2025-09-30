@@ -39,7 +39,7 @@ public class HelpfileTests
 		var fileString = Path.Combine(currentDirectory, "Documentation", "Testfile", file);
 		var fileInfo = new FileInfo(fileString);
 
-		var maybeIndexes = SharpMUSH.Documentation.Helpfiles.Index(fileInfo);
+		var maybeIndexes = Helpfiles.Index(fileInfo);
 
 		await Assert.That(maybeIndexes.IsT1).IsNotEqualTo(true);
 

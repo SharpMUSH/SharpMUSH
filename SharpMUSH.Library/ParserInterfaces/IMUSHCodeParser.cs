@@ -1,6 +1,7 @@
-﻿using SharpMUSH.Library.Services;
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.ParserInterfaces;
@@ -9,8 +10,8 @@ public interface IMUSHCodeParser
 {	
 	ParserState CurrentState { get; }
 	IImmutableStack<ParserState> State { get; }
-	LibraryService<string, Definitions.FunctionDefinition> FunctionLibrary {get;}
-	LibraryService<string, Definitions.CommandDefinition> CommandLibrary {get;}
+	LibraryService<string, FunctionDefinition> FunctionLibrary {get;}
+	LibraryService<string, CommandDefinition> CommandLibrary {get;}
 	ValueTask<CallState?> CommandCommaArgsParse(MString text);
 	ValueTask<CallState?> CommandEqSplitArgsParse(MString text);
 	ValueTask<CallState?> CommandEqSplitParse(MString text);

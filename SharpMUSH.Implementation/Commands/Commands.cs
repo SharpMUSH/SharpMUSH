@@ -1,12 +1,12 @@
-﻿using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.ParserInterfaces;
-using SharpMUSH.Library.Services;
-using System.Reflection;
+﻿using System.Reflection;
 using Mediator;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Commands;

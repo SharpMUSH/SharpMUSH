@@ -1,18 +1,15 @@
-﻿using DotNext;
-using MoreLinq.Extensions;
-using SharpMUSH.Implementation.Definitions;
+﻿using MoreLinq.Extensions;
+using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
-using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Implementation;
-using SharpMUSH.Library.Commands.Database;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -331,7 +328,7 @@ public partial class Functions
 	public static async ValueTask<CallState> NameList(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var namelist = Common.ArgHelpers.NameList(parser.CurrentState.Arguments["0"].Message!.ToPlainText());
+		var namelist = ArgHelpers.NameList(parser.CurrentState.Arguments["0"].Message!.ToPlainText());
 		var (almostDbrefList, almostStrList) = namelist.Partition(x => x.IsT0);
 		var dbrefList = Enumerable.ToHashSet(almostDbrefList.Select(x => x.AsT0));
 		var strList = Enumerable.ToHashSet(almostStrList.Select(x => x.AsT1));

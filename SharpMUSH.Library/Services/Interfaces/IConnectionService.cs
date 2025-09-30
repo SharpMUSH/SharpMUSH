@@ -15,7 +15,7 @@ public interface IConnectionService
 		Disconnected
 	}
 
-	public record ConnectionData(
+	record ConnectionData(
 		long Handle,
 		DBRef? Ref,
 		ConnectionState State,

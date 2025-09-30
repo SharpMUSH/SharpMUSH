@@ -1,5 +1,4 @@
-﻿using Mediator;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
 using SharpMUSH.Library.DiscriminatedUnions;

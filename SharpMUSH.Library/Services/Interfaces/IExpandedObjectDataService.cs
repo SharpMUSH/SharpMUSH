@@ -13,7 +13,7 @@ public interface IExpandedObjectDataService
 	/// <param name="obj">Associated SharpObject. It will use its Key or Id.</param>
 	/// <typeparam name="T">Expanded Object Type</typeparam>
 	/// <returns>The Expanded Data, if found.</returns>
-	public ValueTask<T?> GetExpandedDataAsync<T>(SharpObject obj) where T: class;
+	ValueTask<T?> GetExpandedDataAsync<T>(SharpObject obj) where T: class;
 
 	/// <summary>
 	/// Sets Expanded Data to the database.
@@ -22,14 +22,14 @@ public interface IExpandedObjectDataService
 	/// <param name="obj">Associated SharpObject to set the information on.</param>
 	/// <param name="ignoreNull">Whether to ignore Null values on the passed in Data. Set to true if you intend to use this function as an UPDATE.</param>
 	/// <typeparam name="T">Expanded Object Type</typeparam>
-	public ValueTask SetExpandedDataAsync<T>(T data, SharpObject obj, bool ignoreNull = false) where T: class;
+	ValueTask SetExpandedDataAsync<T>(T data, SharpObject obj, bool ignoreNull = false) where T: class;
 	
 	/// <summary>
 	/// Gets Expanded Server Data from the database.
 	/// </summary>
 	/// <typeparam name="T">Expanded Object Type</typeparam>
 	/// <returns>The Expanded Data, if found.</returns>
-	public ValueTask<T?> GetExpandedServerDataAsync<T>() where T: class;
+	ValueTask<T?> GetExpandedServerDataAsync<T>() where T: class;
 
 	/// <summary>
 	/// Sets Expanded Server Data to the database.
@@ -37,5 +37,5 @@ public interface IExpandedObjectDataService
 	/// <param name="data">Data to set.</param>
 	/// <param name="ignoreNull">Whether to ignore Null values on the passed in Data. Set to true if you intend to use this function as an UPDATE.</param>
 	/// <typeparam name="T">Expanded Object Type</typeparam>
-	public ValueTask SetExpandedServerDataAsync<T>(T data, bool ignoreNull = false) where T: class;
+	ValueTask SetExpandedServerDataAsync<T>(T data, bool ignoreNull = false) where T: class;
 }

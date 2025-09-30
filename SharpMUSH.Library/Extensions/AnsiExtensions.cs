@@ -1,5 +1,5 @@
-﻿using MarkupString;
-using System.Drawing;
+﻿using System.Drawing;
+using MarkupString;
 using static ANSILibrary.ANSI;
 
 namespace SharpMUSH.Library.Extensions;

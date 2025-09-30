@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+﻿using System.Diagnostics;
 using Humanizer;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
@@ -7,7 +7,6 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
-using SharpMUSH.Library.Queries.Database;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 
 namespace SharpMUSH.Implementation.Commands;
@@ -263,7 +262,7 @@ public partial class Commands
 			return new CallState(details);
 		}
 			
-		var process = System.Diagnostics.Process.GetCurrentProcess();
+		var process = Process.GetCurrentProcess();
 		var pid = process.Id;
 		var memoryUsage = process.WorkingSet64.Bytes().Humanize("0.00");
 		var peakMemoryUsage = process.PeakWorkingSet64.Bytes().Humanize("0.00");

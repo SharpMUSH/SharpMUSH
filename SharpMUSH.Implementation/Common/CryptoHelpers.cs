@@ -1,20 +1,22 @@
+using System.Security.Cryptography;
 using System.Text;
+using OneOf;
 using OneOf.Types;
 
 namespace SharpMUSH.Implementation.Common;
 
 public static class CryptoHelpers
 {
-	public static readonly Dictionary<string, System.Security.Cryptography.HashAlgorithm> hashAlgorithms = new(StringComparer.InvariantCultureIgnoreCase) 
+	public static readonly Dictionary<string, HashAlgorithm> hashAlgorithms = new(StringComparer.InvariantCultureIgnoreCase) 
 	{
-		{"MD5", System.Security.Cryptography.MD5.Create()},
-		{"SHA1", System.Security.Cryptography.SHA1.Create()},
-		{"SHA256", System.Security.Cryptography.SHA256.Create()},
-		{"SHA384", System.Security.Cryptography.SHA384.Create()},
-		{"SHA512", System.Security.Cryptography.SHA512.Create()}
+		{"MD5", MD5.Create()},
+		{"SHA1", SHA1.Create()},
+		{"SHA256", SHA256.Create()},
+		{"SHA384", SHA384.Create()},
+		{"SHA512", SHA512.Create()}
 	};
 
-	public static OneOf.OneOf<string, None> Digest(string type, MString str)
+	public static OneOf<string, None> Digest(string type, MString str)
 	{
 		if (!hashAlgorithms.TryGetValue(type, out var hashAlgorithm))
 		{

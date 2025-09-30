@@ -1,6 +1,6 @@
-﻿using Antlr4.Runtime;
+﻿using System.Runtime.CompilerServices;
+using Antlr4.Runtime;
 using Antlr4.Runtime.Misc;
-using System.Runtime.CompilerServices;
 
 namespace SharpMUSH.Implementation;
 

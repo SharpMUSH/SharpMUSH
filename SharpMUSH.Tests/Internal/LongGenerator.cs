@@ -1,5 +1,4 @@
 using SharpMUSH.Library.Services;
-using TUnit.Assertions.AssertConditions.Throws;
 
 namespace SharpMUSH.Tests.Internal;
 
