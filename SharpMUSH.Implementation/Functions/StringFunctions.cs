@@ -359,7 +359,7 @@ public partial class Functions
 		var filler = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MModule.single(" "));
 		var columnSeparator = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MModule.single(" "));
 		var rowSeparator = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, MModule.single("\n"));
-		
+
 		var actualColumnArgCount = args.Count - 1;
 		var expectedColumnCount = widths.Split(' ').Length;
 		var minRequiredColumnCount = actualColumnArgCount - 3;
@@ -627,7 +627,7 @@ public partial class Functions
 			return string.Join(" ", CryptoHelpers.hashAlgorithms.Keys);
 		}
 
-		return CryptoHelpers.hashAlgorithms.Keys.Contains(arg0)
+		return CryptoHelpers.hashAlgorithms.ContainsKey(arg0)
 			? CryptoHelpers.Digest(arg0, arg1!).AsT0
 			: Errors.ErrorArgRange;
 	}
@@ -638,10 +638,28 @@ public partial class Functions
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "ESCAPE", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "escape", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Escape(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var str = MModule.concat(MModule.single("\\"), parser.CurrentState.Arguments["0"].Message!);
+
+		return ValueTask.FromResult<CallState>(MModule.apply(str,
+			FSharpFunc<string, string>.FromConverter(x => x switch
+			{
+				"%" => "\\%",
+				";" => "\\;",
+				"[" => "\\[",
+				"]" => "\\]",
+				"{" => "\\{",
+				"}" => "\\}",
+				"\\" => @"\\",
+				"(" => "\\(",
+				")" => "\\)",
+				"," => "\\,",
+				"^" => "\\^",
+				"$" => "\\$",
+				_ => x
+			})));
 	}
 
 	[SharpFunction(Name = "flip", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
