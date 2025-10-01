@@ -1,0 +1,230 @@
+@page "/admin/config/import"
+@using SharpMUSH.Client.Services
+@using System.Text
+@inject AdminConfigService AdminConfigService
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+
+<PageTitle>Import Configuration</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudStack Spacing="4">
+        <MudCard>
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <MudIcon Icon="Icons.Material.Filled.Upload" Style="color: var(--mud-palette-primary);" />
+                        <MudText Typo="Typo.h5">Import MUSH Configuration</MudText>
+                    </div>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudText Typo="Typo.body2" Class="mb-4">
+                    Upload a mush.cnf file to import configuration settings. The file will be parsed and used as the new configuration source.
+                </MudText>
+                
+                <MudFileUpload T="IBrowserFile" 
+                               Accept=".cnf,.conf,.txt" 
+                               FilesChanged="OnInputFileChanged" 
+                               MaximumFileCount="1"
+                               Class="mb-4">
+                    <ActivatorContent>
+                        <MudPaper Height="150px" 
+                                  Outlined="true" 
+                                  Class="d-flex align-center justify-center cursor-pointer mud-width-full">
+                            <MudText Typo="Typo.h6">
+                                @if (selectedFile != null)
+                                {
+                                    <div class="d-flex flex-column align-center">
+                                        <MudIcon Icon="Icons.Material.Filled.Description" Style="font-size: 48px; color: var(--mud-palette-success);" />
+                                        <MudText>@selectedFile.Name</MudText>
+                                        <MudText Typo="Typo.caption">@FormatFileSize(selectedFile.Size)</MudText>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="d-flex flex-column align-center">
+                                        <MudIcon Icon="Icons.Material.Filled.CloudUpload" Style="font-size: 48px;" />
+                                        <MudText>Drop file here or click to browse</MudText>
+                                        <MudText Typo="Typo.caption">Accepts .cnf, .conf, .txt files</MudText>
+                                    </div>
+                                }
+                            </MudText>
+                        </MudPaper>
+                    </ActivatorContent>
+                </MudFileUpload>
+
+                @if (!string.IsNullOrEmpty(fileContent))
+                {
+                    <MudExpansionPanels Class="mb-4">
+                        <MudExpansionPanel Text="Preview File Content">
+                            <MudPaper Class="pa-4" Style="max-height: 300px; overflow-y: auto;">
+                                <MudText Typo="Typo.body2" Style="font-family: monospace; white-space: pre-wrap;">@fileContent</MudText>
+                            </MudPaper>
+                        </MudExpansionPanel>
+                    </MudExpansionPanels>
+                }
+
+                <MudStack Row Spacing="2" Class="mt-4">
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Primary" 
+                               StartIcon="Icons.Material.Filled.Upload"
+                               OnClick="ImportConfiguration" 
+                               Disabled="selectedFile == null || isImporting">
+                        @if (isImporting)
+                        {
+                            <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true"/>
+                            <MudText Class="ms-2">Importing...</MudText>
+                        }
+                        else
+                        {
+                            <MudText>Import Configuration</MudText>
+                        }
+                    </MudButton>
+                    
+                    <MudButton Variant="Variant.Outlined" 
+                               Color="Color.Secondary" 
+                               StartIcon="Icons.Material.Filled.Clear"
+                               OnClick="ClearFile"
+                               Disabled="selectedFile == null || isImporting">
+                        Clear
+                    </MudButton>
+                    
+                    <MudButton Variant="Variant.Text" 
+                               Color="Color.Inherit" 
+                               StartIcon="Icons.Material.Filled.ArrowBack"
+                               OnClick="@(() => Navigation.NavigateTo("/admin/config"))"
+                               Disabled="isImporting">
+                        Back to Config
+                    </MudButton>
+                </MudStack>
+            </MudCardContent>
+        </MudCard>
+        
+        @if (importResult != null)
+        {
+            <MudCard>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <MudIcon Icon="@(importResult.Success ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Error)" 
+                                     Style="@(importResult.Success ? "color: var(--mud-palette-success);" : "color: var(--mud-palette-error);")" />
+                            <MudText Typo="Typo.h6">Import Result</MudText>
+                        </div>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudAlert Severity="@(importResult.Success ? Severity.Success : Severity.Error)">
+                        @importResult.Message
+                    </MudAlert>
+                    
+                    @if (importResult.Success)
+                    {
+                        <MudText Class="mt-2">
+                            The configuration has been successfully imported and is now being used as the active configuration source.
+                        </MudText>
+                    }
+                </MudCardContent>
+            </MudCard>
+        }
+    </MudStack>
+</MudContainer>
+
+@code {
+    private IBrowserFile? selectedFile;
+    private string? fileContent;
+    private bool isImporting = false;
+    private ImportConfigResult? importResult;
+
+    private async Task OnInputFileChanged(IBrowserFile? file)
+    {
+        selectedFile = file;
+        importResult = null;
+        
+        if (selectedFile != null)
+        {
+            try
+            {
+                var stream = selectedFile.OpenReadStream(maxAllowedSize: 1024 * 1024); // 1MB limit
+                using var reader = new StreamReader(stream);
+                fileContent = await reader.ReadToEndAsync();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error reading file: {ex.Message}", Severity.Error);
+                selectedFile = null;
+                fileContent = null;
+            }
+        }
+        else
+        {
+            fileContent = null;
+        }
+    }
+
+    private async Task ImportConfiguration()
+    {
+        if (selectedFile == null || string.IsNullOrEmpty(fileContent))
+            return;
+
+        isImporting = true;
+        importResult = null;
+
+        try
+        {
+            var success = await AdminConfigService.ImportFromConfigFileAsync(fileContent, selectedFile.Name);
+            
+            importResult = new ImportConfigResult 
+            { 
+                Success = success, 
+                Message = success 
+                    ? $"Successfully imported configuration from {selectedFile.Name}" 
+                    : $"Failed to import configuration from {selectedFile.Name}" 
+            };
+
+            if (success)
+            {
+                Snackbar.Add("Configuration imported successfully!", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add("Failed to import configuration", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            importResult = new ImportConfigResult 
+            { 
+                Success = false, 
+                Message = $"Error importing configuration: {ex.Message}" 
+            };
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isImporting = false;
+        }
+    }
+
+    private void ClearFile()
+    {
+        selectedFile = null;
+        fileContent = null;
+        importResult = null;
+    }
+
+    private string FormatFileSize(long bytes)
+    {
+        if (bytes < 1024)
+            return $"{bytes} B";
+        if (bytes < 1024 * 1024)
+            return $"{bytes / 1024:F1} KB";
+        return $"{bytes / (1024 * 1024):F1} MB";
+    }
+
+    private class ImportConfigResult
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; } = string.Empty;
+    }
+}

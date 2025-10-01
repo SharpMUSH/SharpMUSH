@@ -1,19 +1,86 @@
 ﻿@page "/admin/config"
 @using SharpMUSH.Client.Services
 @inject AdminConfigService AdminConfigService
+@inject NavigationManager Navigation
 
-<MudDataGrid Items="@Options">
+<PageTitle>Configuration Management</PageTitle>
 
-</MudDataGrid>
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudStack Spacing="4">
+        <MudCard>
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <MudIcon Icon="Icons.Material.Filled.Settings" Style="color: var(--mud-palette-primary);" />
+                        <MudText Typo="Typo.h5">Configuration Management</MudText>
+                    </div>
+                </CardHeaderContent>
+                <CardHeaderActions>
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Primary" 
+                               StartIcon="Icons.Material.Filled.Upload"
+                               OnClick="@(() => Navigation.NavigateTo("/admin/config/import"))">
+                        Import Config
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" 
+                               Color="Color.Secondary" 
+                               StartIcon="Icons.Material.Filled.Refresh"
+                               OnClick="ResetToDefault">
+                        Reset to Default
+                    </MudButton>
+                </CardHeaderActions>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudText Typo="Typo.body2" Class="mb-4">
+                    Manage your MUSH configuration settings. You can import configuration files or view current settings.
+                </MudText>
+            </MudCardContent>
+        </MudCard>
 
-Test 1 2 3
+        <MudCard>
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">Current Configuration</MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudDataGrid Items="@ConfigItems" 
+                             Filterable="true" 
+                             FilterMode="DataGridFilterMode.ColumnFilterRow"
+                             Hideable="true"
+                             Dense="true"
+                             Class="mud-width-full">
+                    <Columns>
+                        <PropertyColumn Property="x => x.Section" Title="Section" />
+                        <PropertyColumn Property="x => x.Key" Title="Setting" />
+                        <PropertyColumn Property="x => x.Value" Title="Value" />
+                        <PropertyColumn Property="x => x.Type" Title="Type" />
+                    </Columns>
+                </MudDataGrid>
+            </MudCardContent>
+        </MudCard>
+    </MudStack>
+</MudContainer>
 
 @code {
-    private IEnumerable<object>? Options { get; set; }
+    private IEnumerable<AdminConfigService.ConfigItem> ConfigItems { get; set; } = [];
 
     protected override async Task OnInitializedAsync()
     {
-        Options = AdminConfigService.GetOptions().ToDatagrid();
+        LoadConfiguration();
         await base.OnInitializedAsync();
+    }
+
+    private void LoadConfiguration()
+    {
+        var options = AdminConfigService.GetOptions();
+        ConfigItems = options.ToConfigItems();
+        StateHasChanged();
+    }
+
+    private void ResetToDefault()
+    {
+        AdminConfigService.ResetToDefault();
+        LoadConfiguration();
     }
 }
