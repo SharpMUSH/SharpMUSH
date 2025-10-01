@@ -7,7 +7,7 @@ public class PennConfigAttribute : Attribute
 	public required string Description { get; set; }
 	public string? Category { get; set; }
 	public bool IsAdvanced { get; set; } = false;
-	public required string DefaultValue { get; set; }
+	public required string? DefaultValue { get; set; }
 	public string? ValidationPattern { get; set; }
 	public string? HelpText { get; set; }
 }
