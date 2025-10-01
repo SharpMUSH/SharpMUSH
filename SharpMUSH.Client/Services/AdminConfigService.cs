@@ -317,6 +317,10 @@ public class AdminConfigService
 		public string Type { get; set; } = string.Empty;
 		public object? RawValue { get; set; }
 		public string Description { get; set; } = string.Empty;
+		public string Category { get; set; } = string.Empty;
+		public bool IsAdvanced { get; set; }
+		public string? DefaultValue { get; set; }
+		
 		public bool IsBoolean => Type == "Boolean";
 		public bool IsNumber => Type is "Int32" or "UInt32" or "Double" or "Single" or "Decimal";
 		public bool IsArray => Type.EndsWith("[]");
@@ -369,7 +373,8 @@ public static class PennMUSHOptionsExtension
 									_ => value.ToString() ?? "null"
 								};
 
-								var description = GetPropertyDescription(sectionName, sectionProp.Name);
+								// Get metadata from centralized source
+								var metadata = ConfigurationMetadata.GetPropertyInfo(sectionName, sectionProp.Name);
 
 								configItems.Add(new AdminConfigService.ConfigItem
 								{
@@ -378,7 +383,10 @@ public static class PennMUSHOptionsExtension
 									Value = valueString,
 									Type = sectionProp.PropertyType.Name,
 									RawValue = value,
-									Description = description
+									Description = metadata?.Description ?? GetFallbackDescription(sectionName, sectionProp.Name),
+									Category = metadata?.Category ?? sectionName,
+									IsAdvanced = metadata?.IsAdvanced ?? false,
+									DefaultValue = metadata?.DefaultValue
 								});
 							}
 							catch (Exception ex)
@@ -389,7 +397,9 @@ public static class PennMUSHOptionsExtension
 									Section = sectionName,
 									Key = sectionProp.Name,
 									Value = $"Error: {ex.Message}",
-									Type = sectionProp.PropertyType.Name
+									Type = sectionProp.PropertyType.Name,
+									Description = "Error loading property",
+									Category = sectionName
 								});
 							}
 						}
@@ -403,7 +413,9 @@ public static class PennMUSHOptionsExtension
 						Section = prop.Name,
 						Key = "Error",
 						Value = $"Failed to load section: {ex.Message}",
-						Type = "Error"
+						Type = "Error",
+						Description = "Error loading section",
+						Category = "Error"
 					});
 				}
 			}
@@ -416,53 +428,28 @@ public static class PennMUSHOptionsExtension
 				Section = "Error",
 				Key = "ConfigurationError",
 				Value = $"Failed to load configuration: {ex.Message}",
-				Type = "Error"
+				Type = "Error",
+				Description = "Critical configuration error",
+				Category = "Error"
 			}];
 		}
 
 		return configItems.OrderBy(x => x.Section).ThenBy(x => x.Key);
 	}
 
-	private static string GetPropertyDescription(string section, string propertyName)
+	private static string GetFallbackDescription(string section, string propertyName)
 	{
-		// Add descriptive text for common configuration options
-		var descriptions = new Dictionary<string, Dictionary<string, string>>
+		// Fallback for properties without metadata
+		return propertyName switch
 		{
-			["Net"] = new Dictionary<string, string>
-			{
-				["MudName"] = "The name of your MUSH as displayed to players",
-				["Port"] = "Main telnet port for player connections",
-				["SslPort"] = "Secure SSL port for encrypted connections",
-				["PlayerCreation"] = "Allow new players to create accounts",
-				["Guests"] = "Allow guest connections",
-				["Logins"] = "Allow player logins"
-			},
-			["Chat"] = new Dictionary<string, string>
-			{
-				["ChatTokenAlias"] = "Character used as prefix for chat commands (default: +)",
-				["MaxChannels"] = "Maximum number of channels allowed",
-				["UseMuxComm"] = "Use MUX-style communication system"
-			},
-			["Database"] = new Dictionary<string, string>
-			{
-				["BaseRoom"] = "Default room where new objects are created",
-				["DefaultHome"] = "Default home room for new players",
-				["MasterRoom"] = "Master room (room #2)"
-			},
-			["Limit"] = new Dictionary<string, string>
-			{
-				["MaxLogins"] = "Maximum simultaneous player connections",
-				["MaxGuests"] = "Maximum guest connections (-1 for unlimited)",
-				["PlayerNameLen"] = "Maximum length of player names"
-			}
+			var name when name.Contains("Port") => $"Network port for {section.ToLower()} connections",
+			var name when name.Contains("Addr") => $"IP address for {section.ToLower()} binding",
+			var name when name.Contains("File") => $"File path for {section.ToLower()} data",
+			var name when name.Contains("Database") => $"Database file for {section.ToLower()} storage",
+			var name when name.Contains("Limit") => $"Maximum limit for {section.ToLower()} operations",
+			var name when name.Contains("Cost") => $"Cost setting for {section.ToLower()} operations",
+			var name when name.Contains("Enable") || name.Contains("Use") => $"Enable/disable {section.ToLower()} functionality",
+			_ => $"{section} {propertyName} setting"
 		};
-
-		if (descriptions.TryGetValue(section, out var sectionDescriptions) &&
-		    sectionDescriptions.TryGetValue(propertyName, out var description))
-		{
-			return description;
-		}
-
-		return $"{section} {propertyName} setting";
 	}
 }
