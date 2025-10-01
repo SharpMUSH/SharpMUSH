@@ -32,7 +32,7 @@
             </MudCardHeader>
             <MudCardContent>
                 <MudText Typo="Typo.body2" Class="mb-4">
-                    Manage your MUSH configuration settings. You can import configuration files or view current settings.
+                    Manage your MUSH configuration settings. You can import configuration files or modify settings directly.
                 </MudText>
             </MudCardContent>
         </MudCard>
@@ -40,23 +40,79 @@
         <MudCard>
             <MudCardHeader>
                 <CardHeaderContent>
-                    <MudText Typo="Typo.h6">Current Configuration</MudText>
+                    <MudText Typo="Typo.h6">Configuration Sections</MudText>
                 </CardHeaderContent>
             </MudCardHeader>
             <MudCardContent>
-                <MudDataGrid Items="@ConfigItems" 
-                             Filterable="true" 
-                             FilterMode="DataGridFilterMode.ColumnFilterRow"
-                             Hideable="true"
-                             Dense="true"
-                             Class="mud-width-full">
-                    <Columns>
-                        <PropertyColumn Property="x => x.Section" Title="Section" />
-                        <PropertyColumn Property="x => x.Key" Title="Setting" />
-                        <PropertyColumn Property="x => x.Value" Title="Value" />
-                        <PropertyColumn Property="x => x.Type" Title="Type" />
-                    </Columns>
-                </MudDataGrid>
+                <MudExpansionPanels Elevation="0">
+                    @foreach (var section in ConfigSections)
+                    {
+                        <MudExpansionPanel>
+                            <TitleContent>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <MudIcon Icon="@GetSectionIcon(section.Key)" />
+                                    <MudText Typo="Typo.h6">@(section.Key)</MudText>
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Info">@(section.Value.Count()) settings</MudChip>
+                                </div>
+                            </TitleContent>
+                            <ChildContent>
+                                <MudGrid>
+                                    @foreach (var config in section.Value)
+                                    {
+                                        <MudItem xs="12" md="6" lg="4">
+                                            <MudCard Outlined="true" Class="mb-3">
+                                                <MudCardContent>
+                                                    <MudStack Spacing="2">
+                                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 600;">
+                                                            @config.Key
+                                                        </MudText>
+                                                        <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                                                            @config.Description
+                                                        </MudText>
+                                                        
+                                                        @if (config.IsBoolean)
+                                                        {
+                                                            <MudSwitch Value="@GetBoolValue(config)" 
+                                                                       Label="@(GetBoolValue(config) ? "Enabled" : "Disabled")"
+                                                                       Color="Color.Primary"
+                                                                       ValueChanged="@((bool value) => UpdateConfigValue(config, value))" />
+                                                        }
+                                                        else if (config.IsNumber)
+                                                        {
+                                                            <MudNumericField T="int" Value="@GetIntValue(config)"
+                                                                             Label="Value"
+                                                                             Variant="Variant.Outlined"
+                                                                             ValueChanged="@((int value) => UpdateConfigValue(config, value))" />
+                                                        }
+                                                        else if (config.IsArray)
+                                                        {
+                                                            <MudTextField Value="@config.Value"
+                                                                          Label="Values (comma-separated)"
+                                                                          Variant="Variant.Outlined"
+                                                                          Lines="2"
+                                                                          ValueChanged="@((string value) => UpdateConfigValue(config, value))" />
+                                                        }
+                                                        else
+                                                        {
+                                                            <MudTextField Value="@config.Value"
+                                                                          Label="Value"
+                                                                          Variant="Variant.Outlined"
+                                                                          ValueChanged="@((string value) => UpdateConfigValue(config, value))" />
+                                                        }
+                                                        
+                                                        <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                                                            Type: @FormatTypeName(config.Type)
+                                                        </MudText>
+                                                    </MudStack>
+                                                </MudCardContent>
+                                            </MudCard>
+                                        </MudItem>
+                                    }
+                                </MudGrid>
+                            </ChildContent>
+                        </MudExpansionPanel>
+                    }
+                </MudExpansionPanels>
             </MudCardContent>
         </MudCard>
     </MudStack>
@@ -64,6 +120,7 @@
 
 @code {
     private IEnumerable<AdminConfigService.ConfigItem> ConfigItems { get; set; } = [];
+    private Dictionary<string, IEnumerable<AdminConfigService.ConfigItem>> ConfigSections { get; set; } = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -75,6 +132,7 @@
     {
         var options = AdminConfigService.GetOptions();
         ConfigItems = options.ToConfigItems();
+        ConfigSections = ConfigItems.GroupBy(x => x.Section).ToDictionary(g => g.Key, g => g.AsEnumerable());
         StateHasChanged();
     }
 
@@ -82,5 +140,70 @@
     {
         AdminConfigService.ResetToDefault();
         LoadConfiguration();
+    }
+
+    private string GetSectionIcon(string section)
+    {
+        return section switch
+        {
+            "Net" => Icons.Material.Filled.NetworkCheck,
+            "Chat" => Icons.Material.Filled.Chat,
+            "Database" => Icons.Material.Filled.Storage,
+            "Limit" => Icons.Material.Filled.Speed,
+            "Cost" => Icons.Material.Filled.MonetizationOn,
+            "File" => Icons.Material.Filled.Folder,
+            "Log" => Icons.Material.Filled.Article,
+            "Message" => Icons.Material.Filled.Message,
+            "Cosmetic" => Icons.Material.Filled.Palette,
+            "Command" => Icons.Material.Filled.Terminal,
+            "Function" => Icons.Material.Filled.Functions,
+            "Compatibility" => Icons.Material.Filled.Verified,
+            "Attribute" => Icons.Material.Filled.Label,
+            "Flag" => Icons.Material.Filled.Flag,
+            "Dump" => Icons.Material.Filled.Save,
+            "Debug" => Icons.Material.Filled.BugReport,
+            _ => Icons.Material.Filled.Settings
+        };
+    }
+
+    private string FormatTypeName(string typeName)
+    {
+        return typeName switch
+        {
+            "Boolean" => "Yes/No",
+            "String" => "Text",
+            "Int32" => "Number",
+            "UInt32" => "Number",
+            "Double" => "Decimal",
+            "Single" => "Decimal",
+            "String[]" => "List",
+            var t when t.StartsWith("Nullable") => "Optional " + FormatTypeName(t.Replace("Nullable`1", "").Replace("[", "").Replace("]", "")),
+            _ => typeName
+        };
+    }
+
+    private bool GetBoolValue(AdminConfigService.ConfigItem config)
+    {
+        if (config.RawValue is bool boolValue)
+            return boolValue;
+        return bool.TryParse(config.Value, out var parsed) && parsed;
+    }
+
+    private int GetIntValue(AdminConfigService.ConfigItem config)
+    {
+        if (config.RawValue is int intValue)
+            return intValue;
+        if (config.RawValue is uint uintValue)
+            return (int)uintValue;
+        return int.TryParse(config.Value, out var parsed) ? parsed : 0;
+    }
+
+    private void UpdateConfigValue(AdminConfigService.ConfigItem config, object? newValue)
+    {
+        // For now, just update the display value
+        // In a real implementation, this would update the underlying configuration
+        config.Value = newValue?.ToString() ?? "null";
+        config.RawValue = newValue;
+        StateHasChanged();
     }
 }

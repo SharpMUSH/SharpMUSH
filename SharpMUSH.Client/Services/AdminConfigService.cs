@@ -315,6 +315,12 @@ public class AdminConfigService
 		public string Key { get; set; } = string.Empty;
 		public string Value { get; set; } = string.Empty;
 		public string Type { get; set; } = string.Empty;
+		public object? RawValue { get; set; }
+		public string Description { get; set; } = string.Empty;
+		public bool IsBoolean => Type == "Boolean";
+		public bool IsNumber => Type is "Int32" or "UInt32" or "Double" or "Single" or "Decimal";
+		public bool IsArray => Type.EndsWith("[]");
+		public bool IsNullable => Type.StartsWith("Nullable");
 	}
 }
 
@@ -363,12 +369,16 @@ public static class PennMUSHOptionsExtension
 									_ => value.ToString() ?? "null"
 								};
 
+								var description = GetPropertyDescription(sectionName, sectionProp.Name);
+
 								configItems.Add(new AdminConfigService.ConfigItem
 								{
 									Section = sectionName,
 									Key = sectionProp.Name,
 									Value = valueString,
-									Type = sectionProp.PropertyType.Name
+									Type = sectionProp.PropertyType.Name,
+									RawValue = value,
+									Description = description
 								});
 							}
 							catch (Exception ex)
@@ -411,5 +421,48 @@ public static class PennMUSHOptionsExtension
 		}
 
 		return configItems.OrderBy(x => x.Section).ThenBy(x => x.Key);
+	}
+
+	private static string GetPropertyDescription(string section, string propertyName)
+	{
+		// Add descriptive text for common configuration options
+		var descriptions = new Dictionary<string, Dictionary<string, string>>
+		{
+			["Net"] = new Dictionary<string, string>
+			{
+				["MudName"] = "The name of your MUSH as displayed to players",
+				["Port"] = "Main telnet port for player connections",
+				["SslPort"] = "Secure SSL port for encrypted connections",
+				["PlayerCreation"] = "Allow new players to create accounts",
+				["Guests"] = "Allow guest connections",
+				["Logins"] = "Allow player logins"
+			},
+			["Chat"] = new Dictionary<string, string>
+			{
+				["ChatTokenAlias"] = "Character used as prefix for chat commands (default: +)",
+				["MaxChannels"] = "Maximum number of channels allowed",
+				["UseMuxComm"] = "Use MUX-style communication system"
+			},
+			["Database"] = new Dictionary<string, string>
+			{
+				["BaseRoom"] = "Default room where new objects are created",
+				["DefaultHome"] = "Default home room for new players",
+				["MasterRoom"] = "Master room (room #2)"
+			},
+			["Limit"] = new Dictionary<string, string>
+			{
+				["MaxLogins"] = "Maximum simultaneous player connections",
+				["MaxGuests"] = "Maximum guest connections (-1 for unlimited)",
+				["PlayerNameLen"] = "Maximum length of player names"
+			}
+		};
+
+		if (descriptions.TryGetValue(section, out var sectionDescriptions) &&
+		    sectionDescriptions.TryGetValue(propertyName, out var description))
+		{
+			return description;
+		}
+
+		return $"{section} {propertyName} setting";
 	}
 }
