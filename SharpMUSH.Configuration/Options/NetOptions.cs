@@ -1,16 +1,16 @@
 ﻿namespace SharpMUSH.Configuration.Options;
 
 public record NetOptions(
-	[property: PennConfig(Name = "mud_name", Description = "Name of your MUSH as displayed to players")] 
+	[property: PennConfig(Name = "mud_name", Description = "Name of your MUSH as displayed to players", DefaultValue = "SharpMUSH")] 
 	string MudName,
 	
-	[property: PennConfig(Name = "mud_url", Description = "Web address of your MUSH for browser redirects")] 
+	[property: PennConfig(Name = "mud_url", Description = "Web address of your MUSH for browser redirects", DefaultValue = null)] 
 	string? MudUrl,
 	
-	[property: PennConfig(Name = "ip_addr", Description = "Specific IP address to listen on (leave blank for all addresses)")] 
+	[property: PennConfig(Name = "ip_addr", Description = "Specific IP address to listen on (leave blank for all addresses)", DefaultValue = null)] 
 	string? IpAddr,
 	
-	[property: PennConfig(Name = "ssl_ip_addr", Description = "IP address to bind to for SSL connections", IsAdvanced = true)] 
+	[property: PennConfig(Name = "ssl_ip_addr", Description = "IP address to bind to for SSL connections", IsAdvanced = true, DefaultValue = "4202")] 
 	string? SslIpAddr,
 	
 	[property: PennConfig(Name = "port", Description = "Main telnet port for player connections", DefaultValue = "4203")] 
@@ -19,20 +19,20 @@ public record NetOptions(
 	[property: PennConfig(Name = "ssl_port", Description = "Port for secure SSL connections (0 to disable)", DefaultValue = "0")] 
 	uint SslPort,
 	
-	[property: PennConfig(Name = "portal_port", Description = "Port for portal connections", IsAdvanced = true)] 
+	[property: PennConfig(Name = "portal_port", Description = "Port for portal connections", IsAdvanced = true, DefaultValue = null)] 
 	uint PortalPort,
 	
-	[property: PennConfig(Name = "ssl_portal_port", Description = "Port for secure portal connections", IsAdvanced = true)] 
+	[property: PennConfig(Name = "ssl_portal_port", Description = "Port for secure portal connections", IsAdvanced = true, DefaultValue = null)] 
 	uint SllPortalPort,
 	
-	[property: PennConfig(Name = "socket_file", Description = "Unix domain socket file for SSL slave communication", IsAdvanced = true)] 
+	[property: PennConfig(Name = "socket_file", Description = "Unix domain socket file for SSL slave communication", IsAdvanced = true, DefaultValue = null)] 
 	string SocketFile,
 	
 	[property: PennConfig(Name = "use_ws", Description = "Enable WebSocket support for web clients", DefaultValue = "true")] 
 	bool UseWebsockets,
 	
 	[property: PennConfig(Name = "ws_url", Description = "URL path for WebSocket connections", DefaultValue = "/wsclient")] 
-	string WebsocketUrl,
+	string? WebsocketUrl,
 	
 	[property: PennConfig(Name = "use_dns", Description = "Resolve IP numbers to hostnames (affects WHO display)", DefaultValue = "yes")] 
 	bool UseDns,
@@ -49,15 +49,15 @@ public record NetOptions(
 	[property: PennConfig(Name = "pueblo", Description = "Enable Pueblo HTML client support", DefaultValue = "yes")] 
 	bool Pueblo,
 	
-	[property: PennConfig(Name = "sql_platform", Description = "SQL database platform to use", IsAdvanced = true)] 
+	[property: PennConfig(Name = "sql_platform", Description = "SQL database platform to use", IsAdvanced = true, DefaultValue = null)] 
 	string? SqlPlatform,
 	
-	[property: PennConfig(Name = "sql_host", Description = "SQL database host connection string", IsAdvanced = true)] 
-	string SqlHost,
+	[property: PennConfig(Name = "sql_host", Description = "SQL database host connection string", IsAdvanced = true, DefaultValue = null)] 
+	string? SqlHost,
 	
-	[property: PennConfig(Name = "json_unsafe_unescape", Description = "Allow unsafe JSON unescaping", IsAdvanced = true)] 
+	[property: PennConfig(Name = "json_unsafe_unescape", Description = "Allow unsafe JSON unescaping", IsAdvanced = true, DefaultValue = null)] 
 	bool JsonUnsafeUnescape,
 	
-	[property: PennConfig(Name = "ssl_require_clientcert", Description = "Require clients to present valid SSL certificates", IsAdvanced = true)] 
+	[property: PennConfig(Name = "ssl_require_clientcert", Description = "Require clients to present valid SSL certificates", IsAdvanced = true, DefaultValue = null)] 
 	bool SslRequireClientCert
 );
