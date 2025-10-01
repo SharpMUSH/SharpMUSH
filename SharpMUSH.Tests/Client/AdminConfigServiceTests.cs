@@ -1,8 +1,6 @@
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using SharpMUSH.Client.Services;
-using SharpMUSH.Configuration.Options;
-using TUnit.Core;
 
 namespace SharpMUSH.Tests.Client;
 
@@ -52,7 +50,7 @@ ssl_port 4202
     }
 
     [Test]
-    public void GetOptions_AfterReset_ShouldReturnFakeOptions()
+    public async Task GetOptions_AfterReset_ShouldReturnFakeOptions()
     {
         // Arrange
         var logger = Substitute.For<ILogger<AdminConfigService>>();

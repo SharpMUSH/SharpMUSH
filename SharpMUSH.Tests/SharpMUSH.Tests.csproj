@@ -31,6 +31,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\SharpMUSH.Client\SharpMUSH.Client.csproj" />
     <ProjectReference Include="..\SharpMUSH.Configuration\SharpMUSH.Configuration.csproj" />
     <ProjectReference Include="..\SharpMUSH.Database.ArangoDB\SharpMUSH.Database.ArangoDB.csproj" />
     <ProjectReference Include="..\SharpMUSH.Database\SharpMUSH.Database.csproj" />
