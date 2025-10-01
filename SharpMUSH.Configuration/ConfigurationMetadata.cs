@@ -5,31 +5,30 @@ namespace SharpMUSH.Configuration;
 
 public static class ConfigurationMetadata
 {
-	private static readonly Dictionary<string, ConfigurationPropertyInfo> _propertyMetadata = new();
+	private static readonly Lazy<Dictionary<string, ConfigurationPropertyInfo>> _propertyMetadata = 
+		new Lazy<Dictionary<string, ConfigurationPropertyInfo>>(LoadMetadata);
 	
-	static ConfigurationMetadata()
-	{
-		LoadMetadata();
-	}
+	private static Dictionary<string, ConfigurationPropertyInfo> PropertyMetadata => _propertyMetadata.Value;
 
 	public static ConfigurationPropertyInfo? GetPropertyInfo(string section, string propertyName)
 	{
 		var key = $"{section}.{propertyName}";
-		return _propertyMetadata.TryGetValue(key, out var info) ? info : null;
+		return PropertyMetadata.TryGetValue(key, out var info) ? info : null;
 	}
 
 	public static IEnumerable<ConfigurationPropertyInfo> GetSectionProperties(string section)
 	{
-		return _propertyMetadata.Values.Where(p => p.Section == section);
+		return PropertyMetadata.Values.Where(p => p.Section == section);
 	}
 
 	public static IEnumerable<string> GetAllSections()
 	{
-		return _propertyMetadata.Values.Select(p => p.Section).Distinct();
+		return PropertyMetadata.Values.Select(p => p.Section).Distinct();
 	}
 
-	private static void LoadMetadata()
+	private static Dictionary<string, ConfigurationPropertyInfo> LoadMetadata()
 	{
+		var metadata = new Dictionary<string, ConfigurationPropertyInfo>();
 		var optionsType = typeof(PennMUSHOptions);
 		var sectionProperties = optionsType.GetProperties();
 
@@ -58,10 +57,12 @@ public static class ConfigurationMetadata
 					);
 
 					var key = $"{sectionName}.{configProperty.Name}";
-					_propertyMetadata[key] = propertyInfo;
+					metadata[key] = propertyInfo;
 				}
 			}
 		}
+		
+		return metadata;
 	}
 
 	private static string GetDefaultDescription(string section, string propertyName)
