@@ -117,6 +117,19 @@ public class Startup(ArangoConfiguration config, string configFile, string color
 	}
 
 	// This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-	public static void Configure(IApplicationBuilder app, IWebHostEnvironment _) =>
-		app.Run(async _ => await Task.CompletedTask);
+	public static void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+	{
+		if (env.IsDevelopment())
+		{
+			app.UseDeveloperExceptionPage();
+		}
+
+		app.UseRouting();
+		app.UseAuthorization();
+		app.UseEndpoints(endpoints =>
+		{
+			endpoints.MapControllers();
+			endpoints.MapRazorPages();
+		});
+	}
 }

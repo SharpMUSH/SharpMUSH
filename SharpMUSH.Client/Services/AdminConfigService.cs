@@ -1,44 +1,87 @@
-﻿using AutoBogus;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using FileOptions = SharpMUSH.Configuration.Options.FileOptions;
 using System.Reflection;
+using System.Net.Http.Json;
 
 namespace SharpMUSH.Client.Services;
 
 public class AdminConfigService
 {
 	private readonly ILogger<AdminConfigService> _logger;
+	private readonly HttpClient _httpClient;
 	private PennMUSHOptions? _currentOptions;
 
-	public AdminConfigService(ILogger<AdminConfigService> logger)
+	public AdminConfigService(ILogger<AdminConfigService> logger, HttpClient httpClient)
 	{
 		_logger = logger;
+		_httpClient = httpClient;
+	}
+
+	public async Task<PennMUSHOptions> GetOptionsAsync()
+	{
+		try
+		{
+			if (_currentOptions == null)
+			{
+				_currentOptions = await FetchConfigurationFromServer();
+			}
+			return _currentOptions;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "Error fetching options from server, using defaults");
+			return _currentOptions ?? CreateMinimalOptions();
+		}
 	}
 
 	public PennMUSHOptions GetOptions()
 	{
-		try
-		{
-			return _currentOptions ?? CreateDefaultOptions();
-		}
-		catch (Exception ex)
-		{
-			_logger.LogError(ex, "Error generating options, returning minimal default");
-			return CreateMinimalOptions();
-		}
+		// Synchronous wrapper for backwards compatibility
+		return _currentOptions ?? CreateMinimalOptions();
 	}
 
-	private PennMUSHOptions CreateDefaultOptions()
+	public async Task<PennMUSHOptions> ImportFromConfigFileAsync(string configFileContent)
 	{
 		try
 		{
-			return new AutoFaker<PennMUSHOptions>().Generate();
+			var response = await _httpClient.PostAsJsonAsync("/api/configuration/import", configFileContent);
+			response.EnsureSuccessStatusCode();
+			
+			var importedOptions = await response.Content.ReadFromJsonAsync<PennMUSHOptions>();
+			if (importedOptions != null)
+			{
+				_currentOptions = importedOptions;
+			}
+			return importedOptions ?? CreateMinimalOptions();
 		}
-		catch
+		catch (Exception ex)
 		{
+			_logger.LogError(ex, "Error importing configuration file");
+			throw;
+		}
+	}
+
+	public void ResetToDefault()
+	{
+		_currentOptions = null;
+	}
+
+	private async Task<PennMUSHOptions> FetchConfigurationFromServer()
+	{
+		try
+		{
+			var response = await _httpClient.GetAsync("/api/configuration");
+			response.EnsureSuccessStatusCode();
+			
+			var options = await response.Content.ReadFromJsonAsync<PennMUSHOptions>();
+			return options ?? CreateMinimalOptions();
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "Error fetching configuration from server");
 			return CreateMinimalOptions();
 		}
 	}
@@ -271,37 +314,6 @@ public class AdminConfigService
 				WebsocketUrl: null
 			)
 		};
-	}
-
-	public async Task<bool> ImportFromConfigFileAsync(string configContent, string fileName = "imported.cnf")
-	{
-		try
-		{
-			// Create a temporary file to write the content to
-			var tempFilePath = Path.GetTempFileName();
-			await File.WriteAllTextAsync(tempFilePath, configContent);
-
-			// Create a null logger for ReadPennMushConfig
-			var configLogger = NullLogger<ReadPennMushConfig>.Instance;
-
-			// Use the existing ReadPennMushConfig to parse the file
-			var configReader = new ReadPennMushConfig(configLogger, tempFilePath);
-			var newOptions = configReader.Create(string.Empty);
-
-			// Update current options
-			_currentOptions = newOptions;
-
-			// Clean up temp file
-			File.Delete(tempFilePath);
-
-			_logger.LogInformation("Successfully imported configuration from {FileName}", fileName);
-			return true;
-		}
-		catch (Exception ex)
-		{
-			_logger.LogError(ex, "Failed to import configuration from {FileName}", fileName);
-			return false;
-		}
 	}
 
 	public void ResetToDefault()

@@ -172,24 +172,16 @@
 
         try
         {
-            var success = await AdminConfigService.ImportFromConfigFileAsync(fileContent, selectedFile.Name);
+            var importedOptions = await AdminConfigService.ImportFromConfigFileAsync(fileContent);
             
             importResult = new ImportConfigResult 
             { 
-                Success = success, 
-                Message = success 
-                    ? $"Successfully imported configuration from {selectedFile.Name}" 
-                    : $"Failed to import configuration from {selectedFile.Name}" 
+                Success = true, 
+                Message = $"Successfully imported configuration from {selectedFile.Name}" 
             };
 
-            if (success)
-            {
-                Snackbar.Add("Configuration imported successfully!", Severity.Success);
-            }
-            else
-            {
-                Snackbar.Add("Failed to import configuration", Severity.Error);
-            }
+            Snackbar.Add("Configuration imported successfully!", Severity.Success);
+        }
         }
         catch (Exception ex)
         {

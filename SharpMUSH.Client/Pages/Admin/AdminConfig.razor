@@ -124,22 +124,22 @@
 
     protected override async Task OnInitializedAsync()
     {
-        LoadConfiguration();
+        await LoadConfigurationAsync();
         await base.OnInitializedAsync();
     }
 
-    private void LoadConfiguration()
+    private async Task LoadConfigurationAsync()
     {
-        var options = AdminConfigService.GetOptions();
+        var options = await AdminConfigService.GetOptionsAsync();
         ConfigItems = options.ToConfigItems();
         ConfigSections = ConfigItems.GroupBy(x => x.Section).ToDictionary(g => g.Key, g => g.AsEnumerable());
         StateHasChanged();
     }
 
-    private void ResetToDefault()
+    private async Task ResetToDefault()
     {
         AdminConfigService.ResetToDefault();
-        LoadConfiguration();
+        await LoadConfigurationAsync();
     }
 
     private string GetSectionIcon(string section)
