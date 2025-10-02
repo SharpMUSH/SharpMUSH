@@ -19,11 +19,18 @@ public class ConfigurationController : ControllerBase
 	}
 
 	[HttpGet]
-	public ActionResult<PennMUSHOptions> GetConfiguration()
+	public ActionResult<ConfigurationResponse> GetConfiguration()
 	{
 		try
 		{
-			return Ok(_options.CurrentValue);
+			var configuration = _options.CurrentValue;
+			var metadata = GetConfigurationMetadata();
+			
+			return Ok(new ConfigurationResponse
+			{
+				Configuration = configuration,
+				Metadata = metadata
+			});
 		}
 		catch (Exception ex)
 		{
@@ -32,38 +39,8 @@ public class ConfigurationController : ControllerBase
 		}
 	}
 
-	[HttpGet("metadata")]
-	public ActionResult<IEnumerable<ConfigurationPropertyInfo>> GetConfigurationMetadata()
-	{
-		try
-		{
-			var sections = ConfigurationMetadata.GetAllSections();
-			var allMetadata = sections.SelectMany(ConfigurationMetadata.GetSectionProperties);
-			return Ok(allMetadata);
-		}
-		catch (Exception ex)
-		{
-			_logger.LogError(ex, "Error retrieving configuration metadata");
-			return StatusCode(500, "Error retrieving configuration metadata");
-		}
-	}
-
-	[HttpGet("sections")]
-	public ActionResult<IEnumerable<string>> GetConfigurationSections()
-	{
-		try
-		{
-			return Ok(ConfigurationMetadata.GetAllSections());
-		}
-		catch (Exception ex)
-		{
-			_logger.LogError(ex, "Error retrieving configuration sections");
-			return StatusCode(500, "Error retrieving configuration sections");
-		}
-	}
-
 	[HttpPost("import")]
-	public ActionResult<PennMUSHOptions> ImportConfiguration([FromBody] string configContent)
+	public ActionResult<ConfigurationResponse> ImportConfiguration([FromBody] string configContent)
 	{
 		try
 		{
@@ -75,11 +52,16 @@ public class ConfigurationController : ControllerBase
 			var configReader = new ReadPennMushConfig(_logger as ILogger<ReadPennMushConfig> ?? 
 				LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger<ReadPennMushConfig>(), tempFile);
 			var importedOptions = configReader.Create(string.Empty);
+			var metadata = GetConfigurationMetadata();
 
 			// Clean up temp file
 			File.Delete(tempFile);
 
-			return Ok(importedOptions);
+			return Ok(new ConfigurationResponse
+			{
+				Configuration = importedOptions,
+				Metadata = metadata
+			});
 		}
 		catch (Exception ex)
 		{
@@ -87,4 +69,16 @@ public class ConfigurationController : ControllerBase
 			return BadRequest($"Error importing configuration: {ex.Message}");
 		}
 	}
+
+	private IEnumerable<ConfigurationPropertyInfo> GetConfigurationMetadata()
+	{
+		var sections = ConfigurationMetadata.GetAllSections();
+		return sections.SelectMany(ConfigurationMetadata.GetSectionProperties);
+	}
+}
+
+public class ConfigurationResponse
+{
+	public PennMUSHOptions Configuration { get; set; } = null!;
+	public IEnumerable<ConfigurationPropertyInfo> Metadata { get; set; } = [];
 }

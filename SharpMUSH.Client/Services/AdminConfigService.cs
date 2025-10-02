@@ -8,6 +8,12 @@ using System.Net.Http.Json;
 
 namespace SharpMUSH.Client.Services;
 
+public class ConfigurationResponse
+{
+	public PennMUSHOptions Configuration { get; set; } = null!;
+	public IEnumerable<ConfigurationPropertyInfo> Metadata { get; set; } = [];
+}
+
 public class AdminConfigService
 {
 	private readonly ILogger<AdminConfigService> _logger;
@@ -26,7 +32,8 @@ public class AdminConfigService
 		{
 			if (_currentOptions == null)
 			{
-				_currentOptions = await FetchConfigurationFromServer();
+				var configResponse = await FetchConfigurationFromServer();
+				_currentOptions = configResponse.Configuration;
 			}
 			return _currentOptions;
 		}
@@ -50,12 +57,12 @@ public class AdminConfigService
 			var response = await _httpClient.PostAsJsonAsync("/api/configuration/import", configFileContent);
 			response.EnsureSuccessStatusCode();
 			
-			var importedOptions = await response.Content.ReadFromJsonAsync<PennMUSHOptions>();
-			if (importedOptions != null)
+			var configResponse = await response.Content.ReadFromJsonAsync<ConfigurationResponse>();
+			if (configResponse?.Configuration != null)
 			{
-				_currentOptions = importedOptions;
+				_currentOptions = configResponse.Configuration;
 			}
-			return importedOptions ?? CreateMinimalOptions();
+			return configResponse?.Configuration ?? CreateMinimalOptions();
 		}
 		catch (Exception ex)
 		{
@@ -69,20 +76,28 @@ public class AdminConfigService
 		_currentOptions = null;
 	}
 
-	private async Task<PennMUSHOptions> FetchConfigurationFromServer()
+	private async Task<ConfigurationResponse> FetchConfigurationFromServer()
 	{
 		try
 		{
 			var response = await _httpClient.GetAsync("/api/configuration");
 			response.EnsureSuccessStatusCode();
 			
-			var options = await response.Content.ReadFromJsonAsync<PennMUSHOptions>();
-			return options ?? CreateMinimalOptions();
+			var configResponse = await response.Content.ReadFromJsonAsync<ConfigurationResponse>();
+			return configResponse ?? new ConfigurationResponse 
+			{ 
+				Configuration = CreateMinimalOptions(), 
+				Metadata = Enumerable.Empty<ConfigurationPropertyInfo>() 
+			};
 		}
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "Error fetching configuration from server");
-			return CreateMinimalOptions();
+			return new ConfigurationResponse 
+			{ 
+				Configuration = CreateMinimalOptions(), 
+				Metadata = Enumerable.Empty<ConfigurationPropertyInfo>() 
+			};
 		}
 	}
 
@@ -397,8 +412,8 @@ public static class PennMUSHOptionsExtension
 									RawValue = value,
 									Description = metadata?.Description ?? GetFallbackDescription(sectionName, sectionProp.Name),
 									Category = metadata?.Category ?? sectionName,
-									IsAdvanced = metadata?.IsAdvanced ?? false,
-									DefaultValue = metadata?.DefaultValue
+									IsAdvanced = metadata?.Nullable ?? false,
+									DefaultValue = metadata?.DefaultValue?.ToString()
 								});
 							}
 							catch (Exception ex)

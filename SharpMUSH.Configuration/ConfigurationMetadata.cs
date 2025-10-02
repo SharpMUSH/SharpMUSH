@@ -26,10 +26,10 @@ public static class ConfigurationMetadata
 		return PropertyMetadata.Values.Select(p => p.Section).Distinct();
 	}
 
-	public static string GetDefaultValue(string section, string propertyName)
+	public static object? GetDefaultValue(string section, string propertyName)
 	{
 		var key = $"{section}.{propertyName}";
-		return PropertyMetadata.TryGetValue(key, out var info) ? info.DefaultValue ?? string.Empty : string.Empty;
+		return PropertyMetadata.TryGetValue(key, out var info) ? info.DefaultValue : null;
 	}
 
 	public static PennMUSHOptions CreateDefaultOptions()
@@ -48,7 +48,7 @@ public static class ConfigurationMetadata
 
 	private static object CreateSectionWithDefaults(Type sectionType, string sectionName)
 	{
-		var parameters = new List<object>();
+		var parameters = new List<object?>();
 		var constructor = sectionType.GetConstructors().First();
 		
 		foreach (var parameter in constructor.GetParameters())
@@ -63,9 +63,9 @@ public static class ConfigurationMetadata
 		return Activator.CreateInstance(sectionType, parameters.ToArray())!;
 	}
 
-	private static object ConvertDefaultValue(string defaultValue, Type targetType)
+	private static object? ConvertDefaultValue(object? defaultValue, Type targetType)
 	{
-		if (string.IsNullOrEmpty(defaultValue))
+		if (defaultValue == null)
 		{
 			return GetTypeDefault(targetType);
 		}
@@ -74,33 +74,46 @@ public static class ConfigurationMetadata
 		if (targetType.IsGenericType && targetType.GetGenericTypeDefinition() == typeof(Nullable<>))
 		{
 			var underlyingType = Nullable.GetUnderlyingType(targetType);
-			if (string.IsNullOrEmpty(defaultValue) || defaultValue.Equals("null", StringComparison.OrdinalIgnoreCase))
-				return null!;
+			if (defaultValue == null || (defaultValue is string str && str.Equals("null", StringComparison.OrdinalIgnoreCase)))
+				return null;
 			return ConvertDefaultValue(defaultValue, underlyingType!);
+		}
+
+		// If types match, return as-is
+		if (targetType.IsAssignableFrom(defaultValue.GetType()))
+		{
+			return defaultValue;
+		}
+
+		// Handle string conversion
+		var stringValue = defaultValue.ToString();
+		if (string.IsNullOrEmpty(stringValue))
+		{
+			return GetTypeDefault(targetType);
 		}
 
 		// Handle string arrays
 		if (targetType == typeof(string[]))
 		{
-			return defaultValue.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+			return stringValue.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 		}
 
 		// Handle basic types
 		return targetType.Name switch
 		{
-			nameof(String) => defaultValue,
-			nameof(Boolean) => bool.Parse(defaultValue),
-			nameof(Int32) => int.Parse(defaultValue),
-			nameof(UInt32) => uint.Parse(defaultValue),
-			nameof(Char) => defaultValue.FirstOrDefault(),
-			_ when targetType.IsEnum => Enum.Parse(targetType, defaultValue),
+			nameof(String) => stringValue,
+			nameof(Boolean) => bool.Parse(stringValue),
+			nameof(Int32) => int.Parse(stringValue),
+			nameof(UInt32) => uint.Parse(stringValue),
+			nameof(Char) => stringValue.FirstOrDefault(),
+			_ when targetType.IsEnum => Enum.Parse(targetType, stringValue),
 			_ => GetTypeDefault(targetType)
 		};
 	}
 
-	private static object GetTypeDefault(Type type)
+	private static object? GetTypeDefault(Type type)
 	{
-		return type.IsValueType ? Activator.CreateInstance(type)! : null!;
+		return type.IsValueType ? Activator.CreateInstance(type) : null;
 	}
 
 	private static Dictionary<string, ConfigurationPropertyInfo> LoadMetadata()
@@ -127,7 +140,7 @@ public static class ConfigurationMetadata
 						Description: pennConfigAttr.Description ?? GetDefaultDescription(sectionName, configProperty.Name),
 						Category: pennConfigAttr.Category ?? sectionName,
 						PropertyType: configProperty.PropertyType,
-						IsAdvanced: pennConfigAttr.IsAdvanced,
+						Nullable: pennConfigAttr.Nullable,
 						DefaultValue: pennConfigAttr.DefaultValue,
 						ValidationPattern: pennConfigAttr.ValidationPattern,
 						HelpText: pennConfigAttr.HelpText
@@ -166,8 +179,8 @@ public record ConfigurationPropertyInfo(
 	string Description,
 	string Category,
 	Type PropertyType,
-	bool IsAdvanced = false,
-	string? DefaultValue = null,
+	bool Nullable = false,
+	object? DefaultValue = null,
 	string? ValidationPattern = null,
 	string? HelpText = null
 )
@@ -188,32 +201,5 @@ public static class TypeExtensions
 			   type == typeof(int?) || type == typeof(uint?) || type == typeof(long?) || type == typeof(ulong?) ||
 			   type == typeof(short?) || type == typeof(ushort?) || type == typeof(byte?) || type == typeof(sbyte?) ||
 			   type == typeof(float?) || type == typeof(double?) || type == typeof(decimal?);
-	}
-	public bool IsArray => PropertyType.IsArray;
-	public bool IsNullable => Nullable.GetUnderlyingType(PropertyType) != null;
-
-	public string FriendlyTypeName => PropertyType.Name switch
-	{
-		"Boolean" => "Yes/No",
-		"String" => "Text",
-		"Int32" or "UInt32" => "Number",
-		"Double" or "Single" or "Decimal" => "Decimal",
-		"Char" => "Character",
-		var t when t.EndsWith("[]") => "List",
-		var t when IsNullable => "Optional " + (Nullable.GetUnderlyingType(PropertyType)?.Name ?? "Value"),
-		_ => PropertyType.Name
-	};
-}
-
-public static class TypeExtensions
-{
-	public static bool IsNumericType(this Type type)
-	{
-		return type == typeof(int) || type == typeof(uint) || 
-		       type == typeof(long) || type == typeof(ulong) ||
-		       type == typeof(short) || type == typeof(ushort) ||
-		       type == typeof(byte) || type == typeof(sbyte) ||
-		       type == typeof(double) || type == typeof(float) ||
-		       type == typeof(decimal);
 	}
 }

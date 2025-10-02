@@ -78,7 +78,6 @@ public partial class ReadPennMushConfig(ILogger<ReadPennMushConfig> Logger, stri
 			// For now, this preserves the existing behavior while using centralized defaults as the base
 		}
 	}
-	}
 
 	private static bool Boolean(string value, bool fallback) =>
 		string.IsNullOrWhiteSpace(value)
