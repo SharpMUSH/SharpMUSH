@@ -33,7 +33,7 @@ We are still in the early stages of development, and are working on getting a st
 
 # Quick Contribution Guide
 ## How to Build and Test
-- Install [.Net 9](https://dotnet.microsoft.com/en-us/download/dotnet/9.0)
+- Install [.Net 10](https://dotnet.microsoft.com/en-us/download/dotnet/10.0)
 - Install [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 
 Build with:
