@@ -44,7 +44,7 @@ public partial class ReadPennMushConfig(ILogger<ReadPennMushConfig> Logger, stri
 			return ConfigurationMetadata.CreateDefaultOptions();
 		}
 		
-		// TODO: Use a Regex to split the values.
+		// Use a Regex to split the values.
 		foreach (var configLine in text
 			         .Where(line => configDictionary.Keys.Any(line.Trim().StartsWith))
 			         .Select(line => splitter.Match(line.Trim()))
@@ -65,18 +65,69 @@ public partial class ReadPennMushConfig(ILogger<ReadPennMushConfig> Logger, stri
 
 	private void ApplyConfigFileValues(PennMUSHOptions options, Dictionary<string, string> configDictionary, Dictionary<string, string> propertyDictionary)
 	{
-		// For now, keep the existing logic but simplified
-		// This could be further enhanced to use reflection to set properties dynamically
-		
-		string Get(string key) => configDictionary.TryGetValue(propertyDictionary[key], out var value) ? value : string.Empty;
-
-		// Apply config file overrides (simplified version of original hardcoded values)
-		// Since we start with defaults from attributes, we only need to override what's in the config file
+		// Apply config file values to override the defaults from attributes
 		foreach (var kvp in configDictionary.Where(x => !string.IsNullOrEmpty(x.Value)))
 		{
-			// TODO: Implement dynamic property setting using reflection
-			// For now, this preserves the existing behavior while using centralized defaults as the base
+			var configKey = kvp.Key;
+			var configValue = kvp.Value;
+			
+			// Find the property name from the config key
+			var propertyName = propertyDictionary.FirstOrDefault(x => x.Value == configKey).Key;
+			if (!string.IsNullOrEmpty(propertyName))
+			{
+				// Use reflection to set the property value on the appropriate options section
+				ApplyConfigValueToProperty(options, propertyName, configValue);
+			}
 		}
+	}
+	
+	private void ApplyConfigValueToProperty(PennMUSHOptions options, string propertyName, string configValue)
+	{
+		// Find the property across all option sections
+		var optionsSections = new object[]
+		{
+			options.Net, options.Chat, options.Database, options.Attribute,
+			options.Command, options.Compatibility, options.Cosmetic, options.Cost,
+			options.Debug, options.Dump, options.File, options.Flag,
+			options.Function, options.Limit, options.Log, options.Message
+		};
+		
+		foreach (var section in optionsSections)
+		{
+			var sectionType = section.GetType();
+			var property = sectionType.GetProperty(propertyName);
+			if (property != null && property.CanWrite)
+			{
+				// Convert and set the value based on property type
+				var convertedValue = ConvertConfigValue(configValue, property.PropertyType);
+				property.SetValue(section, convertedValue);
+				break;
+			}
+		}
+	}
+	
+	private object? ConvertConfigValue(string configValue, Type targetType)
+	{
+		if (string.IsNullOrWhiteSpace(configValue))
+			return null;
+			
+		if (targetType == typeof(string))
+			return configValue;
+		if (targetType == typeof(bool))
+			return Boolean(configValue, false);
+		if (targetType == typeof(int))
+			return Integer(configValue, 0);
+		if (targetType == typeof(uint))
+			return UnsignedInteger(configValue, 0);
+		if (targetType == typeof(uint?))
+			return string.IsNullOrWhiteSpace(configValue) ? null : UnsignedInteger(configValue, 0);
+		if (targetType == typeof(char))
+			return string.IsNullOrWhiteSpace(configValue) ? '\0' : configValue[0];
+		if (targetType == typeof(string[]))
+			return configValue.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+			
+		// Default fallback
+		return configValue;
 	}
 
 	private static bool Boolean(string value, bool fallback) =>

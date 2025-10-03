@@ -331,11 +331,6 @@ public class AdminConfigService
 		};
 	}
 
-	public void ResetToDefault()
-	{
-		_currentOptions = null;
-	}
-
 	public class ConfigItem
 	{
 		public string Section { get; set; } = string.Empty;

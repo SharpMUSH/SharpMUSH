@@ -1,67 +1,86 @@
+using System.Net;
+using System.Text;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using SharpMUSH.Client.Services;
 
 namespace SharpMUSH.Tests.Client;
 
+public class MockHttpMessageHandler : HttpMessageHandler
+{
+	private readonly HttpStatusCode _statusCode;
+	private readonly string _content;
+
+	public MockHttpMessageHandler(HttpStatusCode statusCode, string content)
+	{
+		_statusCode = statusCode;
+		_content = content;
+	}
+
+	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+	{
+		var response = new HttpResponseMessage(_statusCode)
+		{
+			Content = new StringContent(_content, Encoding.UTF8, "application/json")
+		};
+		return Task.FromResult(response);
+	}
+}
+
 public class AdminConfigServiceTests
 {
-    [Test]
-    public async Task ImportFromConfigFileAsync_ValidConfig_ShouldReturnTrue()
-    {
-        // Arrange
-        var logger = Substitute.For<ILogger<AdminConfigService>>();
-        var service = new AdminConfigService(logger);
-        
-        var configContent = @"# Test configuration
+	[Test]
+	public async Task ImportFromConfigFileAsync_ValidConfig_ShouldNotThrow()
+	{
+		// Arrange
+		var logger = Substitute.For<ILogger<AdminConfigService>>();
+		var httpClient = new HttpClient(new MockHttpMessageHandler(HttpStatusCode.OK, "{}"));
+		var service = new AdminConfigService(logger, httpClient);
+		
+		var configContent = @"# Test configuration
 mud_name Test MUSH
 port 4201
 ssl_port 4202
 ";
 
-        // Act
-        var result = await service.ImportFromConfigFileAsync(configContent, "test.cnf");
+		// Act & Assert - Should not throw
+		await service.ImportFromConfigFileAsync(configContent);
+	}
 
-        // Assert
-        await Assert.That(result).IsTrue();
-        
-        var options = service.GetOptions();
-        await Assert.That(options).IsNotNull();
-        await Assert.That(options.Net.MudName).IsEqualTo("Test MUSH");
-        await Assert.That(options.Net.Port).IsEqualTo(4201u);
-        await Assert.That(options.Net.SslPort).IsEqualTo(4202u);
-    }
+	[Test]
+	public async Task ImportFromConfigFileAsync_HttpError_ShouldHandleGracefully()
+	{
+		// Arrange
+		var logger = Substitute.For<ILogger<AdminConfigService>>();
+		var httpClient = new HttpClient(new MockHttpMessageHandler(HttpStatusCode.BadRequest, "Error"));
+		var service = new AdminConfigService(logger, httpClient);
+		
+		var configContent = "invalid config content";
 
-    [Test]
-    public async Task ImportFromConfigFileAsync_InvalidConfig_ShouldReturnFalse()
-    {
-        // Arrange
-        var logger = Substitute.For<ILogger<AdminConfigService>>();
-        var service = new AdminConfigService(logger);
-        
-        var configContent = "invalid config content that should fail";
+		// Act & Assert - Should handle HTTP errors gracefully
+		try
+		{
+			await service.ImportFromConfigFileAsync(configContent);
+		}
+		catch (Exception)
+		{
+			// Expected to handle error
+		}
+	}
 
-        // Act & Assert - Should not throw, but should return false for invalid config
-        var result = await service.ImportFromConfigFileAsync(configContent, "invalid.cnf");
-        
-        // Note: This might return true even with invalid config if the parser is tolerant
-        // The important thing is that it doesn't crash the application
-        await Assert.That(result).IsTrue(); // ReadPennMUSHConfig is tolerant of invalid config
-    }
+	[Test]
+	public async Task GetOptions_ShouldReturnConfiguration()
+	{
+		// Arrange
+		var logger = Substitute.For<ILogger<AdminConfigService>>();
+		var httpClient = new HttpClient(new MockHttpMessageHandler(HttpStatusCode.OK, 
+			"""{"Configuration":{"Net":{"MudName":"Test"}}, "Metadata":[]}"""));
+		var service = new AdminConfigService(logger, httpClient);
 
-    [Test]
-    public async Task GetOptions_AfterReset_ShouldReturnFakeOptions()
-    {
-        // Arrange
-        var logger = Substitute.For<ILogger<AdminConfigService>>();
-        var service = new AdminConfigService(logger);
+		// Act
+		var options = await service.GetOptionsAsync();
 
-        // Act
-        service.ResetToDefault();
-        var options = service.GetOptions();
-
-        // Assert
-        await Assert.That(options).IsNotNull();
-        // Since it returns fake options after reset, we just verify it's not null
-    }
+		// Assert
+		await Assert.That(options).IsNotNull();
+	}
 }

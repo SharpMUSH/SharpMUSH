@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
@@ -40,13 +41,13 @@ public class ConfigurationController : ControllerBase
 	}
 
 	[HttpPost("import")]
-	public ActionResult<ConfigurationResponse> ImportConfiguration([FromBody] string configContent)
+	public async Task<ActionResult<ConfigurationResponse>> ImportConfiguration([FromBody] string configContent)
 	{
 		try
 		{
 			// Create a temporary file with the content
 			var tempFile = Path.GetTempFileName();
-			File.WriteAllText(tempFile, configContent);
+			await System.IO.File.WriteAllTextAsync(tempFile, configContent);
 
 			// Use ReadPennMushConfig to parse it
 			var configReader = new ReadPennMushConfig(_logger as ILogger<ReadPennMushConfig> ?? 
@@ -55,7 +56,7 @@ public class ConfigurationController : ControllerBase
 			var metadata = GetConfigurationMetadata();
 
 			// Clean up temp file
-			File.Delete(tempFile);
+			System.IO.File.Delete(tempFile);
 
 			return Ok(new ConfigurationResponse
 			{
