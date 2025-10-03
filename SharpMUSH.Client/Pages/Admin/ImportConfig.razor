@@ -1,0 +1,154 @@
+@page "/admin/config/import"
+@using SharpMUSH.Client.Services
+@inject AdminConfigService AdminConfigService
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
+
+<div class="pa-4">
+	<MudText Typo="Typo.h4" GutterBottom="true">Import Configuration</MudText>
+	<MudText Typo="Typo.body1" Class="mb-4">
+		Upload a mush.cnf file to import configuration settings. Supported formats: .cnf, .conf, .txt
+	</MudText>
+
+	<MudPaper Class="pa-4">
+		<MudFileUpload T="IBrowserFile" 
+		               Accept=".cnf,.conf,.txt" 
+		               FilesChanged="OnFileSelected" 
+		               MaximumFileCount="1"
+		               MaxFileSize="1048576">
+			<ActivatorContent>
+				<MudCard Outlined="true" Style="min-height: 200px; border: 2px dashed #ccc;">
+					<MudCardContent>
+						<div class="d-flex flex-column align-center justify-center" style="min-height: 150px;">
+							<MudIcon Icon="Icons.Material.Filled.CloudUpload" Size="Size.Large" />
+							<MudText Typo="Typo.h6">Drop files here or click</MudText>
+							<MudText Typo="Typo.body2" Class="mt-2">
+								Supported formats: .cnf, .conf, .txt (max 1MB)
+							</MudText>
+						</div>
+					</MudCardContent>
+				</MudCard>
+			</ActivatorContent>
+		</MudFileUpload>
+	</MudPaper>
+
+	@if (_selectedFile != null)
+	{
+		<MudPaper Class="pa-4 mt-4">
+			<MudText Typo="Typo.h6" GutterBottom="true">Selected File</MudText>
+			<MudStack Row="true" Spacing="2" Style="align-items: center;">
+				<MudIcon Icon="Icons.Material.Filled.Description" />
+				<MudText>@_selectedFile.Name</MudText>
+				<MudText Typo="Typo.caption">(@($"{_selectedFile.Size / 1024.0:F1}") KB)</MudText>
+			</MudStack>
+
+			@if (!string.IsNullOrEmpty(_fileContent))
+			{
+				<MudExpansionPanels Class="mt-4">
+					<MudExpansionPanel MaxHeight="400">
+						<TitleContent>
+							<div style="display: flex; align-items: center;">
+								<MudIcon Icon="Icons.Material.Filled.Visibility" class="mr-3" />
+								<MudText>Preview File Content</MudText>
+							</div>
+						</TitleContent>
+						<ChildContent>
+							<MudTextField @bind-Value="_fileContent" 
+							              Lines="15" 
+							              Variant="Variant.Outlined" 
+							              ReadOnly="true" 
+							              Class="mono-font" />
+						</ChildContent>
+					</MudExpansionPanel>
+				</MudExpansionPanels>
+			}
+
+			<MudStack Row="true" Justify="Justify.SpaceBetween" Class="mt-4">
+				<MudButton StartIcon="Icons.Material.Filled.Clear" 
+				           OnClick="ClearSelection">
+					Clear Selection
+				</MudButton>
+				
+				<MudButton StartIcon="Icons.Material.Filled.Upload" 
+				           Color="Color.Primary" 
+				           Variant="Variant.Filled"
+				           OnClick="ImportConfiguration"
+				           Disabled="_isImporting">
+					@if (_isImporting)
+					{
+						<MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+						<MudText Class="ms-2">Importing...</MudText>
+					}
+					else
+					{
+						<MudText>Import Configuration</MudText>
+					}
+				</MudButton>
+			</MudStack>
+		</MudPaper>
+	}
+</div>
+
+@code {
+	private IBrowserFile? _selectedFile;
+	private string? _fileContent;
+	private bool _isImporting;
+
+	private async Task OnFileSelected(IBrowserFile file)
+	{
+		_selectedFile = file;
+		
+		if (file != null)
+		{
+			try
+			{
+				using var stream = file.OpenReadStream(maxAllowedSize: 1048576); // 1MB
+				using var reader = new StreamReader(stream);
+				_fileContent = await reader.ReadToEndAsync();
+			}
+			catch (Exception ex)
+			{
+				await JSRuntime.InvokeVoidAsync("console.error", $"Error reading file: {ex.Message}");
+			}
+		}
+		
+		StateHasChanged();
+	}
+
+	private void ClearSelection()
+	{
+		_selectedFile = null;
+		_fileContent = null;
+		StateHasChanged();
+	}
+
+	private async Task ImportConfiguration()
+	{
+		if (_selectedFile == null || string.IsNullOrEmpty(_fileContent))
+			return;
+
+		_isImporting = true;
+		StateHasChanged();
+
+		try
+		{
+			await AdminConfigService.ImportFromConfigFileAsync(_fileContent);
+			Navigation.NavigateTo("/admin/config");
+		}
+		catch (Exception ex)
+		{
+			await JSRuntime.InvokeVoidAsync("console.error", $"Error importing configuration: {ex.Message}");
+		}
+		finally
+		{
+			_isImporting = false;
+			StateHasChanged();
+		}
+	}
+}
+
+<style>
+	.mono-font {
+		font-family: 'Consolas', 'Monaco', 'Lucida Console', monospace;
+	}
+</style>
