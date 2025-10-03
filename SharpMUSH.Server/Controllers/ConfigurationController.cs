@@ -6,6 +6,32 @@ using SharpMUSH.Configuration.Options;
 
 namespace SharpMUSH.Server.Controllers;
 
+public class ConfigurationResponse
+{
+	public PennMUSHOptions Configuration { get; set; } = new();
+	public IEnumerable<ConfigurationPropertyInfo> Metadata { get; set; } = [];
+}
+
+public class ConfigurationPropertyInfo
+{
+	public string Name { get; set; } = string.Empty;
+	public string Description { get; set; } = string.Empty;
+	public string Section { get; set; } = string.Empty;
+	public string TypeName { get; set; } = string.Empty;
+	public string FriendlyTypeName { get; set; } = string.Empty;
+	public object? DefaultValue { get; set; }
+	public bool Nullable { get; set; }
+	public bool IsBoolean { get; set; }
+	public bool IsNumber { get; set; }
+	public bool IsArray { get; set; }
+	public object? RawValue { get; set; }
+}
+
+public class ImportRequest
+{
+	public string Content { get; set; } = string.Empty;
+}
+
 [ApiController]
 [Route("api/[controller]")]
 public class ConfigurationController : ControllerBase
