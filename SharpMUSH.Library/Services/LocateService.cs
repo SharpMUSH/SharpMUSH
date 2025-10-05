@@ -16,7 +16,7 @@ namespace SharpMUSH.Library.Services;
 public partial class LocateService(IMediator mediator, 
 	INotifyService NotifyService, 
 	IPermissionService PermissionService,
-	IOptionsMonitor<PennMUSHOptions> Configuration) : ILocateService
+	IOptionsMonitor<SharpMUSHOptions> Configuration) : ILocateService
 {
 	private static readonly Regex NthRegex = Nth();
 

@@ -10,7 +10,7 @@ namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
 public static class ChannelRename
 {
-	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, IOptionsMonitor<PennMUSHOptions> Configuration, MString channelName, MString newChannelName)
+	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, IOptionsMonitor<SharpMUSHOptions> Configuration, MString channelName, MString newChannelName)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		if (await executor.IsGuest())

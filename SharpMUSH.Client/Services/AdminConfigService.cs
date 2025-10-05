@@ -10,15 +10,15 @@ namespace SharpMUSH.Client.Services;
 
 public class ConfigurationResponse
 {
-	public PennMUSHOptions Configuration { get; set; } = null!;
-	public IEnumerable<ConfigurationPropertyInfo> Metadata { get; set; } = [];
+	public SharpMUSHOptions Configuration { get; set; } = null!;
+	public Dictionary<string, SharpConfigAttribute> Metadata { get; set; } = [];
 }
 
 public class AdminConfigService
 {
 	private readonly ILogger<AdminConfigService> _logger;
 	private readonly HttpClient _httpClient;
-	private PennMUSHOptions? _currentOptions;
+	private SharpMUSHOptions? _currentOptions;
 
 	public AdminConfigService(ILogger<AdminConfigService> logger, HttpClient httpClient)
 	{
@@ -26,7 +26,7 @@ public class AdminConfigService
 		_httpClient = httpClient;
 	}
 
-	public async Task<PennMUSHOptions> GetOptionsAsync()
+	public async Task<SharpMUSHOptions> GetOptionsAsync()
 	{
 		try
 		{
@@ -44,13 +44,13 @@ public class AdminConfigService
 		}
 	}
 
-	public PennMUSHOptions GetOptions()
+	public SharpMUSHOptions GetOptions()
 	{
 		// Synchronous wrapper for backwards compatibility
 		return _currentOptions ?? CreateMinimalOptions();
 	}
 
-	public async Task<PennMUSHOptions> ImportFromConfigFileAsync(string configFileContent)
+	public async Task<SharpMUSHOptions> ImportFromConfigFileAsync(string configFileContent)
 	{
 		try
 		{
@@ -84,26 +84,21 @@ public class AdminConfigService
 			response.EnsureSuccessStatusCode();
 			
 			var configResponse = await response.Content.ReadFromJsonAsync<ConfigurationResponse>();
-			return configResponse ?? new ConfigurationResponse 
-			{ 
-				Configuration = CreateMinimalOptions(), 
-				Metadata = Enumerable.Empty<ConfigurationPropertyInfo>() 
-			};
+			return configResponse!;
 		}
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "Error fetching configuration from server");
 			return new ConfigurationResponse 
 			{ 
-				Configuration = CreateMinimalOptions(), 
-				Metadata = Enumerable.Empty<ConfigurationPropertyInfo>() 
+				Configuration = CreateMinimalOptions()
 			};
 		}
 	}
 
-	private PennMUSHOptions CreateMinimalOptions()
+	private SharpMUSHOptions CreateMinimalOptions()
 	{
-		return new PennMUSHOptions
+		return new SharpMUSHOptions
 		{
 			Attribute = new AttributeOptions(
 				AbsolutePossessivePronounAttribute: "theirs",
@@ -196,36 +191,17 @@ public class AdminConfigService
 				DebugSharpParser: false
 			),
 			Dump = new DumpOptions(
-				DatabaseCheckInterval: "600",
-				DumpComplete: "Database saved",
-				DumpInterval: "3600",
-				DumpMessage: "Dumping database",
-				DumpWarning1Min: "Database will dump in 1 minute",
-				DumpWarning5Min: "Database will dump in 5 minutes",
-				ForkingDump: true,
-				PurgeInterval: "604800",
-				WarningInterval: "300"
+				PurgeInterval: "604800"
 			),
 			File = new FileOptions(
 				AccessFile: "access.cnf",
-				ChatDatabase: "chat.db",
-				ChunkCacheMemory: "1000000",
-				ChunkSwapFile: "chunk.db",
-				ChunkSwapInitialSize: "1000000",
 				ColorsFile: "colors.cnf",
-				CompressProgram: "gzip",
-				CompressSuffix: ".gz",
-				CrashDatabase: "crash.db",
 				DictionaryFile: "dict.db",
-				InputDatabase: "input.db",
-				MailDatabase: "mail.db",
 				NamesFile: "names.cnf",
-				OutputDatabase: "output.db",
-				SSLCADirectory: "",
-				SSLCAFile: "",
-				SSLCertificateFile: "",
-				SSLPrivateKeyFile: "",
-				UnCompressProgram: "gunzip"
+				SSLCADirectory: null,
+				SSLCAFile: null,
+				SSLCertificateFile: null,
+				SSLPrivateKeyFile: null
 			),
 			Flag = new FlagOptions(
 				ChannelFlags: ["player"],
@@ -353,19 +329,19 @@ public class AdminConfigService
 
 public static class PennMUSHOptionsExtension
 {
-	public static IEnumerable<object> ToDatagrid(this PennMUSHOptions options)
+	public static IEnumerable<object> ToDatagrid(this SharpMUSHOptions options)
 	{
 		return [];
 	}
 
-	public static IEnumerable<AdminConfigService.ConfigItem> ToConfigItems(this PennMUSHOptions options)
+	public static IEnumerable<AdminConfigService.ConfigItem> ToConfigItems(this SharpMUSHOptions options)
 	{
 		var configItems = new List<AdminConfigService.ConfigItem>();
 
 		try
 		{
 			// Use reflection to get all properties and their values
-			var optionsType = typeof(PennMUSHOptions);
+			var optionsType = typeof(SharpMUSHOptions);
 			var properties = optionsType.GetProperties();
 
 			foreach (var prop in properties)
@@ -396,7 +372,6 @@ public static class PennMUSHOptionsExtension
 								};
 
 								// Get metadata from centralized source
-								var metadata = ConfigurationMetadata.GetPropertyInfo(sectionName, sectionProp.Name);
 
 								configItems.Add(new AdminConfigService.ConfigItem
 								{
@@ -404,11 +379,12 @@ public static class PennMUSHOptionsExtension
 									Key = sectionProp.Name,
 									Value = valueString,
 									Type = sectionProp.PropertyType.Name,
-									RawValue = value,
+									RawValue = value
+										/*,
 									Description = metadata?.Description ?? GetFallbackDescription(sectionName, sectionProp.Name),
 									Category = metadata?.Category ?? sectionName,
 									IsAdvanced = metadata?.Nullable ?? false,
-									DefaultValue = metadata?.DefaultValue?.ToString()
+									DefaultValue = metadata?.DefaultValue?.ToString()*/
 								});
 							}
 							catch (Exception ex)

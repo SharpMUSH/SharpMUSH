@@ -100,10 +100,10 @@ public static class ChannelHelper
 		return new PrivilegeOrError(validatedList!);
 	}
 
-	public static bool IsValidChannelName(IOptionsMonitor<PennMUSHOptions> Configuration, MString channelName)
+	public static bool IsValidChannelName(IOptionsMonitor<SharpMUSHOptions> Configuration, MString channelName)
 		=> IsValidChannelName(Configuration!, channelName.ToPlainText());
 
-	public static bool IsValidChannelName(IOptionsMonitor<PennMUSHOptions> Configuration, string channelName)
+	public static bool IsValidChannelName(IOptionsMonitor<SharpMUSHOptions> Configuration, string channelName)
 		=> Configuration!.CurrentValue.Chat.ChannelTitleLength >= channelName.Length
 		   && channelName.Length > 3
 		   && !channelName.Contains(' ');

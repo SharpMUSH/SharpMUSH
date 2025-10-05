@@ -29,7 +29,7 @@ namespace SharpMUSH.Implementation.Visitors;
 /// <param name="source">The original MarkupString. A plain GetText is not good enough to get the proper value back.</param>
 public class SharpMUSHParserVisitor(ILogger logger, 
 	IMUSHCodeParser parser, 
-	IOptionsMonitor<PennMUSHOptions> Configuration, 
+	IOptionsMonitor<SharpMUSHOptions> Configuration, 
 	IMediator Mediator,
 	INotifyService NotifyService,
 	IConnectionService ConnectionService,

@@ -2,8 +2,12 @@ using Core.Arango;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 using Serilog.Sinks.SystemConsole.Themes;
+using SharpMUSH.Configuration;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server;
 using SharpMUSH.Server.ProtocolHandlers;
@@ -27,9 +31,13 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 		
 		Log.Logger = log;
 		
-		var startup = new Startup(acnf, configFile, colorFile, notifier);
+		var startup = new Startup(acnf, colorFile, notifier);
 
 		builder.ConfigureServices(startup.ConfigureServices);
+		builder.ConfigureTestServices(sc => 
+			sc.AddOptions<SharpMUSHOptions>()
+				.Configure(_ => ReadPennMushConfig.Create(configFile))
+			);
 
 		builder.UseKestrel(options 
 			=> options.ListenLocalhost(4203, lo => lo.UseConnectionHandler<TelnetServer>()));

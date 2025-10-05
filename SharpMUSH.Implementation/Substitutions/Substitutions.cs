@@ -16,7 +16,7 @@ public static partial class Substitutions
 	public static async ValueTask<CallState> ParseSimpleSubstitution(string symbol, IMUSHCodeParser parser,
 		IMediator mediator,
 		IAttributeService attributeService,
-		IOptionsMonitor<PennMUSHOptions> configuration,
+		IOptionsMonitor<SharpMUSHOptions> configuration,
 		SubstitutionSymbolContext _)
 		=> symbol switch
 		{

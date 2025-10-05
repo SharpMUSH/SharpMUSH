@@ -1,6 +1,6 @@
 ﻿namespace SharpMUSH.Configuration.Options;
 
-public record PennMUSHOptions
+public record SharpMUSHOptions
 {
 	public required AttributeOptions Attribute { get; init; }
 	public required ChatOptions Chat { get; init; }

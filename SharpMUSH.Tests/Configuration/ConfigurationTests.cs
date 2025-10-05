@@ -12,7 +12,7 @@ public class ConfigurationTests
 {
 	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required WebAppFactory WebAppFactoryArg { get; init; }
-	private IOptionsMonitor<PennMUSHOptions> Configuration => WebAppFactoryArg.Services.GetRequiredService<IOptionsMonitor<PennMUSHOptions>>();
+	private IOptionsMonitor<SharpMUSHOptions> Configuration => WebAppFactoryArg.Services.GetRequiredService<IOptionsMonitor<SharpMUSHOptions>>();
 	
 	private IMUSHCodeParser Parser => WebAppFactoryArg.Services.GetRequiredService<IMUSHCodeParser>();
 
@@ -20,8 +20,7 @@ public class ConfigurationTests
 	public async Task ParseConfigurationFile()
 	{
 		var configFile = Path.Combine(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst");
-		var configReader = new ReadPennMushConfig(Substitute.For<ILogger<ReadPennMushConfig>>(), configFile);
-		var options = configReader.Create(string.Empty);
+		var options = ReadPennMushConfig.Create(configFile);
 
 		await Assert.That(options.Chat.ChatTokenAlias).IsEqualTo('+');
 		await Assert.That(options.Net.MudName).IsEqualTo("PennMUSH Emulation by SharpMUSH");

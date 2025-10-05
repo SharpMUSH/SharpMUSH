@@ -12,7 +12,7 @@ namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
 public static class ChannelAdd
 {
-	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, IOptionsMonitor<PennMUSHOptions> Configuration, MString channelName, MString privileges)
+	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, IOptionsMonitor<SharpMUSHOptions> Configuration, MString channelName, MString privileges)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var executorOwner = await executor.Object().Owner.WithCancellation(CancellationToken.None);

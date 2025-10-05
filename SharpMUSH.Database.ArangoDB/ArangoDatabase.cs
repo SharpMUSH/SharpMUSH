@@ -541,7 +541,7 @@ public partial class ArangoDatabase(
 		return convertedResults.FirstOrDefault();
 	}
 
-	public async Task SetExpandedObjectData(string sharpObjectId, string dataType, dynamic data)
+	public async ValueTask SetExpandedObjectData(string sharpObjectId, string dataType, dynamic data)
 	{
 		// Get the edge that leads to it, otherwise we will have to create one.
 		var result = await arangoDb.Query.ExecuteAsync<dynamic>(handle,
@@ -580,7 +580,7 @@ public partial class ArangoDatabase(
 		return resultingValue?.ToString(Formatting.None);
 	}
 
-	public async Task SetExpandedServerData(string dataType, string data)
+	public async ValueTask SetExpandedServerData(string dataType, string data)
 	{
 		var newJson = new Dictionary<string, dynamic>
 		{

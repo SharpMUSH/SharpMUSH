@@ -58,13 +58,6 @@ public class Program
 			.MinimumLevel.Debug()
 			.CreateLogger());
 
-		var configFile = Path.Combine(AppContext.BaseDirectory, "mushcnf.dst");
-
-		if (!File.Exists(configFile))
-		{
-			throw new FileNotFoundException($"Configuration file not found: {configFile}");
-		}
-
 		var colorFile = Path.Combine(AppContext.BaseDirectory, "colors.json");
 
 		if (!File.Exists(colorFile))
@@ -72,12 +65,12 @@ public class Program
 			throw new FileNotFoundException($"Configuration file not found: {colorFile}");
 		}
 
-		var startup = new Startup(config, configFile, colorFile, null);
+		var startup = new Startup(config, colorFile, null);
 		startup.ConfigureServices(builder.Services);
 		
 		builder.WebHost.ConfigureKestrel((_, options) =>
 		{
-			var optionMonitor = options.ApplicationServices.GetRequiredService<IOptionsMonitor<PennMUSHOptions>>();
+			var optionMonitor = options.ApplicationServices.GetRequiredService<IOptionsMonitor<SharpMUSHOptions>>();
 			var netValues = optionMonitor.CurrentValue.Net;
 
 			options.ListenAnyIP(Convert.ToInt32(netValues.Port), listenOptions => { listenOptions.UseConnectionHandler<TelnetServer>(); });

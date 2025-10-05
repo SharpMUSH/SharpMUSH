@@ -23,7 +23,7 @@ namespace SharpMUSH.Implementation;
 public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	LibraryService<string, FunctionDefinition> FunctionLibrary,
 	LibraryService<string, CommandDefinition> CommandLibrary,
-	IOptionsMonitor<PennMUSHOptions> Configuration,
+	IOptionsMonitor<SharpMUSHOptions> Configuration,
 	IServiceProvider ServiceProvider) : IMUSHCodeParser
 {
 	public ParserState CurrentState => State.Peek();
@@ -60,7 +60,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	public MUSHCodeParser(ILogger<MUSHCodeParser> logger, 
 		LibraryService<string, FunctionDefinition> functionLibrary,
 		LibraryService<string, CommandDefinition> commandLibrary,
-		IOptionsMonitor<PennMUSHOptions> config,
+		IOptionsMonitor<SharpMUSHOptions> config,
 		IServiceProvider serviceProvider,
 		ParserState state) : this(logger, functionLibrary, commandLibrary, config, serviceProvider)
 		=> State = [state];
@@ -86,7 +86,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 
 		var chatContext = sharpParser.startPlainString();
 		SharpMUSHParserVisitor visitor = new(Logger, this, 
-			ServiceProvider.GetRequiredService<IOptionsMonitor<PennMUSHOptions>>(),
+			ServiceProvider.GetRequiredService<IOptionsMonitor<SharpMUSHOptions>>(),
 			ServiceProvider.GetRequiredService<IMediator>(),
 			ServiceProvider.GetRequiredService<INotifyService>(),
 			ServiceProvider.GetRequiredService<IConnectionService>(),
@@ -120,7 +120,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 
 		var chatContext = sharpParser.startCommandString();
 		SharpMUSHParserVisitor visitor = new(Logger, this,
-			ServiceProvider.GetRequiredService<IOptionsMonitor<PennMUSHOptions>>(),
+			ServiceProvider.GetRequiredService<IOptionsMonitor<SharpMUSHOptions>>(),
 			ServiceProvider.GetRequiredService<IMediator>(),
 			ServiceProvider.GetRequiredService<INotifyService>(),
 			ServiceProvider.GetRequiredService<IConnectionService>(),
@@ -154,7 +154,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		var chatContext = sharpParser.startCommandString();
 		
 		SharpMUSHParserVisitor visitor = new(Logger, this, 
-			ServiceProvider.GetRequiredService<IOptionsMonitor<PennMUSHOptions>>(),
+			ServiceProvider.GetRequiredService<IOptionsMonitor<SharpMUSHOptions>>(),
 			ServiceProvider.GetRequiredService<IMediator>(),
 			ServiceProvider.GetRequiredService<INotifyService>(),
 			ServiceProvider.GetRequiredService<IConnectionService>(),
@@ -211,7 +211,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 
 		var chatContext = sharpParser.startSingleCommandString();
 		SharpMUSHParserVisitor visitor = new(Logger, newParser,
-			ServiceProvider.GetRequiredService<IOptionsMonitor<PennMUSHOptions>>(),
+			ServiceProvider.GetRequiredService<IOptionsMonitor<SharpMUSHOptions>>(),
 			ServiceProvider.GetRequiredService<IMediator>(),
 			ServiceProvider.GetRequiredService<INotifyService>(),
 			ServiceProvider.GetRequiredService<IConnectionService>(),
@@ -248,7 +248,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 
 		var chatContext = sharpParser.startSingleCommandString();
 		SharpMUSHParserVisitor visitor = new(Logger, this,
-			ServiceProvider.GetRequiredService<IOptionsMonitor<PennMUSHOptions>>(),
+			ServiceProvider.GetRequiredService<IOptionsMonitor<SharpMUSHOptions>>(),
 			ServiceProvider.GetRequiredService<IMediator>(),
 			ServiceProvider.GetRequiredService<INotifyService>(),
 			ServiceProvider.GetRequiredService<IConnectionService>(),
@@ -280,7 +280,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 
 		var chatContext = sharpParser.commaCommandArgs();
 		SharpMUSHParserVisitor visitor = new(Logger, this,
-			ServiceProvider.GetRequiredService<IOptionsMonitor<PennMUSHOptions>>(),
+			ServiceProvider.GetRequiredService<IOptionsMonitor<SharpMUSHOptions>>(),
 			ServiceProvider.GetRequiredService<IMediator>(),
 			ServiceProvider.GetRequiredService<INotifyService>(),
 			ServiceProvider.GetRequiredService<IConnectionService>(),
@@ -312,7 +312,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 
 		var chatContext = sharpParser.startPlainSingleCommandArg();
 		SharpMUSHParserVisitor visitor = new(Logger, this,
-			ServiceProvider.GetRequiredService<IOptionsMonitor<PennMUSHOptions>>(),
+			ServiceProvider.GetRequiredService<IOptionsMonitor<SharpMUSHOptions>>(),
 			ServiceProvider.GetRequiredService<IMediator>(),
 			ServiceProvider.GetRequiredService<INotifyService>(),
 			ServiceProvider.GetRequiredService<IConnectionService>(),
@@ -344,7 +344,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 
 		var chatContext = sharpParser.startEqSplitCommandArgs();
 		SharpMUSHParserVisitor visitor = new(Logger, this,
-			ServiceProvider.GetRequiredService<IOptionsMonitor<PennMUSHOptions>>(),
+			ServiceProvider.GetRequiredService<IOptionsMonitor<SharpMUSHOptions>>(),
 			ServiceProvider.GetRequiredService<IMediator>(),
 			ServiceProvider.GetRequiredService<INotifyService>(),
 			ServiceProvider.GetRequiredService<IConnectionService>(),
@@ -376,7 +376,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 
 		var chatContext = sharpParser.startEqSplitCommand();
 		SharpMUSHParserVisitor visitor = new(Logger, this,
-			ServiceProvider.GetRequiredService<IOptionsMonitor<PennMUSHOptions>>(),
+			ServiceProvider.GetRequiredService<IOptionsMonitor<SharpMUSHOptions>>(),
 			ServiceProvider.GetRequiredService<IMediator>(),
 			ServiceProvider.GetRequiredService<INotifyService>(),
 			ServiceProvider.GetRequiredService<IConnectionService>(),

@@ -102,7 +102,7 @@ public static partial class HelperFunctions
 	public static async ValueTask<bool> CanHide(this AnySharpObject obj)
 		=> await obj.HasPower("Hide") || await obj.IsPriv();
 
-	public static async ValueTask<DBRef?> Ancestor(this AnySharpObject obj, IOptionsMonitor<PennMUSHOptions> configuration)
+	public static async ValueTask<DBRef?> Ancestor(this AnySharpObject obj, IOptionsMonitor<SharpMUSHOptions> configuration)
 		=> await obj.IsOrphan()
 			? null
 			: obj.Match(

@@ -19,7 +19,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 	private static INotifyService? NotifyService { get; set; }
 	private static IPermissionService? PermissionService {get;set;}
 	private static ICommandDiscoveryService? CommandDiscoveryService {get;set;}
-	private static IOptionsMonitor<PennMUSHOptions>? Configuration { get; set; }
+	private static IOptionsMonitor<SharpMUSHOptions>? Configuration { get; set; }
 	private static IPasswordService? PasswordService { get; set; }
 	private static IConnectionService? ConnectionService { get; set; }
 	private static IExpandedObjectDataService? ObjectDataService { get; set; }
@@ -35,7 +35,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		INotifyService notifyService, 
 		IPermissionService permissionService, 
 		ICommandDiscoveryService commandDiscoveryService, 
-		IOptionsMonitor<PennMUSHOptions> configuration, 
+		IOptionsMonitor<SharpMUSHOptions> configuration, 
 		IPasswordService passwordService,
 		IConnectionService connectionService,
 		IExpandedObjectDataService objectDataService,

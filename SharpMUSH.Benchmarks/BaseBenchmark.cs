@@ -42,7 +42,7 @@ public class BaseBenchmark
 		await _container.StartAsync()
 			.ConfigureAwait(false);
 
-		var config = new ArangoConfiguration()
+		var config = new ArangoConfiguration
 		{
 			ConnectionString = $"Server={_container.GetTransportAddress()};User=root;Realm=;Password=password;",
 			Serializer = new ArangoNewtonsoftSerializer(new ArangoNewtonsoftDefaultContractResolver())
