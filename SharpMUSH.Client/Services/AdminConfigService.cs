@@ -1,14 +1,8 @@
-﻿using SharpMUSH.Configuration;
-using SharpMUSH.Configuration.Options;
+﻿using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.API;
 using System.Net.Http.Json;
 
 namespace SharpMUSH.Client.Services;
-
-public class ConfigurationResponse
-{
-	public SharpMUSHOptions Configuration { get; set; } = null!;
-	public Dictionary<string, SharpConfigAttribute> Metadata { get; set; } = [];
-}
 
 public class AdminConfigService(ILogger<AdminConfigService> logger, IHttpClientFactory httpClient)
 {

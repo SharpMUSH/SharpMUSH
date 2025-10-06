@@ -13,17 +13,17 @@ public record NetOptions(
 	[property: SharpConfig(Name = "ssl_ip_addr", Description = "IP address to bind to for SSL connections")] 
 	string? SslIpAddr,
 	
-	[property: SharpConfig(Name = "port", Description = "Main telnet port for player connections")] 
+	[property: SharpConfig(Name = "port", Description = "Main telnet port for player connections", ValidationPattern = @"^\d+$")] 
 	uint Port,
 	
-	[property: SharpConfig(Name = "ssl_port", Description = "Port for secure SSL connections (0 to disable)")] 
+	[property: SharpConfig(Name = "ssl_port", Description = "Port for secure SSL connections (0 to disable)", ValidationPattern = @"^\d+$")] 
 	uint SslPort,
 	
-	[property: SharpConfig(Name = "portal_port", Description = "Port for portal connections")] 
+	[property: SharpConfig(Name = "portal_port", Description = "Port for portal connections", ValidationPattern = @"^\d+$")] 
 	uint PortalPort,
 	
-	[property: SharpConfig(Name = "ssl_portal_port", Description = "Port for secure portal connections")] 
-	uint SllPortalPort,
+	[property: SharpConfig(Name = "ssl_portal_port", Description = "Port for secure portal connections", ValidationPattern = @"^\d+$")] 
+	uint SslPortalPort,
 	
 	[property: SharpConfig(Name = "socket_file", Description = "Unix domain socket file for SSL slave communication")] 
 	string SocketFile,

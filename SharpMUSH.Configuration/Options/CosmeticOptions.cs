@@ -7,7 +7,7 @@ public record CosmeticOptions(
 	[property: SharpConfig(Name = "ansi_names", Description = "Allow ANSI color codes in player names")] bool AnsiNames,
 	[property: SharpConfig(Name = "only_ascii_in_names", Description = "Restrict names to ASCII characters only")] bool OnlyAsciiInNames,
 	[property: SharpConfig(Name = "monikers", Description = "Enable moniker (nickname) system for players")] bool Monikers,
-	[property: SharpConfig(Name = "float_precision", Description = "Number of decimal places for floating-point display")] uint FloatPrecision,
+	[property: SharpConfig(Name = "float_precision", Description = "Number of decimal places for floating-point display", ValidationPattern = @"^\d+$")] uint FloatPrecision,
 	[property: SharpConfig(Name = "comma_exit_list", Description = "Use commas to separate exit names in lists")] bool CommaExitList,
 	[property: SharpConfig(Name = "count_all", Description = "Include all objects in @count command results")] bool CountAll,
 	[property: SharpConfig(Name = "page_aliases", Description = "Allow @page command to use player aliases")] bool PageAliases,

@@ -29,6 +29,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\SharpMUSH.Configuration\SharpMUSH.Configuration.csproj" />
+      <ProjectReference Include="..\SharpMUSH.Library\SharpMUSH.Library.csproj" />
     </ItemGroup>
 
 </Project>

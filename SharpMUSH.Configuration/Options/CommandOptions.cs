@@ -10,5 +10,5 @@ public record CommandOptions(
 	[property: SharpConfig(Name = "wiz_noaenter", Description = "Wizards bypass @aenter/@aleave attributes")] bool WizardNoAEnter,
 	[property: SharpConfig(Name = "really_safe", Description = "Enable extra safety checks for destructive commands")] bool ReallySafe,
 	[property: SharpConfig(Name = "destroy_possessions", Description = "Destroy contents when container is destroyed")] bool DestroyPossessions,
-	[property: SharpConfig(Name = "probate_judge", Description = "Player who handles ownership of orphaned objects")] uint ProbateJudge
+	[property: SharpConfig(Name = "probate_judge", Description = "Player who handles ownership of orphaned objects", ValidationPattern = @"^\d+$")] uint ProbateJudge
 );
