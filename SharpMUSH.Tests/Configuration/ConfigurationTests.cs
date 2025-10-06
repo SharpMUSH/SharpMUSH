@@ -13,8 +13,6 @@ public class ConfigurationTests
 	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required WebAppFactory WebAppFactoryArg { get; init; }
 	private IOptionsMonitor<SharpMUSHOptions> Configuration => WebAppFactoryArg.Services.GetRequiredService<IOptionsMonitor<SharpMUSHOptions>>();
-	
-	private IMUSHCodeParser Parser => WebAppFactoryArg.Services.GetRequiredService<IMUSHCodeParser>();
 
 	[Test]
 	public async Task ParseConfigurationFile()
@@ -29,9 +27,7 @@ public class ConfigurationTests
 	[Test]
 	public async Task CanUseOptionsFromServer()
 	{
-		var parser = Parser;
-
-		await Assert.That(Configuration!.CurrentValue.Chat.ChatTokenAlias).IsEqualTo('+');
-		await Assert.That(Configuration!.CurrentValue.Net.MudName).IsEqualTo("PennMUSH Emulation by SharpMUSH");
+		await Assert.That(Configuration.CurrentValue.Chat.ChatTokenAlias).IsEqualTo('+');
+		await Assert.That(Configuration.CurrentValue.Net.MudName).IsEqualTo("PennMUSH Emulation by SharpMUSH");
 	} 
 }

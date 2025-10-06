@@ -34,7 +34,7 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 		var startup = new Startup(acnf, colorFile, notifier);
 
 		builder.ConfigureServices(x => startup.ConfigureServices(x));
-		builder.ConfigureTestServices(sc => 
+		builder.ConfigureServices(sc => 
 			sc.AddOptions<SharpMUSHOptions>()
 				.Configure(_ => ReadPennMushConfig.Create(configFile))
 		);

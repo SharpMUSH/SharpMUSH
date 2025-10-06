@@ -6,22 +6,13 @@ using SharpMUSH.Client.Services;
 
 namespace SharpMUSH.Tests.Client;
 
-public class MockHttpMessageHandler : HttpMessageHandler
+public class MockHttpMessageHandler(HttpStatusCode statusCode, string content) : HttpMessageHandler
 {
-	private readonly HttpStatusCode _statusCode;
-	private readonly string _content;
-
-	public MockHttpMessageHandler(HttpStatusCode statusCode, string content)
-	{
-		_statusCode = statusCode;
-		_content = content;
-	}
-
 	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 	{
-		var response = new HttpResponseMessage(_statusCode)
+		var response = new HttpResponseMessage(statusCode)
 		{
-			Content = new StringContent(_content, Encoding.UTF8, "application/json")
+			Content = new StringContent(content, Encoding.UTF8, "application/json")
 		};
 		return Task.FromResult(response);
 	}
@@ -29,7 +20,7 @@ public class MockHttpMessageHandler : HttpMessageHandler
 
 public class AdminConfigServiceTests
 {
-	[Test, Skip("WIP")]
+	[Test]
 	public async Task ImportFromConfigFileAsync_ValidConfig_ShouldNotThrow()
 	{
 		// Arrange
@@ -37,17 +28,19 @@ public class AdminConfigServiceTests
 		var httpClient = new HttpClient(new MockHttpMessageHandler(HttpStatusCode.OK, "{}"));
 		var service = new AdminConfigService(logger, httpClient);
 		
-		var configContent = @"# Test configuration
-mud_name Test MUSH
-port 4201
-ssl_port 4202
-";
+		const string configContent = """
+		                             # Test configuration
+		                             mud_name Test MUSH
+		                             port 4201
+		                             ssl_port 4202
+
+		                             """;
 
 		// Act & Assert - Should not throw
 		await service.ImportFromConfigFileAsync(configContent);
 	}
 
-	[Test, Skip("WIP")]
+	[Test]
 	public async Task ImportFromConfigFileAsync_HttpError_ShouldHandleGracefully()
 	{
 		// Arrange
@@ -55,7 +48,7 @@ ssl_port 4202
 		var httpClient = new HttpClient(new MockHttpMessageHandler(HttpStatusCode.BadRequest, "Error"));
 		var service = new AdminConfigService(logger, httpClient);
 		
-		var configContent = "invalid config content";
+		const string configContent = "invalid config content";
 
 		// Act & Assert - Should handle HTTP errors gracefully
 		try
@@ -68,7 +61,7 @@ ssl_port 4202
 		}
 	}
 
-	[Test, Skip("WIP")]
+	[Test]
 	public async Task GetOptions_ShouldReturnConfiguration()
 	{
 		// Arrange
