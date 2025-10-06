@@ -10,6 +10,7 @@ using Serilog;
 using Serilog.Sinks.PeriodicBatching;
 using Serilog.Sinks.SystemConsole.Themes;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.ProtocolHandlers;
 using Testcontainers.ArangoDb;
 
@@ -70,7 +71,7 @@ public class Program
 		
 		builder.WebHost.ConfigureKestrel((_, options) =>
 		{
-			var optionMonitor = options.ApplicationServices.GetRequiredService<IOptionsMonitor<SharpMUSHOptions>>();
+			var optionMonitor = options.ApplicationServices.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
 			var netValues = optionMonitor.CurrentValue.Net;
 
 			options.ListenAnyIP(Convert.ToInt32(netValues.Port), listenOptions => { listenOptions.UseConnectionHandler<TelnetServer>(); });

@@ -41,7 +41,7 @@ public class WebAppFactory : IAsyncInitializer
 				integrationServer.Services.GetRequiredService<ILogger<MUSHCodeParser>>(),
 				integrationServer.Services.GetRequiredService<LibraryService<string, FunctionDefinition>>(),
 				integrationServer.Services.GetRequiredService<LibraryService<string, CommandDefinition>>(),
-				integrationServer.Services.GetRequiredService<IOptionsMonitor<SharpMUSHOptions>>(),
+				integrationServer.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>(),
 				integrationServer.Services,
 				state: new ParserState(
 					Registers: new([[]]),
@@ -73,7 +73,7 @@ public class WebAppFactory : IAsyncInitializer
 				integrationServer.Services.GetRequiredService<ILogger<MUSHCodeParser>>(),
 				integrationServer.Services.GetRequiredService<LibraryService<string, FunctionDefinition>>(),
 				integrationServer.Services.GetRequiredService<LibraryService<string, CommandDefinition>>(),
-				integrationServer.Services.GetRequiredService<IOptionsMonitor<SharpMUSHOptions>>(),
+				integrationServer.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>(),
 				integrationServer.Services,
 				state: new ParserState(
 					Registers: new([[]]),

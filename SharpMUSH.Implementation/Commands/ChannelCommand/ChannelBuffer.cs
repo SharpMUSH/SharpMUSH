@@ -10,7 +10,7 @@ namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
 public static class ChannelBuffer
 {
-	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, IOptionsMonitor<SharpMUSHOptions> Configuration, MString channelName, MString lines)
+	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, IOptionsWrapper<SharpMUSHOptions> Configuration, MString channelName, MString lines)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		if (await executor.IsGuest())

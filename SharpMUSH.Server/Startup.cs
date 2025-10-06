@@ -100,6 +100,8 @@ public class Startup(ArangoConfiguration config, string colorFile, INotifyServic
 		services.AddSingleton<IValidateService, ValidateService>();
 		services.AddOptions<SharpMUSHOptions>();
 		services.AddOptions<ColorsOptions>();
+		services.AddSingleton<IOptionsWrapper<SharpMUSHOptions>, Library.Services.OptionsWrapper<SharpMUSHOptions>>();
+		services.AddSingleton<IOptionsWrapper<ColorsOptions>, Library.Services.OptionsWrapper<ColorsOptions>>();
 		services.AddHttpClient();
 		services.AddMediator();
 		services.AddFusionCache();

@@ -14,7 +14,7 @@ namespace SharpMUSH.Library.Services;
 
 public partial class ValidateService(
 	IMediator mediator,
-	IOptionsMonitor<SharpMUSHOptions> configuration,
+	IOptionsWrapper<SharpMUSHOptions> configuration,
 	ILockService lockService)
 	: IValidateService
 {

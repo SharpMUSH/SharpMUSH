@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Server.Controllers;
 
@@ -15,7 +16,7 @@ public class ImportRequest
 
 [ApiController]
 [Route("api/[controller]")]
-public class ConfigurationController(IOptionsMonitor<SharpMUSHOptions> options, ILogger<ConfigurationController> logger)
+public class ConfigurationController(IOptionsWrapper<SharpMUSHOptions> options, ILogger<ConfigurationController> logger)
 	: ControllerBase
 {
 	[HttpGet]

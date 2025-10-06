@@ -1,10 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using NSubstitute;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
-using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Configuration;
 
@@ -12,7 +9,7 @@ public class ConfigurationTests
 {
 	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required WebAppFactory WebAppFactoryArg { get; init; }
-	private IOptionsMonitor<SharpMUSHOptions> Configuration => WebAppFactoryArg.Services.GetRequiredService<IOptionsMonitor<SharpMUSHOptions>>();
+	private IOptionsWrapper<SharpMUSHOptions> Configuration => WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
 
 	[Test]
 	public async Task ParseConfigurationFile()

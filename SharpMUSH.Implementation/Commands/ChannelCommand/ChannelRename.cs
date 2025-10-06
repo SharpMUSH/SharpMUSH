@@ -1,5 +1,4 @@
 using Mediator;
-using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
@@ -10,7 +9,15 @@ namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
 public static class ChannelRename
 {
-	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, IOptionsMonitor<SharpMUSHOptions> Configuration, MString channelName, MString newChannelName)
+	public static async ValueTask<CallState> Handle(
+		IMUSHCodeParser parser, 
+		ILocateService LocateService, 
+		IPermissionService PermissionService, 
+		IMediator Mediator, 
+		INotifyService NotifyService,
+		IOptionsWrapper<SharpMUSHOptions> Configuration, 
+		MString channelName, 
+		MString newChannelName)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		if (await executor.IsGuest())

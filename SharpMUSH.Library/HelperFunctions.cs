@@ -1,11 +1,12 @@
-﻿using System.Text.RegularExpressions;
-using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Options;
 using OneOf;
 using OneOf.Types;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Services.Interfaces;
+using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Library;
 
@@ -102,7 +103,7 @@ public static partial class HelperFunctions
 	public static async ValueTask<bool> CanHide(this AnySharpObject obj)
 		=> await obj.HasPower("Hide") || await obj.IsPriv();
 
-	public static async ValueTask<DBRef?> Ancestor(this AnySharpObject obj, IOptionsMonitor<SharpMUSHOptions> configuration)
+	public static async ValueTask<DBRef?> Ancestor(this AnySharpObject obj, IOptionsWrapper<SharpMUSHOptions> configuration)
 		=> await obj.IsOrphan()
 			? null
 			: obj.Match(
