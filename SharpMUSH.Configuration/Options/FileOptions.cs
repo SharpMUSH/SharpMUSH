@@ -30,11 +30,11 @@ Description  = "Program used to decompress database files")] string UnCompressPr
 */
 	[property: SharpConfig(
 		Name = "access_file",
-		Description = "File containing access control rules")]
+		Description = "File containing access control rules", Category = "File")]
 	string AccessFile,
 	[property: SharpConfig(
 		Name = "names_file",
-		Description = "File containing restricted player names")]
+		Description = "File containing restricted player names", Category = "File")]
 	string NamesFile,
 	/*
 [property: PennConfig(
@@ -49,26 +49,26 @@ Description  = "Amount of memory allocated for chunk caching")] string ChunkCach
 */
 	[property: SharpConfig(
 		Name = "ssl_private_key_file",
-		Description = "SSL private key file for secure connections")]
+		Description = "SSL private key file for secure connections", Category = "File")]
 	string? SSLPrivateKeyFile,
 	[property: SharpConfig(
 		Name = "ssl_certificate_file",
-		Description = "SSL certificate file for secure connections")]
+		Description = "SSL certificate file for secure connections", Category = "File")]
 	string? SSLCertificateFile,
 	[property: SharpConfig(
 		Name = "ssl_ca_file",
-		Description = "SSL certificate authority file")]
+		Description = "SSL certificate authority file", Category = "File")]
 	string? SSLCAFile,
 	[property: SharpConfig(
 		Name = "ssl_ca_dir",
-		Description = "Directory containing SSL certificate authorities")]
+		Description = "Directory containing SSL certificate authorities", Category = "File")]
 	string? SSLCADirectory,
 	[property: SharpConfig(
 		Name = "dict_file",
-		Description = "Dictionary file for spell checking and word lists")]
+		Description = "Dictionary file for spell checking and word lists", Category = "File")]
 	string? DictionaryFile,
 	[property: SharpConfig(
 		Name = "colors_file",
-		Description = "JSON file defining color codes and mappings")]
+		Description = "JSON file defining color codes and mappings", Category = "File")]
 	string? ColorsFile
 );

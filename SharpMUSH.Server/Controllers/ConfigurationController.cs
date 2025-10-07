@@ -1,13 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.API;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Server.Controllers;
-
-public record ConfigurationResponse(SharpMUSHOptions Configuration);
 
 public class ImportRequest
 {
@@ -16,7 +14,9 @@ public class ImportRequest
 
 [ApiController]
 [Route("api/[controller]")]
-public class ConfigurationController(IOptionsWrapper<SharpMUSHOptions> options, ILogger<ConfigurationController> logger)
+public class ConfigurationController(
+	IOptionsWrapper<SharpMUSHOptions> options,
+	ILogger<ConfigurationController> logger)
 	: ControllerBase
 {
 	[HttpGet]
@@ -26,7 +26,7 @@ public class ConfigurationController(IOptionsWrapper<SharpMUSHOptions> options, 
 		{
 			var configuration = options.CurrentValue;
 
-			return Ok(new ConfigurationResponse(configuration));
+			return Ok(OptionHelper.OptionsToConfigurationResponse(configuration));
 		}
 		catch (Exception ex)
 		{
@@ -47,10 +47,12 @@ public class ConfigurationController(IOptionsWrapper<SharpMUSHOptions> options, 
 			// Use ReadPennMushConfig to parse it
 			var importedOptions = ReadPennMushConfig.Create(tempFile);
 
+			// TODO: Store the new config data.
+
 			// Clean up temp file
 			System.IO.File.Delete(tempFile);
 
-			return Ok(new ConfigurationResponse(importedOptions));
+			return Ok(OptionHelper.OptionsToConfigurationResponse(importedOptions));
 		}
 		catch (Exception ex)
 		{

@@ -31,67 +31,67 @@ public class OptionsService(ISharpDatabase database) : IOptionsFactory<SharpMUSH
 		return new SharpMUSHOptions
 		{
 			Attribute = new AttributeOptions(
-				AbsolutePossessivePronounAttribute: "theirs",
 				ADestroy: false,
-				AMail: true,
+				AMail: false,
 				EmptyAttributes: false,
-				GenderAttribute: "Gender",
-				ObjectivePronounAttribute: "them",
+				GenderAttribute: "SEX",
 				PlayerAHear: true,
-				PlayerListen: false,
-				PossessivePronounAttribute: "their",
+				PlayerListen: true,
 				ReadRemoteDesc: false,
-				ReverseShs: false,
+				ReverseShs: true,
 				RoomConnects: true,
 				Startups: true,
-				SubjectivePronounAttribute: "they"
+				ObjectivePronounAttribute: null,
+				PossessivePronounAttribute: null,
+				SubjectivePronounAttribute: null,
+				AbsolutePossessivePronounAttribute: null
 			),
 			Chat = new ChatOptions(
 				ChannelCost: 1000,
-				ChannelTitleLength: 256,
+				ChannelTitleLength: 80,
 				ChatTokenAlias: '+',
-				MaxChannels: 100,
-				MaxPlayerChannels: 20,
-				NoisyCEmit: true,
+				MaxChannels: 200,
+				MaxPlayerChannels: 0,
+				NoisyCEmit: false,
 				UseMuxComm: true
 			),
 			Command = new CommandOptions(
 				DestroyPossessions: true,
-				FullInvisibility: true,
-				LinkToObject: false,
+				FullInvisibility: false,
+				LinkToObject: true,
 				NoisyWhisper: false,
-				OwnerQueues: true,
+				OwnerQueues: false,
 				PossessiveGet: true,
 				PossessiveGetD: false,
 				ProbateJudge: 1,
 				ReallySafe: true,
-				WizardNoAEnter: true
+				WizardNoAEnter: false
 			),
 			Compatibility = new CompatibilityOptions(
 				NullEqualsZero: true,
 				SilentPEmit: false,
-				TinyBooleans: true,
-				TinyMath: true,
+				TinyBooleans: false,
+				TinyMath: false,
 				TinyTrimFun: false
 			),
 			Cosmetic = new CosmeticOptions(
-				AnnounceConnects: false,
+				AnnounceConnects: true,
 				AnsiNames: true,
 				ChatStripQuote: true,
-				CommaExitList: false,
+				CommaExitList: true,
 				CountAll: false,
 				ExaminePublicAttributes: true,
 				FlagsOnExamine: true,
 				FloatPrecision: 6,
-				MoneyPlural: "pennies",
-				MoneySingular: "penny",
+				MoneyPlural: "Pennies",
+				MoneySingular: "Penny",
 				Monikers: true,
-				OnlyAsciiInNames: false,
+				OnlyAsciiInNames: true,
 				PageAliases: false,
 				PlayerNameSpaces: true,
-				RoyaltyWallPrefix: "Royalty",
-				WallPrefix: "Wall",
-				WizardWallPrefix: "Wizard"
+				RoyaltyWallPrefix: "Admin:",
+				WallPrefix: "Announcement:",
+				WizardWallPrefix: "Broadcast:"
 			),
 			Cost = new CostOptions(
 				ExitCost: 1,
@@ -107,7 +107,7 @@ public class OptionsService(ISharpDatabase database) : IOptionsFactory<SharpMUSH
 				AncestorPlayer: null,
 				AncestorRoom: null,
 				AncestorThing: null,
-				BaseRoom: 2,
+				BaseRoom: 0,
 				DefaultHome: 0,
 				EventHandler: null,
 				ExitsConnectRooms: true,
@@ -115,18 +115,18 @@ public class OptionsService(ISharpDatabase database) : IOptionsFactory<SharpMUSH
 				HttpRequestsPerSecond: 10,
 				MasterRoom: 2,
 				PlayerStart: 0,
-				ZoneControlZmpOnly: false
+				ZoneControlZmpOnly: true
 			),
 			Debug = new DebugOptions(
 				DebugSharpParser: false
 			),
 			Dump = new DumpOptions(
-				PurgeInterval: "604800"
+				PurgeInterval: "10m1s"
 			),
 			File = new FileOptions(
 				AccessFile: "access.cnf",
 				ColorsFile: "colors.cnf",
-				DictionaryFile: "dict.db",
+				DictionaryFile: null,
 				NamesFile: "names.cnf",
 				SSLCADirectory: null,
 				SSLCAFile: null,
@@ -136,58 +136,58 @@ public class OptionsService(ISharpDatabase database) : IOptionsFactory<SharpMUSH
 			Flag = new FlagOptions(
 				ChannelFlags: ["player"],
 				ExitFlags: ["no_command"],
-				PlayerFlags: ["player", "no_command"],
-				RoomFlags: ["room"],
-				ThingFlags: ["thing"]
+				PlayerFlags: ["enter_ok", "ansi", "no_command"],
+				RoomFlags: [""],
+				ThingFlags: [""]
 			),
 			Function = new FunctionOptions(
 				FunctionSideEffects: true,
 				SaferUserFunctions: true
 			),
 			Limit = new LimitOptions(
-				CallLimit: 10000,
-				ChunkMigrate: 5,
-				ConnectFailLimit: 100,
-				FunctionInvocationLimit: 2500,
-				FunctionRecursionLimit: 50,
-				GuestPaycheck: 50,
-				IdleTimeout: 3600,
-				KeepaliveTimeout: 600,
-				MailLimit: 1000,
+				CallLimit: 1000,
+				ChunkMigrate: 150,
+				ConnectFailLimit: 10,
+				FunctionInvocationLimit: 100000,
+				FunctionRecursionLimit: 100,
+				GuestPaycheck: 0,
+				IdleTimeout: 0,
+				KeepaliveTimeout: 300,
+				MailLimit: 300,
 				MaxAliases: 3,
 				MaxAttributesPerObj: 2048,
 				MaxDbReference: null,
-				MaxDepth: 100,
-				MaxGuestPennies: 10000,
+				MaxDepth: 10,
+				MaxGuestPennies: 1000000000,
 				MaxGuests: -1,
 				MaxLogins: 120,
 				MaxNamedQRegisters: 100,
 				MaxParents: 10,
-				MaxPennies: 10000,
+				MaxPennies: 1000000000,
 				Paycheck: 50,
-				PlayerNameLen: 16,
+				PlayerNameLen: 21,
 				PlayerQueueLimit: 100,
 				QueueChunk: 3,
 				QueueEntryCpuTime: 1000,
-				QueueLoss: 10,
-				StartingMoney: 100,
+				QueueLoss: 63,
+				StartingMoney: 150,
 				StartingQuota: 20,
 				UnconnectedIdleTimeout: 300,
-				UseQuota: false,
+				UseQuota: true,
 				WhisperLoudness: 100
 			),
 			Log = new LogOptions(
-				CheckpointLog: "checkpoint.log",
-				CommandLog: "command.log",
-				ConnectLog: "connect.log",
-				ErrorLog: "error.log",
+				CheckpointLog: "log/checkpoint.log",
+				CommandLog: "log/command.log",
+				ConnectLog: "log/connect.log",
+				ErrorLog: "log/error.log",
 				LogCommands: false,
 				LogForces: true,
-				MemoryCheck: true,
-				TraceLog: "trace.log",
+				MemoryCheck: false,
+				TraceLog: "log/trace.log",
 				UseConnLog: true,
-				UseSyslog: true,
-				WizardLog: "wizard.log"
+				UseSyslog: false,
+				WizardLog: "log/wizard.log"
 			),
 			Message = new MessageOptions(
 				ConnectFile: "connect.txt",
@@ -215,7 +215,7 @@ public class OptionsService(ISharpDatabase database) : IOptionsFactory<SharpMUSH
 			Net = new NetOptions(
 				Guests: true,
 				IpAddr: null,
-				JsonUnsafeUnescape: true,
+				JsonUnsafeUnescape: false,
 				Logins: true,
 				MudName: "SharpMUSH",
 				MudUrl: null,
@@ -223,8 +223,8 @@ public class OptionsService(ISharpDatabase database) : IOptionsFactory<SharpMUSH
 				Port: 4203,
 				PortalPort: 5117,
 				Pueblo: true,
-				SllPortalPort: 5443,
-				SocketFile: "socket",
+				SslPortalPort: 7296,
+				SocketFile: "netmush.sock",
 				SqlHost: null,
 				SqlPlatform: null,
 				SslIpAddr: null,
@@ -232,7 +232,7 @@ public class OptionsService(ISharpDatabase database) : IOptionsFactory<SharpMUSH
 				SslRequireClientCert: false,
 				UseDns: true,
 				UseWebsockets: true,
-				WebsocketUrl: null
+				WebsocketUrl: "/wsclient"
 			)
 		};
 	}

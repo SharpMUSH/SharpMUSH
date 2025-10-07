@@ -1,8 +1,6 @@
 ﻿using System.Collections.Immutable;
 using System.Reflection;
 using System.Text.RegularExpressions;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
 using FileOptions = SharpMUSH.Configuration.Options.FileOptions;
 
@@ -32,7 +30,7 @@ public static partial class ReadPennMushConfig
 			_ => string.Empty);
 
 		var splitter = KeyValueSplittingRegex();
-		
+
 		try
 		{
 			text = File.ReadAllLines(configFile);
@@ -41,13 +39,13 @@ public static partial class ReadPennMushConfig
 		{
 			throw;
 		}
-		
+
 		// TODO: Use a Regex to split the values.
 		foreach (var configLine in text
-			         .Where(line => configDictionary.Keys.Any(line.Trim().StartsWith))
-			         .Select(line => splitter.Match(line.Trim()))
-			         .Where(match => match.Success)
-			         .Select(match => match.Groups))
+							 .Where(line => configDictionary.Keys.Any(line.Trim().StartsWith))
+							 .Select(line => splitter.Match(line.Trim()))
+							 .Where(match => match.Success)
+							 .Select(match => match.Groups))
 		{
 			configDictionary[configLine["Key"].Value] = configLine["Value"].Value;
 		}
@@ -242,7 +240,7 @@ public static partial class ReadPennMushConfig
 				UnsignedInteger(Get(nameof(NetOptions.Port)), 4203),
 				UnsignedInteger(Get(nameof(NetOptions.SslPort)), 4202),
 				UnsignedInteger(Get(nameof(NetOptions.PortalPort)), 5117),
-				UnsignedInteger(Get(nameof(NetOptions.SllPortalPort)), 7296),
+				UnsignedInteger(Get(nameof(NetOptions.SslPortalPort)), 7296),
 				RequiredString(Get(nameof(NetOptions.SocketFile)), "netmush.sock"),
 				Boolean(Get(nameof(NetOptions.UseWebsockets)), true),
 				RequiredString(Get(nameof(NetOptions.WebsocketUrl)), "/wsclient"),

@@ -76,7 +76,7 @@ public class Program
 
 			options.ListenAnyIP(Convert.ToInt32(netValues.Port), listenOptions => { listenOptions.UseConnectionHandler<TelnetServer>(); });
 			options.ListenAnyIP(Convert.ToInt32(netValues.PortalPort));
-			options.ListenAnyIP(Convert.ToInt32(netValues.SllPortalPort), o => o.UseHttps());
+			options.ListenAnyIP(Convert.ToInt32(netValues.SslPortalPort), o => o.UseHttps());
 		});
 
 		var app = builder.Build();
