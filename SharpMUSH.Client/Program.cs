@@ -19,7 +19,11 @@ builder.Services.AddSingleton<AdminConfigService>();
 
 builder.Services.AddHttpClient("api", sp =>
 {
-	sp.BaseAddress = new Uri(builder.HostEnvironment.BaseAddress);
+	var uri = new UriBuilder(builder.HostEnvironment.BaseAddress)
+	{
+		Port = 7296
+	};
+	sp.BaseAddress = uri.Uri;
 });
 
 if (builder.HostEnvironment.IsDevelopment())

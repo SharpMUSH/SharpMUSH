@@ -7,11 +7,6 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Server.Controllers;
 
-public class ImportRequest
-{
-	public string Content { get; set; } = string.Empty;
-}
-
 [ApiController]
 [Route("api/[controller]")]
 public class ConfigurationController(
@@ -25,8 +20,9 @@ public class ConfigurationController(
 		try
 		{
 			var configuration = options.CurrentValue;
-
-			return Ok(OptionHelper.OptionsToConfigurationResponse(configuration));
+			var converted = OptionHelper.OptionsToConfigurationResponse(configuration);
+			
+			return Ok(converted);
 		}
 		catch (Exception ex)
 		{

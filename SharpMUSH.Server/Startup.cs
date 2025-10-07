@@ -31,6 +31,17 @@ public class Startup(ArangoConfiguration config, string colorFile)
 	// For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
 	public void ConfigureServices(IServiceCollection services)
 	{
+		services.AddCors(options =>
+		{
+			options.AddPolicy("AllowSpecificOrigin",
+				builder => builder
+					.SetIsOriginAllowed(o => true)
+					// .WithOrigins("https://localhost:7102")
+					.AllowAnyMethod()
+					.AllowAnyHeader()
+					.AllowCredentials()); 
+		});
+		
 		services.AddLogging(logging =>
 		{
 			logging.ClearProviders();
@@ -119,6 +130,8 @@ public class Startup(ArangoConfiguration config, string colorFile)
 	// This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
 	public static void Configure(IApplicationBuilder app, IWebHostEnvironment env)
 	{
+		app.UseCors("AllowSpecificOrigin");
+		
 		if (env.EnvironmentName == "Development")
 		{
 			app.UseDeveloperExceptionPage();

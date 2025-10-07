@@ -68,19 +68,27 @@ public class Program
 
 		var startup = new Startup(config, colorFile);
 		startup.ConfigureServices(builder.Services);
-		
+
 		builder.WebHost.ConfigureKestrel((_, options) =>
 		{
 			var optionMonitor = options.ApplicationServices.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
 			var netValues = optionMonitor.CurrentValue.Net;
 
-			options.ListenAnyIP(Convert.ToInt32(netValues.Port), listenOptions => { listenOptions.UseConnectionHandler<TelnetServer>(); });
+			options.AddServerHeader = true;
+
+			options.ListenAnyIP(Convert.ToInt32(netValues.Port),
+				listenOptions =>
+				{
+					listenOptions.UseConnectionHandler<TelnetServer>();
+				});
 			options.ListenAnyIP(Convert.ToInt32(netValues.PortalPort));
-			options.ListenAnyIP(Convert.ToInt32(netValues.SslPortalPort), o => o.UseHttps());
+			options.ListenAnyIP(Convert.ToInt32(netValues.SslPortalPort), 
+				o => o.UseHttps()
+				);
 		});
 
 		var app = builder.Build();
-
+		
 		await ConfigureApp(app).RunAsync();
 	}
 
@@ -89,7 +97,7 @@ public class Program
 		app.UseHttpsRedirection();
 		app.UseAuthorization();
 		app.MapControllers();
-		
+
 		return app;
 	}
 }

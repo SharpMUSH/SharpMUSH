@@ -6,25 +6,20 @@ namespace SharpMUSH.Library.API;
 
 public static class OptionHelper
 {
-	private static readonly PropertyInfo[] properties = typeof(SharpMUSHOptions).GetProperties();
-	private static readonly Lazy<IEnumerable<KeyValuePair<string, SharpConfigAttribute>>> KV = new(OptionToKV);
+	private static readonly PropertyInfo[] Properties = typeof(SharpMUSHOptions).GetProperties();
+	private static readonly Lazy<Dictionary<string, SharpConfigAttribute>> KeyValues = new(OptionToKv);
 
 	public static ConfigurationResponse OptionsToConfigurationResponse(SharpMUSHOptions options)
 		=> new()
 		{
 			Configuration = options,
-			Metadata = KV.Value.ToDictionary()
+			Metadata = KeyValues.Value.ToDictionary()
 		};
 
-	private static IEnumerable<KeyValuePair<string, SharpConfigAttribute>> OptionToKV()
-	{
-		foreach (var category in properties)
-		{
-			foreach (var property in category.PropertyType.GetProperties())
-			{
-				var customAttribute = property.GetCustomAttribute<SharpConfigAttribute>()!;
-				yield return new KeyValuePair<string, SharpConfigAttribute>(customAttribute.Name, customAttribute);
-			}
-		}
-	}
+	private static Dictionary<string, SharpConfigAttribute> OptionToKv() 
+		=> Properties
+			.SelectMany(category => category.PropertyType.GetProperties())
+			.Select(property => (property,attribute: property.GetCustomAttribute<SharpConfigAttribute>()!))
+			.Select(pa => new KeyValuePair<string, SharpConfigAttribute>(pa.property.Name, pa.attribute))
+			.ToDictionary();
 }
