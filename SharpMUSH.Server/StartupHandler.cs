@@ -1,20 +1,16 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using SharpMUSH.Library;
 using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Server;
 
-public class StartupHandler(ISharpDatabase database, IExpandedObjectDataService data, ILogger<StartupHandler> logger)
+public class StartupHandler(ILogger<StartupHandler> logger, IExpandedObjectDataService data)
 	: IHostedService
 {
 	public async Task StartAsync(CancellationToken cancellationToken)
 	{
-		logger.LogInformation("Starting Database");
-		await database.Migrate();
-		logger.LogInformation("Database is ready to go.");
-
+		logger.LogInformation("Setting server time data.");
 		// TODO: Move handling of CRON information like this to its own background Handler
 		await data.SetExpandedServerDataAsync(new UptimeData(
 			StartTime: DateTimeOffset.UtcNow,
@@ -28,6 +24,5 @@ public class StartupHandler(ISharpDatabase database, IExpandedObjectDataService 
 	public Task StopAsync(CancellationToken cancellationToken)
 	{
 		return Task.CompletedTask;
-		throw new NotImplementedException();
 	}
 }

@@ -17,10 +17,10 @@ using SharpMUSH.Server.ProtocolHandlers;
 namespace SharpMUSH.Tests;
 
 public class TestWebApplicationBuilderFactory<TProgram>(
-		ArangoConfiguration acnf,
-		string configFile,
-		string colorFile,
-		INotifyService? notifier) :
+	ArangoConfiguration acnf,
+	string configFile,
+	string colorFile,
+	INotifyService notifier) :
 	WebApplicationFactory<TProgram> where TProgram : class
 {
 	protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -33,16 +33,19 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 
 		Log.Logger = log;
 
-		var startup = new Startup(acnf, colorFile, notifier);
-
-		var substitute = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
-		substitute.CurrentValue.Returns(ReadPennMushConfig.Create(configFile));
+		var startup = new Startup(acnf, colorFile);
 
 		builder.ConfigureServices(startup.ConfigureServices);
 		builder.ConfigureTestServices(sc =>
 			{
+				var substitute = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
+				substitute.CurrentValue.Returns(ReadPennMushConfig.Create(configFile));
+
 				sc.RemoveAll<IOptionsWrapper<SharpMUSHOptions>>();
-				sc.AddSingleton(x => substitute);
+				sc.AddSingleton(substitute);
+
+				sc.RemoveAll<INotifyService>();
+				sc.AddSingleton(notifier);
 			}
 		);
 

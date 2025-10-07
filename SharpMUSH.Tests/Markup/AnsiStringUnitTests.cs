@@ -21,11 +21,11 @@ public class AnsiStringUnitTests
 		var resultBytes = Encoding.Unicode.GetBytes(result.ToString());
 		var expectedBytes = Encoding.Unicode.GetBytes(expected.ToString());
 
-		foreach (var (First, Second) in resultBytes.Zip(expectedBytes))
+		foreach (var (first, second) in resultBytes.Zip(expectedBytes))
 		{
 			await Assert
-				.That(First)
-				.IsEqualTo(Second);
+				.That(first)
+				.IsEqualTo(second);
 		}
 	}
 	
@@ -40,11 +40,11 @@ public class AnsiStringUnitTests
 		var resultBytes = Encoding.Unicode.GetBytes(result.ToString());
 		var expectedBytes = Encoding.Unicode.GetBytes(expected.ToString());
 
-		foreach (var (First, Second) in resultBytes.Zip(expectedBytes))
+		foreach (var (first, second) in resultBytes.Zip(expectedBytes))
 		{
 			await Assert
-				.That(First)
-				.IsEqualTo(Second);
+				.That(first)
+				.IsEqualTo(second);
 		}
 	}
 
@@ -104,11 +104,11 @@ public class AnsiStringUnitTests
 		var expectedBytes = Encoding.Unicode.GetBytes(expected.ToString());
 		
 
-		foreach (var (First, Second) in resultBytes.Zip(expectedBytes))
+		foreach (var (first, second) in resultBytes.Zip(expectedBytes))
 		{
 			await Assert
-				.That(First)
-				.IsEqualTo(Second);
+				.That(first)
+				.IsEqualTo(second);
 		}
 	}
 
@@ -124,11 +124,11 @@ public class AnsiStringUnitTests
 		var resultBytes = Encoding.Unicode.GetBytes(result.ToString());
 		var expectedBytes = Encoding.Unicode.GetBytes(expected.ToString());
 
-		foreach (var (First, Second) in resultBytes.Zip(expectedBytes))
+		foreach (var (first, second) in resultBytes.Zip(expectedBytes))
 		{
 			await Assert
-				.That(First)
-				.IsEqualTo(Second);
+				.That(first)
+				.IsEqualTo(second);
 		}
 	}
 
@@ -150,11 +150,11 @@ public class AnsiStringUnitTests
 			var resultBytes = Encoding.Unicode.GetBytes(resultItem.ToString());
 			var expectedBytes = Encoding.Unicode.GetBytes(expectedItem.ToString());
 
-			foreach (var (First, Second) in resultBytes.Zip(expectedBytes))
+			foreach (var (first, second) in resultBytes.Zip(expectedBytes))
 			{
 				await Assert
-					.That(First)
-					.IsEqualTo(Second);
+					.That(first)
+					.IsEqualTo(second);
 			}
 		}
 	}

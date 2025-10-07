@@ -51,17 +51,8 @@ public class BaseBenchmark
 		var configFile = Path.Combine(AppContext.BaseDirectory, "mushcnf.dst");
 		var colorFile = Path.Combine(AppContext.BaseDirectory, "colors.json");
 
-		_server = new TestWebApplicationBuilderFactory<Server.Program>(config, configFile, colorFile, null);
+		_server = new TestWebApplicationBuilderFactory<Server.Program>(config, configFile, colorFile);
 		_database = _server!.Services.GetRequiredService<ISharpDatabase>();
-
-		try
-		{
-			await _database!.Migrate();
-		}
-		catch (Exception ex)
-		{
-			Log.Fatal(ex, "Failed to migrate database");
-		}
 	}
 
 	[GlobalCleanup]
@@ -70,25 +61,16 @@ public class BaseBenchmark
 		await Task.CompletedTask;
 	}
 
-	private async Task<(ISharpDatabase Database, TestWebApplicationBuilderFactory<Server.Program> Infrastructure)> IntegrationServer()
-	{
-		await Task.CompletedTask;
-
-		return (_database!, _server!);
-	}
-
 	protected async Task<IMUSHCodeParser?> TestParser()
 	{
-		var (database, integrationServer) = await IntegrationServer();
-
-		var realOne = await database.GetObjectNodeAsync(new DBRef(1));
+		var realOne = await _database!.GetObjectNodeAsync(new DBRef(1));
 		var one = realOne.Object()!.DBRef;
 
 		var simpleConnectionService = new ConnectionService();
 		simpleConnectionService.Register(1, _ => ValueTask.CompletedTask,  _ => ValueTask.CompletedTask, () => Encoding.UTF8);
 		simpleConnectionService.Bind(1, one);
 
-		var parser = integrationServer.Services.GetRequiredService<IMUSHCodeParser>();
+		var parser = _server!.Services.GetRequiredService<IMUSHCodeParser>();
 		return parser.FromState(new ParserState(
 			Registers: new ConcurrentStack<Dictionary<string, MString>>([[]]),
 			IterationRegisters: new ConcurrentStack<IterationWrapper<MString>>(),

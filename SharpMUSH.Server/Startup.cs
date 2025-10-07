@@ -25,7 +25,7 @@ using TaskScheduler = SharpMUSH.Library.Services.TaskScheduler;
 
 namespace SharpMUSH.Server;
 
-public class Startup(ArangoConfiguration config, string colorFile, INotifyService? notifier)
+public class Startup(ArangoConfiguration config, string colorFile)
 {
 	// This method gets called by the runtime. Use this method to add services to the container.
 	// For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
@@ -40,13 +40,22 @@ public class Startup(ArangoConfiguration config, string colorFile, INotifyServic
 				.CreateLogger());
 		});
 
-		services.AddSingleton<ISharpDatabase, ArangoDatabase>();
-		services.AddSingleton<PasswordHasher<string>, PasswordHasher<string>>(
-			_ => new PasswordHasher<string>()
+		services.AddSingleton<ISharpDatabase, ArangoDatabase>(x =>
+		{
+			var logger = x.GetRequiredService<ILogger<ArangoDatabase>>();
+			var context = x.GetRequiredService<IArangoContext>();
+			var handle = x.GetRequiredService<ArangoHandle>();
+			var mediator = x.GetRequiredService<IMediator>();
+			var password = x.GetRequiredService<IPasswordService>();
+			var db = new ArangoDatabase(logger, context, handle, mediator, password);
+			db.Migrate().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
+			return db;
+		});
+		services.AddSingleton<PasswordHasher<string>, PasswordHasher<string>>(_ => new PasswordHasher<string>()
 			/*
-			 * TODO: PasswordHasher may not be compatible with PennMUSH Passwords. 
+			 * TODO: PasswordHasher may not be compatible with PennMUSH Passwords.
 			 * PBKDF2 with HMAC-SHA512, 128-bit salt, 256-bit subkey, 100000 iterations.
-			 * 
+			 *
 			 * PennMUSH uses SHA1 in password_hash.
 			 * It is stored as: V:ALGO:HASH:TIMESTAMP
 			 *
@@ -70,14 +79,7 @@ public class Startup(ArangoConfiguration config, string colorFile, INotifyServic
 		);
 		services.AddSingleton<IPasswordService, PasswordService>();
 		services.AddSingleton<IPermissionService, PermissionService>();
-		if (notifier != null)
-		{
-			services.AddSingleton(notifier);
-		}
-		else
-		{
-			services.AddSingleton<INotifyService, NotifyService>();
-		}
+		services.AddSingleton<INotifyService, NotifyService>();
 		services.AddSingleton<ILocateService, LocateService>();
 		services.AddSingleton<IExpandedObjectDataService, ExpandedObjectDataService>();
 		services.AddSingleton<IAttributeService, AttributeService>();
@@ -91,13 +93,13 @@ public class Startup(ArangoConfiguration config, string colorFile, INotifyServic
 		services.AddSingleton(x => x.GetService<ILibraryProvider<FunctionDefinition>>()!.Get());
 		services.AddSingleton(x => x.GetService<ILibraryProvider<CommandDefinition>>()!.Get());
 		services.AddSingleton<IOptionsFactory<SharpMUSHOptions>, OptionsService>();
-		services.AddSingleton<IOptionsFactory<ColorsOptions>, ReadColorsOptionsFactory>(x 
-			=> new ReadColorsOptionsFactory(x.GetRequiredService<ILogger<ReadColorsOptionsFactory>>(), colorFile));
+		services.AddSingleton<IOptionsFactory<ColorsOptions>, ReadColorsOptionsFactory>();
 		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(CacheInvalidationBehavior<,>));
 		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(QueryCachingBehavior<,>));
 		services.AddSingleton(new ArangoHandle("CurrentSharpMUSHWorld"));
 		services.AddSingleton<IMUSHCodeParser, MUSHCodeParser>();
 		services.AddSingleton<IValidateService, ValidateService>();
+		services.AddKeyedSingleton(nameof(colorFile), colorFile);
 		services.AddOptions<SharpMUSHOptions>();
 		services.AddOptions<ColorsOptions>();
 		services.AddSingleton<IOptionsWrapper<SharpMUSHOptions>, Library.Services.OptionsWrapper<SharpMUSHOptions>>();
@@ -106,10 +108,7 @@ public class Startup(ArangoConfiguration config, string colorFile, INotifyServic
 		services.AddMediator();
 		services.AddFusionCache();
 		services.AddArango(_ => config.ConnectionString);
-		services.AddQuartz(x =>
-		{
-			x.UseInMemoryStore();
-		});
+		services.AddQuartz(x => { x.UseInMemoryStore(); });
 		services.AddAuthorization();
 		services.AddRazorPages();
 		services.AddControllers();

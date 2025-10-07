@@ -19,8 +19,7 @@ namespace SharpMUSH.Benchmarks;
 public class TestWebApplicationBuilderFactory<TProgram>(
 		ArangoConfiguration acnf,
 		string configFile,
-		string colorFile,
-		INotifyService? notifier) :
+		string colorFile) :
 	WebApplicationFactory<TProgram> where TProgram : class
 {
 	protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -33,7 +32,7 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 
 		Log.Logger = log;
 
-		var startup = new Startup(acnf, colorFile, notifier);
+		var startup = new Startup(acnf, colorFile);
 
 		var substitute = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
 		substitute.CurrentValue.Returns(ReadPennMushConfig.Create(configFile));

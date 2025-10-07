@@ -12,11 +12,8 @@ public class AdminConfigService(ILogger<AdminConfigService> logger, IHttpClientF
 	{
 		try
 		{
-			if (_currentOptions == null)
-			{
-				var configResponse = await FetchConfigurationFromServer();
-				_currentOptions = configResponse.Configuration;
-			}
+			var configResponse = await FetchConfigurationFromServer();
+			_currentOptions = configResponse.Configuration;
 			return _currentOptions;
 		}
 		catch (Exception ex)
@@ -26,17 +23,11 @@ public class AdminConfigService(ILogger<AdminConfigService> logger, IHttpClientF
 		}
 	}
 
-	public SharpMUSHOptions GetOptions()
-	{
-		// Synchronous wrapper for backwards compatibility
-		return _currentOptions!;
-	}
-
 	public async Task<SharpMUSHOptions> ImportFromConfigFileAsync(string configFileContent)
 	{
 		try
 		{
-			var response = await httpClient.CreateClient().PostAsJsonAsync("/api/configuration/import", configFileContent);
+			var response = await httpClient.CreateClient("api").PostAsJsonAsync("/api/configuration/import", configFileContent);
 			response.EnsureSuccessStatusCode();
 			
 			var configResponse = await response.Content.ReadFromJsonAsync<ConfigurationResponse>();
@@ -62,7 +53,7 @@ public class AdminConfigService(ILogger<AdminConfigService> logger, IHttpClientF
 	{
 		try
 		{
-			var response = await httpClient.CreateClient().GetAsync("/api/configuration");
+			var response = await httpClient.CreateClient("api").GetAsync("/api/configuration");
 			response.EnsureSuccessStatusCode();
 			
 			var configResponse = await response.Content.ReadFromJsonAsync<ConfigurationResponse>();
@@ -88,7 +79,6 @@ public class AdminConfigService(ILogger<AdminConfigService> logger, IHttpClientF
 		public string Description { get; set; } = string.Empty;
 		public string Category { get; set; } = string.Empty;
 		public bool IsAdvanced { get; set; }
-		public string? DefaultValue { get; set; }
 		
 		public bool IsBoolean => Type == "Boolean";
 		public bool IsNumber => Type is "Int32" or "UInt32" or "Double" or "Single" or "Decimal";
@@ -97,13 +87,8 @@ public class AdminConfigService(ILogger<AdminConfigService> logger, IHttpClientF
 	}
 }
 
-public static class PennMUSHOptionsExtension
+public static class SharpMUSHOptionsExtension
 {
-	public static IEnumerable<object> ToDatagrid(this SharpMUSHOptions options)
-	{
-		return [];
-	}
-
 	public static IEnumerable<AdminConfigService.ConfigItem> ToConfigItems(this SharpMUSHOptions options)
 	{
 		var configItems = new List<AdminConfigService.ConfigItem>();
@@ -120,56 +105,58 @@ public static class PennMUSHOptionsExtension
 				{
 					var sectionName = prop.Name;
 					var sectionValue = prop.GetValue(options);
-					
-					if (sectionValue != null)
+
+					if (sectionValue == null)
 					{
-						var sectionType = prop.PropertyType;
-						var sectionProperties = sectionType.GetProperties();
+						continue;
+					}
 
-						foreach (var sectionProp in sectionProperties)
+					var sectionType = prop.PropertyType;
+					var sectionProperties = sectionType.GetProperties();
+
+					foreach (var sectionProp in sectionProperties)
+					{
+						try
 						{
-							try
+							var value = sectionProp.GetValue(sectionValue);
+							var valueString = value switch
 							{
-								var value = sectionProp.GetValue(sectionValue);
-								var valueString = value switch
-								{
-									null => "null",
-									bool b => b.ToString(),
-									string s => s,
-									System.Collections.IEnumerable enumerable when enumerable is not string => 
-										string.Join(", ", enumerable.Cast<object>().Select(x => x?.ToString() ?? "null")),
-									_ => value.ToString() ?? "null"
-								};
+								null => "null",
+								bool b => b.ToString(),
+								string s => s,
+								System.Collections.IEnumerable enumerable and not string => 
+									string.Join(", ", enumerable.Cast<object>().Select(x => x?.ToString() ?? "null")),
+								_ => value.ToString() ?? "null"
+							};
 
-								// Get metadata from centralized source
+							// Get metadata from centralized source
 
-								configItems.Add(new AdminConfigService.ConfigItem
-								{
-									Section = sectionName,
-									Key = sectionProp.Name,
-									Value = valueString,
-									Type = sectionProp.PropertyType.Name,
-									RawValue = value
-										/*,
+							configItems.Add(new AdminConfigService.ConfigItem
+							{
+								Section = sectionName,
+								Key = sectionProp.Name,
+								Value = valueString,
+								Type = sectionProp.PropertyType.Name,
+								RawValue = value
+								/*,
 									Description = metadata?.Description ?? GetFallbackDescription(sectionName, sectionProp.Name),
 									Category = metadata?.Category ?? sectionName,
 									IsAdvanced = metadata?.Nullable ?? false,
 									DefaultValue = metadata?.DefaultValue?.ToString()*/
-								});
-							}
-							catch (Exception ex)
+							});
+						}
+						catch (Exception ex)
+						{
+							// If we can't get a specific property, add an error entry
+							configItems.Add(new AdminConfigService.ConfigItem
 							{
-								// If we can't get a specific property, add an error entry
-								configItems.Add(new AdminConfigService.ConfigItem
-								{
-									Section = sectionName,
-									Key = sectionProp.Name,
-									Value = $"Error: {ex.Message}",
-									Type = sectionProp.PropertyType.Name,
-									Description = "Error loading property",
-									Category = sectionName
-								});
-							}
+								Section = sectionName,
+								Key = sectionProp.Name,
+								Value = $"Error: {ex.Message}",
+								Type = sectionProp.PropertyType.Name,
+								Description = "Error loading property",
+								Category = sectionName
+							});
 						}
 					}
 				}

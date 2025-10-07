@@ -17,8 +17,10 @@ builder.Services.AddSingleton<ISlugHelper, SlugHelper>();
 builder.Services.AddSingleton<WikiService>();
 builder.Services.AddSingleton<AdminConfigService>();
 
-builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
-
+builder.Services.AddHttpClient("api", sp =>
+{
+	sp.BaseAddress = new Uri(builder.HostEnvironment.BaseAddress);
+});
 
 if (builder.HostEnvironment.IsDevelopment())
 {

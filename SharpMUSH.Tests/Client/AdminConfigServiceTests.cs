@@ -32,7 +32,7 @@ public class AdminConfigServiceTests(IHttpClientFactory httpClient)
 			BaseAddress = new Uri("http://localhost")
 		};
 
-		httpClient.CreateClient().Returns(client);
+		httpClient.CreateClient("api").Returns(client);
 
 		var service = new AdminConfigService(logger, httpClient);
 
@@ -60,7 +60,7 @@ public class AdminConfigServiceTests(IHttpClientFactory httpClient)
 			BaseAddress = new Uri("http://localhost")
 		};
 
-		httpClient.CreateClient().Returns(client);
+		httpClient.CreateClient("api").Returns(client);
 
 		var service = new AdminConfigService(logger, httpClient);
 
@@ -85,7 +85,7 @@ public class AdminConfigServiceTests(IHttpClientFactory httpClient)
 		var client = new HttpClient(new MockHttpMessageHandler(HttpStatusCode.OK,
 			"""{"Configuration":{"Net":{"MudName":"Test"}}, "Metadata":[]}"""));
 
-		httpClient.CreateClient().Returns(client);
+		httpClient.CreateClient("api").Returns(client);
 
 		var service = new AdminConfigService(logger, httpClient);
 

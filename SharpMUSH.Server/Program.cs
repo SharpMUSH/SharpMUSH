@@ -66,7 +66,7 @@ public class Program
 			throw new FileNotFoundException($"Configuration file not found: {colorFile}");
 		}
 
-		var startup = new Startup(config, colorFile, null);
+		var startup = new Startup(config, colorFile);
 		startup.ConfigureServices(builder.Services);
 		
 		builder.WebHost.ConfigureKestrel((_, options) =>
