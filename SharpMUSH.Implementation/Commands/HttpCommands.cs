@@ -66,7 +66,7 @@ public partial class Commands
 			RequestUri = uri
 		};
 		
-		var client = HttpClientFactory!.CreateClient();
+		var client = HttpClientFactory!.CreateClient("api");
 		
 		// TODO: Schedule the response into the QUEUE.
 		// This will require a special ASYNC Attribute Evaluator Queue type, which accepts an HTTP timeout.

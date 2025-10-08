@@ -1,15 +1,15 @@
 ﻿namespace SharpMUSH.Configuration.Options;
 
 public record LogOptions(
-	[property: PennConfig(Name = "use_syslog")] bool UseSyslog,
-	[property: PennConfig(Name = "log_commands")] bool LogCommands,
-	[property: PennConfig(Name = "log_forces")] bool LogForces,
-	[property: PennConfig(Name = "error_log")] string ErrorLog,
-	[property: PennConfig(Name = "command_log")] string CommandLog,
-	[property: PennConfig(Name = "wizard_log")] string WizardLog,
-	[property: PennConfig(Name = "chkpt_log")] string CheckpointLog,
-	[property: PennConfig(Name = "trace_log")] string TraceLog,
-	[property: PennConfig(Name = "connect_log")] string ConnectLog,
-	[property: PennConfig(Name = "mem_check")] bool MemoryCheck,
-	[property: PennConfig(Name = "use_connlog")] bool UseConnLog
+	[property: SharpConfig(Name = "use_syslog", Category = "Log", Description = "Send log messages to system syslog instead of files")] bool UseSyslog,
+	[property: SharpConfig(Name = "log_commands", Category = "Log", Description = "Log all commands executed by players")] bool LogCommands,
+	[property: SharpConfig(Name = "log_forces", Category = "Log", Description = "Log all @force commands and their results")] bool LogForces,
+	[property: SharpConfig(Name = "error_log", Category = "Log", Description = "File path for error and warning messages")] string ErrorLog,
+	[property: SharpConfig(Name = "command_log", Category = "Log", Description = "File path for command execution logs")] string CommandLog,
+	[property: SharpConfig(Name = "wizard_log", Category = "Log", Description = "File path for wizard/admin activity logs")] string WizardLog,
+	[property: SharpConfig(Name = "chkpt_log", Category = "Log", Description = "File path for database checkpoint logs")] string CheckpointLog,
+	[property: SharpConfig(Name = "trace_log", Category = "Log", Description = "File path for detailed trace information")] string TraceLog,
+	[property: SharpConfig(Name = "connect_log", Category = "Log", Description = "File path for player connection logs")] string ConnectLog,
+	[property: SharpConfig(Name = "mem_check", Category = "Log", Description = "Enable memory usage checking and logging")] bool MemoryCheck,
+	[property: SharpConfig(Name = "use_connlog", Category = "Log", Description = "Enable detailed connection logging")] bool UseConnLog
 );

@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 using Mediator;
-using Microsoft.Extensions.Options;
 using OneOf;
 using OneOf.Types;
 using SharpMUSH.Configuration.Options;
@@ -100,17 +99,19 @@ public static class ChannelHelper
 		return new PrivilegeOrError(validatedList!);
 	}
 
-	public static bool IsValidChannelName(IOptionsMonitor<PennMUSHOptions> Configuration, MString channelName)
+	public static bool IsValidChannelName(IOptionsWrapper<SharpMUSHOptions> Configuration, MString channelName)
 		=> IsValidChannelName(Configuration!, channelName.ToPlainText());
 
-	public static bool IsValidChannelName(IOptionsMonitor<PennMUSHOptions> Configuration, string channelName)
+	public static bool IsValidChannelName(IOptionsWrapper<SharpMUSHOptions> Configuration, string channelName)
 		=> Configuration!.CurrentValue.Chat.ChannelTitleLength >= channelName.Length
 		   && channelName.Length > 3
 		   && !channelName.Contains(' ');
 
 	public static async ValueTask<ChannelOrError> GetChannelOrError(
 		IMUSHCodeParser parser, 
-		ILocateService LocateService, IPermissionService PermissionService, IMediator Mediator,
+		ILocateService LocateService, 
+		IPermissionService PermissionService, 
+		IMediator Mediator,
 		INotifyService NotifyService,
 		MString channelName,
 		bool notify = false)

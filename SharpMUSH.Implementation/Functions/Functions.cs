@@ -19,8 +19,8 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 	private static INotifyService? NotifyService { get; set; }
 	private static IPermissionService? PermissionService {get;set;}
 	private static ICommandDiscoveryService? CommandDiscoveryService {get;set; }
-	private static IOptionsMonitor<PennMUSHOptions>? Configuration { get; set; }
-	private static IOptionsMonitor<ColorsOptions>? ColorConfiguration { get; set; }
+	private static IOptionsWrapper<SharpMUSHOptions>? Configuration { get; set; }
+	private static IOptionsWrapper<ColorsOptions>? ColorConfiguration { get; set; }
 	private static IPasswordService? PasswordService { get; set; }
 	private static IConnectionService? ConnectionService { get; set; }
 	private static IExpandedObjectDataService? ObjectDataService { get; set; }
@@ -37,8 +37,8 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 		INotifyService notifyService, 
 		IPermissionService permissionService, 
 		ICommandDiscoveryService commandDiscoveryService,
-		IOptionsMonitor<PennMUSHOptions> configuration,
-		IOptionsMonitor<ColorsOptions> colorOptions,
+		IOptionsWrapper<SharpMUSHOptions> configuration,
+		IOptionsWrapper<ColorsOptions> colorOptions,
 		IPasswordService passwordService,
 		IConnectionService connectionService,
 		IExpandedObjectDataService objectDataService)

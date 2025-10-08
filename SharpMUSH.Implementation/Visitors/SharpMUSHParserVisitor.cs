@@ -28,8 +28,8 @@ namespace SharpMUSH.Implementation.Visitors;
 /// <param name="parser">The Parser, so that inner functions can force a parser-call.</param>
 /// <param name="source">The original MarkupString. A plain GetText is not good enough to get the proper value back.</param>
 public class SharpMUSHParserVisitor(ILogger logger, 
-	IMUSHCodeParser parser, 
-	IOptionsMonitor<PennMUSHOptions> Configuration, 
+	IMUSHCodeParser parser,
+	IOptionsWrapper<SharpMUSHOptions> Configuration, 
 	IMediator Mediator,
 	INotifyService NotifyService,
 	IConnectionService ConnectionService,

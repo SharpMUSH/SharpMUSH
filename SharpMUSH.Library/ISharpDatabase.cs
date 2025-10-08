@@ -327,7 +327,7 @@ public interface ISharpDatabase
 	/// <param name="sharpObjectId">Database Id</param>
 	/// <param name="dataType">Type being stored. Each Type gets its own storage.</param>
 	/// <param name="data">Json body to set.</param>
-	Task SetExpandedObjectData(string sharpObjectId, string dataType, dynamic data);
+	ValueTask SetExpandedObjectData(string sharpObjectId, string dataType, dynamic data);
 
 	/// <summary>
 	/// Gets the Expanded Object Data for a SharpObject. 
@@ -337,13 +337,13 @@ public interface ISharpDatabase
 	/// <returns>A Json String with the data stored within.</returns>
 	ValueTask<string?> GetExpandedObjectData(string sharpObjectId, string dataType);
 
-	
+
 	/// <summary>
 	/// Sets expanded data for a SharpObject, for the server as a whole.
 	/// </summary>
 	/// <param name="dataType">Type being stored. Each Type gets its own storage.</param>
 	/// <param name="data">Json body to set.</param>
-	Task SetExpandedServerData(string dataType, string data);
+	ValueTask SetExpandedServerData(string dataType, string data);
 
 	/// <summary>
 	/// Gets the Expanded Object Data for the server as a whole. 

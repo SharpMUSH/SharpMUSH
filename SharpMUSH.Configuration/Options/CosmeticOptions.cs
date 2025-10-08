@@ -1,21 +1,21 @@
 ﻿namespace SharpMUSH.Configuration.Options;
 
 public record CosmeticOptions(
-	[property: PennConfig(Name = "money_singular")] string MoneySingular,
-	[property: PennConfig(Name = "money_plural")] string MoneyPlural,
-	[property: PennConfig(Name = "player_name_spaces")] bool PlayerNameSpaces,
-	[property: PennConfig(Name = "ansi_names")] bool AnsiNames,
-	[property: PennConfig(Name = "only_ascii_in_names")] bool OnlyAsciiInNames,
-	[property: PennConfig(Name = "monikers")] bool Monikers,
-	[property: PennConfig(Name = "float_precision")] uint FloatPrecision,
-	[property: PennConfig(Name = "comma_exit_list")] bool CommaExitList,
-	[property: PennConfig(Name = "count_all")] bool CountAll,
-	[property: PennConfig(Name = "page_aliases")] bool PageAliases,
-	[property: PennConfig(Name = "flags_on_examine")] bool FlagsOnExamine,
-	[property: PennConfig(Name = "ex_public_attribs")] bool ExaminePublicAttributes,
-	[property: PennConfig(Name = "wizwall_prefix")] string WizardWallPrefix,
-	[property: PennConfig(Name = "rwall_prefix")] string RoyaltyWallPrefix,
-	[property: PennConfig(Name = "wall_prefix")] string WallPrefix,
-	[property: PennConfig(Name = "announce_connects")] bool AnnounceConnects,
-	[property: PennConfig(Name = "chat_strip_quote")] bool ChatStripQuote
+	[property: SharpConfig(Name = "money_singular", Category = "Cosmetic", Description = "Singular form of money (e.g., 'penny')")] string MoneySingular,
+	[property: SharpConfig(Name = "money_plural", Category = "Cosmetic", Description = "Plural form of money (e.g., 'pennies')")] string MoneyPlural,
+	[property: SharpConfig(Name = "player_name_spaces", Category = "Cosmetic", Description = "Allow spaces in player names")] bool PlayerNameSpaces,
+	[property: SharpConfig(Name = "ansi_names", Category = "Cosmetic", Description = "Allow ANSI color codes in player names")] bool AnsiNames,
+	[property: SharpConfig(Name = "only_ascii_in_names", Category = "Cosmetic", Description = "Restrict names to ASCII characters only")] bool OnlyAsciiInNames,
+	[property: SharpConfig(Name = "monikers", Category = "Cosmetic", Description = "Enable moniker (nickname) system for players")] bool Monikers,
+	[property: SharpConfig(Name = "float_precision", Category = "Cosmetic", Description = "Number of decimal places for floating-point display", ValidationPattern = @"^\d+$")] uint FloatPrecision,
+	[property: SharpConfig(Name = "comma_exit_list", Category = "Cosmetic", Description = "Use commas to separate exit names in lists")] bool CommaExitList,
+	[property: SharpConfig(Name = "count_all", Category = "Cosmetic", Description = "Include all objects in @count command results")] bool CountAll,
+	[property: SharpConfig(Name = "page_aliases", Category = "Cosmetic", Description = "Allow @page command to use player aliases")] bool PageAliases,
+	[property: SharpConfig(Name = "flags_on_examine", Category = "Cosmetic", Description = "Show object flags when using examine command")] bool FlagsOnExamine,
+	[property: SharpConfig(Name = "ex_public_attribs", Category = "Cosmetic", Description = "Show public attributes in examine command")] bool ExaminePublicAttributes,
+	[property: SharpConfig(Name = "wizwall_prefix", Category = "Cosmetic", Description = "Prefix text for wizard wall messages")] string WizardWallPrefix,
+	[property: SharpConfig(Name = "rwall_prefix", Category = "Cosmetic", Description = "Prefix text for royalty wall messages")] string RoyaltyWallPrefix,
+	[property: SharpConfig(Name = "wall_prefix", Category = "Cosmetic", Description = "Prefix text for general wall messages")] string WallPrefix,
+	[property: SharpConfig(Name = "announce_connects", Category = "Cosmetic", Description = "Announce when players connect to the MUSH")] bool AnnounceConnects,
+	[property: SharpConfig(Name = "chat_strip_quote", Category = "Cosmetic", Description = "Remove quote marks from chat messages")] bool ChatStripQuote
 );

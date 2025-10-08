@@ -12,12 +12,19 @@ builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
 builder.Services.AddMudServices();
+builder.Services.AddLogging();
 builder.Services.AddSingleton<ISlugHelper, SlugHelper>();
 builder.Services.AddSingleton<WikiService>();
 builder.Services.AddSingleton<AdminConfigService>();
 
-builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
-
+builder.Services.AddHttpClient("api", sp =>
+{
+	var uri = new UriBuilder(builder.HostEnvironment.BaseAddress)
+	{
+		Port = 7296
+	};
+	sp.BaseAddress = uri.Uri;
+});
 
 if (builder.HostEnvironment.IsDevelopment())
 {

@@ -1,25 +1,23 @@
 ﻿using System.Collections.Immutable;
 using System.Reflection;
 using System.Text.RegularExpressions;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
 using FileOptions = SharpMUSH.Configuration.Options.FileOptions;
 
 namespace SharpMUSH.Configuration;
 
-public partial class ReadPennMushConfig(ILogger<ReadPennMushConfig> Logger, string configFile) : IOptionsFactory<PennMUSHOptions>
+public static partial class ReadPennMushConfig
 {
-	public PennMUSHOptions Create(string _)
+	public static SharpMUSHOptions Create(string configFile)
 	{
 		string[] text;
-		var keys = typeof(PennMUSHOptions)
+		var keys = typeof(SharpMUSHOptions)
 			.GetProperties()
 			.Select(property => property.PropertyType)
 			.SelectMany(configType => configType
 				.GetProperties()
 				.Select(configProperty => configProperty
-					.GetCustomAttributes<PennConfigAttribute>()
+					.GetCustomAttributes<SharpConfigAttribute>()
 					.Select(attribute => (configProperty, attribute))
 					.FirstOrDefault()
 				)).ToImmutableHashSet();
@@ -32,29 +30,28 @@ public partial class ReadPennMushConfig(ILogger<ReadPennMushConfig> Logger, stri
 			_ => string.Empty);
 
 		var splitter = KeyValueSplittingRegex();
-		
+
 		try
 		{
 			text = File.ReadAllLines(configFile);
 		}
 		catch (Exception ex) when (ex is FileNotFoundException or IOException)
 		{
-			Logger.LogCritical(ex, nameof(Create));
 			throw;
 		}
-		
+
 		// TODO: Use a Regex to split the values.
 		foreach (var configLine in text
-			         .Where(line => configDictionary.Keys.Any(line.Trim().StartsWith))
-			         .Select(line => splitter.Match(line.Trim()))
-			         .Where(match => match.Success)
-			         .Select(match => match.Groups))
+							 .Where(line => configDictionary.Keys.Any(line.Trim().StartsWith))
+							 .Select(line => splitter.Match(line.Trim()))
+							 .Where(match => match.Success)
+							 .Select(match => match.Groups))
 		{
 			configDictionary[configLine["Key"].Value] = configLine["Value"].Value;
 		}
 
 		// This is a lot of dupe work. This can likely be done with a proper bit of Reflection. 
-		var work = new PennMUSHOptions()
+		var work = new SharpMUSHOptions()
 		{
 			Attribute = new AttributeOptions(
 				Boolean(Get(nameof(AttributeOptions.ADestroy)), false),
@@ -144,30 +141,11 @@ public partial class ReadPennMushConfig(ILogger<ReadPennMushConfig> Logger, stri
 				UnsignedInteger(Get(nameof(DatabaseOptions.HttpRequestsPerSecond)), 30)
 			),
 			Dump = new DumpOptions(
-				Boolean(Get(nameof(DumpOptions.ForkingDump)), true),
-				RequiredString(Get(nameof(DumpOptions.DumpMessage)), "Saving Database. Game may freeze for a moment."),
-				RequiredString(Get(nameof(DumpOptions.DumpComplete)), "Save complete."),
-				RequiredString(Get(nameof(DumpOptions.DumpWarning1Min)), "Database Save in 1 minute."),
-				RequiredString(Get(nameof(DumpOptions.DumpWarning5Min)), "Database Save in 5 minutes."),
-				RequiredString(Get(nameof(DumpOptions.DumpInterval)), "4h"),
-				RequiredString(Get(nameof(DumpOptions.WarningInterval)), "1h"),
-				RequiredString(Get(nameof(DumpOptions.PurgeInterval)), "10m1s"),
-				RequiredString(Get(nameof(DumpOptions.DatabaseCheckInterval)), "9m59s")
+				RequiredString(Get(nameof(DumpOptions.PurgeInterval)), "10m1s")
 			),
 			File = new FileOptions(
-				InputDatabase: "ignored",
-				OutputDatabase: "ignored",
-				CrashDatabase: "ignored",
-				MailDatabase: "ignored",
-				ChatDatabase: "ignored",
-				CompressSuffix: "ignored",
-				CompressProgram: "ignored",
-				UnCompressProgram: "ignored",
 				RequiredString(Get(nameof(FileOptions.AccessFile)), "access.cnf"),
 				RequiredString(Get(nameof(FileOptions.NamesFile)), "names.cnf"),
-				ChunkSwapFile: "ignored",
-				ChunkSwapInitialSize: "ignored",
-				ChunkCacheMemory: "ignored",
 				RequiredString(Get(nameof(FileOptions.SSLPrivateKeyFile)), string.Empty),
 				RequiredString(Get(nameof(FileOptions.SSLCertificateFile)), string.Empty),
 				RequiredString(Get(nameof(FileOptions.SSLCAFile)), string.Empty),
@@ -262,7 +240,7 @@ public partial class ReadPennMushConfig(ILogger<ReadPennMushConfig> Logger, stri
 				UnsignedInteger(Get(nameof(NetOptions.Port)), 4203),
 				UnsignedInteger(Get(nameof(NetOptions.SslPort)), 4202),
 				UnsignedInteger(Get(nameof(NetOptions.PortalPort)), 5117),
-				UnsignedInteger(Get(nameof(NetOptions.SllPortalPort)), 7296),
+				UnsignedInteger(Get(nameof(NetOptions.SslPortalPort)), 7296),
 				RequiredString(Get(nameof(NetOptions.SocketFile)), "netmush.sock"),
 				Boolean(Get(nameof(NetOptions.UseWebsockets)), true),
 				RequiredString(Get(nameof(NetOptions.WebsocketUrl)), "/wsclient"),

@@ -39,11 +39,14 @@ public class SubstitutionUnitTests
 	{
 		Console.WriteLine("Testing: {0}", str);
 
-		await Parser!.CommandParse(1, ConnectionService, MModule.single(str));
+		await Parser.CommandParse(1, ConnectionService, MModule.single(str));
 
 		if (expected is not null)
 		{
-			await NotifyService.Notify(Arg.Any<AnySharpObject>(), expected, null, INotifyService.NotificationType.Announce);
+			await NotifyService.Notify(Arg.Any<AnySharpObject>(), 
+				expected, 
+				null, 
+				INotifyService.NotificationType.Announce);
 		}
 	}
 }

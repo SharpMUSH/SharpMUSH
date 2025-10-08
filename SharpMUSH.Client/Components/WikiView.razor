@@ -37,14 +37,8 @@ else
     protected override async Task OnInitializedAsync()
     {
         var article = await Wiki.GetWikiArticle(Slug);
-        if (article.IsT0)
-        {
-            _article = article.AsT0;
-        }
-        else
-        {
-            _article = null;
-        }
+        
+        _article = article.IsT0 ? article.AsT0 : null;
 
         await base.OnInitializedAsync();
     }

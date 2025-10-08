@@ -10,6 +10,7 @@ using Serilog;
 using Serilog.Sinks.PeriodicBatching;
 using Serilog.Sinks.SystemConsole.Themes;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.ProtocolHandlers;
 using Testcontainers.ArangoDb;
 
@@ -58,13 +59,6 @@ public class Program
 			.MinimumLevel.Debug()
 			.CreateLogger());
 
-		var configFile = Path.Combine(AppContext.BaseDirectory, "mushcnf.dst");
-
-		if (!File.Exists(configFile))
-		{
-			throw new FileNotFoundException($"Configuration file not found: {configFile}");
-		}
-
 		var colorFile = Path.Combine(AppContext.BaseDirectory, "colors.json");
 
 		if (!File.Exists(colorFile))
@@ -72,30 +66,48 @@ public class Program
 			throw new FileNotFoundException($"Configuration file not found: {colorFile}");
 		}
 
-		var startup = new Startup(config, configFile, colorFile, null);
+		var startup = new Startup(config, colorFile);
 		startup.ConfigureServices(builder.Services);
-		
+
 		builder.WebHost.ConfigureKestrel((_, options) =>
 		{
-			var optionMonitor = options.ApplicationServices.GetRequiredService<IOptionsMonitor<PennMUSHOptions>>();
+			var optionMonitor = options.ApplicationServices.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
 			var netValues = optionMonitor.CurrentValue.Net;
 
-			options.ListenAnyIP(Convert.ToInt32(netValues.Port), listenOptions => { listenOptions.UseConnectionHandler<TelnetServer>(); });
+			options.AddServerHeader = true;
+
+			options.ListenAnyIP(Convert.ToInt32(netValues.Port),
+				listenOptions =>
+				{
+					listenOptions.UseConnectionHandler<TelnetServer>();
+				});
 			options.ListenAnyIP(Convert.ToInt32(netValues.PortalPort));
-			options.ListenAnyIP(Convert.ToInt32(netValues.SllPortalPort), o => o.UseHttps());
+			options.ListenAnyIP(Convert.ToInt32(netValues.SslPortalPort), 
+				o => o.UseHttps()
+				);
 		});
 
 		var app = builder.Build();
-
+		
 		await ConfigureApp(app).RunAsync();
 	}
 
 	private static WebApplication ConfigureApp(WebApplication app)
 	{
+		var env = app.Environment;
+		app.UseRouting();
+		app.UseCors();
+		
+		if (env.EnvironmentName == "Development")
+		{
+			app.UseDeveloperExceptionPage();
+		}
+
 		app.UseHttpsRedirection();
 		app.UseAuthorization();
 		app.MapControllers();
-		
+		app.MapRazorPages();
+
 		return app;
 	}
 }
