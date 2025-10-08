@@ -9,7 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="DotNext" Version="5.25.1" />
-    <PackageReference Include="DotNext.Threading" Version="5.25.1" />
+    <PackageReference Include="DotNext.Threading" Version="5.25.2" />
     <PackageReference Include="Mediator.Abstractions" Version="3.0.1" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.0-rc.1.25451.107" />
     <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="10.0.0-rc.1.25451.107" />
