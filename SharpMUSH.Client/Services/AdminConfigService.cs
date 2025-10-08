@@ -1,4 +1,6 @@
-﻿using SharpMUSH.Configuration.Options;
+﻿using OneOf.Types;
+using SharpMUSH.Configuration;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.API;
 using System.Net.Http.Json;
 
@@ -6,20 +8,23 @@ namespace SharpMUSH.Client.Services;
 
 public class AdminConfigService(ILogger<AdminConfigService> logger, IHttpClientFactory httpClient)
 {
-	private SharpMUSHOptions? _currentOptions;
+	private SharpMUSHOptions? _currentOptions = null;
+	private Dictionary<string, SharpConfigAttribute> _metadata = [];
 
-	public async Task<SharpMUSHOptions> GetOptionsAsync()
+	public async Task<OneOf.OneOf<IEnumerable<ConfigItem>, Error<string>>> GetOptionsAsync()
 	{
 		try
 		{
 			var configResponse = await FetchConfigurationFromServer();
 			_currentOptions = configResponse.Configuration;
-			return _currentOptions;
+			_metadata = configResponse.Metadata;
+
+			return configResponse.ToConfigItems();
 		}
 		catch (Exception ex)
 		{
 			logger.LogError(ex, "Error fetching options from server, using defaults");
-			return _currentOptions!;
+			return OneOf.OneOf<IEnumerable<ConfigItem>, Error<string>>.FromT0([]);
 		}
 	}
 
@@ -29,7 +34,7 @@ public class AdminConfigService(ILogger<AdminConfigService> logger, IHttpClientF
 		{
 			var response = await httpClient.CreateClient("api").PostAsJsonAsync("/api/configuration/import", configFileContent);
 			response.EnsureSuccessStatusCode();
-			
+
 			var configResponse = await response.Content.ReadFromJsonAsync<ConfigurationResponse>();
 			if (configResponse?.Configuration != null)
 			{
@@ -55,15 +60,15 @@ public class AdminConfigService(ILogger<AdminConfigService> logger, IHttpClientF
 		{
 			var response = await httpClient.CreateClient("api").GetAsync("/api/configuration");
 			response.EnsureSuccessStatusCode();
-			
+
 			var configResponse = await response.Content.ReadFromJsonAsync<ConfigurationResponse>();
 			return configResponse!;
 		}
 		catch (Exception ex)
 		{
 			logger.LogError(ex, "Error fetching configuration from server");
-			return new ConfigurationResponse 
-			{ 
+			return new ConfigurationResponse
+			{
 				Configuration = null!
 			};
 		}
@@ -79,7 +84,7 @@ public class AdminConfigService(ILogger<AdminConfigService> logger, IHttpClientF
 		public string Description { get; set; } = string.Empty;
 		public string Category { get; set; } = string.Empty;
 		public bool IsAdvanced { get; set; }
-		
+
 		public bool IsBoolean => Type == "Boolean";
 		public bool IsNumber => Type is "Int32" or "UInt32" or "Double" or "Single" or "Decimal";
 		public bool IsArray => Type.EndsWith("[]");
@@ -89,7 +94,7 @@ public class AdminConfigService(ILogger<AdminConfigService> logger, IHttpClientF
 
 public static class SharpMUSHOptionsExtension
 {
-	public static IEnumerable<AdminConfigService.ConfigItem> ToConfigItems(this SharpMUSHOptions options)
+	public static OneOf.OneOf<IEnumerable<AdminConfigService.ConfigItem>, Error<string>> ToConfigItems(this ConfigurationResponse options)
 	{
 		var configItems = new List<AdminConfigService.ConfigItem>();
 
@@ -121,10 +126,10 @@ public static class SharpMUSHOptionsExtension
 							var value = sectionProp.GetValue(sectionValue);
 							var valueString = value switch
 							{
-								null => "null",
+								null => "",
 								bool b => b.ToString(),
 								string s => s,
-								System.Collections.IEnumerable enumerable and not string => 
+								System.Collections.IEnumerable enumerable and not string =>
 									string.Join(", ", enumerable.Cast<object>().Select(x => x?.ToString() ?? "null")),
 								_ => value.ToString() ?? "null"
 							};
@@ -133,16 +138,13 @@ public static class SharpMUSHOptionsExtension
 
 							configItems.Add(new AdminConfigService.ConfigItem
 							{
-								Section = sectionName,
+								Section = options.Metadata[sectionProp.Name].Category,
 								Key = sectionProp.Name,
 								Value = valueString,
 								Type = sectionProp.PropertyType.Name,
-								RawValue = value
-								/*,
-									Description = metadata?.Description ?? GetFallbackDescription(sectionName, sectionProp.Name),
-									Category = metadata?.Category ?? sectionName,
-									IsAdvanced = metadata?.Nullable ?? false,
-									DefaultValue = metadata?.DefaultValue?.ToString()*/
+								RawValue = value,
+								Description = options.Metadata[sectionProp.Name].Description ?? "No Description",
+								Category = options.Metadata[sectionProp.Name].Category
 							});
 						}
 						catch (Exception ex)
@@ -178,7 +180,7 @@ public static class SharpMUSHOptionsExtension
 		catch (Exception ex)
 		{
 			// If everything fails, return a single error item
-			return [new AdminConfigService.ConfigItem
+			return OneOf.OneOf<IEnumerable<AdminConfigService.ConfigItem>, Error<string>>.FromT0([new AdminConfigService.ConfigItem
 			{
 				Section = "Error",
 				Key = "ConfigurationError",
@@ -186,11 +188,11 @@ public static class SharpMUSHOptionsExtension
 				Type = "Error",
 				Description = "Critical configuration error",
 				Category = "Error"
-			}];
+			}]);
 		}
 
-		return configItems
+		return OneOf.OneOf<IEnumerable<AdminConfigService.ConfigItem>, Error<string>>.FromT0(configItems
 			.OrderBy(x => x.Section)
-			.ThenBy(x => x.Key);
+			.ThenBy(x => x.Key));
 	}
 }

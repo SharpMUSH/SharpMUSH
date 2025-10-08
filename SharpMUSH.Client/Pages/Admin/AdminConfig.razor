@@ -90,7 +90,7 @@
                                                                           Label="Values (comma-separated)"
                                                                           Variant="Variant.Outlined"
                                                                           Lines="2"
-                                                                          ValueChanged="@((string value) => UpdateConfigValue(config, value))" />
+                                                                          ValueChanged="@((string value) => UpdateConfigValue(config, value.Split(',').Select(x => x.Trim())))" />
                                                         }
                                                         else
                                                         {
@@ -131,7 +131,7 @@
     private async Task LoadConfigurationAsync()
     {
         var options = await AdminConfigService.GetOptionsAsync();
-        ConfigItems = options.ToConfigItems();
+        ConfigItems = options.AsT0;
         ConfigSections = ConfigItems.GroupBy(x => x.Section).ToDictionary(g => g.Key, g => g.AsEnumerable());
         StateHasChanged();
     }
@@ -200,9 +200,7 @@
 
     private void UpdateConfigValue(AdminConfigService.ConfigItem config, object? newValue)
     {
-        // For now, just update the display value
-        // In a real implementation, this would update the underlying configuration
-        config.Value = newValue?.ToString() ?? "null";
+        config.Value = newValue?.ToString() ?? string.Empty;
         config.RawValue = newValue;
         StateHasChanged();
     }
