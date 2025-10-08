@@ -94,9 +94,19 @@ public class Program
 
 	private static WebApplication ConfigureApp(WebApplication app)
 	{
+		var env = app.Environment;
+		app.UseRouting();
+		app.UseCors();
+		
+		if (env.EnvironmentName == "Development")
+		{
+			app.UseDeveloperExceptionPage();
+		}
+
 		app.UseHttpsRedirection();
 		app.UseAuthorization();
 		app.MapControllers();
+		app.MapRazorPages();
 
 		return app;
 	}

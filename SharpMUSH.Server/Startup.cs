@@ -33,13 +33,12 @@ public class Startup(ArangoConfiguration config, string colorFile)
 	{
 		services.AddCors(options =>
 		{
-			options.AddPolicy("AllowSpecificOrigin",
+			options.AddDefaultPolicy(
 				builder => builder
 					.SetIsOriginAllowed(o => true)
 					// .WithOrigins("https://localhost:7102")
 					.AllowAnyMethod()
-					.AllowAnyHeader()
-					.AllowCredentials()); 
+					.AllowAnyHeader()); 
 		});
 		
 		services.AddLogging(logging =>
@@ -125,24 +124,5 @@ public class Startup(ArangoConfiguration config, string colorFile)
 		services.AddControllers();
 		services.AddQuartzHostedService();
 		services.AddHostedService<StartupHandler>();
-	}
-
-	// This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-	public static void Configure(IApplicationBuilder app, IWebHostEnvironment env)
-	{
-		app.UseCors("AllowSpecificOrigin");
-		
-		if (env.EnvironmentName == "Development")
-		{
-			app.UseDeveloperExceptionPage();
-		}
-
-		app.UseRouting();
-		app.UseAuthorization();
-		app.UseEndpoints(endpoints =>
-		{
-			endpoints.MapControllers();
-			endpoints.MapRazorPages();
-		});
 	}
 }
