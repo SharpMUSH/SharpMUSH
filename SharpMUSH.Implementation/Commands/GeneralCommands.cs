@@ -1117,8 +1117,45 @@ public partial class Commands
 		MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> NoSpoofEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
+		var executorLocation = await executor.Where();
+		var contents = await executorLocation.Content(Mediator!);
+		var isSpoof = true;
+		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
+		var message = isNoEvaluation
+			? ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.empty())
+			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, MModule.empty());
+
+		var interactableContents = contents
+			.ToAsyncEnumerable()
+			.Where(async (obj, _) =>
+				await PermissionService!.CanInteract(obj.WithRoomOption(), executor,
+					IPermissionService.InteractType.Hear));
+
+		if (isSpoof)
+		{
+			var canSpoof = await executor.HasPower("CAN_SPOOF");
+			var controlsExecutor = await PermissionService!.Controls(executor, enactor);
+
+			if (!canSpoof && !controlsExecutor)
+			{
+				await NotifyService!.Notify(executor, "You do not have permission to spoof emits.");
+				return new CallState(Errors.ErrorPerm);
+			}
+		}
+
+		await foreach (var obj in interactableContents)
+		{
+			await NotifyService!.Notify(
+				obj.WithRoomOption(),
+				message,
+				isSpoof ? enactor : executor,
+				INotifyService.NotificationType.NSEmit);
+		}
+
+		return new CallState(message);
 	}
 
 	[SharpCommand(Name = "@NSREMIT", Switches = ["LIST", "NOEVAL", "NOISY", "SILENT"],

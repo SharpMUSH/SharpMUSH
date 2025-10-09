@@ -1,6 +1,5 @@
 ﻿using System.Reflection;
 using Mediator;
-using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
