@@ -1,4 +1,4 @@
-﻿using System.Drawing;
+﻿using Antlr4.Runtime.Misc;
 using OneOf;
 using OneOf.Types;
 using SharpMUSH.Implementation.Commands.ChannelCommand;
@@ -18,6 +18,8 @@ using SharpMUSH.Library.Queries;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Drawing;
+using System.Numerics;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using StringExtensions = ANSILibrary.StringExtensions;
 
@@ -1694,6 +1696,213 @@ public partial class Commands
 		MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Sweep(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+
+		//dbref here = Location(player);
+		//int connect_flag = 0;
+		//int here_flag = 0;
+		//int inven_flag = 0;
+		//int exit_flag = 0;
+		//char nhere[BUFFER_LEN];
+
+		//if (here == NOTHING)
+		//	return;
+
+		//if (arg1 && *arg1)
+		//{
+		//	if (string_prefix(arg1, "connected"))
+		//		connect_flag = 1;
+		//	else if (string_prefix(arg1, "here"))
+		//		here_flag = 1;
+		//	else if (string_prefix(arg1, "inventory"))
+		//		inven_flag = 1;
+		//	else if (string_prefix(arg1, "exits"))
+		//		exit_flag = 1;
+		//	else
+		//	{
+		//		notify(player, T("Invalid parameter."));
+		//		return;
+		//	}
+		//}
+
+		//strcpy(nhere, AName(here, AN_LOOK, NULL));
+
+		//if (!inven_flag && !exit_flag)
+		//{
+		//	notify(player, T("Listening in ROOM:"));
+
+		//	if (connect_flag)
+		//	{
+		//		/* only worry about puppet and players who's owner's are connected */
+		//		if (Connected(here) || (Puppet(here) && Connected(Owner(here))))
+		//		{
+		//			if (IsPlayer(here))
+		//			{
+		//				notify_format(player, T("%s is listening."), nhere);
+		//			}
+		//			else
+		//			{
+		//				notify_format(player, T("%s [owner: %s] is listening."), nhere,
+		//											AName(Owner(here), AN_LOOK, NULL));
+		//			}
+		//		}
+		//	}
+		//	else
+		//	{
+		//		if (Hearer(here) || Listener(here))
+		//		{
+		//			if (Connected(here))
+		//				notify_format(player, T("%s (this room) [speech]. (connected)"),
+		//											nhere);
+		//			else
+		//				notify_format(player, T("%s (this room) [speech]."), nhere);
+		//		}
+		//		if (Commer(here))
+		//			notify_format(player, T("%s (this room) [commands]."), nhere);
+		//		if (Audible(here))
+		//			notify_format(player, T("%s (this room) [broadcasting]."), nhere);
+		//	}
+
+		//	for (here = Contents(here); here != NOTHING; here = Next(here))
+		//	{
+		//		if (connect_flag)
+		//		{
+		//			/* only worry about puppet and players who's owner's are connected */
+		//			if (Connected(here) || (Puppet(here) && Connected(Owner(here))))
+		//			{
+		//				if (IsPlayer(here))
+		//				{
+		//					notify_format(player, T("%s is listening."),
+		//												AName(here, AN_LOOK, NULL));
+		//				}
+		//				else
+		//				{
+		//					strcpy(nhere, AName(here, AN_LOOK, NULL));
+		//					notify_format(player, T("%s [owner: %s] is listening."), nhere,
+		//												AName(Owner(here), AN_LOOK, NULL));
+		//				}
+		//			}
+		//		}
+		//		else
+		//		{
+		//			if (Hearer(here) || Listener(here))
+		//			{
+		//				if (Connected(here))
+		//					notify_format(player, T("%s [speech]. (connected)"),
+		//												AName(here, AN_LOOK, NULL));
+		//				else
+		//					notify_format(player, T("%s [speech]."),
+		//												AName(here, AN_LOOK, NULL));
+		//			}
+		//			if (Commer(here))
+		//				notify_format(player, T("%s [commands]."),
+		//											AName(here, AN_LOOK, NULL));
+		//		}
+		//	}
+		//}
+		//if (!connect_flag && !inven_flag && IsRoom(Location(player)))
+		//{
+		//	notify(player, T("Listening EXITS:"));
+		//	if (Audible(Location(player)))
+		//	{
+		//		/* listening exits only work if the room is AUDIBLE */
+		//		for (here = Exits(Location(player)); here != NOTHING; here = Next(here))
+		//		{
+		//			if (Audible(here))
+		//			{
+		//				notify_format(player, T("%s [broadcasting]."),
+		//											AName(here, AN_LOOK, NULL));
+		//			}
+		//		}
+		//	}
+		//}
+		//if (!here_flag && !exit_flag)
+		//{
+		//	notify(player, T("Listening in your INVENTORY:"));
+
+		//	for (here = Contents(player); here != NOTHING; here = Next(here))
+		//	{
+		//		if (connect_flag)
+		//		{
+		//			/* only worry about puppet and players who's owner's are connected */
+		//			if (Connected(here) || (Puppet(here) && Connected(Owner(here))))
+		//			{
+		//				if (IsPlayer(here))
+		//				{
+		//					notify_format(player, T("%s is listening."),
+		//												AName(here, AN_LOOK, NULL));
+		//				}
+		//				else
+		//				{
+		//					strcpy(nhere, AName(here, AN_LOOK, NULL));
+		//					notify_format(player, T("%s [owner: %s] is listening."), nhere,
+		//												AName(Owner(here), AN_LOOK, NULL));
+		//				}
+		//			}
+		//		}
+		//		else
+		//		{
+		//			if (Hearer(here) || Listener(here))
+		//			{
+		//				if (Connected(here))
+		//					notify_format(player, T("%s [speech]. (connected)"),
+		//												AName(here, AN_LOOK, NULL));
+		//				else
+		//					notify_format(player, T("%s [speech]."),
+		//												AName(here, AN_LOOK, NULL));
+		//			}
+		//			if (Commer(here))
+		//				notify_format(player, T("%s [commands]."),
+		//											AName(here, AN_LOOK, NULL));
+		//		}
+		//	}
+		//}
+
+		bool connect_flag = false, 
+			here_flag = false, 
+			inventory_flag = false, 
+			exits_flag = false;
+
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var location = await executor.Where();
+		var locationObj = location.Object();
+		var locationAnyObject = location.WithRoomOption();
+		var locationOwner = await locationObj.Owner.WithCancellation(CancellationToken.None);
+
+		if (!inventory_flag && !here_flag)
+		{
+			if (connect_flag)
+			{
+				if (ConnectionService!.IsConnected(locationAnyObject))
+				{
+					await NotifyService!.Notify(executor, $"{locationObj.Name} is listening.");
+				}
+				else if (await locationAnyObject.IsPuppet()
+					&& ConnectionService!.IsConnected(locationOwner))
+				{
+					await NotifyService!.Notify(executor, $"{locationObj.Name} [owner: {locationOwner}] is listening.");
+				}
+			}
+		}
+
+		/*
+  @sweep gives you a list of all objects/players that are listening in
+  the room you are currently in, as well as the objects you are
+  carrying. Most objects only listen for a particular string or
+  phrase, so they normally do not pose a problem if you need privacy.
+  You will have to be careful of players and puppets since they will
+  hear everything you say and do. (And might post the same to r.g.m!)
+  AUDIBLE exits are also shown on an ordinary sweep, if the room is
+  also AUDIBLE. (Audible exits aren't active unless the room is audible).
+ 
+  The four command options can also be used as switches (i.e., you
+  can use "@sweep/connected" instead of "@sweep connected"). 
+  If the connected flag is given, only connected players and puppets
+  owned by connected players will be shown in the @sweep.
+  The "here" and "inventory" flags check only your location or
+  inventory, respectively. "exits" only checks for AUDIBLE exits.
+		*/
+
+
 		await ValueTask.CompletedTask;
 		throw new NotImplementedException();
 	}
