@@ -2,6 +2,8 @@ using System.Net;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using OneOf;
+using OneOf.Types;
 using SharpMUSH.Client.Services;
 
 namespace SharpMUSH.Tests.Client;
@@ -93,6 +95,6 @@ public class AdminConfigServiceTests(IHttpClientFactory httpClient)
 		var options = await service.GetOptionsAsync();
 
 		// Assert
-		await Assert.That(options).IsNotNull();
+		await Assert.That(options.IsT1).IsFalse();
 	}
 }

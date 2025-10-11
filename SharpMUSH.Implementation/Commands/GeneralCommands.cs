@@ -1857,6 +1857,7 @@ public partial class Commands
 		//	}
 		//}
 
+		/*
 		bool connect_flag = false, 
 			here_flag = false, 
 			inventory_flag = false, 
@@ -1883,6 +1884,7 @@ public partial class Commands
 				}
 			}
 		}
+		*/
 
 		/*
   @sweep gives you a list of all objects/players that are listening in
