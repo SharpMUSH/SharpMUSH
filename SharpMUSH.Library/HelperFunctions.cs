@@ -5,6 +5,7 @@ using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Text.RegularExpressions;
 
@@ -57,18 +58,56 @@ public static partial class HelperFunctions
 	public static async ValueTask<bool> IsOrphan(this AnySharpObject obj)
 		=> await obj.HasPower("Orphan");
 
+	public static async ValueTask<bool> IsListener(this AnySharpObject obj) => await obj.HasFlag("Monitor");
+
+
 	public static async ValueTask<bool> IsAlive(this AnySharpObject obj)
 		=> obj.IsPlayer
-		   || await IsPuppet(obj)
-		   || (await IsAudible(obj) && (await obj.Object().Attributes.WithCancellation(CancellationToken.None))
-			   .Any(x => x.Name == "FORWARDLIST"));
+			 || await IsPuppet(obj)
+			 || (await IsAudible(obj) && (await obj.Object().Attributes.WithCancellation(CancellationToken.None))
+				 .Any(x => x.Name == "FORWARDLIST"));
 
 	public static async ValueTask<bool> IsPuppet(this AnySharpObject obj)
 		=> await obj.HasPower("Puppet");
 
 	public static async ValueTask<bool> HasPower(this AnySharpObject obj, string power)
 		=> (await obj.Object().Powers.WithCancellation(CancellationToken.None))
-			.Any(x => x.Name == power || x.Alias == power);
+			.Any(x => x.Name.Equals(power, StringComparison.InvariantCultureIgnoreCase) || x.Alias.Equals(power, StringComparison.InvariantCultureIgnoreCase));
+
+	public static async ValueTask<bool> IsHearer(this AnySharpObject obj, IConnectionService connections, IAttributeService attributes)
+	{
+		if (connections.IsConnected(obj) || await obj.IsPuppet())
+		{
+			return true;
+		}
+
+		if (await obj.IsAudible() && (await attributes.GetAttributeAsync(obj, obj, "FORWARDLIST", IAttributeService.AttributeMode.Read, true)).IsAttribute)
+		{
+			return true;
+		}
+
+		if ((await attributes.GetAttributeAsync(obj, obj, "LISTEN", IAttributeService.AttributeMode.Read, true)).IsAttribute)
+		{
+			return true;
+		}
+
+		return false;
+	}
+
+
+	public static async ValueTask<bool> HasActiveCommands(this AnySharpObject obj, IAttributeService attributes)
+	{
+		if (await obj.HasFlag("NO_COMMAND")) return false;
+
+		var attrs = await attributes.GetAttributePatternAsync(obj, obj, "*", true, IAttributeService.AttributePatternMode.Wildcard);
+		if (!attrs.IsAttribute)
+		{
+			return false;
+		}
+
+		return attrs.AsAttributes
+			.Any(x => x.IsCommand());
+	}
 
 	public static bool HasType(this AnySharpObject obj, string validType) =>
 		validType switch
@@ -77,24 +116,24 @@ public static partial class HelperFunctions
 			"THING" => obj.IsThing,
 			"ROOM" => obj.IsRoom,
 			"EXIT" => obj.IsExit,
-			_ => true, 
+			_ => true,
 		};
-	
+
 	public static string TypeString(this AnySharpObject obj) =>
 		obj switch
 		{
-			{IsPlayer: true} => "PLAYER",
-			{IsThing: true} => "THING",
-			{IsRoom: true} => "ROOM",
-			{IsExit: true} => "EXIT",
+			{ IsPlayer: true } => "PLAYER",
+			{ IsThing: true } => "THING",
+			{ IsRoom: true } => "ROOM",
+			{ IsExit: true } => "EXIT",
 			_ => "OBJECT"
 		};
-	
+
 	public static async ValueTask<bool> HasLongFingers(this AnySharpObject obj)
 		=> await obj.IsPriv() || await obj.HasPower("Long_Fingers");
 
 	public static async ValueTask<bool> HasFlag(this AnySharpObject obj, string flag)
-		=> (await obj.Object().Flags.WithCancellation(CancellationToken.None)).Any(x => x.Name == flag);
+		=> (await obj.Object().Flags.WithCancellation(CancellationToken.None)).Any(x => x.Name.Equals(flag, StringComparison.InvariantCultureIgnoreCase));
 
 	// This may belong in the Permission Service.
 	public static async ValueTask<bool> CanDark(this AnySharpObject obj)
@@ -123,15 +162,15 @@ public static partial class HelperFunctions
 
 	public static async ValueTask<bool> Inheritable(this AnySharpObject obj)
 		=> obj.IsPlayer
-		   || await obj.HasFlag("Trust")
-		   || (await (await obj.Object().Owner.WithCancellation(CancellationToken.None))
-			   .Object.Flags.WithCancellation(CancellationToken.None)).Any(x => x.Name == "Trust")
-		   || await IsWizard(obj);
+			 || await obj.HasFlag("Trust")
+			 || (await (await obj.Object().Owner.WithCancellation(CancellationToken.None))
+				 .Object.Flags.WithCancellation(CancellationToken.None)).Any(x => x.Name == "Trust")
+			 || await IsWizard(obj);
 
 	public static async ValueTask<bool> Owns(this AnySharpObject who,
 		AnySharpObject what)
 		=> (await who.Object().Owner.WithCancellation(CancellationToken.None)).Object.Id ==
-		   (await what.Object().Owner.WithCancellation(CancellationToken.None)).Object.Id;
+			 (await what.Object().Owner.WithCancellation(CancellationToken.None)).Object.Id;
 
 	/// <summary>
 	/// Takes the pattern of '#DBREF/attribute' and splits it out if possible.
@@ -142,7 +181,7 @@ public static partial class HelperFunctions
 	{
 		var match = DatabaseReferenceWithAttributeRegex.Match(dbReferenceAttr);
 		var obj = match.Groups["Object"].Value;
-		
+
 		// TODO: Validate Attribute Pattern!
 		var attr = match.Groups["Attribute"].Value;
 
@@ -151,7 +190,7 @@ public static partial class HelperFunctions
 				: new None()
 			;
 	}
-	
+
 	/// <summary>
 	/// Takes the pattern of 'Object/attribute' and splits it out if possible.
 	/// </summary>
@@ -161,7 +200,7 @@ public static partial class HelperFunctions
 	{
 		var match = ObjectWithAttributeRegex.Match(objectAttr);
 		var obj = match.Groups["Object"].Value;
-		
+
 		// TODO: Validate Attribute Pattern!
 		var attr = match.Groups["Attribute"].Value;
 
@@ -174,7 +213,7 @@ public static partial class HelperFunctions
 	{
 		var match = OptionalDatabaseReferenceWithAttributeRegex.Match(ObjectAttr);
 		var obj = match.Groups["Object"].Value;
-		
+
 		// TODO: Validate Attribute Pattern!
 		var attr = match.Groups["Attribute"].Value;
 
@@ -192,14 +231,14 @@ public static partial class HelperFunctions
 	public static async ValueTask<bool> SafeToAddParent(AnySharpObject start, AnySharpObject newParent)
 	{
 		var newParentDbRef = newParent.Object().DBRef;
-		
+
 		if ((await start.Object().Parent.WithCancellation(CancellationToken.None)).Object()!.DBRef == newParentDbRef)
 		{
 			return true;
 		}
-		
+
 		var children = await start.Object().Children.WithCancellation(CancellationToken.None);
-		
+
 		return children.All(x => x.DBRef != newParentDbRef);
 	}
 
@@ -207,7 +246,7 @@ public static partial class HelperFunctions
 	{
 		var match = DatabaseReferenceWithOptionalAttributeRegex.Match(DBRefAttr);
 		var obj = match.Groups["Object"].Value;
-		
+
 		// TODO: Validate Attribute Pattern!
 		var attr = match.Groups["Attribute"].Value;
 
@@ -240,7 +279,7 @@ public static partial class HelperFunctions
 	/// <returns>A regex that has a named group for the Object and Attribute.</returns>
 	[GeneratedRegex(@"#(?<Object>\d+(:\d+)?)/(?<Attribute>[a-zA-Z1-9@_\-\.`]+)")]
 	private static partial Regex DatabaseReferenceWithAttribute();
-	
+
 	/// <summary>
 	/// A regular expression that takes the form of 'Object/attributeName'.
 	/// </summary>

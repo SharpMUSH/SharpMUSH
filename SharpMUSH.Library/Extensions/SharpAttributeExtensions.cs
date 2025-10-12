@@ -38,7 +38,8 @@ public static class SharpAttributeExtensions
 		=> attribute.Flags.Any(x => x.Name == "SAFE");
 
 	public static bool IsCommand(this SharpAttribute attribute)
-		=> attribute.Flags.Any(x => x.Name == "COMMAND");
+		// TODO: Command Pattern. This code is repeated in several places.
+		=> attribute.Flags.All(x => x.Name != "NO_COMMAND") && attribute.Value.ToString().StartsWith('$');
 
 	public static bool IsListen(this SharpAttribute attribute)
 		=> attribute.Flags.Any(x => x.Name == "LISTEN");
