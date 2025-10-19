@@ -28,7 +28,7 @@ namespace SharpMUSH.Implementation.Commands;
 public partial class Commands
 {
 	[SharpCommand(Name = "@@", Switches = [], Behavior = CB.Default | CB.NoParse, MinArgs = 0, MaxArgs = 0)]
-	public static ValueTask<Option<CallState>> At(IMUSHCodeParser parser, SharpCommandAttribute _2) 
+	public static ValueTask<Option<CallState>> At(IMUSHCodeParser parser, SharpCommandAttribute _2)
 		=> ValueTask.FromResult(new Option<CallState>(CallState.Empty));
 
 	[SharpCommand(Name = "THINK", Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
@@ -212,11 +212,11 @@ public partial class Commands
 		var objPowers = await obj.Powers.WithCancellation(CancellationToken.None);
 
 		var nameRow = MModule.multiple([
-			name.Hilight(), 
-			MModule.single(" "), 
+			name.Hilight(),
+			MModule.single(" "),
 			MModule.single($"(#{obj.DBRef.Number}{string.Join(string.Empty, objFlags.Select(x => x.Symbol))})")
 		]);
-		
+
 		var typeAndFlagsRow = MModule.single($"Type: {obj.Type} Flags: {string.Join(" ", objFlags.Select(x => x.Name))}");
 		var descriptionRow = description;
 		var ownerRow = MModule.single($"Owner: {ownerName.Hilight()}" +
@@ -239,7 +239,7 @@ public partial class Commands
 			powersRow,
 			createdRow
 		]));
-		
+
 		var atrs = await AttributeService!.GetVisibleAttributesAsync(enactor, viewing.Known());
 
 		if (atrs.IsAttribute)
@@ -257,7 +257,7 @@ public partial class Commands
 
 		// TODO: Proper carry format.
 		await NotifyService!.Notify(enactor, $"Contents: \n" +
-		                                           $"{string.Join("\n", contentKeys)}");
+		                                     $"{string.Join("\n", contentKeys)}");
 
 		if (!viewing.IsRoom)
 		{
@@ -1389,31 +1389,52 @@ public partial class Commands
 
 		return switches switch
 		{
-			[.., "LIST"] => await ChannelCommand.ChannelList.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, args["0"].Message!, args["1"].Message!, switches),
-			["WHAT"] => await ChannelWhat.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, args["0"].Message!),
-			["WHO"] => await ChannelWho.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, args["0"].Message!),
-			["ON"] or ["JOIN"] => await ChannelOn.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!,  args["0"].Message!, args["1"].Message),
-			["OFF"] or ["LEAVE"] => await ChannelOff.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, args["0"].Message!, args["1"].Message),
-			["GAG"] => await ChannelGag.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, args["0"].Message!, args["1"].Message!, switches),
-			["MUTE"] => await ChannelMute.Handle(parser,LocateService!, PermissionService!, Mediator!, NotifyService!,  args["0"].Message!, args["1"].Message!),
-			["HIDE"] => await ChannelHide.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, args["0"].Message!, args["1"].Message!),
-			["COMBINE"] => await ChannelCombine.Handle(parser,LocateService!, PermissionService!, Mediator!, NotifyService!,  args["0"].Message!, args["1"].Message!),
-			["TITLE"] => await ChannelTitle.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, args["0"].Message!, args["1"].Message!),
-			[.., "RECALL"] => await ChannelRecall.Handle(parser,LocateService!, PermissionService!, Mediator!, NotifyService!,  args["0"].Message!, args["1"].Message!, switches),
+			[.., "LIST"] => await ChannelCommand.ChannelList.Handle(parser, LocateService!, PermissionService!, Mediator!,
+				NotifyService!, args["0"].Message!, args["1"].Message!, switches),
+			["WHAT"] => await ChannelWhat.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!,
+				args["0"].Message!),
+			["WHO"] => await ChannelWho.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!,
+				args["0"].Message!),
+			["ON"] or ["JOIN"] => await ChannelOn.Handle(parser, LocateService!, PermissionService!, Mediator!,
+				NotifyService!, args["0"].Message!, args["1"].Message),
+			["OFF"] or ["LEAVE"] => await ChannelOff.Handle(parser, LocateService!, PermissionService!, Mediator!,
+				NotifyService!, args["0"].Message!, args["1"].Message),
+			["GAG"] => await ChannelGag.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!,
+				args["0"].Message!, args["1"].Message!, switches),
+			["MUTE"] => await ChannelMute.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!,
+				args["0"].Message!, args["1"].Message!),
+			["HIDE"] => await ChannelHide.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!,
+				args["0"].Message!, args["1"].Message!),
+			["COMBINE"] => await ChannelCombine.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!,
+				args["0"].Message!, args["1"].Message!),
+			["TITLE"] => await ChannelTitle.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!,
+				args["0"].Message!, args["1"].Message!),
+			[.., "RECALL"] => await ChannelRecall.Handle(parser, LocateService!, PermissionService!, Mediator!,
+				NotifyService!, args["0"].Message!, args["1"].Message!, switches),
 			["ADD"] when args.ContainsKey("0") && args.ContainsKey("1")
-				=> await ChannelAdd.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, Configuration!, args["0"].Message!, args["1"].Message!),
+				=> await ChannelAdd.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!,
+					Configuration!, args["0"].Message!, args["1"].Message!),
 			["PRIVS"] when args.ContainsKey("0") && args.ContainsKey("1")
-				=> await ChannelPrivs.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, args["0"].Message!, args["1"].Message!),
+				=> await ChannelPrivs.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!,
+					args["0"].Message!, args["1"].Message!),
 			["DESCRIBE"] when args.ContainsKey("0") && args.ContainsKey("1")
-				=> await ChannelDescribe.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, args["0"].Message!, args["1"].Message!),
+				=> await ChannelDescribe.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!,
+					args["0"].Message!, args["1"].Message!),
 			["BUFFER"] when args.ContainsKey("0") && args.ContainsKey("1")
-				=> await ChannelBuffer.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, Configuration!, args["0"].Message!, args["1"].Message!),
-			[.., "DECOMPILE"] => await ChannelDecompile.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, args["0"].Message!, args["1"].Message!, switches),
-			["CHOWN"] => await ChannelChown.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, args["0"].Message!, args["1"].Message!),
-			["RENAME"] => await ChannelRename.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, Configuration!, args["0"].Message!, args["1"].Message!),
-			["WIPE"] => await ChannelWipe.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, args["0"].Message!, args["1"].Message!),
-			["DELETE"] => await ChannelDelete.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, args["0"].Message!, args["1"].Message!),
-			["MOGRIFIER"] => await ChannelMogrifier.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, args["0"].Message!, args["1"].Message!),
+				=> await ChannelBuffer.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!,
+					Configuration!, args["0"].Message!, args["1"].Message!),
+			[.., "DECOMPILE"] => await ChannelDecompile.Handle(parser, LocateService!, PermissionService!, Mediator!,
+				NotifyService!, args["0"].Message!, args["1"].Message!, switches),
+			["CHOWN"] => await ChannelChown.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!,
+				args["0"].Message!, args["1"].Message!),
+			["RENAME"] => await ChannelRename.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!,
+				Configuration!, args["0"].Message!, args["1"].Message!),
+			["WIPE"] => await ChannelWipe.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!,
+				args["0"].Message!, args["1"].Message!),
+			["DELETE"] => await ChannelDelete.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!,
+				args["0"].Message!, args["1"].Message!),
+			["MOGRIFIER"] => await ChannelMogrifier.Handle(parser, LocateService!, PermissionService!, Mediator!,
+				NotifyService!, args["0"].Message!, args["1"].Message!),
 			_ => new CallState("What do you want to do with the channel?")
 		};
 	}
@@ -1613,34 +1634,52 @@ public partial class Commands
 
 		var response = switches.AsSpan() switch
 		{
-			[.., "FOLDER"] when executor.IsPlayer => await FolderMail.Handle(parser, ObjectDataService!, Mediator!, NotifyService!, arg0, arg1, switches),
-			[.., "UNFOLDER"] when executor.IsPlayer => await FolderMail.Handle(parser, ObjectDataService!, Mediator!, NotifyService!, arg0, arg1, switches),
-			[.., "FILE"] when executor.IsPlayer => await FolderMail.Handle(parser, ObjectDataService!, Mediator!, NotifyService!, arg0, arg1, switches),
-			[.., "CLEAR"] when executor.IsPlayer => await StatusMail.Handle(parser, ObjectDataService!, Mediator!, NotifyService!, arg0, arg1, "CLEAR"),
-			[.., "UNCLEAR"] when executor.IsPlayer => await StatusMail.Handle(parser, ObjectDataService!, Mediator!, NotifyService!, arg0, arg1, "UNCLEAR"),
-			[.., "TAG"] when executor.IsPlayer => await StatusMail.Handle(parser, ObjectDataService!, Mediator!, NotifyService!, arg0, arg1, "TAG"),
-			[.., "UNTAG"] when executor.IsPlayer => await StatusMail.Handle(parser, ObjectDataService!, Mediator!, NotifyService!, arg0, arg1, "UNTAG"),
-			[.., "UNREAD"] when executor.IsPlayer => await StatusMail.Handle(parser, ObjectDataService!, Mediator!, NotifyService!, arg0, arg1, "UNREAD"),
-			[.., "STATUS"] when executor.IsPlayer => await StatusMail.Handle(parser, ObjectDataService!, Mediator!, NotifyService!, arg0, arg1, "STATUS"),
-			[.., "CSTATS"] when executor.IsPlayer => await StatsMail.Handle(parser, ObjectDataService!, LocateService!, Mediator!, NotifyService!, arg0, switches),
-			[.., "STATS"] when executor.IsPlayer => await StatsMail.Handle(parser, ObjectDataService!, LocateService!, Mediator!, NotifyService!, arg0, switches),
-			[.., "DSTATS"] when executor.IsPlayer => await StatsMail.Handle(parser, ObjectDataService!, LocateService!, Mediator!, NotifyService!, arg0, switches),
-			[.., "FSTATS"] when executor.IsPlayer => await StatsMail.Handle(parser, ObjectDataService!, LocateService!, Mediator!, NotifyService!, arg0, switches),
+			[.., "FOLDER"] when executor.IsPlayer => await FolderMail.Handle(parser, ObjectDataService!, Mediator!,
+				NotifyService!, arg0, arg1, switches),
+			[.., "UNFOLDER"] when executor.IsPlayer => await FolderMail.Handle(parser, ObjectDataService!, Mediator!,
+				NotifyService!, arg0, arg1, switches),
+			[.., "FILE"] when executor.IsPlayer => await FolderMail.Handle(parser, ObjectDataService!, Mediator!,
+				NotifyService!, arg0, arg1, switches),
+			[.., "CLEAR"] when executor.IsPlayer => await StatusMail.Handle(parser, ObjectDataService!, Mediator!,
+				NotifyService!, arg0, arg1, "CLEAR"),
+			[.., "UNCLEAR"] when executor.IsPlayer => await StatusMail.Handle(parser, ObjectDataService!, Mediator!,
+				NotifyService!, arg0, arg1, "UNCLEAR"),
+			[.., "TAG"] when executor.IsPlayer => await StatusMail.Handle(parser, ObjectDataService!, Mediator!,
+				NotifyService!, arg0, arg1, "TAG"),
+			[.., "UNTAG"] when executor.IsPlayer => await StatusMail.Handle(parser, ObjectDataService!, Mediator!,
+				NotifyService!, arg0, arg1, "UNTAG"),
+			[.., "UNREAD"] when executor.IsPlayer => await StatusMail.Handle(parser, ObjectDataService!, Mediator!,
+				NotifyService!, arg0, arg1, "UNREAD"),
+			[.., "STATUS"] when executor.IsPlayer => await StatusMail.Handle(parser, ObjectDataService!, Mediator!,
+				NotifyService!, arg0, arg1, "STATUS"),
+			[.., "CSTATS"] when executor.IsPlayer => await StatsMail.Handle(parser, ObjectDataService!, LocateService!,
+				Mediator!, NotifyService!, arg0, switches),
+			[.., "STATS"] when executor.IsPlayer => await StatsMail.Handle(parser, ObjectDataService!, LocateService!,
+				Mediator!, NotifyService!, arg0, switches),
+			[.., "DSTATS"] when executor.IsPlayer => await StatsMail.Handle(parser, ObjectDataService!, LocateService!,
+				Mediator!, NotifyService!, arg0, switches),
+			[.., "FSTATS"] when executor.IsPlayer => await StatsMail.Handle(parser, ObjectDataService!, LocateService!,
+				Mediator!, NotifyService!, arg0, switches),
 			[.., "DEBUG"] => await AdminMail.Handle(parser, Mediator!, NotifyService!, switches),
 			[.., "NUKE"] => await AdminMail.Handle(parser, Mediator!, NotifyService!, switches),
 			[.., "REVIEW"] when (arg0?.Length ?? 0) != 0 && (arg1?.Length ?? 0) != 0
-				=> await ReviewMail.Handle(parser, LocateService!, ObjectDataService!, Mediator!, NotifyService!, arg0, arg1, switches),
+				=> await ReviewMail.Handle(parser, LocateService!, ObjectDataService!, Mediator!, NotifyService!, arg0, arg1,
+					switches),
 			[.., "RETRACT"] when (arg0?.Length ?? 0) != 0 && (arg1?.Length ?? 0) != 0
-				=> await RetractMail.Handle(parser, ObjectDataService!, LocateService!, Mediator!, NotifyService!, arg0!.ToPlainText(), arg1!.ToPlainText()),
+				=> await RetractMail.Handle(parser, ObjectDataService!, LocateService!, Mediator!, NotifyService!,
+					arg0!.ToPlainText(), arg1!.ToPlainText()),
 			[.., "FWD"] when executor.IsPlayer && int.TryParse(arg0?.ToPlainText(), out var number) &&
 			                 (arg1?.Length ?? 0) != 0
-				=> await ForwardMail.Handle(parser, ObjectDataService!, LocateService!, PermissionService!, Mediator!, number, arg1!.ToPlainText()),
+				=> await ForwardMail.Handle(parser, ObjectDataService!, LocateService!, PermissionService!, Mediator!, number,
+					arg1!.ToPlainText()),
 			[.., "SEND"] or [.., "URGENT"] or [.., "SILENT"] or [.., "NOSIG"] or []
 				when arg0?.Length != 0 && arg1?.Length != 0
-				=> await SendMail.Handle(parser, PermissionService!, ObjectDataService!, Mediator!, NotifyService!, arg0!, arg1!, switches),
+				=> await SendMail.Handle(parser, PermissionService!, ObjectDataService!, Mediator!, NotifyService!, arg0!,
+					arg1!, switches),
 			[.., "READ"] or [] when executor.IsPlayer && (arg1?.Length ?? 0) == 0 &&
 			                        int.TryParse(arg0?.ToPlainText(), out var number)
-				=> await ReadMail.Handle(parser, ObjectDataService!, Mediator!, NotifyService!, Math.Max(0, number - 1), switches),
+				=> await ReadMail.Handle(parser, ObjectDataService!, Mediator!, NotifyService!, Math.Max(0, number - 1),
+					switches),
 			[.., "LIST"] or [] when executor.IsPlayer && (arg1?.Length ?? 0) == 0
 				=> await ListMail.Handle(parser, ObjectDataService!, Mediator!, NotifyService!, arg0, arg1, switches),
 			_ => MModule.single("#-1 BAD ARGUMENTS TO MAIL COMMAND")
@@ -1724,19 +1763,22 @@ public partial class Commands
 					}
 					else
 					{
-						await NotifyService!.Notify(executor, $"{locationObj.Name} [owner: {locationOwner.Object.Name}] is listening.");
+						await NotifyService!.Notify(executor,
+							$"{locationObj.Name} [owner: {locationOwner.Object.Name}] is listening.");
 					}
 				}
 			}
 			else
 			{
-				if (await locationAnyObject.IsHearer(ConnectionService!, AttributeService!) || await locationAnyObject.IsListener())
+				if (await locationAnyObject.IsHearer(ConnectionService!, AttributeService!) ||
+				    await locationAnyObject.IsListener())
 				{
 					if (ConnectionService!.IsConnected(locationAnyObject))
 						await NotifyService!.Notify(executor, $"{locationObj.Name} (this room) [speech]. (connected)");
 					else
 						await NotifyService!.Notify(executor, $"{locationObj.Name} (this room) [speech].");
 				}
+
 				if (await locationAnyObject.HasActiveCommands(AttributeService!))
 					await NotifyService!.Notify(executor, $"{locationObj.Name} (this room) [commands].");
 				if (await locationAnyObject.IsAudible())
@@ -1759,7 +1801,8 @@ public partial class Commands
 						}
 						else
 						{
-							await NotifyService!.Notify(executor, $"{obj.Object().Name} [owner: {objOwner!.Object.Name}] is listening.");
+							await NotifyService!.Notify(executor,
+								$"{obj.Object().Name} [owner: {objOwner!.Object.Name}] is listening.");
 						}
 					}
 				}
@@ -1772,6 +1815,7 @@ public partial class Commands
 						else
 							await NotifyService!.Notify(executor, $"{obj.Object().Name} [speech].");
 					}
+
 					if (await fullObj.HasActiveCommands(AttributeService!))
 						await NotifyService!.Notify(executor, $"{obj.Object().Name} [commands].");
 				}
@@ -1813,7 +1857,8 @@ public partial class Commands
 						}
 						else
 						{
-							await NotifyService!.Notify(executor, $"{obj.Object().Name} [owner: {objOwner.Object.Name}] is listening.");
+							await NotifyService!.Notify(executor,
+								$"{obj.Object().Name} [owner: {objOwner.Object.Name}] is listening.");
 						}
 					}
 				}
@@ -1826,6 +1871,7 @@ public partial class Commands
 						else
 							await NotifyService!.Notify(executor, $"{obj.Object().Name} [speech].");
 					}
+
 					if (await fullObj.HasActiveCommands(AttributeService!))
 						await NotifyService!.Notify(executor, $"{obj.Object().Name} [commands].");
 				}
@@ -1836,9 +1882,10 @@ public partial class Commands
 
 		static async Task<bool> IsConnectedOrPuppetConnected(AnySharpObject obj)
 		{
-			if (ConnectionService!.IsConnected(obj))
-				return true;
-			return (await obj.IsPuppet() && ConnectionService!.IsConnected(await obj.Object().Owner.WithCancellation(CancellationToken.None)));
+			if (ConnectionService!.IsConnected(obj)) return true;
+
+			return await obj.IsPuppet()
+			       && ConnectionService!.IsConnected(await obj.Object().Owner.WithCancellation(CancellationToken.None));
 		}
 	}
 
