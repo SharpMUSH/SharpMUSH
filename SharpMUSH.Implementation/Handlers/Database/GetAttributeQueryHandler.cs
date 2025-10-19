@@ -14,6 +14,14 @@ public class GetAttributeQueryHandler(ISharpDatabase database)
 		=> await database.GetAttributeAsync(request.DBRef, request.Attribute);
 }
 
+public class GetLazyAttributeQueryHandler(ISharpDatabase database)
+	: IQueryHandler<GetLazyAttributeQuery, IAsyncEnumerable<LazySharpAttribute>?>
+{
+	public async ValueTask<IAsyncEnumerable<LazySharpAttribute>?> Handle(GetLazyAttributeQuery request,
+		CancellationToken cancellationToken)
+		=> await database.GetLazyAttributeAsync(request.DBRef, request.Attribute);
+}
+
 public class GetAttributesQueryHandler(ISharpDatabase database)
 	: IQueryHandler<GetAttributesQuery, IAsyncEnumerable<SharpAttribute>?>
 {

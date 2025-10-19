@@ -68,6 +68,9 @@ public static class SharpAttributeExtensions
 	public static bool IsPublic(this SharpAttribute attribute)
 		=> attribute.Flags.Any(x => x.Name == "PUBLIC");
 
+	public static bool IsPublic(this LazySharpAttribute attribute)
+		=> attribute.Flags.Any(x => x.Name == "PUBLIC");
+
 	public static bool IsMortalHear(this SharpAttribute attribute)
 		=> attribute.Flags.Any(x => x.Name == "MORTALHEAR");
 

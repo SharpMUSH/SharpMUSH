@@ -1,21 +1,29 @@
 ﻿using System.Linq.Expressions;
+using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Queries;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Visitors;
 
-public class SharpMUSHBooleanExpressionVisitor(ISharpDatabase database, ParameterExpression gated, ParameterExpression unlocker) : SharpMUSHBoolExpParserBaseVisitor<Expression>
+public class SharpMUSHBooleanExpressionVisitor(
+	IMediator med,
+	ParameterExpression gated,
+	ParameterExpression unlocker) : SharpMUSHBoolExpParserBaseVisitor<Expression>
 {
 	protected override Expression AggregateResult(Expression aggregate, Expression nextResult)
 		=> new Expression[] { aggregate, nextResult }.First(x => x is not null);
 
 	private readonly Expression<Func<AnySharpObject, string, bool>> _hasFlag = (dbRef, flag)
-		=> dbRef.Object().Flags.WithCancellation(CancellationToken.None).GetAwaiter().GetResult().Any(x => x.Name == flag || x.Symbol == flag);
+		=> dbRef.Object().Flags.WithCancellation(CancellationToken.None).GetAwaiter().GetResult()
+			.Any(x => x.Name == flag || x.Symbol == flag);
 
 	private readonly Expression<Func<AnySharpObject, string, bool>> _hasPower = (dbRef, power)
-		=> dbRef.Object().Powers.WithCancellation(CancellationToken.None).GetAwaiter().GetResult().Any(x => x.Name == power || x.Alias == power);
+		=> dbRef.Object().Powers.WithCancellation(CancellationToken.None).GetAwaiter().GetResult()
+			.Any(x => x.Name == power || x.Alias == power);
 
 	private readonly Expression<Func<AnySharpObject, string, bool>> _isType = (dbRef, type)
 		=> dbRef.Object().Type == type;
@@ -25,14 +33,20 @@ public class SharpMUSHBooleanExpressionVisitor(ISharpDatabase database, Paramete
 	public override Expression VisitLock(SharpMUSHBoolExpParser.LockContext context)
 	{
 		var result = VisitChildren(context);
-		for (; result.CanReduce; result = result.Reduce()) { }
+		for (; result.CanReduce; result = result.Reduce())
+		{
+		}
+
 		return result;
 	}
 
 	public override Expression VisitLockExprList(SharpMUSHBoolExpParser.LockExprListContext context)
 	{
 		var result = VisitChildren(context);
-		for (; result.CanReduce; result = result.Reduce()) { }
+		for (; result.CanReduce; result = result.Reduce())
+		{
+		}
+
 		return result;
 	}
 
@@ -45,7 +59,10 @@ public class SharpMUSHBooleanExpressionVisitor(ISharpDatabase database, Paramete
 	public override Expression VisitLockExpr(SharpMUSHBoolExpParser.LockExprContext context)
 	{
 		var result = VisitChildren(context);
-		for (; result.CanReduce; result = result.Reduce()) { }
+		for (; result.CanReduce; result = result.Reduce())
+		{
+		}
+
 		return result;
 	}
 
@@ -124,23 +141,26 @@ public class SharpMUSHBooleanExpressionVisitor(ISharpDatabase database, Paramete
 		var value = context.@string().GetText();
 		var attribute = context.attributeName().GetText();
 
-		Expression<Func<DBRef, bool>> expr = dbref =>
-			database
-				.GetAttributeAsync(dbref, attribute) // TODO: PERMISSIONS - use the Service instead.
+		Expression<Func<AnySharpObject, bool>> expr = gateObj =>
+			med.Send(
+					new GetAttributeServiceQuery(gateObj, gateObj, attribute, IAttributeService.AttributeMode.Execute, true),
+					CancellationToken.None)
 				.AsTask()
-				.ConfigureAwait(false).GetAwaiter().GetResult()!
-				.FirstOrDefaultAsync(new SharpAttribute(
-					string.Empty,
-					string.Empty,
-					Enumerable.Empty<SharpAttributeFlag>(),
-					null,
-					string.Empty,
-					new(_ => Task.FromResult(Enumerable.Empty<SharpAttribute>().ToAsyncEnumerable()), false),
-					new(_ => Task.FromResult<SharpPlayer?>(null), false),
-					new(_ => Task.FromResult<SharpAttributeEntry?>(null), false))
-				{
-					Value = MModule.single(Guid.NewGuid().ToString())
-				}).Result.Value == MModule.single(value);
+				.ConfigureAwait(false).GetAwaiter().GetResult()
+				.Match(
+					result => true, 
+					/*
+							<value> can contain wildcards (*), greater than (>) or less than (<) symbols.
+
+							For example:
+							  @lock Men's Room = sex:m*
+							    This would lock the exit "Men's Room" to anyone with a SEX attribute starting with the letter "m".
+							  @lock A-F = icname:<g
+							    This would lock the exit "A-F" to anyone with a ICNAME attribute starting with a letter "less than" the letter "g". This assumes that ICNAME is visual or the object with the lock can see it.
+					 */
+					none => false,
+					error => false
+				);
 
 		return Expression.Invoke(expr, gated);
 	}
@@ -166,5 +186,4 @@ public class SharpMUSHBooleanExpressionVisitor(ISharpDatabase database, Paramete
 
 	public override Expression VisitAttributeName(SharpMUSHBoolExpParser.AttributeNameContext context) =>
 		throw new ArgumentException("Parser should never reach here.");
-
 }

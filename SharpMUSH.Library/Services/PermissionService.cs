@@ -90,6 +90,9 @@ public class PermissionService(ILockService lockService) : IPermissionService
 		params SharpAttribute[] attribute)
 		=> CanEvalAttr(viewer, target, attribute.Last());
 
+	public ValueTask<bool> CanExecuteAttribute(AnySharpObject viewer, AnySharpObject target, params LazySharpAttribute[] attribute)
+		=> CanEvalAttr(viewer, target, attribute.Last());
+
 	public async ValueTask<bool> Controls(AnySharpObject who, AnySharpObject target)
 	{
 		if (await who.HasPower("guest"))
@@ -171,6 +174,14 @@ public class PermissionService(ILockService lockService) : IPermissionService
 		SharpAttribute attribute)
 		=> await CanEval(evaluator, evaluationTarget)
 		   || attribute.IsPublic();
+
+	public static async ValueTask<bool> CanEvalAttr(
+		AnySharpObject evaluator,
+		AnySharpObject evaluationTarget,
+		LazySharpAttribute attribute)
+		=> await CanEval(evaluator, evaluationTarget)
+		   || attribute.IsPublic();
+
 
 	/// <summary>
 	/// Checks against basic lock.

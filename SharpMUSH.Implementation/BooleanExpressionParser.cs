@@ -1,12 +1,12 @@
 ﻿using System.Linq.Expressions;
+using Mediator;
 using SharpMUSH.Implementation.Visitors;
-using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Implementation;
 
-public class BooleanExpressionParser(ISharpDatabase database) : IBooleanExpressionParser
+public class BooleanExpressionParser(IMediator mediator) : IBooleanExpressionParser
 {
 	// TODO: Allow the Evaluation to indicate if the cache should be evaluated for optimization.
 	// This should occur if a character stop existing, a flag gets removed, etc, and should be unusual.
@@ -19,7 +19,7 @@ public class BooleanExpressionParser(ISharpDatabase database) : IBooleanExpressi
 		var chatContext = sharpParser.@lock();
 		var parameter = Expression.Parameter(typeof(AnySharpObject), "gated");
 		var parameter2 = Expression.Parameter(typeof(AnySharpObject), "unlocker");
-		SharpMUSHBooleanExpressionVisitor visitor = new(database, parameter, parameter2);
+		SharpMUSHBooleanExpressionVisitor visitor = new(mediator, parameter, parameter2);
 		var expression = visitor.Visit(chatContext);
 
 		return Expression.Lambda<Func<AnySharpObject, AnySharpObject, bool>>(expression, parameter, parameter2).Compile();

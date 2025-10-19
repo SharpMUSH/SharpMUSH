@@ -28,6 +28,8 @@ public interface IPermissionService
 
 	ValueTask<bool> CanExecuteAttribute(AnySharpObject viewer, AnySharpObject target, params SharpAttribute[] attribute);
 
+	ValueTask<bool> CanExecuteAttribute(AnySharpObject viewer, AnySharpObject target, params LazySharpAttribute[] attribute);
+
 	ValueTask<bool> CanInteract(AnySharpObject result, AnySharpObject executor, InteractType type);
 
 	ValueTask<bool> CanNoSpoof(AnySharpObject executor);

@@ -45,9 +45,13 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		while (true)
 		{
 			var attr = await mediator.Send(new GetAttributeQuery(obj.Object().DBRef, attributePath));
+
+			if (attr is null)
+			{
+				return new None();
+			}
 			
-			// This does not look right
-			var attrArr = await attr!.ToArrayAsync();
+			var attrArr = await attr.ToArrayAsync();
 
 			if (attrArr?.Length == attributePath.Length)
 			{
@@ -73,10 +77,61 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		// TODO: Currently this only returns the last piece. We should return the full path.
 	}
 
-	public ValueTask<OptionalLazySharpAttributeOrError> LazilyGetAttributeAsync(AnySharpObject executor, AnySharpObject obj, string attribute,
-		IAttributeService.AttributeMode mode, bool parent = true)
+	public async ValueTask<OptionalLazySharpAttributeOrError> LazilyGetAttributeAsync(AnySharpObject executor, AnySharpObject obj, string attribute,
+		IAttributeService.AttributeMode mode, bool checkParent = true)
 	{
-		throw new NotImplementedException();
+		// TODO: Check if that is a valid attribute format.
+
+		var curObj = obj;
+		var attributePath = attribute.Split('`');
+
+		Func<AnySharpObject, AnySharpObject, LazySharpAttribute[], ValueTask<bool>> permissionPredicate = mode switch
+		{
+			IAttributeService.AttributeMode.Read => ps.CanViewAttribute,
+			IAttributeService.AttributeMode.Execute => ps.CanExecuteAttribute,
+			_ => throw new InvalidOperationException(nameof(IAttributeService.AttributeMode))
+		};
+		var permissionFailureType = mode switch
+		{
+			IAttributeService.AttributeMode.Read => Errors.ErrorAttrPermissions,
+			IAttributeService.AttributeMode.Execute => Errors.ErrorAttrEvalPermissions,
+			_ => throw new InvalidOperationException(nameof(IAttributeService.AttributeMode))
+		};
+
+		// TODO: This code doesn't quite look right. It does not correctly walk the parent chain.
+		while (true)
+		{
+			var attr = await mediator.Send(new GetLazyAttributeQuery(obj.Object().DBRef, attributePath));
+
+			if (attr is null)
+			{
+				return new None();
+			}
+			
+			var attrArr = await attr.ToArrayAsync();
+
+			if (attrArr?.Length == attributePath.Length)
+			{
+				return await permissionPredicate(executor, obj, attrArr)
+					? attrArr
+					: new Error<string>(permissionFailureType);
+			}
+
+			if (!checkParent)
+			{
+				return new None();
+			}
+
+			var parent = await curObj.Object().Parent.WithCancellation(CancellationToken.None);
+			if (parent.IsNone)
+			{
+				return new None();
+			}
+
+			curObj = parent.Known;
+		}
+
+		// TODO: Currently this only returns the last piece. We should return the full path.
 	}
 
 	public async ValueTask<MString> EvaluateAttributeFunctionAsync(IMUSHCodeParser parser, AnySharpObject executor,
