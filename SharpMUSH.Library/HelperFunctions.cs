@@ -8,6 +8,8 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Text.RegularExpressions;
+using Mediator;
+using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Library;
 
@@ -18,7 +20,10 @@ public static partial class HelperFunctions
 	private static readonly Regex ObjectWithAttributeRegex = ObjectWithAttribute();
 	private static readonly Regex OptionalDatabaseReferenceWithAttributeRegex = OptionalDatabaseReferenceWithAttribute();
 	private static readonly Regex DatabaseReferenceWithOptionalAttributeRegex = DatabaseReferenceWithOptionalAttribute();
-
+	
+	public static async ValueTask<AnySharpObject> GetGod(IMediator mediator)
+		=> (await mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Known;
+	
 	public static async ValueTask<bool> IsWizard(this AnySharpObject obj)
 		=> (await obj.Object().Flags.WithCancellation(CancellationToken.None)).Any(x => x.Name == "Wizard");
 
@@ -44,6 +49,9 @@ public static partial class HelperFunctions
 		=> await obj.HasPower("Visual");
 
 	public static async ValueTask<bool> IsDark(this AnySharpObject obj)
+		=> await obj.HasPower("Dark");
+	
+	public static async ValueTask<bool> IsDark(this SharpObject obj)
 		=> await obj.HasPower("Dark");
 
 	public static async ValueTask<bool> IsLight(this AnySharpObject obj)
@@ -72,6 +80,10 @@ public static partial class HelperFunctions
 
 	public static async ValueTask<bool> HasPower(this AnySharpObject obj, string power)
 		=> (await obj.Object().Powers.WithCancellation(CancellationToken.None))
+			.Any(x => x.Name.Equals(power, StringComparison.InvariantCultureIgnoreCase) || x.Alias.Equals(power, StringComparison.InvariantCultureIgnoreCase));
+
+	public static async ValueTask<bool> HasPower(this SharpObject obj, string power)
+		=> (await obj.Powers.WithCancellation(CancellationToken.None))
 			.Any(x => x.Name.Equals(power, StringComparison.InvariantCultureIgnoreCase) || x.Alias.Equals(power, StringComparison.InvariantCultureIgnoreCase));
 
 	public static async ValueTask<bool> IsHearer(this AnySharpObject obj, IConnectionService connections, IAttributeService attributes)

@@ -51,6 +51,16 @@ public class PermissionService(ILockService lockService) : IPermissionService
 
 		return !await target.IsDark();
 	}
+	
+	public async ValueTask<bool> CanSee(AnySharpObject viewer, SharpObject target)
+	{
+		if (await viewer.IsPriv() || await viewer.IsSee_All())
+		{
+			return true;
+		}
+
+		return !await target.IsDark();
+	}
 
 	public async ValueTask<bool> CanHide(AnySharpObject executor)
 		=> await executor.IsPriv() || await executor.HasPower("HIDE");

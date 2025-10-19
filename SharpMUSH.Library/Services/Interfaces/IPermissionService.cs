@@ -38,6 +38,8 @@ public interface IPermissionService
 	
 	ValueTask<bool> CanSee(AnySharpObject viewer, AnySharpObject target);
 	
+	ValueTask<bool> CanSee(AnySharpObject viewer, SharpObject target);
+	
 	ValueTask<bool> CanHide(AnySharpObject executor);
 	
 	ValueTask<bool> CanLogin(AnySharpObject executor);
