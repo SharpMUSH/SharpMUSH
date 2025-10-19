@@ -1452,6 +1452,7 @@ public partial class Commands
 		MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Emit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		// TODO: Make NoEval work
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
@@ -1946,7 +1947,7 @@ public partial class Commands
 		Behavior = CB.Default | CB.EqSplit | CB.RSNoParse | CB.RSBrace, MinArgs = 0, MaxArgs = 2)]
 	public static async ValueTask<Option<CallState>> Assert(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// Inline does nothing.
+		// TODO: Inline vs Queued currently does nothing.
 		var args = parser.CurrentState.Arguments;
 		var nargs = args.Count;
 		switch (nargs)
@@ -1961,15 +1962,14 @@ public partial class Commands
 				}
 
 				return args["0"];
-			case 2:
-				if (args["0"].Message.Falsy())
-				{
-					var command = await args["1"].ParsedMessage();
-					var commandList = parser.CommandListParseVisitor(command!);
-					await commandList();
-					parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
-				}
+			case 2 when args["0"].Message.Falsy():
+				var command = await args["1"].ParsedMessage();
+				var commandList = parser.CommandListParseVisitor(command!);
+				await commandList();
+				parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
 
+				return args["0"];
+			case 2:
 				return args["0"];
 		}
 
@@ -1989,8 +1989,15 @@ public partial class Commands
 		MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Skip(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var parsedIfElse = await parser.CurrentState.Arguments["0"].ParsedMessage();
+		var falsey = Predicates.Falsy(parsedIfElse!);
+
+		if (parser.CurrentState.Arguments.TryGetValue("2", out var arg2))
+		{
+			await parser.CommandListParse(arg2.Message!);
+		}
+
+		return new CallState(!falsey);
 	}
 
 	// TODO: Handle switches
