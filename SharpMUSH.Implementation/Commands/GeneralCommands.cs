@@ -121,15 +121,18 @@ public partial class Commands
 			return new None();
 		}
 
-		var contents = viewing.IsExit
-			? []
-			: await (await Mediator!.Send(new GetContentsQuery(viewing.WithoutNone().AsContainer)))!.ToListAsync();
-		var viewingObject = viewing.Object()!;
+		var realViewing = viewing.Known;
+
+		var contents = realViewing.IsContainer
+			? await (await Mediator!.Send(new GetContentsQuery(realViewing.AsContainer)))!.ToListAsync()
+			: [];
+		var viewingObject = realViewing.Object()!;
 
 		var name = viewingObject.Name;
 		var contentKeys = contents.Where(x => x.IsPlayer || x.IsThing).Select(x => x.Object().Name).ToList();
 		var exitKeys = contents.Where(x => x.IsExit).Select(x => x.Object().Name).ToList();
-		var description = (await AttributeService!.GetAttributeAsync(executor, viewing.Known(), "DESCRIBE",
+		// TODO: Check DESCFORMAT or DESCRIBE
+		var description = (await AttributeService!.GetAttributeAsync(executor, realViewing, "DESCRIBE",
 				IAttributeService.AttributeMode.Read, false))
 			.Match(
 				attr => MModule.getLength(attr.Last().Value) == 0
