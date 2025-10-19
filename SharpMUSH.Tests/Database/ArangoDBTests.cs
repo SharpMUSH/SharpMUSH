@@ -19,39 +19,39 @@ public class ArangoDBTests
 	[Test]
 	public async Task TestRoomZero()
 	{
-		var roomZero = (await Database!.GetObjectNodeAsync(new DBRef(0))).AsRoom;
+		var roomZero = (await Database.GetObjectNodeAsync(new DBRef(0))).AsRoom;
 
 		await Assert.That(roomZero).IsTypeOf(typeof(SharpRoom));
-		await Assert.That(roomZero!.Object!.Name).IsEqualTo("Room Zero");
-		await Assert.That(roomZero!.Object!.Key).IsEqualTo(0);
+		await Assert.That(roomZero.Object.Name).IsEqualTo("Room Zero");
+		await Assert.That(roomZero.Object.Key).IsEqualTo(0);
 	}
 
 	[Test]
 	public async Task TestRoomTwo()
 	{
-		var masterRoom = (await Database!.GetObjectNodeAsync(new DBRef(2))).AsRoom;
+		var masterRoom = (await Database.GetObjectNodeAsync(new DBRef(2))).AsRoom;
 
 		await Assert.That(masterRoom).IsTypeOf(typeof(SharpRoom));
-		await Assert.That(masterRoom!.Object!.Name).IsEqualTo("Master Room");
-		await Assert.That(masterRoom!.Object!.Key).IsEqualTo(2);
+		await Assert.That(masterRoom.Object.Name).IsEqualTo("Master Room");
+		await Assert.That(masterRoom.Object.Key).IsEqualTo(2);
 	}
 
 	[Test]
 	public async Task TestPlayerOne()
 	{
-		var playerOne = (await Database!.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
 
 		await Assert.That(playerOne).IsTypeOf<SharpPlayer>();
-		await Assert.That(playerOne!.Object!.Name).IsEqualTo("God");
-		await Assert.That(playerOne!.Object!.Key).IsEqualTo(1);
+		await Assert.That(playerOne.Object.Name).IsEqualTo("God");
+		await Assert.That(playerOne.Object.Key).IsEqualTo(1);
 	}
 
 	[Test]
 	[Repeat(10)]
 	public async Task SetAndOverrideAnAttribute()
 	{
-		var playerOne = (await Database!.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
-		var playerOneDBRef = new DBRef(playerOne!.Object.Key);
+		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var playerOneDBRef = new DBRef(playerOne.Object.Key);
 
 		await Database.SetAttributeAsync(playerOneDBRef, ["Two", "Layers"], MModule.single("Layer"), playerOne);
 		var existingLayer = await (await Database.GetAttributeAsync(playerOneDBRef, ["Two", "Layers"]))!.ToListAsync();
@@ -67,7 +67,7 @@ public class ArangoDBTests
 	[Test]
 	public async Task StoreAnsiInAttribute()
 	{
-		var playerOne = (await Database!.GetObjectNodeAsync(new DBRef(1)));
+		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1)));
 		var playerOneDBRef = playerOne.Object()!.DBRef;
 
 		var ansiString = A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "red");
@@ -80,14 +80,14 @@ public class ArangoDBTests
 	[Test]
 	public async Task GetAllObjectFlags()
 	{
-		var flags = await Database!.GetObjectFlagsAsync();
+		var flags = await Database.GetObjectFlagsAsync();
 		await Assert.That(flags.Count).IsGreaterThan(0);
 	}
 
 	[Test]
 	public async Task GetAllAttributeFlags()
 	{
-		var flags = await Database!.GetAttributeFlagsAsync();
+		var flags = await Database.GetAttributeFlagsAsync();
 		await Assert.That(flags.Count).IsGreaterThan(0);
 	}
 
@@ -96,13 +96,13 @@ public class ArangoDBTests
 	[Repeat(10)] // Exclusive Locks are needed first. Otherwise there will be write-write errors. 
 	public async Task SetAndGetAnAttribute()
 	{
-		var playerOne = (await Database!.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
 
 		await Assert.That(playerOne).IsTypeOf<SharpPlayer>();
 		await Assert.That(playerOne.Object.Name).IsEqualTo("God");
 		await Assert.That(playerOne.Object.Key).IsEqualTo(1);
 
-		var playerOneDBRef = new DBRef(playerOne!.Object.Key);
+		var playerOneDBRef = new DBRef(playerOne.Object.Key);
 
 		await Database.SetAttributeAsync(playerOneDBRef, ["SingleLayer"], MModule.single("Single"), playerOne);
 		await Database.SetAttributeAsync(playerOneDBRef, ["Two"], MModule.single("Twin"), playerOne);
@@ -119,14 +119,14 @@ public class ArangoDBTests
 		var existingDeep1 =await (await Database.GetAttributeAsync(playerOneDBRef, ["Three", "Layers", "Deep"]))!.ToListAsync();
 		var existingDeep2 =await (await Database.GetAttributeAsync(playerOneDBRef, ["Three", "Layers", "Deep2"]))!.ToListAsync();
 
-		var obj = await Database!.GetObjectNodeAsync(playerOneDBRef);
+		var obj = await Database.GetObjectNodeAsync(playerOneDBRef);
 
-		await Assert.That(existingSingle!.Count).IsEqualTo(1);
-		await Assert.That(existingLayer!.Count).IsEqualTo(2);
-		await Assert.That(existingLeaf!.Count).IsEqualTo(2);
-		await Assert.That(existingLeaf2!.Count).IsEqualTo(2);
-		await Assert.That(existingDeep1!.Count).IsEqualTo(3);
-		await Assert.That(existingDeep2!.Count).IsEqualTo(3);
+		await Assert.That(existingSingle.Count).IsEqualTo(1);
+		await Assert.That(existingLayer.Count).IsEqualTo(2);
+		await Assert.That(existingLeaf.Count).IsEqualTo(2);
+		await Assert.That(existingLeaf2.Count).IsEqualTo(2);
+		await Assert.That(existingDeep1.Count).IsEqualTo(3);
+		await Assert.That(existingDeep2.Count).IsEqualTo(3);
 		await Assert.That(existingSingle.Last().Value.ToString()).IsEqualTo("Single");
 		await Assert.That(existingLayer.Last().Value.ToString()).IsEqualTo("Layer");
 		await Assert.That(existingLeaf.Last().Value.ToString()).IsEqualTo("Leaf");
