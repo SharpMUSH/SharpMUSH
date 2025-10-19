@@ -36,6 +36,10 @@ public class SharpObject
 	// RELATIONSHIP
 	[JsonIgnore]
 	public required AsyncLazy<IEnumerable<SharpAttribute>> Attributes { get; set; }
+	
+	// RELATIONSHIP
+	[JsonIgnore]
+	public required AsyncLazy<IEnumerable<LazySharpAttribute>> LazyAttributes { get; set; }
 
 	[JsonIgnore]
 	public required AsyncLazy<IEnumerable<SharpAttribute>> AllAttributes { get; set; }

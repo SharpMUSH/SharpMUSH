@@ -24,6 +24,8 @@ public interface IPermissionService
 
 	ValueTask<bool> CanViewAttribute(AnySharpObject viewer, AnySharpObject target, params SharpAttribute[] attribute);
 
+	ValueTask<bool> CanViewAttribute(AnySharpObject viewer, AnySharpObject target, params LazySharpAttribute[] attribute);
+
 	ValueTask<bool> CanExecuteAttribute(AnySharpObject viewer, AnySharpObject target, params SharpAttribute[] attribute);
 
 	ValueTask<bool> CanInteract(AnySharpObject result, AnySharpObject executor, InteractType type);

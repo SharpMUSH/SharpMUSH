@@ -97,6 +97,10 @@ public interface ISharpDatabase
 	ValueTask<IEnumerable<SharpAttribute>?> GetAttributesAsync(DBRef dbref, string attribute_pattern);
 	ValueTask<IEnumerable<SharpAttribute>?> GetAttributesByRegexAsync(DBRef dbref, string attribute_pattern);
 
+	ValueTask<IEnumerable<LazySharpAttribute>?> GetLazyAttributeAsync(DBRef dbref, params string[] attribute);
+	ValueTask<IEnumerable<LazySharpAttribute>?> GetLazyAttributesAsync(DBRef dbref, string attribute_pattern);
+	ValueTask<IEnumerable<LazySharpAttribute>?> GetLazyAttributesByRegexAsync(DBRef dbref, string attribute_pattern);
+
 	/// <summary>
 	/// Get the Object represented by a Database Reference Number.
 	/// Optionally passing either the CreatedSecs or CreatedMilliseconds will do a more specific lookup.

@@ -5,3 +5,5 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Library.Queries.Database;
 
 public record GetAttributesQuery(DBRef DBRef, string Pattern, bool CheckParents, IAttributeService.AttributePatternMode Mode) : IQuery<IEnumerable<SharpAttribute>?>;
+
+public record GetLazyAttributesQuery(DBRef DBRef, string Pattern, bool CheckParents, IAttributeService.AttributePatternMode Mode) : IQuery<IEnumerable<LazySharpAttribute>?>;

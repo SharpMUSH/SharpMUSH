@@ -71,6 +71,12 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		// TODO: Currently this only returns the last piece. We should return the full path.
 	}
 
+	public ValueTask<OptionalLazySharpAttributeOrError> LazilyGetAttributeAsync(AnySharpObject executor, AnySharpObject obj, string attribute,
+		IAttributeService.AttributeMode mode, bool parent = true)
+	{
+		throw new NotImplementedException();
+	}
+
 	public async ValueTask<MString> EvaluateAttributeFunctionAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		AnySharpObject obj,
 		string attribute, Dictionary<string, CallState> args, bool evalParent = true, bool ignorePermissions = false)
@@ -117,6 +123,18 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 			? await attributes.ToAsyncEnumerable().Where(async (x, _) => await ps.CanViewAttribute(executor, obj, x))
 				.ToArrayAsync()
 			: (await GetVisibleAttributesAsync(attributes, executor, obj, depth))
+			.ToArray();
+	}
+
+	public async ValueTask<LazySharpAttributesOrError> LazilyGetVisibleAttributesAsync(AnySharpObject executor, AnySharpObject obj, int depth = 1)
+	{
+		var actualObject = obj.Object();
+		var attributes = await actualObject.LazyAttributes.WithCancellation(CancellationToken.None);
+
+		return depth <= 1
+			? await attributes.ToAsyncEnumerable().Where(async (x, _) => await ps.CanViewAttribute(executor, obj, x))
+				.ToArrayAsync()
+			: (await GetVisibleLazyAttributesAsync(attributes, executor, obj, depth))
 			.ToArray();
 	}
 
@@ -184,7 +202,7 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		};
 	}
 
-	public async ValueTask<ImmutableList<SharpAttribute>> GetVisibleAttributesAsync(
+	private async ValueTask<ImmutableList<SharpAttribute>> GetVisibleAttributesAsync(
 		IEnumerable<SharpAttribute> attributes, AnySharpObject executor, AnySharpObject obj, int depth = 1)
 	{
 		if (depth == 0) return [];
@@ -197,6 +215,26 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		{
 			var subAttributes =
 				await GetVisibleAttributesAsync(await attribute.Leaves.WithCancellation(CancellationToken.None), executor, obj,
+					depth - 1);
+			visibleList = visibleList.AddRange(subAttributes);
+		}
+
+		return visibleList;
+	}
+
+	private async ValueTask<ImmutableList<LazySharpAttribute>> GetVisibleLazyAttributesAsync(
+		IEnumerable<LazySharpAttribute> attributes, AnySharpObject executor, AnySharpObject obj, int depth = 1)
+	{
+		if (depth == 0) return [];
+
+		var visibleList = (await attributes.ToAsyncEnumerable().Where((x, _) => ps.CanViewAttribute(executor, obj, x))
+				.ToListAsync())
+			.ToImmutableList();
+
+		foreach (var attribute in visibleList)
+		{
+			var subAttributes =
+				await GetVisibleLazyAttributesAsync(await attribute.Leaves.WithCancellation(CancellationToken.None), executor, obj,
 					depth - 1);
 			visibleList = visibleList.AddRange(subAttributes);
 		}
@@ -224,6 +262,23 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 				.ToArrayAsync();
 	}
 
+	public async ValueTask<LazySharpAttributesOrError> LazilyGetAttributePatternAsync(AnySharpObject executor, AnySharpObject obj, string attributePattern,
+		bool checkParents, IAttributeService.AttributePatternMode mode = IAttributeService.AttributePatternMode.Exact)
+	{
+		// TODO: Implement Pattern Modes
+		// TODO: GetAttributesAsync should return the full Path, not the final attribute.
+		// TODO: CanViewAttribute needs to be able to Memoize during a list check, as it's likely to be called multiple times.
+		var attributes = await mediator.Send(
+			new GetLazyAttributesQuery(obj.Object().DBRef, attributePattern, checkParents, mode));
+
+		return attributes is null
+			? Enumerable.Empty<LazySharpAttribute>().ToArray()
+			: await attributes
+				.ToAsyncEnumerable()
+				.Where(async (x, _) => await ps.CanViewAttribute(executor, obj, x))
+				.ToArrayAsync();
+	}
+	
 	public async ValueTask<OneOf<Success, Error<string>>> SetAttributeFlagAsync(AnySharpObject executor,
 		AnySharpObject obj, string attribute, string flag)
 	{

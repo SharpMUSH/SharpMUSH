@@ -15,3 +15,14 @@ public record SharpAttribute(
 {
 	public MString Value { get; set; } = MModule.empty();
 }
+
+public record LazySharpAttribute(
+	string Key,
+	string Name,
+	IEnumerable<SharpAttributeFlag> Flags,
+	int? CommandListIndex,
+	[property: JsonIgnore] string? LongName,
+	[property: JsonIgnore] AsyncLazy<IEnumerable<LazySharpAttribute>> Leaves,
+	[property: JsonIgnore] AsyncLazy<SharpPlayer?> Owner,
+	[property: JsonIgnore] AsyncLazy<SharpAttributeEntry?> SharpAttributeEntry,
+	[property: JsonIgnore] AsyncLazy<MString> Value);

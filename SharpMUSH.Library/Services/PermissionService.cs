@@ -42,6 +42,9 @@ public class PermissionService(ILockService lockService) : IPermissionService
 		params SharpAttribute[] attribute)
 		=> await CanExamine(viewer, target) || attribute.Last().IsVisual();
 
+	public async ValueTask<bool> CanViewAttribute(AnySharpObject viewer, AnySharpObject target, params LazySharpAttribute[] attribute)
+		=> await CanExamine(viewer, target) || attribute.Last().IsVisual();
+
 	public async ValueTask<bool> CanSee(AnySharpObject viewer, AnySharpObject target)
 	{
 		if (await viewer.IsPriv() || await viewer.IsSee_All())

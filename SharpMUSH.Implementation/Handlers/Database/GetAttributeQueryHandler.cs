@@ -27,3 +27,17 @@ public class GetAttributesQueryHandler(ISharpDatabase database)
 			_ => await database.GetAttributesAsync(request.DBRef, request.Pattern)
 		};
 }
+
+public class GetLazyAttributesQueryHandler(ISharpDatabase database)
+	: IQueryHandler<GetLazyAttributesQuery, IEnumerable<LazySharpAttribute>?>
+{
+	public async ValueTask<IEnumerable<LazySharpAttribute>?> Handle(GetLazyAttributesQuery request,
+		CancellationToken cancellationToken)
+		=> request.Mode switch
+		{
+			IAttributeService.AttributePatternMode.Exact => await database.GetLazyAttributeAsync(request.DBRef, request.Pattern),
+			IAttributeService.AttributePatternMode.Regex => await database.GetLazyAttributesByRegexAsync(request.DBRef,
+				request.Pattern),
+			_ => await database.GetLazyAttributesAsync(request.DBRef, request.Pattern)
+		};
+}
