@@ -90,16 +90,16 @@ public interface ISharpDatabase
 	/// <param name="dbref">DBRef of an object to get the attributes for</param>
 	/// <param name="attribute">Attribute Path - uses attribute leaves</param>
 	/// <returns>The <see cref="SharpAttribute"/> hierarchy, with the last attribute being the final leaf.</returns>
-	ValueTask<IEnumerable<SharpAttribute>?> GetAttributeAsync(DBRef dbref, params string[] attribute);
+	ValueTask<IAsyncEnumerable<SharpAttribute>?> GetAttributeAsync(DBRef dbref, params string[] attribute);
 
 	// TODO: Consider the return value, as an attribute pattern returns multiple attributes.
 	// These should return full attribute paths, so likely IEnumerable<IEnumerable<SharpAttribute>>.
-	ValueTask<IEnumerable<SharpAttribute>?> GetAttributesAsync(DBRef dbref, string attribute_pattern);
-	ValueTask<IEnumerable<SharpAttribute>?> GetAttributesByRegexAsync(DBRef dbref, string attribute_pattern);
+	ValueTask<IAsyncEnumerable<SharpAttribute>?> GetAttributesAsync(DBRef dbref, string attribute_pattern);
+	ValueTask<IAsyncEnumerable<SharpAttribute>?> GetAttributesByRegexAsync(DBRef dbref, string attribute_pattern);
 
-	ValueTask<IEnumerable<LazySharpAttribute>?> GetLazyAttributeAsync(DBRef dbref, params string[] attribute);
-	ValueTask<IEnumerable<LazySharpAttribute>?> GetLazyAttributesAsync(DBRef dbref, string attribute_pattern);
-	ValueTask<IEnumerable<LazySharpAttribute>?> GetLazyAttributesByRegexAsync(DBRef dbref, string attribute_pattern);
+	ValueTask<IAsyncEnumerable<LazySharpAttribute>?> GetLazyAttributeAsync(DBRef dbref, params string[] attribute);
+	ValueTask<IAsyncEnumerable<LazySharpAttribute>?> GetLazyAttributesAsync(DBRef dbref, string attribute_pattern);
+	ValueTask<IAsyncEnumerable<LazySharpAttribute>?> GetLazyAttributesByRegexAsync(DBRef dbref, string attribute_pattern);
 
 	/// <summary>
 	/// Get the Object represented by a Database Reference Number.
@@ -192,11 +192,11 @@ public interface ISharpDatabase
 	/// </summary>
 	/// <param name="id">Child ID</param>
 	/// <returns>The full representing parent chain</returns>
-	ValueTask<IEnumerable<SharpObject>> GetParentsAsync(string id);
+	ValueTask<IAsyncEnumerable<SharpObject>> GetParentsAsync(string id);
 
 	ValueTask<SharpObject?> GetBaseObjectNodeAsync(DBRef dbref);
 
-	ValueTask<IEnumerable<SharpPlayer>> GetPlayerByNameOrAliasAsync(string name);
+	ValueTask<IAsyncEnumerable<SharpPlayer>> GetPlayerByNameOrAliasAsync(string name);
 
 	/// <summary>
 	/// Set an attribute. This does not do any checks, as that is up to the functionality itself.
@@ -273,21 +273,21 @@ public interface ISharpDatabase
 	/// <returns>Success or Failure</returns>
 	ValueTask<bool> WipeAttributeAsync(DBRef dbref, string[] attribute);
 
-	ValueTask<IEnumerable<AnySharpObject>> GetNearbyObjectsAsync(DBRef obj);
+	ValueTask<IAsyncEnumerable<AnySharpObject>> GetNearbyObjectsAsync(DBRef obj);
 
-	ValueTask<IEnumerable<AnySharpObject>> GetNearbyObjectsAsync(AnySharpObject obj);
+	ValueTask<IAsyncEnumerable<AnySharpObject>> GetNearbyObjectsAsync(AnySharpObject obj);
 
 	ValueTask<AnyOptionalSharpContainer> GetLocationAsync(DBRef obj, int depth = 1);
 
 	ValueTask<AnySharpContainer> GetLocationAsync(AnySharpObject obj, int depth = 1);
 
-	ValueTask<IEnumerable<AnySharpContent>?> GetContentsAsync(DBRef obj);
+	ValueTask<IAsyncEnumerable<AnySharpContent>?> GetContentsAsync(DBRef obj);
 
-	ValueTask<IEnumerable<AnySharpContent>?> GetContentsAsync(AnySharpContainer node);
+	ValueTask<IAsyncEnumerable<AnySharpContent>?> GetContentsAsync(AnySharpContainer node);
 
-	ValueTask<IEnumerable<SharpExit>?> GetExitsAsync(DBRef obj);
+	ValueTask<IAsyncEnumerable<SharpExit>?> GetExitsAsync(DBRef obj);
 
-	ValueTask<IEnumerable<SharpExit>> GetExitsAsync(AnySharpContainer node);
+	ValueTask<IAsyncEnumerable<SharpExit>> GetExitsAsync(AnySharpContainer node);
 
 	ValueTask MoveObjectAsync(AnySharpContent enactorObj, AnySharpContainer destination);
 

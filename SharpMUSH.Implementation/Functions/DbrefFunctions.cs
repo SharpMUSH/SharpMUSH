@@ -178,10 +178,10 @@ public partial class Functions
 				}
 
 				// Todo: Turn Content into async enumerable.
-				var exits = (await locate.AsContainer.Content(Mediator!))
+				var exits = await (await locate.AsContainer.Content(Mediator!))
 					.Where(x => x.IsExit)
 					.Select(x => x.Object().DBRef)
-					.ToArray();
+					.ToArrayAsync();
 
 				return exits.Length != 0
 					? exits.First().ToString()
@@ -372,7 +372,7 @@ public partial class Functions
 			async x =>
 			{
 				var children = await x.Object().Children.WithCancellation(CancellationToken.None);
-				return children.Count();
+				return await children.CountAsync();
 			});
 	}
 

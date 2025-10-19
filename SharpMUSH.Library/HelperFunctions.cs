@@ -72,8 +72,8 @@ public static partial class HelperFunctions
 	public static async ValueTask<bool> IsAlive(this AnySharpObject obj)
 		=> obj.IsPlayer
 			 || await IsPuppet(obj)
-			 || (await IsAudible(obj) && (await obj.Object().Attributes.WithCancellation(CancellationToken.None))
-				 .Any(x => x.Name == "FORWARDLIST"));
+			 || (await IsAudible(obj) && await (await obj.Object().LazyAllAttributes.WithCancellation(CancellationToken.None))
+				 .AnyAsync(x => x.Name == "FORWARDLIST"));
 
 	public static async ValueTask<bool> IsPuppet(this AnySharpObject obj)
 		=> await obj.HasPower("Puppet");
@@ -251,7 +251,7 @@ public static partial class HelperFunctions
 
 		var children = await start.Object().Children.WithCancellation(CancellationToken.None);
 
-		return children.All(x => x.DBRef != newParentDbRef);
+		return await children.AllAsync(x => x.DBRef != newParentDbRef);
 	}
 
 	public static OneOf<(string db, string? Attribute), bool> SplitDBRefAndOptionalAttr(string DBRefAttr)

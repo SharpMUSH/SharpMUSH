@@ -7,17 +7,17 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Implementation.Handlers.Database;
 
 public class GetAttributeQueryHandler(ISharpDatabase database)
-	: IQueryHandler<GetAttributeQuery, IEnumerable<SharpAttribute>?>
+	: IQueryHandler<GetAttributeQuery, IAsyncEnumerable<SharpAttribute>?>
 {
-	public async ValueTask<IEnumerable<SharpAttribute>?> Handle(GetAttributeQuery request,
+	public async ValueTask<IAsyncEnumerable<SharpAttribute>?> Handle(GetAttributeQuery request,
 		CancellationToken cancellationToken)
 		=> await database.GetAttributeAsync(request.DBRef, request.Attribute);
 }
 
 public class GetAttributesQueryHandler(ISharpDatabase database)
-	: IQueryHandler<GetAttributesQuery, IEnumerable<SharpAttribute>?>
+	: IQueryHandler<GetAttributesQuery, IAsyncEnumerable<SharpAttribute>?>
 {
-	public async ValueTask<IEnumerable<SharpAttribute>?> Handle(GetAttributesQuery request,
+	public async ValueTask<IAsyncEnumerable<SharpAttribute>?> Handle(GetAttributesQuery request,
 		CancellationToken cancellationToken)
 		=> request.Mode switch
 		{
@@ -29,9 +29,9 @@ public class GetAttributesQueryHandler(ISharpDatabase database)
 }
 
 public class GetLazyAttributesQueryHandler(ISharpDatabase database)
-	: IQueryHandler<GetLazyAttributesQuery, IEnumerable<LazySharpAttribute>?>
+	: IQueryHandler<GetLazyAttributesQuery, IAsyncEnumerable<LazySharpAttribute>?>
 {
-	public async ValueTask<IEnumerable<LazySharpAttribute>?> Handle(GetLazyAttributesQuery request,
+	public async ValueTask<IAsyncEnumerable<LazySharpAttribute>?> Handle(GetLazyAttributesQuery request,
 		CancellationToken cancellationToken)
 		=> request.Mode switch
 		{

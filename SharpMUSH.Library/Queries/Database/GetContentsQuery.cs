@@ -6,7 +6,7 @@ using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Queries.Database;
 
-public record GetContentsQuery(OneOf<DBRef, AnySharpContainer> DBRef) : IQuery<IEnumerable<AnySharpContent>?>/*, ICacheable*/
+public record GetContentsQuery(OneOf<DBRef, AnySharpContainer> DBRef) : IQuery<IAsyncEnumerable<AnySharpContent>?>/*, ICacheable*/
 {
 	public string CacheKey => $"object-contents:{DBRef.Match(x=> x, y=> y.Object().DBRef)}";
 	public string[] CacheTags => [Definitions.CacheTags.ObjectContents];

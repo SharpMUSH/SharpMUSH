@@ -45,7 +45,9 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		while (true)
 		{
 			var attr = await mediator.Send(new GetAttributeQuery(obj.Object().DBRef, attributePath));
-			var attrArr = attr?.ToArray();
+			
+			// This does not look right
+			var attrArr = await attr!.ToArrayAsync();
 
 			if (attrArr?.Length == attributePath.Length)
 			{
@@ -120,7 +122,7 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		var attributes = await actualObject.Attributes.WithCancellation(CancellationToken.None);
 
 		return depth <= 1
-			? await attributes.ToAsyncEnumerable().Where(async (x, _) => await ps.CanViewAttribute(executor, obj, x))
+			? await attributes.Where(async (x, _) => await ps.CanViewAttribute(executor, obj, x))
 				.ToArrayAsync()
 			: (await GetVisibleAttributesAsync(attributes, executor, obj, depth))
 			.ToArray();
@@ -132,7 +134,7 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		var attributes = await actualObject.LazyAttributes.WithCancellation(CancellationToken.None);
 
 		return depth <= 1
-			? await attributes.ToAsyncEnumerable().Where(async (x, _) => await ps.CanViewAttribute(executor, obj, x))
+			? await attributes.Where(async (x, _) => await ps.CanViewAttribute(executor, obj, x))
 				.ToArrayAsync()
 			: (await GetVisibleLazyAttributesAsync(attributes, executor, obj, depth))
 			.ToArray();
@@ -203,11 +205,11 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 	}
 
 	private async ValueTask<ImmutableList<SharpAttribute>> GetVisibleAttributesAsync(
-		IEnumerable<SharpAttribute> attributes, AnySharpObject executor, AnySharpObject obj, int depth = 1)
+		IAsyncEnumerable<SharpAttribute> attributes, AnySharpObject executor, AnySharpObject obj, int depth = 1)
 	{
 		if (depth == 0) return [];
 
-		var visibleList = (await attributes.ToAsyncEnumerable().Where((x, _) => ps.CanViewAttribute(executor, obj, x))
+		var visibleList = (await attributes.Where((x, _) => ps.CanViewAttribute(executor, obj, x))
 				.ToListAsync())
 			.ToImmutableList();
 
@@ -223,11 +225,11 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 	}
 
 	private async ValueTask<ImmutableList<LazySharpAttribute>> GetVisibleLazyAttributesAsync(
-		IEnumerable<LazySharpAttribute> attributes, AnySharpObject executor, AnySharpObject obj, int depth = 1)
+		IAsyncEnumerable<LazySharpAttribute> attributes, AnySharpObject executor, AnySharpObject obj, int depth = 1)
 	{
 		if (depth == 0) return [];
 
-		var visibleList = (await attributes.ToAsyncEnumerable().Where((x, _) => ps.CanViewAttribute(executor, obj, x))
+		var visibleList = (await attributes.Where((x, _) => ps.CanViewAttribute(executor, obj, x))
 				.ToListAsync())
 			.ToImmutableList();
 
@@ -257,7 +259,6 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		return attributes is null
 			? Enumerable.Empty<SharpAttribute>().ToArray()
 			: await attributes
-				.ToAsyncEnumerable()
 				.Where(async (x, _) => await ps.CanViewAttribute(executor, obj, x))
 				.ToArrayAsync();
 	}
@@ -274,7 +275,6 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		return attributes is null
 			? Enumerable.Empty<LazySharpAttribute>().ToArray()
 			: await attributes
-				.ToAsyncEnumerable()
 				.Where(async (x, _) => await ps.CanViewAttribute(executor, obj, x))
 				.ToArrayAsync();
 	}
@@ -360,7 +360,7 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 
 		// TODO: Fix, object permissions also needed.
 		var permission = attr == null ||
-		                 await attr.ToAsyncEnumerable().AllAsync(async (x,_) => await ps.CanSet(executor, obj, x));
+		                 await attr.AllAsync(async (x,_) => await ps.CanSet(executor, obj, x));
 
 		if (!permission)
 		{
@@ -401,10 +401,15 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		}
 
 		var attr = await mediator.Send(new GetAttributesQuery(obj.Object().DBRef, attributePattern, false, patternMode));
-		var attrArr = attr?.ToArray();
 
-		if (!(attrArr == null ||
-		      await attrArr.ToAsyncEnumerable().AllAsync(async (x,_) => await ps.CanSet(executor, obj, x))))
+		if (attr is null)
+		{
+			return new Error<string>(Errors.ErrorAttrSetPermissions);
+		}
+
+		var attrArr = await attr.ToArrayAsync();
+
+		if (!await attrArr.ToAsyncEnumerable().AllAsync(async (x,_) => await ps.CanSet(executor, obj, x)))
 		{
 			return new Error<string>(Errors.ErrorAttrSetPermissions);
 		}

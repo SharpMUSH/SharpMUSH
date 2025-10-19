@@ -6,8 +6,8 @@ using SharpMUSH.Library.Queries.Database;
 namespace SharpMUSH.Implementation.Handlers.Database;
 
 public class GetPlayerQueryHandler(ISharpDatabase database)
-	: IQueryHandler<GetPlayerQuery, IEnumerable<SharpPlayer>>
+	: IQueryHandler<GetPlayerQuery, IAsyncEnumerable<SharpPlayer>>
 {
-	public async ValueTask<IEnumerable<SharpPlayer>> Handle(GetPlayerQuery request, CancellationToken cancellationToken)
+	public async ValueTask<IAsyncEnumerable<SharpPlayer>> Handle(GetPlayerQuery request, CancellationToken cancellationToken)
 		=> await database.GetPlayerByNameOrAliasAsync(request.Name);
 }

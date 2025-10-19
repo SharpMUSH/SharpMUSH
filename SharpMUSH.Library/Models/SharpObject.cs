@@ -35,14 +35,17 @@ public class SharpObject
 
 	// RELATIONSHIP
 	[JsonIgnore]
-	public required AsyncLazy<IEnumerable<SharpAttribute>> Attributes { get; set; }
+	public required AsyncLazy<IAsyncEnumerable<SharpAttribute>> Attributes { get; set; }
 	
 	// RELATIONSHIP
 	[JsonIgnore]
-	public required AsyncLazy<IEnumerable<LazySharpAttribute>> LazyAttributes { get; set; }
+	public required AsyncLazy<IAsyncEnumerable<LazySharpAttribute>> LazyAttributes { get; set; }
 
 	[JsonIgnore]
-	public required AsyncLazy<IEnumerable<SharpAttribute>> AllAttributes { get; set; }
+	public required AsyncLazy<IAsyncEnumerable<SharpAttribute>> AllAttributes { get; set; }
+	
+	[JsonIgnore]
+	public required AsyncLazy<IAsyncEnumerable<LazySharpAttribute>> LazyAllAttributes { get; set; }
 
 	// RELATIONSHIP
 	[JsonIgnore]
@@ -56,5 +59,5 @@ public class SharpObject
 	// RELATIONSHIP
 	// TODO: Consider using AnySharpObject instead of SharpObject
 	[JsonIgnore]
-	public required AsyncLazy<IEnumerable<SharpObject>> Children { get; set; }
+	public required AsyncLazy<IAsyncEnumerable<SharpObject>> Children { get; set; }
 }

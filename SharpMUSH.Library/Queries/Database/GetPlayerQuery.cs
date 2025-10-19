@@ -7,4 +7,4 @@ namespace SharpMUSH.Library.Queries.Database;
 /// Gets a player by matching to their name or aliases.
 /// </summary>
 /// <param name="Name">Name the search, case-insensitive.</param>
-public record GetPlayerQuery(string Name) : IQuery<IEnumerable<SharpPlayer>>/*, ICacheable*/;
+public record GetPlayerQuery(string Name) : IQuery<IAsyncEnumerable<SharpPlayer>>/*, ICacheable*/;

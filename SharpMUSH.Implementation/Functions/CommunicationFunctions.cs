@@ -17,7 +17,6 @@ public partial class Functions
 		var contents = await executorLocation.Content(Mediator!);
 
 		var interactableContents = contents
-			.ToAsyncEnumerable()
 			.Where(async (obj,_) =>
 				await PermissionService!.CanInteract(obj.WithRoomOption(), executor, InteractType.Hear));
 
@@ -40,7 +39,7 @@ public partial class Functions
 		var executorLocation = await executor.Where();
 		var contents = await executorLocation.Content(Mediator!);
 
-		var interactableContents = contents.ToAsyncEnumerable()
+		var interactableContents = contents
 			.Where(async (obj,_) =>
 				await PermissionService!.CanInteract(obj.WithRoomOption(), executor, InteractType.Hear));
 
@@ -107,7 +106,6 @@ public partial class Functions
 		var contents = await executorLocation.Content(Mediator!);
 
 		await foreach (var obj in contents
-			               .ToAsyncEnumerable()
 			               .Where(async (x,_) 
 				               => await PermissionService!.CanInteract(x.WithRoomOption(), executor, InteractType.Hear)))
 		{
@@ -133,7 +131,6 @@ public partial class Functions
 		var contents = await executorLocation.Content(Mediator!);
 
 		await foreach (var obj in contents
-			               .ToAsyncEnumerable()
 			               .Where(async (x,_) 
 				               => await PermissionService!.CanInteract(x.WithRoomOption(), executor, InteractType.Hear)))
 		{

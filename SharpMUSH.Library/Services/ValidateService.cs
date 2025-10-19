@@ -198,12 +198,8 @@ check_lock_type(dbref player, dbref thing, lock_type name, bool silent)
 		var tryFindPlayerByName = (await mediator.Send(new GetPlayerQuery(plainName)))
 			.Where(x => x.Object.DBRef != target.Object().DBRef);
 
-		if (tryFindPlayerByName.Any(x => x.Object.Name.Equals(plainName, StringComparison.InvariantCultureIgnoreCase)))
-		{
-			return false;
-		}
-
-		return true;
+		return !await tryFindPlayerByName
+			.AnyAsync(x => x.Object.Name.Equals(plainName, StringComparison.InvariantCultureIgnoreCase));
 	}
 
 	[GeneratedRegex(@"[^ \[\]%\\=&\|][\[\]%\\=&\|]*?[^ \[\]%\\=&\|]?$")]

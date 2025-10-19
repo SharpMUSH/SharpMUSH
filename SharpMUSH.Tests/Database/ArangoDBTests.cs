@@ -54,12 +54,12 @@ public class ArangoDBTests
 		var playerOneDBRef = new DBRef(playerOne!.Object.Key);
 
 		await Database.SetAttributeAsync(playerOneDBRef, ["Two", "Layers"], MModule.single("Layer"), playerOne);
-		var existingLayer = (await Database.GetAttributeAsync(playerOneDBRef, ["Two", "Layers"]))!.ToList();
+		var existingLayer = await (await Database.GetAttributeAsync(playerOneDBRef, ["Two", "Layers"]))!.ToListAsync();
 
 		await Assert.That(existingLayer.Last().Value.ToString()).IsEqualTo("Layer");
 
 		await Database.SetAttributeAsync(playerOneDBRef, ["Two", "Layers"], MModule.single("Layer2"), playerOne);
-		var overwrittenLayer = (await Database.GetAttributeAsync(playerOneDBRef, ["Two", "Layers"]))!.ToList();
+		var overwrittenLayer = await (await Database.GetAttributeAsync(playerOneDBRef, ["Two", "Layers"]))!.ToListAsync();
 
 		await Assert.That(overwrittenLayer.Last().Value.ToString()).IsEqualTo("Layer2");
 	}
@@ -72,7 +72,7 @@ public class ArangoDBTests
 
 		var ansiString = A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "red");
 		await Database.SetAttributeAsync(playerOneDBRef, ["Two", "Layers"], ansiString, playerOne.AsPlayer);
-		var existingLayer = (await Database.GetAttributeAsync(playerOneDBRef, ["Two", "Layers"]))!;
+		var existingLayer = await (await Database.GetAttributeAsync(playerOneDBRef, ["Two", "Layers"]))!.ToListAsync();
 
 		await Assert.That(existingLayer.Last().Value.ToString()).IsEquatableOrEqualTo(ansiString.ToString());
 	}
@@ -112,12 +112,12 @@ public class ArangoDBTests
 		await Database.SetAttributeAsync(playerOneDBRef, ["Three", "Layers", "Deep"], MModule.single("Deep1"), playerOne);
 		await Database.SetAttributeAsync(playerOneDBRef, ["Three", "Layers", "Deep2"], MModule.single("Deeper"), playerOne);
 
-		var existingSingle = (await Database.GetAttributeAsync(playerOneDBRef, ["SingleLayer"]))?.ToList();
-		var existingLayer = (await Database.GetAttributeAsync(playerOneDBRef, ["Two", "Layers"]))?.ToList();
-		var existingLeaf = (await Database.GetAttributeAsync(playerOneDBRef, ["Two", "Leaves"]))?.ToList();
-		var existingLeaf2 = (await Database.GetAttributeAsync(playerOneDBRef, ["Two", "Leaves2"]))?.ToList();
-		var existingDeep1 = (await Database.GetAttributeAsync(playerOneDBRef, ["Three", "Layers", "Deep"]))?.ToList();
-		var existingDeep2 = (await Database.GetAttributeAsync(playerOneDBRef, ["Three", "Layers", "Deep2"]))?.ToList();
+		var existingSingle = await (await Database.GetAttributeAsync(playerOneDBRef, ["SingleLayer"]))!.ToListAsync();
+		var existingLayer = await (await Database.GetAttributeAsync(playerOneDBRef, ["Two", "Layers"]))!.ToListAsync();
+		var existingLeaf = await (await Database.GetAttributeAsync(playerOneDBRef, ["Two", "Leaves"]))!.ToListAsync();
+		var existingLeaf2 =await (await Database.GetAttributeAsync(playerOneDBRef, ["Two", "Leaves2"]))!.ToListAsync();
+		var existingDeep1 =await (await Database.GetAttributeAsync(playerOneDBRef, ["Three", "Layers", "Deep"]))!.ToListAsync();
+		var existingDeep2 =await (await Database.GetAttributeAsync(playerOneDBRef, ["Three", "Layers", "Deep2"]))!.ToListAsync();
 
 		var obj = await Database!.GetObjectNodeAsync(playerOneDBRef);
 
@@ -144,7 +144,7 @@ public class ArangoDBTests
 
 		var attributes = await obj.Object()!.Attributes.WithCancellation(CancellationToken.None);
 
-		foreach (var attribute in attributes)
+		await foreach (var attribute in attributes)
 		{
 			await Assert.That(attribute)
 				.IsTypeOf<SharpAttribute>()

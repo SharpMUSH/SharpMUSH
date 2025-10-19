@@ -36,10 +36,18 @@ public static class SendMail
 		if (!noSignature)
 		{
 			var attribute = await mediator!.Send(new GetAttributeQuery(sender.Object().DBRef, ["MAILSIGNATURE"]));
-			var attributeValue = attribute?.FirstOrDefault()?.Value;
-			if (attributeValue != null)
+
+			if (attribute is not null)
 			{
-				MModule.concat(message, MModule.single("\n"), attributeValue);
+				var attributeOpportunity = await attribute.FirstOrDefaultAsync();
+				if(attributeOpportunity is not null)
+				{
+					var attributeValue = attributeOpportunity.Value;
+					if (attributeValue.Length > 0)
+					{
+						MModule.concat(message, MModule.single("\n"), attributeValue);
+					}
+				}
 			}
 		}
 		

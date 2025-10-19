@@ -430,7 +430,7 @@ public class SharpMUSHParserVisitor(ILogger logger,
 
 			var userDefinedCommandMatches = await CommandDiscoveryService!.MatchUserDefinedCommand(
 				parser,
-				nearbyObjects,
+				await nearbyObjects.ToArrayAsync(),
 				src);
 
 			if (userDefinedCommandMatches.IsSome())
@@ -457,15 +457,15 @@ public class SharpMUSHParserVisitor(ILogger logger,
 			// Step 13: User defined commands on the player's personal zone.
 			// Step 14: Global Exits
 			// Step 15: Global User-defined commands
-			var goConfig = Configuration!.CurrentValue.Database.MasterRoom;
-			var maybeGlobalObject = await Mediator!.Send(new GetObjectNodeQuery(new DBRef(Convert.ToInt32(goConfig))));
+			var goConfig = Configuration.CurrentValue.Database.MasterRoom;
+			var maybeGlobalObject = await Mediator.Send(new GetObjectNodeQuery(new DBRef(Convert.ToInt32(goConfig))));
 			var globalObject = maybeGlobalObject.Known();
 			var globalObjectContent = (await globalObject.AsContainer.Content(Mediator!))
 				.Select(x => x.WithRoomOption());
 
 			var userDefinedCommandMatchesOnGlobal = await CommandDiscoveryService!.MatchUserDefinedCommand(
 				parser,
-				[globalObject, .. globalObjectContent],
+				[globalObject, .. await globalObjectContent.ToArrayAsync()],
 				src);
 
 			if (userDefinedCommandMatchesOnGlobal.IsSome())

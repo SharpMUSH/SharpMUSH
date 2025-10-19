@@ -222,10 +222,10 @@ public partial class ArgHelpers
 
 	public static async ValueTask<IEnumerable<SharpPlayer?>> PopulatedNameList(IMediator mediator, string list)
 		=> await Task.WhenAll(NameList(list).Select(x => x.Match(
-			async dbref => (await mediator!.Send(new GetObjectNodeQuery(dbref))).TryPickT0(out var player, out var _)
+			async dbref => (await mediator.Send(new GetObjectNodeQuery(dbref))).TryPickT0(out var player, out var _)
 				? player
 				: null,
-			async name => (await mediator!.Send(new GetPlayerQuery(name))).FirstOrDefault())));
+			async name => await (await mediator.Send(new GetPlayerQuery(name))).FirstOrDefaultAsync())));
 
 	public static async ValueTask<CallState> ForHandleOrPlayer(IMUSHCodeParser parser, IMediator mediator, IConnectionService connectionService, ILocateService locateService, CallState value, Func<long, IConnectionService.ConnectionData, ValueTask<CallState>> handleFunc, Func<SharpPlayer,IConnectionService.ConnectionData,ValueTask<CallState>> playerFunc)
 	{

@@ -125,7 +125,7 @@ public partial class Commands
 
 		var contents = viewing.IsExit
 			? []
-			: (await Mediator!.Send(new GetContentsQuery(viewing.WithoutNone().AsContainer)))!.ToList();
+			: await (await Mediator!.Send(new GetContentsQuery(viewing.WithoutNone().AsContainer)))!.ToListAsync();
 		var viewingObject = viewing.Object()!;
 
 		var name = viewingObject.Name;
@@ -188,7 +188,8 @@ public partial class Commands
 
 		var contents = viewing.IsExit
 			? []
-			: await Mediator!.Send(new GetContentsQuery(viewing.Known().AsContainer));
+			: (await Mediator!.Send(new GetContentsQuery(viewing.Known().AsContainer)))?.ToArrayAsync().GetAwaiter()
+			.GetResult();
 
 		var obj = viewing.Object()!;
 		var ownerObj = (await obj.Owner.WithCancellation(CancellationToken.None)).Object;
@@ -605,7 +606,7 @@ public partial class Commands
 			// notify: Matches on contents of this room:
 			var matchedContent =
 				await CommandDiscoveryService!.MatchUserDefinedCommand(parser,
-					whereContent.Select(x => x.WithRoomOption()),
+					await whereContent.Select(x => x.WithRoomOption()).ToArrayAsync(),
 					arg0);
 
 			if (matchedContent.IsSome())
@@ -626,7 +627,7 @@ public partial class Commands
 			// notify: Matches on carried objects:
 			var matchedContent =
 				await CommandDiscoveryService!.MatchUserDefinedCommand(parser,
-					executorContents.Select(x => x.WithRoomOption()),
+					executorContents.Select(x => x.WithRoomOption()).ToArrayAsync().GetAwaiter().GetResult(),
 					arg0);
 
 			if (matchedContent.IsSome())
@@ -648,7 +649,8 @@ public partial class Commands
 		if (switches.Contains("GLOBAL"))
 		{
 			var masterRoom = new DBRef(Convert.ToInt32(Configuration!.CurrentValue.Database.MasterRoom));
-			var masterRoomContents = (await Mediator!.Send(new GetContentsQuery(masterRoom)) ?? []);
+			var masterRoomContents =
+				(await Mediator!.Send(new GetContentsQuery(masterRoom)))?.ToArrayAsync().GetAwaiter().GetResult() ?? [];
 
 			var masterRoomContent =
 				await CommandDiscoveryService!.MatchUserDefinedCommand(parser,
@@ -845,7 +847,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var one = await Mediator!.Send(new GetObjectNodeQuery(new DBRef(0)));
 		var attrValues = await Mediator!.Send(new GetAttributeQuery(located.Object().DBRef, ["SEMAPHORE"]));
-		var attrValue = attrValues?.LastOrDefault();
+		var attrValue = attrValues?.LastOrDefaultAsync().GetAwaiter().GetResult();
 
 		if (attrValue is null)
 		{
@@ -874,7 +876,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var one = await Mediator!.Send(new GetObjectNodeQuery(new DBRef(0)));
 		var attrValues = await Mediator!.Send(new GetAttributeQuery(located.Object().DBRef, attribute));
-		var attrValue = attrValues?.LastOrDefault();
+		var attrValue = attrValues?.LastOrDefaultAsync().GetAwaiter().GetResult();
 
 		if (attrValue is null)
 		{
@@ -1022,7 +1024,7 @@ public partial class Commands
 		{
 			var maybeFoundAttributes =
 				await Mediator!.Send(new GetAttributeQuery(objectToDrain.Object().DBRef, attribute));
-			var maybeFoundAttribute = maybeFoundAttributes?.LastOrDefault();
+			var maybeFoundAttribute = maybeFoundAttributes?.LastOrDefaultAsync().GetAwaiter().GetResult();
 
 			if (maybeFoundAttribute is null)
 			{
@@ -1131,7 +1133,6 @@ public partial class Commands
 			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, MModule.empty());
 
 		var interactableContents = contents
-			.ToAsyncEnumerable()
 			.Where(async (obj, _) =>
 				await PermissionService!.CanInteract(obj.WithRoomOption(), executor,
 					IPermissionService.InteractType.Hear));
@@ -1441,7 +1442,6 @@ public partial class Commands
 			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, MModule.empty());
 
 		var interactableContents = contents
-			.ToAsyncEnumerable()
 			.Where(async (obj, _) =>
 				await PermissionService!.CanInteract(obj.WithRoomOption(), executor,
 					IPermissionService.InteractType.Hear));
@@ -1493,7 +1493,6 @@ public partial class Commands
 			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, MModule.empty());
 
 		var interactableContents = contents
-			.ToAsyncEnumerable()
 			.Where(async (obj, _) =>
 				await PermissionService!.CanInteract(obj.WithRoomOption(), executor,
 					IPermissionService.InteractType.Hear));
@@ -1764,7 +1763,7 @@ public partial class Commands
 
 			// Contents of the room
 			var contents = await location.Content(Mediator!);
-			foreach (var obj in contents)
+			await foreach (var obj in contents)
 			{
 				var fullObj = obj.WithRoomOption();
 				var objOwner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
@@ -1806,7 +1805,7 @@ public partial class Commands
 			if (await locationAnyObject.IsAudible())
 			{
 				var exits = (await location.Content(Mediator!)).Where(x => x.IsExit);
-				foreach (var exit in exits)
+				await foreach (var exit in exits)
 				{
 					if (await exit.WithRoomOption().IsAudible())
 					{
@@ -1820,7 +1819,7 @@ public partial class Commands
 		if (!hereFlag && !exitsFlag && inventoryFlag)
 		{
 			await NotifyService!.Notify(executor, "Listening in your INVENTORY:");
-			foreach (var obj in await executor.AsContainer.Content(Mediator!))
+			await foreach (var obj in await executor.AsContainer.Content(Mediator!))
 			{
 				var fullObj = obj.WithRoomOption();
 				var objOwner = await obj.Object().Owner.WithCancellation(CancellationToken.None);

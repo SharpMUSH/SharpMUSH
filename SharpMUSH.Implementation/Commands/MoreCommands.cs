@@ -212,7 +212,6 @@ public partial class Commands
 			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, MModule.empty());
 
 		var interactableContents = contents
-			.ToAsyncEnumerable()
 			.Where(async (obj, _) =>
 				await PermissionService!.CanInteract(obj.WithRoomOption(), executor,
 					IPermissionService.InteractType.Hear));
@@ -251,7 +250,6 @@ public partial class Commands
 			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, MModule.empty());
 
 		var interactableContents = contents
-			.ToAsyncEnumerable()
 			.Where(async (obj, _) =>
 				await PermissionService!.CanInteract(obj.WithRoomOption(), executor,
 					IPermissionService.InteractType.Hear));
@@ -282,7 +280,6 @@ public partial class Commands
 			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, MModule.empty());
 
 		var interactableContents = contents
-			.ToAsyncEnumerable()
 			.Where(async (obj, _) =>
 				await PermissionService!.CanInteract(obj.WithRoomOption(), executor,
 					IPermissionService.InteractType.Hear));

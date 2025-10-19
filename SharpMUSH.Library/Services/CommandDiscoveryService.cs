@@ -23,14 +23,16 @@ public partial class CommandDiscoveryService(IFusionCache cache) : ICommandDisco
 			attr.Flags.All(flag => flag.Name != "NO_COMMAND")
 			&& CommandPatternRegex().IsMatch(attr.Value.ToPlainText()));
 					
-		var selector = hasNoCommandFlag.Select(attr =>
+		var result = hasNoCommandFlag.Select(attr =>
 		{
 			var match = CommandPatternRegex().Match(attr.Value.ToPlainText());
 			return (Obj: sharpObj, Attr: attr with { CommandListIndex = match.Length }, Pattern: match);
 		});
 		
-		foreach(var item in selector)
-			yield return item;
+		await foreach (var a in result)
+		{
+			yield return a;
+		}
 	}
 	
 	// TODO: Severe optimization needed. We can't keep scanning all attributes each time we want to do a command match, and do conversions.

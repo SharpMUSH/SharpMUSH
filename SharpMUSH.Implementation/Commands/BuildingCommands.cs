@@ -92,7 +92,7 @@ public partial class Commands
 						return found.Object().DBRef;
 
 					case { IsPlayer: true }:
-						var tryFindPlayerByName = (await Mediator!.Send(new GetPlayerQuery(name.ToPlainText()))).ToArray();
+						var tryFindPlayerByName = await (await Mediator!.Send(new GetPlayerQuery(name.ToPlainText()))).ToArrayAsync();
 						if (tryFindPlayerByName.Any(x =>
 							    x.Object.Name.Equals(name.ToPlainText(), StringComparison.InvariantCultureIgnoreCase)))
 						{

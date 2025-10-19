@@ -304,7 +304,7 @@ public partial class Functions
 				var attributes = await Mediator!.Send(new GetAttributesQuery(found.Object().DBRef, attributePattern,
 					false, IAttributeService.AttributePatternMode.Wildcard));
 
-				return string.Join(" ", attributes?.Select(x => x.LongName) ?? []);
+				return string.Join(" ", attributes?.Select(x => x.LongName).ToArrayAsync().GetAwaiter().GetResult() ?? []);
 			});
 	}
 
@@ -329,7 +329,7 @@ public partial class Functions
 				var attributes = await Mediator!.Send(new GetAttributesQuery(found.Object().DBRef, attributePattern,
 					true, IAttributeService.AttributePatternMode.Wildcard));
 
-				return string.Join(" ", attributes?.Select(x => x.LongName) ?? []);
+				return string.Join(" ", attributes?.Select(x => x.LongName).ToArrayAsync().GetAwaiter().GetResult() ?? []);
 			});
 	}
 
@@ -398,7 +398,7 @@ public partial class Functions
 				var attributes = await Mediator!.Send(new GetAttributesQuery(found.Object().DBRef, attributePattern,
 					false, IAttributeService.AttributePatternMode.Wildcard));
 
-				return attributes?.Count() ?? 0;
+				return attributes?.CountAsync().GetAwaiter().GetResult() ?? 0;
 			});
 	}
 
@@ -423,7 +423,7 @@ public partial class Functions
 				var attributes = await Mediator!.Send(new GetAttributesQuery(found.Object().DBRef, attributePattern,
 					true, IAttributeService.AttributePatternMode.Wildcard));
 
-				return attributes?.Count() ?? 0;
+				return attributes?.CountAsync().GetAwaiter().GetResult() ?? 0;
 			});
 	}
 

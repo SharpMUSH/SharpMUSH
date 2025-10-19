@@ -218,7 +218,7 @@ public partial class LocateService(IMediator mediator,
 		    && (flags.HasFlag(LocateFlags.PlayersPreference) || flags.HasFlag(LocateFlags.NoTypePreference)))
 		{
 			// TODO: Fix Async
-			var maybeMatch = (await mediator!.Send(new GetPlayerQuery(name))).FirstOrDefault();
+			var maybeMatch = await (await mediator.Send(new GetPlayerQuery(name))).FirstOrDefaultAsync();
 			match = maybeMatch is null
 				? new None()
 				: maybeMatch;
@@ -277,7 +277,7 @@ public partial class LocateService(IMediator mediator,
 			    where.IsContainer)
 			{
 				var contents = (await mediator!.Send(new GetContentsQuery(where.AsContainer)))?
-					.Select(x => x.WithRoomOption()) ?? [];
+					.Select(x => x.WithRoomOption()) ?? Enumerable.Empty<AnySharpObject>().ToAsyncEnumerable();
 				(bestMatch, final, curr, right_type, exact, c) =
 					await Match_List(parser, contents, looker, where, bestMatch, exact, final, curr, right_type, flags, name);
 				if (c == ControlFlow.Break) break;
@@ -290,7 +290,7 @@ public partial class LocateService(IMediator mediator,
 			{
 				var maybeContents = await mediator!.Send(new GetContentsQuery(location));
 				var contents = maybeContents?
-					.Select(x => x.WithRoomOption()) ?? [];
+					.Select(x => x.WithRoomOption()) ?? Enumerable.Empty<AnySharpObject>().ToAsyncEnumerable();
 				(bestMatch, final, curr, right_type, exact, c) =
 					await Match_List(parser, contents, looker, where, bestMatch, exact, final, curr, right_type, flags, name);
 				if (c == ControlFlow.Break) break;
@@ -315,7 +315,8 @@ public partial class LocateService(IMediator mediator,
 					                      LocateFlags.OnlyMatchObjectsInLookerInventory))
 					{
 						var masterRoom = new DBRef(Convert.ToInt32(Configuration!.CurrentValue.Database.MasterRoom));
-						var exits = (await mediator!.Send(new GetContentsQuery(masterRoom)) ?? [])
+						var exits = (await mediator!.Send(new GetContentsQuery(masterRoom)) 
+						             ?? Enumerable.Empty<AnySharpContent>().ToAsyncEnumerable())
 							.Where(x => x.IsExit)
 							.Select(x => new AnySharpObject(x.AsExit));
 
@@ -342,7 +343,8 @@ public partial class LocateService(IMediator mediator,
 
 			if (flags.HasFlag(LocateFlags.MatchObjectsInLookerInventory))
 			{
-				(bestMatch, final, curr, right_type, exact, c) = await Match_List(parser, [location.WithExitOption()], looker,
+				var list = new List<AnySharpObject> { location.WithExitOption() };
+				(bestMatch, final, curr, right_type, exact, c) = await Match_List(parser, list.ToAsyncEnumerable(), looker,
 					where,
 					bestMatch, exact, final, curr, right_type, flags, name);
 				if (c == ControlFlow.Break) break;
@@ -387,7 +389,7 @@ public partial class LocateService(IMediator mediator,
 			, ControlFlow c)>
 		Match_List(
 			IMUSHCodeParser parser,
-			IEnumerable<AnySharpObject> list,
+			IAsyncEnumerable<AnySharpObject> list,
 			AnySharpObject looker,
 			AnySharpObject where,
 			AnyOptionalSharpObjectOrError bestMatch,
@@ -400,7 +402,7 @@ public partial class LocateService(IMediator mediator,
 	{
 		ControlFlow flow = ControlFlow.Break;
 
-		foreach (var item in list)
+		await foreach (var item in list)
 		{
 			var cur = item;
 			if (flags.HasFlag(LocateFlags.PlayersPreference) && !cur.IsPlayer

@@ -28,7 +28,7 @@ public static class ChannelMute
 		var channel = maybeChannel.AsChannel;
 
 		var players = await Mediator!.Send(new GetPlayerQuery(playerName.ToPlainText()));
-		var player = players.FirstOrDefault();
+		var player = await players.FirstOrDefaultAsync();
 		if (player is null)
 		{
 			return new CallState("Player not found.");
