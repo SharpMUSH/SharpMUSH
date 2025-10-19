@@ -35,32 +35,25 @@ public partial class Commands
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).WithoutNone();
 		var executor = (await parser.CurrentState.ExecutorObject(Mediator!)).WithoutNone();
 
-		var locate = await LocateService!.LocateAndNotifyIfInvalid(parser,
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			enactor,
 			executor,
-			args["1"].Message!.ToString(), LocateFlags.All);
+			args["1"].Message!.ToString(), LocateFlags.All, async realLocated =>
+			{
+				var contents = args.TryGetValue("2", out var tmpContents) ? tmpContents.Message! : MModule.empty();
 
-		// Arguments are getting here in an evaluated state, when they should not be.
-		if (!locate.IsValid())
-		{
-			return new CallState(locate.IsError ? locate.AsError.Value : Errors.ErrorCantSeeThat);
-		}
+				var setResult =
+					await AttributeService!.SetAttributeAsync(executor, realLocated, MModule.plainText(args["0"].Message!),
+						contents);
+				await NotifyService!.Notify(enactor,
+					setResult.Match(
+						_ => $"{realLocated.Object().Name}/{args["0"].Message} - Set.",
+						failure => failure.Value)
+				);
 
-		// TODO: Switch to Clear an attribute! Take note of deeper authorization needed in case of the attribute having leaves.
-		var realLocated = locate.WithoutError().WithoutNone();
-		var contents = args.TryGetValue("2", out var tmpContents) ? tmpContents.Message! : MModule.empty();
-
-		var setResult =
-			await AttributeService!.SetAttributeAsync(executor, realLocated, MModule.plainText(args["0"].Message!),
-				contents);
-		await NotifyService!.Notify(enactor,
-			setResult.Match(
-				_ => $"{realLocated.Object().Name}/{args["0"].Message} - Set.",
-				failure => failure.Value)
-		);
-
-		return new CallState(setResult.Match(
-			_ => $"{realLocated.Object().Name}/{args["0"].Message}",
-			_ => string.Empty));
+				return new CallState(setResult.Match(
+					_ => $"{realLocated.Object().Name}/{args["0"].Message}",
+					_ => string.Empty));
+			});
 	}
 }
