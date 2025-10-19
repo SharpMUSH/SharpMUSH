@@ -1354,29 +1354,6 @@ public partial class Commands
 		], Behavior = CB.Default | CB.EqSplit | CB.NoGagged | CB.RSArgs, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Channel(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		/*
-		    @channel/list[/on|/off][/quiet] [<prefix>]
-			  @channel/what [<prefix>]
-			  @channel/who <channel>
-			  @channel/on <channel>[=<player>]
-			  @channel/off <channel>[=<player>]
-			  @channel/gag [<channel>][=<yes|no>]
-				@channel/mute [<channel>][=<yes|no>]
-				@channel/hide [<channel>][=<yes|no>]
-				@channel/combine [<channel>][=<yes|no>]
-			  @channel/title <channel>[=<message>]
-			  @channel/recall[/quiet] <channel>[=<lines|duration>[, <start line>]]  @channel/add <channel>[=<privs>]
-			  @channel/privs <channel>=<privs>
-			  @channel/describe <channel>=<description>
-			  @channel/buffer <channel>=<lines>
-			  @channel/decompile[/brief] <prefix>
-			  @channel/chown <channel>=<new owner>
-				@channel/rename <channel>=<new name>
-				@channel/wipe <channel>
-				@channel/delete <channel>
-				@channel/mogrifier <channel>=<object>
-		 */
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches.ToArray();
 
@@ -1386,7 +1363,6 @@ public partial class Commands
 		}
 
 		// TODO: Channel Visibility on most of these commands.
-
 		return switches switch
 		{
 			[.., "LIST"] => await ChannelCommand.ChannelList.Handle(parser, LocateService!, PermissionService!, Mediator!,
