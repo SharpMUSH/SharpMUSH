@@ -38,6 +38,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.Benchmarks", "Sha
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.Client", "SharpMUSH.Client\SharpMUSH.Client.csproj", "{2389F0A8-3733-4D75-924D-BB2D77C4374F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.Implementation.Generated", "SharpMUSH.Implementation.Generated\SharpMUSH.Implementation.Generated.csproj", "{6A19D5C2-137B-4409-852B-D00DAB2F6A92}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -96,6 +98,10 @@ Global
 		{2389F0A8-3733-4D75-924D-BB2D77C4374F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2389F0A8-3733-4D75-924D-BB2D77C4374F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2389F0A8-3733-4D75-924D-BB2D77C4374F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6A19D5C2-137B-4409-852B-D00DAB2F6A92}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6A19D5C2-137B-4409-852B-D00DAB2F6A92}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6A19D5C2-137B-4409-852B-D00DAB2F6A92}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6A19D5C2-137B-4409-852B-D00DAB2F6A92}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
