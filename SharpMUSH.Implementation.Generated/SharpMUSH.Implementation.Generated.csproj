@@ -9,7 +9,6 @@
     <OutputItemType>Analyzer</OutputItemType>
     <EnableDynamicLoading>true</EnableDynamicLoading>
 		<EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
-		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
   </PropertyGroup>
 
   <ItemGroup>
