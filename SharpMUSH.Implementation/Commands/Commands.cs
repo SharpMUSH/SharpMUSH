@@ -52,27 +52,14 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		ObjectDataService = objectDataService;
 		HttpClientFactory = httpClientFactory;
 
-		var knownBuiltInMethods =
-			typeof(Commands)
-				.GetMethods()
-				.Select(m => (Method: m,
-					Attribute: m.GetCustomAttribute<SharpCommandAttribute>(false)))
-				.Where(x => x.Attribute is not null)
-				.SelectMany(y =>
-					(Configurable.CommandAliases.TryGetValue(y.Attribute!.Name, out var aliases)
-						? aliases.Select(alias =>
-							new KeyValuePair<string, (MethodInfo Method, SharpCommandAttribute Attribute)>(alias,
-								(y.Method, y.Attribute!)))
-						: [])
-					.Append(new KeyValuePair<string, (MethodInfo Method, SharpCommandAttribute Attribute)>(y.Attribute.Name,
-						(y.Method, y.Attribute!))))
-				.ToDictionary();
-		
-		foreach (var knownMethod in knownBuiltInMethods)
+		foreach (var command in Generated.CommandLibrary.Commands)
 		{
-			_commandLibrary.Add(knownMethod.Key,
-				((knownMethod.Value.Attribute,
-					async p => await (ValueTask<Option<CallState>>)knownMethod.Value.Method.Invoke(null, [p, knownMethod.Value.Attribute])!), true));
+			_commandLibrary.Add(command.Key, (command.Value, true));
+			
+			foreach(var alias in Configurable.CommandAliases.TryGetValue(command.Key, out var aliasList) ? aliasList : [])
+			{
+				_commandLibrary.Add(alias, (command.Value, true));
+			}
 		}
 	}
 }

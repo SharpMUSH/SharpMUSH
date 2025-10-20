@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using DotNext.Collections.Generic;
 using Mediator;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
@@ -10,7 +11,6 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Functions;
 
-// TODO: FunctionProvider Interface.
 public partial class Functions : ILibraryProvider<FunctionDefinition>
 {
 	private static IMediator? Mediator { get; set; }
@@ -25,8 +25,6 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 	private static IConnectionService? ConnectionService { get; set; }
 	private static IExpandedObjectDataService? ObjectDataService { get; set; }
 
-	private readonly CommandLibraryService _commandLibrary = [];
-	
 	private readonly FunctionLibraryService _functionLibrary = [];
 	
 	public LibraryService<string, FunctionDefinition> Get() => _functionLibrary;
@@ -55,26 +53,14 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 		ConnectionService = connectionService;
 		ObjectDataService = objectDataService;
 		
-		var knownBuiltInMethods = typeof(Functions)
-			.GetMethods()
-			.Select(m => (Method: m,
-				Attribute: m.GetCustomAttribute<SharpFunctionAttribute>(false)))
-			.Where(x => x.Attribute is not null)
-			.SelectMany(y =>
-				(Configurable.FunctionAliases.TryGetValue(y.Attribute!.Name, out var aliases)
-					? aliases.Select(alias =>
-						new KeyValuePair<string, (MethodInfo Method, SharpFunctionAttribute Attribute)>(alias,
-							(y.Method, y.Attribute!)))
-					: [])
-				.Append(new KeyValuePair<string, (MethodInfo Method, SharpFunctionAttribute Attribute)>(y.Attribute.Name,
-					(y.Method, y.Attribute!))))
-			.ToDictionary();
-		
-		foreach (var knownMethod in knownBuiltInMethods)
+		foreach (var command in Generated.FunctionLibrary.Functions)
 		{
-			_functionLibrary.Add(knownMethod.Key,
-				((knownMethod.Value.Attribute,
-					async p => await (ValueTask<CallState>)knownMethod.Value.Method.Invoke(null, [p, knownMethod.Value.Attribute])!), true));
+			_functionLibrary.Add(command.Key, (command.Value, true));
+			
+			foreach(var alias in Configurable.FunctionAliases.TryGetValue(command.Key, out var aliasList) ? aliasList : [])
+			{
+				_functionLibrary.Add(alias, (command.Value, true));
+			}
 		}
 	}
 }
