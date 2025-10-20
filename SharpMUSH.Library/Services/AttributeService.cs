@@ -189,10 +189,8 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		var attributes = await actualObject.LazyAttributes.WithCancellation(CancellationToken.None);
 
 		return depth <= 1
-			? await attributes.Where(async (x, _) => await ps.CanViewAttribute(executor, obj, x))
-				.ToArrayAsync()
-			: (await GetVisibleLazyAttributesAsync(attributes, executor, obj, depth))
-			.ToArray();
+			? LazySharpAttributesOrError.FromAsync( attributes.Where(async (x, _) => await ps.CanViewAttribute(executor, obj, x)))
+			: LazySharpAttributesOrError.FromAsync(await GetVisibleLazyAttributesAsync(attributes, executor, obj, depth));
 	}
 
 	public async ValueTask<MString> EvaluateAttributeFunctionAsync(IMUSHCodeParser parser, AnySharpObject executor,
@@ -279,21 +277,20 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		return visibleList;
 	}
 
-	private async ValueTask<ImmutableList<LazySharpAttribute>> GetVisibleLazyAttributesAsync(
+	private async ValueTask<IAsyncEnumerable<LazySharpAttribute>> GetVisibleLazyAttributesAsync(
 		IAsyncEnumerable<LazySharpAttribute> attributes, AnySharpObject executor, AnySharpObject obj, int depth = 1)
 	{
-		if (depth == 0) return [];
+		if (depth == 0) return Enumerable.Empty<LazySharpAttribute>().ToAsyncEnumerable();
 
-		var visibleList = (await attributes.Where((x, _) => ps.CanViewAttribute(executor, obj, x))
-				.ToListAsync())
-			.ToImmutableList();
+		var visibleList = attributes.Where((x, _) => ps.CanViewAttribute(executor, obj, x));
 
-		foreach (var attribute in visibleList)
+		// TODO: Do this better. This is inefficient?
+		await foreach (var attribute in visibleList)
 		{
 			var subAttributes =
 				await GetVisibleLazyAttributesAsync(await attribute.Leaves.WithCancellation(CancellationToken.None), executor, obj,
 					depth - 1);
-			visibleList = visibleList.AddRange(subAttributes);
+			visibleList = visibleList.Union(subAttributes);
 		}
 
 		return visibleList;
@@ -326,12 +323,11 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		// TODO: CanViewAttribute needs to be able to Memoize during a list check, as it's likely to be called multiple times.
 		var attributes = await mediator.Send(
 			new GetLazyAttributesQuery(obj.Object().DBRef, attributePattern, checkParents, mode));
-
+		
 		return attributes is null
-			? Enumerable.Empty<LazySharpAttribute>().ToArray()
-			: await attributes
-				.Where(async (x, _) => await ps.CanViewAttribute(executor, obj, x))
-				.ToArrayAsync();
+			? LazySharpAttributesOrError.FromAsync(Enumerable.Empty<LazySharpAttribute>().ToArray().ToAsyncEnumerable())
+			: LazySharpAttributesOrError.FromAsync(attributes
+				.Where(async (x, _) => await ps.CanViewAttribute(executor, obj, x)));
 	}
 	
 	public async ValueTask<OneOf<Success, Error<string>>> SetAttributeFlagAsync(AnySharpObject executor,

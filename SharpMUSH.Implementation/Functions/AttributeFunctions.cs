@@ -149,7 +149,7 @@ public partial class Functions
 				}
 
 				// Attribute Flags
-				var attr = await AttributeService!.GetAttributeAsync(
+				var attr = await AttributeService!.LazilyGetAttributeAsync(
 					executor, found, attributePattern, IAttributeService.AttributeMode.Read, false);
 
 				return attr.Match(
@@ -202,7 +202,7 @@ public partial class Functions
 
 		if (dbrefAndAttr.IsT1) // IsNone
 		{
-			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
+			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(GetEval).ToUpper()));
 		}
 
 		var (dbref, attribute) = dbrefAndAttr.AsT0;
@@ -287,7 +287,7 @@ public partial class Functions
 	public static async ValueTask<CallState> ListAttributes(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var dbrefAndAttr =
-			HelperFunctions.SplitObjectAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+			HelperFunctions.SplitDBRefAndOptionalAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		if (dbrefAndAttr is { IsT1: true }) // IsNone
@@ -301,10 +301,15 @@ public partial class Functions
 			executor, executor, obj, LocateFlags.All,
 			async found =>
 			{
-				var attributes = await Mediator!.Send(new GetAttributesQuery(found.Object().DBRef, attributePattern,
-					false, IAttributeService.AttributePatternMode.Wildcard));
+				var attributes = await AttributeService!.LazilyGetAttributePatternAsync(executor, found, attributePattern ?? "*", false,
+					IAttributeService.AttributePatternMode.Wildcard);
 
-				return string.Join(" ", attributes?.Select(x => x.LongName).ToArrayAsync().GetAwaiter().GetResult() ?? []);
+				if (attributes.IsError)
+				{
+					return attributes.AsError;
+				}
+				
+				return string.Join(" ", attributes.AsAttributes.Select(x => x.LongName));
 			});
 	}
 
@@ -312,7 +317,7 @@ public partial class Functions
 	public static async ValueTask<CallState> ListAttributesParent(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var dbrefAndAttr =
-			HelperFunctions.SplitObjectAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+			HelperFunctions.SplitDBRefAndOptionalAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		if (dbrefAndAttr is { IsT1: true }) // IsNone
@@ -326,10 +331,15 @@ public partial class Functions
 			executor, executor, obj, LocateFlags.All,
 			async found =>
 			{
-				var attributes = await Mediator!.Send(new GetAttributesQuery(found.Object().DBRef, attributePattern,
-					true, IAttributeService.AttributePatternMode.Wildcard));
+				var attributes = await AttributeService!.LazilyGetAttributePatternAsync(executor, found, attributePattern ?? "*", true,
+					IAttributeService.AttributePatternMode.Wildcard);
 
-				return string.Join(" ", attributes?.Select(x => x.LongName).ToArrayAsync().GetAwaiter().GetResult() ?? []);
+				if (attributes.IsError)
+				{
+					return attributes.AsError;
+				}
+				
+				return string.Join(" ", attributes.AsAttributes.Select(x => x.LongName));
 			});
 	}
 
@@ -367,7 +377,7 @@ public partial class Functions
 				}
 
 				// Attribute Flags
-				var attr = await AttributeService!.GetAttributeAsync(
+				var attr = await AttributeService!.LazilyGetAttributeAsync(
 					executor, found, attributePattern, IAttributeService.AttributeMode.Read, false);
 
 				return attr.Match(
@@ -381,7 +391,7 @@ public partial class Functions
 	public static async ValueTask<CallState> NumberAttributes(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var dbrefAndAttr =
-			HelperFunctions.SplitObjectAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+			HelperFunctions.SplitDBRefAndOptionalAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		if (dbrefAndAttr is { IsT1: true }) // IsNone
@@ -395,10 +405,15 @@ public partial class Functions
 			LocateFlags.All,
 			async found =>
 			{
-				var attributes = await Mediator!.Send(new GetAttributesQuery(found.Object().DBRef, attributePattern,
-					false, IAttributeService.AttributePatternMode.Wildcard));
+				var attributes = await AttributeService!.LazilyGetAttributePatternAsync(executor, found, attributePattern ?? "*", true,
+					IAttributeService.AttributePatternMode.Wildcard);
 
-				return attributes?.CountAsync().GetAwaiter().GetResult() ?? 0;
+				if (attributes.IsError)
+				{
+					return attributes.AsError;
+				}
+				
+				return await attributes.AsAttributes.CountAsync();
 			});
 	}
 
@@ -406,7 +421,7 @@ public partial class Functions
 	public static async ValueTask<CallState> NumberAttributesParent(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var dbrefAndAttr =
-			HelperFunctions.SplitObjectAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+			HelperFunctions.SplitDBRefAndOptionalAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		if (dbrefAndAttr is { IsT1: true }) // IsNone
@@ -420,10 +435,17 @@ public partial class Functions
 			LocateFlags.All,
 			async found =>
 			{
-				var attributes = await Mediator!.Send(new GetAttributesQuery(found.Object().DBRef, attributePattern,
-					true, IAttributeService.AttributePatternMode.Wildcard));
+				
+				var attributes = await AttributeService!.LazilyGetAttributePatternAsync(executor, found, attributePattern ?? "*", true,
+					IAttributeService.AttributePatternMode.Wildcard);
 
-				return attributes?.CountAsync().GetAwaiter().GetResult() ?? 0;
+				if (attributes.IsError)
+				{
+					return attributes.AsError;
+				}
+
+				return await attributes.AsAttributes.CountAsync();
+				
 			});
 	}
 
