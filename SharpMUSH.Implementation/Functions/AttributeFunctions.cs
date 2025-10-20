@@ -73,10 +73,53 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "DEFAULT", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
-	public static ValueTask<CallState> Default(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Default(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// default([<obj>/]<attr>[, ... ,[<objN>]/<attrN>], <default>)
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var defaultArg = parser.CurrentState.ArgumentsOrdered.Last().Value;
+		var objAndAttrsToCheck = parser.CurrentState.ArgumentsOrdered.SkipLast(1).Select(x => x.Value);
+
+		foreach (var objAndAttr in objAndAttrsToCheck)
+		{
+			var parsedMessage = await objAndAttr.ParsedMessage();
+			var dbrefAndAttr = HelperFunctions.SplitObjectAndAttr(parsedMessage!.ToPlainText());
+			var (dbref, attribute) = dbrefAndAttr.AsT0;
+
+			if (dbrefAndAttr is { IsT1: true })
+			{
+				return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
+			}
+			
+			var maybeFound = await LocateService!.LocateAndNotifyIfInvalidWithCallState(
+				parser,
+				executor, 
+				executor, 
+				dbref,
+				LocateFlags.All);
+
+			if (!maybeFound.IsAnySharpObject)
+			{
+				return maybeFound.AsError;
+			}
+
+			var found = maybeFound.AsSharpObject;
+
+			var maybeAttr = await AttributeService!.GetAttributeAsync(
+				executor,
+				found,
+				attribute,
+				mode: IAttributeService.AttributeMode.Execute,
+				parent: false);
+
+			if (!maybeAttr.IsAttribute)
+			{
+				continue;
+			}
+
+			return maybeAttr.AsCallState;
+		}
+		
+		return await defaultArg.ParsedMessage();
 	}
 
 	[SharpFunction(Name = "EDEFAULT", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.NoParse)]
@@ -301,14 +344,15 @@ public partial class Functions
 			executor, executor, obj, LocateFlags.All,
 			async found =>
 			{
-				var attributes = await AttributeService!.LazilyGetAttributePatternAsync(executor, found, attributePattern ?? "*", false,
+				var attributes = await AttributeService!.LazilyGetAttributePatternAsync(executor, found,
+					attributePattern ?? "*", false,
 					IAttributeService.AttributePatternMode.Wildcard);
 
 				if (attributes.IsError)
 				{
 					return attributes.AsError;
 				}
-				
+
 				return string.Join(" ", attributes.AsAttributes.Select(x => x.LongName));
 			});
 	}
@@ -331,14 +375,15 @@ public partial class Functions
 			executor, executor, obj, LocateFlags.All,
 			async found =>
 			{
-				var attributes = await AttributeService!.LazilyGetAttributePatternAsync(executor, found, attributePattern ?? "*", true,
+				var attributes = await AttributeService!.LazilyGetAttributePatternAsync(executor, found,
+					attributePattern ?? "*", true,
 					IAttributeService.AttributePatternMode.Wildcard);
 
 				if (attributes.IsError)
 				{
 					return attributes.AsError;
 				}
-				
+
 				return string.Join(" ", attributes.AsAttributes.Select(x => x.LongName));
 			});
 	}
@@ -405,14 +450,15 @@ public partial class Functions
 			LocateFlags.All,
 			async found =>
 			{
-				var attributes = await AttributeService!.LazilyGetAttributePatternAsync(executor, found, attributePattern ?? "*", true,
+				var attributes = await AttributeService!.LazilyGetAttributePatternAsync(executor, found,
+					attributePattern ?? "*", true,
 					IAttributeService.AttributePatternMode.Wildcard);
 
 				if (attributes.IsError)
 				{
 					return attributes.AsError;
 				}
-				
+
 				return await attributes.AsAttributes.CountAsync();
 			});
 	}
@@ -435,8 +481,8 @@ public partial class Functions
 			LocateFlags.All,
 			async found =>
 			{
-				
-				var attributes = await AttributeService!.LazilyGetAttributePatternAsync(executor, found, attributePattern ?? "*", true,
+				var attributes = await AttributeService!.LazilyGetAttributePatternAsync(executor, found,
+					attributePattern ?? "*", true,
 					IAttributeService.AttributePatternMode.Wildcard);
 
 				if (attributes.IsError)
@@ -445,7 +491,6 @@ public partial class Functions
 				}
 
 				return await attributes.AsAttributes.CountAsync();
-				
 			});
 	}
 
@@ -896,7 +941,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "VERSION", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> Version(IMUSHCodeParser parser, SharpFunctionAttribute _2) 
+	public static ValueTask<CallState> Version(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? string.Empty);
 
 	[SharpFunction(Name = "VISIBLE", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -910,7 +955,7 @@ public partial class Functions
 		If <object>, <victim>, or <attribute> is invalid, the function returns 0.
 
 		 */
-		
+
 		throw new NotImplementedException();
 	}
 
