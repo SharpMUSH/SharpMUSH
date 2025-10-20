@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
@@ -11,6 +10,8 @@ namespace SharpMUSH.Configuration.SourceGenerators;
 [Generator]
 public class SharpMUSHOptionsValidationGenerator : IIncrementalGenerator
 {
+	private const string SHARPATTRIBUTE = "SharpConfigAttribute";
+	
 	public void Initialize(IncrementalGeneratorInitializationContext context)
 	{
 		var optionsProvider = context.SyntaxProvider
@@ -20,11 +21,12 @@ public class SharpMUSHOptionsValidationGenerator : IIncrementalGenerator
 			.Where(static m => m is not null);
 
 		var compilation = context.CompilationProvider.Combine(optionsProvider.Collect());
-		
+
 		context.RegisterSourceOutput(compilation, Execute);
 	}
 
-	private static void Execute(SourceProductionContext spc, (Compilation Left, ImmutableArray<RecordDeclarationSyntax> Right) arg)
+	private static void Execute(SourceProductionContext spc,
+		(Compilation Left, ImmutableArray<RecordDeclarationSyntax> Right) arg)
 	{
 		var compilation = arg.Left;
 		var optionsClasses = arg.Right;
@@ -39,26 +41,58 @@ public class SharpMUSHOptionsValidationGenerator : IIncrementalGenerator
 		sb.AppendLine("using Microsoft.Extensions.Options;");
 		sb.AppendLine("namespace SharpMUSH.Configuration.Generated;");
 		sb.AppendLine();
-		sb.AppendLine("public class ValidateSharpMUSHOptions : IValidateOptions<SharpMUSH.Configuration.Options.SharpMUSHOptions>");
+
+		// Collect regex patterns and assign static fields
+		var regexFields = new List<string>();
+		var regexFieldNames = new Dictionary<string, string>();
+		var regexIndex = 0;
+
+		foreach (var prop in SelectCategoryProperties(optionsSymbol).SelectMany(SelectConfigProperties))
+		{
+			var attr = prop.GetAttributes().FirstOrDefault(a => a.AttributeClass?.Name == SHARPATTRIBUTE);
+			if (attr == null) continue;
+
+			var pattern = attr.NamedArguments.FirstOrDefault(kv => kv.Key == "ValidationPattern").Value.Value as string;
+			if (string.IsNullOrEmpty(pattern) || regexFieldNames.ContainsKey(pattern!)) continue;
+
+			var fieldName = $"_regex{regexIndex++}";
+			regexFields.Add(
+				$"\tprivate static readonly Regex {fieldName} = new Regex(@\"{pattern!}\", RegexOptions.Compiled);");
+			regexFieldNames[pattern!] = fieldName;
+		}
+
+		sb.AppendLine(
+			"public class ValidateSharpMUSHOptions : IValidateOptions<SharpMUSH.Configuration.Options.SharpMUSHOptions>");
 		sb.AppendLine("{");
-		sb.AppendLine("\tpublic ValidateOptionsResult Validate(string? name, SharpMUSH.Configuration.Options.SharpMUSHOptions options)");
+		// Emit regex fields
+		foreach (var field in regexFields)
+		{
+			sb.AppendLine(field);
+		}
+
+		sb.AppendLine(
+			"\tpublic ValidateOptionsResult Validate(string name, SharpMUSH.Configuration.Options.SharpMUSHOptions options)");
 		sb.AppendLine("\t{");
 
 		foreach (var category in SelectCategoryProperties(optionsSymbol))
 		{
 			sb.AppendLine($"\r\t\t// Category: {category.Name}");
 			sb.AppendLine($"\t\tvar {category.Name}Value = options.{category.Name};");
+
 			foreach (var prop in SelectConfigProperties(category))
 			{
-				var attr = prop.GetAttributes().FirstOrDefault(a => a.AttributeClass?.Name == "SharpConfigAttribute");
+				var attr = prop.GetAttributes().FirstOrDefault(a => a.AttributeClass?.Name == SHARPATTRIBUTE);
 				if (attr == null) continue;
 
 				var pattern = attr.NamedArguments.FirstOrDefault(kv => kv.Key == "ValidationPattern").Value.Value as string;
 				if (string.IsNullOrEmpty(pattern)) continue;
 
+				var regexFieldName = regexFieldNames[pattern!];
+
 				sb.AppendLine($"\t\tvar {prop.Name}Value = {category.Name}Value.{prop.Name};");
-				sb.AppendLine($"\t\tif (!Regex.IsMatch({prop.Name}Value.ToString() ?? \"\", @\"{pattern}\"))");
-				sb.AppendLine($"\t\t\treturn ValidateOptionsResult.Fail($\"Configuration option {category.Name}:{prop.Name} with value '{{{prop.Name}Value}}' is invalid.\");");
+				sb.AppendLine($"\t\tif (!{regexFieldName}.IsMatch({prop.Name}Value.ToString() ?? \"\"))");
+				sb.AppendLine(
+					$"\t\t\treturn ValidateOptionsResult.Fail($\"Configuration option {category.Name}:{prop.Name} with value '{{{prop.Name}Value}}' is invalid.\");");
 			}
 		}
 
@@ -70,15 +104,15 @@ public class SharpMUSHOptionsValidationGenerator : IIncrementalGenerator
 	}
 
 	private static IEnumerable<IPropertySymbol> SelectCategoryProperties(INamedTypeSymbol optionsSymbol)
-	{
-		return optionsSymbol.GetMembers().OfType<IPropertySymbol>().Where(x => x.Name is not "EqualityContract");
-	}
+		=> optionsSymbol.GetMembers().OfType<IPropertySymbol>().Where(x => x.Name is not "EqualityContract");
 
 	private static IEnumerable<IPropertySymbol> SelectConfigProperties(IPropertySymbol category)
 	{
-		if (category.Type is INamedTypeSymbol categoryType)
-			return categoryType.GetMembers().OfType<IPropertySymbol>()
-				.Where(p => p.GetAttributes().Any(a => a.AttributeClass?.Name == "SharpConfigAttribute"));
-		return [];
+		return category.Type is INamedTypeSymbol categoryType
+			? categoryType
+				.GetMembers()
+				.OfType<IPropertySymbol>()
+				.Where(p => p.GetAttributes().Any(a => a.AttributeClass?.Name == "SharpConfigAttribute"))
+			: [];
 	}
 }
