@@ -10,9 +10,9 @@
 
 	<ItemGroup>
 		<PackageReference Include="BenchmarkDotNet" Version="0.15.4" />
-		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.0-rc.1.25451.107" />
-		<PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.0-rc.1.25451.107" />
-		<PackageReference Include="Microsoft.AspNetCore.TestHost" Version="10.0.0-rc.1.25451.107" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.0-rc.2.25502.107" />
+		<PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.0-rc.2.25502.107" />
+		<PackageReference Include="Microsoft.AspNetCore.TestHost" Version="10.0.0-rc.2.25502.107" />
 		<PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
 	</ItemGroup>
 
