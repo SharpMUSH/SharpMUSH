@@ -3,6 +3,7 @@ using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -450,12 +451,53 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "HASFLAG", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> HasFlag(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "hasflag", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public static async ValueTask<CallState> HasFlag(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// hasflag(<object>[/<attrib>], <flag>)
-		// Must look at full name, or alias.
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var objAndAttr = MModule.plainText(parser.CurrentState.Arguments["0"].Message!);
+		var flagNameOrSymbol = MModule.plainText(parser.CurrentState.Arguments["1"].Message!);
+		var split = HelperFunctions.SplitDBRefAndOptionalAttr(objAndAttr);
+		
+		if (!split.TryPickT0(out var details, out _))
+		{
+			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(HasFlag)));
+		}
+		
+		var (db, attr) = details;
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+			parser, executor, executor, db, LocateFlags.All, async realLocated =>
+			{
+				return split.AsT0 switch
+				{
+					(_, null) => await HasObjectFlag(realLocated),
+					_ => await HasAttributeFlag(realLocated)
+				};
+			});
+
+		async ValueTask<CallState> HasObjectFlag(AnySharpObject realLocated)
+		{
+			return (await realLocated.Object().Flags.WithCancellation(CancellationToken.None)).Any(f =>
+				string.Equals(f.Name, flagNameOrSymbol, StringComparison.OrdinalIgnoreCase) ||
+				string.Equals(f.Symbol.ToString(), flagNameOrSymbol, StringComparison.OrdinalIgnoreCase));
+		}
+
+		async ValueTask<CallState> HasAttributeFlag(AnySharpObject realLocated)
+		{
+			var maybeAttr = await AttributeService!.GetAttributeAsync(
+				executor,
+				realLocated,
+				attr!,
+				IAttributeService.AttributeMode.Read,
+				false);
+
+			if (!maybeAttr.IsAttribute) return "0";
+					
+			return maybeAttr.AsAttribute.Last().Flags.Any(f =>
+				string.Equals(f.Name, flagNameOrSymbol, StringComparison.OrdinalIgnoreCase) ||
+				string.Equals(f.Symbol.ToString(), flagNameOrSymbol, StringComparison.OrdinalIgnoreCase));
+		}
 	}
 
 	[SharpFunction(Name = "lattr", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
