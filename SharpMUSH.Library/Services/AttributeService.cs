@@ -1,4 +1,5 @@
 ﻿using System.Collections.Immutable;
+using DotNext.Collections.Generic;
 using Mediator;
 using OneOf;
 using OneOf.Types;
@@ -10,10 +11,16 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using AsyncEnumerable = System.Linq.AsyncEnumerable;
 
 namespace SharpMUSH.Library.Services;
 
-public class AttributeService(IMediator mediator, IPermissionService ps, ICommandDiscoveryService cs, ILocateService locateService, INotifyService notifyService)
+public class AttributeService(
+	IMediator mediator,
+	IPermissionService ps,
+	ICommandDiscoveryService cs,
+	ILocateService locateService,
+	INotifyService notifyService)
 	: IAttributeService
 {
 	public async ValueTask<OptionalSharpAttributeOrError> GetAttributeAsync(
@@ -50,8 +57,8 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 			{
 				return new None();
 			}
-			
-			var attrArr = await attr.ToArrayAsync();
+
+			var attrArr = await AsyncEnumerable.ToArrayAsync(attr);
 
 			if (attrArr?.Length == attributePath.Length)
 			{
@@ -77,7 +84,8 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		// TODO: Currently this only returns the last piece. We should return the full path.
 	}
 
-	public async ValueTask<OptionalLazySharpAttributeOrError> LazilyGetAttributeAsync(AnySharpObject executor, AnySharpObject obj, string attribute,
+	public async ValueTask<OptionalLazySharpAttributeOrError> LazilyGetAttributeAsync(AnySharpObject executor,
+		AnySharpObject obj, string attribute,
 		IAttributeService.AttributeMode mode, bool checkParent = true)
 	{
 		// TODO: Check if that is a valid attribute format.
@@ -107,8 +115,8 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 			{
 				return new None();
 			}
-			
-			var attrArr = await attr.ToArrayAsync();
+
+			var attrArr = await AsyncEnumerable.ToArrayAsync(attr);
 
 			if (attrArr?.Length == attributePath.Length)
 			{
@@ -177,20 +185,22 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		var attributes = await actualObject.Attributes.WithCancellation(CancellationToken.None);
 
 		return depth <= 1
-			? await attributes.Where(async (x, _) => await ps.CanViewAttribute(executor, obj, x))
-				.ToArrayAsync()
+			? await AsyncEnumerable.ToArrayAsync(
+				attributes.Where(async (x, _) => await ps.CanViewAttribute(executor, obj, x)))
 			: (await GetVisibleAttributesAsync(attributes, executor, obj, depth))
 			.ToArray();
 	}
 
-	public async ValueTask<LazySharpAttributesOrError> LazilyGetVisibleAttributesAsync(AnySharpObject executor, AnySharpObject obj, int depth = 1)
+	public async ValueTask<LazySharpAttributesOrError> LazilyGetVisibleAttributesAsync(AnySharpObject executor,
+		AnySharpObject obj, int depth = 1)
 	{
 		var actualObject = obj.Object();
 		var attributes = await actualObject.LazyAttributes.WithCancellation(CancellationToken.None);
 
 		return depth <= 1
-			? LazySharpAttributesOrError.FromAsync( attributes.Where(async (x, _) => await ps.CanViewAttribute(executor, obj, x)))
-			: LazySharpAttributesOrError.FromAsync(await GetVisibleLazyAttributesAsync(attributes, executor, obj, depth));
+			? LazySharpAttributesOrError.FromAsync(attributes.Where(async (x, _) =>
+				await ps.CanViewAttribute(executor, obj, x)))
+			: LazySharpAttributesOrError.FromAsync(GetVisibleLazyAttributesAsync(attributes, executor, obj, depth));
 	}
 
 	public async ValueTask<MString> EvaluateAttributeFunctionAsync(IMUSHCodeParser parser, AnySharpObject executor,
@@ -277,23 +287,34 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		return visibleList;
 	}
 
-	private async ValueTask<IAsyncEnumerable<LazySharpAttribute>> GetVisibleLazyAttributesAsync(
-		IAsyncEnumerable<LazySharpAttribute> attributes, AnySharpObject executor, AnySharpObject obj, int depth = 1)
+	private async IAsyncEnumerable<LazySharpAttribute> GetVisibleLazyAttributesAsync(
+		IAsyncEnumerable<LazySharpAttribute> attributes, AnySharpObject executor, AnySharpObject obj, int currentDepth = 1)
 	{
-		if (depth == 0) return Enumerable.Empty<LazySharpAttribute>().ToAsyncEnumerable();
+		var attrs = attributes;
+		var stagingAttrs = new List<IAsyncEnumerable<LazySharpAttribute>>();
+		
+		const int maxDepth = 0;
 
-		var visibleList = attributes.Where((x, _) => ps.CanViewAttribute(executor, obj, x));
-
-		// TODO: Do this better. This is inefficient?
-		await foreach (var attribute in visibleList)
+		while (currentDepth > maxDepth)
 		{
-			var subAttributes =
-				await GetVisibleLazyAttributesAsync(await attribute.Leaves.WithCancellation(CancellationToken.None), executor, obj,
-					depth - 1);
-			visibleList = visibleList.Union(subAttributes);
+			var visibleAttributes = attrs
+				.Where(async (x, _)
+					=> await ps.CanViewAttribute(executor, obj, x));
+			
+			// Multiple Iteration that may be able to be optimized away.
+			await foreach (var attr in visibleAttributes)
+			{
+				yield return attr;
+				stagingAttrs.AddRange(await attr.Leaves.WithCancellation(CancellationToken.None));
+			}
+			
+			attrs = visibleAttributes
+				.Select<LazySharpAttribute, IAsyncEnumerable<LazySharpAttribute>>(async (x, _) =>
+					await x.Leaves.WithCancellation(CancellationToken.None))
+				.SelectMany(x => x);
+			
+			currentDepth++;
 		}
-
-		return visibleList;
 	}
 
 	public async ValueTask<SharpAttributesOrError> GetAttributePatternAsync(AnySharpObject executor,
@@ -310,12 +331,12 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 
 		return attributes is null
 			? Enumerable.Empty<SharpAttribute>().ToArray()
-			: await attributes
-				.Where(async (x, _) => await ps.CanViewAttribute(executor, obj, x))
-				.ToArrayAsync();
+			: await AsyncEnumerable.ToArrayAsync(attributes
+				.Where(async (x, _) => await ps.CanViewAttribute(executor, obj, x)));
 	}
 
-	public async ValueTask<LazySharpAttributesOrError> LazilyGetAttributePatternAsync(AnySharpObject executor, AnySharpObject obj, string attributePattern,
+	public async ValueTask<LazySharpAttributesOrError> LazilyGetAttributePatternAsync(AnySharpObject executor,
+		AnySharpObject obj, string attributePattern,
 		bool checkParents, IAttributeService.AttributePatternMode mode = IAttributeService.AttributePatternMode.Exact)
 	{
 		// TODO: Implement Pattern Modes
@@ -323,13 +344,13 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		// TODO: CanViewAttribute needs to be able to Memoize during a list check, as it's likely to be called multiple times.
 		var attributes = await mediator.Send(
 			new GetLazyAttributesQuery(obj.Object().DBRef, attributePattern, checkParents, mode));
-		
+
 		return attributes is null
 			? LazySharpAttributesOrError.FromAsync(Enumerable.Empty<LazySharpAttribute>().ToArray().ToAsyncEnumerable())
 			: LazySharpAttributesOrError.FromAsync(attributes
 				.Where(async (x, _) => await ps.CanViewAttribute(executor, obj, x)));
 	}
-	
+
 	public async ValueTask<OneOf<Success, Error<string>>> SetAttributeFlagAsync(AnySharpObject executor,
 		AnySharpObject obj, string attribute, string flag)
 	{
@@ -357,7 +378,7 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		await mediator.Send(new SetAttributeFlagCommand(obj.Object().DBRef, returnedAttribute.AsAttribute.Last(),
 			returnedFlag.First()));
 
-		await notifyService.Notify(executor, 
+		await notifyService.Notify(executor,
 			$"Flag {returnedFlag.First().Name} set on attribute {returnedAttribute.AsAttribute.Last().LongName}", obj);
 
 		return new Success();
@@ -389,8 +410,8 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		// TODO: What if it's not already set?
 		await mediator.Send(new UnsetAttributeFlagCommand(obj.Object().DBRef, returnedAttribute.AsAttribute.Last(),
 			returnedFlag.First()));
-		
-		await notifyService.Notify(executor, 
+
+		await notifyService.Notify(executor,
 			$"Flag {returnedFlag.First().Name} unset from attribute {returnedAttribute.AsAttribute.Last().LongName}", obj);
 
 		return new Success();
@@ -411,7 +432,7 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 
 		// TODO: Fix, object permissions also needed.
 		var permission = attr == null ||
-		                 await attr.AllAsync(async (x,_) => await ps.CanSet(executor, obj, x));
+		                 await attr.AllAsync(async (x, _) => await ps.CanSet(executor, obj, x));
 
 		if (!permission)
 		{
@@ -421,8 +442,8 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 		cs.InvalidateCache(obj.Object().DBRef);
 		await mediator.Send(new SetAttributeCommand(obj.Object().DBRef, attrPath, value,
 			await executor.Object().Owner.WithCancellation(CancellationToken.None)));
-		
-		await notifyService.Notify(executor, 
+
+		await notifyService.Notify(executor,
 			$"Attribute {attrPath} SET.", obj);
 
 		return new Success();
@@ -458,9 +479,9 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 			return new Error<string>(Errors.ErrorAttrSetPermissions);
 		}
 
-		var attrArr = await attr.ToArrayAsync();
+		var attrArr = await AsyncEnumerable.ToArrayAsync(attr);
 
-		if (!await attrArr.ToAsyncEnumerable().AllAsync(async (x,_) => await ps.CanSet(executor, obj, x)))
+		if (!await attrArr.ToAsyncEnumerable().AllAsync(async (x, _) => await ps.CanSet(executor, obj, x)))
 		{
 			return new Error<string>(Errors.ErrorAttrSetPermissions);
 		}
@@ -471,10 +492,10 @@ public class AttributeService(IMediator mediator, IPermissionService ps, IComman
 
 		foreach (var attrDone in attrArr!)
 		{
-			await notifyService.Notify(executor, 
+			await notifyService.Notify(executor,
 				$"Attribute {attrDone.LongName} CLEARED.", obj);
 		}
-		
+
 		return new Success();
 	}
 }
