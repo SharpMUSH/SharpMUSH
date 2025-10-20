@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SharpMUSH.Generated", "SharpMUSH.Generated\SharpMUSH.Generated.csproj", "{C5329713-0179-4057-B7F4-363931C5B787}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SharpMUSH.Parser.Generated", "SharpMUSH.Parser.Generated\SharpMUSH.Parser.Generated.csproj", "{C5329713-0179-4057-B7F4-363931C5B787}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SharpMUSH.Tests", "SharpMUSH.Tests\SharpMUSH.Tests.csproj", "{B337D027-927C-4A5F-A0B4-571E0E199CB6}"
 EndProject
