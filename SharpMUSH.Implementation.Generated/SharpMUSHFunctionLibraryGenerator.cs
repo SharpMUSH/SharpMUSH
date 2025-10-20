@@ -47,7 +47,7 @@ public sealed class SharpMUSHFunctionLibraryGenerator : IIncrementalGenerator
 		return (name, className, methodName, attrName, minArgs, maxArgs, flags, restrict);
 	}
 
-	private void Execute(SourceProductionContext context,
+	private static void Execute(SourceProductionContext context,
 		(Compilation Left, ImmutableArray<(MethodDeclarationSyntax Method, AttributeData Attribute)> list) tuple)
 	{
 		var list = tuple.list;

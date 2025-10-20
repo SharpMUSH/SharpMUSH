@@ -1,22 +1,23 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-    <PropertyGroup>
-        <TargetFramework>net10.0</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-        <LangVersion>default</LangVersion>
-    </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<LangVersion>default</LangVersion>
+		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+	</PropertyGroup>
 
-    <ItemGroup>
-      <Reference Include="Microsoft.Extensions.Options">
-        <HintPath>..\..\..\.dotnet\shared\Microsoft.AspNetCore.App\9.0.0\Microsoft.Extensions.Options.dll</HintPath>
-      </Reference>
-    </ItemGroup>
+	<ItemGroup>
+		<Reference Include="Microsoft.Extensions.Options">
+			<HintPath>..\..\..\.dotnet\shared\Microsoft.AspNetCore.App\9.0.0\Microsoft.Extensions.Options.dll</HintPath>
+		</Reference>
+	</ItemGroup>
 
-    <ItemGroup>
-      <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0-rc.2.25502.107" />
-      <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.0-rc.2.25502.107" />
-    </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0-rc.2.25502.107"/>
+		<PackageReference Include="Microsoft.Extensions.Options" Version="10.0.0-rc.2.25502.107"/>
+	</ItemGroup>
 
 	<ItemGroup>
 		<Content Update="mushcnf.dst">
@@ -34,6 +35,11 @@
 		<None Update="colors.json">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\SharpMUSH.Configuration.SourceGenerators\SharpMUSH.Configuration.SourceGenerators.csproj" 
+											OutputItemType="Analyzer" />
 	</ItemGroup>
 
 </Project>

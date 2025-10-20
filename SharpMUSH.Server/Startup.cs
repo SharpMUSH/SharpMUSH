@@ -110,8 +110,9 @@ public class Startup(ArangoConfiguration config, string colorFile)
 		services.AddSingleton<IMUSHCodeParser, MUSHCodeParser>();
 		services.AddSingleton<IValidateService, ValidateService>();
 		services.AddKeyedSingleton(nameof(colorFile), colorFile);
-		services.AddOptions<SharpMUSHOptions>();
-		services.AddOptions<ColorsOptions>();
+		services.AddOptions<SharpMUSHOptions>().ValidateOnStart();
+		services.AddScoped<IValidateOptions<SharpMUSHOptions>, Configuration.Generated.ValidateSharpMUSHOptions>();
+		services.AddOptions<ColorsOptions>().ValidateOnStart();
 		services.AddSingleton<IOptionsWrapper<SharpMUSHOptions>, Library.Services.OptionsWrapper<SharpMUSHOptions>>();
 		services.AddSingleton<IOptionsWrapper<ColorsOptions>, Library.Services.OptionsWrapper<ColorsOptions>>();
 		services.AddHttpClient();
