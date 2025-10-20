@@ -89,11 +89,11 @@ public partial class Functions
 			{
 				return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
 			}
-			
+
 			var maybeFound = await LocateService!.LocateAndNotifyIfInvalidWithCallState(
 				parser,
-				executor, 
-				executor, 
+				executor,
+				executor,
 				dbref,
 				LocateFlags.All);
 
@@ -118,7 +118,7 @@ public partial class Functions
 
 			return maybeAttr.AsCallState;
 		}
-		
+
 		return await defaultArg.ParsedMessage();
 	}
 
@@ -140,11 +140,11 @@ public partial class Functions
 			{
 				return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
 			}
-			
+
 			var maybeFound = await LocateService!.LocateAndNotifyIfInvalidWithCallState(
 				parser,
-				executor, 
-				executor, 
+				executor,
+				executor,
 				dbref,
 				LocateFlags.All);
 
@@ -178,7 +178,7 @@ public partial class Functions
 					attribute,
 					parser.CurrentState.EnvironmentRegisters));
 		}
-		
+
 		return await defaultArg.ParsedMessage();
 	}
 
@@ -340,30 +340,114 @@ public partial class Functions
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "HASATTR", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> HasAttribute(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "hasattr", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public static async ValueTask<CallState> HasAttribute(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var obj = parser.CurrentState.ArgumentsOrdered["0"].Message!.ToPlainText()!;
+		var attribute = parser.CurrentState.ArgumentsOrdered["1"].Message!.ToPlainText()!;
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+			executor,
+			executor,
+			obj,
+			LocateFlags.All,
+			async found =>
+			{
+				var maybeAttr = await AttributeService!.GetAttributeAsync(
+					await parser.CurrentState.KnownExecutorObject(Mediator!),
+					found,
+					attribute,
+					mode: IAttributeService.AttributeMode.Read,
+					parent: false);
+
+				return new CallState(maybeAttr.IsAttribute ? "1" : "0");
+			});
 	}
 
-	[SharpFunction(Name = "HASATTRP", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> HasAttributeParent(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "hasattrp", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public static async ValueTask<CallState> HasAttributeParent(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var obj = parser.CurrentState.ArgumentsOrdered["0"].Message!.ToPlainText()!;
+		var attribute = parser.CurrentState.ArgumentsOrdered["1"].Message!.ToPlainText()!;
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+			executor,
+			executor,
+			obj,
+			LocateFlags.All,
+			async found =>
+			{
+				var maybeAttr = await AttributeService!.GetAttributeAsync(
+					await parser.CurrentState.KnownExecutorObject(Mediator!),
+					found,
+					attribute,
+					mode: IAttributeService.AttributeMode.Read,
+					parent: true);
+
+				return new CallState(maybeAttr.IsAttribute ? "1" : "0");
+			});
 	}
 
-	[SharpFunction(Name = "HASATTRPVAL", MinArgs = 1, MaxArgs = 2,
+	[SharpFunction(Name = "hasattrpval", MinArgs = 2, MaxArgs = 2,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> HasAttributeParentValue(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> HasAttributeParentValue(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var obj = parser.CurrentState.ArgumentsOrdered["0"].Message!.ToPlainText()!;
+		var attribute = parser.CurrentState.ArgumentsOrdered["1"].Message!.ToPlainText()!;
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+			executor,
+			executor,
+			obj,
+			LocateFlags.All,
+			async found =>
+			{
+				var maybeAttr = await AttributeService!.GetAttributeAsync(
+					await parser.CurrentState.KnownExecutorObject(Mediator!),
+					found,
+					attribute,
+					mode: IAttributeService.AttributeMode.Read,
+					parent: true);
+
+				// TODO: This should check config and there's some correctness assumptions here about single space contents.
+				return new CallState(
+					maybeAttr.IsAttribute && !string.IsNullOrWhiteSpace(maybeAttr.AsAttribute.Last().Value.ToPlainText()) 
+						? "1" 
+						: "0");
+			});
 	}
 
-	[SharpFunction(Name = "HASATTRVAL", MinArgs = 1, MaxArgs = 2,
+	[SharpFunction(Name = "hasattrval", MinArgs = 2, MaxArgs = 2,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> HasAttributeValue(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> HasAttributeValue(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var obj = parser.CurrentState.ArgumentsOrdered["0"].Message!.ToPlainText()!;
+		var attribute = parser.CurrentState.ArgumentsOrdered["1"].Message!.ToPlainText()!;
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+			executor,
+			executor,
+			obj,
+			LocateFlags.All,
+			async found =>
+			{
+				var maybeAttr = await AttributeService!.GetAttributeAsync(
+					await parser.CurrentState.KnownExecutorObject(Mediator!),
+					found,
+					attribute,
+					mode: IAttributeService.AttributeMode.Read,
+					parent: false);
+
+				// TODO: This should check config and there's some correctness assumptions here about single space contents.
+				return new CallState(
+					maybeAttr.IsAttribute && !string.IsNullOrWhiteSpace(maybeAttr.AsAttribute.Last().Value.ToPlainText()) 
+						? "1" 
+						: "0");
+			});
 	}
 
 	[SharpFunction(Name = "HASFLAG", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
