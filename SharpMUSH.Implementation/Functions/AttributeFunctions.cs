@@ -72,7 +72,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "DEFAULT", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
+	[SharpFunction(Name = "default", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
 	public static async ValueTask<CallState> Default(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -122,11 +122,64 @@ public partial class Functions
 		return await defaultArg.ParsedMessage();
 	}
 
-	[SharpFunction(Name = "EDEFAULT", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.NoParse)]
-	public static ValueTask<CallState> edefault(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	// TODO: Update Documentation so users know it's like default() now
+	[SharpFunction(Name = "edefault", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
+	public static async ValueTask<CallState> EvaluateDefault(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// edefault([<obj>/]<attr>, <default case>)
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var defaultArg = parser.CurrentState.ArgumentsOrdered.Last().Value;
+		var objAndAttrsToCheck = parser.CurrentState.ArgumentsOrdered.SkipLast(1).Select(x => x.Value);
+
+		foreach (var objAndAttr in objAndAttrsToCheck)
+		{
+			var parsedMessage = await objAndAttr.ParsedMessage();
+			var dbrefAndAttr = HelperFunctions.SplitObjectAndAttr(parsedMessage!.ToPlainText());
+			var (dbref, attribute) = dbrefAndAttr.AsT0;
+
+			if (dbrefAndAttr is { IsT1: true })
+			{
+				return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
+			}
+			
+			var maybeFound = await LocateService!.LocateAndNotifyIfInvalidWithCallState(
+				parser,
+				executor, 
+				executor, 
+				dbref,
+				LocateFlags.All);
+
+			if (!maybeFound.IsAnySharpObject)
+			{
+				return maybeFound.AsError;
+			}
+
+			var found = maybeFound.AsSharpObject;
+
+			var maybeAttr = await AttributeService!.GetAttributeAsync(
+				executor,
+				found,
+				attribute,
+				mode: IAttributeService.AttributeMode.Execute,
+				parent: false);
+
+			if (!maybeAttr.IsAttribute)
+			{
+				continue;
+			}
+
+			return await parser.With(s => s with
+				{
+					Enactor = parser.CurrentState.Executor
+				},
+				async newParser => await AttributeService.EvaluateAttributeFunctionAsync(
+					newParser,
+					executor,
+					found,
+					attribute,
+					parser.CurrentState.EnvironmentRegisters));
+		}
+		
+		return await defaultArg.ParsedMessage();
 	}
 
 	[SharpFunction(Name = "eval", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
@@ -256,11 +309,6 @@ public partial class Functions
 			LocateFlags.All,
 			async actualObject =>
 			{
-				var top2 = parser.State.Take(2).ToArray();
-				var args = top2.Length > 1
-					? top2.Last().Arguments
-					: [];
-
 				return await parser.With(s => s with
 					{
 						Enactor = parser.CurrentState.Executor
@@ -270,7 +318,7 @@ public partial class Functions
 						executor,
 						actualObject,
 						attribute,
-						args));
+						parser.CurrentState.EnvironmentRegisters));
 			});
 	}
 
