@@ -17,6 +17,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.MarkupString;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -340,7 +341,7 @@ public partial class Functions
 			.Skip(1 + expectedColumnCount).Select(x => x.Value.Message!)
 			.ToArray();
 
-		return TextAligner.align(widths,
+		return TextAlignerModule.align(widths,
 			columnArguments,
 			filler: remainder.Skip(0).FirstOrDefault(MModule.single(" ")),
 			columnSeparator: remainder.Skip(1).FirstOrDefault(MModule.single(" ")),
@@ -368,7 +369,7 @@ public partial class Functions
 			0 => "#-1 INVALID ALIGN STRING",
 			_ when expectedColumnCount > actualColumnArgCount => "#-1 NOT ENOUGH COLUMNS FOR ALIGN",
 			_ when expectedColumnCount < minRequiredColumnCount => "#-1 TOO MANY COLUMNS FOR ALIGN",
-			_ => TextAligner.align(widths, MModule.split2(colDelim, cols), filler, columnSeparator, rowSeparator)
+			_ => TextAlignerModule.align(widths, MModule.split2(colDelim, cols), filler, columnSeparator, rowSeparator)
 		};
 	}
 
