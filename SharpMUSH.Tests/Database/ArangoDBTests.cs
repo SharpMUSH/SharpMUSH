@@ -21,7 +21,7 @@ public class ArangoDBTests
 	{
 		var roomZero = (await Database.GetObjectNodeAsync(new DBRef(0))).AsRoom;
 
-		await Assert.That(roomZero).IsTypeOf<SharpRoom>();
+		await Assert.That(roomZero).IsTypeOf(typeof(SharpRoom));
 		await Assert.That(roomZero.Object.Name).IsEqualTo("Room Zero");
 		await Assert.That(roomZero.Object.Key).IsEqualTo(0);
 	}
@@ -31,7 +31,7 @@ public class ArangoDBTests
 	{
 		var masterRoom = (await Database.GetObjectNodeAsync(new DBRef(2))).AsRoom;
 
-		await Assert.That(masterRoom).IsTypeOf<SharpRoom>();
+		await Assert.That(masterRoom).IsTypeOf(typeof(SharpRoom));
 		await Assert.That(masterRoom.Object.Name).IsEqualTo("Master Room");
 		await Assert.That(masterRoom.Object.Key).IsEqualTo(2);
 	}
