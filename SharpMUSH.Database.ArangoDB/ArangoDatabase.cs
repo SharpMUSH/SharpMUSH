@@ -235,18 +235,43 @@ public partial class ArangoDatabase(
 				{ "@C1", DatabaseConstants.ObjectFlags },
 				{ "flag", name }
 			},
-			cache: true)).Select(SharpObjectFlagQueryToSharpChannel).FirstOrDefault();
+			cache: true)).Select(SharpObjectFlagQueryToSharpFlag).FirstOrDefault();
 
 	public async ValueTask<IEnumerable<SharpObjectFlag>> GetObjectFlagsAsync()
 		=> (await arangoDb.Query.ExecuteAsync<SharpObjectFlagQueryResult>(
 			handle,
 			$"FOR v in {DatabaseConstants.ObjectFlags:@} RETURN v",
-			cache: true)).Select(SharpObjectFlagQueryToSharpChannel);
+			cache: true)).Select(SharpObjectFlagQueryToSharpFlag);
+	
+	public async ValueTask<IEnumerable<SharpPower>> GetObjectPowersAsync()
+		=> (await arangoDb.Query.ExecuteAsync<SharpPowerQueryResult>(
+			handle,
+			$"FOR v in {DatabaseConstants.ObjectPowers:@} RETURN v",
+			cache: true)).Select(SharpPowerQueryToSharpPower);
+
+	private static SharpPower SharpPowerQueryToSharpPower(SharpPowerQueryResult arg) =>
+		new()
+		{
+			Id = arg.Id,
+			Alias = arg.Alias,
+			Name = arg.Name,
+			System = arg.System,
+			SetPermissions = arg.SetPermissions,
+			UnsetPermissions = arg.UnsetPermissions,
+			TypeRestrictions = arg.TypeRestrictions
+		};
 
 	private async ValueTask<string?> GetObjectFlagEdge(AnySharpObject target, SharpObjectFlag flag)
 	{
 		var result = await arangoDb.Query.ExecuteAsync<SharpEdgeQueryResult>(handle,
 			$"FOR v,e IN 1..1 OUTBOUND {target.Object().Id} GRAPH {DatabaseConstants.GraphFlags} FILTER v._id == {flag.Id} RETURN e._id");
+		return result.FirstOrDefault()?.Id;
+	}
+	
+	private async ValueTask<string?> GetObjectPowerEdge(AnySharpObject target, SharpPower flag)
+	{
+		var result = await arangoDb.Query.ExecuteAsync<SharpEdgeQueryResult>(handle,
+			$"FOR v,e IN 1..1 OUTBOUND {target.Object().Id} GRAPH {DatabaseConstants.GraphPowers} FILTER v._id == {flag.Id} RETURN e._id");
 		return result.FirstOrDefault()?.Id;
 	}
 
@@ -257,6 +282,28 @@ public partial class ArangoDatabase(
 
 		await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphFlags, DatabaseConstants.HasFlags,
 			new SharpEdgeCreateRequest(target.Object().Id!, flag.Id!));
+
+		return true;
+	}
+
+	public async ValueTask<bool> SetObjectPowerAsync(AnySharpObject dbref, SharpPower power)
+	{
+		var edge = await GetObjectPowerEdge(dbref, power);
+		if (edge is not null) return false;
+
+		await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphFlags, DatabaseConstants.HasPowers,
+			new SharpEdgeCreateRequest(dbref.Object().Id!, power.Id!));
+
+		return true;
+	}
+
+	public async ValueTask<bool> UnsetObjectPowerAsync(AnySharpObject dbref, SharpPower power)
+	{
+		var edge = await GetObjectPowerEdge(dbref, power);
+		if (edge is null) return false;
+
+		await arangoDb.Graph.Edge.RemoveAsync<string>(handle, DatabaseConstants.GraphPowers, DatabaseConstants.HasPowers,
+			edge);
 
 		return true;
 	}
@@ -301,17 +348,17 @@ public partial class ArangoDatabase(
 
 		var contentEdge = response.FirstOrDefault();
 
-		if (contentEdge == null && parent == null)
+		if (contentEdge is null && parent is null)
 		{
 			return;
 		}
 
-		if (contentEdge == null && parent != null)
+		if (contentEdge is null && parent != null)
 		{
 			await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphParents, DatabaseConstants.HasParent,
 				new { To = parent.Id() });
 		}
-		else if (parent == null)
+		else if (parent is null)
 		{
 			await arangoDb.Graph.Edge.RemoveAsync<object>(handle, DatabaseConstants.GraphParents, DatabaseConstants.HasParent,
 				contentEdge);
@@ -342,7 +389,7 @@ public partial class ArangoDatabase(
 	public async ValueTask<bool> UnsetObjectFlagAsync(AnySharpObject target, SharpObjectFlag flag)
 	{
 		var edge = await GetObjectFlagEdge(target, flag);
-		if (edge == null) return false;
+		if (edge is null) return false;
 
 		await arangoDb.Graph.Edge.RemoveAsync<string>(handle, DatabaseConstants.GraphFlags, DatabaseConstants.HasFlags,
 			edge);
@@ -355,22 +402,13 @@ public partial class ArangoDatabase(
 		var result = await arangoDb.Query.ExecuteAsync<SharpPowerQueryResult>(handle,
 			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphPowers} RETURN v");
 
-		return result.Select(x => new SharpPower()
-		{
-			Alias = x.Alias,
-			Name = x.Alias,
-			System = x.System,
-			SetPermissions = x.SetPermissions,
-			TypeRestrictions = x.TypeRestrictions,
-			UnsetPermissions = x.UnsetPermissions,
-			Id = x.Id
-		});
+		return result.Select(SharpPowerQueryToSharpPower);
 	}
 
 	public async ValueTask<IEnumerable<SharpObjectFlag>> GetObjectFlagsAsync(string id)
 		=> (await arangoDb.Query.ExecuteAsync<SharpObjectFlagQueryResult>(handle,
 				$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphFlags} RETURN v"))
-			.Select(SharpObjectFlagQueryToSharpChannel);
+			.Select(SharpObjectFlagQueryToSharpFlag);
 
 	public async ValueTask<IEnumerable<SharpMail>> GetSentMailsAsync(SharpObject sender, SharpPlayer recipient)
 	{
@@ -826,7 +864,7 @@ public partial class ArangoDatabase(
 			singleResult.Key, updates);
 	}
 
-	private SharpObjectFlag SharpObjectFlagQueryToSharpChannel(SharpObjectFlagQueryResult x)
+	private SharpObjectFlag SharpObjectFlagQueryToSharpFlag(SharpObjectFlagQueryResult x)
 	{
 		return new SharpObjectFlag
 		{
@@ -929,7 +967,7 @@ public partial class ArangoDatabase(
 		var parentId = (await arangoDb.Query.ExecuteAsync<dynamic>(handle,
 				$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphParents} RETURN v._key", cache: true))
 			.FirstOrDefault();
-		if (parentId == null)
+		if (parentId is null)
 		{
 			return new None();
 		}

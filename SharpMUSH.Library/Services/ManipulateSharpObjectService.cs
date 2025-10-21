@@ -1,3 +1,4 @@
+using DotNext.Collections.Generic;
 using Mediator;
 using OneOf.Types;
 using SharpMUSH.Library.Commands.Database;
@@ -8,6 +9,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using AsyncEnumerable = System.Linq.AsyncEnumerable;
 
 namespace SharpMUSH.Library.Services;
 
@@ -49,7 +51,7 @@ public class ManipulateSharpObjectService(
 				return obj.Object().DBRef;
 
 			case { IsPlayer: true }:
-				var tryFindPlayerByName = await (await mediator.Send(new GetPlayerQuery(name.ToPlainText()))).ToArrayAsync();
+				var tryFindPlayerByName = await AsyncEnumerable.ToArrayAsync((await mediator.Send(new GetPlayerQuery(name.ToPlainText()))));
 				if (tryFindPlayerByName.Any(x =>
 					    x.Object.Name.Equals(name.ToPlainText(), StringComparison.InvariantCultureIgnoreCase)))
 				{
@@ -221,16 +223,98 @@ public class ManipulateSharpObjectService(
 		return true;
 	}
 
-	public ValueTask<CallState> SetPower(AnySharpObject executor, AnySharpObject obj, string powerOrPowerAlias,
+	public async ValueTask<CallState> SetPower(AnySharpObject executor, AnySharpObject obj, string powerOrPowerAlias,
 		bool notify)
 	{
-		throw new NotImplementedException();
+		if (!await permissionService.Controls(executor, obj))
+		{
+			if (notify)
+			{
+				await notifyService.Notify(executor, "You do not control that object.");
+			}
+			return Errors.ErrorPerm;
+		}
+
+		if (await obj.HasPower(powerOrPowerAlias))
+		{
+			if (notify)
+			{
+				await notifyService.Notify(executor, $"Power: {powerOrPowerAlias} (Already) Set.");
+			}
+			return true;
+		}
+		
+		var allPowers = await mediator.Send(new GetPowersQuery());
+		
+		var found = allPowers
+			.FirstOrDefault(x => 
+				x.Name.Equals(powerOrPowerAlias, StringComparison.InvariantCultureIgnoreCase)  
+				|| x.Alias.Equals(powerOrPowerAlias, StringComparison.InvariantCultureIgnoreCase));
+
+		if (found is null)
+		{
+			if (notify)
+			{
+				await notifyService.Notify(executor, $"No such power exists: {powerOrPowerAlias}.");
+			}
+			return Errors.ErrorNoSuchPower;
+		}
+
+		if (notify)
+		{
+			await notifyService.Notify(executor, $"Power: {powerOrPowerAlias} Set.");
+		}
+
+		await mediator.Send(new SetObjectPowerCommand(obj, found));
+		
+		return true;
 	}
 
-	public ValueTask<CallState> UnsetPower(AnySharpObject executor, AnySharpObject obj, string powerOrPowerAlias,
+	public async ValueTask<CallState> UnsetPower(AnySharpObject executor, AnySharpObject obj, string powerOrPowerAlias,
 		bool notify)
 	{
-		throw new NotImplementedException();
+		if (!await permissionService.Controls(executor, obj))
+		{
+			if (notify)
+			{
+				await notifyService.Notify(executor, "You do not control that object.");
+			}
+			return Errors.ErrorPerm;
+		}
+
+		if (!await obj.HasPower(powerOrPowerAlias))
+		{
+			if (notify)
+			{
+				await notifyService.Notify(executor, $"Power: {powerOrPowerAlias} (Already) Unset.");
+			}
+			return true;
+		}
+		
+		var allPowers = await mediator.Send(new GetPowersQuery());
+		
+		var found = allPowers
+			.FirstOrDefault(x => 
+				x.Name.Equals(powerOrPowerAlias, StringComparison.InvariantCultureIgnoreCase)  
+				|| x.Alias.Equals(powerOrPowerAlias, StringComparison.InvariantCultureIgnoreCase));
+
+		if (found is null)
+		{
+			if (notify)
+			{
+				await notifyService.Notify(executor, $"No such power exists: {powerOrPowerAlias}.");
+			}
+			return Errors.ErrorNoSuchPower;
+		}
+
+		if (notify)
+		{
+			await notifyService.Notify(executor, $"Power: {powerOrPowerAlias} Unset.");
+		}
+
+		await mediator.Send(new UnsetObjectPowerCommand(obj, found));
+		
+		return true;
 	}
 
 	public ValueTask<CallState> SetOwner(AnySharpObject executor, AnySharpObject obj, SharpPlayer newOwner, bool notify)

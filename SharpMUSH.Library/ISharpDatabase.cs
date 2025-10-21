@@ -129,6 +129,22 @@ public interface ISharpDatabase
 	/// <param name="flag">Flag</param>
 	/// <returns>Success or Failure</returns>
 	ValueTask<bool> SetObjectFlagAsync(AnySharpObject dbref, SharpObjectFlag flag);
+	
+	/// <summary>
+	/// Set an Object Power.
+	/// </summary>
+	/// <param name="dbref">Database Reference Number</param>
+	/// <param name="power">Power</param>
+	/// <returns>Success or Failure</returns>
+	ValueTask<bool> SetObjectPowerAsync(AnySharpObject dbref, SharpPower power);
+	
+	/// <summary>
+	/// Unset an Object Power.
+	/// </summary>
+	/// <param name="dbref">Database Reference Number</param>
+	/// <param name="power">Power</param>
+	/// <returns>Success or Failure</returns>
+	ValueTask<bool> UnsetObjectPowerAsync(AnySharpObject dbref, SharpPower power);
 
 	/// <summary>
 	/// Sets a name on an object.
@@ -187,6 +203,12 @@ public interface ISharpDatabase
 	/// <returns>The representing parent</returns>
 	ValueTask<AnyOptionalSharpObject> GetParentAsync(string id);
 
+	/// <summary>
+	/// Get all powers the Server knows about.
+	/// </summary>
+	/// <returns>All powers</returns>
+	ValueTask<IEnumerable<SharpPower>> GetObjectPowersAsync();
+	
 	/// <summary>
 	/// Get the parent of an object.
 	/// </summary>
