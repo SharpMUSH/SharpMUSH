@@ -6,6 +6,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using Errors = SharpMUSH.Library.Definitions.Errors;
@@ -78,63 +79,7 @@ public partial class Commands
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, target,
 			LocateFlags.All,
-			async found =>
-			{
-				if (!await PermissionService!.Controls(executor, found))
-				{
-					return Errors.ErrorPerm;
-				}
-
-				switch (found)
-				{
-					case { IsThing: true } or { IsRoom: true }:
-						await Mediator!.Send(new SetNameCommand(found, name));
-						return found.Object().DBRef;
-
-					case { IsPlayer: true }:
-						var tryFindPlayerByName = await (await Mediator!.Send(new GetPlayerQuery(name.ToPlainText()))).ToArrayAsync();
-						if (tryFindPlayerByName.Any(x =>
-							    x.Object.Name.Equals(name.ToPlainText(), StringComparison.InvariantCultureIgnoreCase)))
-						{
-							return "#-1 PLAYER NAME ALREADY IN USE.";
-						}
-
-						var playerSplit = MModule.split(";", name);
-
-						await Mediator!.Send(new SetNameCommand(found, playerSplit.First()));
-
-						if (playerSplit.Length <= 1)
-						{
-							return found.Object().DBRef;
-						}
-
-						var aliases = playerSplit.Skip(1).Select(x => x.ToPlainText()).ToArray();
-
-						if (tryFindPlayerByName
-						    .SelectMany(x => x.Aliases ?? [])
-						    .Intersect(aliases, StringComparer.InvariantCultureIgnoreCase)
-						    .Any())
-						{
-							return "#-1 PLAYER ALIAS ALREADY IN USE.";
-						}
-
-						await AttributeService!.SetAttributeAsync(executor, found, "ALIAS",
-							MModule.multipleWithDelimiter(MModule.single(";"), aliases.Select(MModule.single)));
-
-						return found.Object().DBRef;
-
-					default:
-						var split = MModule.split(";", name);
-						await Mediator!.Send(new SetNameCommand(found, split.First()));
-						if (split.Length > 1)
-						{
-							await AttributeService!.SetAttributeAsync(executor, found, "ALIAS",
-								MModule.multipleWithDelimiter(MModule.single(";"), split.Skip(1)));
-						}
-
-						return found.Object().DBRef;
-				}
-			}
+			async found => await ManipulateSharpObjectService!.SetName(executor, found, name, true)
 		);
 	}
 

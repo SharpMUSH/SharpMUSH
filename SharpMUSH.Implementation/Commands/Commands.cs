@@ -22,6 +22,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 	private static IPasswordService? PasswordService { get; set; }
 	private static IConnectionService? ConnectionService { get; set; }
 	private static IExpandedObjectDataService? ObjectDataService { get; set; }
+	private static IManipulateSharpObjectService? ManipulateSharpObjectService { get; set; }
 	private static IHttpClientFactory? HttpClientFactory { get; set; }
 	
 	private readonly CommandLibraryService _commandLibrary = [];
@@ -38,6 +39,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		IPasswordService passwordService,
 		IConnectionService connectionService,
 		IExpandedObjectDataService objectDataService,
+		IManipulateSharpObjectService manipulateSharpObjectService,
 		IHttpClientFactory httpClientFactory)
 	{
 		Mediator = mediator;
@@ -51,6 +53,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		ConnectionService = connectionService;
 		ObjectDataService = objectDataService;
 		HttpClientFactory = httpClientFactory;
+		ManipulateSharpObjectService = manipulateSharpObjectService;
 
 		foreach (var command in Generated.CommandLibrary.Commands)
 		{
