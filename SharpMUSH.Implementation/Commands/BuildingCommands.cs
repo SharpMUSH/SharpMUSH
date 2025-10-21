@@ -155,7 +155,7 @@ public partial class Commands
 		// Object Flag Set Path
 		foreach (var flag in MModule.split(" ", args["1"].Message!))
 		{
-			await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, realLocated, flag.ToPlainText(), true );
+			await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, realLocated, flag.ToPlainText(), true);
 		}
 
 		return CallState.Empty;
@@ -337,49 +337,34 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-				executor, executor, args["0"].Message!.ToPlainText(), LocateFlags.All,
-				async target =>
+			executor, executor, args["0"].Message!.ToPlainText(), LocateFlags.All,
+			async target =>
+			{
+				if (!await PermissionService!.Controls(executor, target))
 				{
-					if (!await PermissionService!.Controls(executor, target))
-					{
-						await NotifyService!.Notify(executor, Errors.ErrorPerm);
-						return Errors.ErrorPerm;
-					}
-					
-					switch(args)
-					{
-						case { Count: 1 }:
-						case { Count: 2 } when args["1"].Message!.ToPlainText().Equals("none", StringComparison.InvariantCultureIgnoreCase): 
-							await Mediator!.Send(new UnsetObjectParentCommand(target));
-							return CallState.Empty;
-						default: 
-							return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
-								parser, executor, executor, args["1"].Message!.ToPlainText(), LocateFlags.All,
-								async newParent =>
-								{
-									if (!await PermissionService.Controls(executor, newParent) 
-									    || (!await target.HasFlag("LINK_OK") 
-									    && !PermissionService.PassesLock(executor, newParent, LockType.Parent)))
-									{
-										await NotifyService!.Notify(executor, Errors.ErrorPerm);
-										return Errors.ErrorPerm;
-									}
-
-									if (!await HelperFunctions.SafeToAddParent(target, newParent))
-									{
-										await NotifyService!.Notify(executor, "Cannot add parent to loop.");
-										return CallState.Empty;
-									}
-									
-									await Mediator!.Send(new SetObjectParentCommand(target, newParent));
-									return CallState.Empty;
-								}
-							);
-					}
+					await NotifyService!.Notify(executor, Errors.ErrorPerm);
+					return Errors.ErrorPerm;
 				}
-			);
+
+				switch (args)
+				{
+					case { Count: 1 }:
+					case { Count: 2 } when args["1"].Message!.ToPlainText()
+						.Equals("none", StringComparison.InvariantCultureIgnoreCase):
+
+						return await ManipulateSharpObjectService!.UnsetParent(executor, target, true);
+					default:
+
+						return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
+							parser, executor, executor,
+							args["1"].Message!.ToPlainText(), LocateFlags.All,
+							async newParent
+								=> await ManipulateSharpObjectService!.SetParent(executor, target, newParent, true));
+				}
+			}
+		);
 	}
-	
+
 
 	[SharpCommand(Name = "@UNLINK", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Unlink(IMUSHCodeParser parser, SharpCommandAttribute _2)

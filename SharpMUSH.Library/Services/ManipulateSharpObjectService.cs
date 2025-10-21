@@ -162,6 +162,20 @@ public class ManipulateSharpObjectService(
 			return Errors.ErrorNoSuchFlag;
 		}
 
+		if (!realFlag.TypeRestrictions.Contains(obj.TypeString()))
+		{
+			if (notify)
+			{
+				await notifyService.Notify(executor, $"Flag: {realFlag} cannot be set on object type: {obj.TypeString()}.");
+			}
+
+			return Errors.InvalidFlag;
+		}
+		
+		// TODO: Flag Restrictions based on ownership, permissions, etc.
+		// if(realFlag.SetPermissions) 
+		// if(realFlag.UnsetPermissions)
+
 		switch (unset)
 		{
 			case true when !await obj.HasFlag(plainFlag):
@@ -224,14 +238,46 @@ public class ManipulateSharpObjectService(
 		throw new NotImplementedException();
 	}
 
-	public ValueTask<CallState> SetParent(AnySharpObject executor, AnySharpObject obj, AnySharpObject newParent,
+	public async ValueTask<CallState> SetParent(AnySharpObject executor, AnySharpObject obj, AnySharpObject newParent,
 		bool notify)
 	{
-		throw new NotImplementedException();
+		if (!await permissionService.Controls(executor, newParent)
+		    || (!await obj.HasFlag("LINK_OK")
+		        && !permissionService.PassesLock(executor, newParent, LockType.Parent)))
+		{
+			if (notify)
+			{
+				await notifyService.Notify(executor, Errors.ErrorPerm);
+			}
+
+			return Errors.ErrorPerm;
+		}
+
+		if (!await HelperFunctions.SafeToAddParent(obj, newParent))
+		{
+			if (notify)
+			{
+				await notifyService.Notify(executor, "Cannot add parent to loop.");
+			}
+
+			return Errors.ParentLoop;
+		}
+
+		await mediator.Send(new SetObjectParentCommand(obj, newParent));
+
+		return true;
 	}
 
-	public ValueTask<CallState> UnsetParent(AnySharpObject executor, AnySharpObject obj, bool notify)
+	public async ValueTask<CallState> UnsetParent(AnySharpObject executor, AnySharpObject obj, bool notify)
 	{
-		throw new NotImplementedException();
+		if (!await permissionService.Controls(executor, obj))
+		{
+			await notifyService.Notify(executor, Errors.ErrorPerm);
+			return Errors.ErrorPerm;
+		}
+		
+		await mediator.Send(new UnsetObjectParentCommand(obj));
+		
+		return true;
 	}
 }
