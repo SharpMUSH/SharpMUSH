@@ -181,18 +181,18 @@ public class SharpMUSHParserVisitor(
 
 			// TODO: Reconsider where this is. We Push down below, after we have the refined arguments.
 			// But each RefinedArguments call will create a new call to this FunctionParser without depth info.
-			if (contextDepth > Configuration!.CurrentValue.Limit.CallLimit)
+			if (contextDepth > Configuration.CurrentValue.Limit.CallLimit)
 			{
 				// TODO: Context Depth is not the correct value to use here.
 				return new CallState(Errors.ErrorCall, contextDepth);
 			}
 
-			if (stackDepth > Configuration!.CurrentValue.Limit.MaxDepth)
+			if (stackDepth > Configuration.CurrentValue.Limit.MaxDepth)
 			{
 				return new CallState(Errors.ErrorInvoke, stackDepth);
 			}
 
-			if (recursionDepth > Configuration!.CurrentValue.Limit.FunctionRecursionLimit)
+			if (recursionDepth > Configuration.CurrentValue.Limit.FunctionRecursionLimit)
 			{
 				return new CallState(Errors.ErrorRecursion, recursionDepth);
 			}
@@ -201,13 +201,14 @@ public class SharpMUSHParserVisitor(
 
 			if (!attribute.Flags.HasFlag(FunctionFlags.NoParse))
 			{
-				refinedArguments = (await Task.WhenAll(args
-						.Select(async x => new CallState(
-							stripAnsi
-								? MModule.plainText2((await visitor.VisitChildren(x))?.Message ?? MModule.empty())
-								: (await visitor.VisitChildren(x))?.Message ?? MModule.empty(), x.Depth()))))
+				refinedArguments = await args
+					.ToAsyncEnumerable()
+					.Select<EvaluationStringContext, CallState>(async (x, ct) => new CallState(
+						stripAnsi
+							? MModule.plainText2((await visitor.VisitChildren(x))?.Message ?? MModule.empty())
+							: (await visitor.VisitChildren(x))?.Message ?? MModule.empty(), x.Depth()))
 					.DefaultIfEmpty(new CallState(MModule.empty(), context.Depth()))
-					.ToList();
+					.ToListAsync();
 			}
 			else if (attribute.Flags.HasFlag(FunctionFlags.NoParse) && attribute.MaxArgs == 1)
 			{
@@ -263,11 +264,11 @@ public class SharpMUSHParserVisitor(
 		{
 			logger.LogError(ex, nameof(CallFunction));
 
-			var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+			var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 			if (executor.IsGod())
 			{
-				await NotifyService!.Notify(executor, $"#-1 INTERNAL SHARPMUSH ERROR:\n{ex}");
+				await NotifyService.Notify(executor, $"#-1 INTERNAL SHARPMUSH ERROR:\n{ex}");
 			}
 
 			return CallState.Empty;
@@ -322,7 +323,7 @@ public class SharpMUSHParserVisitor(
 
 			if (parser.CurrentState.Handle is not null && command != "IDLE")
 			{
-				ConnectionService!.Update(parser.CurrentState.Handle.Value, "LastConnectionSignal",
+				ConnectionService.Update(parser.CurrentState.Handle.Value, "LastConnectionSignal",
 					DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString());
 			}
 
@@ -343,16 +344,16 @@ public class SharpMUSHParserVisitor(
 
 			if (parser.CurrentState.Executor is null && parser.CurrentState.Handle is not null)
 			{
-				await NotifyService!.Notify(parser.CurrentState.Handle.Value, "No such command available at login.");
+				await NotifyService.Notify(parser.CurrentState.Handle.Value, "No such command available at login.");
 				return new None();
 			}
 
 			// Step 2a: Check for the channel single-token command.
 
 			// TODO: Better channel name matching within the channel helper.
-			if (command[..1] == Configuration!.CurrentValue.Chat.ChatTokenAlias.ToString())
+			if (command[..1] == Configuration.CurrentValue.Chat.ChatTokenAlias.ToString())
 			{
-				var channels = await Mediator!.Send(new GetChannelListQuery());
+				var channels = await Mediator.Send(new GetChannelListQuery());
 				var check = command[1..];
 
 				var channel = channels.FirstOrDefault(x =>
@@ -376,11 +377,11 @@ public class SharpMUSHParserVisitor(
 				return await HandleSingleTokenCommandPattern(parser, src, context, command, singleTokenCommandPattern);
 			}
 
-			var executorObject = (await parser.CurrentState.ExecutorObject(Mediator!)).WithoutNone();
+			var executorObject = (await parser.CurrentState.ExecutorObject(Mediator)).WithoutNone();
 			// Step 3: Check exit Aliases
 			if (executorObject.IsContent)
 			{
-				var locate = await LocateService!.Locate(
+				var locate = await LocateService.Locate(
 					parser,
 					executorObject,
 					executorObject,
@@ -407,8 +408,8 @@ public class SharpMUSHParserVisitor(
 			var slashIndex = command.AsSpan().IndexOf('/');
 			var rootCommand =
 				command[..(slashIndex > -1 ? slashIndex : command.Length)];
-			var swtch = command[(slashIndex > -1 ? slashIndex : command.Length)..];
-			var switches = swtch.Split('/').Where(s => !string.IsNullOrWhiteSpace(s));
+			var switchString = command[(slashIndex > -1 ? slashIndex : command.Length)..];
+			var switches = switchString.Split('/').Where(s => !string.IsNullOrWhiteSpace(s));
 
 			if (parser.CommandLibrary.TryGetValue(rootCommand.ToUpper(), out var libraryCommandDefinition)
 			    && !rootCommand.Equals("HUH_COMMAND", StringComparison.CurrentCultureIgnoreCase))
@@ -427,9 +428,9 @@ public class SharpMUSHParserVisitor(
 			// Optimistic that the command still exists, until we try and it no longer does?
 			// What's the best way to retrieve the Regex or Wildcard pattern and transform it? 
 			// It needs to take an area to search in. So this is definitely its own service.
-			var nearbyObjects = await Mediator!.Send(new GetNearbyObjectsQuery(executorObject.Object().DBRef));
+			var nearbyObjects = await Mediator.Send(new GetNearbyObjectsQuery(executorObject.Object().DBRef));
 
-			var userDefinedCommandMatches = await CommandDiscoveryService!.MatchUserDefinedCommand(
+			var userDefinedCommandMatches = await CommandDiscoveryService.MatchUserDefinedCommand(
 				parser,
 				await nearbyObjects.ToArrayAsync(),
 				src);
@@ -444,7 +445,7 @@ public class SharpMUSHParserVisitor(
 			// Step 12: User Defined commands on the location itself.
 			if (executorObject.IsContent)
 			{
-				var userDefinedCommandMatchesOnLocation = await CommandDiscoveryService!.MatchUserDefinedCommand(
+				var userDefinedCommandMatchesOnLocation = await CommandDiscoveryService.MatchUserDefinedCommand(
 					parser,
 					[(await executorObject.AsContent.Location()).WithExitOption()],
 					src);
@@ -461,10 +462,10 @@ public class SharpMUSHParserVisitor(
 			var goConfig = Configuration.CurrentValue.Database.MasterRoom;
 			var maybeGlobalObject = await Mediator.Send(new GetObjectNodeQuery(new DBRef(Convert.ToInt32(goConfig))));
 			var globalObject = maybeGlobalObject.Known();
-			var globalObjectContent = (await globalObject.AsContainer.Content(Mediator!))
+			var globalObjectContent = (await globalObject.AsContainer.Content(Mediator))
 				.Select(x => x.WithRoomOption());
 
-			var userDefinedCommandMatchesOnGlobal = await CommandDiscoveryService!.MatchUserDefinedCommand(
+			var userDefinedCommandMatchesOnGlobal = await CommandDiscoveryService.MatchUserDefinedCommand(
 				parser,
 				[globalObject, .. await globalObjectContent.ToArrayAsync()],
 				src);
