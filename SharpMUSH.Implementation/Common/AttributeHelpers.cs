@@ -8,7 +8,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Common;
 
-public class AttributeHelpers
+public static class AttributeHelpers
 {
 	// TODO: Cache the Attribute Configuration for performance.
 

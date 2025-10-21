@@ -13,7 +13,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Common;
 
-public partial class ArgHelpers
+public static partial class ArgHelpers
 {
 	public static MString NoParseDefaultNoParseArgument(ImmutableSortedDictionary<string, CallState> args, int item,
 		MString defaultValue)
