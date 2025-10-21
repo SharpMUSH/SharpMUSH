@@ -18,9 +18,10 @@ public static class Helper
 					return $"{nds.Name}.{classNode.Identifier.Text}";
 				case FileScopedNamespaceDeclarationSyntax fs:
 					return $"{fs.Name}.{classNode.Identifier.Text}";
+				default:
+					ns = ns.Parent;
+					break;
 			}
-
-			ns = ns.Parent;
 		}
 
 		return classNode.Identifier.Text;
