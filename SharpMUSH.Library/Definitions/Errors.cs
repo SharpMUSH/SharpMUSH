@@ -1,7 +1,12 @@
-﻿namespace SharpMUSH.Library.Definitions;
+﻿using SharpMUSH.Library.ParserInterfaces;
+
+namespace SharpMUSH.Library.Definitions;
 
 public static class Errors
 {
+	public const string ErrorNoSuchPower = "#-1 NO SUCH POWER";
+	public const string ErrorInvalidPassword = "#-1 INVALID PASSWORD";
+	public const string ErrorNoSuchFlag = "#-1 NO SUCH FLAG";
 	public const string ErrorNoSideFX = "#-1 SIDE EFFECTS DISABLED FOR THIS FUNCTION";
 	public const string ErrorInteger = "#-1 ARGUMENT MUST BE INTEGER";
 	public const string ErrorNoSuchTimezone = "#-1 NO SUCH TIMEZONE";
@@ -44,4 +49,6 @@ public static class Errors
 	public const string NothingToEvaluate = "#-1 NOTHING TO EVALUATE";
 	public const string NothingToDo = "#-1 NOTHING TO DO";
 	public const string ExitsCannotContainThings = "#-1 EXITS CANNOT CONTAIN THINGS";
+	public const string ParentLoop = "#-1 PARENT LOOP DETECTED";
+	public const string InvalidFlag = "#-1 INVALID FLAG FOR THIS OBJECT";
 }

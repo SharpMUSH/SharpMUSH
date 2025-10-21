@@ -6,6 +6,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using Errors = SharpMUSH.Library.Definitions.Errors;
@@ -78,63 +79,7 @@ public partial class Commands
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, target,
 			LocateFlags.All,
-			async found =>
-			{
-				if (!await PermissionService!.Controls(executor, found))
-				{
-					return Errors.ErrorPerm;
-				}
-
-				switch (found)
-				{
-					case { IsThing: true } or { IsRoom: true }:
-						await Mediator!.Send(new SetNameCommand(found, name));
-						return found.Object().DBRef;
-
-					case { IsPlayer: true }:
-						var tryFindPlayerByName = await (await Mediator!.Send(new GetPlayerQuery(name.ToPlainText()))).ToArrayAsync();
-						if (tryFindPlayerByName.Any(x =>
-							    x.Object.Name.Equals(name.ToPlainText(), StringComparison.InvariantCultureIgnoreCase)))
-						{
-							return "#-1 PLAYER NAME ALREADY IN USE.";
-						}
-
-						var playerSplit = MModule.split(";", name);
-
-						await Mediator!.Send(new SetNameCommand(found, playerSplit.First()));
-
-						if (playerSplit.Length <= 1)
-						{
-							return found.Object().DBRef;
-						}
-
-						var aliases = playerSplit.Skip(1).Select(x => x.ToPlainText()).ToArray();
-
-						if (tryFindPlayerByName
-						    .SelectMany(x => x.Aliases ?? [])
-						    .Intersect(aliases, StringComparer.InvariantCultureIgnoreCase)
-						    .Any())
-						{
-							return "#-1 PLAYER ALIAS ALREADY IN USE.";
-						}
-
-						await AttributeService!.SetAttributeAsync(executor, found, "ALIAS",
-							MModule.multipleWithDelimiter(MModule.single(";"), aliases.Select(MModule.single)));
-
-						return found.Object().DBRef;
-
-					default:
-						var split = MModule.split(";", name);
-						await Mediator!.Send(new SetNameCommand(found, split.First()));
-						if (split.Length > 1)
-						{
-							await AttributeService!.SetAttributeAsync(executor, found, "ALIAS",
-								MModule.multipleWithDelimiter(MModule.single(";"), split.Skip(1)));
-						}
-
-						return found.Object().DBRef;
-				}
-			}
+			async found => await ManipulateSharpObjectService!.SetName(executor, found, name, true)
 		);
 	}
 
@@ -210,30 +155,7 @@ public partial class Commands
 		// Object Flag Set Path
 		foreach (var flag in MModule.split(" ", args["1"].Message!))
 		{
-			var plainFlag = MModule.plainText(flag);
-			var unset = plainFlag.StartsWith('!');
-			plainFlag = unset 
-				? plainFlag[1..] 
-				: plainFlag;
-			// TODO: Permission Check for each flag.
-			// Probably should have a service for this?
-			// CANSETFLAG?
-
-			var realFlag = await Mediator!.Send(new GetObjectFlagQuery(plainFlag));
-
-			if (realFlag is null) continue;
-
-			await NotifyService!.Notify(executor, $"Flag: {realFlag} Set.");
-
-			// Set Flag	
-			if (unset)
-			{
-				await Mediator!.Send(new UnsetObjectFlagCommand(realLocated, realFlag));
-			}
-			else
-			{
-				await Mediator!.Send(new SetObjectFlagCommand(realLocated, realFlag));
-			}
+			await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, realLocated, flag.ToPlainText(), true);
 		}
 
 		return CallState.Empty;
@@ -415,49 +337,34 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-				executor, executor, args["0"].Message!.ToPlainText(), LocateFlags.All,
-				async target =>
+			executor, executor, args["0"].Message!.ToPlainText(), LocateFlags.All,
+			async target =>
+			{
+				if (!await PermissionService!.Controls(executor, target))
 				{
-					if (!await PermissionService!.Controls(executor, target))
-					{
-						await NotifyService!.Notify(executor, Errors.ErrorPerm);
-						return Errors.ErrorPerm;
-					}
-					
-					switch(args)
-					{
-						case { Count: 1 }:
-						case { Count: 2 } when args["1"].Message!.ToPlainText().Equals("none", StringComparison.InvariantCultureIgnoreCase): 
-							await Mediator!.Send(new UnsetObjectParentCommand(target));
-							return CallState.Empty;
-						default: 
-							return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
-								parser, executor, executor, args["1"].Message!.ToPlainText(), LocateFlags.All,
-								async newParent =>
-								{
-									if (!await PermissionService.Controls(executor, newParent) 
-									    || (!await target.HasFlag("LINK_OK") 
-									    && !PermissionService.PassesLock(executor, newParent, LockType.Parent)))
-									{
-										await NotifyService!.Notify(executor, Errors.ErrorPerm);
-										return Errors.ErrorPerm;
-									}
-
-									if (!await HelperFunctions.SafeToAddParent(target, newParent))
-									{
-										await NotifyService!.Notify(executor, "Cannot add parent to loop.");
-										return CallState.Empty;
-									}
-									
-									await Mediator!.Send(new SetObjectParentCommand(target, newParent));
-									return CallState.Empty;
-								}
-							);
-					}
+					await NotifyService!.Notify(executor, Errors.ErrorPerm);
+					return Errors.ErrorPerm;
 				}
-			);
+
+				switch (args)
+				{
+					case { Count: 1 }:
+					case { Count: 2 } when args["1"].Message!.ToPlainText()
+						.Equals("none", StringComparison.InvariantCultureIgnoreCase):
+
+						return await ManipulateSharpObjectService!.UnsetParent(executor, target, true);
+					default:
+
+						return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
+							parser, executor, executor,
+							args["1"].Message!.ToPlainText(), LocateFlags.All,
+							async newParent
+								=> await ManipulateSharpObjectService!.SetParent(executor, target, newParent, true));
+				}
+			}
+		);
 	}
-	
+
 
 	[SharpCommand(Name = "@UNLINK", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Unlink(IMUSHCodeParser parser, SharpCommandAttribute _2)

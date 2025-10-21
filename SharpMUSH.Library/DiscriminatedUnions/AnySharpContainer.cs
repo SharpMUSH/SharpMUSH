@@ -6,12 +6,9 @@ using SharpMUSH.Library.Queries.Database;
 namespace SharpMUSH.Library.DiscriminatedUnions;
 
 [GenerateOneOf]
-public class AnySharpContainer : OneOfBase<SharpPlayer, SharpRoom, SharpThing>
+public class AnySharpContainer(OneOf<SharpPlayer, SharpRoom, SharpThing> input)
+	: OneOfBase<SharpPlayer, SharpRoom, SharpThing>(input)
 {
-	public AnySharpContainer(OneOf<SharpPlayer, SharpRoom, SharpThing> input) : base(input)
-	{
-	}
-
 	public static implicit operator AnySharpContainer(SharpPlayer x) => new(x);
 	public static implicit operator AnySharpContainer(SharpRoom x) => new(x);
 	public static implicit operator AnySharpContainer(SharpThing x) => new(x);
