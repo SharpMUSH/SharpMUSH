@@ -241,12 +241,12 @@ This is the index to the MUSH online help files.
   PennMUSH has a built-in mail system that lets you send messages to players, even if they aren't online. You can keep mail you receive for as long as you like, and re-read it any time.
 
   To list all the messages you've received, type '`@mail`'. You'll see something like:
-
+```
    -------------------------  MAIL (folder  0)  ----------------------------
    [-----]  0:1    One           Welcome!                   Wed Dec 08 09:57
    [-----]  0:2   *Mike          Example Mail               Sat Dec 11 07:55
    -------------------------------------------------------------------------
-
+```
   The number after the ':' is the message number; to read that message, type '`@mail` `<number>`'.
 
   See [gs mail2]
@@ -1205,11 +1205,19 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 
   Related Help Topics (in no particular order)
   -------------------
-  ATTRIBUTES    SUBSTITUTION    NON-STANDARD ATTRIBUTES
-  ENACTOR       EXECUTOR        USER-DEFINED COMMANDS
-  DBREFS        EVALUATION      TYPES OF OBJECTS
-  WILDCARDS     STRINGS         LISTS
-  ACTION LISTS
+  - [ATTRIBUTES]
+  - [SUBSTITUTION]
+  - [NON-STANDARD ATTRIBUTES]
+  - [ENACTOR]
+  - [EXECUTOR]
+  - [USER-DEFINED COMMANDS]
+  - [DBREFS]
+  - [EVALUATION]
+  - [TYPES OF OBJECTS]
+  - [WILDCARDS]
+  - [STRINGS]
+  - [LISTS]
+  - [ACTION LISTS]
 
 # NON-STANDARD ATTRIBUTES
   While there are many standard attributes in MUSH, objects can also have an enormous number of attributes, with any name you wish to use. In the past, you were limited to attributes named VA-VZ, WA-WZ, XA-XZ; these are still available as standard attributes. However, it is strongly recommended that you use non-standard attributes and meaningful names in order to make maintaining your MUSHCode easier.
@@ -2348,10 +2356,11 @@ At the moment, PennMUSH has very minimal support for Unicode. Almost all text is
 
 A few functions support Unicode-aware text transformations:
 
-    `stripaccents()`
+- [stripaccents()]
 
 When the MUSH is compiled with the ICU library (See `@config` compile), additional functions support Unicode-aware text transformations:
 
-    lcstr2()     ucstr2()
+- [lcstr2()]
+- [ucstr2()]
 
 When using these functions, do not assume that they return the same number of characters as their argument.
