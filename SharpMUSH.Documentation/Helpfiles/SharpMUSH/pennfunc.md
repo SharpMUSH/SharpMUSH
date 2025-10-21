@@ -208,23 +208,23 @@ sql()         sqlescape()   mapsql()
 # String functions
   String functions take at least one string and return a transformed string, parts of a string, or a value related to the string(s).
 
-accent()         after()          align()          alphamax()
-alphamin()       art()            before()         brackets()
-capstr()         case()           caseall()        cat()
-center()         chr()            comp()           cond()
-condall()        decode64()       decompose()      decrypt()
-digest()         edit()           encode64()       encrypt()
-escape()         flip()           foreach()        formdecode()
-hmac()           if()             ifelse()         lcstr()
-left()           lit()            ljust()          lpos()
-merge()          mid()            ord()            ordinal()
-pos()            regedit()        regmatch()       repeat()
-right()          rjust()          scramble()       secure()
-space()          spellnum()       squish()         strallof()
-strcat()         strdelete()      strfirstof()     strinsert()
-stripaccents()   stripansi()      strlen()         strmatch()
-strreplace()     switch()         tr()             trim()
-ucstr()          urldecode()      urlencode()      wrap()
+  accent()         after()          align()          alphamax()
+  alphamin()       art()            before()         brackets()
+  capstr()         case()           caseall()        cat()
+  center()         chr()            comp()           cond()
+  condall()        decode64()       decompose()      decrypt()
+  digest()         edit()           encode64()       encrypt()
+  escape()         flip()           foreach()        formdecode()
+  hmac()           if()             ifelse()         lcstr()
+  left()           lit()            ljust()          lpos()
+  merge()          mid()            ord()            ordinal()
+  pos()            regedit()        regmatch()       repeat()
+  right()          rjust()          scramble()       secure()
+  space()          spellnum()       squish()         strallof()
+  strcat()         strdelete()      strfirstof()     strinsert()
+  stripaccents()   stripansi()      strlen()         strmatch()
+  strreplace()     switch()         tr()             trim()
+  ucstr()          urldecode()      urlencode()      wrap()
 
 
 
@@ -233,10 +233,10 @@ ucstr()          urldecode()      urlencode()      wrap()
 # Time functions
   These functions return times or format times.
 
-convsecs()    convutcsecs() convtime()    convutctime() ctime()
-etime()       etimefmt()    isdaylight()  mtime()       restarttime()
-secs()        starttime()   stringsecs()  time()        timecalc()
-timefmt()     timestring()  utctime()     uptime()
+  convsecs()    convutcsecs() convtime()    convutctime() ctime()
+  etime()       etimefmt()    isdaylight()  mtime()       restarttime()
+  secs()        starttime()   stringsecs()  time()        timecalc()
+  timefmt()     timestring()  utctime()     uptime()
 
 
 ## See Also
@@ -244,19 +244,19 @@ timefmt()     timestring()  utctime()     uptime()
 # Utility functions
   These functions don't quite fit into any other category.
 
-allof()       ansi()        atrlock()     beep()        benchmark()
-checkpass()   clone()       create()      die()         dig()
-endtag()      firstof()     functions()   fn()          html()
-ibreak()      ilev()        inum()        isdbref()     isint()
-isnum()       isobjid()     isregexp()    isword()      itext()
-letq()        localize()    link()        list()        listq()
-lnum()        lset()        null()        numversion()  objeval()
-open()        pcreate()     r()           rand()        s()
-scan()        set()         setq()        setr()        slev()
-soundex()     soundslike()  speak()       stext()       suggest()
-tag()         tagwrap()     tel()         testlock()    textentries()
-textfile()    unsetq()      valid()       wipe()        @@()
-uptime()`
+  allof()       ansi()        atrlock()     beep()        benchmark()
+  checkpass()   clone()       create()      die()         dig()
+  endtag()      firstof()     functions()   fn()          html()
+  ibreak()      ilev()        inum()        isdbref()     isint()
+  isnum()       isobjid()     isregexp()    isword()      itext()
+  letq()        localize()    link()        list()        listq()
+  lnum()        lset()        null()        numversion()  objeval()
+  open()        pcreate()     r()           rand()        s()
+  scan()        set()         setq()        setr()        slev()
+  soundex()     soundslike()  speak()       stext()       suggest()
+  tag()         tagwrap()     tel()         testlock()    textentries()
+  textfile()    unsetq()      valid()       wipe()        @@()
+  uptime()`
 
 # @@()
 # NULL()
@@ -280,10 +280,10 @@ uptime()`
 say abs(-4)
 You say, "4"
 ```
-
-    > say abs(2)
-    You say, "2"
-
+```
+> say abs(2)
+You say, "2"
+```
 
 ## See Also
 - [sign()]
@@ -402,13 +402,13 @@ You say, "4"
 
   Examples:
 ```
-say after(foo bar baz,bar)
+> say after(foo bar baz,bar)
 You say, " baz"
 ```
-
-    > say after(foo bar baz,ba)
-    You say, "r baz"
-
+```
+> say after(foo bar baz,ba)
+You say, "r baz"
+```
 
 ## See Also
 - [before()]
@@ -462,7 +462,9 @@ You say, " baz"
       (M) Ashen-Shug Apartment 306
           ar
       (F) Jane Doe   Nowhere
+```
 
+```
     > &line me=align(<3 10X 20X$,([ljust(get(%0/sex),1,,1)]), name(%0),name(loc(%0)))
     > th iter(lwho(),u(line,##),%b,%r)
       (M) Walker     Tree
@@ -472,6 +474,7 @@ You say, " baz"
 
         See '[align4]' for more examples.
 # ALIGN4
+```
     > &haiku me = Alignment function,%rIt justifies your writing,%rBut the words still suck.%rLuke
 
     > th [align(5 -40 5,,[repeat(-,40)]%r[u(haiku)]%r[repeat(-,40)],,%b,+)]
@@ -482,9 +485,11 @@ You say, " baz"
          +       But the words still suck.        +
          +                  Luke                  +
          +----------------------------------------+
+```
 
   See '[align5]' for more examples.
 # ALIGN5
+```
   > &dropcap me=%b_______%r|__%b%b%b__|%r%b%b%b|%b|%r%b%b%b|_|
   > &story me=%r'was the night before Christmas, when all through the house%rNot a creature was stirring, not even a mouse.%rThe stockings were hung by the chimney with care,%rIn hopes that St Nicholas soon would be there.
   > th align(9'(ch) 68, u(dropcap), u(story))
@@ -497,30 +502,39 @@ You say, " baz"
 
   The dropcap 'T' will be in ANSI cyan-highlight, and merges with the 'story'
   column.
+```
 
+```
   > th align(>15 60,Walker,Staff & Developer,x,x)
   xxxxxxxxxWalkerxStaff & Developerxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+```
   > th align(>15 60$,Walker,Staff & Developer,x,x)
   xxxxxxxxxWalkerxStaff & Developer
+```
 # ALLOF()
 `allof(<expr>[, ... , <exprN>], <osep>)`
 
   Evaluates every `<expr>` argument (including side-effects) and returns the results of those which are true, in a list separated by `<osep>`. The output separator argument is required, and can be a string of any length (including an empty string; use %b for a space).
 
   The meaning of true or false depends on configuration options as explained in the 'BOOLEAN VALUES' help topics.
-
+```
     > &s me=Bats are similar to Rats which are afraid of Cats
     > say allof(grab(v(s),rats),grab(v(s),mats),grab(v(s),bats),)
     You say, "Rats Bats"
-
+```
+```
     > say allof(#-1,#101,#2970,,#-3,0,#319,null(This Doesn't Count),|)
     You say, "#101|#2970|#319"
-
+```
     > say allof(foo, 0, #-1, bar, baz,)
     You say, "foobarbaz"
+```
+```
     > say allof(foo, 0, #-1, bar, baz,%b)
     You say, "foo bar baz"
-
+```
 
 ## See Also
 - [firstof()]
@@ -628,7 +642,7 @@ would show white text on an ANSI-blue background.
 - [colors()]
 # ANSI2
   Old-style valid color codes are:
-
+```
         f - flash                       F - not flash
         h - hilite                      H - not hilite
         u - underscore                  U - not underscore
@@ -644,7 +658,7 @@ would show white text on an ANSI-blue background.
         m - magenta foreground          M - magenta background
         c - cyan foreground             C - cyan background
         w - white foreground            W - white background
-
+```
   For example, "ansi(fc, Test)" would hilight "Test" in flashing cyan. Default foreground and background use the client's default color for fore and back.
 # ANSI3
 
@@ -993,13 +1007,13 @@ You say, "A"
 
   With two arguments, colors() returns information about specific colors. `<colors>` can be any string accepted by the ansi() function's first argument. `<format>` must be one of:
 
-   hex, x:      return a hexcode in the format #rrggbb.
-   rgb, r:      return the RGB components as a list (0 0 0 - 255 255 255)
-   xterm256, d: return the number of the xterm color closest to the given `<color>`.
-   xterm256x,h: return the number of the xterm color in base 16.
-   16color, c:  return the letter of the closest ANSI color code (possibly including 'h' for highlight fg colors).
-   name:     return a list of names of all the colors exactly matching the given colors, or '#-1 NO MATCHING COLOR NAME' if there is no exact match with a named color.
-   auto:     returns the colors in the same format(s) they were given in.
+>   hex, x:      return a hexcode in the format #rrggbb.
+>   rgb, r:      return the RGB components as a list (0 0 0 - 255 255 255)
+>   xterm256, d: return the number of the xterm color closest to the given `<color>`.
+>   xterm256x,h: return the number of the xterm color in base 16.
+>   16color, c:  return the letter of the closest ANSI color code (possibly including 'h' for highlight fg colors).
+>   name:     return a list of names of all the colors exactly matching the given colors, or '#-1 NO MATCHING COLOR NAME' if there is no exact match with a named color.
+>   auto:     returns the colors in the same format(s) they were given in.
 
   It can be used for working out how certain colors will downgrade to people using clients which aren't fully color-capable.
 
@@ -1019,26 +1033,34 @@ think colors(*yellow*)
 greenyellow yellowgreen lightgoldenrodyellow lightyellow yellow lightyellow1 lightyellow2 lightyellow3 lightyellow4 yellow1 yellow2 yellow3 yellow4
 ```
 
+```
     > think colors(+yellow, hex)
     #ffff00
-
+```
+```
     > think colors(+yellow, xterm256)
     226
-
+```
+```
     > think colors(+yellow, 16color)
     yh
-
+```
+```
     > think colors(/+yellow, 16color)
     Y
-
+```
+```
     > think colors(#ffff00, name)
     yellow yellow1
-
+```
+```
     > think colors(iuB+red, hex styles)
     ui#ff0000/#0000ee
-
+```
+```
     > think colors(+blue huyG/+black, auto)
     hy/+black
+```
 
 # COMP()
 `comp(<value1>, <value2>[, <type>])`
@@ -1149,13 +1171,14 @@ Penny
 say secs()
 You say, "709395750"
 ```
-
+```
     > say convsecs(709395750)
     You say, "Wed Jun 24 10:22:54 1992"
-
+```
+```
     > say convutcsecs(709395750)
     You say, "Wed Jun 24 14:22:30 1992"
-
+```
 
 ## See Also
 - [convtime()]
@@ -1198,12 +1221,12 @@ You say, "Wed Jun 24 10:22:54 1992"
 say cos(90, d)
 You say, "0"
 ```
-
+```
     > say cos(1.570796)
     You say, "0"
+```
 
   See 'HELP ANGLES' for more on the angle type.
-
 
 ## See Also
 - [acos()]
@@ -1293,17 +1316,22 @@ You say, "90 degrees is 1.570796 radians"
 
   dec() returns the given `<integer>` minus 1. If given a string that ends in an integer, it decrements only the final integer portion. That is:
 
+```
     > think dec(3)
     2
-
+```
+```
     > think dec(hi3)
     hi2
-
+```
+```
     > think dec(1.3.3)
     1.3.2
-
+```
+```
     > think dec(1.3)
     1.2
+```
 
   Note especially the last example, which will trip you up if you use floating point numbers with dec() and expect it to work like sub().
 
@@ -1343,11 +1371,11 @@ This is \[a%b[ansi(y,test)]\] %b%b
 say default(me/Test, No fruits!)
 You say "apple orange banana"
 ```
-
+```
     > &TEST ME
     > say default(me/Test, No fruits!)
     You say "No fruits!"
-
+```
 
 ## See Also
 - [get()]
@@ -1368,10 +1396,10 @@ You say "apple orange banana"
 say strdelete(abcdefgh, 3, 2)
 You say, "abcfgh"
 ```
-
+```
     > say strdelete(abcdefgh, 3, -2)
     You say, "abefgh"
-
+```
   delete() is an alias for strdelete(), for backwards compatability.
 
 
@@ -1473,7 +1501,7 @@ SHA224(foo) => 0808f64e60d58979fcb676c96ec938270dea42445aeefcd3a4e6f8db
   div() returns the integer part of the quotient. floordiv() returns the largest integer less than or equal to the quotient; for positive numbers, they are identical, but for negative numbers they may differ. fdiv() returns the floating-point quotient.
 
   Examples:
-
+```
    div(13,4)          ==>   3      and     floordiv(13,4)     ==>   3
    div(-13,4)         ==>  -3      but     floordiv(-13,4)    ==>  -4
    div(13,-4)         ==>  -3      but     floordiv(13,-4)    ==>  -4
@@ -1481,6 +1509,7 @@ SHA224(foo) => 0808f64e60d58979fcb676c96ec938270dea42445aeefcd3a4e6f8db
 
    fdiv(13,4)         ==>  3.25            fdiv(-13,4)        ==> -3.25
    fdiv(13,-4)        ==>  -3.25           fdiv(-13,-4)       ==>  3.25
+```
 
   Note that add(mul(div(%0,%1),%1),remainder(%0,%1)) always yields %0, and add(mul(floordiv(%0,%1),%1),modulo(%0,%1)) also always yields %0.
 
