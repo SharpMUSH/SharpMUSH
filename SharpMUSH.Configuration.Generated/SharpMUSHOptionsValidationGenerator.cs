@@ -4,9 +4,10 @@ using System.Linq;
 using System.Reflection.Metadata;
 using System.Text;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace SharpMUSH.Configuration.SourceGenerators;
+namespace SharpMUSH.Configuration.Generated;
 
 using RegexFieldsAndNames = (string Field, string Pattern, string FieldName);
 
@@ -36,7 +37,7 @@ public class SharpMUSHOptionsValidationGenerator : IIncrementalGenerator
 
 		var optionsClass = optionsClasses[0];
 		var semanticModel = compilation.GetSemanticModel(optionsClass.SyntaxTree);
-		var optionsSymbol = (INamedTypeSymbol)semanticModel.GetDeclaredSymbol(optionsClass)!;
+		var optionsSymbol = semanticModel.GetDeclaredSymbol(optionsClass)!;
 		var regexFieldsAndNames = GetRegexFieldsAndNames(optionsSymbol).ToImmutableArray();
 		var regexFieldNames = regexFieldsAndNames.ToDictionary(x => x.Pattern, x => x.FieldName);
 

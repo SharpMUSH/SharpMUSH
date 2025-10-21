@@ -38,7 +38,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.Client", "SharpMU
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.Implementation.Generated", "SharpMUSH.Implementation.Generated\SharpMUSH.Implementation.Generated.csproj", "{6A19D5C2-137B-4409-852B-D00DAB2F6A92}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.Configuration.SourceGenerators", "SharpMUSH.Configuration.SourceGenerators\SharpMUSH.Configuration.SourceGenerators.csproj", "{40424206-6A7C-42FC-AACF-85B11283EBCD}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.Configuration.Generated", "SharpMUSH.Configuration.Generated\SharpMUSH.Configuration.Generated.csproj", "{40424206-6A7C-42FC-AACF-85B11283EBCD}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

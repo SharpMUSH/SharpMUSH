@@ -38,8 +38,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\SharpMUSH.Configuration.SourceGenerators\SharpMUSH.Configuration.SourceGenerators.csproj" 
-											OutputItemType="Analyzer" />
+		<ProjectReference Include="..\SharpMUSH.Configuration.Generated\SharpMUSH.Configuration.Generated.csproj" OutputItemType="Analyzer" />
 	</ItemGroup>
 
 </Project>
