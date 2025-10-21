@@ -1093,6 +1093,8 @@ public partial class Commands
 			return new CallState(Errors.NothingToDo);
 		}
 
+		// TODO: Switches
+		// TODO: Queue
 		await parser.With(state => state with { Executor = found.Object().DBRef },
 			async newParser => await newParser.CommandListParseVisitor(cmdListArg)());
 
