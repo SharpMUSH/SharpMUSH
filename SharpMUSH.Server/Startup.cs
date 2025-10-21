@@ -1,4 +1,5 @@
 ﻿using Core.Arango;
+using Core.Arango.Transport;
 using Mediator;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -6,6 +7,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Newtonsoft.Json;
 using Quartz;
 using Serilog;
 using Serilog.Events;
@@ -34,14 +36,13 @@ public class Startup(ArangoConfiguration config, string colorFile)
 	{
 		services.AddCors(options =>
 		{
-			options.AddDefaultPolicy(
-				builder => builder
-					.SetIsOriginAllowed(o => true)
-					// .WithOrigins("https://localhost:7102")
-					.AllowAnyMethod()
-					.AllowAnyHeader()); 
+			options.AddDefaultPolicy(builder => builder
+				.SetIsOriginAllowed(o => true)
+				// .WithOrigins("https://localhost:7102")
+				.AllowAnyMethod()
+				.AllowAnyHeader());
 		});
-		
+
 		services.AddLogging(logging =>
 		{
 			logging.ClearProviders();
@@ -120,14 +121,15 @@ public class Startup(ArangoConfiguration config, string colorFile)
 		services.AddHttpClient();
 		services.AddMediator();
 		services.AddFusionCache();
-		services.AddArango((_, arango) =>
+		services.AddArango((x, arango) =>
 		{
-			arango.ConnectionString = config.ConnectionString;
-			// var socketLocation = "/var/run/arangodb3/arangod.sock";
-			// arango.HttpClient = new HttpClient(UnixSocketHandler.CreateHandlerForUnixSocket(socketLocation))
-			// {
-			//   BaseAddress = new Uri($"http+unix://{socketLocation}) 
-			// };
+			if (config.ConnectionString is not null)
+			{
+				arango.ConnectionString = config.ConnectionString;
+			}
+			arango.HttpClient = config.HttpClient;
+			arango.Serializer = config.Serializer;
+			arango.Transport = new ArangoHttpTransport(arango);
 		});
 		services.AddQuartz(x => { x.UseInMemoryStore(); });
 		services.AddAuthorization();

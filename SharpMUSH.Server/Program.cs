@@ -10,6 +10,7 @@ using Serilog.Sinks.PeriodicBatching;
 using Serilog.Sinks.SystemConsole.Themes;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Server.Connectors;
 using SharpMUSH.Server.ProtocolHandlers;
 using Testcontainers.ArangoDb;
 
@@ -21,20 +22,38 @@ public class Program
 	{
 		var builder = WebApplication.CreateBuilder(args);
 
-		var container = new ArangoDbBuilder()
-			// .WithReuse(true)
-			.WithLabel("reuse-id", "SharpMUSH")
-			.WithImage("arangodb:latest")
-			.WithPassword("password")
-			.Build();
+		var arangoConnStr = Environment.GetEnvironmentVariable("ARANGO_CONNECTION_STRING");
+		ArangoConfiguration config;
 
-		await container.StartAsync();
-
-		var config = new ArangoConfiguration
+		if (string.IsNullOrWhiteSpace(arangoConnStr))
 		{
-			ConnectionString = $"Server={container.GetTransportAddress()};User=root;Realm=;Password=password;",
-			Serializer = new ArangoNewtonsoftSerializer(new ArangoNewtonsoftDefaultContractResolver())
-		};
+			var container = new ArangoDbBuilder()
+				// .WithReuse(true)
+				.WithLabel("reuse-id", "SharpMUSH")
+				.WithImage("arangodb:latest")
+				.WithPassword("password")
+				.Build();
+
+			await container.StartAsync();
+
+			config = new ArangoConfiguration
+			{
+				ConnectionString = $"Server={container.GetTransportAddress()};User=root;Realm=;Password=password;",
+				Serializer = new ArangoNewtonsoftSerializer(new ArangoNewtonsoftDefaultContractResolver())
+			};
+		}
+		else
+		{
+			config = new ArangoConfiguration
+			{
+				ConnectionString = arangoConnStr,
+				HttpClient = new HttpClient(UnixSocketHandler.CreateHandlerForUnixSocket("/var/run/arangodb3/arangodb.sock"))
+				{
+					BaseAddress = new Uri("http://localhost:8529") // Won't get used.
+				},
+				Serializer = new ArangoNewtonsoftSerializer(new ArangoNewtonsoftDefaultContractResolver())
+			};
+		}
 
 		builder.Logging.AddSerilog(new LoggerConfiguration()
 			.Enrich.FromLogContext()
@@ -76,18 +95,15 @@ public class Program
 			options.AddServerHeader = true;
 
 			options.ListenAnyIP(Convert.ToInt32(netValues.Port),
-				listenOptions =>
-				{
-					listenOptions.UseConnectionHandler<TelnetServer>();
-				});
+				listenOptions => { listenOptions.UseConnectionHandler<TelnetServer>(); });
 			options.ListenAnyIP(Convert.ToInt32(netValues.PortalPort));
-			options.ListenAnyIP(Convert.ToInt32(netValues.SslPortalPort), 
-				o => o.UseHttps()
-				);
+			options.ListenAnyIP(Convert.ToInt32(netValues.SslPortalPort)
+				//, o => o.UseHttps()
+			);
 		});
 
 		var app = builder.Build();
-		
+
 		await ConfigureApp(app).RunAsync();
 	}
 
@@ -96,7 +112,7 @@ public class Program
 		var env = app.Environment;
 		app.UseRouting();
 		app.UseCors();
-		
+
 		if (env.EnvironmentName == "Development")
 		{
 			app.UseDeveloperExceptionPage();
