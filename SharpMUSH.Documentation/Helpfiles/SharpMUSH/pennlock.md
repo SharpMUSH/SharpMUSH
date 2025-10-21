@@ -1,8 +1,8 @@
 # LOCK KEYS
 
-There are many key types, and it is also possible to form more complex locks by using boolean symbols and grouping. See [help @lock-complex|@lock-complex] for examples.
+There are many key types, and it is also possible to form more complex locks by using boolean symbols and grouping. See [@lock-complex] for examples.
 
-The types of keys are outlined below. Detailed help for each is available by typing [help @lock-<key>|@lock-key], replacing *<key>* with the word on the left.
+The types of keys are outlined below. Detailed help for each is available by typing [@lock-<key>], replacing *<key>* with the word on the left.
 
 - **Simple** - Always true, always false, or locking to a specific object.
 - **Name** - Check the name of the object attempting to pass the lock.
@@ -15,7 +15,7 @@ The types of keys are outlined below. Detailed help for each is available by typ
 - **Dbreflist** - Check if the dbref of the object trying to pass the lock is in a list set in an attribute.
 - **Host** - Check for players connecting from a particular host/ip.
 
-You can negate lock keys, and combine multiple keys, as explained in [help lockkeys2|lockkeys2].
+You can negate lock keys, and combine multiple keys, as explained in [lockkeys2].
 
 # LOCK KEYS2
 # @LOCK-COMPLEX
@@ -52,10 +52,10 @@ You can group together different sets of keys by enclosing each group in parenth
 allows non-players to pass, or players who do not have the "unregistered" flag set.
 
 See also:
-- [help @lock|@lock]
-- [help locktypes|locktypes]
-- [help @clock|@clock]
-- [help objid()|objid()]
+- [@lock]
+- [locktypes]
+- [@clock]
+- [objid()]
 
 # @LOCK-SIMPLE
 # @LOCK-OBJID
@@ -72,7 +72,7 @@ This lock will always fail.
 ```
 > @lock My Toy = =me
 ```
-This locks the object "My Toy" to you and you alone. It is recommended that you `@lock me = =me` in order to prevent anyone else from picking you up. The two = signs are NOT a typo! The first is part of the @lock syntax (as shown at the top of [help @lock|@lock]) the second is a lock key that means "only this exact object".
+This locks the object "My Toy" to you and you alone. It is recommended that you `@lock me = =me` in order to prevent anyone else from picking you up. The two = signs are NOT a typo! The first is part of the @lock syntax (as shown at the top of [@lock]) the second is a lock key that means "only this exact object".
 
 For backwards compatibility, `OBJID^<object>` is an alias for `=<object>`.
 
@@ -132,7 +132,7 @@ The difference between this and an attribute lock is that the *<attribute>* is t
 
 The person trying to pass the lock is %# and *<object>* is %! when the evaluation takes place. The evaluation is done with the powers of *<object>*. If you try to do something (like [get(%#/*<attribute>*)]) and *<object>* doesn't have permission to do that, the person will automatically fail to pass the lock.
 
-See also: [help @lock-eval2|@lock-eval2]
+See also: [@lock-eval2]
 
 # @LOCK-EVAL2
 # @LOCK-EVALUATION2
@@ -148,7 +148,7 @@ Whenever someone tries to pass through the exit, the attribute "whichday" will b
 
 If you have an evaluation lock that just does [hasflag(%#,FLAGNAME)], you should probably use a bit lock instead.
 
-See also: [help @lock-bit|@lock-bit]
+See also: [@lock-bit]
 
 # @LOCK-NAME
 
@@ -206,7 +206,7 @@ For example:
 # @LOCK-INDIRECT
 
 ## INDIRECT LOCKS
-An "indirect" lock allows you to lock something to the same thing as another object (very useful in setting channel locks; see [help @clock|@clock]):
+An "indirect" lock allows you to lock something to the same thing as another object (very useful in setting channel locks; see [@clock]):
 ```
 @lock Second Puppet=@First Puppet
 ```
@@ -234,16 +234,16 @@ For example:
 This locks *<object>* to players (and the objects of players) currently connected from the computer the MUSH is running on.
 
 See also:
-- [help ipaddr()|ipaddr()]
-- [help hostname()|hostname()]
-- [help LASTSITE|LASTSITE]
+- [ipaddr()]
+- [hostname()]
+- [LASTSITE]
 
 # LOCKTYPES
 # LOCKLIST
 # LOCK TYPES
 # LOCK LIST
 
-These are the standard lock types supported by SharpMUSH. For more detailed information about any lock type, see [help @lock/<lock>|@lock-lock].
+These are the standard lock types supported by SharpMUSH. For more detailed information about any lock type, see [@lock/<lock>].
 
 Standard Lock Types:
 - `@lock/basic` - Who can pick up the player/thing, or go through the exit.
@@ -258,7 +258,7 @@ Standard Lock Types:
 - `@lock/mail` - Who can @mail the player
 - `@lock/user:<name>` - User-defined. No built-in function of this lock, but users can test it with elock()
 
-See also: [help locktypes2|locktypes2]
+See also: [locktypes2]
 
 # LOCK TYPES2
 # LOCKTYPES2
@@ -290,10 +290,10 @@ More standard lock types:
 - `@lock/chown` - Who can @chown this CHOWN_OK object?
 
 See also:
-- [help @lock|@lock]
-- [help @lset|@lset]
-- [help @clock|@clock]
-- [help FAILURE|FAILURE]
+- [@lock]
+- [@lset]
+- [@clock]
+- [FAILURE]
 
 # @LOCK/BASIC
 # @LOCK/ENTER
@@ -306,39 +306,39 @@ For players and things, it controls who can "get" the object.
 For rooms, it determines whether the @success or @failure verbs are triggered when someone "look"s at the room. However, even when the lock is failed, the "look" still occurs.
 
 See also:
-- [help @success|@success]
-- [help @failure|@failure]
-- [help goto|goto]
-- [help get|get]
-- [help look|look]
+- [@success]
+- [@failure]
+- [goto]
+- [get]
+- [look]
 
 ## Enter Lock
 For players and things, the Enter lock controls who can "enter" an ENTER_OK object, as well as who can "empty" it. It has no meaning for exits or rooms.
 
 See also:
-- [help @enter|@enter]
-- [help @efail|@efail]
-- [help ENTER_OK|ENTER_OK]
-- [help enter|enter]
-- [help empty|empty]
+- [@enter]
+- [@efail]
+- [ENTER_OK]
+- [enter]
+- [empty]
 
 ## Leave Lock
 For players, things and rooms, the Leave lock controls who can leave the object, via "leave", "@teleport" or "goto". It has no meaning for exits.
 
 See also:
-- [help @leave|@leave]
-- [help @lfail|@lfail]
-- [help leave|leave]
+- [@leave]
+- [@lfail]
+- [leave]
 
 ## Teleport Lock
 For rooms, the Teleport lock controls who can "@teleport" into the room, if it has the JUMP_OK flag set. It has no meaning for players, things or exits.
 
 See also:
-- [help JUMP_OK|JUMP_OK]
-- [help @teleport|@teleport]
-- [help @lock|@lock]
-- [help locktypes|locktypes]
-- [help lockkeys|lockkeys]
+- [JUMP_OK]
+- [@teleport]
+- [@lock]
+- [locktypes]
+- [lockkeys]
 
 # @LOCK/FOLLOW
 # @LOCK/FORWARD
@@ -347,26 +347,26 @@ See also:
 ## Follow Lock
 For players and things, controls who may "follow" the object. Has no meaning for rooms or exits.
 
-See also: [help FAILURE|FAILURE]
+See also: [FAILURE]
 
 ## Forward Lock
 For players, things and rooms, controls who can forward sound to an object, via @forwardlist or @debugforwardlist. Meaningless for exits.
 
 See also:
-- [help @forwardlist|@forwardlist]
-- [help @debugforwardlist|@debugforwardlist]
-- [help @lock/mailforward|@lock/mailforward]
+- [@forwardlist]
+- [@debugforwardlist]
+- [@lock/mailforward]
 
 ## Dropto Lock
 For rooms, only objects which pass this lock will be sent to the rooms Drop-To. Has no meaning for players, things or exits.
 
 See also:
-- [help DROP-TOS|DROP-TOS]
-- [help drop|drop]
-- [help empty|empty]
-- [help @lock|@lock]
-- [help locktypes|locktypes]
-- [help lockkeys|lockkeys]
+- [DROP-TOS]
+- [drop]
+- [empty]
+- [@lock]
+- [locktypes]
+- [lockkeys]
 
 # @LOCK/USE
 # @LOCK/COMMAND
@@ -376,24 +376,24 @@ See also:
 For players, things and rooms, this lock controls who may "use" the object. You must also pass an object's Use lock to trigger $-commands or ^-listens on it (as well as the Command/Listen lock; see below). When an object is used as a Channel Mogrifier, only players who pass the object's Use lock will have their speech on the channel mogrified. Has no meaning for exits.
 
 See also:
-- [help @use|@use]
-- [help @ufail|@ufail]
-- [help use|use]
-- [help $-commands|$-commands]
-- [help ^|^]
-- [help MOGRIFY|MOGRIFY]
+- [@use]
+- [@ufail]
+- [use]
+- [$-commands]
+- [^]
+- [MOGRIFY]
 
 ## Command Lock
 For players, things and rooms, you must pass this lock (as well as the Use lock) to trigger $-commands on the object. Meaningless for exits.
 
 See also:
-- [help $-commands|$-commands]
-- [help FAILURE|FAILURE]
+- [$-commands]
+- [FAILURE]
 
 ## Listen Lock
 For players, things and rooms, you must pass this lock (as well as the Use lock) to trigger ^-listen patterns on the object when it's set MONITOR. Meaningless for exits.
 
-See also: [help ^|^]
+See also: [^]
 
 # @LOCK/PAGE
 # @LOCK/SPEECH
@@ -405,28 +405,28 @@ See also: [help ^|^]
 For players, things and rooms, you must pass this lock to page or @pemit to the object, or @remit inside it. Meaningless for exits.
 
 See also:
-- [help FAILURE|FAILURE]
-- [help @haven|@haven]
+- [FAILURE]
+- [@haven]
 
 ## Speech Lock
 Controls who can speak (via say, pose, @*emit or teach) inside an object. Meaningless for exits.
 
-See also: [help FAILURE|FAILURE]
+See also: [FAILURE]
 
 ## Mail Lock
 Controls who can send @mail to this object.
 
 See also:
-- [help @mail|@mail]
-- [help FAILURE|FAILURE]
+- [@mail]
+- [FAILURE]
 
 ## Mailforward Lock
 Controls who can forward @mail to this object via @mailforward.
 
 See also:
-- [help @mail|@mail]
-- [help @mailforward|@mailforward]
-- [help @lock/forward|@lock/forward]
+- [@mail]
+- [@mailforward]
+- [@lock/forward]
 
 ## Interact Lock
 Controls whose indirect speech you'll hear (from say, pose, channels, @emit, etc). Does not block sound directed specifically at you, such as page, whisper, @pemit, etc; use @lock/page for those. **Note**: if sound is blocked by the interact lock, the speaker will not be informed.
@@ -443,8 +443,8 @@ Controls whose indirect speech you'll hear (from say, pose, channels, @emit, etc
 For players and things, controls who can drop the object. Has no meaning for exits. On rooms, has the same meaning as @lock/dropin.
 
 See also:
-- [help drop|drop]
-- [help empty|empty]
+- [drop]
+- [empty]
 
 ## Dropin Lock
 When set on a player, thing or room, controls who can drop objects into them. Has no meaning for exits.
@@ -465,10 +465,10 @@ Controls what may be given to this object.
 Controls who can take from this container.
 
 See also:
-- [help give|give]
-- [help buy|buy]
-- [help @lock/basic|@lock/basic]
-- [help @lock/enter|@lock/enter]
+- [give]
+- [buy]
+- [@lock/basic]
+- [@lock/enter]
 
 # @LOCK/FILTER
 # @LOCK/INFILTER
@@ -478,8 +478,8 @@ See also:
 These are lock versions of @filter and @infilter, respectively. Anyone who fails to pass the lock will have their speech filtered. The sound being made is passed to evaluation locks as %0.
 
 See also:
-- [help @filter|@filter]
-- [help @infilter|@infilter]
+- [@filter]
+- [@infilter]
 
 # @LOCK/CONTROL
 # @LOCK/DESTROY
@@ -488,21 +488,21 @@ See also:
 ## Control Lock
 Allows objects which would not normally control something to do so. Does not work for players.
 
-See also: [help CONTROL|CONTROL]
+See also: [CONTROL]
 
 ## Destroy Lock
 Limits who can @destroy a DESTROY_OK object.
 
 See also:
-- [help @destroy|@destroy]
-- [help DESTROY_OK|DESTROY_OK]
+- [@destroy]
+- [DESTROY_OK]
 
 ## Examine Lock
 Limits who can examine a VISUAL object.
 
 See also:
-- [help examine|examine]
-- [help VISUAL|VISUAL]
+- [examine]
+- [VISUAL]
 
 # @LOCK/ZONE
 # @LOCK/CHZONE
@@ -515,48 +515,48 @@ See also:
 Objects which pass a SHARED player's @lock/zone control all the objects the shared player owns. If the zone_control_zmp_only @config option is off, anything passing the @lock/zone of other objects will control everything @chzoned to the object.
 
 See also:
-- [help @chzone|@chzone]
-- [help SHARED|SHARED]
-- [help ZONES|ZONES]
-- [help ZMR|ZMR]
+- [@chzone]
+- [SHARED]
+- [ZONES]
+- [ZMR]
 
 ## Chzone Lock
 If set, controls who can @chzone an object to this zone.
 
 See also:
-- [help @chzone|@chzone]
-- [help ZONES|ZONES]
+- [@chzone]
+- [ZONES]
 
 ## Chown Lock
 If set, controls who can change the owner of this CHOWN_OK object via @chown.
 
 See also:
-- [help CHOWN_OK|CHOWN_OK]
-- [help @chown|@chown]
+- [CHOWN_OK]
+- [@chown]
 
 ## Parent Lock
 Controls who can @parent something to this LINK_OK object.
 
 See also:
-- [help @parent|@parent]
-- [help LINK_OK|LINK_OK]
+- [@parent]
+- [LINK_OK]
 
 ## Link Lock
 Controls who can @link this unlinked exit, or who can @link an exit to this LINK_OK room/thing.
 
 See also:
-- [help @link|@link]
-- [help LINK_OK|LINK_OK]
-- [help LINK_ANYWHERE POWER|LINK_ANYWHERE POWER]
+- [@link]
+- [LINK_OK]
+- [LINK_ANYWHERE POWER]
 
 ## Open Lock
 Controls who can @open an exit from this OPEN_OK room.
 
 See also:
-- [help @open|@open]
-- [help @dig|@dig]
-- [help OPEN_OK|OPEN_OK]
-- [help OPEN_ANYWHERE POWER|OPEN_ANYWHERE POWER]
+- [@open]
+- [@dig]
+- [OPEN_OK]
+- [OPEN_ANYWHERE POWER]
 
 # @LOCK/USER
 # @LOCK/USER:<NAME>
@@ -571,8 +571,8 @@ User-defined locks have no hardcoded meaning. They allow you to set locks for an
 and then test it with `elock(War Hammer/wield, %#)`.
 
 See also:
-- [help elock()|elock()]
-- [help valid()|valid()]
-- [help @lock|@lock]
-- [help locktypes|locktypes]
-- [help lockkeys|lockkeys]
+- [elock()]
+- [valid()]
+- [@lock]
+- [locktypes]
+- [lockkeys]

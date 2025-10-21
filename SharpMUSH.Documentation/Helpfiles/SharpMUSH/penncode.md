@@ -1,7 +1,7 @@
 # code
 
 # contact
-PennMUSH is developed by a team of developers whose names are listed in 'help changes'. Suggestions, comments, and bug reports are welcome.
+PennMUSH is developed by a team of developers whose names are listed in [changes]. Suggestions, comments, and bug reports are welcome.
 
 The main PennMUSH web page is at http://www.pennmush.org
 
@@ -9,8 +9,8 @@ Report bugs and make suggestions at https://github.com/pennmush/pennmush/issues
 
 The PennMUSH community page is at http://community.pennmush.org
 
-For information about downloading PennMUSH, see 'help download'.
-For information about changes in versions of the code, see 'help changes'.
+For information about downloading PennMUSH, see [download].
+For information about changes in versions of the code, see [changes].
 
 # download
 The latest version of this MUSH code is available from https://github.com/pennmush/pennmush/releases or http://download.pennmush.org. It will be called something like pennmush-1.8.3p9.tar.bz2, depending on the version number.

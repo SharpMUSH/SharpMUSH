@@ -4,7 +4,7 @@ Pueblo is a client made by Chaco (a now defunct company). It attempts to mix HTM
 
 SharpMUSH will automatically detect a Pueblo client (rather, the client will announce itself and SharpMUSH will detect that), and set up that connection for Pueblo use. 
 
-See also: [help pueblo2|pueblo2]
+See also: [pueblo2]
 
 # PUEBLO2
 
@@ -24,21 +24,21 @@ While Pueblo brings a number of new features and markups to MUSHes, in many ways
 ```
 
 See also:
-- [help pueblo()|pueblo()]
-- [help HTML Functions|HTML Functions]
+- [pueblo()]
+- [HTML Functions]
 
 # HTML
 
 Hyper Text Markup Language (http://www.w3.org)
 
-The only HTML implementation supported by the MUSH is the one supported by Pueblo (see [help pueblo|pueblo] for more info). To utilize HTML, use one of the MUSH HTML Functions (see [help HTML Functions|HTML Functions] for a list).
+The only HTML implementation supported by the MUSH is the one supported by Pueblo (see [pueblo] for more info). To utilize HTML, use one of the MUSH HTML Functions (see [HTML Functions] for a list).
 
 HTML tags are stripped when sent to non-HTML capable players.
 
 See also:
-- [help HTML Functions|HTML Functions]
-- [help PUEBLO|PUEBLO]
-- [help html()|html()]
+- [HTML Functions]
+- [PUEBLO]
+- [html()]
 
 # PUEBLO()
 
@@ -51,9 +51,9 @@ If used on a player/descriptor which is not connected, pueblo() returns #-1 NOT 
 When used with a *<player>* argument, the most recently active connection is used if the *<player>* is logged in more than once.
 
 See also:
-- [help terminfo()|terminfo()]
-- [help html()|html()]
-- [help PUEBLO|PUEBLO]
+- [terminfo()]
+- [html()]
+- [PUEBLO]
 
 # @VRML_URL
 # VRML_URL
@@ -71,8 +71,8 @@ Example:
 To learn about the VRML Format, have a look at the Pueblo Help, which mentions several good sites for learning.
 
 See also:
-- [help HTML|HTML]
-- [help PUEBLO|PUEBLO]
+- [HTML]
+- [PUEBLO]
 
 # HTML FUNCTIONS
 
@@ -119,9 +119,9 @@ Will output (in HTML):
 Non-wizards should see the tag(), endtag(), and tagwrap() functions, which are similar but can be used by mortals.
 
 See also:
-- [help PUEBLO|PUEBLO]
-- [help HTML|HTML]
-- [help HTML Functions|HTML Functions]
+- [PUEBLO]
+- [HTML]
+- [HTML Functions]
 
 [... Previous content ...]
 
@@ -142,9 +142,9 @@ Will output (in HTML):
 ```
 
 See also:
-- [help endtag()|endtag()]
-- [help tagwrap()|tagwrap()]
-- [help html()|html()]
+- [endtag()]
+- [tagwrap()]
+- [html()]
 
 # ENDTAG()
 
@@ -163,9 +163,9 @@ Will output (in HTML):
 ```
 
 See also:
-- [help tag()|tag()]
-- [help tagwrap()|tagwrap()]
-- [help html()|html()]
+- [tag()]
+- [tagwrap()]
+- [html()]
 
 # TAGWRAP()
 
@@ -186,9 +186,9 @@ Will output (in HTML):
 A particularly important use of this function is `tagwrap(pre, <string>)`. Because Pueblo works like an html browser, spaces and tabs are compressed to a single space. If you have code (a +who function, for example) that relies on exact spacing, surround its output with a tagwrap(pre,...) so that Pueblo will render it as "preformatted" text.
 
 See also:
-- [help tag()|tag()]
-- [help endtag()|endtag()]
-- [help html()|html()]
+- [tag()]
+- [endtag()]
+- [html()]
 
 # WEBSOCKETS
 
@@ -205,24 +205,24 @@ The different kinds of markup that can be sent to clients are:
 
 Without using any HTML markup functions, output is rendered as normal plain text (including ANSI and xterm256 color).
 
-See [help HTML Functions|HTML Functions] for functions used to embed HTML markup tags one at a time.
-See [help wshtml()|wshtml()] for help embedding large segments of raw HTML markup to be sent to WebSocket clients.
+See [HTML Functions] for functions used to embed HTML markup tags one at a time.
+See [wshtml()] for help embedding large segments of raw HTML markup to be sent to WebSocket clients.
 
 Support for Pueblo links depends on the WebSocket client, however the example client above supports xch_cmd for command links and xch_hint for tooltip text popups. For clickable command links, embed a link tag with the command to be executed in the "xch_cmd" attribute, e.g. `<a xch_cmd="+who">Who is online?</a>`.
 
 You can also send data encapsulated in a JSON object.
 
-See [help json()|json()] for information about formatting data into JSON object strings.
-See [help wsjson()|wsjson()] for help sending formatted JSON object strings to WebSocket clients as a JavaScript object.
+See [json()] for information about formatting data into JSON object strings.
+See [wsjson()] for help sending formatted JSON object strings to WebSocket clients as a JavaScript object.
 
-See [help @prompt|@prompt] for information about sending telnet GOAHEAD prompts. Support for prompts depends on the WebSocket client. The example client above shows prompts on their own line, separating the input and output windows, but requires PROMPT_NEWLINES to be turned off.
+See [@prompt] for information about sending telnet GOAHEAD prompts. Support for prompts depends on the WebSocket client. The example client above shows prompts on their own line, separating the input and output windows, but requires PROMPT_NEWLINES to be turned off.
 
 See also:
-- [help HTML Functions|HTML Functions]
-- [help json()|json()]
-- [help pueblo|pueblo]
-- [help wshtml()|wshtml()]
-- [help wsjson()|wsjson()]
+- [HTML Functions]
+- [json()]
+- [pueblo]
+- [wshtml()]
+- [wsjson()]
 
 # WSHTML()
 # WSJSON()
@@ -234,7 +234,7 @@ These functions are used to embed HTML and JSON markup into the output for WebSo
 
 **wshtml()** embeds *<html string>* as HTML markup, to be rendered as HTML by a WebSocket client.
 
-**wsjson()** embeds *<json string>* as a JSON object which can be captured by a WebSocket client. See [help json()|json()] for information about formatting JSON object strings.
+**wsjson()** embeds *<json string>* as a JSON object which can be captured by a WebSocket client. See [json()] for information about formatting JSON object strings.
 
 In both cases, the *<default string>* is shown as plain text if the recipient is not WebSocket-enabled.
 
@@ -257,7 +257,7 @@ Go to http://pennmush.org
 ```
 
 See also:
-- [help WebSockets|WebSockets]
-- [help Pueblo|Pueblo]
-- [help HTML Functions|HTML Functions]
-- [help JSON Functions|JSON Functions]
+- [WebSockets]
+- [Pueblo]
+- [HTML Functions]
+- [JSON Functions]

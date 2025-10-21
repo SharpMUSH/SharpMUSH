@@ -49,7 +49,7 @@ This is the index to the MUSH online help files.
   > help/search @switch
 ```
 
-  help/query is a more advanced and complex way to search our helpfiles, see "help helpfile2" for more.
+  help/query is a more advanced and complex way to search our helpfiles, see [helpfile2] for more.
 
   To add more categories and commands (like 'news'), read "game/txt/README"
 
@@ -115,13 +115,13 @@ This is the index to the MUSH online help files.
 # GS
 
 # Walkthrough
-  This helpfile is a quick walkthrough of some of PennMUSH's standard systems. It uses the same syntax as the other helpfiles; if you're not familiar with the syntax of the PennMUSH helpfiles, please read 'help newbie' first, as it's explained there.
+  This helpfile is a quick walkthrough of some of PennMUSH's standard systems. It uses the same syntax as the other helpfiles; if you're not familiar with the syntax of the PennMUSH helpfiles, please read [newbie] first, as it's explained there.
 
-  For help with getting around, please see 'help gs moving'.
+  For help with getting around, please see [gs moving].
 
-  To talk to people in the room with you, see 'help gs talking'.
+  To talk to people in the room with you, see [gs talking].
 
-  For a brief guide to the PennMUSH chat system, see 'help gs chat'.
+  For a brief guide to the PennMUSH chat system, see [gs chat].
 
   For information on how to send and read mail using PennMUSH's built-in mail system, `@mail`, please type 'help gs mail'.
 
@@ -208,7 +208,7 @@ This is the index to the MUSH online help files.
 
   Most games have a number of different channels, either for discussing different subjects, or for different groups/factions of players to chat on.
 
-  To see a list of channels, type '`@channel`/list'. This shows the names of all the channels, whether or not you're on the channel, and some other information (the rest is explained in 'help channel-list').
+  To see a list of channels, type '`@channel`/list'. This shows the names of all the channels, whether or not you're on the channel, and some other information (the rest is explained in [channel-list]).
 
   To join a channel, type '`@channel`/on `<channel>`'. To leave it again, use '`@channel`/leave `<channel>`'. If you want to stop hearing a channel for a while without leaving it totally, use '`@channel`/gag `<channel>`'.
 
@@ -230,7 +230,7 @@ This is the index to the MUSH online help files.
 
   Some games customize the appearance of channels a little (for instance, adding color or using '[]' square brackets instead of angle brackets), so it may look a little different.
 
-  There's much more you can do with the channel system - see 'help `@channel`' for the other commands.
+  There's much more you can do with the channel system - see [`@channel`] for the other commands.
 
 ## See Also
 - [GS TALKING]
@@ -259,7 +259,7 @@ This is the index to the MUSH online help files.
 
     `@mail` qa'toq anne=Test/Hi! This is a test message!
 
-  You can do other, slightly more complex things with the mail system, too, like filing your messages into different folders. See 'help `@mail`' for more information.
+  You can do other, slightly more complex things with the mail system, too, like filing your messages into different folders. See [`@mail`] for more information.
 
 
 ## See Also
@@ -294,7 +294,7 @@ Help is available on the following topics:
   ZONES
 
 Type 'help `<topic name>`' for help.
-For a list of all topics, see 'help entries'.
+For a list of all topics, see [entries].
 
 # ACTION LISTS
   An "action list" is simply a list of MUSH commands which are run together, one after the other. Each command in the list is separated by a semicolon. Action lists appear in many places: in user-defined commands, triggered in `@a`-attributes by the MUSH, and even as arguments to other commands, like `@switch` and `@dolist`.
@@ -484,7 +484,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
     `@set` `<object>`=`<attribute name>`:`<content>`
     &`<attribute name>` `<object>`=`<content>`
 
-  It is also possible to have non-standard attributes, which can be named anything you like. Please see 'help NON-STANDARD ATTRIBUTES' for more information on those.
+  It is also possible to have non-standard attributes, which can be named anything you like. Please see [NON-STANDARD ATTRIBUTES] for more information on those.
 
   See [attributes3]
 
@@ -497,7 +497,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
     `@adescribe` me=think %n looks at you.
   would.
 
-  To see the attributes that are set on you or on any of the objects you own, you should use the "examine" command. See 'help examine'.
+  To see the attributes that are set on you or on any of the objects you own, you should use the "examine" command. See [examine].
 
   See [attributes4]
 
@@ -737,7 +737,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
     %~ = the enactor's accented name
     %k = the enactor's name, colored by their `@moniker` (if any)
     %: = the enactor's unique identifier, like objid(%#)
-    %a, %o, %p, %s = pronoun substitutions, based on the enactor's `@sex`. See 'help gender' for more information.
+    %a, %o, %p, %s = pronoun substitutions, based on the enactor's `@sex`. See [gender] for more information.
 
   If, for example, you have an `@osuccess` on an object that includes the %n subtitution, whenever someone picks up the object, that %n will evaluate to the name of the enactor (the person who typed 'get `<object>`' in this case).
 
@@ -798,7 +798,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 
     Socket commands (*): QUIT, SCREENWIDTH, etc
     Single-token commands: ", :, ;, +, \, #
-    MUX-style channel aliases, if enabled (see 'help muxcomm')
+    MUX-style channel aliases, if enabled (see [muxcomm])
     Exits in the room
     &attribute setting
     Regular game commands: get, inventory, `@emit`, etc
@@ -1239,7 +1239,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 
   Objects may have multiple levels of parents - thus, if #100 is the parent of #101, which is the parent of #102, object #102 checks itself, #101, and #100 for attributes. Attributes are checked on the object itself first, followed by its parent, followed by that parent's parent, and so on. There is a (configurable) maximum length of the parent chain for an object; the default is 10.
 
-  After the parent chain is exhausted, the type-specific ancestor is also checked in similar fashion. See 'help ANCESTORS' for more about ancestors.
+  After the parent chain is exhausted, the type-specific ancestor is also checked in similar fashion. See [ANCESTORS] for more about ancestors.
 
   See [parents2]
 
@@ -1419,7 +1419,7 @@ See [queue2]
 
   However, keep in mind that players who attempt to use the command and give invalid input (such as "`+setnum` cookies=thirty") will receive the normal, non-descriptive Huh? message. Using a broader match and validating the input in softcode, so you can give more descriptive error messages, may be desirable.
 
-  Regular expression syntax is explained in 'help regexp syntax'.
+  Regular expression syntax is explained in [regexp syntax].
 
 # REGEXP SYNTAX
   PennMUSH uses PCRE for its regular expression engine. PCRE is an open source library of functions to support regular expressions whose syntax and semantics are as close as possible to those of the Perl 5 language. The text below is excerpted from its man page. PCRE was written by Philip Hazel <ph10@cam.ac.uk>, and is Copyright (c) 1997-1999 University of Cambridge, England. You can find it at ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/
@@ -1455,7 +1455,7 @@ See [queue2]
        \      general escape character
        ^      negate the class, if the first character in the class
        -      indicates character range (e.g. A-Z, 0-4)
-   [:NAME:]   A symbol for a group of characters that can vary according to the language the mush is using. See 'help regexp classes' for more information.
+   [:NAME:]   A symbol for a group of characters that can vary according to the language the mush is using. See [regexp classes] for more information.
        ]      terminates the character class
 
   A backslash will escape most metacharacters, and can turn some normal characters into generic character types:
@@ -1585,7 +1585,7 @@ See [queue2]
   whee is in register 0 and foo bar is in register 1.
 ```
 
-  Please see 'help `setq()`' for more information about the setq registers.
+  Please see [`setq()`] for more information about the setq registers.
 
 
 ## See Also
@@ -1675,7 +1675,7 @@ See [queue2]
   See [semaphores5]
 
 # SEMAPHORES5
-  Normally, semaphores use the SEMAPHORE attribute. However, other attributes can be used, as long as they follow a few simple rules: If the attribute is already set, it has to have the same owner (God) and flags as the SEMAPHORE attribute would (typically no_inherit, no_clone, and locked - see 'help `@set`' and '`@atrlock`'), and have a numeric or empty value. If it's not set, it can't be one of the built in attributes (See `@list` attribs) unless, naturally, it is SEMAPHORE.
+  Normally, semaphores use the SEMAPHORE attribute. However, other attributes can be used, as long as they follow a few simple rules: If the attribute is already set, it has to have the same owner (God) and flags as the SEMAPHORE attribute would (typically no_inherit, no_clone, and locked - see [`@set`] and '`@atrlock`'), and have a numeric or empty value. If it's not set, it can't be one of the built in attributes (See `@list` attribs) unless, naturally, it is SEMAPHORE.
 
   See the help on `@wait`, `@notify` and `@drain` for details, but, briefly, you can use named semaphores with `<object>`/`<attribute>` where you would normally just use `<object>` in those commands. This means you can't have an untimed semaphore on an attribute with a numeric name.
 
@@ -1911,7 +1911,7 @@ See [queue2]
     `@pemit`/noeval/silent me=Hi!
 
   Help on the switches available for a command is available in the help file for that command.
-  (If you are looking for information on `@switch`, see 'help `@switch`'.)
+  (If you are looking for information on `@switch`, see [`@switch`].)
 
 # TYPES OF OBJECTS
 
@@ -1922,7 +1922,7 @@ See [queue2]
 
   There is also a 'garbage' type, used for objects which have been created and then `@destroyed`. Garbage objects cannot be used in any way, and their dbrefs will be recycled (with a new objid) when something new is created.
 
-  For more information on any of the types, see 'help `<type>`'.
+  For more information on any of the types, see [`<type>`].
 
   The `@stats` command lists how many objects of each type currently exits in the database.
 
@@ -1969,7 +1969,7 @@ See [queue2]
 - [@create]
 
 # EXITS
-  Exits are created with `@open`. They link rooms together, and can be used by players and things to move from one room to another with the GOTO command. Exits cannot move (though they can be `@teleported` to another room). They can have multiple aliases in their `@alias`. They are NOT checked for `$-commands` or ^-listens. Exits can have variable destinations; see 'help `@destination`' for more information.
+  Exits are created with `@open`. They link rooms together, and can be used by players and things to move from one room to another with the GOTO command. Exits cannot move (though they can be `@teleported` to another room). They can have multiple aliases in their `@alias`. They are NOT checked for `$-commands` or ^-listens. Exits can have variable destinations; see [`@destination`] for more information.
 
   You can change the destination of an exit with the `@link` command. `home()` returns the source room of an exit, and `loc()` returns its destination.
 
@@ -2024,7 +2024,7 @@ See [queue2]
 # MACROS2
 
 # USER-DEFINED2
-  Any number of wildcards, * and ?, may be in present in `<command pattern>`. A * matches any number of characters (including none), and ? matches exactly one character. When the action list is executed, the values on the stack in %0-%9 and v(10)-v(29) are the portions of what the user types that match the first 30 *'s or ?'s. You can also match a regular expression rather than wildcards by setting the REGEXP attribute flag on `<attribute>`; see 'help regexps' for details. When using named regexp captures, the named arguments can be accessed via r(`<name>`, args).
+  Any number of wildcards, * and ?, may be in present in `<command pattern>`. A * matches any number of characters (including none), and ? matches exactly one character. When the action list is executed, the values on the stack in %0-%9 and v(10)-v(29) are the portions of what the user types that match the first 30 *'s or ?'s. You can also match a regular expression rather than wildcards by setting the REGEXP attribute flag on `<attribute>`; see [regexps] for details. When using named regexp captures, the named arguments can be accessed via r(`<name>`, args).
 
   For example, to make a 'wave' command, you could do the following:
 ```
@@ -2155,7 +2155,7 @@ See [queue2]
 
   The "**" wildcard is also available for matching attribute names - see HELP ATTRIBUTE TREES2 for more information.
 
-  It's also possible to use regular expressions, rather than wildcards, for matching strings. Regexps allow a lot more control over what is matched, but are therefore somewhat more complex. See 'help regexp' for details.
+  It's also possible to use regular expressions, rather than wildcards, for matching strings. Regexps allow a lot more control over what is matched, but are therefore somewhat more complex. See [regexp] for details.
 
 
 ## See Also
@@ -2221,7 +2221,7 @@ See [queue2]
 
   The default zone is NOTHING. Any building done by a player defaults to belonging to the same zone that the player belongs to. Every zone is defined by a Zone Master Object (ZMO). The ZMO is an ordinary MUSH object owned by some player. A wizard may change the zone of an object or player to a ZMO.
 
-  If the ZMO is a room, it is called a "Zone Master Room." Most of the statements about ZMOs also apply to zone master rooms; for details, see 'help Zone Master Rooms'.
+  If the ZMO is a room, it is called a "Zone Master Room." Most of the statements about ZMOs also apply to zone master rooms; for details, see [Zone Master Rooms].
 
   See [zones2]
 
@@ -2278,7 +2278,7 @@ This is the AHELP index.
 
 # RESTRICT2
 
-  For commands, `<restriction>` should be an `@lock`-style boolexp (though, for backwards compatability, the restrictions below can be used, and will be converted into an `@lock` automatically). For functions, `<restriction>` should be any combination of the phrases below. For attributes, `<restriction>` is a list of attribute flags, or "none" to create a standard attribute with no restrictions (see 'help attribute flags').
+  For commands, `<restriction>` should be an `@lock`-style boolexp (though, for backwards compatability, the restrictions below can be used, and will be converted into an `@lock` automatically). For functions, `<restriction>` should be any combination of the phrases below. For attributes, `<restriction>` is a list of attribute flags, or "none" to create a standard attribute with no restrictions (see [attribute flags]).
 
     god        Command or function is usable only by God.
     wizard     Usable only by wizards.

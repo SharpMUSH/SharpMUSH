@@ -15,11 +15,11 @@ You say, "is"
     > say first(rest(v(va) [v(vb)]))
     You say, "is"
 
-  See 'help functions2' for more.
+  See [functions2] for more.
 # FUNCTIONS2
   There are two types of functions, "built-in functions" and "global user functions", also known as "@functions". You can get a complete list of functions on this game with "@list/functions".
 
-  Built-in functions are written in the game hardcode, while @functions are written in softcode, and then made global with the "@function" command. Both are used in exactly the same manner. For more information on @functions, see 'help @function'.
+  Built-in functions are written in the game hardcode, while @functions are written in softcode, and then made global with the "@function" command. Both are used in exactly the same manner. For more information on @functions, see [@function].
 
 See also: [MUSHCODE], [FUNCTION LIST]
 # FUNCTION LIST
@@ -260,9 +260,9 @@ See also: [sign()]
 
   Whether or not the resulting string is actually displayed correctly is client-dependent. Some OSes uses different character sets than the one assumed (Unicode and ISO 8859-1), and some clients strip these 8-bit characters.
 
-  For each character in `<string>`, the corresponding character of `<template>` is checked according to the table in 'help accents', and a replacement done. If either the current `<string>` or `<template>` characters aren't in the table, the `<string>` character is passed through unchanged.
+  For each character in `<string>`, the corresponding character of `<template>` is checked according to the table in [accents], and a replacement done. If either the current `<string>` or `<template>` characters aren't in the table, the `<string>` character is passed through unchanged.
 
-  See 'help accent2' for some examples.
+  See [accent2] for some examples.
 
 See also: [stripaccents()], [NOACCENTS], [@nameaccent], [accname()], [ACCENTS]
 # ACCENTS
@@ -362,7 +362,7 @@ See also: [before()], [rest()]
 
   Creates columns of text, each column designated by `<col>` arguments. Each `<col>` is individually wrapped inside its own column, allowing for easy creation of book pages, newsletters, or the like. In lalign(), `<colList>` is a `<delim>`-separated list of the columns.
 
-  `<widths>` is a space-separated list of column widths. '10 10 10' for the widths argument specifies that there are 3 columns, each 10 spaces wide. You can alter the behavior of a column in multiple ways. (Check 'help align2' for more details)
+  `<widths>` is a space-separated list of column widths. '10 10 10' for the widths argument specifies that there are 3 columns, each 10 spaces wide. You can alter the behavior of a column in multiple ways. (Check [align2] for more details)
 
   `<filler>` is a single character that, if given, is the character used to fill empty columns and remaining spaces. `<colsep>`, if given, is inserted between every column, on every row. `<rowsep>`, if given, is inserted between every line. By default, `<filler>` and `<colsep>` are a space, and `<rowsep>` is a newline.
 
@@ -385,12 +385,13 @@ See also: [before()], [rest()]
     `X` Truncate the entire column at the end of the first row instead of wrapping
     `#` Don't add a `<colsep>` after this column. If combined with merge-left, the column to its left inherits this when merged.
 
-  Ansi: Place ansi characters (as defined in 'help ansi()') within ()s to define a column's ansi markup.
+  Ansi: Place ansi characters (as defined in [ansi()]) within ()s to define a column's ansi markup.
 
   See '[align3]' for examples.
 See also: [center()], [ljust()], [rjust()], [table()]
 # ALIGN3
   Examples:
+```
 
     > &line me=align(<3 10 20$,([ljust(get(%0/sex),1,,1)]), name(%0),name(loc(%0)))
     > th iter(lwho(),u(line,##),%b,%r)
@@ -404,6 +405,7 @@ See also: [center()], [ljust()], [rjust()], [table()]
       (M) Walker     Tree
       (M) Ashen-Shug Apartment 306
       (F) Jane Doe   Nowhere
+```
 
         See '[align4]' for more examples.
 # ALIGN4
@@ -513,7 +515,7 @@ See also: [powers()], [orlpowers()], [POWERS LIST], [@power]
   The old-style `<ansi-codes>` are listed in "help ansi2".
   Each block of space-separated `<codes>` can be one or more old-style ANSI codes, as listed in "help ansi2", or a foreground and/or background color. Background colors are prefixed with a "/". Each color can be one of:
 
-    * +`<colorname>` (for a list of valid names, see "help colors()")
+    * +`<colorname>` (for a list of valid names, see [colors()])
     * a hexcode, optionally in angle brackets (#000000, `<#ff0055>`, etc)
     * a list of red, green and blue values from 0-255, in angle brackets (`<0 0 0>`, `<255 0 85>`, etc)
     * a number from 0-255; this is the same as using "+xterm`<number>`", for Rhost compatability.
@@ -526,7 +528,7 @@ ansi(y /+green B <#ffffff>, test)
 would show white text on an ANSI-blue background.
 ```
 
-  See 'help ansi3' for more examples.
+  See [ansi3] for more examples.
 See also: [ANSI], [COLOR], [@sockset], [colorstyle], [colors()]
 # ANSI2
   Old-style valid color codes are:
@@ -840,7 +842,7 @@ See also: [Connection Functions]
 
   `<format>` can also include the word "styles", in which case all ANSI styling options (f, u, i and h) present in `<colors>` are included in the output.
 
-  See 'help colors2' for examples.
+  See [colors2] for examples.
 See also: [ansi()], [valid()], [colorstyle]
 # colors2
 
@@ -955,7 +957,7 @@ See also: [visible()], [CONTROL]
 
   This function converts `<seconds>` (the number of seconds which have elapsed since midnight on January 1, 1970 UTC) to a time string. Because it's based on UTC, but returns local time, convsecs(0) is not going to be "Thu Jan 1 00:00:00 1970" unless you're in the UTC (GMT) timezone.
 
-  If a `<timezone>` argument is given, the return value is based on that timezone instead of the MUSH server's local time. See 'help timezones' for more information on valid timezones.
+  If a `<timezone>` argument is given, the return value is based on that timezone instead of the MUSH server's local time. See [timezones] for more information on valid timezones.
 
   If Extended convtime() is supported (see @config compile), negative values for `<seconds>` representing dates prior to 1970 are allowed.
 
@@ -1555,7 +1557,7 @@ See also: [fdiv()], [div()], [mod()], [lmath()]
 
   Note that it's not possible to pass a `<delimiter>` to fold without also giving a `<base case>`; see the examples for a way around this.
 
-  See 'help fold2' for examples.
+  See [fold2] for examples.
 # FOLD2
 
   Examples:
@@ -1601,7 +1603,7 @@ See also: [followers()], [follow], [unfollow]
 
   If `<start>` is given, everything before the first occurrence of `<start>` is copied as-is, without being passed to the `<object>`/`<attribute>`. If `<end>` is given, everything after the first occurrence of `<end>` is copied as-is. The `<start>` and `<end>` characters themselves are not copied.
 
-  See 'help foreach2' for examples.
+  See [foreach2] for examples.
 # FOREACH2
 
   Examples:
@@ -1692,7 +1694,7 @@ See also: [@ps], [@wait], [lpids()], [pidinfo()], [SEMAPHORES]
 `regrab(<list>, <regexp>[, <delimiter>])`
 `regrabi(<list>, <regexp>[, <delimiter>])`
 
-  These functions return the first word in `<list>` which matches the pattern. For grab(), `<pattern>` is a wildcard pattern ('help wildcards'). For regrab() and regrabi(), the pattern is a regular expression. regrabi() is case-insensitive. `<delimiter>` defaults to a space.
+  These functions return the first word in `<list>` which matches the pattern. For grab(), `<pattern>` is a wildcard pattern ([wildcards]). For regrab() and regrabi(), the pattern is a regular expression. regrabi() is case-insensitive. `<delimiter>` defaults to a space.
 
   Basically, this is a much more efficient way to do:
 `elements(<list>, match(<list>, <pattern>[, <delimiter>])[, <delimiter>])`
@@ -2039,7 +2041,7 @@ You say, "eggs; bacon; & spam"
 
   parse() is an alias for iter().
 
-  See 'help iter2' for examples.
+  See [iter2] for examples.
 See also: [itext()], [inum()], [ilev()], [ibreak()], [map()], [@dolist]
 # ITER2
   Examples:
@@ -2103,7 +2105,7 @@ See also: [iter()], [itext()], [inum()], [ilev()]
 
   ilev() returns the current nesting depth, or -1 when used outside an iter() or @dolist. Thus, itext(ilev()) will return the outermost ##, equivilent to %iL.
 
-  See 'help itext2' for examples.
+  See [itext2] for examples.
 See also: [iter()], [ibreak()], [@dolist]
 # ITEXT2
 
@@ -2432,7 +2434,7 @@ See also: [letq()], [setq()], [setr()], [r()], [ulocal()], [uldefault()]
 
   If type(s) are given, locate() will attempt to find an object with one of the given types first. If none are found, it will attempt to find any type of object, unless 'F' is specified, in which case it will return #-1.
 
-  Continued in 'help locate2'.
+  See [locate2].
 # LOCATE2
 
   You can control where to look with:
@@ -2445,7 +2447,7 @@ See also: [letq()], [setq()], [setr()], [r()], [ulocal()], [uldefault()]
     m - If `<name>` is "me", return `<looker>`'s dbref
     n - Match `<name>` against the names of objects in `<looker>`'s location
     p - If `<name>` begins with a *, match the rest against player names
-    z - English-style matching (my 2nd book) of `<name>` (see 'help matching')
+    z - English-style matching (my 2nd book) of `<name>` (see [matching])
     * - All of the above (try a complete match). Default when no match parameters are given.
     y - Match `<name>` against player names whether it begins with a * or not
     x - Only match objects with the exact name `<name>`, no partial matches
@@ -2453,7 +2455,7 @@ See also: [letq()], [setq()], [setr()], [r()], [ulocal()], [uldefault()]
 
   Just string all the parameters together. Spaces are ignored, so you can use spaces between paramaters for clarity if you wish.
 
-  See 'help locate3' for examples.
+  See [locate3] for examples.
 See also: [num()], [rnum()], [pmatch()], [room()], [where()], [rloc()], [findable()]
 # LOCATE3
 
@@ -2553,7 +2555,7 @@ See also: [lockflags()], [llockflags()], [lset()], [lock()], [llocks()]
 
   This functions sets or clears flags on locks.
 
-  See 'help @lset' for more information on what flags are available.
+  See [@lset] for more information on what flags are available.
 
 See also: [lockflags()], [llockflags()], [lock()], [lockowner()]
 # LOG()
@@ -2609,13 +2611,13 @@ See also: [pos()], [member()], [match()], [wordpos()]
 
   This function is similar to the @search command, except it returns just a list of dbref numbers. The function must have at least three arguments. You can specify "all" or `<player>` for the `<player>` field; for mortals, only objects they can examine are included. If you do not want to restrict something, use "none" for `<class>` and `<restriction>`.
 
-  The possible `<class>`es and `<restriction>`s are the same as those accepted by @search. lsearch() can accept multiple class/restriction pairs, and applies them in a boolean "AND" fashion, returning only dbrefs that fulfill all restrictions. See 'help @search' for information about them.
+  The possible `<class>`es and `<restriction>`s are the same as those accepted by @search. lsearch() can accept multiple class/restriction pairs, and applies them in a boolean "AND" fashion, returning only dbrefs that fulfill all restrictions. See [@search] for information about them.
 
   children() is exactly the same as lsearch([me|all], parent, `<object>`), using "all" for See_All/Search players and "me" for others.
 
   nlsearch(...) and nchildren(...) return the count of results that would be returned by lsearch() or children() with the same args.
 
-  Continued in 'help lsearch2'.
+  See [lsearch2].
 # LSEARCH2
 # SEARCH2
 
@@ -2625,7 +2627,7 @@ See also: [pos()], [member()], [match()], [wordpos()]
 
   lsearchr() is like an lsearch() run through revwords(). Results are returned from highest dbref to lowest. search() is an alias for lsearch().
 
-  See 'help lsearch3' for examples.
+  See [lsearch3] for examples.
 
 See also: [@search], [@find], [lparent()], [stats()]
 # LSEARCH3
@@ -2745,7 +2747,7 @@ See also: [anonymous attributes], [iter()], [@dolist]
 
   To get the matching elements, instead of the indexes of where they appear in the list, use grab()/graball(). To see if a single string matches a wildcard pattern, use strmatch().
 
-  See 'help match2' for examples.
+  See [match2] for examples.
 See also: [grab()], [strmatch()], [member()], [reglmatch()], [WILDCARDS]
 # MATCH2
   Examples:
@@ -2777,10 +2779,11 @@ You say, "3"
 
   In all cases, the elements of `<list>` are separated by `<delimiter>`, which defaults to a space. The elements outputted by reglmatchall() are separated by `<output separator>`, if one is given, or by `<delimiter>` if not.
 
-  See 'help reglmatch2' for examples.
+  See [reglmatch2] for examples.
 See also: [regmatch()], [regrab()], [match()], [REGEXP SYNTAX]
 # REGLMATCH2
   Examples:
+```
 
   > say reglmatch(I am testing a test, test)
   You say, "3"
@@ -2790,6 +2793,7 @@ See also: [regmatch()], [regrab()], [match()], [REGEXP SYNTAX]
 
   > say reglmatchall(I am testing a test, test, , |)
   You say, "3|5"
+```
 # MAX()
 `max(<number1>, <number2>[, ... , <numberN>])`
 
@@ -2842,7 +2846,7 @@ See also: [splice()], [tr()]
 # MESSAGE()
 `message(<recipients>, <message>, [<object>/]<attribute>[, <arg0>[, ... , <arg9>][, <switches>]])`
 
-  message() is the function form of @message/silent, and sends a message, formatted through an attribute, to a list of objects. See 'help @message' for more information.
+  message() is the function form of @message/silent, and sends a message, formatted through an attribute, to a list of objects. See [@message] for more information.
 
   `<switches>` is a space-separated list of one or more of "nospoof", "spoof", "oemit" and "remit", and makes message() behaviour as per @message/`<switches>`. For backwards-compatability reasons, all ten `<arg>` arguments must be given (even if empty) to use `<switches>`.
 
@@ -2885,7 +2889,7 @@ See also: [max()], [lmath()], [bound()], [alphamin()]
 
   This function is similar to MAP(), except that it takes the elements of up to 30 lists, one by one, and passes them to the user-defined function as %0, %1, up to %9, respectively, for elements of `<list1>` to `<list30>`. Use v() to access elements 10 or higher. If the lists are of different sizes, the shorter ones are padded with empty elements. `<delim>` is used to separate elements; if it is not specified, it defaults to a space. If using more than 2 lists, the last argument must be a delimiter.
 
-  See 'help mix2' for examples.
+  See [mix2] for examples.
 # MIX2
   Examples of mix():
 
@@ -2993,7 +2997,7 @@ See also: [lmath()], [div()], [fdiv()]
 
   `<delimiter>` defaults to a space, and `<osep>` defaults to `<delimiter>`.
 
-  See 'help munge2' for examples.
+  See [munge2] for examples.
 # MUNGE2
   For example: Consider attribute PLACES, which contains "Fort Benden Ista", and another attribute DBREFS contains the dbrefs of the main JUMP_OK location of these areas, "#20 #9000 #5000". We want to return a list of dbrefs, corresponding to the names of the places sorted alphabetically. The places sorted this way would be "Benden Fort Ista", so we want the final list to be "#9000 #20 #5000". The functions, using munge(), are simple:
 
@@ -3001,7 +3005,7 @@ See also: [lmath()], [div()], [fdiv()]
     > say munge(sort, v(places), v(dbrefs))
     You say, "#9000 #20 #5000"
 
-  See 'help munge3' for another example.
+  See [munge3] for another example.
 # MUNGE3
   Another common task that munge() is well suited for is sorting a list of dbrefs of players by order of connection. This example uses #apply to avoid the need for the sort attribute, and also unlike the other example, it builds the list to sort on out of the list to return.
 
@@ -3140,13 +3144,13 @@ See also: [and()], [or()], [xor()], [not()], [nand()], [lmath()]
 
   not() returns 1 if `<boolean>` is false, and 0 if it's true.
 
-  The definition of truth and falsehood depends on configuration settings; see 'help boolean values' for details.
+  The definition of truth and falsehood depends on configuration settings; see [boolean values] for details.
 
 See also: [Boolean Functions], [t()], [and()], [or()], [nor()], [xor()]
 # NUM()
 `num(<object>)`
 
-  Returns the dbref number of `<object>`. `<object>` must reference a valid object, as per 'help matching'.
+  Returns the dbref number of `<object>`. `<object>` must reference a valid object, as per [matching].
 
 See also: [locate()], [rnum()], [pmatch()]
 # NVCON()
@@ -3397,7 +3401,7 @@ See also: [subj()], [obj()], [aposs()]
 
   Returns `<number>` to the power of `<exponent>`.
 
-  (For the functional version of @power, see 'help powers()'.)
+  (For the functional version of @power, see [powers()].)
 
 See also: [root()]
 # POWERS()
@@ -3513,13 +3517,13 @@ See also: [edit()], [@edit], [regmatch()], [regrab()]
 `regmatch(<string>, <regexp>[, <register list>])`
 `regmatchi(<string>, <regexp>[, <register list>])`
 
-  regmatch() checks to see if the entirety of `<string>` matches the regular expression `<regexp>`, and returns 1 if so and 0 if not. regmatchi() does the same thing, but case-insensitively. They are the regexp-equivilent of strmatch(); if you're looking for a regexp version of match(), see 'help reglmatch()'.
+  regmatch() checks to see if the entirety of `<string>` matches the regular expression `<regexp>`, and returns 1 if so and 0 if not. regmatchi() does the same thing, but case-insensitively. They are the regexp-equivilent of strmatch(); if you're looking for a regexp version of match(), see [reglmatch()].
 
   If `<register list>` is specified, there is a side-effect: any parenthesized substrings within the regular expression will be set into the specified local registers. The syntax for this is X:Y, where X is the number (0 is the entire matched text) or name of the substring, and Y is the q-register to save it in. If X: isn't given, the nth substring based on the register's position in the list minus one is used. The first element will have the complete matched text, the second the first substring, and so on. This is to maintain compatibility with old code; it's recommended for new uses that the X:Y syntax be used.
 
   If `<regexp>` is not a valid regular expression, an error in the form "#-1 REGEXP ERROR: `<description>`" will be returned.
 
-  See 'help regmatch2' for an example.
+  See [regmatch2] for an example.
 
 See also: [regrab()], [regedit()], [valid()], [reswitch()], [strmatch()], [regexp syntax]
 # REGMATCH2
@@ -3530,7 +3534,7 @@ See also: [regrab()], [regedit()], [valid()], [reswitch()], [strmatch()], [regex
 
   If `<register list>` was '0:0 2:5', then the "cookies" substring would simply be discarded. '1:food 2:amount' would store "cookies" in %q`<food>` and "30" in %q`<amount>`.
 
-  See 'help regexp syntax' for an explanation of regular expressions.
+  See [regexp syntax] for an explanation of regular expressions.
 # REMIT()
 # NSREMIT()
 `remit(<object list>, <message>)`
@@ -3734,7 +3738,7 @@ think pemit(me,test)
 
   To prevent deleted functions from being used with fn(), @function/disable them prior to deleting.
 
-  Continued in 'help fn2'.
+  See [fn2].
 # FN2
   If `<obj>` is specified, the built-in function will be executed as `<obj>`, rather than as the object which called fn(). This is useful when using fn() to replace a side-effect function, to ensure priviledge checks, etc, are done correctly. You must control `<obj>`, or (if function side effects are disabled) must be see_all.
 
@@ -3787,7 +3791,7 @@ See also: [objeval()], [decompose()]
     all       --  all of the above (the default)
     break     --  once a match is found, don't check in other locations
 
-  The order of searching for the "break" switch is the same as the order for normal $-command matching, as described in 'help evaluation order'.
+  The order of searching for the "break" switch is the same as the order for normal $-command matching, as described in [evaluation order].
 
 See also: [@scan], [@sweep], [MASTER ROOM], [EVALUATION ORDER], [$-COMMANDS]
 # SCRAMBLE()
@@ -3828,7 +3832,7 @@ See also: [attrib_set()], [@set], [wipe()]
 # SETDIFF()
 `setdiff(<list1>, <list2>[, <delimiter>[, <sort type>[, <osep>]]])`
 
-  This function returns the difference of two sets -- i.e., the elements in `<list1>` that aren't in `<list2>`. The list that is returned is sorted. Normally, alphabetic sorting is done. You can change this with the fourth argument, which is a sort type as defined in 'help sorting'. If used with exactly four arguments where the fourth is not a sort type, it's treated instead as the output separator.
+  This function returns the difference of two sets -- i.e., the elements in `<list1>` that aren't in `<list2>`. The list that is returned is sorted. Normally, alphabetic sorting is done. You can change this with the fourth argument, which is a sort type as defined in [sorting]. If used with exactly four arguments where the fourth is not a sort type, it's treated instead as the output separator.
 
   Example:
 ```
@@ -3840,7 +3844,7 @@ See also: [setinter()], [setsymdiff()], [setunion()]
 # SETSYMDIFF()
 `setsymdiff(<list1>, <list2>[, <delimiter>[, <sort type>[, <osep>]]])`
 
-  This function returns the symmetric difference of two sets -- i.e., the elements that only appear in one or the other of the lists, but not in both. The list that is returned is sorted. Normally, alphabetic sorting is done. You can change this with the fourth argument, which is a sort type as defined in 'help sorting'. If used with exactly four arguments where the fourth is not a sort type, it's treated instead as the output separator.
+  This function returns the symmetric difference of two sets -- i.e., the elements that only appear in one or the other of the lists, but not in both. The list that is returned is sorted. Normally, alphabetic sorting is done. You can change this with the fourth argument, which is a sort type as defined in [sorting]. If used with exactly four arguments where the fourth is not a sort type, it's treated instead as the output separator.
 
   Example:
 ```
@@ -3852,7 +3856,7 @@ See also: [setdiff()], [setinter()], [setunion()]
 # SETINTER()
 `setinter(<list1>, <list2>[, <delimiter>[, <sort type>[, <osep>]]])`
 
-  This function returns the intersection of two sets -- i.e., the elements that are in both `<list1>` and `<list2>`. The list that is returned is sorted. Normally, alphabetic sorting is done. You can change this with the fourth argument, which is a sort type as defined in 'help sorting'. If used with exactly four arguments where the fourth is not a sort type, it's treated instead as the output separator.
+  This function returns the intersection of two sets -- i.e., the elements that are in both `<list1>` and `<list2>`. The list that is returned is sorted. Normally, alphabetic sorting is done. You can change this with the fourth argument, which is a sort type as defined in [sorting]. If used with exactly four arguments where the fourth is not a sort type, it's treated instead as the output separator.
 
   Example:
 ```
@@ -3872,7 +3876,7 @@ See also: [setdiff()], [setsymdiff()], [setunion()]
 
   Register names are case insensitive: setq(A, foo) and setq(a, foo) both set the same register, and %qA and %qa both fetch its value.
 
-  See 'help setq2' for more on limits, or 'help setq3' for examples.
+  See [setq2] for more on limits, or [setq3] for examples.
 See also: [r()], [listq()], [unsetq()], [letq()], [localize()], [ulocal()], [registers()]
 # SETQ2
   Register names follow the same rules for attribute names, but they must be shorter than 64 characters in length.
@@ -3881,7 +3885,7 @@ See also: [r()], [listq()], [unsetq()], [letq()], [localize()], [ulocal()], [reg
 
   The maximum number of q-registers you can have set is configured via @config max_attrs_per_obj. That number is for the total number of q-registers set in a queue entry: Including across localize()d calls. Beyond that count, you can only use single character registers (a-z 0-9). Attempts to create a new register will simply fail silently, with the exception of setq().
 
-  See 'help setq3' for examples.
+  See [setq3] for examples.
 # SETQ3
   The setq() function is probably best used at the start of the string being manipulated, such as in the following example:
 
@@ -3897,7 +3901,7 @@ See also: [r()], [listq()], [unsetq()], [letq()], [localize()], [ulocal()], [reg
   > think setq(0,foo,one,bar)%q0%q`<one>` - [setq(0,r(one),one,%q0)]%q0%q`<one>`
   foobar - barfoo
 
-  See 'help setq4' for scoping rules of setq().
+  See [setq4] for scoping rules of setq().
 # SETQ4
   The registers set by setq() can be used in later commands in the same thread. That is, the registers are set to null on all $-commands, ^-commands, A-attribute triggers, etc., but are then retained from that point forward through the execution of all your code. Code branches like @wait and @switch retain the register values from the time of the branch.
 
@@ -3953,7 +3957,7 @@ See also: [listq()], [setq()], [setr()], [letq()], [r()], [v()], [stext()], [ite
 # SETUNION()
 `setunion(<list1>, <list2>[, <delimiter>[, <sort type>[, <osep>]]])`
 
-  This function returns the union of two sets -- i.e., all the elements of both `<list1>` and `<list2>`, minus any duplicate elements. The list returned is sorted. Normally, alphabetic sorting is done. You can change this with the fourth argument, which is a sort type as defined in 'help sorting'. If used with exactly four arguments where the fourth is not a sort type, it's treated instead as the output separator.
+  This function returns the union of two sets -- i.e., all the elements of both `<list1>` and `<list2>`, minus any duplicate elements. The list returned is sorted. Normally, alphabetic sorting is done. You can change this with the fourth argument, which is a sort type as defined in [sorting]. If used with exactly four arguments where the fourth is not a sort type, it's treated instead as the output separator.
 
   Examples:
 ```
@@ -4031,7 +4035,7 @@ See also: [acos()], [asin()], [atan()], [cos()], [ctu()], [tan()]
 
   This sorts a list of words. If no second argument is given, it will try to detect the type of sort it should do. If all the words are numbers, it will sort them in order of smallest to largest. If all the words are dbrefs, it will sort them in order of smallest to largest. Otherwise, it will perform a lexicographic sort.
 
-  The second argument is a sort type. See 'help sorting'.
+  The second argument is a sort type. See [sorting].
 
   The optional third argument gives the list's delimiter character. If not present, `<delimiter>` defaults to a space. The optional fourth argument gives a string that will delimit the resulting list; it defaults to `<delimiter>`.
 
@@ -4057,7 +4061,7 @@ See also: [anonymous attributes], [sorting], [sort()], [sortkey()]
 # SORTKEY()
 `sortkey([<obj>/]<attrib>, <list>[, <sort type>[, <delimiter>[, <osep>]]])`
 
-  This function creates a list of keys by passing every element of `<list>` into the ufun given in `<attrib>`. The list is then sorted according to the sorting method in `<sort type>`, or is automatically guessed (as per 'help sorting').
+  This function creates a list of keys by passing every element of `<list>` into the ufun given in `<attrib>`. The list is then sorted according to the sorting method in `<sort type>`, or is automatically guessed (as per [sorting]).
 
   This is equivalent to:
     > &munge_sort me=sort(%0[, `<sort type>`])
@@ -4107,7 +4111,7 @@ See also: [sort()], [sortby()], [sortkey()], [setunion()], [setinter()], [setdif
   > think soundex(foobar)
   F160
 
-  For details of how the algorithm works, see 'help soundex2'.
+  For details of how the algorithm works, see [soundex2].
 
 See also: [soundslike()]
 # SOUNDEX2
@@ -4133,7 +4137,7 @@ See also: [soundslike()]
 `soundslike(<word>, <word>[, <hash type>])`
 `soundlike(<word>, <word>[, <hash type>])`
 
-  The soundslike function returns 1 if the two words have the same hash code (see 'help soundex()' for information), which means, in general, if they sound alike. The hash type can be 'soundex' (Default) or 'phone' for a different algorithm that might give better results with some words.
+  The soundslike function returns 1 if the two words have the same hash code (see [soundex()] for information), which means, in general, if they sound alike. The hash type can be 'soundex' (Default) or 'phone' for a different algorithm that might give better results with some words.
 
   Examples:
 ```
@@ -4176,7 +4180,7 @@ See also: [repeat()]
 
   If `<say string>` is specified, it is used instead of "says,".
 
-  Continued in 'help speak2'.
+  See [speak2].
 # SPEAK2
 
   Examples:
@@ -4209,7 +4213,7 @@ You say, "Wizard"
     > @emit [speak(&Mr. President,:has been misunderestimated.)]
     Mr. President has been misunderestimated.
 
-  Continued in 'help speak3'.
+  See [speak3].
 # SPEAK3
 
   If `<transform>` is specified (an object/attribute pair or attribute, as with map() and similar functions), the speech portions of `<string>` are passed through the transformation function.
@@ -4218,7 +4222,7 @@ You say, "Wizard"
 
   The transformation function receives the speech text as %0, the dbref of `<speaker>` as %1, and the speech fragment number as %2. For non-say input strings (i.e., for an original `<string>` beginning with the :, ;, or | tokens), fragments are numbered starting with 1; otherwise, fragments are numbered starting with 0. (A fragment is a chunk of speech text within the overall original input string.)
 
-  Continued in 'help speak4'.
+  See [speak4].
 # SPEAK4
 
   Examples:
@@ -4250,7 +4254,7 @@ You say, "Wizard"
     > @emit speak(me, :tests. "Hi." And... `<<Bye.>`> The end., ,va, , `<<, >`>)
     Wizard tests. "Hi." And... "Fragment 1 is: Bye." The end.
 
-  Continued in 'help speak5'.
+  See [speak5].
 # SPEAK5
 
   If the result of transforming a given speech fragment is a null string, and `<isnull>` is specified (an object/attribute pair or attribute), that function is used evaluate an alternative result, with %0 as the dbref of `<speaker>`, and %1 as the speech fragment number.
@@ -4266,7 +4270,7 @@ You say, "Wizard"
       OR
     Wizard tests. He mutters something.
 
-  Continued in 'help speak6'.
+  See [speak6].
 # SPEAK6
 
   Elegantly handling an empty string when the type of speech is a plain say is a bit more difficult. In order to facilitate this, when the speech type is a plain say, the '`<speaker>` says,' is only prepended to the output if the transformation of the first speech fragment produces something non-null. Also note that quotes are not placed around such speech automatically, to allow the user's code to insert whatever is appropriate.
@@ -4280,7 +4284,7 @@ You say, "Wizard"
       OR
     Wizard mutters something.
 
-  Continued in 'help speak7'.
+  See [speak7].
 # SPEAK7
 
   Here's another example, where words between + signs are reversed, but those within double-quotes are untouched (demonstrating a technique useful in something where you want to allow users to mix ordinary speech with transformed speech).
@@ -4339,7 +4343,7 @@ See also: [merge()]
 
   If `<dofieldnames>` evaluates to a true boolean, then the first call will be with row number (%0) set to 0, and %1-%9 and v(10) - v(29) will be set to the field names.
 
-  See 'help sql examples' for examples.
+  See [sql examples] for examples.
 
 See also: [anonymous attributes], [sqlescape()], [sql()], [@sql], [@mapsql]
 # SQL()
@@ -4355,7 +4359,7 @@ See also: [anonymous attributes], [sqlescape()], [sql()], [@sql], [@mapsql]
 
   If `<register>` is specified, and `<query>` alters the database (such as an UPDATE or INSERT query), there is a side-effect: the number of affected rows is stored into the specified q-register.
 
-  See 'help sql examples' for examples.
+  See [sql examples] for examples.
 
 See also: [sqlescape()], [mapsql()], [@sql], [setq()], [r()], [@mapsql]
 # SQL Examples
@@ -4421,11 +4425,13 @@ See also: [root()]
   This function removes the leading and trailing `<character>`s from `<string>`, and condenses all inter-word `<character>`s to a single`<character>`. If no character is given, a space is used.
 
   Examples:
+```
 
     > say squish(%b%bfoo bar%b%bbaz blech%b%b%beek%b)
     You say, "foo bar baz blech eek"
     > say squish(||a|| b|c|d|, |)
     You say, "a| b|c|d"
+```
 
 See also: [trim()]
 # STARTTIME()
@@ -4636,11 +4642,11 @@ See also: [switch()], [regmatch()], [regedit()], [REGEXPS]
 
   These functions match `<string>` against the `<expr>`essions, returning the corresponding `<list>`. If nothing is matched, the `<default>` is returned. switch() and case() return the `<str>` for the first matching `<expr>`, while switchall() and caseall() return the corresponding `<list>` for all `<expr>`s which match.
 
-  switch() and switchall() use wildcard and lt/gt `<expr>`s, as described in 'help switch wildcards'. case() and caseall() do a case-sensitive exact match, like member() or comp(). In this case, $0-$9 will be set to the text that the nth wildcard character met.
+  switch() and switchall() use wildcard and lt/gt `<expr>`s, as described in [switch wildcards]. case() and caseall() do a case-sensitive exact match, like member() or comp(). In this case, $0-$9 will be set to the text that the nth wildcard character met.
 
   If the string "#$" appears in the `<list>` to be evaluated, it will be replaced with the evaluated value of `<str>` /before/ evaluation of `<list>`. This is not done in case() and caseall(), for TinyMUSH 3 compatibility. Note that this replacement happens before evaluation, which makes it unsafe when `<str>` contains user input, and makes it unsuitable for use in nested switch()es. It is strongly recommended you use the %$`<n>` substitution or stext() function instead, which solves these problems.
 
-  See 'help switch2' for examples.
+  See [switch2] for examples.
 
 See also: [reswitch()], [stext()], [slev()], [if()], [cond()], [firstof()]
 # SWITCH2
@@ -4703,7 +4709,7 @@ See also: [switch()], [reswitch()], [@switch]
 # T()
 `t(<expression>)`
 
-  Returns 1 if `<expression>` is a true boolean value, and 0 otherwise. The definitions of true and false vary depending on the value of the 'tiny_booleans' @config option. See 'help boolean values' for details.
+  Returns 1 if `<expression>` is a true boolean value, and 0 otherwise. The definitions of true and false vary depending on the value of the 'tiny_booleans' @config option. See [boolean values] for details.
 
 See also: [not()], [if()], [cond()], [@break], [or()], [and()]
 # TABLE()
@@ -4746,10 +4752,10 @@ See also: [@teleport]
   telnet           present if the client understands the telnet protocol.
   gmcp             present if GMCP is negotiated via telnet; see help oob()
   ssl              present if the client is using an SSL/TLS connection.
-  prompt_newlines  see 'help prompt_newlines'
+  prompt_newlines  see [prompt_newlines]
   stripaccents     client is receiving 7-bit ascii, no accented characters
 
-  One of the color styles shown in 'help colorstyle' will also be included.
+  One of the color styles shown in [colorstyle] will also be included.
 
   Other fields may be added in the future, if, for example, MXP support is ever added.
 
@@ -4818,7 +4824,7 @@ See also: [json()]
 
   When `<type>` is "array" or "object", it's recommended that subsequent JSON arguments are created with nested calls to JSON().
 
-  See 'help json2' for examples.
+  See [json2] for examples.
 See also: [oob()], [isjson()], [json_query()], [json_map()], [render()]
 # JSON2
   > think json(null)
@@ -4849,7 +4855,7 @@ See also: [oob()], [isjson()], [json_query()], [json_map()], [render()]
 
   `<osep>` defaults to a space.
 
-  See 'help json_map2' for examples.
+  See [json_map2] for examples.
 See also: [json()], [json_query()]
 # JSON_MAP2
   A very basic example:
@@ -4868,7 +4874,7 @@ See also: [json()], [json_query()]
   We got a string: foo
   We got an array: ["bar",10]
 
-  See 'help json_map3' for a more complex example.
+  See [json_map3] for a more complex example.
 # JSON_MAP3
   A JSON pretty-printer, using nested calls to json_map() to handle nested
   JSON objects/arrays:
@@ -4900,13 +4906,14 @@ See also: [json()], [json_query()]
   size         The size of `<json>`; this is 0 for null objects, 1 for strings/numbers/booleans, the number of array elements, or the number of key/value pairs for objects.
   exists       For arrays and objects, returns 1 if there is an object found by following the path specified in `<arg>`... and 0 if not. If the current arg is an integer and the current json element is an array, uses the `<arg>`th index of the array (Starting at 0) as the new current element. Otherwise, if the current json element is an object, treats the current `<arg>` as a key into the object and its value as the new current element.  Returns #-1 for other types.
   get          For arrays and objects, returns the json element found by following the path laid out in `<args>`... as described above. If no such element exists, returns an empty string. Returns #-1 for other JSON types.
-  extract      Like get, but takes a single combined path arg as described in 'help json paths'. Some caveats: Returns 0 for false, 1 for true, and strings are unquoted.
+  extract      Like get, but takes a single combined path arg as described in [json paths]. Some caveats: Returns 0 for false, 1 for true, and strings are unquoted.
   unescape     Only valid for JSON strings; returns the unescaped form of `<json>`.
 
-  See 'help json_query2' for examples.
+  See [json_query2] for examples.
 See also: [json()], [json_map()]
 # JSON_QUERY2
   Examples:
+```
 
     > say json_query(true)
     You say, "boolean"
@@ -4925,10 +4932,12 @@ See also: [json()], [json_map()]
     You say, "gh"i"
     > say json_query(json_query(v(json), get, 2), unescape)
     You say, "gh"i"
+```
 
- See 'help json_query3' for more examples.
+ See [json_query3] for more examples.
 # JSON_QUERY3
  Examples:
+```
 
     > @set me=json:[json(object, foo, "bar", baz, 12345, fnord, json(array, 1, 2, 3))]
     > say v(json)
@@ -4943,6 +4952,7 @@ See also: [json()], [json_map()]
     You say, "2"
     > say json_query(v(json), extract, $.fnord\[1\])
     You say, "2"
+```
 # JSON PATHS
 
   json_mod() and the extract argument for json_query() take a path string that describes what part of a JSON object or array to act on. All paths start with a $ to indicate the base JSON value, and 0 or more specifiers in the following formats:
@@ -4966,6 +4976,7 @@ See also: [json()], [json_map()]
   See 'HELP JSON_MOD2' for examples.
 # JSON_MOD2
  Examples:
+```
 
     > say json_mod(json(object, a,1,b,2), patch, json(object, a,42))
     You say, "{"a":43,"b":2}"
@@ -4983,6 +4994,7 @@ See also: [json()], [json_map()]
     You say, "{"foo":"bar","baz":12345}"
     > say json_mod(json(array, json(object, id, 2), json(object, id, 1), sort, $.id)
     You say, "[{"id":1},{"id":2}]
+```
 # TESTLOCK()
 `testlock(<key>, <victim>)`
 
@@ -5042,7 +5054,7 @@ See also: [WILDCARDS]
 
   time() gives you the current time on the MUSH. By default this is the time on the server the MUSH is running on, and not the time of the caller.
 
-  With an argument, time() returns the time in the specified timezone, or in the timezone set in the specified object's TZ attribute; for more information, see 'help timezones'.
+  With an argument, time() returns the time in the specified timezone, or in the timezone set in the specified object's TZ attribute; for more information, see [timezones].
 
   utctime() is an alias for time(utc).
 
@@ -5477,7 +5489,7 @@ See also: [etimefmt()], [timestring()], [stringsecs()]
 
   Escape codes in `<format>` are replaced by the proper values, and other characters are left unchanged.
 
-  A list of all codes is in 'help etimefmt2'.
+  A list of all codes is in [etimefmt2].
 
   Examples:
 ```
@@ -5500,7 +5512,7 @@ See also: [timestring()], [timefmt()], [etime()]
 
  Normally, a particular time interval is shown using the remainder of the next largest interval - for example, $s with a time of 65 displays 5, not 65. The exception is $d, which only acts like this if $w or $y is also given. A 't' between the $ and code (But after a width) will print out the total seconds, minutes, etc. instead.
 
-  See 'help etimefmt3' for more examples.
+  See [etimefmt3] for more examples.
 # ETIMEFMT3
   Examples:
 ```
@@ -5516,9 +5528,9 @@ think etimefmt($txs is $xm$xs, 75)
 # TIMEFMT()
 `timefmt(<format>[, <secs>[, <timezone>]])`
 
-  This function returns the time and date, formatted according to `<format>`. `<secs>` is the time/date to format, as the number of seconds since the epoch (as returned by secs(), convtime(), etc). If no `<secs>` is given, the current date/time of the MUSH host is used. If no `<timezone>` is provided, the MUSH host's timezone is used; see 'help timezones' for valid formats for `<timezone>`. Note: Using a fractional timezone offset from GMT may result in timefmt() showing the time zone name (if displayed) as GMT. Using a symbolic name on a server that supports them should show the name correctly.
+  This function returns the time and date, formatted according to `<format>`. `<secs>` is the time/date to format, as the number of seconds since the epoch (as returned by secs(), convtime(), etc). If no `<secs>` is given, the current date/time of the MUSH host is used. If no `<timezone>` is provided, the MUSH host's timezone is used; see [timezones] for valid formats for `<timezone>`. Note: Using a fractional timezone offset from GMT may result in timefmt() showing the time zone name (if displayed) as GMT. Using a symbolic name on a server that supports them should show the name correctly.
 
-  A list of all codes for `<format>` is in 'help timefmt2'.
+  A list of all codes for `<format>` is in [timefmt2].
 
   Example:
 ```
@@ -5669,7 +5681,7 @@ think pfun(foo)
 ParentFoo
 ```
 
-  Continued in 'help pfun2'.
+  See [pfun2].
 # PFUN2
   This function does not have the security problems of using
 
@@ -5679,7 +5691,7 @@ ParentFoo
 
   This function is particularly useful when you want to inherit an attribute tree from a parent, but add further branches.
 
-  See 'help pfun3' for an example.
+  See [pfun3] for an example.
 
 See also: [ufun()], [get()], [parent()], [zfun()], [PARENTS]
 # PFUN3
@@ -5710,16 +5722,16 @@ See also: [ufun()], [get()], [parent()], [zfun()], [PARENTS]
 
   u() is an alias for ufun(), for TinyMUSH compatability.
 
-  ulambda() is the same, but accepts anonymous attributes. See 'help lambda'.
+  ulambda() is the same, but accepts anonymous attributes. See [lambda].
 
-  Continued in 'help ufun2'.
+  See [ufun2].
 # U2
 # UFUN2
   The attribute is evaluated by the object it's set on, with that object's priviledges, and NOT by the object using ufun(). Because of this, allowing arbitrary use of ufun() can be insecure.
 
   You must be able to examine an attribute to ufun() it. If the safer_ufun @config option is on, you must also have equal priviliges (in terms of mortal/Royalty/Wizard/God) to the object the attribute is on. However, attributes with the 'public' flag on can be evaluated by anyone. This is necessary for attributes like 'describe', but should not be set on attributes containing code unless you're sure it's safe for anyone to use them.
 
-  Continued in 'help ufun3'.
+  See [ufun3].
 # U3
 # UFUN3
   Example:
@@ -5779,7 +5791,7 @@ See also: [get()], [eval()], [ufun()], [default()], [edefault()], [ulocal()], [l
 
   The ulocal() function is similar to ufun(); it evaluates `<attribute>` on `<object>` (or the caller, if no `<object>` is given), passing up to thirty `<arg>`s. However, before evaluating the attribute, ulocal() stores all the global q-registers (%q0-%q9, %qa-%qz), in the same way as the localize() function, and restores them after the attribute is evaluated. It's useful when you need to evaluate an attribute on an untrusted object which might alter the values of the registers.
 
-  See 'help ulocal2' for examples.
+  See [ulocal2] for examples.
 # ULOCAL2
   Examples:
 ```
@@ -5801,7 +5813,7 @@ See also: [ufun()], [setq()], [letq()], [r()], [localize()]
 # UNIQUE()
 `unique(<list>[, <sort type>[, <delim>[, <osep>]]])`
 
-  unique() returns a copy of `<list>` with consecutive duplicate items removed. It does not sort the list. The optional `<sort type>` describes what type of data is in the list; see 'help sorting' for details. If no type is given, the elements are compared as strings. Elements of `<list>` are separated by `<delim>`, which defaults to a space. Each element of the output is separated by `<osep>`, which defaults to `<delim>`.
+  unique() returns a copy of `<list>` with consecutive duplicate items removed. It does not sort the list. The optional `<sort type>` describes what type of data is in the list; see [sorting] for details. If no type is given, the elements are compared as strings. Elements of `<list>` are separated by `<delim>`, which defaults to a space. Each element of the output is separated by `<osep>`, which defaults to `<delim>`.
 
   Examples:
 ```
@@ -5860,7 +5872,7 @@ See also: [VECTOR FUNCTIONS]
    colorname   Test for a valid color name for ansi()/colors().
    ansicodes   Test for a valid color code sequence for ansi(`<string>`, ...).
    channel     Test for a valid channel name. If `<target>` is given, check to see if channel `<target>` could be renamed to `<string>`.
-   timezone    Test for a valid timezone; see 'help timezones'
+   timezone    Test for a valid timezone; see [timezones]
    locktype    Test for a valid locktype for @lock/`<string>` `<target>`. `<target>` defaults to the caller.
    lockkey     Test for a valid lockkey for @lock me=`<string>`
 
@@ -5868,7 +5880,7 @@ See also: [VECTOR FUNCTIONS]
 
   For "ansicodes", when not using new-style color names or hex codes, valid() always returns 1, and invalid codes are simply ignored, the same as when used in the ansi() function.
 
-  See 'help valid2' for examples.
+  See [valid2] for examples.
 See also: [colors()], [ansi()]
 # valid2
 
@@ -6238,7 +6250,7 @@ See also: [@suggest]
 
   This function must be enabled (by the use_connlog @config option); if disabled, it returns #-1.
 
-  Continued in 'help connlog2'.
+  See [connlog2].
 # CONNLOG2
   `<spec>` is one or more of the following:
 
@@ -6256,7 +6268,7 @@ See also: [@suggest]
   Others:
     * count - if given, instead of returning a list of connections, returns the total number of matching connections.
 
-  See 'help connlog3' for examples.
+  See [connlog3] for examples.
 See also: [addrlog()], [connrecord()]
 # CONNLOG3
   Examples:

@@ -1,5 +1,5 @@
 # @config parameters
-Many of the mush's run-time options can be set from the game by wizards, using `@config/set <option>=<new value>`. Those that can be set with visible changes are listed below, grouped by category. See [help @config <category>|@config] for details on each.
+Many of the mush's run-time options can be set from the game by wizards, using `@config/set <option>=<new value>`. Those that can be set with visible changes are listed below, grouped by category. See [@config <category>] for details on each.
 
 Categories:
 - Attribs
@@ -43,7 +43,7 @@ These options control chat system settings.
 - `max_player_chans=<number>`: How many channels can each non-admin player create? If 0, mortals cannot create channels.
 - `noisy_cemit=<boolean>`: Is @cemit/noisy the default?
 - `chan_title_len=<number>`: How long can @channel/title's be?
-- `use_muxcomm=<boolean>`: Enable MUX-style channel aliases? See [help muxcomsys|muxcomsys]
+- `use_muxcomm=<boolean>`: Enable MUX-style channel aliases? See [muxcomsys]
 - `chat_token_alias=<character>`: A single character that can be used as well as + for talking on channels (+<chan> <msg>)
 
 # @config cmds
@@ -66,12 +66,12 @@ These are cosmetic options of various sorts.
 - `money_plural=<string>`: What are many pennies called?
 - `player_name_spaces=<boolean>`: Can player names have spaces in them?
 - `ansi_names=<boolean>`: Are names in look hilighted?
-- `monikers=<list>`: Where should @monikers be displayed? See [help monikers|monikers]
+- `monikers=<list>`: Where should @monikers be displayed? See [monikers]
 - `float_precision=<numbers>`: How many digits after the decimal point in floating point numbers are kept when formatting the result of a floating point function?
 - `comma_exit_list=<boolean>`: Do exits show up like North, East, and West or as North East West?
 - `count_all=<boolean>`: Does the count of connected players in WHO include hidden connections for mortals?
 
-See [help @config cosmetic2|@config cosmetic2]
+See [@config cosmetic2]
 
 # @config cosmetic2
 More cosmetic options.
@@ -152,7 +152,7 @@ Limits and other constants.
 - `idle_timeout=<time>`: The number of minutes a connection can be idle before getting booted. 0 means no limit.
 - `unconnected_idle_timeout=<time>`: The number of minutes a connection can be sitting at the login screen before getting booted. 0 means no limit.
 
-See [help @config limits2|@config limits2]
+See [@config limits2]
 
 # @config limits2
 Limits and constants, continued.
@@ -168,7 +168,7 @@ Limits and constants, continued.
 - `queue_loss=<number>`: One in <number> times, queuing a command will cost an extra penny that doesn't get refunded.
 - `queue_chunk=<number>`: How many queued commands get executed in a row before checking for network activity.
 
-See [help @config limits3|@config limits3]
+See [@config limits3]
 
 # @config limits3
 Limits and constants, continued.
@@ -181,7 +181,7 @@ Limits and constants, continued.
 - `queue_entry_cpu_time=<number>`: The maximum number of milliseconds a queue entry can take to run.
 - `use_quota=<boolean>`: Controls if quotas are used to limit the number of objects a player can own.
 
-See [help @config limits4|@config limits4]
+See [@config limits4]
 
 # @config limits4
 Limits and constants, continued.
