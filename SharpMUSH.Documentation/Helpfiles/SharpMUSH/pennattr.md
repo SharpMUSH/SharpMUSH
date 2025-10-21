@@ -10,11 +10,11 @@ These attribute flags restrict access, and are inherited down attribute trees (i
 - `mortal_dark (m)`   Attribute cannot be seen by mortals. This flag can only be set by royalty and wizards. "hidden" is a synonym.
 - `wizard (w)`        Attribute can only be set by wizards. This flag can only be set by royalty and wizards.
 - `veiled (V)`        Attribute value won't be shown on default examine, but is still otherwise accessible (for spammy attribs).
-- `nearby (n)`        Even if the attribute is visual, it can only be retrieved if you're near the object (see **'help nearby()'**).
+- `nearby (n)`        Even if the attribute is visual, it can only be retrieved if you're near the object (see **[nearby()]**).
 - `locked (+)`        Attribute is locked with `@atrlock`.
 - `safe (S)`          Attribute can't be modified without unsetting this flag.
 
-See [help attribute flags2|attribute flags2]
+See [attribute flags2]
 
 # ATTRIBUTE FLAGS2
 
@@ -27,12 +27,12 @@ These attribute flags alter the way attributes are used in commands and ^-listen
 
 - `debug (b)`         Start showing debug output while this attr is evaluated.
 - `no_debug (B)`      Stop showing debug output when this attr is evaluated
-- `regexp (R)`        Match $-commands and ^-listens using regular expressions. See **'help regexps'**
+- `regexp (R)`        Match $-commands and ^-listens using regular expressions. See **[regexps]**
 - `case (C)`          Match $-commands and ^-listens case sensitively.
-- `nospace (s)`       Attribute won't add a space after the object name in @o-* messages. See **'help verbs'**
+- `nospace (s)`       Attribute won't add a space after the object name in @o-* messages. See **[verbs]**
 - `noname (N)`        Attribute won't show name in @o-* messages.
 
-See [help attribute flags3|attribute flags3]
+See [attribute flags3]
 
 # ATTRIBUTE FLAGS3
 
@@ -42,12 +42,12 @@ See [help attribute flags3|attribute flags3]
 - `quiet (Q)`         When altering the attribute's value or flags, don't show the usual confirmation message
 
 These attribute flags are only used internally. They cannot be set, but seen on 'examine' and flags()/lflags(), tested for with hasflag(), etc:
-- `branch (\`)`        This attribute is a branch. See: [help ATTRIBUTE TREES|ATTRIBUTE TREES]
+- `branch (\`)`        This attribute is a branch. See: [ATTRIBUTE TREES]
 
 ## See Also
-- [help @set|@set]
-- [help @attribute|@attribute]
-- [help ATTRIBUTE TREES|ATTRIBUTE TREES]
+- [@set]
+- [@attribute]
+- [ATTRIBUTE TREES]
 
 # ATTRIBUTE TREES
 # ATTR TREES
@@ -66,7 +66,7 @@ Attribute names may not start or end with the backtick, and may not contain two 
 
 All attributes are either branch attributes or leaf attributes. A branch attribute is an attribute that has other branches or leaves beneath it; a leaf attribute is one that does not. Any attribute may act as a branch. If you try to create an unsupported leaf, branch attributes will be created as needed to support it.
 
-See [help attribute trees2|attribute trees2] for more information and examples.
+See [attribute trees2] for more information and examples.
 
 # ATTRIBUTE TREES2
 # ATTR TREES2
@@ -88,10 +88,10 @@ The same principles apply to lattr(). `@decompile obj` is a special case, and di
 
 Branch attributes will be displayed with a \` in the attribute flags on examine. 
 
-See [help attribute trees3|attribute trees3] for more information and examples.
+See [attribute trees3] for more information and examples.
 
 ## See Also
-- [help WILDCARDS|WILDCARDS]
+- [WILDCARDS]
 
 # ATTRIBUTE TREES3
 # ATTR TREES3
@@ -118,7 +118,7 @@ They're also handy for things like character attributes:
 ```
 etc.
 
-See [help attribute trees4|attribute trees4] for information about `@parent` and attribute trees.
+See [attribute trees4] for information about `@parent` and attribute trees.
 
 # ATTRIBUTE TREES4
 # ATTR TREES4
