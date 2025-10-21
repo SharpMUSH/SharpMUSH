@@ -21,6 +21,7 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Server.Connectors;
 using TaskScheduler = SharpMUSH.Library.Services.TaskScheduler;
 
 namespace SharpMUSH.Server;
@@ -119,7 +120,15 @@ public class Startup(ArangoConfiguration config, string colorFile)
 		services.AddHttpClient();
 		services.AddMediator();
 		services.AddFusionCache();
-		services.AddArango(_ => config.ConnectionString);
+		services.AddArango((_, arango) =>
+		{
+			arango.ConnectionString = config.ConnectionString;
+			// var socketLocation = "/var/run/arangodb3/arangod.sock";
+			// arango.HttpClient = new HttpClient(UnixSocketHandler.CreateHandlerForUnixSocket(socketLocation))
+			// {
+			//   BaseAddress = new Uri($"http+unix://{socketLocation}) 
+			// };
+		});
 		services.AddQuartz(x => { x.UseInMemoryStore(); });
 		services.AddAuthorization();
 		services.AddRazorPages();
