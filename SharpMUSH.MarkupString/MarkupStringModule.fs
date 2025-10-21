@@ -440,7 +440,11 @@ module MarkupStringModule =
         match matches with
         | _ when Seq.isEmpty matches -> -1
         | _ -> matches |> Seq.head
-
+        
+    [<TailCall>]
+    let rec indexOf2 (markupStr: MarkupString) (search: string) : int =
+        indexOf markupStr (single search)
+        
     /// <summary>
     /// Returns the last index where a search MarkupString occurs.
     /// </summary>

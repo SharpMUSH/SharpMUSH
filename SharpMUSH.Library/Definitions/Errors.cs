@@ -1,7 +1,10 @@
-﻿namespace SharpMUSH.Library.Definitions;
+﻿using SharpMUSH.Library.ParserInterfaces;
+
+namespace SharpMUSH.Library.Definitions;
 
 public static class Errors
 {
+	public const string ErrorNoSuchFlag = "#-1 NO SUCH FLAG";
 	public const string ErrorNoSideFX = "#-1 SIDE EFFECTS DISABLED FOR THIS FUNCTION";
 	public const string ErrorInteger = "#-1 ARGUMENT MUST BE INTEGER";
 	public const string ErrorNoSuchTimezone = "#-1 NO SUCH TIMEZONE";
