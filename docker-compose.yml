@@ -15,7 +15,7 @@ services:
     build:
       context: ./
     environment:
-      - ARANGO_CONNECTION_STRING=Server=http://localhost:8529;User=root;Password=password;
+      - ARANGO_CONNECTION_STRING=Server=http://unusedschim:8529;User=root;Password=password;
     depends_on:
       - arangodb
     ports:
@@ -24,7 +24,6 @@ services:
       - "4203:4203"
     volumes:
       - arangodb-socket:/var/run/arangodb3
-    command: ["dotnet", "dev-certs", "http"]
     networks:
       - sharpmush-net
 volumes:
