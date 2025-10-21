@@ -1,4 +1,5 @@
 using Mediator;
+using OneOf.Types;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -25,8 +26,9 @@ public class ManipulateSharpObjectService(
 		{
 			if (notify)
 			{
-				await notifyService.Notify(executor, "You do not have permission to rename that object.");
+				await notifyService.Notify(executor, "You do not control that object.");
 			}
+
 			return Errors.ErrorPerm;
 		}
 
@@ -36,6 +38,7 @@ public class ManipulateSharpObjectService(
 			{
 				await notifyService.Notify(executor, $"You cannot name that object {name}.");
 			}
+
 			return Errors.ErrorPerm;
 		}
 
@@ -54,6 +57,7 @@ public class ManipulateSharpObjectService(
 					{
 						await notifyService.Notify(executor, "That player name is already in use.");
 					}
+
 					return "#-1 PLAYER NAME ALREADY IN USE.";
 				}
 
@@ -77,6 +81,7 @@ public class ManipulateSharpObjectService(
 					{
 						await notifyService.Notify(executor, "That player alias is already in use.");
 					}
+
 					return "#-1 PLAYER ALIAS ALREADY IN USE.";
 				}
 
@@ -98,28 +103,118 @@ public class ManipulateSharpObjectService(
 		}
 	}
 
-	public ValueTask<CallState> SetPassword(AnySharpObject executor, SharpPlayer player, string newPassword, bool notify)
+	public async ValueTask<CallState> SetPassword(AnySharpObject executor, SharpPlayer player, string newPassword,
+		bool notify)
 	{
-		var _ = passwordService;
+		if (!await permissionService.Controls(executor, player))
+		{
+			if (notify)
+			{
+				await notifyService.Notify(executor, "You do not control that object.");
+			}
+
+			return Errors.ErrorPerm;
+		}
+
+		if (!await validateService.Valid(IValidateService.ValidationType.Password, MModule.single(newPassword)))
+		{
+			if (notify)
+			{
+				await notifyService.Notify(executor, "That password is not a valid password.");
+			}
+
+			return Errors.ErrorInvalidPassword;
+		}
+
+		var hashedPw = passwordService.HashPassword(player.Object.DBRef.ToString(), newPassword);
+		await passwordService.SetPassword(player, hashedPw);
+
+		return true;
+	}
+
+	public async ValueTask<CallState> SetOrUnsetFlag(AnySharpObject executor, AnySharpObject obj, string flagOrFlagAlias,
+		bool notify)
+	{
+		if (!await permissionService.Controls(executor, obj))
+		{
+			if (notify)
+			{
+				await notifyService.Notify(executor, "You do not control that object.");
+			}
+
+			return Errors.ErrorPerm;
+		}
+
+		var unset = flagOrFlagAlias.StartsWith('!');
+		var plainFlag = flagOrFlagAlias;
+		plainFlag = unset
+			? plainFlag[1..]
+			: plainFlag;
+
+		var realFlag = await mediator.Send(new GetObjectFlagQuery(plainFlag));
+		if (realFlag is null)
+		{
+			if (notify)
+			{
+				await notifyService.Notify(executor, $"No such flag exists: {plainFlag}.");
+			}
+
+			return Errors.ErrorNoSuchFlag;
+		}
+
+		switch (unset)
+		{
+			case true when !await obj.HasFlag(plainFlag):
+			{
+				if (notify)
+				{
+					await notifyService.Notify(executor, $"Flag: {realFlag} (Already) Unset.");
+				}
+
+				break;
+			}
+			case true:
+			{
+				if (notify)
+				{
+					await notifyService.Notify(executor, $"Flag: {realFlag} Unset.");
+				}
+
+				await mediator.Send(new UnsetObjectFlagCommand(obj, realFlag));
+
+				break;
+			}
+			case false when await obj.HasFlag(plainFlag):
+			{
+				if (notify)
+				{
+					await notifyService.Notify(executor, $"Flag: {realFlag} (Already) Set.");
+				}
+
+				break;
+			}
+			case false:
+				if (notify)
+				{
+					await notifyService.Notify(executor, $"Flag: {realFlag} Set.");
+				}
+
+				await mediator.Send(new SetObjectFlagCommand(obj, realFlag));
+
+				break;
+		}
+
+		return true;
+	}
+
+	public ValueTask<CallState> SetPower(AnySharpObject executor, AnySharpObject obj, string powerOrPowerAlias,
+		bool notify)
+	{
 		throw new NotImplementedException();
 	}
 
-	public ValueTask<CallState> SetFlag(AnySharpObject executor, AnySharpObject obj, string flagOrFlagAlias, bool notify)
-	{
-		throw new NotImplementedException();
-	}
-
-	public ValueTask<CallState> UnsetFlag(AnySharpObject executor, AnySharpObject obj, string flagOrFlagAlias, bool notify)
-	{
-		throw new NotImplementedException();
-	}
-
-	public ValueTask<CallState> SetPower(AnySharpObject executor, AnySharpObject obj, string powerOrPowerAlias, bool notify)
-	{
-		throw new NotImplementedException();
-	}
-
-	public ValueTask<CallState> UnsetPower(AnySharpObject executor, AnySharpObject obj, string powerOrPowerAlias, bool notify)
+	public ValueTask<CallState> UnsetPower(AnySharpObject executor, AnySharpObject obj, string powerOrPowerAlias,
+		bool notify)
 	{
 		throw new NotImplementedException();
 	}
@@ -129,7 +224,8 @@ public class ManipulateSharpObjectService(
 		throw new NotImplementedException();
 	}
 
-	public ValueTask<CallState> SetParent(AnySharpObject executor, AnySharpObject obj, AnySharpObject newParent, bool notify)
+	public ValueTask<CallState> SetParent(AnySharpObject executor, AnySharpObject obj, AnySharpObject newParent,
+		bool notify)
 	{
 		throw new NotImplementedException();
 	}

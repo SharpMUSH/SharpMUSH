@@ -10,9 +10,7 @@ public interface IManipulateSharpObjectService
 	
 	ValueTask<CallState> SetPassword(AnySharpObject executor, SharpPlayer player, string newPassword, bool notify);
 	
-	ValueTask<CallState> SetFlag(AnySharpObject executor, AnySharpObject obj, string flagOrFlagAlias, bool notify);
-	
-	ValueTask<CallState> UnsetFlag(AnySharpObject executor, AnySharpObject obj, string flagOrFlagAlias, bool notify);
+	ValueTask<CallState> SetOrUnsetFlag(AnySharpObject executor, AnySharpObject obj, string flagOrFlagAlias, bool notify);
 	
 	ValueTask<CallState> SetPower(AnySharpObject executor, AnySharpObject obj, string powerOrPowerAlias, bool notify);
 	

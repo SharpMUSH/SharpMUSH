@@ -155,30 +155,7 @@ public partial class Commands
 		// Object Flag Set Path
 		foreach (var flag in MModule.split(" ", args["1"].Message!))
 		{
-			var plainFlag = MModule.plainText(flag);
-			var unset = plainFlag.StartsWith('!');
-			plainFlag = unset 
-				? plainFlag[1..] 
-				: plainFlag;
-			// TODO: Permission Check for each flag.
-			// Probably should have a service for this?
-			// CANSETFLAG?
-
-			var realFlag = await Mediator!.Send(new GetObjectFlagQuery(plainFlag));
-
-			if (realFlag is null) continue;
-
-			await NotifyService!.Notify(executor, $"Flag: {realFlag} Set.");
-
-			// Set Flag	
-			if (unset)
-			{
-				await Mediator!.Send(new UnsetObjectFlagCommand(realLocated, realFlag));
-			}
-			else
-			{
-				await Mediator!.Send(new SetObjectFlagCommand(realLocated, realFlag));
-			}
+			await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, realLocated, flag.ToPlainText(), true );
 		}
 
 		return CallState.Empty;
