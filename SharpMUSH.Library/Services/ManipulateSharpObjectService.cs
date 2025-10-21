@@ -326,12 +326,11 @@ public class ManipulateSharpObjectService(
 		bool notify)
 	{
 		if (!await permissionService.Controls(executor, newParent)
-		    || (!await obj.HasFlag("LINK_OK")
-		        && !permissionService.PassesLock(executor, newParent, LockType.Parent)))
+		    || (!await obj.HasFlag("LINK_OK") && !permissionService.PassesLock(executor, newParent, LockType.Parent)))
 		{
 			if (notify)
 			{
-				await notifyService.Notify(executor, Errors.ErrorPerm);
+				await notifyService.Notify(executor, "Permission denied.");
 			}
 
 			return Errors.ErrorPerm;
@@ -356,7 +355,7 @@ public class ManipulateSharpObjectService(
 	{
 		if (!await permissionService.Controls(executor, obj))
 		{
-			await notifyService.Notify(executor, Errors.ErrorPerm);
+			await notifyService.Notify(executor, "Permission denied.");
 			return Errors.ErrorPerm;
 		}
 		
