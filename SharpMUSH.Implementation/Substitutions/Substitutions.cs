@@ -105,10 +105,16 @@ public static partial class Substitutions
 		
 		if (context.REG_NUM() is not null) return HandleRegistrySymbol(symbol, parser);
 		if (context.ITEXT_NUM() is not null) return HandleITextNumber(symbol, parser);
+		if (context.ITEXT_LAST() is not null) return HandleITextTop(symbol, parser);
 		if (context.STEXT_NUM() is not null) return HandleSTextNumber(symbol, parser);
 		if (context.VWX() is not null) return await HandleVWX(symbol, parser, mediator, attributeService);
 		return HandleRegistrySymbol(symbol, parser);
 	}
+
+	private static CallState HandleITextTop(CallState symbol, IMUSHCodeParser parser) =>
+		$"{(parser.CurrentState.IterationRegisters.TryPeek(out var result)
+			? result.Value
+			: MModule.single(Errors.ErrorRegisterRange))}";
 
 	private static CallState HandleRegistrySymbol(CallState symbol, IMUSHCodeParser parser)
 	{
@@ -146,7 +152,7 @@ public static partial class Substitutions
 
 		if (maxCount <= symbolNumber)
 		{
-			return new CallState(Errors.ErrorRange); // TODO: Fix Value
+			return new CallState(Errors.ErrorRegisterRange); 
 		}
 
 		var val = parser.CurrentState.IterationRegisters.ToArray().ElementAt(maxCount - symbolNumber - 1).Iteration;
@@ -163,7 +169,7 @@ public static partial class Substitutions
 
 		if (maxCount <= symbolNumber)
 		{
-			return new CallState(Errors.ErrorRange); // TODO: Fix Value
+			return new CallState(Errors.ErrorRegisterRange);
 		}
 
 		var val = parser.CurrentState.IterationRegisters.ElementAt(symbolNumber).Value;

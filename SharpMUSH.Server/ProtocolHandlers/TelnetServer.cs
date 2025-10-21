@@ -85,9 +85,10 @@ public class TelnetServer : ConnectionHandler
 			}
 			.RegisterMSSPConfig(() => _msspConfig)
 			.BuildAsync();
-		
-		var remoteEndpoint = connection.RemoteEndPoint as IPEndPoint;
-		var remoteIp = remoteEndpoint is null ? "unknown" : $"{remoteEndpoint.Address}:{remoteEndpoint.Port}";
+
+		var remoteIp = connection.RemoteEndPoint is not IPEndPoint remoteEndpoint 
+			? "unknown" 
+			: $"{remoteEndpoint.Address}:{remoteEndpoint.Port}";
 
 		_connectionService.Register(nextPort,
 			remoteIp,

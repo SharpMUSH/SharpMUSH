@@ -7,7 +7,7 @@ public static class Errors
 	public const string ErrorNoSuchPower = "#-1 NO SUCH POWER";
 	public const string ErrorInvalidPassword = "#-1 INVALID PASSWORD";
 	public const string ErrorNoSuchFlag = "#-1 NO SUCH FLAG";
-	public const string ErrorNoSideFX = "#-1 SIDE EFFECTS DISABLED FOR THIS FUNCTION";
+	public const string ErrorNoSideFx = "#-1 SIDE EFFECTS DISABLED FOR THIS FUNCTION";
 	public const string ErrorInteger = "#-1 ARGUMENT MUST BE INTEGER";
 	public const string ErrorNoSuchTimezone = "#-1 NO SUCH TIMEZONE";
 	public const string ErrorTimeInteger = "#-1 TIME INTEGER OUT OF RANGE";
@@ -32,7 +32,7 @@ public static class Errors
 	public const string ErrorNotVisible = "#-1 NO SUCH OBJECT VISIBLE";
 	public const string ErrorCannotTeleport = "#-1 NO PERMISSION TO TELEPORT OBJECT";
 	public const string ErrorDisabled = "#-1 FUNCTION DISABLED";
-	public const string ErrorRange = "#-1 OUT OF RANGE";
+	public const string ErrorRegisterRange = "#-1 REGISTER OUT OF RANGE";
 	public const string ErrorArgRange = "#-1 ARGUMENT OUT OF RANGE";
 	public const string ErrorBadRegName = "#-1 REGISTER NAME INVALID";
 	public const string ErrorTooManyRegs = "#-1 TOO MANY REGISTERS";

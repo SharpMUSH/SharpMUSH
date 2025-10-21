@@ -186,7 +186,7 @@ public partial class Functions
 
 		if (iterNumber >= maxCount)
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorRange));
+			return ValueTask.FromResult(new CallState(Errors.ErrorRegisterRange));
 		}
 
 		parser.CurrentState.IterationRegisters.ElementAt(maxCount - iterNumber - 1).Break = true;

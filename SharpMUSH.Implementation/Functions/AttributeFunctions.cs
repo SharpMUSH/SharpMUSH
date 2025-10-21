@@ -40,7 +40,7 @@ public partial class Functions
 	{
 		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
 		{
-			return new CallState(Errors.ErrorNoSideFX);
+			return new CallState(Errors.ErrorNoSideFx);
 		}
 
 		var args = parser.CurrentState.Arguments;
@@ -885,7 +885,7 @@ public partial class Functions
 		await ValueTask.CompletedTask;
 		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
 		{
-			return new CallState(Errors.ErrorNoSideFX);
+			return new CallState(Errors.ErrorNoSideFx);
 		}
 
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
@@ -1176,7 +1176,7 @@ public partial class Functions
 						? value.Message
 						: MModule.empty(),
 					_ => MModule.empty()),
-			_ => Errors.ErrorRange
+			_ => Errors.ErrorArgRange
 		};
 	}
 

@@ -443,7 +443,7 @@ public partial class Functions
 
 		if (Configuration!.CurrentValue.Function.FunctionSideEffects == false)
 		{
-			return Errors.ErrorNoSideFX;
+			return Errors.ErrorNoSideFx;
 		}
 		
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
