@@ -31,13 +31,13 @@ This is the index to the MUSH online help files.
 
   These commands and switches also work with other things using our helpfile setup: news, ahelp, and any others added.
 
-  help <textname> is how to see a help file.
+  help `<textname>` is how to see a help file.
 ```
   > help helpfile
   > help @search
 ```
 
-  help <namepattern> is a good way to read long helpfilenames or find a pattern you're looking for. If <namepattern> matches multiple entries, it will show you their names.
+  help `<namepattern>` is a good way to read long helpfilenames or find a pattern you're looking for. If `<namepattern>` matches multiple entries, it will show you their names.
 ```
   > help @tri*2
   > help sort*()
@@ -62,7 +62,7 @@ This is the index to the MUSH online help files.
 # helpfile2
 
 # help query
-  Displays help entries that match <pattern> using an advanced full text search. If the /brief switch is given, only shows the names of matching entries. Without it, also shows a fragment of the entry with matches underlined.
+  Displays help entries that match `<pattern>` using an advanced full text search. If the /brief switch is given, only shows the names of matching entries. Without it, also shows a fragment of the entry with matches underlined.
 
   The pattern is one or more phrases, where each phrase is one or more words (enclosed with quote marks if there's more than one word, or searching for a word with characters like @ or +). A * at the end treats the phrase as a prefix. Phrases can be combined with AND (The default), OR and NOT. The function NEAR(phrase phrase...) matches entries where two or more phrases are near each other. An optional second argument controls how close the matching is. All these operators must appear in upper case. For full details, see https://www.sqlite.org/fts5.html#full_text_query_syntax
 
@@ -89,18 +89,18 @@ This is the index to the MUSH online help files.
 
   `help [<topic>]`
 
-  What this means is that to get help, you would type first the word "help" and then you could optionally type the name of a more specific topic in order to get help on that topic. Just typing "help" will work too (that's why the <topic> part is optional).
+  What this means is that to get help, you would type first the word "help" and then you could optionally type the name of a more specific topic in order to get help on that topic. Just typing "help" will work too (that's why the `<topic>` part is optional).
 
   Some common commands that you should look at help for are:
 
     look   say    go    page    pose    get     give    home
 
-  Just type help <command> for help. Example: help page
+  Just type help `<command>` for help. Example: help page
 
   See [newbie3]
 
 # newbie3
-  There is help available on every standard MUSH command. If you see a command or someone mentions one to you that you want to know more about, try just typing: help <command name> -- that will most likely bring up the help file on it.
+  There is help available on every standard MUSH command. If you see a command or someone mentions one to you that you want to know more about, try just typing: help `<command name>` -- that will most likely bring up the help file on it.
 
   Please note that just because there is help available on a command does not necessarily mean that the command can be used on this MUSH. The siteadmin of the MUSH can choose to turn off some commands. If there's something that you would like available, and it isn't, please ask a wizard why not.
 
@@ -145,7 +145,7 @@ This is the index to the MUSH online help files.
 # GS MOVING2
   All players on a MUSH have a "home", which is usually the room you started in. You can go back to your home by just typing 'home', or 'goto home'. Some MUSHes may also allow you to change your home to somewhere else; you can do that by typing '`@link` me=here' when you're in the room.
 
-  There may be some objects on the game that you can go inside (wagons or cars, for instance). You can do that by typing 'enter <object>', and can leave again by typing 'leave'. For instance, 'enter sports car'.
+  There may be some objects on the game that you can go inside (wagons or cars, for instance). You can do that by typing 'enter `<object>`', and can leave again by typing 'leave'. For instance, 'enter sports car'.
 
   It's also sometimes possible to teleport from one room to another, using the '`@teleport`' command. However, most new players on a game probably won't be able to do that - it's mentioned here only for completeness.
 
@@ -210,23 +210,23 @@ This is the index to the MUSH online help files.
 
   To see a list of channels, type '`@channel`/list'. This shows the names of all the channels, whether or not you're on the channel, and some other information (the rest is explained in 'help channel-list').
 
-  To join a channel, type '`@channel`/on <channel>'. To leave it again, use '`@channel`/leave <channel>'. If you want to stop hearing a channel for a while without leaving it totally, use '`@channel`/gag <channel>'.
+  To join a channel, type '`@channel`/on `<channel>`'. To leave it again, use '`@channel`/leave `<channel>`'. If you want to stop hearing a channel for a while without leaving it totally, use '`@channel`/gag `<channel>`'.
 
   See [gs chat2]
 
 # GS CHAT2
   When you've joined a channel, you can chat on it in two ways:
 
-    +<channel> <message>
-    `@chat` <channel>=<message>
+    +`<channel>` `<message>`
+    `@chat` `<channel>`=`<message>`
 
   You don't need to type the entire channel name, just enough letters to make it distinct from other channels. For instance, '`+pub` Hello'.
 
   When you talk on a channel, everyone who is on the channel will see the channel name in '<>' angle brackets, then your name and the message.
   For example, '`+pub` Hello' will show everyone
-    <Public> Skye says, "Hello"
-  If the <message> starts with a ':' or ';' it will be posed or semiposed, respectively. For example, '`+pub` :waves' shows
-    <Public> Skye waves.
+    `<Public>` Skye says, "Hello"
+  If the `<message>` starts with a ':' or ';' it will be posed or semiposed, respectively. For example, '`+pub` :waves' shows
+    `<Public>` Skye waves.
 
   Some games customize the appearance of channels a little (for instance, adding color or using '[]' square brackets instead of angle brackets), so it may look a little different.
 
@@ -247,15 +247,15 @@ This is the index to the MUSH online help files.
    [-----]  0:2   *Mike          Example Mail               Sat Dec 11 07:55
    -------------------------------------------------------------------------
 
-  The number after the ':' is the message number; to read that message, type '`@mail` <number>'.
+  The number after the ':' is the message number; to read that message, type '`@mail` `<number>`'.
 
   See [gs mail2]
 
 # GS MAIL2
   To send mail to someone, type:
-    `@mail` <recipients>=[<subject>/]<message>
+    `@mail` `<recipients>`=[`<subject>`/]`<message>`
 
-  You can send a message to more than one person at a time, just include the names of all the people you want to send to in <recipients>. The <subject> is optional. For example:
+  You can send a message to more than one person at a time, just include the names of all the people you want to send to in `<recipients>`. The `<subject>` is optional. For example:
 
     `@mail` qa'toq anne=Test/Hi! This is a test message!
 
@@ -293,7 +293,7 @@ Help is available on the following topics:
   WILDCARDS                ZONE MASTER ROOMS        ZONE MASTERS
   ZONES
 
-Type 'help <topic name>' for help.
+Type 'help `<topic name>`' for help.
 For a list of all topics, see 'help entries'.
 
 # ACTION LISTS
@@ -458,7 +458,7 @@ For a list of all topics, see 'help entries'.
 # ATTRIBUTES LIST
 
 # ATTRIBUTE LIST
-  Attributes with (*) after them are special, cannot be set by players, and may only be visible to wizards or admin. For those attributes, there is no @-command, so you can just type 'help <attribute name>' for help. For all other attributes, type 'help @<attribute name>' for help.
+  Attributes with (*) after them are special, cannot be set by players, and may only be visible to wizards or admin. For those attributes, there is no @-command, so you can just type 'help `<attribute name>`' for help. For all other attributes, type 'help @`<attribute name>`' for help.
 
 Standard Attributes: (see `@list`/attribs for the complete list)
   AAHEAR        ACLONE        ACONNECT      ADESCRIBE     ADISCONNECT
@@ -480,9 +480,9 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   An attribute is part of the code on an object that makes it unique. An attribute can contain any sort of text -- from a single word, to a long paragraph, to a piece of MUSHcode. Some attributes are standard in PennMUSH. That means that their effects are pre-set.
 
   Standard attributes can be set using one of the following commands:
-    @<attribute name> <object>=<content>
-    `@set` <object>=<attribute name>:<content>
-    &<attribute name> <object>=<content>
+    @`<attribute name>` `<object>`=`<content>`
+    `@set` `<object>`=`<attribute name>`:`<content>`
+    &`<attribute name>` `<object>`=`<content>`
 
   It is also possible to have non-standard attributes, which can be named anything you like. Please see 'help NON-STANDARD ATTRIBUTES' for more information on those.
 
@@ -522,7 +522,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 
 # BOOLEAN VALUES
 
-  A boolean variable, for those of you not familiar with programming, is a variable that is either true or false. Normally, a value of 1 is considered "true" and a value of 0 is considered "false". Many MUSH functions return either 1 if they are true or 0 if false. For example, the `hasflag()` function tests to see if an object has a certain flag set on it. If hasflag(<object>,<flag name>) is true (the object has the flag), it will return 1. If it is false, it will return 0.
+  A boolean variable, for those of you not familiar with programming, is a variable that is either true or false. Normally, a value of 1 is considered "true" and a value of 0 is considered "false". Many MUSH functions return either 1 if they are true or 0 if false. For example, the `hasflag()` function tests to see if an object has a certain flag set on it. If hasflag(`<object>`,`<flag name>`) is true (the object has the flag), it will return 1. If it is false, it will return 0.
 
   Other functions expect to operate on boolean values. What they consider "true" or "false", however, depends on the setting of the "tiny_booleans" config option (`@config` tiny will show this).
 
@@ -552,7 +552,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 
   Examples (assuming tiny_booleans is "no"):
     not(foo) = 0
-    not(<null string>) = 1
+    not(`<null string>`) = 1
     not(-66) = 0
     not(0) = 1
     not(#-1) = 1
@@ -739,7 +739,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
     %: = the enactor's unique identifier, like objid(%#)
     %a, %o, %p, %s = pronoun substitutions, based on the enactor's `@sex`. See 'help gender' for more information.
 
-  If, for example, you have an `@osuccess` on an object that includes the %n subtitution, whenever someone picks up the object, that %n will evaluate to the name of the enactor (the person who typed 'get <object>' in this case).
+  If, for example, you have an `@osuccess` on an object that includes the %n subtitution, whenever someone picks up the object, that %n will evaluate to the name of the enactor (the person who typed 'get `<object>`' in this case).
 
 
 ## See Also
@@ -837,7 +837,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 # FAILURE
   FAILURE
 
-  A "failure" usually occurs when you try to do something that is governed by an `@lock` and you don't pass the lock. If you try to take a player or thing, or pass through an exit, and you don't pass its Basic `@lock`, you will set off their `@failure`/`@ofailure`/`@afailure` attributes. A few failures have special attributes, while others use <locktype>_LOCK`FAILURE, <locktype>_LOCK`OFAILURE and <locktype>_LOCK`AFAILURE attributes.
+  A "failure" usually occurs when you try to do something that is governed by an `@lock` and you don't pass the lock. If you try to take a player or thing, or pass through an exit, and you don't pass its Basic `@lock`, you will set off their `@failure`/`@ofailure`/`@afailure` attributes. A few failures have special attributes, while others use `<locktype>`_LOCK`FAILURE, `<locktype>`_LOCK`OFAILURE and `<locktype>`_LOCK`AFAILURE attributes.
 
   See [failure2]
 
@@ -913,7 +913,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 # HOMES
 
 # HOME
-  Every thing or player has a home, which is usually the room where it was created. You can reset your home or the home of any object you own with the `@link` command: `@link` [me | <object>]=<location>. You must also control <location>, unless that location (room or thing) is set ABODE or LINK_OK.
+  Every thing or player has a home, which is usually the room where it was created. You can reset your home or the home of any object you own with the `@link` command: `@link` [me | `<object>`]=`<location>`. You must also control `<location>`, unless that location (room or thing) is set ABODE or LINK_OK.
 
   When a player types 'home', she is sent back to the home room. When a thing with the STICKY flag set on it is dropped, it also goes to its home location. Note that if the FIXED flag is set on a player, she cannot use the 'home' command.
 
@@ -1036,7 +1036,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 # LISTENING2
   If you need an object to "listen" for more than one pattern, you can also use ^-patterns. These work similar to user-defined commands, using ^ instead of $. An object must be set MONITOR to have ^-patterns activated.
 
-  Syntax:  &<attribute> <object> = ^<pattern>:<action list>
+  Syntax:  &`<attribute>` `<object>` = ^`<pattern>`:`<action list>`
 
   For example:
 ```
@@ -1049,7 +1049,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
     Welcome Mat says as Grimlock leaves, "Bye!"
 ```
 
-  Such attributes can also be `@triggered` as if the ^<pattern>: did not exist.
+  Such attributes can also be `@triggered` as if the ^`<pattern>`: did not exist.
 
   In order to trigger an object's ^-listen patterns, you must pass BOTH its `@lock`/use and its `@lock`/listen.
 
@@ -1094,8 +1094,8 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 # LOOPING
   Looping in an object can have its good parts and its bad parts. The good part is when you activate part of a program multiple times to exhaustively perform an operation. This can be done like this:
 
-    &PART1 object=<action list> ; `@trigger` me/PART2
-    &PART2 object= `@select` <test for being done>=<false>,`@trigger` me/PART1
+    &PART1 object=`<action list>` ; `@trigger` me/PART2
+    &PART2 object= `@select` `<test for being done>`=`<false>`,`@trigger` me/PART1
 
   Looping can be a problem when it goes on without stopping. The `@ps` command can be used to see if you are looping. Beware! A looping machine that isn't `@halt`'d will drain your pennies while you are away from the mush!
 
@@ -1121,10 +1121,10 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 
 # ME
   The word 'me' refers to yourself. Some things to do when starting out:
-  1) give yourself a description:       `@desc` me=<description>
+  1) give yourself a description:       `@desc` me=`<description>`
   2) check your desc.:                  look me
   3) lock yourself:                     `@lock` me==me
-  4) set your gender:                   `@sex` me=<male|female|neuter|plural>
+  4) set your gender:                   `@sex` me=`<male|female|neuter|plural>`
 
 
 ## See Also
@@ -1181,7 +1181,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 
   Setting the option empty disables all automatic displaying of monikers, and they will only be available via softcode (`moniker()` and %k).
 
-  You can use !<value> to remove something, so 'everywhere !who' shows monikers everywhere except in WHO, '!everywhere !alltypes' will disable them entirely, etc.
+  You can use !`<value>` to remove something, so 'everywhere !who' shows monikers everywhere except in WHO, '!everywhere !alltypes' will disable them entirely, etc.
 
 
 ## See Also
@@ -1215,9 +1215,9 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   While there are many standard attributes in MUSH, objects can also have an enormous number of attributes, with any name you wish to use. In the past, you were limited to attributes named VA-VZ, WA-WZ, XA-XZ; these are still available as standard attributes. However, it is strongly recommended that you use non-standard attributes and meaningful names in order to make maintaining your MUSHCode easier.
 
   To set a non-standard attribute, you can use these formats:
-      &<attribute name> <obj>=<value>  OR
-      `@_`<attribute_name> <obj>=<value> OR
-      `@set` <obj>=<attribute_name>:<value>
+      &`<attribute name>` `<obj>`=`<value>`  OR
+      `@_`<attribute_name> `<obj>`=`<value>` OR
+      `@set` `<obj>`=`<attribute_name>`:`<value>`
 
   You can get the value of attributes using the functions `v()`, `get()`, and `xget()`. You can evaluate attributes using `u()`, `eval()`, and `get_eval()`. All attributes can be used in attribute locks and can be 'owned' independent of object ownership.
 
@@ -1399,14 +1399,14 @@ See [queue2]
 
   The majority of matching in MUSH is done with wildcard ("globbing") patterns. There is a second type of matching, using regular expressions, that is available in certain circumstances.
 
-  For attributes that are `$-commands` or ^-listen-patterns, setting that attribute "regexp" (with '`@set` <object>/<attribute>=regexp') causes patterns to be matched using regular expressions rather than globbing. In addition, the function `regmatch()` performs regular expression matching.
+  For attributes that are `$-commands` or ^-listen-patterns, setting that attribute "regexp" (with '`@set` `<object>`/`<attribute>`=regexp') causes patterns to be matched using regular expressions rather than globbing. In addition, the function `regmatch()` performs regular expression matching.
 
   In a regular expression match, the substring of the string which matched the regexp pattern is %0; %1 through %9 are the substrings of the string which matched parenthesized expressions within the regexp pattern.
 
   See [regexps2]
 
 # REGEXPS2
-  Regular expressions are extremely useful when you want to enforce a data type. For example, if you have a command where you want a player to enter a string and a number ('`+setnum` <player>=<number>', for example), you might do it like this:
+  Regular expressions are extremely useful when you want to enforce a data type. For example, if you have a command where you want a player to enter a string and a number ('`+setnum` `<player>`=`<number>`', for example), you might do it like this:
 
 ```
     > &DO_NUM Command Object=$^\+setnum (.+)=([0-9]+)$: @va me=Data: %1 = %2
@@ -1500,11 +1500,11 @@ See [queue2]
 
   You can give names to subpatterns and refer to them that way instead of using numbers.
 
-   (?P<NAME>subexpr) (Note: Literal <>'s) is a named capture, and (?P=NAME) refers back to it. The above pattern might be written:
+   (?P`<NAME>`subexpr) (Note: Literal <>'s) is a named capture, and (?P=NAME) refers back to it. The above pattern might be written:
 
-   (?P<word>sens|respons)e and (?P=word)ibility
+   (?P`<word>`sens|respons)e and (?P=word)ibility
 
-  In a `$-command`, the value of the named pattern can be accessed via the r(<name>, args). Softcode functions which work with regexps allow you to access the named subpatterns via $<NAME> (the <> are literal here).
+  In a `$-command`, the value of the named pattern can be accessed via the r(`<name>`, args). Softcode functions which work with regexps allow you to access the named subpatterns via $`<NAME>` (the <> are literal here).
 
   Continued in '"help regexp syntax7'.
 
@@ -1615,12 +1615,12 @@ See [queue2]
 # SEMAPHORES
   The most complicated thing about semaphores is their name. Before you try to use semaphores, you should first be familiar with the "`@wait`" command. If you are, then you know that normally, you type:
 
-    `@wait` <number of seconds>=<action>
+    `@wait` `<number of seconds>`=`<action>`
 
   and the action takes place after that number of seconds has passed. With a semaphore, you instead type:
 
-    `@wait` <object>=<action>
-    `@wait` <object>/<number of seconds before timeout>=<action>
+    `@wait` `<object>`=`<action>`
+    `@wait` `<object>`/`<number of seconds before timeout>`=`<action>`
 
   and the action takes place after the object has been "notified" that its time for it to happen. You can also set a timeout -- if the object hasn't been notified by the time that number of seconds has passed, the action will take place. Any object (player, thing, exit, room) that you control or that is set LINK_OK can be used to wait actions on.
 
@@ -1628,7 +1628,7 @@ See [queue2]
 
 # SEMAPHORES2
 
-  An object is notified using the "`@notify`" command. When you type "`@wait` <object>=<action>", you are adding one to the SEMAPHORE attribute on the object. When you type "`@notify` <object>", you are decreasing the SEMAPHORE attribute on the object by one. Whenever the attribute decreases, one of the actions waiting on the object takes place. The actions occur in the order they were added.
+  An object is notified using the "`@notify`" command. When you type "`@wait` `<object>`=`<action>`", you are adding one to the SEMAPHORE attribute on the object. When you type "`@notify` `<object>`", you are decreasing the SEMAPHORE attribute on the object by one. Whenever the attribute decreases, one of the actions waiting on the object takes place. The actions occur in the order they were added.
 
   You can make the semaphore attribute of an object negative by `@notify`-ing it more times than things have been `@wait`-ed on it. If you do so, anything `@wait`-ed on the object will add one to the SEMAPHORE attribute and the action will take place immediately. You can also make all the actions waiting on an object take place right away by using "`@notify`/all", or wipe all the commands out and clear the SEMAPHORE attribute by using "`@drain`". Please note that all SEMAPHORE attributes are cleared out whenever the MUSH is restarted.
 
@@ -1677,7 +1677,7 @@ See [queue2]
 # SEMAPHORES5
   Normally, semaphores use the SEMAPHORE attribute. However, other attributes can be used, as long as they follow a few simple rules: If the attribute is already set, it has to have the same owner (God) and flags as the SEMAPHORE attribute would (typically no_inherit, no_clone, and locked - see 'help `@set`' and '`@atrlock`'), and have a numeric or empty value. If it's not set, it can't be one of the built in attributes (See `@list` attribs) unless, naturally, it is SEMAPHORE.
 
-  See the help on `@wait`, `@notify` and `@drain` for details, but, briefly, you can use named semaphores with <object>/<attribute> where you would normally just use <object> in those commands. This means you can't have an untimed semaphore on an attribute with a numeric name.
+  See the help on `@wait`, `@notify` and `@drain` for details, but, briefly, you can use named semaphores with `<object>`/`<attribute>` where you would normally just use `<object>` in those commands. This means you can't have an untimed semaphore on an attribute with a numeric name.
 
   See [semaphores6]
 
@@ -1709,11 +1709,11 @@ See [queue2]
 # SETTING-ATTRIBUTES
 
 # SETTING ATTRIBUTES
-  Standard attributes are set using @<attrib> <obj>=<value>
-  Nonstandard attributes are set using &<attrib> <obj>=<value>
-  Attributes may also be set using `@set` <obj>=<attrib>:<value> or the `attrib_set()` or `set()` functions.
+  Standard attributes are set using @`<attrib>` `<obj>`=`<value>`
+  Nonstandard attributes are set using &`<attrib>` `<obj>`=`<value>`
+  Attributes may also be set using `@set` `<obj>`=`<attrib>`:`<value>` or the `attrib_set()` or `set()` functions.
 
-  Attributes are cleared using @<attrib> <obj> or &<attrib> <obj>, `attrib_set()`, or with `@wipe` or `wipe()`.
+  Attributes are cleared using @`<attrib>` `<obj>` or &`<attrib>` `<obj>`, `attrib_set()`, or with `@wipe` or `wipe()`.
 
   Note that if the empty_attrs configuration option is set (`@config` empty_attrs to check), there is a difference between clearing an attribute and setting an attribute to a null value:
     `@va` me       <--- wipes out my VA attribute
@@ -1751,7 +1751,7 @@ See [queue2]
 # STACK
   For those unfamiliar with the term stack, it refers to a programming data structure that follows a LIFO (Last-In-First-Out) principle. The stack in MUSH holds the REGISTERS. The first ten registers can be accessed via the %0-%9 %-substitutions and v(0)-v(29), while all 30 registers can be accessed via the `r()` function (r(0, args) up to v(29,args)).
 
-  When using regexp `$-commands` with named subpatterns, the named arguments can be accessed via r(<name>, args).
+  When using regexp `$-commands` with named subpatterns, the named arguments can be accessed via r(`<name>`, args).
 
 
 ## See Also
@@ -1815,7 +1815,7 @@ See [queue2]
   Some attributes can be retrieved via substitutions:
      %va-%vz = the contents of the object's VA-VZ attributes, respectively
      %wa-%wz, %xa-%xz = as above, for WA-WZ and XA-XZ
-  These are the equivilent of get(me/<attribute>).
+  These are the equivilent of get(me/`<attribute>`).
 
   See [substitutions3]
 
@@ -1845,9 +1845,9 @@ See [queue2]
     %= = The dbref/attribute currently being evaluated
     %+ = The number of arguments passed to the current ufun.
     %qN = the equivalent of r(N) for registers 0-9 and A-Z set by the `setq()` function
-    %q<N> = the equivalent of r(N) for a named register set by the `setq()` function
+    %q`<N>` = the equivalent of r(N) for a named register set by the `setq()` function
     %iN = equivalent of itext(N), the list element for `iter()`/`@dolist`.
-    %`$N` = equivalent of stext(N), the <string> in `switch()`/`@switch`.
+    %`$N` = equivalent of stext(N), the `<string>` in `switch()`/`@switch`.
 
   See [substitutions4]
 
@@ -1922,7 +1922,7 @@ See [queue2]
 
   There is also a 'garbage' type, used for objects which have been created and then `@destroyed`. Garbage objects cannot be used in any way, and their dbrefs will be recycled (with a new objid) when something new is created.
 
-  For more information on any of the types, see 'help <type>'.
+  For more information on any of the types, see 'help `<type>`'.
 
   The `@stats` command lists how many objects of each type currently exits in the database.
 
@@ -2004,7 +2004,7 @@ See [queue2]
 # USER-DEFINED COMMANDS
   User-defined commands can be created by setting `$-commands` on players, things, and rooms. Exits are not checked for `$-commands`. To set a `$-command`:
 
-    &<attribute> <object>=$<command pattern>:<action list>
+    &`<attribute>` `<object>`=$`<command pattern>`:`<action list>`
 
   Whenever someone in the same room as the object types the command name, the action list is carried out by the object, as long as:
 
@@ -2013,9 +2013,9 @@ See [queue2]
 
   `$-commands` can be run by players, things, and exits.
 
-  Such attributes can also be `@triggered` as if the $<command name>: did not exist.
+  Such attributes can also be `@triggered` as if the $`<command name>`: did not exist.
 
-  It is recommended that <command pattern> not begin with "@", as many of PennMUSH's built-in commands start with "@". Conventionally, global `$-commands` are often named with the "+" prefix, and local `$-commands` commonly have a "+" or "." prefix.
+  It is recommended that `<command pattern>` not begin with "@", as many of PennMUSH's built-in commands start with "@". Conventionally, global `$-commands` are often named with the "+" prefix, and local `$-commands` commonly have a "+" or "." prefix.
 
   See [user-defined2]
 
@@ -2024,7 +2024,7 @@ See [queue2]
 # MACROS2
 
 # USER-DEFINED2
-  Any number of wildcards, * and ?, may be in present in <command pattern>. A * matches any number of characters (including none), and ? matches exactly one character. When the action list is executed, the values on the stack in %0-%9 and v(10)-v(29) are the portions of what the user types that match the first 30 *'s or ?'s. You can also match a regular expression rather than wildcards by setting the REGEXP attribute flag on <attribute>; see 'help regexps' for details. When using named regexp captures, the named arguments can be accessed via r(<name>, args).
+  Any number of wildcards, * and ?, may be in present in `<command pattern>`. A * matches any number of characters (including none), and ? matches exactly one character. When the action list is executed, the values on the stack in %0-%9 and v(10)-v(29) are the portions of what the user types that match the first 30 *'s or ?'s. You can also match a regular expression rather than wildcards by setting the REGEXP attribute flag on `<attribute>`; see 'help regexps' for details. When using named regexp captures, the named arguments can be accessed via r(`<name>`, args).
 
   For example, to make a 'wave' command, you could do the following:
 ```
@@ -2119,7 +2119,7 @@ See [queue2]
   all          all of the above
 
   The warning "none" indicates no warnings.
-  You can exclude warnings from a larger list by using !<warning> after the larger list. For example: `@warnings` me=all !exit-oneway
+  You can exclude warnings from a larger list by using !`<warning>` after the larger list. For example: `@warnings` me=all !exit-oneway
 
 # WILDCARDS
 
@@ -2247,10 +2247,10 @@ See [queue2]
   Using the object's name only works if the object is near you.
 
   You can usually qualify an object with an adjective (English matching) to help the MUSH determine which object you mean Adjectives include:
-    * my <obj> - an object you're carrying
-    * this <obj> - an object in your location (also: this here <obj>)
-    * toward <exit> - an exit in your location
-    * 1st, 2nd, etc. <obj> - one of a set of objects with the same names. Objects are ordered in the order in which they're listed in your inventory, room contents, and exit list (in that order). If there aren't enough objects, this will fail.	You can use an adjective with an ordinal (my 1st <obj>, this 2nd <obj>, etc)
+    * my `<obj>` - an object you're carrying
+    * this `<obj>` - an object in your location (also: this here `<obj>`)
+    * toward `<exit>` - an exit in your location
+    * 1st, 2nd, etc. `<obj>` - one of a set of objects with the same names. Objects are ordered in the order in which they're listed in your inventory, room contents, and exit list (in that order). If there aren't enough objects, this will fail.	You can use an adjective with an ordinal (my 1st `<obj>`, this 2nd `<obj>`, etc)
 
   In commands that take a list of space-separated names (like page), you'll need to enclose names with spaces in "double quotes". The same is true on the login screen. For example:
     page "Leeroy Jenkins"=Stop doing that.
@@ -2263,22 +2263,22 @@ This is the AHELP index.
   Commands, functions and attributes can have their permission levels controlled in the mush config files, or by wizards from the game via `@command`, `@function` and `@attribute`.
 
   In the config file, the syntax is:
-    restrict_command <command-name> <restriction> [" <error message>]
-    restrict_function <function-name> <restriction>
-    restrict_attribute <attribute-name> <restriction>
+    restrict_command `<command-name>` `<restriction>` [" `<error message>`]
+    restrict_function `<function-name>` `<restriction>`
+    restrict_attribute `<attribute-name>` `<restriction>`
 
   From the game:
-    `@command`/restrict <command-name>=<restriction> [" <error message>]
-    `@function`/restrict <function-name>=<restriction>
-    `@attribute`/access <attribute-name>=<restriction>
+    `@command`/restrict `<command-name>`=`<restriction>` [" `<error message>`]
+    `@function`/restrict `<function-name>`=`<restriction>`
+    `@attribute`/access `<attribute-name>`=`<restriction>`
 
-  For commands, if <error message> is given, that message is sent to the player who runs it instead of a generic, unhelpful error message.
+  For commands, if `<error message>` is given, that message is sent to the player who runs it instead of a generic, unhelpful error message.
 
   See [restrict2]
 
 # RESTRICT2
 
-  For commands, <restriction> should be an `@lock`-style boolexp (though, for backwards compatability, the restrictions below can be used, and will be converted into an `@lock` automatically). For functions, <restriction> should be any combination of the phrases below. For attributes, <restriction> is a list of attribute flags, or "none" to create a standard attribute with no restrictions (see 'help attribute flags').
+  For commands, `<restriction>` should be an `@lock`-style boolexp (though, for backwards compatability, the restrictions below can be used, and will be converted into an `@lock` automatically). For functions, `<restriction>` should be any combination of the phrases below. For attributes, `<restriction>` is a list of attribute flags, or "none" to create a standard attribute with no restrictions (see 'help attribute flags').
 
     god        Command or function is usable only by God.
     wizard     Usable only by wizards.
