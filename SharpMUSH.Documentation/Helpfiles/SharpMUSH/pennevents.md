@@ -17,8 +17,9 @@ The enactor of an event is either:
 1. The executor that caused it, or
 2. #-1 for system events without an executor.
 
-See also:
-- [event list]
+
+## See Also
+- [- [event list]
 - [event examples]
 
 # EVENT EXAMPLES
@@ -42,7 +43,9 @@ Or admin want to be notified when a player connect attempt fails:
 Broadcast: [Event Handler]: On descriptor 3, from IP '127.0.0.1', a failed connect attempt to '#1': 'invalid password'
 ```
 
-See also: [event examples2]
+
+## See Also
+- [event examples2]
 
 # EVENT EXAMPLES2
 Suppose you want `@pcreated` players to be powered builder, set shared and zonelocked to roys, but players created at the connect screen to not be:

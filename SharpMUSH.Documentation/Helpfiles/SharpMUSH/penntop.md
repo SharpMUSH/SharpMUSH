@@ -643,8 +643,8 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 
 
 ## See Also
-- [help code]
-- [help license]
+- [code]
+- [license]
 
 # DATABASE
 

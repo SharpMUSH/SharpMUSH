@@ -23,8 +23,9 @@ A *<player-list>* is a space-separated list of recipients, which may be:
 * Message #'s, in which case you send to the sender of that message
 * An alias name (see [@malias])
 
-See also:
-- [mail-sending]
+
+## See Also
+- [- [mail-sending]
 - [mail-reading]
 - [mail-folders]
 - [mail-forward]
@@ -142,7 +143,9 @@ The MUSH mail system allows each player 16 folders, numbered from 0 to 15. Mail 
 - `@mail/file <msg-list>=<folder#>`
 * This command moves all messages in *<msg-list>* from the current folder to a new folder, *<folder#>*.
 
-See also: [@mailfilter]
+
+## See Also
+- [@mailfilter]
 
 # MAIL-REVIEWING
 # @MAIL/REVIEW
@@ -186,7 +189,9 @@ Example: Filter urgent messages into folder 1
 > @mailfilter me=if(strmatch(%3,*U*),1)
 ```
 
-See also: [mail-folders]
+
+## See Also
+- [mail-folders]
 
 # @MAILSIGNATURE
 # MAILSIGNATURE
@@ -200,7 +205,10 @@ Example:
 > @mailsignature me=%r%r-- %n%r%r[u(funny_quote)]
 ```
 
-See also: [@mail], [mail-sending]
+
+## See Also
+- [@mail]
+- [mail-sending]
 
 # MAIL-ADMIN
 
@@ -232,7 +240,9 @@ The @malias command is used to create, view, and manipulate @mail aliases, or li
 
 `@malias` with a single argument (the name of an alias) lists the members of that alias, if you're allowed to see them. Other forms of the same command are `@malias/members <alias>` or `@malias/who <alias>`
 
-See also: [@malias2]
+
+## See Also
+- [@malias2]
 
 # @MALIAS2
 
@@ -249,7 +259,9 @@ The first form above creates a new alias for the given list of players.
 
 `@malias/destroy` destroys the alias completely.
 
-See also: [@malias3]
+
+## See Also
+- [@malias3]
 
 # @MALIAS3
 
@@ -263,7 +275,9 @@ See also: [@malias3]
 
 `@malias/remove` removes players from the alias. If a player is on the alias more than once, a single remove will remove only one instance of that player.
 
-See also: [@malias4]
+
+## See Also
+- [@malias4]
 
 # @MALIAS4
 
@@ -278,7 +292,9 @@ An empty permission list allows any player. The permission list may also be a sp
 
 By default, the owner and alias members may see and use the alias, but only the owner may list the members. Note that admin may always list aliases and their members, regardless of these settings, but are treated like anyone else when trying to @mail with an alias.
 
-See also: [@malias5]
+
+## See Also
+- [@malias5]
 
 # @MALIAS5
 
@@ -322,7 +338,9 @@ Available functions:
 
 folderstats() returns the number of read, unread, and cleared messages in a specific folder, or, if none is given, the player's current folder. Only Wizards may use forms which get other players' mail information.
 
-See also: [mailstats]
+
+## See Also
+- [mailstats]
 
 # MAIL()
 
@@ -341,7 +359,10 @@ Example:
 (text of the second message in the player's third folder)
 ```
 
-See also: [maillist], [mailfrom]
+
+## See Also
+- [maillist]
+- [mailfrom]
 
 # MAILLIST()
 
@@ -359,7 +380,10 @@ Examples:
 1:1 1:2
 ```
 
-See also: [mail], [mailfrom]
+
+## See Also
+- [mail]
+- [mailfrom]
 
 # MAILFROM()
 # MAILTIME()
@@ -376,7 +400,10 @@ See also: [mail], [mailfrom]
 * mailsubject() is similar, but returns the subject of the message.
 * mailstatus() returns the mail's status characters (as per @mail/list).
 
-See also: [mail], [maillist]
+
+## See Also
+- [mail]
+- [maillist]
 
 # MAILSTATS()
 # MAILDSTATS()
@@ -397,7 +424,9 @@ Example:
 <# received unread> <# received cleared> <# received bytes>
 ```
 
-See also: [folderstats]
+
+## See Also
+- [folderstats]
 
 # MAILSEND()
 
