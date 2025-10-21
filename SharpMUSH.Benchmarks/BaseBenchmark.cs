@@ -67,7 +67,7 @@ public class BaseBenchmark
 		var one = realOne.Object()!.DBRef;
 
 		var simpleConnectionService = new ConnectionService();
-		simpleConnectionService.Register(1, _ => ValueTask.CompletedTask,  _ => ValueTask.CompletedTask, () => Encoding.UTF8);
+		simpleConnectionService.Register(1, "localhost", "localhost", "test",  _ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
 		simpleConnectionService.Bind(1, one);
 
 		var parser = _server!.Services.GetRequiredService<IMUSHCodeParser>();

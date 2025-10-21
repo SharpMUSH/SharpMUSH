@@ -64,13 +64,20 @@ public class ConnectionService : IConnectionService
 			});
 	}
 
-	public void Register(long handle, Func<byte[], ValueTask> outputFunction, Func<byte[], ValueTask> promptOutputFunction, Func<Encoding> encoding, ConcurrentDictionary<string, string>? metaData = null)
+	public void Register(long handle, string ipaddr, string host,
+		string connectionType,
+		Func<byte[], ValueTask> outputFunction, Func<byte[], ValueTask> promptOutputFunction, Func<Encoding> encoding,
+		ConcurrentDictionary<string, string>? metaData = null)
 	{
 		_sessionState.AddOrUpdate(handle,
 			_ => new IConnectionService.ConnectionData(handle, null, IConnectionService.ConnectionState.Connected, outputFunction, promptOutputFunction, encoding, metaData ??
 				new ConcurrentDictionary<string, string>(new Dictionary<string, string> {
 					{"ConnectionStartTime", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() },
-					{"LastConnectionSignal", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() }})),
+					{"LastConnectionSignal", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() },
+					{"InternetProtocolAddress", ipaddr},
+					{"HostName", host},
+					{"ConnectionType", connectionType}
+				})),
 			(_, _) => throw new InvalidDataException("Tried to replace an existing handle during Register."));
 
 		foreach (var handler in _handlers)

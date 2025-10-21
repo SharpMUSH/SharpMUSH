@@ -128,7 +128,7 @@ public class WebAppFactory : IAsyncInitializer
 		// Retrieve the object with DBRef #1 and bind it to a connection.
 		var realOne = await databaseService.GetObjectNodeAsync(new DBRef(1));
 		_one = realOne.Object()!.DBRef;
-		connectionService.Register(1, _ => ValueTask.CompletedTask,  _ => ValueTask.CompletedTask, () => Encoding.UTF8);
+		connectionService.Register(1, "localhost", "locahost","test", _ => ValueTask.CompletedTask,  _ => ValueTask.CompletedTask, () => Encoding.UTF8);
 		connectionService.Bind(1, _one);
 	}
 }

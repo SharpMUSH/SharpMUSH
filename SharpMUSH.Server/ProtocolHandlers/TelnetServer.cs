@@ -85,18 +85,18 @@ public class TelnetServer : ConnectionHandler
 			}
 			.RegisterMSSPConfig(() => _msspConfig)
 			.BuildAsync();
+		
+		var remoteEndpoint = connection.RemoteEndPoint as IPEndPoint;
+		var remoteIp = remoteEndpoint is null ? "unknown" : $"{remoteEndpoint.Address}:{remoteEndpoint.Port}";
 
 		_connectionService.Register(nextPort,
+			remoteIp,
+			connection.RemoteEndPoint?.ToString() ?? remoteIp,
+			"telnet",
 			telnet.SendAsync,
 			telnet.SendPromptAsync,
 			() => telnet.CurrentEncoding,
-			new ConcurrentDictionary<string, string>(new Dictionary<string, string>()
-			{
-				{ "InternetProtocolAddress", (connection.RemoteEndPoint as IPEndPoint)?.Address.ToString() ?? "Unknown Error" },
-				{ "ConnectionType", "telnet" },
-				{ "ConnectionStartTime", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() },
-				{ "LastConnectionSignal", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() }
-			}));
+			new ConcurrentDictionary<string, string>(new Dictionary<string, string>()));
 
 		try
 		{

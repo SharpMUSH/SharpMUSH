@@ -6,6 +6,9 @@ using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Implementation.Functions;
 
+/// <summary>
+/// SharpMUSH Implementation Status: 100%
+/// </summary>
 public partial class Functions
 {
 	/// <summary>
