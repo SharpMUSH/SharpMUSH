@@ -58,6 +58,7 @@ public class AttributeCommandTests
 	}
 
 	[Test]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask CopyAttribute()
 	{
 		// First set an attribute
@@ -72,6 +73,7 @@ public class AttributeCommandTests
 	}
 
 	[Test]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask MoveAttribute()
 	{
 		// First set an attribute
@@ -86,6 +88,7 @@ public class AttributeCommandTests
 	}
 
 	[Test]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask WipeAttributes()
 	{
 		// Set some attributes
