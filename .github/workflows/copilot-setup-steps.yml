@@ -33,7 +33,7 @@ jobs:
         with:
           # Use 'x' to always get the latest stable version
           dotnet-version: 10.x
-          dotnet-quality: 'validated'
+          dotnet-quality: 'preview'
 
       - name: Restore dependencies
         run: dotnet restore
