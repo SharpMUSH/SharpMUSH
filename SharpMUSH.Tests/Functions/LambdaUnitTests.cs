@@ -22,4 +22,14 @@ public class LambdaUnitTests
 		var res = (await Parser!.FunctionParse(MModule.single(call)))!.Message!;
 		await Assert.That(res.ToPlainText()).IsEqualTo(expected);
 	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("ulambda(code)", "")]
+	public async Task Ulambda(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		await Assert.That(result).IsNotNull();
+	}
 }

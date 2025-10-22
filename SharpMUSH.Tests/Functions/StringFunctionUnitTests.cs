@@ -114,4 +114,237 @@ public class StringFunctionUnitTests
 				.IsEqualTo(bt.Second);
 		}
 	}
+
+	[Test]
+	[Arguments("strlen(hello)", "5")]
+	[Arguments("strlen(a b c)", "5")]
+	public async Task Strlen(string str, string expectedText)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
+	}
+
+	[Test]
+	[Arguments("left(hello world,5)", "hello")]
+	[Arguments("left(abc,10)", "abc")]
+	public async Task Left(string str, string expectedText)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
+	}
+
+	[Test]
+	[Arguments("right(hello world,5)", "world")]
+	[Arguments("right(abc,10)", "abc")]
+	public async Task Right(string str, string expectedText)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
+	}
+
+	[Test]
+	[Arguments("mid(hello world,6,5)", "world")]
+	public async Task Mid(string str, string expectedText)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
+	}
+
+	[Test]
+	[Arguments("ucstr(hello)", "HELLO")]
+	[Arguments("ucstr(HeLLo WoRLd)", "HELLO WORLD")]
+	public async Task Ucstr(string str, string expectedText)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
+	}
+
+	[Test]
+	[Arguments("lcstr(HELLO)", "hello")]
+	[Arguments("lcstr(HeLLo WoRLd)", "hello world")]
+	public async Task Lcstr(string str, string expectedText)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
+	}
+
+	[Test]
+	[Arguments("repeat(x,5)", "xxxxx")]
+	[Arguments("repeat(ab,3)", "ababab")]
+	public async Task Repeat(string str, string expectedText)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
+	}
+
+	[Test]
+	[Arguments("space(5)", "     ")]
+	[Arguments("space(0)", "")]
+	public async Task Space(string str, string expectedText)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
+	}
+
+	[Test]
+	[Arguments("chr(65)", "A")]
+	[Arguments("chr(97)", "a")]
+	public async Task Chr(string str, string expectedText)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
+	}
+
+	[Test]
+	[Arguments("ord(A)", "65")]
+	[Arguments("ord(a)", "97")]
+	public async Task Ord(string str, string expectedText)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
+	}
+
+	[Test]
+	[Arguments("flip(hello)", "olleh")]
+	[Arguments("flip(abc)", "cba")]
+	public async Task Flip(string str, string expectedText)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("edit(this is a test,a test,an exam)", "this is an exam")]
+	[Arguments("edit(hello,^,well )", "well hello")]
+	[Arguments("edit(hello,$, world)", "hello world")]
+	public async Task Edit(string str, string expectedText)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("tr(hello,el,ip)", "hippo")]
+	[Arguments("tr(abcd,bd,xy)", "axcy")]
+	public async Task Tr(string str, string expectedText)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("merge(a|b|c,1|2|3,|)", "a1 b2 c3")]
+	public async Task Merge(string str, string expectedText)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("comp(abc,abc)", "0")]
+	[Arguments("comp(abc,def)", "-1")]
+	[Arguments("comp(def,abc)", "1")]
+	public async Task Comp(string str, string expectedText)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("decompose(ansi(hr,red))", "ansi(hr,red)")]
+	public async Task Decompose(string str, string expectedText)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("cond(1,yes,no)", "yes")]
+	[Arguments("cond(0,yes,no)", "no")]
+	public async Task Cond(string str, string expectedText)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("strinsert(hello,3,X)", "helXlo")]
+	public async Task Strinsert(string str, string expectedText)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("strreplace(hello world,world,universe)", "hello universe")]
+	public async Task Strreplace(string str, string expectedText)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("strmatch(test,t*)", "1")]
+	[Arguments("strmatch(test,x*)", "0")]
+	public async Task Strmatch(string str, string expectedText)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("accent(e,acute)", "é")]
+	public async Task Accent(string str, string expectedText)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("brackets(test)", "[test]")]
+	public async Task Brackets(string str, string expectedText)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("lpos(test,t)", "1")]
+	[Arguments("lpos(test,s)", "3")]
+	public async Task Lpos(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("strcat(a,b,c)", "abc")]
+	[Arguments("strcat(hello, ,world)", "hello world")]
+	public async Task Strcat(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("stripansi(ansi(r,red))", "red")]
+	public async Task Stripansi(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
 }
