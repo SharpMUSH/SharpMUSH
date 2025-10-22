@@ -62,4 +62,31 @@ public class RegexFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("wildgrepi(obj,pattern,attr)", "list")]
+	public async Task Wildgrepi(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("regmatchi(test,TEST)", "1")]
+	public async Task Regmatchi(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("reswitch(test,t*,match)", "match")]
+	public async Task Reswitch(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
 }
