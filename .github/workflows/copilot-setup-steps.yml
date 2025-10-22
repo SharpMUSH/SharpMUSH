@@ -32,10 +32,8 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           # Use 'x' to always get the latest stable version
-          # This will automatically update to newer major versions as they're released
           dotnet-version: 10.x
-          # Prefer the latest version if multiple are installed
-          dotnet-quality: 'ga'
+          dotnet-quality: 'validated'
 
       - name: Restore dependencies
         run: dotnet restore
