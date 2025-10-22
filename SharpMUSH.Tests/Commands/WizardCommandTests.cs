@@ -207,4 +207,15 @@ public class WizardCommandTests
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
 	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	public async ValueTask PollCommand()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@poll"));
+
+		await NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+	}
 }
