@@ -100,10 +100,10 @@ public static class ChannelHelper
 	}
 
 	public static bool IsValidChannelName(IOptionsWrapper<SharpMUSHOptions> Configuration, MString channelName)
-		=> IsValidChannelName(Configuration!, channelName.ToPlainText());
+		=> IsValidChannelName(Configuration, channelName.ToPlainText());
 
 	public static bool IsValidChannelName(IOptionsWrapper<SharpMUSHOptions> Configuration, string channelName)
-		=> Configuration!.CurrentValue.Chat.ChannelTitleLength >= channelName.Length
+		=> Configuration.CurrentValue.Chat.ChannelTitleLength >= channelName.Length
 		   && channelName.Length > 3
 		   && !channelName.Contains(' ');
 
@@ -116,13 +116,13 @@ public static class ChannelHelper
 		MString channelName,
 		bool notify = false)
 	{
-		var channel = await Mediator!.Send(new GetChannelQuery(channelName.ToPlainText()));
+		var channel = await Mediator.Send(new GetChannelQuery(channelName.ToPlainText()));
 
 		switch (channel, notify)
 		{
 			case (null, true):
 			{
-				await NotifyService!.Notify(await parser.CurrentState.KnownExecutorObject(Mediator!),
+				await NotifyService.Notify(await parser.CurrentState.KnownExecutorObject(Mediator),
 					"Channel not found.");
 				return new ChannelOrError(new Error<CallState>(new CallState("#-1 Channel not found.")));
 			}

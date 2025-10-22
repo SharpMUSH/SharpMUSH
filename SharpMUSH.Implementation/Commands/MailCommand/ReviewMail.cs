@@ -9,7 +9,7 @@ public static class ReviewMail
 {
 	public static async ValueTask<MString>  Handle(IMUSHCodeParser parser, ILocateService locateService, IExpandedObjectDataService objectDataService, IMediator mediator, INotifyService notifyService, MString? arg0, MString? msgListArg, string[] switches)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
 		var line = MModule.repeat(MModule.single("-"), 78, MModule.empty());
 		var name = arg0?.ToPlainText() ?? "all";
 		
@@ -17,7 +17,7 @@ public static class ReviewMail
 
 		if (string.IsNullOrWhiteSpace(arg0?.ToPlainText()))
 		{
-			var actualPlayer = await locateService!.LocateAndNotifyIfInvalid(parser, 
+			var actualPlayer = await locateService.LocateAndNotifyIfInvalid(parser, 
 				executor, executor, name,
 				LocateFlags.PlayersPreference |
 				LocateFlags.MatchWildCardForPlayerName |
@@ -26,7 +26,7 @@ public static class ReviewMail
 
 			if (!actualPlayer.IsPlayer)
 			{
-				await notifyService!.Notify(executor, $"MAIL: {name} not found.");
+				await notifyService.Notify(executor, $"MAIL: {name} not found.");
 				return MModule.single("#-1 NO SUCH PLAYER");
 			}
 		
@@ -67,7 +67,7 @@ public static class ReviewMail
 			};
 
 			var output = MModule.multipleWithDelimiter(MModule.single("\n"), messageBuilder);
-			await notifyService!.Notify(executor, output);
+			await notifyService.Notify(executor, output);
 		}
 		
 		return MModule.empty();

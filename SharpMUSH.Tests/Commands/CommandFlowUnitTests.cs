@@ -12,7 +12,7 @@ public class CommandFlowUnitTests
 	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required WebAppFactory WebAppFactoryArg { get; init; }
 
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>()!;
+	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 
@@ -30,7 +30,7 @@ public class CommandFlowUnitTests
 		Console.WriteLine("Testing: {0}", str);
 		await Parser.CommandListParse(MModule.single(str));
 
-		await NotifyService!.Received(Quantity.Exactly(1))
+		await NotifyService.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), expected);
 	}
 
@@ -40,10 +40,10 @@ public class CommandFlowUnitTests
 	{
 		await Parser.CommandListParse(MModule.single("think %0; @retry gt(%0,-1)=dec(%0)"));
 
-		await NotifyService!.Received(Quantity.Exactly(1))
+		await NotifyService.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), MModule.single(""));
 
-		await NotifyService!.Received(Quantity.Exactly(1))
+		await NotifyService.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), MModule.single("-1"));
 	}
 }

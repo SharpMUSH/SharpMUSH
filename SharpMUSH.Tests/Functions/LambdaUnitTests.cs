@@ -19,7 +19,7 @@ public class LambdaUnitTests
 	[Arguments("3", "3")] 
 	public async Task BasicLambdaTest(string call, string expected)
 	{
-		var res = (await Parser!.FunctionParse(MModule.single(call)))!.Message!;
+		var res = (await Parser.FunctionParse(MModule.single(call)))!.Message!;
 		await Assert.That(res.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -29,7 +29,7 @@ public class LambdaUnitTests
 	public async Task Ulambda(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 }

@@ -12,10 +12,10 @@ public static class ChannelMute
 {
 	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, MString channelName, MString playerName)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (await executor.IsGuest())
 		{
-			await NotifyService!.Notify(executor, "CHAT: Guests may not modify channels.");
+			await NotifyService.Notify(executor, "CHAT: Guests may not modify channels.");
 			return new CallState("#-1 Guests may not modify channels.");
 		}
 
@@ -27,7 +27,7 @@ public static class ChannelMute
 
 		var channel = maybeChannel.AsChannel;
 
-		var players = await Mediator!.Send(new GetPlayerQuery(playerName.ToPlainText()));
+		var players = await Mediator.Send(new GetPlayerQuery(playerName.ToPlainText()));
 		var player = await players.FirstOrDefaultAsync();
 		if (player is null)
 		{
@@ -47,7 +47,7 @@ public static class ChannelMute
 			return new CallState("Player is already muted.");
 		}
 
-		await Mediator!.Send(new UpdateChannelUserStatusCommand(channel, executor,
+		await Mediator.Send(new UpdateChannelUserStatusCommand(channel, executor,
 			new SharpChannelStatus(
 				null,
 				null,

@@ -131,4 +131,13 @@ public class InformationFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
+	
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("version()", "")]
+	public async Task Version(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsNotNull();
+	}
 }

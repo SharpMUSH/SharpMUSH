@@ -13,12 +13,12 @@ public static class ChannelHide
 {
 	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, MString? channelName, MString? yesNo)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		ImmutableArray<SharpChannel> channels;
 
 		if (await executor.IsGuest())
 		{
-			await NotifyService!.Notify(executor, "CHAT: Guests may not modify channels.");
+			await NotifyService.Notify(executor, "CHAT: Guests may not modify channels.");
 			return new CallState("#-1 Guests may not modify channels.");
 		}
 
@@ -26,13 +26,13 @@ public static class ChannelHide
 		if (yesNoString is not null && !(yesNoString.Equals("yes", StringComparison.InvariantCultureIgnoreCase) ||
 		                                 yesNoString.Equals("no", StringComparison.InvariantCultureIgnoreCase)))
 		{
-			await NotifyService!.Notify(executor, "CHAT: Yes or No are the only valid options.");
+			await NotifyService.Notify(executor, "CHAT: Yes or No are the only valid options.");
 			return new CallState("#-1 INVALID OPTION");
 		}
 
 		if (channelName != null)
 		{
-			channels = [..await Mediator!.Send(new GetChannelListQuery())];
+			channels = [..await Mediator.Send(new GetChannelListQuery())];
 		}
 		else
 		{
@@ -53,18 +53,18 @@ public static class ChannelHide
 
 			if (maybeMemberStatus is null)
 			{
-				await NotifyService!.Notify(executor, $"CHAT: You are not a member of {channel.Name.ToPlainText()}.");
+				await NotifyService.Notify(executor, $"CHAT: You are not a member of {channel.Name.ToPlainText()}.");
 			}
 
 			var status = maybeMemberStatus?.Status;
 
 			if (status?.Hide ?? false == hideOn)
 			{
-			    await NotifyService!.Notify(executor, $"CHAT: You are already in that hide state on {channel.Name.ToPlainText()}.");
+			    await NotifyService.Notify(executor, $"CHAT: You are already in that hide state on {channel.Name.ToPlainText()}.");
 			    continue;
 			}
 
-			await Mediator!.Send(new UpdateChannelUserStatusCommand(
+			await Mediator.Send(new UpdateChannelUserStatusCommand(
 				channel, executor, new SharpChannelStatus(
 					null,
 					null,
@@ -75,11 +75,11 @@ public static class ChannelHide
 
 			if (hideOn)
 			{
-				await NotifyService!.Notify(executor, $"CHAT: You have been hidden on {channel.Name.ToPlainText()}.");
+				await NotifyService.Notify(executor, $"CHAT: You have been hidden on {channel.Name.ToPlainText()}.");
 			}
 			else
 			{
-				await NotifyService!.Notify(executor, $"CHAT: You have been unhidden on {channel.Name.ToPlainText()}.");
+				await NotifyService.Notify(executor, $"CHAT: You have been unhidden on {channel.Name.ToPlainText()}.");
 			}
 		}
 

@@ -107,7 +107,7 @@ public partial class Functions
 
 		await foreach (var obj in contents
 			               .Where(async (x,_) 
-				               => await PermissionService!.CanInteract(x.WithRoomOption(), executor, InteractType.Hear)))
+				               => await PermissionService.CanInteract(x.WithRoomOption(), executor, InteractType.Hear)))
 		{
 			await NotifyService!.Notify(
 				obj.WithRoomOption(),
@@ -132,7 +132,7 @@ public partial class Functions
 
 		await foreach (var obj in contents
 			               .Where(async (x,_) 
-				               => await PermissionService!.CanInteract(x.WithRoomOption(), executor, InteractType.Hear)))
+				               => await PermissionService.CanInteract(x.WithRoomOption(), executor, InteractType.Hear)))
 		{
 			await NotifyService!.Notify(
 				obj.WithRoomOption(),

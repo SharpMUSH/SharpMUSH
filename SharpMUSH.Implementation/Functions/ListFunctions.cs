@@ -26,7 +26,7 @@ public partial class Functions
 		var list = MModule.split2(delimiter, listArg);
 		var numbers = numbersArg.Split(" ");
 
-		var result = list.Where((item, i) => numbers!.Contains(i.ToString()));
+		var result = list.Where((item, i) => numbers.Contains(i.ToString()));
 
 		return new CallState(MModule.multipleWithDelimiter(sep, result));
 	}

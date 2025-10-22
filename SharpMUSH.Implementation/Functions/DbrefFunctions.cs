@@ -97,7 +97,7 @@ public partial class Functions
 		{
 			var attributeObj = arg1Split[0];
 			var attribute = string.Join("/", arg1Split.Skip(1));
-			var maybeLocateAttributeObject = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
+			var maybeLocateAttributeObject = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
 				executor,
 				executor,
 				attributeObj,
@@ -129,7 +129,7 @@ public partial class Functions
 			return controlsAttribute;
 		}
 
-		var maybeLocateVictim = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
+		var maybeLocateVictim = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
 			executor,
 			executor,
 			arg1,
@@ -517,7 +517,7 @@ public partial class Functions
 			LocateFlags.All,
 			async x =>
 			{
-				var room = await LocateService!.Room(x); 
+				var room = await LocateService.Room(x); 
 				return room.Object().DBRef;
 			});
 	}

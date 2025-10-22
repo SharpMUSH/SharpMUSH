@@ -276,7 +276,7 @@ public class MiscFunctionUnitTests
 	public async Task Zfun(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -286,7 +286,7 @@ public class MiscFunctionUnitTests
 	public async Task Zmwho(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -296,7 +296,7 @@ public class MiscFunctionUnitTests
 	public async Task Zone(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 }

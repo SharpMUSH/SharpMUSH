@@ -19,9 +19,9 @@ public static class SendMail
 		var silent = switches.Contains("SILENT");
 		var noSignature = switches.Contains("NOSIG");
 		
-		var sender = await parser.CurrentState.KnownExecutorObject(mediator!);
+		var sender = await parser.CurrentState.KnownExecutorObject(mediator);
 		
-		var playerList = await ArgHelpers.PopulatedNameList(mediator!, nameList.ToPlainText()!);
+		var playerList = await ArgHelpers.PopulatedNameList(mediator, nameList.ToPlainText()!);
 		var knownPlayerList = playerList.Where(x => x != null).Select(x => x!).ToList();
 		var subjectBodySplit = MModule.indexOf(subjectAndMessage, MModule.single("/"));
 		
@@ -35,7 +35,7 @@ public static class SendMail
 		
 		if (!noSignature)
 		{
-			var attribute = await mediator!.Send(new GetAttributeQuery(sender.Object().DBRef, ["MAILSIGNATURE"]));
+			var attribute = await mediator.Send(new GetAttributeQuery(sender.Object().DBRef, ["MAILSIGNATURE"]));
 
 			if (attribute is not null)
 			{
@@ -72,19 +72,19 @@ public static class SendMail
 
 		foreach (var player in knownPlayerList)
 		{
-			if (!permissionService!.PassesLock(sender, player, LockType.Mail))
+			if (!permissionService.PassesLock(sender, player, LockType.Mail))
 			{
-				await notifyService!.Notify(sender, $"MAIL: {player.Object.Name} does not wish to receive mail from you.");
+				await notifyService.Notify(sender, $"MAIL: {player.Object.Name} does not wish to receive mail from you.");
 				continue;
 			}
 				
-			await mediator!.Send(new SendMailCommand(sender.Object(), player, mail));
-			await notifyService!.Notify(sender, $"MAIL: You sent a message to {player.Object.Name}.");
+			await mediator.Send(new SendMailCommand(sender.Object(), player, mail));
+			await notifyService.Notify(sender, $"MAIL: You sent a message to {player.Object.Name}.");
 
 			if (!silent)
 			{
-				var mailList = await mediator!.Send(new GetMailListQuery(player, "INBOX"));
-				await notifyService!.Notify(player, $"MAIL: You have received a message ({mailList.Count()}) from {sender.Object().Name}.");
+				var mailList = await mediator.Send(new GetMailListQuery(player, "INBOX"));
+				await notifyService.Notify(player, $"MAIL: You have received a message ({mailList.Count()}) from {sender.Object().Name}.");
 			}
 			
 			// TODO: If AMAIL is config true, and AMAIL &attribute is set on the target, trigger it.

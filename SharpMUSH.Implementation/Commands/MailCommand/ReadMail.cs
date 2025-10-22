@@ -15,15 +15,15 @@ public static class ReadMail
 		INotifyService notifyService, 
 		int messageNumber, string[] switches)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
 		var line = MModule.repeat(MModule.single("-"), 78, MModule.empty());
 		var folder = await MessageListHelper.CurrentMailFolder(parser, objectDataService, executor);
 
-		var actualMail = await mediator!.Send(new GetMailQuery(executor.AsPlayer, messageNumber, folder));
+		var actualMail = await mediator.Send(new GetMailQuery(executor.AsPlayer, messageNumber, folder));
 
 		if (actualMail is null)
 		{
-			await notifyService!.Notify(executor, $"MAIL: You do not have a mail with number: {messageNumber + 1}");
+			await notifyService.Notify(executor, $"MAIL: You do not have a mail with number: {messageNumber + 1}");
 			return MModule.single("#-1 NO SUCH MAIL");
 		}
 
@@ -48,9 +48,9 @@ public static class ReadMail
 		};
 
 		var output = MModule.multipleWithDelimiter(MModule.single("\n"), messageBuilder);
-		await notifyService!.Notify(executor, output);
+		await notifyService.Notify(executor, output);
 
-		await mediator!.Send(new UpdateMailCommand(actualMail, MailUpdate.ReadEdit(true)));
+		await mediator.Send(new UpdateMailCommand(actualMail, MailUpdate.ReadEdit(true)));
 
 		return output;
 	}

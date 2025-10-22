@@ -57,7 +57,7 @@ public static partial class ArgHelpers
 			return (await defaultValue.ParsedMessage())!;
 		}
 
-		return parsedValue!;
+		return parsedValue;
 	}
 
 	public static ValueTask<CallState> AggregateDecimals(ImmutableSortedDictionary<string, CallState> args,
@@ -242,7 +242,7 @@ public static partial class ArgHelpers
 				return await handleFunc(handle, handleData);
 			}
 	
-			var maybeFound = await locateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, valueText);
+			var maybeFound = await locateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, valueText);
 	
 			if (maybeFound.IsError)
 			{

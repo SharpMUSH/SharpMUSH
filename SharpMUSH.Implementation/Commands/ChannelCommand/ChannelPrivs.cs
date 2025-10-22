@@ -10,10 +10,10 @@ public static class ChannelPrivs
 {
 	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, MString channelName, MString privs)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (await executor.IsGuest())
 		{
-			await NotifyService!.Notify(executor, "CHAT: Guests may not modify channels.");
+			await NotifyService.Notify(executor, "CHAT: Guests may not modify channels.");
 			return new CallState("#-1 Guests may not modify channels.");
 		}
 
@@ -26,7 +26,7 @@ public static class ChannelPrivs
 
 		var channel = maybeChannel.AsChannel;
 
-		if (await PermissionService!.ChannelCanModifyAsync(executor, channel))
+		if (await PermissionService.ChannelCanModifyAsync(executor, channel))
 		{
 			return new CallState("You are not the owner of the channel.");
 		}
@@ -34,11 +34,11 @@ public static class ChannelPrivs
 		var privilegeList = ChannelHelper.StringToChannelPrivileges(privs);
 		if (privilegeList.IsError)
 		{
-			await NotifyService!.Notify(executor,
+			await NotifyService.Notify(executor,
 				$"CHAT: Invalid channel privileges(s):  {string.Join(",", privilegeList.AsError.Value)}");
 		}
 		
-		await Mediator!.Send(new UpdateChannelCommand(channel,
+		await Mediator.Send(new UpdateChannelCommand(channel,
 			null, 
 			null,
 			Privs: privilegeList.AsPrivileges,

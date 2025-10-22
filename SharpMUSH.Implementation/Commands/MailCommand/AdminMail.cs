@@ -33,7 +33,7 @@ public static class AdminMail
 				var mailList = (await mediator!.Send(new GetAllMailListQuery(executor.AsPlayer))).ToImmutableArray();
 				foreach (var mail in mailList)
 				{
-					await mediator!.Send(new DeleteMailCommand(mail));
+					await mediator.Send(new DeleteMailCommand(mail));
 				}
 				await notifyService!.Notify(executor, "MAIL: Mail deleted.");
 				return MModule.single(mailList.Length.ToString());

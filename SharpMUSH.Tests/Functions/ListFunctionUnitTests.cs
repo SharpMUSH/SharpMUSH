@@ -21,7 +21,7 @@ public class ListFunctionUnitTests
 	// [Arguments("iter(1|2|3,iter(1 2 3,add(%i0,%iL)),|,-)", "2 3 4-3 4 5-4 5 6")]
 	public async Task IterationValue(string function, string expected)
 	{
-		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
@@ -32,7 +32,7 @@ public class ListFunctionUnitTests
 	[Arguments("iter(1|2|3,iter(1 2 3,add(%$0,%i1)),|,-)", "2 2 2-4 4 4-6 6 6")]
 	public async Task IterationNumber(string function, string expected)
 	{
-		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
@@ -47,7 +47,7 @@ public class ListFunctionUnitTests
 	// TODO: Why does putting [ibreak()] at the start of the contents cause a different evaluation?
 	public async Task IterationBreak(string function, string expected)
 	{
-		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
@@ -60,7 +60,7 @@ public class ListFunctionUnitTests
 	[Arguments("rest(1|2|3,|)", "2|3")]
 	public async Task Rest(string function, string expected)
 	{
-		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
@@ -73,7 +73,7 @@ public class ListFunctionUnitTests
 	[Arguments("last(1|2|3,|)", "3")]
 	public async Task Last(string function, string expected)
 	{
-		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
@@ -82,7 +82,7 @@ public class ListFunctionUnitTests
 	[Arguments("first(a|b|c,|)", "a")]
 	public async Task First(string function, string expected)
 	{
-		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
@@ -91,7 +91,7 @@ public class ListFunctionUnitTests
 	[Arguments("words(single)", "1")]
 	public async Task Words(string function, string expected)
 	{
-		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
@@ -101,7 +101,7 @@ public class ListFunctionUnitTests
 	[Arguments("extract(a|b|c,2,3,|)", "b|c")]
 	public async Task Extract(string function, string expected)
 	{
-		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
@@ -111,7 +111,7 @@ public class ListFunctionUnitTests
 	[Arguments("grab(a|b|c|d,c,|)", "c")]
 	public async Task Grab(string function, string expected)
 	{
-		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
@@ -121,7 +121,7 @@ public class ListFunctionUnitTests
 	[Arguments("graball(This|is|testing|a|test,tes*,|)", "testing|test")]
 	public async Task Graball(string function, string expected)
 	{
-		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
@@ -131,7 +131,7 @@ public class ListFunctionUnitTests
 	[Arguments("sort(foo bar baz)", "bar baz foo")]
 	public async Task Sort(string function, string expected)
 	{
-		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
@@ -140,7 +140,7 @@ public class ListFunctionUnitTests
 	[Arguments("filter(test/is_odd,1 2 3 4 5 6)", "1 3 5")]
 	public async Task Filter(string function, string expected)
 	{
-		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
@@ -149,7 +149,7 @@ public class ListFunctionUnitTests
 	[Arguments("fold(test/add_func,1 2 3)", "6")]
 	public async Task Fold(string function, string expected)
 	{
-		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
@@ -159,7 +159,7 @@ public class ListFunctionUnitTests
 	[Arguments("ldelete(a|b|c|d,2,1,|)", "a|c|d")]
 	public async Task Ldelete(string function, string expected)
 	{
-		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
@@ -169,7 +169,7 @@ public class ListFunctionUnitTests
 	[Arguments("lreplace(a|b|c,2,foo,|)", "a|foo|c")]
 	public async Task Lreplace(string function, string expected)
 	{
-		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
@@ -179,7 +179,7 @@ public class ListFunctionUnitTests
 	[Arguments("member(a|b|c,b,|)", "2")]
 	public async Task Member(string function, string expected)
 	{
-		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
@@ -189,7 +189,7 @@ public class ListFunctionUnitTests
 	[Arguments("remove(a|b|c|b,b,|)", "a|c")]
 	public async Task Remove(string function, string expected)
 	{
-		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
@@ -199,7 +199,7 @@ public class ListFunctionUnitTests
 	[Arguments("setunion(1 2 3,2 3 4)", "1 2 3 4")]
 	public async Task Setunion(string function, string expected)
 	{
-		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
@@ -209,7 +209,7 @@ public class ListFunctionUnitTests
 	[Arguments("setinter(1 2 3,2 3 4)", "2 3")]
 	public async Task Setinter(string function, string expected)
 	{
-		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
@@ -219,7 +219,7 @@ public class ListFunctionUnitTests
 	[Arguments("setdiff(1 2 3,2 3 4)", "1")]
 	public async Task Setdiff(string function, string expected)
 	{
-		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
@@ -228,7 +228,7 @@ public class ListFunctionUnitTests
 	[Arguments("matchall(foo bar baz,ba*)", "2 3")]
 	public async Task Matchall(string function, string expected)
 	{
-		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
@@ -237,7 +237,7 @@ public class ListFunctionUnitTests
 	[Arguments("mix(a b c,1 2 3)", "a 1 b 2 c 3")]
 	public async Task Mix(string function, string expected)
 	{
-		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
@@ -246,7 +246,7 @@ public class ListFunctionUnitTests
 	[Arguments("munge(a b c,1 2 3,|)", "a|1 b|2 c|3")]
 	public async Task Munge(string function, string expected)
 	{
-		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
@@ -255,7 +255,7 @@ public class ListFunctionUnitTests
 	[Arguments("unique(a b a c b)", "a b c")]
 	public async Task Unique(string function, string expected)
 	{
-		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
@@ -264,7 +264,7 @@ public class ListFunctionUnitTests
 	[Arguments("randextract(a b c d e)", "")]
 	public async Task Randextract(string function, string expected)
 	{
-		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		// Random result, just check it's not empty
 		await Assert.That(result.ToString()).IsNotEmpty();
 	}
@@ -274,7 +274,7 @@ public class ListFunctionUnitTests
 	[Arguments("randword(a b c d e)", "")]
 	public async Task Randword(string function, string expected)
 	{
-		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		// Random result, just check it's not empty
 		await Assert.That(result.ToString()).IsNotEmpty();
 	}
@@ -284,7 +284,7 @@ public class ListFunctionUnitTests
 	[Arguments("step(a b c d e,2)", "a c e")]
 	public async Task Step(string function, string expected)
 	{
-		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
@@ -293,7 +293,7 @@ public class ListFunctionUnitTests
 	[Arguments("index(a b c d,2,4,2)", "b d")]
 	public async Task Index(string function, string expected)
 	{
-		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
@@ -302,7 +302,7 @@ public class ListFunctionUnitTests
 	[Arguments("itemize(a b c)", "a, b, and c")]
 	public async Task Itemize(string function, string expected)
 	{
-		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
@@ -311,7 +311,7 @@ public class ListFunctionUnitTests
 	[Arguments("items(a b c,and)", "3")]
 	public async Task Items(string function, string expected)
 	{
-		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
@@ -320,7 +320,7 @@ public class ListFunctionUnitTests
 	[Arguments("namegrab(obj,pattern)", "")]
 	public async Task Namegrab(string function, string expected)
 	{
-		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsNotNull();
 	}
 
@@ -329,7 +329,7 @@ public class ListFunctionUnitTests
 	[Arguments("namegraball(obj,pattern)", "")]
 	public async Task Namegraball(string function, string expected)
 	{
-		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsNotNull();
 	}
 
@@ -338,7 +338,7 @@ public class ListFunctionUnitTests
 	[Arguments("filterbool(1 0 1,##)", "1 1")]
 	public async Task Filterbool(string function, string expected)
 	{
-		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 }

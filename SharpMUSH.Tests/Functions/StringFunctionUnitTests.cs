@@ -26,7 +26,7 @@ public class StringFunctionUnitTests
 			? new[] { expectedByte1 }
 			: new[] { expectedByte1, expectedByte2.Value };
 
-		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 
 		var color = StringExtensions.ansiBytes(expectedBytes);
 		var markup = MarkupImplementation.AnsiMarkup.Create(foreground: color);
@@ -95,7 +95,7 @@ public class StringFunctionUnitTests
 			? new[] { expectedByte1 }
 			: new[] { expectedByte1, expectedByte2.Value };
 
-		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 
 		var color = StringExtensions.ansiBytes(expectedBytes);
 		var markup = MarkupImplementation.AnsiMarkup.Create(background: color);

@@ -24,7 +24,7 @@ public static class FolderMail
 		
 		// TODO: Consider that this is a duplicate call to the ObjectDataService.
 		var folderInfo =
-			await objectDataService!.GetExpandedDataAsync<ExpandedMailData>(executor.Object());
+			await objectDataService.GetExpandedDataAsync<ExpandedMailData>(executor.Object());
 
 		switch (switches)
 		{
@@ -66,7 +66,7 @@ public static class FolderMail
 		}
 
 		await notifyService!.Notify(executor, $"MAIL: Moved {list.Length} messages to {folder.ToPlainText()}.");
-		await objectDataService!.SetExpandedDataAsync(
+		await objectDataService.SetExpandedDataAsync(
 			new ExpandedMailData(
 				Folders: (folderInfo?.Folders ?? [])
 				.ToImmutableHashSet()
@@ -83,7 +83,7 @@ public static class FolderMail
 	{
 		await mediator!.Send(new RenameMailFolderCommand(executorPlayer, folder.ToPlainText(), "INBOX"));
 		await notifyService!.Notify(executor, $"MAIL: {folder.ToPlainText()} folder renamed to INBOX.");
-		await objectDataService!.SetExpandedDataAsync(
+		await objectDataService.SetExpandedDataAsync(
 			new ExpandedMailData(
 				Folders: (folderInfo?.Folders ?? [])
 				.ToImmutableArray()
@@ -106,7 +106,7 @@ public static class FolderMail
 		await mediator!.Send(new RenameMailFolderCommand(executorPlayer, folder.ToPlainText(), newName.ToPlainText()));
 		await notifyService!.Notify(executor,
 			$"MAIL: {folder.ToPlainText()} folder renamed to {newName.ToPlainText()}.");
-		await objectDataService!.SetExpandedDataAsync(
+		await objectDataService.SetExpandedDataAsync(
 			new ExpandedMailData(
 				Folders: (folderInfo?.Folders ?? [])
 				.ToImmutableHashSet()
@@ -121,7 +121,7 @@ public static class FolderMail
 	private static async Task<MString> SetCurrentMailFolder(IMUSHCodeParser parser, IExpandedObjectDataService objectDataService, ExpandedMailData? folderInfo, MString folder,
 		AnySharpObject executor)
 	{
-		await objectDataService!.SetExpandedDataAsync(
+		await objectDataService.SetExpandedDataAsync(
 			new ExpandedMailData(Folders: folderInfo?.Folders ?? [], ActiveFolder: folder.ToPlainText()),
 			executor.Object());
 		return MModule.single(folder.ToPlainText());
@@ -139,7 +139,7 @@ public static class FolderMail
 
 		await notifyService!.Notify(executor,
 			$"MAIL: {totalMail} messages in folder {currentFolder} ({unread} unread, {cleared} cleared).");
-		await notifyService!.Notify(executor,
+		await notifyService.Notify(executor,
 			$"MAIL: Current folder is {currentFolder}.");
 		return MModule.single(unread.ToString());
 	}

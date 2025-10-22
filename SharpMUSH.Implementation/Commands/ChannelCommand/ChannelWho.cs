@@ -9,7 +9,7 @@ public static class ChannelWho
 {
 	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, MString channelName)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService, PermissionService, Mediator, NotifyService, channelName, notify: true);
 		if (maybeChannel.IsError)
 		{
@@ -31,7 +31,7 @@ public static class ChannelWho
 				delimitedMembers
 			]);
 
-		await NotifyService!.Notify(executor, memberOutput);
+		await NotifyService.Notify(executor, memberOutput);
 
 		var memberList = memberArray.Select(x => x.Member.Object().DBRef).ToList();
 		return new CallState(string.Join(", ", memberList));

@@ -14,12 +14,12 @@ public static class ChannelGag
 	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, MString? channelName, MString? yesNo,
 		string[] switches)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		ImmutableArray<SharpChannel> channels;
 
 		if (await executor.IsGuest())
 		{
-			await NotifyService!.Notify(executor, "CHAT: Guests may not modify channels.");
+			await NotifyService.Notify(executor, "CHAT: Guests may not modify channels.");
 			return new CallState("#-1 Guests may not modify channels.");
 		}
 
@@ -27,17 +27,17 @@ public static class ChannelGag
 		if (yesNoString is not null && !(yesNoString.Equals("yes", StringComparison.InvariantCultureIgnoreCase) ||
 		                                 yesNoString.Equals("no", StringComparison.InvariantCultureIgnoreCase)))
 		{
-			await NotifyService!.Notify(executor, "CHAT: Yes or No are the only valid options.");
+			await NotifyService.Notify(executor, "CHAT: Yes or No are the only valid options.");
 			return new CallState("#-1 INVALID OPTION");
 		}
 
 		if (channelName is null)
 		{
-			channels = [..await Mediator!.Send(new GetChannelListQuery())];
+			channels = [..await Mediator.Send(new GetChannelListQuery())];
 		}
 		else
 		{
-			var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService, PermissionService, Mediator, NotifyService, channelName!, true);
+			var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService, PermissionService, Mediator, NotifyService, channelName, true);
 			if (maybeChannel.IsError)
 			{
 				return maybeChannel.AsError.Value;
@@ -54,7 +54,7 @@ public static class ChannelGag
 
 			if (maybeMemberStatus is null)
 			{
-				await NotifyService!.Notify(executor, $"CHAT: You are not a member of {channel.Name.ToPlainText()}.");
+				await NotifyService.Notify(executor, $"CHAT: You are not a member of {channel.Name.ToPlainText()}.");
 				return new CallState("#-1 YOU ARE NOT A MEMBER OF THAT CHANNEL");
 			}
 
@@ -62,11 +62,11 @@ public static class ChannelGag
 
 			if ((status.Hide ?? false) == gagOn)
 			{
-			    await NotifyService!.Notify(executor, $"CHAT: You are already in that gag state on {channel.Name.ToPlainText()}.");
+			    await NotifyService.Notify(executor, $"CHAT: You are already in that gag state on {channel.Name.ToPlainText()}.");
 			    continue;
 			}
 
-			await Mediator!.Send(new UpdateChannelUserStatusCommand(
+			await Mediator.Send(new UpdateChannelUserStatusCommand(
 				channel, executor, new SharpChannelStatus(
 					null,
 					null,
@@ -77,11 +77,11 @@ public static class ChannelGag
 
 			if (gagOn)
 			{
-				await NotifyService!.Notify(executor, $"CHAT: You have been gagged on {channel.Name.ToPlainText()}.");
+				await NotifyService.Notify(executor, $"CHAT: You have been gagged on {channel.Name.ToPlainText()}.");
 			}
 			else
 			{
-				await NotifyService!.Notify(executor, $"CHAT: You have been ungagged on {channel.Name.ToPlainText()}.");
+				await NotifyService.Notify(executor, $"CHAT: You have been ungagged on {channel.Name.ToPlainText()}.");
 			}
 		}
 

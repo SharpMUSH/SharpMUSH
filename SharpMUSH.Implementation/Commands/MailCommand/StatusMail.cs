@@ -19,14 +19,14 @@ public static class StatusMail
 		// These are all types of Mail Updates.
 		// { bool? tag, bool? clear, bool? read, bool? urgent }
 
-		var executor = await parser.CurrentState.KnownExecutorObject(mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
 		var filteredList = await MessageListHelper.Handle(parser, objectDataService, mediator, notifyService, arg0, executor);
 		var statusString = arg1?.ToPlainText().ToUpper();
 		var id = arg0!.ToPlainText();
 
 		if (filteredList.IsError)
 		{
-			await notifyService!.Notify(executor, $"#-1 {filteredList.AsError}");
+			await notifyService.Notify(executor, $"#-1 {filteredList.AsError}");
 			return MModule.single(filteredList.AsError);
 		}
 
@@ -35,14 +35,14 @@ public static class StatusMail
 		switch (sw)
 		{
 			case "UPDATE" when string.IsNullOrEmpty(statusString):
-				await notifyService!.Notify(executor, "Update to what?");
+				await notifyService.Notify(executor, "Update to what?");
 				return MModule.single("#-1 Update to what?");
 			case "UPDATE"
 				when statusString is "CLEAR" or "UNCLEAR" or "TAG" or "UNTAG" or "UNREAD" or "READ" or "URGENT" or "UNURGENT":
 				sw = statusString;
 				break;
 			case "UPDATE":
-				await notifyService!.Notify(executor, $"{statusString} is not a valid status.");
+				await notifyService.Notify(executor, $"{statusString} is not a valid status.");
 				return MModule.single($"{statusString} is not a valid status.");
 		}
 
@@ -61,10 +61,10 @@ public static class StatusMail
 
 		foreach (var mail in actualList)
 		{
-			await mediator!.Send(new UpdateMailCommand(mail, mailUpdate));
+			await mediator.Send(new UpdateMailCommand(mail, mailUpdate));
 			// TODO: Consider how IDs are displayed for Mail on output.
 			// This ID isn't useful to anyone. It should be the mail number in their inbox. But what does that mean?
-			await notifyService!.Notify(executor, $"Mail {id} updated.");
+			await notifyService.Notify(executor, $"Mail {id} updated.");
 		}
 
 		return MModule.single(string.Join(" ", actualList.Select(x => x.Id)));

@@ -15,7 +15,7 @@ public class ExpandedDataTests
 	[Test, NotInParallel]
 	public async Task SetAndGetExpandedData()
 	{
-		var one = await _database!.GetObjectNodeAsync(new DBRef(1));
+		var one = await _database.GetObjectNodeAsync(new DBRef(1));
 		await _database.SetExpandedObjectData(one.Object()!.Id!, "SetAndGetExpandedData", new { Word = "Dog" });
 
 		var result = await _database.GetExpandedObjectData(one.Object()!.Id!, "SetAndGetExpandedData");
@@ -28,7 +28,7 @@ public class ExpandedDataTests
 	[Test, NotInParallel]
 	public async Task OverwritePartialAndGetExpandedData()
 	{
-		var one = await _database!.GetObjectNodeAsync(new DBRef(1));
+		var one = await _database.GetObjectNodeAsync(new DBRef(1));
 		await _database.SetExpandedObjectData(one.Object()!.Id!, "OverwritePartialAndGetExpandedData", new { Word = "Dog", Verb = "Bark" });
 		await _database.SetExpandedObjectData(one.Object()!.Id!, "OverwritePartialAndGetExpandedData", new { Word = "Cat" });
 
@@ -43,7 +43,7 @@ public class ExpandedDataTests
 	[Test, NotInParallel]
 	public async Task OverwritePartialNullAndGetExpandedData()
 	{
-		var one = await _database!.GetObjectNodeAsync(new DBRef(1));
+		var one = await _database.GetObjectNodeAsync(new DBRef(1));
 		await _database.SetExpandedObjectData(one.Object()!.Id!, "OverwritePartialAndGetExpandedData", new { Word = "Dog", Verb = "Bark" });
 		await _database.SetExpandedObjectData(one.Object()!.Id!, "OverwritePartialAndGetExpandedData", new { Word = (string?)null });
 
@@ -58,7 +58,7 @@ public class ExpandedDataTests
 	[Test, NotInParallel]
 	public async Task OverwriteUnrelatedTypesAndGetExpandedData()
 	{
-		var one = await _database!.GetObjectNodeAsync(new DBRef(1));
+		var one = await _database.GetObjectNodeAsync(new DBRef(1));
 		await _database.SetExpandedObjectData(one.Object()!.Id!, "OverwriteUnrelatedTypesAndGetExpandedData", new { Word = "Dog", Verb = "Bark" });
 		await _database.SetExpandedObjectData(one.Object()!.Id!, "OverwriteUnrelatedTypesAndGetExpandedData2", new { Word = "Cat" });
 

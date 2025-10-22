@@ -50,7 +50,7 @@ public static class ForwardMail
 		mail.Subject = MModule.concat(MModule.single("Fwd: "), mail.Subject);
 		mail.DateSent = DateTimeOffset.UtcNow;
 		
-		await mediator!.Send(new SendMailCommand(executor.Object(), targetPlayer, mail));
+		await mediator.Send(new SendMailCommand(executor.Object(), targetPlayer, mail));
 		
 		return MModule.single(targetPlayer.Object.DBRef.ToString());
 	}

@@ -32,9 +32,9 @@ public class CommandUnitTests
 		// TODO: We need eval vs noparse evaluation.
 		// NoParse is currently not running the command. So let's use NoEval instead for that.
 		Console.WriteLine("Testing: {0}", str);
-		await Parser!.CommandParse(1, ConnectionService, MModule.single(str));
+		await Parser.CommandParse(1, ConnectionService, MModule.single(str));
 
-		await NotifyService!
+		await NotifyService
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), expected);
 	}
@@ -58,13 +58,13 @@ public class CommandUnitTests
 	public async Task TestSingle(string str, string expected1, string expected2)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		await Parser!.CommandListParse(MModule.single(str));
+		await Parser.CommandListParse(MModule.single(str));
 
-		await NotifyService!
+		await NotifyService
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), expected1);
 
-		await NotifyService!
+		await NotifyService
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), expected2);
 	}

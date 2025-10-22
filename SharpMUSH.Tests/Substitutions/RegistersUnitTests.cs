@@ -33,7 +33,7 @@ public class RegistersUnitTests
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single(str));
 
-		await NotifyService!
+		await NotifyService
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), expected);
 	}

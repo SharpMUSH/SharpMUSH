@@ -37,7 +37,7 @@ public class BooleanExpressionUnitTests
 	public async Task SimpleExpressions(string input, bool expected)
 	{
 		var bep = BooleanParser;
-		var dbn = (await Database!.GetObjectNodeAsync(new DBRef(1))).Known();
+		var dbn = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
 
 		await Assert.That(bep.Validate(input, dbn)).IsTrue();
 		await Assert.That(bep.Compile(input)(dbn, dbn)).IsEqualTo(expected);
@@ -52,7 +52,7 @@ public class BooleanExpressionUnitTests
 	public async Task TypeExpressions(string input, bool expected)
 	{
 		var bep = BooleanParser;
-		var dbn = (await Database!.GetObjectNodeAsync(new DBRef(1))).Known();
+		var dbn = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
 
 		await Assert.That(bep.Validate(input, dbn)).IsTrue();
 		await Assert.That(bep.Compile(input)(dbn, dbn)).IsEqualTo(expected);
@@ -67,7 +67,7 @@ public class BooleanExpressionUnitTests
 	public async Task TypeValidation(string input, bool expected)
 	{
 		var bep = BooleanParser;
-		var dbn = (await Database!.GetObjectNodeAsync(new DBRef(1))).Known();
+		var dbn = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
 
 		await Assert.That(bep.Validate(input, dbn)).IsEqualTo(expected);
 	}

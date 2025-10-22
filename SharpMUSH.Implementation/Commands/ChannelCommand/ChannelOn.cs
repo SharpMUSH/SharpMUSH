@@ -10,7 +10,7 @@ public static class ChannelOn
 {
 	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, MString channelName, MString? arg1)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var target = executor;
 
 		if (arg1 is not null)
@@ -18,7 +18,7 @@ public static class ChannelOn
 			var targetName = arg1.ToPlainText();
 
 			var maybeTarget =
-				await LocateService!.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, targetName);
+				await LocateService.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, targetName);
 
 			switch (maybeTarget)
 			{
@@ -40,9 +40,9 @@ public static class ChannelOn
 		var channel = maybeChannel.AsChannel;
 
 		// TODO: Announce Channel Join
-		await Mediator!.Send(new AddUserToChannelCommand(channel, target));
+		await Mediator.Send(new AddUserToChannelCommand(channel, target));
 
-		await NotifyService!.Notify(executor, $"CHAT: {target.Object().Name} has been added to {channelName}.");
+		await NotifyService.Notify(executor, $"CHAT: {target.Object().Name} has been added to {channelName}.");
 		return new CallState($"{target.Object().Name} has been added to {channelName}.");
 	}
 }

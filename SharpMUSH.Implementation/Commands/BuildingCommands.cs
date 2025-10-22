@@ -60,7 +60,7 @@ public partial class Commands
 					var oldData = o.AsExit;
 					var oldLocation = await oldData.Location.WithCancellation(CancellationToken.None);
 					await Mediator!.Send(new UnlinkExitCommand(oldData));
-					await Mediator!.Send(new LinkExitCommand(oldData, oldLocation));
+					await Mediator.Send(new LinkExitCommand(oldData, oldLocation));
 					return CallState.Empty;
 				}
 			);
@@ -251,18 +251,18 @@ public partial class Commands
 			// CAN CREATE EXIT HERE?
 			// CAN LINK TO DESTINATION?
 
-			var toExitResponse = await Mediator!.Send(new CreateExitCommand(exitToName.First(),
+			var toExitResponse = await Mediator.Send(new CreateExitCommand(exitToName.First(),
 				exitToName.Skip(1).ToArray(), await executorBase.Where(),
 				await executor.Owner.WithCancellation(CancellationToken.None)));
-			await NotifyService!.Notify(executor.DBRef, $"Opened exit #{toExitResponse.Number}");
-			await NotifyService!.Notify(executor.DBRef, "Trying to link...");
+			await NotifyService.Notify(executor.DBRef, $"Opened exit #{toExitResponse.Number}");
+			await NotifyService.Notify(executor.DBRef, "Trying to link...");
 
-			var newRoomObject = await Mediator!.Send(new GetObjectNodeQuery(response));
-			var newExitObject = await Mediator!.Send(new GetObjectNodeQuery(toExitResponse));
+			var newRoomObject = await Mediator.Send(new GetObjectNodeQuery(response));
+			var newExitObject = await Mediator.Send(new GetObjectNodeQuery(toExitResponse));
 
-			await Mediator!.Send(new LinkExitCommand(newExitObject.AsExit, newRoomObject.AsRoom));
+			await Mediator.Send(new LinkExitCommand(newExitObject.AsExit, newRoomObject.AsRoom));
 
-			await NotifyService!.Notify(executor.DBRef, $"Linked exit #{toExitResponse.Number} to #{response.Number}");
+			await NotifyService.Notify(executor.DBRef, $"Linked exit #{toExitResponse.Number} to #{response.Number}");
 		}
 
 		if (!string.IsNullOrWhiteSpace(exitFrom?.ToString()))
@@ -271,20 +271,20 @@ public partial class Commands
 			// CAN LINK BACK TO CURRENT ROOM?
 
 			var exitFromName = MModule.plainText(exitFrom).Split(";");
-			var newRoomObject = await Mediator!.Send(new GetObjectNodeQuery(response));
+			var newRoomObject = await Mediator.Send(new GetObjectNodeQuery(response));
 
-			var fromExitResponse = await Mediator!.Send(new CreateExitCommand(exitFromName.First(),
+			var fromExitResponse = await Mediator.Send(new CreateExitCommand(exitFromName.First(),
 				exitFromName.Skip(1).ToArray(), newRoomObject.AsRoom,
 				await executor.Owner.WithCancellation(CancellationToken.None)));
-			var newExitObject = await Mediator!.Send(new GetObjectNodeQuery(fromExitResponse));
+			var newExitObject = await Mediator.Send(new GetObjectNodeQuery(fromExitResponse));
 
-			await NotifyService!.Notify(executor.DBRef, $"Opened exit #{fromExitResponse.Number}");
-			await NotifyService!.Notify(executor.DBRef, "Trying to link...");
+			await NotifyService.Notify(executor.DBRef, $"Opened exit #{fromExitResponse.Number}");
+			await NotifyService.Notify(executor.DBRef, "Trying to link...");
 
 			var where = await executorBase.Where();
-			await Mediator!.Send(new LinkExitCommand(newExitObject.AsExit, where));
+			await Mediator.Send(new LinkExitCommand(newExitObject.AsExit, where));
 
-			await NotifyService!.Notify(executor.DBRef,
+			await NotifyService.Notify(executor.DBRef,
 				$"Linked exit #{fromExitResponse.Number} to #{where.Object().DBRef.Number}");
 		}
 

@@ -20,13 +20,13 @@ public class UtilityFunctionUnitTests
 	[Test]
 	public async Task PCreate()
 	{
-		var result = (await Parser!.FunctionParse(MModule.single("pcreate(John,SomePassword)")))?.Message?.ToString()!;
+		var result = (await Parser.FunctionParse(MModule.single("pcreate(John,SomePassword)")))?.Message?.ToString()!;
 
 		var a = HelperFunctions.ParseDBRef(result).AsValue();
-		var db = await Mediator!.Send(new GetObjectNodeQuery(a));
-		var player = db!.AsPlayer;
+		var db = await Mediator.Send(new GetObjectNodeQuery(a));
+		var player = db.AsPlayer;
 
-		await Assert.That(PasswordService!.PasswordIsValid(result, "SomePassword", player.PasswordHash)).IsTrue();
-		await Assert.That(PasswordService!.PasswordIsValid(result, "SomePassword2", player.PasswordHash)).IsFalse();
+		await Assert.That(PasswordService.PasswordIsValid(result, "SomePassword", player.PasswordHash)).IsTrue();
+		await Assert.That(PasswordService.PasswordIsValid(result, "SomePassword2", player.PasswordHash)).IsFalse();
 	}
 }

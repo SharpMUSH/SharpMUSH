@@ -26,7 +26,7 @@ public partial class Functions
 			LocateFlags.All,
 			async onObject => await AttributeHelpers.GetPronoun(AttributeService!, Mediator!, parser, onObject,
 				Configuration!.CurrentValue.Attribute.GenderAttribute,
-				Configuration!.CurrentValue.Attribute.AbsolutePossessivePronounAttribute,
+				Configuration.CurrentValue.Attribute.AbsolutePossessivePronounAttribute,
 				x => x switch
 				{
 					"M" or "Male" => "his",
@@ -681,7 +681,7 @@ public partial class Functions
 			executor, executor, arg0, LocateFlags.All,
 			async onObject => await AttributeHelpers.GetPronoun(AttributeService!, Mediator!, parser, onObject,
 				Configuration!.CurrentValue.Attribute.GenderAttribute,
-				Configuration!.CurrentValue.Attribute.ObjectivePronounAttribute,
+				Configuration.CurrentValue.Attribute.ObjectivePronounAttribute,
 				x => x switch
 				{
 					"M" or "Male" => "him",
@@ -790,7 +790,7 @@ public partial class Functions
 			executor, executor, arg0, LocateFlags.All,
 			async onObject => await AttributeHelpers.GetPronoun(AttributeService!, Mediator!, parser, onObject,
 				Configuration!.CurrentValue.Attribute.GenderAttribute,
-				Configuration!.CurrentValue.Attribute.PossessivePronounAttribute,
+				Configuration.CurrentValue.Attribute.PossessivePronounAttribute,
 				x => x switch
 				{
 					"M" or "Male" => "his",
@@ -957,7 +957,7 @@ public partial class Functions
 
 					// TODO: There should be a service for this.
 					// TODO: Permission Check!
-					await Mediator!.Send(new SetObjectFlagCommand(found, realFlag));
+					await Mediator.Send(new SetObjectFlagCommand(found, realFlag));
 					
 					return string.Empty;
 				});
@@ -974,7 +974,7 @@ public partial class Functions
 			LocateFlags.All,
 			async onObject => await AttributeHelpers.GetPronoun(AttributeService!, Mediator!, parser, onObject,
 				Configuration!.CurrentValue.Attribute.GenderAttribute,
-				Configuration!.CurrentValue.Attribute.SubjectivePronounAttribute,
+				Configuration.CurrentValue.Attribute.SubjectivePronounAttribute,
 				x => x switch
 				{
 					"M" or "Male" => "he",

@@ -30,7 +30,7 @@ public static class MessageListHelper
 {
 	public static async ValueTask<string> CurrentMailFolder(IMUSHCodeParser parser, IExpandedObjectDataService objectDataService, AnySharpObject executor)
 	{
-		var mailData = await objectDataService!.GetExpandedDataAsync<ExpandedMailData>(executor.Object());
+		var mailData = await objectDataService.GetExpandedDataAsync<ExpandedMailData>(executor.Object());
 
 		if (mailData?.ActiveFolder != null)
 		{
@@ -38,7 +38,7 @@ public static class MessageListHelper
 		}
 
 		mailData = new ExpandedMailData(Folders: ["INBOX"], ActiveFolder: "INBOX");
-		await objectDataService!.SetExpandedDataAsync(mailData, executor.Object());
+		await objectDataService.SetExpandedDataAsync(mailData, executor.Object());
 
 		return mailData.ActiveFolder!;
 	}

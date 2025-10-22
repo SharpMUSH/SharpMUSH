@@ -11,8 +11,8 @@ public static class ChannelList
 {
 	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, MString arg0, MString arg1, string[] switches)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var channels = await Mediator!.Send(new GetChannelListQuery());
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var channels = await Mediator.Send(new GetChannelListQuery());
 
 		var quietSwitch = switches.Contains("QUIET");
 		var onSwitch = switches.Contains("ON");
@@ -21,13 +21,13 @@ public static class ChannelList
 		// Switches: On, Off, Or Quiet. On/off are exclusive.
 		if (onSwitch && offSwitch)
 		{
-			await NotifyService!.Notify(executor, "You can only use one of /on or /off.");
+			await NotifyService.Notify(executor, "You can only use one of /on or /off.");
 			return new CallState(Errors.ErrorTooManySwitches);
 		}
 
 		var channelList = await channels
 			.ToAsyncEnumerable()
-			.Where(async (x,_) => await PermissionService!.ChannelCanSeeAsync(executor,x))
+			.Where(async (x,_) => await PermissionService.ChannelCanSeeAsync(executor,x))
 			.Where(async (x,_) => !offSwitch || (await x.Members.WithCancellation(CancellationToken.None))
 				.All(m => m.Member.Object().Id != executor.Object().Id))
 			.Where(async (x,_) => !onSwitch || (await x.Members.WithCancellation(CancellationToken.None))

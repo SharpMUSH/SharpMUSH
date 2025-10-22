@@ -33,7 +33,7 @@ public partial class Functions
 			thing => thing.Object.Key,
 			none => -1);
 
-		var created = await Mediator!.Send(new CreatePlayerCommand(
+		var created = await Mediator.Send(new CreatePlayerCommand(
 			args["0"].Message!.ToString(),
 			args["1"].Message!.ToString(),
 			new DBRef(trueLocation == -1 ? 1 : trueLocation)));
@@ -240,7 +240,7 @@ public partial class Functions
 
 		var dbRef = dbRefConversion.AsValue();
 		var objectInfo = await Mediator!.Send(new GetObjectNodeQuery(dbRef));
-		if (!objectInfo!.IsPlayer)
+		if (!objectInfo.IsPlayer)
 		{
 			return new CallState("#-1 NO SUCH PLAYER");
 		}
@@ -248,7 +248,7 @@ public partial class Functions
 		var player = objectInfo.AsPlayer;
 
 		var result = PasswordService!.PasswordIsValid(
-			$"#{player!.Object!.Key}:{player!.Object!.CreationTime}",
+			$"#{player.Object.Key}:{player.Object.CreationTime}",
 			parser.CurrentState.Arguments["1"].Message!.ToString(),
 			player.PasswordHash);
 

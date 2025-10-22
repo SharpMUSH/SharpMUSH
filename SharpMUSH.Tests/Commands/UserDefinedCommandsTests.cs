@@ -19,7 +19,7 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async Task SetAndResetCacheTest()
 	{
-		await Parser!.CommandParse(1, ConnectionService,
+		await Parser.CommandParse(1, ConnectionService,
 			MModule.single("&cmd`setandresetcache #1=$test:@pemit #1=Value 1 received"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("test"));
 
@@ -27,10 +27,10 @@ public class UserDefinedCommandsTests
 			MModule.single("&cmd`setandresetcache #1=$test2:@pemit #1=Value 2 received"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("test2"));
 
-		await NotifyService!
+		await NotifyService
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), "Value 1 received");
-		await NotifyService!
+		await NotifyService
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), "Value 2 received");
 	}

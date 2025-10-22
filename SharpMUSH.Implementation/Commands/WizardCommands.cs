@@ -197,7 +197,7 @@ public partial class Commands
 			var generatedPassword = PasswordService!.GenerateRandomPassword();
 
 			await Mediator!.Send(
-				new SetPlayerPasswordCommand(asPlayer, PasswordService!.HashPassword(asPlayer.Object.DBRef.ToString(), generatedPassword)));
+				new SetPlayerPasswordCommand(asPlayer, PasswordService.HashPassword(asPlayer.Object.DBRef.ToString(), generatedPassword)));
 
 			await NotifyService!.Notify(
 				executor.Object().DBRef,
@@ -278,7 +278,7 @@ public partial class Commands
 		             Peak Paged Memory: {peakPaged}
 		             """;
 			
-		await NotifyService!.Notify(executor, extra);
+		await NotifyService.Notify(executor, extra);
 
 		return new CallState(details);
 	}

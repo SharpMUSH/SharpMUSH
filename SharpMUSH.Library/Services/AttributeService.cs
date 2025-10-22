@@ -150,7 +150,7 @@ public class AttributeService(
 
 		if (ignorePermissions)
 		{
-			var maybeOne = await mediator!.Send(new GetObjectNodeQuery(new DBRef(1)));
+			var maybeOne = await mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
 			realExecutor = maybeOne.Known;
 		}
 
@@ -256,7 +256,7 @@ public class AttributeService(
 
 		// Standard Object/Attribute evaluation
 		var maybeObject =
-			await locateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, obj.ToPlainText(),
+			await locateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, obj.ToPlainText(),
 				LocateFlags.All);
 
 		return maybeObject switch
@@ -488,9 +488,9 @@ public class AttributeService(
 
 		cs.InvalidateCache(obj.Object().DBRef);
 
-		await mediator.Send(new ClearAttributeCommand(obj.Object().DBRef, attrArr!.Select(x => x.LongName!).ToArray()));
+		await mediator.Send(new ClearAttributeCommand(obj.Object().DBRef, attrArr.Select(x => x.LongName!).ToArray()));
 
-		foreach (var attrDone in attrArr!)
+		foreach (var attrDone in attrArr)
 		{
 			await notifyService.Notify(executor,
 				$"Attribute {attrDone.LongName} CLEARED.", obj);

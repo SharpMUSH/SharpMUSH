@@ -10,8 +10,8 @@ public static class RetractMail
 {
 	public static async ValueTask<MString> Handle(IMUSHCodeParser parser, IExpandedObjectDataService objectDataService, ILocateService locateService, IMediator mediator, INotifyService notifyService, string target, string msgList)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(mediator!);
-		var maybeLocate = await locateService!.LocateAndNotifyIfInvalid(parser, 
+		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
+		var maybeLocate = await locateService.LocateAndNotifyIfInvalid(parser, 
 			executor, executor, target,
 			LocateFlags.PlayersPreference | LocateFlags.OnlyMatchTypePreference);
 
@@ -33,11 +33,11 @@ public static class RetractMail
 		{
 			if (!mail.Fresh)
 			{
-				await notifyService!.Notify(executor, "MAIL: Mail already read.");
+				await notifyService.Notify(executor, "MAIL: Mail already read.");
 				continue;
 			}
 			
-			await mediator!.Send(new DeleteMailCommand(mail));
+			await mediator.Send(new DeleteMailCommand(mail));
 		}
 
 		return MModule.single(foundMailList.Length.ToString());
