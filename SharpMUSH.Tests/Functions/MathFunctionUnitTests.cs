@@ -168,23 +168,18 @@ public class MathFunctionUnitTests
 		await Assert.That(result).IsEqualTo(expected);
 	}
 
-	/*
-		Not yet Implemented.
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("round(3.14159,2)", "3.14")]
+	[Arguments("round(3.5,3,1)", "3.500")]
+	public async Task Round(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
 
-		[Test]
-		[Arguments("round(3.14, 1)", "3")]
-		[Arguments("round(3.5,1)", "4")]
-		[Arguments("round(-3.5,1)", "-4")]
-		[Arguments("round(3.14159, 2)", "3.14")]
-		public async Task Round(string str, string expected)
-		{
-				Console.WriteLine("Testing: {0}", str);
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
 
-				var result = (await _parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
-
-				await Assert.That(result).IsEqualTo(expected);
-		}
-	*/
+		await Assert.That(result).IsEqualTo(expected);
+	}
 
 	[Test]
 	[Arguments("abs(5)", "5")]
@@ -321,6 +316,46 @@ public class MathFunctionUnitTests
 	[Arguments("inc(5)", "6")]
 	[Arguments("inc(-1)", "0")]
 	public async Task Inc(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("mean(1,2,3)", "2")]
+	[Arguments("mean(10,20,30)", "20")]
+	public async Task Mean(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("median(1,2,3)", "2")]
+	[Arguments("median(1,2,3,4)", "2.5")]
+	public async Task Median(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("bound(5,1,10)", "5")]
+	[Arguments("bound(0,1,10)", "1")]
+	[Arguments("bound(15,1,10)", "10")]
+	public async Task Bound(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
 

@@ -104,4 +104,24 @@ public class ListFunctionUnitTests
 		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("grab(This is a test,tes*)", "test")]
+	[Arguments("grab(a|b|c|d,c,|)", "c")]
+	public async Task Grab(string function, string expected)
+	{
+		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("graball(This is a test of a test,test)", "test test")]
+	[Arguments("graball(This|is|testing|a|test,tes*,|)", "testing|test")]
+	public async Task Graball(string function, string expected)
+	{
+		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
 }

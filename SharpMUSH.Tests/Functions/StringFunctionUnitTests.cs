@@ -212,4 +212,15 @@ public class StringFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
 	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("edit(this is a test,a test,an exam)", "this is an exam")]
+	[Arguments("edit(hello,^,well )", "well hello")]
+	[Arguments("edit(hello,$, world)", "hello world")]
+	public async Task Edit(string str, string expectedText)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
+	}
 }
