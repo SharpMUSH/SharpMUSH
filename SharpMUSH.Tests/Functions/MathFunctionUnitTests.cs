@@ -198,4 +198,134 @@ public class MathFunctionUnitTests
 
 		await Assert.That(result).IsEqualTo(expected);
 	}
+
+	[Test]
+	[Arguments("gte(2,1)", "1")]
+	[Arguments("gte(1,1)", "1")]
+	[Arguments("gte(0,1)", "0")]
+	[Arguments("gte(2,1,1)", "1")]
+	[Arguments("gte(1,2,1)", "0")]
+	[Arguments("gte(wood,1)", "#-1 ARGUMENTS MUST BE NUMBERS")]
+	public async Task Gte(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("max(1,2,3)", "3")]
+	[Arguments("max(-1,-2,-3)", "-1")]
+	[Arguments("max(1.5,2.5,3.5)", "3.5")]
+	public async Task Max(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("min(1,2,3)", "1")]
+	[Arguments("min(-1,-2,-3)", "-3")]
+	[Arguments("min(1.5,2.5,3.5)", "1.5")]
+	public async Task Min(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("floor(3.14)", "3")]
+	[Arguments("floor(3.0)", "3")]
+	[Arguments("floor(-3.14)", "-4")]
+	public async Task Floor(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("trunc(3.14)", "3")]
+	[Arguments("trunc(3.99)", "3")]
+	[Arguments("trunc(-3.14)", "-3")]
+	public async Task Trunc(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("sign(5)", "1")]
+	[Arguments("sign(-5)", "-1")]
+	[Arguments("sign(0)", "0")]
+	public async Task Sign(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("sqrt(4)", "2")]
+	[Arguments("sqrt(9)", "3")]
+	[Arguments("sqrt(2)", "1.4142135623730951")]
+	public async Task Sqrt(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("fdiv(7,2)", "3.5")]
+	[Arguments("fdiv(10,4)", "2.5")]
+	public async Task Fdiv(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("floordiv(7,2)", "3")]
+	[Arguments("floordiv(-7,2)", "-4")]
+	public async Task Floordiv(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("inc(5)", "6")]
+	[Arguments("inc(-1)", "0")]
+	public async Task Inc(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
 }

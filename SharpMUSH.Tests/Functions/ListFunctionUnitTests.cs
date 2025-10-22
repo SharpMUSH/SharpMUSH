@@ -76,4 +76,32 @@ public class ListFunctionUnitTests
 		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
+
+	[Test, NotInParallel]
+	[Arguments("first(1 2 3)", "1")]
+	[Arguments("first(a|b|c,|)", "a")]
+	public async Task First(string function, string expected)
+	{
+		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
+	[Test, NotInParallel]
+	[Arguments("words(1 2 3)", "3")]
+	[Arguments("words(single)", "1")]
+	public async Task Words(string function, string expected)
+	{
+		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
+	[Test, NotInParallel]
+	[Arguments("extract(a b c,2)", "b")]
+	[Arguments("extract(a b c,1,2)", "a b")]
+	[Arguments("extract(a|b|c,2,3,|)", "b|c")]
+	public async Task Extract(string function, string expected)
+	{
+		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
 }

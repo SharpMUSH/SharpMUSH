@@ -54,4 +54,90 @@ public class BooleanFunctionUnitTests
 
 		await Assert.That(result).IsEqualTo(expected);
 	}
+
+	[Test]
+	[Arguments("or(1,1)", "1")]
+	[Arguments("or(0,1)", "1")]
+	[Arguments("or(0,0)", "0")]
+	[Arguments("or(0,0,1)", "1")]
+	[Arguments("or(1,1,1)", "1")]
+	public async Task Or(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("nor(1,1)", "0")]
+	[Arguments("nor(0,1)", "0")]
+	[Arguments("nor(0,0)", "1")]
+	[Arguments("nor(0,0,1)", "0")]
+	[Arguments("nor(1,1,1)", "0")]
+	public async Task Nor(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("xor(1,1)", "0")]
+	[Arguments("xor(0,1)", "1")]
+	[Arguments("xor(1,0)", "1")]
+	[Arguments("xor(0,0)", "0")]
+	public async Task Xor(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("not(1)", "0")]
+	[Arguments("not(0)", "1")]
+	[Arguments("not(true)", "0")]
+	[Arguments("not(false)", "0")]
+	public async Task Not(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("cand(1,1)", "0")]
+	[Arguments("cand(0,1)", "1")]
+	[Arguments("cand(0,0,1)", "1")]
+	[Arguments("cand(1,1,1)", "0")]
+	public async Task Cand(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("cor(1,1)", "1")]
+	[Arguments("cor(0,1)", "0")]
+	[Arguments("cor(0,0)", "0")]
+	[Arguments("cor(0,0,1)", "0")]
+	public async Task Cor(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
 }

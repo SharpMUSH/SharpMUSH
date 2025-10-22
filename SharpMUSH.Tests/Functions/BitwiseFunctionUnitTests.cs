@@ -23,4 +23,52 @@ public class BitwiseFunctionUnitTests
 		var result = await Parser.FunctionParse(MModule.single($"baseconv({number},{frombase},{tobase})"));
 		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
 	}
+
+	[Test]
+	[Arguments("band(6,3)", "2")]
+	[Arguments("band(5,3)", "1")]
+	[Arguments("band(12,10)", "8")]
+	public async Task Band(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("bor(6,3)", "7")]
+	[Arguments("bor(5,3)", "7")]
+	[Arguments("bor(12,10)", "14")]
+	public async Task Bor(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("bxor(6,3)", "5")]
+	[Arguments("bxor(5,3)", "6")]
+	[Arguments("bxor(12,10)", "6")]
+	public async Task Bxor(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("shl(1,3)", "8")]
+	[Arguments("shl(5,2)", "20")]
+	public async Task Shl(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("shr(8,3)", "1")]
+	[Arguments("shr(20,2)", "5")]
+	public async Task Shr(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
 }
