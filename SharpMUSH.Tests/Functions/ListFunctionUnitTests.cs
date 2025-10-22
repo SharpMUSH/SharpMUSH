@@ -332,4 +332,13 @@ public class ListFunctionUnitTests
 		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsNotNull();
 	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("filterbool(1 0 1,##)", "1 1")]
+	public async Task Filterbool(string function, string expected)
+	{
+		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
 }

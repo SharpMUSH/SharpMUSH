@@ -501,4 +501,69 @@ public class MathFunctionUnitTests
 
 		await Assert.That(result).IsEqualTo(expected);
 	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("acos(0)", "1.5707963267948966")]
+	[Arguments("acos(1)", "0")]
+	public async Task Acos(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("asin(0)", "0")]
+	[Arguments("asin(1)", "1.5707963267948966")]
+	public async Task Asin(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("atan(0)", "0")]
+	[Arguments("atan(1)", "0.7853981633974483")]
+	public async Task Atan(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("cos(0)", "1")]
+	[Arguments("cos(1.5707963267948966)", "0")]
+	public async Task Cos(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("sin(0)", "0")]
+	[Arguments("sin(1.5707963267948966)", "1")]
+	public async Task Sin(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
 }
