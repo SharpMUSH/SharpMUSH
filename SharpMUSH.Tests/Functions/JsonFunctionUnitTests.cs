@@ -35,7 +35,7 @@ public class JsonFunctionUnitTests
 
 	[Test]
 	[Skip("Not Yet Implemented")]
-	[Arguments("json_map(json(object,a,1,b,2),toupper(%%k):%%v)", "A:1 B:2")]
+	[Arguments(@"json_map(#lambda/toupper\(%%1,%%2\) json(object,a,1,b,2))", "A:1 B:2")]
 	public async Task JsonMap(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;

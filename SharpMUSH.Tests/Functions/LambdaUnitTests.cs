@@ -10,13 +10,13 @@ public class LambdaUnitTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
 	[Test]
+	// TODO: PennMUSH inconsistency. u() normally does not allow for #apply or #lambda
 	[Arguments(@"u(#lambda/add\(1\,2\))", "3")]
 	// CONSIDER: 3) is not the correct return value. This should just be: 3
 	// However, this is how our parser should handle this. 
 	[Arguments("u(lit(#lambda/add(1,2)))", "3)")] 
 	[Arguments("u(#lambda/[add(1,2)])", "3")]
 	[Arguments("u(#lambda/3)", "3")]
-	[Arguments("3", "3")] 
 	public async Task BasicLambdaTest(string call, string expected)
 	{
 		var res = (await Parser.FunctionParse(MModule.single(call)))!.Message!;
@@ -25,7 +25,10 @@ public class LambdaUnitTests
 
 	[Test]
 	[Skip("Not Yet Implemented")]
-	[Arguments("ulambda(code)", "")]
+	[Arguments(@"ulambda(#lambda/add\(1\,2\))", "3")]
+	[Arguments("ulambda(lit(#lambda/add(1,2)))", "3)")] 
+	[Arguments("ulambda(#lambda/[add(1,2)])", "3")]
+	[Arguments("ulambda(#lambda/3)", "3")]
 	public async Task Ulambda(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);

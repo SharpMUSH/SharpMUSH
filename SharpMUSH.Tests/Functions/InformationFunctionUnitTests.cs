@@ -124,8 +124,8 @@ public class InformationFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("playermem()", "0")]
+	[Arguments("playermem(%#)", "0")]
 	public async Task Playermem(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;

@@ -141,16 +141,6 @@ public class UtilityFunctionUnitTests2
 
 	[Test]
 	[Skip("Not Yet Implemented")]
-	[Arguments("rand(10)", "")]
-	public async Task Rand(string str, string expected)
-	{
-		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
-		await Assert.That(result).IsNotNull();
-	}
-
-	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("recv()", "")]
 	public async Task Recv(string str, string expected)
 	{

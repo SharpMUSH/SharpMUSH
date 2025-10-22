@@ -29,7 +29,7 @@ public class EncryptionFunctionUnitTests
 
 	[Test]
 	[Skip("Not Yet Implemented")]
-	[Arguments("encode64(test)", "")]
+	[Arguments("encode64(test)", "dGVzdA==")]
 	public async Task Encode64(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
