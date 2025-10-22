@@ -11,6 +11,7 @@ public class InformationFunctionUnitTests
 
 	[Test]
 	[Arguments("type(%#)", "PLAYER")]
+	[Arguments("type(%l)", "ROOM")]
 	public async Task Type(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;

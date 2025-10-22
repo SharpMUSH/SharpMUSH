@@ -6,6 +6,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Functions;
@@ -126,7 +127,8 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var target = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, "me");
-		var queueTypes = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, "wait semaphore").ToPlainText().ToUpperInvariant()
+		var queueTypes = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, "wait semaphore").ToPlainText()
+			.ToUpperInvariant()
 			.Split(" ").Distinct();
 
 		if (queueTypes.Any(type => type is not "WAIT" and not "SEMAPHORE" and not "INDEPENDENT"))
@@ -169,7 +171,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "mudname", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> MudName(IMUSHCodeParser parser, SharpFunctionAttribute _2) 
+	public static ValueTask<CallState> MudName(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(Configuration!.CurrentValue.Net.MudName);
 
 	[SharpFunction(Name = "mudurl", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]
@@ -177,9 +179,30 @@ public partial class Functions
 		=> ValueTask.FromResult<CallState>(Configuration!.CurrentValue.Net.MudUrl ?? "");
 
 	[SharpFunction(Name = "name", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> Name(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Name(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		//   name(<object>[, <new name>])
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var obj = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
+		var newName = parser.CurrentState.Arguments.GetValueOrDefault("1");
+
+		if (newName is null)
+		{
+			return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, 
+				executor, executor, obj, LocateFlags.All,
+				found => found.Object().Name);
+		}
+
+		if (Configuration!.CurrentValue.Function.FunctionSideEffects)
+		{
+			return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+				executor, executor, obj, LocateFlags.All,
+				async found =>
+					await ManipulateSharpObjectService!.SetName(executor, found, newName.Message!, true));
+		}
+
+		await NotifyService!.Notify(executor, Errors.ErrorNoSideFx);
+		return false;
 	}
 
 	[SharpFunction(Name = "MONIKER", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -195,7 +218,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "PLAYERMEM", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> PlayerMem(IMUSHCodeParser parser, SharpFunctionAttribute _2) 
+	public static ValueTask<CallState> PlayerMem(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(0);
 
 	[SharpFunction(Name = "QUOTA", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -209,7 +232,7 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, 
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, arg0, LocateFlags.All, found => found.TypeString());
 	}
 
@@ -225,14 +248,14 @@ public partial class Functions
 	{
 		await ValueTask.CompletedTask;
 		var args = parser.CurrentState.Arguments;
-		
-		if(args.Count == 0)
+
+		if (args.Count == 0)
 		{
 			return string.Join(" ", ColorConfiguration!.CurrentValue.Colors
 				.Select(x => x.name));
 		}
 
-		if(args.Count == 1)
+		if (args.Count == 1)
 		{
 			return string.Join(" ", ColorConfiguration!.CurrentValue.Colors
 				.Where(x => x.name.Contains(args["0"].Message!.ToPlainText()))

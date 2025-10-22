@@ -24,6 +24,7 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 	private static IPasswordService? PasswordService { get; set; }
 	private static IConnectionService? ConnectionService { get; set; }
 	private static IExpandedObjectDataService? ObjectDataService { get; set; }
+	private static IManipulateSharpObjectService? ManipulateSharpObjectService { get; set; }
 
 	private readonly FunctionLibraryService _functionLibrary = [];
 	
@@ -39,6 +40,7 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 		IOptionsWrapper<ColorsOptions> colorOptions,
 		IPasswordService passwordService,
 		IConnectionService connectionService,
+		IManipulateSharpObjectService manipulateSharpObjectService,
 		IExpandedObjectDataService objectDataService)
 	{
 		Mediator = mediator;
@@ -51,6 +53,7 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 		ColorConfiguration = colorOptions;
 		PasswordService = passwordService;
 		ConnectionService = connectionService;
+		ManipulateSharpObjectService = manipulateSharpObjectService;
 		ObjectDataService = objectDataService;
 		
 		foreach (var command in Generated.FunctionLibrary.Functions)
