@@ -32,4 +32,13 @@ public class JsonFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsNotEqualTo("#-1 BAD ARGUMENT FORMAT TO json");
 	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("json_map(json(object,a,1,b,2),toupper(%%k):%%v)", "A:1 B:2")]
+	public async Task JsonMap(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
 }

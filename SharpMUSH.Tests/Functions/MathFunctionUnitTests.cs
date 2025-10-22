@@ -566,4 +566,17 @@ public class MathFunctionUnitTests
 
 		await Assert.That(result).IsEqualTo(expected);
 	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("ln(1)", "0")]
+	[Arguments("ln(2.718281828459045)", "1")]
+	public async Task Ln(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
 }

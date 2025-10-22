@@ -318,4 +318,33 @@ public class StringFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
 	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("lpos(test,t)", "1")]
+	[Arguments("lpos(test,s)", "3")]
+	public async Task Lpos(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("strcat(a,b,c)", "abc")]
+	[Arguments("strcat(hello, ,world)", "hello world")]
+	public async Task Strcat(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("stripansi(ansi(r,red))", "red")]
+	public async Task Stripansi(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
 }
