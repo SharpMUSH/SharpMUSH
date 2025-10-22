@@ -269,4 +269,34 @@ public class MiscFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("zfun(#0,func,arg)", "")]
+	public async Task Zfun(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		await Assert.That(result).IsNotNull();
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("zmwho()", "")]
+	public async Task Zmwho(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		await Assert.That(result).IsNotNull();
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("zone(#0)", "#-1")]
+	public async Task Zone(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		await Assert.That(result).IsNotNull();
+	}
 }

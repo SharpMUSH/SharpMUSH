@@ -44,4 +44,54 @@ public class CommunicationFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("nsoemit(#1,test)", "")]
+	public async Task Nsoemit(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		await Assert.That(result).IsNotNull();
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("nspemit(#1,test)", "")]
+	public async Task Nspemit(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		await Assert.That(result).IsNotNull();
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("nsprompt(#1,test)", "")]
+	public async Task Nsprompt(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		await Assert.That(result).IsNotNull();
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("nsremit(#0,test)", "")]
+	public async Task Nsremit(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		await Assert.That(result).IsNotNull();
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("nszemit(#0,test)", "")]
+	public async Task Nszemit(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		await Assert.That(result).IsNotNull();
+	}
 }

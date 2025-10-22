@@ -90,4 +90,104 @@ public class ConnectionFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("lwhoid()", "")]
+	public async Task Lwhoid(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		await Assert.That(result).IsNotNull();
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("ncon()", "0")]
+	public async Task Ncon(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		await Assert.That(result).IsNotNull();
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("nexits(#0)", "0")]
+	public async Task Nexits(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		await Assert.That(result).IsNotNull();
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("nplayers()", "0")]
+	public async Task Nplayers(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		await Assert.That(result).IsNotNull();
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("nthings()", "0")]
+	public async Task Nthings(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		await Assert.That(result).IsNotNull();
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("nvcon()", "0")]
+	public async Task Nvcon(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		await Assert.That(result).IsNotNull();
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("nvexits()", "0")]
+	public async Task Nvexits(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		await Assert.That(result).IsNotNull();
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("nvplayers()", "0")]
+	public async Task Nvplayers(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		await Assert.That(result).IsNotNull();
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("nvthings()", "0")]
+	public async Task Nvthings(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		await Assert.That(result).IsNotNull();
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("ports()", "4201")]
+	public async Task Ports(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		await Assert.That(result).IsNotNull();
+	}
 }
