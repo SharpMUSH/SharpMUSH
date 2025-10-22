@@ -114,10 +114,10 @@ public class BooleanFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("cand(1,1)", "0")]
-	[Arguments("cand(0,1)", "1")]
-	[Arguments("cand(0,0,1)", "1")]
-	[Arguments("cand(1,1,1)", "0")]
+	[Arguments("cand(1,1)", "1")]
+	[Arguments("cand(0,1)", "0")]
+	[Arguments("cand(0,0,1)", "0")]
+	[Arguments("cand(1,1,1)", "1")]
 	public async Task Cand(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
@@ -129,9 +129,9 @@ public class BooleanFunctionUnitTests
 
 	[Test]
 	[Arguments("cor(1,1)", "1")]
-	[Arguments("cor(0,1)", "0")]
+	[Arguments("cor(0,1)", "1")]
 	[Arguments("cor(0,0)", "0")]
-	[Arguments("cor(0,0,1)", "0")]
+	[Arguments("cor(0,0,1)", "1")]
 	public async Task Cor(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);

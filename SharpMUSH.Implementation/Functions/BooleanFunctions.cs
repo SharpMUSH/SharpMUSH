@@ -25,15 +25,15 @@ public partial class Functions
 			.Select(x => x.Value.Message!)
 			.ToAsyncEnumerable()
 			.AllAsync(async (m, _) => (await parser.FunctionParse(m))!.Message.Truthy())
-			? "0"
-			: "1";
+			? "1"
+			: "0";
 
 	[SharpFunction(Name = "cor", Flags = FunctionFlags.Regular | FunctionFlags.NoParse)]
 	public static async ValueTask<CallState> CancellingOr(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> await parser.CurrentState.Arguments
 			.Select(x => x.Value.Message!)
 			.ToAsyncEnumerable()
-			.AllAsync(async (m, _) => (await parser.FunctionParse(m))!.Message.Truthy())
+			.AnyAsync(async (m, _) => (await parser.FunctionParse(m))!.Message.Truthy())
 			? "1"
 			: "0";
 

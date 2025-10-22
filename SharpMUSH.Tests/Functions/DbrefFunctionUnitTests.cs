@@ -14,17 +14,15 @@ public class DbrefFunctionUnitTests
 	{
 		// Test loc function - should return the location of the current player
 		var result = (await Parser.FunctionParse(MModule.single("loc(%#)")))?.Message!;
-		// The result should be a dbref (starts with #)
-		await Assert.That(result.ToPlainText()).StartsWith("#");
+		await Assert.That(result.ToPlainText()).StartsWith("#0:");
 	}
 
 	[Test]
 	public async Task Controls()
 	{
-		// Test CONTROLS function (uppercase) - a player should control themselves
-		var result = (await Parser.FunctionParse(MModule.single("CONTROLS(%#,%#)")))?.Message!;
-		// Result should be a valid string (typically "1" or "0")
-		await Assert.That(result.ToPlainText()).IsNotNull();
+		// Test controls function - a player should control themselves
+		var result = (await Parser.FunctionParse(MModule.single("controls(%#,%#)")))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo("1");
 	}
 
 	[Test]
@@ -32,7 +30,6 @@ public class DbrefFunctionUnitTests
 	{
 		// Test home function - should return the home of the current player
 		var result = (await Parser.FunctionParse(MModule.single("home(%#)")))?.Message!;
-		// The result should be a dbref (starts with #)
-		await Assert.That(result.ToPlainText()).StartsWith("#");
+		await Assert.That(result.ToPlainText()).StartsWith("#0:");
 	}
 }

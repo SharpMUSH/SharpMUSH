@@ -51,7 +51,7 @@ public class ListFunctionUnitTests
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	[Arguments("rest(1|2|3)", "")]
 	[Arguments("rest(%b)", "")]
 	[Arguments("rest(null())", "")]
@@ -64,7 +64,7 @@ public class ListFunctionUnitTests
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	[Arguments("last(1|2|3)", "1|2|3")]
 	[Arguments("last(null())", "")]
 	[Arguments("last(%b)", "")]
@@ -77,7 +77,7 @@ public class ListFunctionUnitTests
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	[Arguments("first(1 2 3)", "1")]
 	[Arguments("first(a|b|c,|)", "a")]
 	public async Task First(string function, string expected)
@@ -86,7 +86,7 @@ public class ListFunctionUnitTests
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	[Arguments("words(1 2 3)", "3")]
 	[Arguments("words(single)", "1")]
 	public async Task Words(string function, string expected)
@@ -95,7 +95,7 @@ public class ListFunctionUnitTests
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	[Arguments("extract(a b c,2)", "b")]
 	[Arguments("extract(a b c,1,2)", "a b")]
 	[Arguments("extract(a|b|c,2,3,|)", "b|c")]

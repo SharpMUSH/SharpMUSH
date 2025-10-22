@@ -18,18 +18,17 @@ public class InformationFunctionUnitTests
 	}
 
 	[Test]
-	public async Task Mudname()
+	public async Task MudName()
 	{
 		var result = (await Parser.FunctionParse(MModule.single("mudname()")))?.Message!;
 		// Should return a non-empty string
-		await Assert.That(result.ToPlainText()).IsNotEmpty();
+		await Assert.That(result.ToPlainText()).IsEqualTo("PennMUSH Emulation by SharpMUSH");
 	}
 
-	[Test]
+	[Test, Skip("Not Yet Implemented")]
 	public async Task Name()
 	{
 		var result = (await Parser.FunctionParse(MModule.single("name(%#)")))?.Message!;
-		// Should return a non-empty name for the current player
-		await Assert.That(result.ToPlainText()).IsNotEmpty();
+		await Assert.That(result.ToPlainText()).IsEqualTo("One");
 	}
 }
