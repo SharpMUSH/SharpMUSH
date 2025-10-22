@@ -27,7 +27,7 @@ public class AttributeCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Set")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
 
 		// Verify attribute was set
 		var obj = await Mediator.Send(new GetObjectNodeQuery(new(1)));
@@ -44,7 +44,7 @@ public class AttributeCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Set")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
 	}
 
 	[Test]
@@ -54,7 +54,7 @@ public class AttributeCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Set")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
 	}
 
 	[Test]

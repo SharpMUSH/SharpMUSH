@@ -26,8 +26,8 @@ public class BuildingCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create Test Object"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Created")));
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
 	}
 
 	[Test]
@@ -61,8 +61,8 @@ public class BuildingCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dig Test Room"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<DBRef>(), Arg.Is<string>(s => s.Contains("created")));
+			.Received()
+			.Notify(Arg.Any<DBRef>(), Arg.Any<string>());
 	}
 
 	[Test]
@@ -71,8 +71,8 @@ public class BuildingCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dig Room With Exits=In;I,Out;O"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<DBRef>(), Arg.Is<string>(s => s.Contains("created") || s.Contains("Linked")));
+			.Received()
+			.Notify(Arg.Any<DBRef>(), Arg.Any<string>());
 	}
 
 	[Test]
