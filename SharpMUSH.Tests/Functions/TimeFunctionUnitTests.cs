@@ -34,4 +34,31 @@ public class TimeFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single("uptime()")))?.Message!;
 		await Assert.That(long.Parse(result.ToPlainText())).IsGreaterThan(0);
 	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("etime(0)", "0s")]
+	public async Task Etime(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsNotNull();
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("stringsecs(1d)", "86400")]
+	public async Task Stringsecs(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("timestring(86400)", "1d")]
+	public async Task Timestring(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsNotNull();
+	}
 }

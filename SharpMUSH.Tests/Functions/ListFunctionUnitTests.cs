@@ -231,4 +231,105 @@ public class ListFunctionUnitTests
 		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("mix(a b c,1 2 3)", "a 1 b 2 c 3")]
+	public async Task Mix(string function, string expected)
+	{
+		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("munge(a b c,1 2 3,|)", "a|1 b|2 c|3")]
+	public async Task Munge(string function, string expected)
+	{
+		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("unique(a b a c b)", "a b c")]
+	public async Task Unique(string function, string expected)
+	{
+		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("randextract(a b c d e)", "")]
+	public async Task Randextract(string function, string expected)
+	{
+		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		// Random result, just check it's not empty
+		await Assert.That(result.ToString()).IsNotEmpty();
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("randword(a b c d e)", "")]
+	public async Task Randword(string function, string expected)
+	{
+		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		// Random result, just check it's not empty
+		await Assert.That(result.ToString()).IsNotEmpty();
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("step(a b c d e,2)", "a c e")]
+	public async Task Step(string function, string expected)
+	{
+		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("index(a b c d,2,4,2)", "b d")]
+	public async Task Index(string function, string expected)
+	{
+		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("itemize(a b c)", "a, b, and c")]
+	public async Task Itemize(string function, string expected)
+	{
+		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("items(a b c,and)", "3")]
+	public async Task Items(string function, string expected)
+	{
+		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("namegrab(obj,pattern)", "")]
+	public async Task Namegrab(string function, string expected)
+	{
+		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		await Assert.That(result.ToString()).IsNotNull();
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("namegraball(obj,pattern)", "")]
+	public async Task Namegraball(string function, string expected)
+	{
+		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		await Assert.That(result.ToString()).IsNotNull();
+	}
 }

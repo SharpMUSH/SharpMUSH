@@ -36,4 +36,58 @@ public class ConnectionFunctionUnitTests
 		// The result should be a valid string
 		await Assert.That(result.ToPlainText()).HasLength().Positive;
 	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("doing(%#)", "")]
+	public async Task Doing(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsNotNull();
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("host(%#)", "")]
+	public async Task Host(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsNotNull();
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("ipaddr(%#)", "")]
+	public async Task Ipaddr(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsNotNull();
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("lports()", "")]
+	public async Task Lports(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsNotNull();
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("mwho()", "")]
+	public async Task Mwho(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsNotNull();
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("nwho()", "1")]
+	public async Task Nwho(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsNotNull();
+	}
 }

@@ -32,4 +32,94 @@ public class InformationFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single("name(%#)")))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo("One");
 	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("alias(%#)", "")]
+	public async Task Alias(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsNotNull();
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("fullname(%#)", "")]
+	public async Task Fullname(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsNotEmpty();
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("accname(%#)", "")]
+	public async Task Accname(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsNotNull();
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("iname(%#)", "")]
+	public async Task Iname(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsNotNull();
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("moniker(%#)", "")]
+	public async Task Moniker(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsNotNull();
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("money(%#)", "0")]
+	public async Task Money(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsNotNull();
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("quota(%#)", "")]
+	public async Task Quota(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsNotNull();
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("powers(%#)", "")]
+	public async Task Powers(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsNotNull();
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("findable(%#,%#)", "1")]
+	public async Task Findable(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("hidden(%#)", "0")]
+	public async Task Hidden(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
 }

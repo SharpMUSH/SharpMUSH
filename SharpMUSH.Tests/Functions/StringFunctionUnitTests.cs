@@ -262,4 +262,60 @@ public class StringFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
 	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("cond(1,yes,no)", "yes")]
+	[Arguments("cond(0,yes,no)", "no")]
+	public async Task Cond(string str, string expectedText)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("strinsert(hello,3,X)", "helXlo")]
+	public async Task Strinsert(string str, string expectedText)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("strreplace(hello world,world,universe)", "hello universe")]
+	public async Task Strreplace(string str, string expectedText)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("strmatch(test,t*)", "1")]
+	[Arguments("strmatch(test,x*)", "0")]
+	public async Task Strmatch(string str, string expectedText)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("accent(e,acute)", "é")]
+	public async Task Accent(string str, string expectedText)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("brackets(test)", "[test]")]
+	public async Task Brackets(string str, string expectedText)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
+	}
 }

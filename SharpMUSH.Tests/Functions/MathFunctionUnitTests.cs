@@ -426,4 +426,79 @@ public class MathFunctionUnitTests
 
 		await Assert.That(result).IsEqualTo(expected);
 	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("acos(1)", "0")]
+	[Arguments("asin(0)", "0")]
+	[Arguments("atan(0)", "0")]
+	public async Task InverseTrigFunctions(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("tan(0)", "0")]
+	public async Task Tan(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("fmod(7,3)", "1")]
+	public async Task Fmod(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("stddev(1,2,3,4,5)", "1.4142135623730951")]
+	public async Task Stddev(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("root(8,3)", "2")]
+	[Arguments("root(16,2)", "4")]
+	public async Task Root(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("fraction(3.14159)", "0.14159")]
+	public async Task Fraction(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+
+		var result = (await Parser!.FunctionParse(MModule.single(str)))?.Message?.ToString();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
 }

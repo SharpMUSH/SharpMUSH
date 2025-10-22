@@ -32,4 +32,58 @@ public class DbrefFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single("home(%#)")))?.Message!;
 		await Assert.That(result.ToPlainText()).StartsWith("#0:");
 	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("entrances(#0)", "")]
+	public async Task Entrances(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsNotNull();
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("followers(%#)", "")]
+	public async Task Followers(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsNotNull();
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("following(%#)", "")]
+	public async Task Following(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsNotNull();
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("locate(%#,test,*)", "")]
+	public async Task Locate(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsNotNull();
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("lock(%#)", "")]
+	public async Task Lock(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsNotNull();
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("elock(%#)", "")]
+	public async Task Elock(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsNotNull();
+	}
 }
