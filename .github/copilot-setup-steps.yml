@@ -1,5 +1,9 @@
 # Copilot Setup Steps
 # This file defines reusable setup steps for building and testing SharpMUSH with the latest .NET SDK
+#
+# Usage in a workflow:
+#   - name: Setup Development Environment
+#     uses: ./.github/copilot-setup-steps.yml
 
 name: 'Setup SharpMUSH Development Environment'
 description: 'Sets up the latest .NET SDK and prepares the environment for building and testing SharpMUSH'
