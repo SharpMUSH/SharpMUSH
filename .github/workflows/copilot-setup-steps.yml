@@ -33,10 +33,7 @@ jobs:
         with:
           # Use 'x' to always get the latest stable version
           # This will automatically update to newer major versions as they're released
-          dotnet-version: |
-            8.x
-            9.x
-            10.x
+          dotnet-version: 10.x
           # Prefer the latest version if multiple are installed
           dotnet-quality: 'ga'
 
