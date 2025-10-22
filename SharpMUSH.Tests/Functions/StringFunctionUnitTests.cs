@@ -223,4 +223,43 @@ public class StringFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
 	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("tr(hello,el,ip)", "hippo")]
+	[Arguments("tr(abcd,bd,xy)", "axcy")]
+	public async Task Tr(string str, string expectedText)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("merge(a|b|c,1|2|3,|)", "a1 b2 c3")]
+	public async Task Merge(string str, string expectedText)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("comp(abc,abc)", "0")]
+	[Arguments("comp(abc,def)", "-1")]
+	[Arguments("comp(def,abc)", "1")]
+	public async Task Comp(string str, string expectedText)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("decompose(ansi(hr,red))", "ansi(hr,red)")]
+	public async Task Decompose(string str, string expectedText)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
+	}
 }

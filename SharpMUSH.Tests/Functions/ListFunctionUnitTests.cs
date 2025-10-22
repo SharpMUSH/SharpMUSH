@@ -124,4 +124,111 @@ public class ListFunctionUnitTests
 		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("sort(3 1 2)", "1 2 3")]
+	[Arguments("sort(foo bar baz)", "bar baz foo")]
+	public async Task Sort(string function, string expected)
+	{
+		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("filter(test/is_odd,1 2 3 4 5 6)", "1 3 5")]
+	public async Task Filter(string function, string expected)
+	{
+		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("fold(test/add_func,1 2 3)", "6")]
+	public async Task Fold(string function, string expected)
+	{
+		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("ldelete(a b c d,2)", "a c d")]
+	[Arguments("ldelete(a|b|c|d,2,1,|)", "a|c|d")]
+	public async Task Ldelete(string function, string expected)
+	{
+		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("lreplace(a b c,2,foo)", "a foo c")]
+	[Arguments("lreplace(a|b|c,2,foo,|)", "a|foo|c")]
+	public async Task Lreplace(string function, string expected)
+	{
+		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("member(a b c,b)", "2")]
+	[Arguments("member(a|b|c,b,|)", "2")]
+	public async Task Member(string function, string expected)
+	{
+		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("remove(a b c b,b)", "a c")]
+	[Arguments("remove(a|b|c|b,b,|)", "a|c")]
+	public async Task Remove(string function, string expected)
+	{
+		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("setunion(a b c,c d e)", "a b c d e")]
+	[Arguments("setunion(1 2 3,2 3 4)", "1 2 3 4")]
+	public async Task Setunion(string function, string expected)
+	{
+		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("setinter(a b c,c d e)", "c")]
+	[Arguments("setinter(1 2 3,2 3 4)", "2 3")]
+	public async Task Setinter(string function, string expected)
+	{
+		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("setdiff(a b c,c d e)", "a b")]
+	[Arguments("setdiff(1 2 3,2 3 4)", "1")]
+	public async Task Setdiff(string function, string expected)
+	{
+		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	[Arguments("matchall(foo bar baz,ba*)", "2 3")]
+	public async Task Matchall(string function, string expected)
+	{
+		var result = (await Parser!.FunctionParse(MModule.single(function)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
 }
