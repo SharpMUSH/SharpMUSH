@@ -62,6 +62,17 @@ public class GeneralCommandTests
 			.Received(Quantity.Exactly(3))
 			.Notify(Arg.Any<AnySharpObject>(), "4 This is, a test");
 	}
+	
+	[Test]
+	[Skip("Not Yet Implemented")]
+	public async ValueTask DolistCommand()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist 1 2 3=think ##"));
+
+		await NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+	}
 
 	[Test]
 	public async ValueTask DoListComplex()

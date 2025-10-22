@@ -92,4 +92,15 @@ public class ControlFlowCommandTests
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
 	}
+
+	[Test]
+	[Skip("Not Yet Implemented")]
+	public async ValueTask IfElseCommand()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@ifelse 1=@pemit #1=True,@pemit #1=False"));
+
+		await NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), "True");
+	}
 }
