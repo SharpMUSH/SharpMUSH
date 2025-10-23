@@ -27,7 +27,7 @@ public partial class Commands
 	/// Creating on the DBRef is not implemented.
 	/// TODO: Using the Cost is not implemented.
 	/// </remarks>
-	[SharpCommand(Name = "@CREATE", Behavior = CB.Default, MinArgs = 1, MaxArgs = 3)]
+	[SharpCommand(Name = "@CREATE", Behavior = CB.Default | CB.EqSplit, MinArgs = 1, MaxArgs = 3)]
 	public static async ValueTask<Option<CallState>> Create(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// TODO: Validate Name
@@ -39,6 +39,8 @@ public partial class Commands
 			await executor.Where(),
 			await executor.Object()
 				.Owner.WithCancellation(CancellationToken.None)));
+		
+		await NotifyService!.Notify(executor, $"Created {thing}");
 
 		return new CallState(thing.ToString());
 	}

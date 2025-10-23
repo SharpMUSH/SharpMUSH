@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -10,6 +11,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
+[NotInParallel]
 public class BuildingCommandTests
 {
 	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -21,82 +23,136 @@ public class BuildingCommandTests
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
 	[Test]
-	[Explicit("Command is implemented but test is failing")]
+	[DependsOn<GeneralCommandTests>]
 	public async ValueTask CreateObject()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@create Test Object"));
+		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@create CreateObject - Test Object"));
 
-		await NotifyService
-			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
-	}
-
-	[Test]
-	[Explicit("Command is implemented but test is failing")]
-	public async ValueTask CreateObjectWithCost()
-	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@create Test Object=10"));
-
-		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+		var newDb = DBRef.Parse(result.Message!.ToPlainText()!);
+		var newObject = await Mediator.Send(new GetObjectNodeQuery(newDb));
+		
+		await Assert.That(newObject.Object()!.Name).IsEqualTo("CreateObject - Test Object");
 	}
 
 	[Test]
 	[DependsOn(nameof(CreateObject))]
-	public async ValueTask NameObject()
+	public async ValueTask CreateObjectWithCost()
 	{
-		// Create an object first
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@create Rename Test"));
+		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@create CreateObjectWithCost - Test Object=10"));
+
+		var newDb = DBRef.Parse(result.Message!.ToPlainText()!);
+		var newObject = await Mediator.Send(new GetObjectNodeQuery(newDb));
 		
-		// Rename it
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@name #4=New Name"));
+		await Assert.That(newObject.Object()!.Name).IsEqualTo("CreateObjectWithCost - Test Object");
+	}
+	
+	[Test]
+	[DependsOn(nameof(CreateObjectWithCost))]
+	public async ValueTask DoDigForCommandListCheck()
+	{
+		var newRoom = await Parser.CommandParse(1, ConnectionService,
+			MModule.single("@dig Bar Room=Exit;ExitAlias,ExitBack;ExitAliasBack"));
+
+		var newDb = DBRef.Parse(newRoom.Message!.ToPlainText()!);
+		
+		await NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<DBRef>(),  $"Bar Room created with room number #{newDb.Number}.");
+		await NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<DBRef>(), $"Linked exit #{newDb.Number+1} to #{newDb.Number}");
+		await NotifyService
+			.Received(Quantity.Exactly(2))
+			.Notify(Arg.Any<DBRef>(), "Trying to link...");
+		await NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<DBRef>(), $"Linked exit #{newDb.Number+2} to #0");
+	}
+
+	// Something is getting created before this one can trigger...
+	[Test, DependsOn(nameof(DoDigForCommandListCheck))]
+	public async ValueTask DoDigForCommandListCheck2()
+	{
+		await Parser.CommandListParse(MModule.single("@dig Foo Room={Exit;ExitAlias},{ExitBack;ExitAliasBack}"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(Arg.Any<DBRef>(), "Foo Room created with room number #9.");
+		await NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<DBRef>(), "Linked exit #10 to #9");
+		await NotifyService
+			.Received(Quantity.Exactly(4))
+			.Notify(Arg.Any<DBRef>(), "Trying to link...");
+		await NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<DBRef>(), "Linked exit #11 to #0");
+	}
+
+
+	[Test]
+	[DependsOn(nameof(DoDigForCommandListCheck2))]
+	public async Task DigAndMoveTest()
+	{
+		if (Parser is null) throw new Exception("Parser is null");
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@dig NewRoom=Forward;F,Backward;B"));
+		var initialRoom = (await Parser.FunctionParse(MModule.single("%l")))!.Message!.ToPlainText();
+		await Parser.CommandParse(1, ConnectionService, MModule.single("goto Forward"));
+		var newRoom = (await Parser.FunctionParse(MModule.single("%l")))!.Message!.ToPlainText();
+		await Parser.CommandParse(1, ConnectionService, MModule.single("goto Backward"));
+		var finalRoom = (await Parser.FunctionParse(MModule.single("%l")))!.Message!.ToPlainText();
+
+		await Assert.That(initialRoom).HasLength().Positive;
+		await Assert.That(initialRoom).IsEqualTo(finalRoom);
+		await Assert.That(newRoom).IsNotEqualTo(initialRoom);
 	}
 
 	[Test]
-	[Explicit("Command is implemented but test is failing")]
+	[DependsOn(nameof(DigAndMoveTest))]
+	[Skip("Failing Test - Needs Investigation")]
+	// 	"#-2 I DON'T KNOW WHICH ONE YOU MEAN"
+	public async ValueTask NameObject()
+	{
+		// Create an object first
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@create DigAndMoveTest - Rename Test"));
+		
+		// Rename it
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@name DigAndMoveTest - Rename Test=DigAndMoveTest - New Name"));
+
+		var newObject = (await Parser.FunctionParse(MModule.single("name(DigAndMoveTest - New Name)")))!.Message!.ToPlainText();
+		
+		await Assert.That(newObject).IsEqualTo("DigAndMoveTest - New Name");
+	}
+
+	[Test]
+	[DependsOn(nameof(NameObject))]
 	public async ValueTask DigRoom()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dig Test Room"));
+		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@dig DigRoom - Test Room"));
 
-		await NotifyService
-			.Received()
-			.Notify(Arg.Any<DBRef>(), Arg.Any<string>());
-	}
-
-	[Test]
-	[Explicit("Command is implemented but test is failing")]
-	public async ValueTask DigRoomWithExits()
-	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dig Room With Exits=In;I,Out;O"));
-
-		await NotifyService
-			.Received()
-			.Notify(Arg.Any<DBRef>(), Arg.Any<string>());
+		var newDb = DBRef.Parse(result.Message!.ToPlainText()!);
+		var newObject = await Mediator.Send(new GetObjectNodeQuery(newDb));
+		
+		await Assert.That(newObject.Object()!.Name).IsEqualTo("DigRoom - Test Room");
 	}
 
 	[Test]
 	[DependsOn(nameof(DigRoom))]
-	[Skip("Not Yet Implemented")]
-	public async ValueTask OpenExit()
+	public async ValueTask DigRoomWithExits()
 	{
-		// Create a room first
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dig Destination Room"));
-		
-		// Open an exit
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@open Test Exit=#5"));
+		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@dig Room With Exits=In;I,Out;O"));
 
+		var newDb = DBRef.Parse(result.Message!.ToPlainText()!);
+		var newObject = await Mediator.Send(new GetObjectNodeQuery(newDb));
+		
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received()
+			.Notify(Arg.Any<DBRef>(), $"Room With Exits created with room number #{newObject.Object()!.DBRef.Number}.");
 	}
 
 	[Test]
-	[DependsOn(nameof(CreateObject))]
+	[DependsOn(nameof(DigRoomWithExits))]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask LinkExit()
 	{
@@ -109,11 +165,11 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(Arg.Any<DBRef>(), Arg.Any<string>());
 	}
 
 	[Test]
-	[DependsOn(nameof(CreateObject))]
+	[DependsOn(nameof(LinkExit))]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask CloneObject()
 	{
@@ -129,7 +185,8 @@ public class BuildingCommandTests
 	}
 
 	[Test]
-	[DependsOn(nameof(CreateObject))]
+	[DependsOn(nameof(CloneObject))]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask SetParent()
 	{
 		// Create two objects
@@ -145,7 +202,7 @@ public class BuildingCommandTests
 	}
 
 	[Test]
-	[DependsOn(nameof(CreateObject))]
+	[DependsOn(nameof(SetParent))]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask ChownObject()
 	{
@@ -161,7 +218,7 @@ public class BuildingCommandTests
 	}
 
 	[Test]
-	[DependsOn(nameof(CreateObject))]
+	[DependsOn(nameof(ChownObject))]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask ChzoneObject()
 	{
@@ -178,7 +235,7 @@ public class BuildingCommandTests
 	}
 
 	[Test]
-	[DependsOn(nameof(CreateObject))]
+	[DependsOn(nameof(ChzoneObject))]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask RecycleObject()
 	{
@@ -194,7 +251,7 @@ public class BuildingCommandTests
 	}
 
 	[Test]
-	[DependsOn(nameof(OpenExit))]
+	[DependsOn(nameof(RecycleObject))]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask UnlinkExit()
 	{

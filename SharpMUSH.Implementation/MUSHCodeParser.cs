@@ -171,7 +171,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	/// <param name="handle">The handle that identifies the connection.</param>
 	/// <param name="text">The text to parse.</param>
 	/// <returns>A completed task.</returns>
-	public async ValueTask CommandParse(long handle, IConnectionService connectionService, MString text)
+	public async ValueTask<CallState> CommandParse(long handle, IConnectionService connectionService, MString text)
 	{
 		var handleId = connectionService.Get(handle);
 		var newParser = Push(new ParserState(
@@ -219,7 +219,9 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			ServiceProvider.GetRequiredService<ICommandDiscoveryService>(),
 			ServiceProvider.GetRequiredService<IAttributeService>(), text);
 
-		await visitor.Visit(chatContext);
+		var result = await visitor.Visit(chatContext);
+
+		return result ?? CallState.Empty;
 	}
 
 	/// <summary>
@@ -227,7 +229,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	/// </summary>
 	/// <param name="text">The text to parse.</param>
 	/// <returns>A completed task.</returns>
-	public async ValueTask CommandParse(MString text)
+	public async ValueTask<CallState> CommandParse(MString text)
 	{
 		AntlrInputStreamSpan inputStream = new(MModule.plainText(text).AsMemory(), nameof(CommandParse));
 		SharpMUSHLexer sharpLexer = new(inputStream);
@@ -256,7 +258,9 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			ServiceProvider.GetRequiredService<ICommandDiscoveryService>(),
 			ServiceProvider.GetRequiredService<IAttributeService>(), text);
 
-		await visitor.Visit(chatContext);
+		var result = await visitor.Visit(chatContext);
+
+		return result ?? CallState.Empty;
 	}
 
 	public ValueTask<CallState?> CommandCommaArgsParse(MString text)

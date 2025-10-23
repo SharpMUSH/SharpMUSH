@@ -1000,8 +1000,16 @@ public partial class ArangoDatabase(
 
 	public async ValueTask<AnyOptionalSharpObject> GetObjectNodeAsync(DBRef dbref)
 	{
-		var obj = await arangoDb.Document.GetAsync<SharpObjectQueryResult>(handle, DatabaseConstants.Objects,
-			dbref.Number.ToString());
+		SharpObjectQueryResult? obj;
+		try
+		{
+			obj = await arangoDb.Document.GetAsync<SharpObjectQueryResult>(handle, DatabaseConstants.Objects,
+				dbref.Number.ToString());
+		}
+		catch
+		{
+			obj = null;
+		}
 
 		if (obj is null) return new None();
 		if (dbref.CreationMilliseconds is not null && obj.CreationTime != dbref.CreationMilliseconds) return new None();

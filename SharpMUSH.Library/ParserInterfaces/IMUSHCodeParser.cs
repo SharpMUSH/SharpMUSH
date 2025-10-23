@@ -17,8 +17,8 @@ public interface IMUSHCodeParser
 	ValueTask<CallState?> CommandEqSplitParse(MString text);
 	ValueTask<CallState?> CommandListParse(MString text);
 	Func<ValueTask<CallState?>> CommandListParseVisitor(MString text);
-	ValueTask CommandParse(long handle, IConnectionService connectionService, MString text);
-	ValueTask CommandParse(MString text);
+	ValueTask<CallState> CommandParse(long handle, IConnectionService connectionService, MString text);
+	ValueTask<CallState> CommandParse(MString text);
 	ValueTask<CallState?> CommandSingleArgParse(MString text);
 	ValueTask<CallState?> FunctionParse(MString text);
 	IMUSHCodeParser Empty();
