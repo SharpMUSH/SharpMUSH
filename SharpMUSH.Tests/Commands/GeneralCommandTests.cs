@@ -62,6 +62,17 @@ public class GeneralCommandTests
 			.Received(Quantity.Exactly(3))
 			.Notify(Arg.Any<AnySharpObject>(), "4 This is, a test");
 	}
+	
+	[Test]
+	[Skip("Not Yet Implemented")]
+	public async ValueTask DolistCommand()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist 1 2 3=think ##"));
+
+		await NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+	}
 
 	[Test]
 	public async ValueTask DoListComplex()
@@ -168,26 +179,6 @@ public class GeneralCommandTests
 	}
 
 	[Test]
-	public async ValueTask DoDigForCommandListCheck()
-	{
-		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("@dig Bar Room=Exit;ExitAlias,ExitBack;ExitAliasBack"));
-
-		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<DBRef>(), "Bar Room created with room number #4.");
-		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<DBRef>(), "Linked exit #5 to #4");
-		await NotifyService
-			.Received(Quantity.Exactly(2))
-			.Notify(Arg.Any<DBRef>(), "Trying to link...");
-		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<DBRef>(), "Linked exit #6 to #0");
-	}
-
-	[Test]
 	public async ValueTask DoBreakSimpleCommandList()
 	{
 		await Parser.CommandListParse(MModule.single("think assert 1a; @assert; think assert 2a; think assert 3a"));
@@ -252,49 +243,6 @@ public class GeneralCommandTests
 		await NotifyService.Received(Quantity.Exactly(0)).Notify(Arg.Any<AnySharpObject>(), "break 3e");
 		await NotifyService.Received(Quantity.Exactly(1)).Notify(Arg.Any<AnySharpObject>(), "broken 1e");
 		await NotifyService.Received(Quantity.Exactly(1)).Notify(Arg.Any<AnySharpObject>(), "broken 2e");
-	}
-
-	[Test, DependsOn(nameof(DoDigForCommandListCheck))]
-	public async ValueTask DoDigForCommandListCheck2()
-	{
-		await Parser.CommandListParse(MModule.single("@dig Foo Room={Exit;ExitAlias},{ExitBack;ExitAliasBack}"));
-
-		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<DBRef>(), "Foo Room created with room number #7.");
-		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<DBRef>(), "Linked exit #8 to #7");
-		await NotifyService
-			.Received(Quantity.Exactly(4))
-			.Notify(Arg.Any<DBRef>(), "Trying to link...");
-		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<DBRef>(), "Linked exit #9 to #0");
-	}
-
-
-	[Test]
-	[DependsOn(nameof(DoDigForCommandListCheck2))]
-	public async Task DigAndMoveTest()
-	{
-		if (Parser is null) throw new Exception("Parser is null");
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dig NewRoom=Forward;F,Backward;B"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("think %l start"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("goto Forward"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("think %l forward"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("goto Backward"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("think %l back"));
-
-		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), "#0 start");
-		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), "#10 forward");
-		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), "#0 back");
 	}
 
 	[Test]

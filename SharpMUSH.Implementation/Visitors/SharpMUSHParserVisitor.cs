@@ -46,15 +46,20 @@ public class SharpMUSHParserVisitor(
 
 	public override async ValueTask<CallState?> Visit(IParseTree tree) => await tree.Accept(this);
 
-	public override async ValueTask<CallState?> VisitChildren(IRuleNode node)
+	public override async ValueTask<CallState?> VisitChildren(IRuleNode? node)
 	{
+		if (node is null) return null;
+		
 		var result = await DefaultResult;
 
-		foreach (var child in Enumerable
+		await foreach (var child in Enumerable
 			         .Range(0, node.ChildCount)
+			         .ToAsyncEnumerable()
 			         .Select(node.GetChild))
 		{
-			result = AggregateResult(result, await child.Accept(this));
+			result = child is null 
+				? AggregateResult(result, null) 
+				: AggregateResult(result, await child.Accept(this));
 		}
 
 		return result;
@@ -901,10 +906,11 @@ public class SharpMUSHParserVisitor(
 
 		var isCommandList = context.Parent is CommandListContext;
 
-		return (await EvaluateCommands(source, context, isCommandList, VisitChildren))
+		var result = await EvaluateCommands(source, context, isCommandList, VisitChildren); 
+		return result
 			.Match<CallState?>(
 				x => x,
-				_ => null);
+				_ => CallState.Empty);
 	}
 
 	public override async ValueTask<CallState?> VisitStartCommandString(
