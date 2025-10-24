@@ -10,7 +10,6 @@ public class CommunicationFunctionUnitTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("pemit(#1,test message)", "")]
 	public async Task Pemit(string str, string expected)
 	{
@@ -56,7 +55,6 @@ public class CommunicationFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("nspemit(#1,test)", "")]
 	public async Task Nspemit(string str, string expected)
 	{

@@ -151,9 +151,51 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "NSPEMIT", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> NoSpoofPrivateEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> NoSpoofPrivateEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var recipients = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var message = parser.CurrentState.Arguments["1"].Message!;
+		
+		// Determine notification type based on nospoof permissions
+		var notificationType = await PermissionService!.CanNoSpoof(executor)
+			? INotifyService.NotificationType.NSAnnounce
+			: INotifyService.NotificationType.Announce;
+		
+		// Check if first argument is an integer list (port list)
+		if (IsIntegerList(recipients))
+		{
+			// Handle port-based messaging
+			var ports = recipients.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+				.Select(long.Parse)
+				.ToArray();
+			
+			await NotifyService!.Notify(ports, message, executor, notificationType);
+		}
+		else
+		{
+			// Handle object/player-based messaging
+			var recipientList = ArgHelpers.NameList(recipients);
+			
+			foreach (var recipient in recipientList)
+			{
+				await recipient.Match(
+					async dbref =>
+					{
+						await NotifyService!.Notify(dbref, message, executor, notificationType);
+					},
+					async name =>
+					{
+						var maybeFound = await LocateService!.LocatePlayer(parser, executor, executor, name);
+						if (maybeFound.TryPickT0(out var player, out var _))
+						{
+							await NotifyService!.Notify(player, message, executor, notificationType);
+						}
+					});
+			}
+		}
+		
+		return CallState.Empty;
 	}
 
 	[SharpFunction(Name = "NSPROMPT", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
@@ -181,9 +223,54 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "PEMIT", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> PrivateEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> PrivateEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var recipients = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var message = parser.CurrentState.Arguments["1"].Message!;
+		
+		// Check if first argument is an integer list (port list)
+		if (IsIntegerList(recipients))
+		{
+			// Handle port-based messaging
+			var ports = recipients.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+				.Select(long.Parse)
+				.ToArray();
+			
+			await NotifyService!.Notify(ports, message, executor, INotifyService.NotificationType.Announce);
+		}
+		else
+		{
+			// Handle object/player-based messaging
+			var recipientList = ArgHelpers.NameList(recipients);
+			
+			foreach (var recipient in recipientList)
+			{
+				await recipient.Match(
+					async dbref =>
+					{
+						await NotifyService!.Notify(dbref, message, executor, INotifyService.NotificationType.Announce);
+					},
+					async name =>
+					{
+						var maybeFound = await LocateService!.LocatePlayer(parser, executor, executor, name);
+						if (maybeFound.TryPickT0(out var player, out var _))
+						{
+							await NotifyService!.Notify(player, message, executor, INotifyService.NotificationType.Announce);
+						}
+					});
+			}
+		}
+		
+		return CallState.Empty;
+	}
+	
+	private static bool IsIntegerList(string input)
+	{
+		if (string.IsNullOrWhiteSpace(input)) return false;
+		
+		var tokens = input.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		return tokens.Length > 0 && tokens.All(token => long.TryParse(token, out _));
 	}
 
 	[SharpFunction(Name = "PROMPT", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
