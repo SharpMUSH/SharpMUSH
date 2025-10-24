@@ -178,13 +178,18 @@ public partial class Functions
 				.Select(long.Parse)
 				.ToArray();
 			
-			// Filter ports by permission check - only send to ports where executor can interact with the connected player
+			// Filter ports by permission check
+			// Ports without a DBRef always work (no interactability check)
+			// Ports with a DBRef require permission check
 			var validPorts = new List<long>();
 			foreach (var port in allPorts)
 			{
 				var connectionData = ConnectionService!.Get(port);
+				
+				// If no connection or no DBRef, allow the port (no permission check needed)
 				if (connectionData == null || connectionData.Ref == null)
 				{
+					validPorts.Add(port);
 					continue;
 				}
 				
@@ -192,6 +197,8 @@ public partial class Functions
 				var playerResult = await Mediator!.Send(new GetObjectNodeQuery(connectionData.Ref.Value));
 				if (!playerResult.IsT0 && !playerResult.IsT1 && !playerResult.IsT2 && !playerResult.IsT3)
 				{
+					// Player not found, but port exists - allow it
+					validPorts.Add(port);
 					continue;
 				}
 				
@@ -310,13 +317,18 @@ public partial class Functions
 				.Select(long.Parse)
 				.ToArray();
 			
-			// Filter ports by permission check - only send to ports where executor can interact with the connected player
+			// Filter ports by permission check
+			// Ports without a DBRef always work (no interactability check)
+			// Ports with a DBRef require permission check
 			var validPorts = new List<long>();
 			foreach (var port in allPorts)
 			{
 				var connectionData = ConnectionService!.Get(port);
+				
+				// If no connection or no DBRef, allow the port (no permission check needed)
 				if (connectionData == null || connectionData.Ref == null)
 				{
+					validPorts.Add(port);
 					continue;
 				}
 				
@@ -324,6 +336,8 @@ public partial class Functions
 				var playerResult = await Mediator!.Send(new GetObjectNodeQuery(connectionData.Ref.Value));
 				if (!playerResult.IsT0 && !playerResult.IsT1 && !playerResult.IsT2 && !playerResult.IsT3)
 				{
+					// Player not found, but port exists - allow it
+					validPorts.Add(port);
 					continue;
 				}
 				
