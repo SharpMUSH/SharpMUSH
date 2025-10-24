@@ -150,9 +150,14 @@ public partial class Functions
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "NSPEMIT", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "NSPEMIT", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX)]
 	public static async ValueTask<CallState> NoSpoofPrivateEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
+		{
+			return new CallState(Errors.ErrorNoSideFx);
+		}
+		
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var recipients = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var message = parser.CurrentState.Arguments["1"].Message!;
@@ -222,9 +227,14 @@ public partial class Functions
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "PEMIT", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "PEMIT", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX)]
 	public static async ValueTask<CallState> PrivateEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
+		{
+			return new CallState(Errors.ErrorNoSideFx);
+		}
+		
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var recipients = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var message = parser.CurrentState.Arguments["1"].Message!;
