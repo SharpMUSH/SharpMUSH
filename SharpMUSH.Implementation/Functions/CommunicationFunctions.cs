@@ -181,12 +181,32 @@ public partial class Functions
 			return CallState.Empty;
 		}
 		
-		// Handle object/player-based messaging using CommunicationService
+		// Handle object/player-based messaging
 		var recipientList = ArgHelpers.NameList(recipients);
 		
 		foreach (var recipient in recipientList)
 		{
-			await CommunicationService!.SendToRecipientAsync(parser, executor, recipient, message, notificationType);
+			var recipientName = recipient.IsT0 ? recipient.AsT0.ToString()! : recipient.AsT1;
+			
+			// Use LocateAndNotifyIfInvalidWithCallStateFunction for proper error handling
+			await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+				parser, 
+				executor, 
+				executor, 
+				recipientName,
+				LocateFlags.All,
+				async target =>
+				{
+					// Check if executor can interact with the target
+					if (!await PermissionService!.CanInteract(target, executor, InteractType.Hear))
+					{
+						return CallState.Empty;
+					}
+					
+					// Send the notification
+					await NotifyService!.Notify(target, message, executor, notificationType);
+					return CallState.Empty;
+				});
 		}
 		
 		return CallState.Empty;
@@ -240,12 +260,32 @@ public partial class Functions
 			return CallState.Empty;
 		}
 		
-		// Handle object/player-based messaging using CommunicationService
+		// Handle object/player-based messaging
 		var recipientList = ArgHelpers.NameList(recipients);
 		
 		foreach (var recipient in recipientList)
 		{
-			await CommunicationService!.SendToRecipientAsync(parser, executor, recipient, message, INotifyService.NotificationType.Announce);
+			var recipientName = recipient.IsT0 ? recipient.AsT0.ToString()! : recipient.AsT1;
+			
+			// Use LocateAndNotifyIfInvalidWithCallStateFunction for proper error handling
+			await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+				parser, 
+				executor, 
+				executor, 
+				recipientName,
+				LocateFlags.All,
+				async target =>
+				{
+					// Check if executor can interact with the target
+					if (!await PermissionService!.CanInteract(target, executor, InteractType.Hear))
+					{
+						return CallState.Empty;
+					}
+					
+					// Send the notification
+					await NotifyService!.Notify(target, message, executor, INotifyService.NotificationType.Announce);
+					return CallState.Empty;
+				});
 		}
 		
 		return CallState.Empty;

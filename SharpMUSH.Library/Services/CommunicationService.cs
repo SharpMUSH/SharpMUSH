@@ -3,7 +3,6 @@ using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
-using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using static SharpMUSH.Library.Services.Interfaces.IPermissionService;
@@ -14,8 +13,7 @@ public class CommunicationService(
 	IMediator mediator,
 	INotifyService notifyService,
 	IConnectionService connectionService,
-	IPermissionService permissionService,
-	ILocateService locateService) : ICommunicationService
+	IPermissionService permissionService) : ICommunicationService
 {
 	public async ValueTask SendToPortsAsync(
 		AnySharpObject executor,
@@ -60,44 +58,5 @@ public class CommunicationService(
 		{
 			await notifyService.Notify(validPorts.ToArray(), message, executor, notificationType);
 		}
-	}
-
-	public async ValueTask SendToRecipientAsync(
-		IMUSHCodeParser parser,
-		AnySharpObject executor,
-		OneOf<DBRef, string> recipient,
-		OneOf<MString, string> message,
-		INotifyService.NotificationType notificationType)
-	{
-		// Locate the target object (works for all types: player, room, exit, thing)
-		AnyOptionalSharpObjectOrError targetResult;
-		
-		if (recipient.IsT0)
-		{
-			// DBRef - use Locate with AbsoluteMatch flag to directly resolve the DBRef
-			targetResult = await locateService.Locate(parser, executor, executor, recipient.AsT0.ToString()!, LocateFlags.AbsoluteMatch);
-		}
-		else
-		{
-			// Name string - use Locate with appropriate flags to find any object type
-			targetResult = await locateService.Locate(parser, executor, executor, recipient.AsT1, LocateFlags.All);
-		}
-		
-		// Check if target was found
-		if (targetResult.IsNone() || targetResult.IsError())
-		{
-			return;
-		}
-		
-		var target = targetResult.WithoutError().WithoutNone();
-		
-		// Check if executor can interact with the target
-		if (!await permissionService.CanInteract(target, executor, InteractType.Hear))
-		{
-			return;
-		}
-		
-		// Send the notification
-		await notifyService.Notify(target, message, executor, notificationType);
 	}
 }
