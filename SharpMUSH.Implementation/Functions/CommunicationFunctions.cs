@@ -1,6 +1,7 @@
 ﻿using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -178,47 +179,52 @@ public partial class Functions
 				.ToArray();
 			
 			await NotifyService!.Notify(ports, message, executor, notificationType);
+			return CallState.Empty;
 		}
-		else
+		
+		// Handle object/player-based messaging
+		var recipientList = ArgHelpers.NameList(recipients);
+		
+		foreach (var recipient in recipientList)
 		{
-			// Handle object/player-based messaging
-			var recipientList = ArgHelpers.NameList(recipients);
+			AnySharpObject target;
 			
-			foreach (var recipient in recipientList)
+			// Try to locate the target based on type
+			if (recipient.IsT0)
 			{
-				await recipient.Match(
-					async dbref =>
-					{
-						// Get the object to check permissions
-						var maybeTarget = await Mediator!.Send(new GetObjectNodeQuery(dbref));
-						if (!maybeTarget.TryPickT0(out var target, out var _))
-						{
-							return;
-						}
-						
-						// Check if executor can interact with the target
-						if (!await PermissionService!.CanInteract(target, executor, InteractType.Hear))
-						{
-							return;
-						}
-						
-						await NotifyService!.Notify(dbref, message, executor, notificationType);
-					},
-					async name =>
-					{
-						var maybeFound = await LocateService!.LocatePlayer(parser, executor, executor, name);
-						if (maybeFound.TryPickT0(out var player, out var _))
-						{
-							// Check if executor can interact with the player
-							if (!await PermissionService!.CanInteract(player, executor, InteractType.Hear))
-							{
-								return;
-							}
-							
-							await NotifyService!.Notify(player, message, executor, notificationType);
-						}
-					});
+				// DBRef
+				var targetResult = await Mediator!.Send(new GetObjectNodeQuery(recipient.AsT0));
+				if (!targetResult.IsT0 && !targetResult.IsT1 && !targetResult.IsT2 && !targetResult.IsT3)
+				{
+					continue;
+				}
+				target = targetResult.Match<AnySharpObject>(
+					t0 => t0,
+					t1 => t1,
+					t2 => t2,
+					t3 => t3,
+					t4 => throw new InvalidOperationException()
+				);
 			}
+			else
+			{
+				// Name string
+				var playerResult = await LocateService!.LocatePlayer(parser, executor, executor, recipient.AsT1);
+				if (!playerResult.TryPickT0(out var player, out var _))
+				{
+					continue;
+				}
+				target = player;
+			}
+			
+			// Check if executor can interact with the target
+			if (!await PermissionService!.CanInteract(target, executor, InteractType.Hear))
+			{
+				continue;
+			}
+			
+			// Send the notification
+			await NotifyService!.Notify(target, message, executor, notificationType);
 		}
 		
 		return CallState.Empty;
@@ -270,47 +276,52 @@ public partial class Functions
 				.ToArray();
 			
 			await NotifyService!.Notify(ports, message, executor, INotifyService.NotificationType.Announce);
+			return CallState.Empty;
 		}
-		else
+		
+		// Handle object/player-based messaging
+		var recipientList = ArgHelpers.NameList(recipients);
+		
+		foreach (var recipient in recipientList)
 		{
-			// Handle object/player-based messaging
-			var recipientList = ArgHelpers.NameList(recipients);
+			AnySharpObject target;
 			
-			foreach (var recipient in recipientList)
+			// Try to locate the target based on type
+			if (recipient.IsT0)
 			{
-				await recipient.Match(
-					async dbref =>
-					{
-						// Get the object to check permissions
-						var maybeTarget = await Mediator!.Send(new GetObjectNodeQuery(dbref));
-						if (!maybeTarget.TryPickT0(out var target, out var _))
-						{
-							return;
-						}
-						
-						// Check if executor can interact with the target
-						if (!await PermissionService!.CanInteract(target, executor, InteractType.Hear))
-						{
-							return;
-						}
-						
-						await NotifyService!.Notify(dbref, message, executor, INotifyService.NotificationType.Announce);
-					},
-					async name =>
-					{
-						var maybeFound = await LocateService!.LocatePlayer(parser, executor, executor, name);
-						if (maybeFound.TryPickT0(out var player, out var _))
-						{
-							// Check if executor can interact with the player
-							if (!await PermissionService!.CanInteract(player, executor, InteractType.Hear))
-							{
-								return;
-							}
-							
-							await NotifyService!.Notify(player, message, executor, INotifyService.NotificationType.Announce);
-						}
-					});
+				// DBRef
+				var targetResult = await Mediator!.Send(new GetObjectNodeQuery(recipient.AsT0));
+				if (!targetResult.IsT0 && !targetResult.IsT1 && !targetResult.IsT2 && !targetResult.IsT3)
+				{
+					continue;
+				}
+				target = targetResult.Match<AnySharpObject>(
+					t0 => t0,
+					t1 => t1,
+					t2 => t2,
+					t3 => t3,
+					t4 => throw new InvalidOperationException()
+				);
 			}
+			else
+			{
+				// Name string
+				var playerResult = await LocateService!.LocatePlayer(parser, executor, executor, recipient.AsT1);
+				if (!playerResult.TryPickT0(out var player, out var _))
+				{
+					continue;
+				}
+				target = player;
+			}
+			
+			// Check if executor can interact with the target
+			if (!await PermissionService!.CanInteract(target, executor, InteractType.Hear))
+			{
+				continue;
+			}
+			
+			// Send the notification
+			await NotifyService!.Notify(target, message, executor, INotifyService.NotificationType.Announce);
 		}
 		
 		return CallState.Empty;

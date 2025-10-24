@@ -32,7 +32,7 @@ public class CommunicationFunctionUnitTests
 		await NotifyService
 			.Received()
 			.Notify(
-				Arg.Any<DBRef>(), 
+				Arg.Any<AnySharpObject>(), 
 				Arg.Is<OneOf<MString, string>>(m => m.Match(
 					mstr => mstr.ToPlainText() == uniqueMessage,
 					str => str == uniqueMessage
@@ -117,7 +117,7 @@ public class CommunicationFunctionUnitTests
 		await NotifyService
 			.Received()
 			.Notify(
-				Arg.Any<DBRef>(), 
+				Arg.Any<AnySharpObject>(), 
 				Arg.Is<OneOf<MString, string>>(m => m.Match(
 					mstr => mstr.ToPlainText() == uniqueMessage,
 					str => str == uniqueMessage
