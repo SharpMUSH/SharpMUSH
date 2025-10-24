@@ -294,7 +294,7 @@ public partial class Commands
 			executor,
 			enactor,
 			nameListTargets,
-			notification,
+			(_, msg) => notification,
 			INotifyService.NotificationType.Announce,
 			notifyOnPermissionFailure: true);
 
@@ -1443,7 +1443,7 @@ public partial class Commands
 		await CommunicationService!.SendToRoomAsync(
 			executor,
 			executorLocation,
-			message,
+			(_, msg) => message,
 			INotifyService.NotificationType.Emit,
 			sender: isSpoof ? enactor : executor);
 

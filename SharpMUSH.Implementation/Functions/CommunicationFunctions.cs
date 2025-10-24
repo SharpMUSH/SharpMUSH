@@ -21,7 +21,7 @@ public partial class Functions
 		await CommunicationService!.SendToRoomAsync(
 			executor,
 			executorLocation,
-			message,
+			(_, msg) => message,
 			INotifyService.NotificationType.Emit);
 
 		return CallState.Empty;
@@ -170,7 +170,7 @@ public partial class Functions
 				.Select(long.Parse)
 				.ToArray();
 			
-			await CommunicationService!.SendToPortsAsync(executor, ports, message, notificationType);
+			await CommunicationService!.SendToPortsAsync(executor, ports, (_, msg) => message, notificationType);
 			return CallState.Empty;
 		}
 		
@@ -246,7 +246,7 @@ public partial class Functions
 				.Select(long.Parse)
 				.ToArray();
 			
-			await CommunicationService!.SendToPortsAsync(executor, ports, message, INotifyService.NotificationType.Announce);
+			await CommunicationService!.SendToPortsAsync(executor, ports, (_, msg) => message, INotifyService.NotificationType.Announce);
 			return CallState.Empty;
 		}
 		

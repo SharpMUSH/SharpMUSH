@@ -17,13 +17,13 @@ public interface ICommunicationService
 	/// </summary>
 	/// <param name="executor">The object executing the function</param>
 	/// <param name="ports">Array of port numbers</param>
-	/// <param name="message">The message to send</param>
+	/// <param name="messageFunc">Function that takes the target and base message, returns the final message to send</param>
 	/// <param name="notificationType">The type of notification to send</param>
 	/// <returns>Task representing the async operation</returns>
 	ValueTask SendToPortsAsync(
 		AnySharpObject executor,
 		long[] ports,
-		OneOf<MString, string> message,
+		Func<AnySharpObject, OneOf<MString, string>, OneOf<MString, string>> messageFunc,
 		INotifyService.NotificationType notificationType);
 
 	/// <summary>
@@ -32,16 +32,18 @@ public interface ICommunicationService
 	/// </summary>
 	/// <param name="executor">The object executing the function</param>
 	/// <param name="room">The room whose contents will receive the message</param>
-	/// <param name="message">The message to send</param>
+	/// <param name="messageFunc">Function that takes the target and base message, returns the final message to send</param>
 	/// <param name="notificationType">The type of notification to send</param>
 	/// <param name="sender">The object shown as the sender (for spoof support)</param>
+	/// <param name="excludeObjects">Optional list of objects to exclude from receiving the message</param>
 	/// <returns>Task representing the async operation</returns>
 	ValueTask SendToRoomAsync(
 		AnySharpObject executor,
 		AnySharpContainer room,
-		OneOf<MString, string> message,
+		Func<AnySharpObject, OneOf<MString, string>, OneOf<MString, string>> messageFunc,
 		INotifyService.NotificationType notificationType,
-		AnySharpObject? sender = null);
+		AnySharpObject? sender = null,
+		IEnumerable<AnySharpObject>? excludeObjects = null);
 
 	/// <summary>
 	/// Sends a message to a single object after locating it and checking permissions.
@@ -50,7 +52,7 @@ public interface ICommunicationService
 	/// <param name="executor">The object executing the function</param>
 	/// <param name="enactor">The enactor for locate operations</param>
 	/// <param name="targetName">The name or DBRef of the target</param>
-	/// <param name="message">The message to send</param>
+	/// <param name="messageFunc">Function that takes the target and base message, returns the final message to send</param>
 	/// <param name="notificationType">The type of notification to send</param>
 	/// <param name="notifyOnPermissionFailure">Whether to notify executor if permission check fails</param>
 	/// <returns>True if message was sent successfully, false otherwise</returns>
@@ -59,7 +61,7 @@ public interface ICommunicationService
 		AnySharpObject executor,
 		AnySharpObject enactor,
 		string targetName,
-		OneOf<MString, string> message,
+		Func<AnySharpObject, OneOf<MString, string>, OneOf<MString, string>> messageFunc,
 		INotifyService.NotificationType notificationType,
 		bool notifyOnPermissionFailure = true);
 
@@ -70,7 +72,7 @@ public interface ICommunicationService
 	/// <param name="executor">The object executing the function</param>
 	/// <param name="enactor">The enactor for locate operations</param>
 	/// <param name="targets">List of target names or DBRefs</param>
-	/// <param name="message">The message to send</param>
+	/// <param name="messageFunc">Function that takes the target and base message, returns the final message to send</param>
 	/// <param name="notificationType">The type of notification to send</param>
 	/// <param name="notifyOnPermissionFailure">Whether to notify executor if permission check fails</param>
 	/// <returns>Task representing the async operation</returns>
@@ -79,7 +81,7 @@ public interface ICommunicationService
 		AnySharpObject executor,
 		AnySharpObject enactor,
 		IEnumerable<OneOf<DBRef, string>> targets,
-		OneOf<MString, string> message,
+		Func<AnySharpObject, OneOf<MString, string>, OneOf<MString, string>> messageFunc,
 		INotifyService.NotificationType notificationType,
 		bool notifyOnPermissionFailure = true);
 }

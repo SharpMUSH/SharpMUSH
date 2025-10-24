@@ -20,7 +20,7 @@ public class CommunicationService(
 	public async ValueTask SendToPortsAsync(
 		AnySharpObject executor,
 		long[] ports,
-		OneOf<MString, string> message,
+		Func<AnySharpObject, OneOf<MString, string>, OneOf<MString, string>> messageFunc,
 		INotifyService.NotificationType notificationType)
 	{
 		// Filter ports by permission check
@@ -58,6 +58,8 @@ public class CommunicationService(
 
 		if (validPorts.Count > 0)
 		{
+			// Call message function with executor as target for port-based messaging
+			var message = messageFunc(executor, string.Empty);
 			await notifyService.Notify(validPorts.ToArray(), message, executor, notificationType);
 		}
 	}
@@ -65,21 +67,31 @@ public class CommunicationService(
 	public async ValueTask SendToRoomAsync(
 		AnySharpObject executor,
 		AnySharpContainer room,
-		OneOf<MString, string> message,
+		Func<AnySharpObject, OneOf<MString, string>, OneOf<MString, string>> messageFunc,
 		INotifyService.NotificationType notificationType,
-		AnySharpObject? sender = null)
+		AnySharpObject? sender = null,
+		IEnumerable<AnySharpObject>? excludeObjects = null)
 	{
 		var contents = await room.Content(mediator);
 		var actualSender = sender ?? executor;
+		var excludeSet = excludeObjects?.ToHashSet() ?? new HashSet<AnySharpObject>();
 
 		var interactableContents = contents
 			.Where(async (obj, _) =>
-				await permissionService.CanInteract(obj.WithRoomOption(), executor, InteractType.Hear));
+			{
+				var objWithRoom = obj.WithRoomOption();
+				// Exclude objects in the exclude list
+				if (excludeSet.Contains(objWithRoom))
+					return false;
+				return await permissionService.CanInteract(objWithRoom, executor, InteractType.Hear);
+			});
 
 		await foreach (var obj in interactableContents)
 		{
+			var objWithRoom = obj.WithRoomOption();
+			var message = messageFunc(objWithRoom, string.Empty);
 			await notifyService.Notify(
-				obj.WithRoomOption(),
+				objWithRoom,
 				message,
 				actualSender,
 				notificationType);
@@ -91,7 +103,7 @@ public class CommunicationService(
 		AnySharpObject executor,
 		AnySharpObject enactor,
 		string targetName,
-		OneOf<MString, string> message,
+		Func<AnySharpObject, OneOf<MString, string>, OneOf<MString, string>> messageFunc,
 		INotifyService.NotificationType notificationType,
 		bool notifyOnPermissionFailure = true)
 	{
@@ -115,7 +127,8 @@ public class CommunicationService(
 			return false;
 		}
 
-		await notifyService.Notify(target, message);
+		var message = messageFunc(target, string.Empty);
+		await notifyService.Notify(target, message, executor, notificationType);
 		return true;
 	}
 
@@ -124,14 +137,14 @@ public class CommunicationService(
 		AnySharpObject executor,
 		AnySharpObject enactor,
 		IEnumerable<OneOf<DBRef, string>> targets,
-		OneOf<MString, string> message,
+		Func<AnySharpObject, OneOf<MString, string>, OneOf<MString, string>> messageFunc,
 		INotifyService.NotificationType notificationType,
 		bool notifyOnPermissionFailure = true)
 	{
 		foreach (var target in targets)
 		{
 			var targetString = target.Match(dbref => dbref.ToString(), str => str);
-			await SendToObjectAsync(parser, executor, enactor, targetString, message, notificationType, notifyOnPermissionFailure);
+			await SendToObjectAsync(parser, executor, enactor, targetString, messageFunc, notificationType, notifyOnPermissionFailure);
 		}
 	}
 }
