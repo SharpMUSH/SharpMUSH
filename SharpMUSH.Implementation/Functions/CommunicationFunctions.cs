@@ -2,6 +2,7 @@
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using static SharpMUSH.Library.Services.Interfaces.IPermissionService;
 
@@ -188,6 +189,19 @@ public partial class Functions
 				await recipient.Match(
 					async dbref =>
 					{
+						// Get the object to check permissions
+						var maybeTarget = await Mediator!.Send(new GetObjectNodeQuery(dbref));
+						if (!maybeTarget.TryPickT0(out var target, out var _))
+						{
+							return;
+						}
+						
+						// Check if executor can interact with the target
+						if (!await PermissionService!.CanInteract(target, executor, InteractType.Hear))
+						{
+							return;
+						}
+						
 						await NotifyService!.Notify(dbref, message, executor, notificationType);
 					},
 					async name =>
@@ -195,6 +209,12 @@ public partial class Functions
 						var maybeFound = await LocateService!.LocatePlayer(parser, executor, executor, name);
 						if (maybeFound.TryPickT0(out var player, out var _))
 						{
+							// Check if executor can interact with the player
+							if (!await PermissionService!.CanInteract(player, executor, InteractType.Hear))
+							{
+								return;
+							}
+							
 							await NotifyService!.Notify(player, message, executor, notificationType);
 						}
 					});
@@ -261,6 +281,19 @@ public partial class Functions
 				await recipient.Match(
 					async dbref =>
 					{
+						// Get the object to check permissions
+						var maybeTarget = await Mediator!.Send(new GetObjectNodeQuery(dbref));
+						if (!maybeTarget.TryPickT0(out var target, out var _))
+						{
+							return;
+						}
+						
+						// Check if executor can interact with the target
+						if (!await PermissionService!.CanInteract(target, executor, InteractType.Hear))
+						{
+							return;
+						}
+						
 						await NotifyService!.Notify(dbref, message, executor, INotifyService.NotificationType.Announce);
 					},
 					async name =>
@@ -268,6 +301,12 @@ public partial class Functions
 						var maybeFound = await LocateService!.LocatePlayer(parser, executor, executor, name);
 						if (maybeFound.TryPickT0(out var player, out var _))
 						{
+							// Check if executor can interact with the player
+							if (!await PermissionService!.CanInteract(player, executor, InteractType.Hear))
+							{
+								return;
+							}
+							
 							await NotifyService!.Notify(player, message, executor, INotifyService.NotificationType.Announce);
 						}
 					});
