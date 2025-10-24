@@ -24,6 +24,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 	private static IExpandedObjectDataService? ObjectDataService { get; set; }
 	private static IManipulateSharpObjectService? ManipulateSharpObjectService { get; set; }
 	private static IHttpClientFactory? HttpClientFactory { get; set; }
+	private static ICommunicationService? CommunicationService { get; set; }
 	
 	private readonly CommandLibraryService _commandLibrary = [];
 
@@ -40,7 +41,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		IConnectionService connectionService,
 		IExpandedObjectDataService objectDataService,
 		IManipulateSharpObjectService manipulateSharpObjectService,
-		IHttpClientFactory httpClientFactory)
+		IHttpClientFactory httpClientFactory,
+		ICommunicationService communicationService)
 	{
 		Mediator = mediator;
 		LocateService = locateService;
@@ -54,6 +56,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		ObjectDataService = objectDataService;
 		HttpClientFactory = httpClientFactory;
 		ManipulateSharpObjectService = manipulateSharpObjectService;
+		CommunicationService = communicationService;
 
 		foreach (var command in Generated.CommandLibrary.Commands)
 		{

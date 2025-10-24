@@ -16,20 +16,13 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var executorLocation = await executor.Where();
-		var contents = await executorLocation.Content(Mediator!);
+		var message = parser.CurrentState.Arguments["0"].Message!;
 
-		var interactableContents = contents
-			.Where(async (obj,_) =>
-				await PermissionService!.CanInteract(obj.WithRoomOption(), executor, InteractType.Hear));
-
-		await foreach (var obj in interactableContents)
-		{
-			await NotifyService!.Notify(
-				obj.WithRoomOption(),
-				parser.CurrentState.Arguments["0"].Message!,
-				executor,
-				INotifyService.NotificationType.Emit);
-		}
+		await CommunicationService!.SendToRoomAsync(
+			executor,
+			executorLocation,
+			message,
+			INotifyService.NotificationType.Emit);
 
 		return CallState.Empty;
 	}
