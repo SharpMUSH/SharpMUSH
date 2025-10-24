@@ -172,101 +172,21 @@ public partial class Functions
 		// Check if first argument is an integer list (port list)
 		if (IsIntegerList(recipients))
 		{
-			// Handle port-based messaging
-			// IsIntegerList already validated these are parseable integers
-			var allPorts = recipients.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+			// Handle port-based messaging using CommunicationService
+			var ports = recipients.Split(' ', StringSplitOptions.RemoveEmptyEntries)
 				.Select(long.Parse)
 				.ToArray();
 			
-			// Filter ports by permission check
-			// Ports without a DBRef always work (no interactability check)
-			// Ports with a DBRef require permission check
-			var validPorts = new List<long>();
-			foreach (var port in allPorts)
-			{
-				var connectionData = ConnectionService!.Get(port);
-				
-				// If no connection or no DBRef, allow the port (no permission check needed)
-				if (connectionData == null || connectionData.Ref == null)
-				{
-					validPorts.Add(port);
-					continue;
-				}
-				
-				// Get the player object connected to this port
-				var playerResult = await Mediator!.Send(new GetObjectNodeQuery(connectionData.Ref.Value));
-				if (!playerResult.IsT0 && !playerResult.IsT1 && !playerResult.IsT2 && !playerResult.IsT3)
-				{
-					// Player not found, but port exists - allow it
-					validPorts.Add(port);
-					continue;
-				}
-				
-				var player = playerResult.Match<AnySharpObject>(
-					t0 => t0,
-					t1 => t1,
-					t2 => t2,
-					t3 => t3,
-					t4 => throw new InvalidOperationException()
-				);
-				
-				// Check if executor can interact with the player
-				if (await PermissionService!.CanInteract(player, executor, InteractType.Hear))
-				{
-					validPorts.Add(port);
-				}
-			}
-			
-			if (validPorts.Count > 0)
-			{
-				await NotifyService!.Notify(validPorts.ToArray(), message, executor, notificationType);
-			}
+			await CommunicationService!.SendToPortsAsync(executor, ports, message, notificationType);
 			return CallState.Empty;
 		}
 		
-		// Handle object/player-based messaging
+		// Handle object/player-based messaging using CommunicationService
 		var recipientList = ArgHelpers.NameList(recipients);
 		
 		foreach (var recipient in recipientList)
 		{
-			AnySharpObject target;
-			
-			// Try to locate the target based on type
-			if (recipient.IsT0)
-			{
-				// DBRef
-				var targetResult = await Mediator!.Send(new GetObjectNodeQuery(recipient.AsT0));
-				if (!targetResult.IsT0 && !targetResult.IsT1 && !targetResult.IsT2 && !targetResult.IsT3)
-				{
-					continue;
-				}
-				target = targetResult.Match<AnySharpObject>(
-					t0 => t0,
-					t1 => t1,
-					t2 => t2,
-					t3 => t3,
-					t4 => throw new InvalidOperationException()
-				);
-			}
-			else
-			{
-				// Name string
-				var playerResult = await LocateService!.LocatePlayer(parser, executor, executor, recipient.AsT1);
-				if (!playerResult.TryPickT0(out var player, out var _))
-				{
-					continue;
-				}
-				target = player;
-			}
-			
-			// Check if executor can interact with the target
-			if (!await PermissionService!.CanInteract(target, executor, InteractType.Hear))
-			{
-				continue;
-			}
-			
-			// Send the notification
-			await NotifyService!.Notify(target, message, executor, notificationType);
+			await CommunicationService!.SendToRecipientAsync(parser, executor, recipient, message, notificationType);
 		}
 		
 		return CallState.Empty;
@@ -311,101 +231,21 @@ public partial class Functions
 		// Check if first argument is an integer list (port list)
 		if (IsIntegerList(recipients))
 		{
-			// Handle port-based messaging
-			// IsIntegerList already validated these are parseable integers
-			var allPorts = recipients.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+			// Handle port-based messaging using CommunicationService
+			var ports = recipients.Split(' ', StringSplitOptions.RemoveEmptyEntries)
 				.Select(long.Parse)
 				.ToArray();
 			
-			// Filter ports by permission check
-			// Ports without a DBRef always work (no interactability check)
-			// Ports with a DBRef require permission check
-			var validPorts = new List<long>();
-			foreach (var port in allPorts)
-			{
-				var connectionData = ConnectionService!.Get(port);
-				
-				// If no connection or no DBRef, allow the port (no permission check needed)
-				if (connectionData == null || connectionData.Ref == null)
-				{
-					validPorts.Add(port);
-					continue;
-				}
-				
-				// Get the player object connected to this port
-				var playerResult = await Mediator!.Send(new GetObjectNodeQuery(connectionData.Ref.Value));
-				if (!playerResult.IsT0 && !playerResult.IsT1 && !playerResult.IsT2 && !playerResult.IsT3)
-				{
-					// Player not found, but port exists - allow it
-					validPorts.Add(port);
-					continue;
-				}
-				
-				var player = playerResult.Match<AnySharpObject>(
-					t0 => t0,
-					t1 => t1,
-					t2 => t2,
-					t3 => t3,
-					t4 => throw new InvalidOperationException()
-				);
-				
-				// Check if executor can interact with the player
-				if (await PermissionService!.CanInteract(player, executor, InteractType.Hear))
-				{
-					validPorts.Add(port);
-				}
-			}
-			
-			if (validPorts.Count > 0)
-			{
-				await NotifyService!.Notify(validPorts.ToArray(), message, executor, INotifyService.NotificationType.Announce);
-			}
+			await CommunicationService!.SendToPortsAsync(executor, ports, message, INotifyService.NotificationType.Announce);
 			return CallState.Empty;
 		}
 		
-		// Handle object/player-based messaging
+		// Handle object/player-based messaging using CommunicationService
 		var recipientList = ArgHelpers.NameList(recipients);
 		
 		foreach (var recipient in recipientList)
 		{
-			AnySharpObject target;
-			
-			// Try to locate the target based on type
-			if (recipient.IsT0)
-			{
-				// DBRef
-				var targetResult = await Mediator!.Send(new GetObjectNodeQuery(recipient.AsT0));
-				if (!targetResult.IsT0 && !targetResult.IsT1 && !targetResult.IsT2 && !targetResult.IsT3)
-				{
-					continue;
-				}
-				target = targetResult.Match<AnySharpObject>(
-					t0 => t0,
-					t1 => t1,
-					t2 => t2,
-					t3 => t3,
-					t4 => throw new InvalidOperationException()
-				);
-			}
-			else
-			{
-				// Name string
-				var playerResult = await LocateService!.LocatePlayer(parser, executor, executor, recipient.AsT1);
-				if (!playerResult.TryPickT0(out var player, out var _))
-				{
-					continue;
-				}
-				target = player;
-			}
-			
-			// Check if executor can interact with the target
-			if (!await PermissionService!.CanInteract(target, executor, InteractType.Hear))
-			{
-				continue;
-			}
-			
-			// Send the notification
-			await NotifyService!.Notify(target, message, executor, INotifyService.NotificationType.Announce);
+			await CommunicationService!.SendToRecipientAsync(parser, executor, recipient, message, INotifyService.NotificationType.Announce);
 		}
 		
 		return CallState.Empty;
