@@ -18,35 +18,51 @@ public class CommunicationFunctionUnitTests
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 
 	[Test]
-	[Arguments("pemit(#1,test message)")]
-	public async Task Pemit(string str)
+	public async Task Pemit()
 	{
-		// Execute the function
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		const string uniqueMessage = "Pemit_test_unique_message_for_verification";
+		
+		// Execute the function with unique message
+		var result = (await Parser.FunctionParse(MModule.single($"pemit(#1,{uniqueMessage})")))?.Message!;
 		
 		// Verify return value is empty (side effect function)
 		await Assert.That(result.ToPlainText()).IsEqualTo("");
 		
-		// Verify NotifyService.Notify was called at least once
+		// Verify NotifyService.Notify was called with the unique message
 		await NotifyService
-			.ReceivedWithAnyArgs(1)
-			.Notify(default(DBRef)!, default!, default, default);
+			.Received()
+			.Notify(
+				Arg.Any<DBRef>(), 
+				Arg.Is<OneOf<MString, string>>(m => m.Match(
+					mstr => mstr.ToPlainText() == uniqueMessage,
+					str => str == uniqueMessage
+				)), 
+				Arg.Any<AnySharpObject?>(), 
+				Arg.Any<INotifyService.NotificationType>());
 	}
 	
 	[Test]
-	[Arguments("pemit(1234,test port message)")]
-	public async Task PemitPort(string str)
+	public async Task PemitPort()
 	{
-		// Execute the function
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		const string uniqueMessage = "PemitPort_test_unique_message_for_verification";
+		
+		// Execute the function with unique message for port-based messaging
+		var result = (await Parser.FunctionParse(MModule.single($"pemit(1234,{uniqueMessage})")))?.Message!;
 		
 		// Verify return value is empty (side effect function)
 		await Assert.That(result.ToPlainText()).IsEqualTo("");
 		
-		// Verify NotifyService.Notify with port array was called at least once
+		// Verify NotifyService.Notify with port array was called with the unique message
 		await NotifyService
-			.ReceivedWithAnyArgs(1)
-			.Notify(default(long[])!, default!, default, default);
+			.Received()
+			.Notify(
+				Arg.Any<long[]>(), 
+				Arg.Is<OneOf<MString, string>>(m => m.Match(
+					mstr => mstr.ToPlainText() == uniqueMessage,
+					str => str == uniqueMessage
+				)), 
+				Arg.Any<AnySharpObject?>(), 
+				Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
@@ -87,19 +103,27 @@ public class CommunicationFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("nspemit(#1,test message)")]
-	public async Task Nspemit(string str)
+	public async Task Nspemit()
 	{
-		// Execute the function
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		const string uniqueMessage = "Nspemit_test_unique_message_for_verification";
+		
+		// Execute the function with unique message
+		var result = (await Parser.FunctionParse(MModule.single($"nspemit(#1,{uniqueMessage})")))?.Message!;
 		
 		// Verify return value is empty (side effect function)
 		await Assert.That(result.ToPlainText()).IsEqualTo("");
 		
-		// Verify NotifyService.Notify was called at least once
+		// Verify NotifyService.Notify was called with the unique message
 		await NotifyService
-			.ReceivedWithAnyArgs(1)
-			.Notify(default(DBRef)!, default!, default, default);
+			.Received()
+			.Notify(
+				Arg.Any<DBRef>(), 
+				Arg.Is<OneOf<MString, string>>(m => m.Match(
+					mstr => mstr.ToPlainText() == uniqueMessage,
+					str => str == uniqueMessage
+				)), 
+				Arg.Any<AnySharpObject?>(), 
+				Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
