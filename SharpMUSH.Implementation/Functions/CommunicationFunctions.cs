@@ -156,62 +156,36 @@ public partial class Functions
 			? INotifyService.NotificationType.NSEmit
 			: INotifyService.NotificationType.Emit;
 		
-		// Parse objects - can be room/obj format or just objects
+		// For simplicity: emit to executor's location, excluding the specified objects
+		// TODO: Support room/obj format like PennMUSH
+		var targetRoom = await executor.Where();
 		var objectList = ArgHelpers.NameList(objects);
 		var excludeObjects = new List<AnySharpObject>();
-		AnySharpContainer? targetRoom = null;
 		
-		// First object might be a room (if it has contents), rest are objects to exclude
-		var firstObjName = objectList.FirstOrDefault();
-		if (firstObjName != null)
+		// Resolve all objects to exclude
+		foreach (var obj in objectList)
 		{
-			var firstObjStr = firstObjName.IsT0 ? firstObjName.AsT0.ToString()! : firstObjName.AsT1;
-			var locateResult = await LocateService!.Locate(parser, executor, executor, firstObjStr, LocateFlags.All);
+			var objName = obj.IsT0 ? obj.AsT0.ToString()! : obj.AsT1;
 			
-			if (!locateResult.IsError())
-			{
-				var firstObj = locateResult.WithoutError();
-				// Check if it's a container (room) - if so, use it as target room
-				if (firstObj.IsT0 || firstObj.IsT1)
+			await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+				parser, 
+				executor, 
+				executor, 
+				objName,
+				LocateFlags.All,
+				async target =>
 				{
-					targetRoom = firstObj.IsT0 ? (AnySharpContainer)firstObj.AsT0 : firstObj.AsT1;
-					// Rest are exclusions
-					foreach (var obj in objectList.Skip(1))
-					{
-						var objName = obj.IsT0 ? obj.AsT0.ToString()! : obj.AsT1;
-						var objResult = await LocateService!.Locate(parser, executor, executor, objName, LocateFlags.All);
-						if (!objResult.IsError())
-						{
-							excludeObjects.Add(objResult.WithoutError());
-						}
-					}
-				}
-				else
-				{
-					// All are exclusions, use executor's location
-					targetRoom = await executor.Where();
-					foreach (var obj in objectList)
-					{
-						var objName = obj.IsT0 ? obj.AsT0.ToString()! : obj.AsT1;
-						var objResult = await LocateService!.Locate(parser, executor, executor, objName, LocateFlags.All);
-						if (!objResult.IsError())
-						{
-							excludeObjects.Add(objResult.WithoutError());
-						}
-					}
-				}
-			}
+					excludeObjects.Add(target);
+					return CallState.Empty;
+				});
 		}
-		
-		// If no target room determined, use executor's location
-		targetRoom ??= await executor.Where();
 		
 		await CommunicationService!.SendToRoomAsync(
 			executor,
 			targetRoom,
 			(_, msg) => message,
 			notificationType,
-			excludeObjects);
+			excludeObjects: excludeObjects);
 		
 		return CallState.Empty;
 	}
@@ -287,8 +261,8 @@ public partial class Functions
 		
 		// Determine notification type based on nospoof permissions
 		var notificationType = await PermissionService!.CanNoSpoof(executor)
-			? INotifyService.NotificationType.NSPrompt
-			: INotifyService.NotificationType.Prompt;
+			? INotifyService.NotificationType.NSAnnounce
+			: INotifyService.NotificationType.Announce;
 		
 		// Handle object/player-based messaging (prompt doesn't support ports)
 		var recipientList = ArgHelpers.NameList(recipients);
@@ -307,7 +281,7 @@ public partial class Functions
 				{
 					if (await PermissionService!.CanInteract(target, executor, InteractType.Hear))
 					{
-						await NotifyService!.Notify(target, message, executor, notificationType);
+						await NotifyService!.Prompt(target, message, executor, notificationType);
 					}
 					
 					return CallState.Empty;
@@ -417,62 +391,36 @@ public partial class Functions
 		var objects = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var message = parser.CurrentState.Arguments["1"].Message!;
 		
-		// Parse objects - can be room/obj format or just objects
+		// For simplicity: emit to executor's location, excluding the specified objects
+		// TODO: Support room/obj format like PennMUSH
+		var targetRoom = await executor.Where();
 		var objectList = ArgHelpers.NameList(objects);
 		var excludeObjects = new List<AnySharpObject>();
-		AnySharpContainer? targetRoom = null;
 		
-		// First object might be a room (if it has contents), rest are objects to exclude
-		var firstObjName = objectList.FirstOrDefault();
-		if (firstObjName != null)
+		// Resolve all objects to exclude
+		foreach (var obj in objectList)
 		{
-			var firstObjStr = firstObjName.IsT0 ? firstObjName.AsT0.ToString()! : firstObjName.AsT1;
-			var locateResult = await LocateService!.Locate(parser, executor, executor, firstObjStr, LocateFlags.All);
+			var objName = obj.IsT0 ? obj.AsT0.ToString()! : obj.AsT1;
 			
-			if (!locateResult.IsError())
-			{
-				var firstObj = locateResult.WithoutError();
-				// Check if it's a container (room) - if so, use it as target room
-				if (firstObj.IsT0 || firstObj.IsT1)
+			await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+				parser, 
+				executor, 
+				executor, 
+				objName,
+				LocateFlags.All,
+				async target =>
 				{
-					targetRoom = firstObj.IsT0 ? (AnySharpContainer)firstObj.AsT0 : firstObj.AsT1;
-					// Rest are exclusions
-					foreach (var obj in objectList.Skip(1))
-					{
-						var objName = obj.IsT0 ? obj.AsT0.ToString()! : obj.AsT1;
-						var objResult = await LocateService!.Locate(parser, executor, executor, objName, LocateFlags.All);
-						if (!objResult.IsError())
-						{
-							excludeObjects.Add(objResult.WithoutError());
-						}
-					}
-				}
-				else
-				{
-					// All are exclusions, use executor's location
-					targetRoom = await executor.Where();
-					foreach (var obj in objectList)
-					{
-						var objName = obj.IsT0 ? obj.AsT0.ToString()! : obj.AsT1;
-						var objResult = await LocateService!.Locate(parser, executor, executor, objName, LocateFlags.All);
-						if (!objResult.IsError())
-						{
-							excludeObjects.Add(objResult.WithoutError());
-						}
-					}
-				}
-			}
+					excludeObjects.Add(target);
+					return CallState.Empty;
+				});
 		}
-		
-		// If no target room determined, use executor's location
-		targetRoom ??= await executor.Where();
 		
 		await CommunicationService!.SendToRoomAsync(
 			executor,
 			targetRoom,
 			(_, msg) => message,
 			INotifyService.NotificationType.Emit,
-			excludeObjects);
+			excludeObjects: excludeObjects);
 		
 		return CallState.Empty;
 	}
@@ -566,7 +514,7 @@ public partial class Functions
 				{
 					if (await PermissionService!.CanInteract(target, executor, InteractType.Hear))
 					{
-						await NotifyService!.Notify(target, message, executor, INotifyService.NotificationType.Prompt);
+						await NotifyService!.Prompt(target, message, executor, INotifyService.NotificationType.Announce);
 					}
 					
 					return CallState.Empty;
