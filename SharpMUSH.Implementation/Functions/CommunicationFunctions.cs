@@ -174,11 +174,46 @@ public partial class Functions
 		{
 			// Handle port-based messaging
 			// IsIntegerList already validated these are parseable integers
-			var ports = recipients.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+			var allPorts = recipients.Split(' ', StringSplitOptions.RemoveEmptyEntries)
 				.Select(long.Parse)
 				.ToArray();
 			
-			await NotifyService!.Notify(ports, message, executor, notificationType);
+			// Filter ports by permission check - only send to ports where executor can interact with the connected player
+			var validPorts = new List<long>();
+			foreach (var port in allPorts)
+			{
+				var connectionData = ConnectionService!.Get(port);
+				if (connectionData == null || connectionData.Ref == null)
+				{
+					continue;
+				}
+				
+				// Get the player object connected to this port
+				var playerResult = await Mediator!.Send(new GetObjectNodeQuery(connectionData.Ref.Value));
+				if (!playerResult.IsT0 && !playerResult.IsT1 && !playerResult.IsT2 && !playerResult.IsT3)
+				{
+					continue;
+				}
+				
+				var player = playerResult.Match<AnySharpObject>(
+					t0 => t0,
+					t1 => t1,
+					t2 => t2,
+					t3 => t3,
+					t4 => throw new InvalidOperationException()
+				);
+				
+				// Check if executor can interact with the player
+				if (await PermissionService!.CanInteract(player, executor, InteractType.Hear))
+				{
+					validPorts.Add(port);
+				}
+			}
+			
+			if (validPorts.Count > 0)
+			{
+				await NotifyService!.Notify(validPorts.ToArray(), message, executor, notificationType);
+			}
 			return CallState.Empty;
 		}
 		
@@ -271,11 +306,46 @@ public partial class Functions
 		{
 			// Handle port-based messaging
 			// IsIntegerList already validated these are parseable integers
-			var ports = recipients.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+			var allPorts = recipients.Split(' ', StringSplitOptions.RemoveEmptyEntries)
 				.Select(long.Parse)
 				.ToArray();
 			
-			await NotifyService!.Notify(ports, message, executor, INotifyService.NotificationType.Announce);
+			// Filter ports by permission check - only send to ports where executor can interact with the connected player
+			var validPorts = new List<long>();
+			foreach (var port in allPorts)
+			{
+				var connectionData = ConnectionService!.Get(port);
+				if (connectionData == null || connectionData.Ref == null)
+				{
+					continue;
+				}
+				
+				// Get the player object connected to this port
+				var playerResult = await Mediator!.Send(new GetObjectNodeQuery(connectionData.Ref.Value));
+				if (!playerResult.IsT0 && !playerResult.IsT1 && !playerResult.IsT2 && !playerResult.IsT3)
+				{
+					continue;
+				}
+				
+				var player = playerResult.Match<AnySharpObject>(
+					t0 => t0,
+					t1 => t1,
+					t2 => t2,
+					t3 => t3,
+					t4 => throw new InvalidOperationException()
+				);
+				
+				// Check if executor can interact with the player
+				if (await PermissionService!.CanInteract(player, executor, InteractType.Hear))
+				{
+					validPorts.Add(port);
+				}
+			}
+			
+			if (validPorts.Count > 0)
+			{
+				await NotifyService!.Notify(validPorts.ToArray(), message, executor, INotifyService.NotificationType.Announce);
+			}
 			return CallState.Empty;
 		}
 		
