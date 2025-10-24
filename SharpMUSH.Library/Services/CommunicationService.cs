@@ -1,6 +1,7 @@
 using Mediator;
 using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -39,20 +40,14 @@ public class CommunicationService(
 
 			// Get the player object connected to this port
 			var playerResult = await mediator.Send(new GetObjectNodeQuery(connectionData.Ref.Value));
-			if (!playerResult.IsT0 && !playerResult.IsT1 && !playerResult.IsT2 && !playerResult.IsT3)
+			if (playerResult.IsNone())
 			{
 				// Player not found, but port exists - allow it
 				validPorts.Add(port);
 				continue;
 			}
 
-			var player = playerResult.Match<AnySharpObject>(
-				t0 => t0,
-				t1 => t1,
-				t2 => t2,
-				t3 => t3,
-				t4 => throw new InvalidOperationException()
-			);
+			var player = playerResult.WithoutNone();
 
 			// Check if executor can interact with the player
 			if (await permissionService.CanInteract(player, executor, InteractType.Hear))
@@ -74,42 +69,34 @@ public class CommunicationService(
 		OneOf<MString, string> message,
 		INotifyService.NotificationType notificationType)
 	{
-		AnySharpObject target;
-
-		// Try to locate the target based on type
+		// Locate the target object (works for all types: player, room, exit, thing)
+		AnyOptionalSharpObjectOrError targetResult;
+		
 		if (recipient.IsT0)
 		{
-			// DBRef
-			var targetResult = await mediator.Send(new GetObjectNodeQuery(recipient.AsT0));
-			if (!targetResult.IsT0 && !targetResult.IsT1 && !targetResult.IsT2 && !targetResult.IsT3)
-			{
-				return;
-			}
-			target = targetResult.Match<AnySharpObject>(
-				t0 => t0,
-				t1 => t1,
-				t2 => t2,
-				t3 => t3,
-				t4 => throw new InvalidOperationException()
-			);
+			// DBRef - use Locate with AbsoluteMatch flag to directly resolve the DBRef
+			targetResult = await locateService.Locate(parser, executor, executor, recipient.AsT0.ToString()!, LocateFlags.AbsoluteMatch);
 		}
 		else
 		{
-			// Name string
-			var playerResult = await locateService.LocatePlayer(parser, executor, executor, recipient.AsT1);
-			if (!playerResult.TryPickT0(out var player, out var _))
-			{
-				return;
-			}
-			target = player;
+			// Name string - use Locate with appropriate flags to find any object type
+			targetResult = await locateService.Locate(parser, executor, executor, recipient.AsT1, LocateFlags.All);
 		}
-
+		
+		// Check if target was found
+		if (targetResult.IsNone() || targetResult.IsError())
+		{
+			return;
+		}
+		
+		var target = targetResult.WithoutError().WithoutNone();
+		
 		// Check if executor can interact with the target
 		if (!await permissionService.CanInteract(target, executor, InteractType.Hear))
 		{
 			return;
 		}
-
+		
 		// Send the notification
 		await notifyService.Notify(target, message, executor, notificationType);
 	}
