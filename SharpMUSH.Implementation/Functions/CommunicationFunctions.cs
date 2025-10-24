@@ -171,6 +171,7 @@ public partial class Functions
 		if (IsIntegerList(recipients))
 		{
 			// Handle port-based messaging
+			// IsIntegerList already validated these are parseable integers
 			var ports = recipients.Split(' ', StringSplitOptions.RemoveEmptyEntries)
 				.Select(long.Parse)
 				.ToArray();
@@ -243,6 +244,7 @@ public partial class Functions
 		if (IsIntegerList(recipients))
 		{
 			// Handle port-based messaging
+			// IsIntegerList already validated these are parseable integers
 			var ports = recipients.Split(' ', StringSplitOptions.RemoveEmptyEntries)
 				.Select(long.Parse)
 				.ToArray();
