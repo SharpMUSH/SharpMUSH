@@ -197,14 +197,11 @@ public partial class Functions
 				LocateFlags.All,
 				async target =>
 				{
-					// Check if executor can interact with the target
-					if (!await PermissionService!.CanInteract(target, executor, InteractType.Hear))
+					if (await PermissionService!.CanInteract(target, executor, InteractType.Hear))
 					{
-						return CallState.Empty;
+						await NotifyService!.Notify(target, message, executor, notificationType);
 					}
 					
-					// Send the notification
-					await NotifyService!.Notify(target, message, executor, notificationType);
 					return CallState.Empty;
 				});
 		}
@@ -276,14 +273,11 @@ public partial class Functions
 				LocateFlags.All,
 				async target =>
 				{
-					// Check if executor can interact with the target
-					if (!await PermissionService!.CanInteract(target, executor, InteractType.Hear))
+					if (await PermissionService!.CanInteract(target, executor, InteractType.Hear))
 					{
-						return CallState.Empty;
+						await NotifyService!.Notify(target, message, executor, INotifyService.NotificationType.Announce);
 					}
 					
-					// Send the notification
-					await NotifyService!.Notify(target, message, executor, INotifyService.NotificationType.Announce);
 					return CallState.Empty;
 				});
 		}
