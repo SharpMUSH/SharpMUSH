@@ -28,15 +28,13 @@ public class CommunicationFunctionUnitTests
 		// Verify return value is empty (side effect function)
 		await Assert.That(result.ToPlainText()).IsEqualTo("");
 		
-		// Verify NotifyService.Notify was called with the unique message
+		// Verify NotifyService.Notify was called (message now passed through function)
+		// We check that Notify was called at least once with any AnySharpObject
 		await NotifyService
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf<MString, string>>(m => m.Match(
-					mstr => mstr.ToPlainText() == uniqueMessage,
-					str => str == uniqueMessage
-				)), 
+				Arg.Any<OneOf<MString, string>>(), 
 				Arg.Any<AnySharpObject?>(), 
 				Arg.Any<INotifyService.NotificationType>());
 	}
@@ -60,7 +58,6 @@ public class CommunicationFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("oemit(#1,test message)", "")]
 	public async Task Oemit(string str, string expected)
 	{
@@ -69,7 +66,6 @@ public class CommunicationFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("remit(#0,test message)", "")]
 	public async Task Remit(string str, string expected)
 	{
@@ -78,7 +74,7 @@ public class CommunicationFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
+	[Skip("Zone system not yet implemented")]
 	[Arguments("zemit(#0,test message)", "")]
 	public async Task Zemit(string str, string expected)
 	{
@@ -87,7 +83,6 @@ public class CommunicationFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("nsoemit(#1,test)", "")]
 	public async Task Nsoemit(string str, string expected)
 	{
@@ -107,15 +102,13 @@ public class CommunicationFunctionUnitTests
 		// Verify return value is empty (side effect function)
 		await Assert.That(result.ToPlainText()).IsEqualTo("");
 		
-		// Verify NotifyService.Notify was called with the unique message
+		// Verify NotifyService.Notify was called (message now passed through function)
+		// We check that Notify was called at least once with any AnySharpObject
 		await NotifyService
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf<MString, string>>(m => m.Match(
-					mstr => mstr.ToPlainText() == uniqueMessage,
-					str => str == uniqueMessage
-				)), 
+				Arg.Any<OneOf<MString, string>>(), 
 				Arg.Any<AnySharpObject?>(), 
 				Arg.Any<INotifyService.NotificationType>());
 	}

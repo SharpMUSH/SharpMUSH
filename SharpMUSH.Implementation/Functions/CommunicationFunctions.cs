@@ -139,10 +139,81 @@ public partial class Functions
 		return CallState.Empty;
 	}
 
-	[SharpFunction(Name = "nsoemit", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> NoSpoofOmitEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "nsoemit", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX)]
+	public static async ValueTask<CallState> NoSpoofOmitEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
+		{
+			return new CallState(Errors.ErrorNoSideFx);
+		}
+		
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var objects = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var message = parser.CurrentState.Arguments["1"].Message!;
+		
+		// Determine notification type based on nospoof permissions
+		var notificationType = await PermissionService!.CanNoSpoof(executor)
+			? INotifyService.NotificationType.NSEmit
+			: INotifyService.NotificationType.Emit;
+		
+		// Parse objects - can be room/obj format or just objects
+		var objectList = ArgHelpers.NameList(objects);
+		var excludeObjects = new List<AnySharpObject>();
+		AnySharpContainer? targetRoom = null;
+		
+		// First object might be a room (if it has contents), rest are objects to exclude
+		var firstObjName = objectList.FirstOrDefault();
+		if (firstObjName != null)
+		{
+			var firstObjStr = firstObjName.IsT0 ? firstObjName.AsT0.ToString()! : firstObjName.AsT1;
+			var locateResult = await LocateService!.Locate(parser, executor, executor, firstObjStr, LocateFlags.All);
+			
+			if (!locateResult.IsError())
+			{
+				var firstObj = locateResult.WithoutError();
+				// Check if it's a container (room) - if so, use it as target room
+				if (firstObj.IsT0 || firstObj.IsT1)
+				{
+					targetRoom = firstObj.IsT0 ? (AnySharpContainer)firstObj.AsT0 : firstObj.AsT1;
+					// Rest are exclusions
+					foreach (var obj in objectList.Skip(1))
+					{
+						var objName = obj.IsT0 ? obj.AsT0.ToString()! : obj.AsT1;
+						var objResult = await LocateService!.Locate(parser, executor, executor, objName, LocateFlags.All);
+						if (!objResult.IsError())
+						{
+							excludeObjects.Add(objResult.WithoutError());
+						}
+					}
+				}
+				else
+				{
+					// All are exclusions, use executor's location
+					targetRoom = await executor.Where();
+					foreach (var obj in objectList)
+					{
+						var objName = obj.IsT0 ? obj.AsT0.ToString()! : obj.AsT1;
+						var objResult = await LocateService!.Locate(parser, executor, executor, objName, LocateFlags.All);
+						if (!objResult.IsError())
+						{
+							excludeObjects.Add(objResult.WithoutError());
+						}
+					}
+				}
+			}
+		}
+		
+		// If no target room determined, use executor's location
+		targetRoom ??= await executor.Where();
+		
+		await CommunicationService!.SendToRoomAsync(
+			executor,
+			targetRoom,
+			(_, msg) => message,
+			notificationType,
+			excludeObjects);
+		
+		return CallState.Empty;
 	}
 
 	[SharpFunction(Name = "nspemit", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX)]
@@ -202,28 +273,208 @@ public partial class Functions
 		return CallState.Empty;
 	}
 
-	[SharpFunction(Name = "nsprompt", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> NoSpoofPrompt(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "nsprompt", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX)]
+	public static async ValueTask<CallState> NoSpoofPrompt(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
+		{
+			return new CallState(Errors.ErrorNoSideFx);
+		}
+		
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var recipients = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var message = parser.CurrentState.Arguments["1"].Message!;
+		
+		// Determine notification type based on nospoof permissions
+		var notificationType = await PermissionService!.CanNoSpoof(executor)
+			? INotifyService.NotificationType.NSPrompt
+			: INotifyService.NotificationType.Prompt;
+		
+		// Handle object/player-based messaging (prompt doesn't support ports)
+		var recipientList = ArgHelpers.NameList(recipients);
+		
+		foreach (var recipient in recipientList)
+		{
+			var recipientName = recipient.IsT0 ? recipient.AsT0.ToString()! : recipient.AsT1;
+			
+			await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+				parser, 
+				executor, 
+				executor, 
+				recipientName,
+				LocateFlags.All,
+				async target =>
+				{
+					if (await PermissionService!.CanInteract(target, executor, InteractType.Hear))
+					{
+						await NotifyService!.Notify(target, message, executor, notificationType);
+					}
+					
+					return CallState.Empty;
+				});
+		}
+		
+		return CallState.Empty;
 	}
 
-	[SharpFunction(Name = "nsremit", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> NoSpoofRoomEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "nsremit", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX)]
+	public static async ValueTask<CallState> NoSpoofRoomEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
+		{
+			return new CallState(Errors.ErrorNoSideFx);
+		}
+		
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var objects = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var message = parser.CurrentState.Arguments["1"].Message!;
+		
+		// Determine notification type based on nospoof permissions
+		var notificationType = await PermissionService!.CanNoSpoof(executor)
+			? INotifyService.NotificationType.NSEmit
+			: INotifyService.NotificationType.Emit;
+		
+		// Send message to contents of all specified objects
+		var objectList = ArgHelpers.NameList(objects);
+		
+		foreach (var obj in objectList)
+		{
+			var objName = obj.IsT0 ? obj.AsT0.ToString()! : obj.AsT1;
+			
+			await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+				parser, 
+				executor, 
+				executor, 
+				objName,
+				LocateFlags.All,
+				async target =>
+				{
+					// Check if target is a container (has contents)
+					if (target.IsT0 || target.IsT1)
+					{
+						var container = target.IsT0 ? (AnySharpContainer)target.AsT0 : target.AsT1;
+						await CommunicationService!.SendToRoomAsync(
+							executor,
+							container,
+							(_, msg) => message,
+							notificationType);
+					}
+					
+					return CallState.Empty;
+				});
+		}
+		
+		return CallState.Empty;
 	}
 
-	[SharpFunction(Name = "nszemit", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> NoSpoofZoneEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "nszemit", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX)]
+	public static async ValueTask<CallState> NoSpoofZoneEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
+		{
+			return new CallState(Errors.ErrorNoSideFx);
+		}
+		
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var zoneName = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var message = parser.CurrentState.Arguments["1"].Message!;
+		
+		// Determine notification type based on nospoof permissions
+		var notificationType = await PermissionService!.CanNoSpoof(executor)
+			? INotifyService.NotificationType.NSEmit
+			: INotifyService.NotificationType.Emit;
+		
+		// Locate the zone object
+		await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+			parser, 
+			executor, 
+			executor, 
+			zoneName,
+			LocateFlags.All,
+			async zone =>
+			{
+				// TODO: Implement zone emission - requires zone system support
+				// For now, this is a placeholder that would need to:
+				// 1. Find all rooms with zone == zone parameter
+				// 2. Send message to each of those rooms
+				// This requires zone system infrastructure not yet implemented
+				
+				return CallState.Empty;
+			});
+		
+		return CallState.Empty;
 	}
 
-	[SharpFunction(Name = "oemit", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> OmitEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "oemit", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX)]
+	public static async ValueTask<CallState> OmitEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
+		{
+			return new CallState(Errors.ErrorNoSideFx);
+		}
+		
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var objects = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var message = parser.CurrentState.Arguments["1"].Message!;
+		
+		// Parse objects - can be room/obj format or just objects
+		var objectList = ArgHelpers.NameList(objects);
+		var excludeObjects = new List<AnySharpObject>();
+		AnySharpContainer? targetRoom = null;
+		
+		// First object might be a room (if it has contents), rest are objects to exclude
+		var firstObjName = objectList.FirstOrDefault();
+		if (firstObjName != null)
+		{
+			var firstObjStr = firstObjName.IsT0 ? firstObjName.AsT0.ToString()! : firstObjName.AsT1;
+			var locateResult = await LocateService!.Locate(parser, executor, executor, firstObjStr, LocateFlags.All);
+			
+			if (!locateResult.IsError())
+			{
+				var firstObj = locateResult.WithoutError();
+				// Check if it's a container (room) - if so, use it as target room
+				if (firstObj.IsT0 || firstObj.IsT1)
+				{
+					targetRoom = firstObj.IsT0 ? (AnySharpContainer)firstObj.AsT0 : firstObj.AsT1;
+					// Rest are exclusions
+					foreach (var obj in objectList.Skip(1))
+					{
+						var objName = obj.IsT0 ? obj.AsT0.ToString()! : obj.AsT1;
+						var objResult = await LocateService!.Locate(parser, executor, executor, objName, LocateFlags.All);
+						if (!objResult.IsError())
+						{
+							excludeObjects.Add(objResult.WithoutError());
+						}
+					}
+				}
+				else
+				{
+					// All are exclusions, use executor's location
+					targetRoom = await executor.Where();
+					foreach (var obj in objectList)
+					{
+						var objName = obj.IsT0 ? obj.AsT0.ToString()! : obj.AsT1;
+						var objResult = await LocateService!.Locate(parser, executor, executor, objName, LocateFlags.All);
+						if (!objResult.IsError())
+						{
+							excludeObjects.Add(objResult.WithoutError());
+						}
+					}
+				}
+			}
+		}
+		
+		// If no target room determined, use executor's location
+		targetRoom ??= await executor.Where();
+		
+		await CommunicationService!.SendToRoomAsync(
+			executor,
+			targetRoom,
+			(_, msg) => message,
+			INotifyService.NotificationType.Emit,
+			excludeObjects);
+		
+		return CallState.Empty;
 	}
 
 	[SharpFunction(Name = "pemit", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX)]
@@ -286,21 +537,120 @@ public partial class Functions
 		return tokens.Length > 0 && tokens.All(token => long.TryParse(token, out _));
 	}
 
-	[SharpFunction(Name = "prompt", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> Prompt(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "prompt", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX)]
+	public static async ValueTask<CallState> Prompt(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
+		{
+			return new CallState(Errors.ErrorNoSideFx);
+		}
+		
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var recipients = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var message = parser.CurrentState.Arguments["1"].Message!;
+		
+		// Handle object/player-based messaging (prompt doesn't support ports)
+		var recipientList = ArgHelpers.NameList(recipients);
+		
+		foreach (var recipient in recipientList)
+		{
+			var recipientName = recipient.IsT0 ? recipient.AsT0.ToString()! : recipient.AsT1;
+			
+			await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+				parser, 
+				executor, 
+				executor, 
+				recipientName,
+				LocateFlags.All,
+				async target =>
+				{
+					if (await PermissionService!.CanInteract(target, executor, InteractType.Hear))
+					{
+						await NotifyService!.Notify(target, message, executor, INotifyService.NotificationType.Prompt);
+					}
+					
+					return CallState.Empty;
+				});
+		}
+		
+		return CallState.Empty;
 	}
 
-	[SharpFunction(Name = "remit", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> RoomEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "remit", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX)]
+	public static async ValueTask<CallState> RoomEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
+		{
+			return new CallState(Errors.ErrorNoSideFx);
+		}
+		
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var objects = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var message = parser.CurrentState.Arguments["1"].Message!;
+		
+		// Send message to contents of all specified objects
+		var objectList = ArgHelpers.NameList(objects);
+		
+		foreach (var obj in objectList)
+		{
+			var objName = obj.IsT0 ? obj.AsT0.ToString()! : obj.AsT1;
+			
+			await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+				parser, 
+				executor, 
+				executor, 
+				objName,
+				LocateFlags.All,
+				async target =>
+				{
+					// Check if target is a container (has contents)
+					if (target.IsT0 || target.IsT1)
+					{
+						var container = target.IsT0 ? (AnySharpContainer)target.AsT0 : target.AsT1;
+						await CommunicationService!.SendToRoomAsync(
+							executor,
+							container,
+							(_, msg) => message,
+							INotifyService.NotificationType.Emit);
+					}
+					
+					return CallState.Empty;
+				});
+		}
+		
+		return CallState.Empty;
 	}
 
-	[SharpFunction(Name = "zemit", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> ZoneEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "zemit", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX)]
+	public static async ValueTask<CallState> ZoneEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
+		{
+			return new CallState(Errors.ErrorNoSideFx);
+		}
+		
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var zoneName = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var message = parser.CurrentState.Arguments["1"].Message!;
+		
+		// Locate the zone object
+		await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+			parser, 
+			executor, 
+			executor, 
+			zoneName,
+			LocateFlags.All,
+			async zone =>
+			{
+				// TODO: Implement zone emission - requires zone system support
+				// For now, this is a placeholder that would need to:
+				// 1. Find all rooms with zone == zone parameter
+				// 2. Send message to each of those rooms
+				// This requires zone system infrastructure not yet implemented
+				
+				return CallState.Empty;
+			});
+		
+		return CallState.Empty;
 	}
 }
