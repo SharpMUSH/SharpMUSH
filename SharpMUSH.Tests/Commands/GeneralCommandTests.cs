@@ -33,7 +33,7 @@ public class GeneralCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), expected);
+			.Notify(Arg.Any<AnySharpObject>(), expected, Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -53,7 +53,7 @@ public class GeneralCommandTests
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString() == "3 This is a test") ||
-				(msg.IsT1 && msg.AsT1 == "3 This is a test")));
+				(msg.IsT1 && msg.AsT1 == "3 This is a test")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -65,7 +65,7 @@ public class GeneralCommandTests
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString() == "4 This is, a test") ||
-				(msg.IsT1 && msg.AsT1 == "4 This is, a test")));
+				(msg.IsT1 && msg.AsT1 == "4 This is, a test")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 	
 	[Test]
@@ -89,12 +89,12 @@ public class GeneralCommandTests
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString() == "5 This is a test") ||
-				(msg.IsT1 && msg.AsT1 == "5 This is a test")));
+				(msg.IsT1 && msg.AsT1 == "5 This is a test")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString() == "6 This is also a test") ||
-				(msg.IsT1 && msg.AsT1 == "6 This is also a test")));
+				(msg.IsT1 && msg.AsT1 == "6 This is also a test")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -108,17 +108,17 @@ public class GeneralCommandTests
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString() == "7 This is a test") ||
-				(msg.IsT1 && msg.AsT1 == "7 This is a test")));
+				(msg.IsT1 && msg.AsT1 == "7 This is a test")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString() == "8 This is also a test") ||
-				(msg.IsT1 && msg.AsT1 == "8 This is also a test")));
+				(msg.IsT1 && msg.AsT1 == "8 This is also a test")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString() == "9 Repeat 3 times in this mode.") ||
-				(msg.IsT1 && msg.AsT1 == "9 Repeat 3 times in this mode.")));
+				(msg.IsT1 && msg.AsT1 == "9 Repeat 3 times in this mode.")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
