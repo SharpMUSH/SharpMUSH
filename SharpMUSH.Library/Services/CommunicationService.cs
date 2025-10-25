@@ -128,7 +128,7 @@ public class CommunicationService(
 		}
 
 		var message = messageFunc(target, string.Empty);
-		await notifyService.Notify(target, message);
+		await notifyService.Notify(target, message, executor, notificationType);
 		return true;
 	}
 
