@@ -34,7 +34,7 @@ public class CommandFlowUnitTests
 		await NotifyService.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString() == expected) ||
-				(msg.IsT1 && msg.AsT1 == expected)));
+				(msg.IsT1 && msg.AsT1 == expected)), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -44,9 +44,9 @@ public class CommandFlowUnitTests
 		await Parser.CommandListParse(MModule.single("think %0; @retry gt(%0,-1)=dec(%0)"));
 
 		await NotifyService.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), MModule.single(""));
+			.Notify(Arg.Any<AnySharpObject>(), MModule.single(""), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 
 		await NotifyService.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), MModule.single("-1"));
+			.Notify(Arg.Any<AnySharpObject>(), MModule.single("-1"), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 }
