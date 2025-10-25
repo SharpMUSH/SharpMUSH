@@ -98,6 +98,7 @@ public class Startup(ArangoConfiguration config, string colorFile)
 		services.AddSingleton<IManipulateSharpObjectService, ManipulateSharpObjectService>();
 		services.AddSingleton<ITaskScheduler, TaskScheduler>();
 		services.AddSingleton<IConnectionService, ConnectionService>();
+		services.AddSingleton<ICommunicationService, CommunicationService>();
 		services.AddSingleton<ILockService, LockService>();
 		services.AddSingleton<IBooleanExpressionParser, BooleanExpressionParser>();
 		services.AddSingleton<ICommandDiscoveryService, CommandDiscoveryService>();

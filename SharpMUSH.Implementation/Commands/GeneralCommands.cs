@@ -289,29 +289,14 @@ public partial class Commands
 
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
 
-		foreach (var target in nameListTargets)
-		{
-			var targetString = target.Match(dbref => dbref.ToString(), str => str);
-			var maybeLocateTarget = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, enactor, enactor,
-				targetString,
-				LocateFlags.All);
-
-			if (maybeLocateTarget.IsError)
-			{
-				await NotifyService!.Notify(executor, maybeLocateTarget.AsError.Message!);
-				continue;
-			}
-
-			var locateTarget = maybeLocateTarget.AsSharpObject;
-
-			if (!await PermissionService!.CanInteract(locateTarget, executor, IPermissionService.InteractType.Hear))
-			{
-				await NotifyService!.Notify(executor, $"{locateTarget.Object().Name} does not want to hear from you.");
-				continue;
-			}
-
-			await NotifyService!.Notify(locateTarget, notification);
-		}
+		await CommunicationService!.SendToMultipleObjectsAsync(
+			parser,
+			executor,
+			enactor,
+			nameListTargets,
+			(_, msg) => notification,
+			INotifyService.NotificationType.Announce,
+			notifyOnPermissionFailure: true);
 
 		return new None();
 	}
@@ -1437,17 +1422,11 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
 		var executorLocation = await executor.Where();
-		var contents = await executorLocation.Content(Mediator!);
 		var isSpoof = parser.CurrentState.Switches.Contains("SPOOF");
 		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
 		var message = isNoEvaluation
 			? ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.empty())
 			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, MModule.empty());
-
-		var interactableContents = contents
-			.Where(async (obj, _) =>
-				await PermissionService!.CanInteract(obj.WithRoomOption(), executor,
-					IPermissionService.InteractType.Hear));
 
 		if (isSpoof)
 		{
@@ -1461,14 +1440,12 @@ public partial class Commands
 			}
 		}
 
-		await foreach (var obj in interactableContents)
-		{
-			await NotifyService!.Notify(
-				obj.WithRoomOption(),
-				message,
-				isSpoof ? enactor : executor,
-				INotifyService.NotificationType.Emit);
-		}
+		await CommunicationService!.SendToRoomAsync(
+			executor,
+			executorLocation,
+			(_, msg) => message,
+			INotifyService.NotificationType.Emit,
+			sender: isSpoof ? enactor : executor);
 
 		return new CallState(message);
 	}
