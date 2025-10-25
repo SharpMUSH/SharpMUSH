@@ -29,9 +29,9 @@ public class UserDefinedCommandsTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), "Value 1 received");
+			.Notify(Arg.Any<AnySharpObject>(), "Value 1 received", Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), "Value 2 received");
+			.Notify(Arg.Any<AnySharpObject>(), "Value 2 received", Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 }

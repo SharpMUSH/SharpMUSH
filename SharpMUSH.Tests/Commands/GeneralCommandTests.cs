@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
+using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -31,8 +32,8 @@ public class GeneralCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single(str));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), expected);
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), expected, Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -49,8 +50,10 @@ public class GeneralCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist 1 2 3=@pemit #1=3 This is a test"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(3))
-			.Notify(Arg.Any<AnySharpObject>(), "3 This is a test");
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString() == "3 This is a test") ||
+				(msg.IsT1 && msg.AsT1 == "3 This is a test")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -59,8 +62,10 @@ public class GeneralCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist 1 2 3=@pemit #1={4 This is, a test};"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(3))
-			.Notify(Arg.Any<AnySharpObject>(), "4 This is, a test");
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString() == "4 This is, a test") ||
+				(msg.IsT1 && msg.AsT1 == "4 This is, a test")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 	
 	[Test]
@@ -81,11 +86,15 @@ public class GeneralCommandTests
 			MModule.single("@dolist 1 2 3={@pemit #1=5 This is a test; @pemit #1=6 This is also a test}"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(3))
-			.Notify(Arg.Any<AnySharpObject>(), "5 This is a test");
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString() == "5 This is a test") ||
+				(msg.IsT1 && msg.AsT1 == "5 This is a test")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 		await NotifyService
-			.Received(Quantity.Exactly(3))
-			.Notify(Arg.Any<AnySharpObject>(), "6 This is also a test");
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString() == "6 This is also a test") ||
+				(msg.IsT1 && msg.AsT1 == "6 This is also a test")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -96,14 +105,20 @@ public class GeneralCommandTests
 				"@dolist 1 2 3={@pemit #1=7 This is a test; @pemit #1=8 This is also a test}; @pemit #1=9 Repeat 3 times in this mode."));
 
 		await NotifyService
-			.Received(Quantity.Exactly(3))
-			.Notify(Arg.Any<AnySharpObject>(), "7 This is a test");
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString() == "7 This is a test") ||
+				(msg.IsT1 && msg.AsT1 == "7 This is a test")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 		await NotifyService
-			.Received(Quantity.Exactly(3))
-			.Notify(Arg.Any<AnySharpObject>(), "8 This is also a test");
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString() == "8 This is also a test") ||
+				(msg.IsT1 && msg.AsT1 == "8 This is also a test")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 		await NotifyService
-			.Received(Quantity.Exactly(3))
-			.Notify(Arg.Any<AnySharpObject>(), "9 Repeat 3 times in this mode.");
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString() == "9 Repeat 3 times in this mode.") ||
+				(msg.IsT1 && msg.AsT1 == "9 Repeat 3 times in this mode.")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -114,11 +129,15 @@ public class GeneralCommandTests
 				"@dolist 1={@dolist 1 2 3=@pemit #1=10 This is a test}; @pemit #1=11 Repeat 1 times in this mode."));
 
 		await NotifyService
-			.Received(Quantity.Exactly(3))
-			.Notify(Arg.Any<AnySharpObject>(), "10 This is a test");
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString() == "10 This is a test") ||
+				(msg.IsT1 && msg.AsT1 == "10 This is a test")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), "11 Repeat 1 times in this mode.");
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString() == "11 Repeat 1 times in this mode.") ||
+				(msg.IsT1 && msg.AsT1 == "11 Repeat 1 times in this mode.")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -129,11 +148,15 @@ public class GeneralCommandTests
 				"@dolist 1 2={@dolist 1 2 3=@pemit #1=12 This is a test}; @pemit #1=13 Repeat 2 times in this mode."));
 
 		await NotifyService
-			.Received(Quantity.Exactly(6))
-			.Notify(Arg.Any<AnySharpObject>(), "12 This is a test");
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString() == "12 This is a test") ||
+				(msg.IsT1 && msg.AsT1 == "12 This is a test")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 		await NotifyService
-			.Received(Quantity.Exactly(2))
-			.Notify(Arg.Any<AnySharpObject>(), "13 Repeat 2 times in this mode.");
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString() == "13 Repeat 2 times in this mode.") ||
+				(msg.IsT1 && msg.AsT1 == "13 Repeat 2 times in this mode.")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -144,20 +167,30 @@ public class GeneralCommandTests
 				"@dolist a b={@dolist 1 2 3=@pemit #1=14 This is a test %i0}; @pemit #1=15 Repeat 1 times in this mode %i0"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(2))
-			.Notify(Arg.Any<AnySharpObject>(), "14 This is a test 1");
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString() == "14 This is a test 1") ||
+				(msg.IsT1 && msg.AsT1 == "14 This is a test 1")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 		await NotifyService
-			.Received(Quantity.Exactly(2))
-			.Notify(Arg.Any<AnySharpObject>(), "14 This is a test 2");
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString() == "14 This is a test 2") ||
+				(msg.IsT1 && msg.AsT1 == "14 This is a test 2")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 		await NotifyService
-			.Received(Quantity.Exactly(2))
-			.Notify(Arg.Any<AnySharpObject>(), "14 This is a test 3");
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString() == "14 This is a test 3") ||
+				(msg.IsT1 && msg.AsT1 == "14 This is a test 3")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), "15 Repeat 1 times in this mode a");
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString() == "15 Repeat 1 times in this mode a") ||
+				(msg.IsT1 && msg.AsT1 == "15 Repeat 1 times in this mode a")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), "15 Repeat 1 times in this mode b");
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString() == "15 Repeat 1 times in this mode b") ||
+				(msg.IsT1 && msg.AsT1 == "15 Repeat 1 times in this mode b")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -168,14 +201,20 @@ public class GeneralCommandTests
 				"@dolist a b={@dolist 1 2 3={@ifelse eq(%i0,1)=think %i0 is 1; @ifelse eq(%i0,2)=think %i0 is 2,think {%i0 is 1, or 3}}}"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(2))
-			.Notify(Arg.Any<AnySharpObject>(), "3 is 1, or 3");
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString() == "3 is 1, or 3") ||
+				(msg.IsT1 && msg.AsT1 == "3 is 1, or 3")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 		await NotifyService
-			.Received(Quantity.Exactly(2))
-			.Notify(Arg.Any<AnySharpObject>(), "1 is 1");
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString() == "1 is 1") ||
+				(msg.IsT1 && msg.AsT1 == "1 is 1")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 		await NotifyService
-			.Received(Quantity.Exactly(2))
-			.Notify(Arg.Any<AnySharpObject>(), "2 is 2");
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString() == "2 is 2") ||
+				(msg.IsT1 && msg.AsT1 == "2 is 2")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -184,12 +223,12 @@ public class GeneralCommandTests
 		await Parser.CommandListParse(MModule.single("think assert 1a; @assert; think assert 2a; think assert 3a"));
 		await Parser.CommandListParse(MModule.single("think break 1a; @break; think break 2a; think break 3a"));
 
-		await NotifyService.Received(Quantity.Exactly(1)).Notify(Arg.Any<AnySharpObject>(), "break 1a");
-		await NotifyService.Received(Quantity.Exactly(1)).Notify(Arg.Any<AnySharpObject>(), "break 2a");
-		await NotifyService.Received(Quantity.Exactly(1)).Notify(Arg.Any<AnySharpObject>(), "break 3a");
-		await NotifyService.Received(Quantity.Exactly(1)).Notify(Arg.Any<AnySharpObject>(), "assert 1a");
-		await NotifyService.Received(Quantity.Exactly(0)).Notify(Arg.Any<AnySharpObject>(), "assert 2a");
-		await NotifyService.Received(Quantity.Exactly(0)).Notify(Arg.Any<AnySharpObject>(), "assert 3a");
+		await NotifyService.Received().Notify(Arg.Any<AnySharpObject>(), "break 1a");
+		await NotifyService.Received().Notify(Arg.Any<AnySharpObject>(), "break 2a");
+		await NotifyService.Received().Notify(Arg.Any<AnySharpObject>(), "break 3a");
+		await NotifyService.Received().Notify(Arg.Any<AnySharpObject>(), "assert 1a");
+		await NotifyService.DidNotReceive().Notify(Arg.Any<AnySharpObject>(), "assert 2a");
+		await NotifyService.DidNotReceive().Notify(Arg.Any<AnySharpObject>(), "assert 3a");
 	}
 
 	[Test]
@@ -198,12 +237,12 @@ public class GeneralCommandTests
 		await Parser.CommandListParse(MModule.single("think assert 1b; @assert 1; think assert 2b; think assert 3b"));
 		await Parser.CommandListParse(MModule.single("think break 1b; @break 1; think break 2b; think break 3b"));
 
-		await NotifyService.Received(Quantity.Exactly(1)).Notify(Arg.Any<AnySharpObject>(), "assert 1b");
-		await NotifyService.Received(Quantity.Exactly(1)).Notify(Arg.Any<AnySharpObject>(), "assert 2b");
-		await NotifyService.Received(Quantity.Exactly(1)).Notify(Arg.Any<AnySharpObject>(), "assert 3b");
-		await NotifyService.Received(Quantity.Exactly(1)).Notify(Arg.Any<AnySharpObject>(), "break 1b");
-		await NotifyService.Received(Quantity.Exactly(0)).Notify(Arg.Any<AnySharpObject>(), "break 2b");
-		await NotifyService.Received(Quantity.Exactly(0)).Notify(Arg.Any<AnySharpObject>(), "break 3b");
+		await NotifyService.Received().Notify(Arg.Any<AnySharpObject>(), "assert 1b");
+		await NotifyService.Received().Notify(Arg.Any<AnySharpObject>(), "assert 2b");
+		await NotifyService.Received().Notify(Arg.Any<AnySharpObject>(), "assert 3b");
+		await NotifyService.Received().Notify(Arg.Any<AnySharpObject>(), "break 1b");
+		await NotifyService.DidNotReceive().Notify(Arg.Any<AnySharpObject>(), "break 2b");
+		await NotifyService.DidNotReceive().Notify(Arg.Any<AnySharpObject>(), "break 3b");
 	}
 
 	[Test]
@@ -212,12 +251,12 @@ public class GeneralCommandTests
 		await Parser.CommandListParse(MModule.single("think assert 1c; @assert 0; think assert 2c; think assert 3c"));
 		await Parser.CommandListParse(MModule.single("think break 1c; @break 0; think break 2c; think break 3c"));
 
-		await NotifyService.Received(Quantity.Exactly(1)).Notify(Arg.Any<AnySharpObject>(), "break 1c");
-		await NotifyService.Received(Quantity.Exactly(1)).Notify(Arg.Any<AnySharpObject>(), "break 2c");
-		await NotifyService.Received(Quantity.Exactly(1)).Notify(Arg.Any<AnySharpObject>(), "break 3c");
-		await NotifyService.Received(Quantity.Exactly(1)).Notify(Arg.Any<AnySharpObject>(), "assert 1c");
-		await NotifyService.Received(Quantity.Exactly(0)).Notify(Arg.Any<AnySharpObject>(), "assert 2c");
-		await NotifyService.Received(Quantity.Exactly(0)).Notify(Arg.Any<AnySharpObject>(), "assert 3c");
+		await NotifyService.Received().Notify(Arg.Any<AnySharpObject>(), "break 1c");
+		await NotifyService.Received().Notify(Arg.Any<AnySharpObject>(), "break 2c");
+		await NotifyService.Received().Notify(Arg.Any<AnySharpObject>(), "break 3c");
+		await NotifyService.Received().Notify(Arg.Any<AnySharpObject>(), "assert 1c");
+		await NotifyService.DidNotReceive().Notify(Arg.Any<AnySharpObject>(), "assert 2c");
+		await NotifyService.DidNotReceive().Notify(Arg.Any<AnySharpObject>(), "assert 3c");
 	}
 
 	[Test]
@@ -226,10 +265,10 @@ public class GeneralCommandTests
 		await Parser.CommandListParse(
 			MModule.single("think break 1d; @break 1=think broken 1d; think break 2d; think break 3d"));
 
-		await NotifyService.Received(Quantity.Exactly(1)).Notify(Arg.Any<AnySharpObject>(), "break 1d");
-		await NotifyService.Received(Quantity.Exactly(0)).Notify(Arg.Any<AnySharpObject>(), "break 2d");
-		await NotifyService.Received(Quantity.Exactly(0)).Notify(Arg.Any<AnySharpObject>(), "break 3d");
-		await NotifyService.Received(Quantity.Exactly(1)).Notify(Arg.Any<AnySharpObject>(), "broken 1d");
+		await NotifyService.Received().Notify(Arg.Any<AnySharpObject>(), "break 1d");
+		await NotifyService.DidNotReceive().Notify(Arg.Any<AnySharpObject>(), "break 2d");
+		await NotifyService.DidNotReceive().Notify(Arg.Any<AnySharpObject>(), "break 3d");
+		await NotifyService.Received().Notify(Arg.Any<AnySharpObject>(), "broken 1d");
 	}
 
 	[Test]
@@ -238,11 +277,11 @@ public class GeneralCommandTests
 		await Parser.CommandListParse(
 			MModule.single("think break 1e; @break 1={think broken 1e; think broken 2e}; think break 2e; think break 3e"));
 
-		await NotifyService.Received(Quantity.Exactly(1)).Notify(Arg.Any<AnySharpObject>(), "break 1e");
-		await NotifyService.Received(Quantity.Exactly(0)).Notify(Arg.Any<AnySharpObject>(), "break 2e");
-		await NotifyService.Received(Quantity.Exactly(0)).Notify(Arg.Any<AnySharpObject>(), "break 3e");
-		await NotifyService.Received(Quantity.Exactly(1)).Notify(Arg.Any<AnySharpObject>(), "broken 1e");
-		await NotifyService.Received(Quantity.Exactly(1)).Notify(Arg.Any<AnySharpObject>(), "broken 2e");
+		await NotifyService.Received().Notify(Arg.Any<AnySharpObject>(), "break 1e");
+		await NotifyService.DidNotReceive().Notify(Arg.Any<AnySharpObject>(), "break 2e");
+		await NotifyService.DidNotReceive().Notify(Arg.Any<AnySharpObject>(), "break 3e");
+		await NotifyService.Received().Notify(Arg.Any<AnySharpObject>(), "broken 1e");
+		await NotifyService.Received().Notify(Arg.Any<AnySharpObject>(), "broken 2e");
 	}
 
 	[Test]

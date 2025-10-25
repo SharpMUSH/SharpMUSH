@@ -10,7 +10,9 @@ public interface IAttributeService
 	enum AttributeMode
 	{
 		Read = 0,
-		Execute = 1
+		Execute = 1,
+		Set = 2,
+		SystemSet = 3
 	}
 
 	enum AttributePatternMode
