@@ -7,7 +7,7 @@ public interface IPermissionService
 {
 	enum InteractType
 	{
-		See, Hear, Match, Presence
+		See, Hear, Match, Presence, Page
 	}
 
 	bool PassesLock(AnySharpObject who, AnySharpObject target, string lockString);

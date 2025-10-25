@@ -2,6 +2,7 @@
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
@@ -196,7 +197,6 @@ public partial class Commands
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var isNoEval = parser.CurrentState.Switches.Contains("NOEVAL");
-		var isPort = parser.CurrentState.Switches.Contains("PORT");
 		var isOverride = parser.CurrentState.Switches.Contains("OVERRIDE");
 		
 		// Get the raw arguments
@@ -209,34 +209,35 @@ public partial class Commands
 			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, MModule.empty());
 		
 		// Parse message and recipients
-		var message = messageArg.TextValue;
+		var message = messageArg;
 		string recipientsText;
 		
 		// If no recipients provided, use last paged
-		if (string.IsNullOrWhiteSpace(recipientsArg.TextValue) && !string.IsNullOrWhiteSpace(message))
+		if (string.IsNullOrWhiteSpace(recipientsArg.ToPlainText()) && !string.IsNullOrWhiteSpace(message.ToPlainText()))
 		{
 			// Get LASTPAGED attribute
-			var lastPagedAttr = await AttributeService!.GetAttributeAsync(executor.DBRef, "LASTPAGED", Mediator!);
+			var lastPagedAttr = await AttributeService!.GetAttributeAsync(executor, executor, "LASTPAGED", IAttributeService.AttributeMode.Set, false);
 			recipientsText = lastPagedAttr.Match(
-				attr => attr.Value.Plaintext,
-				() => string.Empty
+				attr => attr.Last().Value.ToPlainText(),
+				_ => string.Empty,
+				_ => string.Empty
 			);
 			
 			if (string.IsNullOrWhiteSpace(recipientsText))
 			{
 				await NotifyService!.Notify(executor, "Who do you want to page?");
-				return Option.None<CallState>();
+				return CallState.Empty;
 			}
 		}
 		else
 		{
-			recipientsText = recipientsArg.TextValue;
+			recipientsText = recipientsArg.ToPlainText();
 		}
 		
-		if (string.IsNullOrWhiteSpace(message))
+		if (string.IsNullOrWhiteSpace(message.ToPlainText()))
 		{
 			await NotifyService!.Notify(executor, "What do you want to page?");
-			return Option.None<CallState>();
+			return CallState.Empty;
 		}
 		
 		// Parse recipients list
@@ -246,16 +247,15 @@ public partial class Commands
 		foreach (var recipientName in recipientNames)
 		{
 			// Locate the recipient
-			var recipientResult = await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
-				parser, executor, executor, recipientName, 
-				LocateFlags.All | LocateFlags.PartialMatch);
+			var recipientResult = await LocateService!.LocateAndNotifyIfInvalidWithCallState(
+				parser, executor, executor, recipientName, LocateFlags.All);
 			
-			if (recipientResult.IsNone())
+			if (!recipientResult.IsAnySharpObject)
 			{
 				continue;
 			}
 			
-			var recipient = recipientResult.WithoutNone();
+			var recipient = recipientResult.AsSharpObject;
 			
 			// Check HAVEN flag unless OVERRIDE switch is used
 			if (!isOverride)
@@ -269,46 +269,43 @@ public partial class Commands
 			}
 			
 			// Check @lock/page unless OVERRIDE switch is used
+			// TODO: Most of this nonsense is not evaluating those VERBs correctly.
 			if (!isOverride)
 			{
-				var lockResult = await PermissionService!.CheckLock(executor, recipient, "PAGE");
+				var lockResult = await PermissionService!.CanInteract(executor, recipient, IPermissionService.InteractType.Hear | IPermissionService.InteractType.Page);
 				if (!lockResult)
 				{
 					// Trigger PAGE_LOCK`FAILURE attributes
-					var failureAttr = await AttributeService!.GetAttributeAsync(recipient.DBRef(), "PAGE_LOCK`FAILURE", Mediator!);
-					failureAttr.Match(
+					var failureAttr = await AttributeService!.GetAttributeAsync(executor, recipient, "PAGE_LOCK`FAILURE", IAttributeService.AttributeMode.Read, true);
+					failureAttr.Switch(
 						async attr =>
 						{
-							await NotifyService!.Notify(executor, attr.Value.Plaintext);
-							return 0;
+							await NotifyService!.Notify(executor, attr.Last().Value.ToPlainText());
 						},
-						() => 0
+						x => { },
+						x => { }
 					);
 					
-					var oFailureAttr = await AttributeService!.GetAttributeAsync(recipient.DBRef(), "PAGE_LOCK`OFAILURE", Mediator!);
-					oFailureAttr.Match(
+					var oFailureAttr = await AttributeService!.GetAttributeAsync(executor, recipient, "PAGE_LOCK`OFAILURE", IAttributeService.AttributeMode.Read, true);
+					oFailureAttr.Switch(
 						async attr =>
 						{
-							await NotifyService!.Notify(recipient, attr.Value.Plaintext);
-							return 0;
+							await NotifyService!.Notify(executor, attr.Last().Value.ToPlainText());
 						},
-						() => 0
+						x => { },
+						x => { }
 					);
 					
-					var aFailureAttr = await AttributeService!.GetAttributeAsync(recipient.DBRef(), "PAGE_LOCK`AFAILURE", Mediator!);
-					aFailureAttr.Match(
+					var aFailureAttr = await AttributeService!.GetAttributeAsync(executor, recipient, "PAGE_LOCK`AFAILURE", IAttributeService.AttributeMode.Read, true);
+					aFailureAttr.Switch(
 						async attr =>
 						{
 							// Notify to room or others
-							var location = await recipient.Object().Where();
-							var contents = await location.Content(Mediator!);
-							foreach (var obj in contents.Where(o => o.DBRef != recipient.DBRef()))
-							{
-								await NotifyService!.Notify(obj.Object(), attr.Value.Plaintext);
-							}
-							return 0;
+							await CommunicationService!.SendToRoomAsync(executor, await executor.Where(), (_, m) => m,
+								INotifyService.NotificationType.Announce, recipient);
 						},
-						() => 0
+						x => { },
+						x => { }
 					);
 					
 					continue;
@@ -317,7 +314,7 @@ public partial class Commands
 			
 			// Send the page
 			var pageMessage = $"From afar, {executor.Object().Name} pages: {message}";
-			await NotifyService!.Notify(recipient, pageMessage, executor, INotifyService.NotificationType.Page);
+			await NotifyService!.Notify(recipient, pageMessage, executor, INotifyService.NotificationType.Say);
 			
 			successfulRecipients.Add(recipient);
 		}
@@ -325,19 +322,19 @@ public partial class Commands
 		// Notify executor
 		if (successfulRecipients.Count > 0)
 		{
-			var recipientList = string.Join(", ", successfulRecipients.Select(r => r.Object().Name));
+			var recipientList = string.Join(", ", successfulRecipients.Select(r => r.Object().DBRef));
 			await NotifyService!.Notify(executor, $"You paged {recipientList} with '{message}'.");
 			
 			// Store LASTPAGED attribute
-			var lastPagedText = string.Join(" ", successfulRecipients.Select(r => r.Object().Name));
-			await AttributeService!.SetAttributeAsync(executor.DBRef, "LASTPAGED", MModule.plainText(lastPagedText), Mediator!);
+			var lastPagedText = string.Join(" ", successfulRecipients.Select(r => r.Object().DBRef));
+			await AttributeService!.SetAttributeAsync(executor, executor, "LASTPAGED", MModule.single(lastPagedText));
 		}
 		else if (recipientNames.Length > 0)
 		{
 			await NotifyService!.Notify(executor, "No one to page.");
 		}
 		
-		return Option.None<CallState>();
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "POSE", Switches = ["NOEVAL", "NOSPACE"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0,
