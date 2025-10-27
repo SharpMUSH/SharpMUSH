@@ -45,7 +45,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		IExpandedObjectDataService objectDataService,
 		IManipulateSharpObjectService manipulateSharpObjectService,
 		IHttpClientFactory httpClientFactory,
-		ICommunicationService communicationService, 
+		ICommunicationService communicationService,
 		IValidateService validateService)
 	{
 		Mediator = mediator;

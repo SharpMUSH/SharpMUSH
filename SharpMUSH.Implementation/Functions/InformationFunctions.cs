@@ -2,6 +2,7 @@
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.ParserInterfaces;
@@ -26,6 +27,21 @@ public partial class Functions
 		throw new NotImplementedException();
 	}
 
+
+	[SharpFunction(Name = "restarts", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]
+	public static async ValueTask<CallState> restarts(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var uptimeData = await ObjectDataService!.GetExpandedServerDataAsync<UptimeData>();
+		return uptimeData?.Reboots ?? 0;
+	}
+
+	[SharpFunction(Name = "restarttime", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]
+	public static async ValueTask<CallState> RestartTime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var uptimeData = await ObjectDataService!.GetExpandedServerDataAsync<UptimeData>();
+		return (uptimeData?.LastRebootTime ?? DateTimeOffset.Now).ToUnixTimeMilliseconds();
+	}
+	
 	[SharpFunction(Name = "pidinfo", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> PIDInfo(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
