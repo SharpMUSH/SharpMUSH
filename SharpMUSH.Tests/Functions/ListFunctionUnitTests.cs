@@ -174,7 +174,6 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("member(a b c,b)", "2")]
 	[Arguments("member(a|b|c,b,|)", "2")]
 	public async Task Member(string function, string expected)
@@ -184,9 +183,8 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("remove(a b c b,b)", "a c")]
-	[Arguments("remove(a|b|c|b,b,|)", "a|c")]
+	[Arguments("remove(a b c b a,b a)", "c b a")]
+	[Arguments("remove(a|b|c|b,b,|)", "a|c|b")]
 	public async Task Remove(string function, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
@@ -270,9 +268,8 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("randword(a b c d e)", "")]
-	public async Task Randword(string function, string expected)
+	[Arguments("randword(a b c d e)")]
+	public async Task Randword(string function)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		// Random result, just check it's not empty
