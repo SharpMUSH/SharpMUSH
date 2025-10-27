@@ -51,6 +51,18 @@ public partial class Commands
 		return new CallState("#-1 HUH");
 	}
 
+	[SharpCommand(Name = "@MAP", Behavior = CB.EqSplit | CB.RSNoParse, MinArgs = 1, MaxArgs = 2,
+		Switches = ["CLEARREGS", "DELIMIT", "INLINE", "INPLACE", "LOCALIZE", "NOBREAK", "NOTIFY"])]
+	public static async ValueTask<Option<CallState>> Map(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		// Will need documentation.
+		// A version of map(), but for a command, to run like @dolist
+		// @map[/<switches>][/notify][/delimit <delim>] [<object>/]<attribute>=<list>
+		
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
+	}
+	
 	[SharpCommand(Name = "@DOLIST", Behavior = CB.EqSplit | CB.RSNoParse, MinArgs = 1, MaxArgs = 2,
 		Switches = ["CLEARREGS", "DELIMIT", "INLINE", "INPLACE", "LOCALIZE", "NOBREAK", "NOTIFY"])]
 	public static async ValueTask<Option<CallState>> DoList(IMUSHCodeParser parser, SharpCommandAttribute _2)
@@ -162,7 +174,7 @@ public partial class Commands
 	{
 		var args = parser.CurrentState.Arguments;
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).WithoutNone();
-		AnyOptionalSharpObject viewing = new None();
+		AnyOptionalSharpObject viewing;
 
 		// TODO: Implement the version of this command that takes an attribute pattern!
 		if (args.Count == 1)

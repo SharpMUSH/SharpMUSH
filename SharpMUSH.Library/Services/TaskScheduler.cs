@@ -1,10 +1,12 @@
-﻿using OneOf;
+﻿using Mediator;
+using OneOf;
 using Quartz;
 using Quartz.Impl.Matchers;
 using Quartz.Lambda;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.Services;
@@ -26,11 +28,16 @@ namespace SharpMUSH.Library.Services;
 /// </example>
 /// <param name="parser"></param>
 /// <param name="schedulerFactory"></param>
-public class TaskScheduler(IMUSHCodeParser parser, IConnectionService connectionService, ISchedulerFactory schedulerFactory) : ITaskScheduler
+public class TaskScheduler(
+	IMUSHCodeParser parser,
+	IConnectionService connectionService,
+	ISchedulerFactory schedulerFactory,
+	IAttributeService attributeService,
+	IMediator mediator) : ITaskScheduler
 {
 	private long _nextPid = 0;
 	private long NextPid() => Interlocked.Increment(ref _nextPid);
-	
+
 	private readonly IScheduler _scheduler = schedulerFactory.GetScheduler().GetAwaiter().GetResult();
 	public const string DirectInputGroup = "direct-input";
 	public const string EnqueueGroup = "enqueue";
@@ -61,7 +68,8 @@ public class TaskScheduler(IMUSHCodeParser parser, IConnectionService connection
 	}
 
 	public async ValueTask WriteUserCommand(long handle, MString command, ParserState state) =>
-		await _scheduler.ScheduleJob(() => parser.FromState(state).CommandParse(handle, connectionService, command).AsTask(),
+		await _scheduler.ScheduleJob(
+			() => parser.FromState(state).CommandParse(handle, connectionService, command).AsTask(),
 			builder => builder
 				.StartNow()
 				.WithSimpleSchedule(x => x.WithRepeatCount(0))
@@ -99,6 +107,25 @@ public class TaskScheduler(IMUSHCodeParser parser, IConnectionService connection
 				.WithIdentity(
 					$"dbref:{state.Executor}-{NextPid()}",
 					$"{SemaphoreGroup}:{dbRefAttribute}").Build());
+	}
+
+	public async ValueTask WriteAsyncAttribute(Func<ValueTask<ParserState>> function,
+		DbRefAttribute dbAttribute)
+	{
+		var parserState = await function();
+		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
+		var obj = await mediator.Send(new GetObjectNodeQuery(dbAttribute.DbRef));
+		if (obj.IsNone) return;
+
+		var attr = await attributeService.GetAttributeAsync(
+			executor,
+			obj.Known,
+			string.Join('`', dbAttribute.Attribute),
+			IAttributeService.AttributeMode.Execute);
+
+		if (!attr.IsAttribute) return;
+
+		await parser.FromState(parserState).CommandListParse(attr.AsAttribute.Last().Value);
 	}
 
 	public async ValueTask WriteCommandList(MString command, ParserState state, DbRefAttribute dbRefAttribute,
@@ -208,7 +235,7 @@ public class TaskScheduler(IMUSHCodeParser parser, IConnectionService connection
 		await foreach (var key in keyTriggers)
 		{
 			var translate = new Func<string, string>(x =>
-				x.Replace("dbref:", "").Replace("handle:", "")
+				x.Replace("dbref:", string.Empty).Replace("handle:", string.Empty)
 					.TakeWhile(c => c != '-').ToString()!);
 
 			yield return (key.Key, key.Select(x => (
@@ -224,39 +251,43 @@ public class TaskScheduler(IMUSHCodeParser parser, IConnectionService connection
 	{
 		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupStartsWith($"{SemaphoreGroup}:{obj}"));
 		var keyTriggers = keys.ToAsyncEnumerable()
-			 .Select<TriggerKey, SemaphoreTaskData>(async (triggerKey,_) => await MapSemaphoreTaskData(_scheduler, triggerKey));
-		
+			.Select<TriggerKey, SemaphoreTaskData>(async (triggerKey, _) =>
+				await MapSemaphoreTaskData(_scheduler, triggerKey));
+
 		await foreach (var key in keyTriggers)
 		{
 			yield return key;
 		}
 	}
-	
+
 	public async IAsyncEnumerable<SemaphoreTaskData> GetSemaphoreTasks(long pid)
 	{
 		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupStartsWith($"{SemaphoreGroup}:"));
 		var keyTriggers = keys.ToAsyncEnumerable()
 			.Where(key => key.Name.EndsWith($"-{pid}"))
-			.Select<TriggerKey, SemaphoreTaskData>(async (triggerKey,_) => await MapSemaphoreTaskData(_scheduler, triggerKey));
-		
+			.Select<TriggerKey, SemaphoreTaskData>(async (triggerKey, _) =>
+				await MapSemaphoreTaskData(_scheduler, triggerKey));
+
 		await foreach (var key in keyTriggers)
 		{
 			yield return key;
 		}
 	}
-	
+
 	public async IAsyncEnumerable<SemaphoreTaskData> GetSemaphoreTasks(DbRefAttribute objAttribute)
 	{
-		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals($"{SemaphoreGroup}:{objAttribute}"));
+		var keys = await _scheduler.GetTriggerKeys(
+			GroupMatcher<TriggerKey>.GroupEquals($"{SemaphoreGroup}:{objAttribute}"));
 		var keyTriggers = keys.ToAsyncEnumerable()
-			.Select<TriggerKey, SemaphoreTaskData>(async (triggerKey,_) => await MapSemaphoreTaskData(_scheduler, triggerKey));
-		
+			.Select<TriggerKey, SemaphoreTaskData>(async (triggerKey, _) =>
+				await MapSemaphoreTaskData(_scheduler, triggerKey));
+
 		await foreach (var key in keyTriggers)
 		{
 			yield return key;
 		}
 	}
-	
+
 	private static async ValueTask<SemaphoreTaskData> MapSemaphoreTaskData(IScheduler scheduler, TriggerKey triggerKey)
 	{
 		var trigger = await scheduler.GetTrigger(triggerKey);
@@ -267,7 +298,7 @@ public class TaskScheduler(IMUSHCodeParser parser, IConnectionService connection
 		var fireDelay = trigger.FinalFireTimeUtc is null
 			? null
 			: DateTimeOffset.UtcNow - trigger.FinalFireTimeUtc;
-		var semaphoreSourceString = string.Join(':', trigger.JobKey.Group.Split(':').Skip(1)); 
+		var semaphoreSourceString = string.Join(':', trigger.JobKey.Group.Split(':').Skip(1));
 		var semaphoreSource = DbRefAttribute.Parse(semaphoreSourceString);
 		var pid = long.Parse(triggerKey.Name.Split('-').Last());
 
@@ -277,7 +308,7 @@ public class TaskScheduler(IMUSHCodeParser parser, IConnectionService connection
 	public async ValueTask RescheduleSemaphoreTask(long pid, TimeSpan delay)
 	{
 		var allKeys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupStartsWith($"{SemaphoreGroup}"));
-		
+
 		// This should return just one or zero, but using it as an iterator simplifies the code.
 		foreach (var key in allKeys.Where(x => x.Name.EndsWith($"-{pid}")))
 		{

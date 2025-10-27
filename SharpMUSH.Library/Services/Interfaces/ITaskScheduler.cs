@@ -30,6 +30,14 @@ public interface ITaskScheduler
 	/// <param name="dbAttribute">Attribute to register under.</param>
 	/// <param name="oldValue">Check the old value, in case we don't need to wait at all.</param>
 	ValueTask WriteCommandList(MString command, ParserState state, DbRefAttribute dbAttribute, int oldValue);
+	
+	/// <summary>
+	/// Write an async function to the scheduler, to be immediately executed when the scheduler runs.
+	/// </summary>
+	/// <param name="function">Function to run, before invoking the DbRefAttribute</param>
+	/// <param name="dbAttribute">Attribute to register under.</param>
+	/// <returns></returns>
+	ValueTask WriteAsyncAttribute(Func<ValueTask<ParserState>> function, DbRefAttribute dbAttribute);
 
 	/// <summary>
 	/// Write a command-list to the scheduler on semaphore with a timeout, to be immediately executed when the scheduler runs.

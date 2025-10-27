@@ -11,6 +11,10 @@ public record QueueCommandListRequest(
 	DbRefAttribute DbRefAttribute,
 	int OldValue) : IRequest;
 
+public record QueueAttributeRequest(
+	Func<ValueTask<ParserState>> Input,
+	DbRefAttribute DbRefAttribute) : IRequest;
+
 public record QueueDelayedCommandListRequest(
 	MString Command,
 	ParserState State,

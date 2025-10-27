@@ -15,6 +15,15 @@ public class ScheduleHandler(ITaskScheduler scheduler) : IRequestHandler<QueueCo
 	}
 }
 
+public class AsyncScheduleHandler(ITaskScheduler scheduler) : IRequestHandler<QueueAttributeRequest>
+{
+	public async ValueTask<Unit> Handle(QueueAttributeRequest request, CancellationToken cancellationToken)
+	{
+		await scheduler.WriteAsyncAttribute(request.Input, request.DbRefAttribute);
+		return await Unit.ValueTask;
+	}
+}
+
 public class GetScheduledTasksHandler(ITaskScheduler scheduler)
 	: IQueryHandler<ScheduleSemaphoreQuery, IAsyncEnumerable<SemaphoreTaskData>>
 {
