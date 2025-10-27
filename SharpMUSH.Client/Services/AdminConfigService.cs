@@ -111,7 +111,7 @@ public static class SharpMUSHOptionsExtension
 					var sectionName = prop.Name;
 					var sectionValue = prop.GetValue(options);
 
-					if (sectionValue == null)
+					if (sectionValue is null)
 					{
 						continue;
 					}

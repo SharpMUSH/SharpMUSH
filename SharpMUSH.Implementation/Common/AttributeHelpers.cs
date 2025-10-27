@@ -67,7 +67,7 @@ public static class AttributeHelpers
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
 
-		if (evaluationAttribute == null) return defaultValue;
+		if (evaluationAttribute is null) return defaultValue;
 
 		var split = HelperFunctions.SplitObjectAndAttr(evaluationAttribute);
 

@@ -16,5 +16,5 @@ public static class Predicates
 public static class PredicateExtensions
 {
 	public static bool Truthy(this MString? text) => text != null && Predicates.Truthy(text);
-	public static bool Falsy(this MString? text) => text == null || Predicates.Falsy(text);
+	public static bool Falsy(this MString? text) => text is null || Predicates.Falsy(text);
 }

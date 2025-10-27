@@ -432,7 +432,7 @@ public partial class Functions
 			? value.Message!.ToPlainText()
 			: null;
 		
-		if (arg1 == null)
+		if (arg1 is null)
 		{
 			return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
 				parser, executor, executor, arg0, LocateFlags.All,

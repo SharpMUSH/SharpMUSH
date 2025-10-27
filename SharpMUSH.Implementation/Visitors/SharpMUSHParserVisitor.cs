@@ -822,7 +822,7 @@ public class SharpMUSHParserVisitor(
 		}
 
 		var result = await VisitChildren(context);
-		if (result == null)
+		if (result is null)
 		{
 			return new CallState(
 				MModule.substring(context.Start.StartIndex,

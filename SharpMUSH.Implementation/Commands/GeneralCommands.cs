@@ -294,7 +294,7 @@ public partial class Commands
 			executor,
 			enactor,
 			nameListTargets,
-			(_, msg) => notification,
+			_ => notification,
 			INotifyService.NotificationType.Announce,
 			notifyOnPermissionFailure: true);
 
@@ -680,7 +680,7 @@ public partial class Commands
 
 		foreach (var (expr, action) in pairs)
 		{
-			if (expr == null) break;
+			if (expr is null) break;
 
 			// TODO: Make this use a glob.
 			if (expr.Message! == strArg)
@@ -1443,7 +1443,7 @@ public partial class Commands
 		await CommunicationService!.SendToRoomAsync(
 			executor,
 			executorLocation,
-			(_, msg) => message,
+			_ => message,
 			INotifyService.NotificationType.Emit,
 			sender: isSpoof ? enactor : executor);
 

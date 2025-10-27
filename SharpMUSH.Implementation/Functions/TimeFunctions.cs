@@ -99,7 +99,7 @@ public partial class Functions
 			? arg0Value.Message!.ToPlainText()
 			: null;
 
-		if (arg0 == null)
+		if (arg0 is null)
 		{
 			return DateTimeOffset.Now.ToLocalTime().ToString();
 		}
@@ -157,7 +157,7 @@ public partial class Functions
 
 		var data = (await ObjectDataService!.GetExpandedServerDataAsync<UptimeData>())!;
 
-		if (arg0 == null)
+		if (arg0 is null)
 		{
 			return data.StartTime.ToUnixTimeSeconds().ToString();
 		}

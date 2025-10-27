@@ -431,7 +431,7 @@ public class AttributeService(
 		var attr = await mediator.Send(new GetAttributeQuery(obj.Object().DBRef, attrPath));
 
 		// TODO: Fix, object permissions also needed.
-		var permission = attr == null ||
+		var permission = attr is null ||
 		                 await attr.AllAsync(async (x, _) => await ps.CanSet(executor, obj, x));
 
 		if (!permission)

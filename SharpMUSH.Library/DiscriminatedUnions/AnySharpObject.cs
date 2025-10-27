@@ -1,12 +1,17 @@
 ﻿using OneOf;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.DiscriminatedUnions;
 
 [GenerateOneOf]
-public class AnySharpObject : OneOfBase<SharpPlayer, SharpRoom, SharpExit, SharpThing>
+public class AnySharpObject(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> input)
+	: OneOfBase<SharpPlayer, SharpRoom, SharpExit, SharpThing>(input)
 {
-	public AnySharpObject(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> input) : base(input) { }
+	protected bool Equals(AnySharpObject other) => this.Object().DBRef == other.Object().DBRef;
+
+	public override int GetHashCode() => this.Object().DBRef.GetHashCode();
+
 	public static implicit operator AnySharpObject(SharpPlayer x) => new(x);
 	public static implicit operator AnySharpObject(SharpRoom x) => new(x);
 	public static implicit operator AnySharpObject(SharpExit x) => new(x);
@@ -18,6 +23,19 @@ public class AnySharpObject : OneOfBase<SharpPlayer, SharpRoom, SharpExit, Sharp
 		async exit => await exit.Location.WithCancellation(CancellationToken.None),
 		async thing => await thing.Location.WithCancellation(CancellationToken.None)
 	);
+	
+	public async ValueTask<AnySharpContainer> OutermostWhere()
+	{
+		var where = await Where();
+
+		for (DBRef? tmpWhere = null; where.Object().DBRef != tmpWhere;)
+		{
+			tmpWhere = where.Object().DBRef;
+			where = await where.Location();
+		}
+
+		return where;
+	}
 
 	public string[] Aliases => Match(
 		player => player.Aliases,

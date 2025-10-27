@@ -20,36 +20,30 @@ public class CommunicationService(
 	public async ValueTask SendToPortsAsync(
 		AnySharpObject executor,
 		long[] ports,
-		Func<AnySharpObject, OneOf<MString, string>, OneOf<MString, string>> messageFunc,
+		Func<AnySharpObject, OneOf<MString, string>> messageFunc,
 		INotifyService.NotificationType notificationType)
 	{
-		// Filter ports by permission check
-		// Ports without a DBRef always work (no interactability check)
-		// Ports with a DBRef require permission check
 		var validPorts = new List<long>();
 		foreach (var port in ports)
 		{
 			var connectionData = connectionService.Get(port);
 
-			// If no connection or no DBRef, allow the port (no permission check needed)
-			if (connectionData == null || connectionData.Ref == null)
+			if (connectionData?.Ref is null)
 			{
 				validPorts.Add(port);
 				continue;
 			}
 
-			// Get the player object connected to this port
 			var playerResult = await mediator.Send(new GetObjectNodeQuery(connectionData.Ref.Value));
+
 			if (playerResult.IsNone())
 			{
-				// Player not found, but port exists - allow it
 				validPorts.Add(port);
 				continue;
 			}
 
 			var player = playerResult.WithoutNone();
 
-			// Check if executor can interact with the player
 			if (await permissionService.CanInteract(player, executor, InteractType.Hear))
 			{
 				validPorts.Add(port);
@@ -58,8 +52,7 @@ public class CommunicationService(
 
 		if (validPorts.Count > 0)
 		{
-			// Call message function with executor as target for port-based messaging
-			var message = messageFunc(executor, string.Empty);
+			var message = messageFunc(executor);
 			await notifyService.Notify(validPorts.ToArray(), message, executor, notificationType);
 		}
 	}
@@ -67,29 +60,32 @@ public class CommunicationService(
 	public async ValueTask SendToRoomAsync(
 		AnySharpObject executor,
 		AnySharpContainer room,
-		Func<AnySharpObject, OneOf<MString, string>, OneOf<MString, string>> messageFunc,
+		Func<AnySharpObject, OneOf<MString, string>> messageFunc,
 		INotifyService.NotificationType notificationType,
 		AnySharpObject? sender = null,
 		IEnumerable<AnySharpObject>? excludeObjects = null)
 	{
 		var contents = await room.Content(mediator);
 		var actualSender = sender ?? executor;
-		var excludeSet = excludeObjects?.ToHashSet() ?? new HashSet<AnySharpObject>();
+		var excludeSet = excludeObjects?.ToHashSet() ?? [];
 
 		var interactableContents = contents
 			.Where(async (obj, _) =>
 			{
 				var objWithRoom = obj.WithRoomOption();
-				// Exclude objects in the exclude list
+				
 				if (excludeSet.Contains(objWithRoom))
+				{
 					return false;
+				}
+
 				return await permissionService.CanInteract(objWithRoom, executor, InteractType.Hear);
 			});
 
 		await foreach (var obj in interactableContents)
 		{
 			var objWithRoom = obj.WithRoomOption();
-			var message = messageFunc(objWithRoom, string.Empty);
+			var message = messageFunc(objWithRoom);
 			await notifyService.Notify(
 				objWithRoom,
 				message,
@@ -103,7 +99,7 @@ public class CommunicationService(
 		AnySharpObject executor,
 		AnySharpObject enactor,
 		string targetName,
-		Func<AnySharpObject, OneOf<MString, string>, OneOf<MString, string>> messageFunc,
+		Func<AnySharpObject, OneOf<MString, string>> messageFunc,
 		INotifyService.NotificationType notificationType,
 		bool notifyOnPermissionFailure = true)
 	{
@@ -124,10 +120,11 @@ public class CommunicationService(
 			{
 				await notifyService.Notify(executor, $"{target.Object().Name} does not want to hear from you.");
 			}
+
 			return false;
 		}
 
-		var message = messageFunc(target, string.Empty);
+		var message = messageFunc(target);
 		await notifyService.Notify(target, message, executor, notificationType);
 		return true;
 	}
@@ -137,14 +134,15 @@ public class CommunicationService(
 		AnySharpObject executor,
 		AnySharpObject enactor,
 		IEnumerable<OneOf<DBRef, string>> targets,
-		Func<AnySharpObject, OneOf<MString, string>, OneOf<MString, string>> messageFunc,
+		Func<AnySharpObject, OneOf<MString, string>> messageFunc,
 		INotifyService.NotificationType notificationType,
 		bool notifyOnPermissionFailure = true)
 	{
 		foreach (var target in targets)
 		{
 			var targetString = target.Match(dbref => dbref.ToString(), str => str);
-			await SendToObjectAsync(parser, executor, enactor, targetString, messageFunc, notificationType, notifyOnPermissionFailure);
+			await SendToObjectAsync(parser, executor, enactor, targetString, messageFunc, notificationType,
+				notifyOnPermissionFailure);
 		}
 	}
 }

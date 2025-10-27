@@ -158,16 +158,16 @@ public static partial class HelperFunctions
 		=> await obj.IsOrphan()
 			? null
 			: obj.Match(
-				_ => configuration.CurrentValue.Database.AncestorPlayer == null
+				_ => configuration.CurrentValue.Database.AncestorPlayer is null
 					? null
 					: new DBRef(Convert.ToInt32(configuration.CurrentValue.Database.AncestorPlayer)),
-				_ => configuration.CurrentValue.Database.AncestorRoom == null
+				_ => configuration.CurrentValue.Database.AncestorRoom is null
 					? null
 					: new DBRef(Convert.ToInt32(configuration.CurrentValue.Database.AncestorRoom)),
-				_ => configuration.CurrentValue.Database.AncestorExit == null
+				_ => configuration.CurrentValue.Database.AncestorExit is null
 					? null
 					: new DBRef(Convert.ToInt32(configuration.CurrentValue.Database.AncestorExit)),
-				_ => configuration.CurrentValue.Database.AncestorThing == null
+				_ => configuration.CurrentValue.Database.AncestorThing is null
 					? (DBRef?)null
 					: new DBRef(Convert.ToInt32(configuration.CurrentValue.Database.AncestorThing))
 			);

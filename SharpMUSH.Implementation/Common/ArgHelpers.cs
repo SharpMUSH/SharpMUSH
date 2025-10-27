@@ -219,10 +219,16 @@ public static partial class ArgHelpers
 			!string.IsNullOrWhiteSpace(x.Groups["DBRef"].Value)
 				? OneOf<DBRef, string>.FromT0(HelperFunctions.ParseDBRef(x.Groups["DBRef"].Value).AsValue())
 				: OneOf<DBRef, string>.FromT1(x.Groups["User"].Value));
+	
+	public static IEnumerable<string> NameListString(string list)
+		=> NameListPattern().Matches(list).Select(x =>
+			!string.IsNullOrWhiteSpace(x.Groups["DBRef"].Value)
+				? HelperFunctions.ParseDBRef(x.Groups["DBRef"].Value).AsValue().ToString()
+				: x.Groups["User"].Value);
 
 	public static async ValueTask<IEnumerable<SharpPlayer?>> PopulatedNameList(IMediator mediator, string list)
 		=> await Task.WhenAll(NameList(list).Select(x => x.Match(
-			async dbref => (await mediator.Send(new GetObjectNodeQuery(dbref))).TryPickT0(out var player, out var _)
+			async dbref => (await mediator.Send(new GetObjectNodeQuery(dbref))).TryPickT0(out var player, out _)
 				? player
 				: null,
 			async name => await (await mediator.Send(new GetPlayerQuery(name))).FirstOrDefaultAsync())));
@@ -237,7 +243,7 @@ public static partial class ArgHelpers
 			if (isHandle)
 			{
 				var handleData = connectionService.Get(handle);
-				if (handleData == null) return new CallState("#-1 That handle is not connected.");
+				if (handleData is null) return new CallState("#-1 That handle is not connected.");
 				
 				return await handleFunc(handle, handleData);
 			}
@@ -252,7 +258,7 @@ public static partial class ArgHelpers
 			var found = maybeFound.AsSharpObject.AsPlayer;
 			var foundData = connectionService.Get(found.Object.DBRef).FirstOrDefault();
 			
-			if(foundData == null) return new CallState("#-1 That player is not connected.");
+			if(foundData is null) return new CallState("#-1 That player is not connected.");
 			
 			return await playerFunc(found, foundData);
 	}

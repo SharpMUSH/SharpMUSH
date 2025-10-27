@@ -18,13 +18,13 @@ public partial class Commands
 		parser.CurrentState.Arguments.TryGetValue("1", out var uriArg);
 		parser.CurrentState.Arguments.TryGetValue("2", out var dataArg);
 
-		if (objAttrArg == null)
+		if (objAttrArg is null)
 		{
 			await NotifyService!.Notify(executor, "What do you want to query?");
 			return new CallState("#-1 What do you want to query?");
 		}
 		
-		if (uriArg == null)
+		if (uriArg is null)
 		{
 			await NotifyService!.Notify(executor, "Query where?");
 			return new CallState("#-1 Query where?");
@@ -60,7 +60,7 @@ public partial class Commands
 		{
 			// TODO: Headers
 			Method = method,
-			Content = dataArg == null 
+			Content = dataArg is null 
 				? null
 				: new StringContent(dataArg.Message!.ToString()),
 			RequestUri = uri

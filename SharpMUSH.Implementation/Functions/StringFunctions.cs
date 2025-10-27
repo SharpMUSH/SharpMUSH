@@ -617,7 +617,7 @@ public partial class Functions
 			? result.Message!
 			: null;
 
-		if (arg1 == null && !arg0.Equals("LIST", StringComparison.InvariantCultureIgnoreCase))
+		if (arg1 is null && !arg0.Equals("LIST", StringComparison.InvariantCultureIgnoreCase))
 		{
 			return Errors.ErrorArgRange;
 		}

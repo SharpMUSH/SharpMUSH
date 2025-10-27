@@ -20,7 +20,7 @@ public class ValidateSharpOptions : IValidateOptions<SharpMUSHOptions>
 			{
 				var customAttributes = property.GetCustomAttribute<SharpConfigAttribute>()!;
 				var propertyValue = property.GetValue(categoryValue);
-				if (customAttributes.ValidationPattern == null) continue;
+				if (customAttributes.ValidationPattern is null) continue;
 
 				if (!Regex.IsMatch(propertyValue?.ToString() ?? string.Empty, customAttributes.ValidationPattern))
 				{

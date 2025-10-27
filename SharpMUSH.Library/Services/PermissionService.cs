@@ -149,7 +149,7 @@ public class PermissionService(ILockService lockService) : IPermissionService
 		var fromStep = from.MinusRoom();
 		var toStep = to.MinusRoom();
 
-		if (type == IPermissionService.InteractType.Hear && !lockService.Evaluate(LockType.Interact, to, from))
+		if (type.HasFlag(IPermissionService.InteractType.Hear)  && !lockService.Evaluate(LockType.Interact, to, from))
 			return false;
 
 		// TODO: This looks like this is 'return true or true'.
@@ -160,6 +160,9 @@ public class PermissionService(ILockService lockService) : IPermissionService
 
 		return true;
 	}
+
+	public async ValueTask<bool> CanInteract(AnySharpContent result, AnySharpObject executor, IPermissionService.InteractType type) 
+		=> await CanInteract(result.WithRoomOption(), executor, type);
 
 	public static async ValueTask<bool> CanEval(AnySharpObject evaluator, AnySharpObject evaluationTarget)
 		=> !await evaluationTarget.IsPriv()

@@ -124,7 +124,7 @@
 
 	private async Task ImportConfiguration()
 	{
-		if (_selectedFile == null || string.IsNullOrEmpty(_fileContent))
+		if (_selectedFile is null || string.IsNullOrEmpty(_fileContent))
 			return;
 
 		_isImporting = true;

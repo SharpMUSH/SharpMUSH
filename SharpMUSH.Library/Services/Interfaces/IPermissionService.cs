@@ -5,6 +5,7 @@ namespace SharpMUSH.Library.Services.Interfaces;
 
 public interface IPermissionService
 {
+	[Flags]
 	enum InteractType
 	{
 		See, Hear, Match, Presence, Page
@@ -31,6 +32,8 @@ public interface IPermissionService
 	ValueTask<bool> CanExecuteAttribute(AnySharpObject viewer, AnySharpObject target, params LazySharpAttribute[] attribute);
 
 	ValueTask<bool> CanInteract(AnySharpObject result, AnySharpObject executor, InteractType type);
+	
+	ValueTask<bool> CanInteract(AnySharpContent result, AnySharpObject executor, InteractType type);
 
 	ValueTask<bool> CanNoSpoof(AnySharpObject executor);
 

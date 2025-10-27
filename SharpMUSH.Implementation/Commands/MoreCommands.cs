@@ -209,11 +209,10 @@ public partial class Commands
 			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, MModule.empty());
 		
 		// Parse message and recipients
-		var message = messageArg;
 		string recipientsText;
 		
 		// If no recipients provided, use last paged
-		if (string.IsNullOrWhiteSpace(recipientsArg.ToPlainText()) && !string.IsNullOrWhiteSpace(message.ToPlainText()))
+		if (string.IsNullOrWhiteSpace(recipientsArg.ToPlainText()) && !string.IsNullOrWhiteSpace(messageArg.ToPlainText()))
 		{
 			// Get LASTPAGED attribute
 			var lastPagedAttr = await AttributeService!.GetAttributeAsync(executor, executor, "LASTPAGED", IAttributeService.AttributeMode.Set, false);
@@ -234,7 +233,7 @@ public partial class Commands
 			recipientsText = recipientsArg.ToPlainText();
 		}
 		
-		if (string.IsNullOrWhiteSpace(message.ToPlainText()))
+		if (string.IsNullOrWhiteSpace(messageArg.ToPlainText()))
 		{
 			await NotifyService!.Notify(executor, "What do you want to page?");
 			return CallState.Empty;
@@ -275,45 +274,63 @@ public partial class Commands
 				var lockResult = await PermissionService!.CanInteract(executor, recipient, IPermissionService.InteractType.Hear | IPermissionService.InteractType.Page);
 				if (!lockResult)
 				{
-					// Trigger PAGE_LOCK`FAILURE attributes
-					var failureAttr = await AttributeService!.GetAttributeAsync(executor, recipient, "PAGE_LOCK`FAILURE", IAttributeService.AttributeMode.Read, true);
-					failureAttr.Switch(
-						async attr =>
-						{
-							await NotifyService!.Notify(executor, attr.Last().Value.ToPlainText());
-						},
-						x => { },
-						x => { }
-					);
+					var failureAttr = await AttributeService!.GetAttributeAsync(executor, recipient, "PAGE_LOCK`FAILURE", IAttributeService.AttributeMode.Read);
 					
-					var oFailureAttr = await AttributeService!.GetAttributeAsync(executor, recipient, "PAGE_LOCK`OFAILURE", IAttributeService.AttributeMode.Read, true);
-					oFailureAttr.Switch(
-						async attr =>
+					switch (failureAttr)
+					{
+						case { IsError: true }:
+						case { IsNone: true }:
 						{
-							await NotifyService!.Notify(executor, attr.Last().Value.ToPlainText());
-						},
-						x => { },
-						x => { }
-					);
-					
-					var aFailureAttr = await AttributeService!.GetAttributeAsync(executor, recipient, "PAGE_LOCK`AFAILURE", IAttributeService.AttributeMode.Read, true);
-					aFailureAttr.Switch(
-						async attr =>
+							break;
+						}
+						case { IsAttribute: true, AsAttribute: var attr }:
 						{
-							// Notify to room or others
-							await CommunicationService!.SendToRoomAsync(executor, await executor.Where(), (_, m) => m,
+							await CommunicationService!.SendToRoomAsync(executor, await executor.Where(), _ => attr.Last().Value.ToPlainText(),
 								INotifyService.NotificationType.Announce, recipient);
-						},
-						x => { },
-						x => { }
-					);
+							break;
+						}
+					}
+					
+					var oFailureAttr = await AttributeService.GetAttributeAsync(executor, recipient, "PAGE_LOCK`OFAILURE", IAttributeService.AttributeMode.Read);
+					
+					switch (oFailureAttr)
+					{
+						case { IsError: true }:
+						case { IsNone: true }:
+						{
+							break;
+						}
+						case { IsAttribute: true, AsAttribute: var attr }:
+						{
+							await CommunicationService!.SendToRoomAsync(executor, await executor.Where(), _ => attr.Last().Value.ToPlainText(),
+								INotifyService.NotificationType.Announce, recipient);
+							break;
+						}
+					}
+					
+					var aFailureAttr = await AttributeService.GetAttributeAsync(executor, recipient, "PAGE_LOCK`AFAILURE", IAttributeService.AttributeMode.Read);
+
+					switch (aFailureAttr)
+					{
+						case { IsError: true }:
+						case { IsNone: true }:
+						{
+							break;
+						}
+						case { IsAttribute: true }:
+						{
+							await CommunicationService!.SendToRoomAsync(executor, await executor.Where(), _ => messageArg,
+								INotifyService.NotificationType.Announce, recipient);
+							break;
+						}
+					}
 					
 					continue;
 				}
 			}
 			
 			// Send the page
-			var pageMessage = $"From afar, {executor.Object().Name} pages: {message}";
+			var pageMessage = $"From afar, {executor.Object().Name} pages: {messageArg}";
 			await NotifyService!.Notify(recipient, pageMessage, executor, INotifyService.NotificationType.Say);
 			
 			successfulRecipients.Add(recipient);
@@ -323,7 +340,7 @@ public partial class Commands
 		if (successfulRecipients.Count > 0)
 		{
 			var recipientList = string.Join(", ", successfulRecipients.Select(r => r.Object().DBRef));
-			await NotifyService!.Notify(executor, $"You paged {recipientList} with '{message}'.");
+			await NotifyService!.Notify(executor, $"You paged {recipientList} with '{messageArg}'.");
 			
 			// Store LASTPAGED attribute
 			var lastPagedText = string.Join(" ", successfulRecipients.Select(r => r.Object().DBRef));
@@ -353,7 +370,7 @@ public partial class Commands
 
 		var interactableContents = contents
 			.Where(async (obj, _) =>
-				await PermissionService!.CanInteract(obj.WithRoomOption(), executor,
+				await PermissionService!.CanInteract(obj, executor,
 					IPermissionService.InteractType.Hear));
 
 		await foreach (var obj in interactableContents)
@@ -421,8 +438,7 @@ public partial class Commands
 
 		var interactableContents = contents
 			.Where(async (obj, _) =>
-				await PermissionService!.CanInteract(obj.WithRoomOption(), executor,
-					IPermissionService.InteractType.Hear));
+				await PermissionService!.CanInteract(obj.WithRoomOption(), executor, IPermissionService.InteractType.Hear));
 
 		await foreach (var obj in interactableContents)
 		{

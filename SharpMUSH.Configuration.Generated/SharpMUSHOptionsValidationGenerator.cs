@@ -83,7 +83,7 @@ public class SharpMUSHOptionsValidationGenerator : IIncrementalGenerator
 		IPropertySymbol category)
 	{
 		var attr = prop.GetAttributes().FirstOrDefault(a => a.AttributeClass?.Name == SHARPATTRIBUTE);
-		if (attr == null) return null;
+		if (attr is null) return null;
 
 		var pattern = attr.NamedArguments.FirstOrDefault(kv => kv.Key == "ValidationPattern").Value.Value as string;
 		if (string.IsNullOrEmpty(pattern)) return null;
