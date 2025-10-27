@@ -25,7 +25,9 @@ public interface ISortService
 		Location,
 		CreatedTime,
 		ModifiedTime,
-		AttributeName
+		AttributeName,
+		UncasedAttributeContent,
+		CasedAttributeContent
 	}
 
 	SortInformation StringToSortType(string sortType);
