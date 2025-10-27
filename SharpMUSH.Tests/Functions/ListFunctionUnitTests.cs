@@ -167,7 +167,7 @@ public class ListFunctionUnitTests
 	[Skip("Not Yet Implemented")]
 	[Arguments("lreplace(a b c,2,foo)", "a foo c")]
 	[Arguments("lreplace(a|b|c,2,foo,|)", "a|foo|c")]
-	public async Task Lreplace(string function, string expected)
+	public async Task ListReplace(string function, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
@@ -195,7 +195,7 @@ public class ListFunctionUnitTests
 	[Skip("Not Yet Implemented")]
 	[Arguments("setunion(a b c,c d e)", "a b c d e")]
 	[Arguments("setunion(1 2 3,2 3 4)", "1 2 3 4")]
-	public async Task Setunion(string function, string expected)
+	public async Task SetUnion(string function, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
@@ -205,7 +205,7 @@ public class ListFunctionUnitTests
 	[Skip("Not Yet Implemented")]
 	[Arguments("setinter(a b c,c d e)", "c")]
 	[Arguments("setinter(1 2 3,2 3 4)", "2 3")]
-	public async Task Setinter(string function, string expected)
+	public async Task SetIntersection(string function, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
@@ -215,7 +215,7 @@ public class ListFunctionUnitTests
 	[Skip("Not Yet Implemented")]
 	[Arguments("setdiff(a b c,c d e)", "a b")]
 	[Arguments("setdiff(1 2 3,2 3 4)", "1")]
-	public async Task Setdiff(string function, string expected)
+	public async Task SetDifference(string function, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
@@ -260,7 +260,7 @@ public class ListFunctionUnitTests
 	[Test]
 	[Skip("Not Yet Implemented")]
 	[Arguments("randextract(a b c d e)", "")]
-	public async Task Randextract(string function, string expected)
+	public async Task RandomExtract(string function, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		// Random result, just check it's not empty
@@ -269,7 +269,7 @@ public class ListFunctionUnitTests
 
 	[Test]
 	[Arguments("randword(a b c d e)")]
-	public async Task Randword(string function)
+	public async Task RandomWord(string function)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		// Random result, just check it's not empty
@@ -324,7 +324,7 @@ public class ListFunctionUnitTests
 	[Test]
 	[Skip("Not Yet Implemented")]
 	[Arguments("namegraball(obj,pattern)", "")]
-	public async Task Namegraball(string function, string expected)
+	public async Task NameGrabAll(string function, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsNotNull();
@@ -333,7 +333,7 @@ public class ListFunctionUnitTests
 	[Test]
 	[Skip("Not Yet Implemented")]
 	[Arguments(@"filterbool(#lambda/\%0,1 0 1)", "1 1")]
-	public async Task Filterbool(string function, string expected)
+	public async Task FilterBool(string function, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
@@ -342,7 +342,7 @@ public class ListFunctionUnitTests
 	[Test]
 	[Skip("Not Yet Implemented")]
 	[Arguments("revwords(a b c)", "c b a")]
-	public async Task Revwords(string str, string expected)
+	public async Task ReverseWords(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
@@ -360,7 +360,7 @@ public class ListFunctionUnitTests
 	[Test]
 	[Skip("Not Yet Implemented")]
 	[Arguments("lset(a b c,2,x)", "a b x")]
-	public async Task Lset(string str, string expected)
+	public async Task ListSet(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
@@ -369,7 +369,7 @@ public class ListFunctionUnitTests
 	[Test]
 	[Skip("Not Yet Implemented")]
 	[Arguments("linsert(a b c,1,x)", "a x b c")]
-	public async Task Linsert(string str, string expected)
+	public async Task ListInsert(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
@@ -378,7 +378,7 @@ public class ListFunctionUnitTests
 	[Test]
 	[Skip("Not Yet Implemented")]
 	[Arguments("sortby(obj/attr,a b c)", "")]
-	public async Task Sortby(string str, string expected)
+	public async Task SortBy(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
@@ -387,7 +387,7 @@ public class ListFunctionUnitTests
 	[Test]
 	[Skip("Not Yet Implemented")]
 	[Arguments("sortkey(obj/attr,a b c,key)", "")]
-	public async Task Sortkey(string str, string expected)
+	public async Task SortKey(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();

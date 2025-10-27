@@ -14,6 +14,6 @@ public static class StringExtensions
 	/// <returns>Regex Pattern</returns>
 	public static string GlobToRegex(this string str)
 		=> Regex.Escape(str)
-			.Replace(Asterisk, ".*")
+			.Replace(Asterisk, ".*?")
 			.Replace(Question, ".");
 }

@@ -6,7 +6,6 @@ using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
-using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Functions;
@@ -27,7 +26,7 @@ public partial class Functions
 		var list = MModule.split2(delimiter, listArg);
 		var numbers = numbersArg.Split(" ");
 
-		var result = list.Where((item, i) => numbers.Contains(i.ToString()));
+		var result = list.Where((_, i) => numbers.Contains(i.ToString()));
 
 		return new CallState(MModule.multipleWithDelimiter(sep, result));
 	}
@@ -300,17 +299,31 @@ public partial class Functions
 	[SharpFunction(Name = "match", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> Match(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var str = parser.CurrentState.Arguments["0"].Message;
+		var list = parser.CurrentState.Arguments["0"].Message;
 		var globPattern = MModule.plainText(parser.CurrentState.Arguments["1"].Message)!;
 		var regPattern = globPattern.GlobToRegex();
+		var regex = new System.Text.RegularExpressions.Regex(regPattern,
+			System.Text.RegularExpressions.RegexOptions.Singleline);
+		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ");
+		var splitList = MModule.split2(delimiter, list) ?? [];
 
-		throw new NotImplementedException();
+		return ValueTask.FromResult<CallState>(splitList
+			.FirstOrDefault(x => regex.IsMatch(x.ToPlainText())) ?? MModule.empty());
 	}
 
-	[SharpFunction(Name = "MATCHALL", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> matchall(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "matchall", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public static ValueTask<CallState> MatchAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var list = parser.CurrentState.Arguments["0"].Message;
+		var globPattern = MModule.plainText(parser.CurrentState.Arguments["1"].Message)!;
+		var regPattern = globPattern.GlobToRegex();
+		var regex = new System.Text.RegularExpressions.Regex(regPattern,
+			System.Text.RegularExpressions.RegexOptions.Singleline);
+		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ");
+		var splitList = MModule.split2(delimiter, list) ?? [];
+
+		return ValueTask.FromResult<CallState>(
+			MModule.multipleWithDelimiter(delimiter, splitList.Where(x => regex.IsMatch(x.ToPlainText()))));
 	}
 
 	[SharpFunction(Name = "member", MinArgs = 2, MaxArgs = 3,
@@ -326,32 +339,32 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>(splitList.IndexOf(word) + 1);
 	}
 
-	[SharpFunction(Name = "MIX", MinArgs = 3, MaxArgs = 35, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> mix(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "mix", MinArgs = 3, MaxArgs = 35, Flags = FunctionFlags.Regular)]
+	public static ValueTask<CallState> Mix(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "MUNGE", MinArgs = 3, MaxArgs = 5, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> munge(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "munge", MinArgs = 3, MaxArgs = 5, Flags = FunctionFlags.Regular)]
+	public static ValueTask<CallState> Munge(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "NAMEGRAB", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> namegrab(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "namegrab", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public static ValueTask<CallState> NameGrab(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "NAMEGRABALL", MinArgs = 2, MaxArgs = 3,
+	[SharpFunction(Name = "namegraball", MinArgs = 2, MaxArgs = 3,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> namegraball(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> NameGrabAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "RANDEXTRACT", MinArgs = 1, MaxArgs = 5, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "randextract", MinArgs = 1, MaxArgs = 5, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> randextract(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
@@ -390,7 +403,7 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>(MModule.multipleWithDelimiter(delimiter, splitList));
 	}
 
-	[SharpFunction(Name = "LREPLACE", MinArgs = 3, MaxArgs = 5, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "lreplace", MinArgs = 3, MaxArgs = 5, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> lreplace(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
@@ -413,7 +426,7 @@ public partial class Functions
 		var sep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, delim);
 		var list = MModule.split2(
 			delim,
-			(await parser.CurrentState.Arguments["0"].ParsedMessage())!);
+			(await parser.CurrentState.Arguments["0"].ParsedMessage())!) ?? [];
 
 		return new CallState(MModule.multipleWithDelimiter(sep, list.Reverse()));
 	}
@@ -426,7 +439,7 @@ public partial class Functions
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.single(" "));
 		var sep = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, delimiter);
 
-		var list = MModule.split2(delimiter, listArg);
+		var list = MModule.split2(delimiter, listArg) ?? [];
 		var shuffled = ShuffleExtension.Shuffle(list);
 		var result = MModule.multipleWithDelimiter(sep, shuffled);
 
@@ -443,38 +456,8 @@ public partial class Functions
 		var outputSeparator = ArgHelpers.NoParseDefaultNoParseArgument(orderedArgs, 3, delimiter);
 		var listItems = MModule.split2(delimiter, list);
 
-		var ascending = false;
-		
-		if (sortType.StartsWith('-'))
-		{
-			sortType = sortType[1..];
-			ascending = true;
-		}
-		
-		// TODO: Special Sort Key
-		// The special sort key attr:<aname> or attri:<aname> will sort dbrefs according to their <aname> attributes.
-		// For example: Separating by &factions or &species attrs.
-		// attr is probably case-sensitive, and attri is case-insensitive.
 		return MModule.multipleWithDelimiter(outputSeparator,
-			sortType switch
-			{
-				"a" => await SortService!.Sort(listItems, ISortService.SortType.CasedLexicographically, ascending), 
-				"i" => await SortService!.Sort(listItems, ISortService.SortType.UncasedLexicographically, ascending),
-				"d" => await SortService!.Sort(listItems, ISortService.SortType.DbRef, ascending),
-				"n" => await SortService!.Sort(listItems, ISortService.SortType.IntegerSort, ascending),
-				"f" => await SortService!.Sort(listItems, ISortService.SortType.DecimalSort, ascending),
-				"m" => await SortService!.Sort(listItems, ISortService.SortType.NaturalSort, ascending),
-				"name" => await SortService!.Sort(listItems, ISortService.SortType.CasedName, ascending),
-				"namei" => await SortService!.Sort(listItems, ISortService.SortType.UncasedName, ascending),
-				"conn" => await SortService!.Sort(listItems, ISortService.SortType.Conn, ascending),
-				"idle" => await SortService!.Sort(listItems, ISortService.SortType.Idle, ascending),
-				"owner" => await SortService!.Sort(listItems, ISortService.SortType.Owner, ascending),
-				"loc" => await SortService!.Sort(listItems, ISortService.SortType.Location, ascending),
-				"ctime" => await SortService!.Sort(listItems, ISortService.SortType.CreatedTime, ascending),
-				"mtime" => await SortService!.Sort(listItems, ISortService.SortType.ModifiedTime, ascending),
-				"lattr" => await SortService!.Sort(listItems, ISortService.SortType.AttributeName, ascending),
-				_ => [MModule.single("#-1 INVALID SORT TYPE")]
-			});
+			await SortService!.Sort(listItems, x => x.ToPlainText(), parser, SortService.StringToSortType(sortType)));
 	}
 
 	[SharpFunction(Name = "sortby", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
@@ -519,7 +502,7 @@ public partial class Functions
 	public static ValueTask<CallState> Step(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// step([<obj>/]<attr>, <list>, <step>[, <delim>[, <osep>]])
-		
+
 		throw new NotImplementedException();
 	}
 
@@ -672,12 +655,11 @@ public partial class Functions
 		var aList1 = MModule.split2(delimiter, list1);
 		var aList2 = MModule.split2(delimiter, list2);
 
-		var result = await Enumerable.DistinctBy(aList1
-				.Concat(aList2), MModule.plainText)
-			.OrderByAsync(x => x.ToPlainText(), parser, Mediator!, LocateService!, ConnectionService!,
-				sortType.ToPlainText());
+		var sortTypeType = SortService!.StringToSortType(sortType.ToPlainText());
+		var sorted = await SortService.Sort(Enumerable.DistinctBy(aList1
+			.Concat(aList2), MModule.plainText), x => x.ToPlainText(), parser, sortTypeType);
 
-		return new CallState(MModule.multipleWithDelimiter(outputSeparator, result));
+		return new CallState(MModule.multipleWithDelimiter(outputSeparator, sorted));
 	}
 
 	[SharpFunction(Name = "setdiff", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular)]
