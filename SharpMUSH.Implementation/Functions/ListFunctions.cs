@@ -366,7 +366,7 @@ public partial class Functions
 			MModule.split2(delimiter, list).RandomSubset(1).FirstOrDefault() ?? MModule.empty());
 	}
 
-	[SharpFunction(Name = "REMOVE", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "remove", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Remove(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var orderedArgs = parser.CurrentState.ArgumentsOrdered;
@@ -379,7 +379,7 @@ public partial class Functions
 
 		foreach (var word in splitWords)
 		{
-			var index = splitList.FindIndex(x => x == word);
+			var index = splitList.FindIndex(x => x.ToPlainText() == word.ToPlainText());
 			if (index != -1)
 			{
 				splitList.RemoveAt(index);
