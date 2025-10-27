@@ -4,6 +4,7 @@ namespace SharpMUSH.Library.Definitions;
 
 public static class Errors
 {
+	public const string ErrorBadObjectName = "#-1 BAD OBJECT NAME";
 	public const string ErrorNoSuchPower = "#-1 NO SUCH POWER";
 	public const string ErrorInvalidPassword = "#-1 INVALID PASSWORD";
 	public const string ErrorNoSuchFlag = "#-1 NO SUCH FLAG";

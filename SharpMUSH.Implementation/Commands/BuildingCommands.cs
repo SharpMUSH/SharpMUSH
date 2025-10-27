@@ -3,10 +3,8 @@ using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
-using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
-using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using Errors = SharpMUSH.Library.Definitions.Errors;
@@ -30,17 +28,22 @@ public partial class Commands
 	[SharpCommand(Name = "@CREATE", Behavior = CB.Default | CB.EqSplit, MinArgs = 1, MaxArgs = 3)]
 	public static async ValueTask<Option<CallState>> Create(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// TODO: Validate Name
 		var args = parser.CurrentState.Arguments;
-		var name = MModule.plainText(args["0"].Message!);
+		var name = args["0"].Message!;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		var thing = await Mediator!.Send(new CreateThingCommand(name,
+		if (!await ValidateService!.Valid(IValidateService.ValidationType.Name, name))
+		{
+			await NotifyService!.Notify(executor, "Invalid name for a thing.");
+			return new CallState(Errors.ErrorBadObjectName);
+		}
+		
+		var thing = await Mediator!.Send(new CreateThingCommand(name.ToPlainText(),
 			await executor.Where(),
 			await executor.Object()
 				.Owner.WithCancellation(CancellationToken.None)));
 		
-		await NotifyService!.Notify(executor, $"Created {thing}");
+		await NotifyService!.Notify(executor, $"Created {name} ({thing}).");
 
 		return new CallState(thing.ToString());
 	}
