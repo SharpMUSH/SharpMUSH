@@ -15,10 +15,10 @@ public class ExpandedDataTests
 	[Test, NotInParallel]
 	public async Task SetAndGetExpandedData()
 	{
-		var one = await _database.GetObjectNodeAsync(new DBRef(1));
-		await _database.SetExpandedObjectData(one.Object()!.Id!, "SetAndGetExpandedData", new { Word = "Dog" });
+		var one = await _database.GetObjectNodeAsync(new DBRef(1), CancellationToken.None);
+		await _database.SetExpandedObjectData(one.Object()!.Id!, "SetAndGetExpandedData", new { Word = "Dog" }, CancellationToken.None);
 
-		var result = await _database.GetExpandedObjectData(one.Object()!.Id!, "SetAndGetExpandedData");
+		var result = await _database.GetExpandedObjectData(one.Object()!.Id!, "SetAndGetExpandedData", CancellationToken.None);
 		await Assert.That(result).IsEqualTo("{\"Word\":\"Dog\"}");
 	}
 

@@ -10,7 +10,7 @@ public class MoveObjectCommandHandler(ISharpDatabase database) : ICommandHandler
 {
 	public async ValueTask<DBRef> Handle(MoveObjectCommand request, CancellationToken cancellationToken)
 	{
-		await database.MoveObjectAsync(request.Target, request.Destination);
+		await database.MoveObjectAsync(request.Target, request.Destination, cancellationToken);
 		return request.Destination.Object().DBRef;
 	}
 }

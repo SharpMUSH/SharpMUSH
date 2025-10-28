@@ -11,6 +11,6 @@ public class GetAttributeFlagsQueryHandler(ISharpDatabase database)
 	public async ValueTask<IEnumerable<SharpAttributeFlag>> Handle(GetAttributeFlagsQuery request,
 		CancellationToken cancellationToken)
 	{
-		return await database.GetAttributeFlagsAsync();
+		return await database.GetAttributeFlagsAsync(cancellationToken);
 	}
 }

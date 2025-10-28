@@ -10,7 +10,7 @@ public class GetNearbyObjectsQueryHandler(ISharpDatabase database)
 {
 	public async ValueTask<IAsyncEnumerable<AnySharpObject>> Handle(GetNearbyObjectsQuery request, CancellationToken cancellationToken)
 		=> await request.DBRef.Match(
-			async dbRef => await database.GetNearbyObjectsAsync(dbRef),
-			async obj => await database.GetNearbyObjectsAsync(obj)
+			async dbRef => await database.GetNearbyObjectsAsync(dbRef, cancellationToken),
+			async obj => await database.GetNearbyObjectsAsync(obj, cancellationToken)
 			);
 }

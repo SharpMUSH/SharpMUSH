@@ -8,7 +8,7 @@ public class SetLockCommandHandler(ISharpDatabase database) : ICommandHandler<Se
 {
 	public async ValueTask<Unit> Handle(SetLockCommand request, CancellationToken cancellationToken)
 	{
-		await database.SetLockAsync(request.Target, request.LockName, request.LockString);
+		await database.SetLockAsync(request.Target, request.LockName, request.LockString, cancellationToken);
 		return new Unit();
 	}
 }
@@ -16,7 +16,7 @@ public class UnsetLockCommandHandler(ISharpDatabase database) : ICommandHandler<
 {
 	public async ValueTask<Unit> Handle(UnsetLockCommand request, CancellationToken cancellationToken)
 	{
-		await database.UnsetLockAsync(request.Target, request.LockName);
+		await database.UnsetLockAsync(request.Target, request.LockName, cancellationToken);
 		return new Unit();
 	}
 }

@@ -9,6 +9,6 @@ public class CreateRoomCommandHandler(ISharpDatabase database) : ICommandHandler
 {
 	public async ValueTask<DBRef> Handle(CreateRoomCommand request, CancellationToken cancellationToken)
 	{
-		return await database.CreateRoomAsync(request.Name, request.Creator);
+		return await database.CreateRoomAsync(request.Name, request.Creator, cancellationToken);
 	}
 }

@@ -10,7 +10,7 @@ public class GetContentsQueryHandler(ISharpDatabase database)
 {
 	public async ValueTask<IAsyncEnumerable<AnySharpContent>?> Handle(GetContentsQuery request, CancellationToken cancellationToken)
 		=> await request.DBRef.Match(
-			async dbRef => await database.GetContentsAsync(dbRef),
-			async obj => await database.GetContentsAsync(obj)
+			async dbRef => await database.GetContentsAsync(dbRef, cancellationToken),
+			async obj => await database.GetContentsAsync(obj, cancellationToken)
 			);
 }

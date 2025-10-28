@@ -9,5 +9,5 @@ public class GetPlayerQueryHandler(ISharpDatabase database)
 	: IQueryHandler<GetPlayerQuery, IAsyncEnumerable<SharpPlayer>>
 {
 	public async ValueTask<IAsyncEnumerable<SharpPlayer>> Handle(GetPlayerQuery request, CancellationToken cancellationToken)
-		=> await database.GetPlayerByNameOrAliasAsync(request.Name);
+		=> await database.GetPlayerByNameOrAliasAsync(request.Name, cancellationToken);
 }

@@ -8,7 +8,7 @@ public class SetAttributeFlagCommandHandler(ISharpDatabase database) : ICommandH
 {
 	public async ValueTask<bool> Handle(SetAttributeFlagCommand request, CancellationToken cancellationToken)
 	{
-		await database.SetAttributeFlagAsync(request.Target, request.Flag);
+		await database.SetAttributeFlagAsync(request.Target, request.Flag, cancellationToken);
 		return true;
 	}
 }
@@ -17,7 +17,7 @@ public class UnsetAttributeFlagCommandHandler(ISharpDatabase database) : IComman
 {
 	public async ValueTask<bool> Handle(UnsetAttributeFlagCommand request, CancellationToken cancellationToken)
 	{
-		await database.UnsetAttributeFlagAsync(request.Target, request.Flag);
+		await database.UnsetAttributeFlagAsync(request.Target, request.Flag, cancellationToken);
 		return true;
 	}
 }

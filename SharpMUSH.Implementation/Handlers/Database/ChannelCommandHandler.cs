@@ -8,7 +8,7 @@ public class CreateChannelCommandHandler(ISharpDatabase database) : ICommandHand
 {
 	public async ValueTask<Unit> Handle(CreateChannelCommand request, CancellationToken cancellationToken)
 	{
-		await database.CreateChannelAsync(request.Channel, request.Privs, request.Owner);
+		await database.CreateChannelAsync(request.Channel, request.Privs, request.Owner, cancellationToken);
 		return Unit.Value;
 	}
 }
@@ -27,7 +27,7 @@ public class UpdateChannelCommandHandler(ISharpDatabase database) : ICommandHand
 			request.HideLock,
 			request.ModLock,
 			request.Mogrifier,
-			request.Buffer);
+			request.Buffer, cancellationToken);
 		return Unit.Value;
 	}
 }
@@ -36,7 +36,7 @@ public class DeleteChannelCommandHandler(ISharpDatabase database) : ICommandHand
 {
 	public async ValueTask<Unit> Handle(DeleteChannelCommand request, CancellationToken cancellationToken)
 	{
-		await database.DeleteChannelAsync(request.Channel);
+		await database.DeleteChannelAsync(request.Channel, cancellationToken);
 		return Unit.Value;
 	}
 }
@@ -45,7 +45,7 @@ public class AddUserToChannelCommandHandler(ISharpDatabase database) : ICommandH
 {
 	public async ValueTask<Unit> Handle(AddUserToChannelCommand request, CancellationToken cancellationToken)
 	{
-		await database.AddUserToChannelAsync(request.Channel, request.Object);
+		await database.AddUserToChannelAsync(request.Channel, request.Object, cancellationToken);
 		return Unit.Value;
 	}
 }
@@ -54,7 +54,7 @@ public class RemoveUserFromChannelCommandHandler(ISharpDatabase database) : ICom
 {
 	public async ValueTask<Unit> Handle(RemoveUserFromChannelCommand request, CancellationToken cancellationToken)
 	{
-		await database.RemoveUserFromChannelAsync(request.Channel, request.Object);
+		await database.RemoveUserFromChannelAsync(request.Channel, request.Object, cancellationToken);
 		return Unit.Value;
 	}
 }
@@ -63,7 +63,7 @@ public class UpdateChannelUserStatusCommandHandler(ISharpDatabase database) : IC
 {
 	public async ValueTask<Unit> Handle(UpdateChannelUserStatusCommand request, CancellationToken cancellationToken)
 	{
-		await database.UpdateChannelUserStatusAsync(request.Channel, request.Object, request.Status);
+		await database.UpdateChannelUserStatusAsync(request.Channel, request.Object, request.Status, cancellationToken);
 		return Unit.Value;
 	}
 }
@@ -72,7 +72,7 @@ public class UpdateChannelOwnerCommandHandler(ISharpDatabase database) : IComman
 {
 	public async ValueTask<Unit> Handle(UpdateChannelOwnerCommand request, CancellationToken cancellationToken)
 	{
-		await database.UpdateChannelOwnerAsync(request.Channel, request.Player);
+		await database.UpdateChannelOwnerAsync(request.Channel, request.Player, cancellationToken);
 		return Unit.Value;
 	}
 }

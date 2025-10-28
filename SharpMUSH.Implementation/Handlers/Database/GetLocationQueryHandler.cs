@@ -10,7 +10,7 @@ public class GetLocationQueryHandler(ISharpDatabase database)
 {
 	public async ValueTask<AnyOptionalSharpContainer> Handle(GetLocationQuery request, CancellationToken cancellationToken)
 	{
-		return await database.GetLocationAsync(request.DBRef, request.Depth);
+		return await database.GetLocationAsync(request.DBRef, request.Depth, cancellationToken);
 	}
 }
 
@@ -19,6 +19,6 @@ public class GetCertainLocationQueryHandler(ISharpDatabase database)
 {
 	public async ValueTask<AnySharpContainer> Handle(GetCertainLocationQuery request, CancellationToken cancellationToken)
 	{
-		return await database.GetLocationAsync(request.Key, request.Depth);
+		return await database.GetLocationAsync(request.Key, request.Depth, cancellationToken);
 	}
 }

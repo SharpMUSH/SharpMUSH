@@ -8,7 +8,7 @@ public class SetObjectFlagCommandHandler(ISharpDatabase database) : ICommandHand
 {
 	public async ValueTask<bool> Handle(SetObjectFlagCommand request, CancellationToken cancellationToken)
 	{
-		return await database.SetObjectFlagAsync(request.Target, request.Flag);
+		return await database.SetObjectFlagAsync(request.Target, request.Flag, cancellationToken);
 	}
 }
 
@@ -16,6 +16,6 @@ public class UnsetObjectFlagCommandHandler(ISharpDatabase database) : ICommandHa
 {
 	public async ValueTask<bool> Handle(UnsetObjectFlagCommand request, CancellationToken cancellationToken)
 	{
-		return await database.UnsetObjectFlagAsync(request.Target, request.Flag);
+		return await database.UnsetObjectFlagAsync(request.Target, request.Flag, cancellationToken);
 	}
 }
