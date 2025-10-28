@@ -11,7 +11,7 @@ public class GetAllObjectFlagsQueryHandler(ISharpDatabase database)
 	public async ValueTask<IEnumerable<SharpObjectFlag>> Handle(GetAllObjectFlagsQuery request,
 		CancellationToken cancellationToken)
 	{
-		return await database.GetObjectFlagsAsync();
+		return await database.GetObjectFlagsAsync(cancellationToken);
 	}
 }
 
@@ -21,7 +21,7 @@ public class GetObjectFlagQueryHandler(ISharpDatabase database)
 	public async ValueTask<SharpObjectFlag?> Handle(GetObjectFlagQuery request,
 		CancellationToken cancellationToken)
 	{
-		return await database.GetObjectFlagAsync(request.FlagName);
+		return await database.GetObjectFlagAsync(request.FlagName, cancellationToken);
 	}
 }
 
@@ -31,6 +31,6 @@ public class GetObjectFlagsQueryHandler(ISharpDatabase database)
 	public async ValueTask<IEnumerable<SharpObjectFlag>?> Handle(GetObjectFlagsQuery request,
 		CancellationToken cancellationToken)
 	{
-		return await database.GetObjectFlagsAsync(request.Id);
+		return await database.GetObjectFlagsAsync(request.Id, cancellationToken);
 	}
 }

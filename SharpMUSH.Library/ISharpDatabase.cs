@@ -90,16 +90,16 @@ public interface ISharpDatabase
 	/// <param name="dbref">DBRef of an object to get the attributes for</param>
 	/// <param name="attribute">Attribute Path - uses attribute leaves</param>
 	/// <returns>The <see cref="SharpAttribute"/> hierarchy, with the last attribute being the final leaf.</returns>
-	ValueTask<IAsyncEnumerable<SharpAttribute>?> GetAttributeAsync(DBRef dbref, params string[] attribute);
+	ValueTask<IAsyncEnumerable<SharpAttribute>?> GetAttributeAsync(DBRef dbref, CancellationToken cancellationToken = default, params string[] attribute);
 
 	// TODO: Consider the return value, as an attribute pattern returns multiple attributes.
 	// These should return full attribute paths, so likely IEnumerable<IEnumerable<SharpAttribute>>.
-	ValueTask<IAsyncEnumerable<SharpAttribute>?> GetAttributesAsync(DBRef dbref, string attribute_pattern);
-	ValueTask<IAsyncEnumerable<SharpAttribute>?> GetAttributesByRegexAsync(DBRef dbref, string attribute_pattern);
+	ValueTask<IAsyncEnumerable<SharpAttribute>?> GetAttributesAsync(DBRef dbref, string attribute_pattern, CancellationToken cancellationToken = default);
+	ValueTask<IAsyncEnumerable<SharpAttribute>?> GetAttributesByRegexAsync(DBRef dbref, string attribute_pattern, CancellationToken cancellationToken = default);
 
-	ValueTask<IAsyncEnumerable<LazySharpAttribute>?> GetLazyAttributeAsync(DBRef dbref, params string[] attribute);
-	ValueTask<IAsyncEnumerable<LazySharpAttribute>?> GetLazyAttributesAsync(DBRef dbref, string attribute_pattern);
-	ValueTask<IAsyncEnumerable<LazySharpAttribute>?> GetLazyAttributesByRegexAsync(DBRef dbref, string attribute_pattern);
+	ValueTask<IAsyncEnumerable<LazySharpAttribute>?> GetLazyAttributeAsync(DBRef dbref, CancellationToken cancellationToken = default, params string[] attribute);
+	ValueTask<IAsyncEnumerable<LazySharpAttribute>?> GetLazyAttributesAsync(DBRef dbref, string attribute_pattern, CancellationToken cancellationToken = default);
+	ValueTask<IAsyncEnumerable<LazySharpAttribute>?> GetLazyAttributesByRegexAsync(DBRef dbref, string attribute_pattern, CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Get the Object represented by a Database Reference Number.

@@ -8,5 +8,5 @@ namespace SharpMUSH.Implementation.Handlers.Database;
 public class PowerQueryHandler(ISharpDatabase database): IQueryHandler<GetPowersQuery, IEnumerable<SharpPower>>
 {
 	public async ValueTask<IEnumerable<SharpPower>> Handle(GetPowersQuery query, CancellationToken cancellationToken) 
-		=> await database.GetObjectPowersAsync();
+		=> await database.GetObjectPowersAsync(cancellationToken);
 }

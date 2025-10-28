@@ -8,7 +8,7 @@ public class SendMailCommandHandler(ISharpDatabase database)  : ICommandHandler<
 {
 	public async ValueTask<Unit> Handle(SendMailCommand command, CancellationToken cancellationToken)
 	{
-		await database.SendMailAsync(command.Sender, command.Recipient, command.Mail);
+		await database.SendMailAsync(command.Sender, command.Recipient, command.Mail, cancellationToken);
 		return Unit.Value;
 	}
 }
@@ -17,7 +17,7 @@ public class UpdateMailCommandHandler(ISharpDatabase database) : ICommandHandler
 {
 	public async ValueTask<Unit> Handle(UpdateMailCommand command, CancellationToken cancellationToken)
 	{
-		await database.UpdateMailAsync(command.Mail.Id!, command.Update);
+		await database.UpdateMailAsync(command.Mail.Id!, command.Update, cancellationToken);
 		return Unit.Value;
 	}
 }
@@ -26,7 +26,7 @@ public class DeleteMailHandler(ISharpDatabase database) : ICommandHandler<Delete
 {
 	public async ValueTask<Unit> Handle(DeleteMailCommand command, CancellationToken cancellationToken)
 	{
-		await database.DeleteMailAsync(command.Mail.Id!);
+		await database.DeleteMailAsync(command.Mail.Id!, cancellationToken);
 		return Unit.Value;
 	}
 }
@@ -35,7 +35,7 @@ public class RenameMailFolderHandler(ISharpDatabase database) : ICommandHandler<
 {
 	public async ValueTask<Unit> Handle(RenameMailFolderCommand command, CancellationToken cancellationToken)
 	{
-		await database.RenameMailFolderAsync(command.Owner, command.FolderName, command.NewFolderName);
+		await database.RenameMailFolderAsync(command.Owner, command.FolderName, command.NewFolderName, cancellationToken);
 		return Unit.Value;
 	}
 }
@@ -44,7 +44,7 @@ public class MoveMailFolderHandler(ISharpDatabase database) : ICommandHandler<Mo
 {
 	public async ValueTask<Unit> Handle(MoveMailFolderCommand command, CancellationToken cancellationToken)
 	{
-		await database.MoveMailFolderAsync(command.Mail.Id!, command.NewFolderName);
+		await database.MoveMailFolderAsync(command.Mail.Id!, command.NewFolderName, cancellationToken);
 		return Unit.Value;
 	}
 }

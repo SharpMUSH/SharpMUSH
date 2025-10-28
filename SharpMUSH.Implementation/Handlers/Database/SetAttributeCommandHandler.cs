@@ -8,6 +8,6 @@ public class SetAttributeCommandHandler(ISharpDatabase database) : ICommandHandl
 {
 	public async ValueTask<bool> Handle(SetAttributeCommand request, CancellationToken cancellationToken)
 	{
-		return await database.SetAttributeAsync(request.DBRef, request.Attribute, request.Value, request.Owner);
+		return await database.SetAttributeAsync(request.DBRef, request.Attribute, request.Value, request.Owner, cancellationToken);
 	}
 }

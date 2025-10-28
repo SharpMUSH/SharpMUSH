@@ -9,6 +9,6 @@ public class CreateThingCommandHandler(ISharpDatabase database) : ICommandHandle
 {
 	public async ValueTask<DBRef> Handle(CreateThingCommand request, CancellationToken cancellationToken)
 	{
-		return await database.CreateThingAsync(request.Name, request.Where, request.Owner);
+		return await database.CreateThingAsync(request.Name, request.Where, request.Owner, cancellationToken);
 	}
 }

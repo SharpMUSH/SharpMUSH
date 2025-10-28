@@ -8,6 +8,6 @@ public class ClearAttributeCommandHandler(ISharpDatabase database) : ICommandHan
 {
 	public async ValueTask<bool> Handle(ClearAttributeCommand request, CancellationToken cancellationToken)
 	{
-		return await database.ClearAttributeAsync(request.DBRef, request.Attribute);
+		return await database.ClearAttributeAsync(request.DBRef, request.Attribute, cancellationToken);
 	}
 }

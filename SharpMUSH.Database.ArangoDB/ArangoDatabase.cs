@@ -43,13 +43,13 @@ public partial class ArangoDatabase(
 				HistoryCollection = "MigrationHistory"
 			};
 
-			if (!await migrator.Context.Database.ExistAsync(handle, cancellationToken))
+			if (!await migrator.Context.Database.ExistAsync(handle))
 			{
-				await migrator.Context.Database.CreateAsync(handle, cancellationToken);
+				await migrator.Context.Database.CreateAsync(handle);
 			}
 
 			migrator.AddMigrations(typeof(ArangoDatabase).Assembly);
-			await migrator.UpgradeAsync(handle, cancellationToken);
+			await migrator.UpgradeAsync(handle);
 
 			logger.LogInformation("Migration Completed.");
 		}
@@ -1230,7 +1230,7 @@ public partial class ArangoDatabase(
 	}
 
 	public async ValueTask<IAsyncEnumerable<LazySharpAttribute>?> GetLazyAttributesAsync(DBRef dbref,
-		string attributePattern)
+		string attributePattern, CancellationToken cancellationToken = default)
 	{
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 		var result =
@@ -1272,7 +1272,7 @@ public partial class ArangoDatabase(
 	}
 
 
-	public async ValueTask<IAsyncEnumerable<SharpAttribute>?> GetAttributesAsync(DBRef dbref, string attributePattern)
+	public async ValueTask<IAsyncEnumerable<SharpAttribute>?> GetAttributesAsync(DBRef dbref, string attributePattern, CancellationToken cancellationToken = default)
 	{
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 		var result =
@@ -1309,7 +1309,7 @@ public partial class ArangoDatabase(
 	}
 
 	public async ValueTask<IAsyncEnumerable<SharpAttribute>?> GetAttributesByRegexAsync(DBRef dbref,
-		string attributePattern)
+		string attributePattern, CancellationToken cancellationToken = default)
 	{
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 		var result =
@@ -1345,7 +1345,7 @@ public partial class ArangoDatabase(
 
 
 	public async ValueTask<IAsyncEnumerable<LazySharpAttribute>?> GetLazyAttributesByRegexAsync(DBRef dbref,
-		string attributePattern)
+		string attributePattern, CancellationToken cancellationToken = default)
 	{
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 		var result =
@@ -1441,7 +1441,7 @@ public partial class ArangoDatabase(
 			Locks = target.Locks.Remove(lockName)
 		}, mergeObjects: true);
 
-	public async ValueTask<IAsyncEnumerable<SharpAttribute>?> GetAttributeAsync(DBRef dbref, params string[] attribute)
+	public async ValueTask<IAsyncEnumerable<SharpAttribute>?> GetAttributeAsync(DBRef dbref, CancellationToken cancellationToken = default, params string[] attribute)
 	{
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 
@@ -1466,7 +1466,7 @@ public partial class ArangoDatabase(
 	}
 
 	public async ValueTask<IAsyncEnumerable<LazySharpAttribute>?> GetLazyAttributeAsync(DBRef dbref,
-		params string[] attribute)
+		CancellationToken cancellationToken = default, params string[] attribute)
 	{
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 
