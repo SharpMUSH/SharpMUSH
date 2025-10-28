@@ -31,10 +31,31 @@ public partial class Functions
 		return new CallState(MModule.multipleWithDelimiter(sep, result));
 	}
 
-	[SharpFunction(Name = "ELIST", MinArgs = 1, MaxArgs = 5, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> elist(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "elist", MinArgs = 1, MaxArgs = 5, Flags = FunctionFlags.Regular)]
+	public static ValueTask<CallState> SeperatedList(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var space = MModule.single(" ");
+		var list = parser.CurrentState.ArgumentsOrdered["0"].Message!;
+		var conjunction = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, "and");
+		var delim = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, space);
+		var outSeparator = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, delim);
+		var punctuation = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, ",");
+		var splitList = MModule.split2(delim, list) ?? [];
+
+		if (splitList.Length > 2)
+		{
+			splitList[^1] = MModule.concat(
+				MModule.concat(
+					conjunction,
+					MModule.concat(outSeparator, splitList[^1])),
+				outSeparator);
+		}
+
+		return ValueTask.FromResult<CallState>(
+			MModule.multipleWithDelimiter(
+				MModule.concat(punctuation, outSeparator),
+				splitList));
 	}
 
 	[SharpFunction(Name = "extract", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular)]
@@ -71,14 +92,14 @@ public partial class Functions
 		return new CallState(MModule.multipleWithDelimiter(delimiter, result));
 	}
 
-	[SharpFunction(Name = "FILTER", MinArgs = 2, MaxArgs = 35, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> filter(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "filter", MinArgs = 2, MaxArgs = 35, Flags = FunctionFlags.Regular)]
+	public static ValueTask<CallState> Filter(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "FILTERBOOL", MinArgs = 2, MaxArgs = 35, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> filterbool(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "filterbool", MinArgs = 2, MaxArgs = 35, Flags = FunctionFlags.Regular)]
+	public static ValueTask<CallState> FilterBool(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
@@ -100,33 +121,34 @@ public partial class Functions
 	{
 		await Task.CompletedTask;
 
-		var first = parser.CurrentState.ArgumentsOrdered
+		var first = await parser.CurrentState.ArgumentsOrdered
+			.ToAsyncEnumerable()
 			.Select(x => x.Value)
-			.FirstOrDefault(x => x.ParsedMessage().ConfigureAwait(false).GetAwaiter().GetResult().Truthy(), CallState.Empty);
+			.FirstOrDefaultAsync(async (x, _) => (await x.ParsedMessage()).Truthy(), CallState.Empty);
 
 		return first;
 	}
 
-	[SharpFunction(Name = "FOLD", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> fold(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "fold", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
+	public static ValueTask<CallState> Fold(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "GRAB", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> grab(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "grab", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular)]
+	public static ValueTask<CallState> Grab(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "GRABALL", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> graball(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "graball", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
+	public static ValueTask<CallState> GrabAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "INDEX", MinArgs = 4, MaxArgs = 4, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> index(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "index", MinArgs = 4, MaxArgs = 4, Flags = FunctionFlags.Regular)]
+	public static ValueTask<CallState> Index(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
@@ -163,8 +185,8 @@ public partial class Functions
 		return new CallState(MModule.multipleWithDelimiter(sep, result));
 	}
 
-	[SharpFunction(Name = "ITEMS", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> items(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "items", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public static ValueTask<CallState> Items(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
@@ -185,7 +207,7 @@ public partial class Functions
 			splitList[^1] = MModule.concat(
 				MModule.concat(
 					conjunction,
-					MModule.concat(space, splitList[^1])), 
+					MModule.concat(space, splitList[^1])),
 				space);
 		}
 
@@ -197,7 +219,7 @@ public partial class Functions
 
 	[SharpFunction(Name = "ibreak", MinArgs = 0, MaxArgs = 1,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.PositiveIntegersOnly)]
-	public static ValueTask<CallState> IBreak(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> IterationBreak(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var iterDepth = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.single("0"));
@@ -214,14 +236,14 @@ public partial class Functions
 		return ValueTask.FromResult(CallState.Empty);
 	}
 
-	[SharpFunction(Name = "ILEV", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> ILev(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "ilev", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public static ValueTask<CallState> IterationLevel(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "INUM", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> INum(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "inum", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public static ValueTask<CallState> IterationNumber(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
@@ -238,8 +260,8 @@ public partial class Functions
 		return ValueTask.FromResult(new CallState(last));
 	}
 
-	[SharpFunction(Name = "LDELETE", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> ldelete(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "ldelete", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
+	public static ValueTask<CallState> ListDelete(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
@@ -385,7 +407,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "randextract", MinArgs = 1, MaxArgs = 5, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> randextract(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> RandomExtract(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
@@ -424,7 +446,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "lreplace", MinArgs = 3, MaxArgs = 5, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> lreplace(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> ListReplace(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
 	}
