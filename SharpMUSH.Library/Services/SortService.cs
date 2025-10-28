@@ -86,7 +86,13 @@ public class SortService(ILocateService locateService, IConnectionService connec
 				null)
 		};
 
-	public async ValueTask<IEnumerable<MString>> Sort(IEnumerable<MString> source, Func<MString, string> keySelector,
+	public ValueTask<IAsyncEnumerable<MString>> Sort(IEnumerable<MString> items,
+		Func<MString, CancellationToken, ValueTask<string>> keySelector,
+		IMUSHCodeParser parser, ISortService.SortInformation sortData)
+		=> Sort(items.ToAsyncEnumerable(), keySelector, parser, sortData);
+
+	public async ValueTask<IAsyncEnumerable<MString>> Sort(IAsyncEnumerable<MString> source,
+		Func<MString, CancellationToken, ValueTask<string>> keySelector,
 		IMUSHCodeParser parser, ISortService.SortInformation sortData)
 	{
 		await ValueTask.CompletedTask;
@@ -98,64 +104,60 @@ public class SortService(ILocateService locateService, IConnectionService connec
 		{
 			ISortService.SortType.CasedLexicographically
 				=> source
-					.OrderBy(i => i.ToPlainText(), StringComparer.CurrentCulture, direction),
-			
+					.OrderByAwait((i, ct) => ValueTask.FromResult(i.ToPlainText()), StringComparer.CurrentCulture, direction),
+
 			ISortService.SortType.UncasedLexicographically
 				=> source
-					.OrderBy(i => i.ToPlainText(), StringComparer.CurrentCultureIgnoreCase, direction),
-			
+					.OrderByAwait((i, ct) => ValueTask.FromResult(i.ToPlainText()), StringComparer.CurrentCultureIgnoreCase,
+						direction),
+
 			ISortService.SortType.DbRef
 				=> source
-					.OrderBy(i => i.ToPlainText(), StringComparer.CurrentCulture, direction),
-			
+					.OrderByAwait((i, ct) => ValueTask.FromResult(i.ToPlainText()), StringComparer.CurrentCulture, direction),
+
 			ISortService.SortType.IntegerSort
 				=> source
 					.Select(mString => (i: int.TryParse(mString.ToPlainText(), out var number) ? number : -1, mString))
-					.OrderBy(val => val.i, Comparer<int>.Default, direction)
+					.OrderByAwait((val, ct) => ValueTask.FromResult(val.i), Comparer<int>.Default, direction)
 					.Select(val => val.mString),
-			
+
 			ISortService.SortType.DecimalSort
 				=> source
 					.Select(mString => (i: decimal.TryParse(mString.ToPlainText(), out var number) ? number : -1, mString))
-					.OrderBy(val => val.i, Comparer<decimal>.Default, direction)
+					.OrderByAwait((val, ct) => ValueTask.FromResult(val.i), Comparer<decimal>.Default, direction)
 					.Select(val => val.mString),
-			
+
 			ISortService.SortType.NaturalSort
-				=> source.OrderBy(x => x.ToPlainText(), _naturalSortComparer, direction),
-			
-			ISortService.SortType.CasedName => await source
-				.ToAsyncEnumerable()
-				.OrderByAwait(async (key, _)
-					=> (await locateService.Locate(parser, executor, executor, keySelector(key), LocateFlags.All))
-					.Match(
-						player => player.Object.Name,
-						room => room.Object.Name,
-						exit => exit.Object.Name,
-						thing => thing.Object.Name,
-						_ => keySelector(key),
-						_ => keySelector(key)
-					), StringComparer.Ordinal, direction)
-				.ToArrayAsync(CancellationToken.None),
-			
-			ISortService.SortType.UncasedName => await source
-				.ToAsyncEnumerable()
-				.OrderByAwait(async (key, _)
-						=> (await locateService.Locate(parser, executor, executor, keySelector(key), LocateFlags.All))
-						.Match(
-							player => player.Object.Name,
-							room => room.Object.Name,
-							exit => exit.Object.Name,
-							thing => thing.Object.Name,
-							_ => keySelector(key),
-							_ => keySelector(key)
+				=> source.OrderByAwait((i, ct) => ValueTask.FromResult(i.ToPlainText()), _naturalSortComparer, direction),
+
+			ISortService.SortType.CasedName => source
+				.OrderByAwait(async (key, ct)
+					=> await (await locateService.Locate(parser, executor, executor, await keySelector(key, ct), LocateFlags.All))
+					.Match<ValueTask<string>>(
+						player => ValueTask.FromResult(player.Object.Name),
+						room => ValueTask.FromResult(room.Object.Name),
+						exit => ValueTask.FromResult(exit.Object.Name),
+						thing => ValueTask.FromResult(thing.Object.Name),
+						_ => keySelector(key, ct),
+						_ => keySelector(key, ct)
+					), StringComparer.Ordinal, direction),
+
+			ISortService.SortType.UncasedName => source
+				.OrderByAwait(async (key, ct)
+						=> await (await locateService.Locate(parser, executor, executor, await keySelector(key, ct), LocateFlags.All))
+						.Match<ValueTask<string>>(
+							player => ValueTask.FromResult(player.Object.Name),
+							room => ValueTask.FromResult(room.Object.Name),
+							exit => ValueTask.FromResult(exit.Object.Name),
+							thing => ValueTask.FromResult(thing.Object.Name),
+							_ => keySelector(key, ct),
+							_ => keySelector(key, ct)
 						), StringComparer.OrdinalIgnoreCase,
-					direction)
-				.ToArrayAsync(CancellationToken.None),
-			
-			ISortService.SortType.Conn => await source
-				.ToAsyncEnumerable()
-				.OrderByAwait(async (key, _)
-						=> (await locateService.Locate(parser, executor, executor, keySelector(key), LocateFlags.All))
+					direction),
+
+			ISortService.SortType.Conn => source
+				.OrderByAwait(async (key, ct)
+						=> (await locateService.Locate(parser, executor, executor, await keySelector(key, ct), LocateFlags.All))
 						.Match(
 							player => connectionService.Get(player.Object.DBRef).FirstOrDefault()?.Connected ??
 							          TimeSpan.MaxValue,
@@ -165,13 +167,11 @@ public class SortService(ILocateService locateService, IConnectionService connec
 							_ => TimeSpan.MaxValue,
 							_ => TimeSpan.MaxValue
 						),
-					direction)
-				.ToArrayAsync(CancellationToken.None),
-			
-			ISortService.SortType.Idle => await source
-				.ToAsyncEnumerable()
-				.OrderByAwait(async (key, _)
-						=> (await locateService.Locate(parser, executor, executor, keySelector(key), LocateFlags.All))
+					direction),
+
+			ISortService.SortType.Idle => source
+				.OrderByAwait(async (key, ct)
+						=> (await locateService.Locate(parser, executor, executor, await keySelector(key, ct), LocateFlags.All))
 						.Match(
 							player => connectionService.Get(player.Object.DBRef).FirstOrDefault()?.Connected ??
 							          TimeSpan.MaxValue,
@@ -181,13 +181,11 @@ public class SortService(ILocateService locateService, IConnectionService connec
 							_ => TimeSpan.MaxValue,
 							_ => TimeSpan.MaxValue
 						),
-					direction)
-				.ToArrayAsync(CancellationToken.None),
-			
-			ISortService.SortType.Owner => await source
-				.ToAsyncEnumerable()
-				.OrderByAwait(async (key, _)
-						=> (await locateService.Locate(parser, executor, executor, keySelector(key), LocateFlags.All))
+					direction),
+
+			ISortService.SortType.Owner => source
+				.OrderByAwait(async (key, ct)
+						=> (await locateService.Locate(parser, executor, executor, await keySelector(key, ct), LocateFlags.All))
 						.Match(
 							async player => (await player.Object.Owner.WithCancellation(CancellationToken.None)).Object.DBRef.Number,
 							async room => (await room.Object.Owner.WithCancellation(CancellationToken.None)).Object.DBRef.Number,
@@ -196,13 +194,11 @@ public class SortService(ILocateService locateService, IConnectionService connec
 							async _ => await ValueTask.FromResult(-1),
 							async _ => await ValueTask.FromResult(-1)
 						),
-					direction)
-				.ToArrayAsync(CancellationToken.None),
-			
-			ISortService.SortType.Location => await source
-				.ToAsyncEnumerable()
-				.OrderByAwait(async (key, _)
-						=> (await locateService.Locate(parser, executor, executor, keySelector(key), LocateFlags.All))
+					direction),
+
+			ISortService.SortType.Location => source
+				.OrderByAwait(async (key, ct)
+						=> (await locateService.Locate(parser, executor, executor, await keySelector(key, ct), LocateFlags.All))
 						.Match(
 							async player => (await player.Location.WithCancellation(CancellationToken.None)).Object().DBRef.Number,
 							async room => await ValueTask.FromResult(room.Object.DBRef.Number),
@@ -211,13 +207,11 @@ public class SortService(ILocateService locateService, IConnectionService connec
 							async _ => await ValueTask.FromResult(-1),
 							async _ => await ValueTask.FromResult(-1)
 						),
-					direction)
-				.ToArrayAsync(CancellationToken.None),
-			
-			ISortService.SortType.CreatedTime => await source
-				.ToAsyncEnumerable()
-				.OrderByAwait(async (key, _)
-						=> (await locateService.Locate(parser, executor, executor, keySelector(key), LocateFlags.All))
+					direction),
+
+			ISortService.SortType.CreatedTime => source
+				.OrderByAwait(async (key, ct)
+						=> (await locateService.Locate(parser, executor, executor, await keySelector(key, ct), LocateFlags.All))
 						.Match(
 							player => player.Object.CreationTime,
 							room => room.Object.CreationTime,
@@ -226,13 +220,11 @@ public class SortService(ILocateService locateService, IConnectionService connec
 							_ => -1,
 							_ => -1
 						),
-					direction)
-				.ToArrayAsync(CancellationToken.None),
-			
-			ISortService.SortType.ModifiedTime => await source
-				.ToAsyncEnumerable()
-				.OrderByAwait(async (key, _)
-						=> (await locateService.Locate(parser, executor, executor, keySelector(key), LocateFlags.All))
+					direction),
+
+			ISortService.SortType.ModifiedTime => source
+				.OrderByAwait(async (key, ct)
+						=> (await locateService.Locate(parser, executor, executor, await keySelector(key, ct), LocateFlags.All))
 						.Match(
 							player => player.Object.ModifiedTime,
 							room => room.Object.ModifiedTime,
@@ -241,15 +233,16 @@ public class SortService(ILocateService locateService, IConnectionService connec
 							_ => -1,
 							_ => -1
 						),
-					direction)
-				.ToArrayAsync(CancellationToken.None),
-			
+					direction),
+
 			ISortService.SortType.AttributeName => source
-				.OrderBy(keySelector, StringComparer.OrdinalIgnoreCase.WithNaturalSort(), direction),
-			
+				.OrderByAwait(keySelector, StringComparer.OrdinalIgnoreCase.WithNaturalSort(), direction),
+
 			ISortService.SortType.Invalid
-				=> source.OrderBy(i => i.ToPlainText(), StringComparer.CurrentCulture, direction),
-			_ => source.OrderBy(i => i.ToPlainText(), StringComparer.CurrentCulture, direction)
+				=> source.OrderByAwait((i, ct) => ValueTask.FromResult(i.ToPlainText()), StringComparer.CurrentCulture,
+					direction),
+			_ => source.OrderByAwait((i, ct) => ValueTask.FromResult(i.ToPlainText()), StringComparer.CurrentCulture,
+				direction)
 		};
 	}
 }

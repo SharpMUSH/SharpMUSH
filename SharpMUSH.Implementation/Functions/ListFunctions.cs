@@ -498,8 +498,10 @@ public partial class Functions
 		var outputSeparator = ArgHelpers.NoParseDefaultNoParseArgument(orderedArgs, 3, delimiter);
 		var listItems = MModule.split2(delimiter, list);
 
-		return MModule.multipleWithDelimiter(outputSeparator,
-			await SortService!.Sort(listItems, x => x.ToPlainText(), parser, SortService.StringToSortType(sortType)));
+		var sorted = await SortService!.Sort(listItems, (x, ct) => ValueTask.FromResult(x.ToPlainText()), parser,
+			SortService!.StringToSortType(sortType));
+
+		return MModule.multipleWithDelimiter(outputSeparator, await sorted.ToArrayAsync());
 	}
 
 	[SharpFunction(Name = "sortby", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
@@ -699,9 +701,9 @@ public partial class Functions
 
 		var sortTypeType = SortService!.StringToSortType(sortType.ToPlainText());
 		var sorted = await SortService.Sort(Enumerable.DistinctBy(aList1
-			.Concat(aList2), MModule.plainText), x => x.ToPlainText(), parser, sortTypeType);
+			.Concat(aList2), MModule.plainText), (x, ct) => ValueTask.FromResult(x.ToPlainText()), parser, sortTypeType);
 
-		return new CallState(MModule.multipleWithDelimiter(outputSeparator, sorted));
+		return new CallState(MModule.multipleWithDelimiter(outputSeparator, await sorted.ToArrayAsync()));
 	}
 
 	[SharpFunction(Name = "setdiff", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular)]

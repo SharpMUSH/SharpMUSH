@@ -246,8 +246,8 @@ public class ManipulateSharpObjectService(
 		
 		var allPowers = await mediator.Send(new GetPowersQuery());
 		
-		var found = allPowers
-			.FirstOrDefault(x => 
+		var found = await allPowers
+			.FirstOrDefaultAsync(x => 
 				x.Name.Equals(powerOrPowerAlias, StringComparison.InvariantCultureIgnoreCase)  
 				|| x.Alias.Equals(powerOrPowerAlias, StringComparison.InvariantCultureIgnoreCase));
 
@@ -293,8 +293,8 @@ public class ManipulateSharpObjectService(
 		
 		var allPowers = await mediator.Send(new GetPowersQuery());
 		
-		var found = allPowers
-			.FirstOrDefault(x => 
+		var found = await allPowers
+			.FirstOrDefaultAsync(x => 
 				x.Name.Equals(powerOrPowerAlias, StringComparison.InvariantCultureIgnoreCase)  
 				|| x.Alias.Equals(powerOrPowerAlias, StringComparison.InvariantCultureIgnoreCase));
 

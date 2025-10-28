@@ -21,8 +21,8 @@ public static class SendMail
 		
 		var sender = await parser.CurrentState.KnownExecutorObject(mediator);
 		
-		var playerList = await ArgHelpers.PopulatedNameList(mediator, nameList.ToPlainText()!);
-		var knownPlayerList = playerList.Where(x => x != null).Select(x => x!).ToList();
+		var playerList = ArgHelpers.PopulatedNameList(mediator, nameList.ToPlainText()!);
+		var knownPlayerList = await playerList.Where(x => x != null).Select(x => x!).ToListAsync();
 		var subjectBodySplit = MModule.indexOf(subjectAndMessage, MModule.single("/"));
 		
 		var subject = subjectBodySplit > -1 

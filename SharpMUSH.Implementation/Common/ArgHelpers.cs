@@ -212,55 +212,62 @@ public static partial class ArgHelpers
 
 	public static async ValueTask<bool> HasObjectPowers(SharpObject obj, string power) =>
 		await obj.Powers.Value
-		.AnyAsync(x => x.Name == power || x.Alias == power);
+			.AnyAsync(x => x.Name == power || x.Alias == power);
 
 	public static IEnumerable<OneOf<DBRef, string>> NameList(string list)
 		=> NameListPattern().Matches(list).Select(x =>
 			!string.IsNullOrWhiteSpace(x.Groups["DBRef"].Value)
 				? OneOf<DBRef, string>.FromT0(HelperFunctions.ParseDbRef(x.Groups["DBRef"].Value).AsValue())
 				: OneOf<DBRef, string>.FromT1(x.Groups["User"].Value));
-	
+
 	public static IEnumerable<string> NameListString(string list)
 		=> NameListPattern().Matches(list).Select(x =>
 			!string.IsNullOrWhiteSpace(x.Groups["DBRef"].Value)
 				? HelperFunctions.ParseDbRef(x.Groups["DBRef"].Value).AsValue().ToString()
 				: x.Groups["User"].Value);
 
-	public static async ValueTask<IEnumerable<SharpPlayer?>> PopulatedNameList(IMediator mediator, string list)
-		=> await Task.WhenAll(NameList(list).Select(x => x.Match(
-			async dbref => (await mediator.Send(new GetObjectNodeQuery(dbref))).TryPickT0(out var player, out _)
-				? player
-				: null,
-			async name => await (await mediator.Send(new GetPlayerQuery(name))).FirstOrDefaultAsync())));
+	public static IAsyncEnumerable<SharpPlayer?> PopulatedNameList(IMediator mediator, string list)
+		=> NameList(list)
+			.ToAsyncEnumerable()
+			.Select<OneOf<DBRef, string>, SharpPlayer?>(async (x, ct) =>
+				await x.Match(
+					async dbref => (await mediator.Send(new GetObjectNodeQuery(dbref), ct)).TryPickT0(out var player, out _)
+						? player
+						: null,
+					async name => await (await mediator.Send(new GetPlayerQuery(name), ct)).FirstOrDefaultAsync(cancellationToken: ct)));
 
-	public static async ValueTask<CallState> ForHandleOrPlayer(IMUSHCodeParser parser, IMediator mediator, IConnectionService connectionService, ILocateService locateService, CallState value, Func<long, IConnectionService.ConnectionData, ValueTask<CallState>> handleFunc, Func<SharpPlayer,IConnectionService.ConnectionData,ValueTask<CallState>> playerFunc)
+	public static async ValueTask<CallState> ForHandleOrPlayer(IMUSHCodeParser parser, IMediator mediator,
+		IConnectionService connectionService, ILocateService locateService, CallState value,
+		Func<long, IConnectionService.ConnectionData, ValueTask<CallState>> handleFunc,
+		Func<SharpPlayer, IConnectionService.ConnectionData, ValueTask<CallState>> playerFunc)
 	{
-			var executor = await parser.CurrentState.KnownExecutorObject(mediator);
-			var valueText = MModule.plainText(value.Message);
-	
-			var isHandle = long.TryParse(valueText, out var handle);
-			
-			if (isHandle)
-			{
-				var handleData = connectionService.Get(handle);
-				if (handleData is null) return new CallState("#-1 That handle is not connected.");
-				
-				return await handleFunc(handle, handleData);
-			}
-	
-			var maybeFound = await locateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, valueText);
-	
-			if (maybeFound.IsError)
-			{
-				return maybeFound.AsError;
-			}
-	
-			var found = maybeFound.AsSharpObject.AsPlayer;
-			var foundData = connectionService.Get(found.Object.DBRef).FirstOrDefault();
-			
-			if(foundData is null) return new CallState("#-1 That player is not connected.");
-			
-			return await playerFunc(found, foundData);
+		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
+		var valueText = MModule.plainText(value.Message);
+
+		var isHandle = long.TryParse(valueText, out var handle);
+
+		if (isHandle)
+		{
+			var handleData = connectionService.Get(handle);
+			if (handleData is null) return new CallState("#-1 That handle is not connected.");
+
+			return await handleFunc(handle, handleData);
+		}
+
+		var maybeFound =
+			await locateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, valueText);
+
+		if (maybeFound.IsError)
+		{
+			return maybeFound.AsError;
+		}
+
+		var found = maybeFound.AsSharpObject.AsPlayer;
+		var foundData = connectionService.Get(found.Object.DBRef).FirstOrDefault();
+
+		if (foundData is null) return new CallState("#-1 That player is not connected.");
+
+		return await playerFunc(found, foundData);
 	}
 
 	/// <summary>
@@ -268,5 +275,5 @@ public static partial class ArgHelpers
 	/// </summary>
 	/// <returns>A regex that has a named group for the match.</returns>
 	[GeneratedRegex("(\"(?<User>.+?)\"|(?<DBRef>#\\d+(:\\d+)?)|(?<User>\\S+))(\\s?|$)")]
-	private static partial Regex NameListPattern();	
+	private static partial Regex NameListPattern();
 }

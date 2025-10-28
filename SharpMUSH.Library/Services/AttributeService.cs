@@ -369,20 +369,21 @@ public class AttributeService(
 			return new Error<string>("Not Found");
 		}
 
-		var returnedFlag =
-			(await mediator.Send(new GetAttributeFlagsQuery())).Where(x => x.Name == flag || x.Symbol == flag).ToArray();
+		var allFlags = await mediator.Send(new GetAttributeFlagsQuery());
+		var returnedFlag = await allFlags
+			.FirstOrDefaultAsync(x => x.Name == flag || x.Symbol == flag);
 
-		if (returnedFlag.Length == 0)
+		if (returnedFlag is null)
 		{
 			return new Error<string>("Flag Found");
 		}
 
 		// TODO: What if it's already set?
 		await mediator.Send(new SetAttributeFlagCommand(obj.Object().DBRef, returnedAttribute.AsAttribute.Last(),
-			returnedFlag.First()));
+			returnedFlag));
 
 		await notifyService.Notify(executor,
-			$"Flag {returnedFlag.First().Name} set on attribute {returnedAttribute.AsAttribute.Last().LongName}", obj);
+			$"Flag {returnedFlag.Name} set on attribute {returnedAttribute.AsAttribute.Last().LongName}", obj);
 
 		return new Success();
 	}
@@ -402,20 +403,20 @@ public class AttributeService(
 			return new Error<string>("Not Found");
 		}
 
-		var returnedFlag =
-			(await mediator.Send(new GetAttributeFlagsQuery())).Where(x => x.Name == flag || x.Symbol == flag).ToArray();
+		var allFlags = await mediator.Send(new GetAttributeFlagsQuery()); 
+		var returnedFlag = await allFlags.FirstOrDefaultAsync(x => x.Name == flag || x.Symbol == flag);
 
-		if (returnedFlag.Length == 0)
+		if (returnedFlag is null)
 		{
 			return new Error<string>("Flag Found");
 		}
 
 		// TODO: What if it's not already set?
 		await mediator.Send(new UnsetAttributeFlagCommand(obj.Object().DBRef, returnedAttribute.AsAttribute.Last(),
-			returnedFlag.First()));
+			returnedFlag));
 
 		await notifyService.Notify(executor,
-			$"Flag {returnedFlag.First().Name} unset from attribute {returnedAttribute.AsAttribute.Last().LongName}", obj);
+			$"Flag {returnedFlag.Name} unset from attribute {returnedAttribute.AsAttribute.Last().LongName}", obj);
 
 		return new Success();
 	}
