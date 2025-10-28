@@ -16,8 +16,7 @@ public partial class CommandDiscoveryService(IFusionCache cache) : ICommandDisco
 
 	private async IAsyncEnumerable<(AnySharpObject Obj, SharpAttribute Attr, Match Pattern)> MatchUserDefinedCommandSelectMany(AnySharpObject sharpObj)
 	{
-		var attributes = await sharpObj.Object().AllAttributes
-			.WithCancellation(CancellationToken.None);
+		var attributes = sharpObj.Object().AllAttributes.Value;
 					
 		var hasNoCommandFlag = attributes.Where(attr =>
 			attr.Flags.All(flag => flag.Name != "NO_COMMAND")

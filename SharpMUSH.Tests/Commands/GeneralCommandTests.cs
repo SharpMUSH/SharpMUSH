@@ -291,8 +291,8 @@ public class GeneralCommandTests
 
 		var one = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
 		var onePlayer = one.AsPlayer;
-		var flags = await onePlayer.Object.Flags.WithCancellation(CancellationToken.None);
+		var flags = await onePlayer.Object.Flags.Value.ToArrayAsync();
 
-		await Assert.That(await flags.CountAsync(x => x.Name == "DEBUG")).IsEqualTo(1);
+		await Assert.That(flags.Count(x => x.Name == "DEBUG")).IsEqualTo(1);
 	}
 }

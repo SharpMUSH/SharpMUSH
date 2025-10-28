@@ -25,15 +25,15 @@ public static partial class HelperFunctions
 		=> (await mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Known;
 	
 	public static async ValueTask<bool> IsWizard(this AnySharpObject obj)
-		=> await (await obj.Object().Flags.WithCancellation(CancellationToken.None))
+		=> await (obj.Object().Flags.Value)
 			.AnyAsync(x => x.Name == "Wizard");
 
 	public static async ValueTask<bool> IsRoyalty(this AnySharpObject obj)
-		=> await (await obj.Object().Flags.WithCancellation(CancellationToken.None))
+		=> await (obj.Object().Flags.Value)
 			.AnyAsync(x => x.Name == "Royalty");
 
 	public static async ValueTask<bool> IsMistrust(this AnySharpObject obj)
-		=> await (await obj.Object().Flags.WithCancellation(CancellationToken.None))
+		=> await (obj.Object().Flags.Value)
 			.AnyAsync(x => x.Name == "Mistrust");
 
 	public static bool IsGod(this AnySharpObject obj)
@@ -75,7 +75,7 @@ public static partial class HelperFunctions
 	public static async ValueTask<bool> IsAlive(this AnySharpObject obj)
 		=> obj.IsPlayer
 			 || await IsPuppet(obj)
-			 || (await IsAudible(obj) && await (await obj.Object().LazyAllAttributes.WithCancellation(CancellationToken.None))
+			 || (await IsAudible(obj) && await (obj.Object().LazyAllAttributes.Value)
 				 .AnyAsync(x => x.Name == "FORWARDLIST"));
 
 	public static async ValueTask<bool> IsPuppet(this AnySharpObject obj)
@@ -148,7 +148,7 @@ public static partial class HelperFunctions
 		=> await obj.IsPriv() || await obj.HasPower("Long_Fingers");
 
 	public static async ValueTask<bool> HasFlag(this AnySharpObject obj, string flag)
-		=> await (await obj.Object().Flags.WithCancellation(CancellationToken.None))
+		=> await (obj.Object().Flags.Value)
 			.AnyAsync(x => x.Name.Equals(flag, StringComparison.InvariantCultureIgnoreCase));
 
 	// This may belong in the Permission Service.
@@ -179,8 +179,8 @@ public static partial class HelperFunctions
 	public static async ValueTask<bool> Inheritable(this AnySharpObject obj)
 		=> obj.IsPlayer
 			 || await obj.HasFlag("Trust")
-			 || await (await (await obj.Object().Owner.WithCancellation(CancellationToken.None))
-				 .Object.Flags.WithCancellation(CancellationToken.None)).AnyAsync(x => x.Name == "Trust")
+			 || await (await obj.Object().Owner.WithCancellation(CancellationToken.None))
+				 .Object.Flags.Value.AnyAsync(x => x.Name == "Trust")
 			 || await IsWizard(obj);
 
 	public static async ValueTask<bool> Owns(this AnySharpObject who,
@@ -253,12 +253,12 @@ public static partial class HelperFunctions
 			return true;
 		}
 
-		var children = await start.Object().Children.WithCancellation(CancellationToken.None);
+		var children = start.Object().Children.Value ?? AsyncEnumerable.Empty<SharpObject>();
 
 		return await children.AllAsync(x => x.DBRef != newParentDbRef);
 	}
 
-	public static OneOf<(string db, string? Attribute), bool> SplitDBRefAndOptionalAttr(string DBRefAttr)
+	public static OneOf<(string db, string? Attribute), bool> SplitDbRefAndOptionalAttr(string DBRefAttr)
 	{
 		var match = DatabaseReferenceWithOptionalAttributeRegex.Match(DBRefAttr);
 		var obj = match.Groups["Object"].Value;
@@ -271,7 +271,7 @@ public static partial class HelperFunctions
 			: (obj, attr);
 	}
 
-	public static Option<DBRef> ParseDBRef(string dbrefStr)
+	public static Option<DBRef> ParseDbRef(string dbrefStr)
 	{
 		var match = DatabaseReferenceRegex.Match(dbrefStr);
 		var dbref = match.Groups["DatabaseNumber"].Value;

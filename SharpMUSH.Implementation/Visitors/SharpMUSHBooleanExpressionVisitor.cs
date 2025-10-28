@@ -18,8 +18,8 @@ public class SharpMUSHBooleanExpressionVisitor(
 		=> new Expression[] { aggregate, nextResult }.First(x => x is not null);
 
 	private readonly Expression<Func<AnySharpObject, string, bool>> _hasFlag = (dbRef, flag)
-		=> dbRef.Object().Flags.WithCancellation(CancellationToken.None).GetAwaiter().GetResult()
-			.AnyAsync(x => x.Name == flag || x.Symbol == flag, CancellationToken.None).GetAwaiter().GetResult();
+		=> dbRef.Object().Flags.Value
+			.AnyAsync(x => x.Name == flag || x.Symbol == flag, CancellationToken.None).AsTask().GetAwaiter().GetResult();
 
 	private readonly Expression<Func<AnySharpObject, string, bool>> _hasPower = (dbRef, power)
 		=> dbRef.Object().Powers.WithCancellation(CancellationToken.None).GetAwaiter().GetResult()

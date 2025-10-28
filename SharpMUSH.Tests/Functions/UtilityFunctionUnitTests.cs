@@ -22,7 +22,7 @@ public class UtilityFunctionUnitTests
 	{
 		var result = (await Parser.FunctionParse(MModule.single("pcreate(John,SomePassword)")))?.Message?.ToString()!;
 
-		var a = HelperFunctions.ParseDBRef(result).AsValue();
+		var a = HelperFunctions.ParseDbRef(result).AsValue();
 		var db = await Mediator.Send(new GetObjectNodeQuery(a));
 		var player = db.AsPlayer;
 

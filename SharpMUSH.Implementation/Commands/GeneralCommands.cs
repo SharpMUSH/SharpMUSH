@@ -156,7 +156,7 @@ public partial class Commands
 		// TODO: Pass value into NAMEFORMAT
 		await NotifyService!.Notify(executor,
 			$"{MModule.markupSingle2(Ansi.Create(foreground: StringExtensions.rgb(Color.White)), MModule.single(name))}" +
-			$"(#{viewingObject.DBRef.Number}{string.Join(string.Empty, (await viewingObject.Flags.WithCancellation(CancellationToken.None)).Select(x => x.Symbol))})");
+			$"(#{viewingObject.DBRef.Number}{string.Join(string.Empty, viewingObject.Flags.Value.Select(x => x.Symbol))})");
 		// TODO: Pass value into DESCFORMAT
 		await NotifyService.Notify(executor, description.ToString());
 		// NotifyService!.Notify(enactor, $"Location: {location}");
@@ -220,8 +220,8 @@ public partial class Commands
 				none => MModule.single("There is nothing to see here"),
 				error => MModule.empty());
 
-		var objFlags = await (await obj.Flags.WithCancellation(CancellationToken.None)).ToArrayAsync();
-		var ownerObjFlags = await (await ownerObj.Flags.WithCancellation(CancellationToken.None)).ToArrayAsync();
+		var objFlags = await obj.Flags.Value.ToArrayAsync();
+		var ownerObjFlags = await ownerObj.Flags.Value.ToArrayAsync();
 		var objParent = await obj.Parent.WithCancellation(CancellationToken.None);
 		var objPowers = await obj.Powers.WithCancellation(CancellationToken.None);
 
@@ -492,7 +492,7 @@ public partial class Commands
 				return new CallState(Errors.ErrorTooManySwitches);
 		}
 
-		var objectAndAttribute = HelperFunctions.SplitDBRefAndOptionalAttr(args["0"].Message!.ToPlainText());
+		var objectAndAttribute = HelperFunctions.SplitDbRefAndOptionalAttr(args["0"].Message!.ToPlainText());
 		if (objectAndAttribute.IsT1 && objectAndAttribute.AsT1 == false)
 		{
 			await NotifyService!.Notify(executor,
@@ -995,7 +995,7 @@ public partial class Commands
 			return new CallState(Errors.ErrorTooManySwitches);
 		}
 
-		var maybeObjectAndAttribute = HelperFunctions.SplitDBRefAndOptionalAttr(arg0);
+		var maybeObjectAndAttribute = HelperFunctions.SplitDbRefAndOptionalAttr(arg0);
 		if (maybeObjectAndAttribute is { IsT1: true, AsT1: false })
 		{
 			await NotifyService!.Notify(executor, Errors.ErrorCantSeeThat);

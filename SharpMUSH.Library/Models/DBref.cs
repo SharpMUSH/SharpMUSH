@@ -30,12 +30,12 @@ public readonly struct DBRef : IEquatable<DBRef>
 
 	public static bool TryParse(string value, out DBRef? dbref)
 	{
-		var parsed = HelperFunctions.ParseDBRef(value);
+		var parsed = HelperFunctions.ParseDbRef(value);
 
 		dbref = parsed.IsSome() ? parsed.AsValue() : default;
 		return parsed.IsSome();
 	}
 	
 	public static DBRef Parse(string value) 
-		=> HelperFunctions.ParseDBRef(value).AsValue();
+		=> HelperFunctions.ParseDbRef(value).AsValue();
 }

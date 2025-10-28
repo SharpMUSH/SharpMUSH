@@ -427,7 +427,7 @@ public partial class ArangoDatabase(
 		=> arangoDb.Query.ExecuteStreamAsync<SharpObjectFlagQueryResult>(handle,
 				$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphFlags} RETURN v", cancellationToken: ct)
 			.Select(SharpObjectFlagQueryToSharpFlag);
-	
+
 	// TODO: Fix this.
 	public async ValueTask<IAsyncEnumerable<SharpObject>> GetParentsAsync(string id, CancellationToken ct = default)
 		=> (await arangoDb.Query.ExecuteAsync<SharpObject>(handle,
@@ -995,11 +995,10 @@ public partial class ArangoDatabase(
 		return await GetObjectNodeAsync(new DBRef(parentId._id), ct);
 	}
 
-	private async ValueTask<IAsyncEnumerable<SharpObject?>> GetChildrenAsync(string id, CancellationToken ct = default)
-		=> (await arangoDb.Query.ExecuteAsync<SharpObject>(handle,
-				$"FOR v IN 1..1 INBOUND {id} GRAPH {DatabaseConstants.GraphParents} RETURN v", cache: true,
-				cancellationToken: ct) ?? [])
-			.ToAsyncEnumerable();
+	private IAsyncEnumerable<SharpObject>? GetChildrenAsync(string id, CancellationToken ct = default)
+		=> arangoDb.Query.ExecuteStreamAsync<SharpObject>(handle,
+			$"FOR v IN 1..1 INBOUND {id} GRAPH {DatabaseConstants.GraphParents} RETURN v", cache: true,
+			cancellationToken: ct);
 
 	public IAsyncEnumerable<SharpPower> GetObjectPowersAsync(string id, CancellationToken ct = default)
 		=> arangoDb.Query.ExecuteStreamAsync<SharpPower>(handle,
@@ -1068,23 +1067,25 @@ public partial class ArangoDatabase(
 			Locks = (obj.Locks ?? []).ToImmutableDictionary(),
 			Id = obj.Id,
 			Key = int.Parse(obj.Key),
-			Flags = new AsyncLazy<IAsyncEnumerable<SharpObjectFlag>>(async ct =>
-				(await mediator.Send(new GetObjectFlagsQuery(startVertex), ct) ?? []).ToAsyncEnumerable()),
+			Flags = new Lazy<IAsyncEnumerable<SharpObjectFlag>>(() =>
+				(mediator.Send(new GetObjectFlagsQuery(startVertex), CancellationToken.None).GetAwaiter().GetResult() ?? [])
+				.ToAsyncEnumerable()),
 			Powers = new AsyncLazy<IEnumerable<SharpPower>>(async ct => await GetPowersAsync(startVertex, ct)),
 			Attributes =
-				new AsyncLazy<IAsyncEnumerable<SharpAttribute>>(ct =>
-					Task.FromResult(GetTopLevelAttributesAsync(startVertex, ct))),
+				new Lazy<IAsyncEnumerable<SharpAttribute>>(() =>
+					GetTopLevelAttributesAsync(startVertex, CancellationToken.None)),
 			LazyAttributes =
-				new AsyncLazy<IAsyncEnumerable<LazySharpAttribute>>(ct =>
-					Task.FromResult(GetTopLevelLazyAttributesAsync(obj.Id, ct))),
+				new Lazy<IAsyncEnumerable<LazySharpAttribute>>(() =>
+					GetTopLevelLazyAttributesAsync(obj.Id, CancellationToken.None)),
 			AllAttributes =
-				new AsyncLazy<IAsyncEnumerable<SharpAttribute>>(ct => Task.FromResult(GetAllAttributesAsync(startVertex, ct))),
+				new Lazy<IAsyncEnumerable<SharpAttribute>>(() => GetAllAttributesAsync(startVertex, CancellationToken.None)),
 			LazyAllAttributes =
-				new AsyncLazy<IAsyncEnumerable<LazySharpAttribute>>(ct =>
-					Task.FromResult(GetAllLazyAttributesAsync(startVertex, ct))),
+				new Lazy<IAsyncEnumerable<LazySharpAttribute>>(() =>
+					GetAllLazyAttributesAsync(startVertex, CancellationToken.None)),
 			Owner = new AsyncLazy<SharpPlayer>(async ct => await GetObjectOwnerAsync(startVertex, ct)),
 			Parent = new AsyncLazy<AnyOptionalSharpObject>(async ct => await GetParentAsync(startVertex, ct)),
-			Children = new AsyncLazy<IAsyncEnumerable<SharpObject>>(async ct => (await GetChildrenAsync(startVertex, ct))!)
+			Children = new Lazy<IAsyncEnumerable<SharpObject>?>(() =>
+				GetChildrenAsync(startVertex, CancellationToken.None)!)
 		};
 
 		return obj.Type switch
@@ -1148,15 +1149,15 @@ public partial class ArangoDatabase(
 			ModifiedTime = obj.ModifiedTime,
 			Locks = ImmutableDictionary<string, string>
 				.Empty, // FIX: ((Dictionary<string, string>?)obj.Locks ?? []).ToImmutableDictionary(),
-			Flags = new(ct => Task.FromResult(GetObjectFlagsAsync(objId, ct))),
-			Powers = new(async ct => await GetPowersAsync(objId, ct)),
-			Attributes = new(ct => Task.FromResult(GetTopLevelAttributesAsync(objId, ct))),
-			LazyAttributes = new(ct => Task.FromResult(GetTopLevelLazyAttributesAsync(objId, ct))),
-			AllAttributes = new(ct => Task.FromResult(GetAllAttributesAsync(objId, ct))),
-			LazyAllAttributes = new(ct => Task.FromResult(GetAllLazyAttributesAsync(objId, ct))),
+			Flags = new(() => GetObjectFlagsAsync(objId, CancellationToken.None)),
+			Powers = new(async ct => await GetPowersAsync(objId, CancellationToken.None)),
+			Attributes = new(() => GetTopLevelAttributesAsync(objId, CancellationToken.None)),
+			LazyAttributes = new(() => GetTopLevelLazyAttributesAsync(objId, CancellationToken.None)),
+			AllAttributes = new(() => GetAllAttributesAsync(objId, CancellationToken.None)),
+			LazyAllAttributes = new(() => GetAllLazyAttributesAsync(objId, CancellationToken.None)),
 			Owner = new(async ct => await GetObjectOwnerAsync(objId, ct)),
 			Parent = new(async ct => await GetParentAsync(objId, ct)),
-			Children = new(async ct => (await GetChildrenAsync(objId, ct))!)
+			Children = new(() => GetChildrenAsync(objId, CancellationToken.None))
 		};
 
 		return collection switch
@@ -1207,22 +1208,22 @@ public partial class ArangoDatabase(
 				CreationTime = obj.CreationTime,
 				ModifiedTime = obj.ModifiedTime,
 				Flags =
-					new AsyncLazy<IAsyncEnumerable<SharpObjectFlag>>(ct => Task.FromResult(GetObjectFlagsAsync(obj.Id, ct))),
+					new Lazy<IAsyncEnumerable<SharpObjectFlag>>(() => GetObjectFlagsAsync(obj.Id, CancellationToken.None)),
 				Powers = new AsyncLazy<IEnumerable<SharpPower>>(async ct => await GetPowersAsync(obj.Id, ct)),
 				Attributes =
-					new AsyncLazy<IAsyncEnumerable<SharpAttribute>>(ct =>
-						Task.FromResult(GetTopLevelAttributesAsync(obj.Id, ct))),
+					new Lazy<IAsyncEnumerable<SharpAttribute>>(() =>
+						GetTopLevelAttributesAsync(obj.Id, CancellationToken.None)),
 				LazyAttributes =
-					new AsyncLazy<IAsyncEnumerable<LazySharpAttribute>>(ct =>
-						Task.FromResult(GetTopLevelLazyAttributesAsync(obj.Id, ct))),
+					new Lazy<IAsyncEnumerable<LazySharpAttribute>>(() =>
+						GetTopLevelLazyAttributesAsync(obj.Id, CancellationToken.None)),
 				AllAttributes =
-					new AsyncLazy<IAsyncEnumerable<SharpAttribute>>(ct => Task.FromResult(GetAllAttributesAsync(obj.Id, ct))),
+					new Lazy<IAsyncEnumerable<SharpAttribute>>(() => GetAllAttributesAsync(obj.Id, CancellationToken.None)),
 				LazyAllAttributes =
-					new AsyncLazy<IAsyncEnumerable<LazySharpAttribute>>(ct =>
-						Task.FromResult(GetAllLazyAttributesAsync(obj.Id, ct))),
+					new Lazy<IAsyncEnumerable<LazySharpAttribute>>(() =>
+						GetAllLazyAttributesAsync(obj.Id, CancellationToken.None)),
 				Owner = new AsyncLazy<SharpPlayer>(async ct => await GetObjectOwnerAsync(obj.Id, ct)),
 				Parent = new AsyncLazy<AnyOptionalSharpObject>(async ct => await GetParentAsync(obj.Id, ct)),
-				Children = new AsyncLazy<IAsyncEnumerable<SharpObject>>(async ct => (await GetChildrenAsync(obj.Id, ct))!)
+				Children = new Lazy<IAsyncEnumerable<SharpObject>?>(() => GetChildrenAsync(obj.Id, CancellationToken.None))
 			};
 	}
 

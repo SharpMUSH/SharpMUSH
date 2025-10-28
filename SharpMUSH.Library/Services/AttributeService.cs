@@ -182,7 +182,7 @@ public class AttributeService(
 		int depth = 1)
 	{
 		var actualObject = obj.Object();
-		var attributes = await actualObject.Attributes.WithCancellation(CancellationToken.None);
+		var attributes = actualObject.Attributes.Value;
 
 		return depth <= 1
 			? 
@@ -196,8 +196,9 @@ public class AttributeService(
 	public async ValueTask<LazySharpAttributesOrError> LazilyGetVisibleAttributesAsync(AnySharpObject executor,
 		AnySharpObject obj, int depth = 1)
 	{
+		await ValueTask.CompletedTask;
 		var actualObject = obj.Object();
-		var attributes = await actualObject.LazyAttributes.WithCancellation(CancellationToken.None);
+		var attributes = actualObject.LazyAttributes.Value;
 
 		return depth <= 1
 			? LazySharpAttributesOrError.FromAsync(attributes.Where(async (x, _) =>

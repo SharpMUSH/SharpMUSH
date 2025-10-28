@@ -259,7 +259,7 @@ public partial class Commands
 			// Check HAVEN flag unless OVERRIDE switch is used
 			if (!isOverride)
 			{
-				var recipientFlags = await recipient.Object().Flags.WithCancellation(CancellationToken.None);
+				var recipientFlags = recipient.Object().Flags.Value;
 				if (await recipientFlags.AnyAsync(f => f.Name.Equals("HAVEN", StringComparison.OrdinalIgnoreCase)))
 				{
 					await NotifyService!.Notify(executor, $"{recipient.Object().Name} is not accepting pages.");

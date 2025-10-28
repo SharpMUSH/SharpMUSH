@@ -207,7 +207,7 @@ public static partial class ArgHelpers
 	}
 
 	public static async ValueTask<bool> HasObjectFlags(SharpObject obj, SharpObjectFlag flag)
-		=> await (await obj.Flags.WithCancellation(CancellationToken.None))
+		=> await obj.Flags.Value
 			.ContainsAsync(flag);
 
 	public static async ValueTask<bool> HasObjectPowers(SharpObject obj, string power) =>
@@ -217,13 +217,13 @@ public static partial class ArgHelpers
 	public static IEnumerable<OneOf<DBRef, string>> NameList(string list)
 		=> NameListPattern().Matches(list).Select(x =>
 			!string.IsNullOrWhiteSpace(x.Groups["DBRef"].Value)
-				? OneOf<DBRef, string>.FromT0(HelperFunctions.ParseDBRef(x.Groups["DBRef"].Value).AsValue())
+				? OneOf<DBRef, string>.FromT0(HelperFunctions.ParseDbRef(x.Groups["DBRef"].Value).AsValue())
 				: OneOf<DBRef, string>.FromT1(x.Groups["User"].Value));
 	
 	public static IEnumerable<string> NameListString(string list)
 		=> NameListPattern().Matches(list).Select(x =>
 			!string.IsNullOrWhiteSpace(x.Groups["DBRef"].Value)
-				? HelperFunctions.ParseDBRef(x.Groups["DBRef"].Value).AsValue().ToString()
+				? HelperFunctions.ParseDbRef(x.Groups["DBRef"].Value).AsValue().ToString()
 				: x.Groups["User"].Value);
 
 	public static async ValueTask<IEnumerable<SharpPlayer?>> PopulatedNameList(IMediator mediator, string list)

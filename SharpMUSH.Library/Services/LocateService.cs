@@ -243,7 +243,7 @@ public partial class LocateService(IMediator mediator,
 			}
 		}
 
-		var abs = HelperFunctions.ParseDBRef(name);
+		var abs = HelperFunctions.ParseDbRef(name);
 		if (abs.IsSome())
 		{
 			var absObject = await mediator.Send(new GetObjectNodeQuery(abs.AsValue()));
@@ -413,7 +413,7 @@ public partial class LocateService(IMediator mediator,
 				continue;
 			}
 
-			var abs = HelperFunctions.ParseDBRef(name);
+			var abs = HelperFunctions.ParseDbRef(name);
 			if (abs.IsSome() && cur.Object().DBRef == abs.AsValue())
 			{
 				(bestMatch, final, curr, rightType, exact, flow) =

@@ -227,7 +227,7 @@ public partial class Functions
 
 		// List flags on an object or the object attribute
 		var dbrefAndAttr =
-			HelperFunctions.SplitDBRefAndOptionalAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+			HelperFunctions.SplitDbRefAndOptionalAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		if (dbrefAndAttr is { IsT1: true }) // IsNone
@@ -244,8 +244,8 @@ public partial class Functions
 				// Object Flags
 				if (attributePattern is null)
 				{
-					var flags = await found.Object().Flags.WithCancellation(CancellationToken.None);
-					return string.Join("", flags.Select(x => x.Symbol));
+					var flags = found.Object().Flags.Value;
+					return string.Join("", await flags.Select(x => x.Symbol).ToArrayAsync());
 				}
 
 				// Attribute Flags
@@ -460,7 +460,7 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var objAndAttr = parser.CurrentState.Arguments["0"].Message!.ToString();
 		var flagNameOrSymbol = parser.CurrentState.Arguments["1"].Message!.ToString();
-		var split = HelperFunctions.SplitDBRefAndOptionalAttr(objAndAttr);
+		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objAndAttr);
 
 		if (!split.TryPickT0(out var details, out _))
 		{
@@ -481,7 +481,7 @@ public partial class Functions
 
 		async ValueTask<CallState> HasObjectFlag(AnySharpObject realLocated)
 		{
-			return await (await realLocated.Object().Flags.WithCancellation(CancellationToken.None)).AnyAsync(f =>
+			return await realLocated.Object().Flags.Value.AnyAsync(f =>
 				string.Equals(f.Name, flagNameOrSymbol, StringComparison.OrdinalIgnoreCase) ||
 				string.Equals(f.Symbol.ToString(), flagNameOrSymbol, StringComparison.OrdinalIgnoreCase));
 		}
@@ -507,7 +507,7 @@ public partial class Functions
 	public static async ValueTask<CallState> ListAttributes(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var dbrefAndAttr =
-			HelperFunctions.SplitDBRefAndOptionalAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+			HelperFunctions.SplitDbRefAndOptionalAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		if (dbrefAndAttr is { IsT1: true }) // IsNone
@@ -538,7 +538,7 @@ public partial class Functions
 	public static async ValueTask<CallState> ListAttributesParent(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var dbrefAndAttr =
-			HelperFunctions.SplitDBRefAndOptionalAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+			HelperFunctions.SplitDbRefAndOptionalAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		if (dbrefAndAttr is { IsT1: true }) // IsNone
@@ -577,7 +577,7 @@ public partial class Functions
 
 		// List flags on an object or the object attribute
 		var dbrefAndAttr =
-			HelperFunctions.SplitDBRefAndOptionalAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+			HelperFunctions.SplitDbRefAndOptionalAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		if (dbrefAndAttr is { IsT1: true }) // IsNone
@@ -594,8 +594,8 @@ public partial class Functions
 				// Object Flags
 				if (attributePattern is null)
 				{
-					var flags = await found.Object().Flags.WithCancellation(CancellationToken.None);
-					return string.Join(" ", flags.Select(x => x.Name));
+					var flags = found.Object().Flags.Value;
+					return string.Join(" ", await flags.Select(x => x.Name).ToArrayAsync());
 				}
 
 				// Attribute Flags
@@ -613,7 +613,7 @@ public partial class Functions
 	public static async ValueTask<CallState> NumberAttributes(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var dbrefAndAttr =
-			HelperFunctions.SplitDBRefAndOptionalAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+			HelperFunctions.SplitDbRefAndOptionalAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		if (dbrefAndAttr is { IsT1: true }) // IsNone
@@ -644,7 +644,7 @@ public partial class Functions
 	public static async ValueTask<CallState> NumberAttributesParent(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var dbrefAndAttr =
-			HelperFunctions.SplitDBRefAndOptionalAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+			HelperFunctions.SplitDbRefAndOptionalAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		if (dbrefAndAttr is { IsT1: true }) // IsNone
@@ -740,7 +740,7 @@ public partial class Functions
 	public static async ValueTask<CallState> Owner(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var dbrefAndMaybeArg =
-			HelperFunctions.SplitDBRefAndOptionalAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+			HelperFunctions.SplitDbRefAndOptionalAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
 		var executor = (await parser.CurrentState.ExecutorObject(Mediator!)).WithoutNone();
 
 		if (dbrefAndMaybeArg is { IsT1: true, AsT1: false })

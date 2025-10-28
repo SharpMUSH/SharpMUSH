@@ -274,9 +274,9 @@ public class BuildingCommandTests
 
 		var one = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
 		var onePlayer = one.AsPlayer;
-		var flags = await onePlayer.Object.Flags.WithCancellation(CancellationToken.None);
+		var flags = await onePlayer.Object.Flags.Value.ToArrayAsync();
 
-		await Assert.That(await flags.AnyAsync(x => x.Name == "MONITOR" || x.Name == "DEBUG")).IsTrue();
+		await Assert.That(flags.Any(x => x.Name == "MONITOR" || x.Name == "DEBUG")).IsTrue();
 	}
 
 	[Test]
