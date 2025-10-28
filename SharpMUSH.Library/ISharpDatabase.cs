@@ -100,7 +100,7 @@ public interface ISharpDatabase
 	ValueTask<IAsyncEnumerable<LazySharpAttribute>?> GetLazyAttributeAsync(DBRef dbref, CancellationToken cancellationToken = default, params string[] attribute);
 	ValueTask<IAsyncEnumerable<LazySharpAttribute>?> GetLazyAttributesAsync(DBRef dbref, string attribute_pattern, CancellationToken cancellationToken = default);
 	ValueTask<IAsyncEnumerable<LazySharpAttribute>?> GetLazyAttributesByRegexAsync(DBRef dbref, string attribute_pattern, CancellationToken cancellationToken = default);
-	ValueTask<IAsyncEnumerable<SharpAttributeEntry>> GetAllAttributeEntriesAsync();
+	IAsyncEnumerable<SharpAttributeEntry> GetAllAttributeEntriesAsync();
 
 	/// <summary>
 	/// Get the Object represented by a Database Reference Number.

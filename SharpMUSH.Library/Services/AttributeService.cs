@@ -185,8 +185,10 @@ public class AttributeService(
 		var attributes = await actualObject.Attributes.WithCancellation(CancellationToken.None);
 
 		return depth <= 1
-			? await AsyncEnumerable.ToArrayAsync(
-				attributes.Where(async (x, _) => await ps.CanViewAttribute(executor, obj, x)))
+			? 
+				await attributes
+					.Where(async (x, _) => await ps.CanViewAttribute(executor, obj, x))
+					.ToArrayAsync(CancellationToken.None)
 			: (await GetVisibleAttributesAsync(attributes, executor, obj, depth))
 			.ToArray();
 	}

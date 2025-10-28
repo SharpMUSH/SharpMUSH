@@ -242,7 +242,7 @@ public partial class ArangoDatabase(
 			handle,
 			$"FOR v in {DatabaseConstants.ObjectFlags:@} RETURN v",
 			cache: true)).Select(SharpObjectFlagQueryToSharpFlag);
-	
+
 	public async ValueTask<IEnumerable<SharpPower>> GetObjectPowersAsync()
 		=> (await arangoDb.Query.ExecuteAsync<SharpPowerQueryResult>(
 			handle,
@@ -267,7 +267,7 @@ public partial class ArangoDatabase(
 			$"FOR v,e IN 1..1 OUTBOUND {target.Object().Id} GRAPH {DatabaseConstants.GraphFlags} FILTER v._id == {flag.Id} RETURN e._id");
 		return result.FirstOrDefault()?.Id;
 	}
-	
+
 	private async ValueTask<string?> GetObjectPowerEdge(AnySharpObject target, SharpPower flag)
 	{
 		var result = await arangoDb.Query.ExecuteAsync<SharpEdgeQueryResult>(handle,
@@ -895,49 +895,47 @@ public partial class ArangoDatabase(
 			});
 	}
 
-	private async ValueTask<IAsyncEnumerable<SharpAttribute>> GetAllAttributesAsync(string id)
+	private IAsyncEnumerable<SharpAttribute> GetAllAttributesAsync(string id)
 	{
 		// This only works for when we get a non-attribute as our ID.
 		// Adjustment is needed if we get an attribute ID.
-		IEnumerable<SharpAttributeQueryResult> sharpAttributeResults;
+		IAsyncEnumerable<SharpAttributeQueryResult> sharpAttributeResults;
 		if (id.StartsWith(DatabaseConstants.Attributes))
 		{
-			sharpAttributeResults = await arangoDb.Query.ExecuteAsync<SharpAttributeQueryResult>(handle,
+			sharpAttributeResults = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle,
 				$"FOR v IN 1..999 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} RETURN v",
 				new Dictionary<string, object>() { { StartVertex, id } });
 		}
 		else
 		{
-			sharpAttributeResults = await arangoDb.Query.ExecuteAsync<SharpAttributeQueryResult>(handle,
+			sharpAttributeResults = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle,
 				$"LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphObjects} RETURN v) FOR v IN 1..999 OUTBOUND start GRAPH {DatabaseConstants.GraphAttributes} RETURN v",
 				new Dictionary<string, object> { { "startVertex", id } });
 		}
 
 		return sharpAttributeResults
-			.ToAsyncEnumerable()
 			.Select(SharpAttributeQueryToSharpAttribute);
 	}
 
-	private async ValueTask<IAsyncEnumerable<LazySharpAttribute>> GetAllLazyAttributesAsync(string id)
+	private IAsyncEnumerable<LazySharpAttribute> GetAllLazyAttributesAsync(string id)
 	{
 		// This only works for when we get a non-attribute as our ID.
 		// Adjustment is needed if we get an attribute ID.
-		IEnumerable<SharpAttributeQueryResult> sharpAttributeResults;
+		IAsyncEnumerable<SharpAttributeQueryResult> sharpAttributeResults;
 		if (id.StartsWith(DatabaseConstants.Attributes))
 		{
-			sharpAttributeResults = await arangoDb.Query.ExecuteAsync<SharpAttributeQueryResult>(handle,
+			sharpAttributeResults = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle,
 				$"FOR v IN 1..999 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} RETURN v",
 				new Dictionary<string, object>() { { StartVertex, id } });
 		}
 		else
 		{
-			sharpAttributeResults = await arangoDb.Query.ExecuteAsync<SharpAttributeQueryResult>(handle,
+			sharpAttributeResults = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle,
 				$"LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphObjects} RETURN v) FOR v IN 1..999 OUTBOUND start GRAPH {DatabaseConstants.GraphAttributes} RETURN v",
 				new Dictionary<string, object> { { "startVertex", id } });
 		}
 
 		return sharpAttributeResults
-			.ToAsyncEnumerable()
 			.Select(SharpAttributeQueryToLazySharpAttribute);
 	}
 
@@ -997,12 +995,16 @@ public partial class ArangoDatabase(
 			thing => thing,
 			_ => throw new Exception("Invalid Location found"));
 	}
-	
-	public ValueTask<IAsyncEnumerable<SharpAttributeEntry>> GetAllAttributeEntriesAsync()
-	{
-		throw new NotImplementedException();
-	}
 
+	public IAsyncEnumerable<SharpAttributeEntry> GetAllAttributeEntriesAsync()
+		=> arangoDb.Query.ExecuteStreamAsync<SharpAttributeEntry>(handle,
+			$"FOR v IN {DatabaseConstants.AttributeEntries} RETURN v", true);
+
+	public async ValueTask<SharpAttributeEntry?> GetSharpAttribute(string name)
+		=> (await arangoDb.Query.ExecuteAsync<SharpAttributeEntry>(handle,
+				$"FOR v IN {DatabaseConstants.AttributeEntries} FILTER v.Name == {name} RETURN v", true))
+			.FirstOrDefault();
+	
 	public async ValueTask<AnyOptionalSharpObject> GetObjectNodeAsync(DBRef dbref)
 	{
 		SharpObjectQueryResult? obj;
@@ -1016,8 +1018,10 @@ public partial class ArangoDatabase(
 			obj = null;
 		}
 
-		if (obj is null) return new None();
-		if (dbref.CreationMilliseconds is not null && obj.CreationTime != dbref.CreationMilliseconds) return new None();
+		if (obj is null
+		    || dbref.CreationMilliseconds is not null
+		    && obj.CreationTime != dbref.CreationMilliseconds)
+			return new None();
 
 		var startVertex = obj.Id;
 		var res = (await arangoDb.Query.ExecuteAsync<SharpObjectQueryResult>(handle,
@@ -1039,10 +1043,10 @@ public partial class ArangoDatabase(
 			Key = int.Parse(obj.Key),
 			Flags = new(async ct => await mediator.Send(new GetObjectFlagsQuery(startVertex), ct) ?? []),
 			Powers = new(async ct => await GetPowersAsync(startVertex)),
-			Attributes = new(async ct => await GetTopLevelAttributesAsync(startVertex)),
-			LazyAttributes = new(async ct => await GetTopLevelLazyAttributesAsync(obj.Id)),
-			AllAttributes = new(async ct => await GetAllAttributesAsync(startVertex)),
-			LazyAllAttributes = new(async ct => await GetAllLazyAttributesAsync(startVertex)),
+			Attributes = new(ct => Task.FromResult(GetTopLevelAttributesAsync(startVertex))),
+			LazyAttributes = new(ct => Task.FromResult(GetTopLevelLazyAttributesAsync(obj.Id))),
+			AllAttributes = new(ct => Task.FromResult(GetAllAttributesAsync(startVertex))),
+			LazyAllAttributes = new(ct => Task.FromResult(GetAllLazyAttributesAsync(startVertex))),
 			Owner = new(async ct => await GetObjectOwnerAsync(startVertex)),
 			Parent = new(async ct => await GetParentAsync(startVertex)),
 			Children = new(async ct => (await GetChildrenAsync(startVertex))!)
@@ -1097,6 +1101,7 @@ public partial class ArangoDatabase(
 		string id = res._id;
 		string objId = obj._id;
 		var collection = id.Split("/")[0];
+		
 		var convertObject = new SharpObject
 		{
 			Id = objId,
@@ -1109,10 +1114,10 @@ public partial class ArangoDatabase(
 				.Empty, // FIX: ((Dictionary<string, string>?)obj.Locks ?? []).ToImmutableDictionary(),
 			Flags = new(async ct => await GetObjectFlagsAsync(objId)),
 			Powers = new(async ct => await GetPowersAsync(objId)),
-			Attributes = new(async ct => await GetTopLevelAttributesAsync(objId)),
-			LazyAttributes = new(async ct => await GetTopLevelLazyAttributesAsync(obj.Id)),
-			AllAttributes = new(async ct => await GetAllAttributesAsync(objId)),
-			LazyAllAttributes = new (async ct => await GetAllLazyAttributesAsync(obj.Id)),
+			Attributes = new(ct => Task.FromResult(GetTopLevelAttributesAsync(objId))),
+			LazyAttributes = new(ct => Task.FromResult(GetTopLevelLazyAttributesAsync(objId))),
+			AllAttributes = new(ct => Task.FromResult(GetAllAttributesAsync(objId))),
+			LazyAllAttributes = new(ct => Task.FromResult(GetAllLazyAttributesAsync(objId))),
 			Owner = new(async ct => await GetObjectOwnerAsync(objId)),
 			Parent = new(async ct => await GetParentAsync(objId)),
 			Children = new(async ct => (await GetChildrenAsync(objId))!)
@@ -1166,72 +1171,93 @@ public partial class ArangoDatabase(
 				ModifiedTime = obj.ModifiedTime,
 				Flags = new(async ct => await GetObjectFlagsAsync(obj.Id)),
 				Powers = new(async ct => await GetPowersAsync(obj.Id)),
-				Attributes = new(async ct => await GetTopLevelAttributesAsync(obj.Id)),
-				LazyAttributes = new(async ct => await GetTopLevelLazyAttributesAsync(obj.Id)),
-				AllAttributes = new(async ct => await GetAllAttributesAsync(obj.Id)),
-				LazyAllAttributes = new (async ct => await GetAllLazyAttributesAsync(obj.Id)),
+				Attributes = new(ct => Task.FromResult(GetTopLevelAttributesAsync(obj.Id))),
+				LazyAttributes = new(ct => Task.FromResult(GetTopLevelLazyAttributesAsync(obj.Id))),
+				AllAttributes = new(ct => Task.FromResult(GetAllAttributesAsync(obj.Id))),
+				LazyAllAttributes = new(ct => Task.FromResult(GetAllLazyAttributesAsync(obj.Id))),
 				Owner = new(async ct => await GetObjectOwnerAsync(obj.Id)),
 				Parent = new(async ct => await GetParentAsync(obj.Id)),
 				Children = new(async ct => (await GetChildrenAsync(obj.Id))!)
 			};
 	}
 
-	private async ValueTask<IAsyncEnumerable<SharpAttribute>> GetTopLevelAttributesAsync(string id)
+	private IAsyncEnumerable<SharpAttribute> GetTopLevelAttributesAsync(string id)
 	{
 		// This only works for when we get a non-attribute as our ID.
 		// Adjustment is needed if we get an attribute ID.
-		IEnumerable<SharpAttributeQueryResult> sharpAttributeResults;
+		IAsyncEnumerable<SharpAttributeQueryResult> sharpAttributeResults;
 		if (id.StartsWith(DatabaseConstants.Attributes))
 		{
-			sharpAttributeResults = await arangoDb.Query.ExecuteAsync<SharpAttributeQueryResult>(handle,
+			sharpAttributeResults = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle,
 				$"FOR v IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} RETURN v",
 				new Dictionary<string, object>() { { StartVertex, id } });
 		}
 		else
 		{
-			sharpAttributeResults = await arangoDb.Query.ExecuteAsync<SharpAttributeQueryResult>(handle,
+			sharpAttributeResults = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle,
 				$"LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphObjects} RETURN v) FOR v IN 1..1 OUTBOUND start GRAPH {DatabaseConstants.GraphAttributes} RETURN v",
 				new Dictionary<string, object>() { { StartVertex, id } });
 		}
 
 		return sharpAttributeResults
-			.ToAsyncEnumerable()
 			.Select(SharpAttributeQueryToSharpAttribute);
+	}
+
+	private async ValueTask<SharpAttributeEntry?> GetRelatedAttributeEntry(string id)
+	{
+		var result = await arangoDb.Query.ExecuteAsync<SharpAttributeEntryQueryResult>(handle,
+			$"FOR v IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributeEntries} RETURN v",
+			new Dictionary<string, object> { { StartVertex, id } });
+
+		if (result is null) return null;
+		var entry = result.First();
+
+		return new SharpAttributeEntry
+		{
+			DefaultFlags = entry.DefaultFlags,
+			Name = entry.Name,
+			Enum = entry.Enum,
+			Id = entry.Id,
+			Limit = entry.Limit
+		};
 	}
 
 	private async ValueTask<SharpAttribute> SharpAttributeQueryToSharpAttribute(SharpAttributeQueryResult x,
 		CancellationToken _)
 		=> new(x.Key, x.Name,
-				await GetAttributeFlagsAsync(x.Id), null, x.LongName, new(async ct => await GetTopLevelAttributesAsync(x.Id)),
-				new(async ct => await GetAttributeOwnerAsync(x.Id)),
-				new(async ct => await Task.FromResult<SharpAttributeEntry?>(null)))
+				await GetAttributeFlagsAsync(x.Id), null, x.LongName,
+				new AsyncLazy<IAsyncEnumerable<SharpAttribute>>(ct => Task.FromResult(GetTopLevelAttributesAsync(x.Id))),
+				new AsyncLazy<SharpPlayer?>(async ct => await GetAttributeOwnerAsync(x.Id)),
+				new AsyncLazy<SharpAttributeEntry?>(async ct => await GetRelatedAttributeEntry(x.Id)))
 			{ Value = MarkupStringModule.deserialize(x.Value) };
 
-	private async ValueTask<IAsyncEnumerable<LazySharpAttribute>> GetTopLevelLazyAttributesAsync(string id)
+	private IAsyncEnumerable<LazySharpAttribute> GetTopLevelLazyAttributesAsync(string id)
 	{
 		// This only works for when we get a non-attribute as our ID.
 		// Adjustment is needed if we get an attribute ID.
-		IEnumerable<SharpAttributeQueryResult> sharpAttributeResults;
+		IAsyncEnumerable<SharpAttributeQueryResult> sharpAttributeResults;
 		if (id.StartsWith(DatabaseConstants.Attributes))
 		{
-			sharpAttributeResults = await arangoDb.Query.ExecuteAsync<SharpAttributeQueryResult>(handle,
+			sharpAttributeResults = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle,
 				$"FOR v IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} RETURN v",
 				new Dictionary<string, object>() { { StartVertex, id } });
 		}
 		else
 		{
-			sharpAttributeResults = await arangoDb.Query.ExecuteAsync<SharpAttributeQueryResult>(handle,
+			sharpAttributeResults = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle,
 				$"LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphObjects} RETURN v) FOR v IN 1..1 OUTBOUND start GRAPH {DatabaseConstants.GraphAttributes} RETURN v",
 				new Dictionary<string, object>() { { StartVertex, id } });
 		}
 
-		return sharpAttributeResults.ToAsyncEnumerable()
+		return sharpAttributeResults
 			.Select<SharpAttributeQueryResult, LazySharpAttribute>(async (x, _) =>
 				new LazySharpAttribute(x.Key, x.Name, await GetAttributeFlagsAsync(x.Id), null, x.LongName,
-					new(async ct => await GetTopLevelLazyAttributesAsync(x.Id)),
-					new(async ct => await GetAttributeOwnerAsync(x.Id)),
-					new(async ct => await Task.FromResult<SharpAttributeEntry?>(null)),
-					Value: new(async ct => MarkupStringModule.deserialize(await GetAttributeValue(x.Key, ct)))));
+					new AsyncLazy<IAsyncEnumerable<LazySharpAttribute>>(ct =>
+						Task.FromResult(GetTopLevelLazyAttributesAsync(x.Id))),
+					new AsyncLazy<SharpPlayer?>(async ct => await GetAttributeOwnerAsync(x.Id)),
+					new AsyncLazy<SharpAttributeEntry?>(async ct => await GetRelatedAttributeEntry(x.Id)),
+					Value: new AsyncLazy<MarkupStringModule.MarkupString>(async ct =>
+						MarkupStringModule.deserialize(await GetAttributeValue(x.Key, ct)))));
 	}
 
 	public async ValueTask<IAsyncEnumerable<LazySharpAttribute>?> GetLazyAttributesAsync(DBRef dbref,
@@ -1241,13 +1267,14 @@ public partial class ArangoDatabase(
 		var result =
 			await arangoDb.Query.ExecuteAsync<SharpObjectQueryResult>(handle, $"RETURN DOCUMENT({startVertex})", cache: true);
 
-		var pattern = WildcardToRegex().Replace(attributePattern, m => m.Value switch
-		{
-			"*" => "[^`]*",
-			"**" => ".*",
-			"?" => ".",
-			_ => $"\\{m.Value}"
-		});
+		var pattern = WildcardToRegex()
+			.Replace(attributePattern, m => m.Value switch
+			{
+				"**" => ".*",
+				"*" => "[^`]*",
+				"?" => ".",
+				_ => $"\\{m.Value}"
+			});
 
 		if (!result.Any())
 		{
@@ -1259,7 +1286,7 @@ public partial class ArangoDatabase(
 		const string query =
 			$"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName =~ @pattern RETURN v";
 
-		var result2 = await arangoDb.Query.ExecuteAsync<SharpAttributeQueryResult>(handle, query,
+		var result2 = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle, query,
 			new Dictionary<string, object>
 			{
 				{ StartVertex, startVertex },
@@ -1267,13 +1294,14 @@ public partial class ArangoDatabase(
 			});
 
 		return result2
-			.ToAsyncEnumerable()
 			.Select<SharpAttributeQueryResult, LazySharpAttribute>(async (x, _) =>
 				new LazySharpAttribute(x.Key, x.Name, await GetAttributeFlagsAsync(x.Id), null, x.LongName,
-					new(async ct => await GetTopLevelLazyAttributesAsync(x.Id)),
-					new(async ct => await GetObjectOwnerAsync(x.Id)),
-					new(async ct => await Task.FromResult<SharpAttributeEntry?>(null)),
-					Value: new(async ct => MarkupStringModule.deserialize(await GetAttributeValue(x.Key, ct)))));
+					new AsyncLazy<IAsyncEnumerable<LazySharpAttribute>>(ct =>
+						Task.FromResult(GetTopLevelLazyAttributesAsync(x.Id))),
+					new AsyncLazy<SharpPlayer?>(async ct => await GetObjectOwnerAsync(x.Id)),
+					new AsyncLazy<SharpAttributeEntry?>(async ct => await GetRelatedAttributeEntry(x.Id)),
+					Value: new AsyncLazy<MarkupStringModule.MarkupString>(async ct =>
+						MarkupStringModule.deserialize(await GetAttributeValue(x.Key, ct)))));
 	}
 
 
@@ -1301,7 +1329,7 @@ public partial class ArangoDatabase(
 		const string query =
 			$"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName =~ @pattern RETURN v";
 
-		var result2 = await arangoDb.Query.ExecuteAsync<SharpAttributeQueryResult>(handle, query,
+		var result2 = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle, query,
 			new Dictionary<string, object>
 			{
 				{ StartVertex, startVertex },
@@ -1309,7 +1337,6 @@ public partial class ArangoDatabase(
 			});
 
 		return result2
-			.ToAsyncEnumerable()
 			.Select(SharpAttributeQueryToSharpAttribute);
 	}
 
@@ -1318,10 +1345,10 @@ public partial class ArangoDatabase(
 	{
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 		var result =
-			await arangoDb.Query.ExecuteAsync<SharpObjectQueryResult>(handle, $"RETURN DOCUMENT({startVertex})", cache: true);
+			arangoDb.Query.ExecuteStreamAsync<SharpObjectQueryResult>(handle, $"RETURN DOCUMENT({startVertex})", cache: true);
 		var pattern = attributePattern;
 
-		if (!result.Any())
+		if (!await result.AnyAsync())
 		{
 			return null;
 		}
@@ -1336,7 +1363,7 @@ public partial class ArangoDatabase(
 		const string query =
 			$"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName LIKE @pattern RETURN v";
 
-		var result2 = await arangoDb.Query.ExecuteAsync<SharpAttributeQueryResult>(handle, query,
+		var result2 = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle, query,
 			new Dictionary<string, object>
 			{
 				{ StartVertex, startVertex },
@@ -1344,7 +1371,6 @@ public partial class ArangoDatabase(
 			});
 
 		return result2
-			.ToAsyncEnumerable()
 			.Select(SharpAttributeQueryToSharpAttribute);
 	}
 
@@ -1387,10 +1413,11 @@ public partial class ArangoDatabase(
 	private async ValueTask<LazySharpAttribute> SharpAttributeQueryToLazySharpAttribute(SharpAttributeQueryResult x,
 		CancellationToken _)
 		=> new(x.Key, x.Name, await GetAttributeFlagsAsync(x.Id), null, x.LongName,
-			new(async _ => await GetTopLevelLazyAttributesAsync(x.Id)),
-			new(async _ => await GetObjectOwnerAsync(x.Id)),
-			new(async _ => await Task.FromResult<SharpAttributeEntry?>(null)),
-			new(async ct => MarkupStringModule.deserialize(await GetAttributeValue(x.Key, ct))));
+			new AsyncLazy<IAsyncEnumerable<LazySharpAttribute>>(_ => Task.FromResult(GetTopLevelLazyAttributesAsync(x.Id))),
+			new AsyncLazy<SharpPlayer?>(async _ => await GetObjectOwnerAsync(x.Id)),
+			new AsyncLazy<SharpAttributeEntry?>(async _ => await GetRelatedAttributeEntry(x.Id)),
+			new AsyncLazy<MarkupStringModule.MarkupString>(async ct =>
+				MarkupStringModule.deserialize(await GetAttributeValue(x.Key, ct))));
 
 	private async ValueTask<string> GetAttributeValue(string key, CancellationToken ct)
 	{
@@ -1424,9 +1451,9 @@ public partial class ArangoDatabase(
 
 		return await Task.WhenAll(result2.Select(async x =>
 			new SharpAttribute(x.Key, x.Name, await GetAttributeFlagsAsync(x.Id), null, x.LongName,
-				new(async ct => await GetTopLevelAttributesAsync(x.Id)),
-				new(async ct => await GetObjectOwnerAsync(x.Id)),
-				new(async ct => await Task.FromResult<SharpAttributeEntry?>(null)))
+				new AsyncLazy<IAsyncEnumerable<SharpAttribute>>(ct => Task.FromResult(GetTopLevelAttributesAsync(x.Id))),
+				new AsyncLazy<SharpPlayer?>(async ct => await GetObjectOwnerAsync(x.Id)),
+				new AsyncLazy<SharpAttributeEntry?>(async ct => await GetRelatedAttributeEntry(x.Id)))
 			{
 				Value = MarkupStringModule.deserialize(x.Value)
 			}));
@@ -1497,6 +1524,7 @@ public partial class ArangoDatabase(
 		SharpPlayer owner)
 	{
 		ArgumentException.ThrowIfNullOrEmpty(owner.Id);
+		attribute = attribute.Select(x => x.ToUpper()).ToArray();
 
 		var transactionHandle = await arangoDb.Transaction.BeginAsync(handle, new ArangoTransaction
 		{
@@ -1524,7 +1552,7 @@ public partial class ArangoDatabase(
 
 		var result = await arangoDb.Query.ExecuteAsync<dynamic[]>(handle, query, new Dictionary<string, object>
 		{
-			{ "attr", attribute.Select(x => x.ToUpper()) },
+			{ "attr", attribute },
 			{ StartVertex, startVertex },
 			{ "max", attribute.Length }
 		});
@@ -1539,13 +1567,15 @@ public partial class ArangoDatabase(
 		// Create Path
 		foreach (var nextAttr in remaining.Select((attrName, i) => (value: attrName, i)))
 		{
+			var longName = string.Join('`', attribute.SkipLast(remaining.Length - 1 - nextAttr.i));
+
 			var newOne = await arangoDb.Document.CreateAsync<SharpAttributeCreateRequest, SharpAttributeQueryResult>(
 				transactionHandle, DatabaseConstants.Attributes,
 				new SharpAttributeCreateRequest(nextAttr.value.ToUpper(), [],
 					nextAttr.i == remaining.Length - 1
 						? MarkupStringModule.serialize(value)
 						: string.Empty,
-					string.Join('`', attribute.SkipLast(remaining.Length - 1 - nextAttr.i).Select(x => x.ToUpper()))),
+					longName),
 				waitForSync: true);
 
 			await arangoDb.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.GraphAttributes,
