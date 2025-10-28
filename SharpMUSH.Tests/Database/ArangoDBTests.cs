@@ -80,14 +80,14 @@ public class ArangoDBTests
 	[Test]
 	public async Task GetAllObjectFlags()
 	{
-		var flags = await Database.GetObjectFlagsAsync();
+		var flags = await Database.GetObjectFlagsAsync().ToArrayAsync();
 		await Assert.That(flags.Count).IsGreaterThan(0);
 	}
 
 	[Test]
 	public async Task GetAllAttributeFlags()
 	{
-		var flags = await Database.GetAttributeFlagsAsync();
+		var flags = await Database.GetAttributeFlagsAsync().ToArrayAsync();
 		await Assert.That(flags.Count).IsGreaterThan(0);
 	}
 

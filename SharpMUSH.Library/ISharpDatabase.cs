@@ -104,12 +104,16 @@ public interface ISharpDatabase
 
 	// TODO: Consider the return value, as an attribute pattern returns multiple attributes.
 	// These should return full attribute paths, so likely IEnumerable<IEnumerable<SharpAttribute>>.
-	ValueTask<IAsyncEnumerable<SharpAttribute>?> GetAttributesAsync(DBRef dbref, string attributePattern, CancellationToken cancellationToken = default);
-	ValueTask<IAsyncEnumerable<SharpAttribute>?> GetAttributesByRegexAsync(DBRef dbref, string attributePattern, CancellationToken cancellationToken = default);
+	ValueTask<IAsyncEnumerable<SharpAttribute>?> GetAttributesAsync(DBRef dbref, string attributePattern,
+		CancellationToken cancellationToken = default);
+	ValueTask<IAsyncEnumerable<SharpAttribute>?> GetAttributesByRegexAsync(DBRef dbref, string attributePattern,
+		CancellationToken cancellationToken = default);
 
-	ValueTask<IAsyncEnumerable<LazySharpAttribute>?> GetLazyAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default);
-	ValueTask<IAsyncEnumerable<LazySharpAttribute>?> GetLazyAttributesAsync(DBRef dbref, string attributePattern, CancellationToken cancellationToken = default);
-	ValueTask<IAsyncEnumerable<LazySharpAttribute>?> GetLazyAttributesByRegexAsync(DBRef dbref, string attributePattern, CancellationToken cancellationToken = default);
+	IAsyncEnumerable<LazySharpAttribute>? GetLazyAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default);
+	ValueTask<IAsyncEnumerable<LazySharpAttribute>?> GetLazyAttributesAsync(DBRef dbref, string attributePattern,
+		CancellationToken cancellationToken = default);
+	ValueTask<IAsyncEnumerable<LazySharpAttribute>?> GetLazyAttributesByRegexAsync(DBRef dbref, string attributePattern,
+		CancellationToken cancellationToken = default);
 	IAsyncEnumerable<SharpAttributeEntry> GetAllAttributeEntriesAsync(CancellationToken cancellationToken = default);
 
 	/// <summary>
@@ -133,7 +137,7 @@ public interface ISharpDatabase
 	/// Get all known Object Flags
 	/// </summary>
 	/// <returns>A list of all SharpObjectFlags</returns>
-	ValueTask<IEnumerable<SharpObjectFlag>> GetObjectFlagsAsync(CancellationToken cancellationToken = default);
+	IAsyncEnumerable<SharpObjectFlag> GetObjectFlagsAsync(CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Set an Object Flag.
@@ -231,7 +235,7 @@ public interface ISharpDatabase
 	/// Get all powers the Server knows about.
 	/// </summary>
 	/// <returns>All powers</returns>
-	ValueTask<IEnumerable<SharpPower>> GetObjectPowersAsync(CancellationToken cancellationToken = default);
+	IAsyncEnumerable<SharpPower> GetObjectPowersAsync(CancellationToken cancellationToken = default);
 	
 	/// <summary>
 	/// Get the parent of an object.
@@ -304,7 +308,7 @@ public interface ISharpDatabase
 	/// Set an attribute. This does not do any checks, as that is up to the functionality itself.
 	/// </summary>
 	/// <returns>Success or Failure</returns>
-	ValueTask<IEnumerable<SharpAttributeFlag>> GetAttributeFlagsAsync(CancellationToken cancellationToken = default);
+	IAsyncEnumerable<SharpAttributeFlag> GetAttributeFlagsAsync(CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Sets an attribute to string.Empty, or if it has no children, removes it entirely.
@@ -353,17 +357,17 @@ public interface ISharpDatabase
 	/// <returns>The deepest findable object based on depth</returns>
 	ValueTask<AnySharpContainer> GetLocationAsync(string id, int depth = 1, CancellationToken cancellationToken = default);
 
-	ValueTask<IEnumerable<SharpObjectFlag>> GetObjectFlagsAsync(string id, CancellationToken cancellationToken = default);
+	IAsyncEnumerable<SharpObjectFlag> GetObjectFlagsAsync(string id, CancellationToken cancellationToken = default);
 
-	ValueTask<IEnumerable<SharpMail>> GetIncomingMailsAsync(SharpPlayer id, string folder, CancellationToken cancellationToken = default);
+	IAsyncEnumerable<SharpMail> GetIncomingMailsAsync(SharpPlayer id, string folder, CancellationToken cancellationToken = default);
 
-	ValueTask<IEnumerable<SharpMail>> GetAllIncomingMailsAsync(SharpPlayer id, CancellationToken cancellationToken = default);
+	IAsyncEnumerable<SharpMail> GetAllIncomingMailsAsync(SharpPlayer id, CancellationToken cancellationToken = default);
 
 	ValueTask<SharpMail?> GetIncomingMailAsync(SharpPlayer id, string folder, int mail, CancellationToken cancellationToken = default);
 
-	ValueTask<IEnumerable<SharpMail>> GetSentMailsAsync(SharpObject sender, SharpPlayer recipient, CancellationToken cancellationToken = default);
+	IAsyncEnumerable<SharpMail> GetSentMailsAsync(SharpObject sender, SharpPlayer recipient, CancellationToken cancellationToken = default);
 	
-	ValueTask<IEnumerable<SharpMail>> GetAllSentMailsAsync(SharpObject sender, CancellationToken cancellationToken = default);
+	IAsyncEnumerable<SharpMail> GetAllSentMailsAsync(SharpObject sender, CancellationToken cancellationToken = default);
 
 	ValueTask<SharpMail?> GetSentMailAsync(SharpObject sender, SharpPlayer recipient, int mail, CancellationToken cancellationToken = default);
 
@@ -414,11 +418,11 @@ public interface ISharpDatabase
 	/// <returns>A Json String with the data stored within.</returns>
 	ValueTask<string?> GetExpandedServerData(string dataType, CancellationToken cancellationToken = default);
 
-	ValueTask<IEnumerable<SharpChannel>> GetAllChannelsAsync(CancellationToken cancellationToken = default);
+	IAsyncEnumerable<SharpChannel> GetAllChannelsAsync(CancellationToken cancellationToken = default);
 	
 	ValueTask<SharpChannel?> GetChannelAsync(string name, CancellationToken cancellationToken = default);
 	
-	ValueTask<IEnumerable<SharpChannel>> GetMemberChannelsAsync(AnySharpObject obj, CancellationToken cancellationToken = default);
+	IAsyncEnumerable<SharpChannel> GetMemberChannelsAsync(AnySharpObject obj, CancellationToken cancellationToken = default);
 
 	ValueTask CreateChannelAsync(MString name, string[] privs, SharpPlayer owner, CancellationToken cancellationToken = default);
 	

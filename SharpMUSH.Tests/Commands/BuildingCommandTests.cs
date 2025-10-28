@@ -276,7 +276,7 @@ public class BuildingCommandTests
 		var onePlayer = one.AsPlayer;
 		var flags = await onePlayer.Object.Flags.WithCancellation(CancellationToken.None);
 
-		await Assert.That(flags.Any(x => x.Name == "MONITOR" || x.Name == "DEBUG")).IsTrue();
+		await Assert.That(await flags.AnyAsync(x => x.Name == "MONITOR" || x.Name == "DEBUG")).IsTrue();
 	}
 
 	[Test]

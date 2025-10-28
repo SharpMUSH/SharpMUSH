@@ -207,8 +207,8 @@ public static partial class ArgHelpers
 	}
 
 	public static async ValueTask<bool> HasObjectFlags(SharpObject obj, SharpObjectFlag flag)
-		=> (await obj.Flags.WithCancellation(CancellationToken.None))
-			.Contains(flag);
+		=> await (await obj.Flags.WithCancellation(CancellationToken.None))
+			.ContainsAsync(flag);
 
 	public static async ValueTask<bool> HasObjectPowers(SharpObject obj, string power) =>
 		(await obj.Powers.WithCancellation(CancellationToken.None))

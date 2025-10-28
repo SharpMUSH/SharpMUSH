@@ -19,7 +19,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 
 	private readonly Expression<Func<AnySharpObject, string, bool>> _hasFlag = (dbRef, flag)
 		=> dbRef.Object().Flags.WithCancellation(CancellationToken.None).GetAwaiter().GetResult()
-			.Any(x => x.Name == flag || x.Symbol == flag);
+			.AnyAsync(x => x.Name == flag || x.Symbol == flag, CancellationToken.None).GetAwaiter().GetResult();
 
 	private readonly Expression<Func<AnySharpObject, string, bool>> _hasPower = (dbRef, power)
 		=> dbRef.Object().Powers.WithCancellation(CancellationToken.None).GetAwaiter().GetResult()

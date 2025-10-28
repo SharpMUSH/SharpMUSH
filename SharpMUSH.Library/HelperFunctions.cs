@@ -25,13 +25,16 @@ public static partial class HelperFunctions
 		=> (await mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Known;
 	
 	public static async ValueTask<bool> IsWizard(this AnySharpObject obj)
-		=> (await obj.Object().Flags.WithCancellation(CancellationToken.None)).Any(x => x.Name == "Wizard");
+		=> await (await obj.Object().Flags.WithCancellation(CancellationToken.None))
+			.AnyAsync(x => x.Name == "Wizard");
 
 	public static async ValueTask<bool> IsRoyalty(this AnySharpObject obj)
-		=> (await obj.Object().Flags.WithCancellation(CancellationToken.None)).Any(x => x.Name == "Royalty");
+		=> await (await obj.Object().Flags.WithCancellation(CancellationToken.None))
+			.AnyAsync(x => x.Name == "Royalty");
 
 	public static async ValueTask<bool> IsMistrust(this AnySharpObject obj)
-		=> (await obj.Object().Flags.WithCancellation(CancellationToken.None)).Any(x => x.Name == "Mistrust");
+		=> await (await obj.Object().Flags.WithCancellation(CancellationToken.None))
+			.AnyAsync(x => x.Name == "Mistrust");
 
 	public static bool IsGod(this AnySharpObject obj)
 		=> obj.Object().Key == 1;
@@ -145,7 +148,8 @@ public static partial class HelperFunctions
 		=> await obj.IsPriv() || await obj.HasPower("Long_Fingers");
 
 	public static async ValueTask<bool> HasFlag(this AnySharpObject obj, string flag)
-		=> (await obj.Object().Flags.WithCancellation(CancellationToken.None)).Any(x => x.Name.Equals(flag, StringComparison.InvariantCultureIgnoreCase));
+		=> await (await obj.Object().Flags.WithCancellation(CancellationToken.None))
+			.AnyAsync(x => x.Name.Equals(flag, StringComparison.InvariantCultureIgnoreCase));
 
 	// This may belong in the Permission Service.
 	public static async ValueTask<bool> CanDark(this AnySharpObject obj)
@@ -175,8 +179,8 @@ public static partial class HelperFunctions
 	public static async ValueTask<bool> Inheritable(this AnySharpObject obj)
 		=> obj.IsPlayer
 			 || await obj.HasFlag("Trust")
-			 || (await (await obj.Object().Owner.WithCancellation(CancellationToken.None))
-				 .Object.Flags.WithCancellation(CancellationToken.None)).Any(x => x.Name == "Trust")
+			 || await (await (await obj.Object().Owner.WithCancellation(CancellationToken.None))
+				 .Object.Flags.WithCancellation(CancellationToken.None)).AnyAsync(x => x.Name == "Trust")
 			 || await IsWizard(obj);
 
 	public static async ValueTask<bool> Owns(this AnySharpObject who,

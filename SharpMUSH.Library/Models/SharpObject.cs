@@ -49,7 +49,7 @@ public class SharpObject
 
 	// RELATIONSHIP
 	[JsonIgnore]
-	public required AsyncLazy<IEnumerable<SharpObjectFlag>> Flags { get; set; }
+	public required AsyncLazy<IAsyncEnumerable<SharpObjectFlag>> Flags { get; set; }
 
 	// RELATIONSHIP
 	// TODO: Consider using AnySharpObject instead of SharpObject

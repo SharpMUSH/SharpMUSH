@@ -260,7 +260,7 @@ public partial class Commands
 			if (!isOverride)
 			{
 				var recipientFlags = await recipient.Object().Flags.WithCancellation(CancellationToken.None);
-				if (recipientFlags.Any(f => f.Name.Equals("HAVEN", StringComparison.OrdinalIgnoreCase)))
+				if (await recipientFlags.AnyAsync(f => f.Name.Equals("HAVEN", StringComparison.OrdinalIgnoreCase)))
 				{
 					await NotifyService!.Notify(executor, $"{recipient.Object().Name} is not accepting pages.");
 					continue;

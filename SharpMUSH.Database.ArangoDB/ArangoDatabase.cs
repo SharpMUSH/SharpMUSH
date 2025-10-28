@@ -243,21 +243,19 @@ public partial class ArangoDatabase(
 			.Select(SharpObjectFlagQueryToSharpFlag)
 			.FirstOrDefaultAsync(cancellationToken: ct);
 
-	public async ValueTask<IEnumerable<SharpObjectFlag>> GetObjectFlagsAsync(CancellationToken ct = default)
-		=> await arangoDb.Query.ExecuteStreamAsync<SharpObjectFlagQueryResult>(
+	public IAsyncEnumerable<SharpObjectFlag> GetObjectFlagsAsync(CancellationToken ct = default)
+		=> arangoDb.Query.ExecuteStreamAsync<SharpObjectFlagQueryResult>(
 				handle,
 				$"FOR v in {DatabaseConstants.ObjectFlags:@} RETURN v",
 				cache: true, cancellationToken: ct)
-			.Select(SharpObjectFlagQueryToSharpFlag)
-			.ToArrayAsync(cancellationToken: ct);
+			.Select(SharpObjectFlagQueryToSharpFlag);
 
-	public async ValueTask<IEnumerable<SharpPower>> GetObjectPowersAsync(CancellationToken ct = default)
-		=> await arangoDb.Query.ExecuteStreamAsync<SharpPowerQueryResult>(
+	public IAsyncEnumerable<SharpPower> GetObjectPowersAsync(CancellationToken ct = default)
+		=> arangoDb.Query.ExecuteStreamAsync<SharpPowerQueryResult>(
 				handle,
 				$"FOR v in {DatabaseConstants.ObjectPowers:@} RETURN v",
 				cache: true, cancellationToken: ct)
-			.Select(SharpPowerQueryToSharpPower)
-			.ToArrayAsync(cancellationToken: ct);
+			.Select(SharpPowerQueryToSharpPower);
 
 	private static SharpPower SharpPowerQueryToSharpPower(SharpPowerQueryResult arg) =>
 		new()
@@ -425,44 +423,39 @@ public partial class ArangoDatabase(
 		return result.Select(SharpPowerQueryToSharpPower);
 	}
 
-	public async ValueTask<IEnumerable<SharpObjectFlag>> GetObjectFlagsAsync(string id, CancellationToken ct = default)
-		=> (await arangoDb.Query.ExecuteAsync<SharpObjectFlagQueryResult>(handle,
-				$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphFlags} RETURN v", cancellationToken: ct))
+	public IAsyncEnumerable<SharpObjectFlag> GetObjectFlagsAsync(string id, CancellationToken ct = default)
+		=> arangoDb.Query.ExecuteStreamAsync<SharpObjectFlagQueryResult>(handle,
+				$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphFlags} RETURN v", cancellationToken: ct)
 			.Select(SharpObjectFlagQueryToSharpFlag);
+	
+	// TODO: Fix this.
+	public async ValueTask<IAsyncEnumerable<SharpObject>> GetParentsAsync(string id, CancellationToken ct = default)
+		=> (await arangoDb.Query.ExecuteAsync<SharpObject>(handle,
+				$"FOR v IN 1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphParents} RETURN v", cache: true,
+				cancellationToken: ct))
+			.ToAsyncEnumerable();
 
-	public async ValueTask<IEnumerable<SharpMail>> GetSentMailsAsync(SharpObject sender, SharpPlayer recipient,
+	public IAsyncEnumerable<SharpMail> GetSentMailsAsync(SharpObject sender, SharpPlayer recipient,
 		CancellationToken ct = default)
-	{
-		var results = await arangoDb.Query.ExecuteAsync<SharpMailQueryResult>(handle,
-			$"FOR path IN 1..1 INBOUND ALL_SHORTEST_PATH {recipient.Id} TO {sender.Id} GRAPH {DatabaseConstants.GraphMail} RETURN path.vertices[1]",
-			cancellationToken: ct);
+		=> arangoDb.Query.ExecuteStreamAsync<SharpMailQueryResult>(handle,
+				$"FOR path IN 1..1 INBOUND ALL_SHORTEST_PATH {recipient.Id} TO {sender.Id} GRAPH {DatabaseConstants.GraphMail} RETURN path.vertices[1]",
+				cancellationToken: ct)
+			.Select(ConvertMailQueryResult);
 
-		var convertedResults = results.Select(ConvertMailQueryResult);
-
-		return convertedResults;
-	}
-
-	public async ValueTask<IEnumerable<SharpMail>> GetAllSentMailsAsync(SharpObject id, CancellationToken ct = default)
-	{
-		var results = await arangoDb.Query.ExecuteAsync<SharpMailQueryResult>(handle,
-			$"FOR v IN 1..1 INBOUND {id.Id} GRAPH {DatabaseConstants.GraphMail} RETURN v", cancellationToken: ct);
-
-		var convertedResults = results.Select(ConvertMailQueryResult);
-
-		return convertedResults;
-	}
+	public IAsyncEnumerable<SharpMail> GetAllSentMailsAsync(SharpObject id, CancellationToken ct = default)
+		=> arangoDb.Query.ExecuteStreamAsync<SharpMailQueryResult>(handle,
+				$"FOR v IN 1..1 INBOUND {id.Id} GRAPH {DatabaseConstants.GraphMail} RETURN v", cancellationToken: ct)
+			.Select(ConvertMailQueryResult);
 
 	public async ValueTask<SharpMail?> GetSentMailAsync(SharpObject sender, SharpPlayer recipient, int mail,
 		CancellationToken ct = default)
-	{
-		var results = await arangoDb.Query.ExecuteAsync<SharpMailQueryResult>(handle,
-			$"FOR path IN 1..1 INBOUND ALL_SHORTEST_PATH {recipient.Id} TO {sender.Id} GRAPH {DatabaseConstants.GraphMail} RETURN path.vertices[1]",
-			cancellationToken: ct);
-
-		var convertedResults = results.Select(ConvertMailQueryResult).Skip(mail).Take(1);
-
-		return convertedResults.FirstOrDefault();
-	}
+		=> await arangoDb.Query.ExecuteStreamAsync<SharpMailQueryResult>(handle,
+				$"FOR path IN 1..1 INBOUND ALL_SHORTEST_PATH {recipient.Id} TO {sender.Id} GRAPH {DatabaseConstants.GraphMail} RETURN path.vertices[1]",
+				cancellationToken: ct)
+			.Select(ConvertMailQueryResult)
+			.Skip(mail)
+			.Take(1)
+			.FirstOrDefaultAsync(cancellationToken: ct);
 
 	public async ValueTask<string[]> GetMailFoldersAsync(SharpPlayer id, CancellationToken ct = default)
 	{
@@ -472,13 +465,11 @@ public partial class ArangoDatabase(
 		return results.ToArray();
 	}
 
-	public async ValueTask<IEnumerable<SharpMail>> GetAllIncomingMailsAsync(SharpPlayer id,
+	public IAsyncEnumerable<SharpMail> GetAllIncomingMailsAsync(SharpPlayer id,
 		CancellationToken ct = default)
-	{
-		var results = await arangoDb.Query.ExecuteAsync<SharpMailQueryResult>(handle,
-			$"FOR v IN 1..1 OUTBOUND {id.Id} GRAPH {DatabaseConstants.GraphMail} RETURN v", cancellationToken: ct);
-		return results.Select(ConvertMailQueryResult);
-	}
+		=> arangoDb.Query.ExecuteStreamAsync<SharpMailQueryResult>(handle,
+				$"FOR v IN 1..1 OUTBOUND {id.Id} GRAPH {DatabaseConstants.GraphMail} RETURN v", cancellationToken: ct)
+			.Select(ConvertMailQueryResult);
 
 	private SharpMail ConvertMailQueryResult(SharpMailQueryResult x)
 		=> new()
@@ -498,15 +489,11 @@ public partial class ArangoDatabase(
 				await MailFromAsync(x.Id, ct))
 		};
 
-	public async ValueTask<IEnumerable<SharpMail>> GetIncomingMailsAsync(SharpPlayer id, string folder,
+	public IAsyncEnumerable<SharpMail> GetIncomingMailsAsync(SharpPlayer id, string folder,
 		CancellationToken ct = default)
-	{
-		var results = await arangoDb.Query.ExecuteAsync<SharpMailQueryResult>(handle,
+		=> arangoDb.Query.ExecuteStreamAsync<SharpMailQueryResult>(handle,
 			$"FOR v IN 1..1 OUTBOUND {id.Id} GRAPH {DatabaseConstants.GraphMail} FILTER v.Folder == {folder} RETURN v",
-			cancellationToken: ct);
-
-		return results.Select(ConvertMailQueryResult);
-	}
+			cancellationToken: ct).Select(ConvertMailQueryResult);
 
 	private async ValueTask<AnyOptionalSharpObject> MailFromAsync(string id, CancellationToken ct = default)
 	{
@@ -587,8 +574,10 @@ public partial class ArangoDatabase(
 	public async ValueTask RenameMailFolderAsync(SharpPlayer player, string folder, string newFolder,
 		CancellationToken ct = default)
 	{
-		var list = await GetIncomingMailsAsync(player, folder, ct);
-		var updates = list.Select(x => new { Key = x.Id!.Split("/")[1], Folder = newFolder });
+		var updates = await GetIncomingMailsAsync(player, folder, ct)
+			.Select(x => new { Key = x.Id!.Split("/")[1], Folder = newFolder })
+			.ToArrayAsync(cancellationToken: ct);
+
 		await arangoDb.Document.UpdateManyAsync(handle, DatabaseConstants.Mails, updates, cancellationToken: ct);
 	}
 
@@ -687,18 +676,14 @@ public partial class ArangoDatabase(
 		}
 	}
 
-	public async ValueTask<IEnumerable<SharpChannel>> GetAllChannelsAsync(CancellationToken ct = default)
-	{
-		await ValueTask.CompletedTask;
-		return await arangoDb.Query.ExecuteStreamAsync<SharpChannelQueryResult>(
+	public IAsyncEnumerable<SharpChannel> GetAllChannelsAsync(CancellationToken ct = default)
+		=> arangoDb.Query.ExecuteStreamAsync<SharpChannelQueryResult>(
 				handle, "FOR v IN @@C RETURN v",
 				bindVars: new Dictionary<string, object>
 				{
 					{ "@C", DatabaseConstants.Channels }
 				}, cancellationToken: ct)
-			.Select(SharpChannelQueryToSharpChannel)
-			.ToArrayAsync(cancellationToken: ct);
-	}
+			.Select(SharpChannelQueryToSharpChannel);
 
 	private async ValueTask<SharpPlayer> GetChannelOwnerAsync(string channelId, CancellationToken ct = default)
 	{
@@ -764,13 +749,12 @@ public partial class ArangoDatabase(
 			.FirstOrDefault();
 	}
 
-	public async ValueTask<IEnumerable<SharpChannel>> GetMemberChannelsAsync(AnySharpObject obj,
+	public IAsyncEnumerable<SharpChannel> GetMemberChannelsAsync(AnySharpObject obj,
 		CancellationToken ct = default) =>
-		await arangoDb.Query.ExecuteStreamAsync<SharpChannelQueryResult>(handle,
+		arangoDb.Query.ExecuteStreamAsync<SharpChannelQueryResult>(handle,
 				$"FOR v in 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.OnChannel} RETURN v",
 				new Dictionary<string, object> { { StartVertex, obj.Object().Id! } }, cancellationToken: ct)
-			.Select(SharpChannelQueryToSharpChannel)
-			.ToArrayAsync(cancellationToken: ct);
+			.Select(SharpChannelQueryToSharpChannel);
 
 	public async ValueTask CreateChannelAsync(MarkupStringModule.MarkupString channel, string[] privs,
 		SharpPlayer owner, CancellationToken ct = default)
@@ -1017,11 +1001,10 @@ public partial class ArangoDatabase(
 				cancellationToken: ct) ?? [])
 			.ToAsyncEnumerable();
 
-	public async ValueTask<IAsyncEnumerable<SharpObject>> GetParentsAsync(string id, CancellationToken ct = default)
-		=> (await arangoDb.Query.ExecuteAsync<SharpObject>(handle,
-				$"FOR v IN 1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphParents} RETURN v", cache: true,
-				cancellationToken: ct))
-			.ToAsyncEnumerable();
+	public IAsyncEnumerable<SharpPower> GetObjectPowersAsync(string id, CancellationToken ct = default)
+		=> arangoDb.Query.ExecuteStreamAsync<SharpPower>(handle,
+			$"FOR v IN 1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphPowers} RETURN v", cache: true,
+			cancellationToken: ct);
 
 	private async ValueTask<AnySharpContainer> GetHomeAsync(string id, CancellationToken ct = default)
 	{
@@ -1085,8 +1068,8 @@ public partial class ArangoDatabase(
 			Locks = (obj.Locks ?? []).ToImmutableDictionary(),
 			Id = obj.Id,
 			Key = int.Parse(obj.Key),
-			Flags = new AsyncLazy<IEnumerable<SharpObjectFlag>>(async ct =>
-				await mediator.Send(new GetObjectFlagsQuery(startVertex), ct) ?? []),
+			Flags = new AsyncLazy<IAsyncEnumerable<SharpObjectFlag>>(async ct =>
+				(await mediator.Send(new GetObjectFlagsQuery(startVertex), ct) ?? []).ToAsyncEnumerable()),
 			Powers = new AsyncLazy<IEnumerable<SharpPower>>(async ct => await GetPowersAsync(startVertex, ct)),
 			Attributes =
 				new AsyncLazy<IAsyncEnumerable<SharpAttribute>>(ct =>
@@ -1165,7 +1148,7 @@ public partial class ArangoDatabase(
 			ModifiedTime = obj.ModifiedTime,
 			Locks = ImmutableDictionary<string, string>
 				.Empty, // FIX: ((Dictionary<string, string>?)obj.Locks ?? []).ToImmutableDictionary(),
-			Flags = new(async ct => await GetObjectFlagsAsync(objId, ct)),
+			Flags = new(ct => Task.FromResult(GetObjectFlagsAsync(objId, ct))),
 			Powers = new(async ct => await GetPowersAsync(objId, ct)),
 			Attributes = new(ct => Task.FromResult(GetTopLevelAttributesAsync(objId, ct))),
 			LazyAttributes = new(ct => Task.FromResult(GetTopLevelLazyAttributesAsync(objId, ct))),
@@ -1223,7 +1206,8 @@ public partial class ArangoDatabase(
 				Locks = (obj.Locks ?? []).ToImmutableDictionary(),
 				CreationTime = obj.CreationTime,
 				ModifiedTime = obj.ModifiedTime,
-				Flags = new AsyncLazy<IEnumerable<SharpObjectFlag>>(async ct => await GetObjectFlagsAsync(obj.Id, ct)),
+				Flags =
+					new AsyncLazy<IAsyncEnumerable<SharpObjectFlag>>(ct => Task.FromResult(GetObjectFlagsAsync(obj.Id, ct))),
 				Powers = new AsyncLazy<IEnumerable<SharpPower>>(async ct => await GetPowersAsync(obj.Id, ct)),
 				Attributes =
 					new AsyncLazy<IAsyncEnumerable<SharpAttribute>>(ct =>
@@ -1576,10 +1560,9 @@ public partial class ArangoDatabase(
 			.Select(SharpAttributeQueryToSharpAttribute);
 	}
 
-	public async ValueTask<IAsyncEnumerable<LazySharpAttribute>?> GetLazyAttributeAsync(DBRef dbref,
+	public IAsyncEnumerable<LazySharpAttribute>? GetLazyAttributeAsync(DBRef dbref,
 		string[] attribute, CancellationToken ct = default)
 	{
-		await ValueTask.CompletedTask;
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 
 		const string let =
@@ -1732,8 +1715,8 @@ public partial class ArangoDatabase(
 				{ "flag", flagName }
 			}, cache: true, cancellationToken: ct)).FirstOrDefault();
 
-	public async ValueTask<IEnumerable<SharpAttributeFlag>> GetAttributeFlagsAsync(CancellationToken ct = default) =>
-		await arangoDb.Query.ExecuteAsync<SharpAttributeFlag>(handle,
+	public IAsyncEnumerable<SharpAttributeFlag> GetAttributeFlagsAsync(CancellationToken ct = default) =>
+		arangoDb.Query.ExecuteStreamAsync<SharpAttributeFlag>(handle,
 			$"FOR v in {DatabaseConstants.AttributeFlags:@} RETURN v",
 			cache: true, cancellationToken: ct);
 
@@ -1961,7 +1944,8 @@ public partial class ArangoDatabase(
 		CancellationToken ct = default)
 	{
 		var edge = (await arangoDb.Query.ExecuteAsync<SharpEdgeQueryResult>(handle,
-				$"FOR v,e IN 1..1 OUTBOUND {enactorObj.Id} GRAPH {DatabaseConstants.GraphLocations} RETURN e", cancellationToken: ct))
+				$"FOR v,e IN 1..1 OUTBOUND {enactorObj.Id} GRAPH {DatabaseConstants.GraphLocations} RETURN e",
+				cancellationToken: ct))
 			.Single();
 
 		await arangoDb.Graph.Edge.UpdateAsync(handle,

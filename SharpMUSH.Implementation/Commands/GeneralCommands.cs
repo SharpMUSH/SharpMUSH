@@ -220,8 +220,8 @@ public partial class Commands
 				none => MModule.single("There is nothing to see here"),
 				error => MModule.empty());
 
-		var objFlags = (await obj.Flags.WithCancellation(CancellationToken.None)).ToArray();
-		var ownerObjFlags = (await ownerObj.Flags.WithCancellation(CancellationToken.None)).ToArray();
+		var objFlags = await (await obj.Flags.WithCancellation(CancellationToken.None)).ToArrayAsync();
+		var ownerObjFlags = await (await ownerObj.Flags.WithCancellation(CancellationToken.None)).ToArrayAsync();
 		var objParent = await obj.Parent.WithCancellation(CancellationToken.None);
 		var objPowers = await obj.Powers.WithCancellation(CancellationToken.None);
 

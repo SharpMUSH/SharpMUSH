@@ -481,7 +481,7 @@ public partial class Functions
 
 		async ValueTask<CallState> HasObjectFlag(AnySharpObject realLocated)
 		{
-			return (await realLocated.Object().Flags.WithCancellation(CancellationToken.None)).Any(f =>
+			return await (await realLocated.Object().Flags.WithCancellation(CancellationToken.None)).AnyAsync(f =>
 				string.Equals(f.Name, flagNameOrSymbol, StringComparison.OrdinalIgnoreCase) ||
 				string.Equals(f.Symbol.ToString(), flagNameOrSymbol, StringComparison.OrdinalIgnoreCase));
 		}

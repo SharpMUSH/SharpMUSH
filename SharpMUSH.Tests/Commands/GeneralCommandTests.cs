@@ -293,6 +293,6 @@ public class GeneralCommandTests
 		var onePlayer = one.AsPlayer;
 		var flags = await onePlayer.Object.Flags.WithCancellation(CancellationToken.None);
 
-		await Assert.That(flags.Count(x => x.Name == "DEBUG")).IsEqualTo(1);
+		await Assert.That(await flags.CountAsync(x => x.Name == "DEBUG")).IsEqualTo(1);
 	}
 }
