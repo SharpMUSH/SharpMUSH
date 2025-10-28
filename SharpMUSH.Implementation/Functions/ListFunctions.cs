@@ -169,10 +169,30 @@ public partial class Functions
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "ITEMIZE", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> itemize(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "itemize", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular)]
+	public static ValueTask<CallState> Itemize(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var space = MModule.single(" ");
+		var list = parser.CurrentState.ArgumentsOrdered["0"].Message!;
+		var delim = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, space);
+		var conjunction = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, "and");
+		var punctuation = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, ",");
+		var splitList = MModule.split2(delim, list) ?? [];
+
+		if (splitList.Length > 2)
+		{
+			splitList[^1] = MModule.concat(
+				MModule.concat(
+					conjunction,
+					MModule.concat(space, splitList[^1])), 
+				space);
+		}
+
+		return ValueTask.FromResult<CallState>(
+			MModule.multipleWithDelimiter(
+				MModule.concat(punctuation, space),
+				splitList));
 	}
 
 	[SharpFunction(Name = "ibreak", MinArgs = 0, MaxArgs = 1,
