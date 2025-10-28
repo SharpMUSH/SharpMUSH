@@ -521,6 +521,15 @@ public class Migration_CreateDatabase : IArangoMigration
 					{
 						Collection = new ArangoCollection
 						{
+							Name = DatabaseConstants.HasAttributeEntry,
+							Type = ArangoCollectionType.Edge,
+							WaitForSync = true
+						}
+					},
+					new()
+					{
+						Collection = new ArangoCollection
+						{
 							Name = DatabaseConstants.HasObjectOwner,
 							Type = ArangoCollectionType.Edge,
 							WaitForSync = true
@@ -695,6 +704,21 @@ public class Migration_CreateDatabase : IArangoMigration
 							}
 						],
 						Name = DatabaseConstants.GraphAttributeFlags
+					},
+					new()
+					{
+						EdgeDefinitions =
+						[
+							new ArangoEdgeDefinition()
+							{
+								Collection = DatabaseConstants.HasAttributeEntry,
+								To = [DatabaseConstants.AttributeEntries],
+								From = [
+									DatabaseConstants.Attributes
+								]
+							}
+						],
+						Name = DatabaseConstants.GraphAttributeEntries
 					},
 					new()
 					{
@@ -909,6 +933,1301 @@ public class Migration_CreateDatabase : IArangoMigration
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasFlags, new SharpEdge { From = playerOneObj.Id, To = wizard.Id });
 	}
 
+	private static async Task<List<ArangoUpdateResult<ArangoVoid>>> CreateInitialSharpAttributeEntries(
+		IArangoMigrator migrator, ArangoHandle handle) =>
+	[
+				await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "AAHEAR",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "ABUY",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "ACLONE",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "ACONNECT",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "ADEATH",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "ADESCRIBE",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "ADESTROY",
+				DefaultFlags = (string[])["no_inherit","no_clone","wizard","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "ADISCONNECT",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "ADROP",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "AEFAIL",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "AENTER",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "AFAILURE",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "AFOLLOW",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "AGIVE",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "AHEAR",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "AIDESCRIBE",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "ALEAVE",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "ALFAIL",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "ALIAS",
+				DefaultFlags = (string[])["no_command","visual","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "AMAIL",
+				DefaultFlags = (string[])["wizard","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "AMHEAR",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "AMOVE",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "ANAME",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "APAYMENT",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "ARECEIVE",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "ASUCCESS",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "ATPORT",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "AUFAIL",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "AUNFOLLOW",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "AUSE",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "AWAY",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "AZENTER",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "AZLEAVE",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "BUY",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "CHANALIAS",
+				DefaultFlags = (string[])["no_command"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "CHARGES",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "CHATFORMAT",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "COMMENT",
+				DefaultFlags = (string[])["no_command","no_clone","wizard","mortal_dark","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "CONFORMAT",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "COST",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "DEATH",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "DEBUGFORWARDLIST",
+				DefaultFlags = (string[])["no_command","no_inherit","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "DESCFORMAT",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "DESCRIBE",
+				DefaultFlags = (string[])["no_command","visual","prefixmatch","public","nearby"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "DESTINATION",
+				DefaultFlags = (string[])["no_command"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "DOING",
+				DefaultFlags = (string[])["no_command","no_inherit","visual","public"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "DROP",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "EALIAS",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "EFAIL",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "ENTER",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "EXITFORMAT",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "EXITTO",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "FAILURE",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "FILTER",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "FOLLOW",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "FOLLOWERS",
+				DefaultFlags = (string[])["no_command","no_inherit","no_clone","wizard","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "FOLLOWING",
+				DefaultFlags = (string[])["no_command","no_inherit","no_clone","wizard","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "FORWARDLIST",
+				DefaultFlags = (string[])["no_command","no_inherit","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "GIVE",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "HAVEN",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "IDESCFORMAT",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "IDESCRIBE",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "IDLE",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "INFILTER",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "INPREFIX",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "INVFORMAT",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "LALIAS",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "LAST",
+				DefaultFlags = (string[])["no_clone","wizard","visual","locked","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "LASTFAILED",
+				DefaultFlags = (string[])["no_clone","wizard","locked","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "LASTIP",
+				DefaultFlags = (string[])["no_clone","wizard","locked","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "LASTLOGOUT",
+				DefaultFlags = (string[])["no_clone","wizard","locked","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "LASTPAGED",
+				DefaultFlags = (string[])["no_clone","wizard","locked","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "LASTSITE",
+				DefaultFlags = (string[])["no_clone","wizard","locked","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "LEAVE",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "LFAIL",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "LISTEN",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "MAILCURF",
+				DefaultFlags = (string[])["no_command","no_clone","wizard","locked","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "MAILFILTER",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "MAILFILTERS",
+				DefaultFlags = (string[])["no_command","no_clone","wizard","locked","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "MAILFOLDERS",
+				DefaultFlags = (string[])["no_command","no_clone","wizard","locked","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "MAILFORWARDLIST",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "MAILQUOTA",
+				DefaultFlags = (string[])["no_command","no_clone","wizard","locked"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "MAILSIGNATURE",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "MONIKER",
+				DefaultFlags = (string[])["no_command","wizard","visual","locked"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "MOVE",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "NAMEACCENT",
+				DefaultFlags = (string[])["no_command","visual","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "NAMEFORMAT",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "OBUY",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "ODEATH",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "ODESCRIBE",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "ODROP",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "OEFAIL",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "OENTER",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "OFAILURE",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "OFOLLOW",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "OGIVE",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "OIDESCRIBE",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "OLEAVE",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "OLFAIL",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "OMOVE",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "ONAME",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "OPAYMENT",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "ORECEIVE",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "OSUCCESS",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "OTPORT",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "OUFAIL",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "OUNFOLLOW",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "OUSE",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "OUTPAGEFORMAT",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "OXENTER",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "OXLEAVE",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "OXMOVE",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "OXTPORT",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "OZENTER",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "OZLEAVE",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "PAGEFORMAT",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "PAYMENT",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "PREFIX",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "PRICELIST",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "QUEUE",
+				DefaultFlags = (string[])["no_inherit","no_clone","wizard"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "RECEIVE",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "REGISTERED_EMAIL",
+				DefaultFlags = (string[])["no_inherit","no_clone","wizard","locked"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "RQUOTA",
+				DefaultFlags = (string[])["mortal_dark","locked"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "RUNOUT",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "SEMAPHORE",
+				DefaultFlags = (string[])["no_inherit","no_clone","locked"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "SEX",
+				DefaultFlags = (string[])["no_command","visual","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "SPEECHMOD",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "STARTUP",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "SUCCESS",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "TFPREFIX",
+				DefaultFlags = (string[])["no_command","no_inherit","no_clone","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "TPORT",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "TZ",
+				DefaultFlags = (string[])["no_command","visual"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "UFAIL",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "UNFOLLOW",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "USE",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "VA",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "VB",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "VC",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "VD",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "VE",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "VF",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "VG",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "VH",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "VI",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "VJ",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "VK",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "VL",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "VM",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "VN",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "VO",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "VP",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "VQ",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "VR",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "VRML_URL",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "VS",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "VT",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "VU",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "VV",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "VW",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "VX",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "VY",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "VZ",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "WA",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "WB",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "WC",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "WD",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "WE",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "WF",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "WG",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "WH",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "WI",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "WJ",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "WK",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "WL",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "WM",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "WN",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "WO",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "WP",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "WQ",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "WR",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "WS",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "WT",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "WU",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "WV",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "WW",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "WX",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "WY",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "WZ",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "XA",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "XB",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "XC",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "XD",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "XE",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "XF",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "XG",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "XH",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "XI",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "XJ",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "XK",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "XL",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "XM",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "XN",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "XO",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "XP",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "XQ",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "XR",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "XS",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "XT",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "XU",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "XV",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "XW",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "XX",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "XY",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "XZ",
+				DefaultFlags = (string[])[]
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			new
+			{
+				Name = "ZENTER",
+				DefaultFlags = (string[])["no_command","prefixmatch"]
+			}),
+	];
+	
 	private static async Task<List<ArangoUpdateResult<ArangoVoid>>> CreateInitialPowers(IArangoMigrator migrator,
 		ArangoHandle handle) =>
 	[

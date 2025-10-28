@@ -32,7 +32,7 @@ public partial class ArangoDatabase(
 {
 	private const string StartVertex = "startVertex";
 
-	public async ValueTask Migrate(CancellationToken cancellationToken = default)
+	public async ValueTask Migrate()
 	{
 		try
 		{
@@ -60,7 +60,7 @@ public partial class ArangoDatabase(
 		}
 	}
 
-	public async ValueTask<DBRef> CreatePlayerAsync(string name, string password, DBRef location, CancellationToken cancellationToken = default)
+	public async ValueTask<DBRef> CreatePlayerAsync(string name, string password, DBRef location)
 	{
 		var time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 		var objectLocation = await GetObjectNodeAsync(location);
@@ -127,7 +127,7 @@ public partial class ArangoDatabase(
 		return new DBRef(int.Parse(obj.New.Key), time);
 	}
 
-	public async ValueTask<DBRef> CreateRoomAsync(string name, SharpPlayer creator, CancellationToken cancellationToken = default)
+	public async ValueTask<DBRef> CreateRoomAsync(string name, SharpPlayer creator)
 	{
 		var time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
@@ -143,7 +143,7 @@ public partial class ArangoDatabase(
 		return new DBRef(int.Parse(obj.Key), time);
 	}
 
-	public async ValueTask<DBRef> CreateThingAsync(string name, AnySharpContainer location, SharpPlayer creator, CancellationToken cancellationToken = default)
+	public async ValueTask<DBRef> CreateThingAsync(string name, AnySharpContainer location, SharpPlayer creator)
 	{
 		var transaction = await arangoDb.Transaction.BeginAsync(handle,
 			new ArangoTransaction()
@@ -180,14 +180,14 @@ public partial class ArangoDatabase(
 		return new DBRef(int.Parse(obj.Key), time);
 	}
 
-	public async ValueTask<bool> LinkExitAsync(SharpExit exit, AnySharpContainer location, CancellationToken cancellationToken = default)
+	public async ValueTask<bool> LinkExitAsync(SharpExit exit, AnySharpContainer location)
 	{
 		await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphHomes, DatabaseConstants.HasHome,
 			new SharpEdgeCreateRequest(exit.Id!, location.Id));
 		return true;
 	}
 
-	public async ValueTask<bool> UnlinkExitAsync(SharpExit exit, CancellationToken cancellationToken = default)
+	public async ValueTask<bool> UnlinkExitAsync(SharpExit exit)
 	{
 		var result = await arangoDb.Query.ExecuteAsync<SharpEdgeQueryResult>(handle,
 			$"FOR v ,eIN 1..1 INBOUND {exit.Id} GRAPH {DatabaseConstants.GraphHomes} RETURN e");
@@ -204,7 +204,7 @@ public partial class ArangoDatabase(
 	}
 
 	public async ValueTask<DBRef> CreateExitAsync(string name, string[] aliases, AnySharpContainer location,
-		SharpPlayer creator, CancellationToken cancellationToken = default)
+		SharpPlayer creator)
 	{
 		var time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
@@ -226,7 +226,7 @@ public partial class ArangoDatabase(
 		return new DBRef(int.Parse(obj.Key), time);
 	}
 
-	public async ValueTask<SharpObjectFlag?> GetObjectFlagAsync(string name, CancellationToken cancellationToken = default)
+	public async ValueTask<SharpObjectFlag?> GetObjectFlagAsync(string name)
 		=> (await arangoDb.Query.ExecuteAsync<SharpObjectFlagQueryResult>(
 			handle,
 			$"FOR v in @@C1 FILTER v.Name == @flag RETURN v",
@@ -237,13 +237,13 @@ public partial class ArangoDatabase(
 			},
 			cache: true)).Select(SharpObjectFlagQueryToSharpFlag).FirstOrDefault();
 
-	public async ValueTask<IEnumerable<SharpObjectFlag>> GetObjectFlagsAsync(CancellationToken cancellationToken = default)
+	public async ValueTask<IEnumerable<SharpObjectFlag>> GetObjectFlagsAsync()
 		=> (await arangoDb.Query.ExecuteAsync<SharpObjectFlagQueryResult>(
 			handle,
 			$"FOR v in {DatabaseConstants.ObjectFlags:@} RETURN v",
 			cache: true)).Select(SharpObjectFlagQueryToSharpFlag);
 	
-	public async ValueTask<IEnumerable<SharpPower>> GetObjectPowersAsync(CancellationToken cancellationToken = default)
+	public async ValueTask<IEnumerable<SharpPower>> GetObjectPowersAsync()
 		=> (await arangoDb.Query.ExecuteAsync<SharpPowerQueryResult>(
 			handle,
 			$"FOR v in {DatabaseConstants.ObjectPowers:@} RETURN v",
@@ -275,7 +275,7 @@ public partial class ArangoDatabase(
 		return result.FirstOrDefault()?.Id;
 	}
 
-	public async ValueTask<bool> SetObjectFlagAsync(AnySharpObject target, SharpObjectFlag flag, CancellationToken cancellationToken = default)
+	public async ValueTask<bool> SetObjectFlagAsync(AnySharpObject target, SharpObjectFlag flag)
 	{
 		var edge = await GetObjectFlagEdge(target, flag);
 		if (edge is not null) return false;
@@ -286,7 +286,7 @@ public partial class ArangoDatabase(
 		return true;
 	}
 
-	public async ValueTask<bool> SetObjectPowerAsync(AnySharpObject dbref, SharpPower power, CancellationToken cancellationToken = default)
+	public async ValueTask<bool> SetObjectPowerAsync(AnySharpObject dbref, SharpPower power)
 	{
 		var edge = await GetObjectPowerEdge(dbref, power);
 		if (edge is not null) return false;
@@ -297,7 +297,7 @@ public partial class ArangoDatabase(
 		return true;
 	}
 
-	public async ValueTask<bool> UnsetObjectPowerAsync(AnySharpObject dbref, SharpPower power, CancellationToken cancellationToken = default)
+	public async ValueTask<bool> UnsetObjectPowerAsync(AnySharpObject dbref, SharpPower power)
 	{
 		var edge = await GetObjectPowerEdge(dbref, power);
 		if (edge is null) return false;
@@ -308,7 +308,7 @@ public partial class ArangoDatabase(
 		return true;
 	}
 
-	public async ValueTask SetObjectName(AnySharpObject obj, MarkupStringModule.MarkupString value, CancellationToken cancellationToken = default)
+	public async ValueTask SetObjectName(AnySharpObject obj, MarkupStringModule.MarkupString value)
 		=> await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Objects,
 			new
 			{
@@ -316,7 +316,7 @@ public partial class ArangoDatabase(
 				Name = value
 			});
 
-	public async ValueTask SetContentHome(AnySharpContent obj, AnySharpContainer home, CancellationToken cancellationToken = default)
+	public async ValueTask SetContentHome(AnySharpContent obj, AnySharpContainer home)
 	{
 		var response = await arangoDb.Query.ExecuteAsync<string>(handle,
 			$"FOR v,e IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphHomes} RETURN e._id",
@@ -328,7 +328,7 @@ public partial class ArangoDatabase(
 			contentEdge, new { To = home.Id });
 	}
 
-	public async ValueTask SetContentLocation(AnySharpContent obj, AnySharpContainer location, CancellationToken cancellationToken = default)
+	public async ValueTask SetContentLocation(AnySharpContent obj, AnySharpContainer location)
 	{
 		var response = await arangoDb.Query.ExecuteAsync<string>(handle,
 			$"FOR v,e IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphLocations} RETURN e._id",
@@ -340,7 +340,7 @@ public partial class ArangoDatabase(
 			contentEdge, new { To = location.Id });
 	}
 
-	public async ValueTask SetObjectParent(AnySharpObject obj, AnySharpObject? parent, CancellationToken cancellationToken = default)
+	public async ValueTask SetObjectParent(AnySharpObject obj, AnySharpObject? parent)
 	{
 		var response = await arangoDb.Query.ExecuteAsync<string>(handle,
 			$"FOR v,e IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphParents} RETURN e._id",
@@ -371,10 +371,10 @@ public partial class ArangoDatabase(
 	}
 
 	// Todo: Separate SET and UNSET better.
-	public async ValueTask UnsetObjectParent(AnySharpObject obj, CancellationToken cancellationToken = default)
+	public async ValueTask UnsetObjectParent(AnySharpObject obj)
 		=> await SetObjectParent(obj, null);
 
-	public async ValueTask SetObjectOwner(AnySharpObject obj, SharpPlayer owner, CancellationToken cancellationToken = default)
+	public async ValueTask SetObjectOwner(AnySharpObject obj, SharpPlayer owner)
 	{
 		var response = await arangoDb.Query.ExecuteAsync<string>(handle,
 			$"FOR v,e IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphObjectOwners} RETURN e._id",
@@ -386,7 +386,7 @@ public partial class ArangoDatabase(
 			contentEdge, new { To = owner.Id });
 	}
 
-	public async ValueTask<bool> UnsetObjectFlagAsync(AnySharpObject target, SharpObjectFlag flag, CancellationToken cancellationToken = default)
+	public async ValueTask<bool> UnsetObjectFlagAsync(AnySharpObject target, SharpObjectFlag flag)
 	{
 		var edge = await GetObjectFlagEdge(target, flag);
 		if (edge is null) return false;
@@ -405,7 +405,7 @@ public partial class ArangoDatabase(
 		return result.Select(SharpPowerQueryToSharpPower);
 	}
 
-	public async ValueTask<IEnumerable<SharpObjectFlag>> GetObjectFlagsAsync(string id, CancellationToken cancellationToken = default)
+	public async ValueTask<IEnumerable<SharpObjectFlag>> GetObjectFlagsAsync(string id)
 		=> (await arangoDb.Query.ExecuteAsync<SharpObjectFlagQueryResult>(handle,
 				$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphFlags} RETURN v"))
 			.Select(SharpObjectFlagQueryToSharpFlag);
@@ -430,7 +430,7 @@ public partial class ArangoDatabase(
 		return convertedResults;
 	}
 
-	public async ValueTask<SharpMail?> GetSentMailAsync(SharpObject sender, SharpPlayer recipient, int mail, CancellationToken cancellationToken = default)
+	public async ValueTask<SharpMail?> GetSentMailAsync(SharpObject sender, SharpPlayer recipient, int mail)
 	{
 		var results = await arangoDb.Query.ExecuteAsync<SharpMailQueryResult>(handle,
 			$"FOR path IN 1..1 INBOUND ALL_SHORTEST_PATH {recipient.Id} TO {sender.Id} GRAPH {DatabaseConstants.GraphMail} RETURN path.vertices[1]");
@@ -440,7 +440,7 @@ public partial class ArangoDatabase(
 		return convertedResults.FirstOrDefault();
 	}
 
-	public async ValueTask<string[]> GetMailFoldersAsync(SharpPlayer id, CancellationToken cancellationToken = default)
+	public async ValueTask<string[]> GetMailFoldersAsync(SharpPlayer id)
 	{
 		var results = await arangoDb.Query.ExecuteAsync<string>(handle,
 			$"FOR v IN 1..1 OUTBOUND {id.Id} GRAPH {DatabaseConstants.GraphMail} RETURN DISTINCT(v.Folder)");
@@ -492,7 +492,7 @@ public partial class ArangoDatabase(
 		};
 	}
 
-	public async ValueTask SendMailAsync(SharpObject from, SharpPlayer to, SharpMail mail, CancellationToken cancellationToken = default)
+	public async ValueTask SendMailAsync(SharpObject from, SharpPlayer to, SharpMail mail)
 	{
 		var transaction = await arangoDb.Transaction.BeginAsync(handle, new ArangoTransaction()
 		{
@@ -527,7 +527,7 @@ public partial class ArangoDatabase(
 		await arangoDb.Transaction.CommitAsync(transaction);
 	}
 
-	public async ValueTask UpdateMailAsync(string mailId, MailUpdate commandMail, CancellationToken cancellationToken = default)
+	public async ValueTask UpdateMailAsync(string mailId, MailUpdate commandMail)
 	{
 		var key = mailId.Split("/")[1];
 
@@ -552,24 +552,24 @@ public partial class ArangoDatabase(
 		}
 	}
 
-	public async ValueTask DeleteMailAsync(string mailId, CancellationToken cancellationToken = default)
+	public async ValueTask DeleteMailAsync(string mailId)
 	{
 		var key = mailId.Split("/")[1];
 		await arangoDb.Graph.Vertex.RemoveAsync(handle, DatabaseConstants.GraphMail, DatabaseConstants.Mails, key);
 	}
 
-	public async ValueTask RenameMailFolderAsync(SharpPlayer player, string folder, string newFolder, CancellationToken cancellationToken = default)
+	public async ValueTask RenameMailFolderAsync(SharpPlayer player, string folder, string newFolder)
 	{
 		var list = await GetIncomingMailsAsync(player, folder);
 		var updates = list.Select(x => new { Key = x.Id!.Split("/")[1], Folder = newFolder });
 		await arangoDb.Document.UpdateManyAsync(handle, DatabaseConstants.Mails, updates);
 	}
 
-	public async ValueTask MoveMailFolderAsync(string mailId, string newFolder, CancellationToken cancellationToken = default)
+	public async ValueTask MoveMailFolderAsync(string mailId, string newFolder)
 		=> await arangoDb.Graph.Vertex.UpdateAsync(handle, DatabaseConstants.GraphMail, DatabaseConstants.Mails,
 			mailId.Split("/")[1], new { Folder = newFolder });
 
-	public async ValueTask<SharpMail?> GetIncomingMailAsync(SharpPlayer id, string folder, int mail, CancellationToken cancellationToken = default)
+	public async ValueTask<SharpMail?> GetIncomingMailAsync(SharpPlayer id, string folder, int mail)
 	{
 		var results = await arangoDb.Query.ExecuteAsync<SharpMailQueryResult>(handle,
 			$"FOR v IN 1..1 OUTBOUND {id.Id} GRAPH {DatabaseConstants.GraphMail} FILTER v.Folder == {folder} LIMIT {mail},1 RETURN v");
@@ -579,7 +579,7 @@ public partial class ArangoDatabase(
 		return convertedResults.FirstOrDefault();
 	}
 
-	public async ValueTask SetExpandedObjectData(string sharpObjectId, string dataType, dynamic data, CancellationToken cancellationToken = default)
+	public async ValueTask SetExpandedObjectData(string sharpObjectId, string dataType, dynamic data)
 	{
 		// Get the edge that leads to it, otherwise we will have to create one.
 		var result = await arangoDb.Query.ExecuteAsync<dynamic>(handle,
@@ -609,7 +609,7 @@ public partial class ArangoDatabase(
 		);
 	}
 
-	public async ValueTask<string?> GetExpandedObjectData(string sharpObjectId, string dataType, CancellationToken cancellationToken = default)
+	public async ValueTask<string?> GetExpandedObjectData(string sharpObjectId, string dataType)
 	{
 		// Get the edge that leads to it, otherwise we will have to create one.
 		var result = await arangoDb.Query.ExecuteAsync<JObject>(handle,
@@ -618,7 +618,7 @@ public partial class ArangoDatabase(
 		return resultingValue?.ToString(Formatting.None);
 	}
 
-	public async ValueTask SetExpandedServerData(string dataType, string data, CancellationToken cancellationToken = default)
+	public async ValueTask SetExpandedServerData(string dataType, string data)
 	{
 		var newJson = new Dictionary<string, dynamic>
 		{
@@ -639,7 +639,7 @@ public partial class ArangoDatabase(
 		public required T Data { get; set; }
 	}
 
-	public async ValueTask<string?> GetExpandedServerData(string dataType, CancellationToken cancellationToken = default)
+	public async ValueTask<string?> GetExpandedServerData(string dataType)
 	{
 		try
 		{
@@ -716,7 +716,7 @@ public partial class ArangoDatabase(
 		};
 	}
 
-	public async ValueTask<SharpChannel?> GetChannelAsync(string name, CancellationToken cancellationToken = default)
+	public async ValueTask<SharpChannel?> GetChannelAsync(string name)
 	{
 		var result = await arangoDb.Query.ExecuteAsync<SharpChannelQueryResult>(
 			handle,
@@ -737,7 +737,7 @@ public partial class ArangoDatabase(
 	}
 
 	public async ValueTask CreateChannelAsync(MarkupStringModule.MarkupString channel, string[] privs,
-		SharpPlayer owner, CancellationToken cancellationToken = default)
+		SharpPlayer owner)
 	{
 		var transaction = await arangoDb.Transaction.BeginAsync(handle,
 			new ArangoTransaction
@@ -769,7 +769,7 @@ public partial class ArangoDatabase(
 	public async ValueTask UpdateChannelAsync(SharpChannel channel, MarkupStringModule.MarkupString? name,
 		MarkupStringModule.MarkupString? description, string[]? privs,
 		string? joinLock, string? speakLock, string? seeLock, string? hideLock, string? modLock, string? mogrifier,
-		int? buffer, CancellationToken cancellationToken = default)
+		int? buffer)
 		=> await arangoDb.Graph.Vertex.UpdateAsync(handle,
 			DatabaseConstants.GraphChannels, DatabaseConstants.Channels, channel.Id,
 			new
@@ -790,7 +790,7 @@ public partial class ArangoDatabase(
 				Mogrifier = mogrifier ?? channel.Mogrifier
 			});
 
-	public async ValueTask UpdateChannelOwnerAsync(SharpChannel channel, SharpPlayer newOwner, CancellationToken cancellationToken = default)
+	public async ValueTask UpdateChannelOwnerAsync(SharpChannel channel, SharpPlayer newOwner)
 	{
 		var response = await arangoDb.Query.ExecuteAsync<string>(handle,
 			$"FOR v,e IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.OwnerOfChannel} RETURN e._id",
@@ -800,15 +800,15 @@ public partial class ArangoDatabase(
 			ownerEdge, new { To = newOwner.Id });
 	}
 
-	public async ValueTask DeleteChannelAsync(SharpChannel channel, CancellationToken cancellationToken = default) =>
+	public async ValueTask DeleteChannelAsync(SharpChannel channel) =>
 		await arangoDb.Graph.Vertex.RemoveAsync(handle, DatabaseConstants.GraphChannels, DatabaseConstants.Channels,
 			channel.Id);
 
-	public async ValueTask AddUserToChannelAsync(SharpChannel channel, AnySharpObject obj, CancellationToken cancellationToken = default) =>
+	public async ValueTask AddUserToChannelAsync(SharpChannel channel, AnySharpObject obj) =>
 		await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphChannels, DatabaseConstants.OnChannel,
 			new SharpEdgeCreateRequest(channel.Id!, obj.Object().Id!));
 
-	public async ValueTask RemoveUserFromChannelAsync(SharpChannel channel, AnySharpObject obj, CancellationToken cancellationToken = default)
+	public async ValueTask RemoveUserFromChannelAsync(SharpChannel channel, AnySharpObject obj)
 	{
 		var result = await arangoDb.Query.ExecuteAsync<SharpEdgeQueryResult>(handle,
 			$"FOR v IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.OnChannel} RETURN v",
@@ -824,7 +824,7 @@ public partial class ArangoDatabase(
 	}
 
 	public async ValueTask UpdateChannelUserStatusAsync(SharpChannel channel, AnySharpObject obj,
-		SharpChannelStatus status, CancellationToken cancellationToken = default)
+		SharpChannelStatus status)
 	{
 		var result = await arangoDb.Query.ExecuteAsync<SharpEdgeQueryResult>(handle,
 			$"FOR v IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.OnChannel} RETURN v",
@@ -961,7 +961,7 @@ public partial class ArangoDatabase(
 		return populatedOwner.AsPlayer;
 	}
 
-	public async ValueTask<AnyOptionalSharpObject> GetParentAsync(string id, CancellationToken cancellationToken = default)
+	public async ValueTask<AnyOptionalSharpObject> GetParentAsync(string id)
 	{
 		// TODO: Optimize
 		var parentId = (await arangoDb.Query.ExecuteAsync<dynamic>(handle,
@@ -997,8 +997,13 @@ public partial class ArangoDatabase(
 			thing => thing,
 			_ => throw new Exception("Invalid Location found"));
 	}
+	
+	public ValueTask<IAsyncEnumerable<SharpAttributeEntry>> GetAllAttributeEntriesAsync()
+	{
+		throw new NotImplementedException();
+	}
 
-	public async ValueTask<AnyOptionalSharpObject> GetObjectNodeAsync(DBRef dbref, CancellationToken cancellationToken = default)
+	public async ValueTask<AnyOptionalSharpObject> GetObjectNodeAsync(DBRef dbref)
 	{
 		SharpObjectQueryResult? obj;
 		try
@@ -1138,7 +1143,7 @@ public partial class ArangoDatabase(
 		};
 	}
 
-	public async ValueTask<SharpObject?> GetBaseObjectNodeAsync(DBRef dbref, CancellationToken cancellationToken = default)
+	public async ValueTask<SharpObject?> GetBaseObjectNodeAsync(DBRef dbref)
 	{
 		var obj = await arangoDb.Document.GetAsync<SharpObjectQueryResult>(handle, DatabaseConstants.Objects,
 			dbref.Number.ToString());
@@ -1230,7 +1235,7 @@ public partial class ArangoDatabase(
 	}
 
 	public async ValueTask<IAsyncEnumerable<LazySharpAttribute>?> GetLazyAttributesAsync(DBRef dbref,
-		string attributePattern, CancellationToken cancellationToken = default)
+		string attributePattern)
 	{
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 		var result =
@@ -1272,7 +1277,7 @@ public partial class ArangoDatabase(
 	}
 
 
-	public async ValueTask<IAsyncEnumerable<SharpAttribute>?> GetAttributesAsync(DBRef dbref, string attributePattern, CancellationToken cancellationToken = default)
+	public async ValueTask<IAsyncEnumerable<SharpAttribute>?> GetAttributesAsync(DBRef dbref, string attributePattern)
 	{
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 		var result =
@@ -1309,7 +1314,7 @@ public partial class ArangoDatabase(
 	}
 
 	public async ValueTask<IAsyncEnumerable<SharpAttribute>?> GetAttributesByRegexAsync(DBRef dbref,
-		string attributePattern, CancellationToken cancellationToken = default)
+		string attributePattern)
 	{
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 		var result =
@@ -1345,7 +1350,7 @@ public partial class ArangoDatabase(
 
 
 	public async ValueTask<IAsyncEnumerable<LazySharpAttribute>?> GetLazyAttributesByRegexAsync(DBRef dbref,
-		string attributePattern, CancellationToken cancellationToken = default)
+		string attributePattern)
 	{
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 		var result =
@@ -1427,21 +1432,21 @@ public partial class ArangoDatabase(
 			}));
 	}
 
-	public async ValueTask SetLockAsync(SharpObject target, string lockName, string lockString, CancellationToken cancellationToken = default)
+	public async ValueTask SetLockAsync(SharpObject target, string lockName, string lockString)
 		=> await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Objects, new
 		{
 			target.Key,
 			Locks = target.Locks.Add(lockName, lockString)
 		}, mergeObjects: true);
 
-	public async ValueTask UnsetLockAsync(SharpObject target, string lockName, CancellationToken cancellationToken = default)
+	public async ValueTask UnsetLockAsync(SharpObject target, string lockName)
 		=> await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Objects, new
 		{
 			target.Key,
 			Locks = target.Locks.Remove(lockName)
 		}, mergeObjects: true);
 
-	public async ValueTask<IAsyncEnumerable<SharpAttribute>?> GetAttributeAsync(DBRef dbref, CancellationToken cancellationToken = default, params string[] attribute)
+	public async ValueTask<IAsyncEnumerable<SharpAttribute>?> GetAttributeAsync(DBRef dbref, params string[] attribute)
 	{
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 
@@ -1466,7 +1471,7 @@ public partial class ArangoDatabase(
 	}
 
 	public async ValueTask<IAsyncEnumerable<LazySharpAttribute>?> GetLazyAttributeAsync(DBRef dbref,
-		CancellationToken cancellationToken = default, params string[] attribute)
+		params string[] attribute)
 	{
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 
@@ -1489,7 +1494,7 @@ public partial class ArangoDatabase(
 	}
 
 	public async ValueTask<bool> SetAttributeAsync(DBRef dbref, string[] attribute, MarkupStringModule.MarkupString value,
-		SharpPlayer owner, CancellationToken cancellationToken = default)
+		SharpPlayer owner)
 	{
 		ArgumentException.ThrowIfNullOrEmpty(owner.Id);
 
@@ -1571,41 +1576,41 @@ public partial class ArangoDatabase(
 		return true;
 	}
 
-	public async ValueTask<bool> SetAttributeFlagAsync(SharpObject dbref, string[] attribute, SharpAttributeFlag flag, CancellationToken cancellationToken = default)
+	public async ValueTask<bool> SetAttributeFlagAsync(SharpObject dbref, string[] attribute, SharpAttributeFlag flag)
 	{
-		var attrInfo = await GetAttributeAsync(dbref.DBRef, cancellationToken, attribute);
+		var attrInfo = await GetAttributeAsync(dbref.DBRef, attribute);
 		if (attrInfo is null) return false;
 		var attr = await attrInfo.LastAsync();
 
-		await SetAttributeFlagAsync(attr, flag, cancellationToken);
+		await SetAttributeFlagAsync(attr, flag);
 		return true;
 	}
 
-	public async ValueTask SetAttributeFlagAsync(SharpAttribute attr, SharpAttributeFlag flag, CancellationToken cancellationToken = default) =>
+	public async ValueTask SetAttributeFlagAsync(SharpAttribute attr, SharpAttributeFlag flag) =>
 		await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Attributes, new
 		{
 			attr.Key,
 			Value = attr.Flags.ToImmutableArray().Add(flag)
 		});
 
-	public async ValueTask<bool> UnsetAttributeFlagAsync(SharpObject dbref, string[] attribute, SharpAttributeFlag flag, CancellationToken cancellationToken = default)
+	public async ValueTask<bool> UnsetAttributeFlagAsync(SharpObject dbref, string[] attribute, SharpAttributeFlag flag)
 	{
-		var attrInfo = await GetAttributeAsync(dbref.DBRef, cancellationToken, attribute);
+		var attrInfo = await GetAttributeAsync(dbref.DBRef, attribute);
 		if (attrInfo is null) return false;
 		var attr = await attrInfo.LastAsync();
 
-		await UnsetAttributeFlagAsync(attr, flag, cancellationToken);
+		await UnsetAttributeFlagAsync(attr, flag);
 		return true;
 	}
 
-	public async ValueTask UnsetAttributeFlagAsync(SharpAttribute attr, SharpAttributeFlag flag, CancellationToken cancellationToken = default) =>
+	public async ValueTask UnsetAttributeFlagAsync(SharpAttribute attr, SharpAttributeFlag flag) =>
 		await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Attributes, new
 		{
 			attr.Key,
 			Value = attr.Flags.ToImmutableArray().Remove(flag)
 		});
 
-	public async ValueTask<SharpAttributeFlag?> GetAttributeFlagAsync(string flagName, CancellationToken cancellationToken = default) =>
+	public async ValueTask<SharpAttributeFlag?> GetAttributeFlagAsync(string flagName) =>
 		(await arangoDb.Query.ExecuteAsync<SharpAttributeFlag>(handle,
 			"FOR v in @@C1 FILTER v.Name == @flag RETURN v",
 			bindVars: new Dictionary<string, object>
@@ -1619,14 +1624,14 @@ public partial class ArangoDatabase(
 			$"FOR v in {DatabaseConstants.AttributeFlags:@} RETURN v",
 			cache: true);
 
-	public ValueTask<bool> ClearAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default)
+	public ValueTask<bool> ClearAttributeAsync(DBRef dbref, string[] attribute)
 	{
 		// Set the contents to empty.
 
 		throw new NotImplementedException();
 	}
 
-	public ValueTask<bool> WipeAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default)
+	public ValueTask<bool> WipeAttributeAsync(DBRef dbref, string[] attribute)
 	{
 		// Wipe a list of attributes. We assume the calling code figured out the permissions part.
 
@@ -1662,7 +1667,7 @@ public partial class ArangoDatabase(
 	/// <param name="obj">Location</param>
 	/// <param name="depth">Depth</param>
 	/// <returns>The deepest findable object based on depth</returns>
-	public async ValueTask<AnyOptionalSharpContainer> GetLocationAsync(DBRef obj, int depth = 1, CancellationToken cancellationToken = default)
+	public async ValueTask<AnyOptionalSharpContainer> GetLocationAsync(DBRef obj, int depth = 1)
 	{
 		var baseObject = await GetObjectNodeAsync(obj);
 		if (baseObject.IsNone) return new None();
@@ -1691,7 +1696,7 @@ public partial class ArangoDatabase(
 	/// <param name="id">Location ID</param>
 	/// <param name="depth">Depth</param>
 	/// <returns>The deepest findable object based on depth</returns>
-	public async ValueTask<AnySharpContainer> GetLocationAsync(string id, int depth = 1, CancellationToken cancellationToken = default)
+	public async ValueTask<AnySharpContainer> GetLocationAsync(string id, int depth = 1)
 	{
 		var variableDepth = depth == -1 ? "0" : $"0..{depth}";
 		var locationQuery =
@@ -1711,7 +1716,7 @@ public partial class ArangoDatabase(
 		return trueLocation;
 	}
 
-	public async ValueTask<AnySharpContainer> GetLocationAsync(AnySharpObject obj, int depth = 1, CancellationToken cancellationToken = default) =>
+	public async ValueTask<AnySharpContainer> GetLocationAsync(AnySharpObject obj, int depth = 1) =>
 		(await GetLocationAsync(obj.Object().DBRef, depth)).WithoutNone();
 
 	public async ValueTask<IAsyncEnumerable<AnySharpContent>?> GetContentsAsync(DBRef obj)
@@ -1816,7 +1821,7 @@ public partial class ArangoDatabase(
 			));
 	}
 
-	public async ValueTask<IAsyncEnumerable<SharpPlayer>> GetPlayerByNameOrAliasAsync(string name, CancellationToken cancellationToken = default)
+	public async ValueTask<IAsyncEnumerable<SharpPlayer>> GetPlayerByNameOrAliasAsync(string name)
 	{
 		// TODO: Look up by Alias.
 		var query = await arangoDb.Query.ExecuteAsync<string>(handle,
@@ -1837,7 +1842,7 @@ public partial class ArangoDatabase(
 			.Select(x => x.AsPlayer);
 	}
 
-	public async ValueTask MoveObjectAsync(AnySharpContent enactorObj, AnySharpContainer destination, CancellationToken cancellationToken = default)
+	public async ValueTask MoveObjectAsync(AnySharpContent enactorObj, AnySharpContainer destination)
 	{
 		var edge = (await arangoDb.Query.ExecuteAsync<SharpEdgeQueryResult>(handle,
 				$"FOR v,e IN 1..1 OUTBOUND {enactorObj.Id} GRAPH {DatabaseConstants.GraphLocations} RETURN e"))
@@ -1855,12 +1860,12 @@ public partial class ArangoDatabase(
 			waitForSync: true);
 	}
 
-	public async ValueTask SetupLogging(CancellationToken cancellationToken = default)
+	public async ValueTask SetupLogging()
 	{
 		await ValueTask.CompletedTask;
 	}
 
-	public async ValueTask SetPlayerPasswordAsync(SharpPlayer player, string password, CancellationToken cancellationToken = default)
+	public async ValueTask SetPlayerPasswordAsync(SharpPlayer player, string password)
 	{
 		var hashed = passwordService.HashPassword(player.Object.DBRef.ToString(), password);
 

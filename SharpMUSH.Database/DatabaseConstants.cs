@@ -33,6 +33,7 @@ public static class DatabaseConstants
 	public const string HasFlags = "edge_has_flags";
 	public const string HasPowers = "edge_has_powers";
 	public const string HasAttribute = "edge_has_attribute";
+	public const string HasAttributeEntry = "edge_has_attribute_entry";
 	public const string HasAttributeFlag = "edge_has_attribute_flag";
 	public const string HasHook = "edge_has_hook";
 	public const string HasAttributeOwner = "edge_has_attribute_owner";
@@ -73,6 +74,11 @@ public static class DatabaseConstants
 	/// <see cref="Attributes"/> -> <see cref="HasAttributeFlag"/> -> <see cref="AttributeFlags"/>
 	/// </summary>
 	public const string GraphAttributeFlags = "graph_attribute_flags";
+	/// <summary>
+	/// Describes the relationship between attributes and their flags.
+	/// <see cref="Attributes"/> -> <see cref="HasAttributeEntry"/> -> <see cref="AttributeEntries"/>
+	/// </summary>
+	public const string GraphAttributeEntries = "graph_attribute_entries";
 	/// <summary>
 	/// Describes the relationship between contents and their container locations.
 	/// <see cref="verticesContent"/> -> <see cref="AtLocation"/> -> <see cref="verticesContainer"/>
