@@ -7,16 +7,16 @@ namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
 public static class ChannelWhat
 {
-	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, MString channelName)
+	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService locateService, IPermissionService permissionService, IMediator mediator, INotifyService notifyService, MString channelName)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
 		if (await executor.IsGuest())
 		{
-			await NotifyService.Notify(executor, "CHAT: Guests may not modify channels.");
+			await notifyService.Notify(executor, "CHAT: Guests may not modify channels.");
 			return new CallState("#-1 Guests may not modify channels.");
 		}
 		
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService, PermissionService, Mediator, NotifyService, channelName, true);
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, locateService, permissionService, mediator, notifyService, channelName, true);
 
 		if (maybeChannel.IsError)
 		{
@@ -25,8 +25,8 @@ public static class ChannelWhat
 
 		var channel = maybeChannel.AsChannel;
 
-		var members = await channel.Members.WithCancellation(CancellationToken.None);
-		var memberList = members.Select(x => x.Member).ToList();
+		var members = channel.Members.Value;
+		var memberList = members.Select(x => x.Member).ToArrayAsync();
 		var memberString = string.Join(", ", memberList);
 
 		return new CallState(MModule.single(memberString));

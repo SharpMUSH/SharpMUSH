@@ -9,7 +9,9 @@ namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
 public static class ChannelList
 {
-	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, MString arg0, MString arg1, string[] switches)
+	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService,
+		IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, MString arg0, MString arg1,
+		string[] switches)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var channels = await Mediator.Send(new GetChannelListQuery());
@@ -27,16 +29,16 @@ public static class ChannelList
 
 		var channelList = await channels
 			.ToAsyncEnumerable()
-			.Where(async (x,_) => await PermissionService.ChannelCanSeeAsync(executor,x))
-			.Where(async (x,_) => !offSwitch || (await x.Members.WithCancellation(CancellationToken.None))
-				.All(m => m.Member.Object().Id != executor.Object().Id))
-			.Where(async (x,_) => !onSwitch || (await x.Members.WithCancellation(CancellationToken.None))
-				.Any(m => m.Member.Object().Id == executor.Object().Id))
-			.Select((channel,_) => quietSwitch 
+			.Where(async (x, _) => await PermissionService.ChannelCanSeeAsync(executor, x))
+			.Where(async (x, ct) => !offSwitch || await x.Members.Value
+				.AllAsync(m => m.Member.Object().Id != executor.Object().Id, ct))
+			.Where(async (x, ct) => !onSwitch || await x.Members.Value
+				.AnyAsync(m => m.Member.Object().Id == executor.Object().Id, ct))
+			.Select((channel, _) => quietSwitch
 				? channel.Name
 				: MModule.concat(MModule.single("Name: "), channel.Name))
 			.ToArrayAsync();
-		
+
 		return new CallState(MModule.multiple(channelList));
 	}
 }

@@ -42,7 +42,8 @@ public class PermissionService(ILockService lockService) : IPermissionService
 		params SharpAttribute[] attribute)
 		=> await CanExamine(viewer, target) || attribute.Last().IsVisual();
 
-	public async ValueTask<bool> CanViewAttribute(AnySharpObject viewer, AnySharpObject target, params LazySharpAttribute[] attribute)
+	public async ValueTask<bool> CanViewAttribute(AnySharpObject viewer, AnySharpObject target,
+		params LazySharpAttribute[] attribute)
 		=> await CanExamine(viewer, target) || attribute.Last().IsVisual();
 
 	public async ValueTask<bool> CanSee(AnySharpObject viewer, AnySharpObject target)
@@ -54,7 +55,7 @@ public class PermissionService(ILockService lockService) : IPermissionService
 
 		return !await target.IsDark();
 	}
-	
+
 	public async ValueTask<bool> CanSee(AnySharpObject viewer, SharpObject target)
 	{
 		if (await viewer.IsPriv() || await viewer.IsSee_All())
@@ -90,7 +91,8 @@ public class PermissionService(ILockService lockService) : IPermissionService
 		params SharpAttribute[] attribute)
 		=> CanEvalAttr(viewer, target, attribute.Last());
 
-	public ValueTask<bool> CanExecuteAttribute(AnySharpObject viewer, AnySharpObject target, params LazySharpAttribute[] attribute)
+	public ValueTask<bool> CanExecuteAttribute(AnySharpObject viewer, AnySharpObject target,
+		params LazySharpAttribute[] attribute)
 		=> CanEvalAttr(viewer, target, attribute.Last());
 
 	public async ValueTask<bool> Controls(AnySharpObject who, AnySharpObject target)
@@ -149,7 +151,7 @@ public class PermissionService(ILockService lockService) : IPermissionService
 		var fromStep = from.MinusRoom();
 		var toStep = to.MinusRoom();
 
-		if (type.HasFlag(IPermissionService.InteractType.Hear)  && !lockService.Evaluate(LockType.Interact, to, from))
+		if (type.HasFlag(IPermissionService.InteractType.Hear) && !lockService.Evaluate(LockType.Interact, to, from))
 			return false;
 
 		// TODO: This looks like this is 'return true or true'.
@@ -161,7 +163,8 @@ public class PermissionService(ILockService lockService) : IPermissionService
 		return true;
 	}
 
-	public async ValueTask<bool> CanInteract(AnySharpContent result, AnySharpObject executor, IPermissionService.InteractType type) 
+	public async ValueTask<bool> CanInteract(AnySharpContent result, AnySharpObject executor,
+		IPermissionService.InteractType type)
 		=> await CanInteract(result.WithRoomOption(), executor, type);
 
 	public static async ValueTask<bool> CanEval(AnySharpObject evaluator, AnySharpObject evaluationTarget)
@@ -192,8 +195,8 @@ public class PermissionService(ILockService lockService) : IPermissionService
 	/// <param name="who">Who wants to pass the lock.</param>
 	/// <param name="thing">Against what thing?</param>
 	/// <returns>Whether or not they pass te basic lock.</returns>
-	public ValueTask<bool> CouldDoIt(AnySharpObject who, AnyOptionalSharpObject thing) 
-		=> ValueTask.FromResult( thing switch
+	public ValueTask<bool> CouldDoIt(AnySharpObject who, AnyOptionalSharpObject thing)
+		=> ValueTask.FromResult(thing switch
 		{
 			{ IsNone: true } => false,
 			_ => PassesLock(who, thing.Known, LockType.Basic)
@@ -204,18 +207,18 @@ public class PermissionService(ILockService lockService) : IPermissionService
 		/*
 		 // D:\pennmush\src\move.c
 		 // Most details are in do_move (395)
-		 
+
       if (!eval_lock_with(player, Location(player), Leave_Lock, pe_info)) {
         fail_lock(player, Location(player), Leave_Lock,
                   T("You can't go that way."), NOTHING);
         return;
       }
-      
+
       // could_doit(player, exit_m, pe_info)
-      
-      
+
+
 		 */
-		
+
 		var _ = who;
 		var _2 = exit;
 		var _3 = destination;
@@ -267,8 +270,7 @@ public class PermissionService(ILockService lockService) : IPermissionService
 			   && lockService.Evaluate(channel.SeeLock, channel, target)
 		   )
 		   || (
-			   (await channel.Members.WithCancellation(CancellationToken.None))
-			   .Any(x => x.Member.Id() == target.Id())
+			   await channel.Members.Value.AnyAsync(x => x.Member.Id() == target.Id())
 			   && await ChannelCanSpeak(target, channel)
 		   );
 

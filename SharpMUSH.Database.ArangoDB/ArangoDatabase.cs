@@ -695,16 +695,13 @@ public partial class ArangoDatabase(
 		return owner.AsPlayer;
 	}
 
-	private async ValueTask<IEnumerable<(AnySharpObject Member, SharpChannelStatus Status)>> GetChannelMembersAsync(
+	private IAsyncEnumerable<(AnySharpObject Member, SharpChannelStatus Status)> GetChannelMembersAsync(
 		string channelId, CancellationToken ct = default)
-	{
-		var vertexes = arangoDb.Query.ExecuteStreamAsync<(string Id, SharpChannelUserStatusQueryResult Status)>(handle,
-			$"FOR v IN 1..1 INBOUND {channelId} GRAPH {DatabaseConstants.GraphChannels} RETURN {{Id: v._id, Status: e}}",
-			cancellationToken: ct);
-
-		return await vertexes
-			.Select<(string Id, SharpChannelUserStatusQueryResult Status), (AnySharpObject, SharpChannelStatus
-				)>(async (x, cancelToken) =>
+		=> arangoDb.Query.ExecuteStreamAsync<(string Id, SharpChannelUserStatusQueryResult Status)>(handle,
+				$"FOR v IN 1..1 INBOUND {channelId} GRAPH {DatabaseConstants.GraphChannels} RETURN {{Id: v._id, Status: e}}",
+				cancellationToken: ct)
+			.Select<(string Id, SharpChannelUserStatusQueryResult Status), (AnySharpObject, SharpChannelStatus)>(
+				async (x, cancelToken) =>
 				((await GetObjectNodeAsync(x.Id, cancelToken)).Known(),
 					new SharpChannelStatus(
 						Combine: x.Status.Combine,
@@ -712,9 +709,7 @@ public partial class ArangoDatabase(
 						Hide: x.Status.Hide,
 						Mute: x.Status.Mute,
 						Title: MarkupStringModule.deserialize(x.Status.Title)
-					)))
-			.ToArrayAsync(CancellationToken.None);
-	}
+					)));
 
 	private SharpChannel SharpChannelQueryToSharpChannel(SharpChannelQueryResult x) =>
 		new()
@@ -729,8 +724,8 @@ public partial class ArangoDatabase(
 			HideLock = x.HideLock,
 			ModLock = x.ModLock,
 			Owner = new AsyncLazy<SharpPlayer>(async ct => await GetChannelOwnerAsync(x.Id, ct)),
-			Members = new AsyncLazy<IEnumerable<(AnySharpObject, SharpChannelStatus)>>(async ct =>
-				await GetChannelMembersAsync(x.Id, ct)),
+			Members = new Lazy<IAsyncEnumerable<(AnySharpObject, SharpChannelStatus)>>(() =>
+				GetChannelMembersAsync(x.Id, CancellationToken.None)),
 			Mogrifier = x.Mogrifier,
 			Buffer = x.Buffer
 		};

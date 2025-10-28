@@ -9,7 +9,7 @@ public class ChannelMessageRequestHandler(IPermissionService permissionService, 
 {
 	public async ValueTask Handle(ChannelMessageNotification notification, CancellationToken cancellationToken)
 	{
-		var channelMembers = await notification.Channel.Members.WithCancellation(cancellationToken);
+		var channelMembers = await notification.Channel.Members.Value.ToArrayAsync(cancellationToken);
 		var chanName = notification.Channel.Name;
 		var message = MModule.multiple([MModule.single("<"), chanName, MModule.single("> "), notification.Message]);
 		
