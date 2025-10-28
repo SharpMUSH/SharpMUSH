@@ -17,6 +17,7 @@ public interface ISharpDatabase
 	/// <param name="name">Player name</param>
 	/// <param name="password">Player password</param>
 	/// <param name="location">Location to create it in</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>New player <see cref="DBRef"/></returns>
 	ValueTask<DBRef> CreatePlayerAsync(string name, string password, DBRef location, CancellationToken cancellationToken = default);
 
@@ -25,6 +26,7 @@ public interface ISharpDatabase
 	/// </summary>
 	/// <param name="player">Player</param>
 	/// <param name="password">plaintext password</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
 	ValueTask SetPlayerPasswordAsync(SharpPlayer player, string password, CancellationToken cancellationToken = default);
 
 	/// <summary>
@@ -32,6 +34,7 @@ public interface ISharpDatabase
 	/// </summary>
 	/// <param name="name">Room Name</param>
 	/// <param name="creator">Room Player-Creator</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>New room <see cref="DBRef"/></returns>
 	ValueTask<DBRef> CreateRoomAsync(string name, SharpPlayer creator, CancellationToken cancellationToken = default);
 
@@ -41,6 +44,7 @@ public interface ISharpDatabase
 	/// <param name="name">Thing name</param>
 	/// <param name="location">Location to create it in</param>
 	/// <param name="creator">Owner to the thing</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>New thing <see cref="DBRef"/></returns>
 	ValueTask<DBRef> CreateThingAsync(string name, AnySharpContainer location, SharpPlayer creator, CancellationToken cancellationToken = default);
 
@@ -51,6 +55,7 @@ public interface ISharpDatabase
 	/// <param name="aliases">Exit Aliases</param>
 	/// <param name="location">Location for the Exit</param>
 	/// <param name="creator">Owner to the exit</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>New thing <see cref="DBRef"/></returns>
 	ValueTask<DBRef> CreateExitAsync(string name, string[] aliases, AnySharpContainer location, SharpPlayer creator, CancellationToken cancellationToken = default);
 
@@ -59,6 +64,7 @@ public interface ISharpDatabase
 	/// </summary>
 	/// <param name="exit"><see cref="SharpExit"/></param>
 	/// <param name="location"><see cref="AnySharpContainer"/></param>
+	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>Success if all elements existed and were able to be linked</returns>
 	ValueTask<bool> LinkExitAsync(SharpExit exit, AnySharpContainer location, CancellationToken cancellationToken = default);
 
@@ -66,6 +72,7 @@ public interface ISharpDatabase
 	/// Unlink an exit from its destination location. Does not clear the DESTINATION / EXITTO attribute.
 	/// </summary>
 	/// <param name="exit"><see cref="SharpExit"/></param>
+	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>Success if the element still existed and could be unlinked.</returns>
 	ValueTask<bool> UnlinkExitAsync(SharpExit exit, CancellationToken cancellationToken = default);
 
@@ -75,6 +82,7 @@ public interface ISharpDatabase
 	/// <param name="target">What object to lock</param>
 	/// <param name="lockName">The name of the lock</param>
 	/// <param name="lockString">The string of the Lock</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
 	ValueTask SetLockAsync(SharpObject target, string lockName, string lockString, CancellationToken cancellationToken = default);
 	
 	/// <summary>
@@ -82,6 +90,7 @@ public interface ISharpDatabase
 	/// </summary>
 	/// <param name="target">What object to lock</param>
 	/// <param name="lockName">The name of the lock</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
 	ValueTask UnsetLockAsync(SharpObject target, string lockName, CancellationToken cancellationToken = default);
 
 	/// <summary>
@@ -89,24 +98,26 @@ public interface ISharpDatabase
 	/// </summary>
 	/// <param name="dbref">DBRef of an object to get the attributes for</param>
 	/// <param name="attribute">Attribute Path - uses attribute leaves</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>The <see cref="SharpAttribute"/> hierarchy, with the last attribute being the final leaf.</returns>
-	ValueTask<IAsyncEnumerable<SharpAttribute>?> GetAttributeAsync(DBRef dbref, CancellationToken cancellationToken = default, params string[] attribute);
+	ValueTask<IAsyncEnumerable<SharpAttribute>?> GetAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default);
 
 	// TODO: Consider the return value, as an attribute pattern returns multiple attributes.
 	// These should return full attribute paths, so likely IEnumerable<IEnumerable<SharpAttribute>>.
-	ValueTask<IAsyncEnumerable<SharpAttribute>?> GetAttributesAsync(DBRef dbref, string attribute_pattern, CancellationToken cancellationToken = default);
-	ValueTask<IAsyncEnumerable<SharpAttribute>?> GetAttributesByRegexAsync(DBRef dbref, string attribute_pattern, CancellationToken cancellationToken = default);
+	ValueTask<IAsyncEnumerable<SharpAttribute>?> GetAttributesAsync(DBRef dbref, string attributePattern, CancellationToken cancellationToken = default);
+	ValueTask<IAsyncEnumerable<SharpAttribute>?> GetAttributesByRegexAsync(DBRef dbref, string attributePattern, CancellationToken cancellationToken = default);
 
-	ValueTask<IAsyncEnumerable<LazySharpAttribute>?> GetLazyAttributeAsync(DBRef dbref, CancellationToken cancellationToken = default, params string[] attribute);
-	ValueTask<IAsyncEnumerable<LazySharpAttribute>?> GetLazyAttributesAsync(DBRef dbref, string attribute_pattern, CancellationToken cancellationToken = default);
-	ValueTask<IAsyncEnumerable<LazySharpAttribute>?> GetLazyAttributesByRegexAsync(DBRef dbref, string attribute_pattern, CancellationToken cancellationToken = default);
-	IAsyncEnumerable<SharpAttributeEntry> GetAllAttributeEntriesAsync();
+	ValueTask<IAsyncEnumerable<LazySharpAttribute>?> GetLazyAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default);
+	ValueTask<IAsyncEnumerable<LazySharpAttribute>?> GetLazyAttributesAsync(DBRef dbref, string attributePattern, CancellationToken cancellationToken = default);
+	ValueTask<IAsyncEnumerable<LazySharpAttribute>?> GetLazyAttributesByRegexAsync(DBRef dbref, string attributePattern, CancellationToken cancellationToken = default);
+	IAsyncEnumerable<SharpAttributeEntry> GetAllAttributeEntriesAsync(CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Get the Object represented by a Database Reference Number.
 	/// Optionally passing either the CreatedSecs or CreatedMilliseconds will do a more specific lookup.
 	/// </summary>
 	/// <param name="dbref">Database Reference Number</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>A OneOf over the object being returned</returns>
 	ValueTask<AnyOptionalSharpObject> GetObjectNodeAsync(DBRef dbref, CancellationToken cancellationToken = default);
 
@@ -114,6 +125,7 @@ public interface ISharpDatabase
 	/// Get an Object Flag by name, if it exists.
 	/// </summary>
 	/// <param name="name">Flag name</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>A SharpObjectFlag, or null if it does not exist</returns>
 	ValueTask<SharpObjectFlag?> GetObjectFlagAsync(string name, CancellationToken cancellationToken = default);
 
@@ -128,6 +140,7 @@ public interface ISharpDatabase
 	/// </summary>
 	/// <param name="dbref">Database Reference Number</param>
 	/// <param name="flag">Flag</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>Success or Failure</returns>
 	ValueTask<bool> SetObjectFlagAsync(AnySharpObject dbref, SharpObjectFlag flag, CancellationToken cancellationToken = default);
 	
@@ -136,6 +149,7 @@ public interface ISharpDatabase
 	/// </summary>
 	/// <param name="dbref">Database Reference Number</param>
 	/// <param name="power">Power</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>Success or Failure</returns>
 	ValueTask<bool> SetObjectPowerAsync(AnySharpObject dbref, SharpPower power, CancellationToken cancellationToken = default);
 	
@@ -144,6 +158,7 @@ public interface ISharpDatabase
 	/// </summary>
 	/// <param name="dbref">Database Reference Number</param>
 	/// <param name="power">Power</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>Success or Failure</returns>
 	ValueTask<bool> UnsetObjectPowerAsync(AnySharpObject dbref, SharpPower power, CancellationToken cancellationToken = default);
 
@@ -152,6 +167,7 @@ public interface ISharpDatabase
 	/// </summary>
 	/// <param name="obj">The object to alter</param>
 	/// <param name="value">The value for the field</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>Result</returns>
 	ValueTask SetObjectName(AnySharpObject obj, MString value, CancellationToken cancellationToken = default);
 
@@ -160,6 +176,7 @@ public interface ISharpDatabase
 	/// </summary>
 	/// <param name="obj">Object</param>
 	/// <param name="home">New Value</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
 	ValueTask SetContentHome(AnySharpContent obj, AnySharpContainer home, CancellationToken cancellationToken = default);
 	
 	/// <summary>
@@ -167,6 +184,7 @@ public interface ISharpDatabase
 	/// </summary>
 	/// <param name="obj">Object</param>
 	/// <param name="location">New Value</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
 	ValueTask SetContentLocation(AnySharpContent obj, AnySharpContainer location, CancellationToken cancellationToken = default);
 	
 	/// <summary>
@@ -174,12 +192,14 @@ public interface ISharpDatabase
 	/// </summary>
 	/// <param name="obj">Object</param>
 	/// <param name="parent">New Value</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
 	ValueTask SetObjectParent(AnySharpObject obj, AnySharpObject? parent, CancellationToken cancellationToken = default);
 	
 	/// <summary>
 	/// Sets the Parent of an object.
 	/// </summary>
 	/// <param name="obj">Object</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
 	ValueTask UnsetObjectParent(AnySharpObject obj, CancellationToken cancellationToken = default);
 
 	/// <summary>
@@ -187,6 +207,7 @@ public interface ISharpDatabase
 	/// </summary>
 	/// <param name="obj">Object</param>
 	/// <param name="owner">New Value</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
 	ValueTask SetObjectOwner(AnySharpObject obj, SharpPlayer owner, CancellationToken cancellationToken = default);
 
 	/// <summary>
@@ -194,6 +215,7 @@ public interface ISharpDatabase
 	/// </summary>
 	/// <param name="dbref">Database Reference Number</param>
 	/// <param name="flag">Flag</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>Success or Failure</returns>
 	ValueTask<bool> UnsetObjectFlagAsync(AnySharpObject dbref, SharpObjectFlag flag, CancellationToken cancellationToken = default);
 
@@ -201,6 +223,7 @@ public interface ISharpDatabase
 	/// Get the parent of an object.
 	/// </summary>
 	/// <param name="id">Child ID</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>The representing parent</returns>
 	ValueTask<AnyOptionalSharpObject> GetParentAsync(string id, CancellationToken cancellationToken = default);
 
@@ -214,8 +237,9 @@ public interface ISharpDatabase
 	/// Get the parent of an object.
 	/// </summary>
 	/// <param name="id">Child ID</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>The full representing parent chain</returns>
-	ValueTask<IAsyncEnumerable<SharpObject>> GetParentsAsync(string id);
+	ValueTask<IAsyncEnumerable<SharpObject>> GetParentsAsync(string id, CancellationToken cancellationToken = default);
 
 	ValueTask<SharpObject?> GetBaseObjectNodeAsync(DBRef dbref, CancellationToken cancellationToken = default);
 
@@ -227,6 +251,8 @@ public interface ISharpDatabase
 	/// <param name="dbref">Database Reference Number</param>
 	/// <param name="attribute">Attribute Path.</param>
 	/// <param name="value">The value to place into the attribute</param>
+	/// <param name="owner">Attribute Owner</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>Success or Failure</returns>
 	ValueTask<bool> SetAttributeAsync(DBRef dbref, string[] attribute, MString value, SharpPlayer owner, CancellationToken cancellationToken = default);
 
@@ -236,15 +262,16 @@ public interface ISharpDatabase
 	/// <param name="dbref">Database Reference Number</param>
 	/// <param name="attribute">Attribute Path.</param>
 	/// <param name="flag">Flag</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>Success or Failure</returns>
 	ValueTask<bool> SetAttributeFlagAsync(SharpObject dbref, string[] attribute, SharpAttributeFlag flag, CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Set an attribute flag. This does not do any checks, as that is up to the functionality itself.
 	/// </summary>
-	/// <param name="dbref">Database Reference Number</param>
-	/// <param name="attribute">Attribute Path.</param>
+	/// <param name="attr">Attribute</param>
 	/// <param name="flag">Flag</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
 	ValueTask SetAttributeFlagAsync(SharpAttribute attr, SharpAttributeFlag flag, CancellationToken cancellationToken = default);
 
 	/// <summary>
@@ -253,6 +280,7 @@ public interface ISharpDatabase
 	/// <param name="dbref">Database Reference Number</param>
 	/// <param name="attribute">Attribute Path.</param>
 	/// <param name="flag">Flag</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>Success or Failure</returns>
 	ValueTask<bool> UnsetAttributeFlagAsync(SharpObject dbref, string[] attribute, SharpAttributeFlag flag, CancellationToken cancellationToken = default);
 
@@ -261,14 +289,14 @@ public interface ISharpDatabase
 	/// </summary>
 	/// <param name="attr"></param>
 	/// <param name="flag">Flag</param>
-	/// <param name="dbref">Database Reference Number</param>
-	/// <param name="attribute">Attribute Path.</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
 	ValueTask UnsetAttributeFlagAsync(SharpAttribute attr, SharpAttributeFlag flag, CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Set an attribute. This does not do any checks, as that is up to the functionality itself.
 	/// </summary>
 	/// <param name="flagName">Flag</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>Success or Failure</returns>
 	ValueTask<SharpAttributeFlag?> GetAttributeFlagAsync(string flagName, CancellationToken cancellationToken = default);
 
@@ -276,7 +304,7 @@ public interface ISharpDatabase
 	/// Set an attribute. This does not do any checks, as that is up to the functionality itself.
 	/// </summary>
 	/// <returns>Success or Failure</returns>
-	ValueTask<IEnumerable<SharpAttributeFlag>> GetAttributeFlagsAsync();
+	ValueTask<IEnumerable<SharpAttributeFlag>> GetAttributeFlagsAsync(CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Sets an attribute to string.Empty, or if it has no children, removes it entirely.
@@ -284,6 +312,7 @@ public interface ISharpDatabase
 	/// </summary>
 	/// <param name="dbref">Database Reference Number</param>
 	/// <param name="attribute">Attribute Path.</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>Success or Failure</returns>
 	ValueTask<bool> ClearAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default);
 
@@ -293,24 +322,25 @@ public interface ISharpDatabase
 	/// </summary>
 	/// <param name="dbref">Database Reference Number</param>
 	/// <param name="attribute">Attribute Path.</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>Success or Failure</returns>
 	ValueTask<bool> WipeAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default);
 
-	ValueTask<IAsyncEnumerable<AnySharpObject>> GetNearbyObjectsAsync(DBRef obj);
+	ValueTask<IAsyncEnumerable<AnySharpObject>> GetNearbyObjectsAsync(DBRef obj, CancellationToken cancellationToken = default);
 
-	ValueTask<IAsyncEnumerable<AnySharpObject>> GetNearbyObjectsAsync(AnySharpObject obj);
+	ValueTask<IAsyncEnumerable<AnySharpObject>> GetNearbyObjectsAsync(AnySharpObject obj, CancellationToken cancellationToken = default);
 
 	ValueTask<AnyOptionalSharpContainer> GetLocationAsync(DBRef obj, int depth = 1, CancellationToken cancellationToken = default);
 
 	ValueTask<AnySharpContainer> GetLocationAsync(AnySharpObject obj, int depth = 1, CancellationToken cancellationToken = default);
 
-	ValueTask<IAsyncEnumerable<AnySharpContent>?> GetContentsAsync(DBRef obj);
+	ValueTask<IAsyncEnumerable<AnySharpContent>?> GetContentsAsync(DBRef obj, CancellationToken cancellationToken = default);
 
-	ValueTask<IAsyncEnumerable<AnySharpContent>?> GetContentsAsync(AnySharpContainer node);
+	ValueTask<IAsyncEnumerable<AnySharpContent>?> GetContentsAsync(AnySharpContainer node, CancellationToken cancellationToken = default);
 
-	ValueTask<IAsyncEnumerable<SharpExit>?> GetExitsAsync(DBRef obj);
+	ValueTask<IAsyncEnumerable<SharpExit>?> GetExitsAsync(DBRef obj, CancellationToken cancellationToken = default);
 
-	ValueTask<IAsyncEnumerable<SharpExit>> GetExitsAsync(AnySharpContainer node);
+	ValueTask<IAsyncEnumerable<SharpExit>> GetExitsAsync(AnySharpContainer node, CancellationToken cancellationToken = default);
 
 	ValueTask MoveObjectAsync(AnySharpContent enactorObj, AnySharpContainer destination, CancellationToken cancellationToken = default);
 
@@ -319,20 +349,21 @@ public interface ISharpDatabase
 	/// </summary>
 	/// <param name="id">Location ID</param>
 	/// <param name="depth">Depth</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>The deepest findable object based on depth</returns>
 	ValueTask<AnySharpContainer> GetLocationAsync(string id, int depth = 1, CancellationToken cancellationToken = default);
 
 	ValueTask<IEnumerable<SharpObjectFlag>> GetObjectFlagsAsync(string id, CancellationToken cancellationToken = default);
 
-	ValueTask<IEnumerable<SharpMail>> GetIncomingMailsAsync(SharpPlayer id, string folder);
+	ValueTask<IEnumerable<SharpMail>> GetIncomingMailsAsync(SharpPlayer id, string folder, CancellationToken cancellationToken = default);
 
-	ValueTask<IEnumerable<SharpMail>> GetAllIncomingMailsAsync(SharpPlayer id);
+	ValueTask<IEnumerable<SharpMail>> GetAllIncomingMailsAsync(SharpPlayer id, CancellationToken cancellationToken = default);
 
 	ValueTask<SharpMail?> GetIncomingMailAsync(SharpPlayer id, string folder, int mail, CancellationToken cancellationToken = default);
 
-	ValueTask<IEnumerable<SharpMail>> GetSentMailsAsync(SharpObject sender, SharpPlayer recipient);
+	ValueTask<IEnumerable<SharpMail>> GetSentMailsAsync(SharpObject sender, SharpPlayer recipient, CancellationToken cancellationToken = default);
 	
-	ValueTask<IEnumerable<SharpMail>> GetAllSentMailsAsync(SharpObject sender);
+	ValueTask<IEnumerable<SharpMail>> GetAllSentMailsAsync(SharpObject sender, CancellationToken cancellationToken = default);
 
 	ValueTask<SharpMail?> GetSentMailAsync(SharpObject sender, SharpPlayer recipient, int mail, CancellationToken cancellationToken = default);
 
@@ -354,6 +385,7 @@ public interface ISharpDatabase
 	/// <param name="sharpObjectId">Database Id</param>
 	/// <param name="dataType">Type being stored. Each Type gets its own storage.</param>
 	/// <param name="data">Json body to set.</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
 	ValueTask SetExpandedObjectData(string sharpObjectId, string dataType, dynamic data, CancellationToken cancellationToken = default);
 
 	/// <summary>
@@ -361,6 +393,7 @@ public interface ISharpDatabase
 	/// </summary>
 	/// <param name="sharpObjectId">Database Id</param>
 	/// <param name="dataType">Type being queried. Each Type gets its ow n storage.</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>A Json String with the data stored within.</returns>
 	ValueTask<string?> GetExpandedObjectData(string sharpObjectId, string dataType, CancellationToken cancellationToken = default);
 
@@ -370,34 +403,36 @@ public interface ISharpDatabase
 	/// </summary>
 	/// <param name="dataType">Type being stored. Each Type gets its own storage.</param>
 	/// <param name="data">Json body to set.</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
 	ValueTask SetExpandedServerData(string dataType, string data, CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Gets the Expanded Object Data for the server as a whole. 
 	/// </summary>
 	/// <param name="dataType">Type being queried. Each Type gets its ow n storage.</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>A Json String with the data stored within.</returns>
 	ValueTask<string?> GetExpandedServerData(string dataType, CancellationToken cancellationToken = default);
 
-	ValueTask<IEnumerable<SharpChannel>> GetAllChannelsAsync();
+	ValueTask<IEnumerable<SharpChannel>> GetAllChannelsAsync(CancellationToken cancellationToken = default);
 	
 	ValueTask<SharpChannel?> GetChannelAsync(string name, CancellationToken cancellationToken = default);
 	
-	ValueTask<IEnumerable<SharpChannel>> GetMemberChannelsAsync(AnySharpObject obj);
+	ValueTask<IEnumerable<SharpChannel>> GetMemberChannelsAsync(AnySharpObject obj, CancellationToken cancellationToken = default);
 
 	ValueTask CreateChannelAsync(MString name, string[] privs, SharpPlayer owner, CancellationToken cancellationToken = default);
 	
 	ValueTask UpdateChannelAsync(SharpChannel channel,
-		MString? Name,
-		MString? Description,
-		string[]? Privs,
-		string? JoinLock,
-		string? SpeakLock,
-		string? SeeLock,
-		string? HideLock,
-		string? ModLock,
-		string? Mogrifier,
-		int? Buffer, CancellationToken cancellationToken = default);
+		MString? name,
+		MString? description,
+		string[]? privs,
+		string? joinLock,
+		string? speakLock,
+		string? seeLock,
+		string? hideLock,
+		string? modLock,
+		string? mogrifier,
+		int? buffer, CancellationToken cancellationToken = default);
 	
 	ValueTask UpdateChannelOwnerAsync(SharpChannel channel, SharpPlayer newOwner, CancellationToken cancellationToken = default);
 	

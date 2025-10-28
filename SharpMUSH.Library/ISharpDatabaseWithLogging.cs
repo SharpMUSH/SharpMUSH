@@ -2,5 +2,5 @@ namespace SharpMUSH.Library;
 
 public interface ISharpDatabaseWithLogging
 {
-	ValueTask SetupLogging(CancellationToken cancellationToken = default);
+	ValueTask SetupLogging();
 }
