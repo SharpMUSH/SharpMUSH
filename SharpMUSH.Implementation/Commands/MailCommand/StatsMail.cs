@@ -72,7 +72,7 @@ public static class StatsMail
 		INotifyService notifyService, AnySharpObject executor, AnySharpObject target)
 	{
 		var currentFolder = await MessageListHelper.CurrentMailFolder(parser, objectDataService, executor);
-		var stats = (await mediator.Send(new GetMailListQuery(target.AsPlayer, currentFolder))).ToArray();
+		var stats = await (await mediator.Send(new GetMailListQuery(target.AsPlayer, currentFolder))).ToArrayAsync();
 		var unread = stats.Sum(x => x.Read ? 0 : 1);
 		var cleared = stats.Sum(x => x.Cleared ? 1 : 0);
 
@@ -84,11 +84,11 @@ public static class StatsMail
 
 	private static async Task<MString> FStats(
 		INotifyService notifyService, AnySharpObject executor, string targetName,
-		IEnumerable<SharpMail> allSentMailIe, IEnumerable<SharpMail> allReceivedMailIe)
+		IAsyncEnumerable<SharpMail> allSentMailIe, IAsyncEnumerable<SharpMail> allReceivedMailIe)
 	{
 		await notifyService.Notify(executor, $"Mail statistics for {targetName}:");
 
-		var allSentMail = allSentMailIe.ToArray();
+		var allSentMail = await allSentMailIe.ToArrayAsync();
 		var sentSize = allSentMail.Sum(x => x.Content.Length);
 		var sentUnread = allSentMail.Sum(x => x.Read ? 0 : 1);
 		var sentCleared = allSentMail.Sum(x => x.Cleared ? 1 : 0);
@@ -96,7 +96,7 @@ public static class StatsMail
 		await notifyService.Notify(executor,
 			$"{allSentMail.Length} messages sent, {sentUnread} unread, {sentCleared} cleared, totalling {sentSize} characters.");
 
-		var allReceivedMail = allReceivedMailIe.ToArray();
+		var allReceivedMail = await allReceivedMailIe.ToArrayAsync();
 		var receivedSize = allReceivedMail.Sum(x => x.Content.Length);
 		var receivedUnread = allReceivedMail.Sum(x => x.Read ? 0 : 1);
 		var receivedCleared = allReceivedMail.Sum(x => x.Cleared ? 1 : 0);
@@ -111,16 +111,16 @@ public static class StatsMail
 
 	private static async Task<MString> DStats(
 		INotifyService notifyService, AnySharpObject executor, string targetName,
-		IEnumerable<SharpMail> allSentMailIe, IEnumerable<SharpMail> allReceivedMailIe)
+		IAsyncEnumerable<SharpMail> allSentMailIe, IAsyncEnumerable<SharpMail> allReceivedMailIe)
 	{
-		var allSentMail = allSentMailIe.ToArray();
+		var allSentMail = await allSentMailIe.ToArrayAsync();
 		var sentUnread = allSentMail.Sum(x => x.Read ? 0 : 1);
 		var sentCleared = allSentMail.Sum(x => x.Cleared ? 1 : 0);
 		await notifyService.Notify(executor, $"Mail statistics for {targetName}:");
 		await notifyService.Notify(executor,
 			$"{allSentMail.Length} messages sent, {sentUnread} unread, {sentCleared} cleared.");
 
-		var allReceivedMail = allReceivedMailIe.ToArray();
+		var allReceivedMail = await allReceivedMailIe.ToArrayAsync();
 		var receivedUnread = allReceivedMail.Sum(x => x.Read ? 0 : 1);
 		var receivedCleared = allReceivedMail.Sum(x => x.Cleared ? 1 : 0);
 		var lastDate = allReceivedMail.Max(x => x.DateSent);
@@ -134,10 +134,10 @@ public static class StatsMail
 
 	private static async Task<MString> Stats(
 		INotifyService notifyService, AnySharpObject executor, string targetName,
-		IEnumerable<SharpMail> allSentMailIe, IEnumerable<SharpMail> allReceivedMailIe)
+		IAsyncEnumerable<SharpMail> allSentMailIe, IAsyncEnumerable<SharpMail> allReceivedMailIe)
 	{
-		await notifyService.Notify(executor, $"{targetName} sent {allSentMailIe.Count()} messages.");
-		await notifyService.Notify(executor, $"{targetName} received {allReceivedMailIe.Count()} messages.");
+		await notifyService.Notify(executor, $"{targetName} sent {await allSentMailIe.CountAsync()} messages.");
+		await notifyService.Notify(executor, $"{targetName} received {await allReceivedMailIe.CountAsync()} messages.");
 
 		return MModule.empty();
 	}

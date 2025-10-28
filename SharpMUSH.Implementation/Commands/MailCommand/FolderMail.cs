@@ -60,12 +60,14 @@ public static class FolderMail
 		}
 
 		var list = maybeList.AsMailList;
-		foreach (var mail in list)
+		var length = 0;
+		await foreach (var mail in list)
 		{
+			length++;
 			await mediator!.Send(new MoveMailFolderCommand(mail, folder.ToPlainText()));
 		}
 
-		await notifyService!.Notify(executor, $"MAIL: Moved {list.Length} messages to {folder.ToPlainText()}.");
+		await notifyService!.Notify(executor, $"MAIL: Moved {length} messages to {folder.ToPlainText()}.");
 		await objectDataService.SetExpandedDataAsync(
 			new ExpandedMailData(
 				Folders: (folderInfo?.Folders ?? [])
@@ -130,9 +132,9 @@ public static class FolderMail
 	private static async Task<MString> GetMailFolderInfo(IMUSHCodeParser parser, IExpandedObjectDataService objectDataService, IMediator? mediator, INotifyService? notifyService, AnySharpObject executor, SharpPlayer executorPlayer)
 	{
 		var currentFolder = await MessageListHelper.CurrentMailFolder(parser, objectDataService, executor);
-		var folderMailList = (await mediator!.Send(
-				new GetMailListQuery(executorPlayer, currentFolder)))
-			.ToImmutableArray();
+		var folderMail = await mediator!.Send(
+			new GetMailListQuery(executorPlayer, currentFolder));
+		var folderMailList = await folderMail.ToArrayAsync();
 		var unread = folderMailList.Count(x => !x.Read);
 		var cleared = folderMailList.Count(x => x.Cleared);
 		var totalMail = folderMailList.Length;

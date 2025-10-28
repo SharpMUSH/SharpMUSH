@@ -59,14 +59,16 @@ public static class StatusMail
 			_ => throw new NotImplementedException("Invalid switch somehow made it into StatusMail.Handle")
 		};
 
-		foreach (var mail in actualList)
+		List<string> idList = [];
+		await foreach (var mail in actualList)
 		{
 			await mediator.Send(new UpdateMailCommand(mail, mailUpdate));
 			// TODO: Consider how IDs are displayed for Mail on output.
 			// This ID isn't useful to anyone. It should be the mail number in their inbox. But what does that mean?
 			await notifyService.Notify(executor, $"Mail {id} updated.");
+			idList.Add(mail.Id ?? string.Empty);
 		}
 
-		return MModule.single(string.Join(" ", actualList.Select(x => x.Id)));
+		return MModule.single(string.Join(" ", idList));
 	}
 }

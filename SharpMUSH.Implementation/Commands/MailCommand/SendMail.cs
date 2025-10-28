@@ -84,7 +84,7 @@ public static class SendMail
 			if (!silent)
 			{
 				var mailList = await mediator.Send(new GetMailListQuery(player, "INBOX"));
-				await notifyService.Notify(player, $"MAIL: You have received a message ({mailList.Count()}) from {sender.Object().Name}.");
+				await notifyService.Notify(player, $"MAIL: You have received a message ({await mailList.CountAsync()}) from {sender.Object().Name}.");
 			}
 			
 			// TODO: If AMAIL is config true, and AMAIL &attribute is set on the target, trigger it.

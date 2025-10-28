@@ -30,13 +30,15 @@ public static class AdminMail
 			case [.., "NUKE"] when executor.IsGod():
 				// TODO: This deletes one's own mail, not all mail on the server.
 				// A new command is needed.
-				var mailList = (await mediator!.Send(new GetAllMailListQuery(executor.AsPlayer))).ToImmutableArray();
-				foreach (var mail in mailList)
+				var mailList = (await mediator!.Send(new GetAllMailListQuery(executor.AsPlayer)));
+				var length = 0;
+				await foreach (var mail in mailList)
 				{
 					await mediator.Send(new DeleteMailCommand(mail));
+					length++;
 				}
 				await notifyService!.Notify(executor, "MAIL: Mail deleted.");
-				return MModule.single(mailList.Length.ToString());
+				return MModule.single(length.ToString());
 			default: 
 				await notifyService!.Notify(executor, "Invalid arguments for @mail admin command.");
 				return MModule.single("#-1 Invalid arguments for @mail admin command.");

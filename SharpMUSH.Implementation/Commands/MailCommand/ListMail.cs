@@ -24,15 +24,10 @@ public static class ListMail
 			return MModule.single(filteredList.AsT0.Value);
 		}
 
-		var list = filteredList.AsT1;
+		var list = filteredList.AsT1 ?? AsyncEnumerable.Empty<SharpMail>();
 
-		if (list.IsNullOrEmpty())
-		{
-			await notifyService!.Notify(executor, "MAIL: You have no matching mail in that mail folder.");
-			return MModule.single("MAIL: You have no matching mail in that mail folder.");
-		}
-
-		foreach (var folder in list.GroupBy(x => x.Folder))
+		var foundAny = false;
+		await foreach (var folder in list.GroupBy(x => x.Folder))
 		{
 			var center = MModule.pad(
 				markupStr: MModule.single($"  MAIL (folder {folder.Key})  "),
@@ -50,9 +45,17 @@ public static class ListMail
 				line
 			];
 			await notifyService!.Notify(executor, MModule.multipleWithDelimiter(MModule.single("\n"), builder));
+
+			foundAny = true;
 		}
 
-		return MModule.empty();
+		if (foundAny)
+		{
+			return MModule.empty();
+		}
+
+		await notifyService!.Notify(executor, "MAIL: You have no matching mail in that mail folder.");
+		return MModule.single("MAIL: You have no matching mail in that mail folder.");
 	}
 
 	private static async ValueTask<MString> DisplayMailLine(SharpMail mail, int arg2)

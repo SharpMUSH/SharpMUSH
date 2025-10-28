@@ -12,18 +12,20 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Implementation.Commands.MailCommand;
 
 [GenerateOneOf]
-public class ErrorOrMailList : OneOfBase<Error<string>, SharpMail[]>
+public class ErrorOrMailList : OneOfBase<Error<string>, IAsyncEnumerable<SharpMail>>
 {
-	private ErrorOrMailList(OneOf<Error<string>, SharpMail[]> input) : base(input)
+	private ErrorOrMailList(OneOf<Error<string>, IAsyncEnumerable<SharpMail>> input) : base(input)
 	{
 	}
 
 	public bool IsError => IsT0;
 	public string AsError => AsT0.Value;
-	public SharpMail[] AsMailList => AsT1;
+	public IAsyncEnumerable<SharpMail> AsMailList => AsT1;
 
 	public static implicit operator ErrorOrMailList(Error<string> x) => new(x);
-	public static implicit operator ErrorOrMailList(SharpMail[] x) => new(x);
+
+	public static ErrorOrMailList FromAsyncEnumerable(IAsyncEnumerable<SharpMail> x) 
+		=> new(OneOf<Error<string>, IAsyncEnumerable<SharpMail>>.FromT1(x));
 }
 
 public static class MessageListHelper
@@ -48,7 +50,7 @@ public static class MessageListHelper
 		var msgList = arg0?.ToPlainText().Trim().ToLower() ?? "folder";
 		var folderSplit = msgList.Split(':');
 		var rangeSplit = msgList.Split('-');
-		IEnumerable<SharpMail> mailList;
+		IAsyncEnumerable<SharpMail> mailList;
 
 		if (folderSplit.Length == 2 && !string.IsNullOrWhiteSpace(folderSplit[0]))
 		{
@@ -70,43 +72,42 @@ public static class MessageListHelper
 			_ when msgList.Contains(' ')
 				=> new Error<string>("MAIL: Invalid message specification"),
 			['*', .. var person] // TODO: Fix this to use a Locate() to find the person.
-				=> await mailList.ToAsyncEnumerable()
+				=> ErrorOrMailList.FromAsyncEnumerable(mailList
 					.Where(async (x,_) =>
 						(await x.From.WithCancellation(CancellationToken.None))
-						.Object()?.Name.StartsWith(person) ?? false)
-					.ToArrayAsync(),
+						.Object()?.Name.StartsWith(person) ?? false)),
 			['~', .. var days] when int.TryParse(days, out var exactDay)
-				=> mailList.Where(x => x.DateSent >= DateTimeOffset.UtcNow.AddDays(-exactDay - 1)
-				                       && x.DateSent <= DateTimeOffset.UtcNow.AddDays(-exactDay)).ToArray(),
+				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Where(x => x.DateSent >= DateTimeOffset.UtcNow.AddDays(-exactDay - 1)
+				                                                           && x.DateSent <= DateTimeOffset.UtcNow.AddDays(-exactDay))),
 			['>', .. var days] when int.TryParse(days, out var afterDay)
-				=> mailList.Where(x => x.DateSent >= DateTimeOffset.UtcNow.AddDays(-afterDay)).ToArray(),
+				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Where(x => x.DateSent >= DateTimeOffset.UtcNow.AddDays(-afterDay))),
 			['<', .. var days] when int.TryParse(days, out var beforeDay)
-				=> mailList.Where(x => x.DateSent <= DateTimeOffset.UtcNow.AddDays(-beforeDay)).ToArray(),
+				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Where(x => x.DateSent <= DateTimeOffset.UtcNow.AddDays(-beforeDay))),
 			"read"
-				=> mailList.Where(x => x.Read).ToArray(),
+				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Where(x => x.Read)),
 			"unread"
-				=> mailList.Where(x => !x.Read).ToArray(),
+				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Where(x => !x.Read)),
 			"cleared"
-				=> mailList.Where(x => x.Cleared).ToArray(),
+				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Where(x => x.Cleared)),
 			"tagged"
-				=> mailList.Where(x => x.Tagged).ToArray(),
+				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Where(x => x.Tagged)),
 			"urgent"
-				=> mailList.Where(x => x.Urgent).ToArray(),
+				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Where(x => x.Urgent)),
 			"folder"
-				=> mailList.ToArray(),
+				=> ErrorOrMailList.FromAsyncEnumerable(mailList),
 			_ when rangeSplit.Length == 2
 			       && int.TryParse(rangeSplit[0], out var left) && int.TryParse(rangeSplit[1], out var right)
-				=> mailList.Skip(left - 1).Take(right - left).ToArray(),
+				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Skip(left - 1).Take(right - left)),
 			_ when rangeSplit.Length == 2
 			       && int.TryParse(rangeSplit[0], out var left) && !int.TryParse(rangeSplit[1], out _)
-				=> mailList.Skip(left - 1).ToArray(),
+				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Skip(left - 1)),
 			_ when rangeSplit.Length == 2
 			       && !int.TryParse(rangeSplit[0], out _) && int.TryParse(rangeSplit[1], out var right)
-				=> mailList.Take(right).ToArray(),
+				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Take(right)),
 			_ when int.TryParse(msgList, out var specificMessage)
-				=> mailList.Skip(specificMessage).Take(1).ToArray(),
+				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Skip(specificMessage).Take(1)),
 			[] when msgList.Length == 0
-				=> mailList.ToArray(),
+				=> ErrorOrMailList.FromAsyncEnumerable(mailList),
 			_ => new Error<string>("MAIL: Invalid message specification")
 		};
 
@@ -118,7 +119,7 @@ public static class MessageListHelper
 		var msgList = arg0?.ToPlainText().Trim().ToLower() ?? "folder";
 		var folderSplit = msgList.Split(':');
 		var rangeSplit = msgList.Split('-');
-		IEnumerable<SharpMail> mailList;
+		IAsyncEnumerable<SharpMail> mailList;
 
 		if (folderSplit.Length == 2 && !string.IsNullOrWhiteSpace(folderSplit[0]))
 		{
@@ -139,35 +140,35 @@ public static class MessageListHelper
 			_ when msgList.Contains(' ')
 				=> new Error<string>("MAIL: Invalid message specification"),
 			['~', .. var days] when int.TryParse(days, out var exactDay)
-				=> mailList.Where(x => x.DateSent >= DateTimeOffset.UtcNow.AddDays(-exactDay - 1)
-				                       && x.DateSent <= DateTimeOffset.UtcNow.AddDays(-exactDay)).ToArray(),
+				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Where(x => x.DateSent >= DateTimeOffset.UtcNow.AddDays(-exactDay - 1)
+				                                                           && x.DateSent <= DateTimeOffset.UtcNow.AddDays(-exactDay))),
 			['>', .. var days] when int.TryParse(days, out var afterDay)
-				=> mailList.Where(x => x.DateSent >= DateTimeOffset.UtcNow.AddDays(-afterDay)).ToArray(),
+				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Where(x => x.DateSent >= DateTimeOffset.UtcNow.AddDays(-afterDay))),
 			['<', .. var days] when int.TryParse(days, out var beforeDay)
-				=> mailList.Where(x => x.DateSent <= DateTimeOffset.UtcNow.AddDays(-beforeDay)).ToArray(),
+				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Where(x => x.DateSent <= DateTimeOffset.UtcNow.AddDays(-beforeDay))),
 			"read"
-				=> mailList.Where(x => x.Read).ToArray(),
+				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Where(x => x.Read)),
 			"unread"
-				=> mailList.Where(x => !x.Read).ToArray(),
+				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Where(x => !x.Read)),
 			"cleared"
-				=> mailList.Where(x => x.Cleared).ToArray(),
+				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Where(x => x.Cleared)),
 			"tagged"
-				=> mailList.Where(x => x.Tagged).ToArray(),
+				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Where(x => x.Tagged)),
 			"urgent"
-				=> mailList.Where(x => x.Urgent).ToArray(),
+				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Where(x => x.Urgent)),
 			_ when rangeSplit.Length == 2
 			       && int.TryParse(rangeSplit[0], out var left) && int.TryParse(rangeSplit[1], out var right)
-				=> mailList.Skip(left - 1).Take(right - left).ToArray(),
+				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Skip(left - 1).Take(right - left)),
 			_ when rangeSplit.Length == 2
 			       && int.TryParse(rangeSplit[0], out var left) && !int.TryParse(rangeSplit[1], out _)
-				=> mailList.Skip(left - 1).ToArray(),
+				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Skip(left - 1)),
 			_ when rangeSplit.Length == 2
 			       && !int.TryParse(rangeSplit[0], out _) && int.TryParse(rangeSplit[1], out var right)
-				=> mailList.Take(right).ToArray(),
+				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Take(right)),
 			_ when int.TryParse(msgList, out var specificMessage)
-				=> mailList.Skip(specificMessage).Take(1).ToArray(),
+				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Skip(specificMessage).Take(1)),
 			[] when msgList.Length == 0
-				=> mailList.ToArray(),
+				=> ErrorOrMailList.FromAsyncEnumerable(mailList),
 			_ => new Error<string>("MAIL: Invalid message specification")
 		};
 

@@ -11,20 +11,26 @@ public class GetMailQueryHandler(ISharpDatabase database) : IQueryHandler<GetMai
 		await database.GetIncomingMailAsync(query.Player, query.Folder, query.Mail, cancellationToken);
 }
 
-public class GetMailListQueryHandler(ISharpDatabase database) : IQueryHandler<GetMailListQuery, IEnumerable<SharpMail>>
+public class GetMailListQueryHandler(ISharpDatabase database)
+	: IQueryHandler<GetMailListQuery, IAsyncEnumerable<SharpMail>>
 {
-	public async ValueTask<IEnumerable<SharpMail>>
-		Handle(GetMailListQuery query, CancellationToken cancellationToken) =>
-		await database.GetIncomingMailsAsync(query.Player, query.Folder, cancellationToken)
-			.ToArrayAsync(cancellationToken: cancellationToken);
+	public async ValueTask<IAsyncEnumerable<SharpMail>>
+		Handle(GetMailListQuery query, CancellationToken cancellationToken)
+	{
+		await ValueTask.CompletedTask;
+		return database.GetIncomingMailsAsync(query.Player, query.Folder, cancellationToken);
+	}
 }
 
-public class GetAllMailListQueryHandler(ISharpDatabase database) : IQueryHandler<GetAllMailListQuery, IEnumerable<SharpMail>>
+public class GetAllMailListQueryHandler(ISharpDatabase database)
+	: IQueryHandler<GetAllMailListQuery, IAsyncEnumerable<SharpMail>>
 {
-	public async ValueTask<IEnumerable<SharpMail>>
-		Handle(GetAllMailListQuery query, CancellationToken cancellationToken) =>
-		await database.GetAllIncomingMailsAsync(query.Player, cancellationToken)
-			.ToArrayAsync(cancellationToken: cancellationToken);
+	public async ValueTask<IAsyncEnumerable<SharpMail>>
+		Handle(GetAllMailListQuery query, CancellationToken cancellationToken)
+	{
+		await ValueTask.CompletedTask;
+		return database.GetAllIncomingMailsAsync(query.Player, cancellationToken);
+	}
 }
 
 public class GetSentMailQueryHandler(ISharpDatabase database) : IQueryHandler<GetSentMailQuery, SharpMail?>
@@ -34,19 +40,23 @@ public class GetSentMailQueryHandler(ISharpDatabase database) : IQueryHandler<Ge
 }
 
 public class GetSentMailListQueryHandler(ISharpDatabase database)
-	: IQueryHandler<GetSentMailListQuery, IEnumerable<SharpMail>>
+	: IQueryHandler<GetSentMailListQuery, IAsyncEnumerable<SharpMail>>
 {
-	public async ValueTask<IEnumerable<SharpMail>>
-		Handle(GetSentMailListQuery query, CancellationToken cancellationToken) =>
-		await database.GetSentMailsAsync(query.Sender, query.Recipient, cancellationToken)
-			.ToArrayAsync(cancellationToken: cancellationToken);
+	public async ValueTask<IAsyncEnumerable<SharpMail>>
+		Handle(GetSentMailListQuery query, CancellationToken cancellationToken)
+	{
+		await ValueTask.CompletedTask;
+		return database.GetSentMailsAsync(query.Sender, query.Recipient, cancellationToken);
+	}
 }
 
 public class GetAllSentMailListQueryHandler(ISharpDatabase database)
-	: IQueryHandler<GetAllSentMailListQuery, IEnumerable<SharpMail>>
+	: IQueryHandler<GetAllSentMailListQuery, IAsyncEnumerable<SharpMail>>
 {
-	public async ValueTask<IEnumerable<SharpMail>>
-		Handle(GetAllSentMailListQuery query, CancellationToken cancellationToken) =>
-		await database.GetAllSentMailsAsync(query.Sender, cancellationToken)
-			.ToArrayAsync(cancellationToken: cancellationToken);
+	public async ValueTask<IAsyncEnumerable<SharpMail>>
+		Handle(GetAllSentMailListQuery query, CancellationToken cancellationToken)
+	{
+		await ValueTask.CompletedTask;
+		return database.GetAllSentMailsAsync(query.Sender, cancellationToken);
+	}
 }

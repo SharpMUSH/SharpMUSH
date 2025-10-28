@@ -28,18 +28,20 @@ public static class RetractMail
 		}
 		
 		var foundMailList = sentMails.AsMailList;
-		
-		foreach (var mail in foundMailList)
+
+		var length = 0;
+		await foreach (var mail in foundMailList)
 		{
 			if (!mail.Fresh)
 			{
 				await notifyService.Notify(executor, "MAIL: Mail already read.");
 				continue;
 			}
-			
+
+			length++;
 			await mediator.Send(new DeleteMailCommand(mail));
 		}
 
-		return MModule.single(foundMailList.Length.ToString());
+		return MModule.single(length.ToString());
 	}
 }

@@ -43,7 +43,7 @@ public static class ReviewMail
 		var mailList = maybeMailList.AsMailList;
 		var i = 0;
 		
-		foreach (var actualMail in mailList)
+		await foreach (var actualMail in mailList)
 		{
 			i++;
 			var dateline = MModule.pad(
