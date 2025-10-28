@@ -31,7 +31,7 @@ public class SharpObject
 
 	// RELATIONSHIP
 	[JsonIgnore]
-	public required AsyncLazy<IEnumerable<SharpPower>> Powers { get; set; }
+	public required Lazy<IAsyncEnumerable<SharpPower>> Powers { get; set; }
 
 	// RELATIONSHIP
 	[JsonIgnore]

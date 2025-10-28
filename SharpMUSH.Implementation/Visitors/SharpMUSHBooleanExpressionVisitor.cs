@@ -22,8 +22,8 @@ public class SharpMUSHBooleanExpressionVisitor(
 			.AnyAsync(x => x.Name == flag || x.Symbol == flag, CancellationToken.None).AsTask().GetAwaiter().GetResult();
 
 	private readonly Expression<Func<AnySharpObject, string, bool>> _hasPower = (dbRef, power)
-		=> dbRef.Object().Powers.WithCancellation(CancellationToken.None).GetAwaiter().GetResult()
-			.Any(x => x.Name == power || x.Alias == power);
+		=> dbRef.Object().Powers.Value
+			.AnyAsync(x => x.Name == power || x.Alias == power, CancellationToken.None).AsTask().GetAwaiter().GetResult();
 
 	private readonly Expression<Func<AnySharpObject, string, bool>> _isType = (dbRef, type)
 		=> dbRef.Object().Type == type;

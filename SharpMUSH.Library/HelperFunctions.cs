@@ -20,10 +20,10 @@ public static partial class HelperFunctions
 	private static readonly Regex ObjectWithAttributeRegex = ObjectWithAttribute();
 	private static readonly Regex OptionalDatabaseReferenceWithAttributeRegex = OptionalDatabaseReferenceWithAttribute();
 	private static readonly Regex DatabaseReferenceWithOptionalAttributeRegex = DatabaseReferenceWithOptionalAttribute();
-	
+
 	public static async ValueTask<AnySharpObject> GetGod(IMediator mediator)
 		=> (await mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Known;
-	
+
 	public static async ValueTask<bool> IsWizard(this AnySharpObject obj)
 		=> await (obj.Object().Flags.Value)
 			.AnyAsync(x => x.Name == "Wizard");
@@ -53,7 +53,7 @@ public static partial class HelperFunctions
 
 	public static async ValueTask<bool> IsDark(this AnySharpObject obj)
 		=> await obj.HasPower("Dark");
-	
+
 	public static async ValueTask<bool> IsDark(this SharpObject obj)
 		=> await obj.HasPower("Dark");
 
@@ -74,34 +74,40 @@ public static partial class HelperFunctions
 
 	public static async ValueTask<bool> IsAlive(this AnySharpObject obj)
 		=> obj.IsPlayer
-			 || await IsPuppet(obj)
-			 || (await IsAudible(obj) && await (obj.Object().LazyAllAttributes.Value)
-				 .AnyAsync(x => x.Name == "FORWARDLIST"));
+		   || await IsPuppet(obj)
+		   || (await IsAudible(obj) && await (obj.Object().LazyAllAttributes.Value)
+			   .AnyAsync(x => x.Name == "FORWARDLIST"));
 
 	public static async ValueTask<bool> IsPuppet(this AnySharpObject obj)
 		=> await obj.HasPower("Puppet");
 
 	public static async ValueTask<bool> HasPower(this AnySharpObject obj, string power)
-		=> (await obj.Object().Powers.WithCancellation(CancellationToken.None))
-			.Any(x => x.Name.Equals(power, StringComparison.InvariantCultureIgnoreCase) || x.Alias.Equals(power, StringComparison.InvariantCultureIgnoreCase));
+		=> await obj.Object().Powers.Value
+			.AnyAsync(x => x.Name.Equals(power, StringComparison.InvariantCultureIgnoreCase)
+			               || x.Alias.Equals(power, StringComparison.InvariantCultureIgnoreCase));
 
 	public static async ValueTask<bool> HasPower(this SharpObject obj, string power)
-		=> (await obj.Powers.WithCancellation(CancellationToken.None))
-			.Any(x => x.Name.Equals(power, StringComparison.InvariantCultureIgnoreCase) || x.Alias.Equals(power, StringComparison.InvariantCultureIgnoreCase));
+		=> await obj.Powers.Value
+			.AnyAsync(x => x.Name.Equals(power, StringComparison.InvariantCultureIgnoreCase)
+			               || x.Alias.Equals(power, StringComparison.InvariantCultureIgnoreCase));
 
-	public static async ValueTask<bool> IsHearer(this AnySharpObject obj, IConnectionService connections, IAttributeService attributes)
+	public static async ValueTask<bool> IsHearer(this AnySharpObject obj, IConnectionService connections,
+		IAttributeService attributes)
 	{
 		if (connections.IsConnected(obj) || await obj.IsPuppet())
 		{
 			return true;
 		}
 
-		if (await obj.IsAudible() && (await attributes.GetAttributeAsync(obj, obj, "FORWARDLIST", IAttributeService.AttributeMode.Read, true)).IsAttribute)
+		if (await obj.IsAudible() &&
+		    (await attributes.GetAttributeAsync(obj, obj, "FORWARDLIST", IAttributeService.AttributeMode.Read, true))
+		    .IsAttribute)
 		{
 			return true;
 		}
 
-		if ((await attributes.GetAttributeAsync(obj, obj, "LISTEN", IAttributeService.AttributeMode.Read, true)).IsAttribute)
+		if ((await attributes.GetAttributeAsync(obj, obj, "LISTEN", IAttributeService.AttributeMode.Read, true))
+		    .IsAttribute)
 		{
 			return true;
 		}
@@ -114,7 +120,8 @@ public static partial class HelperFunctions
 	{
 		if (await obj.HasFlag("NO_COMMAND")) return false;
 
-		var attrs = await attributes.GetAttributePatternAsync(obj, obj, "*", true, IAttributeService.AttributePatternMode.Wildcard);
+		var attrs = await attributes.GetAttributePatternAsync(obj, obj, "*", true,
+			IAttributeService.AttributePatternMode.Wildcard);
 		if (!attrs.IsAttribute)
 		{
 			return false;
@@ -158,7 +165,8 @@ public static partial class HelperFunctions
 	public static async ValueTask<bool> CanHide(this AnySharpObject obj)
 		=> await obj.HasPower("Hide") || await obj.IsPriv();
 
-	public static async ValueTask<DBRef?> Ancestor(this AnySharpObject obj, IOptionsWrapper<SharpMUSHOptions> configuration)
+	public static async ValueTask<DBRef?> Ancestor(this AnySharpObject obj,
+		IOptionsWrapper<SharpMUSHOptions> configuration)
 		=> await obj.IsOrphan()
 			? null
 			: obj.Match(
@@ -178,15 +186,15 @@ public static partial class HelperFunctions
 
 	public static async ValueTask<bool> Inheritable(this AnySharpObject obj)
 		=> obj.IsPlayer
-			 || await obj.HasFlag("Trust")
-			 || await (await obj.Object().Owner.WithCancellation(CancellationToken.None))
-				 .Object.Flags.Value.AnyAsync(x => x.Name == "Trust")
-			 || await IsWizard(obj);
+		   || await obj.HasFlag("Trust")
+		   || await (await obj.Object().Owner.WithCancellation(CancellationToken.None))
+			   .Object.Flags.Value.AnyAsync(x => x.Name == "Trust")
+		   || await IsWizard(obj);
 
 	public static async ValueTask<bool> Owns(this AnySharpObject who,
 		AnySharpObject what)
 		=> (await who.Object().Owner.WithCancellation(CancellationToken.None)).Object.Id ==
-			 (await what.Object().Owner.WithCancellation(CancellationToken.None)).Object.Id;
+		   (await what.Object().Owner.WithCancellation(CancellationToken.None)).Object.Id;
 
 	/// <summary>
 	/// Takes the pattern of '#DBREF/attribute' and splits it out if possible.

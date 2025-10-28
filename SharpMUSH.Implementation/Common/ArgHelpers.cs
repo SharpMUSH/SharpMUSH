@@ -211,8 +211,8 @@ public static partial class ArgHelpers
 			.ContainsAsync(flag);
 
 	public static async ValueTask<bool> HasObjectPowers(SharpObject obj, string power) =>
-		(await obj.Powers.WithCancellation(CancellationToken.None))
-		.Any(x => x.Name == power || x.Alias == power);
+		await obj.Powers.Value
+		.AnyAsync(x => x.Name == power || x.Alias == power);
 
 	public static IEnumerable<OneOf<DBRef, string>> NameList(string list)
 		=> NameListPattern().Matches(list).Select(x =>

@@ -223,7 +223,7 @@ public partial class Commands
 		var objFlags = await obj.Flags.Value.ToArrayAsync();
 		var ownerObjFlags = await ownerObj.Flags.Value.ToArrayAsync();
 		var objParent = await obj.Parent.WithCancellation(CancellationToken.None);
-		var objPowers = await obj.Powers.WithCancellation(CancellationToken.None);
+		var objPowers = obj.Powers.Value;
 
 		var nameRow = MModule.multiple([
 			name.Hilight(),
@@ -237,7 +237,7 @@ public partial class Commands
 		                              $"(#{obj.DBRef.Number}{string.Join(string.Empty, ownerObjFlags.Select(x => x.Symbol))})");
 		var parentRow = MModule.single($"Parent: {objParent.Object()?.Name ?? "*NOTHING*"}");
 		// TODO: LOCK LIST
-		var powersRow = MModule.single($"Powers: {string.Join(" ", objPowers.Select(x => x.Name))}");
+		var powersRow = MModule.single($"Powers: {string.Join(" ", await objPowers.Select(x => x.Name).ToArrayAsync())}");
 		// TODO: Channels
 		// TODO: Warnings Checked
 

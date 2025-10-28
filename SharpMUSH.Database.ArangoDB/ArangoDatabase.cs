@@ -415,13 +415,10 @@ public partial class ArangoDatabase(
 		return true;
 	}
 
-	private async ValueTask<IEnumerable<SharpPower>> GetPowersAsync(string id, CancellationToken ct = default)
-	{
-		var result = await arangoDb.Query.ExecuteAsync<SharpPowerQueryResult>(handle,
-			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphPowers} RETURN v", cancellationToken: ct);
-
-		return result.Select(SharpPowerQueryToSharpPower);
-	}
+	private IAsyncEnumerable<SharpPower> GetPowersAsync(string id, CancellationToken ct = default) =>
+		arangoDb.Query.ExecuteStreamAsync<SharpPowerQueryResult>(handle,
+				$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphPowers} RETURN v", cancellationToken: ct)
+			.Select(SharpPowerQueryToSharpPower);
 
 	public IAsyncEnumerable<SharpObjectFlag> GetObjectFlagsAsync(string id, CancellationToken ct = default)
 		=> arangoDb.Query.ExecuteStreamAsync<SharpObjectFlagQueryResult>(handle,
@@ -700,8 +697,8 @@ public partial class ArangoDatabase(
 		=> arangoDb.Query.ExecuteStreamAsync<(string Id, SharpChannelUserStatusQueryResult Status)>(handle,
 				$"FOR v IN 1..1 INBOUND {channelId} GRAPH {DatabaseConstants.GraphChannels} RETURN {{Id: v._id, Status: e}}",
 				cancellationToken: ct)
-			.Select<(string Id, SharpChannelUserStatusQueryResult Status), (AnySharpObject, SharpChannelStatus)>(
-				async (x, cancelToken) =>
+			.Select<(string Id, SharpChannelUserStatusQueryResult Status), (AnySharpObject, SharpChannelStatus)>(async (x,
+					cancelToken) =>
 				((await GetObjectNodeAsync(x.Id, cancelToken)).Known(),
 					new SharpChannelStatus(
 						Combine: x.Status.Combine,
@@ -1144,7 +1141,7 @@ public partial class ArangoDatabase(
 			Locks = ImmutableDictionary<string, string>
 				.Empty, // FIX: ((Dictionary<string, string>?)obj.Locks ?? []).ToImmutableDictionary(),
 			Flags = new(() => GetObjectFlagsAsync(obj._id, CancellationToken.None)),
-			Powers = new(async ct => await GetPowersAsync(obj._id, CancellationToken.None)),
+			Powers = new(() => GetPowersAsync(obj._id, CancellationToken.None)),
 			Attributes = new(() => GetTopLevelAttributesAsync(obj._id, CancellationToken.None)),
 			LazyAttributes = new(() => GetTopLevelLazyAttributesAsync(obj._id, CancellationToken.None)),
 			AllAttributes = new(() => GetAllAttributesAsync(obj._id, CancellationToken.None)),
@@ -1182,7 +1179,7 @@ public partial class ArangoDatabase(
 			ModifiedTime = obj.ModifiedTime,
 			Flags =
 				new Lazy<IAsyncEnumerable<SharpObjectFlag>>(() => GetObjectFlagsAsync(obj.Id, CancellationToken.None)),
-			Powers = new AsyncLazy<IEnumerable<SharpPower>>(async ct => await GetPowersAsync(obj.Id, ct)),
+			Powers = new Lazy<IAsyncEnumerable<SharpPower>>(() => GetPowersAsync(obj.Id, CancellationToken.None)),
 			Attributes =
 				new Lazy<IAsyncEnumerable<SharpAttribute>>(() =>
 					GetTopLevelAttributesAsync(obj.Id, CancellationToken.None)),
