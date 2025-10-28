@@ -120,7 +120,7 @@ public interface ISharpDatabase
 	/// Get all known Object Flags
 	/// </summary>
 	/// <returns>A list of all SharpObjectFlags</returns>
-	ValueTask<IEnumerable<SharpObjectFlag>> GetObjectFlagsAsync();
+	ValueTask<IEnumerable<SharpObjectFlag>> GetObjectFlagsAsync(CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Set an Object Flag.
@@ -207,7 +207,7 @@ public interface ISharpDatabase
 	/// Get all powers the Server knows about.
 	/// </summary>
 	/// <returns>All powers</returns>
-	ValueTask<IEnumerable<SharpPower>> GetObjectPowersAsync();
+	ValueTask<IEnumerable<SharpPower>> GetObjectPowersAsync(CancellationToken cancellationToken = default);
 	
 	/// <summary>
 	/// Get the parent of an object.
@@ -218,7 +218,7 @@ public interface ISharpDatabase
 
 	ValueTask<SharpObject?> GetBaseObjectNodeAsync(DBRef dbref, CancellationToken cancellationToken = default);
 
-	ValueTask<IAsyncEnumerable<SharpPlayer>> GetPlayerByNameOrAliasAsync(string name);
+	ValueTask<IAsyncEnumerable<SharpPlayer>> GetPlayerByNameOrAliasAsync(string name, CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Set an attribute. This does not do any checks, as that is up to the functionality itself.
@@ -321,7 +321,7 @@ public interface ISharpDatabase
 	/// <returns>The deepest findable object based on depth</returns>
 	ValueTask<AnySharpContainer> GetLocationAsync(string id, int depth = 1, CancellationToken cancellationToken = default);
 
-	ValueTask<IEnumerable<SharpObjectFlag>> GetObjectFlagsAsync(string id);
+	ValueTask<IEnumerable<SharpObjectFlag>> GetObjectFlagsAsync(string id, CancellationToken cancellationToken = default);
 
 	ValueTask<IEnumerable<SharpMail>> GetIncomingMailsAsync(SharpPlayer id, string folder);
 

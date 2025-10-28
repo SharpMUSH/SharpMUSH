@@ -237,13 +237,13 @@ public partial class ArangoDatabase(
 			},
 			cache: true)).Select(SharpObjectFlagQueryToSharpFlag).FirstOrDefault();
 
-	public async ValueTask<IEnumerable<SharpObjectFlag>> GetObjectFlagsAsync()
+	public async ValueTask<IEnumerable<SharpObjectFlag>> GetObjectFlagsAsync(CancellationToken cancellationToken = default)
 		=> (await arangoDb.Query.ExecuteAsync<SharpObjectFlagQueryResult>(
 			handle,
 			$"FOR v in {DatabaseConstants.ObjectFlags:@} RETURN v",
 			cache: true)).Select(SharpObjectFlagQueryToSharpFlag);
 	
-	public async ValueTask<IEnumerable<SharpPower>> GetObjectPowersAsync()
+	public async ValueTask<IEnumerable<SharpPower>> GetObjectPowersAsync(CancellationToken cancellationToken = default)
 		=> (await arangoDb.Query.ExecuteAsync<SharpPowerQueryResult>(
 			handle,
 			$"FOR v in {DatabaseConstants.ObjectPowers:@} RETURN v",
@@ -405,7 +405,7 @@ public partial class ArangoDatabase(
 		return result.Select(SharpPowerQueryToSharpPower);
 	}
 
-	public async ValueTask<IEnumerable<SharpObjectFlag>> GetObjectFlagsAsync(string id)
+	public async ValueTask<IEnumerable<SharpObjectFlag>> GetObjectFlagsAsync(string id, CancellationToken cancellationToken = default)
 		=> (await arangoDb.Query.ExecuteAsync<SharpObjectFlagQueryResult>(handle,
 				$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphFlags} RETURN v"))
 			.Select(SharpObjectFlagQueryToSharpFlag);
@@ -1573,11 +1573,11 @@ public partial class ArangoDatabase(
 
 	public async ValueTask<bool> SetAttributeFlagAsync(SharpObject dbref, string[] attribute, SharpAttributeFlag flag, CancellationToken cancellationToken = default)
 	{
-		var attrInfo = await GetAttributeAsync(dbref.DBRef, attribute);
+		var attrInfo = await GetAttributeAsync(dbref.DBRef, cancellationToken, attribute);
 		if (attrInfo is null) return false;
 		var attr = await attrInfo.LastAsync();
 
-		await SetAttributeFlagAsync(attr, flag);
+		await SetAttributeFlagAsync(attr, flag, cancellationToken);
 		return true;
 	}
 
@@ -1590,11 +1590,11 @@ public partial class ArangoDatabase(
 
 	public async ValueTask<bool> UnsetAttributeFlagAsync(SharpObject dbref, string[] attribute, SharpAttributeFlag flag, CancellationToken cancellationToken = default)
 	{
-		var attrInfo = await GetAttributeAsync(dbref.DBRef, attribute);
+		var attrInfo = await GetAttributeAsync(dbref.DBRef, cancellationToken, attribute);
 		if (attrInfo is null) return false;
 		var attr = await attrInfo.LastAsync();
 
-		await UnsetAttributeFlagAsync(attr, flag);
+		await UnsetAttributeFlagAsync(attr, flag, cancellationToken);
 		return true;
 	}
 
@@ -1816,7 +1816,7 @@ public partial class ArangoDatabase(
 			));
 	}
 
-	public async ValueTask<IAsyncEnumerable<SharpPlayer>> GetPlayerByNameOrAliasAsync(string name)
+	public async ValueTask<IAsyncEnumerable<SharpPlayer>> GetPlayerByNameOrAliasAsync(string name, CancellationToken cancellationToken = default)
 	{
 		// TODO: Look up by Alias.
 		var query = await arangoDb.Query.ExecuteAsync<string>(handle,
