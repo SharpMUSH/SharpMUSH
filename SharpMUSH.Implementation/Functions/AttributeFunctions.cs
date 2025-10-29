@@ -1128,7 +1128,7 @@ public partial class Functions
 			dbrefAndAttr,
 			parser.CurrentState.Arguments.Skip(1)
 				.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value.Value))
-				.ToDictionary(), true, false);
+				.ToDictionary(), true, false, true);
 
 		return new CallState(result);
 	}
