@@ -33,7 +33,8 @@ public static class ChannelGag
 
 		if (channelName is null)
 		{
-			channels = [..await Mediator.Send(new GetChannelListQuery())];
+			var channelList = await Mediator.Send(new GetChannelListQuery()); 
+			channels = [..await channelList.ToArrayAsync()];
 		}
 		else
 		{

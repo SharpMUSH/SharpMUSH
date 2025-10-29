@@ -29,10 +29,11 @@ public static class ChannelCombine
 			await NotifyService.Notify(executor, "CHAT: Yes or No are the only valid options.");
 			return new CallState("#-1 INVALID OPTION");
 		}
-		
+
+		var channelList = await Mediator.Send(new GetChannelListQuery()); 
 		if (channelName is null)
 		{
-			channels = [..await Mediator.Send(new GetChannelListQuery())];
+			channels = [.. await channelList.ToArrayAsync()];
 		}
 		else
 		{

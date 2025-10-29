@@ -28,7 +28,6 @@ public static class ChannelList
 		}
 
 		var channelList = await channels
-			.ToAsyncEnumerable()
 			.Where(async (x, _) => await PermissionService.ChannelCanSeeAsync(executor, x))
 			.Where(async (x, ct) => !offSwitch || await x.Members.Value
 				.AllAsync(m => m.Member.Object().Id != executor.Object().Id, ct))

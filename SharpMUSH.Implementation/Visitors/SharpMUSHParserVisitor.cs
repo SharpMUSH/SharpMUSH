@@ -361,7 +361,7 @@ public class SharpMUSHParserVisitor(
 				var channels = await Mediator.Send(new GetChannelListQuery());
 				var check = command[1..];
 
-				var channel = channels.FirstOrDefault(x =>
+				var channel = await channels.FirstOrDefaultAsync(x =>
 					x.Name.ToPlainText().StartsWith(check, StringComparison.CurrentCultureIgnoreCase));
 
 				if (channel is not null && !context.evaluationString().IsEmpty)

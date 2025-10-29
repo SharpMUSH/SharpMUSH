@@ -13,18 +13,20 @@ public class GetChannelQueryHandler(ISharpDatabase database) : IQueryHandler<Get
 	}
 }
 
-public class GetChannelListQueryHandler(ISharpDatabase database) : IQueryHandler<GetChannelListQuery, IEnumerable<SharpChannel>>
+public class GetChannelListQueryHandler(ISharpDatabase database) : IQueryHandler<GetChannelListQuery, IAsyncEnumerable<SharpChannel>>
 {
-	public async ValueTask<IEnumerable<SharpChannel>> Handle(GetChannelListQuery request, CancellationToken cancellationToken)
+	public async ValueTask<IAsyncEnumerable<SharpChannel>> Handle(GetChannelListQuery request, CancellationToken cancellationToken)
 	{
-		return await database.GetAllChannelsAsync(cancellationToken).ToArrayAsync(cancellationToken: cancellationToken);
+		await ValueTask.CompletedTask;
+		return database.GetAllChannelsAsync(cancellationToken);
 	}
 }
 
-public class GetChannelUsersQueryHandler(ISharpDatabase database) : IQueryHandler<GetOnChannelQuery, IEnumerable<SharpChannel>>
+public class GetChannelUsersQueryHandler(ISharpDatabase database) : IQueryHandler<GetOnChannelQuery, IAsyncEnumerable<SharpChannel>>
 {
-	public async ValueTask<IEnumerable<SharpChannel>> Handle(GetOnChannelQuery request, CancellationToken cancellationToken)
+	public async ValueTask<IAsyncEnumerable<SharpChannel>> Handle(GetOnChannelQuery request, CancellationToken cancellationToken)
 	{
-		return await database.GetMemberChannelsAsync(request.Obj, cancellationToken).ToArrayAsync(cancellationToken: cancellationToken);
+		await ValueTask.CompletedTask;
+		return database.GetMemberChannelsAsync(request.Obj, cancellationToken);
 	}
 }

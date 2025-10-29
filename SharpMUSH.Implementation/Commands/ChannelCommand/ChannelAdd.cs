@@ -42,7 +42,6 @@ public static class ChannelAdd
 
 		var allChannels = await Mediator.Send(new GetChannelListQuery());
 		var ownedChannels = await allChannels
-			.ToAsyncEnumerable()
 			.Where(async (x, _) =>
 				(await x.Owner.WithCancellation(CancellationToken.None)).Id == executorOwner.Id)
 			.CountAsync();

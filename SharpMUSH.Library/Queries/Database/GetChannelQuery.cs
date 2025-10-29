@@ -7,9 +7,9 @@ namespace SharpMUSH.Library.Queries.Database;
 
 public record GetChannelQuery(string Name): IQuery<SharpChannel?>;
 
-public record GetOnChannelQuery(AnySharpObject Obj): IQuery<IEnumerable<SharpChannel>>;
+public record GetOnChannelQuery(AnySharpObject Obj): IQuery<IAsyncEnumerable<SharpChannel>>;
 
-public record GetChannelListQuery: IQuery<IEnumerable<SharpChannel>>, ICacheable
+public record GetChannelListQuery: IQuery<IAsyncEnumerable<SharpChannel>>, ICacheable
 {
 	public string CacheKey => "global:ChannelList";
 	public string[] CacheTags => [Definitions.CacheTags.ChannelList];
