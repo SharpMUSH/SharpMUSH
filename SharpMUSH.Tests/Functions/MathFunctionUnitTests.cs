@@ -542,8 +542,8 @@ public class MathFunctionUnitTests
 
 	[Test]
 	[Arguments("cos(0)", "1")]
-	[Arguments("cos(90,d)", "6.123233995736766E-17")]
-	[Arguments("cos(1.570796)", "3.2679489653813835E-07")]
+	[Arguments("cos(90,d)", "0")]
+	[Arguments("cos(1.570796)", "0")]
 	public async Task Cos(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);

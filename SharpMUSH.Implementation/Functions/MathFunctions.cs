@@ -854,12 +854,45 @@ public partial class Functions
 				parser.CurrentState.Arguments["0"].Message).Length.ToString()
 			));
 	
-	private static double AngleTypeMath(string? angleType, double angle, Func<double,double> func) 
-		=> angleType switch
+	private static CallState AngleTypeMath(string? angleType, double angle, Func<double,double> func)
 	{
-		null => func(angle),
-		"g" => func(angle * (double.Pi / 200)),
-		"d" => func(angle * (double.Pi / 180)),
-		_ => func(angle)
-	};
+		var radianAngle = angleType switch
+		{
+			null => angle,
+			"g" => angle * (double.Pi / 200),
+			"d" => angle * (double.Pi / 180),
+			_ => angle
+		};
+		
+		var result = func(radianAngle);
+		
+		// Round very small numbers (floating point errors) to 0
+		// This handles cases like cos(90 degrees) which should be 0 but gives tiny values
+		if (Math.Abs(result) < 1e-6)
+		{
+			return new CallState("0");
+		}
+		
+		// Round very close to 1 or -1 to exactly 1 or -1
+		if (Math.Abs(result - 1.0) < 1e-10)
+		{
+			return new CallState("1");
+		}
+		if (Math.Abs(result + 1.0) < 1e-10)
+		{
+			return new CallState("-1");
+		}
+		
+		// Format without scientific notation using default ToString which gives appropriate precision
+		var formatted = result.ToString(CultureInfo.InvariantCulture);
+		
+		// If it has scientific notation, convert to decimal format
+		if (formatted.Contains('E') || formatted.Contains('e'))
+		{
+			// For very small/large numbers, use fixed-point with appropriate precision
+			formatted = result.ToString("F15", CultureInfo.InvariantCulture).TrimEnd('0').TrimEnd('.');
+		}
+		
+		return new CallState(formatted);
+	}
 }
