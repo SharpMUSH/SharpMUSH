@@ -94,7 +94,7 @@ public static partial class HelperFunctions
 	public static async ValueTask<bool> IsHearer(this AnySharpObject obj, IConnectionService connections,
 		IAttributeService attributes)
 	{
-		if (connections.IsConnected(obj) || await obj.IsPuppet())
+		if (await connections.IsConnected(obj) || await obj.IsPuppet())
 		{
 			return true;
 		}

@@ -26,11 +26,15 @@ public class ConnectionService : IConnectionService
 	public IConnectionService.ConnectionData? Get(long handle) =>
 		_sessionState.GetValueOrDefault(handle);
 	
-	public IEnumerable<IConnectionService.ConnectionData> Get(DBRef reference) =>
-		_sessionState.Values.Where(x => x.Ref.HasValue).Where(x => x.Ref!.Value.Equals(reference));
+	public IAsyncEnumerable<IConnectionService.ConnectionData> Get(DBRef reference) =>
+		_sessionState.Values
+			.ToAsyncEnumerable()
+			.Where(x => x.Ref.HasValue)
+			.Where(x => x.Ref!.Value.Equals(reference));
 
-	public IEnumerable<IConnectionService.ConnectionData> GetAll() =>
-		_sessionState.Values;
+	public IAsyncEnumerable<IConnectionService.ConnectionData> GetAll() =>
+		_sessionState.Values
+			.ToAsyncEnumerable();
 
 	public void ListenState(Action<(long, DBRef?, IConnectionService.ConnectionState, IConnectionService.ConnectionState)> handler) =>
 		_handlers.Add(handler);

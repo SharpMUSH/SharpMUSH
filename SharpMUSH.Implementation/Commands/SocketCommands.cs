@@ -27,7 +27,6 @@ public partial class Commands
 		
 		var filteredPlayers = await everyone
 			.Where(player => player.Ref.HasValue)
-			.ToAsyncEnumerable()
 			.Select(async player =>
 			{
 				var obj = await Mediator!.Send(new GetBaseObjectNodeQuery(player.Ref!.Value));

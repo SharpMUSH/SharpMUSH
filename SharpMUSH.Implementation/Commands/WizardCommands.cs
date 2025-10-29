@@ -62,7 +62,7 @@ public partial class Commands
 			shout = MModule.concat(MModule.single(Configuration!.CurrentValue.Cosmetic.RoyaltyWallPrefix + " "), shout);
 		}
 		
-		await foreach (var handle in handles.ToAsyncEnumerable())
+		await foreach (var handle in handles)
 		{
 			await NotifyService!.Notify(handle, shout);
 		}
@@ -82,7 +82,7 @@ public partial class Commands
 			shout = MModule.concat(MModule.single(Configuration!.CurrentValue.Cosmetic.WizardWallPrefix + " "), shout);
 		}
 		
-		await foreach (var handle in handles.ToAsyncEnumerable())
+		await foreach (var handle in handles)
 		{
 			await NotifyService!.Notify(handle, shout);
 		}
@@ -339,7 +339,7 @@ public partial class Commands
 			shout = MModule.concat(MModule.single(Configuration!.CurrentValue.Cosmetic.WallPrefix + " "), shout);
 		}
 		
-		await foreach (var handle in handles.ToAsyncEnumerable())
+		await foreach (var handle in handles)
 		{
 			await NotifyService!.Notify(handle, shout);
 		}

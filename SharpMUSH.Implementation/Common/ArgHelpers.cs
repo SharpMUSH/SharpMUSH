@@ -263,7 +263,7 @@ public static partial class ArgHelpers
 		}
 
 		var found = maybeFound.AsSharpObject.AsPlayer;
-		var foundData = connectionService.Get(found.Object.DBRef).FirstOrDefault();
+		var foundData = await connectionService.Get(found.Object.DBRef).FirstOrDefaultAsync();
 
 		if (foundData is null) return new CallState("#-1 That player is not connected.");
 

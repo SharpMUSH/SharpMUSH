@@ -6,6 +6,7 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services.Interfaces;
 using AsyncEnumerable = System.Linq.AsyncEnumerable;
 
 namespace SharpMUSH.Implementation.Functions;
@@ -51,7 +52,7 @@ public partial class Functions
 		var located = maybeLocate.AsPlayer;
 
 		// TODO: CanSee in case of Dark.
-		var data = ConnectionService!.Get(located.Object.DBRef).ToArray().First();
+		var data = await ConnectionService!.Get(located.Object.DBRef).FirstAsync();
 		return new CallState(data.Connected?.TotalSeconds.ToString(CultureInfo.InvariantCulture) ?? "-1");
 	}
 
@@ -103,10 +104,12 @@ public partial class Functions
 		}
 
 		var locate = maybeLocate.AsPlayer;
-		var data = ConnectionService!.Get(locate.Object.DBRef).ToArray();
+		var data = ConnectionService!.Get(locate.Object.DBRef);
 
 		// TODO: CanSee in case of Dark.
-		return new CallState(data.Min(x => x.Idle?.TotalSeconds).ToString() ?? "-1");
+		return new CallState(await data
+			.Select(x => x.Idle?.TotalSeconds ?? -1)
+			.MinAsync());
 	}
 
 	[SharpFunction(Name = "IPADDR", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -157,12 +160,11 @@ public partial class Functions
 
 		// NEEDED: 'Get All Players'.
 		var allConnectionsDbRefs = await AsyncEnumerable.ToArrayAsync(ConnectionService!
-				.GetAll()
-				.Where(x => x.Ref is not null)
-				.ToAsyncEnumerable()
-				.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
-				.Where(async (x, _) => await PermissionService!.CanSee(looker, x))
-				.Select(x => $"#{x.Object().DBRef.Number}"));
+			.GetAll()
+			.Where(x => x.Ref is not null)
+			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
+			.Where(async (x, _) => await PermissionService!.CanSee(looker, x))
+			.Select(x => $"#{x.Object().DBRef.Number}"));
 
 		return new CallState(string.Join(" ", allConnectionsDbRefs));
 	}
@@ -231,7 +233,6 @@ public partial class Functions
 	[SharpFunction(Name = "WIDTH", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> Width(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		
 		var playerOrDescriptor = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var defaultArg = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, "78");
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -246,17 +247,17 @@ public partial class Functions
 				return new CallState("#-1");
 			}
 
-			return data.Metadata.TryGetValue("WIDTH", out var height) 
-				? height 
+			return data.Metadata.TryGetValue("WIDTH", out var height)
+				? height
 				: defaultArg;
 		}
 
 		return await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor,
 			playerOrDescriptor,
-			found =>
+			async found =>
 			{
-				var fod = ConnectionService!.Get(found.Object.DBRef).FirstOrDefault();
-				return ValueTask.FromResult<CallState>(fod?.Metadata["WIDTH"] ?? defaultArg.ToPlainText());
+				var fod = await ConnectionService!.Get(found.Object.DBRef).FirstOrDefaultAsync();
+				return fod?.Metadata["WIDTH"] ?? defaultArg.ToPlainText();
 			});
 	}
 
@@ -347,17 +348,17 @@ public partial class Functions
 				return new CallState("#-1");
 			}
 
-			return data.Metadata.TryGetValue("HEIGHT", out var height) 
-				? height 
+			return data.Metadata.TryGetValue("HEIGHT", out var height)
+				? height
 				: defaultArg;
 		}
 
 		return await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor,
 			playerOrDescriptor,
-			found =>
+			async found =>
 			{
-				var fod = ConnectionService!.Get(found.Object.DBRef).FirstOrDefault();
-				return ValueTask.FromResult<CallState>(fod?.Metadata["HEIGHT"] ?? defaultArg.ToPlainText());
+				var fod = await ConnectionService!.Get(found.Object.DBRef).FirstOrDefaultAsync();
+				return fod?.Metadata["HEIGHT"] ?? defaultArg.ToPlainText();
 			});
 	}
 

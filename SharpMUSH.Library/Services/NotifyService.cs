@@ -16,26 +16,24 @@ namespace SharpMUSH.Library.Services;
 /// <param name="_connectionService">Connection Service</param>
 public class NotifyService(IConnectionService _connectionService) : INotifyService
 {
-	public ValueTask Notify(DBRef who, OneOf<MString, string> what, AnySharpObject? sender, NotificationType type = NotificationType.Announce)
+	public async ValueTask Notify(DBRef who, OneOf<MString, string> what, AnySharpObject? sender, NotificationType type = NotificationType.Announce)
 	{
 		if (what.Match(
 			markupString => MModule.getLength(markupString) == 0,
 			str => str.Length == 0
 			))
 		{
-			return ValueTask.CompletedTask;
+			return;
 		}
 
 		var list = _connectionService.Get(who);
 
-		foreach (var item in list)
+		await foreach (var item in list)
 		{
-			_ = item?.OutputFunction(what.Match(
+			await item.OutputFunction(what.Match(
 				markupString => item.Encoding().GetBytes(markupString.ToString()),
 				str => item.Encoding().GetBytes(str)));
 		}
-
-		return ValueTask.CompletedTask;
 	}
 
 	public ValueTask Notify(AnySharpObject who, OneOf<MString, string> what, AnySharpObject? sender, NotificationType type = NotificationType.Announce)
@@ -66,26 +64,24 @@ public class NotifyService(IConnectionService _connectionService) : INotifyServi
 		return ValueTask.CompletedTask;
 	}
 
-	public ValueTask Prompt(DBRef who, OneOf<MString, string> what, AnySharpObject? sender, NotificationType type = NotificationType.Announce)
+	public async ValueTask Prompt(DBRef who, OneOf<MString, string> what, AnySharpObject? sender, NotificationType type = NotificationType.Announce)
 	{
 		if (what.Match(
 			    markupString => MModule.getLength(markupString) == 0,
 			    str => str.Length == 0
 		    ))
 		{
-			return ValueTask.CompletedTask;
+			return;
 		}
 
 		var list = _connectionService.Get(who);
 
-		foreach (var item in list)
+		await foreach (var item in list)
 		{
-			_ = item?.OutputFunction(what.Match(
+			await item.OutputFunction(what.Match(
 				markupString => item.Encoding().GetBytes(markupString.ToString()),
 				str => item.Encoding().GetBytes(str)));
 		}
-
-		return ValueTask.CompletedTask;
 	}
 
 	public ValueTask Prompt(AnySharpObject who, OneOf<MString, string> what, AnySharpObject? sender, NotificationType type = NotificationType.Announce)

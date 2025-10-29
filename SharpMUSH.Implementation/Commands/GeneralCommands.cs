@@ -1741,7 +1741,7 @@ public partial class Commands
 				if (await locationAnyObject.IsHearer(ConnectionService!, AttributeService!) ||
 				    await locationAnyObject.IsListener())
 				{
-					if (ConnectionService!.IsConnected(locationAnyObject))
+					if (await ConnectionService!.IsConnected(locationAnyObject))
 						await NotifyService.Notify(executor, $"{locationObj.Name} (this room) [speech]. (connected)");
 					else
 						await NotifyService.Notify(executor, $"{locationObj.Name} (this room) [speech].");
@@ -1778,7 +1778,7 @@ public partial class Commands
 				{
 					if (await fullObj.IsHearer(ConnectionService!, AttributeService!) || await fullObj.IsListener())
 					{
-						if (ConnectionService!.IsConnected(fullObj))
+						if (await ConnectionService!.IsConnected(fullObj))
 							await NotifyService.Notify(executor, $"{obj.Object().Name} [speech]. (connected)");
 						else
 							await NotifyService.Notify(executor, $"{obj.Object().Name} [speech].");
@@ -1834,7 +1834,7 @@ public partial class Commands
 				{
 					if (await fullObj.IsHearer(ConnectionService!, AttributeService!) || await fullObj.IsListener())
 					{
-						if (ConnectionService!.IsConnected(fullObj))
+						if (await ConnectionService!.IsConnected(fullObj))
 							await NotifyService.Notify(executor, $"{obj.Object().Name} [speech]. (connected)");
 						else
 							await NotifyService.Notify(executor, $"{obj.Object().Name} [speech].");
@@ -1850,10 +1850,10 @@ public partial class Commands
 
 		static async Task<bool> IsConnectedOrPuppetConnected(AnySharpObject obj)
 		{
-			if (ConnectionService!.IsConnected(obj)) return true;
+			if (await ConnectionService!.IsConnected(obj)) return true;
 
 			return await obj.IsPuppet()
-			       && ConnectionService!.IsConnected(await obj.Object().Owner.WithCancellation(CancellationToken.None));
+			       && await ConnectionService!.IsConnected(await obj.Object().Owner.WithCancellation(CancellationToken.None));
 		}
 	}
 

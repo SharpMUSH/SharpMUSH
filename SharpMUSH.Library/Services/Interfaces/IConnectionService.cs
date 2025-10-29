@@ -62,12 +62,12 @@ public interface IConnectionService
 	/// </summary>
 	/// <param name="reference">A database reference</param>
 	/// <returns>All matching handles connected to the DBRef</returns>
-	IEnumerable<ConnectionData> Get(DBRef reference);
+	IAsyncEnumerable<ConnectionData> Get(DBRef reference);
 
 	/// <summary>
 	/// Gets all handle information.
 	/// </summary>
-	IEnumerable<ConnectionData> GetAll();
+	IAsyncEnumerable<ConnectionData> GetAll();
 
 	/// <summary>
 	/// Register a handler that listens to connection change events.

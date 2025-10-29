@@ -133,18 +133,6 @@ public class SortService(ILocateService locateService, IConnectionService connec
 			ISortService.SortType.CasedName => source
 				.OrderByAwait(async (key, ct)
 					=> await (await locateService.Locate(parser, executor, executor, await keySelector(key, ct), LocateFlags.All))
-					.Match<ValueTask<string>>(
-						player => ValueTask.FromResult(player.Object.Name),
-						room => ValueTask.FromResult(room.Object.Name),
-						exit => ValueTask.FromResult(exit.Object.Name),
-						thing => ValueTask.FromResult(thing.Object.Name),
-						_ => keySelector(key, ct),
-						_ => keySelector(key, ct)
-					), StringComparer.Ordinal, direction),
-
-			ISortService.SortType.UncasedName => source
-				.OrderByAwait(async (key, ct)
-						=> await (await locateService.Locate(parser, executor, executor, await keySelector(key, ct), LocateFlags.All))
 						.Match<ValueTask<string>>(
 							player => ValueTask.FromResult(player.Object.Name),
 							room => ValueTask.FromResult(room.Object.Name),
@@ -152,15 +140,29 @@ public class SortService(ILocateService locateService, IConnectionService connec
 							thing => ValueTask.FromResult(thing.Object.Name),
 							_ => keySelector(key, ct),
 							_ => keySelector(key, ct)
-						), StringComparer.OrdinalIgnoreCase,
+						), StringComparer.Ordinal, direction),
+
+			ISortService.SortType.UncasedName => source
+				.OrderByAwait(async (key, ct)
+						=> await (await locateService.Locate(parser, executor, executor, await keySelector(key, ct),
+								LocateFlags.All))
+							.Match<ValueTask<string>>(
+								player => ValueTask.FromResult(player.Object.Name),
+								room => ValueTask.FromResult(room.Object.Name),
+								exit => ValueTask.FromResult(exit.Object.Name),
+								thing => ValueTask.FromResult(thing.Object.Name),
+								_ => keySelector(key, ct),
+								_ => keySelector(key, ct)
+							), StringComparer.OrdinalIgnoreCase,
 					direction),
 
 			ISortService.SortType.Conn => source
 				.OrderByAwait(async (key, ct)
 						=> (await locateService.Locate(parser, executor, executor, await keySelector(key, ct), LocateFlags.All))
 						.Match(
-							player => connectionService.Get(player.Object.DBRef).FirstOrDefault()?.Connected ??
-							          TimeSpan.MaxValue,
+							player => connectionService.Get(player.Object.DBRef)
+								.FirstOrDefaultAsync(ct).AsTask().GetAwaiter().GetResult()?
+								.Connected ?? TimeSpan.MaxValue,
 							_ => TimeSpan.MaxValue,
 							_ => TimeSpan.MaxValue,
 							_ => TimeSpan.MaxValue,
@@ -173,7 +175,9 @@ public class SortService(ILocateService locateService, IConnectionService connec
 				.OrderByAwait(async (key, ct)
 						=> (await locateService.Locate(parser, executor, executor, await keySelector(key, ct), LocateFlags.All))
 						.Match(
-							player => connectionService.Get(player.Object.DBRef).FirstOrDefault()?.Connected ??
+							player => connectionService.Get(player.Object.DBRef)
+								          .FirstOrDefaultAsync(ct).AsTask().GetAwaiter().GetResult()?
+								          .Connected ??
 							          TimeSpan.MaxValue,
 							_ => TimeSpan.MaxValue,
 							_ => TimeSpan.MaxValue,
