@@ -368,8 +368,7 @@ public partial class Functions
 			MModule.multipleWithDelimiter(delimiter, splitList.Where(x => regex.IsMatch(x.ToPlainText()))));
 	}
 
-	[SharpFunction(Name = "member", MinArgs = 2, MaxArgs = 3,
-		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "member", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> Member(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
