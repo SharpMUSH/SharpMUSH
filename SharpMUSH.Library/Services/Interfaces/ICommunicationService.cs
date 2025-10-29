@@ -80,7 +80,7 @@ public interface ICommunicationService
 		IMUSHCodeParser parser,
 		AnySharpObject executor,
 		AnySharpObject enactor,
-		IEnumerable<OneOf<DBRef, string>> targets,
+		IAsyncEnumerable<OneOf<DBRef, string>> targets,
 		Func<AnySharpObject, OneOf<MString, string>> messageFunc,
 		INotifyService.NotificationType notificationType,
 		bool notifyOnPermissionFailure = true);

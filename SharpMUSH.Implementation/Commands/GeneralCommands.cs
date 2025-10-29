@@ -305,7 +305,7 @@ public partial class Commands
 			parser,
 			executor,
 			enactor,
-			nameListTargets,
+			nameListTargets.ToAsyncEnumerable(),
 			_ => notification,
 			INotifyService.NotificationType.Announce,
 			notifyOnPermissionFailure: true);

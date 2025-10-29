@@ -133,12 +133,12 @@ public class CommunicationService(
 		IMUSHCodeParser parser,
 		AnySharpObject executor,
 		AnySharpObject enactor,
-		IEnumerable<OneOf<DBRef, string>> targets,
+		IAsyncEnumerable<OneOf<DBRef, string>> targets,
 		Func<AnySharpObject, OneOf<MString, string>> messageFunc,
 		INotifyService.NotificationType notificationType,
 		bool notifyOnPermissionFailure = true)
 	{
-		foreach (var target in targets)
+		await foreach (var target in targets)
 		{
 			var targetString = target.Match(dbref => dbref.ToString(), str => str);
 			await SendToObjectAsync(parser, executor, enactor, targetString, messageFunc, notificationType,
