@@ -9,6 +9,7 @@ public interface IValidateService
 {
 	enum ValidationType
 	{
+		Invalid = 0,
 		Name, 
 		AttributeName, 
 		AttributeValue, 

@@ -733,7 +733,7 @@ public partial class Functions
 			found => ValueTask.FromResult<CallState>(found.Object().DBRef));
 	}
 
-	[SharpFunction(Name = "OBJMEM", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "objmem", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> ObjectMemory(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>("0");
 
@@ -1215,10 +1215,10 @@ public partial class Functions
 			"timezome" => IValidateService.ValidationType.Timezone,
 			"locktype" => IValidateService.ValidationType.LockType,
 			"lockkey" => IValidateService.ValidationType.LockKey,
-			_ => IValidateService.ValidationType.PowerName
+			_ => IValidateService.ValidationType.Invalid
 		};
 
-		if (validationType == IValidateService.ValidationType.PowerName)
+		if (validationType == IValidateService.ValidationType.Invalid)
 		{
 			return string.Format(Errors.ErrorBadArgumentFormat, "valid");
 		}
@@ -1259,11 +1259,11 @@ public partial class Functions
 		}
 	}
 
-	[SharpFunction(Name = "VERSION", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "version", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Version(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? string.Empty);
 
-	[SharpFunction(Name = "VISIBLE", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "visible", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> Visible(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		await ValueTask.CompletedTask;
