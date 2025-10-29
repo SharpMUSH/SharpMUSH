@@ -196,14 +196,7 @@ public partial class Functions
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, dbref,
 			LocateFlags.All,
-			async actualObject =>
-			{
-				var top2 = parser.State.Take(2).ToArray();
-				var args = top2.Length > 1
-					? top2.Last().Arguments
-					: [];
-
-				return await parser.With(s => s with
+			async actualObject => await parser.With(s => s with
 					{
 						Enactor = parser.CurrentState.Executor
 					},
@@ -212,8 +205,7 @@ public partial class Functions
 						executor,
 						actualObject,
 						attribute,
-						args));
-			});
+						parser.CurrentState.EnvironmentRegisters)));
 	}
 
 	[SharpFunction(Name = "flags", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -221,12 +213,10 @@ public partial class Functions
 	{
 		if (parser.CurrentState.Arguments.Count == 0)
 		{
-			// List all flags known to the server
 			var flags = await Mediator!.Send(new GetAllObjectFlagsQuery());
 			return string.Join("", flags.Select(x => x.Symbol));
 		}
 
-		// List flags on an object or the object attribute
 		var dbrefAndAttr =
 			HelperFunctions.SplitDbRefAndOptionalAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -242,14 +232,12 @@ public partial class Functions
 			parser, executor, executor, obj, LocateFlags.All,
 			async found =>
 			{
-				// Object Flags
 				if (attributePattern is null)
 				{
 					var flags = found.Object().Flags.Value;
 					return string.Join("", await flags.Select(x => x.Symbol).ToArrayAsync());
 				}
 
-				// Attribute Flags
 				var attr = await AttributeService!.LazilyGetAttributeAsync(
 					executor, found, attributePattern, IAttributeService.AttributeMode.Read, false);
 
