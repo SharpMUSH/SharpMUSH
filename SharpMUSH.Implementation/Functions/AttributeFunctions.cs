@@ -77,6 +77,47 @@ public partial class Functions
 			});
 	}
 
+	[SharpFunction(Name = "attrib_set#", MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX)]
+	public static async ValueTask<CallState> AttributeSetSharp(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
+		{
+			return new CallState(Errors.ErrorNoSideFx);
+		}
+
+		var args = parser.CurrentState.Arguments;
+		var split = HelperFunctions.SplitObjectAndAttr(MModule.plainText(args["0"].Message!));
+		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+
+		if (!split.TryPickT0(out var details, out _))
+		{
+			return new CallState("#-1 BAD ARGUMENT FORMAT TO ATTRIB_SET");
+		}
+
+		var (dbref, attribute) = details;
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+			parser, enactor, executor, dbref, LocateFlags.All, async realLocated =>
+			{
+				var contents = args.TryGetValue("1", out var tmpContents)
+					? tmpContents.Message!
+					: MModule.empty();
+
+				var setResult = await AttributeService!.SetAttributeAsync(executor, realLocated, attribute, contents);
+
+				await NotifyService!.Notify(enactor,
+					setResult.Match(
+						_ => $"{realLocated.Object().Name}/{args["0"].Message} - Set.",
+						failure => failure.Value)
+				);
+
+				return new CallState(setResult.Match(
+					_ => $"{realLocated.Object().Name}/{args["0"].Message}",
+					failure => failure.Value));
+			});
+	}
+
 	[SharpFunction(Name = "default", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
 	public static async ValueTask<CallState> Default(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
