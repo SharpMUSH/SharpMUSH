@@ -889,22 +889,20 @@ public partial class ArangoDatabase(
 			TypeRestrictions = x.TypeRestrictions
 		};
 
-	private async ValueTask<IEnumerable<SharpAttributeFlag>> GetAttributeFlagsAsync(string id,
-		CancellationToken ct = default)
-	{
-		var result = await arangoDb.Query.ExecuteAsync<SharpAttributeFlagQueryResult>(handle,
-			$"FOR v in 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributeFlags} RETURN v",
-			new Dictionary<string, object> { { StartVertex, id } }, cancellationToken: ct);
-		return result.Select(x =>
-			new SharpAttributeFlag()
-			{
-				Name = x.Name,
-				Symbol = x.Symbol,
-				System = x.System,
-				Inheritable = x.Inheritable,
-				Id = x.Id
-			});
-	}
+	private IAsyncEnumerable<SharpAttributeFlag> GetAttributeFlagsAsync(string id,
+		CancellationToken ct = default) =>
+		arangoDb.Query.ExecuteStreamAsync<SharpAttributeFlagQueryResult>(handle,
+				$"FOR v in 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributeFlags} RETURN v",
+				new Dictionary<string, object> { { StartVertex, id } }, cancellationToken: ct)
+			.Select(x =>
+				new SharpAttributeFlag()
+				{
+					Name = x.Name,
+					Symbol = x.Symbol,
+					System = x.System,
+					Inheritable = x.Inheritable,
+					Id = x.Id
+				});
 
 	private IAsyncEnumerable<SharpAttribute> GetAllAttributesAsync(string id, CancellationToken ct = default)
 	{
@@ -1240,7 +1238,7 @@ public partial class ArangoDatabase(
 	private async ValueTask<SharpAttribute> SharpAttributeQueryToSharpAttribute(SharpAttributeQueryResult x,
 		CancellationToken cancellationToken = default)
 		=> new(x.Key, x.Name,
-			await GetAttributeFlagsAsync(x.Id, cancellationToken), null, x.LongName,
+			await GetAttributeFlagsAsync(x.Id, cancellationToken).ToArrayAsync(cancellationToken), null, x.LongName,
 			new AsyncLazy<IAsyncEnumerable<SharpAttribute>>(ct => Task.FromResult(GetTopLevelAttributesAsync(x.Id, ct))),
 			new AsyncLazy<SharpPlayer?>(async ct => await GetAttributeOwnerAsync(x.Id, ct)),
 			new AsyncLazy<SharpAttributeEntry?>(async ct => await GetRelatedAttributeEntry(x.Id, ct)))
@@ -1269,7 +1267,7 @@ public partial class ArangoDatabase(
 
 		return sharpAttributeResults
 			.Select<SharpAttributeQueryResult, LazySharpAttribute>(async (x, ctOuter) =>
-				new LazySharpAttribute(x.Key, x.Name, await GetAttributeFlagsAsync(x.Id, ctOuter), null, x.LongName,
+				new LazySharpAttribute(x.Key, x.Name, await GetAttributeFlagsAsync(x.Id, ctOuter).ToArrayAsync(ctOuter), null, x.LongName,
 					new AsyncLazy<IAsyncEnumerable<LazySharpAttribute>>(ct =>
 						Task.FromResult(GetTopLevelLazyAttributesAsync(x.Id, ct))),
 					new AsyncLazy<SharpPlayer?>(async ct => await GetAttributeOwnerAsync(x.Id, ct)),
@@ -1314,7 +1312,8 @@ public partial class ArangoDatabase(
 
 		return result2
 			.Select<SharpAttributeQueryResult, LazySharpAttribute>(async (x, outerCt) =>
-				new LazySharpAttribute(x.Key, x.Name, await GetAttributeFlagsAsync(x.Id, outerCt), null, x.LongName,
+				new LazySharpAttribute(x.Key, x.Name, await GetAttributeFlagsAsync(x.Id, outerCt).ToArrayAsync(outerCt), null,
+					x.LongName,
 					new AsyncLazy<IAsyncEnumerable<LazySharpAttribute>>(ct =>
 						Task.FromResult(GetTopLevelLazyAttributesAsync(x.Id, ct))),
 					new AsyncLazy<SharpPlayer?>(async ct => await GetObjectOwnerAsync(x.Id, ct)),
@@ -1435,7 +1434,7 @@ public partial class ArangoDatabase(
 		=> new(
 			x.Key,
 			x.Name,
-			await GetAttributeFlagsAsync(x.Id, cancellationToken),
+			await GetAttributeFlagsAsync(x.Id, cancellationToken).ToArrayAsync(cancellationToken),
 			null,
 			x.LongName,
 			new AsyncLazy<IAsyncEnumerable<LazySharpAttribute>>(ct =>
@@ -1454,7 +1453,8 @@ public partial class ArangoDatabase(
 		return result?.Value ?? string.Empty;
 	}
 
-	public async ValueTask<IEnumerable<SharpAttribute>?> GetAttributesRegexAsync(DBRef dbref, string attributePattern,
+	public async ValueTask<IAsyncEnumerable<SharpAttribute>?> GetAttributesRegexAsync(DBRef dbref,
+		string attributePattern,
 		CancellationToken cancellationToken = default)
 	{
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
@@ -1470,26 +1470,26 @@ public partial class ArangoDatabase(
 		const string query =
 			$"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName =~ @pattern RETURN v";
 
-		var result2 = await arangoDb.Query.ExecuteAsync<SharpAttributeQueryResult>(handle, query,
-			new Dictionary<string, object>()
-			{
-				{ StartVertex, startVertex },
-				{ "pattern", attributePattern }
-			}, cancellationToken: cancellationToken);
-
-		return await Task.WhenAll(result2.Select(async x =>
-			new SharpAttribute(
-				x.Key,
-				x.Name,
-				await GetAttributeFlagsAsync(x.Id, cancellationToken),
-				null,
-				x.LongName,
-				new AsyncLazy<IAsyncEnumerable<SharpAttribute>>(ct => Task.FromResult(GetTopLevelAttributesAsync(x.Id, ct))),
-				new AsyncLazy<SharpPlayer?>(async ct => await GetObjectOwnerAsync(x.Id, ct)),
-				new AsyncLazy<SharpAttributeEntry?>(async ct => await GetRelatedAttributeEntry(x.Id, ct)))
-			{
-				Value = MarkupStringModule.deserialize(x.Value)
-			}));
+		return arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle, query,
+				new Dictionary<string, object>()
+				{
+					{ StartVertex, startVertex },
+					{ "pattern", attributePattern }
+				}, cancellationToken: cancellationToken)
+			.Select<SharpAttributeQueryResult, SharpAttribute>(async (x, outerCt) =>
+				new SharpAttribute(
+					x.Key,
+					x.Name,
+					await GetAttributeFlagsAsync(x.Id, CancellationToken.None)
+						.ToArrayAsync(cancellationToken: outerCt),
+					null,
+					x.LongName,
+					new AsyncLazy<IAsyncEnumerable<SharpAttribute>>(ct => Task.FromResult(GetTopLevelAttributesAsync(x.Id, ct))),
+					new AsyncLazy<SharpPlayer?>(async ct => await GetObjectOwnerAsync(x.Id, ct)),
+					new AsyncLazy<SharpAttributeEntry?>(async ct => await GetRelatedAttributeEntry(x.Id, ct)))
+				{
+					Value = MarkupStringModule.deserialize(x.Value)
+				});
 	}
 
 	public async ValueTask SetLockAsync(SharpObject target, string lockName, string lockString,
