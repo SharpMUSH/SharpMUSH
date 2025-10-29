@@ -1100,7 +1100,8 @@ public partial class Functions
 			objAndAttribute: parser.CurrentState.Arguments["0"].Message!,
 			args: parser.CurrentState.Arguments.Skip(1)
 				.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value.Value))
-				.ToDictionary());
+				.ToDictionary(),
+			ignoreLambda: true);
 
 		return new CallState(result);
 	}
@@ -1132,10 +1133,20 @@ public partial class Functions
 		return new CallState(result);
 	}
 
-	[SharpFunction(Name = "ULAMBDA", MinArgs = 1, MaxArgs = 33, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> UserFunctionLambda(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "ulambda", MinArgs = 1, MaxArgs = 33, Flags = FunctionFlags.Regular)]
+	public static async ValueTask<CallState> UserFunctionLambda(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+
+		var result = await AttributeService!.EvaluateAttributeFunctionAsync(
+			parser,
+			executor,
+			objAndAttribute: parser.CurrentState.Arguments["0"].Message!,
+			args: parser.CurrentState.Arguments.Skip(1)
+				.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value.Value))
+				.ToDictionary());
+
+		return new CallState(result);
 	}
 
 	[SharpFunction(Name = "ulocal", MinArgs = 1, MaxArgs = 33, Flags = FunctionFlags.Regular | FunctionFlags.Localize)]

@@ -74,7 +74,7 @@ public class AttributeService(
 			{
 				return new None();
 			}
-			
+
 			var parent = await curObj.Object().Parent.WithCancellation(CancellationToken.None);
 			if (parent.IsNone)
 			{
@@ -210,7 +210,8 @@ public class AttributeService(
 
 	public async ValueTask<MString> EvaluateAttributeFunctionAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		MString objAndAttribute,
-		Dictionary<string, CallState> args, bool evalParent = true, bool ignorePermissions = false)
+		Dictionary<string, CallState> args, bool evalParent = true, bool ignorePermissions = false,
+		bool ignoreLambda = false)
 	{
 		var split = MModule.split("/", objAndAttribute);
 		var obj = split.First();
@@ -219,7 +220,7 @@ public class AttributeService(
 		var lambdaPredicate = obj.ToPlainText().StartsWith("#LAMBDA", StringComparison.InvariantCultureIgnoreCase);
 
 		// #apply evaluations. 
-		if (applyPredicate)
+		if (applyPredicate && !ignoreLambda)
 		{
 			var argN = 1;
 			if (!string.IsNullOrWhiteSpace(attribute.ToPlainText()) && !int.TryParse(attribute.ToPlainText(), out argN))
@@ -252,7 +253,7 @@ public class AttributeService(
 		}
 
 		// LAMBDA.
-		if (lambdaPredicate)
+		if (lambdaPredicate && !ignoreLambda)
 		{
 			var result = await parser.With(s => s with { Arguments = args },
 				async np => await np.FunctionParse(attribute));
