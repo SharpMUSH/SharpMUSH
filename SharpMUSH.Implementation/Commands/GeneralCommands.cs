@@ -604,7 +604,7 @@ public partial class Commands
 			// notify: Matches on contents of this room:
 			var matchedContent =
 				await CommandDiscoveryService!.MatchUserDefinedCommand(parser,
-					await whereContent.Select(x => x.WithRoomOption()).ToArrayAsync(),
+					whereContent.Select(x => x.WithRoomOption()),
 					arg0);
 
 			if (matchedContent.IsSome())
@@ -625,7 +625,7 @@ public partial class Commands
 			// notify: Matches on carried objects:
 			var matchedContent =
 				await CommandDiscoveryService!.MatchUserDefinedCommand(parser,
-					executorContents.Select(x => x.WithRoomOption()).ToArrayAsync().GetAwaiter().GetResult(),
+					executorContents.Select(x => x.WithRoomOption()),
 					arg0);
 
 			if (matchedContent.IsSome())
@@ -647,8 +647,8 @@ public partial class Commands
 		if (switches.Contains("GLOBAL"))
 		{
 			var masterRoom = new DBRef(Convert.ToInt32(Configuration!.CurrentValue.Database.MasterRoom));
-			var masterRoomContents =
-				(await Mediator!.Send(new GetContentsQuery(masterRoom)))?.ToArrayAsync().GetAwaiter().GetResult() ?? [];
+			var masterRoomContents = await Mediator!.Send(new GetContentsQuery(masterRoom))
+			                         ?? AsyncEnumerable.Empty<AnySharpContent>();
 
 			var masterRoomContent =
 				await CommandDiscoveryService!.MatchUserDefinedCommand(parser,

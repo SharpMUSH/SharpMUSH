@@ -40,11 +40,10 @@ public partial class CommandDiscoveryService(IFusionCache cache) : ICommandDisco
 	// CONSIDERATION: Do we also need a possible Database-Scan for all commands, and cache them?
 	public async ValueTask<Option<IEnumerable<(AnySharpObject SObject, SharpAttribute Attribute, Dictionary<string, CallState> Arguments)>>> MatchUserDefinedCommand(
 		IMUSHCodeParser parser,
-		IEnumerable<AnySharpObject> objects,
+		IAsyncEnumerable<AnySharpObject> objects,
 		MString commandString)
 	{
 		var commandPatternAttributes = await objects
-			.ToAsyncEnumerable()
 			.Where(async (x,_) => !await x.HasFlag("NO_COMMAND"))
 			.SelectMany(MatchUserDefinedCommandSelectMany)
 			.ToArrayAsync();

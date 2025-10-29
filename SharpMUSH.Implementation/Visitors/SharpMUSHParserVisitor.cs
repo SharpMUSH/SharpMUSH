@@ -437,7 +437,7 @@ public class SharpMUSHParserVisitor(
 
 			var userDefinedCommandMatches = await CommandDiscoveryService.MatchUserDefinedCommand(
 				parser,
-				await nearbyObjects.ToArrayAsync(),
+				nearbyObjects,
 				src);
 
 			if (userDefinedCommandMatches.IsSome())
@@ -450,9 +450,10 @@ public class SharpMUSHParserVisitor(
 			// Step 12: User Defined commands on the location itself.
 			if (executorObject.IsContent)
 			{
+				AnySharpObject[] item = [(await executorObject.AsContent.Location()).WithExitOption()]; 
 				var userDefinedCommandMatchesOnLocation = await CommandDiscoveryService.MatchUserDefinedCommand(
 					parser,
-					[(await executorObject.AsContent.Location()).WithExitOption()],
+					item.ToAsyncEnumerable(),
 					src);
 
 				if (userDefinedCommandMatchesOnLocation.IsSome())
@@ -467,12 +468,13 @@ public class SharpMUSHParserVisitor(
 			var goConfig = Configuration.CurrentValue.Database.MasterRoom;
 			var maybeGlobalObject = await Mediator.Send(new GetObjectNodeQuery(new DBRef(Convert.ToInt32(goConfig))));
 			var globalObject = maybeGlobalObject.Known();
+			AnySharpObject[] globalObjects = [globalObject];
 			var globalObjectContent = (await globalObject.AsContainer.Content(Mediator))
 				.Select(x => x.WithRoomOption());
 
 			var userDefinedCommandMatchesOnGlobal = await CommandDiscoveryService.MatchUserDefinedCommand(
 				parser,
-				[globalObject, .. await globalObjectContent.ToArrayAsync()],
+				globalObjects.ToAsyncEnumerable().Union(globalObjectContent),
 				src);
 
 			if (userDefinedCommandMatchesOnGlobal.IsSome())

@@ -10,6 +10,6 @@ public interface ICommandDiscoveryService
 
 	ValueTask<Option<IEnumerable<(AnySharpObject SObject, SharpAttribute Attribute, Dictionary<string, CallState> Arguments)>>> MatchUserDefinedCommand(
 		IMUSHCodeParser parser,
-		IEnumerable<AnySharpObject> objects,
+		IAsyncEnumerable<AnySharpObject> objects,
 		MString commandString);
 }
