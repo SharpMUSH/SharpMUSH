@@ -26,6 +26,7 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 	private static IExpandedObjectDataService? ObjectDataService { get; set; }
 	private static IManipulateSharpObjectService? ManipulateSharpObjectService { get; set; }
 	private static ICommunicationService? CommunicationService { get; set; }
+	private static IValidateService? ValidateService { get; set; }
 	private static ISortService? SortService { get; set; }
 
 	private readonly FunctionLibraryService _functionLibrary = [];
@@ -45,6 +46,7 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 		IManipulateSharpObjectService manipulateSharpObjectService,
 		IExpandedObjectDataService objectDataService,
 		ISortService sortService,
+		IValidateService validateService,
 		ICommunicationService communicationService)
 	{
 		Mediator = mediator;
@@ -60,6 +62,7 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 		ManipulateSharpObjectService = manipulateSharpObjectService;
 		ObjectDataService = objectDataService;
 		SortService = sortService;
+		ValidateService = validateService;
 		CommunicationService = communicationService;
 		
 		foreach (var command in Generated.FunctionLibrary.Functions)

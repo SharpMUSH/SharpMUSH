@@ -33,6 +33,8 @@ public class AnyOptionalSharpObjectOrError : OneOfBase<SharpPlayer, SharpRoom, S
 	public SharpExit AsExit => AsT2;
 	public SharpThing AsThing => AsT3;
 
+	public bool IsAnyObject => !IsNone && !IsError;
+	
 	public AnySharpObject AsAnyObject => Match(
 		player => new AnySharpObject(player), 
 		room => new AnySharpObject(room),

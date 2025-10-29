@@ -118,7 +118,7 @@ public class ManipulateSharpObjectService(
 			return Errors.ErrorPerm;
 		}
 
-		if (!await validateService.Valid(IValidateService.ValidationType.Password, MModule.single(newPassword)))
+		if (!await validateService.Valid(IValidateService.ValidationType.Password, MModule.single(newPassword), new None()))
 		{
 			if (notify)
 			{

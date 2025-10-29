@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using Mediator;
 using Microsoft.Extensions.Options;
 using OneOf;
+using OneOf.Types;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -19,7 +20,7 @@ public partial class ValidateService(
 	: IValidateService
 {
 	public async ValueTask<bool> Valid(IValidateService.ValidationType type, MString value,
-		OneOf<AnySharpObject, SharpAttributeEntry>? target = null)
+		OneOf<AnySharpObject, SharpAttributeEntry, SharpChannel, None> target)
 		=> type switch
 		{
 			_ when value.Length == 0
@@ -27,13 +28,13 @@ public partial class ValidateService(
 			IValidateService.ValidationType.Name
 				=> ValidateName(value),
 			IValidateService.ValidationType.PlayerName when target is { IsT0: true }
-				=> await ValidatePlayerName(value, target.Value.AsT0),
+				=> await ValidatePlayerName(value, target.AsT0),
 			IValidateService.ValidationType.PlayerAlias when target is { IsT0: true }
-				=> ValidatePlayerAlias(value, target.Value.AsT0),
+				=> ValidatePlayerAlias(value, target.AsT0),
 			IValidateService.ValidationType.AttributeName
 				=> ValidAttributeNameRegex().IsMatch(value.ToPlainText()),
 			IValidateService.ValidationType.AttributeValue when target is { IsT1: true }
-				=> ValidateAttributeValue(value, target.Value.AsT1),
+				=> ValidateAttributeValue(value, target.AsT1),
 			IValidateService.ValidationType.ColorName
 				=> true,
 			IValidateService.ValidationType.AnsiCode
@@ -41,7 +42,7 @@ public partial class ValidateService(
 			IValidateService.ValidationType.CommandName
 				=> ValidCommandNameRegex().IsMatch(value.ToPlainText()),
 			IValidateService.ValidationType.LockKey when target is { IsT0: true }
-				=> lockService.Validate(value.ToPlainText(), target.Value.AsT0),
+				=> lockService.Validate(value.ToPlainText(), target.AsT0),
 			IValidateService.ValidationType.LockType
 				=> ValidateLockType(value),
 			IValidateService.ValidationType.BoolExp
@@ -50,8 +51,11 @@ public partial class ValidateService(
 				=> ValidAttributeNameRegex().IsMatch(value.ToPlainText()),
 			IValidateService.ValidationType.PowerName
 				=> ValidAttributeNameRegex().IsMatch(value.ToPlainText()),
-			IValidateService.ValidationType.ChannelName
+			IValidateService.ValidationType.ChannelName when target is { IsT3: true }
 				=> ChannelNameRegex().IsMatch(value.ToPlainText()),
+			IValidateService.ValidationType.ChannelName when target is { IsT2: true, AsT2: var channel}
+				=> channel.Name.ToPlainText() == value.ToPlainText() 
+				   ||  ChannelNameRegex().IsMatch(value.ToPlainText()),
 			IValidateService.ValidationType.Password
 				=> PasswordRegex().IsMatch(value.ToPlainText()),
 			IValidateService.ValidationType.QRegisterName

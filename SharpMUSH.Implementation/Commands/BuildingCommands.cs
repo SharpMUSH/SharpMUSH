@@ -1,4 +1,5 @@
-﻿using SharpMUSH.Library;
+﻿using OneOf.Types;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -32,7 +33,7 @@ public partial class Commands
 		var name = args["0"].Message!;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		if (!await ValidateService!.Valid(IValidateService.ValidationType.Name, name))
+		if (!await ValidateService!.Valid(IValidateService.ValidationType.Name, name, new None()))
 		{
 			await NotifyService!.Notify(executor, "Invalid name for a thing.");
 			return new CallState(Errors.ErrorBadObjectName);

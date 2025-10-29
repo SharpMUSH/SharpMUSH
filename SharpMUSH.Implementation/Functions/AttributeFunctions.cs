@@ -8,6 +8,7 @@ using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -1159,12 +1160,10 @@ public partial class Functions
 				Registers = []
 			},
 			async np => await AttributeService!.EvaluateAttributeFunctionAsync(
-				parser,
+				np,
 				executor,
 				objAndAttribute: parser.CurrentState.Arguments["0"].Message!,
-				args: parser.CurrentState.Arguments.Skip(1)
-					.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value.Value))
-					.ToDictionary())
+				args: parser.CurrentState.EnvironmentRegisters)
 		);
 	}
 
@@ -1189,10 +1188,75 @@ public partial class Functions
 		};
 	}
 
-	[SharpFunction(Name = "VALID", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> Valid(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "valid", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular)]
+	public static async ValueTask<CallState> Valid(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var category = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var str = parser.CurrentState.Arguments["1"].Message!;
+		var target = parser.CurrentState.Arguments.Count >= 3
+			? parser.CurrentState.Arguments["2"].Message!.ToPlainText()
+			: null;
+		var caller = await parser.CurrentState.KnownCallerObject(Mediator!);
+
+		var validationType = category switch
+		{
+			"name" => IValidateService.ValidationType.Name,
+			"attrname" => IValidateService.ValidationType.AttributeName,
+			"attrvalue" => IValidateService.ValidationType.AttributeValue,
+			"playername" => IValidateService.ValidationType.PlayerName,
+			"password" => IValidateService.ValidationType.Password,
+			"command" => IValidateService.ValidationType.CommandName,
+			"function" => IValidateService.ValidationType.FunctionName,
+			"flag" => IValidateService.ValidationType.FlagName,
+			"qreg" => IValidateService.ValidationType.QRegisterName,
+			"colorname" => IValidateService.ValidationType.ColorName,
+			"ansicodes" => IValidateService.ValidationType.AnsiCode,
+			"channel" => IValidateService.ValidationType.ChannelName,
+			"timezome" => IValidateService.ValidationType.Timezone,
+			"locktype" => IValidateService.ValidationType.LockType,
+			"lockkey" => IValidateService.ValidationType.LockKey,
+			_ => IValidateService.ValidationType.PowerName
+		};
+
+		if (validationType == IValidateService.ValidationType.PowerName)
+		{
+			return string.Format(Errors.ErrorBadArgumentFormat, "valid");
+		}
+
+		return validationType switch
+		{
+			// TODO: TARGET ATTRIBUTE!
+			// TODO: Mediator & Service for getting the entry.
+			IValidateService.ValidationType.AttributeValue => await ValidateService!.Valid(validationType, str, new None()),
+
+			IValidateService.ValidationType.PlayerName when target is null
+				=> await ValidateService!.Valid(validationType, str, caller),
+			IValidateService.ValidationType.PlayerName
+				when await LocateService!.LocateAndNotifyIfInvalid(parser, caller, caller, target, LocateFlags.All)
+					is { IsAnyObject: true, AsAnyObject: var obj }
+				=> await ValidateService!.Valid(validationType, str, obj),
+			IValidateService.ValidationType.PlayerName => Errors.ErrorCantSeeThat,
+
+			IValidateService.ValidationType.ChannelName => await ValidateService!.Valid(validationType, str,
+				await GetChannel(target ?? string.Empty)),
+
+			IValidateService.ValidationType.LockType when target is null
+				=> await ValidateService!.Valid(validationType, str, caller),
+			IValidateService.ValidationType.LockType
+				when await LocateService!.LocateAndNotifyIfInvalid(parser, caller, caller, target, LocateFlags.All)
+					is { IsAnyObject: true, AsAnyObject: var obj }
+				=> await ValidateService!.Valid(validationType, str, obj),
+			IValidateService.ValidationType.LockType => Errors.ErrorCantSeeThat,
+			_ => await ValidateService!.Valid(validationType, str, new None())
+		};
+
+		async ValueTask<OneOf<AnySharpObject, SharpAttributeEntry, SharpChannel, None>> GetChannel(string t)
+		{
+			var channel = await Mediator!.Send(new GetChannelQuery(t));
+			return channel is null
+				? new None()
+				: channel;
+		}
 	}
 
 	[SharpFunction(Name = "VERSION", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]
@@ -1203,7 +1267,7 @@ public partial class Functions
 	public static async ValueTask<CallState> Visible(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		await ValueTask.CompletedTask;
-		
+
 		var obj = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var victimAttribute = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 		var victAttr = HelperFunctions.SplitDbRefAndOptionalAttr(victimAttribute);
@@ -1220,22 +1284,23 @@ public partial class Functions
 			LocateFlags.All,
 			async foundObj =>
 			{
-				return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, victim,
+				return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, victim,
 					LocateFlags.All,
-					async foundVictim => 
+					async foundVictim =>
 					{
 						if (attr is null)
 						{
 							return await PermissionService!.CanSee(foundObj, foundVictim);
 						}
-						
-						var realAttr = await AttributeService!.GetAttributeAsync(executor, foundVictim, attr, IAttributeService.AttributeMode.Read, false);
-						
+
+						var realAttr = await AttributeService!.GetAttributeAsync(executor, foundVictim, attr,
+							IAttributeService.AttributeMode.Read, false);
+
 						if (realAttr.IsError || realAttr.IsNone)
 						{
 							return false;
 						}
-						
+
 						return await PermissionService!.CanViewAttribute(foundObj, foundVictim, realAttr.AsAttribute);
 					});
 			}
@@ -1272,7 +1337,8 @@ public partial class Functions
 		{
 			return Errors.ErrorInteger;
 		}
-		if(startInt > countInt || startInt < 1)
+
+		if (startInt > countInt || startInt < 1)
 		{
 			return Errors.ErrorArgRange;
 		}
@@ -1293,7 +1359,7 @@ public partial class Functions
 				}
 
 				var attributesStaging = attributes.AsAttributes.Skip(startInt).Take(countInt);
-				
+
 				return string.Join(" ", await attributesStaging.Select(x => x.LongName).ToArrayAsync());
 			});
 	}
@@ -1316,7 +1382,8 @@ public partial class Functions
 		{
 			return Errors.ErrorInteger;
 		}
-		if(startInt > countInt || startInt < 1)
+
+		if (startInt > countInt || startInt < 1)
 		{
 			return Errors.ErrorArgRange;
 		}
@@ -1337,7 +1404,7 @@ public partial class Functions
 				}
 
 				var attributesStaging = attributes.AsAttributes.Skip(startInt).Take(countInt);
-				
+
 				return string.Join(" ", await attributesStaging.Select(x => x.LongName).ToArrayAsync());
 			});
 	}
