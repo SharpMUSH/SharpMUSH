@@ -1959,9 +1959,9 @@ public partial class Commands
 		var parsedIfElse = await parser.CurrentState.Arguments["0"].ParsedMessage();
 		var falsey = Predicates.Falsy(parsedIfElse!);
 
-		if (parser.CurrentState.Arguments.TryGetValue("2", out var arg2))
+		if (parser.CurrentState.Arguments.TryGetValue("1", out var arg1))
 		{
-			await parser.CommandListParse(arg2.Message!);
+			await parser.CommandListParse(arg1.Message!);
 		}
 
 		return new CallState(!falsey);
