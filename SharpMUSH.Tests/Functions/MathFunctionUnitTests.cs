@@ -239,7 +239,21 @@ public class MathFunctionUnitTests
 	[Arguments("floor(3.14)", "3")]
 	[Arguments("floor(3.0)", "3")]
 	[Arguments("floor(-3.14)", "-4")]
+	[Arguments("floor(3.14159)", "3")]
 	public async Task Floor(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("ceil(3.14159)", "4")]
+	[Arguments("ceil(3.0)", "3")]
+	[Arguments("ceil(-3.14)", "-3")]
+	public async Task Ceil(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
 
@@ -528,8 +542,8 @@ public class MathFunctionUnitTests
 
 	[Test]
 	[Arguments("cos(0)", "1")]
-	// Note: cos(π/2) is technically 0, but floating point precision gives a very small number
-	// [Arguments("cos(1.5707963267948966)", "0")]
+	[Arguments("cos(90,d)", "6.123233995736766E-17")]
+	[Arguments("cos(1.570796)", "3.2679489653813835E-07")]
 	public async Task Cos(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
