@@ -154,21 +154,93 @@ public partial class Functions
 		try
 		{
 			var value = double.Parse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["0"].Message)));
-			var fractionalPart = value - Math.Truncate(value);
+			var showWhole = args.Count == 2 && int.Parse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["1"].Message))) != 0;
 			
-			if (args.Count == 2)
+			var wholePart = Math.Truncate(value);
+			var fractionalPart = Math.Abs(value - wholePart);
+			
+			// If it's a whole number, just return it
+			if (fractionalPart < 0.000001)
 			{
-				// Second argument is precision
-				var precision = int.Parse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["1"].Message)));
-				return ValueTask.FromResult<CallState>(Math.Round(fractionalPart, precision));
+				return ValueTask.FromResult<CallState>(((int)wholePart).ToString());
 			}
 			
-			return ValueTask.FromResult<CallState>(fractionalPart);
+			// Convert fractional part to a fraction using continued fractions algorithm
+			var (numerator, denominator) = DecimalToFraction(fractionalPart);
+			
+			// Adjust for negative numbers
+			if (value < 0 && wholePart == 0)
+			{
+				numerator = -numerator;
+			}
+			
+			// If we have a whole part and showWhole is true
+			if (Math.Abs(wholePart) >= 1 && showWhole)
+			{
+				return ValueTask.FromResult<CallState>($"{(int)wholePart} {numerator}/{denominator}");
+			}
+			// If we have a whole part but showWhole is false, add it to the fraction
+			else if (Math.Abs(wholePart) >= 1 && !showWhole)
+			{
+				numerator += (int)wholePart * denominator;
+				return ValueTask.FromResult<CallState>($"{numerator}/{denominator}");
+			}
+			// Just the fraction
+			else
+			{
+				return ValueTask.FromResult<CallState>($"{numerator}/{denominator}");
+			}
 		}
 		catch (Exception)
 		{
 			return ValueTask.FromResult<CallState>(Errors.ErrorNumbers);
 		}
+	}
+	
+	private static (int numerator, int denominator) DecimalToFraction(double value, int maxDenominator = 1000000)
+	{
+		if (value == 0) return (0, 1);
+		
+		int sign = value < 0 ? -1 : 1;
+		value = Math.Abs(value);
+		
+		int n0 = 0, d0 = 1;
+		int n1 = 1, d1 = 0;
+		
+		double remaining = value;
+		int maxIterations = 50;
+		
+		for (int i = 0; i < maxIterations; i++)
+		{
+			int a = (int)remaining;
+			int n2 = n0 + a * n1;
+			int d2 = d0 + a * d1;
+			
+			if (d2 > maxDenominator)
+			{
+				break;
+			}
+			
+			// Check if we're close enough
+			if (Math.Abs(value - (double)n2 / d2) < 0.000001)
+			{
+				return (sign * n2, d2);
+			}
+			
+			remaining = 1.0 / (remaining - a);
+			
+			if (double.IsInfinity(remaining) || double.IsNaN(remaining))
+			{
+				return (sign * n2, d2);
+			}
+			
+			n0 = n1;
+			d0 = d1;
+			n1 = n2;
+			d1 = d2;
+		}
+		
+		return (sign * n1, d1);
 	}
 
 	[SharpFunction(Name = "inc", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -194,20 +266,59 @@ public partial class Functions
 				return new CallState("0");
 			}
 			
-			// Check for division by zero if operation is div
-			if (operation == "div" && values.Skip(1).Any(v => v == 0))
+			// Check for division by zero for operations that divide
+			if ((operation == "div" || operation == "fdiv" || operation == "modulo" || operation == "remainder") 
+			    && values.Skip(1).Any(v => v == 0))
 			{
 				return Errors.ErrorDivideByZero;
 			}
 			
 			decimal result = operation switch
 			{
+				// Arithmetic operations
 				"add" => values.Sum(),
 				"sub" => values.Aggregate((acc, val) => acc - val),
 				"mul" => values.Aggregate((acc, val) => acc * val),
 				"div" => values.Aggregate((acc, val) => acc / val),
+				"fdiv" => values.Aggregate((acc, val) => acc / val),
+				"modulo" => values.Aggregate((acc, val) => acc % val),
+				"remainder" => values.Aggregate((acc, val) => acc % val),
+				
+				// Comparison operations
 				"max" => values.Max(),
 				"min" => values.Min(),
+				"eq" => values.All(v => v == values[0]) ? 1 : 0,
+				"neq" => values.Zip(values.Skip(1), (a, b) => a != b).All(x => x) ? 1 : 0,
+				"gt" => values.Zip(values.Skip(1), (a, b) => a > b).All(x => x) ? 1 : 0,
+				"gte" => values.Zip(values.Skip(1), (a, b) => a >= b).All(x => x) ? 1 : 0,
+				"lt" => values.Zip(values.Skip(1), (a, b) => a < b).All(x => x) ? 1 : 0,
+				"lte" => values.Zip(values.Skip(1), (a, b) => a <= b).All(x => x) ? 1 : 0,
+				
+				// Logical operations (treat non-zero as true)
+				"and" => values.All(v => v != 0) ? 1 : 0,
+				"or" => values.Any(v => v != 0) ? 1 : 0,
+				"xor" => values.Count(v => v != 0) == 1 ? 1 : 0,
+				"nand" => !values.All(v => v != 0) ? 1 : 0,
+				"nor" => !values.Any(v => v != 0) ? 1 : 0,
+				
+				// Bitwise operations (convert to int)
+				"band" => values.Select(v => (int)v).Aggregate((acc, val) => acc & val),
+				"bor" => values.Select(v => (int)v).Aggregate((acc, val) => acc | val),
+				"bxor" => values.Select(v => (int)v).Aggregate((acc, val) => acc ^ val),
+				
+				// Statistical operations
+				"mean" => values.Average(),
+				"median" => CalculateMedian(values),
+				"stddev" => CalculateStdDev(values),
+				
+				// Distance operations (requires exactly 4 or 6 values)
+				"dist2d" => values.Count == 4 
+					? (decimal)Math.Sqrt((double)((values[2] - values[0]) * (values[2] - values[0]) + (values[3] - values[1]) * (values[3] - values[1])))
+					: throw new InvalidOperationException("dist2d requires exactly 4 values"),
+				"dist3d" => values.Count == 6
+					? (decimal)Math.Sqrt((double)((values[3] - values[0]) * (values[3] - values[0]) + (values[4] - values[1]) * (values[4] - values[1]) + (values[5] - values[2]) * (values[5] - values[2])))
+					: throw new InvalidOperationException("dist3d requires exactly 6 values"),
+				
 				_ => throw new InvalidOperationException($"Unknown operation: {operation}")
 			};
 			
@@ -217,6 +328,28 @@ public partial class Functions
 		{
 			return Errors.ErrorNumbers;
 		}
+	}
+	
+	private static decimal CalculateMedian(List<decimal> values)
+	{
+		var sorted = values.OrderBy(x => x).ToList();
+		int count = sorted.Count;
+		if (count % 2 == 1)
+		{
+			return sorted[count / 2];
+		}
+		else
+		{
+			return (sorted[count / 2 - 1] + sorted[count / 2]) / 2.0m;
+		}
+	}
+	
+	private static decimal CalculateStdDev(List<decimal> values)
+	{
+		var mean = values.Average();
+		var sumOfSquaredDifferences = values.Select(val => (val - mean) * (val - mean)).Sum();
+		var variance = sumOfSquaredDifferences / values.Count;
+		return (decimal)Math.Sqrt((double)variance);
 	}
 
 	[SharpFunction(Name = "lnum", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]

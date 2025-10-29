@@ -477,8 +477,10 @@ public class MathFunctionUnitTests
 	}
 
 	[Test]
-	// Note: Floating point precision means 3.14159 - 3 gives 0.14158999999999988
-	[Arguments("fraction(3.14159)", "0.14158999999999988")]
+	[Arguments("fraction(0.75)", "3/4")]
+	[Arguments("fraction(2)", "2")]
+	[Arguments("fraction(2.75)", "11/4")]
+	[Arguments("fraction(2.75,1)", "2 3/4")]
 	public async Task Fraction(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
