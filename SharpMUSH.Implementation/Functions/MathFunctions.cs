@@ -1,4 +1,5 @@
-﻿using System.Numerics;
+﻿using System.Globalization;
+using System.Numerics;
 using MoreLinq;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library.Attributes;
@@ -194,21 +195,54 @@ public partial class Functions
 		=> ArgHelpers.EvaluateDecimalToInteger(parser.CurrentState.ArgumentsOrdered, x => (int)Math.Truncate(x));
 
 	[SharpFunction(Name = "acos", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> ACos(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> ACos(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		await ValueTask.CompletedTask;
+		var angleArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var angleType = parser.CurrentState.Arguments.TryGetValue("1", out var value)
+			? value.Message!.ToPlainText()
+			: null;
+		
+		if (!double.TryParse(angleArg, out var angle))
+		{
+			return Errors.ErrorNumber;
+		}
+
+		return AngleTypeMath(angleType, angle, Math.Acos);
 	}
 
 	[SharpFunction(Name = "asin", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> ASin(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> ASin(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		await ValueTask.CompletedTask;
+		var angleArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var angleType = parser.CurrentState.Arguments.TryGetValue("1", out var value)
+			? value.Message!.ToPlainText()
+			: null;
+		
+		if (!double.TryParse(angleArg, out var angle))
+		{
+			return Errors.ErrorNumber;
+		}
+
+		return AngleTypeMath(angleType, angle, Math.Asin);
 	}
 
 	[SharpFunction(Name = "atan", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> ATan(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> ATan(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		await ValueTask.CompletedTask;
+		var angleArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var angleType = parser.CurrentState.Arguments.TryGetValue("1", out var value)
+			? value.Message!.ToPlainText()
+			: null;
+		
+		if (!double.TryParse(angleArg, out var angle))
+		{
+			return Errors.ErrorNumber;
+		}
+
+		return AngleTypeMath(angleType, angle, Math.Atan);
 	}
 
 	[SharpFunction(Name = "atan2", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -224,9 +258,20 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "cos", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> Cos(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Cos(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		await ValueTask.CompletedTask;
+		var angleArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var angleType = parser.CurrentState.Arguments.TryGetValue("1", out var value)
+			? value.Message!.ToPlainText()
+			: null;
+		
+		if (!double.TryParse(angleArg, out var angle))
+		{
+			return Errors.ErrorNumber;
+		}
+
+		return AngleTypeMath(angleType, angle, Math.Cos);
 	}
 
 	[SharpFunction(Name = "ctu", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -271,7 +316,7 @@ public partial class Functions
 
 	[SharpFunction(Name = "pi", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> PI(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
-		ValueTask.FromResult<CallState>(new(Math.PI.ToString()));
+		ValueTask.FromResult<CallState>(Math.PI);
 
 	[SharpFunction(Name = "power", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> Power(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -286,9 +331,20 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "sin", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> Sin(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Sin(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		await ValueTask.CompletedTask;
+		var angleArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var angleType = parser.CurrentState.Arguments.TryGetValue("1", out var value)
+			? value.Message!.ToPlainText()
+			: null;
+		
+		if (!double.TryParse(angleArg, out var angle))
+		{
+			return Errors.ErrorNumber;
+		}
+
+		return AngleTypeMath(angleType, angle, Math.Sin);
 	}
 
 	[SharpFunction(Name = "sqrt", MinArgs = 1, MaxArgs = 1,
@@ -304,9 +360,20 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "tan", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> Tan(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Tan(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		await ValueTask.CompletedTask;
+		var angleArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var angleType = parser.CurrentState.Arguments.TryGetValue("1", out var value)
+			? value.Message!.ToPlainText()
+			: null;
+		
+		if (!double.TryParse(angleArg, out var angle))
+		{
+			return Errors.ErrorNumber;
+		}
+
+		return AngleTypeMath(angleType, angle, Math.Tan);
 	}
 
 	private static ValueTask<CallState> VectorOperation(IMUSHCodeParser parser,
@@ -357,9 +424,9 @@ public partial class Functions
 		var vector2 = new Vector<decimal>(list2.Select(x => x.result).ToArray().AsSpan());
 		var vectorResult = func(vector1, vector2);
 
-		var output = vectorResult.ToString();
+		var output = vectorResult.ToString(CultureInfo.InvariantCulture);
 
-		return ValueTask.FromResult(new CallState(MModule.single(output)));
+		return ValueTask.FromResult<CallState>(output);
 	}
 
 	private static ValueTask<CallState> SingleVectorOperation(IMUSHCodeParser parser,
@@ -383,7 +450,7 @@ public partial class Functions
 		var result = new decimal[list1.Length];
 		vectorResult.CopyTo(result);
 
-		var output = result.Select(x => MModule.single(x.ToString()));
+		var output = result.Select(x => MModule.single(x.ToString(CultureInfo.InvariantCulture)));
 		return ValueTask.FromResult(new CallState(MModule.multipleWithDelimiter(sep, output)));
 	}
 
@@ -430,5 +497,13 @@ public partial class Functions
 				ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, MModule.single(" ")),
 				parser.CurrentState.Arguments["0"].Message).Length.ToString()
 			));
-
+	
+	private static double AngleTypeMath(string? angleType, double angle, Func<double,double> func) 
+		=> angleType switch
+	{
+		null => func(angle),
+		"g" => func(angle * (double.Pi / 200)),
+		"d" => func(angle * (double.Pi / 180)),
+		_ => func(angle)
+	};
 }
