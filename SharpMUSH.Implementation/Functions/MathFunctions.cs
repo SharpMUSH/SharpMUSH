@@ -167,7 +167,7 @@ public partial class Functions
 		}
 		catch (Exception)
 		{
-			return ValueTask.FromResult<CallState>(Errors.ErrorNumber);
+			return ValueTask.FromResult<CallState>(Errors.ErrorNumbers);
 		}
 	}
 
@@ -192,6 +192,12 @@ public partial class Functions
 			if (values.Count == 0)
 			{
 				return new CallState("0");
+			}
+			
+			// Check for division by zero if operation is div
+			if (operation == "div" && values.Skip(1).Any(v => v == 0))
+			{
+				return Errors.ErrorDivideByZero;
 			}
 			
 			decimal result = operation switch
@@ -512,7 +518,7 @@ public partial class Functions
 		}
 		catch (Exception)
 		{
-			return ValueTask.FromResult<CallState>(Errors.ErrorNumber);
+			return ValueTask.FromResult<CallState>(Errors.ErrorNumbers);
 		}
 	}
 
