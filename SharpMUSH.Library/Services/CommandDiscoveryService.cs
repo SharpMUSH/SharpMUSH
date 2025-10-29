@@ -43,10 +43,9 @@ public partial class CommandDiscoveryService(IFusionCache cache) : ICommandDisco
 		IAsyncEnumerable<AnySharpObject> objects,
 		MString commandString)
 	{
-		var commandPatternAttributes = await objects
-			.Where(async (x,_) => !await x.HasFlag("NO_COMMAND"))
-			.SelectMany(MatchUserDefinedCommandSelectMany)
-			.ToArrayAsync();
+		var commandPatternAttributes = objects
+			.Where(async (x, _) => !await x.HasFlag("NO_COMMAND"))
+			.SelectMany(MatchUserDefinedCommandSelectMany);
 
 		var convertedCommandPatternAttributes = commandPatternAttributes
 			.Select(x =>
@@ -55,10 +54,10 @@ public partial class CommandDiscoveryService(IFusionCache cache) : ICommandDisco
 					(SObject: x.Obj, Attribute: x.Attr, Reg: new Regex(MModule.getWildcardMatchAsRegex(
 							MModule.single(x.Pattern.Value.Remove(x.Pattern.Length - 1, 1).Remove(0, 1))))));
 
-		var matchedCommandPatternAttributes = convertedCommandPatternAttributes
-			.Where(x => x.Reg.IsMatch(MModule.plainText(commandString))).ToList();
+		var matchedCommandPatternAttributes = await convertedCommandPatternAttributes
+			.Where(x => x.Reg.IsMatch(MModule.plainText(commandString))).ToArrayAsync();
 
-		if (matchedCommandPatternAttributes.Count == 0)
+		if (matchedCommandPatternAttributes.Length == 0)
 		{
 			return new None();
 		}

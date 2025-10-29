@@ -1,5 +1,4 @@
 ﻿using System.Collections.Immutable;
-using DotNext.Collections.Generic;
 using Mediator;
 using OneOf;
 using OneOf.Types;
@@ -39,12 +38,16 @@ public class AttributeService(
 		{
 			IAttributeService.AttributeMode.Read => ps.CanViewAttribute,
 			IAttributeService.AttributeMode.Execute => ps.CanExecuteAttribute,
+			IAttributeService.AttributeMode.Set => ps.CanExecuteAttribute,
+			IAttributeService.AttributeMode.SystemSet => (_, _, _) => ValueTask.FromResult(true),
 			_ => throw new InvalidOperationException(nameof(IAttributeService.AttributeMode))
 		};
 		var permissionFailureType = mode switch
 		{
 			IAttributeService.AttributeMode.Read => Errors.ErrorAttrPermissions,
 			IAttributeService.AttributeMode.Execute => Errors.ErrorAttrEvalPermissions,
+			IAttributeService.AttributeMode.Set => Errors.ErrorAttrSetPermissions,
+			IAttributeService.AttributeMode.SystemSet => string.Empty,
 			_ => throw new InvalidOperationException(nameof(IAttributeService.AttributeMode))
 		};
 
@@ -58,9 +61,9 @@ public class AttributeService(
 				return new None();
 			}
 
-			var attrArr = await AsyncEnumerable.ToArrayAsync(attr);
+			var attrArr = await attr.ToArrayAsync();
 
-			if (attrArr?.Length == attributePath.Length)
+			if (attrArr.Length == attributePath.Length)
 			{
 				return await permissionPredicate(executor, obj, attrArr)
 					? attrArr
@@ -71,7 +74,7 @@ public class AttributeService(
 			{
 				return new None();
 			}
-
+			
 			var parent = await curObj.Object().Parent.WithCancellation(CancellationToken.None);
 			if (parent.IsNone)
 			{
@@ -116,9 +119,9 @@ public class AttributeService(
 				return new None();
 			}
 
-			var attrArr = await AsyncEnumerable.ToArrayAsync(attr);
+			var attrArr = await attr.ToArrayAsync(CancellationToken.None);
 
-			if (attrArr?.Length == attributePath.Length)
+			if (attrArr.Length == attributePath.Length)
 			{
 				return await permissionPredicate(executor, obj, attrArr)
 					? attrArr
@@ -185,10 +188,9 @@ public class AttributeService(
 		var attributes = actualObject.Attributes.Value;
 
 		return depth <= 1
-			? 
-				await attributes
-					.Where(async (x, _) => await ps.CanViewAttribute(executor, obj, x))
-					.ToArrayAsync(CancellationToken.None)
+			? await attributes
+				.Where(async (x, _) => await ps.CanViewAttribute(executor, obj, x))
+				.ToArrayAsync(CancellationToken.None)
 			: (await GetVisibleAttributesAsync(attributes, executor, obj, depth))
 			.ToArray();
 	}
@@ -295,7 +297,7 @@ public class AttributeService(
 	{
 		var attrs = attributes;
 		var stagingAttrs = new List<IAsyncEnumerable<LazySharpAttribute>>();
-		
+
 		const int maxDepth = 0;
 
 		while (currentDepth > maxDepth)
@@ -303,19 +305,19 @@ public class AttributeService(
 			var visibleAttributes = attrs
 				.Where(async (x, _)
 					=> await ps.CanViewAttribute(executor, obj, x));
-			
+
 			// Multiple Iteration that may be able to be optimized away.
 			await foreach (var attr in visibleAttributes)
 			{
 				yield return attr;
 				stagingAttrs.AddRange(await attr.Leaves.WithCancellation(CancellationToken.None));
 			}
-			
+
 			attrs = visibleAttributes
 				.Select<LazySharpAttribute, IAsyncEnumerable<LazySharpAttribute>>(async (x, _) =>
 					await x.Leaves.WithCancellation(CancellationToken.None))
 				.SelectMany(x => x);
-			
+
 			currentDepth++;
 		}
 	}
@@ -403,7 +405,7 @@ public class AttributeService(
 			return new Error<string>("Not Found");
 		}
 
-		var allFlags = await mediator.Send(new GetAttributeFlagsQuery()); 
+		var allFlags = await mediator.Send(new GetAttributeFlagsQuery());
 		var returnedFlag = await allFlags.FirstOrDefaultAsync(x => x.Name == flag || x.Symbol == flag);
 
 		if (returnedFlag is null)
