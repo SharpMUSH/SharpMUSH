@@ -153,22 +153,25 @@ public partial class Functions
 		var args = parser.CurrentState.ArgumentsOrdered;
 		try
 		{
-			var value = double.Parse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["0"].Message)));
+			var value = decimal.Parse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["0"].Message)));
 			var showWhole = args.Count == 2 && int.Parse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["1"].Message))) != 0;
 			
 			var wholePart = Math.Truncate(value);
 			var fractionalPart = Math.Abs(value - wholePart);
 			
 			// If it's a whole number, just return it
-			if (fractionalPart < 0.000001)
+			if (fractionalPart < 0.000001m)
 			{
 				return ValueTask.FromResult<CallState>(((int)wholePart).ToString());
 			}
 			
-			// Convert fractional part to a fraction using continued fractions algorithm
-			var (numerator, denominator) = DecimalToFraction(fractionalPart);
+			// Convert fractional part to a fraction using Fractions library
+			var fraction = Fractions.Fraction.FromDecimal(fractionalPart);
 			
 			// Adjust for negative numbers
+			var numerator = fraction.Numerator;
+			var denominator = fraction.Denominator;
+			
 			if (value < 0 && wholePart == 0)
 			{
 				numerator = -numerator;
@@ -182,7 +185,7 @@ public partial class Functions
 			// If we have a whole part but showWhole is false, add it to the fraction
 			else if (Math.Abs(wholePart) >= 1 && !showWhole)
 			{
-				numerator += (int)wholePart * denominator;
+				numerator += (long)wholePart * denominator;
 				return ValueTask.FromResult<CallState>($"{numerator}/{denominator}");
 			}
 			// Just the fraction
@@ -195,52 +198,6 @@ public partial class Functions
 		{
 			return ValueTask.FromResult<CallState>(Errors.ErrorNumbers);
 		}
-	}
-	
-	private static (int numerator, int denominator) DecimalToFraction(double value, int maxDenominator = 1000000)
-	{
-		if (value == 0) return (0, 1);
-		
-		int sign = value < 0 ? -1 : 1;
-		value = Math.Abs(value);
-		
-		int n0 = 0, d0 = 1;
-		int n1 = 1, d1 = 0;
-		
-		double remaining = value;
-		int maxIterations = 50;
-		
-		for (int i = 0; i < maxIterations; i++)
-		{
-			int a = (int)remaining;
-			int n2 = n0 + a * n1;
-			int d2 = d0 + a * d1;
-			
-			if (d2 > maxDenominator)
-			{
-				break;
-			}
-			
-			// Check if we're close enough
-			if (Math.Abs(value - (double)n2 / d2) < 0.000001)
-			{
-				return (sign * n2, d2);
-			}
-			
-			remaining = 1.0 / (remaining - a);
-			
-			if (double.IsInfinity(remaining) || double.IsNaN(remaining))
-			{
-				return (sign * n2, d2);
-			}
-			
-			n0 = n1;
-			d0 = d1;
-			n1 = n2;
-			d1 = d2;
-		}
-		
-		return (sign * n1, d1);
 	}
 
 	[SharpFunction(Name = "inc", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -273,56 +230,56 @@ public partial class Functions
 				return Errors.ErrorDivideByZero;
 			}
 			
-			decimal result = operation switch
+			string result = operation switch
 			{
 				// Arithmetic operations
-				"add" => values.Sum(),
-				"sub" => values.Aggregate((acc, val) => acc - val),
-				"mul" => values.Aggregate((acc, val) => acc * val),
-				"div" => values.Aggregate((acc, val) => acc / val),
-				"fdiv" => values.Aggregate((acc, val) => acc / val),
-				"modulo" => values.Aggregate((acc, val) => acc % val),
-				"remainder" => values.Aggregate((acc, val) => acc % val),
+				"add" => values.Sum().ToString(CultureInfo.InvariantCulture),
+				"sub" => values.Aggregate((acc, val) => acc - val).ToString(CultureInfo.InvariantCulture),
+				"mul" => values.Aggregate((acc, val) => acc * val).ToString(CultureInfo.InvariantCulture),
+				"div" => values.Aggregate((acc, val) => acc / val).ToString(CultureInfo.InvariantCulture),
+				"fdiv" => values.Aggregate((acc, val) => acc / val).ToString(CultureInfo.InvariantCulture),
+				"modulo" => values.Aggregate((acc, val) => acc % val).ToString(CultureInfo.InvariantCulture),
+				"remainder" => values.Aggregate((acc, val) => acc % val).ToString(CultureInfo.InvariantCulture),
 				
 				// Comparison operations
-				"max" => values.Max(),
-				"min" => values.Min(),
-				"eq" => values.All(v => v == values[0]) ? 1 : 0,
-				"neq" => values.Zip(values.Skip(1), (a, b) => a != b).All(x => x) ? 1 : 0,
-				"gt" => values.Zip(values.Skip(1), (a, b) => a > b).All(x => x) ? 1 : 0,
-				"gte" => values.Zip(values.Skip(1), (a, b) => a >= b).All(x => x) ? 1 : 0,
-				"lt" => values.Zip(values.Skip(1), (a, b) => a < b).All(x => x) ? 1 : 0,
-				"lte" => values.Zip(values.Skip(1), (a, b) => a <= b).All(x => x) ? 1 : 0,
+				"max" => values.Max().ToString(CultureInfo.InvariantCulture),
+				"min" => values.Min().ToString(CultureInfo.InvariantCulture),
+				"eq" => (values.All(v => v == values[0]) ? 1 : 0).ToString(),
+				"neq" => (values.Zip(values.Skip(1), (a, b) => a != b).All(x => x) ? 1 : 0).ToString(),
+				"gt" => (values.Zip(values.Skip(1), (a, b) => a > b).All(x => x) ? 1 : 0).ToString(),
+				"gte" => (values.Zip(values.Skip(1), (a, b) => a >= b).All(x => x) ? 1 : 0).ToString(),
+				"lt" => (values.Zip(values.Skip(1), (a, b) => a < b).All(x => x) ? 1 : 0).ToString(),
+				"lte" => (values.Zip(values.Skip(1), (a, b) => a <= b).All(x => x) ? 1 : 0).ToString(),
 				
 				// Logical operations (treat non-zero as true)
-				"and" => values.All(v => v != 0) ? 1 : 0,
-				"or" => values.Any(v => v != 0) ? 1 : 0,
-				"xor" => values.Count(v => v != 0) == 1 ? 1 : 0,
-				"nand" => !values.All(v => v != 0) ? 1 : 0,
-				"nor" => !values.Any(v => v != 0) ? 1 : 0,
+				"and" => (values.All(v => v != 0) ? 1 : 0).ToString(),
+				"or" => (values.Any(v => v != 0) ? 1 : 0).ToString(),
+				"xor" => (values.Count(v => v != 0) == 1 ? 1 : 0).ToString(),
+				"nand" => (!values.All(v => v != 0) ? 1 : 0).ToString(),
+				"nor" => (!values.Any(v => v != 0) ? 1 : 0).ToString(),
 				
 				// Bitwise operations (convert to int)
-				"band" => values.Select(v => (int)v).Aggregate((acc, val) => acc & val),
-				"bor" => values.Select(v => (int)v).Aggregate((acc, val) => acc | val),
-				"bxor" => values.Select(v => (int)v).Aggregate((acc, val) => acc ^ val),
+				"band" => values.Select(v => (int)v).Aggregate((acc, val) => acc & val).ToString(),
+				"bor" => values.Select(v => (int)v).Aggregate((acc, val) => acc | val).ToString(),
+				"bxor" => values.Select(v => (int)v).Aggregate((acc, val) => acc ^ val).ToString(),
 				
 				// Statistical operations
-				"mean" => values.Average(),
-				"median" => CalculateMedian(values),
-				"stddev" => CalculateStdDev(values),
+				"mean" => values.Average().ToString(CultureInfo.InvariantCulture),
+				"median" => CalculateMedian(values).ToString(CultureInfo.InvariantCulture),
+				"stddev" => CalculateStdDev(values).ToString(CultureInfo.InvariantCulture),
 				
 				// Distance operations (requires exactly 4 or 6 values)
-				"dist2d" => values.Count == 4 
-					? (decimal)Math.Sqrt((double)((values[2] - values[0]) * (values[2] - values[0]) + (values[3] - values[1]) * (values[3] - values[1])))
-					: throw new InvalidOperationException("dist2d requires exactly 4 values"),
-				"dist3d" => values.Count == 6
-					? (decimal)Math.Sqrt((double)((values[3] - values[0]) * (values[3] - values[0]) + (values[4] - values[1]) * (values[4] - values[1]) + (values[5] - values[2]) * (values[5] - values[2])))
-					: throw new InvalidOperationException("dist3d requires exactly 6 values"),
+				"dist2d" when values.Count == 4 
+					=> ((decimal)Math.Sqrt((double)((values[2] - values[0]) * (values[2] - values[0]) + (values[3] - values[1]) * (values[3] - values[1])))).ToString(CultureInfo.InvariantCulture),
+				"dist2d" => Errors.ErrorBadArgumentFormat.Replace("{0}", "lmath"),
+				"dist3d" when values.Count == 6
+					=> ((decimal)Math.Sqrt((double)((values[3] - values[0]) * (values[3] - values[0]) + (values[4] - values[1]) * (values[4] - values[1]) + (values[5] - values[2]) * (values[5] - values[2])))).ToString(CultureInfo.InvariantCulture),
+				"dist3d" => Errors.ErrorBadArgumentFormat.Replace("{0}", "lmath"),
 				
-				_ => throw new InvalidOperationException($"Unknown operation: {operation}")
+				_ => Errors.ErrorBadArgumentFormat.Replace("{0}", "lmath")
 			};
 			
-			return new CallState(result.ToString(CultureInfo.InvariantCulture));
+			return new CallState(result);
 		}
 		catch (Exception)
 		{
