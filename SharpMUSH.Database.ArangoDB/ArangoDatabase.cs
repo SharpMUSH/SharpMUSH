@@ -1012,11 +1012,12 @@ public partial class ArangoDatabase(
 
 	public IAsyncEnumerable<SharpAttributeEntry> GetAllAttributeEntriesAsync(CancellationToken ct = default)
 		=> arangoDb.Query.ExecuteStreamAsync<SharpAttributeEntry>(handle,
-			$"FOR v IN {DatabaseConstants.AttributeEntries} RETURN v", true, cancellationToken: ct);
+			$"FOR v IN {DatabaseConstants.AttributeEntries:@} RETURN v", true, cancellationToken: ct);
 
-	public async ValueTask<SharpAttributeEntry?> GetSharpAttribute(string name, CancellationToken ct = default)
+	public async ValueTask<SharpAttributeEntry?> GetSharpAttributeEntry(string name, CancellationToken ct = default)
 		=> (await arangoDb.Query.ExecuteAsync<SharpAttributeEntry>(handle,
-				$"FOR v IN {DatabaseConstants.AttributeEntries} FILTER v.Name == {name} RETURN v", true, cancellationToken: ct))
+				$"FOR v IN {DatabaseConstants.AttributeEntries:@} FILTER v.Name == {name} RETURN v", true,
+				cancellationToken: ct))
 			.FirstOrDefault();
 
 	public async ValueTask<AnyOptionalSharpObject> GetObjectNodeAsync(DBRef dbref,
@@ -1237,8 +1238,13 @@ public partial class ArangoDatabase(
 
 	private async ValueTask<SharpAttribute> SharpAttributeQueryToSharpAttribute(SharpAttributeQueryResult x,
 		CancellationToken cancellationToken = default)
-		=> new(x.Key, x.Name,
-			await GetAttributeFlagsAsync(x.Id, cancellationToken).ToArrayAsync(cancellationToken), null, x.LongName,
+		=> new(
+			x.Id,
+			x.Key, 
+			x.Name,
+			await GetAttributeFlagsAsync(x.Id, cancellationToken).ToArrayAsync(cancellationToken), 
+			null, 
+			x.LongName,
 			new AsyncLazy<IAsyncEnumerable<SharpAttribute>>(ct => Task.FromResult(GetTopLevelAttributesAsync(x.Id, ct))),
 			new AsyncLazy<SharpPlayer?>(async ct => await GetAttributeOwnerAsync(x.Id, ct)),
 			new AsyncLazy<SharpAttributeEntry?>(async ct => await GetRelatedAttributeEntry(x.Id, ct)))
@@ -1267,7 +1273,13 @@ public partial class ArangoDatabase(
 
 		return sharpAttributeResults
 			.Select<SharpAttributeQueryResult, LazySharpAttribute>(async (x, ctOuter) =>
-				new LazySharpAttribute(x.Key, x.Name, await GetAttributeFlagsAsync(x.Id, ctOuter).ToArrayAsync(ctOuter), null, x.LongName,
+				new LazySharpAttribute(
+					x.Id,
+					x.Key, 
+					x.Name, 
+					await GetAttributeFlagsAsync(x.Id, ctOuter).ToArrayAsync(ctOuter), 
+					null,
+					x.LongName,
 					new AsyncLazy<IAsyncEnumerable<LazySharpAttribute>>(ct =>
 						Task.FromResult(GetTopLevelLazyAttributesAsync(x.Id, ct))),
 					new AsyncLazy<SharpPlayer?>(async ct => await GetAttributeOwnerAsync(x.Id, ct)),
@@ -1311,15 +1323,7 @@ public partial class ArangoDatabase(
 			}, cancellationToken: cancellationToken);
 
 		return result2
-			.Select<SharpAttributeQueryResult, LazySharpAttribute>(async (x, outerCt) =>
-				new LazySharpAttribute(x.Key, x.Name, await GetAttributeFlagsAsync(x.Id, outerCt).ToArrayAsync(outerCt), null,
-					x.LongName,
-					new AsyncLazy<IAsyncEnumerable<LazySharpAttribute>>(ct =>
-						Task.FromResult(GetTopLevelLazyAttributesAsync(x.Id, ct))),
-					new AsyncLazy<SharpPlayer?>(async ct => await GetObjectOwnerAsync(x.Id, ct)),
-					new AsyncLazy<SharpAttributeEntry?>(async ct => await GetRelatedAttributeEntry(x.Id, ct)),
-					Value: new AsyncLazy<MarkupStringModule.MarkupString>(async ct =>
-						MarkupStringModule.deserialize(await GetAttributeValue(x.Key, ct)))));
+			.Select(SharpAttributeQueryToLazySharpAttribute);
 	}
 
 
@@ -1432,6 +1436,7 @@ public partial class ArangoDatabase(
 	private async ValueTask<LazySharpAttribute> SharpAttributeQueryToLazySharpAttribute(SharpAttributeQueryResult x,
 		CancellationToken cancellationToken = default)
 		=> new(
+			x.Id,
 			x.Key,
 			x.Name,
 			await GetAttributeFlagsAsync(x.Id, cancellationToken).ToArrayAsync(cancellationToken),
@@ -1476,20 +1481,7 @@ public partial class ArangoDatabase(
 					{ StartVertex, startVertex },
 					{ "pattern", attributePattern }
 				}, cancellationToken: cancellationToken)
-			.Select<SharpAttributeQueryResult, SharpAttribute>(async (x, outerCt) =>
-				new SharpAttribute(
-					x.Key,
-					x.Name,
-					await GetAttributeFlagsAsync(x.Id, CancellationToken.None)
-						.ToArrayAsync(cancellationToken: outerCt),
-					null,
-					x.LongName,
-					new AsyncLazy<IAsyncEnumerable<SharpAttribute>>(ct => Task.FromResult(GetTopLevelAttributesAsync(x.Id, ct))),
-					new AsyncLazy<SharpPlayer?>(async ct => await GetObjectOwnerAsync(x.Id, ct)),
-					new AsyncLazy<SharpAttributeEntry?>(async ct => await GetRelatedAttributeEntry(x.Id, ct)))
-				{
-					Value = MarkupStringModule.deserialize(x.Value)
-				});
+			.Select(SharpAttributeQueryToSharpAttribute);
 	}
 
 	public async ValueTask SetLockAsync(SharpObject target, string lockName, string lockString,
@@ -1565,10 +1557,15 @@ public partial class ArangoDatabase(
 			AllowImplicit = false,
 			Collections = new ArangoTransactionScope
 			{
-				Exclusive = [DatabaseConstants.Attributes, DatabaseConstants.HasAttribute, DatabaseConstants.HasAttributeOwner],
+				Exclusive = [
+					DatabaseConstants.Attributes, 
+					DatabaseConstants.HasAttribute, 
+					DatabaseConstants.HasAttributeFlag, 
+					DatabaseConstants.HasAttributeOwner
+				],
 				Read =
 				[
-					DatabaseConstants.Attributes, DatabaseConstants.HasAttribute, DatabaseConstants.Objects,
+					DatabaseConstants.Attributes, DatabaseConstants.HasAttribute, DatabaseConstants.Objects, DatabaseConstants.HasAttributeFlag,
 					DatabaseConstants.IsObject, DatabaseConstants.Players, DatabaseConstants.Rooms, DatabaseConstants.Things,
 					DatabaseConstants.Exits
 				]
@@ -1601,14 +1598,24 @@ public partial class ArangoDatabase(
 		{
 			var longName = string.Join('`', attribute.SkipLast(remaining.Length - 1 - nextAttr.i));
 
+			var sharpAttributeEntry = await GetSharpAttributeEntry(longName, ct);
+			var flags = (sharpAttributeEntry?.DefaultFlags ?? [])
+				.ToAsyncEnumerable()
+				.Select(async (x, innerCt) => await GetAttributeFlagAsync(x, innerCt));
+			
 			var newOne = await arangoDb.Document.CreateAsync<SharpAttributeCreateRequest, SharpAttributeQueryResult>(
 				transactionHandle, DatabaseConstants.Attributes,
-				new SharpAttributeCreateRequest(nextAttr.value.ToUpper(), [],
+				new SharpAttributeCreateRequest(nextAttr.value.ToUpper(),
 					nextAttr.i == remaining.Length - 1
 						? MarkupStringModule.serialize(value)
 						: string.Empty,
 					longName),
-				waitForSync: true);
+				waitForSync: true, cancellationToken: ct, returnNew: true);
+
+			await foreach (var flag in (flags ?? AsyncEnumerable.Empty<SharpAttributeFlag>()).WithCancellation(ct))
+			{
+				await SetAttributeFlagAsync(transactionHandle, newOne.New.Id, flag!, ct);
+			}
 
 			await arangoDb.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.GraphAttributes,
 				DatabaseConstants.HasAttribute,
@@ -1650,12 +1657,18 @@ public partial class ArangoDatabase(
 	}
 
 	public async ValueTask SetAttributeFlagAsync(SharpAttribute attr, SharpAttributeFlag flag,
-		CancellationToken ct = default) =>
-		await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Attributes, new
-		{
-			attr.Key,
-			Value = attr.Flags.ToImmutableArray().Add(flag)
-		}, cancellationToken: ct);
+		CancellationToken ct = default) 
+		=> await arangoDb.Graph.Edge.CreateAsync(handle, 
+			DatabaseConstants.AttributeFlags, DatabaseConstants.HasAttributeFlag,
+			new SharpEdgeCreateRequest(attr.Id, flag.Id!), cancellationToken: ct);
+
+	
+	private async ValueTask SetAttributeFlagAsync(ArangoHandle transactionHandle, string attrId, SharpAttributeFlag flag,
+		CancellationToken ct = default) 
+		=> await arangoDb.Graph.Edge.CreateAsync(transactionHandle,
+			DatabaseConstants.GraphAttributeFlags, DatabaseConstants.HasAttributeFlag,
+			new SharpEdgeCreateRequest(attrId, flag.Id!), cancellationToken: ct);
+
 
 	public async ValueTask<bool> UnsetAttributeFlagAsync(SharpObject dbref, string[] attribute, SharpAttributeFlag flag,
 		CancellationToken ct = default)

@@ -90,6 +90,22 @@ public class ArangoDBTests
 		var flags = await Database.GetAttributeFlagsAsync().ToArrayAsync();
 		await Assert.That(flags.Count).IsGreaterThan(0);
 	}
+	
+	[Test]
+	public async Task SettingAKnownAttributeSetsFlags()
+	{
+		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var playerOneDbRef = playerOne.Object.DBRef;
+		await Database.SetAttributeAsync(playerOneDbRef, ["TZ"], MModule.single("America/Chicago"), playerOne);
+		var result = await Database.GetAttributeAsync(playerOneDbRef, ["TZ"]);
+		var realResult = await result!.FirstOrDefaultAsync();
+		
+		await Assert.That(realResult).IsNotNull();
+		await Assert.That(realResult!.Flags).IsNotNull();
+		await Assert.That(realResult.Flags).HasCount().EqualTo(2);
+		await Assert.That(realResult.Flags).Contains(x => x.Name == "no_command");
+		await Assert.That(realResult.Flags).Contains(x => x.Name == "visual");
+	}
 
 	[Test]
 	[NotInParallel]

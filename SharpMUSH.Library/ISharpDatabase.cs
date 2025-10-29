@@ -106,16 +106,22 @@ public interface ISharpDatabase
 	// These should return full attribute paths, so likely IEnumerable<IEnumerable<SharpAttribute>>.
 	ValueTask<IAsyncEnumerable<SharpAttribute>?> GetAttributesAsync(DBRef dbref, string attributePattern,
 		CancellationToken cancellationToken = default);
+	
 	ValueTask<IAsyncEnumerable<SharpAttribute>?> GetAttributesByRegexAsync(DBRef dbref, string attributePattern,
 		CancellationToken cancellationToken = default);
 
 	IAsyncEnumerable<LazySharpAttribute>? GetLazyAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default);
+	
 	ValueTask<IAsyncEnumerable<LazySharpAttribute>?> GetLazyAttributesAsync(DBRef dbref, string attributePattern,
 		CancellationToken cancellationToken = default);
+	
 	ValueTask<IAsyncEnumerable<LazySharpAttribute>?> GetLazyAttributesByRegexAsync(DBRef dbref, string attributePattern,
 		CancellationToken cancellationToken = default);
+	
 	IAsyncEnumerable<SharpAttributeEntry> GetAllAttributeEntriesAsync(CancellationToken cancellationToken = default);
 
+	ValueTask<SharpAttributeEntry?> GetSharpAttributeEntry(string name, CancellationToken ct = default);
+	
 	/// <summary>
 	/// Get the Object represented by a Database Reference Number.
 	/// Optionally passing either the CreatedSecs or CreatedMilliseconds will do a more specific lookup.

@@ -920,6 +920,7 @@ public class Migration_CreateDatabase : IArangoMigration
 		var flags = await CreateInitialFlags(migrator, handle);
 		var attributeFlags = await CreateInitialAttributeFlags(migrator, handle);
 		var powers = await CreateInitialPowers(migrator, handle);
+		var attributeEntries = await CreateInitialSharpAttributeEntries(migrator, handle);
 		var wizard = flags[18];
 
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.IsObject, new SharpEdge { From = roomTwoRoom.Id, To = roomTwoObj.Id });

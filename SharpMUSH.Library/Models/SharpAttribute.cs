@@ -4,6 +4,7 @@ using DotNext.Threading;
 namespace SharpMUSH.Library.Models;
 
 public record SharpAttribute(
+	string Id,
 	string Key,
 	string Name,
 	IEnumerable<SharpAttributeFlag> Flags,
@@ -17,6 +18,7 @@ public record SharpAttribute(
 }
 
 public record LazySharpAttribute(
+	string Id,
 	string Key,
 	string Name,
 	IEnumerable<SharpAttributeFlag> Flags,
