@@ -7,6 +7,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -41,7 +42,7 @@ public partial class Functions
 		var uptimeData = await ObjectDataService!.GetExpandedServerDataAsync<UptimeData>();
 		return (uptimeData?.LastRebootTime ?? DateTimeOffset.Now).ToUnixTimeMilliseconds();
 	}
-	
+
 	[SharpFunction(Name = "pidinfo", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> PIDInfo(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -79,12 +80,45 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "powers", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> Powers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Powers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		parser.CurrentState.Arguments.TryGetValue("0", out var obj);
+		parser.CurrentState.Arguments.TryGetValue("1", out var power);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+
+		switch (parser.CurrentState.Arguments.Count)
+		{
+			case 0:
+			{
+				var allPowers = (await Mediator!.Send(new GetPowersQuery()))
+					.Select(x => MModule.single(x.Name));
+				return MModule.multipleWithDelimiter(MModule.single(" "), await allPowers.ToArrayAsync());
+			}
+
+			case 1:
+				return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+					parser, executor, executor, obj!.Message!.ToPlainText(), LocateFlags.All,
+					async found => MModule.multipleWithDelimiter(MModule.single(" "),
+						await found.Object()
+							.Powers.Value
+							.Select(x => MModule.single(x.Name)).ToArrayAsync()));
+
+			default:
+			{
+				if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
+				{
+					return Errors.ErrorNoSideFx;
+				}
+
+				return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+					parser, executor, executor, obj!.Message!.ToPlainText(), LocateFlags.All,
+					async found =>
+						await ManipulateSharpObjectService!.SetPower(executor, found, power!.Message!.ToPlainText(), true));
+			}
+		}
 	}
 
-	[SharpFunction(Name = "HASPOWER", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "haspower", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> HasPower(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -204,7 +238,7 @@ public partial class Functions
 
 		if (newName is null)
 		{
-			return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, 
+			return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 				executor, executor, obj, LocateFlags.All,
 				found => found.Object().Name);
 		}
