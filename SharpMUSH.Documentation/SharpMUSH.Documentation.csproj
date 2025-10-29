@@ -1,19 +1,20 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-    <PropertyGroup>
-        <TargetFramework>net10.0</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-        <LangVersion>default</LangVersion>
-    </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<LangVersion>default</LangVersion>
+		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+	</PropertyGroup>
 
-    <ItemGroup>
-      <PackageReference Include="Markdig" Version="0.43.0" />
-      <PackageReference Include="OneOf" Version="3.0.271" />
-    </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Markdig" Version="0.43.0"/>
+		<PackageReference Include="OneOf" Version="3.0.271"/>
+	</ItemGroup>
 
-    <ItemGroup>
-      <ProjectReference Include="..\SharpMUSH.MarkupString\SharpMUSH.MarkupString.fsproj" />
-    </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\SharpMUSH.MarkupString\SharpMUSH.MarkupString.fsproj"/>
+	</ItemGroup>
 
 </Project>

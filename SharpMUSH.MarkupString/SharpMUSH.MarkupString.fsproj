@@ -1,32 +1,26 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    </PropertyGroup>
 
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-  </PropertyGroup>
+    <ItemGroup>
+        <Compile Include="Markup\ANSILibrary\ANSI.fs"/>
+        <Compile Include="Markup\Markup.fs"/>
+        <Compile Include="MarkupStringModule.fs"/>
+        <Compile Include="ColumnModule.fs"/>
+        <Compile Include="TextAlignerModule.fs"/>
+    </ItemGroup>
 
-	<PropertyGroup>
-		<TreatWarningsAsErrors>True</TreatWarningsAsErrors>
-	</PropertyGroup>
+    <ItemGroup>
+        <PackageReference Include="FSharp.SystemTextJson" Version="1.4.36"/>
+        <PackageReference Include="FSharp.Text.RegexProvider" Version="2.1.0"/>
+        <PackageReference Include="FSharpPlus" Version="1.7.0"/>
+    </ItemGroup>
 
-  <ItemGroup>
-    <Compile Include="Markup\ANSILibrary\ANSI.fs" />
-    <Compile Include="Markup\Markup.fs" />
-    <Compile Include="MarkupStringModule.fs" />
-    <Compile Include="ColumnModule.fs" />
-    <Compile Include="TextAlignerModule.fs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="FSharp.SystemTextJson" Version="1.4.36" />
-    <PackageReference Include="FSharp.Text.RegexProvider" Version="2.1.0" />
-    <PackageReference Include="FSharpPlus" Version="1.7.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Update="FSharp.Core" Version="10.0.100-rc2.25502.107" />
-  </ItemGroup>
-
-
+    <ItemGroup>
+        <PackageReference Update="FSharp.Core" Version="10.0.100-rc2.25502.107"/>
+    </ItemGroup>
 </Project>
 
