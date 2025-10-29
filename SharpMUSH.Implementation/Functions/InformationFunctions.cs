@@ -4,6 +4,7 @@ using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries;
@@ -73,10 +74,41 @@ public partial class Functions
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "GETPIDS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> GetPIDs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "getpids", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public static async ValueTask<CallState> GetProcessIds(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
+
+		var split = HelperFunctions.SplitDbRefAndOptionalAttr(arg0);
+		if (split.IsT1)
+		{
+			return string.Format(Errors.ErrorBadArgumentFormat, "getpids");
+		}
+
+		var (db, attr) = split.AsT0;
+
+		if (attr is null)
+		{
+			return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+				parser, executor, executor, db, LocateFlags.All,
+				async found =>
+				{
+					var queryResult = await Mediator!.Send(new ScheduleSemaphoreQuery(found.Object().DBRef));
+					var pids = queryResult.Select(x => MModule.single(x.Pid.ToString()));
+					return MModule.multipleWithDelimiter(MModule.single(" "), await pids.ToArrayAsync());
+				});
+		}
+		
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+			parser, executor, executor, db, LocateFlags.All,
+			async found =>
+			{
+				var dbAttr = new DbRefAttribute(found.Object().DBRef, attr.Split("`"));
+				var queryResult = await Mediator!.Send(new ScheduleSemaphoreQuery(dbAttr));
+				var pids = queryResult.Select(x => MModule.single(x.Pid.ToString()));
+				return MModule.multipleWithDelimiter(MModule.single(" "), await pids.ToArrayAsync());
+			});
 	}
 
 	[SharpFunction(Name = "powers", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
