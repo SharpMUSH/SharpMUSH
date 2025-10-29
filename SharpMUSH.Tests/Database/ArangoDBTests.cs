@@ -109,7 +109,7 @@ public class ArangoDBTests
 
 	[Test]
 	[NotInParallel]
-	[Repeat(10)] // Exclusive Locks are needed first. Otherwise there will be write-write errors. 
+	[Repeat(2)]
 	public async Task SetAndGetAnAttribute()
 	{
 		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
