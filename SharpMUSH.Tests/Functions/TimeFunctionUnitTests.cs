@@ -84,6 +84,8 @@ public class TimeFunctionUnitTests
 	[Arguments("etimefmt($2H:$2M, 3661)", "01:01")]
 	[Arguments("etimefmt($2h:$2M, 3700)", "1:01")]
 	[Arguments("etimefmt($2mm $2ss, 500)", "8m 20s")]
+	[Arguments("etimefmt(You have $m minutes and $s seconds to go, 78)", "You have 1 minutes and 18 seconds to go")]
+	[Arguments("etimefmt($txs is $xm$xs, 75)", "75s is 1m15s")]
 	public async Task Etimefmt(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -94,6 +96,9 @@ public class TimeFunctionUnitTests
 	[Test]
 	[Arguments("timefmt($Y-$m-$d,0)", "1970-01-01")]
 	[Arguments("timefmt($$,0)", "$")]
+	[Arguments("timefmt($H:$M:$S,0)", "00:00:00")]
+	[Arguments("timefmt($y,0)", "70")]
+	[Arguments("timefmt($Y,0)", "1970")]
 	public async Task Timefmt(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
