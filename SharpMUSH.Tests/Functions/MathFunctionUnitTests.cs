@@ -169,7 +169,6 @@ public class MathFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("round(3.14159,2)", "3.14")]
 	[Arguments("round(3.5,3,1)", "3.500")]
 	public async Task Round(string str, string expected)
@@ -240,7 +239,21 @@ public class MathFunctionUnitTests
 	[Arguments("floor(3.14)", "3")]
 	[Arguments("floor(3.0)", "3")]
 	[Arguments("floor(-3.14)", "-4")]
+	[Arguments("floor(3.14159)", "3")]
 	public async Task Floor(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("ceil(3.14159)", "4")]
+	[Arguments("ceil(3.0)", "3")]
+	[Arguments("ceil(-3.14)", "-3")]
+	public async Task Ceil(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
 
@@ -325,7 +338,6 @@ public class MathFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("mean(1,2,3)", "2")]
 	[Arguments("mean(10,20,30)", "20")]
 	public async Task Mean(string str, string expected)
@@ -338,7 +350,6 @@ public class MathFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("median(1,2,3)", "2")]
 	[Arguments("median(1,2,3,4)", "2.5")]
 	public async Task Median(string str, string expected)
@@ -351,7 +362,6 @@ public class MathFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("bound(5,1,10)", "5")]
 	[Arguments("bound(0,1,10)", "1")]
 	[Arguments("bound(15,1,10)", "10")]
@@ -365,7 +375,6 @@ public class MathFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("lmath(add,1|2|3,|)", "6")]
 	[Arguments("lmath(max,1 2 3)", "3")]
 	public async Task Lmath(string str, string expected)
@@ -378,7 +387,6 @@ public class MathFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("sin(0)", "0")]
 	[Arguments("cos(0)", "1")]
 	public async Task TrigFunctions(string str, string expected)
@@ -391,7 +399,6 @@ public class MathFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("log(10)", "1")]
 	[Arguments("log(100)", "2")]
 	public async Task Log(string str, string expected)
@@ -404,7 +411,6 @@ public class MathFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("dist2d(0,0,3,4)", "5")]
 	public async Task Dist2d(string str, string expected)
 	{
@@ -416,7 +422,6 @@ public class MathFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("dist3d(0,0,0,1,1,1)", "1.7320508075688772")]
 	public async Task Dist3d(string str, string expected)
 	{
@@ -428,7 +433,6 @@ public class MathFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("acos(1)", "0")]
 	[Arguments("asin(0)", "0")]
 	[Arguments("atan(0)", "0")]
@@ -442,7 +446,6 @@ public class MathFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("tan(0)", "0")]
 	public async Task Tan(string str, string expected)
 	{
@@ -454,7 +457,6 @@ public class MathFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("fmod(7,3)", "1")]
 	public async Task Fmod(string str, string expected)
 	{
@@ -466,7 +468,6 @@ public class MathFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("stddev(1,2,3,4,5)", "1.4142135623730951")]
 	public async Task Stddev(string str, string expected)
 	{
@@ -478,7 +479,6 @@ public class MathFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("root(8,3)", "2")]
 	[Arguments("root(16,2)", "4")]
 	public async Task Root(string str, string expected)
@@ -491,8 +491,10 @@ public class MathFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("fraction(3.14159)", "0.14159")]
+	[Arguments("fraction(0.75)", "3/4")]
+	[Arguments("fraction(2)", "2")]
+	[Arguments("fraction(2.75)", "11/4")]
+	[Arguments("fraction(2.75,1)", "2 3/4")]
 	public async Task Fraction(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
@@ -503,7 +505,6 @@ public class MathFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("acos(0)", "1.5707963267948966")]
 	[Arguments("acos(1)", "0")]
 	public async Task Acos(string str, string expected)
@@ -516,7 +517,6 @@ public class MathFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("asin(0)", "0")]
 	[Arguments("asin(1)", "1.5707963267948966")]
 	public async Task Asin(string str, string expected)
@@ -529,7 +529,6 @@ public class MathFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("atan(0)", "0")]
 	[Arguments("atan(1)", "0.7853981633974483")]
 	public async Task Atan(string str, string expected)
@@ -542,9 +541,9 @@ public class MathFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("cos(0)", "1")]
-	[Arguments("cos(1.5707963267948966)", "0")]
+	[Arguments("cos(90,d)", "0")]
+	[Arguments("cos(1.570796)", "0")]
 	public async Task Cos(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
@@ -555,7 +554,6 @@ public class MathFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("sin(0)", "0")]
 	[Arguments("sin(1.5707963267948966)", "1")]
 	public async Task Sin(string str, string expected)
@@ -568,7 +566,6 @@ public class MathFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("ln(1)", "0")]
 	[Arguments("ln(2.718281828459045)", "1")]
 	public async Task Ln(string str, string expected)
