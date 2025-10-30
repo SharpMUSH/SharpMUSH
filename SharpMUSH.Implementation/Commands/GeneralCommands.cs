@@ -18,6 +18,8 @@ using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Drawing;
+using System.Linq;
+using System.Threading.Tasks;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using static SharpMUSH.Library.Services.Interfaces.IPermissionService;
 using StringExtensions = ANSILibrary.StringExtensions;
@@ -1679,22 +1681,21 @@ public partial class Commands
 		var excludeObjects = new List<AnySharpObject>();
 
 		// Resolve all objects to exclude
-		foreach (var obj in objectList)
-		{
-			var objName = obj.IsT0 ? obj.AsT0.ToString() : obj.AsT1;
-
-			await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
-				parser,
-				executor,
-				executor,
-				objName,
-				LocateFlags.All,
-				target =>
-				{
-					excludeObjects.Add(target);
-					return CallState.Empty;
-				});
-		}
+		var nameTasks = objectList
+			.Select(obj => obj.IsT0 ? obj.AsT0.ToString() : obj.AsT1)
+			.Select(objName =>
+				LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+					parser,
+					executor,
+					executor,
+					objName,
+					LocateFlags.All,
+					target =>
+					{
+						excludeObjects.Add(target);
+						return CallState.Empty;
+					}));
+		await Task.WhenAll(nameTasks);
 
 		await CommunicationService!.SendToRoomAsync(
 			executor,
