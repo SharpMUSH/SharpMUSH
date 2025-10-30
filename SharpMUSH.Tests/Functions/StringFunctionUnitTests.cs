@@ -214,7 +214,6 @@ public class StringFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("edit(this is a test,a test,an exam)", "this is an exam")]
 	[Arguments("edit(hello,^,well )", "well hello")]
 	[Arguments("edit(hello,$, world)", "hello world")]
@@ -225,7 +224,6 @@ public class StringFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("tr(hello,el,ip)", "hippo")]
 	[Arguments("tr(abcd,bd,xy)", "axcy")]
 	public async Task Tr(string str, string expectedText)
@@ -235,7 +233,6 @@ public class StringFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("merge(a|b|c,1|2|3,|)", "a1 b2 c3")]
 	public async Task Merge(string str, string expectedText)
 	{
@@ -244,7 +241,6 @@ public class StringFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("comp(abc,abc)", "0")]
 	[Arguments("comp(abc,def)", "-1")]
 	[Arguments("comp(def,abc)", "1")]
@@ -255,7 +251,6 @@ public class StringFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("decompose(ansi(hr,red))", "ansi(hr,red)")]
 	public async Task Decompose(string str, string expectedText)
 	{
@@ -264,7 +259,6 @@ public class StringFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("cond(1,yes,no)", "yes")]
 	[Arguments("cond(0,yes,no)", "no")]
 	public async Task Cond(string str, string expectedText)
@@ -274,7 +268,6 @@ public class StringFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("strinsert(hello,3,X)", "helXlo")]
 	public async Task Strinsert(string str, string expectedText)
 	{
@@ -283,8 +276,7 @@ public class StringFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("strreplace(hello world,world,universe)", "hello universe")]
+	[Arguments("strreplace(hello world,6,5,universe)", "hello universe")]
 	public async Task Strreplace(string str, string expectedText)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -292,7 +284,6 @@ public class StringFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("strmatch(test,t*)", "1")]
 	[Arguments("strmatch(test,x*)", "0")]
 	public async Task Strmatch(string str, string expectedText)
@@ -302,8 +293,7 @@ public class StringFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("accent(e,acute)", "é")]
+	[Arguments("accent(e,')", "é")]
 	public async Task Accent(string str, string expectedText)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -311,8 +301,7 @@ public class StringFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("brackets(test)", "[test]")]
+	[Arguments("brackets([test])", "1 1 0 0 0 0")]
 	public async Task Brackets(string str, string expectedText)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -320,9 +309,8 @@ public class StringFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("lpos(test,t)", "1")]
-	[Arguments("lpos(test,s)", "3")]
+	[Arguments("lpos(test,t)", "0 3")]
+	[Arguments("lpos(test,s)", "2")]
 	public async Task Lpos(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -330,7 +318,6 @@ public class StringFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("strcat(a,b,c)", "abc")]
 	[Arguments("strcat(hello, ,world)", "hello world")]
 	public async Task Strcat(string str, string expected)
@@ -340,7 +327,6 @@ public class StringFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("stripansi(ansi(r,red))", "red")]
 	public async Task Stripansi(string str, string expected)
 	{

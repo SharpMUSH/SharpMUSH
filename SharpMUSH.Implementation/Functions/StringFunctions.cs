@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using System.Net;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
@@ -284,13 +285,57 @@ public partial class Functions
 	[SharpFunction(Name = "STRINSERT", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> StrInsert(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var str = parser.CurrentState.Arguments["0"].Message!;
+		var positionStr = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+		var insert = parser.CurrentState.Arguments["2"].Message!;
+
+		if (!int.TryParse(positionStr, out var position) || position < 0)
+		{
+			return ValueTask.FromResult(new CallState(Errors.ErrorPositiveInteger));
+		}
+
+		// If position is greater than length, append
+		if (position >= str.Length)
+		{
+			return ValueTask.FromResult(new CallState(MModule.concat(str, insert)));
+		}
+
+		// Insert at position
+		var left = MModule.substring(0, position, str);
+		var right = MModule.substring(position, str.Length - position, str);
+		var result = MModule.concat(MModule.concat(left, insert), right);
+
+		return ValueTask.FromResult(new CallState(result));
 	}
 
 	[SharpFunction(Name = "STRREPLACE", MinArgs = 4, MaxArgs = 4, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> StrReplace(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var str = parser.CurrentState.Arguments["0"].Message!;
+		var startStr = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+		var lengthStr = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
+		var text = parser.CurrentState.Arguments["3"].Message!;
+
+		if (!int.TryParse(startStr, out var start) || start < 0)
+		{
+			return ValueTask.FromResult(new CallState(Errors.ErrorPositiveInteger));
+		}
+
+		if (!int.TryParse(lengthStr, out var length))
+		{
+			return ValueTask.FromResult(new CallState(Errors.ErrorInteger));
+		}
+
+		// If start is greater than length, return original string
+		if (start >= str.Length)
+		{
+			return ValueTask.FromResult(new CallState(str));
+		}
+
+		// Replace the section
+		var result = MModule.replace(str, text, start, length);
+
+		return ValueTask.FromResult(new CallState(result));
 	}
 
 	[SharpFunction(Name = "strcat", Flags = FunctionFlags.Regular)]
@@ -308,7 +353,113 @@ public partial class Functions
 	[SharpFunction(Name = "ACCENT", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Accent(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var str = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var template = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+
+		if (str.Length != template.Length)
+		{
+			return ValueTask.FromResult(new CallState(Errors.ErrorArgRange));
+		}
+
+		var result = new StringBuilder();
+		for (int i = 0; i < str.Length; i++)
+		{
+			var c = str[i];
+			var t = template[i];
+			
+			var accented = ApplyAccent(c, t);
+			result.Append(accented);
+		}
+
+		return ValueTask.FromResult(new CallState(result.ToString()));
+	}
+
+	private static char ApplyAccent(char c, char template)
+	{
+		// Accent mappings based on pennfunc.md ACCENTS table
+		return (template, c) switch
+		{
+			// Grave accent (`)
+			('`', 'A') => 'À',
+			('`', 'E') => 'È',
+			('`', 'I') => 'Ì',
+			('`', 'O') => 'Ò',
+			('`', 'U') => 'Ù',
+			('`', 'a') => 'à',
+			('`', 'e') => 'è',
+			('`', 'i') => 'ì',
+			('`', 'o') => 'ò',
+			('`', 'u') => 'ù',
+
+			// Acute accent (')
+			('\'', 'A') => 'Á',
+			('\'', 'E') => 'É',
+			('\'', 'I') => 'Í',
+			('\'', 'O') => 'Ó',
+			('\'', 'U') => 'Ú',
+			('\'', 'Y') => 'Ý',
+			('\'', 'a') => 'á',
+			('\'', 'e') => 'é',
+			('\'', 'i') => 'í',
+			('\'', 'o') => 'ó',
+			('\'', 'u') => 'ú',
+			('\'', 'y') => 'ý',
+
+			// Tilde (~)
+			('~', 'A') => 'Ã',
+			('~', 'N') => 'Ñ',
+			('~', 'O') => 'Õ',
+			('~', 'a') => 'ã',
+			('~', 'n') => 'ñ',
+			('~', 'o') => 'õ',
+
+			// Circumflex (^)
+			('^', 'A') => 'Â',
+			('^', 'E') => 'Ê',
+			('^', 'I') => 'Î',
+			('^', 'O') => 'Ô',
+			('^', 'U') => 'Û',
+			('^', 'a') => 'â',
+			('^', 'e') => 'ê',
+			('^', 'i') => 'î',
+			('^', 'o') => 'ô',
+			('^', 'u') => 'û',
+
+			// Umlaut/Diaeresis (:)
+			(':', 'A') => 'Ä',
+			(':', 'E') => 'Ë',
+			(':', 'I') => 'Ï',
+			(':', 'O') => 'Ö',
+			(':', 'U') => 'Ü',
+			(':', 'a') => 'ä',
+			(':', 'e') => 'ë',
+			(':', 'i') => 'ï',
+			(':', 'o') => 'ö',
+			(':', 'u') => 'ü',
+			(':', 'y') => 'ÿ',
+
+			// Ring (o)
+			('o', 'A') => 'Å',
+			('o', 'a') => 'å',
+
+			// Cedilla (,)
+			(',', 'C') => 'Ç',
+			(',', 'c') => 'ç',
+
+			// Special characters
+			('u', '?') => '¿',
+			('u', '!') => '¡',
+			('"', '<') => '«',
+			('"', '>') => '»',
+			('B', 's') => 'ß',
+			('|', 'P') => 'Þ',
+			('|', 'p') => 'þ',
+			('-', 'D') => 'Ð',
+			('&', 'o') => 'ð',
+
+			// No match, return original character
+			_ => c
+		};
 	}
 
 	[SharpFunction(Name = "align", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
@@ -484,7 +635,16 @@ public partial class Functions
 	[SharpFunction(Name = "BRACKETS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> Brackets(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+
+		var leftSquare = arg0.Count(c => c == '[');
+		var rightSquare = arg0.Count(c => c == ']');
+		var leftParen = arg0.Count(c => c == '(');
+		var rightParen = arg0.Count(c => c == ')');
+		var leftCurly = arg0.Count(c => c == '{');
+		var rightCurly = arg0.Count(c => c == '}');
+
+		return ValueTask.FromResult(new CallState($"{leftSquare} {rightSquare} {leftParen} {rightParen} {leftCurly} {rightCurly}"));
 	}
 
 	[SharpFunction(Name = "CAPSTR", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
@@ -593,19 +753,115 @@ public partial class Functions
 	[SharpFunction(Name = "COMP", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> Comp(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var value1 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var value2 = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+		var type = parser.CurrentState.Arguments.TryGetValue("2", out var typeArg)
+			? typeArg.Message!.ToPlainText()?.ToUpperInvariant() ?? "A"
+			: "A";
+
+		int result = type switch
+		{
+			"I" => string.Compare(value1, value2, StringComparison.OrdinalIgnoreCase),
+			"N" when int.TryParse(value1, out var int1) && int.TryParse(value2, out var int2) => int1.CompareTo(int2),
+			"F" when decimal.TryParse(value1, out var dec1) && decimal.TryParse(value2, out var dec2) => dec1.CompareTo(dec2),
+			"D" => CompareDbRefs(value1, value2),
+			_ => string.Compare(value1, value2, StringComparison.Ordinal)
+		};
+
+		return ValueTask.FromResult(new CallState(result == 0 ? "0" : result < 0 ? "-1" : "1"));
+	}
+
+	private static int CompareDbRefs(string value1, string value2)
+	{
+		// Try to parse as dbrefs (#123 format)
+		var dbref1 = ParseDbRef(value1);
+		var dbref2 = ParseDbRef(value2);
+
+		if (dbref1.HasValue && dbref2.HasValue)
+		{
+			return dbref1.Value.CompareTo(dbref2.Value);
+		}
+
+		// Fall back to string comparison if not valid dbrefs
+		return string.Compare(value1, value2, StringComparison.Ordinal);
+	}
+
+	private static int? ParseDbRef(string value)
+	{
+		if (value.StartsWith("#") && int.TryParse(value[1..], out var dbref))
+		{
+			return dbref;
+		}
+		return null;
 	}
 
 	[SharpFunction(Name = "COND", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
-	public static ValueTask<CallState> Cond(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Cond(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var hasDefault = args.Count % 2 == 1;
+		var pairCount = hasDefault ? (args.Count - 1) / 2 : args.Count / 2;
+
+		for (int i = 0; i < pairCount; i++)
+		{
+			var conditionIndex = i * 2;
+			var exprIndex = i * 2 + 1;
+
+			var condition = await parser.FunctionParse(args[conditionIndex.ToString()].Message!);
+			if (condition != null && Predicates.Truthy(condition.Message!))
+			{
+				var result = await parser.FunctionParse(args[exprIndex.ToString()].Message!);
+				return result ?? CallState.Empty;
+			}
+		}
+
+		// Return default if present
+		if (hasDefault)
+		{
+			var result = await parser.FunctionParse(args[(args.Count - 1).ToString()].Message!);
+			return result ?? CallState.Empty;
+		}
+
+		return CallState.Empty;
 	}
 
 	[SharpFunction(Name = "CONDALL", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
-	public static ValueTask<CallState> CondAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> CondAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var hasDefault = args.Count % 2 == 1;
+		var pairCount = hasDefault ? (args.Count - 1) / 2 : args.Count / 2;
+		var results = new List<MString?>();
+
+		for (int i = 0; i < pairCount; i++)
+		{
+			var conditionIndex = i * 2;
+			var exprIndex = i * 2 + 1;
+
+			var condition = await parser.FunctionParse(args[conditionIndex.ToString()].Message!);
+			if (condition != null && Predicates.Truthy(condition.Message!))
+			{
+				var expr = await parser.FunctionParse(args[exprIndex.ToString()].Message!);
+				if (expr != null)
+				{
+					results.Add(expr.Message);
+				}
+			}
+		}
+
+		// Return matched results or default
+		if (results.Count > 0)
+		{
+			return MModule.multiple(results);
+		}
+
+		if (hasDefault)
+		{
+			var result = await parser.FunctionParse(args[(args.Count - 1).ToString()].Message!);
+			return result ?? CallState.Empty;
+		}
+
+		return CallState.Empty;
 	}
 
 	[SharpFunction(Name = "digest", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular)]
@@ -635,7 +891,45 @@ public partial class Functions
 	[SharpFunction(Name = "edit", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Edit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var str = args["0"].Message!.ToPlainText();
+
+		// Process search/replace pairs
+		for (int i = 1; i < args.Count - 1; i += 2)
+		{
+			var search = args[i.ToString()].Message!.ToPlainText();
+			var replace = args[(i + 1).ToString()].Message!.ToPlainText();
+
+			if (search == "^")
+			{
+				// Prepend
+				str = replace + str;
+			}
+			else if (search == "$")
+			{
+				// Append
+				str = str + replace;
+			}
+			else if (string.IsNullOrEmpty(search))
+			{
+				// Insert between every character
+				var result = new StringBuilder();
+				result.Append(replace);
+				foreach (var c in str)
+				{
+					result.Append(c);
+					result.Append(replace);
+				}
+				str = result.ToString();
+			}
+			else
+			{
+				// Replace all occurrences
+				str = str.Replace(search, replace);
+			}
+		}
+
+		return ValueTask.FromResult(new CallState(str));
 	}
 
 	[SharpFunction(Name = "escape", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
@@ -709,7 +1003,30 @@ public partial class Functions
 	[SharpFunction(Name = "decompose", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Decompose(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var str = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		
+		// Escape special characters like escape() does
+		var result = str
+			.Replace("\\", "\\\\")
+			.Replace("%", "\\%")
+			.Replace(";", "\\;")
+			.Replace("[", "\\[")
+			.Replace("]", "\\]")
+			.Replace("{", "\\{")
+			.Replace("}", "\\}")
+			.Replace("(", "\\(")
+			.Replace(")", "\\)")
+			.Replace(",", "\\,")
+			.Replace("^", "\\^")
+			.Replace("$", "\\$");
+
+		// Handle multiple consecutive spaces by converting them to %b sequences
+		result = Regex.Replace(result, @"  +", m => string.Join("", Enumerable.Repeat("%b", m.Length)));
+
+		// Handle newlines and tabs
+		result = result.Replace("\r", "%r").Replace("\n", "%r").Replace("\t", "%t");
+
+		return ValueTask.FromResult(new CallState(result));
 	}
 
 	[SharpFunction(Name = "FORMDECODE", MinArgs = 1, MaxArgs = 3,
@@ -733,16 +1050,41 @@ public partial class Functions
 	[SharpFunction(Name = "HMAC", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> HashMessageAuthenticationCode(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		/*
-		  Computes the HMAC (message authentication code) hash for <text> using the passphrase <key> and the given hash function <digest>, which can be any supported by digest(). <encoding> can be base16 (The default) or base64.
+		var digest = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!.ToUpperInvariant();
+		var key = parser.CurrentState.Arguments["1"].Message!.ToPlainText()!;
+		var text = parser.CurrentState.Arguments["2"].Message!.ToPlainText()!;
+		var encoding = parser.CurrentState.Arguments.TryGetValue("3", out var encodingArg)
+			? encodingArg.Message!.ToPlainText()!.ToLowerInvariant()
+			: "base16";
 
-		  Example:
-		  > think hmac(sha256, secret, this is some text)
-		  9598fd959633f2a64a7d7e985966774aa6f334bc802e5b3301772ec8ed6eed5a
-		  > think hmac(sha256, secret, this is some text, base64)
-		  lZj9lZYz8qZKfX6YWWZ3SqbzNLyALlszAXcuyO1u7Vo=
-  */
-		throw new NotImplementedException();
+		// Get the appropriate HMAC algorithm
+		HMAC? hmac = digest switch
+		{
+			"MD5" => new HMACMD5(Encoding.UTF8.GetBytes(key)),
+			"SHA1" => new HMACSHA1(Encoding.UTF8.GetBytes(key)),
+			"SHA256" => new HMACSHA256(Encoding.UTF8.GetBytes(key)),
+			"SHA384" => new HMACSHA384(Encoding.UTF8.GetBytes(key)),
+			"SHA512" => new HMACSHA512(Encoding.UTF8.GetBytes(key)),
+			_ => null
+		};
+
+		if (hmac == null)
+		{
+			return ValueTask.FromResult(new CallState(Errors.ErrorArgRange));
+		}
+
+		using (hmac)
+		{
+			var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(text));
+
+			var result = encoding switch
+			{
+				"base64" => Convert.ToBase64String(hash),
+				_ => BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant()
+			};
+
+			return ValueTask.FromResult(new CallState(result));
+		}
 	}
 
 	[SharpFunction(Name = "if", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.NoParse)]
@@ -834,7 +1176,35 @@ public partial class Functions
 	[SharpFunction(Name = "MERGE", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Merge(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var string1 = parser.CurrentState.Arguments["0"].Message!;
+		var string2 = parser.CurrentState.Arguments["1"].Message!;
+		var characters = parser.CurrentState.Arguments["2"].Message!;
+
+		// Empty argument is treated as space
+		var charsToCheck = characters.Length == 0 ? " " : characters.ToPlainText();
+
+		if (string1.Length != string2.Length)
+		{
+			return ValueTask.FromResult(new CallState(Errors.ErrorArgRange));
+		}
+
+		var result = new StringBuilder();
+		var str1Plain = string1.ToPlainText();
+		var str2Plain = string2.ToPlainText();
+
+		for (int i = 0; i < str1Plain.Length; i++)
+		{
+			if (charsToCheck.Contains(str1Plain[i]))
+			{
+				result.Append(str2Plain[i]);
+			}
+			else
+			{
+				result.Append(str1Plain[i]);
+			}
+		}
+
+		return ValueTask.FromResult(new CallState(result.ToString()));
 	}
 
 	[SharpFunction(Name = "mid", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular)]
@@ -858,15 +1228,72 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "NCOND", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
-	public static ValueTask<CallState> NCond(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> NCond(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var hasDefault = args.Count % 2 == 1;
+		var pairCount = hasDefault ? (args.Count - 1) / 2 : args.Count / 2;
+
+		for (int i = 0; i < pairCount; i++)
+		{
+			var conditionIndex = i * 2;
+			var exprIndex = i * 2 + 1;
+
+			var condition = await parser.FunctionParse(args[conditionIndex.ToString()].Message!);
+			if (condition != null && !Predicates.Truthy(condition.Message!))
+			{
+				var result = await parser.FunctionParse(args[exprIndex.ToString()].Message!);
+				return result ?? CallState.Empty;
+			}
+		}
+
+		// Return default if present
+		if (hasDefault)
+		{
+			var result = await parser.FunctionParse(args[(args.Count - 1).ToString()].Message!);
+			return result ?? CallState.Empty;
+		}
+
+		return CallState.Empty;
 	}
 
 	[SharpFunction(Name = "NCONDALL", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
-	public static ValueTask<CallState> NCondAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> NCondAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var hasDefault = args.Count % 2 == 1;
+		var pairCount = hasDefault ? (args.Count - 1) / 2 : args.Count / 2;
+		var results = new List<MString?>();
+
+		for (int i = 0; i < pairCount; i++)
+		{
+			var conditionIndex = i * 2;
+			var exprIndex = i * 2 + 1;
+
+			var condition = await parser.FunctionParse(args[conditionIndex.ToString()].Message!);
+			if (condition != null && !Predicates.Truthy(condition.Message!))
+			{
+				var expr = await parser.FunctionParse(args[exprIndex.ToString()].Message!);
+				if (expr != null)
+				{
+					results.Add(expr.Message);
+				}
+			}
+		}
+
+		// Return matched results or default
+		if (results.Count > 0)
+		{
+			return MModule.multiple(results);
+		}
+
+		if (hasDefault)
+		{
+			var result = await parser.FunctionParse(args[(args.Count - 1).ToString()].Message!);
+			return result ?? CallState.Empty;
+		}
+
+		return CallState.Empty;
 	}
 
 	[SharpFunction(Name = "ord", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -1048,7 +1475,12 @@ public partial class Functions
 	[SharpFunction(Name = "STRMATCH", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> StringMatch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var str = parser.CurrentState.Arguments["0"].Message!;
+		var pattern = parser.CurrentState.Arguments["1"].Message!;
+		
+		var match = MModule.isWildcardMatch(str, pattern);
+		
+		return ValueTask.FromResult(new CallState(match ? "1" : "0"));
 	}
 
 	[SharpFunction(Name = "switch", MinArgs = 3, MaxArgs = int.MaxValue,
@@ -1140,7 +1572,63 @@ public partial class Functions
 	[SharpFunction(Name = "TR", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Tr(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var str = parser.CurrentState.Arguments["0"].Message!;
+		var find = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+		var replace = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
+
+		// Expand ranges (e.g., a-z)
+		var expandedFind = ExpandRanges(find);
+		var expandedReplace = ExpandRanges(replace);
+
+		if (expandedFind.Length != expandedReplace.Length)
+		{
+			return ValueTask.FromResult(new CallState(Errors.ErrorArgRange));
+		}
+
+		// Build translation map - later occurrences override earlier ones
+		var translationMap = new Dictionary<char, char>();
+		for (int i = 0; i < expandedFind.Length; i++)
+		{
+			translationMap[expandedFind[i]] = expandedReplace[i];
+		}
+
+		// Apply translation
+		var result = MModule.apply(str, FuncConvert.FromFunc<string, string>(s =>
+		{
+			if (s.Length == 1 && translationMap.TryGetValue(s[0], out var replacement))
+			{
+				return replacement.ToString();
+			}
+			return s;
+		}));
+
+		return ValueTask.FromResult(new CallState(result));
+	}
+
+	private static string ExpandRanges(string input)
+	{
+		if (string.IsNullOrEmpty(input)) return input;
+
+		var result = new StringBuilder();
+		for (int i = 0; i < input.Length; i++)
+		{
+			if (i + 2 < input.Length && input[i + 1] == '-')
+			{
+				// Range found
+				char start = input[i];
+				char end = input[i + 2];
+				for (char c = start; c <= end; c++)
+				{
+					result.Append(c);
+				}
+				i += 2; // Skip the '-' and end character
+			}
+			else
+			{
+				result.Append(input[i]);
+			}
+		}
+		return result.ToString();
 	}
 
 	[SharpFunction(Name = "trim", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular)]
