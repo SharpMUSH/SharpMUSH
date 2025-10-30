@@ -1572,7 +1572,7 @@ public partial class Functions
 	[SharpFunction(Name = "tr", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Tr(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var str = parser.CurrentState.Arguments["0"].Message!;
+		var str = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var find = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 		var replace = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
 
@@ -1592,17 +1592,21 @@ public partial class Functions
 			translationMap[expandedFind[i]] = expandedReplace[i];
 		}
 
-		// Apply translation
-		var result = MModule.apply(str, FuncConvert.FromFunc<string, string>(s =>
+		// Apply translation character by character
+		var result = new StringBuilder(str.Length);
+		foreach (var c in str)
 		{
-			if (s.Length == 1 && translationMap.TryGetValue(s[0], out var replacement))
+			if (translationMap.TryGetValue(c, out var replacement))
 			{
-				return replacement.ToString();
+				result.Append(replacement);
 			}
-			return s;
-		}));
+			else
+			{
+				result.Append(c);
+			}
+		}
 
-		return ValueTask.FromResult(new CallState(result));
+		return ValueTask.FromResult(new CallState(result.ToString()));
 	}
 
 	private static string ExpandRanges(string input)
