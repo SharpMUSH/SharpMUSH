@@ -1,5 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -16,6 +18,7 @@ public class ListFunctionUnitTests
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
 	private static bool _testObjectsCreated = false;
+	private static DBRef _testObjectDbRef;
 	private static readonly SemaphoreSlim _lock = new SemaphoreSlim(1, 1);
 
 	/// <summary>
@@ -30,29 +33,30 @@ public class ListFunctionUnitTests
 		{
 			if (_testObjectsCreated) return;
 			
-			// Create test object
-			await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create test"));
+			// Create test object and capture its DBRef
+			var createResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create test"));
+			_testObjectDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
 			
-			// Set up filter test attribute
-			await CommandParser.CommandParse(1, ConnectionService, MModule.single("&IS_ODD test=mod(%0,2)"));
+			// Set up filter test attribute using DBRef
+			await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&IS_ODD #{_testObjectDbRef.Number}=mod(%0,2)"));
 			
 			// Set up fold test attribute
-			await CommandParser.CommandParse(1, ConnectionService, MModule.single("&ADD_FUNC test=add(%0,%1)"));
+			await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&ADD_FUNC #{_testObjectDbRef.Number}=add(%0,%1)"));
 			
 			// Set up mix test attribute  
-			await CommandParser.CommandParse(1, ConnectionService, MModule.single("&CONCAT test=cat(%0,%b,%1)"));
+			await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&CONCAT #{_testObjectDbRef.Number}=cat(%0,%b,%1)"));
 			
 			// Set up munge test attribute (sort function)
-			await CommandParser.CommandParse(1, ConnectionService, MModule.single("&SORT test=sort(%0,%1)"));
+			await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&SORT #{_testObjectDbRef.Number}=sort(%0,%1)"));
 			
 			// Set up sortby test attribute (comparison function)
-			await CommandParser.CommandParse(1, ConnectionService, MModule.single("&COMP test=comp(%0,%1)"));
+			await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&COMP #{_testObjectDbRef.Number}=comp(%0,%1)"));
 			
 			// Set up sortkey test attribute (key generator)
-			await CommandParser.CommandParse(1, ConnectionService, MModule.single("&KEY test=strlen(%0)"));
+			await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&KEY #{_testObjectDbRef.Number}=strlen(%0)"));
 			
 			// Set up step test attribute
-			await CommandParser.CommandParse(1, ConnectionService, MModule.single("&FIRST test=%0"));
+			await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&FIRST #{_testObjectDbRef.Number}=%0"));
 			
 			_testObjectsCreated = true;
 		}
@@ -190,7 +194,9 @@ public class ListFunctionUnitTests
 	public async Task Filter(string function, string expected)
 	{
 		await EnsureTestObjectsExist();
-		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
+		// Replace "test" with actual DBRef
+		var functionWithDbRef = function.Replace("test", $"#{_testObjectDbRef.Number}");
+		var result = (await Parser.FunctionParse(MModule.single(functionWithDbRef)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
@@ -199,7 +205,9 @@ public class ListFunctionUnitTests
 	public async Task Fold(string function, string expected)
 	{
 		await EnsureTestObjectsExist();
-		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
+		// Replace "test" with actual DBRef
+		var functionWithDbRef = function.Replace("test", $"#{_testObjectDbRef.Number}");
+		var result = (await Parser.FunctionParse(MModule.single(functionWithDbRef)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
@@ -279,7 +287,9 @@ public class ListFunctionUnitTests
 	public async Task Mix(string function, string expected)
 	{
 		await EnsureTestObjectsExist();
-		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
+		// Replace "test" with actual DBRef
+		var functionWithDbRef = function.Replace("test", $"#{_testObjectDbRef.Number}");
+		var result = (await Parser.FunctionParse(MModule.single(functionWithDbRef)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
@@ -288,7 +298,9 @@ public class ListFunctionUnitTests
 	public async Task Munge(string function, string expected)
 	{
 		await EnsureTestObjectsExist();
-		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
+		// Replace "test" with actual DBRef
+		var functionWithDbRef = function.Replace("test", $"#{_testObjectDbRef.Number}");
+		var result = (await Parser.FunctionParse(MModule.single(functionWithDbRef)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
@@ -323,7 +335,9 @@ public class ListFunctionUnitTests
 	public async Task Step(string function, string expected)
 	{
 		await EnsureTestObjectsExist();
-		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
+		// Replace "test" with actual DBRef
+		var functionWithDbRef = function.Replace("test", $"#{_testObjectDbRef.Number}");
+		var result = (await Parser.FunctionParse(MModule.single(functionWithDbRef)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
@@ -414,7 +428,9 @@ public class ListFunctionUnitTests
 	public async Task SortBy(string str, string expected)
 	{
 		await EnsureTestObjectsExist();
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		// Replace "test" with actual DBRef
+		var functionWithDbRef = str.Replace("test", $"#{_testObjectDbRef.Number}");
+		var result = (await Parser.FunctionParse(MModule.single(functionWithDbRef)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -423,7 +439,9 @@ public class ListFunctionUnitTests
 	public async Task SortKey(string str, string expected)
 	{
 		await EnsureTestObjectsExist();
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		// Replace "test" with actual DBRef
+		var functionWithDbRef = str.Replace("test", $"#{_testObjectDbRef.Number}");
+		var result = (await Parser.FunctionParse(MModule.single(functionWithDbRef)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
