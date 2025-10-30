@@ -106,7 +106,6 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("grab(This is a test,tes*)", "test")]
 	[Arguments("grab(a|b|c|d,c,|)", "c")]
 	public async Task Grab(string function, string expected)
@@ -116,7 +115,6 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("graball(This is a test of a test,test)", "test test")]
 	[Arguments("graball(This|is|testing|a|test,tes*,|)", "testing|test")]
 	public async Task Graball(string function, string expected)
@@ -154,7 +152,6 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("ldelete(a b c d,2)", "a c d")]
 	[Arguments("ldelete(a|b|c|d,2,1,|)", "a|c|d")]
 	public async Task Ldelete(string function, string expected)
@@ -164,7 +161,6 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("lreplace(a b c,2,foo)", "a foo c")]
 	[Arguments("lreplace(a|b|c,2,foo,|)", "a|foo|c")]
 	public async Task ListReplace(string function, string expected)
@@ -202,7 +198,6 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("setinter(a b c,c d e)", "c")]
 	[Arguments("setinter(1 2 3,2 3 4)", "2 3")]
 	public async Task SetIntersection(string function, string expected)
@@ -212,7 +207,6 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("setdiff(a b c,c d e)", "a b")]
 	[Arguments("setdiff(1 2 3,2 3 4)", "1")]
 	public async Task SetDifference(string function, string expected)
@@ -249,7 +243,6 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("unique(a b a c b)", "a b c")]
 	public async Task Unique(string function, string expected)
 	{
@@ -258,7 +251,6 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("randextract(a b c d e)", "")]
 	public async Task RandomExtract(string function, string expected)
 	{
@@ -286,8 +278,7 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("index(a b c d,2,4,2)", "b d")]
+	[Arguments("index(a b c d, ,2,4)", "b d")]
 	public async Task Index(string function, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
@@ -304,7 +295,6 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("items(a b c,and)", "3")]
 	public async Task Items(string function, string expected)
 	{
