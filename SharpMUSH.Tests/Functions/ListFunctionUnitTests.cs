@@ -153,7 +153,7 @@ public class ListFunctionUnitTests
 
 	[Test]
 	[Arguments("ldelete(a b c d,2)", "a c d")]
-	[Arguments("ldelete(a|b|c|d,2,1,|)", "a|c|d")]
+	[Arguments("ldelete(a|b|c|d,2,|)", "a|c|d")]
 	public async Task Ldelete(string function, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
@@ -243,7 +243,7 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("unique(a b a c b)", "a b c")]
+	[Arguments("unique(a b b c b)", "a b c b")]
 	public async Task Unique(string function, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
@@ -295,7 +295,7 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("items(a b c,and)", "3")]
+	[Arguments("items(a b c,%b)", "3")]
 	public async Task Items(string function, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
