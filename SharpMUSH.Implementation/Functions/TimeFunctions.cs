@@ -703,16 +703,18 @@ public partial class Functions
 		if (minutes > 0) parts.Add($"{minutes}m");
 		if (seconds > 0 || parts.Count == 0) parts.Add($"{seconds}s");
 
-		// Join parts and respect width limit
-		var result = string.Join(" ", parts);
+		// Join parts with two spaces and respect width limit
+		var separator = "  ";
+		var result = string.Join(separator, parts);
+		
 		if (result.Length > maxWidth && parts.Count > 1)
 		{
 			// Trim from the end until it fits
-			while (parts.Count > 1 && string.Join(" ", parts).Length > maxWidth)
+			while (parts.Count > 1 && string.Join(separator, parts).Length > maxWidth)
 			{
 				parts.RemoveAt(parts.Count - 1);
 			}
-			result = string.Join(" ", parts);
+			result = string.Join(separator, parts);
 		}
 
 		return ValueTask.FromResult<CallState>(result);
@@ -845,6 +847,7 @@ public partial class Functions
 			}
 		}
 
-		return ValueTask.FromResult<CallState>(result);
+		// Trim leading spaces from space-padded values
+		return ValueTask.FromResult<CallState>(result.TrimStart(' '));
 	}
 }

@@ -35,24 +35,36 @@ public class TimeFunctionUnitTests
 		await Assert.That(long.Parse(result.ToPlainText())).IsGreaterThan(0);
 	}
 
+	// ETIME tests - based on pennfunc.md examples
 	[Test]
 	[Arguments("etime(0)", "0s")]
+	[Arguments("etime(59)", "59s")]
+	[Arguments("etime(60)", "1m")]
+	[Arguments("etime(61)", "1m  1s")]
+	[Arguments("etime(61, 5)", "1m")]
 	public async Task Etime(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
+	// STRINGSECS tests - based on pennfunc.md examples
 	[Test]
 	[Arguments("stringsecs(1d)", "86400")]
+	[Arguments("stringsecs(5m 1s)", "301")]
+	[Arguments("stringsecs(3y 2m 7d 5h 23m)", "95232300")]
 	public async Task Stringsecs(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
+	// TIMESTRING tests - based on pennfunc.md examples
 	[Test]
 	[Arguments("timestring(86400)", " 1d  0s")]
+	[Arguments("timestring(301)", " 5m  1s")]
+	[Arguments("timestring(301,1)", "0d  0h  5m  1s")]
+	[Arguments("timestring(301,2)", "00d 00h 05m 01s")]
 	public async Task Timestring(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -67,22 +79,28 @@ public class TimeFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
+	// ETIMEFMT tests - based on pennfunc.md examples
 	[Test]
 	[Arguments("etimefmt($2H:$2M, 3661)", "01:01")]
+	[Arguments("etimefmt($2h:$2M, 3700)", "1:01")]
+	[Arguments("etimefmt($2mm $2ss, 500)", "8m 20s")]
 	public async Task Etimefmt(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
+	// TIMEFMT tests - based on pennfunc.md examples
 	[Test]
 	[Arguments("timefmt($Y-$m-$d,0)", "1970-01-01")]
+	[Arguments("timefmt($$,0)", "$")]
 	public async Task Timefmt(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
+	// SECSCALC tests - based on pennfunc.md examples
 	[Test]
 	[Arguments("secscalc(1d2h3m4s)", "93784")]
 	public async Task Secscalc(string str, string expected)
@@ -91,6 +109,7 @@ public class TimeFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
+	// TIMECALC tests - based on pennfunc.md examples
 	[Test]
 	[Arguments("timecalc(1h 2m)", "")]
 	public async Task Timecalc(string str, string expected)
