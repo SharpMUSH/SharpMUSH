@@ -11,6 +11,21 @@ namespace SharpMUSH.Implementation.Functions;
 
 public partial class Functions
 {
+	// Generated regex for parsing duration strings
+	// Matches: number + optional unit (y/year/years, w/week/weeks, d/day/days, h/hour/hours, m/minute/minutes, s/second/seconds)
+	[GeneratedRegex(@"(?<number>[-+]?\d+(?:\.\d+)?)\s*(?<unit>y(?:ears?)?|w(?:eeks?)?|d(?:ays?)?|h(?:ours?)?|m(?:inutes?)?|s(?:econds?)?)", RegexOptions.IgnoreCase | RegexOptions.Compiled)]
+	private static partial Regex DurationPattern();
+	
+	// Generated regex for parsing etimefmt format codes
+	// Matches: $ + optional width + optional flags (x,z,t) + code letter
+	[GeneratedRegex(@"\$(?<width>\d*)(?<flags>[xzt]*)(?<code>[yYwWdDhHmMsS$])", RegexOptions.Compiled)]
+	private static partial Regex ETimeFmtPattern();
+	
+	// Generated regex for parsing timefmt format codes
+	// Matches: $ + format code letter
+	[GeneratedRegex(@"\$(?<code>.)", RegexOptions.Compiled)]
+	private static partial Regex TimeFmtPattern();
+
 	[SharpFunction(Name = "ctime", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> CreationTime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -84,9 +99,8 @@ public partial class Functions
 			var timeStr = args["0"].Message!.ToPlainText().Trim();
 			
 			// Parse time string which can be "1d 2h 3m 4s" or "1d2h3m4s"
-			// Use regex to extract all number-unit pairs
-			var pattern = @"([-+]?\d+(?:\.\d+)?)\s*([yYwWdDhHmMsS](?:ears?|eeks?|ays?|ours?|inutes?|econds?)?)";
-			var matches = Regex.Matches(timeStr, pattern);
+			// Use generated regex to extract all number-unit pairs
+			var matches = DurationPattern().Matches(timeStr);
 			
 			if (matches.Count == 0)
 			{
@@ -96,21 +110,23 @@ public partial class Functions
 			long totalSeconds = 0;
 			foreach (Match match in matches)
 			{
-				if (!double.TryParse(match.Groups[1].Value, out var value))
+				if (!double.TryParse(match.Groups["number"].Value, out var value))
 				{
 					return new ValueTask<CallState>(Errors.ErrorInteger);
 				}
 				
-				var unit = match.Groups[2].Value.ToLower();
+				var unit = match.Groups["unit"].Value.ToLower();
+				// Use array pattern matching for first character
 				totalSeconds += unit switch
 				{
-					var u when u.StartsWith('y') => (long)(value * 365 * 24 * 3600),
-					var u when u.StartsWith('w') => (long)(value * 7 * 24 * 3600),
-					var u when u.StartsWith('d') => (long)(value * 24 * 3600),
-					var u when u.StartsWith('h') => (long)(value * 3600),
-					var u when u.StartsWith('m') => (long)(value * 60),
-					var u when u.StartsWith('s') || string.IsNullOrEmpty(u) => (long)value,
-					_ => throw new InvalidOperationException()
+					[var first, ..] when first is 'y' => (long)(value * 365 * 24 * 3600),
+					[var first, ..] when first is 'w' => (long)(value * 7 * 24 * 3600),
+					[var first, ..] when first is 'd' => (long)(value * 24 * 3600),
+					[var first, ..] when first is 'h' => (long)(value * 3600),
+					[var first, ..] when first is 'm' => (long)(value * 60),
+					[var first, ..] when first is 's' => (long)value,
+					"" => (long)value, // Empty unit defaults to seconds
+					_ => 0 // Unknown unit returns 0 instead of throwing
 				};
 			}
 
@@ -135,9 +151,8 @@ public partial class Functions
 		var timeStr = parser.CurrentState.Arguments["0"].Message!.ToPlainText().Trim();
 		
 		// Parse strings like "5m 1s", "1d 2h 3m 4s", "3y 2m 7d 5h 23m", etc.
-		// Use regex to extract all number-unit pairs
-		var pattern = @"([-+]?\d+(?:\.\d+)?)\s*([yYwWdDhHmMsS](?:ears?|eeks?|ays?|ours?|inutes?|econds?)?)";
-		var matches = Regex.Matches(timeStr, pattern);
+		// Use generated regex to extract all number-unit pairs
+		var matches = DurationPattern().Matches(timeStr);
 		
 		if (matches.Count == 0)
 		{
@@ -147,21 +162,23 @@ public partial class Functions
 		long totalSeconds = 0;
 		foreach (Match match in matches)
 		{
-			if (!double.TryParse(match.Groups[1].Value, out var value))
+			if (!double.TryParse(match.Groups["number"].Value, out var value))
 			{
 				return new ValueTask<CallState>(Errors.ErrorInteger);
 			}
 			
-			var unit = match.Groups[2].Value.ToLower();
+			var unit = match.Groups["unit"].Value.ToLower();
+			// Use array pattern matching for first character
 			totalSeconds += unit switch
 			{
-				var u when u.StartsWith('y') => (long)(value * 365 * 24 * 3600),
-				var u when u.StartsWith('w') => (long)(value * 7 * 24 * 3600),
-				var u when u.StartsWith('d') => (long)(value * 24 * 3600),
-				var u when u.StartsWith('h') => (long)(value * 3600),
-				var u when u.StartsWith('m') => (long)(value * 60),
-				var u when u.StartsWith('s') || string.IsNullOrEmpty(u) => (long)value,
-				_ => throw new InvalidOperationException()
+				[var first, ..] when first is 'y' => (long)(value * 365 * 24 * 3600),
+				[var first, ..] when first is 'w' => (long)(value * 7 * 24 * 3600),
+				[var first, ..] when first is 'd' => (long)(value * 24 * 3600),
+				[var first, ..] when first is 'h' => (long)(value * 3600),
+				[var first, ..] when first is 'm' => (long)(value * 60),
+				[var first, ..] when first is 's' => (long)value,
+				"" => (long)value, // Empty unit defaults to seconds
+				_ => 0 // Unknown unit returns 0 instead of throwing
 			};
 		}
 
@@ -357,104 +374,57 @@ public partial class Functions
 			dt = dt.ToLocalTime();
 		}
 
-		// Process format string
-		var result = "";
-		for (var i = 0; i < format.Length; i++)
+		// Process format string using generated regex with MatchEvaluator
+		var result = TimeFmtPattern().Replace(format, match =>
 		{
-			if (format[i] == '$' && i + 1 < format.Length)
+			var code = match.Groups["code"].Value[0];
+			return code switch
 			{
-				var code = format[i + 1];
-				switch (code)
-				{
-					case '$':
-						result += '$';
-						break;
-					case 'a':
-						result += dt.ToString("ddd");
-						break;
-					case 'A':
-						result += dt.ToString("dddd");
-						break;
-					case 'b':
-						result += dt.ToString("MMM");
-						break;
-					case 'B':
-						result += dt.ToString("MMMM");
-						break;
-					case 'c':
-						result += dt.ToString("f");
-						break;
-					case 'd':
-						result += dt.ToString("dd");
-						break;
-					case 'H':
-						result += dt.ToString("HH");
-						break;
-					case 'I':
-						result += dt.ToString("hh");
-						break;
-					case 'j':
-						result += dt.DayOfYear.ToString("D3");
-						break;
-					case 'm':
-						result += dt.ToString("MM");
-						break;
-					case 'M':
-						result += dt.ToString("mm");
-						break;
-					case 'p':
-					case 'P':
-						result += dt.ToString("tt");
-						break;
-					case 'S':
-						result += dt.ToString("ss");
-						break;
-					case 'U':
-						// Week of year from first Sunday
-						var startOfYear = new DateTimeOffset(dt.Year, 1, 1, 0, 0, 0, dt.Offset);
-						var daysOffset = (int)startOfYear.DayOfWeek;
-						var firstSunday = daysOffset == 0 ? startOfYear : startOfYear.AddDays(7 - daysOffset);
-						var weekNumber = dt < firstSunday ? 0 : (int)((dt - firstSunday).TotalDays / 7) + 1;
-						result += weekNumber.ToString("D2");
-						break;
-					case 'w':
-						result += ((int)dt.DayOfWeek).ToString();
-						break;
-					case 'W':
-						// Week of year from first Monday
-						var startOfYearW = new DateTimeOffset(dt.Year, 1, 1, 0, 0, 0, dt.Offset);
-						var daysOffsetW = (int)startOfYearW.DayOfWeek;
-						var firstMonday = daysOffsetW <= 1 ? startOfYearW.AddDays(1 - daysOffsetW) : startOfYearW.AddDays(8 - daysOffsetW);
-						var weekNumberW = dt < firstMonday ? 0 : (int)((dt - firstMonday).TotalDays / 7) + 1;
-						result += weekNumberW.ToString("D2");
-						break;
-					case 'x':
-						result += dt.ToString("d");
-						break;
-					case 'X':
-						result += dt.ToString("T");
-						break;
-					case 'y':
-						result += dt.ToString("yy");
-						break;
-					case 'Y':
-						result += dt.ToString("yyyy");
-						break;
-					case 'Z':
-						result += dt.ToString("zzz");
-						break;
-					default:
-						return new ValueTask<CallState>("#-1 INVALID ESCAPE CODE");
-				}
-				i++; // Skip the code character
-			}
-			else
-			{
-				result += format[i];
-			}
-		}
+				'$' => "$",
+				'a' => dt.ToString("ddd"),
+				'A' => dt.ToString("dddd"),
+				'b' => dt.ToString("MMM"),
+				'B' => dt.ToString("MMMM"),
+				'c' => dt.ToString("f"),
+				'd' => dt.ToString("dd"),
+				'H' => dt.ToString("HH"),
+				'I' => dt.ToString("hh"),
+				'j' => dt.DayOfYear.ToString("D3"),
+				'm' => dt.ToString("MM"),
+				'M' => dt.ToString("mm"),
+				'p' or 'P' => dt.ToString("tt"),
+				'S' => dt.ToString("ss"),
+				'U' => CalculateWeekOfYearFromSunday(dt),
+				'w' => ((int)dt.DayOfWeek).ToString(),
+				'W' => CalculateWeekOfYearFromMonday(dt),
+				'x' => dt.ToString("d"),
+				'X' => dt.ToString("T"),
+				'y' => dt.ToString("yy"),
+				'Y' => dt.ToString("yyyy"),
+				'Z' => dt.ToString("zzz"),
+				_ => "#-1 INVALID ESCAPE CODE"
+			};
+		});
 
 		return ValueTask.FromResult<CallState>(result);
+	}
+	
+	private static string CalculateWeekOfYearFromSunday(DateTimeOffset dt)
+	{
+		var startOfYear = new DateTimeOffset(dt.Year, 1, 1, 0, 0, 0, dt.Offset);
+		var daysOffset = (int)startOfYear.DayOfWeek;
+		var firstSunday = daysOffset == 0 ? startOfYear : startOfYear.AddDays(7 - daysOffset);
+		var weekNumber = dt < firstSunday ? 0 : (int)((dt - firstSunday).TotalDays / 7) + 1;
+		return weekNumber.ToString("D2");
+	}
+	
+	private static string CalculateWeekOfYearFromMonday(DateTimeOffset dt)
+	{
+		var startOfYear = new DateTimeOffset(dt.Year, 1, 1, 0, 0, 0, dt.Offset);
+		var daysOffset = (int)startOfYear.DayOfWeek;
+		var firstMonday = daysOffset <= 1 ? startOfYear.AddDays(1 - daysOffset) : startOfYear.AddDays(8 - daysOffset);
+		var weekNumber = dt < firstMonday ? 0 : (int)((dt - firstMonday).TotalDays / 7) + 1;
+		return weekNumber.ToString("D2");
 	}
 
 	[SharpFunction(Name = "timestring", MinArgs = 1, MaxArgs = 2,
@@ -644,13 +614,12 @@ public partial class Functions
 		var totalHours = (long)timeSpan.TotalHours;
 		var totalMinutes = (long)timeSpan.TotalMinutes;
 
-		// Process format string using regex for format codes
-		var pattern = @"\$(\d*)([xzt]*)([yYwWdDhHmMsS$])";
-		var result = Regex.Replace(format, pattern, match =>
+		// Process format string using generated regex with MatchEvaluator
+		var result = ETimeFmtPattern().Replace(format, match =>
 		{
-			var widthStr = match.Groups[1].Value;
-			var flags = match.Groups[2].Value.ToLower();
-			var codeChar = match.Groups[3].Value;
+			var widthStr = match.Groups["width"].Value;
+			var flags = match.Groups["flags"].Value.ToLower();
+			var codeChar = match.Groups["code"].Value;
 			
 			var width = string.IsNullOrEmpty(widthStr) ? 0 : int.Parse(widthStr);
 			var addSuffix = flags.Contains('x');
