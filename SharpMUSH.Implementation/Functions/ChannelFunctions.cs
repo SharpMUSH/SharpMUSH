@@ -144,7 +144,7 @@ public partial class Functions
 
 		var (_, status) = maybeMemberStatus.Value;
 
-		var canNoSpoof = await executor.HasPower("CAN_SPOOF") || await executor.IsPriv();
+		var canNoSpoof = await PermissionService!.CanNoSpoof(executor);
 
 		await Mediator!.Send(new ChannelMessageNotification(
 			channel,
