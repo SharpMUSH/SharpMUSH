@@ -1,4 +1,9 @@
+using Mediator;
+using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
@@ -8,6 +13,58 @@ public class ListFunctionUnitTests
 	public required WebAppFactory WebAppFactoryArg { get; init; }
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
+	private IMUSHCodeParser CommandParser => WebAppFactoryArg.CommandParser;
+	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
+	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+
+	private static bool _testObjectsCreated = false;
+	private static DBRef _testObjectDbRef;
+	private static readonly SemaphoreSlim _lock = new SemaphoreSlim(1, 1);
+
+	/// <summary>
+	/// Creates test object and attributes needed for list function tests
+	/// </summary>
+	private async Task EnsureTestObjectsExist()
+	{
+		if (_testObjectsCreated) return;
+		
+		await _lock.WaitAsync();
+		try
+		{
+			if (_testObjectsCreated) return;
+			
+			// Create test object and capture its DBRef
+			var createResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create test"));
+			_testObjectDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
+			
+			// Set up filter test attribute using DBRef
+			await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&IS_ODD #{_testObjectDbRef.Number}=mod(%0,2)"));
+			
+			// Set up fold test attribute
+			await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&ADD_FUNC #{_testObjectDbRef.Number}=add(%0,%1)"));
+			
+			// Set up mix test attribute  
+			await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&CONCAT #{_testObjectDbRef.Number}=cat(%0,%b,%1)"));
+			
+			// Set up munge test attribute (sort function)
+			await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&SORT #{_testObjectDbRef.Number}=sort(%0,%1)"));
+			
+			// Set up sortby test attribute (comparison function)
+			await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&COMP #{_testObjectDbRef.Number}=comp(%0,%1)"));
+			
+			// Set up sortkey test attribute (key generator)
+			await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&KEY #{_testObjectDbRef.Number}=strlen(%0)"));
+			
+			// Set up step test attribute
+			await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&FIRST #{_testObjectDbRef.Number}=%0"));
+			
+			_testObjectsCreated = true;
+		}
+		finally
+		{
+			_lock.Release();
+		}
+	}
 
 	[Test, NotInParallel]
 	[Arguments("iter(1 2 3,%i0)", "1 2 3")]
@@ -106,7 +163,6 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("grab(This is a test,tes*)", "test")]
 	[Arguments("grab(a|b|c|d,c,|)", "c")]
 	public async Task Grab(string function, string expected)
@@ -116,7 +172,6 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("graball(This is a test of a test,test)", "test test")]
 	[Arguments("graball(This|is|testing|a|test,tes*,|)", "testing|test")]
 	public async Task Graball(string function, string expected)
@@ -126,7 +181,7 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
+	[Skip("Implementation incomplete - sort function needs full implementation")]
 	[Arguments("sort(3 1 2)", "1 2 3")]
 	[Arguments("sort(foo bar baz)", "bar baz foo")]
 	public async Task Sort(string function, string expected)
@@ -136,27 +191,30 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("filter(test/is_odd,1 2 3 4 5 6)", "1 3 5")]
 	public async Task Filter(string function, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
+		await EnsureTestObjectsExist();
+		// Replace "test" with actual DBRef
+		var functionWithDbRef = function.Replace("test", $"#{_testObjectDbRef.Number}");
+		var result = (await Parser.FunctionParse(MModule.single(functionWithDbRef)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("fold(test/add_func,1 2 3)", "6")]
 	public async Task Fold(string function, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
+		await EnsureTestObjectsExist();
+		// Replace "test" with actual DBRef
+		var functionWithDbRef = function.Replace("test", $"#{_testObjectDbRef.Number}");
+		var result = (await Parser.FunctionParse(MModule.single(functionWithDbRef)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("ldelete(a b c d,2)", "a c d")]
-	[Arguments("ldelete(a|b|c|d,2,1,|)", "a|c|d")]
+	[Arguments("ldelete(a|b|c|d,2,|)", "a|c|d")]
 	public async Task Ldelete(string function, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
@@ -164,7 +222,6 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("lreplace(a b c,2,foo)", "a foo c")]
 	[Arguments("lreplace(a|b|c,2,foo,|)", "a|foo|c")]
 	public async Task ListReplace(string function, string expected)
@@ -192,7 +249,6 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("setunion(a b c,c d e)", "a b c d e")]
 	[Arguments("setunion(1 2 3,2 3 4)", "1 2 3 4")]
 	public async Task SetUnion(string function, string expected)
@@ -202,7 +258,6 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("setinter(a b c,c d e)", "c")]
 	[Arguments("setinter(1 2 3,2 3 4)", "2 3")]
 	public async Task SetIntersection(string function, string expected)
@@ -212,7 +267,6 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("setdiff(a b c,c d e)", "a b")]
 	[Arguments("setdiff(1 2 3,2 3 4)", "1")]
 	public async Task SetDifference(string function, string expected)
@@ -222,7 +276,7 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
+	[Skip("Implementation doesn't match expected behavior - returns wrong indices")]
 	[Arguments("matchall(foo bar baz,ba*)", "2 3")]
 	public async Task Matchall(string function, string expected)
 	{
@@ -231,26 +285,30 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("mix(a b c,1 2 3)", "a 1 b 2 c 3")]
+	[Skip("User-defined function execution issue - attribute not being called correctly")]
+	[Arguments("mix(test/concat,a b c,1 2 3)", "a 1 b 2 c 3")]
 	public async Task Mix(string function, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
+		await EnsureTestObjectsExist();
+		// Replace "test" with actual DBRef
+		var functionWithDbRef = function.Replace("test", $"#{_testObjectDbRef.Number}");
+		var result = (await Parser.FunctionParse(MModule.single(functionWithDbRef)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("munge(a b c,1 2 3,|)", "a|1 b|2 c|3")]
+	[Arguments("munge(test/sort,b a c,2 1 3)", "1 2 3")]
 	public async Task Munge(string function, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
+		await EnsureTestObjectsExist();
+		// Replace "test" with actual DBRef
+		var functionWithDbRef = function.Replace("test", $"#{_testObjectDbRef.Number}");
+		var result = (await Parser.FunctionParse(MModule.single(functionWithDbRef)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("unique(a b a c b)", "a b c")]
+	[Arguments("unique(a b b c b)", "a b c b")]
 	public async Task Unique(string function, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
@@ -258,7 +316,6 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("randextract(a b c d e)", "")]
 	public async Task RandomExtract(string function, string expected)
 	{
@@ -277,17 +334,18 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("step(a b c d e,2)", "a c e")]
+	[Arguments("step(test/first,a b c d e,2)", "a c e")]
 	public async Task Step(string function, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
+		await EnsureTestObjectsExist();
+		// Replace "test" with actual DBRef
+		var functionWithDbRef = function.Replace("test", $"#{_testObjectDbRef.Number}");
+		var result = (await Parser.FunctionParse(MModule.single(functionWithDbRef)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("index(a b c d,2,4,2)", "b d")]
+	[Arguments("index(a b c d,%b,2,2)", "b c")]
 	public async Task Index(string function, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
@@ -295,7 +353,7 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
+	[Skip("Formatting logic incorrect - conjunction and punctuation not formatted properly")]
 	[Arguments("itemize(a b c)", "a, b, and c")]
 	public async Task Itemize(string function, string expected)
 	{
@@ -304,8 +362,7 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("items(a b c,and)", "3")]
+	[Arguments("items(a b c,%b)", "3")]
 	public async Task Items(string function, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
@@ -313,7 +370,7 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
+	[Skip("Placeholder - needs database integration")]
 	[Arguments("namegrab(obj,pattern)", "")]
 	public async Task Namegrab(string function, string expected)
 	{
@@ -322,7 +379,7 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
+	[Skip("Placeholder - needs database integration")]
 	[Arguments("namegraball(obj,pattern)", "")]
 	public async Task NameGrabAll(string function, string expected)
 	{
@@ -331,7 +388,7 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
+	[Skip("Lambda function syntax not fully supported - #lambda/\\%0 pattern needs implementation")]
 	[Arguments(@"filterbool(#lambda/\%0,1 0 1)", "1 1")]
 	public async Task FilterBool(string function, string expected)
 	{
@@ -340,7 +397,6 @@ public class ListFunctionUnitTests
 	}
 	
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("revwords(a b c)", "c b a")]
 	public async Task ReverseWords(string str, string expected)
 	{
@@ -349,7 +405,7 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
+	[Skip("Implementation issue - splice logic doesn't handle output separator correctly")]
 	[Arguments("splice(a b c,d e f, )", "a d  b e  c f")]
 	public async Task Splice(string str, string expected)
 	{
@@ -358,8 +414,8 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("lset(a b c,2,x)", "a b x")]
+	[Skip("Indexing issue - 1-based vs 0-based position handling incorrect")]
+	[Arguments("lset(a b c,2,x)", "a x c")]
 	public async Task ListSet(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -367,8 +423,8 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("linsert(a b c,1,x)", "a x b c")]
+	[Skip("Indexing issue - 1-based position handling for insert incorrect")]
+	[Arguments("linsert(a b c,2,x)", "a x b c")]
 	public async Task ListInsert(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -376,26 +432,30 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("sortby(obj/attr,a b c)", "")]
+	[Arguments("sortby(test/comp,c a b)", "a b c")]
 	public async Task SortBy(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsNotNull();
+		await EnsureTestObjectsExist();
+		// Replace "test" with actual DBRef
+		var functionWithDbRef = str.Replace("test", $"#{_testObjectDbRef.Number}");
+		var result = (await Parser.FunctionParse(MModule.single(functionWithDbRef)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("sortkey(obj/attr,a b c,key)", "")]
+	[Arguments("sortkey(test/key,abc ab a)", "a ab abc")]
 	public async Task SortKey(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsNotNull();
+		await EnsureTestObjectsExist();
+		// Replace "test" with actual DBRef
+		var functionWithDbRef = str.Replace("test", $"#{_testObjectDbRef.Number}");
+		var result = (await Parser.FunctionParse(MModule.single(functionWithDbRef)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("elist(a|b|c,|)", "0|1|2")]
+	[Skip("Formatting logic incorrect - same issue as itemize")]
+	[Arguments("elist(a b c)", "a, b, and c")]
 	public async Task Elist(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -403,8 +463,7 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("ilev()", "0")]
+	[Arguments("ilev()", "-1")]
 	public async Task Ilev(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -412,8 +471,7 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("inum()", "0")]
+	[Arguments("inum(0)", "#-1 REGISTER OUT OF RANGE")]
 	public async Task Inum(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -421,8 +479,8 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("itext()", "")]
+	[Skip("Error handling outside iteration - should return error but doesn't")]
+	[Arguments("itext(0)", "#-1 REGISTER OUT OF RANGE")]
 	public async Task Itext(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -430,7 +488,6 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("setsymdiff(a b c,b c d)", "a d")]
 	public async Task Setsymdiff(string str, string expected)
 	{
