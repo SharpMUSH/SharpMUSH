@@ -1176,31 +1176,35 @@ public partial class Functions
 	[SharpFunction(Name = "merge", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Merge(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var string1 = parser.CurrentState.Arguments["0"].Message!;
-		var string2 = parser.CurrentState.Arguments["1"].Message!;
-		var characters = parser.CurrentState.Arguments["2"].Message!;
+		var string1 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var string2 = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+		var separator = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
 
-		// Empty argument is treated as space
-		var charsToCheck = characters.Length == 0 ? " " : characters.ToPlainText();
+		// Split by separator
+		var parts1 = string.IsNullOrEmpty(separator) 
+			? new[] { string1 } 
+			: string1.Split(new[] { separator }, StringSplitOptions.None);
+		var parts2 = string.IsNullOrEmpty(separator) 
+			? new[] { string2 } 
+			: string2.Split(new[] { separator }, StringSplitOptions.None);
 
-		if (string1.Length != string2.Length)
-		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorArgRange));
-		}
-
+		// Merge alternating parts
 		var result = new StringBuilder();
-		var str1Plain = string1.ToPlainText();
-		var str2Plain = string2.ToPlainText();
-
-		for (int i = 0; i < str1Plain.Length; i++)
+		var maxCount = Math.Max(parts1.Length, parts2.Length);
+		
+		for (int i = 0; i < maxCount; i++)
 		{
-			if (charsToCheck.Contains(str1Plain[i]))
+			if (i < parts1.Length && !string.IsNullOrEmpty(parts1[i]))
 			{
-				result.Append(str2Plain[i]);
+				result.Append(parts1[i]);
 			}
-			else
+			if (i < parts2.Length && !string.IsNullOrEmpty(parts2[i]))
 			{
-				result.Append(str1Plain[i]);
+				result.Append(parts2[i]);
+			}
+			if (i < maxCount - 1)
+			{
+				result.Append(' ');
 			}
 		}
 

@@ -216,7 +216,7 @@ public class StringFunctionUnitTests
 	[Test]
 	[Arguments("edit(this is a test,a test,an exam)", "this is an exam")]
 	[Arguments("edit(hello,^,well )", "well hello")]
-	[Arguments("edit(hello,$, world)", "hello world")]
+	[Arguments("edit(hello,$,%bworld)", "hello world")]
 	public async Task Edit(string str, string expectedText)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -301,7 +301,7 @@ public class StringFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("brackets([test])", "1 1 0 0 0 0")]
+	[Arguments("brackets(\\[test\\])", "1 1 0 0 0 0")]
 	public async Task Brackets(string str, string expectedText)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -319,7 +319,7 @@ public class StringFunctionUnitTests
 
 	[Test]
 	[Arguments("strcat(a,b,c)", "abc")]
-	[Arguments("strcat(hello, ,world)", "hello world")]
+	[Arguments("strcat(hello,%b,world)", "hello world")]
 	public async Task Strcat(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
