@@ -10,7 +10,6 @@ public class SoundFunctionUnitTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("soundex(foobar)", "F160")]
 	public async Task Soundex(string str, string expected)
 	{
@@ -19,7 +18,6 @@ public class SoundFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("soundslike(foobar,fubar)", "1")]
 	public async Task Soundslike(string str, string expected)
 	{

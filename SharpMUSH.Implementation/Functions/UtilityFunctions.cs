@@ -10,6 +10,7 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using XSoundex;
 using static ANSILibrary.ANSI;
 
 namespace SharpMUSH.Implementation.Functions;
@@ -483,13 +484,31 @@ public partial class Functions
 	[SharpFunction(Name = "soundex", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> SoundEx(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var arg1 = parser.CurrentState.Arguments.TryGetValue("1", out var val) 
+			? val.Message!.ToPlainText().ToLowerInvariant() 
+			: "soundex";
+
+		return ValueTask.FromResult<CallState>(
+			arg1 == "soundex" 
+				? arg0.ToSoundex()
+				: Errors.NotSupported);
 	}
 
 	[SharpFunction(Name = "soundslike", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> SoundLike(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		
+		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var arg1 = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+		var arg2 = parser.CurrentState.Arguments.TryGetValue("2", out var val) 
+			? val.Message!.ToPlainText().ToLowerInvariant() 
+			: "soundex";
+
+		return ValueTask.FromResult<CallState>(
+			arg2 == "soundex" 
+				? arg0.HasTheSameSoundex(arg1)
+				: Errors.NotSupported);
 	}
 
 	[SharpFunction(Name = "suggest", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
