@@ -60,8 +60,7 @@ public class TimeFunctionUnitTests
 	}
 	
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("ctime()", "")]
+	[Arguments("ctime(#0)", "")]
 	public async Task Ctime(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
