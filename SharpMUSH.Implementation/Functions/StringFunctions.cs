@@ -1236,17 +1236,17 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var hasDefault = args.Count % 2 == 1;
-		var pairCount = hasDefault ? (args.Count - 1) / 2 : args.Count / 2;
+		
+		var pairs = hasDefault 
+			? args.SkipLast(1).Pairwise()
+			: args.Pairwise();
 
-		for (int i = 0; i < pairCount; i++)
+		foreach (var (conditionKv, exprKv) in pairs)
 		{
-			var conditionIndex = i * 2;
-			var exprIndex = i * 2 + 1;
-
-			var condition = await parser.FunctionParse(args[conditionIndex.ToString()].Message!);
+			var condition = await parser.FunctionParse(conditionKv.Value.Message!);
 			if (condition != null && !Predicates.Truthy(condition.Message!))
 			{
-				var result = await parser.FunctionParse(args[exprIndex.ToString()].Message!);
+				var result = await parser.FunctionParse(exprKv.Value.Message!);
 				return result ?? CallState.Empty;
 			}
 		}
@@ -1266,18 +1266,18 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var hasDefault = args.Count % 2 == 1;
-		var pairCount = hasDefault ? (args.Count - 1) / 2 : args.Count / 2;
 		var results = new List<MString?>();
 
-		for (int i = 0; i < pairCount; i++)
-		{
-			var conditionIndex = i * 2;
-			var exprIndex = i * 2 + 1;
+		var pairs = hasDefault 
+			? args.SkipLast(1).Pairwise()
+			: args.Pairwise();
 
-			var condition = await parser.FunctionParse(args[conditionIndex.ToString()].Message!);
+		foreach (var (conditionKv, exprKv) in pairs)
+		{
+			var condition = await parser.FunctionParse(conditionKv.Value.Message!);
 			if (condition != null && !Predicates.Truthy(condition.Message!))
 			{
-				var expr = await parser.FunctionParse(args[exprIndex.ToString()].Message!);
+				var expr = await parser.FunctionParse(exprKv.Value.Message!);
 				if (expr != null)
 				{
 					results.Add(expr.Message);
