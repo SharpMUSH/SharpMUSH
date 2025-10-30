@@ -278,7 +278,7 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("index(a b c d, ,2,4)", "b d")]
+	[Arguments("index(a b c d,%b,2,2)", "b c")]
 	public async Task Index(string function, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
