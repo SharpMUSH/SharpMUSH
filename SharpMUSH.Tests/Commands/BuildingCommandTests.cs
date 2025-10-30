@@ -73,20 +73,22 @@ public class BuildingCommandTests
 	[Test, DependsOn(nameof(DoDigForCommandListCheck))]
 	public async ValueTask DoDigForCommandListCheck2()
 	{
-		await Parser.CommandListParse(MModule.single("@dig Foo Room={Exit;ExitAlias},{ExitBack;ExitAliasBack}"));
+		var newRoom = await Parser.CommandListParse(MModule.single("@dig Foo Room={Exit;ExitAlias},{ExitBack;ExitAliasBack}"));
 
+		var newDb = DBRef.Parse(newRoom!.Message!.ToPlainText()!);
+		
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<DBRef>(), "Foo Room created with room number #9.");
+			.Notify(Arg.Any<DBRef>(), $"Foo Room created with room number #{newDb.Number}.");
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<DBRef>(), "Linked exit #10 to #9");
+			.Notify(Arg.Any<DBRef>(), $"Linked exit #{newDb.Number+1} to #{newDb.Number}");
 		await NotifyService
 			.Received(Quantity.Exactly(4))
 			.Notify(Arg.Any<DBRef>(), "Trying to link...");
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<DBRef>(), "Linked exit #11 to #0");
+			.Notify(Arg.Any<DBRef>(), $"Linked exit #{newDb.Number+2} to #0");
 	}
 
 

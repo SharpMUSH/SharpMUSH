@@ -6,7 +6,6 @@ using System.Text.RegularExpressions;
 using System.Web;
 using DotNext.Collections.Generic;
 using Humanizer;
-using MarkupString;
 using Microsoft.FSharp.Core;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Implementation.Definitions;

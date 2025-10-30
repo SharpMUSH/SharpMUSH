@@ -94,11 +94,11 @@ public class TimeFunctionUnitTests
 
 	// TIMEFMT tests - based on pennfunc.md examples
 	[Test]
-	[Arguments("timefmt($Y-$m-$d,0)", "1970-01-01")]
-	[Arguments("timefmt($$,0)", "$")]
-	[Arguments("timefmt($H:$M:$S,0)", "00:00:00")]
-	[Arguments("timefmt($y,0)", "70")]
-	[Arguments("timefmt($Y,0)", "1970")]
+	[Arguments("timefmt($Y-$m-$d,0,UTC)", "1970-01-01")]
+	[Arguments("timefmt($$,0,UTC)", "$")]
+	[Arguments("timefmt($H:$M:$S,0,UTC)", "00:00:00")]
+	[Arguments("timefmt($y,0,UTC)", "70")]
+	[Arguments("timefmt($Y,0,UTC)", "1970")]
 	public async Task Timefmt(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
