@@ -1,4 +1,5 @@
-﻿using SharpMUSH.Implementation.Definitions;
+﻿using System.Text.RegularExpressions;
+using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ExpandedObjectData;
@@ -83,82 +84,34 @@ public partial class Functions
 			var timeStr = args["0"].Message!.ToPlainText().Trim();
 			
 			// Parse time string which can be "1d 2h 3m 4s" or "1d2h3m4s"
-			long totalSeconds = 0;
-			var i = 0;
+			// Use regex to extract all number-unit pairs
+			var pattern = @"([-+]?\d+(?:\.\d+)?)\s*([yYwWdDhHmMsS](?:ears?|eeks?|ays?|ours?|inutes?|econds?)?)";
+			var matches = Regex.Matches(timeStr, pattern);
 			
-			while (i < timeStr.Length)
+			if (matches.Count == 0)
 			{
-				// Skip whitespace
-				while (i < timeStr.Length && char.IsWhiteSpace(timeStr[i]))
-				{
-					i++;
-				}
-				
-				if (i >= timeStr.Length) break;
-				
-				// Get the number part
-				var numStr = "";
-				while (i < timeStr.Length && (char.IsDigit(timeStr[i]) || timeStr[i] == '.' || timeStr[i] == '-'))
-				{
-					numStr += timeStr[i];
-					i++;
-				}
-				
-				if (string.IsNullOrEmpty(numStr))
+				return new ValueTask<CallState>(Errors.ErrorInteger);
+			}
+			
+			long totalSeconds = 0;
+			foreach (Match match in matches)
+			{
+				if (!double.TryParse(match.Groups[1].Value, out var value))
 				{
 					return new ValueTask<CallState>(Errors.ErrorInteger);
 				}
 				
-				if (!double.TryParse(numStr, out var value))
+				var unit = match.Groups[2].Value.ToLower();
+				totalSeconds += unit switch
 				{
-					return new ValueTask<CallState>(Errors.ErrorInteger);
-				}
-				
-				// Get the unit part
-				var unit = "";
-				while (i < timeStr.Length && !char.IsWhiteSpace(timeStr[i]) && !char.IsDigit(timeStr[i]) && timeStr[i] != '-')
-				{
-					unit += timeStr[i];
-					i++;
-				}
-				
-				unit = unit.ToLower();
-				switch (unit)
-				{
-					case "y":
-					case "years":
-					case "year":
-						totalSeconds += (long)(value * 365 * 24 * 3600);
-						break;
-					case "w":
-					case "weeks":
-					case "week":
-						totalSeconds += (long)(value * 7 * 24 * 3600);
-						break;
-					case "d":
-					case "days":
-					case "day":
-						totalSeconds += (long)(value * 24 * 3600);
-						break;
-					case "h":
-					case "hours":
-					case "hour":
-						totalSeconds += (long)(value * 3600);
-						break;
-					case "m":
-					case "minutes":
-					case "minute":
-						totalSeconds += (long)(value * 60);
-						break;
-					case "s":
-					case "seconds":
-					case "second":
-					case "":
-						totalSeconds += (long)value;
-						break;
-					default:
-						return new ValueTask<CallState>(Errors.ErrorInteger);
-				}
+					var u when u.StartsWith('y') => (long)(value * 365 * 24 * 3600),
+					var u when u.StartsWith('w') => (long)(value * 7 * 24 * 3600),
+					var u when u.StartsWith('d') => (long)(value * 24 * 3600),
+					var u when u.StartsWith('h') => (long)(value * 3600),
+					var u when u.StartsWith('m') => (long)(value * 60),
+					var u when u.StartsWith('s') || string.IsNullOrEmpty(u) => (long)value,
+					_ => throw new InvalidOperationException()
+				};
 			}
 
 			return ValueTask.FromResult<CallState>(totalSeconds.ToString());
@@ -180,80 +133,36 @@ public partial class Functions
 	public static ValueTask<CallState> StringSecs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var timeStr = parser.CurrentState.Arguments["0"].Message!.ToPlainText().Trim();
-		long totalSeconds = 0;
-
+		
 		// Parse strings like "5m 1s", "1d 2h 3m 4s", "3y 2m 7d 5h 23m", etc.
-		// Split by whitespace and parse each component
-		var parts = timeStr.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
-
-		foreach (var part in parts)
+		// Use regex to extract all number-unit pairs
+		var pattern = @"([-+]?\d+(?:\.\d+)?)\s*([yYwWdDhHmMsS](?:ears?|eeks?|ays?|ours?|inutes?|econds?)?)";
+		var matches = Regex.Matches(timeStr, pattern);
+		
+		if (matches.Count == 0)
 		{
-			if (string.IsNullOrWhiteSpace(part)) continue;
-
-			// Extract number and unit
-			var numStr = "";
-			var unit = "";
-			var i = 0;
-
-			// Get the number part (including decimals)
-			while (i < part.Length && (char.IsDigit(part[i]) || part[i] == '.' || part[i] == '-'))
-			{
-				numStr += part[i];
-				i++;
-			}
-
-			// Get the unit part
-			while (i < part.Length)
-			{
-				unit += part[i];
-				i++;
-			}
-
-			if (string.IsNullOrEmpty(numStr)) continue;
-
-			if (!double.TryParse(numStr, out var value))
+			return new ValueTask<CallState>(Errors.ErrorInteger);
+		}
+		
+		long totalSeconds = 0;
+		foreach (Match match in matches)
+		{
+			if (!double.TryParse(match.Groups[1].Value, out var value))
 			{
 				return new ValueTask<CallState>(Errors.ErrorInteger);
 			}
-
-			// Convert based on unit
-			unit = unit.ToLower();
-			switch (unit)
+			
+			var unit = match.Groups[2].Value.ToLower();
+			totalSeconds += unit switch
 			{
-				case "y":
-				case "years":
-				case "year":
-					totalSeconds += (long)(value * 365 * 24 * 3600);
-					break;
-				case "w":
-				case "weeks":
-				case "week":
-					totalSeconds += (long)(value * 7 * 24 * 3600);
-					break;
-				case "d":
-				case "days":
-				case "day":
-					totalSeconds += (long)(value * 24 * 3600);
-					break;
-				case "h":
-				case "hours":
-				case "hour":
-					totalSeconds += (long)(value * 3600);
-					break;
-				case "m":
-				case "minutes":
-				case "minute":
-					totalSeconds += (long)(value * 60);
-					break;
-				case "s":
-				case "seconds":
-				case "second":
-				case "":
-					totalSeconds += (long)value;
-					break;
-				default:
-					return new ValueTask<CallState>(Errors.ErrorInteger);
-			}
+				var u when u.StartsWith('y') => (long)(value * 365 * 24 * 3600),
+				var u when u.StartsWith('w') => (long)(value * 7 * 24 * 3600),
+				var u when u.StartsWith('d') => (long)(value * 24 * 3600),
+				var u when u.StartsWith('h') => (long)(value * 3600),
+				var u when u.StartsWith('m') => (long)(value * 60),
+				var u when u.StartsWith('s') || string.IsNullOrEmpty(u) => (long)value,
+				_ => throw new InvalidOperationException()
+			};
 		}
 
 		return ValueTask.FromResult<CallState>(totalSeconds.ToString());
@@ -568,35 +477,26 @@ public partial class Functions
 			pad = 0;
 		}
 
-		// Calculate time components
-		var days = totalSecs / (24 * 3600);
-		var remainder = totalSecs % (24 * 3600);
-		var hours = remainder / 3600;
-		remainder %= 3600;
-		var minutes = remainder / 60;
-		var seconds = remainder % 60;
+		// Calculate time components using TimeSpan
+		var timeSpan = TimeSpan.FromSeconds(totalSecs);
+		var days = (long)timeSpan.TotalDays;
+		var hours = timeSpan.Hours;
+		var minutes = timeSpan.Minutes;
+		var seconds = timeSpan.Seconds;
 
 		// Format based on pad flag
-		if (pad == 2)
+		return pad switch
 		{
-			// All numbers are 2 digits
-			return ValueTask.FromResult<CallState>($"{days:D2}d {hours:D2}h {minutes:D2}m {seconds:D2}s");
-		}
-		else if (pad == 1)
-		{
-			// All time periods used even if 0
-			return ValueTask.FromResult<CallState>($"{days}d  {hours}h  {minutes}m  {seconds}s");
-		}
-		else
-		{
-			// Default: only show non-zero periods (but always show at least seconds)
-			var parts = new List<string>();
-			if (days > 0) parts.Add($"{days}d");
-			if (hours > 0) parts.Add($"{hours}h");
-			if (minutes > 0) parts.Add($"{minutes}m");
-			parts.Add($"{seconds}s");
-			return ValueTask.FromResult<CallState>(" " + string.Join("  ", parts));
-		}
+			2 => ValueTask.FromResult<CallState>($"{days:D2}d {hours:D2}h {minutes:D2}m {seconds:D2}s"),
+			1 => ValueTask.FromResult<CallState>($"{days}d  {hours}h  {minutes}m  {seconds}s"),
+			_ => ValueTask.FromResult<CallState>(" " + string.Join("  ", 
+				new[] { 
+					days > 0 ? $"{days}d" : null,
+					hours > 0 ? $"{hours}h" : null,
+					minutes > 0 ? $"{minutes}m" : null,
+					$"{seconds}s"
+				}.Where(s => s != null)))
+		};
 	}
 
 	[SharpFunction(Name = "uptime", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.StripAnsi)]
@@ -682,16 +582,14 @@ public partial class Functions
 		var maxWidth = width != null && int.TryParse(width, out var w) ? w : int.MaxValue;
 
 		// Calculate time components
-		var years = totalSecs / (365 * 24 * 3600);
-		var remainder = totalSecs % (365 * 24 * 3600);
-		var weeks = remainder / (7 * 24 * 3600);
-		remainder %= (7 * 24 * 3600);
-		var days = remainder / (24 * 3600);
-		remainder %= (24 * 3600);
-		var hours = remainder / 3600;
-		remainder %= 3600;
-		var minutes = remainder / 60;
-		var seconds = remainder % 60;
+		var timeSpan = TimeSpan.FromSeconds(totalSecs);
+		var years = (long)(timeSpan.TotalDays / 365);
+		var remainingDays = (long)timeSpan.TotalDays % 365;
+		var weeks = remainingDays / 7;
+		var days = remainingDays % 7;
+		var hours = timeSpan.Hours;
+		var minutes = timeSpan.Minutes;
+		var seconds = timeSpan.Seconds;
 
 		// Build result string, showing non-zero fields
 		var parts = new List<string>();
@@ -704,16 +602,15 @@ public partial class Functions
 		if (seconds > 0 || parts.Count == 0) parts.Add($"{seconds}s");
 
 		// Join parts with two spaces and respect width limit
-		var separator = "  ";
+		const string separator = "  ";
 		var result = string.Join(separator, parts);
 		
+		// Trim from the end until it fits width
 		if (result.Length > maxWidth && parts.Count > 1)
 		{
-			// Trim from the end until it fits
-			while (parts.Count > 1 && string.Join(separator, parts).Length > maxWidth)
-			{
-				parts.RemoveAt(parts.Count - 1);
-			}
+			parts = parts.TakeWhile((_, index) => 
+				string.Join(separator, parts.Take(index + 1)).Length <= maxWidth || index == 0
+			).ToList();
 			result = string.Join(separator, parts);
 		}
 
@@ -732,120 +629,55 @@ public partial class Functions
 			return new ValueTask<CallState>(Errors.ErrorInteger);
 		}
 
-		// Calculate time components
-		var years = totalSecs / (365 * 24 * 3600);
-		var remainder = totalSecs % (365 * 24 * 3600);
-		var weeks = remainder / (7 * 24 * 3600);
-		remainder %= (7 * 24 * 3600);
-		var days = remainder / (24 * 3600);
-		remainder %= (24 * 3600);
-		var hours = remainder / 3600;
-		remainder %= 3600;
-		var minutes = remainder / 60;
-		var seconds = remainder % 60;
+		// Calculate time components using TimeSpan
+		var timeSpan = TimeSpan.FromSeconds(totalSecs);
+		var years = (long)(timeSpan.TotalDays / 365);
+		var remainingDays = (long)timeSpan.TotalDays % 365;
+		var weeks = remainingDays / 7;
+		var days = remainingDays % 7;
+		var hours = timeSpan.Hours;
+		var minutes = timeSpan.Minutes;
+		var seconds = timeSpan.Seconds;
 
 		// Total values (for $t codes)
-		var totalDays = totalSecs / (24 * 3600);
-		var totalHours = totalSecs / 3600;
-		var totalMinutes = totalSecs / 60;
+		var totalDays = (long)timeSpan.TotalDays;
+		var totalHours = (long)timeSpan.TotalHours;
+		var totalMinutes = (long)timeSpan.TotalMinutes;
 
-		// Process format string
-		var result = "";
-		for (var i = 0; i < format.Length; i++)
+		// Process format string using regex for format codes
+		var pattern = @"\$(\d*)([xzt]*)([yYwWdDhHmMsS$])";
+		var result = Regex.Replace(format, pattern, match =>
 		{
-			if (format[i] == '$' && i + 1 < format.Length)
+			var widthStr = match.Groups[1].Value;
+			var flags = match.Groups[2].Value.ToLower();
+			var codeChar = match.Groups[3].Value;
+			
+			var width = string.IsNullOrEmpty(widthStr) ? 0 : int.Parse(widthStr);
+			var addSuffix = flags.Contains('x');
+			var skipZero = flags.Contains('z');
+			var useTotal = flags.Contains('t');
+			var isUpperCase = char.IsUpper(codeChar[0]);
+			var code = char.ToLower(codeChar[0]);
+			var padChar = isUpperCase && width > 0 ? '0' : ' ';
+
+			if (code == '$') return "$";
+
+			var (value, suffix) = code switch
 			{
-				var width = 0;
-				var padChar = ' ';
-				var addSuffix = false;
-				var skipZero = false;
-				var useTotal = false;
-				var j = i + 1;
+				'y' => (years, "y"),
+				'w' => (weeks, "w"),
+				'd' => (useTotal ? totalDays : days, "d"),
+				'h' => (useTotal ? totalHours : hours, "h"),
+				'm' => (useTotal ? totalMinutes : minutes, "m"),
+				's' => (useTotal ? totalSecs : seconds, "s"),
+				_ => (0L, "")
+			};
 
-				// Parse width
-				while (j < format.Length && char.IsDigit(format[j]))
-				{
-					width = width * 10 + (format[j] - '0');
-					j++;
-				}
+			if (skipZero && value == 0) return "";
 
-				// Parse flags (uppercase = pad with 0, x = add suffix, z = skip if zero, t = use total)
-				while (j < format.Length && (format[j] == 'x' || format[j] == 'z' || format[j] == 't'))
-				{
-					if (format[j] == 'x') addSuffix = true;
-					else if (format[j] == 'z') skipZero = true;
-					else if (format[j] == 't') useTotal = true;
-					j++;
-				}
-
-				if (j >= format.Length) break;
-
-				var code = format[j];
-				var isUpperCase = char.IsUpper(code);
-				code = char.ToLower(code);
-
-				if (isUpperCase && width > 0) padChar = '0';
-
-				long value = 0;
-				string suffix = "";
-
-				switch (code)
-				{
-					case '$':
-						result += '$';
-						i = j;
-						continue;
-					case 'y':
-						value = years;
-						suffix = "y";
-						break;
-					case 'w':
-						value = weeks;
-						suffix = "w";
-						break;
-					case 'd':
-						value = useTotal ? totalDays : days;
-						suffix = "d";
-						break;
-					case 'h':
-						value = useTotal ? totalHours : hours;
-						suffix = "h";
-						break;
-					case 'm':
-						value = useTotal ? totalMinutes : minutes;
-						suffix = "m";
-						break;
-					case 's':
-						value = useTotal ? totalSecs : seconds;
-						suffix = "s";
-						break;
-					default:
-						result += format[i];
-						continue;
-				}
-
-				// Skip if zero and z flag is set
-				if (skipZero && value == 0)
-				{
-					i = j;
-					continue;
-				}
-
-				// Format the value
-				var valueStr = width > 0
-					? value.ToString().PadLeft(width, padChar)
-					: value.ToString();
-
-				result += valueStr;
-				if (addSuffix) result += suffix;
-
-				i = j;
-			}
-			else
-			{
-				result += format[i];
-			}
-		}
+			var valueStr = width > 0 ? value.ToString().PadLeft(width, padChar) : value.ToString();
+			return addSuffix ? valueStr + suffix : valueStr;
+		});
 
 		// Trim leading spaces from space-padded values
 		return ValueTask.FromResult<CallState>(result.TrimStart(' '));
