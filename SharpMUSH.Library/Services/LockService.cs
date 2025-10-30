@@ -117,13 +117,13 @@ public class LockService(IFusionCache cache, IBooleanExpressionParser bep, IMedi
 		AnySharpObject unlocker)
 		=> bep.Compile(lockString)(gated, unlocker);
 
+	// TODO: throw new NotImplementedException(); 
 	public bool Evaluate(string lockString, SharpChannel gatedChannel, AnySharpObject unlocker)
 	{
 		if(lockString == "#TRUE") return true;
 		
 		var compile = bep.Compile(lockString);
 		return true;
-		throw new NotImplementedException();
 	}
 
 	public bool Evaluate(
