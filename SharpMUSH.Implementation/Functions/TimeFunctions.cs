@@ -119,12 +119,12 @@ public partial class Functions
 				// Use array pattern matching for first character
 				totalSeconds += unit switch
 				{
-					[var first, ..] when first is 'y' => (long)(value * 365 * 24 * 3600),
-					[var first, ..] when first is 'w' => (long)(value * 7 * 24 * 3600),
-					[var first, ..] when first is 'd' => (long)(value * 24 * 3600),
-					[var first, ..] when first is 'h' => (long)(value * 3600),
-					[var first, ..] when first is 'm' => (long)(value * 60),
-					[var first, ..] when first is 's' => (long)value,
+					['y', ..] => (long)(value * 365 * 24 * 3600),
+					['w', ..] => (long)(value * 7 * 24 * 3600),
+					['d', ..] => (long)(value * 24 * 3600),
+					['h', ..] => (long)(value * 3600),
+					['m', ..] => (long)(value * 60),
+					['s', ..] => (long)value,
 					"" => (long)value, // Empty unit defaults to seconds
 					_ => 0 // Unknown unit returns 0 instead of throwing
 				};
@@ -171,12 +171,12 @@ public partial class Functions
 			// Use array pattern matching for first character
 			totalSeconds += unit switch
 			{
-				[var first, ..] when first is 'y' => (long)(value * 365 * 24 * 3600),
-				[var first, ..] when first is 'w' => (long)(value * 7 * 24 * 3600),
-				[var first, ..] when first is 'd' => (long)(value * 24 * 3600),
-				[var first, ..] when first is 'h' => (long)(value * 3600),
-				[var first, ..] when first is 'm' => (long)(value * 60),
-				[var first, ..] when first is 's' => (long)value,
+				['y', ..] => (long)(value * 365 * 24 * 3600),
+				['w', ..] => (long)(value * 7 * 24 * 3600),
+				['d', ..] => (long)(value * 24 * 3600),
+				['h', ..] => (long)(value * 3600),
+				['m', ..] => (long)(value * 60),
+				['s', ..] => (long)value,
 				"" => (long)value, // Empty unit defaults to seconds
 				_ => 0 // Unknown unit returns 0 instead of throwing
 			};
@@ -252,83 +252,68 @@ public partial class Functions
 			return new ValueTask<CallState>(Errors.ErrorBadArgumentFormat.Replace("{0}", "TIMECALC"));
 		}
 
-		// Apply modifiers
-		for (var i = 1; i < args.Count; i++)
-		{
-			var modifier = args[i.ToString()].Message!.ToPlainText().Trim();
-			
-			if (modifier.Equals("unixepoch", StringComparison.OrdinalIgnoreCase))
+		// Apply modifiers using Aggregate
+		dt = Enumerable.Range(1, args.Count - 1)
+			.Aggregate(dt, (currentDt, i) =>
 			{
-				// Already in Unix epoch format
-				continue;
-			}
-			else if (modifier.Equals("localtime", StringComparison.OrdinalIgnoreCase))
-			{
-				dt = dt.ToLocalTime();
-			}
-			else if (modifier.Equals("utc", StringComparison.OrdinalIgnoreCase))
-			{
-				dt = dt.ToUniversalTime();
-			}
-			else if (modifier.StartsWith("start of ", StringComparison.OrdinalIgnoreCase))
-			{
-				var unit = modifier.Substring(9).ToLower();
-				if (unit == "month")
+				var modifier = args[i.ToString()].Message!.ToPlainText().Trim();
+				
+				if (modifier.Equals("unixepoch", StringComparison.OrdinalIgnoreCase))
 				{
-					dt = new DateTimeOffset(dt.Year, dt.Month, 1, 0, 0, 0, dt.Offset);
+					// Already in Unix epoch format
+					return currentDt;
 				}
-				else if (unit == "year")
+				else if (modifier.Equals("localtime", StringComparison.OrdinalIgnoreCase))
 				{
-					dt = new DateTimeOffset(dt.Year, 1, 1, 0, 0, 0, dt.Offset);
+					return currentDt.ToLocalTime();
 				}
-				else if (unit == "day")
+				else if (modifier.Equals("utc", StringComparison.OrdinalIgnoreCase))
 				{
-					dt = new DateTimeOffset(dt.Year, dt.Month, dt.Day, 0, 0, 0, dt.Offset);
+					return currentDt.ToUniversalTime();
 				}
-			}
-			else if (modifier.StartsWith("weekday ", StringComparison.OrdinalIgnoreCase))
-			{
-				if (int.TryParse(modifier.Substring(8), out var targetDay))
+				else if (modifier.StartsWith("start of ", StringComparison.OrdinalIgnoreCase))
 				{
-					var currentDay = (int)dt.DayOfWeek;
-					var daysToAdd = (targetDay - currentDay + 7) % 7;
-					dt = dt.AddDays(daysToAdd);
-				}
-			}
-			else
-			{
-				// Try to parse as time offset like "+100 years", "-5 days", etc.
-				var parts = modifier.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-				if (parts.Length == 2 && double.TryParse(parts[0], out var amount))
-				{
-					var unit = parts[1].ToLower().TrimEnd('s');
-					switch (unit)
+					var unit = modifier.Substring(9).ToLower();
+					return unit switch
 					{
-						case "year":
-							dt = dt.AddYears((int)amount);
-							break;
-						case "month":
-							dt = dt.AddMonths((int)amount);
-							break;
-						case "week":
-							dt = dt.AddDays(amount * 7);
-							break;
-						case "day":
-							dt = dt.AddDays(amount);
-							break;
-						case "hour":
-							dt = dt.AddHours(amount);
-							break;
-						case "minute":
-							dt = dt.AddMinutes(amount);
-							break;
-						case "second":
-							dt = dt.AddSeconds(amount);
-							break;
-					}
+						"month" => new DateTimeOffset(currentDt.Year, currentDt.Month, 1, 0, 0, 0, currentDt.Offset),
+						"year" => new DateTimeOffset(currentDt.Year, 1, 1, 0, 0, 0, currentDt.Offset),
+						"day" => new DateTimeOffset(currentDt.Year, currentDt.Month, currentDt.Day, 0, 0, 0, currentDt.Offset),
+						_ => currentDt
+					};
 				}
-			}
-		}
+				else if (modifier.StartsWith("weekday ", StringComparison.OrdinalIgnoreCase))
+				{
+					if (int.TryParse(modifier.Substring(8), out var targetDay))
+					{
+						var currentDay = (int)currentDt.DayOfWeek;
+						var daysToAdd = (targetDay - currentDay + 7) % 7;
+						return currentDt.AddDays(daysToAdd);
+					}
+					return currentDt;
+				}
+				else
+				{
+					// Try to parse as time offset like "+100 years", "-5 days", etc.
+					var parts = modifier.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+					if (parts.Length == 2 && double.TryParse(parts[0], out var amount))
+					{
+						var unit = parts[1].ToLower().TrimEnd('s');
+						return unit switch
+						{
+							"year" => currentDt.AddYears((int)amount),
+							"month" => currentDt.AddMonths((int)amount),
+							"week" => currentDt.AddDays(amount * 7),
+							"day" => currentDt.AddDays(amount),
+							"hour" => currentDt.AddHours(amount),
+							"minute" => currentDt.AddMinutes(amount),
+							"second" => currentDt.AddSeconds(amount),
+							_ => currentDt
+						};
+					}
+					return currentDt;
+				}
+			});
 
 		// Return formatted time string
 		return ValueTask.FromResult<CallState>(dt.ToString());
