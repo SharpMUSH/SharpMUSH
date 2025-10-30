@@ -9,8 +9,7 @@ namespace SharpMUSH.Library.Services;
 
 public class PasswordService(IMediator mediator, PasswordHasher<string> hasher) : IPasswordService
 {
-	private static readonly Random random = new();
-	private const string Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvw0123456789";
+	private const string Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
 	public string GenerateRandomPassword() 
 		=> RandomNumberGenerator.GetString(Chars, 32);
