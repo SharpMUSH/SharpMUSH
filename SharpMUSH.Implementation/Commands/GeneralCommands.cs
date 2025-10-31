@@ -1885,7 +1885,7 @@ public partial class Commands
 		var maybeAttr = await attributeService.GetAttributeAsync(
 			executor, victim, attrName, IAttributeService.AttributeMode.Execute);
 
-		if (maybeAttr.IsError)
+		if (maybeAttr.IsError || maybeAttr.IsNone)
 		{
 			return MModule.single(defaultValue);
 		}

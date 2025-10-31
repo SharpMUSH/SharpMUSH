@@ -216,7 +216,7 @@ public static class MessageHelpers
 				executor, finalObjToEvaluate,
 				attrToEvaluate, IAttributeService.AttributeMode.Execute);
 
-			if (maybeAttr.IsError)
+			if (maybeAttr.IsError || maybeAttr.IsNone)
 			{
 				return defmsg;
 			}
