@@ -686,14 +686,19 @@ public partial class Functions
 					return Errors.ExitsCannotContainThings;
 				}
 
-				var contents = await (await locate.AsContainer.Content(Mediator!))
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
-					.Skip(start - 1)
-					.Take(count)
-					.Select(x => x.Object().DBRef.ToString())
-					.ToListAsync();
-
-				return string.Join(" ", contents);
+				var allContents = await (await locate.AsContainer.Content(Mediator!)).ToListAsync();
+				var visibleContents = new List<string>();
+				
+				foreach (var item in allContents)
+				{
+					if (await PermissionService!.CanSee(executor, item.Object()))
+					{
+						visibleContents.Add(item.Object().DBRef.ToString());
+					}
+				}
+				
+				var paginated = visibleContents.Skip(start - 1).Take(count);
+				return string.Join(" ", paginated);
 			});
 	}
 
@@ -722,15 +727,19 @@ public partial class Functions
 					return Errors.ExitsCannotContainThings;
 				}
 
-				var exits = await (await locate.AsContainer.Content(Mediator!))
-					.Where(x => x.IsExit)
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
-					.Skip(start - 1)
-					.Take(count)
-					.Select(x => x.Object().DBRef.ToString())
-					.ToListAsync();
-
-				return string.Join(" ", exits);
+				var allContents = await (await locate.AsContainer.Content(Mediator!)).ToListAsync();
+				var visibleExits = new List<string>();
+				
+				foreach (var item in allContents.Where(x => x.IsExit))
+				{
+					if (await PermissionService!.CanSee(executor, item.Object()))
+					{
+						visibleExits.Add(item.Object().DBRef.ToString());
+					}
+				}
+				
+				var paginated = visibleExits.Skip(start - 1).Take(count);
+				return string.Join(" ", paginated);
 			});
 	}
 
@@ -759,15 +768,19 @@ public partial class Functions
 					return Errors.ExitsCannotContainThings;
 				}
 
-				var players = await (await locate.AsContainer.Content(Mediator!))
-					.Where(x => x.IsPlayer)
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
-					.Skip(start - 1)
-					.Take(count)
-					.Select(x => x.Object().DBRef.ToString())
-					.ToListAsync();
-
-				return string.Join(" ", players);
+				var allContents = await (await locate.AsContainer.Content(Mediator!)).ToListAsync();
+				var visiblePlayers = new List<string>();
+				
+				foreach (var item in allContents.Where(x => x.IsPlayer))
+				{
+					if (await PermissionService!.CanSee(executor, item.Object()))
+					{
+						visiblePlayers.Add(item.Object().DBRef.ToString());
+					}
+				}
+				
+				var paginated = visiblePlayers.Skip(start - 1).Take(count);
+				return string.Join(" ", paginated);
 			});
 	}
 
@@ -796,15 +809,19 @@ public partial class Functions
 					return Errors.ExitsCannotContainThings;
 				}
 
-				var things = await (await locate.AsContainer.Content(Mediator!))
-					.Where(x => x.IsThing)
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
-					.Skip(start - 1)
-					.Take(count)
-					.Select(x => x.Object().DBRef.ToString())
-					.ToListAsync();
-
-				return string.Join(" ", things);
+				var allContents = await (await locate.AsContainer.Content(Mediator!)).ToListAsync();
+				var visibleThings = new List<string>();
+				
+				foreach (var item in allContents.Where(x => x.IsThing))
+				{
+					if (await PermissionService!.CanSee(executor, item.Object()))
+					{
+						visibleThings.Add(item.Object().DBRef.ToString());
+					}
+				}
+				
+				var paginated = visibleThings.Skip(start - 1).Take(count);
+				return string.Join(" ", paginated);
 			});
 	}
 
@@ -1023,10 +1040,16 @@ public partial class Functions
 					return Errors.ExitsCannotContainThings;
 				}
 
-				var visibleContents = await (await locate.AsContainer.Content(Mediator!))
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
-					.Select(x => x.Object().DBRef.ToString())
-					.ToListAsync();
+				var contents = await (await locate.AsContainer.Content(Mediator!)).ToListAsync();
+				var visibleContents = new List<string>();
+				
+				foreach (var item in contents)
+				{
+					if (await PermissionService!.CanSee(executor, item.Object()))
+					{
+						visibleContents.Add(item.Object().DBRef.ToString());
+					}
+				}
 
 				return string.Join(" ", visibleContents);
 			});
@@ -1049,11 +1072,16 @@ public partial class Functions
 					return Errors.ExitsCannotContainThings;
 				}
 
-				var visibleExits = await (await locate.AsContainer.Content(Mediator!))
-					.Where(x => x.IsExit)
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
-					.Select(x => x.Object().DBRef.ToString())
-					.ToListAsync();
+				var contents = await (await locate.AsContainer.Content(Mediator!)).ToListAsync();
+				var visibleExits = new List<string>();
+				
+				foreach (var item in contents.Where(x => x.IsExit))
+				{
+					if (await PermissionService!.CanSee(executor, item.Object()))
+					{
+						visibleExits.Add(item.Object().DBRef.ToString());
+					}
+				}
 
 				return string.Join(" ", visibleExits);
 			});
@@ -1076,11 +1104,16 @@ public partial class Functions
 					return Errors.ExitsCannotContainThings;
 				}
 
-				var visiblePlayers = await (await locate.AsContainer.Content(Mediator!))
-					.Where(x => x.IsPlayer)
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
-					.Select(x => x.Object().DBRef.ToString())
-					.ToListAsync();
+				var contents = await (await locate.AsContainer.Content(Mediator!)).ToListAsync();
+				var visiblePlayers = new List<string>();
+				
+				foreach (var item in contents.Where(x => x.IsPlayer))
+				{
+					if (await PermissionService!.CanSee(executor, item.Object()))
+					{
+						visiblePlayers.Add(item.Object().DBRef.ToString());
+					}
+				}
 
 				return string.Join(" ", visiblePlayers);
 			});
@@ -1103,11 +1136,16 @@ public partial class Functions
 					return Errors.ExitsCannotContainThings;
 				}
 
-				var visibleThings = await (await locate.AsContainer.Content(Mediator!))
-					.Where(x => x.IsThing)
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
-					.Select(x => x.Object().DBRef.ToString())
-					.ToListAsync();
+				var contents = await (await locate.AsContainer.Content(Mediator!)).ToListAsync();
+				var visibleThings = new List<string>();
+				
+				foreach (var item in contents.Where(x => x.IsThing))
+				{
+					if (await PermissionService!.CanSee(executor, item.Object()))
+					{
+						visibleThings.Add(item.Object().DBRef.ToString());
+					}
+				}
 
 				return string.Join(" ", visibleThings);
 			});
@@ -1256,9 +1294,18 @@ public partial class Functions
 					return Errors.ExitsCannotContainThings;
 				}
 
-				return await (await locate.AsContainer.Content(Mediator!))
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
-					.CountAsync();
+				var contents = await (await locate.AsContainer.Content(Mediator!)).ToListAsync();
+				var visibleCount = 0;
+				
+				foreach (var item in contents)
+				{
+					if (await PermissionService!.CanSee(executor, item.Object()))
+					{
+						visibleCount++;
+					}
+				}
+				
+				return visibleCount;
 			});
 	}
 
@@ -1279,10 +1326,18 @@ public partial class Functions
 					return Errors.ExitsCannotContainThings;
 				}
 
-				return await (await locate.AsContainer.Content(Mediator!))
-					.Where(x => x.IsExit)
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
-					.CountAsync();
+				var contents = await (await locate.AsContainer.Content(Mediator!)).ToListAsync();
+				var visibleCount = 0;
+				
+				foreach (var item in contents.Where(x => x.IsExit))
+				{
+					if (await PermissionService!.CanSee(executor, item.Object()))
+					{
+						visibleCount++;
+					}
+				}
+				
+				return visibleCount;
 			});
 	}
 
@@ -1303,10 +1358,18 @@ public partial class Functions
 					return Errors.ExitsCannotContainThings;
 				}
 
-				return await (await locate.AsContainer.Content(Mediator!))
-					.Where(x => x.IsPlayer)
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
-					.CountAsync();
+				var contents = await (await locate.AsContainer.Content(Mediator!)).ToListAsync();
+				var visibleCount = 0;
+				
+				foreach (var item in contents.Where(x => x.IsPlayer))
+				{
+					if (await PermissionService!.CanSee(executor, item.Object()))
+					{
+						visibleCount++;
+					}
+				}
+				
+				return visibleCount;
 			});
 	}
 
@@ -1327,10 +1390,18 @@ public partial class Functions
 					return Errors.ExitsCannotContainThings;
 				}
 
-				return await (await locate.AsContainer.Content(Mediator!))
-					.Where(x => x.IsThing)
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
-					.CountAsync();
+				var contents = await (await locate.AsContainer.Content(Mediator!)).ToListAsync();
+				var visibleCount = 0;
+				
+				foreach (var item in contents.Where(x => x.IsThing))
+				{
+					if (await PermissionService!.CanSee(executor, item.Object()))
+					{
+						visibleCount++;
+					}
+				}
+				
+				return visibleCount;
 			});
 	}
 }
