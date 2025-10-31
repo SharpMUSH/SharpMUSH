@@ -119,20 +119,19 @@ module MarkupStringModule =
         /// <param name="evaluator">Function that takes (markupType, innerText) and returns reconstructed string</param>
         [<TailCall>]
         let rec evaluateWith (evaluator: MarkupTypes -> string -> string) : string =
-            let rec evalContent (content: Content list) (outerMarkupType: MarkupTypes) : string =
+            let rec evalContent (content: Content list) : string =
                 content
                 |> List.map (function
                     | Text str -> str
-                    | MarkupText mStr -> evaluateWithMarkup mStr evaluator outerMarkupType)
+                    | MarkupText mStr -> evaluateWithMarkup mStr evaluator)
                 |> String.concat ""
 
-            and evaluateWithMarkup (markupStr: MarkupString) (evaluator: MarkupTypes -> string -> string) (outerMarkupType: MarkupTypes) : string =
-                let innerText = evalContent markupStr.Content markupStr.MarkupDetails
-                match markupStr.MarkupDetails with
-                | Empty -> innerText
-                | markup -> evaluator markup innerText
+            and evaluateWithMarkup (markupStr: MarkupString) (evaluator: MarkupTypes -> string -> string) : string =
+                let innerText = evalContent markupStr.Content
+                evaluator markupStr.MarkupDetails innerText
 
-            evalContent ms.Content ms.MarkupDetails
+            // Start evaluation with this MarkupString's structure
+            evaluateWithMarkup ms evaluator
 
         let toString () : string =
             let postfix (markupType: MarkupTypes) : string =
