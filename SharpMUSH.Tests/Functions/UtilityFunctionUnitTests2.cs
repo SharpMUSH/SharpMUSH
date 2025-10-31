@@ -72,7 +72,6 @@ public class UtilityFunctionUnitTests2
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("colors()", "")]
 	public async Task Colors(string str, string expected)
 	{
@@ -101,7 +100,6 @@ public class UtilityFunctionUnitTests2
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("null()", "")]
 	public async Task Null(string str, string expected)
 	{
@@ -110,8 +108,8 @@ public class UtilityFunctionUnitTests2
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("s(Hello)", "Hello")]
+	[Arguments("s(strcat\\(a\\,b\\))", "ab")]
 	public async Task S(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -119,7 +117,6 @@ public class UtilityFunctionUnitTests2
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("@@(test)", "")]
 	public async Task AtAt(string str, string expected)
 	{

@@ -21,7 +21,7 @@ EQUALS: WS '=' WS;
 PERCENT: '%' -> pushMode(SUBSTITUTION);
 SEMICOLON: WS ';' WS;
 OANSI: '\u001b' -> pushMode(ANSI);
-FUNCHAR: [0-9a-zA-Z_~]+ '(' WS ; 
+FUNCHAR: [0-9a-zA-Z_~@`]+ '(' WS ; 
 OPAREN: '(' WS;
 
 // Greedy way of grabbing non-special characters which the parser does not care about, and can thus fast-forward through.
