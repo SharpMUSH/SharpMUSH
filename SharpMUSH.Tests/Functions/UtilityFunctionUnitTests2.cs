@@ -10,12 +10,10 @@ public class UtilityFunctionUnitTests2
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("beep()", "")]
-	public async Task Beep(string str, string expected)
+	public async Task Beep()
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsNotNull();
+		var result = (await Parser.FunctionParse(MModule.single("beep()")))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo("\a");
 	}
 
 	[Test]
