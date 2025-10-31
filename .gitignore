@@ -407,4 +407,4 @@ gen
 .ANTLR4
 
 # Rider
-.idea
+.idea*.bak
