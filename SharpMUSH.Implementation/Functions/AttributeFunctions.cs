@@ -1,4 +1,6 @@
 ﻿using System.Reflection;
+using System.Text.RegularExpressions;
+using System.Linq;
 using OneOf;
 using OneOf.Types;
 using SharpMUSH.Implementation.Common;
@@ -830,42 +832,174 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "regedit", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
-	public static ValueTask<CallState> RegularExpressionEdit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> RegularExpressionEdit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		return await RegEditInternal(parser, false, false);
 	}
 
 	[SharpFunction(Name = "regeditall", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
-	public static ValueTask<CallState> RegularExpressionEditAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> RegularExpressionEditAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		return await RegEditInternal(parser, false, true);
 	}
 
 	[SharpFunction(Name = "regeditalli", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
-	public static ValueTask<CallState> RegularExpressionAllCaseInsensitive(IMUSHCodeParser parser,
+	public static async ValueTask<CallState> RegularExpressionAllCaseInsensitive(IMUSHCodeParser parser,
 		SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		return await RegEditInternal(parser, true, true);
 	}
 
 	[SharpFunction(Name = "regediti", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
-	public static ValueTask<CallState> RegularExpressionEditCaseInsensitive(IMUSHCodeParser parser,
+	public static async ValueTask<CallState> RegularExpressionEditCaseInsensitive(IMUSHCodeParser parser,
 		SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		return await RegEditInternal(parser, true, false);
 	}
 
 	[SharpFunction(Name = "regrep", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> RegularExpressionGrep(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		return RegGrepInternal(parser, false);
 	}
 
 	[SharpFunction(Name = "regrepi", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> RegularExpressionGrepCaseInsensitive(IMUSHCodeParser parser,
 		SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		return RegGrepInternal(parser, true);
+	}
+
+	/// <summary>
+	/// Internal helper for regedit, regediti, regeditall, regeditalli.
+	/// </summary>
+	private static async ValueTask<CallState> RegEditInternal(IMUSHCodeParser parser, bool caseInsensitive, bool all)
+	{
+		// Get the string to edit - keep as MString
+		var stringArg = await parser.CurrentState.Arguments["0"].ParsedMessage();
+		var mstr = stringArg!;
+		var str = mstr.ToPlainText(); // For regex matching only
+		
+		// Get pattern/replacement pairs (remaining args after the first)
+		var args = parser.CurrentState.ArgumentsOrdered.Skip(1).ToList();
+		
+		var options = RegexOptions.None;
+		if (caseInsensitive)
+		{
+			options |= RegexOptions.IgnoreCase;
+		}
+		
+		// Process pattern/replacement pairs (every 2 elements)
+		for (int i = 0; i < args.Count - 1; i += 2)
+		{
+			var patternKv = args[i];
+			var replaceKv = args[i + 1];
+			
+			var pattern = await patternKv.Value.ParsedMessage();
+			var patternStr = pattern!.ToPlainText();
+			var replaceTemplate = replaceKv.Value.Message!.ToPlainText();
+			
+			try
+			{
+				var regex = new Regex(patternStr, options);
+				
+				if (all)
+				{
+					// Replace all matches manually, working backwards to maintain indices
+					var matches = regex.Matches(str!).Cast<Match>().Reverse().ToList();
+					foreach (var match in matches)
+					{
+						var replacement = await EvaluateReplacement(parser, regex, match, replaceTemplate);
+						// Use MModule.substring and MModule.concat to preserve markup
+						var before = MModule.substring(0, match.Index, mstr);
+						var after = MModule.substring(match.Index + match.Length, mstr.Length - match.Index - match.Length, mstr);
+						mstr = MModule.concat(MModule.concat(before, MModule.single(replacement)), after);
+						str = mstr.ToPlainText(); // Update plain text for next iteration
+					}
+				}
+				else
+				{
+					// Replace only the first match
+					var match = regex.Match(str!);
+					if (match.Success)
+					{
+						var replacement = await EvaluateReplacement(parser, regex, match, replaceTemplate);
+						// Use MModule.substring and MModule.concat to preserve markup
+						var before = MModule.substring(0, match.Index, mstr);
+						var after = MModule.substring(match.Index + match.Length, mstr.Length - match.Index - match.Length, mstr);
+						mstr = MModule.concat(MModule.concat(before, MModule.single(replacement)), after);
+						str = mstr.ToPlainText(); // Update plain text for next iteration
+					}
+				}
+			}
+			catch (ArgumentException)
+			{
+				return new CallState("#-1 REGEXP ERROR: Invalid regular expression");
+			}
+		}
+		
+		return new CallState(mstr);
+	}
+
+	/// <summary>
+	/// Helper to evaluate a replacement template with captured groups.
+	/// </summary>
+	private static async ValueTask<string> EvaluateReplacement(IMUSHCodeParser parser, Regex regex, Match match, string template)
+	{
+		var replacement = template;
+		
+		// Replace $0, $1, etc. with captured groups
+		for (int j = 0; j < match.Groups.Count; j++)
+		{
+			replacement = replacement.Replace($"${j}", match.Groups[j].Value);
+		}
+		
+		// Replace named captures
+		foreach (var groupName in regex.GetGroupNames().Where(groupName => !int.TryParse(groupName, out _)))
+		{
+			var group = match.Groups[groupName];
+			if (group.Success)
+			{
+				replacement = replacement.Replace($"$<{groupName}>", group.Value);
+			}
+		}
+		
+		// Evaluate the replacement
+		var evaluatedReplacement = await parser.FunctionParse(MModule.single(replacement));
+		return evaluatedReplacement?.Message?.ToPlainText() ?? replacement;
+	}
+
+	/// <summary>
+	/// Internal helper for regrep, regrepi.
+	/// </summary>
+	private static ValueTask<CallState> RegGrepInternal(IMUSHCodeParser parser, bool caseInsensitive)
+	{
+		var args = parser.CurrentState.Arguments;
+		var objectStr = args["0"].Message!.ToPlainText();
+		var attrsPattern = args["1"].Message!.ToPlainText();
+		var regexpPattern = args["2"].Message!.ToPlainText();
+		
+		try
+		{
+			var options = RegexOptions.None;
+			if (caseInsensitive)
+			{
+				options |= RegexOptions.IgnoreCase;
+			}
+			
+			// TODO: Implement grep functionality - requires attribute service integration
+			// This would need to:
+			// 1. Parse the object reference
+			// 2. Get all attributes matching the attrsPattern
+			// 3. Filter those attributes whose values match the regexpPattern
+			// 4. Return the list of matching attribute names
+			
+			return ValueTask.FromResult(new CallState("#-1 NOT YET IMPLEMENTED"));
+		}
+		catch (ArgumentException)
+		{
+			return ValueTask.FromResult(new CallState("#-1 REGEXP ERROR: Invalid regular expression"));
+		}
 	}
 
 	[SharpFunction(Name = "reglattr", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular)]

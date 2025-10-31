@@ -9,9 +9,14 @@ public class RegexFunctionUnitTests
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
+	// regmatch tests
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("regmatch(test123,t(.*)t)", "1")]
+	[Arguments("regmatch(test,test)", "1")] // Exact match
+	[Arguments("regmatch(test,t.*t)", "1")] // Pattern matches entire string
+	[Arguments("regmatch(test123,t.*t)", "0")] // Pattern doesn't match entire string
+	[Arguments("regmatch(test,TEST)", "0")] // Case sensitive
+	[Arguments("regmatch(test,tes)", "0")] // Should match entire string only
+	[Arguments("regmatch(test,.*)", "1")] // Matches entire string
 	public async Task Regmatch(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -19,17 +24,20 @@ public class RegexFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("regedit(test,t,T)", "TesT")]
-	public async Task Regedit(string str, string expected)
+	[Arguments("regmatchi(test,TEST)", "1")]
+	[Arguments("regmatchi(TeSt,test)", "1")]
+	[Arguments("regmatchi(test,tes)", "0")] // Should match entire string only
+	public async Task Regmatchi(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
+	// regrab tests (from pennfunc.md)
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("regrab(This is testing a test,s$)", "This is")]
+	[Arguments("regrab(This is testing a test,test)", "testing")]
+	[Arguments("regrab(This is testing a test,s$)", "This")] // First word ending in 's'
+	[Arguments("regrab(one two three,t.*)", "two")]
 	public async Task Regrab(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -37,8 +45,17 @@ public class RegexFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("regraball(This is testing a test,s$)", "This is")]
+	[Arguments("regrabi(This is testing a test,TEST)", "testing")]
+	public async Task Regrabi(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	// regraball tests (from pennfunc.md)
+	[Test]
+	[Arguments("regraball(This is testing a test,test)", "testing test")]
+	[Arguments("regraball(This is testing a test,s$)", "This is")] // All words ending in 's'
 	public async Task Regraball(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -46,44 +63,89 @@ public class RegexFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("grep(obj,pattern,attr)", "list")]
-	public async Task Grep(string str, string expected)
+	[Arguments("regraballi(This is testing a TEST,test)", "testing TEST")]
+	public async Task Regraballi(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	// reglmatch tests (from pennfunc.md)
+	[Test]
+	[Arguments("reglmatch(I am testing a test,test)", "3")]
+	[Arguments("reglmatch(I am testing a test,test$)", "5")]
+	[Arguments("reglmatch(I am testing a test,notfound)", "0")]
+	public async Task Reglmatch(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("wildgrep(obj,pattern,attr)", "list")]
-	public async Task Wildgrep(string str, string expected)
+	[Arguments("reglmatchi(I am testing a TEST,test$)", "5")]
+	public async Task Reglmatchi(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("wildgrepi(obj,pattern,attr)", "list")]
-	public async Task Wildgrepi(string str, string expected)
+	[Arguments("reglmatchall(I am testing a test,test,%b,|)", "3|5")]
+	public async Task Reglmatchall(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("regmatchi(test,TEST)", "1")]
-	public async Task Regmatchi(string str, string expected)
+	[Arguments("regmatchalli(I am testing a TEST,test,%b,|)", "3|5")]
+	public async Task Regmatchalli(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	// regedit tests (from pennfunc.md)
+	[Test]
+	[Arguments("regedit(test,t,T)", "Test")] // First match only
+	[Arguments("regedit(test,e,a)", "tast")] // Simple replacement
+	public async Task Regedit(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("reswitch(test,t*,match)", "match")]
+	[Arguments("regediti(test,T,X)", "Xest")] // Case insensitive
+	public async Task Regediti(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("regeditall(test,t,T)", "TesT")] // All matches
+	// Note: The capstr function would need to be implemented for this test to work fully
+	// [Arguments("regeditall(this test is the best string,(.)est,capstr($1)rash)", "this Trash is the Brash string")]
+	public async Task Regeditall(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("regeditalli(TesT,t,X)", "XesX")] // Case insensitive, all matches
+	public async Task Regeditalli(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	// reswitch tests
+	[Test]
+	[Arguments("reswitch(test,t.*,match)", "match")]
+	[Arguments("reswitch(test,x.*,nomatch,t.*,match)", "match")]
+	[Arguments("reswitch(test,x.*,nomatch,default)", "default")]
 	public async Task Reswitch(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -91,152 +153,45 @@ public class RegexFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("regeditall(text,pattern,replacement)", "")]
-	public async Task Regeditall(string str, string expected)
+	[Arguments("reswitchi(TEST,t.*,match)", "match")]
+	public async Task Reswitchi(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
-		await Assert.That(result).IsNotNull();
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("regeditalli(text,pattern,replacement)", "")]
-	public async Task Regeditalli(string str, string expected)
+	[Arguments("reswitchall(test,t.*,match1,e.*,match2)", "match1 match2")]
+	public async Task Reswitchall(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
-		await Assert.That(result).IsNotNull();
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("regediti(text,pattern,replacement)", "")]
-	public async Task Regediti(string str, string expected)
+	[Arguments("reswitchalli(TEST,t.*,match1,e.*,match2)", "match1 match2")]
+	public async Task Reswitchalli(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
-		await Assert.That(result).IsNotNull();
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	// regrep tests - skipped as they require attribute service
+	[Test]
+	[Skip("Requires attribute service integration")]
+	[Arguments("regrep(#0,*,pattern)", "")]
+	public async Task Regrep(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("registers()", "")]
-	public async Task Registers(string str, string expected)
+	[Skip("Requires attribute service integration")]
+	[Arguments("regrepi(#0,*,pattern)", "")]
+	public async Task Regrepi(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
-		await Assert.That(result).IsNotNull();
-	}
-
-	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("reglattrp(#0,pattern)", "")]
-	public async Task Reglattrp(string str, string expected)
-	{
-		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
-		await Assert.That(result).IsNotNull();
-	}
-
-	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("reglmatch(list,pattern)", "")]
-	public async Task Reglmatch(string str, string expected)
-	{
-		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
-		await Assert.That(result).IsNotNull();
-	}
-
-	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("reglmatchall(list,pattern)", "")]
-	public async Task Reglmatchall(string str, string expected)
-	{
-		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
-		await Assert.That(result).IsNotNull();
-	}
-
-	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("reglmatchalli(list,pattern)", "")]
-	public async Task Reglmatchalli(string str, string expected)
-	{
-		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
-		await Assert.That(result).IsNotNull();
-	}
-
-	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("reglmatchi(list,pattern)", "")]
-	public async Task Reglmatchi(string str, string expected)
-	{
-		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
-		await Assert.That(result).IsNotNull();
-	}
-
-	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("regnattr(#0,pattern)", "")]
-	public async Task Regnattr(string str, string expected)
-	{
-		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
-		await Assert.That(result).IsNotNull();
-	}
-
-	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("regnattrp(#0,pattern)", "")]
-	public async Task Regnattrp(string str, string expected)
-	{
-		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
-		await Assert.That(result).IsNotNull();
-	}
-
-	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("regraballi(list,pattern)", "")]
-	public async Task Regraballi(string str, string expected)
-	{
-		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
-		await Assert.That(result).IsNotNull();
-	}
-
-	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("regrabi(text,pattern)", "")]
-	public async Task Regrabi(string str, string expected)
-	{
-		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
-		await Assert.That(result).IsNotNull();
-	}
-
-	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("regxattr(#0,pattern)", "")]
-	public async Task Regxattr(string str, string expected)
-	{
-		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
-		await Assert.That(result).IsNotNull();
-	}
-
-	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("regxattrp(#0,pattern)", "")]
-	public async Task Regxattrp(string str, string expected)
-	{
-		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
-		await Assert.That(result).IsNotNull();
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 }
