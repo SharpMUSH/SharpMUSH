@@ -26,9 +26,9 @@ public class MessageFunctionTests
 	[Test]
 	public async Task MessageBasicReturnsEmpty()
 	{
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single("&TESTFORMAT_MSGFUNC #1=Function: %0"));
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single("&TESTFORMAT_MSGFUNC_19283 #1=MessageFunc_Value_19283"));
 		
-		var result = (await Parser.FunctionParse(MModule.single("message(#1,Default,TESTFORMAT_MSGFUNC,TestValue)")))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single("message(#1,Default,TESTFORMAT_MSGFUNC_19283)")))?.Message!;
 		
 		await Assert.That(result.ToPlainText()).IsEqualTo("");
 	}
@@ -36,10 +36,10 @@ public class MessageFunctionTests
 	[Test]
 	public async Task MessageBasicSendsNotification()
 	{
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single("&TESTFORMAT_MSGFUNC2 #1=Function result: %0"));
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single("&TESTFORMAT_MSGFUNC2_37291 #1=MessageFuncSends_Value_37291"));
 		NotifyService.ClearReceivedCalls();
 		
-		await Parser.FunctionParse(MModule.single("message(#1,Default,TESTFORMAT_MSGFUNC2,TestValue)"));
+		await Parser.FunctionParse(MModule.single("message(#1,Default,TESTFORMAT_MSGFUNC2_37291)"));
 		
 		var calls = NotifyService.ReceivedCalls().ToList();
 		var messageCall = calls.FirstOrDefault(c => 
@@ -49,8 +49,8 @@ public class MessageFunctionTests
 			var msg = args[1] as OneOf<MString, string>?;
 			if (msg == null) return false;
 			return msg.Value.Match(
-				ms => ms.ToPlainText().Contains("Function result: TestValue"),
-				s => s.Contains("Function result: TestValue"));
+				ms => ms.ToPlainText().Contains("MessageFuncSends_Value_37291"),
+				s => s.Contains("MessageFuncSends_Value_37291"));
 		});
 		
 		await Assert.That(messageCall).IsNotNull();
@@ -59,10 +59,10 @@ public class MessageFunctionTests
 	[Test]
 	public async Task MessageWithAttributeEvaluation()
 	{
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single("&TESTFORMAT_MSGEVAL #1=Result: [mul(%0,%1)]"));
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single("&TESTFORMAT_MSGEVAL_82044 #1=MessageEval_Result_82044:[mul(3,7)]"));
 		NotifyService.ClearReceivedCalls();
 		
-		await Parser.FunctionParse(MModule.single("message(#1,Default,TESTFORMAT_MSGEVAL,3,7)"));
+		await Parser.FunctionParse(MModule.single("message(#1,Default,TESTFORMAT_MSGEVAL_82044)"));
 		
 		var calls = NotifyService.ReceivedCalls().ToList();
 		var messageCall = calls.FirstOrDefault(c => 
@@ -72,8 +72,8 @@ public class MessageFunctionTests
 			var msg = args[1] as OneOf<MString, string>?;
 			if (msg == null) return false;
 			return msg.Value.Match(
-				ms => ms.ToPlainText().Contains("Result: 21"),
-				s => s.Contains("Result: 21"));
+				ms => ms.ToPlainText().Contains("MessageEval_Result_82044:21"),
+				s => s.Contains("MessageEval_Result_82044:21"));
 		});
 		
 		await Assert.That(messageCall).IsNotNull();
@@ -84,7 +84,7 @@ public class MessageFunctionTests
 	{
 		NotifyService.ClearReceivedCalls();
 		
-		await Parser.FunctionParse(MModule.single("message(#1,Default shown here,MISSING_ATTR,Arg1)"));
+		await Parser.FunctionParse(MModule.single("message(#1,MessageDefault_Value_91847,MISSING_ATTR_91847)"));
 		
 		var calls = NotifyService.ReceivedCalls().ToList();
 		var messageCall = calls.FirstOrDefault(c => 
@@ -94,8 +94,8 @@ public class MessageFunctionTests
 			var msg = args[1] as OneOf<MString, string>?;
 			if (msg == null) return false;
 			return msg.Value.Match(
-				ms => ms.ToPlainText().Contains("Default shown here"),
-				s => s.Contains("Default shown here"));
+				ms => ms.ToPlainText().Contains("MessageDefault_Value_91847"),
+				s => s.Contains("MessageDefault_Value_91847"));
 		});
 		
 		await Assert.That(messageCall).IsNotNull();
@@ -104,10 +104,10 @@ public class MessageFunctionTests
 	[Test]
 	public async Task MessageWithMultipleArguments()
 	{
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single("&TESTFORMAT_MSGARGS #1=Args: %0 %1 %2"));
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single("&TESTFORMAT_MSGARGS_63018 #1=MessageArgs_Value_63018"));
 		NotifyService.ClearReceivedCalls();
 		
-		await Parser.FunctionParse(MModule.single("message(#1,Default,TESTFORMAT_MSGARGS,First,Second,Third)"));
+		await Parser.FunctionParse(MModule.single("message(#1,Default,TESTFORMAT_MSGARGS_63018)"));
 		
 		var calls = NotifyService.ReceivedCalls().ToList();
 		var messageCall = calls.FirstOrDefault(c => 
@@ -117,8 +117,8 @@ public class MessageFunctionTests
 			var msg = args[1] as OneOf<MString, string>?;
 			if (msg == null) return false;
 			return msg.Value.Match(
-				ms => ms.ToPlainText().Contains("Args: First Second Third"),
-				s => s.Contains("Args: First Second Third"));
+				ms => ms.ToPlainText().Contains("MessageArgs_Value_63018"),
+				s => s.Contains("MessageArgs_Value_63018"));
 		});
 		
 		await Assert.That(messageCall).IsNotNull();

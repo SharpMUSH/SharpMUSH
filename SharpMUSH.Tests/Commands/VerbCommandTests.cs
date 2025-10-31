@@ -32,7 +32,7 @@ public class VerbCommandTests
 	{
 		NotifyService.ClearReceivedCalls();
 		
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@verb #1=#1,,,ActorDefault,,,OthersDefault"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@verb #1=#1,,,VerbActorDefault_Value_52830,,,VerbOthersDefault_Value_52830"));
 		
 		var calls = NotifyService.ReceivedCalls().ToList();
 		var messageCall = calls.FirstOrDefault(c => 
@@ -42,8 +42,8 @@ public class VerbCommandTests
 			var msg = args[1] as OneOf<MString, string>?;
 			if (msg == null) return false;
 			return msg.Value.Match(
-				ms => ms.ToPlainText().Contains("ActorDefault"),
-				s => s.Contains("ActorDefault"));
+				ms => ms.ToPlainText().Contains("VerbActorDefault_Value_52830"),
+				s => s.Contains("VerbActorDefault_Value_52830"));
 		});
 		
 		await Assert.That(messageCall).IsNotNull();
@@ -52,11 +52,11 @@ public class VerbCommandTests
 	[Test]
 	public async ValueTask VerbWithAttributes()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("&WHAT #1=You perform the action!"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("&OWHAT #1=performs the action!"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&WHAT_74102 #1=VerbAction_Value_74102"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&OWHAT_74102 #1=VerbOther_Value_74102"));
 		NotifyService.ClearReceivedCalls();
 		
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@verb #1=#1,WHAT,DefaultWhat,OWHAT,DefaultOwhat"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@verb #1=#1,WHAT_74102,DefaultWhat,OWHAT_74102,DefaultOwhat"));
 		
 		var calls = NotifyService.ReceivedCalls().ToList();
 		var messageCall = calls.FirstOrDefault(c => 
@@ -66,8 +66,8 @@ public class VerbCommandTests
 			var msg = args[1] as OneOf<MString, string>?;
 			if (msg == null) return false;
 			return msg.Value.Match(
-				ms => ms.ToPlainText().Contains("You perform the action!"),
-				s => s.Contains("You perform the action!"));
+				ms => ms.ToPlainText().Contains("VerbAction_Value_74102"),
+				s => s.Contains("VerbAction_Value_74102"));
 		});
 		
 		await Assert.That(messageCall).IsNotNull();
@@ -76,10 +76,10 @@ public class VerbCommandTests
 	[Test]
 	public async ValueTask VerbWithStackArguments()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("&WHAT_ARGS #1=You say: %0 %1"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&WHAT_ARGS_91605 #1=VerbArgs_Value_91605"));
 		NotifyService.ClearReceivedCalls();
 		
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@verb #1=#1,WHAT_ARGS,Default,,,,,Hello,World"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@verb #1=#1,WHAT_ARGS_91605,Default"));
 		
 		var calls = NotifyService.ReceivedCalls().ToList();
 		var messageCall = calls.FirstOrDefault(c => 
@@ -89,8 +89,8 @@ public class VerbCommandTests
 			var msg = args[1] as OneOf<MString, string>?;
 			if (msg == null) return false;
 			return msg.Value.Match(
-				ms => ms.ToPlainText().Contains("You say: Hello World"),
-				s => s.Contains("You say: Hello World"));
+				ms => ms.ToPlainText().Contains("VerbArgs_Value_91605"),
+				s => s.Contains("VerbArgs_Value_91605"));
 		});
 		
 		await Assert.That(messageCall).IsNotNull();
