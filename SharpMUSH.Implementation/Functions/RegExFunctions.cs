@@ -334,15 +334,12 @@ public partial class Functions
 					}
 					
 					// Replace named captures ($<name>)
-					foreach (var groupName in regex.GetGroupNames())
+					foreach (var groupName in regex.GetGroupNames().Where(groupName => !int.TryParse(groupName, out _)))
 					{
-						if (!int.TryParse(groupName, out _))
+						var group = match.Groups[groupName];
+						if (group.Success)
 						{
-							var group = match.Groups[groupName];
-							if (group.Success)
-							{
-								list = list.Replace($"$<{groupName}>", group.Value);
-							}
+							list = list.Replace($"$<{groupName}>", group.Value);
 						}
 					}
 					
