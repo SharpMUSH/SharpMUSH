@@ -112,7 +112,6 @@ public class ConnectionFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("nexits(#0)", "0")]
 	public async Task Nexits(string str, string expected)
 	{

@@ -91,7 +91,6 @@ public class ObjectFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("next(%#)", "")]
 	public async Task Next(string str, string expected)
 	{
