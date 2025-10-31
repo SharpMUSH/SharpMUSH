@@ -1,5 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
+using NSubstitute.ReceivedExtensions;
+using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -12,67 +14,82 @@ public class MessageFunctionTests
 	public required WebAppFactory WebAppFactoryArg { get; init; }
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
+	private IMUSHCodeParser CommandParser => WebAppFactoryArg.CommandParser;
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
+	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 
 	[Test]
-	[Skip("Requires attribute setup to fully test")]
-	public async Task MessageBasic()
+	public async Task MessageBasicReturnsEmpty()
 	{
-		const string uniqueMessage = "Message_test_unique_message";
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single("&TESTFORMAT_MSGFUNC #1=Function: %0"));
 		
-		// message(<recipients>, <message>, <attribute>)
-		var result = (await Parser.FunctionParse(MModule.single($"message(#1,{uniqueMessage},TESTFORMAT)")))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single("message(#1,Default,TESTFORMAT_MSGFUNC,TestValue)")))?.Message!;
 		
-		// message() returns empty string (side effect function)
 		await Assert.That(result.ToPlainText()).IsEqualTo("");
 	}
 
 	[Test]
-	[Skip("Requires attribute setup")]
-	public async Task MessageWithAttribute()
+	public async Task MessageBasicSendsNotification()
 	{
-		// message(<recipients>, <default>, <object>/<attribute>, <arg0>, <arg1>, ...)
-		// This would require setting up an attribute to evaluate
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single("&TESTFORMAT_MSGFUNC2 #1=Function result: %0"));
+		NotifyService.ClearReceivedCalls();
 		
-		await ValueTask.CompletedTask;
+		await Parser.FunctionParse(MModule.single("message(#1,Default,TESTFORMAT_MSGFUNC2,TestValue)"));
+		
+		await NotifyService
+			.Received(Quantity.AtLeastOne())
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
-	[Skip("Requires proper attribute and argument setup")]
-	public async Task MessageWithArguments()
+	public async Task MessageWithAttributeEvaluation()
 	{
-		// message(#1, default, #0/FORMATTER, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)
-		// Arguments should be passed to the attribute evaluation
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single("&TESTFORMAT_MSGEVAL #1=Result: [mul(%0,%1)]"));
+		NotifyService.ClearReceivedCalls();
 		
-		await ValueTask.CompletedTask;
+		await Parser.FunctionParse(MModule.single("message(#1,Default,TESTFORMAT_MSGEVAL,3,7)"));
+		
+		await NotifyService
+			.Received(Quantity.AtLeastOne())
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
-	[Skip("Requires attribute setup")]
-	public async Task MessageWithSwitches()
+	public async Task MessageUsesDefaultWhenAttributeMissing()
 	{
-		// message(#1, default, #0/FORMAT, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, remit)
-		// Last argument can be switches: remit, oemit, nospoof, spoof
+		NotifyService.ClearReceivedCalls();
 		
-		await ValueTask.CompletedTask;
+		await Parser.FunctionParse(MModule.single("message(#1,Default shown here,MISSING_ATTR,Arg1)"));
+		
+		await NotifyService
+			.Received(Quantity.AtLeastOne())
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+	}
+
+	[Test]
+	public async Task MessageWithMultipleArguments()
+	{
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single("&TESTFORMAT_MSGARGS #1=Args: %0 %1 %2"));
+		NotifyService.ClearReceivedCalls();
+		
+		await Parser.FunctionParse(MModule.single("message(#1,Default,TESTFORMAT_MSGARGS,First,Second,Third)"));
+		
+		await NotifyService
+			.Received(Quantity.AtLeastOne())
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
 	[Skip("Requires attribute setup")]
 	public async Task MessageHashHashReplacement()
 	{
-		// When ## is passed as an argument, it should be replaced with recipient's dbref
-		// message(#1, default, #0/FORMAT, ##)
-		
 		await ValueTask.CompletedTask;
 	}
 
 	[Test]
+	[Skip("Requires configuration setup")]
 	public async Task MessageNoSideFxDisabled()
 	{
-		// When side effects are disabled, message() should return error
-		// This would require modifying configuration for the test
-		
 		await ValueTask.CompletedTask;
 	}
 
@@ -80,9 +97,6 @@ public class MessageFunctionTests
 	[Skip("Requires room setup")]
 	public async Task MessageRemitSwitch()
 	{
-		// message(here, default, #0/FORMAT, arg0,,,,,,,,,,remit)
-		// Should send to room contents
-		
 		await ValueTask.CompletedTask;
 	}
 
@@ -90,9 +104,6 @@ public class MessageFunctionTests
 	[Skip("Requires multiple objects setup")]
 	public async Task MessageOemitSwitch()
 	{
-		// message(#2 #3, default, #0/FORMAT, arg0,,,,,,,,,,oemit)
-		// Should exclude specified objects
-		
 		await ValueTask.CompletedTask;
 	}
 }

@@ -1,5 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
+using NSubstitute.ReceivedExtensions;
+using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -16,64 +18,67 @@ public class VerbCommandTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	[Test]
-	[Skip("Requires object and attribute setup")]
-	public async ValueTask VerbBasic()
+	public async ValueTask VerbWithDefaultMessages()
 	{
-		Console.WriteLine("Testing basic @verb command");
+		NotifyService.ClearReceivedCalls();
 		
-		// @verb <victim>=<actor>,<what>,<whatd>,<owhat>,<owhatd>,<awhat>
-		// This test would require:
-		// 1. Creating a victim object
-		// 2. Setting attributes WHAT, OWHAT, AWHAT on it
-		// 3. Having proper permissions
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@verb #1=#1,,,ActorDefault,,,OthersDefault"));
 		
-		await ValueTask.CompletedTask;
+		await NotifyService
+			.Received(Quantity.AtLeastOne())
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+	}
+
+	[Test]
+	public async ValueTask VerbWithAttributes()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&WHAT #1=You perform the action!"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&OWHAT #1=performs the action!"));
+		NotifyService.ClearReceivedCalls();
+		
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@verb #1=#1,WHAT,DefaultWhat,OWHAT,DefaultOwhat"));
+		
+		await NotifyService
+			.Received(Quantity.AtLeastOne())
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+	}
+
+	[Test]
+	public async ValueTask VerbWithStackArguments()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&WHAT_ARGS #1=You say: %0 %1"));
+		NotifyService.ClearReceivedCalls();
+		
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@verb #1=#1,WHAT_ARGS,Default,,,,,Hello,World"));
+		
+		await NotifyService
+			.Received(Quantity.AtLeastOne())
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
 	public async ValueTask VerbInsufficientArgs()
 	{
-		Console.WriteLine("Testing @verb with insufficient arguments");
+		NotifyService.ClearReceivedCalls();
 		
-		// Should fail with too few arguments - but command will still parse
-		// The implementation will send a usage notification
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@verb #1=#2"));
 
-		// Just verify it completes without crashing
-		await ValueTask.CompletedTask;
+		await NotifyService
+			.Received(Quantity.AtLeastOne())
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
 	[Skip("Requires proper permission setup")]
 	public async ValueTask VerbPermissionDenied()
 	{
-		Console.WriteLine("Testing @verb permission denied");
-		
-		// This would require setting up objects where executor doesn't have control
 		await ValueTask.CompletedTask;
 	}
 
 	[Test]
-	[Skip("Requires attribute setup")]
-	public async ValueTask VerbWithDefaultMessages()
+	[Skip("Requires AWHAT command list execution verification")]
+	public async ValueTask VerbExecutesAwhat()
 	{
-		Console.WriteLine("Testing @verb with default messages when attributes don't exist");
-		
-		// When victim doesn't have WHAT, should use WHATD default
-		// When victim doesn't have OWHAT, should use OWHATD default
-		
-		await ValueTask.CompletedTask;
-	}
-
-	[Test]
-	[Skip("Requires stack argument support")]
-	public async ValueTask VerbWithStackArgs()
-	{
-		Console.WriteLine("Testing @verb with stack arguments");
-		
-		// @verb <victim>=<actor>,<what>,<whatd>,<owhat>,<owhatd>,<awhat>,arg1,arg2,arg3
-		// Arguments should be available as %0, %1, %2 in the attribute evaluation
-		
 		await ValueTask.CompletedTask;
 	}
 }
