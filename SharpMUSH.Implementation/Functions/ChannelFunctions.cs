@@ -1,6 +1,12 @@
-﻿using SharpMUSH.Library.Attributes;
+﻿using SharpMUSH.Implementation.Commands.ChannelCommand;
+using SharpMUSH.Library;
+using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -13,9 +19,48 @@ public partial class Functions
 	}
 	
 	[SharpFunction(Name = "cemit", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> ChannelEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> ChannelEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
+		{
+			return new CallState(Errors.ErrorNoSideFx);
+		}
+
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var channelName = parser.CurrentState.Arguments["0"].Message!;
+		var message = parser.CurrentState.Arguments["1"].Message!;
+
+		// TODO: Use standardized method.
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, channelName, true);
+
+		if (maybeChannel.IsError)
+		{
+			return maybeChannel.AsError.Value;
+		}
+
+		var channel = maybeChannel.AsChannel;
+
+		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(executor, channel);
+
+		if (maybeMemberStatus is null)
+		{
+			return new CallState("#-1 You are not a member of that channel.");
+		}
+
+		var (_, status) = maybeMemberStatus.Value;
+
+		await Mediator!.Send(new ChannelMessageNotification(
+			channel,
+			executor.WithNoneOption(),
+			INotifyService.NotificationType.Emit,
+			message,
+			status.Title ?? MModule.empty(),
+			MModule.single(executor.Object().Name),
+			MModule.single("says"),
+			[]
+		));
+
+		return CallState.Empty;
 	}
 	
 	[SharpFunction(Name = "cflags", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -69,9 +114,52 @@ public partial class Functions
 		throw new NotImplementedException();
 	}
 	[SharpFunction(Name = "nscemit", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> NoSpoofChannelEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> NoSpoofChannelEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
+		{
+			return new CallState(Errors.ErrorNoSideFx);
+		}
+
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var channelName = parser.CurrentState.Arguments["0"].Message!;
+		var message = parser.CurrentState.Arguments["1"].Message!;
+
+		// TODO: Use standardized method.
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, channelName, true);
+
+		if (maybeChannel.IsError)
+		{
+			return maybeChannel.AsError.Value;
+		}
+
+		var channel = maybeChannel.AsChannel;
+
+		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(executor, channel);
+
+		if (maybeMemberStatus is null)
+		{
+			return new CallState("#-1 You are not a member of that channel.");
+		}
+
+		var (_, status) = maybeMemberStatus.Value;
+
+		var canNoSpoof = await PermissionService!.CanNoSpoof(executor);
+
+		await Mediator!.Send(new ChannelMessageNotification(
+			channel,
+			executor.WithNoneOption(),
+			canNoSpoof
+				? INotifyService.NotificationType.NSEmit 
+				: INotifyService.NotificationType.Emit,
+			message,
+			status.Title ?? MModule.empty(),
+			MModule.single(executor.Object().Name),
+			MModule.single("says"),
+			[]
+		));
+
+		return CallState.Empty;
 	}
 
 	[SharpFunction(Name = "cbuffer", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
