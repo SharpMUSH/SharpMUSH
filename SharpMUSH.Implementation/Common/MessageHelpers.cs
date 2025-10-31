@@ -225,8 +225,7 @@ public static class MessageHelpers
 				var result = await parser.With(
 					state => state with
 					{
-						Enactor = enactor.Object().DBRef,
-						Arguments = processedArgs
+						Enactor = enactor.Object().DBRef
 					},
 					newParser => attributeService.EvaluateAttributeFunctionAsync(
 						newParser, recipient, recipient, attrToEvaluate, processedArgs));

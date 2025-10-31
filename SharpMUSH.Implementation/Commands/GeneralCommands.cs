@@ -2409,7 +2409,8 @@ public partial class Commands
 					return new KeyValuePair<string, CallState>((numKey - 3).ToString(), x.Value);
 				}
 				return x;
-			});
+			})
+			.ToList();
 
 		var isRemit = switches.Contains("REMIT");
 		var isOemit = switches.Contains("OEMIT");

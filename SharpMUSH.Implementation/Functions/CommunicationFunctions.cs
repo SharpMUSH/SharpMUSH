@@ -58,7 +58,8 @@ public partial class Functions
 		var defmsg = orderedArgs["1"];
 		var objectAndAttribute = orderedArgs["2"];
 		var inBetweenArgs = orderedArgs.Skip(3).Take(MaxFunctionArguments)
-			.Select((kvp, idx) => new KeyValuePair<string, CallState>(idx.ToString(), kvp.Value));
+			.Select((kvp, idx) => new KeyValuePair<string, CallState>(idx.ToString(), kvp.Value))
+			.ToList();
 
 		var switchesText = parser.CurrentState.Arguments.TryGetValue("13", out var switchArg)
 			? (await switchArg.ParsedMessage())?.ToPlainText() ?? ""
