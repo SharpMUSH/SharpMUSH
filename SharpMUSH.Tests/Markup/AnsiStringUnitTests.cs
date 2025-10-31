@@ -1,5 +1,8 @@
 ﻿using System.Drawing;
 using System.Text;
+using System.Text.Json;
+using ANSILibrary;
+using MarkupString;
 using Serilog;
 using SharpMUSH.Tests.Markup.Data;
 using A = MarkupString.MarkupStringModule;
@@ -185,6 +188,37 @@ public class AnsiStringUnitTests
 		await Assert.That(truncated.ToString()).IsEqualTo("ab   de  ef  de");
 	}
 
+	[Test]
+	public async Task EvaluateWith()
+	{
+		var redString = A.markupSingle2(
+			M.Create(foreground: StringExtensions.rgb(Color.Red)), 
+			A.markupSingle(
+				M.Create(background: StringExtensions.rgb(Color.Yellow)), "red"));
+		
+		var result = redString.EvaluateWith((x, y) => x switch
+		{
+			MModule.MarkupTypes.MarkedupText { Item: M { Details: var structure} } =>
+				$"ansi({ItemName(structure)},{y})",
+			_ => throw new NotImplementedException("???")
+		});
+		
+		await Assert.That(result).IsEqualTo("ansi(Red,ansi(/Yellow,red))");
+		return;
+
+		string ItemName(MarkupImplementation.AnsiStructure structure)
+		{
+			var sb = new StringBuilder();
+			
+			if(structure.Foreground is ANSI.AnsiColor.RGB rgb)
+				sb.Append(rgb.Item.Name);
+			if(structure.Background is ANSI.AnsiColor.RGB rgb2)
+				sb.Append($"/{rgb2.Item.Name}");
+
+			return sb.ToString();
+		}
+	}
+	
 	[Test]
 	public async Task AnsiBleed()
 	{

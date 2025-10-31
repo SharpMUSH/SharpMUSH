@@ -112,6 +112,27 @@ module MarkupStringModule =
 
         let len: Lazy<int> = Lazy<int>(length)
 
+        /// <summary>
+        /// Evaluates the MarkupString using a custom evaluation function that receives markup information.
+        /// This allows reconstructing original function calls like ansi() from the markup data.
+        /// </summary>
+        /// <param name="evaluator">Function that takes (markupType, innerText) and returns reconstructed string</param>
+        [<TailCall>]
+        let rec evaluateWith (evaluator: MarkupTypes -> string -> string) : string =
+            let rec evalContent (content: Content list) : string =
+                content
+                |> List.map (function
+                    | Text str -> str
+                    | MarkupText mStr -> evaluateWithMarkup mStr evaluator)
+                |> String.concat ""
+
+            and evaluateWithMarkup (markupStr: MarkupString) (evaluator: MarkupTypes -> string -> string) : string =
+                let innerText = evalContent markupStr.Content
+                evaluator markupStr.MarkupDetails innerText
+
+            // Start evaluation with this MarkupString's structure
+            evaluateWithMarkup ms evaluator
+
         let toString () : string =
             let postfix (markupType: MarkupTypes) : string =
                 match markupType with
@@ -162,6 +183,9 @@ module MarkupStringModule =
         override this.ToString() : string = strVal.Value
 
         member this.ToPlainText() : string = plainStrVal.Value
+
+        member this.EvaluateWith(evaluator: System.Func<MarkupTypes, string, string>) : string =
+            evaluateWith (fun markup text -> evaluator.Invoke(markup, text))
 
     /// <summary>
     /// Active pattern for extracting markup details and content from a MarkupString.
@@ -288,6 +312,15 @@ module MarkupStringModule =
     /// <param name="markupStr">The MarkupString to measure.</param>
     [<TailCall>]
     let rec getLength (markupStr: MarkupString) : int = markupStr.Length
+
+    /// <summary>
+    /// Evaluates a MarkupString using a custom evaluator function.
+    /// Useful for reconstructing original function calls like ansi() from markup information.
+    /// </summary>
+    /// <param name="evaluator">Function that takes markup type and inner text, returns reconstructed string</param>
+    /// <param name="markupStr">The MarkupString to evaluate</param>
+    let evaluateWith (evaluator: System.Func<MarkupTypes, string, string>) (markupStr: MarkupString) : string =
+        markupStr.EvaluateWith(evaluator)
 
     /// <summary>
     /// Concatenates two MarkupStrings, optionally inserting a separator.
