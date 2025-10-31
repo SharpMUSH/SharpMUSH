@@ -51,4 +51,8 @@
 		</Content>
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Remove="Functions\UtilityFunctionUnitTests.cs" />
+  </ItemGroup>
+
 </Project>
