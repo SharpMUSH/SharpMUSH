@@ -133,9 +133,9 @@ public partial class Functions
 			
 			return ValueTask.FromResult(new CallState(isFullMatch ? "1" : "0"));
 		}
-		catch (ArgumentException ex)
+		catch (ArgumentException)
 		{
-			return ValueTask.FromResult(new CallState($"#-1 REGEXP ERROR: {ex.Message}"));
+			return ValueTask.FromResult(new CallState("#-1 REGEXP ERROR: Invalid regular expression"));
 		}
 	}
 
@@ -230,9 +230,9 @@ public partial class Functions
 				return ValueTask.FromResult<CallState>(firstMatch ?? MModule.empty());
 			}
 		}
-		catch (ArgumentException ex)
+		catch (ArgumentException)
 		{
-			return ValueTask.FromResult(new CallState($"#-1 REGEXP ERROR: {ex.Message}"));
+			return ValueTask.FromResult(new CallState("#-1 REGEXP ERROR: Invalid regular expression"));
 		}
 	}
 
@@ -280,9 +280,9 @@ public partial class Functions
 				return ValueTask.FromResult(new CallState(position != null ? (position.index + 1).ToString() : "0"));
 			}
 		}
-		catch (ArgumentException ex)
+		catch (ArgumentException)
 		{
-			return ValueTask.FromResult(new CallState($"#-1 REGEXP ERROR: {ex.Message}"));
+			return ValueTask.FromResult(new CallState("#-1 REGEXP ERROR: Invalid regular expression"));
 		}
 	}
 

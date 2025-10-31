@@ -922,9 +922,9 @@ public partial class Functions
 					}
 				}
 			}
-			catch (ArgumentException ex)
+			catch (ArgumentException)
 			{
-				return new CallState($"#-1 REGEXP ERROR: {ex.Message}");
+				return new CallState("#-1 REGEXP ERROR: Invalid regular expression");
 			}
 		}
 		
@@ -989,9 +989,9 @@ public partial class Functions
 			
 			return ValueTask.FromResult(new CallState("#-1 NOT YET IMPLEMENTED"));
 		}
-		catch (ArgumentException ex)
+		catch (ArgumentException)
 		{
-			return ValueTask.FromResult(new CallState($"#-1 REGEXP ERROR: {ex.Message}"));
+			return ValueTask.FromResult(new CallState("#-1 REGEXP ERROR: Invalid regular expression"));
 		}
 	}
 
