@@ -875,9 +875,10 @@ public partial class Functions
 	/// </summary>
 	private static async ValueTask<CallState> RegEditInternal(IMUSHCodeParser parser, bool caseInsensitive, bool all)
 	{
-		// Get the string to edit
+		// Get the string to edit - keep as MString
 		var stringArg = await parser.CurrentState.Arguments["0"].ParsedMessage();
-		var str = stringArg!.ToPlainText();
+		var mstr = stringArg!;
+		var str = mstr.ToPlainText(); // For regex matching only
 		
 		// Get pattern/replacement pairs (remaining args after the first)
 		var args = parser.CurrentState.ArgumentsOrdered.Skip(1).ToList();
@@ -904,12 +905,16 @@ public partial class Functions
 				
 				if (all)
 				{
-					// Replace all matches manually
+					// Replace all matches manually, working backwards to maintain indices
 					var matches = regex.Matches(str!).Cast<Match>().Reverse().ToList();
 					foreach (var match in matches)
 					{
 						var replacement = await EvaluateReplacement(parser, regex, match, replaceTemplate);
-						str = str.Substring(0, match.Index) + replacement + str.Substring(match.Index + match.Length);
+						// Use MModule.substring and MModule.concat to preserve markup
+						var before = MModule.substring(0, match.Index, mstr);
+						var after = MModule.substring(match.Index + match.Length, mstr.Length - match.Index - match.Length, mstr);
+						mstr = MModule.concat(MModule.concat(before, MModule.single(replacement)), after);
+						str = mstr.ToPlainText(); // Update plain text for next iteration
 					}
 				}
 				else
@@ -919,7 +924,11 @@ public partial class Functions
 					if (match.Success)
 					{
 						var replacement = await EvaluateReplacement(parser, regex, match, replaceTemplate);
-						str = str.Substring(0, match.Index) + replacement + str.Substring(match.Index + match.Length);
+						// Use MModule.substring and MModule.concat to preserve markup
+						var before = MModule.substring(0, match.Index, mstr);
+						var after = MModule.substring(match.Index + match.Length, mstr.Length - match.Index - match.Length, mstr);
+						mstr = MModule.concat(MModule.concat(before, MModule.single(replacement)), after);
+						str = mstr.ToPlainText(); // Update plain text for next iteration
 					}
 				}
 			}
@@ -929,7 +938,7 @@ public partial class Functions
 			}
 		}
 		
-		return new CallState(str!);
+		return new CallState(mstr);
 	}
 
 	/// <summary>

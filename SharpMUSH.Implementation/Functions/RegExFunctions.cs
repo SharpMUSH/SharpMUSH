@@ -375,6 +375,6 @@ public partial class Functions
 			return new CallState(defaultEvaluated!);
 		}
 		
-		return new CallState(string.Empty);
+		return new CallState(MModule.empty());
 	}
 }
