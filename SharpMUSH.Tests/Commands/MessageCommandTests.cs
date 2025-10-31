@@ -5,7 +5,7 @@ using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
-
+using System.Linq;
 namespace SharpMUSH.Tests.Commands;
 
 public class MessageCommandTests
@@ -37,9 +37,8 @@ public class MessageCommandTests
 		
 		var calls = NotifyService.ReceivedCalls().ToList();
 		Console.WriteLine($"Total calls: {calls.Count}");
-		foreach (var call in calls)
+		foreach (var args in calls.Select(call => call.GetArguments()))
 		{
-			var args = call.GetArguments();
 			Console.WriteLine($"Call with {args.Length} args");
 			if (args.Length >= 2)
 			{
