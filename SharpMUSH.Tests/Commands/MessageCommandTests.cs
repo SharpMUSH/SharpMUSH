@@ -16,38 +16,26 @@ public class MessageCommandTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	[Test]
-	[Skip("Requires attribute setup to fully test")]
 	public async ValueTask MessageBasic()
 	{
-		Console.WriteLine("Testing basic @message command");
-		
-		// Basic message with default message
-		// This would work better with actual attribute setup
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@message #1=Default message,TESTFORMAT"));
-
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&TESTFORMAT_MSGBASIC #1=Formatted: %0"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@message #1=Default message,TESTFORMAT_MSGBASIC,TestArg"));
 		await ValueTask.CompletedTask;
 	}
 
 	[Test]
-	[Skip("Requires attribute setup")]
 	public async ValueTask MessageWithAttribute()
 	{
-		Console.WriteLine("Testing @message command with attribute evaluation");
-		
-		// This test would require setting up an attribute first
-		// await Parser.CommandParse(1, ConnectionService, MModule.single("@message #1=Default,#0/TESTFORMAT,arg1,arg2"));
-		
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&TESTFORMAT_MSGATTR #1=Custom format: [add(%0,%1)]"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@message #1=Default,#1/TESTFORMAT_MSGATTR,5,10"));
 		await ValueTask.CompletedTask;
 	}
 
 	[Test]
-	[Skip("Requires attribute setup to fully test")]
 	public async ValueTask MessageSilentSwitch()
 	{
-		Console.WriteLine("Testing @message/silent");
-		
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@message/silent #1=Test,TESTFORMAT"));
-
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&TESTFORMAT_MSGSILENT #1=Silent: %0"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@message/silent #1=Test,TESTFORMAT_MSGSILENT,TestValue"));
 		await ValueTask.CompletedTask;
 	}
 
@@ -55,9 +43,6 @@ public class MessageCommandTests
 	[Skip("Requires room setup")]
 	public async ValueTask MessageRemitSwitch()
 	{
-		Console.WriteLine("Testing @message/remit");
-		
-		// This would require proper room setup to test room emission
 		await ValueTask.CompletedTask;
 	}
 
@@ -72,12 +57,14 @@ public class MessageCommandTests
 	}
 
 	[Test]
-	[Skip("Requires attribute setup to fully test")]
 	public async ValueTask MessageNospoofSwitch()
 	{
 		Console.WriteLine("Testing @message/nospoof");
 		
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@message/nospoof #1=Test,TESTFORMAT"));
+		// Set up the attribute for this test with a unique name
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&TESTFORMAT_MSGNOSPOOF #1=Nospoof: %0"));
+		
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@message/nospoof #1=Test,TESTFORMAT_MSGNOSPOOF,TestValue"));
 
 		await ValueTask.CompletedTask;
 	}

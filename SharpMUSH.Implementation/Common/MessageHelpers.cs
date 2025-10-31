@@ -11,12 +11,9 @@ namespace SharpMUSH.Implementation.Common;
 
 public static class MessageHelpers
 {
-	private const string SpecialRecipientDbref = "#-2"; // When specified, attribute is on recipient
-	private const string RecipientReplacementToken = "##"; // Replaced with recipient's dbref
+	private const string SpecialRecipientDbref = "#-2";
+	private const string RecipientReplacementToken = "##";
 	
-	/// <summary>
-	/// Core logic for @message command and message() function.
-	/// </summary>
 	public static async ValueTask<CallState> ProcessMessageAsync(
 		IMUSHCodeParser parser,
 		IMediator mediator,
@@ -38,13 +35,11 @@ public static class MessageHelpers
 	{
 		var recipientNamelist = ArgHelpers.NameList(recipientsArg.ToString());
 
-		// Parse object/attribute specification
 		var attrObjSplit = objectAttrArg.Split('/', 2);
 		AnySharpObject? objToEvaluate = null;
 		string attrToEvaluate;
 		SharpAttribute[]? pinnedAttribute = null;
 
-		// Check if object is specified (obj/attr format)
 		if (attrObjSplit.Length > 1 && attrObjSplit[0] != SpecialRecipientDbref)
 		{
 			var maybeLocateTarget = await locateService.LocateAndNotifyIfInvalidWithCallState(
@@ -69,23 +64,19 @@ public static class MessageHelpers
 		}
 		else
 		{
-			// If object is #-2 or not specified, attribute is on recipient
 			attrToEvaluate = attrObjSplit.Length > 1 ? attrObjSplit[1] : objectAttrArg;
 		}
 
-		// Determine notification type based on switches
 		var notificationType = isNospoof
 			? (await permissionService.CanNoSpoof(executor)
 				? INotifyService.NotificationType.NSAnnounce
 				: INotifyService.NotificationType.Announce)
 			: INotifyService.NotificationType.Announce;
 
-		// Get enactor for spoof switch
 		var enactor = isSpoof
 			? (await parser.CurrentState.EnactorObject(mediator)).WithoutNone()
 			: executor;
 
-		// Check spoof permission - require CanNoSpoof for now (similar to nospoof check)
 		if (isSpoof && !await permissionService.CanNoSpoof(executor))
 		{
 			await notifyService.Notify(executor, "Permission denied: You lack spoofing permissions.");
@@ -94,7 +85,6 @@ public static class MessageHelpers
 
 		int recipientCount = 0;
 
-		// Process each recipient
 		foreach (var target in recipientNamelist)
 		{
 			var targetString = target.Match(dbref => dbref.ToString(), str => str);
@@ -108,7 +98,6 @@ public static class MessageHelpers
 
 			var locateTarget = maybeLocateTarget.AsSharpObject;
 
-			// Handle /remit switch - send to room contents
 			if (isRemit)
 			{
 				if (!locateTarget.IsContainer)
@@ -129,15 +118,11 @@ public static class MessageHelpers
 				continue;
 			}
 
-			// Handle /oemit switch - exclude these objects
 			if (isOemit)
 			{
-				// For oemit, we need to collect all objects to exclude
-				// This is handled differently - we'll need to collect all recipients first
 				continue;
 			}
 
-			// Standard recipient handling
 			if (!await permissionService.CanInteract(locateTarget, executor, InteractType.Hear))
 			{
 				continue;
@@ -152,7 +137,6 @@ public static class MessageHelpers
 			recipientCount++;
 		}
 
-		// Handle /oemit switch separately
 		if (isOemit)
 		{
 			var excludeObjects = new HashSet<AnySharpObject>();
@@ -177,10 +161,9 @@ public static class MessageHelpers
 			await communicationService.SendToRoomAsync(
 				enactor, executorLocation, _ => message, notificationType, excludeObjects: excludeObjects);
 
-			recipientCount = 1; // For confirmation message
+			recipientCount = 1;
 		}
 
-		// Show confirmation message if not silent
 		if (!isSilent && recipientCount > 0)
 		{
 			await notifyService.Notify(executor, $"Message sent to {recipientCount} recipient(s).");
@@ -203,7 +186,6 @@ public static class MessageHelpers
 	{
 		var finalObjToEvaluate = objToEvaluate ?? recipient;
 
-		// Replace ## with recipient's dbref in arguments
 		var processedArgs = functionArgs.Select(kvp =>
 		{
 			var value = kvp.Value.Message?.ToString() ?? string.Empty;

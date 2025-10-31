@@ -1767,32 +1767,10 @@ public partial class Commands
 		MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Verb(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		/*
-		 @verb <victim>=<actor>,<what>,<whatd>,<owhat>,<owhatd>,<awhat>,<args>
-		 
-		 This command provides a way to do user-defined verbs with associated @attr/@oattr/@aattr groups.
-		 
-		 <actor> sees the contents of <victim>'s <what> attribute, or <whatd> if <victim> doesn't have a <what>.
-		 Everyone in the same room as <actor> sees the contents of <victim>'s <owhat> attribute, 
-		 with <actor>'s name prepended, or <owhatd>, also with <actor>'s name prepended, 
-		 if <victim> doesn't have an <owhat>.
-		 <victim> executes the contents of his <awhat> attribute.
-		 
-		 By supplying up to 29 <args>, you may pass those values on the stack 
-		 (i.e. %0, %1, %2, etc. up through %9, and r(0,args) to r(29,args)).
-		 
-		 Permission checks:
-		 1. The object which did the @verb is a wizard.
-		 2. The object which did the @verb controls both <actor> and <victim>
-		 3. The thing which triggered the @verb must be <actor>, AND the object which did 
-		    the @verb must be either privileged or control <victim> or <victim> must be VISUAL.
-		 */
-
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).WithoutNone();
 		var args = parser.CurrentState.ArgumentsOrdered;
 
-		// Parse arguments
 		if (args.Count < 2)
 		{
 			await NotifyService!.Notify(executor, "Usage: @verb <victim>=<actor>,<what>,<whatd>,<owhat>,<owhatd>,<awhat>[,<args>]");
@@ -1807,8 +1785,6 @@ public partial class Commands
 		var owhatd = args.ElementAtOrDefault(5).Value.Message!.ToPlainText();
 		var awhat = args.ElementAtOrDefault(6).Value.Message!.ToPlainText();
 
-		// Collect additional arguments (7 onwards) for stack
-		// These become %0, %1, %2, etc. in attribute evaluation
 		const int RequiredArgsBeforeStack = 7;
 		var stackArgs = args.Skip(RequiredArgsBeforeStack)
 			.Select((kvp, idx) => new KeyValuePair<string, CallState>(idx.ToString(), kvp.Value))
@@ -1838,14 +1814,12 @@ public partial class Commands
 
 		var actor = maybeActor.AsSharpObject;
 
-		// Permission checks - simplified version
 		var isWizard = await executor.IsWizard();
 		var controlsBoth = await PermissionService!.Controls(executor, actor) &&
 		                   await PermissionService!.Controls(executor, victim);
 		var enactorIsActor = enactor.Object().DBRef == actor.Object().DBRef;
 		var executorPrivileged = await executor.IsRoyalty();
 		var executorControlsVictim = await PermissionService!.Controls(executor, victim);
-		// For VISUAL flag check, we'd need flag system support - skipping for now
 
 		var hasPermission = isWizard || controlsBoth ||
 		                    (enactorIsActor && (executorPrivileged || executorControlsVictim));
@@ -1856,15 +1830,11 @@ public partial class Commands
 			return new CallState(Errors.ErrorPerm);
 		}
 
-		// Execute the verb
-
-		// 1. Show actor the <what> attribute or <whatd> default
 		var actorMessage = await GetAttributeOrDefault(
 			parser, AttributeService!, executor, victim, actor, what, whatd, stackArgs);
 
 		await NotifyService!.Notify(actor, actorMessage);
 
-		// 2. Show others in room the <owhat> attribute or <owhatd> default with actor's name prepended
 		var actorLocation = await actor.Where();
 		var othersMessage = await GetAttributeOrDefault(
 			parser, AttributeService!, executor, victim, actor, owhat, owhatd, stackArgs);
@@ -1876,7 +1846,6 @@ public partial class Commands
 			INotifyService.NotificationType.Emit,
 			excludeObjects: [actor]);
 
-		// 3. Execute victim's <awhat> attribute if it exists
 		if (!string.IsNullOrWhiteSpace(awhat))
 		{
 			var maybeAwhatAttr = await AttributeService!.GetAttributeAsync(
@@ -1891,8 +1860,7 @@ public partial class Commands
 						Enactor = actor.Object().DBRef,
 						Arguments = stackArgs
 					},
-					newParser => AttributeService.EvaluateAttributeFunctionAsync(
-						newParser, victim, victim, awhat, stackArgs));
+					newParser => newParser.CommandListParse(maybeAwhatAttr.AsAttribute.Last().Value));
 			}
 		}
 
@@ -2433,8 +2401,6 @@ public partial class Commands
 		var recipientsArg = args.ElementAtOrDefault(0).Value.Message!;
 		var defmsg = args.ElementAtOrDefault(1).Value.Message!;
 		var objectAttrArg = args.ElementAtOrDefault(2).Value.Message!.ToPlainText();
-		// Transform arguments 3+ to 0+ for attribute evaluation (matching PennMUSH %0-%9, r(0,args)-r(29,args) convention)
-		// ArgumentsOrdered has numeric string keys, so we parse and shift them
 		var otherArgs = args
 			.Skip(3)
 			.Select(x => {
@@ -2442,11 +2408,9 @@ public partial class Commands
 				{
 					return new KeyValuePair<string, CallState>((numKey - 3).ToString(), x.Value);
 				}
-				// Fallback: keep original key if not numeric (shouldn't happen with ArgumentsOrdered)
 				return x;
 			});
 
-		// Parse switches
 		var isRemit = switches.Contains("REMIT");
 		var isOemit = switches.Contains("OEMIT");
 		var isNospoof = switches.Contains("NOSPOOF");
