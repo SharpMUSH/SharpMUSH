@@ -1717,9 +1717,9 @@ public partial class ArangoDatabase(
 
 		var targetAttr = attrArray.Last();
 
-		// Check if attribute has children
+		// Check if attribute has children (just need to know if any exist)
 		var children = await arangoDb.Query.ExecuteAsync<string>(handle,
-			$"FOR v IN 1..1 OUTBOUND {targetAttr.Id} GRAPH {DatabaseConstants.GraphAttributes} RETURN v._id",
+			$"FOR v IN 1..1 OUTBOUND {targetAttr.Id} GRAPH {DatabaseConstants.GraphAttributes} LIMIT 1 RETURN v._id",
 			cancellationToken: ct);
 
 		if (children.Any())
@@ -1769,20 +1769,26 @@ public partial class ArangoDatabase(
 			}
 		}, ct);
 
-		// Remove all descendants first (bottom-up) to avoid orphans
-		var descendantsList = descendants.ToList();
-		descendantsList.Reverse();
-		foreach (var descendant in descendantsList)
+		try
 		{
+			// Remove all descendants first (bottom-up) to avoid orphans
+			for (int i = descendants.Count - 1; i >= 0; i--)
+			{
+				await arangoDb.Graph.Vertex.RemoveAsync(transaction, DatabaseConstants.GraphAttributes,
+					DatabaseConstants.Attributes, descendants[i].Key, cancellationToken: ct);
+			}
+
+			// Remove the target attribute itself
 			await arangoDb.Graph.Vertex.RemoveAsync(transaction, DatabaseConstants.GraphAttributes,
-				DatabaseConstants.Attributes, descendant.Key, cancellationToken: ct);
+				DatabaseConstants.Attributes, targetAttr.Key, cancellationToken: ct);
+
+			await arangoDb.Transaction.CommitAsync(transaction, ct);
 		}
-
-		// Remove the target attribute itself
-		await arangoDb.Graph.Vertex.RemoveAsync(transaction, DatabaseConstants.GraphAttributes,
-			DatabaseConstants.Attributes, targetAttr.Key, cancellationToken: ct);
-
-		await arangoDb.Transaction.CommitAsync(transaction, ct);
+		catch
+		{
+			await arangoDb.Transaction.AbortAsync(transaction, ct);
+			throw;
+		}
 
 		return true;
 	}
