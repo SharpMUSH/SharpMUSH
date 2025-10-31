@@ -454,8 +454,16 @@ public partial class Functions
 	public static async ValueTask<CallState> Pueblo(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> await ArgHelpers.ForHandleOrPlayer(parser, Mediator!, ConnectionService!, LocateService!,
 			parser.CurrentState.Arguments["0"],
-			(_, cd) => ValueTask.FromResult<CallState>(cd.Metadata.GetValueOrDefault("PUEBLO", "0")),
-			(_, cd) => ValueTask.FromResult<CallState>(cd.Metadata.GetValueOrDefault("PUEBLO", "0"))
+			(_, cd) =>
+			{
+				var pueblo = cd.Metadata.GetValueOrDefault("PUEBLO", "0");
+				return ValueTask.FromResult<CallState>(pueblo);
+			},
+			(_, cd) =>
+			{
+				var pueblo = cd.Metadata.GetValueOrDefault("PUEBLO", "0");
+				return ValueTask.FromResult<CallState>(pueblo);
+			}
 		);
 
 	[SharpFunction(Name = "recv", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -473,10 +481,13 @@ public partial class Functions
 				return new CallState("#-1");
 			}
 
-			// Check permissions
-			if (!await CanAccessConnectionData(executor, data.Ref))
+			// Check permissions - can use on self, or need See_All/Wizard/Royalty for others
+			if (data.Ref != executor.Object().DBRef)
 			{
-				return new CallState(Errors.ErrorPerm);
+				if (!await executor.HasFlag("WIZARD") && !await executor.HasFlag("ROYALTY") && !await executor.HasPower("SEE_ALL"))
+				{
+					return new CallState(Errors.ErrorPerm);
+				}
 			}
 
 			return new CallState(data.Metadata.GetValueOrDefault("RECV", "0"));
@@ -492,9 +503,12 @@ public partial class Functions
 		var located = maybeLocate.AsPlayer;
 
 		// Check permissions
-		if (!await CanAccessConnectionData(executor, located.Object.DBRef))
+		if (located.Object.DBRef != executor.Object().DBRef)
 		{
-			return new CallState(Errors.ErrorPerm);
+			if (!await executor.HasFlag("WIZARD") && !await executor.HasFlag("ROYALTY") && !await executor.HasPower("SEE_ALL"))
+			{
+				return new CallState(Errors.ErrorPerm);
+			}
 		}
 
 		var connectionData = await ConnectionService!.Get(located.Object.DBRef).FirstOrDefaultAsync();
@@ -521,10 +535,13 @@ public partial class Functions
 				return new CallState("#-1");
 			}
 
-			// Check permissions
-			if (!await CanAccessConnectionData(executor, data.Ref))
+			// Check permissions - can use on self, or need See_All/Wizard/Royalty for others
+			if (data.Ref != executor.Object().DBRef)
 			{
-				return new CallState(Errors.ErrorPerm);
+				if (!await executor.HasFlag("WIZARD") && !await executor.HasFlag("ROYALTY") && !await executor.HasPower("SEE_ALL"))
+				{
+					return new CallState(Errors.ErrorPerm);
+				}
 			}
 
 			return new CallState(data.Metadata.GetValueOrDefault("SENT", "0"));
@@ -540,9 +557,12 @@ public partial class Functions
 		var located = maybeLocate.AsPlayer;
 
 		// Check permissions
-		if (!await CanAccessConnectionData(executor, located.Object.DBRef))
+		if (located.Object.DBRef != executor.Object().DBRef)
 		{
-			return new CallState(Errors.ErrorPerm);
+			if (!await executor.HasFlag("WIZARD") && !await executor.HasFlag("ROYALTY") && !await executor.HasPower("SEE_ALL"))
+			{
+				return new CallState(Errors.ErrorPerm);
+			}
 		}
 
 		var connectionData = await ConnectionService!.Get(located.Object.DBRef).FirstOrDefaultAsync();
@@ -634,7 +654,31 @@ public partial class Functions
 				return new CallState("unknown");
 			}
 
-			return new CallState(BuildTermInfo(data.Metadata, hasSeeAll || isSelf));
+			// Build terminfo list
+			var terminfo = new List<string>();
+			terminfo.Add(data.Metadata.GetValueOrDefault("CLIENT", "unknown"));
+			
+			if (hasSeeAll || isSelf)
+			{
+				if (data.Metadata.GetValueOrDefault("PUEBLO", "0") == "1")
+					terminfo.Add("pueblo");
+				if (data.Metadata.GetValueOrDefault("TELNET", "0") == "1")
+					terminfo.Add("telnet");
+				if (data.Metadata.GetValueOrDefault("GMCP", "0") == "1")
+					terminfo.Add("gmcp");
+				if (data.Metadata.GetValueOrDefault("SSL", "0") == "1")
+					terminfo.Add("ssl");
+				if (data.Metadata.GetValueOrDefault("PROMPT_NEWLINES", "0") == "1")
+					terminfo.Add("prompt_newlines");
+				if (data.Metadata.GetValueOrDefault("STRIPACCENTS", "0") == "1")
+					terminfo.Add("stripaccents");
+				
+				var colorStyle = data.Metadata.GetValueOrDefault("COLORSTYLE", "");
+				if (!string.IsNullOrEmpty(colorStyle))
+					terminfo.Add(colorStyle);
+			}
+
+			return new CallState(string.Join(" ", terminfo));
 		}
 
 		// It's a player name
@@ -659,7 +703,31 @@ public partial class Functions
 			return new CallState("unknown");
 		}
 
-		return new CallState(BuildTermInfo(connectionData.Metadata, hasSeeAll || isSelfPlayer));
+		// Build terminfo list
+		var terminfoPlayer = new List<string>();
+		terminfoPlayer.Add(connectionData.Metadata.GetValueOrDefault("CLIENT", "unknown"));
+		
+		if (hasSeeAll || isSelfPlayer)
+		{
+			if (connectionData.Metadata.GetValueOrDefault("PUEBLO", "0") == "1")
+				terminfoPlayer.Add("pueblo");
+			if (connectionData.Metadata.GetValueOrDefault("TELNET", "0") == "1")
+				terminfoPlayer.Add("telnet");
+			if (connectionData.Metadata.GetValueOrDefault("GMCP", "0") == "1")
+				terminfoPlayer.Add("gmcp");
+			if (connectionData.Metadata.GetValueOrDefault("SSL", "0") == "1")
+				terminfoPlayer.Add("ssl");
+			if (connectionData.Metadata.GetValueOrDefault("PROMPT_NEWLINES", "0") == "1")
+				terminfoPlayer.Add("prompt_newlines");
+			if (connectionData.Metadata.GetValueOrDefault("STRIPACCENTS", "0") == "1")
+				terminfoPlayer.Add("stripaccents");
+			
+			var colorStyle = connectionData.Metadata.GetValueOrDefault("COLORSTYLE", "");
+			if (!string.IsNullOrEmpty(colorStyle))
+				terminfoPlayer.Add(colorStyle);
+		}
+
+		return new CallState(string.Join(" ", terminfoPlayer));
 	}
 
 	[SharpFunction(Name = "width", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
