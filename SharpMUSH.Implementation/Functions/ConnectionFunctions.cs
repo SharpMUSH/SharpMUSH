@@ -3,9 +3,12 @@ using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services.Interfaces;
 using AsyncEnumerable = System.Linq.AsyncEnumerable;
 
 namespace SharpMUSH.Implementation.Functions;
@@ -76,9 +79,51 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "host", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> HostName(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> HostName(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+
+		// Check if it's a descriptor number
+		if (long.TryParse(arg0, out var port))
+		{
+			var data = ConnectionService!.Get(port);
+			if (data is null)
+			{
+				return new CallState("#-1");
+			}
+
+			// Check permissions
+			if (!await CanAccessConnectionData(executor, data.Ref))
+			{
+				return new CallState(Errors.ErrorPerm);
+			}
+
+			return new CallState(data.HostName);
+		}
+
+		// It's a player name
+		var maybeLocate = await LocateService!.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, arg0);
+		if (maybeLocate.IsNone || maybeLocate.IsError)
+		{
+			return new CallState(maybeLocate.IsNone ? "#-1" : maybeLocate.AsError.Value);
+		}
+
+		var located = maybeLocate.AsPlayer;
+
+		// Check permissions
+		if (!await CanAccessConnectionData(executor, located.Object.DBRef))
+		{
+			return new CallState(Errors.ErrorPerm);
+		}
+
+		var connectionData = await ConnectionService!.Get(located.Object.DBRef).FirstOrDefaultAsync();
+		if (connectionData is null)
+		{
+			return new CallState("#-1");
+		}
+
+		return new CallState(connectionData.HostName);
 	}
 
 	[SharpFunction(Name = "idle", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -112,15 +157,121 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "ipaddr", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> IpAddress(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> IpAddress(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+
+		// Check if it's a descriptor number
+		if (long.TryParse(arg0, out var port))
+		{
+			var data = ConnectionService!.Get(port);
+			if (data is null)
+			{
+				return new CallState("#-1");
+			}
+
+			// Check permissions
+			if (!await CanAccessConnectionData(executor, data.Ref))
+			{
+				return new CallState(Errors.ErrorPerm);
+			}
+
+			return new CallState(data.InternetProtocolAddress);
+		}
+
+		// It's a player name
+		var maybeLocate = await LocateService!.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, arg0);
+		if (maybeLocate.IsNone || maybeLocate.IsError)
+		{
+			return new CallState(maybeLocate.IsNone ? "#-1" : maybeLocate.AsError.Value);
+		}
+
+		var located = maybeLocate.AsPlayer;
+
+		// Check permissions
+		if (!await CanAccessConnectionData(executor, located.Object.DBRef))
+		{
+			return new CallState(Errors.ErrorPerm);
+		}
+
+		var connectionData = await ConnectionService!.Get(located.Object.DBRef).FirstOrDefaultAsync();
+		if (connectionData is null)
+		{
+			return new CallState("#-1");
+		}
+
+		return new CallState(connectionData.InternetProtocolAddress);
 	}
 
 	[SharpFunction(Name = "lports", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> ListPorts(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> ListPorts(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var args = parser.CurrentState.Arguments;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		
+		// Check permissions - only See_All can use lports
+		if (!await executor.HasPower("SEE_ALL"))
+		{
+			return new CallState(Errors.ErrorPerm);
+		}
+
+		var viewer = executor;
+		var status = "online"; // default status
+
+		// Parse viewer argument if provided
+		if (args.ContainsKey("0"))
+		{
+			var arg0 = args["0"].Message!.ToPlainText();
+			if (!string.IsNullOrWhiteSpace(arg0))
+			{
+				var maybeLocate = await LocateService!.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, arg0);
+				if (maybeLocate.IsNone || maybeLocate.IsError)
+				{
+					return new CallState(maybeLocate.IsNone ? "#-1" : maybeLocate.AsError.Value);
+				}
+				viewer = maybeLocate.AsPlayer;
+			}
+		}
+
+		// Parse status argument if provided
+		if (args.ContainsKey("1"))
+		{
+			status = args["1"].Message!.ToPlainText().ToLower();
+			if (status != "all" && status != "online" && status != "offline")
+			{
+				return new CallState("#-1 INVALID SECOND ARGUMENT");
+			}
+		}
+
+		var allConnections = ConnectionService!.GetAll()
+			.Where(x => status == "all" || 
+			            (status == "online" && x.State == IConnectionService.ConnectionState.LoggedIn) || 
+			            (status == "offline" && x.State != IConnectionService.ConnectionState.LoggedIn));
+
+		// Filter connections viewer can see
+		var visibleConnections = new List<long>();
+		await foreach (var conn in allConnections)
+		{
+			if (conn.Ref is null)
+			{
+				// Offline connection - only visible if See_All
+				if (await viewer.HasPower("SEE_ALL"))
+				{
+					visibleConnections.Add(conn.Handle);
+				}
+			}
+			else
+			{
+				var connectedPlayer = await Mediator!.Send(new GetObjectNodeQuery(conn.Ref.Value));
+				if (await PermissionService!.CanSee(viewer, connectedPlayer.Known))
+				{
+					visibleConnections.Add(conn.Handle);
+				}
+			}
+		}
+
+		return new CallState(string.Join(" ", visibleConnections));
 	}
 
 	[SharpFunction(Name = "lwho", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -158,75 +309,357 @@ public partial class Functions
 		}
 
 		// NEEDED: 'Get All Players'.
-		var allConnectionsDbRefs = await AsyncEnumerable.ToArrayAsync(ConnectionService!
+		var allConnectionsDbRefs = new List<string>();
+		await foreach (var player in ConnectionService!
 			.GetAll()
 			.Where(x => x.Ref is not null)
 			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
-			.Where(async (x, _) => await PermissionService!.CanSee(looker, x))
-			.Select(x => $"#{x.Object().DBRef.Number}"));
+			.Where(async (x, _) => await PermissionService!.CanSee(looker, x)))
+		{
+			allConnectionsDbRefs.Add($"#{player.Object().DBRef.Number}");
+		}
 
 		return new CallState(string.Join(" ", allConnectionsDbRefs));
 	}
 
 	[SharpFunction(Name = "lwhoid", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> ListWhoObjectIds(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> ListWhoObjectIds(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var args = parser.CurrentState.Arguments;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var looker = executor;
+
+		// Parse viewer argument if provided
+		if (args.ContainsKey("0"))
+		{
+			var arg0 = args["0"].Message!.ToPlainText();
+			if (!string.IsNullOrWhiteSpace(arg0))
+			{
+				var maybeLocate = await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0);
+				if (maybeLocate.IsError)
+				{
+					return maybeLocate.AsError;
+				}
+				looker = maybeLocate.AsSharpObject;
+			}
+		}
+
+		// Get all connected players that the looker can see
+		var allConnectionsObjIds = new List<string>();
+		await foreach (var player in ConnectionService!
+			.GetAll()
+			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
+			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
+			.Where(async (x, _) => await PermissionService!.CanSee(looker, x)))
+		{
+			var id = player.Object().Id;
+			if (id is not null)
+			{
+				allConnectionsObjIds.Add(id);
+			}
+		}
+
+		return new CallState(string.Join(" ", allConnectionsObjIds));
 	}
 
 	[SharpFunction(Name = "mwho", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> MortalWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> MortalWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		// Create a "mortal" viewer context - can't see hidden players
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+
+		// Get all connected players that are not hidden
+		var nonHiddenConnections = new List<string>();
+		await foreach (var player in ConnectionService!
+			.GetAll()
+			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
+			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
+			.Where(async (x, _) => !await x.HasFlag("DARK")))
+		{
+			nonHiddenConnections.Add($"#{player.Object().DBRef.Number}");
+		}
+
+		return new CallState(string.Join(" ", nonHiddenConnections));
 	}
 
 	[SharpFunction(Name = "mwhoid", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> MortalWhoObjectIds(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> MortalWhoObjectIds(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		// Get all connected players that are not hidden
+		var nonHiddenConnectionsObjIds = new List<string>();
+		await foreach (var player in ConnectionService!
+			.GetAll()
+			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
+			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
+			.Where(async (x, _) => !await x.HasFlag("DARK")))
+		{
+			var id = player.Object().Id;
+			if (id is not null)
+			{
+				nonHiddenConnectionsObjIds.Add(id);
+			}
+		}
+
+		return new CallState(string.Join(" ", nonHiddenConnectionsObjIds));
 	}
 
 	[SharpFunction(Name = "nmwho", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> NumberMortalWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> NumberMortalWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		// Count all connected players that are not hidden
+		var count = await ConnectionService!
+			.GetAll()
+			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
+			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
+			.Where(async (x, _) => !await x.HasFlag("DARK"))
+			.CountAsync();
+
+		return new CallState(count.ToString(CultureInfo.InvariantCulture));
 	}
 
 	[SharpFunction(Name = "nwho", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> NumberWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> NumberWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var args = parser.CurrentState.Arguments;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var looker = executor;
+
+		// Parse viewer argument if provided
+		if (args.ContainsKey("0"))
+		{
+			var arg0 = args["0"].Message!.ToPlainText();
+			if (!string.IsNullOrWhiteSpace(arg0))
+			{
+				var maybeLocate = await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0);
+				if (maybeLocate.IsError)
+				{
+					return maybeLocate.AsError;
+				}
+				looker = maybeLocate.AsSharpObject;
+			}
+		}
+
+		// Count all connected players that the looker can see
+		var count = await ConnectionService!
+			.GetAll()
+			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
+			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
+			.Where(async (x, _) => await PermissionService!.CanSee(looker, x))
+			.CountAsync();
+
+		return new CallState(count.ToString(CultureInfo.InvariantCulture));
 	}
 
 	[SharpFunction(Name = "pueblo", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> Pueblo(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		throw new NotImplementedException();
-	}
+	public static async ValueTask<CallState> Pueblo(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> await ArgHelpers.ForHandleOrPlayer(parser, Mediator!, ConnectionService!, LocateService!,
+			parser.CurrentState.Arguments["0"],
+			(_, cd) => ValueTask.FromResult<CallState>(cd.Metadata.GetValueOrDefault("PUEBLO", "0")),
+			(_, cd) => ValueTask.FromResult<CallState>(cd.Metadata.GetValueOrDefault("PUEBLO", "0"))
+		);
 
 	[SharpFunction(Name = "recv", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> Received(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Received(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+
+		// Check if it's a descriptor number
+		if (long.TryParse(arg0, out var port))
+		{
+			var data = ConnectionService!.Get(port);
+			if (data is null)
+			{
+				return new CallState("#-1");
+			}
+
+			// Check permissions
+			if (!await CanAccessConnectionData(executor, data.Ref))
+			{
+				return new CallState(Errors.ErrorPerm);
+			}
+
+			return new CallState(data.Metadata.GetValueOrDefault("RECV", "0"));
+		}
+
+		// It's a player name
+		var maybeLocate = await LocateService!.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, arg0);
+		if (maybeLocate.IsNone || maybeLocate.IsError)
+		{
+			return new CallState(maybeLocate.IsNone ? "#-1" : maybeLocate.AsError.Value);
+		}
+
+		var located = maybeLocate.AsPlayer;
+
+		// Check permissions
+		if (!await CanAccessConnectionData(executor, located.Object.DBRef))
+		{
+			return new CallState(Errors.ErrorPerm);
+		}
+
+		var connectionData = await ConnectionService!.Get(located.Object.DBRef).FirstOrDefaultAsync();
+		if (connectionData is null)
+		{
+			return new CallState("#-1");
+		}
+
+		return new CallState(connectionData.Metadata.GetValueOrDefault("RECV", "0"));
 	}
 
 	[SharpFunction(Name = "sent", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> Sent(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Sent(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+
+		// Check if it's a descriptor number
+		if (long.TryParse(arg0, out var port))
+		{
+			var data = ConnectionService!.Get(port);
+			if (data is null)
+			{
+				return new CallState("#-1");
+			}
+
+			// Check permissions
+			if (!await CanAccessConnectionData(executor, data.Ref))
+			{
+				return new CallState(Errors.ErrorPerm);
+			}
+
+			return new CallState(data.Metadata.GetValueOrDefault("SENT", "0"));
+		}
+
+		// It's a player name
+		var maybeLocate = await LocateService!.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, arg0);
+		if (maybeLocate.IsNone || maybeLocate.IsError)
+		{
+			return new CallState(maybeLocate.IsNone ? "#-1" : maybeLocate.AsError.Value);
+		}
+
+		var located = maybeLocate.AsPlayer;
+
+		// Check permissions
+		if (!await CanAccessConnectionData(executor, located.Object.DBRef))
+		{
+			return new CallState(Errors.ErrorPerm);
+		}
+
+		var connectionData = await ConnectionService!.Get(located.Object.DBRef).FirstOrDefaultAsync();
+		if (connectionData is null)
+		{
+			return new CallState("#-1");
+		}
+
+		return new CallState(connectionData.Metadata.GetValueOrDefault("SENT", "0"));
 	}
 
 	[SharpFunction(Name = "ssl", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> SecureSocketLayer(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> SecureSocketLayer(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+
+		// Check if it's a descriptor number
+		if (long.TryParse(arg0, out var port))
+		{
+			var data = ConnectionService!.Get(port);
+			if (data is null)
+			{
+				return new CallState("0");
+			}
+
+			// Check permissions - can use on self, or need See_All for others
+			if (data.Ref != executor.Object().DBRef)
+			{
+				if (!await executor.HasPower("SEE_ALL"))
+				{
+					return new CallState(Errors.ErrorPerm);
+				}
+			}
+
+			var ssl = data.Metadata.GetValueOrDefault("SSL", "0");
+			return new CallState(ssl);
+		}
+
+		// It's a player name
+		var maybeLocate = await LocateService!.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, arg0);
+		if (maybeLocate.IsNone || maybeLocate.IsError)
+		{
+			return new CallState(maybeLocate.IsNone ? "0" : maybeLocate.AsError.Value);
+		}
+
+		var located = maybeLocate.AsPlayer;
+
+		// Check permissions
+		if (located.Object.DBRef != executor.Object().DBRef)
+		{
+			if (!await executor.HasPower("SEE_ALL"))
+			{
+				return new CallState(Errors.ErrorPerm);
+			}
+		}
+
+		var connectionData = await ConnectionService!.Get(located.Object.DBRef).FirstOrDefaultAsync();
+		if (connectionData is null)
+		{
+			return new CallState("0");
+		}
+
+		return new CallState(connectionData.Metadata.GetValueOrDefault("SSL", "0"));
 	}
 
 	[SharpFunction(Name = "terminfo", MinArgs = 1, MaxArgs = 1,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> TerminalInformation(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> TerminalInformation(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var hasSeeAll = await executor.HasPower("SEE_ALL");
+
+		// Check if it's a descriptor number
+		if (long.TryParse(arg0, out var port))
+		{
+			var data = ConnectionService!.Get(port);
+			if (data is null)
+			{
+				return new CallState("unknown");
+			}
+
+			var isSelf = data.Ref == executor.Object().DBRef;
+			
+			// Return limited info if not See_All and not self
+			if (!hasSeeAll && !isSelf)
+			{
+				return new CallState("unknown");
+			}
+
+			return new CallState(BuildTermInfo(data.Metadata, hasSeeAll || isSelf));
+		}
+
+		// It's a player name
+		var maybeLocate = await LocateService!.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, arg0);
+		if (maybeLocate.IsNone || maybeLocate.IsError)
+		{
+			return new CallState("unknown");
+		}
+
+		var located = maybeLocate.AsPlayer;
+		var isSelfPlayer = located.Object.DBRef == executor.Object().DBRef;
+
+		// Return limited info if not See_All and not self
+		if (!hasSeeAll && !isSelfPlayer)
+		{
+			return new CallState("unknown");
+		}
+
+		var connectionData = await ConnectionService!.Get(located.Object.DBRef).FirstOrDefaultAsync();
+		if (connectionData is null)
+		{
+			return new CallState("unknown");
+		}
+
+		return new CallState(BuildTermInfo(connectionData.Metadata, hasSeeAll || isSelfPlayer));
 	}
 
 	[SharpFunction(Name = "width", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -261,45 +694,279 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "xmwhoid", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> NumberRangeMortalWhoObjectId(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> NumberRangeMortalWhoObjectId(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var arg1 = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+
+		if (!int.TryParse(arg0, out var start) || !int.TryParse(arg1, out var count))
+		{
+			return new CallState(Errors.ErrorIntegers);
+		}
+
+		if (start < 1 || count < 0)
+		{
+			return new CallState(Errors.ErrorArgRange);
+		}
+
+		// Get all non-hidden connected player objids
+		var allObjIds = new List<string>();
+		await foreach (var player in ConnectionService!
+			.GetAll()
+			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
+			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
+			.Where(async (x, _) => !await x.HasFlag("DARK")))
+		{
+			var id = player.Object().Id;
+			if (id is not null)
+			{
+				allObjIds.Add(id);
+			}
+		}
+
+		// Extract the range (1-indexed start position)
+		var result = allObjIds.Skip(start - 1).Take(count);
+		return new CallState(string.Join(" ", result));
 	}
 
 	[SharpFunction(Name = "xwho", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> NumberRangeWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> NumberRangeWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var args = parser.CurrentState.Arguments;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var looker = executor;
+		
+		int start, count;
+		
+		// Handle 2 or 3 argument versions
+		if (args.Count == 3)
+		{
+			// xwho(<looker>, <start>, <count>)
+			var arg0 = args["0"].Message!.ToPlainText();
+			if (!string.IsNullOrWhiteSpace(arg0))
+			{
+				var maybeLocate = await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0);
+				if (maybeLocate.IsError)
+				{
+					return maybeLocate.AsError;
+				}
+				looker = maybeLocate.AsSharpObject;
+			}
+			
+			if (!int.TryParse(args["1"].Message!.ToPlainText(), out start) || 
+			    !int.TryParse(args["2"].Message!.ToPlainText(), out count))
+			{
+				return new CallState(Errors.ErrorIntegers);
+			}
+		}
+		else
+		{
+			// xwho(<start>, <count>)
+			if (!int.TryParse(args["0"].Message!.ToPlainText(), out start) || 
+			    !int.TryParse(args["1"].Message!.ToPlainText(), out count))
+			{
+				return new CallState(Errors.ErrorIntegers);
+			}
+		}
+
+		if (start < 1 || count < 0)
+		{
+			return new CallState(Errors.ErrorArgRange);
+		}
+
+		// Get all connected players that the looker can see
+		var allDbrefs = new List<string>();
+		await foreach (var player in ConnectionService!
+			.GetAll()
+			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
+			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
+			.Where(async (x, _) => await PermissionService!.CanSee(looker, x)))
+		{
+			allDbrefs.Add($"#{player.Object().DBRef.Number}");
+		}
+
+		// Extract the range (1-indexed start position)
+		var result = allDbrefs.Skip(start - 1).Take(count);
+		return new CallState(string.Join(" ", result));
 	}
 
 	[SharpFunction(Name = "xwhoid", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> NumberRangeWhoObjectId(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> NumberRangeWhoObjectId(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var args = parser.CurrentState.Arguments;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var looker = executor;
+		
+		int start, count;
+		
+		// Handle 2 or 3 argument versions
+		if (args.Count == 3)
+		{
+			// xwhoid(<looker>, <start>, <count>)
+			var arg0 = args["0"].Message!.ToPlainText();
+			if (!string.IsNullOrWhiteSpace(arg0))
+			{
+				var maybeLocate = await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0);
+				if (maybeLocate.IsError)
+				{
+					return maybeLocate.AsError;
+				}
+				looker = maybeLocate.AsSharpObject;
+			}
+			
+			if (!int.TryParse(args["1"].Message!.ToPlainText(), out start) || 
+			    !int.TryParse(args["2"].Message!.ToPlainText(), out count))
+			{
+				return new CallState(Errors.ErrorIntegers);
+			}
+		}
+		else
+		{
+			// xwhoid(<start>, <count>)
+			if (!int.TryParse(args["0"].Message!.ToPlainText(), out start) || 
+			    !int.TryParse(args["1"].Message!.ToPlainText(), out count))
+			{
+				return new CallState(Errors.ErrorIntegers);
+			}
+		}
+
+		if (start < 1 || count < 0)
+		{
+			return new CallState(Errors.ErrorArgRange);
+		}
+
+		// Get all connected players that the looker can see
+		var allObjIds = new List<string>();
+		await foreach (var player in ConnectionService!
+			.GetAll()
+			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
+			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
+			.Where(async (x, _) => await PermissionService!.CanSee(looker, x)))
+		{
+			var id = player.Object().Id;
+			if (id is not null)
+			{
+				allObjIds.Add(id);
+			}
+		}
+
+		// Extract the range (1-indexed start position)
+		var result = allObjIds.Skip(start - 1).Take(count);
+		return new CallState(string.Join(" ", result));
 	}
 
 	[SharpFunction(Name = "zmwho", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> ZoneMortalWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> ZoneMortalWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+
+		// Locate the zone object
+		var maybeZone = await LocateService!.LocateAndNotifyIfInvalid(parser, executor, executor, arg0, Library.Services.Interfaces.LocateFlags.All);
+		if (maybeZone.IsNone || maybeZone.IsError)
+		{
+			return new CallState(maybeZone.IsNone ? "#-1" : maybeZone.AsError.Value);
+		}
+
+		var zone = maybeZone.AsAnyObject;
+
+		// Check permissions - must be See_All or pass zone lock
+		var hasSeeAll = await executor.HasPower("SEE_ALL");
+		if (!hasSeeAll)
+		{
+			// TODO: Check zone lock when zone lock checking is implemented
+			return new CallState(Errors.ErrorPerm);
+		}
+
+		// TODO: Zone matching infrastructure not yet fully implemented
+		// For now, return empty list
+		return new CallState(string.Empty);
 	}
 
 	[SharpFunction(Name = "zwho", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> ZoneWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> ZoneWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var args = parser.CurrentState.Arguments;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var arg0 = args["0"].Message!.ToPlainText();
+
+		// Locate the zone object
+		var maybeZone = await LocateService!.LocateAndNotifyIfInvalid(parser, executor, executor, arg0, Library.Services.Interfaces.LocateFlags.All);
+		if (maybeZone.IsNone || maybeZone.IsError)
+		{
+			return new CallState(maybeZone.IsNone ? "#-1" : maybeZone.AsError.Value);
+		}
+
+		var zone = maybeZone.AsAnyObject;
+
+		// Check permissions - must be See_All or pass zone lock
+		var hasSeeAll = await executor.HasPower("SEE_ALL");
+		if (!hasSeeAll)
+		{
+			// TODO: Check zone lock when zone lock checking is implemented
+			return new CallState(Errors.ErrorPerm);
+		}
+
+		// Parse viewer argument if provided
+		var viewer = executor;
+		if (args.ContainsKey("1"))
+		{
+			var arg1 = args["1"].Message!.ToPlainText();
+			if (!string.IsNullOrWhiteSpace(arg1))
+			{
+				var maybeLocate = await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, arg1);
+				if (maybeLocate.IsError)
+				{
+					return maybeLocate.AsError;
+				}
+				viewer = maybeLocate.AsSharpObject;
+			}
+		}
+
+		// TODO: Zone matching infrastructure not yet fully implemented
+		// For now, return empty list
+		return new CallState(string.Empty);
 	}
 
 	[SharpFunction(Name = "poll", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> Poll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Poll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		// Get the current @poll value from configuration or game state
+		// For now, return a default empty value since @poll infrastructure isn't implemented
+		return new CallState(string.Empty);
 	}
 
 	[SharpFunction(Name = "ports", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> Ports(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Ports(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+
+		var maybeLocate = await LocateService!.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, arg0);
+		if (maybeLocate.IsNone || maybeLocate.IsError)
+		{
+			return new CallState(maybeLocate.IsNone ? "#-1" : maybeLocate.AsError.Value);
+		}
+
+		var target = maybeLocate.AsPlayer;
+
+		// Check permissions - can use on self, or need See_All for others
+		if (target.Object.DBRef != executor.Object().DBRef)
+		{
+			if (!await executor.HasPower("SEE_ALL"))
+			{
+				return new CallState(Errors.ErrorPerm);
+			}
+		}
+
+		// Get all ports for this player, most recent to least recent
+		var ports = new List<long>();
+		await foreach (var handle in ConnectionService!.Get(target.Object.DBRef).Select(x => x.Handle))
+		{
+			ports.Add(handle);
+		}
+
+		return new CallState(string.Join(" ", ports));
 	}
 
 	[SharpFunction(Name = "player", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -362,8 +1029,92 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "hidden", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> Hidden(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Hidden(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+
+		// Check if executor can see hidden players
+		var canSeeHidden = await executor.HasFlag("WIZARD") || await executor.HasFlag("ROYALTY") || await executor.HasPower("SEE_ALL");
+		
+		if (!canSeeHidden)
+		{
+			return new CallState("#-1");
+		}
+
+		// Check if it's a descriptor number
+		if (long.TryParse(arg0, out var port))
+		{
+			var data = ConnectionService!.Get(port);
+			if (data is null || data.Ref is null)
+			{
+				return new CallState("#-1");
+			}
+
+			var player = await Mediator!.Send(new GetObjectNodeQuery(data.Ref.Value));
+			var isHidden = await player.Known.HasFlag("DARK");
+			return new CallState(isHidden ? "1" : "0");
+		}
+
+		// It's a player name
+		var maybeLocate = await LocateService!.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, arg0);
+		if (maybeLocate.IsNone || maybeLocate.IsError)
+		{
+			return new CallState("#-1");
+		}
+
+		var located = maybeLocate.AsPlayer;
+		var isHiddenPlayer = await new AnySharpObject(located).HasFlag("DARK");
+		return new CallState(isHiddenPlayer ? "1" : "0");
+	}
+
+	// Helper methods for code quality improvements
+
+	/// <summary>
+	/// Checks if the executor has permission to access connection data for another player.
+	/// </summary>
+	private static async ValueTask<bool> CanAccessConnectionData(AnySharpObject executor, DBRef? targetDbRef)
+	{
+		if (targetDbRef == executor.Object().DBRef)
+		{
+			return true;
+		}
+
+		return await executor.HasFlag("WIZARD") || 
+		       await executor.HasFlag("ROYALTY") || 
+		       await executor.HasPower("SEE_ALL");
+	}
+
+	/// <summary>
+	/// Builds terminal information string from connection metadata.
+	/// </summary>
+	private static string BuildTermInfo(IReadOnlyDictionary<string, string> metadata, bool includeDetails)
+	{
+		var terminfo = new List<string>
+		{
+			metadata.GetValueOrDefault("CLIENT", "unknown")
+		};
+
+		if (includeDetails)
+		{
+			if (metadata.GetValueOrDefault("PUEBLO", "0") == "1")
+				terminfo.Add("pueblo");
+			if (metadata.GetValueOrDefault("TELNET", "0") == "1")
+				terminfo.Add("telnet");
+			if (metadata.GetValueOrDefault("GMCP", "0") == "1")
+				terminfo.Add("gmcp");
+			if (metadata.GetValueOrDefault("SSL", "0") == "1")
+				terminfo.Add("ssl");
+			if (metadata.GetValueOrDefault("PROMPT_NEWLINES", "0") == "1")
+				terminfo.Add("prompt_newlines");
+			if (metadata.GetValueOrDefault("STRIPACCENTS", "0") == "1")
+				terminfo.Add("stripaccents");
+
+			var colorStyle = metadata.GetValueOrDefault("COLORSTYLE", "");
+			if (!string.IsNullOrEmpty(colorStyle))
+				terminfo.Add(colorStyle);
+		}
+
+		return string.Join(" ", terminfo);
 	}
 }
