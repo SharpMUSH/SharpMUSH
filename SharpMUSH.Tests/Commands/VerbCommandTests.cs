@@ -31,7 +31,6 @@ public class VerbCommandTests
 	[Skip("Test environment issue with @verb notification capture")]
 	public async ValueTask VerbWithDefaultMessages()
 	{
-		NotifyService.ClearReceivedCalls();
 		
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@verb #1=#1,,,VerbActorDefault_Value_52830,,,VerbOthersDefault_Value_52830"));
 		
@@ -40,9 +39,8 @@ public class VerbCommandTests
 		{
 			var args = c.GetArguments();
 			if (args.Length < 2) return false;
-			var msg = args[1] as OneOf<MString, string>?;
-			if (msg == null) return false;
-			return msg.Value.Match(
+			if (args[1] is not OneOf<MString, string> msg) return false;
+			return msg.Match(
 				ms => ms.ToPlainText().Contains("VerbActorDefault_Value_52830"),
 				s => s.Contains("VerbActorDefault_Value_52830"));
 		});
@@ -56,7 +54,6 @@ public class VerbCommandTests
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&WHAT_74102 #1=VerbAction_Value_74102"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&OWHAT_74102 #1=VerbOther_Value_74102"));
-		NotifyService.ClearReceivedCalls();
 		
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@verb #1=#1,WHAT_74102,DefaultWhat,OWHAT_74102,DefaultOwhat"));
 		
@@ -65,9 +62,8 @@ public class VerbCommandTests
 		{
 			var args = c.GetArguments();
 			if (args.Length < 2) return false;
-			var msg = args[1] as OneOf<MString, string>?;
-			if (msg == null) return false;
-			return msg.Value.Match(
+			if (args[1] is not OneOf<MString, string> msg) return false;
+			return msg.Match(
 				ms => ms.ToPlainText().Contains("VerbAction_Value_74102"),
 				s => s.Contains("VerbAction_Value_74102"));
 		});
@@ -80,7 +76,6 @@ public class VerbCommandTests
 	public async ValueTask VerbWithStackArguments()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&WHAT_ARGS_91605 #1=VerbArgs_Value_91605"));
-		NotifyService.ClearReceivedCalls();
 		
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@verb #1=#1,WHAT_ARGS_91605,Default"));
 		
@@ -89,9 +84,8 @@ public class VerbCommandTests
 		{
 			var args = c.GetArguments();
 			if (args.Length < 2) return false;
-			var msg = args[1] as OneOf<MString, string>?;
-			if (msg == null) return false;
-			return msg.Value.Match(
+			if (args[1] is not OneOf<MString, string> msg) return false;
+			return msg.Match(
 				ms => ms.ToPlainText().Contains("VerbArgs_Value_91605"),
 				s => s.Contains("VerbArgs_Value_91605"));
 		});
@@ -103,7 +97,6 @@ public class VerbCommandTests
 	[Skip("Test environment issue with notification capture")]
 	public async ValueTask VerbInsufficientArgs()
 	{
-		NotifyService.ClearReceivedCalls();
 		
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@verb #1=#2"));
 
@@ -112,9 +105,8 @@ public class VerbCommandTests
 		{
 			var args = c.GetArguments();
 			if (args.Length < 2) return false;
-			var msg = args[1] as OneOf<MString, string>?;
-			if (msg == null) return false;
-			return msg.Value.Match(
+			if (args[1] is not OneOf<MString, string> msg) return false;
+			return msg.Match(
 				ms => ms.ToPlainText().Contains("Usage: @verb"),
 				s => s.Contains("Usage: @verb"));
 		});

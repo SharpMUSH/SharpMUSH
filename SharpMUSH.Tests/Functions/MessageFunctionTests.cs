@@ -37,7 +37,6 @@ public class MessageFunctionTests
 	public async Task MessageBasicSendsNotification()
 	{
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single("&TESTFORMAT_MSGFUNC2_37291 #1=MessageFuncSends_Value_37291"));
-		NotifyService.ClearReceivedCalls();
 		
 		await Parser.FunctionParse(MModule.single("message(#1,Default,TESTFORMAT_MSGFUNC2_37291)"));
 		
@@ -46,9 +45,8 @@ public class MessageFunctionTests
 		{
 			var args = c.GetArguments();
 			if (args.Length < 2) return false;
-			var msg = args[1] as OneOf<MString, string>?;
-			if (msg == null) return false;
-			return msg.Value.Match(
+			if (args[1] is not OneOf<MString, string> msg) return false;
+			return msg.Match(
 				ms => ms.ToPlainText().Contains("MessageFuncSends_Value_37291"),
 				s => s.Contains("MessageFuncSends_Value_37291"));
 		});
@@ -60,7 +58,6 @@ public class MessageFunctionTests
 	public async Task MessageWithAttributeEvaluation()
 	{
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single("&TESTFORMAT_MSGEVAL_82044 #1=MessageEval_Result_82044:[mul(3,7)]"));
-		NotifyService.ClearReceivedCalls();
 		
 		await Parser.FunctionParse(MModule.single("message(#1,Default,TESTFORMAT_MSGEVAL_82044)"));
 		
@@ -69,9 +66,8 @@ public class MessageFunctionTests
 		{
 			var args = c.GetArguments();
 			if (args.Length < 2) return false;
-			var msg = args[1] as OneOf<MString, string>?;
-			if (msg == null) return false;
-			return msg.Value.Match(
+			if (args[1] is not OneOf<MString, string> msg) return false;
+			return msg.Match(
 				ms => ms.ToPlainText().Contains("MessageEval_Result_82044:21"),
 				s => s.Contains("MessageEval_Result_82044:21"));
 		});
@@ -82,8 +78,6 @@ public class MessageFunctionTests
 	[Test]
 	public async Task MessageUsesDefaultWhenAttributeMissing()
 	{
-		NotifyService.ClearReceivedCalls();
-		
 		await Parser.FunctionParse(MModule.single("message(#1,MessageDefault_Value_91847,MISSING_ATTR_91847)"));
 		
 		var calls = NotifyService.ReceivedCalls().ToList();
@@ -105,7 +99,6 @@ public class MessageFunctionTests
 	public async Task MessageWithMultipleArguments()
 	{
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single("&TESTFORMAT_MSGARGS_63018 #1=MessageArgs_Value_63018"));
-		NotifyService.ClearReceivedCalls();
 		
 		await Parser.FunctionParse(MModule.single("message(#1,Default,TESTFORMAT_MSGARGS_63018)"));
 		
@@ -114,9 +107,8 @@ public class MessageFunctionTests
 		{
 			var args = c.GetArguments();
 			if (args.Length < 2) return false;
-			var msg = args[1] as OneOf<MString, string>?;
-			if (msg == null) return false;
-			return msg.Value.Match(
+			if (args[1] is not OneOf<MString, string> msg) return false;
+			return msg.Match(
 				ms => ms.ToPlainText().Contains("MessageArgs_Value_63018"),
 				s => s.Contains("MessageArgs_Value_63018"));
 		});
