@@ -36,15 +36,43 @@ public class MessageCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@message #1=Default message,TESTFORMAT_MSGBASIC,TestArg"));
 		
 		var calls = NotifyService.ReceivedCalls().ToList();
+		Console.WriteLine($"Total calls: {calls.Count}");
+		foreach (var call in calls)
+		{
+			var args = call.GetArguments();
+			Console.WriteLine($"Call with {args.Length} args");
+			if (args.Length >= 2)
+			{
+				Console.WriteLine($"Arg[1] type: {args[1]?.GetType().FullName ?? "null"}");
+				
+				// Try direct cast to OneOf
+				if (args[1] is OneOf<MString, string> oneOfMsg)
+				{
+					var text = oneOfMsg.Match(
+						ms => ms.ToPlainText(),
+						s => s);
+					Console.WriteLine($"OneOf matched! Text: '{text}'");
+					Console.WriteLine($"Contains 'Formatted: TestArg': {text.Contains("Formatted: TestArg")}");
+				}
+				else
+				{
+					Console.WriteLine("Failed to cast to OneOf");
+				}
+			}
+		}
+		
 		var messageCall = calls.FirstOrDefault(c => 
 		{
 			var args = c.GetArguments();
 			if (args.Length < 2) return false;
-			var msg = args[1] as OneOf<MString, string>?;
-			if (msg == null) return false;
-			return msg.Value.Match(
-				ms => ms.ToPlainText().Contains("Formatted: TestArg"),
-				s => s.Contains("Formatted: TestArg"));
+			
+			if (args[1] is OneOf<MString, string> oneOfMsg)
+			{
+				return oneOfMsg.Match(
+					ms => ms.ToPlainText().Contains("Formatted: TestArg"),
+					s => s.Contains("Formatted: TestArg"));
+			}
+			return false;
 		});
 		
 		await Assert.That(messageCall).IsNotNull();
