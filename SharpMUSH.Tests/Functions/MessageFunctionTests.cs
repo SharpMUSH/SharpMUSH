@@ -18,6 +18,11 @@ public class MessageFunctionTests
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 
+	private static bool MessageContains(OneOf<MString, string> msg, string expected) =>
+		msg.Match(
+			ms => ms.ToPlainText().Contains(expected),
+			s => s.Contains(expected));
+
 	[Test]
 	public async Task MessageBasicReturnsEmpty()
 	{
@@ -36,9 +41,19 @@ public class MessageFunctionTests
 		
 		await Parser.FunctionParse(MModule.single("message(#1,Default,TESTFORMAT_MSGFUNC2,TestValue)"));
 		
-		await NotifyService
-			.Received(Quantity.AtLeastOne())
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+		var calls = NotifyService.ReceivedCalls().ToList();
+		var messageCall = calls.FirstOrDefault(c => 
+		{
+			var args = c.GetArguments();
+			if (args.Length < 2) return false;
+			var msg = args[1] as OneOf<MString, string>?;
+			if (msg == null) return false;
+			return msg.Value.Match(
+				ms => ms.ToPlainText().Contains("Function result: TestValue"),
+				s => s.Contains("Function result: TestValue"));
+		});
+		
+		await Assert.That(messageCall).IsNotNull();
 	}
 
 	[Test]
@@ -49,9 +64,19 @@ public class MessageFunctionTests
 		
 		await Parser.FunctionParse(MModule.single("message(#1,Default,TESTFORMAT_MSGEVAL,3,7)"));
 		
-		await NotifyService
-			.Received(Quantity.AtLeastOne())
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+		var calls = NotifyService.ReceivedCalls().ToList();
+		var messageCall = calls.FirstOrDefault(c => 
+		{
+			var args = c.GetArguments();
+			if (args.Length < 2) return false;
+			var msg = args[1] as OneOf<MString, string>?;
+			if (msg == null) return false;
+			return msg.Value.Match(
+				ms => ms.ToPlainText().Contains("Result: 21"),
+				s => s.Contains("Result: 21"));
+		});
+		
+		await Assert.That(messageCall).IsNotNull();
 	}
 
 	[Test]
@@ -61,9 +86,19 @@ public class MessageFunctionTests
 		
 		await Parser.FunctionParse(MModule.single("message(#1,Default shown here,MISSING_ATTR,Arg1)"));
 		
-		await NotifyService
-			.Received(Quantity.AtLeastOne())
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+		var calls = NotifyService.ReceivedCalls().ToList();
+		var messageCall = calls.FirstOrDefault(c => 
+		{
+			var args = c.GetArguments();
+			if (args.Length < 2) return false;
+			var msg = args[1] as OneOf<MString, string>?;
+			if (msg == null) return false;
+			return msg.Value.Match(
+				ms => ms.ToPlainText().Contains("Default shown here"),
+				s => s.Contains("Default shown here"));
+		});
+		
+		await Assert.That(messageCall).IsNotNull();
 	}
 
 	[Test]
@@ -74,9 +109,19 @@ public class MessageFunctionTests
 		
 		await Parser.FunctionParse(MModule.single("message(#1,Default,TESTFORMAT_MSGARGS,First,Second,Third)"));
 		
-		await NotifyService
-			.Received(Quantity.AtLeastOne())
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+		var calls = NotifyService.ReceivedCalls().ToList();
+		var messageCall = calls.FirstOrDefault(c => 
+		{
+			var args = c.GetArguments();
+			if (args.Length < 2) return false;
+			var msg = args[1] as OneOf<MString, string>?;
+			if (msg == null) return false;
+			return msg.Value.Match(
+				ms => ms.ToPlainText().Contains("Args: First Second Third"),
+				s => s.Contains("Args: First Second Third"));
+		});
+		
+		await Assert.That(messageCall).IsNotNull();
 	}
 
 	[Test]

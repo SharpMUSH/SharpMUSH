@@ -17,6 +17,16 @@ public class VerbCommandTests
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
+	private static bool MessageEquals(OneOf<MString, string> msg, string expected) =>
+		msg.Match(
+			ms => ms.ToPlainText() == expected,
+			s => s == expected);
+
+	private static bool MessageContains(OneOf<MString, string> msg, string expected) =>
+		msg.Match(
+			ms => ms.ToPlainText().Contains(expected),
+			s => s.Contains(expected));
+
 	[Test]
 	public async ValueTask VerbWithDefaultMessages()
 	{
@@ -24,13 +34,22 @@ public class VerbCommandTests
 		
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@verb #1=#1,,,ActorDefault,,,OthersDefault"));
 		
-		await NotifyService
-			.Received(Quantity.AtLeastOne())
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+		var calls = NotifyService.ReceivedCalls().ToList();
+		var messageCall = calls.FirstOrDefault(c => 
+		{
+			var args = c.GetArguments();
+			if (args.Length < 2) return false;
+			var msg = args[1] as OneOf<MString, string>?;
+			if (msg == null) return false;
+			return msg.Value.Match(
+				ms => ms.ToPlainText().Contains("ActorDefault"),
+				s => s.Contains("ActorDefault"));
+		});
+		
+		await Assert.That(messageCall).IsNotNull();
 	}
 
 	[Test]
-	[Skip("Test environment issue - NotifyService calls not being captured correctly")]
 	public async ValueTask VerbWithAttributes()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&WHAT #1=You perform the action!"));
@@ -39,9 +58,19 @@ public class VerbCommandTests
 		
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@verb #1=#1,WHAT,DefaultWhat,OWHAT,DefaultOwhat"));
 		
-		await NotifyService
-			.Received(Quantity.AtLeastOne())
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+		var calls = NotifyService.ReceivedCalls().ToList();
+		var messageCall = calls.FirstOrDefault(c => 
+		{
+			var args = c.GetArguments();
+			if (args.Length < 2) return false;
+			var msg = args[1] as OneOf<MString, string>?;
+			if (msg == null) return false;
+			return msg.Value.Match(
+				ms => ms.ToPlainText().Contains("You perform the action!"),
+				s => s.Contains("You perform the action!"));
+		});
+		
+		await Assert.That(messageCall).IsNotNull();
 	}
 
 	[Test]
@@ -52,9 +81,19 @@ public class VerbCommandTests
 		
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@verb #1=#1,WHAT_ARGS,Default,,,,,Hello,World"));
 		
-		await NotifyService
-			.Received(Quantity.AtLeastOne())
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+		var calls = NotifyService.ReceivedCalls().ToList();
+		var messageCall = calls.FirstOrDefault(c => 
+		{
+			var args = c.GetArguments();
+			if (args.Length < 2) return false;
+			var msg = args[1] as OneOf<MString, string>?;
+			if (msg == null) return false;
+			return msg.Value.Match(
+				ms => ms.ToPlainText().Contains("You say: Hello World"),
+				s => s.Contains("You say: Hello World"));
+		});
+		
+		await Assert.That(messageCall).IsNotNull();
 	}
 
 	[Test]
@@ -64,9 +103,19 @@ public class VerbCommandTests
 		
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@verb #1=#2"));
 
-		await NotifyService
-			.Received(Quantity.AtLeastOne())
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+		var calls = NotifyService.ReceivedCalls().ToList();
+		var messageCall = calls.FirstOrDefault(c => 
+		{
+			var args = c.GetArguments();
+			if (args.Length < 2) return false;
+			var msg = args[1] as OneOf<MString, string>?;
+			if (msg == null) return false;
+			return msg.Value.Match(
+				ms => ms.ToPlainText().Contains("Usage: @verb"),
+				s => s.Contains("Usage: @verb"));
+		});
+		
+		await Assert.That(messageCall).IsNotNull();
 	}
 
 	[Test]
