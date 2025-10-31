@@ -96,13 +96,24 @@ public class MessageCommandTests
 	}
 
 	[Test]
+	[NotInParallel]
 	public async ValueTask MessageSilentSwitch()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&TESTFORMAT_MSGSILENT_61829 #1=MessageSilent_Value_61829"));
 		
+		var calls = NotifyService.ReceivedCalls().ToList();
+		var confirmationCallsBefore = calls.Count(c => 
+		{
+			var args = c.GetArguments();
+			if (args.Length < 2) return false;
+			if (args[1] is not OneOf<MString, string> msg) return false;
+			var text = msg.Match(ms => ms.ToPlainText(), s => s);
+			return text == "Message sent to 1 recipient(s).";
+		});
+		
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@message/silent #1=Default,TESTFORMAT_MSGSILENT_61829"));
 		
-		var calls = NotifyService.ReceivedCalls().ToList();
+		calls = NotifyService.ReceivedCalls().ToList();
 		var messageCall = calls.FirstOrDefault(c => 
 		{
 			var args = c.GetArguments();
@@ -115,8 +126,7 @@ public class MessageCommandTests
 		
 		await Assert.That(messageCall).IsNotNull();
 		
-		/* No easy way to test this in a safe manner.
-		var confirmationCall = calls.FirstOrDefault(c => 
+		var confirmationCallsAfter = calls.Count(c => 
 		{
 			var args = c.GetArguments();
 			if (args.Length < 2) return false;
@@ -125,8 +135,7 @@ public class MessageCommandTests
 			return text == "Message sent to 1 recipient(s).";
 		});
 		
-		await Assert.That(confirmationCall).IsNull();
-		*/
+		await Assert.That(confirmationCallsBefore).IsEqualTo(confirmationCallsAfter);
 	}
 
 	[Test]
