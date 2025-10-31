@@ -10,7 +10,6 @@ public class ObjectListFunctionUnitTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("lvcon(#0)", "")]
 	public async Task Lvcon(string str, string expected)
 	{

@@ -291,7 +291,6 @@ public class MiscFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("zone(#0)", "#-1")]
 	public async Task Zone(string str, string expected)
 	{
