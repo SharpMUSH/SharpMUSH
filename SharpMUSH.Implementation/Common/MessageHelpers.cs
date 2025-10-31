@@ -11,6 +11,9 @@ namespace SharpMUSH.Implementation.Common;
 
 public static class MessageHelpers
 {
+	private const string SpecialRecipientDbref = "#-2"; // When specified, attribute is on recipient
+	private const string RecipientReplacementToken = "##"; // Replaced with recipient's dbref
+	
 	/// <summary>
 	/// Core logic for @message command and message() function.
 	/// </summary>
@@ -42,7 +45,7 @@ public static class MessageHelpers
 		SharpAttribute[]? pinnedAttribute = null;
 
 		// Check if object is specified (obj/attr format)
-		if (attrObjSplit.Length > 1 && attrObjSplit[0] != "#-2")
+		if (attrObjSplit.Length > 1 && attrObjSplit[0] != SpecialRecipientDbref)
 		{
 			var maybeLocateTarget = await locateService.LocateAndNotifyIfInvalidWithCallState(
 				parser, executor, executor, attrObjSplit[0], LocateFlags.All);
@@ -204,7 +207,7 @@ public static class MessageHelpers
 		var processedArgs = functionArgs.Select(kvp =>
 		{
 			var value = kvp.Value.Message?.ToString() ?? string.Empty;
-			if (value == "##")
+			if (value == RecipientReplacementToken)
 			{
 				return new KeyValuePair<string, CallState>(
 					kvp.Key,
@@ -228,7 +231,7 @@ public static class MessageHelpers
 		else
 		{
 			var maybeAttr = await attributeService.GetAttributeAsync(
-				finalObjToEvaluate, finalObjToEvaluate,
+				executor, finalObjToEvaluate,
 				attrToEvaluate, IAttributeService.AttributeMode.Execute);
 
 			if (maybeAttr.IsError)

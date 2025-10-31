@@ -1796,7 +1796,7 @@ public partial class Commands
 		if (args.Count < 2)
 		{
 			await NotifyService!.Notify(executor, "Usage: @verb <victim>=<actor>,<what>,<whatd>,<owhat>,<owhatd>,<awhat>[,<args>]");
-			return new CallState(Errors.ErrorPerm);
+			return new CallState(Errors.ErrorCantSeeThat);
 		}
 
 		var victimName = args.ElementAtOrDefault(0).Value.Message!.ToPlainText();
@@ -1808,7 +1808,9 @@ public partial class Commands
 		var awhat = args.ElementAtOrDefault(6).Value.Message!.ToPlainText();
 
 		// Collect additional arguments (7 onwards) for stack
-		var stackArgs = args.Skip(7)
+		// These become %0, %1, %2, etc. in attribute evaluation
+		const int RequiredArgsBeforeStack = 7;
+		var stackArgs = args.Skip(RequiredArgsBeforeStack)
 			.Select((kvp, idx) => new KeyValuePair<string, CallState>(idx.ToString(), kvp.Value))
 			.ToDictionary();
 

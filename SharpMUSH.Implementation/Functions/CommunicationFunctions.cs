@@ -42,6 +42,8 @@ public partial class Functions
 		return CallState.Empty;
 	}
 
+	private const int MaxFunctionArguments = 10; // Maximum arguments for message() excluding switches
+
 	[SharpFunction(Name = "message", MinArgs = 3, MaxArgs = 14, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX)]
 	public static async ValueTask<CallState> Message(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -55,7 +57,7 @@ public partial class Functions
 		var recipients = orderedArgs["0"];
 		var defmsg = orderedArgs["1"];
 		var objectAndAttribute = orderedArgs["2"];
-		var inBetweenArgs = orderedArgs.Skip(3).Take(10)
+		var inBetweenArgs = orderedArgs.Skip(3).Take(MaxFunctionArguments)
 			.Select((kvp, idx) => new KeyValuePair<string, CallState>(idx.ToString(), kvp.Value));
 
 		// Parse switches from argument 13 (0-indexed)
