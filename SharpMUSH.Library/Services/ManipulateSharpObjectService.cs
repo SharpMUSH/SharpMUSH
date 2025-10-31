@@ -1,4 +1,3 @@
-using DotNext.Collections.Generic;
 using Mediator;
 using OneOf.Types;
 using SharpMUSH.Library.Commands.Database;
@@ -9,7 +8,6 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
-using AsyncEnumerable = System.Linq.AsyncEnumerable;
 
 namespace SharpMUSH.Library.Services;
 
@@ -51,7 +49,8 @@ public class ManipulateSharpObjectService(
 				return obj.Object().DBRef;
 
 			case { IsPlayer: true }:
-				var tryFindPlayerByName = await AsyncEnumerable.ToArrayAsync((await mediator.Send(new GetPlayerQuery(name.ToPlainText()))));
+				var tryFindPlayerByName = await (await mediator.Send(new GetPlayerQuery(name.ToPlainText())))
+					.ToArrayAsync();
 				if (tryFindPlayerByName.Any(x =>
 					    x.Object.Name.Equals(name.ToPlainText(), StringComparison.InvariantCultureIgnoreCase)))
 				{
