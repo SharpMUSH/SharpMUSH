@@ -10,12 +10,10 @@ public class UtilityFunctionUnitTests2
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("beep()", "")]
-	public async Task Beep(string str, string expected)
+	public async Task Beep()
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsNotNull();
+		var result = (await Parser.FunctionParse(MModule.single("beep()")))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo("\a");
 	}
 
 	[Test]
@@ -74,7 +72,6 @@ public class UtilityFunctionUnitTests2
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("colors()", "")]
 	public async Task Colors(string str, string expected)
 	{
@@ -103,7 +100,6 @@ public class UtilityFunctionUnitTests2
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("null()", "")]
 	public async Task Null(string str, string expected)
 	{
@@ -112,8 +108,8 @@ public class UtilityFunctionUnitTests2
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("s(Hello)", "Hello")]
+	[Arguments("s(strcat\\(a\\,b\\))", "ab")]
 	public async Task S(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -121,7 +117,6 @@ public class UtilityFunctionUnitTests2
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("@@(test)", "")]
 	public async Task AtAt(string str, string expected)
 	{

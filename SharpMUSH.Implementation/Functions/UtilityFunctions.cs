@@ -220,7 +220,17 @@ public partial class Functions
 	[SharpFunction(Name = "beep", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.AdminOnly | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> Beep(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var count = 1;
+		if (!parser.CurrentState.Arguments.TryGetValue("0", out var arg))
+		{
+			return ValueTask.FromResult(new CallState(new string('\a', count)));
+		}
+
+		var str = arg.Message!.ToString();
+		if (int.TryParse(str, out var parsed) && parsed is >= 1 and <= 5)
+			count = parsed;
+
+		return ValueTask.FromResult(new CallState(new string('\a', count)));
 	}
 
 	[SharpFunction(Name = "benchmark", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.NoParse)]
