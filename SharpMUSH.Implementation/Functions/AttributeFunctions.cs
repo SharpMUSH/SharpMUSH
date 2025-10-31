@@ -1,5 +1,6 @@
 ﻿using System.Reflection;
 using System.Text.RegularExpressions;
+using System.Linq;
 using OneOf;
 using OneOf.Types;
 using SharpMUSH.Implementation.Common;
@@ -945,15 +946,12 @@ public partial class Functions
 		}
 		
 		// Replace named captures
-		foreach (var groupName in regex.GetGroupNames())
+		foreach (var groupName in regex.GetGroupNames().Where(groupName => !int.TryParse(groupName, out _)))
 		{
-			if (!int.TryParse(groupName, out _))
+			var group = match.Groups[groupName];
+			if (group.Success)
 			{
-				var group = match.Groups[groupName];
-				if (group.Success)
-				{
-					replacement = replacement.Replace($"$<{groupName}>", group.Value);
-				}
+				replacement = replacement.Replace($"$<{groupName}>", group.Value);
 			}
 		}
 		
