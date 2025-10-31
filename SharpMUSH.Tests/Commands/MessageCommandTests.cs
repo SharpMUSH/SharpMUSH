@@ -126,9 +126,8 @@ public class MessageCommandTests
 			if (args.Length < 2) return false;
 			var msg = args[1] as OneOf<MString, string>?;
 			if (msg == null) return false;
-			return msg.Value.Match(
-				ms => ms.ToPlainText().Contains("Message sent to"),
-				s => s.Contains("Message sent to"));
+			var text = msg.Value.Match(ms => ms.ToPlainText(), s => s);
+			return text == "Message sent to 1 recipient(s).";
 		});
 		
 		await Assert.That(confirmationCall).IsNull();
