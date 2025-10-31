@@ -255,15 +255,14 @@ public partial class Functions
 			}
 		}
 
-		var allConnections = await ConnectionService!.GetAll()
+		var allConnections = ConnectionService!.GetAll()
 			.Where(x => status == "all" || 
 			            (status == "online" && x.State == IConnectionService.ConnectionState.LoggedIn) || 
-			            (status == "offline" && x.State != IConnectionService.ConnectionState.LoggedIn))
-			.ToArrayAsync();
+			            (status == "offline" && x.State != IConnectionService.ConnectionState.LoggedIn));
 
 		// Filter connections viewer can see
 		var visibleConnections = new List<long>();
-		foreach (var conn in allConnections)
+		await foreach (var conn in allConnections)
 		{
 			if (conn.Ref is null)
 			{
@@ -321,12 +320,15 @@ public partial class Functions
 		}
 
 		// NEEDED: 'Get All Players'.
-		var allConnectionsDbRefs = await AsyncEnumerable.ToArrayAsync(ConnectionService!
+		var allConnectionsDbRefs = new List<string>();
+		await foreach (var player in ConnectionService!
 			.GetAll()
 			.Where(x => x.Ref is not null)
 			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
-			.Where(async (x, _) => await PermissionService!.CanSee(looker, x))
-			.Select(x => $"#{x.Object().DBRef.Number}"));
+			.Where(async (x, _) => await PermissionService!.CanSee(looker, x)))
+		{
+			allConnectionsDbRefs.Add($"#{player.Object().DBRef.Number}");
+		}
 
 		return new CallState(string.Join(" ", allConnectionsDbRefs));
 	}
@@ -354,12 +356,19 @@ public partial class Functions
 		}
 
 		// Get all connected players that the looker can see
-		var allConnectionsObjIds = await AsyncEnumerable.ToArrayAsync(ConnectionService!
+		var allConnectionsObjIds = new List<string>();
+		await foreach (var player in ConnectionService!
 			.GetAll()
 			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
 			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
-			.Where(async (x, _) => await PermissionService!.CanSee(looker, x))
-			.Select(x => x.Object().Id));
+			.Where(async (x, _) => await PermissionService!.CanSee(looker, x)))
+		{
+			var id = player.Object().Id;
+			if (id is not null)
+			{
+				allConnectionsObjIds.Add(id);
+			}
+		}
 
 		return new CallState(string.Join(" ", allConnectionsObjIds));
 	}
@@ -371,12 +380,15 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		// Get all connected players that are not hidden
-		var nonHiddenConnections = await AsyncEnumerable.ToArrayAsync(ConnectionService!
+		var nonHiddenConnections = new List<string>();
+		await foreach (var player in ConnectionService!
 			.GetAll()
 			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
 			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
-			.Where(async (x, _) => !await x.HasFlag("DARK"))
-			.Select(x => $"#{x.Object().DBRef.Number}"));
+			.Where(async (x, _) => !await x.HasFlag("DARK")))
+		{
+			nonHiddenConnections.Add($"#{player.Object().DBRef.Number}");
+		}
 
 		return new CallState(string.Join(" ", nonHiddenConnections));
 	}
@@ -385,12 +397,19 @@ public partial class Functions
 	public static async ValueTask<CallState> MortalWhoObjectIds(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// Get all connected players that are not hidden
-		var nonHiddenConnectionsObjIds = await AsyncEnumerable.ToArrayAsync(ConnectionService!
+		var nonHiddenConnectionsObjIds = new List<string>();
+		await foreach (var player in ConnectionService!
 			.GetAll()
 			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
 			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
-			.Where(async (x, _) => !await x.HasFlag("DARK"))
-			.Select(x => x.Object().Id));
+			.Where(async (x, _) => !await x.HasFlag("DARK")))
+		{
+			var id = player.Object().Id;
+			if (id is not null)
+			{
+				nonHiddenConnectionsObjIds.Add(id);
+			}
+		}
 
 		return new CallState(string.Join(" ", nonHiddenConnectionsObjIds));
 	}
@@ -770,12 +789,19 @@ public partial class Functions
 		}
 
 		// Get all non-hidden connected player objids
-		var allObjIds = await AsyncEnumerable.ToArrayAsync(ConnectionService!
+		var allObjIds = new List<string>();
+		await foreach (var player in ConnectionService!
 			.GetAll()
 			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
 			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
-			.Where(async (x, _) => !await x.HasFlag("DARK"))
-			.Select(x => x.Object().Id));
+			.Where(async (x, _) => !await x.HasFlag("DARK")))
+		{
+			var id = player.Object().Id;
+			if (id is not null)
+			{
+				allObjIds.Add(id);
+			}
+		}
 
 		// Extract the range (1-indexed start position)
 		var result = allObjIds.Skip(start - 1).Take(count);
@@ -828,12 +854,15 @@ public partial class Functions
 		}
 
 		// Get all connected players that the looker can see
-		var allDbrefs = await AsyncEnumerable.ToArrayAsync(ConnectionService!
+		var allDbrefs = new List<string>();
+		await foreach (var player in ConnectionService!
 			.GetAll()
 			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
 			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
-			.Where(async (x, _) => await PermissionService!.CanSee(looker, x))
-			.Select(x => $"#{x.Object().DBRef.Number}"));
+			.Where(async (x, _) => await PermissionService!.CanSee(looker, x)))
+		{
+			allDbrefs.Add($"#{player.Object().DBRef.Number}");
+		}
 
 		// Extract the range (1-indexed start position)
 		var result = allDbrefs.Skip(start - 1).Take(count);
@@ -886,12 +915,19 @@ public partial class Functions
 		}
 
 		// Get all connected players that the looker can see
-		var allObjIds = await AsyncEnumerable.ToArrayAsync(ConnectionService!
+		var allObjIds = new List<string>();
+		await foreach (var player in ConnectionService!
 			.GetAll()
 			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
 			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
-			.Where(async (x, _) => await PermissionService!.CanSee(looker, x))
-			.Select(x => x.Object().Id));
+			.Where(async (x, _) => await PermissionService!.CanSee(looker, x)))
+		{
+			var id = player.Object().Id;
+			if (id is not null)
+			{
+				allObjIds.Add(id);
+			}
+		}
 
 		// Extract the range (1-indexed start position)
 		var result = allObjIds.Skip(start - 1).Take(count);
@@ -1003,9 +1039,11 @@ public partial class Functions
 		}
 
 		// Get all ports for this player, most recent to least recent
-		var ports = await ConnectionService!.Get(target.Object.DBRef)
-			.Select(x => x.Handle)
-			.ToArrayAsync();
+		var ports = new List<long>();
+		await foreach (var handle in ConnectionService!.Get(target.Object.DBRef).Select(x => x.Handle))
+		{
+			ports.Add(handle);
+		}
 
 		return new CallState(string.Join(" ", ports));
 	}
