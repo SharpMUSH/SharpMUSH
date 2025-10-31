@@ -57,6 +57,7 @@ public partial class Functions
 		var recipients = orderedArgs["0"];
 		var defmsg = orderedArgs["1"];
 		var objectAndAttribute = orderedArgs["2"];
+		// Transform arguments 3-12 to 0-9 for attribute evaluation (matching PennMUSH %0-%9 convention)
 		var inBetweenArgs = orderedArgs.Skip(3).Take(MaxFunctionArguments)
 			.Select((kvp, idx) => new KeyValuePair<string, CallState>(idx.ToString(), kvp.Value));
 

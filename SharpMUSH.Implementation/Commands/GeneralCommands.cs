@@ -1860,14 +1860,14 @@ public partial class Commands
 
 		// 1. Show actor the <what> attribute or <whatd> default
 		var actorMessage = await GetAttributeOrDefault(
-			parser, AttributeService!, victim, actor, what, whatd, stackArgs);
+			parser, AttributeService!, executor, victim, actor, what, whatd, stackArgs);
 
 		await NotifyService!.Notify(actor, actorMessage);
 
 		// 2. Show others in room the <owhat> attribute or <owhatd> default with actor's name prepended
 		var actorLocation = await actor.Where();
 		var othersMessage = await GetAttributeOrDefault(
-			parser, AttributeService!, victim, actor, owhat, owhatd, stackArgs);
+			parser, AttributeService!, executor, victim, actor, owhat, owhatd, stackArgs);
 
 		var prependedMessage = MModule.single($"{actor.Object().Name} {othersMessage.ToPlainText()}");
 
@@ -1880,7 +1880,7 @@ public partial class Commands
 		if (!string.IsNullOrWhiteSpace(awhat))
 		{
 			var maybeAwhatAttr = await AttributeService!.GetAttributeAsync(
-				victim, victim, awhat, IAttributeService.AttributeMode.Execute);
+				executor, victim, awhat, IAttributeService.AttributeMode.Execute);
 
 			if (!maybeAwhatAttr.IsError)
 			{
@@ -1902,6 +1902,7 @@ public partial class Commands
 	private static async ValueTask<MString> GetAttributeOrDefault(
 		IMUSHCodeParser parser,
 		IAttributeService attributeService,
+		AnySharpObject executor,
 		AnySharpObject victim,
 		AnySharpObject actor,
 		string attrName,
@@ -1914,7 +1915,7 @@ public partial class Commands
 		}
 
 		var maybeAttr = await attributeService.GetAttributeAsync(
-			victim, victim, attrName, IAttributeService.AttributeMode.Execute);
+			executor, victim, attrName, IAttributeService.AttributeMode.Execute);
 
 		if (maybeAttr.IsError)
 		{
@@ -2432,9 +2433,18 @@ public partial class Commands
 		var recipientsArg = args.ElementAtOrDefault(0).Value.Message!;
 		var defmsg = args.ElementAtOrDefault(1).Value.Message!;
 		var objectAttrArg = args.ElementAtOrDefault(2).Value.Message!.ToPlainText();
+		// Transform arguments 3+ to 0+ for attribute evaluation (matching PennMUSH %0-%9, r(0,args)-r(29,args) convention)
+		// ArgumentsOrdered has numeric string keys, so we parse and shift them
 		var otherArgs = args
 			.Skip(3)
-			.Select(x => new KeyValuePair<string, CallState>((int.Parse(x.Key) - 3).ToString(), x.Value));
+			.Select(x => {
+				if (int.TryParse(x.Key, out var numKey))
+				{
+					return new KeyValuePair<string, CallState>((numKey - 3).ToString(), x.Value);
+				}
+				// Fallback: keep original key if not numeric (shouldn't happen with ArgumentsOrdered)
+				return x;
+			});
 
 		// Parse switches
 		var isRemit = switches.Contains("REMIT");
