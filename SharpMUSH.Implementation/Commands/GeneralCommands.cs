@@ -1681,7 +1681,8 @@ public partial class Commands
 		var excludeObjects = new List<AnySharpObject>();
 
 		// Resolve all objects to exclude
-		var nameTasks = objectList
+		_ = await objectList
+			.ToAsyncEnumerable()
 			.Select(obj => obj.IsT0 ? obj.AsT0.ToString() : obj.AsT1)
 			.Select(objName =>
 				LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
@@ -1694,8 +1695,8 @@ public partial class Commands
 					{
 						excludeObjects.Add(target);
 						return CallState.Empty;
-					}));
-		await Task.WhenAll(nameTasks);
+					}))
+			.ToArrayAsync();
 
 		await CommunicationService!.SendToRoomAsync(
 			executor,
