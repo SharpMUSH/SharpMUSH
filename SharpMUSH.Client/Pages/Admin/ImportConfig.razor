@@ -94,7 +94,7 @@
 	private string? _fileContent;
 	private bool _isImporting;
 
-	private async Task OnFileSelected(IBrowserFile file)
+	private async Task OnFileSelected(IBrowserFile? file)
 	{
 		_selectedFile = file;
 		
@@ -102,9 +102,9 @@
 		{
 			try
 			{
-				using var stream = file.OpenReadStream(maxAllowedSize: 1048576); // 1MB
-				using var reader = new StreamReader(stream);
-				_fileContent = await reader.ReadToEndAsync();
+                await using var stream = file.OpenReadStream(maxAllowedSize: 1048576); // 1MB
+                using var reader = new StreamReader(stream);
+                _fileContent = await reader.ReadToEndAsync();
 			}
 			catch (Exception ex)
 			{
