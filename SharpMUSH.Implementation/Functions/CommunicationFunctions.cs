@@ -42,43 +42,40 @@ public partial class Functions
 		return CallState.Empty;
 	}
 
-	[SharpFunction(Name = "message", MinArgs = 3, MaxArgs = 14, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "message", MinArgs = 3, MaxArgs = 14, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX)]
 	public static async ValueTask<CallState> Message(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		/*
-	MESSAGE()
-  message(<recipients>, <message>, [<object>/]<attribute>[, <arg0>[, ... , <arg9>][, <switches>]])
-
-  message() is the function form of @message/silent, and sends a message, formatted through an attribute, to a list of objects. See 'help @message' for more information.
-
-  <switches> is a space-separated list of one or more of "nospoof", "spoof", "oemit" and "remit", and makes message() behaviour as per @message/<switches>. For backwards-compatability reasons, all ten <arg> arguments must be given (even if empty) to use <switches>.
-
-  Examples:
-  > &formatter #123
-  > think message(me, Default> foo bar baz, #123/formatter, foo bar baz)
-  Foo Bar Baz
-  > &formatter #123=Formatted> [iter(%0,capstr(%i0))]
-  > think message(me, Default> foo bar baz, #123/formatter, foo bar baz)
-  Formatted> Foo Bar Baz
-
-  > think message(here, default, #123/formatter, backwards compatability is annoying sometimes,,,,,,,,,,remit)
-  Formatted> Backwards Compatability Is Annoying Sometimes
-		 */
+		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
+		{
+			return new CallState(Errors.ErrorNoSideFx);
+		}
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var orderedArgs = parser.CurrentState.ArgumentsOrdered;
 		var recipients = orderedArgs["0"];
-		var message = orderedArgs["1"];
+		var defmsg = orderedArgs["1"];
 		var objectAndAttribute = orderedArgs["2"];
-		var inBetweenArgs = orderedArgs.Skip(3).Take(10);
-		var switches = ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 13, "");
+		var inBetweenArgs = orderedArgs.Skip(3).Take(10)
+			.Select((kvp, idx) => new KeyValuePair<string, CallState>(idx.ToString(), kvp.Value));
 
-		var playerList = ArgHelpers.NameList(recipients.Message!.ToPlainText());
+		// Parse switches from argument 13 (0-indexed)
+		var switchesText = parser.CurrentState.Arguments.TryGetValue("13", out var switchArg)
+			? (await switchArg.ParsedMessage())?.ToPlainText() ?? ""
+			: "";
+		var switchesList = switchesText.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		
+		var isRemit = switchesList.Contains("remit", StringComparer.OrdinalIgnoreCase);
+		var isOemit = switchesList.Contains("oemit", StringComparer.OrdinalIgnoreCase);
+		var isNospoof = switchesList.Contains("nospoof", StringComparer.OrdinalIgnoreCase);
+		var isSpoof = switchesList.Contains("spoof", StringComparer.OrdinalIgnoreCase);
 
-		// Step 1: Evaluate message into the default object/attribute, pass the arguments into it.
-		// Step 2: Send the message to all that want to hear it.
+		await MessageHelpers.ProcessMessageAsync(
+			parser, Mediator!, LocateService!, AttributeService!, NotifyService!,
+			PermissionService!, CommunicationService!, executor,
+			recipients.Message!, defmsg.Message!, objectAndAttribute.Message!.ToPlainText(),
+			inBetweenArgs, isRemit, isOemit, isNospoof, isSpoof, isSilent: true);
 
-		throw new NotImplementedException();
+		return CallState.Empty;
 	}
 
 	[SharpFunction(Name = "nsemit", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]

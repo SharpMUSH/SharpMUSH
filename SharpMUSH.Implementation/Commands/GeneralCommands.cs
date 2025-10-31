@@ -1767,8 +1767,169 @@ public partial class Commands
 		MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Verb(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		/*
+		 @verb <victim>=<actor>,<what>,<whatd>,<owhat>,<owhatd>,<awhat>,<args>
+		 
+		 This command provides a way to do user-defined verbs with associated @attr/@oattr/@aattr groups.
+		 
+		 <actor> sees the contents of <victim>'s <what> attribute, or <whatd> if <victim> doesn't have a <what>.
+		 Everyone in the same room as <actor> sees the contents of <victim>'s <owhat> attribute, 
+		 with <actor>'s name prepended, or <owhatd>, also with <actor>'s name prepended, 
+		 if <victim> doesn't have an <owhat>.
+		 <victim> executes the contents of his <awhat> attribute.
+		 
+		 By supplying up to 29 <args>, you may pass those values on the stack 
+		 (i.e. %0, %1, %2, etc. up through %9, and r(0,args) to r(29,args)).
+		 
+		 Permission checks:
+		 1. The object which did the @verb is a wizard.
+		 2. The object which did the @verb controls both <actor> and <victim>
+		 3. The thing which triggered the @verb must be <actor>, AND the object which did 
+		    the @verb must be either privileged or control <victim> or <victim> must be VISUAL.
+		 */
+
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).WithoutNone();
+		var args = parser.CurrentState.ArgumentsOrdered;
+
+		// Parse arguments
+		if (args.Count < 2)
+		{
+			await NotifyService!.Notify(executor, "Usage: @verb <victim>=<actor>,<what>,<whatd>,<owhat>,<owhatd>,<awhat>[,<args>]");
+			return new CallState(Errors.ErrorPerm);
+		}
+
+		var victimName = args.ElementAtOrDefault(0).Value.Message!.ToPlainText();
+		var actorName = args.ElementAtOrDefault(1).Value.Message!.ToPlainText();
+		var what = args.ElementAtOrDefault(2).Value.Message!.ToPlainText();
+		var whatd = args.ElementAtOrDefault(3).Value.Message!.ToPlainText();
+		var owhat = args.ElementAtOrDefault(4).Value.Message!.ToPlainText();
+		var owhatd = args.ElementAtOrDefault(5).Value.Message!.ToPlainText();
+		var awhat = args.ElementAtOrDefault(6).Value.Message!.ToPlainText();
+
+		// Collect additional arguments (7 onwards) for stack
+		var stackArgs = args.Skip(7)
+			.Select((kvp, idx) => new KeyValuePair<string, CallState>(idx.ToString(), kvp.Value))
+			.ToDictionary();
+
+		// Locate victim
+		var maybeVictim = await LocateService!.LocateAndNotifyIfInvalidWithCallState(
+			parser, executor, executor, victimName, LocateFlags.All);
+
+		if (maybeVictim.IsError)
+		{
+			await NotifyService!.Notify(executor, maybeVictim.AsError.Message!);
+			return maybeVictim.AsError;
+		}
+
+		var victim = maybeVictim.AsSharpObject;
+
+		// Locate actor
+		var maybeActor = await LocateService!.LocateAndNotifyIfInvalidWithCallState(
+			parser, executor, executor, actorName, LocateFlags.All);
+
+		if (maybeActor.IsError)
+		{
+			await NotifyService!.Notify(executor, maybeActor.AsError.Message!);
+			return maybeActor.AsError;
+		}
+
+		var actor = maybeActor.AsSharpObject;
+
+		// Permission checks - simplified version
+		var isWizard = await executor.IsWizard();
+		var controlsBoth = await PermissionService!.Controls(executor, actor) &&
+		                   await PermissionService!.Controls(executor, victim);
+		var enactorIsActor = enactor.Object().DBRef == actor.Object().DBRef;
+		var executorPrivileged = await executor.IsRoyalty();
+		var executorControlsVictim = await PermissionService!.Controls(executor, victim);
+		// For VISUAL flag check, we'd need flag system support - skipping for now
+
+		var hasPermission = isWizard || controlsBoth ||
+		                    (enactorIsActor && (executorPrivileged || executorControlsVictim));
+
+		if (!hasPermission)
+		{
+			await NotifyService!.Notify(executor, "Permission denied.");
+			return new CallState(Errors.ErrorPerm);
+		}
+
+		// Execute the verb
+
+		// 1. Show actor the <what> attribute or <whatd> default
+		var actorMessage = await GetAttributeOrDefault(
+			parser, AttributeService!, victim, actor, what, whatd, stackArgs);
+
+		await NotifyService!.Notify(actor, actorMessage);
+
+		// 2. Show others in room the <owhat> attribute or <owhatd> default with actor's name prepended
+		var actorLocation = await actor.Where();
+		var othersMessage = await GetAttributeOrDefault(
+			parser, AttributeService!, victim, actor, owhat, owhatd, stackArgs);
+
+		var prependedMessage = MModule.single($"{actor.Object().Name} {othersMessage.ToPlainText()}");
+
+		await CommunicationService!.SendToRoomAsync(
+			actor, actorLocation, _ => prependedMessage,
+			INotifyService.NotificationType.Emit,
+			excludeObjects: [actor]);
+
+		// 3. Execute victim's <awhat> attribute if it exists
+		if (!string.IsNullOrWhiteSpace(awhat))
+		{
+			var maybeAwhatAttr = await AttributeService!.GetAttributeAsync(
+				victim, victim, awhat, IAttributeService.AttributeMode.Execute);
+
+			if (!maybeAwhatAttr.IsError)
+			{
+				await parser.With(
+					state => state with
+					{
+						Executor = victim.Object().DBRef,
+						Enactor = actor.Object().DBRef,
+						Arguments = stackArgs
+					},
+					newParser => AttributeService.EvaluateAttributeFunctionAsync(
+						newParser, victim, victim, awhat, stackArgs));
+			}
+		}
+
+		return CallState.Empty;
+	}
+
+	private static async ValueTask<MString> GetAttributeOrDefault(
+		IMUSHCodeParser parser,
+		IAttributeService attributeService,
+		AnySharpObject victim,
+		AnySharpObject actor,
+		string attrName,
+		string defaultValue,
+		Dictionary<string, CallState> stackArgs)
+	{
+		if (string.IsNullOrWhiteSpace(attrName))
+		{
+			return MModule.single(defaultValue);
+		}
+
+		var maybeAttr = await attributeService.GetAttributeAsync(
+			victim, victim, attrName, IAttributeService.AttributeMode.Execute);
+
+		if (maybeAttr.IsError)
+		{
+			return MModule.single(defaultValue);
+		}
+
+		var result = await parser.With(
+			state => state with
+			{
+				Executor = victim.Object().DBRef,
+				Enactor = actor.Object().DBRef,
+				Arguments = stackArgs
+			},
+			newParser => attributeService.EvaluateAttributeFunctionAsync(
+				newParser, victim, victim, attrName, stackArgs));
+
+		return result ?? MModule.single(defaultValue);
 	}
 
 	[SharpCommand(Name = "@ENTRANCES", Switches = ["EXITS", "THINGS", "PLAYERS", "ROOMS"],
@@ -2263,7 +2424,9 @@ public partial class Commands
 	public static async ValueTask<Option<CallState>> Message(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var switches = parser.CurrentState.Switches;
 		var args = parser.CurrentState.ArgumentsOrdered;
+
 		var recipientsArg = args.ElementAtOrDefault(0).Value.Message!;
 		var defmsg = args.ElementAtOrDefault(1).Value.Message!;
 		var objectAttrArg = args.ElementAtOrDefault(2).Value.Message!.ToPlainText();
@@ -2271,128 +2434,19 @@ public partial class Commands
 			.Skip(3)
 			.Select(x => new KeyValuePair<string, CallState>((int.Parse(x.Key) - 3).ToString(), x.Value));
 
-		var recipientNamelist = ArgHelpers.NameList(recipientsArg.ToString());
+		// Parse switches
+		var isRemit = switches.Contains("REMIT");
+		var isOemit = switches.Contains("OEMIT");
+		var isNospoof = switches.Contains("NOSPOOF");
+		var isSpoof = switches.Contains("SPOOF");
+		var isSilent = switches.Contains("SILENT") || !switches.Contains("NOISY");
 
-		var attrObjSplit = objectAttrArg.Split('/');
-		AnySharpObject? objToEvaluate = null;
-		string attrToEvaluate;
-		SharpAttribute[]? pinnedAttribute = null;
+		var result = await MessageHelpers.ProcessMessageAsync(
+			parser, Mediator!, LocateService!, AttributeService!, NotifyService!,
+			PermissionService!, CommunicationService!, executor,
+			recipientsArg, defmsg, objectAttrArg, otherArgs,
+			isRemit, isOemit, isNospoof, isSpoof, isSilent);
 
-		if (attrObjSplit.Length > 1)
-		{
-			var maybeLocateTarget = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor,
-				executor,
-				attrObjSplit[0],
-				LocateFlags.All);
-
-			if (maybeLocateTarget.IsError)
-			{
-				await NotifyService!.Notify(executor, maybeLocateTarget.AsError.Message!);
-				return new CallState(Errors.ErrorNotVisible);
-			}
-
-			objToEvaluate = maybeLocateTarget.AsSharpObject;
-			attrToEvaluate = string.Join("/", attrObjSplit.Skip(1));
-
-			var attr = await AttributeService!.GetAttributeAsync(executor, objToEvaluate, attrToEvaluate,
-				IAttributeService.AttributeMode.Execute);
-
-			if (attr.IsError)
-			{
-				await NotifyService!.Notify(executor, attr.AsCallStateError.Message!);
-				return attr.AsCallStateError;
-			}
-
-			pinnedAttribute = attr.AsAttribute;
-		}
-		else
-		{
-			attrToEvaluate = objectAttrArg;
-		}
-
-		foreach (var target in recipientNamelist)
-		{
-			var targetString = target.Match(dbref => dbref.ToString(), str => str);
-			var maybeLocateTarget = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor,
-				executor,
-				targetString,
-				LocateFlags.All);
-
-			if (maybeLocateTarget.IsError)
-			{
-				await NotifyService!.Notify(executor, maybeLocateTarget.AsError.Message!);
-				continue;
-			}
-
-			var locateTarget = maybeLocateTarget.AsSharpObject;
-
-			if (!await PermissionService!.CanInteract(locateTarget, executor, IPermissionService.InteractType.Hear))
-			{
-				await NotifyService!.Notify(executor, $"{locateTarget.Object().Name} does not want to hear from you.");
-				continue;
-			}
-
-			var finalObjToEvaluate = objToEvaluate ?? locateTarget;
-
-			if (pinnedAttribute != null)
-			{
-				var result = await parser.With(state => state with
-					{
-						Enactor = executor.Object().DBRef,
-						Arguments = otherArgs.ToDictionary()
-					},
-					newParser => newParser.FunctionParse(pinnedAttribute.Last().Value));
-
-				await NotifyService!.Notify(locateTarget, result!.Message!);
-			}
-			else
-			{
-				var maybeAttr = await AttributeService!.GetAttributeAsync(finalObjToEvaluate, finalObjToEvaluate,
-					attrToEvaluate, IAttributeService.AttributeMode.Execute);
-
-				// Default behavior for not having access or there not being one, is to display the message as is.
-				if (maybeAttr.IsError)
-				{
-					await NotifyService!.Notify(locateTarget, defmsg);
-				}
-				else
-				{
-					var result = await parser.With(state => state with
-						{
-							Enactor = executor.Object().DBRef
-						},
-						newParser => AttributeService.EvaluateAttributeFunctionAsync(newParser, locateTarget,
-							locateTarget, attrToEvaluate, otherArgs.ToDictionary()));
-
-					await NotifyService!.Notify(locateTarget, result!);
-				}
-			}
-
-			return CallState.Empty;
-		}
-
-		/*
-		 @message[/<switches>] <recipients>=<defmsg>,[<obj>/]<attr>[,<arg0>[, ... , <arg29>]]]
-
-		  @message is designed for the use of *format messages, such as @pageformat or @chatformat. It is intended for use with @hooking page, @chat, or say/pose/emit, or for coding language systems.
-
-		  For each of the given <recipients>, <obj>/<attr> is evaluated (with up to 30 arguments, as if it was ufun()'d), and the object is shown the result via @pemit. If the attribute does not exist, or you do not have permission to evaluate it, they are shown <defmsg> instead.
-
-		  If <obj> is not given, or is given as "#-2", the attribute will be checked on the recipient.
-
-		  If one of the arguments matches "##", it will be replaced with the dbref of the recipient.
-
-		  Switches:
-		    /noeval   -- none of @message's arguments will be evaluated
-		    /spoof    -- the message will appear to be from the enactor, not the executor. Requires the Can_Spoof @power
-		    /remit    -- works like @remit, treating <recipients> as a list of rooms to send the message to
-		    /oemit    -- works like @oemit, with <recipients> as a list of objects not to emit to. See 'help @oemit' for more info
-		    /nospoof  -- don't show nospoof info, as per @nspemit/@nsremit/@nsoemit
-		    /silent   -- don't show a confirmation message
-		    /noisy    -- show a confirmation message; default depends on the silent_pemit @config option
-		*/
-
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		return result;
 	}
 }
