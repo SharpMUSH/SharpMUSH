@@ -1,9 +1,10 @@
-﻿using System.Globalization;
+﻿﻿using System.Globalization;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
+using ANSILibrary;
 using DotNext.Collections.Generic;
 using Humanizer;
 using Microsoft.FSharp.Core;
@@ -18,6 +19,8 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.MarkupString;
+using static MarkupString.MarkupImplementation;
+using static ANSILibrary.ANSI;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -1002,11 +1005,22 @@ public partial class Functions
 	[SharpFunction(Name = "decompose", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Decompose(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var str = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var input = parser.CurrentState.Arguments["0"].Message!;
 		
-		// Escape special characters like escape() does
-		var result = str
-			.Replace("\\", "\\\\")
+		// Use the new MarkupString evaluation capability to reconstruct ANSI function calls
+		var reconstructed = MModule.evaluateWith((markupType, innerText) =>
+		{
+			return markupType switch
+			{
+				MModule.MarkupTypes.MarkedupText { Item: Ansi ansiMarkup } 
+					=> ReconstructAnsiCall(ansiMarkup.Details, innerText),
+				_ => innerText
+			};
+		}, input);
+		
+		// Now apply the standard decompose escaping to the reconstructed string
+		var result = reconstructed
+			.Replace("\\", @"\\")
 			.Replace("%", "\\%")
 			.Replace(";", "\\;")
 			.Replace("[", "\\[")
@@ -1020,7 +1034,7 @@ public partial class Functions
 			.Replace("$", "\\$");
 
 		// Handle multiple consecutive spaces by converting them to %b sequences
-		result = Regex.Replace(result, @"  +", m => string.Join("", Enumerable.Repeat("%b", m.Length)));
+		result = Regex.Replace(result, "\\s+", m => string.Join("", Enumerable.Repeat("%b", m.Length)));
 
 		// Handle newlines and tabs
 		result = result.Replace("\r", "%r").Replace("\n", "%r").Replace("\t", "%t");
@@ -1028,7 +1042,80 @@ public partial class Functions
 		return ValueTask.FromResult(new CallState(result));
 	}
 
-	[SharpFunction(Name = "FORMDECODE", MinArgs = 1, MaxArgs = 3,
+	/// <summary>
+	/// Reconstructs an ansi() function call from AnsiStructure and inner text
+	/// </summary>
+	private static string ReconstructAnsiCall(AnsiStructure ansiDetails, string innerText)
+	{
+		var attributes = new List<string>();
+
+		// Handle text attributes first
+		if (ansiDetails.Bold) attributes.Add("h");
+		if (ansiDetails.Underlined) attributes.Add("u"); 
+		if (ansiDetails.Blink) attributes.Add("f");
+		if (ansiDetails.Inverted) attributes.Add("i");
+
+		// Handle foreground colors
+		if (!ansiDetails.Foreground.Equals(AnsiColor.NoAnsi))
+		{
+			var colorCode = ConvertAnsiColorToCode(ansiDetails.Foreground);
+			if (!string.IsNullOrEmpty(colorCode))
+				attributes.Add(colorCode);
+		}
+
+		// Handle background colors  
+		if (!ansiDetails.Background.Equals(AnsiColor.NoAnsi))
+		{
+			var colorCode = ConvertAnsiColorToCode(ansiDetails.Background, isBackground: true);
+			if (!string.IsNullOrEmpty(colorCode))
+				attributes.Add(colorCode);
+		}
+
+		// If we have attributes, wrap in ansi() function
+		if (attributes.Count > 0)
+		{
+			var attributeString = string.Join(",", attributes);
+			return $"ansi({attributeString},{innerText})";
+		}
+
+		return innerText;
+	}
+
+	/// <summary>
+	/// Converts AnsiColor to PennMUSH color code
+	/// </summary>
+	private static string ConvertAnsiColorToCode(ANSI.AnsiColor color, bool isBackground = false)
+	{
+		var prefix = isBackground ? "b" : "";
+		
+		return color switch
+		{
+			ANSI.AnsiColor.RGB rgb => $"{prefix}{rgb.Item.R:X2}{rgb.Item.G:X2}{rgb.Item.B:X2}",
+			AnsiColor.ANSI ansi when ansi.Item.Length == 1 => ansi.Item[0] switch
+			{
+				30 => $"{prefix}x", // black
+				31 => $"{prefix}r", // red  
+				32 => $"{prefix}g", // green
+				33 => $"{prefix}y", // yellow
+				34 => $"{prefix}b", // blue
+				35 => $"{prefix}m", // magenta
+				36 => $"{prefix}c", // cyan
+				37 => $"{prefix}w", // white
+				90 => $"{prefix}X", // bright black
+				91 => $"{prefix}R", // bright red
+				92 => $"{prefix}G", // bright green
+				93 => $"{prefix}Y", // bright yellow
+				94 => $"{prefix}B", // bright blue
+				95 => $"{prefix}M", // bright magenta
+				96 => $"{prefix}C", // bright cyan
+				97 => $"{prefix}W", // bright white
+				_ => ""
+			},
+			_ => ""
+		};
+	}
+
+	[SharpFunction(Name = "formdecode", MinArgs = 1, MaxArgs = 3,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> FormDecode(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
