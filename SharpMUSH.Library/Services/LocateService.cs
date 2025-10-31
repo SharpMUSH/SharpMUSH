@@ -48,16 +48,17 @@ public partial class LocateService(IMediator mediator,
 	{
 		var loc = await Locate(parser, looker, executor, name, flags);
 		var caller = await parser.CurrentState.CallerObject(mediator);
-		if (!loc.IsValid())
+		if (loc.IsValid())
 		{
-			await notifyService.Notify(executor, loc.IsError ? loc.AsError.Value : "I can't see that here",
-				caller.WithoutNone());
-			var callStateMessage = loc.IsError ? loc.AsError.Value : Errors.ErrorCantSeeThat;
-
-			return new Error<CallState>(new CallState(callStateMessage));
+			return loc.AsAnyObject;
 		}
 
-		return loc.AsAnyObject;
+		await notifyService.Notify(executor, loc.IsError ? loc.AsError.Value : "I can't see that here",
+			caller.WithoutNone());
+		var callStateMessage = loc.IsError ? loc.AsError.Value : Errors.ErrorCantSeeThat;
+
+		return new Error<CallState>(new CallState(callStateMessage));
+
 	}
 
 	public async ValueTask<CallState> LocateAndNotifyIfInvalidWithCallStateFunction(IMUSHCodeParser parser,
