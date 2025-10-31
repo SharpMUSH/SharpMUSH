@@ -376,9 +376,52 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "next", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> Next(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Next(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+			executor,
+			executor,
+			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
+			LocateFlags.All,
+			async locate =>
+			{
+				// Get the location of the object
+				AnySharpContainer location;
+				
+				if (locate.IsExit)
+				{
+					// For exits, get the source room (location)
+					var exitLocation = await locate.AsExit.Location.WithCancellation(CancellationToken.None);
+					location = exitLocation;
+				}
+				else if (locate.IsContent)
+				{
+					// For things and players, get their location
+					location = await locate.AsContent.Location();
+				}
+				else
+				{
+					// Rooms don't have a next
+					return "#-1";
+				}
+
+				// Get all contents of the location
+				var contents = await (await location.Content(Mediator!)).ToListAsync();
+				
+				// Find the current object in the list
+				var currentIndex = contents.FindIndex(x => x.Object().DBRef == locate.Object().DBRef);
+				
+				if (currentIndex == -1 || currentIndex == contents.Count - 1)
+				{
+					// Object not found or is the last item
+					return "#-1";
+				}
+
+				// Return the next object
+				return contents[currentIndex + 1].Object().DBRef;
+			});
 	}
 
 	[SharpFunction(Name = "nextdbref", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]
@@ -542,9 +585,44 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "zone", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> Zone(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Zone(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		var arg0 = args["0"].Message!.ToPlainText()!;
+		var hasArg1 = args.TryGetValue("1", out var arg1Value);
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+			executor,
+			executor,
+			arg0,
+			LocateFlags.All,
+			async target =>
+			{
+				// Check if we can examine the object
+				if (!await PermissionService!.CanExamine(executor, target))
+				{
+					return "#-1";
+				}
+
+				if (hasArg1)
+				{
+					// Setting zone is a side effect
+					if (Configuration!.CurrentValue.Function.FunctionSideEffects == false)
+					{
+						return Errors.ErrorNoSideFx;
+					}
+
+					// Zone setting would be implemented here when @chzone is implemented
+					// For now, return an error indicating it's not implemented
+					return "#-1 ZONE SETTING NOT YET IMPLEMENTED";
+				}
+
+				// TODO: Implement zone retrieval when zone infrastructure is complete
+				// Zones in PennMUSH are typically stored as a special parent or attribute
+				// For now, return #-1 (no zone)
+				return "#-1";
+			});
 	}
 
 	[SharpFunction(Name = "xthings", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -747,27 +825,93 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "ncon", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> dbwalker(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> NumberOfContents(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+			executor,
+			executor,
+			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
+			LocateFlags.All,
+			async locate =>
+			{
+				if (!locate.IsContainer)
+				{
+					return Errors.ExitsCannotContainThings;
+				}
+
+				return await (await locate.AsContainer.Content(Mediator!)).CountAsync();
+			});
 	}
 
 	[SharpFunction(Name = "nexits", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> NumberOfExits(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> NumberOfExits(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+			executor,
+			executor,
+			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
+			LocateFlags.All,
+			async locate =>
+			{
+				if (!locate.IsContainer)
+				{
+					return Errors.ExitsCannotContainThings;
+				}
+
+				return await (await locate.AsContainer.Content(Mediator!))
+					.Where(x => x.IsExit)
+					.CountAsync();
+			});
 	}
 
 	[SharpFunction(Name = "nplayers", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> NumberOfPlayers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> NumberOfPlayers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+			executor,
+			executor,
+			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
+			LocateFlags.All,
+			async locate =>
+			{
+				if (!locate.IsContainer)
+				{
+					return Errors.ExitsCannotContainThings;
+				}
+
+				return await (await locate.AsContainer.Content(Mediator!))
+					.Where(x => x.IsPlayer)
+					.CountAsync();
+			});
 	}
 
 	[SharpFunction(Name = "nthings", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> NumberOfThings(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> NumberOfThings(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+			executor,
+			executor,
+			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
+			LocateFlags.All,
+			async locate =>
+			{
+				if (!locate.IsContainer)
+				{
+					return Errors.ExitsCannotContainThings;
+				}
+
+				return await (await locate.AsContainer.Content(Mediator!))
+					.Where(x => x.IsThing)
+					.CountAsync();
+			});
 	}
 
 	[SharpFunction(Name = "nvcon", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
