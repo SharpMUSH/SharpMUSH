@@ -1,4 +1,4 @@
-﻿﻿using System.Globalization;
+﻿using System.Globalization;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
@@ -368,7 +368,7 @@ public partial class Functions
 		{
 			var c = str[i];
 			var t = template[i];
-			
+
 			var accented = ApplyAccent(c, t);
 			result.Append(accented);
 		}
@@ -646,7 +646,8 @@ public partial class Functions
 		var leftCurly = arg0.Count(c => c == '{');
 		var rightCurly = arg0.Count(c => c == '}');
 
-		return ValueTask.FromResult(new CallState($"{leftSquare} {rightSquare} {leftParen} {rightParen} {leftCurly} {rightCurly}"));
+		return ValueTask.FromResult(
+			new CallState($"{leftSquare} {rightSquare} {leftParen} {rightParen} {leftCurly} {rightCurly}"));
 	}
 
 	[SharpFunction(Name = "CAPSTR", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
@@ -794,6 +795,7 @@ public partial class Functions
 		{
 			return dbref;
 		}
+
 		return null;
 	}
 
@@ -922,6 +924,7 @@ public partial class Functions
 					result.Append(c);
 					result.Append(replace);
 				}
+
 				str = result.ToString();
 			}
 			else
@@ -982,22 +985,22 @@ public partial class Functions
 		{
 			return Errors.ErrorInteger;
 		}
-		
-		if(startInt < 0 || endInt < 0)
+
+		if (startInt < 0 || endInt < 0)
 		{
 			return Errors.ErrorPositiveInteger;
 		}
 
 		// DO Object and Attribute split here.
-		
+
 		endInt = Math.Min(endInt, str.Length);
-		
+
 		var left = MModule.substring(startInt, endInt - startInt, str);
 		var right = MModule.substring(endInt, str.Length - endInt, str);
 		var remainder = MModule.substring(endInt - startInt, str.Length - endInt + startInt, str);
 
 		// TODO: MModule.apply2 over the remainder to apply the attribute-function to each character.
-		
+
 		return MModule.multiple([left, remainder, right]);
 	}
 
@@ -1006,19 +1009,18 @@ public partial class Functions
 	public static ValueTask<CallState> Decompose(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var input = parser.CurrentState.Arguments["0"].Message!;
-		
-		// Use the new MarkupString evaluation capability to reconstruct ANSI function calls
+
+		// TODO: ansi() needs to happen after the replacements, of seperately from the replacements.
 		var reconstructed = MModule.evaluateWith((markupType, innerText) =>
 		{
 			return markupType switch
 			{
-				MModule.MarkupTypes.MarkedupText { Item: Ansi ansiMarkup } 
+				MModule.MarkupTypes.MarkedupText { Item: Ansi ansiMarkup }
 					=> ReconstructAnsiCall(ansiMarkup.Details, innerText),
 				_ => innerText
 			};
 		}, input);
-		
-		// Now apply the standard decompose escaping to the reconstructed string
+
 		var result = reconstructed
 			.Replace("\\", @"\\")
 			.Replace("%", "\\%")
@@ -1033,10 +1035,8 @@ public partial class Functions
 			.Replace("^", "\\^")
 			.Replace("$", "\\$");
 
-		// Handle multiple consecutive spaces by converting them to %b sequences
-		result = Regex.Replace(result, "\\s+", m => string.Join("", Enumerable.Repeat("%b", m.Length)));
+		result = SpacesRegex().Replace(result, m => string.Join("", Enumerable.Repeat("%b", m.Length)));
 
-		// Handle newlines and tabs
 		result = result.Replace("\r", "%r").Replace("\n", "%r").Replace("\t", "%t");
 
 		return ValueTask.FromResult(new CallState(result));
@@ -1051,7 +1051,7 @@ public partial class Functions
 
 		// Handle text attributes first
 		if (ansiDetails.Bold) attributes.Add("h");
-		if (ansiDetails.Underlined) attributes.Add("u"); 
+		if (ansiDetails.Underlined) attributes.Add("u");
 		if (ansiDetails.Blink) attributes.Add("f");
 		if (ansiDetails.Inverted) attributes.Add("i");
 
@@ -1086,31 +1086,41 @@ public partial class Functions
 	/// </summary>
 	private static string ConvertAnsiColorToCode(ANSI.AnsiColor color, bool isBackground = false)
 	{
+		// TODO: That's not how we do backgrounds here!
 		var prefix = isBackground ? "b" : "";
-		
+
 		return color switch
 		{
 			ANSI.AnsiColor.RGB rgb => $"{prefix}{rgb.Item.R:X2}{rgb.Item.G:X2}{rgb.Item.B:X2}",
-			AnsiColor.ANSI ansi when ansi.Item.Length == 1 => ansi.Item[0] switch
-			{
-				30 => $"{prefix}x", // black
-				31 => $"{prefix}r", // red  
-				32 => $"{prefix}g", // green
-				33 => $"{prefix}y", // yellow
-				34 => $"{prefix}b", // blue
-				35 => $"{prefix}m", // magenta
-				36 => $"{prefix}c", // cyan
-				37 => $"{prefix}w", // white
-				90 => $"{prefix}X", // bright black
-				91 => $"{prefix}R", // bright red
-				92 => $"{prefix}G", // bright green
-				93 => $"{prefix}Y", // bright yellow
-				94 => $"{prefix}B", // bright blue
-				95 => $"{prefix}M", // bright magenta
-				96 => $"{prefix}C", // bright cyan
-				97 => $"{prefix}W", // bright white
-				_ => ""
-			},
+			AnsiColor.ANSI ansi
+				=> ansi.Item switch
+				{
+					[0,30] => $"{prefix}x", // black
+					[0,31] => $"{prefix}r", // red  
+					[0,32] => $"{prefix}g", // green
+					[0,33] => $"{prefix}y", // yellow
+					[0,34] => $"{prefix}b", // blue
+					[0,35] => $"{prefix}m", // magenta
+					[0,36] => $"{prefix}c", // cyan
+					[0,37] => $"{prefix}w", // white
+					[1,30] => $"{prefix}hx", // bright black
+					[1,31] => $"{prefix}hr", // bright red  
+					[1,32] => $"{prefix}hg", // bright green
+					[1,33] => $"{prefix}hy", // bright yellow
+					[1,34] => $"{prefix}hb", // bright blue
+					[1,35] => $"{prefix}hm", // bright magenta
+					[1,36] => $"{prefix}hc", // bright cyan
+					[1,37] => $"{prefix}hw", // bright white
+					[.., 90] => $"{prefix}hx", // bright black
+					[.., 91] => $"{prefix}hr", // bright red
+					[.., 92] => $"{prefix}hg", // bright green
+					[.., 93] => $"{prefix}hy", // bright yellow
+					[.., 94] => $"{prefix}hb", // bright blue
+					[.., 95] => $"{prefix}hm", // bright magenta
+					[.., 96] => $"{prefix}hc", // bright cyan
+					[.., 97] => $"{prefix}hw", // bright white
+					_ => ""
+				},
 			_ => ""
 		};
 	}
@@ -1126,10 +1136,10 @@ public partial class Functions
 
 		return ValueTask.FromResult<CallState>((arg0, arg1, arg2) switch
 		{
-			(var str, "", var outSep) 
+			(var str, "", var outSep)
 				=> string.Join(outSep, HttpUtility.ParseQueryString(str)),
-			var (str, field, outSep) 
-				=> string.Join(outSep,HttpUtility.ParseQueryString(str).GetValues(field) ?? []),
+			var (str, field, outSep)
+				=> string.Join(outSep, HttpUtility.ParseQueryString(str).GetValues(field) ?? []),
 		});
 	}
 
@@ -1251,11 +1261,11 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "lpos", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> ListPositions(IMUSHCodeParser parser, SharpFunctionAttribute _2) 
+	public static ValueTask<CallState> ListPositions(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(
-			string.Join(" ", 
+			string.Join(" ",
 				MModule.indexesOf(
-						parser.CurrentState.Arguments["0"].Message!, 
+						parser.CurrentState.Arguments["0"].Message!,
 						parser.CurrentState.Arguments["1"].Message!)
 					.Select(x => x.ToString())));
 
@@ -1267,27 +1277,29 @@ public partial class Functions
 		var separator = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
 
 		// Split by separator
-		var parts1 = string.IsNullOrEmpty(separator) 
-			? new[] { string1 } 
+		var parts1 = string.IsNullOrEmpty(separator)
+			? new[] { string1 }
 			: string1.Split(new[] { separator }, StringSplitOptions.None);
-		var parts2 = string.IsNullOrEmpty(separator) 
-			? new[] { string2 } 
+		var parts2 = string.IsNullOrEmpty(separator)
+			? new[] { string2 }
 			: string2.Split(new[] { separator }, StringSplitOptions.None);
 
 		// Merge alternating parts
 		var result = new StringBuilder();
 		var maxCount = Math.Max(parts1.Length, parts2.Length);
-		
+
 		for (int i = 0; i < maxCount; i++)
 		{
 			if (i < parts1.Length && !string.IsNullOrEmpty(parts1[i]))
 			{
 				result.Append(parts1[i]);
 			}
+
 			if (i < parts2.Length && !string.IsNullOrEmpty(parts2[i]))
 			{
 				result.Append(parts2[i]);
 			}
+
 			if (i < maxCount - 1)
 			{
 				result.Append(' ');
@@ -1322,8 +1334,8 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var hasDefault = args.Count % 2 == 1;
-		
-		var pairs = hasDefault 
+
+		var pairs = hasDefault
 			? args.SkipLast(1).Pairwise()
 			: args.Pairwise();
 
@@ -1354,7 +1366,7 @@ public partial class Functions
 		var hasDefault = args.Count % 2 == 1;
 		var results = new List<MString?>();
 
-		var pairs = hasDefault 
+		var pairs = hasDefault
 			? args.SkipLast(1).Pairwise()
 			: args.Pairwise();
 
@@ -1390,8 +1402,8 @@ public partial class Functions
 	public static ValueTask<CallState> CharacterOrdinance(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
-		return arg0.Length is > 1 or < 0 
-			? new ValueTask<CallState>("#-1 ARGUMENT MUST BE A SINGLE CHARACTER") 
+		return arg0.Length is > 1 or < 0
+			? new ValueTask<CallState>("#-1 ARGUMENT MUST BE A SINGLE CHARACTER")
 			: ValueTask.FromResult<CallState>(arg0.EnumerateRunes().First().Value);
 	}
 
@@ -1472,7 +1484,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "secure", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> Secure(IMUSHCodeParser parser, SharpFunctionAttribute _2) 
+	public static ValueTask<CallState> Secure(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(MModule.apply(parser.CurrentState.Arguments["0"].Message!,
 			FSharpFunc<string, string>.FromConverter(x => x switch
 			{
@@ -1567,9 +1579,9 @@ public partial class Functions
 	{
 		var str = parser.CurrentState.Arguments["0"].Message!;
 		var pattern = parser.CurrentState.Arguments["1"].Message!;
-		
+
 		var match = MModule.isWildcardMatch(str, pattern);
-		
+
 		return ValueTask.FromResult(new CallState(match ? "1" : "0"));
 	}
 
@@ -1715,6 +1727,7 @@ public partial class Functions
 				{
 					result.Append(c);
 				}
+
 				i += 2; // Skip the '-' and end character
 			}
 			else
@@ -1722,6 +1735,7 @@ public partial class Functions
 				result.Append(input[i]);
 			}
 		}
+
 		return result.ToString();
 	}
 
@@ -1882,4 +1896,7 @@ public partial class Functions
 
 	[GeneratedRegex("^y(b[lor]|cl[ea]|fere|gg|p[ios]|rou|tt)")]
 	private static partial Regex ArticleRegex3();
+
+	[GeneratedRegex("\\s+")]
+	private static partial Regex SpacesRegex();
 }
