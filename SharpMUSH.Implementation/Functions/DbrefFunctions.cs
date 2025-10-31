@@ -608,7 +608,7 @@ public partial class Functions
 				if (hasArg1)
 				{
 					// Setting zone is a side effect
-					if (Configuration!.CurrentValue.Function.FunctionSideEffects == false)
+					if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
 					{
 						return Errors.ErrorNoSideFx;
 					}
