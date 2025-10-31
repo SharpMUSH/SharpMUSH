@@ -295,9 +295,10 @@ public partial class Functions
 		var str = arg0!.ToPlainText();
 		var orderedArgs = parser.CurrentState.ArgumentsOrdered.Skip(1).ToList();
 		
-		// Last arg is default, rest are pattern/list pairs
-		var defaultValue = orderedArgs.Last();
-		var patternListPairs = orderedArgs.SkipLast(1).ToList();
+		// Check if we have a default (odd number of remaining args)
+		var hasDefault = orderedArgs.Count % 2 == 1;
+		KeyValuePair<string, CallState>? defaultValue = hasDefault ? orderedArgs.Last() : (KeyValuePair<string, CallState>?)null;
+		var patternListPairs = hasDefault ? orderedArgs.SkipLast(1).ToList() : orderedArgs;
 		
 		var results = new List<MString>();
 		var options = RegexOptions.None;
@@ -370,8 +371,13 @@ public partial class Functions
 			return new CallState(MModule.multipleWithDelimiter(MModule.single(" "), results));
 		}
 		
-		// No matches - return default
-		var defaultEvaluated = await defaultValue.Value.ParsedMessage();
-		return new CallState(defaultEvaluated!);
+		// No matches - return default if available
+		if (defaultValue != null)
+		{
+			var defaultEvaluated = await defaultValue.Value.Value.ParsedMessage();
+			return new CallState(defaultEvaluated!);
+		}
+		
+		return new CallState(string.Empty);
 	}
 }
