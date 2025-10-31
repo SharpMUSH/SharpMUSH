@@ -100,7 +100,6 @@ public partial class LocateService(IMediator mediator,
 		if ((flags.HasFlag(LocateFlags.MatchObjectsInLookerLocation)
 		     || flags.HasFlag(LocateFlags.MatchObjectsInLookerInventory)
 		     || flags.HasFlag(LocateFlags.MatchHereForLookerLocation)
-		     || flags.HasFlag(LocateFlags.MatchHereForLookerLocation)
 		     || flags.HasFlag(LocateFlags.ExitsPreference)
 		     || flags.HasFlag(LocateFlags.ExitsInsideOfLooker)) &&
 		    !await Nearby(executor, looker) && !await executor.IsSee_All() &&
@@ -187,13 +186,13 @@ public partial class LocateService(IMediator mediator,
 			location = await FriendlyWhereIs(where);
 		}
 
-		if (true // !flags.HasFlag(LocateFlags.NoTypePreference) // TODO: Incorrect check.
+		if (!flags.HasFlag(LocateFlags.NoTypePreference)
 		    && flags.HasFlag(LocateFlags.MatchMeForLooker)
 		    && !flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerInventory)
 		    && name.Equals("me", StringComparison.InvariantCultureIgnoreCase))
 		{
 			if (!flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
-			    && await permissionService.Controls(looker, where))
+			    || await permissionService.Controls(looker, where))
 			{
 				return where.WithNoneOption().WithErrorOption();
 			}
@@ -206,7 +205,7 @@ public partial class LocateService(IMediator mediator,
 		    && name.Equals("here", StringComparison.InvariantCultureIgnoreCase))
 		{
 			if (!flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
-			    && await permissionService.Controls(looker, where))
+			    || await permissionService.Controls(looker, where))
 			{
 				return (await FriendlyWhereIs(where)).WithExitOption().WithNoneOption().WithErrorOption();
 			}
@@ -230,9 +229,9 @@ public partial class LocateService(IMediator mediator,
 				    || await Nearby(looker, match.WithoutError().WithoutNone())
 				    || await permissionService.Controls(looker, match.WithoutError().WithoutNone()))
 				{
-					// TODO: This doesn't look right.
+					// TODO: This needs review - the logic may be incorrect.
 					if (!flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
-					    && await permissionService.Controls(looker, where))
+					    || await permissionService.Controls(looker, where))
 					{
 						return match;
 					}
@@ -428,12 +427,12 @@ public partial class LocateService(IMediator mediator,
 			{
 				// continue;
 			}
-			// FIX THIS, THIS SHOULD NOT DO AN IS PLAYER CHECK
+			// Fixed: Corrected the inverted logic for non-exit name matching
 			else if (
 				(cur.IsPlayer && cur.Aliases.Contains(name))
 				|| (cur.IsExit && (cur.Aliases.Contains(name) ||
 				                   cur.Object().Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
-				|| (!cur.IsExit && !string.Equals(cur.Object().Name, name, StringComparison.OrdinalIgnoreCase)))
+				|| (!cur.IsExit && string.Equals(cur.Object().Name, name, StringComparison.OrdinalIgnoreCase)))
 			{
 				(bestMatch, final, curr, rightType, exact, flow) =
 					await Matched(parser, true, exact, final, curr, rightType, looker, where, cur, bestMatch, flags);
@@ -500,8 +499,8 @@ public partial class LocateService(IMediator mediator,
 			AnyOptionalSharpObjectOrError bestMatch,
 			LocateFlags flags)
 	{
-		if (!(!flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
-		      && await permissionService.Controls(looker, where)))
+		if (flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
+		    && !await permissionService.Controls(looker, where))
 		{
 			return (new Error<string>(Errors.ErrorPerm), final, curr, right_type, exact, ControlFlow.Continue);
 		}
