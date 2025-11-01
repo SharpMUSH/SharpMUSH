@@ -57,6 +57,10 @@ public class LocateServiceCompatibilityTests
 		// Mock GetPlayerQuery to return empty results
 		_mediator.Send(Arg.Any<GetPlayerQuery>(), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
+		
+		// Set up permissions - player controls themselves
+		_permissionService.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
+			.Returns(true);
 			
 		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), 
 			IPermissionService.InteractType.Match)
@@ -90,6 +94,10 @@ public class LocateServiceCompatibilityTests
 		// Mock GetPlayerQuery to return empty results
 		_mediator.Send(Arg.Any<GetPlayerQuery>(), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
+		
+		// Set up permissions - player controls themselves
+		_permissionService.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
+			.Returns(true);
 			
 		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), 
 			IPermissionService.InteractType.Match)
@@ -114,6 +122,10 @@ public class LocateServiceCompatibilityTests
 		// Mock GetPlayerQuery to return empty results
 		_mediator.Send(Arg.Any<GetPlayerQuery>(), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
+		
+		// Set up permissions - player controls themselves
+		_permissionService.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
+			.Returns(true);
 		
 		// Act - with NoTypePreference, should not match "me"
 		var resultWithNoTypePreference = await _locateService.Locate(_parser, player, player, "me", 
