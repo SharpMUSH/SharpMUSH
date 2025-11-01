@@ -1767,11 +1767,7 @@ public partial class ArangoDatabase(
 
 		try
 		{
-			// Collect descendants and remove in reverse order for bottom-up deletion
-			var descendantsList = await descendants.ToListAsync(ct);
-			
-			// Remove all descendants first (bottom-up) to avoid orphans
-			foreach (var descendant in descendantsList.AsEnumerable().Reverse())
+			await foreach (var descendant in descendants.Reverse().WithCancellation(ct))
 			{
 				await arangoDb.Graph.Vertex.RemoveAsync(transaction, DatabaseConstants.GraphAttributes,
 					DatabaseConstants.Attributes, descendant.Key, cancellationToken: ct);
