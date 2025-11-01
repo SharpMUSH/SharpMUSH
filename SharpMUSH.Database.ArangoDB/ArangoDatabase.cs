@@ -1712,10 +1712,8 @@ public partial class ArangoDatabase(
 		var attrs = await GetAttributeAsync(dbref, attribute, ct);
 		if (attrs is null) return false;
 
-		var attrArray = await attrs.ToArrayAsync(ct);
-		if (attrArray.Length == 0) return false;
-
-		var targetAttr = attrArray.Last();
+		var targetAttr = await attrs.LastOrDefaultAsync(ct);
+		if (targetAttr is null) return false;
 
 		// Check if attribute has children (just need to know if any exist)
 		var children = await arangoDb.Query.ExecuteAsync<string>(handle,
@@ -1726,7 +1724,7 @@ public partial class ArangoDatabase(
 		{
 			// Has children, just clear the value
 			await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Attributes,
-				new { Key = targetAttr.Key, Value = string.Empty },
+				new { Key = targetAttr.Key, Value = MarkupStringModule.serialize(MarkupStringModule.empty()) },
 				mergeObjects: true, cancellationToken: ct);
 		}
 		else
@@ -1748,14 +1746,12 @@ public partial class ArangoDatabase(
 		var attrs = await GetAttributeAsync(dbref, attribute, ct);
 		if (attrs is null) return false;
 
-		var attrArray = await attrs.ToArrayAsync(ct);
-		if (attrArray.Length == 0) return false;
+		var targetAttr = await attrs.LastOrDefaultAsync(ct);
+		if (targetAttr is null) return false;
 
-		var targetAttr = attrArray.Last();
-
-		// Get all descendants (children, grandchildren, etc.)
-		var descendants = await arangoDb.Query.ExecuteAsync<SharpAttributeQueryResult>(handle,
-			$"FOR v IN 1..999 OUTBOUND {targetAttr.Id} GRAPH {DatabaseConstants.GraphAttributes} RETURN v",
+		// Get all descendants (children, grandchildren, etc.) - no limit on depth
+		var descendants = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle,
+			$"FOR v IN OUTBOUND {targetAttr.Id} GRAPH {DatabaseConstants.GraphAttributes} RETURN v",
 			cancellationToken: ct);
 
 		// Use a transaction to remove all at once for consistency
@@ -1771,11 +1767,18 @@ public partial class ArangoDatabase(
 
 		try
 		{
+			// Collect descendants in reverse order for bottom-up deletion
+			var descendantsList = new List<SharpAttributeQueryResult>();
+			await foreach (var descendant in descendants.WithCancellation(ct))
+			{
+				descendantsList.Add(descendant);
+			}
+
 			// Remove all descendants first (bottom-up) to avoid orphans
-			for (int i = descendants.Count - 1; i >= 0; i--)
+			for (int i = descendantsList.Count - 1; i >= 0; i--)
 			{
 				await arangoDb.Graph.Vertex.RemoveAsync(transaction, DatabaseConstants.GraphAttributes,
-					DatabaseConstants.Attributes, descendants[i].Key, cancellationToken: ct);
+					DatabaseConstants.Attributes, descendantsList[i].Key, cancellationToken: ct);
 			}
 
 			// Remove the target attribute itself
