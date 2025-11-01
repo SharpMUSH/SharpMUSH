@@ -1751,7 +1751,7 @@ public partial class ArangoDatabase(
 
 		// Get all descendants (children, grandchildren, etc.) - no limit on depth
 		var descendants = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle,
-			$"FOR v IN OUTBOUND {targetAttr.Id} GRAPH {DatabaseConstants.GraphAttributes} RETURN v",
+			$"FOR v IN 1.. OUTBOUND {targetAttr.Id} GRAPH {DatabaseConstants.GraphAttributes} RETURN v",
 			cancellationToken: ct);
 
 		// Use a transaction to remove all at once for consistency
@@ -1767,7 +1767,11 @@ public partial class ArangoDatabase(
 
 		try
 		{
-			await foreach (var descendant in descendants.Reverse().WithCancellation(ct))
+			// Collect descendants and remove in reverse order for bottom-up deletion
+			var descendantsList = await descendants.ToListAsync(ct);
+			
+			// Remove all descendants first (bottom-up) to avoid orphans
+			foreach (var descendant in descendantsList.AsEnumerable().Reverse())
 			{
 				await arangoDb.Graph.Vertex.RemoveAsync(transaction, DatabaseConstants.GraphAttributes,
 					DatabaseConstants.Attributes, descendant.Key, cancellationToken: ct);
