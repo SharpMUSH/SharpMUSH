@@ -1,5 +1,4 @@
 ﻿using SharpMUSH.Implementation.Commands.ChannelCommand;
-using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -294,7 +293,7 @@ public partial class Functions
 	public static async ValueTask<CallState> ChannelLock(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
 			NotifyService!, channelName, false);
@@ -332,7 +331,7 @@ public partial class Functions
 	public static async ValueTask<CallState> ChannelMogrifier(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
 			NotifyService!, channelName, false);
@@ -351,7 +350,7 @@ public partial class Functions
 	public static async ValueTask<CallState> ChannelOwner(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
 			NotifyService!, channelName, false);
@@ -468,7 +467,7 @@ public partial class Functions
 	public static async ValueTask<CallState> ChannelWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
 			NotifyService!, channelName, false);
@@ -489,7 +488,7 @@ public partial class Functions
 			: " ";
 
 		// Get list separator (arg 2) or default to outputSep
-		var listSep = parser.CurrentState.Arguments.TryGetValue("2", out var arg2)
+		_ = parser.CurrentState.Arguments.TryGetValue("2", out var arg2)
 			? arg2.Message!.ToPlainText()
 			: outputSep;
 
@@ -600,8 +599,6 @@ public partial class Functions
 			return maybeChannel.AsError.Value;
 		}
 
-		var channel = maybeChannel.AsChannel;
-
 		// TODO: This should query the actual message count from the database
 		// For now, return 0 as a placeholder
 		return new CallState("0");
@@ -611,7 +608,7 @@ public partial class Functions
 	public static async ValueTask<CallState> ChannelUsers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
 			NotifyService!, channelName, false);

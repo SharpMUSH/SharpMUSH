@@ -41,7 +41,7 @@ public class ChannelFunctionUnitTests
 		// Create a test channel
 		await Mediator.Send(new CreateChannelCommand(
 			MModule.single(TestChannelName),
-			new[] { TestChannelPrivilege },
+			[TestChannelPrivilege],
 			_testPlayer
 		));
 
