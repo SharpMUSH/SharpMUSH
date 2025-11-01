@@ -1,4 +1,6 @@
-﻿using SharpMUSH.Implementation.Commands.MailCommand;
+﻿using OneOf;
+using OneOf.Types;
+using SharpMUSH.Implementation.Commands.MailCommand;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
@@ -60,35 +62,58 @@ public partial class Functions
 	}
 
 	/// <summary>
-	/// Helper to parse target player and message spec from function arguments.
-	/// Returns null if permission denied or player not found.
+	/// Result of parsing player and message arguments
 	/// </summary>
-	private static async ValueTask<(AnySharpObject? player, string? messageSpec)> ParsePlayerAndMessageArgs(
+	private class PlayerMessageResult
+	{
+		public bool IsError { get; init; }
+		public string? Error { get; init; }
+		public AnySharpObject? Player { get; init; }
+		public string? MessageSpec { get; init; }
+
+		public static PlayerMessageResult Success(AnySharpObject player, string messageSpec)
+			=> new() { IsError = false, Player = player, MessageSpec = messageSpec };
+
+		public static PlayerMessageResult FromError(string error)
+			=> new() { IsError = true, Error = error };
+	}
+
+	/// <summary>
+	/// Helper to parse target player and message spec from function arguments.
+	/// Uses same methodology as commands - returns proper error types.
+	/// </summary>
+	private static async ValueTask<PlayerMessageResult> ParsePlayerAndMessageArgs(
 		IMUSHCodeParser parser,
 		AnySharpObject executor,
 		Dictionary<string, CallState> args)
 	{
+		// Single argument - query self
 		if (args.Count == 1)
 		{
-			return (executor, args["0"].Message!.ToPlainText()!);
+			return PlayerMessageResult.Success(executor, args["0"].Message!.ToPlainText()!);
 		}
 
 		// Two arguments - must be wizard to view other player's mail
 		if (!executor.IsGod() && !await executor.IsWizard())
 		{
-			return (null, null);
+			return PlayerMessageResult.FromError("#-1 PERMISSION DENIED");
 		}
 
 		var playerArg = args["0"].Message!.ToPlainText()!;
 		var locateResult = await LocateService!.LocateAndNotifyIfInvalid(
 			parser, executor, executor, playerArg, LocateFlags.PlayersPreference);
 
-		if (locateResult.IsError || locateResult.IsNone)
+		if (locateResult.IsError)
 		{
-			return (null, null);
+			return PlayerMessageResult.FromError(locateResult.AsError.Value);
 		}
 
-		return (locateResult.AsPlayer, args["1"].Message!.ToPlainText()!);
+		if (locateResult.IsNone)
+		{
+			return PlayerMessageResult.FromError("#-1 NO SUCH PLAYER");
+		}
+
+		return PlayerMessageResult.Success(locateResult.AsPlayer, args["1"].Message!.ToPlainText()!);
 	}
 
 	/// <summary>
@@ -280,19 +305,19 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		
-		var (targetPlayer, messageSpec) = await ParsePlayerAndMessageArgs(parser, executor, args);
-		if (targetPlayer == null || messageSpec == null)
+		var parseResult = await ParsePlayerAndMessageArgs(parser, executor, args);
+		if (parseResult.IsError)
 		{
-			return new CallState(args.Count == 1 ? "#-1 NO SUCH MAIL" : "#-1 PERMISSION DENIED");
+			return new CallState(parseResult.Error!);
 		}
 
-		var (folder, messageIndex) = await ParseMessageSpec(parser, targetPlayer, messageSpec);
+		var (folder, messageIndex) = await ParseMessageSpec(parser, parseResult.Player!, parseResult.MessageSpec!);
 		if (messageIndex < 0)
 		{
 			return new CallState("#-1 NO SUCH MAIL");
 		}
 
-		var mail = await GetMailMessage(targetPlayer, folder, messageIndex);
+		var mail = await GetMailMessage(parseResult.Player!, folder, messageIndex);
 		if (mail == null)
 		{
 			return new CallState("#-1 NO SUCH MAIL");
@@ -513,19 +538,19 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		
-		var (targetPlayer, messageSpec) = await ParsePlayerAndMessageArgs(parser, executor, args);
-		if (targetPlayer == null || messageSpec == null)
+		var parseResult = await ParsePlayerAndMessageArgs(parser, executor, args);
+		if (parseResult.IsError)
 		{
-			return new CallState(args.Count == 1 ? "#-1 NO SUCH MAIL" : "#-1 PERMISSION DENIED");
+			return new CallState(parseResult.Error!);
 		}
 
-		var (folder, messageIndex) = await ParseMessageSpec(parser, targetPlayer, messageSpec);
+		var (folder, messageIndex) = await ParseMessageSpec(parser, parseResult.Player!, parseResult.MessageSpec!);
 		if (messageIndex < 0)
 		{
 			return new CallState("#-1 NO SUCH MAIL");
 		}
 
-		var mail = await GetMailMessage(targetPlayer, folder, messageIndex);
+		var mail = await GetMailMessage(parseResult.Player!, folder, messageIndex);
 		if (mail == null)
 		{
 			return new CallState("#-1 NO SUCH MAIL");
@@ -546,19 +571,19 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		
-		var (targetPlayer, messageSpec) = await ParsePlayerAndMessageArgs(parser, executor, args);
-		if (targetPlayer == null || messageSpec == null)
+		var parseResult = await ParsePlayerAndMessageArgs(parser, executor, args);
+		if (parseResult.IsError)
 		{
-			return new CallState(args.Count == 1 ? "#-1 NO SUCH MAIL" : "#-1 PERMISSION DENIED");
+			return new CallState(parseResult.Error!);
 		}
 
-		var (folder, messageIndex) = await ParseMessageSpec(parser, targetPlayer, messageSpec);
+		var (folder, messageIndex) = await ParseMessageSpec(parser, parseResult.Player!, parseResult.MessageSpec!);
 		if (messageIndex < 0)
 		{
 			return new CallState("#-1 NO SUCH MAIL");
 		}
 
-		var mail = await GetMailMessage(targetPlayer, folder, messageIndex);
+		var mail = await GetMailMessage(parseResult.Player!, folder, messageIndex);
 		if (mail == null)
 		{
 			return new CallState("#-1 NO SUCH MAIL");
@@ -572,19 +597,19 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		
-		var (targetPlayer, messageSpec) = await ParsePlayerAndMessageArgs(parser, executor, args);
-		if (targetPlayer == null || messageSpec == null)
+		var parseResult = await ParsePlayerAndMessageArgs(parser, executor, args);
+		if (parseResult.IsError)
 		{
-			return new CallState(args.Count == 1 ? "#-1 NO SUCH MAIL" : "#-1 PERMISSION DENIED");
+			return new CallState(parseResult.Error!);
 		}
 
-		var (folder, messageIndex) = await ParseMessageSpec(parser, targetPlayer, messageSpec);
+		var (folder, messageIndex) = await ParseMessageSpec(parser, parseResult.Player!, parseResult.MessageSpec!);
 		if (messageIndex < 0)
 		{
 			return new CallState("#-1 NO SUCH MAIL");
 		}
 
-		var mail = await GetMailMessage(targetPlayer, folder, messageIndex);
+		var mail = await GetMailMessage(parseResult.Player!, folder, messageIndex);
 		if (mail == null)
 		{
 			return new CallState("#-1 NO SUCH MAIL");
