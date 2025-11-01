@@ -1,17 +1,20 @@
 ﻿using System.Drawing;
 using System.Text.RegularExpressions;
-using ANSILibrary;
 using DotNext.Collections.Generic;
 using MarkupString;
+using OneOf.Types;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services.Interfaces;
 using XSoundex;
 using static ANSILibrary.ANSI;
+using StringExtensions = ANSILibrary.StringExtensions;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -273,10 +276,26 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "create", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> Create(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Create(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var args = parser.CurrentState.Arguments;
+		var name = args["0"].Message!;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+
+		if (!await ValidateService!.Valid(IValidateService.ValidationType.Name, name, new None()))
+		{
+			await NotifyService!.Notify(executor, "Invalid name for a thing.");
+			return new CallState(Errors.ErrorBadObjectName);
+		}
+		
+		var thing = await Mediator!.Send(new CreateThingCommand(name.ToPlainText(),
+			await executor.Where(),
+			await executor.Object()
+				.Owner.WithCancellation(CancellationToken.None)));
+		
+		return new CallState(thing.ToString());
 	}
+	
 	[SharpFunction(Name = "die", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> Die(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{

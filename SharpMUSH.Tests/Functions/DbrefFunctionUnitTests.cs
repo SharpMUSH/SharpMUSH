@@ -61,12 +61,25 @@ public class DbrefFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("locate(%#,test,*)", "")]
+	[Arguments("locate(%#,nonsense-does-not-exist,*)", "#-1")]
+	[Arguments("first(locate(%#,me,*),:)", "#1")]
+	[Arguments("first(locate(%#,here,*),:)", "#0")]
 	public async Task Locate(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsNotNull();
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+	
+	[Test]
+	[Arguments("create(some-silly-object)", "locate(%#,some-silly-object,*)")]
+	// TODO: Enable when tel() is implemented
+	// [Arguments("tel(create(content-object),create(container-object))", "locate(%#,container-object's content-object,*)")]
+	public async Task CreateAndLocate(string create, string locate)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(create)))?.Message!;
+		var located = (await Parser.FunctionParse(MModule.single(locate)))?.Message!;
+		
+		await Assert.That(result.ToPlainText()).IsEqualTo(located.ToPlainText());
 	}
 
 	[Test]

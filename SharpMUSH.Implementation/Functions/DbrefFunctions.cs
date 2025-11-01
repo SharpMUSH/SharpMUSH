@@ -249,9 +249,172 @@ public partial class Functions
 		   ?? CallState.Empty;
 
 	[SharpFunction(Name = "locate", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> Locate(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Locate(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		/*
+		 
+		 help locate()
+LOCATE()
+  locate(<looker>, <name>, <parameters>)
+
+  This function attempts to find an object called <name>, relative to the object <looker>. It's similar to the num() function, but you can be more specific about which type of object to find, and where to look for it. When attempting to match objects near to <looker> (anything but absolute, player name or "me" matches), you must control <looker>, have the See_All power or be nearby.
+
+  <parameters> is a string of characters which control the type of the object to find, and where (relative to <looker>) to look for it.
+
+  You can control the preferred types of the match with:
+    N - No type (this is the default)
+    E - Exits
+    L - Prefer an object whose Basic @lock <looker> passes
+    P - Players
+    R - Rooms
+    T - Things
+    F - Return #-1 if what's found is of a different type than the preferred one.
+    X - Never return #-2. Use the last dbref found if the match is ambiguous.
+
+  If type(s) are given, locate() will attempt to find an object with one of the given types first. If none are found, it will attempt to find any type of object, unless 'F' is specified, in which case it will return #-1.
+
+  You can control where to look with:
+    a - Absolute match (match <name> against any dbref)
+    c - Exits in the room <looker>
+    e - Exits in <looker>'s location
+    h - If <name> is "here", return <looker>'s location
+    i - Match <name> against the names of objects in <looker>'s inventory
+    l - Match <name> against the name of <looker>'s location
+    m - If <name> is "me", return <looker>'s dbref
+    n - Match <name> against the names of objects in <looker>'s location
+    p - If <name> begins with a *, match the rest against player names
+    z - English-style matching (my 2nd book) of <name> (see 'help matching')
+    * - All of the above (try a complete match). Default when no match parameters are given.
+    y - Match <name> against player names whether it begins with a * or not
+    x - Only match objects with the exact name <name>, no partial matches
+    s - Only match objects which <looker> controls. You must control <looker> or have the See_All power.
+
+  Just string all the parameters together. Spaces are ignored, so you can use spaces between paramaters for clarity if you wish.
+
+  Examples:
+  Find the dbref of the player whose name matches %0, or %#'s dbref if %0 is "me".
+    > think locate(%#, %0, PFym)
+  'PF' matches objects of type 'player' and nothing else, 'm' checks for the string "me", and 'y' matches the names of players.
+
+  Find the dbref of an object near %# called %0, including %# himself and his location. Prefer players or things, but accept rooms or exits if no players or things are found.
+    > think locate(%#, %0, PThmlni)
+  This prefers 'P'layers or 'T'hings, and compares %0 against the strings "here" and "me", and the names of %#'s location, his neighbours, and his inventory.
+  
+  */
+
+		var args = parser.CurrentState.Arguments;
+		var lookerArg = args["0"].Message!.ToPlainText();
+		var nameArg = args["1"].Message!.ToPlainText();
+		var parametersArg = args["2"].Message!.ToPlainText();
+
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+
+		// First, locate the looker object
+		var maybeLooker = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, lookerArg, LocateFlags.All);
+		if (maybeLooker.IsError)
+		{
+			return maybeLooker.AsError;
+		}
+
+		var looker = maybeLooker.AsSharpObject;
+
+		// Parse the parameters string into LocateFlags
+		var locateFlags = ParseLocateParameters(parametersArg);
+		
+		// Check if we need to determine type preferences
+		var preferredTypes = GetPreferredTypes(parametersArg);
+		var requireExactType = parametersArg.Contains('F', StringComparison.OrdinalIgnoreCase);
+
+		// Perform the locate operation
+		var maybeFound = await LocateService.Locate(parser, looker, executor, nameArg, locateFlags);
+
+		if (maybeFound.IsError)
+		{
+			return maybeFound.AsError.Value;
+		}
+
+		if (maybeFound.IsNone)
+		{
+			return "#-1";
+		}
+
+		var found = maybeFound.WithoutError().WithoutNone();
+
+		// Check type preferences if specified
+		if (preferredTypes.Any())
+		{
+			var foundType = GetObjectType(found);
+			if (!preferredTypes.Contains(foundType))
+			{
+				if (requireExactType)
+				{
+					return "#-1";
+				}
+				// If not requiring exact type, we still return the found object
+			}
+		}
+
+		return found.Object().DBRef;
+	}
+
+	private static LocateFlags ParseLocateParameters(string parameters)
+	{
+		var flags = LocateFlags.NoTypePreference;
+		var paramUpper = parameters.ToUpperInvariant().Replace(" ", "");
+
+		// Handle special case of "*" meaning all flags
+		if (paramUpper.Contains('*'))
+		{
+			return LocateFlags.All;
+		}
+
+		// Parse location flags
+		if (paramUpper.Contains('A')) flags |= LocateFlags.AbsoluteMatch;
+		if (paramUpper.Contains('C')) flags |= LocateFlags.ExitsInTheRoomOfLooker;
+		if (paramUpper.Contains('E')) flags |= LocateFlags.ExitsInsideOfLooker;
+		if (paramUpper.Contains('H')) flags |= LocateFlags.MatchHereForLookerLocation;
+		if (paramUpper.Contains('I')) flags |= LocateFlags.MatchObjectsInLookerInventory;
+		if (paramUpper.Contains('L')) flags |= LocateFlags.MatchAgainstLookerLocationName;
+		if (paramUpper.Contains('M')) flags |= LocateFlags.MatchMeForLooker;
+		if (paramUpper.Contains('N')) flags |= LocateFlags.MatchObjectsInLookerLocation;
+		if (paramUpper.Contains('P')) flags |= LocateFlags.MatchWildCardForPlayerName;
+		if (paramUpper.Contains('Y')) flags |= LocateFlags.MatchOptionalWildCardForPlayerName;
+		if (paramUpper.Contains('Z')) flags |= LocateFlags.EnglishStyleMatching;
+		if (paramUpper.Contains('X')) flags |= LocateFlags.NoPartialMatches | LocateFlags.UseLastIfAmbiguous;
+		if (paramUpper.Contains('S')) flags |= LocateFlags.OnlyMatchLookerControlledObjects;
+
+		// Parse type preference flags (note: some letters are reused)
+		if (paramUpper.Contains('E')) flags |= LocateFlags.ExitsPreference;
+		if (paramUpper.Contains('P')) flags |= LocateFlags.PlayersPreference;
+		if (paramUpper.Contains('R')) flags |= LocateFlags.RoomsPreference;
+		if (paramUpper.Contains('T')) flags |= LocateFlags.ThingsPreference;
+		if (paramUpper.Contains('L')) flags |= LocateFlags.PreferLockPass;
+		if (paramUpper.Contains('F')) flags |= LocateFlags.FailIfNotPreferred;
+
+		return flags;
+	}
+
+	private static HashSet<string> GetPreferredTypes(string parameters)
+	{
+		var types = new HashSet<string>();
+		var paramUpper = parameters.ToUpperInvariant();
+
+		if (paramUpper.Contains('E')) types.Add("EXIT");
+		if (paramUpper.Contains('P')) types.Add("PLAYER");
+		if (paramUpper.Contains('R')) types.Add("ROOM");
+		if (paramUpper.Contains('T')) types.Add("THING");
+
+		return types;
+	}
+
+	private static string GetObjectType(AnySharpObject obj)
+	{
+		return obj.Match(
+			_ => "PLAYER",
+			_ => "ROOM",
+			_ => "EXIT",
+			_ => "THING"
+		);
 	}
 
 	[SharpFunction(Name = "lock", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]

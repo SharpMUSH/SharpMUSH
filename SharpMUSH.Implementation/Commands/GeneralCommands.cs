@@ -380,15 +380,15 @@ public partial class Commands
 
 		var isList = parser.CurrentState.Switches.Contains("LIST");
 
-		var toTeleportList = Enumerable.Empty<OneOf<DBRef, string>>();
+		IEnumerable<OneOf<DBRef, string>> toTeleportList;
 		if (isList)
 		{
 			toTeleportList = ArgHelpers.NameList(toTeleport);
 		}
 		else
 		{
-			var isDBRef = DBRef.TryParse(toTeleport, out var objToTeleport);
-			toTeleportList = [isDBRef ? objToTeleport!.Value : toTeleport];
+			var isDbRef = DBRef.TryParse(toTeleport, out var objToTeleport);
+			toTeleportList = [isDbRef ? objToTeleport!.Value : toTeleport];
 		}
 
 		var toTeleportStringList = toTeleportList.Select(x => x.ToString());
