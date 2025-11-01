@@ -80,7 +80,7 @@ public class LocateServiceCompatibilityTests
 		
 		// Assert
 		await Assert.That(result.IsValid()).IsTrue();
-		await Assert.That(result.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(3));
+		await Assert.That(result.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(3, 0));
 	}
 
 	[Test]
@@ -162,7 +162,7 @@ public class LocateServiceCompatibilityTests
 		// Assert
 		await Assert.That(resultWithNoTypePreference.IsNone || resultWithNoTypePreference.IsError).IsTrue();
 		await Assert.That(resultWithoutNoTypePreference.IsValid()).IsTrue();
-		await Assert.That(resultWithoutNoTypePreference.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(1));
+		await Assert.That(resultWithoutNoTypePreference.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(1, 0));
 	}
 
 	[Test]

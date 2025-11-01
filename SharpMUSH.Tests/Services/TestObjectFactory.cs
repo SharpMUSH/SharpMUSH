@@ -61,7 +61,7 @@ public class TestObjectFactory
 		var sharpObject = new SharpObject
 		{
 			Key = key,
-			CreationTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+			CreationTime = 0L, // Use 0 for test objects to make DBRef comparisons easier
 			Name = name,
 			Type = "Player",
 			Locks = ImmutableDictionary<string, string>.Empty,
@@ -111,7 +111,7 @@ public class TestObjectFactory
 		var sharpObject = new SharpObject
 		{
 			Key = key,
-			CreationTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+			CreationTime = 0L, // Use 0 for test objects to make DBRef comparisons easier
 			Name = name,
 			Type = "Thing",
 			Locks = ImmutableDictionary<string, string>.Empty,
