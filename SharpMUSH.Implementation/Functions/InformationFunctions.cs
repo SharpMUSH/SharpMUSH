@@ -2,6 +2,7 @@
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -23,9 +24,86 @@ public partial class Functions
 
 	[SharpFunction(Name = "folderstats", MinArgs = 0, MaxArgs = 2,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> folderstats(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> folderstats(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var args = parser.CurrentState.Arguments;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		
+		AnySharpObject targetPlayer = executor;
+		string? folderSpec = null;
+
+		// Parse arguments - can be (), (folder), (player), or (player, folder)
+		if (args.Count == 0)
+		{
+			// Use current folder
+			folderSpec = await Implementation.Commands.MailCommand.MessageListHelper.CurrentMailFolder(
+				parser, ObjectDataService!, executor);
+		}
+		else if (args.Count == 1)
+		{
+			var arg = args["0"].Message!.ToPlainText()!;
+			
+			// Try to determine if it's a folder number/name or a player
+			if (int.TryParse(arg, out _) || arg.All(c => char.IsDigit(c) || char.IsUpper(c)))
+			{
+				// Looks like a folder
+				folderSpec = arg;
+			}
+			else
+			{
+				// Must be wizard to view other player's mail
+				if (!(executor.IsGod() || await executor.IsWizard()))
+				{
+					return new CallState("#-1 PERMISSION DENIED");
+				}
+
+				// Try to locate as player
+				var locateResult = await LocateService!.LocateAndNotifyIfInvalid(
+					parser, executor, executor, arg, LocateFlags.PlayersPreference);
+				
+				if (locateResult.IsError || locateResult.IsNone)
+				{
+					// Not a player, try as folder name
+					folderSpec = arg;
+				}
+				else
+				{
+					targetPlayer = locateResult.AsPlayer;
+					folderSpec = await Implementation.Commands.MailCommand.MessageListHelper.CurrentMailFolder(
+						parser, ObjectDataService!, targetPlayer);
+				}
+			}
+		}
+		else if (args.Count == 2)
+		{
+			// Must be wizard to view other player's mail
+			if (!(executor.IsGod() || await executor.IsWizard()))
+			{
+				return new CallState("#-1 PERMISSION DENIED");
+			}
+
+			var playerArg = args["0"].Message!.ToPlainText()!;
+			var locateResult = await LocateService!.LocateAndNotifyIfInvalid(
+				parser, executor, executor, playerArg, LocateFlags.PlayersPreference);
+			
+			if (locateResult.IsError || locateResult.IsNone)
+			{
+				return new CallState("#-1 NO SUCH PLAYER");
+			}
+
+			targetPlayer = locateResult.AsPlayer;
+			folderSpec = args["1"].Message!.ToPlainText()!;
+		}
+
+		// Get mail for the folder
+		var folderMail = await Mediator!.Send(new GetMailListQuery(targetPlayer.AsPlayer, folderSpec ?? "INBOX"));
+		var mailArray = await folderMail.ToArrayAsync();
+		
+		var read = mailArray.Count(m => m.Read);
+		var unread = mailArray.Count(m => !m.Read);
+		var cleared = mailArray.Count(m => m.Cleared);
+
+		return new CallState($"{read} {unread} {cleared}");
 	}
 
 
