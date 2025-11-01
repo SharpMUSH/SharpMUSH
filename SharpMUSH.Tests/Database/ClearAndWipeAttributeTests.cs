@@ -166,7 +166,6 @@ public class ClearAndWipeAttributeTests
 	}
 
 	[Test]
-	[Skip("Intermittent failure - investigating why wiping middle node sometimes leaves parent reference")]
 	public async Task WipeAttributeAsync_MiddleOfTree_RemovesOnlySubtree()
 	{
 		// Arrange: Create a unique attribute tree
