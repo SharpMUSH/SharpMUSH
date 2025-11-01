@@ -66,8 +66,11 @@ public static class ChannelHelper
 		new(ChannelPrivileges.ToDictionary(x => x.Value, string? (x) => x.Key));
 
 	public static async ValueTask<bool> IsMemberOfChannel(AnySharpObject member, SharpChannel channel)
-		=> await channel.Members.Value
-			.AnyAsync(x => x.Member.Id() == member.Id());
+		=> await channel.Members
+			.Value
+			.AnyAsync(x => 
+				x.Member.Id() == member.Id()
+				);
 
 	public static async ValueTask<(AnySharpObject Member, SharpChannelStatus Status)?> ChannelMemberStatus(
 		AnySharpObject member, SharpChannel channel)

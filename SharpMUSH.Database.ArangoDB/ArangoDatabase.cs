@@ -694,26 +694,37 @@ public partial class ArangoDatabase(
 
 	private IAsyncEnumerable<(AnySharpObject Member, SharpChannelStatus Status)> GetChannelMembersAsync(
 		string channelId, CancellationToken ct = default)
-		=> arangoDb.Query.ExecuteStreamAsync<(string Id, SharpChannelUserStatusQueryResult Status)>(handle,
-				$"FOR v IN 1..1 INBOUND {channelId} GRAPH {DatabaseConstants.GraphChannels} RETURN {{Id: v._id, Status: e}}",
-				cancellationToken: ct)
-			.Select<(string Id, SharpChannelUserStatusQueryResult Status), (AnySharpObject, SharpChannelStatus)>(async (x,
-					cancelToken) =>
-				((await GetObjectNodeAsync(x.Id, cancelToken)).Known(),
+	{
+		var stream = arangoDb.Query.ExecuteStreamAsync<dynamic>(handle,
+			$"FOR v,e IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphChannels} RETURN {{Id: v._id, Status: e}}",
+			bindVars: new Dictionary<string, object>
+			{
+				{ "startVertex",  channelId }
+			},
+			cancellationToken: ct);
+		
+		var result = stream
+			.Select<dynamic, (AnySharpObject, SharpChannelStatus)>(
+				async (x, cancelToken) =>
+				((await GetObjectNodeAsync((string)x.Id, cancelToken)).Known(),
 					new SharpChannelStatus(
-						Combine: x.Status.Combine,
-						Gagged: x.Status.Gagged,
-						Hide: x.Status.Hide,
-						Mute: x.Status.Mute,
-						Title: MarkupStringModule.deserialize(x.Status.Title)
+						Combine: (bool?)x.Status.Combine,
+						Gagged: (bool?)x.Status.Gagged,
+						Hide: (bool?)x.Status.Hide,
+						Mute: (bool?)x.Status.Mute,
+						Title: MarkupStringModule.deserialize((string?)x.Status.Title ?? string.Empty)
 					)));
+		var count = result.ToArrayAsync().GetAwaiter().GetResult();	
+		
+		return result;
+	}
 
 	private SharpChannel SharpChannelQueryToSharpChannel(SharpChannelQueryResult x) =>
 		new()
 		{
 			Id = x.Id,
-			Name = MarkupStringModule.deserialize(x.Name),
-			Description = MarkupStringModule.deserialize(x.Description),
+			Name = MarkupStringModule.deserialize(x.MarkedUpName),
+			Description = MarkupStringModule.deserialize(x.Description ?? string.Empty),
 			Privs = x.Privs,
 			JoinLock = x.JoinLock,
 			SpeakLock = x.SpeakLock,
@@ -731,10 +742,11 @@ public partial class ArangoDatabase(
 	{
 		var result = await arangoDb.Query.ExecuteAsync<SharpChannelQueryResult>(
 			handle,
-			$"FOR v IN @@c FILTER v.Name = {name} RETURN v",
+			$"FOR v IN @@c FILTER v.Name == @name RETURN v",
 			bindVars: new Dictionary<string, object>
 			{
-				{ "@c", DatabaseConstants.Channels }
+				{ "@c", DatabaseConstants.Channels },
+				{ "name", name }
 			}, cancellationToken: ct);
 		return result?
 			.Select(SharpChannelQueryToSharpChannel)
@@ -745,7 +757,10 @@ public partial class ArangoDatabase(
 		CancellationToken ct = default) =>
 		arangoDb.Query.ExecuteStreamAsync<SharpChannelQueryResult>(handle,
 				$"FOR v in 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.OnChannel} RETURN v",
-				new Dictionary<string, object> { { StartVertex, obj.Object().Id! } }, cancellationToken: ct)
+				new Dictionary<string, object>
+				{
+					{ StartVertex, obj.Object().Id! }
+				}, cancellationToken: ct)
 			.Select(SharpChannelQueryToSharpChannel);
 
 	public async ValueTask CreateChannelAsync(MarkupStringModule.MarkupString channel, string[] privs,
@@ -761,12 +776,13 @@ public partial class ArangoDatabase(
 			}, ct);
 
 		var newChannel = new SharpChannelCreateRequest(
-			Name: MarkupStringModule.serialize(channel),
+			Name: channel.ToPlainText(),
+			MarkedUpName: MarkupStringModule.serialize(channel),
 			Privs: privs
 		);
 
 		var createdChannel = await arangoDb.Graph.Vertex.CreateAsync<SharpChannelCreateRequest, SharpChannelQueryResult>(
-			transaction, DatabaseConstants.GraphChannels, DatabaseConstants.Channels, newChannel, cancellationToken: ct);
+			transaction, DatabaseConstants.GraphChannels, DatabaseConstants.Channels, newChannel, returnNew: true, cancellationToken: ct);
 
 		await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.GraphChannels,
 			DatabaseConstants.OwnerOfChannel,
@@ -788,6 +804,9 @@ public partial class ArangoDatabase(
 				Name = name is not null
 					? MarkupStringModule.serialize(name)
 					: MarkupStringModule.serialize(channel.Name),
+				MarkedUpName = name is not null
+					? name.ToPlainText()
+					: channel.Name.ToPlainText(),
 				Description = description is not null
 					? MarkupStringModule.serialize(description)
 					: MarkupStringModule.serialize(channel.Description),

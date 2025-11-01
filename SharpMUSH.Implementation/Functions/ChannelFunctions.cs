@@ -181,7 +181,7 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		
 		// Get player argument (default to executor)
-		AnySharpObject player = executor;
+		var player = executor;
 		if (parser.CurrentState.Arguments.TryGetValue("0", out var arg0) && !string.IsNullOrWhiteSpace(arg0.Message!.ToPlainText()))
 		{
 			var maybePlayer = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0.Message!.ToPlainText(), LocateFlags.All);
