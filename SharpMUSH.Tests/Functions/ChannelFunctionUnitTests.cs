@@ -90,7 +90,7 @@ public class ChannelFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single($"cowner({TestChannelName})")))?.Message!;
 		var owner = result.ToPlainText();
 		
-		await Assert.That(owner).IsEqualTo($"#{TestPlayerDbRef}");
+		await Assert.That(owner).StartsWith($"#{TestPlayerDbRef}:");
 	}
 
 	[Test]

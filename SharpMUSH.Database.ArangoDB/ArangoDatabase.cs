@@ -695,7 +695,7 @@ public partial class ArangoDatabase(
 	private IAsyncEnumerable<(AnySharpObject Member, SharpChannelStatus Status)> GetChannelMembersAsync(
 		string channelId, CancellationToken ct = default)
 	{
-		var stream = arangoDb.Query.ExecuteStreamAsync<dynamic>(handle,
+		var stream = arangoDb.Query.ExecuteStreamAsync<SharpChannelMemberListQueryResult>(handle,
 			$"FOR v,e IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphChannels} RETURN {{Id: v._id, Status: e}}",
 			bindVars: new Dictionary<string, object>
 			{
@@ -704,17 +704,16 @@ public partial class ArangoDatabase(
 			cancellationToken: ct);
 		
 		var result = stream
-			.Select<dynamic, (AnySharpObject, SharpChannelStatus)>(
+			.Select<SharpChannelMemberListQueryResult, (AnySharpObject, SharpChannelStatus)>(
 				async (x, cancelToken) =>
 				((await GetObjectNodeAsync((string)x.Id, cancelToken)).Known(),
 					new SharpChannelStatus(
-						Combine: (bool?)x.Status.Combine,
-						Gagged: (bool?)x.Status.Gagged,
-						Hide: (bool?)x.Status.Hide,
-						Mute: (bool?)x.Status.Mute,
-						Title: MarkupStringModule.deserialize((string?)x.Status.Title ?? string.Empty)
+						Combine: x.Status.Combine,
+						Gagged: x.Status.Gagged,
+						Hide: x.Status.Hide,
+						Mute: x.Status.Mute,
+						Title: MarkupStringModule.deserialize(x.Status.Title ?? string.Empty)
 					)));
-		var count = result.ToArrayAsync().GetAwaiter().GetResult();	
 		
 		return result;
 	}
@@ -844,8 +843,11 @@ public partial class ArangoDatabase(
 		CancellationToken ct = default)
 	{
 		var result = await arangoDb.Query.ExecuteAsync<SharpEdgeQueryResult>(handle,
-			$"FOR v IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.OnChannel} RETURN v",
-			new Dictionary<string, object> { { StartVertex, obj.Object().Id! } }, cancellationToken: ct);
+			$"FOR v,e IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphChannels} RETURN e",
+			new Dictionary<string, object>
+			{
+				{ StartVertex, obj.Object().Id! }
+			}, cancellationToken: ct);
 
 		var singleResult = result?.FirstOrDefault();
 		if (singleResult is null) return;
@@ -859,7 +861,7 @@ public partial class ArangoDatabase(
 		SharpChannelStatus status, CancellationToken ct = default)
 	{
 		var result = await arangoDb.Query.ExecuteAsync<SharpEdgeQueryResult>(handle,
-			$"FOR v IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.OnChannel} RETURN v",
+			$"FOR v,e IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphChannels} RETURN e",
 			new Dictionary<string, object> { { StartVertex, obj.Object().Id! } }, cancellationToken: ct);
 
 		var singleResult = result?.FirstOrDefault();

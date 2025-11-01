@@ -22,14 +22,16 @@ public record SharpChannelCreateRequest(
 	string[] Privs
 );
 
+public record SharpChannelMemberListQueryResult(
+	string Id,
+	SharpChannelUserStatusQueryResult Status);
+
 public record SharpChannelUserStatusQueryResult(
-	string From,
-	string To,
-	bool Gagged,
-	bool Mute,
-	bool Hide,
-	bool Combine,
-	string Title
+	bool? Gagged,
+	bool? Mute,
+	bool? Hide,
+	bool? Combine,
+	string? Title
 );
 
 public record SharpChannelUserStatusUpdateRequest(
