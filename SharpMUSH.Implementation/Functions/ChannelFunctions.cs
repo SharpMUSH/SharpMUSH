@@ -544,7 +544,6 @@ public partial class Functions
 	public static async ValueTask<CallState> ChannelBuffer(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, channelName, false);
 		
