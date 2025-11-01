@@ -6,6 +6,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Tests.Functions;
 
@@ -17,9 +18,10 @@ public class MailFunctionUnitTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	
-	// Flag to track if setup has been done
-	private bool _setupComplete = false;
-	private readonly object _setupLock = new();
+	// Unique test identifier to ensure we don't conflict with other test runs
+	private static readonly string TestRunId = Guid.NewGuid().ToString("N")[..8];
+	private static bool _setupComplete = false;
+	private static readonly object _setupLock = new();
 
 	[Before(Test)]
 	public async Task EnsureTestMailSetup()
@@ -38,7 +40,14 @@ public class MailFunctionUnitTests
 				var executor = await Parser.CurrentState.KnownExecutorObject(Mediator);
 				var testPlayer = executor.AsPlayer;
 				
-				// Create test mail messages with known content
+				// Clear any existing mail to ensure clean state
+				var existingMail = await Mediator.Send(new GetAllMailListQuery(testPlayer));
+				await foreach (var mail in existingMail)
+				{
+					await Mediator.Send(new DeleteMailCommand(mail));
+				}
+				
+				// Create test mail messages with unique content tied to this test run
 				var testMail1 = new SharpMail
 				{
 					DateSent = DateTimeOffset.UtcNow.AddHours(-2),
@@ -49,8 +58,8 @@ public class MailFunctionUnitTests
 					Cleared = false,
 					Forwarded = false,
 					Folder = "INBOX",
-					Content = MModule.single("Test message content 1"),
-					Subject = MModule.single("Test Subject 1"),
+					Content = MModule.single($"TESTMAIL-{TestRunId}-MSG1-Content"),
+					Subject = MModule.single($"TESTMAIL-{TestRunId}-Subject1"),
 					From = new DotNext.Threading.AsyncLazy<AnyOptionalSharpObject>(
 						async _ => await ValueTask.FromResult(executor.WithNoneOption()))
 				};
@@ -65,8 +74,8 @@ public class MailFunctionUnitTests
 					Cleared = false,
 					Forwarded = false,
 					Folder = "INBOX",
-					Content = MModule.single("Test message content 2 with more text"),
-					Subject = MModule.single("Urgent Test Subject 2"),
+					Content = MModule.single($"TESTMAIL-{TestRunId}-MSG2-Content with more text"),
+					Subject = MModule.single($"TESTMAIL-{TestRunId}-UrgentSubject2"),
 					From = new DotNext.Threading.AsyncLazy<AnyOptionalSharpObject>(
 						async _ => await ValueTask.FromResult(executor.WithNoneOption()))
 				};
@@ -81,8 +90,8 @@ public class MailFunctionUnitTests
 					Cleared = true,
 					Forwarded = false,
 					Folder = "INBOX",
-					Content = MModule.single("Test message content 3"),
-					Subject = MModule.single("Test Subject 3"),
+					Content = MModule.single($"TESTMAIL-{TestRunId}-MSG3-Content"),
+					Subject = MModule.single($"TESTMAIL-{TestRunId}-Subject3"),
 					From = new DotNext.Threading.AsyncLazy<AnyOptionalSharpObject>(
 						async _ => await ValueTask.FromResult(executor.WithNoneOption()))
 				};
@@ -100,9 +109,11 @@ public class MailFunctionUnitTests
 	[Test]
 	public async Task Mail_NoArgs_ReturnsCount()
 	{
-		// Should return count of messages (3 from setup)
+		// Should return count of messages (3 from setup after clearing)
 		var result = (await Parser.FunctionParse(MModule.single("mail()")))?.Message!;
-		await Assert.That(result.ToPlainText()).IsEqualTo("3");
+		var count = int.Parse(result.ToPlainText()!);
+		// Should have exactly 3 messages after our clean setup
+		await Assert.That(count).IsEqualTo(3);
 	}
 
 	[Test]
@@ -111,8 +122,8 @@ public class MailFunctionUnitTests
 		// Get a message content (any of our test messages)
 		var result = (await Parser.FunctionParse(MModule.single("mail(1)")))?.Message!;
 		var content = result.ToPlainText();
-		// Should be one of our test messages
-		await Assert.That(content).Contains("Test message content");
+		// Should be one of our test messages with our unique ID
+		await Assert.That(content).Contains($"TESTMAIL-{TestRunId}");
 	}
 
 	[Test]
@@ -294,8 +305,8 @@ public class MailFunctionUnitTests
 		// Get subject of any message
 		var result = (await Parser.FunctionParse(MModule.single("mailsubject(1)")))?.Message!;
 		var subject = result.ToPlainText();
-		// Should be one of our test subjects
-		await Assert.That(subject).Contains("Test Subject");
+		// Should be one of our test subjects with unique ID
+		await Assert.That(subject).Contains($"TESTMAIL-{TestRunId}");
 	}
 
 	[Test]
