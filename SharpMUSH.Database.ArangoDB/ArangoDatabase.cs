@@ -1749,45 +1749,22 @@ public partial class ArangoDatabase(
 		var targetAttr = await attrs.LastOrDefaultAsync(ct);
 		if (targetAttr is null) return false;
 
-		// Get all descendants (children, grandchildren, etc.) - no limit on depth
+		// Get all descendants (children, grandchildren, etc.) and collect them
 		var descendants = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle,
 			$"FOR v IN 1.. OUTBOUND {targetAttr.Id} GRAPH {DatabaseConstants.GraphAttributes} RETURN v",
 			cancellationToken: ct);
+		var descendantsList = await descendants.ToListAsync(ct);
 
-		// Use a transaction to remove all at once for consistency
-		var transaction = await arangoDb.Transaction.BeginAsync(handle, new ArangoTransaction
+		// Remove all descendants first (bottom-up) to avoid orphans
+		foreach (var descendant in descendantsList.AsEnumerable().Reverse())
 		{
-			LockTimeout = DatabaseBehaviorConstants.TransactionTimeout,
-			WaitForSync = true,
-			Collections = new ArangoTransactionScope
-			{
-				Exclusive = [DatabaseConstants.Attributes, DatabaseConstants.HasAttribute, DatabaseConstants.HasAttributeFlag, DatabaseConstants.HasAttributeOwner]
-			}
-		}, ct);
-
-		try
-		{
-			// Collect descendants and remove in reverse order for bottom-up deletion
-			var descendantsList = await descendants.ToListAsync(ct);
-			
-			// Remove all descendants first (bottom-up) to avoid orphans
-			foreach (var descendant in descendantsList.AsEnumerable().Reverse())
-			{
-				await arangoDb.Graph.Vertex.RemoveAsync(transaction, DatabaseConstants.GraphAttributes,
-					DatabaseConstants.Attributes, descendant.Key, cancellationToken: ct);
-			}
-
-			// Remove the target attribute itself
-			await arangoDb.Graph.Vertex.RemoveAsync(transaction, DatabaseConstants.GraphAttributes,
-				DatabaseConstants.Attributes, targetAttr.Key, cancellationToken: ct);
-
-			await arangoDb.Transaction.CommitAsync(transaction, ct);
+			await arangoDb.Graph.Vertex.RemoveAsync(handle, DatabaseConstants.GraphAttributes,
+				DatabaseConstants.Attributes, descendant.Key, cancellationToken: ct);
 		}
-		catch
-		{
-			await arangoDb.Transaction.AbortAsync(transaction, ct);
-			throw;
-		}
+
+		// Remove the target attribute itself
+		await arangoDb.Graph.Vertex.RemoveAsync(handle, DatabaseConstants.GraphAttributes,
+			DatabaseConstants.Attributes, targetAttr.Key, cancellationToken: ct);
 
 		return true;
 	}
