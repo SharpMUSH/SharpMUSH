@@ -773,23 +773,31 @@ public partial class ArangoDatabase(
 				}
 			}, ct);
 
-		var newChannel = new SharpChannelCreateRequest(
-			Name: channel.ToPlainText(),
-			MarkedUpName: MarkupStringModule.serialize(channel),
-			Privs: privs
-		);
+		try
+		{
 
-		var createdChannel = await arangoDb.Graph.Vertex.CreateAsync<SharpChannelCreateRequest, SharpChannelQueryResult>(
-			transaction, DatabaseConstants.GraphChannels, DatabaseConstants.Channels, newChannel, returnNew: true,
-			cancellationToken: ct);
+			var newChannel = new SharpChannelCreateRequest(
+				Name: channel.ToPlainText(),
+				MarkedUpName: MarkupStringModule.serialize(channel),
+				Privs: privs
+			);
 
-		await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.GraphChannels,
-			DatabaseConstants.OwnerOfChannel,
-			new SharpEdgeCreateRequest(createdChannel.New.Id, owner.Id!), cancellationToken: ct);
-		await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.GraphChannels, DatabaseConstants.OnChannel,
-			new SharpEdgeCreateRequest(owner.Id!, createdChannel.New.Id), cancellationToken: ct);
+			var createdChannel = await arangoDb.Graph.Vertex.CreateAsync<SharpChannelCreateRequest, SharpChannelQueryResult>(
+				transaction, DatabaseConstants.GraphChannels, DatabaseConstants.Channels, newChannel, returnNew: true,
+				cancellationToken: ct);
 
-		await arangoDb.Transaction.CommitAsync(transaction, ct);
+			await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.GraphChannels,
+				DatabaseConstants.OwnerOfChannel,
+				new SharpEdgeCreateRequest(createdChannel.New.Id, owner.Id!), cancellationToken: ct);
+			await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.GraphChannels, DatabaseConstants.OnChannel,
+				new SharpEdgeCreateRequest(owner.Id!, createdChannel.New.Id), cancellationToken: ct);
+
+			await arangoDb.Transaction.CommitAsync(transaction, ct);
+		}
+		catch
+		{
+			await arangoDb.Transaction.AbortAsync(transaction, ct);
+		}
 	}
 
 	public async ValueTask UpdateChannelAsync(SharpChannel channel, MarkupStringModule.MarkupString? name,

@@ -38,7 +38,7 @@ public static class DatabaseConstants
 	public const string HasHook = "edge_has_hook";
 	public const string HasAttributeOwner = "edge_has_attribute_owner";
 	public const string OwnerOfChannel = "edge_owner_of_channel";
-	public const string OnChannel = "edge_has_channel";
+	public const string OnChannel = "edge_member_of_channel";
 	public const string SenderOfMail = "edge_mail_sender";
 	public const string ReceivedMail = "edge_received_mail";
 

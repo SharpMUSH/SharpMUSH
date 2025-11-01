@@ -562,7 +562,7 @@ public class Migration_CreateDatabase : IArangoMigration
 										Mute = new { type = DatabaseConstants.TypeBoolean },
 										Hide = new { type = DatabaseConstants.TypeBoolean },
 										Combine = new { type = DatabaseConstants.TypeBoolean },
-										Title = new { type = DatabaseConstants.TypeBoolean }
+										Title = new { type = DatabaseConstants.TypeString }
 									}
 								}
 							}
