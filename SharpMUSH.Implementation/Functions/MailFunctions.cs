@@ -14,11 +14,11 @@ namespace SharpMUSH.Implementation.Functions;
 public partial class Functions
 {
 	/// <summary>
-	/// Helper to parse folder:message format and retrieve mail
+	/// Parse message specification (e.g. "123" or "INBOX:5") into folder and message index
 	/// </summary>
-	private static async ValueTask<(string folder, int messageIndex, SharpMail? mail)> GetMailMessage(
-		IMUSHCodeParser parser, 
-		AnySharpObject player, 
+	private static async ValueTask<(string folder, int messageIndex)> ParseMessageSpec(
+		IMUSHCodeParser parser,
+		AnySharpObject player,
 		string messageSpec)
 	{
 		var parts = messageSpec.Split(':', 2);
@@ -27,25 +27,68 @@ public partial class Functions
 
 		if (parts.Length == 2 && !string.IsNullOrWhiteSpace(parts[0]))
 		{
+			// Format: "folder:number"
 			folder = parts[0].Trim().ToUpper();
 			if (!int.TryParse(parts[1].Trim(), out messageIndex) || messageIndex < 1)
 			{
-				return (folder, -1, null);
+				return (folder, -1);
 			}
-			messageIndex--; // Convert from 1-indexed to 0-indexed
 		}
 		else
 		{
+			// Format: just "number" - use current folder
 			folder = await MessageListHelper.CurrentMailFolder(parser, ObjectDataService!, player);
 			if (!int.TryParse(messageSpec.Trim(), out messageIndex) || messageIndex < 1)
 			{
-				return (folder, -1, null);
+				return (folder, -1);
 			}
-			messageIndex--; // Convert from 1-indexed to 0-indexed
 		}
 
-		var mail = await Mediator!.Send(new GetMailQuery(player.AsPlayer, messageIndex, folder));
-		return (folder, messageIndex, mail);
+		// Convert from 1-indexed to 0-indexed
+		return (folder, messageIndex - 1);
+	}
+
+	/// <summary>
+	/// Retrieve mail message by folder and index
+	/// </summary>
+	private static async ValueTask<SharpMail?> GetMailMessage(
+		AnySharpObject player,
+		string folder,
+		int messageIndex)
+	{
+		return await Mediator!.Send(new GetMailQuery(player.AsPlayer, messageIndex, folder));
+	}
+
+	/// <summary>
+	/// Helper to parse target player and message spec from function arguments.
+	/// Returns null if permission denied or player not found.
+	/// </summary>
+	private static async ValueTask<(AnySharpObject? player, string? messageSpec)> ParsePlayerAndMessageArgs(
+		IMUSHCodeParser parser,
+		AnySharpObject executor,
+		Dictionary<string, CallState> args)
+	{
+		if (args.Count == 1)
+		{
+			return (executor, args["0"].Message!.ToPlainText()!);
+		}
+
+		// Two arguments - must be wizard to view other player's mail
+		if (!executor.IsGod() && !await executor.IsWizard())
+		{
+			return (null, null);
+		}
+
+		var playerArg = args["0"].Message!.ToPlainText()!;
+		var locateResult = await LocateService!.LocateAndNotifyIfInvalid(
+			parser, executor, executor, playerArg, LocateFlags.PlayersPreference);
+
+		if (locateResult.IsError || locateResult.IsNone)
+		{
+			return (null, null);
+		}
+
+		return (locateResult.AsPlayer, args["1"].Message!.ToPlainText()!);
 	}
 
 	/// <summary>
@@ -73,27 +116,11 @@ public partial class Functions
 		var arg0 = args["0"].Message!.ToPlainText()!;
 
 		// Check if arg0 is a message number (contains only digits or folder:digits format)
-		// Valid formats: "123", "0:123", "INBOX:5"
-		var isMsgNumber = false;
-		if (!string.IsNullOrEmpty(arg0))
-		{
-			if (arg0.All(char.IsDigit))
-			{
-				// Pure number like "123"
-				isMsgNumber = true;
-			}
-			else if (arg0.Contains(':'))
-			{
-				// Folder:number format like "0:123" or "INBOX:5"
-				var parts = arg0.Split(':', 2);
-				isMsgNumber = parts.Length == 2 && !string.IsNullOrWhiteSpace(parts[0]) && parts[1].All(char.IsDigit);
-			}
-		}
+		var isMsgNumber = IsMessageNumber(arg0);
 
 		// Case 2: mail(player) - return "read unread cleared" counts for player
 		if (args.Count == 1 && !isMsgNumber)
 		{
-			// Must be wizard to view other player's mail
 			if (!await CanViewOtherPlayerMail(executor))
 			{
 				return new CallState("#-1 PERMISSION DENIED");
@@ -115,8 +142,13 @@ public partial class Functions
 		// Case 3: mail(msg#) or mail(folder:msg#) - return text content of message
 		if (args.Count == 1)
 		{
-			var (folder, messageIndex, mail) = await GetMailMessage(parser, executor, arg0);
-			
+			var (folder, messageIndex) = await ParseMessageSpec(parser, executor, arg0);
+			if (messageIndex < 0)
+			{
+				return new CallState("#-1 NO SUCH MAIL");
+			}
+
+			var mail = await GetMailMessage(executor, folder, messageIndex);
 			if (mail == null)
 			{
 				return new CallState("#-1 NO SUCH MAIL");
@@ -128,7 +160,6 @@ public partial class Functions
 		// Case 4: mail(player, msg#) or mail(player, folder:msg#) - return text of player's message
 		var arg1 = args["1"].Message!.ToPlainText()!;
 		
-		// Must be wizard to view other player's mail
 		if (!await CanViewOtherPlayerMail(executor))
 		{
 			return new CallState("#-1 PERMISSION DENIED");
@@ -138,8 +169,13 @@ public partial class Functions
 			parser, executor, executor, arg0, LocateFlags.PlayersPreference,
 			async target =>
 			{
-				var (folder, messageIndex, mail) = await GetMailMessage(parser, target, arg1);
-				
+				var (folder, messageIndex) = await ParseMessageSpec(parser, target, arg1);
+				if (messageIndex < 0)
+				{
+					return new CallState("#-1 NO SUCH MAIL");
+				}
+
+				var mail = await GetMailMessage(target, folder, messageIndex);
 				if (mail == null)
 				{
 					return new CallState("#-1 NO SUCH MAIL");
@@ -147,6 +183,30 @@ public partial class Functions
 
 				return new CallState(mail.Content.ToString());
 			});
+	}
+
+	/// <summary>
+	/// Check if a string is a valid message number (e.g., "123" or "INBOX:5")
+	/// </summary>
+	private static bool IsMessageNumber(string arg)
+	{
+		if (string.IsNullOrEmpty(arg))
+		{
+			return false;
+		}
+
+		if (arg.All(char.IsDigit))
+		{
+			return true;
+		}
+
+		if (arg.Contains(':'))
+		{
+			var parts = arg.Split(':', 2);
+			return parts.Length == 2 && !string.IsNullOrWhiteSpace(parts[0]) && parts[1].All(char.IsDigit);
+		}
+
+		return false;
 	}
 	[SharpFunction(Name = "maillist", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> maillist(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -220,36 +280,19 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		
-		AnySharpObject targetPlayer = executor;
-		string messageSpec;
-
-		if (args.Count == 1)
+		var (targetPlayer, messageSpec) = await ParsePlayerAndMessageArgs(parser, executor, args);
+		if (targetPlayer == null || messageSpec == null)
 		{
-			messageSpec = args["0"].Message!.ToPlainText()!;
-		}
-		else
-		{
-			// Must be wizard to view other player's mail
-			if (!await CanViewOtherPlayerMail(executor))
-			{
-				return new CallState("#-1 PERMISSION DENIED");
-			}
-
-			var playerArg = args["0"].Message!.ToPlainText()!;
-			var locateResult = await LocateService!.LocateAndNotifyIfInvalid(
-				parser, executor, executor, playerArg, LocateFlags.PlayersPreference);
-			
-			if (locateResult.IsError || locateResult.IsNone)
-			{
-				return new CallState("#-1 NO SUCH PLAYER");
-			}
-
-			targetPlayer = locateResult.AsPlayer;
-			messageSpec = args["1"].Message!.ToPlainText()!;
+			return new CallState(args.Count == 1 ? "#-1 NO SUCH MAIL" : "#-1 PERMISSION DENIED");
 		}
 
-		var (folder, messageIndex, mail) = await GetMailMessage(parser, targetPlayer, messageSpec);
-		
+		var (folder, messageIndex) = await ParseMessageSpec(parser, targetPlayer, messageSpec);
+		if (messageIndex < 0)
+		{
+			return new CallState("#-1 NO SUCH MAIL");
+		}
+
+		var mail = await GetMailMessage(targetPlayer, folder, messageIndex);
 		if (mail == null)
 		{
 			return new CallState("#-1 NO SUCH MAIL");
@@ -470,36 +513,19 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		
-		AnySharpObject targetPlayer = executor;
-		string messageSpec;
-
-		if (args.Count == 1)
+		var (targetPlayer, messageSpec) = await ParsePlayerAndMessageArgs(parser, executor, args);
+		if (targetPlayer == null || messageSpec == null)
 		{
-			messageSpec = args["0"].Message!.ToPlainText()!;
-		}
-		else
-		{
-			// Must be wizard to view other player's mail
-			if (!await CanViewOtherPlayerMail(executor))
-			{
-				return new CallState("#-1 PERMISSION DENIED");
-			}
-
-			var playerArg = args["0"].Message!.ToPlainText()!;
-			var locateResult = await LocateService!.LocateAndNotifyIfInvalid(
-				parser, executor, executor, playerArg, LocateFlags.PlayersPreference);
-			
-			if (locateResult.IsError || locateResult.IsNone)
-			{
-				return new CallState("#-1 NO SUCH PLAYER");
-			}
-
-			targetPlayer = locateResult.AsPlayer;
-			messageSpec = args["1"].Message!.ToPlainText()!;
+			return new CallState(args.Count == 1 ? "#-1 NO SUCH MAIL" : "#-1 PERMISSION DENIED");
 		}
 
-		var (folder, messageIndex, mail) = await GetMailMessage(parser, targetPlayer, messageSpec);
-		
+		var (folder, messageIndex) = await ParseMessageSpec(parser, targetPlayer, messageSpec);
+		if (messageIndex < 0)
+		{
+			return new CallState("#-1 NO SUCH MAIL");
+		}
+
+		var mail = await GetMailMessage(targetPlayer, folder, messageIndex);
 		if (mail == null)
 		{
 			return new CallState("#-1 NO SUCH MAIL");
@@ -520,36 +546,19 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		
-		AnySharpObject targetPlayer = executor;
-		string messageSpec;
-
-		if (args.Count == 1)
+		var (targetPlayer, messageSpec) = await ParsePlayerAndMessageArgs(parser, executor, args);
+		if (targetPlayer == null || messageSpec == null)
 		{
-			messageSpec = args["0"].Message!.ToPlainText()!;
-		}
-		else
-		{
-			// Must be wizard to view other player's mail
-			if (!await CanViewOtherPlayerMail(executor))
-			{
-				return new CallState("#-1 PERMISSION DENIED");
-			}
-
-			var playerArg = args["0"].Message!.ToPlainText()!;
-			var locateResult = await LocateService!.LocateAndNotifyIfInvalid(
-				parser, executor, executor, playerArg, LocateFlags.PlayersPreference);
-			
-			if (locateResult.IsError || locateResult.IsNone)
-			{
-				return new CallState("#-1 NO SUCH PLAYER");
-			}
-
-			targetPlayer = locateResult.AsPlayer;
-			messageSpec = args["1"].Message!.ToPlainText()!;
+			return new CallState(args.Count == 1 ? "#-1 NO SUCH MAIL" : "#-1 PERMISSION DENIED");
 		}
 
-		var (folder, messageIndex, mail) = await GetMailMessage(parser, targetPlayer, messageSpec);
-		
+		var (folder, messageIndex) = await ParseMessageSpec(parser, targetPlayer, messageSpec);
+		if (messageIndex < 0)
+		{
+			return new CallState("#-1 NO SUCH MAIL");
+		}
+
+		var mail = await GetMailMessage(targetPlayer, folder, messageIndex);
 		if (mail == null)
 		{
 			return new CallState("#-1 NO SUCH MAIL");
@@ -563,36 +572,19 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		
-		AnySharpObject targetPlayer = executor;
-		string messageSpec;
-
-		if (args.Count == 1)
+		var (targetPlayer, messageSpec) = await ParsePlayerAndMessageArgs(parser, executor, args);
+		if (targetPlayer == null || messageSpec == null)
 		{
-			messageSpec = args["0"].Message!.ToPlainText()!;
-		}
-		else
-		{
-			// Must be wizard to view other player's mail
-			if (!await CanViewOtherPlayerMail(executor))
-			{
-				return new CallState("#-1 PERMISSION DENIED");
-			}
-
-			var playerArg = args["0"].Message!.ToPlainText()!;
-			var locateResult = await LocateService!.LocateAndNotifyIfInvalid(
-				parser, executor, executor, playerArg, LocateFlags.PlayersPreference);
-			
-			if (locateResult.IsError || locateResult.IsNone)
-			{
-				return new CallState("#-1 NO SUCH PLAYER");
-			}
-
-			targetPlayer = locateResult.AsPlayer;
-			messageSpec = args["1"].Message!.ToPlainText()!;
+			return new CallState(args.Count == 1 ? "#-1 NO SUCH MAIL" : "#-1 PERMISSION DENIED");
 		}
 
-		var (folder, messageIndex, mail) = await GetMailMessage(parser, targetPlayer, messageSpec);
-		
+		var (folder, messageIndex) = await ParseMessageSpec(parser, targetPlayer, messageSpec);
+		if (messageIndex < 0)
+		{
+			return new CallState("#-1 NO SUCH MAIL");
+		}
+
+		var mail = await GetMailMessage(targetPlayer, folder, messageIndex);
 		if (mail == null)
 		{
 			return new CallState("#-1 NO SUCH MAIL");
