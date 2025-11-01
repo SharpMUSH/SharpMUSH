@@ -100,7 +100,7 @@ public partial class Functions
 			return new CallState("#-1 You are not a member of that channel.");
 		}
 
-		var (_, status) = maybeMemberStatus.Value;
+		var (_, status) = maybeMemberStatus;
 
 		await Mediator!.Send(new ChannelMessageNotification(
 			channel,
@@ -167,7 +167,7 @@ public partial class Functions
 			return CallState.Empty; // Player not on channel
 		}
 
-		var (_, status) = maybeMemberStatus.Value;
+		var (_, status) = maybeMemberStatus;
 
 		// Build status flags
 		var statusFlags = new List<string>();
@@ -280,7 +280,7 @@ public partial class Functions
 		}
 
 		// Return the same as cflags with a player argument
-		var (_, status) = maybeMemberStatus.Value;
+		var (_, status) = maybeMemberStatus;
 		var statusFlags = new List<string>();
 		if (status.Combine is true) statusFlags.Add("COMBINE");
 		if (status.Gagged is true) statusFlags.Add("GAG");
@@ -425,7 +425,7 @@ public partial class Functions
 			return new CallState("OFF");
 		}
 
-		var (_, status) = maybeMemberStatus.Value;
+		var (_, status) = maybeMemberStatus;
 
 		// Build status flags - starting with ON
 		var statusFlags = new List<string> { "ON" };
@@ -459,7 +459,7 @@ public partial class Functions
 			return CallState.Empty; // Player not on channel
 		}
 
-		var (_, status) = maybeMemberStatus.Value;
+		var (_, status) = maybeMemberStatus;
 
 		return new CallState(status.Title ?? MModule.empty());
 	}
@@ -529,7 +529,7 @@ public partial class Functions
 			return new CallState("#-1 You are not a member of that channel.");
 		}
 
-		var (_, status) = maybeMemberStatus.Value;
+		var (_, status) = maybeMemberStatus;
 
 		var canNoSpoof = await PermissionService!.CanNoSpoof(executor);
 

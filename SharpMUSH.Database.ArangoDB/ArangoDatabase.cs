@@ -692,21 +692,20 @@ public partial class ArangoDatabase(
 		return owner.AsPlayer;
 	}
 
-	private IAsyncEnumerable<(AnySharpObject Member, SharpChannelStatus Status)> GetChannelMembersAsync(
+	private IAsyncEnumerable<SharpChannel.MemberAndStatus> GetChannelMembersAsync(
 		string channelId, CancellationToken ct = default)
 	{
 		var stream = arangoDb.Query.ExecuteStreamAsync<SharpChannelMemberListQueryResult>(handle,
 			$"FOR v,e IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphChannels} RETURN {{Id: v._id, Status: e}}",
 			bindVars: new Dictionary<string, object>
 			{
-				{ "startVertex",  channelId }
+				{ "startVertex", channelId }
 			},
 			cancellationToken: ct);
-		
+
 		var result = stream
-			.Select<SharpChannelMemberListQueryResult, (AnySharpObject, SharpChannelStatus)>(
-				async (x, cancelToken) =>
-				((await GetObjectNodeAsync((string)x.Id, cancelToken)).Known(),
+			.Select<SharpChannelMemberListQueryResult, SharpChannel.MemberAndStatus>(async (x, cancelToken) =>
+				new SharpChannel.MemberAndStatus((await GetObjectNodeAsync(x.Id, cancelToken)).Known(),
 					new SharpChannelStatus(
 						Combine: x.Status.Combine,
 						Gagged: x.Status.Gagged,
@@ -714,7 +713,7 @@ public partial class ArangoDatabase(
 						Mute: x.Status.Mute,
 						Title: MarkupStringModule.deserialize(x.Status.Title ?? string.Empty)
 					)));
-		
+
 		return result;
 	}
 
@@ -731,7 +730,7 @@ public partial class ArangoDatabase(
 			HideLock = x.HideLock,
 			ModLock = x.ModLock,
 			Owner = new AsyncLazy<SharpPlayer>(async ct => await GetChannelOwnerAsync(x.Id, ct)),
-			Members = new Lazy<IAsyncEnumerable<(AnySharpObject, SharpChannelStatus)>>(() =>
+			Members = new Lazy<IAsyncEnumerable<SharpChannel.MemberAndStatus>>(() =>
 				GetChannelMembersAsync(x.Id, CancellationToken.None)),
 			Mogrifier = x.Mogrifier,
 			Buffer = x.Buffer
@@ -781,7 +780,8 @@ public partial class ArangoDatabase(
 		);
 
 		var createdChannel = await arangoDb.Graph.Vertex.CreateAsync<SharpChannelCreateRequest, SharpChannelQueryResult>(
-			transaction, DatabaseConstants.GraphChannels, DatabaseConstants.Channels, newChannel, returnNew: true, cancellationToken: ct);
+			transaction, DatabaseConstants.GraphChannels, DatabaseConstants.Channels, newChannel, returnNew: true,
+			cancellationToken: ct);
 
 		await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.GraphChannels,
 			DatabaseConstants.OwnerOfChannel,
@@ -834,15 +834,18 @@ public partial class ArangoDatabase(
 		await arangoDb.Graph.Vertex.RemoveAsync(handle, DatabaseConstants.GraphChannels, DatabaseConstants.Channels,
 			channel.Id, cancellationToken: ct);
 
-	public async ValueTask
-		AddUserToChannelAsync(SharpChannel channel, AnySharpObject obj, CancellationToken ct = default) =>
-		await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphChannels, DatabaseConstants.OnChannel,
-			new SharpEdgeCreateRequest(channel.Id!, obj.Object().Id!), cancellationToken: ct);
+	public async ValueTask AddUserToChannelAsync(SharpChannel channel, AnySharpObject obj, CancellationToken ct = default)
+		=> await arangoDb.Graph.Edge.CreateAsync(
+			handle, 
+			DatabaseConstants.GraphChannels, 
+			DatabaseConstants.OnChannel,
+			new SharpEdgeCreateRequest(channel.Id!, obj.Object().Id!), 
+			cancellationToken: ct);
 
 	public async ValueTask RemoveUserFromChannelAsync(SharpChannel channel, AnySharpObject obj,
 		CancellationToken ct = default)
 	{
-		var result = await arangoDb.Query.ExecuteAsync<SharpEdgeQueryResult>(handle,
+		var result = await arangoDb.Query.ExecuteAsync<dynamic>(handle,
 			$"FOR v,e IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphChannels} RETURN e",
 			new Dictionary<string, object>
 			{
@@ -861,7 +864,7 @@ public partial class ArangoDatabase(
 		SharpChannelStatus status, CancellationToken ct = default)
 	{
 		var result = await arangoDb.Query.ExecuteAsync<SharpEdgeQueryResult>(handle,
-			$"FOR v,e IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphChannels} RETURN e",
+			$"FOR v,e IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphChannels} RETURN e",
 			new Dictionary<string, object> { { StartVertex, obj.Object().Id! } }, cancellationToken: ct);
 
 		var singleResult = result?.FirstOrDefault();
@@ -1261,10 +1264,10 @@ public partial class ArangoDatabase(
 		CancellationToken cancellationToken = default)
 		=> new(
 			x.Id,
-			x.Key, 
+			x.Key,
 			x.Name,
-			await GetAttributeFlagsAsync(x.Id, cancellationToken).ToArrayAsync(cancellationToken), 
-			null, 
+			await GetAttributeFlagsAsync(x.Id, cancellationToken).ToArrayAsync(cancellationToken),
+			null,
 			x.LongName,
 			new AsyncLazy<IAsyncEnumerable<SharpAttribute>>(ct => Task.FromResult(GetTopLevelAttributesAsync(x.Id, ct))),
 			new AsyncLazy<SharpPlayer?>(async ct => await GetAttributeOwnerAsync(x.Id, ct)),
@@ -1296,9 +1299,9 @@ public partial class ArangoDatabase(
 			.Select<SharpAttributeQueryResult, LazySharpAttribute>(async (x, ctOuter) =>
 				new LazySharpAttribute(
 					x.Id,
-					x.Key, 
-					x.Name, 
-					await GetAttributeFlagsAsync(x.Id, ctOuter).ToArrayAsync(ctOuter), 
+					x.Key,
+					x.Name,
+					await GetAttributeFlagsAsync(x.Id, ctOuter).ToArrayAsync(ctOuter),
 					null,
 					x.LongName,
 					new AsyncLazy<IAsyncEnumerable<LazySharpAttribute>>(ct =>
@@ -1550,9 +1553,9 @@ public partial class ArangoDatabase(
 			count++;
 			return await SharpAttributeQueryToSharpAttribute(item, innerCt);
 		}).ToArrayAsync(cancellationToken: ct);
-		
-		return count != attribute.Length 
-			? null 
+
+		return count != attribute.Length
+			? null
 			: resulted.ToAsyncEnumerable();
 	}
 
@@ -1591,15 +1594,17 @@ public partial class ArangoDatabase(
 			AllowImplicit = false,
 			Collections = new ArangoTransactionScope
 			{
-				Exclusive = [
-					DatabaseConstants.Attributes, 
-					DatabaseConstants.HasAttribute, 
-					DatabaseConstants.HasAttributeFlag, 
+				Exclusive =
+				[
+					DatabaseConstants.Attributes,
+					DatabaseConstants.HasAttribute,
+					DatabaseConstants.HasAttributeFlag,
 					DatabaseConstants.HasAttributeOwner
 				],
 				Read =
 				[
-					DatabaseConstants.Attributes, DatabaseConstants.HasAttribute, DatabaseConstants.Objects, DatabaseConstants.HasAttributeFlag,
+					DatabaseConstants.Attributes, DatabaseConstants.HasAttribute, DatabaseConstants.Objects,
+					DatabaseConstants.HasAttributeFlag,
 					DatabaseConstants.IsObject, DatabaseConstants.Players, DatabaseConstants.Rooms, DatabaseConstants.Things,
 					DatabaseConstants.Exits
 				]
@@ -1636,7 +1641,7 @@ public partial class ArangoDatabase(
 			var flags = (sharpAttributeEntry?.DefaultFlags ?? [])
 				.ToAsyncEnumerable()
 				.Select(async (x, innerCt) => await GetAttributeFlagAsync(x, innerCt));
-			
+
 			var newOne = await arangoDb.Document.CreateAsync<SharpAttributeCreateRequest, SharpAttributeQueryResult>(
 				transactionHandle, DatabaseConstants.Attributes,
 				new SharpAttributeCreateRequest(nextAttr.value.ToUpper(),
@@ -1691,14 +1696,14 @@ public partial class ArangoDatabase(
 	}
 
 	public async ValueTask SetAttributeFlagAsync(SharpAttribute attr, SharpAttributeFlag flag,
-		CancellationToken ct = default) 
-		=> await arangoDb.Graph.Edge.CreateAsync(handle, 
+		CancellationToken ct = default)
+		=> await arangoDb.Graph.Edge.CreateAsync(handle,
 			DatabaseConstants.AttributeFlags, DatabaseConstants.HasAttributeFlag,
 			new SharpEdgeCreateRequest(attr.Id, flag.Id!), cancellationToken: ct);
 
-	
+
 	private async ValueTask SetAttributeFlagAsync(ArangoHandle transactionHandle, string attrId, SharpAttributeFlag flag,
-		CancellationToken ct = default) 
+		CancellationToken ct = default)
 		=> await arangoDb.Graph.Edge.CreateAsync(transactionHandle,
 			DatabaseConstants.GraphAttributeFlags, DatabaseConstants.HasAttributeFlag,
 			new SharpEdgeCreateRequest(attrId, flag.Id!), cancellationToken: ct);

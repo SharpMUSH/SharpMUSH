@@ -6,11 +6,13 @@ namespace SharpMUSH.Library.Models;
 
 public class SharpChannel
 {
+	public record MemberAndStatus(AnySharpObject Member, SharpChannelStatus Status);
+	
 	[JsonIgnore] public string? Id { get; set; }
 	public required MString Name { get; set; }
 	public MString Description { get; set; } = MModule.empty();
 	public required AsyncLazy<SharpPlayer> Owner { get; set; }
-	public required Lazy<IAsyncEnumerable<(AnySharpObject Member, SharpChannelStatus Status)>> Members { get; set; }
+	public required Lazy<IAsyncEnumerable<MemberAndStatus>> Members { get; set; }
 	public required string[] Privs { get; set; }
 	public string JoinLock { get; set; } = string.Empty;
 	public string SpeakLock { get; set; } = string.Empty;

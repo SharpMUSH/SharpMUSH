@@ -72,10 +72,9 @@ public static class ChannelHelper
 				x.Member.Id() == member.Id()
 				);
 
-	public static async ValueTask<(AnySharpObject Member, SharpChannelStatus Status)?> ChannelMemberStatus(
-		AnySharpObject member, SharpChannel channel)
-		=> await channel.Members.Value
-			.FirstOrDefaultAsync(x => x.Member.Id() == member.Id());
+	public static async ValueTask<SharpChannel.MemberAndStatus?> ChannelMemberStatus(
+		AnySharpObject member, SharpChannel channel) =>
+		await channel.Members.Value.FirstOrDefaultAsync(x => x.Member.Id() == member.Id());
 
 	public static PrivilegeOrError StringToChannelPrivileges(MString channelName)
 	{

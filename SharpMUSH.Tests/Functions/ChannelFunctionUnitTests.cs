@@ -22,7 +22,7 @@ public class ChannelFunctionUnitTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
-	
+
 	private SharpChannel? _testChannel;
 	private SharpPlayer? _testPlayer;
 
@@ -71,7 +71,7 @@ public class ChannelFunctionUnitTests
 	{
 		var result = (await Parser.FunctionParse(MModule.single("channels()")))?.Message!;
 		var channels = result.ToPlainText();
-		
+
 		await Assert.That(channels).Contains(TestChannelName);
 	}
 
@@ -80,7 +80,7 @@ public class ChannelFunctionUnitTests
 	{
 		var result = (await Parser.FunctionParse(MModule.single("channels(%#,on)")))?.Message!;
 		var channels = result.ToPlainText();
-		
+
 		await Assert.That(channels).Contains(TestChannelName);
 	}
 
@@ -89,7 +89,7 @@ public class ChannelFunctionUnitTests
 	{
 		var result = (await Parser.FunctionParse(MModule.single($"cowner({TestChannelName})")))?.Message!;
 		var owner = result.ToPlainText();
-		
+
 		await Assert.That(owner).StartsWith($"#{TestPlayerDbRef}:");
 	}
 
@@ -98,7 +98,7 @@ public class ChannelFunctionUnitTests
 	{
 		var result = (await Parser.FunctionParse(MModule.single($"cflags({TestChannelName})")))?.Message!;
 		var flags = result.ToPlainText();
-		
+
 		await Assert.That(flags).Contains(TestChannelPrivilege.ToUpper());
 	}
 
@@ -107,7 +107,7 @@ public class ChannelFunctionUnitTests
 	{
 		var result = (await Parser.FunctionParse(MModule.single($"cwho({TestChannelName})")))?.Message!;
 		var members = result.ToPlainText();
-		
+
 		await Assert.That(members).Contains($"#{TestPlayerDbRef}");
 	}
 
@@ -116,7 +116,7 @@ public class ChannelFunctionUnitTests
 	{
 		var result = (await Parser.FunctionParse(MModule.single($"cusers({TestChannelName})")))?.Message!;
 		var count = result.ToPlainText();
-		
+
 		await Assert.That(int.Parse(count)).IsGreaterThanOrEqualTo(1);
 	}
 
@@ -125,37 +125,32 @@ public class ChannelFunctionUnitTests
 	{
 		var result = (await Parser.FunctionParse(MModule.single($"cstatus(%#,{TestChannelName})")))?.Message!;
 		var status = result.ToPlainText();
-		
+
 		await Assert.That(status).Contains("ON");
 	}
 
 	[Test]
+	[NotInParallel]
 	public async Task Cstatus_WithNonMember_ReturnsOff()
 	{
-		// First remove player from channel
-		if (_testChannel != null)
+		if (_testChannel == null)
 		{
-			var playerNode = await Database.GetObjectNodeAsync(new DBRef(TestPlayerDbRef));
-			if (playerNode.IsPlayer)
-			{
-				await Mediator.Send(new RemoveUserFromChannelCommand(_testChannel, playerNode.AsPlayer));
-			}
+			throw new InvalidOperationException("Test channel is not initialized.");
 		}
+		var playerNode = await Database.GetObjectNodeAsync(new DBRef(TestPlayerDbRef));
+		
+		var userStartsOn = (await Parser.FunctionParse(MModule.single($"cstatus(%#,{TestChannelName})")))?.Message!;
+		await Assert.That(userStartsOn.ToPlainText()).Contains("ON");
 
-		var result = (await Parser.FunctionParse(MModule.single($"cstatus(%#,{TestChannelName})")))?.Message!;
-		var status = result.ToPlainText();
-		
-		await Assert.That(status).IsEqualTo("OFF");
-		
-		// Add player back for cleanup
-		if (_testChannel != null)
-		{
-			var playerNode = await Database.GetObjectNodeAsync(new DBRef(TestPlayerDbRef));
-			if (playerNode.IsPlayer)
-			{
-				await Mediator.Send(new AddUserToChannelCommand(_testChannel, playerNode.AsPlayer));
-			}
-		}
+		// TEST: Remove the player from the channel
+		await Mediator.Send(new RemoveUserFromChannelCommand(_testChannel, playerNode.AsPlayer));
+
+		var userEndsOff = (await Parser.FunctionParse(MModule.single($"cstatus(%#,{TestChannelName})")))?.Message!;
+		await Assert.That(userEndsOff.ToPlainText()).IsEqualTo("OFF");
+
+		await Mediator.Send(new AddUserToChannelCommand(_testChannel, playerNode.AsPlayer));
+		var userIsPutBackOn = (await Parser.FunctionParse(MModule.single($"cstatus(%#,{TestChannelName})")))?.Message!;
+		await Assert.That(userIsPutBackOn.ToPlainText()).Contains("ON");
 	}
 
 	[Test]
@@ -163,7 +158,7 @@ public class ChannelFunctionUnitTests
 	{
 		var result = (await Parser.FunctionParse(MModule.single($"cbuffer({TestChannelName})")))?.Message!;
 		var buffer = result.ToPlainText();
-		
+
 		await Assert.That(int.TryParse(buffer, out _)).IsTrue();
 	}
 
@@ -180,7 +175,7 @@ public class ChannelFunctionUnitTests
 	{
 		var result = (await Parser.FunctionParse(MModule.single($"cmogrifier({TestChannelName})")))?.Message!;
 		var mogrifier = result.ToPlainText();
-		
+
 		await Assert.That(mogrifier).IsEmpty();
 	}
 
@@ -189,7 +184,7 @@ public class ChannelFunctionUnitTests
 	{
 		var result = (await Parser.FunctionParse(MModule.single($"clock({TestChannelName})")))?.Message!;
 		var lockStr = result.ToPlainText();
-		
+
 		// Default is empty lock string
 		await Assert.That(lockStr).IsNotNull();
 	}
@@ -199,7 +194,7 @@ public class ChannelFunctionUnitTests
 	{
 		var result = (await Parser.FunctionParse(MModule.single($"ctitle(%#,{TestChannelName})")))?.Message!;
 		var title = result.ToPlainText();
-		
+
 		// Player has no title by default
 		await Assert.That(title).IsEmpty();
 	}
@@ -217,7 +212,7 @@ public class ChannelFunctionUnitTests
 	{
 		var result = (await Parser.FunctionParse(MModule.single($"cmsgs({TestChannelName})")))?.Message!;
 		var msgCount = result.ToPlainText();
-		
+
 		await Assert.That(msgCount).IsEqualTo("0");
 	}
 
@@ -234,7 +229,7 @@ public class ChannelFunctionUnitTests
 	{
 		var result = (await Parser.FunctionParse(MModule.single("cemit(NonExistentChan,test message)")))?.Message!;
 		var error = result.ToPlainText();
-		
+
 		await Assert.That(error).Contains("#-1");
 	}
 
@@ -243,7 +238,7 @@ public class ChannelFunctionUnitTests
 	{
 		var result = (await Parser.FunctionParse(MModule.single("nscemit(NonExistentChan,test message)")))?.Message!;
 		var error = result.ToPlainText();
-		
+
 		await Assert.That(error).Contains("#-1");
 	}
 
@@ -252,7 +247,7 @@ public class ChannelFunctionUnitTests
 	{
 		var result = (await Parser.FunctionParse(MModule.single("cbufferadd(NonExistentChan,test message)")))?.Message!;
 		var error = result.ToPlainText();
-		
+
 		await Assert.That(error).Contains("#-1");
 	}
 }
