@@ -13,6 +13,31 @@ namespace SharpMUSH.Implementation.Functions;
 
 public partial class Functions
 {
+	/// <summary>
+	/// Helper method to determine which argument is the player and which is the channel name.
+	/// Tries arg0 as player first, then arg1 if that fails.
+	/// </summary>
+	private static async ValueTask<(AnySharpObject? Player, string? ChannelName, CallState? Error)> 
+		ResolvePlayerAndChannel(IMUSHCodeParser parser, AnySharpObject executor, string arg0, string arg1)
+	{
+		// Try arg0 as player first
+		var maybePlayer = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0, LocateFlags.All);
+		
+		if (!maybePlayer.IsError)
+		{
+			return (maybePlayer.AsSharpObject, arg1, null);
+		}
+		
+		// Try arg1 as player
+		var maybePlayer2 = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, arg1, LocateFlags.All);
+		if (!maybePlayer2.IsError)
+		{
+			return (maybePlayer2.AsSharpObject, arg0, null);
+		}
+		
+		return (null, null, new CallState("#-1 Invalid player"));
+	}
+	
 	[SharpFunction(Name = "cbufferadd", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular)]
 	public static async ValueTask<CallState> ChannelBufferAdd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -176,19 +201,26 @@ public partial class Functions
 		
 		// Get all channels
 		var allChannels = await Mediator!.Send(new GetChannelListQuery());
+		var channelArray = await allChannels.ToArrayAsync();
 		
 		// Filter based on type
-		var filteredChannels = type switch
+		var filteredChannels = new List<string>();
+		foreach (var channel in channelArray)
 		{
-			"on" => allChannels.Where(async (c, ct) => await ChannelHelper.IsMemberOfChannel(player, c)),
-			"off" => allChannels.Where(async (c, ct) => !await ChannelHelper.IsMemberOfChannel(player, c)),
-			"quiet" => allChannels.Where(async (c, ct) => await PermissionService!.ChannelCanSeeAsync(player, c)),
-			_ => allChannels.Where(async (c, ct) => await PermissionService!.ChannelCanSeeAsync(player, c))
-		};
+			var shouldInclude = type switch
+			{
+				"on" => await ChannelHelper.IsMemberOfChannel(player, channel),
+				"off" => !await ChannelHelper.IsMemberOfChannel(player, channel),
+				"quiet" or _ => await PermissionService!.ChannelCanSeeAsync(player, channel)
+			};
+			
+			if (shouldInclude)
+			{
+				filteredChannels.Add(channel.Name.ToPlainText());
+			}
+		}
 		
-		var channelList = await filteredChannels.Select((c, ct) => c.Name.ToPlainText()).ToArrayAsync();
-		
-		return new CallState(string.Join(" ", channelList));
+		return new CallState(string.Join(" ", filteredChannels));
 	}
 	[SharpFunction(Name = "clflags", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> ChannelListFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -357,33 +389,13 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		
 		// Determine which arg is player and which is channel
-		// Try arg0 as player first
-		var maybePlayer = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0, LocateFlags.All);
-		
-		AnySharpObject? player = null;
-		string? channelName = null;
-		
-		if (!maybePlayer.IsError)
+		var (player, channelName, error) = await ResolvePlayerAndChannel(parser, executor, arg0, arg1);
+		if (error != null)
 		{
-			player = maybePlayer.AsSharpObject;
-			channelName = arg1;
-		}
-		else
-		{
-			// Try arg1 as player
-			var maybePlayer2 = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, arg1, LocateFlags.All);
-			if (!maybePlayer2.IsError)
-			{
-				player = maybePlayer2.AsSharpObject;
-				channelName = arg0;
-			}
-			else
-			{
-				return new CallState("#-1 Invalid player");
-			}
+			return error;
 		}
 		
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, MModule.single(channelName), false);
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, MModule.single(channelName!), false);
 		
 		if (maybeChannel.IsError)
 		{
@@ -393,7 +405,7 @@ public partial class Functions
 		var channel = maybeChannel.AsChannel;
 		
 		// Get player's status on this channel
-		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(player, channel);
+		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(player!, channel);
 		
 		if (maybeMemberStatus is null)
 		{
@@ -419,33 +431,13 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		
 		// Determine which arg is player and which is channel
-		// Try arg0 as player first
-		var maybePlayer = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0, LocateFlags.All);
-		
-		AnySharpObject? player = null;
-		string? channelName = null;
-		
-		if (!maybePlayer.IsError)
+		var (player, channelName, error) = await ResolvePlayerAndChannel(parser, executor, arg0, arg1);
+		if (error != null)
 		{
-			player = maybePlayer.AsSharpObject;
-			channelName = arg1;
-		}
-		else
-		{
-			// Try arg1 as player
-			var maybePlayer2 = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, arg1, LocateFlags.All);
-			if (!maybePlayer2.IsError)
-			{
-				player = maybePlayer2.AsSharpObject;
-				channelName = arg0;
-			}
-			else
-			{
-				return new CallState("#-1 Invalid player");
-			}
+			return error;
 		}
 		
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, MModule.single(channelName), false);
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, MModule.single(channelName!), false);
 		
 		if (maybeChannel.IsError)
 		{
@@ -455,7 +447,7 @@ public partial class Functions
 		var channel = maybeChannel.AsChannel;
 		
 		// Get player's status on this channel
-		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(player, channel);
+		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(player!, channel);
 		
 		if (maybeMemberStatus is null)
 		{
