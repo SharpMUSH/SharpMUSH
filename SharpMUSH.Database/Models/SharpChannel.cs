@@ -4,6 +4,7 @@ public record SharpChannelQueryResult(
 	string Id,
 	string Key,
 	string Name,
+	string MarkedUpName,
 	string Description,
 	string[] Privs,
 	string JoinLock,
@@ -17,15 +18,20 @@ public record SharpChannelQueryResult(
 
 public record SharpChannelCreateRequest(
 	string Name,
+	string MarkedUpName,
 	string[] Privs
 );
 
+public record SharpChannelMemberListQueryResult(
+	string Id,
+	SharpChannelUserStatusQueryResult Status);
+
 public record SharpChannelUserStatusQueryResult(
-	bool Gagged,
-	bool Mute,
-	bool Hide,
-	bool Combine,
-	string Title
+	bool? Gagged,
+	bool? Mute,
+	bool? Hide,
+	bool? Combine,
+	string? Title
 );
 
 public record SharpChannelUserStatusUpdateRequest(
