@@ -47,7 +47,7 @@ public partial class Commands
 			return new CallState("#-1 You are not a member of that channel.");
 		}
 
-		var (_, status) = maybeMemberStatus.Value;
+		var (_, status) = maybeMemberStatus;
 
 		await Mediator!.Send(new ChannelMessageNotification(
 			channel,
@@ -97,7 +97,7 @@ public partial class Commands
 			return new CallState("#-1 You are not a member of that channel.");
 		}
 
-		var (_, status) = maybeMemberStatus.Value;
+		var (_, status) = maybeMemberStatus;
 
 		// TODO: Change notification type based on the first character.
 		await Mediator!.Send(new ChannelMessageNotification(
@@ -149,7 +149,7 @@ public partial class Commands
 			return new CallState("#-1 You are not a member of that channel.");
 		}
 
-		var (_, status) = maybeMemberStatus.Value;
+		var (_, status) = maybeMemberStatus;
 
 		var canNoSpoof = await executor.HasPower("CAN_SPOOF") || await executor.IsPriv();
 

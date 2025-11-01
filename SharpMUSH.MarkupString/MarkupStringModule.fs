@@ -180,12 +180,22 @@ module MarkupStringModule =
 
         member val Length = len.Value
 
-        override this.ToString() : string = strVal.Value
-
         member this.ToPlainText() : string = plainStrVal.Value
 
         member this.EvaluateWith(evaluator: System.Func<MarkupTypes, string, string>) : string =
             evaluateWith (fun markup text -> evaluator.Invoke(markup, text))
+            
+        override this.ToString() : string = strVal.Value
+        
+        override this.Equals(obj) =
+            match obj with
+            | :? MarkupString as other ->
+                toPlainText().Equals(other.ToPlainText())
+            | :? string as other ->
+                toPlainText().Equals(other)
+            | _ -> false
+        
+        override this.GetHashCode() = toPlainText().GetHashCode()
 
     /// <summary>
     /// Active pattern for extracting markup details and content from a MarkupString.

@@ -59,7 +59,7 @@ public static class ChannelGag
 				return new CallState("#-1 YOU ARE NOT A MEMBER OF THAT CHANNEL");
 			}
 
-			var status = maybeMemberStatus.Value.Status;
+			var status = maybeMemberStatus.Status;
 
 			if ((status.Hide ?? false) == gagOn)
 			{

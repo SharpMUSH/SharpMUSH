@@ -437,6 +437,7 @@ public class Migration_CreateDatabase : IArangoMigration
 									properties = new
 									{
 										Name = new { type = DatabaseConstants.TypeString },
+										MarkedUpName = new { type = DatabaseConstants.TypeString },
 										Description = new { type = DatabaseConstants.TypeString },
 										Privs = new { type = DatabaseConstants.TypeArray, items = new { type = DatabaseConstants.TypeString } },
 										JoinLock = new { type = DatabaseConstants.TypeString },
@@ -445,7 +446,7 @@ public class Migration_CreateDatabase : IArangoMigration
 										HideLock = new { type = DatabaseConstants.TypeString },
 										ModLock = new { type = DatabaseConstants.TypeString },
 									},
-									required = (string[])[nameof(SharpChannel.Name), nameof(SharpChannel.Privs)]
+									required = (string[])[nameof(SharpChannel.Name), "MarkedUpName", nameof(SharpChannel.Privs)]
 								}
 							}
 						},
@@ -561,7 +562,7 @@ public class Migration_CreateDatabase : IArangoMigration
 										Mute = new { type = DatabaseConstants.TypeBoolean },
 										Hide = new { type = DatabaseConstants.TypeBoolean },
 										Combine = new { type = DatabaseConstants.TypeBoolean },
-										Title = new { type = DatabaseConstants.TypeBoolean }
+										Title = new { type = DatabaseConstants.TypeString }
 									}
 								}
 							}

@@ -40,7 +40,7 @@ public static class ChannelMute
 			return new CallState("Player is not a member of the channel.");
 		}
 
-		var (_, status) = memberStatus.Value;
+		var (_, status) = memberStatus;
 
 		if (status.Mute ?? false)
 		{
