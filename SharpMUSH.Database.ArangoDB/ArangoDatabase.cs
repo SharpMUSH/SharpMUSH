@@ -1749,9 +1749,9 @@ public partial class ArangoDatabase(
 		var targetAttr = await attrs.LastOrDefaultAsync(ct);
 		if (targetAttr is null) return false;
 
-		// Get all descendants (children, grandchildren, etc.) and collect them
+		// Get all descendants (children, grandchildren, etc.) - traverse to max depth
 		var descendants = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle,
-			$"FOR v IN 1.. OUTBOUND {targetAttr.Id} GRAPH {DatabaseConstants.GraphAttributes} RETURN v",
+			$"FOR v IN 1..999 OUTBOUND {targetAttr.Id} GRAPH {DatabaseConstants.GraphAttributes} RETURN v",
 			cancellationToken: ct);
 		var descendantsList = await descendants.ToListAsync(ct);
 
