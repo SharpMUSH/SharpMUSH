@@ -18,8 +18,8 @@ public class MailFunctionUnitTests
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	
 	// Flag to track if setup has been done
-	private static bool _setupComplete = false;
-	private static readonly object _setupLock = new();
+	private bool _setupComplete = false;
+	private readonly object _setupLock = new();
 
 	[Before(Test)]
 	public async Task EnsureTestMailSetup()
