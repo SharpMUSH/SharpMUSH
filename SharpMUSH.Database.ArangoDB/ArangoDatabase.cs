@@ -1518,8 +1518,21 @@ public partial class ArangoDatabase(
 				{ "max", attribute.Length }
 			}, cancellationToken: ct);
 
-		return result?
-			.Select(SharpAttributeQueryToSharpAttribute);
+		if (result == null)
+		{
+			return null;
+		}
+
+		var count = 0;
+		var resulted = await result.Select(async (item, _, innerCt) =>
+		{
+			count++;
+			return await SharpAttributeQueryToSharpAttribute(item, innerCt);
+		}).ToArrayAsync(cancellationToken: ct);
+		
+		return count != attribute.Length 
+			? null 
+			: resulted.ToAsyncEnumerable();
 	}
 
 	public IAsyncEnumerable<LazySharpAttribute>? GetLazyAttributeAsync(DBRef dbref,
@@ -1703,18 +1716,69 @@ public partial class ArangoDatabase(
 			$"FOR v in {DatabaseConstants.AttributeFlags:@} RETURN v",
 			cache: true, cancellationToken: ct);
 
-	public ValueTask<bool> ClearAttributeAsync(DBRef dbref, string[] attribute, CancellationToken ct = default)
+	public async ValueTask<bool> ClearAttributeAsync(DBRef dbref, string[] attribute, CancellationToken ct = default)
 	{
-		// Set the contents to empty.
+		// Set the contents to empty, or remove entirely if no children.
+		attribute = attribute.Select(x => x.ToUpper()).ToArray();
 
-		throw new NotImplementedException();
+		// Get the attribute
+		var attrs = await GetAttributeAsync(dbref, attribute, ct);
+		if (attrs is null) return false;
+
+		var targetAttr = await attrs.LastOrDefaultAsync(ct);
+		if (targetAttr is null) return false;
+
+		// Check if attribute has children (just need to know if any exist)
+		var children = await arangoDb.Query.ExecuteAsync<string>(handle,
+			$"FOR v IN 1..1 OUTBOUND {targetAttr.Id} GRAPH {DatabaseConstants.GraphAttributes} LIMIT 1 RETURN v._id",
+			cancellationToken: ct);
+
+		if (children.Any())
+		{
+			// Has children, just clear the value
+			await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Attributes,
+				new { Key = targetAttr.Key, Value = MarkupStringModule.serialize(MarkupStringModule.empty()) },
+				mergeObjects: true, cancellationToken: ct);
+		}
+		else
+		{
+			// No children, remove the attribute
+			await arangoDb.Graph.Vertex.RemoveAsync(handle, DatabaseConstants.GraphAttributes,
+				DatabaseConstants.Attributes, targetAttr.Key, cancellationToken: ct);
+		}
+
+		return true;
 	}
 
-	public ValueTask<bool> WipeAttributeAsync(DBRef dbref, string[] attribute, CancellationToken ct = default)
+	public async ValueTask<bool> WipeAttributeAsync(DBRef dbref, string[] attribute, CancellationToken ct = default)
 	{
 		// Wipe a list of attributes. We assume the calling code figured out the permissions part.
+		attribute = attribute.Select(x => x.ToUpper()).ToArray();
 
-		throw new NotImplementedException();
+		// Get the attribute
+		var attrs = await GetAttributeAsync(dbref, attribute, ct);
+		if (attrs is null) return false;
+
+		var targetAttr = await attrs.LastOrDefaultAsync(ct);
+		if (targetAttr is null) return false;
+
+		// Get all descendants (children, grandchildren, etc.) - traverse to max depth
+		var descendants = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle,
+			$"FOR v IN 1..999 OUTBOUND {targetAttr.Id} GRAPH {DatabaseConstants.GraphAttributes} RETURN v",
+			cancellationToken: ct);
+
+		// Remove all descendants first (bottom-up) to avoid orphans
+		await foreach (var descendant in descendants.Reverse().WithCancellation(ct))
+		{
+			await arangoDb.Graph.Vertex.RemoveAsync(handle, DatabaseConstants.GraphAttributes,
+				DatabaseConstants.Attributes, descendant.Key, cancellationToken: ct);
+		}
+
+		// Remove the target attribute itself
+		await arangoDb.Graph.Vertex.RemoveAsync(handle, DatabaseConstants.GraphAttributes,
+			DatabaseConstants.Attributes, targetAttr.Key, cancellationToken: ct);
+
+		return true;
 	}
 
 	public async ValueTask<IAsyncEnumerable<AnySharpObject>> GetNearbyObjectsAsync(DBRef obj,
