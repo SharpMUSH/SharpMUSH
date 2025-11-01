@@ -1518,8 +1518,21 @@ public partial class ArangoDatabase(
 				{ "max", attribute.Length }
 			}, cancellationToken: ct);
 
-		return result?
-			.Select(SharpAttributeQueryToSharpAttribute);
+		if (result == null)
+		{
+			return null;
+		}
+
+		var count = 0;
+		var resulted = await result.Select(async (item, _, innerCt) =>
+		{
+			count++;
+			return await SharpAttributeQueryToSharpAttribute(item, innerCt);
+		}).ToArrayAsync(cancellationToken: ct);
+		
+		return count != attribute.Length 
+			? null 
+			: resulted.ToAsyncEnumerable();
 	}
 
 	public IAsyncEnumerable<LazySharpAttribute>? GetLazyAttributeAsync(DBRef dbref,
@@ -1753,10 +1766,9 @@ public partial class ArangoDatabase(
 		var descendants = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle,
 			$"FOR v IN 1..999 OUTBOUND {targetAttr.Id} GRAPH {DatabaseConstants.GraphAttributes} RETURN v",
 			cancellationToken: ct);
-		var descendantsList = await descendants.ToListAsync(ct);
 
 		// Remove all descendants first (bottom-up) to avoid orphans
-		foreach (var descendant in descendantsList.AsEnumerable().Reverse())
+		await foreach (var descendant in descendants.Reverse().WithCancellation(ct))
 		{
 			await arangoDb.Graph.Vertex.RemoveAsync(handle, DatabaseConstants.GraphAttributes,
 				DatabaseConstants.Attributes, descendant.Key, cancellationToken: ct);
