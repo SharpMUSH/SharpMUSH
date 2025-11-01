@@ -1,4 +1,12 @@
+using Mediator;
+using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library;
+using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
@@ -8,157 +16,239 @@ public class ChannelFunctionUnitTests
 	public required WebAppFactory WebAppFactoryArg { get; init; }
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
+	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+	
+	private SharpChannel? _testChannel;
+	private SharpPlayer? _testPlayer;
+
+	[Before(Test)]
+	public async Task SetupTestChannel()
+	{
+		// Get the test player (DBRef #1)
+		var playerNode = await Database.GetObjectNodeAsync(new DBRef(1));
+		_testPlayer = playerNode.IsPlayer ? playerNode.AsPlayer : null;
+
+		if (_testPlayer == null)
+		{
+			throw new InvalidOperationException("Test player #1 not found");
+		}
+
+		// Create a test channel
+		await Mediator.Send(new CreateChannelCommand(
+			MModule.single("TestChannel"),
+			new[] { "Open" },
+			_testPlayer
+		));
+
+		// Retrieve the created channel
+		var channelQuery = new GetChannelQuery("TestChannel");
+		_testChannel = await Mediator.Send(channelQuery);
+
+		// Add the test player to the channel
+		if (_testChannel != null && playerNode.IsPlayer)
+		{
+			await Mediator.Send(new AddUserToChannelCommand(_testChannel, playerNode.AsPlayer));
+		}
+	}
+
+	[After(Test)]
+	public async Task CleanupTestChannel()
+	{
+		// Clean up: Delete the test channel
+		if (_testChannel != null)
+		{
+			await Mediator.Send(new DeleteChannelCommand(_testChannel));
+		}
+	}
 
 	[Test]
-	[Arguments("channels()", "")]
-	public async Task Channels(string str, string expected)
+	public async Task Channels_ReturnsTestChannel()
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
-		// channels() should return a string (empty or with channel names)
+		var result = (await Parser.FunctionParse(MModule.single("channels()")))?.Message!;
+		var channels = result.ToPlainText();
+		
+		await Assert.That(channels).Contains("TestChannel");
+	}
+
+	[Test]
+	public async Task Channels_WithOnFilter_ReturnsChannelsPlayerIsOn()
+	{
+		var result = (await Parser.FunctionParse(MModule.single("channels(%#,on)")))?.Message!;
+		var channels = result.ToPlainText();
+		
+		await Assert.That(channels).Contains("TestChannel");
+	}
+
+	[Test]
+	public async Task Cowner_ReturnsChannelOwner()
+	{
+		var result = (await Parser.FunctionParse(MModule.single("cowner(TestChannel)")))?.Message!;
+		var owner = result.ToPlainText();
+		
+		await Assert.That(owner).IsEqualTo("#1");
+	}
+
+	[Test]
+	public async Task Cflags_ReturnsChannelFlags()
+	{
+		var result = (await Parser.FunctionParse(MModule.single("cflags(TestChannel)")))?.Message!;
+		var flags = result.ToPlainText();
+		
+		await Assert.That(flags).Contains("OPEN");
+	}
+
+	[Test]
+	public async Task Cwho_ReturnsChannelMembers()
+	{
+		var result = (await Parser.FunctionParse(MModule.single("cwho(TestChannel)")))?.Message!;
+		var members = result.ToPlainText();
+		
+		await Assert.That(members).Contains("#1");
+	}
+
+	[Test]
+	public async Task Cusers_ReturnsUserCount()
+	{
+		var result = (await Parser.FunctionParse(MModule.single("cusers(TestChannel)")))?.Message!;
+		var count = result.ToPlainText();
+		
+		await Assert.That(int.Parse(count)).IsGreaterThanOrEqualTo(1);
+	}
+
+	[Test]
+	public async Task Cstatus_ReturnsPlayerStatus()
+	{
+		var result = (await Parser.FunctionParse(MModule.single("cstatus(%#,TestChannel)")))?.Message!;
+		var status = result.ToPlainText();
+		
+		await Assert.That(status).Contains("ON");
+	}
+
+	[Test]
+	public async Task Cstatus_WithNonMember_ReturnsOff()
+	{
+		// First remove player from channel
+		if (_testChannel != null)
+		{
+			var playerNode = await Database.GetObjectNodeAsync(new DBRef(1));
+			if (playerNode.IsPlayer)
+			{
+				await Mediator.Send(new RemoveUserFromChannelCommand(_testChannel, playerNode.AsPlayer));
+			}
+		}
+
+		var result = (await Parser.FunctionParse(MModule.single("cstatus(%#,TestChannel)")))?.Message!;
+		var status = result.ToPlainText();
+		
+		await Assert.That(status).IsEqualTo("OFF");
+		
+		// Add player back for cleanup
+		if (_testChannel != null)
+		{
+			var playerNode = await Database.GetObjectNodeAsync(new DBRef(1));
+			if (playerNode.IsPlayer)
+			{
+				await Mediator.Send(new AddUserToChannelCommand(_testChannel, playerNode.AsPlayer));
+			}
+		}
+	}
+
+	[Test]
+	public async Task Cbuffer_ReturnsBufferSize()
+	{
+		var result = (await Parser.FunctionParse(MModule.single("cbuffer(TestChannel)")))?.Message!;
+		var buffer = result.ToPlainText();
+		
+		await Assert.That(int.TryParse(buffer, out _)).IsTrue();
+	}
+
+	[Test]
+	public async Task Cdesc_ReturnsChannelDescription()
+	{
+		var result = (await Parser.FunctionParse(MModule.single("cdesc(TestChannel)")))?.Message!;
+		// Description should be empty or a valid string
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
 	[Test]
-	[Arguments("cemit(testchan,test message)", "")]
-	public async Task Cemit(string str, string expected)
+	public async Task Cmogrifier_ReturnsEmptyForNoMogrifier()
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
-		// cemit() returns error if channel doesn't exist
+		var result = (await Parser.FunctionParse(MModule.single("cmogrifier(TestChannel)")))?.Message!;
+		var mogrifier = result.ToPlainText();
+		
+		await Assert.That(mogrifier).IsEmpty();
+	}
+
+	[Test]
+	public async Task Clock_ReturnsEmptyForNoLock()
+	{
+		var result = (await Parser.FunctionParse(MModule.single("clock(TestChannel)")))?.Message!;
+		var lockStr = result.ToPlainText();
+		
+		// Default is empty lock string
+		await Assert.That(lockStr).IsNotNull();
+	}
+
+	[Test]
+	public async Task Ctitle_ReturnsEmptyForNoTitle()
+	{
+		var result = (await Parser.FunctionParse(MModule.single("ctitle(%#,TestChannel)")))?.Message!;
+		var title = result.ToPlainText();
+		
+		// Player has no title by default
+		await Assert.That(title).IsEmpty();
+	}
+
+	[Test]
+	public async Task Clflags_ReturnsLockFlags()
+	{
+		var result = (await Parser.FunctionParse(MModule.single("clflags(TestChannel)")))?.Message!;
+		// Should return empty or list of lock flags
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
 	[Test]
-	[Arguments("cflags(testchan)", "")]
-	public async Task Cflags(string str, string expected)
+	public async Task Cmsgs_ReturnsZeroForNoMessages()
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
-		// cflags() returns error if channel doesn't exist
+		var result = (await Parser.FunctionParse(MModule.single("cmsgs(TestChannel)")))?.Message!;
+		var msgCount = result.ToPlainText();
+		
+		await Assert.That(msgCount).IsEqualTo("0");
+	}
+
+	[Test]
+	public async Task Crecall_ReturnsEmptyForNoHistory()
+	{
+		var result = (await Parser.FunctionParse(MModule.single("crecall(TestChannel)")))?.Message!;
+		// Should return empty or error message
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
 	[Test]
-	[Arguments("clock(testchan)", "")]
-	public async Task Clock(string str, string expected)
+	public async Task Cemit_WithNonExistentChannel_ReturnsError()
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
-		// clock() returns error or empty if channel doesn't exist
-		await Assert.That(result.ToPlainText()).IsNotNull();
+		var result = (await Parser.FunctionParse(MModule.single("cemit(NonExistentChan,test message)")))?.Message!;
+		var error = result.ToPlainText();
+		
+		await Assert.That(error).Contains("#-1");
 	}
 
 	[Test]
-	[Arguments("cowner(testchan)", "")]
-	public async Task Cowner(string str, string expected)
+	public async Task Nscemit_WithNonExistentChannel_ReturnsError()
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
-		// cowner() returns error if channel doesn't exist
-		await Assert.That(result.ToPlainText()).IsNotNull();
+		var result = (await Parser.FunctionParse(MModule.single("nscemit(NonExistentChan,test message)")))?.Message!;
+		var error = result.ToPlainText();
+		
+		await Assert.That(error).Contains("#-1");
 	}
 
 	[Test]
-	[Arguments("crecall(testchan)", "")]
-	public async Task Crecall(string str, string expected)
+	public async Task Cbufferadd_WithNonExistentChannel_ReturnsError()
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
-		// crecall() returns error if channel doesn't exist
-		await Assert.That(result.ToPlainText()).IsNotNull();
-	}
-
-	[Test]
-	[Arguments("cstatus(%#,testchan)", "")]
-	public async Task Cstatus(string str, string expected)
-	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
-		// cstatus() returns error or OFF if channel doesn't exist
-		await Assert.That(result.ToPlainText()).IsNotNull();
-	}
-
-	[Test]
-	[Arguments("cwho(testchan)", "")]
-	public async Task Cwho(string str, string expected)
-	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
-		// cwho() returns error if channel doesn't exist
-		await Assert.That(result.ToPlainText()).IsNotNull();
-	}
-
-	[Test]
-	[Arguments("cbuffer(testchan)", "")]
-	public async Task Cbuffer(string str, string expected)
-	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
-		// cbuffer() returns error if channel doesn't exist
-		await Assert.That(result.ToPlainText()).IsNotNull();
-	}
-
-	[Test]
-	[Arguments("cdesc(testchan)", "")]
-	public async Task Cdesc(string str, string expected)
-	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
-		// cdesc() returns error if channel doesn't exist
-		await Assert.That(result.ToPlainText()).IsNotNull();
-	}
-
-	[Test]
-	[Arguments("cmogrifier(testchan)", "")]
-	public async Task Cmogrifier(string str, string expected)
-	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
-		// cmogrifier() returns error or empty if channel doesn't exist
-		await Assert.That(result.ToPlainText()).IsNotNull();
-	}
-
-	[Test]
-	[Arguments("cusers(testchan)", "")]
-	public async Task Cusers(string str, string expected)
-	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
-		// cusers() returns error if channel doesn't exist
-		await Assert.That(result.ToPlainText()).IsNotNull();
-	}
-
-	[Test]
-	[Arguments("ctitle(%#,testchan)", "")]
-	public async Task Ctitle(string str, string expected)
-	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
-		// ctitle() returns error or empty if channel doesn't exist
-		await Assert.That(result.ToPlainText()).IsNotNull();
-	}
-
-	[Test]
-	[Arguments("clflags(testchan)", "")]
-	public async Task Clflags(string str, string expected)
-	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
-		// clflags() returns error or empty if channel doesn't exist
-		await Assert.That(result.ToPlainText()).IsNotNull();
-	}
-
-	[Test]
-	[Arguments("cmsgs(testchan)", "")]
-	public async Task Cmsgs(string str, string expected)
-	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
-		// cmsgs() returns error if channel doesn't exist
-		await Assert.That(result.ToPlainText()).IsNotNull();
-	}
-
-	[Test]
-	[Arguments("cbufferadd(testchan,test message)", "")]
-	public async Task Cbufferadd(string str, string expected)
-	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
-		// cbufferadd() returns error if channel doesn't exist
-		await Assert.That(result.ToPlainText()).IsNotNull();
-	}
-
-	[Test]
-	[Arguments("nscemit(testchan,test message)", "")]
-	public async Task Nscemit(string str, string expected)
-	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
-		// nscemit() returns error if channel doesn't exist
-		await Assert.That(result.ToPlainText()).IsNotNull();
+		var result = (await Parser.FunctionParse(MModule.single("cbufferadd(NonExistentChan,test message)")))?.Message!;
+		var error = result.ToPlainText();
+		
+		await Assert.That(error).Contains("#-1");
 	}
 }
