@@ -63,7 +63,7 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		
 		// Case 1: mail() - return total count of messages in all folders
-		if (args.Count == 0)
+		if (args.Count == 0 || (args.Count == 1 && string.IsNullOrWhiteSpace(args["0"].Message?.ToPlainText())))
 		{
 			var allMail = await Mediator!.Send(new GetAllMailListQuery(executor.AsPlayer));
 			var count = await allMail.CountAsync();
@@ -73,7 +73,7 @@ public partial class Functions
 		var arg0 = args["0"].Message!.ToPlainText()!;
 
 		// Check if arg0 is a message number (contains only digits or folder:digits)
-		var isMsgNumber = arg0.All(c => char.IsDigit(c) || c == ':');
+		var isMsgNumber = !string.IsNullOrEmpty(arg0) && arg0.All(c => char.IsDigit(c) || c == ':');
 
 		// Case 2: mail(player) - return "read unread cleared" counts for player
 		if (args.Count == 1 && !isMsgNumber)
