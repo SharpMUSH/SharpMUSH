@@ -1767,18 +1767,14 @@ public partial class ArangoDatabase(
 
 		try
 		{
-			// Collect descendants in reverse order for bottom-up deletion
-			var descendantsList = new List<SharpAttributeQueryResult>();
-			await foreach (var descendant in descendants.WithCancellation(ct))
-			{
-				descendantsList.Add(descendant);
-			}
-
+			// Collect descendants and remove in reverse order for bottom-up deletion
+			var descendantsList = await descendants.ToListAsync(ct);
+			
 			// Remove all descendants first (bottom-up) to avoid orphans
-			for (int i = descendantsList.Count - 1; i >= 0; i--)
+			foreach (var descendant in descendantsList.AsEnumerable().Reverse())
 			{
 				await arangoDb.Graph.Vertex.RemoveAsync(transaction, DatabaseConstants.GraphAttributes,
-					DatabaseConstants.Attributes, descendantsList[i].Key, cancellationToken: ct);
+					DatabaseConstants.Attributes, descendant.Key, cancellationToken: ct);
 			}
 
 			// Remove the target attribute itself
