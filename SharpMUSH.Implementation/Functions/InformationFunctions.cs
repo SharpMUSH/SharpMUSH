@@ -44,9 +44,15 @@ public partial class Functions
 			var arg = args["0"].Message!.ToPlainText()!;
 			
 			// Try to determine if it's a folder number/name or a player
-			if (int.TryParse(arg, out _) || arg.All(c => char.IsDigit(c) || char.IsUpper(c)))
+			// Folders are typically numbers (0-15) or uppercase names (INBOX)
+			if (int.TryParse(arg, out var folderNum) && folderNum >= 0 && folderNum <= 15)
 			{
-				// Looks like a folder
+				// Looks like a folder number
+				folderSpec = arg;
+			}
+			else if (arg.All(char.IsUpper) || arg.Equals("INBOX", StringComparison.OrdinalIgnoreCase))
+			{
+				// Looks like a folder name (all uppercase)
 				folderSpec = arg;
 			}
 			else
@@ -63,7 +69,7 @@ public partial class Functions
 				
 				if (locateResult.IsError || locateResult.IsNone)
 				{
-					// Not a player, try as folder name
+					// Not a player, try as folder name anyway
 					folderSpec = arg;
 				}
 				else

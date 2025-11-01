@@ -72,8 +72,23 @@ public partial class Functions
 
 		var arg0 = args["0"].Message!.ToPlainText()!;
 
-		// Check if arg0 is a message number (contains only digits or folder:digits)
-		var isMsgNumber = !string.IsNullOrEmpty(arg0) && arg0.All(c => char.IsDigit(c) || c == ':');
+		// Check if arg0 is a message number (contains only digits or folder:digits format)
+		// Valid formats: "123", "0:123", "INBOX:5"
+		var isMsgNumber = false;
+		if (!string.IsNullOrEmpty(arg0))
+		{
+			if (arg0.All(char.IsDigit))
+			{
+				// Pure number like "123"
+				isMsgNumber = true;
+			}
+			else if (arg0.Contains(':'))
+			{
+				// Folder:number format like "0:123" or "INBOX:5"
+				var parts = arg0.Split(':', 2);
+				isMsgNumber = parts.Length == 2 && !string.IsNullOrWhiteSpace(parts[0]) && parts[1].All(char.IsDigit);
+			}
+		}
 
 		// Case 2: mail(player) - return "read unread cleared" counts for player
 		if (args.Count == 1 && !isMsgNumber)
@@ -305,8 +320,7 @@ public partial class Functions
 			Subject = subject,
 			From = new DotNext.Threading.AsyncLazy<AnyOptionalSharpObject>(async _ =>
 			{
-				await ValueTask.CompletedTask;
-				return sender.WithNoneOption();
+				return await ValueTask.FromResult(sender.WithNoneOption());
 			}),
 		};
 
