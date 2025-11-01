@@ -29,6 +29,7 @@ public class LocateServiceCompatibilityTests
 	private readonly IMUSHCodeParser _parser = Substitute.For<IMUSHCodeParser>();
 	
 	private readonly LocateService _locateService;
+	private readonly TestObjectFactory _factory = new();
 	
 	public LocateServiceCompatibilityTests()
 	{
@@ -47,37 +48,19 @@ public class LocateServiceCompatibilityTests
 	{
 		// Arrange
 		// Create a shared room for player and thing to be in the same location
-		var sharedRoom = new SharpRoom
-		{
-			Id = "shared-room",
-			Object = new SharpObject
-			{
-				Key = 999,
-				Name = "Shared Room",
-				Type = "Room",
-				Locks = ImmutableDictionary<string, string>.Empty,
-				Owner = new(async ct => { await ValueTask.CompletedTask; return null!; }),
-				Powers = new(() => AsyncEnumerable.Empty<SharpPower>()),
-				Attributes = new(() => AsyncEnumerable.Empty<SharpAttribute>()),
-				LazyAttributes = new(() => AsyncEnumerable.Empty<LazySharpAttribute>()),
-				AllAttributes = new(() => AsyncEnumerable.Empty<SharpAttribute>()),
-				LazyAllAttributes = new(() => AsyncEnumerable.Empty<LazySharpAttribute>()),
-				Flags = new(() => AsyncEnumerable.Empty<SharpObjectFlag>()),
-				Parent = new(async ct => { await ValueTask.CompletedTask; return new None(); }),
-				Children = new(() => null)
-			}
-		};
+		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
 		
-		var player = CreateMockPlayer("TestPlayer", new DBRef(1), sharedRoom);
-		var thing = CreateMockThing("TestObject", new DBRef(3), sharedRoom);
+		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
+		var thing = _factory.CreateThing(3, "TestObject", sharedRoom, player);
 		
 		var contents = new[] { thing }.ToAsyncEnumerable();
 		
-		_mediator.Send(Arg.Any<GetContentsQuery>(), Arg.Any<CancellationToken>())
+		// Mock GetContentsQuery for any container to return our thing
+		_mediator.Send(Arg.Is<GetContentsQuery>(q => true), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult<IAsyncEnumerable<AnySharpContent>?>(contents.Select(x => x.AsContent)));
 		
 		// Mock GetPlayerQuery to return empty results
-		_mediator.Send(Arg.Any<GetPlayerQuery>(), Arg.Any<CancellationToken>())
+		_mediator.Send(Arg.Is<GetPlayerQuery>(q => true), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
 		
 		// Set up comprehensive permission mocking
@@ -109,37 +92,19 @@ public class LocateServiceCompatibilityTests
 		
 		// Arrange
 		// Create a shared room for player and thing to be in the same location
-		var sharedRoom = new SharpRoom
-		{
-			Id = "shared-room",
-			Object = new SharpObject
-			{
-				Key = 999,
-				Name = "Shared Room",
-				Type = "Room",
-				Locks = ImmutableDictionary<string, string>.Empty,
-				Owner = new(async ct => { await ValueTask.CompletedTask; return null!; }),
-				Powers = new(() => AsyncEnumerable.Empty<SharpPower>()),
-				Attributes = new(() => AsyncEnumerable.Empty<SharpAttribute>()),
-				LazyAttributes = new(() => AsyncEnumerable.Empty<LazySharpAttribute>()),
-				AllAttributes = new(() => AsyncEnumerable.Empty<SharpAttribute>()),
-				LazyAllAttributes = new(() => AsyncEnumerable.Empty<LazySharpAttribute>()),
-				Flags = new(() => AsyncEnumerable.Empty<SharpObjectFlag>()),
-				Parent = new(async ct => { await ValueTask.CompletedTask; return new None(); }),
-				Children = new(() => null)
-			}
-		};
+		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
 		
-		var player = CreateMockPlayer("TestPlayer", new DBRef(1), sharedRoom);
-		var thing = CreateMockThing("TestObject", new DBRef(3), sharedRoom);
+		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
+		var thing = _factory.CreateThing(3, "TestObject", sharedRoom, player);
 		
 		var contents = new[] { thing }.ToAsyncEnumerable();
 		
-		_mediator.Send(Arg.Any<GetContentsQuery>(), Arg.Any<CancellationToken>())
+		// Mock GetContentsQuery for any container to return our thing
+		_mediator.Send(Arg.Is<GetContentsQuery>(q => true), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult<IAsyncEnumerable<AnySharpContent>?>(contents.Select(x => x.AsContent)));
 		
 		// Mock GetPlayerQuery to return empty results
-		_mediator.Send(Arg.Any<GetPlayerQuery>(), Arg.Any<CancellationToken>())
+		_mediator.Send(Arg.Is<GetPlayerQuery>(q => true), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
 		
 		// Set up comprehensive permission mocking
@@ -167,10 +132,11 @@ public class LocateServiceCompatibilityTests
 		// This test verifies the fix for the NoTypePreference check
 		
 		// Arrange
-		var player = CreateMockPlayer("TestPlayer", new DBRef(1));
+		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
+		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
 		
 		// Mock GetPlayerQuery to return empty results
-		_mediator.Send(Arg.Any<GetPlayerQuery>(), Arg.Any<CancellationToken>())
+		_mediator.Send(Arg.Is<GetPlayerQuery>(q => true), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
 		
 		// Set up comprehensive permission mocking
@@ -185,12 +151,13 @@ public class LocateServiceCompatibilityTests
 			.Returns(true);
 		
 		// Act - with NoTypePreference, should not match "me"
+		// Use PreferLockPass to prevent auto-adding flags that would interfere
 		var resultWithNoTypePreference = await _locateService.Locate(_parser, player, player, "me", 
-			LocateFlags.NoTypePreference | LocateFlags.MatchMeForLooker);
+			LocateFlags.NoTypePreference | LocateFlags.MatchMeForLooker | LocateFlags.PreferLockPass);
 		
 		// Act - without NoTypePreference, should match "me"
 		var resultWithoutNoTypePreference = await _locateService.Locate(_parser, player, player, "me", 
-			LocateFlags.MatchMeForLooker);
+			LocateFlags.MatchMeForLooker | LocateFlags.PreferLockPass);
 		
 		// Assert
 		await Assert.That(resultWithNoTypePreference.IsNone || resultWithNoTypePreference.IsError).IsTrue();
@@ -204,11 +171,15 @@ public class LocateServiceCompatibilityTests
 		// This test verifies the fix for the permission check logic
 		
 		// Arrange
-		var player = CreateMockPlayer("TestPlayer", new DBRef(1));
-		var target = CreateMockPlayer("TargetPlayer", new DBRef(2));
+		// Create players in DIFFERENT locations to test permission check
+		var room1 = _factory.CreateRoom(1001, "Room 1");
+		var room2 = _factory.CreateRoom(1002, "Room 2");
+		
+		var player = _factory.CreatePlayer(1, "TestPlayer", room1);
+		var target = _factory.CreatePlayer(2, "TargetPlayer", room2);
 		
 		// Mock GetPlayerQuery to return empty results
-		_mediator.Send(Arg.Any<GetPlayerQuery>(), Arg.Any<CancellationToken>())
+		_mediator.Send(Arg.Is<GetPlayerQuery>(q => true), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
 		
 		// Set up specific permission logic for this test
@@ -219,6 +190,10 @@ public class LocateServiceCompatibilityTests
 		_permissionService.Controls(player, player)
 			.Returns(true);
 		
+		// Target can control themselves  
+		_permissionService.Controls(target, target)
+			.Returns(true);
+		
 		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), 
 			Arg.Any<IPermissionService.InteractType>())
 			.Returns(true);
@@ -227,123 +202,17 @@ public class LocateServiceCompatibilityTests
 			.Returns(true);
 		
 		// Act - with OnlyMatchLookerControlledObjects, should fail when player doesn't control target
+		// Use PreferLockPass to prevent auto-adding flags
 		var resultWithControlRequired = await _locateService.Locate(_parser, player, target, "me", 
-			LocateFlags.MatchMeForLooker | LocateFlags.OnlyMatchLookerControlledObjects);
+			LocateFlags.MatchMeForLooker | LocateFlags.OnlyMatchLookerControlledObjects | LocateFlags.PreferLockPass);
 		
 		// Act - without OnlyMatchLookerControlledObjects, should succeed
 		var resultWithoutControlRequired = await _locateService.Locate(_parser, player, target, "me", 
-			LocateFlags.MatchMeForLooker);
+			LocateFlags.MatchMeForLooker | LocateFlags.PreferLockPass);
 		
 		// Assert
 		await Assert.That(resultWithControlRequired.IsError).IsTrue();
 		await Assert.That(resultWithControlRequired.AsError.Value).IsEqualTo(Errors.ErrorPerm);
 		await Assert.That(resultWithoutControlRequired.IsValid()).IsTrue();
-	}
-
-	private static AnySharpObject CreateMockPlayer(string name, DBRef dbref, SharpRoom? location = null)
-	{
-		// Create a simple mock room to use as the location, or use the provided one
-		var mockRoom = location ?? new SharpRoom
-		{
-			Id = $"mock-room-{dbref.Number}",
-			Object = new SharpObject
-			{
-				Key = (int)dbref.Number + 1000, // Offset to avoid conflicts with players
-				Name = $"Mock Room {dbref.Number}",
-				Type = "Room",
-				Locks = ImmutableDictionary<string, string>.Empty,
-				Owner = new(async ct => { await ValueTask.CompletedTask; return null!; }),
-				Powers = new(() => AsyncEnumerable.Empty<SharpPower>()),
-				Attributes = new(() => AsyncEnumerable.Empty<SharpAttribute>()),
-				LazyAttributes = new(() => AsyncEnumerable.Empty<LazySharpAttribute>()),
-				AllAttributes = new(() => AsyncEnumerable.Empty<SharpAttribute>()),
-				LazyAllAttributes = new(() => AsyncEnumerable.Empty<LazySharpAttribute>()),
-				Flags = new(() => AsyncEnumerable.Empty<SharpObjectFlag>()),
-				Parent = new(async ct => { await ValueTask.CompletedTask; return new None(); }),
-				Children = new(() => null)
-			}
-		};
-		
-		var sharpObject = new SharpObject
-		{
-			Key = (int)dbref.Number,
-			CreationTime = dbref.CreationMilliseconds ?? 0L,
-			Name = name,
-			Type = "Player",
-			Locks = ImmutableDictionary<string, string>.Empty,
-			Owner = new(async ct => { await ValueTask.CompletedTask; return null!; }),
-			Powers = new(() => AsyncEnumerable.Empty<SharpPower>()),
-			Attributes = new(() => AsyncEnumerable.Empty<SharpAttribute>()),
-			LazyAttributes = new(() => AsyncEnumerable.Empty<LazySharpAttribute>()),
-			AllAttributes = new(() => AsyncEnumerable.Empty<SharpAttribute>()),
-			LazyAllAttributes = new(() => AsyncEnumerable.Empty<LazySharpAttribute>()),
-			Flags = new(() => AsyncEnumerable.Empty<SharpObjectFlag>()),
-			Parent = new(async ct => { await ValueTask.CompletedTask; return new None(); }),
-			Children = new(() => null)
-		};
-		
-		var player = new SharpPlayer
-		{
-			Object = sharpObject,
-			Aliases = Array.Empty<string>(),
-			Location = new(async ct => { await ValueTask.CompletedTask; return mockRoom; }),
-			Home = new(async ct => { await ValueTask.CompletedTask; return mockRoom; }),
-			PasswordHash = string.Empty
-		};
-		
-		return new AnySharpObject(player);
-	}
-	
-	private static AnySharpObject CreateMockThing(string name, DBRef dbref, SharpRoom? location = null)
-	{
-		// Create a simple mock room to use as the location, or use the provided one
-		var mockRoom = location ?? new SharpRoom
-		{
-			Id = $"mock-room-{dbref.Number}",
-			Object = new SharpObject
-			{
-				Key = (int)dbref.Number + 1000, // Offset to avoid conflicts with things
-				Name = $"Mock Room {dbref.Number}",
-				Type = "Room",
-				Locks = ImmutableDictionary<string, string>.Empty,
-				Owner = new(async ct => { await ValueTask.CompletedTask; return null!; }),
-				Powers = new(() => AsyncEnumerable.Empty<SharpPower>()),
-				Attributes = new(() => AsyncEnumerable.Empty<SharpAttribute>()),
-				LazyAttributes = new(() => AsyncEnumerable.Empty<LazySharpAttribute>()),
-				AllAttributes = new(() => AsyncEnumerable.Empty<SharpAttribute>()),
-				LazyAllAttributes = new(() => AsyncEnumerable.Empty<LazySharpAttribute>()),
-				Flags = new(() => AsyncEnumerable.Empty<SharpObjectFlag>()),
-				Parent = new(async ct => { await ValueTask.CompletedTask; return new None(); }),
-				Children = new(() => null)
-			}
-		};
-		
-		var sharpObject = new SharpObject
-		{
-			Key = (int)dbref.Number,
-			CreationTime = dbref.CreationMilliseconds ?? 0L,
-			Name = name,
-			Type = "Thing",
-			Locks = ImmutableDictionary<string, string>.Empty,
-			Owner = new(async ct => { await ValueTask.CompletedTask; return null!; }),
-			Powers = new(() => AsyncEnumerable.Empty<SharpPower>()),
-			Attributes = new(() => AsyncEnumerable.Empty<SharpAttribute>()),
-			LazyAttributes = new(() => AsyncEnumerable.Empty<LazySharpAttribute>()),
-			AllAttributes = new(() => AsyncEnumerable.Empty<SharpAttribute>()),
-			LazyAllAttributes = new(() => AsyncEnumerable.Empty<LazySharpAttribute>()),
-			Flags = new(() => AsyncEnumerable.Empty<SharpObjectFlag>()),
-			Parent = new(async ct => { await ValueTask.CompletedTask; return new None(); }),
-			Children = new(() => null)
-		};
-		
-		var thing = new SharpThing
-		{
-			Object = sharpObject,
-			Aliases = Array.Empty<string>(),
-			Location = new(async ct => { await ValueTask.CompletedTask; return mockRoom; }),
-			Home = new(async ct => { await ValueTask.CompletedTask; return mockRoom; })
-		};
-		
-		return new AnySharpObject(thing);
 	}
 }
