@@ -168,10 +168,10 @@ public partial class Functions
 		
 		// Build status flags
 		var statusFlags = new List<string>();
-		if (status.Combine == true) statusFlags.Add("COMBINE");
-		if (status.Gagged == true) statusFlags.Add("GAG");
-		if (status.Hide == true) statusFlags.Add("HIDE");
-		if (status.Mute == true) statusFlags.Add("MUTE");
+		if (status.Combine is true) statusFlags.Add("COMBINE");
+		if (status.Gagged is true) statusFlags.Add("GAG");
+		if (status.Hide is true) statusFlags.Add("HIDE");
+		if (status.Mute is true) statusFlags.Add("MUTE");
 		
 		return new CallState(string.Join(" ", statusFlags));
 	}
@@ -271,10 +271,10 @@ public partial class Functions
 		// Return the same as cflags with a player argument
 		var (_, status) = maybeMemberStatus.Value;
 		var statusFlags = new List<string>();
-		if (status.Combine == true) statusFlags.Add("COMBINE");
-		if (status.Gagged == true) statusFlags.Add("GAG");
-		if (status.Hide == true) statusFlags.Add("HIDE");
-		if (status.Mute == true) statusFlags.Add("MUTE");
+		if (status.Combine is true) statusFlags.Add("COMBINE");
+		if (status.Gagged is true) statusFlags.Add("GAG");
+		if (status.Hide is true) statusFlags.Add("HIDE");
+		if (status.Mute is true) statusFlags.Add("MUTE");
 		
 		return new CallState(string.Join(" ", statusFlags));
 	}
@@ -416,10 +416,10 @@ public partial class Functions
 		
 		// Build status flags - starting with ON
 		var statusFlags = new List<string> { "ON" };
-		if (status.Gagged == true) statusFlags.Add("GAG");
-		if (status.Hide == true) statusFlags.Add("HIDE");
-		if (status.Mute == true) statusFlags.Add("MUTE");
-		if (status.Combine == true) statusFlags.Add("COMBINE");
+		if (status.Gagged is true) statusFlags.Add("GAG");
+		if (status.Hide is true) statusFlags.Add("HIDE");
+		if (status.Mute is true) statusFlags.Add("MUTE");
+		if (status.Combine is true) statusFlags.Add("COMBINE");
 		
 		return new CallState(string.Join(" ", statusFlags));
 	}

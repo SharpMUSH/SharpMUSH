@@ -12,6 +12,10 @@ namespace SharpMUSH.Tests.Functions;
 
 public class ChannelFunctionUnitTests
 {
+	private const string TestChannelName = "TestChannel";
+	private const string TestChannelPrivilege = "Open";
+	private const int TestPlayerDbRef = 1;
+
 	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required WebAppFactory WebAppFactoryArg { get; init; }
 
@@ -26,23 +30,23 @@ public class ChannelFunctionUnitTests
 	public async Task SetupTestChannel()
 	{
 		// Get the test player (DBRef #1)
-		var playerNode = await Database.GetObjectNodeAsync(new DBRef(1));
+		var playerNode = await Database.GetObjectNodeAsync(new DBRef(TestPlayerDbRef));
 		_testPlayer = playerNode.IsPlayer ? playerNode.AsPlayer : null;
 
 		if (_testPlayer == null)
 		{
-			throw new InvalidOperationException("Test player #1 not found");
+			throw new InvalidOperationException($"Test player #{TestPlayerDbRef} not found");
 		}
 
 		// Create a test channel
 		await Mediator.Send(new CreateChannelCommand(
-			MModule.single("TestChannel"),
-			new[] { "Open" },
+			MModule.single(TestChannelName),
+			new[] { TestChannelPrivilege },
 			_testPlayer
 		));
 
 		// Retrieve the created channel
-		var channelQuery = new GetChannelQuery("TestChannel");
+		var channelQuery = new GetChannelQuery(TestChannelName);
 		_testChannel = await Mediator.Send(channelQuery);
 
 		// Add the test player to the channel
@@ -68,7 +72,7 @@ public class ChannelFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single("channels()")))?.Message!;
 		var channels = result.ToPlainText();
 		
-		await Assert.That(channels).Contains("TestChannel");
+		await Assert.That(channels).Contains(TestChannelName);
 	}
 
 	[Test]
@@ -77,40 +81,40 @@ public class ChannelFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single("channels(%#,on)")))?.Message!;
 		var channels = result.ToPlainText();
 		
-		await Assert.That(channels).Contains("TestChannel");
+		await Assert.That(channels).Contains(TestChannelName);
 	}
 
 	[Test]
 	public async Task Cowner_ReturnsChannelOwner()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("cowner(TestChannel)")))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single($"cowner({TestChannelName})")))?.Message!;
 		var owner = result.ToPlainText();
 		
-		await Assert.That(owner).IsEqualTo("#1");
+		await Assert.That(owner).IsEqualTo($"#{TestPlayerDbRef}");
 	}
 
 	[Test]
 	public async Task Cflags_ReturnsChannelFlags()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("cflags(TestChannel)")))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single($"cflags({TestChannelName})")))?.Message!;
 		var flags = result.ToPlainText();
 		
-		await Assert.That(flags).Contains("OPEN");
+		await Assert.That(flags).Contains(TestChannelPrivilege.ToUpper());
 	}
 
 	[Test]
 	public async Task Cwho_ReturnsChannelMembers()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("cwho(TestChannel)")))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single($"cwho({TestChannelName})")))?.Message!;
 		var members = result.ToPlainText();
 		
-		await Assert.That(members).Contains("#1");
+		await Assert.That(members).Contains($"#{TestPlayerDbRef}");
 	}
 
 	[Test]
 	public async Task Cusers_ReturnsUserCount()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("cusers(TestChannel)")))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single($"cusers({TestChannelName})")))?.Message!;
 		var count = result.ToPlainText();
 		
 		await Assert.That(int.Parse(count)).IsGreaterThanOrEqualTo(1);
@@ -119,7 +123,7 @@ public class ChannelFunctionUnitTests
 	[Test]
 	public async Task Cstatus_ReturnsPlayerStatus()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("cstatus(%#,TestChannel)")))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single($"cstatus(%#,{TestChannelName})")))?.Message!;
 		var status = result.ToPlainText();
 		
 		await Assert.That(status).Contains("ON");
@@ -131,14 +135,14 @@ public class ChannelFunctionUnitTests
 		// First remove player from channel
 		if (_testChannel != null)
 		{
-			var playerNode = await Database.GetObjectNodeAsync(new DBRef(1));
+			var playerNode = await Database.GetObjectNodeAsync(new DBRef(TestPlayerDbRef));
 			if (playerNode.IsPlayer)
 			{
 				await Mediator.Send(new RemoveUserFromChannelCommand(_testChannel, playerNode.AsPlayer));
 			}
 		}
 
-		var result = (await Parser.FunctionParse(MModule.single("cstatus(%#,TestChannel)")))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single($"cstatus(%#,{TestChannelName})")))?.Message!;
 		var status = result.ToPlainText();
 		
 		await Assert.That(status).IsEqualTo("OFF");
@@ -146,7 +150,7 @@ public class ChannelFunctionUnitTests
 		// Add player back for cleanup
 		if (_testChannel != null)
 		{
-			var playerNode = await Database.GetObjectNodeAsync(new DBRef(1));
+			var playerNode = await Database.GetObjectNodeAsync(new DBRef(TestPlayerDbRef));
 			if (playerNode.IsPlayer)
 			{
 				await Mediator.Send(new AddUserToChannelCommand(_testChannel, playerNode.AsPlayer));
@@ -157,7 +161,7 @@ public class ChannelFunctionUnitTests
 	[Test]
 	public async Task Cbuffer_ReturnsBufferSize()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("cbuffer(TestChannel)")))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single($"cbuffer({TestChannelName})")))?.Message!;
 		var buffer = result.ToPlainText();
 		
 		await Assert.That(int.TryParse(buffer, out _)).IsTrue();
@@ -166,7 +170,7 @@ public class ChannelFunctionUnitTests
 	[Test]
 	public async Task Cdesc_ReturnsChannelDescription()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("cdesc(TestChannel)")))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single($"cdesc({TestChannelName})")))?.Message!;
 		// Description should be empty or a valid string
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
@@ -174,7 +178,7 @@ public class ChannelFunctionUnitTests
 	[Test]
 	public async Task Cmogrifier_ReturnsEmptyForNoMogrifier()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("cmogrifier(TestChannel)")))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single($"cmogrifier({TestChannelName})")))?.Message!;
 		var mogrifier = result.ToPlainText();
 		
 		await Assert.That(mogrifier).IsEmpty();
@@ -183,7 +187,7 @@ public class ChannelFunctionUnitTests
 	[Test]
 	public async Task Clock_ReturnsEmptyForNoLock()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("clock(TestChannel)")))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single($"clock({TestChannelName})")))?.Message!;
 		var lockStr = result.ToPlainText();
 		
 		// Default is empty lock string
@@ -193,7 +197,7 @@ public class ChannelFunctionUnitTests
 	[Test]
 	public async Task Ctitle_ReturnsEmptyForNoTitle()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("ctitle(%#,TestChannel)")))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single($"ctitle(%#,{TestChannelName})")))?.Message!;
 		var title = result.ToPlainText();
 		
 		// Player has no title by default
@@ -203,7 +207,7 @@ public class ChannelFunctionUnitTests
 	[Test]
 	public async Task Clflags_ReturnsLockFlags()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("clflags(TestChannel)")))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single($"clflags({TestChannelName})")))?.Message!;
 		// Should return empty or list of lock flags
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
@@ -211,7 +215,7 @@ public class ChannelFunctionUnitTests
 	[Test]
 	public async Task Cmsgs_ReturnsZeroForNoMessages()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("cmsgs(TestChannel)")))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single($"cmsgs({TestChannelName})")))?.Message!;
 		var msgCount = result.ToPlainText();
 		
 		await Assert.That(msgCount).IsEqualTo("0");
@@ -220,7 +224,7 @@ public class ChannelFunctionUnitTests
 	[Test]
 	public async Task Crecall_ReturnsEmptyForNoHistory()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("crecall(TestChannel)")))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single($"crecall({TestChannelName})")))?.Message!;
 		// Should return empty or error message
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
