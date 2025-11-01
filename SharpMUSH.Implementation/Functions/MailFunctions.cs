@@ -279,25 +279,21 @@ public partial class Functions
 		}
 
 		var mailList = filteredList.AsMailList;
-		var result = new List<string>();
+		var mailArray = await mailList.ToArrayAsync();
 		
-		await foreach (var mail in mailList)
+		// Build result list by finding each mail's index in its folder
+		var resultTasks = mailArray.Select(async mail =>
 		{
-			// Get the index of this mail in its folder
 			var folderMail = await Mediator!.Send(new GetMailListQuery(targetPlayer.AsPlayer, mail.Folder));
-			var index = 0;
-			await foreach (var m in folderMail)
-			{
-				if (m.Id == mail.Id)
-				{
-					result.Add($"{mail.Folder}:{index + 1}");
-					break;
-				}
-				index++;
-			}
-		}
+			var folderMailArray = await folderMail.ToArrayAsync();
+			var index = Array.FindIndex(folderMailArray, m => m.Id == mail.Id);
+			return index >= 0 ? $"{mail.Folder}:{index + 1}" : null;
+		});
 
-		return new CallState(string.Join(" ", result));
+		var results = await Task.WhenAll(resultTasks);
+		var validResults = results.Where(r => r != null);
+
+		return new CallState(string.Join(" ", validResults));
 	}
 	[SharpFunction(Name = "mailfrom", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> mailfrom(IMUSHCodeParser parser, SharpFunctionAttribute _2)

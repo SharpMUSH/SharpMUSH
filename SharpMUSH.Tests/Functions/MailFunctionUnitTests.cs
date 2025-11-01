@@ -206,11 +206,14 @@ public class MailFunctionUnitTests
 		var receivedUnread = int.Parse(parts[4]);
 		var receivedCleared = int.Parse(parts[5]);
 		
-		// Validate counts match our setup: 3 sent, 2 unread, 1 cleared
+		// Validate all counts match our setup: 3 sent, 2 unread, 1 cleared
 		await Assert.That(sent).IsEqualTo(3);
 		await Assert.That(received).IsEqualTo(3);
 		await Assert.That(receivedUnread).IsEqualTo(2); // mail 2 and 3 are unread
 		await Assert.That(receivedCleared).IsEqualTo(1); // mail 3 is cleared
+		// Also validate sent mail stats (we sent to ourselves)
+		await Assert.That(sentUnread).IsEqualTo(2); // Same as received unread
+		await Assert.That(sentCleared).IsEqualTo(1); // Same as received cleared
 	}
 
 	[Test]
