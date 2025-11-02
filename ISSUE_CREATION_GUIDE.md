@@ -5,20 +5,36 @@ This guide explains how to create GitHub issues for the 224 unimplemented comman
 
 ## Quick Start
 
-### Option 1: Using the Shell Script (Recommended)
+### Option 1: Using the Shell Script (Recommended for gh CLI users)
 A shell script has been created to automate issue creation:
 
 ```bash
 # The script is available at /tmp/create_github_issues.sh
 # To use it, you need gh CLI authenticated:
 gh auth login
-./tmp/create_github_issues.sh
+bash /tmp/create_github_issues.sh
 ```
 
-### Option 2: Using the JSON File
+### Option 2: Using the Python API Script (Recommended for API users)
+A Python script is available that uses the GitHub REST API:
+
+```bash
+# Install requests if needed
+pip install requests
+
+# Set your GitHub token
+export GITHUB_TOKEN='your_personal_access_token'
+
+# Run the script
+python3 /tmp/create_issues_api.py
+```
+
+The script will run in DRY-RUN mode without a token to show what would be created.
+
+### Option 3: Using the JSON File
 A structured JSON file is available at `/tmp/github_issues_to_create.json` containing all issue data for programmatic creation.
 
-### Option 3: Manual Creation from UNIMPLEMENTED_ANALYSIS.md
+### Option 4: Manual Creation from UNIMPLEMENTED_ANALYSIS.md
 The file `UNIMPLEMENTED_ANALYSIS.md` contains all 15 issues in markdown format. Each section can be manually copied to create a GitHub issue.
 
 ## Issue Structure
@@ -87,7 +103,9 @@ After creating the issues:
 ## Files Created
 
 - `UNIMPLEMENTED_ANALYSIS.md` - Full analysis with all issue content
-- `/tmp/create_github_issues.sh` - Shell script for automated creation
+- `ANALYSIS_SUMMARY.md` - Quick reference summary
+- `/tmp/create_github_issues.sh` - Shell script for gh CLI automated creation
+- `/tmp/create_issues_api.py` - Python script for REST API automated creation
 - `/tmp/github_issues_to_create.json` - JSON data for programmatic creation
 - This file - Guide for issue creation
 
