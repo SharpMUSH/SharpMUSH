@@ -73,13 +73,13 @@ Located in `/tmp/` directory:
 **gh CLI (fastest):**
 ```bash
 gh auth login
-bash /tmp/create_github_issues.sh
+bash scripts/create_github_issues.sh
 ```
 
 **Python API:**
 ```bash
 export GITHUB_TOKEN='your_token'
-python3 /tmp/create_issues_api.py
+python3 scripts/create_github_issues.py
 ```
 
 **Verification:**

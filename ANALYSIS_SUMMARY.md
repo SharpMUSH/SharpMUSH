@@ -49,8 +49,8 @@ This analysis identified **224 unimplemented features** in SharpMUSH that need t
    - Quick reference for what needs to be done
 
 ### Scripts and Data
-- `/tmp/create_github_issues.sh` - Automated shell script for issue creation
-- `/tmp/github_issues_to_create.json` - Structured JSON data
+- `scripts/create_github_issues.sh` - Automated shell script for issue creation
+- `scripts/github_issues.json` - Structured JSON data
 - `/tmp/issues.json` - Raw issue definitions
 
 ## Issue Creation Required
@@ -82,7 +82,7 @@ This analysis identified **224 unimplemented features** in SharpMUSH that need t
 ```bash
 cd /home/runner/work/SharpMUSH/SharpMUSH
 gh auth login  # authenticate first
-bash /tmp/create_github_issues.sh
+bash scripts/create_github_issues.sh
 ```
 
 ### Manual Method

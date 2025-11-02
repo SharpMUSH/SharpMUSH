@@ -44,9 +44,9 @@
 - File location references
 
 ### 4. Automation Tools Provided
-- **gh CLI Script:** `/tmp/create_github_issues.sh`
-- **Python API Script:** `/tmp/create_issues_api.py`
-- **JSON Data:** `/tmp/github_issues_to_create.json`
+- **gh CLI Script:** `scripts/create_github_issues.sh`
+- **Python API Script:** `scripts/create_github_issues.py`
+- **JSON Data:** `scripts/github_issues.json`
 
 ### 5. Documentation Suite
 - **ISSUE_CREATION_REQUIRED.md** - Quick start guide
@@ -62,13 +62,13 @@
 ### Quick Method (gh CLI)
 ```bash
 gh auth login
-bash /tmp/create_github_issues.sh
+bash scripts/create_github_issues.sh
 ```
 
 ### Python API Method
 ```bash
 export GITHUB_TOKEN='your_token'
-python3 /tmp/create_issues_api.py
+python3 scripts/create_github_issues.py
 ```
 
 ### Manual Method

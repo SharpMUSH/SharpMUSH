@@ -67,9 +67,9 @@ Environment limitations prevent direct GitHub issue creation:
 - PennMUSH compatibility notes
 
 ✅ **3 Automation Scripts** (ready to use)
-1. `/tmp/create_github_issues.sh` - gh CLI automation
-2. `/tmp/create_issues_api.py` - Python REST API
-3. `/tmp/github_issues_to_create.json` - JSON data
+1. `scripts/create_github_issues.sh` - gh CLI automation
+2. `scripts/create_github_issues.py` - Python REST API
+3. `scripts/github_issues.json` - JSON data
 
 ✅ **Complete Documentation** (6 files, 48KB)
 1. README_ANALYSIS.md - Navigation guide
@@ -110,13 +110,13 @@ Environment limitations prevent direct GitHub issue creation:
 ```bash
 cd /home/runner/work/SharpMUSH/SharpMUSH
 gh auth login
-bash /tmp/create_github_issues.sh
+bash scripts/create_github_issues.sh
 ```
 
 **Option B - Python API:**
 ```bash
 export GITHUB_TOKEN='your_personal_access_token'
-python3 /tmp/create_issues_api.py
+python3 scripts/create_github_issues.py
 ```
 
 **Option C - Manual:**

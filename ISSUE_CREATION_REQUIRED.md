@@ -26,13 +26,13 @@ The analysis of SharpMUSH has been **completed successfully**. However, creating
 ```bash
 cd /home/runner/work/SharpMUSH/SharpMUSH
 gh auth login
-bash /tmp/create_github_issues.sh
+bash scripts/create_github_issues.sh
 ```
 
 #### Method 2: Using Python + GitHub API
 ```bash
 export GITHUB_TOKEN='your_personal_access_token'
-python3 /tmp/create_issues_api.py
+python3 scripts/create_github_issues.py
 ```
 
 #### Method 3: Using GitHub Web UI (Manual)
