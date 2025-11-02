@@ -5,6 +5,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Queries.Database;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 
 namespace SharpMUSH.Implementation.Commands;
@@ -179,8 +180,49 @@ public partial class Commands
 	[SharpCommand(Name = "INVENTORY", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Inventory(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		// INVENTORY command - lists what you are carrying
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		
+		// Default format
+		var output = new System.Text.StringBuilder();
+		output.AppendLine("You are carrying:");
+		
+		// Check if executor is a container (player or thing)
+		if (executor.IsContainer)
+		{
+			var contents = await Mediator!.Send(new GetContentsQuery(executor.AsContainer));
+			var itemsNames = new List<string>();
+			
+			if (contents != null)
+			{
+				await foreach (var item in contents)
+				{
+					itemsNames.Add(item.Object().Name);
+				}
+			}
+			
+			if (itemsNames.Count == 0)
+			{
+				output.AppendLine("  Nothing.");
+			}
+			else
+			{
+				foreach (var itemName in itemsNames)
+				{
+					output.AppendLine($"  {itemName}");
+				}
+			}
+		}
+		else
+		{
+			output.AppendLine("  Nothing.");
+		}
+		
+		// TODO: Add money display once money system is implemented
+		// output.AppendLine($"You have {pennies} {moneyName}.");
+		
+		await NotifyService!.Notify(executor, MModule.single(output.ToString().TrimEnd()));
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "LEAVE", Switches = [], Behavior = CB.Player | CB.Thing, MinArgs = 0, MaxArgs = 0)]
@@ -390,8 +432,24 @@ public partial class Commands
 	[SharpCommand(Name = "SCORE", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Score(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		// SCORE command - displays how many pennies you have
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		
+		// TODO: Implement money system - for now, just display a placeholder message
+		// Once money system is implemented, retrieve from attribute or object property
+		await NotifyService!.Notify(executor, "Score tracking not yet implemented.");
+		
+		// Future implementation:
+		// var moneyAttr = await AttributeService!.GetAttributeAsync(executor, executor, "MONEY", IAttributeService.AttributeMode.Read);
+		// var pennies = moneyAttr.Match(
+		//     attr => int.TryParse(attr.LastOrDefault()?.Value.ToPlainText(), out var p) ? p : 0,
+		//     _ => 0,
+		//     _ => 0
+		// );
+		// var moneyName = pennies == 1 ? Configuration!.CurrentValue.Money.MoneySingular : Configuration!.CurrentValue.Money.MoneyPlural;
+		// await NotifyService!.Notify(executor, $"You have {pennies} {moneyName}.");
+		
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "SAY", Switches = ["NOEVAL"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
@@ -475,11 +533,120 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "WHISPER", Switches = ["LIST", "NOISY", "SILENT", "NOEVAL"],
-		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 2, MaxArgs = 2)]
 	public static async ValueTask<Option<CallState>> Whisper(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		// WHISPER command - whispers a message to nearby players
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var isNoEval = parser.CurrentState.Switches.Contains("NOEVAL");
+		var isNoisy = parser.CurrentState.Switches.Contains("NOISY");
+		var isSilent = parser.CurrentState.Switches.Contains("SILENT");
+		var isList = parser.CurrentState.Switches.Contains("LIST");
+		
+		// Get target and message
+		var targetArg = isNoEval
+			? ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.empty())
+			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 0, MModule.empty());
+			
+		var messageArg = isNoEval
+			? ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.empty())
+			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, MModule.empty());
+		
+		var targetText = targetArg.ToPlainText();
+		var message = messageArg;
+		
+		if (string.IsNullOrWhiteSpace(targetText))
+		{
+			await NotifyService!.Notify(executor, "Whisper to whom?");
+			return CallState.Empty;
+		}
+		
+		if (string.IsNullOrWhiteSpace(message.ToPlainText()))
+		{
+			await NotifyService!.Notify(executor, "Whisper what?");
+			return CallState.Empty;
+		}
+		
+		// Get executor's location
+		var executorLocation = await Mediator!.Send(new GetLocationQuery(executor.Object().DBRef));
+		if (executorLocation.IsNone)
+		{
+			await NotifyService!.Notify(executor, "You have no location!");
+			return CallState.Empty;
+		}
+		
+		var location = executorLocation.Known();
+		var targets = new List<AnySharpObject>();
+		
+		// Parse target list
+		var targetNames = isList 
+			? targetText.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+			: new[] { targetText };
+		
+		foreach (var targetName in targetNames)
+		{
+			// Locate target in same location
+			var targetResult = await LocateService!.LocateAndNotifyIfInvalidWithCallState(
+				parser, executor, executor, targetName, LocateFlags.PlayersPreference | LocateFlags.MatchObjectsInLookerLocation);
+			
+			if (!targetResult.IsAnySharpObject)
+			{
+				continue;
+			}
+			
+			var target = targetResult.AsSharpObject;
+			
+			// Check if target is in same location
+			var targetLocation = await Mediator!.Send(new GetLocationQuery(target.Object().DBRef));
+			if (targetLocation.IsNone || !targetLocation.Known().Object().DBRef.Equals(location.Object().DBRef))
+			{
+				await NotifyService!.Notify(executor, $"{target.Object().Name} is not here.");
+				continue;
+			}
+			
+			targets.Add(target);
+		}
+		
+		if (targets.Count == 0)
+		{
+			return CallState.Empty;
+		}
+		
+		// Send whisper to targets
+		foreach (var target in targets)
+		{
+			var targetDBRef = target.Object().DBRef;
+			await NotifyService!.Notify(targetDBRef, MModule.concat(MModule.single($"{executor.Object().Name} whispers, \""), message, MModule.single("\"")));
+		}
+		
+		// Notify executor
+		var targetListText = string.Join(", ", targets.Select(t => t.Object().Name));
+		await NotifyService!.Notify(executor, MModule.concat(MModule.single($"You whisper, \""), message, MModule.single($"\" to {targetListText}.")));
+		
+		// Handle noisy whispers (others in room may hear)
+		if (isNoisy && !isSilent)
+		{
+			// Get all contents of the location
+			var contents = await Mediator!.Send(new GetContentsQuery(location));
+			if (contents != null)
+			{
+				await foreach (var occupant in contents)
+				{
+					var occupantDBRef = occupant.Object().DBRef;
+					// Skip executor and whisper targets
+					if (occupantDBRef.Equals(executor.Object().DBRef) || targets.Any(t => t.Object().DBRef.Equals(occupantDBRef)))
+					{
+						continue;
+					}
+					
+					// Inform others that someone whispered (but not what)
+					await NotifyService!.Notify(occupantDBRef, $"{executor.Object().Name} whispers something to {targetListText}.");
+				}
+			}
+		}
+		
+		return new CallState(message);
 	}
 
 	[SharpCommand(Name = "WITH", Switches = ["NOEVAL", "ROOM"], Behavior = CB.Player | CB.Thing | CB.EqSplit, MinArgs = 0,
@@ -490,18 +657,96 @@ public partial class Commands
 		throw new NotImplementedException();
 	}
 
-	[SharpCommand(Name = "DOING", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
+	[SharpCommand(Name = "DOING", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> Doing(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		// DOING command - sets or displays the player's @doing message shown in WHO
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		
+		// If no argument provided, display current @doing
+		if (parser.CurrentState.Arguments.Count == 0 || string.IsNullOrWhiteSpace(parser.CurrentState.Arguments["0"].Message?.ToPlainText()))
+		{
+			var currentDoing = await AttributeService!.GetAttributeAsync(executor, executor, "DOING", IAttributeService.AttributeMode.Read);
+			var doingText = currentDoing.Match(
+				attr => attr.LastOrDefault()?.Value.ToPlainText() ?? "Nothing",
+				_ => "Nothing",
+				_ => "Nothing"
+			);
+			await NotifyService!.Notify(executor, $"Doing: {doingText}");
+			return CallState.Empty;
+		}
+		
+		// Set the @doing message
+		var newDoing = parser.CurrentState.Arguments["0"].Message!;
+		await AttributeService!.SetAttributeAsync(executor, executor, "DOING", newDoing);
+		await NotifyService!.Notify(executor, "Doing set.");
+		return new CallState(newDoing);
 	}
 
-	[SharpCommand(Name = "SESSION", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
+	[SharpCommand(Name = "SESSION", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> Session(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		// SESSION command - displays connection information (admin version of WHO showing bytes)
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		
+		// Check if executor has permission (wizard or admin)
+		var isWizard = await executor.Object().Flags.Value.AnyAsync(f => f.Name.Equals("WIZARD", StringComparison.OrdinalIgnoreCase));
+		if (!isWizard)
+		{
+			await NotifyService!.Notify(executor, "Permission denied.");
+			return CallState.Empty;
+		}
+		
+		// Get optional pattern filter
+		var pattern = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message?.ToPlainText() ?? "";
+		
+		var output = new System.Text.StringBuilder();
+		output.AppendLine("Player Name              On For Idle  Sent    Recv    Pend");
+		output.AppendLine("------------------------ ------ ----- ------- ------- -------");
+		
+		var allConnections = ConnectionService!.GetAll();
+		await foreach (var conn in allConnections)
+		{
+			string connPlayerName;
+			
+			// Filter by pattern if provided
+			if (!string.IsNullOrWhiteSpace(pattern) && conn.Ref.HasValue)
+			{
+				var playerObj = await Mediator!.Send(new GetObjectNodeQuery(conn.Ref.Value));
+				if (playerObj.IsNone)
+				{
+					continue;
+				}
+				var playerName = playerObj.AsSharpObject.Object().Name;
+				if (!playerName.StartsWith(pattern, StringComparison.OrdinalIgnoreCase))
+				{
+					continue;
+				}
+			}
+			
+			if (conn.Ref.HasValue)
+			{
+				var playerObj = await Mediator!.Send(new GetObjectNodeQuery(conn.Ref.Value));
+				connPlayerName = playerObj.IsNone ? conn.Ref.Value.ToString() : playerObj.AsSharpObject.Object().Name;
+			}
+			else
+			{
+				connPlayerName = "<Connecting>";
+			}
+			
+			var connectedTime = conn.Connected?.ToString(@"hh\:mm") ?? "00:00";
+			var idleTime = conn.Idle?.TotalMinutes.ToString("F0") ?? "0";
+			
+			// TODO: Track bytes sent/received/pending once connection service tracks this
+			var sent = conn.Metadata.GetValueOrDefault("BytesSent", "0");
+			var recv = conn.Metadata.GetValueOrDefault("BytesReceived", "0");
+			var pend = conn.Metadata.GetValueOrDefault("BytesPending", "0");
+			
+			output.AppendLine($"{connPlayerName,-24} {connectedTime,6} {idleTime,5} {sent,7} {recv,7} {pend,7}");
+		}
+		
+		await NotifyService!.Notify(executor, MModule.single(output.ToString().TrimEnd()));
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "WARN_ON_MISSING", Switches = [], Behavior = CB.Default | CB.NoParse | CB.Internal | CB.NoOp,
