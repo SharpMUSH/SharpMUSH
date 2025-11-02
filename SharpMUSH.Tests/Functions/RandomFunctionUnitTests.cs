@@ -10,22 +10,30 @@ public class RandomFunctionUnitTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("die(6,2)", "")]
+	[Arguments("die(2,6)", "")]
+	[Arguments("die(3,10)", "")]
 	public async Task Die(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
+		// Result should be space-separated numbers
+		var rolls = result.ToPlainText().Split(' ');
+		await Assert.That(rolls.Length).IsGreaterThan(0);
 	}
 	
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("rand(10)", "")]
+	[Arguments("rand(100)", "")]
+	[Arguments("rand()", "")]
+	[Arguments("rand(5,10)", "")]
 	public async Task Rand(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
+		// Should be a valid integer
+		await Assert.That(int.TryParse(result, out _)).IsTrue();
 	}
 
 	[Test]

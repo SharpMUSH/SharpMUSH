@@ -209,9 +209,30 @@ public partial class Functions
 		ValueTask.FromResult<CallState>(new(string.Empty));
 
 	[SharpFunction(Name = "allof", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
-	public static ValueTask<CallState> AllOf(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> AllOf(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var allTrue = true;
+		CallState? lastResult = null;
+		
+		// Evaluate all arguments (no short-circuit like and())
+		foreach (var arg in args)
+		{
+			lastResult = await parser.FunctionParse(arg.Value.Message!);
+			var resultStr = MModule.plainText(lastResult!.Message).Trim();
+			
+			// Check if false (0, empty, #-1, or false)
+			if (string.IsNullOrEmpty(resultStr) || 
+			    resultStr == "0" || 
+			    resultStr.StartsWith("#-1") ||
+			    resultStr.Equals("false", StringComparison.OrdinalIgnoreCase))
+			{
+				allTrue = false;
+			}
+		}
+		
+		// Return 1 if all true, 0 otherwise
+		return new CallState(allTrue ? "1" : "0");
 	}
 
 	[SharpFunction(Name = "atrlock", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -299,7 +320,48 @@ public partial class Functions
 	[SharpFunction(Name = "die", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> Die(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var args = parser.CurrentState.Arguments;
+		
+		if (!int.TryParse(MModule.plainText(args["0"].Message), out var count) || count < 0)
+		{
+			return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
+		}
+		if (!int.TryParse(MModule.plainText(args["1"].Message), out var sides) || sides <= 0)
+		{
+			return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
+		}
+		
+		// Optional third argument for how many rolls to show (vs just return sum)
+		var showCount = count;
+		if (args.Count == 3)
+		{
+			if (!int.TryParse(MModule.plainText(args["2"].Message), out showCount) || showCount < 0)
+			{
+				return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
+			}
+		}
+		
+		var random = new Random();
+		var rolls = new List<int>();
+		var total = 0;
+		
+		for (int i = 0; i < count; i++)
+		{
+			var roll = random.Next(1, sides + 1);
+			rolls.Add(roll);
+			total += roll;
+		}
+		
+		// If showCount is specified and less than count, only show that many rolls
+		if (showCount < count)
+		{
+			return ValueTask.FromResult(new CallState(total.ToString()));
+		}
+		else
+		{
+			// Show individual rolls
+			return ValueTask.FromResult(new CallState(string.Join(" ", rolls)));
+		}
 	}
 	[SharpFunction(Name = "dig", MinArgs = 1, MaxArgs = 6, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Dig(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -337,7 +399,10 @@ public partial class Functions
 	[SharpFunction(Name = "isobjid", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> IsObjId(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var arg = MModule.plainText(parser.CurrentState.Arguments["0"].Message);
+		// Object ID format is #dbref:timestamp (e.g., #123:456789)
+		var match = Regex.Match(arg, @"^#\d+:\d+$");
+		return ValueTask.FromResult(new CallState(match.Success ? "1" : "0"));
 	}
 
 	[SharpFunction(Name = "isregexp", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -433,18 +498,106 @@ public partial class Functions
 	[SharpFunction(Name = "r", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> R(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var args = parser.CurrentState.Arguments;
+		var registerName = MModule.plainText(args["0"].Message);
+		
+		// Try to get the register value from the current stack
+		if (parser.CurrentState.Registers.TryPeek(out var registers))
+		{
+			if (registers.TryGetValue(registerName.ToUpper(), out var value))
+			{
+				return ValueTask.FromResult(new CallState(value));
+			}
+		}
+		
+		// If not found and there's a default value, return it
+		if (args.Count == 2)
+		{
+			return ValueTask.FromResult(new CallState(args["1"].Message!));
+		}
+		
+		// Otherwise return empty
+		return ValueTask.FromResult(CallState.Empty);
 	}
 	[SharpFunction(Name = "rand", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> Rand(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var random = new Random();
+		var args = parser.CurrentState.Arguments;
+		
+		if (args.Count == 0)
+		{
+			// No arguments: random number between 0 and 2^31-1
+			return ValueTask.FromResult(new CallState(random.Next(0, int.MaxValue)));
+		}
+		else if (args.Count == 1)
+		{
+			// One argument: random number from 0 to arg-1
+			if (!int.TryParse(MModule.plainText(args["0"].Message), out var max) || max <= 0)
+			{
+				return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
+			}
+			return ValueTask.FromResult(new CallState(random.Next(0, max)));
+		}
+		else
+		{
+			// Two arguments: random number between min and max (inclusive)
+			if (!int.TryParse(MModule.plainText(args["0"].Message), out var min) ||
+			    !int.TryParse(MModule.plainText(args["1"].Message), out var max))
+			{
+				return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
+			}
+			if (min > max)
+			{
+				return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
+			}
+			// Next is exclusive of upper bound, so add 1
+			return ValueTask.FromResult(new CallState(random.Next(min, max + 1)));
+		}
 	}
 
 	[SharpFunction(Name = "registers", MinArgs = 0, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> Registers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var args = parser.CurrentState.Arguments;
+		
+		// Get current registers
+		if (!parser.CurrentState.Registers.TryPeek(out var registers))
+		{
+			return ValueTask.FromResult(CallState.Empty);
+		}
+		
+		// No arguments: return count of registers
+		if (args.Count == 0)
+		{
+			return ValueTask.FromResult(new CallState(registers.Count));
+		}
+		
+		// First argument determines what to return
+		var mode = MModule.plainText(args["0"].Message).ToLower();
+		
+		if (mode == "list" || mode == "names")
+		{
+			// Return space-separated list of register names
+			return ValueTask.FromResult(new CallState(string.Join(" ", registers.Keys)));
+		}
+		else if (mode == "get")
+		{
+			// Get specific register value (second argument is register name)
+			if (args.Count < 2)
+			{
+				return ValueTask.FromResult(CallState.Empty);
+			}
+			var regName = MModule.plainText(args["1"].Message).ToUpper();
+			if (registers.TryGetValue(regName, out var value))
+			{
+				return ValueTask.FromResult(new CallState(value));
+			}
+			return ValueTask.FromResult(CallState.Empty);
+		}
+		
+		// Default: return count
+		return ValueTask.FromResult(new CallState(registers.Count));
 	}
 	
 	[SharpFunction(Name = "render", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
@@ -549,7 +702,8 @@ public partial class Functions
 	[SharpFunction(Name = "slev", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> SLev(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		// Return the current parser function depth (stack level)
+		return ValueTask.FromResult(new CallState(parser.CurrentState.ParserFunctionDepth ?? 0));
 	}
 
 	[SharpFunction(Name = "stext", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]

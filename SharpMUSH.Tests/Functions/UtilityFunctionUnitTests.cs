@@ -102,9 +102,12 @@ public class UtilityFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("isobjid(#1:0)", "1")]
+	[Arguments("isobjid(#123:456789)", "1")]
 	[Arguments("isobjid(notvalid)", "0")]
+	[Arguments("isobjid(#1)", "0")]
+	[Arguments("isobjid(#1:)", "0")]
+	[Arguments("isobjid(1:0)", "0")]
 	public async Task Isobjid(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -112,9 +115,12 @@ public class UtilityFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("isint(123)", "1")]
+	[Arguments("isint(-456)", "1")]
+	[Arguments("isint(0)", "1")]
 	[Arguments("isint(abc)", "0")]
+	[Arguments("isint(12.34)", "0")]
+	[Arguments("isint()", "0")]
 	public async Task Isint(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -184,5 +190,116 @@ public class UtilityFunctionUnitTests
 		Console.WriteLine("Testing: {0}", str);
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
+	}
+
+	[Test]
+	public async Task Rand_NoArgs()
+	{
+		// rand() should return a value between 0 and 2^31-1
+		var result = (await Parser.FunctionParse(MModule.single("rand()")))?.Message!;
+		var value = int.Parse(result.ToPlainText());
+		await Assert.That(value).IsGreaterThanOrEqualTo(0);
+		await Assert.That(value).IsLessThan(int.MaxValue);
+	}
+
+	[Test]
+	[Arguments("rand(10)", 0, 9)]
+	[Arguments("rand(100)", 0, 99)]
+	[Arguments("rand(1)", 0, 0)]
+	public async Task Rand_OneArg(string str, int min, int max)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var value = int.Parse(result.ToPlainText());
+		await Assert.That(value).IsGreaterThanOrEqualTo(min);
+		await Assert.That(value).IsLessThanOrEqualTo(max);
+	}
+
+	[Test]
+	[Arguments("rand(5,10)", 5, 10)]
+	[Arguments("rand(0,5)", 0, 5)]
+	[Arguments("rand(-5,5)", -5, 5)]
+	public async Task Rand_TwoArgs(string str, int min, int max)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var value = int.Parse(result.ToPlainText());
+		await Assert.That(value).IsGreaterThanOrEqualTo(min);
+		await Assert.That(value).IsLessThanOrEqualTo(max);
+	}
+
+	[Test]
+	public async Task Die_TwoDice()
+	{
+		// die(2,6) should return two space-separated dice rolls
+		var result = (await Parser.FunctionParse(MModule.single("die(2,6)")))?.Message!;
+		var rolls = result.ToPlainText().Split(' ');
+		await Assert.That(rolls.Length).IsEqualTo(2);
+		foreach (var roll in rolls)
+		{
+			var value = int.Parse(roll);
+			await Assert.That(value).IsGreaterThanOrEqualTo(1);
+			await Assert.That(value).IsLessThanOrEqualTo(6);
+		}
+	}
+
+	[Test]
+	public async Task Die_ShowSum()
+	{
+		// die(5,6,0) should return only the sum
+		var result = (await Parser.FunctionParse(MModule.single("die(5,6,0)")))?.Message!;
+		var value = int.Parse(result.ToPlainText());
+		await Assert.That(value).IsGreaterThanOrEqualTo(5);
+		await Assert.That(value).IsLessThanOrEqualTo(30);
+	}
+
+	[Test]
+	public async Task R_WithRegister()
+	{
+		// setq(A,test_value_r)[r(A)]
+		var result = (await Parser.FunctionParse(MModule.single("setq(A,test_value_r)[r(A)]")))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo("test_value_r");
+	}
+
+	[Test]
+	public async Task R_WithDefault()
+	{
+		// r(NONEXISTENT,default_value)
+		var result = (await Parser.FunctionParse(MModule.single("r(NONEXISTENT,default_value)")))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo("default_value");
+	}
+
+	[Test]
+	public async Task Registers_Count()
+	{
+		var result = (await Parser.FunctionParse(MModule.single("setq(A,1)[setq(B,2)][registers()]")))?.Message!;
+		await Assert.That(int.Parse(result.ToPlainText())).IsGreaterThanOrEqualTo(2);
+	}
+
+	[Test]
+	public async Task Registers_List()
+	{
+		var result = (await Parser.FunctionParse(MModule.single("setq(TEST1,val1)[setq(TEST2,val2)][registers(list)]")))?.Message!;
+		var list = result.ToPlainText();
+		await Assert.That(list).Contains("TEST1");
+		await Assert.That(list).Contains("TEST2");
+	}
+
+	[Test]
+	public async Task SLev_CheckDepth()
+	{
+		// slev() should return current stack depth
+		var result = (await Parser.FunctionParse(MModule.single("slev()")))?.Message!;
+		var depth = int.Parse(result.ToPlainText());
+		await Assert.That(depth).IsGreaterThanOrEqualTo(0);
+	}
+
+	[Test]
+	[Arguments("allof(1,1,1)", "1")]
+	[Arguments("allof(1,0,1)", "0")]
+	[Arguments("allof(0,0,0)", "0")]
+	[Arguments("allof(add(1,1),sub(5,3))", "1")]
+	public async Task AllOf_Evaluation(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 }
