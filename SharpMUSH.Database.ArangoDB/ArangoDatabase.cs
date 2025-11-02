@@ -2046,6 +2046,32 @@ public partial class ArangoDatabase(
 		await ValueTask.CompletedTask;
 	}
 
+	public IAsyncEnumerable<LogEventEntity> GetChannelLogs(SharpChannel channel, int skip = 0, int count = 100) 
+		=> arangoDb.Query.ExecuteStreamAsync<LogEventEntity>(
+			handle,
+			$"FOR v IN @@c FILTER v.Properties.ChannelId == @channelId SORT v.Timestamp DESC LIMIT @skip, @count RETURN v",
+			bindVars:
+			new Dictionary<string, object>
+			{
+				{"@c", DatabaseConstants.Logs },
+				{ "channelId", channel.Id! },
+				{ "skip", skip },
+				{ "count", count }
+			});
+
+	public IAsyncEnumerable<LogEventEntity> GetLogsFromCategory(string category, int skip = 0, int count = 100)
+		=> arangoDb.Query.ExecuteStreamAsync<LogEventEntity>(
+			handle,
+			$"FOR v IN @@c FILTER v.Properties.Category == category SORT v.Timestamp DESC LIMIT @skip, @count RETURN v",
+			bindVars:
+			new Dictionary<string, object>
+			{
+				{"@c", DatabaseConstants.Logs },
+				{ "category", category },
+				{ "skip", skip },
+				{ "count", count }
+			});
+
 	public async ValueTask SetPlayerPasswordAsync(SharpPlayer player, string password, CancellationToken ct = default)
 	{
 		var hashed = passwordService.HashPassword(player.Object.DBRef.ToString(), password);

@@ -9,6 +9,7 @@ using Serilog;
 using Serilog.Sinks.PeriodicBatching;
 using Serilog.Sinks.SystemConsole.Themes;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Connectors;
 using SharpMUSH.Server.ProtocolHandlers;
@@ -60,8 +61,8 @@ public class Program
 			.WriteTo.Console(theme: AnsiConsoleTheme.Code)
 			.WriteTo.Sink(new PeriodicBatchingSink(
 				new ArangoSerilogSink(new ArangoContext(config),
-					"logs",
-					"logs",
+					DatabaseConstants.Logs,
+					DatabaseConstants.Logs,
 					ArangoSerilogSink.LoggingRenderStrategy.StoreTemplate,
 					true,
 					true,
