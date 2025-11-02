@@ -8,6 +8,7 @@ public class ArangoDbTestServer : IAsyncInitializer, IAsyncDisposable
 	public ArangoDbContainer Instance { get; } =  new ArangoDbBuilder()
 		.WithImage("arangodb:latest")
 		.WithPassword("password")
+		.WithReuse(false)
 		.Build();
 
 	public async Task InitializeAsync() => await Instance.StartAsync();
