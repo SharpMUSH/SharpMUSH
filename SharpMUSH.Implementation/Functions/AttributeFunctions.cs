@@ -361,19 +361,63 @@ public partial class Functions
 	[SharpFunction(Name = "grep", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Grep(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		return GrepInternal(parser, false, false);
 	}
 
 	[SharpFunction(Name = "pgrep", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> ParentGrep(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		return GrepInternal(parser, false, true);
 	}
 
 	[SharpFunction(Name = "grepi", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> GrepCaseInsensitive(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		return GrepInternal(parser, true, false);
+	}
+
+	/// <summary>
+	/// Internal helper for grep, grepi, pgrep.
+	/// </summary>
+	private static async ValueTask<CallState> GrepInternal(IMUSHCodeParser parser, bool caseInsensitive, bool checkParents)
+	{
+		var args = parser.CurrentState.Arguments;
+		var objectStr = args["0"].Message!.ToPlainText();
+		var attrsPattern = args["1"].Message!.ToPlainText();
+		var substring = args["2"].Message!.ToPlainText();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+			executor, executor, objectStr!, LocateFlags.All,
+			async found =>
+			{
+				// Get all attributes matching the attribute pattern (wildcard)
+				var attributes = await AttributeService!.GetAttributePatternAsync(executor, found,
+					attrsPattern ?? "*", checkParents,
+					IAttributeService.AttributePatternMode.Wildcard);
+
+				if (attributes.IsError)
+				{
+					return attributes.AsError;
+				}
+
+				// Filter attributes whose values contain the substring
+				var matchingAttrs = new List<string>();
+				var comparison = caseInsensitive 
+					? StringComparison.OrdinalIgnoreCase 
+					: StringComparison.Ordinal;
+
+				foreach (var attr in attributes.AsAttributes)
+				{
+					var value = attr.Value.ToPlainText();
+					if (value != null && value.Contains(substring!, comparison))
+					{
+						matchingAttrs.Add(attr.LongName!);
+					}
+				}
+
+				return string.Join(" ", matchingAttrs);
+			});
 	}
 
 	[SharpFunction(Name = "hasattr", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -1003,44 +1047,238 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "reglattr", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> RegularExpressionListAttribute(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> RegularExpressionListAttribute(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var dbrefAndAttr =
+			HelperFunctions.SplitDbRefAndOptionalAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+
+		if (dbrefAndAttr is { IsT1: true }) // IsNone
+		{
+			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
+		}
+
+		var (obj, attributePattern) = dbrefAndAttr.AsT0;
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+			executor, executor, obj, LocateFlags.All,
+			async found =>
+			{
+				var attributes = await AttributeService!.LazilyGetAttributePatternAsync(executor, found,
+					attributePattern ?? ".*", false,
+					IAttributeService.AttributePatternMode.Regex);
+
+				if (attributes.IsError)
+				{
+					return attributes.AsError;
+				}
+
+				var separator = parser.CurrentState.Arguments.TryGetValue("1", out var sepArg)
+					? sepArg.Message!.ToPlainText()
+					: " ";
+
+				return string.Join(separator, attributes.AsAttributes.Select(x => x.LongName));
+			});
 	}
 
 	[SharpFunction(Name = "reglattrp", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> RegularExpressionListAttributeParent(IMUSHCodeParser parser,
+	public static async ValueTask<CallState> RegularExpressionListAttributeParent(IMUSHCodeParser parser,
 		SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var dbrefAndAttr =
+			HelperFunctions.SplitDbRefAndOptionalAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+
+		if (dbrefAndAttr is { IsT1: true }) // IsNone
+		{
+			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
+		}
+
+		var (obj, attributePattern) = dbrefAndAttr.AsT0;
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+			executor, executor, obj, LocateFlags.All,
+			async found =>
+			{
+				var attributes = await AttributeService!.LazilyGetAttributePatternAsync(executor, found,
+					attributePattern ?? ".*", true,
+					IAttributeService.AttributePatternMode.Regex);
+
+				if (attributes.IsError)
+				{
+					return attributes.AsError;
+				}
+
+				var separator = parser.CurrentState.Arguments.TryGetValue("1", out var sepArg)
+					? sepArg.Message!.ToPlainText()
+					: " ";
+
+				return string.Join(separator, attributes.AsAttributes.Select(x => x.LongName));
+			});
 	}
 
 	[SharpFunction(Name = "regnattr", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> RegularExpressionNumberAttributes(IMUSHCodeParser parser,
+	public static async ValueTask<CallState> RegularExpressionNumberAttributes(IMUSHCodeParser parser,
 		SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var dbrefAndAttr =
+			HelperFunctions.SplitDbRefAndOptionalAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+
+		if (dbrefAndAttr is { IsT1: true }) // IsNone
+		{
+			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
+		}
+
+		var (obj, attributePattern) = dbrefAndAttr.AsT0;
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, obj,
+			LocateFlags.All,
+			async found =>
+			{
+				var attributes = await AttributeService!.LazilyGetAttributePatternAsync(executor, found,
+					attributePattern ?? ".*", false,
+					IAttributeService.AttributePatternMode.Regex);
+
+				if (attributes.IsError)
+				{
+					return attributes.AsError;
+				}
+
+				return await attributes.AsAttributes.CountAsync();
+			});
 	}
 
 	[SharpFunction(Name = "regnattrp", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> RegularExpressionNumberAttributesParent(IMUSHCodeParser parser,
+	public static async ValueTask<CallState> RegularExpressionNumberAttributesParent(IMUSHCodeParser parser,
 		SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var dbrefAndAttr =
+			HelperFunctions.SplitDbRefAndOptionalAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+
+		if (dbrefAndAttr is { IsT1: true }) // IsNone
+		{
+			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
+		}
+
+		var (obj, attributePattern) = dbrefAndAttr.AsT0;
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, obj,
+			LocateFlags.All,
+			async found =>
+			{
+				var attributes = await AttributeService!.LazilyGetAttributePatternAsync(executor, found,
+					attributePattern ?? ".*", true,
+					IAttributeService.AttributePatternMode.Regex);
+
+				if (attributes.IsError)
+				{
+					return attributes.AsError;
+				}
+
+				return await attributes.AsAttributes.CountAsync();
+			});
 	}
 
 	[SharpFunction(Name = "regxattr", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> RegularExpressionNumberRangeAttributes(IMUSHCodeParser parser,
+	public static async ValueTask<CallState> RegularExpressionNumberRangeAttributes(IMUSHCodeParser parser,
 		SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var dbrefAndAttr =
+			HelperFunctions.SplitDbRefAndOptionalAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+		var start = MModule.plainText(parser.CurrentState.Arguments["1"].Message!)!;
+		var count = MModule.plainText(parser.CurrentState.Arguments["2"].Message!)!;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+
+		if (dbrefAndAttr is { IsT1: true }) // IsNone
+		{
+			return string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper());
+		}
+
+		if (!int.TryParse(start, out var startInt) || !int.TryParse(count, out var countInt))
+		{
+			return Errors.ErrorInteger;
+		}
+
+		if (startInt < 1)
+		{
+			return Errors.ErrorArgRange;
+		}
+
+		var (obj, attributePattern) = dbrefAndAttr.AsT0;
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+			executor, executor, obj, LocateFlags.All,
+			async found =>
+			{
+				var attributes = await AttributeService!.LazilyGetAttributePatternAsync(executor, found,
+					attributePattern ?? ".*", false,
+					IAttributeService.AttributePatternMode.Regex);
+
+				if (attributes.IsError)
+				{
+					return attributes.AsError;
+				}
+
+				var attributesStaging = attributes.AsAttributes.Skip(startInt - 1).Take(countInt);
+
+				var separator = parser.CurrentState.Arguments.TryGetValue("3", out var sepArg)
+					? sepArg.Message!.ToPlainText()
+					: " ";
+
+				return string.Join(separator!, await attributesStaging.Select(x => x.LongName).ToArrayAsync());
+			});
 	}
 
 	[SharpFunction(Name = "regxattrp", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> RegularExpressionNumberRangeParent(IMUSHCodeParser parser,
+	public static async ValueTask<CallState> RegularExpressionNumberRangeParent(IMUSHCodeParser parser,
 		SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var dbrefAndAttr =
+			HelperFunctions.SplitDbRefAndOptionalAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+		var start = MModule.plainText(parser.CurrentState.Arguments["1"].Message!)!;
+		var count = MModule.plainText(parser.CurrentState.Arguments["2"].Message!)!;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+
+		if (dbrefAndAttr is { IsT1: true }) // IsNone
+		{
+			return string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper());
+		}
+
+		if (!int.TryParse(start, out var startInt) || !int.TryParse(count, out var countInt))
+		{
+			return Errors.ErrorInteger;
+		}
+
+		if (startInt < 1)
+		{
+			return Errors.ErrorArgRange;
+		}
+
+		var (obj, attributePattern) = dbrefAndAttr.AsT0;
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+			executor, executor, obj, LocateFlags.All,
+			async found =>
+			{
+				var attributes = await AttributeService!.LazilyGetAttributePatternAsync(executor, found,
+					attributePattern ?? ".*", true,
+					IAttributeService.AttributePatternMode.Regex);
+
+				if (attributes.IsError)
+				{
+					return attributes.AsError;
+				}
+
+				var attributesStaging = attributes.AsAttributes.Skip(startInt - 1).Take(countInt);
+
+				var separator = parser.CurrentState.Arguments.TryGetValue("3", out var sepArg)
+					? sepArg.Message!.ToPlainText()
+					: " ";
+
+				return string.Join(separator!, await attributesStaging.Select(x => x.LongName).ToArrayAsync());
+			});
 	}
 
 	[SharpFunction(Name = "set", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
@@ -1473,13 +1711,60 @@ public partial class Functions
 	[SharpFunction(Name = "wildgrep", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> WildcardGrep(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		return WildGrepInternal(parser, false);
 	}
 
 	[SharpFunction(Name = "wildgrepi", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> WildcardGrepCaseInsensitive(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		return WildGrepInternal(parser, true);
+	}
+
+	/// <summary>
+	/// Internal helper for wildgrep, wildgrepi.
+	/// </summary>
+	private static async ValueTask<CallState> WildGrepInternal(IMUSHCodeParser parser, bool caseInsensitive)
+	{
+		var args = parser.CurrentState.Arguments;
+		var objectStr = args["0"].Message!.ToPlainText();
+		var attrsPattern = args["1"].Message!.ToPlainText();
+		var valuePattern = args["2"].Message!.ToPlainText();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+			executor, executor, objectStr!, LocateFlags.All,
+			async found =>
+			{
+				// Get all attributes matching the attribute pattern (wildcard)
+				var attributes = await AttributeService!.GetAttributePatternAsync(executor, found,
+					attrsPattern ?? "*", false,
+					IAttributeService.AttributePatternMode.Wildcard);
+
+				if (attributes.IsError)
+				{
+					return attributes.AsError;
+				}
+
+				// Filter attributes whose values match the wildcard pattern
+				var matchingAttrs = new List<string>();
+
+				foreach (var attr in attributes.AsAttributes)
+				{
+					var value = attr.Value.ToPlainText();
+					if (value != null)
+					{
+						var valueToMatch = caseInsensitive ? value.ToLower() : value;
+						var patternToMatch = caseInsensitive ? valuePattern!.ToLower() : valuePattern;
+						
+						if (MModule.isWildcardMatch(MModule.single(valueToMatch), MModule.single(patternToMatch!)))
+						{
+							matchingAttrs.Add(attr.LongName!);
+						}
+					}
+				}
+
+				return string.Join(" ", matchingAttrs);
+			});
 	}
 
 	[SharpFunction(Name = "xattr", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -1595,8 +1880,30 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "zfun", MinArgs = 1, MaxArgs = 33, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> ZoneFunction(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> ZoneFunction(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
+		
+		// TODO: Once zone infrastructure is implemented, get the zone object from enactor
+		// For now, zones are not implemented, so we return an error
+		// The zone() function currently returns "#-1" when no zone is set
+		// This should be: var zone = await enactor.Zone();
+		
+		return new CallState("#-1 ZONES NOT YET IMPLEMENTED");
+		
+		// Future implementation when zones are ready:
+		// if (zone is null or invalid)
+		//     return "#-1 NO ZONE SET";
+		//
+		// var result = await AttributeService!.EvaluateAttributeFunctionAsync(
+		//     parser,
+		//     zone,
+		//     objAndAttribute: parser.CurrentState.Arguments["0"].Message!,
+		//     args: parser.CurrentState.Arguments.Skip(1)
+		//         .Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value.Value))
+		//         .ToDictionary(),
+		//     ignoreLambda: true);
+		//
+		// return new CallState(result);
 	}
 }
