@@ -16,9 +16,53 @@ namespace SharpMUSH.Implementation.Functions;
 public partial class Functions
 {
 	[SharpFunction(Name = "addrlog", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> AddressLog(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> AddressLog(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		
+		// Check permissions - requires See_All, Wizard, or Royalty
+		if (!await executor.HasFlag("WIZARD") && 
+		    !await executor.HasFlag("ROYALTY") && 
+		    !await executor.HasPower("SEE_ALL"))
+		{
+			return new CallState(Errors.ErrorPerm);
+		}
+
+		// Check if connection logging is enabled
+		if (!Configuration!.CurrentValue.Log.UseConnLog)
+		{
+			return new CallState("#-1");
+		}
+
+		var args = parser.CurrentState.Arguments;
+		var argCount = args.Count;
+		
+		// Parse arguments
+		bool isCount = false;
+		int startArg = 0;
+		
+		if (argCount >= 3)
+		{
+			var firstArg = args["0"].Message!.ToPlainText().ToLower();
+			if (firstArg == "count")
+			{
+				isCount = true;
+				startArg = 1;
+			}
+		}
+
+		var searchType = args[startArg.ToString()].Message!.ToPlainText().ToLower();
+		var pattern = args[(startArg + 1).ToString()].Message!.ToPlainText();
+		var osep = argCount > startArg + 2 ? args[(startArg + 2).ToString()].Message!.ToPlainText() : "|";
+
+		if (searchType != "ip" && searchType != "hostname")
+		{
+			return new CallState("#-1 INVALID SEARCH TYPE");
+		}
+
+		// TODO: Implement actual connection log search when logging infrastructure is complete
+		// For now, return empty result as infrastructure is not fully implemented
+		return new CallState(isCount ? "0" : string.Empty);
 	}
 
 	[SharpFunction(Name = "cmds", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
@@ -60,22 +104,144 @@ public partial class Functions
 
 	[SharpFunction(Name = "connlog", MinArgs = 3, MaxArgs = int.MaxValue,
 		Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly)]
-	public static ValueTask<CallState> ConnectionLog(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> ConnectionLog(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		// Check if connection logging is enabled
+		if (!Configuration!.CurrentValue.Log.UseConnLog)
+		{
+			return new CallState("#-1");
+		}
+
+		var args = parser.CurrentState.Arguments;
+		var filter = args["0"].Message!.ToPlainText().ToLower();
+		
+		// Validate filter type
+		if (filter != "all" && filter != "logged in" && filter != "not logged in" && !filter.StartsWith("#"))
+		{
+			return new CallState("#-1 INVALID FILTER");
+		}
+
+		// Parse osep if present at the end
+		var osep = "|";
+		var lastArgIndex = args.Count - 1;
+		
+		// Check if we have an odd number of arguments (means osep is provided)
+		if (args.Count % 2 == 0)
+		{
+			osep = args[lastArgIndex.ToString()].Message!.ToPlainText();
+			lastArgIndex--;
+		}
+
+		// Parse spec pairs
+		var specs = new List<(string type, string value)>();
+		for (int i = 1; i <= lastArgIndex; i += 2)
+		{
+			if (i + 1 > lastArgIndex)
+			{
+				return new CallState("#-1 INVALID SPEC PAIR");
+			}
+			
+			var specType = args[i.ToString()].Message!.ToPlainText().ToLower();
+			var specValue = args[(i + 1).ToString()].Message!.ToPlainText();
+			
+			// Validate spec types
+			if (specType != "after" && specType != "before" && specType != "ip" && 
+			    specType != "hostname" && specType != "count")
+			{
+				return new CallState("#-1 INVALID SPEC TYPE");
+			}
+			
+			specs.Add((specType, specValue));
+		}
+
+		// Check if count is requested
+		bool isCount = specs.Any(s => s.type == "count");
+
+		// TODO: Implement actual connection log query when logging infrastructure is complete
+		// For now, return empty result as infrastructure is not fully implemented
+		return new CallState(isCount ? "0" : string.Empty);
 	}
 
 	[SharpFunction(Name = "connrecord", MinArgs = 1, MaxArgs = 2,
 		Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly)]
-	public static ValueTask<CallState> ConnectionRecord(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> ConnectionRecord(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		// Check if connection logging is enabled
+		if (!Configuration!.CurrentValue.Log.UseConnLog)
+		{
+			return new CallState("#-1");
+		}
+
+		var args = parser.CurrentState.Arguments;
+		var connectionId = args["0"].Message!.ToPlainText();
+		var osep = args.ContainsKey("1") ? args["1"].Message!.ToPlainText() : " ";
+
+		// Validate connection ID format
+		if (string.IsNullOrWhiteSpace(connectionId))
+		{
+			return new CallState("#-1 INVALID CONNECTION ID");
+		}
+
+		// TODO: Implement actual connection record lookup when logging infrastructure is complete
+		// Expected format: DBREF NAME IPADDR HOSTNAME CONNECTION-TIME DISCONNECTION-TIME DISCONNECTION-REASON SSL WEBSOCKET
+		// For now, return #-1 as infrastructure is not fully implemented
+		return new CallState("#-1 CONNECTION NOT FOUND");
 	}
 
 	[SharpFunction(Name = "doing", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> Doing(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Doing(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+
+		// Check if it's a descriptor number
+		if (long.TryParse(arg0, out var port))
+		{
+			var data = ConnectionService!.Get(port);
+			if (data is null || data.Ref is null)
+			{
+				return new CallState(string.Empty);
+			}
+
+			var player = await Mediator!.Send(new GetObjectNodeQuery(data.Ref.Value));
+			
+			// Get the DOING attribute
+			var maybeAttr = await AttributeService!.GetAttributeAsync(
+				executor,
+				player.Known,
+				"DOING",
+				mode: IAttributeService.AttributeMode.Read,
+				parent: false);
+
+			return maybeAttr switch
+			{
+				{ IsError: true } or { IsNone: true } => new CallState(string.Empty),
+				_ => new CallState(maybeAttr.AsAttribute.Last().Value)
+			};
+		}
+
+		// It's a player name
+		var maybeLocate = await LocateService!.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, arg0);
+		if (maybeLocate.IsNone || maybeLocate.IsError)
+		{
+			return new CallState(string.Empty);
+		}
+
+		var located = maybeLocate.AsPlayer;
+
+		// Get the DOING attribute
+		var doingAttr = await AttributeService!.GetAttributeAsync(
+			executor,
+			located,
+			"DOING",
+			mode: IAttributeService.AttributeMode.Read,
+			parent: false);
+
+		return doingAttr switch
+		{
+			{ IsError: true } or { IsNone: true } => new CallState(string.Empty),
+			_ => new CallState(doingAttr.AsAttribute.Last().Value)
+		};
 	}
 
 	[SharpFunction(Name = "host", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]

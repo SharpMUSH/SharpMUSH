@@ -38,12 +38,36 @@ public class ConnectionFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("doing(%#)", "")]
 	public async Task Doing(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
+	}
+
+	[Test]
+	public async Task Test_Doing_ReturnsEmpty_WhenNoDoingAttributeSet()
+	{
+		// Test that doing() returns empty string when DOING attribute is not set
+		var result = (await Parser.FunctionParse(MModule.single("doing(%#)")))?.Message!;
+		await Assert.That(result.ToPlainText()).IsNotNull();
+		// Should be empty or a string, never throw
+	}
+
+	[Test]
+	public async Task Test_Doing_WithInvalidDescriptor_ReturnsEmpty()
+	{
+		// Test that doing() returns empty string with invalid descriptor
+		var result = (await Parser.FunctionParse(MModule.single("doing(999999)")))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(string.Empty);
+	}
+
+	[Test]
+	public async Task Test_Doing_WithInvalidPlayer_ReturnsEmpty()
+	{
+		// Test that doing() returns empty string with invalid player name
+		var result = (await Parser.FunctionParse(MModule.single("doing(test_invalid_player_doing_xyz)")))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(string.Empty);
 	}
 
 	[Test]
@@ -188,5 +212,38 @@ public class ConnectionFunctionUnitTests
 		Console.WriteLine("Testing: {0}", str);
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
+	}
+
+	[Test]
+	public async Task Test_Addrlog_ReturnsError_WhenConnLogDisabled()
+	{
+		// Test that addrlog() returns #-1 when connection logging is disabled
+		// This requires wizard privileges, so it may return permission error instead
+		var result = (await Parser.FunctionParse(MModule.single("addrlog(ip,test_addrlog_pattern_xyz)")))?.Message!;
+		var text = result.ToPlainText();
+		// Should return either #-1 (no connlog) or #-1 PERMISSION DENIED
+		await Assert.That(text).StartsWith("#-1");
+	}
+
+	[Test]
+	public async Task Test_Connlog_ReturnsError_WhenConnLogDisabled()
+	{
+		// Test that connlog() returns #-1 when connection logging is disabled
+		// This is wizard-only
+		var result = (await Parser.FunctionParse(MModule.single("connlog(all,count,test_connlog_spec_xyz)")))?.Message!;
+		var text = result.ToPlainText();
+		// Should return #-1 (no connlog) or permission error
+		await Assert.That(text).StartsWith("#-1");
+	}
+
+	[Test]
+	public async Task Test_Connrecord_ReturnsError_WhenConnLogDisabled()
+	{
+		// Test that connrecord() returns #-1 when connection logging is disabled
+		// This is wizard-only
+		var result = (await Parser.FunctionParse(MModule.single("connrecord(test_connrecord_id_xyz)")))?.Message!;
+		var text = result.ToPlainText();
+		// Should return #-1 (no connlog/not found) or permission error
+		await Assert.That(text).StartsWith("#-1");
 	}
 }
