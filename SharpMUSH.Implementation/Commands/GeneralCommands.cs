@@ -1,5 +1,7 @@
 ﻿using OneOf;
 using OneOf.Types;
+using SharpMUSH.Configuration;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation.Commands.ChannelCommand;
 using SharpMUSH.Implementation.Commands.MailCommand;
 using SharpMUSH.Implementation.Common;
@@ -19,6 +21,7 @@ using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Drawing;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using static SharpMUSH.Library.Services.Interfaces.IPermissionService;
@@ -1305,11 +1308,118 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@CONFIG", Switches = ["SET", "SAVE", "LOWERCASE", "LIST"], Behavior = CB.Default | CB.EqSplit,
-		MinArgs = 0, MaxArgs = 0)]
+		MinArgs = 0, MaxArgs = 2)]
 	public static async ValueTask<Option<CallState>> Config(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches.ToArray();
+		
+		// Get all configuration categories and options using reflection
+		var optionsType = typeof(SharpMUSHOptions);
+		var categoryProperties = optionsType.GetProperties();
+		var allCategories = categoryProperties.Select(p => p.Name).OrderBy(n => n).ToList();
+		
+		// Helper to get all config options with metadata
+		var getAllOptions = () => categoryProperties
+			.SelectMany(category => {
+				var categoryType = category.PropertyType;
+				var props = categoryType.GetProperties();
+				return props.Select(prop => {
+					var attr = prop.GetCustomAttribute<SharpConfigAttribute>();
+					return new {
+						Category = category.Name,
+						PropertyName = prop.Name,
+						ConfigAttr = attr,
+						Value = prop.GetValue(category.GetValue(Configuration!.CurrentValue))
+					};
+				}).Where(x => x.ConfigAttr != null);
+			})
+			.ToList();
+		
+		// @config with no arguments - list categories
+		if (args.Count == 0 && switches.Length == 0)
+		{
+			await NotifyService!.Notify(executor, "Configuration Categories:");
+			foreach (var cat in allCategories)
+			{
+				await NotifyService.Notify(executor, $"  {cat}");
+			}
+			await NotifyService.Notify(executor, "Use '@config <category>' to see options in a category.");
+			await NotifyService.Notify(executor, "Use '@config <option>' to see the value of an option.");
+			return CallState.Empty;
+		}
+		
+		// @config/set - requires wizard permissions
+		if (switches.Contains("SET") || switches.Contains("SAVE"))
+		{
+			if (!await executor.IsWizard())
+			{
+				await NotifyService!.Notify(executor, "Permission denied.");
+				return new CallState(Errors.ErrorPerm);
+			}
+			
+			if (switches.Contains("SAVE") && !executor.IsGod())
+			{
+				await NotifyService!.Notify(executor, "Only God can use /save switch.");
+				return new CallState(Errors.ErrorPerm);
+			}
+			
+			await NotifyService!.Notify(executor, "@config/set and @config/save are not yet implemented.");
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+		
+		var searchTerm = args.GetValueOrDefault("0")?.Message?.ToPlainText() ?? "";
+		var useLowercase = switches.Contains("LOWERCASE");
+		
+		// Check if searchTerm is a category
+		var matchingCategory = allCategories.FirstOrDefault(c => 
+			c.Equals(searchTerm, StringComparison.OrdinalIgnoreCase));
+		
+		if (matchingCategory != null)
+		{
+			// List all options in the category
+			var categoryOptions = getAllOptions()
+				.Where(opt => opt.Category.Equals(matchingCategory, StringComparison.OrdinalIgnoreCase))
+				.OrderBy(opt => opt.ConfigAttr!.Name)
+				.ToList();
+			
+			if (categoryOptions.Count == 0)
+			{
+				await NotifyService!.Notify(executor, $"No options found in category '{matchingCategory}'.");
+				return CallState.Empty;
+			}
+			
+			await NotifyService!.Notify(executor, $"Options in {matchingCategory}:");
+			foreach (var opt in categoryOptions)
+			{
+				var name = useLowercase ? opt.ConfigAttr!.Name.ToLower() : opt.ConfigAttr!.Name;
+				var value = opt.Value?.ToString() ?? "null";
+				await NotifyService!.Notify(executor, $"  {name}: {value}");
+			}
+			return CallState.Empty;
+		}
+		
+		// Check if searchTerm is a specific option
+		var allOptions = getAllOptions();
+		var matchingOption = allOptions.FirstOrDefault(opt => 
+			opt.ConfigAttr!.Name.Equals(searchTerm, StringComparison.OrdinalIgnoreCase));
+		
+		if (matchingOption != null)
+		{
+			var name = useLowercase ? matchingOption.ConfigAttr!.Name.ToLower() : matchingOption.ConfigAttr!.Name;
+			var value = matchingOption.Value?.ToString() ?? "null";
+			var desc = matchingOption.ConfigAttr!.Description;
+			
+			await NotifyService!.Notify(executor, $"{name}: {value}");
+			await NotifyService!.Notify(executor, $"  Description: {desc}");
+			await NotifyService!.Notify(executor, $"  Category: {matchingOption.Category}");
+			return new CallState(value);
+		}
+		
+		// No match found
+		await NotifyService!.Notify(executor, $"No configuration category or option named '{searchTerm}'.");
+		return new CallState("#-1 NOT FOUND");
 	}
 
 	[SharpCommand(Name = "@EDIT", Switches = ["FIRST", "CHECK", "QUIET", "REGEXP", "NOCASE", "ALL"],
