@@ -84,13 +84,56 @@ public partial class Functions
 	[SharpFunction(Name = "decode64", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Decode64(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var input = parser.CurrentState.Arguments["0"].Message;
+		var inputText = MModule.plainText(input);
+		
+		try
+		{
+			var bytes = Convert.FromBase64String(inputText);
+			var decoded = System.Text.Encoding.UTF8.GetString(bytes);
+			return ValueTask.FromResult<CallState>(decoded);
+		}
+		catch
+		{
+			return ValueTask.FromResult<CallState>("#-1 INVALID BASE64 STRING");
+		}
 	}
 
 	[SharpFunction(Name = "decrypt", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Decrypt(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var encrypted = MModule.plainText(args["0"].Message);
+		var password = MModule.plainText(args["1"].Message);
+		var isEncoded = args.Count == 3 && MModule.plainText(args["2"].Message) != "0";
+		
+		if (string.IsNullOrEmpty(password))
+		{
+			return ValueTask.FromResult<CallState>("#-1 PASSWORD REQUIRED");
+		}
+		
+		try
+		{
+			// If base64 encoded, decode first, otherwise use ISO-8859-1 encoding to read binary data
+			var encryptedBytes = isEncoded 
+				? Convert.FromBase64String(encrypted) 
+				: System.Text.Encoding.GetEncoding("ISO-8859-1").GetBytes(encrypted);
+			
+			// Simple XOR cipher with password
+			var passwordBytes = System.Text.Encoding.UTF8.GetBytes(password);
+			var decrypted = new byte[encryptedBytes.Length];
+			
+			for (int i = 0; i < encryptedBytes.Length; i++)
+			{
+				decrypted[i] = (byte)(encryptedBytes[i] ^ passwordBytes[i % passwordBytes.Length]);
+			}
+			
+			return ValueTask.FromResult<CallState>(System.Text.Encoding.UTF8.GetString(decrypted));
+		}
+		catch
+		{
+			return ValueTask.FromResult<CallState>("#-1 DECRYPTION ERROR");
+		}
 	}
 
 	[SharpFunction(Name = "dist2d", MinArgs = 4, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -132,13 +175,42 @@ public partial class Functions
 	[SharpFunction(Name = "encode64", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Encode64(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var input = parser.CurrentState.Arguments["0"].Message;
+		var inputText = MModule.plainText(input);
+		var bytes = System.Text.Encoding.UTF8.GetBytes(inputText);
+		var encoded = Convert.ToBase64String(bytes);
+		return ValueTask.FromResult<CallState>(encoded);
 	}
 
 	[SharpFunction(Name = "encrypt", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Encrypt(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var plaintext = MModule.plainText(args["0"].Message);
+		var password = MModule.plainText(args["1"].Message);
+		var shouldEncode = args.Count == 3 && MModule.plainText(args["2"].Message) != "0";
+		
+		if (string.IsNullOrEmpty(password))
+		{
+			return ValueTask.FromResult<CallState>("#-1 PASSWORD REQUIRED");
+		}
+		
+		// Simple XOR cipher with password
+		var plaintextBytes = System.Text.Encoding.UTF8.GetBytes(plaintext);
+		var passwordBytes = System.Text.Encoding.UTF8.GetBytes(password);
+		var encrypted = new byte[plaintextBytes.Length];
+		
+		for (int i = 0; i < plaintextBytes.Length; i++)
+		{
+			encrypted[i] = (byte)(plaintextBytes[i] ^ passwordBytes[i % passwordBytes.Length]);
+		}
+		
+		// Always base64 encode if requested, otherwise use ISO-8859-1 encoding to preserve binary data
+		var result = shouldEncode 
+			? Convert.ToBase64String(encrypted) 
+			: System.Text.Encoding.GetEncoding("ISO-8859-1").GetString(encrypted);
+		
+		return ValueTask.FromResult<CallState>(result);
 	}
 
 	[SharpFunction(Name = "fraction", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -551,7 +623,35 @@ public partial class Functions
 	[SharpFunction(Name = "ctu", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> CTU(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var args = parser.CurrentState.ArgumentsOrdered;
+		
+		if (!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["0"].Message)), out var angle))
+		{
+			return ValueTask.FromResult<CallState>(Errors.ErrorNumber);
+		}
+		
+		var from = MModule.plainText(args["1"].Message).ToLower();
+		var to = MModule.plainText(args["2"].Message).ToLower();
+		
+		// Convert to radians first
+		double radians = from switch
+		{
+			"r" => angle,  // radians
+			"d" => angle * (Math.PI / 180.0),  // degrees
+			"g" => angle * (Math.PI / 200.0),  // gradians
+			_ => angle  // default to radians
+		};
+		
+		// Convert from radians to target unit
+		double result = to switch
+		{
+			"r" => radians,  // radians
+			"d" => radians * (180.0 / Math.PI),  // degrees
+			"g" => radians * (200.0 / Math.PI),  // gradians
+			_ => radians  // default to radians
+		};
+		
+		return ValueTask.FromResult<CallState>(result);
 	}
 
 	[SharpFunction(Name = "e", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
@@ -816,7 +916,40 @@ public partial class Functions
 
 	[SharpFunction(Name = "vcross", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> vcross(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> VectorOperation(parser, (v1, v2) => throw new NotImplementedException());
+	{
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var delimiter = args.TryGetValue("2", out var tmpDelimiter)
+			? tmpDelimiter.Message
+			: MModule.single(" ");
+		var sep = args.TryGetValue("3", out var tmpSep) ? tmpSep.Message : delimiter;
+		
+		var list1 = MModule.split2(delimiter, args["0"].Message)
+			.Select(x => (decimal.TryParse(MModule.plainText(x), out var result), result)).ToArray();
+		var list2 = MModule.split2(delimiter, args["1"].Message)
+			.Select(x => (decimal.TryParse(MModule.plainText(x), out var result), result)).ToArray();
+		
+		if (list1.Any(x => !x.Item1) || list2.Any(x => !x.Item1))
+		{
+			return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
+		}
+		
+		// Cross product requires exactly 3-dimensional vectors
+		if (list1.Length != 3 || list2.Length != 3)
+		{
+			return ValueTask.FromResult(new CallState("#-1 VECTORS MUST BE 3-DIMENSIONAL"));
+		}
+		
+		// Cross product formula:
+		// x = Ay * Bz - By * Az
+		// y = Az * Bx - Bz * Ax
+		// z = Ax * By - Bx * Ay
+		var x = list1[1].result * list2[2].result - list2[1].result * list1[2].result;
+		var y = list1[2].result * list2[0].result - list2[2].result * list1[0].result;
+		var z = list1[0].result * list2[1].result - list2[0].result * list1[1].result;
+		
+		var output = new[] { x, y, z }.Select(v => MModule.single(v.ToString(CultureInfo.InvariantCulture)));
+		return ValueTask.FromResult(new CallState(MModule.multipleWithDelimiter(sep, output)));
+	}
 
 	[SharpFunction(Name = "vsub", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> vsub(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -840,7 +973,26 @@ public partial class Functions
 
 	[SharpFunction(Name = "vmag", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> vmag(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> VectorOperationToScalar(parser, (v1, v2) => throw new NotImplementedException());
+	{
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var delimiter = args.TryGetValue("1", out var tmpDelimiter)
+			? tmpDelimiter.Message
+			: MModule.single(" ");
+		
+		var list = MModule.split2(delimiter, args["0"].Message)
+			.Select(x => (decimal.TryParse(MModule.plainText(x), out var result), result)).ToArray();
+		
+		if (list.Any(x => !x.Item1))
+		{
+			return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
+		}
+		
+		// Calculate magnitude: sqrt(a^2 + b^2 + c^2 + ...)
+		var sumOfSquares = list.Sum(x => (double)(x.result * x.result));
+		var magnitude = Math.Sqrt(sumOfSquares);
+		
+		return ValueTask.FromResult<CallState>(magnitude);
+	}
 
 	[SharpFunction(Name = "vunit", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> vunit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
