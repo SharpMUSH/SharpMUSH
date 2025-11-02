@@ -174,4 +174,151 @@ public class CommunicationCommandTests
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
 	}
+
+	[Test]
+	[Arguments("addcom test_alias_ADDCOM1=Public", "test_alias_ADDCOM1")]
+	[Arguments("addcom test_alias_ADDCOM2=Public", "test_alias_ADDCOM2")]
+	public async ValueTask AddComBasic(string command, string alias)
+	{
+		Console.WriteLine("Testing: {0}", command);
+		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+
+		// Verify notification was sent containing "added"
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(msg => msg.Contains("added")));
+	}
+
+	[Test]
+	[Arguments("addcom=Public")]
+	[Arguments("addcom test_alias_ADDCOM3=")]
+	public async ValueTask AddComInvalidArgs(string command)
+	{
+		Console.WriteLine("Testing: {0}", command);
+		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+
+		// Verify error notification was sent
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(msg => 
+				msg.Contains("Usage") || 
+				msg.Contains("empty") ||
+				msg.Contains("not found")));
+	}
+
+	[Test]
+	[Arguments("delcom test_alias_DELCOM1")]
+	public async ValueTask DelComBasic(string command)
+	{
+		Console.WriteLine("Testing: {0}", command);
+		// First add an alias
+		await Parser.CommandParse(1, ConnectionService, MModule.single("addcom test_alias_DELCOM1=Public"));
+		
+		// Clear the notifications from addcom
+		NotifyService.ClearReceivedCalls();
+		
+		// Now delete it
+		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+
+		// Verify notification was sent containing "deleted"
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(msg => msg.Contains("deleted")));
+	}
+
+	[Test]
+	[Arguments("delcom nonexistent_alias_DELCOM")]
+	public async ValueTask DelComNotFound(string command)
+	{
+		Console.WriteLine("Testing: {0}", command);
+		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+
+		// Verify error notification was sent containing "not found"
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(msg => msg.Contains("not found")));
+	}
+
+	[Test]
+	[Arguments("@clist")]
+	[Arguments("@clist/full")]
+	public async ValueTask CListBasic(string command)
+	{
+		Console.WriteLine("Testing: {0}", command);
+		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+
+		// Verify notification was sent (list of channels)
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+	}
+
+	[Test]
+	[Arguments("comtitle test_alias_COMTITLE=test_title_COMTITLE")]
+	public async ValueTask ComTitleBasic(string command)
+	{
+		Console.WriteLine("Testing: {0}", command);
+		// First add an alias
+		await Parser.CommandParse(1, ConnectionService, MModule.single("addcom test_alias_COMTITLE=Public"));
+		
+		// Clear the notifications from addcom
+		NotifyService.ClearReceivedCalls();
+		
+		// Now set title
+		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+
+		// Verify notification was sent
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+	}
+
+	[Test]
+	[Arguments("comtitle nonexistent_alias_COMTITLE=title")]
+	public async ValueTask ComTitleNotFound(string command)
+	{
+		Console.WriteLine("Testing: {0}", command);
+		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+
+		// Verify error notification was sent containing "not found"
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(msg => msg.Contains("not found")));
+	}
+
+	[Test]
+	[Arguments("comlist")]
+	public async ValueTask ComListBasic(string command)
+	{
+		Console.WriteLine("Testing: {0}", command);
+		// First add some aliases
+		await Parser.CommandParse(1, ConnectionService, MModule.single("addcom test_alias_COMLIST1=Public"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("addcom test_alias_COMLIST2=Public"));
+		
+		// Clear the notifications from addcom
+		NotifyService.ClearReceivedCalls();
+		
+		// Now list them
+		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+
+		// Verify notification was sent with the aliases
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+	}
+
+	[Test]
+	[Arguments("comlist")]
+	public async ValueTask ComListEmpty(string command)
+	{
+		Console.WriteLine("Testing: {0}", command);
+		// Make sure we have no aliases (use a fresh player if possible)
+		// For now, just test that it doesn't error
+		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+
+		// Verify notification was sent
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+	}
 }
