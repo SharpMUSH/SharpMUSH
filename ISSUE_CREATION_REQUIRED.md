@@ -101,7 +101,7 @@ Once the 15 issues are created and assigned to @copilot:
 After running the issue creation:
 ```bash
 # Verify all issues were created
-gh issue list --repo SharpMUSH/SharpMUSH --label enhancement --assignee copilot
+gh issue list --repo SharpMUSH/SharpMUSH --label enhancement --assignee @copilot
 
 # Should show 15 new issues
 ```

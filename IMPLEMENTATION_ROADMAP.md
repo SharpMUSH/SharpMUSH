@@ -157,7 +157,7 @@ All implementations must:
 1. **Follow C# conventions**
    - PascalCase for public members
    - camelCase for parameters
-   - Tabs for indentation (2 spaces width)
+   - Use tabs for indentation (configured to display as 2 spaces)
 
 2. **Include documentation**
    - XML comments for public methods
