@@ -211,9 +211,9 @@ continue;
 // Set the attribute value
 var setResult = await AttributeService!.SetAttributeAsync(executor, destObject, targetAttrName, attrValue);
 
-if (setResult.TryPickT1(out var error))
+if (setResult.IsT1)
 {
-await NotifyService!.Notify(executor, $"Failed to copy attribute to {destDbref}: {error.Value}");
+await NotifyService!.Notify(executor, $"Failed to copy attribute to {destDbref}: {setResult.AsT1.Value}");
 continue;
 }
 
@@ -336,9 +336,9 @@ continue;
 // Set the attribute value
 var setResult = await AttributeService!.SetAttributeAsync(executor, destObject, targetAttrName, attrValue);
 
-if (setResult.TryPickT1(out var error))
+if (setResult.IsT1)
 {
-await NotifyService!.Notify(executor, $"Failed to copy attribute to {destDbref}: {error.Value}");
+await NotifyService!.Notify(executor, $"Failed to copy attribute to {destDbref}: {setResult.AsT1.Value}");
 continue;
 }
 
@@ -361,9 +361,9 @@ var clearResult = await AttributeService!.ClearAttributeAsync(executor, sourceOb
 IAttributeService.AttributePatternMode.Exact,
 IAttributeService.AttributeClearMode.Safe);
 
-if (clearResult.TryPickT1(out var error))
+if (clearResult.IsT1)
 {
-await NotifyService!.Notify(executor, $"Attribute moved to {copiedCount} destination(s) but failed to remove source: {error.Value}");
+await NotifyService!.Notify(executor, $"Attribute moved to {copiedCount} destination(s) but failed to remove source: {clearResult.AsT1.Value}");
 }
 else
 {
@@ -446,9 +446,8 @@ newOwnerPlayer = newOwnerObject.AsPlayer;
 }
 else
 {
-// Use the object's owner - we need to get the owner through the Object property
-var ownerTask = newOwnerObject.Object().Owner;
-newOwnerPlayer = await ownerTask.WithCancellation(CancellationToken.None);
+// Use the object's owner
+newOwnerPlayer = await newOwnerObject.Object().Owner.WithCancellation(CancellationToken.None);
 }
 
 // Check permissions
@@ -486,9 +485,9 @@ return new CallState("#-1 PERMISSION DENIED");
 var currentValue = attribute.AsAttribute.Last().Value;
 var setResult = await AttributeService!.SetAttributeAsync(executor, targetObject, attrName, currentValue);
 
-if (setResult.TryPickT1(out var error))
+if (setResult.IsT1)
 {
-await NotifyService!.Notify(executor, $"Failed to change ownership: {error.Value}");
+await NotifyService!.Notify(executor, $"Failed to change ownership: {setResult.AsT1.Value}");
 return new CallState("#-1 FAILED");
 }
 
@@ -509,7 +508,7 @@ await NotifyService!.Notify(executor, "Wipe what?");
 return new CallState("#-1 INVALID ARGUMENT");
 }
 
-var objAttr = MModule.plainText(args.First().Message!);
+var objAttr = MModule.plainText(args["0"].Message!);
 var split = HelperFunctions.SplitDbRefAndOptionalAttr(objAttr);
 
 if (!split.TryPickT0(out var details, out _))
