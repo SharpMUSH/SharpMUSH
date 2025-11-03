@@ -6,9 +6,15 @@ using Json.Path;
 using Json.Pointer;
 using OneOf;
 using OneOf.Types;
+using SharpMUSH.Implementation.Common;
+using SharpMUSH.Implementation.Definitions;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -32,7 +38,7 @@ public partial class Functions
 			: new CallState(MModule.single("#-1 Invalid Type"));
 
 
-	[SharpFunction(Name = "isjson", MaxArgs = 1, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "isjson", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> IsJSON(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		try
@@ -47,9 +53,156 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "json_map", MinArgs = 2, MaxArgs = 33, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> json_map(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> json_map(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		// Arg0: Object/Attribute
+		// Arg1: JSON string
+		// Arg2: Output separator (optional, defaults to space)
+		// Arg3+: Additional arguments passed as %3, %4, etc.
+
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known;
+		var objAttr =
+			HelperFunctions.SplitOptionalObjectAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message!));
+		if (objAttr is { IsT1: true, AsT1: false })
+		{
+			return new CallState(Errors.ErrorObjectAttributeString);
+		}
+
+		var (dbref, attrName) = objAttr.AsT0;
+		dbref ??= executor.Object().DBRef.ToString();
+
+		var locate = await LocateService!.LocateAndNotifyIfInvalid(
+			parser,
+			enactor,
+			executor,
+			dbref,
+			LocateFlags.All);
+
+		if (!locate.IsValid())
+		{
+			return CallState.Empty;
+		}
+
+		var located = locate.WithoutError().WithoutNone();
+
+		var maybeAttr = await AttributeService!.GetAttributeAsync(
+			executor,
+			located,
+			attrName,
+			mode: IAttributeService.AttributeMode.Execute,
+			parent: true);
+
+		if (maybeAttr.IsNone)
+		{
+			return new CallState(Errors.ErrorNoSuchAttribute);
+		}
+
+		if (maybeAttr.IsError)
+		{
+			return new CallState(maybeAttr.AsError.Value);
+		}
+
+		var attr = maybeAttr.AsAttribute;
+		var attrValue = attr.Last().Value;
+		
+		var jsonStr = parser.CurrentState.Arguments["1"].Message!.ToString();
+		var osep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MModule.single(" "));
+
+		// Parse additional user arguments (available as %3, %4, etc.)
+		var userArgs = new Dictionary<string, CallState>();
+		for (int i = 3; i < parser.CurrentState.Arguments.Count; i++)
+		{
+			userArgs[i.ToString()] = parser.CurrentState.Arguments[i.ToString()];
+		}
+
+		try
+		{
+			using var jsonDoc = JsonDocument.Parse(jsonStr);
+			var rootElement = jsonDoc.RootElement;
+
+			var result = new List<MString>();
+
+			switch (rootElement.ValueKind)
+			{
+				case JsonValueKind.Null:
+				case JsonValueKind.True:
+				case JsonValueKind.False:
+				case JsonValueKind.String:
+				case JsonValueKind.Number:
+					// For basic types, call attribute once
+					var args = new Dictionary<string, CallState>
+					{
+						{ "0", new CallState(JsonHelpers.GetJsonType(rootElement)) },
+						{ "1", new CallState(rootElement.GetRawText()) }
+					};
+					foreach (var ua in userArgs)
+					{
+						args[ua.Key] = ua.Value;
+					}
+					var newParser = parser.Push(parser.CurrentState with
+					{
+						Arguments = args,
+						EnvironmentRegisters = args
+					});
+					result.Add((await newParser.FunctionParse(attrValue))!.Message!);
+					break;
+
+				case JsonValueKind.Array:
+					// For arrays, call once per element with %2 as the index
+					var arrayIndex = 0;
+					foreach (var element in rootElement.EnumerateArray())
+					{
+						var arrayArgs = new Dictionary<string, CallState>
+						{
+							{ "0", new CallState(JsonHelpers.GetJsonType(element)) },
+							{ "1", new CallState(element.GetRawText()) },
+							{ "2", new CallState(arrayIndex.ToString()) }
+						};
+						foreach (var ua in userArgs)
+						{
+							arrayArgs[ua.Key] = ua.Value;
+						}
+						var arrayParser = parser.Push(parser.CurrentState with
+						{
+							Arguments = arrayArgs,
+							EnvironmentRegisters = arrayArgs
+						});
+						result.Add((await arrayParser.FunctionParse(attrValue))!.Message!);
+						arrayIndex++;
+					}
+					break;
+
+				case JsonValueKind.Object:
+					// For objects, call once per key/value pair with %2 as the key
+					foreach (var property in rootElement.EnumerateObject())
+					{
+						var objArgs = new Dictionary<string, CallState>
+						{
+							{ "0", new CallState(JsonHelpers.GetJsonType(property.Value)) },
+							{ "1", new CallState(property.Value.GetRawText()) },
+							{ "2", new CallState(property.Name) }
+						};
+						foreach (var ua in userArgs)
+						{
+							objArgs[ua.Key] = ua.Value;
+						}
+						var objParser = parser.Push(parser.CurrentState with
+						{
+							Arguments = objArgs,
+							EnvironmentRegisters = objArgs
+						});
+						result.Add((await objParser.FunctionParse(attrValue))!.Message!);
+					}
+					break;
+			}
+
+			return new CallState(MModule.multipleWithDelimiter(osep, result));
+		}
+		catch (JsonException)
+		{
+			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, "json_map"));
+		}
 	}
 
 	[SharpFunction(Name = "json_mod", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -142,8 +295,120 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "oob", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> oob(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> oob(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known;
+
+		// Arg0: Players (space-separated list of player names/dbrefs)
+		// Arg1: Package name
+		// Arg2: JSON message (optional)
+		
+		var playersArg = MModule.plainText(parser.CurrentState.Arguments["0"].Message!);
+		var package = MModule.plainText(parser.CurrentState.Arguments["1"].Message!);
+		var message = parser.CurrentState.Arguments.TryGetValue("2", out var msgState) 
+			? msgState.Message?.ToString() ?? ""
+			: "";
+
+		// Parse players list - handle quoted names with spaces
+		var players = new List<string>();
+		var inQuotes = false;
+		var currentPlayer = new System.Text.StringBuilder();
+		
+		for (int i = 0; i < playersArg.Length; i++)
+		{
+			var c = playersArg[i];
+			if (c == '"')
+			{
+				inQuotes = !inQuotes;
+			}
+			else if (c == ' ' && !inQuotes)
+			{
+				if (currentPlayer.Length > 0)
+				{
+					players.Add(currentPlayer.ToString());
+					currentPlayer.Clear();
+				}
+			}
+			else
+			{
+				currentPlayer.Append(c);
+			}
+		}
+		if (currentPlayer.Length > 0)
+		{
+			players.Add(currentPlayer.ToString());
+		}
+
+		// Validate message is valid JSON if provided
+		if (!string.IsNullOrWhiteSpace(message))
+		{
+			try
+			{
+				using var _ = JsonDocument.Parse(message);
+			}
+			catch (JsonException)
+			{
+				return new CallState("#-1 INVALID JSON MESSAGE");
+			}
+		}
+
+		int sentCount = 0;
+
+		// Locate each player and send message to their connections
+		foreach (var playerStr in players)
+		{
+			var locate = await LocateService!.LocateAndNotifyIfInvalid(
+				parser,
+				enactor,
+				executor,
+				playerStr,
+				LocateFlags.All);
+
+			if (!locate.IsValid())
+			{
+				continue;
+			}
+
+			var located = locate.WithoutError().WithoutNone();
+
+			// Check if located object is a player
+			if (!located.IsPlayer)
+			{
+				continue;
+			}
+
+			// Check permissions: must be wizard, have Send_OOB power, or sending to self
+			bool isWizard = executor.IsGod() || await executor.IsWizard();
+			bool isSelf = executor.Object().DBRef == located.Object().DBRef;
+			
+			// TODO: Check for Send_OOB power when powers are implemented
+			bool hasSendOOBPower = false;
+
+			if (!isWizard && !isSelf && !hasSendOOBPower)
+			{
+				return new CallState("#-1 PERMISSION DENIED");
+			}
+
+			// Get all connections for this player
+			await foreach (var connection in ConnectionService!.Get(located.Object().DBRef))
+			{
+				// Check if connection supports GMCP
+				if (connection.Metadata.GetValueOrDefault("GMCP", "0") != "1")
+				{
+					continue;
+				}
+
+				// Send GMCP message
+				await Mediator!.Publish(new SignalGMCPNotification(
+					connection.Handle,
+					package,
+					message));
+				
+				sentCount++;
+			}
+		}
+
+		return new CallState(sentCount.ToString());
 	}
 }
