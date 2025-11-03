@@ -80,12 +80,9 @@ public partial class Functions
 			
 			if (addressValue != null && HelperFunctions.WildcardMatch(addressValue, pattern))
 			{
-				if (uniqueAddresses.Add(addressValue))
+				if (uniqueAddresses.Add(addressValue) && !isCount)
 				{
-					if (!isCount)
-					{
-						results.Add($"{log.Properties.GetValueOrDefault("InternetProtocolAddress", "UNKNOWN")} {log.Properties.GetValueOrDefault("HostName", "UNKNOWN")}");
-					}
+					results.Add($"{log.Properties.GetValueOrDefault("InternetProtocolAddress", "UNKNOWN")} {log.Properties.GetValueOrDefault("HostName", "UNKNOWN")}");
 				}
 			}
 		}
