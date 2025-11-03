@@ -9,14 +9,14 @@ namespace SharpMUSH.Implementation.Handlers.Telnet;
 public class TelnetInputRequestHandler(ILogger<TelnetInputRequestHandler> logger, ITaskScheduler scheduler)
 	: INotificationHandler<TelnetInputNotification>
 {
-	public async ValueTask Handle(TelnetInputNotification request, CancellationToken ct)
+	public async ValueTask Handle(TelnetInputNotification notification, CancellationToken cancellationToken)
 	{
 		try
 		{
 			await scheduler.WriteUserCommand(
-				handle: request.Handle,
-				command: MModule.single(request.Input),
-				state: ParserState.Empty with { Handle = request.Handle });
+				handle: notification.Handle,
+				command: MModule.single(notification.Input),
+				state: ParserState.Empty with { Handle = notification.Handle });
 		}
 		catch (Exception ex)
 		{
