@@ -81,12 +81,13 @@ public class AttributeCommandTests
 		// Copy it using command
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@cpattr #1/SOURCE_DIRECT_TEST=#1/DEST_DIRECT_TEST"));
 
-		// Check what notifications were sent
-		var calls = NotifyService.ReceivedCalls().ToList();
-		foreach (var call in calls)
-		{
-			Console.WriteLine($"Notification: {call.GetArguments()[1]}");
-		}
+		// Verify command sent a success notification using Arg.Is
+		await NotifyService
+			.Received()
+			.Notify(
+				Arg.Any<AnySharpObject>(),
+				Arg.Is<string>(s => s.Contains("copied") || s.Contains("Attribute copied"))
+			);
 
 		// Verify destination attribute was created
 		var destAttr = await Database.GetAttributeAsync(player.Object.DBRef, ["DEST_DIRECT_TEST"]);
@@ -102,11 +103,22 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask Test_CopyAttribute_Basic()
 	{
+		// Clear notifications
+		NotifyService.ClearReceivedCalls();
+		
 		// First set an attribute with unique test string
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&SOURCE_CPATTR_TEST1 #1=test_string_CPATTR_basic"));
 		
 		// Copy it
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@cpattr #1/SOURCE_CPATTR_TEST1=#1/DEST_CPATTR_TEST1"));
+
+		// Verify command executed with success notification
+		await NotifyService
+			.Received()
+			.Notify(
+				Arg.Any<AnySharpObject>(),
+				Arg.Is<string>(s => s.Contains("copied") && s.Contains("destination"))
+			);
 
 		// Verify destination attribute was created
 		var obj = await Mediator.Send(new GetObjectNodeQuery(new(1)));
@@ -125,11 +137,22 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask Test_CopyAttribute_MultipleDestinations()
 	{
+		// Clear notifications
+		NotifyService.ClearReceivedCalls();
+		
 		// Set source attribute
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&SOURCE_CPATTR_MULTI #1=test_string_CPATTR_multi"));
 		
 		// Copy to multiple destinations
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@cpattr #1/SOURCE_CPATTR_MULTI=#1/DEST1_CPATTR_MULTI,#1/DEST2_CPATTR_MULTI"));
+
+		// Verify command executed successfully with notification mentioning count
+		await NotifyService
+			.Received()
+			.Notify(
+				Arg.Any<AnySharpObject>(),
+				Arg.Is<string>(s => s.Contains("copied") && s.Contains("2"))
+			);
 
 		var obj = await Mediator.Send(new GetObjectNodeQuery(new(1)));
 		
@@ -148,11 +171,22 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask Test_MoveAttribute_Basic()
 	{
+		// Clear notifications
+		NotifyService.ClearReceivedCalls();
+		
 		// First set an attribute with unique test string
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&MOVESOURCE_TEST1 #1=test_string_MVATTR_basic"));
 		
 		// Move it
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@mvattr #1/MOVESOURCE_TEST1=#1/MOVEDEST_TEST1"));
+
+		// Verify command executed successfully with notification
+		await NotifyService
+			.Received()
+			.Notify(
+				Arg.Any<AnySharpObject>(),
+				Arg.Is<string>(s => s.Contains("moved") || (s.Contains("Attribute") && s.Contains("destination")))
+			);
 
 		var obj = await Mediator.Send(new GetObjectNodeQuery(new(1)));
 		
@@ -171,6 +205,9 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask Test_WipeAttributes_AllAttributes()
 	{
+		// Clear notifications
+		NotifyService.ClearReceivedCalls();
+		
 		// Set some attributes with unique test strings
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&WIPE1_TEST #1=test_string_WIPE_val1"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&WIPE2_TEST #1=test_string_WIPE_val2"));
@@ -183,6 +220,14 @@ public class AttributeCommandTests
 		
 		// Wipe them with pattern
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@wipe #1/WIPE*_TEST"));
+
+		// Verify command sent notification about wiping
+		await NotifyService
+			.Received()
+			.Notify(
+				Arg.Any<AnySharpObject>(),
+				Arg.Is<string>(s => s.Contains("Wiped") || s.Contains("wiped"))
+			);
 
 		// Verify they're gone
 		var attr1After = await AttributeService.GetAttributeAsync(obj.AsPlayer, obj.AsPlayer, "WIPE1_TEST",
