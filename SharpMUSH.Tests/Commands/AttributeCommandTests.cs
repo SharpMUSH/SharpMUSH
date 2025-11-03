@@ -11,6 +11,7 @@ using A = MarkupString.MarkupStringModule;
 
 namespace SharpMUSH.Tests.Commands;
 
+[NotInParallel]
 public class AttributeCommandTests
 {
 	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -80,10 +81,10 @@ public class AttributeCommandTests
 
 		// Verify command sent a success notification with unique attribute name
 		await NotifyService
-			.Received()
+			.Received(Quantity.Exactly(1))
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<string>(s => s.Contains("copied") && s.Contains("1 destination"))
+				"Attribute copied to 1 destination."
 			);
 
 		// Verify destination attribute was created
@@ -108,10 +109,10 @@ public class AttributeCommandTests
 
 		// Verify command executed with success notification mentioning destination
 		await NotifyService
-			.Received()
+			.Received(Quantity.Exactly(1))
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<string>(s => s.Contains("Attribute copied to 1 destination"))
+				"Attribute copied to 1 destination."
 			);
 
 		// Verify destination attribute was created
@@ -139,10 +140,10 @@ public class AttributeCommandTests
 
 		// Verify command executed successfully with notification mentioning 2 destinations
 		await NotifyService
-			.Received()
+			.Received(Quantity.Exactly(1))
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<string>(s => s.Contains("Attribute copied to 2 destination"))
+				"Attribute copied to 2 destinations."
 			);
 
 		var obj = await Mediator.Send(new GetObjectNodeQuery(new(1)));
@@ -170,10 +171,10 @@ public class AttributeCommandTests
 
 		// Verify command executed successfully with notification about move
 		await NotifyService
-			.Received()
+			.Received(Quantity.Exactly(1))
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<string>(s => s.Contains("Attribute moved to 1 destination"))
+				"Attribute moved to 1 destination."
 			);
 
 		var obj = await Mediator.Send(new GetObjectNodeQuery(new(1)));
@@ -208,10 +209,10 @@ public class AttributeCommandTests
 
 		// Verify command sent notification about wiping with the pattern
 		await NotifyService
-			.Received()
+			.Received(Quantity.Exactly(1))
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<string>(s => s.Contains("Wiped attributes matching WIPE*_UNIQUE"))
+				"Wiped attributes matching WIPE*_UNIQUE."
 			);
 
 		// Verify they're gone
@@ -235,10 +236,10 @@ public class AttributeCommandTests
 
 		// Verify lock notification sent
 		await NotifyService
-			.Received()
+			.Received(Quantity.Exactly(1))
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<string>(s => s.Contains("Attribute LOCKTEST_UNIQUE_ATTR locked"))
+				"Attribute LOCKTEST_UNIQUE_ATTR locked."
 			);
 
 		var obj = await Mediator.Send(new GetObjectNodeQuery(new(1)));
@@ -256,10 +257,10 @@ public class AttributeCommandTests
 		
 		// Verify unlock notification sent
 		await NotifyService
-			.Received()
+			.Received(Quantity.Exactly(1))
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<string>(s => s.Contains("Attribute LOCKTEST_UNIQUE_ATTR unlocked"))
+				"Attribute LOCKTEST_UNIQUE_ATTR unlocked."
 			);
 
 		attr = await AttributeService.GetAttributeAsync(obj.AsPlayer, obj.AsPlayer, "LOCKTEST_UNIQUE_ATTR",
@@ -279,10 +280,10 @@ public class AttributeCommandTests
 
 		// Should receive a notification about lock status with the attribute name
 		await NotifyService
-			.Received()
+			.Received(Quantity.Exactly(1))
 			.Notify(
 				Arg.Any<AnySharpObject>(), 
-				Arg.Is<string>(s => s.Contains("Attribute QUERYLOCK_UNIQUE_ATTR is") && (s.Contains("unlocked") || s.Contains("locked")))
+				"Attribute QUERYLOCK_UNIQUE_ATTR is unlocked."
 			);
 	}
 
@@ -294,8 +295,8 @@ public class AttributeCommandTests
 
 		// Should receive error notification
 		await NotifyService
-			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Invalid") || s.Contains("invalid")));
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), "Invalid arguments to @atrchown.");
 	}
 
 	[Test]
@@ -306,8 +307,8 @@ public class AttributeCommandTests
 
 		// Should receive error notification
 		await NotifyService
-			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("not found") || s.Contains("NO MATCH")));
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), "Attribute NONEXISTENT_ATTR_TEST not found on source object.");
 	}
 
 	[Test]
@@ -318,7 +319,7 @@ public class AttributeCommandTests
 
 		// Should receive error notification
 		await NotifyService
-			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("not found") || s.Contains("NO MATCH")));
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), "Attribute NONEXISTENT_MOVE_TEST not found on source object.");
 	}
 }

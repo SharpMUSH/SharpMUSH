@@ -232,7 +232,8 @@ public partial class Commands
 
 		if (copiedCount > 0)
 		{
-			await NotifyService!.Notify(executor, $"Attribute copied to {copiedCount} destination(s).");
+			var destWord = copiedCount == 1 ? "destination" : "destinations";
+			await NotifyService!.Notify(executor, $"Attribute copied to {copiedCount} {destWord}.");
 		}
 		else
 		{
@@ -362,13 +363,14 @@ public partial class Commands
 			IAttributeService.AttributePatternMode.Exact,
 			IAttributeService.AttributeClearMode.Safe);
 
+			var destWord = copiedCount == 1 ? "destination" : "destinations";
 			if (clearResult.IsT1)
 			{
-				await NotifyService!.Notify(executor, $"Attribute moved to {copiedCount} destination(s) but failed to remove source: {clearResult.AsT1.Value}");
+				await NotifyService!.Notify(executor, $"Attribute moved to {copiedCount} {destWord} but failed to remove source: {clearResult.AsT1.Value}");
 			}
 			else
 			{
-				await NotifyService!.Notify(executor, $"Attribute moved to {copiedCount} destination(s).");
+				await NotifyService!.Notify(executor, $"Attribute moved to {copiedCount} {destWord}.");
 			}
 		}
 		else
