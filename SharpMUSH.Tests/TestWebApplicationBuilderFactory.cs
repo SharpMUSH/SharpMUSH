@@ -20,7 +20,8 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 	ArangoConfiguration acnf,
 	string configFile,
 	string colorFile,
-	INotifyService notifier) :
+	INotifyService notifier,
+	ISqlService? sqlService = null) :
 	WebApplicationFactory<TProgram> where TProgram : class
 {
 	protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -46,6 +47,13 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 
 				sc.RemoveAll<INotifyService>();
 				sc.AddSingleton(notifier);
+
+				// Replace SqlService if provided
+				if (sqlService != null)
+				{
+					sc.RemoveAll<ISqlService>();
+					sc.AddSingleton(sqlService);
+				}
 			}
 		);
 
