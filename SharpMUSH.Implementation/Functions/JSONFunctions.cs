@@ -310,35 +310,8 @@ public partial class Functions
 			? msgState.Message?.ToString() ?? ""
 			: "";
 
-		// Parse players list - handle quoted names with spaces
-		var players = new List<string>();
-		var inQuotes = false;
-		var currentPlayer = new System.Text.StringBuilder();
-		
-		for (int i = 0; i < playersArg.Length; i++)
-		{
-			var c = playersArg[i];
-			if (c == '"')
-			{
-				inQuotes = !inQuotes;
-			}
-			else if (c == ' ' && !inQuotes)
-			{
-				if (currentPlayer.Length > 0)
-				{
-					players.Add(currentPlayer.ToString());
-					currentPlayer.Clear();
-				}
-			}
-			else
-			{
-				currentPlayer.Append(c);
-			}
-		}
-		if (currentPlayer.Length > 0)
-		{
-			players.Add(currentPlayer.ToString());
-		}
+		// Parse players list using NameListString helper
+		var players = ArgHelpers.NameListString(playersArg);
 
 		// Validate message is valid JSON if provided
 		if (!string.IsNullOrWhiteSpace(message))
@@ -352,6 +325,11 @@ public partial class Functions
 				return new CallState("#-1 INVALID JSON MESSAGE");
 			}
 		}
+
+		// Check permissions once: must be wizard, have Send_OOB power, or will check per-player for self
+		bool isWizard = executor.IsGod() || await executor.IsWizard();
+		// TODO: Check for Send_OOB power when powers are implemented
+		bool hasSendOOBPower = false;
 
 		int sentCount = 0;
 
@@ -379,11 +357,7 @@ public partial class Functions
 			}
 
 			// Check permissions: must be wizard, have Send_OOB power, or sending to self
-			bool isWizard = executor.IsGod() || await executor.IsWizard();
 			bool isSelf = executor.Object().DBRef == located.Object().DBRef;
-			
-			// TODO: Check for Send_OOB power when powers are implemented
-			bool hasSendOOBPower = false;
 
 			if (!isWizard && !isSelf && !hasSendOOBPower)
 			{
