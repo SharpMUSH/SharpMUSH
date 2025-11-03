@@ -6,9 +6,11 @@ using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
+using Serilog.Core;
 using Serilog.Sinks.PeriodicBatching;
 using Serilog.Sinks.SystemConsole.Themes;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Connectors;
 using SharpMUSH.Server.ProtocolHandlers;
@@ -28,7 +30,7 @@ public class Program
 		if (string.IsNullOrWhiteSpace(arangoConnStr))
 		{
 			var container = new ArangoDbBuilder()
-				// .WithReuse(true)
+				.WithReuse(false)
 				.WithLabel("reuse-id", "SharpMUSH")
 				.WithImage("arangodb:latest")
 				.WithPassword("password")
@@ -54,28 +56,6 @@ public class Program
 				Serializer = new ArangoNewtonsoftSerializer(new ArangoNewtonsoftDefaultContractResolver())
 			};
 		}
-
-		builder.Logging.AddSerilog(new LoggerConfiguration()
-			.Enrich.FromLogContext()
-			.WriteTo.Console(theme: AnsiConsoleTheme.Code)
-			.WriteTo.Sink(new PeriodicBatchingSink(
-				new ArangoSerilogSink(new ArangoContext(config),
-					"logs",
-					"logs",
-					ArangoSerilogSink.LoggingRenderStrategy.StoreTemplate,
-					true,
-					true,
-					true),
-				new PeriodicBatchingSinkOptions
-				{
-					BatchSizeLimit = 1000,
-					QueueLimit = 100000,
-					Period = TimeSpan.FromSeconds(2),
-					EagerlyEmitFirstEvent = true,
-				}
-			))
-			.MinimumLevel.Debug()
-			.CreateLogger());
 
 		var colorFile = Path.Combine(AppContext.BaseDirectory, "colors.json");
 
