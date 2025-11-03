@@ -273,9 +273,9 @@ public partial class Commands
 					await AttributeService!.EvaluateAttributeFunctionAsync(
 						parser, executor, obj, "ADESTROY", new Dictionary<string, CallState>(), evalParent: false);
 				}
-				catch
+				catch (Exception)
 				{
-					// Ignore errors from @adestroy evaluation
+					// Ignore errors from @adestroy evaluation - attribute may not exist or may fail
 				}
 				
 				return CallState.Empty;
@@ -417,9 +417,9 @@ public partial class Commands
 					await AttributeService!.EvaluateAttributeFunctionAsync(
 						parser, executor, obj, "ADESTROY", new Dictionary<string, CallState>(), evalParent: false);
 				}
-				catch
+				catch (Exception)
 				{
-					// Ignore errors from @adestroy evaluation
+					// Ignore errors from @adestroy evaluation - attribute may not exist or may fail
 				}
 				
 				return CallState.Empty;
@@ -469,9 +469,9 @@ public partial class Commands
 					await AttributeService!.EvaluateAttributeFunctionAsync(
 						parser, executor, obj, "STARTUP", new Dictionary<string, CallState>(), evalParent: false);
 				}
-				catch
+				catch (Exception)
 				{
-					// Ignore errors from @startup evaluation
+					// Ignore errors from @startup evaluation - attribute may not exist or may fail
 				}
 				
 				return CallState.Empty;
