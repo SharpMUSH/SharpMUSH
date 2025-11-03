@@ -34,11 +34,12 @@ public class EncryptionFunctionUnitTests
 	[Test]
 	public async Task Encrypt_Basic()
 	{
-		var encrypted = (await Parser.FunctionParse(MModule.single("encrypt(test_string_encrypt_case1,mypassword)")))?.Message!;
+		// Use base64 encoding to ensure the encrypted text can be passed through the parser
+		var encrypted = (await Parser.FunctionParse(MModule.single("encrypt(test_string_encrypt_case1,mypassword,1)")))?.Message!;
 		await Assert.That(encrypted.ToPlainText()).IsNotNull();
 		
 		// Verify we can decrypt it back
-		var decrypted = (await Parser.FunctionParse(MModule.single($"decrypt({encrypted.ToPlainText()},mypassword)")))?.Message!;
+		var decrypted = (await Parser.FunctionParse(MModule.single($"decrypt({encrypted.ToPlainText()},mypassword,1)")))?.Message!;
 		await Assert.That(decrypted.ToPlainText()).IsEqualTo("test_string_encrypt_case1");
 	}
 
