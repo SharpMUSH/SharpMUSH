@@ -61,23 +61,30 @@ public partial class Functions
 		var results = new List<string>();
 		var uniqueAddresses = new HashSet<string>();
 
-		await foreach (var log in logs)
+		try
 		{
-			var addressValue = searchType switch
+			await foreach (var log in logs)
 			{
-				"ip" when log.Properties.TryGetValue("InternetProtocolAddress", out var ip) => ip,
-				"hostname" when log.Properties.TryGetValue("HostName", out var host) => host,
-				_ => null
-			};
+				var addressValue = searchType switch
+				{
+					"ip" when log.Properties.TryGetValue("InternetProtocolAddress", out var ip) => ip,
+					"hostname" when log.Properties.TryGetValue("HostName", out var host) => host,
+					_ => null
+				};
 
-			if (addressValue != null
-			    && MModule.isWildcardMatch2(MModule.single(addressValue), pattern)
-			    && uniqueAddresses.Add(addressValue)
-			    && !isCount)
-			{
-				results.Add(
-					$"{log.Properties.GetValueOrDefault("InternetProtocolAddress", "UNKNOWN")} {log.Properties.GetValueOrDefault("HostName", "UNKNOWN")}");
+				if (addressValue != null
+				    && MModule.isWildcardMatch2(MModule.single(addressValue), pattern)
+				    && uniqueAddresses.Add(addressValue)
+				    && !isCount)
+				{
+					results.Add(
+						$"{log.Properties.GetValueOrDefault("InternetProtocolAddress", "UNKNOWN")} {log.Properties.GetValueOrDefault("HostName", "UNKNOWN")}");
+				}
 			}
+		}
+		catch
+		{
+			// If iteration fails, return partial results
 		}
 
 		return new CallState(isCount ? uniqueAddresses.Count.ToString() : string.Join(osep, results));
@@ -171,76 +178,83 @@ public partial class Functions
 
 		var results = new List<string>();
 
-		await foreach (var log in logs)
+		try
 		{
-			var matches = true;
-
-			switch (filter)
+			await foreach (var log in logs)
 			{
-				case "logged in" when log.Properties.GetValueOrDefault("NewState") != "LoggedIn":
-				case "not logged in" when log.Properties.GetValueOrDefault("NewState") == "LoggedIn":
-					matches = false;
-					break;
-				default:
+				var matches = true;
+
+				switch (filter)
 				{
-					if (filter.StartsWith("#") && log.Properties.GetValueOrDefault("DBRef") != filter)
-					{
-						matches = false;
-					}
-
-					break;
-				}
-			}
-
-			foreach (var (type, value) in specs.Where(s => s.type != "count"))
-			{
-				switch (type)
-				{
-					case "after" when long.TryParse(value, out var afterTime):
-					{
-						if (log.Timestamp <= DateTimeOffset.FromUnixTimeSeconds(afterTime).DateTime)
-						{
-							matches = false;
-						}
-
-						break;
-					}
-					case "before" when long.TryParse(value, out var beforeTime):
-					{
-						if (log.Timestamp >= DateTimeOffset.FromUnixTimeSeconds(beforeTime).DateTime)
-						{
-							matches = false;
-						}
-
-						break;
-					}
-					case "ip":
-					{
-						if (!MModule.isWildcardMatch2(
-							    MModule.single(log.Properties.GetValueOrDefault("InternetProtocolAddress", "")),
-							    value))
-						{
-							matches = false;
-						}
-
-						break;
-					}
-					case "hostname" when
-						!MModule.isWildcardMatch2(MModule.single(log.Properties.GetValueOrDefault("HostName", "")), value):
+					case "logged in" when log.Properties.GetValueOrDefault("NewState") != "LoggedIn":
+					case "not logged in" when log.Properties.GetValueOrDefault("NewState") == "LoggedIn":
 						matches = false;
 						break;
+					default:
+					{
+						if (filter.StartsWith("#") && log.Properties.GetValueOrDefault("DBRef") != filter)
+						{
+							matches = false;
+						}
+
+						break;
+					}
+				}
+
+				foreach (var (type, value) in specs.Where(s => s.type != "count"))
+				{
+					switch (type)
+					{
+						case "after" when long.TryParse(value, out var afterTime):
+						{
+							if (log.Timestamp <= DateTimeOffset.FromUnixTimeSeconds(afterTime).DateTime)
+							{
+								matches = false;
+							}
+
+							break;
+						}
+						case "before" when long.TryParse(value, out var beforeTime):
+						{
+							if (log.Timestamp >= DateTimeOffset.FromUnixTimeSeconds(beforeTime).DateTime)
+							{
+								matches = false;
+							}
+
+							break;
+						}
+						case "ip":
+						{
+							if (!MModule.isWildcardMatch2(
+								    MModule.single(log.Properties.GetValueOrDefault("InternetProtocolAddress", "")),
+								    value))
+							{
+								matches = false;
+							}
+
+							break;
+						}
+						case "hostname" when
+							!MModule.isWildcardMatch2(MModule.single(log.Properties.GetValueOrDefault("HostName", "")), value):
+							matches = false;
+							break;
+					}
+				}
+
+				switch (matches)
+				{
+					case true when !isCount:
+						results.Add($"{log.Properties.GetValueOrDefault("DBRef", "null")} {log.Key}");
+						break;
+					case true:
+						results.Add(log.Key);
+						break;
 				}
 			}
-
-			switch (matches)
-			{
-				case true when !isCount:
-					results.Add($"{log.Properties.GetValueOrDefault("DBRef", "null")} {log.Key}");
-					break;
-				case true:
-					results.Add(log.Key);
-					break;
-			}
+		}
+		catch
+		{
+			// If iteration fails, return partial results
 		}
 
 		return new CallState(isCount ? results.Count.ToString() : string.Join(osep, results));
@@ -267,28 +281,35 @@ public partial class Functions
 
 		var logs = await Mediator!.Send(new GetConnectionLogsQuery("Connection", 0, 1000));
 
-		await foreach (var log in logs)
+		try
 		{
-			if (log.Key != connectionId)
+			await foreach (var log in logs)
 			{
-				continue;
+				if (log.Key != connectionId)
+				{
+					continue;
+				}
+
+				// Format: DBREF NAME IPADDR HOSTNAME CONNECTION-TIME DISCONNECTION-TIME DISCONNECTION-REASON SSL WEBSOCKET
+				var fields = new List<string>
+				{
+					log.Properties.GetValueOrDefault("DBRef", "#-1"),
+					"Unknown", // Name - would need to look up from DBRef
+					log.Properties.GetValueOrDefault("InternetProtocolAddress", "UNKNOWN"),
+					log.Properties.GetValueOrDefault("HostName", "UNKNOWN"),
+					log.Timestamp.ToUnixTimeSeconds().ToString(),
+					log.Properties.GetValueOrDefault("DisconnectTime", "0"),
+					log.Properties.GetValueOrDefault("DisconnectReason", ""),
+					log.Properties.GetValueOrDefault("SSL", "0"),
+					log.Properties.GetValueOrDefault("WebSocket", "0")
+				};
+
+				return new CallState(string.Join(osep, fields));
 			}
-
-			// Format: DBREF NAME IPADDR HOSTNAME CONNECTION-TIME DISCONNECTION-TIME DISCONNECTION-REASON SSL WEBSOCKET
-			var fields = new List<string>
-			{
-				log.Properties.GetValueOrDefault("DBRef", "#-1"),
-				"Unknown", // Name - would need to look up from DBRef
-				log.Properties.GetValueOrDefault("InternetProtocolAddress", "UNKNOWN"),
-				log.Properties.GetValueOrDefault("HostName", "UNKNOWN"),
-				log.Timestamp.ToUnixTimeSeconds().ToString(),
-				log.Properties.GetValueOrDefault("DisconnectTime", "0"),
-				log.Properties.GetValueOrDefault("DisconnectReason", ""),
-				log.Properties.GetValueOrDefault("SSL", "0"),
-				log.Properties.GetValueOrDefault("WebSocket", "0")
-			};
-
-			return new CallState(string.Join(osep, fields));
+		}
+		catch
+		{
+			// If iteration fails, return not found
 		}
 
 		return new CallState("#-1 CONNECTION NOT FOUND");
