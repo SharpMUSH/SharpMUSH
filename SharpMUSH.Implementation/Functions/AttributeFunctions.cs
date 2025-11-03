@@ -1077,7 +1077,7 @@ public partial class Functions
 					? sepArg.Message!.ToPlainText()
 					: " ";
 
-				return string.Join(separator, attributes.AsAttributes.Select(x => x.LongName));
+				return string.Join(separator, await attributes.AsAttributes.Select(x => x.LongName).ToArrayAsync());
 			});
 	}
 
@@ -1113,7 +1113,7 @@ public partial class Functions
 					? sepArg.Message!.ToPlainText()
 					: " ";
 
-				return string.Join(separator, attributes.AsAttributes.Select(x => x.LongName));
+				return string.Join(separator, await attributes.AsAttributes.Select(x => x.LongName).ToArrayAsync());
 			});
 	}
 

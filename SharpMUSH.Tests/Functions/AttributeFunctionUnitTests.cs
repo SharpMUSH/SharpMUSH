@@ -76,9 +76,9 @@ public class AttributeFunctionUnitTests
 	
 	
 	[Test]
-	[Arguments("[attrib_set(%!/TEST_GREP_1,test_string_grep_case1)][attrib_set(%!/TEST_GREP_2,another_test_value)][attrib_set(%!/NO_MATCH,different)][grep(%#,TEST_*,test)]", "TEST_GREP_1 TEST_GREP_2")]
-	[Arguments("[attrib_set(%!/TEST_GREP_UPPER,TEST_VALUE)][grep(%#,TEST_*,VALUE)]", "TEST_GREP_UPPER")]
-	[Arguments("[attrib_set(%!/EMPTY_TEST,)][grep(%#,*TEST*,test)]", "TEST_GREP_1 TEST_GREP_2")]
+	[Arguments("[attrib_set(%!/TEST_GREP_1,test_string_grep_case1)][attrib_set(%!/TEST_GREP_2,another_test_value)][attrib_set(%!/NO_MATCH,different)][grep(%!,TEST_*,test)]", "TEST_GREP_1 TEST_GREP_2")]
+	[Arguments("[attrib_set(%!/TEST_GREP_UPPER,TEST_VALUE)][grep(%!,TEST_*,VALUE)]", "TEST_GREP_UPPER")]
+	[Arguments("[attrib_set(%!/EMPTY_TEST,)][grep(%!,*TEST*,test)]", "TEST_GREP_1 TEST_GREP_2")]
 	public async Task Test_Grep_CaseSensitive(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -87,8 +87,8 @@ public class AttributeFunctionUnitTests
 
 	[Test]
 	[DependsOn(nameof(Test_Grep_CaseSensitive))]
-	[Arguments("[grepi(%#,TEST_*,VALUE)]", "TEST_GREP_1 TEST_GREP_2 TEST_GREP_UPPER")]
-	[Arguments("[grepi(%#,TEST_GREP_*,TEST)]", "TEST_GREP_1 TEST_GREP_2 TEST_GREP_UPPER")]
+	[Arguments("[grepi(%!,TEST_*,VALUE)]", "TEST_GREP_1 TEST_GREP_2 TEST_GREP_UPPER")]
+	[Arguments("[grepi(%!,TEST_GREP_*,TEST)]", "TEST_GREP_1 TEST_GREP_2 TEST_GREP_UPPER")]
 	public async Task Test_Grepi_CaseInsensitive(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -96,8 +96,8 @@ public class AttributeFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("[attrib_set(%!/WILDGREP_1,test_wildcard_*_match)][attrib_set(%!/WILDGREP_2,different)][wildgrep(%#,WILDGREP_*,*wildcard*)]", "WILDGREP_1")]
-	[Arguments("[wildgrep(%#,WILDGREP_*,test_*_match)]", "WILDGREP_1")]
+	[Arguments("[attrib_set(%!/WILDGREP_1,test_wildcard_*_match)][attrib_set(%!/WILDGREP_2,different)][wildgrep(%!,WILDGREP_*,*wildcard*)]", "WILDGREP_1")]
+	[Arguments("[wildgrep(%!,WILDGREP_*,test_*_match)]", "WILDGREP_1")]
 	public async Task Test_Wildgrep_Pattern(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -106,7 +106,7 @@ public class AttributeFunctionUnitTests
 
 	[Test]
 	[DependsOn(nameof(Test_Wildgrep_Pattern))]
-	[Arguments("[attrib_set(%!/WILDGREP_UPPER,TEST_WILDCARD)][wildgrepi(%#,WILDGREP_*,*WILDCARD*)]", "WILDGREP_1 WILDGREP_UPPER")]
+	[Arguments("[attrib_set(%!/WILDGREP_UPPER,TEST_WILDCARD)][wildgrepi(%!,WILDGREP_*,*WILDCARD*)]", "WILDGREP_1 WILDGREP_UPPER")]
 	public async Task Test_Wildgrepi_CaseInsensitive(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -114,9 +114,9 @@ public class AttributeFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("[attrib_set(%!/ATTR_001,value1)][attrib_set(%!/ATTR_002,value2)][attrib_set(%!/ATTR_100,value3)][reglattr(%#,ATTR_0+)]", "ATTR_001 ATTR_002")]
-	[Arguments("[reglattr(%#,ATTR_[0-9]+)]", "ATTR_001 ATTR_002 ATTR_100")]
-	[Arguments("[reglattr(%#,^TEST_)]", "TEST_GREP_1 TEST_GREP_2 TEST_GREP_UPPER")]
+	[Arguments("[attrib_set(%!/ATTR_001,value1)][attrib_set(%!/ATTR_002,value2)][attrib_set(%!/ATTR_100,value3)][reglattr(%!,ATTR_0+)]", "ATTR_001 ATTR_002")]
+	[Arguments("[reglattr(%!,ATTR_[0-9]+)]", "ATTR_001 ATTR_002 ATTR_100")]
+	[Arguments("[reglattr(%!,^TEST_)]", "TEST_GREP_1 TEST_GREP_2 TEST_GREP_UPPER")]
 	public async Task Test_Reglattr_RegexPattern(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -125,9 +125,9 @@ public class AttributeFunctionUnitTests
 
 	[Test]
 	[DependsOn(nameof(Test_Reglattr_RegexPattern))]
-	[Arguments("[regnattr(%#,ATTR_[0-9]+)]", "3")]
-	[Arguments("[regnattr(%#,^TEST_)]", "3")]
-	[Arguments("[regnattr(%#,WILDGREP_)]", "3")]
+	[Arguments("[regnattr(%!,ATTR_[0-9]+)]", "3")]
+	[Arguments("[regnattr(%!,^TEST_)]", "3")]
+	[Arguments("[regnattr(%!,WILDGREP_)]", "3")]
 	public async Task Test_Regnattr_Count(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -136,9 +136,9 @@ public class AttributeFunctionUnitTests
 
 	[Test]
 	[DependsOn(nameof(Test_Regnattr_Count))]
-	[Arguments("[regxattr(%#/ATTR_[0-9]+,1,2)]", "ATTR_001 ATTR_002")]
-	[Arguments("[regxattr(%#/ATTR_[0-9]+,2,2)]", "ATTR_002 ATTR_100")]
-	[Arguments("[regxattr(%#/^TEST_,1,2)]", "TEST_GREP_1 TEST_GREP_2")]
+	[Arguments("[regxattr(%!/ATTR_[0-9]+,1,2)]", "ATTR_001 ATTR_002")]
+	[Arguments("[regxattr(%!/ATTR_[0-9]+,2,2)]", "ATTR_002 ATTR_100")]
+	[Arguments("[regxattr(%!/^TEST_,1,2)]", "TEST_GREP_1 TEST_GREP_2")]
 	public async Task Test_Regxattr_RangeWithRegex(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -192,7 +192,7 @@ public class AttributeFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("[attrib_set(%!/PGREP_CHILD,child_value)][pgrep(%#,PGREP_*,child)]", "PGREP_CHILD")]
+	[Arguments("[attrib_set(%!/PGREP_CHILD,child_value)][pgrep(%!,PGREP_*,child)]", "PGREP_CHILD")]
 	public async Task Test_Pgrep_IncludesParents(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -201,7 +201,7 @@ public class AttributeFunctionUnitTests
 
 	[Test]
 	[DependsOn(nameof(Test_Reglattr_RegexPattern))]
-	[Arguments("[reglattrp(%#,ATTR_[0-9]+)]", "ATTR_001 ATTR_002 ATTR_100")]
+	[Arguments("[reglattrp(%!,ATTR_[0-9]+)]", "ATTR_001 ATTR_002 ATTR_100")]
 	public async Task Test_Reglattrp_IncludesParents(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -210,7 +210,7 @@ public class AttributeFunctionUnitTests
 
 	[Test]
 	[DependsOn(nameof(Test_Regnattr_Count))]
-	[Arguments("[regnattrp(%#,ATTR_[0-9]+)]", "3")]
+	[Arguments("[regnattrp(%!,ATTR_[0-9]+)]", "3")]
 	public async Task Test_Regnattrp_CountWithParents(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -219,7 +219,7 @@ public class AttributeFunctionUnitTests
 
 	[Test]
 	[DependsOn(nameof(Test_Regxattr_RangeWithRegex))]
-	[Arguments("[regxattrp(%#/ATTR_[0-9]+,1,2)]", "ATTR_001 ATTR_002")]
+	[Arguments("[regxattrp(%!/ATTR_[0-9]+,1,2)]", "ATTR_001 ATTR_002")]
 	public async Task Test_Regxattrp_RangeWithParents(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
