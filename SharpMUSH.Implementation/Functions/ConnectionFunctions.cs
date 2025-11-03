@@ -232,12 +232,9 @@ public partial class Functions
 						matches = false;
 					}
 				}
-				else if (type == "hostname")
+				else if (type == "hostname" && !HelperFunctions.WildcardMatch(log.Properties.GetValueOrDefault("HostName", ""), value))
 				{
-					if (!HelperFunctions.WildcardMatch(log.Properties.GetValueOrDefault("HostName", ""), value))
-					{
-						matches = false;
-					}
+					matches = false;
 				}
 			}
 			
