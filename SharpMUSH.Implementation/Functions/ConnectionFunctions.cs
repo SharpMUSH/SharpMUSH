@@ -263,15 +263,9 @@ public partial class Functions
 
 		var args = parser.CurrentState.Arguments;
 		var connectionId = args["0"].Message!.ToPlainText();
-		string osep;
-		if (args.TryGetValue("1", out var osepArg) && osepArg?.Message != null)
-		{
-			osep = osepArg.Message.ToPlainText();
-		}
-		else
-		{
-			osep = " ";
-		}
+		string osep = (args.TryGetValue("1", out var osepArg) && osepArg?.Message != null)
+			? osepArg.Message.ToPlainText()
+			: " ";
 		// Validate connection ID format
 		if (string.IsNullOrWhiteSpace(connectionId))
 		{
