@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
+using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -79,7 +80,9 @@ public class DatabaseCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), "#-1 SQL IS NOT ENABLED");
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString() == "#-1 SQL IS NOT ENABLED") ||
+				(msg.IsT1 && msg.AsT1 == "#-1 SQL IS NOT ENABLED")));
 	}
 
 	[Test]
@@ -90,7 +93,9 @@ public class DatabaseCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), "#-1 SQL IS NOT ENABLED");
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString() == "#-1 SQL IS NOT ENABLED") ||
+				(msg.IsT1 && msg.AsT1 == "#-1 SQL IS NOT ENABLED")));
 	}
 
 	[Test]
@@ -101,7 +106,9 @@ public class DatabaseCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), "#-1 SQL IS NOT ENABLED");
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString() == "#-1 SQL IS NOT ENABLED") ||
+				(msg.IsT1 && msg.AsT1 == "#-1 SQL IS NOT ENABLED")));
 	}
 
 	[Test]
@@ -112,7 +119,9 @@ public class DatabaseCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), "#-1 SQL IS NOT ENABLED");
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString() == "#-1 SQL IS NOT ENABLED") ||
+				(msg.IsT1 && msg.AsT1 == "#-1 SQL IS NOT ENABLED")));
 	}
 
 	[Test]
@@ -123,7 +132,9 @@ public class DatabaseCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), "#-1 SQL IS NOT ENABLED");
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString() == "#-1 SQL IS NOT ENABLED") ||
+				(msg.IsT1 && msg.AsT1 == "#-1 SQL IS NOT ENABLED")));
 	}
 
 	[Test]
@@ -134,7 +145,9 @@ public class DatabaseCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), "#-1 SQL IS NOT ENABLED");
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString() == "#-1 SQL IS NOT ENABLED") ||
+				(msg.IsT1 && msg.AsT1 == "#-1 SQL IS NOT ENABLED")));
 	}
 
 	[Test]
@@ -145,7 +158,9 @@ public class DatabaseCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), "#-1 SQL IS NOT ENABLED");
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString() == "#-1 SQL IS NOT ENABLED") ||
+				(msg.IsT1 && msg.AsT1 == "#-1 SQL IS NOT ENABLED")));
 	}
 
 	[Test]
@@ -156,7 +171,9 @@ public class DatabaseCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), "#-1 SQL IS NOT ENABLED");
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString() == "#-1 SQL IS NOT ENABLED") ||
+				(msg.IsT1 && msg.AsT1 == "#-1 SQL IS NOT ENABLED")));
 	}
 
 	[Test]
@@ -167,7 +184,9 @@ public class DatabaseCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), "#-1 SQL IS NOT ENABLED");
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString() == "#-1 SQL IS NOT ENABLED") ||
+				(msg.IsT1 && msg.AsT1 == "#-1 SQL IS NOT ENABLED")));
 	}
 
 	[Test]
@@ -178,6 +197,8 @@ public class DatabaseCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), "#-1 SQL IS NOT ENABLED");
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString() == "#-1 SQL IS NOT ENABLED") ||
+				(msg.IsT1 && msg.AsT1 == "#-1 SQL IS NOT ENABLED")));
 	}
 }
