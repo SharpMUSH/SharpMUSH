@@ -1,21 +1,64 @@
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
 using OneOf;
+using SharpMUSH.Library;
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
 public class CommunicationCommandTests
 {
+	private const string TestChannelName = "Public";
+	private const string TestChannelPrivilege = "Open";
+	private const int TestPlayerDbRef = 1;
+
 	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required WebAppFactory WebAppFactoryArg { get; init; }
 
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
+	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+
+	private SharpChannel? _testChannel;
+	private SharpPlayer? _testPlayer;
+
+	[Before(Test)]
+	public async Task SetupTestChannel()
+	{
+		var playerNode = await Database.GetObjectNodeAsync(new DBRef(TestPlayerDbRef));
+		_testPlayer = playerNode.IsPlayer ? playerNode.AsPlayer : null;
+
+		if (_testPlayer == null)
+		{
+			throw new InvalidOperationException($"Test player #{TestPlayerDbRef} not found");
+		}
+
+		// Create a test channel named "Public"
+		await Mediator.Send(new CreateChannelCommand(
+			MModule.single(TestChannelName),
+			[TestChannelPrivilege],
+			_testPlayer
+		));
+
+		// Retrieve the created channel
+		var channelQuery = new GetChannelQuery(TestChannelName);
+		_testChannel = await Mediator.Send(channelQuery);
+
+		// Add the test player to the channel
+		if (_testChannel != null && playerNode.IsPlayer)
+		{
+			await Mediator.Send(new AddUserToChannelCommand(_testChannel, playerNode.AsPlayer));
+		}
+	}
 
 	[Test]
 	[Arguments("@pemit #1=Test message", "Test message")]
@@ -189,12 +232,12 @@ public class CommunicationCommandTests
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString() == expected) ||
+				(msg.IsT0 && msg.AsT0.ToPlainText() == expected) ||
 				(msg.IsT1 && msg.AsT1 == expected)), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
-	[Arguments("addcom=Public", "Usage: addcom <alias>=<channel>")]
+	[Arguments("addcom=Public", "Alias name cannot be empty.")]
 	[Arguments("addcom test_alias_ADDCOM3=", "Channel not found.")]
 	public async ValueTask AddComInvalidArgs(string command, string expected)
 	{
@@ -205,7 +248,7 @@ public class CommunicationCommandTests
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString() == expected) ||
+				(msg.IsT0 && msg.AsT0.ToPlainText() == expected) ||
 				(msg.IsT1 && msg.AsT1 == expected)), null, INotifyService.NotificationType.Announce);
 	}
 
@@ -227,7 +270,7 @@ public class CommunicationCommandTests
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString() == expected) ||
+				(msg.IsT0 && msg.AsT0.ToPlainText() == expected) ||
 				(msg.IsT1 && msg.AsT1 == expected)), null, INotifyService.NotificationType.Announce);
 	}
 
@@ -242,7 +285,7 @@ public class CommunicationCommandTests
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString() == expected) ||
+				(msg.IsT0 && msg.AsT0.ToPlainText() == expected) ||
 				(msg.IsT1 && msg.AsT1 == expected)), null, INotifyService.NotificationType.Announce);
 	}
 
@@ -257,7 +300,7 @@ public class CommunicationCommandTests
 		// Verify notification was sent (any response is valid for channel list)
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
@@ -277,7 +320,7 @@ public class CommunicationCommandTests
 		// Verify notification was sent (any response is valid)
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
@@ -291,7 +334,7 @@ public class CommunicationCommandTests
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString() == expected) ||
+				(msg.IsT0 && msg.AsT0.ToPlainText() == expected) ||
 				(msg.IsT1 && msg.AsT1 == expected)), null, INotifyService.NotificationType.Announce);
 	}
 
@@ -313,7 +356,7 @@ public class CommunicationCommandTests
 		// Verify notification was sent with the aliases
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
@@ -328,6 +371,6 @@ public class CommunicationCommandTests
 		// Verify notification was sent
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 }
