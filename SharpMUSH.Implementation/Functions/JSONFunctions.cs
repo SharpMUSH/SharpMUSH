@@ -25,7 +25,7 @@ public partial class Functions
 		{"null", JsonHelpers.NullJSON},
 		{"boolean", JsonHelpers.BooleanJSON},
 		{"string", JsonHelpers.StringJSON },
-		{"markupstring", JsonHelpers.StringJSON }, // TODO: In PennMUSH, this uses their internal markup instead. This currently has no meaning for us yet.
+		{"markupstring", JsonHelpers.StringJSON },
 		{"number", JsonHelpers.NumberJSON },
 		{"array", JsonHelpers.ArrayJSON },
 		{"object", JsonHelpers.ObjectJSON }
@@ -55,11 +55,6 @@ public partial class Functions
 	[SharpFunction(Name = "json_map", MinArgs = 2, MaxArgs = 33, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> json_map(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// Arg0: Object/Attribute
-		// Arg1: JSON string
-		// Arg2: Output separator (optional, defaults to space)
-		// Arg3+: Additional arguments passed as %3, %4, etc.
-
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known;
 		var objAttr =
@@ -109,7 +104,6 @@ public partial class Functions
 		var jsonStr = parser.CurrentState.Arguments["1"].Message!.ToString();
 		var osep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MModule.single(" "));
 
-		// Parse additional user arguments (available as %3, %4, etc.)
 		var userArgs = new Dictionary<string, CallState>();
 		for (int i = 3; i < parser.CurrentState.Arguments.Count; i++)
 		{
@@ -130,7 +124,6 @@ public partial class Functions
 				case JsonValueKind.False:
 				case JsonValueKind.String:
 				case JsonValueKind.Number:
-					// For basic types, call attribute once
 					var args = new Dictionary<string, CallState>
 					{
 						{ "0", new CallState(JsonHelpers.GetJsonType(rootElement)) },
@@ -149,7 +142,6 @@ public partial class Functions
 					break;
 
 				case JsonValueKind.Array:
-					// For arrays, call once per element with %2 as the index
 					var arrayIndex = 0;
 					foreach (var element in rootElement.EnumerateArray())
 					{
@@ -174,7 +166,6 @@ public partial class Functions
 					break;
 
 				case JsonValueKind.Object:
-					// For objects, call once per key/value pair with %2 as the key
 					foreach (var property in rootElement.EnumerateObject())
 					{
 						var objArgs = new Dictionary<string, CallState>
@@ -256,7 +247,6 @@ public partial class Functions
 		}
 	}
 
-	// TODO: Use JSON PATH PROPERLY
 	[SharpFunction(Name = "json_query", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> json_query(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -299,10 +289,6 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known;
-
-		// Arg0: Players (space-separated list of player names/dbrefs)
-		// Arg1: Package name
-		// Arg2: JSON message (optional)
 		
 		var playersArg = MModule.plainText(parser.CurrentState.Arguments["0"].Message!);
 		var package = MModule.plainText(parser.CurrentState.Arguments["1"].Message!);
@@ -310,10 +296,8 @@ public partial class Functions
 			? msgState.Message?.ToString() ?? ""
 			: "";
 
-		// Parse players list using NameListString helper
 		var players = ArgHelpers.NameListString(playersArg);
 
-		// Validate message is valid JSON if provided
 		if (!string.IsNullOrWhiteSpace(message))
 		{
 			try
@@ -326,14 +310,11 @@ public partial class Functions
 			}
 		}
 
-		// Check permissions once: must be wizard, have Send_OOB power, or will check per-player for self
 		bool isWizard = executor.IsGod() || await executor.IsWizard();
-		// TODO: Check for Send_OOB power when powers are implemented
-		bool hasSendOOBPower = false;
+		bool hasSendOOBPower = await ArgHelpers.HasObjectPowers(executor.Object(), "Send_OOB");
 
 		int sentCount = 0;
 
-		// Locate each player and send message to their connections
 		foreach (var playerStr in players)
 		{
 			var locate = await LocateService!.LocateAndNotifyIfInvalid(
@@ -350,13 +331,11 @@ public partial class Functions
 
 			var located = locate.WithoutError().WithoutNone();
 
-			// Check if located object is a player
 			if (!located.IsPlayer)
 			{
 				continue;
 			}
 
-			// Check permissions: must be wizard, have Send_OOB power, or sending to self
 			bool isSelf = executor.Object().DBRef == located.Object().DBRef;
 
 			if (!isWizard && !isSelf && !hasSendOOBPower)
@@ -364,16 +343,13 @@ public partial class Functions
 				return new CallState("#-1 PERMISSION DENIED");
 			}
 
-			// Get all connections for this player
 			await foreach (var connection in ConnectionService!.Get(located.Object().DBRef))
 			{
-				// Check if connection supports GMCP
 				if (connection.Metadata.GetValueOrDefault("GMCP", "0") != "1")
 				{
 					continue;
 				}
 
-				// Send GMCP message
 				await Mediator!.Publish(new SignalGMCPNotification(
 					connection.Handle,
 					package,
