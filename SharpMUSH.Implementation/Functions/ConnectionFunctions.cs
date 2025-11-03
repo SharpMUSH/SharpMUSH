@@ -78,12 +78,12 @@ public partial class Functions
 				addressValue = host;
 			}
 			
-			if (addressValue != null && HelperFunctions.WildcardMatch(addressValue, pattern))
+			if (addressValue != null 
+			    && HelperFunctions.WildcardMatch(addressValue, pattern) 
+			    && uniqueAddresses.Add(addressValue) 
+			    && !isCount)
 			{
-				if (uniqueAddresses.Add(addressValue) && !isCount)
-				{
-					results.Add($"{log.Properties.GetValueOrDefault("InternetProtocolAddress", "UNKNOWN")} {log.Properties.GetValueOrDefault("HostName", "UNKNOWN")}");
-				}
+				results.Add($"{log.Properties.GetValueOrDefault("InternetProtocolAddress", "UNKNOWN")} {log.Properties.GetValueOrDefault("HostName", "UNKNOWN")}");
 			}
 		}
 
