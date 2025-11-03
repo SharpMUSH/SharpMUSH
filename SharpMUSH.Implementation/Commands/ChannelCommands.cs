@@ -50,7 +50,7 @@ public partial class Commands
 
 		var (_, status) = maybeMemberStatus;
 
-		await Mediator!.Send(new ChannelMessageNotification(
+		await Mediator!.Publish(new ChannelMessageNotification(
 			channel,
 			executor.WithNoneOption(),
 			INotifyService.NotificationType.Emit,
@@ -101,7 +101,7 @@ public partial class Commands
 		var (_, status) = maybeMemberStatus;
 
 		// TODO: Change notification type based on the first character.
-		await Mediator!.Send(new ChannelMessageNotification(
+		await Mediator!.Publish(new ChannelMessageNotification(
 			channel,
 			executor.WithNoneOption(),
 			INotifyService.NotificationType.Emit,
@@ -154,7 +154,7 @@ public partial class Commands
 
 		var canNoSpoof = await executor.HasPower("CAN_SPOOF") || await executor.IsPriv();
 
-		await Mediator!.Send(new ChannelMessageNotification(
+		await Mediator!.Publish(new ChannelMessageNotification(
 			channel,
 			executor.WithNoneOption(),
 			canNoSpoof

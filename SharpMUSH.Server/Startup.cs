@@ -1,4 +1,5 @@
 ﻿using Core.Arango;
+using Core.Arango.Serilog;
 using Core.Arango.Transport;
 using Mediator;
 using Microsoft.AspNetCore.Builder;
@@ -11,8 +12,10 @@ using Newtonsoft.Json;
 using Quartz;
 using Serilog;
 using Serilog.Events;
+using Serilog.Sinks.PeriodicBatching;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Database;
 using SharpMUSH.Database.ArangoDB;
 using SharpMUSH.Implementation;
 using SharpMUSH.Implementation.Commands;
@@ -23,7 +26,6 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Server.Connectors;
 using TaskScheduler = SharpMUSH.Library.Services.TaskScheduler;
 
 namespace SharpMUSH.Server;
@@ -41,15 +43,6 @@ public class Startup(ArangoConfiguration config, string colorFile)
 				// .WithOrigins("https://localhost:7102")
 				.AllowAnyMethod()
 				.AllowAnyHeader());
-		});
-
-		services.AddLogging(logging =>
-		{
-			logging.ClearProviders();
-			logging.AddSerilog(new LoggerConfiguration()
-				.MinimumLevel.Override("ZiggyCreatures.Caching.Fusion", LogEventLevel.Verbose)
-				.MinimumLevel.Debug()
-				.CreateLogger());
 		});
 
 		services.AddSingleton<ISharpDatabase, ArangoDatabase>(x =>
@@ -139,5 +132,32 @@ public class Startup(ArangoConfiguration config, string colorFile)
 		services.AddControllers();
 		services.AddQuartzHostedService();
 		services.AddHostedService<StartupHandler>();
+		
+		services.AddLogging(logging =>
+		{
+			logging.ClearProviders();
+			logging.AddSerilog(new LoggerConfiguration()
+				.MinimumLevel.Debug()
+				.MinimumLevel.Override("ZiggyCreatures.Caching.Fusion", LogEventLevel.Error)
+				.Enrich.FromLogContext()
+				.WriteTo.Sink(new PeriodicBatchingSink(
+					new ArangoSerilogSink(
+						logging.Services.BuildServiceProvider().GetRequiredService<IArangoContext>(),
+						"CurrentSharpMUSHWorld",
+						DatabaseConstants.Logs,
+						ArangoSerilogSink.LoggingRenderStrategy.StoreTemplate,
+						true,
+						true,
+						true),
+					new PeriodicBatchingSinkOptions
+					{
+						BatchSizeLimit = 1000,
+						QueueLimit = 100000,
+						Period = TimeSpan.FromSeconds(2),
+						EagerlyEmitFirstEvent = true,
+					}))
+				.CreateLogger());;
+		});
+
 	}
 }
