@@ -17,14 +17,47 @@ public class ConfigCommandTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	public async ValueTask ConfigCommand()
+	public async ValueTask ConfigCommand_NoArgs_ListsCategories()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@config"));
 
+		// Should notify with "Configuration Categories:"
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), "Configuration Categories:", Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+	}
+
+	[Test]
+	public async ValueTask ConfigCommand_CategoryArg_ShowsCategoryOptions()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@config Net"));
+
+		// Should notify with "Options in Net:"
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), "Options in Net:", Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+	}
+
+	[Test]
+	public async ValueTask ConfigCommand_OptionArg_ShowsOptionValue()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@config mud_name"));
+
+		// Should receive at least one notification about mud_name
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("mud_name")), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+	}
+
+	[Test]
+	public async ValueTask ConfigCommand_InvalidOption_ReturnsNotFound()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@config test_string_CONFIG_invalid_option"));
+
+		// Should notify that option was not found
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("No configuration category or option")), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
