@@ -206,8 +206,17 @@ public partial class Commands
 						// Clear privileged flags and powers unless /preserve is used
 						if (!preserve)
 						{
-							// TODO: Clear WIZARD, ROYALTY flags and powers
-							// await Mediator!.Send(new SetObjectFlagCommand(obj, "HALT"));
+							// Clear WIZARD, ROYALTY flags if present
+							if (await obj.HasFlag("WIZARD"))
+							{
+								await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "!WIZARD", false);
+							}
+							if (await obj.HasFlag("ROYALTY"))
+							{
+								await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "!ROYALTY", false);
+							}
+							// Set HALT flag
+							await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "HALT", false);
 						}
 
 						return result;
@@ -482,7 +491,19 @@ public partial class Commands
 						// Clear privileged flags and powers unless /preserve is used
 						if (!preserve && !obj.IsPlayer)
 						{
-							// TODO: Clear WIZARD, ROYALTY, TRUST flags and powers
+							// Clear WIZARD, ROYALTY, TRUST flags if present
+							if (await obj.HasFlag("WIZARD"))
+							{
+								await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "!WIZARD", false);
+							}
+							if (await obj.HasFlag("ROYALTY"))
+							{
+								await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "!ROYALTY", false);
+							}
+							if (await obj.HasFlag("TRUST"))
+							{
+								await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "!TRUST", false);
+							}
 						}
 
 						await NotifyService.Notify(executor, "Zone set.");
