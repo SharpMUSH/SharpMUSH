@@ -219,7 +219,7 @@ public partial class Commands
 			return new CallState($"#-1 Error setting alias: {result.AsT1.Value}");
 		}
 
-		await NotifyService!.Notify(executor, $"Alias '{alias}' added for channel {channel.Name}.");
+		await NotifyService!.Notify(executor, $"Alias '{alias}' added for channel {channel.Name.ToPlainText()}.");
 		return new CallState(string.Empty);
 	}
 

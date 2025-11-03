@@ -176,39 +176,36 @@ public class CommunicationCommandTests
 	}
 
 	[Test]
-	[Arguments("addcom test_alias_ADDCOM1=Public", "test_alias_ADDCOM1")]
-	[Arguments("addcom test_alias_ADDCOM2=Public", "test_alias_ADDCOM2")]
-	public async ValueTask AddComBasic(string command, string alias)
+	[Arguments("addcom test_alias_ADDCOM1=Public", "Alias 'test_alias_ADDCOM1' added for channel Public.")]
+	[Arguments("addcom test_alias_ADDCOM2=Public", "Alias 'test_alias_ADDCOM2' added for channel Public.")]
+	public async ValueTask AddComBasic(string command, string expected)
 	{
 		Console.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
-		// Verify notification was sent containing "added"
+		// Verify notification was sent with all parameters like PemitBasic does
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(msg => msg.Contains("added")));
+			.Notify(Arg.Any<AnySharpObject>(), expected, Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
-	[Arguments("addcom=Public")]
-	[Arguments("addcom test_alias_ADDCOM3=")]
-	public async ValueTask AddComInvalidArgs(string command)
+	[Arguments("addcom=Public", "Usage: addcom <alias>=<channel>")]
+	[Arguments("addcom test_alias_ADDCOM3=", "Channel not found.")]
+	public async ValueTask AddComInvalidArgs(string command, string expected)
 	{
 		Console.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
-		// Verify error notification was sent
+		// Verify exact error notification was sent
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(msg => 
-				msg.Contains("Usage") || 
-				msg.Contains("empty") ||
-				msg.Contains("not found")));
+			.Notify(Arg.Any<AnySharpObject>(), expected);
 	}
 
 	[Test]
-	[Arguments("delcom test_alias_DELCOM1")]
-	public async ValueTask DelComBasic(string command)
+	[Arguments("delcom test_alias_DELCOM1", "Alias 'test_alias_DELCOM1' deleted.")]
+	public async ValueTask DelComBasic(string command, string expected)
 	{
 		Console.WriteLine("Testing: {0}", command);
 		// First add an alias
@@ -220,23 +217,23 @@ public class CommunicationCommandTests
 		// Now delete it
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
-		// Verify notification was sent containing "deleted"
+		// Verify exact notification was sent
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(msg => msg.Contains("deleted")));
+			.Notify(Arg.Any<AnySharpObject>(), expected);
 	}
 
 	[Test]
-	[Arguments("delcom nonexistent_alias_DELCOM")]
-	public async ValueTask DelComNotFound(string command)
+	[Arguments("delcom nonexistent_alias_DELCOM", "Alias 'nonexistent_alias_DELCOM' not found.")]
+	public async ValueTask DelComNotFound(string command, string expected)
 	{
 		Console.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
-		// Verify error notification was sent containing "not found"
+		// Verify exact error notification was sent
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(msg => msg.Contains("not found")));
+			.Notify(Arg.Any<AnySharpObject>(), expected);
 	}
 
 	[Test]
@@ -247,7 +244,7 @@ public class CommunicationCommandTests
 		Console.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
-		// Verify notification was sent (list of channels)
+		// Verify notification was sent (any response is valid for channel list)
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
@@ -267,23 +264,23 @@ public class CommunicationCommandTests
 		// Now set title
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
-		// Verify notification was sent
+		// Verify notification was sent (any response is valid)
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
 	}
 
 	[Test]
-	[Arguments("comtitle nonexistent_alias_COMTITLE=title")]
-	public async ValueTask ComTitleNotFound(string command)
+	[Arguments("comtitle nonexistent_alias_COMTITLE=title", "Alias 'nonexistent_alias_COMTITLE' not found.")]
+	public async ValueTask ComTitleNotFound(string command, string expected)
 	{
 		Console.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
-		// Verify error notification was sent containing "not found"
+		// Verify exact error notification was sent
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(msg => msg.Contains("not found")));
+			.Notify(Arg.Any<AnySharpObject>(), expected);
 	}
 
 	[Test]
