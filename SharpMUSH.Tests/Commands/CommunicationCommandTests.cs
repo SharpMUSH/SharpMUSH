@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
+using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -183,10 +184,13 @@ public class CommunicationCommandTests
 		Console.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
-		// Verify notification was sent with all parameters like PemitBasic does
+		// Verify notification was sent with exact expected message
+		// Match the 2-parameter Notify call (the implementation uses default parameters)
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), expected, Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString() == expected) ||
+				(msg.IsT1 && msg.AsT1 == expected)), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -200,7 +204,9 @@ public class CommunicationCommandTests
 		// Verify exact error notification was sent
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), expected);
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString() == expected) ||
+				(msg.IsT1 && msg.AsT1 == expected)), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -220,7 +226,9 @@ public class CommunicationCommandTests
 		// Verify exact notification was sent
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), expected);
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString() == expected) ||
+				(msg.IsT1 && msg.AsT1 == expected)), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -233,7 +241,9 @@ public class CommunicationCommandTests
 		// Verify exact error notification was sent
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), expected);
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString() == expected) ||
+				(msg.IsT1 && msg.AsT1 == expected)), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -280,7 +290,9 @@ public class CommunicationCommandTests
 		// Verify exact error notification was sent
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), expected);
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString() == expected) ||
+				(msg.IsT1 && msg.AsT1 == expected)), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
