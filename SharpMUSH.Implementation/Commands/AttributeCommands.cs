@@ -12,7 +12,7 @@ namespace SharpMUSH.Implementation.Commands;
 
 public partial class Commands
 {
-[SharpCommand(Name = "@ATRLOCK", Switches = [], Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 0)]
+[SharpCommand(Name = "@ATRLOCK", Switches = [], Behavior = CB.Default | CB.EqSplit, MinArgs = 1, MaxArgs = 2)]
 public static async ValueTask<Option<CallState>> AttributeLock(IMUSHCodeParser parser, SharpCommandAttribute _2)
 {
 var args = parser.CurrentState.Arguments;
@@ -119,7 +119,7 @@ return new CallState(string.Empty);
 }
 
 [SharpCommand(Name = "@CPATTR", Switches = ["CONVERT", "NOFLAGCOPY"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs,
-MinArgs = 0, MaxArgs = 0)]
+MinArgs = 2, MaxArgs = 2)]
 public static async ValueTask<Option<CallState>> CopyAttribute(IMUSHCodeParser parser, SharpCommandAttribute _2)
 {
 var args = parser.CurrentState.Arguments;
@@ -244,7 +244,7 @@ return new CallState(string.Empty);
 }
 
 [SharpCommand(Name = "@MVATTR", Switches = ["CONVERT", "NOFLAGCOPY"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs,
-MinArgs = 0, MaxArgs = 0)]
+MinArgs = 2, MaxArgs = 2)]
 public static async ValueTask<Option<CallState>> MoveAttribute(IMUSHCodeParser parser, SharpCommandAttribute _2)
 {
 var args = parser.CurrentState.Arguments;
@@ -380,7 +380,7 @@ return new CallState("#-1 MOVE FAILED");
 return new CallState(string.Empty);
 }
 
-[SharpCommand(Name = "@ATRCHOWN", Switches = [], Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 0)]
+[SharpCommand(Name = "@ATRCHOWN", Switches = [], Behavior = CB.Default | CB.EqSplit, MinArgs = 2, MaxArgs = 2)]
 public static async ValueTask<Option<CallState>> ChangeAttributeOwner(IMUSHCodeParser parser, SharpCommandAttribute _2)
 {
 var args = parser.CurrentState.Arguments;
@@ -496,7 +496,7 @@ await NotifyService!.Notify(executor, $"Attribute {attrName} owner changed.");
 return new CallState(string.Empty);
 }
 
-[SharpCommand(Name = "@WIPE", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
+[SharpCommand(Name = "@WIPE", Switches = [], Behavior = CB.Default, MinArgs = 1, MaxArgs = 1)]
 public static async ValueTask<Option<CallState>> Wipe(IMUSHCodeParser parser, SharpCommandAttribute _2)
 {
 var args = parser.CurrentState.ArgumentsOrdered;

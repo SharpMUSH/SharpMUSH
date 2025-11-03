@@ -2,10 +2,12 @@ using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
+using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using A = MarkupString.MarkupStringModule;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -19,6 +21,7 @@ public class AttributeCommandTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private IAttributeService AttributeService => WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
+	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 
 	[Test]
 	[Explicit("Command is implemented but test is failing")]
@@ -58,6 +61,42 @@ public class AttributeCommandTests
 		await NotifyService
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+	}
+
+	[Test]
+	public async ValueTask Test_CopyAttribute_Direct()
+	{
+		// Clear notifications mock
+		NotifyService.ClearReceivedCalls();
+		
+		// Set attribute directly via database
+		var player = (await Database.GetObjectNodeAsync(new(1))).AsPlayer;
+		await Database.SetAttributeAsync(player.Object.DBRef, ["SOURCE_DIRECT_TEST"], A.single("test_string_CPATTR_direct"), player);
+		
+		// Verify source exists
+		var sourceAttr = await Database.GetAttributeAsync(player.Object.DBRef, ["SOURCE_DIRECT_TEST"]);
+		var sourceList = await sourceAttr!.ToListAsync();
+		await Assert.That(sourceList).HasCount().EqualTo(1);
+		
+		// Copy it using command
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@cpattr #1/SOURCE_DIRECT_TEST=#1/DEST_DIRECT_TEST"));
+
+		// Check what notifications were sent
+		var calls = NotifyService.ReceivedCalls().ToList();
+		foreach (var call in calls)
+		{
+			Console.WriteLine($"Notification: {call.GetArguments()[1]}");
+		}
+
+		// Verify destination attribute was created
+		var destAttr = await Database.GetAttributeAsync(player.Object.DBRef, ["DEST_DIRECT_TEST"]);
+		var destList = destAttr == null ? null : await destAttr.ToListAsync();
+		
+		await Assert.That(destList).IsNotNull();
+		if (destList != null)
+		{
+			await Assert.That(destList.Last().Value.ToString()).IsEqualTo("test_string_CPATTR_direct");
+		}
 	}
 
 	[Test]
