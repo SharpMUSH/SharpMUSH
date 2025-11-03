@@ -93,7 +93,7 @@ public partial class Functions
 			var decoded = System.Text.Encoding.UTF8.GetString(bytes);
 			return ValueTask.FromResult<CallState>(decoded);
 		}
-		catch
+		catch (FormatException)
 		{
 			return ValueTask.FromResult<CallState>("#-1 INVALID BASE64 STRING");
 		}
@@ -114,12 +114,10 @@ public partial class Functions
 		
 		try
 		{
-			// If base64 encoded, decode first, otherwise use ISO-8859-1 encoding to read binary data
 			var encryptedBytes = isEncoded 
 				? Convert.FromBase64String(encrypted) 
 				: System.Text.Encoding.GetEncoding("ISO-8859-1").GetBytes(encrypted);
 			
-			// Simple XOR cipher with password
 			var passwordBytes = System.Text.Encoding.UTF8.GetBytes(password);
 			var decrypted = new byte[encryptedBytes.Length];
 			
@@ -130,7 +128,7 @@ public partial class Functions
 			
 			return ValueTask.FromResult<CallState>(System.Text.Encoding.UTF8.GetString(decrypted));
 		}
-		catch
+		catch (Exception ex) when (ex is FormatException || ex is ArgumentException)
 		{
 			return ValueTask.FromResult<CallState>("#-1 DECRYPTION ERROR");
 		}
@@ -195,7 +193,6 @@ public partial class Functions
 			return ValueTask.FromResult<CallState>("#-1 PASSWORD REQUIRED");
 		}
 		
-		// Simple XOR cipher with password
 		var plaintextBytes = System.Text.Encoding.UTF8.GetBytes(plaintext);
 		var passwordBytes = System.Text.Encoding.UTF8.GetBytes(password);
 		var encrypted = new byte[plaintextBytes.Length];
@@ -205,7 +202,6 @@ public partial class Functions
 			encrypted[i] = (byte)(plaintextBytes[i] ^ passwordBytes[i % passwordBytes.Length]);
 		}
 		
-		// Always base64 encode if requested, otherwise use ISO-8859-1 encoding to preserve binary data
 		var result = shouldEncode 
 			? Convert.ToBase64String(encrypted) 
 			: System.Text.Encoding.GetEncoding("ISO-8859-1").GetString(encrypted);
@@ -633,22 +629,20 @@ public partial class Functions
 		var from = MModule.plainText(args["1"].Message).ToLower();
 		var to = MModule.plainText(args["2"].Message).ToLower();
 		
-		// Convert to radians first
 		double radians = from switch
 		{
-			"r" => angle,  // radians
-			"d" => angle * (Math.PI / 180.0),  // degrees
-			"g" => angle * (Math.PI / 200.0),  // gradians
-			_ => angle  // default to radians
+			"r" => angle,
+			"d" => angle * (Math.PI / 180.0),
+			"g" => angle * (Math.PI / 200.0),
+			_ => angle
 		};
 		
-		// Convert from radians to target unit
 		double result = to switch
 		{
-			"r" => radians,  // radians
-			"d" => radians * (180.0 / Math.PI),  // degrees
-			"g" => radians * (200.0 / Math.PI),  // gradians
-			_ => radians  // default to radians
+			"r" => radians,
+			"d" => radians * (180.0 / Math.PI),
+			"g" => radians * (200.0 / Math.PI),
+			_ => radians
 		};
 		
 		return ValueTask.FromResult<CallState>(result);
@@ -933,16 +927,11 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
 		}
 		
-		// Cross product requires exactly 3-dimensional vectors
 		if (list1.Length != 3 || list2.Length != 3)
 		{
 			return ValueTask.FromResult(new CallState("#-1 VECTORS MUST BE 3-DIMENSIONAL"));
 		}
 		
-		// Cross product formula:
-		// x = Ay * Bz - By * Az
-		// y = Az * Bx - Bz * Ax
-		// z = Ax * By - Bx * Ay
 		var x = list1[1].result * list2[2].result - list2[1].result * list1[2].result;
 		var y = list1[2].result * list2[0].result - list2[2].result * list1[0].result;
 		var z = list1[0].result * list2[1].result - list2[0].result * list1[1].result;
@@ -987,7 +976,6 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
 		}
 		
-		// Calculate magnitude: sqrt(a^2 + b^2 + c^2 + ...)
 		var sumOfSquares = list.Sum(x => (double)(x.result * x.result));
 		var magnitude = Math.Sqrt(sumOfSquares);
 		
