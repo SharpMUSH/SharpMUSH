@@ -107,11 +107,10 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var switches = parser.CurrentState.Switches.ToList();
-		var handle = parser.CurrentState.Handle;
+		var httpResponse = parser.CurrentState.HttpResponse;
 
-		// Get the connection data if handle exists
-		var connection = handle.HasValue ? ConnectionService!.Get(handle.Value) : null;
-		var isHttpContext = connection?.ConnectionType == "HTTP";
+		// Determine if we're in HTTP context (HttpResponse will be set by HTTP handler)
+		var isHttpContext = httpResponse is not null;
 
 		// Parse the arguments based on the switch
 		var hasTypeSwitch = switches.Contains("TYPE");
@@ -131,7 +130,7 @@ public partial class Commands
 
 			if (isHttpContext)
 			{
-				ConnectionService!.Update(handle!.Value, "HTTP_CONTENT_TYPE", contentType);
+				httpResponse!.ContentType = contentType;
 			}
 			else
 			{
@@ -173,8 +172,7 @@ public partial class Commands
 
 				if (isHttpContext)
 				{
-					var headerKey = $"HTTP_HEADER_{Guid.NewGuid():N}";
-					ConnectionService!.Update(handle!.Value, headerKey, $"{headerName}: ");
+					httpResponse!.Headers.Add((headerName, string.Empty));
 				}
 				else
 				{
@@ -201,8 +199,7 @@ public partial class Commands
 
 				if (isHttpContext)
 				{
-					var headerKey = $"HTTP_HEADER_{Guid.NewGuid():N}";
-					ConnectionService!.Update(handle!.Value, headerKey, $"{headerName}: {headerValue}");
+					httpResponse!.Headers.Add((headerName, headerValue));
 				}
 				else
 				{
@@ -246,7 +243,7 @@ public partial class Commands
 
 			if (isHttpContext)
 			{
-				ConnectionService!.Update(handle!.Value, "HTTP_STATUS", statusLine);
+				httpResponse!.StatusLine = statusLine;
 			}
 			else
 			{
