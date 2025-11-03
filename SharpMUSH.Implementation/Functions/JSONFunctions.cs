@@ -186,6 +186,9 @@ public partial class Functions
 						result.Add((await objParser.FunctionParse(attrValue))!.Message!);
 					}
 					break;
+				case JsonValueKind.Undefined:
+				default:
+					throw new JsonException();
 			}
 
 			return new CallState(MModule.multipleWithDelimiter(osep, result));
@@ -214,7 +217,7 @@ public partial class Functions
 			var jsonPointer = JsonPointer.Parse(jsonPath.AsJsonPointer());
 			var jsonDoc2 = json2 is null ? null : JsonNode.Parse(json2);
 
-			if ((action is "insert" or "replace" or "set" or "patch") && string.IsNullOrWhiteSpace(json2))
+			if (action is "insert" or "replace" or "set" or "patch" && string.IsNullOrWhiteSpace(json2))
 			{
 				return new CallState("#-1 MISSING JSON2");
 			}
@@ -224,7 +227,7 @@ public partial class Functions
 				"insert" => new JsonPatch(PatchOperation.Add(jsonPointer, jsonDoc2)),
 				"replace" => new JsonPatch(PatchOperation.Replace(jsonPointer, jsonDoc2!)),
 				"set" => new JsonPatch(PatchOperation.Replace(jsonPointer, jsonDoc2!)),
-				// "patch" => JsonSerializer.Deserialize<JsonPatch>(jsonDoc2) ||  new JsonPatch(PatchOperation.(jsonPointer, jsonDoc2!)),
+				// TODO: "patch" => JsonSerializer.Deserialize<JsonPatch>(jsonDoc2) ||  new JsonPatch(PatchOperation.(jsonPointer, jsonDoc2!)),
 				"remove" => new JsonPatch(PatchOperation.Remove(jsonPointer)),
 				"sort" => new JsonPatch(PatchOperation.Replace(jsonPointer, jsonDoc /* A sorted version! */)),
 				_ => new Error<string>("Invalid Operation"),
@@ -310,8 +313,8 @@ public partial class Functions
 			}
 		}
 
-		bool isWizard = executor.IsGod() || await executor.IsWizard();
-		bool hasSendOOBPower = await ArgHelpers.HasObjectPowers(executor.Object(), "Send_OOB");
+		var isWizard = executor.IsGod() || await executor.IsWizard();
+		var hasSendOOBPower = await ArgHelpers.HasObjectPowers(executor.Object(), "Send_OOB");
 
 		int sentCount = 0;
 
@@ -336,7 +339,7 @@ public partial class Functions
 				continue;
 			}
 
-			bool isSelf = executor.Object().DBRef == located.Object().DBRef;
+			var isSelf = executor.Object().DBRef == located.Object().DBRef;
 
 			if (!isWizard && !isSelf && !hasSendOOBPower)
 			{
