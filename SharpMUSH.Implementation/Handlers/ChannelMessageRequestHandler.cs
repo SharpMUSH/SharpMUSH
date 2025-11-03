@@ -6,7 +6,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Handlers;
 
-public partial class ChannelMessageRequestHandler(
+public class ChannelMessageRequestHandler(
 	IPermissionService permissionService,
 	INotifyService notifyService,
 	ILogger<ChannelMessageRequestHandler> logger)
@@ -37,14 +37,11 @@ public partial class ChannelMessageRequestHandler(
 
 				if (!isGagged && wantsToHear)
 				{
-					await notifyService.Notify(member, message);
+					await notifyService.Notify(member, message, notification.Source.Known, notification.MessageType);
 				}
 			}
 
-			LogChannelMessage(logger, MModule.serialize(message));
+			logger.LogInformation("{ChannelMessage}", MModule.serialize(message));
 		}
 	}
-
-	[LoggerMessage(LogLevel.Information, "{ChannelMessage}")]
-	static partial void LogChannelMessage(ILogger<ChannelMessageRequestHandler> logger, string channelMessage);
 }

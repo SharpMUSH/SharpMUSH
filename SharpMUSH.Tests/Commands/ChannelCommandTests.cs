@@ -63,11 +63,13 @@ public class ChannelCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask ChatCommand()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chat {TestChannelName}=Test message"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chat {TestChannelName}=ChatCommand: Test message"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString() == "<TestCommandChannel> ChatCommand: Test message") ||
+				(msg.IsT1 && msg.AsT1 == "<TestCommandChannel> ChatCommand: Test message")), Arg.Any<AnySharpObject>());
 	}
 
 	[Test]
@@ -84,25 +86,27 @@ public class ChannelCommandTests
 	[Test]
 	public async ValueTask CemitCommand()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@cemit {TestChannelName}=Test message"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@cemit {TestChannelName}=CemitCommand: Test message"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(),
-				"Test message",
-				Arg.Any<AnySharpObject>(),
-				Arg.Any<INotifyService.NotificationType>());
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString() == $"<{TestChannelName}> CemitCommand: Test message") ||
+				(msg.IsT1 && msg.AsT1 == $"<{TestChannelName}> CemitCommand: Test message")), 
+				Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Emit);
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask NscemitCommand()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@nscemit {TestChannelName}=Test message"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@nscemit {TestChannelName}=NscemitCommand: Test message"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString() == $"<{TestChannelName}> NscemitCommand: Test message") ||
+				(msg.IsT1 && msg.AsT1 == $"<{TestChannelName}> NscemitCommand: Test message")), 
+				Arg.Any<AnySharpObject>(), INotifyService.NotificationType.NSEmit);
 	}
 
 	[Test]
