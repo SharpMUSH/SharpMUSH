@@ -66,31 +66,28 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask Test_CopyAttribute_Direct()
 	{
-		// Clear notifications mock
-		NotifyService.ClearReceivedCalls();
-		
-		// Set attribute directly via database
+		// Set attribute directly via database with unique name
 		var player = (await Database.GetObjectNodeAsync(new(1))).AsPlayer;
-		await Database.SetAttributeAsync(player.Object.DBRef, ["SOURCE_DIRECT_TEST"], A.single("test_string_CPATTR_direct"), player);
+		await Database.SetAttributeAsync(player.Object.DBRef, ["SOURCE_DIRECT_CPATTR"], A.single("test_string_CPATTR_direct"), player);
 		
 		// Verify source exists
-		var sourceAttr = await Database.GetAttributeAsync(player.Object.DBRef, ["SOURCE_DIRECT_TEST"]);
+		var sourceAttr = await Database.GetAttributeAsync(player.Object.DBRef, ["SOURCE_DIRECT_CPATTR"]);
 		var sourceList = await sourceAttr!.ToListAsync();
 		await Assert.That(sourceList).HasCount().EqualTo(1);
 		
 		// Copy it using command
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@cpattr #1/SOURCE_DIRECT_TEST=#1/DEST_DIRECT_TEST"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@cpattr #1/SOURCE_DIRECT_CPATTR=#1/DEST_DIRECT_CPATTR"));
 
-		// Verify command sent a success notification using Arg.Is
+		// Verify command sent a success notification with unique attribute name
 		await NotifyService
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<string>(s => s.Contains("copied") || s.Contains("Attribute copied"))
+				Arg.Is<string>(s => s.Contains("copied") && s.Contains("1 destination"))
 			);
 
 		// Verify destination attribute was created
-		var destAttr = await Database.GetAttributeAsync(player.Object.DBRef, ["DEST_DIRECT_TEST"]);
+		var destAttr = await Database.GetAttributeAsync(player.Object.DBRef, ["DEST_DIRECT_CPATTR"]);
 		var destList = destAttr == null ? null : await destAttr.ToListAsync();
 		
 		await Assert.That(destList).IsNotNull();
@@ -103,33 +100,30 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask Test_CopyAttribute_Basic()
 	{
-		// Clear notifications
-		NotifyService.ClearReceivedCalls();
-		
 		// First set an attribute with unique test string
-		await Parser.CommandParse(1, ConnectionService, MModule.single("&SOURCE_CPATTR_TEST1 #1=test_string_CPATTR_basic"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&SOURCE_CPATTR_BASIC #1=test_string_CPATTR_basic_unique"));
 		
 		// Copy it
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@cpattr #1/SOURCE_CPATTR_TEST1=#1/DEST_CPATTR_TEST1"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@cpattr #1/SOURCE_CPATTR_BASIC=#1/DEST_CPATTR_BASIC"));
 
-		// Verify command executed with success notification
+		// Verify command executed with success notification mentioning destination
 		await NotifyService
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<string>(s => s.Contains("copied") && s.Contains("destination"))
+				Arg.Is<string>(s => s.Contains("Attribute copied to 1 destination"))
 			);
 
 		// Verify destination attribute was created
 		var obj = await Mediator.Send(new GetObjectNodeQuery(new(1)));
-		var destAttr = await AttributeService.GetAttributeAsync(obj.AsPlayer, obj.AsPlayer, "DEST_CPATTR_TEST1",
+		var destAttr = await AttributeService.GetAttributeAsync(obj.AsPlayer, obj.AsPlayer, "DEST_CPATTR_BASIC",
 			IAttributeService.AttributeMode.Read, false);
 
 		await Assert.That(destAttr.IsAttribute).IsTrue();
-		await Assert.That(MModule.plainText(destAttr.AsAttribute.Last().Value)).IsEqualTo("test_string_CPATTR_basic");
+		await Assert.That(MModule.plainText(destAttr.AsAttribute.Last().Value)).IsEqualTo("test_string_CPATTR_basic_unique");
 		
 		// Verify source still exists
-		var sourceAttr = await AttributeService.GetAttributeAsync(obj.AsPlayer, obj.AsPlayer, "SOURCE_CPATTR_TEST1",
+		var sourceAttr = await AttributeService.GetAttributeAsync(obj.AsPlayer, obj.AsPlayer, "SOURCE_CPATTR_BASIC",
 			IAttributeService.AttributeMode.Read, false);
 		await Assert.That(sourceAttr.IsAttribute).IsTrue();
 	}
@@ -137,21 +131,18 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask Test_CopyAttribute_MultipleDestinations()
 	{
-		// Clear notifications
-		NotifyService.ClearReceivedCalls();
-		
-		// Set source attribute
-		await Parser.CommandParse(1, ConnectionService, MModule.single("&SOURCE_CPATTR_MULTI #1=test_string_CPATTR_multi"));
+		// Set source attribute with unique name
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&SOURCE_CPATTR_MULTI_UNIQUE #1=test_string_CPATTR_multi_value"));
 		
 		// Copy to multiple destinations
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@cpattr #1/SOURCE_CPATTR_MULTI=#1/DEST1_CPATTR_MULTI,#1/DEST2_CPATTR_MULTI"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@cpattr #1/SOURCE_CPATTR_MULTI_UNIQUE=#1/DEST1_CPATTR_MULTI,#1/DEST2_CPATTR_MULTI"));
 
-		// Verify command executed successfully with notification mentioning count
+		// Verify command executed successfully with notification mentioning 2 destinations
 		await NotifyService
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<string>(s => s.Contains("copied") && s.Contains("2"))
+				Arg.Is<string>(s => s.Contains("Attribute copied to 2 destination"))
 			);
 
 		var obj = await Mediator.Send(new GetObjectNodeQuery(new(1)));
@@ -160,44 +151,41 @@ public class AttributeCommandTests
 		var dest1Attr = await AttributeService.GetAttributeAsync(obj.AsPlayer, obj.AsPlayer, "DEST1_CPATTR_MULTI",
 			IAttributeService.AttributeMode.Read, false);
 		await Assert.That(dest1Attr.IsAttribute).IsTrue();
-		await Assert.That(MModule.plainText(dest1Attr.AsAttribute.Last().Value)).IsEqualTo("test_string_CPATTR_multi");
+		await Assert.That(MModule.plainText(dest1Attr.AsAttribute.Last().Value)).IsEqualTo("test_string_CPATTR_multi_value");
 		
 		var dest2Attr = await AttributeService.GetAttributeAsync(obj.AsPlayer, obj.AsPlayer, "DEST2_CPATTR_MULTI",
 			IAttributeService.AttributeMode.Read, false);
 		await Assert.That(dest2Attr.IsAttribute).IsTrue();
-		await Assert.That(MModule.plainText(dest2Attr.AsAttribute.Last().Value)).IsEqualTo("test_string_CPATTR_multi");
+		await Assert.That(MModule.plainText(dest2Attr.AsAttribute.Last().Value)).IsEqualTo("test_string_CPATTR_multi_value");
 	}
 
 	[Test]
 	public async ValueTask Test_MoveAttribute_Basic()
 	{
-		// Clear notifications
-		NotifyService.ClearReceivedCalls();
-		
 		// First set an attribute with unique test string
-		await Parser.CommandParse(1, ConnectionService, MModule.single("&MOVESOURCE_TEST1 #1=test_string_MVATTR_basic"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&MOVESOURCE_UNIQUE #1=test_string_MVATTR_basic_moved"));
 		
 		// Move it
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@mvattr #1/MOVESOURCE_TEST1=#1/MOVEDEST_TEST1"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@mvattr #1/MOVESOURCE_UNIQUE=#1/MOVEDEST_UNIQUE"));
 
-		// Verify command executed successfully with notification
+		// Verify command executed successfully with notification about move
 		await NotifyService
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<string>(s => s.Contains("moved") || (s.Contains("Attribute") && s.Contains("destination")))
+				Arg.Is<string>(s => s.Contains("Attribute moved to 1 destination"))
 			);
 
 		var obj = await Mediator.Send(new GetObjectNodeQuery(new(1)));
 		
 		// Verify destination attribute was created
-		var destAttr = await AttributeService.GetAttributeAsync(obj.AsPlayer, obj.AsPlayer, "MOVEDEST_TEST1",
+		var destAttr = await AttributeService.GetAttributeAsync(obj.AsPlayer, obj.AsPlayer, "MOVEDEST_UNIQUE",
 			IAttributeService.AttributeMode.Read, false);
 		await Assert.That(destAttr.IsAttribute).IsTrue();
-		await Assert.That(MModule.plainText(destAttr.AsAttribute.Last().Value)).IsEqualTo("test_string_MVATTR_basic");
+		await Assert.That(MModule.plainText(destAttr.AsAttribute.Last().Value)).IsEqualTo("test_string_MVATTR_basic_moved");
 		
 		// Verify source no longer exists
-		var sourceAttr = await AttributeService.GetAttributeAsync(obj.AsPlayer, obj.AsPlayer, "MOVESOURCE_TEST1",
+		var sourceAttr = await AttributeService.GetAttributeAsync(obj.AsPlayer, obj.AsPlayer, "MOVESOURCE_UNIQUE",
 			IAttributeService.AttributeMode.Read, false);
 		await Assert.That(sourceAttr.IsAttribute).IsFalse();
 	}
@@ -205,36 +193,33 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask Test_WipeAttributes_AllAttributes()
 	{
-		// Clear notifications
-		NotifyService.ClearReceivedCalls();
-		
 		// Set some attributes with unique test strings
-		await Parser.CommandParse(1, ConnectionService, MModule.single("&WIPE1_TEST #1=test_string_WIPE_val1"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("&WIPE2_TEST #1=test_string_WIPE_val2"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&WIPE1_UNIQUE #1=test_string_WIPE_val1_unique"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&WIPE2_UNIQUE #1=test_string_WIPE_val2_unique"));
 		
 		// Verify they exist
 		var obj = await Mediator.Send(new GetObjectNodeQuery(new(1)));
-		var attr1Before = await AttributeService.GetAttributeAsync(obj.AsPlayer, obj.AsPlayer, "WIPE1_TEST",
+		var attr1Before = await AttributeService.GetAttributeAsync(obj.AsPlayer, obj.AsPlayer, "WIPE1_UNIQUE",
 			IAttributeService.AttributeMode.Read, false);
 		await Assert.That(attr1Before.IsAttribute).IsTrue();
 		
 		// Wipe them with pattern
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@wipe #1/WIPE*_TEST"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@wipe #1/WIPE*_UNIQUE"));
 
-		// Verify command sent notification about wiping
+		// Verify command sent notification about wiping with the pattern
 		await NotifyService
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<string>(s => s.Contains("Wiped") || s.Contains("wiped"))
+				Arg.Is<string>(s => s.Contains("Wiped attributes matching WIPE*_UNIQUE"))
 			);
 
 		// Verify they're gone
-		var attr1After = await AttributeService.GetAttributeAsync(obj.AsPlayer, obj.AsPlayer, "WIPE1_TEST",
+		var attr1After = await AttributeService.GetAttributeAsync(obj.AsPlayer, obj.AsPlayer, "WIPE1_UNIQUE",
 			IAttributeService.AttributeMode.Read, false);
 		await Assert.That(attr1After.IsAttribute).IsFalse();
 		
-		var attr2After = await AttributeService.GetAttributeAsync(obj.AsPlayer, obj.AsPlayer, "WIPE2_TEST",
+		var attr2After = await AttributeService.GetAttributeAsync(obj.AsPlayer, obj.AsPlayer, "WIPE2_UNIQUE",
 			IAttributeService.AttributeMode.Read, false);
 		await Assert.That(attr2After.IsAttribute).IsFalse();
 	}
@@ -242,14 +227,22 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask Test_AtrLock_LockAndUnlock()
 	{
-		// Set an attribute
-		await Parser.CommandParse(1, ConnectionService, MModule.single("&LOCKTEST_ATTR #1=test_string_ATRLOCK_value"));
+		// Set an attribute with unique name
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&LOCKTEST_UNIQUE_ATTR #1=test_string_ATRLOCK_value_unique"));
 		
 		// Lock it
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@atrlock #1/LOCKTEST_ATTR=on"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@atrlock #1/LOCKTEST_UNIQUE_ATTR=on"));
+
+		// Verify lock notification sent
+		await NotifyService
+			.Received()
+			.Notify(
+				Arg.Any<AnySharpObject>(),
+				Arg.Is<string>(s => s.Contains("Attribute LOCKTEST_UNIQUE_ATTR locked"))
+			);
 
 		var obj = await Mediator.Send(new GetObjectNodeQuery(new(1)));
-		var attr = await AttributeService.GetAttributeAsync(obj.AsPlayer, obj.AsPlayer, "LOCKTEST_ATTR",
+		var attr = await AttributeService.GetAttributeAsync(obj.AsPlayer, obj.AsPlayer, "LOCKTEST_UNIQUE_ATTR",
 			IAttributeService.AttributeMode.Read, false);
 		
 		await Assert.That(attr.IsAttribute).IsTrue();
@@ -259,9 +252,17 @@ public class AttributeCommandTests
 		await Assert.That(isLocked).IsTrue();
 		
 		// Unlock it
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@atrlock #1/LOCKTEST_ATTR=off"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@atrlock #1/LOCKTEST_UNIQUE_ATTR=off"));
 		
-		attr = await AttributeService.GetAttributeAsync(obj.AsPlayer, obj.AsPlayer, "LOCKTEST_ATTR",
+		// Verify unlock notification sent
+		await NotifyService
+			.Received()
+			.Notify(
+				Arg.Any<AnySharpObject>(),
+				Arg.Is<string>(s => s.Contains("Attribute LOCKTEST_UNIQUE_ATTR unlocked"))
+			);
+
+		attr = await AttributeService.GetAttributeAsync(obj.AsPlayer, obj.AsPlayer, "LOCKTEST_UNIQUE_ATTR",
 			IAttributeService.AttributeMode.Read, false);
 		isLocked = attr.AsAttribute.Last().Flags.Any(f => f.Name.Equals("LOCKED", StringComparison.OrdinalIgnoreCase));
 		await Assert.That(isLocked).IsFalse();
@@ -270,16 +271,19 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask Test_AtrLock_QueryStatus()
 	{
-		// Set an attribute
-		await Parser.CommandParse(1, ConnectionService, MModule.single("&QUERYLOCK_ATTR #1=test_value"));
+		// Set an attribute with unique name
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&QUERYLOCK_UNIQUE_ATTR #1=test_value_unique_query"));
 		
 		// Query lock status (no =on or =off)
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@atrlock #1/QUERYLOCK_ATTR"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@atrlock #1/QUERYLOCK_UNIQUE_ATTR"));
 
-		// Should receive a notification about lock status
+		// Should receive a notification about lock status with the attribute name
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("unlocked") || s.Contains("locked")));
+			.Notify(
+				Arg.Any<AnySharpObject>(), 
+				Arg.Is<string>(s => s.Contains("Attribute QUERYLOCK_UNIQUE_ATTR is") && (s.Contains("unlocked") || s.Contains("locked")))
+			);
 	}
 
 	[Test]
