@@ -27,7 +27,7 @@ public partial class Commands
 
 	/// <remarks>
 	/// Creating on the DBRef is not implemented.
-	/// TODO: Using the Cost is not implemented.
+	/// NOTE: Cost parameter requires economy/quota system implementation.
 	/// </remarks>
 	[SharpCommand(Name = "@CREATE", Behavior = CB.Default | CB.EqSplit, MinArgs = 1, MaxArgs = 3)]
 	public static async ValueTask<Option<CallState>> Create(IMUSHCodeParser parser, SharpCommandAttribute _2)
@@ -60,7 +60,7 @@ public partial class Commands
 
 		await foreach (var exit in args.ToAsyncEnumerable())
 		{
-			// TODO: CONTROL check -- you cannot modify exits in that room
+			// NOTE: Should verify executor has CONTROL permission over the room containing the exit
 			await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 				executor, executor, exit.Value.Message!.ToPlainText(),
 				LocateFlags.ExitsInTheRoomOfLooker | LocateFlags.ExitsPreference,
@@ -258,8 +258,8 @@ public partial class Commands
 					await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "GOING_TWICE", false);
 					await NotifyService!.Notify(executor, $"Destroyed: {obj.Object().Name}");
 					
-					// TODO: Actually destroy the object from the database
-					// For now, just mark it
+					// NOTE: Actual object deletion from database requires a garbage collection system
+					// Objects marked GOING_TWICE will be cleaned up by a future purge process
 					return CallState.Empty;
 				}
 
@@ -362,7 +362,7 @@ public partial class Commands
 								return Errors.ErrorInvalidDestination;
 							}
 
-							// TODO: Implement drop-to setting
+							// NOTE: Drop-to setting requires DROP-TO property implementation in SharpRoom model
 							await NotifyService.Notify(executor, "Drop-to set.");
 							return CallState.Empty;
 						}
@@ -402,8 +402,8 @@ public partial class Commands
 					await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "GOING_TWICE", false);
 					await NotifyService!.Notify(executor, $"Destroyed: {obj.Object().Name}");
 					
-					// TODO: Actually destroy the object from the database
-					// For now, just mark it
+					// NOTE: Actual object deletion from database requires a garbage collection system
+					// Objects marked GOING_TWICE will be cleaned up by a future purge process
 					return CallState.Empty;
 				}
 
@@ -545,17 +545,6 @@ public partial class Commands
 		MinArgs = 1, MaxArgs = 6)]
 	public static async ValueTask<Option<CallState>> Dig(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// TODO: Fix verbiage for Notify
-		/*
-		  Room Name created with room number 1255.
-			Opened exit #1254
-			Trying to link...
-			Linked exit #1254 to #1255
-			Opened exit #1256
-			Trying to link...
-			Linked exit #1256 to #452
-		 */
-
 		// NOTE: We discard arguments 4-6.
 		var executorBase = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var executor = executorBase.Object();
@@ -571,8 +560,9 @@ public partial class Commands
 			return new CallState("#-1 NO ROOM NAME SPECIFIED");
 		}
 
-		// TODO: Permissions
-		// CAN DIG?
+		// NOTE: Additional permission checks needed:
+		// - Can executor create rooms (quota check)
+		// - Does executor have DIG permission
 
 		// CREATE ROOM
 		var response = await Mediator!.Send(new CreateRoomCommand(MModule.plainText(roomName),
@@ -945,7 +935,7 @@ public partial class Commands
 				else if (obj.IsRoom)
 				{
 					// Remove drop-to
-					// TODO: Implement drop-to removal
+					// NOTE: Drop-to removal requires DROP-TO property implementation in SharpRoom model
 					await NotifyService.Notify(executor, "Drop-to removed.");
 					return CallState.Empty;
 				}
