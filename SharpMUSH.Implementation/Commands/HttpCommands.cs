@@ -101,7 +101,7 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	[SharpCommand(Name = "@RESPOND", Switches = ["HEADER", "TYPE"], Behavior = CB.Default | CB.NoGagged,
+	[SharpCommand(Name = "@RESPOND", Switches = ["HEADER", "TYPE"], Behavior = CB.Default | CB.NoGagged | CB.EqSplit,
 		MinArgs = 1, MaxArgs = 2)]
 	public static async ValueTask<Option<CallState>> Respond(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -140,87 +140,70 @@ public partial class Commands
 		else if (hasHeaderSwitch)
 		{
 			// @respond/header <name>=<value>
-			// Without EqSplit, need to manually parse the equals sign
-			parser.CurrentState.Arguments.TryGetValue("0", out var headerArg);
+			// With EqSplit, arg 0 is header name, arg 1 is header value
+			parser.CurrentState.Arguments.TryGetValue("0", out var headerNameArg);
+			parser.CurrentState.Arguments.TryGetValue("1", out var headerValueArg);
 
-			if (headerArg is null)
+			if (headerNameArg is null)
 			{
 				await NotifyService!.Notify(executor, "Header required.");
 				return new CallState("#-1 HEADER REQUIRED");
 			}
 
-			var headerText = headerArg.Message?.ToPlainText() ?? string.Empty;
-			var equalsIndex = headerText.IndexOf('=');
+			var headerName = headerNameArg.Message?.ToPlainText()?.Trim() ?? string.Empty;
+			var headerValue = headerValueArg?.Message?.ToPlainText()?.Trim() ?? string.Empty;
 
-			if (equalsIndex < 0)
+			if (string.IsNullOrWhiteSpace(headerName))
 			{
-				// No equals sign, treat entire thing as header name with empty value
-				var headerName = headerText.Trim();
-				
-				if (string.IsNullOrWhiteSpace(headerName))
-				{
-					await NotifyService!.Notify(executor, "Header name cannot be empty.");
-					return new CallState("#-1 HEADER NAME CANNOT BE EMPTY");
-				}
+				await NotifyService!.Notify(executor, "Header name cannot be empty.");
+				return new CallState("#-1 HEADER NAME CANNOT BE EMPTY");
+			}
 
-				// Prevent setting Content-Length as per documentation
-				if (headerName.Equals("Content-Length", StringComparison.OrdinalIgnoreCase))
-				{
-					await NotifyService!.Notify(executor, "Cannot set Content-Length header.");
-					return new CallState("#-1 CANNOT SET CONTENT-LENGTH HEADER");
-				}
+			// Prevent setting Content-Length as per documentation
+			if (headerName.Equals("Content-Length", StringComparison.OrdinalIgnoreCase))
+			{
+				await NotifyService!.Notify(executor, "Cannot set Content-Length header.");
+				return new CallState("#-1 CANNOT SET CONTENT-LENGTH HEADER");
+			}
 
-				if (isHttpContext)
-				{
-					httpResponse!.Headers.Add((headerName, string.Empty));
-				}
-				else
-				{
-					await NotifyService!.Notify(executor, $"(HTTP): Header {headerName}: ");
-				}
+			if (isHttpContext)
+			{
+				httpResponse!.Headers.Add((headerName, headerValue));
 			}
 			else
 			{
-				var headerName = headerText[..equalsIndex].Trim();
-				var headerValue = headerText[(equalsIndex + 1)..].Trim();
-
-				if (string.IsNullOrWhiteSpace(headerName))
-				{
-					await NotifyService!.Notify(executor, "Header name cannot be empty.");
-					return new CallState("#-1 HEADER NAME CANNOT BE EMPTY");
-				}
-
-				// Prevent setting Content-Length as per documentation
-				if (headerName.Equals("Content-Length", StringComparison.OrdinalIgnoreCase))
-				{
-					await NotifyService!.Notify(executor, "Cannot set Content-Length header.");
-					return new CallState("#-1 CANNOT SET CONTENT-LENGTH HEADER");
-				}
-
-				if (isHttpContext)
-				{
-					httpResponse!.Headers.Add((headerName, headerValue));
-				}
-				else
-				{
-					await NotifyService!.Notify(executor, $"(HTTP): Header {headerName}: {headerValue}");
-				}
+				await NotifyService!.Notify(executor, $"(HTTP): Header {headerName}: {headerValue}");
 			}
 		}
 		else
 		{
 			// @respond <code> <text>
-			parser.CurrentState.Arguments.TryGetValue("0", out var statusCodeArg);
-			parser.CurrentState.Arguments.TryGetValue("1", out var statusTextArg);
+			// With EqSplit, the entire "code text" comes in arg[0], need to manually split on first space
+			parser.CurrentState.Arguments.TryGetValue("0", out var statusArg);
 
-			if (statusCodeArg is null)
+			if (statusArg is null)
 			{
 				await NotifyService!.Notify(executor, "Status code required.");
 				return new CallState("#-1 STATUS CODE REQUIRED");
 			}
 
-			var statusCodeText = statusCodeArg.Message?.ToPlainText() ?? string.Empty;
-			var statusText = statusTextArg?.Message?.ToPlainText() ?? string.Empty;
+			var fullStatusText = statusArg.Message?.ToPlainText() ?? string.Empty;
+			
+			// Split on first space to separate code from text
+			var spaceIndex = fullStatusText.IndexOf(' ');
+			string statusCodeText;
+			string statusText;
+			
+			if (spaceIndex > 0)
+			{
+				statusCodeText = fullStatusText[..spaceIndex].Trim();
+				statusText = fullStatusText[(spaceIndex + 1)..].Trim();
+			}
+			else
+			{
+				statusCodeText = fullStatusText.Trim();
+				statusText = string.Empty;
+			}
 
 			// Validate status code is 3 digits
 			if (!int.TryParse(statusCodeText, out var statusCode) || statusCode < 100 || statusCode > 999)
