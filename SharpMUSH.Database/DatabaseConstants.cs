@@ -18,6 +18,7 @@ public static class DatabaseConstants
 	public const string AttributeFlags = "node_attribute_flags";
 	public const string Channels = "node_channels";
 	public const string Mails = "node_mails";
+	public const string Logs = "logs";
 	
 	public static readonly string[] verticesContainer = [Rooms, Players, Things];
 	public static readonly string[] verticesContent = [Players, Exits, Things];
