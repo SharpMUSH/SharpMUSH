@@ -267,7 +267,16 @@ public partial class Commands
 				await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "GOING", false);
 				await NotifyService!.Notify(executor, $"Marked for destruction: {obj.Object().Name}");
 				
-				// TODO: Trigger @adestroy attribute
+				// Trigger @adestroy attribute if it exists
+				try
+				{
+					await AttributeService!.EvaluateAttributeFunctionAsync(
+						parser, executor, obj, "ADESTROY", new Dictionary<string, CallState>(), evalParent: false);
+				}
+				catch
+				{
+					// Ignore errors from @adestroy evaluation
+				}
 				
 				return CallState.Empty;
 			}
@@ -402,7 +411,16 @@ public partial class Commands
 				await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "GOING", false);
 				await NotifyService!.Notify(executor, $"Marked for destruction: {obj.Object().Name}");
 				
-				// TODO: Trigger @adestroy attribute
+				// Trigger @adestroy attribute if it exists
+				try
+				{
+					await AttributeService!.EvaluateAttributeFunctionAsync(
+						parser, executor, obj, "ADESTROY", new Dictionary<string, CallState>(), evalParent: false);
+				}
+				catch
+				{
+					// Ignore errors from @adestroy evaluation
+				}
 				
 				return CallState.Empty;
 			}
@@ -445,7 +463,16 @@ public partial class Commands
 
 				await NotifyService.Notify(executor, $"Spared from destruction: {obj.Object().Name}");
 				
-				// TODO: Trigger @startup attribute
+				// Trigger @startup attribute if it exists
+				try
+				{
+					await AttributeService!.EvaluateAttributeFunctionAsync(
+						parser, executor, obj, "STARTUP", new Dictionary<string, CallState>(), evalParent: false);
+				}
+				catch
+				{
+					// Ignore errors from @startup evaluation
+				}
 				
 				return CallState.Empty;
 			}
