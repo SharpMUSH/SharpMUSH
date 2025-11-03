@@ -86,6 +86,16 @@ module MarkupStringModule =
                     0
 
             getLengthInternal content
+            
+        let rec msOptimize (ms: MarkupString) =
+            // TODO: Depth-First optimization of nested MarkupStrings
+            // This function should go to the bottom of each tree branch first
+            // From there, it looks for any Content that, left to right, have the same MarkupDetails
+            // If so, it should merge their Content lists together.
+            // As it travels up, it should also check that the current MarkupDetails is the same as the child MarkupDetails
+            // If so, and the child is the only Content, it should lift the child's Content up to the parent.
+            
+            ms
 
         let isMarkedUp (m: MarkupTypes) =
             match m with
