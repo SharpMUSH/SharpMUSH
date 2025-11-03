@@ -222,12 +222,28 @@ public partial class Functions
 				return new CallState("#-1 MISSING JSON2");
 			}
 
+			if (action == "patch")
+			{
+				var target = jsonPointer.TryEvaluate(jsonDoc, out var targetNode) ? targetNode : null;
+				if (target == null)
+				{
+					return new CallState("#-1 PATH NOT FOUND");
+				}
+
+				var mergedNode = ApplyMergePatch(target, jsonDoc2!);
+				var patchOp = new JsonPatch(PatchOperation.Replace(jsonPointer, mergedNode));
+				var patched = patchOp.Apply(jsonDoc);
+				
+				return patched.IsSuccess 
+					? new CallState(patched.Result!.ToString()) 
+					: new CallState($"#-1 PATCH FAILED: {patched.Error}");
+			}
+
 			OneOf<JsonPatch,Error<string>> operation = action switch
 			{
 				"insert" => new JsonPatch(PatchOperation.Add(jsonPointer, jsonDoc2)),
 				"replace" => new JsonPatch(PatchOperation.Replace(jsonPointer, jsonDoc2!)),
 				"set" => new JsonPatch(PatchOperation.Replace(jsonPointer, jsonDoc2!)),
-				// TODO: "patch" => JsonSerializer.Deserialize<JsonPatch>(jsonDoc2) ||  new JsonPatch(PatchOperation.(jsonPointer, jsonDoc2!)),
 				"remove" => new JsonPatch(PatchOperation.Remove(jsonPointer)),
 				"sort" => new JsonPatch(PatchOperation.Replace(jsonPointer, jsonDoc /* A sorted version! */)),
 				_ => new Error<string>("Invalid Operation"),
@@ -238,16 +254,54 @@ public partial class Functions
 				return new CallState("#-1 INVALID OPERATION");
 			}
 
-			var patched = operation.AsT0.Apply(jsonDoc);
+			var patchResult = operation.AsT0.Apply(jsonDoc);
 			
-			return patched.IsSuccess 
-				? new CallState(patched.Result!.ToString()) 
-				: new CallState($"#-1 PATCH FAILED: {patched.Error}");
+			return patchResult.IsSuccess 
+				? new CallState(patchResult.Result!.ToString()) 
+				: new CallState($"#-1 PATCH FAILED: {patchResult.Error}");
 		}
 		catch (JsonException)
 		{
 			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, "json_mod"));
 		}
+	}
+
+	private static JsonNode? ApplyMergePatch(JsonNode? target, JsonNode patch)
+	{
+		if (patch is not JsonObject patchObj)
+		{
+			return patch.DeepClone();
+		}
+
+		if (target is not JsonObject targetObj)
+		{
+			targetObj = new JsonObject();
+		}
+		else
+		{
+			targetObj = targetObj.DeepClone() as JsonObject ?? new JsonObject();
+		}
+
+		foreach (var kvp in patchObj)
+		{
+			if (kvp.Value is null)
+			{
+				targetObj.Remove(kvp.Key);
+			}
+			else
+			{
+				if (targetObj.TryGetPropertyValue(kvp.Key, out var existingValue))
+				{
+					targetObj[kvp.Key] = ApplyMergePatch(existingValue, kvp.Value);
+				}
+				else
+				{
+					targetObj[kvp.Key] = kvp.Value.DeepClone();
+				}
+			}
+		}
+
+		return targetObj;
 	}
 
 	[SharpFunction(Name = "json_query", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
