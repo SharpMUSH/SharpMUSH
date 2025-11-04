@@ -1322,39 +1322,181 @@ LOCATE()
 	}
 
 	[SharpFunction(Name = "orflags", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> OrFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> OrFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		// orflags() checks if object has ANY of the specified flags
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var objArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var flagsArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+			parser, executor, executor, objArg, LocateFlags.All,
+			async found =>
+			{
+				var flags = flagsArg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+				foreach (var flag in flags)
+				{
+					if (await found.HasFlag(flag))
+					{
+						return new CallState(true);
+					}
+				}
+				return new CallState(false);
+			});
 	}
 
 	[SharpFunction(Name = "orlflags", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> OrListFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> OrListFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		// orlflags() checks a list of objects to see if ANY have ANY of the flags
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var objListArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var flagsArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+
+		var objList = objListArg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		var flags = flagsArg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+		foreach (var objRef in objList)
+		{
+			var maybeObj = await LocateService!.Locate(parser, executor, executor, objRef, LocateFlags.All);
+			if (maybeObj.IsValid())
+			{
+				var found = maybeObj.AsAnyObject;
+				foreach (var flag in flags)
+				{
+					if (await found.HasFlag(flag))
+					{
+						return new CallState(true);
+					}
+				}
+			}
+		}
+		return new CallState(false);
 	}
 
 	[SharpFunction(Name = "orlpowers", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> OrListPowers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> OrListPowers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		// orlpowers() checks a list of objects to see if ANY have ANY of the powers
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var objListArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var powersArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+
+		var objList = objListArg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		var powers = powersArg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+		foreach (var objRef in objList)
+		{
+			var maybeObj = await LocateService!.Locate(parser, executor, executor, objRef, LocateFlags.All);
+			if (maybeObj.IsValid())
+			{
+				var found = maybeObj.AsAnyObject;
+				foreach (var power in powers)
+				{
+					if (await found.HasPower(power))
+					{
+						return new CallState(true);
+					}
+				}
+			}
+		}
+		return new CallState(false);
 	}
 
 	[SharpFunction(Name = "andflags", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> AndFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> AndFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		// andflags() checks if object has ALL of the specified flags
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var objArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var flagsArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+			parser, executor, executor, objArg, LocateFlags.All,
+			async found =>
+			{
+				var flags = flagsArg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+				foreach (var flag in flags)
+				{
+					if (!await found.HasFlag(flag))
+					{
+						return new CallState(false);
+					}
+				}
+				return new CallState(true);
+			});
 	}
 
 	[SharpFunction(Name = "andlflags", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> AndListFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> AndListFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		// andlflags() checks if ALL objects in list have ALL of the flags
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var objListArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var flagsArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+
+		var objList = objListArg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		var flags = flagsArg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+		if (objList.Length == 0)
+		{
+			return new CallState(false);
+		}
+
+		foreach (var objRef in objList)
+		{
+			var maybeObj = await LocateService!.Locate(parser, executor, executor, objRef, LocateFlags.All);
+			if (!maybeObj.IsValid())
+			{
+				return new CallState(false);
+			}
+
+			var found = maybeObj.AsAnyObject;
+			foreach (var flag in flags)
+			{
+				if (!await found.HasFlag(flag))
+				{
+					return new CallState(false);
+				}
+			}
+		}
+		return new CallState(true);
 	}
 
 	[SharpFunction(Name = "andlpowers", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> AndListPowers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> AndListPowers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		// andlpowers() checks if ALL objects in list have ALL of the powers
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var objListArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var powersArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+
+		var objList = objListArg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		var powers = powersArg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+		if (objList.Length == 0)
+		{
+			return new CallState(false);
+		}
+
+		foreach (var objRef in objList)
+		{
+			var maybeObj = await LocateService!.Locate(parser, executor, executor, objRef, LocateFlags.All);
+			if (!maybeObj.IsValid())
+			{
+				return new CallState(false);
+			}
+
+			var found = maybeObj.AsAnyObject;
+			foreach (var power in powers)
+			{
+				if (!await found.HasPower(power))
+				{
+					return new CallState(false);
+				}
+			}
+		}
+		return new CallState(true);
 	}
 
 	[SharpFunction(Name = "ncon", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
