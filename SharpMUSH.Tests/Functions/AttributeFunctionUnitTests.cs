@@ -115,8 +115,8 @@ public class AttributeFunctionUnitTests
 
 	[Test]
 	[Arguments("[attrib_set(%!/ATTR_001,value1)][attrib_set(%!/ATTR_002,value2)][attrib_set(%!/ATTR_100,value3)][reglattr(%!,ATTR_0+)]", "ATTR_001 ATTR_002")]
-	[Arguments("[reglattr(%!,ATTR_[0-9]+)]", "ATTR_001 ATTR_002 ATTR_100")]
-	[Arguments("[reglattr(%!,^TEST_)]", "TEST_GREP_1 TEST_GREP_2 TEST_GREP_UPPER")]
+	[Arguments("[attrib_set(%!/ATTR_001,value1)][attrib_set(%!/ATTR_002,value2)][attrib_set(%!/ATTR_100,value3)][reglattr(%!,ATTR_[0-9]+)]", "ATTR_001 ATTR_002 ATTR_100")]
+	[Arguments("[attrib_set(%!/TEST_GREP_1,val1)][attrib_set(%!/TEST_GREP_2,val2)][attrib_set(%!/TEST_GREP_UPPER,val3)][reglattr(%!,^TEST_)]", "TEST_GREP_1 TEST_GREP_2 TEST_GREP_UPPER")]
 	public async Task Test_Reglattr_RegexPattern(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -125,9 +125,9 @@ public class AttributeFunctionUnitTests
 
 	[Test]
 	[DependsOn(nameof(Test_Reglattr_RegexPattern))]
-	[Arguments("[regnattr(%!,ATTR_[0-9]+)]", "3")]
-	[Arguments("[regnattr(%!,^TEST_)]", "3")]
-	[Arguments("[regnattr(%!,WILDGREP_)]", "3")]
+	[Arguments("[attrib_set(%!/ATTR_001,value1)][attrib_set(%!/ATTR_002,value2)][attrib_set(%!/ATTR_100,value3)][regnattr(%!,ATTR_[0-9]+)]", "3")]
+	[Arguments("[attrib_set(%!/TEST_GREP_1,val1)][attrib_set(%!/TEST_GREP_2,val2)][attrib_set(%!/TEST_GREP_UPPER,val3)][regnattr(%!,^TEST_)]", "3")]
+	[Arguments("[attrib_set(%!/WILDGREP_1,val1)][attrib_set(%!/WILDGREP_2,val2)][attrib_set(%!/WILDGREP_UPPER,val3)][regnattr(%!,WILDGREP_)]", "3")]
 	public async Task Test_Regnattr_Count(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -136,9 +136,9 @@ public class AttributeFunctionUnitTests
 
 	[Test]
 	[DependsOn(nameof(Test_Regnattr_Count))]
-	[Arguments("[regxattr(%!/ATTR_[0-9]+,1,2)]", "ATTR_001 ATTR_002")]
-	[Arguments("[regxattr(%!/ATTR_[0-9]+,2,2)]", "ATTR_002 ATTR_100")]
-	[Arguments("[regxattr(%!/^TEST_,1,2)]", "TEST_GREP_1 TEST_GREP_2")]
+	[Arguments("[attrib_set(%!/ATTR_001,value1)][attrib_set(%!/ATTR_002,value2)][attrib_set(%!/ATTR_100,value3)][regxattr(%!/ATTR_[0-9]+,1,2)]", "ATTR_001 ATTR_002")]
+	[Arguments("[attrib_set(%!/ATTR_001,value1)][attrib_set(%!/ATTR_002,value2)][attrib_set(%!/ATTR_100,value3)][regxattr(%!/ATTR_[0-9]+,2,2)]", "ATTR_002 ATTR_100")]
+	[Arguments("[attrib_set(%!/TEST_GREP_1,val1)][attrib_set(%!/TEST_GREP_2,val2)][regxattr(%!/^TEST_,1,2)]", "TEST_GREP_1 TEST_GREP_2")]
 	public async Task Test_Regxattr_RangeWithRegex(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -201,7 +201,7 @@ public class AttributeFunctionUnitTests
 
 	[Test]
 	[DependsOn(nameof(Test_Reglattr_RegexPattern))]
-	[Arguments("[reglattrp(%!,ATTR_[0-9]+)]", "ATTR_001 ATTR_002 ATTR_100")]
+	[Arguments("[attrib_set(%!/ATTR_001,value1)][attrib_set(%!/ATTR_002,value2)][attrib_set(%!/ATTR_100,value3)][reglattrp(%!,ATTR_[0-9]+)]", "ATTR_001 ATTR_002 ATTR_100")]
 	public async Task Test_Reglattrp_IncludesParents(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -210,7 +210,7 @@ public class AttributeFunctionUnitTests
 
 	[Test]
 	[DependsOn(nameof(Test_Regnattr_Count))]
-	[Arguments("[regnattrp(%!,ATTR_[0-9]+)]", "3")]
+	[Arguments("[attrib_set(%!/ATTR_001,value1)][attrib_set(%!/ATTR_002,value2)][attrib_set(%!/ATTR_100,value3)][regnattrp(%!,ATTR_[0-9]+)]", "3")]
 	public async Task Test_Regnattrp_CountWithParents(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -219,7 +219,7 @@ public class AttributeFunctionUnitTests
 
 	[Test]
 	[DependsOn(nameof(Test_Regxattr_RangeWithRegex))]
-	[Arguments("[regxattrp(%!/ATTR_[0-9]+,1,2)]", "ATTR_001 ATTR_002")]
+	[Arguments("[attrib_set(%!/ATTR_001,value1)][attrib_set(%!/ATTR_002,value2)][attrib_set(%!/ATTR_100,value3)][regxattrp(%!/ATTR_[0-9]+,1,2)]", "ATTR_001 ATTR_002")]
 	public async Task Test_Regxattrp_RangeWithParents(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
