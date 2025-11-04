@@ -916,7 +916,7 @@ public partial class Commands
 			return new CallState(string.Format(Errors.ErrorTooFewArguments, "@WAIT", 2, 1));
 		}
 
-		var exists = await Mediator!.Send(new ScheduleSemaphoreQuery(pid));
+		var exists = Mediator!.CreateStream(new ScheduleSemaphoreQuery(pid));
 		var maybeFoundPid = await exists.FirstOrDefaultAsync();
 
 		if (maybeFoundPid is null)
@@ -1039,7 +1039,7 @@ public partial class Commands
 		}
 		else if (maybeAttribute is null && (switches.Contains("ANY") || switches.Length == 0))
 		{
-			var pids = await Mediator.Send(new ScheduleSemaphoreQuery(objectToDrain.Object().DBRef));
+			var pids = Mediator.CreateStream(new ScheduleSemaphoreQuery(objectToDrain.Object().DBRef));
 			var filteredPids = pids
 				.GroupBy(data => string.Join('`', data.SemaphoreSource.Attribute), x => x.SemaphoreSource)
 				.Select(x => x.First());
