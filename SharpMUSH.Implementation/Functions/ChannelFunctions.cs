@@ -206,7 +206,7 @@ public partial class Functions
 		}
 
 		// Get all channels
-		var allChannels = await Mediator!.Send(new GetChannelListQuery());
+		var allChannels = Mediator!.CreateStream(new GetChannelListQuery());
 		var channelArray = await allChannels.ToArrayAsync();
 
 		// Filter based on type
