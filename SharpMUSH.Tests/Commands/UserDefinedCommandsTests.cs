@@ -29,9 +29,13 @@ public class UserDefinedCommandsTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), "Value 1 received", Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToPlainText() == "Value 1 received") ||
+				(msg.IsT1 && msg.AsT1 == "Value 1 received")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), "Value 2 received", Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToPlainText() == "Value 2 received") ||
+				(msg.IsT1 && msg.AsT1 == "Value 2 received")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 }
