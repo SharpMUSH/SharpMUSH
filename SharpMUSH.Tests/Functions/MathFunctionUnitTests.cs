@@ -576,4 +576,33 @@ public class MathFunctionUnitTests
 
 		await Assert.That(result).IsEqualTo(expected);
 	}
+
+	[Test]
+	[Arguments("ctu(90,d,r)", "1.5707963267948966")]  // 90 degrees to radians
+	[Arguments("ctu(0,d,r)", "0")]  // 0 degrees to radians
+	[Arguments("ctu(180,d,r)", "3.141592653589793")]  // 180 degrees to radians
+	public async Task CTU(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("dec(1)", "0")]
+	[Arguments("dec(5)", "4")]
+	[Arguments("dec(-1)", "-2")]
+	[Arguments("dec(0)", "-1")]
+	[Arguments("dec(100)", "99")]
+	[Arguments("dec(3.5)", "2.5")]
+	public async Task Dec(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
 }

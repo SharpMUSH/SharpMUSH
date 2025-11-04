@@ -14,4 +14,5 @@ public static class CacheTags
 	public const string ObjectFlags = "object-flags";
 	public const string ChannelList = "channel-list";
 	public const string FlagList = "flag-list";
+	public const string ConnectionLogs = "connection-logs";
 }
