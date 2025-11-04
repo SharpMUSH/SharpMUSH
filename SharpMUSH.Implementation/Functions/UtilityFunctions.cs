@@ -379,13 +379,12 @@ public partial class Functions
 			}
 		}
 		
-		var random = new Random();
 		var rolls = new List<int>();
 		var total = 0;
 		
 		for (int i = 0; i < count; i++)
 		{
-			var roll = random.Next(1, sides + 1);
+			var roll = Random.Shared.Next(1, sides + 1);
 			rolls.Add(roll);
 			total += roll;
 		}
@@ -395,18 +394,18 @@ public partial class Functions
 		{
 			return ValueTask.FromResult(new CallState(total.ToString()));
 		}
-		else
-		{
-			// Show individual rolls
-			return ValueTask.FromResult(new CallState(string.Join(" ", rolls)));
-		}
+		
+		// Show individual rolls
+		return ValueTask.FromResult(new CallState(string.Join(" ", rolls)));
 	}
+
 	[SharpFunction(Name = "dig", MinArgs = 1, MaxArgs = 6, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Dig(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// TODO: Implement dig - requires room creation
 		return ValueTask.FromResult(new CallState(Errors.NotSupported));
 	}
+
 	[SharpFunction(Name = "fn", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
 	public static async ValueTask<CallState> Fn(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -691,17 +690,17 @@ public partial class Functions
 		// Otherwise return empty
 		return ValueTask.FromResult(CallState.Empty);
 	}
+
 	[SharpFunction(Name = "rand", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> Rand(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var random = new Random();
 		var args = parser.CurrentState.Arguments;
 		
 		// Check if first argument exists and is not empty
 		if (!args.TryGetValue("0", out var arg0) || string.IsNullOrWhiteSpace(MModule.plainText(arg0.Message)))
 		{
 			// No arguments: random number between 0 and 2^31-1
-			return ValueTask.FromResult(new CallState(random.Next(0, int.MaxValue)));
+			return ValueTask.FromResult(new CallState(Random.Shared.Next(0, int.MaxValue)));
 		}
 		
 		// Check if second argument exists and is not empty
@@ -712,7 +711,7 @@ public partial class Functions
 			{
 				return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
 			}
-			return ValueTask.FromResult(new CallState(random.Next(0, maxVal)));
+			return ValueTask.FromResult(new CallState(Random.Shared.Next(0, maxVal)));
 		}
 		
 		// Two arguments: random number between min and max (inclusive)
@@ -726,7 +725,7 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
 		}
 		// Next is exclusive of upper bound, so add 1
-		return ValueTask.FromResult(new CallState(random.Next(minVal, maxVal2 + 1)));
+		return ValueTask.FromResult(new CallState(Random.Shared.Next(minVal, maxVal2 + 1)));
 	}
 
 	[SharpFunction(Name = "registers", MinArgs = 0, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -734,7 +733,7 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.Arguments;
 		
-		// Get current registers
+		// Get current registers from the stack
 		if (!parser.CurrentState.Registers.TryPeek(out var registers))
 		{
 			return ValueTask.FromResult(CallState.Empty);
@@ -749,14 +748,15 @@ public partial class Functions
 		// First argument determines what to return
 		var mode = MModule.plainText(arg0.Message).ToLower();
 		
+		// Return space-separated list of register names
 		if (mode == "list" || mode == "names")
 		{
-			// Return space-separated list of register names
 			return ValueTask.FromResult(new CallState(string.Join(" ", registers.Keys)));
 		}
-		else if (mode == "get")
+		
+		// Get specific register value (second argument is register name)
+		if (mode == "get")
 		{
-			// Get specific register value (second argument is register name)
 			if (!args.TryGetValue("1", out var arg1))
 			{
 				return ValueTask.FromResult(CallState.Empty);
