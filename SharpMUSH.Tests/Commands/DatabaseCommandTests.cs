@@ -13,8 +13,8 @@ namespace SharpMUSH.Tests.Commands;
 
 public class DatabaseCommandTests : IAsyncInitializer, IAsyncDisposable
 {
-	[ClassDataSource<TestWebApplicationBuilderFactory<Server.Program>>(Shared = SharedType.PerTestSession)]
-	public required TestWebApplicationBuilderFactory<Server.Program> SqlWebAppFactoryArg { get; init; }
+	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required WebAppFactory SqlWebAppFactoryArg { get; init; }
 
 	[ClassDataSource<MySqlTestServer>(Shared = SharedType.PerTestSession)]
 	public required MySqlTestServer MySqlTestServer { get; init; }
