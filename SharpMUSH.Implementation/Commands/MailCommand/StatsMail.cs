@@ -53,8 +53,8 @@ public static class StatsMail
 				return await CStats(parser, objectDataService, mediator, notifyService, executor, target);
 		}
 
-		var allSentMail = await mediator.Send(new GetAllSentMailListQuery(target.Object()));
-		var allReceivedMail = await mediator.Send(new GetAllMailListQuery(target.AsPlayer));
+		var allSentMail = mediator.CreateStream(new GetAllSentMailListQuery(target.Object()));
+		var allReceivedMail = mediator.CreateStream(new GetAllMailListQuery(target.AsPlayer));
 		var targetName = target.Object().Name;
 
 		return switches switch
@@ -72,7 +72,7 @@ public static class StatsMail
 		INotifyService notifyService, AnySharpObject executor, AnySharpObject target)
 	{
 		var currentFolder = await MessageListHelper.CurrentMailFolder(parser, objectDataService, executor);
-		var stats = await (await mediator.Send(new GetMailListQuery(target.AsPlayer, currentFolder))).ToArrayAsync();
+		var stats = await mediator.CreateStream(new GetMailListQuery(target.AsPlayer, currentFolder)).ToArrayAsync();
 		var unread = stats.Sum(x => x.Read ? 0 : 1);
 		var cleared = stats.Sum(x => x.Cleared ? 1 : 0);
 

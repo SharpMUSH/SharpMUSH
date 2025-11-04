@@ -13,44 +13,43 @@ namespace SharpMUSH.Implementation.Commands.MailCommand;
 
 public static class SendMail
 {
-	public static async ValueTask<MString> Handle(IMUSHCodeParser parser, IPermissionService permissionService, IExpandedObjectDataService objectDataService, IMediator mediator, INotifyService notifyService, MString nameList, MString subjectAndMessage, string[] switches)
+	public static async ValueTask<MString> Handle(IMUSHCodeParser parser, IPermissionService permissionService,
+		IExpandedObjectDataService objectDataService, IMediator mediator, INotifyService notifyService, MString nameList,
+		MString subjectAndMessage, string[] switches)
 	{
 		var urgent = switches.Contains("URGENT");
 		var silent = switches.Contains("SILENT");
 		var noSignature = switches.Contains("NOSIG");
-		
+
 		var sender = await parser.CurrentState.KnownExecutorObject(mediator);
-		
+
 		var playerList = ArgHelpers.PopulatedNameList(mediator, nameList.ToPlainText()!);
 		var knownPlayerList = await playerList.Where(x => x != null).Select(x => x!).ToListAsync();
 		var subjectBodySplit = MModule.indexOf(subjectAndMessage, MModule.single("/"));
-		
-		var subject = subjectBodySplit > -1 
-			? MModule.substring(0, subjectBodySplit, subjectAndMessage) 
+
+		var subject = subjectBodySplit > -1
+			? MModule.substring(0, subjectBodySplit, subjectAndMessage)
 			: MModule.substring(0, Math.Min(20, subjectAndMessage.Length), subjectAndMessage);
-		
+
 		var message = subjectBodySplit > -1
-			? MModule.substring(subjectBodySplit + 1, subjectAndMessage.Length - subjectBodySplit, subjectAndMessage) 
+			? MModule.substring(subjectBodySplit + 1, subjectAndMessage.Length - subjectBodySplit, subjectAndMessage)
 			: subjectAndMessage;
-		
+
 		if (!noSignature)
 		{
-			var attribute = await mediator.Send(new GetAttributeQuery(sender.Object().DBRef, ["MAILSIGNATURE"]));
+			var attribute = mediator.CreateStream(new GetAttributeQuery(sender.Object().DBRef, ["MAILSIGNATURE"]));
 
-			if (attribute is not null)
+			var attributeOpportunity = await attribute.FirstOrDefaultAsync();
+			if (attributeOpportunity is not null)
 			{
-				var attributeOpportunity = await attribute.FirstOrDefaultAsync();
-				if(attributeOpportunity is not null)
+				var attributeValue = attributeOpportunity.Value;
+				if (attributeValue.Length > 0)
 				{
-					var attributeValue = attributeOpportunity.Value;
-					if (attributeValue.Length > 0)
-					{
-						MModule.concat(message, MModule.single("\n"), attributeValue);
-					}
+					MModule.concat(message, MModule.single("\n"), attributeValue);
 				}
 			}
 		}
-		
+
 		var mail = new SharpMail
 		{
 			DateSent = DateTimeOffset.UtcNow,
@@ -77,21 +76,22 @@ public static class SendMail
 				await notifyService.Notify(sender, $"MAIL: {player.Object.Name} does not wish to receive mail from you.");
 				continue;
 			}
-				
+
 			await mediator.Send(new SendMailCommand(sender.Object(), player, mail));
 			await notifyService.Notify(sender, $"MAIL: You sent a message to {player.Object.Name}.");
 
 			if (!silent)
 			{
-				var mailList = await mediator.Send(new GetMailListQuery(player, "INBOX"));
-				await notifyService.Notify(player, $"MAIL: You have received a message ({await mailList.CountAsync()}) from {sender.Object().Name}.");
+				var mailList = mediator.CreateStream(new GetMailListQuery(player, "INBOX"));
+				await notifyService.Notify(player,
+					$"MAIL: You have received a message ({await mailList.CountAsync()}) from {sender.Object().Name}.");
 			}
-			
+
 			// TODO: If AMAIL is config true, and AMAIL &attribute is set on the target, trigger it.
 		}
 
 		return MModule.multipleWithDelimiter(
-			MModule.single(" "), 
+			MModule.single(" "),
 			knownPlayerList
 				.Select(x => x.Object.DBRef)
 				.Select(x => x.ToString())

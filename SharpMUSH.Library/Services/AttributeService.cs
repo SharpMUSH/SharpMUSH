@@ -1,4 +1,5 @@
 ﻿using System.Collections.Immutable;
+using DotNext;
 using Mediator;
 using OneOf;
 using OneOf.Types;
@@ -54,14 +55,14 @@ public class AttributeService(
 		// TODO: This code doesn't quite look right. It does not correctly walk the parent chain.
 		while (true)
 		{
-			var attr = await mediator.Send(new GetAttributeQuery(obj.Object().DBRef, attributePath));
+			var attr = mediator.CreateStream(new GetAttributeQuery(obj.Object().DBRef, attributePath));
+			
+			var attrArr = await attr.ToArrayAsync();
 
-			if (attr is null)
+			if (attrArr.IsNullOrEmpty())
 			{
 				return new None();
 			}
-
-			var attrArr = await attr.ToArrayAsync();
 
 			if (attrArr.Length == attributePath.Length)
 			{
@@ -112,15 +113,15 @@ public class AttributeService(
 		// TODO: This code doesn't quite look right. It does not correctly walk the parent chain.
 		while (true)
 		{
-			var attr = await mediator.Send(new GetLazyAttributeQuery(obj.Object().DBRef, attributePath));
+			var attr = mediator.CreateStream(new GetLazyAttributeQuery(obj.Object().DBRef, attributePath));
+			
+			var attrArr = await attr.ToArrayAsync(CancellationToken.None);
 
-			if (attr is null)
+			if (attrArr.IsNullOrEmpty())
 			{
 				return new None();
 			}
-
-			var attrArr = await attr.ToArrayAsync(CancellationToken.None);
-
+			
 			if (attrArr.Length == attributePath.Length)
 			{
 				return await permissionPredicate(executor, obj, attrArr)
@@ -332,28 +333,26 @@ public class AttributeService(
 		// TODO: Implement Pattern Modes
 		// TODO: GetAttributesAsync should return the full Path, not the final attribute.
 		// TODO: CanViewAttribute needs to be able to Memoize during a list check, as it's likely to be called multiple times.
-		var attributes = await mediator.Send(
+		var attributes = mediator.CreateStream(
 			new GetAttributesQuery(obj.Object().DBRef, attributePattern, checkParents, mode));
 
-		return attributes is null
-			? Enumerable.Empty<SharpAttribute>().ToArray()
-			: await AsyncEnumerable.ToArrayAsync(attributes
-				.Where(async (x, _) => await ps.CanViewAttribute(executor, obj, x)));
+		return await attributes
+			.Where(async (x, _) => await ps.CanViewAttribute(executor, obj, x))
+			.ToArrayAsync();
 	}
 
-	public async ValueTask<LazySharpAttributesOrError> LazilyGetAttributePatternAsync(AnySharpObject executor,
+	public LazySharpAttributesOrError LazilyGetAttributePatternAsync(AnySharpObject executor,
 		AnySharpObject obj, string attributePattern,
 		bool checkParents, IAttributeService.AttributePatternMode mode = IAttributeService.AttributePatternMode.Exact)
 	{
 		// TODO: Implement Pattern Modes
 		// TODO: GetAttributesAsync should return the full Path, not the final attribute.
 		// TODO: CanViewAttribute needs to be able to Memoize during a list check, as it's likely to be called multiple times.
-		var attributes = await mediator.Send(
+		var attributes = mediator.CreateStream(
 			new GetLazyAttributesQuery(obj.Object().DBRef, attributePattern, checkParents, mode));
 
-		return attributes is null
-			? LazySharpAttributesOrError.FromAsync(Enumerable.Empty<LazySharpAttribute>().ToArray().ToAsyncEnumerable())
-			: LazySharpAttributesOrError.FromAsync(attributes
+		return LazySharpAttributesOrError
+			.FromAsync(attributes
 				.Where(async (x, _) => await ps.CanViewAttribute(executor, obj, x)));
 	}
 
@@ -372,7 +371,7 @@ public class AttributeService(
 			return new Error<string>("Not Found");
 		}
 
-		var allFlags = await mediator.Send(new GetAttributeFlagsQuery());
+		var allFlags = mediator.CreateStream(new GetAttributeFlagsQuery());
 		var returnedFlag = await allFlags
 			.FirstOrDefaultAsync(x => x.Name == flag || x.Symbol == flag);
 
@@ -406,7 +405,7 @@ public class AttributeService(
 			return new Error<string>("Not Found");
 		}
 
-		var allFlags = await mediator.Send(new GetAttributeFlagsQuery());
+		var allFlags = mediator.CreateStream(new GetAttributeFlagsQuery());
 		var returnedFlag = await allFlags.FirstOrDefaultAsync(x => x.Name == flag || x.Symbol == flag);
 
 		if (returnedFlag is null)
@@ -435,11 +434,10 @@ public class AttributeService(
 		}
 
 		var attrPath = attribute.Split('`');
-		var attr = await mediator.Send(new GetAttributeQuery(obj.Object().DBRef, attrPath));
+		var attr = mediator.CreateStream(new GetAttributeQuery(obj.Object().DBRef, attrPath));
 
 		// TODO: Fix, object permissions also needed.
-		var permission = attr is null ||
-		                 await attr.AllAsync(async (x, _) => await ps.CanSet(executor, obj, x));
+		var permission = await attr.AllAsync(async (x, _) => await ps.CanSet(executor, obj, x));
 
 		if (!permission)
 		{
@@ -479,16 +477,12 @@ public class AttributeService(
 			return new Error<string>(Errors.ErrorAttrSetPermissions);
 		}
 
-		var attr = await mediator.Send(new GetAttributesQuery(obj.Object().DBRef, attributePattern, false, patternMode));
-
-		if (attr is null)
-		{
-			return new Error<string>(Errors.ErrorAttrSetPermissions);
-		}
-
-		var attrArr = await AsyncEnumerable.ToArrayAsync(attr);
-
-		if (!await attrArr.ToAsyncEnumerable().AllAsync(async (x, _) => await ps.CanSet(executor, obj, x)))
+		var attr = mediator.CreateStream(new GetAttributesQuery(obj.Object().DBRef, attributePattern, false, patternMode));
+		
+		var attrArr = await attr.ToArrayAsync();
+		
+		if (attrArr.IsNullOrEmpty() 
+		    || !await attrArr.ToAsyncEnumerable().AllAsync(async (x, _) => await ps.CanSet(executor, obj, x)))
 		{
 			return new Error<string>(Errors.ErrorAttrSetPermissions);
 		}
