@@ -289,6 +289,27 @@ public class AttributeFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
+	// Diagnostic test to verify basic functionality
+	[Test]
+	[NotInParallel]
+	[Arguments("[attrib_set(%!/TESTATTR,testvalue)][get(%!/TESTATTR)]", "testvalue")]
+	[Arguments("[attrib_set(%!/ATTR1,val1)][attrib_set(%!/ATTR2,val2)][get(%!/ATTR1)][get(%!/ATTR2)]", "val1val2")]
+	public async Task Test_Basic_AttribSet_And_Get(string str, string expected)
+	{
+		var result = await Parser.FunctionParse(MModule.single(str));
+		await Assert.That(result!.Message!.ToString()).IsEqualTo(expected);
+	}
+
+	// Test lattr which should work (it's already implemented)
+	[Test]
+	[NotInParallel]
+	[Arguments("[attrib_set(%!/TEST1,v1)][attrib_set(%!/TEST2,v2)][lattr(%!/TEST*)]", "TEST1 TEST2")]
+	public async Task Test_Lattr_Simple(string str, string expected)
+	{
+		var result = await Parser.FunctionParse(MModule.single(str));
+		await Assert.That(result!.Message!.ToString()).IsEqualTo(expected);
+	}
+
 	[Test]
 	[Skip("Not Yet Implemented")]
 	[Arguments("xattrp(#0,attr)", "0")]

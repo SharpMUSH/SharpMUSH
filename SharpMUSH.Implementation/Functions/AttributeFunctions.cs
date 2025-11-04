@@ -595,9 +595,9 @@ public partial class Functions
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, obj, LocateFlags.All,
-			found =>
+			async found =>
 			{
-				var attributes = AttributeService!.LazilyGetAttributePatternAsync(executor, found,
+				var attributes = await AttributeService!.GetAttributePatternAsync(executor, found,
 					attributePattern ?? "*", false,
 					IAttributeService.AttributePatternMode.Wildcard);
 
@@ -626,9 +626,9 @@ public partial class Functions
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, obj, LocateFlags.All,
-			found =>
+			async found =>
 			{
-				var attributes = AttributeService!.LazilyGetAttributePatternAsync(executor, found,
+				var attributes = await AttributeService!.GetAttributePatternAsync(executor, found,
 					attributePattern ?? "*", true,
 					IAttributeService.AttributePatternMode.Wildcard);
 
@@ -703,8 +703,8 @@ public partial class Functions
 			LocateFlags.All,
 			async found =>
 			{
-				var attributes = AttributeService!.LazilyGetAttributePatternAsync(executor, found,
-					attributePattern ?? "*", true,
+				var attributes = await AttributeService!.GetAttributePatternAsync(executor, found,
+					attributePattern ?? "*", false,
 					IAttributeService.AttributePatternMode.Wildcard);
 
 				if (attributes.IsError)
@@ -712,7 +712,7 @@ public partial class Functions
 					return attributes.AsError;
 				}
 
-				return await attributes.AsAttributes.CountAsync();
+				return attributes.AsAttributes.Length;
 			});
 	}
 
@@ -734,7 +734,7 @@ public partial class Functions
 			LocateFlags.All,
 			async found =>
 			{
-				var attributes = AttributeService!.LazilyGetAttributePatternAsync(executor, found,
+				var attributes = await AttributeService!.GetAttributePatternAsync(executor, found,
 					attributePattern ?? "*", true,
 					IAttributeService.AttributePatternMode.Wildcard);
 
@@ -743,7 +743,7 @@ public partial class Functions
 					return attributes.AsError;
 				}
 
-				return await attributes.AsAttributes.CountAsync();
+				return attributes.AsAttributes.Length;
 			});
 	}
 
@@ -1797,7 +1797,7 @@ public partial class Functions
 			executor, executor, obj, LocateFlags.All,
 			async found =>
 			{
-				var attributes = AttributeService!.LazilyGetAttributePatternAsync(executor, found,
+				var attributes = await AttributeService!.GetAttributePatternAsync(executor, found,
 					attributePattern ?? "*", false,
 					IAttributeService.AttributePatternMode.Wildcard);
 
@@ -1808,7 +1808,11 @@ public partial class Functions
 
 				var attributesStaging = attributes.AsAttributes.Skip(startInt).Take(countInt);
 
-				return string.Join(" ", await attributesStaging.Select(x => x.LongName).ToArrayAsync());
+				var separator = parser.CurrentState.Arguments.TryGetValue("3", out var sepArg)
+					? sepArg.Message!.ToPlainText()
+					: " ";
+
+				return string.Join(separator!, attributesStaging.Select(x => x.LongName));
 			});
 	}
 
@@ -1842,7 +1846,7 @@ public partial class Functions
 			executor, executor, obj, LocateFlags.All,
 			async found =>
 			{
-				var attributes = AttributeService!.LazilyGetAttributePatternAsync(executor, found,
+				var attributes = await AttributeService!.GetAttributePatternAsync(executor, found,
 					attributePattern ?? "*", true,
 					IAttributeService.AttributePatternMode.Wildcard);
 
@@ -1853,7 +1857,11 @@ public partial class Functions
 
 				var attributesStaging = attributes.AsAttributes.Skip(startInt).Take(countInt);
 
-				return string.Join(" ", await attributesStaging.Select(x => x.LongName).ToArrayAsync());
+				var separator = parser.CurrentState.Arguments.TryGetValue("3", out var sepArg)
+					? sepArg.Message!.ToPlainText()
+					: " ";
+
+				return string.Join(separator!, attributesStaging.Select(x => x.LongName));
 			});
 	}
 
