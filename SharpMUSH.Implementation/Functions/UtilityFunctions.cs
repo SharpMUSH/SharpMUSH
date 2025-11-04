@@ -525,35 +525,36 @@ public partial class Functions
 		var random = new Random();
 		var args = parser.CurrentState.Arguments;
 		
-		if (args.Count == 0)
+		// Check if first argument exists and is not empty
+		if (!args.TryGetValue("0", out var arg0) || string.IsNullOrWhiteSpace(MModule.plainText(arg0.Message)))
 		{
 			// No arguments: random number between 0 and 2^31-1
 			return ValueTask.FromResult(new CallState(random.Next(0, int.MaxValue)));
 		}
-		else if (args.Count == 1)
+		
+		// Check if second argument exists and is not empty
+		if (!args.TryGetValue("1", out var arg1) || string.IsNullOrWhiteSpace(MModule.plainText(arg1.Message)))
 		{
 			// One argument: random number from 0 to arg-1
-			if (!int.TryParse(MModule.plainText(args["0"].Message), out var max) || max <= 0)
+			if (!int.TryParse(MModule.plainText(arg0.Message), out var maxVal) || maxVal <= 0)
 			{
 				return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
 			}
-			return ValueTask.FromResult(new CallState(random.Next(0, max)));
+			return ValueTask.FromResult(new CallState(random.Next(0, maxVal)));
 		}
-		else
+		
+		// Two arguments: random number between min and max (inclusive)
+		if (!int.TryParse(MModule.plainText(arg0.Message), out var minVal) ||
+		    !int.TryParse(MModule.plainText(arg1.Message), out var maxVal2))
 		{
-			// Two arguments: random number between min and max (inclusive)
-			if (!int.TryParse(MModule.plainText(args["0"].Message), out var min) ||
-			    !int.TryParse(MModule.plainText(args["1"].Message), out var max))
-			{
-				return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
-			}
-			if (min > max)
-			{
-				return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
-			}
-			// Next is exclusive of upper bound, so add 1
-			return ValueTask.FromResult(new CallState(random.Next(min, max + 1)));
+			return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
 		}
+		if (minVal > maxVal2)
+		{
+			return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
+		}
+		// Next is exclusive of upper bound, so add 1
+		return ValueTask.FromResult(new CallState(random.Next(minVal, maxVal2 + 1)));
 	}
 
 	[SharpFunction(Name = "registers", MinArgs = 0, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -568,13 +569,13 @@ public partial class Functions
 		}
 		
 		// No arguments: return count of registers
-		if (args.Count == 0)
+		if (!args.TryGetValue("0", out var arg0))
 		{
 			return ValueTask.FromResult(new CallState(registers.Count));
 		}
 		
 		// First argument determines what to return
-		var mode = MModule.plainText(args["0"].Message).ToLower();
+		var mode = MModule.plainText(arg0.Message).ToLower();
 		
 		if (mode == "list" || mode == "names")
 		{
@@ -584,11 +585,11 @@ public partial class Functions
 		else if (mode == "get")
 		{
 			// Get specific register value (second argument is register name)
-			if (args.Count < 2)
+			if (!args.TryGetValue("1", out var arg1))
 			{
 				return ValueTask.FromResult(CallState.Empty);
 			}
-			var regName = MModule.plainText(args["1"].Message).ToUpper();
+			var regName = MModule.plainText(arg1.Message).ToUpper();
 			if (registers.TryGetValue(regName, out var value))
 			{
 				return ValueTask.FromResult(new CallState(value));

@@ -30,7 +30,10 @@ public class RandomFunctionUnitTests
 	public async Task Rand(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var parsed = await Parser.FunctionParse(MModule.single(str));
+		var result = parsed?.Message?.ToPlainText();
+		Console.WriteLine($"Result value: '{result}'");
+		Console.WriteLine($"Result length: {result?.Length}");
 		await Assert.That(result).IsNotNull();
 		// Should be a valid integer
 		await Assert.That(int.TryParse(result, out _)).IsTrue();
