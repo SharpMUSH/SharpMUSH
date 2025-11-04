@@ -1,6 +1,3 @@
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using MySqlConnector;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -33,7 +30,7 @@ public class MySqlService : ISqlService
 		while (await reader.ReadAsync())
 		{
 			var row = new Dictionary<string, object?>();
-			for (int i = 0; i < reader.FieldCount; i++)
+			for (var i = 0; i < reader.FieldCount; i++)
 			{
 				row[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader.GetValue(i);
 			}
@@ -83,10 +80,6 @@ public class MySqlService : ISqlService
 		return string.Join("\n", output);
 	}
 
-	public string Escape(string value)
-	{
-		// MySQL escape - replace single quotes with double single quotes
-		// and handle backslashes
-		return value.Replace("\\", "\\\\").Replace("'", "''");
-	}
+	public string Escape(string value) 
+		=> MySqlHelper.EscapeString(value);
 }

@@ -29,32 +29,16 @@ public class SqlService : ISqlService
 	}
 
 	public bool IsAvailable => false;
-
-	
 	
 	public ValueTask<IEnumerable<Dictionary<string, object?>>> ExecuteQueryAsync(string query)
-	{
-		
-		// TODO: Implement actual SQL query execution
-		return ValueTask.FromResult(Enumerable.Empty<Dictionary<string, object?>>());
-	}
+		=> _mySql!.ExecuteQueryAsync(query);
 
-	public async IAsyncEnumerable<Dictionary<string, object?>> ExecuteQueryStreamAsync(string query)
-	{
-		// TODO: Implement actual SQL query execution with streaming
-		await ValueTask.CompletedTask;
-		yield break;
-	}
+	public IAsyncEnumerable<Dictionary<string, object?>> ExecuteQueryStreamAsync(string query)
+		=> _mySql!.ExecuteQueryStreamAsync(query);
 
 	public ValueTask<string> ExecuteQueryAsStringAsync(string query, string delimiter = " ")
-	{
-		// TODO: Implement actual SQL query execution
-		return ValueTask.FromResult(string.Empty);
-	}
+		=> _mySql!.ExecuteQueryAsStringAsync(query, delimiter);
 
-	public string Escape(string value)
-	{
-		// Basic SQL escape - replace single quotes with double single quotes
-		return value.Replace("'", "''");
-	}
+	public string Escape(string value) 
+		=> _mySql!.Escape(value);
 }
