@@ -1550,7 +1550,6 @@ public partial class ArangoDatabase(
 	public async ValueTask<IAsyncEnumerable<SharpAttribute>?> GetAttributeAsync(DBRef dbref, string[] attribute,
 		CancellationToken ct = default)
 	{
-		await ValueTask.CompletedTask;
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 
 		const string let =
@@ -2078,7 +2077,7 @@ public partial class ArangoDatabase(
 	public IAsyncEnumerable<LogEventEntity> GetLogsFromCategory(string category, int skip = 0, int count = 100)
 		=> arangoDb.Query.ExecuteStreamAsync<LogEventEntity>(
 			handle,
-			$"FOR v IN @@c FILTER v.Properties.Category == category SORT v.Timestamp DESC LIMIT @skip, @count RETURN v",
+			$"FOR v IN @@c FILTER v.Properties.Category == @category SORT v.Timestamp DESC LIMIT @skip, @count RETURN v",
 			bindVars:
 			new Dictionary<string, object>
 			{

@@ -6,11 +6,11 @@ using SharpMUSH.Library.Queries.Database;
 namespace SharpMUSH.Implementation.Handlers.Database;
 
 public class GetNearbyObjectsQueryHandler(ISharpDatabase database)
-	: IQueryHandler<GetNearbyObjectsQuery, IAsyncEnumerable<AnySharpObject>>
+	: IStreamQueryHandler<GetNearbyObjectsQuery, AnySharpObject>
 {
-	public async ValueTask<IAsyncEnumerable<AnySharpObject>> Handle(GetNearbyObjectsQuery request, CancellationToken cancellationToken)
-		=> await request.DBRef.Match(
+	public IAsyncEnumerable<AnySharpObject> Handle(GetNearbyObjectsQuery request, CancellationToken cancellationToken)
+		=> request.DBRef.Match(
 			async dbRef => await database.GetNearbyObjectsAsync(dbRef, cancellationToken),
 			async obj => await database.GetNearbyObjectsAsync(obj, cancellationToken)
-			);
+			).GetAwaiter().GetResult();
 }

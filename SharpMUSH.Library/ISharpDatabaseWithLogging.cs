@@ -17,7 +17,7 @@ public class LogEventEntity
 	[JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
 	public required string Key { get; set; }
 
-	public required DateTime Timestamp { get; set; }
+	public required DateTimeOffset Timestamp { get; set; }
 
 	public required string Level { get; set; }
 

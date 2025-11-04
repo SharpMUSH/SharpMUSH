@@ -30,7 +30,7 @@ public static class AdminMail
 			case [.., "NUKE"] when executor.IsGod():
 				// TODO: This deletes one's own mail, not all mail on the server.
 				// A new command is needed.
-				var mailList = (await mediator!.Send(new GetAllMailListQuery(executor.AsPlayer)));
+				var mailList = mediator!.CreateStream(new GetAllMailListQuery(executor.AsPlayer));
 				var length = 0;
 				await foreach (var mail in mailList)
 				{

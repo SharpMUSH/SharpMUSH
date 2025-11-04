@@ -49,7 +49,7 @@ public class ManipulateSharpObjectService(
 				return obj.Object().DBRef;
 
 			case { IsPlayer: true }:
-				var tryFindPlayerByName = await (await mediator.Send(new GetPlayerQuery(name.ToPlainText())))
+				var tryFindPlayerByName = await (mediator.CreateStream(new GetPlayerQuery(name.ToPlainText())))
 					.ToArrayAsync();
 				if (tryFindPlayerByName.Any(x =>
 					    x.Object.Name.Equals(name.ToPlainText(), StringComparison.InvariantCultureIgnoreCase)))
@@ -243,7 +243,7 @@ public class ManipulateSharpObjectService(
 			return true;
 		}
 		
-		var allPowers = await mediator.Send(new GetPowersQuery());
+		var allPowers = mediator.CreateStream(new GetPowersQuery());
 		
 		var found = await allPowers
 			.FirstOrDefaultAsync(x => 
@@ -290,7 +290,7 @@ public class ManipulateSharpObjectService(
 			return true;
 		}
 		
-		var allPowers = await mediator.Send(new GetPowersQuery());
+		var allPowers = mediator.CreateStream(new GetPowersQuery());
 		
 		var found = await allPowers
 			.FirstOrDefaultAsync(x => 

@@ -38,7 +38,8 @@ public interface IAttributeService
 
 	ValueTask<LazySharpAttributesOrError> LazilyGetVisibleAttributesAsync(AnySharpObject executor, AnySharpObject obj, int depth = 1);
 
-	ValueTask<LazySharpAttributesOrError> LazilyGetAttributePatternAsync(AnySharpObject executor, AnySharpObject obj, string attributePattern, bool checkParents, AttributePatternMode mode = AttributePatternMode.Exact);
+	LazySharpAttributesOrError LazilyGetAttributePatternAsync(AnySharpObject executor, AnySharpObject obj,
+		string attributePattern, bool checkParents, AttributePatternMode mode = AttributePatternMode.Exact);
 
 	ValueTask<SharpAttributesOrError> GetVisibleAttributesAsync(AnySharpObject executor, AnySharpObject obj, int depth = 1);
 

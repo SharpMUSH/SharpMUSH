@@ -256,7 +256,7 @@ public partial class Functions
 	{
 		if (parser.CurrentState.Arguments.Count == 0)
 		{
-			var flags = await Mediator!.Send(new GetAllObjectFlagsQuery());
+			var flags = Mediator!.CreateStream(new GetAllObjectFlagsQuery());
 			return string.Join("", flags.Select(x => x.Symbol));
 		}
 
@@ -595,9 +595,9 @@ public partial class Functions
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, obj, LocateFlags.All,
-			async found =>
+			found =>
 			{
-				var attributes = await AttributeService!.LazilyGetAttributePatternAsync(executor, found,
+				var attributes = AttributeService!.LazilyGetAttributePatternAsync(executor, found,
 					attributePattern ?? "*", false,
 					IAttributeService.AttributePatternMode.Wildcard);
 
@@ -626,9 +626,9 @@ public partial class Functions
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, obj, LocateFlags.All,
-			async found =>
+			found =>
 			{
-				var attributes = await AttributeService!.LazilyGetAttributePatternAsync(executor, found,
+				var attributes = AttributeService!.LazilyGetAttributePatternAsync(executor, found,
 					attributePattern ?? "*", true,
 					IAttributeService.AttributePatternMode.Wildcard);
 
@@ -647,7 +647,7 @@ public partial class Functions
 		if (parser.CurrentState.Arguments.Count == 0)
 		{
 			// List all flags known to the server
-			var flags = await Mediator!.Send(new GetAllObjectFlagsQuery());
+			var flags = Mediator!.CreateStream(new GetAllObjectFlagsQuery());
 			return string.Join(" ", flags.Select(x => x.Name));
 		}
 
@@ -703,7 +703,7 @@ public partial class Functions
 			LocateFlags.All,
 			async found =>
 			{
-				var attributes = await AttributeService!.LazilyGetAttributePatternAsync(executor, found,
+				var attributes = AttributeService!.LazilyGetAttributePatternAsync(executor, found,
 					attributePattern ?? "*", true,
 					IAttributeService.AttributePatternMode.Wildcard);
 
@@ -734,7 +734,7 @@ public partial class Functions
 			LocateFlags.All,
 			async found =>
 			{
-				var attributes = await AttributeService!.LazilyGetAttributePatternAsync(executor, found,
+				var attributes = AttributeService!.LazilyGetAttributePatternAsync(executor, found,
 					attributePattern ?? "*", true,
 					IAttributeService.AttributePatternMode.Wildcard);
 
@@ -1797,7 +1797,7 @@ public partial class Functions
 			executor, executor, obj, LocateFlags.All,
 			async found =>
 			{
-				var attributes = await AttributeService!.LazilyGetAttributePatternAsync(executor, found,
+				var attributes = AttributeService!.LazilyGetAttributePatternAsync(executor, found,
 					attributePattern ?? "*", false,
 					IAttributeService.AttributePatternMode.Wildcard);
 
@@ -1842,7 +1842,7 @@ public partial class Functions
 			executor, executor, obj, LocateFlags.All,
 			async found =>
 			{
-				var attributes = await AttributeService!.LazilyGetAttributePatternAsync(executor, found,
+				var attributes = AttributeService!.LazilyGetAttributePatternAsync(executor, found,
 					attributePattern ?? "*", true,
 					IAttributeService.AttributePatternMode.Wildcard);
 
