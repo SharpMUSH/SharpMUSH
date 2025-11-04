@@ -551,10 +551,40 @@ public partial class Functions
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "list", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "list", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> List(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var args = parser.CurrentState.ArgumentsOrdered;
+		
+		if (args.Count == 0)
+		{
+			return ValueTask.FromResult(CallState.Empty);
+		}
+		
+		// Get all arguments as plain text
+		var items = args.Values
+			.Select(x => MModule.plainText(x.Message))
+			.Where(x => !string.IsNullOrEmpty(x))
+			.ToList();
+		
+		if (items.Count == 0)
+		{
+			return ValueTask.FromResult(CallState.Empty);
+		}
+		else if (items.Count == 1)
+		{
+			return ValueTask.FromResult(new CallState(items[0]));
+		}
+		else if (items.Count == 2)
+		{
+			return ValueTask.FromResult(new CallState($"{items[0]} and {items[1]}"));
+		}
+		else
+		{
+			// More than 2 items: "a, b, and c"
+			var result = string.Join(", ", items.Take(items.Count - 1)) + ", and " + items.Last();
+			return ValueTask.FromResult(new CallState(result));
+		}
 	}
 
 	[SharpFunction(Name = "listq", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -564,10 +594,61 @@ public partial class Functions
 		return ValueTask.FromResult(new CallState(string.Join(" ", kv!.Keys)));
 	}
 
-	[SharpFunction(Name = "lset", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "lset", MinArgs = 3, MaxArgs = 5, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> LSet(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var args = parser.CurrentState.Arguments;
+		
+		// Get the list
+		if (!args.TryGetValue("0", out var arg0))
+		{
+			return ValueTask.FromResult(CallState.Empty);
+		}
+		var listStr = arg0.Message!;
+		
+		// Get the position (1-based)
+		if (!args.TryGetValue("1", out var arg1) || 
+		    !int.TryParse(MModule.plainText(arg1.Message), out var position))
+		{
+			return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
+		}
+		
+		// Get the new value
+		if (!args.TryGetValue("2", out var arg2))
+		{
+			return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
+		}
+		var newValue = arg2.Message!;
+		
+		// Get optional input delimiter (default is space)
+		var inputDelimiter = " ";
+		if (args.TryGetValue("3", out var arg3))
+		{
+			inputDelimiter = MModule.plainText(arg3.Message);
+		}
+		
+		// Get optional output delimiter (default is same as input)
+		var outputDelimiter = inputDelimiter;
+		if (args.TryGetValue("4", out var arg4))
+		{
+			outputDelimiter = MModule.plainText(arg4.Message);
+		}
+		
+		// Split the list
+		var items = MModule.split2(MModule.single(inputDelimiter), listStr).ToList();
+		
+		// Check if position is valid (1-based indexing)
+		if (position < 1 || position > items.Count)
+		{
+			return ValueTask.FromResult(new CallState(Errors.ErrorArgRange));
+		}
+		
+		// Set the item at the position (convert to 0-based)
+		items[position - 1] = newValue;
+		
+		// Join back with output delimiter
+		var result = string.Join(outputDelimiter, items.Select(x => MModule.plainText(x)));
+		return ValueTask.FromResult(new CallState(result));
 	}
 
 	[SharpFunction(Name = "null", MinArgs = 0, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular )]
