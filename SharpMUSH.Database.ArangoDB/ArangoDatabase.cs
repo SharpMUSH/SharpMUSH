@@ -495,6 +495,22 @@ public partial class ArangoDatabase(
 
 	private async ValueTask<AnyOptionalSharpObject> MailFromAsync(string id, CancellationToken ct = default)
 	{
+		// There is an error here. 
+		/*
+		 *Microsoft.CSharp.RuntimeBinder.RuntimeBinderException: Cannot convert null to 'long' because it is a non-nullable value type
+   at CallSite.Target(Closure, CallSite, Object)
+   at System.Dynamic.UpdateDelegates.UpdateAndExecute1[T0,TRet](CallSite site, T0 arg0)
+   at CallSite.Target(Closure, CallSite, Object)
+   at SharpMUSH.Database.ArangoDB.ArangoDatabase.SharpObjectQueryToSharpObject(Object obj) in D:\\SharpMUSH\\SharpMUSH.Database.ArangoDB\\ArangoDatabase.cs:line 1164
+   at SharpMUSH.Database.ArangoDB.ArangoDatabase.GetObjectNodeAsync(String dbId, CancellationToken cancellationToken) in D:\\SharpMUSH\\SharpMUSH.Database.ArangoDB\\ArangoDatabase.cs:line 1136
+   at SharpMUSH.Database.ArangoDB.ArangoDatabase.MailFromAsync(String id, CancellationToken ct) in D:\\SharpMUSH\\SharpMUSH.Database.ArangoDB\\ArangoDatabase.cs:line 502
+   at SharpMUSH.Database.ArangoDB.ArangoDatabase.<>c__DisplayClass38_0.<<ConvertMailQueryResult>b__0>d.MoveNext() in D:\\SharpMUSH\\SharpMUSH.Database.ArangoDB\\ArangoDatabase.cs:line 486
+--- End of stack trace from previous location ---
+   at SharpMUSH.Implementation.Functions.Functions.mailfrom(IMUSHCodeParser parser, SharpFunctionAttribute _2) in D:\\SharpMUSH\\SharpMUSH.Implementation\\Functions\\MailFunctions.cs:line 326
+   at SharpMUSH.Implementation.Visitors.SharpMUSHParserVisitor.CallFunction(String name, MarkupString src, FunctionContext context, EvaluationStringContext[] args, SharpMUSHParserVisitor visitor) in D:\\SharpMUSH\\SharpMUSH.Implementation\\Visitors\\SharpMUSHParserVisitor.cs:line 264
+		 * 
+		 */
+		
 		var edges = await arangoDb.Query.ExecuteAsync<SharpEdgeQueryResult>(handle,
 			$"FOR v,e IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphMail} RETURN e", cancellationToken: ct);
 
@@ -2060,8 +2076,34 @@ public partial class ArangoDatabase(
 
 	public async ValueTask SetupLogging()
 	{
-		await ValueTask.CompletedTask;
+		_ = await arangoDb.Collection.ExistAsync(handle, DatabaseConstants.Logs);
 	}
+
+	public IAsyncEnumerable<LogEventEntity> GetChannelLogs(SharpChannel channel, int skip = 0, int count = 100) 
+		=> arangoDb.Query.ExecuteStreamAsync<LogEventEntity>(
+			handle,
+			$"FOR v IN @@c FILTER v.Properties.ChannelId == @channelId SORT v.Timestamp DESC LIMIT @skip, @count RETURN v",
+			bindVars:
+			new Dictionary<string, object>
+			{
+				{"@c", DatabaseConstants.Logs },
+				{ "channelId", channel.Id! },
+				{ "skip", skip },
+				{ "count", count }
+			});
+
+	public IAsyncEnumerable<LogEventEntity> GetLogsFromCategory(string category, int skip = 0, int count = 100)
+		=> arangoDb.Query.ExecuteStreamAsync<LogEventEntity>(
+			handle,
+			$"FOR v IN @@c FILTER v.Properties.Category == @category SORT v.Timestamp DESC LIMIT @skip, @count RETURN v",
+			bindVars:
+			new Dictionary<string, object>
+			{
+				{"@c", DatabaseConstants.Logs },
+				{ "category", category },
+				{ "skip", skip },
+				{ "count", count }
+			});
 
 	public async ValueTask SetPlayerPasswordAsync(SharpPlayer player, string password, CancellationToken ct = default)
 	{

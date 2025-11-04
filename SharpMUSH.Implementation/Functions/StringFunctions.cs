@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System.Drawing;
+using System.Globalization;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
@@ -1004,6 +1005,18 @@ public partial class Functions
 		return MModule.multiple([left, remainder, right]);
 	}
 
+	// TODO: <>s need to be escaped.
+	[SharpFunction(Name = "decomposeweb", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
+	public static ValueTask<CallState> DecomposeWeb(IMUSHCodeParser parser, SharpFunctionAttribute _2) 
+		=> ValueTask.FromResult<CallState>(
+			MModule.evaluateWith((markupType, innerText) 
+				=> markupType switch
+				{
+					MModule.MarkupTypes.MarkedupText { Item: Ansi ansiMarkup }
+						=> ReconstructWebCall(ansiMarkup.Details, innerText),
+					_ => innerText
+				}, 
+				parser.CurrentState.Arguments["0"].Message!));
 
 	[SharpFunction(Name = "decompose", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Decompose(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -1049,13 +1062,11 @@ public partial class Functions
 	{
 		var attributes = new List<string>();
 
-		// Handle text attributes first
 		if (ansiDetails.Bold) attributes.Add("h");
 		if (ansiDetails.Underlined) attributes.Add("u");
 		if (ansiDetails.Blink) attributes.Add("f");
 		if (ansiDetails.Inverted) attributes.Add("i");
 
-		// Handle foreground colors
 		if (!ansiDetails.Foreground.Equals(AnsiColor.NoAnsi))
 		{
 			var colorCode = ConvertAnsiColorToCode(ansiDetails.Foreground);
@@ -1063,7 +1074,6 @@ public partial class Functions
 				attributes.Add(colorCode);
 		}
 
-		// Handle background colors  
 		if (!ansiDetails.Background.Equals(AnsiColor.NoAnsi))
 		{
 			var colorCode = ConvertAnsiColorToCode(ansiDetails.Background, isBackground: true);
@@ -1071,7 +1081,6 @@ public partial class Functions
 				attributes.Add(colorCode);
 		}
 
-		// If we have attributes, wrap in ansi() function
 		if (attributes.Count > 0)
 		{
 			var attributeString = string.Join(",", attributes);
@@ -1082,12 +1091,46 @@ public partial class Functions
 	}
 
 	/// <summary>
+	/// Reconstructs an ansi() function call from AnsiStructure and inner text
+	/// </summary>
+	private static string ReconstructWebCall(AnsiStructure ansiDetails, string innerText)
+	{
+		Color foregroundColor = Color.Empty;
+		Color backgroundColor = Color.Empty;
+		
+		if (!ansiDetails.Foreground.Equals(AnsiColor.NoAnsi))
+		{
+			foregroundColor = ConvertAnsiColorToRGB(ansiDetails.Foreground);
+		}
+
+		if (!ansiDetails.Background.Equals(AnsiColor.NoAnsi))
+		{
+			backgroundColor = ConvertAnsiColorToRGB(ansiDetails.Background);
+		}
+
+		return
+			$"<span style=\"color:{(
+				foregroundColor != Color.Empty 
+					? ColorTranslator.ToHtml(foregroundColor) 
+					: "inherit")
+			};background-color:{
+				(backgroundColor != Color.Empty 
+					? ColorTranslator.ToHtml(backgroundColor) 
+					: "inherit")
+			};text-decoration:{
+				(ansiDetails.Underlined
+				? "underline"
+				: "inherit")
+			}\">{innerText}</span>";
+	}
+
+	/// <summary>
 	/// Converts AnsiColor to PennMUSH color code
 	/// </summary>
 	private static string ConvertAnsiColorToCode(ANSI.AnsiColor color, bool isBackground = false)
 	{
 		// TODO: That's not how we do backgrounds here!
-		var prefix = isBackground ? "b" : "";
+		var prefix = ""; // isBackground ? "b" : "";
 
 		return color switch
 		{
@@ -1095,22 +1138,22 @@ public partial class Functions
 			AnsiColor.ANSI ansi
 				=> ansi.Item switch
 				{
-					[0,30] => $"{prefix}x", // black
-					[0,31] => $"{prefix}r", // red  
-					[0,32] => $"{prefix}g", // green
-					[0,33] => $"{prefix}y", // yellow
-					[0,34] => $"{prefix}b", // blue
-					[0,35] => $"{prefix}m", // magenta
-					[0,36] => $"{prefix}c", // cyan
-					[0,37] => $"{prefix}w", // white
-					[1,30] => $"{prefix}hx", // bright black
-					[1,31] => $"{prefix}hr", // bright red  
-					[1,32] => $"{prefix}hg", // bright green
-					[1,33] => $"{prefix}hy", // bright yellow
-					[1,34] => $"{prefix}hb", // bright blue
-					[1,35] => $"{prefix}hm", // bright magenta
-					[1,36] => $"{prefix}hc", // bright cyan
-					[1,37] => $"{prefix}hw", // bright white
+					[0, 30] => $"{prefix}x", // black
+					[0, 31] => $"{prefix}r", // red  
+					[0, 32] => $"{prefix}g", // green
+					[0, 33] => $"{prefix}y", // yellow
+					[0, 34] => $"{prefix}b", // blue
+					[0, 35] => $"{prefix}m", // magenta
+					[0, 36] => $"{prefix}c", // cyan
+					[0, 37] => $"{prefix}w", // white
+					[1, 30] => $"{prefix}hx", // bright black
+					[1, 31] => $"{prefix}hr", // bright red  
+					[1, 32] => $"{prefix}hg", // bright green
+					[1, 33] => $"{prefix}hy", // bright yellow
+					[1, 34] => $"{prefix}hb", // bright blue
+					[1, 35] => $"{prefix}hm", // bright magenta
+					[1, 36] => $"{prefix}hc", // bright cyan
+					[1, 37] => $"{prefix}hw", // bright white
 					[.., 90] => $"{prefix}hx", // bright black
 					[.., 91] => $"{prefix}hr", // bright red
 					[.., 92] => $"{prefix}hg", // bright green
@@ -1122,6 +1165,47 @@ public partial class Functions
 					_ => ""
 				},
 			_ => ""
+		};
+	}
+
+	/// <summary>
+	/// Converts AnsiColor to PennMUSH color code
+	/// </summary>
+	private static Color ConvertAnsiColorToRGB(ANSI.AnsiColor color)
+	{
+		return color switch
+		{
+			ANSI.AnsiColor.RGB rgb => rgb.Item,
+			AnsiColor.ANSI ansi
+				=> ansi.Item switch
+				{
+					[0, 30] => Color.Black, // black
+					[0, 31] => Color.DarkRed, // red  
+					[0, 32] => Color.DarkGreen, // green
+					[0, 33] => Color.DarkGoldenrod, // yellow
+					[0, 34] => Color.DarkBlue, // blue
+					[0, 35] => Color.DarkMagenta, // magenta
+					[0, 36] => Color.DarkCyan, // cyan
+					[0, 37] => Color.Gray, // white
+					[1, 30] => Color.LightGray, // bright black
+					[1, 31] => Color.Red, // bright red  
+					[1, 32] => Color.Green, // bright green
+					[1, 33] => Color.Yellow, // bright yellow
+					[1, 34] => Color.Blue, // bright blue
+					[1, 35] => Color.Magenta, // bright magenta
+					[1, 36] => Color.Cyan, // bright cyan
+					[1, 37] => Color.White, // bright white
+					[.., 90] => Color.LightGray, // bright black
+					[.., 91] => Color.Red, // bright red
+					[.., 92] => Color.Green, // bright green
+					[.., 93] => Color.Yellow, // bright yellow
+					[.., 94] => Color.Blue, // bright blue
+					[.., 95] => Color.Magenta, // bright magenta
+					[.., 96] => Color.Cyan, // bright cyan
+					[.., 97] => Color.White, // bright white
+					_ => Color.Empty
+				},
+			_ => Color.Empty
 		};
 	}
 
