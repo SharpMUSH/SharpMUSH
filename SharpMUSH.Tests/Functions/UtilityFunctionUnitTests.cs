@@ -48,8 +48,9 @@ public class UtilityFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("functions()", "")]
+	[Arguments("functions(add*)", "")]
+	[Arguments("functions(rand)", "")]
 	public async Task Functions(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -85,12 +86,15 @@ public class UtilityFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("benchmark(add(1,2),1000)", "")]
+	[Arguments("benchmark(add(1,2),100)", "")]
+	[Arguments("benchmark(sub(5,3),50)", "")]
 	public async Task Benchmark(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsNotNull();
+		var value = result.ToPlainText();
+		await Assert.That(value).IsNotNull();
+		// Should return a numeric value (time in milliseconds)
+		await Assert.That(double.TryParse(value, out _)).IsTrue();
 	}
 
 	[Test]

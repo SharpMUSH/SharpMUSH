@@ -258,9 +258,45 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "benchmark", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.NoParse)]
-	public static ValueTask<CallState> Benchmark(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Benchmark(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var args = parser.CurrentState.ArgumentsOrdered;
+		
+		// First argument is the code to benchmark
+		var code = args["0"].Message!;
+		
+		// Second argument is the number of iterations
+		if (!int.TryParse(MModule.plainText(args["1"].Message), out var iterations) || iterations <= 0)
+		{
+			return new CallState(Errors.ErrorNumbers);
+		}
+		
+		// Optional third argument for output format (defaults to milliseconds)
+		var outputFormat = "ms";
+		if (args.Count >= 3 && args.TryGetValue("2", out var formatArg))
+		{
+			outputFormat = MModule.plainText(formatArg.Message).ToLower();
+		}
+		
+		// Benchmark the code
+		var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+		for (int i = 0; i < iterations; i++)
+		{
+			await parser.FunctionParse(code);
+		}
+		stopwatch.Stop();
+		
+		// Return the elapsed time in the requested format
+		var elapsed = stopwatch.Elapsed.TotalMilliseconds;
+		if (outputFormat == "s" || outputFormat == "seconds")
+		{
+			return new CallState((elapsed / 1000.0).ToString("F6"));
+		}
+		else
+		{
+			// Default to milliseconds
+			return new CallState(elapsed.ToString("F3"));
+		}
 	}
 
 	[SharpFunction(Name = "checkpass", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly | FunctionFlags.StripAnsi)]
@@ -369,14 +405,63 @@ public partial class Functions
 		throw new NotImplementedException();
 	}
 	[SharpFunction(Name = "fn", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
-	public static ValueTask<CallState> Fn(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Fn(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		// fn() is like ufun() but the first argument is the function name
+		// and remaining arguments are passed to the function
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		
+		// Get the function name from the first argument
+		var functionName = parser.CurrentState.Arguments["0"].Message!;
+		
+		// Call the attribute function with remaining arguments
+		var result = await AttributeService!.EvaluateAttributeFunctionAsync(
+			parser,
+			executor,
+			objAndAttribute: functionName,
+			args: parser.CurrentState.Arguments.Skip(1)
+				.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value.Value))
+				.ToDictionary(),
+			ignoreLambda: true);
+
+		return new CallState(result);
 	}
 	[SharpFunction(Name = "functions", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> FFunctions(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		// Get the function library from the parser
+		var functionLibrary = parser.FunctionLibrary;
+		
+		// Get optional pattern argument
+		var pattern = "*";
+		if (parser.CurrentState.Arguments.TryGetValue("0", out var arg0))
+		{
+			var patternArg = MModule.plainText(arg0.Message);
+			if (!string.IsNullOrWhiteSpace(patternArg))
+			{
+				pattern = patternArg;
+			}
+		}
+		
+		// Get all function names
+		var allFunctions = functionLibrary.Keys.OrderBy(x => x);
+		
+		// Filter by pattern if specified (simple wildcard matching)
+		IEnumerable<string> filteredFunctions;
+		if (pattern == "*")
+		{
+			filteredFunctions = allFunctions;
+		}
+		else
+		{
+			// Convert simple wildcard pattern to regex
+			var regexPattern = "^" + Regex.Escape(pattern).Replace("\\*", ".*").Replace("\\?", ".") + "$";
+			var regex = new Regex(regexPattern, RegexOptions.IgnoreCase);
+			filteredFunctions = allFunctions.Where(name => regex.IsMatch(name));
+		}
+		
+		// Return space-separated list of function names
+		return ValueTask.FromResult(new CallState(string.Join(" ", filteredFunctions)));
 	}
 
 
