@@ -133,6 +133,7 @@ public class Startup(ArangoConfiguration config, string colorFile)
 		services.AddControllers();
 		services.AddQuartzHostedService();
 		services.AddHostedService<StartupHandler>();
+		services.AddHostedService<Services.ConnectionLoggingService>();
 		
 		services.AddLogging(logging =>
 		{

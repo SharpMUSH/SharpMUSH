@@ -133,7 +133,7 @@ public partial class Functions
 		// Case 1: mail() - return total count of messages in all folders
 		if (args.Count == 0 || (args.Count == 1 && string.IsNullOrWhiteSpace(args["0"].Message?.ToPlainText())))
 		{
-			var allMail = await Mediator!.Send(new GetAllMailListQuery(executor.AsPlayer));
+			var allMail = Mediator!.CreateStream(new GetAllMailListQuery(executor.AsPlayer));
 			var count = await allMail.CountAsync();
 			return new CallState(count.ToString());
 		}
@@ -155,7 +155,7 @@ public partial class Functions
 				parser, executor, executor, arg0, LocateFlags.PlayersPreference,
 				async target =>
 				{
-					var allMail = await Mediator!.Send(new GetAllMailListQuery(target.AsPlayer));
+					var allMail = Mediator!.CreateStream(new GetAllMailListQuery(target.AsPlayer));
 					var mailArray = await allMail.ToArrayAsync();
 					var read = mailArray.Count(m => m.Read);
 					var unread = mailArray.Count(m => !m.Read);
@@ -284,7 +284,7 @@ public partial class Functions
 		var results = new List<string>();
 		await foreach (var mail in mailList)
 		{
-			var folderMail = await Mediator!.Send(new GetMailListQuery(targetPlayer.AsPlayer, mail.Folder));
+			var folderMail = Mediator!.CreateStream(new GetMailListQuery(targetPlayer.AsPlayer, mail.Folder));
 			var index = 0;
 			await foreach (var m in folderMail)
 			{
@@ -430,8 +430,8 @@ public partial class Functions
 			target = locateResult.AsPlayer;
 		}
 
-		var allSentMail = await Mediator!.Send(new GetAllSentMailListQuery(target.Object()));
-		var allReceivedMail = await Mediator!.Send(new GetAllMailListQuery(target.AsPlayer));
+		var allSentMail = Mediator!.CreateStream(new GetAllSentMailListQuery(target.Object()));
+		var allReceivedMail = Mediator!.CreateStream(new GetAllMailListQuery(target.AsPlayer));
 
 		var sentCount = await allSentMail.CountAsync();
 		var receivedCount = await allReceivedMail.CountAsync();
@@ -471,8 +471,8 @@ public partial class Functions
 			target = locateResult.AsPlayer;
 		}
 
-		var allSentMail = await (await Mediator!.Send(new GetAllSentMailListQuery(target.Object()))).ToArrayAsync();
-		var allReceivedMail = await (await Mediator!.Send(new GetAllMailListQuery(target.AsPlayer))).ToArrayAsync();
+		var allSentMail = await (Mediator!.CreateStream(new GetAllSentMailListQuery(target.Object()))).ToArrayAsync();
+		var allReceivedMail = await (Mediator!.CreateStream(new GetAllMailListQuery(target.AsPlayer))).ToArrayAsync();
 
 		var sentCount = allSentMail.Length;
 		var sentUnread = allSentMail.Count(m => !m.Read);
@@ -517,8 +517,8 @@ public partial class Functions
 			target = locateResult.AsPlayer;
 		}
 
-		var allSentMail = await (await Mediator!.Send(new GetAllSentMailListQuery(target.Object()))).ToArrayAsync();
-		var allReceivedMail = await (await Mediator!.Send(new GetAllMailListQuery(target.AsPlayer))).ToArrayAsync();
+		var allSentMail = await (Mediator!.CreateStream(new GetAllSentMailListQuery(target.Object()))).ToArrayAsync();
+		var allReceivedMail = await (Mediator!.CreateStream(new GetAllMailListQuery(target.AsPlayer))).ToArrayAsync();
 
 		var sentCount = allSentMail.Length;
 		var sentUnread = allSentMail.Count(m => !m.Read);

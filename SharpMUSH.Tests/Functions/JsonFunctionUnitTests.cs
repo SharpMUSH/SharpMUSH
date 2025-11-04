@@ -34,11 +34,57 @@ public class JsonFunctionUnitTests
 	}
 
 	[Test]
+	[Arguments("isjson(1)", "1")]
+	[Arguments("isjson(true)", "1")]
+	[Arguments("isjson(false)", "1")]
+	[Arguments("isjson(null)", "1")]
+	[Arguments("""isjson("test_string_isjson_case1")""", "1")]
+	[Arguments("""isjson(json(object,key,json(string,test_value_isjson_case2)))""", "1")]
+	[Arguments("""isjson(json(array,1,2,3))""", "1")]
+	[Arguments("isjson(unquoted)", "0")]
+	[Arguments("isjson(test_invalid_isjson_case3)", "0")]
+	[Arguments("""isjson(json(string,{bad json}))""", "1")]
+	public async Task Test_IsJson_ValidatesJsonCorrectly(string function, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
+	[Test]
 	[Skip("Not Yet Implemented")]
 	[Arguments(@"json_map(#lambda/toupper\(%%1,%%2\) json(object,a,1,b,2))", "A:1 B:2")]
 	public async Task JsonMap(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	// Note: json_map and oob tests require more complex setup with attributes and connections
+	// These are placeholder tests that should be expanded once the test infrastructure supports them
+	
+	[Test]
+	[Skip("Requires attribute setup")]
+	[Arguments(@"&TEST me=%%0:%%1", @"json_map(me/TEST,""test_json_map_string"")", "string:\"test_json_map_string\"")]
+	[Arguments(@"&TEST me=%%0:%%1:%%2", @"json_map(me/TEST,[1,2,3])", "number:1:0 number:2:1 number:3:2")]
+	public async Task Test_JsonMap_MapsOverJsonElements(string setup, string function, string expected)
+	{
+		// Setup: set attribute
+		// TODO: Implement attribute setting in test infrastructure
+		
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+	
+	[Test]
+	[Skip("Requires connection setup")]
+	[Arguments("oob(me,Package.Name,{\"key\":\"test_oob_case1\"})", "1")]
+	[Arguments("oob(me,Package.Name)", "1")]
+	public async Task Test_Oob_SendsGmcpMessages(string function, string expected)
+	{
+		// This test requires proper GMCP connection setup
+		// TODO: Implement connection mocking in test infrastructure
+		
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 }

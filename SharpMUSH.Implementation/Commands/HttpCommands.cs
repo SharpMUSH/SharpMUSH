@@ -102,10 +102,138 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@RESPOND", Switches = ["HEADER", "TYPE"], Behavior = CB.Default | CB.NoGagged | CB.EqSplit,
-		MinArgs = 0, MaxArgs = 0)]
+		MinArgs = 1, MaxArgs = 2)]
 	public static async ValueTask<Option<CallState>> Respond(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var switches = parser.CurrentState.Switches.ToList();
+		var httpResponse = parser.CurrentState.HttpResponse;
+
+		// Determine if we're in HTTP context (HttpResponse will be set by HTTP handler)
+		var isHttpContext = httpResponse is not null;
+
+		// Parse the arguments based on the switch
+		var hasTypeSwitch = switches.Contains("TYPE");
+		var hasHeaderSwitch = switches.Contains("HEADER");
+
+		if (hasTypeSwitch)
+		{
+			// @respond/type <content-type>
+			parser.CurrentState.Arguments.TryGetValue("0", out var contentTypeArg);
+			if (contentTypeArg is null || string.IsNullOrWhiteSpace(contentTypeArg.Message?.ToPlainText()))
+			{
+				await NotifyService!.Notify(executor, "Content-Type cannot be empty.");
+				return new CallState("#-1 CONTENT-TYPE CANNOT BE EMPTY");
+			}
+
+			var contentType = contentTypeArg.Message!.ToPlainText();
+
+			if (isHttpContext)
+			{
+				httpResponse!.ContentType = contentType;
+			}
+			else
+			{
+				await NotifyService!.Notify(executor, $"(HTTP): Content-Type set to {contentType}");
+			}
+		}
+		else if (hasHeaderSwitch)
+		{
+			// @respond/header <name>=<value>
+			// With EqSplit, arg 0 is header name, arg 1 is header value
+			parser.CurrentState.Arguments.TryGetValue("0", out var headerNameArg);
+			parser.CurrentState.Arguments.TryGetValue("1", out var headerValueArg);
+
+			if (headerNameArg is null)
+			{
+				await NotifyService!.Notify(executor, "Header required.");
+				return new CallState("#-1 HEADER REQUIRED");
+			}
+
+			var headerName = headerNameArg.Message?.ToPlainText()?.Trim() ?? string.Empty;
+			var headerValue = headerValueArg?.Message?.ToPlainText()?.Trim() ?? string.Empty;
+
+			if (string.IsNullOrWhiteSpace(headerName))
+			{
+				await NotifyService!.Notify(executor, "Header name cannot be empty.");
+				return new CallState("#-1 HEADER NAME CANNOT BE EMPTY");
+			}
+
+			// Prevent setting Content-Length as per documentation
+			if (headerName.Equals("Content-Length", StringComparison.OrdinalIgnoreCase))
+			{
+				await NotifyService!.Notify(executor, "Cannot set Content-Length header.");
+				return new CallState("#-1 CANNOT SET CONTENT-LENGTH HEADER");
+			}
+
+			if (isHttpContext)
+			{
+				httpResponse!.Headers.Add((headerName, headerValue));
+			}
+			else
+			{
+				await NotifyService!.Notify(executor, $"(HTTP): Header {headerName}: {headerValue}");
+			}
+		}
+		else
+		{
+			// @respond <code> <text>
+			// With EqSplit, the entire "code text" comes in arg[0], need to manually split on first space
+			parser.CurrentState.Arguments.TryGetValue("0", out var statusArg);
+
+			if (statusArg is null)
+			{
+				await NotifyService!.Notify(executor, "Status code required.");
+				return new CallState("#-1 STATUS CODE REQUIRED");
+			}
+
+			var fullStatusText = statusArg.Message?.ToPlainText() ?? string.Empty;
+			
+			// Split on first space to separate code from text
+			var spaceIndex = fullStatusText.IndexOf(' ');
+			string statusCodeText;
+			string statusText;
+			
+			if (spaceIndex > 0)
+			{
+				statusCodeText = fullStatusText[..spaceIndex].Trim();
+				statusText = fullStatusText[(spaceIndex + 1)..].Trim();
+			}
+			else
+			{
+				statusCodeText = fullStatusText.Trim();
+				statusText = string.Empty;
+			}
+
+			// Validate status code is 3 digits
+			if (!int.TryParse(statusCodeText, out var statusCode) || statusCode < 100 || statusCode > 999)
+			{
+				await NotifyService!.Notify(executor, "Status code must be a 3-digit number.");
+				return new CallState("#-1 STATUS CODE MUST BE A 3-DIGIT NUMBER");
+			}
+
+			// Build the full status line
+			var statusLine = string.IsNullOrWhiteSpace(statusText) 
+				? statusCodeText 
+				: $"{statusCodeText} {statusText}";
+
+			// Validate total length < 40 characters as per documentation
+			if (statusLine.Length >= 40)
+			{
+				await NotifyService!.Notify(executor, "Status line must be less than 40 characters.");
+				return new CallState("#-1 STATUS LINE MUST BE LESS THAN 40 CHARACTERS");
+			}
+
+			if (isHttpContext)
+			{
+				httpResponse!.StatusLine = statusLine;
+			}
+			else
+			{
+				await NotifyService!.Notify(executor, $"(HTTP): Status {statusLine}");
+			}
+		}
+
+		return CallState.Empty;
 	}
 }
