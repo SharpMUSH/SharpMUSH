@@ -168,19 +168,13 @@ public partial class Functions
 			target = maybeTarget.AsAnyObject;
 		}
 
-		// Get all objects and find exits pointing to target
-		var allObjects = await Mediator!.Send(new GetAllObjectsQuery());
+		// Get all exits that lead to the target location using the new database query
+		var exits = await Mediator!.Send(new GetEntrancesQuery(target.Object().DBRef));
 		var entrances = new List<string>();
 
-		await foreach (var obj in allObjects)
+		await foreach (var exit in exits)
 		{
-			if (obj.Type.Equals("EXIT", StringComparison.OrdinalIgnoreCase))
-			{
-				// Check if this exit leads to the target
-				// Exits have their destination in the Location relationship
-				// This is a simplified check - full implementation would need proper exit destination tracking
-				entrances.Add(new DBRef(obj.Key, obj.CreationTime).ToString());
-			}
+			entrances.Add(exit.Object.DBRef.ToString());
 		}
 
 		// TODO: Implement type, start, and count filtering when arguments are provided

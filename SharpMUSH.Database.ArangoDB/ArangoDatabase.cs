@@ -2054,6 +2054,29 @@ public partial class ArangoDatabase(
 		}
 	}
 
+	public async ValueTask<IAsyncEnumerable<SharpExit>> GetEntrancesAsync(DBRef destination, CancellationToken ct = default)
+	{
+		await ValueTask.CompletedTask;
+		
+		// Query to find all exits that lead to the destination
+		// Exits are connected to their destination via the AtLocation edge in GraphLocations
+		var exitIds = arangoDb.Query.ExecuteStreamAsync<string>(handle,
+			$@"FOR v, e IN 1..1 INBOUND @destination GRAPH @graph
+			   FILTER v.Type == @exitType
+			   RETURN v._id",
+			bindVars: new Dictionary<string, object>
+			{
+				{ "destination", $"{DatabaseConstants.Objects}/{destination.Number}" },
+				{ "graph", DatabaseConstants.GraphLocations },
+				{ "exitType", DatabaseConstants.TypeExit }
+			}, cancellationToken: ct) ?? AsyncEnumerable.Empty<string>();
+
+		return exitIds
+			.Select(async id => await GetObjectNodeAsync(id, ct))
+			.Where(x => !x.Result.IsNone)
+			.Select(x => x.Result.AsExit);
+	}
+
 	public async ValueTask MoveObjectAsync(AnySharpContent enactorObj, AnySharpContainer destination,
 		CancellationToken ct = default)
 	{
