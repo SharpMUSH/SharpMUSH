@@ -10,7 +10,7 @@ namespace SharpMUSH.Library.Queries.Database;
 /// <param name="Skip">Number of records to skip for pagination</param>
 /// <param name="Count">Number of records to return</param>
 public record GetConnectionLogsQuery(string Category, int Skip = 0, int Count = 100) 
-	: IQuery<IAsyncEnumerable<LogEventEntity>>, ICacheable
+	: IStreamQuery<LogEventEntity>, ICacheable
 {
 	public string CacheKey => $"logs:{Category}:{Skip}:{Count}";
 	public string[] CacheTags => [Definitions.CacheTags.ConnectionLogs];

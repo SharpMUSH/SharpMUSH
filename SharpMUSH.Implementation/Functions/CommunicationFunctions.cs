@@ -89,7 +89,7 @@ public partial class Functions
 			: INotifyService.NotificationType.Emit;
 
 		var executorLocation = await executor.Where();
-		var contents = await executorLocation.Content(Mediator!);
+		var contents = executorLocation.Content(Mediator!);
 
 		await foreach (var obj in contents
 			               .Where(async (x, _)
@@ -114,7 +114,7 @@ public partial class Functions
 			: INotifyService.NotificationType.Emit;
 
 		var executorLocation = await executor.Where();
-		var contents = await executorLocation.Content(Mediator!);
+		var contents = executorLocation.Content(Mediator!);
 
 		await foreach (var obj in contents
 			               .Where(async (x, _)

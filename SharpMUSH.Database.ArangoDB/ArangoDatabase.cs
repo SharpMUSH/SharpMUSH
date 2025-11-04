@@ -1550,7 +1550,6 @@ public partial class ArangoDatabase(
 	public async ValueTask<IAsyncEnumerable<SharpAttribute>?> GetAttributeAsync(DBRef dbref, string[] attribute,
 		CancellationToken ct = default)
 	{
-		await ValueTask.CompletedTask;
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 
 		const string let =

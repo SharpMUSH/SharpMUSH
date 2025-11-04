@@ -6,11 +6,11 @@ using SharpMUSH.Library.Queries.Database;
 namespace SharpMUSH.Implementation.Handlers.Database;
 
 public class GetContentsQueryHandler(ISharpDatabase database)
-	: IQueryHandler<GetContentsQuery, IAsyncEnumerable<AnySharpContent>?>
+	: IStreamQueryHandler<GetContentsQuery, AnySharpContent>
 {
-	public async ValueTask<IAsyncEnumerable<AnySharpContent>?> Handle(GetContentsQuery request, CancellationToken cancellationToken)
-		=> await request.DBRef.Match(
-			async dbRef => await database.GetContentsAsync(dbRef, cancellationToken),
-			async obj => await database.GetContentsAsync(obj, cancellationToken)
-			);
+	public IAsyncEnumerable<AnySharpContent> Handle(GetContentsQuery request, CancellationToken cancellationToken)
+		=> request.DBRef.Match(
+			dbRef => database.GetContentsAsync(dbRef, cancellationToken).AsTask().GetAwaiter().GetResult(),
+			obj => database.GetContentsAsync(obj, cancellationToken).AsTask().GetAwaiter().GetResult()
+		) ?? AsyncEnumerable.Empty<AnySharpContent>();
 }

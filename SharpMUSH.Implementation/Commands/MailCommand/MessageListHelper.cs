@@ -54,17 +54,17 @@ public static class MessageListHelper
 
 		if (folderSplit.Length == 2 && !string.IsNullOrWhiteSpace(folderSplit[0]))
 		{
-			mailList = await mediator!.Send(new GetMailListQuery(executor.AsPlayer, folderSplit[0]));
+			mailList = mediator!.CreateStream(new GetMailListQuery(executor.AsPlayer, folderSplit[0]));
 			msgList = folderSplit[1];
 		}
 		else if (msgList == "all")
 		{
-			mailList = await mediator!.Send(new GetAllMailListQuery(executor.AsPlayer));
+			mailList = mediator!.CreateStream(new GetAllMailListQuery(executor.AsPlayer));
 		}
 		else
 		{
 			var currentFolder = await CurrentMailFolder(parser, objectDataService, executor);
-			mailList = await mediator!.Send(new GetMailListQuery(executor.AsPlayer, currentFolder));
+			mailList = mediator!.CreateStream(new GetMailListQuery(executor.AsPlayer, currentFolder));
 		}
 
 		ErrorOrMailList filteredList = msgList switch
@@ -116,6 +116,7 @@ public static class MessageListHelper
 	
 	public static async ValueTask<ErrorOrMailList> HandleSent(IMUSHCodeParser parser,IMediator? mediator, INotifyService? notifyService,  MString? arg0, AnySharpObject executor, SharpPlayer target)
 	{
+		await ValueTask.CompletedTask;
 		var msgList = arg0?.ToPlainText().Trim().ToLower() ?? "folder";
 		var folderSplit = msgList.Split(':');
 		var rangeSplit = msgList.Split('-');
@@ -123,16 +124,16 @@ public static class MessageListHelper
 
 		if (folderSplit.Length == 2 && !string.IsNullOrWhiteSpace(folderSplit[0]))
 		{
-			mailList = await mediator!.Send(new GetSentMailListQuery(executor.Object(), target));
+			mailList = mediator!.CreateStream(new GetSentMailListQuery(executor.Object(), target));
 			msgList = folderSplit[1];
 		}
 		else if (msgList == "all")
 		{
-			mailList = await mediator!.Send(new GetAllSentMailListQuery(executor.Object()));
+			mailList = mediator!.CreateStream(new GetAllSentMailListQuery(executor.Object()));
 		}
 		else
 		{
-			mailList = await mediator!.Send(new GetSentMailListQuery(executor.Object(), target));
+			mailList = mediator!.CreateStream(new GetSentMailListQuery(executor.Object(), target));
 		}
 
 		ErrorOrMailList filteredList = msgList switch

@@ -30,7 +30,7 @@ public static class ChannelCombine
 			return new CallState("#-1 INVALID OPTION");
 		}
 
-		var channelList = await Mediator.Send(new GetChannelListQuery()); 
+		var channelList = Mediator.CreateStream(new GetChannelListQuery()); 
 		if (channelName is null)
 		{
 			channels = [.. await channelList.ToArrayAsync()];

@@ -65,7 +65,7 @@ public class CommunicationService(
 		AnySharpObject? sender = null,
 		IEnumerable<AnySharpObject>? excludeObjects = null)
 	{
-		var contents = await room.Content(mediator);
+		var contents = room.Content(mediator);
 		var actualSender = sender ?? executor;
 		var excludeSet = excludeObjects?.ToHashSet() ?? [];
 

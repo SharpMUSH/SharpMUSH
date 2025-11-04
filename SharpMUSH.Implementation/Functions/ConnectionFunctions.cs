@@ -56,7 +56,7 @@ public partial class Functions
 			return new CallState("#-1 INVALID SEARCH TYPE");
 		}
 
-		var logs = await Mediator!.Send(new GetConnectionLogsQuery("Connection", 0, 1000));
+		var logs = Mediator!.CreateStream(new GetConnectionLogsQuery("Connection", 0, 1000));
 
 		var results = new List<string>();
 		var uniqueAddresses = new HashSet<string>();
@@ -174,7 +174,7 @@ public partial class Functions
 
 		var isCount = specs.Any(s => s.type == "count");
 
-		var logs = await Mediator!.Send(new GetConnectionLogsQuery("Connection", 0, 1000));
+		var logs = Mediator!.CreateStream(new GetConnectionLogsQuery("Connection", 0, 1000));
 
 		var results = new List<string>();
 
@@ -279,7 +279,7 @@ public partial class Functions
 			return new CallState("#-1 INVALID CONNECTION ID");
 		}
 
-		var logs = await Mediator!.Send(new GetConnectionLogsQuery("Connection", 0, 1000));
+		var logs = Mediator!.CreateStream(new GetConnectionLogsQuery("Connection", 0, 1000));
 
 		try
 		{
