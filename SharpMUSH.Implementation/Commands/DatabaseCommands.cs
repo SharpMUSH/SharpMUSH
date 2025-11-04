@@ -1,3 +1,4 @@
+using DotNext.Collections.Generic;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
@@ -124,15 +125,12 @@ public partial class Commands
 				
 				try
 				{
-					// Use async enumerable streaming for better performance and memory efficiency
 					var columnNames = new List<string>();
 					var firstRow = true;
 					int rowNumber = 1;
 
-					// Execute the SQL query with streaming to avoid loading all results into memory
 					await foreach (var row in SqlService.ExecuteQueryStreamAsync(query))
 					{
-						// If /colnames switch and first row, queue attr with column names
 						if (colnamesSwitch && firstRow)
 						{
 							columnNames = row.Keys.ToList();
@@ -140,46 +138,44 @@ public partial class Commands
 							await Mediator!.Send(new QueueAttributeRequest(
 								() =>
 								{
-									// Set %0 to 0 for column names row
-									parser.CurrentState.AddRegister("0", MModule.single("0"));
-
-									// Set %1-29 to column names
-									for (int i = 0; i < Math.Min(columnNames.Count, 29); i++)
+									var remainder = columnNames
+										.Select((x, i) 
+												=> new KeyValuePair<string, CallState>((i + 1).ToString(), MModule.single(x)))
+										.ToDictionary();
+									
+									remainder.TryAdd("0", MModule.single("0"));
+										
+									var newState = parser.CurrentState with
 									{
-										var colName = columnNames[i];
-										parser.CurrentState.AddRegister((i + 1).ToString(), MModule.single(colName));
-									}
-
-									return ValueTask.FromResult(parser.CurrentState);
+										Arguments = remainder,
+										EnvironmentRegisters = remainder
+									};
+									return ValueTask.FromResult(newState);
 								},
 								new DbRefAttribute(found.Object().DBRef, attribute.LongName!.Split("`")) ));
 
 							firstRow = false;
 						}
 
-						// Queue attribute for this row
 						var currentRow = rowNumber;
 						await Mediator!.Send(new QueueAttributeRequest(
 							() =>
 							{
-								// Set %0 to row number
+								var values = row.Values.ToList();
+								
 								parser.CurrentState.AddRegister("0", MModule.single(currentRow.ToString()));
 
-								// Set %1-29 to column values
-								var values = row.Values.ToList();
-								for (int i = 0; i < Math.Min(values.Count, 29); i++)
-								{
-									var value = values[i]?.ToString() ?? string.Empty;
-									parser.CurrentState.AddRegister((i + 1).ToString(), MModule.single(value));
-								}
+								var dict = values.Select((x, i) =>
+										new KeyValuePair<string, CallState>((i + 1).ToString(),
+											MModule.single(x?.ToString() ?? string.Empty)))
+									.ToDictionary();
+								dict.TryAdd("0", MModule.single(currentRow.ToString()));
 
-								// Set named arguments for r(<name>, arg)
-								foreach (var kvp in row)
+								return ValueTask.FromResult(parser.CurrentState with
 								{
-									parser.CurrentState.AddRegister(kvp.Key, MModule.single(kvp.Value?.ToString() ?? string.Empty));
-								}
-
-								return ValueTask.FromResult(parser.CurrentState);
+									Arguments = dict,
+									EnvironmentRegisters = dict
+								});
 							},
 							new DbRefAttribute(found.Object().DBRef, attribute.LongName!.Split("`"))));
 

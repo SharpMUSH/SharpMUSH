@@ -6,22 +6,15 @@ namespace SharpMUSH.Library.Services;
 /// <summary>
 /// MySQL implementation of the SQL service
 /// </summary>
-public class MySqlService : ISqlService
+public class MySqlService(string connectionString) : ISqlService
 {
-	private readonly string _connectionString;
-
-	public MySqlService(string connectionString)
-	{
-		_connectionString = connectionString;
-	}
-
-	public bool IsAvailable => !string.IsNullOrEmpty(_connectionString);
+	public bool IsAvailable => !string.IsNullOrEmpty(connectionString);
 
 	public async ValueTask<IEnumerable<Dictionary<string, object?>>> ExecuteQueryAsync(string query)
 	{
 		var results = new List<Dictionary<string, object?>>();
 
-		await using var connection = new MySqlConnection(_connectionString);
+		await using var connection = new MySqlConnection(connectionString);
 		await connection.OpenAsync();
 
 		await using var command = new MySqlCommand(query, connection);
@@ -42,16 +35,15 @@ public class MySqlService : ISqlService
 
 	public async IAsyncEnumerable<Dictionary<string, object?>> ExecuteQueryStreamAsync(string query)
 	{
-		await using var connection = new MySqlConnection(_connectionString);
+		await using var connection = new MySqlConnection(connectionString);
 		await connection.OpenAsync();
 
 		await using var command = new MySqlCommand(query, connection);
 		await using var reader = await command.ExecuteReaderAsync();
-
-		while (await reader.ReadAsync())
+		while (await reader.ReadAsync(CancellationToken.None))
 		{
 			var row = new Dictionary<string, object?>();
-			for (int i = 0; i < reader.FieldCount; i++)
+			for (var i = 0; i < reader.FieldCount; i++)
 			{
 				row[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader.GetValue(i);
 			}
@@ -62,20 +54,11 @@ public class MySqlService : ISqlService
 	public async ValueTask<string> ExecuteQueryAsStringAsync(string query, string delimiter = " ")
 	{
 		var results = await ExecuteQueryAsync(query);
-		var rows = results.ToList();
 
-		if (rows.Count == 0)
-		{
-			return string.Empty;
-		}
-
-		var output = new List<string>();
-		
-		foreach (var row in rows)
-		{
-			var values = row.Values.Select(v => v?.ToString() ?? string.Empty);
-			output.Add(string.Join(delimiter, values));
-		}
+		var output = results
+			.Select(row => row.Values.Select(v => v?.ToString() ?? string.Empty))
+			.Select(values => string.Join(delimiter, values))
+			.ToArray();
 
 		return string.Join("\n", output);
 	}
