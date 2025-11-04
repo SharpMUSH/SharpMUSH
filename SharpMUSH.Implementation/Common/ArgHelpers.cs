@@ -234,7 +234,7 @@ public static partial class ArgHelpers
 					async dbref => (await mediator.Send(new GetObjectNodeQuery(dbref), ct)).TryPickT0(out var player, out _)
 						? player
 						: null,
-					async name => await (await mediator.Send(new GetPlayerQuery(name), ct)).FirstOrDefaultAsync(cancellationToken: ct)));
+					async name => await mediator.CreateStream(new GetPlayerQuery(name), ct).FirstOrDefaultAsync(cancellationToken: ct)));
 
 	public static async ValueTask<CallState> ForHandleOrPlayer(IMUSHCodeParser parser, IMediator mediator,
 		IConnectionService connectionService, ILocateService locateService, CallState value,

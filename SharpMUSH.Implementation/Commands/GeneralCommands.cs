@@ -206,7 +206,7 @@ public partial class Commands
 			? []
 			: await Mediator.CreateStream(new GetContentsQuery(viewing.Known().AsContainer))
 				.ToArrayAsync();
-				
+
 		var obj = viewing.Object()!;
 		var ownerObj = (await obj.Owner.WithCancellation(CancellationToken.None)).Object;
 		var name = obj.Name;
@@ -602,7 +602,7 @@ public partial class Commands
 		if (executor.IsContent && switches.Contains("ROOM"))
 		{
 			var where = await executor.AsContent.Location();
-			var whereContent = await where.Content(Mediator!);
+			var whereContent = where.Content(Mediator!);
 
 			// notify: Matches on contents of this room:
 			var matchedContent =
@@ -623,7 +623,7 @@ public partial class Commands
 
 		if (executor.IsContainer && switches.Contains("SELF"))
 		{
-			var executorContents = await executor.AsContainer.Content(Mediator!);
+			var executorContents = executor.AsContainer.Content(Mediator!);
 
 			// notify: Matches on carried objects:
 			var matchedContent =
@@ -1024,7 +1024,7 @@ public partial class Commands
 		if (maybeAttribute is not null && (switches.Contains("ANY") || switches.Length == 0))
 		{
 			var maybeFoundAttributes =
-				await Mediator.Send(new GetAttributeQuery(objectToDrain.Object().DBRef, attribute));
+				Mediator.CreateStream(new GetAttributeQuery(objectToDrain.Object().DBRef, attribute));
 			var maybeFoundAttribute = maybeFoundAttributes?.LastOrDefaultAsync().GetAwaiter().GetResult();
 
 			if (maybeFoundAttribute is null)
@@ -1128,7 +1128,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
 		var executorLocation = await executor.Where();
-		var contents = await executorLocation.Content(Mediator!);
+		var contents = executorLocation.Content(Mediator!);
 		var isSpoof = true;
 		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
 		var message = isNoEvaluation
@@ -1138,7 +1138,7 @@ public partial class Commands
 		var interactableContents = contents
 			.Where(async (obj, _) =>
 				await PermissionService!.CanInteract(obj.WithRoomOption(), executor,
-					IPermissionService.InteractType.Hear));
+					InteractType.Hear));
 
 		if (isSpoof)
 		{
@@ -1372,7 +1372,7 @@ public partial class Commands
 			: INotifyService.NotificationType.Emit;
 
 		var executorLocation = await executor.Where();
-		var contents = await executorLocation.Content(Mediator!);
+		var contents = executorLocation.Content(Mediator!);
 		var message = args["0"].Message!;
 
 		await foreach (var obj in contents
@@ -1626,7 +1626,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
 		var executorLocation = await executor.Where();
-		var contents = await executorLocation.Content(Mediator!);
+		var contents = executorLocation.Content(Mediator!);
 		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
 		var message = isNoEvaluation
 			? ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.empty())
@@ -2177,7 +2177,7 @@ public partial class Commands
 			}
 
 			// Contents of the room
-			var contents = await location.Content(Mediator!);
+			var contents = location.Content(Mediator!);
 			await foreach (var obj in contents)
 			{
 				var fullObj = obj.WithRoomOption();
@@ -2219,7 +2219,7 @@ public partial class Commands
 			await NotifyService!.Notify(executor, "Listening EXITS:");
 			if (await locationAnyObject.IsAudible())
 			{
-				var exits = (await location.Content(Mediator!)).Where(x => x.IsExit);
+				var exits = (location.Content(Mediator!)).Where(x => x.IsExit);
 				await foreach (var exit in exits)
 				{
 					if (await exit.WithRoomOption().IsAudible())
@@ -2234,7 +2234,7 @@ public partial class Commands
 		if (!hereFlag && !exitsFlag && inventoryFlag)
 		{
 			await NotifyService!.Notify(executor, "Listening in your INVENTORY:");
-			await foreach (var obj in await executor.AsContainer.Content(Mediator!))
+			await foreach (var obj in executor.AsContainer.Content(Mediator!))
 			{
 				var fullObj = obj.WithRoomOption();
 				var objOwner = await obj.Object().Owner.WithCancellation(CancellationToken.None);

@@ -8,11 +8,9 @@ namespace SharpMUSH.Implementation.Handlers.Database;
 public class GetContentsQueryHandler(ISharpDatabase database)
 	: IStreamQueryHandler<GetContentsQuery, AnySharpContent>
 {
-	public async IAsyncEnumerable<AnySharpContent> Handle(GetContentsQuery request, CancellationToken cancellationToken)
-		=> await request.DBRef.Match(
-			async dbRef => await database.GetContentsAsync(dbRef, cancellationToken)
-			               ?? AsyncEnumerable.Empty<AnySharpContent>(),
-			async obj => await database.GetContentsAsync(obj, cancellationToken)
-			             ?? AsyncEnumerable.Empty<AnySharpContent>()
-		);
+	public IAsyncEnumerable<AnySharpContent> Handle(GetContentsQuery request, CancellationToken cancellationToken)
+		=> request.DBRef.Match(
+			dbRef => database.GetContentsAsync(dbRef, cancellationToken).AsTask().GetAwaiter().GetResult(),
+			obj => database.GetContentsAsync(obj, cancellationToken).AsTask().GetAwaiter().GetResult()
+		) ?? AsyncEnumerable.Empty<AnySharpContent>();
 }

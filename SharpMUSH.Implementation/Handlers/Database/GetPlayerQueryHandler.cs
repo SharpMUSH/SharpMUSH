@@ -8,6 +8,6 @@ namespace SharpMUSH.Implementation.Handlers.Database;
 public class GetPlayerQueryHandler(ISharpDatabase database)
 	: IStreamQueryHandler<GetPlayerQuery, SharpPlayer>
 {
-	public async IAsyncEnumerable<SharpPlayer> Handle(GetPlayerQuery request, CancellationToken cancellationToken)
-		=> await database.GetPlayerByNameOrAliasAsync(request.Name, cancellationToken);
+	public IAsyncEnumerable<SharpPlayer> Handle(GetPlayerQuery request, CancellationToken cancellationToken)
+		=>  database.GetPlayerByNameOrAliasAsync(request.Name, cancellationToken).AsTask().GetAwaiter().GetResult();
 }

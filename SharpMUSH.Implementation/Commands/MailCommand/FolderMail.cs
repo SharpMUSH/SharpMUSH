@@ -132,7 +132,7 @@ public static class FolderMail
 	private static async Task<MString> GetMailFolderInfo(IMUSHCodeParser parser, IExpandedObjectDataService objectDataService, IMediator? mediator, INotifyService? notifyService, AnySharpObject executor, SharpPlayer executorPlayer)
 	{
 		var currentFolder = await MessageListHelper.CurrentMailFolder(parser, objectDataService, executor);
-		var folderMail = await mediator!.Send(
+		var folderMail = mediator!.CreateStream(
 			new GetMailListQuery(executorPlayer, currentFolder));
 		var folderMailList = await folderMail.ToArrayAsync();
 		var unread = folderMailList.Count(x => !x.Read);
