@@ -61,11 +61,11 @@ public partial class Commands
 		// Will need documentation.
 		// A version of map(), but for a command, to run like @dolist
 		// @map[/<switches>][/notify][/delimit <delim>] [<object>/]<attribute>=<list>
-		
+
 		await ValueTask.CompletedTask;
 		throw new NotImplementedException();
 	}
-	
+
 	[SharpCommand(Name = "@DOLIST", Behavior = CB.EqSplit | CB.RSNoParse, MinArgs = 1, MaxArgs = 2,
 		Switches = ["CLEARREGS", "DELIMIT", "INLINE", "INPLACE", "LOCALIZE", "NOBREAK", "NOTIFY"])]
 	public static async ValueTask<Option<CallState>> DoList(IMUSHCodeParser parser, SharpCommandAttribute _2)
@@ -139,7 +139,7 @@ public partial class Commands
 		var realViewing = viewing.Known;
 
 		var contents = realViewing.IsContainer
-			? await (await Mediator!.Send(new GetContentsQuery(realViewing.AsContainer)))!.ToListAsync()
+			? await (Mediator!.CreateStream(new GetContentsQuery(realViewing.AsContainer)))!.ToListAsync()
 			: [];
 		var viewingObject = realViewing.Object();
 
@@ -204,9 +204,9 @@ public partial class Commands
 
 		var contents = viewing.IsExit
 			? []
-			: (await Mediator.Send(new GetContentsQuery(viewing.Known().AsContainer)))?.ToArrayAsync().GetAwaiter()
-			.GetResult();
-
+			: await Mediator.CreateStream(new GetContentsQuery(viewing.Known().AsContainer))
+				.ToArrayAsync();
+				
 		var obj = viewing.Object()!;
 		var ownerObj = (await obj.Owner.WithCancellation(CancellationToken.None)).Object;
 		var name = obj.Name;
@@ -650,7 +650,7 @@ public partial class Commands
 		if (switches.Contains("GLOBAL"))
 		{
 			var masterRoom = new DBRef(Convert.ToInt32(Configuration!.CurrentValue.Database.MasterRoom));
-			var masterRoomContents = await Mediator!.Send(new GetContentsQuery(masterRoom))
+			var masterRoomContents = Mediator!.CreateStream(new GetContentsQuery(masterRoom))
 			                         ?? AsyncEnumerable.Empty<AnySharpContent>();
 
 			var masterRoomContent =
@@ -847,7 +847,7 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var one = await Mediator!.Send(new GetObjectNodeQuery(new DBRef(0)));
-		var attrValues = await Mediator.Send(new GetAttributeQuery(located.Object().DBRef, ["SEMAPHORE"]));
+		var attrValues = Mediator!.CreateStream(new GetAttributeQuery(located.Object().DBRef, ["SEMAPHORE"]));
 		var attrValue = attrValues?.LastOrDefaultAsync().GetAwaiter().GetResult();
 
 		if (attrValue is null)
@@ -876,7 +876,7 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var one = await Mediator!.Send(new GetObjectNodeQuery(new DBRef(0)));
-		var attrValues = await Mediator.Send(new GetAttributeQuery(located.Object().DBRef, attribute));
+		var attrValues = Mediator!.CreateStream(new GetAttributeQuery(located.Object().DBRef, attribute));
 		var attrValue = attrValues?.LastOrDefaultAsync().GetAwaiter().GetResult();
 
 		if (attrValue is null)
@@ -1773,7 +1773,8 @@ public partial class Commands
 
 		if (args.Count < 2)
 		{
-			await NotifyService!.Notify(executor, "Usage: @verb <victim>=<actor>,<what>,<whatd>,<owhat>,<owhatd>,<awhat>[,<args>]");
+			await NotifyService!.Notify(executor,
+				"Usage: @verb <victim>=<actor>,<what>,<whatd>,<owhat>,<owhatd>,<awhat>[,<args>]");
 			return new CallState(Errors.ErrorCantSeeThat);
 		}
 
@@ -2403,11 +2404,13 @@ public partial class Commands
 		var objectAttrArg = args.ElementAtOrDefault(2).Value.Message!.ToPlainText();
 		var otherArgs = args
 			.Skip(3)
-			.Select(x => {
+			.Select(x =>
+			{
 				if (int.TryParse(x.Key, out var numKey))
 				{
 					return new KeyValuePair<string, CallState>((numKey - 3).ToString(), x.Value);
 				}
+
 				return x;
 			})
 			.ToList();

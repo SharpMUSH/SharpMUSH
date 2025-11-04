@@ -40,8 +40,8 @@ public class AnySharpContainer(OneOf<SharpPlayer, SharpRoom, SharpThing> input)
 		async thing => await thing.Location.WithCancellation(CancellationToken.None)
 	);
 
-	public async ValueTask<IAsyncEnumerable<AnySharpContent>> Content(IMediator mediator) =>
-		await mediator.Send(new GetContentsQuery(this)) ?? Enumerable.Empty<AnySharpContent>().ToAsyncEnumerable();
+	public IAsyncEnumerable<AnySharpContent> Content(IMediator mediator) =>
+		mediator.CreateStream(new GetContentsQuery(this));
 
 	public bool IsPlayer => IsT0;
 	public bool IsRoom => IsT1;

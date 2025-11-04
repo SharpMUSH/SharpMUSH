@@ -469,7 +469,8 @@ public class SharpMUSHParserVisitor(
 			var maybeGlobalObject = await Mediator.Send(new GetObjectNodeQuery(new DBRef(Convert.ToInt32(goConfig))));
 			var globalObject = maybeGlobalObject.Known();
 			AnySharpObject[] globalObjects = [globalObject];
-			var globalObjectContent = (await globalObject.AsContainer.Content(Mediator))
+			var globalObjectContent = globalObject.AsContainer
+				.Content(Mediator)
 				.Select(x => x.WithRoomOption());
 
 			var userDefinedCommandMatchesOnGlobal = await CommandDiscoveryService.MatchUserDefinedCommand(

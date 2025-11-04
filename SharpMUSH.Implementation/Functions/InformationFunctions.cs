@@ -102,7 +102,7 @@ public partial class Functions
 		}
 
 		// Get mail for the folder
-		var folderMail = await Mediator!.Send(new GetMailListQuery(targetPlayer.AsPlayer, folderSpec ?? "INBOX"));
+		var folderMail = Mediator!.CreateStream(new GetMailListQuery(targetPlayer.AsPlayer, folderSpec ?? "INBOX"));
 		var mailArray = await folderMail.ToArrayAsync();
 		
 		var read = mailArray.Count(m => m.Read);
@@ -235,7 +235,7 @@ public partial class Functions
 		{
 			case 0:
 			{
-				var allPowers = (await Mediator!.Send(new GetPowersQuery()))
+				var allPowers = (Mediator!.CreateStream(new GetPowersQuery()))
 					.Select(x => MModule.single(x.Name));
 				return MModule.multipleWithDelimiter(MModule.single(" "), await allPowers.ToArrayAsync());
 			}

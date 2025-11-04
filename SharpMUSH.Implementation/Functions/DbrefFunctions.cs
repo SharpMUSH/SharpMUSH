@@ -57,14 +57,14 @@ public partial class Functions
 			executor,
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
 			LocateFlags.All,
-			async locate =>
+			locate =>
 			{
 				if (!locate.IsContainer)
 				{
 					return CallState.Empty;
 				}
 
-				var contents = await locate.AsContainer.Content(Mediator!);
+				var contents = locate.AsContainer.Content(Mediator!);
 				return string.Join(" ", contents.Take(1).Select(x => x.Object().DBRef.ToString()));
 			});
 	}
@@ -178,7 +178,7 @@ public partial class Functions
 				}
 
 				// Todo: Turn Content into async enumerable.
-				var exits = await (await locate.AsContainer.Content(Mediator!))
+				var exits = await locate.AsContainer.Content(Mediator!)
 					.Where(x => x.IsExit)
 					.Select(x => x.Object().DBRef)
 					.ToArrayAsync();
@@ -252,7 +252,7 @@ public partial class Functions
 	public static async ValueTask<CallState> Locate(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		/*
-		 
+
 		 help locate()
 LOCATE()
   locate(<looker>, <name>, <parameters>)
@@ -299,7 +299,7 @@ LOCATE()
   Find the dbref of an object near %# called %0, including %# himself and his location. Prefer players or things, but accept rooms or exits if no players or things are found.
     > think locate(%#, %0, PThmlni)
   This prefers 'P'layers or 'T'hings, and compares %0 against the strings "here" and "me", and the names of %#'s location, his neighbours, and his inventory.
-  
+
   */
 
 		var args = parser.CurrentState.Arguments;
@@ -310,7 +310,9 @@ LOCATE()
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		// First, locate the looker object
-		var maybeLooker = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, lookerArg, LocateFlags.All);
+		var maybeLooker =
+			await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, lookerArg,
+				LocateFlags.All);
 		if (maybeLooker.IsError)
 		{
 			return maybeLooker.AsError;
@@ -320,7 +322,7 @@ LOCATE()
 
 		// Parse the parameters string into LocateFlags
 		var locateFlags = ParseLocateParameters(parametersArg);
-		
+
 		// Check if we need to determine type preferences
 		var preferredTypes = GetPreferredTypes(parametersArg);
 		var requireExactType = parametersArg.Contains('F', StringComparison.OrdinalIgnoreCase);
@@ -423,7 +425,8 @@ LOCATE()
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "lockfilter", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "lockfilter", MinArgs = 2, MaxArgs = 3,
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> LockFilter(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
@@ -552,7 +555,7 @@ LOCATE()
 			{
 				// Get the location of the object
 				AnySharpContainer location;
-				
+
 				if (locate.IsExit)
 				{
 					// For exits, get the source room (location)
@@ -571,11 +574,11 @@ LOCATE()
 				}
 
 				// Get all contents of the location
-				var contents = await (await location.Content(Mediator!)).ToListAsync();
-				
+				var contents = await location.Content(Mediator!).ToListAsync();
+
 				// Find the current object in the list
 				var currentIndex = contents.FindIndex(x => x.Object().DBRef == locate.Object().DBRef);
-				
+
 				if (currentIndex == -1 || currentIndex == contents.Count - 1)
 				{
 					// Object not found or is the last item
@@ -813,7 +816,7 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				var things = await (await locate.AsContainer.Content(Mediator!))
+				var things = await locate.AsContainer.Content(Mediator!)
 					.Where(x => x.IsThing)
 					.Skip(start - 1)
 					.Take(count)
@@ -849,7 +852,7 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				var paginated = await (await locate.AsContainer.Content(Mediator!))
+				var paginated = await locate.AsContainer.Content(Mediator!)
 					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
 					.Skip(start - 1)
 					.Take(count)
@@ -885,7 +888,7 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				var paginated = await (await locate.AsContainer.Content(Mediator!))
+				var paginated = await locate.AsContainer.Content(Mediator!)
 					.Where(x => x.IsExit)
 					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
 					.Skip(start - 1)
@@ -922,7 +925,7 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				var paginated = await (await locate.AsContainer.Content(Mediator!))
+				var paginated = await locate.AsContainer.Content(Mediator!)
 					.Where(x => x.IsPlayer)
 					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
 					.Skip(start - 1)
@@ -959,7 +962,7 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				var paginated = await (await locate.AsContainer.Content(Mediator!))
+				var paginated = await locate.AsContainer.Content(Mediator!)
 					.Where(x => x.IsThing)
 					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
 					.Skip(start - 1)
@@ -996,7 +999,7 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				var contents = await (await locate.AsContainer.Content(Mediator!))
+				var contents = await locate.AsContainer.Content(Mediator!)
 					.Skip(start - 1)
 					.Take(count)
 					.Select(x => x.Object().DBRef.ToString())
@@ -1031,7 +1034,7 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				var exits = await (await locate.AsContainer.Content(Mediator!))
+				var exits = await locate.AsContainer.Content(Mediator!)
 					.Where(x => x.IsExit)
 					.Skip(start - 1)
 					.Take(count)
@@ -1067,7 +1070,7 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				var players = await (await locate.AsContainer.Content(Mediator!))
+				var players = await  locate.AsContainer.Content(Mediator!)
 					.Where(x => x.IsPlayer)
 					.Skip(start - 1)
 					.Take(count)
@@ -1088,14 +1091,14 @@ LOCATE()
 			executor,
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
 			LocateFlags.All,
-			async locate =>
+			 locate =>
 			{
 				if (!locate.IsContainer)
 				{
 					return Errors.ExitsCannotContainThings;
 				}
 
-				return string.Join(" ", (await locate.AsContainer.Content(Mediator!))
+				return string.Join(" ",  locate.AsContainer.Content(Mediator!)
 					.Select(x => x.Object().DBRef.ToString()));
 			});
 	}
@@ -1110,14 +1113,14 @@ LOCATE()
 			executor,
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
 			LocateFlags.All,
-			async locate =>
+			 locate =>
 			{
 				if (!locate.IsContainer)
 				{
 					return Errors.ExitsCannotContainThings;
 				}
 
-				return string.Join(" ", (await locate.AsContainer.Content(Mediator!))
+				return string.Join(" ", locate.AsContainer.Content(Mediator!)
 					.Where(x => x.IsExit)
 					.Select(x => x.Object().DBRef.ToString()));
 			});
@@ -1133,14 +1136,14 @@ LOCATE()
 			executor,
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
 			LocateFlags.All,
-			async locate =>
+			locate =>
 			{
 				if (!locate.IsContainer)
 				{
 					return Errors.ExitsCannotContainThings;
 				}
 
-				return string.Join(" ", (await locate.AsContainer.Content(Mediator!))
+				return string.Join(" ", locate.AsContainer.Content(Mediator!)
 					.Where(x => x.IsPlayer)
 					.Select(x => x.Object().DBRef.ToString()));
 			});
@@ -1156,14 +1159,14 @@ LOCATE()
 			executor,
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
 			LocateFlags.All,
-			async locate =>
+			locate =>
 			{
 				if (!locate.IsContainer)
 				{
 					return Errors.ExitsCannotContainThings;
 				}
 
-				return string.Join(" ", (await locate.AsContainer.Content(Mediator!))
+				return string.Join(" ", locate.AsContainer.Content(Mediator!)
 					.Where(x => x.IsThing)
 					.Select(x => x.Object().DBRef.ToString()));
 			});
@@ -1186,7 +1189,7 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				var visibleContents = await (await locate.AsContainer.Content(Mediator!))
+				var visibleContents = await locate.AsContainer.Content(Mediator!)
 					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
 					.Select(x => x.Object().DBRef.ToString())
 					.ToListAsync();
@@ -1212,7 +1215,7 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				var visibleExits = await (await locate.AsContainer.Content(Mediator!))
+				var visibleExits = await locate.AsContainer.Content(Mediator!)
 					.Where(x => x.IsExit)
 					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
 					.Select(x => x.Object().DBRef.ToString())
@@ -1239,7 +1242,7 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				var visiblePlayers = await (await locate.AsContainer.Content(Mediator!))
+				var visiblePlayers = await locate.AsContainer.Content(Mediator!)
 					.Where(x => x.IsPlayer)
 					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
 					.Select(x => x.Object().DBRef.ToString())
@@ -1266,7 +1269,7 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				var visibleThings = await (await locate.AsContainer.Content(Mediator!))
+				var visibleThings = await locate.AsContainer.Content(Mediator!)
 					.Where(x => x.IsThing)
 					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
 					.Select(x => x.Object().DBRef.ToString())
@@ -1306,7 +1309,8 @@ LOCATE()
 		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "andlpowers", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "andlpowers", MinArgs = 2, MaxArgs = 2,
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> AndListPowers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		throw new NotImplementedException();
@@ -1329,7 +1333,7 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				return await (await locate.AsContainer.Content(Mediator!)).CountAsync();
+				return await locate.AsContainer.Content(Mediator!).CountAsync();
 			});
 	}
 
@@ -1350,7 +1354,7 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				return await (await locate.AsContainer.Content(Mediator!))
+				return await locate.AsContainer.Content(Mediator!)
 					.Where(x => x.IsExit)
 					.CountAsync();
 			});
@@ -1373,7 +1377,7 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				return await (await locate.AsContainer.Content(Mediator!))
+				return await locate.AsContainer.Content(Mediator!)
 					.Where(x => x.IsPlayer)
 					.CountAsync();
 			});
@@ -1396,7 +1400,7 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				return await (await locate.AsContainer.Content(Mediator!))
+				return await locate.AsContainer.Content(Mediator!)
 					.Where(x => x.IsThing)
 					.CountAsync();
 			});
@@ -1419,7 +1423,7 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				return await (await locate.AsContainer.Content(Mediator!))
+				return await locate.AsContainer.Content(Mediator!)
 					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
 					.CountAsync();
 			});
@@ -1442,7 +1446,7 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				return await (await locate.AsContainer.Content(Mediator!))
+				return await locate.AsContainer.Content(Mediator!)
 					.Where(x => x.IsExit)
 					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
 					.CountAsync();
@@ -1466,7 +1470,7 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				return await (await locate.AsContainer.Content(Mediator!))
+				return await locate.AsContainer.Content(Mediator!)
 					.Where(x => x.IsPlayer)
 					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
 					.CountAsync();
@@ -1490,7 +1494,7 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				return await (await locate.AsContainer.Content(Mediator!))
+				return await locate.AsContainer.Content(Mediator!)
 					.Where(x => x.IsThing)
 					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
 					.CountAsync();
