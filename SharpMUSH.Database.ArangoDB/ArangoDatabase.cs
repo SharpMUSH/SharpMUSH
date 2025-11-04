@@ -1419,7 +1419,7 @@ public partial class ArangoDatabase(
 		var result =
 			arangoDb.Query.ExecuteStreamAsync<SharpObjectQueryResult>(handle, $"RETURN DOCUMENT({startVertex})", cache: true,
 				cancellationToken: ct);
-		var pattern = attributePattern;
+		var pattern = $"(?i){attributePattern}"; // Add case-insensitive flag
 
 		if (!await result.AnyAsync(cancellationToken: ct))
 		{
@@ -1434,7 +1434,7 @@ public partial class ArangoDatabase(
 		// OPTIONS { indexHint: "inverted_index_name", forceIndexHint: true }
 		// This doesn't seem like it can be done on a GRAPH query?
 		const string query =
-			$"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName LIKE @pattern RETURN v";
+			$"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName =~ @pattern RETURN v";
 
 		var result2 = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle, query,
 			new Dictionary<string, object>
@@ -1469,14 +1469,15 @@ public partial class ArangoDatabase(
 
 		// OPTIONS { indexHint: "inverted_index_name", forceIndexHint: true }
 		// This doesn't seem like it can be done on a GRAPH query?
+		var pattern = $"(?i){attributePattern}"; // Add case-insensitive flag
 		const string query =
-			$"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName LIKE @pattern RETURN v";
+			$"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName =~ @pattern RETURN v";
 
 		return arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle, query,
 				new Dictionary<string, object>
 				{
 					{ StartVertex, startVertex },
-					{ "pattern", attributePattern }
+					{ "pattern", pattern }
 				}, cancellationToken: ct)
 			.Select(SharpAttributeQueryToLazySharpAttribute);
 	}
