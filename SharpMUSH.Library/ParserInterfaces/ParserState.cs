@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Collections.Immutable;
+using System.Text;
 using Mediator;
 using OneOf.Types;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -33,6 +34,32 @@ public enum ParseMode
 /// </summary>
 /// <param name="CommandListBreak">Sets whether to stop executing the remainder of the CommandList. This is reset in the SharpMUSHParserVisitor</param>
 public record Execution(bool CommandListBreak = false);
+
+/// <summary>
+/// HTTP response context for building HTTP responses
+/// </summary>
+public class HttpResponseContext
+{
+	/// <summary>
+	/// HTTP status line (e.g., "200 OK", "404 Not Found")
+	/// </summary>
+	public string? StatusLine { get; set; }
+	
+	/// <summary>
+	/// Content-Type header value
+	/// </summary>
+	public string? ContentType { get; set; }
+	
+	/// <summary>
+	/// Additional HTTP headers
+	/// </summary>
+	public List<(string Name, string Value)> Headers { get; } = new();
+	
+	/// <summary>
+	/// Response body content
+	/// </summary>
+	public StringBuilder Body { get; } = new();
+}
 
 public class IterationWrapper<T>
 {
@@ -74,6 +101,7 @@ public class IterationWrapper<T>
 /// <param name="Caller">The caller is the object which causes an attribute to be evaluated (for instance, by using ufun() or a similar function): %@</param>
 /// <param name="Handle">The telnet handle running the command.</param>
 /// <param name="ParseMode">Parse mode, in case we need to NoParse.</param>
+/// <param name="HttpResponse">HTTP response context for building HTTP responses</param>
 public record ParserState(
 	ConcurrentStack<Dictionary<string, MString>> Registers,
 	ConcurrentStack<IterationWrapper<MString>> IterationRegisters,
@@ -91,7 +119,8 @@ public record ParserState(
 	DBRef? Enactor,
 	DBRef? Caller,
 	long? Handle,
-	ParseMode ParseMode = ParseMode.Default)
+	ParseMode ParseMode = ParseMode.Default,
+	HttpResponseContext? HttpResponse = null)
 {
 	private AnyOptionalSharpObject? _executorObject;
 	private AnyOptionalSharpObject? _enactorObject;
@@ -114,7 +143,8 @@ public record ParserState(
 		null,
 		null,
 		null,
-		ParseMode.Default);
+		ParseMode.Default,
+		null);
 	
 	/// <summary>
 	/// The executor of a command is the object actually carrying out the command or running the code: %!
