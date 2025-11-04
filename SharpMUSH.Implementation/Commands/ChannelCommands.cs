@@ -352,8 +352,25 @@ public partial class Commands
 
 		var channelName = maybeAttribute.AsAttribute.First().Value;
 
-		// Use the ChannelTitle handler
-		return await ChannelTitle.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, channelName, title);
+		// Get the channel to validate it exists
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, channelName, true);
+		if (maybeChannel.IsError)
+		{
+			return maybeChannel.AsError.Value;
+		}
+
+		var channel = maybeChannel.AsChannel;
+
+		// Use the ChannelTitle handler to set the title
+		var result = await ChannelTitle.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, channelName, title);
+
+		// Send custom notification that includes the alias name
+		if (result.Message != null && !result.Message.ToPlainText().StartsWith("#-1"))
+		{
+			await NotifyService!.Notify(executor, $"Title set to '{title.ToPlainText()}' for alias '{alias}' (channel {channel.Name.ToPlainText()}).");
+		}
+
+		return result;
 	}
 
 	[SharpCommand(Name = "COMLIST", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]

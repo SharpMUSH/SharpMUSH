@@ -308,7 +308,7 @@ public class CommunicationCommandTests
 	}
 
 	[Test]
-	[Arguments("comtitle test_alias_COMTITLE=test_title_COMTITLE", "Title set to 'test_title_COMTITLE' on channel Public.")]
+	[Arguments("comtitle test_alias_COMTITLE=test_title_COMTITLE", "Title set to 'test_title_COMTITLE' for alias 'test_alias_COMTITLE' (channel Public).")]
 	public async ValueTask ComTitleBasic(string command, string expected)
 	{
 		Console.WriteLine("Testing: {0}", command);
