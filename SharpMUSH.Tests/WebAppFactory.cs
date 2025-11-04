@@ -116,15 +116,15 @@ public class WebAppFactory : IAsyncInitializer
 			Serializer = new ArangoNewtonsoftSerializer(new ArangoNewtonsoftDefaultContractResolver())
 		};
 
-		var configFile = Path.Join(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst");
+		var configFile = Path.Combine(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst");
 
-		var colorFile = Path.Join(AppContext.BaseDirectory, "colors.json");
+		var colorFile = Path.Combine(AppContext.BaseDirectory, "colors.json");
 
 		_server = new TestWebApplicationBuilderFactory<Program>(
 			config, 
 			MySqlTestServer.Instance.GetConnectionString(), 
-			colorFile, 
 			configFile,
+			colorFile, 
 			Substitute.For<INotifyService>());
 
 		var provider = _server.Services;
