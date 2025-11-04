@@ -43,6 +43,25 @@ public class MySqlService : ISqlService
 		return results;
 	}
 
+	public async IAsyncEnumerable<Dictionary<string, object?>> ExecuteQueryStreamAsync(string query)
+	{
+		await using var connection = new MySqlConnection(_connectionString);
+		await connection.OpenAsync();
+
+		await using var command = new MySqlCommand(query, connection);
+		await using var reader = await command.ExecuteReaderAsync();
+
+		while (await reader.ReadAsync())
+		{
+			var row = new Dictionary<string, object?>();
+			for (int i = 0; i < reader.FieldCount; i++)
+			{
+				row[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader.GetValue(i);
+			}
+			yield return row;
+		}
+	}
+
 	public async ValueTask<string> ExecuteQueryAsStringAsync(string query, string delimiter = " ")
 	{
 		var results = await ExecuteQueryAsync(query);

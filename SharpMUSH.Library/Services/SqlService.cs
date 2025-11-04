@@ -19,6 +19,13 @@ public class SqlService : ISqlService
 		return ValueTask.FromResult(Enumerable.Empty<Dictionary<string, object?>>());
 	}
 
+	public async IAsyncEnumerable<Dictionary<string, object?>> ExecuteQueryStreamAsync(string query)
+	{
+		// TODO: Implement actual SQL query execution with streaming
+		await ValueTask.CompletedTask;
+		yield break;
+	}
+
 	public ValueTask<string> ExecuteQueryAsStringAsync(string query, string delimiter = " ")
 	{
 		// TODO: Implement actual SQL query execution

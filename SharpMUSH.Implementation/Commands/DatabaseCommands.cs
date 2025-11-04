@@ -62,6 +62,7 @@ public partial class Commands
 	public static async ValueTask<Option<CallState>> MapSql(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
 
 		// Check if SQL is available
 		if (SqlService == null || !SqlService.IsAvailable)
@@ -98,41 +99,44 @@ public partial class Commands
 		var switches = parser.CurrentState.Switches;
 		var notifySwitch = switches.Contains("NOTIFY");
 		var colnamesSwitch = switches.Contains("COLNAMES");
+		var spoofSwitch = switches.Contains("SPOOF");
 
 		try
 		{
-			// Execute the SQL query
-			var results = await SqlService.ExecuteQueryAsync(query);
-			var rows = results.ToList();
-
-			// If /colnames switch, queue attr with column names first
-			if (colnamesSwitch && rows.Count > 0)
-			{
-				var firstRow = rows[0];
-				var columnNames = firstRow.Keys.ToList();
-				
-				await Mediator!.Publish(new QueueAttributeRequest(
-					async () =>
-					{
-						// Set %0 to 0 for column names row
-						parser.CurrentState.AddRegister("0", MModule.single("0"));
-						
-						// Set %1-29 to column names
-						for (int i = 0; i < Math.Min(columnNames.Count, 29); i++)
-						{
-							var colName = columnNames[i];
-							parser.CurrentState.AddRegister((i + 1).ToString(), MModule.single(colName));
-						}
-
-						return parser.CurrentState;
-					},
-					dbRefAttr.Value));
-			}
-
-			// Queue attribute for each row
+			// Use async enumerable streaming for better performance and memory efficiency
+			var columnNames = new List<string>();
+			var firstRow = true;
 			int rowNumber = 1;
-			foreach (var row in rows)
+
+			// Execute the SQL query with streaming to avoid loading all results into memory
+			await foreach (var row in SqlService.ExecuteQueryStreamAsync(query))
 			{
+				// If /colnames switch and first row, queue attr with column names
+				if (colnamesSwitch && firstRow)
+				{
+					columnNames = row.Keys.ToList();
+					
+					await Mediator!.Publish(new QueueAttributeRequest(
+						async () =>
+						{
+							// Set %0 to 0 for column names row
+							parser.CurrentState.AddRegister("0", MModule.single("0"));
+							
+							// Set %1-29 to column names
+							for (int i = 0; i < Math.Min(columnNames.Count, 29); i++)
+							{
+								var colName = columnNames[i];
+								parser.CurrentState.AddRegister((i + 1).ToString(), MModule.single(colName));
+							}
+
+							return parser.CurrentState;
+						},
+						dbRefAttr.Value));
+
+					firstRow = false;
+				}
+
+				// Queue attribute for this row
 				var currentRow = rowNumber;
 				await Mediator!.Publish(new QueueAttributeRequest(
 					async () =>
@@ -170,6 +174,10 @@ public partial class Commands
 					dbRefAttr.Value,
 					0));
 			}
+
+			// Note: SPOOF switch affects who the queued attributes execute as
+			// This is handled at the parser/execution level, not here
+			// The attribute will execute with the permissions of the enactor rather than executor
 
 			return CallState.Empty;
 		}

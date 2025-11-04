@@ -16,6 +16,13 @@ public interface ISqlService
 	ValueTask<IEnumerable<Dictionary<string, object?>>> ExecuteQueryAsync(string query);
 
 	/// <summary>
+	/// Executes a SQL query and returns the results as an async enumerable stream
+	/// </summary>
+	/// <param name="query">The SQL query to execute</param>
+	/// <returns>An async enumerable of rows, where each row is a dictionary of column names to values</returns>
+	IAsyncEnumerable<Dictionary<string, object?>> ExecuteQueryStreamAsync(string query);
+
+	/// <summary>
 	/// Executes a SQL query and returns a formatted string result
 	/// </summary>
 	/// <param name="query">The SQL query to execute</param>
