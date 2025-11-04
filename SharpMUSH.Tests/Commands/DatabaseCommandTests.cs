@@ -13,29 +13,20 @@ namespace SharpMUSH.Tests.Commands;
 
 public class DatabaseCommandTests : IAsyncInitializer, IAsyncDisposable
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<SqlWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required SqlWebAppFactory SqlWebAppFactoryArg { get; init; }
 
 	[ClassDataSource<MySqlTestServer>(Shared = SharedType.PerTestSession)]
 	public required MySqlTestServer MySqlTestServer { get; init; }
 
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
-	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
-	private ISqlService? _sqlService;
+	private INotifyService NotifyService => SqlWebAppFactoryArg.Services.GetRequiredService<INotifyService>();
+	private IConnectionService ConnectionService => SqlWebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
+	private IMUSHCodeParser Parser => SqlWebAppFactoryArg.CommandParser;
 
 	public async Task InitializeAsync()
 	{
-		// Set up MySQL service with connection string from TestContainer
-		var connectionString = MySqlTestServer.Instance.GetConnectionString();
-		_sqlService = new MySqlService(connectionString);
-
-		// Replace the stub SqlService with the real one for these tests
-		var property = typeof(Implementation.Commands.Commands).GetProperty("SqlService", 
-			System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-		property?.SetValue(null, _sqlService);
-
 		// Create test database and populate with test data
+		var connectionString = MySqlTestServer.Instance.GetConnectionString();
 		await using var connection = new MySqlConnection(connectionString);
 		await connection.OpenAsync();
 
@@ -84,21 +75,18 @@ public class DatabaseCommandTests : IAsyncInitializer, IAsyncDisposable
 	public async ValueTask DisposeAsync()
 	{
 		// Clean up test data
-		if (_sqlService != null && _sqlService.IsAvailable)
+		var connectionString = MySqlTestServer.Instance.GetConnectionString();
+		await using var connection = new MySqlConnection(connectionString);
+		await connection.OpenAsync();
+
+		await using (var cmd = new MySqlCommand("DROP TABLE IF EXISTS test_sql_data", connection))
 		{
-			var connectionString = MySqlTestServer.Instance.GetConnectionString();
-			await using var connection = new MySqlConnection(connectionString);
-			await connection.OpenAsync();
+			await cmd.ExecuteNonQueryAsync();
+		}
 
-			await using (var cmd = new MySqlCommand("DROP TABLE IF EXISTS test_sql_data", connection))
-			{
-				await cmd.ExecuteNonQueryAsync();
-			}
-
-			await using (var cmd = new MySqlCommand("DROP TABLE IF EXISTS test_mapsql_data", connection))
-			{
-				await cmd.ExecuteNonQueryAsync();
-			}
+		await using (var cmd = new MySqlCommand("DROP TABLE IF EXISTS test_mapsql_data", connection))
+		{
+			await cmd.ExecuteNonQueryAsync();
 		}
 	}
 
