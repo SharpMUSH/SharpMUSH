@@ -34,8 +34,7 @@ public class DbrefFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("entrances(#0)", "")]
+	[Arguments("entrances(%l)", "")]
 	public async Task Entrances(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -43,7 +42,6 @@ public class DbrefFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("followers(%#)", "")]
 	public async Task Followers(string str, string expected)
 	{
@@ -52,7 +50,6 @@ public class DbrefFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("following(%#)", "")]
 	public async Task Following(string str, string expected)
 	{
@@ -83,8 +80,8 @@ public class DbrefFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("lock(%#)", "")]
+	[Arguments("lock(%#,Basic)", "")]
 	public async Task Lock(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -92,12 +89,11 @@ public class DbrefFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("elock(%#)", "")]
+	[Arguments("elock(%#,Basic)", "#-1 NO SUCH LOCK")]
 	public async Task Elock(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsNotNull();
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
@@ -128,5 +124,88 @@ public class DbrefFunctionUnitTests
 		Console.WriteLine("Testing: {0}", str);
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
+	}
+
+	[Test]
+	[Arguments("llocks(%#)", "")]
+	public async Task Llocks(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsNotNull();
+	}
+
+	[Test]
+	[Arguments("llockflags()", "")]
+	[Arguments("llockflags(Basic)", "")]
+	public async Task Llockflags(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsNotNull();
+	}
+
+	[Test]
+	[Arguments("lockowner(%#)", "#1")]
+	public async Task Lockowner(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("lockfilter(%# %l,Basic,1)", "")]
+	public async Task Lockfilter(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsNotNull();
+	}
+
+	[Test]
+	[Arguments("andflags(%#,PLAYER)", "1")]
+	[Arguments("andflags(%#,PLAYER WIZARD)", "0")]
+	public async Task Andflags(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("orflags(%#,PLAYER)", "1")]
+	[Arguments("orflags(%#,WIZARD PLAYER)", "1")]
+	public async Task Orflags(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("andlflags(%#,PLAYER)", "1")]
+	public async Task Andlflags(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("orlflags(%#,PLAYER)", "1")]
+	public async Task Orlflags(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("andlpowers(%#,Guest)", "0")]
+	public async Task Andlpowers(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("orlpowers(%#,Guest)", "0")]
+	public async Task Orlpowers(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 }
