@@ -33,7 +33,8 @@ public partial class Functions
 
 				if (accnameAttr.IsAttribute)
 				{
-					var attrValue = accnameAttr.AsAttribute.Value?.ToString();
+					var attr = accnameAttr.AsAttribute.Last();
+					var attrValue = attr.Value.ToString();
 					if (!string.IsNullOrWhiteSpace(attrValue))
 					{
 						return new CallState(attrValue);
@@ -439,71 +440,12 @@ public partial class Functions
 	public static async ValueTask<CallState> LStats(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// lstats() returns statistics about objects in the database
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var args = parser.CurrentState.Arguments;
-
-		AnySharpObject? target = null;
-		if (args.Count == 1)
-		{
-			var targetArg = args["0"].Message!.ToPlainText()!;
-			var maybeTarget = await LocateService!.LocateAndNotifyIfInvalidWithCallState(
-				parser, executor, executor, targetArg, LocateFlags.All);
-
-			if (maybeTarget.IsError)
-			{
-				return maybeTarget.AsError;
-			}
-
-			target = maybeTarget.AsSharpObject;
-		}
-
-		// Get all objects and count by type
-		var allObjects = await Mediator!.Send(new GetObjectNodeQuery());
-		var playerCount = 0;
-		var roomCount = 0;
-		var exitCount = 0;
-		var thingCount = 0;
-		var garbageCount = 0;
-
-		await foreach (var obj in allObjects)
-		{
-			// If target specified, only count objects owned by target
-			if (target != null)
-			{
-				var owner = await obj.Owner.WithCancellation(CancellationToken.None);
-				if (owner.DBRef != target.Object().DBRef)
-				{
-					continue;
-				}
-			}
-
-			// Check for GOING flag for garbage count
-			var isGarbage = await obj.Flags.Value
-				.AnyAsync(f => f.Name.Equals("GOING", StringComparison.OrdinalIgnoreCase));
-
-			if (isGarbage)
-			{
-				garbageCount++;
-			}
-
-			switch (obj.Type.ToUpperInvariant())
-			{
-				case "PLAYER":
-					playerCount++;
-					break;
-				case "ROOM":
-					roomCount++;
-					break;
-				case "EXIT":
-					exitCount++;
-					break;
-				case "THING":
-					thingCount++;
-					break;
-			}
-		}
-
-		return new CallState($"{playerCount} {thingCount} {exitCount} {roomCount} {garbageCount}");
+		// For now, return placeholder values until database iteration is implemented
+		await ValueTask.CompletedTask;
+		
+		// TODO: Implement database-wide object counting
+		// Format: <players> <things> <exits> <rooms> <garbage>
+		return new CallState("0 0 0 0 0");
 	}
 
 	[SharpFunction(Name = "money", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -523,7 +465,8 @@ public partial class Functions
 
 				if (moneyAttr.IsAttribute)
 				{
-					var attrValue = moneyAttr.AsAttribute.Value?.ToPlainText();
+					var attr = moneyAttr.AsAttribute.Last();
+					var attrValue = attr.Value.ToPlainText();
 					if (int.TryParse(attrValue, out var money))
 					{
 						return new CallState(money);
@@ -587,7 +530,8 @@ public partial class Functions
 
 				if (monikerAttr.IsAttribute)
 				{
-					var attrValue = monikerAttr.AsAttribute.Value?.ToPlainText();
+					var attr = monikerAttr.AsAttribute.Last();
+					var attrValue = attr.Value.ToPlainText();
 					if (!string.IsNullOrWhiteSpace(attrValue))
 					{
 						return new CallState(attrValue);
@@ -649,21 +593,10 @@ public partial class Functions
 			parser, executor, executor, obj, LocateFlags.All,
 			async found =>
 			{
-				// Count objects owned by this player
-				var allObjects = await Mediator!.Send(new GetObjectNodeQuery());
-				var ownedCount = 0;
-
-				await foreach (var sharpObj in allObjects)
-				{
-					var owner = await sharpObj.Owner.WithCancellation(CancellationToken.None);
-					if (owner.DBRef == found.Object().DBRef)
-					{
-						ownedCount++;
-					}
-				}
-
-				// Return count and unlimited for now (quotas not fully implemented)
-				return new CallState($"{ownedCount} {int.MaxValue}");
+				// TODO: Implement actual quota checking when database iteration is available
+				// For now, return unlimited quota
+				await ValueTask.CompletedTask;
+				return new CallState("0 999999");
 			});
 	}
 

@@ -588,9 +588,15 @@ LOCATE()
 	}
 
 	[SharpFunction(Name = "nextdbref", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> NextDbReference(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> NextDbReference(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		// nextdbref() returns the next DB reference that will be assigned
+		// This requires knowing the highest dbref in the database
+		// For now, return a placeholder value
+		await ValueTask.CompletedTask;
+		
+		// TODO: Implement proper next dbref tracking when database supports it
+		return new CallState("#-1 NOT YET IMPLEMENTED");
 	}
 
 	[SharpFunction(Name = "nlsearch", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
@@ -624,7 +630,9 @@ LOCATE()
 	[SharpFunction(Name = "numversion", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> NumVersion(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		// Return a version number for compatibility
+		// Format: YYYYMMDDHHMMSS (like PennMUSH)
+		return ValueTask.FromResult<CallState>("20250102000000");
 	}
 
 	[SharpFunction(Name = "parent", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -706,9 +714,46 @@ LOCATE()
 	}
 
 	[SharpFunction(Name = "rloc", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> RecursiveLocation(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> RecursiveLocation(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		// rloc() recursively gets location N levels up
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var objArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var levelsArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+
+		if (!int.TryParse(levelsArg, out var levels) || levels < 0)
+		{
+			return new CallState("#-1 INVALID LEVEL");
+		}
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+			parser, executor, executor, objArg, LocateFlags.All,
+			async found =>
+			{
+				var current = found;
+				for (var i = 0; i < levels; i++)
+				{
+					// Get location
+					if (current.IsContent)
+					{
+						var location = await current.AsContent.Location();
+						current = location.WithRoomOption();
+					}
+					else if (current.IsExit)
+					{
+						// Exits' location is their source room
+						var location = await current.AsExit.Home.WithCancellation(CancellationToken.None);
+						current = location.WithRoomOption();
+					}
+					else
+					{
+						// Rooms don't have locations
+						return new CallState("#-1");
+					}
+				}
+
+				return new CallState(current.Object().DBRef);
+			});
 	}
 
 	[SharpFunction(Name = "room", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
