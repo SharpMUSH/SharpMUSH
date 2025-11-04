@@ -237,22 +237,24 @@ public class CommunicationCommandTests
 	}
 
 	[Test]
-	[Arguments("addcom=Public")]
-	[Arguments("addcom test_alias_ADDCOM3=")]
-	public async ValueTask AddComInvalidArgs(string command)
+	[Arguments("addcom=Public", "Alias name cannot be empty.")]
+	[Arguments("addcom test_alias_ADDCOM3=", "Channel not found.")]
+	public async ValueTask AddComInvalidArgs(string command, string expected)
 	{
 		Console.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
-		// Verify an error notification was sent (don't check exact message)
+		// Verify exact error notification was sent
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToPlainText() == expected) ||
+				(msg.IsT1 && msg.AsT1 == expected)), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
-	[Arguments("delcom test_alias_DELCOM1")]
-	public async ValueTask DelComBasic(string command)
+	[Arguments("delcom test_alias_DELCOM1", "Alias 'test_alias_DELCOM1' deleted.")]
+	public async ValueTask DelComBasic(string command, string expected)
 	{
 		Console.WriteLine("Testing: {0}", command);
 		// First add an alias
@@ -264,10 +266,12 @@ public class CommunicationCommandTests
 		// Now delete it
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
-		// Verify a notification was sent (don't check exact message)
+		// Verify exact notification was sent
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToPlainText() == expected) ||
+				(msg.IsT1 && msg.AsT1 == expected)), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -293,15 +297,19 @@ public class CommunicationCommandTests
 		Console.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
-		// Verify notification was sent (any response is valid for channel list)
+		// Verify notification was sent with channel list (should contain "Public" channel)
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				((msg.IsT0 && msg.AsT0.ToPlainText().Contains("Public")) ||
+				 (msg.IsT1 && msg.AsT1.Contains("Public"))) ||
+				((msg.IsT0 && msg.AsT0.ToPlainText().Contains("Channels:")) ||
+				 (msg.IsT1 && msg.AsT1.Contains("Channels:")))), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
-	[Arguments("comtitle test_alias_COMTITLE=test_title_COMTITLE")]
-	public async ValueTask ComTitleBasic(string command)
+	[Arguments("comtitle test_alias_COMTITLE=test_title_COMTITLE", "Title set to 'test_title_COMTITLE' on channel Public.")]
+	public async ValueTask ComTitleBasic(string command, string expected)
 	{
 		Console.WriteLine("Testing: {0}", command);
 		// First add an alias
@@ -313,10 +321,12 @@ public class CommunicationCommandTests
 		// Now set title
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
-		// Verify notification was sent (any response is valid)
+		// Verify exact notification was sent
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToPlainText() == expected) ||
+				(msg.IsT1 && msg.AsT1 == expected)), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
@@ -349,24 +359,32 @@ public class CommunicationCommandTests
 		// Now list them
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
-		// Verify notification was sent with the aliases
+		// Verify notification was sent with the aliases (check for both aliases in the output)
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				((msg.IsT0 && msg.AsT0.ToPlainText().Contains("test_alias_comlist1") && 
+				              msg.AsT0.ToPlainText().Contains("test_alias_comlist2") &&
+				              msg.AsT0.ToPlainText().Contains("Public")) ||
+				 (msg.IsT1 && msg.AsT1.Contains("test_alias_comlist1") && 
+				              msg.AsT1.Contains("test_alias_comlist2") &&
+				              msg.AsT1.Contains("Public")))), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
-	[Arguments("comlist")]
-	public async ValueTask ComListEmpty(string command)
+	[Arguments("comlist", "You have no channel aliases.")]
+	public async ValueTask ComListEmpty(string command, string expected)
 	{
 		Console.WriteLine("Testing: {0}", command);
 		// Make sure we have no aliases (use a fresh player if possible)
 		// For now, just test that it doesn't error
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
-		// Verify notification was sent
+		// Verify exact notification was sent
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToPlainText() == expected) ||
+				(msg.IsT1 && msg.AsT1 == expected)), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 }
