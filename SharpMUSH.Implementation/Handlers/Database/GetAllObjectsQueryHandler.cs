@@ -6,8 +6,8 @@ using SharpMUSH.Library.Queries.Database;
 namespace SharpMUSH.Implementation.Handlers.Database;
 
 public class GetAllObjectsQueryHandler(ISharpDatabase database)
-	: IQueryHandler<GetAllObjectsQuery, IAsyncEnumerable<SharpObject>>
+	: IStreamQueryHandler<GetAllObjectsQuery, SharpObject>
 {
-	public async ValueTask<IAsyncEnumerable<SharpObject>> Handle(GetAllObjectsQuery request, CancellationToken cancellationToken)
-		=> await Task.FromResult(database.GetAllObjectsAsync(cancellationToken));
+	public IAsyncEnumerable<SharpObject> Handle(GetAllObjectsQuery request, CancellationToken cancellationToken)
+		=> database.GetAllObjectsAsync(cancellationToken);
 }

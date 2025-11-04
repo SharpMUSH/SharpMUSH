@@ -169,7 +169,7 @@ public partial class Functions
 		}
 
 		// Get all exits that lead to the target location using the new database query
-		var exits = await Mediator!.Send(new GetEntrancesQuery(target.Object().DBRef));
+		var exits = Mediator!.CreateStream(new GetEntrancesQuery(target.Object().DBRef));
 		var entrances = new List<string>();
 
 		await foreach (var exit in exits)
@@ -691,7 +691,7 @@ LOCATE()
 		}
 
 		// Get all objects to search
-		var allObjects = await Mediator!.Send(new GetAllObjectsQuery());
+		var allObjects = Mediator!.CreateStream(new GetAllObjectsQuery());
 		var results = new List<string>();
 
 		// First argument is the class (who owns the objects to search)

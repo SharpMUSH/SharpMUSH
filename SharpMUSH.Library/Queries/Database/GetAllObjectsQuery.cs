@@ -7,4 +7,4 @@ namespace SharpMUSH.Library.Queries.Database;
 /// Gets all objects in the database as a streaming AsyncEnumerable.
 /// This allows for efficient filtering and searching without loading all objects into memory.
 /// </summary>
-public record GetAllObjectsQuery() : IQuery<IAsyncEnumerable<SharpObject>>;
+public record GetAllObjectsQuery() : IStreamQuery<SharpObject>;

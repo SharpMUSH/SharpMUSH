@@ -639,7 +639,7 @@ public partial class Functions
 			: "*";
 
 		// Get all objects to search
-		var allObjects = await Mediator!.Send(new GetAllObjectsQuery());
+		var allObjects = Mediator!.CreateStream(new GetAllObjectsQuery());
 		var results = new List<string>();
 
 		// Determine class filter

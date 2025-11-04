@@ -2053,10 +2053,8 @@ public partial class ArangoDatabase(
 		}
 	}
 
-	public async ValueTask<IAsyncEnumerable<SharpExit>> GetEntrancesAsync(DBRef destination, CancellationToken ct = default)
+	public async IAsyncEnumerable<SharpExit> GetEntrancesAsync(DBRef destination, [EnumeratorCancellation] CancellationToken ct = default)
 	{
-		await ValueTask.CompletedTask;
-		
 		// Query to find all exits that lead to the destination
 		// Exits are connected to their destination via the AtLocation edge in GraphLocations
 		var exitIds = arangoDb.Query.ExecuteStreamAsync<string>(handle,
@@ -2070,10 +2068,14 @@ public partial class ArangoDatabase(
 				{ "exitType", DatabaseConstants.TypeExit }
 			}, cancellationToken: ct) ?? AsyncEnumerable.Empty<string>();
 
-		return exitIds
-			.Select(async id => await GetObjectNodeAsync(id, ct))
-			.Where(x => !x.Result.IsNone)
-			.Select(x => x.Result.AsExit);
+		await foreach (var id in exitIds.WithCancellation(ct))
+		{
+			var optionalObj = await GetObjectNodeAsync(id, ct);
+			if (!optionalObj.IsNone)
+			{
+				yield return optionalObj.AsExit;
+			}
+		}
 	}
 
 	public async ValueTask MoveObjectAsync(AnySharpContent enactorObj, AnySharpContainer destination,

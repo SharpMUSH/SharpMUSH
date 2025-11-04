@@ -269,7 +269,7 @@ public interface ISharpDatabase
 	/// <param name="destination">The destination DBRef</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>An async enumerable of exits leading to the destination</returns>
-	ValueTask<IAsyncEnumerable<SharpExit>> GetEntrancesAsync(DBRef destination, CancellationToken cancellationToken = default);
+	IAsyncEnumerable<SharpExit> GetEntrancesAsync(DBRef destination, CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Set an attribute. This does not do any checks, as that is up to the functionality itself.
