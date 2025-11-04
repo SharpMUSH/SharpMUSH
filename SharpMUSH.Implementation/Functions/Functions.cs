@@ -28,6 +28,7 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 	private static ICommunicationService? CommunicationService { get; set; }
 	private static IValidateService? ValidateService { get; set; }
 	private static ISortService? SortService { get; set; }
+	private static ILockService? LockService { get; set; }
 
 	private readonly FunctionLibraryService _functionLibrary = [];
 	
@@ -47,7 +48,8 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 		IExpandedObjectDataService objectDataService,
 		ISortService sortService,
 		IValidateService validateService,
-		ICommunicationService communicationService)
+		ICommunicationService communicationService,
+		ILockService lockService)
 	{
 		Mediator = mediator;
 		LocateService = locateService;
@@ -64,6 +66,7 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 		SortService = sortService;
 		ValidateService = validateService;
 		CommunicationService = communicationService;
+		LockService = lockService;
 		
 		foreach (var command in Generated.FunctionLibrary.Functions)
 		{
