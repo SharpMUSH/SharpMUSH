@@ -475,15 +475,89 @@ LOCATE()
 	}
 
 	[SharpFunction(Name = "lsearch", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> ListSearch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> ListSearch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		// lsearch() searches the database for objects matching criteria
+		// Format: lsearch(<class>, <criteria>=<value>, ...)
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+
+		if (args.Count == 0)
+		{
+			return new CallState("#-1 INVALID ARGUMENTS");
+		}
+
+		// Get all objects to search
+		var allObjects = await Mediator!.Send(new GetAllObjectsQuery());
+		var results = new List<string>();
+
+		// First argument is the class (who owns the objects to search)
+		var classArg = args["0"].Message!.ToPlainText();
+		AnySharpObject? classObj = null;
+
+		if (!classArg.Equals("all", StringComparison.OrdinalIgnoreCase))
+		{
+			var maybeClass = await LocateService!.Locate(parser, executor, executor, classArg, LocateFlags.All);
+			if (!maybeClass.IsValid())
+			{
+				return new CallState("#-1 INVALID CLASS");
+			}
+			classObj = maybeClass.AsAnyObject;
+		}
+
+		// Process search criteria
+		await foreach (var obj in allObjects)
+		{
+			// Check ownership if class is specified
+			if (classObj != null)
+			{
+				var owner = await obj.Owner.WithCancellation(CancellationToken.None);
+				if (owner.Object.DBRef != classObj.Object().DBRef)
+				{
+					continue;
+				}
+			}
+
+			// Check if object matches all criteria
+			bool matches = true;
+			for (int i = 1; i < args.Count; i++)
+			{
+				var criterion = args[i.ToString()].Message!.ToPlainText();
+				var parts = criterion.Split('=', 2);
+				if (parts.Length != 2)
+				{
+					continue;
+				}
+
+				var key = parts[0].Trim().ToUpperInvariant();
+				var value = parts[1].Trim();
+
+				matches = key switch
+				{
+					"TYPE" => obj.Type.Equals(value, StringComparison.OrdinalIgnoreCase),
+					"NAME" => obj.Name.Contains(value, StringComparison.OrdinalIgnoreCase),
+					_ => true // Unknown criteria, skip
+				};
+
+				if (!matches) break;
+			}
+
+			if (matches)
+			{
+				results.Add(new DBRef(obj.Key, obj.CreationTime).ToString());
+			}
+		}
+
+		return new CallState(string.Join(" ", results));
 	}
 
 	[SharpFunction(Name = "lsearchr", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> ListSearchRegex(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> ListSearchRegex(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		// lsearchr() is like lsearch but with regex support
+		// For now, implement as basic lsearch (regex support can be added later)
+		// TODO: Add regex matching support for search criteria
+		return await ListSearch(parser, _2);
 	}
 
 	[SharpFunction(Name = "namelist", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular)]
@@ -600,15 +674,29 @@ LOCATE()
 	}
 
 	[SharpFunction(Name = "nlsearch", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> NumberOfListSearch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> NumberOfListSearch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		// nlsearch() returns the count of objects matching lsearch criteria
+		var result = await ListSearch(parser, _2);
+		var resultStr = result.Message?.ToPlainText() ?? "";
+		
+		if (resultStr.StartsWith("#-1"))
+		{
+			return result;
+		}
+
+		var count = string.IsNullOrWhiteSpace(resultStr) 
+			? 0 
+			: resultStr.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
+		
+		return new CallState(count);
 	}
 
 	[SharpFunction(Name = "nsearch", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> NumberOfSearch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		// nsearch() is an alias for nlsearch()
+		return NumberOfListSearch(parser, _2);
 	}
 
 	[SharpFunction(Name = "num", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]

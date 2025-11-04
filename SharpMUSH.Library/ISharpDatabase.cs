@@ -256,6 +256,14 @@ public interface ISharpDatabase
 	ValueTask<IAsyncEnumerable<SharpPlayer>> GetPlayerByNameOrAliasAsync(string name, CancellationToken cancellationToken = default);
 
 	/// <summary>
+	/// Get all objects in the database as a streaming AsyncEnumerable.
+	/// This allows for efficient filtering and searching without loading all objects into memory.
+	/// </summary>
+	/// <param name="cancellationToken">Cancellation Token</param>
+	/// <returns>An async enumerable of all SharpObjects in the database</returns>
+	IAsyncEnumerable<SharpObject> GetAllObjectsAsync(CancellationToken cancellationToken = default);
+
+	/// <summary>
 	/// Set an attribute. This does not do any checks, as that is up to the functionality itself.
 	/// </summary>
 	/// <param name="dbref">Database Reference Number</param>

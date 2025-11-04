@@ -1,4 +1,5 @@
 ﻿using System.Collections.Immutable;
+using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using Core.Arango;
 using Core.Arango.Migration;
@@ -2019,6 +2020,22 @@ public partial class ArangoDatabase(
 				}, cancellationToken: ct) ?? AsyncEnumerable.Empty<string>())
 			.Select(GetObjectNodeAsync)
 			.Select(x => x.AsPlayer);
+	}
+
+	public async IAsyncEnumerable<SharpObject> GetAllObjectsAsync([EnumeratorCancellation] CancellationToken ct = default)
+	{
+		var objectIds = arangoDb.Query.ExecuteStreamAsync<string>(handle,
+			$"FOR v IN {DatabaseConstants.Objects} RETURN v._id",
+			cancellationToken: ct) ?? AsyncEnumerable.Empty<string>();
+
+		await foreach (var id in objectIds.WithCancellation(ct))
+		{
+			var optionalObj = await GetObjectNodeAsync(id, ct);
+			if (!optionalObj.IsNone)
+			{
+				yield return optionalObj.Known.Object();
+			}
+		}
 	}
 
 	public async ValueTask MoveObjectAsync(AnySharpContent enactorObj, AnySharpContainer destination,

@@ -610,9 +610,70 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "textsearch", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> TextSearch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> TextSearch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		// textsearch() searches for text in object attributes
+		// Format: textsearch(<class>, <pattern>, [<attribute>])
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+
+		var classArg = args["0"].Message!.ToPlainText();
+		var pattern = args["1"].Message!.ToPlainText();
+		var attributePattern = args.TryGetValue("2", out var attrArg) 
+			? attrArg.Message!.ToPlainText() 
+			: "*";
+
+		// Get all objects to search
+		var allObjects = await Mediator!.Send(new GetAllObjectsQuery());
+		var results = new List<string>();
+
+		// Determine class filter
+		AnySharpObject? classObj = null;
+		if (!classArg.Equals("all", StringComparison.OrdinalIgnoreCase))
+		{
+			var maybeClass = await LocateService!.Locate(parser, executor, executor, classArg, LocateFlags.All);
+			if (!maybeClass.IsValid())
+			{
+				return new CallState("#-1 INVALID CLASS");
+			}
+			classObj = maybeClass.AsAnyObject;
+		}
+
+		// Search through objects
+		await foreach (var obj in allObjects)
+		{
+			// Check ownership if class is specified
+			if (classObj != null)
+			{
+				var owner = await obj.Owner.WithCancellation(CancellationToken.None);
+				if (owner.Object.DBRef != classObj.Object().DBRef)
+				{
+					continue;
+				}
+			}
+
+			// Get attributes and search
+			var attributes = obj.Attributes.Value;
+			
+			await foreach (var attr in attributes)
+			{
+				// Check if attribute name matches pattern (simple contains for now)
+				if (attributePattern != "*" && !attr.Name.Contains(attributePattern, StringComparison.OrdinalIgnoreCase))
+				{
+					continue;
+				}
+
+				// Check if value contains pattern
+				var value = attr.Value.ToPlainText();
+				if (value.Contains(pattern, StringComparison.OrdinalIgnoreCase))
+				{
+					results.Add(new DBRef(obj.Key, obj.CreationTime).ToString());
+					break; // Found match in this object, move to next
+				}
+			}
+		}
+
+		return new CallState(string.Join(" ", results));
 	}
 
 	[SharpFunction(Name = "colors", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
