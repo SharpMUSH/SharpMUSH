@@ -353,9 +353,15 @@ public partial class Functions
 				.Owner.WithCancellation(CancellationToken.None)));
 		
 		return new CallState(thing.ToString());
-		return ValueTask.FromResult(new CallState(
-			showCount < count ? total.ToString() : string.Join(" ", rolls)
-		));
+	}
+	
+	[SharpFunction(Name = "die", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public static ValueTask<CallState> Die(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var args = parser.CurrentState.Arguments;
+		
+		if (!int.TryParse(MModule.plainText(args["0"].Message), out var count) || count < 0)
+		{
 			return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
 		}
 		if (!int.TryParse(MModule.plainText(args["1"].Message), out var sides) || sides <= 0)

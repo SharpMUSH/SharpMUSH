@@ -48,13 +48,33 @@ public class UtilityFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("functions()", "")]
-	[Arguments("functions(add*)", "")]
-	[Arguments("functions(rand)", "")]
-	public async Task Functions(string str, string expected)
+	public async Task Functions_All()
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsNotEmpty();
+		var result = (await Parser.FunctionParse(MModule.single("functions()")))?.Message!;
+		var functions = result.ToPlainText();
+		await Assert.That(functions).IsNotEmpty();
+		// Should contain some known functions
+		await Assert.That(functions).Contains("rand");
+		await Assert.That(functions).Contains("add");
+	}
+
+	[Test]
+	public async Task Functions_Wildcard()
+	{
+		var result = (await Parser.FunctionParse(MModule.single("functions(add*)")))?.Message!;
+		var functions = result.ToPlainText();
+		await Assert.That(functions).IsNotEmpty();
+		// Should contain functions starting with "add"
+		await Assert.That(functions).Contains("add");
+	}
+
+	[Test]
+	public async Task Functions_Exact()
+	{
+		var result = (await Parser.FunctionParse(MModule.single("functions(rand)")))?.Message!;
+		var functions = result.ToPlainText();
+		await Assert.That(functions).IsNotEmpty();
+		await Assert.That(functions).Contains("rand");
 	}
 
 	[Test]
