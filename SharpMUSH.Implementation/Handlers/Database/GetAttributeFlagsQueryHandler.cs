@@ -6,12 +6,9 @@ using SharpMUSH.Library.Queries.Database;
 namespace SharpMUSH.Implementation.Handlers.Database;
 
 public class GetAttributeFlagsQueryHandler(ISharpDatabase database)
-	: IQueryHandler<GetAttributeFlagsQuery, IAsyncEnumerable<SharpAttributeFlag>>
+	: IStreamQueryHandler<GetAttributeFlagsQuery, SharpAttributeFlag>
 {
-	public async ValueTask<IAsyncEnumerable<SharpAttributeFlag>> Handle(GetAttributeFlagsQuery request,
-		CancellationToken cancellationToken)
-	{
-		await ValueTask.CompletedTask;
-		return database.GetAttributeFlagsAsync(cancellationToken);
-	}
+	public IAsyncEnumerable<SharpAttributeFlag> Handle(GetAttributeFlagsQuery request,
+		CancellationToken cancellationToken) =>
+		database.GetAttributeFlagsAsync(cancellationToken);
 }

@@ -86,7 +86,7 @@ public partial class Commands
 			async dbref => (await Mediator!.Send(new GetObjectNodeQuery(dbref))).TryPickT0(out var player, out _)
 				? player
 				: null,
-			async name => await (await Mediator!.Send(new GetPlayerQuery(name))).FirstOrDefaultAsync());
+			async name => await (Mediator!.CreateStream(new GetPlayerQuery(name))).FirstOrDefaultAsync());
 
 		if (foundDB is null)
 		{

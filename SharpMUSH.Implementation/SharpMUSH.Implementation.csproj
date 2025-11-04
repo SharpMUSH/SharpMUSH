@@ -7,6 +7,7 @@
 		<LangVersion>default</LangVersion>
 		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+		<NoWarn>CS8425</NoWarn>
 	</PropertyGroup>
 
 	<ItemGroup>

@@ -5,9 +5,9 @@ using SharpMUSH.Library.Queries.Database;
 namespace SharpMUSH.Implementation.Handlers.Database;
 
 public class GetConnectionLogsQueryHandler(ISharpDatabase database) 
-	: IQueryHandler<GetConnectionLogsQuery, IAsyncEnumerable<LogEventEntity>>
+	: IStreamQueryHandler<GetConnectionLogsQuery, LogEventEntity>
 {
-	public async ValueTask<IAsyncEnumerable<LogEventEntity>> Handle(GetConnectionLogsQuery request, CancellationToken cancellationToken)
+	public IAsyncEnumerable<LogEventEntity> Handle(GetConnectionLogsQuery request, CancellationToken cancellationToken)
 	{
 		if (database is ISharpDatabaseWithLogging loggingDb)
 		{
@@ -20,10 +20,10 @@ public class GetConnectionLogsQueryHandler(ISharpDatabase database)
 	
 	private static async IAsyncEnumerable<LogEventEntity> SafeAsyncEnumerable(IAsyncEnumerable<LogEventEntity> source)
 	{
-		IAsyncEnumerator<LogEventEntity>? enumerator = null;
+		var enumerator = source.GetAsyncEnumerator();
+		
 		try
 		{
-			enumerator = source.GetAsyncEnumerator();
 			while (true)
 			{
 				bool hasNext;
@@ -33,7 +33,6 @@ public class GetConnectionLogsQueryHandler(ISharpDatabase database)
 				}
 				catch
 				{
-					// If enumeration fails, stop silently
 					yield break;
 				}
 				
@@ -44,10 +43,7 @@ public class GetConnectionLogsQueryHandler(ISharpDatabase database)
 		}
 		finally
 		{
-			if (enumerator != null)
-			{
-				await enumerator.DisposeAsync();
-			}
+			await enumerator.DisposeAsync();
 		}
 	}
 }

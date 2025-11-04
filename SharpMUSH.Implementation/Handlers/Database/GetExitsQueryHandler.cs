@@ -6,11 +6,13 @@ using SharpMUSH.Library.Queries.Database;
 namespace SharpMUSH.Implementation.Handlers.Database;
 
 public class GetExitsQueryHandler(ISharpDatabase database)
-	: IQueryHandler<GetExitsQuery, IAsyncEnumerable<SharpExit>?>
+	: IStreamQueryHandler<GetExitsQuery, SharpExit>
 {
-	public async ValueTask<IAsyncEnumerable<SharpExit>?> Handle(GetExitsQuery request, CancellationToken cancellationToken)
-		=> await request.DBRef.Match<ValueTask<IAsyncEnumerable<SharpExit>?>>(
-			async dbref  => await database.GetExitsAsync(dbref, cancellationToken),
-			async obj => await database.GetExitsAsync(obj, cancellationToken)
-			);
+	public IAsyncEnumerable<SharpExit> Handle(GetExitsQuery request, CancellationToken cancellationToken)
+		=> request.DBRef.Match<IAsyncEnumerable<SharpExit>?>(
+			   dbref => database.GetExitsAsync(dbref, cancellationToken)
+				   .AsTask().GetAwaiter().GetResult(),
+			   obj => database.GetExitsAsync(obj, cancellationToken)
+				   .AsTask().GetAwaiter().GetResult())
+		   ?? AsyncEnumerable.Empty<SharpExit>();
 }
