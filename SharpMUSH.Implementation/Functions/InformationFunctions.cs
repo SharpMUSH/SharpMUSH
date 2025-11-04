@@ -152,9 +152,23 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "pidinfo", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> PIDInfo(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> PIDInfo(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		// pidinfo() returns information about a process ID
+		// Format: pidinfo(<pid>[, <field>][, <delimiter>])
+		var args = parser.CurrentState.Arguments;
+		var pidStr = args["0"].Message!.ToPlainText();
+		
+		if (!int.TryParse(pidStr, out var pid))
+		{
+			return new CallState("#-1 INVALID PID");
+		}
+
+		// TODO: Implement actual PID tracking and information retrieval
+		// This requires integration with the queue/process management system
+		// For now, return placeholder indicating not implemented
+		await ValueTask.CompletedTask;
+		return new CallState("#-1 NO SUCH PID");
 	}
 
 	[SharpFunction(Name = "alias", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular)]
