@@ -854,6 +854,20 @@ module MarkupStringModule =
             |> fun x -> KindPattern2Regex().TypedReplace(x, konst @"\?")
 
         pattern |> plainText |> Regex.Escape |> (fun x -> $"^{x}$") |> applyRegexPattern
+        
+    /// <summary>
+    /// Converts a wildcard pattern MarkupString to a regex string.
+    /// </summary>
+    /// <param name="pattern">The wildcard pattern as a MarkupString.</param>
+    let getWildcardMatchAsRegex2 (pattern: string) : string =
+        let applyRegexPattern (pat: string) =
+            pat
+            |> fun x -> GlobPatternRegex().TypedReplace(x, konst @"(.*?)")
+            |> fun x -> QuestionPatternRegex().TypedReplace(x, konst @"(.)")
+            |> fun x -> KindPatternRegex().TypedReplace(x, konst @"\*")
+            |> fun x -> KindPattern2Regex().TypedReplace(x, konst @"\?")
+
+        pattern |> Regex.Escape |> (fun x -> $"^{x}$") |> applyRegexPattern
 
     /// <summary>
     /// Determines if the input MarkupString matches the wildcard pattern.
@@ -862,6 +876,15 @@ module MarkupStringModule =
     /// <param name="pattern">The wildcard pattern MarkupString.</param>
     let isWildcardMatch (input: MarkupString) (pattern: MarkupString) : bool =
         let newPattern = getWildcardMatchAsRegex pattern
+        (plainText input, newPattern) |> Regex.IsMatch
+        
+    /// <summary>
+    /// Determines if the input MarkupString matches the wildcard pattern.
+    /// </summary>
+    /// <param name="input">The input MarkupString.</param>
+    /// <param name="pattern">The wildcard pattern MarkupString.</param>
+    let isWildcardMatch2 (input: MarkupString) (pattern: string) : bool =
+        let newPattern = getWildcardMatchAsRegex2 pattern
         (plainText input, newPattern) |> Regex.IsMatch
 
     /// <summary>
