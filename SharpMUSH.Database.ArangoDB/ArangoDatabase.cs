@@ -2050,7 +2050,7 @@ public partial class ArangoDatabase(
 	public async IAsyncEnumerable<SharpObject> GetAllObjectsAsync([EnumeratorCancellation] CancellationToken ct = default)
 	{
 		var objectIds = arangoDb.Query.ExecuteStreamAsync<string>(handle,
-			$"FOR v IN {DatabaseConstants.Objects} RETURN v._id",
+			$"FOR v IN {DatabaseConstants.Objects:@} RETURN v._id",
 			cancellationToken: ct) ?? AsyncEnumerable.Empty<string>();
 
 		await foreach (var id in objectIds.WithCancellation(ct))

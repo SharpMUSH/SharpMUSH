@@ -10,6 +10,7 @@ using Serilog;
 using Serilog.Sinks.SystemConsole.Themes;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server;
 using SharpMUSH.Server.ProtocolHandlers;
@@ -18,10 +19,10 @@ namespace SharpMUSH.Tests;
 
 public class TestWebApplicationBuilderFactory<TProgram>(
 	ArangoConfiguration acnf,
+	string sqlConnectionString,
 	string configFile,
 	string colorFile,
-	INotifyService notifier,
-	ISqlService? sqlService = null) :
+	INotifyService notifier) :
 	WebApplicationFactory<TProgram> where TProgram : class
 {
 	protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -48,12 +49,8 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 				sc.RemoveAll<INotifyService>();
 				sc.AddSingleton(notifier);
 
-				// Replace SqlService if provided
-				if (sqlService != null)
-				{
-					sc.RemoveAll<ISqlService>();
-					sc.AddSingleton(sqlService);
-				}
+				sc.RemoveAll<ISqlService>();
+				sc.AddSingleton<ISqlService>(new SqlService(sqlConnectionString));
 			}
 		);
 

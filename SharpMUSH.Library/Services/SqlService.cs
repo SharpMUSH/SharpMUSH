@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Options;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.Services;
@@ -11,10 +13,28 @@ namespace SharpMUSH.Library.Services;
 /// </summary>
 public class SqlService : ISqlService
 {
+	private MySqlService? _mySql = null;
+	
+	public SqlService(IOptionsMonitor<SharpMUSHOptions> config)
+	{
+		var cvn = config.CurrentValue.Net;
+		var connectionString = $"Server={cvn.SqlHost};Uid={cvn.SqlUsername};Pwd={cvn.SqlPassword};Database={cvn.SqlDatabase}";
+
+		_mySql = new MySqlService(connectionString);
+	}
+	
+	public SqlService(string connectionString)
+	{
+		_mySql = new MySqlService(connectionString);
+	}
+
 	public bool IsAvailable => false;
 
+	
+	
 	public ValueTask<IEnumerable<Dictionary<string, object?>>> ExecuteQueryAsync(string query)
 	{
+		
 		// TODO: Implement actual SQL query execution
 		return ValueTask.FromResult(Enumerable.Empty<Dictionary<string, object?>>());
 	}

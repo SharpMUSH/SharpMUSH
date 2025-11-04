@@ -117,7 +117,7 @@ public partial class Commands
 					columnNames = row.Keys.ToList();
 					
 					await Mediator!.Publish(new QueueAttributeRequest(
-						async () =>
+						() =>
 						{
 							// Set %0 to 0 for column names row
 							parser.CurrentState.AddRegister("0", MModule.single("0"));
@@ -129,7 +129,7 @@ public partial class Commands
 								parser.CurrentState.AddRegister((i + 1).ToString(), MModule.single(colName));
 							}
 
-							return parser.CurrentState;
+							return ValueTask.FromResult(parser.CurrentState);
 						},
 						dbRefAttr.Value));
 
@@ -139,7 +139,7 @@ public partial class Commands
 				// Queue attribute for this row
 				var currentRow = rowNumber;
 				await Mediator!.Publish(new QueueAttributeRequest(
-					async () =>
+					() =>
 					{
 						// Set %0 to row number
 						parser.CurrentState.AddRegister("0", MModule.single(currentRow.ToString()));
@@ -158,7 +158,7 @@ public partial class Commands
 							parser.CurrentState.AddRegister(kvp.Key, MModule.single(kvp.Value?.ToString() ?? string.Empty));
 						}
 
-						return parser.CurrentState;
+						return ValueTask.FromResult(parser.CurrentState);
 					},
 					dbRefAttr.Value));
 

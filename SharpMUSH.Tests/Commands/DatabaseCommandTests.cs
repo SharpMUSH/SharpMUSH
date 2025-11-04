@@ -13,15 +13,15 @@ namespace SharpMUSH.Tests.Commands;
 
 public class DatabaseCommandTests : IAsyncInitializer, IAsyncDisposable
 {
-	[ClassDataSource<SqlWebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required SqlWebAppFactory SqlWebAppFactoryArg { get; init; }
+	[ClassDataSource<TestWebApplicationBuilderFactory<Server.Program>>(Shared = SharedType.PerTestSession)]
+	public required TestWebApplicationBuilderFactory<Server.Program> SqlWebAppFactoryArg { get; init; }
 
 	[ClassDataSource<MySqlTestServer>(Shared = SharedType.PerTestSession)]
 	public required MySqlTestServer MySqlTestServer { get; init; }
 
 	private INotifyService NotifyService => SqlWebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => SqlWebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-	private IMUSHCodeParser Parser => SqlWebAppFactoryArg.CommandParser;
+	private IMUSHCodeParser Parser => SqlWebAppFactoryArg.Services.GetRequiredService<IMUSHCodeParser>();
 
 	public async Task InitializeAsync()
 	{
@@ -31,42 +31,46 @@ public class DatabaseCommandTests : IAsyncInitializer, IAsyncDisposable
 		await connection.OpenAsync();
 
 		// Create test tables
-		await using (var cmd = new MySqlCommand(@"
-			CREATE TABLE IF NOT EXISTS test_sql_data (
-				id INT PRIMARY KEY AUTO_INCREMENT,
-				name VARCHAR(255),
-				value INT
-			)", connection))
+		await using (var cmd = new MySqlCommand("""
+		                                        			CREATE TABLE IF NOT EXISTS test_sql_data (
+		                                        				id INT PRIMARY KEY AUTO_INCREMENT,
+		                                        				name VARCHAR(255),
+		                                        				value INT
+		                                        			)
+		                                        """, connection))
 		{
 			await cmd.ExecuteNonQueryAsync();
 		}
 
-		await using (var cmd = new MySqlCommand(@"
-			CREATE TABLE IF NOT EXISTS test_mapsql_data (
-				id INT PRIMARY KEY AUTO_INCREMENT,
-				col1 VARCHAR(50),
-				col2 VARCHAR(50),
-				col3 INT
-			)", connection))
+		await using (var cmd = new MySqlCommand("""
+		                                        			CREATE TABLE IF NOT EXISTS test_mapsql_data (
+		                                        				id INT PRIMARY KEY AUTO_INCREMENT,
+		                                        				col1 VARCHAR(50),
+		                                        				col2 VARCHAR(50),
+		                                        				col3 INT
+		                                        			)
+		                                        """, connection))
 		{
 			await cmd.ExecuteNonQueryAsync();
 		}
 
 		// Insert test data
-		await using (var cmd = new MySqlCommand(@"
-			INSERT INTO test_sql_data (name, value) VALUES 
-			('test_sql_row1', 100),
-			('test_sql_row2', 200),
-			('test_sql_row3', 300)", connection))
+		await using (var cmd = new MySqlCommand("""
+		                                        			INSERT INTO test_sql_data (name, value) VALUES 
+		                                        			('test_sql_row1', 100),
+		                                        			('test_sql_row2', 200),
+		                                        			('test_sql_row3', 300)
+		                                        """, connection))
 		{
 			await cmd.ExecuteNonQueryAsync();
 		}
 
-		await using (var cmd = new MySqlCommand(@"
-			INSERT INTO test_mapsql_data (col1, col2, col3) VALUES 
-			('data1_col1', 'data1_col2', 10),
-			('data2_col1', 'data2_col2', 20),
-			('data3_col1', 'data3_col2', 30)", connection))
+		await using (var cmd = new MySqlCommand("""
+		                                        			INSERT INTO test_mapsql_data (col1, col2, col3) VALUES 
+		                                        			('data1_col1', 'data1_col2', 10),
+		                                        			('data2_col1', 'data2_col2', 20),
+		                                        			('data3_col1', 'data3_col2', 30)
+		                                        """, connection))
 		{
 			await cmd.ExecuteNonQueryAsync();
 		}

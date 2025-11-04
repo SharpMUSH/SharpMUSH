@@ -54,7 +54,16 @@ public record NetOptions(
 	
 	[property: SharpConfig(Name = "sql_host", Category = "Net", Description = "SQL database host connection string")] 
 	string? SqlHost,
-	
+
+	[property: SharpConfig(Name = "sql_database", Category = "Net", Description = "SQL database host connection string")] 
+	string? SqlDatabase,
+
+	[property: SharpConfig(Name = "sql_username", Category = "Net", Description = "SQL database host connection string")] 
+	string? SqlUsername,
+
+	[property: SharpConfig(Name = "sql_password", Category = "Net", Description = "SQL database host connection string")] 
+	string? SqlPassword,
+
 	[property: SharpConfig(Name = "json_unsafe_unescape", Category = "Net", Description = "Allow unsafe JSON unescaping")] 
 	bool JsonUnsafeUnescape,
 	
