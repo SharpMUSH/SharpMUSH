@@ -3,6 +3,7 @@ using MySqlConnector;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
 using OneOf;
+using OneOf.Types;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
@@ -11,7 +12,7 @@ using TUnit.Core.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-public class DatabaseCommandTests : IAsyncInitializer, IAsyncDisposable
+public class DatabaseCommandTests
 {
 	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required WebAppFactory SqlWebAppFactoryArg { get; init; }
@@ -23,6 +24,7 @@ public class DatabaseCommandTests : IAsyncInitializer, IAsyncDisposable
 	private IConnectionService ConnectionService => SqlWebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => SqlWebAppFactoryArg.Services.GetRequiredService<IMUSHCodeParser>();
 
+	[Before(Test)]
 	public async Task InitializeAsync()
 	{
 		// Create test database and populate with test data
@@ -71,24 +73,6 @@ public class DatabaseCommandTests : IAsyncInitializer, IAsyncDisposable
 		                                        			('data2_col1', 'data2_col2', 20),
 		                                        			('data3_col1', 'data3_col2', 30)
 		                                        """, connection))
-		{
-			await cmd.ExecuteNonQueryAsync();
-		}
-	}
-
-	public async ValueTask DisposeAsync()
-	{
-		// Clean up test data
-		var connectionString = MySqlTestServer.Instance.GetConnectionString();
-		await using var connection = new MySqlConnection(connectionString);
-		await connection.OpenAsync();
-
-		await using (var cmd = new MySqlCommand("DROP TABLE IF EXISTS test_sql_data", connection))
-		{
-			await cmd.ExecuteNonQueryAsync();
-		}
-
-		await using (var cmd = new MySqlCommand("DROP TABLE IF EXISTS test_mapsql_data", connection))
 		{
 			await cmd.ExecuteNonQueryAsync();
 		}
@@ -212,54 +196,59 @@ public class DatabaseCommandTests : IAsyncInitializer, IAsyncDisposable
 	[Test]
 	public async ValueTask Test_MapSql_Basic()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql #1/test_attr=SELECT col1, col2 FROM test_mapsql_data WHERE id = 1"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&mapsql_test_attr_basic #1=think Test_MapSql_Basic: %0 - %1 - %2"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql #1/mapsql_test_attr_basic=SELECT col1, col2 FROM test_mapsql_data WHERE id = 1"));
 
-		// MapSql queues attributes, so we check that it completes without error
-		// The actual attribute execution would happen asynchronously
-		// We can verify it didn't throw an error by checking no error message was sent
+		await Task.Delay(1000);
+		
 		await NotifyService
-			.DidNotReceive()
+			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("#-1")) ||
-				(msg.IsT1 && msg.AsT1.Contains("#-1"))));
+				(msg.IsT0 && msg.AsT0.ToString().Contains("Test_MapSql_Basic")) ||
+				(msg.IsT1 && msg.AsT1.Contains("Test_MapSql_Basic"))));
 	}
 
 	[Test]
 	public async ValueTask Test_MapSql_WithMultipleRows()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql #1/test_attr=SELECT col1, col2, col3 FROM test_mapsql_data ORDER BY id"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&mapsql_test_attr_mr #1=think Test_MapSql_WithMultipleRows: %0 - %1 - %2"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql #1/mapsql_test_attr_mr=SELECT col1, col2, col3 FROM test_mapsql_data ORDER BY id"));
 
-		// Verify no errors
+		await Task.Delay(1000);
+		
 		await NotifyService
-			.DidNotReceive()
+			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("#-1")) ||
-				(msg.IsT1 && msg.AsT1.Contains("#-1"))));
+				(msg.IsT0 && msg.AsT0.ToString().Contains("Test_MapSql_WithMultipleRows")) ||
+				(msg.IsT1 && msg.AsT1.Contains("Test_MapSql_WithMultipleRows"))));
 	}
 
 	[Test]
 	public async ValueTask Test_MapSql_WithColnamesSwitch()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql/colnames #1/test_attr=SELECT col1, col2 FROM test_mapsql_data WHERE id = 1"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&mapsql_test_attr_cn #1=think Test_MapSql_WithColnamesSwitch: %0 - %1 - %2"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql/colnames #1/mapsql_test_attr_cn=SELECT col1, col2 FROM test_mapsql_data WHERE id = 1"));
 
-		// Verify no errors - with /colnames, should queue an extra row for column names
+		await Task.Delay(1000);
+		
 		await NotifyService
-			.DidNotReceive()
+			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("#-1")) ||
-				(msg.IsT1 && msg.AsT1.Contains("#-1"))));
+				(msg.IsT0 && msg.AsT0.ToString().Contains("Test_MapSql_WithColnamesSwitch")) ||
+				(msg.IsT1 && msg.AsT1.Contains("Test_MapSql_WithColnamesSwitch"))));
 	}
 
 	[Test]
 	public async ValueTask Test_MapSql_InvalidObjectAttribute()
 	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&mapsql_test_attr #1=think %0 - %1 - %2"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql invalid=SELECT * FROM test_mapsql_data"));
 
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("#-1")) ||
-				(msg.IsT1 && msg.AsT1.Contains("#-1"))));
+				(msg.IsT0 && msg.AsT0.ToString().Contains("#-1 INVALID OBJECT/ATTRIBUTE")) ||
+				(msg.IsT1 && msg.AsT1.Contains("#-1 INVALID OBJECT/ATTRIBUTE"))));
 	}
 
 	[Test]
