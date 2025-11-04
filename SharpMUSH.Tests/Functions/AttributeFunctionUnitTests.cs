@@ -230,6 +230,65 @@ public class AttributeFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
+	// Attribute Tree Tests
+	[Test]
+	[NotInParallel]
+	[Arguments("[attrib_set(%!/TREE,root)][attrib_set(%!/TREE`BRANCH1,leaf1)][attrib_set(%!/TREE`BRANCH2,leaf2)][attrib_set(%!/TREE`BRANCH1`SUBLEAF,deep)][lattr(%!/TREE*)]", "TREE TREE`BRANCH1 TREE`BRANCH1`SUBLEAF TREE`BRANCH2")]
+	[Arguments("[attrib_set(%!/PARENT,value)][attrib_set(%!/PARENT`CHILD,childval)][lattr(%!/PARENT*)]", "PARENT PARENT`CHILD")]
+	public async Task Test_Lattr_AttributeTrees(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[NotInParallel]
+	[Arguments("[attrib_set(%!/TREE,root)][attrib_set(%!/TREE`BRANCH1,has_search_term)][attrib_set(%!/TREE`BRANCH2,different)][grep(%!/TREE*,search)]", "TREE`BRANCH1")]
+	[Arguments("[attrib_set(%!/DATA,test)][attrib_set(%!/DATA`SUB1,contains_test)][attrib_set(%!/DATA`SUB2,no_match)][grep(%!/DATA*,test)]", "DATA DATA`SUB1")]
+	public async Task Test_Grep_AttributeTrees(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[NotInParallel]
+	[Arguments("[attrib_set(%!/ROOT,val)][attrib_set(%!/ROOT`A,val1)][attrib_set(%!/ROOT`B,val2)][attrib_set(%!/ROOT`A`DEEP,val3)][reglattr(%!/^ROOT)]", "ROOT ROOT`A ROOT`A`DEEP ROOT`B")]
+	[Arguments("[attrib_set(%!/ATTR_001,v1)][attrib_set(%!/ATTR_001`SUB,v2)][reglattr(%!/ATTR_[0-9]+)]", "ATTR_001 ATTR_001`SUB")]
+	public async Task Test_Reglattr_AttributeTrees(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[NotInParallel]
+	[Arguments("[attrib_set(%!/BASE,v)][attrib_set(%!/BASE`L1,v)][attrib_set(%!/BASE`L2,v)][attrib_set(%!/BASE`L1`L2,v)][regnattr(%!/^BASE)]", "4")]
+	[Arguments("[attrib_set(%!/TEST,v)][attrib_set(%!/TEST`A,v)][attrib_set(%!/TEST`B,v)][regnattr(%!/^TEST)]", "3")]
+	public async Task Test_Regnattr_AttributeTrees(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[NotInParallel]
+	[Arguments("[attrib_set(%!/WILD,val)][attrib_set(%!/WILD`CHILD,has_pattern)][attrib_set(%!/WILD`OTHER,no_match)][wildgrep(%!/WILD*,*pattern*)]", "WILD`CHILD")]
+	public async Task Test_Wildgrep_AttributeTrees(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[NotInParallel]
+	[Arguments("[attrib_set(%!/RANGE,v1)][attrib_set(%!/RANGE`A,v2)][attrib_set(%!/RANGE`B,v3)][attrib_set(%!/RANGE`C,v4)][regxattr(%!/^RANGE,2,2)]", "RANGE`A RANGE`B")]
+	public async Task Test_Regxattr_AttributeTrees(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
 	[Test]
 	[Skip("Not Yet Implemented")]
 	[Arguments("xattrp(#0,attr)", "0")]
