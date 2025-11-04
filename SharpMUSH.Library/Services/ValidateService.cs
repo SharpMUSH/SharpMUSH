@@ -199,7 +199,8 @@ check_lock_type(dbref player, dbref thing, lock_type name, bool silent)
 
 		// TODO: Forbidden names
 
-		var tryFindPlayerByName = (await mediator.Send(new GetPlayerQuery(plainName)))
+		var tryFindPlayerByName = mediator
+			.CreateStream(new GetPlayerQuery(plainName))
 			.Where(x => x.Object.DBRef != target.Object().DBRef);
 
 		return !await tryFindPlayerByName

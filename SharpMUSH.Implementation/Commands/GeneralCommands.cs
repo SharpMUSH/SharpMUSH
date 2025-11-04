@@ -61,11 +61,11 @@ public partial class Commands
 		// Will need documentation.
 		// A version of map(), but for a command, to run like @dolist
 		// @map[/<switches>][/notify][/delimit <delim>] [<object>/]<attribute>=<list>
-		
+
 		await ValueTask.CompletedTask;
 		throw new NotImplementedException();
 	}
-	
+
 	[SharpCommand(Name = "@DOLIST", Behavior = CB.EqSplit | CB.RSNoParse, MinArgs = 1, MaxArgs = 2,
 		Switches = ["CLEARREGS", "DELIMIT", "INLINE", "INPLACE", "LOCALIZE", "NOBREAK", "NOTIFY"])]
 	public static async ValueTask<Option<CallState>> DoList(IMUSHCodeParser parser, SharpCommandAttribute _2)
@@ -139,7 +139,7 @@ public partial class Commands
 		var realViewing = viewing.Known;
 
 		var contents = realViewing.IsContainer
-			? await (await Mediator!.Send(new GetContentsQuery(realViewing.AsContainer)))!.ToListAsync()
+			? await (Mediator!.CreateStream(new GetContentsQuery(realViewing.AsContainer)))!.ToListAsync()
 			: [];
 		var viewingObject = realViewing.Object();
 
@@ -204,8 +204,8 @@ public partial class Commands
 
 		var contents = viewing.IsExit
 			? []
-			: (await Mediator.Send(new GetContentsQuery(viewing.Known().AsContainer)))?.ToArrayAsync().GetAwaiter()
-			.GetResult();
+			: await Mediator.CreateStream(new GetContentsQuery(viewing.Known().AsContainer))
+				.ToArrayAsync();
 
 		var obj = viewing.Object()!;
 		var ownerObj = (await obj.Owner.WithCancellation(CancellationToken.None)).Object;
@@ -602,7 +602,7 @@ public partial class Commands
 		if (executor.IsContent && switches.Contains("ROOM"))
 		{
 			var where = await executor.AsContent.Location();
-			var whereContent = await where.Content(Mediator!);
+			var whereContent = where.Content(Mediator!);
 
 			// notify: Matches on contents of this room:
 			var matchedContent =
@@ -623,7 +623,7 @@ public partial class Commands
 
 		if (executor.IsContainer && switches.Contains("SELF"))
 		{
-			var executorContents = await executor.AsContainer.Content(Mediator!);
+			var executorContents = executor.AsContainer.Content(Mediator!);
 
 			// notify: Matches on carried objects:
 			var matchedContent =
@@ -650,7 +650,7 @@ public partial class Commands
 		if (switches.Contains("GLOBAL"))
 		{
 			var masterRoom = new DBRef(Convert.ToInt32(Configuration!.CurrentValue.Database.MasterRoom));
-			var masterRoomContents = await Mediator!.Send(new GetContentsQuery(masterRoom))
+			var masterRoomContents = Mediator!.CreateStream(new GetContentsQuery(masterRoom))
 			                         ?? AsyncEnumerable.Empty<AnySharpContent>();
 
 			var masterRoomContent =
@@ -847,7 +847,7 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var one = await Mediator!.Send(new GetObjectNodeQuery(new DBRef(0)));
-		var attrValues = await Mediator.Send(new GetAttributeQuery(located.Object().DBRef, ["SEMAPHORE"]));
+		var attrValues = Mediator!.CreateStream(new GetAttributeQuery(located.Object().DBRef, ["SEMAPHORE"]));
 		var attrValue = attrValues?.LastOrDefaultAsync().GetAwaiter().GetResult();
 
 		if (attrValue is null)
@@ -876,7 +876,7 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var one = await Mediator!.Send(new GetObjectNodeQuery(new DBRef(0)));
-		var attrValues = await Mediator.Send(new GetAttributeQuery(located.Object().DBRef, attribute));
+		var attrValues = Mediator!.CreateStream(new GetAttributeQuery(located.Object().DBRef, attribute));
 		var attrValue = attrValues?.LastOrDefaultAsync().GetAwaiter().GetResult();
 
 		if (attrValue is null)
@@ -916,7 +916,7 @@ public partial class Commands
 			return new CallState(string.Format(Errors.ErrorTooFewArguments, "@WAIT", 2, 1));
 		}
 
-		var exists = await Mediator!.Send(new ScheduleSemaphoreQuery(pid));
+		var exists = Mediator!.CreateStream(new ScheduleSemaphoreQuery(pid));
 		var maybeFoundPid = await exists.FirstOrDefaultAsync();
 
 		if (maybeFoundPid is null)
@@ -1024,7 +1024,7 @@ public partial class Commands
 		if (maybeAttribute is not null && (switches.Contains("ANY") || switches.Length == 0))
 		{
 			var maybeFoundAttributes =
-				await Mediator.Send(new GetAttributeQuery(objectToDrain.Object().DBRef, attribute));
+				Mediator.CreateStream(new GetAttributeQuery(objectToDrain.Object().DBRef, attribute));
 			var maybeFoundAttribute = maybeFoundAttributes?.LastOrDefaultAsync().GetAwaiter().GetResult();
 
 			if (maybeFoundAttribute is null)
@@ -1039,7 +1039,7 @@ public partial class Commands
 		}
 		else if (maybeAttribute is null && (switches.Contains("ANY") || switches.Length == 0))
 		{
-			var pids = await Mediator.Send(new ScheduleSemaphoreQuery(objectToDrain.Object().DBRef));
+			var pids = Mediator.CreateStream(new ScheduleSemaphoreQuery(objectToDrain.Object().DBRef));
 			var filteredPids = pids
 				.GroupBy(data => string.Join('`', data.SemaphoreSource.Attribute), x => x.SemaphoreSource)
 				.Select(x => x.First());
@@ -1128,7 +1128,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
 		var executorLocation = await executor.Where();
-		var contents = await executorLocation.Content(Mediator!);
+		var contents = executorLocation.Content(Mediator!);
 		var isSpoof = true;
 		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
 		var message = isNoEvaluation
@@ -1138,7 +1138,7 @@ public partial class Commands
 		var interactableContents = contents
 			.Where(async (obj, _) =>
 				await PermissionService!.CanInteract(obj.WithRoomOption(), executor,
-					IPermissionService.InteractType.Hear));
+					InteractType.Hear));
 
 		if (isSpoof)
 		{
@@ -1372,7 +1372,7 @@ public partial class Commands
 			: INotifyService.NotificationType.Emit;
 
 		var executorLocation = await executor.Where();
-		var contents = await executorLocation.Content(Mediator!);
+		var contents = executorLocation.Content(Mediator!);
 		var message = args["0"].Message!;
 
 		await foreach (var obj in contents
@@ -1626,7 +1626,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
 		var executorLocation = await executor.Where();
-		var contents = await executorLocation.Content(Mediator!);
+		var contents = executorLocation.Content(Mediator!);
 		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
 		var message = isNoEvaluation
 			? ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.empty())
@@ -1773,7 +1773,8 @@ public partial class Commands
 
 		if (args.Count < 2)
 		{
-			await NotifyService!.Notify(executor, "Usage: @verb <victim>=<actor>,<what>,<whatd>,<owhat>,<owhatd>,<awhat>[,<args>]");
+			await NotifyService!.Notify(executor,
+				"Usage: @verb <victim>=<actor>,<what>,<whatd>,<owhat>,<owhatd>,<awhat>[,<args>]");
 			return new CallState(Errors.ErrorCantSeeThat);
 		}
 
@@ -2176,7 +2177,7 @@ public partial class Commands
 			}
 
 			// Contents of the room
-			var contents = await location.Content(Mediator!);
+			var contents = location.Content(Mediator!);
 			await foreach (var obj in contents)
 			{
 				var fullObj = obj.WithRoomOption();
@@ -2218,7 +2219,7 @@ public partial class Commands
 			await NotifyService!.Notify(executor, "Listening EXITS:");
 			if (await locationAnyObject.IsAudible())
 			{
-				var exits = (await location.Content(Mediator!)).Where(x => x.IsExit);
+				var exits = (location.Content(Mediator!)).Where(x => x.IsExit);
 				await foreach (var exit in exits)
 				{
 					if (await exit.WithRoomOption().IsAudible())
@@ -2233,7 +2234,7 @@ public partial class Commands
 		if (!hereFlag && !exitsFlag && inventoryFlag)
 		{
 			await NotifyService!.Notify(executor, "Listening in your INVENTORY:");
-			await foreach (var obj in await executor.AsContainer.Content(Mediator!))
+			await foreach (var obj in executor.AsContainer.Content(Mediator!))
 			{
 				var fullObj = obj.WithRoomOption();
 				var objOwner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
@@ -2403,11 +2404,13 @@ public partial class Commands
 		var objectAttrArg = args.ElementAtOrDefault(2).Value.Message!.ToPlainText();
 		var otherArgs = args
 			.Skip(3)
-			.Select(x => {
+			.Select(x =>
+			{
 				if (int.TryParse(x.Key, out var numKey))
 				{
 					return new KeyValuePair<string, CallState>((numKey - 3).ToString(), x.Value);
 				}
+
 				return x;
 			})
 			.ToList();

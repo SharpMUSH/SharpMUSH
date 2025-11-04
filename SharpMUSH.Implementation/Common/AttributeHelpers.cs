@@ -21,7 +21,7 @@ public static class AttributeHelpers
 		string? pronounAttribute,
 		Func<string, string> defaultEvaluator)
 	{
-		var ga = await GetGenderAttribute(attributeService, mediator, parser, onObject, genderAttribute);
+		var ga = await GetGenderAttribute(attributeService, onObject, genderAttribute);
 		return await EvaluatePronounIndicatingAttribute(attributeService, mediator, parser, pronounAttribute,
 			defaultEvaluator(ga));
 	}
@@ -30,13 +30,11 @@ public static class AttributeHelpers
 	/// Gets the gender attribute that indicates the pronoun. This is typically 'SEX' for legacy reasons.
 	/// </summary>
 	/// <param name="attributeService"></param>
-	/// <param name="mediator"></param>
-	/// <param name="parser"></param>
 	/// <param name="onObject"></param>
 	/// <param name="attr"></param>
 	/// <returns></returns>
 	private static async ValueTask<string> GetGenderAttribute(IAttributeService attributeService,
-		IMediator mediator, IMUSHCodeParser parser, AnySharpObject onObject, string? attr)
+		AnySharpObject onObject, string? attr)
 	{
 		var attribute = await attributeService.GetAttributeAsync(
 			onObject,

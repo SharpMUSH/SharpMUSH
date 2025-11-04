@@ -101,7 +101,7 @@ public partial class Functions
 
 		var (_, status) = maybeMemberStatus;
 
-		await Mediator!.Send(new ChannelMessageNotification(
+		await Mediator!.Publish(new ChannelMessageNotification(
 			channel,
 			executor.WithNoneOption(),
 			INotifyService.NotificationType.Emit,
@@ -206,7 +206,7 @@ public partial class Functions
 		}
 
 		// Get all channels
-		var allChannels = await Mediator!.Send(new GetChannelListQuery());
+		var allChannels = Mediator!.CreateStream(new GetChannelListQuery());
 		var channelArray = await allChannels.ToArrayAsync();
 
 		// Filter based on type
@@ -532,7 +532,7 @@ public partial class Functions
 
 		var canNoSpoof = await PermissionService!.CanNoSpoof(executor);
 
-		await Mediator!.Send(new ChannelMessageNotification(
+		await Mediator!.Publish(new ChannelMessageNotification(
 			channel,
 			executor.WithNoneOption(),
 			canNoSpoof
