@@ -7,49 +7,67 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Implementation.Handlers.Database;
 
 public class GetAttributeQueryHandler(ISharpDatabase database)
-	: IQueryHandler<GetAttributeQuery, IAsyncEnumerable<SharpAttribute>?>
+	: IStreamQueryHandler<GetAttributeQuery, SharpAttribute>
 {
-	public async ValueTask<IAsyncEnumerable<SharpAttribute>?> Handle(GetAttributeQuery request,
-		CancellationToken cancellationToken)
-		=> await database.GetAttributeAsync(request.DBRef, request.Attribute, cancellationToken);
+	public IAsyncEnumerable<SharpAttribute> Handle(GetAttributeQuery request,
+		CancellationToken cancellationToken) =>
+		database.GetAttributeAsync(request.DBRef, request.Attribute, cancellationToken)
+			.AsTask().GetAwaiter().GetResult()
+		?? AsyncEnumerable.Empty<SharpAttribute>();
 }
 
 public class GetLazyAttributeQueryHandler(ISharpDatabase database)
-	: IQueryHandler<GetLazyAttributeQuery, IAsyncEnumerable<LazySharpAttribute>?>
+	: IStreamQueryHandler<GetLazyAttributeQuery, LazySharpAttribute>
 {
-	public ValueTask<IAsyncEnumerable<LazySharpAttribute>?> Handle(GetLazyAttributeQuery request,
+	public IAsyncEnumerable<LazySharpAttribute> Handle(GetLazyAttributeQuery request,
 		CancellationToken cancellationToken)
-		=> ValueTask.FromResult(database.GetLazyAttributeAsync(request.DBRef, request.Attribute, cancellationToken));
+		=> database.GetLazyAttributeAsync(request.DBRef, request.Attribute, cancellationToken)
+		   ?? AsyncEnumerable.Empty<LazySharpAttribute>();
 }
 
 public class GetAttributesQueryHandler(ISharpDatabase database)
-	: IQueryHandler<GetAttributesQuery, IAsyncEnumerable<SharpAttribute>?>
+	: IStreamQueryHandler<GetAttributesQuery, SharpAttribute>
 {
-	public ValueTask<IAsyncEnumerable<SharpAttribute>?> Handle(GetAttributesQuery request,
+	public IAsyncEnumerable<SharpAttribute> Handle(GetAttributesQuery request,
 		CancellationToken cancellationToken)
 		=> request.Mode switch
 		{
-			IAttributeService.AttributePatternMode.Exact => 
-				database.GetAttributesAsync(request.DBRef, request.Pattern, cancellationToken),
-			IAttributeService.AttributePatternMode.Regex => database.GetAttributesByRegexAsync(
-				request.DBRef,
-				request.Pattern, cancellationToken),
+			IAttributeService.AttributePatternMode.Exact =>
+				database.GetAttributesAsync(request.DBRef, request.Pattern, cancellationToken)
+					.AsTask().GetAwaiter().GetResult()
+				?? AsyncEnumerable.Empty<SharpAttribute>(),
+			IAttributeService.AttributePatternMode.Regex =>
+				database.GetAttributesByRegexAsync(
+						request.DBRef,
+						request.Pattern, cancellationToken)
+					.AsTask().GetAwaiter().GetResult()
+				?? AsyncEnumerable.Empty<SharpAttribute>(),
 			_ => database.GetAttributesAsync(request.DBRef, request.Pattern, cancellationToken)
+				     .AsTask().GetAwaiter().GetResult()
+			     ?? AsyncEnumerable.Empty<SharpAttribute>()
 		};
 }
 
 public class GetLazyAttributesQueryHandler(ISharpDatabase database)
-	: IQueryHandler<GetLazyAttributesQuery, IAsyncEnumerable<LazySharpAttribute>?>
+	: IStreamQueryHandler<GetLazyAttributesQuery, LazySharpAttribute>
 {
-	public ValueTask<IAsyncEnumerable<LazySharpAttribute>?> Handle(GetLazyAttributesQuery request,
+	public IAsyncEnumerable<LazySharpAttribute> Handle(GetLazyAttributesQuery request,
 		CancellationToken cancellationToken)
 		=> request.Mode switch
 		{
-			IAttributeService.AttributePatternMode.Exact => 
-				database.GetLazyAttributesAsync(request.DBRef, request.Pattern, cancellationToken),
-			IAttributeService.AttributePatternMode.Regex => database.GetLazyAttributesByRegexAsync(
-				request.DBRef,
-				request.Pattern, cancellationToken),
-			_ => database.GetLazyAttributesAsync(request.DBRef, request.Pattern, cancellationToken)
+			IAttributeService.AttributePatternMode.Exact =>
+				database.GetLazyAttributesAsync(request.DBRef, request.Pattern, cancellationToken)
+					.AsTask().GetAwaiter().GetResult()
+				?? AsyncEnumerable.Empty<LazySharpAttribute>(),
+			IAttributeService.AttributePatternMode.Regex =>
+				database.GetLazyAttributesByRegexAsync(
+						request.DBRef,
+						request.Pattern, cancellationToken)
+					.AsTask().GetAwaiter().GetResult()
+				?? AsyncEnumerable.Empty<LazySharpAttribute>(),
+			_ =>
+				database.GetLazyAttributesAsync(request.DBRef, request.Pattern, cancellationToken)
+					.AsTask().GetAwaiter().GetResult()
+				?? AsyncEnumerable.Empty<LazySharpAttribute>()
 		};
 }

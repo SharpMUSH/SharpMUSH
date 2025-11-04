@@ -218,7 +218,10 @@ public partial class LocateService(IMediator mediator,
 		    && (flags.HasFlag(LocateFlags.PlayersPreference) || flags.HasFlag(LocateFlags.NoTypePreference)))
 		{
 			// TODO: Fix Async
-			var maybeMatch = await (await mediator.Send(new GetPlayerQuery(name))).FirstOrDefaultAsync();
+			var maybeMatch = await mediator
+				.CreateStream(new GetPlayerQuery(name))
+				.FirstOrDefaultAsync();
+			
 			match = maybeMatch is null
 				? new None()
 				: maybeMatch;
@@ -276,10 +279,13 @@ public partial class LocateService(IMediator mediator,
 			if (flags.HasFlag(LocateFlags.MatchObjectsInLookerInventory | LocateFlags.MatchRemoteContents) &&
 			    where.IsContainer)
 			{
-				var contents = (await mediator.Send(new GetContentsQuery(where.AsContainer)))?
-					.Select(x => x.WithRoomOption()) ?? Enumerable.Empty<AnySharpObject>().ToAsyncEnumerable();
+				var contents = mediator
+					.CreateStream(new GetContentsQuery(where.AsContainer))
+					.Select(x => x.WithRoomOption());
+				
 				(bestMatch, final, curr, right_type, exact, c) =
 					await Match_List(parser, contents, looker, where, bestMatch, exact, final, curr, right_type, flags, name);
+				
 				if (c == ControlFlow.Break) break;
 				if (c == ControlFlow.Return) break;
 			}
@@ -288,11 +294,13 @@ public partial class LocateService(IMediator mediator,
 			    && !flags.HasFlag(LocateFlags.MatchRemoteContents)
 			    && location.Object().DBRef != where.Object().DBRef)
 			{
-				var maybeContents = await mediator.Send(new GetContentsQuery(location));
+				var maybeContents = mediator.CreateStream(new GetContentsQuery(location));
 				var contents = maybeContents?
 					.Select(x => x.WithRoomOption()) ?? Enumerable.Empty<AnySharpObject>().ToAsyncEnumerable();
+				
 				(bestMatch, final, curr, right_type, exact, c) =
 					await Match_List(parser, contents, looker, where, bestMatch, exact, final, curr, right_type, flags, name);
+				
 				if (c == ControlFlow.Break) break;
 				if (c == ControlFlow.Return) break;
 			}
@@ -315,26 +323,28 @@ public partial class LocateService(IMediator mediator,
 					                      LocateFlags.OnlyMatchObjectsInLookerInventory))
 					{
 						var masterRoom = new DBRef(Convert.ToInt32(configuration.CurrentValue.Database.MasterRoom));
-						var exits = (await mediator.Send(new GetContentsQuery(masterRoom)) 
-						             ?? Enumerable.Empty<AnySharpContent>().ToAsyncEnumerable())
+						var exits = mediator
+							.CreateStream(new GetContentsQuery(masterRoom))
 							.Where(x => x.IsExit)
 							.Select(x => new AnySharpObject(x.AsExit));
 
 						(bestMatch, final, curr, right_type, exact, c) = await Match_List(parser, exits, looker, where, bestMatch,
-							exact,
-							final, curr, right_type, flags, name);
+							exact, final, curr, right_type, flags, name);
+						
 						if (c == ControlFlow.Break) break;
 						if (c == ControlFlow.Return) break;
 					}
 
 					if (location.IsRoom)
 					{
-						var exits = (await mediator.Send(new GetContentsQuery(location)))!
+						var exits = mediator
+							.CreateStream(new GetContentsQuery(location))
 							.Where(x => x.IsExit)
 							.Select(x => new AnySharpObject(x.AsExit));
+						
 						(bestMatch, final, curr, right_type, exact, c) = await Match_List(parser, exits, looker, where, bestMatch,
-							exact,
-							final, curr, right_type, flags, name);
+							exact, final, curr, right_type, flags, name);
+						
 						if (c == ControlFlow.Break) break;
 						if (c == ControlFlow.Return) break;
 					}
@@ -357,11 +367,11 @@ public partial class LocateService(IMediator mediator,
 				    && where.IsRoom
 				    && ((location.Object().DBRef != where.Object().DBRef) || !flags.HasFlag(LocateFlags.ExitsPreference)))
 				{
-					var exits = (await mediator.Send(new GetContentsQuery(where.AsContainer)))!
+					var exits = (mediator.CreateStream(new GetContentsQuery(where.AsContainer)))
 						.Where(x => x.IsExit)
 						.Select(x => new AnySharpObject(x.AsExit));
 
-					(bestMatch, final, curr, right_type, exact, c) = await Match_List(parser, exits, looker, where, bestMatch,
+					(bestMatch, final, curr, right_type, _, _) = await Match_List(parser, exits, looker, where, bestMatch,
 						exact,
 						final, curr, right_type, flags, name);
 				}

@@ -358,7 +358,7 @@ public class SharpMUSHParserVisitor(
 			// TODO: Better channel name matching within the channel helper.
 			if (command[..1] == Configuration.CurrentValue.Chat.ChatTokenAlias.ToString())
 			{
-				var channels = await Mediator.Send(new GetChannelListQuery());
+				var channels = Mediator.CreateStream(new GetChannelListQuery());
 				var check = command[1..];
 
 				var channel = await channels.FirstOrDefaultAsync(x =>
@@ -433,7 +433,7 @@ public class SharpMUSHParserVisitor(
 			// Optimistic that the command still exists, until we try and it no longer does?
 			// What's the best way to retrieve the Regex or Wildcard pattern and transform it? 
 			// It needs to take an area to search in. So this is definitely its own service.
-			var nearbyObjects = await Mediator.Send(new GetNearbyObjectsQuery(executorObject.Object().DBRef));
+			var nearbyObjects = Mediator.CreateStream(new GetNearbyObjectsQuery(executorObject.Object().DBRef));
 
 			var userDefinedCommandMatches = await CommandDiscoveryService.MatchUserDefinedCommand(
 				parser,
@@ -469,7 +469,8 @@ public class SharpMUSHParserVisitor(
 			var maybeGlobalObject = await Mediator.Send(new GetObjectNodeQuery(new DBRef(Convert.ToInt32(goConfig))));
 			var globalObject = maybeGlobalObject.Known();
 			AnySharpObject[] globalObjects = [globalObject];
-			var globalObjectContent = (await globalObject.AsContainer.Content(Mediator))
+			var globalObjectContent = globalObject.AsContainer
+				.Content(Mediator)
 				.Select(x => x.WithRoomOption());
 
 			var userDefinedCommandMatchesOnGlobal = await CommandDiscoveryService.MatchUserDefinedCommand(
