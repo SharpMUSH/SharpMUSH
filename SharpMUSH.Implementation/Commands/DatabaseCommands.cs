@@ -3,7 +3,6 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Requests;
-using System;
 using MySqlConnector;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 

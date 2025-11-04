@@ -13,7 +13,7 @@ namespace SharpMUSH.Library.Services;
 /// </summary>
 public class SqlService : ISqlService
 {
-	private MySqlService? _mySql = null;
+	private readonly MySqlService? _mySql = null;
 	
 	public SqlService(IOptionsMonitor<SharpMUSHOptions> config)
 	{
@@ -28,7 +28,7 @@ public class SqlService : ISqlService
 		_mySql = new MySqlService(connectionString);
 	}
 
-	public bool IsAvailable => false;
+	public bool IsAvailable => _mySql?.IsAvailable ?? false;
 	
 	public ValueTask<IEnumerable<Dictionary<string, object?>>> ExecuteQueryAsync(string query)
 		=> _mySql!.ExecuteQueryAsync(query);
