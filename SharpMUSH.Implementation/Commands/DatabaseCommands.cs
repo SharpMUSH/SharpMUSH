@@ -3,6 +3,8 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Requests;
+using System;
+using MySqlConnector;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 
 namespace SharpMUSH.Implementation.Commands;
@@ -42,7 +44,13 @@ public partial class Commands
 			await NotifyService!.Notify(executor, result);
 			return new CallState(MModule.single(result));
 		}
-		catch (Exception ex)
+		catch (MySqlException ex)
+		{
+			var errorMsg = $"#-1 SQL ERROR: {ex.Message}";
+			await NotifyService!.Notify(executor, errorMsg);
+			return new CallState(errorMsg);
+		}
+		catch (InvalidOperationException ex)
 		{
 			var errorMsg = $"#-1 SQL ERROR: {ex.Message}";
 			await NotifyService!.Notify(executor, errorMsg);
@@ -54,7 +62,6 @@ public partial class Commands
 	public static async ValueTask<Option<CallState>> MapSql(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
 
 		// Check if SQL is available
 		if (SqlService == null || !SqlService.IsAvailable)
@@ -91,7 +98,6 @@ public partial class Commands
 		var switches = parser.CurrentState.Switches;
 		var notifySwitch = switches.Contains("NOTIFY");
 		var colnamesSwitch = switches.Contains("COLNAMES");
-		var spoofSwitch = switches.Contains("SPOOF");
 
 		try
 		{
@@ -111,18 +117,11 @@ public partial class Commands
 						// Set %0 to 0 for column names row
 						parser.CurrentState.AddRegister("0", MModule.single("0"));
 						
-						// Set %1-9 and v(10)-v(29) to column names
+						// Set %1-29 to column names
 						for (int i = 0; i < Math.Min(columnNames.Count, 29); i++)
 						{
 							var colName = columnNames[i];
-							if (i < 9)
-							{
-								parser.CurrentState.AddRegister((i + 1).ToString(), MModule.single(colName));
-							}
-							else
-							{
-								parser.CurrentState.AddRegister((i + 1).ToString(), MModule.single(colName));
-							}
+							parser.CurrentState.AddRegister((i + 1).ToString(), MModule.single(colName));
 						}
 
 						return parser.CurrentState;
@@ -141,7 +140,7 @@ public partial class Commands
 						// Set %0 to row number
 						parser.CurrentState.AddRegister("0", MModule.single(currentRow.ToString()));
 						
-						// Set %1-9 and v(10)-v(29) to column values
+						// Set %1-29 to column values
 						var values = row.Values.ToList();
 						for (int i = 0; i < Math.Min(values.Count, 29); i++)
 						{
@@ -174,7 +173,13 @@ public partial class Commands
 
 			return CallState.Empty;
 		}
-		catch (Exception ex)
+		catch (MySqlException ex)
+		{
+			var errorMsg = $"#-1 SQL ERROR: {ex.Message}";
+			await NotifyService!.Notify(executor, errorMsg);
+			return new CallState(errorMsg);
+		}
+		catch (InvalidOperationException ex)
 		{
 			var errorMsg = $"#-1 SQL ERROR: {ex.Message}";
 			await NotifyService!.Notify(executor, errorMsg);
