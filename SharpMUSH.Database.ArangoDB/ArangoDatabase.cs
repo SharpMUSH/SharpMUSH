@@ -306,7 +306,7 @@ public partial class ArangoDatabase(
 		var edge = await GetObjectPowerEdge(dbref, power, ct);
 		if (edge is not null) return false;
 
-		await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphFlags, DatabaseConstants.HasPowers,
+		await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphPowers, DatabaseConstants.HasPowers,
 			new SharpEdgeCreateRequest(dbref.Object().Id!, power.Id!), cancellationToken: ct);
 
 		return true;
