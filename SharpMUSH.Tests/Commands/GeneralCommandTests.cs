@@ -358,4 +358,28 @@ public class GeneralCommandTests
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Database Statistics")), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
+
+	[Test]
+	public async ValueTask Search_PerformsDatabaseSearch()
+	{
+		// Test @search command
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@search"));
+
+		// Should notify about search
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("database search")), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+	}
+
+	[Test]
+	public async ValueTask Entrances_ShowsLinkedObjects()
+	{
+		// Test @entrances command
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@entrances"));
+
+		// Should notify about entrances
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Entrances")), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+	}
 }

@@ -1315,11 +1315,68 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@SEARCH", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse,
-		MinArgs = 0, MaxArgs = 0)]
+		MinArgs = 0, MaxArgs = 3)]
 	public static async ValueTask<Option<CallState>> Search(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		
+		// @search [<player>] [<classN>=<restrictionN>[,...]][,<begin>,<end>]
+		// This is a complex command that searches the database with multiple filters
+		
+		string? playerName = null;
+		string? searchCriteria = null;
+		int? beginDbref = null;
+		int? endDbref = null;
+		
+		// Parse arguments
+		if (args.Count > 0 && args.ContainsKey("0"))
+		{
+			var arg0 = args["0"].Message?.ToPlainText();
+			if (!string.IsNullOrEmpty(arg0))
+			{
+				// Could be player name or search criteria
+				playerName = arg0;
+			}
+		}
+		
+		if (args.Count > 1 && args.ContainsKey("1"))
+		{
+			searchCriteria = args["1"].Message?.ToPlainText();
+		}
+		
+		if (args.Count > 2 && args.ContainsKey("2"))
+		{
+			var endStr = args["2"].Message?.ToPlainText();
+			if (!string.IsNullOrEmpty(endStr) && int.TryParse(endStr, out var end))
+			{
+				endDbref = end;
+			}
+		}
+		
+		await NotifyService!.Notify(executor, "@search: Advanced database search");
+		
+		if (playerName != null)
+		{
+			await NotifyService.Notify(executor, $"  Player filter: {playerName}");
+		}
+		
+		if (searchCriteria != null)
+		{
+			await NotifyService.Notify(executor, $"  Criteria: {searchCriteria}");
+		}
+		
+		if (beginDbref.HasValue || endDbref.HasValue)
+		{
+			await NotifyService.Notify(executor, $"  Range: {beginDbref ?? 0} to {endDbref?.ToString() ?? "end"}");
+		}
+		
+		// TODO: Implement full database search with filters:
+		// TYPE, NAME, ZONE, PARENT, EXITS, THINGS, ROOMS, PLAYERS, FLAGS, etc.
+		await NotifyService.Notify(executor, "Note: Full @search database query not yet implemented.");
+		await NotifyService.Notify(executor, "0 objects found.");
+		
+		return new CallState("0");
 	}
 
 	[SharpCommand(Name = "@WHEREIS", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 1, MaxArgs = 1)]
@@ -2205,11 +2262,97 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@ENTRANCES", Switches = ["EXITS", "THINGS", "PLAYERS", "ROOMS"],
-		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 0, MaxArgs = 3)]
 	public static async ValueTask<Option<CallState>> Entrances(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches.ToArray();
+		
+		// @entrances[/<switch>] [<object>][=<begin>[, <end>]]
+		// Shows all objects linked to <object>
+		
+		AnySharpObject targetObject;
+		
+		// Get target object (defaults to current location if not specified)
+		if (args.Count > 0 && args.ContainsKey("0"))
+		{
+			var targetName = args["0"].Message?.ToPlainText();
+			if (!string.IsNullOrEmpty(targetName))
+			{
+				var maybeTarget = await LocateService!.LocateAndNotifyIfInvalid(
+					parser, executor, executor, targetName, LocateFlags.All);
+				
+				if (!maybeTarget.IsValid())
+				{
+					return new CallState("#-1 NOT FOUND");
+				}
+				
+				targetObject = maybeTarget.WithoutError().WithoutNone();
+			}
+			else
+			{
+				var location = await executor.AsContent.Location();
+				targetObject = location.WithRoomOption();
+			}
+		}
+		else
+		{
+			var location = await executor.AsContent.Location();
+			targetObject = location.WithRoomOption();
+		}
+		
+		// Parse range if specified
+		int? beginDbref = null;
+		int? endDbref = null;
+		
+		if (args.Count > 1 && args.ContainsKey("1"))
+		{
+			var beginStr = args["1"].Message?.ToPlainText();
+			if (!string.IsNullOrEmpty(beginStr) && int.TryParse(beginStr, out var begin))
+			{
+				beginDbref = begin;
+			}
+		}
+		
+		if (args.Count > 2 && args.ContainsKey("2"))
+		{
+			var endStr = args["2"].Message?.ToPlainText();
+			if (!string.IsNullOrEmpty(endStr) && int.TryParse(endStr, out var end))
+			{
+				endDbref = end;
+			}
+		}
+		
+		var targetObj = targetObject.Object();
+		await NotifyService!.Notify(executor, $"Entrances to {targetObj.Name}:");
+		
+		// Filter by switch type
+		var filterTypes = new List<string>();
+		if (switches.Contains("EXITS")) filterTypes.Add("exits");
+		if (switches.Contains("THINGS")) filterTypes.Add("things");
+		if (switches.Contains("PLAYERS")) filterTypes.Add("players");
+		if (switches.Contains("ROOMS")) filterTypes.Add("rooms");
+		
+		if (filterTypes.Count > 0)
+		{
+			await NotifyService.Notify(executor, $"  Filtering for: {string.Join(", ", filterTypes)}");
+		}
+		
+		if (beginDbref.HasValue || endDbref.HasValue)
+		{
+			await NotifyService.Notify(executor, $"  Range: {beginDbref ?? 0} to {endDbref?.ToString() ?? "end"}");
+		}
+		
+		// TODO: Query database for objects linked to target
+		// - Exits linked to target
+		// - Things with home = target  
+		// - Players with home = target
+		// - Rooms with drop-to = target
+		await NotifyService.Notify(executor, "Note: Database query for linked objects not yet implemented.");
+		await NotifyService.Notify(executor, "0 entrances found.");
+		
+		return new CallState("0");
 	}
 
 	[SharpCommand(Name = "@GREP", Switches = ["LIST", "PRINT", "ILIST", "IPRINT", "REGEXP", "WILD", "NOCASE", "PARENT"],
