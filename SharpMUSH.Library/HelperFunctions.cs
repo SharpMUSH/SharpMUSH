@@ -256,7 +256,8 @@ public static partial class HelperFunctions
 	{
 		var newParentDbRef = newParent.Object().DBRef;
 
-		if ((await start.Object().Parent.WithCancellation(CancellationToken.None)).Object()!.DBRef == newParentDbRef)
+		var parent = await start.Object().Parent.WithCancellation(CancellationToken.None); 
+		if (!parent.IsNone && parent.Object()!.DBRef == newParentDbRef)
 		{
 			return true;
 		}

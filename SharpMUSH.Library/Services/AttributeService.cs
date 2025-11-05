@@ -335,6 +335,7 @@ public class AttributeService(
 		IAttributeService.AttributePatternMode mode)
 	{
 		// TODO: Implement Pattern Modes
+		// TODO: CheckParents.
 		// TODO: GetAttributesAsync should return the full Path, not the final attribute.
 		// TODO: CanViewAttribute needs to be able to Memoize during a list check, as it's likely to be called multiple times.
 		var attributes = mediator.CreateStream(

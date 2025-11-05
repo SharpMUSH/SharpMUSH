@@ -362,7 +362,7 @@ public partial class ArangoDatabase(
 	{
 		var response = await arangoDb.Query.ExecuteAsync<string>(handle,
 			$"FOR v,e IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphParents} RETURN e._id",
-			new Dictionary<string, object> { { StartVertex, obj.Id()! } }, cancellationToken: ct);
+			new Dictionary<string, object> { { StartVertex, obj.Object().Id! } }, cancellationToken: ct);
 
 		var contentEdge = response.FirstOrDefault();
 
@@ -374,7 +374,7 @@ public partial class ArangoDatabase(
 		if (contentEdge is null && parent != null)
 		{
 			await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphParents, DatabaseConstants.HasParent,
-				new { To = parent.Id() }, cancellationToken: ct);
+				new { _from = obj.Object().Id, _to = parent.Object().Id }, cancellationToken: ct);
 		}
 		else if (parent is null)
 		{
@@ -384,7 +384,7 @@ public partial class ArangoDatabase(
 		else
 		{
 			await arangoDb.Graph.Edge.UpdateAsync(handle, DatabaseConstants.GraphParents, DatabaseConstants.HasParent,
-				contentEdge, new { To = parent.Id() }, cancellationToken: ct);
+				contentEdge, new { _to = parent.Object().Id }, cancellationToken: ct);
 		}
 	}
 
