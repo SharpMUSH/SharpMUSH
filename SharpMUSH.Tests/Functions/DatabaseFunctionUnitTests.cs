@@ -28,12 +28,12 @@ public class DatabaseFunctionUnitTests
 
 		// Verify test_sql_data exists and has data
 		await using (var cmd = new MySqlCommand("""
-			CREATE TABLE IF NOT EXISTS test_sql_data (
-				id INT PRIMARY KEY AUTO_INCREMENT,
-				name VARCHAR(255),
-				value INT
-			)
-		""", connection))
+		                                        	CREATE TABLE IF NOT EXISTS test_sql_data (
+		                                        		id INT PRIMARY KEY AUTO_INCREMENT,
+		                                        		name VARCHAR(255),
+		                                        		value INT
+		                                        	)
+		                                        """, connection))
 		{
 			await cmd.ExecuteNonQueryAsync();
 		}
@@ -45,23 +45,24 @@ public class DatabaseFunctionUnitTests
 			if (count == 0)
 			{
 				await using var cmd = new MySqlCommand("""
-					INSERT INTO test_sql_data (name, value) VALUES 
-					('test_sql_row1', 100),
-					('test_sql_row2', 200),
-					('test_sql_row3', 300)
-				""", connection);
+				                                       	INSERT INTO test_sql_data (name, value) VALUES 
+				                                       	('test_sql_row1', 100),
+				                                       	('test_sql_row2', 200),
+				                                       	('test_sql_row3', 300)
+				                                       """, connection);
 				await cmd.ExecuteNonQueryAsync();
 			}
 		}
 	}
 
-	// sql() function tests - Test successful queries with actual data
 	[Test]
 	public async Task Test_Sql_SelectSingleRow()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("sql(lit(SELECT `name`,`value` FROM `test_sql_data` WHERE id = 1))")))?.Message!;
+		var result =
+			(await Parser.FunctionParse(MModule.single("sql(lit(SELECT `name`,`value` FROM `test_sql_data` WHERE id = 1))")))
+			?.Message!;
 		var plainText = result.ToPlainText();
-		
+
 		await Assert.That(plainText).Contains("test_sql_row1");
 		await Assert.That(plainText).Contains("100");
 	}
@@ -69,9 +70,10 @@ public class DatabaseFunctionUnitTests
 	[Test]
 	public async Task Test_Sql_SelectMultipleRows_DefaultSeparators()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("sql(SELECT `name` FROM `test_sql_data` ORDER BY id)")))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single("sql(SELECT `name` FROM `test_sql_data` ORDER BY id)")))
+			?.Message!;
 		var plainText = result.ToPlainText();
-		
+
 		await Assert.That(plainText).Contains("test_sql_row1");
 		await Assert.That(plainText).Contains("test_sql_row2");
 		await Assert.That(plainText).Contains("test_sql_row3");
@@ -80,27 +82,32 @@ public class DatabaseFunctionUnitTests
 	[Test]
 	public async Task Test_Sql_SelectWithCustomRowSeparator()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("sql(SELECT `name` FROM `test_sql_data` ORDER BY id,|)")))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single("sql(SELECT `name` FROM `test_sql_data` ORDER BY id,|)")))
+			?.Message!;
 		var plainText = result.ToPlainText();
-		
+
 		await Assert.That(plainText).Contains("test_sql_row1|test_sql_row2|test_sql_row3");
 	}
 
 	[Test]
 	public async Task Test_Sql_SelectWithCustomFieldSeparator()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("sql(lit(SELECT `name`,`value` FROM `test_sql_data` WHERE id = 1),%b,~)")))?.Message!;
+		var result =
+			(await Parser.FunctionParse(
+				MModule.single("sql(lit(SELECT `name`,`value` FROM `test_sql_data` WHERE id = 1),%b,~)")))?.Message!;
 		var plainText = result.ToPlainText();
-		
+
 		await Assert.That(plainText).Contains("test_sql_row1~100");
 	}
 
 	[Test]
 	public async Task Test_Sql_SelectWithCustomSeparators()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("sql(lit(SELECT `name`,`value` FROM `test_sql_data` ORDER BY id),|,~)")))?.Message!;
+		var result =
+			(await Parser.FunctionParse(
+				MModule.single("sql(lit(SELECT `name`,`value` FROM `test_sql_data` ORDER BY id),|,~)")))?.Message!;
 		var plainText = result.ToPlainText();
-		
+
 		await Assert.That(plainText).Contains("test_sql_row1~100");
 		await Assert.That(plainText).Contains("test_sql_row2~200");
 		await Assert.That(plainText).Contains("|");
@@ -109,29 +116,30 @@ public class DatabaseFunctionUnitTests
 	[Test]
 	public async Task Test_Sql_Count()
 	{
-		// Use a simpler query to avoid parsing issues with COUNT(*)
 		var result = (await Parser.FunctionParse(MModule.single("sql(lit(SELECT `id` FROM `test_sql_data`))")))?.Message!;
 		var plainText = result.ToPlainText();
-		
-		// Should have 3 rows worth of IDs
+
 		await Assert.That(plainText).IsNotEmpty();
 	}
 
 	[Test]
 	public async Task Test_Sql_WhereClause()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("sql(lit(SELECT `value` FROM `test_sql_data` WHERE id = 2))")))?.Message!;
+		var result =
+			(await Parser.FunctionParse(MModule.single("sql(lit(SELECT `value` FROM `test_sql_data` WHERE id = 2))")))
+			?.Message!;
 		var plainText = result.ToPlainText();
-		
+
 		await Assert.That(plainText).IsEqualTo("200");
 	}
 
 	[Test]
 	public async Task Test_Sql_NoResults()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("sql(lit(SELECT * FROM `test_sql_data` WHERE id = 999))")))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single("sql(lit(SELECT * FROM `test_sql_data` WHERE id = 999))")))
+			?.Message!;
 		var plainText = result.ToPlainText();
-		
+
 		await Assert.That(plainText).IsEmpty();
 	}
 
@@ -140,21 +148,22 @@ public class DatabaseFunctionUnitTests
 	{
 		var result = (await Parser.FunctionParse(MModule.single("sql(lit(SELECT * FROM `nonexistent_table`))")))?.Message!;
 		var plainText = result.ToPlainText();
-		
+
 		await Assert.That(plainText).StartsWith("#-1 SQL ERROR");
 	}
 
 	[Test]
 	public async Task Test_Sql_WithRegister()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("sql(lit(SELECT `name` FROM `test_sql_data`), , ,rowcount)")))?.Message!;
-		
+		var result =
+			(await Parser.FunctionParse(MModule.single("sql(lit(SELECT `name` FROM `test_sql_data`), , ,rowcount)")))
+			?.Message!;
+
 		// The register should be set, but we can't easily test it in function context
 		// Just verify the query succeeded
 		await Assert.That(result.ToPlainText()).Contains("test_sql_row");
 	}
 
-	// sqlescape() function tests - Test successful escaping
 	[Test]
 	[Arguments("sqlescape(test_string_no_special_chars)", "test_string_no_special_chars")]
 	public async Task Test_Sqlescape_NoSpecialChars(string str, string expected)
@@ -211,28 +220,24 @@ public class DatabaseFunctionUnitTests
 		var escapedValue = (await Parser.FunctionParse(MModule.single("sqlescape(test_sql_row1)")))?.Message!.ToPlainText();
 		var query = $"sql(lit(SELECT value FROM test_sql_data WHERE name = '{escapedValue}'))";
 		var result = (await Parser.FunctionParse(MModule.single(query)))?.Message!;
-		
+
 		await Assert.That(result.ToPlainText()).IsEqualTo("100");
 	}
 
 	[Test]
 	public async Task Test_Sqlescape_PreventInjection()
 	{
-		// Test that sqlescape prevents SQL injection
 		var maliciousInput = "test' OR '1'='1";
 		var escaped = (await Parser.FunctionParse(MModule.single($"sqlescape({maliciousInput})")))?.Message!.ToPlainText();
-		
-		// The escaped version should have the quote escaped
+
 		await Assert.That(escaped).Contains("\\'");
-		
-		// And when used in a query, should return no results (not all rows)
+
 		var query = $"sql(lit(SELECT * FROM test_sql_data WHERE name = '{escaped}'))";
 		var result = (await Parser.FunctionParse(MModule.single(query)))?.Message!;
-		
+
 		await Assert.That(result.ToPlainText()).IsEmpty();
 	}
 
-	// mapsql() function tests
 	[Test]
 	public async Task Test_Mapsql_AttributeDoesNotExist()
 	{
@@ -241,29 +246,34 @@ public class DatabaseFunctionUnitTests
 	}
 
 	[Test]
-	[NotInParallel]
 	public async Task Test_Mapsql_BasicExecution()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("&test_mapsql_func_attr #1=Mapsql_BasicExecution: Row %0 has value %2"));
-		
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single("&test_mapsql_func_attr #1=Mapsql_BasicExecution: Row %0 has value %2"));
+
 		await Task.Delay(100);
-		
-		var result = (await Parser.FunctionParse(MModule.single("mapsql(#1/test_mapsql_func_attr,lit(SELECT `name`,`value` FROM `test_sql_data` WHERE id = 1))")))?.Message!;
-		
+
+		var result =
+			(await Parser.FunctionParse(MModule.single(
+				"mapsql(#1/test_mapsql_func_attr,lit(SELECT `name`,`value` FROM `test_sql_data` WHERE id = 1))")))?.Message!;
+
 		await Assert.That(result.ToPlainText()).IsEqualTo("Mapsql_BasicExecution: Row 1 has value 100");
 	}
 
 	[Test]
 	[Skip("Something weird going on with these results.")]
-	[NotInParallel]
 	public async Task Test_Mapsql_BasicExecution2()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("&test_mapsql_func_attr #1=Mapsql_BasicExecution: Row %0 has value %2"));
-		
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single("&test_mapsql_func_attr #1=Mapsql_BasicExecution: Row %0 has value %2"));
+
 		await Task.Delay(100);
-		
-		var result = (await Parser.FunctionParse(MModule.single("mapsql(#1/test_mapsql_func_attr,lit(SELECT `name`,`value` FROM `test_sql_data`),%r)")))?.Message!;
-		
+
+		var result =
+			(await Parser.FunctionParse(
+				MModule.single("mapsql(#1/test_mapsql_func_attr,lit(SELECT `name`,`value` FROM `test_sql_data`),%r)")))
+			?.Message!;
+
 		await Assert.That(result.ToPlainText()).IsEqualTo("Mapsql_BasicExecution: Row 1 has value 100" +
 		                                                  "\nMapsql_BasicExecution: Row 2 has value 200" +
 		                                                  "\nMapsql_BasicExecution: Row 3 has value 300");
@@ -277,14 +287,15 @@ public class DatabaseFunctionUnitTests
 	}
 
 	[Test]
-	[NotInParallel]
 	public async Task Test_Mapsql_TableDoesNotExist()
 	{
 		// Set up an attribute first
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&test_mapsql_error_func #1=think %0"));
 		await Task.Delay(100);
-		
-		var result = (await Parser.FunctionParse(MModule.single("mapsql(#1/test_mapsql_error_func,lit(SELECT * FROM nonexistent_table))")))?.Message!;
+
+		var result =
+			(await Parser.FunctionParse(
+				MModule.single("mapsql(#1/test_mapsql_error_func,lit(SELECT * FROM nonexistent_table))")))?.Message!;
 		await Assert.That(result.ToPlainText()).StartsWith("#-1 SQL ERROR");
 	}
 }

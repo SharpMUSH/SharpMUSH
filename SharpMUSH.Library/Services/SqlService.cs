@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Options;
+using MySqlConnector;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -20,12 +21,12 @@ public class SqlService : ISqlService
 		var cvn = config.CurrentValue.Net;
 		var connectionString = $"Server={cvn.SqlHost};Uid={cvn.SqlUsername};Pwd={cvn.SqlPassword};Database={cvn.SqlDatabase}";
 
-		_mySql = new MySqlService(connectionString);
+		_mySql = new MySqlService(new MySqlDataSource(connectionString));
 	}
 	
 	public SqlService(string connectionString)
 	{
-		_mySql = new MySqlService(connectionString);
+		_mySql = new MySqlService(new MySqlDataSource(connectionString));
 	}
 
 	public bool IsAvailable => _mySql?.IsAvailable ?? false;
