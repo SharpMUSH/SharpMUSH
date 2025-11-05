@@ -174,6 +174,7 @@ public class AttributeService(
 				s with
 				{
 					Arguments = args,
+					EnvironmentRegisters = args,
 					CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attr.AsAttribute.Last().LongName!),
 				},
 			async newParser =>
