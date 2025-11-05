@@ -295,14 +295,14 @@ public static partial class HelperFunctions
 	/// A regular expression that takes the form of '#123:43143124' or '#543'.
 	/// </summary>
 	/// <returns>A regex that has a named group for the DBRef Number and Creation Milliseconds.</returns>
-	[GeneratedRegex(@"#(?<DatabaseNumber>\d+)(?::(?<CreationTimestamp>\d+))?")]
+	[GeneratedRegex(@"^#(?<DatabaseNumber>\d+)(?::(?<CreationTimestamp>\d+))?$")]
 	private static partial Regex DatabaseReference();
 
 	/// <summary>
 	/// A regular expression that takes the form of 'Object/attributeName'.
 	/// </summary>
 	/// <returns>A regex that has a named group for the Object and Attribute.</returns>
-	[GeneratedRegex(@"#(?<Object>\d+(:\d+)?)/(?<Attribute>[a-zA-Z1-9@_\-\.`\?\*\[\]\(\)\+\<\>]+)")]
+	[GeneratedRegex(@"#$(?<Object>\d+(:\d+)?)/(?<Attribute>[a-zA-Z0-9@_\-\.`\?\*\[\]\(\)\+\<\>\^\$]+)$")]
 	private static partial Regex DatabaseReferenceWithAttribute();
 
 	// TODO: Make split versions for Patterns and Regex Patterns, which are different from normal attributes.
@@ -311,20 +311,20 @@ public static partial class HelperFunctions
 	/// A regular expression that takes the form of 'Object/attributeName'.
 	/// </summary>
 	/// <returns>A regex that has a named group for the Object and Attribute.</returns>
-	[GeneratedRegex(@"(?<Object>[^/]+)/(?<Attribute>[a-zA-Z1-9@_\-\.`\?\*\[\]\(\)\+\<\>]+)")]
+	[GeneratedRegex(@"^(?<Object>[^/]+)/(?<Attribute>[a-zA-Z0-9@_\-\.`\?\*\[\]\(\)\+\<\>\^\$]+)$")]
 	private static partial Regex ObjectWithAttribute();
 
 	/// <summary>
 	/// A regular expression that takes the form of '[Object/]attributeName'.
 	/// </summary>
 	/// <returns>A regex that has a named group for the Object and Attribute.</returns>
-	[GeneratedRegex(@"(?:(?<Object>[^/]+)/)?(?<Attribute>[a-zA-Z1-9@_\-\.`\?\*\[\]\(\)\+\<\>]+)")]
+	[GeneratedRegex(@"^(?:(?<Object>[^/]+)/)?(?<Attribute>[a-zA-Z0-9@_\-\.`\?\*\[\]\(\)\+\<\>\^\$]+)$")]
 	private static partial Regex OptionalDatabaseReferenceWithAttribute();
 
 	/// <summary>
 	/// A regular expression that takes the form of '[Object/]attributeName'.
 	/// </summary>
 	/// <returns>A regex that has a named group for the Object and Attribute.</returns>
-	[GeneratedRegex(@"(?<Object>[^/]+)(?:/(?<Attribute>[a-zA-Z1-9@_\-\.`\?\*\[\]\(\)\+\<\>]+))?")]
+	[GeneratedRegex(@"^(?<Object>[^/]+)(?:/(?<Attribute>[a-zA-Z0-9@_\-\.`\?\*\[\]\(\)\+\<\>\^\$]+))?$")]
 	private static partial Regex DatabaseReferenceWithOptionalAttribute();
 }

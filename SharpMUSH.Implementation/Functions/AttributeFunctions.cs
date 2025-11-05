@@ -1055,7 +1055,7 @@ public partial class Functions
 
 		if (dbrefAndAttr is { IsT1: true }) // IsNone
 		{
-			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
+			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, "reglattr".ToUpper()));
 		}
 
 		var (obj, attributePattern) = dbrefAndAttr.AsT0;

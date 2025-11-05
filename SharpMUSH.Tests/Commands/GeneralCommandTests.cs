@@ -80,6 +80,7 @@ public class GeneralCommandTests
 	}
 
 	[Test]
+	[NotInParallel]
 	public async ValueTask DoListComplex()
 	{
 		await Parser.CommandParse(1, ConnectionService,
@@ -98,6 +99,7 @@ public class GeneralCommandTests
 	}
 
 	[Test]
+	[NotInParallel]
 	public async ValueTask DoListComplex2()
 	{
 		await Parser.CommandParse(1, ConnectionService,
@@ -122,6 +124,7 @@ public class GeneralCommandTests
 	}
 
 	[Test]
+	[NotInParallel]
 	public async ValueTask DoListComplex3()
 	{
 		await Parser.CommandParse(1, ConnectionService,
