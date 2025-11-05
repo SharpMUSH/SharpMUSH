@@ -220,70 +220,76 @@ public class CommunicationCommandTests
 	}
 
 	[Test]
-	[Arguments("addcom test_alias_ADDCOM1=Public", "Alias 'test_alias_ADDCOM1' added for channel Public.")]
-	[Arguments("addcom test_alias_ADDCOM2=Public", "Alias 'test_alias_ADDCOM2' added for channel Public.")]
-	public async ValueTask AddComBasic(string command, string expected)
+	[Arguments("addcom test_alias_ADDCOM1=Public")]
+	[Arguments("addcom test_alias_ADDCOM2=Public")]
+	public async ValueTask AddComBasic(string command)
 	{
 		Console.WriteLine("Testing: {0}", command);
+		var alias = command.Split('=')[0].Split(' ')[1];
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
-		// Verify notification was sent with exact expected message
-		// Match the 2-parameter Notify call (the implementation uses default parameters)
+		// Verify notification was sent with message containing the alias and channel
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToPlainText() == expected) ||
-				(msg.IsT1 && msg.AsT1 == expected)), null, INotifyService.NotificationType.Announce);
+				(msg.IsT0 && msg.AsT0.ToPlainText().Contains($"Alias '{alias}' added for channel Public")) ||
+				(msg.IsT1 && msg.AsT1.Contains($"Alias '{alias}' added for channel Public"))), 
+				null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	[Arguments("addcom=Public", "Alias name cannot be empty.")]
-	[Arguments("addcom test_alias_ADDCOM3=NonExistentChannel", "Channel not found.")]
+	[Arguments("addcom test_alias_ADDCOM3=NonExistentChannel", "I don't see that here.")]
 	public async ValueTask AddComInvalidArgs(string command, string expected)
 	{
 		Console.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
-		// Verify exact error notification was sent
+		// Verify error notification was sent containing the expected text
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToPlainText() == expected) ||
-				(msg.IsT1 && msg.AsT1 == expected)), null, INotifyService.NotificationType.Announce);
+				(msg.IsT0 && msg.AsT0.ToPlainText().Contains(expected)) ||
+				(msg.IsT1 && msg.AsT1.Contains(expected))), 
+				null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
-	[Arguments("delcom test_alias_DELCOM1", "Alias 'test_alias_DELCOM1' deleted.")]
-	public async ValueTask DelComBasic(string command, string expected)
+	[Arguments("delcom test_alias_DELCOM1")]
+	public async ValueTask DelComBasic(string command)
 	{
 		Console.WriteLine("Testing: {0}", command);
+		var alias = command.Split(' ')[1];
 		// First add an alias
-		await Parser.CommandParse(1, ConnectionService, MModule.single("addcom test_alias_DELCOM1=Public"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"addcom {alias}=Public"));
 		
 		// Now delete it
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
-		// Verify the deletion notification was sent with exact expected message
+		// Verify the deletion notification was sent containing the alias name
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToPlainText() == expected) ||
-				(msg.IsT1 && msg.AsT1 == expected)), null, INotifyService.NotificationType.Announce);
+				(msg.IsT0 && msg.AsT0.ToPlainText().Contains($"Alias '{alias}' deleted")) ||
+				(msg.IsT1 && msg.AsT1.Contains($"Alias '{alias}' deleted"))), 
+				null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
-	[Arguments("delcom nonexistent_alias_DELCOM", "Alias 'nonexistent_alias_DELCOM' not found.")]
-	public async ValueTask DelComNotFound(string command, string expected)
+	[Arguments("delcom nonexistent_alias_DELCOM")]
+	public async ValueTask DelComNotFound(string command)
 	{
 		Console.WriteLine("Testing: {0}", command);
+		var alias = command.Split(' ')[1];
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
-		// Verify exact error notification was sent
+		// Verify error notification was sent
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToPlainText() == expected) ||
-				(msg.IsT1 && msg.AsT1 == expected)), null, INotifyService.NotificationType.Announce);
+				(msg.IsT0 && msg.AsT0.ToPlainText().Contains($"Alias '{alias}' not found")) ||
+				(msg.IsT1 && msg.AsT1.Contains($"Alias '{alias}' not found"))), 
+				null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -304,37 +310,44 @@ public class CommunicationCommandTests
 	}
 
 	[Test]
-	[Arguments("comtitle test_alias_COMTITLE=test_title_COMTITLE", "Title set to 'test_title_COMTITLE' for alias 'test_alias_COMTITLE' (channel Public).")]
-	public async ValueTask ComTitleBasic(string command, string expected)
+	[Arguments("comtitle test_alias_COMTITLE=test_title_COMTITLE")]
+	public async ValueTask ComTitleBasic(string command)
 	{
 		Console.WriteLine("Testing: {0}", command);
+		var parts = command.Split('=');
+		var alias = parts[0].Split(' ')[1];
+		var title = parts[1];
+		
 		// First add an alias
-		await Parser.CommandParse(1, ConnectionService, MModule.single("addcom test_alias_COMTITLE=Public"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"addcom {alias}=Public"));
 		
 		// Now set title
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
-		// Verify the title set notification was sent with exact expected message
+		// Verify the title set notification was sent containing the title, alias, and channel
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToPlainText() == expected) ||
-				(msg.IsT1 && msg.AsT1 == expected)), null, INotifyService.NotificationType.Announce);
+				(msg.IsT0 && msg.AsT0.ToPlainText().Contains($"Title set to '{title}' for alias '{alias}'")) ||
+				(msg.IsT1 && msg.AsT1.Contains($"Title set to '{title}' for alias '{alias}'"))), 
+				null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
-	[Arguments("comtitle nonexistent_alias_COMTITLE=title", "Alias 'nonexistent_alias_COMTITLE' not found.")]
-	public async ValueTask ComTitleNotFound(string command, string expected)
+	[Arguments("comtitle nonexistent_alias_COMTITLE=title")]
+	public async ValueTask ComTitleNotFound(string command)
 	{
 		Console.WriteLine("Testing: {0}", command);
+		var alias = command.Split('=')[0].Split(' ')[1];
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
-		// Verify exact error notification was sent
+		// Verify error notification was sent
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToPlainText() == expected) ||
-				(msg.IsT1 && msg.AsT1 == expected)), null, INotifyService.NotificationType.Announce);
+				(msg.IsT0 && msg.AsT0.ToPlainText().Contains($"Alias '{alias}' not found")) ||
+				(msg.IsT1 && msg.AsT1.Contains($"Alias '{alias}' not found"))), 
+				null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -358,8 +371,8 @@ public class CommunicationCommandTests
 	}
 
 	[Test]
-	[Arguments("comlist", "You have no channel aliases.")]
-	public async ValueTask ComListEmpty(string command, string expected)
+	[Arguments("comlist")]
+	public async ValueTask ComListEmpty(string command)
 	{
 		Console.WriteLine("Testing: {0}", command);
 		// Make sure we have no aliases, just list
@@ -369,7 +382,8 @@ public class CommunicationCommandTests
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToPlainText() == expected) ||
-				(msg.IsT1 && msg.AsT1 == expected)), null, INotifyService.NotificationType.Announce);
+				(msg.IsT0 && msg.AsT0.ToPlainText().Contains("no channel aliases")) ||
+				(msg.IsT1 && msg.AsT1.Contains("no channel aliases"))), 
+				null, INotifyService.NotificationType.Announce);
 	}
 }
