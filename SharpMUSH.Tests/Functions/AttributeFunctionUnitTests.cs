@@ -77,9 +77,15 @@ public class AttributeFunctionUnitTests
 	
 	[Test]
 	[NotInParallel]
-	[Arguments("[attrib_set(%!/TEST_GREP_1,test_string_grep_case1)][attrib_set(%!/TEST_GREP_2,another_test_value)][attrib_set(%!/NO_MATCH,different)][grep(%!,TEST_*,test)]", "TEST_GREP_1 TEST_GREP_2")]
-	[Arguments("[attrib_set(%!/TEST_GREP_UPPER,TEST_VALUE)][grep(%!,TEST_*,VALUE)]", "TEST_GREP_UPPER")]
-	[Arguments("[attrib_set(%!/TEST_GREP_1,has_test_in_value)][attrib_set(%!/TEST_GREP_2,also_test_here)][attrib_set(%!/EMPTY_TEST,)][grep(%!,*TEST*,test)]", "TEST_GREP_1 TEST_GREP_2")]
+	[Arguments("[attrib_set(%!/Test_Grep_CaseSensitive_1,test_string_grep_case1)]" +
+	           "[attrib_set(%!/Test_Grep_CaseSensitive_2,another_test_value)]" +
+	           "[attrib_set(%!/NO_MATCH,different)][grep(%!,TEST_*,test)]", "TEST_GREP_CASESENSITIVE_1 TEST_GREP_CASESENSITIVE_2")]
+	[Arguments("[attrib_set(%!/Test_Grep_CaseSensitive_UPPER,TEST_VALUE)]" +
+	           "[grep(%!,TEST_*,VALUE)]", "TEST_GREP_CASESENSITIVE_UPPER")]
+	[Arguments("[attrib_set(%!/Test_Grep_CaseSensitive_1,has_test_in_value)]" +
+	           "[attrib_set(%!/Test_Grep_CaseSensitive_2,also_test_here)]" +
+	           "[attrib_set(%!/EMPTY_TEST,)]" +
+	           "[grep(%!,*TEST*,test)]", "TEST_GREP_CASESENSITIVE_1 TEST_GREP_CASESENSITIVE_2")]
 	public async Task Test_Grep_CaseSensitive(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -88,8 +94,16 @@ public class AttributeFunctionUnitTests
 
 	[Test]
 	[NotInParallel]
-	[Arguments("[attrib_set(%!/TEST_GREP_1,has_VALUE)][attrib_set(%!/TEST_GREP_2,also_VALUE)][attrib_set(%!/TEST_GREP_UPPER,more_VALUE)][grepi(%!,TEST_*,VALUE)]", "TEST_GREP_1 TEST_GREP_2 TEST_GREP_UPPER")]
-	[Arguments("[attrib_set(%!/TEST_GREP_1,has_TEST)][attrib_set(%!/TEST_GREP_2,also_TEST)][attrib_set(%!/TEST_GREP_UPPER,more_TEST)][grepi(%!,TEST_GREP_*,TEST)]", "TEST_GREP_1 TEST_GREP_2 TEST_GREP_UPPER")]
+	[Arguments("[attrib_set(%!/Test_Grepi_CaseInsensitive1_1,has_VALUE)]" +
+	           "[attrib_set(%!/Test_Grepi_CaseInsensitive1_2,also_VALUE)]" +
+	           "[attrib_set(%!/Test_Grepi_CaseInsensitive1_UPPER,more_VALUE)]" +
+	           "[grepi(%!,Test_Grepi_CaseInsensitive1_*,VALUE)]", 
+		"TEST_GREPI_CASEINSENSITIVE1_1 TEST_GREPI_CASEINSENSITIVE1_2 TEST_GREPI_CASEINSENSITIVE1_UPPER")]
+	[Arguments("[attrib_set(%!/Test_Grepi_CaseInsensitive2_1,has_TEST)]" +
+	           "[attrib_set(%!/Test_Grepi_CaseInsensitive2_2,also_TEST)]" +
+	           "[attrib_set(%!/Test_Grepi_CaseInsensitive2_UPPER,more_TEST)]" +
+	           "[grepi(%!,Test_Grepi_CaseInsensitive2_*,TEST)]", 
+		"TEST_GREPI_CASEINSENSITIVE2_1 TEST_GREPI_CASEINSENSITIVE2_2 TEST_GREPI_CASEINSENSITIVE2_UPPER")]
 	public async Task Test_Grepi_CaseInsensitive(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -197,6 +211,7 @@ public class AttributeFunctionUnitTests
 	[Test]
 	[NotInParallel]
 	[Arguments("[attrib_set(%!/PGREP_CHILD,child_value)][pgrep(%!,PGREP_*,child)]", "PGREP_CHILD")]
+	[Arguments("[attrib_set([parent(me,create(PGREP_PARENT))]/PGREP_PARENT,child_value)][pgrep(%!,PGREP_*,child)]", "PGREP_PARENT")]
 	public async Task Test_Pgrep_IncludesParents(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -205,7 +220,11 @@ public class AttributeFunctionUnitTests
 
 	[Test]
 	[NotInParallel]
-	[Arguments("[attrib_set(%!/ATTR_001,value1)][attrib_set(%!/ATTR_002,value2)][attrib_set(%!/ATTR_100,value3)][reglattrp(%!,ATTR_[0-9]+)]", "ATTR_001 ATTR_002 ATTR_100")]
+	[Arguments("[attrib_set(%!/Test_Reglattrp_IncludesParents_001,value1)]" +
+	           "[attrib_set([parent(me,create(Test_Reglattrp_IncludesParents))]/Test_Reglattrp_IncludesParents_002,value2)]" +
+	           "[attrib_set(%!/Test_Reglattrp_IncludesParents_100,value3)]" +
+	           "[reglattrp(%!,Test_Reglattrp_IncludesParents_[0-9]+)]", 
+		"Test_Reglattrp_IncludesParents_001 Test_Reglattrp_IncludesParents_002 Test_Reglattrp_IncludesParents_100")]
 	public async Task Test_Reglattrp_IncludesParents(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -214,7 +233,10 @@ public class AttributeFunctionUnitTests
 
 	[Test]
 	[NotInParallel]
-	[Arguments("[attrib_set(%!/ATTR_001,value1)][attrib_set(%!/ATTR_002,value2)][attrib_set(%!/ATTR_100,value3)][regnattrp(%!,ATTR_[0-9]+)]", "3")]
+	[Arguments("[attrib_set(%!/Test_Regnattrp_CountWithParents_001,value1)]" +
+	           "[attrib_set([parent(me,create(Test_Regnattrp_CountWithParents))]/Test_Regnattrp_CountWithParents_002,value2)]" +
+	           "[attrib_set(%!/Test_Regnattrp_CountWithParents_100,value3)]" +
+	           "[regnattrp(%!,Test_Regnattrp_CountWithParents_[0-9]+)]", "3")]
 	public async Task Test_Regnattrp_CountWithParents(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -226,10 +248,12 @@ public class AttributeFunctionUnitTests
 	[Arguments("[attrib_set(%!/Test_Regxattrp_RangeWithParents_001,value1)]" +
 	           "[attrib_set(%!/Test_Regxattrp_RangeWithParents_002,value2)]" +
 	           "[attrib_set(%!/Test_Regxattrp_RangeWithParents_100,value3)]" +
-	           "[regxattrp(%!/Test_Regxattrp_RangeWithParents_[0-9]+,1,2)]", "TEST_REGXATTRP_RANGEWITHPARENTS_001 TEST_REGXATTRP_RANGEWITHPARENTS_002")]
+	           "[regxattrp(%!/Test_Regxattrp_RangeWithParents_[0-9]+,1,2)]", 
+		"TEST_REGXATTRP_RANGEWITHPARENTS_001 TEST_REGXATTRP_RANGEWITHPARENTS_002")]
 	[Arguments("[attrib_set(%!/Test_Regxattrp_RangeWithParents2_001,value1)]" +
 	           "[attrib_set([parent(me,create(Test_Regxattrp_RangeWithParents2))]/Test_Regxattrp_RangeWithParents2_002,value2)]" +
-	           "[attrib_set(%!/Test_Regxattrp_RangeWithParents2_100,value3)][regxattrp(%!/Test_Regxattrp_RangeWithParents2_[0-9]+,1,2)]", "TEST_REGXATTRP_RANGEWITHPARENTS2_001 TEST_REGXATTRP_RANGEWITHPARENTS2_002")]
+	           "[attrib_set(%!/Test_Regxattrp_RangeWithParents2_100,value3)][regxattrp(%!/Test_Regxattrp_RangeWithParents2_[0-9]+,1,2)]", 
+		"TEST_REGXATTRP_RANGEWITHPARENTS2_001 TEST_REGXATTRP_RANGEWITHPARENTS2_002")]
 	public async Task Test_Regxattrp_RangeWithParents(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -239,9 +263,20 @@ public class AttributeFunctionUnitTests
 	// Attribute Tree Tests
 	[Test]
 	[NotInParallel]
-	[Arguments("[attrib_set(%!/Test_Lattr_AttributeTrees,root)][attrib_set(%!/Test_Lattr_AttributeTrees`BRANCH1,leaf1)][attrib_set(%!/Test_Lattr_AttributeTrees`BRANCH2,leaf2)][attrib_set(%!/Test_Lattr_AttributeTrees`BRANCH1`SUBLEAF,deep)][lattr(%!/Test_Lattr_AttributeTrees**)]", "TEST_LATTR_ATTRIBUTETREES TEST_LATTR_ATTRIBUTETREES`BRANCH1 TREE`BRANCH1`SUBLEAF TEST_LATTR_ATTRIBUTETREES`BRANCH2")]
-	[Arguments("[attrib_set(%!/Test_Lattr_AttributeTrees2,value)][attrib_set(%!/Test_Lattr_AttributeTrees2`CHILD,childval)][lattr(%!/Test_Lattr_AttributeTrees2**)]", "Test_Lattr_AttributeTrees2 Test_Lattr_AttributeTrees2`CHILD")]
-	[Arguments("[attrib_set(%!/Test_Lattr_AttributeTrees3,value)][attrib_set(%!/Test_Lattr_AttributeTrees3`CHILD,childval)][lattr(%!/Test_Lattr_AttributeTrees3*)]", "Test_Lattr_AttributeTrees3")]
+	[Arguments("[attrib_set(%!/Test_Lattr_AttributeTrees,root)]" +
+	           "[attrib_set(%!/Test_Lattr_AttributeTrees`BRANCH1,leaf1)]" +
+	           "[attrib_set(%!/Test_Lattr_AttributeTrees`BRANCH2,leaf2)]" +
+	           "[attrib_set(%!/Test_Lattr_AttributeTrees`BRANCH1`SUBLEAF,deep)]" +
+	           "[lattr(%!/Test_Lattr_AttributeTrees`**)]", 
+		"TEST_LATTR_ATTRIBUTETREES`BRANCH1 TEST_LATTR_ATTRIBUTETREES`BRANCH1`SUBLEAF TEST_LATTR_ATTRIBUTETREES`BRANCH2")]
+	[Arguments("[attrib_set(%!/Test_Lattr_AttributeTrees2,value)]" +
+	           "[attrib_set(%!/Test_Lattr_AttributeTrees2`CHILD,childval)]" +
+	           "[lattr(%!/Test_Lattr_AttributeTrees2**)]", 
+		"TEST_LATTR_ATTRIBUTETREES2 TEST_LATTR_ATTRIBUTETREES2`CHILD")]
+	[Arguments("[attrib_set(%!/Test_Lattr_AttributeTrees3,value)]" +
+	           "[attrib_set(%!/Test_Lattr_AttributeTrees3`CHILD,childval)]" +
+	           "[lattr(%!/Test_Lattr_AttributeTrees3*)]", 
+		"TEST_LATTR_ATTRIBUTETREES3")]
 	public async Task Test_Lattr_AttributeTrees(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -266,8 +301,16 @@ public class AttributeFunctionUnitTests
 
 	[Test]
 	[NotInParallel]
-	[Arguments("[attrib_set(%!/ROOT,val)][attrib_set(%!/ROOT`A,val1)][attrib_set(%!/ROOT`B,val2)][attrib_set(%!/ROOT`A`DEEP,val3)][reglattr(%!/^ROOT)]", "ROOT ROOT`A ROOT`A`DEEP ROOT`B")]
-	[Arguments("[attrib_set(%!/ATTR_001,v1)][attrib_set(%!/ATTR_001`SUB,v2)][reglattr(%!/ATTR_[0-9]+)]", "ATTR_001 ATTR_001`SUB")]
+	[Arguments("[attrib_set(%!/Test_Reglattr_AttributeTrees,val)]" +
+	           "[attrib_set(%!/Test_Reglattr_AttributeTrees`A,val1)]" +
+	           "[attrib_set(%!/Test_Reglattr_AttributeTrees`B,val2)]" +
+	           "[attrib_set(%!/Test_Reglattr_AttributeTrees`A`DEEP,val3)]" +
+	           "[reglattr(%!/^Test_Reglattr_AttributeTrees)]", 
+		"TEST_REGLATTR_ATTRIBUTETREES TEST_REGLATTR_ATTRIBUTETREES`A TEST_REGLATTR_ATTRIBUTETREES`A`DEEP TEST_REGLATTR_ATTRIBUTETREES`B")]
+	[Arguments("[attrib_set(%!/Test_Reglattr_AttributeTrees_001,v1)]" +
+	           "[attrib_set(%!/Test_Reglattr_AttributeTrees_001`SUB,v2)]" +
+	           "[reglattr(%!/Test_Reglattr_AttributeTrees_[0-9]+)]", 
+		"TEST_REGLATTR_ATTRIBUTETREES_001 TEST_REGLATTR_ATTRIBUTETREES_001`SUB")]
 	public async Task Test_Reglattr_AttributeTrees(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -276,8 +319,15 @@ public class AttributeFunctionUnitTests
 
 	[Test]
 	[NotInParallel]
-	[Arguments("[attrib_set(%!/BASE,v)][attrib_set(%!/BASE`L1,v)][attrib_set(%!/BASE`L2,v)][attrib_set(%!/BASE`L1`L2,v)][regnattr(%!/^BASE)]", "4")]
-	[Arguments("[attrib_set(%!/TEST,v)][attrib_set(%!/TEST`A,v)][attrib_set(%!/TEST`B,v)][regnattr(%!/^TEST)]", "3")]
+	[Arguments("[attrib_set(%!/Test_Regnattr_AttributeTrees1,v)]" +
+	           "[attrib_set(%!/Test_Regnattr_AttributeTrees1`L1,v)]" +
+	           "[attrib_set(%!/Test_Regnattr_AttributeTrees1`L2,v)]" +
+	           "[attrib_set(%!/Test_Regnattr_AttributeTrees1`L1`L2,v)]" +
+	           "[regnattr(%!/^Test_Regnattr_AttributeTrees1)]", "4")]
+	[Arguments("[attrib_set(%!/Test_Regnattr_AttributeTrees2,v)]" +
+	           "[attrib_set(%!/Test_Regnattr_AttributeTrees2`A,v)]" +
+	           "[attrib_set(%!/Test_Regnattr_AttributeTrees2`B,v)]" +
+	           "[regnattr(%!/^Test_Regnattr_AttributeTrees2)]", "3")]
 	public async Task Test_Regnattr_AttributeTrees(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -286,7 +336,11 @@ public class AttributeFunctionUnitTests
 
 	[Test]
 	[NotInParallel]
-	[Arguments("[attrib_set(%!/WILD,val)][attrib_set(%!/WILD`CHILD,has_pattern)][attrib_set(%!/WILD`OTHER,no_match)][wildgrep(%!,WILD*,*pattern*)]", "WILD`CHILD")]
+	[Arguments("[attrib_set(%!/Test_Wildgrep_AttributeTrees,val)]" +
+	           "[attrib_set(%!/Test_Wildgrep_AttributeTrees`CHILD,has_pattern)]" +
+	           "[attrib_set(%!/Test_Wildgrep_AttributeTrees`OTHER,no_match)]" +
+	           "[wildgrep(%!,Test_Wildgrep_AttributeTrees*,*pattern*)]", 
+		"TEST_WILDGREP_ATTRIBUTETREES`CHILD")]
 	public async Task Test_Wildgrep_AttributeTrees(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -295,7 +349,12 @@ public class AttributeFunctionUnitTests
 
 	[Test]
 	[NotInParallel]
-	[Arguments("[attrib_set(%!/RANGE,v1)][attrib_set(%!/RANGE`A,v2)][attrib_set(%!/RANGE`B,v3)][attrib_set(%!/RANGE`C,v4)][regxattr(%!/^RANGE,2,2)]", "RANGE`A RANGE`B")]
+	[Arguments("[attrib_set(%!/Test_Regxattr_AttributeTrees,v1)]" +
+	           "[attrib_set(%!/Test_Regxattr_AttributeTrees`A,v2)]" +
+	           "[attrib_set(%!/Test_Regxattr_AttributeTrees`B,v3)]" +
+	           "[attrib_set(%!/Test_Regxattr_AttributeTrees`C,v4)]" +
+	           "[regxattr(%!/^Test_Regxattr_AttributeTrees,2,2)]", 
+		"TEST_REGXATTR_ATTRIBUTETREES`A TEST_REGXATTR_ATTRIBUTETREES`B")]
 	public async Task Test_Regxattr_AttributeTrees(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -305,8 +364,11 @@ public class AttributeFunctionUnitTests
 	// Diagnostic test to verify basic functionality
 	[Test]
 	[NotInParallel]
-	[Arguments("[attrib_set(%!/TESTATTR,testvalue)][get(%!/TESTATTR)]", "testvalue")]
-	[Arguments("[attrib_set(%!/ATTR1,val1)][attrib_set(%!/ATTR2,val2)][get(%!/ATTR1)][get(%!/ATTR2)]", "val1val2")]
+	[Arguments("[attrib_set(%!/Test_Basic_AttribSet_And_Get,testvalue)]" +
+	           "[get(%!/Test_Basic_AttribSet_And_Get)]", "testvalue")]
+	[Arguments("[attrib_set(%!/Test_Basic_AttribSet_And_Get21,val1)]" +
+	           "[attrib_set(%!/Test_Basic_AttribSet_And_Get22,val2)]" +
+	           "[get(%!/Test_Basic_AttribSet_And_Get21)][get(%!/Test_Basic_AttribSet_And_Get22)]", "val1val2")]
 	public async Task Test_Basic_AttribSet_And_Get(string str, string expected)
 	{
 		var result = await Parser.FunctionParse(MModule.single(str));
@@ -316,7 +378,10 @@ public class AttributeFunctionUnitTests
 	// Test lattr which should work (it's already implemented)
 	[Test]
 	[NotInParallel]
-	[Arguments("[attrib_set(%!/TEST1,v1)][attrib_set(%!/TEST2,v2)][lattr(%!/TEST*)]", "TEST1 TEST2")]
+	[Arguments("[attrib_set(%!/Test_Lattr_Simple1,v1)]" +
+	           "[attrib_set(%!/Test_Lattr_Simple2,v2)]" +
+	           "[lattr(%!/Test_Lattr_Simple*)]",
+		"TEST_LATTR_SIMPLE1 TEST_LATTR_SIMPLE2")]
 	public async Task Test_Lattr_Simple(string str, string expected)
 	{
 		var result = await Parser.FunctionParse(MModule.single(str));

@@ -1,6 +1,7 @@
 ﻿using System.Collections.Immutable;
 using DotNext;
 using Mediator;
+using NaturalSort.Extension;
 using OneOf;
 using OneOf.Types;
 using SharpMUSH.Library.Commands.Database;
@@ -23,6 +24,8 @@ public class AttributeService(
 	INotifyService notifyService)
 	: IAttributeService
 {
+	private readonly NaturalSortComparer _attributeSort = new NaturalSortComparer(StringComparison.CurrentCulture);
+	
 	public async ValueTask<OptionalSharpAttributeOrError> GetAttributeAsync(
 		AnySharpObject executor,
 		AnySharpObject obj,
@@ -339,6 +342,7 @@ public class AttributeService(
 
 		return await attributes
 			.Where(async (x, _) => await ps.CanViewAttribute(executor, obj, x))
+			.OrderBy(x => x.LongName, _attributeSort)
 			.ToArrayAsync();
 	}
 
@@ -354,6 +358,7 @@ public class AttributeService(
 
 		return LazySharpAttributesOrError
 			.FromAsync(attributes
+				.OrderBy(x => x.LongName, _attributeSort)
 				.Where(async (x, _) => await ps.CanViewAttribute(executor, obj, x)));
 	}
 
