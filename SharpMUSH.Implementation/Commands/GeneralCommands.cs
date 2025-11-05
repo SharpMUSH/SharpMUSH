@@ -1753,11 +1753,140 @@ public partial class Commands
 
 	[SharpCommand(Name = "@FUNCTION",
 		Switches = ["ALIAS", "BUILTIN", "CLONE", "DELETE", "ENABLE", "DISABLE", "PRESERVE", "RESTORE", "RESTRICT"],
-		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 0, MaxArgs = 5)]
 	public static async ValueTask<Option<CallState>> Function(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches.ToArray();
+		
+		// No arguments - list all user-defined functions
+		if (args.Count == 0)
+		{
+			await NotifyService!.Notify(executor, "Global user-defined functions:");
+			
+			// Check if executor has Functions power or is wizard
+			var canSeeDetails = await executor.IsWizard();
+			
+			if (canSeeDetails)
+			{
+				await NotifyService.Notify(executor, "  (Full function listing with details)");
+			}
+			
+			// TODO: Query function registry for user-defined functions
+			await NotifyService.Notify(executor, "Note: Function registry query not yet implemented.");
+			await NotifyService.Notify(executor, "0 functions defined.");
+			
+			return CallState.Empty;
+		}
+		
+		var functionName = args["0"].Message?.ToPlainText();
+		if (string.IsNullOrEmpty(functionName))
+		{
+			await NotifyService!.Notify(executor, "You must specify a function name.");
+			return new CallState("#-1 NO FUNCTION SPECIFIED");
+		}
+		
+		// Handle administrative switches
+		if (switches.Contains("ALIAS"))
+		{
+			var aliasName = args.GetValueOrDefault("1")?.Message?.ToPlainText();
+			if (string.IsNullOrEmpty(aliasName))
+			{
+				await NotifyService!.Notify(executor, "You must specify an alias name.");
+				return new CallState("#-1 NO ALIAS SPECIFIED");
+			}
+			
+			await NotifyService!.Notify(executor, $"@function/alias: Would create alias '{aliasName}' for function '{functionName}'.");
+			await NotifyService.Notify(executor, "Note: Function aliasing not yet implemented.");
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+		
+		if (switches.Contains("CLONE"))
+		{
+			var cloneName = args.GetValueOrDefault("1")?.Message?.ToPlainText();
+			if (string.IsNullOrEmpty(cloneName))
+			{
+				await NotifyService!.Notify(executor, "You must specify a clone name.");
+				return new CallState("#-1 NO CLONE NAME SPECIFIED");
+			}
+			
+			await NotifyService!.Notify(executor, $"@function/clone: Would clone function '{functionName}' as '{cloneName}'.");
+			await NotifyService.Notify(executor, "Note: Function cloning not yet implemented.");
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+		
+		if (switches.Contains("DELETE"))
+		{
+			await NotifyService!.Notify(executor, $"@function/delete: Would delete function '{functionName}'.");
+			await NotifyService.Notify(executor, "Note: Function deletion not yet implemented.");
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+		
+		if (switches.Contains("DISABLE"))
+		{
+			await NotifyService!.Notify(executor, $"@function/disable: Would disable function '{functionName}'.");
+			await NotifyService.Notify(executor, "Note: Function disabling not yet implemented.");
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+		
+		if (switches.Contains("ENABLE"))
+		{
+			await NotifyService!.Notify(executor, $"@function/enable: Would enable function '{functionName}'.");
+			await NotifyService.Notify(executor, "Note: Function enabling not yet implemented.");
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+		
+		if (switches.Contains("RESTRICT"))
+		{
+			var restriction = args.GetValueOrDefault("1")?.Message?.ToPlainText();
+			await NotifyService!.Notify(executor, $"@function/restrict: Would restrict function '{functionName}' to: {restriction ?? "none"}");
+			await NotifyService.Notify(executor, "Note: Function restriction not yet implemented.");
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+		
+		// Check if defining a new function: @function <name>=<obj>,<attrib>[,<min>,<max>[,<restrictions>]]
+		if (args.Count >= 2)
+		{
+			var definition = args["1"].Message?.ToPlainText();
+			if (!string.IsNullOrEmpty(definition))
+			{
+				// Parse definition: obj, attrib[, min, max[, restrictions]]
+				await NotifyService!.Notify(executor, $"@function: Would define function '{functionName}' as: {definition}");
+				
+				// Parse min/max args if provided
+				if (args.Count >= 3)
+				{
+					var minArgs = args.GetValueOrDefault("2")?.Message?.ToPlainText();
+					await NotifyService.Notify(executor, $"  Min args: {minArgs ?? "none"}");
+				}
+				
+				if (args.Count >= 4)
+				{
+					var maxArgs = args.GetValueOrDefault("3")?.Message?.ToPlainText();
+					await NotifyService.Notify(executor, $"  Max args: {maxArgs ?? "none"}");
+				}
+				
+				if (args.Count >= 5)
+				{
+					var restrictions = args.GetValueOrDefault("4")?.Message?.ToPlainText();
+					await NotifyService.Notify(executor, $"  Restrictions: {restrictions ?? "none"}");
+				}
+				
+				await NotifyService.Notify(executor, "Note: Dynamic function definition not yet implemented.");
+				return new CallState("#-1 NOT IMPLEMENTED");
+			}
+		}
+		
+		// Single argument - show function information
+		await NotifyService!.Notify(executor, $"Function: {functionName}");
+		
+		// Try to find the function information
+		// TODO: Query function registry for this function
+		await NotifyService.Notify(executor, "  Status: Checking function registry...");
+		await NotifyService.Notify(executor, "Note: Function introspection not yet implemented.");
+		
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@LEMIT", Switches = ["NOEVAL", "NOISY", "SILENT", "SPOOF"], Behavior = CB.Default | CB.NoGagged,

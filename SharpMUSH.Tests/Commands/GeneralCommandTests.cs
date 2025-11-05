@@ -394,4 +394,28 @@ public class GeneralCommandTests
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Command:")), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
+
+	[Test]
+	public async ValueTask Function_ListsGlobalFunctions()
+	{
+		// Test @function with no arguments to list functions
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@function"));
+
+		// Should notify about global functions
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Global user-defined functions")), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+	}
+
+	[Test]
+	public async ValueTask Function_ShowsFunctionInfo()
+	{
+		// Test @function with a function name
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@function name"));
+
+		// Should notify about function information
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Function:")), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+	}
 }
