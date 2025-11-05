@@ -9,7 +9,7 @@ public class DatabaseFunctionUnitTests
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
-	// SQL() function tests - SQL is enabled in test environment
+	// sql() function tests - SQL is enabled in test environment
 	[Test]
 	[Arguments("sql(SELECT * FROM nonexistent)", "#-1 SQL ERROR")]
 	public async Task Test_Sql_TableDoesNotExist(string str, string expectedPrefix)
@@ -19,7 +19,7 @@ public class DatabaseFunctionUnitTests
 		await Assert.That(plainText).StartsWith(expectedPrefix);
 	}
 
-	// SQLESCAPE() function tests - SQL is enabled in test environment
+	// sqlescape() function tests - SQL is enabled in test environment
 	[Test]
 	[Arguments("sqlescape(test_string_sqlescape_case1)", "test_string_sqlescape_case1")]
 	public async Task Test_Sqlescape_NoQuotes(string str, string expected)
@@ -69,7 +69,7 @@ public class DatabaseFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
-	// MAPSQL() function tests - SQL is enabled in test environment
+	// mapsql() function tests - SQL is enabled in test environment
 	// Note: mapsql requires a valid attribute to exist, so we test the error case for non-existent attribute
 	[Test]
 	[Arguments("mapsql(me/nonexistent_attr_test,SELECT 1)", "#-1 NO SUCH ATTRIBUTE")]

@@ -66,11 +66,7 @@ public partial class Functions
 			var result = string.Join(rowSeparator, formattedRows);
 			return new CallState(result);
 		}
-		catch (MySqlException ex)
-		{
-			return new CallState($"#-1 SQL ERROR: {ex.Message}");
-		}
-		catch (InvalidOperationException ex)
+		catch (Exception ex) when (ex is MySqlException or InvalidOperationException)
 		{
 			return new CallState($"#-1 SQL ERROR: {ex.Message}");
 		}
@@ -200,8 +196,6 @@ public partial class Functions
 							() =>
 							{
 								var values = row.Values.ToList();
-								
-								parser.CurrentState.AddRegister("0", MModule.single(currentRow.ToString()));
 
 								var dict = values.Select((x, i) =>
 										new KeyValuePair<string, CallState>((i + 1).ToString(),
@@ -223,11 +217,7 @@ public partial class Functions
 					// Return success (the actual results are queued as attribute executions)
 					return new CallState(string.Empty);
 				}
-				catch (MySqlException ex)
-				{
-					return new CallState($"#-1 SQL ERROR: {ex.Message}");
-				}
-				catch (InvalidOperationException ex)
+				catch (Exception ex) when (ex is MySqlException or InvalidOperationException)
 				{
 					return new CallState($"#-1 SQL ERROR: {ex.Message}");
 				}
