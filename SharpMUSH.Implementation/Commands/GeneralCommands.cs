@@ -1034,11 +1034,151 @@ public partial class Commands
 		[
 			"ADD", "ALIAS", "CLONE", "DELETE", "EqSplit", "LSARGS", "RSARGS", "NOEVAL", "ON", "OFF", "QUIET", "ENABLE",
 			"DISABLE", "RESTRICT", "NOPARSE", "RSNoParse"
-		], Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 0)]
+		], Behavior = CB.Default | CB.EqSplit, MinArgs = 1, MaxArgs = 2)]
 	public static async ValueTask<Option<CallState>> Command(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches.ToArray();
+		
+		if (args.Count == 0)
+		{
+			await NotifyService!.Notify(executor, "You must specify a command name.");
+			return new CallState("#-1 NO COMMAND SPECIFIED");
+		}
+		
+		var commandName = args["0"].Message?.ToPlainText();
+		if (string.IsNullOrEmpty(commandName))
+		{
+			await NotifyService!.Notify(executor, "You must specify a command name.");
+			return new CallState("#-1 NO COMMAND SPECIFIED");
+		}
+		
+		var isQuiet = switches.Contains("QUIET");
+		
+		// Administrative switches - wizard only
+		if (switches.Any(s => new[] { "ADD", "ALIAS", "CLONE", "DELETE", "DISABLE", "ENABLE", "RESTRICT" }.Contains(s)))
+		{
+			if (!await executor.IsWizard())
+			{
+				await NotifyService!.Notify(executor, "Permission denied.");
+				return new CallState(Errors.ErrorPerm);
+			}
+			
+			// Handle administrative operations
+			if (switches.Contains("ADD"))
+			{
+				if (!isQuiet)
+				{
+					await NotifyService!.Notify(executor, $"@command/add: Command '{commandName}' would be added.");
+					await NotifyService.Notify(executor, "Note: Dynamic command creation not yet implemented.");
+				}
+				return new CallState("#-1 NOT IMPLEMENTED");
+			}
+			
+			if (switches.Contains("ALIAS"))
+			{
+				var aliasName = args.GetValueOrDefault("1")?.Message?.ToPlainText();
+				if (string.IsNullOrEmpty(aliasName))
+				{
+					await NotifyService!.Notify(executor, "You must specify an alias name.");
+					return new CallState("#-1 NO ALIAS SPECIFIED");
+				}
+				
+				if (!isQuiet)
+				{
+					await NotifyService!.Notify(executor, $"@command/alias: Would create alias '{aliasName}' for '{commandName}'.");
+					await NotifyService.Notify(executor, "Note: Dynamic command aliasing not yet implemented.");
+				}
+				return new CallState("#-1 NOT IMPLEMENTED");
+			}
+			
+			if (switches.Contains("CLONE"))
+			{
+				var cloneName = args.GetValueOrDefault("1")?.Message?.ToPlainText();
+				if (string.IsNullOrEmpty(cloneName))
+				{
+					await NotifyService!.Notify(executor, "You must specify a clone name.");
+					return new CallState("#-1 NO CLONE NAME SPECIFIED");
+				}
+				
+				if (!isQuiet)
+				{
+					await NotifyService!.Notify(executor, $"@command/clone: Would clone '{commandName}' as '{cloneName}'.");
+					await NotifyService.Notify(executor, "Note: Command cloning not yet implemented.");
+				}
+				return new CallState("#-1 NOT IMPLEMENTED");
+			}
+			
+			if (switches.Contains("DELETE"))
+			{
+				if (!executor.IsGod())
+				{
+					await NotifyService!.Notify(executor, "Only God can delete commands.");
+					return new CallState(Errors.ErrorPerm);
+				}
+				
+				if (!isQuiet)
+				{
+					await NotifyService!.Notify(executor, $"@command/delete: Would delete command '{commandName}'.");
+					await NotifyService.Notify(executor, "Note: Command deletion not yet implemented.");
+				}
+				return new CallState("#-1 NOT IMPLEMENTED");
+			}
+			
+			if (switches.Contains("DISABLE"))
+			{
+				if (!isQuiet)
+				{
+					await NotifyService!.Notify(executor, $"@command/disable: Would disable command '{commandName}'.");
+					await NotifyService.Notify(executor, "Note: Command disabling not yet implemented.");
+				}
+				return new CallState("#-1 NOT IMPLEMENTED");
+			}
+			
+			if (switches.Contains("ENABLE"))
+			{
+				if (!isQuiet)
+				{
+					await NotifyService!.Notify(executor, $"@command/enable: Would enable command '{commandName}'.");
+					await NotifyService.Notify(executor, "Note: Command enabling not yet implemented.");
+				}
+				return new CallState("#-1 NOT IMPLEMENTED");
+			}
+			
+			if (switches.Contains("RESTRICT"))
+			{
+				var restriction = args.GetValueOrDefault("1")?.Message?.ToPlainText();
+				if (!isQuiet)
+				{
+					await NotifyService!.Notify(executor, $"@command/restrict: Would restrict '{commandName}' to: {restriction ?? "none"}");
+					await NotifyService.Notify(executor, "Note: Command restriction not yet implemented.");
+				}
+				return new CallState("#-1 NOT IMPLEMENTED");
+			}
+		}
+		
+		// No switches - display command information
+		await NotifyService!.Notify(executor, $"Command: {commandName}");
+		
+		// Try to find the command using CommandDiscoveryService
+		if (CommandDiscoveryService != null)
+		{
+			// TODO: Query command information from CommandDiscoveryService
+			// This would show:
+			// - Command parsing behavior
+			// - Switches available
+			// - Argument counts
+			// - Restrictions
+			await NotifyService.Notify(executor, "  Status: Checking command registry...");
+			await NotifyService.Notify(executor, "Note: Full command introspection not yet implemented.");
+		}
+		else
+		{
+			await NotifyService.Notify(executor, "  Status: Unknown (command service unavailable)");
+		}
+		
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@DRAIN", Switches = ["ALL", "ANY"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs, MinArgs = 1,
