@@ -1266,11 +1266,72 @@ public partial class Commands
 		throw new NotImplementedException();
 	}
 
-	[SharpCommand(Name = "@WHEREIS", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	[SharpCommand(Name = "@WHEREIS", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 1, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> WhereIs(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+
+		if (args.Count == 0)
+		{
+			await NotifyService!.Notify(executor, "You must specify a player to locate.");
+			return new CallState("#-1 NO PLAYER SPECIFIED");
+		}
+
+		var targetName = args["0"].Message!.ToPlainText();
+
+		// Locate the target player
+		var maybeTarget = await LocateService!.LocateAndNotifyIfInvalid(
+			parser,
+			executor,
+			executor,
+			targetName,
+			LocateFlags.All);
+
+		if (!maybeTarget.IsValid())
+		{
+			return new CallState("#-1 NOT FOUND");
+		}
+
+		var target = maybeTarget.WithoutError().WithoutNone();
+
+		// Check if target is a player
+		if (!target.IsPlayer)
+		{
+			await NotifyService!.Notify(executor, "You can only @whereis players.");
+			return new CallState("#-1 NOT A PLAYER");
+		}
+
+		var targetPlayer = target.AsPlayer;
+		var targetObject = target.Object();
+		
+		// Check if target is UNFINDABLE
+		var targetFlags = await targetObject.Flags.Value.ToListAsync();
+		var isUnfindable = targetFlags.Any(f => f.Symbol == "U" || f.Name.Equals("UNFINDABLE", StringComparison.OrdinalIgnoreCase));
+
+		// Notify the target that someone is trying to find them
+		if (isUnfindable)
+		{
+			await NotifyService!.Notify(target, 
+				$"{executor.Object().Name} tried to locate you, but was unable to.");
+			await NotifyService.Notify(executor, 
+				$"{targetObject.Name} is UNFINDABLE.");
+			return new CallState("#-1 UNFINDABLE");
+		}
+
+		// Get the target's location
+		var targetLocation = await target.AsContent.Location();
+		var locationName = targetLocation.Object().Name;
+
+		// Notify the target that they were found
+		await NotifyService!.Notify(target, 
+			$"{executor.Object().Name} has just located your position.");
+
+		// Notify the executor of the target's location
+		await NotifyService.Notify(executor, 
+			$"{targetObject.Name} is in {locationName}.");
+
+		return new CallState(targetLocation.Object().DBRef.ToString());
 	}
 
 	[SharpCommand(Name = "@BREAK", Switches = ["INLINE", "QUEUED"],

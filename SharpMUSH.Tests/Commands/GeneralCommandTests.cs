@@ -295,4 +295,31 @@ public class GeneralCommandTests
 
 		await Assert.That(flags.Count(x => x.Name == "DEBUG")).IsEqualTo(1);
 	}
+
+	[Test]
+	public async ValueTask WhereIs_ValidPlayer_ReportsLocation()
+	{
+		// Test @whereis with a valid player
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@whereis #1"));
+
+		// Should notify about the location
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("is in")), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+	}
+
+	[Test]
+	public async ValueTask WhereIs_NonPlayer_ReturnsError()
+	{
+		// First create a thing (non-player object)
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@create test_object_whereis"));
+
+		// Try to @whereis a non-player
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@whereis test_object_whereis"));
+
+		// Should notify that it's not a player
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("only @whereis players")), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+	}
 }
