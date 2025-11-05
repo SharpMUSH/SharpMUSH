@@ -144,21 +144,19 @@ public partial class Functions
 					return maybeAttribute.AsCallState;
 				}
 
-				var attribute = maybeAttribute.AsAttribute.Last();
 				var results = new List<MString>();
 
 				try
 				{
-					var columnNames = new List<string>();
 					var firstRow = true;
-					int rowNumber = 1;
+					var rowNumber = 1;
 
 					foreach (var row in await SqlService.ExecuteQueryAsync(query))
 					{
 						// If field names requested and this is the first row, process column names
 						if (doFieldNames && firstRow)
 						{
-							columnNames = row.Keys.ToList();
+							var columnNames = row.Keys.ToList();
 
 							var remainder = columnNames
 								.Select((x, i)
