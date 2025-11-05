@@ -1401,8 +1401,8 @@ public partial class ArangoDatabase(
 		
 		var pattern = WildcardToRegex().Replace(attributePattern, m => m.Value switch
 		{
+			"**" => ".*?",
 			"*" => "[^`]*",
-			"**" => ".*",
 			"?" => ".",
 			_ => $"\\{m.Value}"
 		});
@@ -2161,6 +2161,6 @@ public partial class ArangoDatabase(
 		}, mergeObjects: true, cancellationToken: ct);
 	}
 
-	[GeneratedRegex("[.*+?^${}()|[\\]/]")]
+	[GeneratedRegex(@"\*\*|[.*+?^${}()|[\]/]")]
 	private static partial Regex WildcardToRegex();
 }
