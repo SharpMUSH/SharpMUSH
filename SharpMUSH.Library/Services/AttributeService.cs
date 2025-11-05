@@ -449,7 +449,7 @@ public class AttributeService(
 			await executor.Object().Owner.WithCancellation(CancellationToken.None)));
 
 		await notifyService.Notify(executor,
-			$"Attribute {attrPath} SET.", obj);
+			$"Attribute {string.Join("`", attrPath)} SET.", obj);
 
 		return new Success();
 	}

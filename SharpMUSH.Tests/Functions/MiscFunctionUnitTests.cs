@@ -10,8 +10,9 @@ public class MiscFunctionUnitTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("list(a,b,c)", "a, b, and c")]
+	[Arguments("list(a,b)", "a and b")]
+	[Arguments("list(a)", "a")]
 	public async Task List(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;

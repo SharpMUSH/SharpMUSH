@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text;
 using Core.Arango;
 using Core.Arango.Serialization.Newtonsoft;
@@ -27,6 +28,9 @@ public class WebAppFactory : IAsyncInitializer
 {
 	[ClassDataSource<ArangoDbTestServer>(Shared = SharedType.PerTestSession)]
 	public required ArangoDbTestServer ArangoDbTestServer { get; init; }
+	
+	[ClassDataSource<MySqlTestServer>(Shared = SharedType.PerTestSession)]
+	public required MySqlTestServer MySqlTestServer { get; init; }
 
 	public IServiceProvider Services => _server!.Services;
 	private TestWebApplicationBuilderFactory<Program>? _server;
@@ -44,7 +48,7 @@ public class WebAppFactory : IAsyncInitializer
 				integrationServer.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>(),
 				integrationServer.Services,
 				state: new ParserState(
-					Registers: new([[]]),
+					Registers: new ConcurrentStack<Dictionary<string, MString>>([[]]),
 					IterationRegisters: [],
 					RegexRegisters: [],
 					ExecutionStack: [],
@@ -112,11 +116,16 @@ public class WebAppFactory : IAsyncInitializer
 			Serializer = new ArangoNewtonsoftSerializer(new ArangoNewtonsoftDefaultContractResolver())
 		};
 
-		var configFile = Path.Combine(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst");
+		var configFile = Path.Join(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst");
 
-		var colorFile = Path.Combine(AppContext.BaseDirectory, "colors.json");
+		var colorFile = Path.Join(AppContext.BaseDirectory, "colors.json");
 
-		_server = new TestWebApplicationBuilderFactory<Program>(config, configFile, colorFile, Substitute.For<INotifyService>());
+		_server = new TestWebApplicationBuilderFactory<Program>(
+			config, 
+			MySqlTestServer.Instance.GetConnectionString(), 
+			configFile,
+			colorFile, 
+			Substitute.For<INotifyService>());
 
 		var provider = _server.Services;
 		var connectionService = provider.GetRequiredService<IConnectionService>();

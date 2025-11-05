@@ -151,8 +151,8 @@ public class InformationFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("rloc(%#,0)", "%#")]
-	[Arguments("rloc(%#,1)", "%l")]
+	[Arguments("first(rloc(%#,0),:)", "%#")]
+	[Arguments("first(rloc(%#,1),:)", "%l")]
 	public async Task Rloc(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
