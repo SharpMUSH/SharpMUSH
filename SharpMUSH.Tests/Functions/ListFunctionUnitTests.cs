@@ -414,8 +414,9 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Indexing issue - 1-based vs 0-based position handling incorrect")]
 	[Arguments("lset(a b c,2,x)", "a x c")]
+	[Arguments("lset(a b c,1,x)", "x b c")]
+	[Arguments("lset(a b c,3,x)", "a b x")]
 	public async Task ListSet(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;

@@ -28,6 +28,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 	private static ICommunicationService? CommunicationService { get; set; }
 	
 	private static IValidateService? ValidateService { get; set; }
+	
+	private static ISqlService? SqlService { get; set; }
 
 	private readonly CommandLibraryService _commandLibrary = [];
 
@@ -46,7 +48,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		IManipulateSharpObjectService manipulateSharpObjectService,
 		IHttpClientFactory httpClientFactory,
 		ICommunicationService communicationService,
-		IValidateService validateService)
+		IValidateService validateService,
+		ISqlService sqlService)
 	{
 		Mediator = mediator;
 		LocateService = locateService;
@@ -62,6 +65,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		ManipulateSharpObjectService = manipulateSharpObjectService;
 		CommunicationService = communicationService;
 		ValidateService = validateService;
+		SqlService = sqlService;
 
 		foreach (var command in Generated.CommandLibrary.Commands)
 		{
