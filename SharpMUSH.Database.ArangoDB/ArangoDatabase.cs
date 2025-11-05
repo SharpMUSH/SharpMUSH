@@ -1425,8 +1425,6 @@ public partial class ArangoDatabase(
 				{ StartVertex, result.First().Id },
 				{ "pattern", $"^{pattern}$" }
 			}, cancellationToken: ct);
-
-		var matches = await result2.ToListAsync(cancellationToken: ct);
 		
 		return result2
 			.Select(SharpAttributeQueryToSharpAttribute);
@@ -1437,11 +1435,17 @@ public partial class ArangoDatabase(
 	{
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 		var result =
-			arangoDb.Query.ExecuteStreamAsync<SharpObjectQueryResult>(handle, $"RETURN DOCUMENT({startVertex})", cache: true,
+			await arangoDb.Query.ExecuteAsync<SharpObjectQueryResult>(handle, 
+				$"FOR v IN 1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphObjects} RETURN v",
+				new Dictionary<string, object>
+				{
+					{ StartVertex, startVertex }
+				}, cache: true,
 				cancellationToken: ct);
+
 		var pattern = $"(?i){attributePattern}"; // Add case-insensitive flag
 
-		if (!await result.AnyAsync(cancellationToken: ct))
+		if (!result.Any())
 		{
 			return null;
 		}
@@ -1454,12 +1458,12 @@ public partial class ArangoDatabase(
 		// OPTIONS { indexHint: "inverted_index_name", forceIndexHint: true }
 		// This doesn't seem like it can be done on a GRAPH query?
 		const string query =
-			$"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName =~ @pattern RETURN v";
+			$"FOR v IN 1..99999 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName =~ @pattern RETURN v";
 
 		var result2 = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle, query,
 			new Dictionary<string, object>
 			{
-				{ StartVertex, startVertex },
+				{ StartVertex, result.First().Id },
 				{ "pattern", pattern }
 			}, cancellationToken: ct);
 
