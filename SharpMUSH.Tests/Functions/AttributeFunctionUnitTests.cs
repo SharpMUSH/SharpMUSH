@@ -233,8 +233,9 @@ public class AttributeFunctionUnitTests
 	// Attribute Tree Tests
 	[Test]
 	[NotInParallel]
-	[Arguments("[attrib_set(%!/TREE,root)][attrib_set(%!/TREE`BRANCH1,leaf1)][attrib_set(%!/TREE`BRANCH2,leaf2)][attrib_set(%!/TREE`BRANCH1`SUBLEAF,deep)][lattr(%!/TREE*)]", "TREE TREE`BRANCH1 TREE`BRANCH1`SUBLEAF TREE`BRANCH2")]
-	[Arguments("[attrib_set(%!/PARENT,value)][attrib_set(%!/PARENT`CHILD,childval)][lattr(%!/PARENT*)]", "PARENT PARENT`CHILD")]
+	[Arguments("[attrib_set(%!/TREE,root)][attrib_set(%!/TREE`BRANCH1,leaf1)][attrib_set(%!/TREE`BRANCH2,leaf2)][attrib_set(%!/TREE`BRANCH1`SUBLEAF,deep)][lattr(%!/TREE**)]", "TREE TREE`BRANCH1 TREE`BRANCH1`SUBLEAF TREE`BRANCH2")]
+	[Arguments("[attrib_set(%!/PARENT,value)][attrib_set(%!/PARENT`CHILD,childval)][lattr(%!/PARENT**)]", "PARENT PARENT`CHILD")]
+	[Arguments("[attrib_set(%!/PARENT,value)][attrib_set(%!/PARENT`CHILD,childval)][lattr(%!/PARENT*)]", "PARENT")]
 	public async Task Test_Lattr_AttributeTrees(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;

@@ -1391,9 +1391,14 @@ public partial class ArangoDatabase(
 	{
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 		var result =
-			await arangoDb.Query.ExecuteAsync<SharpObjectQueryResult>(handle, $"RETURN DOCUMENT({startVertex})", cache: true,
+			await arangoDb.Query.ExecuteAsync<SharpObjectQueryResult>(handle, 
+				$"FOR v IN 1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphObjects} RETURN v",
+				new Dictionary<string, object>
+				{
+					{ StartVertex, startVertex }
+				}, cache: true,
 				cancellationToken: ct);
-
+		
 		var pattern = WildcardToRegex().Replace(attributePattern, m => m.Value switch
 		{
 			"*" => "[^`]*",
@@ -1410,15 +1415,19 @@ public partial class ArangoDatabase(
 		// OPTIONS { indexHint: "inverted_index_name", forceIndexHint: true }
 		// This doesn't seem like it can be done on a GRAPH query?
 		const string query =
-			$"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName =~ @pattern RETURN v";
+			$"FOR v IN 1..99999 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName =~ @pattern  RETURN v";
 
+		// FILTER v.LongName =~ @pattern 
+		
 		var result2 = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle, query,
 			new Dictionary<string, object>
 			{
-				{ StartVertex, startVertex },
-				{ "pattern", pattern }
+				{ StartVertex, result.First().Id },
+				{ "pattern", $"^{pattern}$" }
 			}, cancellationToken: ct);
 
+		var matches = await result2.ToListAsync(cancellationToken: ct);
+		
 		return result2
 			.Select(SharpAttributeQueryToSharpAttribute);
 	}
