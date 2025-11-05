@@ -223,7 +223,13 @@ public class AttributeFunctionUnitTests
 
 	[Test]
 	[NotInParallel]
-	[Arguments("[attrib_set(%!/ATTR_001,value1)][attrib_set(%!/ATTR_002,value2)][attrib_set(%!/ATTR_100,value3)][regxattrp(%!/ATTR_[0-9]+,1,2)]", "ATTR_001 ATTR_002")]
+	[Arguments("[attrib_set(%!/Test_Regxattrp_RangeWithParents_001,value1)]" +
+	           "[attrib_set(%!/Test_Regxattrp_RangeWithParents_002,value2)]" +
+	           "[attrib_set(%!/Test_Regxattrp_RangeWithParents_100,value3)]" +
+	           "[regxattrp(%!/Test_Regxattrp_RangeWithParents_[0-9]+,1,2)]", "TEST_REGXATTRP_RANGEWITHPARENTS_001 TEST_REGXATTRP_RANGEWITHPARENTS_002")]
+	[Arguments("[attrib_set(%!/Test_Regxattrp_RangeWithParents2_001,value1)]" +
+	           "[attrib_set([parent(me,create(Test_Regxattrp_RangeWithParents2))]/Test_Regxattrp_RangeWithParents2_002,value2)]" +
+	           "[attrib_set(%!/Test_Regxattrp_RangeWithParents2_100,value3)][regxattrp(%!/Test_Regxattrp_RangeWithParents2_[0-9]+,1,2)]", "TEST_REGXATTRP_RANGEWITHPARENTS2_001 TEST_REGXATTRP_RANGEWITHPARENTS2_002")]
 	public async Task Test_Regxattrp_RangeWithParents(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -233,9 +239,9 @@ public class AttributeFunctionUnitTests
 	// Attribute Tree Tests
 	[Test]
 	[NotInParallel]
-	[Arguments("[attrib_set(%!/TREE,root)][attrib_set(%!/TREE`BRANCH1,leaf1)][attrib_set(%!/TREE`BRANCH2,leaf2)][attrib_set(%!/TREE`BRANCH1`SUBLEAF,deep)][lattr(%!/TREE**)]", "TREE TREE`BRANCH1 TREE`BRANCH1`SUBLEAF TREE`BRANCH2")]
-	[Arguments("[attrib_set(%!/PARENT,value)][attrib_set(%!/PARENT`CHILD,childval)][lattr(%!/PARENT**)]", "PARENT PARENT`CHILD")]
-	[Arguments("[attrib_set(%!/PARENT,value)][attrib_set(%!/PARENT`CHILD,childval)][lattr(%!/PARENT*)]", "PARENT")]
+	[Arguments("[attrib_set(%!/Test_Lattr_AttributeTrees,root)][attrib_set(%!/Test_Lattr_AttributeTrees`BRANCH1,leaf1)][attrib_set(%!/Test_Lattr_AttributeTrees`BRANCH2,leaf2)][attrib_set(%!/Test_Lattr_AttributeTrees`BRANCH1`SUBLEAF,deep)][lattr(%!/Test_Lattr_AttributeTrees**)]", "TEST_LATTR_ATTRIBUTETREES TEST_LATTR_ATTRIBUTETREES`BRANCH1 TREE`BRANCH1`SUBLEAF TEST_LATTR_ATTRIBUTETREES`BRANCH2")]
+	[Arguments("[attrib_set(%!/Test_Lattr_AttributeTrees2,value)][attrib_set(%!/Test_Lattr_AttributeTrees2`CHILD,childval)][lattr(%!/Test_Lattr_AttributeTrees2**)]", "Test_Lattr_AttributeTrees2 Test_Lattr_AttributeTrees2`CHILD")]
+	[Arguments("[attrib_set(%!/Test_Lattr_AttributeTrees3,value)][attrib_set(%!/Test_Lattr_AttributeTrees3`CHILD,childval)][lattr(%!/Test_Lattr_AttributeTrees3*)]", "Test_Lattr_AttributeTrees3")]
 	public async Task Test_Lattr_AttributeTrees(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -244,8 +250,14 @@ public class AttributeFunctionUnitTests
 
 	[Test]
 	[NotInParallel]
-	[Arguments("[attrib_set(%!/TREE,root)][attrib_set(%!/TREE`BRANCH1,has_search_term)][attrib_set(%!/TREE`BRANCH2,different)][grep(%!/TREE*,search)]", "TREE`BRANCH1")]
-	[Arguments("[attrib_set(%!/DATA,test)][attrib_set(%!/DATA`SUB1,contains_test)][attrib_set(%!/DATA`SUB2,no_match)][grep(%!/DATA*,test)]", "DATA DATA`SUB1")]
+	[Arguments("[attrib_set(%!/Test_Grep_AttributeTrees,root)]" +
+	           "[attrib_set(%!/Test_Grep_AttributeTrees`BRANCH1,has_search_term)]" +
+	           "[attrib_set(%!/Test_Grep_AttributeTrees`BRANCH2,different)]" +
+	           "[grep(%!,Test_Grep_AttributeTrees**,search)]", "TEST_GREP_ATTRIBUTETREES`BRANCH1")]
+	[Arguments("[attrib_set(%!/Test_Grep_AttributeTrees_2,test)]" +
+	           "[attrib_set(%!/Test_Grep_AttributeTrees_2`SUB1,contains_test)]" +
+	           "[attrib_set(%!/Test_Grep_AttributeTrees_2`SUB2,no_match)]" +
+	           "[grep(%!,Test_Grep_AttributeTrees_2**,test)]", "TEST_GREP_ATTRIBUTETREES_2 TEST_GREP_ATTRIBUTETREES_2`SUB1")]
 	public async Task Test_Grep_AttributeTrees(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -274,7 +286,7 @@ public class AttributeFunctionUnitTests
 
 	[Test]
 	[NotInParallel]
-	[Arguments("[attrib_set(%!/WILD,val)][attrib_set(%!/WILD`CHILD,has_pattern)][attrib_set(%!/WILD`OTHER,no_match)][wildgrep(%!/WILD*,*pattern*)]", "WILD`CHILD")]
+	[Arguments("[attrib_set(%!/WILD,val)][attrib_set(%!/WILD`CHILD,has_pattern)][attrib_set(%!/WILD`OTHER,no_match)][wildgrep(%!,WILD*,*pattern*)]", "WILD`CHILD")]
 	public async Task Test_Wildgrep_AttributeTrees(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;

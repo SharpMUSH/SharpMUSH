@@ -335,7 +335,7 @@ public class AttributeService(
 		// TODO: GetAttributesAsync should return the full Path, not the final attribute.
 		// TODO: CanViewAttribute needs to be able to Memoize during a list check, as it's likely to be called multiple times.
 		var attributes = mediator.CreateStream(
-			new GetAttributesQuery(obj.Object().DBRef, attributePattern, checkParents, mode));
+			new GetAttributesQuery(obj.Object().DBRef, attributePattern.ToUpper(), checkParents, mode));
 
 		return await attributes
 			.Where(async (x, _) => await ps.CanViewAttribute(executor, obj, x))
@@ -350,7 +350,7 @@ public class AttributeService(
 		// TODO: GetAttributesAsync should return the full Path, not the final attribute.
 		// TODO: CanViewAttribute needs to be able to Memoize during a list check, as it's likely to be called multiple times.
 		var attributes = mediator.CreateStream(
-			new GetLazyAttributesQuery(obj.Object().DBRef, attributePattern, checkParents, mode));
+			new GetLazyAttributesQuery(obj.Object().DBRef, attributePattern.ToUpper(), checkParents, mode));
 
 		return LazySharpAttributesOrError
 			.FromAsync(attributes
