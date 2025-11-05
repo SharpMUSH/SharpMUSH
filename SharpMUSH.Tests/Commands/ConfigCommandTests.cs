@@ -83,14 +83,14 @@ public class ConfigCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask ListmotdCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@listmotd"));
 
+		// Should notify with MOTD settings
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Message of the Day settings")), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]

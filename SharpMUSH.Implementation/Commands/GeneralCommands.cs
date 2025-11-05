@@ -1791,8 +1791,29 @@ public partial class Commands
 	[SharpCommand(Name = "@LISTMOTD", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> ListMessageOfTheDay(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		
+		// Check if executor is wizard/royalty to see wizard MOTD
+		var isWizard = await executor.IsWizard();
+		
+		// Get MOTD file paths from configuration
+		var motdFile = Configuration!.CurrentValue.Message.MessageOfTheDayFile;
+		var motdHtmlFile = Configuration.CurrentValue.Message.MessageOfTheDayHtmlFile;
+		
+		await NotifyService!.Notify(executor, "Current Message of the Day settings:");
+		await NotifyService.Notify(executor, $"  Connect MOTD File: {motdFile ?? "(not set)"}");
+		await NotifyService.Notify(executor, $"  Connect MOTD HTML: {motdHtmlFile ?? "(not set)"}");
+		
+		if (isWizard)
+		{
+			var wizmotdFile = Configuration.CurrentValue.Message.WizMessageOfTheDayFile;
+			var wizmotdHtmlFile = Configuration.CurrentValue.Message.WizMessageOfTheDayHtmlFile;
+			
+			await NotifyService.Notify(executor, $"  Wizard MOTD File: {wizmotdFile ?? "(not set)"}");
+			await NotifyService.Notify(executor, $"  Wizard MOTD HTML: {wizmotdHtmlFile ?? "(not set)"}");
+		}
+		
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@NSOEMIT", Switches = ["NOEVAL"],
