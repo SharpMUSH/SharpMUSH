@@ -346,4 +346,16 @@ public class GeneralCommandTests
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Searching")), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
+
+	[Test]
+	public async ValueTask Stats_ShowsDatabaseStatistics()
+	{
+		// Test @stats command
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@stats"));
+
+		// Should notify about database statistics
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Database Statistics")), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+	}
 }

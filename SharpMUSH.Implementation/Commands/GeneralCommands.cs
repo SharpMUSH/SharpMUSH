@@ -2011,11 +2011,56 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@STATS", Switches = ["CHUNKS", "FREESPACE", "PAGING", "REGIONS", "TABLES", "FLAGS"],
-		Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
+		Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> Stats(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches.ToArray();
+		
+		// Check for specialized switches
+		if (switches.Contains("TABLES"))
+		{
+			await NotifyService!.Notify(executor, "@stats/tables: Internal table statistics not yet implemented.");
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+		
+		if (switches.Contains("FLAGS"))
+		{
+			await NotifyService!.Notify(executor, "@stats/flags: Flag system statistics not yet implemented.");
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+		
+		if (switches.Contains("CHUNKS") || switches.Contains("FREESPACE") || 
+		    switches.Contains("PAGING") || switches.Contains("REGIONS"))
+		{
+			await NotifyService!.Notify(executor, "@stats memory switches not yet implemented.");
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+		
+		// Basic @stats - show object counts
+		string? playerName = null;
+		if (args.Count > 0 && args.ContainsKey("0"))
+		{
+			playerName = args["0"].Message?.ToPlainText();
+		}
+		
+		await NotifyService!.Notify(executor, "Database Statistics:");
+		
+		if (playerName != null)
+		{
+			await NotifyService.Notify(executor, $"  For player: {playerName}");
+		}
+		
+		// TODO: Query actual database statistics
+		await NotifyService.Notify(executor, "  Rooms: (query pending)");
+		await NotifyService.Notify(executor, "  Exits: (query pending)");
+		await NotifyService.Notify(executor, "  Things: (query pending)");
+		await NotifyService.Notify(executor, "  Players: (query pending)");
+		await NotifyService.Notify(executor, "  Total: (query pending)");
+		await NotifyService.Notify(executor, "Note: Full database statistics not yet implemented.");
+		
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@VERB", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs, MinArgs = 0,
