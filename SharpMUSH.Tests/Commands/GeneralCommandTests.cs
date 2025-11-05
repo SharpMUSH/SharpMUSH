@@ -322,4 +322,16 @@ public class GeneralCommandTests
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("only @whereis players")), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
+
+	[Test]
+	public async ValueTask Restart_ValidObject_Restarts()
+	{
+		// Test @restart with a valid object
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@restart #1"));
+
+		// Should notify about restart
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Restarted")), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+	}
 }

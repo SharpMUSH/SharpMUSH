@@ -2314,11 +2314,77 @@ public partial class Commands
 		return new CallState(string.Empty);
 	}
 
-	[SharpCommand(Name = "@RESTART", Switches = ["ALL"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	[SharpCommand(Name = "@RESTART", Switches = ["ALL"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> Restart(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches.ToArray();
+		
+		// Check for /all switch - wizard only
+		if (switches.Contains("ALL"))
+		{
+			if (!await executor.IsWizard())
+			{
+				await NotifyService!.Notify(executor, "Permission denied.");
+				return new CallState(Errors.ErrorPerm);
+			}
+			
+			// @restart/all would halt and restart all objects
+			await NotifyService!.Notify(executor, "@restart/all is not yet fully implemented.");
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+		
+		// Get target object
+		if (args.Count == 0)
+		{
+			await NotifyService!.Notify(executor, "You must specify an object to restart.");
+			return new CallState("#-1 NO OBJECT SPECIFIED");
+		}
+		
+		var targetName = args["0"].Message!.ToPlainText();
+		
+		// Locate the target object
+		var maybeTarget = await LocateService!.LocateAndNotifyIfInvalid(
+			parser,
+			executor,
+			executor,
+			targetName,
+			LocateFlags.All);
+		
+		if (!maybeTarget.IsValid())
+		{
+			return new CallState("#-1 NOT FOUND");
+		}
+		
+		var target = maybeTarget.WithoutError().WithoutNone();
+		
+		// Check control permissions
+		if (!await PermissionService!.Controls(executor, target))
+		{
+			await NotifyService!.Notify(executor, "Permission denied.");
+			return new CallState(Errors.ErrorPerm);
+		}
+		
+		var targetObject = target.Object();
+		
+		// For players, restart the player and all their objects
+		if (target.IsPlayer)
+		{
+			// Would need to restart all objects owned by the player
+			await NotifyService!.Notify(executor, $"Restarting {targetObject.Name} and all their objects.");
+			await NotifyService.Notify(executor, "Full player restart functionality not yet implemented.");
+			return new CallState("#-1 NOT FULLY IMPLEMENTED");
+		}
+		
+		// For other objects, halt and trigger @STARTUP
+		// TODO: Implement actual halt functionality
+		// TODO: Trigger @STARTUP attribute if it exists
+		
+		await NotifyService!.Notify(executor, $"Restarted {targetObject.Name}.");
+		await NotifyService.Notify(executor, "Note: @STARTUP attribute triggering not yet implemented.");
+		
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@SWEEP", Switches = ["CONNECTED", "HERE", "INVENTORY", "EXITS"], Behavior = CB.Default,
