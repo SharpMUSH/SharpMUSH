@@ -26,5 +26,5 @@ public class GetObjectFlagsQueryHandler(ISharpDatabase database)
 {
 	public IAsyncEnumerable<SharpObjectFlag> Handle(GetObjectFlagsQuery request,
 		CancellationToken cancellationToken) =>
-		database.GetObjectFlagsAsync(request.Id, cancellationToken);
+		database.GetObjectFlagsAsync(request.Id, request.Type.ToUpper(), cancellationToken);
 }

@@ -155,7 +155,7 @@ public static partial class HelperFunctions
 		=> await obj.IsPriv() || await obj.HasPower("Long_Fingers");
 
 	public static async ValueTask<bool> HasFlag(this AnySharpObject obj, string flag)
-		=> await (obj.Object().Flags.Value)
+		=> await obj.Object().Flags.Value
 			.AnyAsync(x => x.Name.Equals(flag, StringComparison.InvariantCultureIgnoreCase));
 
 	// This may belong in the Permission Service.

@@ -379,7 +379,8 @@ public interface ISharpDatabase
 	/// <returns>The deepest findable object based on depth</returns>
 	ValueTask<AnySharpContainer> GetLocationAsync(string id, int depth = 1, CancellationToken cancellationToken = default);
 
-	IAsyncEnumerable<SharpObjectFlag> GetObjectFlagsAsync(string id, CancellationToken cancellationToken = default);
+	IAsyncEnumerable<SharpObjectFlag> GetObjectFlagsAsync(string id, string type,
+		CancellationToken cancellationToken = default);
 
 	IAsyncEnumerable<SharpMail> GetIncomingMailsAsync(SharpPlayer id, string folder, CancellationToken cancellationToken = default);
 
