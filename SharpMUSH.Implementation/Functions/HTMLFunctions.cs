@@ -24,47 +24,12 @@ public partial class Functions
 	[SharpFunction(Name = "tag", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> tag(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.ArgumentsOrdered;
-		var tagName = args["0"].Message!.ToPlainText();
-		
-		// Start building the tag
-		var result = new System.Text.StringBuilder();
-		result.Append('<');
-		result.Append(tagName);
-		
-		// Process attributes as key-value pairs
-		// Arguments after the tag name come in pairs: attr1, val1, attr2, val2, ...
-		for (int i = 1; i < args.Count; i += 2)
-		{
-			var attrName = args[i.ToString()].Message!.ToPlainText();
-			
-			// If we have a value for this attribute
-			if (i + 1 < args.Count)
-			{
-				var attrValue = args[(i + 1).ToString()].Message!.ToPlainText();
-				result.Append(' ');
-				result.Append(attrName);
-				result.Append("=\"");
-				result.Append(attrValue);
-				result.Append('"');
-			}
-			else
-			{
-				// Odd number of arguments after tag name - just add the attribute without a value
-				result.Append(' ');
-				result.Append(attrName);
-			}
-		}
-		
-		result.Append('>');
-		
-		return ValueTask.FromResult(new CallState(result.ToString()));
+		throw new NotImplementedException();
 	}
 	[SharpFunction(Name = "endtag", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> endtag(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var tagName = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		return ValueTask.FromResult(new CallState($"</{tagName}>"));
+		throw new NotImplementedException();
 	}
 	[SharpFunction(Name = "tagwrap", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> tagwrap(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -124,14 +89,14 @@ public partial class Functions
 				executor, 
 				executor, 
 				targetRef, 
-				LocateFlags.Players | LocateFlags.PreferConnected);
+				PlayersPreference | AbsoluteMatch);
 			
 			if (locateResult.IsError)
 			{
 				return new CallState(locateResult.AsError);
 			}
 			
-			target = locateResult.AsOk;
+			target = locateResult.AsAnyObject;
 		}
 		else
 		{
@@ -173,14 +138,14 @@ public partial class Functions
 				executor, 
 				executor, 
 				targetRef, 
-				LocateFlags.Players | LocateFlags.PreferConnected);
+				PlayersPreference | AbsoluteMatch);
 			
 			if (locateResult.IsError)
 			{
 				return new CallState(locateResult.AsError);
 			}
 			
-			target = locateResult.AsOk;
+			target = locateResult.AsAnyObject;
 		}
 		else
 		{
