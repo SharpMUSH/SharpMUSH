@@ -26,8 +26,16 @@ module MarkupImplementation =
       StrikeThrough: bool;
     }
     
+  [<Struct>]
+  type HtmlStructure =
+    {
+      TagName: string;
+      Attributes: string option;
+    }
+
   [<JsonDerivedType(typeof<NeutralMarkup>, "Neutral")>]
   [<JsonDerivedType(typeof<AnsiMarkup>, "Ansi")>]
+  [<JsonDerivedType(typeof<HtmlMarkup>, "Html")>]
   type Markup =
       abstract member Wrap: string -> string
       abstract member WrapAndRestore: string * Markup -> string
@@ -155,3 +163,32 @@ module MarkupImplementation =
 
       override this.Wrap (text: string) : string =
         StringExtensions.endWithTrueClear((AnsiMarkup.applyDetails details text).ToString()).ToString()
+
+  and HtmlMarkup(details: HtmlStructure) =
+    member val Details = details with get
+    
+    static member Create(tagName: string, [<Optional;DefaultParameterValue(null)>]?attributes) =
+      {
+        TagName = tagName
+        Attributes = defaultArg attributes None
+      }
+      |> HtmlMarkup
+
+    interface Markup with
+      override this.Postfix: string = sprintf "</%s>" details.TagName
+
+      override this.Prefix: string = 
+        match details.Attributes with
+        | None -> sprintf "<%s>" details.TagName
+        | Some attrs -> sprintf "<%s %s>" details.TagName attrs
+
+      override this.Wrap (text: string) : string =
+        match details.Attributes with
+        | None -> sprintf "<%s>%s</%s>" details.TagName text details.TagName
+        | Some attrs -> sprintf "<%s %s>%s</%s>" details.TagName attrs text details.TagName
+
+      override this.WrapAndRestore (text: string, outerDetails: Markup) : string =
+        // For HTML, we don't need to restore outer markup since HTML tags are independent
+        (this :> Markup).Wrap(text)
+
+      override this.Optimize (text: string) : string = text
