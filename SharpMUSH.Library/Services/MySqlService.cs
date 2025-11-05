@@ -1,3 +1,4 @@
+using System.Text.Json;
 using MySqlConnector;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -6,21 +7,20 @@ namespace SharpMUSH.Library.Services;
 /// <summary>
 /// MySQL implementation of the SQL service
 /// </summary>
-public class MySqlService(string connectionString) : ISqlService
+public class MySqlService(MySqlDataSource source) : ISqlService
 {
-	public bool IsAvailable => !string.IsNullOrEmpty(connectionString);
+	public bool IsAvailable => !string.IsNullOrEmpty(source.ConnectionString);
 
 	public async ValueTask<IEnumerable<Dictionary<string, object?>>> ExecuteQueryAsync(string query)
 	{
+		var guid = Guid.NewGuid();
 		var results = new List<Dictionary<string, object?>>();
 
-		await using var connection = new MySqlConnection(connectionString);
-		await connection.OpenAsync();
-
+		await using var connection = await source.OpenConnectionAsync();
 		await using var command = new MySqlCommand(query, connection);
 		await using var reader = await command.ExecuteReaderAsync();
 
-		while (await reader.ReadAsync())
+		while (await reader.ReadAsync().ConfigureAwait(false))
 		{
 			var row = new Dictionary<string, object?>();
 			for (var i = 0; i < reader.FieldCount; i++)
@@ -28,6 +28,7 @@ public class MySqlService(string connectionString) : ISqlService
 				row[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader.GetValue(i);
 			}
 			results.Add(row);
+			Console.WriteLine($"{guid}: {JsonSerializer.Serialize(row)}");
 		}
 
 		return results;
@@ -35,12 +36,10 @@ public class MySqlService(string connectionString) : ISqlService
 
 	public async IAsyncEnumerable<Dictionary<string, object?>> ExecuteQueryStreamAsync(string query)
 	{
-		await using var connection = new MySqlConnection(connectionString);
-		await connection.OpenAsync();
-
+		await using var connection = await source.OpenConnectionAsync();
 		await using var command = new MySqlCommand(query, connection);
 		await using var reader = await command.ExecuteReaderAsync();
-		while (await reader.ReadAsync(CancellationToken.None))
+		while (await reader.ReadAsync(CancellationToken.None).ConfigureAwait(false))
 		{
 			var row = new Dictionary<string, object?>();
 			for (var i = 0; i < reader.FieldCount; i++)
