@@ -6,7 +6,7 @@ namespace SharpMUSH.Library.Queries.Database;
 
 public record GetObjectFlagQuery(string FlagName) : IQuery<SharpObjectFlag?>/*, ICacheable*/;
 
-public record GetObjectFlagsQuery(string Id) : IStreamQuery<SharpObjectFlag>/*, ICacheable*/;
+public record GetObjectFlagsQuery(string Id, string Type) : IStreamQuery<SharpObjectFlag>/*, ICacheable*/;
 
 public record GetAllObjectFlagsQuery() : IStreamQuery<SharpObjectFlag>, ICacheable
 {

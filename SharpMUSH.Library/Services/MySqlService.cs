@@ -1,0 +1,67 @@
+using System.Text.Json;
+using MySqlConnector;
+using SharpMUSH.Library.Services.Interfaces;
+
+namespace SharpMUSH.Library.Services;
+
+/// <summary>
+/// MySQL implementation of the SQL service
+/// </summary>
+public class MySqlService(MySqlDataSource source) : ISqlService
+{
+	public bool IsAvailable => !string.IsNullOrEmpty(source.ConnectionString);
+
+	public async ValueTask<IEnumerable<Dictionary<string, object?>>> ExecuteQueryAsync(string query)
+	{
+		var guid = Guid.NewGuid();
+		var results = new List<Dictionary<string, object?>>();
+
+		await using var connection = await source.OpenConnectionAsync();
+		await using var command = new MySqlCommand(query, connection);
+		await using var reader = await command.ExecuteReaderAsync();
+
+		while (await reader.ReadAsync().ConfigureAwait(false))
+		{
+			var row = new Dictionary<string, object?>();
+			for (var i = 0; i < reader.FieldCount; i++)
+			{
+				row[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader.GetValue(i);
+			}
+			results.Add(row);
+			Console.WriteLine($"{guid}: {JsonSerializer.Serialize(row)}");
+		}
+
+		return results;
+	}
+
+	public async IAsyncEnumerable<Dictionary<string, object?>> ExecuteQueryStreamAsync(string query)
+	{
+		await using var connection = await source.OpenConnectionAsync();
+		await using var command = new MySqlCommand(query, connection);
+		await using var reader = await command.ExecuteReaderAsync();
+		while (await reader.ReadAsync(CancellationToken.None).ConfigureAwait(false))
+		{
+			var row = new Dictionary<string, object?>();
+			for (var i = 0; i < reader.FieldCount; i++)
+			{
+				row[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader.GetValue(i);
+			}
+			yield return row;
+		}
+	}
+
+	public async ValueTask<string> ExecuteQueryAsStringAsync(string query, string delimiter = " ")
+	{
+		var results = await ExecuteQueryAsync(query);
+
+		var output = results
+			.Select(row => row.Values.Select(v => v?.ToString() ?? string.Empty))
+			.Select(values => string.Join(delimiter, values))
+			.ToArray();
+
+		return string.Join("\n", output);
+	}
+
+	public string Escape(string value) 
+		=> MySqlHelper.EscapeString(value);
+}

@@ -144,7 +144,7 @@ public class DbrefFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("lockowner(%#)", "#1")]
+	[Arguments("first(lockowner(%#),:)", "#1")]
 	public async Task Lockowner(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -161,7 +161,9 @@ public class DbrefFunctionUnitTests
 
 	[Test]
 	[Arguments("andflags(%#,PLAYER)", "1")]
-	[Arguments("andflags(%#,PLAYER WIZARD)", "0")]
+	[Arguments("andflags(%#,PLAYER WIZARD)", "1")]
+	[Arguments("andflags(%#,THING WIZARD)", "0")]
+	[Arguments("andflags(%#,PLAYER ROYALTY)", "0")]
 	public async Task Andflags(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
