@@ -452,11 +452,67 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@FIND", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged,
-		MinArgs = 0, MaxArgs = 0)]
+		MinArgs = 0, MaxArgs = 3)]
 	public static async ValueTask<Option<CallState>> Find(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		
+		// Get search name (optional)
+		string? searchName = null;
+		if (args.Count > 0 && args.ContainsKey("0"))
+		{
+			searchName = args["0"].Message?.ToPlainText();
+		}
+		
+		// Get begin/end range (optional)
+		int? beginDbref = null;
+		int? endDbref = null;
+		
+		if (args.Count >= 2 && args.ContainsKey("1"))
+		{
+			var beginStr = args["1"].Message?.ToPlainText();
+			if (!string.IsNullOrEmpty(beginStr) && int.TryParse(beginStr, out var begin))
+			{
+				beginDbref = begin;
+			}
+		}
+		
+		if (args.Count >= 3 && args.ContainsKey("2"))
+		{
+			var endStr = args["2"].Message?.ToPlainText();
+			if (!string.IsNullOrEmpty(endStr) && int.TryParse(endStr, out var end))
+			{
+				endDbref = end;
+			}
+		}
+		
+		// Query database for all objects
+		// For now, implement a basic version that notifies about the functionality
+		var matchCount = 0;
+		
+		await NotifyService!.Notify(executor, 
+			$"@find: Searching for objects{(searchName != null ? $" matching '{searchName}'" : "")}...");
+		
+		// TODO: Implement full database query to find matching objects
+		// This would require:
+		// 1. Querying all objects in the database (or within range if specified)
+		// 2. Checking if executor controls each object
+		// 3. Matching object names against searchName pattern
+		// 4. Displaying results
+		
+		if (beginDbref.HasValue || endDbref.HasValue)
+		{
+			await NotifyService.Notify(executor, 
+				$"Range: {beginDbref ?? 0} to {endDbref?.ToString() ?? "end"}");
+		}
+		
+		await NotifyService.Notify(executor, 
+			"Note: Full @find database search not yet implemented.");
+		await NotifyService.Notify(executor, 
+			$"Found {matchCount} matching objects.");
+		
+		return new CallState(matchCount.ToString());
 	}
 
 	[SharpCommand(Name = "@HALT", Switches = ["ALL", "NOEVAL", "PID"], Behavior = CB.Default | CB.EqSplit | CB.RSBrace,

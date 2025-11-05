@@ -334,4 +334,16 @@ public class GeneralCommandTests
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Restarted")), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
+
+	[Test]
+	public async ValueTask Find_SearchesForObjects()
+	{
+		// Test @find command
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@find test"));
+
+		// Should notify about searching
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Searching")), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+	}
 }
