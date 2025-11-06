@@ -130,7 +130,7 @@ public class AttributeFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Failing")]
+	[Skip("Regex pattern matches too many attributes from test database - needs more unique test attribute names")]
 	[NotInParallel]
 	[Arguments("[attrib_set(%!/Test_Reglattr_RegexPattern1_001,value1)]" +
 	           "[attrib_set(%!/Test_Reglattr_RegexPattern1_002,value2)]" +
@@ -140,7 +140,7 @@ public class AttributeFunctionUnitTests
 	[Arguments("[attrib_set(%!/Test_Reglattr_RegexPattern2_001,value1)]" +
 	           "[attrib_set(%!/Test_Reglattr_RegexPattern2_002,value2)]" +
 	           "[attrib_set(%!/Test_Reglattr_RegexPattern2_100,value3)]" +
-	           @"[reglattr(%!,Test_Reglattr_RegexPattern_\[0-9\]+)]", 
+	           @"[reglattr(%!,Test_Reglattr_RegexPattern2_\[0-9\]+)]", 
 		"TEST_REGLATTR_REGEXPATTERN2_001 TEST_REGLATTR_REGEXPATTERN2_002 TEST_REGLATTR_REGEXPATTERN2_100")]
 	[Arguments("[attrib_set(%!/Test_Reglattr_RegexPattern3_1,val1)]" +
 	           "[attrib_set(%!/Test_Reglattr_RegexPattern3_2,val2)]" +
@@ -155,7 +155,7 @@ public class AttributeFunctionUnitTests
 
 	[Test]
 	[NotInParallel]
-	[Skip("Failing")]
+	[Skip("Regex pattern matches too many attributes from test database - needs more unique test attribute names")]
 	[Arguments("[attrib_set(%!/Test_Regnattr_Count1_001,value1)]" +
 	           "[attrib_set(%!/Test_Regnattr_Count1_002,value2)]" +
 	           "[attrib_set(%!/Test_Regnattr_Count1_100,value3)]" +
