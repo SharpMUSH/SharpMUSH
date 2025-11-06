@@ -34,6 +34,9 @@ public class SqlService : ISqlService
 	public ValueTask<IEnumerable<Dictionary<string, object?>>> ExecuteQueryAsync(string query)
 		=> _mySql!.ExecuteQueryAsync(query);
 
+	public IAsyncEnumerable<Dictionary<string, object?>> ExecuteStreamQueryAsync(string query) 
+		=> _mySql!.ExecuteStreamQueryAsync(query);
+
 	public ValueTask<string> ExecuteQueryAsStringAsync(string query, string delimiter = " ")
 		=> _mySql!.ExecuteQueryAsStringAsync(query, delimiter);
 

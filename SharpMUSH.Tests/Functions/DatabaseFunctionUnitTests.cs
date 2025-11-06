@@ -16,6 +16,7 @@ public class DatabaseFunctionUnitTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 
+	[NotInParallel]
 	[Before(Test)]
 	public async Task InitializeAsync()
 	{
@@ -254,7 +255,7 @@ public class DatabaseFunctionUnitTests
 
 		var result =
 			(await Parser.FunctionParse(MModule.single(
-				"mapsql(#1/test_mapsql_func_attr,lit(SELECT `name`,`value` FROM `test_sql_data` WHERE id = 1))")))?.Message!;
+				"mapsql(#1/Test_Mapsql_BasicExecution,lit(SELECT `name`,`value` FROM `test_sql_data` WHERE id = 1))")))?.Message!;
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("Test_Mapsql_BasicExecution: Row 1 has value 100");
 	}
