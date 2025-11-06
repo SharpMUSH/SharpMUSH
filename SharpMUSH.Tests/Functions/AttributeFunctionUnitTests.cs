@@ -130,23 +130,22 @@ public class AttributeFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Regex pattern matches too many attributes from test database - needs more unique test attribute names")]
 	[NotInParallel]
-	[Arguments("[attrib_set(%!/Test_Reglattr_RegexPattern1_001,value1)]" +
-	           "[attrib_set(%!/Test_Reglattr_RegexPattern1_002,value2)]" +
-	           "[attrib_set(%!/Test_Reglattr_RegexPattern1_100,value3)]" +
-	           "[reglattr(%!,Test_Reglattr_RegexPattern1_0+)]", 
-		"TEST_REGLATTR_REGEXPATTERN1_001 TEST_REGLATTR_REGEXPATTERN1_002")]
-	[Arguments("[attrib_set(%!/Test_Reglattr_RegexPattern2_001,value1)]" +
-	           "[attrib_set(%!/Test_Reglattr_RegexPattern2_002,value2)]" +
-	           "[attrib_set(%!/Test_Reglattr_RegexPattern2_100,value3)]" +
-	           @"[reglattr(%!,Test_Reglattr_RegexPattern2_\[0-9\]+)]", 
-		"TEST_REGLATTR_REGEXPATTERN2_001 TEST_REGLATTR_REGEXPATTERN2_002 TEST_REGLATTR_REGEXPATTERN2_100")]
-	[Arguments("[attrib_set(%!/Test_Reglattr_RegexPattern3_1,val1)]" +
-	           "[attrib_set(%!/Test_Reglattr_RegexPattern3_2,val2)]" +
-	           "[attrib_set(%!/Test_Reglattr_RegexPattern3_UPPER,val3)]" +
-	           "[reglattr(%!,^Test_Reglattr_RegexPattern3_)]", 
-		"TEST_REGLATTR_REGEXPATTERN3_1 TEST_REGLATTR_REGEXPATTERN3_2 TEST_REGLATTR_REGEXPATTERN3_UPPER")]
+	[Arguments("[attrib_set(%!/TESTREGLATTR_UNIQUE_RGX1_001,value1)]" +
+	           "[attrib_set(%!/TESTREGLATTR_UNIQUE_RGX1_002,value2)]" +
+	           "[attrib_set(%!/TESTREGLATTR_UNIQUE_RGX1_100,value3)]" +
+	           "[reglattr(%!,^TESTREGLATTR_UNIQUE_RGX1_00%[0-9%]$)]", 
+		"TESTREGLATTR_UNIQUE_RGX1_001 TESTREGLATTR_UNIQUE_RGX1_002")]
+	[Arguments("[attrib_set(%!/TESTREGLATTR_UNIQUE_RGX2_001,value1)]" +
+	           "[attrib_set(%!/TESTREGLATTR_UNIQUE_RGX2_002,value2)]" +
+	           "[attrib_set(%!/TESTREGLATTR_UNIQUE_RGX2_100,value3)]" +
+	           @"[reglattr(%!,^TESTREGLATTR_UNIQUE_RGX2_%[0-9%]+$)]", 
+		"TESTREGLATTR_UNIQUE_RGX2_001 TESTREGLATTR_UNIQUE_RGX2_002 TESTREGLATTR_UNIQUE_RGX2_100")]
+	[Arguments("[attrib_set(%!/TESTREGLATTR_UNIQUE_RGX3_A,val1)]" +
+	           "[attrib_set(%!/TESTREGLATTR_UNIQUE_RGX3_B,val2)]" +
+	           "[attrib_set(%!/TESTREGLATTR_UNIQUE_RGX3_UPPER,val3)]" +
+	           "[reglattr(%!,^TESTREGLATTR_UNIQUE_RGX3_%[A-Z%]+$)]", 
+		"TESTREGLATTR_UNIQUE_RGX3_A TESTREGLATTR_UNIQUE_RGX3_B TESTREGLATTR_UNIQUE_RGX3_UPPER")]
 	public async Task Test_Reglattr_RegexPattern(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -155,19 +154,18 @@ public class AttributeFunctionUnitTests
 
 	[Test]
 	[NotInParallel]
-	[Skip("Regex pattern matches too many attributes from test database - needs more unique test attribute names")]
-	[Arguments("[attrib_set(%!/Test_Regnattr_Count1_001,value1)]" +
-	           "[attrib_set(%!/Test_Regnattr_Count1_002,value2)]" +
-	           "[attrib_set(%!/Test_Regnattr_Count1_100,value3)]" +
-	           "[regnattr(%!,Test_Regnattr_Count1_\\[0-9\\]+)]", "3")]
-	[Arguments("[attrib_set(%!/Test_Regnattr_Count2_1,val1)]" +
-	           "[attrib_set(%!/Test_Regnattr_Count2_2,val2)]" +
-	           "[attrib_set(%!/Test_Regnattr_Count2_UPPER,val3)]" +
-	           "[regnattr(%!,^Test_Regnattr_Count2_)]", "3")]
-	[Arguments("[attrib_set(%!/Test_Regnattr_Count3_1,val1)]" +
-	           "[attrib_set(%!/Test_Regnattr_Count3_2,val2)]" +
-	           "[attrib_set(%!/Test_Regnattr_Count3_UPPER,val3)]" +
-	           "[regnattr(%!,Test_Regnattr_Count3_)]", "3")]
+	[Arguments("[attrib_set(%!/TESTREGNATTR_UNIQUE_CNT1_001,value1)]" +
+	           "[attrib_set(%!/TESTREGNATTR_UNIQUE_CNT1_002,value2)]" +
+	           "[attrib_set(%!/TESTREGNATTR_UNIQUE_CNT1_100,value3)]" +
+	           "[regnattr(%!,^TESTREGNATTR_UNIQUE_CNT1_%[0-9%]+$)]", "3")]
+	[Arguments("[attrib_set(%!/TESTREGNATTR_UNIQUE_CNT2_A,val1)]" +
+	           "[attrib_set(%!/TESTREGNATTR_UNIQUE_CNT2_B,val2)]" +
+	           "[attrib_set(%!/TESTREGNATTR_UNIQUE_CNT2_UPPER,val3)]" +
+	           "[regnattr(%!,^TESTREGNATTR_UNIQUE_CNT2_%[A-Z%]+$)]", "3")]
+	[Arguments("[attrib_set(%!/TESTREGNATTR_UNIQUE_CNT3_X,val1)]" +
+	           "[attrib_set(%!/TESTREGNATTR_UNIQUE_CNT3_Y,val2)]" +
+	           "[attrib_set(%!/TESTREGNATTR_UNIQUE_CNT3_Z,val3)]" +
+	           "[regnattr(%!,^TESTREGNATTR_UNIQUE_CNT3_%[XYZ%]$)]", "3")]
 	public async Task Test_Regnattr_Count(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
