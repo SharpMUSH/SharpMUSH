@@ -2383,6 +2383,7 @@ public partial class Commands
 		// @trigger/match[/<switches>] <object>/<attribute>=<string>
 		
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).WithoutNone();
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches.ToArray();
 		
@@ -2404,60 +2405,67 @@ public partial class Commands
 		var objectName = parts[0];
 		var attributeName = parts[1];
 		
-		await NotifyService!.Notify(executor, $"@trigger: Would trigger {objectName}/{attributeName}");
-		
-		// Check if we have arguments to pass
-		if (args.Count > 1)
+		// Locate the target object
+		var maybeObject = await LocateService!.LocateAndNotifyIfInvalidWithCallState(
+			parser, executor, enactor, objectName, LocateFlags.All);
+			
+		if (maybeObject.IsError)
 		{
-			await NotifyService.Notify(executor, $"  Arguments: {args.Count - 1} provided");
+			return maybeObject.AsError;
 		}
 		
-		// Check switches
-		if (switches.Contains("SPOOF"))
+		var targetObject = maybeObject.AsSharpObject;
+		
+		// Check control permissions
+		if (!await PermissionService!.Controls(executor, targetObject))
 		{
-			await NotifyService.Notify(executor, "  Mode: Enactor preserved (spoof)");
-		}
-		else
-		{
-			await NotifyService.Notify(executor, "  Mode: New enactor (object executes)");
+			await NotifyService!.Notify(executor, "Permission denied. You do not control that object.");
+			return new CallState("#-1 PERMISSION DENIED");
 		}
 		
-		if (switches.Contains("INLINE"))
-		{
-			await NotifyService.Notify(executor, "  Execution: Inline (immediate)");
-		}
-		else
-		{
-			await NotifyService.Notify(executor, "  Execution: Queued");
-		}
+		// Get the attribute - must be visible to enactor
+		var attributeResult = await AttributeService!.GetAttributeAsync(
+			enactor, targetObject, attributeName, IAttributeService.AttributeMode.Read, false);
 		
-		if (switches.Contains("CLEARREGS"))
+		if (attributeResult.IsError)
 		{
-			await NotifyService.Notify(executor, "  Q-registers: Cleared");
+			await NotifyService!.Notify(executor, $"No such attribute: {attributeName}");
+			return new CallState("#-1 NO SUCH ATTRIBUTE");
 		}
 		
-		if (switches.Contains("LOCALIZE"))
+		if (attributeResult.IsNone)
 		{
-			await NotifyService.Notify(executor, "  Q-registers: Localized");
+			// Empty attribute - nothing to trigger
+			return CallState.Empty;
 		}
 		
-		if (switches.Contains("MATCH"))
+		var attributeContent = attributeResult.AsAttribute.Last().Value;
+		var attributeText = attributeContent.ToPlainText();
+		
+		if (string.IsNullOrWhiteSpace(attributeText))
 		{
-			await NotifyService.Notify(executor, "  Mode: Pattern matching enabled");
+			// Empty attribute - nothing to trigger
+			return CallState.Empty;
 		}
 		
-		// TODO: Full implementation requires:
-		// - Locating the target object
-		// - Checking control permissions
-		// - Retrieving the attribute
-		// - Setting up environment arguments (%0-%9, r(0,args)-r(29,args))
-		// - Managing enactor state based on /spoof switch
-		// - Queue or execute inline based on switches
-		// - Handle Q-register management (clearregs, localize, nobreak)
-		// - Handle /match for pattern matching
-		await NotifyService.Notify(executor, "Note: @trigger attribute execution and queueing not yet implemented.");
+		// Determine enactor/executor for execution based on /spoof switch
+		// /spoof: enactor stays the same (original caller)
+		// no /spoof: target object becomes both enactor and executor
+		var executionEnactor = switches.Contains("SPOOF") ? enactor.Object().DBRef : targetObject.Object().DBRef;
 		
-		return new CallState("#-1 NOT IMPLEMENTED");
+		// TODO: Set up environment arguments (%0-%9, r(0,args)-r(29,args)) from args[1] through args[30]
+		// TODO: Handle Q-register management (clearregs, localize) when Q-register system available
+		// TODO: Handle /match for pattern matching when pattern engine available
+		// TODO: Handle queueing vs inline execution when queue system available
+		
+		// For now, execute inline using CommandListParse
+		// This is functionally correct for /inline mode, but doesn't handle queueing
+		await parser.With(state => state with { 
+			Executor = targetObject.Object().DBRef,
+			Enactor = executionEnactor 
+		}, async newParser => await newParser.CommandListParseVisitor(MModule.single(attributeText))());
+		
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@ZEMIT", Switches = ["NOISY", "SILENT"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged,
