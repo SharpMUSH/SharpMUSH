@@ -14,22 +14,40 @@ public class MySqlService(MySqlDataSource source) : ISqlService
 
 	public async ValueTask<IEnumerable<Dictionary<string, object?>>> ExecuteQueryAsync(string query)
 	{
-		await using var connection = await source.OpenConnectionAsync();
-		var result = await connection.QueryAsync<dynamic>(query);
+		var guid = Guid.NewGuid();
+		var results = new List<Dictionary<string, object?>>();
 
-		return result.Select<dynamic, Dictionary<string, object?>>(x =>
-			JsonSerializer.Deserialize<Dictionary<string, object?>>(
-				JsonSerializer.Serialize(x)));
+		await using var connection = await source.OpenConnectionAsync();
+		await using var command = new MySqlCommand(query, connection);
+		await using var reader = await command.ExecuteReaderAsync();
+
+		while (await reader.ReadAsync())
+		{
+			var row = new Dictionary<string, object?>();
+			for (var i = 0; i < reader.FieldCount; i++)
+			{
+				row[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader.GetValue(i);
+			}
+			results.Add(row);
+			Console.WriteLine($"{guid}: {JsonSerializer.Serialize(row)}");
+		}
+
+		return results;
 	}
 
 	public async IAsyncEnumerable<Dictionary<string, object?>> ExecuteStreamQueryAsync(string query)
 	{
 		await using var connection = await source.OpenConnectionAsync();
-		var result = connection.QueryUnbufferedAsync(query);
-
-		await foreach (var row in result)
+		await using var command = new MySqlCommand(query, connection);
+		await using var reader = await command.ExecuteReaderAsync();
+		while (await reader.ReadAsync(CancellationToken.None))
 		{
-			yield return JsonSerializer.Deserialize<Dictionary<string, object?>>(JsonSerializer.Serialize(row));
+			var row = new Dictionary<string, object?>();
+			for (var i = 0; i < reader.FieldCount; i++)
+			{
+				row[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader.GetValue(i);
+			}
+			yield return row;
 		}
 	}
 

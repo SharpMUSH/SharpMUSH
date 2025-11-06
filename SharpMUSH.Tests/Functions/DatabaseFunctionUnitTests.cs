@@ -218,7 +218,7 @@ public class DatabaseFunctionUnitTests
 	{
 		// Test using sqlescape in an actual query
 		var escapedValue = (await Parser.FunctionParse(MModule.single("sqlescape(test_sql_row1)")))?.Message!.ToPlainText();
-		var query = $"Test_Sqlescape_RealWorldUse: [sql(lit(SELECT value FROM test_sql_data WHERE name = '{escapedValue}'))]";
+		var query = $"Test_Sqlescape_RealWorldUse: [sql(lit(SELECT DISTINCT value FROM test_sql_data WHERE name = '{escapedValue}'))]";
 		var result = (await Parser.FunctionParse(MModule.single(query)))?.Message!;
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("Test_Sqlescape_RealWorldUse: 100");
@@ -270,7 +270,7 @@ public class DatabaseFunctionUnitTests
 
 		var result =
 			(await Parser.FunctionParse(
-				MModule.single("mapsql(#1/Test_Mapsql_BasicExecution2,lit(SELECT `name`,`value` FROM `test_sql_data`),%r)")))
+				MModule.single("mapsql(#1/Test_Mapsql_BasicExecution2,lit(SELECT `name`,`value` FROM `test_sql_data` LIMIT 3),%r)")))
 			?.Message!;
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("Test_Mapsql_BasicExecution2: Row 1 has value 100" +
