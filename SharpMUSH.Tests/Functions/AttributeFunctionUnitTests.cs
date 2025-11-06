@@ -134,17 +134,17 @@ public class AttributeFunctionUnitTests
 	[Arguments("[attrib_set(%!/TESTREGLATTR_UNIQUE_RGX1_001,value1)]" +
 	           "[attrib_set(%!/TESTREGLATTR_UNIQUE_RGX1_002,value2)]" +
 	           "[attrib_set(%!/TESTREGLATTR_UNIQUE_RGX1_100,value3)]" +
-	           "[reglattr(%!,^TESTREGLATTR_UNIQUE_RGX1_00%[0-9%]$)]", 
+	           "[reglattr(%!,^TESTREGLATTR_UNIQUE_RGX1_00\\[0-9\\]$)]", 
 		"TESTREGLATTR_UNIQUE_RGX1_001 TESTREGLATTR_UNIQUE_RGX1_002")]
 	[Arguments("[attrib_set(%!/TESTREGLATTR_UNIQUE_RGX2_001,value1)]" +
 	           "[attrib_set(%!/TESTREGLATTR_UNIQUE_RGX2_002,value2)]" +
 	           "[attrib_set(%!/TESTREGLATTR_UNIQUE_RGX2_100,value3)]" +
-	           @"[reglattr(%!,^TESTREGLATTR_UNIQUE_RGX2_%[0-9%]+$)]", 
+	           "[reglattr(%!,^TESTREGLATTR_UNIQUE_RGX2_\\[0-9\\]+$)]", 
 		"TESTREGLATTR_UNIQUE_RGX2_001 TESTREGLATTR_UNIQUE_RGX2_002 TESTREGLATTR_UNIQUE_RGX2_100")]
 	[Arguments("[attrib_set(%!/TESTREGLATTR_UNIQUE_RGX3_A,val1)]" +
 	           "[attrib_set(%!/TESTREGLATTR_UNIQUE_RGX3_B,val2)]" +
 	           "[attrib_set(%!/TESTREGLATTR_UNIQUE_RGX3_UPPER,val3)]" +
-	           "[reglattr(%!,^TESTREGLATTR_UNIQUE_RGX3_%[A-Z%]+$)]", 
+	           "[reglattr(%!,^TESTREGLATTR_UNIQUE_RGX3_\\[A-Z\\]+$)]", 
 		"TESTREGLATTR_UNIQUE_RGX3_A TESTREGLATTR_UNIQUE_RGX3_B TESTREGLATTR_UNIQUE_RGX3_UPPER")]
 	public async Task Test_Reglattr_RegexPattern(string str, string expected)
 	{
@@ -157,15 +157,15 @@ public class AttributeFunctionUnitTests
 	[Arguments("[attrib_set(%!/TESTREGNATTR_UNIQUE_CNT1_001,value1)]" +
 	           "[attrib_set(%!/TESTREGNATTR_UNIQUE_CNT1_002,value2)]" +
 	           "[attrib_set(%!/TESTREGNATTR_UNIQUE_CNT1_100,value3)]" +
-	           "[regnattr(%!,^TESTREGNATTR_UNIQUE_CNT1_%[0-9%]+$)]", "3")]
+	           "[regnattr(%!,^TESTREGNATTR_UNIQUE_CNT1_\\[0-9\\]+$)]", "3")]
 	[Arguments("[attrib_set(%!/TESTREGNATTR_UNIQUE_CNT2_A,val1)]" +
 	           "[attrib_set(%!/TESTREGNATTR_UNIQUE_CNT2_B,val2)]" +
 	           "[attrib_set(%!/TESTREGNATTR_UNIQUE_CNT2_UPPER,val3)]" +
-	           "[regnattr(%!,^TESTREGNATTR_UNIQUE_CNT2_%[A-Z%]+$)]", "3")]
+	           "[regnattr(%!,^TESTREGNATTR_UNIQUE_CNT2_\\[A-Z\\]+$)]", "3")]
 	[Arguments("[attrib_set(%!/TESTREGNATTR_UNIQUE_CNT3_X,val1)]" +
 	           "[attrib_set(%!/TESTREGNATTR_UNIQUE_CNT3_Y,val2)]" +
 	           "[attrib_set(%!/TESTREGNATTR_UNIQUE_CNT3_Z,val3)]" +
-	           "[regnattr(%!,^TESTREGNATTR_UNIQUE_CNT3_%[XYZ%]$)]", "3")]
+	           "[regnattr(%!,^TESTREGNATTR_UNIQUE_CNT3_\\[XYZ\\]$)]", "3")]
 	public async Task Test_Regnattr_Count(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
