@@ -28,7 +28,6 @@ public class FormattingFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("tagwrap(b,text)", "<b>text</b>")]
 	public async Task Tagwrap(string str, string expected)
 	{

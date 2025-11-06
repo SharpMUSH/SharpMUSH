@@ -26,8 +26,16 @@ module MarkupImplementation =
       StrikeThrough: bool;
     }
     
+  [<Struct>]
+  type HtmlStructure =
+    {
+      TagName: string;
+      Attributes: string option;
+    }
+
   [<JsonDerivedType(typeof<NeutralMarkup>, "Neutral")>]
   [<JsonDerivedType(typeof<AnsiMarkup>, "Ansi")>]
+  [<JsonDerivedType(typeof<HtmlMarkup>, "Html")>]
   type Markup =
       abstract member Wrap: string -> string
       abstract member WrapAndRestore: string * Markup -> string
@@ -150,8 +158,37 @@ module MarkupImplementation =
                 |> (fun t -> if markup.Details.Underlined then StringExtensions.underlinedANSI(t) else t)
                 |> (fun t -> if markup.Details.StrikeThrough then StringExtensions.strikeThroughANSI(t) else t)
                 |> (fun t -> if markup.Details.Inverted then StringExtensions.invertedANSI(t) else t)
+            | :? HtmlMarkup -> StringExtensions.toANSI System.String.Empty // HTML tags don't need restoration codes
             | _ -> raise (System.Exception "Unknown markup type")
         (AnsiMarkup.applyDetails details text).ToString() + restoreDetailsF(outerDetails).ToString()
 
       override this.Wrap (text: string) : string =
         StringExtensions.endWithTrueClear((AnsiMarkup.applyDetails details text).ToString()).ToString()
+
+  and HtmlMarkup(details: HtmlStructure) =
+    member val Details = details with get
+    
+    static member Create(tagName: string, [<Optional;DefaultParameterValue(null)>]?attributes) =
+      {
+        TagName = tagName
+        Attributes = defaultArg attributes None
+      }
+      |> HtmlMarkup
+
+    interface Markup with
+      // For HTML, we use empty prefix/postfix since Wrap handles everything
+      override this.Postfix: string = System.String.Empty
+
+      override this.Prefix: string = System.String.Empty
+
+      override this.Wrap (text: string) : string =
+        // Wrap includes the full HTML tags
+        match details.Attributes with
+        | None -> sprintf "<%s>%s</%s>" details.TagName text details.TagName
+        | Some attrs -> sprintf "<%s %s>%s</%s>" details.TagName attrs text details.TagName
+
+      override this.WrapAndRestore (text: string, outerDetails: Markup) : string =
+        // For HTML, we just wrap without restoring outer markup since HTML tags are independent
+        (this :> Markup).Wrap(text)
+
+      override this.Optimize (text: string) : string = text
