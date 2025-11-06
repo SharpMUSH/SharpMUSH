@@ -21,7 +21,7 @@ public interface ISharpDatabase
 	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>New player <see cref="DBRef"/></returns>
 	ValueTask<DBRef> CreatePlayerAsync(string name, string password, DBRef location, DBRef home,
-		CancellationToken cancellationToken = bad);
+		CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Sets a hashed password for a player.

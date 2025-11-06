@@ -1,5 +1,6 @@
 ﻿using System.Drawing;
 using System.Text.RegularExpressions;
+using DotNext;
 using DotNext.Collections.Generic;
 using MarkupString;
 using OneOf.Types;
@@ -24,6 +25,8 @@ public partial class Functions
 	[SharpFunction(Name = "pcreate", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly)]
 	public static async ValueTask<CallState> PCreate(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var defaultHome = Configuration!.CurrentValue.Database.DefaultHome;
+		var defaultHomeDbref = new DBRef((int)defaultHome);
 		var args = parser.CurrentState.Arguments;
 		var location = await Mediator!.Send(new GetObjectNodeQuery(new DBRef
 		{
@@ -40,7 +43,8 @@ public partial class Functions
 		var created = await Mediator.Send(new CreatePlayerCommand(
 			args["0"].Message!.ToString(),
 			args["1"].Message!.ToString(),
-			new DBRef(trueLocation == -1 ? 1 : trueLocation)));
+			new DBRef(trueLocation == -1 ? 1 : trueLocation),
+			defaultHomeDbref));
 
 		return new CallState($"#{created.Number}:{created.CreationMilliseconds}");
 	}
@@ -341,6 +345,16 @@ public partial class Functions
 		var name = args["0"].Message!;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
+		var defaultHome = Configuration!.CurrentValue.Database.DefaultHome;
+		var defaultHomeDbref = new DBRef((int)defaultHome);
+		var location = await Mediator!.Send(new GetObjectNodeQuery(defaultHomeDbref));
+		
+		if (location.IsNone || location.IsExit)
+		{
+			await NotifyService!.Notify(executor, "Default home location is invalid.");
+			return new CallState(Errors.ErrorInvalidRoom);
+		}
+		
 		if (!await ValidateService!.Valid(IValidateService.ValidationType.Name, name, new None()))
 		{
 			await NotifyService!.Notify(executor, "Invalid name for a thing.");
@@ -350,7 +364,8 @@ public partial class Functions
 		var thing = await Mediator!.Send(new CreateThingCommand(name.ToPlainText(),
 			await executor.Where(),
 			await executor.Object()
-				.Owner.WithCancellation(CancellationToken.None)));
+				.Owner.WithCancellation(CancellationToken.None),
+			location.Known.AsContainer));
 		
 		return new CallState(thing);
 	}
