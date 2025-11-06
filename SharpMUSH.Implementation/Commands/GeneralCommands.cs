@@ -1184,7 +1184,7 @@ public partial class Commands
 			return new CallState("#-1 NO COMMAND SPECIFIED");
 		}
 		
-		var commandName = args["0"].Message?.ToPlainText();
+		var commandName = args["0"].Message?.ToPlainText()?.ToUpper();
 		if (string.IsNullOrEmpty(commandName))
 		{
 			await NotifyService!.Notify(executor, "You must specify a command name.");
@@ -1193,7 +1193,7 @@ public partial class Commands
 		
 		var isQuiet = switches.Contains("QUIET");
 		
-		// Administrative switches - wizard only
+		// Administrative switches - wizard only (except DELETE which requires God)
 		if (switches.Any(s => new[] { "ADD", "ALIAS", "CLONE", "DELETE", "DISABLE", "ENABLE", "RESTRICT" }.Contains(s)))
 		{
 			if (!await executor.IsWizard())
@@ -1207,8 +1207,7 @@ public partial class Commands
 			{
 				if (!isQuiet)
 				{
-					await NotifyService!.Notify(executor, $"@command/add: Command '{commandName}' would be added.");
-					await NotifyService.Notify(executor, "Note: Dynamic command creation not yet implemented.");
+					await NotifyService!.Notify(executor, $"@command/add: Dynamic command creation not yet implemented.");
 				}
 				return new CallState("#-1 NOT IMPLEMENTED");
 			}
@@ -1224,8 +1223,7 @@ public partial class Commands
 				
 				if (!isQuiet)
 				{
-					await NotifyService!.Notify(executor, $"@command/alias: Would create alias '{aliasName}' for '{commandName}'.");
-					await NotifyService.Notify(executor, "Note: Dynamic command aliasing not yet implemented.");
+					await NotifyService!.Notify(executor, $"@command/alias: Dynamic command aliasing not yet implemented.");
 				}
 				return new CallState("#-1 NOT IMPLEMENTED");
 			}
@@ -1241,8 +1239,7 @@ public partial class Commands
 				
 				if (!isQuiet)
 				{
-					await NotifyService!.Notify(executor, $"@command/clone: Would clone '{commandName}' as '{cloneName}'.");
-					await NotifyService.Notify(executor, "Note: Command cloning not yet implemented.");
+					await NotifyService!.Notify(executor, $"@command/clone: Command cloning not yet implemented.");
 				}
 				return new CallState("#-1 NOT IMPLEMENTED");
 			}
@@ -1257,8 +1254,7 @@ public partial class Commands
 				
 				if (!isQuiet)
 				{
-					await NotifyService!.Notify(executor, $"@command/delete: Would delete command '{commandName}'.");
-					await NotifyService.Notify(executor, "Note: Command deletion not yet implemented.");
+					await NotifyService!.Notify(executor, $"@command/delete: Command deletion not yet implemented.");
 				}
 				return new CallState("#-1 NOT IMPLEMENTED");
 			}
@@ -1267,8 +1263,7 @@ public partial class Commands
 			{
 				if (!isQuiet)
 				{
-					await NotifyService!.Notify(executor, $"@command/disable: Would disable command '{commandName}'.");
-					await NotifyService.Notify(executor, "Note: Command disabling not yet implemented.");
+					await NotifyService!.Notify(executor, $"@command/disable: Command disabling not yet implemented.");
 				}
 				return new CallState("#-1 NOT IMPLEMENTED");
 			}
@@ -1277,8 +1272,7 @@ public partial class Commands
 			{
 				if (!isQuiet)
 				{
-					await NotifyService!.Notify(executor, $"@command/enable: Would enable command '{commandName}'.");
-					await NotifyService.Notify(executor, "Note: Command enabling not yet implemented.");
+					await NotifyService!.Notify(executor, $"@command/enable: Command enabling not yet implemented.");
 				}
 				return new CallState("#-1 NOT IMPLEMENTED");
 			}
@@ -1288,31 +1282,56 @@ public partial class Commands
 				var restriction = args.GetValueOrDefault("1")?.Message?.ToPlainText();
 				if (!isQuiet)
 				{
-					await NotifyService!.Notify(executor, $"@command/restrict: Would restrict '{commandName}' to: {restriction ?? "none"}");
-					await NotifyService.Notify(executor, "Note: Command restriction not yet implemented.");
+					await NotifyService!.Notify(executor, $"@command/restrict: Command restriction not yet implemented.");
 				}
 				return new CallState("#-1 NOT IMPLEMENTED");
 			}
 		}
 		
 		// No switches - display command information
-		await NotifyService!.Notify(executor, $"Command: {commandName}");
-		
-		// Try to find the command using CommandDiscoveryService
-		if (CommandDiscoveryService != null)
+		if (CommandLibrary == null)
 		{
-			// TODO: Query command information from CommandDiscoveryService
-			// This would show:
-			// - Command parsing behavior
-			// - Switches available
-			// - Argument counts
-			// - Restrictions
-			await NotifyService.Notify(executor, "  Status: Checking command registry...");
-			await NotifyService.Notify(executor, "Note: Full command introspection not yet implemented.");
+			await NotifyService!.Notify(executor, "Command library unavailable.");
+			return new CallState("#-1 LIBRARY UNAVAILABLE");
 		}
-		else
+		
+		// Try to find the command in the library
+		if (!CommandLibrary.TryGetValue(commandName, out var commandInfo))
 		{
-			await NotifyService.Notify(executor, "  Status: Unknown (command service unavailable)");
+			await NotifyService!.Notify(executor, $"Command '{commandName}' not found.");
+			return new CallState("#-1 COMMAND NOT FOUND");
+		}
+		
+		var (definition, isSystem) = commandInfo;
+		var attr = definition.Attribute;
+		
+		await NotifyService!.Notify(executor, $"Command: {attr.Name}");
+		await NotifyService.Notify(executor, $"  Type: {(isSystem ? "Built-in" : "User-defined")}");
+		await NotifyService.Notify(executor, $"  Min Args: {attr.MinArgs}");
+		await NotifyService.Notify(executor, $"  Max Args: {attr.MaxArgs}");
+		
+		if (attr.Switches != null && attr.Switches.Length > 0)
+		{
+			await NotifyService.Notify(executor, $"  Switches: {string.Join(", ", attr.Switches)}");
+		}
+		
+		var behaviors = new List<string>();
+		if ((attr.Behavior & CB.Default) != 0) behaviors.Add("Default");
+		if ((attr.Behavior & CB.EqSplit) != 0) behaviors.Add("EqSplit");
+		if ((attr.Behavior & CB.LSArgs) != 0) behaviors.Add("LSArgs");
+		if ((attr.Behavior & CB.RSArgs) != 0) behaviors.Add("RSArgs");
+		if ((attr.Behavior & CB.RSNoParse) != 0) behaviors.Add("RSNoParse");
+		if ((attr.Behavior & CB.NoGagged) != 0) behaviors.Add("NoGagged");
+		if ((attr.Behavior & CB.NoParse) != 0) behaviors.Add("NoParse");
+		
+		if (behaviors.Count > 0)
+		{
+			await NotifyService.Notify(executor, $"  Behavior: {string.Join(" | ", behaviors)}");
+		}
+		
+		if (!string.IsNullOrEmpty(attr.CommandLock))
+		{
+			await NotifyService.Notify(executor, $"  Lock: {attr.CommandLock}");
 		}
 		
 		return CallState.Empty;
@@ -1900,19 +1919,39 @@ public partial class Commands
 		// No arguments - list all user-defined functions
 		if (args.Count == 0)
 		{
+			if (FunctionLibrary == null)
+			{
+				await NotifyService!.Notify(executor, "Function library unavailable.");
+				return new CallState("#-1 LIBRARY UNAVAILABLE");
+			}
+			
 			await NotifyService!.Notify(executor, "Global user-defined functions:");
 			
 			// Check if executor has Functions power or is wizard
 			var canSeeDetails = await executor.IsWizard();
 			
+			var userFunctions = FunctionLibrary.Where(kvp => !kvp.Value.IsSystem).ToArray();
+			var builtinFunctions = FunctionLibrary.Where(kvp => kvp.Value.IsSystem).ToArray();
+			
 			if (canSeeDetails)
 			{
-				await NotifyService.Notify(executor, "  (Full function listing with details)");
+				await NotifyService.Notify(executor, $"  User-defined: {userFunctions.Length}");
+				foreach (var (name, (def, _)) in userFunctions.Take(10))
+				{
+					await NotifyService.Notify(executor, $"    {name}: {def.Attribute.MinArgs}-{def.Attribute.MaxArgs} args, Flags: {def.Attribute.Flags}");
+				}
+				if (userFunctions.Length > 10)
+				{
+					await NotifyService.Notify(executor, $"    ... and {userFunctions.Length - 10} more");
+				}
+				
+				await NotifyService.Notify(executor, $"  Built-in: {builtinFunctions.Length}");
 			}
-			
-			// TODO: Query function registry for user-defined functions
-			await NotifyService.Notify(executor, "Note: Function registry query not yet implemented.");
-			await NotifyService.Notify(executor, "0 functions defined.");
+			else
+			{
+				await NotifyService.Notify(executor, $"  {userFunctions.Length} user-defined functions");
+				await NotifyService.Notify(executor, $"  {builtinFunctions.Length} built-in functions");
+			}
 			
 			return CallState.Empty;
 		}
@@ -1985,11 +2024,11 @@ public partial class Commands
 		// Check if defining a new function: @function <name>=<obj>,<attrib>[,<min>,<max>[,<restrictions>]]
 		if (args.Count >= 2)
 		{
-			var definition = args["1"].Message?.ToPlainText();
-			if (!string.IsNullOrEmpty(definition))
+			var defString = args["1"].Message?.ToPlainText();
+			if (!string.IsNullOrEmpty(defString))
 			{
 				// Parse definition: obj, attrib[, min, max[, restrictions]]
-				await NotifyService!.Notify(executor, $"@function: Would define function '{functionName}' as: {definition}");
+				await NotifyService!.Notify(executor, $"@function: Would define function '{functionName}' as: {defString}");
 				
 				// Parse min/max args if provided
 				if (args.Count >= 3)
@@ -2016,12 +2055,44 @@ public partial class Commands
 		}
 		
 		// Single argument - show function information
-		await NotifyService!.Notify(executor, $"Function: {functionName}");
+		if (FunctionLibrary == null)
+		{
+			await NotifyService!.Notify(executor, "Function library unavailable.");
+			return new CallState("#-1 LIBRARY UNAVAILABLE");
+		}
 		
-		// Try to find the function information
-		// TODO: Query function registry for this function
-		await NotifyService.Notify(executor, "  Status: Checking function registry...");
-		await NotifyService.Notify(executor, "Note: Function introspection not yet implemented.");
+		// Try to find the function in the library
+		var functionNameUpper = functionName.ToUpper();
+		if (!FunctionLibrary.TryGetValue(functionNameUpper, out var functionInfo))
+		{
+			await NotifyService!.Notify(executor, $"Function '{functionName}' not found.");
+			return new CallState("#-1 FUNCTION NOT FOUND");
+		}
+		
+		var (definition, isSystem) = functionInfo;
+		var attr = definition.Attribute;
+		
+		await NotifyService!.Notify(executor, $"Function: {attr.Name}");
+		await NotifyService.Notify(executor, $"  Type: {(isSystem ? "Built-in" : "User-defined")}");
+		await NotifyService.Notify(executor, $"  Min Args: {attr.MinArgs}");
+		await NotifyService.Notify(executor, $"  Max Args: {attr.MaxArgs}");
+		
+		var flags = new List<string>();
+		if ((attr.Flags & FunctionFlags.Regular) != 0) flags.Add("Regular");
+		if ((attr.Flags & FunctionFlags.StripAnsi) != 0) flags.Add("StripAnsi");
+		if ((attr.Flags & FunctionFlags.NoParse) != 0) flags.Add("NoParse");
+		if ((attr.Flags & FunctionFlags.Localize) != 0) flags.Add("Localize");
+		if ((attr.Flags & FunctionFlags.Literal) != 0) flags.Add("Literal");
+		
+		if (flags.Count > 0)
+		{
+			await NotifyService.Notify(executor, $"  Flags: {string.Join(" | ", flags)}");
+		}
+		
+		if (attr.Restrict != null && attr.Restrict.Length > 0)
+		{
+			await NotifyService.Notify(executor, $"  Restrictions: {string.Join(", ", attr.Restrict)}");
+		}
 		
 		return CallState.Empty;
 	}

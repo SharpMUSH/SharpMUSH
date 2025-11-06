@@ -30,6 +30,9 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 	private static IValidateService? ValidateService { get; set; }
 	
 	private static ISqlService? SqlService { get; set; }
+	
+	private static LibraryService<string, CommandDefinition>? CommandLibrary { get; set; }
+	private static LibraryService<string, FunctionDefinition>? FunctionLibrary { get; set; }
 
 	private readonly CommandLibraryService _commandLibrary = [];
 
@@ -49,7 +52,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		IHttpClientFactory httpClientFactory,
 		ICommunicationService communicationService,
 		IValidateService validateService,
-		ISqlService sqlService)
+		ISqlService sqlService,
+		LibraryService<string, FunctionDefinition> functionLibrary)
 	{
 		Mediator = mediator;
 		LocateService = locateService;
@@ -66,6 +70,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		CommunicationService = communicationService;
 		ValidateService = validateService;
 		SqlService = sqlService;
+		FunctionLibrary = functionLibrary;
 
 		foreach (var command in Generated.CommandLibrary.Commands)
 		{
@@ -76,5 +81,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 				_commandLibrary.Add(alias, (command.Value, true));
 			}
 		}
+		
+		// Store reference to this command library for @command introspection
+		CommandLibrary = _commandLibrary;
 	}
 }
