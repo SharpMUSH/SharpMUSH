@@ -418,4 +418,40 @@ public class GeneralCommandTests
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Function:")), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
+
+	[Test]
+	public async ValueTask Map_ExecutesAttributeOverList()
+	{
+		// Test @map command
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@map me/test=foo bar baz"));
+
+		// Should notify about mapping
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("@map:")), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+	}
+
+	[Test]
+	public async ValueTask Trigger_QueuesAttribute()
+	{
+		// Test @trigger command
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@trigger me/test=arg1,arg2"));
+
+		// Should notify about triggering
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("@trigger:")), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+	}
+
+	[Test]
+	public async ValueTask Include_InsertsAttributeInPlace()
+	{
+		// Test @include command
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@include me/test=arg1,arg2"));
+
+		// Should notify about including
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("@include:")), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+	}
 }

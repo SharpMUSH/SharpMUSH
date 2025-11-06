@@ -61,12 +61,70 @@ public partial class Commands
 		Switches = ["CLEARREGS", "DELIMIT", "INLINE", "INPLACE", "LOCALIZE", "NOBREAK", "NOTIFY"])]
 	public static async ValueTask<Option<CallState>> Map(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// Will need documentation.
-		// A version of map(), but for a command, to run like @dolist
 		// @map[/<switches>][/notify][/delimit <delim>] [<object>/]<attribute>=<list>
-
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		// A version of map(), but for a command, to run like @dolist
+		
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches.ToArray();
+		
+		if (args.Count == 0)
+		{
+			await NotifyService!.Notify(executor, "You must specify an attribute to map.");
+			return new CallState("#-1 NO ATTRIBUTE SPECIFIED");
+		}
+		
+		var attributePath = args["0"].Message?.ToPlainText();
+		if (string.IsNullOrEmpty(attributePath))
+		{
+			await NotifyService!.Notify(executor, "You must specify an attribute to map.");
+			return new CallState("#-1 NO ATTRIBUTE SPECIFIED");
+		}
+		
+		string? listToMap = null;
+		if (args.Count >= 2)
+		{
+			listToMap = args["1"].Message?.ToPlainText();
+		}
+		
+		await NotifyService!.Notify(executor, $"@map: Would iterate over list and execute attribute '{attributePath}'");
+		
+		if (listToMap != null)
+		{
+			await NotifyService.Notify(executor, $"  List: {listToMap}");
+		}
+		
+		// Check switches
+		if (switches.Contains("INLINE"))
+		{
+			await NotifyService.Notify(executor, "  Mode: Inline execution");
+		}
+		
+		if (switches.Contains("NOTIFY"))
+		{
+			await NotifyService.Notify(executor, "  Will queue @notify after completion");
+		}
+		
+		if (switches.Contains("CLEARREGS"))
+		{
+			await NotifyService.Notify(executor, "  Will clear Q-registers");
+		}
+		
+		if (switches.Contains("LOCALIZE"))
+		{
+			await NotifyService.Notify(executor, "  Will localize Q-registers");
+		}
+		
+		// TODO: Full implementation requires:
+		// - Parsing object/attribute path
+		// - Splitting list into elements
+		// - For each element, queue/execute the attribute with element as %0
+		// - Handle enactor preservation and Q-register management
+		// - Handle /inline vs queued execution
+		// - Handle /notify switch
+		await NotifyService.Notify(executor, "Note: @map command queueing and execution not yet implemented.");
+		
+		return new CallState("#-1 NOT IMPLEMENTED");
 	}
 
 	[SharpCommand(Name = "@DOLIST", Behavior = CB.EqSplit | CB.RSNoParse, MinArgs = 1, MaxArgs = 2,
@@ -2010,11 +2068,88 @@ public partial class Commands
 
 	[SharpCommand(Name = "@TRIGGER",
 		Switches = ["CLEARREGS", "SPOOF", "INLINE", "NOBREAK", "LOCALIZE", "INPLACE", "MATCH"],
-		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 1, MaxArgs = 31)]
 	public static async ValueTask<Option<CallState>> Trigger(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		// @trigger[/<switches>] <object>/<attribute>[=<arg0>, ..., <arg29>]
+		// @trigger/match[/<switches>] <object>/<attribute>=<string>
+		
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches.ToArray();
+		
+		var attributePath = args["0"].Message?.ToPlainText();
+		if (string.IsNullOrEmpty(attributePath))
+		{
+			await NotifyService!.Notify(executor, "You must specify an object/attribute to trigger.");
+			return new CallState("#-1 NO ATTRIBUTE SPECIFIED");
+		}
+		
+		// Parse object/attribute
+		var parts = attributePath.Split('/', 2);
+		if (parts.Length < 2)
+		{
+			await NotifyService!.Notify(executor, "You must specify an object/attribute path.");
+			return new CallState("#-1 INVALID PATH");
+		}
+		
+		var objectName = parts[0];
+		var attributeName = parts[1];
+		
+		await NotifyService!.Notify(executor, $"@trigger: Would trigger {objectName}/{attributeName}");
+		
+		// Check if we have arguments to pass
+		if (args.Count > 1)
+		{
+			await NotifyService.Notify(executor, $"  Arguments: {args.Count - 1} provided");
+		}
+		
+		// Check switches
+		if (switches.Contains("SPOOF"))
+		{
+			await NotifyService.Notify(executor, "  Mode: Enactor preserved (spoof)");
+		}
+		else
+		{
+			await NotifyService.Notify(executor, "  Mode: New enactor (object executes)");
+		}
+		
+		if (switches.Contains("INLINE"))
+		{
+			await NotifyService.Notify(executor, "  Execution: Inline (immediate)");
+		}
+		else
+		{
+			await NotifyService.Notify(executor, "  Execution: Queued");
+		}
+		
+		if (switches.Contains("CLEARREGS"))
+		{
+			await NotifyService.Notify(executor, "  Q-registers: Cleared");
+		}
+		
+		if (switches.Contains("LOCALIZE"))
+		{
+			await NotifyService.Notify(executor, "  Q-registers: Localized");
+		}
+		
+		if (switches.Contains("MATCH"))
+		{
+			await NotifyService.Notify(executor, "  Mode: Pattern matching enabled");
+		}
+		
+		// TODO: Full implementation requires:
+		// - Locating the target object
+		// - Checking control permissions
+		// - Retrieving the attribute
+		// - Setting up environment arguments (%0-%9, r(0,args)-r(29,args))
+		// - Managing enactor state based on /spoof switch
+		// - Queue or execute inline based on switches
+		// - Handle Q-register management (clearregs, localize, nobreak)
+		// - Handle /match for pattern matching
+		await NotifyService.Notify(executor, "Note: @trigger attribute execution and queueing not yet implemented.");
+		
+		return new CallState("#-1 NOT IMPLEMENTED");
 	}
 
 	[SharpCommand(Name = "@ZEMIT", Switches = ["NOISY", "SILENT"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged,
@@ -2633,11 +2768,72 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@INCLUDE", Switches = ["LOCALIZE", "CLEARREGS", "NOBREAK"],
-		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 1, MaxArgs = 31)]
 	public static async ValueTask<Option<CallState>> Include(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		// @include[/<switches>] <object>/<attribute>[=<arg1>,<arg2>,...]
+		// Inserts attribute contents in-place without adding a new queue entry
+		
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches.ToArray();
+		
+		var attributePath = args["0"].Message?.ToPlainText();
+		if (string.IsNullOrEmpty(attributePath))
+		{
+			await NotifyService!.Notify(executor, "You must specify an object/attribute to include.");
+			return new CallState("#-1 NO ATTRIBUTE SPECIFIED");
+		}
+		
+		// Parse object/attribute
+		var parts = attributePath.Split('/', 2);
+		if (parts.Length < 2)
+		{
+			await NotifyService!.Notify(executor, "You must specify an object/attribute path.");
+			return new CallState("#-1 INVALID PATH");
+		}
+		
+		var objectName = parts[0];
+		var attributeName = parts[1];
+		
+		await NotifyService!.Notify(executor, $"@include: Would include {objectName}/{attributeName}");
+		
+		// Check if we have arguments to pass
+		if (args.Count > 1)
+		{
+			await NotifyService.Notify(executor, $"  Arguments: {args.Count - 1} provided (will substitute %0-%9)");
+		}
+		
+		// Check switches
+		if (switches.Contains("NOBREAK"))
+		{
+			await NotifyService.Notify(executor, "  Mode: @break/@assert won't propagate to calling list");
+		}
+		
+		if (switches.Contains("LOCALIZE"))
+		{
+			await NotifyService.Notify(executor, "  Q-registers: Will be saved/restored");
+		}
+		
+		if (switches.Contains("CLEARREGS"))
+		{
+			await NotifyService.Notify(executor, "  Q-registers: Will be cleared before execution");
+		}
+		
+		// TODO: Full implementation requires:
+		// - Locating the target object
+		// - Checking visibility permissions
+		// - Retrieving the attribute
+		// - Stripping ^...: or $...: prefixes
+		// - Managing environment arguments (%0-%9)
+		// - Substituting provided arguments for environment
+		// - Managing Q-registers (save/restore for localize, clear for clearregs)
+		// - Executing in-place (no queue entry)
+		// - Handling @break/@assert propagation based on /nobreak
+		// - Restoring environment after execution
+		await NotifyService.Notify(executor, "Note: @include in-place execution not yet implemented.");
+		
+		return new CallState("#-1 NOT IMPLEMENTED");
 	}
 
 	[SharpCommand(Name = "@MAIL",
