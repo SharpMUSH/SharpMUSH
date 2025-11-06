@@ -1,5 +1,7 @@
 ﻿using System.Collections.Immutable;
+using DotNext;
 using Mediator;
+using NaturalSort.Extension;
 using OneOf;
 using OneOf.Types;
 using SharpMUSH.Library.Commands.Database;
@@ -22,6 +24,8 @@ public class AttributeService(
 	INotifyService notifyService)
 	: IAttributeService
 {
+	private readonly NaturalSortComparer _attributeSort = new NaturalSortComparer(StringComparison.CurrentCulture);
+	
 	public async ValueTask<OptionalSharpAttributeOrError> GetAttributeAsync(
 		AnySharpObject executor,
 		AnySharpObject obj,
@@ -54,14 +58,14 @@ public class AttributeService(
 		// TODO: This code doesn't quite look right. It does not correctly walk the parent chain.
 		while (true)
 		{
-			var attr = await mediator.Send(new GetAttributeQuery(obj.Object().DBRef, attributePath));
+			var attr = mediator.CreateStream(new GetAttributeQuery(obj.Object().DBRef, attributePath));
+			
+			var attrArr = await attr.ToArrayAsync();
 
-			if (attr is null)
+			if (attrArr.IsNullOrEmpty())
 			{
 				return new None();
 			}
-
-			var attrArr = await attr.ToArrayAsync();
 
 			if (attrArr.Length == attributePath.Length)
 			{
@@ -112,15 +116,15 @@ public class AttributeService(
 		// TODO: This code doesn't quite look right. It does not correctly walk the parent chain.
 		while (true)
 		{
-			var attr = await mediator.Send(new GetLazyAttributeQuery(obj.Object().DBRef, attributePath));
+			var attr = mediator.CreateStream(new GetLazyAttributeQuery(obj.Object().DBRef, attributePath));
+			
+			var attrArr = await attr.ToArrayAsync(CancellationToken.None);
 
-			if (attr is null)
+			if (attrArr.IsNullOrEmpty())
 			{
 				return new None();
 			}
-
-			var attrArr = await attr.ToArrayAsync(CancellationToken.None);
-
+			
 			if (attrArr.Length == attributePath.Length)
 			{
 				return await permissionPredicate(executor, obj, attrArr)
@@ -173,6 +177,7 @@ public class AttributeService(
 				s with
 				{
 					Arguments = args,
+					EnvironmentRegisters = args,
 					CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attr.AsAttribute.Last().LongName!),
 				},
 			async newParser =>
@@ -330,30 +335,31 @@ public class AttributeService(
 		IAttributeService.AttributePatternMode mode)
 	{
 		// TODO: Implement Pattern Modes
+		// TODO: CheckParents.
 		// TODO: GetAttributesAsync should return the full Path, not the final attribute.
 		// TODO: CanViewAttribute needs to be able to Memoize during a list check, as it's likely to be called multiple times.
-		var attributes = await mediator.Send(
-			new GetAttributesQuery(obj.Object().DBRef, attributePattern, checkParents, mode));
+		var attributes = mediator.CreateStream(
+			new GetAttributesQuery(obj.Object().DBRef, attributePattern.ToUpper(), checkParents, mode));
 
-		return attributes is null
-			? Enumerable.Empty<SharpAttribute>().ToArray()
-			: await AsyncEnumerable.ToArrayAsync(attributes
-				.Where(async (x, _) => await ps.CanViewAttribute(executor, obj, x)));
+		return await attributes
+			.Where(async (x, _) => await ps.CanViewAttribute(executor, obj, x))
+			.OrderBy(x => x.LongName, _attributeSort)
+			.ToArrayAsync();
 	}
 
-	public async ValueTask<LazySharpAttributesOrError> LazilyGetAttributePatternAsync(AnySharpObject executor,
+	public LazySharpAttributesOrError LazilyGetAttributePatternAsync(AnySharpObject executor,
 		AnySharpObject obj, string attributePattern,
 		bool checkParents, IAttributeService.AttributePatternMode mode = IAttributeService.AttributePatternMode.Exact)
 	{
 		// TODO: Implement Pattern Modes
 		// TODO: GetAttributesAsync should return the full Path, not the final attribute.
 		// TODO: CanViewAttribute needs to be able to Memoize during a list check, as it's likely to be called multiple times.
-		var attributes = await mediator.Send(
-			new GetLazyAttributesQuery(obj.Object().DBRef, attributePattern, checkParents, mode));
+		var attributes = mediator.CreateStream(
+			new GetLazyAttributesQuery(obj.Object().DBRef, attributePattern.ToUpper(), checkParents, mode));
 
-		return attributes is null
-			? LazySharpAttributesOrError.FromAsync(Enumerable.Empty<LazySharpAttribute>().ToArray().ToAsyncEnumerable())
-			: LazySharpAttributesOrError.FromAsync(attributes
+		return LazySharpAttributesOrError
+			.FromAsync(attributes
+				.OrderBy(x => x.LongName, _attributeSort)
 				.Where(async (x, _) => await ps.CanViewAttribute(executor, obj, x)));
 	}
 
@@ -372,7 +378,7 @@ public class AttributeService(
 			return new Error<string>("Not Found");
 		}
 
-		var allFlags = await mediator.Send(new GetAttributeFlagsQuery());
+		var allFlags = mediator.CreateStream(new GetAttributeFlagsQuery());
 		var returnedFlag = await allFlags
 			.FirstOrDefaultAsync(x => x.Name == flag || x.Symbol == flag);
 
@@ -406,7 +412,7 @@ public class AttributeService(
 			return new Error<string>("Not Found");
 		}
 
-		var allFlags = await mediator.Send(new GetAttributeFlagsQuery());
+		var allFlags = mediator.CreateStream(new GetAttributeFlagsQuery());
 		var returnedFlag = await allFlags.FirstOrDefaultAsync(x => x.Name == flag || x.Symbol == flag);
 
 		if (returnedFlag is null)
@@ -435,11 +441,10 @@ public class AttributeService(
 		}
 
 		var attrPath = attribute.Split('`');
-		var attr = await mediator.Send(new GetAttributeQuery(obj.Object().DBRef, attrPath));
+		var attr = mediator.CreateStream(new GetAttributeQuery(obj.Object().DBRef, attrPath));
 
 		// TODO: Fix, object permissions also needed.
-		var permission = attr is null ||
-		                 await attr.AllAsync(async (x, _) => await ps.CanSet(executor, obj, x));
+		var permission = await attr.AllAsync(async (x, _) => await ps.CanSet(executor, obj, x));
 
 		if (!permission)
 		{
@@ -451,7 +456,7 @@ public class AttributeService(
 			await executor.Object().Owner.WithCancellation(CancellationToken.None)));
 
 		await notifyService.Notify(executor,
-			$"Attribute {attrPath} SET.", obj);
+			$"Attribute {string.Join("`", attrPath)} SET.", obj);
 
 		return new Success();
 	}
@@ -479,16 +484,12 @@ public class AttributeService(
 			return new Error<string>(Errors.ErrorAttrSetPermissions);
 		}
 
-		var attr = await mediator.Send(new GetAttributesQuery(obj.Object().DBRef, attributePattern, false, patternMode));
-
-		if (attr is null)
-		{
-			return new Error<string>(Errors.ErrorAttrSetPermissions);
-		}
-
-		var attrArr = await AsyncEnumerable.ToArrayAsync(attr);
-
-		if (!await attrArr.ToAsyncEnumerable().AllAsync(async (x, _) => await ps.CanSet(executor, obj, x)))
+		var attr = mediator.CreateStream(new GetAttributesQuery(obj.Object().DBRef, attributePattern, false, patternMode));
+		
+		var attrArr = await attr.ToArrayAsync();
+		
+		if (attrArr.IsNullOrEmpty() 
+		    || !await attrArr.ToAsyncEnumerable().AllAsync(async (x, _) => await ps.CanSet(executor, obj, x)))
 		{
 			return new Error<string>(Errors.ErrorAttrSetPermissions);
 		}

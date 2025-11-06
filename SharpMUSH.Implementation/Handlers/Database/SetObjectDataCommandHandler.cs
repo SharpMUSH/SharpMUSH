@@ -8,7 +8,7 @@ public class SetObjectNameCommandHandler(ISharpDatabase database) : ICommandHand
 {
 	public async ValueTask<Unit> Handle(SetNameCommand request, CancellationToken cancellationToken)
 	{
-		await database.SetObjectName(request.Target, request.Name);
+		await database.SetObjectName(request.Target, request.Name, cancellationToken);
 		return Unit.Value;
 	}
 }
@@ -17,7 +17,7 @@ public class SetObjectHomeCommandHandler(ISharpDatabase database) : ICommandHand
 {
 	public async ValueTask<Unit> Handle(SetObjectHomeCommand request, CancellationToken cancellationToken)
 	{
-		await database.SetContentHome(request.Target, request.Home);
+		await database.SetContentHome(request.Target, request.Home, cancellationToken);
 		return Unit.Value;
 	}
 }
@@ -35,7 +35,7 @@ public class SetObjectOwnerCommandHandler(ISharpDatabase database) : ICommandHan
 {
 	public async ValueTask<Unit> Handle(SetObjectOwnerCommand request, CancellationToken cancellationToken)
 	{
-		await database.SetObjectOwner(request.Target, request.Owner);
+		await database.SetObjectOwner(request.Target, request.Owner, cancellationToken);
 		return Unit.Value;
 	}
 }
@@ -44,7 +44,7 @@ public class SetObjectParentCommandHandler(ISharpDatabase database) : ICommandHa
 {
 	public async ValueTask<Unit> Handle(SetObjectParentCommand request, CancellationToken cancellationToken)
 	{
-		await database.SetObjectParent(request.Target, request.Parent);
+		await database.SetObjectParent(request.Target, request.Parent, cancellationToken);
 		return Unit.Value;
 	}
 }
@@ -53,7 +53,7 @@ public class UnsetObjectParentCommandHandler(ISharpDatabase database) : ICommand
 {
 	public async ValueTask<Unit> Handle(UnsetObjectParentCommand request, CancellationToken cancellationToken)
 	{
-		await database.UnsetObjectParent(request.Target);
+		await database.UnsetObjectParent(request.Target, cancellationToken);
 		return Unit.Value;
 	}
 }

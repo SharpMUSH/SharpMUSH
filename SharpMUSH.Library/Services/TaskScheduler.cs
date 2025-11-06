@@ -113,7 +113,7 @@ public class TaskScheduler(
 		DbRefAttribute dbAttribute)
 	{
 		var parserState = await function();
-		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
+		var executor = await parserState.KnownExecutorObject(mediator);
 		var obj = await mediator.Send(new GetObjectNodeQuery(dbAttribute.DbRef));
 		if (obj.IsNone) return;
 

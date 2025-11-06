@@ -34,7 +34,6 @@ public class InformationFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("alias(%#)", "")]
 	public async Task Alias(string str, string expected)
 	{
@@ -43,7 +42,6 @@ public class InformationFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("fullname(%#)", "")]
 	public async Task Fullname(string str, string expected)
 	{
@@ -52,7 +50,6 @@ public class InformationFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("accname(%#)", "")]
 	public async Task Accname(string str, string expected)
 	{
@@ -61,7 +58,6 @@ public class InformationFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("iname(%#)", "")]
 	public async Task Iname(string str, string expected)
 	{
@@ -70,7 +66,6 @@ public class InformationFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("moniker(%#)", "")]
 	public async Task Moniker(string str, string expected)
 	{
@@ -79,21 +74,19 @@ public class InformationFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("money(%#)", "0")]
 	public async Task Money(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsNotNull();
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("quota(%#)", "")]
+	[Arguments("quota(%#)", "0 999999")]
 	public async Task Quota(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsNotNull();
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
@@ -106,7 +99,6 @@ public class InformationFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("findable(%#,%#)", "1")]
 	public async Task Findable(string str, string expected)
 	{
@@ -139,5 +131,49 @@ public class InformationFunctionUnitTests
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
+	}
+
+	[Test]
+	[Arguments("numversion()", "20250102000000")]
+	public async Task Numversion(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("nearby(%#,%#)", "1")]
+	[Arguments("nearby(%#,%l)", "1")]
+	public async Task Nearby(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("first(rloc(%#,0),:)", "%#")]
+	[Arguments("first(rloc(%#,1),:)", "%l")]
+	public async Task Rloc(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var resultPlain = result.ToPlainText();
+		var expectedParsed = (await Parser.FunctionParse(MModule.single(expected)))?.Message!.ToPlainText();
+		await Assert.That(resultPlain).IsEqualTo(expectedParsed);
+	}
+
+	[Test]
+	[Arguments("lstats()", "0 0 0 0 0")]
+	public async Task Lstats(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("pidinfo(999)", "#-1 NO SUCH PID")]
+	public async Task Pidinfo(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 }

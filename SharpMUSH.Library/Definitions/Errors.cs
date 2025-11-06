@@ -53,4 +53,10 @@ public static class Errors
 	public const string ParentLoop = "#-1 PARENT LOOP DETECTED";
 	public const string InvalidFlag = "#-1 INVALID FLAG FOR THIS OBJECT";
 	public const string NotSupported = "#-1 BEHAVIOR NOT SUPPORTED BY SHARPMUSH";
+	public const string ErrorInvalidPlayer = "#-1 INVALID PLAYER";
+	public const string ErrorInvalidDestination = "#-1 INVALID DESTINATION";
+	public const string ErrorInvalidObjectType = "#-1 INVALID OBJECT TYPE";
+	public const string ErrorInvalidRoom = "#-1 INVALID ROOM";
+	public const string ErrorSafeObject = "#-1 OBJECT IS SAFE";
+	public const string ErrorNotGoing = "#-1 OBJECT NOT MARKED FOR DESTRUCTION";
 }

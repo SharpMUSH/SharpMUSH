@@ -40,7 +40,7 @@ public static class ChannelAdd
 			return new CallState("#-1 Invalid channel name.");
 		}
 
-		var allChannels = await Mediator.Send(new GetChannelListQuery());
+		var allChannels = Mediator.CreateStream(new GetChannelListQuery());
 		var ownedChannels = await allChannels
 			.Where(async (x, _) =>
 				(await x.Owner.WithCancellation(CancellationToken.None)).Id == executorOwner.Id)

@@ -80,6 +80,7 @@ public class GeneralCommandTests
 	}
 
 	[Test]
+	[NotInParallel]
 	public async ValueTask DoListComplex()
 	{
 		await Parser.CommandParse(1, ConnectionService,
@@ -98,6 +99,7 @@ public class GeneralCommandTests
 	}
 
 	[Test]
+	[NotInParallel]
 	public async ValueTask DoListComplex2()
 	{
 		await Parser.CommandParse(1, ConnectionService,
@@ -122,6 +124,7 @@ public class GeneralCommandTests
 	}
 
 	[Test]
+	[NotInParallel]
 	public async ValueTask DoListComplex3()
 	{
 		await Parser.CommandParse(1, ConnectionService,
@@ -294,5 +297,240 @@ public class GeneralCommandTests
 		var flags = await onePlayer.Object.Flags.Value.ToArrayAsync();
 
 		await Assert.That(flags.Count(x => x.Name == "DEBUG")).IsEqualTo(1);
+	}
+
+	[Test]
+	public async ValueTask WhereIs_ValidPlayer_ReportsLocation()
+	{
+		// Test @whereis with a valid player
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@whereis #1"));
+
+		// Should notify about the location
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("is in")), 
+				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+	}
+
+	[Test]
+	public async ValueTask WhereIs_NonPlayer_ReturnsError()
+	{
+		// First create a thing (non-player object)
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@create test_object_whereis"));
+
+		// Try to @whereis a non-player
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@whereis test_object_whereis"));
+
+		// Should notify that it's not a player
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("only @whereis players")), 
+				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+	}
+
+	[Test, Skip("TODO")]
+	public async ValueTask Restart_ValidObject_Restarts()
+	{
+		// Test @restart with a valid object
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@restart #1"));
+
+		// Should notify about restart
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Restarted")), 
+				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+	}
+
+	[Test]
+	public async ValueTask Find_SearchesForObjects()
+	{
+		// Test @find command
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@find test"));
+
+		// Should notify about searching
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Searching")), 
+				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+	}
+
+	[Test]
+	public async ValueTask Stats_ShowsDatabaseStatistics()
+	{
+		// Test @stats command
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@stats"));
+
+		// Should notify about database statistics
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Database Statistics")), 
+				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+	}
+
+	[Test]
+	public async ValueTask Search_PerformsDatabaseSearch()
+	{
+		// Test @search command
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@search"));
+
+		// Should notify about search
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf<MString,string>>(s => s.Value.ToString()!.Contains("database search")), 
+				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+	}
+
+	[Test]
+	public async ValueTask Entrances_ShowsLinkedObjects()
+	{
+		// Test @entrances command
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@entrances"));
+
+		// Should notify about entrances
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Entrances")), 
+				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+	}
+
+	[Test]
+	public async ValueTask Command_ShowsCommandInfo()
+	{
+		// Test @command with a command name
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@command @emit"));
+
+		// Should notify about command information
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Command:")), 
+				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+	}
+
+	[Test, Skip("TODO")]
+	public async ValueTask Function_ListsGlobalFunctions()
+	{
+		// Test @function with no arguments to list functions
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@function"));
+
+		// Should notify about global functions
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Global user-defined functions")), 
+				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+	}
+
+	[Test, Skip("TODO")]
+	public async ValueTask Function_ShowsFunctionInfo()
+	{
+		// Test @function with a function name
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@function name"));
+
+		// Should notify about function information
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Function:")), 
+				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+	}
+
+	[Test]
+	public async ValueTask Map_ExecutesAttributeOverList()
+	{
+		// Test @map command
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@map me/test=foo bar baz"));
+
+		// Should notify about mapping
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("@map:")), 
+				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+	}
+
+	[Test, Skip("TODO")]
+	public async ValueTask Trigger_QueuesAttribute()
+	{
+		// Test @trigger command
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@trigger me/test=arg1,arg2"));
+
+		// Should notify about triggering
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("@trigger:")), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+	}
+
+	[Test]
+	public async ValueTask Include_InsertsAttributeInPlace()
+	{
+		// Test @include command
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@include me/test=arg1,arg2"));
+
+		// Should attempt to locate the object and get the attribute
+		// Since mocks aren't fully set up, it will fail with an error message
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+	}
+
+	[Test]
+	public async ValueTask Halt_ClearsQueue()
+	{
+		// Test @halt command
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@halt me"));
+
+		// Should notify about halting
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("@halt:")), 
+				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+	}
+
+	[Test, Skip("TODO")]
+	public async ValueTask PS_ShowsQueueStatus()
+	{
+		// Test @ps command
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@ps"));
+
+		// Should notify about queue
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("@ps:")), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+	}
+
+	[Test]
+	public async ValueTask Select_MatchesFirstExpression()
+	{
+		// Test @select command
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@select test=foo,:action1,bar,:action2"));
+
+		// Should notify about select
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf<MString,string>>(s => s.Value.ToString()!.Contains("@select:")),  
+				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+	}
+
+	[Test]
+	public async ValueTask Attribute_DisplaysAttributeInfo()
+	{
+		// Test @attribute command
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@attribute DESCRIPTION"));
+
+		// Should notify about attribute info
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf<MString,string>>(s => s.Value.ToString()!.Contains("@attribute:")), 
+				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 }

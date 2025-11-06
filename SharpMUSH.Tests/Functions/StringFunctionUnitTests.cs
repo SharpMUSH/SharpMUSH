@@ -253,8 +253,22 @@ public class StringFunctionUnitTests
 	[Test]
 	// TODO: Fix decompose, and then fix this test.
 	[Arguments("decompose(ansi(hr,red))", @"ansi\(hr\,red\)")]
+	//[Arguments("decompose(ansi(ub,red))", @"ansi\(ub\,red\)")]
+	// TODO: returns	"ansi\(u\,red\)". Something wrong with 'b'?
 	// [Skip("Decompose function not functioning as expected. Needs investigation.")]
 	public async Task Decompose(string str, string expectedText)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
+	}
+	
+	[Test]
+	// TODO: Fix decomposeweb, and then fix this test.
+	[Arguments("decomposeweb(ansi(hr,red))", @"<span style=""color:Red;background-color:inherit;text-decoration:inherit"">red</span>")]
+	// [Arguments("decomposeweb(ansi(bu,blue))", @"<span style=""color:Blue;background-color:inherit;text-decoration:underline"">blue</span>")]
+	// TODO: decompsoe is not matching 'b' correctly it seems.
+	// [Skip("Decompose function not functioning as expected. Needs investigation.")]
+	public async Task DecomposeWeb(string str, string expectedText)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);

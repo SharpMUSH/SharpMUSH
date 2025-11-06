@@ -1,4 +1,5 @@
-﻿using Mediator;
+﻿using System.ComponentModel;
+using Mediator;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -56,7 +57,7 @@ public static class StatusMail
 			"READ" => MailUpdate.ReadEdit(true),
 			"URGENT" => MailUpdate.UrgentEdit(true),
 			"UNURGENT" => MailUpdate.UrgentEdit(false),
-			_ => throw new NotImplementedException("Invalid switch somehow made it into StatusMail.Handle")
+			_ => throw new ArgumentOutOfRangeException(nameof(sw), "Invalid switch somehow made it into StatusMail.Handle")
 		};
 
 		List<string> idList = [];

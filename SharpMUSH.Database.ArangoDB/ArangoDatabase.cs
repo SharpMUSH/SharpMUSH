@@ -1,4 +1,5 @@
 ﻿using System.Collections.Immutable;
+using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using Core.Arango;
 using Core.Arango.Migration;
@@ -305,7 +306,7 @@ public partial class ArangoDatabase(
 		var edge = await GetObjectPowerEdge(dbref, power, ct);
 		if (edge is not null) return false;
 
-		await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphFlags, DatabaseConstants.HasPowers,
+		await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphPowers, DatabaseConstants.HasPowers,
 			new SharpEdgeCreateRequest(dbref.Object().Id!, power.Id!), cancellationToken: ct);
 
 		return true;
@@ -361,7 +362,7 @@ public partial class ArangoDatabase(
 	{
 		var response = await arangoDb.Query.ExecuteAsync<string>(handle,
 			$"FOR v,e IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphParents} RETURN e._id",
-			new Dictionary<string, object> { { StartVertex, obj.Id()! } }, cancellationToken: ct);
+			new Dictionary<string, object> { { StartVertex, obj.Object().Id! } }, cancellationToken: ct);
 
 		var contentEdge = response.FirstOrDefault();
 
@@ -373,7 +374,7 @@ public partial class ArangoDatabase(
 		if (contentEdge is null && parent != null)
 		{
 			await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphParents, DatabaseConstants.HasParent,
-				new { To = parent.Id() }, cancellationToken: ct);
+				new { _from = obj.Object().Id, _to = parent.Object().Id }, cancellationToken: ct);
 		}
 		else if (parent is null)
 		{
@@ -383,7 +384,7 @@ public partial class ArangoDatabase(
 		else
 		{
 			await arangoDb.Graph.Edge.UpdateAsync(handle, DatabaseConstants.GraphParents, DatabaseConstants.HasParent,
-				contentEdge, new { To = parent.Id() }, cancellationToken: ct);
+				contentEdge, new { _to = parent.Object().Id }, cancellationToken: ct);
 		}
 	}
 
@@ -420,10 +421,21 @@ public partial class ArangoDatabase(
 				$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphPowers} RETURN v", cancellationToken: ct)
 			.Select(SharpPowerQueryToSharpPower);
 
-	public IAsyncEnumerable<SharpObjectFlag> GetObjectFlagsAsync(string id, CancellationToken ct = default)
+	public IAsyncEnumerable<SharpObjectFlag> GetObjectFlagsAsync(string id, string type, CancellationToken ct = default)
 		=> arangoDb.Query.ExecuteStreamAsync<SharpObjectFlagQueryResult>(handle,
 				$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphFlags} RETURN v", cancellationToken: ct)
-			.Select(SharpObjectFlagQueryToSharpFlag);
+			.Select(SharpObjectFlagQueryToSharpFlag)
+			.Append(new SharpObjectFlag()
+			{
+				Name = type,
+				SetPermissions = [],
+				TypeRestrictions = [],
+				Symbol = type[0].ToString(),
+				System = true,
+				UnsetPermissions = [],
+				Id = null,
+				Aliases = []
+			});
 
 	// TODO: Fix this.
 	public async ValueTask<IAsyncEnumerable<SharpObject>> GetParentsAsync(string id, CancellationToken ct = default)
@@ -494,6 +506,22 @@ public partial class ArangoDatabase(
 
 	private async ValueTask<AnyOptionalSharpObject> MailFromAsync(string id, CancellationToken ct = default)
 	{
+		// There is an error here. 
+		/*
+		 *Microsoft.CSharp.RuntimeBinder.RuntimeBinderException: Cannot convert null to 'long' because it is a non-nullable value type
+   at CallSite.Target(Closure, CallSite, Object)
+   at System.Dynamic.UpdateDelegates.UpdateAndExecute1[T0,TRet](CallSite site, T0 arg0)
+   at CallSite.Target(Closure, CallSite, Object)
+   at SharpMUSH.Database.ArangoDB.ArangoDatabase.SharpObjectQueryToSharpObject(Object obj) in D:\\SharpMUSH\\SharpMUSH.Database.ArangoDB\\ArangoDatabase.cs:line 1164
+   at SharpMUSH.Database.ArangoDB.ArangoDatabase.GetObjectNodeAsync(String dbId, CancellationToken cancellationToken) in D:\\SharpMUSH\\SharpMUSH.Database.ArangoDB\\ArangoDatabase.cs:line 1136
+   at SharpMUSH.Database.ArangoDB.ArangoDatabase.MailFromAsync(String id, CancellationToken ct) in D:\\SharpMUSH\\SharpMUSH.Database.ArangoDB\\ArangoDatabase.cs:line 502
+   at SharpMUSH.Database.ArangoDB.ArangoDatabase.<>c__DisplayClass38_0.<<ConvertMailQueryResult>b__0>d.MoveNext() in D:\\SharpMUSH\\SharpMUSH.Database.ArangoDB\\ArangoDatabase.cs:line 486
+--- End of stack trace from previous location ---
+   at SharpMUSH.Implementation.Functions.Functions.mailfrom(IMUSHCodeParser parser, SharpFunctionAttribute _2) in D:\\SharpMUSH\\SharpMUSH.Implementation\\Functions\\MailFunctions.cs:line 326
+   at SharpMUSH.Implementation.Visitors.SharpMUSHParserVisitor.CallFunction(String name, MarkupString src, FunctionContext context, EvaluationStringContext[] args, SharpMUSHParserVisitor visitor) in D:\\SharpMUSH\\SharpMUSH.Implementation\\Visitors\\SharpMUSHParserVisitor.cs:line 264
+		 *
+		 */
+
 		var edges = await arangoDb.Query.ExecuteAsync<SharpEdgeQueryResult>(handle,
 			$"FOR v,e IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphMail} RETURN e", cancellationToken: ct);
 
@@ -775,7 +803,6 @@ public partial class ArangoDatabase(
 
 		try
 		{
-
 			var newChannel = new SharpChannelCreateRequest(
 				Name: channel.ToPlainText(),
 				MarkedUpName: MarkupStringModule.serialize(channel),
@@ -844,10 +871,10 @@ public partial class ArangoDatabase(
 
 	public async ValueTask AddUserToChannelAsync(SharpChannel channel, AnySharpObject obj, CancellationToken ct = default)
 		=> await arangoDb.Graph.Edge.CreateAsync(
-			handle, 
-			DatabaseConstants.GraphChannels, 
+			handle,
+			DatabaseConstants.GraphChannels,
 			DatabaseConstants.OnChannel,
-			new SharpEdgeCreateRequest(channel.Id!, obj.Object().Id!), 
+			new SharpEdgeCreateRequest(channel.Id!, obj.Object().Id!),
 			cancellationToken: ct);
 
 	public async ValueTask RemoveUserFromChannelAsync(SharpChannel channel, AnySharpObject obj,
@@ -1171,7 +1198,7 @@ public partial class ArangoDatabase(
 			ModifiedTime = obj.ModifiedTime,
 			Locks = ImmutableDictionary<string, string>
 				.Empty, // FIX: ((Dictionary<string, string>?)obj.Locks ?? []).ToImmutableDictionary(),
-			Flags = new(() => GetObjectFlagsAsync(obj._id, CancellationToken.None)),
+			Flags = new(() => GetObjectFlagsAsync(obj._id, obj.Type.ToUpper(), CancellationToken.None)),
 			Powers = new(() => GetPowersAsync(obj._id, CancellationToken.None)),
 			Attributes = new(() => GetTopLevelAttributesAsync(obj._id, CancellationToken.None)),
 			LazyAttributes = new(() => GetTopLevelLazyAttributesAsync(obj._id, CancellationToken.None)),
@@ -1209,7 +1236,7 @@ public partial class ArangoDatabase(
 			CreationTime = obj.CreationTime,
 			ModifiedTime = obj.ModifiedTime,
 			Flags =
-				new Lazy<IAsyncEnumerable<SharpObjectFlag>>(() => GetObjectFlagsAsync(obj.Id, CancellationToken.None)),
+				new Lazy<IAsyncEnumerable<SharpObjectFlag>>(() => GetObjectFlagsAsync(obj.Id, obj.Type.ToUpper(), CancellationToken.None)),
 			Powers = new Lazy<IAsyncEnumerable<SharpPower>>(() => GetPowersAsync(obj.Id, CancellationToken.None)),
 			Attributes =
 				new Lazy<IAsyncEnumerable<SharpAttribute>>(() =>
@@ -1364,13 +1391,18 @@ public partial class ArangoDatabase(
 	{
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 		var result =
-			await arangoDb.Query.ExecuteAsync<SharpObjectQueryResult>(handle, $"RETURN DOCUMENT({startVertex})", cache: true,
+			await arangoDb.Query.ExecuteAsync<SharpObjectQueryResult>(handle, 
+				$"FOR v IN 1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphObjects} RETURN v",
+				new Dictionary<string, object>
+				{
+					{ StartVertex, startVertex }
+				}, cache: true,
 				cancellationToken: ct);
-
+		
 		var pattern = WildcardToRegex().Replace(attributePattern, m => m.Value switch
 		{
+			"**" => ".*?",
 			"*" => "[^`]*",
-			"**" => ".*",
 			"?" => ".",
 			_ => $"\\{m.Value}"
 		});
@@ -1383,15 +1415,17 @@ public partial class ArangoDatabase(
 		// OPTIONS { indexHint: "inverted_index_name", forceIndexHint: true }
 		// This doesn't seem like it can be done on a GRAPH query?
 		const string query =
-			$"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName =~ @pattern RETURN v";
+			$"FOR v IN 1..99999 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName =~ @pattern  RETURN v";
 
+		// FILTER v.LongName =~ @pattern 
+		
 		var result2 = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle, query,
 			new Dictionary<string, object>
 			{
-				{ StartVertex, startVertex },
-				{ "pattern", pattern }
+				{ StartVertex, result.First().Id },
+				{ "pattern", $"^{pattern}$" }
 			}, cancellationToken: ct);
-
+		
 		return result2
 			.Select(SharpAttributeQueryToSharpAttribute);
 	}
@@ -1401,11 +1435,17 @@ public partial class ArangoDatabase(
 	{
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 		var result =
-			arangoDb.Query.ExecuteStreamAsync<SharpObjectQueryResult>(handle, $"RETURN DOCUMENT({startVertex})", cache: true,
+			await arangoDb.Query.ExecuteAsync<SharpObjectQueryResult>(handle, 
+				$"FOR v IN 1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphObjects} RETURN v",
+				new Dictionary<string, object>
+				{
+					{ StartVertex, startVertex }
+				}, cache: true,
 				cancellationToken: ct);
-		var pattern = attributePattern;
 
-		if (!await result.AnyAsync(cancellationToken: ct))
+		var pattern = $"(?i){attributePattern}"; // Add case-insensitive flag
+
+		if (!result.Any())
 		{
 			return null;
 		}
@@ -1418,12 +1458,12 @@ public partial class ArangoDatabase(
 		// OPTIONS { indexHint: "inverted_index_name", forceIndexHint: true }
 		// This doesn't seem like it can be done on a GRAPH query?
 		const string query =
-			$"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName LIKE @pattern RETURN v";
+			$"FOR v IN 1..99999 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName =~ @pattern RETURN v";
 
 		var result2 = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle, query,
 			new Dictionary<string, object>
 			{
-				{ StartVertex, startVertex },
+				{ StartVertex, result.First().Id },
 				{ "pattern", pattern }
 			}, cancellationToken: ct);
 
@@ -1453,14 +1493,15 @@ public partial class ArangoDatabase(
 
 		// OPTIONS { indexHint: "inverted_index_name", forceIndexHint: true }
 		// This doesn't seem like it can be done on a GRAPH query?
+		var pattern = $"(?i){attributePattern}"; // Add case-insensitive flag
 		const string query =
-			$"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName LIKE @pattern RETURN v";
+			$"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName =~ @pattern RETURN v";
 
 		return arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle, query,
 				new Dictionary<string, object>
 				{
 					{ StartVertex, startVertex },
-					{ "pattern", attributePattern }
+					{ "pattern", pattern }
 				}, cancellationToken: ct)
 			.Select(SharpAttributeQueryToLazySharpAttribute);
 	}
@@ -1534,7 +1575,6 @@ public partial class ArangoDatabase(
 	public async ValueTask<IAsyncEnumerable<SharpAttribute>?> GetAttributeAsync(DBRef dbref, string[] attribute,
 		CancellationToken ct = default)
 	{
-		await ValueTask.CompletedTask;
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 
 		const string let =
@@ -2021,6 +2061,48 @@ public partial class ArangoDatabase(
 			.Select(x => x.AsPlayer);
 	}
 
+	public async IAsyncEnumerable<SharpObject> GetAllObjectsAsync([EnumeratorCancellation] CancellationToken ct = default)
+	{
+		var objectIds = arangoDb.Query.ExecuteStreamAsync<string>(handle,
+			$"FOR v IN {DatabaseConstants.Objects:@} RETURN v._id",
+			cancellationToken: ct) ?? AsyncEnumerable.Empty<string>();
+
+		await foreach (var id in objectIds.WithCancellation(ct))
+		{
+			var optionalObj = await GetObjectNodeAsync(id, ct);
+			if (!optionalObj.IsNone)
+			{
+				yield return optionalObj.Known.Object();
+			}
+		}
+	}
+
+	public async IAsyncEnumerable<SharpExit> GetEntrancesAsync(DBRef destination,
+		[EnumeratorCancellation] CancellationToken ct = default)
+	{
+		// Query to find all exits that lead to the destination
+		// Exits are connected to their destination via the AtLocation edge in GraphLocations
+		var exitIds = arangoDb.Query.ExecuteStreamAsync<string>(handle,
+			$@"FOR v, e IN 1..1 INBOUND @destination GRAPH @graph
+			   FILTER v.Type == @exitType
+			   RETURN v._id",
+			bindVars: new Dictionary<string, object>
+			{
+				{ "destination", $"{DatabaseConstants.Objects}/{destination.Number}" },
+				{ "graph", DatabaseConstants.GraphLocations },
+				{ "exitType", DatabaseConstants.TypeExit }
+			}, cancellationToken: ct) ?? AsyncEnumerable.Empty<string>();
+
+		await foreach (var id in exitIds.WithCancellation(ct))
+		{
+			var optionalObj = await GetObjectNodeAsync(id, ct);
+			if (!optionalObj.IsNone)
+			{
+				yield return optionalObj.AsExit;
+			}
+		}
+	}
+
 	public async ValueTask MoveObjectAsync(AnySharpContent enactorObj, AnySharpContainer destination,
 		CancellationToken ct = default)
 	{
@@ -2043,8 +2125,34 @@ public partial class ArangoDatabase(
 
 	public async ValueTask SetupLogging()
 	{
-		await ValueTask.CompletedTask;
+		_ = await arangoDb.Collection.ExistAsync(handle, DatabaseConstants.Logs);
 	}
+
+	public IAsyncEnumerable<LogEventEntity> GetChannelLogs(SharpChannel channel, int skip = 0, int count = 100)
+		=> arangoDb.Query.ExecuteStreamAsync<LogEventEntity>(
+			handle,
+			$"FOR v IN @@c FILTER v.Properties.ChannelId == @channelId SORT v.Timestamp DESC LIMIT @skip, @count RETURN v",
+			bindVars:
+			new Dictionary<string, object>
+			{
+				{ "@c", DatabaseConstants.Logs },
+				{ "channelId", channel.Id! },
+				{ "skip", skip },
+				{ "count", count }
+			});
+
+	public IAsyncEnumerable<LogEventEntity> GetLogsFromCategory(string category, int skip = 0, int count = 100)
+		=> arangoDb.Query.ExecuteStreamAsync<LogEventEntity>(
+			handle,
+			$"FOR v IN @@c FILTER v.Properties.Category == @category SORT v.Timestamp DESC LIMIT @skip, @count RETURN v",
+			bindVars:
+			new Dictionary<string, object>
+			{
+				{ "@c", DatabaseConstants.Logs },
+				{ "category", category },
+				{ "skip", skip },
+				{ "count", count }
+			});
 
 	public async ValueTask SetPlayerPasswordAsync(SharpPlayer player, string password, CancellationToken ct = default)
 	{
@@ -2057,6 +2165,6 @@ public partial class ArangoDatabase(
 		}, mergeObjects: true, cancellationToken: ct);
 	}
 
-	[GeneratedRegex("[.*+?^${}()|[\\]/]")]
+	[GeneratedRegex(@"\*\*|[.*+?^${}()|[\]/]")]
 	private static partial Regex WildcardToRegex();
 }

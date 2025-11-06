@@ -42,7 +42,8 @@ public class MailFunctionUnitTests
 		var testPlayer = executor.AsPlayer;
 		
 		// Clear any existing mail to ensure clean state
-		var existingMail = await Mediator.Send(new GetAllMailListQuery(testPlayer));
+		var existingMail = Mediator.CreateStream(new GetAllMailListQuery(testPlayer));
+		
 		await foreach (var mail in existingMail)
 		{
 			await Mediator.Send(new DeleteMailCommand(mail));

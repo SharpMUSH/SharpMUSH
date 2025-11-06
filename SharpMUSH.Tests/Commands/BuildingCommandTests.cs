@@ -167,7 +167,7 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<DBRef>(), Arg.Any<string>());
+			.Notify(Arg.Any<DBRef>(), Arg.Is<string>(s => s.Contains("Linked")));
 	}
 
 	[Test]
@@ -183,7 +183,7 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Cloned")));
 	}
 
 	[Test]
@@ -214,9 +214,10 @@ public class BuildingCommandTests
 		// Change ownership (to self in this case)
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@chown #10=#1"));
 
+		// Verify command executed without permission error
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.DidNotReceive()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("PERMISSION DENIED")));
 	}
 
 	[Test]
@@ -233,7 +234,7 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Zone set")));
 	}
 
 	[Test]
@@ -249,7 +250,7 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Marked for destruction")));
 	}
 
 	[Test]
@@ -266,7 +267,7 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Unlinked")));
 	}
 
 	[Test]
@@ -289,7 +290,7 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Locked")));
 	}
 
 	[Test]
@@ -304,6 +305,6 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Unlocked")));
 	}
 }

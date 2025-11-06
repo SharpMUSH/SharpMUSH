@@ -333,6 +333,59 @@ module MarkupStringModule =
         markupStr.EvaluateWith(evaluator)
 
     /// <summary>
+    /// Optimizes a MarkupString by merging adjacent content with the same markup details
+    /// and lifting child content when the parent and child have the same markup details.
+    /// </summary>
+    /// <param name="markupStr">The MarkupString to optimize.</param>
+    let optimize (markupStr: MarkupString) : MarkupString =
+        let rec msOptimize (ms: MarkupString) =
+            // Depth-First optimization of nested MarkupStrings
+            // This function should go to the bottom of each tree branch first
+            // From there, it looks for any Content that, left to right, have the same MarkupDetails
+            // If so, it should merge their Content lists together.
+            // As it travels up, it should also check that the current MarkupDetails is the same as the child MarkupDetails
+            // If so, and the child is the only Content, it should lift the child's Content up to the parent.
+            
+            // Helper function to check if two MarkupTypes are equivalent
+            let markupTypesEqual (a: MarkupTypes) (b: MarkupTypes) =
+                match a, b with
+                | Empty, Empty -> true
+                | MarkedupText markupA, MarkedupText markupB -> markupA = markupB
+                | _ -> false
+            
+            // First, recursively optimize all nested MarkupStrings (depth-first)
+            let optimizedContent = 
+                ms.Content 
+                |> List.map (function
+                    | Text t -> Text t
+                    | MarkupText nestedMs -> MarkupText (msOptimize nestedMs))
+            
+            // Merge adjacent MarkupText items with the same MarkupDetails
+            let rec mergeAdjacent (contentList: Content list) (acc: Content list) =
+                match contentList with
+                | [] -> List.rev acc
+                | [single] -> List.rev (single :: acc)
+                | MarkupText a :: MarkupText b :: tail when markupTypesEqual a.MarkupDetails b.MarkupDetails ->
+                    // Merge the content lists of a and b
+                    let mergedContent = a.Content @ b.Content
+                    let merged = MarkupString(a.MarkupDetails, mergedContent)
+                    mergeAdjacent (MarkupText merged :: tail) acc
+                | head :: tail ->
+                    mergeAdjacent tail (head :: acc)
+            
+            let mergedContent = mergeAdjacent optimizedContent []
+            
+            // Check if we can lift child content up to parent
+            match mergedContent with
+            | [MarkupText child] when markupTypesEqual ms.MarkupDetails child.MarkupDetails ->
+                // Lift the child's content up to the parent level
+                MarkupString(ms.MarkupDetails, child.Content)
+            | _ ->
+                MarkupString(ms.MarkupDetails, mergedContent)
+        
+        msOptimize markupStr
+
+    /// <summary>
     /// Concatenates two MarkupStrings, optionally inserting a separator.
     /// </summary>
     /// <param name="originalMarkupStr">The first MarkupString.</param>
@@ -801,6 +854,20 @@ module MarkupStringModule =
             |> fun x -> KindPattern2Regex().TypedReplace(x, konst @"\?")
 
         pattern |> plainText |> Regex.Escape |> (fun x -> $"^{x}$") |> applyRegexPattern
+        
+    /// <summary>
+    /// Converts a wildcard pattern MarkupString to a regex string.
+    /// </summary>
+    /// <param name="pattern">The wildcard pattern as a MarkupString.</param>
+    let getWildcardMatchAsRegex2 (pattern: string) : string =
+        let applyRegexPattern (pat: string) =
+            pat
+            |> fun x -> GlobPatternRegex().TypedReplace(x, konst @"(.*?)")
+            |> fun x -> QuestionPatternRegex().TypedReplace(x, konst @"(.)")
+            |> fun x -> KindPatternRegex().TypedReplace(x, konst @"\*")
+            |> fun x -> KindPattern2Regex().TypedReplace(x, konst @"\?")
+
+        pattern |> Regex.Escape |> (fun x -> $"^{x}$") |> applyRegexPattern
 
     /// <summary>
     /// Determines if the input MarkupString matches the wildcard pattern.
@@ -809,6 +876,15 @@ module MarkupStringModule =
     /// <param name="pattern">The wildcard pattern MarkupString.</param>
     let isWildcardMatch (input: MarkupString) (pattern: MarkupString) : bool =
         let newPattern = getWildcardMatchAsRegex pattern
+        (plainText input, newPattern) |> Regex.IsMatch
+        
+    /// <summary>
+    /// Determines if the input MarkupString matches the wildcard pattern.
+    /// </summary>
+    /// <param name="input">The input MarkupString.</param>
+    /// <param name="pattern">The wildcard pattern MarkupString.</param>
+    let isWildcardMatch2 (input: MarkupString) (pattern: string) : bool =
+        let newPattern = getWildcardMatchAsRegex2 pattern
         (plainText input, newPattern) |> Regex.IsMatch
 
     /// <summary>
