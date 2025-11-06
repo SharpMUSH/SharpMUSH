@@ -18,6 +18,7 @@ public class SqlService : ISqlService
 	
 	public SqlService(IOptionsMonitor<SharpMUSHOptions> config)
 	{
+		// TODO: Support multiple database types.
 		var cvn = config.CurrentValue.Net;
 		var connectionString = $"Server={cvn.SqlHost};Uid={cvn.SqlUsername};Pwd={cvn.SqlPassword};Database={cvn.SqlDatabase}";
 
@@ -34,8 +35,8 @@ public class SqlService : ISqlService
 	public ValueTask<IEnumerable<Dictionary<string, object?>>> ExecuteQueryAsync(string query)
 		=> _mySql!.ExecuteQueryAsync(query);
 
-	public IAsyncEnumerable<Dictionary<string, object?>> ExecuteQueryStreamAsync(string query)
-		=> _mySql!.ExecuteQueryStreamAsync(query);
+	public IAsyncEnumerable<Dictionary<string, object?>> ExecuteStreamQueryAsync(string query) 
+		=> _mySql!.ExecuteStreamQueryAsync(query);
 
 	public ValueTask<string> ExecuteQueryAsStringAsync(string query, string delimiter = " ")
 		=> _mySql!.ExecuteQueryAsStringAsync(query, delimiter);

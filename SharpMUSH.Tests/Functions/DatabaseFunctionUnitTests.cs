@@ -16,6 +16,7 @@ public class DatabaseFunctionUnitTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 
+	[NotInParallel]
 	[Before(Test)]
 	public async Task InitializeAsync()
 	{
@@ -213,15 +214,14 @@ public class DatabaseFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Something weird going on with these results.")]
 	public async Task Test_Sqlescape_RealWorldUse()
 	{
 		// Test using sqlescape in an actual query
 		var escapedValue = (await Parser.FunctionParse(MModule.single("sqlescape(test_sql_row1)")))?.Message!.ToPlainText();
-		var query = $"sql(lit(SELECT value FROM test_sql_data WHERE name = '{escapedValue}'))";
+		var query = $"Test_Sqlescape_RealWorldUse: [sql(lit(SELECT DISTINCT value FROM test_sql_data WHERE name = '{escapedValue}'))]";
 		var result = (await Parser.FunctionParse(MModule.single(query)))?.Message!;
 
-		await Assert.That(result.ToPlainText()).IsEqualTo("100");
+		await Assert.That(result.ToPlainText()).IsEqualTo("Test_Sqlescape_RealWorldUse: 100");
 	}
 
 	[Test]
@@ -249,34 +249,33 @@ public class DatabaseFunctionUnitTests
 	public async Task Test_Mapsql_BasicExecution()
 	{
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("&test_mapsql_func_attr #1=Mapsql_BasicExecution: Row %0 has value %2"));
+			MModule.single("&Test_Mapsql_BasicExecution #1=Test_Mapsql_BasicExecution: Row %0 has value %2"));
 
 		await Task.Delay(100);
 
 		var result =
 			(await Parser.FunctionParse(MModule.single(
-				"mapsql(#1/test_mapsql_func_attr,lit(SELECT `name`,`value` FROM `test_sql_data` WHERE id = 1))")))?.Message!;
+				"mapsql(#1/Test_Mapsql_BasicExecution,lit(SELECT `name`,`value` FROM `test_sql_data` WHERE id = 1))")))?.Message!;
 
-		await Assert.That(result.ToPlainText()).IsEqualTo("Mapsql_BasicExecution: Row 1 has value 100");
+		await Assert.That(result.ToPlainText()).IsEqualTo("Test_Mapsql_BasicExecution: Row 1 has value 100");
 	}
 
 	[Test]
-	[Skip("Something weird going on with these results.")]
 	public async Task Test_Mapsql_BasicExecution2()
 	{
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("&test_mapsql_func_attr #1=Mapsql_BasicExecution: Row %0 has value %2"));
+			MModule.single("&Test_Mapsql_BasicExecution2 #1=Test_Mapsql_BasicExecution2: Row %0 has value %2"));
 
 		await Task.Delay(100);
 
 		var result =
 			(await Parser.FunctionParse(
-				MModule.single("mapsql(#1/test_mapsql_func_attr,lit(SELECT `name`,`value` FROM `test_sql_data`),%r)")))
+				MModule.single("mapsql(#1/Test_Mapsql_BasicExecution2,lit(SELECT `name`,`value` FROM `test_sql_data` LIMIT 3),%r)")))
 			?.Message!;
 
-		await Assert.That(result.ToPlainText()).IsEqualTo("Mapsql_BasicExecution: Row 1 has value 100" +
-		                                                  "\nMapsql_BasicExecution: Row 2 has value 200" +
-		                                                  "\nMapsql_BasicExecution: Row 3 has value 300");
+		await Assert.That(result.ToPlainText()).IsEqualTo("Test_Mapsql_BasicExecution2: Row 1 has value 100" +
+		                                                  "\nTest_Mapsql_BasicExecution2: Row 2 has value 200" +
+		                                                  "\nTest_Mapsql_BasicExecution2: Row 3 has value 300");
 	}
 
 	[Test]
@@ -290,12 +289,12 @@ public class DatabaseFunctionUnitTests
 	public async Task Test_Mapsql_TableDoesNotExist()
 	{
 		// Set up an attribute first
-		await Parser.CommandParse(1, ConnectionService, MModule.single("&test_mapsql_error_func #1=think %0"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&Test_Mapsql_TableDoesNotExist #1=think %0"));
 		await Task.Delay(100);
 
 		var result =
 			(await Parser.FunctionParse(
-				MModule.single("mapsql(#1/test_mapsql_error_func,lit(SELECT * FROM nonexistent_table))")))?.Message!;
+				MModule.single("mapsql(#1/Test_Mapsql_TableDoesNotExist,lit(SELECT * FROM nonexistent_table))")))?.Message!;
 		await Assert.That(result.ToPlainText()).StartsWith("#-1 SQL ERROR");
 	}
 }
