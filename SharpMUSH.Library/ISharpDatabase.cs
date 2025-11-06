@@ -216,6 +216,31 @@ public interface ISharpDatabase
 	ValueTask<bool> DeletePowerAsync(string name, CancellationToken cancellationToken = default);
 
 	/// <summary>
+	/// Update an existing Power.
+	/// </summary>
+	/// <param name="name">Power name</param>
+	/// <param name="alias">Power alias</param>
+	/// <param name="setPermissions">Permissions required to set this power</param>
+	/// <param name="unsetPermissions">Permissions required to unset this power</param>
+	/// <param name="typeRestrictions">Object types this power can be set on</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
+	/// <returns>Success or Failure</returns>
+	ValueTask<bool> UpdatePowerAsync(string name, string alias, string[] setPermissions, string[] unsetPermissions, string[] typeRestrictions, CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Update an existing object flag.
+	/// </summary>
+	/// <param name="name">Flag name</param>
+	/// <param name="aliases">Flag aliases</param>
+	/// <param name="symbol">Flag symbol</param>
+	/// <param name="setPermissions">Permissions required to set this flag</param>
+	/// <param name="unsetPermissions">Permissions required to unset this flag</param>
+	/// <param name="typeRestrictions">Object types this flag can be set on</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
+	/// <returns>Success or Failure</returns>
+	ValueTask<bool> UpdateObjectFlagAsync(string name, string[]? aliases, string symbol, string[] setPermissions, string[] unsetPermissions, string[] typeRestrictions, CancellationToken cancellationToken = default);
+
+	/// <summary>
 	/// Sets a name on an object.
 	/// </summary>
 	/// <param name="obj">The object to alter</param>

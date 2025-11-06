@@ -141,8 +141,302 @@ public partial class Commands
 			}
 		}
 		
+		// @flag/letter name=symbol - change flag symbol
+		if (switches.Contains("LETTER"))
+		{
+			if (parser.CurrentState.Arguments.Count < 2)
+			{
+				await NotifyService!.Notify(executor, "@FLAG/LETTER requires flag name and new symbol.");
+				return CallState.Empty;
+			}
+			
+			var flagName = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+			var newSymbol = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+			
+			if (string.IsNullOrWhiteSpace(flagName) || string.IsNullOrWhiteSpace(newSymbol))
+			{
+				await NotifyService!.Notify(executor, "Flag name and symbol cannot be empty.");
+				return CallState.Empty;
+			}
+			
+			var flag = await Mediator!.Send(new GetObjectFlagQuery(flagName.ToUpper()));
+			if (flag == null)
+			{
+				await NotifyService!.Notify(executor, $"Flag '{flagName}' not found.");
+				return CallState.Empty;
+			}
+			
+			if (flag.System)
+			{
+				await NotifyService!.Notify(executor, $"Cannot modify system flag '{flagName}'.");
+				return CallState.Empty;
+			}
+			
+			var result = await Mediator!.Send(new UpdateObjectFlagCommand(
+				flagName.ToUpper(),
+				flag.Aliases,
+				newSymbol,
+				flag.SetPermissions,
+				flag.UnsetPermissions,
+				flag.TypeRestrictions
+			));
+			
+			if (result)
+			{
+				await NotifyService!.Notify(executor, $"Flag '{flagName}' symbol changed to '{newSymbol}'.");
+				return new CallState(MModule.single(flagName));
+			}
+			else
+			{
+				await NotifyService!.Notify(executor, $"Failed to update flag '{flagName}'.");
+				return CallState.Empty;
+			}
+		}
+		
+		// @flag/type name=types - change type restrictions
+		if (switches.Contains("TYPE"))
+		{
+			if (parser.CurrentState.Arguments.Count < 2)
+			{
+				await NotifyService!.Notify(executor, "@FLAG/TYPE requires flag name and type restrictions.");
+				return CallState.Empty;
+			}
+			
+			var flagName = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+			var typesArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+			
+			if (string.IsNullOrWhiteSpace(flagName) || string.IsNullOrWhiteSpace(typesArg))
+			{
+				await NotifyService!.Notify(executor, "Flag name and types cannot be empty.");
+				return CallState.Empty;
+			}
+			
+			var flag = await Mediator!.Send(new GetObjectFlagQuery(flagName.ToUpper()));
+			if (flag == null)
+			{
+				await NotifyService!.Notify(executor, $"Flag '{flagName}' not found.");
+				return CallState.Empty;
+			}
+			
+			if (flag.System)
+			{
+				await NotifyService!.Notify(executor, $"Cannot modify system flag '{flagName}'.");
+				return CallState.Empty;
+			}
+			
+			var types = typesArg.Split([',', ' '], StringSplitOptions.RemoveEmptyEntries)
+				.Select(t => t.ToUpper())
+				.ToArray();
+			
+			var result = await Mediator!.Send(new UpdateObjectFlagCommand(
+				flagName.ToUpper(),
+				flag.Aliases,
+				flag.Symbol,
+				flag.SetPermissions,
+				flag.UnsetPermissions,
+				types
+			));
+			
+			if (result)
+			{
+				await NotifyService!.Notify(executor, $"Flag '{flagName}' type restrictions updated to: {string.Join(", ", types)}.");
+				return new CallState(MModule.single(flagName));
+			}
+			else
+			{
+				await NotifyService!.Notify(executor, $"Failed to update flag '{flagName}'.");
+				return CallState.Empty;
+			}
+		}
+		
+		// @flag/alias name=aliases - set aliases for flag
+		if (switches.Contains("ALIAS"))
+		{
+			if (parser.CurrentState.Arguments.Count < 2)
+			{
+				await NotifyService!.Notify(executor, "@FLAG/ALIAS requires flag name and aliases.");
+				return CallState.Empty;
+			}
+			
+			var flagName = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+			var aliasesArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+			
+			if (string.IsNullOrWhiteSpace(flagName))
+			{
+				await NotifyService!.Notify(executor, "Flag name cannot be empty.");
+				return CallState.Empty;
+			}
+			
+			var flag = await Mediator!.Send(new GetObjectFlagQuery(flagName.ToUpper()));
+			if (flag == null)
+			{
+				await NotifyService!.Notify(executor, $"Flag '{flagName}' not found.");
+				return CallState.Empty;
+			}
+			
+			if (flag.System)
+			{
+				await NotifyService!.Notify(executor, $"Cannot modify system flag '{flagName}'.");
+				return CallState.Empty;
+			}
+			
+			string[]? aliases = null;
+			if (!string.IsNullOrWhiteSpace(aliasesArg))
+			{
+				aliases = aliasesArg.Split([',', ' '], StringSplitOptions.RemoveEmptyEntries)
+					.Select(a => a.ToUpper())
+					.ToArray();
+			}
+			
+			var result = await Mediator!.Send(new UpdateObjectFlagCommand(
+				flagName.ToUpper(),
+				aliases,
+				flag.Symbol,
+				flag.SetPermissions,
+				flag.UnsetPermissions,
+				flag.TypeRestrictions
+			));
+			
+			if (result)
+			{
+				var aliasStr = aliases != null && aliases.Length > 0 ? string.Join(", ", aliases) : "none";
+				await NotifyService!.Notify(executor, $"Flag '{flagName}' aliases set to: {aliasStr}.");
+				return new CallState(MModule.single(flagName));
+			}
+			else
+			{
+				await NotifyService!.Notify(executor, $"Failed to update flag '{flagName}'.");
+				return CallState.Empty;
+			}
+		}
+		
+		// @flag/restrict name=permissions - set permissions
+		if (switches.Contains("RESTRICT"))
+		{
+			if (parser.CurrentState.Arguments.Count < 2)
+			{
+				await NotifyService!.Notify(executor, "@FLAG/RESTRICT requires flag name and permissions.");
+				return CallState.Empty;
+			}
+			
+			var flagName = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+			var permsArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+			
+			if (string.IsNullOrWhiteSpace(flagName) || string.IsNullOrWhiteSpace(permsArg))
+			{
+				await NotifyService!.Notify(executor, "Flag name and permissions cannot be empty.");
+				return CallState.Empty;
+			}
+			
+			var flag = await Mediator!.Send(new GetObjectFlagQuery(flagName.ToUpper()));
+			if (flag == null)
+			{
+				await NotifyService!.Notify(executor, $"Flag '{flagName}' not found.");
+				return CallState.Empty;
+			}
+			
+			if (flag.System)
+			{
+				await NotifyService!.Notify(executor, $"Cannot modify system flag '{flagName}'.");
+				return CallState.Empty;
+			}
+			
+			var perms = permsArg.Split([',', ' '], StringSplitOptions.RemoveEmptyEntries);
+			
+			var result = await Mediator!.Send(new UpdateObjectFlagCommand(
+				flagName.ToUpper(),
+				flag.Aliases,
+				flag.Symbol,
+				perms,
+				perms,
+				flag.TypeRestrictions
+			));
+			
+			if (result)
+			{
+				await NotifyService!.Notify(executor, $"Flag '{flagName}' permissions updated to: {string.Join(", ", perms)}.");
+				return new CallState(MModule.single(flagName));
+			}
+			else
+			{
+				await NotifyService!.Notify(executor, $"Failed to update flag '{flagName}'.");
+				return CallState.Empty;
+			}
+		}
+		
+		// @flag/decompile name - show flag definition
+		if (switches.Contains("DECOMPILE"))
+		{
+			if (parser.CurrentState.Arguments.Count < 1)
+			{
+				await NotifyService!.Notify(executor, "@FLAG/DECOMPILE requires a flag name.");
+				return CallState.Empty;
+			}
+			
+			var flagName = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+			
+			var flag = await Mediator!.Send(new GetObjectFlagQuery(flagName.ToUpper()));
+			if (flag == null)
+			{
+				await NotifyService!.Notify(executor, $"Flag '{flagName}' not found.");
+				return CallState.Empty;
+			}
+			
+			var output = new System.Text.StringBuilder();
+			output.AppendLine($"Flag: {flag.Name}");
+			output.AppendLine($"Symbol: {flag.Symbol}");
+			output.AppendLine($"System: {(flag.System ? "Yes" : "No")}");
+			output.AppendLine($"Aliases: {(flag.Aliases != null && flag.Aliases.Length > 0 ? string.Join(", ", flag.Aliases) : "none")}");
+			output.AppendLine($"Type Restrictions: {string.Join(", ", flag.TypeRestrictions)}");
+			output.AppendLine($"Set Permissions: {string.Join(", ", flag.SetPermissions)}");
+			output.AppendLine($"Unset Permissions: {string.Join(", ", flag.UnsetPermissions)}");
+			
+			await NotifyService!.Notify(executor, output.ToString().TrimEnd());
+			return CallState.Empty;
+		}
+		
+		// @flag/disable and @flag/enable are not yet implemented
+		// They would require a flag enable/disable state in the database
+		if (switches.Contains("DISABLE") || switches.Contains("ENABLE"))
+		{
+			await NotifyService!.Notify(executor, "Flag enable/disable functionality not yet implemented.");
+			return CallState.Empty;
+		}
+		
+		// @flag/debug - show debug information (currently same as decompile)
+		if (switches.Contains("DEBUG"))
+		{
+			if (parser.CurrentState.Arguments.Count < 1)
+			{
+				await NotifyService!.Notify(executor, "@FLAG/DEBUG requires a flag name.");
+				return CallState.Empty;
+			}
+			
+			var flagName = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+			
+			var flag = await Mediator!.Send(new GetObjectFlagQuery(flagName.ToUpper()));
+			if (flag == null)
+			{
+				await NotifyService!.Notify(executor, $"Flag '{flagName}' not found.");
+				return CallState.Empty;
+			}
+			
+			var output = new System.Text.StringBuilder();
+			output.AppendLine($"DEBUG - Flag: {flag.Name}");
+			output.AppendLine($"ID: {flag.Id ?? "N/A"}");
+			output.AppendLine($"Symbol: {flag.Symbol}");
+			output.AppendLine($"System: {(flag.System ? "Yes" : "No")}");
+			output.AppendLine($"Aliases: {(flag.Aliases != null && flag.Aliases.Length > 0 ? string.Join(", ", flag.Aliases) : "none")}");
+			output.AppendLine($"Type Restrictions: {string.Join(", ", flag.TypeRestrictions)}");
+			output.AppendLine($"Set Permissions: {string.Join(", ", flag.SetPermissions)}");
+			output.AppendLine($"Unset Permissions: {string.Join(", ", flag.UnsetPermissions)}");
+			
+			await NotifyService!.Notify(executor, output.ToString().TrimEnd());
+			return CallState.Empty;
+		}
+		
 		// Default - show usage
-		await NotifyService!.Notify(executor, "Usage: @flag/list, @flag/add <name>=<symbol>, @flag/delete <name>");
+		await NotifyService!.Notify(executor, "Usage: @flag/list, @flag/add <name>=<symbol>, @flag/delete <name>, @flag/letter <name>=<symbol>, @flag/type <name>=<types>, @flag/alias <name>=<aliases>, @flag/restrict <name>=<permissions>, @flag/decompile <name>");
 		return CallState.Empty;
 	}
 
@@ -353,8 +647,205 @@ public partial class Commands
 			}
 		}
 		
+		// @power/alias name=alias - change power alias
+		if (switches.Contains("ALIAS"))
+		{
+			if (parser.CurrentState.Arguments.Count < 2)
+			{
+				await NotifyService!.Notify(executor, "@POWER/ALIAS requires power name and new alias.");
+				return CallState.Empty;
+			}
+			
+			var powerName = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+			var newAlias = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+			
+			if (string.IsNullOrWhiteSpace(powerName) || string.IsNullOrWhiteSpace(newAlias))
+			{
+				await NotifyService!.Notify(executor, "Power name and alias cannot be empty.");
+				return CallState.Empty;
+			}
+			
+			var power = await Mediator!.Send(new GetPowerQuery(powerName.ToUpper()));
+			if (power == null)
+			{
+				await NotifyService!.Notify(executor, $"Power '{powerName}' not found.");
+				return CallState.Empty;
+			}
+			
+			if (power.System)
+			{
+				await NotifyService!.Notify(executor, $"Cannot modify system power '{powerName}'.");
+				return CallState.Empty;
+			}
+			
+			var result = await Mediator!.Send(new UpdatePowerCommand(
+				powerName.ToUpper(),
+				newAlias.ToUpper(),
+				power.SetPermissions,
+				power.UnsetPermissions,
+				power.TypeRestrictions
+			));
+			
+			if (result)
+			{
+				await NotifyService!.Notify(executor, $"Power '{powerName}' alias changed to '{newAlias}'.");
+				return new CallState(MModule.single(powerName));
+			}
+			else
+			{
+				await NotifyService!.Notify(executor, $"Failed to update power '{powerName}'.");
+				return CallState.Empty;
+			}
+		}
+		
+		// @power/type name=types - change type restrictions
+		if (switches.Contains("TYPE"))
+		{
+			if (parser.CurrentState.Arguments.Count < 2)
+			{
+				await NotifyService!.Notify(executor, "@POWER/TYPE requires power name and type restrictions.");
+				return CallState.Empty;
+			}
+			
+			var powerName = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+			var typesArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+			
+			if (string.IsNullOrWhiteSpace(powerName) || string.IsNullOrWhiteSpace(typesArg))
+			{
+				await NotifyService!.Notify(executor, "Power name and types cannot be empty.");
+				return CallState.Empty;
+			}
+			
+			var power = await Mediator!.Send(new GetPowerQuery(powerName.ToUpper()));
+			if (power == null)
+			{
+				await NotifyService!.Notify(executor, $"Power '{powerName}' not found.");
+				return CallState.Empty;
+			}
+			
+			if (power.System)
+			{
+				await NotifyService!.Notify(executor, $"Cannot modify system power '{powerName}'.");
+				return CallState.Empty;
+			}
+			
+			var types = typesArg.Split([',', ' '], StringSplitOptions.RemoveEmptyEntries)
+				.Select(t => t.ToUpper())
+				.ToArray();
+			
+			var result = await Mediator!.Send(new UpdatePowerCommand(
+				powerName.ToUpper(),
+				power.Alias,
+				power.SetPermissions,
+				power.UnsetPermissions,
+				types
+			));
+			
+			if (result)
+			{
+				await NotifyService!.Notify(executor, $"Power '{powerName}' type restrictions updated to: {string.Join(", ", types)}.");
+				return new CallState(MModule.single(powerName));
+			}
+			else
+			{
+				await NotifyService!.Notify(executor, $"Failed to update power '{powerName}'.");
+				return CallState.Empty;
+			}
+		}
+		
+		// @power/restrict name=permissions - set permissions
+		if (switches.Contains("RESTRICT"))
+		{
+			if (parser.CurrentState.Arguments.Count < 2)
+			{
+				await NotifyService!.Notify(executor, "@POWER/RESTRICT requires power name and permissions.");
+				return CallState.Empty;
+			}
+			
+			var powerName = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+			var permsArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+			
+			if (string.IsNullOrWhiteSpace(powerName) || string.IsNullOrWhiteSpace(permsArg))
+			{
+				await NotifyService!.Notify(executor, "Power name and permissions cannot be empty.");
+				return CallState.Empty;
+			}
+			
+			var power = await Mediator!.Send(new GetPowerQuery(powerName.ToUpper()));
+			if (power == null)
+			{
+				await NotifyService!.Notify(executor, $"Power '{powerName}' not found.");
+				return CallState.Empty;
+			}
+			
+			if (power.System)
+			{
+				await NotifyService!.Notify(executor, $"Cannot modify system power '{powerName}'.");
+				return CallState.Empty;
+			}
+			
+			var perms = permsArg.Split([',', ' '], StringSplitOptions.RemoveEmptyEntries);
+			
+			var result = await Mediator!.Send(new UpdatePowerCommand(
+				powerName.ToUpper(),
+				power.Alias,
+				perms,
+				perms,
+				power.TypeRestrictions
+			));
+			
+			if (result)
+			{
+				await NotifyService!.Notify(executor, $"Power '{powerName}' permissions updated to: {string.Join(", ", perms)}.");
+				return new CallState(MModule.single(powerName));
+			}
+			else
+			{
+				await NotifyService!.Notify(executor, $"Failed to update power '{powerName}'.");
+				return CallState.Empty;
+			}
+		}
+		
+		// @power/decompile name - show power definition
+		if (switches.Contains("DECOMPILE"))
+		{
+			if (parser.CurrentState.Arguments.Count < 1)
+			{
+				await NotifyService!.Notify(executor, "@POWER/DECOMPILE requires a power name.");
+				return CallState.Empty;
+			}
+			
+			var powerName = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+			
+			var power = await Mediator!.Send(new GetPowerQuery(powerName.ToUpper()));
+			if (power == null)
+			{
+				await NotifyService!.Notify(executor, $"Power '{powerName}' not found.");
+				return CallState.Empty;
+			}
+			
+			var output = new System.Text.StringBuilder();
+			output.AppendLine($"Power: {power.Name}");
+			output.AppendLine($"Alias: {power.Alias}");
+			output.AppendLine($"System: {(power.System ? "Yes" : "No")}");
+			output.AppendLine($"Type Restrictions: {string.Join(", ", power.TypeRestrictions)}");
+			output.AppendLine($"Set Permissions: {string.Join(", ", power.SetPermissions)}");
+			output.AppendLine($"Unset Permissions: {string.Join(", ", power.UnsetPermissions)}");
+			
+			await NotifyService!.Notify(executor, output.ToString().TrimEnd());
+			return CallState.Empty;
+		}
+		
+		// @power/disable and @power/enable are not yet implemented
+		// They would require a power enable/disable state in the database
+		if (switches.Contains("DISABLE") || switches.Contains("ENABLE"))
+		{
+			await NotifyService!.Notify(executor, "Power enable/disable functionality not yet implemented.");
+			return CallState.Empty;
+		}
+		
 		// Default - show usage
-		await NotifyService!.Notify(executor, "Usage: @power/list, @power/add <name>=<alias>, @power/delete <name>");
+		await NotifyService!.Notify(executor, "Usage: @power/list, @power/add <name>=<alias>, @power/delete <name>, @power/alias <name>=<alias>, @power/type <name>=<types>, @power/restrict <name>=<permissions>, @power/decompile <name>");
 		return CallState.Empty;
 	}
 
