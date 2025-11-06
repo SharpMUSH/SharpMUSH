@@ -2165,6 +2165,42 @@ public partial class ArangoDatabase(
 		}, mergeObjects: true, cancellationToken: ct);
 	}
 
+	public async ValueTask<SharpObjectFlag?> CreateObjectFlagAsync(string name, string[]? aliases, string symbol, 
+		bool system, string[] setPermissions, string[] unsetPermissions, string[] typeRestrictions, 
+		CancellationToken ct = default)
+	{
+		// TODO: Implement flag creation in ArangoDB
+		// For now, return null to indicate creation is not yet supported
+		await ValueTask.CompletedTask;
+		return null;
+	}
+
+	public async ValueTask<bool> DeleteObjectFlagAsync(string name, CancellationToken ct = default)
+	{
+		// TODO: Implement flag deletion in ArangoDB
+		// For now, return false to indicate deletion is not yet supported
+		await ValueTask.CompletedTask;
+		return false;
+	}
+
+	public async ValueTask<SharpPower?> CreatePowerAsync(string name, string alias, bool system, 
+		string[] setPermissions, string[] unsetPermissions, string[] typeRestrictions, 
+		CancellationToken ct = default)
+	{
+		// TODO: Implement power creation in ArangoDB
+		// For now, return null to indicate creation is not yet supported
+		await ValueTask.CompletedTask;
+		return null;
+	}
+
+	public async ValueTask<bool> DeletePowerAsync(string name, CancellationToken ct = default)
+	{
+		// TODO: Implement power deletion in ArangoDB
+		// For now, return false to indicate deletion is not yet supported
+		await ValueTask.CompletedTask;
+		return false;
+	}
+
 	[GeneratedRegex(@"\*\*|[.*+?^${}()|[\]/]")]
 	private static partial Regex WildcardToRegex();
 }
