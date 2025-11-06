@@ -1,5 +1,4 @@
 using System.Text.Json;
-using Dapper;
 using MySqlConnector;
 using SharpMUSH.Library.Services.Interfaces;
 
