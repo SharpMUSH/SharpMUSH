@@ -289,6 +289,14 @@ public interface ISharpDatabase
 	IAsyncEnumerable<SharpPower> GetObjectPowersAsync(CancellationToken cancellationToken = default);
 	
 	/// <summary>
+	/// Get a Power by name, if it exists.
+	/// </summary>
+	/// <param name="name">Power name</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
+	/// <returns>A SharpPower, or null if it does not exist</returns>
+	ValueTask<SharpPower?> GetPowerAsync(string name, CancellationToken cancellationToken = default);
+	
+	/// <summary>
 	/// Get the parent of an object.
 	/// </summary>
 	/// <param name="id">Child ID</param>
