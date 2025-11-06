@@ -65,12 +65,20 @@ public partial class Commands
 				return CallState.Empty;
 			}
 			
-			// TODO: Parse additional parameters like type restrictions, permissions
+			// Check if flag already exists
+			var existingFlag = await Mediator!.Send(new GetObjectFlagQuery(flagName.ToUpper()));
+			if (existingFlag != null)
+			{
+				await NotifyService!.Notify(executor, $"Flag '{flagName}' already exists.");
+				return CallState.Empty;
+			}
+			
+			// User-created flags are always non-system
 			var result = await Mediator!.Send(new CreateObjectFlagCommand(
 				flagName.ToUpper(),
 				null, // aliases
 				symbol,
-				false, // system
+				false, // system - user-created flags are NEVER system flags
 				["FLAG^WIZARD"], // default set permissions
 				["FLAG^WIZARD"], // default unset permissions
 				["PLAYER", "THING", "ROOM", "EXIT"] // default type restrictions
@@ -83,7 +91,7 @@ public partial class Commands
 			}
 			else
 			{
-				await NotifyService!.Notify(executor, $"Failed to create flag '{flagName}'. Database operations not yet fully implemented.");
+				await NotifyService!.Notify(executor, $"Failed to create flag '{flagName}'.");
 				return CallState.Empty;
 			}
 		}
@@ -128,7 +136,7 @@ public partial class Commands
 			}
 			else
 			{
-				await NotifyService!.Notify(executor, $"Failed to delete flag '{flagName}'. Database operations not yet fully implemented.");
+				await NotifyService!.Notify(executor, $"Failed to delete flag '{flagName}'.");
 				return CallState.Empty;
 			}
 		}
@@ -278,11 +286,11 @@ public partial class Commands
 				return CallState.Empty;
 			}
 			
-			// TODO: Parse additional parameters like type restrictions, permissions
+			// User-created powers are always non-system
 			var result = await Mediator!.Send(new CreatePowerCommand(
 				powerName.ToUpper(),
 				alias.ToUpper(),
-				false, // system
+				false, // system - user-created powers are NEVER system powers
 				["FLAG^WIZARD"], // default set permissions
 				["FLAG^WIZARD"], // default unset permissions
 				["PLAYER"] // default type restrictions (powers typically only on players)
@@ -295,7 +303,7 @@ public partial class Commands
 			}
 			else
 			{
-				await NotifyService!.Notify(executor, $"Failed to create power '{powerName}'. Database operations not yet fully implemented.");
+				await NotifyService!.Notify(executor, $"Failed to create power '{powerName}'.");
 				return CallState.Empty;
 			}
 		}
@@ -317,8 +325,19 @@ public partial class Commands
 				return CallState.Empty;
 			}
 			
-			// TODO: Check if power is a system power (would need GetPowerQuery)
-			// For now, just attempt deletion
+			// Check if power is a system power
+			var power = await Mediator!.Send(new GetPowerQuery(powerName.ToUpper()));
+			if (power == null)
+			{
+				await NotifyService!.Notify(executor, $"Power '{powerName}' not found.");
+				return CallState.Empty;
+			}
+			
+			if (power.System)
+			{
+				await NotifyService!.Notify(executor, $"Cannot delete system power '{powerName}'.");
+				return CallState.Empty;
+			}
 			
 			var result = await Mediator!.Send(new DeletePowerCommand(powerName.ToUpper()));
 			
@@ -329,7 +348,7 @@ public partial class Commands
 			}
 			else
 			{
-				await NotifyService!.Notify(executor, $"Failed to delete power '{powerName}'. Database operations not yet fully implemented.");
+				await NotifyService!.Notify(executor, $"Failed to delete power '{powerName}'.");
 				return CallState.Empty;
 			}
 		}

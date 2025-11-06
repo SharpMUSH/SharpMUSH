@@ -2169,37 +2169,146 @@ public partial class ArangoDatabase(
 		bool system, string[] setPermissions, string[] unsetPermissions, string[] typeRestrictions, 
 		CancellationToken ct = default)
 	{
-		// TODO: Implement flag creation in ArangoDB
-		// For now, return null to indicate creation is not yet supported
-		await ValueTask.CompletedTask;
+		// Create the flag document in the database
+		var request = new SharpObjectFlagCreationRequest(
+			name,
+			aliases,
+			symbol,
+			system,
+			setPermissions,
+			unsetPermissions,
+			typeRestrictions
+		);
+		
+		var result = await arangoDb.Document.CreateAsync(
+			handle, 
+			DatabaseConstants.ObjectFlags, 
+			request, 
+			cancellationToken: ct
+		);
+		
+		if (result != null)
+		{
+			// Return the created flag
+			return new SharpObjectFlag
+			{
+				Id = result.Id,
+				Name = name,
+				Aliases = aliases,
+				Symbol = symbol,
+				System = system,
+				SetPermissions = setPermissions,
+				UnsetPermissions = unsetPermissions,
+				TypeRestrictions = typeRestrictions
+			};
+		}
+		
 		return null;
 	}
 
 	public async ValueTask<bool> DeleteObjectFlagAsync(string name, CancellationToken ct = default)
 	{
-		// TODO: Implement flag deletion in ArangoDB
-		// For now, return false to indicate deletion is not yet supported
-		await ValueTask.CompletedTask;
-		return false;
+		// Get the flag to delete
+		var flag = await GetObjectFlagAsync(name, ct);
+		if (flag == null)
+		{
+			return false;
+		}
+		
+		// Prevent deletion of system flags
+		if (flag.System)
+		{
+			return false;
+		}
+		
+		// Delete the flag document using collection and key
+		await arangoDb.Document.DeleteAsync<object>(
+			handle,
+			DatabaseConstants.ObjectFlags,
+			flag.Id!.Split('/')[1], // Extract key from ID (format: collection/key)
+			cancellationToken: ct
+		);
+		
+		return true;
 	}
 
 	public async ValueTask<SharpPower?> CreatePowerAsync(string name, string alias, bool system, 
 		string[] setPermissions, string[] unsetPermissions, string[] typeRestrictions, 
 		CancellationToken ct = default)
 	{
-		// TODO: Implement power creation in ArangoDB
-		// For now, return null to indicate creation is not yet supported
-		await ValueTask.CompletedTask;
+		// Create the power document in the database
+		var request = new SharpPowerCreateRequest(
+			name,
+			alias,
+			system,
+			setPermissions,
+			unsetPermissions,
+			typeRestrictions
+		);
+		
+		var result = await arangoDb.Document.CreateAsync(
+			handle, 
+			DatabaseConstants.ObjectPowers, 
+			request, 
+			cancellationToken: ct
+		);
+		
+		if (result != null)
+		{
+			// Return the created power
+			return new SharpPower
+			{
+				Id = result.Id,
+				Name = name,
+				Alias = alias,
+				System = system,
+				SetPermissions = setPermissions,
+				UnsetPermissions = unsetPermissions,
+				TypeRestrictions = typeRestrictions
+			};
+		}
+		
 		return null;
 	}
 
 	public async ValueTask<bool> DeletePowerAsync(string name, CancellationToken ct = default)
 	{
-		// TODO: Implement power deletion in ArangoDB
-		// For now, return false to indicate deletion is not yet supported
-		await ValueTask.CompletedTask;
-		return false;
+		// Get the power to delete
+		var power = await GetPowerAsync(name, ct);
+		if (power == null)
+		{
+			return false;
+		}
+		
+		// Prevent deletion of system powers
+		if (power.System)
+		{
+			return false;
+		}
+		
+		// Delete the power document using collection and key
+		await arangoDb.Document.DeleteAsync<object>(
+			handle,
+			DatabaseConstants.ObjectPowers,
+			power.Id!.Split('/')[1], // Extract key from ID (format: collection/key)
+			cancellationToken: ct
+		);
+		
+		return true;
 	}
+
+	public async ValueTask<SharpPower?> GetPowerAsync(string name, CancellationToken ct = default)
+		=> await arangoDb.Query.ExecuteStreamAsync<SharpPowerQueryResult>(
+				handle,
+				$"FOR v in @@C1 FILTER v.Name == @power RETURN v",
+				bindVars: new Dictionary<string, object>
+				{
+					{ "@C1", DatabaseConstants.ObjectPowers },
+					{ "power", name }
+				},
+				cache: true, cancellationToken: ct)
+			.Select(SharpPowerQueryToSharpPower)
+			.FirstOrDefaultAsync(cancellationToken: ct);
 
 	[GeneratedRegex(@"\*\*|[.*+?^${}()|[\]/]")]
 	private static partial Regex WildcardToRegex();
