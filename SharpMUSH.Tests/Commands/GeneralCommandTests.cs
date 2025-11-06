@@ -490,4 +490,16 @@ public class GeneralCommandTests
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("@select:")), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
+
+	[Test]
+	public async ValueTask Attribute_DisplaysAttributeInfo()
+	{
+		// Test @attribute command
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@attribute DESCRIPTION"));
+
+		// Should notify about attribute info
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("@attribute:")), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+	}
 }

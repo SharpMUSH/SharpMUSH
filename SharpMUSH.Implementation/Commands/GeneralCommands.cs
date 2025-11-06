@@ -3579,11 +3579,217 @@ public partial class Commands
 
 	[SharpCommand(Name = "@ATTRIBUTE",
 		Switches = ["ACCESS", "DELETE", "RENAME", "RETROACTIVE", "LIMIT", "ENUM", "DECOMPILE"],
-		Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 0)]
+		Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 2)]
 	public static async ValueTask<Option<CallState>> Attribute(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		// @attribute <attrib> - Display attribute information
+		// @attribute/access[/retroactive] <attrib>=<flag list> - Add/modify standard attribute
+		// @attribute/delete <attrib> - Remove standard attribute
+		// @attribute/rename <attrib>=<new name> - Rename standard attribute
+		// @attribute/limit <attrib>=<regexp pattern> - Restrict values to pattern
+		// @attribute/enum [<delim>] <attrib>=<list> - Restrict values to list
+		// @attribute/decompile[/retroactive] [<pattern>] - Decompile attribute table
+		
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches.ToArray();
+		
+		// Check for decompile switch first (can work with 0 or 1 arg)
+		if (switches.Contains("DECOMPILE"))
+		{
+			if (!await executor.IsWizard())
+			{
+				await NotifyService!.Notify(executor, "Permission denied.");
+				return new CallState(Errors.ErrorPerm);
+			}
+			
+			var pattern = args.GetValueOrDefault("0")?.Message?.ToPlainText() ?? "*";
+			var retroactive = switches.Contains("RETROACTIVE");
+			
+			await NotifyService!.Notify(executor, "@attribute/decompile: Decompiling attribute table");
+			await NotifyService.Notify(executor, $"  Pattern: {pattern}");
+			if (retroactive)
+			{
+				await NotifyService.Notify(executor, "  Including /retroactive switch");
+			}
+			
+			// TODO: Full implementation requires:
+			// - Iterate through all standard attributes in the attribute table
+			// - Filter by pattern (wildcard matching)
+			// - Output @attribute/access commands for each matching attribute
+			// - Include attribute flags and creator dbref
+			await NotifyService.Notify(executor, "Note: Attribute table decompilation not yet implemented.");
+			
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+		
+		// All other operations require at least one argument
+		if (args.Count == 0)
+		{
+			await NotifyService!.Notify(executor, "You must specify an attribute.");
+			return new CallState("#-1 NO ATTRIBUTE SPECIFIED");
+		}
+		
+		var attrName = args["0"].Message?.ToPlainText();
+		if (string.IsNullOrEmpty(attrName))
+		{
+			await NotifyService!.Notify(executor, "You must specify an attribute.");
+			return new CallState("#-1 NO ATTRIBUTE SPECIFIED");
+		}
+		
+		// Check for various switches
+		if (switches.Contains("ACCESS"))
+		{
+			if (!await executor.IsWizard())
+			{
+				await NotifyService!.Notify(executor, "Permission denied.");
+				return new CallState(Errors.ErrorPerm);
+			}
+			
+			if (args.Count < 2)
+			{
+				await NotifyService!.Notify(executor, "You must specify attribute flags.");
+				return new CallState("#-1 NO FLAGS SPECIFIED");
+			}
+			
+			var flagList = args["1"].Message?.ToPlainText() ?? "none";
+			var retroactive = switches.Contains("RETROACTIVE");
+			
+			await NotifyService!.Notify(executor, $"@attribute/access: Setting up attribute '{attrName}'");
+			await NotifyService.Notify(executor, $"  Flags: {flagList}");
+			if (retroactive)
+			{
+				await NotifyService.Notify(executor, "  Retroactively updating existing copies");
+			}
+			
+			// TODO: Full implementation requires:
+			// - Add attribute to standard attribute table if new
+			// - Set default flags for the attribute
+			// - If retroactive, update all existing copies:
+			//   - Change owner to executor
+			//   - Update flags to match flag list
+			// - Save changes to persist across reboots
+			await NotifyService.Notify(executor, "Note: Attribute table modification not yet implemented.");
+			
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+		
+		if (switches.Contains("DELETE"))
+		{
+			if (!await executor.IsWizard())
+			{
+				await NotifyService!.Notify(executor, "Permission denied.");
+				return new CallState(Errors.ErrorPerm);
+			}
+			
+			await NotifyService!.Notify(executor, $"@attribute/delete: Removing attribute '{attrName}' from table");
+			
+			// TODO: Full implementation requires:
+			// - Remove attribute from standard attribute table
+			// - Existing copies remain but are no longer "standard"
+			// - Save changes to persist across reboots
+			await NotifyService.Notify(executor, "Note: Attribute table modification not yet implemented.");
+			
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+		
+		if (switches.Contains("RENAME"))
+		{
+			if (!await executor.IsWizard())
+			{
+				await NotifyService!.Notify(executor, "Permission denied.");
+				return new CallState(Errors.ErrorPerm);
+			}
+			
+			if (args.Count < 2)
+			{
+				await NotifyService!.Notify(executor, "You must specify a new name.");
+				return new CallState("#-1 NO NEW NAME SPECIFIED");
+			}
+			
+			var newName = args["1"].Message?.ToPlainText();
+			await NotifyService!.Notify(executor, $"@attribute/rename: Renaming '{attrName}' to '{newName}'");
+			
+			// TODO: Full implementation requires:
+			// - Rename attribute in standard attribute table
+			// - Update all references to use new name
+			// - Save changes to persist across reboots
+			await NotifyService.Notify(executor, "Note: Attribute table modification not yet implemented.");
+			
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+		
+		if (switches.Contains("LIMIT"))
+		{
+			if (!await executor.IsWizard())
+			{
+				await NotifyService!.Notify(executor, "Permission denied.");
+				return new CallState(Errors.ErrorPerm);
+			}
+			
+			if (args.Count < 2)
+			{
+				await NotifyService!.Notify(executor, "You must specify a regexp pattern.");
+				return new CallState("#-1 NO PATTERN SPECIFIED");
+			}
+			
+			var pattern = args["1"].Message?.ToPlainText();
+			await NotifyService!.Notify(executor, $"@attribute/limit: Setting pattern for '{attrName}'");
+			await NotifyService.Notify(executor, $"  Pattern: {pattern}");
+			await NotifyService.Notify(executor, "  New values must match this pattern (case insensitive)");
+			
+			// TODO: Full implementation requires:
+			// - Store regexp pattern with attribute in table
+			// - Validate all new attribute values against pattern
+			// - Pattern is case insensitive unless (?-i) is used
+			await NotifyService.Notify(executor, "Note: Attribute validation not yet implemented.");
+			
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+		
+		if (switches.Contains("ENUM"))
+		{
+			if (!await executor.IsWizard())
+			{
+				await NotifyService!.Notify(executor, "Permission denied.");
+				return new CallState(Errors.ErrorPerm);
+			}
+			
+			if (args.Count < 2)
+			{
+				await NotifyService!.Notify(executor, "You must specify a list of choices.");
+				return new CallState("#-1 NO CHOICES SPECIFIED");
+			}
+			
+			var choices = args["1"].Message?.ToPlainText();
+			await NotifyService!.Notify(executor, $"@attribute/enum: Setting choices for '{attrName}'");
+			await NotifyService.Notify(executor, $"  Choices: {choices}");
+			await NotifyService.Notify(executor, "  New values must match one of these choices");
+			
+			// TODO: Full implementation requires:
+			// - Store enumeration list with attribute in table
+			// - Validate all new attribute values against list
+			// - Support partial matching like grab()
+			// - Support custom delimiters (default is space)
+			await NotifyService.Notify(executor, "Note: Attribute validation not yet implemented.");
+			
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+		
+		// No switches - display attribute information
+		await NotifyService!.Notify(executor, $"@attribute: Information for '{attrName}'");
+		await NotifyService.Notify(executor, "  Full name: (attribute lookup pending)");
+		await NotifyService.Notify(executor, "  Flags: (attribute table query pending)");
+		await NotifyService.Notify(executor, "  Created by: (attribute table query pending)");
+		
+		// TODO: Full implementation requires:
+		// - Query attribute table for attribute information
+		// - Display full name (canonical form)
+		// - Display default attribute flags
+		// - Display dbref of object that added it to table
+		await NotifyService.Notify(executor, "Note: Attribute table query not yet implemented.");
+		
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@SKIP", Switches = ["IFELSE"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse,
