@@ -18,6 +18,7 @@ public class SqlService : ISqlService
 	
 	public SqlService(IOptionsMonitor<SharpMUSHOptions> config)
 	{
+		// TODO: Support multiple database types.
 		var cvn = config.CurrentValue.Net;
 		var connectionString = $"Server={cvn.SqlHost};Uid={cvn.SqlUsername};Pwd={cvn.SqlPassword};Database={cvn.SqlDatabase}";
 
