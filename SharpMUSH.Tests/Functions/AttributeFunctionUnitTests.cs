@@ -79,13 +79,16 @@ public class AttributeFunctionUnitTests
 	[NotInParallel]
 	[Arguments("[attrib_set(%!/Test_Grep_CaseSensitive_1,test_string_grep_case1)]" +
 	           "[attrib_set(%!/Test_Grep_CaseSensitive_2,another_test_value)]" +
-	           "[attrib_set(%!/NO_MATCH,different)][grep(%!,TEST_*,test)]", "TEST_GREP_CASESENSITIVE_1 TEST_GREP_CASESENSITIVE_2")]
+	           "[attrib_set(%!/NO_MATCH,different)][grep(%!,Test_Grep_CaseSensitive_*,test)]", 
+		"TEST_GREP_CASESENSITIVE_1 TEST_GREP_CASESENSITIVE_2")]
 	[Arguments("[attrib_set(%!/Test_Grep_CaseSensitive_UPPER,TEST_VALUE)]" +
-	           "[grep(%!,Test_Grep_CaseSensitive_UPPER_*,VALUE)]", "TEST_GREP_CASESENSITIVE_UPPER"), Skip("Case Sensitive grep should not match uppercase")]
+	           "[grep(%!,Test_Grep_CaseSensitive_*,VALUE)]", 
+		"TEST_GREP_CASESENSITIVE_UPPER")]
 	[Arguments("[attrib_set(%!/Test_Grep_CaseSensitive_1,has_test_in_value)]" +
 	           "[attrib_set(%!/Test_Grep_CaseSensitive_2,also_test_here)]" +
-	           "[attrib_set(%!/EMPTY_TEST,)]" +
-	           "[grep(%!,*TEST*,test)]", "TEST_GREP_CASESENSITIVE_1 TEST_GREP_CASESENSITIVE_2")]
+	           "[attrib_set(%!/Test_Grep_CaseSensitive_2_EMPTY_TEST,)]" +
+	           "[grep(%!,*Test_Grep_CaseSensitive_*,test)]", 
+		"TEST_GREP_CASESENSITIVE_1 TEST_GREP_CASESENSITIVE_2")]
 	public async Task Test_Grep_CaseSensitive(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;

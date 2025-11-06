@@ -28,21 +28,19 @@ public class WebFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("wshtml(<b>test</b>)", "")]
 	public async Task Wshtml(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsNotNull();
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("wsjson({\"test\":\"value\"})", "")]
 	public async Task Wsjson(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsNotNull();
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
