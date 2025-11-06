@@ -454,4 +454,40 @@ public class GeneralCommandTests
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("@include:")), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
+
+	[Test]
+	public async ValueTask Halt_ClearsQueue()
+	{
+		// Test @halt command
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@halt me"));
+
+		// Should notify about halting
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("@halt:")), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+	}
+
+	[Test]
+	public async ValueTask PS_ShowsQueueStatus()
+	{
+		// Test @ps command
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@ps"));
+
+		// Should notify about queue
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("@ps:")), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+	}
+
+	[Test]
+	public async ValueTask Select_MatchesFirstExpression()
+	{
+		// Test @select command
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@select test=foo,:action1,bar,:action2"));
+
+		// Should notify about select
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("@select:")), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+	}
 }

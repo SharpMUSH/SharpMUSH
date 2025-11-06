@@ -574,11 +574,90 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@HALT", Switches = ["ALL", "NOEVAL", "PID"], Behavior = CB.Default | CB.EqSplit | CB.RSBrace,
-		MinArgs = 0, MaxArgs = 0)]
+		MinArgs = 0, MaxArgs = 2)]
 	public static async ValueTask<Option<CallState>> Halt(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		// @halt[/noeval] <object>[=<action list>] 
+		// @halt/pid <pid>
+		// @halt/all or @allhalt
+		
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches.ToArray();
+		
+		// Check for /all switch or @allhalt
+		if (switches.Contains("ALL"))
+		{
+			if (!await executor.IsWizard())
+			{
+				await NotifyService!.Notify(executor, "Permission denied.");
+				return new CallState(Errors.ErrorPerm);
+			}
+			
+			await NotifyService!.Notify(executor, "@halt/all: Would halt all objects in the game.");
+			await NotifyService.Notify(executor, "Note: Queue management for halting all objects not yet implemented.");
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+		
+		// Check for /pid switch
+		if (switches.Contains("PID"))
+		{
+			var pidStr = args.GetValueOrDefault("0")?.Message?.ToPlainText();
+			if (string.IsNullOrEmpty(pidStr))
+			{
+				await NotifyService!.Notify(executor, "You must specify a process ID.");
+				return new CallState("#-1 NO PID SPECIFIED");
+			}
+			
+			await NotifyService!.Notify(executor, $"@halt/pid: Would halt queue entry with PID {pidStr}");
+			await NotifyService.Notify(executor, "Note: Queue management for halting by PID not yet implemented.");
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+		
+		// Regular halt of an object
+		if (args.Count == 0)
+		{
+			// Halt self
+			await NotifyService!.Notify(executor, "@halt: Would clear your queue without setting HALT flag.");
+			await NotifyService.Notify(executor, "Note: Queue management not yet implemented.");
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+		
+		var targetName = args["0"].Message?.ToPlainText();
+		if (string.IsNullOrEmpty(targetName))
+		{
+			await NotifyService!.Notify(executor, "You must specify a target object.");
+			return new CallState("#-1 NO TARGET SPECIFIED");
+		}
+		
+		// Check if replacement action list is provided
+		string? replacementActions = null;
+		if (args.Count >= 2)
+		{
+			replacementActions = args["1"].Message?.ToPlainText();
+		}
+		
+		await NotifyService!.Notify(executor, $"@halt: Would halt queue for '{targetName}'");
+		
+		if (replacementActions != null)
+		{
+			await NotifyService.Notify(executor, $"  Replacement actions: {replacementActions}");
+		}
+		else
+		{
+			await NotifyService.Notify(executor, "  Will set HALT flag on object");
+		}
+		
+		// TODO: Full implementation requires:
+		// - Locating the target object
+		// - Checking control permissions or halt @power
+		// - Clearing all queued actions for the object
+		// - If player, clearing queue for player and all their objects
+		// - If replacement actions, queue them
+		// - Otherwise, set HALT flag
+		await NotifyService.Notify(executor, "Note: Queue management for @halt not yet implemented.");
+		
+		return new CallState("#-1 NOT IMPLEMENTED");
 	}
 
 	[SharpCommand(Name = "@NOTIFY", Switches = ["ALL", "ANY", "SETQ", "QUIET"],
@@ -2050,20 +2129,178 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@PS", Switches = ["ALL", "SUMMARY", "COUNT", "QUICK", "DEBUG"], Behavior = CB.Default,
-		MinArgs = 0, MaxArgs = 0)]
+		MinArgs = 0, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> ProcessStatus(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		// @ps[/<switch>] [<player>]
+		// @ps[/debug] <pid>
+		
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches.ToArray();
+		
+		// Check for /summary switch
+		if (switches.Contains("SUMMARY"))
+		{
+			await NotifyService!.Notify(executor, "@ps/summary: Queue totals");
+			await NotifyService.Notify(executor, "  Command queue: 0/0");
+			await NotifyService.Notify(executor, "  Wait queue: 0/0");
+			await NotifyService.Notify(executor, "  Semaphore queue: 0/0");
+			await NotifyService.Notify(executor, "  Load average: 0.0, 0.0, 0.0");
+			await NotifyService.Notify(executor, "Note: Queue management not yet implemented.");
+			return CallState.Empty;
+		}
+		
+		// Check for /quick switch
+		if (switches.Contains("QUICK"))
+		{
+			await NotifyService!.Notify(executor, "@ps/quick: Your queue totals");
+			await NotifyService.Notify(executor, "  Command queue: 0/0");
+			await NotifyService.Notify(executor, "  Wait queue: 0/0");
+			await NotifyService.Notify(executor, "  Semaphore queue: 0/0");
+			await NotifyService.Notify(executor, "Note: Queue management not yet implemented.");
+			return CallState.Empty;
+		}
+		
+		// Check if showing debug info for a specific PID
+		if (switches.Contains("DEBUG"))
+		{
+			var pidStr = args.GetValueOrDefault("0")?.Message?.ToPlainText();
+			if (string.IsNullOrEmpty(pidStr))
+			{
+				await NotifyService!.Notify(executor, "You must specify a process ID.");
+				return new CallState("#-1 NO PID SPECIFIED");
+			}
+			
+			await NotifyService!.Notify(executor, $"@ps/debug: Would show debug info for PID {pidStr}");
+			await NotifyService.Notify(executor, "  Would show: Arguments, Q-registers, executor, enactor, caller");
+			await NotifyService.Notify(executor, "Note: Queue management not yet implemented.");
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+		
+		// Check for /all switch (wizard only)
+		if (switches.Contains("ALL"))
+		{
+			if (!await executor.IsWizard())
+			{
+				await NotifyService!.Notify(executor, "Permission denied.");
+				return new CallState(Errors.ErrorPerm);
+			}
+			
+			await NotifyService!.Notify(executor, "@ps/all: Would show full queue for all objects");
+			await NotifyService.Notify(executor, "Note: Queue management not yet implemented.");
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+		
+		// Show queue for specific player or self
+		string targetName = "you";
+		if (args.Count > 0)
+		{
+			var playerName = args["0"].Message?.ToPlainText();
+			if (!string.IsNullOrEmpty(playerName))
+			{
+				targetName = playerName;
+			}
+		}
+		
+		await NotifyService!.Notify(executor, $"@ps: Queue for {targetName}");
+		await NotifyService.Notify(executor, "  Command queue: 0/0");
+		await NotifyService.Notify(executor, "  Wait queue: 0/0");
+		await NotifyService.Notify(executor, "  Semaphore queue: 0/0");
+		await NotifyService.Notify(executor, "  Load average: 0.0, 0.0, 0.0");
+		
+		// TODO: Full implementation requires:
+		// - Queue management system to track all queued commands
+		// - Process IDs for each queue entry
+		// - Ability to list queue entries with format: [PID] <semaphore> <wait> <object> <command>
+		// - Load average tracking
+		// - Permission checks for viewing other players' queues
+		await NotifyService.Notify(executor, "Note: Queue management not yet implemented.");
+		
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@SELECT",
 		Switches = ["NOTIFY", "REGEXP", "INPLACE", "INLINE", "LOCALIZE", "CLEARREGS", "NOBREAK"],
-		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse, MinArgs = 0, MaxArgs = 0)]
+		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse, MinArgs = 1, MaxArgs = int.MaxValue)]
 	public static async ValueTask<Option<CallState>> Select(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		// @select <string>=<expr1>, <action1> [,<exprN>, <actionN>]... [,<default>]
+		// Like @switch but only runs the first matching action
+		
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches.ToArray();
+		
+		var testString = args["0"].Message?.ToPlainText();
+		if (string.IsNullOrEmpty(testString))
+		{
+			await NotifyService!.Notify(executor, "You must specify a test string.");
+			return new CallState("#-1 NO TEST STRING");
+		}
+		
+		await NotifyService!.Notify(executor, $"@select: Testing string '{testString}'");
+		
+		// Count expression/action pairs (args are: 0=test string, then pairs of expr,action)
+		int pairCount = (args.Count - 1) / 2;
+		bool hasDefault = (args.Count - 1) % 2 == 1;
+		
+		await NotifyService.Notify(executor, $"  Expression/action pairs: {pairCount}");
+		if (hasDefault)
+		{
+			await NotifyService.Notify(executor, "  Has default action");
+		}
+		
+		// Check switches
+		if (switches.Contains("REGEXP"))
+		{
+			await NotifyService.Notify(executor, "  Mode: Regular expression matching");
+		}
+		else
+		{
+			await NotifyService.Notify(executor, "  Mode: Wildcard pattern matching");
+		}
+		
+		if (switches.Contains("INLINE") || switches.Contains("INPLACE"))
+		{
+			await NotifyService.Notify(executor, "  Execution: Inline (immediate)");
+			
+			if (switches.Contains("NOBREAK"))
+			{
+				await NotifyService.Notify(executor, "  @break won't propagate to caller");
+			}
+			
+			if (switches.Contains("LOCALIZE"))
+			{
+				await NotifyService.Notify(executor, "  Q-registers will be localized");
+			}
+			
+			if (switches.Contains("CLEARREGS"))
+			{
+				await NotifyService.Notify(executor, "  Q-registers will be cleared");
+			}
+		}
+		else
+		{
+			await NotifyService.Notify(executor, "  Execution: Queued");
+		}
+		
+		if (switches.Contains("NOTIFY"))
+		{
+			await NotifyService.Notify(executor, "  Will queue @notify after completion");
+		}
+		
+		// TODO: Full implementation requires:
+		// - Pattern matching (wildcard or regexp based on switch)
+		// - Capture group handling ($0-$9 for matches)
+		// - #$ substitution in actions (replaced with evaluated test string)
+		// - Queue or inline execution based on switches
+		// - Q-register management (localize, clearregs)
+		// - @break propagation handling
+		// - Only execute first matching action (unlike @switch which executes all)
+		await NotifyService.Notify(executor, "Note: Pattern matching and action execution not yet implemented.");
+		
+		return new CallState("#-1 NOT IMPLEMENTED");
 	}
 
 	[SharpCommand(Name = "@TRIGGER",
