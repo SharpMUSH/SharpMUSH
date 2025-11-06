@@ -2316,6 +2316,81 @@ public partial class ArangoDatabase(
 			.Select(SharpPowerQueryToSharpPower)
 			.FirstOrDefaultAsync(cancellationToken: ct);
 
+	public async ValueTask<bool> UpdateObjectFlagAsync(string name, string[]? aliases, string symbol, 
+		string[] setPermissions, string[] unsetPermissions, string[] typeRestrictions, 
+		CancellationToken ct = default)
+	{
+		// Get the flag to update
+		var flag = await GetObjectFlagAsync(name, ct);
+		if (flag == null)
+		{
+			return false;
+		}
+		
+		// Prevent modification of system flags
+		if (flag.System)
+		{
+			return false;
+		}
+		
+		// Update the flag document - need to extract the Key from the ID
+		var key = flag.Id!.Split('/')[1];
+		await arangoDb.Document.UpdateAsync(
+			handle,
+			DatabaseConstants.ObjectFlags,
+			new
+			{
+				Key = key,
+				Aliases = aliases ?? Array.Empty<string>(),
+				Symbol = symbol,
+				SetPermissions = setPermissions,
+				UnsetPermissions = unsetPermissions,
+				TypeRestrictions = typeRestrictions
+			},
+			mergeObjects: true,
+			cancellationToken: ct
+		);
+		
+		return true;
+	}
+
+	public async ValueTask<bool> UpdatePowerAsync(string name, string alias, 
+		string[] setPermissions, string[] unsetPermissions, string[] typeRestrictions, 
+		CancellationToken ct = default)
+	{
+		// Get the power to update
+		var power = await GetPowerAsync(name, ct);
+		if (power == null)
+		{
+			return false;
+		}
+		
+		// Prevent modification of system powers
+		if (power.System)
+		{
+			return false;
+		}
+		
+		// Update the power document - need to extract the Key from the ID
+		var key = power.Id!.Split('/')[1];
+		await arangoDb.Document.UpdateAsync(
+			handle,
+			DatabaseConstants.ObjectPowers,
+			new
+			{
+				Key = key,
+				Alias = alias,
+				SetPermissions = setPermissions,
+				UnsetPermissions = unsetPermissions,
+				TypeRestrictions = typeRestrictions
+			},
+			mergeObjects: true,
+			cancellationToken: ct
+		);
+		
+		return true;
+	}
+
 	[GeneratedRegex(@"\*\*|[.*+?^${}()|[\]/]")]
 	private static partial Regex WildcardToRegex();
 }
