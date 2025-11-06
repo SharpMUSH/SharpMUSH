@@ -127,9 +127,9 @@ public partial class Commands
 				{
 					var columnNames = new List<string>();
 					var firstRow = true;
-					int rowNumber = 1;
+					var rowNumber = 1;
 
-					await foreach (var row in SqlService.ExecuteQueryStreamAsync(query))
+					foreach (var row in await SqlService.ExecuteQueryAsync(query))
 					{
 						if (colnamesSwitch && firstRow)
 						{
