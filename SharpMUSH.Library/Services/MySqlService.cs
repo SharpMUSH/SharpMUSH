@@ -20,7 +20,7 @@ public class MySqlService(MySqlDataSource source) : ISqlService
 		await using var command = new MySqlCommand(query, connection);
 		await using var reader = await command.ExecuteReaderAsync();
 
-		while (await reader.ReadAsync().ConfigureAwait(false))
+		while (await reader.ReadAsync())
 		{
 			var row = new Dictionary<string, object?>();
 			for (var i = 0; i < reader.FieldCount; i++)
@@ -34,12 +34,12 @@ public class MySqlService(MySqlDataSource source) : ISqlService
 		return results;
 	}
 
-	public async IAsyncEnumerable<Dictionary<string, object?>> ExecuteQueryStreamAsync(string query)
+	public async IAsyncEnumerable<Dictionary<string, object?>> ExecuteStreamQueryAsync(string query)
 	{
 		await using var connection = await source.OpenConnectionAsync();
 		await using var command = new MySqlCommand(query, connection);
 		await using var reader = await command.ExecuteReaderAsync();
-		while (await reader.ReadAsync(CancellationToken.None).ConfigureAwait(false))
+		while (await reader.ReadAsync(CancellationToken.None))
 		{
 			var row = new Dictionary<string, object?>();
 			for (var i = 0; i < reader.FieldCount; i++)
