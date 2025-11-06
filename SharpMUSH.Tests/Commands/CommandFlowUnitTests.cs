@@ -29,7 +29,7 @@ public class CommandFlowUnitTests
 	public async ValueTask IfElse(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var result = await Parser.CommandListParse(MModule.single(str));
+		await Parser.CommandListParse(MModule.single(str));
 
 		await NotifyService.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
