@@ -158,6 +158,7 @@ module MarkupImplementation =
                 |> (fun t -> if markup.Details.Underlined then StringExtensions.underlinedANSI(t) else t)
                 |> (fun t -> if markup.Details.StrikeThrough then StringExtensions.strikeThroughANSI(t) else t)
                 |> (fun t -> if markup.Details.Inverted then StringExtensions.invertedANSI(t) else t)
+            | :? HtmlMarkup -> StringExtensions.toANSI System.String.Empty // HTML tags don't need restoration codes
             | _ -> raise (System.Exception "Unknown markup type")
         (AnsiMarkup.applyDetails details text).ToString() + restoreDetailsF(outerDetails).ToString()
 
@@ -175,20 +176,19 @@ module MarkupImplementation =
       |> HtmlMarkup
 
     interface Markup with
-      override this.Postfix: string = sprintf "</%s>" details.TagName
+      // For HTML, we use empty prefix/postfix since Wrap handles everything
+      override this.Postfix: string = System.String.Empty
 
-      override this.Prefix: string = 
-        match details.Attributes with
-        | None -> sprintf "<%s>" details.TagName
-        | Some attrs -> sprintf "<%s %s>" details.TagName attrs
+      override this.Prefix: string = System.String.Empty
 
       override this.Wrap (text: string) : string =
+        // Wrap includes the full HTML tags
         match details.Attributes with
         | None -> sprintf "<%s>%s</%s>" details.TagName text details.TagName
         | Some attrs -> sprintf "<%s %s>%s</%s>" details.TagName attrs text details.TagName
 
       override this.WrapAndRestore (text: string, outerDetails: Markup) : string =
-        // For HTML, we don't need to restore outer markup since HTML tags are independent
+        // For HTML, we just wrap without restoring outer markup since HTML tags are independent
         (this :> Markup).Wrap(text)
 
       override this.Optimize (text: string) : string = text
