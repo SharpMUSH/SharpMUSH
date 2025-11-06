@@ -1,6 +1,7 @@
 ﻿using System.Collections.Immutable;
 using DotNext;
 using Mediator;
+using NaturalSort.Extension;
 using OneOf;
 using OneOf.Types;
 using SharpMUSH.Library.Commands.Database;
@@ -23,6 +24,8 @@ public class AttributeService(
 	INotifyService notifyService)
 	: IAttributeService
 {
+	private readonly NaturalSortComparer _attributeSort = new NaturalSortComparer(StringComparison.CurrentCulture);
+	
 	public async ValueTask<OptionalSharpAttributeOrError> GetAttributeAsync(
 		AnySharpObject executor,
 		AnySharpObject obj,
@@ -332,13 +335,15 @@ public class AttributeService(
 		IAttributeService.AttributePatternMode mode)
 	{
 		// TODO: Implement Pattern Modes
+		// TODO: CheckParents.
 		// TODO: GetAttributesAsync should return the full Path, not the final attribute.
 		// TODO: CanViewAttribute needs to be able to Memoize during a list check, as it's likely to be called multiple times.
 		var attributes = mediator.CreateStream(
-			new GetAttributesQuery(obj.Object().DBRef, attributePattern, checkParents, mode));
+			new GetAttributesQuery(obj.Object().DBRef, attributePattern.ToUpper(), checkParents, mode));
 
 		return await attributes
 			.Where(async (x, _) => await ps.CanViewAttribute(executor, obj, x))
+			.OrderBy(x => x.LongName, _attributeSort)
 			.ToArrayAsync();
 	}
 
@@ -350,10 +355,11 @@ public class AttributeService(
 		// TODO: GetAttributesAsync should return the full Path, not the final attribute.
 		// TODO: CanViewAttribute needs to be able to Memoize during a list check, as it's likely to be called multiple times.
 		var attributes = mediator.CreateStream(
-			new GetLazyAttributesQuery(obj.Object().DBRef, attributePattern, checkParents, mode));
+			new GetLazyAttributesQuery(obj.Object().DBRef, attributePattern.ToUpper(), checkParents, mode));
 
 		return LazySharpAttributesOrError
 			.FromAsync(attributes
+				.OrderBy(x => x.LongName, _attributeSort)
 				.Where(async (x, _) => await ps.CanViewAttribute(executor, obj, x)));
 	}
 

@@ -980,11 +980,11 @@ LOCATE()
 
 								if (!await HelperFunctions.SafeToAddParent(target, newParent))
 								{
-									return CallState.Empty;
+									return "#-1 CYCLE DETECTED";
 								}
 
 								await Mediator!.Send(new SetObjectParentCommand(target, newParent));
-								return CallState.Empty;
+								return newParent;
 							}
 						);
 				}

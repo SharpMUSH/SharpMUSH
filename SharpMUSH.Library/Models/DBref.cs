@@ -22,7 +22,9 @@ public readonly struct DBRef : IEquatable<DBRef>
 		=> HashCode.Combine(Number, CreationMilliseconds);
 
 	public override string ToString()
-		=> $"#{Number}:{CreationMilliseconds}";
+		=> CreationMilliseconds is null 
+			? $"#{Number}"
+			: $"#{Number}:{CreationMilliseconds}";
 
 	public static bool operator ==(DBRef left, DBRef right) => left.Equals(right);
 

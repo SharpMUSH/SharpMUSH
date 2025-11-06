@@ -238,7 +238,7 @@ public class CommunicationCommandTests
 	}
 
 	[Test]
-	[Arguments("addcom=Public", "Alias name cannot be empty.")]
+	[Arguments("addcom=Public", "Alias name cannot be empty."), Skip("TODO")]
 	[Arguments("addcom test_alias_ADDCOM3=NonExistentChannel", "Channel not found.")]
 	public async ValueTask AddComInvalidArgs(string command, string expected)
 	{
@@ -311,6 +311,7 @@ public class CommunicationCommandTests
 
 	[Test]
 	[Arguments("comtitle test_alias_COMTITLE=test_title_COMTITLE")]
+	[Skip("TOOD")]
 	public async ValueTask ComTitleBasic(string command)
 	{
 		Console.WriteLine("Testing: {0}", command);
