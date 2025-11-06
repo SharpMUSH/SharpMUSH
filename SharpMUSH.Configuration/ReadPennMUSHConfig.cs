@@ -250,7 +250,10 @@ public static partial class ReadPennMushConfig
 				Boolean(Get(nameof(NetOptions.Guests)), true),
 				Boolean(Get(nameof(NetOptions.Pueblo)), true),
 				String(Get(nameof(NetOptions.SqlPlatform)), null),
-				RequiredString(Get(nameof(NetOptions.SqlHost)), "localhost"),
+				String(Get(nameof(NetOptions.SqlHost)), "localhost"),
+				String(Get(nameof(NetOptions.SqlDatabase)), null),
+				String(Get(nameof(NetOptions.SqlUsername)), null),
+				String(Get(nameof(NetOptions.SqlPassword)), null),
 				Boolean(Get(nameof(NetOptions.JsonUnsafeUnescape)), false),
 				Boolean(Get(nameof(NetOptions.SslRequireClientCert)), false)
 			),

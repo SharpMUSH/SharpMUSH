@@ -5,11 +5,8 @@ using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class PowerQueryHandler(ISharpDatabase database): IQueryHandler<GetPowersQuery, IAsyncEnumerable<SharpPower>>
+public class PowerQueryHandler(ISharpDatabase database): IStreamQueryHandler<GetPowersQuery, SharpPower>
 {
-	public async ValueTask<IAsyncEnumerable<SharpPower>> Handle(GetPowersQuery query, CancellationToken cancellationToken)
-	{
-		await ValueTask.CompletedTask;
-		return database.GetObjectPowersAsync(cancellationToken);
-	}
+	public IAsyncEnumerable<SharpPower> Handle(GetPowersQuery query, CancellationToken cancellationToken) 
+		=> database.GetObjectPowersAsync(cancellationToken);
 }

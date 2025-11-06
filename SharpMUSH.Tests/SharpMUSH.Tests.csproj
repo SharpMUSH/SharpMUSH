@@ -21,8 +21,10 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0-rc.2.25502.107" />
     <PackageReference Include="NSubstitute" Version="5.3.0" />
     <PackageReference Include="Serilog" Version="4.3.0" />
-    <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="6.1.0" />
     <PackageReference Include="Testcontainers.ArangoDb" Version="4.8.1" />
+    <PackageReference Include="Testcontainers.MySql" Version="4.8.1" />
+    <PackageReference Include="MySqlConnector" Version="2.4.0" />
 		<PackageReference Include="TUnit" Version="0.61.39" />
   </ItemGroup>
 

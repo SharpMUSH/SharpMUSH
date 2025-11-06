@@ -256,6 +256,22 @@ public interface ISharpDatabase
 	ValueTask<IAsyncEnumerable<SharpPlayer>> GetPlayerByNameOrAliasAsync(string name, CancellationToken cancellationToken = default);
 
 	/// <summary>
+	/// Get all objects in the database as a streaming AsyncEnumerable.
+	/// This allows for efficient filtering and searching without loading all objects into memory.
+	/// </summary>
+	/// <param name="cancellationToken">Cancellation Token</param>
+	/// <returns>An async enumerable of all SharpObjects in the database</returns>
+	IAsyncEnumerable<SharpObject> GetAllObjectsAsync(CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Get all exits that lead to a specific destination.
+	/// </summary>
+	/// <param name="destination">The destination DBRef</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
+	/// <returns>An async enumerable of exits leading to the destination</returns>
+	IAsyncEnumerable<SharpExit> GetEntrancesAsync(DBRef destination, CancellationToken cancellationToken = default);
+
+	/// <summary>
 	/// Set an attribute. This does not do any checks, as that is up to the functionality itself.
 	/// </summary>
 	/// <param name="dbref">Database Reference Number</param>
@@ -363,7 +379,8 @@ public interface ISharpDatabase
 	/// <returns>The deepest findable object based on depth</returns>
 	ValueTask<AnySharpContainer> GetLocationAsync(string id, int depth = 1, CancellationToken cancellationToken = default);
 
-	IAsyncEnumerable<SharpObjectFlag> GetObjectFlagsAsync(string id, CancellationToken cancellationToken = default);
+	IAsyncEnumerable<SharpObjectFlag> GetObjectFlagsAsync(string id, string type,
+		CancellationToken cancellationToken = default);
 
 	IAsyncEnumerable<SharpMail> GetIncomingMailsAsync(SharpPlayer id, string folder, CancellationToken cancellationToken = default);
 

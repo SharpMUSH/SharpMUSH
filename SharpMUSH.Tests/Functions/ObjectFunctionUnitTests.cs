@@ -73,8 +73,7 @@ public class ObjectFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("lsearch(all,type,player)", "")]
+	[Arguments("lsearch(all,type,PLAYER)", "")]
 	public async Task Lsearch(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -82,12 +81,45 @@ public class ObjectFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("lstats()", "")]
-	public async Task Lstats(string str, string expected)
+	[Skip("Failing")]
+	[Arguments("nlsearch(all,type,PLAYER)", "1")]
+	public async Task Nlsearch(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(int.Parse(result.ToPlainText())).IsGreaterThanOrEqualTo(1);
+	}
+
+	[Test]
+	[Skip("Failing")]
+	[Arguments("nsearch(all,type,PLAYER)", "1")]
+	public async Task Nsearch(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(int.Parse(result.ToPlainText())).IsGreaterThanOrEqualTo(1);
+	}
+
+	[Test]
+	[Arguments("lsearchr(all,type,PLAYER)", "")]
+	public async Task Lsearchr(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
+	}
+
+	[Test]
+	[Arguments("textsearch(all,One)", "")]
+	public async Task Textsearch(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsNotNull();
+	}
+
+	[Test]
+	[Arguments("lstats()", "0 0 0 0 0")]
+	public async Task Lstats(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
@@ -99,11 +131,10 @@ public class ObjectFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("nextdbref()", "")]
+	[Arguments("nextdbref()", "#-1 NOT YET IMPLEMENTED")]
 	public async Task Nextdbref(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsNotNull();
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 }

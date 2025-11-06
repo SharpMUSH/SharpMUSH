@@ -7,6 +7,7 @@
 		<LangVersion>default</LangVersion>
 		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+		<NoWarn>CS8425</NoWarn>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -17,9 +18,9 @@
 
 	<ItemGroup>
 		<PackageReference Include="Antlr4.Runtime.Standard" Version="4.13.1" />
-		<PackageReference Include="Fractions" Version="7.3.0" />
+		<PackageReference Include="Fractions" Version="8.3.2" />
 		<PackageReference Include="Humanizer.Core" Version="2.14.1" />
-		<PackageReference Include="JsonPatch.Net" Version="3.3.0" />
+		<PackageReference Include="JsonPatch.Net" Version="3.3.0	" />
 		<PackageReference Include="JsonPath.Net" Version="2.1.1" />
 		<PackageReference Include="Mediator.Abstractions" Version="3.0.1" />
 		<PackageReference Include="Microsoft.Extensions.Identity.Core" Version="10.0.0-rc.2.25502.107" />

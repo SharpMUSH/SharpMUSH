@@ -155,7 +155,7 @@ public static partial class HelperFunctions
 		=> await obj.IsPriv() || await obj.HasPower("Long_Fingers");
 
 	public static async ValueTask<bool> HasFlag(this AnySharpObject obj, string flag)
-		=> await (obj.Object().Flags.Value)
+		=> await obj.Object().Flags.Value
 			.AnyAsync(x => x.Name.Equals(flag, StringComparison.InvariantCultureIgnoreCase));
 
 	// This may belong in the Permission Service.
@@ -256,7 +256,8 @@ public static partial class HelperFunctions
 	{
 		var newParentDbRef = newParent.Object().DBRef;
 
-		if ((await start.Object().Parent.WithCancellation(CancellationToken.None)).Object()!.DBRef == newParentDbRef)
+		var parent = await start.Object().Parent.WithCancellation(CancellationToken.None); 
+		if (!parent.IsNone && parent.Object()!.DBRef == newParentDbRef)
 		{
 			return true;
 		}
@@ -289,39 +290,41 @@ public static partial class HelperFunctions
 			? new None()
 			: new DBRef(int.Parse(dbref), string.IsNullOrWhiteSpace(cTime) ? null : long.Parse(cTime));
 	}
-
+	
 	/// <summary>
 	/// A regular expression that takes the form of '#123:43143124' or '#543'.
 	/// </summary>
 	/// <returns>A regex that has a named group for the DBRef Number and Creation Milliseconds.</returns>
-	[GeneratedRegex(@"#(?<DatabaseNumber>\d+)(?::(?<CreationTimestamp>\d+))?")]
+	[GeneratedRegex(@"^#(?<DatabaseNumber>\d+)(?::(?<CreationTimestamp>\d+))?$")]
 	private static partial Regex DatabaseReference();
 
 	/// <summary>
 	/// A regular expression that takes the form of 'Object/attributeName'.
 	/// </summary>
 	/// <returns>A regex that has a named group for the Object and Attribute.</returns>
-	[GeneratedRegex(@"#(?<Object>\d+(:\d+)?)/(?<Attribute>[a-zA-Z1-9@_\-\.`]+)")]
+	[GeneratedRegex(@"#$(?<Object>\d+(:\d+)?)/(?<Attribute>[a-zA-Z0-9@_\-\.`\?\*\[\]\(\)\+\<\>\^\$]+)$")]
 	private static partial Regex DatabaseReferenceWithAttribute();
 
+	// TODO: Make split versions for Patterns and Regex Patterns, which are different from normal attributes.
+	
 	/// <summary>
 	/// A regular expression that takes the form of 'Object/attributeName'.
 	/// </summary>
 	/// <returns>A regex that has a named group for the Object and Attribute.</returns>
-	[GeneratedRegex(@"(?<Object>[^/]+)/(?<Attribute>[a-zA-Z1-9@_\-\.`]+)")]
+	[GeneratedRegex(@"^(?<Object>[^/]+)/(?<Attribute>[a-zA-Z0-9@_\-\.`\?\*\[\]\(\)\+\<\>\^\$]+)$")]
 	private static partial Regex ObjectWithAttribute();
 
 	/// <summary>
 	/// A regular expression that takes the form of '[Object/]attributeName'.
 	/// </summary>
 	/// <returns>A regex that has a named group for the Object and Attribute.</returns>
-	[GeneratedRegex(@"(?:(?<Object>[^/]+)/)?(?<Attribute>[a-zA-Z1-9@_\-\.`]+)")]
+	[GeneratedRegex(@"^(?:(?<Object>[^/]+)/)?(?<Attribute>[a-zA-Z0-9@_\-\.`\?\*\[\]\(\)\+\<\>\^\$]+)$")]
 	private static partial Regex OptionalDatabaseReferenceWithAttribute();
 
 	/// <summary>
 	/// A regular expression that takes the form of '[Object/]attributeName'.
 	/// </summary>
 	/// <returns>A regex that has a named group for the Object and Attribute.</returns>
-	[GeneratedRegex(@"(?<Object>[^/]+)(?:/(?<Attribute>[a-zA-Z1-9@_\-\.`]+))?")]
+	[GeneratedRegex(@"^(?<Object>[^/]+)(?:/(?<Attribute>[a-zA-Z0-9@_\-\.`\?\*\[\]\(\)\+\<\>\^\$]+))?$")]
 	private static partial Regex DatabaseReferenceWithOptionalAttribute();
 }

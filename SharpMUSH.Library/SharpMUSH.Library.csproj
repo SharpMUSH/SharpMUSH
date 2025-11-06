@@ -15,8 +15,9 @@
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.0-rc.2.25502.107" />
     <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="10.0.0-rc.2.25502.107" />
     <PackageReference Include="morelinq" Version="4.4.0" />
+    <PackageReference Include="MySqlConnector" Version="2.4.0" />
     <PackageReference Include="NaturalSort.Extension" Version="4.4.0" />
-    <PackageReference Include="OneOf" Version="3.0.271" />
+		<PackageReference Include="OneOf" Version="3.0.271" />
     <PackageReference Include="OneOf.SourceGenerator" Version="3.0.271" />
     <PackageReference Include="Quartz.Lambda" Version="1.0.5" />
     <PackageReference Include="System.Data.SqlClient" Version="4.9.0" />
