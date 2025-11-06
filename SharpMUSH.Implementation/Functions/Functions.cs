@@ -1,6 +1,7 @@
 ﻿using System.Reflection;
 using DotNext.Collections.Generic;
 using Mediator;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Attributes;
@@ -30,12 +31,15 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 	private static ISortService? SortService { get; set; }
 	private static ILockService? LockService { get; set; }
 	private static ISqlService? SqlService { get; set; }
+	private static ILogger<Functions>? Logger { get; set; }
 
 	private readonly FunctionLibraryService _functionLibrary = [];
-	
+
 	public LibraryService<string, FunctionDefinition> Get() => _functionLibrary;
 
-	public Functions(IMediator mediator, 
+	public Functions(
+		ILogger<Functions> logger,
+		IMediator mediator, 
 		ILocateService locateService, 
 		IAttributeService attributeService,
 		INotifyService notifyService, 
@@ -53,6 +57,7 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 		ILockService lockService,
 		ISqlService sqlService)
 	{
+		Logger = logger;
 		Mediator = mediator;
 		LocateService = locateService;
 		AttributeService = attributeService;	
