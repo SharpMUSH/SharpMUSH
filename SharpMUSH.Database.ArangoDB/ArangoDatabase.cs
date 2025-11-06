@@ -362,7 +362,7 @@ public partial class ArangoDatabase(
 	{
 		var response = await arangoDb.Query.ExecuteAsync<string>(handle,
 			$"FOR v,e IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphParents} RETURN e._id",
-			new Dictionary<string, object> { { StartVertex, obj.Id()! } }, cancellationToken: ct);
+			new Dictionary<string, object> { { StartVertex, obj.Object().Id! } }, cancellationToken: ct);
 
 		var contentEdge = response.FirstOrDefault();
 
@@ -374,7 +374,7 @@ public partial class ArangoDatabase(
 		if (contentEdge is null && parent != null)
 		{
 			await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphParents, DatabaseConstants.HasParent,
-				new { To = parent.Id() }, cancellationToken: ct);
+				new { _from = obj.Object().Id, _to = parent.Object().Id }, cancellationToken: ct);
 		}
 		else if (parent is null)
 		{
@@ -384,7 +384,7 @@ public partial class ArangoDatabase(
 		else
 		{
 			await arangoDb.Graph.Edge.UpdateAsync(handle, DatabaseConstants.GraphParents, DatabaseConstants.HasParent,
-				contentEdge, new { To = parent.Id() }, cancellationToken: ct);
+				contentEdge, new { _to = parent.Object().Id }, cancellationToken: ct);
 		}
 	}
 
@@ -1391,13 +1391,18 @@ public partial class ArangoDatabase(
 	{
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 		var result =
-			await arangoDb.Query.ExecuteAsync<SharpObjectQueryResult>(handle, $"RETURN DOCUMENT({startVertex})", cache: true,
+			await arangoDb.Query.ExecuteAsync<SharpObjectQueryResult>(handle, 
+				$"FOR v IN 1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphObjects} RETURN v",
+				new Dictionary<string, object>
+				{
+					{ StartVertex, startVertex }
+				}, cache: true,
 				cancellationToken: ct);
-
+		
 		var pattern = WildcardToRegex().Replace(attributePattern, m => m.Value switch
 		{
+			"**" => ".*?",
 			"*" => "[^`]*",
-			"**" => ".*",
 			"?" => ".",
 			_ => $"\\{m.Value}"
 		});
@@ -1410,15 +1415,17 @@ public partial class ArangoDatabase(
 		// OPTIONS { indexHint: "inverted_index_name", forceIndexHint: true }
 		// This doesn't seem like it can be done on a GRAPH query?
 		const string query =
-			$"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName =~ @pattern RETURN v";
+			$"FOR v IN 1..99999 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName =~ @pattern  RETURN v";
 
+		// FILTER v.LongName =~ @pattern 
+		
 		var result2 = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle, query,
 			new Dictionary<string, object>
 			{
-				{ StartVertex, startVertex },
-				{ "pattern", pattern }
+				{ StartVertex, result.First().Id },
+				{ "pattern", $"^{pattern}$" }
 			}, cancellationToken: ct);
-
+		
 		return result2
 			.Select(SharpAttributeQueryToSharpAttribute);
 	}
@@ -1428,11 +1435,17 @@ public partial class ArangoDatabase(
 	{
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 		var result =
-			arangoDb.Query.ExecuteStreamAsync<SharpObjectQueryResult>(handle, $"RETURN DOCUMENT({startVertex})", cache: true,
+			await arangoDb.Query.ExecuteAsync<SharpObjectQueryResult>(handle, 
+				$"FOR v IN 1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphObjects} RETURN v",
+				new Dictionary<string, object>
+				{
+					{ StartVertex, startVertex }
+				}, cache: true,
 				cancellationToken: ct);
-		var pattern = attributePattern;
 
-		if (!await result.AnyAsync(cancellationToken: ct))
+		var pattern = $"(?i){attributePattern}"; // Add case-insensitive flag
+
+		if (!result.Any())
 		{
 			return null;
 		}
@@ -1445,12 +1458,12 @@ public partial class ArangoDatabase(
 		// OPTIONS { indexHint: "inverted_index_name", forceIndexHint: true }
 		// This doesn't seem like it can be done on a GRAPH query?
 		const string query =
-			$"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName LIKE @pattern RETURN v";
+			$"FOR v IN 1..99999 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName =~ @pattern RETURN v";
 
 		var result2 = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle, query,
 			new Dictionary<string, object>
 			{
-				{ StartVertex, startVertex },
+				{ StartVertex, result.First().Id },
 				{ "pattern", pattern }
 			}, cancellationToken: ct);
 
@@ -1480,14 +1493,15 @@ public partial class ArangoDatabase(
 
 		// OPTIONS { indexHint: "inverted_index_name", forceIndexHint: true }
 		// This doesn't seem like it can be done on a GRAPH query?
+		var pattern = $"(?i){attributePattern}"; // Add case-insensitive flag
 		const string query =
-			$"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName LIKE @pattern RETURN v";
+			$"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName =~ @pattern RETURN v";
 
 		return arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle, query,
 				new Dictionary<string, object>
 				{
 					{ StartVertex, startVertex },
-					{ "pattern", attributePattern }
+					{ "pattern", pattern }
 				}, cancellationToken: ct)
 			.Select(SharpAttributeQueryToLazySharpAttribute);
 	}
@@ -2151,6 +2165,6 @@ public partial class ArangoDatabase(
 		}, mergeObjects: true, cancellationToken: ct);
 	}
 
-	[GeneratedRegex("[.*+?^${}()|[\\]/]")]
+	[GeneratedRegex(@"\*\*|[.*+?^${}()|[\]/]")]
 	private static partial Regex WildcardToRegex();
 }

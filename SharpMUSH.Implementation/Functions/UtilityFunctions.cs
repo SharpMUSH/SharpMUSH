@@ -352,7 +352,7 @@ public partial class Functions
 			await executor.Object()
 				.Owner.WithCancellation(CancellationToken.None)));
 		
-		return new CallState(thing.ToString());
+		return new CallState(thing);
 	}
 	
 	[SharpFunction(Name = "die", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
