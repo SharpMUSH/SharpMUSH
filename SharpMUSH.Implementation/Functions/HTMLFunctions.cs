@@ -36,13 +36,6 @@ public partial class Functions
 		var tagName = args["0"].Message!.ToPlainText();
 		var content = args["1"].Message!;
 
-		// Build the HTML string
-		var result = new System.Text.StringBuilder();
-
-		// Build opening tag
-		result.Append('<');
-		result.Append(tagName);
-
 		// Add attributes if provided
 		Microsoft.FSharp.Core.FSharpOption<string>? attributes = null;
 		if (args.Count > 2)
@@ -50,21 +43,9 @@ public partial class Functions
 			var attrText = args["2"].Message!.ToPlainText();
 			if (!string.IsNullOrEmpty(attrText))
 			{
-				result.Append(' ');
-				result.Append(attrText);
 				attributes = Microsoft.FSharp.Core.FSharpOption<string>.Some(attrText);
 			}
 		}
-
-		result.Append('>');
-
-		// Add content (preserving formatting)
-		result.Append(content.ToPlainText());
-
-		// Add closing tag
-		result.Append("</");
-		result.Append(tagName);
-		result.Append('>');
 
 		// Create HTML markup structure for semantic information
 		var htmlMarkup = attributes == null
@@ -77,7 +58,7 @@ public partial class Functions
 		var wrappedContent = MModule.markupSingle2(htmlMarkup, content);
 
 		// But for now, return the plain HTML string since tests expect it
-		return ValueTask.FromResult(new CallState(result.ToString()));
+		return ValueTask.FromResult<CallState>(wrappedContent.ToString());
 	}
 
 	[SharpFunction(Name = "wsjson", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular)]
