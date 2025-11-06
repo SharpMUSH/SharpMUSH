@@ -3012,6 +3012,7 @@ public partial class Commands
 		// Inserts attribute contents in-place without adding a new queue entry
 		
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).WithoutNone();
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches.ToArray();
 		
@@ -3033,44 +3034,84 @@ public partial class Commands
 		var objectName = parts[0];
 		var attributeName = parts[1];
 		
-		await NotifyService!.Notify(executor, $"@include: Would include {objectName}/{attributeName}");
+		// Locate the target object
+		var maybeObject = await LocateService!.LocateAndNotifyIfInvalidWithCallState(
+			parser, executor, enactor, objectName, LocateFlags.All);
 		
-		// Check if we have arguments to pass
-		if (args.Count > 1)
+		if (maybeObject.IsError)
 		{
-			await NotifyService.Notify(executor, $"  Arguments: {args.Count - 1} provided (will substitute %0-%9)");
+			return maybeObject.AsError;
 		}
 		
-		// Check switches
-		if (switches.Contains("NOBREAK"))
+		var targetObject = maybeObject.AsSharpObject;
+		
+		// Get the attribute - must be visible to enactor
+		var attributeResult = await AttributeService!.GetAttributeAsync(
+			enactor, targetObject, attributeName, IAttributeService.AttributeMode.Read, false);
+		
+		if (attributeResult.IsError)
 		{
-			await NotifyService.Notify(executor, "  Mode: @break/@assert won't propagate to calling list");
+			await NotifyService!.Notify(executor, $"No such attribute: {attributeName}");
+			return new CallState("#-1 NO SUCH ATTRIBUTE");
 		}
 		
-		if (switches.Contains("LOCALIZE"))
+		if (attributeResult.IsNone)
 		{
-			await NotifyService.Notify(executor, "  Q-registers: Will be saved/restored");
+			await NotifyService!.Notify(executor, $"Attribute {attributeName} is empty.");
+			return CallState.Empty;
 		}
+		
+		var attributeContent = attributeResult.AsAttribute.Last().Value;
+		var attributeText = attributeContent.ToPlainText();
+		
+		// Strip ^...: or $...: prefixes for listen/command patterns
+		if (attributeText.StartsWith("^") || attributeText.StartsWith("$"))
+		{
+			var colonIndex = attributeText.IndexOf(':');
+			if (colonIndex > 0)
+			{
+				attributeText = attributeText.Substring(colonIndex + 1).TrimStart();
+			}
+		}
+		
+		// TODO: Handle Q-register management
+		// - If CLEARREGS: Clear Q-registers before execution
+		// - If LOCALIZE: Save Q-registers, execute, then restore
+		// Currently we don't have Q-register management system implemented
 		
 		if (switches.Contains("CLEARREGS"))
 		{
-			await NotifyService.Notify(executor, "  Q-registers: Will be cleared before execution");
+			// TODO: Clear Q-registers when system is available
+		}
+		else if (switches.Contains("LOCALIZE"))
+		{
+			// TODO: Save Q-registers when system is available
 		}
 		
-		// TODO: Full implementation requires:
-		// - Locating the target object
-		// - Checking visibility permissions
-		// - Retrieving the attribute
-		// - Stripping ^...: or $...: prefixes
-		// - Managing environment arguments (%0-%9)
-		// - Substituting provided arguments for environment
-		// - Managing Q-registers (save/restore for localize, clear for clearregs)
-		// - Executing in-place (no queue entry)
-		// - Handling @break/@assert propagation based on /nobreak
-		// - Restoring environment after execution
-		await NotifyService.Notify(executor, "Note: @include in-place execution not yet implemented.");
+		// TODO: Handle environment argument substitution
+		// If arguments are provided to @include, they should substitute for %0-%9
+		// while the included action list is running, then restore original environment
+		// Currently we don't have environment management system fully implemented
 		
-		return new CallState("#-1 NOT IMPLEMENTED");
+		// Execute the attribute content in-place using CommandListParse
+		// This evaluates the command list without creating a queue entry
+		try
+		{
+			var result = await parser.CommandListParse(MModule.single(attributeText));
+			
+			// TODO: If LOCALIZE: Restore Q-registers when system is available
+			
+			// TODO: Handle NOBREAK switch
+			// When set, @break/@assert from included code shouldn't propagate to calling list
+			// This requires break/assert propagation system
+			
+			return result ?? CallState.Empty;
+		}
+		catch (Exception ex)
+		{
+			await NotifyService!.Notify(executor, $"Error executing included attribute: {ex.Message}");
+			return new CallState($"#-1 ERROR: {ex.Message}");
+		}
 	}
 
 	[SharpCommand(Name = "@MAIL",
