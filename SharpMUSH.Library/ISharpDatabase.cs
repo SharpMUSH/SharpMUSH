@@ -148,6 +148,28 @@ public interface ISharpDatabase
 	IAsyncEnumerable<SharpObjectFlag> GetObjectFlagsAsync(CancellationToken cancellationToken = default);
 
 	/// <summary>
+	/// Create a new Object Flag.
+	/// </summary>
+	/// <param name="name">Flag name</param>
+	/// <param name="aliases">Flag aliases</param>
+	/// <param name="symbol">Flag symbol</param>
+	/// <param name="system">Whether this is a system flag</param>
+	/// <param name="setPermissions">Permissions required to set this flag</param>
+	/// <param name="unsetPermissions">Permissions required to unset this flag</param>
+	/// <param name="typeRestrictions">Object types this flag can be set on</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
+	/// <returns>The created flag, or null if creation failed</returns>
+	ValueTask<SharpObjectFlag?> CreateObjectFlagAsync(string name, string[]? aliases, string symbol, bool system, string[] setPermissions, string[] unsetPermissions, string[] typeRestrictions, CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Delete an Object Flag by name.
+	/// </summary>
+	/// <param name="name">Flag name</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
+	/// <returns>Success or Failure</returns>
+	ValueTask<bool> DeleteObjectFlagAsync(string name, CancellationToken cancellationToken = default);
+
+	/// <summary>
 	/// Set an Object Flag.
 	/// </summary>
 	/// <param name="dbref">Database Reference Number</param>
@@ -173,6 +195,27 @@ public interface ISharpDatabase
 	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>Success or Failure</returns>
 	ValueTask<bool> UnsetObjectPowerAsync(AnySharpObject dbref, SharpPower power, CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Create a new Power.
+	/// </summary>
+	/// <param name="name">Power name</param>
+	/// <param name="alias">Power alias</param>
+	/// <param name="system">Whether this is a system power</param>
+	/// <param name="setPermissions">Permissions required to set this power</param>
+	/// <param name="unsetPermissions">Permissions required to unset this power</param>
+	/// <param name="typeRestrictions">Object types this power can be set on</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
+	/// <returns>The created power, or null if creation failed</returns>
+	ValueTask<SharpPower?> CreatePowerAsync(string name, string alias, bool system, string[] setPermissions, string[] unsetPermissions, string[] typeRestrictions, CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Delete a Power by name.
+	/// </summary>
+	/// <param name="name">Power name</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
+	/// <returns>Success or Failure</returns>
+	ValueTask<bool> DeletePowerAsync(string name, CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Sets a name on an object.
