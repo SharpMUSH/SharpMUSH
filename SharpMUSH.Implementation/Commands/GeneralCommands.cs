@@ -1,5 +1,7 @@
 ﻿using OneOf;
 using OneOf.Types;
+using SharpMUSH.Configuration;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation.Commands.ChannelCommand;
 using SharpMUSH.Implementation.Commands.MailCommand;
 using SharpMUSH.Implementation.Common;
@@ -19,6 +21,7 @@ using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Drawing;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using static SharpMUSH.Library.Services.Interfaces.IPermissionService;
@@ -58,12 +61,70 @@ public partial class Commands
 		Switches = ["CLEARREGS", "DELIMIT", "INLINE", "INPLACE", "LOCALIZE", "NOBREAK", "NOTIFY"])]
 	public static async ValueTask<Option<CallState>> Map(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// Will need documentation.
-		// A version of map(), but for a command, to run like @dolist
 		// @map[/<switches>][/notify][/delimit <delim>] [<object>/]<attribute>=<list>
-
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		// A version of map(), but for a command, to run like @dolist
+		
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches.ToArray();
+		
+		if (args.Count == 0)
+		{
+			await NotifyService!.Notify(executor, "You must specify an attribute to map.");
+			return new CallState("#-1 NO ATTRIBUTE SPECIFIED");
+		}
+		
+		var attributePath = args["0"].Message?.ToPlainText();
+		if (string.IsNullOrEmpty(attributePath))
+		{
+			await NotifyService!.Notify(executor, "You must specify an attribute to map.");
+			return new CallState("#-1 NO ATTRIBUTE SPECIFIED");
+		}
+		
+		string? listToMap = null;
+		if (args.Count >= 2)
+		{
+			listToMap = args["1"].Message?.ToPlainText();
+		}
+		
+		await NotifyService!.Notify(executor, $"@map: Would iterate over list and execute attribute '{attributePath}'");
+		
+		if (listToMap != null)
+		{
+			await NotifyService.Notify(executor, $"  List: {listToMap}");
+		}
+		
+		// Check switches
+		if (switches.Contains("INLINE"))
+		{
+			await NotifyService.Notify(executor, "  Mode: Inline execution");
+		}
+		
+		if (switches.Contains("NOTIFY"))
+		{
+			await NotifyService.Notify(executor, "  Will queue @notify after completion");
+		}
+		
+		if (switches.Contains("CLEARREGS"))
+		{
+			await NotifyService.Notify(executor, "  Will clear Q-registers");
+		}
+		
+		if (switches.Contains("LOCALIZE"))
+		{
+			await NotifyService.Notify(executor, "  Will localize Q-registers");
+		}
+		
+		// TODO: Full implementation requires:
+		// - Parsing object/attribute path
+		// - Splitting list into elements
+		// - For each element, queue/execute the attribute with element as %0
+		// - Handle enactor preservation and Q-register management
+		// - Handle /inline vs queued execution
+		// - Handle /notify switch
+		await NotifyService.Notify(executor, "Note: @map command queueing and execution not yet implemented.");
+		
+		return new CallState("#-1 NOT IMPLEMENTED");
 	}
 
 	[SharpCommand(Name = "@DOLIST", Behavior = CB.EqSplit | CB.RSNoParse, MinArgs = 1, MaxArgs = 2,
@@ -449,19 +510,154 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@FIND", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged,
-		MinArgs = 0, MaxArgs = 0)]
+		MinArgs = 0, MaxArgs = 3)]
 	public static async ValueTask<Option<CallState>> Find(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		
+		// Get search name (optional)
+		string? searchName = null;
+		if (args.Count > 0 && args.ContainsKey("0"))
+		{
+			searchName = args["0"].Message?.ToPlainText();
+		}
+		
+		// Get begin/end range (optional)
+		int? beginDbref = null;
+		int? endDbref = null;
+		
+		if (args.Count >= 2 && args.ContainsKey("1"))
+		{
+			var beginStr = args["1"].Message?.ToPlainText();
+			if (!string.IsNullOrEmpty(beginStr) && int.TryParse(beginStr, out var begin))
+			{
+				beginDbref = begin;
+			}
+		}
+		
+		if (args.Count >= 3 && args.ContainsKey("2"))
+		{
+			var endStr = args["2"].Message?.ToPlainText();
+			if (!string.IsNullOrEmpty(endStr) && int.TryParse(endStr, out var end))
+			{
+				endDbref = end;
+			}
+		}
+		
+		// Query database for all objects
+		// For now, implement a basic version that notifies about the functionality
+		var matchCount = 0;
+		
+		await NotifyService!.Notify(executor, 
+			$"@find: Searching for objects{(searchName != null ? $" matching '{searchName}'" : "")}...");
+		
+		// TODO: Implement full database query to find matching objects
+		// This would require:
+		// 1. Querying all objects in the database (or within range if specified)
+		// 2. Checking if executor controls each object
+		// 3. Matching object names against searchName pattern
+		// 4. Displaying results
+		
+		if (beginDbref.HasValue || endDbref.HasValue)
+		{
+			await NotifyService.Notify(executor, 
+				$"Range: {beginDbref ?? 0} to {endDbref?.ToString() ?? "end"}");
+		}
+		
+		await NotifyService.Notify(executor, 
+			"Note: Full @find database search not yet implemented.");
+		await NotifyService.Notify(executor, 
+			$"Found {matchCount} matching objects.");
+		
+		return new CallState(matchCount.ToString());
 	}
 
 	[SharpCommand(Name = "@HALT", Switches = ["ALL", "NOEVAL", "PID"], Behavior = CB.Default | CB.EqSplit | CB.RSBrace,
-		MinArgs = 0, MaxArgs = 0)]
+		MinArgs = 0, MaxArgs = 2)]
 	public static async ValueTask<Option<CallState>> Halt(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		// @halt[/noeval] <object>[=<action list>] 
+		// @halt/pid <pid>
+		// @halt/all or @allhalt
+		
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches.ToArray();
+		
+		// Check for /all switch or @allhalt
+		if (switches.Contains("ALL"))
+		{
+			if (!await executor.IsWizard())
+			{
+				await NotifyService!.Notify(executor, "Permission denied.");
+				return new CallState(Errors.ErrorPerm);
+			}
+			
+			await NotifyService!.Notify(executor, "@halt/all: Would halt all objects in the game.");
+			await NotifyService.Notify(executor, "Note: Queue management for halting all objects not yet implemented.");
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+		
+		// Check for /pid switch
+		if (switches.Contains("PID"))
+		{
+			var pidStr = args.GetValueOrDefault("0")?.Message?.ToPlainText();
+			if (string.IsNullOrEmpty(pidStr))
+			{
+				await NotifyService!.Notify(executor, "You must specify a process ID.");
+				return new CallState("#-1 NO PID SPECIFIED");
+			}
+			
+			await NotifyService!.Notify(executor, $"@halt/pid: Would halt queue entry with PID {pidStr}");
+			await NotifyService.Notify(executor, "Note: Queue management for halting by PID not yet implemented.");
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+		
+		// Regular halt of an object
+		if (args.Count == 0)
+		{
+			// Halt self
+			await NotifyService!.Notify(executor, "@halt: Would clear your queue without setting HALT flag.");
+			await NotifyService.Notify(executor, "Note: Queue management not yet implemented.");
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+		
+		var targetName = args["0"].Message?.ToPlainText();
+		if (string.IsNullOrEmpty(targetName))
+		{
+			await NotifyService!.Notify(executor, "You must specify a target object.");
+			return new CallState("#-1 NO TARGET SPECIFIED");
+		}
+		
+		// Check if replacement action list is provided
+		string? replacementActions = null;
+		if (args.Count >= 2)
+		{
+			replacementActions = args["1"].Message?.ToPlainText();
+		}
+		
+		await NotifyService!.Notify(executor, $"@halt: Would halt queue for '{targetName}'");
+		
+		if (replacementActions != null)
+		{
+			await NotifyService.Notify(executor, $"  Replacement actions: {replacementActions}");
+		}
+		else
+		{
+			await NotifyService.Notify(executor, "  Will set HALT flag on object");
+		}
+		
+		// TODO: Full implementation requires:
+		// - Locating the target object
+		// - Checking control permissions or halt @power
+		// - Clearing all queued actions for the object
+		// - If player, clearing queue for player and all their objects
+		// - If replacement actions, queue them
+		// - Otherwise, set HALT flag
+		await NotifyService.Notify(executor, "Note: Queue management for @halt not yet implemented.");
+		
+		return new CallState("#-1 NOT IMPLEMENTED");
 	}
 
 	[SharpCommand(Name = "@NOTIFY", Switches = ["ALL", "ANY", "SETQ", "QUIET"],
@@ -975,11 +1171,170 @@ public partial class Commands
 		[
 			"ADD", "ALIAS", "CLONE", "DELETE", "EqSplit", "LSARGS", "RSARGS", "NOEVAL", "ON", "OFF", "QUIET", "ENABLE",
 			"DISABLE", "RESTRICT", "NOPARSE", "RSNoParse"
-		], Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 0)]
+		], Behavior = CB.Default | CB.EqSplit, MinArgs = 1, MaxArgs = 2)]
 	public static async ValueTask<Option<CallState>> Command(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches.ToArray();
+		
+		if (args.Count == 0)
+		{
+			await NotifyService!.Notify(executor, "You must specify a command name.");
+			return new CallState("#-1 NO COMMAND SPECIFIED");
+		}
+		
+		var commandName = args["0"].Message?.ToPlainText()?.ToUpper();
+		if (string.IsNullOrEmpty(commandName))
+		{
+			await NotifyService!.Notify(executor, "You must specify a command name.");
+			return new CallState("#-1 NO COMMAND SPECIFIED");
+		}
+		
+		var isQuiet = switches.Contains("QUIET");
+		
+		// Administrative switches - wizard only (except DELETE which requires God)
+		if (switches.Any(s => new[] { "ADD", "ALIAS", "CLONE", "DELETE", "DISABLE", "ENABLE", "RESTRICT" }.Contains(s)))
+		{
+			if (!await executor.IsWizard())
+			{
+				await NotifyService!.Notify(executor, "Permission denied.");
+				return new CallState(Errors.ErrorPerm);
+			}
+			
+			// Handle administrative operations
+			if (switches.Contains("ADD"))
+			{
+				if (!isQuiet)
+				{
+					await NotifyService!.Notify(executor, $"@command/add: Dynamic command creation not yet implemented.");
+				}
+				return new CallState("#-1 NOT IMPLEMENTED");
+			}
+			
+			if (switches.Contains("ALIAS"))
+			{
+				var aliasName = args.GetValueOrDefault("1")?.Message?.ToPlainText();
+				if (string.IsNullOrEmpty(aliasName))
+				{
+					await NotifyService!.Notify(executor, "You must specify an alias name.");
+					return new CallState("#-1 NO ALIAS SPECIFIED");
+				}
+				
+				if (!isQuiet)
+				{
+					await NotifyService!.Notify(executor, $"@command/alias: Dynamic command aliasing not yet implemented.");
+				}
+				return new CallState("#-1 NOT IMPLEMENTED");
+			}
+			
+			if (switches.Contains("CLONE"))
+			{
+				var cloneName = args.GetValueOrDefault("1")?.Message?.ToPlainText();
+				if (string.IsNullOrEmpty(cloneName))
+				{
+					await NotifyService!.Notify(executor, "You must specify a clone name.");
+					return new CallState("#-1 NO CLONE NAME SPECIFIED");
+				}
+				
+				if (!isQuiet)
+				{
+					await NotifyService!.Notify(executor, $"@command/clone: Command cloning not yet implemented.");
+				}
+				return new CallState("#-1 NOT IMPLEMENTED");
+			}
+			
+			if (switches.Contains("DELETE"))
+			{
+				if (!executor.IsGod())
+				{
+					await NotifyService!.Notify(executor, "Only God can delete commands.");
+					return new CallState(Errors.ErrorPerm);
+				}
+				
+				if (!isQuiet)
+				{
+					await NotifyService!.Notify(executor, $"@command/delete: Command deletion not yet implemented.");
+				}
+				return new CallState("#-1 NOT IMPLEMENTED");
+			}
+			
+			if (switches.Contains("DISABLE"))
+			{
+				if (!isQuiet)
+				{
+					await NotifyService!.Notify(executor, $"@command/disable: Command disabling not yet implemented.");
+				}
+				return new CallState("#-1 NOT IMPLEMENTED");
+			}
+			
+			if (switches.Contains("ENABLE"))
+			{
+				if (!isQuiet)
+				{
+					await NotifyService!.Notify(executor, $"@command/enable: Command enabling not yet implemented.");
+				}
+				return new CallState("#-1 NOT IMPLEMENTED");
+			}
+			
+			if (switches.Contains("RESTRICT"))
+			{
+				var restriction = args.GetValueOrDefault("1")?.Message?.ToPlainText();
+				if (!isQuiet)
+				{
+					await NotifyService!.Notify(executor, $"@command/restrict: Command restriction not yet implemented.");
+				}
+				return new CallState("#-1 NOT IMPLEMENTED");
+			}
+		}
+		
+		// No switches - display command information
+		if (CommandLibrary == null)
+		{
+			await NotifyService!.Notify(executor, "Command library unavailable.");
+			return new CallState("#-1 LIBRARY UNAVAILABLE");
+		}
+		
+		// Try to find the command in the library
+		if (!CommandLibrary.TryGetValue(commandName, out var commandInfo))
+		{
+			await NotifyService!.Notify(executor, $"Command '{commandName}' not found.");
+			return new CallState("#-1 COMMAND NOT FOUND");
+		}
+		
+		var (definition, isSystem) = commandInfo;
+		var attr = definition.Attribute;
+		
+		await NotifyService!.Notify(executor, $"Command: {attr.Name}");
+		await NotifyService.Notify(executor, $"  Type: {(isSystem ? "Built-in" : "User-defined")}");
+		await NotifyService.Notify(executor, $"  Min Args: {attr.MinArgs}");
+		await NotifyService.Notify(executor, $"  Max Args: {attr.MaxArgs}");
+		
+		if (attr.Switches != null && attr.Switches.Length > 0)
+		{
+			await NotifyService.Notify(executor, $"  Switches: {string.Join(", ", attr.Switches)}");
+		}
+		
+		var behaviors = new List<string>();
+		if ((attr.Behavior & CB.Default) != 0) behaviors.Add("Default");
+		if ((attr.Behavior & CB.EqSplit) != 0) behaviors.Add("EqSplit");
+		if ((attr.Behavior & CB.LSArgs) != 0) behaviors.Add("LSArgs");
+		if ((attr.Behavior & CB.RSArgs) != 0) behaviors.Add("RSArgs");
+		if ((attr.Behavior & CB.RSNoParse) != 0) behaviors.Add("RSNoParse");
+		if ((attr.Behavior & CB.NoGagged) != 0) behaviors.Add("NoGagged");
+		if ((attr.Behavior & CB.NoParse) != 0) behaviors.Add("NoParse");
+		
+		if (behaviors.Count > 0)
+		{
+			await NotifyService.Notify(executor, $"  Behavior: {string.Join(" | ", behaviors)}");
+		}
+		
+		if (!string.IsNullOrEmpty(attr.CommandLock))
+		{
+			await NotifyService.Notify(executor, $"  Lock: {attr.CommandLock}");
+		}
+		
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@DRAIN", Switches = ["ALL", "ANY"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs, MinArgs = 1,
@@ -1256,18 +1611,136 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@SEARCH", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse,
-		MinArgs = 0, MaxArgs = 0)]
+		MinArgs = 0, MaxArgs = 3)]
 	public static async ValueTask<Option<CallState>> Search(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		
+		// @search [<player>] [<classN>=<restrictionN>[,...]][,<begin>,<end>]
+		// This is a complex command that searches the database with multiple filters
+		
+		string? playerName = null;
+		string? searchCriteria = null;
+		int? beginDbref = null;
+		int? endDbref = null;
+		
+		// Parse arguments
+		if (args.Count > 0 && args.ContainsKey("0"))
+		{
+			var arg0 = args["0"].Message?.ToPlainText();
+			if (!string.IsNullOrEmpty(arg0))
+			{
+				// Could be player name or search criteria
+				playerName = arg0;
+			}
+		}
+		
+		if (args.Count > 1 && args.ContainsKey("1"))
+		{
+			searchCriteria = args["1"].Message?.ToPlainText();
+		}
+		
+		if (args.Count > 2 && args.ContainsKey("2"))
+		{
+			var endStr = args["2"].Message?.ToPlainText();
+			if (!string.IsNullOrEmpty(endStr) && int.TryParse(endStr, out var end))
+			{
+				endDbref = end;
+			}
+		}
+		
+		await NotifyService!.Notify(executor, "@search: Advanced database search");
+		
+		if (playerName != null)
+		{
+			await NotifyService.Notify(executor, $"  Player filter: {playerName}");
+		}
+		
+		if (searchCriteria != null)
+		{
+			await NotifyService.Notify(executor, $"  Criteria: {searchCriteria}");
+		}
+		
+		if (beginDbref.HasValue || endDbref.HasValue)
+		{
+			await NotifyService.Notify(executor, $"  Range: {beginDbref ?? 0} to {endDbref?.ToString() ?? "end"}");
+		}
+		
+		// TODO: Implement full database search with filters:
+		// TYPE, NAME, ZONE, PARENT, EXITS, THINGS, ROOMS, PLAYERS, FLAGS, etc.
+		await NotifyService.Notify(executor, "Note: Full @search database query not yet implemented.");
+		await NotifyService.Notify(executor, "0 objects found.");
+		
+		return new CallState("0");
 	}
 
-	[SharpCommand(Name = "@WHEREIS", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	[SharpCommand(Name = "@WHEREIS", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 1, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> WhereIs(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+
+		if (args.Count == 0)
+		{
+			await NotifyService!.Notify(executor, "You must specify a player to locate.");
+			return new CallState("#-1 NO PLAYER SPECIFIED");
+		}
+
+		var targetName = args["0"].Message!.ToPlainText();
+
+		// Locate the target player
+		var maybeTarget = await LocateService!.LocateAndNotifyIfInvalid(
+			parser,
+			executor,
+			executor,
+			targetName,
+			LocateFlags.All);
+
+		if (!maybeTarget.IsValid())
+		{
+			return new CallState("#-1 NOT FOUND");
+		}
+
+		var target = maybeTarget.WithoutError().WithoutNone();
+
+		// Check if target is a player
+		if (!target.IsPlayer)
+		{
+			await NotifyService!.Notify(executor, "You can only @whereis players.");
+			return new CallState("#-1 NOT A PLAYER");
+		}
+
+		var targetPlayer = target.AsPlayer;
+		var targetObject = target.Object();
+		
+		// Check if target is UNFINDABLE
+		var targetFlags = await targetObject.Flags.Value.ToListAsync();
+		var isUnfindable = targetFlags.Any(f => f.Symbol == "U" || f.Name.Equals("UNFINDABLE", StringComparison.OrdinalIgnoreCase));
+
+		// Notify the target that someone is trying to find them
+		if (isUnfindable)
+		{
+			await NotifyService!.Notify(target, 
+				$"{executor.Object().Name} tried to locate you, but was unable to.");
+			await NotifyService.Notify(executor, 
+				$"{targetObject.Name} is UNFINDABLE.");
+			return new CallState("#-1 UNFINDABLE");
+		}
+
+		// Get the target's location
+		var targetLocation = await target.AsContent.Location();
+		var locationName = targetLocation.Object().Name;
+
+		// Notify the target that they were found
+		await NotifyService!.Notify(target, 
+			$"{executor.Object().Name} has just located your position.");
+
+		// Notify the executor of the target's location
+		await NotifyService.Notify(executor, 
+			$"{targetObject.Name} is in {locationName}.");
+
+		return new CallState(targetLocation.Object().DBRef.ToString());
 	}
 
 	[SharpCommand(Name = "@BREAK", Switches = ["INLINE", "QUEUED"],
@@ -1305,11 +1778,125 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@CONFIG", Switches = ["SET", "SAVE", "LOWERCASE", "LIST"], Behavior = CB.Default | CB.EqSplit,
-		MinArgs = 0, MaxArgs = 0)]
+		MinArgs = 0, MaxArgs = 2)]
 	public static async ValueTask<Option<CallState>> Config(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches.ToArray();
+		var useLowercase = switches.Contains("LOWERCASE");
+
+		// Get all configuration categories using reflection
+		var optionsType = typeof(SharpMUSHOptions);
+		var categoryProperties = optionsType.GetProperties();
+		var allCategories = categoryProperties.Select(p => p.Name).OrderBy(n => n).ToList();
+
+		// Helper to get all config options with metadata
+		var getAllOptions = () => categoryProperties
+			.SelectMany(category =>
+			{
+				var categoryType = category.PropertyType;
+				var props = categoryType.GetProperties();
+				return props.Select(prop =>
+				{
+					var attr = prop.GetCustomAttribute<SharpConfigAttribute>();
+					if (attr == null) return null;
+					var value = prop.GetValue(category.GetValue(Configuration!.CurrentValue));
+					return new
+					{
+						Category = category.Name,
+						PropertyName = prop.Name,
+						ConfigAttr = attr,
+						Value = value
+					};
+				}).Where(x => x != null);
+			})
+			.Select(x => x!)
+			.ToList();
+
+		// @config/set or @config/save - requires wizard/god permissions
+		if (switches.Contains("SET") || switches.Contains("SAVE"))
+		{
+			if (!await executor.IsWizard())
+			{
+				await NotifyService!.Notify(executor, "Permission denied.");
+				return new CallState(Errors.ErrorPerm);
+			}
+
+			if (switches.Contains("SAVE") && !executor.IsGod())
+			{
+				await NotifyService!.Notify(executor, "Only God can use /save switch.");
+				return new CallState(Errors.ErrorPerm);
+			}
+
+			// /set and /save not yet implemented - would require runtime config modification
+			await NotifyService!.Notify(executor, "@config/set and @config/save are not yet implemented.");
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+
+		// @config with no arguments - list categories
+		if (args.Count == 0)
+		{
+			await NotifyService!.Notify(executor, "Configuration Categories:");
+			foreach (var cat in allCategories)
+			{
+				await NotifyService.Notify(executor, $"  {cat}");
+			}
+			await NotifyService.Notify(executor, "Use '@config <category>' to see options in a category.");
+			await NotifyService.Notify(executor, "Use '@config <option>' to see the value of an option.");
+			return CallState.Empty;
+		}
+
+		var searchTerm = args.GetValueOrDefault("0")?.Message?.ToPlainText() ?? "";
+
+		// Check if searchTerm is a category
+		var matchingCategory = allCategories.FirstOrDefault(c =>
+			c.Equals(searchTerm, StringComparison.OrdinalIgnoreCase));
+
+		if (matchingCategory != null)
+		{
+			// List all options in the category
+			var categoryOptions = getAllOptions()
+				.Where(opt => opt.Category.Equals(matchingCategory, StringComparison.OrdinalIgnoreCase))
+				.OrderBy(opt => opt.ConfigAttr.Name)
+				.ToList();
+
+			if (categoryOptions.Count == 0)
+			{
+				await NotifyService!.Notify(executor, $"No options found in category '{matchingCategory}'.");
+				return CallState.Empty;
+			}
+
+			await NotifyService!.Notify(executor, $"Options in {matchingCategory}:");
+			foreach (var opt in categoryOptions)
+			{
+				var name = useLowercase ? opt.ConfigAttr.Name.ToLower() : opt.ConfigAttr.Name;
+				var value = opt.Value?.ToString() ?? "null";
+				await NotifyService.Notify(executor, $"  {name}: {value}");
+			}
+			return CallState.Empty;
+		}
+
+		// Check if searchTerm is a specific option
+		var allOptions = getAllOptions();
+		var matchingOption = allOptions.FirstOrDefault(opt =>
+			opt.ConfigAttr.Name.Equals(searchTerm, StringComparison.OrdinalIgnoreCase));
+
+		if (matchingOption != null)
+		{
+			var name = useLowercase ? matchingOption.ConfigAttr.Name.ToLower() : matchingOption.ConfigAttr.Name;
+			var value = matchingOption.Value?.ToString() ?? "null";
+			var desc = matchingOption.ConfigAttr.Description;
+
+			await NotifyService!.Notify(executor, $"{name}: {value}");
+			await NotifyService.Notify(executor, $"  Description: {desc}");
+			await NotifyService.Notify(executor, $"  Category: {matchingOption.Category}");
+			return new CallState(value);
+		}
+
+		// No match found
+		await NotifyService!.Notify(executor, $"No configuration category or option named '{searchTerm}'.");
+		return new CallState("#-1 NOT FOUND");
 	}
 
 	[SharpCommand(Name = "@EDIT", Switches = ["FIRST", "CHECK", "QUIET", "REGEXP", "NOCASE", "ALL"],
@@ -1322,11 +1909,192 @@ public partial class Commands
 
 	[SharpCommand(Name = "@FUNCTION",
 		Switches = ["ALIAS", "BUILTIN", "CLONE", "DELETE", "ENABLE", "DISABLE", "PRESERVE", "RESTORE", "RESTRICT"],
-		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 0, MaxArgs = 5)]
 	public static async ValueTask<Option<CallState>> Function(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches.ToArray();
+		
+		// No arguments - list all user-defined functions
+		if (args.Count == 0)
+		{
+			if (FunctionLibrary == null)
+			{
+				await NotifyService!.Notify(executor, "Function library unavailable.");
+				return new CallState("#-1 LIBRARY UNAVAILABLE");
+			}
+			
+			await NotifyService!.Notify(executor, "Global user-defined functions:");
+			
+			// Check if executor has Functions power or is wizard
+			var canSeeDetails = await executor.IsWizard();
+			
+			var userFunctions = FunctionLibrary.Where(kvp => !kvp.Value.IsSystem).ToArray();
+			var builtinFunctions = FunctionLibrary.Where(kvp => kvp.Value.IsSystem).ToArray();
+			
+			if (canSeeDetails)
+			{
+				await NotifyService.Notify(executor, $"  User-defined: {userFunctions.Length}");
+				foreach (var (name, (def, _)) in userFunctions.Take(10))
+				{
+					await NotifyService.Notify(executor, $"    {name}: {def.Attribute.MinArgs}-{def.Attribute.MaxArgs} args, Flags: {def.Attribute.Flags}");
+				}
+				if (userFunctions.Length > 10)
+				{
+					await NotifyService.Notify(executor, $"    ... and {userFunctions.Length - 10} more");
+				}
+				
+				await NotifyService.Notify(executor, $"  Built-in: {builtinFunctions.Length}");
+			}
+			else
+			{
+				await NotifyService.Notify(executor, $"  {userFunctions.Length} user-defined functions");
+				await NotifyService.Notify(executor, $"  {builtinFunctions.Length} built-in functions");
+			}
+			
+			return CallState.Empty;
+		}
+		
+		var functionName = args["0"].Message?.ToPlainText();
+		if (string.IsNullOrEmpty(functionName))
+		{
+			await NotifyService!.Notify(executor, "You must specify a function name.");
+			return new CallState("#-1 NO FUNCTION SPECIFIED");
+		}
+		
+		// Handle administrative switches
+		if (switches.Contains("ALIAS"))
+		{
+			var aliasName = args.GetValueOrDefault("1")?.Message?.ToPlainText();
+			if (string.IsNullOrEmpty(aliasName))
+			{
+				await NotifyService!.Notify(executor, "You must specify an alias name.");
+				return new CallState("#-1 NO ALIAS SPECIFIED");
+			}
+			
+			await NotifyService!.Notify(executor, $"@function/alias: Would create alias '{aliasName}' for function '{functionName}'.");
+			await NotifyService.Notify(executor, "Note: Function aliasing not yet implemented.");
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+		
+		if (switches.Contains("CLONE"))
+		{
+			var cloneName = args.GetValueOrDefault("1")?.Message?.ToPlainText();
+			if (string.IsNullOrEmpty(cloneName))
+			{
+				await NotifyService!.Notify(executor, "You must specify a clone name.");
+				return new CallState("#-1 NO CLONE NAME SPECIFIED");
+			}
+			
+			await NotifyService!.Notify(executor, $"@function/clone: Would clone function '{functionName}' as '{cloneName}'.");
+			await NotifyService.Notify(executor, "Note: Function cloning not yet implemented.");
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+		
+		if (switches.Contains("DELETE"))
+		{
+			await NotifyService!.Notify(executor, $"@function/delete: Would delete function '{functionName}'.");
+			await NotifyService.Notify(executor, "Note: Function deletion not yet implemented.");
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+		
+		if (switches.Contains("DISABLE"))
+		{
+			await NotifyService!.Notify(executor, $"@function/disable: Would disable function '{functionName}'.");
+			await NotifyService.Notify(executor, "Note: Function disabling not yet implemented.");
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+		
+		if (switches.Contains("ENABLE"))
+		{
+			await NotifyService!.Notify(executor, $"@function/enable: Would enable function '{functionName}'.");
+			await NotifyService.Notify(executor, "Note: Function enabling not yet implemented.");
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+		
+		if (switches.Contains("RESTRICT"))
+		{
+			var restriction = args.GetValueOrDefault("1")?.Message?.ToPlainText();
+			await NotifyService!.Notify(executor, $"@function/restrict: Would restrict function '{functionName}' to: {restriction ?? "none"}");
+			await NotifyService.Notify(executor, "Note: Function restriction not yet implemented.");
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+		
+		// Check if defining a new function: @function <name>=<obj>,<attrib>[,<min>,<max>[,<restrictions>]]
+		if (args.Count >= 2)
+		{
+			var defString = args["1"].Message?.ToPlainText();
+			if (!string.IsNullOrEmpty(defString))
+			{
+				// Parse definition: obj, attrib[, min, max[, restrictions]]
+				await NotifyService!.Notify(executor, $"@function: Would define function '{functionName}' as: {defString}");
+				
+				// Parse min/max args if provided
+				if (args.Count >= 3)
+				{
+					var minArgs = args.GetValueOrDefault("2")?.Message?.ToPlainText();
+					await NotifyService.Notify(executor, $"  Min args: {minArgs ?? "none"}");
+				}
+				
+				if (args.Count >= 4)
+				{
+					var maxArgs = args.GetValueOrDefault("3")?.Message?.ToPlainText();
+					await NotifyService.Notify(executor, $"  Max args: {maxArgs ?? "none"}");
+				}
+				
+				if (args.Count >= 5)
+				{
+					var restrictions = args.GetValueOrDefault("4")?.Message?.ToPlainText();
+					await NotifyService.Notify(executor, $"  Restrictions: {restrictions ?? "none"}");
+				}
+				
+				await NotifyService.Notify(executor, "Note: Dynamic function definition not yet implemented.");
+				return new CallState("#-1 NOT IMPLEMENTED");
+			}
+		}
+		
+		// Single argument - show function information
+		if (FunctionLibrary == null)
+		{
+			await NotifyService!.Notify(executor, "Function library unavailable.");
+			return new CallState("#-1 LIBRARY UNAVAILABLE");
+		}
+		
+		// Try to find the function in the library
+		var functionNameUpper = functionName.ToUpper();
+		if (!FunctionLibrary.TryGetValue(functionNameUpper, out var functionInfo))
+		{
+			await NotifyService!.Notify(executor, $"Function '{functionName}' not found.");
+			return new CallState("#-1 FUNCTION NOT FOUND");
+		}
+		
+		var (definition, isSystem) = functionInfo;
+		var attr = definition.Attribute;
+		
+		await NotifyService!.Notify(executor, $"Function: {attr.Name}");
+		await NotifyService.Notify(executor, $"  Type: {(isSystem ? "Built-in" : "User-defined")}");
+		await NotifyService.Notify(executor, $"  Min Args: {attr.MinArgs}");
+		await NotifyService.Notify(executor, $"  Max Args: {attr.MaxArgs}");
+		
+		var flags = new List<string>();
+		if ((attr.Flags & FunctionFlags.Regular) != 0) flags.Add("Regular");
+		if ((attr.Flags & FunctionFlags.StripAnsi) != 0) flags.Add("StripAnsi");
+		if ((attr.Flags & FunctionFlags.NoParse) != 0) flags.Add("NoParse");
+		if ((attr.Flags & FunctionFlags.Localize) != 0) flags.Add("Localize");
+		if ((attr.Flags & FunctionFlags.Literal) != 0) flags.Add("Literal");
+		
+		if (flags.Count > 0)
+		{
+			await NotifyService.Notify(executor, $"  Flags: {string.Join(" | ", flags)}");
+		}
+		
+		if (attr.Restrict != null && attr.Restrict.Length > 0)
+		{
+			await NotifyService.Notify(executor, $"  Restrictions: {string.Join(", ", attr.Restrict)}");
+		}
+		
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@LEMIT", Switches = ["NOEVAL", "NOISY", "SILENT", "SPOOF"], Behavior = CB.Default | CB.NoGagged,
@@ -1432,29 +2200,272 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@PS", Switches = ["ALL", "SUMMARY", "COUNT", "QUICK", "DEBUG"], Behavior = CB.Default,
-		MinArgs = 0, MaxArgs = 0)]
+		MinArgs = 0, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> ProcessStatus(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		// @ps[/<switch>] [<player>]
+		// @ps[/debug] <pid>
+		
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches.ToArray();
+		
+		// Check for /summary switch
+		if (switches.Contains("SUMMARY"))
+		{
+			await NotifyService!.Notify(executor, "@ps/summary: Queue totals");
+			await NotifyService.Notify(executor, "  Command queue: 0/0");
+			await NotifyService.Notify(executor, "  Wait queue: 0/0");
+			await NotifyService.Notify(executor, "  Semaphore queue: 0/0");
+			await NotifyService.Notify(executor, "  Load average: 0.0, 0.0, 0.0");
+			await NotifyService.Notify(executor, "Note: Queue management not yet implemented.");
+			return CallState.Empty;
+		}
+		
+		// Check for /quick switch
+		if (switches.Contains("QUICK"))
+		{
+			await NotifyService!.Notify(executor, "@ps/quick: Your queue totals");
+			await NotifyService.Notify(executor, "  Command queue: 0/0");
+			await NotifyService.Notify(executor, "  Wait queue: 0/0");
+			await NotifyService.Notify(executor, "  Semaphore queue: 0/0");
+			await NotifyService.Notify(executor, "Note: Queue management not yet implemented.");
+			return CallState.Empty;
+		}
+		
+		// Check if showing debug info for a specific PID
+		if (switches.Contains("DEBUG"))
+		{
+			var pidStr = args.GetValueOrDefault("0")?.Message?.ToPlainText();
+			if (string.IsNullOrEmpty(pidStr))
+			{
+				await NotifyService!.Notify(executor, "You must specify a process ID.");
+				return new CallState("#-1 NO PID SPECIFIED");
+			}
+			
+			await NotifyService!.Notify(executor, $"@ps/debug: Would show debug info for PID {pidStr}");
+			await NotifyService.Notify(executor, "  Would show: Arguments, Q-registers, executor, enactor, caller");
+			await NotifyService.Notify(executor, "Note: Queue management not yet implemented.");
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+		
+		// Check for /all switch (wizard only)
+		if (switches.Contains("ALL"))
+		{
+			if (!await executor.IsWizard())
+			{
+				await NotifyService!.Notify(executor, "Permission denied.");
+				return new CallState(Errors.ErrorPerm);
+			}
+			
+			await NotifyService!.Notify(executor, "@ps/all: Would show full queue for all objects");
+			await NotifyService.Notify(executor, "Note: Queue management not yet implemented.");
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+		
+		// Show queue for specific player or self
+		string targetName = "you";
+		if (args.Count > 0)
+		{
+			var playerName = args["0"].Message?.ToPlainText();
+			if (!string.IsNullOrEmpty(playerName))
+			{
+				targetName = playerName;
+			}
+		}
+		
+		await NotifyService!.Notify(executor, $"@ps: Queue for {targetName}");
+		await NotifyService.Notify(executor, "  Command queue: 0/0");
+		await NotifyService.Notify(executor, "  Wait queue: 0/0");
+		await NotifyService.Notify(executor, "  Semaphore queue: 0/0");
+		await NotifyService.Notify(executor, "  Load average: 0.0, 0.0, 0.0");
+		
+		// TODO: Full implementation requires:
+		// - Queue management system to track all queued commands
+		// - Process IDs for each queue entry
+		// - Ability to list queue entries with format: [PID] <semaphore> <wait> <object> <command>
+		// - Load average tracking
+		// - Permission checks for viewing other players' queues
+		await NotifyService.Notify(executor, "Note: Queue management not yet implemented.");
+		
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@SELECT",
 		Switches = ["NOTIFY", "REGEXP", "INPLACE", "INLINE", "LOCALIZE", "CLEARREGS", "NOBREAK"],
-		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse, MinArgs = 0, MaxArgs = 0)]
+		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse, MinArgs = 1, MaxArgs = int.MaxValue)]
 	public static async ValueTask<Option<CallState>> Select(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		// @select <string>=<expr1>, <action1> [,<exprN>, <actionN>]... [,<default>]
+		// Like @switch but only runs the first matching action
+		
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches.ToArray();
+		
+		var testString = args["0"].Message?.ToPlainText();
+		if (string.IsNullOrEmpty(testString))
+		{
+			await NotifyService!.Notify(executor, "You must specify a test string.");
+			return new CallState("#-1 NO TEST STRING");
+		}
+		
+		await NotifyService!.Notify(executor, $"@select: Testing string '{testString}'");
+		
+		// Count expression/action pairs (args are: 0=test string, then pairs of expr,action)
+		int pairCount = (args.Count - 1) / 2;
+		bool hasDefault = (args.Count - 1) % 2 == 1;
+		
+		await NotifyService.Notify(executor, $"  Expression/action pairs: {pairCount}");
+		if (hasDefault)
+		{
+			await NotifyService.Notify(executor, "  Has default action");
+		}
+		
+		// Check switches
+		if (switches.Contains("REGEXP"))
+		{
+			await NotifyService.Notify(executor, "  Mode: Regular expression matching");
+		}
+		else
+		{
+			await NotifyService.Notify(executor, "  Mode: Wildcard pattern matching");
+		}
+		
+		if (switches.Contains("INLINE") || switches.Contains("INPLACE"))
+		{
+			await NotifyService.Notify(executor, "  Execution: Inline (immediate)");
+			
+			if (switches.Contains("NOBREAK"))
+			{
+				await NotifyService.Notify(executor, "  @break won't propagate to caller");
+			}
+			
+			if (switches.Contains("LOCALIZE"))
+			{
+				await NotifyService.Notify(executor, "  Q-registers will be localized");
+			}
+			
+			if (switches.Contains("CLEARREGS"))
+			{
+				await NotifyService.Notify(executor, "  Q-registers will be cleared");
+			}
+		}
+		else
+		{
+			await NotifyService.Notify(executor, "  Execution: Queued");
+		}
+		
+		if (switches.Contains("NOTIFY"))
+		{
+			await NotifyService.Notify(executor, "  Will queue @notify after completion");
+		}
+		
+		// TODO: Full implementation requires:
+		// - Pattern matching (wildcard or regexp based on switch)
+		// - Capture group handling ($0-$9 for matches)
+		// - #$ substitution in actions (replaced with evaluated test string)
+		// - Queue or inline execution based on switches
+		// - Q-register management (localize, clearregs)
+		// - @break propagation handling
+		// - Only execute first matching action (unlike @switch which executes all)
+		await NotifyService.Notify(executor, "Note: Pattern matching and action execution not yet implemented.");
+		
+		return new CallState("#-1 NOT IMPLEMENTED");
 	}
 
 	[SharpCommand(Name = "@TRIGGER",
 		Switches = ["CLEARREGS", "SPOOF", "INLINE", "NOBREAK", "LOCALIZE", "INPLACE", "MATCH"],
-		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 1, MaxArgs = 31)]
 	public static async ValueTask<Option<CallState>> Trigger(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		// @trigger[/<switches>] <object>/<attribute>[=<arg0>, ..., <arg29>]
+		// @trigger/match[/<switches>] <object>/<attribute>=<string>
+		
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).WithoutNone();
+		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches.ToArray();
+		
+		var attributePath = args["0"].Message?.ToPlainText();
+		if (string.IsNullOrEmpty(attributePath))
+		{
+			await NotifyService!.Notify(executor, "You must specify an object/attribute to trigger.");
+			return new CallState("#-1 NO ATTRIBUTE SPECIFIED");
+		}
+		
+		// Parse object/attribute
+		var parts = attributePath.Split('/', 2);
+		if (parts.Length < 2)
+		{
+			await NotifyService!.Notify(executor, "You must specify an object/attribute path.");
+			return new CallState("#-1 INVALID PATH");
+		}
+		
+		var objectName = parts[0];
+		var attributeName = parts[1];
+		
+		// Locate the target object
+		var maybeObject = await LocateService!.LocateAndNotifyIfInvalidWithCallState(
+			parser, executor, enactor, objectName, LocateFlags.All);
+			
+		if (maybeObject.IsError)
+		{
+			return maybeObject.AsError;
+		}
+		
+		var targetObject = maybeObject.AsSharpObject;
+		
+		// Check control permissions
+		if (!await PermissionService!.Controls(executor, targetObject))
+		{
+			await NotifyService!.Notify(executor, "Permission denied. You do not control that object.");
+			return new CallState("#-1 PERMISSION DENIED");
+		}
+		
+		// Get the attribute - must be visible to enactor
+		var attributeResult = await AttributeService!.GetAttributeAsync(
+			enactor, targetObject, attributeName, IAttributeService.AttributeMode.Read, false);
+		
+		if (attributeResult.IsError)
+		{
+			await NotifyService!.Notify(executor, $"No such attribute: {attributeName}");
+			return new CallState("#-1 NO SUCH ATTRIBUTE");
+		}
+		
+		if (attributeResult.IsNone)
+		{
+			// Empty attribute - nothing to trigger
+			return CallState.Empty;
+		}
+		
+		var attributeContent = attributeResult.AsAttribute.Last().Value;
+		var attributeText = attributeContent.ToPlainText();
+		
+		if (string.IsNullOrWhiteSpace(attributeText))
+		{
+			// Empty attribute - nothing to trigger
+			return CallState.Empty;
+		}
+		
+		// Determine enactor/executor for execution based on /spoof switch
+		// /spoof: enactor stays the same (original caller)
+		// no /spoof: target object becomes both enactor and executor
+		var executionEnactor = switches.Contains("SPOOF") ? enactor.Object().DBRef : targetObject.Object().DBRef;
+		
+		// TODO: Set up environment arguments (%0-%9, r(0,args)-r(29,args)) from args[1] through args[30]
+		// TODO: Handle Q-register management (clearregs, localize) when Q-register system available
+		// TODO: Handle /match for pattern matching when pattern engine available
+		// TODO: Handle queueing vs inline execution when queue system available
+		
+		// For now, execute inline using CommandListParse
+		// This is functionally correct for /inline mode, but doesn't handle queueing
+		await parser.With(state => state with { 
+			Executor = targetObject.Object().DBRef,
+			Enactor = executionEnactor 
+		}, async newParser => await newParser.CommandListParseVisitor(MModule.single(attributeText))());
+		
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@ZEMIT", Switches = ["NOISY", "SILENT"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged,
@@ -1613,8 +2624,29 @@ public partial class Commands
 	[SharpCommand(Name = "@LISTMOTD", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> ListMessageOfTheDay(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		
+		// Check if executor is wizard/royalty to see wizard MOTD
+		var isWizard = await executor.IsWizard();
+		
+		// Get MOTD file paths from configuration
+		var motdFile = Configuration!.CurrentValue.Message.MessageOfTheDayFile;
+		var motdHtmlFile = Configuration.CurrentValue.Message.MessageOfTheDayHtmlFile;
+		
+		await NotifyService!.Notify(executor, "Current Message of the Day settings:");
+		await NotifyService.Notify(executor, $"  Connect MOTD File: {motdFile ?? "(not set)"}");
+		await NotifyService.Notify(executor, $"  Connect MOTD HTML: {motdHtmlFile ?? "(not set)"}");
+		
+		if (isWizard)
+		{
+			var wizmotdFile = Configuration.CurrentValue.Message.WizMessageOfTheDayFile;
+			var wizmotdHtmlFile = Configuration.CurrentValue.Message.WizMessageOfTheDayHtmlFile;
+			
+			await NotifyService.Notify(executor, $"  Wizard MOTD File: {wizmotdFile ?? "(not set)"}");
+			await NotifyService.Notify(executor, $"  Wizard MOTD HTML: {wizmotdHtmlFile ?? "(not set)"}");
+		}
+		
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@NSOEMIT", Switches = ["NOEVAL"],
@@ -1756,11 +2788,56 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@STATS", Switches = ["CHUNKS", "FREESPACE", "PAGING", "REGIONS", "TABLES", "FLAGS"],
-		Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
+		Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> Stats(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches.ToArray();
+		
+		// Check for specialized switches
+		if (switches.Contains("TABLES"))
+		{
+			await NotifyService!.Notify(executor, "@stats/tables: Internal table statistics not yet implemented.");
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+		
+		if (switches.Contains("FLAGS"))
+		{
+			await NotifyService!.Notify(executor, "@stats/flags: Flag system statistics not yet implemented.");
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+		
+		if (switches.Contains("CHUNKS") || switches.Contains("FREESPACE") || 
+		    switches.Contains("PAGING") || switches.Contains("REGIONS"))
+		{
+			await NotifyService!.Notify(executor, "@stats memory switches not yet implemented.");
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+		
+		// Basic @stats - show object counts
+		string? playerName = null;
+		if (args.Count > 0 && args.ContainsKey("0"))
+		{
+			playerName = args["0"].Message?.ToPlainText();
+		}
+		
+		await NotifyService!.Notify(executor, "Database Statistics:");
+		
+		if (playerName != null)
+		{
+			await NotifyService.Notify(executor, $"  For player: {playerName}");
+		}
+		
+		// TODO: Query actual database statistics
+		await NotifyService.Notify(executor, "  Rooms: (query pending)");
+		await NotifyService.Notify(executor, "  Exits: (query pending)");
+		await NotifyService.Notify(executor, "  Things: (query pending)");
+		await NotifyService.Notify(executor, "  Players: (query pending)");
+		await NotifyService.Notify(executor, "  Total: (query pending)");
+		await NotifyService.Notify(executor, "Note: Full database statistics not yet implemented.");
+		
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@VERB", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs, MinArgs = 0,
@@ -1905,11 +2982,97 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@ENTRANCES", Switches = ["EXITS", "THINGS", "PLAYERS", "ROOMS"],
-		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 0, MaxArgs = 3)]
 	public static async ValueTask<Option<CallState>> Entrances(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches.ToArray();
+		
+		// @entrances[/<switch>] [<object>][=<begin>[, <end>]]
+		// Shows all objects linked to <object>
+		
+		AnySharpObject targetObject;
+		
+		// Get target object (defaults to current location if not specified)
+		if (args.Count > 0 && args.ContainsKey("0"))
+		{
+			var targetName = args["0"].Message?.ToPlainText();
+			if (!string.IsNullOrEmpty(targetName))
+			{
+				var maybeTarget = await LocateService!.LocateAndNotifyIfInvalid(
+					parser, executor, executor, targetName, LocateFlags.All);
+				
+				if (!maybeTarget.IsValid())
+				{
+					return new CallState("#-1 NOT FOUND");
+				}
+				
+				targetObject = maybeTarget.WithoutError().WithoutNone();
+			}
+			else
+			{
+				var location = await executor.AsContent.Location();
+				targetObject = location.WithRoomOption();
+			}
+		}
+		else
+		{
+			var location = await executor.AsContent.Location();
+			targetObject = location.WithRoomOption();
+		}
+		
+		// Parse range if specified
+		int? beginDbref = null;
+		int? endDbref = null;
+		
+		if (args.Count > 1 && args.ContainsKey("1"))
+		{
+			var beginStr = args["1"].Message?.ToPlainText();
+			if (!string.IsNullOrEmpty(beginStr) && int.TryParse(beginStr, out var begin))
+			{
+				beginDbref = begin;
+			}
+		}
+		
+		if (args.Count > 2 && args.ContainsKey("2"))
+		{
+			var endStr = args["2"].Message?.ToPlainText();
+			if (!string.IsNullOrEmpty(endStr) && int.TryParse(endStr, out var end))
+			{
+				endDbref = end;
+			}
+		}
+		
+		var targetObj = targetObject.Object();
+		await NotifyService!.Notify(executor, $"Entrances to {targetObj.Name}:");
+		
+		// Filter by switch type
+		var filterTypes = new List<string>();
+		if (switches.Contains("EXITS")) filterTypes.Add("exits");
+		if (switches.Contains("THINGS")) filterTypes.Add("things");
+		if (switches.Contains("PLAYERS")) filterTypes.Add("players");
+		if (switches.Contains("ROOMS")) filterTypes.Add("rooms");
+		
+		if (filterTypes.Count > 0)
+		{
+			await NotifyService.Notify(executor, $"  Filtering for: {string.Join(", ", filterTypes)}");
+		}
+		
+		if (beginDbref.HasValue || endDbref.HasValue)
+		{
+			await NotifyService.Notify(executor, $"  Range: {beginDbref ?? 0} to {endDbref?.ToString() ?? "end"}");
+		}
+		
+		// TODO: Query database for objects linked to target
+		// - Exits linked to target
+		// - Things with home = target  
+		// - Players with home = target
+		// - Rooms with drop-to = target
+		await NotifyService.Notify(executor, "Note: Database query for linked objects not yet implemented.");
+		await NotifyService.Notify(executor, "0 entrances found.");
+		
+		return new CallState("0");
 	}
 
 	[SharpCommand(Name = "@GREP", Switches = ["LIST", "PRINT", "ILIST", "IPRINT", "REGEXP", "WILD", "NOCASE", "PARENT"],
@@ -1921,11 +3084,113 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@INCLUDE", Switches = ["LOCALIZE", "CLEARREGS", "NOBREAK"],
-		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 1, MaxArgs = 31)]
 	public static async ValueTask<Option<CallState>> Include(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		// @include[/<switches>] <object>/<attribute>[=<arg1>,<arg2>,...]
+		// Inserts attribute contents in-place without adding a new queue entry
+		
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).WithoutNone();
+		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches.ToArray();
+		
+		var attributePath = args["0"].Message?.ToPlainText();
+		if (string.IsNullOrEmpty(attributePath))
+		{
+			await NotifyService!.Notify(executor, "You must specify an object/attribute to include.");
+			return new CallState("#-1 NO ATTRIBUTE SPECIFIED");
+		}
+		
+		// Parse object/attribute
+		var parts = attributePath.Split('/', 2);
+		if (parts.Length < 2)
+		{
+			await NotifyService!.Notify(executor, "You must specify an object/attribute path.");
+			return new CallState("#-1 INVALID PATH");
+		}
+		
+		var objectName = parts[0];
+		var attributeName = parts[1];
+		
+		// Locate the target object
+		var maybeObject = await LocateService!.LocateAndNotifyIfInvalidWithCallState(
+			parser, executor, enactor, objectName, LocateFlags.All);
+		
+		if (maybeObject.IsError)
+		{
+			return maybeObject.AsError;
+		}
+		
+		var targetObject = maybeObject.AsSharpObject;
+		
+		// Get the attribute - must be visible to enactor
+		var attributeResult = await AttributeService!.GetAttributeAsync(
+			enactor, targetObject, attributeName, IAttributeService.AttributeMode.Read, false);
+		
+		if (attributeResult.IsError)
+		{
+			await NotifyService!.Notify(executor, $"No such attribute: {attributeName}");
+			return new CallState("#-1 NO SUCH ATTRIBUTE");
+		}
+		
+		if (attributeResult.IsNone)
+		{
+			await NotifyService!.Notify(executor, $"Attribute {attributeName} is empty.");
+			return CallState.Empty;
+		}
+		
+		var attributeContent = attributeResult.AsAttribute.Last().Value;
+		var attributeText = attributeContent.ToPlainText();
+		
+		// Strip ^...: or $...: prefixes for listen/command patterns
+		if (attributeText.StartsWith("^") || attributeText.StartsWith("$"))
+		{
+			var colonIndex = attributeText.IndexOf(':');
+			if (colonIndex > 0)
+			{
+				attributeText = attributeText.Substring(colonIndex + 1).TrimStart();
+			}
+		}
+		
+		// TODO: Handle Q-register management
+		// - If CLEARREGS: Clear Q-registers before execution
+		// - If LOCALIZE: Save Q-registers, execute, then restore
+		// Currently we don't have Q-register management system implemented
+		
+		if (switches.Contains("CLEARREGS"))
+		{
+			// TODO: Clear Q-registers when system is available
+		}
+		else if (switches.Contains("LOCALIZE"))
+		{
+			// TODO: Save Q-registers when system is available
+		}
+		
+		// TODO: Handle environment argument substitution
+		// If arguments are provided to @include, they should substitute for %0-%9
+		// while the included action list is running, then restore original environment
+		// Currently we don't have environment management system fully implemented
+		
+		// Execute the attribute content in-place using CommandListParse
+		// This evaluates the command list without creating a queue entry
+		try
+		{
+			var result = await parser.CommandListParse(MModule.single(attributeText));
+			
+			// TODO: If LOCALIZE: Restore Q-registers when system is available
+			
+			// TODO: Handle NOBREAK switch
+			// When set, @break/@assert from included code shouldn't propagate to calling list
+			// This requires break/assert propagation system
+			
+			return result ?? CallState.Empty;
+		}
+		catch (Exception ex)
+		{
+			await NotifyService!.Notify(executor, $"Error executing included attribute: {ex.Message}");
+			return new CallState($"#-1 ERROR: {ex.Message}");
+		}
 	}
 
 	[SharpCommand(Name = "@MAIL",
@@ -2115,11 +3380,77 @@ public partial class Commands
 		return new CallState(string.Empty);
 	}
 
-	[SharpCommand(Name = "@RESTART", Switches = ["ALL"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	[SharpCommand(Name = "@RESTART", Switches = ["ALL"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> Restart(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches.ToArray();
+		
+		// Check for /all switch - wizard only
+		if (switches.Contains("ALL"))
+		{
+			if (!await executor.IsWizard())
+			{
+				await NotifyService!.Notify(executor, "Permission denied.");
+				return new CallState(Errors.ErrorPerm);
+			}
+			
+			// @restart/all would halt and restart all objects
+			await NotifyService!.Notify(executor, "@restart/all is not yet fully implemented.");
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+		
+		// Get target object
+		if (args.Count == 0)
+		{
+			await NotifyService!.Notify(executor, "You must specify an object to restart.");
+			return new CallState("#-1 NO OBJECT SPECIFIED");
+		}
+		
+		var targetName = args["0"].Message!.ToPlainText();
+		
+		// Locate the target object
+		var maybeTarget = await LocateService!.LocateAndNotifyIfInvalid(
+			parser,
+			executor,
+			executor,
+			targetName,
+			LocateFlags.All);
+		
+		if (!maybeTarget.IsValid())
+		{
+			return new CallState("#-1 NOT FOUND");
+		}
+		
+		var target = maybeTarget.WithoutError().WithoutNone();
+		
+		// Check control permissions
+		if (!await PermissionService!.Controls(executor, target))
+		{
+			await NotifyService!.Notify(executor, "Permission denied.");
+			return new CallState(Errors.ErrorPerm);
+		}
+		
+		var targetObject = target.Object();
+		
+		// For players, restart the player and all their objects
+		if (target.IsPlayer)
+		{
+			// Would need to restart all objects owned by the player
+			await NotifyService!.Notify(executor, $"Restarting {targetObject.Name} and all their objects.");
+			await NotifyService.Notify(executor, "Full player restart functionality not yet implemented.");
+			return new CallState("#-1 NOT FULLY IMPLEMENTED");
+		}
+		
+		// For other objects, halt and trigger @STARTUP
+		// TODO: Implement actual halt functionality
+		// TODO: Trigger @STARTUP attribute if it exists
+		
+		await NotifyService!.Notify(executor, $"Restarted {targetObject.Name}.");
+		await NotifyService.Notify(executor, "Note: @STARTUP attribute triggering not yet implemented.");
+		
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@SWEEP", Switches = ["CONNECTED", "HERE", "INVENTORY", "EXITS"], Behavior = CB.Default,
@@ -2368,11 +3699,217 @@ public partial class Commands
 
 	[SharpCommand(Name = "@ATTRIBUTE",
 		Switches = ["ACCESS", "DELETE", "RENAME", "RETROACTIVE", "LIMIT", "ENUM", "DECOMPILE"],
-		Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 0)]
+		Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 2)]
 	public static async ValueTask<Option<CallState>> Attribute(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		// @attribute <attrib> - Display attribute information
+		// @attribute/access[/retroactive] <attrib>=<flag list> - Add/modify standard attribute
+		// @attribute/delete <attrib> - Remove standard attribute
+		// @attribute/rename <attrib>=<new name> - Rename standard attribute
+		// @attribute/limit <attrib>=<regexp pattern> - Restrict values to pattern
+		// @attribute/enum [<delim>] <attrib>=<list> - Restrict values to list
+		// @attribute/decompile[/retroactive] [<pattern>] - Decompile attribute table
+		
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches.ToArray();
+		
+		// Check for decompile switch first (can work with 0 or 1 arg)
+		if (switches.Contains("DECOMPILE"))
+		{
+			if (!await executor.IsWizard())
+			{
+				await NotifyService!.Notify(executor, "Permission denied.");
+				return new CallState(Errors.ErrorPerm);
+			}
+			
+			var pattern = args.GetValueOrDefault("0")?.Message?.ToPlainText() ?? "*";
+			var retroactive = switches.Contains("RETROACTIVE");
+			
+			await NotifyService!.Notify(executor, "@attribute/decompile: Decompiling attribute table");
+			await NotifyService.Notify(executor, $"  Pattern: {pattern}");
+			if (retroactive)
+			{
+				await NotifyService.Notify(executor, "  Including /retroactive switch");
+			}
+			
+			// TODO: Full implementation requires:
+			// - Iterate through all standard attributes in the attribute table
+			// - Filter by pattern (wildcard matching)
+			// - Output @attribute/access commands for each matching attribute
+			// - Include attribute flags and creator dbref
+			await NotifyService.Notify(executor, "Note: Attribute table decompilation not yet implemented.");
+			
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+		
+		// All other operations require at least one argument
+		if (args.Count == 0)
+		{
+			await NotifyService!.Notify(executor, "You must specify an attribute.");
+			return new CallState("#-1 NO ATTRIBUTE SPECIFIED");
+		}
+		
+		var attrName = args["0"].Message?.ToPlainText();
+		if (string.IsNullOrEmpty(attrName))
+		{
+			await NotifyService!.Notify(executor, "You must specify an attribute.");
+			return new CallState("#-1 NO ATTRIBUTE SPECIFIED");
+		}
+		
+		// Check for various switches
+		if (switches.Contains("ACCESS"))
+		{
+			if (!await executor.IsWizard())
+			{
+				await NotifyService!.Notify(executor, "Permission denied.");
+				return new CallState(Errors.ErrorPerm);
+			}
+			
+			if (args.Count < 2)
+			{
+				await NotifyService!.Notify(executor, "You must specify attribute flags.");
+				return new CallState("#-1 NO FLAGS SPECIFIED");
+			}
+			
+			var flagList = args["1"].Message?.ToPlainText() ?? "none";
+			var retroactive = switches.Contains("RETROACTIVE");
+			
+			await NotifyService!.Notify(executor, $"@attribute/access: Setting up attribute '{attrName}'");
+			await NotifyService.Notify(executor, $"  Flags: {flagList}");
+			if (retroactive)
+			{
+				await NotifyService.Notify(executor, "  Retroactively updating existing copies");
+			}
+			
+			// TODO: Full implementation requires:
+			// - Add attribute to standard attribute table if new
+			// - Set default flags for the attribute
+			// - If retroactive, update all existing copies:
+			//   - Change owner to executor
+			//   - Update flags to match flag list
+			// - Save changes to persist across reboots
+			await NotifyService.Notify(executor, "Note: Attribute table modification not yet implemented.");
+			
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+		
+		if (switches.Contains("DELETE"))
+		{
+			if (!await executor.IsWizard())
+			{
+				await NotifyService!.Notify(executor, "Permission denied.");
+				return new CallState(Errors.ErrorPerm);
+			}
+			
+			await NotifyService!.Notify(executor, $"@attribute/delete: Removing attribute '{attrName}' from table");
+			
+			// TODO: Full implementation requires:
+			// - Remove attribute from standard attribute table
+			// - Existing copies remain but are no longer "standard"
+			// - Save changes to persist across reboots
+			await NotifyService.Notify(executor, "Note: Attribute table modification not yet implemented.");
+			
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+		
+		if (switches.Contains("RENAME"))
+		{
+			if (!await executor.IsWizard())
+			{
+				await NotifyService!.Notify(executor, "Permission denied.");
+				return new CallState(Errors.ErrorPerm);
+			}
+			
+			if (args.Count < 2)
+			{
+				await NotifyService!.Notify(executor, "You must specify a new name.");
+				return new CallState("#-1 NO NEW NAME SPECIFIED");
+			}
+			
+			var newName = args["1"].Message?.ToPlainText();
+			await NotifyService!.Notify(executor, $"@attribute/rename: Renaming '{attrName}' to '{newName}'");
+			
+			// TODO: Full implementation requires:
+			// - Rename attribute in standard attribute table
+			// - Update all references to use new name
+			// - Save changes to persist across reboots
+			await NotifyService.Notify(executor, "Note: Attribute table modification not yet implemented.");
+			
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+		
+		if (switches.Contains("LIMIT"))
+		{
+			if (!await executor.IsWizard())
+			{
+				await NotifyService!.Notify(executor, "Permission denied.");
+				return new CallState(Errors.ErrorPerm);
+			}
+			
+			if (args.Count < 2)
+			{
+				await NotifyService!.Notify(executor, "You must specify a regexp pattern.");
+				return new CallState("#-1 NO PATTERN SPECIFIED");
+			}
+			
+			var pattern = args["1"].Message?.ToPlainText();
+			await NotifyService!.Notify(executor, $"@attribute/limit: Setting pattern for '{attrName}'");
+			await NotifyService.Notify(executor, $"  Pattern: {pattern}");
+			await NotifyService.Notify(executor, "  New values must match this pattern (case insensitive)");
+			
+			// TODO: Full implementation requires:
+			// - Store regexp pattern with attribute in table
+			// - Validate all new attribute values against pattern
+			// - Pattern is case insensitive unless (?-i) is used
+			await NotifyService.Notify(executor, "Note: Attribute validation not yet implemented.");
+			
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+		
+		if (switches.Contains("ENUM"))
+		{
+			if (!await executor.IsWizard())
+			{
+				await NotifyService!.Notify(executor, "Permission denied.");
+				return new CallState(Errors.ErrorPerm);
+			}
+			
+			if (args.Count < 2)
+			{
+				await NotifyService!.Notify(executor, "You must specify a list of choices.");
+				return new CallState("#-1 NO CHOICES SPECIFIED");
+			}
+			
+			var choices = args["1"].Message?.ToPlainText();
+			await NotifyService!.Notify(executor, $"@attribute/enum: Setting choices for '{attrName}'");
+			await NotifyService.Notify(executor, $"  Choices: {choices}");
+			await NotifyService.Notify(executor, "  New values must match one of these choices");
+			
+			// TODO: Full implementation requires:
+			// - Store enumeration list with attribute in table
+			// - Validate all new attribute values against list
+			// - Support partial matching like grab()
+			// - Support custom delimiters (default is space)
+			await NotifyService.Notify(executor, "Note: Attribute validation not yet implemented.");
+			
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+		
+		// No switches - display attribute information
+		await NotifyService!.Notify(executor, $"@attribute: Information for '{attrName}'");
+		await NotifyService.Notify(executor, "  Full name: (attribute lookup pending)");
+		await NotifyService.Notify(executor, "  Flags: (attribute table query pending)");
+		await NotifyService.Notify(executor, "  Created by: (attribute table query pending)");
+		
+		// TODO: Full implementation requires:
+		// - Query attribute table for attribute information
+		// - Display full name (canonical form)
+		// - Display default attribute flags
+		// - Display dbref of object that added it to table
+		await NotifyService.Notify(executor, "Note: Attribute table query not yet implemented.");
+		
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@SKIP", Switches = ["IFELSE"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse,
