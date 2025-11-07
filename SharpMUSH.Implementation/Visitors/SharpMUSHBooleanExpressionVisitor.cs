@@ -11,6 +11,14 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Visitors;
 
+/// <summary>
+/// Visitor for compiling PennMUSH lock expressions into executable Expression trees.
+/// Supports all 11 documented PennMUSH lock key types including name, owner, carry, attribute,
+/// evaluation, indirect, DBRef list, IP/hostname, channel, and bit locks.
+/// </summary>
+/// <param name="med">Mediator for database and service queries</param>
+/// <param name="gated">Expression parameter representing the object being locked</param>
+/// <param name="unlocker">Expression parameter representing the object attempting to pass the lock</param>
 public class SharpMUSHBooleanExpressionVisitor(
 	IMediator med,
 	ParameterExpression gated,
@@ -19,6 +27,10 @@ public class SharpMUSHBooleanExpressionVisitor(
 	protected override Expression AggregateResult(Expression aggregate, Expression nextResult)
 		=> new Expression[] { aggregate, nextResult }.First(x => x is not null);
 
+	// Compiled expressions for bit checks (flag, power, type)
+	// Note: These use .GetAwaiter().GetResult() which is necessary for Expression trees
+	// that cannot be async. This is acceptable technical debt in this context.
+	
 	private readonly Expression<Func<AnySharpObject, string, bool>> _hasFlag = (dbRef, flag)
 		=> dbRef.Object().Flags.Value
 			.AnyAsync(x => x.Name == flag || x.Symbol == flag, CancellationToken.None).AsTask().GetAwaiter().GetResult();
@@ -126,8 +138,9 @@ public class SharpMUSHBooleanExpressionVisitor(
 				// For name-based lookup, we would need database query which isn't practical here
 				return false;
 			}
-			catch
+			catch (Exception)
 			{
+				// Catch any errors during owner resolution (database access, null references, etc.)
 				return false;
 			}
 		};
@@ -162,9 +175,13 @@ public class SharpMUSHBooleanExpressionVisitor(
 						.AsTask().GetAwaiter().GetResult();
 				}
 			}
-			catch
+			catch (InvalidOperationException)
 			{
-				// If not a container or any error, just use name/alias match
+				// Object is not a container, fall through to name/alias check
+			}
+			catch (Exception)
+			{
+				// Catch any errors during inventory check (database access, etc.)
 			}
 			
 			return false;
@@ -286,8 +303,9 @@ public class SharpMUSHBooleanExpressionVisitor(
 					error => false
 				);
 			}
-			catch
+			catch (Exception)
 			{
+				// Catch any errors during IP lookup (attribute access, regex errors, etc.)
 				return false;
 			}
 		};
@@ -331,8 +349,9 @@ public class SharpMUSHBooleanExpressionVisitor(
 					error => false
 				);
 			}
-			catch
+			catch (Exception)
 			{
+				// Catch any errors during hostname lookup (attribute access, regex errors, etc.)
 				return false;
 			}
 		};
@@ -516,8 +535,9 @@ public class SharpMUSHBooleanExpressionVisitor(
 				// For name-based lookup, we would need database query which isn't practical here
 				return false;
 			}
-			catch
+			catch (Exception)
 			{
+				// Catch any errors during indirect lock resolution (database access, etc.)
 				return false;
 			}
 		};
