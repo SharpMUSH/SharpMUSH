@@ -121,4 +121,36 @@ public class BooleanExpressionUnitTests
 		await Assert.That(bep.Validate(input, player)).IsTrue();
 		await Assert.That(bep.Compile(input)(player, player)).IsEqualTo(expected);
 	}
+
+	[Arguments("dbreflist^testattr", true)]  // DBRef list locks are always valid syntactically
+	[Test]
+	public async Task DbRefListValidation(string input, bool expected)
+	{
+		var bep = BooleanParser;
+		var dbn = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
+
+		await Assert.That(bep.Validate(input, dbn)).IsEqualTo(expected);
+	}
+
+	[Arguments("ip^127.0.0.1", true)]  // IP locks are always valid syntactically
+	[Arguments("ip^192.168.*", true)]
+	[Arguments("hostname^localhost", true)]  // Hostname locks are always valid syntactically
+	[Test]
+	public async Task HostLockValidation(string input, bool expected)
+	{
+		var bep = BooleanParser;
+		var dbn = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
+
+		await Assert.That(bep.Validate(input, dbn)).IsEqualTo(expected);
+	}
+
+	[Arguments("channel^Public", true)]  // Channel locks are always valid syntactically
+	[Test]
+	public async Task ChannelValidation(string input, bool expected)
+	{
+		var bep = BooleanParser;
+		var dbn = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
+
+		await Assert.That(bep.Validate(input, dbn)).IsEqualTo(expected);
+	}
 }

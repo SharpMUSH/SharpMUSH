@@ -148,30 +148,160 @@ public class SharpMUSHBooleanExpressionVisitor(
 
 	public override Expression VisitChannelExpr(SharpMUSHBoolExpParser.ChannelExprContext context)
 	{
-		// TODO: Implement Channel Expression - requires channel system integration
-		var value = context.@string().GetText();
-		return VisitChildren(context);
+		var channelName = context.@string().GetText();
+
+		// Channel locks check if the unlocker is a member of the specified channel
+		Func<AnySharpObject, string, bool> func = (unlockerObj, channel) =>
+		{
+			// TODO: Full implementation requires channel system integration
+			// For now, return false as a placeholder
+			// This would need to:
+			// 1. Query the channel system for channel membership
+			// 2. Check if unlocker (or unlocker's owner) is on the channel
+			return false;
+		};
+
+		return Expression.Invoke(Expression.Constant(func), unlocker, Expression.Constant(channelName));
 	}
 
 	public override Expression VisitDbRefListExpr(SharpMUSHBoolExpParser.DbRefListExprContext context)
 	{
-		// TODO: Implement DBRef List Expression
-		var value = context.attributeName().GetText();
-		return VisitChildren(context);
+		var attributeName = context.attributeName().GetText();
+
+		// DBRef list locks check if the unlocker's dbref is in a space-separated list stored in an attribute
+		Func<AnySharpObject, AnySharpObject, string, bool> func = (gatedObj, unlockerObj, attrName) =>
+		{
+			var attrResult = med.Send(
+					new GetAttributeServiceQuery(gatedObj, gatedObj, attrName, IAttributeService.AttributeMode.Execute, true),
+					CancellationToken.None)
+				.AsTask()
+				.ConfigureAwait(false).GetAwaiter().GetResult();
+
+			return attrResult.Match(
+				attributes =>
+				{
+					if (!attributes.Any())
+						return false;
+						
+					var listValue = MModule.plainText(attributes.First().Value);
+					var dbrefs = listValue.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+					var unlockerDbRef = unlockerObj.Object().DBRef;
+					
+					// Check if unlocker's dbref is in the list
+					foreach (var dbrefStr in dbrefs)
+					{
+						// Handle both #123 and #123:timestamp formats
+						if (dbrefStr.StartsWith('#'))
+						{
+							var colonIndex = dbrefStr.IndexOf(':');
+							var numStr = colonIndex > 0 ? dbrefStr.Substring(1, colonIndex - 1) : dbrefStr.Substring(1);
+							
+							if (int.TryParse(numStr, out int dbrefNum))
+							{
+								if (unlockerDbRef.Number == dbrefNum)
+									return true;
+							}
+						}
+					}
+					
+					return false;
+				},
+				none => false,
+				error => false
+			);
+		};
+
+		return Expression.Invoke(Expression.Constant(func), gated, unlocker, Expression.Constant(attributeName));
 	}
 
 	public override Expression VisitIpExpr(SharpMUSHBoolExpParser.IpExprContext context)
 	{
-		// TODO: Implement IP Expression
-		var value = context.@string().GetText();
-		return VisitChildren(context);
+		var ipPattern = context.@string().GetText();
+
+		// IP locks check if the unlocker's owner is connected from a matching IP address
+		Func<AnySharpObject, string, bool> func = (unlockerObj, pattern) =>
+		{
+			try
+			{
+				// Get the owner of the unlocker
+				var ownerTask = unlockerObj.Object().Owner.WithCancellation(CancellationToken.None);
+				var owner = ownerTask.GetAwaiter().GetResult();
+				
+				// Get the LASTIP attribute from the owner
+				var attrResult = med.Send(
+						new GetAttributeServiceQuery(owner, owner, "LASTIP", IAttributeService.AttributeMode.Execute, true),
+						CancellationToken.None)
+					.AsTask()
+					.ConfigureAwait(false).GetAwaiter().GetResult();
+
+				return attrResult.Match(
+					attributes =>
+					{
+						if (!attributes.Any())
+							return false;
+							
+						var actualIp = MModule.plainText(attributes.First().Value);
+						
+						// Use wildcard matching for IP pattern
+						var regexPattern = MModule.getWildcardMatchAsRegex2(pattern);
+						return Regex.IsMatch(actualIp, regexPattern, RegexOptions.IgnoreCase);
+					},
+					none => false,
+					error => false
+				);
+			}
+			catch
+			{
+				return false;
+			}
+		};
+
+		return Expression.Invoke(Expression.Constant(func), unlocker, Expression.Constant(ipPattern));
 	}
 
 	public override Expression VisitHostNameExpr(SharpMUSHBoolExpParser.HostNameExprContext context)
 	{
-		// TODO: Implement Host Name Expression
-		var value = context.@string().GetText();
-		return VisitChildren(context);
+		var hostPattern = context.@string().GetText();
+
+		// Hostname locks check if the unlocker's owner is connected from a matching hostname
+		Func<AnySharpObject, string, bool> func = (unlockerObj, pattern) =>
+		{
+			try
+			{
+				// Get the owner of the unlocker
+				var ownerTask = unlockerObj.Object().Owner.WithCancellation(CancellationToken.None);
+				var owner = ownerTask.GetAwaiter().GetResult();
+				
+				// Get the LASTSITE attribute from the owner
+				var attrResult = med.Send(
+						new GetAttributeServiceQuery(owner, owner, "LASTSITE", IAttributeService.AttributeMode.Execute, true),
+						CancellationToken.None)
+					.AsTask()
+					.ConfigureAwait(false).GetAwaiter().GetResult();
+
+				return attrResult.Match(
+					attributes =>
+					{
+						if (!attributes.Any())
+							return false;
+							
+						var actualHost = MModule.plainText(attributes.First().Value);
+						
+						// Use wildcard matching for hostname pattern
+						var regexPattern = MModule.getWildcardMatchAsRegex2(pattern);
+						return Regex.IsMatch(actualHost, regexPattern, RegexOptions.IgnoreCase);
+					},
+					none => false,
+					error => false
+				);
+			}
+			catch
+			{
+				return false;
+			}
+		};
+
+		return Expression.Invoke(Expression.Constant(func), unlocker, Expression.Constant(hostPattern));
 	}
 
 	public override Expression VisitNameExpr(SharpMUSHBoolExpParser.NameExprContext context)
@@ -276,18 +406,61 @@ public class SharpMUSHBooleanExpressionVisitor(
 
 	public override Expression VisitEvaluationExpr(SharpMUSHBoolExpParser.EvaluationExprContext context)
 	{
-		// TODO: Implement Evaluation Expression
-		var value = context.@string().GetText();
+		var expectedValue = context.@string().GetText();
 		var attribute = context.attributeName().GetText();
-		return VisitChildren(context);
+
+		// Evaluation locks evaluate an attribute on the gated object (not the unlocker)
+		// The result is compared to the expected value
+		// %# is the unlocker, %! is the gated object during evaluation
+		Func<AnySharpObject, AnySharpObject, string, string, bool> func = (gatedObj, unlockerObj, attrName, expected) =>
+		{
+			var attrResult = med.Send(
+					new GetAttributeServiceQuery(gatedObj, gatedObj, attrName, IAttributeService.AttributeMode.Execute, true),
+					CancellationToken.None)
+				.AsTask()
+				.ConfigureAwait(false).GetAwaiter().GetResult();
+
+			return attrResult.Match(
+				attributes =>
+				{
+					if (!attributes.Any())
+						return false;
+						
+					// Get the attribute value and evaluate it
+					// TODO: The attribute should be evaluated with %# = unlocker, %! = gated object
+					// For now, we just get the plaintext value
+					var actualValue = MModule.plainText(attributes.First().Value);
+					
+					// Compare with expected value (case-insensitive)
+					return actualValue.Equals(expected, StringComparison.OrdinalIgnoreCase);
+				},
+				none => false,
+				error => false
+			);
+		};
+
+		return Expression.Invoke(Expression.Constant(func), gated, unlocker, Expression.Constant(attribute), Expression.Constant(expectedValue));
 	}
 
 	public override Expression VisitIndirectExpr(SharpMUSHBoolExpParser.IndirectExprContext context)
 	{
-		// TODO: Implement Indirect Expression
-		var value = context.@string().GetText();
-		var attribute = context.attributeName().GetText();
-		return VisitChildren(context);
+		var targetName = context.@string().GetText();
+		var lockName = context.attributeName()?.GetText() ?? "Basic"; // Default to Basic lock if not specified
+
+		// Indirect locks check another object's lock
+		// @object means check the Basic lock on object
+		// @object/lockname means check the specific lock on object
+		Func<AnySharpObject, AnySharpObject, string, string, bool> func = (gatedObj, unlockerObj, target, lockType) =>
+		{
+			// For now, return false as this requires looking up another object's lock
+			// TODO: Full implementation requires:
+			// 1. Resolve target object by name
+			// 2. Get the specified lock from that object
+			// 3. Evaluate that lock with the current unlocker
+			return false;
+		};
+
+		return Expression.Invoke(Expression.Constant(func), gated, unlocker, Expression.Constant(targetName), Expression.Constant(lockName));
 	}
 
 	public override Expression VisitString(SharpMUSHBoolExpParser.StringContext context) =>
