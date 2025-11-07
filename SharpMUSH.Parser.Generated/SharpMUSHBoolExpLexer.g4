@@ -56,4 +56,13 @@ ATTRIBUTE_COLON: ':';
 ATTRIBUTENAME:
     ~('#' | '&' | '|' | ':' | '!' | ')' | '(' | '/' | ' ' | '^')+
 ;
-STRING: ~( '#' | '&' | '|' | ':' | '!' | ')' | '(' | '^')+;
+STRING: ~( '#' | '&' | '|' | ':' | '!' | ')' | '(' | '^' | ' ' | '/')+
+    {Text.ToLower() != "name" && 
+     Text.ToLower() != "type" && 
+     Text.ToLower() != "flag" && 
+     Text.ToLower() != "power" && 
+     Text.ToLower() != "channel" && 
+     Text.ToLower() != "dbreflist" && 
+     Text.ToLower() != "ip" && 
+     Text.ToLower() != "hostname" &&
+     Text.ToLower() != "objid"}?;
