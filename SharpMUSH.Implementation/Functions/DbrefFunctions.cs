@@ -54,8 +54,9 @@ public partial class Functions
 					var destination = await exit.Location.WithCancellation(CancellationToken.None);
 					return destination.Object().DBRef;
 				}
-				catch
+				catch (Exception ex) when (ex is InvalidOperationException or NullReferenceException)
 				{
+					// Exit is unlinked - return #-1
 					return "#-1";
 				}
 			},

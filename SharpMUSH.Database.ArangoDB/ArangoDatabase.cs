@@ -201,7 +201,7 @@ public partial class ArangoDatabase(
 	public async ValueTask<bool> UnlinkExitAsync(SharpExit exit, CancellationToken ct = default)
 	{
 		var result = await arangoDb.Query.ExecuteAsync<SharpEdgeQueryResult>(handle,
-			$"FOR v ,eIN 1..1 INBOUND {exit.Id} GRAPH {DatabaseConstants.GraphHomes} RETURN e", cancellationToken: ct);
+			$"FOR v, e IN 1..1 INBOUND {exit.Id} GRAPH {DatabaseConstants.GraphHomes} RETURN e", cancellationToken: ct);
 
 		if (!result.Any())
 		{
@@ -216,14 +216,14 @@ public partial class ArangoDatabase(
 
 	public async ValueTask<bool> LinkRoomAsync(SharpRoom room, AnyOptionalSharpContainer dropTo, CancellationToken ct = default)
 	{
-		// First, unlink any existing drop-to
-		await UnlinkRoomAsync(room, ct);
-
-		// If dropTo is None, we're just unlinking
+		// If dropTo is None, just unlink any existing drop-to
 		if (dropTo.IsT3) // None
 		{
-			return true;
+			return await UnlinkRoomAsync(room, ct);
 		}
+
+		// First, unlink any existing drop-to
+		await UnlinkRoomAsync(room, ct);
 
 		// Create edge for drop-to
 		var dropToId = dropTo.Match(
@@ -1104,7 +1104,7 @@ public partial class ArangoDatabase(
 		var homeId = (await arangoDb.Query.ExecuteAsync<string>(handle,
 			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphHomes} RETURN v._id", cache: true,
 			cancellationToken: ct)).First();
-		var homeObject = await GetObjectNodeAsync(homeId, CancellationToken.None);
+		var homeObject = await GetObjectNodeAsync(homeId, ct);
 
 		return homeObject.Match<AnySharpContainer>(
 			player => player,
@@ -1126,7 +1126,7 @@ public partial class ArangoDatabase(
 		}
 
 		var dropToId = dropToResult.First();
-		var dropToObject = await GetObjectNodeAsync(dropToId, CancellationToken.None);
+		var dropToObject = await GetObjectNodeAsync(dropToId, ct);
 
 		return dropToObject.Match<AnyOptionalSharpContainer>(
 			player => player,
