@@ -559,8 +559,64 @@ public partial class Commands
 	[SharpCommand(Name = "@HIDE", Switches = ["NO", "OFF", "YES", "ON"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Hide(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		// @HIDE command - sets/unsets the DARK flag on the executor to hide from WHO lists
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var switches = parser.CurrentState.Switches;
+		
+		// Get the DARK flag
+		var darkFlag = await Mediator!.Send(new GetObjectFlagQuery("DARK"));
+		if (darkFlag == null)
+		{
+			await NotifyService!.Notify(executor, "Error: DARK flag not found in database.");
+			return CallState.Empty;
+		}
+		
+		// Check current DARK flag state
+		var isDark = await executor.HasFlag("DARK");
+		
+		// Determine desired state
+		bool shouldBeDark;
+		if (switches.Contains("YES") || switches.Contains("ON"))
+		{
+			shouldBeDark = true;
+		}
+		else if (switches.Contains("NO") || switches.Contains("OFF"))
+		{
+			shouldBeDark = false;
+		}
+		else
+		{
+			// No switch = toggle
+			shouldBeDark = !isDark;
+		}
+		
+		// Apply the change if needed
+		if (shouldBeDark && !isDark)
+		{
+			// Set DARK flag
+			await Mediator!.Send(new SetObjectFlagCommand(executor, darkFlag));
+			await NotifyService!.Notify(executor, "You are now hidden from the WHO list.");
+		}
+		else if (!shouldBeDark && isDark)
+		{
+			// Unset DARK flag
+			await Mediator!.Send(new UnsetObjectFlagCommand(executor, darkFlag));
+			await NotifyService!.Notify(executor, "You are no longer hidden from the WHO list.");
+		}
+		else
+		{
+			// No change needed
+			if (isDark)
+			{
+				await NotifyService!.Notify(executor, "You are already hidden from the WHO list.");
+			}
+			else
+			{
+				await NotifyService!.Notify(executor, "You are already visible on the WHO list.");
+			}
+		}
+		
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@MOTD", Switches = ["CONNECT", "LIST", "WIZARD", "DOWN", "FULL", "CLEAR"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
