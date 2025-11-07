@@ -79,16 +79,16 @@ public interface ISharpDatabase
 	ValueTask<bool> UnlinkExitAsync(SharpExit exit, CancellationToken cancellationToken = default);
 
 	/// <summary>
-	/// Link a room to a drop-to location.
+	/// Link a room to a location (drop-to).
 	/// </summary>
 	/// <param name="room"><see cref="SharpRoom"/></param>
-	/// <param name="dropTo"><see cref="AnyOptionalSharpContainer"/></param>
+	/// <param name="location"><see cref="AnyOptionalSharpContainer"/></param>
 	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>Success if all elements existed and were able to be linked</returns>
-	ValueTask<bool> LinkRoomAsync(SharpRoom room, AnyOptionalSharpContainer dropTo, CancellationToken cancellationToken = default);
+	ValueTask<bool> LinkRoomAsync(SharpRoom room, AnyOptionalSharpContainer location, CancellationToken cancellationToken = default);
 
 	/// <summary>
-	/// Unlink a room from its drop-to location.
+	/// Unlink a room from its location (drop-to).
 	/// </summary>
 	/// <param name="room"><see cref="SharpRoom"/></param>
 	/// <param name="cancellationToken">Cancellation Token</param>

@@ -34,11 +34,11 @@ public partial class Functions
 		return await found.Match<ValueTask<CallState>>(
 			// Player - return location
 			async player => (await player.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
-			// Room - return drop-to or #-1
+			// Room - return location (drop-to) or #-1
 			async room =>
 			{
-				var dropTo = await room.DropTo.WithCancellation(CancellationToken.None);
-				return dropTo.Match(
+				var location = await room.Location.WithCancellation(CancellationToken.None);
+				return location.Match(
 					player => player.Object.DBRef.ToString(),
 					r => r.Object.DBRef.ToString(),
 					thing => thing.Object.DBRef.ToString(),
@@ -309,11 +309,11 @@ public partial class Functions
 		return await found.Match<ValueTask<CallState>>(
 			// Player - return home
 			async player => (await player.Home.WithCancellation(CancellationToken.None)).Object().DBRef,
-			// Room - return drop-to
+			// Room - return location (drop-to) or #-1
 			async room =>
 			{
-				var dropTo = await room.DropTo.WithCancellation(CancellationToken.None);
-				return dropTo.Match(
+				var location = await room.Location.WithCancellation(CancellationToken.None);
+				return location.Match(
 					player => player.Object.DBRef.ToString(),
 					r => r.Object.DBRef.ToString(),
 					thing => thing.Object.DBRef.ToString(),

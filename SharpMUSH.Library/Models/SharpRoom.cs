@@ -14,7 +14,7 @@ public class SharpRoom
 	[JsonIgnore]
 	public required SharpObject Object { get; set; }
 
-	// Relationship - Drop-To room
+	// Relationship - Location (Drop-To for rooms)
 	[JsonIgnore]
-	public required AsyncLazy<AnyOptionalSharpContainer> DropTo { get; set; }
+	public required AsyncLazy<AnyOptionalSharpContainer> Location { get; set; }
 }

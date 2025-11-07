@@ -41,7 +41,7 @@ public class TestObjectFactory
 				Parent = new(async ct => { await ValueTask.CompletedTask; return new None(); }),
 				Children = new(() => AsyncEnumerable.Empty<SharpObject>())
 			},
-			DropTo = new(async ct => { await ValueTask.CompletedTask; return new None(); })
+			Location = new(async ct => { await ValueTask.CompletedTask; return new None(); })
 		};
 		
 		_rooms[key] = room;

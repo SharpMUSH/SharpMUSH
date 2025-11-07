@@ -5,7 +5,7 @@ using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Commands.Database;
 
-public record LinkRoomCommand(SharpRoom Room, AnyOptionalSharpContainer DropTo) : ICommand<bool>, ICacheInvalidating
+public record LinkRoomCommand(SharpRoom Room, AnyOptionalSharpContainer Location) : ICommand<bool>, ICacheInvalidating
 {
 	public string[] CacheKeys => [$"object:{Room.Object.DBRef}"];
 	public string[] CacheTags => [];

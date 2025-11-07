@@ -214,26 +214,26 @@ public partial class ArangoDatabase(
 		return true;
 	}
 
-	public async ValueTask<bool> LinkRoomAsync(SharpRoom room, AnyOptionalSharpContainer dropTo, CancellationToken ct = default)
+	public async ValueTask<bool> LinkRoomAsync(SharpRoom room, AnyOptionalSharpContainer location, CancellationToken ct = default)
 	{
-		// If dropTo is None, just unlink any existing drop-to
-		if (dropTo.IsT3) // None
+		// If location is None, just unlink any existing location
+		if (location.IsT3) // None
 		{
 			return await UnlinkRoomAsync(room, ct);
 		}
 
-		// First, unlink any existing drop-to
+		// First, unlink any existing location
 		await UnlinkRoomAsync(room, ct);
 
-		// Create edge for drop-to
-		var dropToId = dropTo.Match(
+		// Create edge for location (drop-to)
+		var locationId = location.Match(
 			player => player.Id!,
 			room => room.Id!,
 			thing => thing.Id!,
-			_ => throw new InvalidOperationException("Invalid drop-to type"));
+			_ => throw new InvalidOperationException("Invalid location type"));
 
 		await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphHomes, DatabaseConstants.HasHome,
-			new SharpEdgeCreateRequest(room.Id!, dropToId), cancellationToken: ct);
+			new SharpEdgeCreateRequest(room.Id!, locationId), cancellationToken: ct);
 		return true;
 	}
 
@@ -1196,7 +1196,7 @@ public partial class ArangoDatabase(
 			{ 
 				Id = id, 
 				Object = convertObject,
-				DropTo = new(async ct => await GetDropToAsync(id, ct))
+				Location = new(async ct => await GetDropToAsync(id, ct))
 			},
 			DatabaseConstants.TypeExit => new SharpExit
 			{
@@ -1252,7 +1252,7 @@ public partial class ArangoDatabase(
 			{ 
 				Id = id, 
 				Object = convertObject,
-				DropTo = new(async ct => await GetDropToAsync(id, ct))
+				Location = new(async ct => await GetDropToAsync(id, ct))
 			},
 			DatabaseConstants.Exits => new SharpExit
 			{
