@@ -220,7 +220,6 @@ public class WizardCommandTests
 	}
 
 	[Test]
-	[Skip("TODO: Fix implementation")]
 	public async ValueTask Hide_NoSwitch_TogglesHidden()
 	{
 		// Test that @hide without switches toggles the DARK flag
@@ -231,7 +230,10 @@ public class WizardCommandTests
 		
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("hidden")));
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("hidden")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
 		
 		NotifyService.ClearReceivedCalls();
 		
@@ -240,11 +242,13 @@ public class WizardCommandTests
 		
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("no longer hidden") || s.Contains("visible")));
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("no longer hidden") || s.Value.ToString()!.Contains("visible")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
-	[Skip("TODO: Fix implementation")]
 	public async ValueTask Hide_YesSwitch_SetsHidden()
 	{
 		// Test that @hide/yes sets the DARK flag
@@ -264,7 +268,6 @@ public class WizardCommandTests
 	}
 
 	[Test]
-	[Skip("TODO: Fix implementation")]
 	public async ValueTask Hide_OnSwitch_SetsHidden()
 	{
 		// Test that @hide/on sets the DARK flag
@@ -284,7 +287,6 @@ public class WizardCommandTests
 	}
 
 	[Test]
-	[Skip("TODO: Fix implementation")]
 	public async ValueTask Hide_NoSwitch_UnsetsHidden()
 	{
 		// Test that @hide/no unsets the DARK flag
@@ -304,7 +306,6 @@ public class WizardCommandTests
 	}
 
 	[Test]
-	[Skip("TODO: Fix implementation")]
 	public async ValueTask Hide_OffSwitch_UnsetsHidden()
 	{
 		// Test that @hide/off unsets the DARK flag
@@ -324,7 +325,6 @@ public class WizardCommandTests
 	}
 
 	[Test]
-	[Skip("TODO: Fix implementation")]
 	public async ValueTask Hide_AlreadyHidden_ShowsAppropriateMessage()
 	{
 		// Test that @hide/on when already hidden shows appropriate message
@@ -344,7 +344,6 @@ public class WizardCommandTests
 	}
 
 	[Test]
-	[Skip("TODO: Fix implementation")]
 	public async ValueTask Hide_AlreadyVisible_ShowsAppropriateMessage()
 	{
 		// Test that @hide/off when already visible shows appropriate message

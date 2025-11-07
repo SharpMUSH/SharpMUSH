@@ -24,7 +24,6 @@ public class FlagAndPowerCommandTests
 	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 
 	[Test]
-	[Skip("TODO: Fix Bad Test")]
 	public async ValueTask Flag_List_DisplaysAllFlags()
 	{
 		// Execute @flag/list
@@ -33,11 +32,13 @@ public class FlagAndPowerCommandTests
 		// Verify that a notification was sent with the flag list
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Object Flags:")));
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Object Flags:")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
-	[Skip("TODO: Fix Bad Test")]
 	public async ValueTask Flag_Add_CreatesNewFlag()
 	{
 		// Create a unique flag name for this test
@@ -57,14 +58,16 @@ public class FlagAndPowerCommandTests
 		// Verify notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains($"Flag '{flagName}' created")));
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains($"Flag '{flagName}' created")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
 
 		// Cleanup - delete the flag
 		await Mediator.Send(new DeleteObjectFlagCommand(flagName));
 	}
 
 	[Test]
-	[Skip("TODO: Fix Bad Test")]
 	public async ValueTask Flag_Add_PreventsSystemFlagCreation()
 	{
 		// Create a unique flag name
@@ -84,7 +87,6 @@ public class FlagAndPowerCommandTests
 	}
 
 	[Test]
-	[Skip("TODO: Fix Bad Test")]
 	public async ValueTask Flag_Add_PreventsDuplicateFlags()
 	{
 		// Create a unique flag name
@@ -103,14 +105,16 @@ public class FlagAndPowerCommandTests
 		// Verify error notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("already exists")));
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("already exists")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
 
 		// Cleanup
 		await Mediator.Send(new DeleteObjectFlagCommand(flagName));
 	}
 
 	[Test]
-	[Skip("TODO: Fix Bad Test")]
 	public async ValueTask Flag_Delete_RemovesNonSystemFlag()
 	{
 		// Create a test flag first
@@ -133,11 +137,13 @@ public class FlagAndPowerCommandTests
 		// Verify notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains($"Flag '{flagName}' deleted")));
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains($"Flag '{flagName}' deleted")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
-	[Skip("TODO: Fix Bad Test")]
 	public async ValueTask Flag_Delete_PreventsSystemFlagDeletion()
 	{
 		// Try to delete a system flag (e.g., WIZARD)
@@ -146,11 +152,13 @@ public class FlagAndPowerCommandTests
 		// Verify error notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Cannot delete system flag")));
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Cannot delete system flag")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
-	[Skip("TODO: Fix Bad Test")]
 	public async ValueTask Flag_Delete_HandlesNonExistentFlag()
 	{
 		// Try to delete a non-existent flag
@@ -160,11 +168,13 @@ public class FlagAndPowerCommandTests
 		// Verify error notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("not found")));
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("not found")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
-	[Skip("TODO: Fix Bad Test")]
 	public async ValueTask Power_List_DisplaysAllPowers()
 	{
 		// Execute @power/list
@@ -173,11 +183,13 @@ public class FlagAndPowerCommandTests
 		// Verify that a notification was sent with the power list
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Object Powers:")));
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Object Powers:")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
-	[Skip("TODO: Fix Bad Test")]
 	public async ValueTask Power_Add_CreatesNewPower()
 	{
 		// Create a unique power name for this test
@@ -197,14 +209,16 @@ public class FlagAndPowerCommandTests
 		// Verify notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains($"Power '{powerName}' created")));
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains($"Power '{powerName}' created")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
 
 		// Cleanup - delete the power
 		await Mediator.Send(new DeletePowerCommand(powerName));
 	}
 
 	[Test]
-	[Skip("TODO: Fix Bad Test")]
 	public async ValueTask Power_Add_PreventsSystemPowerCreation()
 	{
 		// Create a unique power name
@@ -224,7 +238,6 @@ public class FlagAndPowerCommandTests
 	}
 
 	[Test]
-	[Skip("TODO: Fix Bad Test")]
 	public async ValueTask Power_Delete_RemovesNonSystemPower()
 	{
 		// Create a test power first
@@ -247,11 +260,13 @@ public class FlagAndPowerCommandTests
 		// Verify notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains($"Power '{powerName}' deleted")));
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains($"Power '{powerName}' deleted")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
-	[Skip("TODO: Fix Bad Test")]
 	public async ValueTask Power_Delete_PreventsSystemPowerDeletion()
 	{
 		// Try to delete a system power (e.g., BUILDER if it exists)
@@ -264,12 +279,14 @@ public class FlagAndPowerCommandTests
 			// Verify error notification was sent
 			await NotifyService
 				.Received(Quantity.Exactly(1))
-				.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Cannot delete system power")));
+				.Notify(Arg.Any<AnySharpObject>(), 
+					Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Cannot delete system power")),
+					Arg.Any<AnySharpObject>(),
+					Arg.Any<INotifyService.NotificationType>());
 		}
 	}
 
 	[Test]
-	[Skip("TODO: Fix Bad Test")]
 	public async ValueTask Power_Delete_HandlesNonExistentPower()
 	{
 		// Try to delete a non-existent power
@@ -279,11 +296,13 @@ public class FlagAndPowerCommandTests
 		// Verify error notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("not found")));
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("not found")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
-	[Skip("TODO: Fix Bad Test")]
 	public async ValueTask Flag_Add_RequiresBothArguments()
 	{
 		// Try to create a flag without symbol
@@ -292,11 +311,13 @@ public class FlagAndPowerCommandTests
 		// Verify error notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("requires flag name and symbol")));
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("requires flag name and symbol")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
-	[Skip("TODO: Fix Bad Test")]
 	public async ValueTask Power_Add_RequiresBothArguments()
 	{
 		// Try to create a power without alias
@@ -305,11 +326,13 @@ public class FlagAndPowerCommandTests
 		// Verify error notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("requires power name and alias")));
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("requires power name and alias")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
-	[Skip("TODO: Fix Bad Test")]
 	public async ValueTask Flag_Disable_DisablesNonSystemFlag()
 	{
 		// Create a unique flag name for this test
@@ -330,14 +353,16 @@ public class FlagAndPowerCommandTests
 		// Verify notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains($"Flag '{flagName}' disabled")));
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains($"Flag '{flagName}' disabled")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
 
 		// Cleanup
 		await Mediator.Send(new DeleteObjectFlagCommand(flagName));
 	}
 
 	[Test]
-	[Skip("TODO: Fix Bad Test")]
 	public async ValueTask Flag_Enable_EnablesDisabledFlag()
 	{
 		// Create a unique flag name for this test
@@ -359,14 +384,16 @@ public class FlagAndPowerCommandTests
 		// Verify notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains($"Flag '{flagName}' enabled")));
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains($"Flag '{flagName}' enabled")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
 
 		// Cleanup
 		await Mediator.Send(new DeleteObjectFlagCommand(flagName));
 	}
 
 	[Test]
-	[Skip("TODO: Fix Bad Test")]
 	public async ValueTask Flag_Disable_PreventsSystemFlagDisable()
 	{
 		// Try to disable a system flag (PLAYER is a system flag)
@@ -375,11 +402,13 @@ public class FlagAndPowerCommandTests
 		// Verify error notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Cannot disable system flag")));
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Cannot disable system flag")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
-	[Skip("TODO: Fix Bad Test")]
 	public async ValueTask Power_Disable_DisablesNonSystemPower()
 	{
 		// Create a unique power name for this test
@@ -400,14 +429,16 @@ public class FlagAndPowerCommandTests
 		// Verify notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains($"Power '{powerName}' disabled")));
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains($"Power '{powerName}' disabled")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
 
 		// Cleanup
 		await Mediator.Send(new DeletePowerCommand(powerName));
 	}
 
 	[Test]
-	[Skip("TODO: Fix Bad Test")]
 	public async ValueTask Power_Enable_EnablesDisabledPower()
 	{
 		// Create a unique power name for this test
@@ -429,14 +460,16 @@ public class FlagAndPowerCommandTests
 		// Verify notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains($"Power '{powerName}' enabled")));
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains($"Power '{powerName}' enabled")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
 
 		// Cleanup
 		await Mediator.Send(new DeletePowerCommand(powerName));
 	}
 
 	[Test]
-	[Skip("TODO: Fix Bad Test")]
 	public async ValueTask Power_Disable_PreventsSystemPowerDisable()
 	{
 		// Try to disable a system power (Builder is a system power)
@@ -445,6 +478,9 @@ public class FlagAndPowerCommandTests
 		// Verify error notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Cannot disable system power")));
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Cannot disable system power")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
 	}
 }
