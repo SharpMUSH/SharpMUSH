@@ -343,11 +343,34 @@ public partial class Commands
 								return Errors.ErrorInvalidDestination;
 							}
 
+							var destinationRoom = destObj.AsRoom;
+							
+							// Check permission to link to destination
+							// Per PennMUSH: Must own/control the room OR room must be LINK_OK
+							bool canLink = await PermissionService!.Controls(executor, destObj);
+							
+							if (!canLink)
+							{
+								// Check if destination has LINK_OK flag
+								var destFlags = await destinationRoom.Object.Flags.Value.ToArrayAsync();
+								var hasLinkOk = destFlags.Any(f => f.Name.Equals("LINK_OK", StringComparison.OrdinalIgnoreCase));
+								
+								if (!hasLinkOk)
+								{
+									await NotifyService!.Notify(executor, "You can't link to that.");
+									return Errors.ErrorPerm;
+								}
+							}
+							
+							// TODO: Check if exit is unlinked and check @lock/link
+							// TODO: If linking someone else's exit, @chown it and set HALT
+							// TODO: Charge link cost (usually 1 penny)
+
 							// Clear any special link type attribute
 							await AttributeService!.SetAttributeAsync(executor, exitObj, "_LINKTYPE", MModule.empty());
 							
 							// Link the exit
-							await Mediator!.Send(new LinkExitCommand(exitObj.AsExit, destObj.AsRoom));
+							await Mediator!.Send(new LinkExitCommand(exitObj.AsExit, destinationRoom));
 
 							await NotifyService.Notify(executor, "Linked.");
 							return CallState.Empty;
