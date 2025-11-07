@@ -1,6 +1,7 @@
 ﻿using OneOf.Types;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
@@ -124,11 +125,128 @@ public partial class Commands
 		throw new NotImplementedException();
 	}
 
-	[SharpCommand(Name = "DROP", Switches = [], Behavior = CB.Player | CB.Thing, MinArgs = 0, MaxArgs = 0)]
+	[SharpCommand(Name = "DROP", Switches = [], Behavior = CB.Player | CB.Thing, MinArgs = 1, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> Drop(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		var objectName = args["0"].Message!.ToPlainText();
+
+		// Locate the object to drop
+		var locateResult = await LocateService!.LocateAndNotifyIfInvalid(parser, executor, executor, objectName, LocateFlags.All);
+		
+		if (!locateResult.IsValid() || locateResult.IsRoom || locateResult.IsExit)
+		{
+			await NotifyService!.Notify(executor, "You can't drop that.");
+			return CallState.Empty;
+		}
+
+		var objectToDrop = locateResult.WithoutError().WithoutNone();
+		
+		// Check if we're carrying the object
+		var executorLocation = await executor.Match(
+			async player => await player.Location.WithCancellation(CancellationToken.None),
+			async room => await ValueTask.FromResult<AnySharpContainer>(room),
+			async exit => await exit.Home.WithCancellation(CancellationToken.None),
+			async thing => await thing.Location.WithCancellation(CancellationToken.None));
+		
+		var objectLocation = await objectToDrop.Match(
+			async player => await player.Location.WithCancellation(CancellationToken.None),
+			async room => await ValueTask.FromResult<AnySharpContainer>(room),
+			async exit => await exit.Home.WithCancellation(CancellationToken.None),
+			async thing => await thing.Location.WithCancellation(CancellationToken.None));
+
+		// Check if object is in our inventory (its location is us)
+		bool isCarrying = objectLocation.Match(
+			player => player.Object.DBRef.Equals(executor.Object().DBRef),
+			room => room.Object.DBRef.Equals(executor.Object().DBRef),
+			thing => thing.Object.DBRef.Equals(executor.Object().DBRef));
+
+		if (!isCarrying)
+		{
+			await NotifyService!.Notify(executor, "You aren't carrying that.");
+			return CallState.Empty;
+		}
+
+		// Get current room
+		var currentRoom = executorLocation;
+		
+		// TODO: Check Drop lock on object
+		// TODO: Check DropIn lock on room
+		
+		// Move object to current location
+		var contentToDrop = objectToDrop.AsContent;
+		await Mediator!.Send(new MoveObjectCommand(contentToDrop, currentRoom));
+		
+		// Trigger @drop attribute on the object
+		var dropAttr = await AttributeService!.GetAttributeAsync(executor, objectToDrop, "DROP", IAttributeService.AttributeMode.Read, true);
+		if (dropAttr.IsAttribute && dropAttr.AsT0.Length > 0)
+		{
+			var dropMsg = dropAttr.AsT0[0].Value;
+			if (!string.IsNullOrEmpty(dropMsg.ToPlainText()))
+			{
+				await NotifyService!.Notify(executor, dropMsg);
+			}
+		}
+		
+		// Trigger @odrop attribute (show to others in room)
+		var odropAttr = await AttributeService!.GetAttributeAsync(executor, objectToDrop, "ODROP", IAttributeService.AttributeMode.Read, true);
+		if (odropAttr.IsAttribute && odropAttr.AsT0.Length > 0)
+		{
+			var odropMsg = odropAttr.AsT0[0].Value;
+			if (!string.IsNullOrEmpty(odropMsg.ToPlainText()))
+			{
+				// TODO: Notify others in room (exclude executor)
+				// await NotifyService!.NotifyExcept(currentRoom, executor, odropMsg);
+			}
+		}
+		
+		// Trigger @adrop attribute (actions)
+		var adropAttr = await AttributeService!.GetAttributeAsync(executor, objectToDrop, "ADROP", IAttributeService.AttributeMode.Read, true);
+		if (adropAttr.IsAttribute && adropAttr.AsT0.Length > 0)
+		{
+			var adropActions = adropAttr.AsT0[0].Value;
+			if (!string.IsNullOrEmpty(adropActions.ToPlainText()))
+			{
+				// TODO: Execute attribute as actions
+				// await parser.CommandParse(adropActions);
+			}
+		}
+
+		// Check if room has drop-to set
+		if (currentRoom.IsRoom)
+		{
+			var room = currentRoom.AsRoom;
+			var dropToLocation = await room.Location.WithCancellation(CancellationToken.None);
+			
+			if (!dropToLocation.IsT3) // Not None
+			{
+				// TODO: Check dropto lock
+				// if (await LockService!.Evaluate(LockType.DropTo, room, objectToDrop))
+				// {
+					// Move to drop-to location
+					var dropToContainer = dropToLocation.Match<AnySharpContainer>(
+						player => player,
+						r => r,
+						thing => thing,
+						_ => currentRoom);
+					
+					await Mediator!.Send(new MoveObjectCommand(contentToDrop, dropToContainer));
+					
+					await NotifyService!.Notify(executor, $"Dropped. {objectToDrop.Object().Name} was sent to {dropToContainer.Object().Name}.");
+				// }
+			}
+			else
+			{
+				await NotifyService!.Notify(executor, "Dropped.");
+			}
+		}
+		else
+		{
+			await NotifyService!.Notify(executor, "Dropped.");
+		}
+
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "EMPTY", Switches = [], CommandLock = "(TYPE^PLAYER|TYPE^THING)&!FLAG^GAGGED",
@@ -139,11 +257,116 @@ public partial class Commands
 		throw new NotImplementedException();
 	}
 
-	[SharpCommand(Name = "ENTER", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
+	[SharpCommand(Name = "ENTER", Switches = [], Behavior = CB.Default, MinArgs = 1, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> Enter(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		var objectName = args["0"].Message!.ToPlainText();
+
+		// Locate the object to enter
+		var locateResult = await LocateService!.LocateAndNotifyIfInvalid(parser, executor, executor, objectName, LocateFlags.All);
+		
+		if (!locateResult.IsValid())
+		{
+			await NotifyService!.Notify(executor, "You can't see that here.");
+			return CallState.Empty;
+		}
+
+		var objectToEnter = locateResult.WithoutError().WithoutNone();
+		
+		// Can only enter things and players
+		if (!objectToEnter.IsThing && !objectToEnter.IsPlayer)
+		{
+			await NotifyService!.Notify(executor, "You can't enter that.");
+			return CallState.Empty;
+		}
+
+		// Check if we own it or if it has ENTER_OK flag
+		bool canEnter = await PermissionService!.Controls(executor, objectToEnter);
+		
+		if (!canEnter)
+		{
+			// Check for ENTER_OK flag
+			var objFlags = await objectToEnter.Object().Flags.Value.ToArrayAsync();
+			var hasEnterOk = objFlags.Any(f => f.Name.Equals("ENTER_OK", StringComparison.OrdinalIgnoreCase));
+			
+			if (!hasEnterOk)
+			{
+				await NotifyService!.Notify(executor, "Permission denied.");
+				return CallState.Empty;
+			}
+		}
+
+		// TODO: Check enter lock
+		// if (!await LockService!.Evaluate(LockType.Enter, objectToEnter, executor))
+		// {
+		//     // Trigger @efail
+		//     await NotifyService!.Notify(executor, "You can't enter that.");
+		//     return CallState.Empty;
+		// }
+
+		// Get old location for %0 substitution
+		var oldLocation = await executor.Match(
+			async player => await player.Location.WithCancellation(CancellationToken.None),
+			async room => await ValueTask.FromResult<AnySharpContainer>(room),
+			async exit => await exit.Home.WithCancellation(CancellationToken.None),
+			async thing => await thing.Location.WithCancellation(CancellationToken.None));
+
+		// Move executor into object
+		var executorAsContent = executor.AsContent;
+		var containerToEnter = objectToEnter.AsContainer;
+		await Mediator!.Send(new MoveObjectCommand(executorAsContent, containerToEnter));
+
+		// Trigger @enter attribute (shown to entering player)
+		var enterAttr = await AttributeService!.GetAttributeAsync(executor, objectToEnter, "ENTER", IAttributeService.AttributeMode.Read, true);
+		if (enterAttr.IsAttribute && enterAttr.AsT0.Length > 0)
+		{
+			var enterMsg = enterAttr.AsT0[0].Value;
+			if (!string.IsNullOrEmpty(enterMsg.ToPlainText()))
+			{
+				await NotifyService!.Notify(executor, enterMsg);
+			}
+		}
+
+		// Trigger @oenter attribute (shown to others inside)
+		var oenterAttr = await AttributeService!.GetAttributeAsync(executor, objectToEnter, "OENTER", IAttributeService.AttributeMode.Read, true);
+		if (oenterAttr.IsAttribute && oenterAttr.AsT0.Length > 0)
+		{
+			var oenterMsg = oenterAttr.AsT0[0].Value;
+			if (!string.IsNullOrEmpty(oenterMsg.ToPlainText()))
+			{
+				// TODO: Notify others inside object (exclude executor)
+				// await NotifyService!.NotifyExcept(containerToEnter, executor, oenterMsg);
+			}
+		}
+
+		// Trigger @oxenter attribute (shown to those in old location)
+		var oxenterAttr = await AttributeService!.GetAttributeAsync(executor, objectToEnter, "OXENTER", IAttributeService.AttributeMode.Read, true);
+		if (oxenterAttr.IsAttribute && oxenterAttr.AsT0.Length > 0)
+		{
+			var oxenterMsg = oxenterAttr.AsT0[0].Value;
+			if (!string.IsNullOrEmpty(oxenterMsg.ToPlainText()))
+			{
+				// TODO: Notify others in old location (exclude executor)
+				// await NotifyService!.NotifyExcept(oldLocation, executor, oxenterMsg);
+			}
+		}
+
+		// Trigger @aenter attribute (actions)
+		var aenterAttr = await AttributeService!.GetAttributeAsync(executor, objectToEnter, "AENTER", IAttributeService.AttributeMode.Read, true);
+		if (aenterAttr.IsAttribute && aenterAttr.AsT0.Length > 0)
+		{
+			var aenterActions = aenterAttr.AsT0[0].Value;
+			if (!string.IsNullOrEmpty(aenterActions.ToPlainText()))
+			{
+				// TODO: Execute attribute as actions
+				// await parser.CommandParse(aenterActions);
+			}
+		}
+
+		await NotifyService!.Notify(executor, $"You enter {objectToEnter.Object().Name}.");
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "FOLLOW", Switches = [], Behavior = CB.Player | CB.Thing | CB.NoGagged, MinArgs = 0,
