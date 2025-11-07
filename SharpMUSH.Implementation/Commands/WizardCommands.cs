@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Reflection;
 using Humanizer;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
@@ -1003,11 +1004,12 @@ public partial class Commands
 		throw new NotImplementedException();
 	}
 
-	[SharpCommand(Name = "@DISABLE", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD", MinArgs = 0)]
+	[SharpCommand(Name = "@DISABLE", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD", MinArgs = 1, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> Disable(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		// @disable <option> - same as @config/set <option>=no
+		// This command sets a boolean configuration option to false
+		return await ConfigSetHelper(parser, isEnable: false);
 	}
 
 	[SharpCommand(Name = "@HOOK", Switches = ["LIST", "AFTER", "BEFORE", "EXTEND", "IGSWITCH", "IGNORE", "OVERRIDE", "INPLACE", "INLINE", "LOCALIZE", "CLEARREGS", "NOBREAK"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs, CommandLock = "FLAG^WIZARD|POWER^HOOK", MinArgs = 0)]
@@ -1206,11 +1208,12 @@ public partial class Commands
 		throw new NotImplementedException();
 	}
 
-	[SharpCommand(Name = "@ENABLE", Switches = [], Behavior = CB.Default | CB.NoGagged, CommandLock = "FLAG^WIZARD", MinArgs = 0)]
+	[SharpCommand(Name = "@ENABLE", Switches = [], Behavior = CB.Default | CB.NoGagged, CommandLock = "FLAG^WIZARD", MinArgs = 1, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> Enable(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		// @enable <option> - same as @config/set <option>=yes
+		// This command sets a boolean configuration option to true
+		return await ConfigSetHelper(parser, isEnable: true);
 	}
 
 	[SharpCommand(Name = "@KICK", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD", MinArgs = 0)]
@@ -1239,5 +1242,82 @@ public partial class Commands
 	{
 		await ValueTask.CompletedTask;
 		throw new NotImplementedException();
+	}
+
+	/// <summary>
+	/// Helper method for @ENABLE and @DISABLE commands.
+	/// Mimics @config/set behavior for boolean options.
+	/// </summary>
+	private static async ValueTask<Option<CallState>> ConfigSetHelper(IMUSHCodeParser parser, bool isEnable)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+
+		// Get the option name from arguments
+		var optionName = args.GetValueOrDefault("0")?.Message?.ToPlainText();
+		if (string.IsNullOrWhiteSpace(optionName))
+		{
+			await NotifyService!.Notify(executor, $"Usage: @{(isEnable ? "enable" : "disable")} <option>");
+			return new CallState("#-1 INVALID ARGUMENTS");
+		}
+
+		// Use reflection to find the configuration option (same as @config)
+		var optionsType = typeof(SharpMUSH.Configuration.Options.SharpMUSHOptions);
+		var categoryProperties = optionsType.GetProperties();
+		
+		// Search for the option across all categories
+		var allOptions = categoryProperties
+			.SelectMany(category =>
+			{
+				var categoryType = category.PropertyType;
+				var props = categoryType.GetProperties();
+				return props.Select(prop =>
+				{
+					var attr = prop.GetCustomAttribute<SharpMUSH.Configuration.SharpConfigAttribute>();
+					if (attr == null) return null;
+					var categoryValue = category.GetValue(Configuration!.CurrentValue);
+					var value = prop.GetValue(categoryValue);
+					return new
+					{
+						Category = category.Name,
+						CategoryInstance = categoryValue,
+						PropertyInfo = prop,
+						PropertyName = prop.Name,
+						ConfigAttr = attr,
+						Value = value
+					};
+				}).Where(x => x != null);
+			})
+			.Select(x => x!)
+			.ToList();
+
+		// Find the matching option (case-insensitive)
+		var matchingOption = allOptions.FirstOrDefault(opt =>
+			opt.ConfigAttr.Name.Equals(optionName, StringComparison.OrdinalIgnoreCase));
+
+		if (matchingOption == null)
+		{
+			await NotifyService!.Notify(executor, $"No configuration option named '{optionName}'.");
+			return new CallState("#-1 NOT FOUND");
+		}
+
+		// Check if the option is a boolean
+		if (matchingOption.PropertyInfo.PropertyType != typeof(bool))
+		{
+			await NotifyService!.Notify(executor, 
+				$"Option '{matchingOption.ConfigAttr.Name}' is not a boolean option. Use @config/set instead.");
+			return new CallState("#-1 INVALID TYPE");
+		}
+
+		// Note: Runtime configuration modification is not yet fully implemented
+		// This would require writing to a configuration file or database and reloading
+		await NotifyService!.Notify(executor, 
+			$"@{(isEnable ? "enable" : "disable")} is equivalent to @config/set {matchingOption.ConfigAttr.Name}={(isEnable ? "yes" : "no")}");
+		await NotifyService.Notify(executor, 
+			"Runtime configuration modification is not yet implemented. Changes require server restart.");
+		await NotifyService.Notify(executor, 
+			$"Current value: {matchingOption.ConfigAttr.Name}={(matchingOption.Value?.ToString() ?? "null")}");
+		
+		return new CallState("#-1 NOT IMPLEMENTED");
 	}
 }
