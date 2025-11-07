@@ -21,6 +21,7 @@ public class AttributeService(
 	IPermissionService ps,
 	ICommandDiscoveryService cs,
 	ILocateService locateService,
+	IValidateService validateService, 
 	INotifyService notifyService)
 	: IAttributeService
 {
@@ -33,11 +34,14 @@ public class AttributeService(
 		IAttributeService.AttributeMode mode,
 		bool checkParent = true)
 	{
-		// TODO: Check if that is a valid attribute format.
-
 		var curObj = obj;
 		var attributePath = attribute.Split('`');
 
+		if (!await validateService.Valid(IValidateService.ValidationType.AttributeName, MModule.single(attribute), obj))
+		{
+			return new Error<string>(Errors.ErrorObjectAttributeString);
+		}
+		
 		Func<AnySharpObject, AnySharpObject, SharpAttribute[], ValueTask<bool>> permissionPredicate = mode switch
 		{
 			IAttributeService.AttributeMode.Read => ps.CanViewAttribute,
@@ -95,7 +99,10 @@ public class AttributeService(
 		AnySharpObject obj, string attribute,
 		IAttributeService.AttributeMode mode, bool checkParent = true)
 	{
-		// TODO: Check if that is a valid attribute format.
+		if (!await validateService.Valid(IValidateService.ValidationType.AttributeName, MModule.single(attribute), obj))
+		{
+			return new Error<string>(Errors.ErrorObjectAttributeString);
+		}
 
 		var curObj = obj;
 		var attributePath = attribute.Split('`');
@@ -153,6 +160,11 @@ public class AttributeService(
 		AnySharpObject obj,
 		string attribute, Dictionary<string, CallState> args, bool evalParent = true, bool ignorePermissions = false)
 	{
+		if (!await validateService.Valid(IValidateService.ValidationType.AttributeName, MModule.single(attribute), obj))
+		{
+			return MModule.single(Errors.ErrorObjectAttributeString);
+		}
+		
 		var realExecutor = executor;
 
 		if (ignorePermissions)
@@ -224,6 +236,11 @@ public class AttributeService(
 		var applyPredicate = obj.ToPlainText().StartsWith("#APPLY", StringComparison.InvariantCultureIgnoreCase);
 		var lambdaPredicate = obj.ToPlainText().StartsWith("#LAMBDA", StringComparison.InvariantCultureIgnoreCase);
 
+		if (!await validateService.Valid(IValidateService.ValidationType.AttributeName, attribute, new None()))
+		{
+			return MModule.single(Errors.ErrorObjectAttributeString);
+		}
+		
 		// #apply evaluations. 
 		if (applyPredicate && !ignoreLambda)
 		{
@@ -374,8 +391,7 @@ public class AttributeService(
 
 		if (returnedAttribute.IsNone)
 		{
-			// TODO: Do this better
-			return new Error<string>("Not Found");
+			return new Error<string>(Errors.ErrorObjectAttributeString);
 		}
 
 		var allFlags = mediator.CreateStream(new GetAttributeFlagsQuery());
@@ -408,8 +424,7 @@ public class AttributeService(
 
 		if (returnedAttribute.IsNone)
 		{
-			// TODO: Do this better
-			return new Error<string>("Not Found");
+			return new Error<string>(Errors.ErrorObjectAttributeString);
 		}
 
 		var allFlags = mediator.CreateStream(new GetAttributeFlagsQuery());

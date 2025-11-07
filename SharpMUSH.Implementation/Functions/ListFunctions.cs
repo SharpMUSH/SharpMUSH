@@ -6,6 +6,7 @@ using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Functions;
@@ -965,7 +966,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "namegrab", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> NameGrab(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> NameGrab(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var dbrefList = args["0"].Message!.ToPlainText();
@@ -973,30 +974,41 @@ public partial class Functions
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, " ").ToPlainText();
 
 		var dbrefs = dbrefList.Split(delimiter, StringSplitOptions.RemoveEmptyEntries);
+		var dbRefsActualized = dbrefs.Select(HelperFunctions.ParseDbRef).ToArray();
+
+		if (dbRefsActualized.Any(x => x.IsNone()))
+		{
+			return "INVALID DBREF IN LIST";
+		}
 		
-		// First pass: look for exact matches
-		foreach (var dbref in dbrefs)
+		var locatedNames = dbRefsActualized.ToAsyncEnumerable().Select(async dbref =>
 		{
-			// TODO: Get actual object name from database
-			// For now, return first dbref that matches exactly (case-insensitive)
-			// This is a placeholder implementation
-		}
+			var item = await Mediator!.Send(new GetObjectNodeQuery(dbref.AsT0));
+			return (dbref.AsT0, item.Object()!.Name);
+		});
 
-		// Second pass: look for partial matches
-		foreach (var dbref in dbrefs)
+		var exact = await locatedNames.FirstOrDefaultAsync(async (x,ct) 
+			=> (await x).Name == name);
+
+		if (exact != null)
 		{
-			// TODO: Get actual object name from database and check partial match
-			// For now, return first dbref
-			// This is a placeholder implementation
+			return (await exact).AsT0;
 		}
+		
+		var partial = await locatedNames.FirstOrDefaultAsync(async (x,ct) 
+			=> (await x).Name.Contains(name, StringComparison.OrdinalIgnoreCase));
 
-		// Return empty if no match found
-		return ValueTask.FromResult(CallState.Empty);
+		if (partial != null)
+		{
+			return (await partial).AsT0;
+		}
+		
+		return CallState.Empty;
 	}
 
 	[SharpFunction(Name = "namegraball", MinArgs = 2, MaxArgs = 3,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> NameGrabAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> NameGrabAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var dbrefList = args["0"].Message!.ToPlainText();
@@ -1004,12 +1016,36 @@ public partial class Functions
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, " ").ToPlainText();
 
 		var dbrefs = dbrefList.Split(delimiter, StringSplitOptions.RemoveEmptyEntries);
-		var matches = new List<string>();
+		var dbRefsActualized = dbrefs.Select(HelperFunctions.ParseDbRef).ToArray();
 
-		// TODO: Get actual object names from database and match against name
-		// This is a placeholder implementation
+		if (dbRefsActualized.Any(x => x.IsNone()))
+		{
+			return "INVALID DBREF IN LIST";
+		}
 		
-		return ValueTask.FromResult<CallState>(MModule.single(string.Join(" ", matches)));
+		var locatedNames = dbRefsActualized.ToAsyncEnumerable().Select(async dbref =>
+		{
+			var item = await Mediator!.Send(new GetObjectNodeQuery(dbref.AsT0));
+			return (dbref.AsT0, item.Object()!.Name);
+		});
+
+		var exact = locatedNames.Where(async (x,ct) 
+			=> (await x).Name == name);
+
+		if (await exact.AnyAsync())
+		{
+			return string.Join(" ", exact.Select(async x => (await x).AsT0.ToString()));
+		}
+		
+		var partial = locatedNames.Where(async (x,ct) 
+			=> (await x).Name.Contains(name, StringComparison.OrdinalIgnoreCase));
+
+		if (await partial.AnyAsync())
+		{
+			return string.Join(" ", partial.Select(async x => (await x).AsT0.ToString()));
+		}
+		
+		return CallState.Empty;
 	}
 
 	[SharpFunction(Name = "randextract", MinArgs = 1, MaxArgs = 5, Flags = FunctionFlags.Regular)]
@@ -1177,8 +1213,6 @@ public partial class Functions
 	[SharpFunction(Name = "sortby", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
 	public static async ValueTask<CallState> SortBy(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// sortby([<obj>/]<attrib>, <list>[, <delimiter>[, <output separator>]])
-
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known();
 		var objAttr =

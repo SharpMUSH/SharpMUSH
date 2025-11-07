@@ -35,6 +35,16 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var name = args["0"].Message!;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		
+		var defaultHome = Configuration!.CurrentValue.Database.DefaultHome;
+		var defaultHomeDbref = new DBRef((int)defaultHome);
+		var location = await Mediator.Send(new GetObjectNodeQuery(defaultHomeDbref));
+		
+		if (location.IsNone || location.IsExit)
+		{
+			await NotifyService!.Notify(executor, "Default home location is invalid.");
+			return new CallState(Errors.ErrorInvalidRoom);
+		}
 
 		if (!await ValidateService!.Valid(IValidateService.ValidationType.Name, name, new None()))
 		{
@@ -44,8 +54,8 @@ public partial class Commands
 		
 		var thing = await Mediator!.Send(new CreateThingCommand(name.ToPlainText(),
 			await executor.Where(),
-			await executor.Object()
-				.Owner.WithCancellation(CancellationToken.None)));
+			await executor.Object().Owner.WithCancellation(CancellationToken.None),
+			location.Known.AsContainer));
 		
 		await NotifyService!.Notify(executor, $"Created {name} ({thing}).");
 
@@ -752,6 +762,16 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var targetName = args["0"].Message!.ToPlainText();
 		var preserve = parser.CurrentState.Switches.Contains("PRESERVE");
+		
+		var defaultHome = Configuration!.CurrentValue.Database.DefaultHome;
+		var defaultHomeDbref = new DBRef((int)defaultHome);
+		var location = await Mediator.Send(new GetObjectNodeQuery(defaultHomeDbref));
+		
+		if (location.IsNone || location.IsExit)
+		{
+			await NotifyService!.Notify(executor, "Default home location is invalid.");
+			return new CallState(Errors.ErrorInvalidRoom);
+		}
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, targetName, LocateFlags.All,
@@ -785,7 +805,8 @@ public partial class Commands
 					cloneDbRef = await Mediator!.Send(new CreateThingCommand(
 						newName,
 						await executor.Where(),
-						owner
+						owner,
+						location.Known.AsContainer
 					));
 				}
 				else if (obj.IsRoom)

@@ -22,7 +22,6 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Database.ArangoDB;
 
-// TODO: Unit of Work / Transaction around all of this! Otherwise it risks the stability of the Database.
 public partial class ArangoDatabase(
 	ILogger<ArangoDatabase> logger,
 	IArangoContext arangoDb,
@@ -61,11 +60,12 @@ public partial class ArangoDatabase(
 		}
 	}
 
-	public async ValueTask<DBRef> CreatePlayerAsync(string name, string password, DBRef location,
+	public async ValueTask<DBRef> CreatePlayerAsync(string name, string password, DBRef location, DBRef home,
 		CancellationToken ct = default)
 	{
 		var time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 		var objectLocation = await GetObjectNodeAsync(location, ct);
+		var objectHome = await GetObjectNodeAsync(home, ct);
 
 		var transaction = new ArangoTransaction
 		{
@@ -118,12 +118,18 @@ public partial class ArangoDatabase(
 			thing => thing.Id,
 			_ => throw new ArgumentException("A player must have a valid creation location!"));
 
+		var homeIdx = objectHome.Match(
+			player => player.Id,
+			room => room.Id,
+			_ => throw new ArgumentException("An Exit is not a valid location to create a player!"),
+			thing => thing.Id,
+			_ => throw new ArgumentException("A player must have a valid creation location!"));
+
 		await arangoDb.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.GraphLocations,
 			DatabaseConstants.AtLocation, new SharpEdgeCreateRequest(playerResult.Id, idx!), cancellationToken: ct);
 
-		// TODO: This should use a Default Home, which should be passed down from above.
 		await arangoDb.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.GraphHomes, DatabaseConstants.HasHome,
-			new SharpEdgeCreateRequest(playerResult.Id, idx!), cancellationToken: ct);
+			new SharpEdgeCreateRequest(playerResult.Id, homeIdx!), cancellationToken: ct);
 
 		await arangoDb.Transaction.CommitAsync(transactionHandle, ct);
 
