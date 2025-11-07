@@ -34,6 +34,25 @@ public class DbrefFunctionUnitTests
 	}
 
 	[Test]
+	public async Task LocOnCurrentRoom()
+	{
+		// loc() on the current room (%l) should return drop-to or #-1
+		var result = (await Parser.FunctionParse(MModule.single("loc(%l)")))?.Message!;
+		// Should return either a dbref or #-1 (if no drop-to)
+		await Assert.That(result.ToPlainText()).Matches("^(#[0-9]+:[0-9]+|#-1)$");
+	}
+
+	[Test]
+	public async Task HomeOnCurrentRoom()
+	{
+		// home() on the current room (%l) should return drop-to or #-1
+		var result = (await Parser.FunctionParse(MModule.single("home(%l)")))?.Message!;
+		// Should return either a dbref or #-1 (if no drop-to)
+		await Assert.That(result.ToPlainText()).Matches("^(#[0-9]+:[0-9]+|#-1)$");
+	}
+
+
+	[Test]
 	[Arguments("entrances(%l)", "")]
 	public async Task Entrances(string str, string expected)
 	{
@@ -194,6 +213,7 @@ public class DbrefFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
+
 
 	[Test]
 	[Arguments("andlpowers(%#,Guest)", "0")]
