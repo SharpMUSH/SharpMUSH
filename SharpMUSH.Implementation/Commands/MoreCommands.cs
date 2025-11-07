@@ -4,6 +4,7 @@ using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
@@ -171,8 +172,19 @@ public partial class Commands
 		// Get current room
 		var currentRoom = executorLocation;
 		
-		// TODO: Check Drop lock on object
-		// TODO: Check DropIn lock on room
+		// Check Drop lock on object
+		if (!LockService!.Evaluate(LockType.Drop, objectToDrop, executor))
+		{
+			await NotifyService!.Notify(executor, "You can't drop that.");
+			return CallState.Empty;
+		}
+		
+		// Check DropIn lock on room
+		if (!LockService!.Evaluate(LockType.DropIn, currentRoom.WithExitOption(), objectToDrop))
+		{
+			await NotifyService!.Notify(executor, "You can't drop that here.");
+			return CallState.Empty;
+		}
 		
 		// Move object to current location
 		var contentToDrop = objectToDrop.AsContent;
@@ -208,8 +220,8 @@ public partial class Commands
 			var adropActions = adropAttr.AsT0[0].Value;
 			if (!string.IsNullOrEmpty(adropActions.ToPlainText()))
 			{
-				// TODO: Execute attribute as actions
-				// await parser.CommandParse(adropActions);
+				// Execute attribute as actions
+				await parser.CommandParse(adropActions);
 			}
 		}
 
@@ -221,9 +233,9 @@ public partial class Commands
 			
 			if (!dropToLocation.IsT3) // Not None
 			{
-				// TODO: Check dropto lock
-				// if (await LockService!.Evaluate(LockType.DropTo, room, objectToDrop))
-				// {
+				// Check dropto lock
+				if (LockService!.Evaluate(LockType.DropTo, room, objectToDrop))
+				{
 					// Move to drop-to location
 					var dropToContainer = dropToLocation.Match<AnySharpContainer>(
 						player => player,
@@ -234,7 +246,11 @@ public partial class Commands
 					await Mediator!.Send(new MoveObjectCommand(contentToDrop, dropToContainer));
 					
 					await NotifyService!.Notify(executor, $"Dropped. {objectToDrop.Object().Name} was sent to {dropToContainer.Object().Name}.");
-				// }
+				}
+				else
+				{
+					await NotifyService!.Notify(executor, "Dropped.");
+				}
 			}
 			else
 			{
@@ -298,13 +314,48 @@ public partial class Commands
 			}
 		}
 
-		// TODO: Check enter lock
-		// if (!await LockService!.Evaluate(LockType.Enter, objectToEnter, executor))
-		// {
-		//     // Trigger @efail
-		//     await NotifyService!.Notify(executor, "You can't enter that.");
-		//     return CallState.Empty;
-		// }
+		// Check enter lock
+		if (!LockService!.Evaluate(LockType.Enter, objectToEnter, executor))
+		{
+			// Trigger @efail attribute
+			var efailAttr = await AttributeService!.GetAttributeAsync(executor, objectToEnter, "EFAIL", IAttributeService.AttributeMode.Read, true);
+			if (efailAttr.IsAttribute && efailAttr.AsT0.Length > 0)
+			{
+				var efailMsg = efailAttr.AsT0[0].Value;
+				if (!string.IsNullOrEmpty(efailMsg.ToPlainText()))
+				{
+					await NotifyService!.Notify(executor, efailMsg);
+				}
+			}
+			else
+			{
+				await NotifyService!.Notify(executor, "You can't enter that.");
+			}
+			
+			// Trigger @oefail attribute (shown to others in room)
+			var oefailAttr = await AttributeService!.GetAttributeAsync(executor, objectToEnter, "OEFAIL", IAttributeService.AttributeMode.Read, true);
+			if (oefailAttr.IsAttribute && oefailAttr.AsT0.Length > 0)
+			{
+				var oefailMsg = oefailAttr.AsT0[0].Value;
+				if (!string.IsNullOrEmpty(oefailMsg.ToPlainText()))
+				{
+					// TODO: Notify others in current location (exclude executor)
+				}
+			}
+			
+			// Trigger @aefail attribute (actions)
+			var aefailAttr = await AttributeService!.GetAttributeAsync(executor, objectToEnter, "AEFAIL", IAttributeService.AttributeMode.Read, true);
+			if (aefailAttr.IsAttribute && aefailAttr.AsT0.Length > 0)
+			{
+				var aefailActions = aefailAttr.AsT0[0].Value;
+				if (!string.IsNullOrEmpty(aefailActions.ToPlainText()))
+				{
+					await parser.CommandParse(aefailActions);
+				}
+			}
+			
+			return CallState.Empty;
+		}
 
 		// Get old location for %0 substitution
 		var oldLocation = await executor.Match(
@@ -360,8 +411,8 @@ public partial class Commands
 			var aenterActions = aenterAttr.AsT0[0].Value;
 			if (!string.IsNullOrEmpty(aenterActions.ToPlainText()))
 			{
-				// TODO: Execute attribute as actions
-				// await parser.CommandParse(aenterActions);
+				// Execute attribute as actions
+				await parser.CommandParse(aenterActions);
 			}
 		}
 
