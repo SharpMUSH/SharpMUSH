@@ -35,6 +35,12 @@ public class SharpObjectFlag
 	public required bool System { get; set; }
 
 	/// <summary>
+	/// Indicates if this flag is currently disabled and cannot be set on objects.
+	/// System flags cannot be disabled.
+	/// </summary>
+	public bool Disabled { get; set; } = false;
+
+	/// <summary>
 	/// What internal type(s) this object flag can be set to.
 	/// </summary>
 	public required string[] TypeRestrictions { get; set; }

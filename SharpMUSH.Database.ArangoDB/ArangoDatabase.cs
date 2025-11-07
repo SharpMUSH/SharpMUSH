@@ -271,6 +271,7 @@ public partial class ArangoDatabase(
 			Alias = arg.Alias,
 			Name = arg.Name,
 			System = arg.System,
+			Disabled = arg.Disabled,
 			SetPermissions = arg.SetPermissions,
 			UnsetPermissions = arg.UnsetPermissions,
 			TypeRestrictions = arg.TypeRestrictions
@@ -948,6 +949,7 @@ public partial class ArangoDatabase(
 			Name = x.Name,
 			Symbol = x.Symbol,
 			System = x.System,
+			Disabled = x.Disabled,
 			SetPermissions = x.SetPermissions,
 			UnsetPermissions = x.UnsetPermissions,
 			Aliases = x.Aliases,
@@ -2181,6 +2183,7 @@ public partial class ArangoDatabase(
 			aliases,
 			symbol,
 			system,
+			false, // disabled - user-created flags start enabled
 			setPermissions,
 			unsetPermissions,
 			typeRestrictions
@@ -2247,6 +2250,7 @@ public partial class ArangoDatabase(
 			name,
 			alias,
 			system,
+			false, // disabled - user-created powers start enabled
 			setPermissions,
 			unsetPermissions,
 			typeRestrictions
@@ -2383,6 +2387,72 @@ public partial class ArangoDatabase(
 				SetPermissions = setPermissions,
 				UnsetPermissions = unsetPermissions,
 				TypeRestrictions = typeRestrictions
+			},
+			mergeObjects: true,
+			cancellationToken: ct
+		);
+		
+		return true;
+	}
+
+	public async ValueTask<bool> SetObjectFlagDisabledAsync(string name, bool disabled, 
+		CancellationToken ct = default)
+	{
+		// Get the flag to update
+		var flag = await GetObjectFlagAsync(name, ct);
+		if (flag == null)
+		{
+			return false;
+		}
+		
+		// Prevent disabling system flags
+		if (flag.System)
+		{
+			return false;
+		}
+		
+		// Update the flag document - need to extract the Key from the ID
+		var key = flag.Id!.Split('/')[1];
+		await arangoDb.Document.UpdateAsync(
+			handle,
+			DatabaseConstants.ObjectFlags,
+			new
+			{
+				Key = key,
+				Disabled = disabled
+			},
+			mergeObjects: true,
+			cancellationToken: ct
+		);
+		
+		return true;
+	}
+
+	public async ValueTask<bool> SetPowerDisabledAsync(string name, bool disabled, 
+		CancellationToken ct = default)
+	{
+		// Get the power to update
+		var power = await GetPowerAsync(name, ct);
+		if (power == null)
+		{
+			return false;
+		}
+		
+		// Prevent disabling system powers
+		if (power.System)
+		{
+			return false;
+		}
+		
+		// Update the power document - need to extract the Key from the ID
+		var key = power.Id!.Split('/')[1];
+		await arangoDb.Document.UpdateAsync(
+			handle,
+			DatabaseConstants.ObjectPowers,
+			new
+			{
+				Key = key,
+				Disabled = disabled
 			},
 			mergeObjects: true,
 			cancellationToken: ct

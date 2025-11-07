@@ -11,6 +11,12 @@ public class SharpPower
 
 	public required bool System { get; set; }
 
+	/// <summary>
+	/// Indicates if this power is currently disabled and cannot be set on objects.
+	/// System powers cannot be disabled.
+	/// </summary>
+	public bool Disabled { get; set; } = false;
+
 	public required string Alias { get; set; }
 
 	public required string[] SetPermissions { get; set; }

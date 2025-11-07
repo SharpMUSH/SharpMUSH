@@ -292,4 +292,138 @@ public class FlagAndPowerCommandTests
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("requires power name and alias")));
 	}
+
+	[Test]
+	public async ValueTask Flag_Disable_DisablesNonSystemFlag()
+	{
+		// Create a unique flag name for this test
+		var flagName = $"TEST_FLAG_DISABLE_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+		var symbol = "T";
+
+		// Create the flag first
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/add {flagName}={symbol}"));
+
+		// Disable the flag
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/disable {flagName}"));
+
+		// Verify the flag is disabled
+		var flag = await Mediator.Send(new GetObjectFlagQuery(flagName));
+		await Assert.That(flag).IsNotNull();
+		await Assert.That(flag!.Disabled).IsTrue();
+
+		// Verify notification was sent
+		await NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains($"Flag '{flagName}' disabled")));
+
+		// Cleanup
+		await Mediator.Send(new DeleteObjectFlagCommand(flagName));
+	}
+
+	[Test]
+	public async ValueTask Flag_Enable_EnablesDisabledFlag()
+	{
+		// Create a unique flag name for this test
+		var flagName = $"TEST_FLAG_ENABLE_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+		var symbol = "T";
+
+		// Create and disable the flag
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/add {flagName}={symbol}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/disable {flagName}"));
+
+		// Enable the flag
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/enable {flagName}"));
+
+		// Verify the flag is enabled
+		var flag = await Mediator.Send(new GetObjectFlagQuery(flagName));
+		await Assert.That(flag).IsNotNull();
+		await Assert.That(flag!.Disabled).IsFalse();
+
+		// Verify notification was sent
+		await NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains($"Flag '{flagName}' enabled")));
+
+		// Cleanup
+		await Mediator.Send(new DeleteObjectFlagCommand(flagName));
+	}
+
+	[Test]
+	public async ValueTask Flag_Disable_PreventsSystemFlagDisable()
+	{
+		// Try to disable a system flag (PLAYER is a system flag)
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@flag/disable PLAYER"));
+
+		// Verify error notification was sent
+		await NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Cannot disable system flag")));
+	}
+
+	[Test]
+	public async ValueTask Power_Disable_DisablesNonSystemPower()
+	{
+		// Create a unique power name for this test
+		var powerName = $"TEST_POWER_DISABLE_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+		var alias = "TPOW";
+
+		// Create the power first
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/add {powerName}={alias}"));
+
+		// Disable the power
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/disable {powerName}"));
+
+		// Verify the power is disabled
+		var power = await Mediator.Send(new GetPowerQuery(powerName));
+		await Assert.That(power).IsNotNull();
+		await Assert.That(power!.Disabled).IsTrue();
+
+		// Verify notification was sent
+		await NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains($"Power '{powerName}' disabled")));
+
+		// Cleanup
+		await Mediator.Send(new DeletePowerCommand(powerName));
+	}
+
+	[Test]
+	public async ValueTask Power_Enable_EnablesDisabledPower()
+	{
+		// Create a unique power name for this test
+		var powerName = $"TEST_POWER_ENABLE_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+		var alias = "TPOW";
+
+		// Create and disable the power
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/add {powerName}={alias}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/disable {powerName}"));
+
+		// Enable the power
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/enable {powerName}"));
+
+		// Verify the power is enabled
+		var power = await Mediator.Send(new GetPowerQuery(powerName));
+		await Assert.That(power).IsNotNull();
+		await Assert.That(power!.Disabled).IsFalse();
+
+		// Verify notification was sent
+		await NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains($"Power '{powerName}' enabled")));
+
+		// Cleanup
+		await Mediator.Send(new DeletePowerCommand(powerName));
+	}
+
+	[Test]
+	public async ValueTask Power_Disable_PreventsSystemPowerDisable()
+	{
+		// Try to disable a system power (Builder is a system power)
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@power/disable Builder"));
+
+		// Verify error notification was sent
+		await NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Cannot disable system power")));
+	}
 }

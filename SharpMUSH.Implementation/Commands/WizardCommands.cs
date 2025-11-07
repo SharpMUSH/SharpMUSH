@@ -386,6 +386,7 @@ public partial class Commands
 			output.AppendLine($"Flag: {flag.Name}");
 			output.AppendLine($"Symbol: {flag.Symbol}");
 			output.AppendLine($"System: {(flag.System ? "Yes" : "No")}");
+			output.AppendLine($"Disabled: {(flag.Disabled ? "Yes" : "No")}");
 			output.AppendLine($"Aliases: {(flag.Aliases != null && flag.Aliases.Length > 0 ? string.Join(", ", flag.Aliases) : "none")}");
 			output.AppendLine($"Type Restrictions: {string.Join(", ", flag.TypeRestrictions)}");
 			output.AppendLine($"Set Permissions: {string.Join(", ", flag.SetPermissions)}");
@@ -395,12 +396,49 @@ public partial class Commands
 			return CallState.Empty;
 		}
 		
-		// @flag/disable and @flag/enable are not yet implemented
-		// They would require a flag enable/disable state in the database
+		// @flag/disable and @flag/enable - toggle flag disabled state
 		if (switches.Contains("DISABLE") || switches.Contains("ENABLE"))
 		{
-			await NotifyService!.Notify(executor, "Flag enable/disable functionality not yet implemented.");
-			return CallState.Empty;
+			if (parser.CurrentState.Arguments.Count < 1)
+			{
+				await NotifyService!.Notify(executor, $"@FLAG/{(switches.Contains("DISABLE") ? "DISABLE" : "ENABLE")} requires a flag name.");
+				return CallState.Empty;
+			}
+			
+			var flagName = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+			
+			if (string.IsNullOrWhiteSpace(flagName))
+			{
+				await NotifyService!.Notify(executor, "Flag name cannot be empty.");
+				return CallState.Empty;
+			}
+			
+			var flag = await Mediator!.Send(new GetObjectFlagQuery(flagName.ToUpper()));
+			if (flag == null)
+			{
+				await NotifyService!.Notify(executor, $"Flag '{flagName}' not found.");
+				return CallState.Empty;
+			}
+			
+			if (flag.System)
+			{
+				await NotifyService!.Notify(executor, $"Cannot disable system flag '{flagName}'.");
+				return CallState.Empty;
+			}
+			
+			bool disable = switches.Contains("DISABLE");
+			var result = await Mediator!.Send(new SetObjectFlagDisabledCommand(flagName.ToUpper(), disable));
+			
+			if (result)
+			{
+				await NotifyService!.Notify(executor, $"Flag '{flagName}' {(disable ? "disabled" : "enabled")}.");
+				return new CallState(MModule.single(flagName));
+			}
+			else
+			{
+				await NotifyService!.Notify(executor, $"Failed to {(disable ? "disable" : "enable")} flag '{flagName}'.");
+				return CallState.Empty;
+			}
 		}
 		
 		// @flag/debug - show debug information (currently same as decompile)
@@ -426,6 +464,7 @@ public partial class Commands
 			output.AppendLine($"ID: {flag.Id ?? "N/A"}");
 			output.AppendLine($"Symbol: {flag.Symbol}");
 			output.AppendLine($"System: {(flag.System ? "Yes" : "No")}");
+			output.AppendLine($"Disabled: {(flag.Disabled ? "Yes" : "No")}");
 			output.AppendLine($"Aliases: {(flag.Aliases != null && flag.Aliases.Length > 0 ? string.Join(", ", flag.Aliases) : "none")}");
 			output.AppendLine($"Type Restrictions: {string.Join(", ", flag.TypeRestrictions)}");
 			output.AppendLine($"Set Permissions: {string.Join(", ", flag.SetPermissions)}");
@@ -828,6 +867,7 @@ public partial class Commands
 			output.AppendLine($"Power: {power.Name}");
 			output.AppendLine($"Alias: {power.Alias}");
 			output.AppendLine($"System: {(power.System ? "Yes" : "No")}");
+			output.AppendLine($"Disabled: {(power.Disabled ? "Yes" : "No")}");
 			output.AppendLine($"Type Restrictions: {string.Join(", ", power.TypeRestrictions)}");
 			output.AppendLine($"Set Permissions: {string.Join(", ", power.SetPermissions)}");
 			output.AppendLine($"Unset Permissions: {string.Join(", ", power.UnsetPermissions)}");
@@ -836,12 +876,49 @@ public partial class Commands
 			return CallState.Empty;
 		}
 		
-		// @power/disable and @power/enable are not yet implemented
-		// They would require a power enable/disable state in the database
+		// @power/disable and @power/enable - toggle power disabled state
 		if (switches.Contains("DISABLE") || switches.Contains("ENABLE"))
 		{
-			await NotifyService!.Notify(executor, "Power enable/disable functionality not yet implemented.");
-			return CallState.Empty;
+			if (parser.CurrentState.Arguments.Count < 1)
+			{
+				await NotifyService!.Notify(executor, $"@POWER/{(switches.Contains("DISABLE") ? "DISABLE" : "ENABLE")} requires a power name.");
+				return CallState.Empty;
+			}
+			
+			var powerName = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+			
+			if (string.IsNullOrWhiteSpace(powerName))
+			{
+				await NotifyService!.Notify(executor, "Power name cannot be empty.");
+				return CallState.Empty;
+			}
+			
+			var power = await Mediator!.Send(new GetPowerQuery(powerName.ToUpper()));
+			if (power == null)
+			{
+				await NotifyService!.Notify(executor, $"Power '{powerName}' not found.");
+				return CallState.Empty;
+			}
+			
+			if (power.System)
+			{
+				await NotifyService!.Notify(executor, $"Cannot disable system power '{powerName}'.");
+				return CallState.Empty;
+			}
+			
+			bool disable = switches.Contains("DISABLE");
+			var result = await Mediator!.Send(new SetPowerDisabledCommand(powerName.ToUpper(), disable));
+			
+			if (result)
+			{
+				await NotifyService!.Notify(executor, $"Power '{powerName}' {(disable ? "disabled" : "enabled")}.");
+				return new CallState(MModule.single(powerName));
+			}
+			else
+			{
+				await NotifyService!.Notify(executor, $"Failed to {(disable ? "disable" : "enable")} power '{powerName}'.");
+				return CallState.Empty;
+			}
 		}
 		
 		// Default - show usage
