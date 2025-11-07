@@ -259,12 +259,22 @@ public class SharpMUSHBooleanExpressionVisitor(
 		// Channel locks check if the unlocker is a member of the specified channel
 		Func<AnySharpObject, string, bool> func = (unlockerObj, channel) =>
 		{
-			// TODO: Full implementation requires channel system integration
-			// For now, return false as a placeholder
-			// This would need to:
-			// 1. Query the channel system for channel membership
-			// 2. Check if unlocker (or unlocker's owner) is on the channel
-			return false;
+			try
+			{
+				// Use mediator to query channel membership
+				// This checks if the unlocker (or their owner if they're an object) is on the channel
+				var isOnChannelQuery = new IsOnChannelQuery(unlockerObj, channel);
+				var result = med.Send(isOnChannelQuery, CancellationToken.None)
+					.GetAwaiter()
+					.GetResult();
+				
+				return result;
+			}
+			catch (Exception)
+			{
+				// If channel doesn't exist or any error occurs, lock fails
+				return false;
+			}
 		};
 
 		return Expression.Invoke(Expression.Constant(func), unlocker, Expression.Constant(channelName));
