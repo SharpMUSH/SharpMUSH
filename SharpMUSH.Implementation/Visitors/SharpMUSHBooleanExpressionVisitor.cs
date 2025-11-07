@@ -15,6 +15,7 @@ namespace SharpMUSH.Implementation.Visitors;
 /// Visitor for compiling PennMUSH lock expressions into executable Expression trees.
 /// Supports all 11 documented PennMUSH lock key types including name, owner, carry, attribute,
 /// evaluation, indirect, DBRef list, IP/hostname, channel, and bit locks.
+/// Uses mediator queries to access services without creating circular dependencies.
 /// </summary>
 /// <param name="med">Mediator for database and service queries</param>
 /// <param name="gated">Expression parameter representing the object being locked</param>
@@ -101,7 +102,6 @@ public class SharpMUSHBooleanExpressionVisitor(
 		var targetName = context.@string().GetText();
 		
 		// For owner locks, check if the unlocker is owned by the owner of the named object
-		// This is a simplified implementation focusing on DBRef-based owner checks
 		Func<AnySharpObject, AnySharpObject, string, bool> func = (gatedObj, unlockerObj, target) =>
 		{
 			try
@@ -135,8 +135,38 @@ public class SharpMUSHBooleanExpressionVisitor(
 					return unlockerOwnerDbRef == targetOwner.Object.DBRef;
 				}
 				
-				// For name-based lookup, we would need database query which isn't practical here
-				return false;
+				// Name-based lookup using mediator query
+				// Note: Parser is null as substitutions should have been pre-evaluated
+				var locateResult = med.Send(
+					new LocateObjectQuery(gatedObj, gatedObj, target, LocateFlags.AbsoluteMatch),
+					CancellationToken.None)
+					.AsTask()
+					.ConfigureAwait(false).GetAwaiter().GetResult();
+				
+				return locateResult.Match(
+					player =>
+					{
+						var targetOwner = player.Object.Owner.WithCancellation(CancellationToken.None).GetAwaiter().GetResult();
+						return unlockerOwnerDbRef == targetOwner.Object.DBRef;
+					},
+					room =>
+					{
+						var targetOwner = room.Object.Owner.WithCancellation(CancellationToken.None).GetAwaiter().GetResult();
+						return unlockerOwnerDbRef == targetOwner.Object.DBRef;
+					},
+					exit =>
+					{
+						var targetOwner = exit.Object.Owner.WithCancellation(CancellationToken.None).GetAwaiter().GetResult();
+						return unlockerOwnerDbRef == targetOwner.Object.DBRef;
+					},
+					thing =>
+					{
+						var targetOwner = thing.Object.Owner.WithCancellation(CancellationToken.None).GetAwaiter().GetResult();
+						return unlockerOwnerDbRef == targetOwner.Object.DBRef;
+					},
+					none => false,
+					error => false
+				);
 			}
 			catch (Exception)
 			{
@@ -163,25 +193,48 @@ public class SharpMUSHBooleanExpressionVisitor(
 			if (unlockerObj.Aliases.Any(a => a.Equals(target, StringComparison.OrdinalIgnoreCase)))
 				return true;
 			
-			// For checking inventory, we need database access
+			// If target is a DBRef, check if carrying that specific object
+			if (target.StartsWith('#') && int.TryParse(target.Substring(1), out int targetDbrefNum))
+			{
+				try
+				{
+					if (unlockerObj.IsContainer)
+					{
+						var contents = unlockerObj.AsContainer.Content(med);
+						return contents
+							.AnyAsync(item => item.Object().DBRef.Number == targetDbrefNum, CancellationToken.None)
+							.AsTask().GetAwaiter().GetResult();
+					}
+				}
+				catch (Exception)
+				{
+					// Catch any errors during inventory check
+				}
+				return false;
+			}
+			
+			// For name-based object lookup in inventory
 			try
 			{
-				// Attempt to check contents if this is a container
-				if (unlockerObj.IsContainer)
-				{
-					var contents = unlockerObj.AsContainer.Content(med);
-					return contents
-						.AnyAsync(item => item.Object().Name.Equals(target, StringComparison.OrdinalIgnoreCase), CancellationToken.None)
-						.AsTask().GetAwaiter().GetResult();
-				}
-			}
-			catch (InvalidOperationException)
-			{
-				// Object is not a container, fall through to name/alias check
+				// Use mediator query to find the object in unlocker's inventory
+				var locateResult = med.Send(
+					new LocateObjectQuery(unlockerObj, unlockerObj, target, LocateFlags.OnlyMatchObjectsInLookerInventory),
+					CancellationToken.None)
+					.AsTask()
+					.ConfigureAwait(false).GetAwaiter().GetResult();
+				
+				return locateResult.Match(
+					player => true,  // Found object in inventory
+					room => true,
+					exit => true,
+					thing => true,
+					none => false,
+					error => false
+				);
 			}
 			catch (Exception)
 			{
-				// Catch any errors during inventory check (database access, etc.)
+				// Catch any errors during locate operation
 			}
 			
 			return false;
@@ -509,7 +562,9 @@ public class SharpMUSHBooleanExpressionVisitor(
 		{
 			try
 			{
-				// If target is a DBRef like "#123", resolve and evaluate its lock
+				AnySharpObject? targetObj = null;
+				
+				// If target is a DBRef like "#123", resolve it
 				if (target.StartsWith('#') && int.TryParse(target.Substring(1), out int targetDbrefNum))
 				{
 					var targetObjResult = med.Send(
@@ -521,19 +576,46 @@ public class SharpMUSHBooleanExpressionVisitor(
 					if (targetObjResult.IsNone())
 						return false;
 						
-					var targetObj = targetObjResult.Known();
-					// Get the lock from the target object
-					var lockString = targetObj.Object().Locks.GetValueOrDefault(lockType, "#TRUE");
+					targetObj = targetObjResult.Known();
+				}
+				else
+				{
+					// Name-based lookup using mediator query
+					var locateResult = med.Send(
+						new LocateObjectQuery(gatedObj, gatedObj, target, LocateFlags.AbsoluteMatch),
+						CancellationToken.None)
+						.AsTask()
+						.ConfigureAwait(false).GetAwaiter().GetResult();
 					
-					// We would need the BooleanExpressionParser to compile and evaluate this lock
-					// This creates a circular dependency issue
-					// For now, return false as placeholder
-					// TODO: Need to refactor to allow recursive lock evaluation
-					return false;
+					var found = locateResult.Match(
+						player => { targetObj = player; return true; },
+						room => { targetObj = room; return true; },
+						exit => { targetObj = exit; return true; },
+						thing => { targetObj = thing; return true; },
+						none => false,
+						error => false);
+					
+					if (!found)
+					{
+						return false;
+					}
 				}
 				
-				// For name-based lookup, we would need database query which isn't practical here
-				return false;
+				if (targetObj == null)
+					return false;
+					
+				// Get the lock from the target object
+				var lockString = targetObj.Object().Locks.GetValueOrDefault(lockType, "#TRUE");
+				
+				// Use mediator query to recursively evaluate the lock
+				// This breaks the circular dependency between parser and lock service
+				var evaluateResult = med.Send(
+					new EvaluateLockQuery(lockString, targetObj, unlockerObj),
+					CancellationToken.None)
+					.AsTask()
+					.ConfigureAwait(false).GetAwaiter().GetResult();
+				
+				return evaluateResult;
 			}
 			catch (Exception)
 			{
