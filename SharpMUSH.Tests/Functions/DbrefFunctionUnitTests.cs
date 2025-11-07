@@ -214,6 +214,7 @@ public class DbrefFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
+
 	[Test]
 	[Arguments("andlpowers(%#,Guest)", "0")]
 	public async Task Andlpowers(string str, string expected)

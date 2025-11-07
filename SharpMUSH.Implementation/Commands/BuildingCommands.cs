@@ -316,22 +316,38 @@ public partial class Commands
 				if (exitObj.IsExit)
 				{
 					// Link exit to destination
-					return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+					// Handle special cases: "home" and "variable"
+					if (destName.Equals("home", StringComparison.InvariantCultureIgnoreCase))
+					{
+						// Set special attribute to mark exit as home-linked
+						await AttributeService!.SetAttributeAsync(executor, exitObj, "_LINKTYPE", MModule.single("home"));
+						await NotifyService!.Notify(executor, "Linked to home.");
+						return CallState.Empty;
+					}
+					else if (destName.Equals("variable", StringComparison.InvariantCultureIgnoreCase))
+					{
+						// Set special attribute to mark exit as variable
+						await AttributeService!.SetAttributeAsync(executor, exitObj, "_LINKTYPE", MModule.single("variable"));
+						await NotifyService!.Notify(executor, "Linked to variable.");
+						return CallState.Empty;
+					}
+					
+					// Link to regular room destination
+					return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 						executor, executor, destName, LocateFlags.All,
 						async destObj =>
 						{
-							if (!destObj.IsRoom && !destName.Equals("home", StringComparison.InvariantCultureIgnoreCase) 
-							    && !destName.Equals("variable", StringComparison.InvariantCultureIgnoreCase))
+							if (!destObj.IsRoom)
 							{
 								await NotifyService.Notify(executor, "Invalid destination for exit.");
 								return Errors.ErrorInvalidDestination;
 							}
 
+							// Clear any special link type attribute
+							await AttributeService!.SetAttributeAsync(executor, exitObj, "_LINKTYPE", MModule.empty());
+							
 							// Link the exit
-							if (destObj.IsRoom)
-							{
-								await Mediator!.Send(new LinkExitCommand(exitObj.AsExit, destObj.AsRoom));
-							}
+							await Mediator!.Send(new LinkExitCommand(exitObj.AsExit, destObj.AsRoom));
 
 							await NotifyService.Notify(executor, "Linked.");
 							return CallState.Empty;
