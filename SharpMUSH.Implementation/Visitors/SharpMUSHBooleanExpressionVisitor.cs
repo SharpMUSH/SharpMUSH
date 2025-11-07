@@ -26,7 +26,8 @@ public class SharpMUSHBooleanExpressionVisitor(
 	ParameterExpression unlocker) : SharpMUSHBoolExpParserBaseVisitor<Expression>
 {
 	protected override Expression AggregateResult(Expression aggregate, Expression nextResult)
-		=> new Expression[] { aggregate, nextResult }.First(x => x is not null);
+		=> new Expression[] { aggregate, nextResult }.FirstOrDefault(x => x is not null) 
+			?? Expression.Constant(false);
 
 	// Compiled expressions for bit checks (flag, power, type)
 	// Note: These use .GetAwaiter().GetResult() which is necessary for Expression trees
