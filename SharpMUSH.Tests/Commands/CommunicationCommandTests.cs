@@ -234,7 +234,7 @@ public class CommunicationCommandTests
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToPlainText().Contains($"Alias '{alias}' added for channel Public")) ||
 				(msg.IsT1 && msg.AsT1.Contains($"Alias '{alias}' added for channel Public"))), 
-				null, INotifyService.NotificationType.Announce);
+				null);
 	}
 
 	[Test]

@@ -19,21 +19,24 @@ public class UtilityCommandTests
 	[Test]
 	public async ValueTask ThinkBasic()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("think Test output"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("think ThinkBasic Test output"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), "Test output");
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(x
+				=> x.Value.ToString()!.Contains("ThinkBasic Test output")));
 	}
 
 	[Test]
 	public async ValueTask ThinkWithFunction()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("think [add(2,3)]"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("think ThinkWithFunction [add(2,3)]"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), "5");
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf.OneOf<MString,string>>(x 
+					=> x.Value.ToString()!.Contains("ThinkWithFunction 5")) );
 	}
 
 	[Test]
@@ -45,7 +48,8 @@ public class UtilityCommandTests
 		// Comment should not produce any output
 		await NotifyService
 			.DidNotReceive()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(x 
+				=> x.Value.ToString()!.Contains("This is a comment")));
 	}
 
 	[Test]

@@ -18,7 +18,7 @@ public class CommunicationFunctionUnitTests
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 
 	[Test]
-	public async Task Pemit()
+	public async Task PrivateEmit()
 	{
 		const string uniqueMessage = "Pemit_test_unique_message_for_verification";
 		
@@ -33,8 +33,8 @@ public class CommunicationFunctionUnitTests
 		await NotifyService
 			.Received()
 			.Notify(
-				Arg.Any<AnySharpObject>(), 
-				Arg.Any<OneOf<MString, string>>(), 
+				Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(x => x.Value.ToString()!.Contains(uniqueMessage)), 
 				Arg.Any<AnySharpObject?>(), 
 				Arg.Any<INotifyService.NotificationType>());
 	}
