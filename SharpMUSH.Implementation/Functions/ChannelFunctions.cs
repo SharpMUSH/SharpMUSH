@@ -121,7 +121,7 @@ public partial class Functions
 		
 		
 		using (Logger!.BeginScope("<{DbRef} {Category}: {Channel}.", 
-			       executor.Object().ToString(), 
+			       executor.Object().DbRef.ToString(), 
 			       "Channel", 
 			       channel.Name.ToPlainText()))
 		{
