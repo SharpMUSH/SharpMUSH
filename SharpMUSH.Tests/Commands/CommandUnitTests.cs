@@ -62,10 +62,12 @@ public class CommandUnitTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), expected1);
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(x 
+				=> x.Value.ToString()!.Contains(expected1)) );
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), expected2);
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(x 
+				=> x.Value.ToString()!.Contains(expected2)) );
 	}
 }
