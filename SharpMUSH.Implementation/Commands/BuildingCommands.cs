@@ -317,17 +317,17 @@ public partial class Commands
 				{
 					// Link exit to destination
 					// Handle special cases: "home" and "variable"
-					if (destName.Equals("home", StringComparison.InvariantCultureIgnoreCase))
+					if (destName.Equals(LinkTypeHome, StringComparison.InvariantCultureIgnoreCase))
 					{
 						// Set special attribute to mark exit as home-linked
-						await AttributeService!.SetAttributeAsync(executor, exitObj, "_LINKTYPE", MModule.single("home"));
+						await AttributeService!.SetAttributeAsync(executor, exitObj, AttrLinkType, MModule.single(LinkTypeHome));
 						await NotifyService!.Notify(executor, "Linked to home.");
 						return CallState.Empty;
 					}
-					else if (destName.Equals("variable", StringComparison.InvariantCultureIgnoreCase))
+					else if (destName.Equals(LinkTypeVariable, StringComparison.InvariantCultureIgnoreCase))
 					{
 						// Set special attribute to mark exit as variable
-						await AttributeService!.SetAttributeAsync(executor, exitObj, "_LINKTYPE", MModule.single("variable"));
+						await AttributeService!.SetAttributeAsync(executor, exitObj, AttrLinkType, MModule.single(LinkTypeVariable));
 						await NotifyService!.Notify(executor, "Linked to variable.");
 						return CallState.Empty;
 					}
@@ -367,7 +367,7 @@ public partial class Commands
 							// TODO: Charge link cost (usually 1 penny)
 
 							// Clear any special link type attribute
-							await AttributeService!.SetAttributeAsync(executor, exitObj, "_LINKTYPE", MModule.empty());
+							await AttributeService!.SetAttributeAsync(executor, exitObj, AttrLinkType, MModule.empty());
 							
 							// Link the exit
 							await Mediator!.Send(new LinkExitCommand(exitObj.AsExit, destinationRoom));
@@ -990,7 +990,7 @@ public partial class Commands
 				if (obj.IsExit)
 				{
 					// Clear special link type attribute if it exists
-					await AttributeService!.SetAttributeAsync(executor, obj, "_LINKTYPE", MModule.empty());
+					await AttributeService!.SetAttributeAsync(executor, obj, AttrLinkType, MModule.empty());
 					
 					await Mediator!.Send(new UnlinkExitCommand(obj.AsExit));
 					await NotifyService.Notify(executor, "Unlinked.");

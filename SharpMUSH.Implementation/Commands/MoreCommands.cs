@@ -13,6 +13,22 @@ namespace SharpMUSH.Implementation.Commands;
 
 public partial class Commands
 {
+	// Attribute name constants
+	private const string AttrDrop = "DROP";
+	private const string AttrODrop = "ODROP";
+	private const string AttrADrop = "ADROP";
+	private const string AttrEnter = "ENTER";
+	private const string AttrOEnter = "OENTER";
+	private const string AttrOXEnter = "OXENTER";
+	private const string AttrAEnter = "AENTER";
+	private const string AttrEFail = "EFAIL";
+	private const string AttrOEFail = "OEFAIL";
+	private const string AttrAEFail = "AEFAIL";
+	private const string AttrLinkType = "_LINKTYPE";
+	private const string LinkTypeVariable = "variable";
+	private const string LinkTypeHome = "home";
+
+
 	[SharpCommand(Name = "@CLOCK", Switches = ["JOIN", "SPEAK", "MOD", "SEE", "HIDE"], Behavior = CB.Default | CB.EqSplit,
 		MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> ChannelLock(IMUSHCodeParser parser, SharpCommandAttribute _2)
@@ -191,7 +207,7 @@ public partial class Commands
 		await Mediator!.Send(new MoveObjectCommand(contentToDrop, currentRoom));
 		
 		// Trigger @drop attribute on the object
-		var dropAttr = await AttributeService!.GetAttributeAsync(executor, objectToDrop, "DROP", IAttributeService.AttributeMode.Read, true);
+		var dropAttr = await AttributeService!.GetAttributeAsync(executor, objectToDrop, AttrDrop, IAttributeService.AttributeMode.Read, true);
 		if (dropAttr.IsAttribute && dropAttr.AsT0.Length > 0)
 		{
 			var dropMsg = dropAttr.AsT0[0].Value;
@@ -202,7 +218,7 @@ public partial class Commands
 		}
 		
 		// Trigger @odrop attribute (show to others in room)
-		var odropAttr = await AttributeService!.GetAttributeAsync(executor, objectToDrop, "ODROP", IAttributeService.AttributeMode.Read, true);
+		var odropAttr = await AttributeService!.GetAttributeAsync(executor, objectToDrop, AttrODrop, IAttributeService.AttributeMode.Read, true);
 		if (odropAttr.IsAttribute && odropAttr.AsT0.Length > 0)
 		{
 			var odropMsg = odropAttr.AsT0[0].Value;
@@ -214,7 +230,7 @@ public partial class Commands
 		}
 		
 		// Trigger @adrop attribute (actions)
-		var adropAttr = await AttributeService!.GetAttributeAsync(executor, objectToDrop, "ADROP", IAttributeService.AttributeMode.Read, true);
+		var adropAttr = await AttributeService!.GetAttributeAsync(executor, objectToDrop, AttrADrop, IAttributeService.AttributeMode.Read, true);
 		if (adropAttr.IsAttribute && adropAttr.AsT0.Length > 0)
 		{
 			var adropActions = adropAttr.AsT0[0].Value;
@@ -246,22 +262,12 @@ public partial class Commands
 					await Mediator!.Send(new MoveObjectCommand(contentToDrop, dropToContainer));
 					
 					await NotifyService!.Notify(executor, $"Dropped. {objectToDrop.Object().Name} was sent to {dropToContainer.Object().Name}.");
-				}
-				else
-				{
-					await NotifyService!.Notify(executor, "Dropped.");
+					return CallState.Empty;
 				}
 			}
-			else
-			{
-				await NotifyService!.Notify(executor, "Dropped.");
-			}
 		}
-		else
-		{
-			await NotifyService!.Notify(executor, "Dropped.");
-		}
-
+		
+		await NotifyService!.Notify(executor, "Dropped.");
 		return CallState.Empty;
 	}
 
@@ -318,7 +324,7 @@ public partial class Commands
 		if (!LockService!.Evaluate(LockType.Enter, objectToEnter, executor))
 		{
 			// Trigger @efail attribute
-			var efailAttr = await AttributeService!.GetAttributeAsync(executor, objectToEnter, "EFAIL", IAttributeService.AttributeMode.Read, true);
+			var efailAttr = await AttributeService!.GetAttributeAsync(executor, objectToEnter, AttrEFail, IAttributeService.AttributeMode.Read, true);
 			if (efailAttr.IsAttribute && efailAttr.AsT0.Length > 0)
 			{
 				var efailMsg = efailAttr.AsT0[0].Value;
@@ -333,7 +339,7 @@ public partial class Commands
 			}
 			
 			// Trigger @oefail attribute (shown to others in room)
-			var oefailAttr = await AttributeService!.GetAttributeAsync(executor, objectToEnter, "OEFAIL", IAttributeService.AttributeMode.Read, true);
+			var oefailAttr = await AttributeService!.GetAttributeAsync(executor, objectToEnter, AttrOEFail, IAttributeService.AttributeMode.Read, true);
 			if (oefailAttr.IsAttribute && oefailAttr.AsT0.Length > 0)
 			{
 				var oefailMsg = oefailAttr.AsT0[0].Value;
@@ -344,7 +350,7 @@ public partial class Commands
 			}
 			
 			// Trigger @aefail attribute (actions)
-			var aefailAttr = await AttributeService!.GetAttributeAsync(executor, objectToEnter, "AEFAIL", IAttributeService.AttributeMode.Read, true);
+			var aefailAttr = await AttributeService!.GetAttributeAsync(executor, objectToEnter, AttrAEFail, IAttributeService.AttributeMode.Read, true);
 			if (aefailAttr.IsAttribute && aefailAttr.AsT0.Length > 0)
 			{
 				var aefailActions = aefailAttr.AsT0[0].Value;
@@ -370,7 +376,7 @@ public partial class Commands
 		await Mediator!.Send(new MoveObjectCommand(executorAsContent, containerToEnter));
 
 		// Trigger @enter attribute (shown to entering player)
-		var enterAttr = await AttributeService!.GetAttributeAsync(executor, objectToEnter, "ENTER", IAttributeService.AttributeMode.Read, true);
+		var enterAttr = await AttributeService!.GetAttributeAsync(executor, objectToEnter, AttrEnter, IAttributeService.AttributeMode.Read, true);
 		if (enterAttr.IsAttribute && enterAttr.AsT0.Length > 0)
 		{
 			var enterMsg = enterAttr.AsT0[0].Value;
@@ -381,7 +387,7 @@ public partial class Commands
 		}
 
 		// Trigger @oenter attribute (shown to others inside)
-		var oenterAttr = await AttributeService!.GetAttributeAsync(executor, objectToEnter, "OENTER", IAttributeService.AttributeMode.Read, true);
+		var oenterAttr = await AttributeService!.GetAttributeAsync(executor, objectToEnter, AttrOEnter, IAttributeService.AttributeMode.Read, true);
 		if (oenterAttr.IsAttribute && oenterAttr.AsT0.Length > 0)
 		{
 			var oenterMsg = oenterAttr.AsT0[0].Value;
@@ -393,7 +399,7 @@ public partial class Commands
 		}
 
 		// Trigger @oxenter attribute (shown to those in old location)
-		var oxenterAttr = await AttributeService!.GetAttributeAsync(executor, objectToEnter, "OXENTER", IAttributeService.AttributeMode.Read, true);
+		var oxenterAttr = await AttributeService!.GetAttributeAsync(executor, objectToEnter, AttrOXEnter, IAttributeService.AttributeMode.Read, true);
 		if (oxenterAttr.IsAttribute && oxenterAttr.AsT0.Length > 0)
 		{
 			var oxenterMsg = oxenterAttr.AsT0[0].Value;
@@ -405,7 +411,7 @@ public partial class Commands
 		}
 
 		// Trigger @aenter attribute (actions)
-		var aenterAttr = await AttributeService!.GetAttributeAsync(executor, objectToEnter, "AENTER", IAttributeService.AttributeMode.Read, true);
+		var aenterAttr = await AttributeService!.GetAttributeAsync(executor, objectToEnter, AttrAEnter, IAttributeService.AttributeMode.Read, true);
 		if (aenterAttr.IsAttribute && aenterAttr.AsT0.Length > 0)
 		{
 			var aenterActions = aenterAttr.AsT0[0].Value;

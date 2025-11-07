@@ -15,6 +15,11 @@ namespace SharpMUSH.Implementation.Functions;
 
 public partial class Functions
 {
+	// Attribute name constant for link type
+	private const string AttrLinkType = "_LINKTYPE";
+	private const string LinkTypeVariable = "variable";
+	private const string LinkTypeHome = "home";
+
 	[SharpFunction(Name = "loc", MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> Location(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -48,19 +53,18 @@ public partial class Functions
 			async exit =>
 			{
 				// Check for special link types
-				var linkTypeAttr = await AttributeService!.GetAttributeAsync(executor, exit, "_LINKTYPE", IAttributeService.AttributeMode.Read, false);
+				var linkTypeAttr = await AttributeService!.GetAttributeAsync(executor, exit, AttrLinkType, IAttributeService.AttributeMode.Read, false);
 				
 				if (linkTypeAttr.IsAttribute && linkTypeAttr.AsT0.Length > 0)
 				{
 					var linkTypeText = linkTypeAttr.AsT0[0].Value.ToPlainText();
 					if (!string.IsNullOrEmpty(linkTypeText))
 					{
-						var linkType = linkTypeText.ToLowerInvariant();
-						if (linkType == "variable")
+						if (string.Equals(linkTypeText, LinkTypeVariable, StringComparison.OrdinalIgnoreCase))
 						{
 							return "#-2";
 						}
-						else if (linkType == "home")
+						else if (string.Equals(linkTypeText, LinkTypeHome, StringComparison.OrdinalIgnoreCase))
 						{
 							return "#-3";
 						}
@@ -73,7 +77,7 @@ public partial class Functions
 					var destination = await exit.Location.WithCancellation(CancellationToken.None);
 					return destination.Object().DBRef;
 				}
-				catch (Exception ex) when (ex is InvalidOperationException or NullReferenceException)
+				catch (InvalidOperationException)
 				{
 					// Exit is unlinked - return #-1
 					return "#-1";
