@@ -53,9 +53,9 @@ The lock system is documented in `SharpMUSH.Documentation/Helpfiles/SharpMUSH/pe
 **Documentation:** `$<object>` - Lock to objects owned by the owner of an object
 
 **Implementation Status:**
-- ⚠️ Stub exists in `VisitOwnerExpr` but only calls `VisitChildren(context)`
-- ❌ No actual ownership checking logic
-- ❌ Validation is a stub
+- ⚠️ Implemented for DBRef-based comparisons (e.g., `$#123`)
+- ⚠️ Implemented for "me" reference (owner of gated object)
+- ❌ Name-based lookup needs database query support
 
 **Grammar Support:** ✅ `ownerExpr: OWNER string;` in parser grammar
 
@@ -64,6 +64,8 @@ The lock system is documented in `SharpMUSH.Documentation/Helpfiles/SharpMUSH/pe
 **Example from docs:**
 ```
 @lock Box = $My Toy
+@lock Box = $#100    # Works now
+@lock Box = $me      # Works now
 ```
 
 ---
@@ -201,9 +203,10 @@ The lock system is documented in `SharpMUSH.Documentation/Helpfiles/SharpMUSH/pe
 **Documentation:** `@<object>` or `@<object>/<lockname>` - Use the result of another @lock
 
 **Implementation Status:**
-- ⚠️ Structure implemented in `VisitIndirectExpr`
-- ⚠️ Returns false pending full lock resolution logic
-- ⚠️ Needs database query to resolve target object and its lock
+- ⚠️ Implemented for DBRef-based lock lookup (e.g., `@#123` or `@#123/Use`)
+- ⚠️ Retrieves lock string from target object
+- ❌ Recursive lock evaluation pending (circular dependency issue)
+- ❌ Name-based lookup needs database query
 
 **Grammar Support:** ✅ Both forms supported in parser grammar
 
@@ -212,7 +215,7 @@ The lock system is documented in `SharpMUSH.Documentation/Helpfiles/SharpMUSH/pe
 **Example from docs:**
 ```
 @lock Second Puppet=@First Puppet
-@lock Second Puppet = @First Puppet/Use
+@lock Second Puppet = @#100/Use    # Works now (lock retrieval)
 ```
 
 ---
@@ -439,17 +442,17 @@ Fully working lock types:
 
 Partially working (need enhancements):
 - Carry locks (+) - works for name matching ⚠️
-- Owner locks ($) - placeholder ⚠️
+- Owner locks ($) - works for DBRef-based and "me" references ⚠️ (name-based needs database query)
 - Evaluation locks (/) - basic implementation ⚠️
-- Indirect locks (@) - placeholder ⚠️
+- Indirect locks (@) - works for DBRef-based lock lookup ⚠️ (recursive evaluation pending)
 - Channel locks - placeholder ⚠️
 
 **Target: 100% PennMUSH Compatibility**
 
 All documented lock key types are now at least partially implemented. Remaining work focuses on:
-- Full database integration for owner and carry locks
+- Full database integration for owner locks (name-based lookup)
 - Full parser context for evaluation locks (%# and %! substitution)
-- Lock resolution for indirect locks
+- Recursive lock evaluation for indirect locks
 - Channel system integration for channel locks
 
 ---

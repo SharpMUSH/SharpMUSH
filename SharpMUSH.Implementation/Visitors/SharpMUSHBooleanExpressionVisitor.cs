@@ -6,6 +6,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Visitors;
@@ -87,16 +88,51 @@ public class SharpMUSHBooleanExpressionVisitor(
 	{
 		var targetName = context.@string().GetText();
 		
-		// For owner locks, we need to check if the unlocker is owned by the owner of the named object
-		// Simplified implementation: just return false for now as this needs full database query support
-		// TODO: Full implementation requires looking up target object and checking ownership
-		Func<AnySharpObject, string, bool> func = (unlockerObj, target) =>
+		// For owner locks, check if the unlocker is owned by the owner of the named object
+		// This is a simplified implementation focusing on DBRef-based owner checks
+		Func<AnySharpObject, AnySharpObject, string, bool> func = (gatedObj, unlockerObj, target) =>
 		{
-			// Placeholder - needs database query at evaluation time to look up target object
-			return false;
+			try
+			{
+				// Get the owner of the unlocker
+				var unlockerOwner = unlockerObj.Object().Owner.WithCancellation(CancellationToken.None).GetAwaiter().GetResult();
+				var unlockerOwnerDbRef = unlockerOwner.Object.DBRef;
+				
+				// If target is "me", check if unlocker is owned by gated object's owner
+				if (target.Equals("me", StringComparison.OrdinalIgnoreCase))
+				{
+					var gatedOwner = gatedObj.Object().Owner.WithCancellation(CancellationToken.None).GetAwaiter().GetResult();
+					return unlockerOwnerDbRef == gatedOwner.Object.DBRef;
+				}
+				
+				// If target is a DBRef like "#123", compare owner DBRefs
+				if (target.StartsWith('#') && int.TryParse(target.Substring(1), out int targetDbrefNum))
+				{
+					// Get the target object by DBRef and check if same owner
+					var targetObjResult = med.Send(
+							new GetObjectNodeQuery(new DBRef(targetDbrefNum)),
+							CancellationToken.None)
+						.AsTask()
+						.ConfigureAwait(false).GetAwaiter().GetResult();
+					
+					if (targetObjResult.IsNone())
+						return false;
+						
+					var targetObj = targetObjResult.Known();
+					var targetOwner = targetObj.Object().Owner.WithCancellation(CancellationToken.None).GetAwaiter().GetResult();
+					return unlockerOwnerDbRef == targetOwner.Object.DBRef;
+				}
+				
+				// For name-based lookup, we would need database query which isn't practical here
+				return false;
+			}
+			catch
+			{
+				return false;
+			}
 		};
 
-		return Expression.Invoke(Expression.Constant(func), unlocker, Expression.Constant(targetName));
+		return Expression.Invoke(Expression.Constant(func), gated, unlocker, Expression.Constant(targetName));
 	}
 
 	public override Expression VisitCarryExpr(SharpMUSHBoolExpParser.CarryExprContext context)
@@ -452,12 +488,38 @@ public class SharpMUSHBooleanExpressionVisitor(
 		// @object/lockname means check the specific lock on object
 		Func<AnySharpObject, AnySharpObject, string, string, bool> func = (gatedObj, unlockerObj, target, lockType) =>
 		{
-			// For now, return false as this requires looking up another object's lock
-			// TODO: Full implementation requires:
-			// 1. Resolve target object by name
-			// 2. Get the specified lock from that object
-			// 3. Evaluate that lock with the current unlocker
-			return false;
+			try
+			{
+				// If target is a DBRef like "#123", resolve and evaluate its lock
+				if (target.StartsWith('#') && int.TryParse(target.Substring(1), out int targetDbrefNum))
+				{
+					var targetObjResult = med.Send(
+							new GetObjectNodeQuery(new DBRef(targetDbrefNum)),
+							CancellationToken.None)
+						.AsTask()
+						.ConfigureAwait(false).GetAwaiter().GetResult();
+					
+					if (targetObjResult.IsNone())
+						return false;
+						
+					var targetObj = targetObjResult.Known();
+					// Get the lock from the target object
+					var lockString = targetObj.Object().Locks.GetValueOrDefault(lockType, "#TRUE");
+					
+					// We would need the BooleanExpressionParser to compile and evaluate this lock
+					// This creates a circular dependency issue
+					// For now, return false as placeholder
+					// TODO: Need to refactor to allow recursive lock evaluation
+					return false;
+				}
+				
+				// For name-based lookup, we would need database query which isn't practical here
+				return false;
+			}
+			catch
+			{
+				return false;
+			}
 		};
 
 		return Expression.Invoke(Expression.Constant(func), gated, unlocker, Expression.Constant(targetName), Expression.Constant(lockName));
