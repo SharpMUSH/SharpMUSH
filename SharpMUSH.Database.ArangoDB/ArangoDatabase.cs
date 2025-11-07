@@ -201,7 +201,46 @@ public partial class ArangoDatabase(
 	public async ValueTask<bool> UnlinkExitAsync(SharpExit exit, CancellationToken ct = default)
 	{
 		var result = await arangoDb.Query.ExecuteAsync<SharpEdgeQueryResult>(handle,
-			$"FOR v ,eIN 1..1 INBOUND {exit.Id} GRAPH {DatabaseConstants.GraphHomes} RETURN e", cancellationToken: ct);
+			$"FOR v, e IN 1..1 INBOUND {exit.Id} GRAPH {DatabaseConstants.GraphHomes} RETURN e", cancellationToken: ct);
+
+		if (!result.Any())
+		{
+			return false;
+		}
+
+		await arangoDb.Graph.Edge.RemoveAsync<object>(handle,
+			DatabaseConstants.GraphHomes, DatabaseConstants.HasHome, result.First().Key, cancellationToken: ct);
+
+		return true;
+	}
+
+	public async ValueTask<bool> LinkRoomAsync(SharpRoom room, AnyOptionalSharpContainer location, CancellationToken ct = default)
+	{
+		// If location is None, just unlink any existing location
+		if (location.IsT3) // None
+		{
+			return await UnlinkRoomAsync(room, ct);
+		}
+
+		// First, unlink any existing location
+		await UnlinkRoomAsync(room, ct);
+
+		// Create edge for location (drop-to)
+		var locationId = location.Match(
+			player => player.Id!,
+			room => room.Id!,
+			thing => thing.Id!,
+			_ => throw new InvalidOperationException("Invalid location type"));
+
+		await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphHomes, DatabaseConstants.HasHome,
+			new SharpEdgeCreateRequest(room.Id!, locationId), cancellationToken: ct);
+		return true;
+	}
+
+	public async ValueTask<bool> UnlinkRoomAsync(SharpRoom room, CancellationToken ct = default)
+	{
+		var result = await arangoDb.Query.ExecuteAsync<SharpEdgeQueryResult>(handle,
+			$"FOR v, e IN 1..1 OUTBOUND {room.Id} GRAPH {DatabaseConstants.GraphHomes} RETURN e", cancellationToken: ct);
 
 		if (!result.Any())
 		{
@@ -1065,7 +1104,7 @@ public partial class ArangoDatabase(
 		var homeId = (await arangoDb.Query.ExecuteAsync<string>(handle,
 			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphHomes} RETURN v._id", cache: true,
 			cancellationToken: ct)).First();
-		var homeObject = await GetObjectNodeAsync(homeId, CancellationToken.None);
+		var homeObject = await GetObjectNodeAsync(homeId, ct);
 
 		return homeObject.Match<AnySharpContainer>(
 			player => player,
@@ -1073,6 +1112,28 @@ public partial class ArangoDatabase(
 			_ => throw new Exception("Invalid Location found"),
 			thing => thing,
 			_ => throw new Exception("Invalid Location found"));
+	}
+
+	private async ValueTask<AnyOptionalSharpContainer> GetDropToAsync(string id, CancellationToken ct = default)
+	{
+		var dropToResult = await arangoDb.Query.ExecuteAsync<string>(handle,
+			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphHomes} RETURN v._id", cache: true,
+			cancellationToken: ct);
+
+		if (!dropToResult.Any())
+		{
+			return new None();
+		}
+
+		var dropToId = dropToResult.First();
+		var dropToObject = await GetObjectNodeAsync(dropToId, ct);
+
+		return dropToObject.Match<AnyOptionalSharpContainer>(
+			player => player,
+			room => room,
+			_ => new None(),
+			thing => thing,
+			_ => new None());
 	}
 
 	public IAsyncEnumerable<SharpAttributeEntry> GetAllAttributeEntriesAsync(CancellationToken ct = default)
@@ -1131,7 +1192,12 @@ public partial class ArangoDatabase(
 				Home = new(async ct => await GetHomeAsync(id, ct)),
 				PasswordHash = res.PasswordHash
 			},
-			DatabaseConstants.TypeRoom => new SharpRoom { Id = id, Object = convertObject },
+			DatabaseConstants.TypeRoom => new SharpRoom 
+			{ 
+				Id = id, 
+				Object = convertObject,
+				Location = new(async ct => await GetDropToAsync(id, ct))
+			},
 			DatabaseConstants.TypeExit => new SharpExit
 			{
 				Id = id, Object = convertObject, Aliases = res.Aliases,
@@ -1182,7 +1248,12 @@ public partial class ArangoDatabase(
 				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id), ct)),
 				Home = new(async ct => await GetHomeAsync(id, ct)), PasswordHash = res.PasswordHash
 			},
-			DatabaseConstants.Rooms => new SharpRoom { Id = id, Object = convertObject },
+			DatabaseConstants.Rooms => new SharpRoom 
+			{ 
+				Id = id, 
+				Object = convertObject,
+				Location = new(async ct => await GetDropToAsync(id, ct))
+			},
 			DatabaseConstants.Exits => new SharpExit
 			{
 				Id = id, Object = convertObject, Aliases = res.Aliases.ToObject<string[]>(),

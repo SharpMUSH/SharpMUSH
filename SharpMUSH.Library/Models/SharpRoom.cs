@@ -1,4 +1,6 @@
 ﻿using System.Text.Json.Serialization;
+using DotNext.Threading;
+using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Library.Models;
 
@@ -11,4 +13,8 @@ public class SharpRoom
 
 	[JsonIgnore]
 	public required SharpObject Object { get; set; }
+
+	// Relationship - Location (Drop-To for rooms)
+	[JsonIgnore]
+	public required AsyncLazy<AnyOptionalSharpContainer> Location { get; set; }
 }
