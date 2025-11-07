@@ -966,6 +966,9 @@ public partial class Commands
 
 				if (obj.IsExit)
 				{
+					// Clear special link type attribute if it exists
+					await AttributeService!.SetAttributeAsync(executor, obj, "_LINKTYPE", MModule.empty());
+					
 					await Mediator!.Send(new UnlinkExitCommand(obj.AsExit));
 					await NotifyService.Notify(executor, "Unlinked.");
 					return CallState.Empty;

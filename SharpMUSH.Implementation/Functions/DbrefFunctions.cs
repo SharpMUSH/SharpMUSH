@@ -52,14 +52,18 @@ public partial class Functions
 				
 				if (linkTypeAttr.IsAttribute && linkTypeAttr.AsT0.Length > 0)
 				{
-					var linkType = linkTypeAttr.AsT0[0].Value.ToPlainText()?.ToLowerInvariant();
-					if (linkType == "variable")
+					var linkTypeText = linkTypeAttr.AsT0[0].Value.ToPlainText();
+					if (!string.IsNullOrEmpty(linkTypeText))
 					{
-						return "#-2";
-					}
-					else if (linkType == "home")
-					{
-						return "#-3";
+						var linkType = linkTypeText.ToLowerInvariant();
+						if (linkType == "variable")
+						{
+							return "#-2";
+						}
+						else if (linkType == "home")
+						{
+							return "#-3";
+						}
 					}
 				}
 				
