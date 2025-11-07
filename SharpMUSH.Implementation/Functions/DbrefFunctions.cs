@@ -15,19 +15,77 @@ namespace SharpMUSH.Implementation.Functions;
 
 public partial class Functions
 {
+	// Attribute name constant for link type
+	private const string AttrLinkType = "_LINKTYPE";
+	private const string LinkTypeVariable = "variable";
+	private const string LinkTypeHome = "home";
+
 	[SharpFunction(Name = "loc", MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> Location(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0,
-				LocateFlags.All) switch
+		var locateResult = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0,
+			LocateFlags.All);
+
+		if (locateResult.IsError)
+		{
+			return locateResult.AsError;
+		}
+
+		var found = locateResult.AsSharpObject;
+
+		return await found.Match<ValueTask<CallState>>(
+			// Player - return location
+			async player => (await player.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
+			// Room - return location (drop-to) or #-1
+			async room =>
 			{
-				{ IsError: true, AsError: var error } => error,
-				{ AsSharpObject: { IsContent: true } found } => (await found.AsContent.Location()).Object().DBRef,
-				var container => container.AsSharpObject.AsRoom.Object.DBRef
-			};
+				var location = await room.Location.WithCancellation(CancellationToken.None);
+				return location.Match(
+					player => player.Object.DBRef.ToString(),
+					r => r.Object.DBRef.ToString(),
+					thing => thing.Object.DBRef.ToString(),
+					_ => "#-1");
+			},
+			// Exit - return destination (#-1 for unlinked, #-2 for variable, #-3 for "home")
+			async exit =>
+			{
+				// Check for special link types
+				var linkTypeAttr = await AttributeService!.GetAttributeAsync(executor, exit, AttrLinkType, IAttributeService.AttributeMode.Read, false);
+				
+				if (linkTypeAttr.IsAttribute && linkTypeAttr.AsT0.Length > 0)
+				{
+					var linkTypeText = linkTypeAttr.AsT0[0].Value.ToPlainText();
+					if (!string.IsNullOrEmpty(linkTypeText))
+					{
+						if (string.Equals(linkTypeText, LinkTypeVariable, StringComparison.OrdinalIgnoreCase))
+						{
+							return "#-2";
+						}
+						else if (string.Equals(linkTypeText, LinkTypeHome, StringComparison.OrdinalIgnoreCase))
+						{
+							return "#-3";
+						}
+					}
+				}
+				
+				// Try to get regular destination
+				try
+				{
+					var destination = await exit.Location.WithCancellation(CancellationToken.None);
+					return destination.Object().DBRef;
+				}
+				catch (InvalidOperationException)
+				{
+					// Exit is unlinked - return #-1
+					return "#-1";
+				}
+			},
+			// Thing - return location
+			async thing => (await thing.Location.WithCancellation(CancellationToken.None)).Object().DBRef
+		);
 	}
 
 	[SharpFunction(Name = "children", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -261,18 +319,34 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor, executor, arg0, LocateFlags.All,
-			async found =>
-			{
-				if (found.IsContent)
-				{
-					return (await found.AsContent.Home()).Object().DBRef;
-				}
+		var locateResult = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
+			executor, executor, arg0, LocateFlags.All);
 
-				// Implement DROP-TO behavior.
-				return "#-1 DROPTO TO BE IMPLEMENTED";
-			});
+		if (locateResult.IsError)
+		{
+			return locateResult.AsError;
+		}
+
+		var found = locateResult.AsSharpObject;
+
+		return await found.Match<ValueTask<CallState>>(
+			// Player - return home
+			async player => (await player.Home.WithCancellation(CancellationToken.None)).Object().DBRef,
+			// Room - return location (drop-to) or #-1
+			async room =>
+			{
+				var location = await room.Location.WithCancellation(CancellationToken.None);
+				return location.Match(
+					player => player.Object.DBRef.ToString(),
+					r => r.Object.DBRef.ToString(),
+					thing => thing.Object.DBRef.ToString(),
+					_ => "#-1");
+			},
+			// Exit - return source room
+			async exit => (await exit.Home.WithCancellation(CancellationToken.None)).Object().DBRef,
+			// Thing - return home
+			async thing => (await thing.Home.WithCancellation(CancellationToken.None)).Object().DBRef
+		);
 	}
 
 	[SharpFunction(Name = "llockflags", MinArgs = 0, MaxArgs = 1,
