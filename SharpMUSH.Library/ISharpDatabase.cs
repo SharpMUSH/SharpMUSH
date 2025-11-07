@@ -241,6 +241,26 @@ public interface ISharpDatabase
 	ValueTask<bool> UpdateObjectFlagAsync(string name, string[]? aliases, string symbol, string[] setPermissions, string[] unsetPermissions, string[] typeRestrictions, CancellationToken cancellationToken = default);
 
 	/// <summary>
+	/// Set the disabled state of an object flag.
+	/// System flags cannot be disabled.
+	/// </summary>
+	/// <param name="name">Flag name</param>
+	/// <param name="disabled">True to disable, false to enable</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
+	/// <returns>Success or Failure</returns>
+	ValueTask<bool> SetObjectFlagDisabledAsync(string name, bool disabled, CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Set the disabled state of a power.
+	/// System powers cannot be disabled.
+	/// </summary>
+	/// <param name="name">Power name</param>
+	/// <param name="disabled">True to disable, false to enable</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
+	/// <returns>Success or Failure</returns>
+	ValueTask<bool> SetPowerDisabledAsync(string name, bool disabled, CancellationToken cancellationToken = default);
+
+	/// <summary>
 	/// Sets a name on an object.
 	/// </summary>
 	/// <param name="obj">The object to alter</param>
