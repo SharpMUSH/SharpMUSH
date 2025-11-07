@@ -1,4 +1,5 @@
 ﻿using System.Linq.Expressions;
+using System.Text.RegularExpressions;
 using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -27,6 +28,10 @@ public class SharpMUSHBooleanExpressionVisitor(
 
 	private readonly Expression<Func<AnySharpObject, string, bool>> _isType = (dbRef, type)
 		=> dbRef.Object().Type == type;
+
+	private readonly Expression<Func<AnySharpObject, string, bool>> _matchesName = (dbRef, pattern) =>
+		Regex.IsMatch(dbRef.Object().Name, MModule.getWildcardMatchAsRegex2(pattern), RegexOptions.IgnoreCase)
+		|| dbRef.Aliases.Any(alias => Regex.IsMatch(alias.Trim(), MModule.getWildcardMatchAsRegex2(pattern), RegexOptions.IgnoreCase));
 
 	private static readonly string[] defaultStringArrayValue = [];
 
@@ -80,16 +85,56 @@ public class SharpMUSHBooleanExpressionVisitor(
 
 	public override Expression VisitOwnerExpr(SharpMUSHBoolExpParser.OwnerExprContext context)
 	{
-		var value = context.@string().GetText();
+		var targetName = context.@string().GetText();
+		
+		// For owner locks, we need to check if the unlocker is owned by the owner of the named object
+		// Simplified implementation: just return false for now as this needs full database query support
+		// TODO: Full implementation requires looking up target object and checking ownership
+		Func<AnySharpObject, string, bool> func = (unlockerObj, target) =>
+		{
+			// Placeholder - needs database query at evaluation time to look up target object
+			return false;
+		};
 
-		var result = VisitChildren(context);
-		return result;
+		return Expression.Invoke(Expression.Constant(func), unlocker, Expression.Constant(targetName));
 	}
 
 	public override Expression VisitCarryExpr(SharpMUSHBoolExpParser.CarryExprContext context)
 	{
-		var value = context.@string().GetText();
-		return VisitChildren(context);
+		var targetName = context.@string().GetText();
+		
+		// For carry locks, check if the unlocker is carrying the named object or IS the object
+		Func<AnySharpObject, string, bool> func = (unlockerObj, target) =>
+		{
+			// Check if unlocker IS the target object (name match)
+			if (unlockerObj.Object().Name.Equals(target, StringComparison.OrdinalIgnoreCase))
+				return true;
+			
+			// Check aliases too
+			if (unlockerObj.Aliases.Any(a => a.Equals(target, StringComparison.OrdinalIgnoreCase)))
+				return true;
+			
+			// For checking inventory, we need database access
+			try
+			{
+				// Attempt to check contents if this is a container
+				if (unlockerObj.IsContainer)
+				{
+					var contents = unlockerObj.AsContainer.Content(med);
+					return contents
+						.AnyAsync(item => item.Object().Name.Equals(target, StringComparison.OrdinalIgnoreCase), CancellationToken.None)
+						.AsTask().GetAwaiter().GetResult();
+				}
+			}
+			catch
+			{
+				// If not a container or any error, just use name/alias match
+			}
+			
+			return false;
+		};
+
+		return Expression.Invoke(Expression.Constant(func), unlocker, Expression.Constant(targetName));
 	}
 
 	public override Expression VisitBitFlagExpr(SharpMUSHBoolExpParser.BitFlagExprContext context)
@@ -103,7 +148,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 
 	public override Expression VisitChannelExpr(SharpMUSHBoolExpParser.ChannelExprContext context)
 	{
-		// TODO: Implement Channel Expression
+		// TODO: Implement Channel Expression - requires channel system integration
 		var value = context.@string().GetText();
 		return VisitChildren(context);
 	}
@@ -129,11 +174,50 @@ public class SharpMUSHBooleanExpressionVisitor(
 		return VisitChildren(context);
 	}
 
+	public override Expression VisitNameExpr(SharpMUSHBoolExpParser.NameExprContext context)
+	{
+		var pattern = context.@string().GetText();
+		
+		// Use the _matchesName lambda to check if the unlocker's name matches the pattern
+		// This supports wildcards and checks both name and aliases
+		return Expression.Invoke(_matchesName, unlocker, Expression.Constant(pattern));
+	}
+
 	public override Expression VisitExactObjectExpr(SharpMUSHBoolExpParser.ExactObjectExprContext context)
 	{
-		// TODO: Implement Exact Object Expression
-		var value = context.@string().GetText();
-		return VisitChildren(context);
+		var targetIdentifier = context.@string().GetText();
+		
+		// Check if unlocker matches the exact target object
+		Func<AnySharpObject, AnySharpObject, string, bool> func = (gatedObj, unlockerObj, target) =>
+		{
+			// If target is "me", it refers to the gated object's owner
+			if (target.Equals("me", StringComparison.OrdinalIgnoreCase))
+			{
+				var ownerTask = gatedObj.Object().Owner.WithCancellation(CancellationToken.None);
+				var owner = ownerTask.GetAwaiter().GetResult();
+				return unlockerObj.Object().DBRef == owner.Object.DBRef;
+			}
+			
+			// Try to parse as DBRef
+			if (target.StartsWith('#') && int.TryParse(target.Substring(1), out int dbrefNum))
+			{
+				// Compare DBRef numbers (ignoring creation time for now)
+				return unlockerObj.Object().DBRef.Number == dbrefNum;
+			}
+			
+			// Otherwise try exact name match
+			// Check if the unlocker itself matches
+			if (unlockerObj.Object().Name.Equals(target, StringComparison.OrdinalIgnoreCase))
+				return true;
+			
+			// Check aliases
+			if (unlockerObj.Aliases.Any(a => a.Equals(target, StringComparison.OrdinalIgnoreCase)))
+				return true;
+			
+			return false;
+		};
+
+		return Expression.Invoke(Expression.Constant(func), gated, unlocker, Expression.Constant(targetIdentifier));
 	}
 
 	public override Expression VisitAttributeExpr(SharpMUSHBoolExpParser.AttributeExprContext context)
@@ -141,28 +225,53 @@ public class SharpMUSHBooleanExpressionVisitor(
 		var value = context.@string().GetText();
 		var attribute = context.attributeName().GetText();
 
-		Expression<Func<AnySharpObject, bool>> expr = gateObj =>
-			med.Send(
-					new GetAttributeServiceQuery(gateObj, gateObj, attribute, IAttributeService.AttributeMode.Execute, true),
+		Func<AnySharpObject, string, string, bool> func = (unlockerObj, attrName, expectedValue) =>
+		{
+			var attrResult = med.Send(
+					new GetAttributeServiceQuery(unlockerObj, unlockerObj, attrName, IAttributeService.AttributeMode.Execute, true),
 					CancellationToken.None)
 				.AsTask()
-				.ConfigureAwait(false).GetAwaiter().GetResult()
-				.Match(
-					result => true, 
-					/*
-							<value> can contain wildcards (*), greater than (>) or less than (<) symbols.
+				.ConfigureAwait(false).GetAwaiter().GetResult();
 
-							For example:
-							  @lock Men's Room = sex:m*
-							    This would lock the exit "Men's Room" to anyone with a SEX attribute starting with the letter "m".
-							  @lock A-F = icname:<g
-							    This would lock the exit "A-F" to anyone with a ICNAME attribute starting with a letter "less than" the letter "g". This assumes that ICNAME is visual or the object with the lock can see it.
-					 */
-					none => false,
-					error => false
-				);
+			return attrResult.Match(
+				attributes =>
+				{
+					if (!attributes.Any())
+						return false;
+						
+					var actualValue = MModule.plainText(attributes.First().Value);
+					
+					// Handle comparison operators
+					if (expectedValue.StartsWith('>'))
+					{
+						// Greater than comparison
+						var compareValue = expectedValue.Substring(1);
+						return string.Compare(actualValue, compareValue, StringComparison.OrdinalIgnoreCase) > 0;
+					}
+					else if (expectedValue.StartsWith('<'))
+					{
+						// Less than comparison
+						var compareValue = expectedValue.Substring(1);
+						return string.Compare(actualValue, compareValue, StringComparison.OrdinalIgnoreCase) < 0;
+					}
+					else if (expectedValue.Contains('*') || expectedValue.Contains('?'))
+					{
+						// Wildcard match
+						var pattern = MModule.getWildcardMatchAsRegex2(expectedValue);
+						return Regex.IsMatch(actualValue, pattern, RegexOptions.IgnoreCase);
+					}
+					else
+					{
+						// Exact match (case-insensitive)
+						return actualValue.Equals(expectedValue, StringComparison.OrdinalIgnoreCase);
+					}
+				},
+				none => false,
+				error => false
+			);
+		};
 
-		return Expression.Invoke(expr, gated);
+		return Expression.Invoke(Expression.Constant(func), unlocker, Expression.Constant(attribute), Expression.Constant(value));
 	}
 
 	public override Expression VisitEvaluationExpr(SharpMUSHBoolExpParser.EvaluationExprContext context)

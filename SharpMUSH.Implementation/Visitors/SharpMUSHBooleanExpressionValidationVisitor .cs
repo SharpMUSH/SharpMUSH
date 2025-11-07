@@ -88,10 +88,18 @@ public class SharpMUSHBooleanExpressionValidationVisitor(AnySharpObject invoker)
 		return VisitChildren(context);
 	}
 
+	public override bool? VisitNameExpr(SharpMUSHBoolExpParser.NameExprContext context)
+	{
+		// Name locks are always valid - they just check pattern matching
+		var pattern = context.@string().GetText();
+		return true;
+	}
+
 	public override bool? VisitExactObjectExpr(SharpMUSHBoolExpParser.ExactObjectExprContext context)
 	{
+		// Exact object locks are always valid - they check at runtime
 		var value = context.@string().GetText();
-		return VisitChildren(context);
+		return true;
 	}
 
 	public override bool? VisitAttributeExpr(SharpMUSHBoolExpParser.AttributeExprContext context)
