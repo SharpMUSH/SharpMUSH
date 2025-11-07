@@ -372,7 +372,8 @@ public partial class Commands
 								return Errors.ErrorInvalidDestination;
 							}
 
-							// NOTE: Drop-to setting requires DROP-TO property implementation in SharpRoom model
+							// Link the room to its drop-to
+							await Mediator!.Send(new LinkRoomCommand(exitObj.AsRoom, destObj.AsRoom));
 							await NotifyService.Notify(executor, "Drop-to set.");
 							return CallState.Empty;
 						}
@@ -956,7 +957,7 @@ public partial class Commands
 				else if (obj.IsRoom)
 				{
 					// Remove drop-to
-					// NOTE: Drop-to removal requires DROP-TO property implementation in SharpRoom model
+					await Mediator!.Send(new UnlinkRoomCommand(obj.AsRoom));
 					await NotifyService.Notify(executor, "Drop-to removed.");
 					return CallState.Empty;
 				}

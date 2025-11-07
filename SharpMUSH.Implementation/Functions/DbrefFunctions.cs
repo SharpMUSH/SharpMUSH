@@ -21,13 +21,47 @@ public partial class Functions
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0,
-				LocateFlags.All) switch
+		var locateResult = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0,
+			LocateFlags.All);
+
+		if (locateResult.IsError)
+		{
+			return locateResult.AsError;
+		}
+
+		var found = locateResult.AsSharpObject;
+
+		return await found.Match<ValueTask<CallState>>(
+			// Player - return location
+			async player => (await player.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
+			// Room - return drop-to or #-1
+			async room =>
 			{
-				{ IsError: true, AsError: var error } => error,
-				{ AsSharpObject: { IsContent: true } found } => (await found.AsContent.Location()).Object().DBRef,
-				var container => container.AsSharpObject.AsRoom.Object.DBRef
-			};
+				var dropTo = await room.DropTo.WithCancellation(CancellationToken.None);
+				return dropTo.Match(
+					player => player.Object.DBRef.ToString(),
+					r => r.Object.DBRef.ToString(),
+					thing => thing.Object.DBRef.ToString(),
+					_ => "#-1");
+			},
+			// Exit - return destination (#-1 for unlinked, #-2 for variable, #-3 for "home")
+			async exit =>
+			{
+				// TODO: Handle variable exits (#-2) and exits linked to "home" (#-3)
+				// For now, return destination or #-1 for unlinked
+				try
+				{
+					var destination = await exit.Location.WithCancellation(CancellationToken.None);
+					return destination.Object().DBRef;
+				}
+				catch
+				{
+					return "#-1";
+				}
+			},
+			// Thing - return location
+			async thing => (await thing.Location.WithCancellation(CancellationToken.None)).Object().DBRef
+		);
 	}
 
 	[SharpFunction(Name = "children", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -261,18 +295,34 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor, executor, arg0, LocateFlags.All,
-			async found =>
-			{
-				if (found.IsContent)
-				{
-					return (await found.AsContent.Home()).Object().DBRef;
-				}
+		var locateResult = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
+			executor, executor, arg0, LocateFlags.All);
 
-				// Implement DROP-TO behavior.
-				return "#-1 DROPTO TO BE IMPLEMENTED";
-			});
+		if (locateResult.IsError)
+		{
+			return locateResult.AsError;
+		}
+
+		var found = locateResult.AsSharpObject;
+
+		return await found.Match<ValueTask<CallState>>(
+			// Player - return home
+			async player => (await player.Home.WithCancellation(CancellationToken.None)).Object().DBRef,
+			// Room - return drop-to
+			async room =>
+			{
+				var dropTo = await room.DropTo.WithCancellation(CancellationToken.None);
+				return dropTo.Match(
+					player => player.Object.DBRef.ToString(),
+					r => r.Object.DBRef.ToString(),
+					thing => thing.Object.DBRef.ToString(),
+					_ => "#-1");
+			},
+			// Exit - return source room
+			async exit => (await exit.Home.WithCancellation(CancellationToken.None)).Object().DBRef,
+			// Thing - return home
+			async thing => (await thing.Home.WithCancellation(CancellationToken.None)).Object().DBRef
+		);
 	}
 
 	[SharpFunction(Name = "llockflags", MinArgs = 0, MaxArgs = 1,
