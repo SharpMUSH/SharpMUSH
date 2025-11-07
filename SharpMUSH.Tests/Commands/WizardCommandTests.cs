@@ -218,4 +218,135 @@ public class WizardCommandTests
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
 	}
+
+	[Test]
+	public async ValueTask Hide_NoSwitch_TogglesHidden()
+	{
+		// Test that @hide without switches toggles the DARK flag
+		NotifyService.ClearReceivedCalls();
+		
+		// First call should hide (set DARK)
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide"));
+		
+		await NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("hidden")));
+		
+		NotifyService.ClearReceivedCalls();
+		
+		// Second call should unhide (unset DARK)
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide"));
+		
+		await NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("no longer hidden") || s.Contains("visible")));
+	}
+
+	[Test]
+	public async ValueTask Hide_YesSwitch_SetsHidden()
+	{
+		// Test that @hide/yes sets the DARK flag
+		NotifyService.ClearReceivedCalls();
+		
+		// Ensure we start unhidden (call @hide/off first)
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/off"));
+		NotifyService.ClearReceivedCalls();
+		
+		// Now test @hide/yes
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/yes"));
+		
+		await NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("hidden")));
+	}
+
+	[Test]
+	public async ValueTask Hide_OnSwitch_SetsHidden()
+	{
+		// Test that @hide/on sets the DARK flag
+		NotifyService.ClearReceivedCalls();
+		
+		// Ensure we start unhidden
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/off"));
+		NotifyService.ClearReceivedCalls();
+		
+		// Now test @hide/on
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/on"));
+		
+		await NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("hidden")));
+	}
+
+	[Test]
+	public async ValueTask Hide_NoSwitch_UnsetsHidden()
+	{
+		// Test that @hide/no unsets the DARK flag
+		NotifyService.ClearReceivedCalls();
+		
+		// Ensure we start hidden
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/on"));
+		NotifyService.ClearReceivedCalls();
+		
+		// Now test @hide/no
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/no"));
+		
+		await NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("no longer hidden") || s.Contains("visible")));
+	}
+
+	[Test]
+	public async ValueTask Hide_OffSwitch_UnsetsHidden()
+	{
+		// Test that @hide/off unsets the DARK flag
+		NotifyService.ClearReceivedCalls();
+		
+		// Ensure we start hidden
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/on"));
+		NotifyService.ClearReceivedCalls();
+		
+		// Now test @hide/off
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/off"));
+		
+		await NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("no longer hidden") || s.Contains("visible")));
+	}
+
+	[Test]
+	public async ValueTask Hide_AlreadyHidden_ShowsAppropriateMessage()
+	{
+		// Test that @hide/on when already hidden shows appropriate message
+		NotifyService.ClearReceivedCalls();
+		
+		// Set hidden
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/on"));
+		NotifyService.ClearReceivedCalls();
+		
+		// Try to set hidden again
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/on"));
+		
+		await NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("already hidden")));
+	}
+
+	[Test]
+	public async ValueTask Hide_AlreadyVisible_ShowsAppropriateMessage()
+	{
+		// Test that @hide/off when already visible shows appropriate message
+		NotifyService.ClearReceivedCalls();
+		
+		// Ensure unhidden
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/off"));
+		NotifyService.ClearReceivedCalls();
+		
+		// Try to set visible again
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/off"));
+		
+		await NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("already visible")));
+	}
 }
