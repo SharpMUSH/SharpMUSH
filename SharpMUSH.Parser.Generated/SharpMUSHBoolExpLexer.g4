@@ -32,6 +32,16 @@ fragment I: [iI];
 fragment J: [jJ];
 fragment WS: ' ';
 
+// Keyword lock tokens - MUST come first to have priority over STRING
+NAME: N A M E;
+BIT_FLAG: F L A G;
+BIT_POWER: P O W E R;
+BIT_TYPE: T Y P E;
+DBREFLIST: D B R E F L I S T;
+CHANNEL: C H A N N E L;
+IP: I P;
+HOSTNAME: H O S T N A M E;
+// Special symbols and operators
 OPEN: WS* '(' WS*;
 CLOSE: WS* ')' WS*;
 NOT: '!';
@@ -41,19 +51,13 @@ CARRY: '+';
 OWNER: '$';
 INDIRECT: '@';
 EVALUATION: '/';
-EXACTOBJECT: ('=' | O B J I D CARET);
+EXACTOBJECT: '=';
 FALSE: POUND F A L S E;
 TRUE: POUND T R U E;
-NAME: N A M E CARET;
-BIT_FLAG: F L A G CARET;
-BIT_POWER: P O W E R CARET;
-BIT_TYPE: T Y P E CARET;
-DBREFLIST: D B R E F L I S T CARET;
-CHANNEL: C H A N N E L CARET;
-IP: I P CARET;
-HOSTNAME: H O S T N A M E CARET;
+CARET_TOKEN: '^';
 ATTRIBUTE_COLON: ':';
-STRING: ~( '#' | '&' | '|' | ':' | '!' | ')' | '(' | '/' | '^')+;
+// STRING - must come BEFORE ATTRIBUTENAME so it matches in `string` parser rules
+STRING: ~( '#' | '&' | '|' | ':' | '!' | ')' | '(' | '^' | ' ' | '/')+;
 ATTRIBUTENAME:
-    ~('#' | '&' | '|' | ':' | '!' | ')' | '(' | '/' | '^' | ' ')+
+    ~('#' | '&' | '|' | ':' | '!' | ')' | '(' | '/' | ' ' | '^')+
 ;
