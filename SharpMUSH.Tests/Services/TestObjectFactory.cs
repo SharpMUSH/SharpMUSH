@@ -40,7 +40,8 @@ public class TestObjectFactory
 				Flags = new(() => AsyncEnumerable.Empty<SharpObjectFlag>()),
 				Parent = new(async ct => { await ValueTask.CompletedTask; return new None(); }),
 				Children = new(() => AsyncEnumerable.Empty<SharpObject>())
-			}
+			},
+			Location = new(async ct => { await ValueTask.CompletedTask; return new None(); })
 		};
 		
 		_rooms[key] = room;

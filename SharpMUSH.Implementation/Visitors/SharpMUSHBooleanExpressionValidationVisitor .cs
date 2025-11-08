@@ -62,57 +62,72 @@ public class SharpMUSHBooleanExpressionValidationVisitor(AnySharpObject invoker)
 	}
 
 	public override bool? VisitBitTypeExpr(SharpMUSHBoolExpParser.BitTypeExprContext context)
-		=> context.@string().GetText().ToUpper().Trim() is "PLAYER" or "THING" or "EXIT" or "ROOM";
+		=> context.objectType().GetText().ToUpper().Trim() is "PLAYER" or "THING" or "EXIT" or "ROOM";
 
 	public override bool? VisitChannelExpr(SharpMUSHBoolExpParser.ChannelExprContext context)
 	{
+		// Channel locks are always valid syntactically
 		var value = context.@string().GetText();
-		return VisitChildren(context);
+		return true;
 	}
 
 	public override bool? VisitDbRefListExpr(SharpMUSHBoolExpParser.DbRefListExprContext context)
 	{
+		// DBRef list locks are always valid syntactically
 		var value = context.attributeName().GetText();
-		return VisitChildren(context);
+		return true;
 	}
 
 	public override bool? VisitIpExpr(SharpMUSHBoolExpParser.IpExprContext context)
 	{
+		// IP locks are always valid syntactically
 		var value = context.@string().GetText();
-		return VisitChildren(context);
+		return true;
 	}
 
 	public override bool? VisitHostNameExpr(SharpMUSHBoolExpParser.HostNameExprContext context)
 	{
+		// Hostname locks are always valid syntactically
 		var value = context.@string().GetText();
-		return VisitChildren(context);
+		return true;
+	}
+
+	public override bool? VisitNameExpr(SharpMUSHBoolExpParser.NameExprContext context)
+	{
+		// Name locks are always valid - they just check pattern matching
+		var pattern = context.@string().GetText();
+		return true;
 	}
 
 	public override bool? VisitExactObjectExpr(SharpMUSHBoolExpParser.ExactObjectExprContext context)
 	{
+		// Exact object locks are always valid - they check at runtime
 		var value = context.@string().GetText();
-		return VisitChildren(context);
+		return true;
 	}
 
 	public override bool? VisitAttributeExpr(SharpMUSHBoolExpParser.AttributeExprContext context)
 	{
+		// Attribute locks are always valid syntactically
 		var value = context.@string().GetText();
 		var attribute = context.attributeName().GetText();
-		return VisitChildren(context);
+		return true;
 	}
 
 	public override bool? VisitEvaluationExpr(SharpMUSHBoolExpParser.EvaluationExprContext context)
 	{
+		// Evaluation locks are always valid syntactically
 		var value = context.@string().GetText();
 		var attribute = context.attributeName().GetText();
-		return VisitChildren(context);
+		return true;
 	}
 
 	public override bool? VisitIndirectExpr(SharpMUSHBoolExpParser.IndirectExprContext context)
 	{
+		// Indirect locks are always valid syntactically
 		var value = context.@string().GetText();
-		var attribute = context.attributeName().GetText();
-		return VisitChildren(context);
+		var attribute = context.attributeName()?.GetText();
+		return true;
 	}
 
 	public override bool? VisitString(SharpMUSHBoolExpParser.StringContext context) =>

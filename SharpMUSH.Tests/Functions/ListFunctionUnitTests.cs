@@ -370,8 +370,9 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Placeholder - needs database integration")]
-	[Arguments("namegrab(obj,pattern)", "")]
+	[Arguments("namegrab(#0 #1 #2,room)", "#0")]
+	[Arguments("namegrab(#0 #1 #2,Master Room)", "#2")]
+	[Arguments("namegrab(#0 #1 #2,God)", "#1")]
 	public async Task Namegrab(string function, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
@@ -379,8 +380,9 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Placeholder - needs database integration")]
-	[Arguments("namegraball(obj,pattern)", "")]
+	[Arguments("namegraball(#0 #1 #2,room)", "#0 #2")]
+	[Arguments("namegraball(#0 #1 #2,Master Room)", "#2")]
+	[Arguments("namegraball(#0 #1 #2,God)", "#1")]
 	public async Task NameGrabAll(string function, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;

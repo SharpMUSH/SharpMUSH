@@ -35,6 +35,16 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var name = args["0"].Message!;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		
+		var defaultHome = Configuration!.CurrentValue.Database.DefaultHome;
+		var defaultHomeDbref = new DBRef((int)defaultHome);
+		var location = await Mediator.Send(new GetObjectNodeQuery(defaultHomeDbref));
+		
+		if (location.IsNone || location.IsExit)
+		{
+			await NotifyService!.Notify(executor, "Default home location is invalid.");
+			return new CallState(Errors.ErrorInvalidRoom);
+		}
 
 		if (!await ValidateService!.Valid(IValidateService.ValidationType.Name, name, new None()))
 		{
@@ -44,8 +54,8 @@ public partial class Commands
 		
 		var thing = await Mediator!.Send(new CreateThingCommand(name.ToPlainText(),
 			await executor.Where(),
-			await executor.Object()
-				.Owner.WithCancellation(CancellationToken.None)));
+			await executor.Object().Owner.WithCancellation(CancellationToken.None),
+			location.Known.AsContainer));
 		
 		await NotifyService!.Notify(executor, $"Created {name} ({thing}).");
 
@@ -306,22 +316,61 @@ public partial class Commands
 				if (exitObj.IsExit)
 				{
 					// Link exit to destination
-					return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+					// Handle special cases: "home" and "variable"
+					if (destName.Equals(LinkTypeHome, StringComparison.InvariantCultureIgnoreCase))
+					{
+						// Set special attribute to mark exit as home-linked
+						await AttributeService!.SetAttributeAsync(executor, exitObj, AttrLinkType, MModule.single(LinkTypeHome));
+						await NotifyService!.Notify(executor, "Linked to home.");
+						return CallState.Empty;
+					}
+					else if (destName.Equals(LinkTypeVariable, StringComparison.InvariantCultureIgnoreCase))
+					{
+						// Set special attribute to mark exit as variable
+						await AttributeService!.SetAttributeAsync(executor, exitObj, AttrLinkType, MModule.single(LinkTypeVariable));
+						await NotifyService!.Notify(executor, "Linked to variable.");
+						return CallState.Empty;
+					}
+					
+					// Link to regular room destination
+					return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 						executor, executor, destName, LocateFlags.All,
 						async destObj =>
 						{
-							if (!destObj.IsRoom && !destName.Equals("home", StringComparison.InvariantCultureIgnoreCase) 
-							    && !destName.Equals("variable", StringComparison.InvariantCultureIgnoreCase))
+							if (!destObj.IsRoom)
 							{
 								await NotifyService.Notify(executor, "Invalid destination for exit.");
 								return Errors.ErrorInvalidDestination;
 							}
 
-							// Link the exit
-							if (destObj.IsRoom)
+							var destinationRoom = destObj.AsRoom;
+							
+							// Check permission to link to destination
+							// Per PennMUSH: Must own/control the room OR room must be LINK_OK
+							bool canLink = await PermissionService!.Controls(executor, destObj);
+							
+							if (!canLink)
 							{
-								await Mediator!.Send(new LinkExitCommand(exitObj.AsExit, destObj.AsRoom));
+								// Check if destination has LINK_OK flag
+								var destFlags = await destinationRoom.Object.Flags.Value.ToArrayAsync();
+								var hasLinkOk = destFlags.Any(f => f.Name.Equals("LINK_OK", StringComparison.OrdinalIgnoreCase));
+								
+								if (!hasLinkOk)
+								{
+									await NotifyService!.Notify(executor, "You can't link to that.");
+									return Errors.ErrorPerm;
+								}
 							}
+							
+							// TODO: Check if exit is unlinked and check @lock/link
+							// TODO: If linking someone else's exit, @chown it and set HALT
+							// TODO: Charge link cost (usually 1 penny)
+
+							// Clear any special link type attribute
+							await AttributeService!.SetAttributeAsync(executor, exitObj, AttrLinkType, MModule.empty());
+							
+							// Link the exit
+							await Mediator!.Send(new LinkExitCommand(exitObj.AsExit, destinationRoom));
 
 							await NotifyService.Notify(executor, "Linked.");
 							return CallState.Empty;
@@ -362,7 +411,8 @@ public partial class Commands
 								return Errors.ErrorInvalidDestination;
 							}
 
-							// NOTE: Drop-to setting requires DROP-TO property implementation in SharpRoom model
+							// Link the room to its drop-to
+							await Mediator!.Send(new LinkRoomCommand(exitObj.AsRoom, destObj.AsRoom));
 							await NotifyService.Notify(executor, "Drop-to set.");
 							return CallState.Empty;
 						}
@@ -752,6 +802,16 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var targetName = args["0"].Message!.ToPlainText();
 		var preserve = parser.CurrentState.Switches.Contains("PRESERVE");
+		
+		var defaultHome = Configuration!.CurrentValue.Database.DefaultHome;
+		var defaultHomeDbref = new DBRef((int)defaultHome);
+		var location = await Mediator.Send(new GetObjectNodeQuery(defaultHomeDbref));
+		
+		if (location.IsNone || location.IsExit)
+		{
+			await NotifyService!.Notify(executor, "Default home location is invalid.");
+			return new CallState(Errors.ErrorInvalidRoom);
+		}
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, targetName, LocateFlags.All,
@@ -785,7 +845,8 @@ public partial class Commands
 					cloneDbRef = await Mediator!.Send(new CreateThingCommand(
 						newName,
 						await executor.Where(),
-						owner
+						owner,
+						location.Known.AsContainer
 					));
 				}
 				else if (obj.IsRoom)
@@ -928,6 +989,9 @@ public partial class Commands
 
 				if (obj.IsExit)
 				{
+					// Clear special link type attribute if it exists
+					await AttributeService!.SetAttributeAsync(executor, obj, AttrLinkType, MModule.empty());
+					
 					await Mediator!.Send(new UnlinkExitCommand(obj.AsExit));
 					await NotifyService.Notify(executor, "Unlinked.");
 					return CallState.Empty;
@@ -935,7 +999,7 @@ public partial class Commands
 				else if (obj.IsRoom)
 				{
 					// Remove drop-to
-					// NOTE: Drop-to removal requires DROP-TO property implementation in SharpRoom model
+					await Mediator!.Send(new UnlinkRoomCommand(obj.AsRoom));
 					await NotifyService.Notify(executor, "Drop-to removed.");
 					return CallState.Empty;
 				}

@@ -8,6 +8,7 @@ using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using Microsoft.Extensions.Logging;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -64,8 +65,14 @@ public partial class Functions
 			return new CallState("#-1 You are not a member of that channel.");
 		}
 
-		// TODO: This should add a message to the channel buffer in the database
-		// For now, return empty as a placeholder
+		using (Logger!.BeginScope("<{DbRef} {Category}: {Channel}.", 
+			       executor.Object().ToString(), 
+			       "Channel",
+			       channel.Name.ToPlainText()))
+		{
+			Logger!.LogInformation("{ChatMessage}", message);
+		}
+		
 		return CallState.Empty;
 	}
 
@@ -111,6 +118,15 @@ public partial class Functions
 			MModule.single("says"),
 			[]
 		));
+		
+		
+		using (Logger!.BeginScope("<{DbRef} {Category}: {Channel}.", 
+			       executor.Object().DBRef.ToString(), 
+			       "Channel", 
+			       channel.Name.ToPlainText()))
+		{
+			Logger!.LogInformation("{ChatMessage}", message);
+		}
 
 		return CallState.Empty;
 	}
