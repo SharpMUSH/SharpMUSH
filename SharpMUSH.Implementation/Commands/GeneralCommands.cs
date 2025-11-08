@@ -1959,8 +1959,8 @@ public partial class Commands
 			return new CallState("#-1 MISSING ARGUMENTS");
 		}
 
-		var search = MModule.plainText(searchArg.Message);
-		var replace = replaceArg?.Message != null ? MModule.plainText(replaceArg.Message) : string.Empty;
+		var search = searchArg.Message.ToPlainText();
+		var replace = replaceArg?.Message != null ? replaceArg.Message.ToPlainText() : string.Empty;
 
 		// Get matching attributes
 		var attributes = await AttributeService!.GetAttributePatternAsync(

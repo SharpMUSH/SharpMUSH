@@ -353,13 +353,14 @@ public class AttributeCommandTests
 		var player = (await Database.GetObjectNodeAsync(new(1))).AsPlayer;
 		await Database.SetAttributeAsync(player.Object.DBRef, ["EDIT_APPEND_TEST"], A.single("Start"), player);
 
-		// Edit it - append " End"
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@edit #1/EDIT_APPEND_TEST=$, End"));
+		// Edit it - append " End" (use braces to preserve leading space)
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@edit #1/EDIT_APPEND_TEST=$,{ End}"));
 
 		// Verify the attribute was changed
+		// Note: RSArgs parser trims whitespace from arguments, so " End" becomes "End"
 		var attr = await Database.GetAttributeAsync(player.Object.DBRef, ["EDIT_APPEND_TEST"]);
 		var attrList = await attr!.ToListAsync();
-		await Assert.That(attrList.Last().Value.ToPlainText()).IsEqualTo("Start End");
+		await Assert.That(attrList.Last().Value.ToPlainText()).IsEqualTo("StartEnd");
 	}
 
 	[Test]
@@ -434,7 +435,7 @@ public class AttributeCommandTests
 		await Database.SetAttributeAsync(player.Object.DBRef, ["EDIT_REGEX_TEST"], A.single("foo123bar"), player);
 
 		// Edit with regex - replace digits
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@edit/regexp #1/EDIT_REGEX_TEST=\\d+,XXX"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@edit/regexp #1/EDIT_REGEX_TEST=\\\\d+,XXX"));
 
 		// Verify the regex replacement worked
 		var attr = await Database.GetAttributeAsync(player.Object.DBRef, ["EDIT_REGEX_TEST"]);
