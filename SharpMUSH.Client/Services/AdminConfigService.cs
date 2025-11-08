@@ -89,6 +89,7 @@ public class AdminConfigService(ILogger<AdminConfigService> logger, IHttpClientF
 		public bool IsNumber => Type is "Int32" or "UInt32" or "Double" or "Single" or "Decimal";
 		public bool IsArray => Type.EndsWith("[]");
 		public bool IsNullable => Type.StartsWith("Nullable");
+		public bool IsDictionary => Type.Contains("Dictionary");
 	}
 }
 

@@ -1,11 +1,16 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Server;
 
-public class StartupHandler(ILogger<StartupHandler> logger, IExpandedObjectDataService data)
+public class StartupHandler(
+	ILogger<StartupHandler> logger, 
+	IExpandedObjectDataService data,
+	IOptionsWrapper<SharpMUSHOptions> options)
 	: IHostedService
 {
 	public async Task StartAsync(CancellationToken cancellationToken)
@@ -19,6 +24,10 @@ public class StartupHandler(ILogger<StartupHandler> logger, IExpandedObjectDataS
 			NextWarningTime: DateTimeOffset.UtcNow + TimeSpan.FromDays(1),
 			NextPurgeTime: DateTimeOffset.UtcNow + TimeSpan.FromDays(1)
 		));
+
+		logger.LogInformation("Initializing configurable aliases and restrictions from database.");
+		var currentOptions = options.CurrentValue;
+		Configurable.Initialize(currentOptions.Alias, currentOptions.Restriction);
 	}
 
 	public Task StopAsync(CancellationToken cancellationToken)
