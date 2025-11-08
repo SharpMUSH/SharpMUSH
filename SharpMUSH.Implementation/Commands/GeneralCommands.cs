@@ -4608,23 +4608,39 @@ public partial class Commands
 			var flagList = args["1"].Message?.ToPlainText() ?? "none";
 			var retroactive = switches.Contains("RETROACTIVE");
 			
-			await NotifyService!.Notify(executor, $"@attribute/access: Setting up attribute '{attrName}'");
-			await NotifyService.Notify(executor, $"  Flags: {flagList}");
-			if (retroactive)
+			// Parse the flag list - space-separated flag names
+			var flagNames = flagList.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+				.Select(f => f.ToUpper())
+				.ToArray();
+			
+			// Validate that all flags exist
+			var allFlags = await Mediator!.CreateStream(new GetAttributeFlagsQuery()).ToArrayAsync();
+			foreach (var flagName in flagNames)
 			{
-				await NotifyService.Notify(executor, "  Retroactively updating existing copies");
+				if (!allFlags.Any(f => f.Name.Equals(flagName, StringComparison.OrdinalIgnoreCase)))
+				{
+					await NotifyService!.Notify(executor, $"Unknown attribute flag: {flagName}");
+					return new CallState("#-1 UNKNOWN FLAG");
+				}
 			}
 			
-			// TODO: Full implementation requires:
-			// - Add attribute to standard attribute table if new
-			// - Set default flags for the attribute
-			// - If retroactive, update all existing copies:
-			//   - Change owner to executor
-			//   - Update flags to match flag list
-			// - Save changes to persist across reboots
-			await NotifyService.Notify(executor, "Note: Attribute table modification not yet implemented.");
+			// Create or update the attribute entry
+			var entry = await Mediator!.Send(new CreateAttributeEntryCommand(attrName.ToUpper(), flagNames));
+			if (entry == null)
+			{
+				await NotifyService!.Notify(executor, "Failed to create attribute entry.");
+				return new CallState("#-1 CREATE FAILED");
+			}
 			
-			return new CallState("#-1 NOT IMPLEMENTED");
+			await NotifyService!.Notify(executor, $"Attribute '{attrName}' set with flags: {string.Join(" ", flagNames)}");
+			
+			// TODO: If retroactive, update all existing copies
+			if (retroactive)
+			{
+				await NotifyService.Notify(executor, "Note: Retroactive flag updating not yet implemented.");
+			}
+			
+			return CallState.Empty;
 		}
 		
 		if (switches.Contains("DELETE"))

@@ -1148,6 +1148,64 @@ public partial class ArangoDatabase(
 				cancellationToken: ct))
 			.FirstOrDefault();
 
+	public async ValueTask<SharpAttributeEntry?> CreateOrUpdateAttributeEntryAsync(string name, string[] defaultFlags, 
+		string? limit = null, string[]? enumValues = null, CancellationToken ct = default)
+	{
+		// Check if entry already exists
+		var existing = await GetSharpAttributeEntry(name, ct);
+		
+		if (existing != null)
+		{
+			// Update existing entry
+			var updated = await arangoDb.Document.UpdateAsync<dynamic, SharpAttributeEntry>(handle, 
+				DatabaseConstants.AttributeEntries,
+				new 
+				{
+					_key = existing.Id!.Split('/')[1],
+					Name = name,
+					DefaultFlags = defaultFlags,
+					Limit = limit,
+					Enum = enumValues
+				},
+				waitForSync: true,
+				cancellationToken: ct,
+				returnNew: true);
+			
+			return updated.New;
+		}
+		else
+		{
+			// Create new entry
+			var created = await arangoDb.Document.CreateAsync<SharpAttributeEntryCreateRequest, SharpAttributeEntry>(handle,
+				DatabaseConstants.AttributeEntries,
+				new SharpAttributeEntryCreateRequest(
+					name.ToUpper(),
+					name,
+					defaultFlags,
+					limit,
+					enumValues),
+				waitForSync: true,
+				cancellationToken: ct,
+				returnNew: true);
+			
+			return created.New;
+		}
+	}
+
+	public async ValueTask<bool> DeleteAttributeEntryAsync(string name, CancellationToken ct = default)
+	{
+		var existing = await GetSharpAttributeEntry(name, ct);
+		if (existing == null)
+		{
+			return false;
+		}
+
+		await arangoDb.Document.DeleteAsync<object>(handle, DatabaseConstants.AttributeEntries, existing.Id!.Split('/')[1],
+			waitForSync: true, cancellationToken: ct);
+		
+		return true;
+	}
+
 	public async ValueTask<AnyOptionalSharpObject> GetObjectNodeAsync(DBRef dbref,
 		CancellationToken cancellationToken = default)
 	{
