@@ -22,6 +22,8 @@ using SharpMUSH.Library.Services.Interfaces;
 using System.Drawing;
 using System.Linq;
 using System.Reflection;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using static SharpMUSH.Library.Services.Interfaces.IPermissionService;
@@ -1903,8 +1905,304 @@ public partial class Commands
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Edit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
+
+		// Parse object/attribute pattern (left side of =)
+		if (!args.TryGetValue("0", out var objAttrArg))
+		{
+			await NotifyService!.Notify(executor, "Invalid arguments to @edit.");
+			return new CallState("#-1 INVALID ARGUMENTS");
+		}
+
+		var objAttrText = MModule.plainText(objAttrArg.Message!);
+		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objAttrText);
+
+		if (!split.TryPickT0(out var details, out _) || string.IsNullOrEmpty(details.Attribute))
+		{
+			await NotifyService!.Notify(executor, "Invalid format. Use: object/attribute=search,replace");
+			return new CallState("#-1 INVALID FORMAT");
+		}
+
+		var (dbref, attrPattern) = details;
+
+		// Locate object
+		var locate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
+			enactor, executor, dbref, LocateFlags.All);
+
+		if (locate.IsError)
+		{
+			return locate.AsError;
+		}
+
+		var targetObject = locate.AsSharpObject;
+
+		// Check permissions
+		var canModify = await PermissionService!.Controls(executor, targetObject);
+		if (!canModify)
+		{
+			await NotifyService!.Notify(executor, "Permission denied.");
+			return new CallState("#-1 PERMISSION DENIED");
+		}
+
+		// Parse search and replace strings (right side of =)
+		if (!args.TryGetValue("1", out var searchReplaceArg))
+		{
+			await NotifyService!.Notify(executor, "You must specify search and replace strings.");
+			return new CallState("#-1 MISSING ARGUMENTS");
+		}
+
+		var searchReplaceText = MModule.plainText(searchReplaceArg.Message!);
+		
+		// Split by comma, but handle curly braces for escaping commas
+		var searchReplaceParts = SplitSearchReplace(searchReplaceText);
+		
+		if (searchReplaceParts.Length != 2)
+		{
+			await NotifyService!.Notify(executor, "You must specify both search and replace strings separated by a comma.");
+			return new CallState("#-1 INVALID ARGUMENTS");
+		}
+
+		var search = searchReplaceParts[0];
+		var replace = searchReplaceParts[1];
+
+		// Get matching attributes
+		var attributes = await AttributeService!.GetAttributePatternAsync(
+			executor, targetObject, attrPattern, false, IAttributeService.AttributePatternMode.Wildcard);
+
+		if (attributes.IsError)
+		{
+			await NotifyService!.Notify(executor, attributes.AsError.Value);
+			return new CallState(attributes.AsError.Value);
+		}
+
+		var attrList = attributes.AsAttributes.ToList();
+		if (attrList.Count == 0)
+		{
+			await NotifyService!.Notify(executor, "No matching attributes found.");
+			return new CallState("#-1 NO MATCH");
+		}
+
+		// Process each attribute
+		int modifiedCount = 0;
+		int unchangedCount = 0;
+		var isRegexp = switches.Contains("REGEXP");
+		var isFirst = switches.Contains("FIRST");
+		var isCheck = switches.Contains("CHECK");
+		var isQuiet = switches.Contains("QUIET");
+		var isAll = switches.Contains("ALL");
+		var isNoCase = switches.Contains("NOCASE");
+
+		foreach (var attr in attrList)
+		{
+			var attrName = attr.Name;
+			var attrValue = attr.Value;
+			var originalText = attrValue.ToPlainText();
+			string newText;
+
+			if (isRegexp)
+			{
+				// Regex mode
+				newText = await PerformRegexEdit(parser, originalText, search, replace, isAll, isNoCase);
+			}
+			else
+			{
+				// Simple string replacement mode
+				newText = PerformSimpleEdit(originalText, search, replace, isFirst);
+			}
+
+			if (newText == originalText)
+			{
+				unchangedCount++;
+				continue;
+			}
+
+			modifiedCount++;
+
+			if (!isQuiet && !isCheck)
+			{
+				await NotifyService!.Notify(executor, $"{attrName} - Set: {newText}");
+			}
+			else if (!isQuiet && isCheck)
+			{
+				// Show changes with highlighting (simple version for now)
+				await NotifyService!.Notify(executor, $"{attrName} - Would change to: {newText}");
+			}
+
+			// Actually set the attribute unless in check mode
+			if (!isCheck)
+			{
+				await AttributeService!.SetAttributeAsync(executor, targetObject, attrName, MModule.single(newText));
+			}
+		}
+
+		// Summary message
+		if (isQuiet || (modifiedCount + unchangedCount > 1))
+		{
+			var checkPrefix = isCheck ? "Would edit" : "Edited";
+			await NotifyService!.Notify(executor, 
+				$"{checkPrefix} {modifiedCount} attribute{(modifiedCount != 1 ? "s" : "")}. {unchangedCount} unchanged.");
+		}
+
+		return new CallState(string.Empty);
+	}
+
+	/// <summary>
+	/// Split search/replace text by comma, respecting curly brace escaping
+	/// </summary>
+	private static string[] SplitSearchReplace(string text)
+	{
+		var parts = new List<string>();
+		var current = new StringBuilder();
+		int braceDepth = 0;
+
+		for (int i = 0; i < text.Length; i++)
+		{
+			char c = text[i];
+			
+			if (c == '{')
+			{
+				braceDepth++;
+				current.Append(c);
+			}
+			else if (c == '}')
+			{
+				braceDepth--;
+				current.Append(c);
+			}
+			else if (c == ',' && braceDepth == 0)
+			{
+				parts.Add(current.ToString());
+				current.Clear();
+			}
+			else
+			{
+				current.Append(c);
+			}
+		}
+		
+		parts.Add(current.ToString());
+		
+		// Trim and remove outer braces if present
+		for (int i = 0; i < parts.Count; i++)
+		{
+			var part = parts[i].Trim();
+			if (part.StartsWith('{') && part.EndsWith('}'))
+			{
+				part = part[1..^1];
+			}
+			parts[i] = part;
+		}
+		
+		return [.. parts];
+	}
+
+	/// <summary>
+	/// Perform simple string replacement
+	/// </summary>
+	private static string PerformSimpleEdit(string text, string search, string replace, bool firstOnly)
+	{
+		if (search == "^")
+		{
+			// Prepend
+			return replace + text;
+		}
+		else if (search == "$")
+		{
+			// Append
+			return text + replace;
+		}
+		else if (firstOnly)
+		{
+			// Replace only first occurrence
+			int index = text.IndexOf(search);
+			if (index >= 0)
+			{
+				return text[..index] + replace + text[(index + search.Length)..];
+			}
+			return text;
+		}
+		else
+		{
+			// Replace all occurrences
+			return text.Replace(search, replace);
+		}
+	}
+
+	/// <summary>
+	/// Perform regex replacement with evaluation
+	/// </summary>
+	private static async ValueTask<string> PerformRegexEdit(IMUSHCodeParser parser, string text, 
+		string pattern, string replaceTemplate, bool all, bool nocase)
+	{
+		try
+		{
+			var options = RegexOptions.None;
+			if (nocase)
+			{
+				options |= RegexOptions.IgnoreCase;
+			}
+
+			var regex = new Regex(pattern, options);
+
+			if (all)
+			{
+				// Replace all matches, working backwards
+				var matches = regex.Matches(text).Cast<Match>().Reverse().ToList();
+				foreach (var match in matches)
+				{
+					var replacement = await EvaluateRegexReplacement(parser, regex, match, replaceTemplate);
+					text = text[..match.Index] + replacement + text[(match.Index + match.Length)..];
+				}
+			}
+			else
+			{
+				// Replace only first match
+				var match = regex.Match(text);
+				if (match.Success)
+				{
+					var replacement = await EvaluateRegexReplacement(parser, regex, match, replaceTemplate);
+					text = text[..match.Index] + replacement + text[(match.Index + match.Length)..];
+				}
+			}
+
+			return text;
+		}
+		catch (ArgumentException)
+		{
+			return text; // Return unchanged on regex error
+		}
+	}
+
+	/// <summary>
+	/// Evaluate replacement template with captured groups
+	/// </summary>
+	private static async ValueTask<string> EvaluateRegexReplacement(IMUSHCodeParser parser, 
+		Regex regex, Match match, string template)
+	{
+		var replacement = template;
+
+		// Replace $0, $1, etc. with captured groups
+		for (int j = 0; j < match.Groups.Count; j++)
+		{
+			replacement = replacement.Replace($"${j}", match.Groups[j].Value);
+		}
+
+		// Replace named captures
+		foreach (var groupName in regex.GetGroupNames().Where(groupName => !int.TryParse(groupName, out _)))
+		{
+			var group = match.Groups[groupName];
+			if (group.Success)
+			{
+				replacement = replacement.Replace($"$<{groupName}>", group.Value);
+			}
+		}
+
+		// Evaluate the replacement
+		var evaluatedReplacement = await parser.FunctionParse(MModule.single(replacement));
+		return evaluatedReplacement?.Message?.ToPlainText() ?? replacement;
 	}
 
 	[SharpCommand(Name = "@FUNCTION",
