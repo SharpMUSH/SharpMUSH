@@ -1175,15 +1175,22 @@ public partial class ArangoDatabase(
 		}
 		else
 		{
-			// Create new entry
-			var created = await arangoDb.Document.CreateAsync<SharpAttributeEntryCreateRequest, SharpAttributeEntry>(handle,
+			// Create new entry - build document dynamically to omit null fields
+			var document = new Dictionary<string, object>
+			{
+				{ "_key", name.ToUpper() },
+				{ "Name", name },
+				{ "DefaultFlags", defaultFlags }
+			};
+			
+			if (limit != null)
+				document["Limit"] = limit;
+			if (enumValues != null)
+				document["Enum"] = enumValues;
+			
+			var created = await arangoDb.Document.CreateAsync<dynamic, SharpAttributeEntry>(handle,
 				DatabaseConstants.AttributeEntries,
-				new SharpAttributeEntryCreateRequest(
-					name.ToUpper(),
-					name,
-					defaultFlags,
-					limit,
-					enumValues),
+				document,
 				waitForSync: true,
 				cancellationToken: ct,
 				returnNew: true);

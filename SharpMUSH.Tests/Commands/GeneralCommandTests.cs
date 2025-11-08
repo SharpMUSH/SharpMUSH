@@ -540,42 +540,13 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Attribute_AccessCreatesAttributeEntry()
 	{
-		// Check what notifications were sent before and after
-		var callsBefore = NotifyService.ReceivedCalls().Where(c => c.GetMethodInfo().Name == "Notify").Count();
-		Console.WriteLine($"Notify calls before command: {callsBefore}");
-		
 		// Test @attribute/access command creates an attribute entry with no_command flag
-		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@attribute/access MYATTR=no_command"));
-		Console.WriteLine($"Command returned: {result}");
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@attribute/access MYATTR=no_command"));
 		
-		// Check what new notifications were sent
-		var callsAfter = NotifyService.ReceivedCalls().Where(c => c.GetMethodInfo().Name == "Notify").ToList();
-		Console.WriteLine($"Notify calls after command: {callsAfter.Count}");
-		var newCalls = callsAfter.Skip(callsBefore).ToList();
-		Console.WriteLine($"New notify calls: {newCalls.Count}");
-		foreach (var call in newCalls)
-		{
-			var args = call.GetArguments();
-			if (args.Length >= 2)
-			{
-				Console.WriteLine($"Notification: {args[1]}");
-			}
-		}
-		
-		// Debug: Check all entries
+		// Verify the entry was created in the database
 		var entries = await Mediator.CreateStream(new Library.Queries.Database.GetAllAttributeEntriesQuery())
 			.ToArrayAsync();
-		Console.WriteLine($"Total attribute entries after command: {entries.Length}");
-		
 		var entry = entries.FirstOrDefault(e => e.Name == "MYATTR");
-		if (entry == null)
-		{
-			Console.WriteLine("MYATTR entry not found!");
-		}
-		else
-		{
-			Console.WriteLine($"Found MYATTR with flags: {string.Join(", ", entry.DefaultFlags)}");
-		}
 		
 		await Assert.That(entry).IsNotNull();
 		await Assert.That(entry!.DefaultFlags.Contains("NO_COMMAND")).IsTrue();
@@ -598,12 +569,24 @@ public class GeneralCommandTests
 		// First create an attribute entry with no_command flag
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@attribute/access TESTATTR2=no_command"));
 
-		// Set the attribute on the executor - it should get the no_command flag automatically
+		// Set the attribute on the executor - it should get the no_command flag automatically  
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&TESTATTR2 me=test value"));
 
 		// Verify the attribute was created with the correct flags by querying it
-		var attr = await Mediator.CreateStream(new Library.Queries.Database.GetAttributeQuery(new DBRef(1), ["TESTATTR2"]))
-			.LastOrDefaultAsync();
+		var attrs = await Mediator.CreateStream(new Library.Queries.Database.GetAttributeQuery(new DBRef(1), ["TESTATTR2"]))
+			.ToArrayAsync();
+		
+		Console.WriteLine($"[DEBUG] Found {attrs.Length} attributes matching TESTATTR2");
+		var attr = attrs.LastOrDefault();
+		
+		if (attr == null)
+		{
+			Console.WriteLine("[DEBUG] Attribute is null");
+		}
+		else
+		{
+			Console.WriteLine($"[DEBUG] Attribute has {attr.Flags.Length} flags: {string.Join(", ", attr.Flags.Select(f => f.Name))}");
+		}
 		
 		await Assert.That(attr).IsNotNull();
 		await Assert.That(attr!.Flags.Any(f => f.Name.Equals("no_command", StringComparison.OrdinalIgnoreCase))).IsTrue();
