@@ -1830,9 +1830,18 @@ public partial class ArangoDatabase(
 			var longName = string.Join('`', attribute.SkipLast(remaining.Length - 1 - nextAttr.i));
 
 			var sharpAttributeEntry = await GetSharpAttributeEntry(longName, ct);
-			var flags = (sharpAttributeEntry?.DefaultFlags ?? [])
-				.ToAsyncEnumerable()
-				.Select(async (x, innerCt) => await GetAttributeFlagAsync(x, innerCt));
+			
+			// Get flags from the attribute entry and resolve them
+			var flagNames = sharpAttributeEntry?.DefaultFlags ?? [];
+			var resolvedFlags = new List<SharpAttributeFlag>();
+			foreach (var flagName in flagNames)
+			{
+				var flag = await GetAttributeFlagAsync(flagName, ct);
+				if (flag != null)
+				{
+					resolvedFlags.Add(flag);
+				}
+			}
 
 			var newOne = await arangoDb.Document.CreateAsync<SharpAttributeCreateRequest, SharpAttributeQueryResult>(
 				transactionHandle, DatabaseConstants.Attributes,
@@ -1843,9 +1852,9 @@ public partial class ArangoDatabase(
 					longName),
 				waitForSync: true, cancellationToken: ct, returnNew: true);
 
-			await foreach (var flag in (flags ?? AsyncEnumerable.Empty<SharpAttributeFlag>()).WithCancellation(ct))
+			foreach (var flag in resolvedFlags)
 			{
-				await SetAttributeFlagAsync(transactionHandle, newOne.New.Id, flag!, ct);
+				await SetAttributeFlagAsync(transactionHandle, newOne.New.Id, flag, ct);
 			}
 
 			await arangoDb.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.GraphAttributes,
@@ -1922,7 +1931,7 @@ public partial class ArangoDatabase(
 
 	public async ValueTask<SharpAttributeFlag?> GetAttributeFlagAsync(string flagName, CancellationToken ct = default) =>
 		(await arangoDb.Query.ExecuteAsync<SharpAttributeFlag>(handle,
-			"FOR v in @@C1 FILTER v.Name == @flag RETURN v",
+			"FOR v in @@C1 FILTER UPPER(v.Name) == UPPER(@flag) RETURN v",
 			bindVars: new Dictionary<string, object>
 			{
 				{ "@C1", DatabaseConstants.AttributeFlags },
