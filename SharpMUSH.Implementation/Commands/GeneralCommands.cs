@@ -1902,22 +1902,23 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@EDIT", Switches = ["FIRST", "CHECK", "QUIET", "REGEXP", "NOCASE", "ALL"],
-		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse | CB.NoGagged, MinArgs = 2, MaxArgs = 2)]
 	public static async ValueTask<Option<CallState>> Edit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentsOrdered;
 		var switches = parser.CurrentState.Switches;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
 
 		// Parse object/attribute pattern (left side of =)
-		if (!args.TryGetValue("0", out var objAttrArg))
+		var objAttrArg = args.ElementAtOrDefault(0).Value;
+		if (objAttrArg == null || objAttrArg.Message == null)
 		{
 			await NotifyService!.Notify(executor, "Invalid arguments to @edit.");
 			return new CallState("#-1 INVALID ARGUMENTS");
 		}
 
-		var objAttrText = MModule.plainText(objAttrArg.Message!);
+		var objAttrText = MModule.plainText(objAttrArg.Message);
 		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objAttrText);
 
 		if (!split.TryPickT0(out var details, out _) || string.IsNullOrEmpty(details.Attribute))
@@ -1948,13 +1949,14 @@ public partial class Commands
 		}
 
 		// Parse search and replace strings (right side of =)
-		if (!args.TryGetValue("1", out var searchReplaceArg))
+		var searchReplaceArg = args.ElementAtOrDefault(1).Value;
+		if (searchReplaceArg == null || searchReplaceArg.Message == null)
 		{
 			await NotifyService!.Notify(executor, "You must specify search and replace strings.");
 			return new CallState("#-1 MISSING ARGUMENTS");
 		}
 
-		var searchReplaceText = MModule.plainText(searchReplaceArg.Message!);
+		var searchReplaceText = MModule.plainText(searchReplaceArg.Message);
 		
 		// Split by comma, but handle curly braces for escaping commas
 		var searchReplaceParts = SplitSearchReplace(searchReplaceText);

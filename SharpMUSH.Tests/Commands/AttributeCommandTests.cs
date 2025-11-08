@@ -329,4 +329,128 @@ public class AttributeCommandTests
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), "Attribute NONEXISTENT_MOVE_TEST not found on source object.");
 	}
+
+	[Test]
+	public async ValueTask Test_Edit_SimpleReplace()
+	{
+		// Set up an attribute
+		var player = (await Database.GetObjectNodeAsync(new(1))).AsPlayer;
+		await Database.SetAttributeAsync(player.Object.DBRef, ["EDIT_TEST"], A.single("Hello World"), player);
+
+		// Edit it - replace "World" with "Universe"
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@edit #1/EDIT_TEST=World,Universe"));
+
+		// Verify the attribute was changed
+		var attr = await Database.GetAttributeAsync(player.Object.DBRef, ["EDIT_TEST"]);
+		var attrList = await attr!.ToListAsync();
+		await Assert.That(attrList.Last().Value.ToPlainText()).IsEqualTo("Hello Universe");
+	}
+
+	[Test]
+	public async ValueTask Test_Edit_Append()
+	{
+		// Set up an attribute
+		var player = (await Database.GetObjectNodeAsync(new(1))).AsPlayer;
+		await Database.SetAttributeAsync(player.Object.DBRef, ["EDIT_APPEND_TEST"], A.single("Start"), player);
+
+		// Edit it - append " End"
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@edit #1/EDIT_APPEND_TEST=$, End"));
+
+		// Verify the attribute was changed
+		var attr = await Database.GetAttributeAsync(player.Object.DBRef, ["EDIT_APPEND_TEST"]);
+		var attrList = await attr!.ToListAsync();
+		await Assert.That(attrList.Last().Value.ToPlainText()).IsEqualTo("Start End");
+	}
+
+	[Test]
+	public async ValueTask Test_Edit_Prepend()
+	{
+		// Set up an attribute
+		var player = (await Database.GetObjectNodeAsync(new(1))).AsPlayer;
+		await Database.SetAttributeAsync(player.Object.DBRef, ["EDIT_PREPEND_TEST"], A.single("End"), player);
+
+		// Edit it - prepend "Start "
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@edit #1/EDIT_PREPEND_TEST=^,Start "));
+
+		// Verify the attribute was changed
+		var attr = await Database.GetAttributeAsync(player.Object.DBRef, ["EDIT_PREPEND_TEST"]);
+		var attrList = await attr!.ToListAsync();
+		await Assert.That(attrList.Last().Value.ToPlainText()).IsEqualTo("Start End");
+	}
+
+	[Test]
+	public async ValueTask Test_Edit_FirstOnly()
+	{
+		// Set up an attribute with repeated text
+		var player = (await Database.GetObjectNodeAsync(new(1))).AsPlayer;
+		await Database.SetAttributeAsync(player.Object.DBRef, ["EDIT_FIRST_TEST"], A.single("foo bar foo baz"), player);
+
+		// Edit it - replace only first "foo"
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@edit/first #1/EDIT_FIRST_TEST=foo,qux"));
+
+		// Verify only first occurrence was replaced
+		var attr = await Database.GetAttributeAsync(player.Object.DBRef, ["EDIT_FIRST_TEST"]);
+		var attrList = await attr!.ToListAsync();
+		await Assert.That(attrList.Last().Value.ToPlainText()).IsEqualTo("qux bar foo baz");
+	}
+
+	[Test]
+	public async ValueTask Test_Edit_ReplaceAll()
+	{
+		// Set up an attribute with repeated text
+		var player = (await Database.GetObjectNodeAsync(new(1))).AsPlayer;
+		await Database.SetAttributeAsync(player.Object.DBRef, ["EDIT_ALL_TEST"], A.single("foo bar foo baz"), player);
+
+		// Edit it - replace all "foo"
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@edit #1/EDIT_ALL_TEST=foo,qux"));
+
+		// Verify all occurrences were replaced
+		var attr = await Database.GetAttributeAsync(player.Object.DBRef, ["EDIT_ALL_TEST"]);
+		var attrList = await attr!.ToListAsync();
+		await Assert.That(attrList.Last().Value.ToPlainText()).IsEqualTo("qux bar qux baz");
+	}
+
+	[Test]
+	public async ValueTask Test_Edit_Check_NoChange()
+	{
+		// Set up an attribute
+		var player = (await Database.GetObjectNodeAsync(new(1))).AsPlayer;
+		await Database.SetAttributeAsync(player.Object.DBRef, ["EDIT_CHECK_TEST"], A.single("Original"), player);
+
+		// Edit with /check - should preview but not change
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@edit/check #1/EDIT_CHECK_TEST=Original,Changed"));
+
+		// Verify the attribute was NOT changed
+		var attr = await Database.GetAttributeAsync(player.Object.DBRef, ["EDIT_CHECK_TEST"]);
+		var attrList = await attr!.ToListAsync();
+		await Assert.That(attrList.Last().Value.ToPlainText()).IsEqualTo("Original");
+	}
+
+	[Test]
+	public async ValueTask Test_Edit_Regex()
+	{
+		// Set up an attribute
+		var player = (await Database.GetObjectNodeAsync(new(1))).AsPlayer;
+		await Database.SetAttributeAsync(player.Object.DBRef, ["EDIT_REGEX_TEST"], A.single("foo123bar"), player);
+
+		// Edit with regex - replace digits
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@edit/regexp #1/EDIT_REGEX_TEST=\\d+,XXX"));
+
+		// Verify the regex replacement worked
+		var attr = await Database.GetAttributeAsync(player.Object.DBRef, ["EDIT_REGEX_TEST"]);
+		var attrList = await attr!.ToListAsync();
+		await Assert.That(attrList.Last().Value.ToPlainText()).IsEqualTo("fooXXXbar");
+	}
+
+	[Test]
+	public async ValueTask Test_Edit_NoMatch()
+	{
+		// Try to edit a non-existent attribute
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@edit #1/NONEXISTENT_EDIT_TEST=foo,bar"));
+
+		// Should receive error notification
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), "No matching attributes found.");
+	}
 }
