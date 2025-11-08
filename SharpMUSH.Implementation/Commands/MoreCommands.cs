@@ -155,7 +155,7 @@ public partial class Commands
 			var header = useLowercase ? "Standard Attributes:" : "STANDARD ATTRIBUTES:";
 			output.AppendLine(header);
 			
-			var attributes = Database!.GetAllAttributeEntriesAsync();
+			var attributes = Mediator!.CreateStream(new GetAllAttributeEntriesQuery());
 			await foreach (var attr in attributes.OrderBy(x => x.Name))
 			{
 				var attrName = useLowercase ? attr.Name.ToLower() : attr.Name;
