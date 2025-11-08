@@ -1,6 +1,7 @@
 ﻿using System.Reflection;
 using Mediator;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -33,6 +34,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 	
 	private static ILockService? LockService { get; set; }
 	
+	private static ISharpDatabase? Database { get; set; }
+	
 	private static LibraryService<string, CommandDefinition>? CommandLibrary { get; set; }
 	private static LibraryService<string, FunctionDefinition>? FunctionLibrary { get; set; }
 
@@ -56,6 +59,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		IValidateService validateService,
 		ISqlService sqlService,
 		ILockService lockService,
+		ISharpDatabase database,
 		LibraryService<string, FunctionDefinition> functionLibrary)
 	{
 		Mediator = mediator;
@@ -74,6 +78,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		ValidateService = validateService;
 		SqlService = sqlService;
 		LockService = lockService;
+		Database = database;
 		FunctionLibrary = functionLibrary;
 
 		foreach (var command in Generated.CommandLibrary.Commands)
