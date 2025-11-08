@@ -3157,7 +3157,12 @@ public partial class Commands
 				try
 				{
 					var regexOptions = isNoCase ? System.Text.RegularExpressions.RegexOptions.IgnoreCase : System.Text.RegularExpressions.RegexOptions.None;
-					matches = System.Text.RegularExpressions.Regex.IsMatch(attrValue, pattern, regexOptions);
+					matches = System.Text.RegularExpressions.Regex.IsMatch(attrValue, pattern, regexOptions, TimeSpan.FromSeconds(1));
+				}
+				catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
+				{
+					await NotifyService!.Notify(executor, $"Regular expression timed out: {pattern}");
+					return new CallState("#-1 REGEXP TIMEOUT");
 				}
 				catch
 				{
@@ -3172,7 +3177,12 @@ public partial class Commands
 				{
 					var regexPattern = MModule.getWildcardMatchAsRegex2(pattern);
 					var regexOptions = isNoCase ? System.Text.RegularExpressions.RegexOptions.IgnoreCase : System.Text.RegularExpressions.RegexOptions.None;
-					matches = System.Text.RegularExpressions.Regex.IsMatch(attrValue, regexPattern, regexOptions);
+					matches = System.Text.RegularExpressions.Regex.IsMatch(attrValue, regexPattern, regexOptions, TimeSpan.FromSeconds(1));
+				}
+				catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
+				{
+					await NotifyService!.Notify(executor, $"Wildcard pattern timed out: {pattern}");
+					return new CallState("#-1 PATTERN TIMEOUT");
 				}
 				catch
 				{
