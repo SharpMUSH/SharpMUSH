@@ -1902,7 +1902,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@EDIT", Switches = ["FIRST", "CHECK", "QUIET", "REGEXP", "NOCASE", "ALL"],
-		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse | CB.NoGagged, MinArgs = 2, MaxArgs = 2)]
+		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse | CB.NoGagged, MinArgs = 1, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Edit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
@@ -1949,26 +1949,18 @@ public partial class Commands
 		}
 
 		// Parse search and replace strings (right side of =)
-		var searchReplaceArg = args.ElementAtOrDefault(1).Value;
-		if (searchReplaceArg == null || searchReplaceArg.Message == null)
+		// With RSArgs, the arguments after = are split by comma
+		var searchArg = args.ElementAtOrDefault(1).Value;
+		var replaceArg = args.ElementAtOrDefault(2).Value;
+		
+		if (searchArg == null || searchArg.Message == null)
 		{
 			await NotifyService!.Notify(executor, "You must specify search and replace strings.");
 			return new CallState("#-1 MISSING ARGUMENTS");
 		}
 
-		var searchReplaceText = MModule.plainText(searchReplaceArg.Message);
-		
-		// Split by comma, but handle curly braces for escaping commas
-		var searchReplaceParts = SplitSearchReplace(searchReplaceText);
-		
-		if (searchReplaceParts.Length != 2)
-		{
-			await NotifyService!.Notify(executor, "You must specify both search and replace strings separated by a comma.");
-			return new CallState("#-1 INVALID ARGUMENTS");
-		}
-
-		var search = searchReplaceParts[0];
-		var replace = searchReplaceParts[1];
+		var search = MModule.plainText(searchArg.Message);
+		var replace = replaceArg?.Message != null ? MModule.plainText(replaceArg.Message) : string.Empty;
 
 		// Get matching attributes
 		var attributes = await AttributeService!.GetAttributePatternAsync(
