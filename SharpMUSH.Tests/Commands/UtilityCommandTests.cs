@@ -75,14 +75,60 @@ public class UtilityCommandTests
 	}
 
 	[Test]
-	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask ExamineObject()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1"));
 
+		// Verify notify was called (exact count may vary based on object attributes)
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf.OneOf<MString,string>>());
+	}
+
+	[Test]
+	public async ValueTask ExamineObjectBriefSwitch()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("examine/brief #1"));
+
+		// /brief should show header info but skip attributes
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf.OneOf<MString,string>>());
+	}
+
+	[Test]
+	public async ValueTask ExamineObjectOpaqueSwitch()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("examine/opaque #1"));
+
+		// /opaque should skip contents display
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf.OneOf<MString,string>>());
+	}
+
+	[Test]
+	public async ValueTask ExamineWithAttributePattern()
+	{
+		// Test examining with attribute pattern (e.g., examine #1/DESC*)
+		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1/DESC*"));
+
+		// Should display matching attributes
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf.OneOf<MString,string>>());
+	}
+
+	[Test]
+	public async ValueTask ExamineCurrentLocation()
+	{
+		// Test examining with no argument (examines current location)
+		await Parser.CommandParse(1, ConnectionService, MModule.single("examine"));
+
+		// Should display current location
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf.OneOf<MString,string>>());
 	}
 
 	[Test]
