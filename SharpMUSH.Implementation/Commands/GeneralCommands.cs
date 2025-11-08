@@ -430,9 +430,8 @@ public partial class Commands
 			if (!string.IsNullOrEmpty(attributePattern))
 			{
 				// Use pattern matching
-				var patternMode = attributePattern.Contains("**") 
-					? IAttributeService.AttributePatternMode.Wildcard 
-					: IAttributeService.AttributePatternMode.Wildcard;
+				// Wildcard mode is always used for examine attribute patterns
+				var patternMode = IAttributeService.AttributePatternMode.Wildcard;
 				
 				atrs = await AttributeService.GetAttributePatternAsync(
 					enactor, 
@@ -456,7 +455,9 @@ public partial class Commands
 				foreach (var attr in atrs.AsAttributes)
 				{
 					// Skip VEILED attributes unless /all switch is used
-					if (!showAll && attr.Flags.Any(f => f.Name == "VEILED"))
+					// Note: Using string comparison for flag name as SharpAttributeFlag doesn't have constants
+					const string VeiledFlagName = "VEILED";
+					if (!showAll && attr.Flags.Any(f => f.Name.Equals(VeiledFlagName, StringComparison.OrdinalIgnoreCase)))
 					{
 						continue;
 					}
@@ -479,11 +480,11 @@ public partial class Commands
 			}
 		}
 
-		// Contents section - skip if /opaque or /brief
+		// Contents section - skip if /opaque (omits contents) or /brief (shows minimal info)
 		if (!switches.Contains("OPAQUE") && !switches.Contains("BRIEF") && contents.Length > 0)
 		{
 			// TODO: Proper carry format.
-			await NotifyService.Notify(enactor, $"Contents:\n" +
+			await NotifyService!.Notify(enactor, $"Contents:\n" +
 			                                    $"{string.Join("\n", contentKeys)}");
 		}
 
