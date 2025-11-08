@@ -168,14 +168,30 @@ public partial class Commands
 	[SharpCommand(Name = "LOOK", Switches = ["OUTSIDE", "OPAQUE"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> Look(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// TODO: Consult CONFORMAT, DESCFORMAT, INAMEFORMAT, NAMEFORMAT, etc.
-
 		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		AnyOptionalSharpObject viewing = new None();
+		var forceOpaque = switches.Contains("OPAQUE");
+		var lookOutside = switches.Contains("OUTSIDE");
 
-		if (args.Count == 1)
+		// Determine what we're looking at
+		AnyOptionalSharpObject viewing = new None();
+		
+		if (lookOutside && executor.IsContent)
 		{
+			// look/outside - look at the container we're in
+			var container = await executor.AsContent.Location();
+			// Convert AnySharpObject to AnyOptionalSharpObject via implicit conversion
+			viewing = container.WithRoomOption().Match<AnyOptionalSharpObject>(
+				player => player,
+				room => room,
+				exit => exit,
+				thing => thing
+			);
+		}
+		else if (args.Count == 1)
+		{
+			// look <object>
 			var locate = await LocateService!.LocateAndNotifyIfInvalid(
 				parser,
 				executor,
@@ -190,6 +206,7 @@ public partial class Commands
 		}
 		else
 		{
+			// look (at current location)
 			viewing = (await Mediator!.Send(new GetCertainLocationQuery(executor.Id()!))).WithExitOption()
 				.WithNoneOption();
 		}
@@ -200,37 +217,227 @@ public partial class Commands
 		}
 
 		var realViewing = viewing.Known;
-
-		var contents = realViewing.IsContainer
-			? await (Mediator!.CreateStream(new GetContentsQuery(realViewing.AsContainer)))!.ToListAsync()
-			: [];
 		var viewingObject = realViewing.Object();
+		
+		// Check if executor is inside the object being viewed (affects whether to use @idescribe)
+		var executorLocation = executor.IsContent 
+			? await executor.AsContent.Location()
+			: null;
+		var viewingFromInside = executorLocation != null 
+			&& executorLocation.Object().DBRef == viewingObject.DBRef;
 
-		var name = viewingObject.Name;
-		var contentKeys = contents.Where(x => x.IsPlayer || x.IsThing).Select(x => x.Object().Name).ToList();
-		var exitKeys = contents.Where(x => x.IsExit).Select(x => x.Object().Name).ToList();
-		// TODO: Check DESCFORMAT or DESCRIBE
-		var description = (await AttributeService!.GetAttributeAsync(executor, realViewing, "DESCRIBE",
-				IAttributeService.AttributeMode.Read, false))
-			.Match(
-				attr => MModule.getLength(attr.Last().Value) == 0
-					? MModule.single("There is nothing to see here")
-					: attr.Last().Value,
-				_ => MModule.single("There is nothing to see here"),
-				_ => MModule.empty());
+		// Get base name and description
+		var baseName = viewingObject.Name;
+		var baseDesc = MModule.empty();
+		var useIdesc = viewingFromInside && !lookOutside;
 
-		// TODO: Pass value into NAMEFORMAT
-		await NotifyService!.Notify(executor,
-			$"{MModule.markupSingle2(Ansi.Create(foreground: StringExtensions.rgb(Color.White)), MModule.single(name))}" +
-			$"(#{viewingObject.DBRef.Number}{string.Join(string.Empty, viewingObject.Flags.Value.Select(x => x.Symbol))})");
-		// TODO: Pass value into DESCFORMAT
-		await NotifyService.Notify(executor, description.ToString());
-		// NotifyService!.Notify(enactor, $"Location: {location}");
-		// TODO: Pass value into CONFORMAT
-		await NotifyService.Notify(executor, $"Contents: {string.Join("\n", contentKeys)}");
-		// TODO: Pass value into EXITFORMAT
-		await NotifyService.Notify(executor,
-			$"Exits: {string.Join("\n", string.Join(", ", exitKeys))}");
+		// Get description (DESCRIBE or IDESCRIBE depending on viewingFromInside)
+		var descAttrName = useIdesc ? "IDESCRIBE" : "DESCRIBE";
+		var descResult = await AttributeService!.GetAttributeAsync(executor, realViewing, descAttrName,
+			IAttributeService.AttributeMode.Read, false);
+		
+		if (descResult.IsAttribute)
+		{
+			var descAttr = descResult.AsAttribute.Last();
+			baseDesc = MModule.getLength(descAttr.Value) > 0
+				? descAttr.Value
+				: (useIdesc ? MModule.empty() : MModule.single("You see nothing special."));
+		}
+		else if (!useIdesc)
+		{
+			baseDesc = MModule.single("You see nothing special.");
+		}
+
+		// Evaluate format attributes with Q-register flow
+		// Create arguments for format attributes
+		var formatArgs = new Dictionary<string, CallState>();
+		
+		// Evaluate NAMEFORMAT if present (only for rooms when viewing from inside)
+		var formattedName = MModule.single(baseName);
+		if (realViewing.IsRoom && viewingFromInside)
+		{
+			var nameFormatResult = await AttributeService.GetAttributeAsync(executor, realViewing, "NAMEFORMAT",
+				IAttributeService.AttributeMode.Read, false);
+			
+			if (nameFormatResult.IsAttribute)
+			{
+				var flags = await viewingObject.Flags.Value.ToArrayAsync();
+				formatArgs["0"] = new CallState(viewingObject.DBRef.ToString());
+				formatArgs["1"] = new CallState($"{MModule.markupSingle2(Ansi.Create(foreground: StringExtensions.rgb(Color.White)), MModule.single(baseName))}" +
+					$"(#{viewingObject.DBRef.Number}{string.Join(string.Empty, flags.Select(x => x.Symbol))})");
+				
+				formattedName = await AttributeService.EvaluateAttributeFunctionAsync(
+					parser, executor, realViewing, "NAMEFORMAT", formatArgs);
+			}
+			else
+			{
+				var flags = await viewingObject.Flags.Value.ToArrayAsync();
+				formattedName = MModule.single($"{MModule.markupSingle2(Ansi.Create(foreground: StringExtensions.rgb(Color.White)), MModule.single(baseName))}" +
+					$"(#{viewingObject.DBRef.Number}{string.Join(string.Empty, flags.Select(x => x.Symbol))})");
+			}
+		}
+		else
+		{
+			var flags = await viewingObject.Flags.Value.ToArrayAsync();
+			formattedName = MModule.single($"{MModule.markupSingle2(Ansi.Create(foreground: StringExtensions.rgb(Color.White)), MModule.single(baseName))}" +
+				$"(#{viewingObject.DBRef.Number}{string.Join(string.Empty, flags.Select(x => x.Symbol))})");
+		}
+
+		// Evaluate DESCFORMAT or IDESCFORMAT if present
+		var formatAttrName = useIdesc ? "IDESCFORMAT" : "DESCFORMAT";
+		var descFormatResult = await AttributeService.GetAttributeAsync(executor, realViewing, formatAttrName,
+			IAttributeService.AttributeMode.Read, false);
+		
+		var formattedDesc = baseDesc;
+		if (descFormatResult.IsAttribute)
+		{
+			formatArgs["0"] = new CallState(baseDesc);
+			formattedDesc = await AttributeService.EvaluateAttributeFunctionAsync(
+				parser, executor, realViewing, formatAttrName, formatArgs);
+		}
+
+		// Display name and description
+		await NotifyService!.Notify(executor, formattedName);
+		if (MModule.getLength(formattedDesc) > 0)
+		{
+			await NotifyService.Notify(executor, formattedDesc);
+		}
+
+		// Get contents and exits (if viewing a container and not OPAQUE)
+		var showInventory = realViewing.IsContainer 
+			&& !forceOpaque 
+			&& !(await realViewing.IsOpaque());
+
+		if (showInventory)
+		{
+			var allContents = await Mediator!.CreateStream(new GetContentsQuery(realViewing.AsContainer))!.ToListAsync();
+			
+			// Filter by DARK/LIGHT flags
+			var isRoomLight = realViewing.IsRoom && await realViewing.IsLight();
+			var isRoomDark = realViewing.IsRoom && await realViewing.IsDarkLegal();
+			var canSeeAll = await executor.IsSee_All();
+			
+			var visibleContents = new List<AnySharpContent>();
+			var visibleExits = new List<AnySharpContent>();
+			
+			foreach (var item in allContents)
+			{
+				var itemObj = item.WithRoomOption();
+				var isDark = await itemObj.IsDarkLegal();
+				var isLight = await itemObj.IsLight();
+				
+				// Determine visibility based on DARK/LIGHT rules
+				bool visible = false;
+				if (isRoomLight)
+				{
+					// LIGHT rooms show everything
+					visible = true;
+				}
+				else if (isRoomDark)
+				{
+					// DARK rooms only show LIGHT objects (unless viewer can see all)
+					visible = canSeeAll || isLight;
+				}
+				else
+				{
+					// Normal rooms don't show DARK objects
+					visible = !isDark || canSeeAll;
+				}
+
+				if (visible)
+				{
+					if (item.IsExit)
+					{
+						// Don't show DARK exits
+						if (!isDark || canSeeAll)
+						{
+							visibleExits.Add(item);
+						}
+					}
+					else
+					{
+						visibleContents.Add(item);
+					}
+				}
+			}
+
+			// Format and display contents using CONFORMAT if present
+			if (visibleContents.Count > 0)
+			{
+				var conFormatResult = await AttributeService.GetAttributeAsync(executor, realViewing, "CONFORMAT",
+					IAttributeService.AttributeMode.Read, false);
+				
+				if (conFormatResult.IsAttribute)
+				{
+					var contentDbrefs = string.Join(" ", visibleContents.Select(x => x.Object().DBRef.ToString()));
+					var contentNames = string.Join("|", visibleContents.Select(x => x.Object().Name));
+					
+					formatArgs["0"] = new CallState(contentDbrefs);
+					formatArgs["1"] = new CallState(contentNames);
+					
+					var formattedContents = await AttributeService.EvaluateAttributeFunctionAsync(
+						parser, executor, realViewing, "CONFORMAT", formatArgs);
+					
+					await NotifyService.Notify(executor, formattedContents);
+				}
+				else
+				{
+					var contentsLabel = realViewing.IsRoom ? "Contents:" : "Carrying:";
+					var contentsList = string.Join("\n", visibleContents.Select(x => x.Object().Name));
+					await NotifyService.Notify(executor, $"{contentsLabel}\n{contentsList}");
+				}
+			}
+
+			// Format and display exits using EXITFORMAT if present
+			if (visibleExits.Count > 0 && realViewing.IsRoom)
+			{
+				var exitFormatResult = await AttributeService.GetAttributeAsync(executor, realViewing, "EXITFORMAT",
+					IAttributeService.AttributeMode.Read, false);
+				
+				if (exitFormatResult.IsAttribute)
+				{
+					var exitDbrefs = string.Join(" ", visibleExits.Select(x => x.Object().DBRef.ToString()));
+					
+					formatArgs["0"] = new CallState(exitDbrefs);
+					
+					var formattedExits = await AttributeService.EvaluateAttributeFunctionAsync(
+						parser, executor, realViewing, "EXITFORMAT", formatArgs);
+					
+					await NotifyService.Notify(executor, formattedExits);
+				}
+				else
+				{
+					// Check if room is TRANSPARENT for different exit display format
+					var isTransparent = await realViewing.IsTransparent();
+					if (isTransparent)
+					{
+						// TRANSPARENT rooms show exits in long format with destinations
+						foreach (var exit in visibleExits)
+						{
+							var exitObj = exit.WithRoomOption().Object();
+							var destination = exit.IsExit ? await exit.AsExit.Home.WithCancellation(CancellationToken.None) : null;
+							var destName = destination != null ? destination.Object().Name : "*UNLINKED*";
+							
+							// Check if exit is OPAQUE (would override TRANSPARENT room)
+							if (await exit.WithRoomOption().IsOpaque())
+							{
+								await NotifyService.Notify(executor, exitObj.Name);
+							}
+							else
+							{
+								await NotifyService.Notify(executor, $"{exitObj.Name} to {destName}");
+							}
+						}
+					}
+					else
+					{
+						// Normal exit display
+						var exitNames = string.Join(", ", visibleExits.Select(x => x.Object().Name));
+						await NotifyService.Notify(executor, $"Obvious exits:\n{exitNames}");
+					}
+				}
+			}
+		}
 
 		return new CallState(viewingObject.DBRef.ToString());
 	}

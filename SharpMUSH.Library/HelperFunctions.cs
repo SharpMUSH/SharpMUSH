@@ -60,6 +60,15 @@ public static partial class HelperFunctions
 	public static async ValueTask<bool> IsLight(this AnySharpObject obj)
 		=> await obj.HasPower("Light");
 
+	public static async ValueTask<bool> IsOpaque(this AnySharpObject obj)
+		=> await obj.HasFlag("OPAQUE");
+
+	public static async ValueTask<bool> IsTransparent(this AnySharpObject obj)
+		=> await obj.HasFlag("TRANSPARENT");
+
+	public static async ValueTask<bool> IsCloudy(this AnySharpObject obj)
+		=> await obj.HasFlag("CLOUDY");
+
 	public static async ValueTask<bool> IsDarkLegal(this AnySharpObject obj)
 		=> await obj.IsDark() && (await obj.CanDark() || !await obj.IsAlive());
 
