@@ -1025,8 +1025,13 @@ mssp ansi/1
 mssp XTERM 256 COLORS/1
 
 ###
-### Reserved command names, command and function aliases, and command/function
-### restrictions are now stored in the database as configurable options.
-### They can be modified at runtime through the options system.
+### Reserved command names, and command and function aliases are in
+### alias.cnf
 ###
+include alias.cnf
+
+###
+### Restrictions on command usage are in restrict.cnf
+###
+include restrict.cnf
 
