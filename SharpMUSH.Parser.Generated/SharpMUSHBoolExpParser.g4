@@ -48,7 +48,9 @@ ownerExpr: OWNER string;
 carryExpr: CARRY string;
 bitFlagExpr: BIT_FLAG CARET_TOKEN string;
 bitPowerExpr: BIT_POWER CARET_TOKEN string;
-bitTypeExpr: BIT_TYPE CARET_TOKEN string;
+bitTypeExpr: BIT_TYPE CARET_TOKEN objectType;
+
+objectType: STRING;
 channelExpr: CHANNEL CARET_TOKEN string;
 dbRefListExpr: DBREFLIST CARET_TOKEN attributeName;
 ipExpr: IP CARET_TOKEN string;

@@ -251,7 +251,18 @@ public class SharpMUSHBooleanExpressionVisitor(
 		=> Expression.Invoke(_hasPower, unlocker, Expression.Constant(context.@string().GetText().ToUpper().Trim()));
 
 	public override Expression VisitBitTypeExpr(SharpMUSHBoolExpParser.BitTypeExprContext context)
-		=> Expression.Invoke(_isType, unlocker, Expression.Constant(context.@string().GetText().ToUpper().Trim()));
+	{
+		var typeText = context.objectType().GetText().ToUpper().Trim();
+		
+		// Validate that the type is one of the four valid MUSH object types
+		if (typeText != "PLAYER" && typeText != "THING" && typeText != "EXIT" && typeText != "ROOM")
+		{
+			// Return false constant if type is invalid
+			return Expression.Constant(false);
+		}
+		
+		return Expression.Invoke(_isType, unlocker, Expression.Constant(typeText));
+	}
 
 	public override Expression VisitChannelExpr(SharpMUSHBoolExpParser.ChannelExprContext context)
 	{

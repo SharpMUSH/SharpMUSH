@@ -62,7 +62,7 @@ public class SharpMUSHBooleanExpressionValidationVisitor(AnySharpObject invoker)
 	}
 
 	public override bool? VisitBitTypeExpr(SharpMUSHBoolExpParser.BitTypeExprContext context)
-		=> context.@string().GetText().ToUpper().Trim() is "PLAYER" or "THING" or "EXIT" or "ROOM";
+		=> context.objectType().GetText().ToUpper().Trim() is "PLAYER" or "THING" or "EXIT" or "ROOM";
 
 	public override bool? VisitChannelExpr(SharpMUSHBoolExpParser.ChannelExprContext context)
 	{
