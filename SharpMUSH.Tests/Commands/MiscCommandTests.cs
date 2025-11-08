@@ -62,6 +62,61 @@ public class MiscCommandTests
 	}
 
 	[Test]
+	public async ValueTask GrepCommand_WithPrintSwitch()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@grep/print #1=pattern"));
+
+		// Verify that Notify was called at least once
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
+	}
+
+	[Test]
+	public async ValueTask GrepCommand_WithWildSwitch()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@grep/wild #1=*pattern*"));
+
+		// Verify that Notify was called at least once
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
+	}
+
+	[Test]
+	public async ValueTask GrepCommand_WithRegexpSwitch()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@grep/regexp #1=.*pattern.*"));
+
+		// Verify that Notify was called at least once
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
+	}
+
+	[Test]
+	public async ValueTask GrepCommand_WithNocaseSwitch()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@grep/nocase #1=PATTERN"));
+
+		// Verify that Notify was called at least once
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
+	}
+
+	[Test]
+	public async ValueTask GrepCommand_WithAttributePattern()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@grep #1/DESC*=pattern"));
+
+		// Verify that Notify was called at least once
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
+	}
+
+	[Test]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask BriefCommand()
 	{
