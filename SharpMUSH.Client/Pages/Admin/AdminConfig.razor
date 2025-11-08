@@ -84,6 +84,57 @@
                                                                              Variant="Variant.Outlined"
                                                                              ValueChanged="@((int value) => UpdateConfigValue(config, value))" />
                                                         }
+                                                        else if (config.IsDictionary)
+                                                        {
+                                                            <MudPaper Outlined="true" Class="pa-3">
+                                                                <MudText Typo="Typo.subtitle2" Class="mb-2">Mappings:</MudText>
+                                                                @if (config.RawValue is Dictionary<string, string[]> dict)
+                                                                {
+                                                                    @foreach (var kvp in dict)
+                                                                    {
+                                                                        <MudStack Row="true" Class="mb-2" AlignItems="AlignItems.Center">
+                                                                            <MudTextField Value="@kvp.Key" 
+                                                                                          Label="Key" 
+                                                                                          Variant="Variant.Outlined"
+                                                                                          Margin="Margin.Dense"
+                                                                                          ReadOnly="true"
+                                                                                          Style="max-width: 200px;" />
+                                                                            <MudIcon Icon="Icons.Material.Filled.ArrowForward" />
+                                                                            <MudTextField Value="@string.Join(", ", kvp.Value)" 
+                                                                                          Label="Values (comma-separated)" 
+                                                                                          Variant="Variant.Outlined"
+                                                                                          Margin="Margin.Dense"
+                                                                                          FullWidth="true"
+                                                                                          ValueChanged="@((string value) => UpdateDictionaryValue(config, kvp.Key, value))" />
+                                                                            <MudIconButton Icon="Icons.Material.Filled.Delete" 
+                                                                                           Color="Color.Error"
+                                                                                           Size="Size.Small"
+                                                                                           OnClick="@(() => RemoveDictionaryEntry(config, kvp.Key))" />
+                                                                        </MudStack>
+                                                                    }
+                                                                    <MudStack Row="true" Class="mt-3" AlignItems="AlignItems.Center">
+                                                                        <MudTextField @bind-Value="@_newDictionaryKey" 
+                                                                                      Label="New Key" 
+                                                                                      Variant="Variant.Outlined"
+                                                                                      Margin="Margin.Dense"
+                                                                                      Style="max-width: 200px;" />
+                                                                        <MudIcon Icon="Icons.Material.Filled.ArrowForward" />
+                                                                        <MudTextField @bind-Value="@_newDictionaryValue" 
+                                                                                      Label="Values (comma-separated)" 
+                                                                                      Variant="Variant.Outlined"
+                                                                                      Margin="Margin.Dense"
+                                                                                      FullWidth="true" />
+                                                                        <MudButton Variant="Variant.Filled"
+                                                                                   Color="Color.Primary"
+                                                                                   StartIcon="Icons.Material.Filled.Add"
+                                                                                   Size="Size.Small"
+                                                                                   OnClick="@(() => AddDictionaryEntry(config))">
+                                                                            Add
+                                                                        </MudButton>
+                                                                    </MudStack>
+                                                                }
+                                                            </MudPaper>
+                                                        }
                                                         else if (config.IsArray)
                                                         {
                                                             <MudTextField Value="@config.Value"
@@ -121,6 +172,8 @@
 @code {
     private IEnumerable<AdminConfigService.ConfigItem> ConfigItems { get; set; } = [];
     private Dictionary<string, IEnumerable<AdminConfigService.ConfigItem>> ConfigSections { get; set; } = new();
+    private string _newDictionaryKey = string.Empty;
+    private string _newDictionaryValue = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -162,6 +215,8 @@
             "Flag" => Icons.Material.Filled.Flag,
             "Dump" => Icons.Material.Filled.Save,
             "Debug" => Icons.Material.Filled.BugReport,
+            "Alias" => Icons.Material.Filled.Link,
+            "Restriction" => Icons.Material.Filled.Lock,
             _ => Icons.Material.Filled.Settings
         };
     }
@@ -203,5 +258,40 @@
         config.Value = newValue?.ToString() ?? string.Empty;
         config.RawValue = newValue;
         StateHasChanged();
+    }
+
+    private void UpdateDictionaryValue(AdminConfigService.ConfigItem config, string key, string newValue)
+    {
+        if (config.RawValue is Dictionary<string, string[]> dict)
+        {
+            var values = newValue.Split(',').Select(x => x.Trim()).Where(x => !string.IsNullOrWhiteSpace(x)).ToArray();
+            dict[key] = values;
+            config.RawValue = dict;
+            StateHasChanged();
+        }
+    }
+
+    private void RemoveDictionaryEntry(AdminConfigService.ConfigItem config, string key)
+    {
+        if (config.RawValue is Dictionary<string, string[]> dict)
+        {
+            dict.Remove(key);
+            config.RawValue = dict;
+            StateHasChanged();
+        }
+    }
+
+    private void AddDictionaryEntry(AdminConfigService.ConfigItem config)
+    {
+        if (config.RawValue is Dictionary<string, string[]> dict && 
+            !string.IsNullOrWhiteSpace(_newDictionaryKey))
+        {
+            var values = _newDictionaryValue.Split(',').Select(x => x.Trim()).Where(x => !string.IsNullOrWhiteSpace(x)).ToArray();
+            dict[_newDictionaryKey] = values;
+            config.RawValue = dict;
+            _newDictionaryKey = string.Empty;
+            _newDictionaryValue = string.Empty;
+            StateHasChanged();
+        }
     }
 }
