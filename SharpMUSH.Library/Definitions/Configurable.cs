@@ -1,8 +1,10 @@
-﻿namespace SharpMUSH.Library.Definitions;
+﻿using SharpMUSH.Configuration.Options;
+
+namespace SharpMUSH.Library.Definitions;
 
 public static class Configurable
 {
-	public static readonly Dictionary<string, string[]> FunctionAliases = new()
+	public static Dictionary<string, string[]> FunctionAliases { get; private set; } = new()
 	{
 		{ "atrlock", ["attrlock"] },
 		{ "iter", ["parse"] },
@@ -24,7 +26,7 @@ public static class Configurable
 		{ "xvthings", ["xvobjects"] }
 	};
 
-	public static readonly Dictionary<string, string[]> CommandAliases = new()
+	public static Dictionary<string, string[]> CommandAliases { get; private set; } = new()
 	{
 		{ "@ATRLOCK", ["@attrlock"] },
 		{ "@ATRCHOWN", ["@attrchown"] },
@@ -38,4 +40,22 @@ public static class Configurable
 		{ "PAGE", ["p"] },
 		{ "WHISPER", ["w"] }
 	};
+
+	public static Dictionary<string, string[]> CommandRestrictions { get; private set; } = new();
+	
+	public static Dictionary<string, string[]> FunctionRestrictions { get; private set; } = new();
+
+	/// <summary>
+	/// Initialize configurable aliases and restrictions from database-backed options.
+	/// This should be called once during application startup.
+	/// </summary>
+	/// <param name="aliasOptions">Alias options from database</param>
+	/// <param name="restrictionOptions">Restriction options from database</param>
+	public static void Initialize(AliasOptions aliasOptions, RestrictionOptions restrictionOptions)
+	{
+		FunctionAliases = aliasOptions.FunctionAliases;
+		CommandAliases = aliasOptions.CommandAliases;
+		CommandRestrictions = restrictionOptions.CommandRestrictions;
+		FunctionRestrictions = restrictionOptions.FunctionRestrictions;
+	}
 }

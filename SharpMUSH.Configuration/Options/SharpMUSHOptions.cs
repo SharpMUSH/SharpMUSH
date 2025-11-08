@@ -18,4 +18,6 @@ public record SharpMUSHOptions
 	public required MessageOptions Message { get; init; }
 	public required NetOptions Net { get; init; }
 	public required DebugOptions Debug { get; init; }
+	public required AliasOptions Alias { get; init; }
+	public required RestrictionOptions Restriction { get; init; }
 };
