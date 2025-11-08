@@ -235,49 +235,110 @@ public partial class Commands
 		return new CallState(viewingObject.DBRef.ToString());
 	}
 
-	[SharpCommand(Name = "EXAMINE", Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
+	[SharpCommand(Name = "EXAMINE", Switches = ["BRIEF", "DEBUG", "MORTAL", "PARENT", "ALL", "OPAQUE"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> Examine(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches.ToArray();
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).WithoutNone();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		AnyOptionalSharpObject viewing;
+		string? attributePattern = null;
 
-		// TODO: Implement the version of this command that takes an attribute pattern!
+		// Parse object/attribute pattern from argument
 		if (args.Count == 1)
 		{
-			var locate = await LocateService!.LocateAndNotifyIfInvalid(
-				parser,
-				enactor,
-				enactor,
-				args["0"].Message!.ToString(),
-				LocateFlags.All);
-
-			if (locate.IsValid())
+			var argText = args["0"].Message!.ToString();
+			var split = HelperFunctions.SplitDbRefAndOptionalAttr(argText);
+			
+			if (split.TryPickT0(out var details, out _))
 			{
-				viewing = locate.WithoutError();
+				var (objectName, maybeAttributePattern) = details;
+				attributePattern = maybeAttributePattern;
+				
+				var locate = await LocateService!.LocateAndNotifyIfInvalid(
+					parser,
+					enactor,
+					enactor,
+					objectName,
+					LocateFlags.All);
+
+				if (locate.IsValid())
+				{
+					viewing = locate.WithoutError();
+				}
+				else
+				{
+					return new None();
+				}
+			}
+			else
+			{
+				// Simple object name without attribute pattern
+				var locate = await LocateService!.LocateAndNotifyIfInvalid(
+					parser,
+					enactor,
+					enactor,
+					argText,
+					LocateFlags.All);
+
+				if (locate.IsValid())
+				{
+					viewing = locate.WithoutError();
+				}
+				else
+				{
+					return new None();
+				}
 			}
 		}
-
-		viewing = (await Mediator!.Send(new GetLocationQuery(enactor.Object().DBRef))).WithExitOption();
+		else
+		{
+			// No argument - examine current location
+			viewing = (await Mediator!.Send(new GetLocationQuery(enactor.Object().DBRef))).WithExitOption();
+		}
 
 		if (viewing.IsNone())
 		{
 			return new None();
 		}
 
-		var contents = viewing.IsExit
+		var viewingKnown = viewing.Known();
+		
+		// Check permission to examine 
+		// Note: /mortal switch simulates a mortal viewer (checked in CanExamine logic)
+		var canExamine = await PermissionService!.CanExamine(executor, viewingKnown);
+		
+		// If using /mortal switch, override wizard permissions
+		if (switches.Contains("MORTAL") && await executor.IsWizard())
+		{
+			// Simulate mortal by checking only Controls, not wizard status
+			canExamine = await PermissionService.Controls(executor, viewingKnown);
+		}
+		
+		// If can't examine and not the object's owner, show limited info
+		if (!canExamine)
+		{
+			var limitedObj = viewingKnown.Object();
+			var limitedOwnerObj = (await limitedObj.Owner.WithCancellation(CancellationToken.None)).Object;
+			await NotifyService!.Notify(enactor, $"{limitedObj.Name} is owned by {limitedOwnerObj.Name}.");
+			return new CallState(limitedObj.DBRef.ToString());
+		}
+
+		// Get contents unless /opaque switch is used
+		var contents = (switches.Contains("OPAQUE") || viewing.IsExit)
 			? []
-			: await Mediator.CreateStream(new GetContentsQuery(viewing.Known().AsContainer))
+			: await Mediator!.CreateStream(new GetContentsQuery(viewingKnown.AsContainer))
 				.ToArrayAsync();
 
-		var obj = viewing.Object()!;
+		var obj = viewingKnown.Object()!;
 		var ownerObj = (await obj.Owner.WithCancellation(CancellationToken.None)).Object;
 		var name = obj.Name;
 		var ownerName = ownerObj.Name;
 		var location = obj.Key;
 		var contentKeys = contents!.Select(x => x.Object().Name);
-		var exitKeys = await Mediator.Send(new GetExitsQuery(obj.DBRef));
-		var description = (await AttributeService!.GetAttributeAsync(enactor, viewing.Known(), "DESCRIBE",
+		var exitKeys = await Mediator!.Send(new GetExitsQuery(obj.DBRef));
+		var description = (await AttributeService!.GetAttributeAsync(enactor, viewingKnown, "DESCRIBE",
 				IAttributeService.AttributeMode.Read, false))
 			.Match(
 				attr => MModule.getLength(attr.Last().Value) == 0
@@ -291,60 +352,148 @@ public partial class Commands
 		var objParent = await obj.Parent.WithCancellation(CancellationToken.None);
 		var objPowers = obj.Powers.Value;
 
-		var nameRow = MModule.multiple([
-			name.Hilight(),
-			MModule.single(" "),
-			MModule.single($"(#{obj.DBRef.Number}{string.Join(string.Empty, objFlags.Select(x => x.Symbol))})")
-		]);
+		// Build output sections
+		var outputSections = new List<MString>();
+		
+		// Name row with optional flags (check configuration)
+		var showFlags = Configuration!.CurrentValue.Cosmetic.FlagsOnExamine;
+		var nameRow = showFlags
+			? MModule.multiple([
+				name.Hilight(),
+				MModule.single(" "),
+				MModule.single($"(#{obj.DBRef.Number}{string.Join(string.Empty, objFlags.Select(x => x.Symbol))})")
+			])
+			: MModule.concat(name.Hilight(), MModule.single($" (#{obj.DBRef.Number})"));
+		
+		outputSections.Add(nameRow);
 
-		var typeAndFlagsRow = MModule.single($"Type: {obj.Type} Flags: {string.Join(" ", objFlags.Select(x => x.Name))}");
-		var descriptionRow = description;
-		var ownerRow = MModule.single($"Owner: {ownerName.Hilight()}" +
-		                              $"(#{obj.DBRef.Number}{string.Join(string.Empty, ownerObjFlags.Select(x => x.Symbol))})");
-		var parentRow = MModule.single($"Parent: {objParent.Object()?.Name ?? "*NOTHING*"}");
+		// Type and flags row
+		if (showFlags)
+		{
+			outputSections.Add(MModule.single($"Type: {obj.Type} Flags: {string.Join(" ", objFlags.Select(x => x.Name))}"));
+		}
+		else
+		{
+			outputSections.Add(MModule.single($"Type: {obj.Type}"));
+		}
+		
+		// Description (not shown in /brief mode)
+		if (!switches.Contains("BRIEF"))
+		{
+			outputSections.Add(description);
+		}
+		
+		// Owner row
+		var ownerRow = showFlags
+			? MModule.single($"Owner: {ownerName.Hilight()}" +
+			                 $"(#{ownerObj.DBRef.Number}{string.Join(string.Empty, ownerObjFlags.Select(x => x.Symbol))})")
+			: MModule.single($"Owner: {ownerName.Hilight()}(#{ownerObj.DBRef.Number})");
+		outputSections.Add(ownerRow);
+		
+		// Parent row
+		outputSections.Add(MModule.single($"Parent: {objParent.Object()?.Name ?? "*NOTHING*"}"));
+		
 		// TODO: LOCK LIST
-		var powersRow = MModule.single($"Powers: {string.Join(" ", await objPowers.Select(x => x.Name).ToArrayAsync())}");
+		
+		// Powers row
+		var powersList = await objPowers.Select(x => x.Name).ToArrayAsync();
+		if (powersList.Length > 0)
+		{
+			outputSections.Add(MModule.single($"Powers: {string.Join(" ", powersList)}"));
+		}
+		
 		// TODO: Channels
 		// TODO: Warnings Checked
-
-		// TODO: Match proper date format: Mon Feb 26 18:05:10 2007
-		var createdRow = MModule.single($"Created: {DateTimeOffset.FromUnixTimeMilliseconds(obj.CreationTime):F}");
-
-		await NotifyService!.Notify(enactor, MModule.multipleWithDelimiter(MModule.single("\n"), [
-			nameRow,
-			typeAndFlagsRow,
-			descriptionRow,
-			ownerRow,
-			parentRow,
-			powersRow,
-			createdRow
-		]));
-
-		var atrs = await AttributeService.GetVisibleAttributesAsync(enactor, viewing.Known());
-
-		if (atrs.IsAttribute)
+		
+		// Created timestamp - /debug switch shows raw values
+		if (switches.Contains("DEBUG") && await executor.IsWizard())
 		{
-			foreach (var attr in atrs.AsAttributes)
+			outputSections.Add(MModule.single($"Created: {obj.CreationTime} ({DateTimeOffset.FromUnixTimeMilliseconds(obj.CreationTime):F})"));
+		}
+		else
+		{
+			// TODO: Match proper date format: Mon Feb 26 18:05:10 2007
+			outputSections.Add(MModule.single($"Created: {DateTimeOffset.FromUnixTimeMilliseconds(obj.CreationTime):F}"));
+		}
+
+		// Output header information
+		await NotifyService!.Notify(enactor, MModule.multipleWithDelimiter(MModule.single("\n"), outputSections));
+
+		// Attributes section - skip for /brief, filter by pattern if provided
+		if (!switches.Contains("BRIEF"))
+		{
+			// Determine if we should check parent attributes
+			var checkParents = switches.Contains("PARENT");
+			
+			// Get attributes based on pattern or all visible
+			SharpAttributesOrError atrs;
+			if (!string.IsNullOrEmpty(attributePattern))
 			{
-				// TODO: Symbols for Flags. Flags are not just strings!
-				await NotifyService.Notify(enactor,
-					MModule.concat(
-						$"{attr.Name} [#{(await attr.Owner.WithCancellation(CancellationToken.None))!.Object.DBRef.Number}]: "
-							.Hilight(),
-						attr.Value));
+				// Use pattern matching
+				var patternMode = attributePattern.Contains("**") 
+					? IAttributeService.AttributePatternMode.Wildcard 
+					: IAttributeService.AttributePatternMode.Wildcard;
+				
+				atrs = await AttributeService.GetAttributePatternAsync(
+					enactor, 
+					viewingKnown, 
+					attributePattern, 
+					checkParents, 
+					patternMode);
+			}
+			else
+			{
+				// Get all visible attributes
+				atrs = await AttributeService.GetVisibleAttributesAsync(enactor, viewingKnown);
+			}
+
+			if (atrs.IsAttribute)
+			{
+				// Filter based on configuration and switches
+				var showPublicOnly = Configuration!.CurrentValue.Cosmetic.ExaminePublicAttributes;
+				var showAll = switches.Contains("ALL");
+				
+				foreach (var attr in atrs.AsAttributes)
+				{
+					// Skip VEILED attributes unless /all switch is used
+					if (!showAll && attr.Flags.Any(f => f.Name == "VEILED"))
+					{
+						continue;
+					}
+					
+					// Skip non-public attributes if configured and not using /all
+					if (showPublicOnly && !showAll && !attr.IsVisual())
+					{
+						continue;
+					}
+					
+					// Display attribute with owner and flags
+					var attrOwner = await attr.Owner.WithCancellation(CancellationToken.None);
+					var attrFlagsStr = attr.Flags.Any() ? $"{string.Join("", attr.Flags.Select(f => f.Symbol))} " : "";
+					
+					await NotifyService!.Notify(enactor,
+						MModule.concat(
+							MModule.single($"{attr.Name} [{attrFlagsStr}#{attrOwner!.Object.DBRef.Number}]: ").Hilight(),
+							attr.Value));
+				}
 			}
 		}
 
-		// TODO: Proper carry format.
-		await NotifyService.Notify(enactor, $"Contents: \n" +
-		                                    $"{string.Join("\n", contentKeys)}");
+		// Contents section - skip if /opaque or /brief
+		if (!switches.Contains("OPAQUE") && !switches.Contains("BRIEF") && contents.Length > 0)
+		{
+			// TODO: Proper carry format.
+			await NotifyService.Notify(enactor, $"Contents:\n" +
+			                                    $"{string.Join("\n", contentKeys)}");
+		}
 
-		if (!viewing.IsRoom)
+		// Home and Location - skip for /brief
+		if (!switches.Contains("BRIEF") && !viewingKnown.IsRoom)
 		{
 			// TODO: Proper Format.
-			await NotifyService.Notify(enactor, $"Home: {(await viewing.Known().MinusRoom().Home()).Object().Name}");
+			await NotifyService.Notify(enactor, $"Home: {(await viewingKnown.MinusRoom().Home()).Object().Name}");
 			await NotifyService.Notify(enactor,
-				$"Location: {(await viewing.Known().AsContent.Location()).Object().Name}");
+				$"Location: {(await viewingKnown.AsContent.Location()).Object().Name}");
 		}
 
 		return new CallState(obj.DBRef.ToString());
