@@ -154,7 +154,7 @@ public partial class ArangoDatabase(
 	}
 
 	public async ValueTask<DBRef> CreateThingAsync(string name, AnySharpContainer location, SharpPlayer creator,
-		CancellationToken ct = default)
+		AnySharpContainer home, CancellationToken ct = default)
 	{
 		var transaction = await arangoDb.Transaction.BeginAsync(handle,
 			new ArangoTransaction()
@@ -180,9 +180,8 @@ public partial class ArangoDatabase(
 			new SharpEdgeCreateRequest(thing.Id, obj.Id), cancellationToken: ct);
 		await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.GraphLocations, DatabaseConstants.AtLocation,
 			new SharpEdgeCreateRequest(thing.Id, location.Id), cancellationToken: ct);
-		// TODO: Fix, this should use a default home location, passed down to this.
 		await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.GraphHomes, DatabaseConstants.HasHome,
-			new SharpEdgeCreateRequest(thing.Id, location.Id), cancellationToken: ct);
+			new SharpEdgeCreateRequest(thing.Id, home.Id), cancellationToken: ct);
 		await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.GraphObjectOwners,
 			DatabaseConstants.HasObjectOwner,
 			new SharpEdgeCreateRequest(obj.Id, creator.Id!), cancellationToken: ct);
@@ -434,7 +433,6 @@ public partial class ArangoDatabase(
 		}
 	}
 
-	// Todo: Separate SET and UNSET better.
 	public async ValueTask UnsetObjectParent(AnySharpObject obj, CancellationToken ct = default)
 		=> await SetObjectParent(obj, null, ct);
 
@@ -483,10 +481,9 @@ public partial class ArangoDatabase(
 				Aliases = []
 			});
 
-	// TODO: Fix this.
 	public async ValueTask<IAsyncEnumerable<SharpObject>> GetParentsAsync(string id, CancellationToken ct = default)
 		=> (await arangoDb.Query.ExecuteAsync<SharpObject>(handle,
-				$"FOR v IN 1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphParents} RETURN v", cache: true,
+				$"FOR v IN 1..999 OUTBOUND {id} GRAPH {DatabaseConstants.GraphParents} RETURN v", cache: true,
 				cancellationToken: ct))
 			.ToAsyncEnumerable();
 
