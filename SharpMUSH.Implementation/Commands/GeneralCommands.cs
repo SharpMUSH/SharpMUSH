@@ -3368,11 +3368,195 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@GREP", Switches = ["LIST", "PRINT", "ILIST", "IPRINT", "REGEXP", "WILD", "NOCASE", "PARENT"],
-		Behavior = CB.Default | CB.EqSplit | CB.RSNoParse | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 2, MaxArgs = 2)]
 	public static async ValueTask<Option<CallState>> Grep(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
+
+		if (!args.TryGetValue("0", out var objAttrArg) || !args.TryGetValue("1", out var patternArg))
+		{
+			await NotifyService!.Notify(executor, "Invalid arguments to @grep.");
+			return new CallState("#-1 INVALID ARGUMENTS");
+		}
+
+		// Parse object/attribute pattern
+		var objAttrText = MModule.plainText(objAttrArg.Message!);
+		var pattern = MModule.plainText(patternArg.Message!);
+		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objAttrText);
+
+		if (!split.TryPickT0(out var details, out _))
+		{
+			await NotifyService!.Notify(executor, "I don't see that here.");
+			return new CallState("#-1 INVALID OBJECT");
+		}
+
+		var (dbref, maybeAttributePattern) = details;
+		var attributePattern = string.IsNullOrEmpty(maybeAttributePattern) ? "*" : maybeAttributePattern;
+
+		// Locate the object
+		var locate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
+			enactor,
+			executor,
+			dbref,
+			LocateFlags.All);
+
+		if (locate.IsError)
+		{
+			return locate.AsError;
+		}
+
+		var targetObject = locate.AsSharpObject;
+
+		// Determine pattern matching mode for attribute values
+		var isWild = switches.Contains("WILD");
+		var isRegexp = switches.Contains("REGEXP");
+		var isNoCase = switches.Contains("NOCASE") || switches.Contains("ILIST") || switches.Contains("IPRINT");
+		var isPrint = switches.Contains("PRINT") || switches.Contains("IPRINT");
+		var checkParents = switches.Contains("PARENT");
+
+		// Get attributes matching the attribute pattern
+		var attributePatternMode = attributePattern == "**" 
+			? IAttributeService.AttributePatternMode.Wildcard 
+			: IAttributeService.AttributePatternMode.Wildcard;
+		
+		var attributes = await AttributeService!.GetAttributePatternAsync(
+			executor, 
+			targetObject, 
+			attributePattern, 
+			checkParents, 
+			attributePatternMode);
+
+		if (attributes.IsError)
+		{
+			await NotifyService!.Notify(executor, $"Error reading attributes: {attributes.AsError.Value}");
+			return new CallState($"#-1 {attributes.AsError.Value}");
+		}
+
+		// Filter attributes by pattern match in their values
+		var matchingAttributes = new List<SharpAttribute>();
+		
+		foreach (var attr in attributes.AsAttributes)
+		{
+			var attrValue = MModule.plainText(attr.Value);
+			bool matches = false;
+
+			if (isRegexp)
+			{
+				// Regex match
+				try
+				{
+					var regexOptions = isNoCase ? System.Text.RegularExpressions.RegexOptions.IgnoreCase : System.Text.RegularExpressions.RegexOptions.None;
+					matches = System.Text.RegularExpressions.Regex.IsMatch(attrValue, pattern, regexOptions, TimeSpan.FromSeconds(1));
+				}
+				catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
+				{
+					await NotifyService!.Notify(executor, $"Regular expression timed out: {pattern}");
+					return new CallState("#-1 REGEXP TIMEOUT");
+				}
+				catch
+				{
+					await NotifyService!.Notify(executor, $"Invalid regular expression: {pattern}");
+					return new CallState("#-1 INVALID REGEXP");
+				}
+			}
+			else if (isWild)
+			{
+				// Wildcard match
+				try
+				{
+					var regexPattern = MModule.getWildcardMatchAsRegex2(pattern);
+					var regexOptions = isNoCase ? System.Text.RegularExpressions.RegexOptions.IgnoreCase : System.Text.RegularExpressions.RegexOptions.None;
+					matches = System.Text.RegularExpressions.Regex.IsMatch(attrValue, regexPattern, regexOptions, TimeSpan.FromSeconds(1));
+				}
+				catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
+				{
+					await NotifyService!.Notify(executor, $"Wildcard pattern timed out: {pattern}");
+					return new CallState("#-1 PATTERN TIMEOUT");
+				}
+				catch
+				{
+					await NotifyService!.Notify(executor, $"Invalid wildcard pattern: {pattern}");
+					return new CallState("#-1 INVALID PATTERN");
+				}
+			}
+			else
+			{
+				// Substring match
+				var comparison = isNoCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+				matches = attrValue.Contains(pattern, comparison);
+			}
+
+			if (matches)
+			{
+				matchingAttributes.Add(attr);
+			}
+		}
+
+		// Display results
+		if (matchingAttributes.Count == 0)
+		{
+			await NotifyService!.Notify(executor, "No matching attributes found.");
+			return new CallState(string.Empty);
+		}
+
+		if (isPrint)
+		{
+			// Print attribute names and values with highlighting
+			foreach (var attr in matchingAttributes)
+			{
+				var attrValue = attr.Value;
+				
+				// Highlight matching substrings in the value
+				MString displayValue;
+				if (isRegexp || isWild)
+				{
+					// For regex/wildcard, just show the value as-is
+					displayValue = attr.Value;
+				}
+				else
+				{
+					// For substring match, highlight the matching parts
+					var plainValue = MModule.plainText(attr.Value);
+					var comparison = isNoCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+					var index = plainValue.IndexOf(pattern, comparison);
+					
+					if (index >= 0)
+					{
+						var before = plainValue.Substring(0, index);
+						var match = plainValue.Substring(index, pattern.Length);
+						var after = plainValue.Substring(index + pattern.Length);
+						
+						displayValue = MModule.concat(
+							MModule.concat(
+								MModule.single(before),
+								MModule.single(match).Hilight()
+							),
+							MModule.single(after)
+						);
+					}
+					else
+					{
+						displayValue = attr.Value;
+					}
+				}
+
+				await NotifyService!.Notify(executor,
+					MModule.concat(
+						MModule.single($"{attr.Name}: ").Hilight(),
+						displayValue));
+			}
+		}
+		else
+		{
+			// List mode - just show attribute names
+			var attrNames = string.Join(" ", matchingAttributes.Select(a => a.Name));
+			await NotifyService!.Notify(executor, attrNames);
+		}
+
+		return new CallState(string.Empty);
 	}
 
 	[SharpCommand(Name = "@INCLUDE", Switches = ["LOCALIZE", "CLEARREGS", "NOBREAK"],
