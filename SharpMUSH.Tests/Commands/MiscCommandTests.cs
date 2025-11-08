@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
+using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -50,14 +51,14 @@ public class MiscCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask GrepCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@grep #1=pattern"));
 
+		// Verify that Notify was called at least once (could be "No matching attributes" or a list)
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
 	}
 
 	[Test]
