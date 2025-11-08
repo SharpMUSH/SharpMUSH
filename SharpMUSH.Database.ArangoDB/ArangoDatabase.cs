@@ -27,7 +27,7 @@ public partial class ArangoDatabase(
 	IArangoContext arangoDb,
 	ArangoHandle handle,
 	IMediator mediator,
-	IPasswordService passwordService // TODO: This doesn't belong in the database layer
+	IPasswordService passwordService
 ) : ISharpDatabase, ISharpDatabaseWithLogging
 {
 	private const string StartVertex = "startVertex";
