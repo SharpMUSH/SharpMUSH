@@ -56,8 +56,8 @@ FALSE: POUND F A L S E;
 TRUE: POUND T R U E;
 CARET_TOKEN: '^';
 ATTRIBUTE_COLON: ':';
+// STRING - must come BEFORE ATTRIBUTENAME so it matches in `string` parser rules
+STRING: ~( '#' | '&' | '|' | ':' | '!' | ')' | '(' | '^' | ' ' | '/')+;
 ATTRIBUTENAME:
     ~('#' | '&' | '|' | ':' | '!' | ')' | '(' | '/' | ' ' | '^')+
 ;
-// STRING - must come LAST so keywords match first
-STRING: ~( '#' | '&' | '|' | ':' | '!' | ')' | '(' | '^' | ' ' | '/')+;
