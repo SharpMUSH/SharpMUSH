@@ -540,14 +540,42 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Attribute_AccessCreatesAttributeEntry()
 	{
-		// Test @attribute/access command creates an attribute entry with no_command flag
-		// This test verifies the command executes without throwing an exception
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@attribute/access MYATTR=no_command"));
+		// Check what notifications were sent before and after
+		var callsBefore = NotifyService.ReceivedCalls().Where(c => c.GetMethodInfo().Name == "Notify").Count();
+		Console.WriteLine($"Notify calls before command: {callsBefore}");
 		
-		// Query the database to verify the entry was created
+		// Test @attribute/access command creates an attribute entry with no_command flag
+		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@attribute/access MYATTR=no_command"));
+		Console.WriteLine($"Command returned: {result}");
+		
+		// Check what new notifications were sent
+		var callsAfter = NotifyService.ReceivedCalls().Where(c => c.GetMethodInfo().Name == "Notify").ToList();
+		Console.WriteLine($"Notify calls after command: {callsAfter.Count}");
+		var newCalls = callsAfter.Skip(callsBefore).ToList();
+		Console.WriteLine($"New notify calls: {newCalls.Count}");
+		foreach (var call in newCalls)
+		{
+			var args = call.GetArguments();
+			if (args.Length >= 2)
+			{
+				Console.WriteLine($"Notification: {args[1]}");
+			}
+		}
+		
+		// Debug: Check all entries
 		var entries = await Mediator.CreateStream(new Library.Queries.Database.GetAllAttributeEntriesQuery())
 			.ToArrayAsync();
+		Console.WriteLine($"Total attribute entries after command: {entries.Length}");
+		
 		var entry = entries.FirstOrDefault(e => e.Name == "MYATTR");
+		if (entry == null)
+		{
+			Console.WriteLine("MYATTR entry not found!");
+		}
+		else
+		{
+			Console.WriteLine($"Found MYATTR with flags: {string.Join(", ", entry.DefaultFlags)}");
+		}
 		
 		await Assert.That(entry).IsNotNull();
 		await Assert.That(entry!.DefaultFlags.Contains("NO_COMMAND")).IsTrue();
