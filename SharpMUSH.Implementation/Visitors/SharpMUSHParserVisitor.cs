@@ -424,6 +424,34 @@ public class SharpMUSHParserVisitor(
 			}
 
 			// Step 6: Check @attribute setting
+			// Check if the command matches an attribute name in the attribute table with COMMAND flag
+			var attributeEntries = await Mediator.CreateStream(new Library.Queries.Database.GetAllAttributeEntriesQuery()).ToArrayAsync();
+			var commandAttributeEntry = attributeEntries.FirstOrDefault(entry => 
+				entry.Name.Equals(rootCommand, StringComparison.OrdinalIgnoreCase) &&
+				entry.DefaultFlags.Contains("COMMAND", StringComparer.OrdinalIgnoreCase));
+			
+			if (commandAttributeEntry != null)
+			{
+				// Look for this attribute on the executor
+				var attrResult = await AttributeService.GetAttributeAsync(executorObject, executorObject, commandAttributeEntry.Name, 
+					IAttributeService.AttributeMode.Execute, parent: true);
+				
+				if (attrResult.IsT0)
+				{
+					var attr = attrResult.AsT0.Last();
+					var attrParser = parser.Push(parser.CurrentState with
+					{
+						CurrentEvaluation = new DBAttribute(executorObject.Object().DBRef, attr.Name),
+						Arguments = [],
+						Function = null,
+						Executor = executorObject.Object().DBRef
+					});
+					
+					await attrParser.CommandListParse(attr.Value);
+					return CallState.Empty;
+				}
+			}
+			
 			// Step 7: Enter Aliases
 			// Step 8: Leave Aliases
 

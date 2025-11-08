@@ -536,4 +536,52 @@ public class GeneralCommandTests
 				Arg.Is<OneOf<MString,string>>(s => s.Value.ToString()!.Contains("@attribute:")), 
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
+
+	[Test]
+	public async ValueTask Attribute_AccessCreatesAttributeEntry()
+	{
+		// Test @attribute/access command creates an attribute entry
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@attribute/access MYATTR=COMMAND"));
+
+		// Should notify success with the attribute name
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf<MString,string>>(s => s.Value.ToString()!.Contains("MYATTR")), 
+				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+	}
+
+	[Test]
+	public async ValueTask Attribute_AccessValidatesFlags()
+	{
+		// Test @attribute/access validates flag names
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@attribute/access TESTATTR=INVALIDFLAG"));
+
+		// Should notify about unknown flag
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf<MString,string>>(s => s.Value.ToString()!.Contains("unknown", StringComparison.OrdinalIgnoreCase) || s.Value.ToString()!.Contains("Unknown")), 
+				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+	}
+
+	[Test]
+	public async ValueTask Attribute_CommandFlagEvaluatesAttribute()
+	{
+		// First create an attribute entry with COMMAND flag
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@attribute/access TESTCMD=COMMAND"));
+
+		// Set the attribute on the executor
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&TESTCMD me=@pemit me=Test command executed"));
+
+		// Now execute the command
+		await Parser.CommandParse(1, ConnectionService, MModule.single("TESTCMD"));
+
+		// Should notify that the command was executed
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Test command executed")), 
+				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+	}
 }
