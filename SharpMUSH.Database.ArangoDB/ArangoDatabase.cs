@@ -1075,9 +1075,9 @@ public partial class ArangoDatabase(
 
 	public async ValueTask<AnyOptionalSharpObject> GetParentAsync(string id, CancellationToken ct = default)
 	{
-		// TODO: Optimize
-		var parentId = (await arangoDb.Query.ExecuteAsync<dynamic>(handle,
-				$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphParents} RETURN v._key", cache: true,
+		// Optimized query: Get parent ID directly instead of just the key
+		var parentId = (await arangoDb.Query.ExecuteAsync<string>(handle,
+				$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphParents} RETURN v._id", cache: true,
 				cancellationToken: ct))
 			.FirstOrDefault();
 		if (parentId is null)
@@ -1085,7 +1085,7 @@ public partial class ArangoDatabase(
 			return new None();
 		}
 
-		return await GetObjectNodeAsync(new DBRef(parentId._id), ct);
+		return await GetObjectNodeAsync(parentId, ct);
 	}
 
 	private IAsyncEnumerable<SharpObject>? GetChildrenAsync(string id, CancellationToken ct = default)
@@ -2076,24 +2076,35 @@ public partial class ArangoDatabase(
 		var baseObject = await GetObjectNodeAsync(obj, ct);
 		if (baseObject.IsNone) return null;
 
-		const string exitQuery = $"FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphExits} RETURN v";
-		var query = await arangoDb.Query.ExecuteAsync<SharpObjectQueryResult>(handle, exitQuery,
+		// Optimized query: Get exit IDs and their object data in a single query by traversing both graphs
+		const string exitQuery = $@"
+			FOR exit IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphExits}
+			FOR obj IN 0..1 OUTBOUND exit GRAPH {DatabaseConstants.GraphObjects}
+			RETURN {{exit: exit, obj: obj}}";
+		
+		var query = await arangoDb.Query.ExecuteAsync<dynamic>(handle, exitQuery,
 			new Dictionary<string, object>
 			{
 				{ StartVertex, baseObject.Known().Id()! }
 			}, cancellationToken: ct);
 
 		return query
-			.Select(x => x.Id)
 			.ToAsyncEnumerable()
-			.Select(GetObjectNodeAsync) // TODO: Optimize to make a single call.
-			.Select(x => x.Match(
-				_ => throw new Exception("Invalid Exit found"),
-				_ => throw new Exception("Invalid Exit found"),
-				exit => exit,
-				_ => throw new Exception("Invalid Exit found"),
-				_ => throw new Exception("Invalid Exit found")
-			));
+			.Select<dynamic, SharpExit>(exitData =>
+			{
+				var exit = exitData.exit;
+				var obj = exitData.obj;
+				var convertObject = SharpObjectQueryToSharpObject(obj);
+				
+				return new SharpExit
+				{
+					Id = (string)exit._id,
+					Object = convertObject,
+					Aliases = ((Newtonsoft.Json.Linq.JArray?)exit.Aliases)?.ToObject<string[]>() ?? [],
+					Location = new(async ct => await mediator.Send(new GetCertainLocationQuery((string)exit._id), ct)),
+					Home = new(async ct => await GetHomeAsync((string)exit._id, ct))
+				};
+			});
 	}
 
 	public async ValueTask<IAsyncEnumerable<SharpExit>> GetExitsAsync(AnySharpContainer node,
@@ -2103,23 +2114,34 @@ public partial class ArangoDatabase(
 		// This is bad code. We can't use graphExits for this.
 		var startVertex = node.Id;
 
-		const string exitQuery = $"FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphExits} RETURN v";
-		var query = arangoDb.Query.ExecuteStreamAsync<SharpObjectQueryResult>(handle, exitQuery,
+		// Optimized query: Get exit IDs and their object data in a single query by traversing both graphs
+		const string exitQuery = $@"
+			FOR exit IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphExits}
+			FOR obj IN 0..1 OUTBOUND exit GRAPH {DatabaseConstants.GraphObjects}
+			RETURN {{exit: exit, obj: obj}}";
+		
+		var query = arangoDb.Query.ExecuteStreamAsync<dynamic>(handle, exitQuery,
 			new Dictionary<string, object>
 			{
 				{ StartVertex, startVertex }
 			}, cancellationToken: ct);
 
 		return query
-			.Select(x => x.Id)
-			.Select(GetObjectNodeAsync) // TODO: Optimize to make a single call.
-			.Select(x => x.Match(
-				_ => throw new Exception("Invalid Exit found"),
-				_ => throw new Exception("Invalid Exit found"),
-				exit => exit,
-				_ => throw new Exception("Invalid Exit found"),
-				_ => throw new Exception("Invalid Exit found")
-			));
+			.Select<dynamic, SharpExit>(exitData =>
+			{
+				var exit = exitData.exit;
+				var obj = exitData.obj;
+				var convertObject = SharpObjectQueryToSharpObject(obj);
+				
+				return new SharpExit
+				{
+					Id = (string)exit._id,
+					Object = convertObject,
+					Aliases = ((Newtonsoft.Json.Linq.JArray?)exit.Aliases)?.ToObject<string[]>() ?? [],
+					Location = new(async ct => await mediator.Send(new GetCertainLocationQuery((string)exit._id), ct)),
+					Home = new(async ct => await GetHomeAsync((string)exit._id, ct))
+				};
+			});
 	}
 
 	public async ValueTask<IAsyncEnumerable<SharpPlayer>> GetPlayerByNameOrAliasAsync(string name,
