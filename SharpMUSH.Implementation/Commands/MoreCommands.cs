@@ -994,16 +994,12 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		
 		// Check if executor is admin (can see hidden players)
-		var isAdmin = await executor.HasFlag("WIZARD") || 
-		              await executor.HasFlag("ROYALTY") || 
+		var isAdmin = await executor.IsWizard() || 
+		              await executor.IsRoyalty() || 
 		              await executor.HasPower("SEE_ALL");
 		
 		// Get optional pattern argument
-		string? pattern = null;
-		if (args.ContainsKey("0"))
-		{
-			pattern = args["0"].Message?.ToPlainText();
-		}
+		var pattern = args.ContainsKey("0") ? args["0"].Message?.ToPlainText() : null;
 		
 		var everyone = ConnectionService!.GetAll();
 		const string fmt = "{0,-18} {1,10} {2,6}  {3,-32}";
@@ -1014,8 +1010,7 @@ public partial class Commands
 		await foreach (var connection in everyone.Where(player => player.Ref.HasValue))
 		{
 			var obj = await Mediator!.Send(new GetObjectNodeQuery(connection.Ref!.Value));
-			var onFor = connection.Connected;
-			var idleFor = connection.Idle;
+			var playerName = obj.Known.Object().Name;
 			
 			// Filter by visibility: mortals can't see DARK players, admins can see all
 			if (!isAdmin && await obj.Known.HasFlag("DARK"))
@@ -1024,47 +1019,18 @@ public partial class Commands
 			}
 			
 			// Filter by pattern if provided
-			var playerName = obj.Known.Object().Name;
-			if (!string.IsNullOrWhiteSpace(pattern))
+			if (!string.IsNullOrWhiteSpace(pattern) && !MatchesPattern(playerName, pattern))
 			{
-				bool matches;
-				// Check if pattern contains wildcards
-				if (pattern.Contains('*') || pattern.Contains('?'))
-				{
-					// Use wildcard matching
-					matches = MModule.isWildcardMatch2(MModule.single(playerName), pattern);
-				}
-				else
-				{
-					// Use prefix matching (starts with)
-					matches = playerName.StartsWith(pattern, StringComparison.OrdinalIgnoreCase);
-				}
-				
-				if (!matches)
-				{
-					continue;
-				}
+				continue;
 			}
 			
-			// Get DOING attribute
-			var doingAttr = await AttributeService!.GetAttributeAsync(
-				executor,
-				obj.Known,
-				"DOING",
-				mode: IAttributeService.AttributeMode.Read,
-				parent: false);
-			
-			var doingText = doingAttr switch
-			{
-				{ IsError: true } or { IsNone: true } => string.Empty,
-				_ => doingAttr.AsAttribute.Last().Value.ToPlainText()
-			};
+			var doingText = await GetDoingText(executor, obj.Known);
 			
 			playerList.Add(string.Format(
 				fmt,
 				playerName,
-				TimeHelpers.TimeString(onFor!.Value, accuracy: 3),
-				TimeHelpers.TimeString(idleFor!.Value),
+				TimeHelpers.TimeString(connection.Connected!.Value, accuracy: 3),
+				TimeHelpers.TimeString(connection.Idle!.Value),
 				doingText));
 		}
 		
@@ -1074,6 +1040,35 @@ public partial class Commands
 		await NotifyService!.Notify(executor, message);
 		
 		return new None();
+	}
+	
+	private static bool MatchesPattern(string playerName, string pattern)
+	{
+		// Check if pattern contains wildcards
+		if (pattern.Contains('*') || pattern.Contains('?'))
+		{
+			// Use wildcard matching
+			return MModule.isWildcardMatch2(MModule.single(playerName), pattern);
+		}
+		
+		// Use prefix matching (starts with)
+		return playerName.StartsWith(pattern, StringComparison.OrdinalIgnoreCase);
+	}
+	
+	private static async ValueTask<string> GetDoingText(AnySharpObject executor, AnySharpObject player)
+	{
+		var doingAttr = await AttributeService!.GetAttributeAsync(
+			executor,
+			player,
+			"DOING",
+			mode: IAttributeService.AttributeMode.Read,
+			parent: false);
+		
+		return doingAttr switch
+		{
+			{ IsError: true } or { IsNone: true } => string.Empty,
+			_ => doingAttr.AsAttribute.Last().Value.ToPlainText()
+		};
 	}
 
 	[SharpCommand(Name = "SESSION", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]

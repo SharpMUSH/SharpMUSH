@@ -31,28 +31,13 @@ public partial class Commands
 			.Select(async player =>
 			{
 				var obj = await Mediator!.Send(new GetObjectNodeQuery(player.Ref!.Value));
-				var onFor = player.Connected;
-				var idleFor = player.Idle;
-				
-				// Get DOING attribute
-				var doingAttr = await AttributeService!.GetAttributeAsync(
-					executor,
-					obj.Known,
-					"DOING",
-					mode: Library.Services.Interfaces.IAttributeService.AttributeMode.Read,
-					parent: false);
-				
-				var doingText = doingAttr switch
-				{
-					{ IsError: true } or { IsNone: true } => string.Empty,
-					_ => doingAttr.AsAttribute.Last().Value.ToPlainText()
-				};
+				var doingText = await Commands.GetDoingText(executor, obj.Known);
 				
 				return (string.Format(
 					fmt,
 					obj.Known.Object().Name,
-					TimeHelpers.TimeString(onFor!.Value, accuracy: 3),
-					TimeHelpers.TimeString(idleFor!.Value),
+					TimeHelpers.TimeString(player.Connected!.Value, accuracy: 3),
+					TimeHelpers.TimeString(player.Idle!.Value),
 					doingText), obj.Known);
 			})
 			.Where(async (player, _) => await PermissionService!.CanSee(executor, (await player).Item2))
