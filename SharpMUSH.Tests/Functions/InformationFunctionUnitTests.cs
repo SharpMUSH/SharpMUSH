@@ -296,8 +296,10 @@ public class InformationFunctionUnitTests
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
 
-    public async Task Motd_ReturnsConnectMotd()
+	[Test]
+	public async Task Motd_ReturnsConnectMotd()
 	{
 		// motd() should return the connect MOTD (empty by default)
 		var result = (await Parser.FunctionParse(MModule.single("motd()")))?.Message!;
