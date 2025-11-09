@@ -19,7 +19,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
-
+using System.Linq;
 namespace SharpMUSH.Database.ArangoDB;
 
 public partial class ArangoDatabase(
@@ -1835,15 +1835,9 @@ public partial class ArangoDatabase(
 			
 			// Get flags from the attribute entry and resolve them
 			var flagNames = sharpAttributeEntry?.DefaultFlags ?? [];
-			var resolvedFlags = new List<SharpAttributeFlag>();
-			foreach (var flagName in flagNames)
-			{
-				var flag = await GetAttributeFlagAsync(flagName, ct);
-				if (flag != null)
-				{
-					resolvedFlags.Add(flag);
-				}
-			}
+			var resolvedFlags = (await Task.WhenAll(flagNames.Select(flagName => GetAttributeFlagAsync(flagName, ct))))
+				.Where(flag => flag != null)
+				.ToList();
 
 			var newOne = await arangoDb.Document.CreateAsync<SharpAttributeCreateRequest, SharpAttributeQueryResult>(
 				transactionHandle, DatabaseConstants.Attributes,
