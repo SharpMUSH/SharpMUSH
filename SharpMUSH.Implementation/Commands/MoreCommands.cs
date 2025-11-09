@@ -193,9 +193,8 @@ public partial class Commands
 				.Distinct()
 				.OrderBy(x => x);
 			
-			foreach (var cmdName in commands)
+			foreach (var displayName in commands.Select(cmdName => useLowercase ? cmdName.ToLower() : cmdName))
 			{
-				var displayName = useLowercase ? cmdName.ToLower() : cmdName;
 				output.AppendLine($"  {displayName}");
 			}
 			
@@ -230,9 +229,8 @@ public partial class Commands
 				.Distinct()
 				.OrderBy(x => x);
 			
-			foreach (var funcName in functions)
+			foreach (var displayName in functions.Select(funcName => useLowercase ? funcName.ToLower() : funcName))
 			{
-				var displayName = useLowercase ? funcName.ToLower() : funcName;
 				output.AppendLine($"  {displayName}");
 			}
 			
