@@ -523,15 +523,8 @@ public partial class Commands
 			// Clamp count to reasonable values
 			count = Math.Max(1, Math.Min(count, 1000));
 			
-			// Check if database supports logging
-			if (Database is not ISharpDatabaseWithLogging loggingDb)
-			{
-				await NotifyService!.Notify(executor, "Log retrieval is not supported by the current database backend.");
-				return CallState.Empty;
-			}
-			
-			// Retrieve logs from the database
-			var logs = loggingDb.GetLogsFromCategory(category, 0, count);
+			// Retrieve logs from the database via Mediator
+			var logs = Mediator!.CreateStream(new GetConnectionLogsQuery(category, 0, count));
 			var logList = new List<LogEventEntity>();
 			
 			await foreach (var log in logs)
