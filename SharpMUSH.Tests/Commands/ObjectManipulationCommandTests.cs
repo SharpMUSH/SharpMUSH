@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
+using OneOf;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
@@ -35,7 +36,10 @@ public class ObjectManipulationCommandTests
 		// Should receive messages including "Taken."
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Taken")));
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Taken")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
@@ -58,7 +62,10 @@ public class ObjectManipulationCommandTests
 		// Should receive messages including "Taken."
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Taken")));
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Taken")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
@@ -69,7 +76,10 @@ public class ObjectManipulationCommandTests
 		// Should receive error message
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("don't see")));
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("don't see")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
@@ -85,7 +95,10 @@ public class ObjectManipulationCommandTests
 		// Should receive messages including "Dropped."
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Dropped")));
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Dropped")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
@@ -105,7 +118,10 @@ public class ObjectManipulationCommandTests
 		// Should receive messages including "Given."
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Given")));
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Given")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
@@ -128,7 +144,10 @@ public class ObjectManipulationCommandTests
 		// Should receive some notification about inventory
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Any<OneOf.OneOf<MString,string>>(),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
@@ -155,7 +174,10 @@ public class ObjectManipulationCommandTests
 		// Should receive error about containment loop
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("loop")));
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("loop")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
@@ -182,7 +204,10 @@ public class ObjectManipulationCommandTests
 		// Should receive error about containment loop
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("loop")));
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("loop")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
