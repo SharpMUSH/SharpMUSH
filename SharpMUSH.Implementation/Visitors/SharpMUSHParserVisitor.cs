@@ -37,6 +37,7 @@ public class SharpMUSHParserVisitor(
 	ILocateService LocateService,
 	ICommandDiscoveryService CommandDiscoveryService,
 	IAttributeService AttributeService,
+	IHookService HookService,
 	MString source)
 	: SharpMUSHParserBaseVisitor<ValueTask<CallState?>>
 {
@@ -566,14 +567,63 @@ public class SharpMUSHParserVisitor(
 		return await newParser.CommandLibrary["GOTO"].LibraryInformation.Command.Invoke(newParser);
 	}
 
-	private static async ValueTask<Option<CallState>> HandleInternalCommandPattern(IMUSHCodeParser prs, MString src,
+	private async ValueTask<Option<CallState>> HandleInternalCommandPattern(IMUSHCodeParser prs, MString src,
 		CommandContext context, string rootCommand, IEnumerable<string> switches,
 		CommandDefinition libraryCommandDefinition)
 	{
 		var arguments = await ArgumentSplit(prs, src, context, libraryCommandDefinition);
 
+		// Hook execution integration
+		// Get executor for permission checks in hooks
+		var executor = await prs.CurrentState.ExecutorObject(Mediator);
+		
+		// Prepare named registers for hooks
+		var namedRegisters = new Dictionary<string, MString>
+		{
+			["ARGS"] = src  // The entire argument string before evaluation
+		};
+		
+		// Parse switches for named register
+		var switchArray = switches.ToArray();
+		if (switchArray.Length > 0)
+		{
+			namedRegisters["SWITCHES"] = MModule.single(string.Join(" ", switchArray));
+		}
+		
+		// For EQSPLIT commands, populate LS/RS registers
+		if (libraryCommandDefinition.Attribute.Behavior.HasFlag(CommandBehavior.EqSplit))
+		{
+			// Parse the source to find the = sign
+			var sourceText = src.ToString();
+			var equalsIndex = sourceText.IndexOf('=');
+			if (equalsIndex >= 0)
+			{
+				namedRegisters["LS"] = MModule.single(sourceText[..equalsIndex].Trim());
+				namedRegisters["EQUALS"] = MModule.single("=");
+				namedRegisters["RS"] = MModule.single(sourceText[(equalsIndex + 1)..].Trim());
+			}
+			else
+			{
+				namedRegisters["LS"] = src;
+			}
+		}
+		else
+		{
+			namedRegisters["LS"] = src;
+		}
+		
+		// Populate LSAx and RSAx registers based on arguments
+		for (int i = 0; i < arguments.Count; i++)
+		{
+			namedRegisters[$"LSA{i + 1}"] = arguments[i].Message ?? MModule.empty();
+		}
+		namedRegisters["LSAC"] = MModule.single(arguments.Count.ToString());
+		
+		// Execute hooks with the new parser state that includes named registers
 		return await prs.With(state =>
-				state with
+			{
+				// Add named registers to the register stack
+				var newState = state with
 				{
 					Command = rootCommand,
 					Switches = switches.Select(x => x.ToUpper()),
@@ -582,8 +632,103 @@ public class SharpMUSHParserVisitor(
 						.ToDictionary(),
 					CommandInvoker = libraryCommandDefinition.Command,
 					Function = null
-				},
-			async newParser => await libraryCommandDefinition.Command.Invoke(newParser));
+				};
+				
+				// Push named registers onto the stack
+				foreach (var (key, value) in namedRegisters)
+				{
+					newState.AddRegister(key, value);
+				}
+				
+				return newState;
+			},
+			async newParser =>
+			{
+				// 1. Check for /ignore hook
+				var ignoreHook = await HookService.GetHookAsync(rootCommand, "IGNORE");
+				if (ignoreHook.IsSome())
+				{
+					var ignoreResult = await ExecuteHookCode(newParser, executor, ignoreHook.AsValue());
+					if (ignoreResult.IsSome())
+					{
+						// If hook returns false (empty, #-1, 0, etc.), skip command
+						var resultText = ignoreResult.AsValue().Message?.ToPlainText() ?? "";
+						if (string.IsNullOrWhiteSpace(resultText) || resultText == "0" || resultText == "#-1")
+						{
+							return CallState.Empty;
+						}
+					}
+				}
+				
+				// 2. Check for /before hook
+				var beforeHook = await HookService.GetHookAsync(rootCommand, "BEFORE");
+				if (beforeHook.IsSome())
+				{
+					await ExecuteHookCode(newParser, executor, beforeHook.AsValue());
+					// Result is discarded
+				}
+				
+				// 3. Check for /override hook  
+				var overrideHook = await HookService.GetHookAsync(rootCommand, "OVERRIDE");
+				if (overrideHook.IsSome())
+				{
+					// TODO: Implement $-command matching for override
+					// For now, just execute the hook attribute code directly
+					var overrideResult = await ExecuteHookCode(newParser, executor, overrideHook.AsValue());
+					if (overrideResult.IsSome())
+					{
+						// 5. Check for /after hook before returning
+						var afterHook = await HookService.GetHookAsync(rootCommand, "AFTER");
+						if (afterHook.IsSome())
+						{
+							await ExecuteHookCode(newParser, executor, afterHook.AsValue());
+							// Result is discarded
+						}
+						return overrideResult.AsValue();
+					}
+				}
+				
+				// 4. Execute the built-in command
+				var commandResult = await libraryCommandDefinition.Command.Invoke(newParser);
+				
+				// 5. Check for /after hook
+				var afterHookFinal = await HookService.GetHookAsync(rootCommand, "AFTER");
+				if (afterHookFinal.IsSome())
+				{
+					await ExecuteHookCode(newParser, executor, afterHookFinal.AsValue());
+					// Result is discarded
+				}
+				
+				return commandResult;
+			});
+	}
+	
+	/// <summary>
+	/// Executes hook code from an attribute on an object
+	/// </summary>
+	private async ValueTask<Option<CallState>> ExecuteHookCode(IMUSHCodeParser parser, AnyOptionalSharpObject executor, CommandHook hook)
+	{
+		// Get the target object
+		var targetObject = await Mediator.Send(new GetObjectNodeQuery(hook.TargetObject));
+		if (targetObject == null || targetObject.IsNone)
+		{
+			return new None();
+		}
+
+		var targetObj = targetObject.Known();
+		var executorObj = executor.IsNone ? targetObj : executor.Known();
+		
+		// Execute the attribute using EvaluateAttributeFunctionAsync
+		var result = await AttributeService.EvaluateAttributeFunctionAsync(
+			parser,
+			executorObj,
+			targetObj,
+			hook.AttributeName,
+			new Dictionary<string, CallState>(),
+			evalParent: true,
+			ignorePermissions: false);
+		
+		return new CallState(result);
 	}
 
 	private static async ValueTask<Option<CallState>> HandleSocketCommandPattern(IMUSHCodeParser prs, MString src,
