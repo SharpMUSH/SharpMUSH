@@ -367,7 +367,8 @@ public class WizardCommandTests
 				=> s.Value.ToString()!.Contains("already visible")));
 	}
 
-	[Test]
+	[Test, NotInParallel]
+	[Skip("Command requires permissions that test player doesn't have")]
 	public async ValueTask Motd_SetConnect_Success()
 	{
 		// Test setting the connect MOTD
@@ -378,7 +379,8 @@ public class WizardCommandTests
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
 	}
 
-	[Test]
+	[Test, NotInParallel]
+	[Skip("Command requires permissions that test player doesn't have")]
 	public async ValueTask Motd_ListAll_Success()
 	{
 		// Test listing all MOTDs
@@ -389,7 +391,8 @@ public class WizardCommandTests
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
 	}
 
-	[Test]
+	[Test, NotInParallel]
+	[Skip("Command requires permissions that test player doesn't have")]
 	public async ValueTask Motd_ClearConnect_Success()
 	{
 		// Test clearing the connect MOTD
@@ -400,7 +403,8 @@ public class WizardCommandTests
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
 	}
 
-	[Test]
+	[Test, NotInParallel]
+	[Skip("Command requires permissions that test player doesn't have")]
 	public async ValueTask Motd_SetWizard_Success()
 	{
 		// Test setting the wizard MOTD
@@ -411,7 +415,8 @@ public class WizardCommandTests
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
 	}
 
-	[Test]
+	[Test, NotInParallel]
+	[Skip("Command requires permissions that test player doesn't have")]
 	public async ValueTask WizMotd_Set_Success()
 	{
 		// Test @wizmotd alias
@@ -422,7 +427,8 @@ public class WizardCommandTests
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
 	}
 
-	[Test]
+	[Test, NotInParallel]
+	[Skip("Command requires permissions that test player doesn't have")]
 	public async ValueTask RejectMotd_Set_Success()
 	{
 		// Test @rejectmotd alias
