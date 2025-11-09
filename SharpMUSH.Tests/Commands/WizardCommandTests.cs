@@ -366,4 +366,70 @@ public class WizardCommandTests
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s 
 				=> s.Value.ToString()!.Contains("already visible")));
 	}
+
+	[Test]
+	public async ValueTask Motd_SetConnect_Success()
+	{
+		// Test setting the connect MOTD
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@motd Welcome to the game!"));
+		
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+	}
+
+	[Test]
+	public async ValueTask Motd_ListAll_Success()
+	{
+		// Test listing all MOTDs
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@motd/list"));
+		
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+	}
+
+	[Test]
+	public async ValueTask Motd_ClearConnect_Success()
+	{
+		// Test clearing the connect MOTD
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@motd/clear"));
+		
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+	}
+
+	[Test]
+	public async ValueTask Motd_SetWizard_Success()
+	{
+		// Test setting the wizard MOTD
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@motd/wizard Important wizard message"));
+		
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+	}
+
+	[Test]
+	public async ValueTask WizMotd_Set_Success()
+	{
+		// Test @wizmotd alias
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@wizmotd Wizard announcement"));
+		
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+	}
+
+	[Test]
+	public async ValueTask RejectMotd_Set_Success()
+	{
+		// Test @rejectmotd alias
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@rejectmotd Server is full"));
+		
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+	}
 }
