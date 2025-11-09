@@ -1,11 +1,13 @@
 ﻿using OneOf.Types;
 using SharpMUSH.Implementation.Common;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 
@@ -45,8 +47,222 @@ public partial class Commands
 		], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> List(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var switches = parser.CurrentState.Switches;
+		var useLowercase = switches.Contains("LOWERCASE");
+		
+		// Handle /MOTD switch - alias for @listmotd
+		if (switches.Contains("MOTD"))
+		{
+			// Check if executor is wizard/royalty to see wizard MOTD
+			var isWizard = await executor.IsWizard();
+			
+			// Get MOTD file paths from configuration
+			var motdFile = Configuration!.CurrentValue.Message.MessageOfTheDayFile;
+			var motdHtmlFile = Configuration.CurrentValue.Message.MessageOfTheDayHtmlFile;
+			
+			await NotifyService!.Notify(executor, "Current Message of the Day settings:");
+			await NotifyService.Notify(executor, $"  Connect MOTD File: {motdFile ?? "(not set)"}");
+			await NotifyService.Notify(executor, $"  Connect MOTD HTML: {motdHtmlFile ?? "(not set)"}");
+			
+			if (isWizard)
+			{
+				var wizmotdFile = Configuration.CurrentValue.Message.WizMessageOfTheDayFile;
+				var wizmotdHtmlFile = Configuration.CurrentValue.Message.WizMessageOfTheDayHtmlFile;
+				
+				await NotifyService.Notify(executor, $"  Wizard MOTD File: {wizmotdFile ?? "(not set)"}");
+				await NotifyService.Notify(executor, $"  Wizard MOTD HTML: {wizmotdHtmlFile ?? "(not set)"}");
+			}
+			
+			return CallState.Empty;
+		}
+		
+		// Handle /FLAGS switch - alias for @flag/list
+		if (switches.Contains("FLAGS"))
+		{
+			var output = new System.Text.StringBuilder();
+			var header = useLowercase ? "Object Flags:" : "OBJECT FLAGS:";
+			output.AppendLine(header);
+			
+			var headerLine = useLowercase 
+				? "name                 symbol type restrictions" 
+				: "NAME                 SYMBOL TYPE RESTRICTIONS";
+			output.AppendLine(headerLine);
+			output.AppendLine("-------------------- ------ -------------------");
+			
+			var flags = Mediator!.CreateStream(new GetAllObjectFlagsQuery());
+			await foreach (var flag in flags)
+			{
+				var flagName = useLowercase ? flag.Name.ToLower() : flag.Name;
+				var symbol = useLowercase ? flag.Symbol.ToLower() : flag.Symbol;
+				var types = string.Join(",", flag.TypeRestrictions.Select(t => useLowercase ? t.ToLower() : t));
+				output.AppendLine($"{flagName,-20} {symbol,-6} {types}");
+			}
+			
+			await NotifyService!.Notify(executor, output.ToString().TrimEnd());
+			return CallState.Empty;
+		}
+		
+		// Handle /POWERS switch - alias for @power/list
+		if (switches.Contains("POWERS"))
+		{
+			var output = new System.Text.StringBuilder();
+			var header = useLowercase ? "Object Powers:" : "OBJECT POWERS:";
+			output.AppendLine(header);
+			
+			var headerLine = useLowercase 
+				? "name                 alias              type restrictions" 
+				: "NAME                 ALIAS              TYPE RESTRICTIONS";
+			output.AppendLine(headerLine);
+			output.AppendLine("-------------------- ------------------ -------------------");
+			
+			var powers = Mediator!.CreateStream(new GetPowersQuery());
+			await foreach (var power in powers)
+			{
+				var powerName = useLowercase ? power.Name.ToLower() : power.Name;
+				var alias = useLowercase ? power.Alias.ToLower() : power.Alias;
+				var types = string.Join(",", power.TypeRestrictions.Select(t => useLowercase ? t.ToLower() : t));
+				output.AppendLine($"{powerName,-20} {alias,-18} {types}");
+			}
+			
+			await NotifyService!.Notify(executor, output.ToString().TrimEnd());
+			return CallState.Empty;
+		}
+		
+		// Handle /LOCKS switch - list lock types
+		if (switches.Contains("LOCKS"))
+		{
+			var output = new System.Text.StringBuilder();
+			var header = useLowercase ? "Lock Types:" : "LOCK TYPES:";
+			output.AppendLine(header);
+			
+			// Get all lock types from the LockType enum
+			var lockTypes = Enum.GetNames(typeof(LockType));
+			foreach (var lockType in lockTypes.OrderBy(x => x))
+			{
+				var displayName = useLowercase ? lockType.ToLower() : lockType.ToUpper();
+				output.AppendLine($"  {displayName}");
+			}
+			
+			await NotifyService!.Notify(executor, output.ToString().TrimEnd());
+			return CallState.Empty;
+		}
+		
+		// Handle /ATTRIBS switch - list standard attributes
+		if (switches.Contains("ATTRIBS"))
+		{
+			var output = new System.Text.StringBuilder();
+			var header = useLowercase ? "Standard Attributes:" : "STANDARD ATTRIBUTES:";
+			output.AppendLine(header);
+			
+			var attributes = Mediator!.CreateStream(new GetAllAttributeEntriesQuery());
+			await foreach (var attr in attributes.OrderBy(x => x.Name))
+			{
+				var attrName = useLowercase ? attr.Name.ToLower() : attr.Name;
+				output.AppendLine($"  {attrName}");
+			}
+			
+			await NotifyService!.Notify(executor, output.ToString().TrimEnd());
+			return CallState.Empty;
+		}
+		
+		// Handle /COMMANDS switch - list all commands
+		if (switches.Contains("COMMANDS"))
+		{
+			var output = new System.Text.StringBuilder();
+			var header = useLowercase ? "Commands:" : "COMMANDS:";
+			output.AppendLine(header);
+			
+			var filterBuiltin = switches.Contains("BUILTIN");
+			var filterLocal = switches.Contains("LOCAL");
+			
+			var commandPairs = CommandLibrary!.AsEnumerable();
+			
+			if (filterBuiltin && !filterLocal)
+			{
+				commandPairs = commandPairs.Where(kvp => kvp.Value.IsSystem);
+			}
+			else if (filterLocal && !filterBuiltin)
+			{
+				commandPairs = commandPairs.Where(kvp => !kvp.Value.IsSystem);
+			}
+			// If both or neither are set, show all
+			
+			var commands = commandPairs
+				.Select(kvp => kvp.Value.LibraryInformation.Attribute.Name)
+				.Distinct()
+				.OrderBy(x => x);
+			
+			foreach (var displayName in commands.Select(cmdName => useLowercase ? cmdName.ToLower() : cmdName))
+			{
+				output.AppendLine($"  {displayName}");
+			}
+			
+			await NotifyService!.Notify(executor, output.ToString().TrimEnd());
+			return CallState.Empty;
+		}
+		
+		// Handle /FUNCTIONS switch - list all functions
+		if (switches.Contains("FUNCTIONS"))
+		{
+			var output = new System.Text.StringBuilder();
+			var header = useLowercase ? "Functions:" : "FUNCTIONS:";
+			output.AppendLine(header);
+			
+			var filterBuiltin = switches.Contains("BUILTIN");
+			var filterLocal = switches.Contains("LOCAL");
+			
+			var functionPairs = FunctionLibrary!.AsEnumerable();
+			
+			if (filterBuiltin && !filterLocal)
+			{
+				functionPairs = functionPairs.Where(kvp => kvp.Value.IsSystem);
+			}
+			else if (filterLocal && !filterBuiltin)
+			{
+				functionPairs = functionPairs.Where(kvp => !kvp.Value.IsSystem);
+			}
+			// If both or neither are set, show all
+			
+			var functions = functionPairs
+				.Select(kvp => kvp.Value.LibraryInformation.Attribute.Name)
+				.Distinct()
+				.OrderBy(x => x);
+			
+			foreach (var displayName in functions.Select(funcName => useLowercase ? funcName.ToLower() : funcName))
+			{
+				output.AppendLine($"  {displayName}");
+			}
+			
+			await NotifyService!.Notify(executor, output.ToString().TrimEnd());
+			return CallState.Empty;
+		}
+		
+		// Handle /ALLOCATIONS switch - memory allocation info (admin-only)
+		if (switches.Contains("ALLOCATIONS"))
+		{
+			// Check if user is admin/wizard
+			var isWizard = await executor.IsWizard();
+			if (!isWizard)
+			{
+				await NotifyService!.Notify(executor, "Permission denied.");
+				return new CallState("#-1 PERMISSION DENIED");
+			}
+			
+			var output = new System.Text.StringBuilder();
+			output.AppendLine("Memory Allocations:");
+			output.AppendLine($"  Total Memory: {GC.GetTotalMemory(false):N0} bytes");
+			output.AppendLine($"  GC Gen 0 Collections: {GC.CollectionCount(0)}");
+			output.AppendLine($"  GC Gen 1 Collections: {GC.CollectionCount(1)}");
+			output.AppendLine($"  GC Gen 2 Collections: {GC.CollectionCount(2)}");
+			
+			await NotifyService!.Notify(executor, output.ToString().TrimEnd());
+			return CallState.Empty;
+		}
+		
+		// If no specific switch is provided, show a help message
+		await NotifyService!.Notify(executor, "You must specify what to list. Use one of: /MOTD /FUNCTIONS /COMMANDS /ATTRIBS /LOCKS /FLAGS /POWERS /ALLOCATIONS");
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@LOGWIPE", Switches = ["CHECK", "CMD", "CONN", "ERR", "TRACE", "WIZ", "ROTATE", "TRIM", "WIPE"],
