@@ -11,6 +11,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
+[NotInParallel]
 public class ObjectManipulationCommandTests
 {
 	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -128,6 +129,60 @@ public class ObjectManipulationCommandTests
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+	}
+
+	[Test]
+	public async ValueTask GetPreventsLoops()
+	{
+		// Create a box and a bag
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@create Box"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@create Bag"));
+		
+		// Set both as ENTER_OK
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set Box=ENTER_OK"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set Bag=ENTER_OK"));
+		
+		// Get both objects
+		await Parser.CommandParse(1, ConnectionService, MModule.single("get Box"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("get Bag"));
+		
+		// Put Bag inside Box
+		await Parser.CommandParse(1, ConnectionService, MModule.single("give Box=Bag"));
+		
+		// Try to get Box from inside Bag (should fail with loop error)
+		await Parser.CommandParse(1, ConnectionService, MModule.single("get Bag's Box"));
+		
+		// Should receive error about containment loop
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("loop")));
+	}
+
+	[Test]
+	public async ValueTask GivePreventsLoops()
+	{
+		// Create a chest and a sack
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@create Chest"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@create Sack"));
+		
+		// Set both as ENTER_OK
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set Chest=ENTER_OK"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set Sack=ENTER_OK"));
+		
+		// Get both objects
+		await Parser.CommandParse(1, ConnectionService, MModule.single("get Chest"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("get Sack"));
+		
+		// Put Sack inside Chest
+		await Parser.CommandParse(1, ConnectionService, MModule.single("give Chest=Sack"));
+		
+		// Try to give Chest to Sack (should fail with loop error)
+		await Parser.CommandParse(1, ConnectionService, MModule.single("give Sack=Chest"));
+		
+		// Should receive error about containment loop
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("loop")));
 	}
 
 	[Test]
