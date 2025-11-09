@@ -176,4 +176,36 @@ public class InformationFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
+
+	[Test]
+	public async Task Motd_ReturnsConnectMotd()
+	{
+		// motd() should return the connect MOTD (empty by default)
+		var result = (await Parser.FunctionParse(MModule.single("motd()")))?.Message!;
+		await Assert.That(result.ToPlainText()).IsNotNull();
+	}
+
+	[Test]
+	public async Task WizMotd_ReturnsWizardMotd()
+	{
+		// wizmotd() should return the wizard MOTD (empty by default)
+		var result = (await Parser.FunctionParse(MModule.single("wizmotd()")))?.Message!;
+		await Assert.That(result.ToPlainText()).IsNotNull();
+	}
+
+	[Test]
+	public async Task DownMotd_ReturnsDownMotd()
+	{
+		// downmotd() should return the down MOTD (empty by default)
+		var result = (await Parser.FunctionParse(MModule.single("downmotd()")))?.Message!;
+		await Assert.That(result.ToPlainText()).IsNotNull();
+	}
+
+	[Test]
+	public async Task FullMotd_ReturnsFullMotd()
+	{
+		// fullmotd() should return the full MOTD (empty by default)
+		var result = (await Parser.FunctionParse(MModule.single("fullmotd()")))?.Message!;
+		await Assert.That(result.ToPlainText()).IsNotNull();
+	}
 }

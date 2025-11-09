@@ -366,4 +366,6 @@ public class WizardCommandTests
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s 
 				=> s.Value.ToString()!.Contains("already visible")));
 	}
+
+
 }
