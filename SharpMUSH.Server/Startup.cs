@@ -86,6 +86,7 @@ public class Startup(ArangoConfiguration config, string colorFile)
 		services.AddSingleton<IPermissionService, PermissionService>();
 		services.AddSingleton<INotifyService, NotifyService>();
 		services.AddSingleton<ILocateService, LocateService>();
+		services.AddSingleton<IMoveService, MoveService>();
 		services.AddSingleton<IExpandedObjectDataService, ExpandedObjectDataService>();
 		services.AddSingleton<IAttributeService, AttributeService>();
 		services.AddSingleton<IManipulateSharpObjectService, ManipulateSharpObjectService>();

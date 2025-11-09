@@ -740,8 +740,6 @@ public partial class Commands
 	[SharpCommand(Name = "GOTO", Behavior = CB.Default, MinArgs = 1, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> GoTo(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// TODO: Ensure they cannot go into an object that is within themselves.
-
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		if (parser.CurrentState.Arguments.Count == 0)
@@ -774,6 +772,13 @@ public partial class Commands
 			    await exitObj.Home.WithCancellation(CancellationToken.None)))
 		{
 			await NotifyService!.Notify(executor, "You can't go that way.");
+			return CallState.Empty;
+		}
+
+		// Check for containment loops before moving
+		if (await MoveService!.WouldCreateLoop(executor.AsContent, destination))
+		{
+			await NotifyService!.Notify(executor, "You can't go that way - it would create a containment loop.");
 			return CallState.Empty;
 		}
 
@@ -851,6 +856,13 @@ public partial class Commands
 			if (!await PermissionService!.Controls(executor, target))
 			{
 				await NotifyService!.Notify(executor, Errors.ErrorCannotTeleport);
+				continue;
+			}
+
+			// Check for containment loops before teleporting
+			if (await MoveService!.WouldCreateLoop(targetContent, destinationContainer))
+			{
+				await NotifyService!.Notify(executor, $"Cannot teleport {target.Object().Name} - it would create a containment loop.");
 				continue;
 			}
 
