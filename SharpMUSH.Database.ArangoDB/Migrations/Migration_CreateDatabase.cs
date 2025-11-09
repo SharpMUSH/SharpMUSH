@@ -938,19 +938,7 @@ public class Migration_CreateDatabase : IArangoMigration
 	private static async Task<List<ArangoUpdateResult<ArangoVoid>>> CreateInitialSharpAttributeEntries(
 		IArangoMigrator migrator, ArangoHandle handle) =>
 	[
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "WIZARD",
-			Symbol = "W",
-			System = true,
-			TypeRestrictions = DatabaseConstants.typesAll,
-			SetPermissions = DatabaseConstants.permissionsTrusted
-				.Union(DatabaseConstants.permissionsWizard)
-				.Union(DatabaseConstants.permissionsLog),
-			UnsetPermissions = DatabaseConstants.permissionsTrusted
-				.Union(DatabaseConstants.permissionsWizard),
-		}),
-				await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
 			new
 			{
 				Name = "AAHEAR",
@@ -2786,6 +2774,18 @@ public class Migration_CreateDatabase : IArangoMigration
 	private static async Task<List<ArangoUpdateResult<ArangoVoid>>> CreateInitialFlags(IArangoMigrator migrator,
 		ArangoHandle handle) =>
 	[
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
+		{
+			Name = "WIZARD",
+			Symbol = "W",
+			System = true,
+			TypeRestrictions = DatabaseConstants.typesAll,
+			SetPermissions = DatabaseConstants.permissionsTrusted
+				.Union(DatabaseConstants.permissionsWizard)
+				.Union(DatabaseConstants.permissionsLog),
+			UnsetPermissions = DatabaseConstants.permissionsTrusted
+				.Union(DatabaseConstants.permissionsWizard),
+		}),
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
 			Name = "ABODE",

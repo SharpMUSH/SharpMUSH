@@ -178,6 +178,127 @@ public class InformationFunctionUnitTests
 	}
 
 	[Test]
+	public async Task Colors_NoArgs()
+	{
+		var result = (await Parser.FunctionParse(MModule.single("colors()")))?.Message!;
+		var colors = result.ToPlainText();
+		
+		// Should return a non-empty list of colors
+		await Assert.That(colors).IsNotEmpty();
+		
+		// Should contain some known color names
+		await Assert.That(colors).Contains("red");
+		await Assert.That(colors).Contains("blue");
+		await Assert.That(colors).Contains("yellow");
+	}
+
+	[Test]
+	[Arguments("colors(*yellow*)", "yellow")]
+	public async Task Colors_Wildcard(string str, string expectedContains)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var colors = result.ToPlainText();
+		
+		// Should return colors matching the wildcard
+		await Assert.That(colors).IsNotEmpty();
+		await Assert.That(colors).Contains(expectedContains);
+	}
+
+	[Test]
+	[Arguments("colors(+yellow, hex)", "#ffff00")]
+	public async Task Colors_NameToHex(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("colors(+yellow, rgb)", "255 255 0")]
+	public async Task Colors_NameToRgb(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("colors(+yellow, xterm256)")]
+	public async Task Colors_NameToXterm(string str)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var xterm = result.ToPlainText();
+		
+		// Should return a valid xterm number
+		await Assert.That(int.TryParse(xterm, out var xtermNum)).IsTrue();
+		await Assert.That(xtermNum).IsGreaterThanOrEqualTo(0);
+		await Assert.That(xtermNum).IsLessThanOrEqualTo(255);
+	}
+
+	[Test]
+	[Arguments("colors(+yellow, 16color)")]
+	public async Task Colors_NameTo16Color(string str)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var ansiCode = result.ToPlainText();
+		
+		// Should return a valid ANSI color code
+		await Assert.That(ansiCode).IsNotEmpty();
+		// Yellow should map to 'y' or 'hy' (highlight yellow)
+		await Assert.That(ansiCode.Contains('y')).IsTrue();
+	}
+
+	[Test]
+	[Arguments("colors(#ffff00, name)", "yellow")]
+	public async Task Colors_HexToName(string str, string expectedContains)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var names = result.ToPlainText();
+		
+		// Should return color names matching the hex value
+		await Assert.That(names).IsNotEmpty();
+		await Assert.That(names).Contains(expectedContains);
+	}
+
+	[Test]
+	[Arguments("colors(+blue /+black, hex)", "#0000ff /#000000")]
+	public async Task Colors_ForegroundAndBackground(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("colors(iuB+red, hex styles)", "iuB #ff0000")]
+	public async Task Colors_WithStyles(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("colors(+blue huyG/+black, auto)", "+blue huyG/+black")]
+	public async Task Colors_AutoFormat(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("colors(invalidcolor, hex)", "#-1 INVALID COLOR")]
+	public async Task Colors_InvalidColor(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("colors(+yellow, invalidformat)", "#-1 INVALID FORMAT")]
+	public async Task Colors_InvalidFormat(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
 	public async Task Motd_ReturnsConnectMotd()
 	{
 		// motd() should return the connect MOTD (empty by default)
