@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Reflection;
+using System.Linq;
 using Humanizer;
 using OneOf.Types;
 using SharpMUSH.Implementation.Common;
@@ -1533,15 +1534,8 @@ public partial class Commands
 			var hostToCheck = args["0"].Message!.ToPlainText();
 			
 			// Find matching rule (simple wildcard matching for now)
-			KeyValuePair<string, string[]>? matchingRule = null;
-			foreach (var rule in sitelockRules.Rules)
-			{
-				if (WildcardMatch(hostToCheck, rule.Key))
-				{
-					matchingRule = rule;
-					break;
-				}
-			}
+			KeyValuePair<string, string[]>? matchingRule = sitelockRules.Rules
+				.FirstOrDefault(rule => WildcardMatch(hostToCheck, rule.Key));
 
 			if (matchingRule.HasValue)
 			{
