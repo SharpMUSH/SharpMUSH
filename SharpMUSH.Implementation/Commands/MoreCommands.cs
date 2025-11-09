@@ -26,6 +26,15 @@ public partial class Commands
 	private const string AttrEFail = "EFAIL";
 	private const string AttrOEFail = "OEFAIL";
 	private const string AttrAEFail = "AEFAIL";
+	private const string AttrSuccess = "SUCCESS";
+	private const string AttrOSuccess = "OSUCCESS";
+	private const string AttrASuccess = "ASUCCESS";
+	private const string AttrGive = "GIVE";
+	private const string AttrOGive = "OGIVE";
+	private const string AttrAGive = "AGIVE";
+	private const string AttrReceive = "RECEIVE";
+	private const string AttrOReceive = "ORECEIVE";
+	private const string AttrAReceive = "ARECEIVE";
 	private const string AttrLinkType = "_LINKTYPE";
 	private const string LinkTypeVariable = "variable";
 	private const string LinkTypeHome = "home";
@@ -654,16 +663,375 @@ public partial class Commands
 	[SharpCommand(Name = "GET", Switches = [], Behavior = CB.Player | CB.Thing | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Get(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		
+		// Parse arguments - support both "get <object>" and "get <container>'s <object>"
+		var fullArg = args["0"].Message!.ToPlainText();
+		
+		if (string.IsNullOrWhiteSpace(fullArg))
+		{
+			await NotifyService!.Notify(executor, "Get what?");
+			return CallState.Empty;
+		}
+		
+		string objectName;
+		AnySharpContainer sourceLocation;
+		
+		// Check if using possessive form: "get box's item"
+		var possessiveIndex = fullArg.IndexOf("'s ", StringComparison.OrdinalIgnoreCase);
+		if (possessiveIndex == -1)
+		{
+			possessiveIndex = fullArg.IndexOf("'S ", StringComparison.Ordinal);
+		}
+		
+		if (possessiveIndex > 0)
+		{
+			// Possessive form: get container's object
+			var containerName = fullArg[..possessiveIndex].Trim();
+			objectName = fullArg[(possessiveIndex + 3)..].Trim();
+			
+			// Locate the container
+			var containerResult = await LocateService!.LocateAndNotifyIfInvalid(parser, executor, executor, containerName, LocateFlags.All);
+			
+			if (!containerResult.IsValid() || (!containerResult.IsPlayer && !containerResult.IsThing))
+			{
+				await NotifyService!.Notify(executor, "I don't see that here.");
+				return CallState.Empty;
+			}
+			
+			var container = containerResult.WithoutError().WithoutNone();
+			
+			// Check if container is ENTER_OK
+			var containerFlags = await container.Object().Flags.Value.ToArrayAsync();
+			var hasEnterOk = containerFlags.Any(f => f.Name.Equals("ENTER_OK", StringComparison.OrdinalIgnoreCase));
+			
+			if (!hasEnterOk && !await PermissionService!.Controls(executor, container))
+			{
+				await NotifyService!.Notify(executor, "Permission denied.");
+				return CallState.Empty;
+			}
+			
+			sourceLocation = container.AsContainer;
+		}
+		else
+		{
+			// Simple form: get object from current location
+			objectName = fullArg;
+			sourceLocation = await executor.Match<ValueTask<AnySharpContainer>>(
+				async player => await player.Location.WithCancellation(CancellationToken.None),
+				room => ValueTask.FromResult<AnySharpContainer>(room),
+				async exit => await exit.Home.WithCancellation(CancellationToken.None),
+				async thing => await thing.Location.WithCancellation(CancellationToken.None));
+		}
+		
+		// Locate the object to get
+		var locateResult = await LocateService!.LocateAndNotifyIfInvalid(parser, executor, sourceLocation.WithExitOption(), objectName, LocateFlags.All);
+		
+		if (!locateResult.IsValid() || locateResult.IsRoom || locateResult.IsExit)
+		{
+			await NotifyService!.Notify(executor, "I don't see that here.");
+			return CallState.Empty;
+		}
+		
+		var objectToGet = locateResult.WithoutError().WithoutNone();
+		
+		// Check if object is already in our inventory
+		var objectLocation = await objectToGet.Match<ValueTask<AnySharpContainer>>(
+			async player => await player.Location.WithCancellation(CancellationToken.None),
+			room => ValueTask.FromResult<AnySharpContainer>(room),
+			async exit => await exit.Home.WithCancellation(CancellationToken.None),
+			async thing => await thing.Location.WithCancellation(CancellationToken.None));
+		
+		var alreadyCarrying = objectLocation.Match(
+			player => player.Object.DBRef.Equals(executor.Object().DBRef),
+			room => room.Object.DBRef.Equals(executor.Object().DBRef),
+			thing => thing.Object.DBRef.Equals(executor.Object().DBRef));
+		
+		if (alreadyCarrying)
+		{
+			await NotifyService!.Notify(executor, "You already have that.");
+			return CallState.Empty;
+		}
+		
+		// Check Basic lock on the object
+		if (!LockService!.Evaluate(LockType.Basic, objectToGet, executor))
+		{
+			await NotifyService!.Notify(executor, "You can't pick that up.");
+			return CallState.Empty;
+		}
+		
+		// Check Take lock on the source location
+		if (!LockService!.Evaluate(LockType.Take, sourceLocation.WithExitOption(), executor))
+		{
+			await NotifyService!.Notify(executor, "You can't take that from there.");
+			return CallState.Empty;
+		}
+		
+		// Check for containment loops
+		var executorContainer = executor.AsContainer;
+		if (await MoveService!.WouldCreateLoop(objectToGet.AsContent, executorContainer))
+		{
+			await NotifyService!.Notify(executor, "You can't pick that up - it would create a containment loop.");
+			return CallState.Empty;
+		}
+		
+		// Move object to executor's inventory
+		var contentToGet = objectToGet.AsContent;
+		await Mediator!.Send(new MoveObjectCommand(contentToGet, executorContainer));
+		
+		// Trigger @success attribute on the object
+		var successAttr = await AttributeService!.GetAttributeAsync(executor, objectToGet, AttrSuccess, IAttributeService.AttributeMode.Read, true);
+		if (successAttr.IsAttribute && successAttr.AsT0.Length > 0)
+		{
+			var successMsg = successAttr.AsT0[0].Value;
+			if (!string.IsNullOrEmpty(successMsg.ToPlainText()))
+			{
+				await NotifyService!.Notify(executor, successMsg);
+			}
+		}
+		else
+		{
+			await NotifyService!.Notify(executor, "Taken.");
+		}
+		
+		// Trigger @osuccess attribute (shown to others in room)
+		var osuccessAttr = await AttributeService!.GetAttributeAsync(executor, objectToGet, AttrOSuccess, IAttributeService.AttributeMode.Read, true);
+		if (osuccessAttr.IsAttribute && osuccessAttr.AsT0.Length > 0)
+		{
+			var osuccessMsg = osuccessAttr.AsT0[0].Value;
+			if (!string.IsNullOrEmpty(osuccessMsg.ToPlainText()))
+			{
+				// TODO: Notify others in source location (exclude executor)
+				// await NotifyService!.NotifyExcept(sourceLocation, executor, osuccessMsg);
+			}
+		}
+		
+		// Trigger @asuccess attribute (actions)
+		var asuccessAttr = await AttributeService!.GetAttributeAsync(executor, objectToGet, AttrASuccess, IAttributeService.AttributeMode.Read, true);
+		if (asuccessAttr.IsAttribute && asuccessAttr.AsT0.Length > 0)
+		{
+			var asuccessActions = asuccessAttr.AsT0[0].Value;
+			if (!string.IsNullOrEmpty(asuccessActions.ToPlainText()))
+			{
+				// Execute attribute as actions
+				await parser.CommandParse(asuccessActions);
+			}
+		}
+		
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "GIVE", Switches = ["SILENT"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0,
 		MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Give(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		var isSilent = parser.CurrentState.Switches.Contains("SILENT");
+		
+		// Parse arguments: "give <recipient>=<object or pennies>"
+		var recipientName = args["0"].Message!.ToPlainText();
+		var thingToGive = args["1"].Message!.ToPlainText();
+		
+		if (string.IsNullOrWhiteSpace(recipientName))
+		{
+			await NotifyService!.Notify(executor, "Give to whom?");
+			return CallState.Empty;
+		}
+		
+		if (string.IsNullOrWhiteSpace(thingToGive))
+		{
+			await NotifyService!.Notify(executor, "Give what?");
+			return CallState.Empty;
+		}
+		
+		// Locate the recipient
+		var recipientResult = await LocateService!.LocateAndNotifyIfInvalid(parser, executor, executor, recipientName, LocateFlags.All);
+		
+		if (!recipientResult.IsValid() || recipientResult.IsRoom || recipientResult.IsExit)
+		{
+			await NotifyService!.Notify(executor, "I don't see that here.");
+			return CallState.Empty;
+		}
+		
+		var recipient = recipientResult.WithoutError().WithoutNone();
+		
+		// Check if recipient can hold things (must be Player or Thing)
+		if (!recipient.IsPlayer && !recipient.IsThing)
+		{
+			await NotifyService!.Notify(executor, "You can't give things to that.");
+			return CallState.Empty;
+		}
+		
+		// Try to parse as a number for pennies/money
+		if (int.TryParse(thingToGive, out var amount))
+		{
+			// TODO: Implement money transfer
+			// This requires implementing money/penny system which is beyond current scope
+			await NotifyService!.Notify(executor, "Money transfer not yet implemented.");
+			return CallState.Empty;
+		}
+		
+		// It's an object to give
+		// Locate the object in executor's inventory
+		var objectResult = await LocateService!.LocateAndNotifyIfInvalid(parser, executor, executor, thingToGive, LocateFlags.All);
+		
+		if (!objectResult.IsValid() || objectResult.IsRoom || objectResult.IsExit)
+		{
+			await NotifyService!.Notify(executor, "You don't have that.");
+			return CallState.Empty;
+		}
+		
+		var objectToGive = objectResult.WithoutError().WithoutNone();
+		
+		// Check if we're actually carrying the object
+		var objectLocation = await objectToGive.Match<ValueTask<AnySharpContainer>>(
+			async player => await player.Location.WithCancellation(CancellationToken.None),
+			room => ValueTask.FromResult<AnySharpContainer>(room),
+			async exit => await exit.Home.WithCancellation(CancellationToken.None),
+			async thing => await thing.Location.WithCancellation(CancellationToken.None));
+		
+		var isCarrying = objectLocation.Match(
+			player => player.Object.DBRef.Equals(executor.Object().DBRef),
+			room => room.Object.DBRef.Equals(executor.Object().DBRef),
+			thing => thing.Object.DBRef.Equals(executor.Object().DBRef));
+		
+		if (!isCarrying)
+		{
+			await NotifyService!.Notify(executor, "You don't have that.");
+			return CallState.Empty;
+		}
+		
+		// Check recipient is ENTER_OK
+		var recipientFlags = await recipient.Object().Flags.Value.ToArrayAsync();
+		var hasEnterOk = recipientFlags.Any(f => f.Name.Equals("ENTER_OK", StringComparison.OrdinalIgnoreCase));
+		
+		if (!hasEnterOk && !await PermissionService!.Controls(executor, recipient))
+		{
+			await NotifyService!.Notify(executor, $"{recipient.Object().Name} is not accepting things.");
+			return CallState.Empty;
+		}
+		
+		// Check @lock/from on recipient
+		if (!LockService!.Evaluate(LockType.From, recipient, executor))
+		{
+			await NotifyService!.Notify(executor, "Permission denied.");
+			return CallState.Empty;
+		}
+		
+		// Check @lock/give on object
+		if (!LockService!.Evaluate(LockType.Give, objectToGive, executor))
+		{
+			await NotifyService!.Notify(executor, "You can't give that away.");
+			return CallState.Empty;
+		}
+		
+		// Check @lock/receive on recipient (object must pass this)
+		if (!LockService!.Evaluate(LockType.Receive, recipient, objectToGive))
+		{
+			await NotifyService!.Notify(executor, $"{recipient.Object().Name} doesn't want that.");
+			return CallState.Empty;
+		}
+		
+		// Check for containment loops
+		var recipientContainer = recipient.AsContainer;
+		if (await MoveService!.WouldCreateLoop(objectToGive.AsContent, recipientContainer))
+		{
+			await NotifyService!.Notify(executor, "You can't give that - it would create a containment loop.");
+			return CallState.Empty;
+		}
+		
+		// Move object to recipient's inventory
+		var contentToGive = objectToGive.AsContent;
+		await Mediator!.Send(new MoveObjectCommand(contentToGive, recipientContainer));
+		
+		// Trigger @give attribute on executor
+		var giveAttr = await AttributeService!.GetAttributeAsync(executor, executor, AttrGive, IAttributeService.AttributeMode.Read, true);
+		if (giveAttr.IsAttribute && giveAttr.AsT0.Length > 0)
+		{
+			var giveMsg = giveAttr.AsT0[0].Value;
+			if (!string.IsNullOrEmpty(giveMsg.ToPlainText()))
+			{
+				await NotifyService!.Notify(executor, giveMsg);
+			}
+		}
+		else
+		{
+			await NotifyService!.Notify(executor, "Given.");
+		}
+		
+		// Trigger @ogive attribute (shown to others in room)
+		var ogiveAttr = await AttributeService!.GetAttributeAsync(executor, executor, AttrOGive, IAttributeService.AttributeMode.Read, true);
+		if (ogiveAttr.IsAttribute && ogiveAttr.AsT0.Length > 0)
+		{
+			var ogiveMsg = ogiveAttr.AsT0[0].Value;
+			if (!string.IsNullOrEmpty(ogiveMsg.ToPlainText()))
+			{
+				// TODO: Notify others in room (exclude executor and recipient)
+			}
+		}
+		
+		// Trigger @agive attribute (actions)
+		var agiveAttr = await AttributeService!.GetAttributeAsync(executor, executor, AttrAGive, IAttributeService.AttributeMode.Read, true);
+		if (agiveAttr.IsAttribute && agiveAttr.AsT0.Length > 0)
+		{
+			var agiveActions = agiveAttr.AsT0[0].Value;
+			if (!string.IsNullOrEmpty(agiveActions.ToPlainText()))
+			{
+				await parser.CommandParse(agiveActions);
+			}
+		}
+		
+		// Trigger @receive attribute on recipient
+		var receiveAttr = await AttributeService!.GetAttributeAsync(executor, recipient, AttrReceive, IAttributeService.AttributeMode.Read, true);
+		if (receiveAttr.IsAttribute && receiveAttr.AsT0.Length > 0)
+		{
+			var receiveMsg = receiveAttr.AsT0[0].Value;
+			if (!string.IsNullOrEmpty(receiveMsg.ToPlainText()) && !isSilent)
+			{
+				await NotifyService!.Notify(recipient, receiveMsg);
+			}
+		}
+		else if (!isSilent)
+		{
+			await NotifyService!.Notify(recipient, $"{executor.Object().Name} gave you {objectToGive.Object().Name}.");
+		}
+		
+		// Trigger @oreceive attribute (shown to others in room)
+		var oreceiveAttr = await AttributeService!.GetAttributeAsync(executor, recipient, AttrOReceive, IAttributeService.AttributeMode.Read, true);
+		if (oreceiveAttr.IsAttribute && oreceiveAttr.AsT0.Length > 0)
+		{
+			var oreceiveMsg = oreceiveAttr.AsT0[0].Value;
+			if (!string.IsNullOrEmpty(oreceiveMsg.ToPlainText()))
+			{
+				// TODO: Notify others in room (exclude executor and recipient)
+			}
+		}
+		
+		// Trigger @areceive attribute (actions)
+		var areceiveAttr = await AttributeService!.GetAttributeAsync(executor, recipient, AttrAReceive, IAttributeService.AttributeMode.Read, true);
+		if (areceiveAttr.IsAttribute && areceiveAttr.AsT0.Length > 0)
+		{
+			var areceiveActions = areceiveAttr.AsT0[0].Value;
+			if (!string.IsNullOrEmpty(areceiveActions.ToPlainText()))
+			{
+				await parser.CommandParse(areceiveActions);
+			}
+		}
+		
+		// Trigger @success attribute on object
+		var successAttr = await AttributeService!.GetAttributeAsync(executor, objectToGive, AttrSuccess, IAttributeService.AttributeMode.Read, true);
+		if (successAttr.IsAttribute && successAttr.AsT0.Length > 0)
+		{
+			var successActions = successAttr.AsT0[0].Value;
+			if (!string.IsNullOrEmpty(successActions.ToPlainText()))
+			{
+				await parser.CommandParse(successActions);
+			}
+		}
+		
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "HOME", Switches = [], Behavior = CB.Player | CB.Thing, MinArgs = 0, MaxArgs = 0)]
@@ -676,8 +1044,39 @@ public partial class Commands
 	[SharpCommand(Name = "INVENTORY", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Inventory(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		
+		// Check if the executor can contain things (Player or Thing)
+		if (!executor.IsPlayer && !executor.IsThing)
+		{
+			await NotifyService!.Notify(executor, "You can't carry anything.");
+			return CallState.Empty;
+		}
+		
+		// Get contents
+		var container = executor.AsContainer;
+		var contents = container.Content(Mediator!);
+		
+		var items = new System.Collections.Generic.List<string>();
+		await foreach (var item in contents)
+		{
+			items.Add(item.Object().Name);
+		}
+		
+		if (items.Count == 0)
+		{
+			await NotifyService!.Notify(executor, "You aren't carrying anything.");
+		}
+		else
+		{
+			await NotifyService!.Notify(executor, "You are carrying:");
+			foreach (var itemName in items)
+			{
+				await NotifyService!.Notify(executor, $"  {itemName}");
+			}
+		}
+		
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "LEAVE", Switches = [], Behavior = CB.Player | CB.Thing, MinArgs = 0, MaxArgs = 0)]

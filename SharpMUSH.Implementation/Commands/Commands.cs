@@ -33,6 +33,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 	
 	private static ILockService? LockService { get; set; }
 	
+	private static IMoveService? MoveService { get; set; }
+	
 	private static LibraryService<string, CommandDefinition>? CommandLibrary { get; set; }
 	private static LibraryService<string, FunctionDefinition>? FunctionLibrary { get; set; }
 
@@ -56,6 +58,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		IValidateService validateService,
 		ISqlService sqlService,
 		ILockService lockService,
+		IMoveService moveService,
 		LibraryService<string, FunctionDefinition> functionLibrary)
 	{
 		Mediator = mediator;
@@ -74,6 +77,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		ValidateService = validateService;
 		SqlService = sqlService;
 		LockService = lockService;
+		MoveService = moveService;
 		FunctionLibrary = functionLibrary;
 
 		foreach (var command in Generated.CommandLibrary.Commands)
