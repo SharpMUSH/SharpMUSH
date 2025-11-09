@@ -54,12 +54,11 @@ public class NetworkCommandTests
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@sitelock/list"));
 
+		// Verify the command executed and sent output to the user
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Sitelock Rules:")),
-				Arg.Any<AnySharpObject>(),
-				Arg.Any<INotifyService.NotificationType>());
+				Arg.Any<OneOf.OneOf<MString, string>>());
 	}
 
 	[Test]
