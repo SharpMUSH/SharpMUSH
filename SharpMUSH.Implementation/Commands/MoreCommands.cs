@@ -176,9 +176,19 @@ public partial class Commands
 			var filterBuiltin = switches.Contains("BUILTIN");
 			var filterLocal = switches.Contains("LOCAL");
 			
-			var commands = CommandLibrary!
-				.Where(kvp => !filterBuiltin || kvp.Value.IsSystem)
-				.Where(kvp => !filterLocal || !kvp.Value.IsSystem)
+			var commandPairs = CommandLibrary!.AsEnumerable();
+			
+			if (filterBuiltin && !filterLocal)
+			{
+				commandPairs = commandPairs.Where(kvp => kvp.Value.IsSystem);
+			}
+			else if (filterLocal && !filterBuiltin)
+			{
+				commandPairs = commandPairs.Where(kvp => !kvp.Value.IsSystem);
+			}
+			// If both or neither are set, show all
+			
+			var commands = commandPairs
 				.Select(kvp => kvp.Value.LibraryInformation.Attribute.Name)
 				.Distinct()
 				.OrderBy(x => x);
@@ -203,9 +213,19 @@ public partial class Commands
 			var filterBuiltin = switches.Contains("BUILTIN");
 			var filterLocal = switches.Contains("LOCAL");
 			
-			var functions = FunctionLibrary!
-				.Where(kvp => !filterBuiltin || kvp.Value.IsSystem)
-				.Where(kvp => !filterLocal || !kvp.Value.IsSystem)
+			var functionPairs = FunctionLibrary!.AsEnumerable();
+			
+			if (filterBuiltin && !filterLocal)
+			{
+				functionPairs = functionPairs.Where(kvp => kvp.Value.IsSystem);
+			}
+			else if (filterLocal && !filterBuiltin)
+			{
+				functionPairs = functionPairs.Where(kvp => !kvp.Value.IsSystem);
+			}
+			// If both or neither are set, show all
+			
+			var functions = functionPairs
 				.Select(kvp => kvp.Value.LibraryInformation.Attribute.Name)
 				.Distinct()
 				.OrderBy(x => x);
