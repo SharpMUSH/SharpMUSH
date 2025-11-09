@@ -1346,23 +1346,24 @@ public partial class Commands
 		var switches = parser.CurrentState.Switches.ToArray();
 
 		// Get current sitelock configuration
-		var sitelockConfig = Configuration!.CurrentValue.Sitelock;
+		var sitelockRules = Configuration!.CurrentValue.SitelockRules;
+		var bannedNames = Configuration!.CurrentValue.BannedNames;
 
 		// @sitelock with no arguments or @sitelock/list - list all rules
 		if (args.Count == 0 || switches.Contains("LIST"))
 		{
 			var output = new System.Text.StringBuilder();
-			output.AppendLine($"Sitelock Rules ({sitelockConfig.Rules.Count} total):");
+			output.AppendLine($"Sitelock Rules ({sitelockRules.Rules.Count} total):");
 			output.AppendLine("Pattern                      Options");
 			output.AppendLine("---------------------------- ------------------------------");
 
-			if (sitelockConfig.Rules.Count == 0)
+			if (sitelockRules.Rules.Count == 0)
 			{
 				output.AppendLine("  (No rules defined - all connections allowed by default)");
 			}
 			else
 			{
-				foreach (var rule in sitelockConfig.Rules)
+				foreach (var rule in sitelockRules.Rules)
 				{
 					var pattern = rule.Key;
 					var options = string.Join(", ", rule.Value);
@@ -1371,14 +1372,14 @@ public partial class Commands
 			}
 
 			output.AppendLine();
-			output.AppendLine($"Banned Player Names ({sitelockConfig.BannedNames.Length} total):");
-			if (sitelockConfig.BannedNames.Length == 0)
+			output.AppendLine($"Banned Player Names ({bannedNames.BannedNames.Length} total):");
+			if (bannedNames.BannedNames.Length == 0)
 			{
 				output.AppendLine("  (No banned names defined)");
 			}
 			else
 			{
-				output.AppendLine("  " + string.Join(", ", sitelockConfig.BannedNames));
+				output.AppendLine("  " + string.Join(", ", bannedNames.BannedNames));
 			}
 
 			await NotifyService!.Notify(executor, output.ToString().TrimEnd());
@@ -1398,7 +1399,7 @@ public partial class Commands
 			
 			// Find matching rule (simple wildcard matching for now)
 			KeyValuePair<string, string[]>? matchingRule = null;
-			foreach (var rule in sitelockConfig.Rules)
+			foreach (var rule in sitelockRules.Rules)
 			{
 				if (WildcardMatch(hostToCheck, rule.Key))
 				{

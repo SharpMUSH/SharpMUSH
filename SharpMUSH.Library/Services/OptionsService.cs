@@ -278,8 +278,10 @@ public class OptionsService(ISharpDatabase database) : IOptionsFactory<SharpMUSH
 				CommandRestrictions: new Dictionary<string, string[]>(),
 				FunctionRestrictions: new Dictionary<string, string[]>()
 			),
-			Sitelock = new SitelockOptions(
-				BannedNames: ["Guest", "Admin", "Wizard"],
+			BannedNames = new BannedNamesOptions(
+				BannedNames: ["Guest", "Admin", "Wizard"]
+			),
+			SitelockRules = new SitelockRulesOptions(
 				Rules: new Dictionary<string, string[]>
 				{
 					{ "*.example.com", ["!connect", "!create", "!guest"] },

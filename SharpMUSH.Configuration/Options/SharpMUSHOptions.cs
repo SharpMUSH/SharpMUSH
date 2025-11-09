@@ -20,5 +20,6 @@ public record SharpMUSHOptions
 	public required DebugOptions Debug { get; init; }
 	public required AliasOptions Alias { get; init; }
 	public required RestrictionOptions Restriction { get; init; }
-	public required SitelockOptions Sitelock { get; init; }
+	public required BannedNamesOptions BannedNames { get; init; }
+	public required SitelockRulesOptions SitelockRules { get; init; }
 };
