@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
+using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -23,7 +24,9 @@ public class LogCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Command log")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString().Contains("Command log")) ||
+				(msg.IsT1 && msg.AsT1.Contains("Command log"))));
 	}
 
 	[Test]
@@ -33,7 +36,9 @@ public class LogCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Command log")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString().Contains("Command log")) ||
+				(msg.IsT1 && msg.AsT1.Contains("Command log"))));
 	}
 
 	[Test]
@@ -43,7 +48,9 @@ public class LogCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Wizard log")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString().Contains("Wizard log")) ||
+				(msg.IsT1 && msg.AsT1.Contains("Wizard log"))));
 	}
 
 	[Test]
@@ -53,7 +60,9 @@ public class LogCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Error log")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString().Contains("Error log")) ||
+				(msg.IsT1 && msg.AsT1.Contains("Error log"))));
 	}
 
 	[Test]
@@ -63,7 +72,9 @@ public class LogCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Usage")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString().Contains("Usage")) ||
+				(msg.IsT1 && msg.AsT1.Contains("Usage"))));
 	}
 
 	[Test]
@@ -73,7 +84,7 @@ public class LogCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
 	}
 
 	[Test]
