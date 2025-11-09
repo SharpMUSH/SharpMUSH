@@ -138,8 +138,19 @@ public interface ISharpDatabase
 	ValueTask<IAsyncEnumerable<LazySharpAttribute>?> GetLazyAttributesByRegexAsync(DBRef dbref, string attributePattern,
 		CancellationToken cancellationToken = default);
 	
+	/// <summary>
+	/// Get all attribute entries from the attribute table.
+	/// </summary>
+	/// <param name="cancellationToken">Cancellation Token</param>
+	/// <returns>Async enumerable of all attribute entries</returns>
 	IAsyncEnumerable<SharpAttributeEntry> GetAllAttributeEntriesAsync(CancellationToken cancellationToken = default);
 
+	/// <summary>
+	/// Get a specific attribute entry by name.
+	/// </summary>
+	/// <param name="name">Attribute name</param>
+	/// <param name="ct">Cancellation Token</param>
+	/// <returns>The attribute entry if found, null otherwise</returns>
 	ValueTask<SharpAttributeEntry?> GetSharpAttributeEntry(string name, CancellationToken ct = default);
 
 	/// <summary>

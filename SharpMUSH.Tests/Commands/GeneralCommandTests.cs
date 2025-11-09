@@ -556,11 +556,15 @@ public class GeneralCommandTests
 	public async ValueTask Attribute_AccessValidatesFlags()
 	{
 		// Test @attribute/access validates flag names
-		// This command should notify about an invalid flag but not throw an exception
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@attribute/access TESTATTR=INVALIDFLAG"));
 		
-		// The command should complete (error handling is done through notifications)
-		// We're just verifying it doesn't crash - no exception means success
+		// Verify that no entry was created with an invalid flag
+		var entries = await Mediator.CreateStream(new Library.Queries.Database.GetAllAttributeEntriesQuery())
+			.ToArrayAsync();
+		var entry = entries.FirstOrDefault(e => e.Name == "TESTATTR");
+		
+		// Entry should not exist because the flag was invalid
+		await Assert.That(entry).IsNull();
 	}
 
 	[Test]

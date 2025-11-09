@@ -1153,17 +1153,22 @@ public partial class ArangoDatabase(
 		
 		if (existing != null)
 		{
-			// Update existing entry
+			// Update existing entry - build document dynamically to omit null fields
+			var document = new Dictionary<string, object>
+			{
+				{ "_key", existing.Id!.Split('/')[1] },
+				{ "Name", name },
+				{ "DefaultFlags", defaultFlags }
+			};
+			
+			if (limit != null)
+				document["Limit"] = limit;
+			if (enumValues != null)
+				document["Enum"] = enumValues;
+			
 			var updated = await arangoDb.Document.UpdateAsync<dynamic, SharpAttributeEntry>(handle, 
 				DatabaseConstants.AttributeEntries,
-				new 
-				{
-					_key = existing.Id!.Split('/')[1],
-					Name = name,
-					DefaultFlags = defaultFlags,
-					Limit = limit,
-					Enum = enumValues
-				},
+				document,
 				waitForSync: true,
 				cancellationToken: ct,
 				returnNew: true);
