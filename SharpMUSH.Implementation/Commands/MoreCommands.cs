@@ -305,8 +305,9 @@ public partial class Commands
 		MinArgs = 0)]
 	public static async ValueTask<Option<CallState>> Slave(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		await NotifyService!.Notify(executor, "Slave command does nothing for SharpMUSH.");
+		return new None();
 	}
 
 	[SharpCommand(Name = "@UNRECYCLE", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]

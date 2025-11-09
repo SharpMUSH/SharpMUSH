@@ -3224,6 +3224,6 @@ public class Migration_CreateDatabase : IArangoMigration
 
 	public Task Down(IArangoMigrator migrator, ArangoHandle handle)
 	{
-		throw new NotImplementedException();
+		throw new NotSupportedException();
 	}
 }
