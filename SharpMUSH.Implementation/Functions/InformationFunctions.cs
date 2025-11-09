@@ -766,10 +766,13 @@ public partial class Functions
 		
 		foreach (var part in parts)
 		{
-			// Extract styles first
+			// Extract all ANSI control codes and styles
 			foreach (var ch in part)
 			{
-				if (ch is 'f' or 'u' or 'i' or 'h')
+				// All ANSI control codes: f, u, i, h, plus uppercase/lowercase color codes
+				if (ch is 'f' or 'u' or 'i' or 'h' or 
+				    'x' or 'r' or 'g' or 'y' or 'b' or 'm' or 'c' or 'w' or 
+				    'X' or 'R' or 'G' or 'Y' or 'B' or 'M' or 'C' or 'W')
 				{
 					if (!styles.Contains(ch))
 					{
@@ -789,9 +792,9 @@ public partial class Functions
 			}
 			else
 			{
-				// Remove style characters to get just the color
-				var colorPart = new string(part.Where(ch => ch is not ('f' or 'u' or 'i' or 'h')).ToArray());
-				if (!string.IsNullOrWhiteSpace(colorPart) && !IsOnlyStyles(part))
+				// Remove all ANSI control codes to get just the color name/spec
+				var colorPart = new string(part.Where(ch => !IsAnsiControlChar(ch)).ToArray());
+				if (!string.IsNullOrWhiteSpace(colorPart) && !IsOnlyAnsiCodes(part))
 				{
 					foreground = colorPart;
 				}
@@ -801,9 +804,16 @@ public partial class Functions
 		return (foreground, background, styles);
 	}
 
-	private static bool IsOnlyStyles(string part)
+	private static bool IsAnsiControlChar(char ch)
 	{
-		return part.All(ch => ch is 'f' or 'u' or 'i' or 'h');
+		return ch is 'f' or 'u' or 'i' or 'h' or 
+		       'x' or 'r' or 'g' or 'y' or 'b' or 'm' or 'c' or 'w' or 
+		       'X' or 'R' or 'G' or 'Y' or 'B' or 'M' or 'C' or 'W';
+	}
+
+	private static bool IsOnlyAnsiCodes(string part)
+	{
+		return part.All(IsAnsiControlChar);
 	}
 
 	private static string FormatColorsAsHex(string? foreground, string? background, string styles, bool includeStyles, 
