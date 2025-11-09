@@ -17,6 +17,11 @@ namespace SharpMUSH.Implementation.Functions;
 
 public partial class Functions
 {
+	// Error message constants for colors() function
+	private const string ErrorInvalidColor = "#-1 INVALID COLOR";
+	private const string ErrorNoMatchingColorName = "#-1 NO MATCHING COLOR NAME";
+	private const string ErrorInvalidFormat = "#-1 INVALID FORMAT";
+
 	[SharpFunction(Name = "accname", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 	public static async ValueTask<CallState> AccName(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -748,7 +753,7 @@ public partial class Functions
 			"16color" or "c" => FormatColorsAs16Color(foregroundSpec, backgroundSpec, styles, includeStyles, colorsConfig),
 			"name" => FormatColorsAsName(foregroundSpec, backgroundSpec, styles, includeStyles, colorsConfig),
 			"auto" => FormatColorsAsAuto(colorSpec, foregroundSpec, backgroundSpec, styles, includeStyles),
-			_ => "#-1 INVALID FORMAT"
+			_ => ErrorInvalidFormat
 		};
 
 		return ValueTask.FromResult(new CallState(result));
@@ -761,7 +766,7 @@ public partial class Functions
 	{
 		string? foreground = null;
 		string? background = null;
-		var styles = string.Empty;
+		var stylesBuilder = new System.Text.StringBuilder();
 
 		var parts = spec.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 		
@@ -778,22 +783,23 @@ public partial class Functions
 			var i = 0;
 			while (i < part.Length && IsAnsiControlChar(part[i]) && part[i] != '+' && part[i] != '#')
 			{
-				if (!styles.Contains(part[i]))
+				var currentChar = part[i];
+				if (stylesBuilder.ToString().IndexOf(currentChar) == -1)
 				{
-					styles += part[i];
+					stylesBuilder.Append(currentChar);
 				}
 				i++;
 			}
 
 			// The remainder is the color specification
-			var colorPart = part.Substring(i);
+			var colorPart = part[i..];
 			if (!string.IsNullOrWhiteSpace(colorPart))
 			{
 				foreground = colorPart;
 			}
 		}
 
-		return (foreground, background, styles);
+		return (foreground, background, stylesBuilder.ToString());
 	}
 
 	private static bool IsAnsiControlChar(char ch)
@@ -831,7 +837,7 @@ public partial class Functions
 			}
 		}
 
-		return result.Count > 0 ? string.Join(" ", result) : "#-1 INVALID COLOR";
+		return result.Count > 0 ? string.Join(" ", result) : ErrorInvalidColor;
 	}
 
 	private static string FormatColorsAsRgb(string? foreground, string? background, string styles, bool includeStyles,
@@ -862,7 +868,7 @@ public partial class Functions
 			}
 		}
 
-		return result.Count > 0 ? string.Join(" ", result) : "#-1 INVALID COLOR";
+		return result.Count > 0 ? string.Join(" ", result) : ErrorInvalidColor;
 	}
 
 	private static string FormatColorsAsXterm(string? foreground, string? background, string styles, bool includeStyles,
@@ -893,7 +899,7 @@ public partial class Functions
 			}
 		}
 
-		return result.Count > 0 ? string.Join(" ", result) : "#-1 INVALID COLOR";
+		return result.Count > 0 ? string.Join(" ", result) : ErrorInvalidColor;
 	}
 
 	private static string FormatColorsAs16Color(string? foreground, string? background, string styles, bool includeStyles,
@@ -924,7 +930,7 @@ public partial class Functions
 			}
 		}
 
-		return result.Count > 0 ? string.Join(" ", result) : "#-1 INVALID COLOR";
+		return result.Count > 0 ? string.Join(" ", result) : ErrorInvalidColor;
 	}
 
 	private static string FormatColorsAsName(string? foreground, string? background, string styles, bool includeStyles,
@@ -946,7 +952,7 @@ public partial class Functions
 			}
 			else
 			{
-				return "#-1 NO MATCHING COLOR NAME";
+				return ErrorNoMatchingColorName;
 			}
 		}
 
@@ -959,11 +965,11 @@ public partial class Functions
 			}
 			else
 			{
-				return "#-1 NO MATCHING COLOR NAME";
+				return ErrorNoMatchingColorName;
 			}
 		}
 
-		return result.Count > 0 ? string.Join(" ", result) : "#-1 NO MATCHING COLOR NAME";
+		return result.Count > 0 ? string.Join(" ", result) : ErrorNoMatchingColorName;
 	}
 
 	private static string FormatColorsAsAuto(string originalSpec, string? foreground, string? background, string styles, bool includeStyles)
