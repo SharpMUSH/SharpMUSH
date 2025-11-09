@@ -277,6 +277,10 @@ public class OptionsService(ISharpDatabase database) : IOptionsFactory<SharpMUSH
 			Restriction = new RestrictionOptions(
 				CommandRestrictions: new Dictionary<string, string[]>(),
 				FunctionRestrictions: new Dictionary<string, string[]>()
+			),
+			Sitelock = new SitelockOptions(
+				BannedNames: [],
+				Rules: new Dictionary<string, string[]>()
 			)
 		};
 	}
