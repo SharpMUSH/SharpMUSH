@@ -6,12 +6,14 @@ using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 
 namespace SharpMUSH.Implementation.Commands;
@@ -1159,8 +1161,141 @@ public partial class Commands
 		], Behavior = CB.Default | CB.EqSplit | CB.RSArgs, CommandLock = "FLAG^WIZARD|POWER^HOOK", MinArgs = 0)]
 	public static async ValueTask<Option<CallState>> Hook(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches.ToArray();
+		
+		// Check permission - wizard only
+		if (!await executor.IsWizard())
+		{
+			await NotifyService!.Notify(executor, "Permission denied.");
+			return new CallState(Errors.ErrorPerm);
+		}
+		
+		if (args.Count == 0)
+		{
+			await NotifyService!.Notify(executor, "You must specify a command name.");
+			return new CallState("#-1 NO COMMAND SPECIFIED");
+		}
+		
+		var commandName = args["0"].Message?.ToPlainText()?.ToUpper();
+		if (string.IsNullOrEmpty(commandName))
+		{
+			await NotifyService!.Notify(executor, "You must specify a command name.");
+			return new CallState("#-1 NO COMMAND SPECIFIED");
+		}
+		
+		// Handle @hook/list
+		if (switches.Contains("LIST"))
+		{
+			var hooks = await HookService!.GetAllHooksAsync(commandName);
+			if (hooks.Count == 0)
+			{
+				await NotifyService!.Notify(executor, $"No hooks set for command '{commandName}'.");
+				return CallState.Empty;
+			}
+			
+			await NotifyService!.Notify(executor, $"Hooks for command '{commandName}':");
+			foreach (var (hookType, hook) in hooks)
+			{
+				var flags = new List<string>();
+				if (hook.Inline) flags.Add("inline");
+				if (hook.NoBreak) flags.Add("nobreak");
+				if (hook.Localize) flags.Add("localize");
+				if (hook.ClearRegs) flags.Add("clearregs");
+				
+				var flagStr = flags.Count > 0 ? $" ({string.Join(", ", flags)})" : "";
+				await NotifyService.Notify(executor, $"  {hookType}: {hook.TargetObject}/{hook.AttributeName}{flagStr}");
+			}
+			return CallState.Empty;
+		}
+		
+		// Determine hook type from switches
+		var hookTypes = new[] { "IGNORE", "OVERRIDE", "BEFORE", "AFTER", "EXTEND", "IGSWITCH" };
+		var selectedHookType = hookTypes.FirstOrDefault(switches.Contains);
+		
+		// IGSWITCH is an alias for EXTEND (Rhost compatibility)
+		if (selectedHookType == "IGSWITCH")
+		{
+			selectedHookType = "EXTEND";
+		}
+		
+		if (selectedHookType == null)
+		{
+			await NotifyService!.Notify(executor, "You must specify a hook type: /ignore, /override, /before, /after, or /extend");
+			return new CallState("#-1 NO HOOK TYPE");
+		}
+		
+		// Check if this is a clear operation (no object/attribute specified)
+		if (args.Count < 2 || string.IsNullOrWhiteSpace(args["1"].Message?.ToPlainText()))
+		{
+			// Clear the hook
+			var cleared = await HookService!.ClearHookAsync(commandName, selectedHookType);
+			if (cleared)
+			{
+				await NotifyService!.Notify(executor, $"Hook '{selectedHookType}' cleared for command '{commandName}'.");
+				return CallState.Empty;
+			}
+			else
+			{
+				await NotifyService!.Notify(executor, $"No '{selectedHookType}' hook set for command '{commandName}'.");
+				return new CallState("#-1 NO HOOK");
+			}
+		}
+		
+		// Parse object and attribute
+		var objectAndAttribute = args["1"].Message!.ToPlainText();
+		var parts = objectAndAttribute.Split(',', 2);
+		
+		if (parts.Length < 1 || string.IsNullOrWhiteSpace(parts[0]))
+		{
+			await NotifyService!.Notify(executor, "You must specify an object.");
+			return new CallState("#-1 NO OBJECT");
+		}
+		
+		// Locate the object
+		var objectRef = parts[0].Trim();
+		var maybeObject = await LocateService!.LocateAndNotifyIfInvalid(parser, executor, executor, 
+			objectRef, LocateFlags.All);
+		
+		if (!maybeObject.IsValid())
+		{
+			return CallState.Empty;
+		}
+		
+		var targetObject = maybeObject.WithoutError().Known();
+		var dbref = targetObject.Object().DBRef;
+		
+		// Get attribute name (default to "cmd.<hooktype>")
+		var attributeName = parts.Length > 1 && !string.IsNullOrWhiteSpace(parts[1])
+			? parts[1].Trim()
+			: $"cmd.{selectedHookType.ToLower()}";
+		
+		// Check if the attribute exists
+		var attrResult = await AttributeService!.GetAttributeAsync(executor, targetObject, 
+			attributeName, IAttributeService.AttributeMode.Read);
+		
+		if (attrResult.IsError)
+		{
+			await NotifyService!.Notify(executor, $"Attribute '{attributeName}' not found on object {dbref}.");
+			return new CallState("#-1 NO ATTRIBUTE");
+		}
+		
+		// Determine inline flags
+		var inline = switches.Contains("INLINE");
+		var inplace = switches.Contains("INPLACE");
+		var nobreak = switches.Contains("NOBREAK") || inplace;
+		var localize = switches.Contains("LOCALIZE") || inplace;
+		var clearregs = switches.Contains("CLEARREGS") || inplace;
+		
+		// Set the hook
+		await HookService!.SetHookAsync(commandName, selectedHookType, dbref, attributeName, 
+			inline || inplace, nobreak, localize, clearregs);
+		
+		var flagDesc = inline || inplace ? " (inline)" : "";
+		await NotifyService!.Notify(executor, $"Hook '{selectedHookType}' set for command '{commandName}'{flagDesc}.");
+		
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@NEWPASSWORD", Switches = ["GENERATE"], Behavior = CB.Default | CB.EqSplit | CB.RSNoParse,
@@ -1504,4 +1639,5 @@ public partial class Commands
 		
 		return new CallState("#-1 NOT IMPLEMENTED");
 	}
+
 }
