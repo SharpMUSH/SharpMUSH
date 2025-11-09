@@ -781,12 +781,14 @@ public partial class Functions
 
 			// Extract leading ANSI codes from the part
 			var i = 0;
+			var currentStyles = stylesBuilder.ToString();
 			while (i < part.Length && IsAnsiControlChar(part[i]) && part[i] != '+' && part[i] != '#')
 			{
 				var currentChar = part[i];
-				if (stylesBuilder.ToString().IndexOf(currentChar) == -1)
+				if (!currentStyles.Contains(currentChar))
 				{
 					stylesBuilder.Append(currentChar);
+					currentStyles = stylesBuilder.ToString();
 				}
 				i++;
 			}
@@ -833,7 +835,7 @@ public partial class Functions
 			var hex = ConvertColorToHex(background, config);
 			if (hex != null)
 			{
-				result.Add("/" + hex);
+				result.Add($"/{hex}");
 			}
 		}
 
@@ -864,7 +866,7 @@ public partial class Functions
 			var rgb = ConvertColorToRgb(background, config);
 			if (rgb != null)
 			{
-				result.Add("/" + rgb);
+				result.Add($"/{rgb}");
 			}
 		}
 
@@ -895,7 +897,8 @@ public partial class Functions
 			var xterm = ConvertColorToXterm(background, config);
 			if (xterm != null)
 			{
-				result.Add(hexFormat ? ("/" + xterm.Value.ToString("x")) : ("/" + xterm.Value.ToString()));
+				var formatted = hexFormat ? xterm.Value.ToString("x") : xterm.Value.ToString();
+				result.Add($"/{formatted}");
 			}
 		}
 
@@ -961,7 +964,7 @@ public partial class Functions
 			var names = ConvertColorToNames(background, config);
 			if (names.Count > 0)
 			{
-				result.AddRange(names.Select(n => "/" + n));
+				result.AddRange(names.Select(n => $"/{n}"));
 			}
 			else
 			{
