@@ -46,9 +46,10 @@ public interface ISharpDatabase
 	/// <param name="name">Thing name</param>
 	/// <param name="location">Location to create it in</param>
 	/// <param name="creator">Owner to the thing</param>
+	/// <param name="home">Home location for the thing</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>New thing <see cref="DBRef"/></returns>
-	ValueTask<DBRef> CreateThingAsync(string name, AnySharpContainer location, SharpPlayer creator, CancellationToken cancellationToken = default);
+	ValueTask<DBRef> CreateThingAsync(string name, AnySharpContainer location, SharpPlayer creator, AnySharpContainer home, CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Create a new exit.
