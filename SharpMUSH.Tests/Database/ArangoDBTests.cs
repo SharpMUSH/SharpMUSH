@@ -168,4 +168,33 @@ public class ArangoDBTests
 				.IsNotNull();
 		}
 	}
+
+	[Test]
+	public async Task GetParentsAsync_ReturnsFullParentChain()
+	{
+		// Create a parent chain: Parent1 -> Parent2 -> ChildRoom
+		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		
+		// Create Parent1
+		var parent1Dbref = await Database.CreateRoomAsync("Parent1", playerOne);
+		var parent1 = (await Database.GetObjectNodeAsync(parent1Dbref)).AsRoom;
+		
+		// Create Parent2 with Parent1 as its parent
+		var parent2Dbref = await Database.CreateRoomAsync("Parent2", playerOne);
+		var parent2 = (await Database.GetObjectNodeAsync(parent2Dbref)).AsRoom;
+		await Database.SetObjectParent(parent2, parent1);
+		
+		// Create ChildRoom with Parent2 as its parent
+		var childDbref = await Database.CreateRoomAsync("ChildRoom", playerOne);
+		var child = (await Database.GetObjectNodeAsync(childDbref)).AsRoom;
+		await Database.SetObjectParent(child, parent2);
+		
+		// Get the full parent chain using Object ID (not Room ID)
+		var parents = await (await Database.GetParentsAsync(child.Object.Id!, CancellationToken.None)).ToListAsync();
+		
+		// Should get Parent2 and Parent1 in order
+		await Assert.That(parents).HasCount().EqualTo(2);
+		await Assert.That(parents[0].Key).IsEqualTo(parent2.Object.Key);
+		await Assert.That(parents[1].Key).IsEqualTo(parent1.Object.Key);
+	}
 }
