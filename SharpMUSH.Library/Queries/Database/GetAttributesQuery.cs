@@ -18,10 +18,3 @@ public record GetLazyAttributesQuery(
 	bool CheckParents,
 	IAttributeService.AttributePatternMode Mode)
 	: IStreamQuery<LazySharpAttribute>;
-
-public record GetAllAttributeEntriesQuery() : IStreamQuery<SharpAttributeEntry>, ICacheable
-{
-	public string CacheKey => "global:AttributeEntriesList";
-	
-	public string[] CacheTags => [Definitions.CacheTags.FlagList];
-}

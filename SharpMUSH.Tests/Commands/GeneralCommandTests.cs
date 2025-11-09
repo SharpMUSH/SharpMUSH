@@ -536,4 +536,69 @@ public class GeneralCommandTests
 				Arg.Is<OneOf<MString,string>>(s => s.Value.ToString()!.Contains("@attribute:")), 
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
+
+	[Test]
+	public async ValueTask Attribute_AccessCreatesAttributeEntry()
+	{
+		// Test @attribute/access command creates an attribute entry with no_command flag
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@attribute/access MYATTR=no_command"));
+		
+		// Verify the entry was created in the database
+		var entries = await Mediator.CreateStream(new Library.Queries.Database.GetAllAttributeEntriesQuery())
+			.ToArrayAsync();
+		var entry = entries.FirstOrDefault(e => e.Name == "MYATTR");
+		
+		await Assert.That(entry).IsNotNull();
+		await Assert.That(entry!.DefaultFlags.Contains("NO_COMMAND")).IsTrue();
+	}
+
+	[Test]
+	public async ValueTask Attribute_AccessValidatesFlags()
+	{
+		// Test @attribute/access validates flag names
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@attribute/access TESTATTR=INVALIDFLAG"));
+		
+		// Verify that no entry was created with an invalid flag
+		var entries = await Mediator.CreateStream(new Library.Queries.Database.GetAllAttributeEntriesQuery())
+			.ToArrayAsync();
+		var entry = entries.FirstOrDefault(e => e.Name == "TESTATTR");
+		
+		// Entry should not exist because the flag was invalid
+		await Assert.That(entry).IsNull();
+	}
+
+	[Test]
+	public async ValueTask Attribute_EntryFlagsAreAppliedWhenAttributeCreated()
+	{
+		// First create an attribute entry with no_command flag
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@attribute/access TESTATTR2=no_command"));
+
+		// Verify the entry was created with correct flags
+		var entries = await Mediator.CreateStream(new Library.Queries.Database.GetAllAttributeEntriesQuery())
+			.ToArrayAsync();
+		var entry = entries.FirstOrDefault(e => e.Name == "TESTATTR2");
+		await Assert.That(entry).IsNotNull();
+		await Assert.That(entry!.DefaultFlags.Contains("NO_COMMAND")).IsTrue();
+		
+		// Use SetAttributeCommand directly to bypass & command test issues
+		var player = await Mediator.Send(new Library.Queries.Database.GetObjectNodeQuery(new DBRef(1)));
+		var success = await Mediator.Send(new Library.Commands.Database.SetAttributeCommand(
+			new DBRef(1),
+			["TESTATTR2"],
+			MModule.single("test value"),
+			player.AsPlayer));
+		
+		await Assert.That(success).IsTrue();
+
+		// Verify the attribute was created with the no_command flag from the entry
+		var attrs = await Mediator.CreateStream(new Library.Queries.Database.GetAttributeQuery(new DBRef(1), ["TESTATTR2"]))
+			.ToArrayAsync();
+		
+		var attr = attrs.LastOrDefault();
+		await Assert.That(attr).IsNotNull();
+		
+		// Verify the attribute has the no_command flag from the entry
+		// This confirms that ArangoDatabase.cs:1832-1849 correctly applies flags from entries
+		await Assert.That(attr!.Flags.Any(f => f.Name.Equals("no_command", StringComparison.OrdinalIgnoreCase))).IsTrue();
+	}
 }

@@ -424,6 +424,9 @@ public class SharpMUSHParserVisitor(
 			}
 
 			// Step 6: Check @attribute setting
+			// TODO: This step is for checking if we're setting an attribute with @attribute syntax
+			// For now, this is handled elsewhere and we'll skip to step 7
+			
 			// Step 7: Enter Aliases
 			// Step 8: Leave Aliases
 
