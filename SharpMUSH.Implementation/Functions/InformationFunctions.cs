@@ -1,4 +1,5 @@
-﻿using SharpMUSH.Implementation.Common;
+﻿using Microsoft.Extensions.Logging;
+using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
@@ -702,8 +703,8 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState(string.Empty));
 		}
 
-		// Mode 1: No arguments - return all color names
-		if (args.Count == 0)
+		// Mode 1: No arguments - return all color names (check if args is empty or first arg is empty)
+		if (args.Count == 0 || string.IsNullOrEmpty(args["0"]?.Message?.ToPlainText()))
 		{
 			var allColors = colorsConfig.Colors
 				.Select(c => c.name)
@@ -714,7 +715,7 @@ public partial class Functions
 		}
 
 		// Mode 2: One argument - wildcard filter
-		if (args.Count == 1)
+		if (args.Count == 1 || (args.Count == 2 && string.IsNullOrEmpty(args["1"]?.Message?.ToPlainText())))
 		{
 			var wildcardPattern = args["0"].Message!.ToString();
 			var matchingColors = colorsConfig.Colors
