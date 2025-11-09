@@ -71,11 +71,3 @@ public class GetLazyAttributesQueryHandler(ISharpDatabase database)
 				?? AsyncEnumerable.Empty<LazySharpAttribute>()
 		};
 }
-
-public class GetAllAttributeEntriesQueryHandler(ISharpDatabase database)
-	: IStreamQueryHandler<GetAllAttributeEntriesQuery, SharpAttributeEntry>
-{
-	public IAsyncEnumerable<SharpAttributeEntry> Handle(GetAllAttributeEntriesQuery request,
-		CancellationToken cancellationToken) =>
-		database.GetAllAttributeEntriesAsync(cancellationToken);
-}

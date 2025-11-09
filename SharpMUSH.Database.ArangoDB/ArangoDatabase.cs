@@ -1835,9 +1835,15 @@ public partial class ArangoDatabase(
 			
 			// Get flags from the attribute entry and resolve them
 			var flagNames = sharpAttributeEntry?.DefaultFlags ?? [];
-			var resolvedFlags = (await Task.WhenAll(flagNames.Select(flagName => GetAttributeFlagAsync(flagName, ct))))
-				.Where(flag => flag != null)
-				.ToList();
+			var resolvedFlags = new List<SharpAttributeFlag>();
+			foreach (var flagName in flagNames)
+			{
+				var flag = await GetAttributeFlagAsync(flagName, ct);
+				if (flag != null)
+				{
+					resolvedFlags.Add(flag);
+				}
+			}
 
 			var newOne = await arangoDb.Document.CreateAsync<SharpAttributeCreateRequest, SharpAttributeQueryResult>(
 				transactionHandle, DatabaseConstants.Attributes,
