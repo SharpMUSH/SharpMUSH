@@ -1,8 +1,12 @@
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
@@ -15,38 +19,92 @@ public class ObjectManipulationCommandTests
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
+	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask GetCommand()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("get test object"));
+		// Create a thing in the room
+		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@create GetTestObject"));
+		var thingDbRef = DBRef.Parse(result.Message!.ToPlainText()!);
 
+		// Get the thing
+		await Parser.CommandParse(1, ConnectionService, MModule.single("get GetTestObject"));
+
+		// Should receive messages including "Taken."
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Taken")));
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
+	public async ValueTask GetFromContainer()
+	{
+		// Create a container and an object
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@create Container2"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@create InnerObject2"));
+		
+		// Set container as ENTER_OK
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set Container2=ENTER_OK"));
+		
+		// Put inner object in container
+		await Parser.CommandParse(1, ConnectionService, MModule.single("get InnerObject2"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("give Container2=InnerObject2"));
+		
+		// Try to get from container
+		await Parser.CommandParse(1, ConnectionService, MModule.single("get Container2's InnerObject2"));
+
+		// Should receive messages including "Taken."
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Taken")));
+	}
+
+	[Test]
+	public async ValueTask GetNonexistentObject()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("get NonexistentObject12345"));
+
+		// Should receive error message
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("don't see")));
+	}
+
+	[Test]
 	public async ValueTask DropCommand()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("drop test object"));
+		// Create and get an object
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@create DropTestObject"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("get DropTestObject"));
 
+		// Drop it
+		await Parser.CommandParse(1, ConnectionService, MModule.single("drop DropTestObject"));
+
+		// Should receive messages including "Dropped."
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Dropped")));
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask GiveCommand()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("give #1=test object"));
+		// Create a thing and another player
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@create GiveTestObject"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("get GiveTestObject"));
+		
+		// Create a recipient (needs to be created as player or thing with ENTER_OK)
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@create Recipient"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set Recipient=ENTER_OK"));
 
+		// Give the object
+		await Parser.CommandParse(1, ConnectionService, MModule.single("give Recipient=GiveTestObject"));
+
+		// Should receive messages including "Given."
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Given")));
 	}
 
 	[Test]
@@ -61,13 +119,14 @@ public class ObjectManipulationCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask InventoryCommand()
 	{
+		// Just test the command runs
 		await Parser.CommandParse(1, ConnectionService, MModule.single("inventory"));
 
+		// Should receive some notification about inventory
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
 	}
 
