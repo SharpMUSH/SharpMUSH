@@ -1058,7 +1058,7 @@ public partial class Functions
 	/// <summary>
 	/// Reconstructs an ansi() function call from AnsiStructure and inner text
 	/// </summary>
-	private static string ReconstructAnsiCall(AnsiStructure ansiDetails, string innerText)
+	internal static string ReconstructAnsiCall(AnsiStructure ansiDetails, string innerText)
 	{
 		var attributes = new List<string>();
 
@@ -1127,7 +1127,7 @@ public partial class Functions
 	/// <summary>
 	/// Converts AnsiColor to PennMUSH color code
 	/// </summary>
-	private static string ConvertAnsiColorToCode(ANSI.AnsiColor color, bool isBackground = false)
+	internal static string ConvertAnsiColorToCode(ANSI.AnsiColor color, bool isBackground = false)
 	{
 		// TODO: That's not how we do backgrounds here!
 		var prefix = ""; // isBackground ? "b" : "";
