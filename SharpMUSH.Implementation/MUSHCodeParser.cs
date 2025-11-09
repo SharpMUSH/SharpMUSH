@@ -93,6 +93,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			ServiceProvider.GetRequiredService<ILocateService>(),
 			ServiceProvider.GetRequiredService<ICommandDiscoveryService>(),
 			ServiceProvider.GetRequiredService<IAttributeService>(),
+			ServiceProvider.GetRequiredService<IHookService>(),
 			text);
 
 		return visitor.Visit(chatContext);
@@ -126,7 +127,8 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			ServiceProvider.GetRequiredService<IConnectionService>(),
 			ServiceProvider.GetRequiredService<ILocateService>(),
 			ServiceProvider.GetRequiredService<ICommandDiscoveryService>(),
-			ServiceProvider.GetRequiredService<IAttributeService>(), text);
+			ServiceProvider.GetRequiredService<IAttributeService>(),
+			ServiceProvider.GetRequiredService<IHookService>(), text);
 
 		return visitor.Visit(chatContext);
 	}
@@ -160,7 +162,8 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			ServiceProvider.GetRequiredService<IConnectionService>(),
 			ServiceProvider.GetRequiredService<ILocateService>(),
 			ServiceProvider.GetRequiredService<ICommandDiscoveryService>(),
-			ServiceProvider.GetRequiredService<IAttributeService>(),text);
+			ServiceProvider.GetRequiredService<IAttributeService>(),
+			ServiceProvider.GetRequiredService<IHookService>(),text);
 
 		return () => visitor.Visit(chatContext);
 	}
@@ -217,7 +220,8 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			ServiceProvider.GetRequiredService<IConnectionService>(),
 			ServiceProvider.GetRequiredService<ILocateService>(),
 			ServiceProvider.GetRequiredService<ICommandDiscoveryService>(),
-			ServiceProvider.GetRequiredService<IAttributeService>(), text);
+			ServiceProvider.GetRequiredService<IAttributeService>(),
+			ServiceProvider.GetRequiredService<IHookService>(), text);
 
 		var result = await visitor.Visit(chatContext);
 
@@ -256,7 +260,8 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			ServiceProvider.GetRequiredService<IConnectionService>(),
 			ServiceProvider.GetRequiredService<ILocateService>(),
 			ServiceProvider.GetRequiredService<ICommandDiscoveryService>(),
-			ServiceProvider.GetRequiredService<IAttributeService>(), text);
+			ServiceProvider.GetRequiredService<IAttributeService>(),
+			ServiceProvider.GetRequiredService<IHookService>(), text);
 
 		var result = await visitor.Visit(chatContext);
 
@@ -290,7 +295,8 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			ServiceProvider.GetRequiredService<IConnectionService>(),
 			ServiceProvider.GetRequiredService<ILocateService>(),
 			ServiceProvider.GetRequiredService<ICommandDiscoveryService>(),
-			ServiceProvider.GetRequiredService<IAttributeService>(), text);
+			ServiceProvider.GetRequiredService<IAttributeService>(),
+			ServiceProvider.GetRequiredService<IHookService>(), text);
 
 		return visitor.Visit(chatContext);
 	}
@@ -322,7 +328,8 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			ServiceProvider.GetRequiredService<IConnectionService>(),
 			ServiceProvider.GetRequiredService<ILocateService>(),
 			ServiceProvider.GetRequiredService<ICommandDiscoveryService>(),
-			ServiceProvider.GetRequiredService<IAttributeService>(), text);
+			ServiceProvider.GetRequiredService<IAttributeService>(),
+			ServiceProvider.GetRequiredService<IHookService>(), text);
 
 		return visitor.Visit(chatContext);
 	}
@@ -354,7 +361,8 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			ServiceProvider.GetRequiredService<IConnectionService>(),
 			ServiceProvider.GetRequiredService<ILocateService>(),
 			ServiceProvider.GetRequiredService<ICommandDiscoveryService>(),
-			ServiceProvider.GetRequiredService<IAttributeService>(), text);
+			ServiceProvider.GetRequiredService<IAttributeService>(),
+			ServiceProvider.GetRequiredService<IHookService>(), text);
 
 		return visitor.Visit(chatContext);
 	}
@@ -386,7 +394,8 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			ServiceProvider.GetRequiredService<IConnectionService>(),
 			ServiceProvider.GetRequiredService<ILocateService>(),
 			ServiceProvider.GetRequiredService<ICommandDiscoveryService>(),
-			ServiceProvider.GetRequiredService<IAttributeService>(), text);
+			ServiceProvider.GetRequiredService<IAttributeService>(),
+			ServiceProvider.GetRequiredService<IHookService>(), text);
 
 		return visitor.Visit(chatContext);
 	}

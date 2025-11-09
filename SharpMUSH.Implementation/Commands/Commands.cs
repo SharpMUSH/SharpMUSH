@@ -39,7 +39,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 	
 	private static ILogger<Commands>? Logger { get; set; }
 	
-	private static ISharpDatabase? Database { get; set; }
+	private static IHookService? HookService { get; set; }
 	
 	private static LibraryService<string, CommandDefinition>? CommandLibrary { get; set; }
 	private static LibraryService<string, FunctionDefinition>? FunctionLibrary { get; set; }
@@ -66,7 +66,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		ILockService lockService,
 		IMoveService moveService,
 		ILogger<Commands> logger,
-		ISharpDatabase database,
+		IHookService hookService,
 		LibraryService<string, FunctionDefinition> functionLibrary)
 	{
 		Mediator = mediator;
@@ -87,7 +87,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		LockService = lockService;
 		MoveService = moveService;
 		Logger = logger;
-		Database = database;
+		HookService = hookService;
 		FunctionLibrary = functionLibrary;
 
 		foreach (var command in Generated.CommandLibrary.Commands)
