@@ -1328,6 +1328,15 @@ public partial class Commands
 		throw new NotImplementedException();
 	}
 
+	/// <summary>
+	/// Manages sitelock rules that control which hosts can connect, create players, or use guests.
+	/// @sitelock - Lists all rules and banned names
+	/// @sitelock/check &lt;host&gt; - Checks which rule matches a host
+	/// @sitelock/name &lt;name&gt; - Manages banned player names (not yet implemented)
+	/// @sitelock/ban &lt;pattern&gt; - Bans a host pattern (not yet implemented)
+	/// @sitelock/register &lt;pattern&gt; - Sets registration requirement (not yet implemented)
+	/// @sitelock/remove &lt;pattern&gt; - Removes a rule (not yet implemented)
+	/// </summary>
 	[SharpCommand(Name = "@SITELOCK", Switches = ["BAN", "CHECK", "REGISTER", "REMOVE", "NAME", "PLAYER", "LIST"],
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs, CommandLock = "FLAG^WIZARD", MinArgs = 0)]
 	public static async ValueTask<Option<CallState>> SiteLock(IMUSHCodeParser parser, SharpCommandAttribute _2)
@@ -1343,13 +1352,13 @@ public partial class Commands
 		if (args.Count == 0 || switches.Contains("LIST"))
 		{
 			var output = new System.Text.StringBuilder();
-			output.AppendLine("Sitelock Rules:");
+			output.AppendLine($"Sitelock Rules ({sitelockConfig.Rules.Count} total):");
 			output.AppendLine("Pattern                      Options");
 			output.AppendLine("---------------------------- ------------------------------");
 
 			if (sitelockConfig.Rules.Count == 0)
 			{
-				output.AppendLine("No sitelock rules defined.");
+				output.AppendLine("  (No rules defined - all connections allowed by default)");
 			}
 			else
 			{
@@ -1362,14 +1371,14 @@ public partial class Commands
 			}
 
 			output.AppendLine();
-			output.AppendLine("Banned Names:");
+			output.AppendLine($"Banned Player Names ({sitelockConfig.BannedNames.Length} total):");
 			if (sitelockConfig.BannedNames.Length == 0)
 			{
-				output.AppendLine("No banned names defined.");
+				output.AppendLine("  (No banned names defined)");
 			}
 			else
 			{
-				output.AppendLine(string.Join(", ", sitelockConfig.BannedNames));
+				output.AppendLine("  " + string.Join(", ", sitelockConfig.BannedNames));
 			}
 
 			await NotifyService!.Notify(executor, output.ToString().TrimEnd());
