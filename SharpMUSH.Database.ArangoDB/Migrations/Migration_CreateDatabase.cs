@@ -2236,6 +2236,16 @@ public class Migration_CreateDatabase : IArangoMigration
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
 			new
 			{
+				Name = "Announce",
+				System = true,
+				TypeRestrictions = DatabaseConstants.typesAll,
+				SetPermissions = DatabaseConstants.permissionsWizard
+					.Union(DatabaseConstants.permissionsLog),
+				UnsetPermissions = DatabaseConstants.permissionsWizard
+			}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
+			new
+			{
 				Name = "Boot",
 				System = true,
 				TypeRestrictions = DatabaseConstants.typesAll,
