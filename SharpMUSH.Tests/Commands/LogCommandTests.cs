@@ -17,9 +17,59 @@ public class LogCommandTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	[Test]
-	public async ValueTask LogCommand()
+	public async ValueTask LogCommand_DefaultSwitch_LogsToCommandCategory()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@log Test log entry"));
+
+		await NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Command log")));
+	}
+
+	[Test]
+	public async ValueTask LogCommand_WithCmdSwitch_LogsToCommandCategory()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@log/cmd Test command log entry"));
+
+		await NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Command log")));
+	}
+
+	[Test]
+	public async ValueTask LogCommand_WithWizSwitch_LogsToWizardCategory()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@log/wiz Test wizard log entry"));
+
+		await NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Wizard log")));
+	}
+
+	[Test]
+	public async ValueTask LogCommand_WithErrSwitch_LogsToErrorCategory()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@log/err Test error log entry"));
+
+		await NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Error log")));
+	}
+
+	[Test]
+	public async ValueTask LogCommand_NoMessage_ReturnsError()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@log"));
+
+		await NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Usage")));
+	}
+
+	[Test]
+	public async ValueTask LogCommand_RecallSwitch_RetrievesLogs()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@log/recall"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
