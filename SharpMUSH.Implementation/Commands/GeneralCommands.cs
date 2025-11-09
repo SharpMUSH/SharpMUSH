@@ -3229,8 +3229,297 @@ public partial class Commands
 		Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Decompile(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches.ToArray();
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).WithoutNone();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		
+		// Parse arguments: object[/attribute pattern][=prefix]
+		if (args.Count == 0)
+		{
+			await NotifyService!.Notify(executor, "You must specify an object to decompile.");
+			return new CallState("#-1 NO OBJECT SPECIFIED");
+		}
+		
+		var objectSpec = args["0"].Message?.ToPlainText();
+		if (string.IsNullOrEmpty(objectSpec))
+		{
+			await NotifyService!.Notify(executor, "You must specify an object to decompile.");
+			return new CallState("#-1 NO OBJECT SPECIFIED");
+		}
+		
+		// Parse prefix if provided in arg 1 (from = split)
+		var prefix = args.Count >= 2 ? args["1"].Message?.ToPlainText() ?? "" : "";
+		
+		// Handle /tf switch - sets prefix to TFPREFIX attribute or default
+		if (switches.Contains("TF"))
+		{
+			var tfPrefixAttr = await AttributeService!.GetAttributeAsync(executor, executor, "TFPREFIX",
+				IAttributeService.AttributeMode.Read, false);
+			
+			prefix = tfPrefixAttr.Match(
+				attr => attr.Last().Value.ToPlainText(),
+				none => "FugueEdit > ",
+				error => "FugueEdit > ");
+		}
+		
+		// Split object/attribute pattern
+		string? attributePattern = null;
+		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objectSpec);
+		AnyOptionalSharpObject target;
+		
+		if (split.TryPickT0(out var details, out _))
+		{
+			var (objectName, maybeAttributePattern) = details;
+			attributePattern = maybeAttributePattern;
+			
+			var locate = await LocateService!.LocateAndNotifyIfInvalid(
+				parser,
+				enactor,
+				enactor,
+				objectName,
+				LocateFlags.All);
+			
+			if (locate.IsValid())
+			{
+				target = locate.WithoutError();
+			}
+			else
+			{
+				return new None();
+			}
+		}
+		else
+		{
+			var locate = await LocateService!.LocateAndNotifyIfInvalid(
+				parser,
+				enactor,
+				enactor,
+				objectSpec,
+				LocateFlags.All);
+			
+			if (locate.IsValid())
+			{
+				target = locate.WithoutError();
+			}
+			else
+			{
+				return new None();
+			}
+		}
+		
+		if (target.IsNone())
+		{
+			return new None();
+		}
+		
+		var targetKnown = target.Known();
+		
+		// Check permission to examine/decompile
+		var canExamine = await PermissionService!.CanExamine(executor, targetKnown);
+		if (!canExamine)
+		{
+			await NotifyService!.Notify(executor, "Permission denied.");
+			return new CallState(Errors.ErrorPerm);
+		}
+		
+		var obj = targetKnown.Object();
+		var useDbRef = switches.Contains("DB");
+		var useName = switches.Contains("NAME") || !useDbRef; // NAME is default
+		var showFlags = switches.Contains("FLAGS") || (!switches.Contains("ATTRIBS") && string.IsNullOrEmpty(attributePattern));
+		var showAttribs = switches.Contains("ATTRIBS") || (!switches.Contains("FLAGS") && string.IsNullOrEmpty(attributePattern)) || !string.IsNullOrEmpty(attributePattern);
+		var skipDefaults = switches.Contains("SKIPDEFAULTS");
+		var isTf = switches.Contains("TF");
+		
+		// If attribute pattern is provided, only show attributes
+		if (!string.IsNullOrEmpty(attributePattern))
+		{
+			showFlags = false;
+			showAttribs = true;
+		}
+		
+		var objectRef = useDbRef ? $"#{obj.DBRef.Number}" : obj.Name;
+		var outputs = new List<string>();
+		
+		// Output flags section if requested
+		if (showFlags)
+		{
+			// @create command based on object type
+			var createCmd = obj.Type.ToUpperInvariant() switch
+			{
+				"ROOM" => $"@dig {objectRef}",
+				"EXIT" => $"@open {objectRef}",
+				"THING" => $"@create {objectRef}",
+				"PLAYER" => $"@pcreate {objectRef}",
+				_ => $"@create {objectRef}"
+			};
+			outputs.Add($"{prefix}{createCmd}");
+			
+			// Set flags
+			var flags = await obj.Flags.Value.ToArrayAsync();
+			foreach (var flag in flags)
+			{
+				// Skip default flags if requested
+				if (skipDefaults && IsDefaultFlag(obj.Type, flag.Name))
+				{
+					continue;
+				}
+				outputs.Add($"{prefix}@set {objectRef}={flag.Name}");
+			}
+			
+			// Set powers
+			var powers = await obj.Powers.Value.ToArrayAsync();
+			foreach (var power in powers)
+			{
+				outputs.Add($"{prefix}@power {objectRef}={power.Name}");
+			}
+			
+			// TODO: Set locks
+			// TODO: Set parent if not default
+		}
+		
+		// Output attributes section if requested
+		if (showAttribs)
+		{
+			// Get attributes
+			SharpAttributesOrError atrs;
+			if (!string.IsNullOrEmpty(attributePattern))
+			{
+				atrs = await AttributeService!.GetAttributePatternAsync(
+					enactor,
+					targetKnown,
+					attributePattern,
+					false, // don't check parents for decompile
+					IAttributeService.AttributePatternMode.Wildcard);
+			}
+			else
+			{
+				atrs = await AttributeService!.GetVisibleAttributesAsync(enactor, targetKnown);
+			}
+			
+			if (atrs.IsAttribute)
+			{
+				foreach (var attr in atrs.AsAttributes)
+				{
+					// Skip VEILED attributes
+					const string VeiledFlagName = "VEILED";
+					if (attr.Flags.Any(f => f.Name.Equals(VeiledFlagName, StringComparison.OrdinalIgnoreCase)))
+					{
+						continue;
+					}
+					
+					// Check if attribute contains ANSI color
+					var hasAnsi = ContainsAnsiMarkup(attr.Value);
+					
+					if (hasAnsi)
+					{
+						// Use @set format with decomposed value to ensure evaluation
+						var decomposedValue = DecomposeAttributeValue(attr.Value);
+						outputs.Add($"{prefix}@set {objectRef}={attr.Name}:{decomposedValue}");
+					}
+					else
+					{
+						// Use &attr format for non-ANSI attributes
+						var plainValue = attr.Value.ToPlainText();
+						outputs.Add($"{prefix}&{attr.Name} {objectRef}={plainValue}");
+					}
+					
+					// Output attribute flags if not in TF mode and not skipdefaults
+					if (!isTf && attr.Flags.Any())
+					{
+						if (!skipDefaults || !AreDefaultAttrFlags(attr.Name, attr.Flags))
+						{
+							foreach (var flag in attr.Flags)
+							{
+								outputs.Add($"{prefix}@set {objectRef}/{attr.Name}={flag.Name}");
+							}
+						}
+					}
+				}
+			}
+		}
+		
+		// Send output to player
+		foreach (var output in outputs)
+		{
+			await NotifyService!.Notify(executor, output);
+		}
+		
+		return CallState.Empty;
+	}
+	
+	/// <summary>
+	/// Checks if an MString contains ANSI markup
+	/// </summary>
+	private static bool ContainsAnsiMarkup(MString str)
+	{
+		var hasAnsi = false;
+		MModule.evaluateWith((markupType, innerText) =>
+		{
+			if (markupType is MModule.MarkupTypes.MarkedupText { Item: Ansi })
+			{
+				hasAnsi = true;
+			}
+			return innerText;
+		}, str);
+		return hasAnsi;
+	}
+	
+	/// <summary>
+	/// Decomposes an attribute value using the decompose() logic from StringFunctions
+	/// </summary>
+	private static string DecomposeAttributeValue(MString input)
+	{
+		// Use same logic as decompose() function from StringFunctions
+		var reconstructed = MModule.evaluateWith((markupType, innerText) =>
+		{
+			return markupType switch
+			{
+				MModule.MarkupTypes.MarkedupText { Item: Ansi ansiMarkup }
+					=> Functions.Functions.ReconstructAnsiCall(ansiMarkup.Details, innerText),
+				_ => innerText
+			};
+		}, input);
+		
+		var result = reconstructed
+			.Replace("\\", @"\\")
+			.Replace("%", "\\%")
+			.Replace(";", "\\;")
+			.Replace("[", "\\[")
+			.Replace("]", "\\]")
+			.Replace("{", "\\{")
+			.Replace("}", "\\}")
+			.Replace("(", "\\(")
+			.Replace(")", "\\)")
+			.Replace(",", "\\,")
+			.Replace("^", "\\^")
+			.Replace("$", "\\$");
+		
+		result = Regex.Replace(result, @"\s{2,}", m => string.Join("", Enumerable.Repeat("%b", m.Length)));
+		
+		result = result.Replace("\r", "%r").Replace("\n", "%r").Replace("\t", "%t");
+		
+		return result;
+	}
+	
+	/// <summary>
+	/// Checks if a flag is a default flag for the object type
+	/// </summary>
+	private static bool IsDefaultFlag(string type, string flagName)
+	{
+		// TODO: Implement proper default flag checking based on object type
+		// For now, return false to show all flags
+		return false;
+	}
+	
+	/// <summary>
+	/// Checks if attribute flags are the default for that attribute
+	/// </summary>
+	private static bool AreDefaultAttrFlags(string attrName, IEnumerable<SharpAttributeFlag> flags)
+	{
+		// TODO: Implement proper default attribute flag checking
+		// For now, return false to show all flags
+		return false;
 	}
 
 	[SharpCommand(Name = "@EMIT", Switches = ["NOEVAL", "SPOOF"], Behavior = CB.Default | CB.RSNoParse | CB.NoGagged,
