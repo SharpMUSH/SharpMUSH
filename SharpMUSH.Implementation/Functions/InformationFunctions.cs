@@ -742,4 +742,36 @@ public partial class Functions
 		*/
 		throw new NotImplementedException();
 	}
+
+	[SharpFunction(Name = "motd", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]
+	public static async ValueTask<CallState> Motd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		// Returns the current @motd/connect
+		var motdData = await ObjectDataService!.GetExpandedServerDataAsync<MotdData>();
+		return new CallState(motdData?.ConnectMotd ?? string.Empty);
+	}
+
+	[SharpFunction(Name = "wizmotd", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly)]
+	public static async ValueTask<CallState> WizMotd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		// Returns the current @motd/wizard
+		var motdData = await ObjectDataService!.GetExpandedServerDataAsync<MotdData>();
+		return new CallState(motdData?.WizardMotd ?? string.Empty);
+	}
+
+	[SharpFunction(Name = "downmotd", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly)]
+	public static async ValueTask<CallState> DownMotd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		// Returns the current @motd/down
+		var motdData = await ObjectDataService!.GetExpandedServerDataAsync<MotdData>();
+		return new CallState(motdData?.DownMotd ?? string.Empty);
+	}
+
+	[SharpFunction(Name = "fullmotd", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly)]
+	public static async ValueTask<CallState> FullMotd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		// Returns the current @motd/full
+		var motdData = await ObjectDataService!.GetExpandedServerDataAsync<MotdData>();
+		return new CallState(motdData?.FullMotd ?? string.Empty);
+	}
 }

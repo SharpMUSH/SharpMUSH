@@ -12,6 +12,7 @@ using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -3293,6 +3294,22 @@ public partial class Commands
 			
 			await NotifyService.Notify(executor, $"  Wizard MOTD File: {wizmotdFile ?? "(not set)"}");
 			await NotifyService.Notify(executor, $"  Wizard MOTD HTML: {wizmotdHtmlFile ?? "(not set)"}");
+		}
+		
+		// Get temporary MOTD data from ExpandedServerData
+		var motdData = await ObjectDataService!.GetExpandedServerDataAsync<MotdData>();
+		if (motdData != null)
+		{
+			await NotifyService.Notify(executor, "");
+			await NotifyService.Notify(executor, "Temporary Message of the Day (cleared on restart):");
+			await NotifyService.Notify(executor, $"  Connect MOTD: {(string.IsNullOrEmpty(motdData.ConnectMotd) ? "(not set)" : motdData.ConnectMotd)}");
+			
+			if (isWizard)
+			{
+				await NotifyService.Notify(executor, $"  Wizard MOTD:  {(string.IsNullOrEmpty(motdData.WizardMotd) ? "(not set)" : motdData.WizardMotd)}");
+				await NotifyService.Notify(executor, $"  Down MOTD:    {(string.IsNullOrEmpty(motdData.DownMotd) ? "(not set)" : motdData.DownMotd)}");
+				await NotifyService.Notify(executor, $"  Full MOTD:    {(string.IsNullOrEmpty(motdData.FullMotd) ? "(not set)" : motdData.FullMotd)}");
+			}
 		}
 		
 		return CallState.Empty;
