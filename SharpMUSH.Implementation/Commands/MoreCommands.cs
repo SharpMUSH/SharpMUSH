@@ -485,6 +485,13 @@ public partial class Commands
 						thing => thing,
 						_ => currentRoom);
 					
+					// Check for containment loops before dropping to the destination
+					if (await MoveService!.WouldCreateLoop(contentToDrop, dropToContainer))
+					{
+						await NotifyService!.Notify(executor, $"Cannot drop {objectToDrop.Object().Name} there - it would create a containment loop.");
+						return CallState.Empty;
+					}
+					
 					await Mediator!.Send(new MoveObjectCommand(contentToDrop, dropToContainer));
 					
 					await NotifyService!.Notify(executor, $"Dropped. {objectToDrop.Object().Name} was sent to {dropToContainer.Object().Name}.");
