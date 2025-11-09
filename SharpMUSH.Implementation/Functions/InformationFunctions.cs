@@ -692,54 +692,511 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "colors", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static async ValueTask<CallState> Colors(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> Colors(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		await ValueTask.CompletedTask;
 		var args = parser.CurrentState.Arguments;
+		var colorsConfig = ColorConfiguration?.CurrentValue;
+		
+		if (colorsConfig == null || colorsConfig.Colors.Length == 0)
+		{
+			return ValueTask.FromResult(new CallState(string.Empty));
+		}
 
+		// Mode 1: No arguments - return all color names
 		if (args.Count == 0)
 		{
-			return string.Join(" ", ColorConfiguration!.CurrentValue.Colors
-				.Select(x => x.name));
+			var allColors = colorsConfig.Colors
+				.Select(c => c.name)
+				.Distinct()
+				.ToList();
+			
+			return ValueTask.FromResult(new CallState(string.Join(" ", allColors)));
 		}
 
+		// Mode 2: One argument - wildcard filter
 		if (args.Count == 1)
 		{
-			return string.Join(" ", ColorConfiguration!.CurrentValue.Colors
-				.Where(x => x.name.Contains(args["0"].Message!.ToPlainText()))
-				.Select(x => x.name));
+			var wildcardPattern = args["0"].Message!.ToString();
+			var matchingColors = colorsConfig.Colors
+				.Where(c => MModule.isWildcardMatch2(MModule.single(c.name), wildcardPattern))
+				.Select(c => c.name)
+				.Distinct()
+				.ToList();
+			
+			return ValueTask.FromResult(new CallState(string.Join(" ", matchingColors)));
 		}
 
-		// Colors , Format
-		// TODO: Handle the various other functions.
-		var colors = args["0"].Message!.ToPlainText().Split(" ");
+		// Mode 3: Two arguments - color specification and format
+		var colorSpec = args["0"].Message!.ToString();
+		var formatSpec = args["1"].Message!.ToString().ToLowerInvariant();
 
+		// Parse the format specification
+		var includeStyles = formatSpec.Contains("styles");
+		var formatType = formatSpec.Replace("styles", "").Trim();
 
-		/*
-  colors()
-  colors(<wildcard>)
-  colors(<colors>, <format>)
+		// Parse the color specification
+		var (foregroundSpec, backgroundSpec, styles) = ParseColorSpecification(colorSpec);
 
-  With no arguments, colors() returns an unsorted, space-separated list of colors that PennMUSH knows the name of. You can use these colors in ansi(+<colorname>,text). The colors "xterm0" to "xterm255" are not included in the list, but can also be used in ansi().
+		// Process based on format type
+		var result = formatType switch
+		{
+			"hex" or "x" => FormatColorsAsHex(foregroundSpec, backgroundSpec, styles, includeStyles, colorsConfig),
+			"rgb" or "r" => FormatColorsAsRgb(foregroundSpec, backgroundSpec, styles, includeStyles, colorsConfig),
+			"xterm256" or "d" => FormatColorsAsXterm(foregroundSpec, backgroundSpec, styles, includeStyles, colorsConfig, hexFormat: false),
+			"xterm256x" or "h" => FormatColorsAsXterm(foregroundSpec, backgroundSpec, styles, includeStyles, colorsConfig, hexFormat: true),
+			"16color" or "c" => FormatColorsAs16Color(foregroundSpec, backgroundSpec, styles, includeStyles, colorsConfig),
+			"name" => FormatColorsAsName(foregroundSpec, backgroundSpec, styles, includeStyles, colorsConfig),
+			"auto" => FormatColorsAsAuto(colorSpec, foregroundSpec, backgroundSpec, styles, includeStyles),
+			_ => "#-1 INVALID FORMAT"
+		};
 
-  With one argument, returns an unsorted, space-separated list of colors that match the wildcard pattern <wildcard>.
+		return ValueTask.FromResult(new CallState(result));
+	}
 
-  With two arguments, colors() returns information about specific colors. <colors> can be any string accepted by the ansi() function's first argument. <format> must be one of:
+	/// <summary>
+	/// Parse a color specification into foreground, background, and styles
+	/// </summary>
+	private static (string? foreground, string? background, string styles) ParseColorSpecification(string spec)
+	{
+		string? foreground = null;
+		string? background = null;
+		var styles = string.Empty;
 
-   hex, x:      return a hexcode in the format #rrggbb.
-   rgb, r:      return the RGB components as a list (0 0 0 - 255 255 255)
-   xterm256, d: return the number of the xterm color closest to the given <color>.
-   xterm256x,h: return the number of the xterm color in base 16.
-   16color, c:  return the letter of the closest ANSI color code (possibly including 'h' for highlight fg colors).
-   name:     return a list of names of all the colors exactly matching the given colors, or '#-1 NO MATCHING COLOR NAME' if there is no exact match with a named color.
-   auto:     returns the colors in the same format(s) they were given in.
+		var parts = spec.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		
+		foreach (var part in parts)
+		{
+			// Extract styles first
+			foreach (var ch in part)
+			{
+				if (ch is 'f' or 'u' or 'i' or 'h')
+				{
+					if (!styles.Contains(ch))
+					{
+						styles += ch;
+					}
+				}
+			}
 
-  It can be used for working out how certain colors will downgrade to people using clients which aren't fully color-capable.
+			// Check if it's a background color (starts with /)
+			if (part.StartsWith('/'))
+			{
+				var colorPart = part[1..];
+				if (!string.IsNullOrWhiteSpace(colorPart))
+				{
+					background = colorPart;
+				}
+			}
+			else
+			{
+				// Remove style characters to get just the color
+				var colorPart = new string(part.Where(ch => ch is not ('f' or 'u' or 'i' or 'h')).ToArray());
+				if (!string.IsNullOrWhiteSpace(colorPart) && !IsOnlyStyles(part))
+				{
+					foreground = colorPart;
+				}
+			}
+		}
 
-  <format> can also include the word "styles", in which case all ANSI styling options (f, u, i and h) present in <colors> are included in the output.
+		return (foreground, background, styles);
+	}
 
-  See 'help colors2' for examples.
-		*/
-		throw new NotImplementedException();
+	private static bool IsOnlyStyles(string part)
+	{
+		return part.All(ch => ch is 'f' or 'u' or 'i' or 'h');
+	}
+
+	private static string FormatColorsAsHex(string? foreground, string? background, string styles, bool includeStyles, 
+		SharpMUSH.Configuration.Options.ColorsOptions config)
+	{
+		var result = new List<string>();
+
+		if (includeStyles && !string.IsNullOrEmpty(styles))
+		{
+			result.Add(styles);
+		}
+
+		if (!string.IsNullOrEmpty(foreground))
+		{
+			var hex = ConvertColorToHex(foreground, config);
+			if (hex != null)
+			{
+				result.Add(hex);
+			}
+		}
+
+		if (!string.IsNullOrEmpty(background))
+		{
+			var hex = ConvertColorToHex(background, config);
+			if (hex != null)
+			{
+				result.Add("/" + hex);
+			}
+		}
+
+		return result.Count > 0 ? string.Join(" ", result) : "#-1 INVALID COLOR";
+	}
+
+	private static string FormatColorsAsRgb(string? foreground, string? background, string styles, bool includeStyles,
+		SharpMUSH.Configuration.Options.ColorsOptions config)
+	{
+		var result = new List<string>();
+
+		if (includeStyles && !string.IsNullOrEmpty(styles))
+		{
+			result.Add(styles);
+		}
+
+		if (!string.IsNullOrEmpty(foreground))
+		{
+			var rgb = ConvertColorToRgb(foreground, config);
+			if (rgb != null)
+			{
+				result.Add(rgb);
+			}
+		}
+
+		if (!string.IsNullOrEmpty(background))
+		{
+			var rgb = ConvertColorToRgb(background, config);
+			if (rgb != null)
+			{
+				result.Add("/" + rgb);
+			}
+		}
+
+		return result.Count > 0 ? string.Join(" ", result) : "#-1 INVALID COLOR";
+	}
+
+	private static string FormatColorsAsXterm(string? foreground, string? background, string styles, bool includeStyles,
+		SharpMUSH.Configuration.Options.ColorsOptions config, bool hexFormat)
+	{
+		var result = new List<string>();
+
+		if (includeStyles && !string.IsNullOrEmpty(styles))
+		{
+			result.Add(styles);
+		}
+
+		if (!string.IsNullOrEmpty(foreground))
+		{
+			var xterm = ConvertColorToXterm(foreground, config);
+			if (xterm != null)
+			{
+				result.Add(hexFormat ? xterm.Value.ToString("x") : xterm.Value.ToString());
+			}
+		}
+
+		if (!string.IsNullOrEmpty(background))
+		{
+			var xterm = ConvertColorToXterm(background, config);
+			if (xterm != null)
+			{
+				result.Add(hexFormat ? ("/" + xterm.Value.ToString("x")) : ("/" + xterm.Value.ToString()));
+			}
+		}
+
+		return result.Count > 0 ? string.Join(" ", result) : "#-1 INVALID COLOR";
+	}
+
+	private static string FormatColorsAs16Color(string? foreground, string? background, string styles, bool includeStyles,
+		SharpMUSH.Configuration.Options.ColorsOptions config)
+	{
+		var result = new List<string>();
+
+		if (includeStyles && !string.IsNullOrEmpty(styles))
+		{
+			result.Add(styles);
+		}
+
+		if (!string.IsNullOrEmpty(foreground))
+		{
+			var ansi = ConvertColorTo16Color(foreground, config);
+			if (ansi != null)
+			{
+				result.Add(ansi);
+			}
+		}
+
+		if (!string.IsNullOrEmpty(background))
+		{
+			var ansi = ConvertColorTo16Color(background, config);
+			if (ansi != null)
+			{
+				result.Add(ansi.ToUpperInvariant());
+			}
+		}
+
+		return result.Count > 0 ? string.Join(" ", result) : "#-1 INVALID COLOR";
+	}
+
+	private static string FormatColorsAsName(string? foreground, string? background, string styles, bool includeStyles,
+		SharpMUSH.Configuration.Options.ColorsOptions config)
+	{
+		var result = new List<string>();
+
+		if (includeStyles && !string.IsNullOrEmpty(styles))
+		{
+			result.Add(styles);
+		}
+
+		if (!string.IsNullOrEmpty(foreground))
+		{
+			var names = ConvertColorToNames(foreground, config);
+			if (names.Count > 0)
+			{
+				result.AddRange(names);
+			}
+			else
+			{
+				return "#-1 NO MATCHING COLOR NAME";
+			}
+		}
+
+		if (!string.IsNullOrEmpty(background))
+		{
+			var names = ConvertColorToNames(background, config);
+			if (names.Count > 0)
+			{
+				result.AddRange(names.Select(n => "/" + n));
+			}
+			else
+			{
+				return "#-1 NO MATCHING COLOR NAME";
+			}
+		}
+
+		return result.Count > 0 ? string.Join(" ", result) : "#-1 NO MATCHING COLOR NAME";
+	}
+
+	private static string FormatColorsAsAuto(string originalSpec, string? foreground, string? background, string styles, bool includeStyles)
+	{
+		// For auto mode, return in the same format as provided
+		return originalSpec;
+	}
+
+	private static string? ConvertColorToHex(string colorSpec, SharpMUSH.Configuration.Options.ColorsOptions config)
+	{
+		// If already hex format
+		if (colorSpec.StartsWith('#'))
+		{
+			return colorSpec;
+		}
+
+		// If color name (with or without +)
+		if (colorSpec.StartsWith('+'))
+		{
+			colorSpec = colorSpec[1..];
+		}
+
+		if (config.ColorsByName.TryGetValue(colorSpec, out var color))
+		{
+			return "#" + color.rgb[2..]; // Remove "0x" prefix
+		}
+
+		// Try xterm color
+		if (int.TryParse(colorSpec, out var xtermNum))
+		{
+			var xtermColors = config.Colors.Where(c => c.xterm == xtermNum).ToList();
+			if (xtermColors.Count > 0)
+			{
+				return "#" + xtermColors[0].rgb[2..];
+			}
+		}
+
+		// Try xterm prefix
+		if (colorSpec.StartsWith("xterm") && int.TryParse(colorSpec[5..], out var xtermNum2))
+		{
+			var xtermColors = config.Colors.Where(c => c.xterm == xtermNum2).ToList();
+			if (xtermColors.Count > 0)
+			{
+				return "#" + xtermColors[0].rgb[2..];
+			}
+		}
+
+		return null;
+	}
+
+	private static string? ConvertColorToRgb(string colorSpec, SharpMUSH.Configuration.Options.ColorsOptions config)
+	{
+		var hex = ConvertColorToHex(colorSpec, config);
+		if (hex == null)
+		{
+			return null;
+		}
+
+		// Parse hex to RGB
+		var r = Convert.ToInt32(hex.Substring(1, 2), 16);
+		var g = Convert.ToInt32(hex.Substring(3, 2), 16);
+		var b = Convert.ToInt32(hex.Substring(5, 2), 16);
+
+		return $"{r} {g} {b}";
+	}
+
+	private static int? ConvertColorToXterm(string colorSpec, SharpMUSH.Configuration.Options.ColorsOptions config)
+	{
+		// If already xterm format
+		if (int.TryParse(colorSpec, out var xtermNum) && xtermNum >= 0 && xtermNum <= 255)
+		{
+			return xtermNum;
+		}
+
+		if (colorSpec.StartsWith("xterm") && int.TryParse(colorSpec[5..], out var xtermNum2))
+		{
+			return xtermNum2;
+		}
+
+		// If color name
+		if (colorSpec.StartsWith('+'))
+		{
+			colorSpec = colorSpec[1..];
+		}
+
+		if (config.ColorsByName.TryGetValue(colorSpec, out var color))
+		{
+			return color.xterm;
+		}
+
+		return null;
+	}
+
+	private static string? ConvertColorTo16Color(string colorSpec, SharpMUSH.Configuration.Options.ColorsOptions config)
+	{
+		// Map to 16-color ANSI codes
+		// Basic ANSI colors: x=black, r=red, g=green, y=yellow, b=blue, m=magenta, c=cyan, w=white
+		// Add 'h' prefix for highlight (bright) versions
+		
+		var xterm = ConvertColorToXterm(colorSpec, config);
+		if (xterm == null)
+		{
+			return null;
+		}
+
+		// Map xterm256 to 16-color ANSI
+		// This is a simplified mapping - PennMUSH has more sophisticated color distance calculations
+		return xterm.Value switch
+		{
+			0 => "x",     // black
+			1 => "r",     // red
+			2 => "g",     // green
+			3 => "y",     // yellow
+			4 => "b",     // blue
+			5 => "m",     // magenta
+			6 => "c",     // cyan
+			7 => "w",     // white
+			8 => "hx",    // bright black (gray)
+			9 => "hr",    // bright red
+			10 => "hg",   // bright green
+			11 => "hy",   // bright yellow
+			12 => "hb",   // bright blue
+			13 => "hm",   // bright magenta
+			14 => "hc",   // bright cyan
+			15 => "hw",   // bright white
+			_ => MapXtermColorTo16Color(xterm.Value, config)
+		};
+	}
+
+	private static string MapXtermColorTo16Color(int xterm, SharpMUSH.Configuration.Options.ColorsOptions config)
+	{
+		// For colors beyond 16, find the closest match
+		// Get the RGB value and map to closest basic color
+		var colorMatch = config.Colors.Where(c => c.xterm == xterm).ToList();
+		if (colorMatch.Count == 0 || colorMatch[0].rgb == null)
+		{
+			return "w"; // default to white
+		}
+
+		var rgb = colorMatch[0].rgb;
+		var r = Convert.ToInt32(rgb.Substring(2, 2), 16);
+		var g = Convert.ToInt32(rgb.Substring(4, 2), 16);
+		var b = Convert.ToInt32(rgb.Substring(6, 2), 16);
+
+		// Simple brightness check
+		var brightness = (r + g + b) / 3;
+		var highlight = brightness > 128 ? "h" : "";
+
+		// Determine dominant color
+		if (r > g && r > b)
+		{
+			return highlight + "r";
+		}
+		else if (g > r && g > b)
+		{
+			return highlight + "g";
+		}
+		else if (b > r && b > g)
+		{
+			return highlight + "b";
+		}
+		else if (r > b && g > b)
+		{
+			return highlight + "y";
+		}
+		else if (r > g && b > g)
+		{
+			return highlight + "m";
+		}
+		else if (g > r && b > r)
+		{
+			return highlight + "c";
+		}
+		else if (brightness < 64)
+		{
+			return "x"; // black
+		}
+		else
+		{
+			return highlight + "w";
+		}
+	}
+
+	private static List<string> ConvertColorToNames(string colorSpec, SharpMUSH.Configuration.Options.ColorsOptions config)
+	{
+		var result = new List<string>();
+
+		// If already a color name
+		if (colorSpec.StartsWith('+'))
+		{
+			colorSpec = colorSpec[1..];
+		}
+
+		if (config.ColorsByName.TryGetValue(colorSpec, out var color))
+		{
+			// Find all colors with the same RGB value
+			if (config.ColorsByRgb.TryGetValue(color.rgb, out var colors))
+			{
+				result.AddRange(colors.Select(c => c.name));
+			}
+			return result;
+		}
+
+		// Try hex format
+		if (colorSpec.StartsWith('#'))
+		{
+			var rgb = "0x" + colorSpec[1..];
+			if (config.ColorsByRgb.TryGetValue(rgb, out var colors))
+			{
+				result.AddRange(colors.Select(c => c.name));
+			}
+			return result;
+		}
+
+		// Try xterm format
+		if (int.TryParse(colorSpec, out var xtermNum) || 
+			(colorSpec.StartsWith("xterm") && int.TryParse(colorSpec[5..], out xtermNum)))
+		{
+			var xtermColors = config.Colors.Where(c => c.xterm == xtermNum).ToList();
+			if (xtermColors.Count > 0)
+			{
+				// Get all colors with the same RGB as the first match
+				var rgb = xtermColors[0].rgb;
+				if (config.ColorsByRgb.TryGetValue(rgb, out var colors))
+				{
+					result.AddRange(colors.Select(c => c.name));
+				}
+			}
+		}
+
+		return result;
 	}
 }
