@@ -135,10 +135,18 @@ Additionally, hooks can use `%u` to access the entire command string entered.
 - [x] Dependency injection wiring
 - [x] Documentation of architecture
 
+### Implemented
+- [x] Hook execution in command flow
+- [x] Named register population (ARGS, LS, RS, LSAx, LSAC, EQUALS, SWITCHES)
+- [x] Hook code execution via AttributeService.EvaluateAttributeFunctionAsync
+- [x] /ignore hook - executed before command, skips if returns false
+- [x] /before hook - executed before command, result discarded
+- [x] /after hook - executed after command, result discarded
+- [x] /override hook - executes hook code instead of built-in command
+
 ### To Be Implemented
-- [ ] Hook execution in command flow
-- [ ] Named register population and access
-- [ ] $-command matching for /override and /extend hooks
+- [ ] $-command matching for /override and /extend hooks (currently using direct attribute execution)
+- [ ] /extend hook for invalid switches
 - [ ] Inline execution handling (queue vs immediate)
 - [ ] Q-register management (localize, clearregs, nobreak)
 - [ ] Integration with HUH_COMMAND hook
