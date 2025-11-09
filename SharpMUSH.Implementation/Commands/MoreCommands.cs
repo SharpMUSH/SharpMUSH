@@ -1393,11 +1393,88 @@ public partial class Commands
 		throw new NotImplementedException();
 	}
 
-	[SharpCommand(Name = "DOING", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
+	[SharpCommand(Name = "DOING", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> Doing(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		
+		// Check if executor is admin (can see hidden players)
+		var isAdmin = await executor.IsWizard() || 
+		              await executor.IsRoyalty() || 
+		              await executor.HasPower("SEE_ALL");
+		
+		// Get optional pattern argument
+		var pattern = args.ContainsKey("0") ? args["0"].Message?.ToPlainText() : null;
+		
+		var everyone = ConnectionService!.GetAll();
+		const string fmt = "{0,-18} {1,10} {2,6}  {3,-32}";
+		var header = string.Format(fmt, "Player Name", "On For", "Idle", "Doing");
+		
+		// Build list of player info with filtering
+		var playerList = new List<string>();
+		await foreach (var connection in everyone.Where(player => player.Ref.HasValue))
+		{
+			var obj = await Mediator!.Send(new GetObjectNodeQuery(connection.Ref!.Value));
+			var playerName = obj.Known.Object().Name;
+			
+			// Filter by visibility: mortals can't see DARK players, admins can see all
+			if (!isAdmin && await obj.Known.HasFlag("DARK"))
+			{
+				continue;
+			}
+			
+			// Filter by pattern if provided
+			if (!string.IsNullOrWhiteSpace(pattern) && !MatchesPattern(playerName, pattern))
+			{
+				continue;
+			}
+			
+			var doingText = await GetDoingText(executor, obj.Known);
+			
+			playerList.Add(string.Format(
+				fmt,
+				playerName,
+				TimeHelpers.TimeString(connection.Connected!.Value, accuracy: 3),
+				TimeHelpers.TimeString(connection.Idle!.Value),
+				doingText));
+		}
+		
+		var footer = $"{playerList.Count} players logged in.";
+		var message = $"{header}\n{string.Join('\n', playerList)}\n{footer}";
+		
+		await NotifyService!.Notify(executor, message);
+		
+		return new None();
+	}
+	
+	private static bool MatchesPattern(string playerName, string pattern)
+	{
+		// Check if pattern contains wildcards
+		if (pattern.Contains('*') || pattern.Contains('?'))
+		{
+			// Use wildcard matching
+			return MModule.isWildcardMatch2(MModule.single(playerName), pattern);
+		}
+		
+		// Use prefix matching (starts with)
+		return playerName.StartsWith(pattern, StringComparison.OrdinalIgnoreCase);
+	}
+	
+	private static async ValueTask<string> GetDoingText(AnySharpObject executor, AnySharpObject player)
+	{
+		var doingAttr = await AttributeService!.GetAttributeAsync(
+			executor,
+			player,
+			"DOING",
+			mode: IAttributeService.AttributeMode.Read,
+			parent: false);
+		
+		return doingAttr switch
+		{
+			{ IsError: true } or { IsNone: true } => string.Empty,
+			_ => doingAttr.AsAttribute.Last().Value.ToPlainText()
+		};
 	}
 
 	[SharpCommand(Name = "SESSION", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
