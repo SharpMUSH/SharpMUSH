@@ -572,6 +572,23 @@ public class SharpMUSHParserVisitor(
 	{
 		var arguments = await ArgumentSplit(prs, src, context, libraryCommandDefinition);
 
+		// TODO: Hook Integration Point
+		// This is where hooks should be checked and executed for built-in commands:
+		// 1. Check for /ignore hook - if exists, execute and skip command if returns false
+		// 2. Check for /before hook - if exists, execute (discard result)
+		// 3. Check for /override hook - if exists, perform $-command matching and execute instead of built-in
+		// 4. Execute the built-in command (unless overridden)
+		// 5. Check for /after hook - if exists, execute (discard result)
+		// 6. For invalid switches, check /extend hook - perform $-command matching
+		// 
+		// Named registers to populate:
+		// - ARGS: entire argument string before evaluation
+		// - LS: left-side argument (before =)
+		// - EQUALS: "=" if present
+		// - RS: right-side argument (after =)
+		// - LSAx/RSAx: individual arguments for multi-arg commands
+		// - SWITCHES: switch string
+		
 		return await prs.With(state =>
 				state with
 				{
