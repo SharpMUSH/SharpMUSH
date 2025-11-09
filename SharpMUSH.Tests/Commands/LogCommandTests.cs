@@ -17,7 +17,6 @@ public class LogCommandTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask LogCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@log Test log entry"));

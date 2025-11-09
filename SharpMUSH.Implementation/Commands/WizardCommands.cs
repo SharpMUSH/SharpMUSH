@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Reflection;
 using Humanizer;
+using Microsoft.Extensions.Logging;
 using OneOf.Types;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
@@ -492,8 +493,95 @@ public partial class Commands
 		Behavior = CB.Default | CB.NoGagged, CommandLock = "FLAG^WIZARD", MinArgs = 0)]
 	public static async ValueTask<Option<CallState>> Log(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var switches = parser.CurrentState.Switches;
+		
+		// Determine the log category based on switches
+		var category = switches.Contains("CHECK") ? "Check" :
+		               switches.Contains("CMD") ? "Command" :
+		               switches.Contains("CONN") ? "Connection" :
+		               switches.Contains("ERR") ? "Error" :
+		               switches.Contains("TRACE") ? "Trace" :
+		               switches.Contains("WIZ") ? "Wizard" :
+		               "Command"; // Default to Command log
+		
+		// Handle /recall switch - display log entries
+		if (switches.Contains("RECALL"))
+		{
+			// Get optional number argument for how many lines to display
+			var countArg = parser.CurrentState.Arguments.TryGetValue("0", out var countCallState) 
+				? countCallState!.Message!.ToPlainText() 
+				: "100";
+			
+			if (!int.TryParse(countArg, out var count))
+			{
+				count = 100;
+			}
+			
+			// Clamp count to reasonable values
+			count = Math.Max(1, Math.Min(count, 1000));
+			
+			// Check if database supports logging
+			if (Database is not ISharpDatabaseWithLogging loggingDb)
+			{
+				await NotifyService!.Notify(executor, "Log retrieval is not supported by the current database backend.");
+				return CallState.Empty;
+			}
+			
+			// Retrieve logs from the database
+			var logs = loggingDb.GetLogsFromCategory(category, 0, count);
+			var logList = new List<LogEventEntity>();
+			
+			await foreach (var log in logs)
+			{
+				logList.Add(log);
+			}
+			
+			if (logList.Count == 0)
+			{
+				await NotifyService!.Notify(executor, $"No log entries found for category '{category}'.");
+				return CallState.Empty;
+			}
+			
+			// Display logs in reverse chronological order
+			var output = new System.Text.StringBuilder();
+			output.AppendLine($"--- Log entries for {category} (showing {logList.Count}) ---");
+			
+			foreach (var log in logList)
+			{
+				var timestamp = log.Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
+				var message = log.Message ?? log.MessageTemplate ?? "(no message)";
+				output.AppendLine($"[{timestamp}] {message}");
+			}
+			
+			await NotifyService!.Notify(executor, output.ToString().TrimEnd());
+			return CallState.Empty;
+		}
+		
+		// Handle writing a log entry
+		var logMessageArg = parser.CurrentState.Arguments.TryGetValue("0", out var logCallState);
+		
+		if (!logMessageArg || string.IsNullOrWhiteSpace(logCallState!.Message!.ToPlainText()))
+		{
+			await NotifyService!.Notify(executor, "Usage: @log[/<switch>] <message> or @log/recall[/<switch>] [<number>]");
+			return new CallState("#-1 INVALID ARGUMENTS");
+		}
+		
+		var logMessage = logCallState!.Message!;
+		
+		// Log the message with the appropriate category
+		using (Logger!.BeginScope(new Dictionary<string, string>
+		{
+			["Category"] = category,
+			["ExecutorDBRef"] = executor.Object().DBRef.ToString(),
+			["ExecutorName"] = executor.Object().Name
+		}))
+		{
+			Logger.LogInformation("{LogMessage}", MModule.serialize(logMessage));
+		}
+		
+		await NotifyService!.Notify(executor, $"Message logged to {category} log.");
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@POOR", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
