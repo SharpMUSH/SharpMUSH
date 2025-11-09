@@ -198,14 +198,17 @@ public class UtilityCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask DecompileCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@decompile #1"));
 
+		// Should receive notifications for decompiled output
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Any<OneOf.OneOf<MString,string>>(),
+				Arg.Any<AnySharpObject?>(),
+				Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
