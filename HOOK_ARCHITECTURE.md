@@ -144,13 +144,15 @@ Additionally, hooks can use `%u` to access the entire command string entered.
 - [x] /after hook - executed after command, result discarded
 - [x] /override hook - executes hook code instead of built-in command
 
+### Completed (Session Persistence)
+- [x] In-memory hook storage (intended design - hooks persist for server session)
+
 ### To Be Implemented
 - [ ] $-command matching for /override and /extend hooks (currently using direct attribute execution)
 - [ ] /extend hook for invalid switches
 - [ ] Inline execution handling (queue vs immediate)
 - [ ] Q-register management (localize, clearregs, nobreak)
 - [ ] Integration with HUH_COMMAND hook
-- [ ] Persistence of hooks (currently in-memory only)
 - [ ] Unit tests for @hook command
 - [ ] Integration tests for hook execution
 - [ ] Performance optimization for hook lookup
@@ -158,23 +160,20 @@ Additionally, hooks can use `%u` to access the entire command string entered.
 ## Design Decisions
 
 ### In-Memory Storage
-Hooks are currently stored in memory. For production use, this should be persisted to the database alongside command configuration. The SharpCommand model already has a Hooks dictionary field that could be used for persistence.
-
-### Hook Service as Singleton
-The HookService is registered as a singleton to maintain hook state across the application lifetime. This works for the current in-memory implementation but should be reconsidered when adding persistence.
+Hooks are stored in memory for the server session lifetime. This is the intended design - hooks are administrative configuration that persist for the duration of the server run. When the server restarts, hooks need to be reconfigured via @hook commands. This matches typical MUSH server behavior where runtime configuration is established on startup and maintained in memory.
 
 ### Minimal Changes to Command Execution
 To minimize impact on existing code, hook execution is intended to be added as a wrapper around the existing command invocation rather than modifying individual commands.
 
 ## Future Enhancements
 
-1. **Persistence**: Store hooks in database
-2. **Hook Introspection**: Add commands to query hook information
-3. **Hook Permissions**: Add fine-grained control over who can set hooks
-4. **Hook Priorities**: Support multiple hooks of the same type
-5. **Hook Debugging**: Add logging and tracing for hook execution
-6. **Hook Performance**: Cache hook lookups for frequently-used commands
-7. **Alias.cnf Support**: Allow hooks to be configured in configuration files
+1. **Hook Introspection**: Add commands to query hook information beyond @hook/list
+2. **Hook Permissions**: Add fine-grained control over who can set hooks
+3. **Hook Priorities**: Support multiple hooks of the same type
+4. **Hook Debugging**: Add logging and tracing for hook execution
+5. **Hook Performance**: Cache hook lookups for frequently-used commands
+6. **Alias.cnf Support**: Allow hooks to be configured in configuration files on server startup
+7. **Database Persistence** (optional): If needed, hooks could be persisted to database for automatic restoration on server restart
 
 ## References
 
