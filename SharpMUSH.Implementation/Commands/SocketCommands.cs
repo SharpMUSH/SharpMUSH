@@ -6,6 +6,7 @@ using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -29,17 +30,32 @@ public partial class Commands
 			.Where(player => player.Ref.HasValue)
 			.Select(async player =>
 			{
-				var obj = await Mediator!.Send(new GetBaseObjectNodeQuery(player.Ref!.Value));
+				var obj = await Mediator!.Send(new GetObjectNodeQuery(player.Ref!.Value));
 				var onFor = player.Connected;
 				var idleFor = player.Idle;
+				
+				// Get DOING attribute
+				var doingAttr = await AttributeService!.GetAttributeAsync(
+					executor,
+					obj.Known,
+					"DOING",
+					mode: Library.Services.Interfaces.IAttributeService.AttributeMode.Read,
+					parent: false);
+				
+				var doingText = doingAttr switch
+				{
+					{ IsError: true } or { IsNone: true } => string.Empty,
+					_ => doingAttr.AsAttribute.Last().Value.ToPlainText()
+				};
+				
 				return (string.Format(
 					fmt,
-					obj!.Name,
+					obj.Known.Object().Name,
 					TimeHelpers.TimeString(onFor!.Value, accuracy: 3),
 					TimeHelpers.TimeString(idleFor!.Value),
-					"Nothing"), obj);
+					doingText), obj.Known);
 			})
-			.Where(async (player, _) => await PermissionService!.CanSee(executor, (await player).obj))
+			.Where(async (player, _) => await PermissionService!.CanSee(executor, (await player).Item2))
 			.ToListAsync();
 
 		var footer = $"{filteredPlayers.Count} players logged in.";

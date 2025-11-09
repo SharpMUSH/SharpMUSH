@@ -987,11 +987,93 @@ public partial class Commands
 		throw new NotImplementedException();
 	}
 
-	[SharpCommand(Name = "DOING", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
+	[SharpCommand(Name = "DOING", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> Doing(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		
+		// Check if executor is admin (can see hidden players)
+		var isAdmin = await executor.HasFlag("WIZARD") || 
+		              await executor.HasFlag("ROYALTY") || 
+		              await executor.HasPower("SEE_ALL");
+		
+		// Get optional pattern argument
+		string? pattern = null;
+		if (args.ContainsKey("0"))
+		{
+			pattern = args["0"].Message?.ToPlainText();
+		}
+		
+		var everyone = ConnectionService!.GetAll();
+		const string fmt = "{0,-18} {1,10} {2,6}  {3,-32}";
+		var header = string.Format(fmt, "Player Name", "On For", "Idle", "Doing");
+		
+		// Build list of player info with filtering
+		var playerList = new List<string>();
+		await foreach (var connection in everyone.Where(player => player.Ref.HasValue))
+		{
+			var obj = await Mediator!.Send(new GetObjectNodeQuery(connection.Ref!.Value));
+			var onFor = connection.Connected;
+			var idleFor = connection.Idle;
+			
+			// Filter by visibility: mortals can't see DARK players, admins can see all
+			if (!isAdmin && await obj.Known.HasFlag("DARK"))
+			{
+				continue;
+			}
+			
+			// Filter by pattern if provided
+			var playerName = obj.Known.Object().Name;
+			if (!string.IsNullOrWhiteSpace(pattern))
+			{
+				bool matches;
+				// Check if pattern contains wildcards
+				if (pattern.Contains('*') || pattern.Contains('?'))
+				{
+					// Use wildcard matching
+					matches = MModule.isWildcardMatch2(MModule.single(playerName), pattern);
+				}
+				else
+				{
+					// Use prefix matching (starts with)
+					matches = playerName.StartsWith(pattern, StringComparison.OrdinalIgnoreCase);
+				}
+				
+				if (!matches)
+				{
+					continue;
+				}
+			}
+			
+			// Get DOING attribute
+			var doingAttr = await AttributeService!.GetAttributeAsync(
+				executor,
+				obj.Known,
+				"DOING",
+				mode: IAttributeService.AttributeMode.Read,
+				parent: false);
+			
+			var doingText = doingAttr switch
+			{
+				{ IsError: true } or { IsNone: true } => string.Empty,
+				_ => doingAttr.AsAttribute.Last().Value.ToPlainText()
+			};
+			
+			playerList.Add(string.Format(
+				fmt,
+				playerName,
+				TimeHelpers.TimeString(onFor!.Value, accuracy: 3),
+				TimeHelpers.TimeString(idleFor!.Value),
+				doingText));
+		}
+		
+		var footer = $"{playerList.Count} players logged in.";
+		var message = $"{header}\n{string.Join('\n', playerList)}\n{footer}";
+		
+		await NotifyService!.Notify(executor, message);
+		
+		return new None();
 	}
 
 	[SharpCommand(Name = "SESSION", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
