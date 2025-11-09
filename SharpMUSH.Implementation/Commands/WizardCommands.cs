@@ -2,6 +2,7 @@
 using System.Reflection;
 using Humanizer;
 using OneOf.Types;
+using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
@@ -639,8 +640,105 @@ public partial class Commands
 			@motd/clear[/<type>]
 			@motd/list
   */
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var switches = parser.CurrentState.Switches;
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var argText = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.empty()).ToString();
+		
+		// Get current MOTD data
+		var motdData = await ObjectDataService!.GetExpandedServerDataAsync<MotdData>() ?? new MotdData();
+		
+		// @motd/list - list all MOTDs
+		if (switches.Contains("LIST"))
+		{
+			// Permission check - must be wizard/royalty
+			if (!executor.IsGod() && !await executor.IsWizard())
+			{
+				await NotifyService!.Notify(executor, "Permission denied.");
+				return CallState.Empty;
+			}
+			
+			var output = new System.Text.StringBuilder();
+			output.AppendLine("Message of the Day settings:");
+			output.AppendLine($"Connect MOTD: {(string.IsNullOrEmpty(motdData.ConnectMotd) ? "(not set)" : motdData.ConnectMotd)}");
+			output.AppendLine($"Wizard MOTD:  {(string.IsNullOrEmpty(motdData.WizardMotd) ? "(not set)" : motdData.WizardMotd)}");
+			output.AppendLine($"Down MOTD:    {(string.IsNullOrEmpty(motdData.DownMotd) ? "(not set)" : motdData.DownMotd)}");
+			output.AppendLine($"Full MOTD:    {(string.IsNullOrEmpty(motdData.FullMotd) ? "(not set)" : motdData.FullMotd)}");
+			
+			await NotifyService!.Notify(executor, output.ToString().TrimEnd());
+			return CallState.Empty;
+		}
+		
+		// Determine which type of MOTD we're working with
+		string motdType;
+		bool isConnect = !switches.Any() || switches.Contains("CONNECT");
+		bool isWizard = switches.Contains("WIZARD");
+		bool isDown = switches.Contains("DOWN");
+		bool isFull = switches.Contains("FULL");
+		
+		if (isWizard)
+			motdType = "wizard";
+		else if (isDown)
+			motdType = "down";
+		else if (isFull)
+			motdType = "full";
+		else
+			motdType = "connect";
+		
+		// Permission checks
+		if (motdType == "connect")
+		{
+			// Need Announce power for connect MOTD
+			if (!executor.IsGod() && !await executor.HasPower("ANNOUNCE"))
+			{
+				await NotifyService!.Notify(executor, "Permission denied. You need the Announce power.");
+				return CallState.Empty;
+			}
+		}
+		else
+		{
+			// Need wizard/royalty for other MOTDs
+			if (!executor.IsGod() && !await executor.IsWizard())
+			{
+				await NotifyService!.Notify(executor, "Permission denied.");
+				return CallState.Empty;
+			}
+		}
+		
+		// @motd/clear - clear the MOTD
+		if (switches.Contains("CLEAR"))
+		{
+			var newMotdData = motdType switch
+			{
+				"wizard" => motdData with { WizardMotd = null },
+				"down" => motdData with { DownMotd = null },
+				"full" => motdData with { FullMotd = null },
+				_ => motdData with { ConnectMotd = null }
+			};
+			
+			await ObjectDataService!.SetExpandedServerDataAsync(newMotdData, ignoreNull: true);
+			await NotifyService!.Notify(executor, $"{motdType.Humanize(LetterCasing.Title)} MOTD cleared.");
+			return CallState.Empty;
+		}
+		
+		// Set the MOTD
+		if (string.IsNullOrEmpty(argText))
+		{
+			await NotifyService!.Notify(executor, "Usage: @motd[/<type>] <message>");
+			return CallState.Empty;
+		}
+		
+		var newMotdDataSet = motdType switch
+		{
+			"wizard" => motdData with { WizardMotd = argText },
+			"down" => motdData with { DownMotd = argText },
+			"full" => motdData with { FullMotd = argText },
+			_ => motdData with { ConnectMotd = argText }
+		};
+		
+		await ObjectDataService!.SetExpandedServerDataAsync(newMotdDataSet, ignoreNull: true);
+		await NotifyService!.Notify(executor, $"{motdType.Humanize(LetterCasing.Title)} MOTD set.");
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@POWER",
@@ -1001,8 +1099,32 @@ public partial class Commands
 	public static async ValueTask<Option<CallState>> RejectMessageOfTheDay(IMUSHCodeParser parser,
 		SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		// Alias for @motd/full
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var switches = parser.CurrentState.Switches;
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var argText = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.empty()).ToString();
+		
+		var motdData = await ObjectDataService!.GetExpandedServerDataAsync<MotdData>() ?? new MotdData();
+		
+		if (switches.Contains("CLEAR"))
+		{
+			var newMotdData = motdData with { FullMotd = null };
+			await ObjectDataService!.SetExpandedServerDataAsync(newMotdData, ignoreNull: true);
+			await NotifyService!.Notify(executor, "Full MOTD cleared.");
+		}
+		else if (string.IsNullOrEmpty(argText))
+		{
+			await NotifyService!.Notify(executor, "Usage: @rejectmotd <message>");
+		}
+		else
+		{
+			var newMotdData = motdData with { FullMotd = argText };
+			await ObjectDataService!.SetExpandedServerDataAsync(newMotdData, ignoreNull: true);
+			await NotifyService!.Notify(executor, "Full MOTD set.");
+		}
+		
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@SUGGEST", Switches = ["ADD", "DELETE", "LIST"], Behavior = CB.Default | CB.EqSplit,
@@ -1278,8 +1400,32 @@ public partial class Commands
 	public static async ValueTask<Option<CallState>> WizardMessageOfTheDay(IMUSHCodeParser parser,
 		SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		// Alias for @motd/wizard
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var switches = parser.CurrentState.Switches;
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var argText = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.empty()).ToString();
+		
+		var motdData = await ObjectDataService!.GetExpandedServerDataAsync<MotdData>() ?? new MotdData();
+		
+		if (switches.Contains("CLEAR"))
+		{
+			var newMotdData = motdData with { WizardMotd = null };
+			await ObjectDataService!.SetExpandedServerDataAsync(newMotdData, ignoreNull: true);
+			await NotifyService!.Notify(executor, "Wizard MOTD cleared.");
+		}
+		else if (string.IsNullOrEmpty(argText))
+		{
+			await NotifyService!.Notify(executor, "Usage: @wizmotd <message>");
+		}
+		else
+		{
+			var newMotdData = motdData with { WizardMotd = argText };
+			await ObjectDataService!.SetExpandedServerDataAsync(newMotdData, ignoreNull: true);
+			await NotifyService!.Notify(executor, "Wizard MOTD set.");
+		}
+		
+		return CallState.Empty;
 	}
 
 	/// <summary>
