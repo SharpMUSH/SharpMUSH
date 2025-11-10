@@ -46,9 +46,10 @@ public interface ISharpDatabase
 	/// <param name="name">Thing name</param>
 	/// <param name="location">Location to create it in</param>
 	/// <param name="creator">Owner to the thing</param>
+	/// <param name="home">Home location for the thing</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>New thing <see cref="DBRef"/></returns>
-	ValueTask<DBRef> CreateThingAsync(string name, AnySharpContainer location, SharpPlayer creator, CancellationToken cancellationToken = default);
+	ValueTask<DBRef> CreateThingAsync(string name, AnySharpContainer location, SharpPlayer creator, AnySharpContainer home, CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Create a new exit.
@@ -137,9 +138,39 @@ public interface ISharpDatabase
 	ValueTask<IAsyncEnumerable<LazySharpAttribute>?> GetLazyAttributesByRegexAsync(DBRef dbref, string attributePattern,
 		CancellationToken cancellationToken = default);
 	
+	/// <summary>
+	/// Get all attribute entries from the attribute table.
+	/// </summary>
+	/// <param name="cancellationToken">Cancellation Token</param>
+	/// <returns>Async enumerable of all attribute entries</returns>
 	IAsyncEnumerable<SharpAttributeEntry> GetAllAttributeEntriesAsync(CancellationToken cancellationToken = default);
 
+	/// <summary>
+	/// Get a specific attribute entry by name.
+	/// </summary>
+	/// <param name="name">Attribute name</param>
+	/// <param name="ct">Cancellation Token</param>
+	/// <returns>The attribute entry if found, null otherwise</returns>
 	ValueTask<SharpAttributeEntry?> GetSharpAttributeEntry(string name, CancellationToken ct = default);
+
+	/// <summary>
+	/// Create or update an attribute entry in the attribute table.
+	/// </summary>
+	/// <param name="name">Attribute name</param>
+	/// <param name="defaultFlags">Default flags for this attribute</param>
+	/// <param name="limit">Optional regex pattern to limit values</param>
+	/// <param name="enumValues">Optional enumeration of allowed values</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
+	/// <returns>The created or updated attribute entry</returns>
+	ValueTask<SharpAttributeEntry?> CreateOrUpdateAttributeEntryAsync(string name, string[] defaultFlags, string? limit = null, string[]? enumValues = null, CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Delete an attribute entry from the attribute table.
+	/// </summary>
+	/// <param name="name">Attribute name</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
+	/// <returns>Success or Failure</returns>
+	ValueTask<bool> DeleteAttributeEntryAsync(string name, CancellationToken cancellationToken = default);
 	
 	/// <summary>
 	/// Get the Object represented by a Database Reference Number.

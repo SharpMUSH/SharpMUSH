@@ -26,15 +26,15 @@ public static partial class HelperFunctions
 
 	public static async ValueTask<bool> IsWizard(this AnySharpObject obj)
 		=> await (obj.Object().Flags.Value)
-			.AnyAsync(x => x.Name == "Wizard");
+			.AnyAsync(x => x.Name.Equals("WIZARD", StringComparison.OrdinalIgnoreCase));
 
 	public static async ValueTask<bool> IsRoyalty(this AnySharpObject obj)
 		=> await (obj.Object().Flags.Value)
-			.AnyAsync(x => x.Name == "Royalty");
+			.AnyAsync(x => x.Name.Equals("ROYALTY", StringComparison.OrdinalIgnoreCase));
 
 	public static async ValueTask<bool> IsMistrust(this AnySharpObject obj)
 		=> await (obj.Object().Flags.Value)
-			.AnyAsync(x => x.Name == "Mistrust");
+			.AnyAsync(x => x.Name.Equals("MISTRUST", StringComparison.OrdinalIgnoreCase));
 
 	public static bool IsGod(this AnySharpObject obj)
 		=> obj.Object().Key == 1;
@@ -59,6 +59,15 @@ public static partial class HelperFunctions
 
 	public static async ValueTask<bool> IsLight(this AnySharpObject obj)
 		=> await obj.HasPower("Light");
+
+	public static async ValueTask<bool> IsOpaque(this AnySharpObject obj)
+		=> await obj.HasFlag("OPAQUE");
+
+	public static async ValueTask<bool> IsTransparent(this AnySharpObject obj)
+		=> await obj.HasFlag("TRANSPARENT");
+
+	public static async ValueTask<bool> IsCloudy(this AnySharpObject obj)
+		=> await obj.HasFlag("CLOUDY");
 
 	public static async ValueTask<bool> IsDarkLegal(this AnySharpObject obj)
 		=> await obj.IsDark() && (await obj.CanDark() || !await obj.IsAlive());

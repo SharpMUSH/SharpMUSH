@@ -236,6 +236,58 @@ public class OptionsService(ISharpDatabase database) : IOptionsFactory<SharpMUSH
 				UseDns: true,
 				UseWebsockets: true,
 				WebsocketUrl: "/wsclient"
+			),
+			Alias = new AliasOptions(
+				FunctionAliases: new Dictionary<string, string[]>
+				{
+					{ "atrlock", ["attrlock"] },
+					{ "iter", ["parse"] },
+					{ "lsearch", ["search"] },
+					{ "lstats", ["stats"] },
+					{ "lthings", ["lobjects"] },
+					{ "lvthings", ["lvobjects"] },
+					{ "modulo", ["mod", "modulus"] },
+					{ "nattr", ["attrcnt"] },
+					{ "nattrp", ["attrpcnt"] },
+					{ "nthings", ["nobjects"] },
+					{ "nvthings", ["nvobjects"] },
+					{ "randword", ["pickrand"] },
+					{ "soundslike", ["soundlike"] },
+					{ "textfile", ["dynhelp"] },
+					{ "trunc", ["val"] },
+					{ "ufun", ["u"] },
+					{ "xthings", ["xobjects"] },
+					{ "xvthings", ["xvobjects"] }
+				},
+				CommandAliases: new Dictionary<string, string[]>
+				{
+					{ "@ATRLOCK", ["@attrlock"] },
+					{ "@ATRCHOWN", ["@attrchown"] },
+					{ "@EDIT", ["@gedit"] },
+					{ "@IFELSE", ["@if"] },
+					{ "@SWITCH", ["@sw"] },
+					{ "GET", ["take"] },
+					{ "GOTO", ["move"] },
+					{ "INVENTORY", ["i"] },
+					{ "LOOK", ["l"] },
+					{ "PAGE", ["p"] },
+					{ "WHISPER", ["w"] }
+				}
+			),
+			Restriction = new RestrictionOptions(
+				CommandRestrictions: new Dictionary<string, string[]>(),
+				FunctionRestrictions: new Dictionary<string, string[]>()
+			),
+			BannedNames = new BannedNamesOptions(
+				BannedNames: ["Guest", "Admin", "Wizard"]
+			),
+			SitelockRules = new SitelockRulesOptions(
+				Rules: new Dictionary<string, string[]>
+				{
+					{ "*.example.com", ["!connect", "!create", "!guest"] },
+					{ "192.168.1.*", ["register"] },
+					{ "trusted.domain.org", ["connect", "create", "guest"] }
+				}
 			)
 		};
 	}

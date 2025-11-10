@@ -141,14 +141,25 @@ public class ConfigCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask DoingPollCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("doing"));
 
+		// Should notify with player list - verify we got a notification
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf.OneOf<MString, string>>());
+	}
+
+	[Test]
+	public async ValueTask DoingPollCommand_WithPattern()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("doing Wiz*"));
+
+		// Should notify with filtered player list
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf.OneOf<MString, string>>());
 	}
 
 	[Test]

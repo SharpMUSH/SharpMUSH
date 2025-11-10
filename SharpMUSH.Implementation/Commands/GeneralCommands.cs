@@ -12,6 +12,7 @@ using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -22,6 +23,8 @@ using SharpMUSH.Library.Services.Interfaces;
 using System.Drawing;
 using System.Linq;
 using System.Reflection;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using static SharpMUSH.Library.Services.Interfaces.IPermissionService;
@@ -166,14 +169,30 @@ public partial class Commands
 	[SharpCommand(Name = "LOOK", Switches = ["OUTSIDE", "OPAQUE"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> Look(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// TODO: Consult CONFORMAT, DESCFORMAT, INAMEFORMAT, NAMEFORMAT, etc.
-
 		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		AnyOptionalSharpObject viewing = new None();
+		var forceOpaque = switches.Contains("OPAQUE");
+		var lookOutside = switches.Contains("OUTSIDE");
 
-		if (args.Count == 1)
+		// Determine what we're looking at
+		AnyOptionalSharpObject viewing = new None();
+		
+		if (lookOutside && executor.IsContent)
 		{
+			// look/outside - look at the container we're in
+			var container = await executor.AsContent.Location();
+			// Convert AnySharpObject to AnyOptionalSharpObject via implicit conversion
+			viewing = container.WithRoomOption().Match<AnyOptionalSharpObject>(
+				player => player,
+				room => room,
+				exit => exit,
+				thing => thing
+			);
+		}
+		else if (args.Count == 1)
+		{
+			// look <object>
 			var locate = await LocateService!.LocateAndNotifyIfInvalid(
 				parser,
 				executor,
@@ -188,6 +207,7 @@ public partial class Commands
 		}
 		else
 		{
+			// look (at current location)
 			viewing = (await Mediator!.Send(new GetCertainLocationQuery(executor.Id()!))).WithExitOption()
 				.WithNoneOption();
 		}
@@ -198,84 +218,335 @@ public partial class Commands
 		}
 
 		var realViewing = viewing.Known;
-
-		var contents = realViewing.IsContainer
-			? await (Mediator!.CreateStream(new GetContentsQuery(realViewing.AsContainer)))!.ToListAsync()
-			: [];
 		var viewingObject = realViewing.Object();
+		
+		// Check if executor is inside the object being viewed (affects whether to use @idescribe)
+		var executorLocation = executor.IsContent 
+			? await executor.AsContent.Location()
+			: null;
+		var viewingFromInside = executorLocation != null 
+			&& executorLocation.Object().DBRef == viewingObject.DBRef;
 
-		var name = viewingObject.Name;
-		var contentKeys = contents.Where(x => x.IsPlayer || x.IsThing).Select(x => x.Object().Name).ToList();
-		var exitKeys = contents.Where(x => x.IsExit).Select(x => x.Object().Name).ToList();
-		// TODO: Check DESCFORMAT or DESCRIBE
-		var description = (await AttributeService!.GetAttributeAsync(executor, realViewing, "DESCRIBE",
-				IAttributeService.AttributeMode.Read, false))
-			.Match(
-				attr => MModule.getLength(attr.Last().Value) == 0
-					? MModule.single("There is nothing to see here")
-					: attr.Last().Value,
-				_ => MModule.single("There is nothing to see here"),
-				_ => MModule.empty());
+		// Get base name and description
+		var baseName = viewingObject.Name;
+		var baseDesc = MModule.empty();
+		var useIdesc = viewingFromInside && !lookOutside;
 
-		// TODO: Pass value into NAMEFORMAT
-		await NotifyService!.Notify(executor,
-			$"{MModule.markupSingle2(Ansi.Create(foreground: StringExtensions.rgb(Color.White)), MModule.single(name))}" +
-			$"(#{viewingObject.DBRef.Number}{string.Join(string.Empty, viewingObject.Flags.Value.Select(x => x.Symbol))})");
-		// TODO: Pass value into DESCFORMAT
-		await NotifyService.Notify(executor, description.ToString());
-		// NotifyService!.Notify(enactor, $"Location: {location}");
-		// TODO: Pass value into CONFORMAT
-		await NotifyService.Notify(executor, $"Contents: {string.Join("\n", contentKeys)}");
-		// TODO: Pass value into EXITFORMAT
-		await NotifyService.Notify(executor,
-			$"Exits: {string.Join("\n", string.Join(", ", exitKeys))}");
+		// Get description (DESCRIBE or IDESCRIBE depending on viewingFromInside)
+		var descAttrName = useIdesc ? "IDESCRIBE" : "DESCRIBE";
+		var descResult = await AttributeService!.GetAttributeAsync(executor, realViewing, descAttrName,
+			IAttributeService.AttributeMode.Read, false);
+		
+		if (descResult.IsAttribute)
+		{
+			var descAttr = descResult.AsAttribute.Last();
+			baseDesc = MModule.getLength(descAttr.Value) > 0
+				? descAttr.Value
+				: (useIdesc ? MModule.empty() : MModule.single("You see nothing special."));
+		}
+		else if (!useIdesc)
+		{
+			baseDesc = MModule.single("You see nothing special.");
+		}
+
+		// Evaluate format attributes with Q-register flow
+		// Create arguments for format attributes
+		var formatArgs = new Dictionary<string, CallState>();
+		
+		// Evaluate NAMEFORMAT if present (only for rooms when viewing from inside)
+		var formattedName = MModule.single(baseName);
+		if (realViewing.IsRoom && viewingFromInside)
+		{
+			var nameFormatResult = await AttributeService.GetAttributeAsync(executor, realViewing, "NAMEFORMAT",
+				IAttributeService.AttributeMode.Read, false);
+			
+			if (nameFormatResult.IsAttribute)
+			{
+				var flags = await viewingObject.Flags.Value.ToArrayAsync();
+				formatArgs["0"] = new CallState(viewingObject.DBRef.ToString());
+				formatArgs["1"] = new CallState($"{MModule.markupSingle2(Ansi.Create(foreground: StringExtensions.rgb(Color.White)), MModule.single(baseName))}" +
+					$"(#{viewingObject.DBRef.Number}{string.Join(string.Empty, flags.Select(x => x.Symbol))})");
+				
+				formattedName = await AttributeService.EvaluateAttributeFunctionAsync(
+					parser, executor, realViewing, "NAMEFORMAT", formatArgs);
+			}
+			else
+			{
+				var flags = await viewingObject.Flags.Value.ToArrayAsync();
+				formattedName = MModule.single($"{MModule.markupSingle2(Ansi.Create(foreground: StringExtensions.rgb(Color.White)), MModule.single(baseName))}" +
+					$"(#{viewingObject.DBRef.Number}{string.Join(string.Empty, flags.Select(x => x.Symbol))})");
+			}
+		}
+		else
+		{
+			var flags = await viewingObject.Flags.Value.ToArrayAsync();
+			formattedName = MModule.single($"{MModule.markupSingle2(Ansi.Create(foreground: StringExtensions.rgb(Color.White)), MModule.single(baseName))}" +
+				$"(#{viewingObject.DBRef.Number}{string.Join(string.Empty, flags.Select(x => x.Symbol))})");
+		}
+
+		// Evaluate DESCFORMAT or IDESCFORMAT if present
+		var formatAttrName = useIdesc ? "IDESCFORMAT" : "DESCFORMAT";
+		var descFormatResult = await AttributeService.GetAttributeAsync(executor, realViewing, formatAttrName,
+			IAttributeService.AttributeMode.Read, false);
+		
+		var formattedDesc = baseDesc;
+		if (descFormatResult.IsAttribute)
+		{
+			formatArgs["0"] = new CallState(baseDesc);
+			formattedDesc = await AttributeService.EvaluateAttributeFunctionAsync(
+				parser, executor, realViewing, formatAttrName, formatArgs);
+		}
+
+		// Display name and description
+		await NotifyService!.Notify(executor, formattedName);
+		if (MModule.getLength(formattedDesc) > 0)
+		{
+			await NotifyService.Notify(executor, formattedDesc);
+		}
+
+		// Get contents and exits (if viewing a container and not OPAQUE)
+		var showInventory = realViewing.IsContainer 
+			&& !forceOpaque 
+			&& !(await realViewing.IsOpaque());
+
+		if (showInventory)
+		{
+			var allContents = await Mediator!.CreateStream(new GetContentsQuery(realViewing.AsContainer))!.ToListAsync();
+			
+			// Filter by DARK/LIGHT flags
+			var isRoomLight = realViewing.IsRoom && await realViewing.IsLight();
+			var isRoomDark = realViewing.IsRoom && await realViewing.IsDarkLegal();
+			var canSeeAll = await executor.IsSee_All();
+			
+			var visibleContents = new List<AnySharpContent>();
+			var visibleExits = new List<AnySharpContent>();
+			
+			foreach (var item in allContents)
+			{
+				var itemObj = item.WithRoomOption();
+				var isDark = await itemObj.IsDarkLegal();
+				var isLight = await itemObj.IsLight();
+				
+				// Determine visibility based on DARK/LIGHT rules
+				bool visible = false;
+				if (isRoomLight)
+				{
+					// LIGHT rooms show everything
+					visible = true;
+				}
+				else if (isRoomDark)
+				{
+					// DARK rooms only show LIGHT objects (unless viewer can see all)
+					visible = canSeeAll || isLight;
+				}
+				else
+				{
+					// Normal rooms don't show DARK objects
+					visible = !isDark || canSeeAll;
+				}
+
+				if (visible)
+				{
+					if (item.IsExit)
+					{
+						// Don't show DARK exits
+						if (!isDark || canSeeAll)
+						{
+							visibleExits.Add(item);
+						}
+					}
+					else
+					{
+						visibleContents.Add(item);
+					}
+				}
+			}
+
+			// Format and display contents using CONFORMAT if present
+			if (visibleContents.Count > 0)
+			{
+				var conFormatResult = await AttributeService.GetAttributeAsync(executor, realViewing, "CONFORMAT",
+					IAttributeService.AttributeMode.Read, false);
+				
+				if (conFormatResult.IsAttribute)
+				{
+					var contentDbrefs = string.Join(" ", visibleContents.Select(x => x.Object().DBRef.ToString()));
+					var contentNames = string.Join("|", visibleContents.Select(x => x.Object().Name));
+					
+					formatArgs["0"] = new CallState(contentDbrefs);
+					formatArgs["1"] = new CallState(contentNames);
+					
+					var formattedContents = await AttributeService.EvaluateAttributeFunctionAsync(
+						parser, executor, realViewing, "CONFORMAT", formatArgs);
+					
+					await NotifyService.Notify(executor, formattedContents);
+				}
+				else
+				{
+					var contentsLabel = realViewing.IsRoom ? "Contents:" : "Carrying:";
+					var contentsList = string.Join("\n", visibleContents.Select(x => x.Object().Name));
+					await NotifyService.Notify(executor, $"{contentsLabel}\n{contentsList}");
+				}
+			}
+
+			// Format and display exits using EXITFORMAT if present
+			if (visibleExits.Count > 0 && realViewing.IsRoom)
+			{
+				var exitFormatResult = await AttributeService.GetAttributeAsync(executor, realViewing, "EXITFORMAT",
+					IAttributeService.AttributeMode.Read, false);
+				
+				if (exitFormatResult.IsAttribute)
+				{
+					var exitDbrefs = string.Join(" ", visibleExits.Select(x => x.Object().DBRef.ToString()));
+					
+					formatArgs["0"] = new CallState(exitDbrefs);
+					
+					var formattedExits = await AttributeService.EvaluateAttributeFunctionAsync(
+						parser, executor, realViewing, "EXITFORMAT", formatArgs);
+					
+					await NotifyService.Notify(executor, formattedExits);
+				}
+				else
+				{
+					// Check if room is TRANSPARENT for different exit display format
+					var isTransparent = await realViewing.IsTransparent();
+					if (isTransparent)
+					{
+						// TRANSPARENT rooms show exits in long format with destinations
+						foreach (var exit in visibleExits)
+						{
+							var exitObj = exit.WithRoomOption().Object();
+							var destination = exit.IsExit ? await exit.AsExit.Home.WithCancellation(CancellationToken.None) : null;
+							var destName = destination != null ? destination.Object().Name : "*UNLINKED*";
+							
+							// Check if exit is OPAQUE (would override TRANSPARENT room)
+							if (await exit.WithRoomOption().IsOpaque())
+							{
+								await NotifyService.Notify(executor, exitObj.Name);
+							}
+							else
+							{
+								await NotifyService.Notify(executor, $"{exitObj.Name} to {destName}");
+							}
+						}
+					}
+					else
+					{
+						// Normal exit display
+						var exitNames = string.Join(", ", visibleExits.Select(x => x.Object().Name));
+						await NotifyService.Notify(executor, $"Obvious exits:\n{exitNames}");
+					}
+				}
+			}
+		}
 
 		return new CallState(viewingObject.DBRef.ToString());
 	}
 
-	[SharpCommand(Name = "EXAMINE", Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
+	[SharpCommand(Name = "EXAMINE", Switches = ["BRIEF", "DEBUG", "MORTAL", "PARENT", "ALL", "OPAQUE"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> Examine(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches.ToArray();
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).WithoutNone();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		AnyOptionalSharpObject viewing;
+		string? attributePattern = null;
 
-		// TODO: Implement the version of this command that takes an attribute pattern!
+		// Parse object/attribute pattern from argument
 		if (args.Count == 1)
 		{
-			var locate = await LocateService!.LocateAndNotifyIfInvalid(
-				parser,
-				enactor,
-				enactor,
-				args["0"].Message!.ToString(),
-				LocateFlags.All);
-
-			if (locate.IsValid())
+			var argText = args["0"].Message!.ToString();
+			var split = HelperFunctions.SplitDbRefAndOptionalAttr(argText);
+			
+			if (split.TryPickT0(out var details, out _))
 			{
-				viewing = locate.WithoutError();
+				var (objectName, maybeAttributePattern) = details;
+				attributePattern = maybeAttributePattern;
+				
+				var locate = await LocateService!.LocateAndNotifyIfInvalid(
+					parser,
+					enactor,
+					enactor,
+					objectName,
+					LocateFlags.All);
+
+				if (locate.IsValid())
+				{
+					viewing = locate.WithoutError();
+				}
+				else
+				{
+					return new None();
+				}
+			}
+			else
+			{
+				// Simple object name without attribute pattern
+				var locate = await LocateService!.LocateAndNotifyIfInvalid(
+					parser,
+					enactor,
+					enactor,
+					argText,
+					LocateFlags.All);
+
+				if (locate.IsValid())
+				{
+					viewing = locate.WithoutError();
+				}
+				else
+				{
+					return new None();
+				}
 			}
 		}
-
-		viewing = (await Mediator!.Send(new GetLocationQuery(enactor.Object().DBRef))).WithExitOption();
+		else
+		{
+			// No argument - examine current location
+			viewing = (await Mediator!.Send(new GetLocationQuery(enactor.Object().DBRef))).WithExitOption();
+		}
 
 		if (viewing.IsNone())
 		{
 			return new None();
 		}
 
-		var contents = viewing.IsExit
+		var viewingKnown = viewing.Known();
+		
+		// Check permission to examine 
+		// Note: /mortal switch simulates a mortal viewer (checked in CanExamine logic)
+		var canExamine = await PermissionService!.CanExamine(executor, viewingKnown);
+		
+		// If using /mortal switch, override wizard permissions
+		if (switches.Contains("MORTAL") && await executor.IsWizard())
+		{
+			// Simulate mortal by checking only Controls, not wizard status
+			canExamine = await PermissionService.Controls(executor, viewingKnown);
+		}
+		
+		// If can't examine and not the object's owner, show limited info
+		if (!canExamine)
+		{
+			var limitedObj = viewingKnown.Object();
+			var limitedOwnerObj = (await limitedObj.Owner.WithCancellation(CancellationToken.None)).Object;
+			await NotifyService!.Notify(enactor, $"{limitedObj.Name} is owned by {limitedOwnerObj.Name}.");
+			return new CallState(limitedObj.DBRef.ToString());
+		}
+
+		// Get contents unless /opaque switch is used
+		var contents = (switches.Contains("OPAQUE") || viewing.IsExit)
 			? []
-			: await Mediator.CreateStream(new GetContentsQuery(viewing.Known().AsContainer))
+			: await Mediator!.CreateStream(new GetContentsQuery(viewingKnown.AsContainer))
 				.ToArrayAsync();
 
-		var obj = viewing.Object()!;
+		var obj = viewingKnown.Object()!;
 		var ownerObj = (await obj.Owner.WithCancellation(CancellationToken.None)).Object;
 		var name = obj.Name;
 		var ownerName = ownerObj.Name;
 		var location = obj.Key;
 		var contentKeys = contents!.Select(x => x.Object().Name);
-		var exitKeys = await Mediator.Send(new GetExitsQuery(obj.DBRef));
-		var description = (await AttributeService!.GetAttributeAsync(enactor, viewing.Known(), "DESCRIBE",
+		var exitKeys = await Mediator!.Send(new GetExitsQuery(obj.DBRef));
+		var description = (await AttributeService!.GetAttributeAsync(enactor, viewingKnown, "DESCRIBE",
 				IAttributeService.AttributeMode.Read, false))
 			.Match(
 				attr => MModule.getLength(attr.Last().Value) == 0
@@ -289,60 +560,149 @@ public partial class Commands
 		var objParent = await obj.Parent.WithCancellation(CancellationToken.None);
 		var objPowers = obj.Powers.Value;
 
-		var nameRow = MModule.multiple([
-			name.Hilight(),
-			MModule.single(" "),
-			MModule.single($"(#{obj.DBRef.Number}{string.Join(string.Empty, objFlags.Select(x => x.Symbol))})")
-		]);
+		// Build output sections
+		var outputSections = new List<MString>();
+		
+		// Name row with optional flags (check configuration)
+		var showFlags = Configuration!.CurrentValue.Cosmetic.FlagsOnExamine;
+		var nameRow = showFlags
+			? MModule.multiple([
+				name.Hilight(),
+				MModule.single(" "),
+				MModule.single($"(#{obj.DBRef.Number}{string.Join(string.Empty, objFlags.Select(x => x.Symbol))})")
+			])
+			: MModule.concat(name.Hilight(), MModule.single($" (#{obj.DBRef.Number})"));
+		
+		outputSections.Add(nameRow);
 
-		var typeAndFlagsRow = MModule.single($"Type: {obj.Type} Flags: {string.Join(" ", objFlags.Select(x => x.Name))}");
-		var descriptionRow = description;
-		var ownerRow = MModule.single($"Owner: {ownerName.Hilight()}" +
-		                              $"(#{obj.DBRef.Number}{string.Join(string.Empty, ownerObjFlags.Select(x => x.Symbol))})");
-		var parentRow = MModule.single($"Parent: {objParent.Object()?.Name ?? "*NOTHING*"}");
+		// Type and flags row
+		if (showFlags)
+		{
+			outputSections.Add(MModule.single($"Type: {obj.Type} Flags: {string.Join(" ", objFlags.Select(x => x.Name))}"));
+		}
+		else
+		{
+			outputSections.Add(MModule.single($"Type: {obj.Type}"));
+		}
+		
+		// Description (not shown in /brief mode)
+		if (!switches.Contains("BRIEF"))
+		{
+			outputSections.Add(description);
+		}
+		
+		// Owner row
+		var ownerRow = showFlags
+			? MModule.single($"Owner: {ownerName.Hilight()}" +
+			                 $"(#{ownerObj.DBRef.Number}{string.Join(string.Empty, ownerObjFlags.Select(x => x.Symbol))})")
+			: MModule.single($"Owner: {ownerName.Hilight()}(#{ownerObj.DBRef.Number})");
+		outputSections.Add(ownerRow);
+		
+		// Parent row
+		outputSections.Add(MModule.single($"Parent: {objParent.Object()?.Name ?? "*NOTHING*"}"));
+		
 		// TODO: LOCK LIST
-		var powersRow = MModule.single($"Powers: {string.Join(" ", await objPowers.Select(x => x.Name).ToArrayAsync())}");
+		
+		// Powers row
+		var powersList = await objPowers.Select(x => x.Name).ToArrayAsync();
+		if (powersList.Length > 0)
+		{
+			outputSections.Add(MModule.single($"Powers: {string.Join(" ", powersList)}"));
+		}
+		
 		// TODO: Channels
 		// TODO: Warnings Checked
-
-		// TODO: Match proper date format: Mon Feb 26 18:05:10 2007
-		var createdRow = MModule.single($"Created: {DateTimeOffset.FromUnixTimeMilliseconds(obj.CreationTime):F}");
-
-		await NotifyService!.Notify(enactor, MModule.multipleWithDelimiter(MModule.single("\n"), [
-			nameRow,
-			typeAndFlagsRow,
-			descriptionRow,
-			ownerRow,
-			parentRow,
-			powersRow,
-			createdRow
-		]));
-
-		var atrs = await AttributeService.GetVisibleAttributesAsync(enactor, viewing.Known());
-
-		if (atrs.IsAttribute)
+		
+		// Created timestamp - /debug switch shows raw values
+		if (switches.Contains("DEBUG") && await executor.IsWizard())
 		{
-			foreach (var attr in atrs.AsAttributes)
+			outputSections.Add(MModule.single($"Created: {obj.CreationTime} ({DateTimeOffset.FromUnixTimeMilliseconds(obj.CreationTime):F})"));
+		}
+		else
+		{
+			// TODO: Match proper date format: Mon Feb 26 18:05:10 2007
+			outputSections.Add(MModule.single($"Created: {DateTimeOffset.FromUnixTimeMilliseconds(obj.CreationTime):F}"));
+		}
+
+		// Output header information
+		await NotifyService!.Notify(enactor, MModule.multipleWithDelimiter(MModule.single("\n"), outputSections));
+
+		// Attributes section - skip for /brief, filter by pattern if provided
+		if (!switches.Contains("BRIEF"))
+		{
+			// Determine if we should check parent attributes
+			var checkParents = switches.Contains("PARENT");
+			
+			// Get attributes based on pattern or all visible
+			SharpAttributesOrError atrs;
+			if (!string.IsNullOrEmpty(attributePattern))
 			{
-				// TODO: Symbols for Flags. Flags are not just strings!
-				await NotifyService.Notify(enactor,
-					MModule.concat(
-						$"{attr.Name} [#{(await attr.Owner.WithCancellation(CancellationToken.None))!.Object.DBRef.Number}]: "
-							.Hilight(),
-						attr.Value));
+				// Use pattern matching
+				// Wildcard mode is always used for examine attribute patterns
+				var patternMode = IAttributeService.AttributePatternMode.Wildcard;
+				
+				atrs = await AttributeService.GetAttributePatternAsync(
+					enactor, 
+					viewingKnown, 
+					attributePattern, 
+					checkParents, 
+					patternMode);
+			}
+			else
+			{
+				// Get all visible attributes
+				atrs = await AttributeService.GetVisibleAttributesAsync(enactor, viewingKnown);
+			}
+
+			if (atrs.IsAttribute)
+			{
+				// Filter based on configuration and switches
+				var showPublicOnly = Configuration!.CurrentValue.Cosmetic.ExaminePublicAttributes;
+				var showAll = switches.Contains("ALL");
+				
+				foreach (var attr in atrs.AsAttributes)
+				{
+					// Skip VEILED attributes unless /all switch is used
+					// Note: Using string comparison for flag name as SharpAttributeFlag doesn't have constants
+					const string VeiledFlagName = "VEILED";
+					if (!showAll && attr.Flags.Any(f => f.Name.Equals(VeiledFlagName, StringComparison.OrdinalIgnoreCase)))
+					{
+						continue;
+					}
+					
+					// Skip non-public attributes if configured and not using /all
+					if (showPublicOnly && !showAll && !attr.IsVisual())
+					{
+						continue;
+					}
+					
+					// Display attribute with owner and flags
+					var attrOwner = await attr.Owner.WithCancellation(CancellationToken.None);
+					var attrFlagsStr = attr.Flags.Any() ? $"{string.Join("", attr.Flags.Select(f => f.Symbol))} " : "";
+					
+					await NotifyService!.Notify(enactor,
+						MModule.concat(
+							MModule.single($"{attr.Name} [{attrFlagsStr}#{attrOwner!.Object.DBRef.Number}]: ").Hilight(),
+							attr.Value));
+				}
 			}
 		}
 
-		// TODO: Proper carry format.
-		await NotifyService.Notify(enactor, $"Contents: \n" +
-		                                    $"{string.Join("\n", contentKeys)}");
+		// Contents section - skip if /opaque (omits contents) or /brief (shows minimal info)
+		if (!switches.Contains("OPAQUE") && !switches.Contains("BRIEF") && contents.Length > 0)
+		{
+			// TODO: Proper carry format.
+			await NotifyService!.Notify(enactor, $"Contents:\n" +
+			                                    $"{string.Join("\n", contentKeys)}");
+		}
 
-		if (!viewing.IsRoom)
+		// Home and Location - skip for /brief
+		if (!switches.Contains("BRIEF") && !viewingKnown.IsRoom)
 		{
 			// TODO: Proper Format.
-			await NotifyService.Notify(enactor, $"Home: {(await viewing.Known().MinusRoom().Home()).Object().Name}");
+			await NotifyService.Notify(enactor, $"Home: {(await viewingKnown.MinusRoom().Home()).Object().Name}");
 			await NotifyService.Notify(enactor,
-				$"Location: {(await viewing.Known().AsContent.Location()).Object().Name}");
+				$"Location: {(await viewingKnown.AsContent.Location()).Object().Name}");
 		}
 
 		return new CallState(obj.DBRef.ToString());
@@ -380,8 +740,6 @@ public partial class Commands
 	[SharpCommand(Name = "GOTO", Behavior = CB.Default, MinArgs = 1, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> GoTo(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// TODO: Ensure they cannot go into an object that is within themselves.
-
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		if (parser.CurrentState.Arguments.Count == 0)
@@ -414,6 +772,13 @@ public partial class Commands
 			    await exitObj.Home.WithCancellation(CancellationToken.None)))
 		{
 			await NotifyService!.Notify(executor, "You can't go that way.");
+			return CallState.Empty;
+		}
+
+		// Check for containment loops before moving
+		if (await MoveService!.WouldCreateLoop(executor.AsContent, destination))
+		{
+			await NotifyService!.Notify(executor, "You can't go that way - it would create a containment loop.");
 			return CallState.Empty;
 		}
 
@@ -491,6 +856,13 @@ public partial class Commands
 			if (!await PermissionService!.Controls(executor, target))
 			{
 				await NotifyService!.Notify(executor, Errors.ErrorCannotTeleport);
+				continue;
+			}
+
+			// Check for containment loops before teleporting
+			if (await MoveService!.WouldCreateLoop(targetContent, destinationContainer))
+			{
+				await NotifyService!.Notify(executor, $"Cannot teleport {target.Object().Name} - it would create a containment loop.");
 				continue;
 			}
 
@@ -1900,11 +2272,301 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@EDIT", Switches = ["FIRST", "CHECK", "QUIET", "REGEXP", "NOCASE", "ALL"],
-		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse | CB.NoGagged, MinArgs = 1, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Edit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var switches = parser.CurrentState.Switches;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
+
+		// Parse object/attribute pattern (left side of =)
+		var objAttrArg = args.ElementAtOrDefault(0).Value;
+		if (objAttrArg == null || objAttrArg.Message == null)
+		{
+			await NotifyService!.Notify(executor, "Invalid arguments to @edit.");
+			return new CallState("#-1 INVALID ARGUMENTS");
+		}
+
+		var objAttrText = MModule.plainText(objAttrArg.Message);
+		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objAttrText);
+
+		if (!split.TryPickT0(out var details, out _) || string.IsNullOrEmpty(details.Attribute))
+		{
+			await NotifyService!.Notify(executor, "Invalid format. Use: object/attribute=search,replace");
+			return new CallState("#-1 INVALID FORMAT");
+		}
+
+		var (dbref, attrPattern) = details;
+
+		// Locate object
+		var locate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
+			enactor, executor, dbref, LocateFlags.All);
+
+		if (locate.IsError)
+		{
+			return locate.AsError;
+		}
+
+		var targetObject = locate.AsSharpObject;
+
+		// Check permissions
+		var canModify = await PermissionService!.Controls(executor, targetObject);
+		if (!canModify)
+		{
+			await NotifyService!.Notify(executor, "Permission denied.");
+			return new CallState("#-1 PERMISSION DENIED");
+		}
+
+		// Parse search and replace strings (right side of =)
+		// With RSArgs, the arguments after = are split by comma
+		var searchArg = args.ElementAtOrDefault(1).Value;
+		var replaceArg = args.ElementAtOrDefault(2).Value;
+		
+		if (searchArg == null || searchArg.Message == null)
+		{
+			await NotifyService!.Notify(executor, "You must specify search and replace strings.");
+			return new CallState("#-1 MISSING ARGUMENTS");
+		}
+
+		var search = searchArg.Message.ToPlainText();
+		var replace = replaceArg?.Message != null ? replaceArg.Message.ToPlainText() : string.Empty;
+
+		// Get matching attributes
+		var attributes = await AttributeService!.GetAttributePatternAsync(
+			executor, targetObject, attrPattern, false, IAttributeService.AttributePatternMode.Wildcard);
+
+		if (attributes.IsError)
+		{
+			await NotifyService!.Notify(executor, attributes.AsError.Value);
+			return new CallState(attributes.AsError.Value);
+		}
+
+		var attrList = attributes.AsAttributes.ToList();
+		if (attrList.Count == 0)
+		{
+			await NotifyService!.Notify(executor, "No matching attributes found.");
+			return new CallState("#-1 NO MATCH");
+		}
+
+		// Process each attribute
+		int modifiedCount = 0;
+		int unchangedCount = 0;
+		var isRegexp = switches.Contains("REGEXP");
+		var isFirst = switches.Contains("FIRST");
+		var isCheck = switches.Contains("CHECK");
+		var isQuiet = switches.Contains("QUIET");
+		var isAll = switches.Contains("ALL");
+		var isNoCase = switches.Contains("NOCASE");
+
+		foreach (var attr in attrList)
+		{
+			var attrName = attr.Name;
+			var attrValue = attr.Value;
+			var originalText = attrValue.ToPlainText();
+			string newText;
+
+			if (isRegexp)
+			{
+				// Regex mode
+				newText = await PerformRegexEdit(parser, originalText, search, replace, isAll, isNoCase);
+			}
+			else
+			{
+				// Simple string replacement mode
+				newText = PerformSimpleEdit(originalText, search, replace, isFirst);
+			}
+
+			if (newText == originalText)
+			{
+				unchangedCount++;
+				continue;
+			}
+
+			modifiedCount++;
+
+			if (!isQuiet && !isCheck)
+			{
+				await NotifyService!.Notify(executor, $"{attrName} - Set: {newText}");
+			}
+			else if (!isQuiet && isCheck)
+			{
+				// Show changes with highlighting (simple version for now)
+				await NotifyService!.Notify(executor, $"{attrName} - Would change to: {newText}");
+			}
+
+			// Actually set the attribute unless in check mode
+			if (!isCheck)
+			{
+				await AttributeService!.SetAttributeAsync(executor, targetObject, attrName, MModule.single(newText));
+			}
+		}
+
+		// Summary message
+		if (isQuiet || (modifiedCount + unchangedCount > 1))
+		{
+			var checkPrefix = isCheck ? "Would edit" : "Edited";
+			await NotifyService!.Notify(executor, 
+				$"{checkPrefix} {modifiedCount} attribute{(modifiedCount != 1 ? "s" : "")}. {unchangedCount} unchanged.");
+		}
+
+		return new CallState(string.Empty);
+	}
+
+	/// <summary>
+	/// Split search/replace text by comma, respecting curly brace escaping
+	/// </summary>
+	private static string[] SplitSearchReplace(string text)
+	{
+		var parts = new List<string>();
+		var current = new StringBuilder();
+		int braceDepth = 0;
+
+		for (int i = 0; i < text.Length; i++)
+		{
+			char c = text[i];
+			
+			if (c == '{')
+			{
+				braceDepth++;
+				current.Append(c);
+			}
+			else if (c == '}')
+			{
+				braceDepth--;
+				current.Append(c);
+			}
+			else if (c == ',' && braceDepth == 0)
+			{
+				parts.Add(current.ToString());
+				current.Clear();
+			}
+			else
+			{
+				current.Append(c);
+			}
+		}
+		
+		parts.Add(current.ToString());
+		
+		// Trim and remove outer braces if present
+		for (int i = 0; i < parts.Count; i++)
+		{
+			var part = parts[i].Trim();
+			if (part.StartsWith('{') && part.EndsWith('}'))
+			{
+				part = part[1..^1];
+			}
+			parts[i] = part;
+		}
+		
+		return [.. parts];
+	}
+
+	/// <summary>
+	/// Perform simple string replacement
+	/// </summary>
+	private static string PerformSimpleEdit(string text, string search, string replace, bool firstOnly)
+	{
+		if (search == "^")
+		{
+			// Prepend
+			return replace + text;
+		}
+		else if (search == "$")
+		{
+			// Append
+			return text + replace;
+		}
+		else if (firstOnly)
+		{
+			// Replace only first occurrence
+			int index = text.IndexOf(search);
+			if (index >= 0)
+			{
+				return text[..index] + replace + text[(index + search.Length)..];
+			}
+			return text;
+		}
+		else
+		{
+			// Replace all occurrences
+			return text.Replace(search, replace);
+		}
+	}
+
+	/// <summary>
+	/// Perform regex replacement with evaluation
+	/// </summary>
+	private static async ValueTask<string> PerformRegexEdit(IMUSHCodeParser parser, string text, 
+		string pattern, string replaceTemplate, bool all, bool nocase)
+	{
+		try
+		{
+			var options = RegexOptions.None;
+			if (nocase)
+			{
+				options |= RegexOptions.IgnoreCase;
+			}
+
+			var regex = new Regex(pattern, options);
+
+			if (all)
+			{
+				// Replace all matches, working backwards
+				var matches = regex.Matches(text).Cast<Match>().Reverse().ToList();
+				foreach (var match in matches)
+				{
+					var replacement = await EvaluateRegexReplacement(parser, regex, match, replaceTemplate);
+					text = text[..match.Index] + replacement + text[(match.Index + match.Length)..];
+				}
+			}
+			else
+			{
+				// Replace only first match
+				var match = regex.Match(text);
+				if (match.Success)
+				{
+					var replacement = await EvaluateRegexReplacement(parser, regex, match, replaceTemplate);
+					text = text[..match.Index] + replacement + text[(match.Index + match.Length)..];
+				}
+			}
+
+			return text;
+		}
+		catch (ArgumentException)
+		{
+			return text; // Return unchanged on regex error
+		}
+	}
+
+	/// <summary>
+	/// Evaluate replacement template with captured groups
+	/// </summary>
+	private static async ValueTask<string> EvaluateRegexReplacement(IMUSHCodeParser parser, 
+		Regex regex, Match match, string template)
+	{
+		var replacement = template;
+
+		// Replace $0, $1, etc. with captured groups
+		for (int j = 0; j < match.Groups.Count; j++)
+		{
+			replacement = replacement.Replace($"${j}", match.Groups[j].Value);
+		}
+
+		// Replace named captures
+		foreach (var groupName in regex.GetGroupNames().Where(groupName => !int.TryParse(groupName, out _)))
+		{
+			var group = match.Groups[groupName];
+			if (group.Success)
+			{
+				replacement = replacement.Replace($"$<{groupName}>", group.Value);
+			}
+		}
+
+		// Evaluate the replacement
+		var evaluatedReplacement = await parser.FunctionParse(MModule.single(replacement));
+		return evaluatedReplacement?.Message?.ToPlainText() ?? replacement;
 	}
 
 	[SharpCommand(Name = "@FUNCTION",
@@ -2579,8 +3241,297 @@ public partial class Commands
 		Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Decompile(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches.ToArray();
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).WithoutNone();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		
+		// Parse arguments: object[/attribute pattern][=prefix]
+		if (args.Count == 0)
+		{
+			await NotifyService!.Notify(executor, "You must specify an object to decompile.");
+			return new CallState("#-1 NO OBJECT SPECIFIED");
+		}
+		
+		var objectSpec = args["0"].Message?.ToPlainText();
+		if (string.IsNullOrEmpty(objectSpec))
+		{
+			await NotifyService!.Notify(executor, "You must specify an object to decompile.");
+			return new CallState("#-1 NO OBJECT SPECIFIED");
+		}
+		
+		// Parse prefix if provided in arg 1 (from = split)
+		var prefix = args.Count >= 2 ? args["1"].Message?.ToPlainText() ?? "" : "";
+		
+		// Handle /tf switch - sets prefix to TFPREFIX attribute or default
+		if (switches.Contains("TF"))
+		{
+			var tfPrefixAttr = await AttributeService!.GetAttributeAsync(executor, executor, "TFPREFIX",
+				IAttributeService.AttributeMode.Read, false);
+			
+			prefix = tfPrefixAttr.Match(
+				attr => attr.Last().Value.ToPlainText(),
+				none => "FugueEdit > ",
+				error => "FugueEdit > ");
+		}
+		
+		// Split object/attribute pattern
+		string? attributePattern = null;
+		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objectSpec);
+		AnyOptionalSharpObject target;
+		
+		if (split.TryPickT0(out var details, out _))
+		{
+			var (objectName, maybeAttributePattern) = details;
+			attributePattern = maybeAttributePattern;
+			
+			var locate = await LocateService!.LocateAndNotifyIfInvalid(
+				parser,
+				enactor,
+				enactor,
+				objectName,
+				LocateFlags.All);
+			
+			if (locate.IsValid())
+			{
+				target = locate.WithoutError();
+			}
+			else
+			{
+				return new None();
+			}
+		}
+		else
+		{
+			var locate = await LocateService!.LocateAndNotifyIfInvalid(
+				parser,
+				enactor,
+				enactor,
+				objectSpec,
+				LocateFlags.All);
+			
+			if (locate.IsValid())
+			{
+				target = locate.WithoutError();
+			}
+			else
+			{
+				return new None();
+			}
+		}
+		
+		if (target.IsNone())
+		{
+			return new None();
+		}
+		
+		var targetKnown = target.Known();
+		
+		// Check permission to examine/decompile
+		var canExamine = await PermissionService!.CanExamine(executor, targetKnown);
+		if (!canExamine)
+		{
+			await NotifyService!.Notify(executor, "Permission denied.");
+			return new CallState(Errors.ErrorPerm);
+		}
+		
+		var obj = targetKnown.Object();
+		var useDbRef = switches.Contains("DB");
+		var useName = switches.Contains("NAME") || !useDbRef; // NAME is default
+		var showFlags = switches.Contains("FLAGS") || (!switches.Contains("ATTRIBS") && string.IsNullOrEmpty(attributePattern));
+		var showAttribs = switches.Contains("ATTRIBS") || (!switches.Contains("FLAGS") && string.IsNullOrEmpty(attributePattern)) || !string.IsNullOrEmpty(attributePattern);
+		var skipDefaults = switches.Contains("SKIPDEFAULTS");
+		var isTf = switches.Contains("TF");
+		
+		// If attribute pattern is provided, only show attributes
+		if (!string.IsNullOrEmpty(attributePattern))
+		{
+			showFlags = false;
+			showAttribs = true;
+		}
+		
+		var objectRef = useDbRef ? $"#{obj.DBRef.Number}" : obj.Name;
+		var outputs = new List<string>();
+		
+		// Output flags section if requested
+		if (showFlags)
+		{
+			// @create command based on object type
+			var createCmd = obj.Type.ToUpperInvariant() switch
+			{
+				"ROOM" => $"@dig {objectRef}",
+				"EXIT" => $"@open {objectRef}",
+				"THING" => $"@create {objectRef}",
+				"PLAYER" => $"@pcreate {objectRef}",
+				_ => $"@create {objectRef}"
+			};
+			outputs.Add($"{prefix}{createCmd}");
+			
+			// Set flags
+			var flags = await obj.Flags.Value.ToArrayAsync();
+			foreach (var flag in flags)
+			{
+				// Skip default flags if requested
+				if (skipDefaults && IsDefaultFlag(obj.Type, flag.Name))
+				{
+					continue;
+				}
+				outputs.Add($"{prefix}@set {objectRef}={flag.Name}");
+			}
+			
+			// Set powers
+			var powers = await obj.Powers.Value.ToArrayAsync();
+			foreach (var power in powers)
+			{
+				outputs.Add($"{prefix}@power {objectRef}={power.Name}");
+			}
+			
+			// TODO: Set locks
+			// TODO: Set parent if not default
+		}
+		
+		// Output attributes section if requested
+		if (showAttribs)
+		{
+			// Get attributes
+			SharpAttributesOrError atrs;
+			if (!string.IsNullOrEmpty(attributePattern))
+			{
+				atrs = await AttributeService!.GetAttributePatternAsync(
+					enactor,
+					targetKnown,
+					attributePattern,
+					false, // don't check parents for decompile
+					IAttributeService.AttributePatternMode.Wildcard);
+			}
+			else
+			{
+				atrs = await AttributeService!.GetVisibleAttributesAsync(enactor, targetKnown);
+			}
+			
+			if (atrs.IsAttribute)
+			{
+				foreach (var attr in atrs.AsAttributes)
+				{
+					// Skip VEILED attributes
+					const string VeiledFlagName = "VEILED";
+					if (attr.Flags.Any(f => f.Name.Equals(VeiledFlagName, StringComparison.OrdinalIgnoreCase)))
+					{
+						continue;
+					}
+					
+					// Check if attribute contains ANSI color
+					var hasAnsi = ContainsAnsiMarkup(attr.Value);
+					
+					if (hasAnsi)
+					{
+						// Use @set format with decomposed value to ensure evaluation
+						var decomposedValue = DecomposeAttributeValue(attr.Value);
+						outputs.Add($"{prefix}@set {objectRef}={attr.Name}:{decomposedValue}");
+					}
+					else
+					{
+						// Use &attr format for non-ANSI attributes
+						var plainValue = attr.Value.ToPlainText();
+						outputs.Add($"{prefix}&{attr.Name} {objectRef}={plainValue}");
+					}
+					
+					// Output attribute flags if not in TF mode and not skipdefaults
+					if (!isTf && attr.Flags.Any())
+					{
+						if (!skipDefaults || !AreDefaultAttrFlags(attr.Name, attr.Flags))
+						{
+							foreach (var flag in attr.Flags)
+							{
+								outputs.Add($"{prefix}@set {objectRef}/{attr.Name}={flag.Name}");
+							}
+						}
+					}
+				}
+			}
+		}
+		
+		// Send output to player
+		foreach (var output in outputs)
+		{
+			await NotifyService!.Notify(executor, output);
+		}
+		
+		return CallState.Empty;
+	}
+	
+	/// <summary>
+	/// Checks if an MString contains ANSI markup
+	/// </summary>
+	private static bool ContainsAnsiMarkup(MString str)
+	{
+		var hasAnsi = false;
+		MModule.evaluateWith((markupType, innerText) =>
+		{
+			if (markupType is MModule.MarkupTypes.MarkedupText { Item: Ansi })
+			{
+				hasAnsi = true;
+			}
+			return innerText;
+		}, str);
+		return hasAnsi;
+	}
+	
+	/// <summary>
+	/// Decomposes an attribute value using the decompose() logic from StringFunctions
+	/// </summary>
+	private static string DecomposeAttributeValue(MString input)
+	{
+		// Use same logic as decompose() function from StringFunctions
+		var reconstructed = MModule.evaluateWith((markupType, innerText) =>
+		{
+			return markupType switch
+			{
+				MModule.MarkupTypes.MarkedupText { Item: Ansi ansiMarkup }
+					=> Functions.Functions.ReconstructAnsiCall(ansiMarkup.Details, innerText),
+				_ => innerText
+			};
+		}, input);
+		
+		var result = reconstructed
+			.Replace("\\", @"\\")
+			.Replace("%", "\\%")
+			.Replace(";", "\\;")
+			.Replace("[", "\\[")
+			.Replace("]", "\\]")
+			.Replace("{", "\\{")
+			.Replace("}", "\\}")
+			.Replace("(", "\\(")
+			.Replace(")", "\\)")
+			.Replace(",", "\\,")
+			.Replace("^", "\\^")
+			.Replace("$", "\\$");
+		
+		result = Regex.Replace(result, @"\s{2,}", m => string.Join("", Enumerable.Repeat("%b", m.Length)));
+		
+		result = result.Replace("\r", "%r").Replace("\n", "%r").Replace("\t", "%t");
+		
+		return result;
+	}
+	
+	/// <summary>
+	/// Checks if a flag is a default flag for the object type
+	/// </summary>
+	private static bool IsDefaultFlag(string type, string flagName)
+	{
+		// TODO: Implement proper default flag checking based on object type
+		// For now, return false to show all flags
+		return false;
+	}
+	
+	/// <summary>
+	/// Checks if attribute flags are the default for that attribute
+	/// </summary>
+	private static bool AreDefaultAttrFlags(string attrName, IEnumerable<SharpAttributeFlag> flags)
+	{
+		// TODO: Implement proper default attribute flag checking
+		// For now, return false to show all flags
+		return false;
 	}
 
 	[SharpCommand(Name = "@EMIT", Switches = ["NOEVAL", "SPOOF"], Behavior = CB.Default | CB.RSNoParse | CB.NoGagged,
@@ -2644,6 +3595,22 @@ public partial class Commands
 			
 			await NotifyService.Notify(executor, $"  Wizard MOTD File: {wizmotdFile ?? "(not set)"}");
 			await NotifyService.Notify(executor, $"  Wizard MOTD HTML: {wizmotdHtmlFile ?? "(not set)"}");
+		}
+		
+		// Get temporary MOTD data from ExpandedServerData
+		var motdData = await ObjectDataService!.GetExpandedServerDataAsync<MotdData>();
+		if (motdData != null)
+		{
+			await NotifyService.Notify(executor, "");
+			await NotifyService.Notify(executor, "Temporary Message of the Day (cleared on restart):");
+			await NotifyService.Notify(executor, $"  Connect MOTD: {(string.IsNullOrEmpty(motdData.ConnectMotd) ? "(not set)" : motdData.ConnectMotd)}");
+			
+			if (isWizard)
+			{
+				await NotifyService.Notify(executor, $"  Wizard MOTD:  {(string.IsNullOrEmpty(motdData.WizardMotd) ? "(not set)" : motdData.WizardMotd)}");
+				await NotifyService.Notify(executor, $"  Down MOTD:    {(string.IsNullOrEmpty(motdData.DownMotd) ? "(not set)" : motdData.DownMotd)}");
+				await NotifyService.Notify(executor, $"  Full MOTD:    {(string.IsNullOrEmpty(motdData.FullMotd) ? "(not set)" : motdData.FullMotd)}");
+			}
 		}
 		
 		return CallState.Empty;
@@ -3076,11 +4043,195 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@GREP", Switches = ["LIST", "PRINT", "ILIST", "IPRINT", "REGEXP", "WILD", "NOCASE", "PARENT"],
-		Behavior = CB.Default | CB.EqSplit | CB.RSNoParse | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 2, MaxArgs = 2)]
 	public static async ValueTask<Option<CallState>> Grep(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
+
+		if (!args.TryGetValue("0", out var objAttrArg) || !args.TryGetValue("1", out var patternArg))
+		{
+			await NotifyService!.Notify(executor, "Invalid arguments to @grep.");
+			return new CallState("#-1 INVALID ARGUMENTS");
+		}
+
+		// Parse object/attribute pattern
+		var objAttrText = MModule.plainText(objAttrArg.Message!);
+		var pattern = MModule.plainText(patternArg.Message!);
+		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objAttrText);
+
+		if (!split.TryPickT0(out var details, out _))
+		{
+			await NotifyService!.Notify(executor, "I don't see that here.");
+			return new CallState("#-1 INVALID OBJECT");
+		}
+
+		var (dbref, maybeAttributePattern) = details;
+		var attributePattern = string.IsNullOrEmpty(maybeAttributePattern) ? "*" : maybeAttributePattern;
+
+		// Locate the object
+		var locate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
+			enactor,
+			executor,
+			dbref,
+			LocateFlags.All);
+
+		if (locate.IsError)
+		{
+			return locate.AsError;
+		}
+
+		var targetObject = locate.AsSharpObject;
+
+		// Determine pattern matching mode for attribute values
+		var isWild = switches.Contains("WILD");
+		var isRegexp = switches.Contains("REGEXP");
+		var isNoCase = switches.Contains("NOCASE") || switches.Contains("ILIST") || switches.Contains("IPRINT");
+		var isPrint = switches.Contains("PRINT") || switches.Contains("IPRINT");
+		var checkParents = switches.Contains("PARENT");
+
+		// Get attributes matching the attribute pattern
+		var attributePatternMode = attributePattern == "**" 
+			? IAttributeService.AttributePatternMode.Wildcard 
+			: IAttributeService.AttributePatternMode.Wildcard;
+		
+		var attributes = await AttributeService!.GetAttributePatternAsync(
+			executor, 
+			targetObject, 
+			attributePattern, 
+			checkParents, 
+			attributePatternMode);
+
+		if (attributes.IsError)
+		{
+			await NotifyService!.Notify(executor, $"Error reading attributes: {attributes.AsError.Value}");
+			return new CallState($"#-1 {attributes.AsError.Value}");
+		}
+
+		// Filter attributes by pattern match in their values
+		var matchingAttributes = new List<SharpAttribute>();
+		
+		foreach (var attr in attributes.AsAttributes)
+		{
+			var attrValue = MModule.plainText(attr.Value);
+			bool matches = false;
+
+			if (isRegexp)
+			{
+				// Regex match
+				try
+				{
+					var regexOptions = isNoCase ? System.Text.RegularExpressions.RegexOptions.IgnoreCase : System.Text.RegularExpressions.RegexOptions.None;
+					matches = System.Text.RegularExpressions.Regex.IsMatch(attrValue, pattern, regexOptions, TimeSpan.FromSeconds(1));
+				}
+				catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
+				{
+					await NotifyService!.Notify(executor, $"Regular expression timed out: {pattern}");
+					return new CallState("#-1 REGEXP TIMEOUT");
+				}
+				catch
+				{
+					await NotifyService!.Notify(executor, $"Invalid regular expression: {pattern}");
+					return new CallState("#-1 INVALID REGEXP");
+				}
+			}
+			else if (isWild)
+			{
+				// Wildcard match
+				try
+				{
+					var regexPattern = MModule.getWildcardMatchAsRegex2(pattern);
+					var regexOptions = isNoCase ? System.Text.RegularExpressions.RegexOptions.IgnoreCase : System.Text.RegularExpressions.RegexOptions.None;
+					matches = System.Text.RegularExpressions.Regex.IsMatch(attrValue, regexPattern, regexOptions, TimeSpan.FromSeconds(1));
+				}
+				catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
+				{
+					await NotifyService!.Notify(executor, $"Wildcard pattern timed out: {pattern}");
+					return new CallState("#-1 PATTERN TIMEOUT");
+				}
+				catch
+				{
+					await NotifyService!.Notify(executor, $"Invalid wildcard pattern: {pattern}");
+					return new CallState("#-1 INVALID PATTERN");
+				}
+			}
+			else
+			{
+				// Substring match
+				var comparison = isNoCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+				matches = attrValue.Contains(pattern, comparison);
+			}
+
+			if (matches)
+			{
+				matchingAttributes.Add(attr);
+			}
+		}
+
+		// Display results
+		if (matchingAttributes.Count == 0)
+		{
+			await NotifyService!.Notify(executor, "No matching attributes found.");
+			return new CallState(string.Empty);
+		}
+
+		if (isPrint)
+		{
+			// Print attribute names and values with highlighting
+			foreach (var attr in matchingAttributes)
+			{
+				var attrValue = attr.Value;
+				
+				// Highlight matching substrings in the value
+				MString displayValue;
+				if (isRegexp || isWild)
+				{
+					// For regex/wildcard, just show the value as-is
+					displayValue = attr.Value;
+				}
+				else
+				{
+					// For substring match, highlight the matching parts
+					var plainValue = MModule.plainText(attr.Value);
+					var comparison = isNoCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+					var index = plainValue.IndexOf(pattern, comparison);
+					
+					if (index >= 0)
+					{
+						var before = plainValue.Substring(0, index);
+						var match = plainValue.Substring(index, pattern.Length);
+						var after = plainValue.Substring(index + pattern.Length);
+						
+						displayValue = MModule.concat(
+							MModule.concat(
+								MModule.single(before),
+								MModule.single(match).Hilight()
+							),
+							MModule.single(after)
+						);
+					}
+					else
+					{
+						displayValue = attr.Value;
+					}
+				}
+
+				await NotifyService!.Notify(executor,
+					MModule.concat(
+						MModule.single($"{attr.Name}: ").Hilight(),
+						displayValue));
+			}
+		}
+		else
+		{
+			// List mode - just show attribute names
+			var attrNames = string.Join(" ", matchingAttributes.Select(a => a.Name));
+			await NotifyService!.Notify(executor, attrNames);
+		}
+
+		return new CallState(string.Empty);
 	}
 
 	[SharpCommand(Name = "@INCLUDE", Switches = ["LOCALIZE", "CLEARREGS", "NOBREAK"],
@@ -3775,23 +4926,39 @@ public partial class Commands
 			var flagList = args["1"].Message?.ToPlainText() ?? "none";
 			var retroactive = switches.Contains("RETROACTIVE");
 			
-			await NotifyService!.Notify(executor, $"@attribute/access: Setting up attribute '{attrName}'");
-			await NotifyService.Notify(executor, $"  Flags: {flagList}");
-			if (retroactive)
+			// Parse the flag list - space-separated flag names
+			var flagNames = flagList.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+				.Select(f => f.ToUpper())
+				.ToArray();
+			
+			// Validate that all flags exist
+			var allFlags = await Mediator!.CreateStream(new GetAttributeFlagsQuery()).ToArrayAsync();
+			foreach (var flagName in flagNames)
 			{
-				await NotifyService.Notify(executor, "  Retroactively updating existing copies");
+				if (!allFlags.Any(f => f.Name.Equals(flagName, StringComparison.OrdinalIgnoreCase)))
+				{
+					await NotifyService!.Notify(executor, $"Unknown attribute flag: {flagName}");
+					return new CallState("#-1 UNKNOWN FLAG");
+				}
 			}
 			
-			// TODO: Full implementation requires:
-			// - Add attribute to standard attribute table if new
-			// - Set default flags for the attribute
-			// - If retroactive, update all existing copies:
-			//   - Change owner to executor
-			//   - Update flags to match flag list
-			// - Save changes to persist across reboots
-			await NotifyService.Notify(executor, "Note: Attribute table modification not yet implemented.");
+			// Create or update the attribute entry
+			var entry = await Mediator!.Send(new CreateAttributeEntryCommand(attrName.ToUpper(), flagNames));
+			if (entry == null)
+			{
+				await NotifyService!.Notify(executor, "Failed to create attribute entry.");
+				return new CallState("#-1 CREATE FAILED");
+			}
 			
-			return new CallState("#-1 NOT IMPLEMENTED");
+			await NotifyService!.Notify(executor, $"Attribute '{attrName}' set with flags: {string.Join(" ", flagNames)}");
+			
+			// TODO: If retroactive, update all existing copies
+			if (retroactive)
+			{
+				await NotifyService.Notify(executor, "Note: Retroactive flag updating not yet implemented.");
+			}
+			
+			return CallState.Empty;
 		}
 		
 		if (switches.Contains("DELETE"))

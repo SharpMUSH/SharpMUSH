@@ -1,15 +1,21 @@
 ﻿using System.Diagnostics;
 using System.Reflection;
+using System.Linq;
 using Humanizer;
+using Microsoft.Extensions.Logging;
+using OneOf.Types;
+using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 
 namespace SharpMUSH.Implementation.Commands;
@@ -490,8 +496,88 @@ public partial class Commands
 		Behavior = CB.Default | CB.NoGagged, CommandLock = "FLAG^WIZARD", MinArgs = 0)]
 	public static async ValueTask<Option<CallState>> Log(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var switches = parser.CurrentState.Switches;
+		
+		// Determine the log category based on switches
+		var category = switches.Contains("CHECK") ? "Check" :
+		               switches.Contains("CMD") ? "Command" :
+		               switches.Contains("CONN") ? "Connection" :
+		               switches.Contains("ERR") ? "Error" :
+		               switches.Contains("TRACE") ? "Trace" :
+		               switches.Contains("WIZ") ? "Wizard" :
+		               "Command"; // Default to Command log
+		
+		// Handle /recall switch - display log entries
+		if (switches.Contains("RECALL"))
+		{
+			// Get optional number argument for how many lines to display
+			var countArg = parser.CurrentState.Arguments.TryGetValue("0", out var countCallState) 
+				? countCallState!.Message!.ToPlainText() 
+				: "100";
+			
+			if (!int.TryParse(countArg, out var count))
+			{
+				count = 100;
+			}
+			
+			// Clamp count to reasonable values
+			count = Math.Max(1, Math.Min(count, 1000));
+			
+			// Retrieve logs from the database via Mediator
+			var logs = Mediator!.CreateStream(new GetConnectionLogsQuery(category, 0, count));
+			var logList = new List<LogEventEntity>();
+			
+			await foreach (var log in logs)
+			{
+				logList.Add(log);
+			}
+			
+			if (logList.Count == 0)
+			{
+				await NotifyService!.Notify(executor, $"No log entries found for category '{category}'.");
+				return CallState.Empty;
+			}
+			
+			// Display logs in reverse chronological order
+			var output = new System.Text.StringBuilder();
+			output.AppendLine($"--- Log entries for {category} (showing {logList.Count}) ---");
+			
+			foreach (var log in logList)
+			{
+				var timestamp = log.Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
+				var message = log.Message ?? log.MessageTemplate ?? "(no message)";
+				output.AppendLine($"[{timestamp}] {message}");
+			}
+			
+			await NotifyService!.Notify(executor, output.ToString().TrimEnd());
+			return CallState.Empty;
+		}
+		
+		// Handle writing a log entry
+		var logMessageArg = parser.CurrentState.Arguments.TryGetValue("0", out var logCallState);
+		
+		if (!logMessageArg || string.IsNullOrWhiteSpace(logCallState!.Message!.ToPlainText()))
+		{
+			await NotifyService!.Notify(executor, "Usage: @log[/<switch>] <message> or @log/recall[/<switch>] [<number>]");
+			return new CallState("#-1 INVALID ARGUMENTS");
+		}
+		
+		var logMessage = logCallState!.Message!;
+		
+		// Log the message with the appropriate category
+		using (Logger!.BeginScope(new Dictionary<string, string>
+		{
+			["Category"] = category,
+			["ExecutorDBRef"] = executor.Object().DBRef.ToString(),
+			["ExecutorName"] = executor.Object().Name
+		}))
+		{
+			Logger.LogInformation("{LogMessage}", MModule.serialize(logMessage));
+		}
+		
+		await NotifyService!.Notify(executor, $"Message logged to {category} log.");
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@POOR", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
@@ -638,8 +724,105 @@ public partial class Commands
 			@motd/clear[/<type>]
 			@motd/list
   */
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var switches = parser.CurrentState.Switches;
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var argText = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.empty()).ToString();
+		
+		// Get current MOTD data
+		var motdData = await ObjectDataService!.GetExpandedServerDataAsync<MotdData>() ?? new MotdData();
+		
+		// @motd/list - list all MOTDs
+		if (switches.Contains("LIST"))
+		{
+			// Permission check - must be wizard/royalty
+			if (!executor.IsGod() && !await executor.IsWizard())
+			{
+				await NotifyService!.Notify(executor, "Permission denied.");
+				return CallState.Empty;
+			}
+			
+			var output = new System.Text.StringBuilder();
+			output.AppendLine("Message of the Day settings:");
+			output.AppendLine($"Connect MOTD: {(string.IsNullOrEmpty(motdData.ConnectMotd) ? "(not set)" : motdData.ConnectMotd)}");
+			output.AppendLine($"Wizard MOTD:  {(string.IsNullOrEmpty(motdData.WizardMotd) ? "(not set)" : motdData.WizardMotd)}");
+			output.AppendLine($"Down MOTD:    {(string.IsNullOrEmpty(motdData.DownMotd) ? "(not set)" : motdData.DownMotd)}");
+			output.AppendLine($"Full MOTD:    {(string.IsNullOrEmpty(motdData.FullMotd) ? "(not set)" : motdData.FullMotd)}");
+			
+			await NotifyService!.Notify(executor, output.ToString().TrimEnd());
+			return CallState.Empty;
+		}
+		
+		// Determine which type of MOTD we're working with
+		string motdType;
+		bool isConnect = !switches.Any() || switches.Contains("CONNECT");
+		bool isWizard = switches.Contains("WIZARD");
+		bool isDown = switches.Contains("DOWN");
+		bool isFull = switches.Contains("FULL");
+		
+		if (isWizard)
+			motdType = "wizard";
+		else if (isDown)
+			motdType = "down";
+		else if (isFull)
+			motdType = "full";
+		else
+			motdType = "connect";
+		
+		// Permission checks
+		if (motdType == "connect")
+		{
+			// Need Announce power for connect MOTD
+			if (!executor.IsGod() && !await executor.HasPower("ANNOUNCE"))
+			{
+				await NotifyService!.Notify(executor, "Permission denied. You need the Announce power.");
+				return CallState.Empty;
+			}
+		}
+		else
+		{
+			// Need wizard/royalty for other MOTDs
+			if (!executor.IsGod() && !await executor.IsWizard())
+			{
+				await NotifyService!.Notify(executor, "Permission denied.");
+				return CallState.Empty;
+			}
+		}
+		
+		// @motd/clear - clear the MOTD
+		if (switches.Contains("CLEAR"))
+		{
+			var newMotdData = motdType switch
+			{
+				"wizard" => motdData with { WizardMotd = null },
+				"down" => motdData with { DownMotd = null },
+				"full" => motdData with { FullMotd = null },
+				_ => motdData with { ConnectMotd = null }
+			};
+			
+			await ObjectDataService!.SetExpandedServerDataAsync(newMotdData, ignoreNull: true);
+			await NotifyService!.Notify(executor, $"{motdType.Humanize(LetterCasing.Title)} MOTD cleared.");
+			return CallState.Empty;
+		}
+		
+		// Set the MOTD
+		if (string.IsNullOrEmpty(argText))
+		{
+			await NotifyService!.Notify(executor, "Usage: @motd[/<type>] <message>");
+			return CallState.Empty;
+		}
+		
+		var newMotdDataSet = motdType switch
+		{
+			"wizard" => motdData with { WizardMotd = argText },
+			"down" => motdData with { DownMotd = argText },
+			"full" => motdData with { FullMotd = argText },
+			_ => motdData with { ConnectMotd = argText }
+		};
+		
+		await ObjectDataService!.SetExpandedServerDataAsync(newMotdDataSet, ignoreNull: true);
+		await NotifyService!.Notify(executor, $"{motdType.Humanize(LetterCasing.Title)} MOTD set.");
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@POWER",
@@ -1000,8 +1183,32 @@ public partial class Commands
 	public static async ValueTask<Option<CallState>> RejectMessageOfTheDay(IMUSHCodeParser parser,
 		SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		// Alias for @motd/full
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var switches = parser.CurrentState.Switches;
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var argText = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.empty()).ToString();
+		
+		var motdData = await ObjectDataService!.GetExpandedServerDataAsync<MotdData>() ?? new MotdData();
+		
+		if (switches.Contains("CLEAR"))
+		{
+			var newMotdData = motdData with { FullMotd = null };
+			await ObjectDataService!.SetExpandedServerDataAsync(newMotdData, ignoreNull: true);
+			await NotifyService!.Notify(executor, "Full MOTD cleared.");
+		}
+		else if (string.IsNullOrEmpty(argText))
+		{
+			await NotifyService!.Notify(executor, "Usage: @rejectmotd <message>");
+		}
+		else
+		{
+			var newMotdData = motdData with { FullMotd = argText };
+			await ObjectDataService!.SetExpandedServerDataAsync(newMotdData, ignoreNull: true);
+			await NotifyService!.Notify(executor, "Full MOTD set.");
+		}
+		
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@SUGGEST", Switches = ["ADD", "DELETE", "LIST"], Behavior = CB.Default | CB.EqSplit,
@@ -1036,8 +1243,141 @@ public partial class Commands
 		], Behavior = CB.Default | CB.EqSplit | CB.RSArgs, CommandLock = "FLAG^WIZARD|POWER^HOOK", MinArgs = 0)]
 	public static async ValueTask<Option<CallState>> Hook(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches.ToArray();
+		
+		// Check permission - wizard only
+		if (!await executor.IsWizard())
+		{
+			await NotifyService!.Notify(executor, "Permission denied.");
+			return new CallState(Errors.ErrorPerm);
+		}
+		
+		if (args.Count == 0)
+		{
+			await NotifyService!.Notify(executor, "You must specify a command name.");
+			return new CallState("#-1 NO COMMAND SPECIFIED");
+		}
+		
+		var commandName = args["0"].Message?.ToPlainText()?.ToUpper();
+		if (string.IsNullOrEmpty(commandName))
+		{
+			await NotifyService!.Notify(executor, "You must specify a command name.");
+			return new CallState("#-1 NO COMMAND SPECIFIED");
+		}
+		
+		// Handle @hook/list
+		if (switches.Contains("LIST"))
+		{
+			var hooks = await HookService!.GetAllHooksAsync(commandName);
+			if (hooks.Count == 0)
+			{
+				await NotifyService!.Notify(executor, $"No hooks set for command '{commandName}'.");
+				return CallState.Empty;
+			}
+			
+			await NotifyService!.Notify(executor, $"Hooks for command '{commandName}':");
+			foreach (var (hookType, hook) in hooks)
+			{
+				var flags = new List<string>();
+				if (hook.Inline) flags.Add("inline");
+				if (hook.NoBreak) flags.Add("nobreak");
+				if (hook.Localize) flags.Add("localize");
+				if (hook.ClearRegs) flags.Add("clearregs");
+				
+				var flagStr = flags.Count > 0 ? $" ({string.Join(", ", flags)})" : "";
+				await NotifyService.Notify(executor, $"  {hookType}: {hook.TargetObject}/{hook.AttributeName}{flagStr}");
+			}
+			return CallState.Empty;
+		}
+		
+		// Determine hook type from switches
+		var hookTypes = new[] { "IGNORE", "OVERRIDE", "BEFORE", "AFTER", "EXTEND", "IGSWITCH" };
+		var selectedHookType = hookTypes.FirstOrDefault(switches.Contains);
+		
+		// IGSWITCH is an alias for EXTEND (Rhost compatibility)
+		if (selectedHookType == "IGSWITCH")
+		{
+			selectedHookType = "EXTEND";
+		}
+		
+		if (selectedHookType == null)
+		{
+			await NotifyService!.Notify(executor, "You must specify a hook type: /ignore, /override, /before, /after, or /extend");
+			return new CallState("#-1 NO HOOK TYPE");
+		}
+		
+		// Check if this is a clear operation (no object/attribute specified)
+		if (args.Count < 2 || string.IsNullOrWhiteSpace(args["1"].Message?.ToPlainText()))
+		{
+			// Clear the hook
+			var cleared = await HookService!.ClearHookAsync(commandName, selectedHookType);
+			if (cleared)
+			{
+				await NotifyService!.Notify(executor, $"Hook '{selectedHookType}' cleared for command '{commandName}'.");
+				return CallState.Empty;
+			}
+			else
+			{
+				await NotifyService!.Notify(executor, $"No '{selectedHookType}' hook set for command '{commandName}'.");
+				return new CallState("#-1 NO HOOK");
+			}
+		}
+		
+		// Parse object and attribute
+		var objectAndAttribute = args["1"].Message!.ToPlainText();
+		var parts = objectAndAttribute.Split(',', 2);
+		
+		if (parts.Length < 1 || string.IsNullOrWhiteSpace(parts[0]))
+		{
+			await NotifyService!.Notify(executor, "You must specify an object.");
+			return new CallState("#-1 NO OBJECT");
+		}
+		
+		// Locate the object
+		var objectRef = parts[0].Trim();
+		var maybeObject = await LocateService!.LocateAndNotifyIfInvalid(parser, executor, executor, 
+			objectRef, LocateFlags.All);
+		
+		if (!maybeObject.IsValid())
+		{
+			return CallState.Empty;
+		}
+		
+		var targetObject = maybeObject.WithoutError().Known();
+		var dbref = targetObject.Object().DBRef;
+		
+		// Get attribute name (default to "cmd.<hooktype>")
+		var attributeName = parts.Length > 1 && !string.IsNullOrWhiteSpace(parts[1])
+			? parts[1].Trim()
+			: $"cmd.{selectedHookType.ToLower()}";
+		
+		// Check if the attribute exists
+		var attrResult = await AttributeService!.GetAttributeAsync(executor, targetObject, 
+			attributeName, IAttributeService.AttributeMode.Read);
+		
+		if (attrResult.IsError)
+		{
+			await NotifyService!.Notify(executor, $"Attribute '{attributeName}' not found on object {dbref}.");
+			return new CallState("#-1 NO ATTRIBUTE");
+		}
+		
+		// Determine inline flags
+		var inline = switches.Contains("INLINE");
+		var inplace = switches.Contains("INPLACE");
+		var nobreak = switches.Contains("NOBREAK") || inplace;
+		var localize = switches.Contains("LOCALIZE") || inplace;
+		var clearregs = switches.Contains("CLEARREGS") || inplace;
+		
+		// Set the hook
+		await HookService!.SetHookAsync(commandName, selectedHookType, dbref, attributeName, 
+			inline || inplace, nobreak, localize, clearregs);
+		
+		var flagDesc = inline || inplace ? " (inline)" : "";
+		await NotifyService!.Notify(executor, $"Hook '{selectedHookType}' set for command '{commandName}'{flagDesc}.");
+		
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@NEWPASSWORD", Switches = ["GENERATE"], Behavior = CB.Default | CB.EqSplit | CB.RSNoParse,
@@ -1174,8 +1514,9 @@ public partial class Commands
 		CommandLock = "FLAG^WIZARD", MinArgs = 0)]
 	public static async ValueTask<Option<CallState>> Dump(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		await NotifyService!.Notify(executor, "Dump command does nothing for SharpMUSH. Consider using @backup.");
+		return new None();
 	}
 
 	/// <remarks>
@@ -1204,12 +1545,173 @@ public partial class Commands
 		throw new NotImplementedException();
 	}
 
-	[SharpCommand(Name = "@SITELOCK", Switches = ["BAN", "CHECK", "REGISTER", "REMOVE", "NAME", "PLAYER"],
+	/// <summary>
+	/// Manages sitelock rules that control which hosts can connect, create players, or use guests.
+	/// @sitelock - Lists all rules and banned names
+	/// @sitelock/check &lt;host&gt; - Checks which rule matches a host
+	/// @sitelock/name &lt;name&gt; - Manages banned player names (not yet implemented)
+	/// @sitelock/ban &lt;pattern&gt; - Bans a host pattern (not yet implemented)
+	/// @sitelock/register &lt;pattern&gt; - Sets registration requirement (not yet implemented)
+	/// @sitelock/remove &lt;pattern&gt; - Removes a rule (not yet implemented)
+	/// </summary>
+	[SharpCommand(Name = "@SITELOCK", Switches = ["BAN", "CHECK", "REGISTER", "REMOVE", "NAME", "PLAYER", "LIST"],
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs, CommandLock = "FLAG^WIZARD", MinArgs = 0)]
 	public static async ValueTask<Option<CallState>> SiteLock(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches.ToArray();
+
+		// Get current sitelock configuration
+		var sitelockRules = Configuration!.CurrentValue.SitelockRules;
+		var bannedNames = Configuration!.CurrentValue.BannedNames;
+
+		// @sitelock with no arguments or @sitelock/list - list all rules
+		if (args.Count == 0 || switches.Contains("LIST"))
+		{
+			var output = new System.Text.StringBuilder();
+			output.AppendLine($"Sitelock Rules ({sitelockRules.Rules.Count} total):");
+			output.AppendLine("Pattern                      Options");
+			output.AppendLine("---------------------------- ------------------------------");
+
+			if (sitelockRules.Rules.Count == 0)
+			{
+				output.AppendLine("  (No rules defined - all connections allowed by default)");
+			}
+			else
+			{
+				foreach (var rule in sitelockRules.Rules)
+				{
+					var pattern = rule.Key;
+					var options = string.Join(", ", rule.Value);
+					output.AppendLine($"{pattern,-28} {options}");
+				}
+			}
+
+			output.AppendLine();
+			output.AppendLine($"Banned Player Names ({bannedNames.BannedNames.Length} total):");
+			if (bannedNames.BannedNames.Length == 0)
+			{
+				output.AppendLine("  (No banned names defined)");
+			}
+			else
+			{
+				output.AppendLine("  " + string.Join(", ", bannedNames.BannedNames));
+			}
+
+			await NotifyService!.Notify(executor, output.ToString().TrimEnd());
+			return CallState.Empty;
+		}
+
+		// @sitelock/check <host> - check which rule matches a host
+		if (switches.Contains("CHECK"))
+		{
+			if (args.Count == 0)
+			{
+				await NotifyService!.Notify(executor, "@SITELOCK/CHECK requires a hostname or IP address.");
+				return new CallState("#-1 INVALID ARGUMENTS");
+			}
+
+			var hostToCheck = args["0"].Message!.ToPlainText();
+			
+			// Find matching rule (simple wildcard matching for now)
+			KeyValuePair<string, string[]>? matchingRule = sitelockRules.Rules
+				.FirstOrDefault(rule => WildcardMatch(hostToCheck, rule.Key));
+
+			if (matchingRule.HasValue)
+			{
+				var options = string.Join(", ", matchingRule.Value.Value);
+				await NotifyService!.Notify(executor, $"Host '{hostToCheck}' matches pattern '{matchingRule.Value.Key}' with options: {options}");
+			}
+			else
+			{
+				await NotifyService!.Notify(executor, $"Host '{hostToCheck}' does not match any sitelock rules (default access allowed).");
+			}
+
+			return CallState.Empty;
+		}
+
+		// @sitelock/name <name> - add/remove banned name
+		if (switches.Contains("NAME"))
+		{
+			if (args.Count == 0)
+			{
+				await NotifyService!.Notify(executor, "@SITELOCK/NAME requires a player name.");
+				return new CallState("#-1 INVALID ARGUMENTS");
+			}
+
+			// Note: Actual modification of configuration is not yet implemented
+			// This would require saving to the database
+			await NotifyService!.Notify(executor, "@SITELOCK/NAME modification is not yet implemented. Use the admin UI to modify banned names.");
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+
+		// @sitelock/ban <pattern> - shorthand for !connect !create !guest
+		if (switches.Contains("BAN"))
+		{
+			if (args.Count == 0)
+			{
+				await NotifyService!.Notify(executor, "@SITELOCK/BAN requires a host pattern.");
+				return new CallState("#-1 INVALID ARGUMENTS");
+			}
+
+			// Note: Actual modification of configuration is not yet implemented
+			await NotifyService!.Notify(executor, "@SITELOCK/BAN modification is not yet implemented. Use the admin UI to add sitelock rules.");
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+
+		// @sitelock/register <pattern> - shorthand for !create register
+		if (switches.Contains("REGISTER"))
+		{
+			if (args.Count == 0)
+			{
+				await NotifyService!.Notify(executor, "@SITELOCK/REGISTER requires a host pattern.");
+				return new CallState("#-1 INVALID ARGUMENTS");
+			}
+
+			// Note: Actual modification of configuration is not yet implemented
+			await NotifyService!.Notify(executor, "@SITELOCK/REGISTER modification is not yet implemented. Use the admin UI to add sitelock rules.");
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+
+		// @sitelock/remove <pattern> - remove a sitelock rule
+		if (switches.Contains("REMOVE"))
+		{
+			if (args.Count == 0)
+			{
+				await NotifyService!.Notify(executor, "@SITELOCK/REMOVE requires a host pattern.");
+				return new CallState("#-1 INVALID ARGUMENTS");
+			}
+
+			// Note: Actual modification of configuration is not yet implemented
+			await NotifyService!.Notify(executor, "@SITELOCK/REMOVE modification is not yet implemented. Use the admin UI to remove sitelock rules.");
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+
+		// @sitelock <pattern>=<options> - add/modify a rule
+		if (args.Count == 2)
+		{
+			// Note: Actual modification of configuration is not yet implemented
+			await NotifyService!.Notify(executor, "@SITELOCK rule modification is not yet implemented. Use the admin UI to modify sitelock rules.");
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+
+		await NotifyService!.Notify(executor, "Invalid @SITELOCK syntax. Use '@help @sitelock' for usage information.");
+		return new CallState("#-1 INVALID ARGUMENTS");
+	}
+
+	/// <summary>
+	/// Simple wildcard matching for sitelock patterns (* and ? wildcards)
+	/// </summary>
+	private static bool WildcardMatch(string text, string pattern)
+	{
+		// Convert wildcard pattern to regex
+		var regexPattern = "^" + System.Text.RegularExpressions.Regex.Escape(pattern)
+			.Replace("\\*", ".*")
+			.Replace("\\?", ".") + "$";
+		
+		return System.Text.RegularExpressions.Regex.IsMatch(text, regexPattern, 
+			System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 	}
 
 	[SharpCommand(Name = "@WALL", Switches = ["NOEVAL", "EMIT"], Behavior = CB.Default,
@@ -1276,8 +1778,32 @@ public partial class Commands
 	public static async ValueTask<Option<CallState>> WizardMessageOfTheDay(IMUSHCodeParser parser,
 		SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		// Alias for @motd/wizard
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var switches = parser.CurrentState.Switches;
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var argText = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.empty()).ToString();
+		
+		var motdData = await ObjectDataService!.GetExpandedServerDataAsync<MotdData>() ?? new MotdData();
+		
+		if (switches.Contains("CLEAR"))
+		{
+			var newMotdData = motdData with { WizardMotd = null };
+			await ObjectDataService!.SetExpandedServerDataAsync(newMotdData, ignoreNull: true);
+			await NotifyService!.Notify(executor, "Wizard MOTD cleared.");
+		}
+		else if (string.IsNullOrEmpty(argText))
+		{
+			await NotifyService!.Notify(executor, "Usage: @wizmotd <message>");
+		}
+		else
+		{
+			var newMotdData = motdData with { WizardMotd = argText };
+			await ObjectDataService!.SetExpandedServerDataAsync(newMotdData, ignoreNull: true);
+			await NotifyService!.Notify(executor, "Wizard MOTD set.");
+		}
+		
+		return CallState.Empty;
 	}
 
 	/// <summary>
@@ -1356,4 +1882,5 @@ public partial class Commands
 		
 		return new CallState("#-1 NOT IMPLEMENTED");
 	}
+
 }

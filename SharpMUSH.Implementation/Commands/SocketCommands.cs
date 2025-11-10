@@ -6,6 +6,7 @@ using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -29,17 +30,17 @@ public partial class Commands
 			.Where(player => player.Ref.HasValue)
 			.Select(async player =>
 			{
-				var obj = await Mediator!.Send(new GetBaseObjectNodeQuery(player.Ref!.Value));
-				var onFor = player.Connected;
-				var idleFor = player.Idle;
+				var obj = await Mediator!.Send(new GetObjectNodeQuery(player.Ref!.Value));
+				var doingText = await Commands.GetDoingText(executor, obj.Known);
+				
 				return (string.Format(
 					fmt,
-					obj!.Name,
-					TimeHelpers.TimeString(onFor!.Value, accuracy: 3),
-					TimeHelpers.TimeString(idleFor!.Value),
-					"Nothing"), obj);
+					obj.Known.Object().Name,
+					TimeHelpers.TimeString(player.Connected!.Value, accuracy: 3),
+					TimeHelpers.TimeString(player.Idle!.Value),
+					doingText), obj.Known);
 			})
-			.Where(async (player, _) => await PermissionService!.CanSee(executor, (await player).obj))
+			.Where(async (player, _) => await PermissionService!.CanSee(executor, (await player).Item2))
 			.ToListAsync();
 
 		var footer = $"{filteredPlayers.Count} players logged in.";

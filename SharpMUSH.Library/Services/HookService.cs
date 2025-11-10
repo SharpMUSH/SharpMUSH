@@ -1,0 +1,90 @@
+using System.Collections.Concurrent;
+using Mediator;
+using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services.Interfaces;
+
+namespace SharpMUSH.Library.Services;
+
+public class HookService : IHookService
+{
+	private readonly ConcurrentDictionary<string, Dictionary<string, CommandHook>> _hooks = new();
+
+	public ValueTask<Option<CommandHook>> GetHookAsync(string commandName, string hookType)
+	{
+		var upperCommand = commandName.ToUpper();
+		var upperHookType = hookType.ToUpper();
+		
+		if (_hooks.TryGetValue(upperCommand, out var commandHooks) &&
+		    commandHooks.TryGetValue(upperHookType, out var hook))
+		{
+			return ValueTask.FromResult<Option<CommandHook>>(hook);
+		}
+		
+		return ValueTask.FromResult<Option<CommandHook>>(new OneOf.Types.None());
+	}
+
+	public ValueTask<bool> SetHookAsync(string commandName, string hookType, DBRef targetObject, string attributeName,
+		bool inline = false, bool nobreak = false, bool localize = false, bool clearregs = false)
+	{
+		var upperCommand = commandName.ToUpper();
+		var upperHookType = hookType.ToUpper();
+		
+		var hook = new CommandHook(upperHookType, targetObject, attributeName, inline, nobreak, localize, clearregs);
+		
+		_hooks.AddOrUpdate(
+			upperCommand,
+			_ => new Dictionary<string, CommandHook> { [upperHookType] = hook },
+			(_, existingHooks) =>
+			{
+				existingHooks[upperHookType] = hook;
+				return existingHooks;
+			});
+		
+		return ValueTask.FromResult(true);
+	}
+
+	public ValueTask<bool> ClearHookAsync(string commandName, string hookType)
+	{
+		var upperCommand = commandName.ToUpper();
+		var upperHookType = hookType.ToUpper();
+		
+		if (_hooks.TryGetValue(upperCommand, out var commandHooks))
+		{
+			return ValueTask.FromResult(commandHooks.Remove(upperHookType));
+		}
+		
+		return ValueTask.FromResult(false);
+	}
+
+	public ValueTask<Dictionary<string, CommandHook>> GetAllHooksAsync(string commandName)
+	{
+		var upperCommand = commandName.ToUpper();
+		
+		if (_hooks.TryGetValue(upperCommand, out var commandHooks))
+		{
+			return ValueTask.FromResult(new Dictionary<string, CommandHook>(commandHooks));
+		}
+		
+		return ValueTask.FromResult(new Dictionary<string, CommandHook>());
+	}
+
+	public async ValueTask<Option<CallState>> ExecuteHookAsync(IMUSHCodeParser parser, CommandHook hook, Dictionary<string, string> namedRegisters)
+	{
+		// TODO: This is a placeholder implementation
+		// The actual execution will need to:
+		// 1. Get the target object and attribute
+		// 2. Set up named registers (ARGS, LS, RS, LSAx, RSAx, etc.)
+		// 3. For /override and /extend hooks, perform $-command matching
+		// 4. For /inline hooks, handle immediate execution with proper q-register handling
+		// 5. For /before and /after hooks, wrap in null() equivalent
+		// 6. Execute the hook code in the appropriate context
+		
+		await ValueTask.CompletedTask;
+		
+		return CallState.Empty;
+	}
+}
