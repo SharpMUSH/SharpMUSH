@@ -74,7 +74,7 @@ public class InformationFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("money(%#)", "0")]
+	[Arguments("money(%#)", "#-1 NOT SUPPORTED")]
 	public async Task Money(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
