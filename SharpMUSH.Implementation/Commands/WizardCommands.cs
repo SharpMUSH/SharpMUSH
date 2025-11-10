@@ -1410,12 +1410,8 @@ public partial class Commands
 
 	[SharpCommand(Name = "@DISABLE", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD",
 		MinArgs = 1, MaxArgs = 1)]
-	public static async ValueTask<Option<CallState>> Disable(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		// @disable <option> - same as @config/set <option>=no
-		// This command sets a boolean configuration option to false
-		return await ConfigSetHelper(parser, isEnable: false);
-	}
+	public static async ValueTask<Option<CallState>> Disable(IMUSHCodeParser parser, SharpCommandAttribute _2) 
+		=> await ConfigSetHelper(parser, isEnable: false);
 
 	[SharpCommand(Name = "@HOOK",
 		Switches =
@@ -1429,7 +1425,6 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches.ToArray();
 		
-		// Check permission - wizard only
 		if (!await executor.IsWizard())
 		{
 			await NotifyService!.Notify(executor, "Permission denied.");
@@ -1449,7 +1444,6 @@ public partial class Commands
 			return new CallState("#-1 NO COMMAND SPECIFIED");
 		}
 		
-		// Handle @hook/list
 		if (switches.Contains("LIST"))
 		{
 			var hooks = await HookService!.GetAllHooksAsync(commandName);
@@ -1474,11 +1468,9 @@ public partial class Commands
 			return CallState.Empty;
 		}
 		
-		// Determine hook type from switches
 		var hookTypes = new[] { "IGNORE", "OVERRIDE", "BEFORE", "AFTER", "EXTEND", "IGSWITCH" };
 		var selectedHookType = hookTypes.FirstOrDefault(switches.Contains);
 		
-		// IGSWITCH is an alias for EXTEND (Rhost compatibility)
 		if (selectedHookType == "IGSWITCH")
 		{
 			selectedHookType = "EXTEND";
@@ -1490,24 +1482,19 @@ public partial class Commands
 			return new CallState("#-1 NO HOOK TYPE");
 		}
 		
-		// Check if this is a clear operation (no object/attribute specified)
 		if (args.Count < 2 || string.IsNullOrWhiteSpace(args["1"].Message?.ToPlainText()))
 		{
-			// Clear the hook
 			var cleared = await HookService!.ClearHookAsync(commandName, selectedHookType);
 			if (cleared)
 			{
 				await NotifyService!.Notify(executor, $"Hook '{selectedHookType}' cleared for command '{commandName}'.");
 				return CallState.Empty;
 			}
-			else
-			{
-				await NotifyService!.Notify(executor, $"No '{selectedHookType}' hook set for command '{commandName}'.");
-				return new CallState("#-1 NO HOOK");
-			}
+		
+			await NotifyService!.Notify(executor, $"No '{selectedHookType}' hook set for command '{commandName}'.");
+			return new CallState("#-1 NO HOOK");
 		}
 		
-		// Parse object and attribute
 		var objectAndAttribute = args["1"].Message!.ToPlainText();
 		var parts = objectAndAttribute.Split(',', 2);
 		
@@ -1517,7 +1504,6 @@ public partial class Commands
 			return new CallState("#-1 NO OBJECT");
 		}
 		
-		// Locate the object
 		var objectRef = parts[0].Trim();
 		var maybeObject = await LocateService!.LocateAndNotifyIfInvalid(parser, executor, executor, 
 			objectRef, LocateFlags.All);
@@ -1530,12 +1516,10 @@ public partial class Commands
 		var targetObject = maybeObject.WithoutError().Known();
 		var dbref = targetObject.Object().DBRef;
 		
-		// Get attribute name (default to "cmd.<hooktype>")
 		var attributeName = parts.Length > 1 && !string.IsNullOrWhiteSpace(parts[1])
 			? parts[1].Trim()
 			: $"cmd.{selectedHookType.ToLower()}";
 		
-		// Check if the attribute exists
 		var attrResult = await AttributeService!.GetAttributeAsync(executor, targetObject, 
 			attributeName, IAttributeService.AttributeMode.Read);
 		
@@ -1545,14 +1529,12 @@ public partial class Commands
 			return new CallState("#-1 NO ATTRIBUTE");
 		}
 		
-		// Determine inline flags
 		var inline = switches.Contains("INLINE");
 		var inplace = switches.Contains("INPLACE");
 		var nobreak = switches.Contains("NOBREAK") || inplace;
 		var localize = switches.Contains("LOCALIZE") || inplace;
 		var clearregs = switches.Contains("CLEARREGS") || inplace;
 		
-		// Set the hook
 		await HookService!.SetHookAsync(commandName, selectedHookType, dbref, attributeName, 
 			inline || inplace, nobreak, localize, clearregs);
 		
@@ -1566,9 +1548,6 @@ public partial class Commands
 		CommandLock = "FLAG^WIZARD", MinArgs = 0)]
 	public static async ValueTask<Option<CallState>> NewPassword(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// @newpassword <player>=<password>
-		// @newpassword / generate < player >
-
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 		var arg0 = args["0"].Message!.ToPlainText();
@@ -2042,12 +2021,8 @@ public partial class Commands
 
 	[SharpCommand(Name = "@ENABLE", Switches = [], Behavior = CB.Default | CB.NoGagged, CommandLock = "FLAG^WIZARD",
 		MinArgs = 1, MaxArgs = 1)]
-	public static async ValueTask<Option<CallState>> Enable(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		// @enable <option> - same as @config/set <option>=yes
-		// This command sets a boolean configuration option to true
-		return await ConfigSetHelper(parser, isEnable: true);
-	}
+	public static async ValueTask<Option<CallState>> Enable(IMUSHCodeParser parser, SharpCommandAttribute _2) 
+		=> await ConfigSetHelper(parser, isEnable: true);
 
 	[SharpCommand(Name = "@KICK", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD", MinArgs = 0)]
 	public static async ValueTask<Option<CallState>> Kick(IMUSHCodeParser parser, SharpCommandAttribute _2)
