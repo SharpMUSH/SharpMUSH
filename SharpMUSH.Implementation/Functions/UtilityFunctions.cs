@@ -219,13 +219,11 @@ public partial class Functions
 		var allTrue = true;
 		CallState? lastResult = null;
 		
-		// Evaluate all arguments (no short-circuit like and())
 		foreach (var arg in args)
 		{
 			lastResult = await parser.FunctionParse(arg.Value.Message!);
 			var resultStr = MModule.plainText(lastResult!.Message).Trim();
 			
-			// Check if false (0, empty, #-1, or false)
 			if (string.IsNullOrEmpty(resultStr) || 
 			    resultStr == "0" || 
 			    resultStr.StartsWith("#-1") ||
@@ -235,7 +233,6 @@ public partial class Functions
 			}
 		}
 		
-		// Return 1 if all true, 0 otherwise
 		return new CallState(allTrue ? "1" : "0");
 	}
 
@@ -267,23 +264,19 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		
-		// First argument is the code to benchmark
 		var code = args["0"].Message!;
 		
-		// Second argument is the number of iterations
 		if (!int.TryParse(MModule.plainText(args["1"].Message), out var iterations) || iterations <= 0)
 		{
 			return new CallState(Errors.ErrorNumbers);
 		}
 		
-		// Optional third argument for output format (defaults to milliseconds)
 		var outputFormat = "ms";
 		if (args.Count >= 3 && args.TryGetValue("2", out var formatArg))
 		{
 			outputFormat = MModule.plainText(formatArg.Message).ToLower();
 		}
 		
-		// Benchmark the code
 		var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 		for (int i = 0; i < iterations; i++)
 		{
@@ -291,7 +284,6 @@ public partial class Functions
 		}
 		stopwatch.Stop();
 		
-		// Return the elapsed time in the requested format
 		var elapsed = stopwatch.Elapsed.TotalMilliseconds;
 		if (outputFormat == "s" || outputFormat == "seconds")
 		{
@@ -299,7 +291,6 @@ public partial class Functions
 		}
 		else
 		{
-			// Default to milliseconds
 			return new CallState(elapsed.ToString("F3"));
 		}
 	}
@@ -404,13 +395,11 @@ public partial class Functions
 			total += roll;
 		}
 		
-		// If showCount is specified and less than count, only show that many rolls
 		if (showCount < count)
 		{
 			return ValueTask.FromResult(new CallState(total.ToString()));
 		}
 		
-		// Show individual rolls
 		return ValueTask.FromResult(new CallState(string.Join(" ", rolls)));
 	}
 
@@ -424,14 +413,10 @@ public partial class Functions
 	[SharpFunction(Name = "fn", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
 	public static async ValueTask<CallState> Fn(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// fn() is like ufun() but the first argument is the function name
-		// and remaining arguments are passed to the function
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		
-		// Get the function name from the first argument
 		var functionName = parser.CurrentState.Arguments["0"].Message!;
 		
-		// Call the attribute function with remaining arguments
 		var result = await AttributeService!.EvaluateAttributeFunctionAsync(
 			parser,
 			executor,
