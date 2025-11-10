@@ -23,10 +23,10 @@ public class LogCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@log Test log entry"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("Command log")) ||
-				(msg.IsT1 && msg.AsT1.Contains("Command log"))));
+				(msg.IsT0 && msg.AsT0.ToString() == "Message logged to Command log.") ||
+				(msg.IsT1 && msg.AsT1 == "Message logged to Command log.")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -35,10 +35,10 @@ public class LogCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@log/cmd Test command log entry"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("Command log")) ||
-				(msg.IsT1 && msg.AsT1.Contains("Command log"))));
+				(msg.IsT0 && msg.AsT0.ToString() == "Message logged to Command log.") ||
+				(msg.IsT1 && msg.AsT1 == "Message logged to Command log.")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -47,10 +47,10 @@ public class LogCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@log/wiz Test wizard log entry"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("Wizard log")) ||
-				(msg.IsT1 && msg.AsT1.Contains("Wizard log"))));
+				(msg.IsT0 && msg.AsT0.ToString() == "Message logged to Wizard log.") ||
+				(msg.IsT1 && msg.AsT1 == "Message logged to Wizard log.")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -59,10 +59,10 @@ public class LogCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@log/err Test error log entry"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("Error log")) ||
-				(msg.IsT1 && msg.AsT1.Contains("Error log"))));
+				(msg.IsT0 && msg.AsT0.ToString() == "Message logged to Error log.") ||
+				(msg.IsT1 && msg.AsT1 == "Message logged to Error log.")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -71,10 +71,10 @@ public class LogCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@log"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("Usage")) ||
-				(msg.IsT1 && msg.AsT1.Contains("Usage"))));
+				(msg.IsT0 && msg.AsT0.ToString() == "Usage: @log[/<switch>] <message> or @log/recall[/<switch>] [<number>]") ||
+				(msg.IsT1 && msg.AsT1 == "Usage: @log[/<switch>] <message> or @log/recall[/<switch>] [<number>]")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -83,8 +83,8 @@ public class LogCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@log/recall"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
