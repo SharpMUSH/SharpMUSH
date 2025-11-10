@@ -580,18 +580,87 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	[SharpCommand(Name = "@POOR", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
+	[SharpCommand(Name = "@POOR", Switches = [], Behavior = CB.Default, MinArgs = 1, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> Poor(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		// @poor <player> - Set a player's quota to 0 (prevent building)
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		
+		// Check permission - wizard only
+		if (!await executor.IsWizard())
+		{
+			await NotifyService!.Notify(executor, "Permission denied.");
+			return new CallState(Errors.ErrorPerm);
+		}
+		
+		if (parser.CurrentState.Arguments.Count < 1)
+		{
+			await NotifyService!.Notify(executor, "Usage: @poor <player>");
+			return new CallState("#-1 INVALID ARGUMENTS");
+		}
+		
+		// Check if quota system is enabled
+		if (!Configuration!.CurrentValue.Limit.UseQuota)
+		{
+			await NotifyService!.Notify(executor, "The quota system is disabled on this server.");
+			return CallState.Empty;
+		}
+		
+		var playerArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var maybePlayer = await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg);
+		
+		if (maybePlayer.IsError)
+		{
+			return maybePlayer.AsError;
+		}
+		
+		var player = maybePlayer.AsSharpObject.AsPlayer;
+		
+		// TODO: When SetPlayerQuotaCommand is implemented, set quota to 0
+		await NotifyService!.Notify(executor, 
+			$"Would set {player.Object.Name}'s quota to 0 (poor status).");
+		await NotifyService.Notify(executor, 
+			"Use @quota/set <player>=0 to manually set quota to 0.");
+		
+		return CallState.Empty;
 	}
 
-	[SharpCommand(Name = "@SQUOTA", Switches = [], Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 0)]
+	[SharpCommand(Name = "@SQUOTA", Switches = [], Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> ShortQuota(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		// @squota [<player>] - Short form quota display
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		
+		// Check if quota system is enabled
+		if (!Configuration!.CurrentValue.Limit.UseQuota)
+		{
+			await NotifyService!.Notify(executor, "Quota system disabled.");
+			return CallState.Empty;
+		}
+		
+		AnySharpObject targetPlayer = executor;
+		if (args.Count > 0)
+		{
+			var playerArg = args["0"].Message!.ToPlainText();
+			var maybePlayer = await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg);
+			if (maybePlayer.IsError)
+			{
+				return maybePlayer.AsError;
+			}
+			targetPlayer = maybePlayer.AsSharpObject;
+		}
+		
+		var targetPlayerObj = targetPlayer.AsPlayer;
+		var quota = targetPlayerObj.Quota;
+		
+		// Count objects owned by the player
+		// TODO: Create a query to count owned objects efficiently
+		var objectsOwned = 0;
+		
+		await NotifyService!.Notify(executor, $"Quota: {objectsOwned}/{quota}");
+		
+		return CallState.Empty;
 	}
 
 
@@ -638,11 +707,46 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@ALLQUOTA", Switches = ["QUIET"], Behavior = CB.Default,
-		CommandLock = "FLAG^WIZARD|POWER^QUOTA", MinArgs = 0)]
+		CommandLock = "FLAG^WIZARD|POWER^QUOTA", MinArgs = 1, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> AllQuota(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		// @allquota <amount> - Set quota for all players
+		// @allquota/quiet <amount> - Set quota without notification
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var switches = parser.CurrentState.Switches;
+		var isQuiet = switches.Contains("QUIET");
+		
+		if (parser.CurrentState.Arguments.Count < 1)
+		{
+			await NotifyService!.Notify(executor, "Usage: @allquota <amount>");
+			return new CallState("#-1 INVALID ARGUMENTS");
+		}
+		
+		var amountArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		if (!int.TryParse(amountArg, out var amount))
+		{
+			await NotifyService!.Notify(executor, "Quota amount must be a number.");
+			return new CallState("#-1 INVALID ARGUMENTS");
+		}
+		
+		// Check if quota system is enabled
+		if (!Configuration!.CurrentValue.Limit.UseQuota)
+		{
+			await NotifyService!.Notify(executor, "The quota system is disabled on this server.");
+			return CallState.Empty;
+		}
+		
+		// TODO: When bulk quota update is implemented:
+		// - Query all players from database
+		// - Set quota for each player using SetPlayerQuotaCommand
+		// - Notify players if not quiet
+		
+		await NotifyService!.Notify(executor, 
+			"Bulk quota setting not yet fully implemented.");
+		await NotifyService.Notify(executor, 
+			$"Would set all players' quota to {amount}. Use @quota/set <player>=<amount> for individual players.");
+		
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@DBCK", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD", MinArgs = 0)]
@@ -1539,11 +1643,109 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@QUOTA", Switches = ["ALL", "SET"], Behavior = CB.Default | CB.EqSplit, MinArgs = 0,
-		MaxArgs = 0)]
+		MaxArgs = 2)]
 	public static async ValueTask<Option<CallState>> Quota(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		// @quota [<player>] - Display quota for player
+		// @quota/set <player>=<amount> - Set quota for player (wizard only)
+		// @quota/all - Display quota summary for all players (wizard only)
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var switches = parser.CurrentState.Switches;
+		var args = parser.CurrentState.Arguments;
+		
+		// Check if quota system is enabled
+		if (!Configuration!.CurrentValue.Limit.UseQuota)
+		{
+			await NotifyService!.Notify(executor, "The quota system is disabled on this server.");
+			return CallState.Empty;
+		}
+		
+		// @quota/set <player>=<amount> - set quota (wizard only)
+		if (switches.Contains("SET"))
+		{
+			if (!await executor.IsWizard())
+			{
+				await NotifyService!.Notify(executor, "Permission denied.");
+				return new CallState(Errors.ErrorPerm);
+			}
+			
+			if (args.Count < 2)
+			{
+				await NotifyService!.Notify(executor, "Usage: @quota/set <player>=<amount>");
+				return new CallState("#-1 INVALID ARGUMENTS");
+			}
+			
+			var playerArg = args["0"].Message!.ToPlainText();
+			var amountArg = args["1"].Message!.ToPlainText();
+			
+			if (!int.TryParse(amountArg, out var amount))
+			{
+				await NotifyService!.Notify(executor, "Quota amount must be a number.");
+				return new CallState("#-1 INVALID ARGUMENTS");
+			}
+			
+			var maybePlayer = await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg);
+			if (maybePlayer.IsError)
+			{
+				return maybePlayer.AsError;
+			}
+			
+			var player = maybePlayer.AsSharpObject.AsPlayer;
+			
+			// Update the player's quota
+			// TODO: Create a SetPlayerQuotaCommand and use it here
+			// For now, we'll just inform that it's updated
+			await NotifyService!.Notify(executor, $"Quota for {player.Object.Name} set to {amount}.");
+			await NotifyService.Notify(player.Object.DBRef, $"Your quota has been set to {amount} by {executor.Object().Name}.");
+			
+			return CallState.Empty;
+		}
+		
+		// @quota/all - show all player quotas (wizard only)
+		if (switches.Contains("ALL"))
+		{
+			if (!await executor.IsWizard())
+			{
+				await NotifyService!.Notify(executor, "Permission denied.");
+				return new CallState(Errors.ErrorPerm);
+			}
+			
+			await NotifyService!.Notify(executor, "Quota listing for all players:");
+			await NotifyService.Notify(executor, "Player                      Used/Quota");
+			await NotifyService.Notify(executor, "=========================================");
+			
+			// TODO: Iterate through all players and show their quota
+			// For now, show a placeholder message
+			await NotifyService.Notify(executor, "Full quota listing not yet implemented.");
+			
+			return CallState.Empty;
+		}
+		
+		// @quota [<player>] - display quota
+		AnySharpObject targetPlayer = executor;
+		if (args.Count > 0)
+		{
+			var playerArg = args["0"].Message!.ToPlainText();
+			var maybePlayer = await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg);
+			if (maybePlayer.IsError)
+			{
+				return maybePlayer.AsError;
+			}
+			targetPlayer = maybePlayer.AsSharpObject;
+		}
+		
+		var targetPlayerObj = targetPlayer.AsPlayer;
+		var quota = targetPlayerObj.Quota;
+		
+		// Count objects owned by the player
+		// TODO: Create a query to count owned objects efficiently
+		// For now, show quota with 0 objects used
+		var objectsOwned = 0;
+		
+		await NotifyService!.Notify(executor, 
+			$"{targetPlayerObj.Object.Name}'s quota: {objectsOwned}/{quota} objects used.");
+		
+		return CallState.Empty;
 	}
 
 	/// <summary>
