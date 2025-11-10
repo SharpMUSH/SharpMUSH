@@ -794,7 +794,24 @@ public partial class Commands
 				continue;
 			}
 
+			// Capture original location before move for event
+			var originalLocation = await target.Where();
+			var isSilent = parser.CurrentState.Switches.Contains("QUIET");
+
 			await Mediator!.Send(new MoveObjectCommand(targetContent, destinationContainer));
+
+			// Trigger OBJECT`MOVE event
+			// PennMUSH spec: object`move (objid, newloc, origloc, issilent, cause)
+			await EventService!.TriggerEventAsync(
+				parser,
+				"OBJECT`MOVE",
+				executor.Object().DBRef,
+				target.Object().DBRef.ToString(),
+				destinationContainer.Object().DBRef.ToString(),
+				originalLocation.ToString(),
+				isSilent ? "1" : "0",
+				"@teleport");
+
 			// TODO: Notify the target that they have been teleported - if Quiet switch is not present.
 			// TODO: Evaluate room verbs upon teleportation.
 			// TODO: If the target is a player, force a LOOK
