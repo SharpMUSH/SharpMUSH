@@ -616,11 +616,11 @@ public partial class Commands
 		
 		var player = maybePlayer.AsSharpObject.AsPlayer;
 		
-		// TODO: When SetPlayerQuotaCommand is implemented, set quota to 0
-		await NotifyService!.Notify(executor, 
-			$"Would set {player.Object.Name}'s quota to 0 (poor status).");
-		await NotifyService.Notify(executor, 
-			"Use @quota/set <player>=0 to manually set quota to 0.");
+		// Set player's quota to 0 (poor status)
+		await Mediator!.Send(new SetPlayerQuotaCommand(player, 0));
+		
+		await NotifyService!.Notify(executor, $"{player.Object.Name} has been set to poor status (quota: 0).");
+		await NotifyService.Notify(player.Object.DBRef, $"Your building quota has been set to 0 by {executor.Object().Name}.");
 		
 		return CallState.Empty;
 	}
@@ -655,8 +655,7 @@ public partial class Commands
 		var quota = targetPlayerObj.Quota;
 		
 		// Count objects owned by the player
-		// TODO: Create a query to count owned objects efficiently
-		var objectsOwned = 0;
+		var objectsOwned = await Mediator!.Send(new GetOwnedObjectCountQuery(targetPlayerObj));
 		
 		await NotifyService!.Notify(executor, $"Quota: {objectsOwned}/{quota}");
 		
@@ -736,15 +735,23 @@ public partial class Commands
 			return CallState.Empty;
 		}
 		
-		// TODO: When bulk quota update is implemented:
-		// - Query all players from database
-		// - Set quota for each player using SetPlayerQuotaCommand
-		// - Notify players if not quiet
+		// Query all players and set their quota
+		var players = Mediator!.CreateStream(new GetAllPlayersQuery());
+		var count = 0;
 		
-		await NotifyService!.Notify(executor, 
-			"Bulk quota setting not yet fully implemented.");
-		await NotifyService.Notify(executor, 
-			$"Would set all players' quota to {amount}. Use @quota/set <player>=<amount> for individual players.");
+		await foreach (var player in players)
+		{
+			await Mediator.Send(new SetPlayerQuotaCommand(player, amount));
+			count++;
+			
+			if (!isQuiet)
+			{
+				await NotifyService!.Notify(player.Object.DBRef, 
+					$"Your building quota has been set to {amount} by {executor.Object().Name}.");
+			}
+		}
+		
+		await NotifyService!.Notify(executor, $"Set quota to {amount} for {count} players.");
 		
 		return CallState.Empty;
 	}
@@ -1693,8 +1700,8 @@ public partial class Commands
 			var player = maybePlayer.AsSharpObject.AsPlayer;
 			
 			// Update the player's quota
-			// TODO: Create a SetPlayerQuotaCommand and use it here
-			// For now, we'll just inform that it's updated
+			await Mediator!.Send(new SetPlayerQuotaCommand(player, amount));
+			
 			await NotifyService!.Notify(executor, $"Quota for {player.Object.Name} set to {amount}.");
 			await NotifyService.Notify(player.Object.DBRef, $"Your quota has been set to {amount} by {executor.Object().Name}.");
 			
@@ -1714,9 +1721,14 @@ public partial class Commands
 			await NotifyService.Notify(executor, "Player                      Used/Quota");
 			await NotifyService.Notify(executor, "=========================================");
 			
-			// TODO: Iterate through all players and show their quota
-			// For now, show a placeholder message
-			await NotifyService.Notify(executor, "Full quota listing not yet implemented.");
+			// Iterate through all players and show their quota
+			var players = Mediator!.CreateStream(new GetAllPlayersQuery());
+			await foreach (var player in players)
+			{
+				var objectCount = await Mediator.Send(new GetOwnedObjectCountQuery(player));
+				var playerName = player.Object.Name.PadRight(27);
+				await NotifyService.Notify(executor, $"{playerName} {objectCount,4}/{player.Quota,-4}");
+			}
 			
 			return CallState.Empty;
 		}
@@ -1738,9 +1750,7 @@ public partial class Commands
 		var quota = targetPlayerObj.Quota;
 		
 		// Count objects owned by the player
-		// TODO: Create a query to count owned objects efficiently
-		// For now, show quota with 0 objects used
-		var objectsOwned = 0;
+		var objectsOwned = await Mediator!.Send(new GetOwnedObjectCountQuery(targetPlayerObj));
 		
 		await NotifyService!.Notify(executor, 
 			$"{targetPlayerObj.Object.Name}'s quota: {objectsOwned}/{quota} objects used.");
