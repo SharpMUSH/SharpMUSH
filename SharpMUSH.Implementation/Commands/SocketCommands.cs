@@ -105,10 +105,20 @@ public partial class Commands
 		}
 
 		// TODO: Step 3: Confirm there is no SiteLock.
-		ConnectionService.Bind(parser.CurrentState.Handle!.Value,
-			new DBRef(foundDB.Object.Key, foundDB.Object.CreationTime));
+		var playerDbRef = new DBRef(foundDB.Object.Key, foundDB.Object.CreationTime);
+		ConnectionService.Bind(parser.CurrentState.Handle!.Value, playerDbRef);
 
-		// TODO: Step 5: Trigger OnConnect Event in EventService.
+		// Trigger PLAYER`CONNECT event
+		// Args: objid, number of connections, descriptor
+		var connectionCount = await ConnectionService.Get(playerDbRef).CountAsync();
+		await EventService!.TriggerEventAsync(
+			parser,
+			"PLAYER`CONNECT",
+			playerDbRef,
+			$"#{foundDB.Object.Key}",
+			connectionCount.ToString(),
+			parser.CurrentState.Handle!.Value.ToString());
+
 		await NotifyService!.Notify(parser.CurrentState.Handle!.Value, "Connected!");
 		Serilog.Log.Logger.Debug("Successful login and binding for {@person}", foundDB.Object);
 		return new None();
