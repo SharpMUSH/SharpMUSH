@@ -547,36 +547,150 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	[SharpCommand(Name = "BRIEF", Switches = ["OPAQUE"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
+	[SharpCommand(Name = "BRIEF", Switches = ["OPAQUE"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> Brief(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		// BRIEF is an abbreviated version of EXAMINE - shows object info without description or attributes
+		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches.ToArray();
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).WithoutNone();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		
-		// Get the BRIEF flag
-		var briefFlag = await Mediator!.Send(new GetObjectFlagQuery("BRIEF"));
-		if (briefFlag == null)
+		AnyOptionalSharpObject viewing;
+
+		// Parse object from argument
+		if (args.Count == 1)
 		{
-			await NotifyService!.Notify(executor, "Error: BRIEF flag not found in database.");
-			return new CallState("#-1 FLAG NOT FOUND");
-		}
-		
-		// Check if executor currently has BRIEF flag
-		var hasFlag = await executor.HasFlag("BRIEF");
-		
-		if (hasFlag)
-		{
-			// Remove BRIEF flag
-			await Mediator!.Send(new UnsetObjectFlagCommand(executor, briefFlag));
-			await NotifyService!.Notify(executor, "BRIEF mode off.");
+			var argText = args["0"].Message!.ToString();
+			
+			var locate = await LocateService!.LocateAndNotifyIfInvalid(
+				parser,
+				enactor,
+				enactor,
+				argText,
+				LocateFlags.All);
+
+			if (locate.IsValid())
+			{
+				viewing = locate.WithoutError();
+			}
+			else
+			{
+				return new None();
+			}
 		}
 		else
 		{
-			// Add BRIEF flag
-			await Mediator!.Send(new SetObjectFlagCommand(executor, briefFlag));
-			await NotifyService!.Notify(executor, "BRIEF mode on.");
+			// No argument - examine current location ("here")
+			viewing = (await Mediator!.Send(new GetLocationQuery(enactor.Object().DBRef))).WithExitOption();
+		}
+
+		if (viewing.IsNone())
+		{
+			return new None();
+		}
+
+		var viewingKnown = viewing.Known();
+		
+		// Check permission to examine 
+		var canExamine = await PermissionService!.CanExamine(executor, viewingKnown);
+		
+		if (!canExamine)
+		{
+			var limitedObj = viewingKnown.Object();
+			var limitedOwnerObj = (await limitedObj.Owner.WithCancellation(CancellationToken.None)).Object;
+			await NotifyService!.Notify(enactor, $"{limitedObj.Name} is owned by {limitedOwnerObj.Name}.");
+			return new CallState(limitedObj.DBRef.ToString());
+		}
+
+		// Get contents unless /opaque switch is used
+		var contents = (switches.Contains("OPAQUE") || viewing.IsExit)
+			? []
+			: await Mediator!.CreateStream(new GetContentsQuery(viewingKnown.AsContainer))
+				.ToArrayAsync();
+
+		var obj = viewingKnown.Object()!;
+		var ownerObj = (await obj.Owner.WithCancellation(CancellationToken.None)).Object;
+		var name = obj.Name;
+		var ownerName = ownerObj.Name;
+		var objFlags = await obj.Flags.Value.ToArrayAsync();
+		var ownerObjFlags = await ownerObj.Flags.Value.ToArrayAsync();
+		var objPowers = obj.Powers.Value;
+		var objParent = await obj.Parent.WithCancellation(CancellationToken.None);
+
+		// Build output sections
+		var outputSections = new List<MString>();
+		
+		// Name row with flags
+		var showFlags = Configuration!.CurrentValue.Cosmetic.FlagsOnExamine;
+		var nameRow = showFlags
+			? MModule.multiple([
+				name.Hilight(),
+				MModule.single(" "),
+				MModule.single($"(#{obj.DBRef.Number}{string.Join(string.Empty, objFlags.Select(x => x.Symbol))})")
+			])
+			: MModule.concat(name.Hilight(), MModule.single($" (#{obj.DBRef.Number})"));
+		
+		outputSections.Add(nameRow);
+
+		// Type and flags row
+		if (showFlags)
+		{
+			outputSections.Add(MModule.single($"Type: {obj.Type} Flags: {string.Join(" ", objFlags.Select(x => x.Name))}"));
+		}
+		else
+		{
+			outputSections.Add(MModule.single($"Type: {obj.Type}"));
 		}
 		
-		return CallState.Empty;
+		// Owner row
+		var ownerRow = showFlags
+			? MModule.single($"Owner: {ownerName.Hilight()}" +
+			                 $"(#{ownerObj.DBRef.Number}{string.Join(string.Empty, ownerObjFlags.Select(x => x.Symbol))})")
+			: MModule.single($"Owner: {ownerName.Hilight()}(#{ownerObj.DBRef.Number})");
+		outputSections.Add(ownerRow);
+		
+		// Parent row
+		outputSections.Add(MModule.single($"Parent: {objParent.Object()?.Name ?? "*NOTHING*"}"));
+		
+		// Powers row
+		var powersList = await objPowers.Select(x => x.Name).ToArrayAsync();
+		if (powersList.Length > 0)
+		{
+			outputSections.Add(MModule.single($"Powers: {string.Join(" ", powersList)}"));
+		}
+		
+		// Home and Location (for players/things)
+		if (viewingKnown.IsPlayer || viewingKnown.IsThing)
+		{
+			var homeObj = await viewingKnown.MinusRoom().Home();
+			outputSections.Add(MModule.single($"Home: {homeObj.Object().Name}(#{homeObj.Object().DBRef.Number})"));
+			
+			var locationObj = await viewingKnown.Match(
+				async player => await player.Location.WithCancellation(CancellationToken.None),
+				async room => await ValueTask.FromResult<AnySharpContainer>(room),
+				async exit => await exit.Home.WithCancellation(CancellationToken.None),
+				async thing => await thing.Location.WithCancellation(CancellationToken.None));
+			outputSections.Add(MModule.single($"Location: {locationObj.Object().Name}(#{locationObj.Object().DBRef.Number})"));
+		}
+		
+		// Created timestamp
+		outputSections.Add(MModule.single($"Created: {DateTimeOffset.FromUnixTimeMilliseconds(obj.CreationTime):F}"));
+
+		// Output header information
+		await NotifyService!.Notify(enactor, MModule.multipleWithDelimiter(MModule.single("\n"), outputSections));
+
+		// Contents (unless /opaque)
+		if (!switches.Contains("OPAQUE") && contents.Length > 0)
+		{
+			var contentNames = contents.Select(x => x.Object().Name);
+			await NotifyService!.Notify(enactor, $"Contents:");
+			foreach (var contentName in contentNames)
+			{
+				await NotifyService!.Notify(enactor, $"  {contentName}");
+			}
+		}
+		
+		return new CallState(obj.DBRef.ToString());
 	}
 
 	[SharpCommand(Name = "DESERT", Switches = [], Behavior = CB.Player | CB.Thing, MinArgs = 0, MaxArgs = 0)]
