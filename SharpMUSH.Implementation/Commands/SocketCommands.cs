@@ -108,13 +108,13 @@ public partial class Commands
 		var playerDbRef = new DBRef(foundDB.Object.Key, foundDB.Object.CreationTime);
 		ConnectionService.Bind(parser.CurrentState.Handle!.Value, playerDbRef);
 
-		// Trigger PLAYER`CONNECT event
-		// Args: objid, number of connections, descriptor
+		// Trigger PLAYER`CONNECT event - PennMUSH compatible
+		// PennMUSH spec: player`connect (objid, number of connections, descriptor)
 		var connectionCount = await ConnectionService.Get(playerDbRef).CountAsync();
 		await EventService!.TriggerEventAsync(
 			parser,
 			"PLAYER`CONNECT",
-			playerDbRef,
+			playerDbRef, // Enactor is the player who connected
 			$"#{foundDB.Object.Key}",
 			connectionCount.ToString(),
 			parser.CurrentState.Handle!.Value.ToString());
