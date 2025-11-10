@@ -8,5 +8,5 @@ namespace SharpMUSH.Implementation.Handlers.Database;
 public class CreatePlayerCommandHandler(ISharpDatabase database) : ICommandHandler<CreatePlayerCommand, DBRef>
 {
 	public async ValueTask<DBRef> Handle(CreatePlayerCommand request, CancellationToken cancellationToken) 
-		=> await database.CreatePlayerAsync(request.Name, request.Password, request.Location, request.Home, cancellationToken);
+		=> await database.CreatePlayerAsync(request.Name, request.Password, request.Location, request.Home, request.Quota, cancellationToken);
 }

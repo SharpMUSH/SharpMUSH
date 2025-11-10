@@ -90,7 +90,8 @@ public class TestObjectFactory
 			Aliases = Array.Empty<string>(),
 			Location = new(async ct => { await ValueTask.CompletedTask; return playerLocation; }),
 			Home = new(async ct => { await ValueTask.CompletedTask; return playerLocation; }),
-			PasswordHash = string.Empty
+			PasswordHash = string.Empty,
+			Quota = 20 // Default test quota
 		};
 		
 		var anySharpObject = new AnySharpObject(player);

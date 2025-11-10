@@ -149,9 +149,10 @@ public class Migration_CreateDatabase : IArangoMigration
 									properties = new
 									{
 										PasswordHash = new { type = DatabaseConstants.TypeString },
-										Aliases = new { type = DatabaseConstants.TypeArray, items = new { type = DatabaseConstants.TypeString } }
+										Aliases = new { type = DatabaseConstants.TypeArray, items = new { type = DatabaseConstants.TypeString } },
+										Quota = new { type = DatabaseConstants.TypeNumber, multipleOf = 1 }
 									},
-									required = (string[])[nameof(SharpPlayer.PasswordHash)]
+									required = (string[])[nameof(SharpPlayer.PasswordHash), nameof(SharpPlayer.Quota)]
 								}
 							}
 						},
@@ -915,7 +916,8 @@ public class Migration_CreateDatabase : IArangoMigration
 		var playerOnePlayer = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.Players, new
 		{
 			Aliases = Array.Empty<string>(),
-			PasswordHash = string.Empty
+			PasswordHash = string.Empty,
+			Quota = 999999 // God has unlimited quota
 		});
 
 		var flags = await CreateInitialFlags(migrator, handle);
