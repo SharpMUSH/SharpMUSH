@@ -1353,15 +1353,14 @@ public partial class Functions
 				arg0, LocateFlags.All,
 				async found =>
 				{
-					var realFlag = await Mediator!.Send(new GetObjectFlagQuery(arg1.ToPlainText()));
-
-					if (realFlag is null) return Errors.ErrorNoSuchFlag;
-
-					// TODO: There should be a service for this.
-					// TODO: Permission Check!
-					await Mediator.Send(new SetObjectFlagCommand(found, realFlag));
-
-					return string.Empty;
+					var result = await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, found, arg1.ToPlainText(), false);
+					
+					// Return empty string on success, error message on failure
+					return result.Message switch
+					{
+						{ } when result.Message!.ToPlainText() == "True" => string.Empty,
+						_ => result
+					};
 				});
 		}
 	}
