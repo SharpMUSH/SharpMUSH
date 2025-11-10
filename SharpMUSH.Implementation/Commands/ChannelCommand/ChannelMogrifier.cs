@@ -32,29 +32,23 @@ public static class ChannelMogrifier
 			return new CallState("You cannot modify this channel.");
 		}
 
-		// TODO: Locate Object
-		var objectString = obj.ToPlainText();
-		var maybeLocate = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, objectString, LocateFlags.All);
-
-		if (maybeLocate.IsError)
-		{
-			return maybeLocate.AsError;
-		}
-
-		var locate = maybeLocate.AsSharpObject;
-
-		await Mediator.Send(new UpdateChannelCommand(channel, 
-			null, 
-			null, 
-			null, 
-			null, 
-			null, 
-			null, 
-			null,
-			null,
-			locate.Object().DBRef.ToString(), 
-			null));
+		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, obj.ToPlainText(),
+			LocateFlags.All,
+			async locate =>
+			{
+				await Mediator.Send(new UpdateChannelCommand(channel, 
+					null, 
+					null, 
+					null, 
+					null, 
+					null, 
+					null, 
+					null,
+					null,
+					locate.Object().DBRef.ToString(), 
+					null));
 		
-		return new CallState("Channel Mogrifier has been updated.");
+				return new CallState("Channel Mogrifier has been updated.");
+			});
 	}
 }
