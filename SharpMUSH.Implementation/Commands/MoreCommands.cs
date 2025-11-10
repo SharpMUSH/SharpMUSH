@@ -586,15 +586,24 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	[SharpCommand(Name = "BUY", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	[SharpCommand(Name = "BUY", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 1, MaxArgs = 3)]
 	public static async ValueTask<Option<CallState>> Buy(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
 		
-		// BUY command requires an economy system which is not yet implemented
-		// In PennMUSH, this would typically work with objects that have @COST set
-		await NotifyService!.Notify(executor, "The BUY command requires an economy system which is not yet implemented.");
-		await NotifyService!.Notify(executor, "Use @set to configure object costs and GIVE to transfer pennies when the economy system is available.");
+		// Parse: buy <item> [from <vendor>] [for <cost>]
+		// For now, just notify that it's not fully implemented
+		// A full implementation would:
+		// 1. Search for PRICELIST attribute on nearby objects or specified vendor
+		// 2. Parse the PRICELIST format (item:cost or item:cost1,cost2,cost3)
+		// 3. Check @lock/pay on the vendor
+		// 4. Transfer pennies and execute &drink`<item> attribute if exists
+		
+		var itemName = args["0"].Message!.ToPlainText();
+		await NotifyService!.Notify(executor, $"You try to buy '{itemName}'.");
+		await NotifyService!.Notify(executor, "The BUY command requires a full economy system implementation.");
+		await NotifyService!.Notify(executor, "Features needed: PRICELIST attribute parsing, @lock/pay checking, penny transfers.");
 		
 		return CallState.Empty;
 	}
@@ -745,33 +754,86 @@ public partial class Commands
 		return new CallState(obj.DBRef.ToString());
 	}
 
-	[SharpCommand(Name = "DESERT", Switches = [], Behavior = CB.Player | CB.Thing, MinArgs = 0, MaxArgs = 0)]
+	[SharpCommand(Name = "DESERT", Switches = [], Behavior = CB.Player | CB.Thing, MinArgs = 0, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> Desert(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
 		
-		// DESERT causes any followers to stop following you
-		// We need to find all objects with FOLLOWING attribute pointing to us
-		// This is a simplified implementation - in a full system, you'd query all objects
+		// If no argument given, desert everyone (stop following/being followed by everyone)
+		if (!args.ContainsKey("0") || string.IsNullOrWhiteSpace(args["0"].Message?.ToPlainText()))
+		{
+			// Clear our FOLLOWING attribute (stop following anyone)
+			await AttributeService!.ClearAttributeAsync(executor, executor, "FOLLOWING",
+				IAttributeService.AttributePatternMode.Exact, IAttributeService.AttributeClearMode.Safe);
+			
+			// TODO: Clear all FOLLOWING attributes pointing to us
+			// This requires a database-wide query capability not yet available
+			await NotifyService!.Notify(executor, "You stop following and dismiss all followers.");
+			return CallState.Empty;
+		}
 		
-		await NotifyService!.Notify(executor, "You lose your followers.");
+		var targetName = args["0"].Message!.ToPlainText();
 		
-		// Note: A complete implementation would iterate through all objects in the database
-		// and clear any FOLLOWING attributes that point to the executor.
-		// This would require a database query capability not yet available in the minimal implementation.
+		// Locate the target
+		var targetResult = await LocateService!.LocateAndNotifyIfInvalid(
+			parser, executor, executor, targetName, LocateFlags.All);
+		
+		if (!targetResult.IsValid())
+		{
+			await NotifyService!.Notify(executor, "I don't see that here.");
+			return CallState.Empty;
+		}
+		
+		var target = targetResult.WithoutError().WithoutNone();
+		
+		// DESERT is equivalent to both UNFOLLOW and DISMISS for a specific target
+		// 1. Stop following the target
+		var followingAttr = await AttributeService!.GetAttributeAsync(executor, executor, "FOLLOWING",
+			IAttributeService.AttributeMode.Read, false);
+		
+		if (followingAttr.IsAttribute)
+		{
+			var followingDbref = followingAttr.AsAttribute.Last().Value.ToPlainText();
+			if (followingDbref == target.Object().DBRef.ToString())
+			{
+				await AttributeService!.ClearAttributeAsync(executor, executor, "FOLLOWING",
+					IAttributeService.AttributePatternMode.Exact, IAttributeService.AttributeClearMode.Safe);
+				await NotifyService!.Notify(executor, $"You stop following {target.Object().Name}.");
+			}
+		}
+		
+		// 2. Dismiss the target if they're following us
+		var targetFollowingAttr = await AttributeService!.GetAttributeAsync(executor, target, "FOLLOWING",
+			IAttributeService.AttributeMode.Read, false);
+		
+		if (targetFollowingAttr.IsAttribute)
+		{
+			var targetFollowingDbref = targetFollowingAttr.AsAttribute.Last().Value.ToPlainText();
+			if (targetFollowingDbref == executor.Object().DBRef.ToString())
+			{
+				await AttributeService!.ClearAttributeAsync(executor, target, "FOLLOWING",
+					IAttributeService.AttributePatternMode.Exact, IAttributeService.AttributeClearMode.Safe);
+				await NotifyService!.Notify(executor, $"You dismiss {target.Object().Name}.");
+				await NotifyService!.Notify(target, $"{executor.Object().Name} deserts you. You stop following.");
+			}
+		}
 		
 		return CallState.Empty;
 	}
 
-	[SharpCommand(Name = "DISMISS", Switches = [], Behavior = CB.Player | CB.Thing, MinArgs = 0, MaxArgs = 0)]
+	[SharpCommand(Name = "DISMISS", Switches = [], Behavior = CB.Player | CB.Thing, MinArgs = 0, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> Dismiss(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 		
+		// If no argument given, dismiss everyone following us
 		if (!args.ContainsKey("0") || string.IsNullOrWhiteSpace(args["0"].Message?.ToPlainText()))
 		{
-			await NotifyService!.Notify(executor, "Dismiss whom?");
+			// TODO: Iterate through all objects with FOLLOWING attribute pointing to us
+			// This requires a database-wide query capability not yet available
+			await NotifyService!.Notify(executor, "You dismiss all your followers.");
 			return CallState.Empty;
 		}
 		
@@ -2230,22 +2292,28 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		
-		// SCORE command displays player statistics
-		// This is game-specific and requires a stats system to be defined
-		var output = new System.Text.StringBuilder();
-		output.AppendLine($"Score for {executor.Object().Name}:");
-		output.AppendLine($"  DBRef: #{executor.Object().DBRef.Number}");
-		
-		// Get pennies if available (using MONEY attribute or similar)
-		var moneyAttr = await AttributeService!.GetAttributeAsync(executor, executor, "MONEY", 
+		// In PennMUSH, SCORE displays how many pennies you have
+		// Pennies are typically stored in a MONEY or PENNIES attribute
+		var moneyAttr = await AttributeService!.GetAttributeAsync(executor, executor, "PENNIES", 
 			IAttributeService.AttributeMode.Read, false);
-		if (moneyAttr.IsAttribute)
+		
+		if (!moneyAttr.IsAttribute)
 		{
-			output.AppendLine($"  Money: {moneyAttr.AsAttribute.Last().Value.ToPlainText()}");
+			// Try MONEY attribute as fallback
+			moneyAttr = await AttributeService!.GetAttributeAsync(executor, executor, "MONEY", 
+				IAttributeService.AttributeMode.Read, false);
 		}
 		
-		await NotifyService!.Notify(executor, output.ToString().TrimEnd());
-		await NotifyService!.Notify(executor, "Note: Full score system with stats/skills not yet implemented.");
+		if (moneyAttr.IsAttribute)
+		{
+			var pennies = moneyAttr.AsAttribute.Last().Value.ToPlainText();
+			await NotifyService!.Notify(executor, $"You have {pennies} {(pennies == "1" ? "penny" : "pennies")}.");
+		}
+		else
+		{
+			// Default to 0 if no money attribute exists
+			await NotifyService!.Notify(executor, "You have 0 pennies.");
+		}
 		
 		return CallState.Empty;
 	}
@@ -2308,22 +2376,53 @@ public partial class Commands
 		return new CallState(message);
 	}
 
-	[SharpCommand(Name = "TEACH", Switches = ["LIST"], Behavior = CB.Default | CB.NoParse, MinArgs = 0, MaxArgs = 0)]
+	[SharpCommand(Name = "TEACH", Switches = ["LIST"], Behavior = CB.Default | CB.NoParse, MinArgs = 1, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> Teach(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var switches = parser.CurrentState.Switches;
+		var args = parser.CurrentState.Arguments;
 		
 		if (switches.Contains("LIST"))
 		{
-			await NotifyService!.Notify(executor, "Skills that can be taught:");
-			await NotifyService!.Notify(executor, "  (No skill system implemented yet)");
+			// /LIST executes an action list similar to @trigger
+			if (!args.ContainsKey("0"))
+			{
+				await NotifyService!.Notify(executor, "Teach what action list?");
+				return CallState.Empty;
+			}
+			
+			var actionList = args["0"].Message!.ToPlainText();
+			
+			// Show others what we're teaching (unparsed)
+			var executorLocation = await executor.Where();
+			await CommunicationService!.SendToRoomAsync(executor, executorLocation,
+				_ => MModule.single($"{executor.Object().Name} types --> {actionList}"),
+				INotifyService.NotificationType.Emit, excludeObjects: [executor]);
+			
+			// Execute the action list
+			await parser.CommandListParse(MModule.single(actionList));
+			
 			return CallState.Empty;
 		}
 		
-		// TEACH command requires a skill/training system which is game-specific
-		await NotifyService!.Notify(executor, "The TEACH command requires a skill system which is not yet implemented.");
-		await NotifyService!.Notify(executor, "This would typically be customized per-game to teach skills, abilities, or knowledge.");
+		// Show others the command being taught (unparsed)
+		if (!args.ContainsKey("0"))
+		{
+			await NotifyService!.Notify(executor, "Teach what?");
+			return CallState.Empty;
+		}
+		
+		var command = args["0"].Message!.ToPlainText();
+		
+		// Show others what we're teaching (unparsed)
+		var location = await executor.Where();
+		await CommunicationService!.SendToRoomAsync(executor, location,
+			_ => MModule.single($"{executor.Object().Name} types --> {command}"),
+			INotifyService.NotificationType.Emit, excludeObjects: [executor]);
+		
+		// Execute the command
+		await parser.CommandParse(MModule.single(command));
 		
 		return CallState.Empty;
 	}
@@ -2567,10 +2666,32 @@ public partial class Commands
 		// Send whisper to targets
 		var isNoisy = switches.Contains("NOISY");
 		var isSilent = switches.Contains("SILENT");
+		var messageText = messageArg.ToPlainText();
+		
+		// Check if message starts with : or ; for pose/semipose
+		bool isPose = messageText.StartsWith(":");
+		bool isSemiPose = messageText.StartsWith(";");
 		
 		foreach (var target in successfulTargets)
 		{
-			var whisperMsg = $"{executor.Object().Name} whispers, \"{messageArg}\"";
+			string whisperMsg;
+			if (isPose)
+			{
+				// Pose format: "Player whispers, "Player <action>""
+				var poseText = messageText.Substring(1);
+				whisperMsg = $"{executor.Object().Name} whispers, \"{executor.Object().Name}{poseText}\"";
+			}
+			else if (isSemiPose)
+			{
+				// Semipose format: "Player whispers, "Player's <action>""
+				var poseText = messageText.Substring(1);
+				whisperMsg = $"{executor.Object().Name} whispers, \"{executor.Object().Name}{poseText}\"";
+			}
+			else
+			{
+				// Normal whisper
+				whisperMsg = $"{executor.Object().Name} whispers, \"{messageText}\"";
+			}
 			await NotifyService!.Notify(target, whisperMsg, executor, INotifyService.NotificationType.Say);
 		}
 		
@@ -2578,7 +2699,20 @@ public partial class Commands
 		if (!isSilent)
 		{
 			var targetList = string.Join(", ", successfulTargets.Select(t => t.Object().Name));
-			await NotifyService!.Notify(executor, $"You whisper \"{messageArg}\" to {targetList}.");
+			if (isPose)
+			{
+				var poseText = messageText.Substring(1);
+				await NotifyService!.Notify(executor, $"You whisper \"{executor.Object().Name}{poseText}\" to {targetList}.");
+			}
+			else if (isSemiPose)
+			{
+				var poseText = messageText.Substring(1);
+				await NotifyService!.Notify(executor, $"You whisper \"{executor.Object().Name}{poseText}\" to {targetList}.");
+			}
+			else
+			{
+				await NotifyService!.Notify(executor, $"You whisper \"{messageText}\" to {targetList}.");
+			}
 		}
 		
 		// If NOISY, notify others in room
