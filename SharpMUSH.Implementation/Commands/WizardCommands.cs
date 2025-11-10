@@ -26,22 +26,8 @@ public partial class Commands
 		MinArgs = 0)]
 	public static async ValueTask<Option<CallState>> AllHalt(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// @allhalt - Halt all queued commands for all objects
-		// Note: This requires access to the TaskScheduler service which is not currently
-		// exposed to commands. For now, provide an informative message.
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		
-		await NotifyService!.Notify(executor, 
-			"@ALLHALT: Queue halting functionality is not yet fully implemented in SharpMUSH.");
-		await NotifyService.Notify(executor, 
-			"Individual object @halt commands are supported. Use @halt <object> to halt a specific object's queue.");
-		
-		// TODO: When TaskScheduler is exposed to Commands, implement:
-		// - Get all objects from database
-		// - Call TaskScheduler.Halt(dbref) for each
-		// - Report how many queues were halted
-		
-		return CallState.Empty;
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
 	}
 
 	[SharpCommand(Name = "@FLAG",
@@ -594,82 +580,18 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	[SharpCommand(Name = "@POOR", Switches = [], Behavior = CB.Default, MinArgs = 1, MaxArgs = 1)]
+	[SharpCommand(Name = "@POOR", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Poor(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// @poor <player> - Set a player's quota to 0 (prevent building)
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		
-		// Check permission - wizard only
-		if (!await executor.IsWizard())
-		{
-			await NotifyService!.Notify(executor, "Permission denied.");
-			return new CallState(Errors.ErrorPerm);
-		}
-		
-		if (parser.CurrentState.Arguments.Count < 1)
-		{
-			await NotifyService!.Notify(executor, "Usage: @poor <player>");
-			return new CallState("#-1 INVALID ARGUMENTS");
-		}
-		
-		// Check if quota system is enabled
-		if (!Configuration!.CurrentValue.Limit.UseQuota)
-		{
-			await NotifyService!.Notify(executor, "The quota system is disabled on this server.");
-			return CallState.Empty;
-		}
-		
-		var playerArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var maybePlayer = await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg);
-		
-		if (maybePlayer.IsError)
-		{
-			return maybePlayer.AsError;
-		}
-		
-		var player = maybePlayer.AsSharpObject;
-		
-		// TODO: When per-player quota storage is implemented, set quota to 0
-		await NotifyService!.Notify(executor, 
-			$"Per-player quota storage is not yet implemented. Cannot set {player.Object().Name} to poor status.");
-		await NotifyService.Notify(executor, 
-			"You can prevent building by setting appropriate permissions/locks on the player instead.");
-		
-		return CallState.Empty;
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
 	}
 
-	[SharpCommand(Name = "@SQUOTA", Switches = [], Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 1)]
+	[SharpCommand(Name = "@SQUOTA", Switches = [], Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> ShortQuota(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// @squota [<player>] - Short form quota display
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var args = parser.CurrentState.Arguments;
-		
-		// Check if quota system is enabled
-		if (!Configuration!.CurrentValue.Limit.UseQuota)
-		{
-			await NotifyService!.Notify(executor, "Quota system disabled.");
-			return CallState.Empty;
-		}
-		
-		var targetPlayer = executor;
-		if (args.Count > 0)
-		{
-			var playerArg = args["0"].Message!.ToPlainText();
-			var maybePlayer = await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg);
-			if (maybePlayer.IsError)
-			{
-				return maybePlayer.AsError;
-			}
-			targetPlayer = maybePlayer.AsSharpObject;
-		}
-		
-		// Display short quota info
-		var startingQuota = Configuration.CurrentValue.Limit.StartingQuota;
-		await NotifyService!.Notify(executor, $"Quota: 0/{startingQuota}");
-		
-		return CallState.Empty;
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
 	}
 
 
@@ -716,112 +638,18 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@ALLQUOTA", Switches = ["QUIET"], Behavior = CB.Default,
-		CommandLock = "FLAG^WIZARD|POWER^QUOTA", MinArgs = 1, MaxArgs = 1)]
+		CommandLock = "FLAG^WIZARD|POWER^QUOTA", MinArgs = 0)]
 	public static async ValueTask<Option<CallState>> AllQuota(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// @allquota <amount> - Set quota for all players
-		// @allquota/quiet <amount> - Set quota without notification
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var switches = parser.CurrentState.Switches;
-		var isQuiet = switches.Contains("QUIET");
-		
-		if (parser.CurrentState.Arguments.Count < 1)
-		{
-			await NotifyService!.Notify(executor, "Usage: @allquota <amount>");
-			return new CallState("#-1 INVALID ARGUMENTS");
-		}
-		
-		var amountArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		if (!int.TryParse(amountArg, out var amount))
-		{
-			await NotifyService!.Notify(executor, "Quota amount must be a number.");
-			return new CallState("#-1 INVALID ARGUMENTS");
-		}
-		
-		// Check if quota system is enabled
-		if (!Configuration!.CurrentValue.Limit.UseQuota)
-		{
-			await NotifyService!.Notify(executor, "The quota system is disabled on this server.");
-			return CallState.Empty;
-		}
-		
-		// TODO: When per-player quota storage is implemented:
-		// - Query all players from database
-		// - Set quota for each player
-		// - Notify players if not quiet
-		
-		await NotifyService!.Notify(executor, 
-			"Per-player quota storage is not yet implemented. All players use the default starting quota.");
-		await NotifyService.Notify(executor, 
-			$"Default starting quota is {Configuration.CurrentValue.Limit.StartingQuota}. This can be changed in configuration.");
-		
-		return CallState.Empty;
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
 	}
 
 	[SharpCommand(Name = "@DBCK", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD", MinArgs = 0)]
 	public static async ValueTask<Option<CallState>> DatabaseCheck(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// @dbck - Database consistency check
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		
-		await NotifyService!.Notify(executor, "Performing database consistency check...");
-		
-		var objects = Mediator!.CreateStream(new GetAllObjectsQuery());
-		var totalObjects = 0;
-		var issues = new List<string>();
-		
-		await foreach (var obj in objects)
-		{
-			totalObjects++;
-			
-			// Basic consistency checks
-			try
-			{
-				// Check if owner exists
-				var owner = await obj.Owner.Value;
-				if (owner == null)
-				{
-					issues.Add($"Object {obj.DBRef}: Missing owner");
-				}
-				
-				// Check if name is valid
-				if (string.IsNullOrWhiteSpace(obj.Name))
-				{
-					issues.Add($"Object {obj.DBRef}: Empty name");
-				}
-				
-				// Check if type is valid
-				if (!new[] { "PLAYER", "THING", "ROOM", "EXIT" }.Contains(obj.Type))
-				{
-					issues.Add($"Object {obj.DBRef}: Invalid type '{obj.Type}'");
-				}
-			}
-			catch (Exception ex)
-			{
-				issues.Add($"Object {obj.DBRef}: Error checking - {ex.Message}");
-			}
-		}
-		
-		await NotifyService.Notify(executor, $"Database check complete. Checked {totalObjects} objects.");
-		
-		if (issues.Count == 0)
-		{
-			await NotifyService.Notify(executor, "No consistency issues found.");
-		}
-		else
-		{
-			await NotifyService.Notify(executor, $"Found {issues.Count} issue(s):");
-			foreach (var issue in issues.Take(20)) // Limit to 20 issues
-			{
-				await NotifyService.Notify(executor, $"  {issue}");
-			}
-			if (issues.Count > 20)
-			{
-				await NotifyService.Notify(executor, $"  ... and {issues.Count - 20} more issues.");
-			}
-		}
-		
-		return new CallState(totalObjects.ToString());
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
 	}
 
 	[SharpCommand(Name = "@HIDE", Switches = ["NO", "OFF", "YES", "ON"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
@@ -830,6 +658,14 @@ public partial class Commands
 		// @HIDE command - sets/unsets the DARK flag on the executor to hide from WHO lists
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var switches = parser.CurrentState.Switches;
+		
+		// Get the DARK flag
+		var darkFlag = await Mediator!.Send(new GetObjectFlagQuery("DARK"));
+		if (darkFlag == null)
+		{
+			await NotifyService!.Notify(executor, "Error: DARK flag not found in database.");
+			return CallState.Empty;
+		}
 		
 		// Check current DARK flag state
 		var isDark = await executor.HasFlag("DARK");
@@ -851,27 +687,17 @@ public partial class Commands
 		}
 		
 		// Apply the change if needed
-		if (shouldBeDark != isDark)
+		if (shouldBeDark && !isDark)
 		{
-			var flagSpec = shouldBeDark ? "DARK" : "!DARK";
-			var result = await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, executor, flagSpec, false);
-			
-			if (result.Message?.ToPlainText() == "True")
-			{
-				if (shouldBeDark)
-				{
-					await NotifyService!.Notify(executor, "You are now hidden from the WHO list.");
-				}
-				else
-				{
-					await NotifyService!.Notify(executor, "You are no longer hidden from the WHO list.");
-				}
-			}
-			else
-			{
-				// Service returned an error
-				await NotifyService!.Notify(executor, result.Message!);
-			}
+			// Set DARK flag
+			await Mediator!.Send(new SetObjectFlagCommand(executor, darkFlag));
+			await NotifyService!.Notify(executor, "You are now hidden from the WHO list.");
+		}
+		else if (!shouldBeDark && isDark)
+		{
+			// Unset DARK flag
+			await Mediator!.Send(new UnsetObjectFlagCommand(executor, darkFlag));
+			await NotifyService!.Notify(executor, "You are no longer hidden from the WHO list.");
 		}
 		else
 		{
@@ -1386,242 +1212,18 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@SUGGEST", Switches = ["ADD", "DELETE", "LIST"], Behavior = CB.Default | CB.EqSplit,
-		MinArgs = 0, MaxArgs = 1)]
+		MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Suggest(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// @suggest <text> or @suggest/add <text> - Add a suggestion
-		// @suggest/list - List all suggestions
-		// @suggest/delete <number> - Delete a suggestion (wizard only)
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var switches = parser.CurrentState.Switches;
-		var args = parser.CurrentState.Arguments;
-		
-		// Get current suggestions data
-		var suggestionsData = await ObjectDataService!.GetExpandedServerDataAsync<SuggestionsData>() 
-			?? new SuggestionsData { Suggestions = [] };
-		
-		// @suggest/list - list all suggestions
-		if (switches.Contains("LIST"))
-		{
-			if (suggestionsData.Suggestions.Length == 0)
-			{
-				await NotifyService!.Notify(executor, "No suggestions on file.");
-				return CallState.Empty;
-			}
-			
-			var output = new System.Text.StringBuilder();
-			output.AppendLine($"Suggestions ({suggestionsData.Suggestions.Length} total):");
-			
-			for (int i = 0; i < suggestionsData.Suggestions.Length; i++)
-			{
-				var suggestion = suggestionsData.Suggestions[i];
-				output.AppendLine($"{i + 1}. [{suggestion.Timestamp:yyyy-MM-dd}] {suggestion.PlayerName}: {suggestion.Text}");
-			}
-			
-			await NotifyService.Notify(executor, output.ToString().TrimEnd());
-			return CallState.Empty;
-		}
-		
-		// @suggest/delete <number> - delete a suggestion (wizard only)
-		if (switches.Contains("DELETE"))
-		{
-			if (!await executor.IsWizard())
-			{
-				await NotifyService!.Notify(executor, "Permission denied.");
-				return new CallState(Errors.ErrorPerm);
-			}
-			
-			if (args.Count < 1)
-			{
-				await NotifyService!.Notify(executor, "Usage: @suggest/delete <number>");
-				return new CallState("#-1 INVALID ARGUMENTS");
-			}
-			
-			var numberArg = args["0"].Message!.ToPlainText();
-			if (!int.TryParse(numberArg, out var number) || number < 1 || number > suggestionsData.Suggestions.Length)
-			{
-				await NotifyService!.Notify(executor, "Invalid suggestion number.");
-				return new CallState("#-1 INVALID ARGUMENTS");
-			}
-			
-			// Remove the suggestion
-			var newSuggestions = suggestionsData.Suggestions
-				.Where((_, index) => index != number - 1)
-				.ToArray();
-			
-			var newData = suggestionsData with { Suggestions = newSuggestions };
-			await ObjectDataService!.SetExpandedServerDataAsync(newData, ignoreNull: true);
-			
-			await NotifyService.Notify(executor, $"Suggestion #{number} deleted.");
-			return CallState.Empty;
-		}
-		
-		// @suggest <text> or @suggest/add <text> - add a suggestion
-		if (args.Count < 1)
-		{
-			await NotifyService!.Notify(executor, "Usage: @suggest <text>");
-			return new CallState("#-1 INVALID ARGUMENTS");
-		}
-		
-		var suggestionText = args["0"].Message!.ToPlainText();
-		if (string.IsNullOrWhiteSpace(suggestionText))
-		{
-			await NotifyService!.Notify(executor, "Suggestion text cannot be empty.");
-			return new CallState("#-1 INVALID ARGUMENTS");
-		}
-		
-		// Add the suggestion
-		var newSuggestion = new SuggestionEntry
-		{
-			PlayerName = executor.Object().Name,
-			PlayerDBRef = executor.Object().DBRef.ToString(),
-			Text = suggestionText,
-			Timestamp = DateTimeOffset.UtcNow
-		};
-		
-		var updatedSuggestions = suggestionsData.Suggestions.Append(newSuggestion).ToArray();
-		var updatedData = suggestionsData with { Suggestions = updatedSuggestions };
-		await ObjectDataService!.SetExpandedServerDataAsync(updatedData, ignoreNull: true);
-		
-		await NotifyService.Notify(executor, "Your suggestion has been recorded. Thank you!");
-		
-		// Notify wizards if they're online
-		var connections = ConnectionService!.GetAll();
-		await foreach (var conn in connections)
-		{
-			if (conn.Ref.HasValue)
-			{
-				var connObj = await Mediator!.Send(new GetObjectNodeQuery(conn.Ref.Value));
-				if (await connObj.IsWizard())
-				{
-					await NotifyService.Notify(conn.Handle, 
-						$"[SUGGESTION] {executor.Object().Name} suggests: {suggestionText}");
-				}
-			}
-		}
-		
-		return CallState.Empty;
-	}
-	
-	// Data class for suggestions
-	public record SuggestionEntry
-	{
-		public required string PlayerName { get; init; }
-		public required string PlayerDBRef { get; init; }
-		public required string Text { get; init; }
-		public required DateTimeOffset Timestamp { get; init; }
-	}
-	
-	public record SuggestionsData
-	{
-		public required SuggestionEntry[] Suggestions { get; init; }
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
 	}
 
-	[SharpCommand(Name = "@BOOT", Switches = ["PORT", "ME", "SILENT"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
+	[SharpCommand(Name = "@BOOT", Switches = ["PORT", "ME", "SILENT"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Boot(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// @boot <player> - Disconnect a player from the game
-		// @boot/port <port#> - Disconnect a specific connection
-		// @boot/me - Disconnect self
-		// @boot/silent - No notification to player
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var switches = parser.CurrentState.Switches;
-		var isSilent = switches.Contains("SILENT");
-		
-		// Check permission - wizard only
-		if (!await executor.IsWizard())
-		{
-			await NotifyService!.Notify(executor, "Permission denied.");
-			return new CallState(Errors.ErrorPerm);
-		}
-		
-		// @boot/me - disconnect self
-		if (switches.Contains("ME"))
-		{
-			var myConnections = ConnectionService!.Get(executor.Object().DBRef);
-			await foreach (var conn in myConnections)
-			{
-				if (!isSilent)
-				{
-					await NotifyService!.Notify(conn.Handle, "You have disconnected yourself.");
-				}
-				ConnectionService.Disconnect(conn.Handle);
-			}
-			return CallState.Empty;
-		}
-		
-		// @boot/port <port#> - disconnect specific port
-		if (switches.Contains("PORT"))
-		{
-			if (parser.CurrentState.Arguments.Count < 1)
-			{
-				await NotifyService!.Notify(executor, "@BOOT/PORT requires a port number.");
-				return new CallState("#-1 INVALID ARGUMENTS");
-			}
-			
-			var portArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-			if (!long.TryParse(portArg, out var handle))
-			{
-				await NotifyService!.Notify(executor, "Invalid port number.");
-				return new CallState("#-1 INVALID ARGUMENTS");
-			}
-			
-			var conn = ConnectionService!.Get(handle);
-			if (conn == null)
-			{
-				await NotifyService!.Notify(executor, $"Port {handle} not found.");
-				return new CallState("#-1 NOT FOUND");
-			}
-			
-			if (!isSilent && conn.Ref.HasValue)
-			{
-				await NotifyService!.Notify(handle, "You have been disconnected by a wizard.");
-			}
-			
-			ConnectionService.Disconnect(handle);
-			await NotifyService.Notify(executor, $"Port {handle} disconnected.");
-			return CallState.Empty;
-		}
-		
-		// @boot <player> - disconnect player
-		if (parser.CurrentState.Arguments.Count < 1)
-		{
-			await NotifyService!.Notify(executor, "Usage: @boot <player> or @boot/port <port#> or @boot/me");
-			return new CallState("#-1 INVALID ARGUMENTS");
-		}
-		
-		var playerArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var maybePlayer = await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg);
-		
-		if (maybePlayer.IsError)
-		{
-			return maybePlayer.AsError;
-		}
-		
-		var player = maybePlayer.AsSharpObject;
-		var connections = ConnectionService!.Get(player.Object().DBRef);
-		var disconnectCount = 0;
-		
-		await foreach (var conn in connections)
-		{
-			if (!isSilent)
-			{
-				await NotifyService!.Notify(conn.Handle, "You have been disconnected by a wizard.");
-			}
-			ConnectionService.Disconnect(conn.Handle);
-			disconnectCount++;
-		}
-		
-		if (disconnectCount == 0)
-		{
-			await NotifyService.Notify(executor, $"{player.Object().Name} is not connected.");
-		}
-		else
-		{
-			await NotifyService.Notify(executor, $"{player.Object().Name} has been disconnected ({disconnectCount} connection{(disconnectCount > 1 ? "s" : "")}).");
-		}
-		
-		return CallState.Empty;
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
 	}
 
 	[SharpCommand(Name = "@DISABLE", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD",
@@ -1837,110 +1439,16 @@ public partial class Commands
 	[SharpCommand(Name = "@PURGE", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Purge(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// @purge - Purge destroyed objects from database
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		
-		// Check permission - wizard only
-		if (!await executor.IsWizard())
-		{
-			await NotifyService!.Notify(executor, "Permission denied.");
-			return new CallState(Errors.ErrorPerm);
-		}
-		
-		await NotifyService!.Notify(executor, "Checking for destroyed objects...");
-		
-		// Get all objects and check for DESTROYED flag
-		var objects = Mediator!.CreateStream(new GetAllObjectsQuery());
-		var destroyedCount = 0;
-		var destroyedObjects = new List<SharpObject>();
-		
-		await foreach (var obj in objects)
-		{
-			// Check if object has DESTROYED flag
-			var flags = obj.Flags.Value;
-			var isDestroyed = false;
-			
-			await foreach (var flag in flags)
-			{
-				if (flag.Name == "DESTROYED")
-				{
-					isDestroyed = true;
-					break;
-				}
-			}
-			
-			if (isDestroyed)
-			{
-				destroyedObjects.Add(obj);
-				destroyedCount++;
-			}
-		}
-		
-		if (destroyedCount == 0)
-		{
-			await NotifyService.Notify(executor, "No destroyed objects found.");
-			return CallState.Empty;
-		}
-		
-		await NotifyService.Notify(executor, 
-			$"Found {destroyedCount} destroyed object(s). Permanent deletion from database is not yet implemented.");
-		await NotifyService.Notify(executor, 
-			"Destroyed objects are already marked and effectively removed from the game.");
-		
-		// TODO: When permanent deletion is implemented:
-		// - For each destroyed object in destroyedObjects
-		// - Call DeleteObjectCommand(obj)
-		// - Report completion
-		
-		return new CallState(destroyedCount.ToString());
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
 	}
 
 	[SharpCommand(Name = "@SHUTDOWN", Switches = ["PANIC", "REBOOT", "PARANOID"], Behavior = CB.Default,
 		CommandLock = "FLAG^WIZARD", MinArgs = 0)]
 	public static async ValueTask<Option<CallState>> Shutdown(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// @shutdown - Shutdown the server
-		// @shutdown/panic - Shutdown without saving
-		// @shutdown/reboot - Reboot instead of shutdown
-		// @shutdown/paranoid - Extra save before shutdown
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var switches = parser.CurrentState.Switches;
-		
-		var isPanic = switches.Contains("PANIC");
-		var isReboot = switches.Contains("REBOOT");
-		var isParanoid = switches.Contains("PARANOID");
-		
-		// Broadcast shutdown message to all connections
-		var shutdownType = isReboot ? "reboot" : "shutdown";
-		var message = isPanic 
-			? $"GAME: Emergency {shutdownType} initiated by {executor.Object().Name}!"
-			: $"GAME: {shutdownType.Humanize(LetterCasing.Title)} initiated by {executor.Object().Name}.";
-		
-		if (isParanoid)
-		{
-			message += " (Saving database...)";
-		}
-		
-		var connections = ConnectionService!.GetAll();
-		await foreach (var conn in connections)
-		{
-			await NotifyService!.Notify(conn.Handle, message);
-		}
-		
-		await NotifyService.Notify(executor, 
-			"Shutdown functionality is not yet fully implemented in SharpMUSH.");
-		await NotifyService.Notify(executor, 
-			"In a containerized environment, shutdown should be handled externally.");
-		await NotifyService.Notify(executor, 
-			"Consider using container orchestration to restart the service.");
-		
-		// TODO: When application lifecycle management is implemented:
-		// - If paranoid, trigger explicit database save
-		// - Send shutdown signal to application host
-		// - If reboot, signal for restart
-		// - Close all connections gracefully
-		
-		return CallState.Empty;
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
 	}
 
 	[SharpCommand(Name = "@UPTIME", Switches = ["MORTAL"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
@@ -1995,96 +1503,11 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@CHOWNALL", Switches = ["PRESERVE", "THINGS", "ROOMS", "EXITS"],
-		Behavior = CB.Default | CB.EqSplit, CommandLock = "FLAG^WIZARD", MinArgs = 2, MaxArgs = 2)]
+		Behavior = CB.Default | CB.EqSplit, CommandLock = "FLAG^WIZARD", MinArgs = 0)]
 	public static async ValueTask<Option<CallState>> Chown(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// @chownall <old-owner>=<new-owner> - Transfer ownership of all objects
-		// @chownall/things - Only transfer things
-		// @chownall/rooms - Only transfer rooms
-		// @chownall/exits - Only transfer exits
-		// @chownall/preserve - Preserve zone and parent pointers
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var switches = parser.CurrentState.Switches;
-		var args = parser.CurrentState.Arguments;
-		
-		if (args.Count < 2)
-		{
-			await NotifyService!.Notify(executor, "Usage: @chownall <old-owner>=<new-owner>");
-			return new CallState("#-1 INVALID ARGUMENTS");
-		}
-		
-		var oldOwnerArg = args["0"].Message!.ToPlainText();
-		var newOwnerArg = args["1"].Message!.ToPlainText();
-		
-		// Locate old owner
-		var maybeOldOwner = await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallState(
-			parser, executor, executor, oldOwnerArg);
-		if (maybeOldOwner.IsError)
-		{
-			return maybeOldOwner.AsError;
-		}
-		
-		// Locate new owner
-		var maybeNewOwner = await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallState(
-			parser, executor, executor, newOwnerArg);
-		if (maybeNewOwner.IsError)
-		{
-			return maybeNewOwner.AsError;
-		}
-		
-		var oldOwner = maybeOldOwner.AsSharpObject.AsPlayer;
-		var newOwner = maybeNewOwner.AsSharpObject.AsPlayer;
-		
-		// Determine which object types to transfer
-		var transferThings = switches.Contains("THINGS") || (!switches.Contains("ROOMS") && !switches.Contains("EXITS"));
-		var transferRooms = switches.Contains("ROOMS") || (!switches.Contains("THINGS") && !switches.Contains("EXITS"));
-		var transferExits = switches.Contains("EXITS") || (!switches.Contains("THINGS") && !switches.Contains("ROOMS"));
-		
-		// If specific type switches were used, only transfer those types
-		if (switches.Contains("THINGS") || switches.Contains("ROOMS") || switches.Contains("EXITS"))
-		{
-			transferThings = switches.Contains("THINGS");
-			transferRooms = switches.Contains("ROOMS");
-			transferExits = switches.Contains("EXITS");
-		}
-		
-		await NotifyService!.Notify(executor, $"Transferring ownership from {oldOwner.Object.Name} to {newOwner.Object.Name}...");
-		
-		var objects = Mediator!.CreateStream(new GetAllObjectsQuery());
-		var transferCount = 0;
-		
-		await foreach (var obj in objects)
-		{
-			// Check if this object is owned by old owner
-			var owner = await obj.Owner.Value;
-			if (owner.Object.DBRef != oldOwner.Object.DBRef)
-			{
-				continue;
-			}
-			
-			// Check if object type matches our filter
-			var shouldTransfer = obj.Type switch
-			{
-				"THING" => transferThings,
-				"ROOM" => transferRooms,
-				"EXIT" => transferExits,
-				"PLAYER" => false, // Never transfer players
-				_ => false
-			};
-			
-			if (!shouldTransfer)
-			{
-				continue;
-			}
-			
-			// Transfer ownership
-			var anyObj = AnySharpObject.NewObject(obj);
-			await Mediator.Send(new SetObjectOwnerCommand(anyObj, newOwner));
-			transferCount++;
-		}
-		
-		await NotifyService.Notify(executor, $"Transferred ownership of {transferCount} object(s).");
-		return new CallState(transferCount.ToString());
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
 	}
 
 	[SharpCommand(Name = "@DUMP", Switches = ["PARANOID", "DEBUG", "NOFORK"], Behavior = CB.Default,
@@ -2105,7 +1528,7 @@ public partial class Commands
 		// TODO: Validate Name and Passwords
 		var defaultHome = Configuration!.CurrentValue.Database.DefaultHome;
 		var defaultHomeDbref = new DBRef((int)defaultHome);
-		var startingQuota = (int)Configuration.CurrentValue.Limit.StartingQuota;
+		var startingQuota = (int)Configuration!.CurrentValue.Limit.StartingQuota;
 		var args = parser.CurrentState.Arguments;
 		var name = MModule.plainText(args["0"].Message!);
 		var password = MModule.plainText(args["1"].Message!);
@@ -2116,95 +1539,11 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@QUOTA", Switches = ["ALL", "SET"], Behavior = CB.Default | CB.EqSplit, MinArgs = 0,
-		MaxArgs = 2)]
+		MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Quota(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// @quota [<player>] - Display quota for player
-		// @quota/set <player>=<amount> - Set quota for player
-		// @quota/all - Display quota for all players
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var switches = parser.CurrentState.Switches;
-		var args = parser.CurrentState.Arguments;
-		
-		// Check if quota system is enabled
-		if (!Configuration!.CurrentValue.Limit.UseQuota)
-		{
-			await NotifyService!.Notify(executor, "The quota system is disabled on this server.");
-			return CallState.Empty;
-		}
-		
-		// @quota/all - show all player quotas
-		if (switches.Contains("ALL"))
-		{
-			// Check permission - wizard only
-			if (!await executor.IsWizard())
-			{
-				await NotifyService!.Notify(executor, "Permission denied.");
-				return new CallState(Errors.ErrorPerm);
-			}
-			
-			await NotifyService!.Notify(executor, "Quota system is enabled but per-player quota tracking is not yet fully implemented.");
-			await NotifyService.Notify(executor, $"Starting quota: {Configuration.CurrentValue.Limit.StartingQuota}");
-			await NotifyService.Notify(executor, "Use the quota() function to check individual player quotas.");
-			return CallState.Empty;
-		}
-		
-		// @quota/set <player>=<amount> - set quota
-		if (switches.Contains("SET"))
-		{
-			// Check permission - wizard only
-			if (!await executor.IsWizard())
-			{
-				await NotifyService!.Notify(executor, "Permission denied.");
-				return new CallState(Errors.ErrorPerm);
-			}
-			
-			if (args.Count < 2)
-			{
-				await NotifyService!.Notify(executor, "Usage: @quota/set <player>=<amount>");
-				return new CallState("#-1 INVALID ARGUMENTS");
-			}
-			
-			var playerArg = args["0"].Message!.ToPlainText();
-			var amountArg = args["1"].Message!.ToPlainText();
-			
-			if (!int.TryParse(amountArg, out var amount))
-			{
-				await NotifyService!.Notify(executor, "Quota amount must be a number.");
-				return new CallState("#-1 INVALID ARGUMENTS");
-			}
-			
-			var maybePlayer = await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg);
-			if (maybePlayer.IsError)
-			{
-				return maybePlayer.AsError;
-			}
-			
-			// TODO: Store quota in player data when per-player quota storage is implemented
-			await NotifyService!.Notify(executor, 
-				$"Per-player quota storage is not yet implemented. Default quota is {Configuration.CurrentValue.Limit.StartingQuota}.");
-			return CallState.Empty;
-		}
-		
-		// @quota [<player>] - display quota
-		var targetPlayer = executor;
-		if (args.Count > 0)
-		{
-			var playerArg = args["0"].Message!.ToPlainText();
-			var maybePlayer = await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg);
-			if (maybePlayer.IsError)
-			{
-				return maybePlayer.AsError;
-			}
-			targetPlayer = maybePlayer.AsSharpObject;
-		}
-		
-		// Display quota info (currently using default values)
-		var startingQuota = Configuration.CurrentValue.Limit.StartingQuota;
-		await NotifyService!.Notify(executor, 
-			$"{targetPlayer.Object().Name}'s quota: 0 objects owned, {startingQuota} quota available (per-player quota tracking not yet implemented).");
-		
-		return CallState.Empty;
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
 	}
 
 	/// <summary>
@@ -2397,64 +1736,12 @@ public partial class Commands
 		return new CallState(shout);
 	}
 
-	[SharpCommand(Name = "@CHZONEALL", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit, MinArgs = 2,
-		MaxArgs = 2)]
+	[SharpCommand(Name = "@CHZONEALL", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit, MinArgs = 0,
+		MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> ChangeOwnerZoneAll(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// @chzoneall <old-zone>=<new-zone> - Change zone (parent) for all objects
-		// Note: In MUSH terminology, zone is typically the parent object
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var args = parser.CurrentState.Arguments;
-		
-		// Check permission - wizard only
-		if (!await executor.IsWizard())
-		{
-			await NotifyService!.Notify(executor, "Permission denied.");
-			return new CallState(Errors.ErrorPerm);
-		}
-		
-		if (args.Count < 2)
-		{
-			await NotifyService!.Notify(executor, "Usage: @chzoneall <old-zone>=<new-zone>");
-			return new CallState("#-1 INVALID ARGUMENTS");
-		}
-		
-		var oldZoneArg = args["0"].Message!.ToPlainText();
-		var newZoneArg = args["1"].Message!.ToPlainText();
-		
-		// Locate old zone
-		var maybeOldZone = await LocateService!.LocateAndNotifyIfInvalid(
-			parser, executor, executor, oldZoneArg, LocateFlags.All);
-		if (!maybeOldZone.IsValid())
-		{
-			return CallState.Empty;
-		}
-		
-		// Locate new zone
-		var maybeNewZone = await LocateService!.LocateAndNotifyIfInvalid(
-			parser, executor, executor, newZoneArg, LocateFlags.All);
-		if (!maybeNewZone.IsValid())
-		{
-			return CallState.Empty;
-		}
-		
-		var oldZone = maybeOldZone.WithoutError().Known();
-		var newZone = maybeNewZone.WithoutError().Known();
-		
-		await NotifyService!.Notify(executor, 
-			$"Zone (parent) changing functionality is not yet fully implemented in SharpMUSH.");
-		await NotifyService.Notify(executor, 
-			$"Would change zone from {oldZone.Object().Name} to {newZone.Object().Name}.");
-		await NotifyService.Notify(executor, 
-			"Individual object @parent commands are supported. Use @parent <object>=<new-zone> for specific objects.");
-		
-		// TODO: When parent changing is fully implemented via Mediator:
-		// - Get all objects from database
-		// - For each object where Parent == oldZone
-		// - Call SetObjectParentCommand(obj, newZone)
-		// - Count and report changes
-		
-		return CallState.Empty;
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
 	}
 
 	[SharpCommand(Name = "@ENABLE", Switches = [], Behavior = CB.Default | CB.NoGagged, CommandLock = "FLAG^WIZARD",
@@ -2466,158 +1753,25 @@ public partial class Commands
 		return await ConfigSetHelper(parser, isEnable: true);
 	}
 
-	[SharpCommand(Name = "@KICK", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD", MinArgs = 1, MaxArgs = 1)]
+	[SharpCommand(Name = "@KICK", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD", MinArgs = 0)]
 	public static async ValueTask<Option<CallState>> Kick(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// @kick <player> - Disconnect a player (same as @boot)
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		
-		if (parser.CurrentState.Arguments.Count < 1)
-		{
-			await NotifyService!.Notify(executor, "Usage: @kick <player>");
-			return new CallState("#-1 INVALID ARGUMENTS");
-		}
-		
-		var playerArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var maybePlayer = await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg);
-		
-		if (maybePlayer.IsError)
-		{
-			return maybePlayer.AsError;
-		}
-		
-		var player = maybePlayer.AsSharpObject;
-		var connections = ConnectionService!.Get(player.Object().DBRef);
-		var disconnectCount = 0;
-		
-		await foreach (var conn in connections)
-		{
-			await NotifyService!.Notify(conn.Handle, "You have been kicked off the game!");
-			ConnectionService.Disconnect(conn.Handle);
-			disconnectCount++;
-		}
-		
-		if (disconnectCount == 0)
-		{
-			await NotifyService.Notify(executor, $"{player.Object().Name} is not connected.");
-		}
-		else
-		{
-			await NotifyService.Notify(executor, $"{player.Object().Name} has been kicked off the game ({disconnectCount} connection{(disconnectCount > 1 ? "s" : "")}).");
-		}
-		
-		return CallState.Empty;
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
 	}
 
-	[SharpCommand(Name = "@POLL", Switches = ["CLEAR"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
+	[SharpCommand(Name = "@POLL", Switches = ["CLEAR"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Poll(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// @poll - Display current poll
-		// @poll <text> - Set a new poll (wizard only)
-		// @poll/clear - Clear current poll (wizard only)
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var switches = parser.CurrentState.Switches;
-		var args = parser.CurrentState.Arguments;
-		
-		// Get current poll data
-		var pollData = await ObjectDataService!.GetExpandedServerDataAsync<PollData>() 
-			?? new PollData { PollText = null, SetBy = null, SetAt = null };
-		
-		// @poll/clear - clear the poll (wizard only)
-		if (switches.Contains("CLEAR"))
-		{
-			if (!await executor.IsWizard())
-			{
-				await NotifyService!.Notify(executor, "Permission denied.");
-				return new CallState(Errors.ErrorPerm);
-			}
-			
-			var clearedData = new PollData { PollText = null, SetBy = null, SetAt = null };
-			await ObjectDataService!.SetExpandedServerDataAsync(clearedData, ignoreNull: true);
-			
-			await NotifyService!.Notify(executor, "Poll cleared.");
-			return CallState.Empty;
-		}
-		
-		// @poll <text> - set a new poll (wizard only)
-		if (args.Count > 0)
-		{
-			if (!await executor.IsWizard())
-			{
-				await NotifyService!.Notify(executor, "Permission denied.");
-				return new CallState(Errors.ErrorPerm);
-			}
-			
-			var pollText = args["0"].Message!.ToPlainText();
-			if (string.IsNullOrWhiteSpace(pollText))
-			{
-				await NotifyService!.Notify(executor, "Poll text cannot be empty.");
-				return new CallState("#-1 INVALID ARGUMENTS");
-			}
-			
-			var newData = new PollData 
-			{ 
-				PollText = pollText,
-				SetBy = executor.Object().Name,
-				SetAt = DateTimeOffset.UtcNow
-			};
-			
-			await ObjectDataService!.SetExpandedServerDataAsync(newData, ignoreNull: true);
-			await NotifyService.Notify(executor, "Poll set.");
-			
-			// Broadcast to all connected players
-			var connections = ConnectionService!.GetAll();
-			await foreach (var conn in connections)
-			{
-				await NotifyService.Notify(conn.Handle, 
-					$"[POLL] {executor.Object().Name} asks: {pollText}");
-			}
-			
-			return CallState.Empty;
-		}
-		
-		// @poll - display current poll
-		if (string.IsNullOrEmpty(pollData.PollText))
-		{
-			await NotifyService!.Notify(executor, "There is no poll currently set.");
-			return CallState.Empty;
-		}
-		
-		var setInfo = pollData.SetBy != null && pollData.SetAt.HasValue
-			? $" (Set by {pollData.SetBy} on {pollData.SetAt.Value:yyyy-MM-dd HH:mm})"
-			: "";
-		
-		await NotifyService.Notify(executor, $"Current poll: {pollData.PollText}{setInfo}");
-		return CallState.Empty;
-	}
-	
-	// Data class for polls
-	public record PollData
-	{
-		public string? PollText { get; init; }
-		public string? SetBy { get; init; }
-		public DateTimeOffset? SetAt { get; init; }
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
 	}
 
 	[SharpCommand(Name = "@READCACHE", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD", MinArgs = 0)]
 	public static async ValueTask<Option<CallState>> ReadCache(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// @readcache - Reload help/text cache files
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		
-		await NotifyService!.Notify(executor, "Cache reloading functionality is not yet implemented in SharpMUSH.");
-		await NotifyService.Notify(executor, 
-			"Help files and text caches are loaded at server startup.");
-		await NotifyService.Notify(executor, 
-			"To reload caches, restart the server or use the admin interface if available.");
-		
-		// TODO: When cache management is implemented:
-		// - Reload help file cache
-		// - Reload text file cache
-		// - Reload any other cached resources
-		// - Report what was reloaded
-		
-		return CallState.Empty;
+		await ValueTask.CompletedTask;
+		throw new NotImplementedException();
 	}
 
 	[SharpCommand(Name = "@WIZMOTD", Switches = ["CLEAR"], Behavior = CB.Default, CommandLock = "FLAG^WIZARD",
