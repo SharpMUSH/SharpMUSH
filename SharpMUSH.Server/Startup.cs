@@ -1,6 +1,7 @@
 ﻿using Core.Arango;
 using Core.Arango.Serilog;
 using Core.Arango.Transport;
+using MassTransit;
 using Mediator;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -84,7 +85,7 @@ public class Startup(ArangoConfiguration config, string colorFile)
 		);
 		services.AddSingleton<IPasswordService, PasswordService>();
 		services.AddSingleton<IPermissionService, PermissionService>();
-		services.AddSingleton<INotifyService, NotifyService>();
+		services.AddSingleton<INotifyService, SharpMUSH.Server.Services.MessageQueueNotifyService>();
 		services.AddSingleton<ILocateService, LocateService>();
 		services.AddSingleton<IMoveService, MoveService>();
 		services.AddSingleton<IExpandedObjectDataService, ExpandedObjectDataService>();
@@ -119,6 +120,38 @@ public class Startup(ArangoConfiguration config, string colorFile)
 		services.AddSingleton<IOptionsWrapper<ColorsOptions>, Library.Services.OptionsWrapper<ColorsOptions>>();
 		services.AddHttpClient();
 		services.AddMediator();
+		
+		// Configure MassTransit for message queue integration
+		var rabbitHost = Environment.GetEnvironmentVariable("RABBITMQ_HOST") ?? "localhost";
+		var rabbitUser = Environment.GetEnvironmentVariable("RABBITMQ_USER") ?? "sharpmush";
+		var rabbitPass = Environment.GetEnvironmentVariable("RABBITMQ_PASSWORD") ?? "sharpmush_dev_password";
+		
+		services.AddMassTransit(x =>
+		{
+			// Register consumers for input messages from ConnectionServer
+			x.AddConsumer<SharpMUSH.Server.Consumers.TelnetInputConsumer>();
+			x.AddConsumer<SharpMUSH.Server.Consumers.GMCPSignalConsumer>();
+			x.AddConsumer<SharpMUSH.Server.Consumers.MSDPUpdateConsumer>();
+			x.AddConsumer<SharpMUSH.Server.Consumers.NAWSUpdateConsumer>();
+			x.AddConsumer<SharpMUSH.Server.Consumers.ConnectionEstablishedConsumer>();
+			x.AddConsumer<SharpMUSH.Server.Consumers.ConnectionClosedConsumer>();
+
+			x.UsingRabbitMq((context, cfg) =>
+			{
+				cfg.Host(rabbitHost, "/", h =>
+				{
+					h.Username(rabbitUser);
+					h.Password(rabbitPass);
+				});
+
+				// Configure message retry
+				cfg.UseMessageRetry(r => r.Interval(3, TimeSpan.FromSeconds(5)));
+
+				// Configure endpoints for consumers
+				cfg.ConfigureEndpoints(context);
+			});
+		});
+		
 		services.AddFusionCache();
 		services.AddArango((x, arango) =>
 		{
