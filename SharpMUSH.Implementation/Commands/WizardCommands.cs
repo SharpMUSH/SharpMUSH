@@ -1643,8 +1643,21 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var name = MModule.plainText(args["0"].Message!);
 		var password = MModule.plainText(args["1"].Message!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		var player = await Mediator!.Send(new CreatePlayerCommand(name, password, defaultHomeDbref, defaultHomeDbref, startingQuota));
+
+		// Trigger PLAYER`CREATE event
+		// PennMUSH spec: player`create (objid, name, how, descriptor, email)
+		await EventService!.TriggerEventAsync(
+			parser,
+			"PLAYER`CREATE",
+			executor.Object().DBRef, // Enactor is the wizard who did @pcreate
+			player.ToString(),
+			name,
+			"pcreate",
+			"", // descriptor (not applicable for @pcreate)
+			""); // email (not applicable for @pcreate)
 
 		return new CallState(player.ToString());
 	}
