@@ -1,4 +1,5 @@
-﻿using OneOf.Types;
+﻿using Microsoft.Extensions.Logging;
+using OneOf.Types;
 using SharpMUSH.Implementation.Commands.ChannelCommand;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
@@ -360,12 +361,33 @@ public partial class Commands
 			return new CallState("#-1 PERMISSION DENIED");
 		}
 		
-		// Log management functionality not yet implemented
-		// This would typically rotate, trim, or wipe various log files
-		var action = switches.FirstOrDefault() ?? "CHECK";
+		// Determine log type and action
+		var logTypes = new[] { "CMD", "CONN", "ERR", "TRACE", "WIZ" };
+		var actions = new[] { "ROTATE", "TRIM", "WIPE", "CHECK" };
 		
-		await NotifyService!.Notify(executor, $"@LOGWIPE/{action}: Log management not yet implemented.");
-		await NotifyService!.Notify(executor, "This command would manage server log files (command logs, connection logs, error logs, etc.)");
+		var specifiedLogType = switches.FirstOrDefault(s => logTypes.Contains(s));
+		var specifiedAction = switches.FirstOrDefault(s => actions.Contains(s)) ?? "CHECK";
+		
+		if (specifiedLogType == null && specifiedAction == "CHECK")
+		{
+			// Show current log status
+			await NotifyService!.Notify(executor, "Log Management Status:");
+			await NotifyService!.Notify(executor, "  SharpMUSH uses .NET logging infrastructure");
+			await NotifyService!.Notify(executor, "  Logs are managed by configured logging providers");
+			await NotifyService!.Notify(executor, "  Available log types: CMD, CONN, ERR, TRACE, WIZ");
+			await NotifyService!.Notify(executor, "  Available actions: ROTATE, TRIM, WIPE");
+			await NotifyService!.Notify(executor, "  Note: Direct log file manipulation not yet implemented");
+			Logger?.LogInformation("@LOGWIPE/CHECK executed by {Executor}", executor.Object().Name);
+		}
+		else
+		{
+			var logDesc = specifiedLogType ?? "all logs";
+			await NotifyService!.Notify(executor, $"@LOGWIPE/{specifiedAction}: Would {specifiedAction.ToLower()} {logDesc}");
+			await NotifyService!.Notify(executor, "Direct log file manipulation not yet implemented.");
+			await NotifyService!.Notify(executor, "Configure log rotation through appsettings.json or hosting provider.");
+			Logger?.LogWarning("@LOGWIPE/{Action} requested for {LogType} by {Executor} - not implemented", 
+				specifiedAction, logDesc, executor.Object().Name);
+		}
 		
 		return CallState.Empty;
 	}
@@ -524,12 +546,61 @@ public partial class Commands
 		}
 		
 		var switches = parser.CurrentState.Switches;
-		var scope = switches.Contains("ALL") ? "database" : (switches.Contains("ME") ? "owned objects" : "database");
+		var checkAll = switches.Contains("ALL");
+		var checkOwned = switches.Contains("ME");
 		
-		// Database integrity check not yet implemented
-		await NotifyService!.Notify(executor, $"@WCHECK: Checking {scope}...");
-		await NotifyService!.Notify(executor, "Database integrity checking not yet implemented.");
-		await NotifyService!.Notify(executor, "This command would scan for orphaned objects, circular references, broken exits, etc.");
+		await NotifyService!.Notify(executor, "@WCHECK: Starting database integrity check...");
+		
+		var issues = new List<string>();
+		var checkedCount = 0;
+		
+		// Get all objects to check (or just owned ones)
+		// For now, we'll do a basic check that can be expanded
+		if (checkOwned)
+		{
+			await NotifyService!.Notify(executor, "Checking objects owned by you...");
+			// TODO: Implement owned object checking when we have efficient queries
+			issues.Add("Owned object checking: Implementation pending");
+		}
+		else
+		{
+			await NotifyService!.Notify(executor, "Checking database integrity...");
+			
+			// Basic checks that could be implemented:
+			// 1. Verify all dbrefs are valid
+			// 2. Check for circular parent chains
+			// 3. Check for orphaned contents
+			// 4. Verify exit destinations exist
+			// 5. Check lock syntax
+			
+			issues.Add("Comprehensive database scanning: Implementation pending");
+			issues.Add("Consider implementing:");
+			issues.Add("  - Orphaned object detection");
+			issues.Add("  - Circular reference checking");
+			issues.Add("  - Broken exit detection");
+			issues.Add("  - Invalid lock verification");
+			issues.Add("  - Zone integrity checks");
+		}
+		
+		// Report results
+		await NotifyService!.Notify(executor, "---");
+		await NotifyService!.Notify(executor, $"@WCHECK Results: Checked {checkedCount} objects");
+		
+		if (issues.Count > 0)
+		{
+			await NotifyService!.Notify(executor, "Notes/Pending Features:");
+			foreach (var issue in issues)
+			{
+				await NotifyService!.Notify(executor, $"  {issue}");
+			}
+		}
+		else
+		{
+			await NotifyService!.Notify(executor, "No issues found.");
+		}
+		
+		Logger?.LogInformation("@WCHECK executed by {Executor}, scope: {Scope}", 
+			executor.Object().Name, checkOwned ? "owned" : "all");
 		
 		return CallState.Empty;
 	}
