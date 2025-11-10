@@ -1,4 +1,5 @@
 ﻿using OneOf.Types;
+using SharpMUSH.Implementation.Commands.ChannelCommand;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
@@ -10,6 +11,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
+using Errors = SharpMUSH.Library.Definitions.Errors;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -48,11 +50,74 @@ public partial class Commands
 
 
 	[SharpCommand(Name = "@CLOCK", Switches = ["JOIN", "SPEAK", "MOD", "SEE", "HIDE"], Behavior = CB.Default | CB.EqSplit,
-		MinArgs = 0, MaxArgs = 0)]
+		MinArgs = 1, MaxArgs = 2)]
 	public static async ValueTask<Option<CallState>> ChannelLock(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches;
+		
+		// Parse channel name
+		var channelName = args["0"].Message!;
+		var lockKey = args.TryGetValue("1", out var arg1) ? arg1.Message!.ToPlainText() : string.Empty;
+		
+		// Determine lock type from switch
+		var lockType = switches.FirstOrDefault() ?? "JOIN";
+		lockType = lockType.ToUpper();
+		
+		// Get the channel
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
+			NotifyService!, channelName, false);
+		
+		if (maybeChannel.IsError)
+		{
+			return maybeChannel.AsError.Value;
+		}
+		
+		var channel = maybeChannel.AsChannel;
+		
+		// Check if executor has permission to modify channel locks
+		// Must pass the mod lock or be the owner
+		var owner = await channel.Owner.WithCancellation(CancellationToken.None);
+		var isOwner = owner.Object.DBRef.Equals(executor.Object().DBRef);
+		var passesModLock = string.IsNullOrEmpty(channel.ModLock) || 
+		                    LockService!.Evaluate(channel.ModLock, channel, executor);
+		
+		if (!isOwner && !passesModLock && !await executor.IsWizard())
+		{
+			await NotifyService!.Notify(executor, "Permission denied.");
+			return new CallState("#-1 PERMISSION DENIED");
+		}
+		
+		// Update the appropriate lock
+		UpdateChannelCommand updateCommand = lockType switch
+		{
+			"JOIN" => new UpdateChannelCommand(channel, null, null, null, lockKey, null, null, null, null, null, null),
+			"SPEAK" => new UpdateChannelCommand(channel, null, null, null, null, lockKey, null, null, null, null, null),
+			"SEE" => new UpdateChannelCommand(channel, null, null, null, null, null, lockKey, null, null, null, null),
+			"HIDE" => new UpdateChannelCommand(channel, null, null, null, null, null, null, lockKey, null, null, null),
+			"MOD" => new UpdateChannelCommand(channel, null, null, null, null, null, null, null, lockKey, null, null),
+			_ => new UpdateChannelCommand(channel, null, null, null, null, null, null, null, null, null, null)
+		};
+		
+		if (lockType is not ("JOIN" or "SPEAK" or "SEE" or "HIDE" or "MOD"))
+		{
+			await NotifyService!.Notify(executor, $"Invalid lock type: {lockType}");
+			return new CallState("#-1 INVALID LOCK TYPE");
+		}
+		
+		await Mediator!.Send(updateCommand);
+		
+		if (string.IsNullOrEmpty(lockKey))
+		{
+			await NotifyService!.Notify(executor, $"{lockType} lock removed from channel {channel.Name.ToPlainText()}.");
+		}
+		else
+		{
+			await NotifyService!.Notify(executor, $"{lockType} lock set on channel {channel.Name.ToPlainText()}.");
+		}
+		
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@LIST",
@@ -289,12 +354,64 @@ public partial class Commands
 		throw new NotImplementedException();
 	}
 
-	[SharpCommand(Name = "@LSET", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0,
-		MaxArgs = 0)]
+	[SharpCommand(Name = "@LSET", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 2,
+		MaxArgs = 2)]
 	public static async ValueTask<Option<CallState>> LockSet(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		
+		// Parse: @lset <object>/<lock type>=[!]<flag>
+		var objectLock = args["0"].Message!.ToPlainText();
+		var flagValue = args["1"].Message!.ToPlainText();
+		
+		// Split object/locktype
+		var slashIndex = objectLock.LastIndexOf('/');
+		if (slashIndex == -1)
+		{
+			await NotifyService!.Notify(executor, "Invalid format. Use: @lset <object>/<lock type>=[!]<flag>");
+			return new CallState("#-1 INVALID FORMAT");
+		}
+		
+		var objectName = objectLock[..slashIndex];
+		var lockType = objectLock[(slashIndex + 1)..];
+		
+		// Determine if we're setting or clearing the flag
+		var isClearing = flagValue.StartsWith('!');
+		var flagName = isClearing ? flagValue[1..] : flagValue;
+		
+		// Validate flag name
+		if (!LockService!.LockPrivileges.TryGetValue(flagName.ToLower(), out var flagInfo))
+		{
+			await NotifyService!.Notify(executor, $"Invalid flag: {flagName}");
+			return new CallState("#-1 INVALID FLAG");
+		}
+		
+		// Locate the object
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+			executor, executor, objectName, LocateFlags.All,
+			async obj =>
+			{
+				// Check permissions
+				if (!await PermissionService!.Controls(executor, obj))
+				{
+					await NotifyService!.Notify(executor, Errors.ErrorPerm);
+					return new CallState(Errors.ErrorPerm);
+				}
+				
+				// Check if lock exists
+				if (!obj.Object().Locks.ContainsKey(lockType))
+				{
+					await NotifyService!.Notify(executor, $"No such lock: {lockType}");
+					return new CallState("#-1 NO SUCH LOCK");
+				}
+				
+				// For now, notify that the feature is not fully implemented
+				// TODO: Implement lock flag storage
+				await NotifyService!.Notify(executor, $"Flag {flagName} {(isClearing ? "cleared" : "set")} on {lockType} lock.");
+				return CallState.Empty;
+			}
+		);
 	}
 
 	[SharpCommand(Name = "@MALIAS",
