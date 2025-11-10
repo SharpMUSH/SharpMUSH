@@ -65,7 +65,8 @@ public static class DatabaseConstants
 	public const string GraphFlags = "graph_flags";
 	/// <summary>
 	/// Describes the relationship between realized objects and their attributes, and attributes and their branches.
-	/// TODO: This should be objects and attributes, but arangoDb gives trouble for some reason.
+	/// TECH DEBT: This would have preferably been objects and attributes, but arangoDb gives trouble for some reason.
+	/// This can be done with a migration in the future if this is figured out. But for now, this works.
 	/// <see cref="verticesAll"/> -> <see cref="HasAttribute"/> -> <see cref="Attributes"/>
 	/// <see cref="Attributes"/> -> <see cref="HasAttribute"/> -> <see cref="Attributes"/>
 	/// </summary>
