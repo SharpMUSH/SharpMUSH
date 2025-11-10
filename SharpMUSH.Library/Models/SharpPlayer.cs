@@ -24,4 +24,9 @@ public class SharpPlayer
 	public required AsyncLazy<AnySharpContainer> Home { get; set; }
 
 	public required string PasswordHash { get; set; }
+	
+	/// <summary>
+	/// The player's build quota - maximum number of objects they can own.
+	/// </summary>
+	public required int Quota { get; set; }
 }
