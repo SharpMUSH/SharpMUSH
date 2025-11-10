@@ -213,10 +213,8 @@ public partial class Commands
 
 						var result = await ManipulateSharpObjectService!.SetOwner(executor, obj, newOwnerObj.AsPlayer, true);
 						
-						// Clear privileged flags and powers unless /preserve is used
 						if (!preserve)
 						{
-							// Clear WIZARD, ROYALTY flags if present
 							if (await obj.HasFlag("WIZARD"))
 							{
 								await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "!WIZARD", false);
@@ -225,7 +223,6 @@ public partial class Commands
 							{
 								await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "!ROYALTY", false);
 							}
-							// Set HALT flag
 							await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "HALT", false);
 						}
 
@@ -254,30 +251,25 @@ public partial class Commands
 					return Errors.ErrorPerm;
 				}
 
-				// Check for SAFE flag
 				if (await obj.HasFlag("SAFE") && !override_)
 				{
 					await NotifyService!.Notify(executor, "That object is SAFE. Use @nuke to override.");
 					return Errors.ErrorSafeObject;
 				}
 
-				// Check if already marked GOING
 				if (await obj.HasFlag("GOING"))
 				{
-					// Mark as GOING_TWICE for immediate destruction
 					await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "GOING_TWICE", false);
 					await NotifyService!.Notify(executor, $"Destroyed: {obj.Object().Name}");
 					
-					// NOTE: Actual object deletion from database requires a garbage collection system
-					// Objects marked GOING_TWICE will be cleaned up by a future purge process
+					// NOTE: Actual object deletion from database requires a garbage collection system.
+					// Objects marked GOING_TWICE will be cleaned up by a future purge process.
 					return CallState.Empty;
 				}
 
-				// Mark as GOING
 				await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "GOING", false);
 				await NotifyService!.Notify(executor, $"Marked for destruction: {obj.Object().Name}");
 				
-				// Trigger @adestroy attribute if it exists
 				try
 				{
 					await AttributeService!.EvaluateAttributeFunctionAsync(
@@ -315,24 +307,19 @@ public partial class Commands
 				// Handle different link types
 				if (exitObj.IsExit)
 				{
-					// Link exit to destination
-					// Handle special cases: "home" and "variable"
 					if (destName.Equals(LinkTypeHome, StringComparison.InvariantCultureIgnoreCase))
 					{
-						// Set special attribute to mark exit as home-linked
 						await AttributeService!.SetAttributeAsync(executor, exitObj, AttrLinkType, MModule.single(LinkTypeHome));
 						await NotifyService!.Notify(executor, "Linked to home.");
 						return CallState.Empty;
 					}
 					else if (destName.Equals(LinkTypeVariable, StringComparison.InvariantCultureIgnoreCase))
 					{
-						// Set special attribute to mark exit as variable
 						await AttributeService!.SetAttributeAsync(executor, exitObj, AttrLinkType, MModule.single(LinkTypeVariable));
 						await NotifyService!.Notify(executor, "Linked to variable.");
 						return CallState.Empty;
 					}
 					
-					// Link to regular room destination
 					return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 						executor, executor, destName, LocateFlags.All,
 						async destObj =>
@@ -345,13 +332,10 @@ public partial class Commands
 
 							var destinationRoom = destObj.AsRoom;
 							
-							// Check permission to link to destination
-							// Per PennMUSH: Must own/control the room OR room must be LINK_OK
 							bool canLink = await PermissionService!.Controls(executor, destObj);
 							
 							if (!canLink)
 							{
-								// Check if destination has LINK_OK flag
 								var destFlags = await destinationRoom.Object.Flags.Value.ToArrayAsync();
 								var hasLinkOk = destFlags.Any(f => f.Name.Equals("LINK_OK", StringComparison.OrdinalIgnoreCase));
 								
@@ -362,14 +346,11 @@ public partial class Commands
 								}
 							}
 							
-							// TODO: Check if exit is unlinked and check @lock/link
-							// TODO: If linking someone else's exit, @chown it and set HALT
-							// TODO: Charge link cost (usually 1 penny)
+							// TODO: Check if exit is unlinked and check @lock/link, if linking someone else's exit @chown it and set HALT,
+							// and charge link cost (usually 1 penny).
 
-							// Clear any special link type attribute
 							await AttributeService!.SetAttributeAsync(executor, exitObj, AttrLinkType, MModule.empty());
 							
-							// Link the exit
 							await Mediator!.Send(new LinkExitCommand(exitObj.AsExit, destinationRoom));
 
 							await NotifyService.Notify(executor, "Linked.");
@@ -379,7 +360,6 @@ public partial class Commands
 				}
 				else if (exitObj.IsThing || exitObj.IsPlayer)
 				{
-					// Set HOME for thing or player
 					return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 						executor, executor, destName, LocateFlags.All,
 						async destObj =>

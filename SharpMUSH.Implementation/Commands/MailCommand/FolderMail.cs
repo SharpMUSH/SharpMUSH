@@ -22,14 +22,13 @@ public static class FolderMail
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator!);
 		var executorPlayer = executor.AsPlayer;
 		
-		// TODO: Consider that this is a duplicate call to the ObjectDataService.
 		var folderInfo =
 			await objectDataService.GetExpandedDataAsync<ExpandedMailData>(executor.Object());
 
 		switch (switches)
 		{
 			case ["FOLDER"] when (arg0, arg1) is (null, null):
-				return await GetMailFolderInfo(parser,objectDataService,  mediator, notifyService, executor, executorPlayer);
+				return await GetMailFolderInfo(parser, objectDataService, mediator, notifyService, executor, executorPlayer, folderInfo);
 
 			case ["FOLDER"] when (arg0, arg1) is ({ } folder, null):
 				return await SetCurrentMailFolder(parser, objectDataService, folderInfo, folder, executor);
@@ -129,9 +128,9 @@ public static class FolderMail
 		return MModule.single(folder.ToPlainText());
 	}
 
-	private static async Task<MString> GetMailFolderInfo(IMUSHCodeParser parser, IExpandedObjectDataService objectDataService, IMediator? mediator, INotifyService? notifyService, AnySharpObject executor, SharpPlayer executorPlayer)
+	private static async Task<MString> GetMailFolderInfo(IMUSHCodeParser parser, IExpandedObjectDataService objectDataService, IMediator? mediator, INotifyService? notifyService, AnySharpObject executor, SharpPlayer executorPlayer, ExpandedMailData? folderInfo)
 	{
-		var currentFolder = await MessageListHelper.CurrentMailFolder(parser, objectDataService, executor);
+		var currentFolder = folderInfo?.ActiveFolder ?? "INBOX";
 		var folderMail = mediator!.CreateStream(
 			new GetMailListQuery(executorPlayer, currentFolder));
 		var folderMailList = await folderMail.ToArrayAsync();
