@@ -291,7 +291,6 @@ public partial class Commands
 		{
 			var allContents = await Mediator!.CreateStream(new GetContentsQuery(realViewing.AsContainer))!.ToListAsync();
 			
-			// Filter by DARK/LIGHT flags
 			var isRoomLight = realViewing.IsRoom && await realViewing.IsLight();
 			var isRoomDark = realViewing.IsRoom && await realViewing.IsDarkLegal();
 			var canSeeAll = await executor.IsSee_All();
@@ -531,7 +530,6 @@ public partial class Commands
 		
 		outputSections.Add(nameRow);
 
-		// Type and flags row
 		if (showFlags)
 		{
 			outputSections.Add(MModule.single($"Type: {obj.Type} Flags: {string.Join(" ", objFlags.Select(x => x.Name))}"));
@@ -604,21 +602,17 @@ public partial class Commands
 				
 				foreach (var attr in atrs.AsAttributes)
 				{
-					// Skip VEILED attributes unless /all switch is used
-					// Note: Using string comparison for flag name as SharpAttributeFlag doesn't have constants
 					const string VeiledFlagName = "VEILED";
 					if (!showAll && attr.Flags.Any(f => f.Name.Equals(VeiledFlagName, StringComparison.OrdinalIgnoreCase)))
 					{
 						continue;
 					}
 					
-					// Skip non-public attributes if configured and not using /all
 					if (showPublicOnly && !showAll && !attr.IsVisual())
 					{
 						continue;
 					}
 					
-					// Display attribute with owner and flags
 					var attrOwner = await attr.Owner.WithCancellation(CancellationToken.None);
 					var attrFlagsStr = attr.Flags.Any() ? $"{string.Join("", attr.Flags.Select(f => f.Symbol))} " : "";
 					
@@ -630,7 +624,6 @@ public partial class Commands
 			}
 		}
 
-		// Contents section - skip if /opaque (omits contents) or /brief (shows minimal info)
 		if (!switches.Contains("OPAQUE") && !switches.Contains("BRIEF") && contents.Length > 0)
 		{
 			// TODO: Proper carry format.
@@ -638,7 +631,6 @@ public partial class Commands
 			                                    $"{string.Join("\n", contentKeys)}");
 		}
 
-		// Home and Location - skip for /brief
 		if (!switches.Contains("BRIEF") && !viewingKnown.IsRoom)
 		{
 			// TODO: Proper Format.
@@ -736,12 +728,6 @@ public partial class Commands
 	{
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-
-		// If /list - Arg0 can contain multiple SharpObject
-		// If not, Arg0 is a singular object
-		// Arg0 must only contain SharpContents (Validation)
-		// If Arg1 does not exist, Arg0 is the Destination for the Enactor.
-		// Otherwise, Arg1 is the Destination for the Arg0.
 
 		var destinationString = MModule.plainText(args.Count == 1 ? args["0"].Message : args["1"].Message);
 		var toTeleport = MModule.plainText(args.Count == 1 ? MModule.single(executor.ToString()) : args["0"].Message);
@@ -919,10 +905,8 @@ public partial class Commands
 			return new CallState("#-1 NOT IMPLEMENTED");
 		}
 		
-		// Regular halt of an object
 		if (args.Count == 0)
 		{
-			// Halt self
 			await NotifyService!.Notify(executor, "@halt: Would clear your queue without setting HALT flag.");
 			await NotifyService.Notify(executor, "Note: Queue management not yet implemented.");
 			return new CallState("#-1 NOT IMPLEMENTED");
@@ -935,7 +919,6 @@ public partial class Commands
 			return new CallState("#-1 NO TARGET SPECIFIED");
 		}
 		
-		// Check if replacement action list is provided
 		string? replacementActions = null;
 		if (args.Count >= 2)
 		{
@@ -953,13 +936,9 @@ public partial class Commands
 			await NotifyService.Notify(executor, "  Will set HALT flag on object");
 		}
 		
-		// TODO: Full implementation requires:
-		// - Locating the target object
-		// - Checking control permissions or halt @power
-		// - Clearing all queued actions for the object
-		// - If player, clearing queue for player and all their objects
-		// - If replacement actions, queue them
-		// - Otherwise, set HALT flag
+		// TODO: Full implementation requires locating the target object, checking control permissions or halt @power,
+		// clearing all queued actions for the object, and if player clearing queue for player and all their objects.
+		// If replacement actions, queue them; otherwise, set HALT flag.
 		await NotifyService.Notify(executor, "Note: Queue management for @halt not yet implemented.");
 		
 		return new CallState("#-1 NOT IMPLEMENTED");
