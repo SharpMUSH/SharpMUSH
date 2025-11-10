@@ -1,0 +1,101 @@
+{
+  "repository": "SharpMUSH/SharpMUSH",
+  "assignee": "@copilot",
+  "update_date": "2025-11-10",
+  "progress": {
+    "original_total": 224,
+    "original_commands": 107,
+    "original_functions": 117,
+    "completed_commands": 71,
+    "completed_functions": 117,
+    "remaining_commands": 36,
+    "remaining_functions": 0,
+    "remaining_total": 36,
+    "completion_percentage": 83.9,
+    "notimplementedexception_count": 40,
+    "todo_count": 282,
+    "todo_breakdown": {
+      "major_implementation": 80,
+      "optimization": 10,
+      "testing": 19,
+      "refactoring": 1,
+      "documentation": 6,
+      "enhancement": 166
+    }
+  },
+  "remaining_commands": [
+    "@ALLHALT",
+    "@ALLQUOTA",
+    "@BOOT",
+    "@CHOWNALL",
+    "@CHZONEALL",
+    "@DBCK",
+    "@ENABLE",
+    "@KICK",
+    "@LOGWIPE",
+    "@MALIAS",
+    "@POLL",
+    "@POOR",
+    "@PURGE",
+    "@QUOTA",
+    "@READCACHE",
+    "@SHUTDOWN",
+    "@SLAVE",
+    "@SOCKSET",
+    "@SQUOTA",
+    "@SUGGEST",
+    "@UNRECYCLE",
+    "@WARNINGS",
+    "@WCHECK",
+    "BRIEF",
+    "BUY",
+    "DESERT",
+    "DISMISS",
+    "FOLLOW",
+    "SCORE",
+    "SESSION",
+    "TEACH",
+    "UNFOLLOW",
+    "USE",
+    "WARN_ON_MISSING",
+    "WHISPER",
+    "WITH"
+  ],
+  "milestone_plan": {
+    "to_90_percent": {
+      "commands_needed": 14,
+      "recommended": [
+        "@SHUTDOWN",
+        "@BOOT",
+        "@KICK",
+        "@QUOTA",
+        "@DBCK",
+        "@ENABLE",
+        "@LOGWIPE",
+        "WHISPER",
+        "SCORE",
+        "SESSION",
+        "USE",
+        "FOLLOW",
+        "UNFOLLOW",
+        "WITH"
+      ]
+    },
+    "to_95_percent": {
+      "commands_needed": 25,
+      "additional": [
+        "@ALLQUOTA",
+        "@SQUOTA",
+        "@PURGE",
+        "@READCACHE",
+        "@POLL",
+        "@SUGGEST",
+        "@WARNINGS",
+        "@WCHECK",
+        "@CHOWNALL",
+        "@CHZONEALL",
+        "BRIEF"
+      ]
+    }
+  }
+}
