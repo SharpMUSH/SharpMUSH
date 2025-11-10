@@ -2709,14 +2709,14 @@ public partial class Commands
 			return CallState.Empty;
 		}
 		
-		if (!args.ContainsKey("1") || string.IsNullOrWhiteSpace(args["1"].Message?.ToPlainText()))
+		if (!args.TryGetValue("1", out var arg1) || string.IsNullOrWhiteSpace(arg1.Message?.ToPlainText()))
 		{
 			await NotifyService!.Notify(executor, "Do what with them?");
 			return CallState.Empty;
 		}
 		
 		var targetName = args["0"].Message!.ToPlainText();
-		var command = args["1"].Message!;
+		var command = arg1.Message!;
 		
 		// Determine search location
 		AnySharpObject searchLocation = switches.Contains("ROOM")
