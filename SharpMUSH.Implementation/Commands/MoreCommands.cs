@@ -2650,29 +2650,18 @@ public partial class Commands
 		var messageText = messageArg.ToPlainText();
 		
 		// Check if message starts with : or ; for pose/semipose
-		bool isPose = messageText.StartsWith(":");
-		bool isSemiPose = messageText.StartsWith(";");
+		var isPose = messageText.StartsWith(":");
+		var isSemiPose = messageText.StartsWith(";");
 		
+		// Extract pose text if needed (reuse this value)
+		var displayText = (isPose || isSemiPose) 
+			? $"{executor.Object().Name}{messageText.Substring(1)}" 
+			: messageText;
+		
+		// Send whisper to each target
 		foreach (var target in successfulTargets)
 		{
-			string whisperMsg;
-			if (isPose)
-			{
-				// Pose format: "Player whispers, "Player <action>""
-				var poseText = messageText.Substring(1);
-				whisperMsg = $"{executor.Object().Name} whispers, \"{executor.Object().Name}{poseText}\"";
-			}
-			else if (isSemiPose)
-			{
-				// Semipose format: "Player whispers, "Player's <action>""
-				var poseText = messageText.Substring(1);
-				whisperMsg = $"{executor.Object().Name} whispers, \"{executor.Object().Name}{poseText}\"";
-			}
-			else
-			{
-				// Normal whisper
-				whisperMsg = $"{executor.Object().Name} whispers, \"{messageText}\"";
-			}
+			var whisperMsg = $"{executor.Object().Name} whispers, \"{displayText}\"";
 			await NotifyService!.Notify(target, whisperMsg, executor, INotifyService.NotificationType.Say);
 		}
 		
@@ -2680,20 +2669,7 @@ public partial class Commands
 		if (!isSilent)
 		{
 			var targetList = string.Join(", ", successfulTargets.Select(t => t.Object().Name));
-			if (isPose)
-			{
-				var poseText = messageText.Substring(1);
-				await NotifyService!.Notify(executor, $"You whisper \"{executor.Object().Name}{poseText}\" to {targetList}.");
-			}
-			else if (isSemiPose)
-			{
-				var poseText = messageText.Substring(1);
-				await NotifyService!.Notify(executor, $"You whisper \"{executor.Object().Name}{poseText}\" to {targetList}.");
-			}
-			else
-			{
-				await NotifyService!.Notify(executor, $"You whisper \"{messageText}\" to {targetList}.");
-			}
+			await NotifyService!.Notify(executor, $"You whisper \"{displayText}\" to {targetList}.");
 		}
 		
 		// If NOISY, notify others in room
