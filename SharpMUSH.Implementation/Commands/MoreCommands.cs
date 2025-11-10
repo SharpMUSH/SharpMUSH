@@ -23,6 +23,13 @@ public partial class Commands
 	private const string AttrOEnter = "OENTER";
 	private const string AttrOXEnter = "OXENTER";
 	private const string AttrAEnter = "AENTER";
+	private const string AttrLeave = "LEAVE";
+	private const string AttrOLeave = "OLEAVE";
+	private const string AttrOXLeave = "OXLEAVE";
+	private const string AttrALeave = "ALEAVE";
+	private const string AttrLFail = "LFAIL";
+	private const string AttrOLFail = "OLFAIL";
+	private const string AttrALFail = "ALFAIL";
 	private const string AttrEFail = "EFAIL";
 	private const string AttrOEFail = "OEFAIL";
 	private const string AttrAEFail = "AEFAIL";
@@ -1090,12 +1097,10 @@ public partial class Commands
 		// Notify the player
 		await NotifyService!.Notify(executor, "There's no place like home...");
 		
-		// Trigger a look at the new location if the executor is a player
+		// Trigger an automatic LOOK command at the new location if the executor is a player
 		if (executor.IsPlayer)
 		{
-			// TODO: This should trigger an automatic LOOK command
-			// For now, just notify with the room name
-			await NotifyService.Notify(executor, homeObj.Name);
+			await parser.CommandParse(MModule.single("look"));
 		}
 		
 		return new CallState(homeObj.DBRef.ToString());
@@ -1151,7 +1156,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 		
-		// Get current location
+		// Get current location (the container we're in)
 		var currentLocation = await executor.Match(
 			async player => await player.Location.WithCancellation(CancellationToken.None),
 			async room => await ValueTask.FromResult<AnySharpContainer>(room),
@@ -1165,41 +1170,128 @@ public partial class Commands
 			return CallState.Empty;
 		}
 		
-		// Get the location of the container we're in
-		var containerLocation = await currentLocation.Match(
+		var container = currentLocation.WithExitOption();
+		
+		// Get the location of the container we're in (where we'll end up)
+		var destinationLocation = await currentLocation.Match(
 			async player => await player.Location.WithCancellation(CancellationToken.None),
 			async room => await ValueTask.FromResult<AnySharpContainer>(room),
 			async thing => await thing.Location.WithCancellation(CancellationToken.None));
 		
 		// Check leave lock on the container
-		if (!LockService!.Evaluate(LockType.Leave, currentLocation.WithExitOption(), executor))
+		if (!LockService!.Evaluate(LockType.Leave, container, executor))
 		{
-			await NotifyService!.Notify(executor, "You can't leave.");
+			// Trigger @lfail attribute on the container (message to leaver)
+			var lfailAttr = await AttributeService!.GetAttributeAsync(executor, container, AttrLFail, IAttributeService.AttributeMode.Read, true);
+			if (lfailAttr.IsAttribute && lfailAttr.AsT0.Length > 0)
+			{
+				var lfailMsg = lfailAttr.AsT0[0].Value;
+				if (!string.IsNullOrEmpty(lfailMsg.ToPlainText()))
+				{
+					await NotifyService!.Notify(executor, lfailMsg);
+				}
+			}
+			else
+			{
+				await NotifyService!.Notify(executor, "You can't leave.");
+			}
+			
+			// Trigger @olfail attribute (shown to others inside container)
+			var olfailAttr = await AttributeService!.GetAttributeAsync(executor, container, AttrOLFail, IAttributeService.AttributeMode.Read, true);
+			if (olfailAttr.IsAttribute && olfailAttr.AsT0.Length > 0)
+			{
+				var olfailMsg = olfailAttr.AsT0[0].Value;
+				if (!string.IsNullOrEmpty(olfailMsg.ToPlainText()))
+				{
+					// Notify others inside the container (excluding executor)
+					await CommunicationService!.SendToRoomAsync(executor, currentLocation, _ => olfailMsg,
+						INotifyService.NotificationType.Emit, excludeObjects: [executor]);
+				}
+			}
+			
+			// Trigger @alfail attribute (actions on failed leave)
+			var alfailAttr = await AttributeService!.GetAttributeAsync(executor, container, AttrALFail, IAttributeService.AttributeMode.Read, true);
+			if (alfailAttr.IsAttribute && alfailAttr.AsT0.Length > 0)
+			{
+				var alfailActions = alfailAttr.AsT0[0].Value;
+				if (!string.IsNullOrEmpty(alfailActions.ToPlainText()))
+				{
+					await parser.CommandParse(alfailActions);
+				}
+			}
+			
 			return CallState.Empty;
 		}
 		
 		// Check for containment loops before moving
-		if (await MoveService!.WouldCreateLoop(executor.AsContent, containerLocation))
+		if (await MoveService!.WouldCreateLoop(executor.AsContent, destinationLocation))
 		{
 			await NotifyService!.Notify(executor, "You can't leave - it would create a containment loop.");
 			return CallState.Empty;
 		}
 		
 		// Move to the container's location
-		await Mediator!.Send(new MoveObjectCommand(executor.AsContent, containerLocation));
+		await Mediator!.Send(new MoveObjectCommand(executor.AsContent, destinationLocation));
 		
-		// Notify the player
-		await NotifyService!.Notify(executor, $"You leave {currentLocation.Object().Name}.");
-		
-		// Trigger a look at the new location if the executor is a player
-		if (executor.IsPlayer)
+		// Trigger @leave attribute on the container (message to leaver)
+		var leaveAttr = await AttributeService!.GetAttributeAsync(executor, container, AttrLeave, IAttributeService.AttributeMode.Read, true);
+		if (leaveAttr.IsAttribute && leaveAttr.AsT0.Length > 0)
 		{
-			// TODO: This should trigger an automatic LOOK command
-			// For now, just notify with the room name
-			await NotifyService.Notify(executor, containerLocation.Object().Name);
+			var leaveMsg = leaveAttr.AsT0[0].Value;
+			if (!string.IsNullOrEmpty(leaveMsg.ToPlainText()))
+			{
+				await NotifyService!.Notify(executor, leaveMsg);
+			}
+		}
+		else
+		{
+			await NotifyService!.Notify(executor, $"You leave {currentLocation.Object().Name}.");
 		}
 		
-		return new CallState(containerLocation.Object().DBRef.ToString());
+		// Trigger @oleave attribute (shown to others inside the container)
+		var oleaveAttr = await AttributeService!.GetAttributeAsync(executor, container, AttrOLeave, IAttributeService.AttributeMode.Read, true);
+		if (oleaveAttr.IsAttribute && oleaveAttr.AsT0.Length > 0)
+		{
+			var oleaveMsg = oleaveAttr.AsT0[0].Value;
+			if (!string.IsNullOrEmpty(oleaveMsg.ToPlainText()))
+			{
+				// Notify others inside the container (excluding executor)
+				await CommunicationService!.SendToRoomAsync(executor, currentLocation, _ => oleaveMsg,
+					INotifyService.NotificationType.Emit, excludeObjects: [executor]);
+			}
+		}
+		
+		// Trigger @oxleave attribute (shown to others in destination location)
+		var oxleaveAttr = await AttributeService!.GetAttributeAsync(executor, container, AttrOXLeave, IAttributeService.AttributeMode.Read, true);
+		if (oxleaveAttr.IsAttribute && oxleaveAttr.AsT0.Length > 0)
+		{
+			var oxleaveMsg = oxleaveAttr.AsT0[0].Value;
+			if (!string.IsNullOrEmpty(oxleaveMsg.ToPlainText()))
+			{
+				// Notify others in the destination location (excluding executor)
+				await CommunicationService!.SendToRoomAsync(executor, destinationLocation, _ => oxleaveMsg,
+					INotifyService.NotificationType.Emit, excludeObjects: [executor]);
+			}
+		}
+		
+		// Trigger @aleave attribute (actions after leaving)
+		var aleaveAttr = await AttributeService!.GetAttributeAsync(executor, container, AttrALeave, IAttributeService.AttributeMode.Read, true);
+		if (aleaveAttr.IsAttribute && aleaveAttr.AsT0.Length > 0)
+		{
+			var aleaveActions = aleaveAttr.AsT0[0].Value;
+			if (!string.IsNullOrEmpty(aleaveActions.ToPlainText()))
+			{
+				await parser.CommandParse(aleaveActions);
+			}
+		}
+		
+		// Trigger an automatic LOOK command at the new location if the executor is a player
+		if (executor.IsPlayer)
+		{
+			await parser.CommandParse(MModule.single("look"));
+		}
+		
+		return new CallState(destinationLocation.Object().DBRef.ToString());
 	}
 
 	[SharpCommand(Name = "PAGE", Switches = ["LIST", "NOEVAL", "PORT", "OVERRIDE"],
