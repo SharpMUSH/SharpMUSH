@@ -642,7 +642,7 @@ public partial class Commands
 		
 		// Clear the FOLLOWING attribute on the target
 		await AttributeService!.ClearAttributeAsync(executor, target, "FOLLOWING", 
-			IAttributeService.AttributePatternMode.Exact, IAttributeService.AttributeClearMode.All);
+			IAttributeService.AttributePatternMode.Exact, IAttributeService.AttributeClearMode.Safe);
 		
 		await NotifyService!.Notify(executor, $"You dismiss {target.Object().Name}.");
 		await NotifyService!.Notify(target, $"{executor.Object().Name} dismisses you. You stop following.");
@@ -2180,7 +2180,7 @@ public partial class Commands
 		
 		// Clear the FOLLOWING attribute
 		await AttributeService!.ClearAttributeAsync(executor, executor, "FOLLOWING", 
-			IAttributeService.AttributePatternMode.Exact, IAttributeService.AttributeClearMode.All);
+			IAttributeService.AttributePatternMode.Exact, IAttributeService.AttributeClearMode.Safe);
 		
 		await NotifyService!.Notify(executor, "You stop following.");
 		return CallState.Empty;
@@ -2604,7 +2604,7 @@ public partial class Commands
 		
 		// Get connection information for the executor
 		var allConnections = ConnectionService!.GetAll();
-		ConnectionData? connection = null;
+		IConnectionService.ConnectionData? connection = null;
 		
 		await foreach (var conn in allConnections)
 		{
@@ -2625,19 +2625,19 @@ public partial class Commands
 		output.AppendLine("Session Information:");
 		output.AppendLine($"  Player: {executor.Object().Name} (#{executor.Object().DBRef.Number})");
 		
-		if (connection.Value.Connected.HasValue)
+		if (connection.Connected.HasValue)
 		{
-			output.AppendLine($"  Connected: {TimeHelpers.TimeString(connection.Value.Connected.Value)} ago");
+			output.AppendLine($"  Connected: {TimeHelpers.TimeString(connection.Connected.Value)} ago");
 		}
 		
-		if (connection.Value.Idle.HasValue)
+		if (connection.Idle.HasValue)
 		{
-			output.AppendLine($"  Idle: {TimeHelpers.TimeString(connection.Value.Idle.Value)}");
+			output.AppendLine($"  Idle: {TimeHelpers.TimeString(connection.Idle.Value)}");
 		}
 		
-		if (!string.IsNullOrEmpty(connection.Value.Hostname))
+		if (!string.IsNullOrEmpty(connection.HostName))
 		{
-			output.AppendLine($"  Host: {connection.Value.Hostname}");
+			output.AppendLine($"  Host: {connection.HostName}");
 		}
 		
 		await NotifyService!.Notify(executor, output.ToString().TrimEnd());
