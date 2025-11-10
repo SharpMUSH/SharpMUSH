@@ -659,14 +659,6 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var switches = parser.CurrentState.Switches;
 		
-		// Get the DARK flag
-		var darkFlag = await Mediator!.Send(new GetObjectFlagQuery("DARK"));
-		if (darkFlag == null)
-		{
-			await NotifyService!.Notify(executor, "Error: DARK flag not found in database.");
-			return CallState.Empty;
-		}
-		
 		// Check current DARK flag state
 		var isDark = await executor.HasFlag("DARK");
 		
@@ -687,17 +679,27 @@ public partial class Commands
 		}
 		
 		// Apply the change if needed
-		if (shouldBeDark && !isDark)
+		if (shouldBeDark != isDark)
 		{
-			// Set DARK flag
-			await Mediator!.Send(new SetObjectFlagCommand(executor, darkFlag));
-			await NotifyService!.Notify(executor, "You are now hidden from the WHO list.");
-		}
-		else if (!shouldBeDark && isDark)
-		{
-			// Unset DARK flag
-			await Mediator!.Send(new UnsetObjectFlagCommand(executor, darkFlag));
-			await NotifyService!.Notify(executor, "You are no longer hidden from the WHO list.");
+			var flagSpec = shouldBeDark ? "DARK" : "!DARK";
+			var result = await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, executor, flagSpec, false);
+			
+			if (result.Message?.ToPlainText() == "True")
+			{
+				if (shouldBeDark)
+				{
+					await NotifyService!.Notify(executor, "You are now hidden from the WHO list.");
+				}
+				else
+				{
+					await NotifyService!.Notify(executor, "You are no longer hidden from the WHO list.");
+				}
+			}
+			else
+			{
+				// Service returned an error
+				await NotifyService!.Notify(executor, result.Message!);
+			}
 		}
 		else
 		{
