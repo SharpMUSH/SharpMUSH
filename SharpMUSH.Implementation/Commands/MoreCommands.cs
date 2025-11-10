@@ -2743,17 +2743,9 @@ public partial class Commands
 		var command = args["1"].Message!;
 		
 		// Determine search location
-		AnySharpObject searchLocation;
-		if (switches.Contains("ROOM"))
-		{
-			// Search in room
-			searchLocation = (await executor.Where()).WithExitOption();
-		}
-		else
-		{
-			// Search in inventory
-			searchLocation = executor;
-		}
+		AnySharpObject searchLocation = switches.Contains("ROOM")
+			? (await executor.Where()).WithExitOption()
+			: executor;
 		
 		// Locate the target
 		var targetResult = await LocateService!.LocateAndNotifyIfInvalid(
