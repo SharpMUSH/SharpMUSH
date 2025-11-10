@@ -18,9 +18,10 @@ public interface ISharpDatabase
 	/// <param name="password">Player password</param>
 	/// <param name="location">Location to create it in</param>
 	/// <param name="home"></param>
+	/// <param name="quota">Initial quota for the player</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>New player <see cref="DBRef"/></returns>
-	ValueTask<DBRef> CreatePlayerAsync(string name, string password, DBRef location, DBRef home,
+	ValueTask<DBRef> CreatePlayerAsync(string name, string password, DBRef location, DBRef home, int quota,
 		CancellationToken cancellationToken = default);
 
 	/// <summary>
@@ -30,6 +31,22 @@ public interface ISharpDatabase
 	/// <param name="password">plaintext password</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
 	ValueTask SetPlayerPasswordAsync(SharpPlayer player, string password, CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Sets the quota for a player.
+	/// </summary>
+	/// <param name="player">Player</param>
+	/// <param name="quota">New quota amount</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
+	ValueTask SetPlayerQuotaAsync(SharpPlayer player, int quota, CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Gets the count of objects owned by a player.
+	/// </summary>
+	/// <param name="player">Player whose objects to count</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
+	/// <returns>Number of objects owned by the player</returns>
+	ValueTask<int> GetOwnedObjectCountAsync(SharpPlayer player, CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Create a new room.
@@ -408,6 +425,14 @@ public interface ISharpDatabase
 	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>An async enumerable of all SharpObjects in the database</returns>
 	IAsyncEnumerable<SharpObject> GetAllObjectsAsync(CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Gets all players in the database as a streaming AsyncEnumerable.
+	/// This allows for efficient processing of all players without loading them all into memory.
+	/// </summary>
+	/// <param name="cancellationToken">Cancellation Token</param>
+	/// <returns>An async enumerable of all SharpPlayers in the database</returns>
+	IAsyncEnumerable<SharpPlayer> GetAllPlayersAsync(CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Get all exits that lead to a specific destination.

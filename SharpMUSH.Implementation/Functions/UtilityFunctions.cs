@@ -27,6 +27,7 @@ public partial class Functions
 	{
 		var defaultHome = Configuration!.CurrentValue.Database.DefaultHome;
 		var defaultHomeDbref = new DBRef((int)defaultHome);
+		var startingQuota = (int)Configuration!.CurrentValue.Limit.StartingQuota;
 		var args = parser.CurrentState.Arguments;
 		var location = await Mediator!.Send(new GetObjectNodeQuery(new DBRef
 		{
@@ -44,7 +45,8 @@ public partial class Functions
 			args["0"].Message!.ToString(),
 			args["1"].Message!.ToString(),
 			new DBRef(trueLocation == -1 ? 1 : trueLocation),
-			defaultHomeDbref));
+			defaultHomeDbref,
+			startingQuota));
 
 		return new CallState($"#{created.Number}:{created.CreationMilliseconds}");
 	}
