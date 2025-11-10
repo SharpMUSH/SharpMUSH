@@ -152,7 +152,6 @@ public partial class Functions
 
 		var list = MModule.split2(delim, parser.CurrentState.Arguments["1"].Message!);
 
-		// Build environment registers for additional arguments (v(1) to v(30))
 		var environmentRegisters = new Dictionary<string, CallState>();
 		for (var i = 4; i < parser.CurrentState.ArgumentsOrdered.Count; i++)
 		{
@@ -172,7 +171,6 @@ public partial class Functions
 			});
 			var parsed = (await newParser.FunctionParse(attrValue))!.Message!;
 			
-			// Filter returns only items where the function evaluates to "1"
 			if (parsed.ToPlainText() == "1")
 			{
 				result.Add(item);
@@ -185,8 +183,6 @@ public partial class Functions
 	[SharpFunction(Name = "filterbool", MinArgs = 2, MaxArgs = 35, Flags = FunctionFlags.Regular)]
 	public static async ValueTask<CallState> FilterBool(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// Similar to filter, but checks for boolean true instead of "1"
-
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known();
 		var objAttr =

@@ -25,7 +25,6 @@ public partial class Functions
 	[SharpFunction(Name = "accname", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 	public static async ValueTask<CallState> AccName(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// accname() returns the accented name (ACCNAME attribute or name with ANSI)
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var obj = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
 
@@ -33,7 +32,6 @@ public partial class Functions
 			parser, executor, executor, obj, LocateFlags.All,
 			async found =>
 			{
-				// Try to get the ACCNAME attribute
 				var accnameAttr = await AttributeService!.GetAttributeAsync(
 					executor, found, "ACCNAME", IAttributeService.AttributeMode.Read);
 
@@ -47,7 +45,6 @@ public partial class Functions
 					}
 				}
 
-				// Fall back to name
 				return new CallState(found.Object().Name);
 			});
 	}
@@ -62,10 +59,8 @@ public partial class Functions
 		AnySharpObject targetPlayer = executor;
 		string? folderSpec = null;
 
-		// Parse arguments - can be (), (folder), (player), or (player, folder)
 		if (args.Count == 0)
 		{
-			// Use current folder
 			folderSpec = await Implementation.Commands.MailCommand.MessageListHelper.CurrentMailFolder(
 				parser, ObjectDataService!, executor);
 		}
