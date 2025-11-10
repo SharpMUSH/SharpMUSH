@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Reflection;
+using System.Linq;
 using Humanizer;
 using OneOf.Types;
 using SharpMUSH.Implementation.Common;
@@ -1463,12 +1464,173 @@ public partial class Commands
 		throw new NotImplementedException();
 	}
 
-	[SharpCommand(Name = "@SITELOCK", Switches = ["BAN", "CHECK", "REGISTER", "REMOVE", "NAME", "PLAYER"],
+	/// <summary>
+	/// Manages sitelock rules that control which hosts can connect, create players, or use guests.
+	/// @sitelock - Lists all rules and banned names
+	/// @sitelock/check &lt;host&gt; - Checks which rule matches a host
+	/// @sitelock/name &lt;name&gt; - Manages banned player names (not yet implemented)
+	/// @sitelock/ban &lt;pattern&gt; - Bans a host pattern (not yet implemented)
+	/// @sitelock/register &lt;pattern&gt; - Sets registration requirement (not yet implemented)
+	/// @sitelock/remove &lt;pattern&gt; - Removes a rule (not yet implemented)
+	/// </summary>
+	[SharpCommand(Name = "@SITELOCK", Switches = ["BAN", "CHECK", "REGISTER", "REMOVE", "NAME", "PLAYER", "LIST"],
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs, CommandLock = "FLAG^WIZARD", MinArgs = 0)]
 	public static async ValueTask<Option<CallState>> SiteLock(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches.ToArray();
+
+		// Get current sitelock configuration
+		var sitelockRules = Configuration!.CurrentValue.SitelockRules;
+		var bannedNames = Configuration!.CurrentValue.BannedNames;
+
+		// @sitelock with no arguments or @sitelock/list - list all rules
+		if (args.Count == 0 || switches.Contains("LIST"))
+		{
+			var output = new System.Text.StringBuilder();
+			output.AppendLine($"Sitelock Rules ({sitelockRules.Rules.Count} total):");
+			output.AppendLine("Pattern                      Options");
+			output.AppendLine("---------------------------- ------------------------------");
+
+			if (sitelockRules.Rules.Count == 0)
+			{
+				output.AppendLine("  (No rules defined - all connections allowed by default)");
+			}
+			else
+			{
+				foreach (var rule in sitelockRules.Rules)
+				{
+					var pattern = rule.Key;
+					var options = string.Join(", ", rule.Value);
+					output.AppendLine($"{pattern,-28} {options}");
+				}
+			}
+
+			output.AppendLine();
+			output.AppendLine($"Banned Player Names ({bannedNames.BannedNames.Length} total):");
+			if (bannedNames.BannedNames.Length == 0)
+			{
+				output.AppendLine("  (No banned names defined)");
+			}
+			else
+			{
+				output.AppendLine("  " + string.Join(", ", bannedNames.BannedNames));
+			}
+
+			await NotifyService!.Notify(executor, output.ToString().TrimEnd());
+			return CallState.Empty;
+		}
+
+		// @sitelock/check <host> - check which rule matches a host
+		if (switches.Contains("CHECK"))
+		{
+			if (args.Count == 0)
+			{
+				await NotifyService!.Notify(executor, "@SITELOCK/CHECK requires a hostname or IP address.");
+				return new CallState("#-1 INVALID ARGUMENTS");
+			}
+
+			var hostToCheck = args["0"].Message!.ToPlainText();
+			
+			// Find matching rule (simple wildcard matching for now)
+			KeyValuePair<string, string[]>? matchingRule = sitelockRules.Rules
+				.FirstOrDefault(rule => WildcardMatch(hostToCheck, rule.Key));
+
+			if (matchingRule.HasValue)
+			{
+				var options = string.Join(", ", matchingRule.Value.Value);
+				await NotifyService!.Notify(executor, $"Host '{hostToCheck}' matches pattern '{matchingRule.Value.Key}' with options: {options}");
+			}
+			else
+			{
+				await NotifyService!.Notify(executor, $"Host '{hostToCheck}' does not match any sitelock rules (default access allowed).");
+			}
+
+			return CallState.Empty;
+		}
+
+		// @sitelock/name <name> - add/remove banned name
+		if (switches.Contains("NAME"))
+		{
+			if (args.Count == 0)
+			{
+				await NotifyService!.Notify(executor, "@SITELOCK/NAME requires a player name.");
+				return new CallState("#-1 INVALID ARGUMENTS");
+			}
+
+			// Note: Actual modification of configuration is not yet implemented
+			// This would require saving to the database
+			await NotifyService!.Notify(executor, "@SITELOCK/NAME modification is not yet implemented. Use the admin UI to modify banned names.");
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+
+		// @sitelock/ban <pattern> - shorthand for !connect !create !guest
+		if (switches.Contains("BAN"))
+		{
+			if (args.Count == 0)
+			{
+				await NotifyService!.Notify(executor, "@SITELOCK/BAN requires a host pattern.");
+				return new CallState("#-1 INVALID ARGUMENTS");
+			}
+
+			// Note: Actual modification of configuration is not yet implemented
+			await NotifyService!.Notify(executor, "@SITELOCK/BAN modification is not yet implemented. Use the admin UI to add sitelock rules.");
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+
+		// @sitelock/register <pattern> - shorthand for !create register
+		if (switches.Contains("REGISTER"))
+		{
+			if (args.Count == 0)
+			{
+				await NotifyService!.Notify(executor, "@SITELOCK/REGISTER requires a host pattern.");
+				return new CallState("#-1 INVALID ARGUMENTS");
+			}
+
+			// Note: Actual modification of configuration is not yet implemented
+			await NotifyService!.Notify(executor, "@SITELOCK/REGISTER modification is not yet implemented. Use the admin UI to add sitelock rules.");
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+
+		// @sitelock/remove <pattern> - remove a sitelock rule
+		if (switches.Contains("REMOVE"))
+		{
+			if (args.Count == 0)
+			{
+				await NotifyService!.Notify(executor, "@SITELOCK/REMOVE requires a host pattern.");
+				return new CallState("#-1 INVALID ARGUMENTS");
+			}
+
+			// Note: Actual modification of configuration is not yet implemented
+			await NotifyService!.Notify(executor, "@SITELOCK/REMOVE modification is not yet implemented. Use the admin UI to remove sitelock rules.");
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+
+		// @sitelock <pattern>=<options> - add/modify a rule
+		if (args.Count == 2)
+		{
+			// Note: Actual modification of configuration is not yet implemented
+			await NotifyService!.Notify(executor, "@SITELOCK rule modification is not yet implemented. Use the admin UI to modify sitelock rules.");
+			return new CallState("#-1 NOT IMPLEMENTED");
+		}
+
+		await NotifyService!.Notify(executor, "Invalid @SITELOCK syntax. Use '@help @sitelock' for usage information.");
+		return new CallState("#-1 INVALID ARGUMENTS");
+	}
+
+	/// <summary>
+	/// Simple wildcard matching for sitelock patterns (* and ? wildcards)
+	/// </summary>
+	private static bool WildcardMatch(string text, string pattern)
+	{
+		// Convert wildcard pattern to regex
+		var regexPattern = "^" + System.Text.RegularExpressions.Regex.Escape(pattern)
+			.Replace("\\*", ".*")
+			.Replace("\\?", ".") + "$";
+		
+		return System.Text.RegularExpressions.Regex.IsMatch(text, regexPattern, 
+			System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 	}
 
 	[SharpCommand(Name = "@WALL", Switches = ["NOEVAL", "EMIT"], Behavior = CB.Default,

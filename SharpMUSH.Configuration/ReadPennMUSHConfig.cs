@@ -300,6 +300,12 @@ public static partial class ReadPennMushConfig
 			Restriction = new RestrictionOptions(
 				CommandRestrictions: new Dictionary<string, string[]>(),
 				FunctionRestrictions: new Dictionary<string, string[]>()
+			),
+			BannedNames = new BannedNamesOptions(
+				BannedNames: []
+			),
+			SitelockRules = new SitelockRulesOptions(
+				Rules: new Dictionary<string, string[]>()
 			)
 		};
 
