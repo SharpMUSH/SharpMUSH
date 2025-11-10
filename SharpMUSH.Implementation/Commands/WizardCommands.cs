@@ -759,8 +759,9 @@ public partial class Commands
 	[SharpCommand(Name = "@DBCK", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD", MinArgs = 0)]
 	public static async ValueTask<Option<CallState>> DatabaseCheck(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		await NotifyService!.Notify(executor, "Not Supported for SharpMUSH.");
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@HIDE", Switches = ["NO", "OFF", "YES", "ON"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
