@@ -3,7 +3,9 @@ using System.Text;
 using BenchmarkDotNet.Attributes;
 using Core.Arango;
 using Core.Arango.Serialization.Newtonsoft;
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using NSubstitute;
 using OneOf.Types;
 using Serilog;
 using SharpMUSH.Library;
@@ -66,7 +68,8 @@ public class BaseBenchmark
 		var realOne = await _database!.GetObjectNodeAsync(new DBRef(1));
 		var one = realOne.Object()!.DBRef;
 
-		var simpleConnectionService = new ConnectionService();
+		var mockPublisher = Substitute.For<IPublisher>();
+		var simpleConnectionService = new ConnectionService(mockPublisher);
 		simpleConnectionService.Register(1, "localhost", "localhost", "test",  _ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
 		simpleConnectionService.Bind(1, one);
 

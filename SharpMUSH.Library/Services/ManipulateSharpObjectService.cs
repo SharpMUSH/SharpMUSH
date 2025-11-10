@@ -5,6 +5,7 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -17,7 +18,8 @@ public class ManipulateSharpObjectService(
 	IPasswordService passwordService,
 	IValidateService validateService,
 	INotifyService notifyService,
-	IAttributeService attributeService)
+	IAttributeService attributeService,
+	IPublisher publisher)
 	: IManipulateSharpObjectService
 {
 	public async ValueTask<CallState> SetName(AnySharpObject executor, AnySharpObject obj, MString name, bool notify)
@@ -197,6 +199,14 @@ public class ManipulateSharpObjectService(
 
 				await mediator.Send(new UnsetObjectFlagCommand(obj, realFlag));
 
+				// Publish notification for OBJECT`FLAG event
+				await publisher.Publish(new ObjectFlagChangedNotification(
+					obj,
+					realFlag.Name,
+					"FLAG",
+					false, // IsSet = false (clearing)
+					executor.Object().DBRef));
+
 				break;
 			}
 			case false when await obj.HasFlag(plainFlag):
@@ -215,6 +225,14 @@ public class ManipulateSharpObjectService(
 				}
 
 				await mediator.Send(new SetObjectFlagCommand(obj, realFlag));
+
+				// Publish notification for OBJECT`FLAG event
+				await publisher.Publish(new ObjectFlagChangedNotification(
+					obj,
+					realFlag.Name,
+					"FLAG",
+					true, // IsSet = true (setting)
+					executor.Object().DBRef));
 
 				break;
 		}
@@ -265,6 +283,14 @@ public class ManipulateSharpObjectService(
 		}
 
 		await mediator.Send(new SetObjectPowerCommand(obj, found));
+
+		// Publish notification for OBJECT`FLAG event (powers trigger same event)
+		await publisher.Publish(new ObjectFlagChangedNotification(
+			obj,
+			found.Name,
+			"POWER",
+			true, // IsSet = true (setting)
+			executor.Object().DBRef));
 		
 		return true;
 	}
@@ -312,6 +338,14 @@ public class ManipulateSharpObjectService(
 		}
 
 		await mediator.Send(new UnsetObjectPowerCommand(obj, found));
+
+		// Publish notification for OBJECT`FLAG event (powers trigger same event)
+		await publisher.Publish(new ObjectFlagChangedNotification(
+			obj,
+			found.Name,
+			"POWER",
+			false, // IsSet = false (clearing)
+			executor.Object().DBRef));
 		
 		return true;
 	}

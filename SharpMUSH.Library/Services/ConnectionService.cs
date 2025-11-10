@@ -1,11 +1,13 @@
 ﻿using System.Collections.Concurrent;
 using System.Text;
+using Mediator;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.Services;
 
-public class ConnectionService : IConnectionService
+public class ConnectionService(IPublisher publisher) : IConnectionService
 {
 	private readonly ConcurrentDictionary<long, IConnectionService.ConnectionData> _sessionState = [];
 	private readonly List<Action<(long handle, DBRef? Ref, IConnectionService.ConnectionState OldState, IConnectionService.ConnectionState NewState)>> _handlers = [];
@@ -19,6 +21,9 @@ public class ConnectionService : IConnectionService
 		{
 			handler(new ValueTuple<long, DBRef?, IConnectionService.ConnectionState, IConnectionService.ConnectionState>(get.Handle, get.Ref, get.State, IConnectionService.ConnectionState.Disconnected));
 		}
+
+		// Publish notification for Mediator handlers
+		_ = publisher.Publish(new ConnectionStateChangeNotification(get.Handle, get.Ref, get.State, IConnectionService.ConnectionState.Disconnected));
 
 		_sessionState.Remove(handle, out _);
 	}
@@ -52,6 +57,9 @@ public class ConnectionService : IConnectionService
 		{
 			handler(new ValueTuple<long, DBRef?, IConnectionService.ConnectionState, IConnectionService.ConnectionState>(handle, player, get.State, IConnectionService.ConnectionState.LoggedIn));
 		}
+
+		// Publish notification for Mediator handlers
+		_ = publisher.Publish(new ConnectionStateChangeNotification(handle, player, get.State, IConnectionService.ConnectionState.LoggedIn));
 	}
 
 	public void Update(long handle, string key, string value)
@@ -88,5 +96,8 @@ public class ConnectionService : IConnectionService
 		{
 			handler(new ValueTuple<long, DBRef?, IConnectionService.ConnectionState, IConnectionService.ConnectionState>(handle, null, IConnectionService.ConnectionState.None, IConnectionService.ConnectionState.Connected));
 		}
+
+		// Publish notification for Mediator handlers
+		_ = publisher.Publish(new ConnectionStateChangeNotification(handle, null, IConnectionService.ConnectionState.None, IConnectionService.ConnectionState.Connected));
 	}
 }
