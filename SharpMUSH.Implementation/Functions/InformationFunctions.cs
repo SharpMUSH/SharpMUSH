@@ -467,31 +467,10 @@ public partial class Functions
 	[SharpFunction(Name = "money", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> Money(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// money() returns the money/pennies attribute value
+		// Money/pennies are not supported in SharpMUSH
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var obj = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
-
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
-			parser, executor, executor, obj, LocateFlags.All,
-			async found =>
-			{
-				// Try to get the MONEY or PENNIES attribute
-				var moneyAttr = await AttributeService!.GetAttributeAsync(
-					executor, found, "MONEY", IAttributeService.AttributeMode.Read);
-
-				if (moneyAttr.IsAttribute)
-				{
-					var attr = moneyAttr.AsAttribute.Last();
-					var attrValue = attr.Value.ToPlainText();
-					if (int.TryParse(attrValue, out var money))
-					{
-						return new CallState(money);
-					}
-				}
-
-				// Default to 0 if no money attribute
-				return new CallState(0);
-			});
+		await NotifyService!.Notify(executor, "The money() function is not supported. SharpMUSH does not track money or pennies.");
+		return new CallState("#-1 NOT SUPPORTED");
 	}
 
 	[SharpFunction(Name = "mudname", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]
