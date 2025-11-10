@@ -1044,8 +1044,61 @@ public partial class Commands
 	[SharpCommand(Name = "HOME", Switches = [], Behavior = CB.Player | CB.Thing, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Home(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		
+		// HOME command only works for players and things
+		if (!executor.IsPlayer && !executor.IsThing)
+		{
+			await NotifyService!.Notify(executor, "Only players and things can go home.");
+			return CallState.Empty;
+		}
+		
+		// Get the home location
+		var homeLocation = await executor.MinusRoom().Home();
+		var homeObj = homeLocation.Object();
+		
+		// Check if home is set (not NOTHING)
+		if (homeObj.DBRef.Number < 0)
+		{
+			await NotifyService!.Notify(executor, "You have no home.");
+			return CallState.Empty;
+		}
+		
+		// Check current location - can't go home if already there
+		var currentLocation = await executor.Match(
+			async player => await player.Location.WithCancellation(CancellationToken.None),
+			async room => await ValueTask.FromResult<AnySharpContainer>(room),
+			async exit => await exit.Home.WithCancellation(CancellationToken.None),
+			async thing => await thing.Location.WithCancellation(CancellationToken.None));
+		
+		if (currentLocation.Object().DBRef.Equals(homeObj.DBRef))
+		{
+			await NotifyService!.Notify(executor, "You are already home.");
+			return CallState.Empty;
+		}
+		
+		// Check for containment loops before moving
+		if (await MoveService!.WouldCreateLoop(executor.AsContent, homeLocation))
+		{
+			await NotifyService!.Notify(executor, "You can't go home - it would create a containment loop.");
+			return CallState.Empty;
+		}
+		
+		// Move to home location
+		await Mediator!.Send(new MoveObjectCommand(executor.AsContent, homeLocation));
+		
+		// Notify the player
+		await NotifyService!.Notify(executor, "There's no place like home...");
+		
+		// Trigger a look at the new location if the executor is a player
+		if (executor.IsPlayer)
+		{
+			// TODO: This should trigger an automatic LOOK command
+			// For now, just notify with the room name
+			await NotifyService.Notify(executor, homeObj.Name);
+		}
+		
+		return new CallState(homeObj.DBRef.ToString());
 	}
 
 	[SharpCommand(Name = "INVENTORY", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
@@ -1089,8 +1142,64 @@ public partial class Commands
 	[SharpCommand(Name = "LEAVE", Switches = [], Behavior = CB.Player | CB.Thing, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Leave(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		
+		// LEAVE command only works for players and things
+		if (!executor.IsPlayer && !executor.IsThing)
+		{
+			await NotifyService!.Notify(executor, "Only players and things can leave.");
+			return CallState.Empty;
+		}
+		
+		// Get current location
+		var currentLocation = await executor.Match(
+			async player => await player.Location.WithCancellation(CancellationToken.None),
+			async room => await ValueTask.FromResult<AnySharpContainer>(room),
+			async exit => await exit.Home.WithCancellation(CancellationToken.None),
+			async thing => await thing.Location.WithCancellation(CancellationToken.None));
+		
+		// Check if we're in a thing or player (not a room)
+		if (!currentLocation.IsThing && !currentLocation.IsPlayer)
+		{
+			await NotifyService!.Notify(executor, "You can't leave a room. Use an exit or HOME.");
+			return CallState.Empty;
+		}
+		
+		// Get the location of the container we're in
+		var containerLocation = await currentLocation.Match(
+			async player => await player.Location.WithCancellation(CancellationToken.None),
+			async room => await ValueTask.FromResult<AnySharpContainer>(room),
+			async thing => await thing.Location.WithCancellation(CancellationToken.None));
+		
+		// Check leave lock on the container
+		if (!LockService!.Evaluate(LockType.Leave, currentLocation.WithExitOption(), executor))
+		{
+			await NotifyService!.Notify(executor, "You can't leave.");
+			return CallState.Empty;
+		}
+		
+		// Check for containment loops before moving
+		if (await MoveService!.WouldCreateLoop(executor.AsContent, containerLocation))
+		{
+			await NotifyService!.Notify(executor, "You can't leave - it would create a containment loop.");
+			return CallState.Empty;
+		}
+		
+		// Move to the container's location
+		await Mediator!.Send(new MoveObjectCommand(executor.AsContent, containerLocation));
+		
+		// Notify the player
+		await NotifyService!.Notify(executor, $"You leave {currentLocation.Object().Name}.");
+		
+		// Trigger a look at the new location if the executor is a player
+		if (executor.IsPlayer)
+		{
+			// TODO: This should trigger an automatic LOOK command
+			// For now, just notify with the room name
+			await NotifyService.Notify(executor, containerLocation.Object().Name);
+		}
+		
+		return new CallState(containerLocation.Object().DBRef.ToString());
 	}
 
 	[SharpCommand(Name = "PAGE", Switches = ["LIST", "NOEVAL", "PORT", "OVERRIDE"],
