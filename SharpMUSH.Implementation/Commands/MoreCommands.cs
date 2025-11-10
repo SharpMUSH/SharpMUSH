@@ -512,11 +512,261 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "EMPTY", Switches = [], CommandLock = "(TYPE^PLAYER|TYPE^THING)&!FLAG^GAGGED",
-		Behavior = CB.Player | CB.Thing | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+		Behavior = CB.Player | CB.Thing | CB.NoGagged, MinArgs = 1, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> Empty(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		var objectName = args["0"].Message!.ToPlainText();
+		
+		if (string.IsNullOrWhiteSpace(objectName))
+		{
+			await NotifyService!.Notify(executor, "Empty what?");
+			return CallState.Empty;
+		}
+		
+		// Locate the object to empty
+		var locateResult = await LocateService!.LocateAndNotifyIfInvalid(parser, executor, executor, objectName, LocateFlags.All);
+		
+		if (!locateResult.IsValid())
+		{
+			await NotifyService!.Notify(executor, "I don't see that here.");
+			return CallState.Empty;
+		}
+		
+		var objectToEmpty = locateResult.WithoutError().WithoutNone();
+		
+		// Can only empty things and players (containers)
+		if (!objectToEmpty.IsThing && !objectToEmpty.IsPlayer)
+		{
+			await NotifyService!.Notify(executor, "You can't empty that.");
+			return CallState.Empty;
+		}
+		
+		// Get executor's location
+		var executorLocation = await executor.Match(
+			async player => await player.Location.WithCancellation(CancellationToken.None),
+			async room => await ValueTask.FromResult<AnySharpContainer>(room),
+			async exit => await exit.Home.WithCancellation(CancellationToken.None),
+			async thing => await thing.Location.WithCancellation(CancellationToken.None));
+		
+		// Get the object's location
+		var objectLocation = await objectToEmpty.Match(
+			async player => await player.Location.WithCancellation(CancellationToken.None),
+			async room => await ValueTask.FromResult<AnySharpContainer>(room),
+			async exit => await exit.Home.WithCancellation(CancellationToken.None),
+			async thing => await thing.Location.WithCancellation(CancellationToken.None));
+		
+		// Check if we're holding the object (its location is us)
+		bool isHolding = objectLocation.Match(
+			player => player.Object.DBRef.Equals(executor.Object().DBRef),
+			room => room.Object.DBRef.Equals(executor.Object().DBRef),
+			thing => thing.Object.DBRef.Equals(executor.Object().DBRef));
+		
+		// Check if we're in the same location as the object
+		bool sameLocation = objectLocation.Match(
+			player => player.Object.DBRef.Equals(executorLocation.Object().DBRef),
+			room => room.Object.DBRef.Equals(executorLocation.Object().DBRef),
+			thing => thing.Object.DBRef.Equals(executorLocation.Object().DBRef));
+		
+		if (!isHolding && !sameLocation)
+		{
+			await NotifyService!.Notify(executor, "You must be holding that object or in the same location as it.");
+			return CallState.Empty;
+		}
+		
+		// Check if we can access the object's contents
+		var objectFlags = await objectToEmpty.Object().Flags.Value.ToArrayAsync();
+		var hasEnterOk = objectFlags.Any(f => f.Name.Equals("ENTER_OK", StringComparison.OrdinalIgnoreCase));
+		
+		if (!hasEnterOk && !await PermissionService!.Controls(executor, objectToEmpty))
+		{
+			await NotifyService!.Notify(executor, "Permission denied.");
+			return CallState.Empty;
+		}
+		
+		// Get all contents of the object
+		var container = objectToEmpty.AsContainer;
+		var contents = await container.Content(Mediator!).ToListAsync();
+		
+		if (contents.Count == 0)
+		{
+			await NotifyService!.Notify(executor, $"{objectToEmpty.Object().Name} is already empty.");
+			return CallState.Empty;
+		}
+		
+		// Determine destination for items
+		AnySharpContainer destination;
+		if (isHolding)
+		{
+			// If holding the object, items move to executor's inventory
+			destination = executor.AsContainer;
+		}
+		else
+		{
+			// If in same location, items move to the shared location
+			destination = executorLocation;
+		}
+		
+		int movedCount = 0;
+		int failedCount = 0;
+		
+		// Process each item
+		foreach (var item in contents)
+		{
+			var itemObj = item.WithRoomOption();
+			
+			// Skip rooms and exits
+			if (itemObj.IsRoom || itemObj.IsExit)
+			{
+				failedCount++;
+				continue;
+			}
+			
+			// Check Basic lock on the item (like GET does)
+			if (!LockService!.Evaluate(LockType.Basic, itemObj, executor))
+			{
+				failedCount++;
+				continue;
+			}
+			
+			// Check Take lock on the container (like GET does)
+			if (!LockService!.Evaluate(LockType.Take, container.WithExitOption(), executor))
+			{
+				failedCount++;
+				continue;
+			}
+			
+			// If we're holding the object, just move items to our inventory (like GET)
+			if (isHolding)
+			{
+				// Check for containment loops
+				if (await MoveService!.WouldCreateLoop(itemObj.AsContent, destination))
+				{
+					failedCount++;
+					continue;
+				}
+				
+				// Move item to executor's inventory
+				await Mediator!.Send(new MoveObjectCommand(itemObj.AsContent, destination));
+				
+				// Trigger @success attribute on the item (like GET does)
+				var successAttr = await AttributeService!.GetAttributeAsync(executor, itemObj, AttrSuccess, IAttributeService.AttributeMode.Read, true);
+				if (successAttr.IsAttribute && successAttr.AsT0.Length > 0)
+				{
+					var successMsg = successAttr.AsT0[0].Value;
+					if (!string.IsNullOrEmpty(successMsg.ToPlainText()))
+					{
+						await NotifyService!.Notify(executor, successMsg);
+					}
+				}
+				
+				// Trigger @asuccess attribute (actions)
+				var asuccessAttr = await AttributeService!.GetAttributeAsync(executor, itemObj, AttrASuccess, IAttributeService.AttributeMode.Read, true);
+				if (asuccessAttr.IsAttribute && asuccessAttr.AsT0.Length > 0)
+				{
+					var asuccessActions = asuccessAttr.AsT0[0].Value;
+					if (!string.IsNullOrEmpty(asuccessActions.ToPlainText()))
+					{
+						await parser.CommandParse(asuccessActions);
+					}
+				}
+				
+				movedCount++;
+			}
+			else
+			{
+				// If in same location, temporarily move to inventory then drop (like GET then DROP)
+				
+				// First, check for containment loops for the GET part
+				if (await MoveService!.WouldCreateLoop(itemObj.AsContent, executor.AsContainer))
+				{
+					failedCount++;
+					continue;
+				}
+				
+				// Move to inventory (GET)
+				await Mediator!.Send(new MoveObjectCommand(itemObj.AsContent, executor.AsContainer));
+				
+				// Trigger @success attribute on the item
+				var successAttr = await AttributeService!.GetAttributeAsync(executor, itemObj, AttrSuccess, IAttributeService.AttributeMode.Read, true);
+				if (successAttr.IsAttribute && successAttr.AsT0.Length > 0)
+				{
+					var successMsg = successAttr.AsT0[0].Value;
+					if (!string.IsNullOrEmpty(successMsg.ToPlainText()))
+					{
+						await NotifyService!.Notify(executor, successMsg);
+					}
+				}
+				
+				// Now drop it (DROP)
+				// Check Drop lock on object
+				if (!LockService!.Evaluate(LockType.Drop, itemObj, executor))
+				{
+					// Item is stuck in inventory if we can't drop it
+					failedCount++;
+					continue;
+				}
+				
+				// Check DropIn lock on destination
+				if (!LockService!.Evaluate(LockType.DropIn, destination.WithExitOption(), itemObj))
+				{
+					// Item is stuck in inventory if we can't drop it here
+					failedCount++;
+					continue;
+				}
+				
+				// Check for containment loops for the DROP part
+				if (await MoveService!.WouldCreateLoop(itemObj.AsContent, destination))
+				{
+					failedCount++;
+					continue;
+				}
+				
+				// Move to destination (DROP)
+				await Mediator!.Send(new MoveObjectCommand(itemObj.AsContent, destination));
+				
+				// Trigger @drop attribute on the object
+				var dropAttr = await AttributeService!.GetAttributeAsync(executor, itemObj, AttrDrop, IAttributeService.AttributeMode.Read, true);
+				if (dropAttr.IsAttribute && dropAttr.AsT0.Length > 0)
+				{
+					var dropMsg = dropAttr.AsT0[0].Value;
+					if (!string.IsNullOrEmpty(dropMsg.ToPlainText()))
+					{
+						await NotifyService!.Notify(executor, dropMsg);
+					}
+				}
+				
+				// Trigger @adrop attribute (actions)
+				var adropAttr = await AttributeService!.GetAttributeAsync(executor, itemObj, AttrADrop, IAttributeService.AttributeMode.Read, true);
+				if (adropAttr.IsAttribute && adropAttr.AsT0.Length > 0)
+				{
+					var adropActions = adropAttr.AsT0[0].Value;
+					if (!string.IsNullOrEmpty(adropActions.ToPlainText()))
+					{
+						await parser.CommandParse(adropActions);
+					}
+				}
+				
+				movedCount++;
+			}
+		}
+		
+		// Notify the player about the results
+		if (movedCount > 0 && failedCount == 0)
+		{
+			await NotifyService!.Notify(executor, $"Emptied {objectToEmpty.Object().Name}.");
+		}
+		else if (movedCount > 0 && failedCount > 0)
+		{
+			await NotifyService!.Notify(executor, $"Emptied {movedCount} item(s) from {objectToEmpty.Object().Name}. {failedCount} item(s) could not be moved.");
+		}
+		else if (movedCount == 0 && failedCount > 0)
+		{
+			await NotifyService!.Notify(executor, $"Could not empty {objectToEmpty.Object().Name}.");
+		}
+		
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "ENTER", Switches = [], Behavior = CB.Default, MinArgs = 1, MaxArgs = 1)]
