@@ -2103,11 +2103,12 @@ public partial class Commands
 		// TODO: Validate Name and Passwords
 		var defaultHome = Configuration!.CurrentValue.Database.DefaultHome;
 		var defaultHomeDbref = new DBRef((int)defaultHome);
+		var startingQuota = (int)Configuration.CurrentValue.Limit.StartingQuota;
 		var args = parser.CurrentState.Arguments;
 		var name = MModule.plainText(args["0"].Message!);
 		var password = MModule.plainText(args["1"].Message!);
 
-		var player = await Mediator!.Send(new CreatePlayerCommand(name, password, defaultHomeDbref, defaultHomeDbref));
+		var player = await Mediator!.Send(new CreatePlayerCommand(name, password, defaultHomeDbref, defaultHomeDbref, startingQuota));
 
 		return new CallState(player.ToString());
 	}

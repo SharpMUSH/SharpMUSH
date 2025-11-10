@@ -60,7 +60,7 @@ public partial class ArangoDatabase(
 		}
 	}
 
-	public async ValueTask<DBRef> CreatePlayerAsync(string name, string password, DBRef location, DBRef home,
+	public async ValueTask<DBRef> CreatePlayerAsync(string name, string password, DBRef location, DBRef home, int quota,
 		CancellationToken ct = default)
 	{
 		var time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
@@ -102,7 +102,7 @@ public partial class ArangoDatabase(
 		var playerResult = await arangoDb.Document.CreateAsync<SharpPlayerCreateRequest, SharpPlayerQueryResult>(
 			transactionHandle,
 			DatabaseConstants.Players,
-			new SharpPlayerCreateRequest([], hashedPassword), cancellationToken: ct);
+			new SharpPlayerCreateRequest([], hashedPassword, quota), cancellationToken: ct);
 
 		await arangoDb.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.GraphObjects, DatabaseConstants.IsObject,
 			new SharpEdgeCreateRequest(playerResult.Id, obj.New.Id), cancellationToken: ct);
@@ -1259,7 +1259,8 @@ public partial class ArangoDatabase(
 				Id = id, Object = convertObject, Aliases = res.Aliases,
 				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id), ct)),
 				Home = new(async ct => await GetHomeAsync(id, ct)),
-				PasswordHash = res.PasswordHash
+				PasswordHash = res.PasswordHash,
+				Quota = res.Quota
 			},
 			DatabaseConstants.TypeRoom => new SharpRoom 
 			{ 
@@ -1315,7 +1316,8 @@ public partial class ArangoDatabase(
 			{
 				Id = id, Object = convertObject, Aliases = res.Aliases.ToObject<string[]>(),
 				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id), ct)),
-				Home = new(async ct => await GetHomeAsync(id, ct)), PasswordHash = res.PasswordHash
+				Home = new(async ct => await GetHomeAsync(id, ct)), PasswordHash = res.PasswordHash,
+				Quota = res.Quota
 			},
 			DatabaseConstants.Rooms => new SharpRoom 
 			{ 

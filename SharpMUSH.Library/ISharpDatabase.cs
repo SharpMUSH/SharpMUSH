@@ -18,9 +18,10 @@ public interface ISharpDatabase
 	/// <param name="password">Player password</param>
 	/// <param name="location">Location to create it in</param>
 	/// <param name="home"></param>
+	/// <param name="quota">Initial quota for the player</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>New player <see cref="DBRef"/></returns>
-	ValueTask<DBRef> CreatePlayerAsync(string name, string password, DBRef location, DBRef home,
+	ValueTask<DBRef> CreatePlayerAsync(string name, string password, DBRef location, DBRef home, int quota,
 		CancellationToken cancellationToken = default);
 
 	/// <summary>
