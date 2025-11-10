@@ -60,7 +60,7 @@ public partial class ArangoDatabase(
 		}
 	}
 
-	public async ValueTask<DBRef> CreatePlayerAsync(string name, string password, DBRef location, DBRef home,
+	public async ValueTask<DBRef> CreatePlayerAsync(string name, string password, DBRef location, DBRef home, int quota,
 		CancellationToken ct = default)
 	{
 		var time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
@@ -102,7 +102,7 @@ public partial class ArangoDatabase(
 		var playerResult = await arangoDb.Document.CreateAsync<SharpPlayerCreateRequest, SharpPlayerQueryResult>(
 			transactionHandle,
 			DatabaseConstants.Players,
-			new SharpPlayerCreateRequest([], hashedPassword), cancellationToken: ct);
+			new SharpPlayerCreateRequest([], hashedPassword, quota), cancellationToken: ct);
 
 		await arangoDb.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.GraphObjects, DatabaseConstants.IsObject,
 			new SharpEdgeCreateRequest(playerResult.Id, obj.New.Id), cancellationToken: ct);
@@ -1259,7 +1259,8 @@ public partial class ArangoDatabase(
 				Id = id, Object = convertObject, Aliases = res.Aliases,
 				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id), ct)),
 				Home = new(async ct => await GetHomeAsync(id, ct)),
-				PasswordHash = res.PasswordHash
+				PasswordHash = res.PasswordHash,
+				Quota = res.Quota
 			},
 			DatabaseConstants.TypeRoom => new SharpRoom 
 			{ 
@@ -1315,7 +1316,8 @@ public partial class ArangoDatabase(
 			{
 				Id = id, Object = convertObject, Aliases = res.Aliases.ToObject<string[]>(),
 				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id), ct)),
-				Home = new(async ct => await GetHomeAsync(id, ct)), PasswordHash = res.PasswordHash
+				Home = new(async ct => await GetHomeAsync(id, ct)), PasswordHash = res.PasswordHash,
+				Quota = res.Quota
 			},
 			DatabaseConstants.Rooms => new SharpRoom 
 			{ 
@@ -2254,6 +2256,23 @@ public partial class ArangoDatabase(
 		}
 	}
 
+	public async IAsyncEnumerable<SharpPlayer> GetAllPlayersAsync([EnumeratorCancellation] CancellationToken ct = default)
+	{
+		var playerIds = arangoDb.Query.ExecuteStreamAsync<string>(handle,
+			$"FOR v IN {DatabaseConstants.Objects:@} FILTER v.Type == @playerType RETURN v._id",
+			bindVars: new Dictionary<string, object> { { "playerType", DatabaseConstants.TypePlayer } },
+			cancellationToken: ct) ?? AsyncEnumerable.Empty<string>();
+
+		await foreach (var id in playerIds.WithCancellation(ct))
+		{
+			var optionalObj = await GetObjectNodeAsync(id, ct);
+			if (!optionalObj.IsNone && optionalObj.IsPlayer)
+			{
+				yield return optionalObj.AsPlayer;
+			}
+		}
+	}
+
 	public async IAsyncEnumerable<SharpExit> GetEntrancesAsync(DBRef destination,
 		[EnumeratorCancellation] CancellationToken ct = default)
 	{
@@ -2340,6 +2359,41 @@ public partial class ArangoDatabase(
 			player.Id,
 			PasswordHash = hashed
 		}, mergeObjects: true, cancellationToken: ct);
+	}
+
+	public async ValueTask SetPlayerQuotaAsync(SharpPlayer player, int quota, CancellationToken ct = default)
+	{
+		await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Players, new
+		{
+			player.Id,
+			Quota = quota
+		}, mergeObjects: true, cancellationToken: ct);
+	}
+
+	public async ValueTask<int> GetOwnedObjectCountAsync(SharpPlayer player, CancellationToken ct = default)
+	{
+		// Query to count all objects owned by the player
+		// Uses the HasObjectOwner edge in the GraphObjectOwners graph
+		var query = $@"
+			FOR v, e IN 1..1 OUTBOUND @playerId GRAPH {DatabaseConstants.GraphObjectOwners}
+			FILTER e._id != @playerId
+			COLLECT WITH COUNT INTO length
+			RETURN length
+		";
+
+		var bindVars = new Dictionary<string, object>
+		{
+			{ "playerId", player.Id! }
+		};
+
+		var result = await arangoDb.Query.ExecuteAsync<int>(
+			handle, 
+			query, 
+			bindVars: bindVars,
+			cache: false,
+			cancellationToken: ct);
+
+		return result.FirstOrDefault();
 	}
 
 	public async ValueTask<SharpObjectFlag?> CreateObjectFlagAsync(string name, string[]? aliases, string symbol, 
