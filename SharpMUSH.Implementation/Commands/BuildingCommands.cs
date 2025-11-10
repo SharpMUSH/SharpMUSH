@@ -59,6 +59,15 @@ public partial class Commands
 		
 		await NotifyService!.Notify(executor, $"Created {name} ({thing}).");
 
+		// Trigger OBJECT`CREATE event
+		// PennMUSH spec: object`create (new objid, cloned-from)
+		await EventService!.TriggerEventAsync(
+			parser,
+			"OBJECT`CREATE",
+			executor.Object().DBRef,
+			thing.ToString(),
+			""); // null for cloned-from (not a clone)
+
 		return new CallState(thing.ToString());
 	}
 
@@ -98,7 +107,26 @@ public partial class Commands
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, target,
 			LocateFlags.All,
-			async found => await ManipulateSharpObjectService!.SetName(executor, found, name, true)
+			async found =>
+			{
+				var oldName = found.Object().Name;
+				var result = await ManipulateSharpObjectService!.SetName(executor, found, name, true);
+				
+				// If rename was successful, trigger OBJECT`RENAME event
+				// PennMUSH spec: object`rename (objid, new name, old name)
+				if (result.ToString() != Errors.ErrorPerm)
+				{
+					await EventService!.TriggerEventAsync(
+						parser,
+						"OBJECT`RENAME",
+						executor.Object().DBRef,
+						found.Object().DBRef.ToString(),
+						name.ToPlainText(),
+						oldName);
+				}
+				
+				return result;
+			}
 		);
 	}
 

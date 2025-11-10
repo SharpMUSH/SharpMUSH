@@ -759,8 +759,9 @@ public partial class Commands
 	[SharpCommand(Name = "@DBCK", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD", MinArgs = 0)]
 	public static async ValueTask<Option<CallState>> DatabaseCheck(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		await NotifyService!.Notify(executor, "Not Supported for SharpMUSH.");
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@HIDE", Switches = ["NO", "OFF", "YES", "ON"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
@@ -1333,8 +1334,78 @@ public partial class Commands
 	[SharpCommand(Name = "@BOOT", Switches = ["PORT", "ME", "SILENT"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Boot(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var switches = parser.CurrentState.Switches.ToHashSet();
+		var args = parser.CurrentState.Arguments;
+		var silent = switches.Contains("SILENT");
+
+		List<long> targetHandles = [];
+
+		if (switches.Contains("ME"))
+		{
+			if (parser.CurrentState.Handle is { } h)
+				targetHandles.Add(h);
+		}
+		else if (switches.Contains("PORT"))
+		{
+			if (args.Count == 0)
+			{
+				await NotifyService!.Notify(executor, "Usage: @boot/port <descriptor number>");
+				return new CallState("#-1 INVALID ARGUMENTS");
+			}
+			var portText = args["0"].Message!.ToPlainText();
+			if (!long.TryParse(portText, out var handle))
+			{
+				await NotifyService!.Notify(executor, "Descriptor number must be a number.");
+				return new CallState("#-1 INVALID ARGUMENTS");
+			}
+			if (ConnectionService!.Get(handle) is not null)
+			{
+				targetHandles.Add(handle);
+			}
+			else
+			{
+				await NotifyService!.Notify(executor, $"No such descriptor: {handle}.");
+				return CallState.Empty;
+			}
+		}
+		else
+		{
+			if (args.Count == 0)
+			{
+				await NotifyService!.Notify(executor, "Usage: @boot <player> | @boot/me | @boot/port <descriptor>");
+				return new CallState("#-1 INVALID ARGUMENTS");
+			}
+			var playerArg = args["0"].Message!.ToPlainText();
+			var maybePlayer = await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg);
+			if (maybePlayer.IsError)
+			{
+				return maybePlayer.AsError;
+			}
+			var playerObj = maybePlayer.AsSharpObject.AsPlayer;
+			var targetDbRef = playerObj.Object.DBRef;
+			// TODO: This should only boot the last active connection, to match Penn behavior.
+			await foreach (var cd in ConnectionService!.Get(targetDbRef))
+			{
+				targetHandles.Add(cd.Handle);
+			}
+			if (targetHandles.Count == 0)
+			{
+				await NotifyService!.Notify(executor, "That player is not connected.");
+				return CallState.Empty;
+			}
+		}
+
+		foreach (var handle in targetHandles)
+		{
+			if (!silent)
+			{
+				await NotifyService!.Notify(handle, "You have been disconnected.", type: INotifyService.NotificationType.Announce);
+			}
+			ConnectionService!.Disconnect(handle);
+		}
+
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@DISABLE", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD",
@@ -1643,8 +1714,21 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var name = MModule.plainText(args["0"].Message!);
 		var password = MModule.plainText(args["1"].Message!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		var player = await Mediator!.Send(new CreatePlayerCommand(name, password, defaultHomeDbref, defaultHomeDbref, startingQuota));
+
+		// Trigger PLAYER`CREATE event
+		// PennMUSH spec: player`create (objid, name, how, descriptor, email)
+		await EventService!.TriggerEventAsync(
+			parser,
+			"PLAYER`CREATE",
+			executor.Object().DBRef, // Enactor is the wizard who did @pcreate
+			player.ToString(),
+			name,
+			"pcreate",
+			"", // descriptor (not applicable for @pcreate)
+			""); // email (not applicable for @pcreate)
 
 		return new CallState(player.ToString());
 	}
@@ -1968,8 +2052,39 @@ public partial class Commands
 	[SharpCommand(Name = "@KICK", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD", MinArgs = 0)]
 	public static async ValueTask<Option<CallState>> Kick(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+
+		if (args.Count == 0)
+		{
+			await NotifyService!.Notify(executor, "Usage: @kick <player>");
+			return new CallState("#-1 INVALID ARGUMENTS");
+		}
+
+		var playerArg = args["0"].Message!.ToPlainText();
+		var maybePlayer = await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg);
+		if (maybePlayer.IsError)
+		{
+			return maybePlayer.AsError;
+		}
+
+		var playerObj = maybePlayer.AsSharpObject.AsPlayer;
+		var targetDbRef = playerObj.Object.DBRef;
+
+		var any = false;
+		await foreach (var cd in ConnectionService!.Get(targetDbRef))
+		{
+			any = true;
+			await NotifyService!.Notify(cd.Handle, "You have been disconnected.", type: INotifyService.NotificationType.Announce);
+			ConnectionService!.Disconnect(cd.Handle);
+		}
+
+		if (!any)
+		{
+			await NotifyService!.Notify(executor, "That player is not connected.");
+		}
+
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@POLL", Switches = ["CLEAR"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
