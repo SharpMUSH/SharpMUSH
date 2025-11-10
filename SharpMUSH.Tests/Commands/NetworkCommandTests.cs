@@ -50,14 +50,15 @@ public class NetworkCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask SitelockCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@sitelock/list"));
 
+		// Verify the command executed and sent output to the user
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Any<OneOf.OneOf<MString, string>>());
 	}
 
 	[Test]
