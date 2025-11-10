@@ -1,6 +1,8 @@
 ﻿using System.Reflection;
 using Mediator;
+using Microsoft.Extensions.Logging;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -35,6 +37,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 	
 	private static IMoveService? MoveService { get; set; }
 	
+	private static ILogger<Commands>? Logger { get; set; }
+	
 	private static IHookService? HookService { get; set; }
 	
 	private static LibraryService<string, CommandDefinition>? CommandLibrary { get; set; }
@@ -61,6 +65,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		ISqlService sqlService,
 		ILockService lockService,
 		IMoveService moveService,
+		ILogger<Commands> logger,
 		IHookService hookService,
 		LibraryService<string, FunctionDefinition> functionLibrary)
 	{
@@ -81,6 +86,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		SqlService = sqlService;
 		LockService = lockService;
 		MoveService = moveService;
+		Logger = logger;
 		HookService = hookService;
 		FunctionLibrary = functionLibrary;
 
