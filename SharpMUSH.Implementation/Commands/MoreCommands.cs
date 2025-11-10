@@ -57,15 +57,12 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches;
 		
-		// Parse channel name
 		var channelName = args["0"].Message!;
 		var lockKey = args.TryGetValue("1", out var arg1) ? arg1.Message!.ToPlainText() : string.Empty;
 		
-		// Determine lock type from switch
 		var lockType = switches.FirstOrDefault() ?? "JOIN";
 		lockType = lockType.ToUpper();
 		
-		// Get the channel
 		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
 			NotifyService!, channelName, false);
 		
@@ -76,8 +73,6 @@ public partial class Commands
 		
 		var channel = maybeChannel.AsChannel;
 		
-		// Check if executor has permission to modify channel locks
-		// Must pass the mod lock or be the owner
 		var owner = await channel.Owner.WithCancellation(CancellationToken.None);
 		var isOwner = owner.Object.DBRef.Equals(executor.Object().DBRef);
 		var passesModLock = string.IsNullOrEmpty(channel.ModLock) || 
@@ -89,7 +84,6 @@ public partial class Commands
 			return new CallState("#-1 PERMISSION DENIED");
 		}
 		
-		// Update the appropriate lock
 		UpdateChannelCommand updateCommand = lockType switch
 		{
 			"JOIN" => new UpdateChannelCommand(channel, null, null, null, lockKey, null, null, null, null, null, null),
@@ -135,10 +129,8 @@ public partial class Commands
 		// Handle /MOTD switch - alias for @listmotd
 		if (switches.Contains("MOTD"))
 		{
-			// Check if executor is wizard/royalty to see wizard MOTD
 			var isWizard = await executor.IsWizard();
 			
-			// Get MOTD file paths from configuration
 			var motdFile = Configuration!.CurrentValue.Message.MessageOfTheDayFile;
 			var motdHtmlFile = Configuration.CurrentValue.Message.MessageOfTheDayHtmlFile;
 			
@@ -158,7 +150,6 @@ public partial class Commands
 			return CallState.Empty;
 		}
 		
-		// Handle /FLAGS switch - alias for @flag/list
 		if (switches.Contains("FLAGS"))
 		{
 			var output = new System.Text.StringBuilder();
@@ -184,7 +175,6 @@ public partial class Commands
 			return CallState.Empty;
 		}
 		
-		// Handle /POWERS switch - alias for @power/list
 		if (switches.Contains("POWERS"))
 		{
 			var output = new System.Text.StringBuilder();
@@ -210,14 +200,12 @@ public partial class Commands
 			return CallState.Empty;
 		}
 		
-		// Handle /LOCKS switch - list lock types
 		if (switches.Contains("LOCKS"))
 		{
 			var output = new System.Text.StringBuilder();
 			var header = useLowercase ? "Lock Types:" : "LOCK TYPES:";
 			output.AppendLine(header);
 			
-			// Get all lock types from the LockType enum
 			var lockTypes = Enum.GetNames(typeof(LockType));
 			foreach (var lockType in lockTypes.OrderBy(x => x))
 			{
@@ -229,7 +217,6 @@ public partial class Commands
 			return CallState.Empty;
 		}
 		
-		// Handle /ATTRIBS switch - list standard attributes
 		if (switches.Contains("ATTRIBS"))
 		{
 			var output = new System.Text.StringBuilder();
@@ -247,7 +234,6 @@ public partial class Commands
 			return CallState.Empty;
 		}
 		
-		// Handle /COMMANDS switch - list all commands
 		if (switches.Contains("COMMANDS"))
 		{
 			var output = new System.Text.StringBuilder();
@@ -267,7 +253,6 @@ public partial class Commands
 			{
 				commandPairs = commandPairs.Where(kvp => !kvp.Value.IsSystem);
 			}
-			// If both or neither are set, show all
 			
 			var commands = commandPairs
 				.Select(kvp => kvp.Value.LibraryInformation.Attribute.Name)
@@ -303,7 +288,6 @@ public partial class Commands
 			{
 				functionPairs = functionPairs.Where(kvp => !kvp.Value.IsSystem);
 			}
-			// If both or neither are set, show all
 			
 			var functions = functionPairs
 				.Select(kvp => kvp.Value.LibraryInformation.Attribute.Name)
@@ -319,10 +303,8 @@ public partial class Commands
 			return CallState.Empty;
 		}
 		
-		// Handle /ALLOCATIONS switch - memory allocation info (admin-only)
 		if (switches.Contains("ALLOCATIONS"))
 		{
-			// Check if user is admin/wizard
 			var isWizard = await executor.IsWizard();
 			if (!isWizard)
 			{
@@ -341,7 +323,6 @@ public partial class Commands
 			return CallState.Empty;
 		}
 		
-		// If no specific switch is provided, show a help message
 		await NotifyService!.Notify(executor, "You must specify what to list. Use one of: /MOTD /FUNCTIONS /COMMANDS /ATTRIBS /LOCKS /FLAGS /POWERS /ALLOCATIONS");
 		return CallState.Empty;
 	}
