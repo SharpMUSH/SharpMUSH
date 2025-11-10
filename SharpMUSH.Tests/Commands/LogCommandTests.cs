@@ -107,7 +107,7 @@ public class LogCommandTests
 		// Now test @lset to set a flag on the Basic lock
 		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@lset #1/Basic=visual"));
 		
-		// Just verify it didn't throw an exception
+		// Verify the command executed successfully (didn't throw or return error)
 		await Assert.That(result).IsNotNull();
 	}
 }

@@ -128,7 +128,7 @@ public class DatabaseCommandTests
 		// Now test @clock to set a lock on the channel
 		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@clock/join TestClockChannel=#TRUE"));
 		
-		// Just verify it didn't throw an exception
+		// Verify the command executed successfully (didn't throw or return error)
 		await Assert.That(result).IsNotNull();
 	}
 
