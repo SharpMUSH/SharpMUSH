@@ -9,106 +9,33 @@ namespace SharpMUSH.Library.Services;
 
 /// <summary>
 /// Notifies objects and sends telnet data.
+/// This is now a wrapper that delegates to an inner INotifyService implementation
+/// (typically MessageQueueNotifyService in distributed architecture).
 /// </summary>
-/// <remarks>
-/// Intentionally not awaiting Telnet ValueTasks here, as we don't need to wait for the output to complete.
-/// </remarks>
-/// <param name="_connectionService">Connection Service</param>
-public class NotifyService(IConnectionService _connectionService) : INotifyService
+/// <param name="_innerService">The actual notify service implementation to delegate to</param>
+public class NotifyService(INotifyService _innerService) : INotifyService
 {
-	public async ValueTask Notify(DBRef who, OneOf<MString, string> what, AnySharpObject? sender, NotificationType type = NotificationType.Announce)
-	{
-		if (what.Match(
-			markupString => MModule.getLength(markupString) == 0,
-			str => str.Length == 0
-			))
-		{
-			return;
-		}
-
-		var list = _connectionService.Get(who);
-
-		await foreach (var item in list)
-		{
-			await item.OutputFunction(what.Match(
-				markupString => item.Encoding().GetBytes(markupString.ToString()),
-				str => item.Encoding().GetBytes(str)));
-		}
-	}
+	public ValueTask Notify(DBRef who, OneOf<MString, string> what, AnySharpObject? sender, NotificationType type = NotificationType.Announce)
+		=> _innerService.Notify(who, what, sender, type);
 
 	public ValueTask Notify(AnySharpObject who, OneOf<MString, string> what, AnySharpObject? sender, NotificationType type = NotificationType.Announce)
-		=> Notify(who.Object().DBRef, what, sender, type);
+		=> _innerService.Notify(who, what, sender, type);
 
-	public async ValueTask Notify(long handle, OneOf<MString, string> what, AnySharpObject? sender, NotificationType type = NotificationType.Announce)
-		=> await Notify([handle], what, sender, type);
+	public ValueTask Notify(long handle, OneOf<MString, string> what, AnySharpObject? sender, NotificationType type = NotificationType.Announce)
+		=> _innerService.Notify(handle, what, sender, type);
 
 	public ValueTask Notify(long[] handles, OneOf<MString, string> what, AnySharpObject? sender, NotificationType type = NotificationType.Announce)
-	{
-		if (what.Match(
-			markupString => MModule.getLength(markupString) == 0,
-			str => str.Length == 0
-			))
-		{
-			return ValueTask.CompletedTask;
-		}
+		=> _innerService.Notify(handles, what, sender, type);
 
-		var list = handles.Select(_connectionService.Get);
-
-		foreach (var item in list)
-		{
-			_ = item?.OutputFunction(what.Match(
-				markupString => item.Encoding().GetBytes(markupString.ToString()),
-				str => item.Encoding().GetBytes(str)));
-		}
-
-		return ValueTask.CompletedTask;
-	}
-
-	public async ValueTask Prompt(DBRef who, OneOf<MString, string> what, AnySharpObject? sender, NotificationType type = NotificationType.Announce)
-	{
-		if (what.Match(
-			    markupString => MModule.getLength(markupString) == 0,
-			    str => str.Length == 0
-		    ))
-		{
-			return;
-		}
-
-		var list = _connectionService.Get(who);
-
-		await foreach (var item in list)
-		{
-			await item.OutputFunction(what.Match(
-				markupString => item.Encoding().GetBytes(markupString.ToString()),
-				str => item.Encoding().GetBytes(str)));
-		}
-	}
+	public ValueTask Prompt(DBRef who, OneOf<MString, string> what, AnySharpObject? sender, NotificationType type = NotificationType.Announce)
+		=> _innerService.Prompt(who, what, sender, type);
 
 	public ValueTask Prompt(AnySharpObject who, OneOf<MString, string> what, AnySharpObject? sender, NotificationType type = NotificationType.Announce)
-		=> Prompt(who.Object().DBRef, what, sender, type);
+		=> _innerService.Prompt(who, what, sender, type);
 
-	public async ValueTask Prompt(long handle, OneOf<MString, string> what, AnySharpObject? sender, NotificationType type = NotificationType.Announce)
-		=> await Prompt([handle], what, sender, type);
+	public ValueTask Prompt(long handle, OneOf<MString, string> what, AnySharpObject? sender, NotificationType type = NotificationType.Announce)
+		=> _innerService.Prompt(handle, what, sender, type);
 
 	public ValueTask Prompt(long[] handles, OneOf<MString, string> what, AnySharpObject? sender, NotificationType type = NotificationType.Announce)
-	{
-		if (what.Match(
-			    markupString => MModule.getLength(markupString) == 0,
-			    str => str.Length == 0
-		    ))
-		{
-			return ValueTask.CompletedTask;
-		}
-
-		var list = handles.Select(_connectionService.Get);
-
-		foreach (var item in list)
-		{
-			_ = item?.OutputFunction(what.Match(
-				markupString => item.Encoding().GetBytes(markupString.ToString()),
-				str => item.Encoding().GetBytes(str)));
-		}
-
-		return ValueTask.CompletedTask;
-	}
+		=> _innerService.Prompt(handles, what, sender, type);
 }

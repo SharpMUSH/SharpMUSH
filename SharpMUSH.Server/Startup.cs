@@ -85,7 +85,11 @@ public class Startup(ArangoConfiguration config, string colorFile)
 		);
 		services.AddSingleton<IPasswordService, PasswordService>();
 		services.AddSingleton<IPermissionService, PermissionService>();
-		services.AddSingleton<INotifyService, SharpMUSH.Server.Services.MessageQueueNotifyService>();
+		// Register MessageQueueNotifyService as the inner service
+		services.AddSingleton<SharpMUSH.Server.Services.MessageQueueNotifyService>();
+		// Register NotifyService as a wrapper that uses MessageQueueNotifyService
+		services.AddSingleton<INotifyService>(sp => 
+			new NotifyService(sp.GetRequiredService<SharpMUSH.Server.Services.MessageQueueNotifyService>()));
 		services.AddSingleton<ILocateService, LocateService>();
 		services.AddSingleton<IMoveService, MoveService>();
 		services.AddSingleton<IExpandedObjectDataService, ExpandedObjectDataService>();
