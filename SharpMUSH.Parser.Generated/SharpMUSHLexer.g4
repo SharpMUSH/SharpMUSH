@@ -28,7 +28,6 @@ OPAREN: '(' WS;
 OTHER: ~( '\\' | '[' | ']' | '{' | '}' | '(' | ')' | '>' | ',' | '=' | '%' | ';' | '\u001b' )+;
 
 // --------------- SUBSTITUTION MODE -------------
-// TODO: Remove all the single-character cases, and let the code itself figure out what they are.
 mode SUBSTITUTION;
 COLON: ':' -> popMode;
 REG_STARTCARET: [qQ]'<' -> popMode;
