@@ -27,6 +27,7 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Server.Services;
 using TaskScheduler = SharpMUSH.Library.Services.TaskScheduler;
 
 namespace SharpMUSH.Server;
@@ -85,11 +86,11 @@ public class Startup(ArangoConfiguration config, string colorFile)
 		);
 		services.AddSingleton<IPasswordService, PasswordService>();
 		services.AddSingleton<IPermissionService, PermissionService>();
-		// Register MessageQueueNotifyService as the inner service
-		services.AddSingleton<SharpMUSH.Server.Services.MessageQueueNotifyService>();
+		// Register MessageQueueNotifyService with its interface for mocking
+		services.AddSingleton<IMessageQueueNotifyService, MessageQueueNotifyService>();
 		// Register NotifyService as a wrapper that uses MessageQueueNotifyService
 		services.AddSingleton<INotifyService>(sp => 
-			new NotifyService(sp.GetRequiredService<SharpMUSH.Server.Services.MessageQueueNotifyService>()));
+			new NotifyService(sp.GetRequiredService<IMessageQueueNotifyService>()));
 		services.AddSingleton<ILocateService, LocateService>();
 		services.AddSingleton<IMoveService, MoveService>();
 		services.AddSingleton<IExpandedObjectDataService, ExpandedObjectDataService>();

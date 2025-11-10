@@ -16,7 +16,7 @@ namespace SharpMUSH.Server.Services;
 /// NotifyService implementation that publishes messages to the message queue
 /// instead of directly calling connection functions.
 /// </summary>
-public class MessageQueueNotifyService : INotifyService
+public class MessageQueueNotifyService : IMessageQueueNotifyService
 {
 	private readonly IPublishEndpoint _publishEndpoint;
 
