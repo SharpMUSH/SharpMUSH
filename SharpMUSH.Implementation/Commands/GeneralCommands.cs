@@ -65,8 +65,6 @@ public partial class Commands
 	public static async ValueTask<Option<CallState>> Map(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// @map[/<switches>][/notify][/delimit <delim>] [<object>/]<attribute>=<list>
-		// A version of map(), but for a command, to run like @dolist
-		
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches.ToArray();
@@ -97,7 +95,6 @@ public partial class Commands
 			await NotifyService.Notify(executor, $"  List: {listToMap}");
 		}
 		
-		// Check switches
 		if (switches.Contains("INLINE"))
 		{
 			await NotifyService.Notify(executor, "  Mode: Inline execution");
@@ -118,13 +115,9 @@ public partial class Commands
 			await NotifyService.Notify(executor, "  Will localize Q-registers");
 		}
 		
-		// TODO: Full implementation requires:
-		// - Parsing object/attribute path
-		// - Splitting list into elements
-		// - For each element, queue/execute the attribute with element as %0
-		// - Handle enactor preservation and Q-register management
-		// - Handle /inline vs queued execution
-		// - Handle /notify switch
+		// TODO: Full implementation requires parsing object/attribute path, splitting list into elements,
+		// executing the attribute for each element with element as %0, handling enactor preservation
+		// and Q-register management, and handling /inline vs queued execution and /notify switch.
 		await NotifyService.Notify(executor, "Note: @map command queueing and execution not yet implemented.");
 		
 		return new CallState("#-1 NOT IMPLEMENTED");
@@ -156,8 +149,7 @@ public partial class Commands
 			wrappedIteration.Value = item!;
 			wrappedIteration.Iteration++;
 
-			// TODO: This should not need parsing each time.
-			// Just Evaluation by getting the Context and Visiting the Children multiple times.
+			// TODO: This should not need parsing each time. Just evaluation by getting the Context and visiting the children multiple times.
 			lastCallState = await visitorFunc();
 		}
 
@@ -175,14 +167,11 @@ public partial class Commands
 		var forceOpaque = switches.Contains("OPAQUE");
 		var lookOutside = switches.Contains("OUTSIDE");
 
-		// Determine what we're looking at
 		AnyOptionalSharpObject viewing = new None();
 		
 		if (lookOutside && executor.IsContent)
 		{
-			// look/outside - look at the container we're in
 			var container = await executor.AsContent.Location();
-			// Convert AnySharpObject to AnyOptionalSharpObject via implicit conversion
 			viewing = container.WithRoomOption().Match<AnyOptionalSharpObject>(
 				player => player,
 				room => room,
@@ -192,7 +181,6 @@ public partial class Commands
 		}
 		else if (args.Count == 1)
 		{
-			// look <object>
 			var locate = await LocateService!.LocateAndNotifyIfInvalid(
 				parser,
 				executor,
@@ -207,7 +195,6 @@ public partial class Commands
 		}
 		else
 		{
-			// look (at current location)
 			viewing = (await Mediator!.Send(new GetCertainLocationQuery(executor.Id()!))).WithExitOption()
 				.WithNoneOption();
 		}
@@ -220,19 +207,16 @@ public partial class Commands
 		var realViewing = viewing.Known;
 		var viewingObject = realViewing.Object();
 		
-		// Check if executor is inside the object being viewed (affects whether to use @idescribe)
 		var executorLocation = executor.IsContent 
 			? await executor.AsContent.Location()
 			: null;
 		var viewingFromInside = executorLocation != null 
 			&& executorLocation.Object().DBRef == viewingObject.DBRef;
 
-		// Get base name and description
 		var baseName = viewingObject.Name;
 		var baseDesc = MModule.empty();
 		var useIdesc = viewingFromInside && !lookOutside;
 
-		// Get description (DESCRIBE or IDESCRIBE depending on viewingFromInside)
 		var descAttrName = useIdesc ? "IDESCRIBE" : "DESCRIBE";
 		var descResult = await AttributeService!.GetAttributeAsync(executor, realViewing, descAttrName,
 			IAttributeService.AttributeMode.Read, false);
@@ -249,11 +233,8 @@ public partial class Commands
 			baseDesc = MModule.single("You see nothing special.");
 		}
 
-		// Evaluate format attributes with Q-register flow
-		// Create arguments for format attributes
 		var formatArgs = new Dictionary<string, CallState>();
 		
-		// Evaluate NAMEFORMAT if present (only for rooms when viewing from inside)
 		var formattedName = MModule.single(baseName);
 		if (realViewing.IsRoom && viewingFromInside)
 		{
@@ -284,7 +265,6 @@ public partial class Commands
 				$"(#{viewingObject.DBRef.Number}{string.Join(string.Empty, flags.Select(x => x.Symbol))})");
 		}
 
-		// Evaluate DESCFORMAT or IDESCFORMAT if present
 		var formatAttrName = useIdesc ? "IDESCFORMAT" : "DESCFORMAT";
 		var descFormatResult = await AttributeService.GetAttributeAsync(executor, realViewing, formatAttrName,
 			IAttributeService.AttributeMode.Read, false);
@@ -297,14 +277,12 @@ public partial class Commands
 				parser, executor, realViewing, formatAttrName, formatArgs);
 		}
 
-		// Display name and description
 		await NotifyService!.Notify(executor, formattedName);
 		if (MModule.getLength(formattedDesc) > 0)
 		{
 			await NotifyService.Notify(executor, formattedDesc);
 		}
 
-		// Get contents and exits (if viewing a container and not OPAQUE)
 		var showInventory = realViewing.IsContainer 
 			&& !forceOpaque 
 			&& !(await realViewing.IsOpaque());
@@ -327,21 +305,17 @@ public partial class Commands
 				var isDark = await itemObj.IsDarkLegal();
 				var isLight = await itemObj.IsLight();
 				
-				// Determine visibility based on DARK/LIGHT rules
 				bool visible = false;
 				if (isRoomLight)
 				{
-					// LIGHT rooms show everything
 					visible = true;
 				}
 				else if (isRoomDark)
 				{
-					// DARK rooms only show LIGHT objects (unless viewer can see all)
 					visible = canSeeAll || isLight;
 				}
 				else
 				{
-					// Normal rooms don't show DARK objects
 					visible = !isDark || canSeeAll;
 				}
 
@@ -349,7 +323,6 @@ public partial class Commands
 				{
 					if (item.IsExit)
 					{
-						// Don't show DARK exits
 						if (!isDark || canSeeAll)
 						{
 							visibleExits.Add(item);
@@ -362,7 +335,6 @@ public partial class Commands
 				}
 			}
 
-			// Format and display contents using CONFORMAT if present
 			if (visibleContents.Count > 0)
 			{
 				var conFormatResult = await AttributeService.GetAttributeAsync(executor, realViewing, "CONFORMAT",
@@ -389,7 +361,6 @@ public partial class Commands
 				}
 			}
 
-			// Format and display exits using EXITFORMAT if present
 			if (visibleExits.Count > 0 && realViewing.IsRoom)
 			{
 				var exitFormatResult = await AttributeService.GetAttributeAsync(executor, realViewing, "EXITFORMAT",
@@ -408,18 +379,15 @@ public partial class Commands
 				}
 				else
 				{
-					// Check if room is TRANSPARENT for different exit display format
 					var isTransparent = await realViewing.IsTransparent();
 					if (isTransparent)
 					{
-						// TRANSPARENT rooms show exits in long format with destinations
 						foreach (var exit in visibleExits)
 						{
 							var exitObj = exit.WithRoomOption().Object();
 							var destination = exit.IsExit ? await exit.AsExit.Home.WithCancellation(CancellationToken.None) : null;
 							var destName = destination != null ? destination.Object().Name : "*UNLINKED*";
 							
-							// Check if exit is OPAQUE (would override TRANSPARENT room)
 							if (await exit.WithRoomOption().IsOpaque())
 							{
 								await NotifyService.Notify(executor, exitObj.Name);
@@ -432,7 +400,6 @@ public partial class Commands
 					}
 					else
 					{
-						// Normal exit display
 						var exitNames = string.Join(", ", visibleExits.Select(x => x.Object().Name));
 						await NotifyService.Notify(executor, $"Obvious exits:\n{exitNames}");
 					}
@@ -453,7 +420,6 @@ public partial class Commands
 		AnyOptionalSharpObject viewing;
 		string? attributePattern = null;
 
-		// Parse object/attribute pattern from argument
 		if (args.Count == 1)
 		{
 			var argText = args["0"].Message!.ToString();
@@ -482,7 +448,6 @@ public partial class Commands
 			}
 			else
 			{
-				// Simple object name without attribute pattern
 				var locate = await LocateService!.LocateAndNotifyIfInvalid(
 					parser,
 					enactor,
@@ -502,7 +467,6 @@ public partial class Commands
 		}
 		else
 		{
-			// No argument - examine current location
 			viewing = (await Mediator!.Send(new GetLocationQuery(enactor.Object().DBRef))).WithExitOption();
 		}
 
@@ -513,18 +477,13 @@ public partial class Commands
 
 		var viewingKnown = viewing.Known();
 		
-		// Check permission to examine 
-		// Note: /mortal switch simulates a mortal viewer (checked in CanExamine logic)
 		var canExamine = await PermissionService!.CanExamine(executor, viewingKnown);
 		
-		// If using /mortal switch, override wizard permissions
 		if (switches.Contains("MORTAL") && await executor.IsWizard())
 		{
-			// Simulate mortal by checking only Controls, not wizard status
 			canExamine = await PermissionService.Controls(executor, viewingKnown);
 		}
 		
-		// If can't examine and not the object's owner, show limited info
 		if (!canExamine)
 		{
 			var limitedObj = viewingKnown.Object();
@@ -533,7 +492,6 @@ public partial class Commands
 			return new CallState(limitedObj.DBRef.ToString());
 		}
 
-		// Get contents unless /opaque switch is used
 		var contents = (switches.Contains("OPAQUE") || viewing.IsExit)
 			? []
 			: await Mediator!.CreateStream(new GetContentsQuery(viewingKnown.AsContainer))
@@ -560,10 +518,8 @@ public partial class Commands
 		var objParent = await obj.Parent.WithCancellation(CancellationToken.None);
 		var objPowers = obj.Powers.Value;
 
-		// Build output sections
 		var outputSections = new List<MString>();
 		
-		// Name row with optional flags (check configuration)
 		var showFlags = Configuration!.CurrentValue.Cosmetic.FlagsOnExamine;
 		var nameRow = showFlags
 			? MModule.multiple([
@@ -585,35 +541,29 @@ public partial class Commands
 			outputSections.Add(MModule.single($"Type: {obj.Type}"));
 		}
 		
-		// Description (not shown in /brief mode)
 		if (!switches.Contains("BRIEF"))
 		{
 			outputSections.Add(description);
 		}
 		
-		// Owner row
 		var ownerRow = showFlags
 			? MModule.single($"Owner: {ownerName.Hilight()}" +
 			                 $"(#{ownerObj.DBRef.Number}{string.Join(string.Empty, ownerObjFlags.Select(x => x.Symbol))})")
 			: MModule.single($"Owner: {ownerName.Hilight()}(#{ownerObj.DBRef.Number})");
 		outputSections.Add(ownerRow);
 		
-		// Parent row
 		outputSections.Add(MModule.single($"Parent: {objParent.Object()?.Name ?? "*NOTHING*"}"));
 		
 		// TODO: LOCK LIST
 		
-		// Powers row
 		var powersList = await objPowers.Select(x => x.Name).ToArrayAsync();
 		if (powersList.Length > 0)
 		{
 			outputSections.Add(MModule.single($"Powers: {string.Join(" ", powersList)}"));
 		}
 		
-		// TODO: Channels
-		// TODO: Warnings Checked
+		// TODO: Channels, Warnings Checked
 		
-		// Created timestamp - /debug switch shows raw values
 		if (switches.Contains("DEBUG") && await executor.IsWizard())
 		{
 			outputSections.Add(MModule.single($"Created: {obj.CreationTime} ({DateTimeOffset.FromUnixTimeMilliseconds(obj.CreationTime):F})"));
@@ -624,21 +574,15 @@ public partial class Commands
 			outputSections.Add(MModule.single($"Created: {DateTimeOffset.FromUnixTimeMilliseconds(obj.CreationTime):F}"));
 		}
 
-		// Output header information
 		await NotifyService!.Notify(enactor, MModule.multipleWithDelimiter(MModule.single("\n"), outputSections));
 
-		// Attributes section - skip for /brief, filter by pattern if provided
 		if (!switches.Contains("BRIEF"))
 		{
-			// Determine if we should check parent attributes
 			var checkParents = switches.Contains("PARENT");
 			
-			// Get attributes based on pattern or all visible
 			SharpAttributesOrError atrs;
 			if (!string.IsNullOrEmpty(attributePattern))
 			{
-				// Use pattern matching
-				// Wildcard mode is always used for examine attribute patterns
 				var patternMode = IAttributeService.AttributePatternMode.Wildcard;
 				
 				atrs = await AttributeService.GetAttributePatternAsync(
@@ -650,13 +594,11 @@ public partial class Commands
 			}
 			else
 			{
-				// Get all visible attributes
 				atrs = await AttributeService.GetVisibleAttributesAsync(enactor, viewingKnown);
 			}
 
 			if (atrs.IsAttribute)
 			{
-				// Filter based on configuration and switches
 				var showPublicOnly = Configuration!.CurrentValue.Cosmetic.ExaminePublicAttributes;
 				var showAll = switches.Contains("ALL");
 				
@@ -888,14 +830,12 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 		
-		// Get search name (optional)
 		string? searchName = null;
 		if (args.Count > 0 && args.ContainsKey("0"))
 		{
 			searchName = args["0"].Message?.ToPlainText();
 		}
 		
-		// Get begin/end range (optional)
 		int? beginDbref = null;
 		int? endDbref = null;
 		
@@ -917,19 +857,14 @@ public partial class Commands
 			}
 		}
 		
-		// Query database for all objects
-		// For now, implement a basic version that notifies about the functionality
 		var matchCount = 0;
 		
 		await NotifyService!.Notify(executor, 
 			$"@find: Searching for objects{(searchName != null ? $" matching '{searchName}'" : "")}...");
 		
-		// TODO: Implement full database query to find matching objects
-		// This would require:
-		// 1. Querying all objects in the database (or within range if specified)
-		// 2. Checking if executor controls each object
-		// 3. Matching object names against searchName pattern
-		// 4. Displaying results
+		// TODO: Implement full database query to find matching objects. This would require
+		// querying all objects in the database (or within range), checking if executor controls each object,
+		// matching object names against searchName pattern, and displaying results.
 		
 		if (beginDbref.HasValue || endDbref.HasValue)
 		{
@@ -957,7 +892,6 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches.ToArray();
 		
-		// Check for /all switch or @allhalt
 		if (switches.Contains("ALL"))
 		{
 			if (!await executor.IsWizard())
@@ -971,7 +905,6 @@ public partial class Commands
 			return new CallState("#-1 NOT IMPLEMENTED");
 		}
 		
-		// Check for /pid switch
 		if (switches.Contains("PID"))
 		{
 			var pidStr = args.GetValueOrDefault("0")?.Message?.ToPlainText();
