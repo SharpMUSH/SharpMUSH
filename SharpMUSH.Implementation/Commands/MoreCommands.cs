@@ -2292,28 +2292,9 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		
-		// In PennMUSH, SCORE displays how many pennies you have
-		// Pennies are typically stored in a MONEY or PENNIES attribute
-		var moneyAttr = await AttributeService!.GetAttributeAsync(executor, executor, "PENNIES", 
-			IAttributeService.AttributeMode.Read, false);
-		
-		if (!moneyAttr.IsAttribute)
-		{
-			// Try MONEY attribute as fallback
-			moneyAttr = await AttributeService!.GetAttributeAsync(executor, executor, "MONEY", 
-				IAttributeService.AttributeMode.Read, false);
-		}
-		
-		if (moneyAttr.IsAttribute)
-		{
-			var pennies = moneyAttr.AsAttribute.Last().Value.ToPlainText();
-			await NotifyService!.Notify(executor, $"You have {pennies} {(pennies == "1" ? "penny" : "pennies")}.");
-		}
-		else
-		{
-			// Default to 0 if no money attribute exists
-			await NotifyService!.Notify(executor, "You have 0 pennies.");
-		}
+		// Money/pennies are not supported in SharpMUSH
+		await NotifyService!.Notify(executor, "The SCORE command is not supported.");
+		await NotifyService!.Notify(executor, "SharpMUSH does not track money or pennies.");
 		
 		return CallState.Empty;
 	}
