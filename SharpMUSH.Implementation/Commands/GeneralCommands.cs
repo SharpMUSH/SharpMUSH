@@ -794,7 +794,15 @@ public partial class Commands
 				continue;
 			}
 
-			await Mediator!.Send(new MoveObjectCommand(targetContent, destinationContainer));
+			// Move with context for event triggering
+			var isSilent = parser.CurrentState.Switches.Contains("QUIET");
+			await Mediator!.Send(new MoveObjectCommand(
+				targetContent, 
+				destinationContainer,
+				executor.Object().DBRef,
+				isSilent,
+				"@teleport"));
+
 			// TODO: Notify the target that they have been teleported - if Quiet switch is not present.
 			// TODO: Evaluate room verbs upon teleportation.
 			// TODO: If the target is a player, force a LOOK

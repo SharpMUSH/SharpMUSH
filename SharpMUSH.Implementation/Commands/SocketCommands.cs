@@ -74,10 +74,26 @@ public partial class Commands
 		var password = match.Groups["Password"].Value;
 
 		var nameItems = ArgHelpers.NameList(username).ToList();
+		var handle = parser.CurrentState.Handle!.Value;
+		var connectionData = ConnectionService.Get(handle);
+		var ipAddress = connectionData?.Metadata.TryGetValue("InternetProtocolAddress", out var ip) == true ? ip : "unknown";
 
 		if (nameItems.Count != 1)
 		{
-			await NotifyService!.Notify(parser.CurrentState.Handle!.Value, "Could not find that player.");
+			// Trigger SOCKET`LOGINFAIL for invalid player name
+			// PennMUSH spec: socket`loginfail (descriptor, IP, count, reason, playerobjid, name)
+			await EventService!.TriggerEventAsync(
+				parser,
+				"SOCKET`LOGINFAIL",
+				null, // System event
+				handle.ToString(),
+				ipAddress,
+				"1", // count - simplified for now
+				"invalid player name",
+				"#-1", // no valid player
+				username);
+			
+			await NotifyService!.Notify(handle, "Could not find that player.");
 			return new None();
 		}
 
@@ -91,7 +107,20 @@ public partial class Commands
 
 		if (foundDB is null)
 		{
-			await NotifyService!.Notify(parser.CurrentState.Handle!.Value, "Could not find that player.");
+			// Trigger SOCKET`LOGINFAIL for player not found
+			// PennMUSH spec: socket`loginfail (descriptor, IP, count, reason, playerobjid, name)
+			await EventService!.TriggerEventAsync(
+				parser,
+				"SOCKET`LOGINFAIL",
+				null, // System event
+				handle.ToString(),
+				ipAddress,
+				"1", // count - simplified for now
+				"player not found",
+				"#-1", // no valid player
+				username);
+			
+			await NotifyService!.Notify(handle, "Could not find that player.");
 			return new None();
 		}
 
@@ -100,15 +129,38 @@ public partial class Commands
 
 		if (!validPassword && !string.IsNullOrEmpty(foundDB.PasswordHash))
 		{
-			await NotifyService!.Notify(parser.CurrentState.Handle!.Value, "Invalid Password.");
+			// Trigger SOCKET`LOGINFAIL for invalid password
+			// PennMUSH spec: socket`loginfail (descriptor, IP, count, reason, playerobjid, name)
+			await EventService!.TriggerEventAsync(
+				parser,
+				"SOCKET`LOGINFAIL",
+				null, // System event
+				handle.ToString(),
+				ipAddress,
+				"1", // count - simplified for now
+				"invalid password",
+				$"#{foundDB.Object.Key}", // valid player objid
+				foundDB.Object.Name);
+			
+			await NotifyService!.Notify(handle, "Invalid Password.");
 			return new None();
 		}
 
 		// TODO: Step 3: Confirm there is no SiteLock.
-		ConnectionService.Bind(parser.CurrentState.Handle!.Value,
-			new DBRef(foundDB.Object.Key, foundDB.Object.CreationTime));
+		var playerDbRef = new DBRef(foundDB.Object.Key, foundDB.Object.CreationTime);
+		ConnectionService.Bind(parser.CurrentState.Handle!.Value, playerDbRef);
 
-		// TODO: Step 5: Trigger OnConnect Event in EventService.
+		// Trigger PLAYER`CONNECT event - PennMUSH compatible
+		// PennMUSH spec: player`connect (objid, number of connections, descriptor)
+		var connectionCount = await ConnectionService.Get(playerDbRef).CountAsync();
+		await EventService!.TriggerEventAsync(
+			parser,
+			"PLAYER`CONNECT",
+			playerDbRef, // Enactor is the player who connected
+			$"#{foundDB.Object.Key}",
+			connectionCount.ToString(),
+			parser.CurrentState.Handle!.Value.ToString());
+
 		await NotifyService!.Notify(parser.CurrentState.Handle!.Value, "Connected!");
 		Serilog.Log.Logger.Debug("Successful login and binding for {@person}", foundDB.Object);
 		return new None();

@@ -41,6 +41,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 	
 	private static IHookService? HookService { get; set; }
 	
+	private static IEventService? EventService { get; set; }
+	
 	private static LibraryService<string, CommandDefinition>? CommandLibrary { get; set; }
 	private static LibraryService<string, FunctionDefinition>? FunctionLibrary { get; set; }
 
@@ -67,6 +69,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		IMoveService moveService,
 		ILogger<Commands> logger,
 		IHookService hookService,
+		IEventService eventService,
 		LibraryService<string, FunctionDefinition> functionLibrary)
 	{
 		Mediator = mediator;
@@ -88,6 +91,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		MoveService = moveService;
 		Logger = logger;
 		HookService = hookService;
+		EventService = eventService;
 		FunctionLibrary = functionLibrary;
 
 		foreach (var command in Generated.CommandLibrary.Commands)

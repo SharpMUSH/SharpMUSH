@@ -99,6 +99,7 @@ public class Startup(ArangoConfiguration config, string colorFile)
 		services.AddSingleton<ICommandDiscoveryService, CommandDiscoveryService>();
 		services.AddSingleton<ISortService, SortService>();
 		services.AddSingleton<IHookService, HookService>();
+		services.AddSingleton<IEventService, EventService>();
 		services.AddSingleton<ILibraryProvider<FunctionDefinition>, Functions>();
 		services.AddSingleton<ILibraryProvider<CommandDefinition>, Commands>();
 		services.AddSingleton(x => x.GetService<ILibraryProvider<FunctionDefinition>>()!.Get());
