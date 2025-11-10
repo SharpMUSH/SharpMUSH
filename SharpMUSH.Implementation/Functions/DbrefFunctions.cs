@@ -52,7 +52,6 @@ public partial class Functions
 			// Exit - return destination (#-1 for unlinked, #-2 for variable, #-3 for "home")
 			async exit =>
 			{
-				// Check for special link types
 				var linkTypeAttr = await AttributeService!.GetAttributeAsync(executor, exit, AttrLinkType, IAttributeService.AttributeMode.Read, false);
 				
 				if (linkTypeAttr.IsAttribute && linkTypeAttr.AsT0.Length > 0)
@@ -71,7 +70,6 @@ public partial class Functions
 					}
 				}
 				
-				// Try to get regular destination
 				try
 				{
 					var destination = await exit.Location.WithCancellation(CancellationToken.None);
@@ -79,7 +77,6 @@ public partial class Functions
 				}
 				catch (InvalidOperationException)
 				{
-					// Exit is unlinked - return #-1
 					return "#-1";
 				}
 			},
