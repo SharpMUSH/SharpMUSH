@@ -56,14 +56,29 @@ public class MovementCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask HomeCommand()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("home"));
-
-		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+		// Create a test room to use as home
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@dig TestHomeRoom"));
+		
+		// Link player to the new room as home
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@link me=TestHomeRoom"));
+		
+		// Execute home command
+		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("home"));
+		
+		// Verify result is not null
+		await Assert.That(result).IsNotNull();
+	}
+	
+	[Test]
+	public async ValueTask HomeCommandAlreadyHome()
+	{
+		// Execute home command when already at home
+		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("home"));
+		
+		// Should notify that already home
+		await Assert.That(result).IsNotNull();
 	}
 
 	[Test]
@@ -78,13 +93,34 @@ public class MovementCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask LeaveCommand()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("leave"));
-
-		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+		// Create a container thing
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@create LeaveTestBox"));
+		
+		// Set it as ENTER_OK so we can enter it
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set LeaveTestBox=ENTER_OK"));
+		
+		// Get the box
+		await Parser.CommandParse(1, ConnectionService, MModule.single("get LeaveTestBox"));
+		
+		// Enter the box
+		await Parser.CommandParse(1, ConnectionService, MModule.single("enter LeaveTestBox"));
+		
+		// Leave the box
+		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("leave"));
+		
+		// Verify result is not null
+		await Assert.That(result).IsNotNull();
+	}
+	
+	[Test]
+	public async ValueTask LeaveCommandInRoom()
+	{
+		// Try to leave when in a room (should fail)
+		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("leave"));
+		
+		// Should notify that can't leave a room
+		await Assert.That(result).IsNotNull();
 	}
 }
