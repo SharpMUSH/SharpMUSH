@@ -23,7 +23,11 @@ public class ConnectionService(IPublisher publisher) : IConnectionService
 		}
 
 		// Publish notification for Mediator handlers
-		_ = publisher.Publish(new ConnectionStateChangeNotification(get.Handle, get.Ref, get.State, IConnectionService.ConnectionState.Disconnected));
+		publisher.Publish(new ConnectionStateChangeNotification(get.Handle, get.Ref, get.State, IConnectionService.ConnectionState.Disconnected))
+			.AsTask()
+			.ConfigureAwait(false)
+			.GetAwaiter()
+			.GetResult();
 
 		_sessionState.Remove(handle, out _);
 	}
@@ -58,8 +62,11 @@ public class ConnectionService(IPublisher publisher) : IConnectionService
 			handler(new ValueTuple<long, DBRef?, IConnectionService.ConnectionState, IConnectionService.ConnectionState>(handle, player, get.State, IConnectionService.ConnectionState.LoggedIn));
 		}
 
-		// Publish notification for Mediator handlers
-		_ = publisher.Publish(new ConnectionStateChangeNotification(handle, player, get.State, IConnectionService.ConnectionState.LoggedIn));
+		publisher.Publish(new ConnectionStateChangeNotification(handle, player, get.State, IConnectionService.ConnectionState.LoggedIn))
+			.AsTask()
+			.ConfigureAwait(false)
+			.GetAwaiter()
+			.GetResult();
 	}
 
 	public void Update(long handle, string key, string value)
@@ -98,6 +105,10 @@ public class ConnectionService(IPublisher publisher) : IConnectionService
 		}
 
 		// Publish notification for Mediator handlers
-		_ = publisher.Publish(new ConnectionStateChangeNotification(handle, null, IConnectionService.ConnectionState.None, IConnectionService.ConnectionState.Connected));
+		publisher.Publish(new ConnectionStateChangeNotification(handle, null, IConnectionService.ConnectionState.None, IConnectionService.ConnectionState.Connected))
+			.AsTask()
+			.ConfigureAwait(false)
+			.GetAwaiter()
+			.GetResult();
 	}
 }

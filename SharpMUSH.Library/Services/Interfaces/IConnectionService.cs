@@ -25,12 +25,14 @@ public interface IConnectionService
 		ConcurrentDictionary<string, string> Metadata
 	)
 	{
-		public TimeSpan? Connected => State == ConnectionState.Connected
+		public TimeSpan? Connected 
+			=> State is ConnectionState.Connected or ConnectionState.LoggedIn
 			? DateTimeOffset.UtcNow -
 			  DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(Metadata["ConnectionStartTime"]))
 			: null;
 
-		public TimeSpan? Idle => State == ConnectionState.Connected
+		public TimeSpan? Idle 
+			=> State is ConnectionState.Connected or ConnectionState.LoggedIn
 			? DateTimeOffset.UtcNow -
 			  DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(Metadata["LastConnectionSignal"]))
 			: null;

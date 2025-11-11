@@ -30,7 +30,7 @@ public class EventService(
 			var eventHandlerDbRef = options.CurrentValue.Database.EventHandler;
 			
 			// If no event handler is configured, return early
-			if (eventHandlerDbRef == null || eventHandlerDbRef == 0)
+			if (eventHandlerDbRef is null or 0)
 			{
 				return;
 			}

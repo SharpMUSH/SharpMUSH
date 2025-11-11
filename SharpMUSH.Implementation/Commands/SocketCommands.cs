@@ -28,24 +28,26 @@ public partial class Commands
 		
 		var filteredPlayers = await everyone
 			.Where(player => player.Ref.HasValue)
-			.Select(async player =>
+			.Select(async (player,i,ct) =>
 			{
-				var obj = await Mediator!.Send(new GetObjectNodeQuery(player.Ref!.Value));
+				var obj = await Mediator!.Send(new GetObjectNodeQuery(player.Ref!.Value), ct);
 				var doingText = await Commands.GetDoingText(executor, obj.Known);
 				
 				return (string.Format(
 					fmt,
 					obj.Known.Object().Name,
-					TimeHelpers.TimeString(player.Connected!.Value, accuracy: 3),
-					TimeHelpers.TimeString(player.Idle!.Value),
+					TimeHelpers.TimeString(player.Connected ?? TimeSpan.Zero, accuracy: 3),
+					TimeHelpers.TimeString(player.Idle ?? TimeSpan.Zero),
 					doingText), obj.Known);
 			})
-			.Where(async (player, _) => await PermissionService!.CanSee(executor, (await player).Item2))
+			.Where(async (player, _) => await PermissionService!.CanSee(executor, player.Known))
 			.ToListAsync();
 
-		var footer = $"{filteredPlayers.Count} players logged in.";
+		var sortedPlayers = filteredPlayers.Select(x => x.Item1).ToArray();
+		
+		var footer = $"{sortedPlayers.Length} players logged in.";
 
-		var message = $"{header}\n{string.Join('\n', filteredPlayers)}\n{footer}";
+		var message = $"{header}\n{string.Join('\n', sortedPlayers)}\n{footer}";
 
 		await NotifyService!.Notify(handle: parser.CurrentState.Handle!.Value, what: message);
 

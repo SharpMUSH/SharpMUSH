@@ -369,12 +369,13 @@ public partial class ArangoDatabase(
 		return true;
 	}
 
+	// [{"error":true,"errorNum":1205,"errorMessage":"illegal document identifier"}]
 	public async ValueTask SetObjectName(AnySharpObject obj, MarkupStringModule.MarkupString value,
 		CancellationToken ct = default)
 		=> await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Objects,
 			new
 			{
-				Id = obj.Id(),
+				Id = obj.Object().Id,
 				Name = value
 			}, cancellationToken: ct);
 
@@ -1340,21 +1341,21 @@ public partial class ArangoDatabase(
 		{
 			Id = obj._id,
 			Key = int.Parse((string)obj._key),
-			Name = obj.Name,
-			Type = obj.Type,
-			CreationTime = obj.CreationTime,
-			ModifiedTime = obj.ModifiedTime,
+			Name = (string)obj.Name,
+			Type = (string)obj.Type,
+			CreationTime = (long)obj.CreationTime,
+			ModifiedTime = (long)obj.ModifiedTime,
 			Locks = ImmutableDictionary<string, string>
 				.Empty, // FIX: ((Dictionary<string, string>?)obj.Locks ?? []).ToImmutableDictionary(),
-			Flags = new(() => GetObjectFlagsAsync(obj._id, obj.Type.ToUpper(), CancellationToken.None)),
-			Powers = new(() => GetPowersAsync(obj._id, CancellationToken.None)),
-			Attributes = new(() => GetTopLevelAttributesAsync(obj._id, CancellationToken.None)),
-			LazyAttributes = new(() => GetTopLevelLazyAttributesAsync(obj._id, CancellationToken.None)),
-			AllAttributes = new(() => GetAllAttributesAsync(obj._id, CancellationToken.None)),
-			LazyAllAttributes = new(() => GetAllLazyAttributesAsync(obj._id, CancellationToken.None)),
-			Owner = new(async ct => await GetObjectOwnerAsync(obj._id, ct)),
-			Parent = new(async ct => await GetParentAsync(obj._id, ct)),
-			Children = new(() => GetChildrenAsync(obj._id, CancellationToken.None))
+			Flags = new(() => GetObjectFlagsAsync((string)obj._id, ((string)obj.Type).ToUpper(), CancellationToken.None)),
+			Powers = new(() => GetPowersAsync((string)obj._id, CancellationToken.None)),
+			Attributes = new(() => GetTopLevelAttributesAsync((string)obj._id, CancellationToken.None)),
+			LazyAttributes = new(() => GetTopLevelLazyAttributesAsync((string)obj._id, CancellationToken.None)),
+			AllAttributes = new(() => GetAllAttributesAsync((string)obj._id, CancellationToken.None)),
+			LazyAllAttributes = new(() => GetAllLazyAttributesAsync((string)obj._id, CancellationToken.None)),
+			Owner = new(async ct => await GetObjectOwnerAsync((string)obj._id, ct)),
+			Parent = new(async ct => await GetParentAsync((string)obj._id, ct)),
+			Children = new(() => GetChildrenAsync((string)obj._id, CancellationToken.None))
 		};
 
 	public async ValueTask<SharpObject?> GetBaseObjectNodeAsync(DBRef dbref,

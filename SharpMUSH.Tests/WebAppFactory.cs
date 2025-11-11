@@ -118,13 +118,9 @@ public class WebAppFactory : IAsyncInitializer
 
 		var configFile = Path.Join(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst");
 
-		var colorFile = Path.Join(AppContext.BaseDirectory, "colors.json");
-
 		_server = new TestWebApplicationBuilderFactory<Program>(
-			config, 
 			MySqlTestServer.Instance.GetConnectionString(), 
 			configFile,
-			colorFile, 
 			Substitute.For<INotifyService>());
 
 		var provider = _server.Services;

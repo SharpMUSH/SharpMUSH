@@ -1,14 +1,12 @@
 ﻿using Core.Arango;
 using Core.Arango.Serilog;
 using Core.Arango.Transport;
+using MassTransit;
 using Mediator;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Newtonsoft.Json;
 using Quartz;
 using Serilog;
 using Serilog.Events;
@@ -119,6 +117,38 @@ public class Startup(ArangoConfiguration config, string colorFile)
 		services.AddSingleton<IOptionsWrapper<ColorsOptions>, Library.Services.OptionsWrapper<ColorsOptions>>();
 		services.AddHttpClient();
 		services.AddMediator();
+		
+		// Configure MassTransit for message queue integration
+		var rabbitHost = Environment.GetEnvironmentVariable("RABBITMQ_HOST") ?? "localhost";
+		var rabbitUser = Environment.GetEnvironmentVariable("RABBITMQ_USER") ?? "sharpmush";
+		var rabbitPass = Environment.GetEnvironmentVariable("RABBITMQ_PASSWORD") ?? "sharpmush_dev_password";
+
+		services.AddMassTransit(x =>
+		{
+			// Register consumers for input messages from ConnectionServer
+			x.AddConsumer<Consumers.TelnetInputConsumer>();
+			x.AddConsumer<Consumers.GMCPSignalConsumer>();
+			x.AddConsumer<Consumers.MSDPUpdateConsumer>();
+			x.AddConsumer<Consumers.NAWSUpdateConsumer>();
+			x.AddConsumer<Consumers.ConnectionEstablishedConsumer>();
+			x.AddConsumer<Consumers.ConnectionClosedConsumer>();
+
+			x.UsingRabbitMq((context, cfg) =>
+			{
+				cfg.Host(rabbitHost, "/", h =>
+				{
+					h.Username(rabbitUser);
+					h.Password(rabbitPass);
+				});
+
+				// Configure message retry
+				cfg.UseMessageRetry(r => r.Interval(3, TimeSpan.FromSeconds(5)));
+
+				// Configure endpoints for consumers
+				cfg.ConfigureEndpoints(context);
+			});
+		});
+		
 		services.AddFusionCache();
 		services.AddArango((x, arango) =>
 		{
