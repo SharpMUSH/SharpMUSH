@@ -3,13 +3,29 @@ using Microsoft.AspNetCore.Connections;
 using SharpMUSH.ConnectionServer.Consumers;
 using SharpMUSH.ConnectionServer.ProtocolHandlers;
 using SharpMUSH.ConnectionServer.Services;
+using Testcontainers.RabbitMq;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Get RabbitMQ configuration from environment or configuration
-var rabbitHost = Environment.GetEnvironmentVariable("RABBITMQ_HOST") ?? "localhost";
+var rabbitHost = Environment.GetEnvironmentVariable("RABBITMQ_HOST");
 var rabbitUser = Environment.GetEnvironmentVariable("RABBITMQ_USER") ?? "sharpmush";
 var rabbitPass = Environment.GetEnvironmentVariable("RABBITMQ_PASSWORD") ?? "sharpmush_dev_password";
+
+RabbitMqContainer? container = null;
+
+if (rabbitHost == null)
+{
+	container = new RabbitMqBuilder()
+		.WithUsername(rabbitUser)
+		.WithPassword(rabbitPass)
+		.WithPortBinding(5672,5672)
+		.Build();
+	await container.StartAsync();
+	
+	rabbitHost = container.Hostname;
+}
+
 
 // Add ConnectionService
 builder.Services.AddSingleton<IConnectionServerService, ConnectionServerService>();
