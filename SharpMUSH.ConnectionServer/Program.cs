@@ -1,10 +1,8 @@
 using MassTransit;
 using Microsoft.AspNetCore.Connections;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
 using SharpMUSH.ConnectionServer.Consumers;
 using SharpMUSH.ConnectionServer.ProtocolHandlers;
 using SharpMUSH.ConnectionServer.Services;
-using SharpMUSH.Messaging.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -34,13 +32,14 @@ builder.Services.AddMassTransit(x =>
 		});
 
 		// Configure message retry
-		cfg.UseMessageRetry(r => r.Interval(3, TimeSpan.FromSeconds(5)));
+		cfg.UseMessageRetry(r => r.Interval(30, TimeSpan.FromSeconds(1)));
 
 		// Configure endpoints for consumers
 		cfg.ConfigureEndpoints(context);
 	});
 });
 
+// TODO: This should be configurable via environment variables or config files
 // Configure Kestrel to listen for Telnet connections
 builder.WebHost.ConfigureKestrel((context, options) =>
 {
