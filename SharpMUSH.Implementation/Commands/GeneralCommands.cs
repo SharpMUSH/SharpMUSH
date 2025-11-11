@@ -620,7 +620,7 @@ public partial class Commands
 					
 					await NotifyService!.Notify(enactor,
 						MModule.concat(
-							MModule.single($"{attr.Name} [{attrFlagsStr}#{attrOwner!.Object.DBRef.Number}]: ").Hilight(),
+							MModule.single($"{attr.LongName} [{attrFlagsStr}#{attrOwner!.Object.DBRef.Number}]: ").Hilight(),
 							attr.Value));
 				}
 			}
@@ -2283,7 +2283,7 @@ public partial class Commands
 
 		foreach (var attr in attrList)
 		{
-			var attrName = attr.Name;
+			var attrName = attr.LongName!;
 			var attrValue = attr.Value;
 			var originalText = attrValue.ToPlainText();
 			string newText;
