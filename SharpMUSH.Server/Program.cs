@@ -103,6 +103,10 @@ public class Program
 		app.MapControllers();
 		app.MapRazorPages();
 
+		// Health and readiness endpoints for deployment checks
+		app.MapGet("/health", () => "healthy");
+		app.MapGet("/ready", () => "ready");
+
 		return app;
 	}
 }

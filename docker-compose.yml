@@ -30,10 +30,28 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-  
+
+  connectionserver:
+    build:
+      context: ./
+      dockerfile: SharpMUSH.ConnectionServer/Dockerfile
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_USER=sharpmush
+      - RABBITMQ_PASSWORD=sharpmush_dev_password
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    ports:
+      - "4201:4201" # Telnet
+      - "4202:4202" # ConnectionServer HTTP API
+    networks:
+      - sharpmush-net
+
   sharpmush-server:
     build:
       context: ./
+      dockerfile: Dockerfile
     environment:
       - ARANGO_CONNECTION_STRING=Server=http://unusedschim:8529;User=root;Password=password;
       - RABBITMQ_HOST=rabbitmq
@@ -44,10 +62,8 @@ services:
         condition: service_started
       rabbitmq:
         condition: service_healthy
-    ports:
-      - "4201:4201"
-      - "4202:4202"
-      - "4203:4203"
+      connectionserver:
+        condition: service_started
     volumes:
       - arangodb-socket:/var/run/arangodb3
     networks:

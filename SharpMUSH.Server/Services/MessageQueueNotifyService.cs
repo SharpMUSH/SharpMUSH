@@ -16,17 +16,12 @@ namespace SharpMUSH.Server.Services;
 /// NotifyService implementation that publishes messages to the message queue
 /// instead of directly calling connection functions.
 /// </summary>
-public class MessageQueueNotifyService : IMessageQueueNotifyService
+public class MessageQueueNotifyService(IPublishEndpoint publishEndpoint, IConnectionService connections) : IMessageQueueNotifyService
 {
-	private readonly IPublishEndpoint _publishEndpoint;
-
-	public MessageQueueNotifyService(IPublishEndpoint publishEndpoint)
-	{
-		_publishEndpoint = publishEndpoint;
-	}
-
 	public async ValueTask Notify(DBRef who, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
+		await ValueTask.CompletedTask;
+		
 		if (what.Match(
 			markupString => MarkupStringModule.getLength(markupString) == 0,
 			str => str.Length == 0
@@ -35,9 +30,17 @@ public class MessageQueueNotifyService : IMessageQueueNotifyService
 			return;
 		}
 
-		// TODO: Look up connection handles for this DBRef
-		// For now, we can't send without handles - need to implement handle lookup or connection state sync
-		// This would require maintaining a mapping from DBRef to connection handles
+		var text = what.Match(
+			markupString => markupString.ToString(),
+			str => str
+		);
+
+		var bytes = Encoding.UTF8.GetBytes(text);
+
+		await foreach (var handle in connections.Get(who).Select(x => x.Handle))
+		{
+			await publishEndpoint.Publish(new TelnetOutputMessage(handle, bytes));
+		}
 	}
 
 	public ValueTask Notify(AnySharpObject who, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
@@ -66,7 +69,7 @@ public class MessageQueueNotifyService : IMessageQueueNotifyService
 		// Publish output message to each handle
 		foreach (var handle in handles)
 		{
-			await _publishEndpoint.Publish(new TelnetOutputMessage(handle, bytes));
+			await publishEndpoint.Publish(new TelnetOutputMessage(handle, bytes));
 		}
 	}
 
@@ -80,8 +83,17 @@ public class MessageQueueNotifyService : IMessageQueueNotifyService
 			return;
 		}
 
-		// TODO: Look up connection handles for this DBRef
-		// For now, we can't send without handles
+		var text = what.Match(
+			markupString => markupString.ToString(),
+			str => str
+		);
+
+		var bytes = Encoding.UTF8.GetBytes(text);
+
+		await foreach (var handle in connections.Get(who).Select(x => x.Handle))
+		{
+			await publishEndpoint.Publish(new TelnetPromptMessage(handle, bytes));
+		}
 	}
 
 	public ValueTask Prompt(AnySharpObject who, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
@@ -110,7 +122,7 @@ public class MessageQueueNotifyService : IMessageQueueNotifyService
 		// Publish prompt message to each handle
 		foreach (var handle in handles)
 		{
-			await _publishEndpoint.Publish(new TelnetPromptMessage(handle, bytes));
+			await publishEndpoint.Publish(new TelnetPromptMessage(handle, bytes));
 		}
 	}
 

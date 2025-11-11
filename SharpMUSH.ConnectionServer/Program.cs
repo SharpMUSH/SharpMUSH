@@ -1,5 +1,6 @@
 using MassTransit;
 using Microsoft.AspNetCore.Connections;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using SharpMUSH.ConnectionServer.Consumers;
 using SharpMUSH.ConnectionServer.ProtocolHandlers;
 using SharpMUSH.ConnectionServer.Services;
@@ -64,5 +65,6 @@ var app = builder.Build();
 app.MapControllers();
 app.MapGet("/", () => "SharpMUSH Connection Server");
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTimeOffset.UtcNow }));
+app.MapGet("/ready", () => Results.Ok(new { status = "ready", timestamp = DateTimeOffset.UtcNow }));
 
 app.Run();
