@@ -82,7 +82,7 @@ public class NAWSUpdateConsumer(ILogger<NAWSUpdateConsumer> logger) : IConsumer<
 /// <summary>
 /// Consumes connection established messages from ConnectionServer
 /// </summary>
-public abstract class ConnectionEstablishedConsumer(
+public class ConnectionEstablishedConsumer(
 	ILogger<ConnectionEstablishedConsumer> logger,
 	IConnectionService connectionService,
 	IBus bus)
