@@ -130,12 +130,12 @@ public class Startup(ArangoConfiguration config, string colorFile)
 		services.AddMassTransit(x =>
 		{
 			// Register consumers for input messages from ConnectionServer
-			x.AddConsumer<SharpMUSH.Server.Consumers.TelnetInputConsumer>();
-			x.AddConsumer<SharpMUSH.Server.Consumers.GMCPSignalConsumer>();
-			x.AddConsumer<SharpMUSH.Server.Consumers.MSDPUpdateConsumer>();
-			x.AddConsumer<SharpMUSH.Server.Consumers.NAWSUpdateConsumer>();
-			x.AddConsumer<SharpMUSH.Server.Consumers.ConnectionEstablishedConsumer>();
-			x.AddConsumer<SharpMUSH.Server.Consumers.ConnectionClosedConsumer>();
+			x.AddConsumer<Consumers.TelnetInputConsumer>();
+			x.AddConsumer<Consumers.GMCPSignalConsumer>();
+			x.AddConsumer<Consumers.MSDPUpdateConsumer>();
+			x.AddConsumer<Consumers.NAWSUpdateConsumer>();
+			x.AddConsumer<Consumers.ConnectionEstablishedConsumer>();
+			x.AddConsumer<Consumers.ConnectionClosedConsumer>();
 
 			x.UsingRabbitMq((context, cfg) =>
 			{
