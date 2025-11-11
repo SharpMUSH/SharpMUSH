@@ -16,7 +16,7 @@ namespace SharpMUSH.Server.Services;
 /// NotifyService implementation that publishes messages to the message queue
 /// instead of directly calling connection functions.
 /// </summary>
-public class MessageQueueNotifyService(IPublishEndpoint publishEndpoint, IConnectionService connections) : IMessageQueueNotifyService
+public class MessageQueueNotifyService(IBus publishEndpoint, IConnectionService connections) : IMessageQueueNotifyService
 {
 	public async ValueTask Notify(DBRef who, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{

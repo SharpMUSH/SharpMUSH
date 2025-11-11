@@ -86,11 +86,8 @@ public class Startup(ArangoConfiguration config, string colorFile)
 		);
 		services.AddSingleton<IPasswordService, PasswordService>();
 		services.AddSingleton<IPermissionService, PermissionService>();
-		// Register MessageQueueNotifyService with its interface for mocking
 		services.AddSingleton<IMessageQueueNotifyService, MessageQueueNotifyService>();
-		// Register NotifyService as a wrapper that uses MessageQueueNotifyService
-		services.AddSingleton<INotifyService>(sp => 
-			new NotifyService(sp.GetRequiredService<IMessageQueueNotifyService>()));
+		services.AddSingleton<INotifyService, NotifyService>();
 		services.AddSingleton<ILocateService, LocateService>();
 		services.AddSingleton<IMoveService, MoveService>();
 		services.AddSingleton<IExpandedObjectDataService, ExpandedObjectDataService>();

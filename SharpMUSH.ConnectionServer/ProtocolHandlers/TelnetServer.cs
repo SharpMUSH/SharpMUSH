@@ -19,7 +19,7 @@ public class TelnetServer : ConnectionHandler
 {
 	private readonly ILogger _logger;
 	private readonly IConnectionService _connectionService;
-	private readonly IPublishEndpoint _publishEndpoint;
+	private readonly IBus _publishEndpoint;
 	private readonly MSSPConfig _msspConfig = new() { Name = "SharpMUSH", UTF_8 = true };
 	private readonly SemaphoreSlim _semaphoreSlimForWriter = new(1, 1);
 	private readonly NextUnoccupiedNumberGenerator _descriptorGenerator = new(0);
@@ -27,7 +27,7 @@ public class TelnetServer : ConnectionHandler
 	public TelnetServer(
 		ILogger<TelnetServer> logger,
 		IConnectionService connectionService,
-		IPublishEndpoint publishEndpoint)
+		IBus publishEndpoint)
 	{
 		Console.OutputEncoding = Encoding.UTF8;
 		_logger = logger;

@@ -8,15 +8,9 @@ namespace SharpMUSH.ConnectionServer.Services;
 /// <summary>
 /// Manages active connections in the ConnectionServer
 /// </summary>
-public class ConnectionService : IConnectionService
+public class ConnectionService(IBus publishEndpoint) : IConnectionService
 {
 	private readonly ConcurrentDictionary<long, ConnectionData> _sessionState = [];
-	private readonly IPublishEndpoint _publishEndpoint;
-
-	public ConnectionService(IPublishEndpoint publishEndpoint)
-	{
-		_publishEndpoint = publishEndpoint;
-	}
 
 	public async Task RegisterAsync(
 		long handle,
@@ -49,7 +43,7 @@ public class ConnectionService : IConnectionService
 			throw new InvalidOperationException("Handle already registered"));
 
 		// Publish connection established message to MainProcess
-		await _publishEndpoint.Publish(new ConnectionEstablishedMessage(
+		await publishEndpoint.Publish(new ConnectionEstablishedMessage(
 			handle,
 			ipAddress,
 			hostname,
@@ -63,7 +57,7 @@ public class ConnectionService : IConnectionService
 		if (_sessionState.TryRemove(handle, out var data))
 		{
 			// Publish connection closed message to MainProcess
-			await _publishEndpoint.Publish(new ConnectionClosedMessage(
+			await publishEndpoint.Publish(new ConnectionClosedMessage(
 				handle,
 				DateTimeOffset.UtcNow
 			));
