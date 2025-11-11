@@ -369,12 +369,13 @@ public partial class ArangoDatabase(
 		return true;
 	}
 
+	// [{"error":true,"errorNum":1205,"errorMessage":"illegal document identifier"}]
 	public async ValueTask SetObjectName(AnySharpObject obj, MarkupStringModule.MarkupString value,
 		CancellationToken ct = default)
 		=> await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Objects,
 			new
 			{
-				Id = obj.Id(),
+				Id = obj.Object().Id,
 				Name = value
 			}, cancellationToken: ct);
 
