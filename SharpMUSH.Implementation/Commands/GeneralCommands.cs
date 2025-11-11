@@ -502,7 +502,9 @@ public partial class Commands
 		var ownerName = ownerObj.Name;
 		var location = obj.Key;
 		var contentKeys = contents!.Select(x => x.Object().Name);
-		var exitKeys = await Mediator!.Send(new GetExitsQuery(obj.DBRef));
+		// var exitKeys = await Mediator!.Send(new GetExitsQuery(obj.DBRef));
+		// THIS FAILS ^ -- Mediator.InvalidMessageException:
+		// Tried to send/publish invalid message type to Mediator: SharpMUSH.Library.Queries.Database.GetExitsQuery
 		var description = (await AttributeService!.GetAttributeAsync(enactor, viewingKnown, "DESCRIBE",
 				IAttributeService.AttributeMode.Read, false))
 			.Match(
