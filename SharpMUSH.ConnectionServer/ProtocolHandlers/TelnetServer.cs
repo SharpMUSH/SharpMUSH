@@ -152,14 +152,9 @@ public class TelnetServer : ConnectionHandler
 /// <summary>
 /// Helper class to generate unique connection descriptors
 /// </summary>
-public class NextUnoccupiedNumberGenerator
+public class NextUnoccupiedNumberGenerator(long start)
 {
-	private long _current;
-
-	public NextUnoccupiedNumberGenerator(long start)
-	{
-		_current = start;
-	}
+	private long _current = start;
 
 	public IEnumerable<long> Get()
 	{
