@@ -118,7 +118,8 @@ public class TelnetServer : ConnectionHandler
 			"telnet",
 			telnet.SendAsync,
 			telnet.SendPromptAsync,
-			() => telnet.CurrentEncoding);
+			() => telnet.CurrentEncoding,
+			connection.Abort);
 
 		try
 		{

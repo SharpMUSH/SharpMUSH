@@ -19,7 +19,8 @@ public class ConnectionServerService(ILogger<ConnectionServerService> logger, IB
 		string connectionType,
 		Func<byte[], ValueTask> outputFunction,
 		Func<byte[], ValueTask> promptOutputFunction,
-		Func<Encoding> encodingFunction)
+		Func<Encoding> encodingFunction,
+		Action disconnectFunction)
 	{
 		try
 		{
@@ -29,7 +30,8 @@ public class ConnectionServerService(ILogger<ConnectionServerService> logger, IB
 				ConnectionState.Connected,
 				outputFunction,
 				promptOutputFunction,
-				encodingFunction);
+				encodingFunction,
+				disconnectFunction);
 
 			_sessionState.AddOrUpdate(handle, data, (_, _) =>
 				throw new InvalidOperationException("Handle already registered"));
@@ -60,6 +62,8 @@ public class ConnectionServerService(ILogger<ConnectionServerService> logger, IB
 				DateTimeOffset.UtcNow
 			));
 		}
+
+		data?.DisconnectFunction();
 	}
 
 	public ConnectionData? Get(long handle) =>
@@ -74,7 +78,8 @@ public class ConnectionServerService(ILogger<ConnectionServerService> logger, IB
 		ConnectionState State,
 		Func<byte[], ValueTask> OutputFunction,
 		Func<byte[], ValueTask> PromptOutputFunction,
-		Func<Encoding> EncodingFunction);
+		Func<Encoding> EncodingFunction,
+		Action DisconnectFunction);
 
 	public enum ConnectionState
 	{
@@ -88,7 +93,8 @@ public interface IConnectionServerService
 {
 	Task RegisterAsync(long handle, string ipAddress, string hostname, string connectionType,
 		Func<byte[], ValueTask> outputFunction, Func<byte[], ValueTask> promptOutputFunction,
-		Func<Encoding> encodingFunction);
+		Func<Encoding> encodingFunction,
+		Action disconnectFunction);
 	
 	Task DisconnectAsync(long handle);
 

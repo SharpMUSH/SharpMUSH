@@ -169,11 +169,13 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "QUIT", Behavior = CommandBehavior.SOCKET | CommandBehavior.NoParse, MinArgs = 0, MaxArgs = 0)]
-	public static ValueTask<Option<CallState>> Quit(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public static async ValueTask<Option<CallState>> Quit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		await NotifyService!.Notify(executor, MModule.single("GOODBYE."));
 		// TODO: Display Disconnect Banner.
 		ConnectionService!.Disconnect(parser.CurrentState.Handle!.Value);
-		return ValueTask.FromResult<Option<CallState>>(new None());
+		return new None();
 	}
 
 	[GeneratedRegex("^(?<User>\"(?:.+?)\"|(?:.+?))(?:\\s+(?<Password>\\S+))?$")]
