@@ -126,7 +126,7 @@ public class Startup(ArangoConfiguration config, string colorFile)
 		var rabbitHost = Environment.GetEnvironmentVariable("RABBITMQ_HOST") ?? "localhost";
 		var rabbitUser = Environment.GetEnvironmentVariable("RABBITMQ_USER") ?? "sharpmush";
 		var rabbitPass = Environment.GetEnvironmentVariable("RABBITMQ_PASSWORD") ?? "sharpmush_dev_password";
-		
+
 		services.AddMassTransit(x =>
 		{
 			// Register consumers for input messages from ConnectionServer
