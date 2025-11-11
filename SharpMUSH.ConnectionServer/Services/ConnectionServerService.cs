@@ -8,7 +8,7 @@ namespace SharpMUSH.ConnectionServer.Services;
 /// <summary>
 /// Manages active connections in the ConnectionServer
 /// </summary>
-public class ConnectionService(IBus publishEndpoint) : IConnectionService
+public class ConnectionServerService(IBus publishEndpoint) : IConnectionServerService
 {
 	private readonly ConcurrentDictionary<long, ConnectionData> _sessionState = [];
 
@@ -19,8 +19,7 @@ public class ConnectionService(IBus publishEndpoint) : IConnectionService
 		string connectionType,
 		Func<byte[], ValueTask> outputFunction,
 		Func<byte[], ValueTask> promptOutputFunction,
-		Func<Encoding> encodingFunction,
-		ConcurrentDictionary<string, string>? metadata = null)
+		Func<Encoding> encodingFunction)
 	{
 		var data = new ConnectionData(
 			handle,
@@ -28,16 +27,7 @@ public class ConnectionService(IBus publishEndpoint) : IConnectionService
 			ConnectionState.Connected,
 			outputFunction,
 			promptOutputFunction,
-			encodingFunction,
-			metadata ?? new ConcurrentDictionary<string, string>(new Dictionary<string, string>
-			{
-				{ "ConnectionStartTime", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() },
-				{ "LastConnectionSignal", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() },
-				{ "InternetProtocolAddress", ipAddress },
-				{ "HostName", hostname },
-				{ "ConnectionType", connectionType }
-			})
-		);
+			encodingFunction);
 
 		_sessionState.AddOrUpdate(handle, data, (_, _) => 
 			throw new InvalidOperationException("Handle already registered"));
@@ -50,6 +40,11 @@ public class ConnectionService(IBus publishEndpoint) : IConnectionService
 			connectionType,
 			DateTimeOffset.UtcNow
 		));
+	}
+
+	public Task ConnectionChangedAsync(long handle, ConnectionState newState)
+	{
+		throw new NotImplementedException();
 	}
 
 	public async Task DisconnectAsync(long handle)
@@ -76,9 +71,7 @@ public class ConnectionService(IBus publishEndpoint) : IConnectionService
 		ConnectionState State,
 		Func<byte[], ValueTask> OutputFunction,
 		Func<byte[], ValueTask> PromptOutputFunction,
-		Func<Encoding> EncodingFunction,
-		ConcurrentDictionary<string, string> Metadata
-	);
+		Func<Encoding> EncodingFunction);
 
 	public enum ConnectionState
 	{
@@ -88,15 +81,15 @@ public class ConnectionService(IBus publishEndpoint) : IConnectionService
 	}
 }
 
-public interface IConnectionService
+public interface IConnectionServerService
 {
 	Task RegisterAsync(long handle, string ipAddress, string hostname, string connectionType,
 		Func<byte[], ValueTask> outputFunction, Func<byte[], ValueTask> promptOutputFunction,
-		Func<Encoding> encodingFunction, ConcurrentDictionary<string, string>? metadata = null);
-
+		Func<Encoding> encodingFunction);
+	
 	Task DisconnectAsync(long handle);
 
-	ConnectionService.ConnectionData? Get(long handle);
+	ConnectionServerService.ConnectionData? Get(long handle);
 
-	IEnumerable<ConnectionService.ConnectionData> GetAll();
+	IEnumerable<ConnectionServerService.ConnectionData> GetAll();
 }

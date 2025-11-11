@@ -1,16 +1,10 @@
 ﻿using Core.Arango;
 using Core.Arango.Serialization.Newtonsoft;
-using Core.Arango.Serilog;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
-using Serilog;
-using Serilog.Core;
-using Serilog.Sinks.PeriodicBatching;
-using Serilog.Sinks.SystemConsole.Themes;
 using SharpMUSH.Configuration.Options;
-using SharpMUSH.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Connectors;
 using SharpMUSH.Server.ProtocolHandlers;

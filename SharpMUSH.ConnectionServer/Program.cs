@@ -12,7 +12,7 @@ var rabbitUser = Environment.GetEnvironmentVariable("RABBITMQ_USER") ?? "sharpmu
 var rabbitPass = Environment.GetEnvironmentVariable("RABBITMQ_PASSWORD") ?? "sharpmush_dev_password";
 
 // Add ConnectionService
-builder.Services.AddSingleton<IConnectionService, ConnectionService>();
+builder.Services.AddSingleton<IConnectionServerService, ConnectionServerService>();
 
 // Configure MassTransit with RabbitMQ
 builder.Services.AddMassTransit(x =>

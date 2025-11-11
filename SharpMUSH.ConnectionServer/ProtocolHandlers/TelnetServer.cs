@@ -18,7 +18,7 @@ namespace SharpMUSH.ConnectionServer.ProtocolHandlers;
 public class TelnetServer : ConnectionHandler
 {
 	private readonly ILogger _logger;
-	private readonly IConnectionService _connectionService;
+	private readonly IConnectionServerService _connectionService;
 	private readonly IBus _publishEndpoint;
 	private readonly MSSPConfig _msspConfig = new() { Name = "SharpMUSH", UTF_8 = true };
 	private readonly SemaphoreSlim _semaphoreSlimForWriter = new(1, 1);
@@ -26,7 +26,7 @@ public class TelnetServer : ConnectionHandler
 
 	public TelnetServer(
 		ILogger<TelnetServer> logger,
-		IConnectionService connectionService,
+		IConnectionServerService connectionService,
 		IBus publishEndpoint)
 	{
 		Console.OutputEncoding = Encoding.UTF8;
@@ -118,8 +118,7 @@ public class TelnetServer : ConnectionHandler
 			"telnet",
 			telnet.SendAsync,
 			telnet.SendPromptAsync,
-			() => telnet.CurrentEncoding,
-			new ConcurrentDictionary<string, string>(new Dictionary<string, string>()));
+			() => telnet.CurrentEncoding);
 
 		try
 		{

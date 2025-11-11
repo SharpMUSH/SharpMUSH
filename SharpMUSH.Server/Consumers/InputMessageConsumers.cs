@@ -39,7 +39,7 @@ public class GMCPSignalConsumer(ILogger<GMCPSignalConsumer> logger) : IConsumer<
 	public Task Consume(ConsumeContext<GMCPSignalMessage> context)
 	{
 		var message = context.Message;
-		logger.LogDebug("Received GMCP signal from handle {Handle}: {Package} - {Info}", 
+		logger.LogDebug("Received GMCP signal from handle {Handle}: {Package} - {Info}",
 			message.Handle, message.Package, message.Info);
 
 		// TODO: Implement GMCP signal handling
@@ -55,7 +55,7 @@ public class MSDPUpdateConsumer(ILogger<MSDPUpdateConsumer> logger) : IConsumer<
 	public Task Consume(ConsumeContext<MSDPUpdateMessage> context)
 	{
 		var message = context.Message;
-		logger.LogDebug("Received MSDP update from handle {Handle} with {Count} variables", 
+		logger.LogDebug("Received MSDP update from handle {Handle} with {Count} variables",
 			message.Handle, message.Variables.Count);
 
 		// TODO: Implement MSDP update handling
@@ -71,7 +71,7 @@ public class NAWSUpdateConsumer(ILogger<NAWSUpdateConsumer> logger) : IConsumer<
 	public Task Consume(ConsumeContext<NAWSUpdateMessage> context)
 	{
 		var message = context.Message;
-		logger.LogDebug("Received NAWS update from handle {Handle}: {Width}x{Height}", 
+		logger.LogDebug("Received NAWS update from handle {Handle}: {Width}x{Height}",
 			message.Handle, message.Width, message.Height);
 
 		// TODO: Implement NAWS update handling (update connection metadata)
@@ -82,16 +82,34 @@ public class NAWSUpdateConsumer(ILogger<NAWSUpdateConsumer> logger) : IConsumer<
 /// <summary>
 /// Consumes connection established messages from ConnectionServer
 /// </summary>
-public abstract class ConnectionEstablishedConsumer(ILogger<ConnectionEstablishedConsumer> logger)
+public abstract class ConnectionEstablishedConsumer(
+	ILogger<ConnectionEstablishedConsumer> logger,
+	IConnectionService connectionService,
+	IBus bus)
 	: IConsumer<ConnectionEstablishedMessage>
 {
 	public Task Consume(ConsumeContext<ConnectionEstablishedMessage> context)
 	{
 		var message = context.Message;
-		logger.LogInformation("Connection established: Handle {Handle}, IP {IpAddress}, Type {ConnectionType}", 
+		logger.LogInformation("Connection established: Handle {Handle}, IP {IpAddress}, Type {ConnectionType}",
 			message.Handle, message.IpAddress, message.ConnectionType);
 
-		// TODO: Initialize any connection-specific state in the database or services
+		connectionService.Register(message.Handle,
+			message.IpAddress,
+			message.Hostname,
+			message.ConnectionType,
+			async x => await bus.Send(new TelnetOutputMessage(message.Handle, x)),
+			async x => await bus.Send(new TelnetPromptMessage(message.Handle, x)),
+			() => System.Text.Encoding.UTF8,
+			new System.Collections.Concurrent.ConcurrentDictionary<string, string>(new Dictionary<string, string>
+			{
+				{ "ConnectionStartTime", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() },
+				{ "LastConnectionSignal", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() },
+				{ "InternetProtocolAddress", message.IpAddress },
+				{ "HostName", message.Hostname },
+				{ "ConnectionType", message.ConnectionType }
+			}));
+
 		return Task.CompletedTask;
 	}
 }
@@ -99,14 +117,15 @@ public abstract class ConnectionEstablishedConsumer(ILogger<ConnectionEstablishe
 /// <summary>
 /// Consumes connection closed messages from ConnectionServer
 /// </summary>
-public class ConnectionClosedConsumer(ILogger<ConnectionClosedConsumer> logger) : IConsumer<ConnectionClosedMessage>
+public class ConnectionClosedConsumer(ILogger<ConnectionClosedConsumer> logger, IConnectionService connectionService) : IConsumer<ConnectionClosedMessage>
 {
 	public Task Consume(ConsumeContext<ConnectionClosedMessage> context)
 	{
 		var message = context.Message;
 		logger.LogInformation("Connection closed: Handle {Handle}", message.Handle);
 
-		// TODO: Clean up any connection-specific state
+		connectionService.Disconnect(message.Handle);
+		
 		return Task.CompletedTask;
 	}
 }
