@@ -86,7 +86,6 @@ public class Startup(ArangoConfiguration config, string colorFile)
 		);
 		services.AddSingleton<IPasswordService, PasswordService>();
 		services.AddSingleton<IPermissionService, PermissionService>();
-		services.AddSingleton<IMessageQueueNotifyService, MessageQueueNotifyService>();
 		services.AddSingleton<INotifyService, NotifyService>();
 		services.AddSingleton<ILocateService, LocateService>();
 		services.AddSingleton<IMoveService, MoveService>();
