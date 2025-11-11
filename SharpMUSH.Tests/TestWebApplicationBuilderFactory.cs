@@ -18,10 +18,8 @@ using SharpMUSH.Server.ProtocolHandlers;
 namespace SharpMUSH.Tests;
 
 public class TestWebApplicationBuilderFactory<TProgram>(
-	ArangoConfiguration acnf,
 	string sqlConnectionString,
 	string configFile,
-	string colorFile,
 	INotifyService notifier) :
 	WebApplicationFactory<TProgram> where TProgram : class
 {
@@ -35,9 +33,6 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 
 		Log.Logger = log;
 
-		var startup = new Startup(acnf, colorFile);
-
-		builder.ConfigureServices(startup.ConfigureServices);
 		builder.ConfigureTestServices(sc =>
 			{
 				var substitute = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
