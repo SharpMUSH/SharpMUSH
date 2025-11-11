@@ -8,7 +8,7 @@ namespace SharpMUSH.ConnectionServer.Services;
 /// <summary>
 /// Manages active connections in the ConnectionServer
 /// </summary>
-public class ConnectionServerService(IBus publishEndpoint) : IConnectionServerService
+public class ConnectionServerService(ILogger<ConnectionServerService> logger, IBus publishEndpoint) : IConnectionServerService
 {
 	private readonly ConcurrentDictionary<long, ConnectionData> _sessionState = [];
 
@@ -21,30 +21,33 @@ public class ConnectionServerService(IBus publishEndpoint) : IConnectionServerSe
 		Func<byte[], ValueTask> promptOutputFunction,
 		Func<Encoding> encodingFunction)
 	{
-		var data = new ConnectionData(
-			handle,
-			null,
-			ConnectionState.Connected,
-			outputFunction,
-			promptOutputFunction,
-			encodingFunction);
+		try
+		{
+			var data = new ConnectionData(
+				handle,
+				null,
+				ConnectionState.Connected,
+				outputFunction,
+				promptOutputFunction,
+				encodingFunction);
 
-		_sessionState.AddOrUpdate(handle, data, (_, _) => 
-			throw new InvalidOperationException("Handle already registered"));
+			_sessionState.AddOrUpdate(handle, data, (_, _) =>
+				throw new InvalidOperationException("Handle already registered"));
 
-		// Publish connection established message to MainProcess
-		await publishEndpoint.Publish(new ConnectionEstablishedMessage(
-			handle,
-			ipAddress,
-			hostname,
-			connectionType,
-			DateTimeOffset.UtcNow
-		));
-	}
-
-	public Task ConnectionChangedAsync(long handle, ConnectionState newState)
-	{
-		throw new NotImplementedException();
+			// Publish connection established message to MainProcess
+			await publishEndpoint.Publish(new ConnectionEstablishedMessage(
+				handle,
+				ipAddress,
+				hostname,
+				connectionType,
+				DateTimeOffset.UtcNow
+			));
+		}
+		catch(Exception ex)
+		{
+			logger.LogError(ex, "Error registering connection handle: {Handle}", handle);
+			await outputFunction(Encoding.UTF8.GetBytes(ex.ToString()));
+		}
 	}
 
 	public async Task DisconnectAsync(long handle)

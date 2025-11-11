@@ -12,6 +12,8 @@
   <ItemGroup>
     <PackageReference Include="MassTransit" Version="8.3.5" />
     <PackageReference Include="MassTransit.RabbitMQ" Version="8.3.5" />
+    <PackageReference Include="Serilog.Extensions.Logging" Version="9.0.2" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
     <PackageReference Include="TelnetNegotiationCore" Version="1.1.0" />
     <PackageReference Include="Testcontainers.RabbitMq" Version="4.8.1" />
   </ItemGroup>

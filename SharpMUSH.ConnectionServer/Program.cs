@@ -4,8 +4,16 @@ using SharpMUSH.ConnectionServer.Consumers;
 using SharpMUSH.ConnectionServer.ProtocolHandlers;
 using SharpMUSH.ConnectionServer.Services;
 using Testcontainers.RabbitMq;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddLogging(logging => logging.AddSerilog(
+	new LoggerConfiguration()
+		.Enrich.FromLogContext()
+		.WriteTo.Console()
+		.CreateLogger()
+));
 
 // Get RabbitMQ configuration from environment or configuration
 var rabbitHost = Environment.GetEnvironmentVariable("RABBITMQ_HOST");
