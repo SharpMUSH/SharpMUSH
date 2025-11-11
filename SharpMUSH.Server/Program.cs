@@ -1,13 +1,7 @@
 ﻿using Core.Arango;
 using Core.Arango.Serialization.Newtonsoft;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Connections;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.DependencyInjection;
-using SharpMUSH.Configuration.Options;
-using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Connectors;
-using SharpMUSH.Server.ProtocolHandlers;
 using Testcontainers.ArangoDb;
 
 namespace SharpMUSH.Server;
@@ -59,25 +53,11 @@ public class Program
 		}
 
 		var startup = new Startup(config, colorFile);
+		
 		startup.ConfigureServices(builder.Services);
-
-		builder.WebHost.ConfigureKestrel((_, options) =>
-		{
-			var optionMonitor = options.ApplicationServices.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
-			var netValues = optionMonitor.CurrentValue.Net;
-
-			options.AddServerHeader = true;
-
-			options.ListenAnyIP(Convert.ToInt32(netValues.Port),
-				listenOptions => { listenOptions.UseConnectionHandler<TelnetServer>(); });
-			options.ListenAnyIP(Convert.ToInt32(netValues.PortalPort));
-			options.ListenAnyIP(Convert.ToInt32(netValues.SslPortalPort)
-				//, o => o.UseHttps()
-			);
-		});
-
+		
 		var app = builder.Build();
-
+		
 		await ConfigureApp(app).RunAsync();
 	}
 

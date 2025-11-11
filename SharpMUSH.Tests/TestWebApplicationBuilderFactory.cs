@@ -1,5 +1,3 @@
-using Core.Arango;
-using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -12,8 +10,6 @@ using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Server;
-using SharpMUSH.Server.ProtocolHandlers;
 
 namespace SharpMUSH.Tests;
 
@@ -48,8 +44,5 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 				sc.AddSingleton<ISqlService>(new SqlService(sqlConnectionString));
 			}
 		);
-
-		builder.UseKestrel(options
-			=> options.ListenLocalhost(4203, lo => lo.UseConnectionHandler<TelnetServer>()));
 	}
 }
