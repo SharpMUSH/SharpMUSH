@@ -154,7 +154,7 @@ public class ManipulateSharpObjectService(
 			? plainFlag[1..]
 			: plainFlag;
 
-		var realFlag = await mediator.Send(new GetObjectFlagQuery(plainFlag));
+		var realFlag = await mediator.Send(new GetObjectFlagQuery(plainFlag.ToUpperInvariant()));
 		if (realFlag is null)
 		{
 			if (notify)
@@ -169,7 +169,7 @@ public class ManipulateSharpObjectService(
 		{
 			if (notify)
 			{
-				await notifyService.Notify(executor, $"Flag: {realFlag} cannot be set on object type: {obj.TypeString()}.");
+				await notifyService.Notify(executor, $"Flag: {realFlag.Name} cannot be set on object type: {obj.TypeString()}.");
 			}
 
 			return Errors.InvalidFlag;
@@ -185,7 +185,7 @@ public class ManipulateSharpObjectService(
 			{
 				if (notify)
 				{
-					await notifyService.Notify(executor, $"Flag: {realFlag} (Already) Unset.");
+					await notifyService.Notify(executor, $"Flag: {realFlag.Name} (Already) Unset.");
 				}
 
 				break;
@@ -194,7 +194,7 @@ public class ManipulateSharpObjectService(
 			{
 				if (notify)
 				{
-					await notifyService.Notify(executor, $"Flag: {realFlag} Unset.");
+					await notifyService.Notify(executor, $"Flag: {realFlag.Name} Unset.");
 				}
 
 				await mediator.Send(new UnsetObjectFlagCommand(obj, realFlag));
@@ -213,7 +213,7 @@ public class ManipulateSharpObjectService(
 			{
 				if (notify)
 				{
-					await notifyService.Notify(executor, $"Flag: {realFlag} (Already) Set.");
+					await notifyService.Notify(executor, $"Flag: {realFlag.Name} (Already) Set.");
 				}
 
 				break;
@@ -221,7 +221,7 @@ public class ManipulateSharpObjectService(
 			case false:
 				if (notify)
 				{
-					await notifyService.Notify(executor, $"Flag: {realFlag} Set.");
+					await notifyService.Notify(executor, $"Flag: {realFlag.Name} Set.");
 				}
 
 				await mediator.Send(new SetObjectFlagCommand(obj, realFlag));
