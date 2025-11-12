@@ -13,7 +13,7 @@ services:
       - sharpmush-net
   
   rabbitmq:
-    image: rabbitmq:3-management
+    image: rabbitmq:latest
     container_name: sharpmush-rabbitmq
     environment:
       - RABBITMQ_DEFAULT_USER=sharpmush

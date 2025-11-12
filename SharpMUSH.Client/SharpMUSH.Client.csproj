@@ -5,6 +5,7 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+		<NoWarn>NU1510</NoWarn>
 	</PropertyGroup>
 
 	<ItemGroup>
