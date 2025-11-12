@@ -1,4 +1,5 @@
 ﻿using Core.Arango;
+using Core.Arango.Serilog;
 using Core.Arango.Transport;
 using MassTransit;
 using Mediator;
@@ -9,7 +10,7 @@ using Microsoft.Extensions.Options;
 using Quartz;
 using Serilog;
 using Serilog.Events;
-using Serilog.Sinks.ArangoDb;
+using Serilog.Sinks.PeriodicBatching;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Database;
@@ -174,12 +175,24 @@ public class Startup(ArangoConfiguration config, string colorFile)
 				.MinimumLevel.Debug()
 				.MinimumLevel.Override("ZiggyCreatures.Caching.Fusion", LogEventLevel.Error)
 				.Enrich.FromLogContext()
-				.WriteTo.ArangoDb(
-					dbContext: logging.Services.BuildServiceProvider().GetRequiredService<IArangoContext>(),
-					handle: new ArangoHandle("CurrentSharpMUSHWorld"),
-					collectionName: DatabaseConstants.Logs,
-					null)
-				.CreateLogger());
+				.WriteTo.Sink(new PeriodicBatchingSink(
+					new ArangoSerilogSink(
+						logging.Services.BuildServiceProvider().GetRequiredService<IArangoContext>(),
+						"CurrentSharpMUSHWorld",
+						DatabaseConstants.Logs,
+						ArangoSerilogSink.LoggingRenderStrategy.StoreTemplate,
+						true,
+						true,
+						true),
+					new PeriodicBatchingSinkOptions
+					{
+						BatchSizeLimit = 1000,
+						QueueLimit = 100000,
+						Period = TimeSpan.FromSeconds(2),
+						EagerlyEmitFirstEvent = true,
+					}))
+				.CreateLogger());;
 		});
+
 	}
 }
