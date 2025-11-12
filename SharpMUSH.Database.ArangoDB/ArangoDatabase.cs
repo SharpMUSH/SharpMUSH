@@ -2110,7 +2110,7 @@ public partial class ArangoDatabase(
 		var query = await arangoDb.Query.ExecuteAsync<string>(handle, $"{locationQuery}",
 			new Dictionary<string, object>
 			{
-				{ StartVertex, baseObject.Object()!.Id! }
+				{ StartVertex, baseObject.Id()! }
 			}, cancellationToken: ct);
 
 		return query.ToAsyncEnumerable()
