@@ -19,7 +19,7 @@ public class ExpandedDataTests
 		await _database.SetExpandedObjectData(one.Object()!.Id!, "SetAndGetExpandedData", new { Word = "Dog" }, CancellationToken.None);
 
 		var result = await _database.GetExpandedObjectData(one.Object()!.Id!, "SetAndGetExpandedData", CancellationToken.None);
-		await Assert.That(result).IsEqualTo("{\"Word\":\"Dog\"}");
+		await Assert.That(result).IsEqualTo("""{"Word":"Dog"}""");
 	}
 
 	/// <summary>
@@ -33,7 +33,7 @@ public class ExpandedDataTests
 		await _database.SetExpandedObjectData(one.Object()!.Id!, "OverwritePartialAndGetExpandedData", new { Word = "Cat" });
 
 		var result = await _database.GetExpandedObjectData(one.Object()!.Id!, "OverwritePartialAndGetExpandedData");
-		await Assert.That(result).IsEqualTo("{\"Verb\":\"Bark\",\"Word\":\"Cat\"}");
+		await Assert.That(result).IsEqualTo("""{"Verb":"Bark","Word":"Cat"}""");
 	}
 
 
@@ -48,7 +48,7 @@ public class ExpandedDataTests
 		await _database.SetExpandedObjectData(one.Object()!.Id!, "OverwritePartialAndGetExpandedData", new { Word = (string?)null });
 
 		var result = await _database.GetExpandedObjectData(one.Object()!.Id!, "OverwritePartialAndGetExpandedData");
-		await Assert.That(result).IsEqualTo("{\"Verb\":\"Bark\",\"Word\":null}");
+		await Assert.That(result).IsEqualTo("""{"Verb":"Bark","Word":null}""");
 	}
 
 
@@ -63,8 +63,8 @@ public class ExpandedDataTests
 		await _database.SetExpandedObjectData(one.Object()!.Id!, "OverwriteUnrelatedTypesAndGetExpandedData2", new { Word = "Cat" });
 
 		var result = await _database.GetExpandedObjectData(one.Object()!.Id!, "OverwriteUnrelatedTypesAndGetExpandedData");
-		await Assert.That(result).IsEqualTo("{\"Word\":\"Dog\",\"Verb\":\"Bark\"}");
+		await Assert.That(result).IsEqualTo("""{"Word":"Dog","Verb":"Bark"}""");
 		var result2 = await _database.GetExpandedObjectData(one.Object()!.Id!, "OverwriteUnrelatedTypesAndGetExpandedData2");
-		await Assert.That(result2).IsEqualTo("{\"Word\":\"Cat\"}");
+		await Assert.That(result2).IsEqualTo("""{"Word":"Cat"}""");
 	}
 }
