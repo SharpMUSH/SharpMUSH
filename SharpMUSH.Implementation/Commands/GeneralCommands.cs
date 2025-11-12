@@ -609,15 +609,16 @@ public partial class Commands
 					{
 						continue;
 					}
-					
-					if (showPublicOnly && !showAll && !attr.IsVisual())
+
+					var attrOwner = await attr.Owner.WithCancellation(CancellationToken.None);
+					var attrFlagsStr = attr.Flags.Any() ? $"{string.Join("", attr.Flags.Select(f => f.Symbol))} " : "";
+
+					if (!await PermissionService.CanViewAttribute(enactor, viewingKnown, attr)) 
+					    // || showPublicOnly && !showAll && !attr.IsVisual())
 					{
 						continue;
 					}
-					
-					var attrOwner = await attr.Owner.WithCancellation(CancellationToken.None);
-					var attrFlagsStr = attr.Flags.Any() ? $"{string.Join("", attr.Flags.Select(f => f.Symbol))} " : "";
-					
+
 					await NotifyService!.Notify(enactor,
 						MModule.concat(
 							MModule.single($"{attr.LongName} [{attrFlagsStr}#{attrOwner!.Object.DBRef.Number}]: ").Hilight(),
