@@ -417,7 +417,13 @@ public class SharpMUSHParserVisitor(
 			var switchString = command[(slashIndex > -1 ? slashIndex : command.Length)..];
 			var switches = switchString.Split('/').Where(s => !string.IsNullOrWhiteSpace(s));
 
-			if (parser.CommandLibrary.TryGetValue(rootCommand.ToUpper(), out var libraryCommandDefinition)
+			var broaderSearch = parser.CommandLibrary.Keys
+				.Where(x => x.StartsWith(rootCommand, StringComparison.CurrentCultureIgnoreCase))
+				.OrderBy(x => x.Length)
+				.FirstOrDefault();
+			
+			if (broaderSearch is not null 
+			    && parser.CommandLibrary.TryGetValue(broaderSearch, out var libraryCommandDefinition)
 			    && !rootCommand.Equals("HUH_COMMAND", StringComparison.CurrentCultureIgnoreCase))
 			{
 				return await HandleInternalCommandPattern(parser, src, context, rootCommand, switches,
