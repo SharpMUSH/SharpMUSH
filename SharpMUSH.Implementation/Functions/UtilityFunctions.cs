@@ -516,8 +516,7 @@ public partial class Functions
 	[SharpFunction(Name = "itext", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> IText(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// TODO: Implement itext - requires text file system integration
-		return ValueTask.FromResult(new CallState(Errors.NotSupported));
+		throw new NotImplementedException();
 	}
 
 	[SharpFunction(Name = "letq", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse | FunctionFlags.UnEvenArgsOnly)]
@@ -553,8 +552,7 @@ public partial class Functions
 	[SharpFunction(Name = "link", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> Link(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// TODO: Implement link - requires exit linking
-		return ValueTask.FromResult(new CallState(Errors.NotSupported));
+		throw new NotImplementedException();
 	}
 
 	[SharpFunction(Name = "list", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
