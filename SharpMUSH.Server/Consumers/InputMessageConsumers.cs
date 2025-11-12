@@ -19,6 +19,12 @@ public class TelnetInputConsumer(ILogger<TelnetInputConsumer> logger, ITaskSched
 
 		try
 		{
+			if (string.IsNullOrWhiteSpace(message.Input))
+			{
+				// Protect the parser from interpreting empty input.
+				return;
+			}
+			
 			await scheduler.WriteUserCommand(
 				handle: message.Handle,
 				command: MarkupStringModule.single(message.Input),
