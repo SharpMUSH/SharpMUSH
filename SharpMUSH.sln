@@ -20,6 +20,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		global.json = global.json
 		Dockerfile = Dockerfile
 		docker-compose.yml = docker-compose.yml
+		docker-compose-hub.yml = docker-compose-hub.yml
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SharpMUSH.Database", "SharpMUSH.Database\SharpMUSH.Database.csproj", "{3F927DFC-7595-4A00-8810-26F0E6D07ACE}"

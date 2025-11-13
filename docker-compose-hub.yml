@@ -1,0 +1,74 @@
+services:
+  arangodb:
+    image: arangodb:latest
+    container_name: arangodb
+    environment:
+      - ARANGO_ROOT_PASSWORD=password
+    ports:
+      - "8529:8529"
+    volumes:
+      - arangodb-socket:/var/run/arangodb3
+    command: ["arangod", "--server.endpoint", "tcp://0.0.0.0:8529", "--server.endpoint", "unix:///var/run/arangodb3/arangodb.sock"]
+    networks:
+      - sharpmush-net
+  
+  rabbitmq:
+    image: rabbitmq:latest
+    container_name: sharpmush-rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=sharpmush
+      - RABBITMQ_DEFAULT_PASS=sharpmush_dev_password
+    ports:
+      - "5672:5672"   # AMQP port
+      - "15672:15672" # Management UI
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - sharpmush-net
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  connectionserver:
+    image: sharpmush/sharpmush-connectionserver:dev
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_USER=sharpmush
+      - RABBITMQ_PASSWORD=sharpmush_dev_password
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    ports:
+      - "4201:4201" # Telnet
+      - "4202:4202" # ConnectionServer HTTP API
+    networks:
+      - sharpmush-net
+
+  sharpmush-server:
+    image: sharpmush/sharpmush-server:dev
+    environment:
+      - ARANGO_CONNECTION_STRING=Server=http://unusedschim:8529;User=root;Password=password;
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_USER=sharpmush
+      - RABBITMQ_PASSWORD=sharpmush_dev_password
+    depends_on:
+      arangodb:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+      connectionserver:
+        condition: service_started
+    volumes:
+      - arangodb-socket:/var/run/arangodb3
+    networks:
+      - sharpmush-net
+      
+volumes:
+  arangodb-socket:
+  rabbitmq-data:
+  
+networks:
+  sharpmush-net:
+    driver: bridge
