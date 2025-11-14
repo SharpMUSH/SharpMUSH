@@ -117,7 +117,7 @@ public class Startup(ArangoConfiguration config, string colorFile)
 		services.AddSingleton<IOptionsWrapper<ColorsOptions>, Library.Services.OptionsWrapper<ColorsOptions>>();
 		services.AddHttpClient();
 		services.AddMediator();
-		
+
 		// Configure MassTransit for message queue integration
 		var rabbitHost = Environment.GetEnvironmentVariable("RABBITMQ_HOST") ?? "localhost";
 		var rabbitUser = Environment.GetEnvironmentVariable("RABBITMQ_USER") ?? "sharpmush";
@@ -148,18 +148,9 @@ public class Startup(ArangoConfiguration config, string colorFile)
 				cfg.ConfigureEndpoints(context);
 			});
 		});
-		
+
 		services.AddFusionCache();
-		services.AddArango((x, arango) =>
-		{
-			if (config.ConnectionString is not null)
-			{
-				arango.ConnectionString = config.ConnectionString;
-			}
-			arango.HttpClient = config.HttpClient;
-			arango.Serializer = config.Serializer;
-			arango.Transport = new ArangoHttpTransport(arango);
-		});
+		services.AddArango((x, arango) => { arango.ConnectionString = config.ConnectionString; });
 		services.AddQuartz(x => { x.UseInMemoryStore(); });
 		services.AddAuthorization();
 		services.AddRazorPages();
@@ -167,7 +158,7 @@ public class Startup(ArangoConfiguration config, string colorFile)
 		services.AddQuartzHostedService();
 		services.AddHostedService<StartupHandler>();
 		services.AddHostedService<Services.ConnectionLoggingService>();
-		
+
 		services.AddLogging(logging =>
 		{
 			logging.ClearProviders();
@@ -191,8 +182,8 @@ public class Startup(ArangoConfiguration config, string colorFile)
 						Period = TimeSpan.FromSeconds(2),
 						EagerlyEmitFirstEvent = true,
 					}))
-				.CreateLogger());;
+				.CreateLogger());
+			;
 		});
-
 	}
 }
