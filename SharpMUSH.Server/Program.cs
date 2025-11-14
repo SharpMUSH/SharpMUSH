@@ -37,10 +37,6 @@ public class Program
 			config = new ArangoConfiguration
 			{
 				ConnectionString = arangoConnStr,
-				HttpClient = new HttpClient(UnixSocketHandler.CreateHandlerForUnixSocket("/var/run/arangodb3/arangodb.sock"))
-				{
-					BaseAddress = new Uri("http://localhost:8529") // Won't get used.
-				},
 				Serializer = new ArangoNewtonsoftSerializer(new ArangoNewtonsoftDefaultContractResolver())
 			};
 		}
