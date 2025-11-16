@@ -28,7 +28,7 @@ using TaskScheduler = SharpMUSH.Library.Services.TaskScheduler;
 
 namespace SharpMUSH.Server;
 
-public class Startup(ArangoConfiguration config, string colorFile)
+public class Startup(ArangoConfiguration arangoConfig, string colorFile)
 {
 	// This method gets called by the runtime. Use this method to add services to the container.
 	// For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
@@ -150,7 +150,7 @@ public class Startup(ArangoConfiguration config, string colorFile)
 		});
 
 		services.AddFusionCache();
-		services.AddArango((x, arango) => { arango.ConnectionString = config.ConnectionString; });
+		services.AddArango((connString, arango) => { arango = arangoConfig; });
 		services.AddQuartz(x => { x.UseInMemoryStore(); });
 		services.AddAuthorization();
 		services.AddRazorPages();

@@ -2,6 +2,7 @@
 using Core.Arango.Serialization.Newtonsoft;
 using Microsoft.AspNetCore.Builder;
 using SharpMUSH.Server.Connectors;
+using SharpMUSH.Server.Strategy.ArangoDB;
 using Testcontainers.ArangoDb;
 
 namespace SharpMUSH.Server;
@@ -12,34 +13,8 @@ public class Program
 	{
 		var builder = WebApplication.CreateBuilder(args);
 
-		var arangoConnStr = Environment.GetEnvironmentVariable("ARANGO_CONNECTION_STRING");
-		ArangoConfiguration config;
-
-		if (string.IsNullOrWhiteSpace(arangoConnStr))
-		{
-			var container = new ArangoDbBuilder()
-				.WithReuse(false)
-				.WithLabel("reuse-id", "SharpMUSH")
-				.WithImage("arangodb:latest")
-				.WithPassword("password")
-				.Build();
-
-			await container.StartAsync();
-
-			config = new ArangoConfiguration
-			{
-				ConnectionString = $"Server={container.GetTransportAddress()};User=root;Realm=;Password=password;",
-				Serializer = new ArangoNewtonsoftSerializer(new ArangoNewtonsoftDefaultContractResolver())
-			};
-		}
-		else
-		{
-			config = new ArangoConfiguration
-			{
-				ConnectionString = arangoConnStr,
-				Serializer = new ArangoNewtonsoftSerializer(new ArangoNewtonsoftDefaultContractResolver())
-			};
-		}
+		var arangoStrategyProvider = new ArangoStartupStrategyProvider().GetStrategy();
+		var arangoConfig = await arangoStrategyProvider.ConfigureArango();
 
 		var colorFile = Path.Combine(AppContext.BaseDirectory, "colors.json");
 
@@ -48,7 +23,7 @@ public class Program
 			throw new FileNotFoundException($"Configuration file not found: {colorFile}");
 		}
 
-		var startup = new Startup(config, colorFile);
+		var startup = new Startup(arangoConfig, colorFile);
 		
 		startup.ConfigureServices(builder.Services);
 		
