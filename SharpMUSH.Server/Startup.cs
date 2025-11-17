@@ -24,6 +24,7 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Server.Strategy.ArangoDB;
 using TaskScheduler = SharpMUSH.Library.Services.TaskScheduler;
 
 namespace SharpMUSH.Server;
@@ -132,21 +133,7 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile)
 			x.AddConsumer<Consumers.NAWSUpdateConsumer>();
 			x.AddConsumer<Consumers.ConnectionEstablishedConsumer>();
 			x.AddConsumer<Consumers.ConnectionClosedConsumer>();
-
-			x.UsingRabbitMq((context, cfg) =>
-			{
-				cfg.Host(rabbitHost, "/", h =>
-				{
-					h.Username(rabbitUser);
-					h.Password(rabbitPass);
-				});
-
-				// Configure message retry
-				cfg.UseMessageRetry(r => r.Interval(3, TimeSpan.FromSeconds(5)));
-
-				// Configure endpoints for consumers
-				cfg.ConfigureEndpoints(context);
-			});
+			x.UsingRabbitMq(RabbitMQStrategyProvider.GetStrategy().ConfigureRabbitMq);
 		});
 
 		services.AddFusionCache();

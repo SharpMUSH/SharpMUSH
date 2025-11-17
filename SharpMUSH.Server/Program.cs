@@ -1,9 +1,5 @@
-﻿using Core.Arango;
-using Core.Arango.Serialization.Newtonsoft;
-using Microsoft.AspNetCore.Builder;
-using SharpMUSH.Server.Connectors;
+﻿using Microsoft.AspNetCore.Builder;
 using SharpMUSH.Server.Strategy.ArangoDB;
-using Testcontainers.ArangoDb;
 
 namespace SharpMUSH.Server;
 
@@ -13,8 +9,7 @@ public class Program
 	{
 		var builder = WebApplication.CreateBuilder(args);
 
-		var arangoStrategyProvider = new ArangoStartupStrategyProvider().GetStrategy();
-		var arangoConfig = await arangoStrategyProvider.ConfigureArango();
+		var arangoConfig = await ArangoStartupStrategyProvider.GetStrategy().ConfigureArango();
 
 		var colorFile = Path.Combine(AppContext.BaseDirectory, "colors.json");
 

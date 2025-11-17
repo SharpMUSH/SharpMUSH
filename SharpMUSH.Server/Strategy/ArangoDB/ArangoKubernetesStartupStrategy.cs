@@ -3,7 +3,7 @@ using Core.Arango.Serialization.Newtonsoft;
 
 namespace SharpMUSH.Server.Strategy.ArangoDB;
 
-internal class ArangoKubernetesStartupStrategy(string arangoConnectionString) : ArangoStartupStrategy
+public class ArangoKubernetesStartupStrategy(string arangoConnectionString) : ArangoStartupStrategy
 {
 	public override async ValueTask<ArangoConfiguration> ConfigureArango()
 	{

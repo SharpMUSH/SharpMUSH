@@ -4,7 +4,7 @@ using Testcontainers.ArangoDb;
 
 namespace SharpMUSH.Server.Strategy.ArangoDB;
 
-internal class ArangoTestContainerStartupStrategy : ArangoStartupStrategy
+public class ArangoTestContainerStartupStrategy : ArangoStartupStrategy
 {
 	public override async ValueTask<ArangoConfiguration> ConfigureArango()
 	{
