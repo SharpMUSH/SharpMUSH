@@ -24,11 +24,12 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Server.Strategy.ArangoDB;
 using TaskScheduler = SharpMUSH.Library.Services.TaskScheduler;
 
 namespace SharpMUSH.Server;
 
-public class Startup(ArangoConfiguration config, string colorFile)
+public class Startup(ArangoConfiguration arangoConfig, string colorFile)
 {
 	// This method gets called by the runtime. Use this method to add services to the container.
 	// For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
@@ -117,7 +118,7 @@ public class Startup(ArangoConfiguration config, string colorFile)
 		services.AddSingleton<IOptionsWrapper<ColorsOptions>, Library.Services.OptionsWrapper<ColorsOptions>>();
 		services.AddHttpClient();
 		services.AddMediator();
-		
+
 		// Configure MassTransit for message queue integration
 		var rabbitHost = Environment.GetEnvironmentVariable("RABBITMQ_HOST") ?? "localhost";
 		var rabbitUser = Environment.GetEnvironmentVariable("RABBITMQ_USER") ?? "sharpmush";
@@ -132,34 +133,11 @@ public class Startup(ArangoConfiguration config, string colorFile)
 			x.AddConsumer<Consumers.NAWSUpdateConsumer>();
 			x.AddConsumer<Consumers.ConnectionEstablishedConsumer>();
 			x.AddConsumer<Consumers.ConnectionClosedConsumer>();
-
-			x.UsingRabbitMq((context, cfg) =>
-			{
-				cfg.Host(rabbitHost, "/", h =>
-				{
-					h.Username(rabbitUser);
-					h.Password(rabbitPass);
-				});
-
-				// Configure message retry
-				cfg.UseMessageRetry(r => r.Interval(3, TimeSpan.FromSeconds(5)));
-
-				// Configure endpoints for consumers
-				cfg.ConfigureEndpoints(context);
-			});
+			x.UsingRabbitMq(RabbitMQStrategyProvider.GetStrategy().ConfigureRabbitMq);
 		});
-		
+
 		services.AddFusionCache();
-		services.AddArango((x, arango) =>
-		{
-			if (config.ConnectionString is not null)
-			{
-				arango.ConnectionString = config.ConnectionString;
-			}
-			arango.HttpClient = config.HttpClient;
-			arango.Serializer = config.Serializer;
-			arango.Transport = new ArangoHttpTransport(arango);
-		});
+		services.AddArango((connString, arango) => { arango = arangoConfig; });
 		services.AddQuartz(x => { x.UseInMemoryStore(); });
 		services.AddAuthorization();
 		services.AddRazorPages();
@@ -167,7 +145,7 @@ public class Startup(ArangoConfiguration config, string colorFile)
 		services.AddQuartzHostedService();
 		services.AddHostedService<StartupHandler>();
 		services.AddHostedService<Services.ConnectionLoggingService>();
-		
+
 		services.AddLogging(logging =>
 		{
 			logging.ClearProviders();
@@ -191,8 +169,8 @@ public class Startup(ArangoConfiguration config, string colorFile)
 						Period = TimeSpan.FromSeconds(2),
 						EagerlyEmitFirstEvent = true,
 					}))
-				.CreateLogger());;
+				.CreateLogger());
+			;
 		});
-
 	}
 }
