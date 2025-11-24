@@ -137,7 +137,11 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile)
 		});
 
 		services.AddFusionCache();
-		services.AddArango((connString, arango) => { arango = arangoConfig; });
+		services.AddArango((_, arango) =>
+		{
+			arango.ConnectionString = arangoConfig.ConnectionString;
+			arango.HttpClient = arango.HttpClient;
+		});
 		services.AddQuartz(x => { x.UseInMemoryStore(); });
 		services.AddAuthorization();
 		services.AddRazorPages();
