@@ -20,11 +20,9 @@ var rabbitHost = Environment.GetEnvironmentVariable("RABBITMQ_HOST");
 var rabbitUser = Environment.GetEnvironmentVariable("RABBITMQ_USER") ?? "sharpmush";
 var rabbitPass = Environment.GetEnvironmentVariable("RABBITMQ_PASSWORD") ?? "sharpmush_dev_password";
 
-RabbitMqContainer? container = null;
-
 if (rabbitHost == null)
 {
-	container = new RabbitMqBuilder()
+	var container = new RabbitMqBuilder()
 		.WithUsername(rabbitUser)
 		.WithPassword(rabbitPass)
 		.WithPortBinding(5672,5672)

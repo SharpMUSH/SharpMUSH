@@ -12,10 +12,14 @@ public class ExpandedObjectDataService(IMediator mediator) : IExpandedObjectData
 {
 	private readonly JsonSerializerOptions _jsonSerializerOptionForNull = new()
 	{
-		DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+		DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+		WriteIndented = false
 	};
 
-	private readonly JsonSerializerOptions _jsonSerializerOptionForOthers = new();
+	private readonly JsonSerializerOptions _jsonSerializerOptionForOthers = new()
+	{
+		WriteIndented = false
+	};
 
 	public async ValueTask<T?> GetExpandedDataAsync<T>(SharpObject obj) where T : class
 	{
