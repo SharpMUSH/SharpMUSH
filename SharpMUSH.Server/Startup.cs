@@ -25,6 +25,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Strategy.ArangoDB;
+using ZiggyCreatures.Caching.Fusion;
 using TaskScheduler = SharpMUSH.Library.Services.TaskScheduler;
 
 namespace SharpMUSH.Server;
@@ -136,13 +137,16 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile)
 			x.UsingRabbitMq(RabbitMQStrategyProvider.GetStrategy().ConfigureRabbitMq);
 		});
 
-		services.AddFusionCache();
+		services.AddFusionCache().TryWithAutoSetup();
 		services.AddArango((_, arango) =>
 		{
 			arango.ConnectionString = arangoConfig.ConnectionString;
 			arango.HttpClient = arango.HttpClient;
 		});
-		services.AddQuartz(x => { x.UseInMemoryStore(); });
+		services.AddQuartz(x =>
+		{
+			x.UseInMemoryStore();
+		});
 		services.AddAuthorization();
 		services.AddRazorPages();
 		services.AddControllers();
