@@ -47,6 +47,8 @@ builder.Services.AddMassTransit(x =>
 
 	x.UsingRabbitMq((context, cfg) =>
 	{
+		cfg.PrefetchCount = 20;
+		cfg.Lazy = false;
 		cfg.Host(rabbitHost, "/", h =>
 		{
 			h.Username(rabbitUser);

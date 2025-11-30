@@ -37,8 +37,9 @@ public class ExpandedObjectDataService(IMediator mediator) : IExpandedObjectData
 	public async ValueTask<T?> GetExpandedServerDataAsync<T>() where T : class
 	{
 		var result = await mediator.Send(new ExpandedServerDataQuery(typeof(T).Name));
-		var resultAsT = result as T;
-		return resultAsT;
+		if (result is null) return null;
+		var json = JsonSerializer.Serialize(result);
+		return JsonSerializer.Deserialize<T>(json);
 	}
 
 	public async ValueTask SetExpandedServerDataAsync<T>(T data, bool ignoreNull = false) where T : class

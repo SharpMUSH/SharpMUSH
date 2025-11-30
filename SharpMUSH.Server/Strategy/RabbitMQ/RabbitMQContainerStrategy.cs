@@ -13,6 +13,8 @@ public class RabbitMQContainerServiceStrategy : RabbitMQServiceStrategy
 		var rabbitPass = Environment.GetEnvironmentVariable("RABBITMQ_PASSWORD") 
 			?? throw new NullReferenceException("RABBITMQ_PASSWORD");
 
+		cfg.Lazy = false;
+		cfg.Durable = false;
 		cfg.Host(rabbitHost, "/", h =>
 		{
 			h.Username(rabbitUser);
