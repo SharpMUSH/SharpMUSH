@@ -9,6 +9,7 @@ public static class CacheTags
 	public const string ThingList = "thing-list";
 	public const string RoomList = "room-list";
 	public const string PlayerList = "player-list";
+	public const string PlayerNames = "player-names";
 	public const string ObjectList = "object-list";
 	public const string ObjectLocks = "object-locks";
 	public const string ObjectFlags = "object-flags";
