@@ -706,12 +706,12 @@ public partial class ArangoDatabase(
 		return resultingValue;
 	}
 
-	public async ValueTask SetExpandedServerData(string dataType, string data, CancellationToken ct = default)
+	public async ValueTask SetExpandedServerData(string dataType, dynamic data, CancellationToken ct = default)
 	{
-		var newJson = new Dictionary<string, string>
+		var newJson = new Dictionary<string, object>
 		{
 			{ "_key", dataType },
-			{ "data", data }
+			{ "Data", data }
 		};
 
 		_ = await arangoDb.Document.CreateAsync(handle,
@@ -722,16 +722,13 @@ public partial class ArangoDatabase(
 			keepNull: true, cancellationToken: ct);
 	}
 
-	public class ArangoDocumentWrapper<T>
-	{
-		public required T Data { get; set; }
-	}
+	public record ArangoDocumentWrapper<T>(T Data);
 
-	public async ValueTask<string?> GetExpandedServerData(string dataType, CancellationToken ct = default)
+	public async ValueTask<T?> GetExpandedServerData<T>(string dataType, CancellationToken ct = default)
 	{
 		try
 		{
-			var result = await arangoDb.Document.GetAsync<ArangoDocumentWrapper<string>>(handle,
+			var result = await arangoDb.Document.GetAsync<ArangoDocumentWrapper<T>>(handle,
 				DatabaseConstants.ServerData,
 				dataType, cancellationToken: ct);
 
@@ -739,7 +736,7 @@ public partial class ArangoDatabase(
 		}
 		catch
 		{
-			return null;
+			return default;
 		}
 	}
 
@@ -932,7 +929,7 @@ public partial class ArangoDatabase(
 		var singleResult = result?.FirstOrDefault();
 		if (singleResult is null) return;
 
-		await arangoDb.Graph.Edge.RemoveAsync<dynamic>(handle,
+		await arangoDb.Graph.Edge.RemoveAsync<ArangoVoid>(handle,
 			DatabaseConstants.GraphChannels, DatabaseConstants.OnChannel,
 			singleResult, cancellationToken: ct);
 	}

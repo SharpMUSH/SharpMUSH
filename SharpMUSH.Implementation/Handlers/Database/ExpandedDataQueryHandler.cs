@@ -10,5 +10,5 @@ public class ExpandedDataQueryHandler(ISharpDatabase database): IQueryHandler<Ex
 		=> await database.GetExpandedObjectData<object?>(query.SharpObject.Id!, query.TypeName, cancellationToken);
 
 	public async ValueTask<object?> Handle(ExpandedServerDataQuery query, CancellationToken cancellationToken) 
-		=> await database.GetExpandedServerData(query.TypeName, cancellationToken);
+		=> await database.GetExpandedServerData<object?>(query.TypeName, cancellationToken);
 }

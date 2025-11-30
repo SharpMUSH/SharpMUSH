@@ -12,7 +12,7 @@ public class ExpandedObjectDataService(IMediator mediator) : IExpandedObjectData
 {
 	private readonly JsonSerializerOptions _jsonSerializerOptionForNull = new()
 	{
-		DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+		DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault,
 		WriteIndented = false
 	};
 
@@ -24,7 +24,8 @@ public class ExpandedObjectDataService(IMediator mediator) : IExpandedObjectData
 	public async ValueTask<T?> GetExpandedDataAsync<T>(SharpObject obj) where T : class
 	{
 		var result = await mediator.Send(new ExpandedDataQuery(obj, typeof(T).Name));
-		return result as T;
+		var resultAsT = result as T;
+		return resultAsT;
 	}
 
 	public async ValueTask SetExpandedDataAsync<T>(T data, SharpObject obj, bool ignoreNull = false) where T : class
@@ -36,14 +37,12 @@ public class ExpandedObjectDataService(IMediator mediator) : IExpandedObjectData
 	public async ValueTask<T?> GetExpandedServerDataAsync<T>() where T : class
 	{
 		var result = await mediator.Send(new ExpandedServerDataQuery(typeof(T).Name));
-		return result as T;
+		var resultAsT = result as T;
+		return resultAsT;
 	}
 
 	public async ValueTask SetExpandedServerDataAsync<T>(T data, bool ignoreNull = false) where T : class
 	{
-		var json = JsonSerializer.Serialize(data, ignoreNull 
-			? _jsonSerializerOptionForNull 
-			: _jsonSerializerOptionForOthers);
-		await mediator.Send(new SetExpandedServerDataCommand(typeof(T).Name, json));
+		await mediator.Send(new SetExpandedServerDataCommand(typeof(T).Name, data));
 	}
 }

@@ -16,7 +16,7 @@ public class ExpandedDataCommandHandler(ISharpDatabase database) : ICommandHandl
 
 	public async ValueTask<Unit> Handle(SetExpandedServerDataCommand command, CancellationToken cancellationToken)
 	{
-		await database.SetExpandedServerData(command.TypeName, command.Json, cancellationToken);
+		await database.SetExpandedServerData(command.TypeName, command.Object, cancellationToken);
 		return Unit.Value;
 	}
 }

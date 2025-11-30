@@ -603,7 +603,7 @@ public interface ISharpDatabase
 	/// <param name="dataType">Type being stored. Each Type gets its own storage.</param>
 	/// <param name="data">Json body to set.</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
-	ValueTask SetExpandedServerData(string dataType, string data, CancellationToken cancellationToken = default);
+	ValueTask SetExpandedServerData(string dataType, dynamic data, CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Gets the Expanded Object Data for the server as a whole. 
@@ -611,7 +611,7 @@ public interface ISharpDatabase
 	/// <param name="dataType">Type being queried. Each Type gets its ow n storage.</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>A Json String with the data stored within.</returns>
-	ValueTask<string?> GetExpandedServerData(string dataType, CancellationToken cancellationToken = default);
+	ValueTask<T?> GetExpandedServerData<T>(string dataType, CancellationToken cancellationToken = default);
 
 	IAsyncEnumerable<SharpChannel> GetAllChannelsAsync(CancellationToken cancellationToken = default);
 	
