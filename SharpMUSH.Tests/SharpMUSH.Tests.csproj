@@ -25,6 +25,7 @@
     <PackageReference Include="Testcontainers.ArangoDb" Version="4.8.1" />
     <PackageReference Include="Testcontainers.MySql" Version="4.8.1" />
     <PackageReference Include="MySqlConnector" Version="2.4.0" />
+    <PackageReference Include="Testcontainers.RabbitMq" Version="4.8.1" />
 		<PackageReference Include="TUnit" Version="0.61.39" />
   </ItemGroup>
 

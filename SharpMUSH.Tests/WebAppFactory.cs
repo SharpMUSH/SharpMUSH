@@ -29,6 +29,9 @@ public class WebAppFactory : IAsyncInitializer
 	[ClassDataSource<ArangoDbTestServer>(Shared = SharedType.PerTestSession)]
 	public required ArangoDbTestServer ArangoDbTestServer { get; init; }
 	
+	[ClassDataSource<RabbitMqTestServer>(Shared = SharedType.PerTestSession)]
+	public required RabbitMqTestServer RabbitMqTestServer { get; init; }
+	
 	[ClassDataSource<MySqlTestServer>(Shared = SharedType.PerTestSession)]
 	public required MySqlTestServer MySqlTestServer { get; init; }
 
