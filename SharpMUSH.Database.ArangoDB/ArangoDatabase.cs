@@ -553,7 +553,7 @@ public partial class ArangoDatabase(
 		/*
 		 *Microsoft.CSharp.RuntimeBinder.RuntimeBinderException: Cannot convert null to 'long' because it is a non-nullable value type
    at CallSite.Target(Closure, CallSite, Object)
-   at System.Dynamic.UpdateDelegates.UpdateAndExecute1[T0,TRet](CallSite site, T0 arg0)
+   at System.System.Text.Json.JsonElement.UpdateDelegates.UpdateAndExecute1[T0,TRet](CallSite site, T0 arg0)
    at CallSite.Target(Closure, CallSite, Object)
    at SharpMUSH.Database.ArangoDB.ArangoDatabase.SharpObjectQueryToSharpObject(Object obj) in D:\\SharpMUSH\\SharpMUSH.Database.ArangoDB\\ArangoDatabase.cs:line 1164
    at SharpMUSH.Database.ArangoDB.ArangoDatabase.GetObjectNodeAsync(String dbId, CancellationToken cancellationToken) in D:\\SharpMUSH\\SharpMUSH.Database.ArangoDB\\ArangoDatabase.cs:line 1136
@@ -669,22 +669,21 @@ public partial class ArangoDatabase(
 		CancellationToken ct = default)
 	{
 		// Get the edge that leads to it, otherwise we will have to create one.
-		var result = await arangoDb.Query.ExecuteAsync<dynamic>(handle,
-			$"FOR v,e IN 1..1 OUTBOUND {sharpObjectId} GRAPH {DatabaseConstants.GraphObjectData} RETURN v",
+		var result = await arangoDb.Query.ExecuteAsync<string>(handle,
+			$"FOR v,e IN 1..1 OUTBOUND {sharpObjectId} GRAPH {DatabaseConstants.GraphObjectData} RETURN v._key",
 			cancellationToken: ct);
 
-		var first = result.FirstOrDefault();
-		if (first?.ContainsKey("_key") ?? false)
+		var key = result.FirstOrDefault();
+		if (key is not null)
 		{
-			var vertexKey = (string)first!["_key"];
 			await arangoDb.Graph.Vertex.UpdateAsync(handle, DatabaseConstants.GraphObjectData, DatabaseConstants.ObjectData,
-				vertexKey, new Dictionary<string, object> { { dataType, data } }, cancellationToken: ct);
+				key, new Dictionary<string, object> { { dataType, data } }, cancellationToken: ct);
 			return;
 		}
 
 		var newJson = new Dictionary<string, object> { { dataType, data } };
 
-		var newVertex = await arangoDb.Graph.Vertex.CreateAsync<dynamic, dynamic>(handle,
+		var newVertex = await arangoDb.Graph.Vertex.CreateAsync<dynamic, System.Text.Json.JsonElement>(handle,
 			DatabaseConstants.GraphObjectData,
 			DatabaseConstants.ObjectData,
 			newJson, cancellationToken: ct);
@@ -693,23 +692,23 @@ public partial class ArangoDatabase(
 			DatabaseConstants.GraphObjectData,
 			DatabaseConstants.HasObjectData, new SharpEdgeCreateRequest(
 				From: sharpObjectId,
-				To: (string)newVertex.Vertex._id), cancellationToken: ct);
+				To: newVertex.Vertex.GetProperty("_id").GetString()!), cancellationToken: ct);
 	}
 
 	public async ValueTask<string?> GetExpandedObjectData(string sharpObjectId, string dataType,
 		CancellationToken ct = default)
 	{
 		// Get the edge that leads to it, otherwise we will have to create one.
-		var result = await arangoDb.Query.ExecuteAsync<dynamic>(handle,
-			$"FOR v IN 1..1 OUTBOUND {sharpObjectId} GRAPH {DatabaseConstants.GraphObjectData} RETURN v",
+		var result = await arangoDb.Query.ExecuteAsync<string>(handle,
+			$"FOR v IN 1..1 OUTBOUND {sharpObjectId} GRAPH {DatabaseConstants.GraphObjectData} RETURN v.data",
 			cancellationToken: ct);
-		var resultingValue = result.FirstOrDefault()?.GetValue(dataType);
-		return resultingValue?.ToString();
+		var resultingValue = result.FirstOrDefault();
+		return resultingValue;
 	}
 
 	public async ValueTask SetExpandedServerData(string dataType, string data, CancellationToken ct = default)
 	{
-		var newJson = new Dictionary<string, dynamic>
+		var newJson = new Dictionary<string, string>
 		{
 			{ "_key", dataType },
 			{ "data", data }
@@ -923,8 +922,8 @@ public partial class ArangoDatabase(
 	public async ValueTask RemoveUserFromChannelAsync(SharpChannel channel, AnySharpObject obj,
 		CancellationToken ct = default)
 	{
-		var result = await arangoDb.Query.ExecuteAsync<dynamic>(handle,
-			$"FOR v,e IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphChannels} RETURN e",
+		var result = await arangoDb.Query.ExecuteAsync<string>(handle,
+			$"FOR v,e IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphChannels} RETURN e.Key",
 			new Dictionary<string, object>
 			{
 				{ StartVertex, obj.Object().Id! }
@@ -933,9 +932,9 @@ public partial class ArangoDatabase(
 		var singleResult = result?.FirstOrDefault();
 		if (singleResult is null) return;
 
-		await arangoDb.Graph.Edge.RemoveAsync<dynamic>(handle,
+		await arangoDb.Graph.Edge.RemoveAsync<System.Text.Json.JsonElement>(handle,
 			DatabaseConstants.GraphChannels, DatabaseConstants.OnChannel,
-			singleResult.Key, cancellationToken: ct);
+			singleResult, cancellationToken: ct);
 	}
 
 	public async ValueTask UpdateChannelUserStatusAsync(SharpChannel channel, AnySharpObject obj,
@@ -1153,7 +1152,7 @@ public partial class ArangoDatabase(
 		
 		if (existing != null)
 		{
-			// Update existing entry - build document dynamically to omit null fields
+			// Update existing entry - build document System.Text.Json.JsonElementally to omit null fields
 			var document = new Dictionary<string, object>
 			{
 				{ "_key", existing.Id!.Split('/')[1] },
@@ -1166,7 +1165,7 @@ public partial class ArangoDatabase(
 			if (enumValues != null)
 				document["Enum"] = enumValues;
 			
-			var updated = await arangoDb.Document.UpdateAsync<dynamic, SharpAttributeEntry>(handle, 
+			var updated = await arangoDb.Document.UpdateAsync<Dictionary<string, object>, SharpAttributeEntry>(handle, 
 				DatabaseConstants.AttributeEntries,
 				document,
 				waitForSync: true,
@@ -1177,7 +1176,7 @@ public partial class ArangoDatabase(
 		}
 		else
 		{
-			// Create new entry - build document dynamically to omit null fields
+			// Create new entry - build document System.Text.Json.JsonElementally to omit null fields
 			var document = new Dictionary<string, object>
 			{
 				{ "_key", name.ToUpper() },
@@ -1190,7 +1189,7 @@ public partial class ArangoDatabase(
 			if (enumValues != null)
 				document["Enum"] = enumValues;
 			
-			var created = await arangoDb.Document.CreateAsync<dynamic, SharpAttributeEntry>(handle,
+			var created = await arangoDb.Document.CreateAsync<Dictionary<string, object>, SharpAttributeEntry>(handle,
 				DatabaseConstants.AttributeEntries,
 				document,
 				waitForSync: true,
@@ -1250,13 +1249,16 @@ public partial class ArangoDatabase(
 		{
 			DatabaseConstants.TypeThing => new SharpThing
 			{
-				Id = id, Object = convertObject,
+				Id = id, 
+				Object = convertObject,
 				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id), ct)),
 				Home = new(async ct => await GetHomeAsync(id, ct))
 			},
 			DatabaseConstants.TypePlayer => new SharpPlayer
 			{
-				Id = id, Object = convertObject, Aliases = res.Aliases,
+				Id = id, 
+				Object = convertObject,
+				Aliases = res.Aliases,
 				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id), ct)),
 				Home = new(async ct => await GetHomeAsync(id, ct)),
 				PasswordHash = res.PasswordHash,
@@ -1270,7 +1272,9 @@ public partial class ArangoDatabase(
 			},
 			DatabaseConstants.TypeExit => new SharpExit
 			{
-				Id = id, Object = convertObject, Aliases = res.Aliases,
+				Id = id, 
+				Object = convertObject, 
+				Aliases = res.Aliases,
 				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id), ct)),
 				Home = new(async ct => await GetHomeAsync(id, ct))
 			},
@@ -1281,23 +1285,23 @@ public partial class ArangoDatabase(
 	private async ValueTask<AnyOptionalSharpObject> GetObjectNodeAsync(string dbId,
 		CancellationToken cancellationToken = default)
 	{
-		ArangoList<dynamic>? query;
+		ArangoList<System.Text.Json.JsonElement>? query;
 		if (dbId.StartsWith(DatabaseConstants.Objects))
 		{
-			query = await arangoDb.Query.ExecuteAsync<dynamic>(handle,
+			query = await arangoDb.Query.ExecuteAsync<System.Text.Json.JsonElement>(handle,
 				$"FOR v IN 0..1 INBOUND {dbId} GRAPH {DatabaseConstants.GraphObjects} RETURN v",
 				cache: true, cancellationToken: cancellationToken);
 			query.Reverse();
 		}
 		else
 		{
-			query = await arangoDb.Query.ExecuteAsync<dynamic>(handle,
+			query = await arangoDb.Query.ExecuteAsync<System.Text.Json.JsonElement>(handle,
 				$"FOR v IN 0..1 OUTBOUND {dbId} GRAPH {DatabaseConstants.GraphObjects} RETURN v", cache: true,
 				cancellationToken: cancellationToken);
 		}
 
-		System.Text.Json.JsonElement res = query.First();
-		System.Text.Json.JsonElement obj = query.Last();
+		var res = query.First();
+		var obj = query.Last();
 
 		var id = res.GetProperty("_id").GetString()!;
 		var collection = id.Split("/")[0];
@@ -1314,9 +1318,10 @@ public partial class ArangoDatabase(
 			},
 			DatabaseConstants.Players => new SharpPlayer
 			{
-				Id = id, Object = convertObject, Aliases = res.GetProperty("Aliases").EnumerateObject().Select(x => x.Value.GetString()!).ToArray(),
+				Id = id, Object = convertObject, Aliases = res.GetProperty("Aliases").EnumerateArray().Select(x => x.GetString()!).ToArray(),
 				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id), ct)),
-				Home = new(async ct => await GetHomeAsync(id, ct)), PasswordHash = res.GetProperty("PasswordHash").GetString()!,
+				Home = new(async ct => await GetHomeAsync(id, ct)), 
+				PasswordHash = res.GetProperty("PasswordHash").GetString()!,
 				Quota = res.GetProperty("Quota").GetInt32()
 			},
 			DatabaseConstants.Rooms => new SharpRoom 
@@ -1327,7 +1332,7 @@ public partial class ArangoDatabase(
 			},
 			DatabaseConstants.Exits => new SharpExit
 			{
-				Id = id, Object = convertObject, Aliases = res.GetProperty("Aliases").EnumerateObject().Select(x => x.Value.GetString()!).ToArray(),
+				Id = id, Object = convertObject, Aliases = res.GetProperty("Aliases").EnumerateArray().Select(x => x.GetString()!).ToArray(),
 				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id), ct)),
 				Home = new(async ct => await GetHomeAsync(id, ct))
 			},
@@ -1335,27 +1340,31 @@ public partial class ArangoDatabase(
 		};
 	}
 
-	private SharpObject SharpObjectQueryToSharpObject(dynamic obj) =>
-		new()
+	private SharpObject SharpObjectQueryToSharpObject(System.Text.Json.JsonElement obj)
+	{
+		var id = obj.GetProperty("_id").GetString()!;
+		var type = obj.GetProperty("Type").GetString()!;
+		return new SharpObject
 		{
-			Id = obj._id,
-			Key = int.Parse((string)obj._key),
-			Name = (string)obj.Name,
-			Type = (string)obj.Type,
-			CreationTime = (long)obj.CreationTime,
-			ModifiedTime = (long)obj.ModifiedTime,
+			Id = id,
+			Key = int.Parse(obj.GetProperty("_key").GetString()!),
+			Name = obj.GetProperty("Name").GetString()!,
+			Type = type,
+			CreationTime = obj.GetProperty("CreationTime").GetInt64(),
+			ModifiedTime = obj.GetProperty("ModifiedTime").GetInt64(),
 			Locks = ImmutableDictionary<string, string>
 				.Empty, // FIX: ((Dictionary<string, string>?)obj.Locks ?? []).ToImmutableDictionary(),
-			Flags = new(() => GetObjectFlagsAsync((string)obj._id, ((string)obj.Type).ToUpper(), CancellationToken.None)),
-			Powers = new(() => GetPowersAsync((string)obj._id, CancellationToken.None)),
-			Attributes = new(() => GetTopLevelAttributesAsync((string)obj._id, CancellationToken.None)),
-			LazyAttributes = new(() => GetTopLevelLazyAttributesAsync((string)obj._id, CancellationToken.None)),
-			AllAttributes = new(() => GetAllAttributesAsync((string)obj._id, CancellationToken.None)),
-			LazyAllAttributes = new(() => GetAllLazyAttributesAsync((string)obj._id, CancellationToken.None)),
-			Owner = new(async ct => await GetObjectOwnerAsync((string)obj._id, ct)),
-			Parent = new(async ct => await GetParentAsync((string)obj._id, ct)),
-			Children = new(() => GetChildrenAsync((string)obj._id, CancellationToken.None))
+			Flags = new(() => GetObjectFlagsAsync(id, type.ToUpper(), CancellationToken.None)),
+			Powers = new(() => GetPowersAsync(id, CancellationToken.None)),
+			Attributes = new(() => GetTopLevelAttributesAsync(id, CancellationToken.None)),
+			LazyAttributes = new(() => GetTopLevelLazyAttributesAsync(id, CancellationToken.None)),
+			AllAttributes = new(() => GetAllAttributesAsync(id, CancellationToken.None)),
+			LazyAllAttributes = new(() => GetAllLazyAttributesAsync(id, CancellationToken.None)),
+			Owner = new(async ct => await GetObjectOwnerAsync(id, ct)),
+			Parent = new(async ct => await GetParentAsync(id, ct)),
+			Children = new(() => GetChildrenAsync(id, CancellationToken.None))
 		};
+	}
 
 	public async ValueTask<SharpObject?> GetBaseObjectNodeAsync(DBRef dbref,
 		CancellationToken cancellationToken = default)
@@ -1814,7 +1823,7 @@ public partial class ArangoDatabase(
 			$"LET foundAttributes = (FOR v,e,p IN 1..@max OUTBOUND FIRST(start) GRAPH {DatabaseConstants.GraphAttributes} PRUNE condition = NTH(@attr,LENGTH(p.edges)-1) != v.Name FILTER !condition RETURN v)";
 		const string query = $"{let1} {let2} RETURN APPEND(start, foundAttributes)";
 
-		var result = await arangoDb.Query.ExecuteAsync<dynamic[]>(handle, query, new Dictionary<string, object>
+		var result = await arangoDb.Query.ExecuteAsync<System.Text.Json.JsonElement[]>(handle, query, new Dictionary<string, object>
 		{
 			{ "attr", attribute },
 			{ StartVertex, startVertex },
@@ -1826,7 +1835,7 @@ public partial class ArangoDatabase(
 		var matches = actualResult.Length;
 		var remaining = attribute.Skip(matches - 1).ToArray();
 		var last = actualResult.Last();
-		string lastId = last._id;
+		var lastId = last.GetProperty("_id").GetString()!;
 
 		// Create Path
 		foreach (var nextAttr in remaining.Select((attrName, i) => (value: attrName, i)))
@@ -1934,13 +1943,26 @@ public partial class ArangoDatabase(
 		}, cancellationToken: ct);
 
 	public async ValueTask<SharpAttributeFlag?> GetAttributeFlagAsync(string flagName, CancellationToken ct = default) =>
-		(await arangoDb.Query.ExecuteAsync<SharpAttributeFlag>(handle,
+		(await arangoDb.Query.ExecuteAsync<SharpAttributeFlagQueryResult>(handle,
 			"FOR v in @@C1 FILTER UPPER(v.Name) == UPPER(@flag) RETURN v",
 			bindVars: new Dictionary<string, object>
 			{
 				{ "@C1", DatabaseConstants.AttributeFlags },
 				{ "flag", flagName }
-			}, cache: true, cancellationToken: ct)).FirstOrDefault();
+			}, cache: true, cancellationToken: ct))
+		.Select(SharpAttributeFlagQueryResultToSharpFlag)
+		.FirstOrDefault();
+
+	private static SharpAttributeFlag SharpAttributeFlagQueryResultToSharpFlag(SharpAttributeFlagQueryResult arg) =>
+		new()
+		{
+			Id = arg.Id,
+			Name = arg.Name,
+			Inheritable = arg.Inheritable,
+			Key = arg.Key,
+			Symbol = arg.Symbol,
+			System = arg.System
+		};
 
 	public IAsyncEnumerable<SharpAttributeFlag> GetAttributeFlagsAsync(CancellationToken ct = default) =>
 		arangoDb.Query.ExecuteStreamAsync<SharpAttributeFlag>(handle,
@@ -2130,18 +2152,16 @@ public partial class ArangoDatabase(
 		var startVertex = node.Id;
 
 		const string locationQuery =
-			$"FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphLocations} RETURN v";
-		var query = await arangoDb.Query.ExecuteAsync<dynamic>(handle, $"{locationQuery}",
+			$"FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphLocations} RETURN v._id";
+		var queryIds = await arangoDb.Query.ExecuteAsync<string>(handle, $"{locationQuery}",
 			new Dictionary<string, object>
 			{
 				{ StartVertex, startVertex }
 			}, cancellationToken: ct);
 
-		var queryIds = query.Select(x => (string)x._id);
-
 		return queryIds
 			.ToAsyncEnumerable()
-			.Select<string, AnyOptionalSharpObject>(GetObjectNodeAsync)
+			.Select(GetObjectNodeAsync)
 			.Select(x => x.Match<AnySharpContent>(
 				player => player,
 				_ => throw new Exception("Invalid Contents found"),
@@ -2151,6 +2171,11 @@ public partial class ArangoDatabase(
 			));
 	}
 
+	public record SharpExitQuery(
+		SharpExitQueryResult Exit,
+		SharpObjectQueryResult Obj
+	);
+	
 	public async ValueTask<IAsyncEnumerable<SharpExit>?> GetExitsAsync(DBRef obj, CancellationToken ct = default)
 	{
 		// This is bad code. We can't use graphExits for this.
@@ -2163,27 +2188,25 @@ public partial class ArangoDatabase(
 			FOR obj IN 0..1 OUTBOUND exit GRAPH {DatabaseConstants.GraphObjects}
 			RETURN {{exit: exit, obj: obj}}";
 		
-		var query = await arangoDb.Query.ExecuteAsync<dynamic>(handle, exitQuery,
+		var query = arangoDb.Query.ExecuteStreamAsync<SharpExitQuery>(handle, exitQuery,
 			new Dictionary<string, object>
 			{
 				{ StartVertex, baseObject.Known().Id()! }
 			}, cancellationToken: ct);
 
 		return query
-			.ToAsyncEnumerable()
-			.Select<dynamic, SharpExit>(exitData =>
+			.Select<SharpExitQuery, SharpExit>(exitData =>
 			{
-				var exit = exitData.exit;
-				var obj = exitData.obj;
-				var convertObject = SharpObjectQueryToSharpObject(obj);
+				var exit = exitData.Exit;
+				var convertObject = SharpObjectQueryToSharpObject(exitData.Obj);
 				
 				return new SharpExit
 				{
-					Id = (string)exit._id,
+					Id = exit.Id,
 					Object = convertObject,
-					Aliases = exit.Aliases?.ToObject<string[]>(),
-					Location = new(async ct => await mediator.Send(new GetCertainLocationQuery((string)exit._id), ct)),
-					Home = new(async ct => await GetHomeAsync((string)exit._id, ct))
+					Aliases = exit.Aliases,
+					Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(exit.Id), ct)),
+					Home = new(async ct => await GetHomeAsync(exit.Id, ct))
 				};
 			});
 	}
@@ -2201,26 +2224,26 @@ public partial class ArangoDatabase(
 			FOR obj IN 0..1 OUTBOUND exit GRAPH {DatabaseConstants.GraphObjects}
 			RETURN {{exit: exit, obj: obj}}";
 		
-		var query = arangoDb.Query.ExecuteStreamAsync<dynamic>(handle, exitQuery,
+		var query = arangoDb.Query.ExecuteStreamAsync<SharpExitQuery>(handle, exitQuery,
 			new Dictionary<string, object>
 			{
 				{ StartVertex, startVertex }
 			}, cancellationToken: ct);
 
 		return query
-			.Select<dynamic, SharpExit>(exitData =>
+			.Select<SharpExitQuery, SharpExit>(exitData =>
 			{
-				var exit = exitData.exit;
-				var obj = exitData.obj;
+				var exit = exitData.Exit;
+				var obj = exitData.Obj;
 				var convertObject = SharpObjectQueryToSharpObject(obj);
 				
 				return new SharpExit
 				{
-					Id = (string)exit._id,
+					Id = exit.Id,
 					Object = convertObject,
-					Aliases = exit.Aliases?.ToObject<string[]>(),
-					Location = new(async ct => await mediator.Send(new GetCertainLocationQuery((string)exit._id), ct)),
-					Home = new(async ct => await GetHomeAsync((string)exit._id, ct))
+					Aliases = exit.Aliases,
+					Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(exit.Id), ct)),
+					Home = new(async ct => await GetHomeAsync(exit.Id, ct))
 				};
 			});
 	}
