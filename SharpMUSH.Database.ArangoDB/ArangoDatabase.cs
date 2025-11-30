@@ -1818,12 +1818,12 @@ public partial class ArangoDatabase(
 
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 		const string let1 =
-			$"LET start = (FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphObjects} RETURN v)";
+			$"LET start = (FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphObjects} RETURN v._id)";
 		const string let2 =
-			$"LET foundAttributes = (FOR v,e,p IN 1..@max OUTBOUND FIRST(start) GRAPH {DatabaseConstants.GraphAttributes} PRUNE condition = NTH(@attr,LENGTH(p.edges)-1) != v.Name FILTER !condition RETURN v)";
+			$"LET foundAttributes = (FOR v,e,p IN 1..@max OUTBOUND FIRST(start) GRAPH {DatabaseConstants.GraphAttributes} PRUNE condition = NTH(@attr,LENGTH(p.edges)-1) != v.Name FILTER !condition RETURN v._id)";
 		const string query = $"{let1} {let2} RETURN APPEND(start, foundAttributes)";
 
-		var result = await arangoDb.Query.ExecuteAsync<System.Text.Json.JsonElement[]>(handle, query, new Dictionary<string, object>
+		var result = await arangoDb.Query.ExecuteAsync<string[]>(handle, query, new Dictionary<string, object>
 		{
 			{ "attr", attribute },
 			{ StartVertex, startVertex },
@@ -1834,8 +1834,7 @@ public partial class ArangoDatabase(
 
 		var matches = actualResult.Length;
 		var remaining = attribute.Skip(matches - 1).ToArray();
-		var last = actualResult.Last();
-		var lastId = last.GetProperty("_id").GetString()!;
+		var lastId = actualResult.Last();
 
 		// Create Path
 		foreach (var nextAttr in remaining.Select((attrName, i) => (value: attrName, i)))
