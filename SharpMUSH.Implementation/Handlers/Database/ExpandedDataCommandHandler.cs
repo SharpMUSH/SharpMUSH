@@ -10,13 +10,13 @@ public class ExpandedDataCommandHandler(ISharpDatabase database) : ICommandHandl
 	public async ValueTask<Unit> Handle(SetExpandedDataCommand command, CancellationToken cancellationToken)
 	{
 		var dynamicObject = JsonSerializer.Deserialize<dynamic>(command.Json);
-		await database.SetExpandedObjectData(command.SharpObject.Id!, command.TypeName, dynamicObject);
+		await database.SetExpandedObjectData(command.SharpObject.Id!, command.TypeName, dynamicObject, cancellationToken);
 		return Unit.Value;
 	}
 
 	public async ValueTask<Unit> Handle(SetExpandedServerDataCommand command, CancellationToken cancellationToken)
 	{
-		await database.SetExpandedServerData(command.TypeName, command.Json);
+		await database.SetExpandedServerData(command.TypeName, command.Object, cancellationToken);
 		return Unit.Value;
 	}
 }

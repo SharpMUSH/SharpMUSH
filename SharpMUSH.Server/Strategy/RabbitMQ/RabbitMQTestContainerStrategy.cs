@@ -6,6 +6,8 @@ public class RabbitMQTestContainerServiceStrategy : RabbitMQServiceStrategy
 {
 	public override void ConfigureRabbitMq(IBusRegistrationContext context, IRabbitMqBusFactoryConfigurator cfg)
 	{
+		cfg.Lazy = false;
+		cfg.Durable = false;
 		cfg.Host("localhost", "/", h =>
 		{
 			h.Username("sharpmush");

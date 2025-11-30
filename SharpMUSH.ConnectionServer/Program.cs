@@ -20,11 +20,9 @@ var rabbitHost = Environment.GetEnvironmentVariable("RABBITMQ_HOST");
 var rabbitUser = Environment.GetEnvironmentVariable("RABBITMQ_USER") ?? "sharpmush";
 var rabbitPass = Environment.GetEnvironmentVariable("RABBITMQ_PASSWORD") ?? "sharpmush_dev_password";
 
-RabbitMqContainer? container = null;
-
 if (rabbitHost == null)
 {
-	container = new RabbitMqBuilder()
+	var container = new RabbitMqBuilder()
 		.WithUsername(rabbitUser)
 		.WithPassword(rabbitPass)
 		.WithPortBinding(5672,5672)
@@ -49,6 +47,8 @@ builder.Services.AddMassTransit(x =>
 
 	x.UsingRabbitMq((context, cfg) =>
 	{
+		cfg.PrefetchCount = 20;
+		cfg.Lazy = false;
 		cfg.Host(rabbitHost, "/", h =>
 		{
 			h.Username(rabbitUser);

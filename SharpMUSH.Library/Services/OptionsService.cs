@@ -9,12 +9,12 @@ public class OptionsService(ISharpDatabase database) : IOptionsFactory<SharpMUSH
 {
 	public SharpMUSHOptions Create(string _)
 	{
-		var data = database.GetExpandedServerData(nameof(SharpMUSHOptions))
+		var data = database.GetExpandedServerData<SharpMUSHOptions>(nameof(SharpMUSHOptions))
 			.AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
 
 		if (data is not null)
 		{
-			return JsonSerializer.Deserialize<SharpMUSHOptions>(data) ?? throw new Exception("Invalid options");
+			return data;
 		}
 
 		var defaultSettings = Default();

@@ -1,4 +1,6 @@
-﻿namespace SharpMUSH.Database.Models;
+﻿using System.Text.Json.Serialization;
+
+namespace SharpMUSH.Database.Models;
 
 public record SharpChannelQueryResult(
 	string Id,
@@ -23,8 +25,8 @@ public record SharpChannelCreateRequest(
 );
 
 public record SharpChannelMemberListQueryResult(
-	string Id,
-	SharpChannelUserStatusQueryResult Status);
+	[property:JsonPropertyName("Id")]string Id,
+	[property:JsonPropertyName("Status")]SharpChannelUserStatusQueryResult Status);
 
 public record SharpChannelUserStatusQueryResult(
 	bool? Gagged,
