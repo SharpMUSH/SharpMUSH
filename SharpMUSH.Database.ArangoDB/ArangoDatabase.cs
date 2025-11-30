@@ -2100,10 +2100,10 @@ public partial class ArangoDatabase(
 		CancellationToken ct = default) =>
 		(await GetLocationAsync(obj.Object().DBRef, depth, ct)).WithoutNone();
 
-	public async ValueTask<IAsyncEnumerable<AnySharpContent>?> GetContentsAsync(DBRef obj, CancellationToken ct = default)
+	public async ValueTask<IAsyncEnumerable<AnySharpContent>> GetContentsAsync(DBRef obj, CancellationToken ct = default)
 	{
 		var baseObject = await GetObjectNodeAsync(obj, ct);
-		if (baseObject.IsNone) return null;
+		if (baseObject.IsNone) return AsyncEnumerable.Empty<AnySharpContent>();
 
 		const string locationQuery =
 			$"FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphLocations} RETURN v._id";
@@ -2125,7 +2125,7 @@ public partial class ArangoDatabase(
 				));
 	}
 
-	public async ValueTask<IAsyncEnumerable<AnySharpContent>?> GetContentsAsync(AnySharpContainer node,
+	public async ValueTask<IAsyncEnumerable<AnySharpContent>> GetContentsAsync(AnySharpContainer node,
 		CancellationToken ct = default)
 	{
 		var startVertex = node.Id;
