@@ -141,7 +141,7 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile)
 		services.AddArango((_, arango) =>
 		{
 			arango.ConnectionString = arangoConfig.ConnectionString;
-			arango.HttpClient = arango.HttpClient;
+			arango.HttpClient = arangoConfig.HttpClient;
 		});
 		services.AddQuartz(x =>
 		{
