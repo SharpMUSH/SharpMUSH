@@ -481,10 +481,11 @@ public partial class ArangoDatabase(
 			});
 
 	public async ValueTask<IAsyncEnumerable<SharpObject>> GetParentsAsync(string id, CancellationToken ct = default)
-		=> (await arangoDb.Query.ExecuteAsync<SharpObject>(handle,
+		=> (await arangoDb.Query.ExecuteAsync<SharpObjectQueryResult>(handle,
 				$"FOR v IN 1..999 OUTBOUND {id} GRAPH {DatabaseConstants.GraphParents} RETURN v", cache: true,
 				cancellationToken: ct))
-			.ToAsyncEnumerable();
+			.ToAsyncEnumerable()
+			.Select(SharpObjectQueryToSharpObject);
 
 	public IAsyncEnumerable<SharpMail> GetSentMailsAsync(SharpObject sender, SharpPlayer recipient,
 		CancellationToken ct = default)
@@ -1295,10 +1296,10 @@ public partial class ArangoDatabase(
 				cancellationToken: cancellationToken);
 		}
 
-		var res = query.First();
-		var obj = query.Last();
+		System.Text.Json.JsonElement res = query.First();
+		System.Text.Json.JsonElement obj = query.Last();
 
-		string id = res._id;
+		var id = res.GetProperty("_id").GetString()!;
 		var collection = id.Split("/")[0];
 
 		var convertObject = SharpObjectQueryToSharpObject(obj);
@@ -1313,10 +1314,10 @@ public partial class ArangoDatabase(
 			},
 			DatabaseConstants.Players => new SharpPlayer
 			{
-				Id = id, Object = convertObject, Aliases = res.Aliases.ToObject<string[]>(),
+				Id = id, Object = convertObject, Aliases = res.GetProperty("Aliases").EnumerateObject().Select(x => x.Value.GetString()!).ToArray(),
 				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id), ct)),
-				Home = new(async ct => await GetHomeAsync(id, ct)), PasswordHash = res.PasswordHash,
-				Quota = res.Quota
+				Home = new(async ct => await GetHomeAsync(id, ct)), PasswordHash = res.GetProperty("PasswordHash").GetString()!,
+				Quota = res.GetProperty("Quota").GetInt32()
 			},
 			DatabaseConstants.Rooms => new SharpRoom 
 			{ 
@@ -1326,11 +1327,11 @@ public partial class ArangoDatabase(
 			},
 			DatabaseConstants.Exits => new SharpExit
 			{
-				Id = id, Object = convertObject, Aliases = res.Aliases.ToObject<string[]>(),
+				Id = id, Object = convertObject, Aliases = res.GetProperty("Aliases").EnumerateObject().Select(x => x.Value.GetString()!).ToArray(),
 				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id), ct)),
 				Home = new(async ct => await GetHomeAsync(id, ct))
 			},
-			_ => throw new ArgumentException($"Invalid Object Type found: '{obj.Type}'"),
+			_ => throw new ArgumentException($"Invalid Object Type found: '{obj.GetProperty("Type").GetString()}'"),
 		};
 	}
 
