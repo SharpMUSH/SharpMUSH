@@ -594,7 +594,7 @@ public interface ISharpDatabase
 	/// <param name="dataType">Type being queried. Each Type gets its ow n storage.</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>A Json String with the data stored within.</returns>
-	ValueTask<string?> GetExpandedObjectData(string sharpObjectId, string dataType, CancellationToken cancellationToken = default);
+	ValueTask<T?> GetExpandedObjectData<T>(string sharpObjectId, string dataType, CancellationToken cancellationToken = default);
 
 
 	/// <summary>

@@ -24,10 +24,7 @@ public class ExpandedObjectDataService(IMediator mediator) : IExpandedObjectData
 	public async ValueTask<T?> GetExpandedDataAsync<T>(SharpObject obj) where T : class
 	{
 		var result = await mediator.Send(new ExpandedDataQuery(obj, typeof(T).Name));
-		if (result is null) return null;
-
-		var conversion = JsonSerializer.Deserialize<T>(result);
-		return conversion;
+		return result as T;
 	}
 
 	public async ValueTask SetExpandedDataAsync<T>(T data, SharpObject obj, bool ignoreNull = false) where T : class
@@ -39,10 +36,7 @@ public class ExpandedObjectDataService(IMediator mediator) : IExpandedObjectData
 	public async ValueTask<T?> GetExpandedServerDataAsync<T>() where T : class
 	{
 		var result = await mediator.Send(new ExpandedServerDataQuery(typeof(T).Name));
-		if (result is null) return null;
-		
-		var conversion = JsonSerializer.Deserialize<T>(result);
-		return conversion;
+		return result as T;
 	}
 
 	public async ValueTask SetExpandedServerDataAsync<T>(T data, bool ignoreNull = false) where T : class

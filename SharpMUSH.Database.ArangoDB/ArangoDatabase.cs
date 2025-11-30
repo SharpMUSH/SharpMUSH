@@ -677,13 +677,13 @@ public partial class ArangoDatabase(
 		if (key is not null)
 		{
 			await arangoDb.Graph.Vertex.UpdateAsync(handle, DatabaseConstants.GraphObjectData, DatabaseConstants.ObjectData,
-				key, new Dictionary<string, object> { { dataType, data } }, cancellationToken: ct);
+				key, new Dictionary<string, object> { { dataType, data } }, cancellationToken: ct, keepNull: false);
 			return;
 		}
 
 		var newJson = new Dictionary<string, object> { { dataType, data } };
 
-		var newVertex = await arangoDb.Graph.Vertex.CreateAsync<dynamic, System.Text.Json.JsonElement>(handle,
+		var newVertex = await arangoDb.Graph.Vertex.CreateAsync<dynamic, dynamic>(handle,
 			DatabaseConstants.GraphObjectData,
 			DatabaseConstants.ObjectData,
 			newJson, cancellationToken: ct);
@@ -695,12 +695,12 @@ public partial class ArangoDatabase(
 				To: newVertex.Vertex.GetProperty("_id").GetString()!), cancellationToken: ct);
 	}
 
-	public async ValueTask<string?> GetExpandedObjectData(string sharpObjectId, string dataType,
+	public async ValueTask<T?> GetExpandedObjectData<T>(string sharpObjectId, string dataType,
 		CancellationToken ct = default)
 	{
 		// Get the edge that leads to it, otherwise we will have to create one.
-		var result = await arangoDb.Query.ExecuteAsync<string>(handle,
-			$"FOR v IN 1..1 OUTBOUND {sharpObjectId} GRAPH {DatabaseConstants.GraphObjectData} RETURN v.data",
+		var result = await arangoDb.Query.ExecuteAsync<T>(handle,
+			$"FOR v IN 1..1 OUTBOUND {sharpObjectId} GRAPH {DatabaseConstants.GraphObjectData} RETURN v.{dataType}",
 			cancellationToken: ct);
 		var resultingValue = result.FirstOrDefault();
 		return resultingValue;
