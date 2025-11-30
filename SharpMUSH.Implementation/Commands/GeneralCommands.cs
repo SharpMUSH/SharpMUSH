@@ -1338,8 +1338,8 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var one = await Mediator!.Send(new GetObjectNodeQuery(new DBRef(0)));
-		var attrValues = Mediator!.CreateStream(new GetAttributeQuery(located.Object().DBRef, ["SEMAPHORE"]));
-		var attrValue = attrValues?.LastOrDefaultAsync().GetAwaiter().GetResult();
+		var attrValues = Mediator.CreateStream(new GetAttributeQuery(located.Object().DBRef, ["SEMAPHORE"]));
+		var attrValue = await attrValues.LastOrDefaultAsync();
 
 		if (attrValue is null)
 		{
@@ -1367,8 +1367,8 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var one = await Mediator!.Send(new GetObjectNodeQuery(new DBRef(0)));
-		var attrValues = Mediator!.CreateStream(new GetAttributeQuery(located.Object().DBRef, attribute));
-		var attrValue = attrValues?.LastOrDefaultAsync().GetAwaiter().GetResult();
+		var attrValues = Mediator.CreateStream(new GetAttributeQuery(located.Object().DBRef, attribute));
+		var attrValue = await attrValues.LastOrDefaultAsync();
 
 		if (attrValue is null)
 		{
@@ -1675,7 +1675,7 @@ public partial class Commands
 		{
 			var maybeFoundAttributes =
 				Mediator.CreateStream(new GetAttributeQuery(objectToDrain.Object().DBRef, attribute));
-			var maybeFoundAttribute = maybeFoundAttributes?.LastOrDefaultAsync().GetAwaiter().GetResult();
+			var maybeFoundAttribute = await maybeFoundAttributes.LastOrDefaultAsync();
 
 			if (maybeFoundAttribute is null)
 			{

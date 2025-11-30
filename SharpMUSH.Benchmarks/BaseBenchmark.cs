@@ -70,8 +70,8 @@ public class BaseBenchmark
 
 		var mockPublisher = Substitute.For<IPublisher>();
 		var simpleConnectionService = new ConnectionService(mockPublisher);
-		simpleConnectionService.Register(1, "localhost", "localhost", "test",  _ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
-		simpleConnectionService.Bind(1, one);
+		await simpleConnectionService.Register(1, "localhost", "localhost", "test",  _ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
+		await simpleConnectionService.Bind(1, one);
 
 		var parser = _server!.Services.GetRequiredService<IMUSHCodeParser>();
 		return parser.FromState(new ParserState(

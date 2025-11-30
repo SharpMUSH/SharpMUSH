@@ -1402,7 +1402,7 @@ public partial class Commands
 			{
 				await NotifyService!.Notify(handle, "You have been disconnected.", type: INotifyService.NotificationType.Announce);
 			}
-			ConnectionService!.Disconnect(handle);
+			await ConnectionService!.Disconnect(handle);
 		}
 
 		return CallState.Empty;
@@ -2051,7 +2051,7 @@ public partial class Commands
 		{
 			any = true;
 			await NotifyService!.Notify(cd.Handle, "You have been disconnected.", type: INotifyService.NotificationType.Announce);
-			ConnectionService!.Disconnect(cd.Handle);
+			await ConnectionService.Disconnect(cd.Handle);
 		}
 
 		if (!any)

@@ -150,7 +150,7 @@ public partial class Commands
 
 		// TODO: Step 3: Confirm there is no SiteLock.
 		var playerDbRef = new DBRef(foundDB.Object.Key, foundDB.Object.CreationTime);
-		ConnectionService.Bind(parser.CurrentState.Handle!.Value, playerDbRef);
+		await ConnectionService.Bind(parser.CurrentState.Handle!.Value, playerDbRef);
 
 		// Trigger PLAYER`CONNECT event - PennMUSH compatible
 		// PennMUSH spec: player`connect (objid, number of connections, descriptor)
@@ -174,7 +174,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		await NotifyService!.Notify(executor, MModule.single("GOODBYE."));
 		// TODO: Display Disconnect Banner.
-		ConnectionService!.Disconnect(parser.CurrentState.Handle!.Value);
+		await ConnectionService!.Disconnect(parser.CurrentState.Handle!.Value);
 		return new None();
 	}
 
