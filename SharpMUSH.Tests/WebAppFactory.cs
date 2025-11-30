@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using System.Text;
 using Core.Arango;
-using Core.Arango.Serialization.Newtonsoft;
+using Core.Arango.Serialization.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -116,7 +116,7 @@ public class WebAppFactory : IAsyncInitializer
 		var config = new ArangoConfiguration
 		{
 			ConnectionString = $"Server={ArangoDbTestServer.Instance.GetTransportAddress()};User=root;Realm=;Password=password;",
-			Serializer = new ArangoNewtonsoftSerializer(new ArangoNewtonsoftDefaultContractResolver())
+			Serializer = new ArangoJsonSerializer(new ArangoJsonDefaultPolicy())
 		};
 
 		var configFile = Path.Join(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst");

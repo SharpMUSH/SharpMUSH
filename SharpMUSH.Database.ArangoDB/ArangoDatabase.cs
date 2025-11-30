@@ -8,8 +8,6 @@ using DotNext.Threading;
 using MarkupString;
 using Mediator;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using OneOf.Types;
 using SharpMUSH.Database.Models;
 using SharpMUSH.Library;
@@ -701,11 +699,11 @@ public partial class ArangoDatabase(
 		CancellationToken ct = default)
 	{
 		// Get the edge that leads to it, otherwise we will have to create one.
-		var result = await arangoDb.Query.ExecuteAsync<JObject>(handle,
+		var result = await arangoDb.Query.ExecuteAsync<dynamic>(handle,
 			$"FOR v IN 1..1 OUTBOUND {sharpObjectId} GRAPH {DatabaseConstants.GraphObjectData} RETURN v",
 			cancellationToken: ct);
 		var resultingValue = result.FirstOrDefault()?.GetValue(dataType);
-		return resultingValue?.ToString(Formatting.None);
+		return resultingValue?.ToString();
 	}
 
 	public async ValueTask SetExpandedServerData(string dataType, string data, CancellationToken ct = default)
@@ -2182,7 +2180,7 @@ public partial class ArangoDatabase(
 				{
 					Id = (string)exit._id,
 					Object = convertObject,
-					Aliases = ((Newtonsoft.Json.Linq.JArray?)exit.Aliases)?.ToObject<string[]>() ?? [],
+					Aliases = exit.Aliases?.ToObject<string[]>(),
 					Location = new(async ct => await mediator.Send(new GetCertainLocationQuery((string)exit._id), ct)),
 					Home = new(async ct => await GetHomeAsync((string)exit._id, ct))
 				};
@@ -2219,7 +2217,7 @@ public partial class ArangoDatabase(
 				{
 					Id = (string)exit._id,
 					Object = convertObject,
-					Aliases = ((Newtonsoft.Json.Linq.JArray?)exit.Aliases)?.ToObject<string[]>() ?? [],
+					Aliases = exit.Aliases?.ToObject<string[]>(),
 					Location = new(async ct => await mediator.Send(new GetCertainLocationQuery((string)exit._id), ct)),
 					Home = new(async ct => await GetHomeAsync((string)exit._id, ct))
 				};

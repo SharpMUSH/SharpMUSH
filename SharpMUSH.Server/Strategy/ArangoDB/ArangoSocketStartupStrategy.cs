@@ -1,5 +1,5 @@
 ﻿using Core.Arango;
-using Core.Arango.Serialization.Newtonsoft;
+using Core.Arango.Serialization.Json;
 using SharpMUSH.Server.Connectors;
 
 namespace SharpMUSH.Server.Strategy.ArangoDB;
@@ -15,7 +15,7 @@ public class ArangoSocketStartupStrategy : ArangoStartupStrategy
 			{
 				BaseAddress = new Uri("http://localhost:8529/") // Workaround for SocketsHttpHandler requiring an absolute URI
 			},
-			Serializer = new ArangoNewtonsoftSerializer(new ArangoNewtonsoftDefaultContractResolver())
+			Serializer = new ArangoJsonSerializer(new ArangoJsonDefaultPolicy())
 		};
 	}
 }
