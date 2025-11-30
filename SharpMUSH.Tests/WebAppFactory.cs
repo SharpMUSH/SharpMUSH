@@ -4,7 +4,6 @@ using Core.Arango;
 using Core.Arango.Serialization.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using NSubstitute;
 using OneOf.Types;
 using Serilog;

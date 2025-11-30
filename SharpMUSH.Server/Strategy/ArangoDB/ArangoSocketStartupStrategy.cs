@@ -15,7 +15,7 @@ public class ArangoSocketStartupStrategy : ArangoStartupStrategy
 			{
 				BaseAddress = new Uri("http://localhost:8529/") // Workaround for SocketsHttpHandler requiring an absolute URI
 			},
-			Serializer = new ArangoJsonSerializer(new ArangoJsonDefaultPolicy())
+			Serializer = new ArangoJsonSerializer(new ArangoJsonDefaultPolicy( ))
 		};
 	}
 }

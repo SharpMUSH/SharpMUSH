@@ -1,6 +1,5 @@
 ﻿using Core.Arango;
 using Core.Arango.Serilog;
-using Core.Arango.Transport;
 using MassTransit;
 using Mediator;
 using Microsoft.AspNetCore.Identity;
