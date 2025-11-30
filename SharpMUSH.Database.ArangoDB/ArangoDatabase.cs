@@ -923,7 +923,7 @@ public partial class ArangoDatabase(
 		CancellationToken ct = default)
 	{
 		var result = await arangoDb.Query.ExecuteAsync<string>(handle,
-			$"FOR v,e IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphChannels} RETURN e.Key",
+			$"FOR v,e IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphChannels} RETURN e._key",
 			new Dictionary<string, object>
 			{
 				{ StartVertex, obj.Object().Id! }
@@ -932,7 +932,7 @@ public partial class ArangoDatabase(
 		var singleResult = result?.FirstOrDefault();
 		if (singleResult is null) return;
 
-		await arangoDb.Graph.Edge.RemoveAsync<System.Text.Json.JsonElement>(handle,
+		await arangoDb.Graph.Edge.RemoveAsync<dynamic>(handle,
 			DatabaseConstants.GraphChannels, DatabaseConstants.OnChannel,
 			singleResult, cancellationToken: ct);
 	}
