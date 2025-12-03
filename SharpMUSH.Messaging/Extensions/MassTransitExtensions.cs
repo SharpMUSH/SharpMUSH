@@ -29,7 +29,13 @@ public static class MassTransitExtensions
 				{
 					h.Username(options.Username);
 					h.Password(options.Password);
+					// Optimize for high throughput
+					h.PublisherConfirmation = false; // Disable confirms for telnet output (fire-and-forget)
+					h.RequestedChannelMax(2047); // Increase channel limit
 				});
+
+				// Increase prefetch for better consumer throughput
+				cfg.PrefetchCount = 100;
 
 				// Configure message retry
 				cfg.UseMessageRetry(r => r.Interval(options.RetryCount, TimeSpan.FromSeconds(options.RetryDelaySeconds)));
@@ -66,7 +72,13 @@ public static class MassTransitExtensions
 				{
 					h.Username(options.Username);
 					h.Password(options.Password);
+					// Optimize for high throughput
+					h.PublisherConfirmation = false; // Disable confirms for telnet output (fire-and-forget)
+					h.RequestedChannelMax(2047); // Increase channel limit
 				});
+
+				// Increase prefetch for better consumer throughput
+				cfg.PrefetchCount = 100;
 
 				// Configure message retry
 				cfg.UseMessageRetry(r => r.Interval(options.RetryCount, TimeSpan.FromSeconds(options.RetryDelaySeconds)));

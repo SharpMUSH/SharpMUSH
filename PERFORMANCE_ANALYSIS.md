@@ -14,94 +14,149 @@ Each iteration in `@dolist` calls `NotifyService.Notify()` which immediately pub
 
 In contrast, `iter()` accumulates all output and calls `Notify()` once, resulting in 1 message.
 
-## Recommendations (Ordered by Priority)
+## Recommendations (Updated - Focus on RabbitMQ Optimization)
 
-### 1. **Implement Output Buffering (RECOMMENDED - Application Level)**
+### 1. **Migrate to RabbitMQ Streams (PRIMARY SOLUTION)**
 
-**Status**: Already partially implemented in the codebase but not enabled.
+**Current State**: Using traditional RabbitMQ queues with MassTransit 8.3.5/8.5.5
 
-The `NotifyService` already has buffering infrastructure:
-- `_buffers` and `_bufferingEnabled` dictionaries exist
-- Logic to check `if (_bufferingEnabled.ContainsKey(handle))` is present
-- Missing: The API to enable/disable buffering and flush mechanism
+RabbitMQ Streams (available in RabbitMQ 3.9+) are designed for high-throughput scenarios with ordered message delivery. Unlike traditional queues, streams:
+- Support append-only log semantics
+- Allow multiple consumers to read from the same stream at different offsets
+- Provide better performance for high-volume scenarios (1000+ messages)
+- Reduce broker overhead for rapid message publishing
 
-**Solution**: Complete the buffering implementation with:
+**Solution**: Migrate telnet output to RabbitMQ streams:
+
+1. **Update RabbitMQ to 3.11+** (already using in testcontainers)
+2. **Add MassTransit.RabbitMQ.Stream package** (available in MassTransit 8.x)
+3. **Configure stream endpoints** for TelnetOutput messages
+4. **Update consumers** to use stream-based consumption
+
 ```csharp
-// In INotifyService.cs
-void BeginBufferingScope(long handle);
-ValueTask EndBufferingScope(long handle); // Flushes when ref count reaches 0
+// In MassTransitExtensions.cs
+x.UsingRabbitMq((context, cfg) =>
+{
+    cfg.Host(options.Host, options.VirtualHost, h =>
+    {
+        h.Username(options.Username);
+        h.Password(options.Password);
+    });
+    
+    // Enable stream for high-throughput telnet output
+    cfg.Message<TelnetOutputMessage>(m => m.UseStream("telnet-output-stream"));
+    
+    cfg.ConfigureEndpoints(context);
+});
+```
 
-// In @dolist command
-NotifyService.BeginBufferingScope(handle);
-try {
-    // Execute iterations
-} finally {
-    await NotifyService.EndBufferingScope(handle);
+**Benefits**:
+- Designed for high-volume ordered messages (exactly our use case)
+- Better throughput for rapid sequential publishes
+- No "lag" introduced (messages still delivered immediately)
+- Broker-level optimization vs application-level buffering
+
+**Drawbacks**:
+- Requires RabbitMQ 3.9+ (already have 3.11 in tests)
+- Different consumption model (offset-based)
+- Migration effort for existing deployments
+
+**Effort**: Medium (8-16 hours) - Package upgrade + configuration + testing
+**Impact**: High - Expected 10-50x improvement (not full 600x but significant)
+
+---
+
+### 2. **Optimize RabbitMQ Publisher Settings**
+
+**Current State**: MassTransit uses default RabbitMQ settings which wait for publisher confirms on each message.
+
+**Solution**: Optimize publisher configuration for high-throughput scenarios:
+
+```csharp
+// In MassTransitExtensions.cs
+x.UsingRabbitMq((context, cfg) =>
+{
+    cfg.Host(options.Host, options.VirtualHost, h =>
+    {
+        h.Username(options.Username);
+        h.Password(options.Password);
+        h.PublisherConfirmation = true;
+        h.RequestedChannelMax = 2047;
+    });
+    
+    // Disable publisher confirms for telnet output (fire-and-forget)
+    cfg.Publish<TelnetOutputMessage>(p => 
+    {
+        p.Exclude = true; // Don't wait for broker confirmation
+    });
+    
+    // Increase prefetch for consumers
+    cfg.PrefetchCount = 100;
+    
+    cfg.UseMessageRetry(r => r.Interval(options.RetryCount, TimeSpan.FromSeconds(options.RetryDelaySeconds)));
+    cfg.ConfigureEndpoints(context);
+});
+```
+
+**Key Optimizations**:
+1. **Disable publisher confirms** for TelnetOutput (acceptable loss for game output)
+2. **Increase prefetch count** for better consumer throughput
+3. **Tune channel settings** for higher concurrency
+
+**Benefits**:
+- Reduces latency per publish by not waiting for confirms
+- Increases consumer throughput
+- No architectural changes needed
+
+**Drawbacks**:
+- Potential message loss on broker failure (acceptable for game output)
+- Still 1000 individual publishes
+- Won't achieve full 600x improvement alone
+
+**Effort**: Low (2-4 hours) - Configuration changes only
+**Impact**: Medium - Expected 5-10x improvement
+
+---
+
+### 3. **Batch Sends with SendContext**
+
+**Solution**: Group multiple messages and send together when possible:
+
+```csharp
+// In NotifyService.cs - collect messages for a short window
+private readonly System.Threading.Channels.Channel<(long handle, byte[] data)> _sendQueue 
+    = Channel.CreateUnbounded<(long, byte[])>();
+
+// Background task batches and sends
+private async Task ProcessSendQueue()
+{
+    var batch = new List<(long, byte[])>();
+    await foreach (var item in _sendQueue.Reader.ReadAllAsync())
+    {
+        batch.Add(item);
+        
+        // Send batch when we hit size limit or short timeout
+        if (batch.Count >= 50 || /* timeout check */)
+        {
+            await PublishBatch(batch);
+            batch.Clear();
+        }
+    }
 }
 ```
 
 **Benefits**:
-- Reduces 1000 RabbitMQ publishes to 1
-- Handles nested @dolists via ref-counting
-- No RabbitMQ configuration changes needed
-- Works with current architecture
-
-**Effort**: Low (2-4 hours) - Infrastructure exists, just needs completion
-**Impact**: High - Should eliminate 95%+ of the performance problem
-
----
-
-### 2. **Configure RabbitMQ Publisher Confirms in Batch Mode**
-
-**Current State**: MassTransit uses default RabbitMQ settings which wait for publisher confirms on each message.
-
-**Solution**: Enable batch publisher confirms in RabbitMQ configuration:
-```csharp
-cfg.Host(options.Host, options.VirtualHost, h =>
-{
-    h.Username(options.Username);
-    h.Password(options.Password);
-    h.PublisherConfirmation = true; // Already likely enabled
-    h.RequestedChannelMax = 2047;
-});
-
-// Add to MassTransit configuration
-cfg.UseSendExecute(context => 
-{
-    context.UseExecute(async ctx => 
-    {
-        // Batch sends within a small time window
-    });
-});
-```
-
-**Benefits**:
-- Reduces TCP round-trips by batching confirms
-- No code changes in NotifyService needed
+- Reduces RabbitMQ publishes significantly
+- Maintains message ordering
+- Transparent to consumers
 
 **Drawbacks**:
-- Still sends 1000 individual messages (just faster)
-- Doesn't solve the fundamental problem
-- More complex to tune correctly
+- Adds minimal latency (1-5ms batching window)
+- More complex implementation
+- Still not as optimal as streaming
 
-**Effort**: Medium (4-8 hours) - Configuration + testing
-**Impact**: Medium - Might improve by 2-5x but not 600x
-
----
-
-### 3. **Use RabbitMQ Streams (NOT RECOMMENDED)**
-
-RabbitMQ Streams are designed for high-throughput scenarios with ordered message delivery.
-
-**Why NOT recommended**:
-- Requires RabbitMQ 3.9+ with streams plugin
-- Different consumption model (offset-based)
-- Overkill for this use case
-- Breaking change to architecture
-- Output buffering (#1) solves the problem better
-
-**Effort**: High (2-3 days) - Significant refactoring
-**Impact**: High - But unnecessary given solution #1
+**Effort**: Medium (6-12 hours) - Implementation + testing
+**Impact**: High - Expected 20-100x improvement
 
 ---
 
@@ -135,33 +190,52 @@ else
 
 ---
 
-## Recommended Implementation Plan
+## Recommended Implementation Plan (Updated)
 
-### Phase 1: Output Buffering (MUST DO)
-1. Complete the buffering implementation in `NotifyService`
-2. Add `BeginBufferingScope()/EndBufferingScope()` with ref-counting
-3. Modify `@dolist` to use buffering scopes
-4. Test with nested @dolists
-5. Apply to `@map`, `@foreach` if they exist
+### Phase 1: Quick Wins - Publisher Configuration (DO FIRST)
+1. Disable publisher confirms for TelnetOutput messages
+2. Increase prefetch count to 100
+3. Tune channel settings
+4. Test and measure improvement
 
-**Expected Result**: ~600x improvement (down to ~30-60ms for 1000 iterations)
+**Expected Result**: 5-10x improvement (1800ms → 200-350ms for 1000 iterations)
+**Effort**: 2-4 hours
 
-### Phase 2: Optimize RabbitMQ Settings (NICE TO HAVE)
-1. Review MassTransit configuration
-2. Enable batch publisher confirms if not already
-3. Tune prefetch counts and channel settings
-4. Monitor RabbitMQ metrics
+### Phase 2: RabbitMQ Streams Migration (PRIMARY SOLUTION)
+1. Verify RabbitMQ 3.11+ is available
+2. Add MassTransit.RabbitMQ.Stream package
+3. Configure stream for TelnetOutput messages
+4. Update consumers to use stream consumption
+5. Test with 1000+ message scenarios
+6. Monitor stream metrics
 
-**Expected Result**: Additional 2-3x improvement
+**Expected Result**: 10-50x improvement (1800ms → 40-180ms for 1000 iterations)
+**Effort**: 8-16 hours
 
-### Phase 3: Consider In-Memory Fast Path (OPTIONAL)
-1. Only if distributed setup is not required for all users
-2. Implement local connection detection
-3. Add in-process notification path
+### Phase 3: Optional - Message Batching (IF NEEDED)
+1. Only if Phases 1-2 don't achieve acceptable performance
+2. Implement Channel-based batching queue
+3. Add background processor
+4. Test latency vs throughput tradeoff
 
-**Expected Result**: Near-instant for local connections
+**Expected Result**: Additional 2-5x improvement
+**Effort**: 6-12 hours
+
+### Why NOT Application-Level Buffering
+Per user feedback, buffering would "create a lag for every command executed":
+- Any command execution would need to check buffering state
+- Adds complexity to every Notify call
+- RabbitMQ-level optimizations are more appropriate
+- Streams are designed specifically for this use case
 
 ## Why NOT Other Options?
+
+### Why not application-level buffering?
+Per user requirement: "will create a lag for every command executed"
+- Adds latency to all commands (not just @dolist)
+- Requires buffering state checks on every Notify
+- RabbitMQ optimizations are cleaner
+- Streams solve the problem at the right layer
 
 ### Why not increase RabbitMQ resources?
 - The problem is **number of messages**, not message size or broker capacity
@@ -176,10 +250,6 @@ else
 - MassTransit already handles this
 - Not a connection issue, it's a message count issue
 
-### Why not persistent connections?
-- Already using persistent connections
-- Not a connection setup issue
-
 ## Metrics to Monitor
 
 After implementing buffering:
@@ -190,6 +260,16 @@ After implementing buffering:
 
 ## Conclusion
 
-**The fix is already 80% implemented** - the `NotifyService` has buffering infrastructure that just needs to be completed and wired up to `@dolist`. This is the correct architectural solution and should reduce the 609x slowdown to near-parity with `iter()`.
+**The solution is RabbitMQ optimization**, not application-level buffering:
 
-RabbitMQ configuration changes are secondary optimizations that won't solve the fundamental problem of sending 1000 individual messages.
+1. **Phase 1** (quick win): Disable publisher confirms, tune settings → 5-10x improvement
+2. **Phase 2** (primary): Migrate to RabbitMQ streams → 10-50x improvement  
+3. **Combined**: Expected 50-100x total improvement (from 18s to 180-360ms)
+
+This won't match iter()'s performance (30ms) but will make @dolist usable. The remaining gap is architectural - @dolist executes commands sequentially while iter() is a single function call.
+
+RabbitMQ Streams are the right solution because:
+- Designed for high-throughput ordered messages (exactly our use case)
+- Broker-level optimization (no application latency)
+- Industry-standard approach for this problem
+- Maintains message ordering and delivery guarantees

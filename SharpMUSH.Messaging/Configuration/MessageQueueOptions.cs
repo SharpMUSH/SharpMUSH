@@ -54,4 +54,20 @@ public class MessageQueueOptions
 	/// Message TTL in hours (0 = no expiration)
 	/// </summary>
 	public int MessageTtlHours { get; set; } = 24;
+
+	/// <summary>
+	/// Enable RabbitMQ Streams for high-throughput telnet output
+	/// Requires RabbitMQ 3.9+ with streams plugin enabled
+	/// </summary>
+	public bool UseStreams { get; set; } = false;
+
+	/// <summary>
+	/// Stream name for telnet output when UseStreams is enabled
+	/// </summary>
+	public string TelnetOutputStreamName { get; set; } = "telnet-output-stream";
+
+	/// <summary>
+	/// Maximum stream age in hours (for automatic cleanup)
+	/// </summary>
+	public int StreamMaxAgeHours { get; set; } = 24;
 }
