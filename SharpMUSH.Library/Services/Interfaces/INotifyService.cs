@@ -37,4 +37,25 @@ public interface INotifyService
 
 	ValueTask Prompt(long[] handles, OneOf<MString, string> what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
 
+	/// <summary>
+	/// Enables output buffering for the specified handle.
+	/// All Notify calls for this handle will be buffered until FlushBuffer is called.
+	/// This reduces RabbitMQ message traffic and TCP overhead for batch operations.
+	/// </summary>
+	/// <param name="handle">The connection handle to enable buffering for</param>
+	void EnableBuffering(long handle);
+
+	/// <summary>
+	/// Flushes all buffered output for the specified handle.
+	/// Sends all accumulated messages as a single batch to reduce RabbitMQ and TCP overhead.
+	/// </summary>
+	/// <param name="handle">The connection handle to flush</param>
+	ValueTask FlushBuffer(long handle);
+
+	/// <summary>
+	/// Disables buffering for the specified handle without flushing.
+	/// Useful for cleanup in error cases.
+	/// </summary>
+	/// <param name="handle">The connection handle to disable buffering for</param>
+	void DisableBuffering(long handle);
 }

@@ -142,20 +142,40 @@ public partial class Commands
 		parser.CurrentState.IterationRegisters.Push(wrappedIteration);
 		var command = parser.CurrentState.Arguments["1"].Message!;
 
-		var lastCallState = CallState.Empty;
-		var visitorFunc = parser.CommandListParseVisitor(command);
-		foreach (var item in list)
+		// Enable output buffering for this handle to batch all notifications
+		// This significantly improves performance by reducing RabbitMQ messages and TCP overhead
+		var handle = parser.CurrentState.Handle;
+		if (handle.HasValue)
 		{
-			wrappedIteration.Value = item!;
-			wrappedIteration.Iteration++;
-
-			// TODO: This should not need parsing each time. Just evaluation by getting the Context and visiting the children multiple times.
-			lastCallState = await visitorFunc();
+			NotifyService!.EnableBuffering(handle.Value);
 		}
 
-		parser.CurrentState.IterationRegisters.TryPop(out _);
+		try
+		{
+			var lastCallState = CallState.Empty;
+			var visitorFunc = parser.CommandListParseVisitor(command);
+			foreach (var item in list)
+			{
+				wrappedIteration.Value = item!;
+				wrappedIteration.Iteration++;
 
-		return lastCallState!;
+				// TODO: This should not need parsing each time. Just evaluation by getting the Context and visiting the children multiple times.
+				lastCallState = await visitorFunc();
+			}
+
+			parser.CurrentState.IterationRegisters.TryPop(out _);
+
+			return lastCallState!;
+		}
+		finally
+		{
+			// Always flush the buffer, even if there was an exception
+			if (handle.HasValue)
+			{
+				await NotifyService!.FlushBuffer(handle.Value);
+				NotifyService!.DisableBuffering(handle.Value);
+			}
+		}
 	}
 
 	[SharpCommand(Name = "LOOK", Switches = ["OUTSIDE", "OPAQUE"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
