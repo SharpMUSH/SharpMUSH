@@ -3,7 +3,8 @@ using Microsoft.AspNetCore.Connections;
 using SharpMUSH.ConnectionServer.Consumers;
 using SharpMUSH.ConnectionServer.ProtocolHandlers;
 using SharpMUSH.ConnectionServer.Services;
-using Testcontainers.RabbitMq;
+using SharpMUSH.Messaging.Extensions;
+using Testcontainers.Redpanda;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -15,52 +16,31 @@ builder.Services.AddLogging(logging => logging.AddSerilog(
 		.CreateLogger()
 ));
 
-// Get RabbitMQ configuration from environment or configuration
-var rabbitHost = Environment.GetEnvironmentVariable("RABBITMQ_HOST");
-var rabbitUser = Environment.GetEnvironmentVariable("RABBITMQ_USER") ?? "sharpmush";
-var rabbitPass = Environment.GetEnvironmentVariable("RABBITMQ_PASSWORD") ?? "sharpmush_dev_password";
+// Get Kafka/RedPanda configuration from environment or configuration
+var kafkaHost = Environment.GetEnvironmentVariable("KAFKA_HOST");
 
-RabbitMqContainer? container = null;
+RedpandaContainer? container = null;
 
-if (rabbitHost == null)
+if (kafkaHost == null)
 {
-	container = new RabbitMqBuilder()
-		.WithUsername(rabbitUser)
-		.WithPassword(rabbitPass)
-		.WithPortBinding(5672,5672)
+	container = new RedpandaBuilder()
+		.WithPortBinding(9092, 9092)
 		.Build();
 	await container.StartAsync();
 	
-	rabbitHost = container.Hostname;
+	kafkaHost = "localhost";
 }
 
 
 // Add ConnectionService
 builder.Services.AddSingleton<IConnectionServerService, ConnectionServerService>();
 
-// Configure MassTransit with RabbitMQ
-builder.Services.AddMassTransit(x =>
+// Configure MassTransit with Kafka/RedPanda
+builder.Services.AddConnectionServerMessaging(options =>
 {
-	// Register consumers for output messages from MainProcess
-	x.AddConsumer<TelnetOutputConsumer>();
-	x.AddConsumer<TelnetPromptConsumer>();
-	x.AddConsumer<BroadcastConsumer>();
-	x.AddConsumer<DisconnectConnectionConsumer>();
-
-	x.UsingRabbitMq((context, cfg) =>
-	{
-		cfg.Host(rabbitHost, "/", h =>
-		{
-			h.Username(rabbitUser);
-			h.Password(rabbitPass);
-		});
-
-		// Configure message retry
-		cfg.UseMessageRetry(r => r.Interval(30, TimeSpan.FromSeconds(1)));
-
-		// Configure endpoints for consumers
-		cfg.ConfigureEndpoints(context);
-	});
+	options.Host = kafkaHost!;
+	options.Port = 9092;
+	options.MaxMessageBytes = 6 * 1024 * 1024; // 6MB
 });
 
 // TODO: This should be configurable via environment variables or config files

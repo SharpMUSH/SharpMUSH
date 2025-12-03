@@ -17,7 +17,7 @@
 		<PackageReference Include="Core.Arango" Version="3.12.2" />
 		<PackageReference Include="Core.Arango.Serilog" Version="3.12.3" />
     <PackageReference Include="MassTransit" Version="8.5.7" />
-    <PackageReference Include="MassTransit.RabbitMQ" Version="8.5.7" />
+    <PackageReference Include="MassTransit.Kafka" Version="8.5.7" />
     <PackageReference Include="Mediator.Abstractions" Version="3.0.1" />
     <PackageReference Include="Mediator.SourceGenerator" Version="3.0.1">
       <PrivateAssets>all</PrivateAssets>
@@ -33,6 +33,7 @@
 		<PackageReference Include="System.Configuration.ConfigurationManager" Version="10.0.0-rc.2.25502.107" />
 		<PackageReference Include="Testcontainers" Version="4.8.1" />
 		<PackageReference Include="Testcontainers.ArangoDb" Version="4.8.1" />
+		<PackageReference Include="Testcontainers.Redpanda" Version="4.8.1" />
 
 	</ItemGroup>
 	

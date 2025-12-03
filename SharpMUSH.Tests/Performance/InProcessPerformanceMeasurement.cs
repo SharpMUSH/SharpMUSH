@@ -108,7 +108,7 @@ public class InProcessPerformanceMeasurement
 		Console.WriteLine("- iter() accumulates results and calls Notify() once");
 		Console.WriteLine("- This difference likely explains the performance gap");
 		Console.WriteLine("\nIf @dolist is significantly slower, the bottleneck is likely:");
-		Console.WriteLine("1. RabbitMQ message publishing overhead (1000 vs 1 publish)");
+		Console.WriteLine("1. Kafka message publishing overhead (1000 vs 1 publish)");
 		Console.WriteLine("2. Message serialization overhead");
 		Console.WriteLine("3. NOT the parsing or execution time");
 	}
@@ -132,7 +132,7 @@ public class InProcessPerformanceMeasurement
 		Console.WriteLine($"  Time: {sw1.ElapsedMilliseconds}ms ({sw1.ElapsedMilliseconds / 1000.0:F3}ms per call)");
 		
 		Console.WriteLine("\nNOTE: This measures the overhead of 1000 individual Notify calls.");
-		Console.WriteLine("In the current implementation, each call publishes to RabbitMQ immediately.");
+		Console.WriteLine("In the current implementation, each call publishes to Kafka immediately.");
 		Console.WriteLine("This is likely the bottleneck causing @dolist to be slower than iter().");
 	}
 }

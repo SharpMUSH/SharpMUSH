@@ -24,6 +24,7 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Messaging.Extensions;
 using SharpMUSH.Server.Strategy.ArangoDB;
 using ZiggyCreatures.Caching.Fusion;
 using TaskScheduler = SharpMUSH.Library.Services.TaskScheduler;
@@ -120,22 +121,26 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile)
 		services.AddHttpClient();
 		services.AddMediator();
 
-		// Configure MassTransit for message queue integration
-		var rabbitHost = Environment.GetEnvironmentVariable("RABBITMQ_HOST") ?? "localhost";
-		var rabbitUser = Environment.GetEnvironmentVariable("RABBITMQ_USER") ?? "sharpmush";
-		var rabbitPass = Environment.GetEnvironmentVariable("RABBITMQ_PASSWORD") ?? "sharpmush_dev_password";
+		// Configure MassTransit with Kafka/RedPanda for message queue integration
+		var kafkaHost = Environment.GetEnvironmentVariable("KAFKA_HOST") ?? "localhost";
 
-		services.AddMassTransit(x =>
-		{
-			// Register consumers for input messages from ConnectionServer
-			x.AddConsumer<Consumers.TelnetInputConsumer>();
-			x.AddConsumer<Consumers.GMCPSignalConsumer>();
-			x.AddConsumer<Consumers.MSDPUpdateConsumer>();
-			x.AddConsumer<Consumers.NAWSUpdateConsumer>();
-			x.AddConsumer<Consumers.ConnectionEstablishedConsumer>();
-			x.AddConsumer<Consumers.ConnectionClosedConsumer>();
-			x.UsingRabbitMq(RabbitMQStrategyProvider.GetStrategy().ConfigureRabbitMq);
-		});
+		services.AddMainProcessMessaging(
+			options =>
+			{
+				options.Host = kafkaHost;
+				options.Port = 9092;
+				options.MaxMessageBytes = 6 * 1024 * 1024; // 6MB
+			},
+			x =>
+			{
+				// Register consumers for input messages from ConnectionServer
+				x.AddConsumer<Consumers.TelnetInputConsumer>();
+				x.AddConsumer<Consumers.GMCPSignalConsumer>();
+				x.AddConsumer<Consumers.MSDPUpdateConsumer>();
+				x.AddConsumer<Consumers.NAWSUpdateConsumer>();
+				x.AddConsumer<Consumers.ConnectionEstablishedConsumer>();
+				x.AddConsumer<Consumers.ConnectionClosedConsumer>();
+			});
 
 		services.AddFusionCache().TryWithAutoSetup();
 		services.AddArango((_, arango) =>
