@@ -18,22 +18,6 @@ namespace SharpMUSH.Library.Services;
 /// <param name="innerService">The actual notify service implementation to delegate to</param>
 public class NotifyService(IBus publishEndpoint, IConnectionService connections) : INotifyService
 {
-	/// <summary>
-	/// Buffers for accumulating output per handle when buffering is enabled
-	/// Key: handle, Value: list of byte arrays to send
-	/// </summary>
-	private readonly System.Collections.Concurrent.ConcurrentDictionary<long, List<byte[]>> _buffers = new();
-
-	/// <summary>
-	/// Tracks which handles have buffering enabled
-	/// Key: handle, Value: unused (using as a set)
-	/// </summary>
-	private readonly System.Collections.Concurrent.ConcurrentDictionary<long, byte> _bufferingEnabled = new();
-
-	/// <summary>
-	/// Lock object for buffer operations to ensure thread safety
-	/// </summary>
-	private readonly object _bufferLock = new();
 	public async ValueTask Notify(DBRef who, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
 		await ValueTask.CompletedTask;
@@ -85,25 +69,7 @@ public class NotifyService(IBus publishEndpoint, IConnectionService connections)
 		// Publish output message to each handle
 		foreach (var handle in handles)
 		{
-			// Check if buffering is enabled for this handle
-			if (_bufferingEnabled.ContainsKey(handle))
-			{
-				// Add to buffer instead of publishing immediately
-				lock (_bufferLock)
-				{
-					if (!_buffers.TryGetValue(handle, out var buffer))
-					{
-						buffer = new List<byte[]>();
-						_buffers[handle] = buffer;
-					}
-					buffer.Add(bytes);
-				}
-			}
-			else
-			{
-				// Normal path - publish immediately
-				await publishEndpoint.Publish(new TelnetOutputMessage(handle, bytes));
-			}
+			await publishEndpoint.Publish(new TelnetOutputMessage(handle, bytes));
 		}
 	}
 
@@ -171,70 +137,4 @@ public class NotifyService(IBus publishEndpoint, IConnectionService connections)
 
 	public async ValueTask NotifyExcept(AnySharpObject who, OneOf<MString, string> what, AnySharpObject[] except, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 		=> await NotifyExcept(who.Object().DBRef, what, except.Select(x => x.Object().DBRef).ToArray(), sender, type);
-
-	public void EnableBuffering(long handle)
-	{
-		_bufferingEnabled.TryAdd(handle, 0);
-		// Ensure buffer exists
-		lock (_bufferLock)
-		{
-			if (!_buffers.ContainsKey(handle))
-			{
-				_buffers[handle] = new List<byte[]>();
-			}
-		}
-	}
-
-	public async ValueTask FlushBuffer(long handle)
-	{
-		List<byte[]>? buffer = null;
-
-		// Atomically remove the buffer to prevent race conditions
-		// This ensures no new messages are added after we start flushing
-		lock (_bufferLock)
-		{
-			if (_buffers.TryGetValue(handle, out buffer) && buffer.Count > 0)
-			{
-				// Remove the buffer immediately to prevent concurrent modifications
-				_buffers.TryRemove(handle, out _);
-			}
-			else
-			{
-				// No messages to flush
-				return;
-			}
-		}
-
-		// Combine all buffered messages with newlines between them
-		var newline = Encoding.UTF8.GetBytes("\r\n");
-		var combinedSize = buffer.Sum(b => b.Length) + (buffer.Count - 1) * newline.Length;
-		var combined = new byte[combinedSize];
-		
-		var offset = 0;
-		for (var i = 0; i < buffer.Count; i++)
-		{
-			var bytes = buffer[i];
-			Array.Copy(bytes, 0, combined, offset, bytes.Length);
-			offset += bytes.Length;
-			
-			// Add newline between messages (but not after the last one)
-			if (i < buffer.Count - 1)
-			{
-				Array.Copy(newline, 0, combined, offset, newline.Length);
-				offset += newline.Length;
-			}
-		}
-
-		// Publish the combined message
-		await publishEndpoint.Publish(new TelnetOutputMessage(handle, combined));
-	}
-
-	public void DisableBuffering(long handle)
-	{
-		_bufferingEnabled.TryRemove(handle, out _);
-		lock (_bufferLock)
-		{
-			_buffers.TryRemove(handle, out _);
-		}
-	}
 }
