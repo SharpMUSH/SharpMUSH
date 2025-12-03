@@ -189,41 +189,44 @@ public class NotifyService(IBus publishEndpoint, IConnectionService connections)
 	{
 		List<byte[]>? buffer = null;
 
+		// Atomically remove the buffer to prevent race conditions
+		// This ensures no new messages are added after we start flushing
 		lock (_bufferLock)
 		{
 			if (_buffers.TryGetValue(handle, out buffer) && buffer.Count > 0)
 			{
-				// Remove the buffer so new messages don't get added during flush
+				// Remove the buffer immediately to prevent concurrent modifications
 				_buffers.TryRemove(handle, out _);
 			}
-		}
-
-		// If we have buffered data, combine and send it
-		if (buffer != null && buffer.Count > 0)
-		{
-			// Combine all buffered messages with newlines between them
-			var combinedSize = buffer.Sum(b => b.Length) + (buffer.Count - 1) * 2; // +2 for \r\n between messages
-			var combined = new byte[combinedSize];
-			var newline = Encoding.UTF8.GetBytes("\r\n");
-			
-			var offset = 0;
-			for (var i = 0; i < buffer.Count; i++)
+			else
 			{
-				var bytes = buffer[i];
-				Array.Copy(bytes, 0, combined, offset, bytes.Length);
-				offset += bytes.Length;
-				
-				// Add newline between messages (but not after the last one)
-				if (i < buffer.Count - 1)
-				{
-					Array.Copy(newline, 0, combined, offset, newline.Length);
-					offset += newline.Length;
-				}
+				// No messages to flush
+				return;
 			}
-
-			// Publish the combined message
-			await publishEndpoint.Publish(new TelnetOutputMessage(handle, combined));
 		}
+
+		// Combine all buffered messages with newlines between them
+		var newline = Encoding.UTF8.GetBytes("\r\n");
+		var combinedSize = buffer.Sum(b => b.Length) + (buffer.Count - 1) * newline.Length;
+		var combined = new byte[combinedSize];
+		
+		var offset = 0;
+		for (var i = 0; i < buffer.Count; i++)
+		{
+			var bytes = buffer[i];
+			Array.Copy(bytes, 0, combined, offset, bytes.Length);
+			offset += bytes.Length;
+			
+			// Add newline between messages (but not after the last one)
+			if (i < buffer.Count - 1)
+			{
+				Array.Copy(newline, 0, combined, offset, newline.Length);
+				offset += newline.Length;
+			}
+		}
+
+		// Publish the combined message
+		await publishEndpoint.Publish(new TelnetOutputMessage(handle, combined));
 	}
 
 	public void DisableBuffering(long handle)
