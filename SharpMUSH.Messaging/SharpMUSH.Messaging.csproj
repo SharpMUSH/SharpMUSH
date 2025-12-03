@@ -11,6 +11,7 @@
   <ItemGroup>
     <PackageReference Include="MassTransit" Version="8.5.7" />
     <PackageReference Include="MassTransit.RabbitMQ" Version="8.5.7" />
+    <PackageReference Include="MassTransit.Kafka" Version="8.5.7" />
   </ItemGroup>
 
   <ItemGroup>
