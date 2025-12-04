@@ -31,7 +31,7 @@ public class HealthMonitoringService(ITelemetryService telemetryService, ILogger
 				// Normal shutdown
 				break;
 			}
-			catch (Exception ex)
+			catch (Exception ex) when (IsCatchableExceptionType(ex))
 			{
 				logger.LogError(ex, "Error in health monitoring service");
 				telemetryService.SetServerHealthState(false);
@@ -48,5 +48,20 @@ public class HealthMonitoringService(ITelemetryService telemetryService, ILogger
 		}
 		
 		logger.LogInformation("Health monitoring service stopped");
+	}
+	/// <summary>
+	/// Helper method that determines whether the exception is safe to catch.
+	/// This avoids swallowing critical exceptions that should not be handled.
+	/// </summary>
+	private static bool IsCatchableExceptionType(Exception ex)
+	{
+		return ex switch
+		{
+			OutOfMemoryException => false,
+			StackOverflowException => false,
+			ThreadAbortException => false,
+			null => false,
+			_ => true
+		};
 	}
 }
