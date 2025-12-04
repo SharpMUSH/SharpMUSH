@@ -68,7 +68,7 @@ public static class MassTransitExtensions
 
 		services.AddMassTransit(x =>
 		{
-			// Register consumers
+			// Register consumers (Server consumes input messages from ConnectionServer)
 			configureConsumers(x);
 
 			// Configure Kafka/RedPanda (streaming-optimized)
@@ -84,12 +84,9 @@ public static class MassTransitExtensions
 					// Host configuration
 					k.Host($"{options.Host}:{options.Port}");
 
-					// Configure topic endpoints for consumers
-					k.TopicEndpoint<Confluent.Kafka.Ignore, string>(options.TelnetOutputTopic, options.ConsumerGroupId, e =>
-					{
-						e.AutoOffsetReset = Confluent.Kafka.AutoOffsetReset.Latest;
-						e.ConfigureConsumers(context);
-					});
+					// Server does NOT consume from telnet-output topic
+					// It produces TO telnet-output topic for ConnectionServer to consume
+					// It consumes from other topics for input messages (configured via consumers)
 				});
 			});
 		});
