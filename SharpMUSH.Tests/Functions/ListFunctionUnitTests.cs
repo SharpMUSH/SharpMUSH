@@ -19,7 +19,7 @@ public class ListFunctionUnitTests
 
 	private static bool _testObjectsCreated = false;
 	private static DBRef _testObjectDbRef;
-	private static readonly SemaphoreSlim _lock = new SemaphoreSlim(1, 1);
+	// private static readonly SemaphoreSlim Lock = new SemaphoreSlim(1, 1);
 
 	/// <summary>
 	/// Creates test object and attributes needed for list function tests
@@ -27,43 +27,39 @@ public class ListFunctionUnitTests
 	private async Task EnsureTestObjectsExist()
 	{
 		if (_testObjectsCreated) return;
-		
-		await _lock.WaitAsync();
-		try
-		{
-			if (_testObjectsCreated) return;
-			
-			// Create test object and capture its DBRef
-			var createResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create test"));
-			_testObjectDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
-			
-			// Set up filter test attribute using DBRef
-			await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&IS_ODD #{_testObjectDbRef.Number}=mod(%0,2)"));
-			
-			// Set up fold test attribute
-			await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&ADD_FUNC #{_testObjectDbRef.Number}=add(%0,%1)"));
-			
-			// Set up mix test attribute  
-			await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&CONCAT #{_testObjectDbRef.Number}=cat(%0,%b,%1)"));
-			
-			// Set up munge test attribute (sort function)
-			await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&SORT #{_testObjectDbRef.Number}=sort(%0,%1)"));
-			
-			// Set up sortby test attribute (comparison function)
-			await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&COMP #{_testObjectDbRef.Number}=comp(%0,%1)"));
-			
-			// Set up sortkey test attribute (key generator)
-			await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&KEY #{_testObjectDbRef.Number}=strlen(%0)"));
-			
-			// Set up step test attribute
-			await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&FIRST #{_testObjectDbRef.Number}=%0"));
-			
-			_testObjectsCreated = true;
-		}
-		finally
-		{
-			_lock.Release();
-		}
+
+		// Create test object and capture its DBRef
+		var createResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create test"));
+		_testObjectDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
+
+		// Set up filter test attribute using DBRef
+		await CommandParser.CommandParse(1, ConnectionService,
+			MModule.single($"&IS_ODD #{_testObjectDbRef.Number}=mod(%0,2)"));
+
+		// Set up fold test attribute
+		await CommandParser.CommandParse(1, ConnectionService,
+			MModule.single($"&ADD_FUNC #{_testObjectDbRef.Number}=add(%0,%1)"));
+
+		// Set up mix test attribute  
+		await CommandParser.CommandParse(1, ConnectionService,
+			MModule.single($"&CONCAT #{_testObjectDbRef.Number}=cat(%0,%b,%1)"));
+
+		// Set up munge test attribute (sort function)
+		await CommandParser.CommandParse(1, ConnectionService,
+			MModule.single($"&SORT #{_testObjectDbRef.Number}=sort(%0,%1)"));
+
+		// Set up sortby test attribute (comparison function)
+		await CommandParser.CommandParse(1, ConnectionService,
+			MModule.single($"&COMP #{_testObjectDbRef.Number}=comp(%0,%1)"));
+
+		// Set up sortkey test attribute (key generator)
+		await CommandParser.CommandParse(1, ConnectionService,
+			MModule.single($"&KEY #{_testObjectDbRef.Number}=strlen(%0)"));
+
+		// Set up step test attribute
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&FIRST #{_testObjectDbRef.Number}=%0"));
+
+		_testObjectsCreated = true;
 	}
 
 	[Test, NotInParallel]
@@ -397,7 +393,7 @@ public class ListFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
-	
+
 	[Test]
 	[Arguments("revwords(a b c)", "c b a")]
 	public async Task ReverseWords(string str, string expected)

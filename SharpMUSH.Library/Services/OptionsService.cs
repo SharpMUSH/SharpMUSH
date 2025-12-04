@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
 using FileOptions = SharpMUSH.Configuration.Options.FileOptions;
@@ -9,18 +8,17 @@ public class OptionsService(ISharpDatabase database) : IOptionsFactory<SharpMUSH
 {
 	public SharpMUSHOptions Create(string _)
 	{
-		var data = database.GetExpandedServerData(nameof(SharpMUSHOptions))
+		var data = database.GetExpandedServerData<SharpMUSHOptions>(nameof(SharpMUSHOptions))
 			.AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
 
 		if (data is not null)
 		{
-			return JsonSerializer.Deserialize<SharpMUSHOptions>(data) ?? throw new Exception("Invalid options");
+			return data;
 		}
 
 		var defaultSettings = Default();
-		var defaultSettingsJson = JsonSerializer.Serialize(defaultSettings);
 			
-		database.SetExpandedServerData(nameof(SharpMUSHOptions), defaultSettingsJson)
+		database.SetExpandedServerData(nameof(SharpMUSHOptions), defaultSettings)
 			.AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
 
 		return defaultSettings;
