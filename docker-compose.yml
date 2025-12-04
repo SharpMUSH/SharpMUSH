@@ -47,6 +47,23 @@ services:
       timeout: 5s
       retries: 5
 
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: sharpmush-jaeger
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "16686:16686"  # Jaeger UI
+      - "4317:4317"    # OTLP gRPC receiver
+      - "4318:4318"    # OTLP HTTP receiver
+    networks:
+      - sharpmush-net
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:16686"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   connectionserver:
     build:
       context: ./
@@ -54,8 +71,11 @@ services:
     environment:
       - KAFKA_HOST=redpanda
       - KAFKA_PORT=9092
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
     depends_on:
       redpanda:
+        condition: service_healthy
+      jaeger:
         condition: service_healthy
     ports:
       - "4201:4201" # Telnet
@@ -71,10 +91,13 @@ services:
       - ARANGO_CONNECTION_STRING=Server=http://unusedschim:8529;User=root;Password=password;
       - KAFKA_HOST=redpanda
       - KAFKA_PORT=9092
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
     depends_on:
       arangodb:
         condition: service_started
       redpanda:
+        condition: service_healthy
+      jaeger:
         condition: service_healthy
       connectionserver:
         condition: service_started

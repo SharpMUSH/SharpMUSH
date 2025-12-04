@@ -198,6 +198,11 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile)
 				.AddMeter("SharpMUSH")
 				.AddRuntimeInstrumentation()
 				.AddConsoleExporter()
-				.AddOtlpExporter());
+				.AddOtlpExporter(options =>
+				{
+					// Configure OTLP endpoint from environment variable (defaults to localhost:4317)
+					var otlpEndpoint = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT") ?? "http://localhost:4317";
+					options.Endpoint = new Uri(otlpEndpoint);
+				}));
 	}
 }
