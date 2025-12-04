@@ -96,7 +96,7 @@ builder.WebHost.ConfigureKestrel((context, options) =>
 // Add API controllers
 builder.Services.AddControllers();
 
-// Configure OpenTelemetry Metrics
+// Configure OpenTelemetry Metrics for Prometheus
 builder.Services.AddOpenTelemetry()
 	.ConfigureResource(resource => resource
 		.AddService("SharpMUSH.ConnectionServer", serviceVersion: "1.0.0"))
@@ -104,12 +104,7 @@ builder.Services.AddOpenTelemetry()
 		.AddMeter("SharpMUSH")
 		.AddRuntimeInstrumentation()
 		.AddConsoleExporter()
-		.AddOtlpExporter(options =>
-		{
-			// Configure OTLP endpoint from environment variable (defaults to localhost:4317)
-			var otlpEndpoint = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT") ?? "http://localhost:4317";
-			options.Endpoint = new Uri(otlpEndpoint);
-		}));
+		.AddPrometheusExporter());
 
 var app = builder.Build();
 
@@ -118,5 +113,8 @@ app.MapControllers();
 app.MapGet("/", () => "SharpMUSH Connection Server");
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTimeOffset.UtcNow }));
 app.MapGet("/ready", () => Results.Ok(new { status = "ready", timestamp = DateTimeOffset.UtcNow }));
+
+// Prometheus metrics endpoint
+app.MapPrometheusScrapingEndpoint();
 
 app.Run();

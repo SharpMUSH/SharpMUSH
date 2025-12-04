@@ -28,12 +28,13 @@ using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Extensions;
 using SharpMUSH.Server.Strategy.ArangoDB;
+using SharpMUSH.Server.Strategy.Prometheus;
 using ZiggyCreatures.Caching.Fusion;
 using TaskScheduler = SharpMUSH.Library.Services.TaskScheduler;
 
 namespace SharpMUSH.Server;
 
-public class Startup(ArangoConfiguration arangoConfig, string colorFile)
+public class Startup(ArangoConfiguration arangoConfig, string colorFile, PrometheusStrategy prometheusStrategy)
 {
 	// This method gets called by the runtime. Use this method to add services to the container.
 	// For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
@@ -88,6 +89,13 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile)
 		services.AddSingleton<IPasswordService, PasswordService>();
 		services.AddSingleton<IPermissionService, PermissionService>();
 		services.AddSingleton<ITelemetryService, TelemetryService>();
+		services.AddSingleton<IPrometheusQueryService>(sp =>
+		{
+			var httpClient = sp.GetRequiredService<IHttpClientFactory>().CreateClient();
+			var logger = sp.GetRequiredService<ILogger<PrometheusQueryService>>();
+			var prometheusUrl = prometheusStrategy.GetPrometheusUrl();
+			return new PrometheusQueryService(httpClient, logger, prometheusUrl);
+		});
 		services.AddSingleton<INotifyService, NotifyService>();
 		services.AddSingleton<ILocateService, LocateService>();
 		services.AddSingleton<IMoveService, MoveService>();
@@ -190,7 +198,7 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile)
 			;
 		});
 
-		// Configure OpenTelemetry Metrics
+		// Configure OpenTelemetry Metrics for Prometheus
 		services.AddOpenTelemetry()
 			.ConfigureResource(resource => resource
 				.AddService("SharpMUSH.Server", serviceVersion: "1.0.0"))
@@ -198,11 +206,6 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile)
 				.AddMeter("SharpMUSH")
 				.AddRuntimeInstrumentation()
 				.AddConsoleExporter()
-				.AddOtlpExporter(options =>
-				{
-					// Configure OTLP endpoint from environment variable (defaults to localhost:4317)
-					var otlpEndpoint = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT") ?? "http://localhost:4317";
-					options.Endpoint = new Uri(otlpEndpoint);
-				}));
+				.AddPrometheusExporter());
 	}
 }

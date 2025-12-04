@@ -47,19 +47,45 @@ services:
       timeout: 5s
       retries: 5
 
-  jaeger:
-    image: jaegertracing/all-in-one:latest
-    container_name: sharpmush-jaeger
-    environment:
-      - COLLECTOR_OTLP_ENABLED=true
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: sharpmush-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
     ports:
-      - "16686:16686"  # Jaeger UI
-      - "4317:4317"    # OTLP gRPC receiver
-      - "4318:4318"    # OTLP HTTP receiver
+      - "9090:9090"  # Prometheus UI
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
     networks:
       - sharpmush-net
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:16686"]
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: sharpmush-grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    ports:
+      - "3000:3000"  # Grafana UI
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    networks:
+      - sharpmush-net
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -71,15 +97,16 @@ services:
     environment:
       - KAFKA_HOST=redpanda
       - KAFKA_PORT=9092
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
+      - PROMETHEUS_URL=http://prometheus:9090
     depends_on:
       redpanda:
         condition: service_healthy
-      jaeger:
+      prometheus:
         condition: service_healthy
     ports:
       - "4201:4201" # Telnet
       - "4202:4202" # ConnectionServer HTTP API
+      - "9091:9091" # Prometheus metrics endpoint
     networks:
       - sharpmush-net
 
@@ -91,16 +118,18 @@ services:
       - ARANGO_CONNECTION_STRING=Server=http://unusedschim:8529;User=root;Password=password;
       - KAFKA_HOST=redpanda
       - KAFKA_PORT=9092
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
+      - PROMETHEUS_URL=http://prometheus:9090
     depends_on:
       arangodb:
         condition: service_started
       redpanda:
         condition: service_healthy
-      jaeger:
+      prometheus:
         condition: service_healthy
       connectionserver:
         condition: service_started
+    ports:
+      - "9092:9092" # Prometheus metrics endpoint
     volumes:
       - arangodb-socket:/var/run/arangodb3
     networks:
@@ -109,6 +138,8 @@ services:
 volumes:
   arangodb-socket:
   redpanda-data:
+  prometheus-data:
+  grafana-data:
   
 networks:
   sharpmush-net:

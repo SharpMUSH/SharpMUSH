@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using SharpMUSH.Server.Strategy.ArangoDB;
+using SharpMUSH.Server.Strategy.Prometheus;
 
 namespace SharpMUSH.Server;
 
@@ -11,6 +12,10 @@ public class Program
 
 		var arangoConfig = await ArangoStartupStrategyProvider.GetStrategy().ConfigureArango();
 
+		// Initialize Prometheus strategy
+		var prometheusStrategy = PrometheusStrategyProvider.GetStrategy();
+		await prometheusStrategy.InitializeAsync();
+
 		var colorFile = Path.Combine(AppContext.BaseDirectory, "colors.json");
 
 		if (!File.Exists(colorFile))
@@ -18,13 +23,20 @@ public class Program
 			throw new FileNotFoundException($"Configuration file not found: {colorFile}");
 		}
 
-		var startup = new Startup(arangoConfig, colorFile);
+		var startup = new Startup(arangoConfig, colorFile, prometheusStrategy);
 		
 		startup.ConfigureServices(builder.Services);
 		
 		var app = builder.Build();
 		
-		await ConfigureApp(app).RunAsync();
+		try
+		{
+			await ConfigureApp(app).RunAsync();
+		}
+		finally
+		{
+			await prometheusStrategy.DisposeAsync();
+		}
 	}
 
 	private static WebApplication ConfigureApp(WebApplication app)
@@ -46,6 +58,9 @@ public class Program
 		// Health and readiness endpoints for deployment checks
 		app.MapGet("/health", () => "healthy");
 		app.MapGet("/ready", () => "ready");
+
+		// Prometheus metrics endpoint
+		app.MapPrometheusScrapingEndpoint();
 
 		return app;
 	}
