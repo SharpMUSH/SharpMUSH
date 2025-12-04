@@ -5,6 +5,7 @@ using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Linq;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -219,5 +220,72 @@ public class MetricsCommandTests
 		// Assert
 		await Assert.That(result.ActiveConnections).IsGreaterThanOrEqualTo(0);
 		await Assert.That(result.LoggedInPlayers).IsGreaterThanOrEqualTo(0);
+	}
+
+	[Test]
+	public async Task PrometheusQueryService_GetMostCalledFunctions_ReturnsInDescendingOrder()
+	{
+		// Arrange - Record some function invocations to generate metrics
+		var telemetryService = WebAppFactoryArg.Services.GetRequiredService<ITelemetryService>();
+		
+		// Simulate multiple function calls with different frequencies
+		// Function1: 100 calls at 1ms each
+		for (int i = 0; i < 100; i++)
+		{
+			telemetryService.RecordFunctionInvocation("testFunction1", 1.0, true);
+		}
+		
+		// Function2: 50 calls at 1ms each
+		for (int i = 0; i < 50; i++)
+		{
+			telemetryService.RecordFunctionInvocation("testFunction2", 1.0, true);
+		}
+		
+		// Function3: 150 calls at 1ms each (should be first)
+		for (int i = 0; i < 150; i++)
+		{
+			telemetryService.RecordFunctionInvocation("testFunction3", 1.0, true);
+		}
+		
+		// Function4: 75 calls at 1ms each
+		for (int i = 0; i < 75; i++)
+		{
+			telemetryService.RecordFunctionInvocation("testFunction4", 1.0, true);
+		}
+
+		// Wait a bit to ensure metrics are exported to Prometheus
+		await Task.Delay(TimeSpan.FromSeconds(10));
+
+		// Act - Query the most called functions
+		var result = await PrometheusQueryService.GetMostCalledFunctionsAsync("1m", limit: 10);
+
+		// Assert - Verify results are returned in descending order by call rate
+		await Assert.That(result).IsNotNull();
+		
+		if (result.Count > 1)
+		{
+			// Verify that each function has a lower or equal call rate than the previous one
+			for (int i = 1; i < result.Count; i++)
+			{
+				var previous = result[i - 1];
+				var current = result[i];
+				
+				await Assert.That(current.CallsPerSecond).IsLessThanOrEqualTo(previous.CallsPerSecond);
+			}
+		}
+
+		// Additionally, if our test functions are present, verify they're in the expected order
+		var testFunctions = result.Where(f => f.FunctionName.StartsWith("testFunction")).ToList();
+		if (testFunctions.Count >= 2)
+		{
+			// testFunction3 (150 calls) should appear before testFunction1 (100 calls)
+			var func3Index = testFunctions.FindIndex(f => f.FunctionName == "testFunction3");
+			var func1Index = testFunctions.FindIndex(f => f.FunctionName == "testFunction1");
+			
+			if (func3Index >= 0 && func1Index >= 0)
+			{
+				await Assert.That(func3Index).IsLessThan(func1Index);
+			}
+		}
 	}
 }
