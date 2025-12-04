@@ -1,7 +1,10 @@
 {
   "dashboard": {
+    "uid": "sharpmush-metrics",
     "title": "SharpMUSH Metrics",
     "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 1,
     "refresh": "10s",
     "panels": [
       {
