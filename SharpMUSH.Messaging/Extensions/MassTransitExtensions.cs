@@ -40,10 +40,16 @@ public static class MassTransitExtensions
 					// Host configuration
 					k.Host($"{options.Host}:{options.Port}");
 
-					// Configure topic endpoint for telnet output messages
+					// Configure topic endpoint for telnet output messages with batching
 					k.TopicEndpoint<Confluent.Kafka.Ignore, string>(options.TelnetOutputTopic, options.ConsumerGroupId, e =>
 					{
 						e.AutoOffsetReset = Confluent.Kafka.AutoOffsetReset.Latest;
+						
+						// Configure prefetch for performance optimization
+						// This solves the @dolist performance issue by prefetching multiple
+						// sequential messages before processing them
+						e.PrefetchCount = options.BatchMaxSize;
+						
 						e.ConfigureConsumers(context);
 					});
 				});

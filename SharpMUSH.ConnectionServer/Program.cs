@@ -42,11 +42,22 @@ builder.Services.AddConnectionServerMessaging(
 		options.Host = kafkaHost!;
 		options.Port = 9092;
 		options.MaxMessageBytes = 6 * 1024 * 1024; // 6MB
+		
+		// Configure batching for @dolist performance optimization
+		options.BatchMaxSize = 100; // Process up to 100 messages in a batch
+		options.BatchTimeLimit = TimeSpan.FromMilliseconds(10); // Wait max 10ms for a full batch
 	},
 	x =>
 	{
-		// Register consumers for output messages from MainProcess
-		x.AddConsumer<TelnetOutputConsumer>();
+		// Register batch consumer for telnet output messages (solves @dolist performance issue)
+		x.AddConsumer<BatchTelnetOutputConsumer>(c =>
+		{
+			c.Options<BatchOptions>(o => o
+				.SetMessageLimit(100)
+				.SetTimeLimit(TimeSpan.FromMilliseconds(10)));
+		});
+		
+		// Register individual consumers for other message types
 		x.AddConsumer<TelnetPromptConsumer>();
 		x.AddConsumer<BroadcastConsumer>();
 		x.AddConsumer<DisconnectConnectionConsumer>();

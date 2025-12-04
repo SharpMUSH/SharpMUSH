@@ -76,6 +76,18 @@ public class MessageQueueOptions
 	public int MaxMessageBytes { get; set; } = 6 * 1024 * 1024; // 6MB
 
 	/// <summary>
+	/// Maximum number of messages to batch for consumer-side batching
+	/// This solves the @dolist performance issue by processing multiple messages together
+	/// </summary>
+	public int BatchMaxSize { get; set; } = 100;
+
+	/// <summary>
+	/// Maximum time to wait for a full batch (in milliseconds)
+	/// Lower values provide better responsiveness, higher values allow more batching
+	/// </summary>
+	public TimeSpan BatchTimeLimit { get; set; } = TimeSpan.FromMilliseconds(10);
+
+	/// <summary>
 	/// Gets Kafka producer configuration
 	/// </summary>
 	public Dictionary<string, string> GetKafkaProducerConfig()
