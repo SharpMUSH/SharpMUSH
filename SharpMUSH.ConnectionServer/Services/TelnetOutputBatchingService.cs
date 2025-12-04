@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -28,6 +29,14 @@ public class TelnetOutputBatchingService : IHostedService, IDisposable
 	private const int MaxBatchSize = 100; // Flush after 100 messages
 	private const int MaxBatchDelayMs = 10; // Flush after 10ms
 	private const int FlushTimerIntervalMs = 5; // Check for flushes every 5ms
+	
+	// Metrics for debugging
+	private long _totalMessagesReceived = 0;
+	private long _totalBatchesFlushed = 0;
+	private long _totalMessagesInBatches = 0;
+	private long _flushesFromSize = 0;
+	private long _flushesFromTimeout = 0;
+	private long _totalTcpWriteTimeMs = 0;
 
 	public TelnetOutputBatchingService(
 		IConnectionServerService connectionService,
@@ -66,6 +75,8 @@ public class TelnetOutputBatchingService : IHostedService, IDisposable
 	/// </summary>
 	public void AddMessage(long handle, byte[] data)
 	{
+		Interlocked.Increment(ref _totalMessagesReceived);
+		
 		var buffer = _buffers.GetOrAdd(handle, _ => new MessageBuffer());
 		
 		lock (buffer.Lock)
@@ -80,6 +91,7 @@ public class TelnetOutputBatchingService : IHostedService, IDisposable
 			// Immediate flush if batch is full
 			if (buffer.Messages.Count >= MaxBatchSize)
 			{
+				Interlocked.Increment(ref _flushesFromSize);
 				FlushBuffer(handle, buffer);
 			}
 		}
@@ -102,6 +114,7 @@ public class TelnetOutputBatchingService : IHostedService, IDisposable
 					
 					if (timeSinceFirst >= MaxBatchDelayMs)
 					{
+						Interlocked.Increment(ref _flushesFromTimeout);
 						FlushBuffer(handle, buffer);
 					}
 				}
@@ -120,11 +133,15 @@ public class TelnetOutputBatchingService : IHostedService, IDisposable
 			return;
 		}
 
+		var messageCount = buffer.Messages.Count;
+		Interlocked.Increment(ref _totalBatchesFlushed);
+		Interlocked.Add(ref _totalMessagesInBatches, messageCount);
+
 		var connection = _connectionService.Get(handle);
 		if (connection == null)
 		{
 			_logger.LogWarning("Cannot flush {Count} messages for unknown connection handle: {Handle}",
-				buffer.Messages.Count, handle);
+				messageCount, handle);
 			buffer.Messages.Clear();
 			return;
 		}
@@ -142,11 +159,15 @@ public class TelnetOutputBatchingService : IHostedService, IDisposable
 				offset += message.Length;
 			}
 
-			// Single TCP write for all batched messages
+			// Measure TCP write time
+			var sw = Stopwatch.StartNew();
 			connection.OutputFunction(combined).AsTask().Wait();
+			sw.Stop();
+			
+			Interlocked.Add(ref _totalTcpWriteTimeMs, sw.ElapsedMilliseconds);
 
-			_logger.LogDebug("Flushed {Count} messages ({Bytes} bytes) to connection {Handle}",
-				buffer.Messages.Count, totalLength, handle);
+			_logger.LogDebug("Flushed {Count} messages ({Bytes} bytes) to connection {Handle} in {TcpWriteMs}ms",
+				messageCount, totalLength, handle, sw.ElapsedMilliseconds);
 
 			buffer.Messages.Clear();
 			buffer.LastFlushTime = DateTime.UtcNow;
@@ -154,7 +175,7 @@ public class TelnetOutputBatchingService : IHostedService, IDisposable
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "Error flushing {Count} messages to connection {Handle}",
-				buffer.Messages.Count, handle);
+				messageCount, handle);
 			buffer.Messages.Clear();
 		}
 	}
@@ -185,6 +206,38 @@ public class TelnetOutputBatchingService : IHostedService, IDisposable
 				FlushBuffer(handle, buffer);
 			}
 		}
+	}
+
+	/// <summary>
+	/// Gets current batching metrics for debugging/monitoring.
+	/// </summary>
+	public (long MessagesReceived, long BatchesFlushed, double AvgBatchSize, long FlushesFromSize, long FlushesFromTimeout, long TotalTcpWriteTimeMs) GetMetrics()
+	{
+		var batchesFlushed = Interlocked.Read(ref _totalBatchesFlushed);
+		var messagesInBatches = Interlocked.Read(ref _totalMessagesInBatches);
+		var avgBatchSize = batchesFlushed > 0 ? (double)messagesInBatches / batchesFlushed : 0;
+		
+		return (
+			Interlocked.Read(ref _totalMessagesReceived),
+			batchesFlushed,
+			avgBatchSize,
+			Interlocked.Read(ref _flushesFromSize),
+			Interlocked.Read(ref _flushesFromTimeout),
+			Interlocked.Read(ref _totalTcpWriteTimeMs)
+		);
+	}
+
+	/// <summary>
+	/// Logs current batching metrics.
+	/// </summary>
+	public void LogMetrics()
+	{
+		var metrics = GetMetrics();
+		_logger.LogInformation(
+			"Batching Metrics: Messages={Messages}, Batches={Batches}, AvgBatchSize={AvgBatchSize:F2}, " +
+			"FlushSize={FlushSize}, FlushTimeout={FlushTimeout}, TcpWriteTime={TcpWriteMs}ms",
+			metrics.MessagesReceived, metrics.BatchesFlushed, metrics.AvgBatchSize,
+			metrics.FlushesFromSize, metrics.FlushesFromTimeout, metrics.TotalTcpWriteTimeMs);
 	}
 
 	public void Dispose()

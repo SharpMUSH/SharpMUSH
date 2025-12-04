@@ -111,6 +111,45 @@ public class InProcessPerformanceMeasurement
 		Console.WriteLine("1. Kafka message publishing overhead (1000 vs 1 publish)");
 		Console.WriteLine("2. Message serialization overhead");
 		Console.WriteLine("3. NOT the parsing or execution time");
+		
+		// Log batching service metrics if available (via reflection to avoid assembly reference)
+		var batchingServiceType = Type.GetType("SharpMUSH.ConnectionServer.Services.TelnetOutputBatchingService, SharpMUSH.ConnectionServer");
+		if (batchingServiceType != null)
+		{
+			var batchingService = WebAppFactoryArg.Services.GetService(batchingServiceType);
+			if (batchingService != null)
+			{
+				var getMetricsMethod = batchingServiceType.GetMethod("GetMetrics");
+				if (getMetricsMethod != null)
+				{
+					var metricsResult = getMetricsMethod.Invoke(batchingService, null);
+					if (metricsResult != null)
+					{
+						var metricsType = metricsResult.GetType();
+						var messagesReceived = (long)metricsType.GetField("Item1")!.GetValue(metricsResult)!;
+						var batchesFlushed = (long)metricsType.GetField("Item2")!.GetValue(metricsResult)!;
+						var avgBatchSize = (double)metricsType.GetField("Item3")!.GetValue(metricsResult)!;
+						var flushesFromSize = (long)metricsType.GetField("Item4")!.GetValue(metricsResult)!;
+						var flushesFromTimeout = (long)metricsType.GetField("Item5")!.GetValue(metricsResult)!;
+						var totalTcpWriteTimeMs = (long)metricsType.GetField("Item6")!.GetValue(metricsResult)!;
+						
+						Console.WriteLine("\n=== BATCHING SERVICE METRICS ===");
+						Console.WriteLine($"Messages received:   {messagesReceived}");
+						Console.WriteLine($"Batches flushed:     {batchesFlushed}");
+						Console.WriteLine($"Avg batch size:      {avgBatchSize:F2}");
+						Console.WriteLine($"Flush from size:     {flushesFromSize}");
+						Console.WriteLine($"Flush from timeout:  {flushesFromTimeout}");
+						Console.WriteLine($"TCP write time:      {totalTcpWriteTimeMs}ms");
+						
+						if (avgBatchSize < 2.0 && messagesReceived > 100)
+						{
+							Console.WriteLine("\nWARNING: Batching is NOT working effectively!");
+							Console.WriteLine("Average batch size < 2 means messages arrive too slowly to batch.");
+						}
+					}
+				}
+			}
+		}
 	}
 	
 	[Test]
