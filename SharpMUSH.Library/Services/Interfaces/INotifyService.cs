@@ -37,4 +37,16 @@ public interface INotifyService
 
 	ValueTask Prompt(long[] handles, OneOf<MString, string> what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
 
+	/// <summary>
+	/// Begin a batching scope for the specified connection handle.
+	/// All Notify calls for this handle will be accumulated until EndBatchingScope is called.
+	/// Scopes are ref-counted to support nested @dolists.
+	/// </summary>
+	void BeginBatchingScope(long handle);
+
+	/// <summary>
+	/// End a batching scope for the specified connection handle.
+	/// If this is the outermost scope (ref count reaches 0), all accumulated messages are published.
+	/// </summary>
+	ValueTask EndBatchingScope(long handle);
 }
