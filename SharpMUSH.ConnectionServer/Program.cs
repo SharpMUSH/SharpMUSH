@@ -46,6 +46,9 @@ builder.Services.AddSingleton<ITelemetryService, TelemetryService>();
 builder.Services.AddSingleton<TelnetOutputBatchingService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<TelnetOutputBatchingService>());
 
+// Add health monitoring service
+builder.Services.AddHostedService<SharpMUSH.ConnectionServer.Services.HealthMonitoringService>();
+
 // Configure MassTransit with Kafka/RedPanda
 builder.Services.AddConnectionServerMessaging(
 	options =>
