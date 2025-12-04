@@ -129,6 +129,7 @@ public class TelemetryService : ITelemetryService, IDisposable
 		{
 			_meter?.Dispose();
 			_disposed = true;
+			GC.SuppressFinalize(this);
 		}
 	}
 }

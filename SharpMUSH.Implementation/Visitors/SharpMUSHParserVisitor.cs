@@ -722,7 +722,7 @@ public class SharpMUSHParserVisitor(
 				{
 					commandResult = await libraryCommandDefinition.Command.Invoke(newParser);
 				}
-				catch
+				catch (Exception)
 				{
 					commandSuccess = false;
 					throw;
