@@ -725,7 +725,7 @@ public class SharpMUSHParserVisitor(
 				catch (Exception)
 				{
 					commandSuccess = false;
-					throw;
+					throw; // Re-throw, so commandResult will never be accessed uninitialized
 				}
 				finally
 				{
