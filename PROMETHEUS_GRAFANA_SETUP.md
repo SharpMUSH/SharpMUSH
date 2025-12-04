@@ -131,7 +131,8 @@ Example:
 
 ### Environment Variables
 
-- `PROMETHEUS_PORT` - Port to expose Prometheus metrics endpoint (default: 9092 for Server, 9091 for ConnectionServer)
+- `PROMETHEUS_URL` - URL of the Prometheus server for querying metrics (e.g., `http://prometheus:9090`)
+  - If not set, SharpMUSH will automatically start a Prometheus TestContainer for local development
 
 ### Prometheus Configuration
 
@@ -207,6 +208,16 @@ SharpMUSH uses:
 - **Prometheus Exporter** to expose metrics in Prometheus format
 - **Prometheus** for metrics collection, storage, and querying
 - **Grafana** for visualization and dashboards
+- **Strategy Pattern** for flexible Prometheus configuration
+
+### Strategy Pattern
+
+SharpMUSH uses the Strategy pattern for Prometheus configuration, similar to ArangoDB and message queue configuration:
+
+- **PrometheusTestContainerStrategy**: Automatically starts a Prometheus container for local development (used when `PROMETHEUS_URL` is not set)
+- **PrometheusExternalStrategy**: Connects to an external Prometheus instance (used when `PROMETHEUS_URL` is set)
+
+This allows seamless switching between local development and production/container environments without code changes.
 
 The metrics flow:
 1. SharpMUSH instruments code using OpenTelemetry Meters

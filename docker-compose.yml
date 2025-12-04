@@ -97,7 +97,7 @@ services:
     environment:
       - KAFKA_HOST=redpanda
       - KAFKA_PORT=9092
-      - PROMETHEUS_PORT=9091
+      - PROMETHEUS_URL=http://prometheus:9090
     depends_on:
       redpanda:
         condition: service_healthy
@@ -118,7 +118,7 @@ services:
       - ARANGO_CONNECTION_STRING=Server=http://unusedschim:8529;User=root;Password=password;
       - KAFKA_HOST=redpanda
       - KAFKA_PORT=9092
-      - PROMETHEUS_PORT=9092
+      - PROMETHEUS_URL=http://prometheus:9090
     depends_on:
       arangodb:
         condition: service_started
