@@ -47,6 +47,9 @@ public class Program
 		app.MapGet("/health", () => "healthy");
 		app.MapGet("/ready", () => "ready");
 
+		// Prometheus metrics endpoint
+		app.MapPrometheusScrapingEndpoint();
+
 		return app;
 	}
 }

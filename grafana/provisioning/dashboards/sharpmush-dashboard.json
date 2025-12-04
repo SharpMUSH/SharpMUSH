@@ -1,0 +1,111 @@
+{
+  "dashboard": {
+    "title": "SharpMUSH Metrics",
+    "timezone": "browser",
+    "refresh": "10s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Function Invocation Duration (p95)",
+        "type": "graph",
+        "gridPos": {
+          "x": 0,
+          "y": 0,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(sharpmush_function_invocation_duration_bucket[5m]))",
+            "legendFormat": "{{function_name}}"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Command Invocation Duration (p95)",
+        "type": "graph",
+        "gridPos": {
+          "x": 12,
+          "y": 0,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(sharpmush_command_invocation_duration_bucket[5m]))",
+            "legendFormat": "{{command_name}}"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Most Called Functions",
+        "type": "graph",
+        "gridPos": {
+          "x": 0,
+          "y": 8,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "rate(sharpmush_function_invocation_duration_count[5m])",
+            "legendFormat": "{{function_name}}"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Most Called Commands",
+        "type": "graph",
+        "gridPos": {
+          "x": 12,
+          "y": 8,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "rate(sharpmush_command_invocation_duration_count[5m])",
+            "legendFormat": "{{command_name}}"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Active Connections",
+        "type": "graph",
+        "gridPos": {
+          "x": 0,
+          "y": 16,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "sharpmush_connections_active",
+            "legendFormat": "Active Connections"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Logged In Players",
+        "type": "graph",
+        "gridPos": {
+          "x": 12,
+          "y": 16,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "sharpmush_players_logged_in",
+            "legendFormat": "Logged In Players"
+          }
+        ]
+      }
+    ]
+  }
+}

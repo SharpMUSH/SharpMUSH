@@ -27,7 +27,7 @@
     <PackageReference Include="NSubstitute" Version="5.3.0" />
     <PackageReference Include="OpenTelemetry.Api" Version="1.11.2" />
     <PackageReference Include="OpenTelemetry.Exporter.Console" Version="1.11.0" />
-    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.11.0" />
+    <PackageReference Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.11.0-beta.1" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.11.0" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.10.0" />
     <PackageReference Include="Quartz.AspNetCore" Version="3.15.1" />

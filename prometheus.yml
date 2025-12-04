@@ -1,0 +1,22 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'sharpmush-monitor'
+
+scrape_configs:
+  - job_name: 'sharpmush-server'
+    static_configs:
+      - targets: ['sharpmush-server:9092']
+        labels:
+          service: 'server'
+
+  - job_name: 'connectionserver'
+    static_configs:
+      - targets: ['connectionserver:9091']
+        labels:
+          service: 'connectionserver'
+
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']

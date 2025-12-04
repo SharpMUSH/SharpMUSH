@@ -190,7 +190,7 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile)
 			;
 		});
 
-		// Configure OpenTelemetry Metrics
+		// Configure OpenTelemetry Metrics for Prometheus
 		services.AddOpenTelemetry()
 			.ConfigureResource(resource => resource
 				.AddService("SharpMUSH.Server", serviceVersion: "1.0.0"))
@@ -198,11 +198,6 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile)
 				.AddMeter("SharpMUSH")
 				.AddRuntimeInstrumentation()
 				.AddConsoleExporter()
-				.AddOtlpExporter(options =>
-				{
-					// Configure OTLP endpoint from environment variable (defaults to localhost:4317)
-					var otlpEndpoint = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT") ?? "http://localhost:4317";
-					options.Endpoint = new Uri(otlpEndpoint);
-				}));
+				.AddPrometheusExporter());
 	}
 }
