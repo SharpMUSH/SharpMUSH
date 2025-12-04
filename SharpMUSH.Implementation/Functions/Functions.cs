@@ -31,6 +31,7 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 	private static ISortService? SortService { get; set; }
 	private static ILockService? LockService { get; set; }
 	private static ISqlService? SqlService { get; set; }
+	private static ITelemetryService? TelemetryService { get; set; }
 	private static ILogger<Functions>? Logger { get; set; }
 
 	private readonly FunctionLibraryService _functionLibrary = [];
@@ -55,7 +56,8 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 		IValidateService validateService,
 		ICommunicationService communicationService,
 		ILockService lockService,
-		ISqlService sqlService)
+		ISqlService sqlService,
+		ITelemetryService telemetryService)
 	{
 		Logger = logger;
 		Mediator = mediator;
@@ -75,6 +77,7 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 		CommunicationService = communicationService;
 		LockService = lockService;
 		SqlService = sqlService;
+		TelemetryService = telemetryService;
 		
 		foreach (var command in Generated.FunctionLibrary.Functions)
 		{
