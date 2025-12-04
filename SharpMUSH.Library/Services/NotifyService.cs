@@ -76,11 +76,11 @@ public class NotifyService(IBus publishEndpoint, IConnectionService connections,
 
 		var bytes = Encoding.UTF8.GetBytes(text);
 
-		var startTime = System.Diagnostics.Stopwatch.GetTimestamp();
-		
 		// Always use batching - if no scope is active, messages are auto-flushed
 		if (_batchingStates.TryGetValue(handle, out var state))
 		{
+			// For batched messages, we don't track individual notification times
+			// as they are accumulated and sent in batch
 			lock (state.Lock)
 			{
 				state.AccumulatedMessages.Add(bytes);
@@ -88,12 +88,12 @@ public class NotifyService(IBus publishEndpoint, IConnectionService connections,
 		}
 		else
 		{
-			// No batching scope active, publish immediately
+			// No batching scope active, publish immediately and track time
+			var startTime = System.Diagnostics.Stopwatch.GetTimestamp();
 			await publishEndpoint.Publish(new TelnetOutputMessage(handle, bytes));
+			var elapsedMs = System.Diagnostics.Stopwatch.GetElapsedTime(startTime).TotalMilliseconds;
+			telemetryService?.RecordNotificationSpeed(type.ToString(), elapsedMs, 1);
 		}
-		
-		var elapsedMs = System.Diagnostics.Stopwatch.GetElapsedTime(startTime).TotalMilliseconds;
-		telemetryService?.RecordNotificationSpeed(type.ToString(), elapsedMs, 1);
 	}
 
 	public async ValueTask Notify(long[] handles, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)

@@ -6,9 +6,10 @@ namespace SharpMUSH.Library.Services;
 /// <summary>
 /// Implementation of telemetry service using OpenTelemetry metrics.
 /// </summary>
-public class TelemetryService : ITelemetryService
+public class TelemetryService : ITelemetryService, IDisposable
 {
 	private readonly Meter _meter;
+	private bool _disposed;
 	private readonly Histogram<double> _functionInvocationDuration;
 	private readonly Histogram<double> _commandInvocationDuration;
 	private readonly Histogram<double> _notificationSpeed;
@@ -120,5 +121,14 @@ public class TelemetryService : ITelemetryService
 	public void SetConnectionServerHealthState(bool isHealthy)
 	{
 		_currentConnectionServerHealthState = isHealthy;
+	}
+
+	public void Dispose()
+	{
+		if (!_disposed)
+		{
+			_meter?.Dispose();
+			_disposed = true;
+		}
 	}
 }

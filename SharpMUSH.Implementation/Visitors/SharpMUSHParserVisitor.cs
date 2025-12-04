@@ -48,6 +48,14 @@ public class SharpMUSHParserVisitor(
 
 	public override async ValueTask<CallState?> Visit(IParseTree tree) => await tree.Accept(this);
 
+	/// <summary>
+	/// Helper method to get the telemetry service from the parser if available.
+	/// </summary>
+	private static ITelemetryService? GetTelemetryService(IMUSHCodeParser parser)
+		=> parser is MUSHCodeParser mushParser 
+			? mushParser.ServiceProvider.GetService<ITelemetryService>() 
+			: null;
+
 	public override async ValueTask<CallState?> VisitChildren(IRuleNode? node)
 	{
 		if (node is null) return null;
@@ -288,10 +296,7 @@ public class SharpMUSHParserVisitor(
 		finally
 		{
 			var elapsedMs = System.Diagnostics.Stopwatch.GetElapsedTime(startTime).TotalMilliseconds;
-			if (parser is MUSHCodeParser mushParser)
-			{
-				mushParser.ServiceProvider.GetService<ITelemetryService>()?.RecordFunctionInvocation(name, elapsedMs, success);
-			}
+			GetTelemetryService(parser)?.RecordFunctionInvocation(name, elapsedMs, success);
 		}
 	}
 
@@ -725,10 +730,7 @@ public class SharpMUSHParserVisitor(
 				finally
 				{
 					var elapsedMs = System.Diagnostics.Stopwatch.GetElapsedTime(startTime).TotalMilliseconds;
-					if (parser is MUSHCodeParser mushParser)
-					{
-						mushParser.ServiceProvider.GetService<ITelemetryService>()?.RecordCommandInvocation(rootCommand, elapsedMs, commandSuccess);
-					}
+					GetTelemetryService(parser)?.RecordCommandInvocation(rootCommand, elapsedMs, commandSuccess);
 				}
 				
 				// 5. Check for /after hook
