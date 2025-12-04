@@ -161,7 +161,7 @@ public class TelnetOutputBatchingService : IHostedService, IDisposable
 
 			// Measure TCP write time
 			var sw = Stopwatch.StartNew();
-			connection.OutputFunction(combined).AsTask().Wait();
+			connection.OutputFunction(combined).GetAwaiter().GetResult();
 			sw.Stop();
 			
 			Interlocked.Add(ref _totalTcpWriteTimeMs, sw.ElapsedMilliseconds);
