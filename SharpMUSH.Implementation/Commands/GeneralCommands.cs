@@ -142,20 +142,38 @@ public partial class Commands
 		parser.CurrentState.IterationRegisters.Push(wrappedIteration);
 		var command = parser.CurrentState.Arguments["1"].Message!;
 
-		var lastCallState = CallState.Empty;
-		var visitorFunc = parser.CommandListParseVisitor(command);
-		foreach (var item in list)
+		// Enable batching for all handles connected to the enactor
+		var connections = await ConnectionService!.Get(enactor.Object().DBRef).ToListAsync();
+		foreach (var connection in connections)
 		{
-			wrappedIteration.Value = item!;
-			wrappedIteration.Iteration++;
-
-			// TODO: This should not need parsing each time. Just evaluation by getting the Context and visiting the children multiple times.
-			lastCallState = await visitorFunc();
+			NotifyService!.BeginBatchingScope(connection.Handle);
 		}
 
-		parser.CurrentState.IterationRegisters.TryPop(out _);
+		try
+		{
+			var lastCallState = CallState.Empty;
+			var visitorFunc = parser.CommandListParseVisitor(command);
+			foreach (var item in list)
+			{
+				wrappedIteration.Value = item!;
+				wrappedIteration.Iteration++;
 
-		return lastCallState!;
+				// TODO: This should not need parsing each time. Just evaluation by getting the Context and visiting the children multiple times.
+				lastCallState = await visitorFunc();
+			}
+
+			parser.CurrentState.IterationRegisters.TryPop(out _);
+
+			return lastCallState!;
+		}
+		finally
+		{
+			// Flush batched messages
+			foreach (var connection in connections)
+			{
+				await NotifyService!.EndBatchingScope(connection.Handle);
+			}
+		}
 	}
 
 	[SharpCommand(Name = "LOOK", Switches = ["OUTSIDE", "OPAQUE"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]

@@ -12,21 +12,37 @@ services:
     networks:
       - sharpmush-net
   
-  rabbitmq:
-    image: rabbitmq:latest
-    container_name: sharpmush-rabbitmq
-    environment:
-      - RABBITMQ_DEFAULT_USER=sharpmush
-      - RABBITMQ_DEFAULT_PASS=sharpmush_dev_password
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:latest
+    container_name: sharpmush-redpanda
+    command:
+      - redpanda
+      - start
+      - --smp
+      - "1"
+      - --memory
+      - 1G
+      - --reserve-memory
+      - 0M
+      - --overprovisioned
+      - --node-id
+      - "0"
+      - --kafka-addr
+      - PLAINTEXT://0.0.0.0:9092
+      - --advertise-kafka-addr
+      - PLAINTEXT://redpanda:9092
+      - --set
+      - redpanda.max_compacted_log_segment_size=6291456
     ports:
-      - "5672:5672"   # AMQP port
-      - "15672:15672" # Management UI
+      - "9092:9092"   # Kafka API
+      - "9644:9644"   # Admin API
+      - "8082:8082"   # HTTP Proxy
     volumes:
-      - rabbitmq-data:/var/lib/rabbitmq
+      - redpanda-data:/var/lib/redpanda/data
     networks:
       - sharpmush-net
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      test: ["CMD", "rpk", "cluster", "health"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -36,11 +52,10 @@ services:
       context: ./
       dockerfile: SharpMUSH.ConnectionServer/Dockerfile
     environment:
-      - RABBITMQ_HOST=rabbitmq
-      - RABBITMQ_USER=sharpmush
-      - RABBITMQ_PASSWORD=sharpmush_dev_password
+      - KAFKA_HOST=redpanda
+      - KAFKA_PORT=9092
     depends_on:
-      rabbitmq:
+      redpanda:
         condition: service_healthy
     ports:
       - "4201:4201" # Telnet
@@ -54,13 +69,12 @@ services:
       dockerfile: Dockerfile
     environment:
       - ARANGO_CONNECTION_STRING=Server=http://unusedschim:8529;User=root;Password=password;
-      - RABBITMQ_HOST=rabbitmq
-      - RABBITMQ_USER=sharpmush
-      - RABBITMQ_PASSWORD=sharpmush_dev_password
+      - KAFKA_HOST=redpanda
+      - KAFKA_PORT=9092
     depends_on:
       arangodb:
         condition: service_started
-      rabbitmq:
+      redpanda:
         condition: service_healthy
       connectionserver:
         condition: service_started
@@ -71,7 +85,7 @@ services:
       
 volumes:
   arangodb-socket:
-  rabbitmq-data:
+  redpanda-data:
   
 networks:
   sharpmush-net:
