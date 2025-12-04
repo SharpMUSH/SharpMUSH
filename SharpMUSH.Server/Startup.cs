@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
 using Quartz;
 using Serilog;
 using Serilog.Events;
@@ -85,6 +87,7 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile)
 		);
 		services.AddSingleton<IPasswordService, PasswordService>();
 		services.AddSingleton<IPermissionService, PermissionService>();
+		services.AddSingleton<ITelemetryService, TelemetryService>();
 		services.AddSingleton<INotifyService, NotifyService>();
 		services.AddSingleton<ILocateService, LocateService>();
 		services.AddSingleton<IMoveService, MoveService>();
@@ -158,6 +161,7 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile)
 		services.AddQuartzHostedService();
 		services.AddHostedService<StartupHandler>();
 		services.AddHostedService<Services.ConnectionLoggingService>();
+		services.AddHostedService<Services.HealthMonitoringService>();
 
 		services.AddLogging(logging =>
 		{
@@ -185,5 +189,20 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile)
 				.CreateLogger());
 			;
 		});
+
+		// Configure OpenTelemetry Metrics
+		services.AddOpenTelemetry()
+			.ConfigureResource(resource => resource
+				.AddService("SharpMUSH.Server", serviceVersion: "1.0.0"))
+			.WithMetrics(metrics => metrics
+				.AddMeter("SharpMUSH")
+				.AddRuntimeInstrumentation()
+				.AddConsoleExporter()
+				.AddOtlpExporter(options =>
+				{
+					// Configure OTLP endpoint from environment variable (defaults to localhost:4317)
+					var otlpEndpoint = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT") ?? "http://localhost:4317";
+					options.Endpoint = new Uri(otlpEndpoint);
+				}));
 	}
 }
