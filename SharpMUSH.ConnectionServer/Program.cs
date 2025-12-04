@@ -1,9 +1,14 @@
 using MassTransit;
 using Microsoft.AspNetCore.Connections;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
 using SharpMUSH.ConnectionServer.Consumers;
 using SharpMUSH.ConnectionServer.ProtocolHandlers;
 using SharpMUSH.ConnectionServer.Services;
-using Testcontainers.RabbitMq;
+using SharpMUSH.Library.Services;
+using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Messaging.Extensions;
+using Testcontainers.Redpanda;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -15,53 +20,62 @@ builder.Services.AddLogging(logging => logging.AddSerilog(
 		.CreateLogger()
 ));
 
-// Get RabbitMQ configuration from environment or configuration
-var rabbitHost = Environment.GetEnvironmentVariable("RABBITMQ_HOST");
-var rabbitUser = Environment.GetEnvironmentVariable("RABBITMQ_USER") ?? "sharpmush";
-var rabbitPass = Environment.GetEnvironmentVariable("RABBITMQ_PASSWORD") ?? "sharpmush_dev_password";
+// Get Kafka/RedPanda configuration from environment or configuration
+var kafkaHost = Environment.GetEnvironmentVariable("KAFKA_HOST");
 
-if (rabbitHost == null)
+RedpandaContainer? container = null;
+
+if (kafkaHost == null)
 {
-	var container = new RabbitMqBuilder()
-		.WithUsername(rabbitUser)
-		.WithPassword(rabbitPass)
-		.WithPortBinding(5672,5672)
+	container = new RedpandaBuilder()
+		.WithPortBinding(9092, 9092)
 		.Build();
 	await container.StartAsync();
 	
-	rabbitHost = container.Hostname;
+	kafkaHost = "localhost";
 }
 
 
 // Add ConnectionService
 builder.Services.AddSingleton<IConnectionServerService, ConnectionServerService>();
 
-// Configure MassTransit with RabbitMQ
-builder.Services.AddMassTransit(x =>
-{
-	// Register consumers for output messages from MainProcess
-	x.AddConsumer<TelnetOutputConsumer>();
-	x.AddConsumer<TelnetPromptConsumer>();
-	x.AddConsumer<BroadcastConsumer>();
-	x.AddConsumer<DisconnectConnectionConsumer>();
+// Add TelemetryService
+builder.Services.AddSingleton<ITelemetryService, TelemetryService>();
 
-	x.UsingRabbitMq((context, cfg) =>
+// Add batching service for @dolist performance optimization
+builder.Services.AddSingleton<TelnetOutputBatchingService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<TelnetOutputBatchingService>());
+
+// Add health monitoring service
+builder.Services.AddHostedService<SharpMUSH.ConnectionServer.Services.HealthMonitoringService>();
+
+// Configure MassTransit with Kafka/RedPanda
+builder.Services.AddConnectionServerMessaging(
+	options =>
 	{
-		cfg.PrefetchCount = 20;
-		cfg.Lazy = false;
-		cfg.Host(rabbitHost, "/", h =>
+		options.Host = kafkaHost!;
+		options.Port = 9092;
+		options.MaxMessageBytes = 6 * 1024 * 1024; // 6MB
+		
+		// Configure batching for @dolist performance optimization
+		options.BatchMaxSize = 100; // Process up to 100 messages in a batch
+		options.BatchTimeLimit = TimeSpan.FromMilliseconds(10); // Wait max 10ms for a full batch
+	},
+	x =>
+	{
+		// Register batch consumer for telnet output messages (solves @dolist performance issue)
+		x.AddConsumer<BatchTelnetOutputConsumer>(c =>
 		{
-			h.Username(rabbitUser);
-			h.Password(rabbitPass);
+			c.Options<BatchOptions>(o => o
+				.SetMessageLimit(100)
+				.SetTimeLimit(TimeSpan.FromMilliseconds(10)));
 		});
-
-		// Configure message retry
-		cfg.UseMessageRetry(r => r.Interval(30, TimeSpan.FromSeconds(1)));
-
-		// Configure endpoints for consumers
-		cfg.ConfigureEndpoints(context);
+		
+		// Register individual consumers for other message types
+		x.AddConsumer<TelnetPromptConsumer>();
+		x.AddConsumer<BroadcastConsumer>();
+		x.AddConsumer<DisconnectConnectionConsumer>();
 	});
-});
 
 // TODO: This should be configurable via environment variables or config files
 // Configure Kestrel to listen for Telnet connections
@@ -81,6 +95,21 @@ builder.WebHost.ConfigureKestrel((context, options) =>
 
 // Add API controllers
 builder.Services.AddControllers();
+
+// Configure OpenTelemetry Metrics
+builder.Services.AddOpenTelemetry()
+	.ConfigureResource(resource => resource
+		.AddService("SharpMUSH.ConnectionServer", serviceVersion: "1.0.0"))
+	.WithMetrics(metrics => metrics
+		.AddMeter("SharpMUSH")
+		.AddRuntimeInstrumentation()
+		.AddConsoleExporter()
+		.AddOtlpExporter(options =>
+		{
+			// Configure OTLP endpoint from environment variable (defaults to localhost:4317)
+			var otlpEndpoint = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT") ?? "http://localhost:4317";
+			options.Endpoint = new Uri(otlpEndpoint);
+		}));
 
 var app = builder.Build();
 

@@ -105,7 +105,7 @@ public class BuildingCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("goto Backward"));
 		var finalRoom = (await Parser.FunctionParse(MModule.single("%l")))!.Message!.ToPlainText();
 
-		await Assert.That(initialRoom).Length().IsPositive();
+		await Assert.That(initialRoom).HasLength().Positive;
 		await Assert.That(initialRoom).IsEqualTo(finalRoom);
 		await Assert.That(newRoom).IsNotEqualTo(initialRoom);
 	}

@@ -76,7 +76,7 @@ public class AttributeCommandTests
 		// Verify source exists
 		var sourceAttr = await Database.GetAttributeAsync(player.Object.DBRef, ["SOURCE_DIRECT_CPATTR"]);
 		var sourceList = await sourceAttr!.ToListAsync();
-		await Assert.That(sourceList).Count().EqualTo(1);
+		await Assert.That(sourceList).HasCount().EqualTo(1);
 		
 		// Copy it using command
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@cpattr #1/SOURCE_DIRECT_CPATTR=#1/DEST_DIRECT_CPATTR"));

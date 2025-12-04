@@ -2,7 +2,7 @@ using System.Collections.Concurrent;
 using System.Text;
 using BenchmarkDotNet.Attributes;
 using Core.Arango;
-using Core.Arango.Serialization.Json;
+using Core.Arango.Serialization.Newtonsoft;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
@@ -47,7 +47,7 @@ public class BaseBenchmark
 		var config = new ArangoConfiguration
 		{
 			ConnectionString = $"Server={_container.GetTransportAddress()};User=root;Realm=;Password=password;",
-			Serializer = new ArangoJsonSerializer(new ArangoJsonDefaultPolicy())
+			Serializer = new ArangoNewtonsoftSerializer(new ArangoNewtonsoftDefaultContractResolver())
 		};
 		
 		var configFile = Path.Combine(AppContext.BaseDirectory, "mushcnf.dst");

@@ -1,11 +1,14 @@
 ﻿using Core.Arango;
 using Core.Arango.Serilog;
+using Core.Arango.Transport;
 using MassTransit;
 using Mediator;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
 using Quartz;
 using Serilog;
 using Serilog.Events;
@@ -23,6 +26,7 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Messaging.Extensions;
 using SharpMUSH.Server.Strategy.ArangoDB;
 using ZiggyCreatures.Caching.Fusion;
 using TaskScheduler = SharpMUSH.Library.Services.TaskScheduler;
@@ -83,6 +87,7 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile)
 		);
 		services.AddSingleton<IPasswordService, PasswordService>();
 		services.AddSingleton<IPermissionService, PermissionService>();
+		services.AddSingleton<ITelemetryService, TelemetryService>();
 		services.AddSingleton<INotifyService, NotifyService>();
 		services.AddSingleton<ILocateService, LocateService>();
 		services.AddSingleton<IMoveService, MoveService>();
@@ -119,29 +124,32 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile)
 		services.AddHttpClient();
 		services.AddMediator();
 
-		// Configure MassTransit for message queue integration
-		var rabbitHost = Environment.GetEnvironmentVariable("RABBITMQ_HOST") ?? "localhost";
-		var rabbitUser = Environment.GetEnvironmentVariable("RABBITMQ_USER") ?? "sharpmush";
-		var rabbitPass = Environment.GetEnvironmentVariable("RABBITMQ_PASSWORD") ?? "sharpmush_dev_password";
+		// Configure MassTransit with Kafka/RedPanda for message queue integration
+		var kafkaHost = Environment.GetEnvironmentVariable("KAFKA_HOST") ?? "localhost";
 
-		services.AddMassTransit(x =>
-		{
-			// Register consumers for input messages from ConnectionServer
-			x.AddConsumer<Consumers.TelnetInputConsumer>();
-			x.AddConsumer<Consumers.GMCPSignalConsumer>();
-			x.AddConsumer<Consumers.MSDPUpdateConsumer>();
-			x.AddConsumer<Consumers.NAWSUpdateConsumer>();
-			x.AddConsumer<Consumers.ConnectionEstablishedConsumer>();
-			x.AddConsumer<Consumers.ConnectionClosedConsumer>();
-			x.UsingRabbitMq(RabbitMQStrategyProvider.GetStrategy().ConfigureRabbitMq);
-		});
+		services.AddMainProcessMessaging(
+			options =>
+			{
+				options.Host = kafkaHost;
+				options.Port = 9092;
+				options.MaxMessageBytes = 6 * 1024 * 1024; // 6MB
+			},
+			x =>
+			{
+				// Register consumers for input messages from ConnectionServer
+				x.AddConsumer<Consumers.TelnetInputConsumer>();
+				x.AddConsumer<Consumers.GMCPSignalConsumer>();
+				x.AddConsumer<Consumers.MSDPUpdateConsumer>();
+				x.AddConsumer<Consumers.NAWSUpdateConsumer>();
+				x.AddConsumer<Consumers.ConnectionEstablishedConsumer>();
+				x.AddConsumer<Consumers.ConnectionClosedConsumer>();
+			});
 
 		services.AddFusionCache().TryWithAutoSetup();
 		services.AddArango((_, arango) =>
 		{
 			arango.ConnectionString = arangoConfig.ConnectionString;
 			arango.HttpClient = arangoConfig.HttpClient;
-			arango.Serializer = arangoConfig.Serializer;
 		});
 		services.AddQuartz(x =>
 		{
@@ -153,6 +161,7 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile)
 		services.AddQuartzHostedService();
 		services.AddHostedService<StartupHandler>();
 		services.AddHostedService<Services.ConnectionLoggingService>();
+		services.AddHostedService<Services.HealthMonitoringService>();
 
 		services.AddLogging(logging =>
 		{
@@ -180,5 +189,20 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile)
 				.CreateLogger());
 			;
 		});
+
+		// Configure OpenTelemetry Metrics
+		services.AddOpenTelemetry()
+			.ConfigureResource(resource => resource
+				.AddService("SharpMUSH.Server", serviceVersion: "1.0.0"))
+			.WithMetrics(metrics => metrics
+				.AddMeter("SharpMUSH")
+				.AddRuntimeInstrumentation()
+				.AddConsoleExporter()
+				.AddOtlpExporter(options =>
+				{
+					// Configure OTLP endpoint from environment variable (defaults to localhost:4317)
+					var otlpEndpoint = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT") ?? "http://localhost:4317";
+					options.Endpoint = new Uri(otlpEndpoint);
+				}));
 	}
 }
