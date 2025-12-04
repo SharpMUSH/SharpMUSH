@@ -15,7 +15,7 @@ namespace SharpMUSH.Library.Services;
 /// Notifies objects and sends telnet data with optional batching support.
 /// Batching accumulates messages before publishing to reduce Kafka overhead for iteration commands.
 /// </summary>
-public class NotifyService(IBus publishEndpoint, IConnectionService connections) : INotifyService
+public class NotifyService(IBus publishEndpoint, IConnectionService connections, ITelemetryService? telemetryService = null) : INotifyService
 {
 	private readonly ConcurrentDictionary<long, BatchingState> _batchingStates = new();
 
@@ -27,6 +27,7 @@ public class NotifyService(IBus publishEndpoint, IConnectionService connections)
 	}
 	public async ValueTask Notify(DBRef who, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
+		var startTime = System.Diagnostics.Stopwatch.GetTimestamp();
 		await ValueTask.CompletedTask;
 		
 		if (what.Match(
@@ -44,10 +45,15 @@ public class NotifyService(IBus publishEndpoint, IConnectionService connections)
 
 		var bytes = Encoding.UTF8.GetBytes(text);
 
+		var recipientCount = 0;
 		await foreach (var handle in connections.Get(who).Select(x => x.Handle))
 		{
 			await publishEndpoint.Publish(new TelnetOutputMessage(handle, bytes));
+			recipientCount++;
 		}
+		
+		var elapsedMs = System.Diagnostics.Stopwatch.GetElapsedTime(startTime).TotalMilliseconds;
+		telemetryService?.RecordNotificationSpeed(type.ToString(), elapsedMs, recipientCount);
 	}
 
 	public ValueTask Notify(AnySharpObject who, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
@@ -70,6 +76,8 @@ public class NotifyService(IBus publishEndpoint, IConnectionService connections)
 
 		var bytes = Encoding.UTF8.GetBytes(text);
 
+		var startTime = System.Diagnostics.Stopwatch.GetTimestamp();
+		
 		// Always use batching - if no scope is active, messages are auto-flushed
 		if (_batchingStates.TryGetValue(handle, out var state))
 		{
@@ -83,6 +91,9 @@ public class NotifyService(IBus publishEndpoint, IConnectionService connections)
 			// No batching scope active, publish immediately
 			await publishEndpoint.Publish(new TelnetOutputMessage(handle, bytes));
 		}
+		
+		var elapsedMs = System.Diagnostics.Stopwatch.GetElapsedTime(startTime).TotalMilliseconds;
+		telemetryService?.RecordNotificationSpeed(type.ToString(), elapsedMs, 1);
 	}
 
 	public async ValueTask Notify(long[] handles, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)

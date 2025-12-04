@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using Antlr4.Runtime.Misc;
 using Antlr4.Runtime.Tree;
 using Mediator;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OneOf.Types;
@@ -135,6 +136,9 @@ public class SharpMUSHParserVisitor(
 	public async ValueTask<CallState> CallFunction(string name, MString src,
 		FunctionContext context, EvaluationStringContext[] args, SharpMUSHParserVisitor visitor)
 	{
+		var startTime = System.Diagnostics.Stopwatch.GetTimestamp();
+		var success = true;
+		
 		try
 		{
 			if (!parser.FunctionLibrary.TryGetValue(name, out var libraryMatch))
@@ -143,6 +147,7 @@ public class SharpMUSHParserVisitor(
 
 				if (!discoveredFunction.TryPickT0(out var functionValue, out _))
 				{
+					success = false;
 					return new CallState(string.Format(Errors.ErrorNoSuchFunction, name), context.Depth());
 				}
 
@@ -269,6 +274,7 @@ public class SharpMUSHParserVisitor(
 		catch (Exception ex)
 		{
 			logger.LogError(ex, nameof(CallFunction));
+			success = false;
 
 			var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
@@ -278,6 +284,14 @@ public class SharpMUSHParserVisitor(
 			}
 
 			return CallState.Empty;
+		}
+		finally
+		{
+			var elapsedMs = System.Diagnostics.Stopwatch.GetElapsedTime(startTime).TotalMilliseconds;
+			if (parser is MUSHCodeParser mushParser)
+			{
+				mushParser.ServiceProvider.GetService<ITelemetryService>()?.RecordFunctionInvocation(name, elapsedMs, success);
+			}
 		}
 	}
 
@@ -695,7 +709,27 @@ public class SharpMUSHParserVisitor(
 				}
 				
 				// 4. Execute the built-in command
-				var commandResult = await libraryCommandDefinition.Command.Invoke(newParser);
+				var startTime = System.Diagnostics.Stopwatch.GetTimestamp();
+				var commandSuccess = true;
+				Option<CallState> commandResult;
+				
+				try
+				{
+					commandResult = await libraryCommandDefinition.Command.Invoke(newParser);
+				}
+				catch
+				{
+					commandSuccess = false;
+					throw;
+				}
+				finally
+				{
+					var elapsedMs = System.Diagnostics.Stopwatch.GetElapsedTime(startTime).TotalMilliseconds;
+					if (parser is MUSHCodeParser mushParser)
+					{
+						mushParser.ServiceProvider.GetService<ITelemetryService>()?.RecordCommandInvocation(rootCommand, elapsedMs, commandSuccess);
+					}
+				}
 				
 				// 5. Check for /after hook
 				var afterHookFinal = await HookService.GetHookAsync(rootCommand, "AFTER");

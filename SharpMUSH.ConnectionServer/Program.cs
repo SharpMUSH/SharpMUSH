@@ -1,8 +1,12 @@
 using MassTransit;
 using Microsoft.AspNetCore.Connections;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
 using SharpMUSH.ConnectionServer.Consumers;
 using SharpMUSH.ConnectionServer.ProtocolHandlers;
 using SharpMUSH.ConnectionServer.Services;
+using SharpMUSH.Library.Services;
+using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Extensions;
 using Testcontainers.Redpanda;
 using Serilog;
@@ -34,6 +38,9 @@ if (kafkaHost == null)
 
 // Add ConnectionService
 builder.Services.AddSingleton<IConnectionServerService, ConnectionServerService>();
+
+// Add TelemetryService
+builder.Services.AddSingleton<ITelemetryService, TelemetryService>();
 
 // Add batching service for @dolist performance optimization
 builder.Services.AddSingleton<TelnetOutputBatchingService>();
@@ -85,6 +92,16 @@ builder.WebHost.ConfigureKestrel((context, options) =>
 
 // Add API controllers
 builder.Services.AddControllers();
+
+// Configure OpenTelemetry Metrics
+builder.Services.AddOpenTelemetry()
+	.ConfigureResource(resource => resource
+		.AddService("SharpMUSH.ConnectionServer", serviceVersion: "1.0.0"))
+	.WithMetrics(metrics => metrics
+		.AddMeter("SharpMUSH")
+		.AddRuntimeInstrumentation()
+		.AddConsoleExporter()
+		.AddOtlpExporter());
 
 var app = builder.Build();
 

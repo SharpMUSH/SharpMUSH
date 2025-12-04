@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
 using Quartz;
 using Serilog;
 using Serilog.Events;
@@ -85,6 +87,7 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile)
 		);
 		services.AddSingleton<IPasswordService, PasswordService>();
 		services.AddSingleton<IPermissionService, PermissionService>();
+		services.AddSingleton<ITelemetryService, TelemetryService>();
 		services.AddSingleton<INotifyService, NotifyService>();
 		services.AddSingleton<ILocateService, LocateService>();
 		services.AddSingleton<IMoveService, MoveService>();
@@ -185,5 +188,15 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile)
 				.CreateLogger());
 			;
 		});
+
+		// Configure OpenTelemetry Metrics
+		services.AddOpenTelemetry()
+			.ConfigureResource(resource => resource
+				.AddService("SharpMUSH.Server", serviceVersion: "1.0.0"))
+			.WithMetrics(metrics => metrics
+				.AddMeter("SharpMUSH")
+				.AddRuntimeInstrumentation()
+				.AddConsoleExporter()
+				.AddOtlpExporter());
 	}
 }
