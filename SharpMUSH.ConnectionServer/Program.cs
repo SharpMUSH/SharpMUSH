@@ -36,12 +36,21 @@ if (kafkaHost == null)
 builder.Services.AddSingleton<IConnectionServerService, ConnectionServerService>();
 
 // Configure MassTransit with Kafka/RedPanda
-builder.Services.AddConnectionServerMessaging(options =>
-{
-	options.Host = kafkaHost!;
-	options.Port = 9092;
-	options.MaxMessageBytes = 6 * 1024 * 1024; // 6MB
-});
+builder.Services.AddConnectionServerMessaging(
+	options =>
+	{
+		options.Host = kafkaHost!;
+		options.Port = 9092;
+		options.MaxMessageBytes = 6 * 1024 * 1024; // 6MB
+	},
+	x =>
+	{
+		// Register consumers for output messages from MainProcess
+		x.AddConsumer<TelnetOutputConsumer>();
+		x.AddConsumer<TelnetPromptConsumer>();
+		x.AddConsumer<BroadcastConsumer>();
+		x.AddConsumer<DisconnectConnectionConsumer>();
+	});
 
 // TODO: This should be configurable via environment variables or config files
 // Configure Kestrel to listen for Telnet connections

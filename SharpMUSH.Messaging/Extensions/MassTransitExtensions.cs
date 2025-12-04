@@ -14,7 +14,8 @@ public static class MassTransitExtensions
 	/// </summary>
 	public static IServiceCollection AddConnectionServerMessaging(
 		this IServiceCollection services,
-		Action<MessageQueueOptions> configureOptions)
+		Action<MessageQueueOptions> configureOptions,
+		Action<IBusRegistrationConfigurator> configureConsumers)
 	{
 		var options = new MessageQueueOptions();
 		configureOptions(options);
@@ -23,6 +24,9 @@ public static class MassTransitExtensions
 
 		services.AddMassTransit(x =>
 		{
+			// Register consumers
+			configureConsumers(x);
+
 			// Configure Kafka/RedPanda (streaming-optimized)
 			x.UsingInMemory((context, cfg) =>
 			{
@@ -35,6 +39,13 @@ public static class MassTransitExtensions
 				{
 					// Host configuration
 					k.Host($"{options.Host}:{options.Port}");
+
+					// Configure topic endpoint for telnet output messages
+					k.TopicEndpoint<Confluent.Kafka.Ignore, string>(options.TelnetOutputTopic, options.ConsumerGroupId, e =>
+					{
+						e.AutoOffsetReset = Confluent.Kafka.AutoOffsetReset.Latest;
+						e.ConfigureConsumers(context);
+					});
 				});
 			});
 		});
