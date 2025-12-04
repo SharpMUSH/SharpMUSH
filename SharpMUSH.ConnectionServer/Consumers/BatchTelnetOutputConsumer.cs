@@ -6,33 +6,30 @@ using SharpMUSH.Messages;
 namespace SharpMUSH.ConnectionServer.Consumers;
 
 /// <summary>
-/// Consumes telnet output messages one at a time (Kafka doesn't support Batch<T> pattern).
-/// NOTE: For batching optimization, we rely on TCP buffering and Nagle's algorithm,
-/// or implement application-level buffering in the NotifyService.
+/// Consumes telnet output messages and sends them to the batching service.
+/// The TelnetOutputBatchingService combines multiple sequential messages into single TCP writes,
+/// solving the @dolist performance issue.
 /// </summary>
 public class BatchTelnetOutputConsumer(
-	IConnectionServerService connectionService,
+	TelnetOutputBatchingService batchingService,
 	ILogger<BatchTelnetOutputConsumer> logger)
 	: IConsumer<TelnetOutputMessage>
 {
-	public async Task Consume(ConsumeContext<TelnetOutputMessage> context)
+	public Task Consume(ConsumeContext<TelnetOutputMessage> context)
 	{
 		var message = context.Message;
-		var connection = connectionService.Get(message.Handle);
-
-		if (connection == null)
-		{
-			logger.LogWarning("Received output message for unknown connection handle: {Handle}", message.Handle);
-			return;
-		}
-
+		
 		try
 		{
-			await connection.OutputFunction(message.Data);
+			// Add message to batching service for efficient TCP writes
+			batchingService.AddMessage(message.Handle, message.Data);
 		}
 		catch (Exception ex)
 		{
-			logger.LogError(ex, "Error sending message to connection {Handle}", message.Handle);
+			logger.LogError(ex, "Error adding message to batch for connection {Handle}", message.Handle);
 		}
+		
+		// Return immediately - batching service handles async flushing
+		return Task.CompletedTask;
 	}
 }

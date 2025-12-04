@@ -35,6 +35,10 @@ if (kafkaHost == null)
 // Add ConnectionService
 builder.Services.AddSingleton<IConnectionServerService, ConnectionServerService>();
 
+// Add batching service for @dolist performance optimization
+builder.Services.AddSingleton<TelnetOutputBatchingService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<TelnetOutputBatchingService>());
+
 // Configure MassTransit with Kafka/RedPanda
 builder.Services.AddConnectionServerMessaging(
 	options =>
