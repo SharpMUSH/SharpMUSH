@@ -29,8 +29,14 @@ public class WebAppFactory : IAsyncInitializer
 	[ClassDataSource<ArangoDbTestServer>(Shared = SharedType.PerTestSession)]
 	public required ArangoDbTestServer ArangoDbTestServer { get; init; }
 	
+	[ClassDataSource<RedPandaTestServer>(Shared = SharedType.PerTestSession)]
+	public required RedPandaTestServer RedPandaTestServer { get; init; }
+	
 	[ClassDataSource<MySqlTestServer>(Shared = SharedType.PerTestSession)]
 	public required MySqlTestServer MySqlTestServer { get; init; }
+	
+	[ClassDataSource<PrometheusTestServer>(Shared = SharedType.PerTestSession)]
+	public required PrometheusTestServer PrometheusTestServer { get; init; }
 
 	public IServiceProvider Services => _server!.Services;
 	private TestWebApplicationBuilderFactory<Program>? _server;
@@ -118,14 +124,14 @@ public class WebAppFactory : IAsyncInitializer
 
 		var configFile = Path.Join(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst");
 
-		var colorFile = Path.Join(AppContext.BaseDirectory, "colors.json");
+		// Get Prometheus URL from the test container
+		var prometheusUrl = $"http://localhost:{PrometheusTestServer.Instance.GetMappedPublicPort(9090)}";
 
 		_server = new TestWebApplicationBuilderFactory<Program>(
-			config, 
 			MySqlTestServer.Instance.GetConnectionString(), 
 			configFile,
-			colorFile, 
-			Substitute.For<INotifyService>());
+			Substitute.For<INotifyService>(),
+			prometheusUrl);
 
 		var provider = _server.Services;
 		var connectionService = provider.GetRequiredService<IConnectionService>();
@@ -137,7 +143,7 @@ public class WebAppFactory : IAsyncInitializer
 		// Retrieve the object with DBRef #1 and bind it to a connection.
 		var realOne = await databaseService.GetObjectNodeAsync(new DBRef(1));
 		_one = realOne.Object()!.DBRef;
-		connectionService.Register(1, "localhost", "locahost","test", _ => ValueTask.CompletedTask,  _ => ValueTask.CompletedTask, () => Encoding.UTF8);
-		connectionService.Bind(1, _one);
+		await connectionService.Register(1, "localhost", "locahost","test", _ => ValueTask.CompletedTask,  _ => ValueTask.CompletedTask, () => Encoding.UTF8);
+		await connectionService.Bind(1, _one);
 	}
 }

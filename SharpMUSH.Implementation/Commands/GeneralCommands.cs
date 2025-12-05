@@ -142,20 +142,38 @@ public partial class Commands
 		parser.CurrentState.IterationRegisters.Push(wrappedIteration);
 		var command = parser.CurrentState.Arguments["1"].Message!;
 
-		var lastCallState = CallState.Empty;
-		var visitorFunc = parser.CommandListParseVisitor(command);
-		foreach (var item in list)
+		// Enable batching for all handles connected to the enactor
+		var connections = await ConnectionService!.Get(enactor.Object().DBRef).ToListAsync();
+		foreach (var connection in connections)
 		{
-			wrappedIteration.Value = item!;
-			wrappedIteration.Iteration++;
-
-			// TODO: This should not need parsing each time. Just evaluation by getting the Context and visiting the children multiple times.
-			lastCallState = await visitorFunc();
+			NotifyService!.BeginBatchingScope(connection.Handle);
 		}
 
-		parser.CurrentState.IterationRegisters.TryPop(out _);
+		try
+		{
+			var lastCallState = CallState.Empty;
+			var visitorFunc = parser.CommandListParseVisitor(command);
+			foreach (var item in list)
+			{
+				wrappedIteration.Value = item!;
+				wrappedIteration.Iteration++;
 
-		return lastCallState!;
+				// TODO: This should not need parsing each time. Just evaluation by getting the Context and visiting the children multiple times.
+				lastCallState = await visitorFunc();
+			}
+
+			parser.CurrentState.IterationRegisters.TryPop(out _);
+
+			return lastCallState!;
+		}
+		finally
+		{
+			// Flush batched messages
+			foreach (var connection in connections)
+			{
+				await NotifyService!.EndBatchingScope(connection.Handle);
+			}
+		}
 	}
 
 	[SharpCommand(Name = "LOOK", Switches = ["OUTSIDE", "OPAQUE"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
@@ -502,7 +520,9 @@ public partial class Commands
 		var ownerName = ownerObj.Name;
 		var location = obj.Key;
 		var contentKeys = contents!.Select(x => x.Object().Name);
-		var exitKeys = await Mediator!.Send(new GetExitsQuery(obj.DBRef));
+		// var exitKeys = await Mediator!.Send(new GetExitsQuery(obj.DBRef));
+		// THIS FAILS ^ -- Mediator.InvalidMessageException:
+		// Tried to send/publish invalid message type to Mediator: SharpMUSH.Library.Queries.Database.GetExitsQuery
 		var description = (await AttributeService!.GetAttributeAsync(enactor, viewingKnown, "DESCRIBE",
 				IAttributeService.AttributeMode.Read, false))
 			.Match(
@@ -607,18 +627,19 @@ public partial class Commands
 					{
 						continue;
 					}
-					
-					if (showPublicOnly && !showAll && !attr.IsVisual())
+
+					var attrOwner = await attr.Owner.WithCancellation(CancellationToken.None);
+					var attrFlagsStr = attr.Flags.Any() ? $"{string.Join("", attr.Flags.Select(f => f.Symbol))} " : "";
+
+					if (!await PermissionService.CanViewAttribute(enactor, viewingKnown, attr)) 
+					    // || showPublicOnly && !showAll && !attr.IsVisual())
 					{
 						continue;
 					}
-					
-					var attrOwner = await attr.Owner.WithCancellation(CancellationToken.None);
-					var attrFlagsStr = attr.Flags.Any() ? $"{string.Join("", attr.Flags.Select(f => f.Symbol))} " : "";
-					
+
 					await NotifyService!.Notify(enactor,
 						MModule.concat(
-							MModule.single($"{attr.Name} [{attrFlagsStr}#{attrOwner!.Object.DBRef.Number}]: ").Hilight(),
+							MModule.single($"{attr.LongName} [{attrFlagsStr}#{attrOwner!.Object.DBRef.Number}]: ").Hilight(),
 							attr.Value));
 				}
 			}
@@ -1335,8 +1356,8 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var one = await Mediator!.Send(new GetObjectNodeQuery(new DBRef(0)));
-		var attrValues = Mediator!.CreateStream(new GetAttributeQuery(located.Object().DBRef, ["SEMAPHORE"]));
-		var attrValue = attrValues?.LastOrDefaultAsync().GetAwaiter().GetResult();
+		var attrValues = Mediator.CreateStream(new GetAttributeQuery(located.Object().DBRef, ["SEMAPHORE"]));
+		var attrValue = await attrValues.LastOrDefaultAsync();
 
 		if (attrValue is null)
 		{
@@ -1364,8 +1385,8 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var one = await Mediator!.Send(new GetObjectNodeQuery(new DBRef(0)));
-		var attrValues = Mediator!.CreateStream(new GetAttributeQuery(located.Object().DBRef, attribute));
-		var attrValue = attrValues?.LastOrDefaultAsync().GetAwaiter().GetResult();
+		var attrValues = Mediator.CreateStream(new GetAttributeQuery(located.Object().DBRef, attribute));
+		var attrValue = await attrValues.LastOrDefaultAsync();
 
 		if (attrValue is null)
 		{
@@ -1672,7 +1693,7 @@ public partial class Commands
 		{
 			var maybeFoundAttributes =
 				Mediator.CreateStream(new GetAttributeQuery(objectToDrain.Object().DBRef, attribute));
-			var maybeFoundAttribute = maybeFoundAttributes?.LastOrDefaultAsync().GetAwaiter().GetResult();
+			var maybeFoundAttribute = await maybeFoundAttributes.LastOrDefaultAsync();
 
 			if (maybeFoundAttribute is null)
 			{
@@ -2281,7 +2302,7 @@ public partial class Commands
 
 		foreach (var attr in attrList)
 		{
-			var attrName = attr.Name;
+			var attrName = attr.LongName!;
 			var attrValue = attr.Value;
 			var originalText = attrValue.ToPlainText();
 			string newText;

@@ -1,0 +1,213 @@
+# Persistent Volumes
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: arangodb-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redpanda-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+# ArangoDB
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: arangodb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: arangodb
+  template:
+    metadata:
+      labels:
+        app: arangodb
+    spec:
+      containers:
+        - name: arangodb
+          image: arangodb
+          ports:
+            - containerPort: 8529
+          volumeMounts:
+            - name: arangodb-storage
+              mountPath: /var/lib/arangodb3
+          resources:
+            requests:
+              cpu: "500m"
+            limits:
+              cpu: "500m"
+          env:
+            - name: ARANGO_ROOT_PASSWORD
+              value: "password"
+      volumes:
+        - name: arangodb-storage
+          persistentVolumeClaim:
+            claimName: arangodb-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: arangodb
+spec:
+  selector:
+    app: arangodb
+  ports:
+    - port: 8529
+      targetPort: 8529
+  type: ClusterIP
+---
+# RedPanda (Kafka-compatible)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redpanda
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redpanda
+  template:
+    metadata:
+      labels:
+        app: redpanda
+    spec:
+      containers:
+        - name: redpanda
+          image: docker.redpanda.com/redpandadata/redpanda:latest
+          command:
+            - /bin/bash
+            - -c
+            - |
+              rpk redpanda start --smp 1 --memory 1G --reserve-memory 0M \
+                --overprovisioned --node-id 0 \
+                --kafka-addr PLAINTEXT://0.0.0.0:9092 \
+                --advertise-kafka-addr PLAINTEXT://redpanda:9092 \
+                --set redpanda.max_compacted_log_segment_size=6291456
+          ports:
+            - name: kafka
+              containerPort: 9092
+            - name: admin
+              containerPort: 9644
+            - name: pandaproxy
+              containerPort: 8082
+          volumeMounts:
+            - name: redpanda-storage
+              mountPath: /var/lib/redpanda/data
+          resources:
+            requests:
+              cpu: "500m"
+            limits:
+              cpu: "500m"
+      volumes:
+        - name: redpanda-storage
+          persistentVolumeClaim:
+            claimName: redpanda-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redpanda
+spec:
+  selector:
+    app: redpanda
+  ports:
+    - name: kafka
+      port: 9092
+      targetPort: 9092
+    - name: admin
+      port: 9644
+      targetPort: 9644
+    - name: pandaproxy
+      port: 8082
+      targetPort: 8082
+  type: ClusterIP
+---
+# SharpMUSH
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sharpmush
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sharpmush
+  template:
+    metadata:
+      labels:
+        app: sharpmush
+    spec:
+      containers:
+        - name: sharpmush-server
+          image: sharpmush/sharpmush-server:dev
+          resources:
+            requests:
+              cpu: "500m"
+            limits:
+              cpu: "500m"
+          env:
+            - name: ARANGO_CONNECTION_STRING
+              value: "Server=http://arangodb:8529;User=root;Password=password;"
+            - name: KAFKA_HOST
+              value: redpanda
+            - name: KAFKA_PORT
+              value: "9092"
+---
+# ConnectionServer
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: connectionserver
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: connectionserver
+  template:
+    metadata:
+      labels:
+        app: connectionserver
+    spec:
+      containers:
+        - name: connectionserver
+          image: sharpmush/sharpmush-connectionserver:dev
+          command: ["dotnet", "SharpMUSH.ConnectionServer.dll"]
+          ports:
+            - containerPort: 4201
+          env:
+            - name: KAFKA_HOST
+              value: redpanda
+            - name: KAFKA_PORT
+              value: "9092"
+            - name: SHARPMUSH_HOST
+              value: sharpmush
+          resources:
+            requests:
+              cpu: "500m"
+            limits:
+              cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: connectionserver
+spec:
+  selector:
+    app: connectionserver
+  ports:
+    - port: 4201
+      targetPort: 4201
+  type: LoadBalancer

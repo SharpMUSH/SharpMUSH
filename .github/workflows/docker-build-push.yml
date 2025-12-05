@@ -1,0 +1,70 @@
+name: Build and Push Docker Images
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ '*' ]
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          # Use 'x' to always get the latest stable version
+          dotnet-version: 10.x
+          dotnet-quality: 'preview'
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build and publish SharpMUSH.Server
+        run: dotnet publish SharpMUSH.Server/SharpMUSH.Server.csproj -c Release -o ./publish/SharpMUSH.Server
+
+      - name: Build and publish SharpMUSH.ConnectionServer
+        run: dotnet publish SharpMUSH.ConnectionServer/SharpMUSH.ConnectionServer.csproj -c Release -o ./publish/SharpMUSH.ConnectionServer
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+            username: ${{ secrets.DOCKERHUB_USERNAME }}
+            password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract tag or set dev
+        id: vars
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+          else
+            TAG=dev
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Build and push SharpMUSH.Server image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: |
+            ${{ vars.IMAGE_SERVER }}:${{ steps.vars.outputs.tag }}
+            ${{ vars.IMAGE_SERVER }}:dev
+
+      - name: Build and push SharpMUSH.ConnectionServer image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: SharpMUSH.ConnectionServer/Dockerfile
+          push: true
+          tags: |
+            ${{ vars.IMAGE_CONN }}:${{ steps.vars.outputs.tag }}
+            ${{ vars.IMAGE_CONN }}:dev

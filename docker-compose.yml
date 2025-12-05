@@ -11,23 +11,136 @@ services:
     command: ["arangod", "--server.endpoint", "tcp://0.0.0.0:8529", "--server.endpoint", "unix:///var/run/arangodb3/arangodb.sock"]
     networks:
       - sharpmush-net
+  
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:latest
+    container_name: sharpmush-redpanda
+    command:
+      - redpanda
+      - start
+      - --smp
+      - "1"
+      - --memory
+      - 1G
+      - --reserve-memory
+      - 0M
+      - --overprovisioned
+      - --node-id
+      - "0"
+      - --kafka-addr
+      - PLAINTEXT://0.0.0.0:9092
+      - --advertise-kafka-addr
+      - PLAINTEXT://redpanda:9092
+      - --set
+      - redpanda.max_compacted_log_segment_size=6291456
+    ports:
+      - "9092:9092"   # Kafka API
+      - "9644:9644"   # Admin API
+      - "8082:8082"   # HTTP Proxy
+    volumes:
+      - redpanda-data:/var/lib/redpanda/data
+    networks:
+      - sharpmush-net
+    healthcheck:
+      test: ["CMD", "rpk", "cluster", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: sharpmush-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    ports:
+      - "9090:9090"  # Prometheus UI
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    networks:
+      - sharpmush-net
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: sharpmush-grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    ports:
+      - "3000:3000"  # Grafana UI
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    networks:
+      - sharpmush-net
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  connectionserver:
+    build:
+      context: ./
+      dockerfile: SharpMUSH.ConnectionServer/Dockerfile
+    environment:
+      - KAFKA_HOST=redpanda
+      - KAFKA_PORT=9092
+      - PROMETHEUS_URL=http://prometheus:9090
+    depends_on:
+      redpanda:
+        condition: service_healthy
+      prometheus:
+        condition: service_healthy
+    ports:
+      - "4201:4201" # Telnet
+      - "4202:4202" # ConnectionServer HTTP API
+      - "9091:9091" # Prometheus metrics endpoint
+    networks:
+      - sharpmush-net
+
   sharpmush-server:
     build:
       context: ./
+      dockerfile: Dockerfile
     environment:
       - ARANGO_CONNECTION_STRING=Server=http://unusedschim:8529;User=root;Password=password;
+      - KAFKA_HOST=redpanda
+      - KAFKA_PORT=9092
+      - PROMETHEUS_URL=http://prometheus:9090
     depends_on:
-      - arangodb
+      arangodb:
+        condition: service_started
+      redpanda:
+        condition: service_healthy
+      prometheus:
+        condition: service_healthy
+      connectionserver:
+        condition: service_started
     ports:
-      - "4201:4201"
-      - "4202:4202"
-      - "4203:4203"
+      - "9092:9092" # Prometheus metrics endpoint
     volumes:
       - arangodb-socket:/var/run/arangodb3
     networks:
       - sharpmush-net
+      
 volumes:
   arangodb-socket:
+  redpanda-data:
+  prometheus-data:
+  grafana-data:
+  
 networks:
   sharpmush-net:
     driver: bridge

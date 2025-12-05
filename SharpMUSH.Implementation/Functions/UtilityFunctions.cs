@@ -516,8 +516,7 @@ public partial class Functions
 	[SharpFunction(Name = "itext", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> IText(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// TODO: Implement itext - requires text file system integration
-		return ValueTask.FromResult(new CallState(Errors.NotSupported));
+		throw new NotImplementedException();
 	}
 
 	[SharpFunction(Name = "letq", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse | FunctionFlags.UnEvenArgsOnly)]
@@ -553,45 +552,128 @@ public partial class Functions
 	[SharpFunction(Name = "link", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> Link(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// TODO: Implement link - requires exit linking
-		return ValueTask.FromResult(new CallState(Errors.NotSupported));
+		throw new NotImplementedException();
 	}
 
-	[SharpFunction(Name = "list", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> List(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var args = parser.CurrentState.ArgumentsOrdered;
-		
+ [SharpFunction(Name = "list", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+ public static async ValueTask<CallState> List(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+ {
+		var args = parser.CurrentState.Arguments;
 		if (args.Count == 0)
 		{
-			return ValueTask.FromResult(CallState.Empty);
+			return CallState.Empty;
 		}
-		
-		// Get all arguments as plain text
-		var items = args.Values
-			.Select(x => MModule.plainText(x.Message))
-			.Where(x => !string.IsNullOrEmpty(x))
-			.ToList();
-		
-		if (items.Count == 0)
+
+		var option = args.TryGetValue("0", out var a0) ? MModule.plainText(a0.Message)!.Trim().ToLowerInvariant() : string.Empty;
+		var type = args.TryGetValue("1", out var a1) ? MModule.plainText(a1.Message)!.Trim().ToLowerInvariant() : string.Empty;
+
+		static string JoinSpace(IEnumerable<string> items) => string.Join(' ', items.Where(s => !string.IsNullOrWhiteSpace(s)));
+
+		switch (option)
 		{
-			return ValueTask.FromResult(CallState.Empty);
+			case "motd":
+			{
+				return await Motd(parser, default!);
+			}
+			case "wizmotd":
+			case "downmotd":
+			case "fullmotd":
+			{
+				return await GetWizardMotdAsync(parser, option);
+			}
+			case "functions":
+			{
+				var funcPairs = type switch
+				{
+					"builtin" => parser.FunctionLibrary.AsEnumerable().Where(kv => kv.Value.IsSystem),
+					"local" => parser.FunctionLibrary.AsEnumerable().Where(kv => !kv.Value.IsSystem),
+					_ => parser.FunctionLibrary.AsEnumerable()
+				};
+
+				var names = funcPairs
+					.Select(kv => kv.Value.LibraryInformation.Attribute.Name)
+					.Distinct(StringComparer.OrdinalIgnoreCase)
+					.OrderBy(s => s, StringComparer.OrdinalIgnoreCase)
+					.Select(s => s.ToLowerInvariant());
+				return new CallState(JoinSpace(names));
+			}
+			case "commands":
+			{
+				var cmdPairs = type switch
+				{
+					"builtin" => parser.CommandLibrary.AsEnumerable().Where(kv => kv.Value.IsSystem),
+					"local" => parser.CommandLibrary.AsEnumerable().Where(kv => !kv.Value.IsSystem),
+					_ => parser.CommandLibrary.AsEnumerable()
+				};
+
+				var names = cmdPairs
+					.Select(kv => kv.Value.LibraryInformation.Attribute.Name)
+					.Distinct(StringComparer.OrdinalIgnoreCase)
+					.OrderBy(s => s, StringComparer.OrdinalIgnoreCase)
+					.Select(s => s.ToLowerInvariant());
+				return new CallState(JoinSpace(names));
+			}
+			case "attribs":
+			{
+				var list = new List<string>();
+				var attributes = Mediator!.CreateStream(new GetAllAttributeEntriesQuery());
+				await foreach (var attr in attributes)
+				{
+					list.Add(attr.Name.ToLowerInvariant());
+				}
+				list.Sort(StringComparer.OrdinalIgnoreCase);
+				return new CallState(JoinSpace(list));
+			}
+			case "locks":
+			{
+				var lockNames = Enum.GetNames(typeof(LockType))
+					.Select(n => n.ToLowerInvariant())
+					.OrderBy(x => x);
+				return new CallState(JoinSpace(lockNames));
+			}
+			case "flags":
+			{
+				var list = new List<string>();
+				var flags = Mediator!.CreateStream(new GetAllObjectFlagsQuery());
+				await foreach (var f in flags)
+				{
+					list.Add(f.Name.ToLowerInvariant());
+				}
+				list.Sort(StringComparer.OrdinalIgnoreCase);
+				return new CallState(JoinSpace(list));
+			}
+			case "powers":
+			{
+				var list = new List<string>();
+				var powers = Mediator!.CreateStream(new GetPowersQuery());
+				await foreach (var p in powers)
+				{
+					list.Add(p.Name.ToLowerInvariant());
+				}
+				list.Sort(StringComparer.OrdinalIgnoreCase);
+				return new CallState(JoinSpace(list));
+			}
+			default:
+				return CallState.Empty;
 		}
-		else if (items.Count == 1)
+
+		static async ValueTask<CallState> GetWizardMotdAsync(IMUSHCodeParser parser, string option)
 		{
-			return ValueTask.FromResult(new CallState(items[0]));
+			var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+			if (!(executor.IsGod() || await executor.IsWizard()))
+			{
+				return new CallState("#-1 PERMISSION DENIED");
+			}
+
+			return option switch
+			{
+				"wizmotd" => await WizMotd(parser, default!),
+				"downmotd" => await DownMotd(parser, default!),
+				"fullmotd" => await FullMotd(parser, default!),
+				_ => CallState.Empty
+			};
 		}
-		else if (items.Count == 2)
-		{
-			return ValueTask.FromResult(new CallState($"{items[0]} and {items[1]}"));
-		}
-		else
-		{
-			// More than 2 items: "a, b, and c"
-			var result = string.Join(", ", items.Take(items.Count - 1)) + ", and " + items.Last();
-			return ValueTask.FromResult(new CallState(result));
-		}
-	}
+}
 
 	[SharpFunction(Name = "listq", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> ListQ(IMUSHCodeParser parser, SharpFunctionAttribute _2)

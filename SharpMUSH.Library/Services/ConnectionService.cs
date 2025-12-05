@@ -7,12 +7,12 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.Services;
 
-public class ConnectionService(IPublisher publisher) : IConnectionService
+public class ConnectionService(IPublisher publisher, ITelemetryService? telemetryService = null) : IConnectionService
 {
 	private readonly ConcurrentDictionary<long, IConnectionService.ConnectionData> _sessionState = [];
 	private readonly List<Action<(long handle, DBRef? Ref, IConnectionService.ConnectionState OldState, IConnectionService.ConnectionState NewState)>> _handlers = [];
 
-	public void Disconnect(long handle)
+	public async ValueTask Disconnect(long handle)
 	{
 		var get = Get(handle);
 		if (get is null) return;
@@ -23,9 +23,14 @@ public class ConnectionService(IPublisher publisher) : IConnectionService
 		}
 
 		// Publish notification for Mediator handlers
-		_ = publisher.Publish(new ConnectionStateChangeNotification(get.Handle, get.Ref, get.State, IConnectionService.ConnectionState.Disconnected));
+		await publisher.Publish(new ConnectionStateChangeNotification(get.Handle, get.Ref, get.State,
+			IConnectionService.ConnectionState.Disconnected));
 
 		_sessionState.Remove(handle, out _);
+		
+		// Record disconnection event
+		telemetryService?.RecordConnectionEvent("disconnected");
+		UpdateConnectionMetrics();
 	}
 
 	public IConnectionService.ConnectionData? Get(long handle) =>
@@ -44,7 +49,7 @@ public class ConnectionService(IPublisher publisher) : IConnectionService
 	public void ListenState(Action<(long, DBRef?, IConnectionService.ConnectionState, IConnectionService.ConnectionState)> handler) =>
 		_handlers.Add(handler);
 
-	public void Bind(long handle, DBRef player)
+	public async ValueTask Bind(long handle, DBRef player)
 	{
 		var get = Get(handle);
 		if (get is null) return;
@@ -57,9 +62,13 @@ public class ConnectionService(IPublisher publisher) : IConnectionService
 		{
 			handler(new ValueTuple<long, DBRef?, IConnectionService.ConnectionState, IConnectionService.ConnectionState>(handle, player, get.State, IConnectionService.ConnectionState.LoggedIn));
 		}
+		
+		// Record login event
+		telemetryService?.RecordConnectionEvent("logged_in");
+		UpdateConnectionMetrics();
 
-		// Publish notification for Mediator handlers
-		_ = publisher.Publish(new ConnectionStateChangeNotification(handle, player, get.State, IConnectionService.ConnectionState.LoggedIn));
+		await publisher.Publish(new ConnectionStateChangeNotification(handle, player, get.State,
+			IConnectionService.ConnectionState.LoggedIn));
 	}
 
 	public void Update(long handle, string key, string value)
@@ -76,7 +85,7 @@ public class ConnectionService(IPublisher publisher) : IConnectionService
 			});
 	}
 
-	public void Register(long handle, string ipaddr, string host,
+	public async ValueTask Register(long handle, string ipaddr, string host,
 		string connectionType,
 		Func<byte[], ValueTask> outputFunction, Func<byte[], ValueTask> promptOutputFunction, Func<Encoding> encoding,
 		ConcurrentDictionary<string, string>? metaData = null)
@@ -98,6 +107,19 @@ public class ConnectionService(IPublisher publisher) : IConnectionService
 		}
 
 		// Publish notification for Mediator handlers
-		_ = publisher.Publish(new ConnectionStateChangeNotification(handle, null, IConnectionService.ConnectionState.None, IConnectionService.ConnectionState.Connected));
+		await publisher.Publish(new ConnectionStateChangeNotification(handle, null, IConnectionService.ConnectionState.None, IConnectionService.ConnectionState.Connected));
+		
+		// Record connection event
+		telemetryService?.RecordConnectionEvent("connected");
+		UpdateConnectionMetrics();
+	}
+	
+	private void UpdateConnectionMetrics()
+	{
+		var activeConnections = _sessionState.Count(x => x.Value.State is IConnectionService.ConnectionState.Connected or IConnectionService.ConnectionState.LoggedIn);
+		var loggedInPlayers = _sessionState.Count(x => x.Value.State is IConnectionService.ConnectionState.LoggedIn);
+		
+		telemetryService?.SetActiveConnectionCount(activeConnections);
+		telemetryService?.SetLoggedInPlayerCount(loggedInPlayers);
 	}
 }

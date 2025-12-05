@@ -25,12 +25,14 @@ public interface IConnectionService
 		ConcurrentDictionary<string, string> Metadata
 	)
 	{
-		public TimeSpan? Connected => State == ConnectionState.Connected
+		public TimeSpan? Connected 
+			=> State is ConnectionState.Connected or ConnectionState.LoggedIn
 			? DateTimeOffset.UtcNow -
 			  DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(Metadata["ConnectionStartTime"]))
 			: null;
 
-		public TimeSpan? Idle => State == ConnectionState.Connected
+		public TimeSpan? Idle 
+			=> State is ConnectionState.Connected or ConnectionState.LoggedIn
 			? DateTimeOffset.UtcNow -
 			  DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(Metadata["LastConnectionSignal"]))
 			: null;
@@ -42,14 +44,14 @@ public interface IConnectionService
 		public string ConnectionType => Metadata[nameof(ConnectionType)];
 	}
 
-	void Register(long handle, string ipaddr, string host, string connectionType, Func<byte[], ValueTask> outputFunction, Func<byte[], ValueTask> promptOutputFunction, Func<Encoding> encoding,
+	ValueTask Register(long handle, string ipaddr, string host, string connectionType, Func<byte[], ValueTask> outputFunction, Func<byte[], ValueTask> promptOutputFunction, Func<Encoding> encoding,
 		ConcurrentDictionary<string, string>? metaData = null);
 
-	void Bind(long handle, DBRef player);
+	ValueTask Bind(long handle, DBRef player);
 
 	void Update(long handle, string key, string value);
 
-	void Disconnect(long handle);
+	ValueTask Disconnect(long handle);
 
 	/// <summary>
 	/// Gets the connection state of a handle.

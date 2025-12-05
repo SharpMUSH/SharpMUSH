@@ -531,9 +531,10 @@ public interface ISharpDatabase
 
 	ValueTask<AnySharpContainer> GetLocationAsync(AnySharpObject obj, int depth = 1, CancellationToken cancellationToken = default);
 
-	ValueTask<IAsyncEnumerable<AnySharpContent>?> GetContentsAsync(DBRef obj, CancellationToken cancellationToken = default);
+	ValueTask<IAsyncEnumerable<AnySharpContent>> GetContentsAsync(DBRef obj, CancellationToken cancellationToken = default);
 
-	ValueTask<IAsyncEnumerable<AnySharpContent>?> GetContentsAsync(AnySharpContainer node, CancellationToken cancellationToken = default);
+	ValueTask<IAsyncEnumerable<AnySharpContent>> GetContentsAsync(AnySharpContainer node,
+		CancellationToken cancellationToken = default);
 
 	ValueTask<IAsyncEnumerable<SharpExit>?> GetExitsAsync(DBRef obj, CancellationToken cancellationToken = default);
 

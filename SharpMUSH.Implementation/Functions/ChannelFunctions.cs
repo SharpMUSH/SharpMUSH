@@ -65,7 +65,7 @@ public partial class Functions
 			return new CallState("#-1 You are not a member of that channel.");
 		}
 
-		using (Logger!.BeginScope("<{DbRef} {Category}: {Channel}.", 
+		using (Logger!.BeginScope("<{DbRef}> {Category}: {Channel}.", 
 			       executor.Object().ToString(), 
 			       "Channel",
 			       channel.Name.ToPlainText()))

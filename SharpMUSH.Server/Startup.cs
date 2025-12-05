@@ -1,14 +1,14 @@
 ﻿using Core.Arango;
 using Core.Arango.Serilog;
 using Core.Arango.Transport;
+using MassTransit;
 using Mediator;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Newtonsoft.Json;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
 using Quartz;
 using Serilog;
 using Serilog.Events;
@@ -26,11 +26,15 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Messaging.Extensions;
+using SharpMUSH.Server.Strategy.ArangoDB;
+using SharpMUSH.Server.Strategy.Prometheus;
+using ZiggyCreatures.Caching.Fusion;
 using TaskScheduler = SharpMUSH.Library.Services.TaskScheduler;
 
 namespace SharpMUSH.Server;
 
-public class Startup(ArangoConfiguration config, string colorFile)
+public class Startup(ArangoConfiguration arangoConfig, string colorFile, PrometheusStrategy prometheusStrategy)
 {
 	// This method gets called by the runtime. Use this method to add services to the container.
 	// For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
@@ -84,6 +88,14 @@ public class Startup(ArangoConfiguration config, string colorFile)
 		);
 		services.AddSingleton<IPasswordService, PasswordService>();
 		services.AddSingleton<IPermissionService, PermissionService>();
+		services.AddSingleton<ITelemetryService, TelemetryService>();
+		services.AddSingleton<IPrometheusQueryService>(sp =>
+		{
+			var httpClient = sp.GetRequiredService<IHttpClientFactory>().CreateClient();
+			var logger = sp.GetRequiredService<ILogger<PrometheusQueryService>>();
+			var prometheusUrl = prometheusStrategy.GetPrometheusUrl();
+			return new PrometheusQueryService(httpClient, logger, prometheusUrl);
+		});
 		services.AddSingleton<INotifyService, NotifyService>();
 		services.AddSingleton<ILocateService, LocateService>();
 		services.AddSingleton<IMoveService, MoveService>();
@@ -119,25 +131,46 @@ public class Startup(ArangoConfiguration config, string colorFile)
 		services.AddSingleton<IOptionsWrapper<ColorsOptions>, Library.Services.OptionsWrapper<ColorsOptions>>();
 		services.AddHttpClient();
 		services.AddMediator();
-		services.AddFusionCache();
-		services.AddArango((x, arango) =>
-		{
-			if (config.ConnectionString is not null)
+
+		// Configure MassTransit with Kafka/RedPanda for message queue integration
+		var kafkaHost = Environment.GetEnvironmentVariable("KAFKA_HOST") ?? "localhost";
+
+		services.AddMainProcessMessaging(
+			options =>
 			{
-				arango.ConnectionString = config.ConnectionString;
-			}
-			arango.HttpClient = config.HttpClient;
-			arango.Serializer = config.Serializer;
-			arango.Transport = new ArangoHttpTransport(arango);
+				options.Host = kafkaHost;
+				options.Port = 9092;
+				options.MaxMessageBytes = 6 * 1024 * 1024; // 6MB
+			},
+			x =>
+			{
+				// Register consumers for input messages from ConnectionServer
+				x.AddConsumer<Consumers.TelnetInputConsumer>();
+				x.AddConsumer<Consumers.GMCPSignalConsumer>();
+				x.AddConsumer<Consumers.MSDPUpdateConsumer>();
+				x.AddConsumer<Consumers.NAWSUpdateConsumer>();
+				x.AddConsumer<Consumers.ConnectionEstablishedConsumer>();
+				x.AddConsumer<Consumers.ConnectionClosedConsumer>();
+			});
+
+		services.AddFusionCache().TryWithAutoSetup();
+		services.AddArango((_, arango) =>
+		{
+			arango.ConnectionString = arangoConfig.ConnectionString;
+			arango.HttpClient = arangoConfig.HttpClient;
 		});
-		services.AddQuartz(x => { x.UseInMemoryStore(); });
+		services.AddQuartz(x =>
+		{
+			x.UseInMemoryStore();
+		});
 		services.AddAuthorization();
 		services.AddRazorPages();
 		services.AddControllers();
 		services.AddQuartzHostedService();
 		services.AddHostedService<StartupHandler>();
 		services.AddHostedService<Services.ConnectionLoggingService>();
-		
+		services.AddHostedService<Services.HealthMonitoringService>();
+
 		services.AddLogging(logging =>
 		{
 			logging.ClearProviders();
@@ -161,8 +194,18 @@ public class Startup(ArangoConfiguration config, string colorFile)
 						Period = TimeSpan.FromSeconds(2),
 						EagerlyEmitFirstEvent = true,
 					}))
-				.CreateLogger());;
+				.CreateLogger());
+			;
 		});
 
+		// Configure OpenTelemetry Metrics for Prometheus
+		services.AddOpenTelemetry()
+			.ConfigureResource(resource => resource
+				.AddService("SharpMUSH.Server", serviceVersion: "1.0.0"))
+			.WithMetrics(metrics => metrics
+				.AddMeter("SharpMUSH")
+				.AddRuntimeInstrumentation()
+				.AddConsoleExporter()
+				.AddPrometheusExporter());
 	}
 }
