@@ -768,7 +768,7 @@ public partial class Functions
 				else if (exitObj.IsThing || exitObj.IsPlayer)
 				{
 					// Set home for thing or player
-					return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+					return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 						executor, executor, destName, LocateFlags.All,
 						async destObj =>
 						{
@@ -786,7 +786,7 @@ public partial class Functions
 				else if (exitObj.IsRoom)
 				{
 					// Set drop-to for room
-					return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+					return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 						executor, executor, destName, LocateFlags.All,
 						async destObj =>
 						{
@@ -1199,12 +1199,13 @@ public partial class Functions
 					var contents = await System.Linq.AsyncEnumerable.ToArrayAsync(
 						Mediator!.CreateStream(new GetContentsQuery(container)));
 					
+					// Compile regex once outside the loop
+					var regexPattern = "^" + Regex.Escape(pattern).Replace("\\*", ".*").Replace("\\?", ".") + "$";
+					var regex = new Regex(regexPattern, RegexOptions.IgnoreCase | RegexOptions.Compiled);
+					
 					foreach (var content in contents)
 					{
 						var contentName = content.Object().Name;
-						// Simple wildcard matching
-						var regex = new Regex("^" + Regex.Escape(pattern).Replace("\\*", ".*").Replace("\\?", ".") + "$", 
-							RegexOptions.IgnoreCase);
 						if (regex.IsMatch(contentName))
 						{
 							matchingObjects.Add(content.Object().DBRef.ToString());
