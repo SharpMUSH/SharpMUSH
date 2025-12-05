@@ -128,12 +128,21 @@ public class MoveService(
 		
 		// 4. Get old location for hooks
 		var oldLocation = await objectToMove.Match<ValueTask<DBRef>>(
-			async player => await player.Location.WithCancellation(CancellationToken.None)
-				.ContinueWith(t => t.Result.Object().DBRef, CancellationToken.None),
-			async exit => await exit.Location.WithCancellation(CancellationToken.None)
-				.ContinueWith(t => t.Result.Object().DBRef, CancellationToken.None),
-			async thing => await thing.Location.WithCancellation(CancellationToken.None)
-				.ContinueWith(t => t.Result.Object().DBRef, CancellationToken.None));
+			async player =>
+			{
+				var location = await player.Location.WithCancellation(CancellationToken.None);
+				return location.Object().DBRef;
+			},
+			async exit =>
+			{
+				var location = await exit.Location.WithCancellation(CancellationToken.None);
+				return location.Object().DBRef;
+			},
+			async thing =>
+			{
+				var location = await thing.Location.WithCancellation(CancellationToken.None);
+				return location.Object().DBRef;
+			});
 		
 		// 5. Trigger LEAVE hooks on old location (if not silent)
 		if (!silent && oldLocation != destObj.DBRef)
@@ -216,12 +225,21 @@ public class MoveService(
 		
 		// If moving from a location, check LEAVE lock on current location
 		var currentLocation = await objectToMove.Match<ValueTask<DBRef?>>(
-			async player => await player.Location.WithCancellation(CancellationToken.None)
-				.ContinueWith(t => (DBRef?)t.Result.Object().DBRef, CancellationToken.None),
-			async exit => await exit.Location.WithCancellation(CancellationToken.None)
-				.ContinueWith(t => (DBRef?)t.Result.Object().DBRef, CancellationToken.None),
-			async thing => await thing.Location.WithCancellation(CancellationToken.None)
-				.ContinueWith(t => (DBRef?)t.Result.Object().DBRef, CancellationToken.None));
+			async player =>
+			{
+				var location = await player.Location.WithCancellation(CancellationToken.None);
+				return (DBRef?)location.Object().DBRef;
+			},
+			async exit =>
+			{
+				var location = await exit.Location.WithCancellation(CancellationToken.None);
+				return (DBRef?)location.Object().DBRef;
+			},
+			async thing =>
+			{
+				var location = await thing.Location.WithCancellation(CancellationToken.None);
+				return (DBRef?)location.Object().DBRef;
+			});
 		
 		if (currentLocation.HasValue)
 		{
@@ -546,10 +564,10 @@ public class MoveService(
 		var oldLocQuery = await mediator.Send(new GetObjectNodeQuery(oldLocation));
 		var newLocQuery = await mediator.Send(new GetObjectNodeQuery(newLocation));
 		
-		if (oldLocQuery.IsT0 && newLocQuery.IsT0)
+		if (!oldLocQuery.IsNone && !newLocQuery.IsNone)
 		{
-			var oldLocName = oldLocQuery.AsT0.Object.Name;
-			var newLocName = newLocQuery.AsT0.Object.Name;
+			var oldLocName = oldLocQuery.Known.Object().Name;
+			var newLocName = newLocQuery.Known.Object().Name;
 			
 			foreach (var content in contents)
 			{
