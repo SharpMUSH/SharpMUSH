@@ -794,31 +794,36 @@ public partial class Commands
 				continue;
 			}
 
-			// Check for containment loops before teleporting
-			if (await MoveService!.WouldCreateLoop(targetContent, destinationContainer))
-			{
-				await NotifyService!.Notify(executor, $"Cannot teleport {target.Object().Name} - it would create a containment loop.");
-				continue;
-			}
-
-			// Move with context for event triggering
+			// Execute the move using the MoveService which handles:
+			// - Containment loop checking
+			// - Permission validation
+			// - Enter/Leave/Teleport hook triggering
+			// - Notifications
 			var isSilent = parser.CurrentState.Switches.Contains("QUIET");
-			await Mediator!.Send(new MoveObjectCommand(
-				targetContent, 
+			var moveResult = await MoveService!.ExecuteMoveAsync(
+				parser,
+				targetContent,
 				destinationContainer,
 				executor.Object().DBRef,
-				isSilent,
-				"@teleport"));
-
-			// TODO: Notify the target that they have been teleported - if Quiet switch is not present.
-			// TODO: Evaluate room verbs upon teleportation.
-			// TODO: If the target is a player, force a LOOK
-
-			// CONSIDER:
-			// There are two ways to move a player: GOTO (exits) and TELEPORT (directly).
-			// Rooms evaluate OENTER either way.
-			// Is this a reason to make this into a 'move service' just for the movement itself?
-			// Or just a common static function?
+				"teleport",
+				isSilent);
+			
+			if (moveResult.IsT1)
+			{
+				await NotifyService!.Notify(executor, moveResult.AsT1.Value);
+				continue;
+			}
+			
+			// If the target is a player and not silent, notify them of the teleport
+			if (target.IsPlayer && !isSilent)
+			{
+				// Notify the target player that they were teleported
+				await NotifyService!.Notify(target.Object().DBRef, "You have been teleported.");
+				
+				// TODO: Show the target player their new location (equivalent to LOOK)
+				// This requires executing commands in the target's parser context, not the executor's
+				// For now, the player can manually type 'look' to see their surroundings
+			}
 		}
 
 		return new CallState(destination.ToString());
