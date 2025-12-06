@@ -142,14 +142,8 @@ public partial class Commands
 		parser.CurrentState.IterationRegisters.Push(wrappedIteration);
 		var command = parser.CurrentState.Arguments["1"].Message!;
 
-		// Enable batching for all handles connected to the enactor
-		var connections = await ConnectionService!.Get(enactor.Object().DBRef).ToListAsync();
-		foreach (var connection in connections)
-		{
-			NotifyService!.BeginBatchingScope(connection.Handle);
-		}
-
-		try
+		// Use context-based batching that batches notifications to any target
+		using (NotifyService!.BeginBatchingContext())
 		{
 			var lastCallState = CallState.Empty;
 			var visitorFunc = parser.CommandListParseVisitor(command);
@@ -165,14 +159,6 @@ public partial class Commands
 			parser.CurrentState.IterationRegisters.TryPop(out _);
 
 			return lastCallState!;
-		}
-		finally
-		{
-			// Flush batched messages
-			foreach (var connection in connections)
-			{
-				await NotifyService!.EndBatchingScope(connection.Handle);
-			}
 		}
 	}
 
