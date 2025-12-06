@@ -123,7 +123,6 @@ public class MoveService(
 		}
 		
 		// 3. Calculate and check move cost
-		var moveCost = await CalculateMoveCostAsync(objectToMove, destination);
 		// TODO: Implement quota checking and deduction when quota system is available
 		
 		// 4. Get old location for hooks
