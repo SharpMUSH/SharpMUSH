@@ -938,11 +938,23 @@ public partial class Commands
 			return CallState.Empty;
 		}
 		
-		// Move object to current location
+		// Move object to current location using MoveService for proper hook triggering
 		var contentToDrop = objectToDrop.AsContent;
-		await Mediator!.Send(new MoveObjectCommand(contentToDrop, currentRoom));
+		var moveResult = await MoveService!.ExecuteMoveAsync(
+			parser,
+			contentToDrop,
+			currentRoom,
+			executor.Object().DBRef,
+			"drop",
+			silent: false);
 		
-		// Trigger @drop attribute on the object
+		if (moveResult.IsT1)
+		{
+			await NotifyService!.Notify(executor, moveResult.AsT1.Value);
+			return CallState.Empty;
+		}
+		
+		// Trigger @drop attribute on the object (command-specific attribute)
 		var dropAttr = await AttributeService!.GetAttributeAsync(executor, objectToDrop, AttrDrop, IAttributeService.AttributeMode.Read, true);
 		if (dropAttr.IsAttribute && dropAttr.AsT0.Length > 0)
 		{
@@ -1363,12 +1375,24 @@ public partial class Commands
 			async exit => await exit.Home.WithCancellation(CancellationToken.None),
 			async thing => await thing.Location.WithCancellation(CancellationToken.None));
 
-		// Move executor into object
+		// Move executor into object using MoveService for proper hook triggering
 		var executorAsContent = executor.AsContent;
 		var containerToEnter = objectToEnter.AsContainer;
-		await Mediator!.Send(new MoveObjectCommand(executorAsContent, containerToEnter));
+		var moveResult = await MoveService!.ExecuteMoveAsync(
+			parser,
+			executorAsContent,
+			containerToEnter,
+			executor.Object().DBRef,
+			"enter",
+			silent: false);
+		
+		if (moveResult.IsT1)
+		{
+			await NotifyService!.Notify(executor, moveResult.AsT1.Value);
+			return CallState.Empty;
+		}
 
-		// Trigger @enter attribute (shown to entering player)
+		// Trigger @enter attribute (shown to entering player) (command-specific attribute)
 		var enterAttr = await AttributeService!.GetAttributeAsync(executor, objectToEnter, AttrEnter, IAttributeService.AttributeMode.Read, true);
 		if (enterAttr.IsAttribute && enterAttr.AsT0.Length > 0)
 		{
@@ -1578,19 +1602,24 @@ public partial class Commands
 			return CallState.Empty;
 		}
 		
-		// Check for containment loops
+		// Move object to executor's inventory using MoveService for proper hook triggering
 		var executorContainer = executor.AsContainer;
-		if (await MoveService!.WouldCreateLoop(objectToGet.AsContent, executorContainer))
+		var contentToGet = objectToGet.AsContent;
+		var moveResult = await MoveService!.ExecuteMoveAsync(
+			parser,
+			contentToGet,
+			executorContainer,
+			executor.Object().DBRef,
+			"get",
+			silent: false);
+		
+		if (moveResult.IsT1)
 		{
-			await NotifyService!.Notify(executor, "You can't pick that up - it would create a containment loop.");
+			await NotifyService!.Notify(executor, moveResult.AsT1.Value);
 			return CallState.Empty;
 		}
 		
-		// Move object to executor's inventory
-		var contentToGet = objectToGet.AsContent;
-		await Mediator!.Send(new MoveObjectCommand(contentToGet, executorContainer));
-		
-		// Trigger @success attribute on the object
+		// Trigger @success attribute on the object (command-specific attribute)
 		var successAttr = await AttributeService!.GetAttributeAsync(executor, objectToGet, AttrSuccess, IAttributeService.AttributeMode.Read, true);
 		if (successAttr.IsAttribute && successAttr.AsT0.Length > 0)
 		{
@@ -2019,17 +2048,22 @@ public partial class Commands
 			return CallState.Empty;
 		}
 		
-		// Check for containment loops before moving
-		if (await MoveService!.WouldCreateLoop(executor.AsContent, destinationLocation))
+		// Move to the container's location using MoveService for proper hook triggering
+		var moveResult = await MoveService!.ExecuteMoveAsync(
+			parser,
+			executor.AsContent,
+			destinationLocation,
+			executor.Object().DBRef,
+			"leave",
+			silent: false);
+		
+		if (moveResult.IsT1)
 		{
-			await NotifyService!.Notify(executor, "You can't leave - it would create a containment loop.");
+			await NotifyService!.Notify(executor, moveResult.AsT1.Value);
 			return CallState.Empty;
 		}
 		
-		// Move to the container's location
-		await Mediator!.Send(new MoveObjectCommand(executor.AsContent, destinationLocation));
-		
-		// Trigger @leave attribute on the container (message to leaver)
+		// Trigger @leave attribute on the container (message to leaver) (command-specific attribute)
 		var leaveAttr = await AttributeService!.GetAttributeAsync(executor, container, AttrLeave, IAttributeService.AttributeMode.Read, true);
 		if (leaveAttr.IsAttribute && leaveAttr.AsT0.Length > 0)
 		{
