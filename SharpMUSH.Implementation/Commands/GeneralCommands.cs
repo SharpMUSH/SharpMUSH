@@ -828,7 +828,12 @@ public partial class Commands
 				continue;
 			}
 			
-			// TODO: If the target is a player, force a LOOK
+			// If the target is a player and not silent, force a LOOK at the new location
+			if (target.IsPlayer && !isSilent)
+			{
+				// Execute LOOK command for the player
+				await parser.CommandParse(MModule.single("look"));
+			}
 		}
 
 		return new CallState(destination.ToString());
