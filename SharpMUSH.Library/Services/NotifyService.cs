@@ -27,9 +27,6 @@ public class NotifyService(IBus publishEndpoint, IConnectionService connections,
 	}
 	public async ValueTask Notify(DBRef who, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
-		var startTime = System.Diagnostics.Stopwatch.GetTimestamp();
-		await ValueTask.CompletedTask;
-		
 		if (what.Match(
 			markupString => MModule.getLength(markupString) == 0,
 			str => str.Length == 0
@@ -45,15 +42,36 @@ public class NotifyService(IBus publishEndpoint, IConnectionService connections,
 
 		var bytes = Encoding.UTF8.GetBytes(text);
 
+		var startTime = System.Diagnostics.Stopwatch.GetTimestamp();
 		var recipientCount = 0;
+		var batchedCount = 0;
+		
 		await foreach (var handle in connections.Get(who).Select(x => x.Handle))
 		{
-			await publishEndpoint.Publish(new TelnetOutputMessage(handle, bytes));
+			// Check if this handle has an active batching scope
+			if (_batchingStates.TryGetValue(handle, out var state))
+			{
+				// Batching is active, accumulate the message
+				lock (state.Lock)
+				{
+					state.AccumulatedMessages.Add(bytes);
+				}
+				batchedCount++;
+			}
+			else
+			{
+				// No batching scope active, publish immediately
+				await publishEndpoint.Publish(new TelnetOutputMessage(handle, bytes));
+			}
 			recipientCount++;
 		}
 		
-		var elapsedMs = System.Diagnostics.Stopwatch.GetElapsedTime(startTime).TotalMilliseconds;
-		telemetryService?.RecordNotificationSpeed(type.ToString(), elapsedMs, recipientCount);
+		// Only track telemetry for non-batched messages
+		if (recipientCount > batchedCount)
+		{
+			var elapsedMs = System.Diagnostics.Stopwatch.GetElapsedTime(startTime).TotalMilliseconds;
+			telemetryService?.RecordNotificationSpeed(type.ToString(), elapsedMs, recipientCount - batchedCount);
+		}
 	}
 
 	public ValueTask Notify(AnySharpObject who, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)

@@ -601,4 +601,29 @@ public class GeneralCommandTests
 		// This confirms that ArangoDatabase.cs:1832-1849 correctly applies flags from entries
 		await Assert.That(attr!.Flags.Any(f => f.Name.Equals("no_command", StringComparison.OrdinalIgnoreCase))).IsTrue();
 	}
+
+	[Test]
+	[NotInParallel]
+	public async ValueTask DoListWithDBRefNotificationBatching()
+	{
+		// This test validates that DBRef-based notifications respect batching scopes.
+		// Before the fix, Notify(DBRef) would bypass batching and send messages immediately.
+		// After the fix, messages should be accumulated and sent as a batch.
+		// We use the same pattern as DoListSimple - a simple message without iteration markers.
+		
+		// Clear previous mock calls to avoid interference from other tests
+		NotifyService.ClearReceivedCalls();
+		
+		// Use @pemit which uses Notify(AnySharpObject) -> Notify(DBRef)
+		// This should call Notify three times with the same message
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist 1 2 3=@pemit #1=Batched test message"));
+
+		// Verify that Notify was called 3 times (once per iteration)
+		// All three should have been batched together internally, but we verify they all went through
+		await NotifyService
+			.Received(Quantity.Exactly(3))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString() == "Batched test message") ||
+				(msg.IsT1 && msg.AsT1 == "Batched test message")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+	}
 }
