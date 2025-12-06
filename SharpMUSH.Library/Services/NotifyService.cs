@@ -42,9 +42,8 @@ public class NotifyService(IBus publishEndpoint, IConnectionService connections,
 
 		var bytes = Encoding.UTF8.GetBytes(text);
 
-		var startTime = System.Diagnostics.Stopwatch.GetTimestamp();
-		var recipientCount = 0;
-		var batchedCount = 0;
+		var nonBatchedCount = 0;
+		long startTime = 0;
 		
 		await foreach (var handle in connections.Get(who).Select(x => x.Handle))
 		{
@@ -56,21 +55,26 @@ public class NotifyService(IBus publishEndpoint, IConnectionService connections,
 				{
 					state.AccumulatedMessages.Add(bytes);
 				}
-				batchedCount++;
 			}
 			else
 			{
+				// Start timing on first non-batched message
+				if (nonBatchedCount == 0)
+				{
+					startTime = System.Diagnostics.Stopwatch.GetTimestamp();
+				}
+				
 				// No batching scope active, publish immediately
 				await publishEndpoint.Publish(new TelnetOutputMessage(handle, bytes));
+				nonBatchedCount++;
 			}
-			recipientCount++;
 		}
 		
-		// Only track telemetry for non-batched messages
-		if (recipientCount > batchedCount)
+		// Track telemetry only for non-batched messages
+		if (nonBatchedCount > 0)
 		{
 			var elapsedMs = System.Diagnostics.Stopwatch.GetElapsedTime(startTime).TotalMilliseconds;
-			telemetryService?.RecordNotificationSpeed(type.ToString(), elapsedMs, recipientCount - batchedCount);
+			telemetryService?.RecordNotificationSpeed(type.ToString(), elapsedMs, nonBatchedCount);
 		}
 	}
 
