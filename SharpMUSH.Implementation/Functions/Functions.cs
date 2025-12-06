@@ -18,8 +18,8 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 	private static ILocateService? LocateService { get; set; }
 	private static IAttributeService? AttributeService { get; set; }
 	private static INotifyService? NotifyService { get; set; }
-	private static IPermissionService? PermissionService {get;set;}
-	private static ICommandDiscoveryService? CommandDiscoveryService {get;set; }
+	private static IPermissionService? PermissionService { get; set; }
+	private static ICommandDiscoveryService? CommandDiscoveryService { get; set; }
 	private static IOptionsWrapper<SharpMUSHOptions>? Configuration { get; set; }
 	private static IOptionsWrapper<ColorsOptions>? ColorConfiguration { get; set; }
 	private static IPasswordService? PasswordService { get; set; }
@@ -42,11 +42,11 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 
 	public Functions(
 		ILogger<Functions> logger,
-		IMediator mediator, 
-		ILocateService locateService, 
+		IMediator mediator,
+		ILocateService locateService,
 		IAttributeService attributeService,
-		INotifyService notifyService, 
-		IPermissionService permissionService, 
+		INotifyService notifyService,
+		IPermissionService permissionService,
 		ICommandDiscoveryService commandDiscoveryService,
 		IOptionsWrapper<SharpMUSHOptions> configuration,
 		IOptionsWrapper<ColorsOptions> colorOptions,
@@ -66,7 +66,7 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 		Logger = logger;
 		Mediator = mediator;
 		LocateService = locateService;
-		AttributeService = attributeService;	
+		AttributeService = attributeService;
 		NotifyService = notifyService;
 		PermissionService = permissionService;
 		CommandDiscoveryService = commandDiscoveryService;
@@ -84,12 +84,12 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 		TelemetryService = telemetryService;
 		MoveService = moveService;
 		EventService = eventService;
-		
+
 		foreach (var command in Generated.FunctionLibrary.Functions)
 		{
 			_functionLibrary.Add(command.Key, (command.Value, true));
-			
-			foreach(var alias in Configurable.FunctionAliases.TryGetValue(command.Key, out var aliasList) ? aliasList : [])
+
+			foreach (var alias in Configurable.FunctionAliases.TryGetValue(command.Key, out var aliasList) ? aliasList : [])
 			{
 				_functionLibrary.Add(alias, (command.Value, true));
 			}
