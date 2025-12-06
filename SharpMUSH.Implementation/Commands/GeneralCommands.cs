@@ -828,11 +828,15 @@ public partial class Commands
 				continue;
 			}
 			
-			// If the target is a player and not silent, force a LOOK at the new location
+			// If the target is a player and not silent, notify them of the teleport
 			if (target.IsPlayer && !isSilent)
 			{
-				// Execute LOOK command for the player
-				await parser.CommandParse(MModule.single("look"));
+				// Notify the target player that they were teleported
+				await NotifyService!.Notify(target.Object().DBRef, "You have been teleported.");
+				
+				// TODO: Show the target player their new location (equivalent to LOOK)
+				// This requires executing commands in the target's parser context, not the executor's
+				// For now, the player can manually type 'look' to see their surroundings
 			}
 		}
 
