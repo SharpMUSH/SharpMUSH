@@ -18,12 +18,34 @@ namespace SharpMUSH.Library.Services;
 public class NotifyService(IBus publishEndpoint, IConnectionService connections, ITelemetryService? telemetryService = null) : INotifyService
 {
 	private readonly ConcurrentDictionary<long, BatchingState> _batchingStates = new();
+	private static readonly AsyncLocal<BatchingContext?> _batchingContext = new();
 
 	private class BatchingState
 	{
 		public int RefCount { get; set; }
 		public List<byte[]> AccumulatedMessages { get; } = [];
 		public object Lock { get; } = new();
+	}
+
+	private class BatchingContext
+	{
+		public int RefCount { get; set; }
+		public ConcurrentDictionary<long, List<byte[]>> AccumulatedMessages { get; } = new();
+		public object Lock { get; } = new();
+	}
+
+	private class BatchingScopeDisposable(NotifyService service) : IDisposable
+	{
+		private bool _disposed;
+
+		public void Dispose()
+		{
+			if (!_disposed)
+			{
+				_disposed = true;
+				service.EndBatchingContextInternal().AsTask().Wait();
+			}
+		}
 	}
 	public async ValueTask Notify(DBRef who, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
@@ -42,6 +64,23 @@ public class NotifyService(IBus publishEndpoint, IConnectionService connections,
 
 		var bytes = Encoding.UTF8.GetBytes(text);
 
+		// Check if we're in a batching context (AsyncLocal-based batching)
+		var context = _batchingContext.Value;
+		if (context != null)
+		{
+			// Accumulate messages for all handles in the context
+			await foreach (var handle in connections.Get(who).Select(x => x.Handle))
+			{
+				var messages = context.AccumulatedMessages.GetOrAdd(handle, _ => []);
+				lock (messages)
+				{
+					messages.Add(bytes);
+				}
+			}
+			return;
+		}
+
+		// Fall back to handle-based batching or immediate publish
 		var nonBatchedCount = 0;
 		long startTime = 0;
 		
@@ -270,6 +309,83 @@ public class NotifyService(IBus publishEndpoint, IConnectionService connections,
 				}
 
 				await publishEndpoint.Publish(new TelnetOutputMessage(handle, combined));
+			}
+		}
+	}
+
+	/// <summary>
+	/// Begin a context-based batching scope that batches notifications to ANY target.
+	/// Returns an IDisposable that should be disposed to end the scope and flush messages.
+	/// Supports ref-counting for nested scopes.
+	/// </summary>
+	public IDisposable BeginBatchingContext()
+	{
+		var context = _batchingContext.Value;
+		if (context != null)
+		{
+			// Already in a batching context, increment ref count
+			lock (context.Lock)
+			{
+				context.RefCount++;
+			}
+		}
+		else
+		{
+			// Create new batching context
+			_batchingContext.Value = new BatchingContext { RefCount = 1 };
+		}
+
+		return new BatchingScopeDisposable(this);
+	}
+
+	private async ValueTask EndBatchingContextInternal()
+	{
+		var context = _batchingContext.Value;
+		if (context == null)
+		{
+			return;
+		}
+
+		Dictionary<long, List<byte[]>>? messagesToFlush = null;
+
+		lock (context.Lock)
+		{
+			context.RefCount--;
+			if (context.RefCount <= 0)
+			{
+				// This is the outermost scope, collect all messages to flush
+				messagesToFlush = new Dictionary<long, List<byte[]>>(context.AccumulatedMessages);
+				_batchingContext.Value = null;
+			}
+		}
+
+		// Flush messages outside the lock
+		if (messagesToFlush != null)
+		{
+			foreach (var (handle, messages) in messagesToFlush)
+			{
+				if (messages.Count > 0)
+				{
+					var totalSize = messages.Sum(m => m.Length) + (messages.Count - 1) * 2; // +2 for \r\n
+					var combined = new byte[totalSize];
+					var offset = 0;
+
+					for (var i = 0; i < messages.Count; i++)
+					{
+						var message = messages[i];
+						Array.Copy(message, 0, combined, offset, message.Length);
+						offset += message.Length;
+
+						// Add \r\n between messages (not after the last one)
+						if (i < messages.Count - 1)
+						{
+							combined[offset++] = (byte)'\r';
+							combined[offset++] = (byte)'\n';
+						}
+					}
+
+					await publishEndpoint.Publish(new TelnetOutputMessage(handle, combined));
+				}
 			}
 		}
 	}

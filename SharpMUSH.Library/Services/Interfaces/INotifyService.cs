@@ -49,4 +49,11 @@ public interface INotifyService
 	/// If this is the outermost scope (ref count reaches 0), all accumulated messages are published.
 	/// </summary>
 	ValueTask EndBatchingScope(long handle);
+
+	/// <summary>
+	/// Begin a context-based batching scope that batches notifications to ANY target.
+	/// Returns an IDisposable that should be disposed to end the scope and flush messages.
+	/// Supports ref-counting for nested scopes.
+	/// </summary>
+	IDisposable BeginBatchingContext();
 }
