@@ -141,13 +141,55 @@ public class WarningService(
 	{
 		var hasWarnings = false;
 
-		// TODO: Implement exit-specific checks
-		// - Unlinked exits
-		// - Variable exits without DESTINATION/EXITTO
-		// - Missing messages (SUCCESS, OSUCCESS, ODROP, FAILURE)
-		// - Missing description
-		// - One-way exits
-		// - Multiple return exits
+		// Check for unlinked exits
+		if (warnings.HasFlag(WarningType.ExitUnlinked))
+		{
+			if (target.IsExit)
+			{
+				// For exits, check if the destination is valid
+				// TODO: Need to determine how to check if an exit is unlinked
+				// This may require checking if destination is set to a special "NOTHING" value
+				// For now, we'll skip this check until we understand the data model better
+			}
+		}
+
+		// Check for missing description
+		if (warnings.HasFlag(WarningType.ExitDesc))
+		{
+			var desc = await attributeService.GetAttributeAsync(checker, target, "DESCRIBE", IAttributeService.AttributeMode.Read, false);
+			if (desc.IsT1)
+			{
+				await Complain(checker, target, "exit-desc", "Exit has no description.");
+				hasWarnings = true;
+			}
+		}
+
+		// Check for missing messages
+		if (warnings.HasFlag(WarningType.ExitMsgs))
+		{
+			// Check unlocked exit messages: SUCCESS, OSUCCESS, ODROP
+			var success = await attributeService.GetAttributeAsync(checker, target, "SUCCESS", IAttributeService.AttributeMode.Read, false);
+			var osuccess = await attributeService.GetAttributeAsync(checker, target, "OSUCCESS", IAttributeService.AttributeMode.Read, false);
+			var odrop = await attributeService.GetAttributeAsync(checker, target, "ODROP", IAttributeService.AttributeMode.Read, false);
+			
+			if (success.IsT1 || osuccess.IsT1 || odrop.IsT1)
+			{
+				await Complain(checker, target, "exit-msgs", "Exit is missing messages (SUCCESS, OSUCCESS, or ODROP).");
+				hasWarnings = true;
+			}
+			
+			// Check locked exit messages: FAILURE
+			var failure = await attributeService.GetAttributeAsync(checker, target, "FAILURE", IAttributeService.AttributeMode.Read, false);
+			if (failure.IsT1)
+			{
+				await Complain(checker, target, "exit-msgs", "Exit is missing FAILURE message.");
+				hasWarnings = true;
+			}
+		}
+
+		// Check for one-way and multiple return exits
+		// These require topology analysis which is more complex
+		// TODO: Implement topology checks (exit-oneway, exit-multiple)
 
 		return hasWarnings;
 	}
@@ -159,9 +201,56 @@ public class WarningService(
 	{
 		var hasWarnings = false;
 
-		// TODO: Implement thing-specific checks
-		// - Missing description
-		// - Missing messages (SUCCESS, OSUCCESS, DROP, ODROP, FAILURE)
+		// Check for missing description
+		if (warnings.HasFlag(WarningType.ThingDesc))
+		{
+			var desc = await attributeService.GetAttributeAsync(checker, target, "DESCRIBE", IAttributeService.AttributeMode.Read, false);
+			if (desc.IsT1)
+			{
+				// Skip things in player inventory as per PennMUSH behavior
+				if (target.IsThing)
+				{
+					var thing = target.AsThing;
+					var location = await thing.Location.WithCancellation(CancellationToken.None);
+					var isInInventory = location.IsPlayer;
+					
+					if (!isInInventory)
+					{
+						await Complain(checker, target, "thing-desc", "Thing has no description.");
+						hasWarnings = true;
+					}
+				}
+				else
+				{
+					await Complain(checker, target, "thing-desc", "Thing has no description.");
+					hasWarnings = true;
+				}
+			}
+		}
+
+		// Check for missing messages
+		if (warnings.HasFlag(WarningType.ThingMsgs))
+		{
+			// Check unlocked thing messages: SUCCESS, OSUCCESS, DROP, ODROP
+			var success = await attributeService.GetAttributeAsync(checker, target, "SUCCESS", IAttributeService.AttributeMode.Read, false);
+			var osuccess = await attributeService.GetAttributeAsync(checker, target, "OSUCCESS", IAttributeService.AttributeMode.Read, false);
+			var drop = await attributeService.GetAttributeAsync(checker, target, "DROP", IAttributeService.AttributeMode.Read, false);
+			var odrop = await attributeService.GetAttributeAsync(checker, target, "ODROP", IAttributeService.AttributeMode.Read, false);
+			
+			if (success.IsT1 || osuccess.IsT1 || drop.IsT1 || odrop.IsT1)
+			{
+				await Complain(checker, target, "thing-msgs", "Thing is missing messages (SUCCESS, OSUCCESS, DROP, or ODROP).");
+				hasWarnings = true;
+			}
+			
+			// Check locked thing messages: FAILURE
+			var failure = await attributeService.GetAttributeAsync(checker, target, "FAILURE", IAttributeService.AttributeMode.Read, false);
+			if (failure.IsT1)
+			{
+				await Complain(checker, target, "thing-msgs", "Thing is missing FAILURE message.");
+				hasWarnings = true;
+			}
+		}
 
 		return hasWarnings;
 	}
