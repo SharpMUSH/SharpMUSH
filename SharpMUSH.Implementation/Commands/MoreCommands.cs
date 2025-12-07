@@ -5,7 +5,6 @@ using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
-using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -506,75 +505,12 @@ public partial class Commands
 	public static async ValueTask<Option<CallState>> Warnings(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var args = parser.CurrentState.Arguments;
 		
-		// Parse: @warnings <object>=<warning list>
-		if (!args.TryGetValue("0", out var objectArg) || string.IsNullOrWhiteSpace(objectArg.Message))
-		{
-			await NotifyService!.Notify(executor, "Usage: @warnings <object>=<warning list>");
-			return CallState.Empty;
-		}
-
-		if (!args.TryGetValue("1", out var warningListArg))
-		{
-			await NotifyService!.Notify(executor, "Usage: @warnings <object>=<warning list>");
-			return CallState.Empty;
-		}
-
-		// Locate the target object
-		var objectString = objectArg.Message?.ToString() ?? string.Empty;
-		var target = await LocateService!.LocateAndNotifyIfInvalid(parser, executor, objectString,
-			LocateFlags.All);
-
-		if (target is null)
-		{
-			return CallState.Empty;
-		}
-
-		var targetObj = target.WithoutNone().Object();
-
-		// Check permissions
-		if (!await PermissionService!.Controls(executor, target.WithoutNone()))
-		{
-			await NotifyService.Notify(executor, "Permission denied.");
-			return new CallState("#-1 PERMISSION DENIED");
-		}
-
-		// TODO: Check if target is garbage
-
-		// Parse warning list
-		var warningListString = warningListArg.Message?.ToString() ?? string.Empty;
-		var unknownWarnings = new List<string>();
-		var newWarnings = WarningTypeHelper.ParseWarnings(warningListString, unknownWarnings);
-
-		// Report any unknown warnings
-		foreach (var unknown in unknownWarnings)
-		{
-			await NotifyService.Notify(executor, $"Unknown warning: {unknown}");
-		}
-
-		// Update warnings if changed
-		var oldWarnings = targetObj.Warnings;
-		if (newWarnings != oldWarnings)
-		{
-			targetObj.Warnings = newWarnings;
-			// TODO: Persist the change to the database using UpdateObjectCommand
-
-			if (newWarnings != WarningType.None)
-			{
-				var warningString = WarningTypeHelper.UnparseWarnings(newWarnings);
-				await NotifyService.Notify(executor, $"@warnings set to: {warningString}");
-			}
-			else
-			{
-				await NotifyService.Notify(executor, "@warnings cleared.");
-			}
-		}
-		else
-		{
-			await NotifyService.Notify(executor, "@warnings not changed.");
-		}
-
+		// Warning system not yet implemented
+		// This would configure which types of warnings the player wants to see
+		await NotifyService!.Notify(executor, "@WARNINGS: Warning configuration system not yet implemented.");
+		await NotifyService!.Notify(executor, "This command would configure parser warnings, deprecation notices, etc.");
+		
 		return CallState.Empty;
 	}
 
@@ -582,73 +518,70 @@ public partial class Commands
 	public static async ValueTask<Option<CallState>> WizardCheck(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var args = parser.CurrentState.Arguments;
-		var switches = parser.CurrentState.Switches;
 		
-		var checkAll = switches.Contains("ALL");
-		var checkMe = switches.Contains("ME");
-
-		if (checkAll)
+		// Check permissions
+		if (!await executor.IsWizard())
 		{
-			// @wcheck/all - check all objects, wizard only
-			if (!await executor.IsWizard())
-			{
-				await NotifyService!.Notify(executor, "You'd better check your wizbit first.");
-				return new CallState("#-1 PERMISSION DENIED");
-			}
-
-			await NotifyService.Notify(executor, "Running database topology warning checks");
-			var checkedCount = await WarningService!.CheckAllObjectsAsync();
-			await NotifyService.Notify(executor, "Warning checks complete.");
-			
-			Logger?.LogInformation("@WCHECK/ALL executed by {Executor}, checked {Count} objects",
-				executor.Object().Name, checkedCount);
+			await NotifyService!.Notify(executor, "Permission denied.");
+			return new CallState("#-1 PERMISSION DENIED");
 		}
-		else if (checkMe)
+		
+		var switches = parser.CurrentState.Switches;
+		var checkAll = switches.Contains("ALL");
+		var checkOwned = switches.Contains("ME");
+		
+		await NotifyService!.Notify(executor, "@WCHECK: Starting database integrity check...");
+		
+		var issues = new List<string>();
+		var checkedCount = 0;
+		
+		// Get all objects to check (or just owned ones)
+		// For now, we'll do a basic check that can be expanded
+		if (checkOwned)
 		{
-			// @wcheck/me - check all objects owned by player
-			await WarningService!.CheckOwnedObjectsAsync(executor);
-			
-			Logger?.LogInformation("@WCHECK/ME executed by {Executor}",
-				executor.Object().Name);
+			await NotifyService!.Notify(executor, "Checking objects owned by you...");
+			// TODO: Implement owned object checking when we have efficient queries
+			issues.Add("Owned object checking: Implementation pending");
 		}
 		else
 		{
-			// @wcheck <object> - check specific object
-			if (!args.TryGetValue("0", out var objectArg) || string.IsNullOrWhiteSpace(objectArg.Message))
-			{
-				await NotifyService!.Notify(executor, "Usage: @wcheck <object> or @wcheck/me or @wcheck/all");
-				return CallState.Empty;
-			}
-
-			// Locate the target object
-			var objectString = objectArg.Message?.ToString() ?? string.Empty;
-			var target = await LocateService!.LocateAndNotifyIfInvalid(parser, executor, objectString,
-				LocateFlags.All);
-
-			if (target is null)
-			{
-				return CallState.Empty;
-			}
-
-			var targetObj = target.WithoutNone().Object();
-			var targetOwner = await targetObj.Owner.WithCancellation(CancellationToken.None);
-
-			// Check permissions - must own or have see_all
-			if (!(await executor.HasPower("SEE_ALL") || targetOwner.Object.DBRef.Equals(executor.Object().DBRef)))
-			{
-				await NotifyService.Notify(executor, "Permission denied.");
-				return new CallState("#-1 PERMISSION DENIED");
-			}
-
-			// TODO: Check if target is garbage
-
-			await WarningService!.CheckObjectAsync(executor, target.WithoutNone());
-			await NotifyService.Notify(executor, "@wcheck complete.");
+			await NotifyService!.Notify(executor, "Checking database integrity...");
 			
-			Logger?.LogInformation("@WCHECK executed by {Executor} on {Target}",
-				executor.Object().Name, targetObj.Name);
+			// Basic checks that could be implemented:
+			// 1. Verify all dbrefs are valid
+			// 2. Check for circular parent chains
+			// 3. Check for orphaned contents
+			// 4. Verify exit destinations exist
+			// 5. Check lock syntax
+			
+			issues.Add("Comprehensive database scanning: Implementation pending");
+			issues.Add("Consider implementing:");
+			issues.Add("  - Orphaned object detection");
+			issues.Add("  - Circular reference checking");
+			issues.Add("  - Broken exit detection");
+			issues.Add("  - Invalid lock verification");
+			issues.Add("  - Zone integrity checks");
 		}
+		
+		// Report results
+		await NotifyService!.Notify(executor, "---");
+		await NotifyService!.Notify(executor, $"@WCHECK Results: Checked {checkedCount} objects");
+		
+		if (issues.Count > 0)
+		{
+			await NotifyService!.Notify(executor, "Notes/Pending Features:");
+			foreach (var issue in issues)
+			{
+				await NotifyService!.Notify(executor, $"  {issue}");
+			}
+		}
+		else
+		{
+			await NotifyService!.Notify(executor, "No issues found.");
+		}
+		
+		Logger?.LogInformation("@WCHECK executed by {Executor}, scope: {Scope}", 
+			executor.Object().Name, checkOwned ? "owned" : "all");
 		
 		return CallState.Empty;
 	}
