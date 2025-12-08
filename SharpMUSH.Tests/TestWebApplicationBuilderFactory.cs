@@ -1,3 +1,4 @@
+using Core.Arango;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -10,13 +11,17 @@ using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Server;
+using SharpMUSH.Server.Strategy.ArangoDB;
+using SharpMUSH.Server.Strategy.Prometheus;
 
 namespace SharpMUSH.Tests;
 
 public class TestWebApplicationBuilderFactory<TProgram>(
 	string sqlConnectionString,
 	string configFile,
-	INotifyService notifier) :
+	INotifyService notifier,
+	string prometheusUrl) :
 	WebApplicationFactory<TProgram> where TProgram : class
 {
 	protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -28,6 +33,9 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 			.CreateLogger();
 
 		Log.Logger = log;
+
+		// Set Prometheus URL as environment variable so the PrometheusStrategyProvider will use ExternalStrategy
+		Environment.SetEnvironmentVariable("PROMETHEUS_URL", prometheusUrl);
 
 		builder.ConfigureTestServices(sc =>
 			{

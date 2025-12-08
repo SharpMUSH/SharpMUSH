@@ -28,11 +28,14 @@ public class WebAppFactory : IAsyncInitializer
 	[ClassDataSource<ArangoDbTestServer>(Shared = SharedType.PerTestSession)]
 	public required ArangoDbTestServer ArangoDbTestServer { get; init; }
 	
-	[ClassDataSource<RabbitMqTestServer>(Shared = SharedType.PerTestSession)]
-	public required RabbitMqTestServer RabbitMqTestServer { get; init; }
+	[ClassDataSource<RedPandaTestServer>(Shared = SharedType.PerTestSession)]
+	public required RedPandaTestServer RedPandaTestServer { get; init; }
 	
 	[ClassDataSource<MySqlTestServer>(Shared = SharedType.PerTestSession)]
 	public required MySqlTestServer MySqlTestServer { get; init; }
+	
+	[ClassDataSource<PrometheusTestServer>(Shared = SharedType.PerTestSession)]
+	public required PrometheusTestServer PrometheusTestServer { get; init; }
 
 	public IServiceProvider Services => _server!.Services;
 	private TestWebApplicationBuilderFactory<Program>? _server;
@@ -120,10 +123,14 @@ public class WebAppFactory : IAsyncInitializer
 
 		var configFile = Path.Join(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst");
 
+		// Get Prometheus URL from the test container
+		var prometheusUrl = $"http://localhost:{PrometheusTestServer.Instance.GetMappedPublicPort(9090)}";
+
 		_server = new TestWebApplicationBuilderFactory<Program>(
 			MySqlTestServer.Instance.GetConnectionString(), 
 			configFile,
-			Substitute.For<INotifyService>());
+			Substitute.For<INotifyService>(),
+			prometheusUrl);
 
 		var provider = _server.Services;
 		var connectionService = provider.GetRequiredService<IConnectionService>();

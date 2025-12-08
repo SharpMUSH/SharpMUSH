@@ -326,4 +326,100 @@ public class UtilityFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
+
+	[Test]
+	[Arguments("itext(test_string_ITEXT_case1)", "1")]
+	[Arguments("itext(123)", "0")]
+	[Arguments("itext(45.67)", "0")]
+	[Arguments("itext(abc123)", "1")]
+	public async Task IText_Validation(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	public async Task Dig_CreateRoom()
+	{
+		// Create a test room using dig()
+		var result = (await Parser.FunctionParse(MModule.single("dig(test_room_DIG_case1)")))?.Message!;
+		var resultStr = result.ToPlainText();
+		
+		// Should return a DBRef
+		await Assert.That(resultStr).StartsWith("#");
+		
+		// Verify the room was created
+		var dbRef = HelperFunctions.ParseDbRef(resultStr).AsValue();
+		var room = await Mediator.Send(new GetObjectNodeQuery(dbRef));
+		await Assert.That(room.IsRoom).IsTrue();
+		await Assert.That(room.AsRoom.Object.Name).IsEqualTo("test_room_DIG_case1");
+	}
+
+	[Test]
+	public async Task Open_CreateExit()
+	{
+		// Create a test exit using open()
+		var result = (await Parser.FunctionParse(MModule.single("open(test_exit_OPEN_case1;te1)")))?.Message!;
+		var resultStr = result.ToPlainText();
+		
+		// Should return a DBRef
+		await Assert.That(resultStr).StartsWith("#");
+		
+		// Verify the exit was created
+		var dbRef = HelperFunctions.ParseDbRef(resultStr).AsValue();
+		var exit = await Mediator.Send(new GetObjectNodeQuery(dbRef));
+		await Assert.That(exit.IsExit).IsTrue();
+		await Assert.That(exit.AsExit.Object.Name).IsEqualTo("test_exit_OPEN_case1");
+	}
+
+	[Test]
+	public async Task Clone_CopyObject()
+	{
+		// First create a thing to clone
+		var createResult = (await Parser.FunctionParse(MModule.single("create(test_thing_CLONE_original)")))?.Message!;
+		var originalDbRef = HelperFunctions.ParseDbRef(createResult.ToPlainText()).AsValue();
+		
+		// Set an attribute on it
+		await Parser.FunctionParse(MModule.single($"attrib_set({createResult},TEST_ATTR,test_value_CLONE)"));
+		
+		// Clone it
+		var cloneResult = (await Parser.FunctionParse(MModule.single($"clone({createResult},test_thing_CLONE_copy)")))?.Message!;
+		var cloneDbRef = HelperFunctions.ParseDbRef(cloneResult.ToPlainText()).AsValue();
+		
+		// Verify clone was created with a different dbref
+		await Assert.That(cloneDbRef.Number).IsNotEqualTo(originalDbRef.Number);
+		
+		// Verify the clone has the same attribute
+		var clone = await Mediator.Send(new GetObjectNodeQuery(cloneDbRef));
+		await Assert.That(clone.IsThing).IsTrue();
+		await Assert.That(clone.AsThing.Object.Name).IsEqualTo("test_thing_CLONE_copy");
+	}
+
+	[Test]
+	public async Task TestLock_EvaluateLock()
+	{
+		// Create a test object
+		var createResult = (await Parser.FunctionParse(MModule.single("create(test_obj_TESTLOCK)")))?.Message!;
+		
+		// Test a simple lock (always pass)
+		var result = (await Parser.FunctionParse(MModule.single($"testlock({createResult},%#/%#)")))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo("1");
+	}
+
+	[Test]
+	public async Task Wipe_ClearAttributes()
+	{
+		// Create a test object
+		var createResult = (await Parser.FunctionParse(MModule.single("create(test_obj_WIPE)")))?.Message!;
+		
+		// Set some attributes
+		await Parser.FunctionParse(MModule.single($"attrib_set({createResult},ATTR1,value1)"));
+		await Parser.FunctionParse(MModule.single($"attrib_set({createResult},ATTR2,value2)"));
+		
+		// Wipe attributes
+		var wipeResult = (await Parser.FunctionParse(MModule.single($"wipe({createResult})")))?.Message!;
+		
+		// Should indicate number of attributes wiped
+		await Assert.That(wipeResult.ToPlainText()).Contains("2");
+	}
 }
