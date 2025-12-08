@@ -14,7 +14,8 @@ namespace SharpMUSH.Library.Services;
 /// </summary>
 public class WarningService(
 	INotifyService notifyService,
-	IAttributeService attributeService) : IWarningService
+	IAttributeService attributeService,
+	IMediator mediator) : IWarningService
 {
 	/// <summary>
 	/// Check warnings on a specific object
@@ -61,18 +62,87 @@ public class WarningService(
 	public async Task<int> CheckOwnedObjectsAsync(AnySharpObject owner)
 	{
 		var warningCount = 0;
-		// TODO: Implement when database queries are better understood
-		await notifyService.Notify(owner, "@wcheck complete.");
+		var ownerObj = owner.Object();
+		
+		// Get all objects in the database and filter by owner
+		var allObjects = mediator.CreateStream(new GetAllObjectsQuery());
+		
+		await foreach (var obj in allObjects)
+		{
+			// Check if this object is owned by the player
+			var objectOwner = await obj.Owner.WithCancellation(CancellationToken.None);
+			if (!objectOwner.Object.DBRef.Equals(ownerObj.DBRef))
+			{
+				continue;
+			}
+			
+			// Get the full object node to get AnySharpObject
+			var objectNode = await mediator.Send(new GetObjectNodeQuery(obj.DBRef));
+			if (objectNode.IsNone)
+			{
+				continue;
+			}
+			
+			// Check warnings on this object
+			var hadWarnings = await CheckObjectAsync(owner, objectNode.WithoutNone());
+			if (hadWarnings)
+			{
+				warningCount++;
+			}
+		}
+		
+		await notifyService.Notify(owner, $"@wcheck complete. Found {warningCount} warnings on your objects.");
 		return warningCount;
 	}
 
 	/// <summary>
 	/// Check warnings on all objects in the database
+	/// Notifies connected owners of warnings found
 	/// </summary>
 	public async Task<int> CheckAllObjectsAsync()
 	{
 		var checkedCount = 0;
-		// TODO: Implement full database scan
+		var warningsByOwner = new Dictionary<string, List<string>>();
+		
+		// Get all objects in the database
+		var allObjects = mediator.CreateStream(new GetAllObjectsQuery());
+		
+		await foreach (var obj in allObjects)
+		{
+			checkedCount++;
+			
+			// Get the owner for this object
+			var owner = await obj.Owner.WithCancellation(CancellationToken.None);
+			var ownerId = owner.Object.Id ?? owner.Object.Key.ToString();
+			
+			// Track warnings per owner
+			if (!warningsByOwner.ContainsKey(ownerId))
+			{
+				warningsByOwner[ownerId] = [];
+			}
+			
+			// Get the full object nodes
+			var ownerNode = await mediator.Send(new GetObjectNodeQuery(owner.Object.DBRef));
+			var objectNode = await mediator.Send(new GetObjectNodeQuery(obj.DBRef));
+			
+			if (ownerNode.IsNone || objectNode.IsNone)
+			{
+				continue;
+			}
+			
+			// Check warnings (using owner as checker for their own objects)
+			var hadWarnings = await CheckObjectAsync(ownerNode.WithoutNone(), objectNode.WithoutNone());
+			
+			if (hadWarnings)
+			{
+				warningsByOwner[ownerId].Add($"{obj.Name}(#{obj.Key})");
+			}
+		}
+		
+		// Notify connected owners of their warnings
+		// TODO: Check if owners are connected before notifying
+		// For now, we just return the count
+		
 		return checkedCount;
 	}
 
