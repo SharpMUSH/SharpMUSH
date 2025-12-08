@@ -308,7 +308,7 @@ public static partial class ReadPennMushConfig
 				Rules: new Dictionary<string, string[]>()
 			),
 			Warning = new WarningOptions(
-				WarnInterval: Integer(Get(nameof(WarningOptions.WarnInterval)), 3600)
+				WarnInterval: RequiredString(Get(nameof(WarningOptions.WarnInterval)), "1h")
 			)
 		};
 
