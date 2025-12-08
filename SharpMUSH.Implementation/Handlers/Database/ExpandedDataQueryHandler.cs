@@ -4,15 +4,11 @@ using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class ExpandedDataQueryHandler(ISharpDatabase database): IQueryHandler<ExpandedDataQuery, string?>, IQueryHandler<ExpandedServerDataQuery, string?>
+public class ExpandedDataQueryHandler(ISharpDatabase database): IQueryHandler<ExpandedDataQuery, object?>, IQueryHandler<ExpandedServerDataQuery, object?>
 {
-	public async ValueTask<string?> Handle(ExpandedDataQuery query, CancellationToken cancellationToken)
-	{
-		return await database.GetExpandedObjectData(query.SharpObject.Id!, query.TypeName);
-	}
+	public async ValueTask<object?> Handle(ExpandedDataQuery query, CancellationToken cancellationToken) 
+		=> await database.GetExpandedObjectData<object?>(query.SharpObject.Id!, query.TypeName, cancellationToken);
 
-	public async ValueTask<string?> Handle(ExpandedServerDataQuery query, CancellationToken cancellationToken)
-	{
-		return await database.GetExpandedServerData(query.TypeName);
-	}
+	public async ValueTask<object?> Handle(ExpandedServerDataQuery query, CancellationToken cancellationToken) 
+		=> await database.GetExpandedServerData<object?>(query.TypeName, cancellationToken);
 }

@@ -1,5 +1,5 @@
 ﻿using Core.Arango;
-using Core.Arango.Serialization.Newtonsoft;
+using Core.Arango.Serialization.Json;
 
 namespace SharpMUSH.Server.Strategy.ArangoDB;
 
@@ -11,7 +11,7 @@ public class ArangoKubernetesStartupStrategy(string arangoConnectionString) : Ar
 		return new ArangoConfiguration
 		{
 			ConnectionString = arangoConnectionString,
-			Serializer = new ArangoNewtonsoftSerializer(new ArangoNewtonsoftDefaultContractResolver())
+			Serializer = new ArangoJsonSerializer(new ArangoJsonDefaultPolicy())
 		};
 	}
 }

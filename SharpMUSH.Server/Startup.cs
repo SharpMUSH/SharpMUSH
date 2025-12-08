@@ -1,6 +1,5 @@
 ﻿using Core.Arango;
 using Core.Arango.Serilog;
-using Core.Arango.Transport;
 using MassTransit;
 using Mediator;
 using Microsoft.AspNetCore.Identity;
@@ -158,6 +157,7 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, Prometh
 		{
 			arango.ConnectionString = arangoConfig.ConnectionString;
 			arango.HttpClient = arangoConfig.HttpClient;
+			arango.Serializer = arangoConfig.Serializer;
 		});
 		services.AddQuartz(x =>
 		{

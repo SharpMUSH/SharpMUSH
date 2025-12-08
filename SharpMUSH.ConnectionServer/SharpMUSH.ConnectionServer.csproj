@@ -12,21 +12,21 @@
   <ItemGroup>
     <PackageReference Include="MassTransit" Version="8.5.7" />
     <PackageReference Include="MassTransit.Kafka" Version="8.5.7" />
-    <PackageReference Include="OpenTelemetry.Api" Version="1.11.2" />
-    <PackageReference Include="OpenTelemetry.Exporter.Console" Version="1.11.0" />
+    <PackageReference Include="OpenTelemetry.Api" Version="1.14.0" />
+    <PackageReference Include="OpenTelemetry.Exporter.Console" Version="1.14.0" />
     <PackageReference Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.11.0-beta.1" />
-    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.11.0" />
-    <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.10.0" />
-    <PackageReference Include="Serilog.Extensions.Logging" Version="9.0.2" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.14.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.14.0" />
+    <PackageReference Include="Serilog.Extensions.Logging" Version="10.0.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
     <PackageReference Include="TelnetNegotiationCore" Version="1.1.0" />
-    <PackageReference Include="Testcontainers.Redpanda" Version="4.8.1" />
+    <PackageReference Include="Testcontainers.Redpanda" Version="4.9.0" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\SharpMUSH.Library\SharpMUSH.Library.csproj" />
     <ProjectReference Include="..\SharpMUSH.Messages\SharpMUSH.Messages.csproj" />
     <ProjectReference Include="..\SharpMUSH.Messaging\SharpMUSH.Messaging.csproj" />
-    <ProjectReference Include="..\SharpMUSH.Library\SharpMUSH.Library.csproj" />
   </ItemGroup>
 
 </Project>

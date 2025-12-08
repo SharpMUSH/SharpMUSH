@@ -25,7 +25,7 @@
 		<Antlr4 Include="SharpMUSHBoolExpLexer.g4" />
 		<Antlr4 Include="SharpMUSHParser.g4" />
 		<Antlr4 Include="SharpMUSHBoolExpParser.g4" />
-		<PackageReference Include="Microsoft.Build.Utilities.Core" Version="17.14.28" />
+		<PackageReference Include="Microsoft.Build.Utilities.Core" Version="18.0.2" />
   </ItemGroup>
 	
 	<ItemGroup>

@@ -8,6 +8,7 @@ using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -220,29 +221,71 @@ public partial class Functions
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var allTrue = true;
 		CallState? lastResult = null;
-		
+
 		foreach (var arg in args)
 		{
 			lastResult = await parser.FunctionParse(arg.Value.Message!);
 			var resultStr = MModule.plainText(lastResult!.Message).Trim();
-			
-			if (string.IsNullOrEmpty(resultStr) || 
-			    resultStr == "0" || 
-			    resultStr.StartsWith("#-1") ||
-			    resultStr.Equals("false", StringComparison.OrdinalIgnoreCase))
+
+			if (string.IsNullOrEmpty(resultStr) ||
+					resultStr == "0" ||
+					resultStr.StartsWith("#-1") ||
+					resultStr.Equals("false", StringComparison.OrdinalIgnoreCase))
 			{
 				allTrue = false;
 			}
 		}
-		
+
 		return new CallState(allTrue ? "1" : "0");
 	}
 
 	[SharpFunction(Name = "atrlock", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> AtrLock(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> AtrLock(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// TODO: Implement atrlock - requires lock service integration
-		return ValueTask.FromResult(new CallState(Errors.NotSupported));
+		var args = parser.CurrentState.Arguments;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var attributeName = args["0"].Message!.ToPlainText();
+
+		// If two args, second is the object to check on; otherwise use executor
+		AnySharpObject targetObj;
+		if (args.ContainsKey("1"))
+		{
+			var objectName = args["1"].Message!.ToPlainText();
+			var locateResult = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
+				executor, executor, objectName, LocateFlags.All);
+
+			if (!locateResult.IsAnySharpObject)
+			{
+				return locateResult.AsError;
+			}
+			targetObj = locateResult.AsSharpObject;
+		}
+		else
+		{
+			targetObj = executor;
+		}
+
+		// Get the attribute's lock (stored in attrname`lock attribute)
+		var lockAttrName = $"{attributeName}`LOCK";
+		var lockAttr = await AttributeService!.GetAttributeAsync(
+			executor, targetObj, lockAttrName,
+			mode: IAttributeService.AttributeMode.Read,
+			parent: false);
+
+		if (!lockAttr.IsAttribute)
+		{
+			return "0"; // No lock set means no restriction
+		}
+
+		// Evaluate the lock
+		var lockString = lockAttr.AsAttribute.Last().Value.ToPlainText();
+		if (string.IsNullOrWhiteSpace(lockString))
+		{
+			return "0";
+		}
+
+		var passes = LockService!.Evaluate(lockString, targetObj, executor);
+		return new CallState(passes ? "1" : "0");
 	}
 
 	[SharpFunction(Name = "beep", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.AdminOnly | FunctionFlags.StripAnsi)]
@@ -265,27 +308,27 @@ public partial class Functions
 	public static async ValueTask<CallState> Benchmark(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		
+
 		var code = args["0"].Message!;
-		
+
 		if (!int.TryParse(MModule.plainText(args["1"].Message), out var iterations) || iterations <= 0)
 		{
 			return new CallState(Errors.ErrorNumbers);
 		}
-		
+
 		var outputFormat = "ms";
 		if (args.Count >= 3 && args.TryGetValue("2", out var formatArg))
 		{
 			outputFormat = MModule.plainText(formatArg.Message).ToLower();
 		}
-		
+
 		var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 		for (int i = 0; i < iterations; i++)
 		{
 			await parser.FunctionParse(code);
 		}
 		stopwatch.Stop();
-		
+
 		var elapsed = stopwatch.Elapsed.TotalMilliseconds;
 		if (outputFormat == "s" || outputFormat == "seconds")
 		{
@@ -325,10 +368,102 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "clone", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> Clone(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Clone(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// TODO: Implement clone - requires database object cloning
-		return ValueTask.FromResult(new CallState(Errors.NotSupported));
+		var args = parser.CurrentState.Arguments;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var targetName = args["0"].Message!.ToPlainText();
+
+		var defaultHome = Configuration!.CurrentValue.Database.DefaultHome;
+		var defaultHomeDbref = new DBRef((int)defaultHome);
+		var location = await Mediator!.Send(new GetObjectNodeQuery(defaultHomeDbref));
+
+		if (location.IsNone || location.IsExit)
+		{
+			return Errors.ErrorInvalidRoom;
+		}
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+			executor, executor, targetName, LocateFlags.All,
+			async obj =>
+			{
+				if (!await PermissionService!.Controls(executor, obj))
+				{
+					return Errors.ErrorPerm;
+				}
+
+				if (obj.IsPlayer)
+				{
+					return Errors.ErrorInvalidObjectType;
+				}
+
+				// Determine new name (arg 1 if provided)
+				var newName = obj.Object().Name;
+				if (args.ContainsKey("1") && !string.IsNullOrWhiteSpace(args["1"].Message!.ToPlainText()))
+				{
+					newName = args["1"].Message!.ToPlainText();
+				}
+
+				DBRef cloneDbRef;
+				var owner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
+
+				// Create the appropriate object type
+				if (obj.IsThing)
+				{
+					cloneDbRef = await Mediator!.Send(new CreateThingCommand(
+						newName,
+						await executor.Where(),
+						owner,
+						location.Known.AsContainer
+					));
+				}
+				else if (obj.IsRoom)
+				{
+					cloneDbRef = await Mediator!.Send(new CreateRoomCommand(
+						newName,
+						owner
+					));
+				}
+				else if (obj.IsExit)
+				{
+					var nameParts = newName.Split(";");
+					cloneDbRef = await Mediator!.Send(new CreateExitCommand(
+						nameParts[0],
+						nameParts.Skip(1).ToArray(),
+						await executor.Where(),
+						owner
+					));
+				}
+				else
+				{
+					return Errors.ErrorInvalidObjectType;
+				}
+
+				// Get the cloned object
+				var clonedObjOptional = await Mediator!.Send(new GetObjectNodeQuery(cloneDbRef));
+				var clonedObj = clonedObjOptional.WithoutNone();
+
+				// Copy attributes (excluding system attributes)
+				await foreach (var attr in obj.Object().Attributes.Value)
+				{
+					if (!attr.Name.StartsWith("_"))
+					{
+						await AttributeService!.SetAttributeAsync(executor, clonedObj,
+							attr.Name, attr.Value);
+					}
+				}
+
+				// Trigger OBJECT`CREATE event for the clone
+				await EventService!.TriggerEventAsync(
+					parser,
+					"OBJECT`CREATE",
+					executor.Object().DBRef,
+					cloneDbRef.ToString(),
+					obj.Object().DBRef.ToString()); // cloned-from
+
+				return new CallState(cloneDbRef.ToString());
+			}
+		);
 	}
 
 	[SharpFunction(Name = "create", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular)]
@@ -341,33 +476,33 @@ public partial class Functions
 		var defaultHome = Configuration!.CurrentValue.Database.DefaultHome;
 		var defaultHomeDbref = new DBRef((int)defaultHome);
 		var location = await Mediator!.Send(new GetObjectNodeQuery(defaultHomeDbref));
-		
+
 		if (location.IsNone || location.IsExit)
 		{
 			await NotifyService!.Notify(executor, "Default home location is invalid.");
 			return new CallState(Errors.ErrorInvalidRoom);
 		}
-		
+
 		if (!await ValidateService!.Valid(IValidateService.ValidationType.Name, name, new None()))
 		{
 			await NotifyService!.Notify(executor, "Invalid name for a thing.");
 			return new CallState(Errors.ErrorBadObjectName);
 		}
-		
+
 		var thing = await Mediator!.Send(new CreateThingCommand(name.ToPlainText(),
 			await executor.Where(),
 			await executor.Object()
 				.Owner.WithCancellation(CancellationToken.None),
 			location.Known.AsContainer));
-		
+
 		return new CallState(thing);
 	}
-	
+
 	[SharpFunction(Name = "die", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> Die(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		
+
 		if (!int.TryParse(MModule.plainText(args["0"].Message), out var count) || count < 0)
 		{
 			return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
@@ -376,7 +511,7 @@ public partial class Functions
 		{
 			return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
 		}
-		
+
 		// Optional third argument for how many rolls to show (vs just return sum)
 		var showCount = count;
 		if (args.Count == 3)
@@ -386,39 +521,53 @@ public partial class Functions
 				return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
 			}
 		}
-		
+
 		var rolls = new List<int>();
 		var total = 0;
-		
+
 		for (int i = 0; i < count; i++)
 		{
 			var roll = Random.Shared.Next(1, sides + 1);
 			rolls.Add(roll);
 			total += roll;
 		}
-		
+
 		if (showCount < count)
 		{
 			return ValueTask.FromResult(new CallState(total.ToString()));
 		}
-		
+
 		return ValueTask.FromResult(new CallState(string.Join(" ", rolls)));
 	}
 
 	[SharpFunction(Name = "dig", MinArgs = 1, MaxArgs = 6, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> Dig(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Dig(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// TODO: Implement dig - requires room creation
-		return ValueTask.FromResult(new CallState(Errors.NotSupported));
+		var args = parser.CurrentState.Arguments;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var roomName = args["0"].Message!.ToPlainText();
+
+		if (string.IsNullOrWhiteSpace(roomName))
+		{
+			return Errors.ErrorBadObjectName;
+		}
+
+		// Create the room
+		var response = await Mediator!.Send(new CreateRoomCommand(
+			roomName,
+			await executor.Object().Owner.WithCancellation(CancellationToken.None)));
+
+		// Return the room's dbref
+		return new CallState(response.ToString());
 	}
 
 	[SharpFunction(Name = "fn", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
 	public static async ValueTask<CallState> Fn(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		
+
 		var functionName = parser.CurrentState.Arguments["0"].Message!;
-		
+
 		var result = await AttributeService!.EvaluateAttributeFunctionAsync(
 			parser,
 			executor,
@@ -435,7 +584,7 @@ public partial class Functions
 	{
 		// Get the function library from the parser
 		var functionLibrary = parser.FunctionLibrary;
-		
+
 		// Get optional pattern argument
 		var pattern = "*";
 		if (parser.CurrentState.Arguments.TryGetValue("0", out var arg0))
@@ -446,10 +595,10 @@ public partial class Functions
 				pattern = patternArg;
 			}
 		}
-		
+
 		// Get all function names
 		var allFunctions = functionLibrary.Keys.OrderBy(x => x);
-		
+
 		// Filter by pattern if specified (simple wildcard matching)
 		IEnumerable<string> filteredFunctions;
 		if (pattern == "*")
@@ -463,7 +612,7 @@ public partial class Functions
 			var regex = new Regex(regexPattern, RegexOptions.IgnoreCase);
 			filteredFunctions = allFunctions.Where(name => regex.IsMatch(name));
 		}
-		
+
 		// Return space-separated list of function names
 		return ValueTask.FromResult(new CallState(string.Join(" ", filteredFunctions)));
 	}
@@ -516,7 +665,10 @@ public partial class Functions
 	[SharpFunction(Name = "itext", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> IText(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var str = MModule.plainText(parser.CurrentState.Arguments["0"].Message);
+		// itext() returns 1 if the argument is text (not a number), 0 otherwise
+		// A string is "text" if it cannot be parsed as a number
+		return ValueTask.FromResult(new CallState(!decimal.TryParse(str, out _) ? "1" : "0"));
 	}
 
 	[SharpFunction(Name = "letq", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse | FunctionFlags.UnEvenArgsOnly)]
@@ -550,14 +702,112 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "link", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> Link(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Link(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var args = parser.CurrentState.Arguments;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var objectName = args["0"].Message!.ToPlainText();
+		var destName = args["1"].Message!.ToPlainText();
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+			executor, executor, objectName, LocateFlags.All,
+			async exitObj =>
+			{
+				if (!await PermissionService!.Controls(executor, exitObj))
+				{
+					return Errors.ErrorPerm;
+				}
+
+				// Handle different link types
+				if (exitObj.IsExit)
+				{
+					// Check for special link types
+					if (destName.Equals(LinkTypeHome, StringComparison.InvariantCultureIgnoreCase))
+					{
+						await AttributeService!.SetAttributeAsync(executor, exitObj, AttrLinkType, MModule.single(LinkTypeHome));
+						return "1";
+					}
+					else if (destName.Equals(LinkTypeVariable, StringComparison.InvariantCultureIgnoreCase))
+					{
+						await AttributeService!.SetAttributeAsync(executor, exitObj, AttrLinkType, MModule.single(LinkTypeVariable));
+						return "1";
+					}
+
+					// Link to a room
+					return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+						executor, executor, destName, LocateFlags.All,
+						async destObj =>
+						{
+							if (!destObj.IsRoom)
+							{
+								return Errors.ErrorInvalidDestination;
+							}
+
+							var destinationRoom = destObj.AsRoom;
+
+							bool canLink = await PermissionService!.Controls(executor, destObj);
+
+							if (!canLink)
+							{
+								var destFlags = await System.Linq.AsyncEnumerable.ToArrayAsync(destinationRoom.Object.Flags.Value);
+								var hasLinkOk = destFlags.Any(f => f.Name.Equals("LINK_OK", StringComparison.OrdinalIgnoreCase));
+
+								if (!hasLinkOk)
+								{
+									return Errors.ErrorPerm;
+								}
+							}
+
+							await AttributeService!.SetAttributeAsync(executor, exitObj, AttrLinkType, MModule.empty());
+							await Mediator!.Send(new LinkExitCommand(exitObj.AsExit, destinationRoom));
+
+							return "1";
+						}
+					);
+				}
+				else if (exitObj.IsThing || exitObj.IsPlayer)
+				{
+					// Set home for thing or player
+					return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+						executor, executor, destName, LocateFlags.All,
+						async destObj =>
+						{
+							if (!destObj.IsRoom)
+							{
+								return Errors.ErrorInvalidDestination;
+							}
+
+							AnySharpContent contentObj = exitObj.IsThing ? exitObj.AsThing : (AnySharpContent)exitObj.AsPlayer;
+							await Mediator!.Send(new SetObjectHomeCommand(contentObj, destObj.AsRoom));
+							return "1";
+						}
+					);
+				}
+				else if (exitObj.IsRoom)
+				{
+					// Set drop-to for room
+					return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+						executor, executor, destName, LocateFlags.All,
+						async destObj =>
+						{
+							if (!destObj.IsRoom)
+							{
+								return Errors.ErrorInvalidDestination;
+							}
+
+							await Mediator!.Send(new LinkRoomCommand(exitObj.AsRoom, destObj.AsRoom));
+							return "1";
+						}
+					);
+				}
+
+				return Errors.ErrorInvalidObjectType;
+			});
 	}
 
- [SharpFunction(Name = "list", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
- public static async ValueTask<CallState> List(IMUSHCodeParser parser, SharpFunctionAttribute _2)
- {
+	[SharpFunction(Name = "list", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public static async ValueTask<CallState> List(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
 		var args = parser.CurrentState.Arguments;
 		if (args.Count == 0)
 		{
@@ -572,87 +822,87 @@ public partial class Functions
 		switch (option)
 		{
 			case "motd":
-			{
-				return await Motd(parser, default!);
-			}
+				{
+					return await Motd(parser, default!);
+				}
 			case "wizmotd":
 			case "downmotd":
 			case "fullmotd":
-			{
-				return await GetWizardMotdAsync(parser, option);
-			}
+				{
+					return await GetWizardMotdAsync(parser, option);
+				}
 			case "functions":
-			{
-				var funcPairs = type switch
 				{
-					"builtin" => parser.FunctionLibrary.AsEnumerable().Where(kv => kv.Value.IsSystem),
-					"local" => parser.FunctionLibrary.AsEnumerable().Where(kv => !kv.Value.IsSystem),
-					_ => parser.FunctionLibrary.AsEnumerable()
-				};
+					var funcPairs = type switch
+					{
+						"builtin" => parser.FunctionLibrary.AsEnumerable().Where(kv => kv.Value.IsSystem),
+						"local" => parser.FunctionLibrary.AsEnumerable().Where(kv => !kv.Value.IsSystem),
+						_ => parser.FunctionLibrary.AsEnumerable()
+					};
 
-				var names = funcPairs
-					.Select(kv => kv.Value.LibraryInformation.Attribute.Name)
-					.Distinct(StringComparer.OrdinalIgnoreCase)
-					.OrderBy(s => s, StringComparer.OrdinalIgnoreCase)
-					.Select(s => s.ToLowerInvariant());
-				return new CallState(JoinSpace(names));
-			}
+					var names = funcPairs
+						.Select(kv => kv.Value.LibraryInformation.Attribute.Name)
+						.Distinct(StringComparer.OrdinalIgnoreCase)
+						.OrderBy(s => s, StringComparer.OrdinalIgnoreCase)
+						.Select(s => s.ToLowerInvariant());
+					return new CallState(JoinSpace(names));
+				}
 			case "commands":
-			{
-				var cmdPairs = type switch
 				{
-					"builtin" => parser.CommandLibrary.AsEnumerable().Where(kv => kv.Value.IsSystem),
-					"local" => parser.CommandLibrary.AsEnumerable().Where(kv => !kv.Value.IsSystem),
-					_ => parser.CommandLibrary.AsEnumerable()
-				};
+					var cmdPairs = type switch
+					{
+						"builtin" => parser.CommandLibrary.AsEnumerable().Where(kv => kv.Value.IsSystem),
+						"local" => parser.CommandLibrary.AsEnumerable().Where(kv => !kv.Value.IsSystem),
+						_ => parser.CommandLibrary.AsEnumerable()
+					};
 
-				var names = cmdPairs
-					.Select(kv => kv.Value.LibraryInformation.Attribute.Name)
-					.Distinct(StringComparer.OrdinalIgnoreCase)
-					.OrderBy(s => s, StringComparer.OrdinalIgnoreCase)
-					.Select(s => s.ToLowerInvariant());
-				return new CallState(JoinSpace(names));
-			}
+					var names = cmdPairs
+						.Select(kv => kv.Value.LibraryInformation.Attribute.Name)
+						.Distinct(StringComparer.OrdinalIgnoreCase)
+						.OrderBy(s => s, StringComparer.OrdinalIgnoreCase)
+						.Select(s => s.ToLowerInvariant());
+					return new CallState(JoinSpace(names));
+				}
 			case "attribs":
-			{
-				var list = new List<string>();
-				var attributes = Mediator!.CreateStream(new GetAllAttributeEntriesQuery());
-				await foreach (var attr in attributes)
 				{
-					list.Add(attr.Name.ToLowerInvariant());
+					var list = new List<string>();
+					var attributes = Mediator!.CreateStream(new GetAllAttributeEntriesQuery());
+					await foreach (var attr in attributes)
+					{
+						list.Add(attr.Name.ToLowerInvariant());
+					}
+					list.Sort(StringComparer.OrdinalIgnoreCase);
+					return new CallState(JoinSpace(list));
 				}
-				list.Sort(StringComparer.OrdinalIgnoreCase);
-				return new CallState(JoinSpace(list));
-			}
 			case "locks":
-			{
-				var lockNames = Enum.GetNames(typeof(LockType))
-					.Select(n => n.ToLowerInvariant())
-					.OrderBy(x => x);
-				return new CallState(JoinSpace(lockNames));
-			}
+				{
+					var lockNames = Enum.GetNames(typeof(LockType))
+						.Select(n => n.ToLowerInvariant())
+						.OrderBy(x => x);
+					return new CallState(JoinSpace(lockNames));
+				}
 			case "flags":
-			{
-				var list = new List<string>();
-				var flags = Mediator!.CreateStream(new GetAllObjectFlagsQuery());
-				await foreach (var f in flags)
 				{
-					list.Add(f.Name.ToLowerInvariant());
+					var list = new List<string>();
+					var flags = Mediator!.CreateStream(new GetAllObjectFlagsQuery());
+					await foreach (var f in flags)
+					{
+						list.Add(f.Name.ToLowerInvariant());
+					}
+					list.Sort(StringComparer.OrdinalIgnoreCase);
+					return new CallState(JoinSpace(list));
 				}
-				list.Sort(StringComparer.OrdinalIgnoreCase);
-				return new CallState(JoinSpace(list));
-			}
 			case "powers":
-			{
-				var list = new List<string>();
-				var powers = Mediator!.CreateStream(new GetPowersQuery());
-				await foreach (var p in powers)
 				{
-					list.Add(p.Name.ToLowerInvariant());
+					var list = new List<string>();
+					var powers = Mediator!.CreateStream(new GetPowersQuery());
+					await foreach (var p in powers)
+					{
+						list.Add(p.Name.ToLowerInvariant());
+					}
+					list.Sort(StringComparer.OrdinalIgnoreCase);
+					return new CallState(JoinSpace(list));
 				}
-				list.Sort(StringComparer.OrdinalIgnoreCase);
-				return new CallState(JoinSpace(list));
-			}
 			default:
 				return CallState.Empty;
 		}
@@ -673,7 +923,7 @@ public partial class Functions
 				_ => CallState.Empty
 			};
 		}
-}
+	}
 
 	[SharpFunction(Name = "listq", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> ListQ(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -686,68 +936,95 @@ public partial class Functions
 	public static ValueTask<CallState> LSet(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		
+
 		// Get the list
 		if (!args.TryGetValue("0", out var arg0))
 		{
 			return ValueTask.FromResult(CallState.Empty);
 		}
 		var listStr = arg0.Message!;
-		
+
 		// Get the position (1-based)
-		if (!args.TryGetValue("1", out var arg1) || 
-		    !int.TryParse(MModule.plainText(arg1.Message), out var position))
+		if (!args.TryGetValue("1", out var arg1) ||
+				!int.TryParse(MModule.plainText(arg1.Message), out var position))
 		{
 			return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
 		}
-		
+
 		// Get the new value
 		if (!args.TryGetValue("2", out var arg2))
 		{
 			return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
 		}
 		var newValue = arg2.Message!;
-		
+
 		// Get optional input delimiter (default is space)
 		var inputDelimiter = " ";
 		if (args.TryGetValue("3", out var arg3))
 		{
 			inputDelimiter = MModule.plainText(arg3.Message);
 		}
-		
+
 		// Get optional output delimiter (default is same as input)
 		var outputDelimiter = inputDelimiter;
 		if (args.TryGetValue("4", out var arg4))
 		{
 			outputDelimiter = MModule.plainText(arg4.Message);
 		}
-		
+
 		// Split the list
 		var items = MModule.split2(MModule.single(inputDelimiter), listStr).ToList();
-		
+
 		// Check if position is valid (1-based indexing)
 		if (position < 1 || position > items.Count)
 		{
 			return ValueTask.FromResult(new CallState(Errors.ErrorArgRange));
 		}
-		
+
 		// Set the item at the position (convert to 0-based)
 		items[position - 1] = newValue;
-		
+
 		// Join back with output delimiter
 		var result = string.Join(outputDelimiter, items.Select(x => MModule.plainText(x)));
 		return ValueTask.FromResult(new CallState(result));
 	}
 
-	[SharpFunction(Name = "null", MinArgs = 0, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular )]
+	[SharpFunction(Name = "null", MinArgs = 0, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Null(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult(CallState.Empty);
 
 	[SharpFunction(Name = "open", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> Open(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Open(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// TODO: Implement open - requires exit creation
-		return ValueTask.FromResult(new CallState(Errors.NotSupported));
+		var args = parser.CurrentState.Arguments;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var exitName = args["0"].Message!.ToPlainText();
+
+		// Parse exit name and aliases
+		var exitParts = exitName.Split(";");
+		var primaryName = exitParts[0];
+		var aliases = exitParts.Skip(1).ToArray();
+
+		// Get source location (default to executor's location)
+		var sourceRoom = await executor.Where();
+
+		// Optional: arg 1 could be destination, arg 2 could be source room
+		// For now, keep it simple - create exit at executor's location
+
+		// Check permissions
+		if (!await PermissionService!.Controls(executor, sourceRoom.WithExitOption()))
+		{
+			return Errors.ErrorPerm;
+		}
+
+		// Create the exit
+		var exitDbRef = await Mediator!.Send(new CreateExitCommand(
+			primaryName,
+			aliases,
+			sourceRoom,
+			await executor.Object().Owner.WithCancellation(CancellationToken.None)));
+
+		return new CallState(exitDbRef.ToString());
 	}
 
 	[SharpFunction(Name = "r", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -755,7 +1032,7 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.Arguments;
 		var registerName = MModule.plainText(args["0"].Message);
-		
+
 		// Try to get the register value from the current stack
 		if (parser.CurrentState.Registers.TryPeek(out var registers))
 		{
@@ -764,13 +1041,13 @@ public partial class Functions
 				return ValueTask.FromResult(new CallState(value));
 			}
 		}
-		
+
 		// If not found and there's a default value, return it
 		if (args.Count == 2)
 		{
 			return ValueTask.FromResult(new CallState(args["1"].Message!));
 		}
-		
+
 		// Otherwise return empty
 		return ValueTask.FromResult(CallState.Empty);
 	}
@@ -779,14 +1056,14 @@ public partial class Functions
 	public static ValueTask<CallState> Rand(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		
+
 		// Check if first argument exists and is not empty
 		if (!args.TryGetValue("0", out var arg0) || string.IsNullOrWhiteSpace(MModule.plainText(arg0.Message)))
 		{
 			// No arguments: random number between 0 and 2^31-1
 			return ValueTask.FromResult(new CallState(Random.Shared.Next(0, int.MaxValue)));
 		}
-		
+
 		// Check if second argument exists and is not empty
 		if (!args.TryGetValue("1", out var arg1) || string.IsNullOrWhiteSpace(MModule.plainText(arg1.Message)))
 		{
@@ -797,10 +1074,10 @@ public partial class Functions
 			}
 			return ValueTask.FromResult(new CallState(Random.Shared.Next(0, maxVal)));
 		}
-		
+
 		// Two arguments: random number between min and max (inclusive)
 		if (!int.TryParse(MModule.plainText(arg0.Message), out var minVal) ||
-		    !int.TryParse(MModule.plainText(arg1.Message), out var maxVal2))
+				!int.TryParse(MModule.plainText(arg1.Message), out var maxVal2))
 		{
 			return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
 		}
@@ -816,28 +1093,28 @@ public partial class Functions
 	public static ValueTask<CallState> Registers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		
+
 		// Get current registers from the stack
 		if (!parser.CurrentState.Registers.TryPeek(out var registers))
 		{
 			return ValueTask.FromResult(CallState.Empty);
 		}
-		
+
 		// No arguments: return count of registers
 		if (!args.TryGetValue("0", out var arg0))
 		{
 			return ValueTask.FromResult(new CallState(registers.Count));
 		}
-		
+
 		// First argument determines what to return
 		var mode = MModule.plainText(arg0.Message).ToLower();
-		
+
 		// Return space-separated list of register names
 		if (mode == "list" || mode == "names")
 		{
 			return ValueTask.FromResult(new CallState(string.Join(" ", registers.Keys)));
 		}
-		
+
 		// Get specific register value (second argument is register name)
 		if (mode == "get")
 		{
@@ -852,27 +1129,95 @@ public partial class Functions
 			}
 			return ValueTask.FromResult(CallState.Empty);
 		}
-		
+
 		// Default: return count
 		return ValueTask.FromResult(new CallState(registers.Count));
 	}
-	
+
 	[SharpFunction(Name = "render", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> Render(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Render(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// TODO: Implement render - requires evaluating code from another object's perspective
-		return ValueTask.FromResult(new CallState(Errors.NotSupported));
+		var args = parser.CurrentState.Arguments;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var objectName = args["0"].Message!.ToPlainText();
+		var code = args["1"].Message!;
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+			executor, executor, objectName, LocateFlags.All,
+			async obj =>
+			{
+				// Check permissions
+				if (!await PermissionService!.Controls(executor, obj))
+				{
+					return Errors.ErrorPerm;
+				}
+
+				// Evaluate the code using the AttributeService which handles executor context properly
+				// This evaluates the code from the perspective of the target object
+				var result = await AttributeService!.EvaluateAttributeFunctionAsync(
+					parser,
+					obj, // executor is the target object
+					code,
+					[],
+					evalParent: false,
+					ignorePermissions: false,
+					ignoreLambda: true);
+
+				return new CallState(result);
+			});
 	}
-	
+
 	[SharpFunction(Name = "s", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 	public static async ValueTask<CallState> S(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> (await parser.FunctionParse(parser.CurrentState.Arguments.Last().Value.Message!))!;
 
 	[SharpFunction(Name = "scan", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> Scan(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Scan(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// TODO: Implement scan - requires object scanning/searching
-		return ValueTask.FromResult(new CallState(Errors.NotSupported));
+		var args = parser.CurrentState.Arguments;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var objectName = args["0"].Message!.ToPlainText();
+		var pattern = args.ContainsKey("1") ? args["1"].Message!.ToPlainText() : "*";
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+			executor, executor, objectName, LocateFlags.All,
+			async obj =>
+			{
+				// Check permissions
+				if (!await PermissionService!.Controls(executor, obj))
+				{
+					return Errors.ErrorPerm;
+				}
+
+				// For rooms and things, scan their contents
+				if (obj.IsRoom || obj.IsThing)
+				{
+					var matchingObjects = new List<string>();
+					var container = obj.AsContainer;
+
+					// Get contents using mediator query
+					var contents = await System.Linq.AsyncEnumerable.ToArrayAsync(
+						Mediator!.CreateStream(new GetContentsQuery(container)));
+
+					// Compile regex once outside the loop
+					var regexPattern = "^" + Regex.Escape(pattern).Replace("\\*", ".*").Replace("\\?", ".") + "$";
+					var regex = new Regex(regexPattern, RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+					foreach (var content in contents)
+					{
+						var contentName = content.Object().Name;
+						if (regex.IsMatch(contentName))
+						{
+							matchingObjects.Add(content.Object().DBRef.ToString());
+						}
+					}
+
+					return string.Join(" ", matchingObjects);
+				}
+
+				// For other object types, return empty
+				return CallState.Empty;
+			});
 	}
 
 	[SharpFunction(Name = "setq", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
@@ -881,7 +1226,7 @@ public partial class Functions
 		var everythingIsOkay = true;
 
 		var numberedArguments = parser.CurrentState.ArgumentsOrdered;
-		
+
 		for (var i = 0; i < numberedArguments.Count; i += 2)
 		{
 			everythingIsOkay &= parser.CurrentState.AddRegister(
@@ -905,7 +1250,7 @@ public partial class Functions
 		var everythingIsOkay = true;
 
 		var numberedArguments = parser.CurrentState.ArgumentsOrdered;
-		
+
 		for (var i = 0; i < numberedArguments.Count; i += 2)
 		{
 			everythingIsOkay &= parser.CurrentState.AddRegister(
@@ -926,12 +1271,12 @@ public partial class Functions
 	public static ValueTask<CallState> SoundEx(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var arg1 = parser.CurrentState.Arguments.TryGetValue("1", out var val) 
-			? val.Message!.ToPlainText().ToLowerInvariant() 
+		var arg1 = parser.CurrentState.Arguments.TryGetValue("1", out var val)
+			? val.Message!.ToPlainText().ToLowerInvariant()
 			: "soundex";
 
 		return ValueTask.FromResult<CallState>(
-			arg1 == "soundex" 
+			arg1 == "soundex"
 				? arg0.ToSoundex()
 				: Errors.NotSupported);
 	}
@@ -939,15 +1284,15 @@ public partial class Functions
 	[SharpFunction(Name = "soundslike", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> SoundLike(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		
+
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var arg1 = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-		var arg2 = parser.CurrentState.Arguments.TryGetValue("2", out var val) 
-			? val.Message!.ToPlainText().ToLowerInvariant() 
+		var arg2 = parser.CurrentState.Arguments.TryGetValue("2", out var val)
+			? val.Message!.ToPlainText().ToLowerInvariant()
 			: "soundex";
 
 		return ValueTask.FromResult<CallState>(
-			arg2 == "soundex" 
+			arg2 == "soundex"
 				? arg0.HasTheSameSoundex(arg1)
 				: Errors.NotSupported);
 	}
@@ -974,17 +1319,82 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "tel", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> Tel(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Tel(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// TODO: Implement tel - requires teleport/movement functionality
-		return ValueTask.FromResult(new CallState(Errors.NotSupported));
+		var args = parser.CurrentState.Arguments;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var objectName = args["0"].Message!.ToPlainText();
+		var destName = args["1"].Message!.ToPlainText();
+
+		// Optional quiet flag (arg 2) and force flag (arg 3) - for now we ignore these
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+			executor, executor, objectName, LocateFlags.All,
+			async targetObj =>
+			{
+				if (targetObj.IsRoom)
+				{
+					return Errors.ErrorCannotTeleport;
+				}
+
+				if (!await PermissionService!.Controls(executor, targetObj))
+				{
+					return Errors.ErrorCannotTeleport;
+				}
+
+				return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+					executor, executor, destName, LocateFlags.All,
+					async destObj =>
+					{
+						if (destObj.IsExit)
+						{
+							return Errors.ErrorInvalidDestination;
+						}
+
+						var destinationContainer = destObj.AsContainer;
+						var targetContent = targetObj.AsContent;
+
+						// Check for containment loops
+						if (await MoveService!.WouldCreateLoop(targetContent, destinationContainer))
+						{
+							return "#-1 WOULD CREATE LOOP";
+						}
+
+						// Move the object
+						await Mediator!.Send(new MoveObjectCommand(
+							targetContent,
+							destinationContainer,
+							executor.Object().DBRef,
+							true, // silent
+							"tel()"));
+
+						return "1";
+					});
+			});
 	}
 
 	[SharpFunction(Name = "testlock", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> TestLock(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> TestLock(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// TODO: Implement testlock - requires lock service integration
-		return ValueTask.FromResult(new CallState(Errors.NotSupported));
+		var args = parser.CurrentState.Arguments;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var objectName = args["0"].Message!.ToPlainText();
+		var lockString = args["1"].Message!.ToPlainText();
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+			executor, executor, objectName, LocateFlags.All,
+			async lockedObject =>
+			{
+				// Validate the lock string
+				if (!LockService!.Validate(lockString, lockedObject))
+				{
+					return new CallState("#-1 INVALID LOCK");
+				}
+
+				// Evaluate the lock
+				var passes = LockService.Evaluate(lockString, lockedObject, executor);
+				return new CallState(passes ? "1" : "0");
+			});
 	}
 
 	[SharpFunction(Name = "textentries", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -1023,9 +1433,38 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "wipe", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
-	public static ValueTask<CallState> Wipe(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Wipe(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// TODO: Implement wipe - requires attribute wiping functionality
-		return ValueTask.FromResult(new CallState(Errors.NotSupported));
+		var args = parser.CurrentState.Arguments;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var objectName = args["0"].Message!.ToPlainText();
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+			executor, executor, objectName, LocateFlags.All,
+			async obj =>
+			{
+				if (!await PermissionService!.Controls(executor, obj))
+				{
+					return Errors.ErrorPerm;
+				}
+
+				// Collect all non-system attributes (those not starting with _)
+				var attributesToClear = new List<string>();
+				await foreach (var attr in obj.Object().Attributes.Value)
+				{
+					if (!attr.Name.StartsWith("_"))
+					{
+						attributesToClear.Add(attr.Name);
+					}
+				}
+
+				// Clear each attribute
+				foreach (var attrName in attributesToClear)
+				{
+					await Mediator!.Send(new ClearAttributeCommand(obj.Object().DBRef, [attrName]));
+				}
+
+				return $"Wiped {attributesToClear.Count}";
+			});
 	}
 }
