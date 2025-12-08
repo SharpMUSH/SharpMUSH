@@ -5,11 +5,11 @@ using OpenTelemetry.Resources;
 using SharpMUSH.ConnectionServer.Consumers;
 using SharpMUSH.ConnectionServer.ProtocolHandlers;
 using SharpMUSH.ConnectionServer.Services;
-using SharpMUSH.Library.Services;
-using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Extensions;
 using Testcontainers.Redpanda;
 using Serilog;
+using SharpMUSH.Library.Services;
+using SharpMUSH.Library.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 

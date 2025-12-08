@@ -25,10 +25,11 @@ public class ActualPerformanceValidation
 		
 		using var client = new TcpClient();
 		await client.ConnectAsync(host, port);
-		using var stream = client.GetStream();
+		await using var stream = client.GetStream();
 		using var reader = new StreamReader(stream, Encoding.UTF8);
-		using var writer = new StreamWriter(stream, Encoding.UTF8) { AutoFlush = true };
-		
+		await using var writer = new StreamWriter(stream, Encoding.UTF8);
+		writer.AutoFlush = true;
+
 		// Read initial connection message
 		var welcome = await ReadUntilPrompt(reader);
 		Console.WriteLine("Server welcome:");

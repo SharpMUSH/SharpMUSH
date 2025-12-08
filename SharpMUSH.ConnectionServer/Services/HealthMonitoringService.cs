@@ -1,5 +1,3 @@
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.ConnectionServer.Services;
