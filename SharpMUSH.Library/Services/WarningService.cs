@@ -230,10 +230,34 @@ public class WarningService(
 		{
 			if (target.IsExit)
 			{
-				// For exits, check if the destination is valid
-				// TODO: Need to determine how to check if an exit is unlinked
-				// This may require checking if destination is set to a special "NOTHING" value
-				// For now, we'll skip this check until we understand the data model better
+				var exit = target.AsExit;
+				try
+				{
+					var destination = await exit.Location.WithCancellation(CancellationToken.None);
+					var destObj = destination.Match(
+						player => player.Object,
+						room => room.Object,
+						thing => thing.Object
+					);
+					
+					// Check if destination DBRef is -1 (NOTHING) or 0 (invalid)
+					if (destObj.DBRef.Number <= 0)
+					{
+						await Complain(checker, target, "exit-unlinked", 
+							"Exit is unlinked (destination is NOTHING). This exit can be stolen.");
+						hasWarnings = true;
+					}
+				}
+				catch
+				{
+					// If we can't get the location, consider it unlinked
+					await Complain(checker, target, "exit-unlinked", 
+						"Exit is unlinked (no valid destination). This exit can be stolen.");
+					hasWarnings = true;
+				}
+				
+				// TODO: Also check for variable exits without DESTINATION or EXITTO attribute
+				// This requires understanding how variable exits work in SharpMUSH
 			}
 		}
 
@@ -272,8 +296,78 @@ public class WarningService(
 		}
 
 		// Check for one-way and multiple return exits
-		// These require topology analysis which is more complex
-		// TODO: Implement topology checks (exit-oneway, exit-multiple)
+		// These require topology analysis
+		if (target.IsExit && (warnings.HasFlag(WarningType.ExitOneway) || warnings.HasFlag(WarningType.ExitMultiple)))
+		{
+			var exit = target.AsExit;
+			try
+			{
+				var destination = await exit.Location.WithCancellation(CancellationToken.None);
+				var source = await exit.Home.WithCancellation(CancellationToken.None);
+				
+				var destObj = destination.Match(
+					player => player.Object,
+					room => room.Object,
+					thing => thing.Object
+				);
+				
+				var sourceObj = source.Match(
+					player => player.Object,
+					room => room.Object,
+					thing => thing.Object
+				);
+				
+				// Only check if we have valid source and destination (not NOTHING)
+				if (destObj.DBRef.Number > 0 && sourceObj.DBRef.Number > 0)
+				{
+					// Get all exits from the destination that lead back to the source
+					var returnExitsQuery = mediator.CreateStream(new GetExitsQuery(destination));
+					var returnExitCount = 0;
+					
+					await foreach (var returnExit in returnExitsQuery)
+					{
+						try
+						{
+							var returnDest = await returnExit.Location.WithCancellation(CancellationToken.None);
+							var returnDestObj = returnDest.Match(
+								player => player.Object,
+								room => room.Object,
+								thing => thing.Object
+							);
+							
+							if (returnDestObj.DBRef.Equals(sourceObj.DBRef))
+							{
+								returnExitCount++;
+							}
+						}
+						catch
+						{
+							// Ignore exits we can't check
+						}
+					}
+					
+					// Check for one-way exits (no return)
+					if (warnings.HasFlag(WarningType.ExitOneway) && returnExitCount == 0)
+					{
+						await Complain(checker, target, "exit-oneway", 
+							"Exit has no return path from destination back to source.");
+						hasWarnings = true;
+					}
+					
+					// Check for multiple return exits
+					if (warnings.HasFlag(WarningType.ExitMultiple) && returnExitCount > 1)
+					{
+						await Complain(checker, target, "exit-multiple", 
+							$"Exit has {returnExitCount} return paths from destination back to source.");
+						hasWarnings = true;
+					}
+				}
+			}
+			catch
+			{
+				// If we can't check topology, skip this check silently
+			}
+		}
 
 		return hasWarnings;
 	}
