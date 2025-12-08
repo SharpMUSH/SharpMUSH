@@ -22,4 +22,5 @@ public record SharpMUSHOptions
 	public required RestrictionOptions Restriction { get; init; }
 	public required BannedNamesOptions BannedNames { get; init; }
 	public required SitelockRulesOptions SitelockRules { get; init; }
+	public required WarningOptions Warning { get; init; }
 };

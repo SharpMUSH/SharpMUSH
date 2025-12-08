@@ -24,12 +24,26 @@ public class WarningService(
 	{
 		var targetObj = target.Object();
 		
-		// TODO: Skip GOING objects
-		// TODO: Skip NO_WARN objects  
-		// TODO: Skip if owner has NO_WARN
+		// Skip GOING objects
+		if (await targetObj.IsGoingAsync())
+		{
+			return false;
+		}
+		
+		// Skip NO_WARN objects
+		if (await targetObj.HasNoWarnFlagAsync())
+		{
+			return false;
+		}
+		
+		// Skip if owner has NO_WARN
+		var owner = await targetObj.Owner.WithCancellation(CancellationToken.None);
+		if (await owner.Object.HasNoWarnFlagAsync())
+		{
+			return false;
+		}
 
 		// Determine which warnings to check
-		var owner = await targetObj.Owner.WithCancellation(CancellationToken.None);
 		var warnings = await GetWarningsForCheck(checker, targetObj, owner.Object);
 		
 		if (warnings == WarningType.None)

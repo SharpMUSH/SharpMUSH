@@ -171,6 +171,7 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, Prometh
 		services.AddHostedService<StartupHandler>();
 		services.AddHostedService<Services.ConnectionLoggingService>();
 		services.AddHostedService<Services.HealthMonitoringService>();
+		services.AddHostedService<Services.WarningCheckService>();
 
 		services.AddLogging(logging =>
 		{

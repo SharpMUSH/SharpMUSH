@@ -306,6 +306,9 @@ public static partial class ReadPennMushConfig
 			),
 			SitelockRules = new SitelockRulesOptions(
 				Rules: new Dictionary<string, string[]>()
+			),
+			Warning = new WarningOptions(
+				WarnInterval: Integer(Get(nameof(WarningOptions.WarnInterval)), 3600)
 			)
 		};
 
