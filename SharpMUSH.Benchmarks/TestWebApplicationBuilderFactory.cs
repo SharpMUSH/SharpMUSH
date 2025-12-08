@@ -11,6 +11,7 @@ using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server;
+using SharpMUSH.Server.Strategy.Prometheus;
 
 namespace SharpMUSH.Benchmarks;
 
@@ -30,7 +31,11 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 
 		Log.Logger = log;
 
-		var startup = new Startup(acnf, colorFile);
+		// Initialize Prometheus strategy for benchmarks
+		var prometheusStrategy = PrometheusStrategyProvider.GetStrategy();
+		prometheusStrategy.InitializeAsync().AsTask().Wait();
+
+		var startup = new Startup(acnf, colorFile, prometheusStrategy);
 
 		var substitute = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
 		substitute.CurrentValue.Returns(ReadPennMushConfig.Create(configFile));

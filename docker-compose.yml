@@ -12,21 +12,80 @@ services:
     networks:
       - sharpmush-net
   
-  rabbitmq:
-    image: rabbitmq:latest
-    container_name: sharpmush-rabbitmq
-    environment:
-      - RABBITMQ_DEFAULT_USER=sharpmush
-      - RABBITMQ_DEFAULT_PASS=sharpmush_dev_password
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:latest
+    container_name: sharpmush-redpanda
+    command:
+      - redpanda
+      - start
+      - --smp
+      - "1"
+      - --memory
+      - 1G
+      - --reserve-memory
+      - 0M
+      - --overprovisioned
+      - --node-id
+      - "0"
+      - --kafka-addr
+      - PLAINTEXT://0.0.0.0:9092
+      - --advertise-kafka-addr
+      - PLAINTEXT://redpanda:9092
+      - --set
+      - redpanda.max_compacted_log_segment_size=6291456
     ports:
-      - "5672:5672"   # AMQP port
-      - "15672:15672" # Management UI
+      - "9092:9092"   # Kafka API
+      - "9644:9644"   # Admin API
+      - "8082:8082"   # HTTP Proxy
     volumes:
-      - rabbitmq-data:/var/lib/rabbitmq
+      - redpanda-data:/var/lib/redpanda/data
     networks:
       - sharpmush-net
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      test: ["CMD", "rpk", "cluster", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: sharpmush-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    ports:
+      - "9090:9090"  # Prometheus UI
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    networks:
+      - sharpmush-net
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: sharpmush-grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    ports:
+      - "3000:3000"  # Grafana UI
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    networks:
+      - sharpmush-net
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -36,15 +95,18 @@ services:
       context: ./
       dockerfile: SharpMUSH.ConnectionServer/Dockerfile
     environment:
-      - RABBITMQ_HOST=rabbitmq
-      - RABBITMQ_USER=sharpmush
-      - RABBITMQ_PASSWORD=sharpmush_dev_password
+      - KAFKA_HOST=redpanda
+      - KAFKA_PORT=9092
+      - PROMETHEUS_URL=http://prometheus:9090
     depends_on:
-      rabbitmq:
+      redpanda:
+        condition: service_healthy
+      prometheus:
         condition: service_healthy
     ports:
       - "4201:4201" # Telnet
       - "4202:4202" # ConnectionServer HTTP API
+      - "9091:9091" # Prometheus metrics endpoint
     networks:
       - sharpmush-net
 
@@ -54,16 +116,20 @@ services:
       dockerfile: Dockerfile
     environment:
       - ARANGO_CONNECTION_STRING=Server=http://unusedschim:8529;User=root;Password=password;
-      - RABBITMQ_HOST=rabbitmq
-      - RABBITMQ_USER=sharpmush
-      - RABBITMQ_PASSWORD=sharpmush_dev_password
+      - KAFKA_HOST=redpanda
+      - KAFKA_PORT=9092
+      - PROMETHEUS_URL=http://prometheus:9090
     depends_on:
       arangodb:
         condition: service_started
-      rabbitmq:
+      redpanda:
+        condition: service_healthy
+      prometheus:
         condition: service_healthy
       connectionserver:
         condition: service_started
+    ports:
+      - "9092:9092" # Prometheus metrics endpoint
     volumes:
       - arangodb-socket:/var/run/arangodb3
     networks:
@@ -71,7 +137,9 @@ services:
       
 volumes:
   arangodb-socket:
-  rabbitmq-data:
+  redpanda-data:
+  prometheus-data:
+  grafana-data:
   
 networks:
   sharpmush-net:
