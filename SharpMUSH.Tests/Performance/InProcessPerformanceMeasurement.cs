@@ -21,7 +21,7 @@ public class InProcessPerformanceMeasurement
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
-	[Test]
+	[Test, Explicit]
 	public async Task MeasureDoListVsIterPerformance()
 	{
 		Console.WriteLine("=== Performance Measurement: @dolist vs iter() ===\n");
@@ -152,7 +152,7 @@ public class InProcessPerformanceMeasurement
 		}
 	}
 	
-	[Test]
+	[Test, Explicit]
 	public async Task MeasureNotifyServiceOverhead()
 	{
 		Console.WriteLine("=== Measuring NotifyService Call Overhead ===\n");
