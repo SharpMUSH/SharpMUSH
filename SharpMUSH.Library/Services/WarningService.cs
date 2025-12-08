@@ -102,7 +102,7 @@ public class WarningService(
 	public async Task<int> CheckAllObjectsAsync()
 	{
 		var checkedCount = 0;
-		var warningsByOwner = new Dictionary<string, List<string>>();
+		var warningsByOwner = new Dictionary<DBRef, (AnySharpObject Owner, List<string> Warnings)>();
 		
 		// Get all objects in the database
 		var allObjects = mediator.CreateStream(new GetAllObjectsQuery());
@@ -113,16 +113,10 @@ public class WarningService(
 			
 			// Get the owner for this object
 			var owner = await obj.Owner.WithCancellation(CancellationToken.None);
-			var ownerId = owner.Object.Id ?? owner.Object.Key.ToString();
-			
-			// Track warnings per owner
-			if (!warningsByOwner.ContainsKey(ownerId))
-			{
-				warningsByOwner[ownerId] = [];
-			}
+			var ownerDbRef = owner.Object.DBRef;
 			
 			// Get the full object nodes
-			var ownerNode = await mediator.Send(new GetObjectNodeQuery(owner.Object.DBRef));
+			var ownerNode = await mediator.Send(new GetObjectNodeQuery(ownerDbRef));
 			var objectNode = await mediator.Send(new GetObjectNodeQuery(obj.DBRef));
 			
 			if (ownerNode.IsNone || objectNode.IsNone)
@@ -130,18 +124,38 @@ public class WarningService(
 				continue;
 			}
 			
+			var ownerAny = ownerNode.WithoutNone();
+			var objectAny = objectNode.WithoutNone();
+			
+			// Track warnings per owner - use TryAdd for efficiency
+			if (!warningsByOwner.TryGetValue(ownerDbRef, out _))
+			{
+				warningsByOwner[ownerDbRef] = (ownerAny, []);
+			}
+			
 			// Check warnings (using owner as checker for their own objects)
-			var hadWarnings = await CheckObjectAsync(ownerNode.WithoutNone(), objectNode.WithoutNone());
+			var hadWarnings = await CheckObjectAsync(ownerAny, objectAny);
 			
 			if (hadWarnings)
 			{
-				warningsByOwner[ownerId].Add($"{obj.Name}(#{obj.Key})");
+				warningsByOwner[ownerDbRef].Warnings.Add($"{obj.Name}(#{obj.Key})");
 			}
 		}
 		
 		// Notify connected owners of their warnings
-		// TODO: Check if owners are connected before notifying
-		// For now, we just return the count
+		foreach (var (ownerDbRef, (owner, warnings)) in warningsByOwner)
+		{
+			if (warnings.Count > 0)
+			{
+				// TODO: Check if owner is connected before notifying
+				// For now, notify all owners (they won't receive if disconnected)
+				await notifyService.Notify(owner, $"Warning check complete: {warnings.Count} warnings found on your objects:");
+				foreach (var warning in warnings)
+				{
+					await notifyService.Notify(owner, $"  - {warning}");
+				}
+			}
+		}
 		
 		return checkedCount;
 	}
