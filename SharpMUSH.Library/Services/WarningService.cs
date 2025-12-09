@@ -15,6 +15,7 @@ namespace SharpMUSH.Library.Services;
 public class WarningService(
 	INotifyService notifyService,
 	IAttributeService attributeService,
+	ILockService lockService,
 	IMediator mediator) : IWarningService
 {
 	/// <summary>
@@ -201,12 +202,50 @@ public class WarningService(
 
 		if (warnings.HasFlag(WarningType.LockProbs))
 		{
-			// TODO: Implement lock checking
-			// This would check for:
-			// - Invalid object references in locks
-			// - References to GOING/garbage objects
-			// - Missing attributes in eval locks
-			// - Indirect locks that aren't present
+			var targetObj = target.Object();
+			var locks = targetObj.Locks;
+			
+			// Check each lock on the object
+			foreach (var (lockName, lockString) in locks)
+			{
+				// Skip empty locks
+				if (string.IsNullOrWhiteSpace(lockString))
+				{
+					continue;
+				}
+				
+				try
+				{
+					// Validate the lock - this checks for:
+					// - Invalid syntax
+					// - Invalid object references (non-existent dbrefs)
+					// - References to GOING/garbage objects
+					// - Missing attributes in eval locks
+					// - Indirect locks that aren't present
+					var isValid = lockService.Validate(lockString, target);
+					
+					if (!isValid)
+					{
+						await Complain(checker, target, "lock-checks", 
+							$"Lock '{lockName}' has problems: invalid syntax or references.");
+						hasWarnings = true;
+					}
+				}
+				catch (ArgumentException ex)
+				{
+					// Argument exceptions indicate invalid lock syntax or format
+					await Complain(checker, target, "lock-checks", 
+						$"Lock '{lockName}' has problems: {ex.Message}");
+					hasWarnings = true;
+				}
+				catch (Exception ex)
+				{
+					// Any other exception during validation indicates a problem with the lock
+					await Complain(checker, target, "lock-checks", 
+						$"Lock '{lockName}' has problems: unable to parse or validate ({ex.GetType().Name}).");
+					hasWarnings = true;
+				}
+			}
 		}
 
 		return hasWarnings;
