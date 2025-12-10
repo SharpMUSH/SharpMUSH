@@ -47,6 +47,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 	
 	private static IPrometheusQueryService? PrometheusQueryService { get; set; }
 	
+	private static IWarningService? WarningService { get; set; }
+	
 	private static LibraryService<string, CommandDefinition>? CommandLibrary { get; set; }
 	private static LibraryService<string, FunctionDefinition>? FunctionLibrary { get; set; }
 
@@ -76,6 +78,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		IEventService eventService,
 		ITelemetryService telemetryService,
 		IPrometheusQueryService prometheusQueryService,
+		IWarningService warningService,
 		LibraryService<string, FunctionDefinition> functionLibrary)
 	{
 		Mediator = mediator;
@@ -100,6 +103,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		EventService = eventService;
 		TelemetryService = telemetryService;
 		PrometheusQueryService = prometheusQueryService;
+		WarningService = warningService;
 		FunctionLibrary = functionLibrary;
 
 		foreach (var command in Generated.CommandLibrary.Commands)

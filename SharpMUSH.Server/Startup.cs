@@ -111,6 +111,7 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, Prometh
 		services.AddSingleton<ISortService, SortService>();
 		services.AddSingleton<IHookService, HookService>();
 		services.AddSingleton<IEventService, EventService>();
+		services.AddSingleton<IWarningService, WarningService>();
 		services.AddSingleton<ILibraryProvider<FunctionDefinition>, Functions>();
 		services.AddSingleton<ILibraryProvider<CommandDefinition>, Commands>();
 		services.AddSingleton(x => x.GetService<ILibraryProvider<FunctionDefinition>>()!.Get());
@@ -170,6 +171,7 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, Prometh
 		services.AddHostedService<StartupHandler>();
 		services.AddHostedService<Services.ConnectionLoggingService>();
 		services.AddHostedService<Services.HealthMonitoringService>();
+		services.AddHostedService<Services.WarningCheckService>();
 
 		services.AddLogging(logging =>
 		{
