@@ -435,6 +435,39 @@ public partial class ArangoDatabase(
 	public async ValueTask UnsetObjectParent(AnySharpObject obj, CancellationToken ct = default)
 		=> await SetObjectParent(obj, null, ct);
 
+	public async ValueTask SetObjectZone(AnySharpObject obj, AnySharpObject? zone, CancellationToken ct = default)
+	{
+		var response = await arangoDb.Query.ExecuteAsync<string>(handle,
+			$"FOR v,e IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphZones} RETURN e._id",
+			new Dictionary<string, object> { { StartVertex, obj.Object().Id! } }, cancellationToken: ct);
+
+		var zoneEdge = response.FirstOrDefault();
+
+		if (zoneEdge is null && zone is null)
+		{
+			return;
+		}
+
+		if (zoneEdge is null && zone != null)
+		{
+			await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphZones, DatabaseConstants.HasZone,
+				new { _from = obj.Object().Id, _to = zone.Object().Id }, cancellationToken: ct);
+		}
+		else if (zone is null)
+		{
+			await arangoDb.Graph.Edge.RemoveAsync<object>(handle, DatabaseConstants.GraphZones, DatabaseConstants.HasZone,
+				zoneEdge, cancellationToken: ct);
+		}
+		else
+		{
+			await arangoDb.Graph.Edge.UpdateAsync(handle, DatabaseConstants.GraphZones, DatabaseConstants.HasZone,
+				zoneEdge, new { _to = zone.Object().Id }, cancellationToken: ct);
+		}
+	}
+
+	public async ValueTask UnsetObjectZone(AnySharpObject obj, CancellationToken ct = default)
+		=> await SetObjectZone(obj, null, ct);
+
 	public async ValueTask SetObjectOwner(AnySharpObject obj, SharpPlayer owner, CancellationToken ct = default)
 	{
 		var response = await arangoDb.Query.ExecuteAsync<string>(handle,
@@ -1084,6 +1117,21 @@ public partial class ArangoDatabase(
 		return await GetObjectNodeAsync(parentId, ct);
 	}
 
+	public async ValueTask<AnyOptionalSharpObject> GetZoneAsync(string id, CancellationToken ct = default)
+	{
+		// Get zone ID directly 
+		var zoneId = (await arangoDb.Query.ExecuteAsync<string>(handle,
+				$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphZones} RETURN v._id", cache: true,
+				cancellationToken: ct))
+			.FirstOrDefault();
+		if (zoneId is null)
+		{
+			return new None();
+		}
+
+		return await GetObjectNodeAsync(zoneId, ct);
+	}
+
 	private IAsyncEnumerable<SharpObject>? GetChildrenAsync(string id, CancellationToken ct = default)
 		=> arangoDb.Query.ExecuteStreamAsync<SharpObject>(handle,
 			$"FOR v IN 1..1 INBOUND {id} GRAPH {DatabaseConstants.GraphParents} RETURN v", cache: true,
@@ -1359,6 +1407,7 @@ public partial class ArangoDatabase(
 			LazyAllAttributes = new(() => GetAllLazyAttributesAsync(id, CancellationToken.None)),
 			Owner = new(async ct => await GetObjectOwnerAsync(id, ct)),
 			Parent = new(async ct => await GetParentAsync(id, ct)),
+			Zone = new(async ct => await GetZoneAsync(id, ct)),
 			Children = new(() => GetChildrenAsync(id, CancellationToken.None))
 		};
 	}
@@ -1405,6 +1454,7 @@ public partial class ArangoDatabase(
 					GetAllLazyAttributesAsync(obj.Id, CancellationToken.None)),
 			Owner = new AsyncLazy<SharpPlayer>(async ct => await GetObjectOwnerAsync(obj.Id, ct)),
 			Parent = new AsyncLazy<AnyOptionalSharpObject>(async ct => await GetParentAsync(obj.Id, ct)),
+			Zone = new AsyncLazy<AnyOptionalSharpObject>(async ct => await GetZoneAsync(obj.Id, ct)),
 			Children = new Lazy<IAsyncEnumerable<SharpObject>?>(() => GetChildrenAsync(obj.Id, CancellationToken.None))
 		};
 
