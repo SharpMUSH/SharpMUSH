@@ -368,6 +368,21 @@ public interface ISharpDatabase
 	ValueTask UnsetObjectParent(AnySharpObject obj, CancellationToken cancellationToken = default);
 
 	/// <summary>
+	/// Sets the Zone of an object.
+	/// </summary>
+	/// <param name="obj">Object</param>
+	/// <param name="zone">New Zone</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
+	ValueTask SetObjectZone(AnySharpObject obj, AnySharpObject? zone, CancellationToken cancellationToken = default);
+	
+	/// <summary>
+	/// Unsets the Zone of an object.
+	/// </summary>
+	/// <param name="obj">Object</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
+	ValueTask UnsetObjectZone(AnySharpObject obj, CancellationToken cancellationToken = default);
+
+	/// <summary>
 	/// Sets the Owner of an Object to a player.
 	/// </summary>
 	/// <param name="obj">Object</param>
