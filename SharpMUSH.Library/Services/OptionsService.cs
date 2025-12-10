@@ -288,6 +288,9 @@ public class OptionsService(ISharpDatabase database) : IOptionsFactory<SharpMUSH
 					{ "192.168.1.*", ["register"] },
 					{ "trusted.domain.org", ["connect", "create", "guest"] }
 				}
+			),
+			Warning = new WarningOptions(
+				WarnInterval: "1h"
 			)
 		};
 	}

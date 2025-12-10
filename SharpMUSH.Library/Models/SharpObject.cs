@@ -1,6 +1,7 @@
 ﻿using System.Collections.Immutable;
 using System.Text.Json.Serialization;
 using DotNext.Threading;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Library.Models;
@@ -24,6 +25,11 @@ public class SharpObject
 	public long CreationTime { get; set; } = DateTimeOffset.Now.ToUnixTimeMilliseconds();
 
 	public long ModifiedTime { get; set; } = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+
+	/// <summary>
+	/// Warning types enabled for this object. If None, the owner's warnings are used.
+	/// </summary>
+	public WarningType Warnings { get; set; } = WarningType.None;
 
 	// RELATIONSHIP
 	[JsonIgnore]
