@@ -560,7 +560,7 @@ public partial class Commands
 				// Handle "none" to remove zone
 				if (zoneName.Equals("none", StringComparison.InvariantCultureIgnoreCase))
 				{
-					await AttributeService!.SetAttributeAsync(executor, obj, "ZONE", MModule.single(""));
+					await Mediator!.Send(new UnsetObjectZoneCommand(obj));
 					await NotifyService.Notify(executor, "Zone cleared.");
 					return CallState.Empty;
 				}
@@ -569,9 +569,24 @@ public partial class Commands
 					executor, executor, zoneName, LocateFlags.All,
 					async zoneObj =>
 					{
-						// Set the zone attribute
-						await AttributeService!.SetAttributeAsync(executor, obj, "ZONE", 
-							MModule.single(zoneObj.Object().DBRef.ToString()));
+						// Check if executor can control the zone or passes ChZone lock
+						// TODO: Check ChZone lock
+						bool canZone = await PermissionService!.Controls(executor, zoneObj);
+						
+						if (!canZone)
+						{
+							await NotifyService!.Notify(executor, "Permission denied: You cannot zone to that object.");
+							return Errors.ErrorPerm;
+						}
+
+						// Set the zone using database edge
+						await Mediator!.Send(new SetObjectZoneCommand(obj, zoneObj));
+
+						// Auto-set Zone lock if not present on zone object
+						if (!zoneObj.Object().Locks.ContainsKey("Zone"))
+						{
+							// TODO: Set Zone lock to `<zone object>` 
+						}
 						
 						// Clear privileged flags and powers unless /preserve is used
 						if (!preserve && !obj.IsPlayer)
@@ -589,6 +604,7 @@ public partial class Commands
 							{
 								await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "!TRUST", false);
 							}
+							// TODO: Strip powers
 						}
 
 						await NotifyService.Notify(executor, "Zone set.");
