@@ -57,6 +57,17 @@ public partial class Commands
 			await executor.Object().Owner.WithCancellation(CancellationToken.None),
 			location.Known.AsContainer));
 		
+		// Inherit zone from creator
+		var creatorZone = await executor.Object().Zone.WithCancellation(CancellationToken.None);
+		if (!creatorZone.IsNone)
+		{
+			var newThing = await Mediator.Send(new GetObjectNodeQuery(thing));
+			if (!newThing.IsNone)
+			{
+				await Mediator.Send(new SetObjectZoneCommand(newThing.Known, creatorZone.Known));
+			}
+		}
+		
 		await NotifyService!.Notify(executor, $"Created {name} ({thing}).");
 
 		// Trigger OBJECT`CREATE event
@@ -643,6 +654,17 @@ public partial class Commands
 			await executor.Owner.WithCancellation(CancellationToken.None)));
 		await NotifyService!.Notify(executor.DBRef, $"{roomName} created with room number #{response.Number}.");
 
+		// Inherit zone from creator
+		var creatorZone = await executor.Zone.WithCancellation(CancellationToken.None);
+		if (!creatorZone.IsNone)
+		{
+			var newRoom = await Mediator.Send(new GetObjectNodeQuery(response));
+			if (!newRoom.IsNone)
+			{
+				await Mediator.Send(new SetObjectZoneCommand(newRoom.Known, creatorZone.Known));
+			}
+		}
+
 		if (!string.IsNullOrWhiteSpace(exitTo?.ToString()))
 		{
 			var exitToName = MModule.plainText(exitTo).Split(";");
@@ -797,6 +819,17 @@ public partial class Commands
 			sourceRoom,
 			await executor.Object().Owner.WithCancellation(CancellationToken.None)
 		));
+
+		// Inherit zone from creator
+		var creatorZone = await executor.Object().Zone.WithCancellation(CancellationToken.None);
+		if (!creatorZone.IsNone)
+		{
+			var newExit = await Mediator.Send(new GetObjectNodeQuery(exitDbRef));
+			if (!newExit.IsNone)
+			{
+				await Mediator.Send(new SetObjectZoneCommand(newExit.Known, creatorZone.Known));
+			}
+		}
 
 		await NotifyService.Notify(executor, $"Opened exit {primaryName} with dbref #{exitDbRef.Number}.");
 
