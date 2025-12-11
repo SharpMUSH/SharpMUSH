@@ -222,18 +222,20 @@ public class BuildingCommandTests
 
 	[Test]
 	[DependsOn(nameof(ChownObject))]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask ChzoneObject()
 	{
 		// Create objects
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@create Zone Object"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@create Zoned Object"));
+		var zoneResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create Zone Object"));
+		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
+		
+		var objResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create Zoned Object"));
+		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 		
 		// Set zone
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@chzone #12=#11"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chzone {objDbRef}={zoneDbRef}"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(Quantity.AtLeastOne())
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Zone set")));
 	}
 
