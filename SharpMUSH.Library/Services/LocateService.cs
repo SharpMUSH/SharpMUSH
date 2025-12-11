@@ -309,6 +309,22 @@ public partial class LocateService(IMediator mediator,
 			{
 				if (location.IsRoom && flags.HasFlag(LocateFlags.ExitsPreference))
 				{
+					// Step 1: Match exits in the current location (PennMUSH order)
+					if (location.IsRoom)
+					{
+						var exits = mediator
+							.CreateStream(new GetContentsQuery(location))
+							.Where(x => x.IsExit)
+							.Select(x => new AnySharpObject(x.AsExit));
+						
+						(bestMatch, final, curr, right_type, exact, c) = await Match_List(parser, exits, looker, where, bestMatch,
+							exact, final, curr, right_type, flags, name);
+						
+						if (c == ControlFlow.Break) break;
+						if (c == ControlFlow.Return) break;
+					}
+
+					// Step 2: Match exits in Zone Master Room if location has a zone that is a room (PennMUSH order)
 					if (flags.HasFlag(LocateFlags.MatchRemoteContents)
 					    && !flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation |
 					                      LocateFlags.OnlyMatchObjectsInLookerInventory))
@@ -332,6 +348,7 @@ public partial class LocateService(IMediator mediator,
 						}
 					}
 
+					// Step 3: Match exits in Master Room (global exits) last (PennMUSH order)
 					if (flags.HasFlag(LocateFlags.All)
 					    && !flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation |
 					                      LocateFlags.OnlyMatchObjectsInLookerInventory))
@@ -342,20 +359,6 @@ public partial class LocateService(IMediator mediator,
 							.Where(x => x.IsExit)
 							.Select(x => new AnySharpObject(x.AsExit));
 
-						(bestMatch, final, curr, right_type, exact, c) = await Match_List(parser, exits, looker, where, bestMatch,
-							exact, final, curr, right_type, flags, name);
-						
-						if (c == ControlFlow.Break) break;
-						if (c == ControlFlow.Return) break;
-					}
-
-					if (location.IsRoom)
-					{
-						var exits = mediator
-							.CreateStream(new GetContentsQuery(location))
-							.Where(x => x.IsExit)
-							.Select(x => new AnySharpObject(x.AsExit));
-						
 						(bestMatch, final, curr, right_type, exact, c) = await Match_List(parser, exits, looker, where, bestMatch,
 							exact, final, curr, right_type, flags, name);
 						
