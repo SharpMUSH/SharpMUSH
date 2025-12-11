@@ -312,10 +312,24 @@ public partial class LocateService(IMediator mediator,
 					if (flags.HasFlag(LocateFlags.MatchRemoteContents)
 					    && !flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation |
 					                      LocateFlags.OnlyMatchObjectsInLookerInventory))
-						/* TODO: && IsRoom(Zone(loc) */
 					{
-						/* TODO: MATCH_LIST(Exits(Zone(loc))); */
-						throw new NotImplementedException();
+						// Check if the location has a zone and if that zone is a room (ZMR)
+						var locationZone = await location.WithExitOption().Object().Zone.WithCancellation(CancellationToken.None);
+						if (!locationZone.IsNone && locationZone.Known.IsRoom)
+						{
+							// Zone Master Room: Match exits in the ZMR
+							AnySharpContainer zmr = locationZone.Known.AsRoom;
+							var zmrExits = mediator
+								.CreateStream(new GetContentsQuery(zmr))
+								.Where(x => x.IsExit)
+								.Select(x => new AnySharpObject(x.AsExit));
+
+							(bestMatch, final, curr, right_type, exact, c) = await Match_List(parser, zmrExits, looker, where, bestMatch,
+								exact, final, curr, right_type, flags, name);
+							
+							if (c == ControlFlow.Break) break;
+							if (c == ControlFlow.Return) break;
+						}
 					}
 
 					if (flags.HasFlag(LocateFlags.All)
