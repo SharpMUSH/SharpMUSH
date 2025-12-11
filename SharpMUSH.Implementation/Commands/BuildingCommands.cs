@@ -581,10 +581,10 @@ public partial class Commands
 					async zoneObj =>
 					{
 						// Check if executor can control the zone or passes ChZone lock
-						// TODO: Check ChZone lock
 						bool canZone = await PermissionService!.Controls(executor, zoneObj);
 						
-						if (!canZone)
+						// If not controlled, check ChZone lock
+						if (!canZone && !LockService!.Evaluate(LockType.ChZone, zoneObj, executor))
 						{
 							await NotifyService!.Notify(executor, "Permission denied: You cannot zone to that object.");
 							return Errors.ErrorPerm;
@@ -593,10 +593,11 @@ public partial class Commands
 						// Set the zone using database edge
 						await Mediator!.Send(new SetObjectZoneCommand(obj, zoneObj));
 
-						// Auto-set Zone lock if not present on zone object
-						if (!zoneObj.Object().Locks.ContainsKey("Zone"))
+						// Auto-set ChZone lock if not present on zone object
+						// Default ChZone lock is the zone object itself (allows controlled objects)
+						if (!zoneObj.Object().Locks.ContainsKey("ChZone"))
 						{
-							// TODO: Set Zone lock to `<zone object>` 
+							await Mediator.Send(new SetLockCommand(zoneObj.Object(), "ChZone", zoneObj.Object().DBRef.ToString()));
 						}
 						
 						// Clear privileged flags and powers unless /preserve is used
