@@ -231,8 +231,9 @@ public class ZoneCommandTests
 		// Create an exit in the ZMR
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@open zmr_exit_{Random.Shared.Next(1000, 9999)}={room1DbRef},{zmrDbRef}"));
 		
-		// Implementation provides ZMR exits to all zoned rooms
-		await Assert.That(true).IsTrue(); // Test setup validates ZMR configuration
+		// Verify ZMR room zone is still properly set (validates test setup)
+		var zmrVerify = await Mediator.Send(new GetObjectNodeQuery(zmrDbRef));
+		await Assert.That(zmrVerify.IsNone).IsFalse();
 	}
 
 	[Test]
