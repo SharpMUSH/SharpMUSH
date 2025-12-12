@@ -24,6 +24,9 @@ public class ZoneFunctionTests
 	[Test]
 	public async Task ZoneGetNoZone()
 	{
+		// First, ensure the player has no zone (so objects don't inherit one)
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single("@chzone me=none"));
+		
 		// Create an object without a zone
 		var objResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ZoneFuncTest1"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
@@ -59,6 +62,9 @@ public class ZoneFunctionTests
 	[DependsOn(nameof(ZoneGetWithZone))]
 	public async Task ZoneSetWithFunction()
 	{
+		// Ensure player has no zone
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single("@chzone me=none"));
+		
 		// Create a zone master object
 		var zoneResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ZoneFuncSetMaster"));
 		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
@@ -119,6 +125,9 @@ public class ZoneFunctionTests
 	[DependsOn(nameof(ZoneInvalidObject))]
 	public async Task ZoneNoPermissionToExamine()
 	{
+		// Ensure player has no zone
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single("@chzone me=none"));
+		
 		// Create an object that player can examine (they created it)
 		var objResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ZonePermTest"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
@@ -156,6 +165,9 @@ public class ZoneFunctionTests
 	[DependsOn(nameof(ZoneOnRoom))]
 	public async Task ZoneChainTest()
 	{
+		// Ensure player has no zone
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single("@chzone me=none"));
+		
 		// Create a hierarchy: Zone -> Object
 		var zoneResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ChainZoneMaster"));
 		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);

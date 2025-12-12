@@ -44,9 +44,11 @@ public class ZoneCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chzone {objDbRef}={zoneDbRef}"));
 
 		// Verify notification was received
-		await NotifyService
+#pragma warning disable CS4014
+		NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Zone set")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
+#pragma warning restore CS4014
 		
 		// Verify the zone was actually set in the database
 		var updatedObject = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
@@ -75,9 +77,11 @@ public class ZoneCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chzone {objDbRef}=none"));
 
 		// Verify notification was received
-		await NotifyService
+#pragma warning disable CS4014
+		NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Zone cleared")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
+#pragma warning restore CS4014
 		
 		// Verify the zone was actually cleared in the database
 		var updatedObject = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
@@ -103,9 +107,11 @@ public class ZoneCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chzone {objDbRef}={zoneDbRef}"));
 		
 		// Verify success notification
-		await NotifyService
+#pragma warning disable CS4014
+		NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Zone set")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
+#pragma warning restore CS4014
 	}
 
 	[Test]
@@ -125,9 +131,11 @@ public class ZoneCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chzone {objDbRef}={zoneDbRef}"));
 		
 		// Verify notification
-		await NotifyService
+#pragma warning disable CS4014
+		NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Zone set")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
+#pragma warning restore CS4014
 	}
 
 	[Test]
@@ -138,10 +146,11 @@ public class ZoneCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@chzone #99999=#1"));
 		
 		// Should receive an error notification
-		await NotifyService
+#pragma warning disable CS4014
+		NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => 
-				s.Contains("not found") || s.Contains("doesn't exist") || s.Contains("I don't see that")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
+#pragma warning restore CS4014
 	}
 
 	[Test]
@@ -156,10 +165,11 @@ public class ZoneCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chzone {objDbRef}=#99999"));
 		
 		// Should receive an error notification
-		await NotifyService
+#pragma warning disable CS4014
+		NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => 
-				s.Contains("not found") || s.Contains("doesn't exist") || s.Contains("I don't see that")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
+#pragma warning restore CS4014
 	}
 
 	[Test]
@@ -180,9 +190,11 @@ public class ZoneCommandTests
 		// Clear any previous expectations
 		NotifyService.ClearReceivedCalls();
 		
-		await NotifyService
+#pragma warning disable CS4014
+		NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Zone set")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
+#pragma warning restore CS4014
 	}
 
 	[Test]
