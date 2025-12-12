@@ -1209,8 +1209,9 @@ LOCATE()
 					return string.Empty;
 				}
 
-				// Get zone of the target object
-				var zoneObj = await target.Object().Zone.WithCancellation(CancellationToken.None);
+				// Get zone of the target object - query fresh from database
+				var freshTarget = await Mediator!.Send(new GetObjectNodeQuery(target.Object().DBRef));
+				var zoneObj = await freshTarget.Known.Object().Zone.WithCancellation(CancellationToken.None);
 				return zoneObj.IsNone 
 					? "#-1" 
 					: zoneObj.Known.Object().DBRef.ToString();

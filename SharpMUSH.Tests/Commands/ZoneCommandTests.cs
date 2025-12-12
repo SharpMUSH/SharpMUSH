@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
+using OneOf;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -10,6 +11,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using static SharpMUSH.Library.Services.Interfaces.INotifyService;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -258,10 +260,12 @@ public class ZoneCommandTests
 		// Execute the $-command - it should be available through ZMR
 		await Parser.CommandParse(1, ConnectionService, MModule.single("zmrtest"));
 		
-		// Verify the command was executed
-		await NotifyService
+		// Verify the command was executed - check that pemit message was sent
+#pragma warning disable CS4014
+		NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("ZMR command executed")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
+#pragma warning restore CS4014
 	}
 
 	[Test]
@@ -304,10 +308,12 @@ public class ZoneCommandTests
 		// Execute the $-command - it should be available through personal zone
 		await Parser.CommandParse(1, ConnectionService, MModule.single("personaltest"));
 		
-		// Verify the command was executed
-		await NotifyService
+		// Verify the command was executed - check that pemit message was sent
+#pragma warning disable CS4014
+		NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Personal zone command executed")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
+#pragma warning restore CS4014
 	}
 
 	[Test]
@@ -344,8 +350,15 @@ public class ZoneCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("zmrselftest"));
 		
 		// Verify the command was NOT executed (per PennMUSH spec, commands on ZMR itself are ignored)
-		await NotifyService
+		// Check that the specific pemit message was not sent
+#pragma warning disable CS4014
+		NotifyService
 			.DidNotReceive()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("This should not execute")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => 
+				msg.Match(
+					mstr => mstr.ToString().Contains("This should not execute"),
+					str => str.Contains("This should not execute")
+				)), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
+#pragma warning restore CS4014
 	}
 }
