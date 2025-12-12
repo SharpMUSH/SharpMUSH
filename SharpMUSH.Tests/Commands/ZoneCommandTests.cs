@@ -204,6 +204,9 @@ public class ZoneCommandTests
 	[Test]
 	public async ValueTask ZMRExitMatchingTest()
 	{
+		// Clear player zone to avoid inheritance issues
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@chzone me=none"));
+		
 		// Create a unique Zone Master Room (ZMR)
 		var zmrName = GenerateUniqueName("ZMR");
 		var zmrResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {zmrName}"));
@@ -244,6 +247,9 @@ public class ZoneCommandTests
 	[Test]
 	public async ValueTask ZMRUserDefinedCommandTest()
 	{
+		// Clear player zone to avoid inheritance issues
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@chzone me=none"));
+		
 		// Create a unique Zone Master Room (ZMR)
 		var zmrName = GenerateUniqueName("ZMRCmd");
 		var zmrResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {zmrName}"));
@@ -307,6 +313,9 @@ public class ZoneCommandTests
 	[Test]
 	public async ValueTask PersonalZoneUserDefinedCommandTest()
 	{
+		// Clear player zone first, then set it to a ZMR for testing
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@chzone me=none"));
+		
 		// Create a unique personal Zone Master Room (ZMR) for the player
 		var personalZMRName = GenerateUniqueName("PersonalZMR");
 		var personalZMRResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {personalZMRName}"));
@@ -370,6 +379,9 @@ public class ZoneCommandTests
 	[Test]
 	public async ValueTask ZMRDoesNotMatchCommandsOnZMRItself()
 	{
+		// Clear player zone to avoid inheritance issues
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@chzone me=none"));
+		
 		// Create a unique Zone Master Room (ZMR)
 		var zmrName = GenerateUniqueName("ZMRSelfTest");
 		var zmrResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {zmrName}"));
