@@ -25,6 +25,9 @@ public class ZoneDatabaseTests
 	[Test]
 	public async ValueTask SetObjectZone()
 	{
+		// Clear player zone first to ensure clean state
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single("@chzone me=none"));
+		
 		// Create zone master and object
 		var zoneResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create DBZoneMaster"));
 		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
@@ -83,6 +86,9 @@ public class ZoneDatabaseTests
 	[DependsOn(nameof(UnsetObjectZone))]
 	public async ValueTask UpdateObjectZone()
 	{
+		// Clear player zone first to ensure clean state
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single("@chzone me=none"));
+		
 		// Create two zone masters and an object
 		var zone1Result = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create DBUpdateZone1"));
 		var zone1DbRef = DBRef.Parse(zone1Result.Message!.ToPlainText()!);
@@ -117,6 +123,9 @@ public class ZoneDatabaseTests
 	[DependsOn(nameof(UpdateObjectZone))]
 	public async ValueTask SetObjectZoneToNull()
 	{
+		// Clear player zone first to ensure clean state
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single("@chzone me=none"));
+		
 		// Create object
 		var objResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create DBNullZoneObject"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
@@ -136,6 +145,9 @@ public class ZoneDatabaseTests
 	[DependsOn(nameof(SetObjectZoneToNull))]
 	public async ValueTask MultipleObjectsSameZone()
 	{
+		// Clear player zone first to ensure clean state
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single("@chzone me=none"));
+		
 		// Create one zone master and multiple objects
 		var zoneResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create DBSharedZone"));
 		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
@@ -168,6 +180,9 @@ public class ZoneDatabaseTests
 	[DependsOn(nameof(MultipleObjectsSameZone))]
 	public async ValueTask ObjectCanBeZone()
 	{
+		// Clear player zone first to ensure clean state
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single("@chzone me=none"));
+		
 		// An object can be both a zone master and be zoned to another zone
 		var topZoneResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create DBTopZone"));
 		var topZoneDbRef = DBRef.Parse(topZoneResult.Message!.ToPlainText()!);
