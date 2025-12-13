@@ -42,6 +42,7 @@ public static class DatabaseConstants
 	public const string OnChannel = "edge_member_of_channel";
 	public const string SenderOfMail = "edge_mail_sender";
 	public const string ReceivedMail = "edge_received_mail";
+	public const string HasZone = "edge_has_zone";
 
 	/// <summary>
 	/// Describes the relationship between actualized types and their objects.
@@ -123,6 +124,11 @@ public static class DatabaseConstants
 	/// <see cref="Mails"/> -> <see cref="SenderOfMail"/> -> <see cref="Objects"/>
 	/// </summary>
 	public const string GraphMail = "graph_mail";
+	/// <summary>
+	/// Describes the relationship between objects and their zones.
+	/// <see cref="Objects"/> -> <see cref="HasZone"/> -> <see cref="Objects"/>
+	/// </summary>
+	public const string GraphZones = "graph_zones";
 
 	public const string TypeObject = "object";
 	public const string TypeString = "string";

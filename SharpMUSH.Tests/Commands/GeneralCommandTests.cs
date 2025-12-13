@@ -466,7 +466,11 @@ public class GeneralCommandTests
 		// Should notify about triggering
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("@trigger:")), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => 
+				msg.Match(
+					mstr => mstr.ToString().Contains("@trigger:"),
+					str => str.Contains("@trigger:")
+				)), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
@@ -505,7 +509,11 @@ public class GeneralCommandTests
 		// Should notify about queue
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("@ps:")), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => 
+				msg.Match(
+					mstr => mstr.ToString().Contains("@ps:"),
+					str => str.Contains("@ps:")
+				)), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]

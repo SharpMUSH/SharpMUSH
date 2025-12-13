@@ -2,7 +2,10 @@
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using static SharpMUSH.Library.Services.Interfaces.IPermissionService;
 
@@ -553,23 +556,39 @@ public partial class Functions
 		var message = parser.CurrentState.Arguments["1"].Message!;
 
 		// Locate the zone object
-		await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser,
 			executor,
 			executor,
 			zoneName,
 			LocateFlags.All,
-			zone =>
+			async zone =>
 			{
-				// TODO: Implement zone emission - requires zone system support
-				// For now, this is a placeholder that would need to:
-				// 1. Find all rooms with zone == zone parameter
-				// 2. Send message to each of those rooms
-				// This requires zone system infrastructure not yet implemented
+				// Find all rooms with this zone and send message to each
+				var allObjects = Mediator!.CreateStream(new GetAllObjectsQuery())!;
+				
+				await foreach (var obj in allObjects)
+				{
+					// Only send to rooms
+					if (obj.Type != "ROOM") continue;
+					
+					// Check if this object is in the zone
+					var objZone = await obj.Zone.WithCancellation(CancellationToken.None);
+					if (!objZone.IsNone)
+					{
+						if (objZone.Known.Object().DBRef.Number == zone.Object().DBRef.Number)
+						{
+							// Send the message to everyone in this room
+							var roomObj = await Mediator.Send(new GetObjectNodeQuery(obj.DBRef));
+							if (!roomObj.IsNone && roomObj.IsRoom)
+							{
+								await NotifyService!.Notify(roomObj.AsRoom, message);
+							}
+						}
+					}
+				}
 
 				return CallState.Empty;
 			});
-
-		return CallState.Empty;
 	}
 }

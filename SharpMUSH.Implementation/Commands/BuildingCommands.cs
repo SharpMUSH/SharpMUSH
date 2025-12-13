@@ -11,8 +11,6 @@ using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using Errors = SharpMUSH.Library.Definitions.Errors;
 
-#pragma warning disable CS8602 // Dereference of a possibly null reference
-
 namespace SharpMUSH.Implementation.Commands;
 
 public partial class Commands
@@ -38,7 +36,7 @@ public partial class Commands
 		
 		var defaultHome = Configuration!.CurrentValue.Database.DefaultHome;
 		var defaultHomeDbref = new DBRef((int)defaultHome);
-		var location = await Mediator.Send(new GetObjectNodeQuery(defaultHomeDbref));
+		var location = await Mediator!.Send(new GetObjectNodeQuery(defaultHomeDbref));
 		
 		if (location.IsNone || location.IsExit)
 		{
@@ -56,6 +54,17 @@ public partial class Commands
 			await executor.Where(),
 			await executor.Object().Owner.WithCancellation(CancellationToken.None),
 			location.Known.AsContainer));
+		
+		// Inherit zone from creator
+		var creatorZone = await executor.Object().Zone.WithCancellation(CancellationToken.None);
+		if (!creatorZone.IsNone)
+		{
+			var newThing = await Mediator.Send(new GetObjectNodeQuery(thing));
+			if (!newThing.IsNone)
+			{
+				await Mediator.Send(new SetObjectZoneCommand(newThing.Known, creatorZone.Known));
+			}
+		}
 		
 		await NotifyService!.Notify(executor, $"Created {name} ({thing}).");
 
@@ -354,7 +363,7 @@ public partial class Commands
 						{
 							if (!destObj.IsRoom)
 							{
-								await NotifyService.Notify(executor, "Invalid destination for exit.");
+								await NotifyService!.Notify(executor, "Invalid destination for exit.");
 								return Errors.ErrorInvalidDestination;
 							}
 
@@ -381,7 +390,7 @@ public partial class Commands
 							
 							await Mediator!.Send(new LinkExitCommand(exitObj.AsExit, destinationRoom));
 
-							await NotifyService.Notify(executor, "Linked.");
+							await NotifyService!.Notify(executor, "Linked.");
 							return CallState.Empty;
 						}
 					);
@@ -399,7 +408,7 @@ public partial class Commands
 							}
 
 							// Convert to AnySharpContent for SetObjectHomeCommand
-							AnySharpContent contentObj = exitObj.IsThing ? exitObj.AsThing : (AnySharpContent)exitObj.AsPlayer;
+							var contentObj = exitObj.AsContent;
 							await Mediator!.Send(new SetObjectHomeCommand(contentObj, destObj.AsRoom));
 							await NotifyService!.Notify(executor, "Home set.");
 							return CallState.Empty;
@@ -415,19 +424,19 @@ public partial class Commands
 						{
 							if (!destObj.IsRoom)
 							{
-								await NotifyService.Notify(executor, "Drop-to must be a room.");
+								await NotifyService!.Notify(executor, "Drop-to must be a room.");
 								return Errors.ErrorInvalidDestination;
 							}
 
 							// Link the room to its drop-to
 							await Mediator!.Send(new LinkRoomCommand(exitObj.AsRoom, destObj.AsRoom));
-							await NotifyService.Notify(executor, "Drop-to set.");
+							await NotifyService!.Notify(executor, "Drop-to set.");
 							return CallState.Empty;
 						}
 					);
 				}
 
-				await NotifyService.Notify(executor, "Invalid object type for linking.");
+				await NotifyService!.Notify(executor, "Invalid object type for linking.");
 				return Errors.ErrorInvalidObjectType;
 			}
 		);
@@ -505,7 +514,7 @@ public partial class Commands
 				// Check if marked for destruction
 				if (!await obj.HasFlag("GOING"))
 				{
-					await NotifyService.Notify(executor, "That object is not marked for destruction.");
+					await NotifyService!.Notify(executor, "That object is not marked for destruction.");
 					return Errors.ErrorNotGoing;
 				}
 
@@ -519,7 +528,7 @@ public partial class Commands
 					await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "!GOING_TWICE", false);
 				}
 
-				await NotifyService.Notify(executor, $"Spared from destruction: {obj.Object().Name}");
+				await NotifyService!.Notify(executor, $"Spared from destruction: {obj.Object().Name}");
 				
 				// Trigger @startup attribute if it exists
 				try
@@ -560,8 +569,8 @@ public partial class Commands
 				// Handle "none" to remove zone
 				if (zoneName.Equals("none", StringComparison.InvariantCultureIgnoreCase))
 				{
-					await AttributeService!.SetAttributeAsync(executor, obj, "ZONE", MModule.single(""));
-					await NotifyService.Notify(executor, "Zone cleared.");
+					await Mediator!.Send(new UnsetObjectZoneCommand(obj));
+					await NotifyService!.Notify(executor, "Zone cleared.");
 					return CallState.Empty;
 				}
 
@@ -569,9 +578,25 @@ public partial class Commands
 					executor, executor, zoneName, LocateFlags.All,
 					async zoneObj =>
 					{
-						// Set the zone attribute
-						await AttributeService!.SetAttributeAsync(executor, obj, "ZONE", 
-							MModule.single(zoneObj.Object().DBRef.ToString()));
+						// Check if executor can control the zone or passes ChZone lock
+						bool canZone = await PermissionService!.Controls(executor, zoneObj);
+						
+						// If not controlled, check ChZone lock
+						if (!canZone && !LockService!.Evaluate(LockType.ChZone, zoneObj, executor))
+						{
+							await NotifyService!.Notify(executor, "Permission denied: You cannot zone to that object.");
+							return Errors.ErrorPerm;
+						}
+
+						// Set the zone using database edge
+						await Mediator!.Send(new SetObjectZoneCommand(obj, zoneObj));
+
+						// Auto-set ChZone lock if not present on zone object
+						// Default ChZone lock is the zone object itself (allows controlled objects)
+						if (!zoneObj.Object().Locks.ContainsKey("ChZone"))
+						{
+							await Mediator.Send(new SetLockCommand(zoneObj.Object(), "ChZone", zoneObj.Object().DBRef.ToString()));
+						}
 						
 						// Clear privileged flags and powers unless /preserve is used
 						if (!preserve && !obj.IsPlayer)
@@ -589,9 +614,10 @@ public partial class Commands
 							{
 								await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "!TRUST", false);
 							}
+							// TODO: Strip powers
 						}
 
-						await NotifyService.Notify(executor, "Zone set.");
+						await NotifyService!.Notify(executor, "Zone set.");
 						return CallState.Empty;
 					}
 				);
@@ -627,6 +653,17 @@ public partial class Commands
 			await executor.Owner.WithCancellation(CancellationToken.None)));
 		await NotifyService!.Notify(executor.DBRef, $"{roomName} created with room number #{response.Number}.");
 
+		// Inherit zone from creator
+		var creatorZone = await executor.Zone.WithCancellation(CancellationToken.None);
+		if (!creatorZone.IsNone)
+		{
+			var newRoom = await Mediator.Send(new GetObjectNodeQuery(response));
+			if (!newRoom.IsNone)
+			{
+				await Mediator.Send(new SetObjectZoneCommand(newRoom.Known, creatorZone.Known));
+			}
+		}
+
 		if (!string.IsNullOrWhiteSpace(exitTo?.ToString()))
 		{
 			var exitToName = MModule.plainText(exitTo).Split(";");
@@ -636,15 +673,15 @@ public partial class Commands
 			var toExitResponse = await Mediator.Send(new CreateExitCommand(exitToName.First(),
 				exitToName.Skip(1).ToArray(), await executorBase.Where(),
 				await executor.Owner.WithCancellation(CancellationToken.None)));
-			await NotifyService.Notify(executor.DBRef, $"Opened exit #{toExitResponse.Number}");
-			await NotifyService.Notify(executor.DBRef, "Trying to link...");
+			await NotifyService!.Notify(executor.DBRef, $"Opened exit #{toExitResponse.Number}");
+			await NotifyService!.Notify(executor.DBRef, "Trying to link...");
 
 			var newRoomObject = await Mediator.Send(new GetObjectNodeQuery(response));
 			var newExitObject = await Mediator.Send(new GetObjectNodeQuery(toExitResponse));
 
 			await Mediator.Send(new LinkExitCommand(newExitObject.AsExit, newRoomObject.AsRoom));
 
-			await NotifyService.Notify(executor.DBRef, $"Linked exit #{toExitResponse.Number} to #{response.Number}");
+			await NotifyService!.Notify(executor.DBRef, $"Linked exit #{toExitResponse.Number} to #{response.Number}");
 		}
 
 		if (!string.IsNullOrWhiteSpace(exitFrom?.ToString()))
@@ -660,13 +697,13 @@ public partial class Commands
 				await executor.Owner.WithCancellation(CancellationToken.None)));
 			var newExitObject = await Mediator.Send(new GetObjectNodeQuery(fromExitResponse));
 
-			await NotifyService.Notify(executor.DBRef, $"Opened exit #{fromExitResponse.Number}");
-			await NotifyService.Notify(executor.DBRef, "Trying to link...");
+			await NotifyService!.Notify(executor.DBRef, $"Opened exit #{fromExitResponse.Number}");
+			await NotifyService!.Notify(executor.DBRef, "Trying to link...");
 
 			var where = await executorBase.Where();
 			await Mediator.Send(new LinkExitCommand(newExitObject.AsExit, where));
 
-			await NotifyService.Notify(executor.DBRef,
+			await NotifyService!.Notify(executor.DBRef,
 				$"Linked exit #{fromExitResponse.Number} to #{where.Object().DBRef.Number}");
 		}
 
@@ -700,7 +737,7 @@ public partial class Commands
 				}
 
 				await Mediator!.Send(new SetLockCommand(obj.Object(), lockType, lockKey));
-				await NotifyService.Notify(executor, "Locked.");
+				await NotifyService!.Notify(executor, "Locked.");
 				return CallState.Empty;
 			}
 		);
@@ -732,7 +769,7 @@ public partial class Commands
 				}
 
 				await Mediator!.Send(new UnsetLockCommand(obj.Object(), lockType));
-				await NotifyService.Notify(executor, "Unlocked.");
+				await NotifyService!.Notify(executor, "Unlocked.");
 				return CallState.Empty;
 			}
 		);
@@ -782,20 +819,31 @@ public partial class Commands
 			await executor.Object().Owner.WithCancellation(CancellationToken.None)
 		));
 
-		await NotifyService.Notify(executor, $"Opened exit {primaryName} with dbref #{exitDbRef.Number}.");
+		// Inherit zone from creator
+		var creatorZone = await executor.Object().Zone.WithCancellation(CancellationToken.None);
+		if (!creatorZone.IsNone)
+		{
+			var newExit = await Mediator.Send(new GetObjectNodeQuery(exitDbRef));
+			if (!newExit.IsNone)
+			{
+				await Mediator.Send(new SetObjectZoneCommand(newExit.Known, creatorZone.Known));
+			}
+		}
+
+		await NotifyService!.Notify(executor, $"Opened exit {primaryName} with dbref #{exitDbRef.Number}.");
 
 		// Link to destination if provided
 		if (args.ContainsKey("1") && !string.IsNullOrWhiteSpace(args["1"].Message!.ToPlainText()))
 		{
 			var destName = args["1"].Message!.ToPlainText();
-			var locateResult = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
+			var locateResult = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
 				executor, executor, destName, LocateFlags.All);
 			
 			if (!locateResult.IsError && locateResult.AsSharpObject.IsRoom)
 			{
 				var exitObj = await Mediator.Send(new GetObjectNodeQuery(exitDbRef));
 				await Mediator.Send(new LinkExitCommand(exitObj.AsExit, locateResult.AsSharpObject.AsRoom));
-				await NotifyService.Notify(executor, $"Linked to {destName}.");
+				await NotifyService!.Notify(executor, $"Linked to {destName}.");
 			}
 		}
 
@@ -813,7 +861,7 @@ public partial class Commands
 		
 		var defaultHome = Configuration!.CurrentValue.Database.DefaultHome;
 		var defaultHomeDbref = new DBRef((int)defaultHome);
-		var location = await Mediator.Send(new GetObjectNodeQuery(defaultHomeDbref));
+		var location = await Mediator!.Send(new GetObjectNodeQuery(defaultHomeDbref));
 		
 		if (location.IsNone || location.IsExit)
 		{
@@ -833,7 +881,7 @@ public partial class Commands
 
 				if (obj.IsPlayer)
 				{
-					await NotifyService.Notify(executor, "You cannot clone players.");
+					await NotifyService!.Notify(executor, "You cannot clone players.");
 					return Errors.ErrorInvalidObjectType;
 				}
 
@@ -876,7 +924,7 @@ public partial class Commands
 				}
 				else
 				{
-					await NotifyService.Notify(executor, "Cannot clone this object type.");
+					await NotifyService!.Notify(executor, "Cannot clone this object type.");
 					return Errors.ErrorInvalidObjectType;
 				}
 
@@ -903,7 +951,7 @@ public partial class Commands
 					}
 				}
 
-				await NotifyService.Notify(executor, $"Cloned. New object: #{cloneDbRef.Number}.");
+				await NotifyService!.Notify(executor, $"Cloned. New object: #{cloneDbRef.Number}.");
 				return new CallState(cloneDbRef.ToString());
 			}
 		);
@@ -930,13 +978,13 @@ public partial class Commands
 				if (!args.ContainsKey("1") || string.IsNullOrWhiteSpace(args["1"].Message!.ToPlainText()))
 				{
 					await AttributeService!.SetAttributeAsync(executor, obj, "MONIKER", MModule.single(""));
-					await NotifyService.Notify(executor, "Moniker cleared.");
+					await NotifyService!.Notify(executor, "Moniker cleared.");
 					return CallState.Empty;
 				}
 
 				var moniker = args["1"].Message!;
 				await AttributeService!.SetAttributeAsync(executor, obj, "MONIKER", moniker);
-				await NotifyService.Notify(executor, "Moniker set.");
+				await NotifyService!.Notify(executor, "Moniker set.");
 				return CallState.Empty;
 			}
 		);
@@ -1001,18 +1049,18 @@ public partial class Commands
 					await AttributeService!.SetAttributeAsync(executor, obj, AttrLinkType, MModule.empty());
 					
 					await Mediator!.Send(new UnlinkExitCommand(obj.AsExit));
-					await NotifyService.Notify(executor, "Unlinked.");
+					await NotifyService!.Notify(executor, "Unlinked.");
 					return CallState.Empty;
 				}
 				else if (obj.IsRoom)
 				{
 					// Remove drop-to
 					await Mediator!.Send(new UnlinkRoomCommand(obj.AsRoom));
-					await NotifyService.Notify(executor, "Drop-to removed.");
+					await NotifyService!.Notify(executor, "Drop-to removed.");
 					return CallState.Empty;
 				}
 
-				await NotifyService.Notify(executor, "Invalid object type for unlinking.");
+				await NotifyService!.Notify(executor, "Invalid object type for unlinking.");
 				return Errors.ErrorInvalidObjectType;
 			}
 		);

@@ -39,6 +39,7 @@ public class TestObjectFactory
 				LazyAllAttributes = new(() => AsyncEnumerable.Empty<LazySharpAttribute>()),
 				Flags = new(() => AsyncEnumerable.Empty<SharpObjectFlag>()),
 				Parent = new(async ct => { await ValueTask.CompletedTask; return new None(); }),
+				Zone = new(async ct => { await ValueTask.CompletedTask; return new None(); }),
 				Children = new(() => AsyncEnumerable.Empty<SharpObject>())
 			},
 			Location = new(async ct => { await ValueTask.CompletedTask; return new None(); })
@@ -81,6 +82,7 @@ public class TestObjectFactory
 			LazyAllAttributes = new(() => AsyncEnumerable.Empty<LazySharpAttribute>()),
 			Flags = new(() => AsyncEnumerable.Empty<SharpObjectFlag>()),
 			Parent = new(async ct => { await ValueTask.CompletedTask; return new None(); }),
+			Zone = new(async ct => { await ValueTask.CompletedTask; return new None(); }),
 			Children = new(() => AsyncEnumerable.Empty<SharpObject>())
 		};
 		
@@ -130,6 +132,7 @@ public class TestObjectFactory
 			LazyAllAttributes = new(() => AsyncEnumerable.Empty<LazySharpAttribute>()),
 			Flags = new(() => AsyncEnumerable.Empty<SharpObjectFlag>()),
 			Parent = new(async ct => { await ValueTask.CompletedTask; return new None(); }),
+			Zone = new(async ct => { await ValueTask.CompletedTask; return new None(); }),
 			Children = new(() => AsyncEnumerable.Empty<SharpObject>())
 		};
 		

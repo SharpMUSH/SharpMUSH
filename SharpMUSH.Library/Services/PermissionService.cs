@@ -1,11 +1,13 @@
-﻿using SharpMUSH.Library.DiscriminatedUnions;
+﻿using Microsoft.Extensions.Options;
+using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.Services;
 
-public class PermissionService(ILockService lockService) : IPermissionService
+public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMUSHOptions> options) : IPermissionService
 {
 	public bool PassesLock(AnySharpObject who, AnySharpObject target, string lockString)
 		=> lockService.Evaluate(lockString, target, who);
@@ -124,16 +126,31 @@ public class PermissionService(ILockService lockService) : IPermissionService
 		if (await target.Inheritable() || target.IsPlayer)
 			return false;
 
-		/* TODO: Zone Master items here.*/
-		/*
-			if (!ZONE_CONTROL_ZMP && (Zone(what) != NOTHING) &&
-					eval_lock(who, Zone(what), Zone_Lock))
-				return 1;
+		// Zone Master Object (ZMO) control
+		// If zone_control_zmp_only is false, check if target has a zone and if who passes the Zone_Lock
+		if (!options.CurrentValue.Database.ZoneControlZmpOnly)
+		{
+			var targetZone = await target.Object().Zone.WithCancellation(CancellationToken.None);
+			if (!targetZone.IsNone && lockService.Evaluate(LockType.Zone, targetZone.Known, who))
+			{
+				return true;
+			}
+		}
 
-			if (ZMaster(Owner(what)) && !IsPlayer(what) &&
-					eval_lock(who, Owner(what), Zone_Lock))
-				return 1;
-		*/
+		// Zone Master Player (ZMP) control
+		// If target's owner has SHARED flag and who passes the owner's Zone_Lock
+		if (!target.IsPlayer)
+		{
+			var targetOwner = await target.Object().Owner.WithCancellation(CancellationToken.None);
+			var ownerObject = new AnySharpObject(targetOwner);
+			if (await ownerObject.HasFlag("SHARED"))
+			{
+				if (lockService.Evaluate(LockType.Zone, ownerObject, who))
+				{
+					return true;
+				}
+			}
+		}
 
 		return lockService.Evaluate(LockType.Control, target, who);
 	}

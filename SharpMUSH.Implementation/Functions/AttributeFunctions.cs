@@ -1891,26 +1891,24 @@ public partial class Functions
 	{
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
 		
-		// TODO: Once zone infrastructure is implemented, get the zone object from enactor
-		// For now, zones are not implemented, so we return an error
-		// The zone() function currently returns "#-1" when no zone is set
-		// This should be: var zone = await enactor.Zone();
+		// Get the zone object from enactor
+		var zone = await enactor.Object().Zone.WithCancellation(CancellationToken.None);
 		
-		return new CallState("#-1 ZONES NOT YET IMPLEMENTED");
+		if (zone.IsNone)
+		{
+			return new CallState("#-1 NO ZONE SET");
+		}
 		
-		// Future implementation when zones are ready:
-		// if (zone is null or invalid)
-		//     return "#-1 NO ZONE SET";
-		//
-		// var result = await AttributeService!.EvaluateAttributeFunctionAsync(
-		//     parser,
-		//     zone,
-		//     objAndAttribute: parser.CurrentState.Arguments["0"].Message!,
-		//     args: parser.CurrentState.Arguments.Skip(1)
-		//         .Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value.Value))
-		//         .ToDictionary(),
-		//     ignoreLambda: true);
-		//
-		// return new CallState(result);
+		// Evaluate the attribute function on the zone object
+		var result = await AttributeService!.EvaluateAttributeFunctionAsync(
+			parser,
+			zone.Known,
+			objAndAttribute: parser.CurrentState.Arguments["0"].Message!,
+			args: parser.CurrentState.Arguments.Skip(1)
+				.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value.Value))
+				.ToDictionary(),
+			ignoreLambda: true);
+		
+		return new CallState(result);
 	}
 }

@@ -2011,12 +2011,108 @@ public partial class Commands
 		return new CallState(shout);
 	}
 
-	[SharpCommand(Name = "@CHZONEALL", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit, MinArgs = 0,
-		MaxArgs = 0)]
-	public static async ValueTask<Option<CallState>> ChangeOwnerZoneAll(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	[SharpCommand(Name = "@CHZONEALL", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit, CommandLock = "FLAG^WIZARD",
+		MinArgs = 2, MaxArgs = 2)]
+	public static async ValueTask<Option<CallState>> ChangeZoneAll(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		var playerName = args["0"].Message!.ToPlainText();
+		var zoneName = args["1"].Message!.ToPlainText();
+		var preserve = parser.CurrentState.Switches.Contains("PRESERVE");
+
+		// Locate the player whose objects we're changing zones for
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+			executor, executor, playerName, LocateFlags.All,
+			async player =>
+			{
+				if (!player.IsPlayer)
+				{
+					await NotifyService!.Notify(executor, "First argument must be a player.");
+					return Errors.ErrorInvalidPlayer;
+				}
+
+				// Handle clearing zones with "none"
+				if (zoneName.Equals("none", StringComparison.InvariantCultureIgnoreCase))
+				{
+					// Get all objects owned by this player
+					var allObjects = Mediator!.CreateStream(new GetAllObjectsQuery())!;
+					var count = 0;
+
+					await foreach (var obj in allObjects)
+					{
+						var objOwner = await obj.Owner.WithCancellation(CancellationToken.None);
+						var ownerAsAny = new AnySharpObject(objOwner);
+						if (ownerAsAny.Object().DBRef.Number == player.Object().DBRef.Number)
+						{
+							// Get the full object node to use with commands
+							var fullObj = await Mediator!.Send(new GetObjectNodeQuery(obj.DBRef));
+							if (!fullObj.IsNone)
+							{
+								// Clear the zone
+								await Mediator!.Send(new UnsetObjectZoneCommand(fullObj.Known));
+								count++;
+							}
+						}
+					}
+
+					await NotifyService!.Notify(executor, $"Zones cleared for {count} object(s) owned by {player.Object().Name}.");
+					return CallState.Empty;
+				}
+
+				// Locate the zone object
+				return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+					executor, executor, zoneName, LocateFlags.All,
+					async zoneObj =>
+					{
+						// Get all objects owned by this player
+						var allObjects = Mediator!.CreateStream(new GetAllObjectsQuery())!;
+						var count = 0;
+
+						await foreach (var obj in allObjects)
+						{
+							var objOwner = await obj.Owner.WithCancellation(CancellationToken.None);
+							var ownerAsAny = new AnySharpObject(objOwner);
+							if (ownerAsAny.Object().DBRef.Number == player.Object().DBRef.Number)
+							{
+								// Get the full object node to use with commands
+								var fullObj = await Mediator!.Send(new GetObjectNodeQuery(obj.DBRef));
+								if (!fullObj.IsNone)
+								{
+									var anyObj = fullObj.Known;
+									
+									// Set the zone
+									await Mediator!.Send(new SetObjectZoneCommand(anyObj, zoneObj));
+
+									// Strip flags and powers unless /preserve is used
+									if (!preserve && !anyObj.IsPlayer)
+									{
+										if (await anyObj.HasFlag("WIZARD"))
+										{
+											await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, anyObj, "!WIZARD", false);
+										}
+										if (await anyObj.HasFlag("ROYALTY"))
+										{
+											await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, anyObj, "!ROYALTY", false);
+										}
+										if (await anyObj.HasFlag("TRUST"))
+										{
+											await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, anyObj, "!TRUST", false);
+										}
+										// TODO: Strip powers
+									}
+
+									count++;
+								}
+							}
+						}
+
+						await NotifyService!.Notify(executor, $"Zone set to {zoneObj.Object().Name} for {count} object(s) owned by {player.Object().Name}.");
+						return CallState.Empty;
+					}
+				);
+			}
+		);
 	}
 
 	[SharpCommand(Name = "@ENABLE", Switches = [], Behavior = CB.Default | CB.NoGagged, CommandLock = "FLAG^WIZARD",

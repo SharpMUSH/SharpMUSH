@@ -1,5 +1,6 @@
 using Mediator;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -13,7 +14,7 @@ namespace SharpMUSH.Implementation.Handlers;
 /// occurs after all substitutions (%#, %!, etc.) have been pre-evaluated.
 /// The LocateService will not attempt to use the parser when it is null.
 /// </summary>
-public class LocateObjectQueryHandler(ILocateService locateService) : IQueryHandler<LocateObjectQuery, AnyOptionalSharpObjectOrError>
+public class LocateObjectQueryHandler(ILocateService locateService, IMUSHCodeParser parser) : IQueryHandler<LocateObjectQuery, AnyOptionalSharpObjectOrError>
 {
 	public async ValueTask<AnyOptionalSharpObjectOrError> Handle(LocateObjectQuery query, CancellationToken cancellationToken)
 	{
@@ -21,7 +22,7 @@ public class LocateObjectQueryHandler(ILocateService locateService) : IQueryHand
 		// This is safe because the locate service handles null parser appropriately
 #pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type
 		return await locateService.Locate(
-			parser: null,
+			parser: parser,
 			looker: query.Looker,
 			executor: query.Executor,
 			name: query.Name,

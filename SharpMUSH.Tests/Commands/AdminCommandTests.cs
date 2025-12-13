@@ -116,7 +116,7 @@ public class AdminCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
+	[Skip("Not Yet Implemented - @chzoneall command not implemented yet")]
 	public async ValueTask ChzoneallCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@chzoneall #1=#2"));

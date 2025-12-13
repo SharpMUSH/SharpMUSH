@@ -474,8 +474,34 @@ public class SharpMUSHParserVisitor(
 				return await HandleUserDefinedCommand(parser, userDefinedCommandMatches.AsValue());
 			}
 
-			// Step 10: Zone Exit Name and Aliases
+			// Step 10: Zone Exit Name and Aliases - handled in LocateService
 			// Step 11: Zone Master User Defined Commands
+			if (executorObject.IsContent)
+			{
+				// Get the location's zone
+				var executorLocation = await executorObject.AsContent.Location();
+				var locationZone = await executorLocation.WithExitOption().Object().Zone.WithCancellation(CancellationToken.None);
+				
+				// If the location has a zone that is a room (ZMR), check for $-commands in ZMR contents
+				if (!locationZone.IsNone && locationZone.Known.IsRoom)
+				{
+					AnySharpContainer zmr = locationZone.Known.AsRoom;
+					var zmrContents = zmr
+						.Content(Mediator)
+						.Select(x => x.WithRoomOption());
+					
+					var userDefinedCommandMatchesOnZMR = await CommandDiscoveryService.MatchUserDefinedCommand(
+						parser,
+						zmrContents,
+						src);
+					
+					if (userDefinedCommandMatchesOnZMR.IsSome())
+					{
+						return await HandleUserDefinedCommand(parser, userDefinedCommandMatchesOnZMR.AsValue());
+					}
+				}
+			}
+			
 			// Step 12: User Defined commands on the location itself.
 			if (executorObject.IsContent)
 			{
@@ -492,6 +518,25 @@ public class SharpMUSHParserVisitor(
 			}
 
 			// Step 13: User defined commands on the player's personal zone.
+			var executorZone = await executorObject.Object().Zone.WithCancellation(CancellationToken.None);
+			if (!executorZone.IsNone && executorZone.Known.IsRoom)
+			{
+				// If player has a ZMR as their personal zone, check for $-commands in ZMR contents
+				AnySharpContainer personalZMR = executorZone.Known.AsRoom;
+				var personalZMRContents = personalZMR
+					.Content(Mediator)
+					.Select(x => x.WithRoomOption());
+				
+				var userDefinedCommandMatchesOnPersonalZMR = await CommandDiscoveryService.MatchUserDefinedCommand(
+					parser,
+					personalZMRContents,
+					src);
+				
+				if (userDefinedCommandMatchesOnPersonalZMR.IsSome())
+				{
+					return await HandleUserDefinedCommand(parser, userDefinedCommandMatchesOnPersonalZMR.AsValue());
+				}
+			}
 			// Step 14: Global Exits
 			// Step 15: Global User-defined commands
 			var goConfig = Configuration.CurrentValue.Database.MasterRoom;

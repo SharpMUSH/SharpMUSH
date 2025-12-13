@@ -57,3 +57,21 @@ public class UnsetObjectParentCommandHandler(ISharpDatabase database) : ICommand
 		return Unit.Value;
 	}
 }
+
+public class SetObjectZoneCommandHandler(ISharpDatabase database) : ICommandHandler<SetObjectZoneCommand, Unit>
+{
+	public async ValueTask<Unit> Handle(SetObjectZoneCommand request, CancellationToken cancellationToken)
+	{
+		await database.SetObjectZone(request.Target, request.Zone, cancellationToken);
+		return Unit.Value;
+	}
+}
+
+public class UnsetObjectZoneCommandHandler(ISharpDatabase database) : ICommandHandler<UnsetObjectZoneCommand, Unit>
+{
+	public async ValueTask<Unit> Handle(UnsetObjectZoneCommand request, CancellationToken cancellationToken)
+	{
+		await database.UnsetObjectZone(request.Target, cancellationToken);
+		return Unit.Value;
+	}
+}
