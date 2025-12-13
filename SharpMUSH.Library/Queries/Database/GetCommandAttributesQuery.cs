@@ -10,6 +10,7 @@ namespace SharpMUSH.Library.Queries.Database;
 /// <summary>
 /// Query to get command attributes for an object with pre-compiled regex patterns.
 /// Results are cached automatically via QueryCachingBehavior.
+/// Cache invalidated automatically via cache key when attribute commands execute.
 /// </summary>
 public record GetCommandAttributesQuery(AnySharpObject SharpObject) : IQuery<CommandAttributeCache[]>, ICacheable
 {
