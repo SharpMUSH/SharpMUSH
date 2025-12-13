@@ -455,17 +455,17 @@ public partial class ArangoDatabase(
 			await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphZones, DatabaseConstants.HasZone,
 				new { _from = obj.Object().Id, _to = zone.Object().Id }, cancellationToken: ct);
 		}
-		else if (zone is null && zoneEdge is not null)
+		else if (zone is null)
 		{
-			// Removing zone - edge exists
+			// Removing zone - edge exists (zoneEdge is not null at this point)
 			await arangoDb.Graph.Edge.RemoveAsync<object>(handle, DatabaseConstants.GraphZones, DatabaseConstants.HasZone,
-				zoneEdge.Key, cancellationToken: ct);
+				zoneEdge!.Key, cancellationToken: ct);
 		}
-		else if (zoneEdge is not null)
+		else
 		{
-			// Updating zone - edge exists
+			// Updating zone - edge exists (zoneEdge is not null at this point)
 			await arangoDb.Graph.Edge.UpdateAsync(handle, DatabaseConstants.GraphZones, DatabaseConstants.HasZone,
-				zoneEdge.Key, new { _to = zone!.Object().Id }, cancellationToken: ct);
+				zoneEdge!.Key, new { _to = zone.Object().Id }, cancellationToken: ct);
 		}
 	}
 
