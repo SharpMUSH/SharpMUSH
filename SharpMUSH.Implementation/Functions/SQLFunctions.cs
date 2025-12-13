@@ -135,7 +135,6 @@ public partial class Functions
 			LocateFlags.All,
 			async found =>
 			{
-				// TODO: DANGER: mapsql() could transform this attribute, which would make this invalid!
 				var maybeAttribute = await AttributeService!.GetAttributeAsync(executor, found, attrName,
 					IAttributeService.AttributeMode.Execute);
 
