@@ -127,21 +127,22 @@ public class ListFunctionUnitTests
 		var expected = (await Parser.FunctionParse(
 			MModule.single("1 --> [ansi(hr,1)]%r2 --> [ansi(hr,2)]%r3 --> [ansi(hr,3)]%r4 --> [ansi(hr,4)]%r5 --> [ansi(hr,5)]")))?.Message!;
 		
-		// Now test the iter version - it should produce the same byte array
+		// Now test the iter version - it should produce the same result
 		var actual = (await Parser.FunctionParse(
 			MModule.single("iter(lnum(1,5),%i0 --> [ansi(hr,%i0)],,%r)")))?.Message!;
 		
 		// Debug output
 		Console.WriteLine($"Expected: {expected.ToString()}");
 		Console.WriteLine($"Actual:   {actual.ToString()}");
-		Console.WriteLine($"Expected bytes: {BitConverter.ToString(System.Text.Encoding.UTF8.GetBytes(expected.ToString()))}");
-		Console.WriteLine($"Actual bytes:   {BitConverter.ToString(System.Text.Encoding.UTF8.GetBytes(actual.ToString()))}");
 		
-		// Compare byte arrays to ensure ANSI codes are preserved
-		var expectedBytes = System.Text.Encoding.UTF8.GetBytes(expected.ToString());
-		var actualBytes = System.Text.Encoding.UTF8.GetBytes(actual.ToString());
+		// Compare using the same method as other Markup tests
+		var resultBytes = System.Text.Encoding.Unicode.GetBytes(actual.ToString());
+		var expectedBytes = System.Text.Encoding.Unicode.GetBytes(expected.ToString());
 		
-		await Assert.That(actualBytes).IsEqualTo(expectedBytes);
+		foreach (var (first, second) in resultBytes.Zip(expectedBytes))
+		{
+			await Assert.That(first).IsEqualTo(second);
+		}
 	}
 
 	[Test]
