@@ -1,43 +1,32 @@
 ﻿using System.Text.RegularExpressions;
+using Mediator;
 using OneOf.Types;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
-using ZiggyCreatures.Caching.Fusion;
 
 namespace SharpMUSH.Library.Services;
 
-public partial class CommandDiscoveryService(IFusionCache cache) : ICommandDiscoveryService
+public partial class CommandDiscoveryService(IMediator mediator) : ICommandDiscoveryService
 {
-	public void InvalidateCache(DBRef dbReference)
-		=> cache.Remove(dbReference.ToString());
-
-	private async IAsyncEnumerable<(AnySharpObject Obj, SharpAttribute Attr, Match Pattern)> MatchUserDefinedCommandSelectMany(AnySharpObject sharpObj)
+	private async IAsyncEnumerable<(AnySharpObject Obj, SharpAttribute Attr, Regex Regex, bool IsRegex)> MatchUserDefinedCommandSelectMany(AnySharpObject sharpObj)
 	{
-		var attributes = sharpObj.Object().AllAttributes.Value;
-					
-		var hasNoCommandFlag = attributes.Where(attr =>
-			attr.Flags.All(flag => flag.Name != "NO_COMMAND")
-			&& CommandPatternRegex().IsMatch(attr.Value.ToPlainText()));
-					
-		var result = hasNoCommandFlag.Select(attr =>
+		// Use Mediator query to get cached command attributes
+		var cachedCommands = await mediator.Send(new GetCommandAttributesQuery(sharpObj));
+
+		foreach (var cached in cachedCommands)
 		{
-			var match = CommandPatternRegex().Match(attr.Value.ToPlainText());
-			return (Obj: sharpObj, Attr: attr with { CommandListIndex = match.Length }, Pattern: match);
-		});
-		
-		await foreach (var a in result)
-		{
-			yield return a;
+			yield return (sharpObj, cached.Attribute, cached.CompiledRegex, cached.IsRegexFlag);
 		}
 	}
-	
-	// TODO: Severe optimization needed. We can't keep scanning all attributes each time we want to do a command match, and do conversions.
-	// We need to cache the results of the conversion and where that object & attribute live.
-	// We don't need to care for the Cache Building if that command was used, we can immediately cache all commands.
-	// CONSIDERATION: Do we also need a possible Database-Scan for all commands, and cache them?
+
+	/// <summary>
+	/// Matches user-defined commands with optimized caching.
+	/// Uses pre-compiled regex patterns via Mediator query pipeline.
+	/// </summary>
 	public async ValueTask<Option<IEnumerable<(AnySharpObject SObject, SharpAttribute Attribute, Dictionary<string, CallState> Arguments)>>> MatchUserDefinedCommand(
 		IMUSHCodeParser parser,
 		IAsyncEnumerable<AnySharpObject> objects,
@@ -47,15 +36,10 @@ public partial class CommandDiscoveryService(IFusionCache cache) : ICommandDisco
 			.Where(async (x, _) => !await x.HasFlag("NO_COMMAND"))
 			.SelectMany(MatchUserDefinedCommandSelectMany);
 
-		var convertedCommandPatternAttributes = commandPatternAttributes
-			.Select(x =>
-				x.Attr.Flags.Any(flag => flag.Name == "REGEX") ?
-					(SObject: x.Obj, Attribute: x.Attr, Reg: new Regex(x.Pattern.Value.Remove(x.Pattern.Length - 1, 1).Remove(0, 1))) :
-					(SObject: x.Obj, Attribute: x.Attr, Reg: new Regex(MModule.getWildcardMatchAsRegex(
-							MModule.single(x.Pattern.Value.Remove(x.Pattern.Length - 1, 1).Remove(0, 1))))));
-
-		var matchedCommandPatternAttributes = await convertedCommandPatternAttributes
-			.Where(x => x.Reg.IsMatch(MModule.plainText(commandString))).ToArrayAsync();
+		var plainCommandString = MModule.plainText(commandString);
+		var matchedCommandPatternAttributes = await commandPatternAttributes
+			.Where(x => x.Regex.IsMatch(plainCommandString))
+			.ToArrayAsync();
 
 		if (matchedCommandPatternAttributes.Length == 0)
 		{
@@ -63,12 +47,12 @@ public partial class CommandDiscoveryService(IFusionCache cache) : ICommandDisco
 		}
 
 		var res = matchedCommandPatternAttributes.Select(match =>
-			(match.SObject,
-			 match.Attribute,
-			 Arguments: match.Reg
-				.Matches(MModule.plainText(commandString))
+			(match.Obj,
+			 match.Attr,
+			 Arguments: match.Regex
+				.Matches(plainCommandString)
 				.SelectMany(x => x.Groups.Values)
-				.Skip(match.Attribute.Flags.All(x => x.Name != "REGEX") ? 1 : 0) // Skip the first Group for Wildcard matches, which is the entire Match
+				.Skip(!match.IsRegex ? 1 : 0) // Skip the first Group for Wildcard matches, which is the entire Match
 				.SelectMany<Group, KeyValuePair<string, MString>>(x => [
 					new KeyValuePair<string, MString>(x.Index.ToString(), MModule.substring(x.Index, x.Length, commandString)),
 					new KeyValuePair<string, MString>(x.Name, MModule.substring(x.Index, x.Length, commandString))
