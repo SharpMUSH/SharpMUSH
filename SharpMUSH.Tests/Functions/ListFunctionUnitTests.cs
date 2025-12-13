@@ -109,8 +109,6 @@ public class ListFunctionUnitTests
 	{
 		// Simple test to check if ansi works at all
 		var result = (await Parser.FunctionParse(MModule.single("ansi(hr,test)")))?.Message!;
-		Console.WriteLine($"Result: {result.ToString()}");
-		Console.WriteLine($"Expected ANSI codes (bright red): ESC[1;31mESC[0m");
 		
 		// Should contain ANSI escape codes
 		await Assert.That(result.ToString()).Contains("\u001b[");
@@ -130,10 +128,6 @@ public class ListFunctionUnitTests
 		// Now test the iter version - it should produce the same result
 		var actual = (await Parser.FunctionParse(
 			MModule.single("iter(lnum(1,5),%i0 --> [ansi(hr,%i0)],,%r)")))?.Message!;
-		
-		// Debug output
-		Console.WriteLine($"Expected: {expected.ToString()}");
-		Console.WriteLine($"Actual:   {actual.ToString()}");
 		
 		// Compare using the same method as other Markup tests
 		var resultBytes = System.Text.Encoding.Unicode.GetBytes(actual.ToString());
