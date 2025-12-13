@@ -247,8 +247,8 @@ public class SharpMUSHParserVisitor(
 								context.Stop?.StopIndex is null ? 0 : (x.Stop.StopIndex - x.Start.StartIndex + 1), src),
 						x.Depth(), null,
 						async () => stripAnsi
-							? (await visitor.VisitChildren(x))!.Message
-							: MModule.plainText2((await visitor.VisitChildren(x))!.Message)))
+							? MModule.plainText2((await visitor.VisitChildren(x))!.Message)
+							: (await visitor.VisitChildren(x))!.Message))
 					.DefaultIfEmpty(new CallState(MModule.empty(), context.Depth()))
 					.ToList();
 			}
