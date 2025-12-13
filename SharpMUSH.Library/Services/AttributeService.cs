@@ -19,7 +19,6 @@ namespace SharpMUSH.Library.Services;
 public class AttributeService(
 	IMediator mediator,
 	IPermissionService ps,
-	ICommandDiscoveryService cs,
 	ILocateService locateService,
 	IValidateService validateService, 
 	INotifyService notifyService)
@@ -466,7 +465,6 @@ public class AttributeService(
 			return new Error<string>(Errors.ErrorAttrSetPermissions);
 		}
 
-		cs.InvalidateCache(obj.Object().DBRef);
 		await mediator.Send(new SetAttributeCommand(obj.Object().DBRef, attrPath, value,
 			await executor.Object().Owner.WithCancellation(CancellationToken.None)));
 
@@ -508,8 +506,6 @@ public class AttributeService(
 		{
 			return new Error<string>(Errors.ErrorAttrSetPermissions);
 		}
-
-		cs.InvalidateCache(obj.Object().DBRef);
 
 		await mediator.Send(new ClearAttributeCommand(obj.Object().DBRef, attrArr.Select(x => x.LongName!).ToArray()));
 
