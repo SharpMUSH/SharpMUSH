@@ -166,14 +166,15 @@ public partial class Functions
 					break;
 
 				case JsonValueKind.Object:
-					foreach (var property in rootElement.EnumerateObject())
+					foreach (var objArgs in rootElement
+						         .EnumerateObject()
+						         .Select(property => new Dictionary<string, CallState>
+					         {
+						         { "0", new CallState(JsonHelpers.GetJsonType(property.Value)) },
+						         { "1", new CallState(property.Value.GetRawText()) },
+						         { "2", new CallState(property.Name) }
+					         }))
 					{
-						var objArgs = new Dictionary<string, CallState>
-						{
-							{ "0", new CallState(JsonHelpers.GetJsonType(property.Value)) },
-							{ "1", new CallState(property.Value.GetRawText()) },
-							{ "2", new CallState(property.Name) }
-						};
 						foreach (var ua in userArgs)
 						{
 							objArgs[ua.Key] = ua.Value;
@@ -193,9 +194,9 @@ public partial class Functions
 
 			return new CallState(MModule.multipleWithDelimiter(osep, result));
 		}
-		catch (JsonException)
+		catch (JsonException ex)
 		{
-			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, "json_map"));
+			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, "json_map") + $": {ex.Message}");
 		}
 	}
 
