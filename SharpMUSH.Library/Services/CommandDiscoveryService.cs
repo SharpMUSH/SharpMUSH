@@ -12,6 +12,12 @@ namespace SharpMUSH.Library.Services;
 public partial class CommandDiscoveryService(IFusionCache cache) : ICommandDiscoveryService
 {
 	/// <summary>
+	/// Duration for which command attribute cache entries remain valid.
+	/// After this time, the cache will be rebuilt on next access.
+	/// </summary>
+	private static readonly TimeSpan CacheDuration = TimeSpan.FromHours(24);
+
+	/// <summary>
 	/// Cache entry for command attributes with pre-compiled regex patterns.
 	/// </summary>
 	private record CachedCommandAttribute(
@@ -36,7 +42,7 @@ public partial class CommandDiscoveryService(IFusionCache cache) : ICommandDisco
 		var cached = await cache.GetOrSetAsync(
 			cacheKey,
 			async _ => await BuildCommandCacheAsync(sharpObj),
-			options => options.SetDuration(TimeSpan.FromHours(24)));
+			options => options.SetDuration(CacheDuration));
 
 		return cached ?? [];
 	}
