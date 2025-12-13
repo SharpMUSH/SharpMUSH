@@ -570,7 +570,7 @@ public partial class Commands
 				if (zoneName.Equals("none", StringComparison.InvariantCultureIgnoreCase))
 				{
 					await Mediator!.Send(new UnsetObjectZoneCommand(obj));
-					await NotifyService.Notify(executor, "Zone cleared.");
+					await NotifyService!.Notify(executor, "Zone cleared.");
 					return CallState.Empty;
 				}
 
@@ -830,7 +830,7 @@ public partial class Commands
 			}
 		}
 
-		await NotifyService.Notify(executor, $"Opened exit {primaryName} with dbref #{exitDbRef.Number}.");
+		await NotifyService!.Notify(executor, $"Opened exit {primaryName} with dbref #{exitDbRef.Number}.");
 
 		// Link to destination if provided
 		if (args.ContainsKey("1") && !string.IsNullOrWhiteSpace(args["1"].Message!.ToPlainText()))
