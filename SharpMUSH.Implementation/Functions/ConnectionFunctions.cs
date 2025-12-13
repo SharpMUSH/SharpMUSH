@@ -1077,13 +1077,48 @@ public partial class Functions
 		var hasSeeAll = await executor.HasPower("SEE_ALL");
 		if (!hasSeeAll)
 		{
-			// TODO: Check zone lock when zone lock checking is implemented
-			return new CallState(Errors.ErrorPerm);
+			// Check if executor passes the zone lock
+			if (!PermissionService!.PassesLock(executor, zone, LockType.Zone))
+			{
+				return new CallState(Errors.ErrorPerm);
+			}
 		}
 
-		// TODO: Zone matching infrastructure not yet fully implemented
-		// For now, return empty list
-		return new CallState(string.Empty);
+		// Get all players in rooms that are in this zone (excluding dark/hidden players)
+		var playersInZone = new List<string>();
+		var allPlayers = Mediator!.CreateStream(new GetAllPlayersQuery())!;
+		
+		await foreach (var player in allPlayers)
+		{
+			// Skip dark/hidden players unless executor has SEE_ALL
+			if (!hasSeeAll)
+			{
+				AnySharpObject playerObj = player;
+				var isDark = await playerObj.HasFlag("DARK");
+				if (isDark)
+				{
+					continue;
+				}
+			}
+			
+			// Get player's location
+			var playerLocation = await player.Location.WithCancellation(CancellationToken.None);
+			
+			// Check if the location's zone matches
+			var locationObj = playerLocation.WithExitOption();
+			var locationZone = await locationObj.Object().Zone.WithCancellation(CancellationToken.None);
+			
+			if (!locationZone.IsNone)
+			{
+				if (locationZone.Known.Object().DBRef.Number == zone.Object().DBRef.Number)
+				{
+					playersInZone.Add(player.Object.DBRef.ToString());
+				}
+			}
+		}
+
+		// Default: space-separated list
+		return new CallState(string.Join(" ", playersInZone));
 	}
 
 	[SharpFunction(Name = "zwho", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]

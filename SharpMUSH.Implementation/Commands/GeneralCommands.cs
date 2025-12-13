@@ -1145,7 +1145,37 @@ public partial class Commands
 
 		if (switches.Contains("ZONE"))
 		{
-			// TODO: Zone Match
+			// Get the zone of the executor's location
+			if (executor.IsContent)
+			{
+				var location = await executor.AsContent.Location();
+				var locationZone = await location.Object().Zone.WithCancellation(CancellationToken.None);
+				
+				if (!locationZone.IsNone)
+				{
+					var zoneObject = locationZone.Known;
+					
+					// Get contents of the zone master object
+					var zoneContents = Mediator!.CreateStream(new GetContentsQuery(zoneObject.Object().DBRef))
+						?? AsyncEnumerable.Empty<AnySharpContent>();
+					
+					// Match user-defined commands in zone contents
+					var zoneMatched =
+						await CommandDiscoveryService!.MatchUserDefinedCommand(parser,
+							zoneContents.Select(x => x.WithRoomOption()),
+							arg0);
+					
+					if (zoneMatched.IsSome())
+					{
+						foreach (var (i, (obj, attr, _)) in zoneMatched.AsValue().Index())
+						{
+							runningOutput.Add($"#{obj.Object().DBRef.Number}/{attr.LongName}");
+							await NotifyService!.Notify(executor,
+								$"{obj.Object().Name}\t[{i}: #{obj.Object().DBRef.Number}/{attr.LongName}]");
+						}
+					}
+				}
+			}
 		}
 
 		if (switches.Contains("GLOBAL"))
