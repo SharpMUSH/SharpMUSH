@@ -104,6 +104,41 @@ public class ListFunctionUnitTests
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
+	[Test, NotInParallel]
+	public async Task SimpleAnsiTest()
+	{
+		// Simple test to check if ansi works at all
+		var result = (await Parser.FunctionParse(MModule.single("ansi(hr,test)")))?.Message!;
+		
+		// Should contain ANSI escape codes
+		await Assert.That(result.ToString()).Contains("\u001b[");
+	}
+
+	[Test, NotInParallel]
+	public async Task IterationWithAnsiMarkup()
+	{
+		// Test case from issue: iter should preserve ANSI markup
+		// The problem: iter(lnum(1,5),%i0 --> [ansi(hr,%i0)],,%r)
+		// loses the ANSI markup
+		
+		// First, test the working equivalent as a baseline
+		var expected = (await Parser.FunctionParse(
+			MModule.single("1 --> [ansi(hr,1)]%r2 --> [ansi(hr,2)]%r3 --> [ansi(hr,3)]%r4 --> [ansi(hr,4)]%r5 --> [ansi(hr,5)]")))?.Message!;
+		
+		// Now test the iter version - it should produce the same result
+		var actual = (await Parser.FunctionParse(
+			MModule.single("iter(lnum(1,5),%i0 --> [ansi(hr,%i0)],,%r)")))?.Message!;
+		
+		// Compare using the same method as other Markup tests
+		var resultBytes = System.Text.Encoding.Unicode.GetBytes(actual.ToString());
+		var expectedBytes = System.Text.Encoding.Unicode.GetBytes(expected.ToString());
+		
+		foreach (var (first, second) in resultBytes.Zip(expectedBytes))
+		{
+			await Assert.That(first).IsEqualTo(second);
+		}
+	}
+
 	[Test]
 	[Arguments("rest(1|2|3)", "")]
 	[Arguments("rest(%b)", "")]
