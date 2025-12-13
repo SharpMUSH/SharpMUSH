@@ -57,15 +57,13 @@ public class ZoneCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chzone {objDbRef}={zoneDbRef}"));
 
 		// Verify zone set notification was received with the specific object dbref
-#pragma warning disable CS4014
-		NotifyService
+		await NotifyService
 			.Received(Quantity.AtLeastOne())
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => 
 				msg.Match(
 					mstr => mstr.ToString().Contains($"Zoned to {zoneName}") || mstr.ToString().Contains($"{objDbRef}"),
 					str => str.Contains($"Zoned to {zoneName}") || str.Contains($"{objDbRef}")
 				)), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
-#pragma warning restore CS4014
 		
 		// Verify the zone was actually set in the database
 		var updatedObject = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
@@ -104,15 +102,13 @@ public class ZoneCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chzone {objDbRef}=none"));
 
 		// Verify zone cleared notification was received with specific text indicating clearing
-#pragma warning disable CS4014
-		NotifyService
+		await NotifyService
 			.Received(Quantity.AtLeastOne())
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => 
 				msg.Match(
 					mstr => mstr.ToString().Contains("Zone cleared"),
 					str => str.Contains("Zone cleared")
 				)), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
-#pragma warning restore CS4014
 		
 		// Verify the zone was actually cleared in the database
 		var updatedObject = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
@@ -142,15 +138,13 @@ public class ZoneCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chzone {objDbRef}={zoneDbRef}"));
 		
 		// Verify success notification with specific zone name
-#pragma warning disable CS4014
-		NotifyService
+		await NotifyService
 			.Received(Quantity.AtLeastOne())
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => 
 				msg.Match(
 					mstr => mstr.ToString().Contains($"{zoneName}") || mstr.ToString().Contains("Zoned"),
 					str => str.Contains($"{zoneName}") || str.Contains("Zoned")
 				)), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
-#pragma warning restore CS4014
 		
 		// Verify zone was set
 		var updated = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
@@ -165,15 +159,13 @@ public class ZoneCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@chzone #99999=#1"));
 		
 		// Should receive an error notification - LocateService handles this with standard error messages
-#pragma warning disable CS4014
-		NotifyService
+		await NotifyService
 			.Received(Quantity.AtLeastOne())
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => 
 				msg.Match(
 					mstr => mstr.ToString().Contains("can't see") || mstr.ToString().Contains("NO SUCH OBJECT"),
 					str => str.Contains("can't see") || str.Contains("NO SUCH OBJECT")
 				)), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
-#pragma warning restore CS4014
 	}
 
 	[Test]
@@ -190,15 +182,13 @@ public class ZoneCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chzone {objDbRef}=#99999"));
 		
 		// Should receive an error notification about not being able to see the object
-#pragma warning disable CS4014
-		NotifyService
+		await NotifyService
 			.Received(Quantity.AtLeastOne())
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => 
 				msg.Match(
 					mstr => mstr.ToString().Contains("can't see"),
 					str => str.Contains("can't see")
 				)), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
-#pragma warning restore CS4014
 	}
 
 	[Test]
@@ -299,15 +289,13 @@ public class ZoneCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single(cmdName));
 		
 		// Verify the command was executed - check for the unique command output
-#pragma warning disable CS4014
-		NotifyService
+		await NotifyService
 			.Received(Quantity.AtLeastOne())
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => 
 				msg.Match(
 					mstr => mstr.ToString().Contains("ZMR command executed"),
 					str => str.Contains("ZMR command executed")
 				)), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
-#pragma warning restore CS4014
 	}
 
 	[Test]
@@ -365,15 +353,13 @@ public class ZoneCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single(cmdName));
 		
 		// Verify the command was executed - check for the unique command output
-#pragma warning disable CS4014
-		NotifyService
+		await NotifyService
 			.Received(Quantity.AtLeastOne())
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => 
 				msg.Match(
 					mstr => mstr.ToString().Contains("Personal zone command executed"),
 					str => str.Contains("Personal zone command executed")
 				)), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
-#pragma warning restore CS4014
 	}
 
 	[Test]
@@ -422,14 +408,12 @@ public class ZoneCommandTests
 		
 		// Verify the command was NOT executed (per PennMUSH spec, commands on ZMR itself are ignored)
 		// Check that the specific unique error message was not sent
-#pragma warning disable CS4014
-		NotifyService
+		await NotifyService
 			.DidNotReceive()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => 
 				msg.Match(
 					mstr => mstr.ToString().Contains("This should not execute"),
 					str => str.Contains("This should not execute")
 				)), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
-#pragma warning restore CS4014
 	}
 }
