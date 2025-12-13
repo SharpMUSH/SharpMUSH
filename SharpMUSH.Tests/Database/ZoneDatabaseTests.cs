@@ -49,6 +49,9 @@ public class ZoneDatabaseTests
 	[DependsOn(nameof(SetObjectZone))]
 	public async ValueTask UnsetObjectZone()
 	{
+		// Clear player zone first to ensure clean state
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single("@chzone me=none"));
+		
 		// Create zone master and object
 		var zoneResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create DBUnsetZoneMaster"));
 		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);

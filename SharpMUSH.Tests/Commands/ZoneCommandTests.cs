@@ -189,14 +189,14 @@ public class ZoneCommandTests
 		// Try to set zone to non-existent zone
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chzone {objDbRef}=#99999"));
 		
-		// Should receive an error notification with specific error about invalid zone
+		// Should receive an error notification about not being able to see the object
 #pragma warning disable CS4014
 		NotifyService
 			.Received(Quantity.AtLeastOne())
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => 
 				msg.Match(
-					mstr => mstr.ToString().Contains("99999") || mstr.ToString().Contains("zone") && mstr.ToString().Contains("invalid"),
-					str => str.Contains("99999") || str.Contains("zone") && str.Contains("invalid")
+					mstr => mstr.ToString().Contains("can't see"),
+					str => str.Contains("can't see")
 				)), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
 #pragma warning restore CS4014
 	}
