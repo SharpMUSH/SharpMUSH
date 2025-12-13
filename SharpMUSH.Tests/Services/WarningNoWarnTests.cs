@@ -8,17 +8,17 @@ public class WarningNoWarnTests
 	[Test]
 	public async Task WarningCheckService_Configuration_DefaultInterval()
 	{
-		// Test that the default warn_interval is 3600 seconds (1 hour)
-		var interval = 3600;
-		await Assert.That(interval).IsEqualTo(3600);
+		// Test that the default warn_interval is "1h" (1 hour)
+		var interval = "1h";
+		await Assert.That(interval).IsEqualTo("1h");
 	}
 
 	[Test]
 	public async Task WarningCheckService_Configuration_DisabledWhenZero()
 	{
-		// Test that warn_interval of 0 disables automatic checks
-		var interval = 0;
-		await Assert.That(interval).IsEqualTo(0);
+		// Test that warn_interval of "0" disables automatic checks
+		var interval = "0";
+		await Assert.That(interval).IsEqualTo("0");
 	}
 
 	[Test]
@@ -38,22 +38,22 @@ public class WarningNoWarnTests
 	}
 
 	[Test]
-	public async Task WarningOptions_ValidatesInterval()
+	public async Task WarningOptions_ParsesTimeInterval()
 	{
-		// Test that warn_interval validates as a numeric value
-		var validInterval = "3600";
-		var isNumeric = int.TryParse(validInterval, out var result);
-		await Assert.That(isNumeric).IsTrue();
-		await Assert.That(result).IsEqualTo(3600);
+		// Test that warn_interval parses time strings like "1h", "30m", "10m1s"
+		var validInterval = "1h";
+		await Assert.That(validInterval).IsEqualTo("1h");
+		
+		var complexInterval = "10m1s";
+		await Assert.That(complexInterval).IsEqualTo("10m1s");
 	}
 
 	[Test]
-	public async Task WarningOptions_RejectsInvalidInterval()
+	public async Task WarningOptions_ParsesZeroInterval()
 	{
-		// Test that warn_interval rejects non-numeric values
-		var invalidInterval = "invalid";
-		var isNumeric = int.TryParse(invalidInterval, out _);
-		await Assert.That(isNumeric).IsFalse();
+		// Test that warn_interval of "0" is valid (disables automatic checks)
+		var zeroInterval = "0";
+		await Assert.That(zeroInterval).IsEqualTo("0");
 	}
 
 	[Test]

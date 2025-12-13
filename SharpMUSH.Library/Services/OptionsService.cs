@@ -290,7 +290,7 @@ public class OptionsService(ISharpDatabase database) : IOptionsFactory<SharpMUSH
 				}
 			),
 			Warning = new WarningOptions(
-				WarnInterval: 3600
+				WarnInterval: "1h"
 			)
 		};
 	}
