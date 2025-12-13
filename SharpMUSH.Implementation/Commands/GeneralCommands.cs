@@ -2,6 +2,7 @@
 using OneOf.Types;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Database;
 using SharpMUSH.Implementation.Commands.ChannelCommand;
 using SharpMUSH.Implementation.Commands.MailCommand;
 using SharpMUSH.Implementation.Common;
@@ -2779,13 +2780,23 @@ public partial class Commands
 			executor,
 			zoneName,
 			LocateFlags.All,
-			zone =>
+			async zone =>
 			{
-				// TODO: Implement zone emission - requires zone system support
-				// For now, this is a placeholder that would need to:
-				// 1. Find all rooms with zone == zone parameter
-				// 2. Send message to each of those rooms
-				// This requires zone system infrastructure not yet implemented
+				// Find all objects in the zone
+				var zoneObjects = Mediator!.CreateStream(new GetObjectsByZoneQuery(zone));
+				
+				// Get all rooms in the zone
+				var rooms = zoneObjects.Where(obj => obj.Type == DatabaseConstants.TypeRoom);
+				
+				// Send message to each room
+				await foreach (var room in rooms)
+				{
+					var roomContents = Mediator!.CreateStream(new GetContentsQuery(new DBRef(room.Key)))!;
+					await foreach (var content in roomContents)
+					{
+						await NotifyService!.Notify(content.WithRoomOption(), message, executor, notificationType);
+					}
+				}
 
 				return CallState.Empty;
 			});
@@ -3085,13 +3096,23 @@ public partial class Commands
 			executor,
 			zoneName,
 			LocateFlags.All,
-			zone =>
+			async zone =>
 			{
-				// TODO: Implement zone emission - requires zone system support
-				// For now, this is a placeholder that would need to:
-				// 1. Find all rooms with zone == zone parameter
-				// 2. Send message to each of those rooms
-				// This requires zone system infrastructure not yet implemented
+				// Find all objects in the zone
+				var zoneObjects = Mediator!.CreateStream(new GetObjectsByZoneQuery(zone));
+				
+				// Get all rooms in the zone
+				var rooms = zoneObjects.Where(obj => obj.Type == DatabaseConstants.TypeRoom);
+				
+				// Send message to each room
+				await foreach (var room in rooms)
+				{
+					var roomContents = Mediator!.CreateStream(new GetContentsQuery(new DBRef(room.Key)))!;
+					await foreach (var content in roomContents)
+					{
+						await NotifyService!.Notify(content.WithRoomOption(), message, executor, INotifyService.NotificationType.Emit);
+					}
+				}
 
 				return CallState.Empty;
 			});
