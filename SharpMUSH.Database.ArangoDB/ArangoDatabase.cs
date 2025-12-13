@@ -2757,6 +2757,31 @@ public partial class ArangoDatabase(
 		return true;
 	}
 
+	public async IAsyncEnumerable<SharpObject> GetObjectsByZoneAsync(AnySharpObject zone, 
+		[EnumeratorCancellation] CancellationToken ct = default)
+	{
+		var zoneId = zone.Id;
+		
+		// Query to find all objects that have this zone set
+		const string zoneQuery =
+			$"FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphZones} RETURN v._id";
+		
+		var queryIds = await arangoDb.Query.ExecuteAsync<string>(handle, zoneQuery,
+			new Dictionary<string, object>
+			{
+				{ StartVertex, zoneId }
+			}, cancellationToken: ct);
+		
+		await foreach (var id in queryIds.ToAsyncEnumerable().WithCancellation(ct))
+		{
+			var obj = await GetBaseObjectNodeAsync(new DBRef(int.Parse(id.Split('/')[1])), ct);
+			if (obj != null)
+			{
+				yield return obj;
+			}
+		}
+	}
+
 	[GeneratedRegex(@"\*\*|[.*+?^${}()|[\]/]")]
 	private static partial Regex WildcardToRegex();
 }
