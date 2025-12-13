@@ -147,22 +147,18 @@ module MarkupStringModule =
             let optimize (markupType: MarkupTypes) (text: string) : string =
                 match markupType with
                 | MarkedupText markup -> markup.Optimize text
-                | Empty -> text
+                | Empty -> String.Empty
 
-            // Only use findFirstMarkedUpText if this MarkupString itself has markup
-            // If it's Empty, just render the content directly
-            match ms.MarkupDetails with
+            let firstMarkedupTextType = findFirstMarkedUpText ms
+
+            match firstMarkedupTextType with
             | Empty -> getText (ms, Empty)
-            | MarkedupText _ ->
-                let firstMarkedupTextType = findFirstMarkedUpText ms
-                match firstMarkedupTextType with
-                | Empty -> getText (ms, Empty)
-                | _ ->
-                    optimize
-                        firstMarkedupTextType
-                        (prefix firstMarkedupTextType
-                         + getText (ms, Empty)
-                         + postfix firstMarkedupTextType)
+            | _ ->
+                optimize
+                    firstMarkedupTextType
+                    (prefix firstMarkedupTextType
+                     + getText (ms, Empty)
+                     + postfix firstMarkedupTextType)
 
         let strVal: Lazy<string> = Lazy<string>(toString)
 
