@@ -58,7 +58,6 @@ public class SharpObject
 	public required Lazy<IAsyncEnumerable<SharpObjectFlag>> Flags { get; set; }
 
 	// RELATIONSHIP
-	// TODO: Consider using AnySharpObject instead of SharpObject
 	[JsonIgnore]
 	public required AsyncLazy<AnyOptionalSharpObject> Parent { get; set; }
 	
@@ -67,7 +66,6 @@ public class SharpObject
 	public required AsyncLazy<AnyOptionalSharpObject> Zone { get; set; }
 	
 	// RELATIONSHIP
-	// TODO: Consider using AnySharpObject instead of SharpObject
 	[JsonIgnore]
 	public required Lazy<IAsyncEnumerable<SharpObject>?> Children { get; set; }
 }

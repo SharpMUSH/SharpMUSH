@@ -1,4 +1,7 @@
-﻿using SharpMUSH.Library.ParserInterfaces;
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Functions;
 public class JsonFunctionUnitTests
@@ -7,6 +10,7 @@ public class JsonFunctionUnitTests
 	public required WebAppFactory WebAppFactoryArg { get; init; }
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
+	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 
 	[Test]
 	[Arguments("json(string,foo)", "\"foo\"")]
@@ -50,9 +54,8 @@ public class JsonFunctionUnitTests
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
-	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments(@"json_map(#lambda/toupper\(%%1,%%2\) json(object,a,1,b,2))", "A:1 B:2")]
+	[Test, Skip("json_map currently explicitly does not use #lambda. It should evaluate functions later in its loop instead and use the existing method of calling attributes.")]
+	[Arguments(@"json_map(#lambda/toupper\(%%1\,%%2\),json(object,a,1,b,2))", "A:1 B:2")]
 	public async Task JsonMap(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -63,13 +66,13 @@ public class JsonFunctionUnitTests
 	// These are placeholder tests that should be expanded once the test infrastructure supports them
 	
 	[Test]
-	[Skip("Requires attribute setup")]
-	[Arguments(@"&TEST me=%%0:%%1", @"json_map(me/TEST,""test_json_map_string"")", "string:\"test_json_map_string\"")]
-	[Arguments(@"&TEST me=%%0:%%1:%%2", @"json_map(me/TEST,[1,2,3])", "number:1:0 number:2:1 number:3:2")]
+	[Arguments("&Test_JsonMap_MapsOverJsonElements_1 me=%0:%1", @"json_map(me/Test_JsonMap_MapsOverJsonElements_1,lit(""test_json_map_string""))", "string:\"test_json_map_string\"")]
+	[Arguments("&Test_JsonMap_MapsOverJsonElements_2 me=%0:%1:%2", @"json_map(me/Test_JsonMap_MapsOverJsonElements_2,\[1\,2\,3\])", "number:1:0 number:2:1 number:3:2")]
 	public async Task Test_JsonMap_MapsOverJsonElements(string setup, string function, string expected)
 	{
 		// Setup: set attribute
 		// TODO: Implement attribute setting in test infrastructure
+		await Parser.CommandParse(1, ConnectionService, MModule.single(setup));
 		
 		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
