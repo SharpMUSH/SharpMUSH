@@ -109,8 +109,8 @@ public class ZoneCommandTests
 			.Received(Quantity.AtLeastOne())
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => 
 				msg.Match(
-					mstr => mstr.ToString().Contains("Cleared zone") || mstr.ToString().Contains($"{objDbRef}") && mstr.ToString().Contains("none"),
-					str => str.Contains("Cleared zone") || str.Contains($"{objDbRef}") && str.Contains("none")
+					mstr => mstr.ToString().Contains("Zone cleared"),
+					str => str.Contains("Zone cleared")
 				)), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
 #pragma warning restore CS4014
 		
@@ -164,14 +164,14 @@ public class ZoneCommandTests
 		// Try to set zone on non-existent object
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@chzone #99999=#1"));
 		
-		// Should receive an error notification with specific error message about invalid object
+		// Should receive an error notification - LocateService handles this with standard error messages
 #pragma warning disable CS4014
 		NotifyService
 			.Received(Quantity.AtLeastOne())
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => 
 				msg.Match(
-					mstr => mstr.ToString().Contains("99999") || mstr.ToString().Contains("not found") || mstr.ToString().Contains("invalid"),
-					str => str.Contains("99999") || str.Contains("not found") || str.Contains("invalid")
+					mstr => mstr.ToString().Contains("can't see") || mstr.ToString().Contains("NO SUCH OBJECT"),
+					str => str.Contains("can't see") || str.Contains("NO SUCH OBJECT")
 				)), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
 #pragma warning restore CS4014
 	}

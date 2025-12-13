@@ -167,7 +167,11 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<DBRef>(), Arg.Is<string>(s => s.Contains("Linked")));
+			.Notify(Arg.Any<DBRef>(), Arg.Is<OneOf<MString, string>>(msg => 
+				msg.Match(
+					mstr => mstr.ToString().Contains("Linked"),
+					str => str.Contains("Linked")
+				)));
 	}
 
 	[Test]
@@ -183,7 +187,11 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Cloned")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => 
+				msg.Match(
+					mstr => mstr.ToString().Contains("Cloned"),
+					str => str.Contains("Cloned")
+				)));
 	}
 
 	[Test]
@@ -217,7 +225,11 @@ public class BuildingCommandTests
 		// Verify command executed without permission error
 		await NotifyService
 			.DidNotReceive()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("PERMISSION DENIED")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => 
+				msg.Match(
+					mstr => mstr.ToString().Contains("PERMISSION DENIED"),
+					str => str.Contains("PERMISSION DENIED")
+				)));
 	}
 
 	[Test]
@@ -236,7 +248,11 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Zone set")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => 
+				msg.Match(
+					mstr => mstr.ToString().Contains("Zoned"),
+					str => str.Contains("Zoned")
+				)), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
@@ -252,7 +268,11 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Marked for destruction")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => 
+				msg.Match(
+					mstr => mstr.ToString().Contains("Marked for destruction"),
+					str => str.Contains("Marked for destruction")
+				)));
 	}
 
 	[Test]
@@ -269,7 +289,11 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Unlinked")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => 
+				msg.Match(
+					mstr => mstr.ToString().Contains("Unlinked"),
+					str => str.Contains("Unlinked")
+				)));
 	}
 
 	[Test]
@@ -292,7 +316,11 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Locked")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => 
+				msg.Match(
+					mstr => mstr.ToString().Contains("Locked"),
+					str => str.Contains("Locked")
+				)));
 	}
 
 	[Test]
@@ -307,6 +335,10 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Unlocked")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => 
+				msg.Match(
+					mstr => mstr.ToString().Contains("Unlocked"),
+					str => str.Contains("Unlocked")
+				)));
 	}
 }
