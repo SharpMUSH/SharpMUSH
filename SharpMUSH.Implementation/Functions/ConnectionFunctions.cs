@@ -1078,7 +1078,7 @@ public partial class Functions
 		if (!hasSeeAll)
 		{
 			// Check if executor passes the zone lock
-			if (!PermissionService!.PassesLock(executor, zone, LockType.Zone))
+			if (!LockService!.Evaluate(LockType.Zone, zone, executor))
 			{
 				return new CallState(Errors.ErrorPerm);
 			}
@@ -1140,7 +1140,7 @@ public partial class Functions
 		if (!hasSeeAll)
 		{
 			// Check if executor passes the zone lock
-			if (!PermissionService!.PassesLock(executor, zone, LockType.Zone))
+			if (!LockService!.Evaluate(LockType.Zone, zone, executor))
 			{
 				return new CallState(Errors.ErrorPerm);
 			}
