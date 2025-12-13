@@ -437,8 +437,8 @@ public partial class ArangoDatabase(
 
 	public async ValueTask SetObjectZone(AnySharpObject obj, AnySharpObject? zone, CancellationToken ct = default)
 	{
-		var response = await arangoDb.Query.ExecuteAsync<string>(handle,
-			$"FOR v,e IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphZones} RETURN e._key",
+		var response = await arangoDb.Query.ExecuteAsync<SharpEdgeQueryResult>(handle,
+			$"FOR v,e IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphZones} RETURN e",
 			new Dictionary<string, object> { { StartVertex, obj.Object().Id! } }, cancellationToken: ct);
 
 		var zoneEdge = response.FirstOrDefault();
@@ -456,12 +456,12 @@ public partial class ArangoDatabase(
 		else if (zone is null)
 		{
 			await arangoDb.Graph.Edge.RemoveAsync<object>(handle, DatabaseConstants.GraphZones, DatabaseConstants.HasZone,
-				zoneEdge, cancellationToken: ct);
+				zoneEdge!.Key, cancellationToken: ct);
 		}
 		else
 		{
 			await arangoDb.Graph.Edge.UpdateAsync(handle, DatabaseConstants.GraphZones, DatabaseConstants.HasZone,
-				zoneEdge, new { _to = zone.Object().Id }, cancellationToken: ct);
+				zoneEdge!.Key, new { _to = zone.Object().Id }, cancellationToken: ct);
 		}
 	}
 
@@ -1119,9 +1119,9 @@ public partial class ArangoDatabase(
 
 	public async ValueTask<AnyOptionalSharpObject> GetZoneAsync(string id, CancellationToken ct = default)
 	{
-		// Get zone ID directly 
+		// Get zone ID directly - cache: false to ensure fresh data after zone changes
 		var zoneId = (await arangoDb.Query.ExecuteAsync<string>(handle,
-				$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphZones} RETURN v._id", cache: true,
+				$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphZones} RETURN v._id", cache: false,
 				cancellationToken: ct))
 			.FirstOrDefault();
 		if (zoneId is null)
