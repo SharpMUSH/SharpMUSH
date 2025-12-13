@@ -37,8 +37,8 @@ public class ZoneDatabaseTests
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 		var zonedObject = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 		
-		// Set zone via database
-		await Database.SetObjectZone(zonedObject.Known, zoneObject.Known, CancellationToken.None);
+		// Set zone via Mediator command
+		await Mediator.Send(new SetObjectZoneCommand(zonedObject.Known, zoneObject.Known));
 		
 		// Verify zone was set
 		var updatedObject = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
@@ -64,16 +64,16 @@ public class ZoneDatabaseTests
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 		var zonedObject = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 		
-		// Set zone first
-		await Database.SetObjectZone(zonedObject.Known, zoneObject.Known, CancellationToken.None);
+		// Set zone first using Mediator (like the function does)
+		await Mediator.Send(new SetObjectZoneCommand(zonedObject.Known, zoneObject.Known));
 		
 		// Verify zone was set
 		var withZone = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 		var zoneCheck = await withZone.Known.Object().Zone.WithCancellation(CancellationToken.None);
 		await Assert.That(zoneCheck.IsNone).IsFalse();
 		
-		// Unset zone
-		await Database.UnsetObjectZone(withZone.Known, CancellationToken.None);
+		// Unset zone using Mediator (like the function does)
+		await Mediator.Send(new UnsetObjectZoneCommand(withZone.Known));
 		
 		// Verify zone was cleared
 		var updatedObject = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
@@ -102,16 +102,16 @@ public class ZoneDatabaseTests
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 		var zonedObject = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 		
-		// Set zone to zone1
-		await Database.SetObjectZone(zonedObject.Known, zone1Object.Known, CancellationToken.None);
+		// Set zone to zone1 using Mediator
+		await Mediator.Send(new SetObjectZoneCommand(zonedObject.Known, zone1Object.Known));
 		
 		// Verify initial zone
 		var withZone1 = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 		var zone1Check = await withZone1.Known.Object().Zone.WithCancellation(CancellationToken.None);
 		await Assert.That(zone1Check.Known.Object().DBRef.Number).IsEqualTo(zone1DbRef.Number);
 		
-		// Update zone to zone2
-		await Database.SetObjectZone(withZone1.Known, zone2Object.Known, CancellationToken.None);
+		// Update zone to zone2 using Mediator
+		await Mediator.Send(new SetObjectZoneCommand(withZone1.Known, zone2Object.Known));
 		
 		// Verify updated zone
 		var withZone2 = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
@@ -131,7 +131,8 @@ public class ZoneDatabaseTests
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 		var zonedObject = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 		
-		// Set zone to null (should be equivalent to unset)
+		// Set zone to null via direct database call (testing database method directly)
+		// This bypasses the Mediator and tests the database implementation
 		await Database.SetObjectZone(zonedObject.Known, null, CancellationToken.None);
 		
 		// Verify no zone
@@ -161,9 +162,9 @@ public class ZoneDatabaseTests
 		var obj2DbRef = DBRef.Parse(obj2Result.Message!.ToPlainText()!);
 		var obj2 = await Mediator.Send(new GetObjectNodeQuery(obj2DbRef));
 		
-		// Set both objects to same zone
-		await Database.SetObjectZone(obj1.Known, zoneObject.Known, CancellationToken.None);
-		await Database.SetObjectZone(obj2.Known, zoneObject.Known, CancellationToken.None);
+		// Set both objects to same zone using Mediator
+		await Mediator.Send(new SetObjectZoneCommand(obj1.Known, zoneObject.Known));
+		await Mediator.Send(new SetObjectZoneCommand(obj2.Known, zoneObject.Known));
 		
 		// Verify both have the same zone
 		var updated1 = await Mediator.Send(new GetObjectNodeQuery(obj1DbRef));
@@ -196,11 +197,11 @@ public class ZoneDatabaseTests
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 		
-		// Set midZone to be zoned to topZone
-		await Database.SetObjectZone(midZone.Known, topZone.Known, CancellationToken.None);
+		// Set midZone to be zoned to topZone using Mediator
+		await Mediator.Send(new SetObjectZoneCommand(midZone.Known, topZone.Known));
 		
-		// Set obj to be zoned to midZone
-		await Database.SetObjectZone(obj.Known, midZone.Known, CancellationToken.None);
+		// Set obj to be zoned to midZone using Mediator
+		await Mediator.Send(new SetObjectZoneCommand(obj.Known, midZone.Known));
 		
 		// Verify the chain
 		var updatedMid = await Mediator.Send(new GetObjectNodeQuery(midZoneDbRef));
