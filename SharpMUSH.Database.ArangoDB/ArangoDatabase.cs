@@ -2774,10 +2774,15 @@ public partial class ArangoDatabase(
 		
 		await foreach (var id in queryIds.ToAsyncEnumerable().WithCancellation(ct))
 		{
-			var obj = await GetBaseObjectNodeAsync(new DBRef(int.Parse(id.Split('/')[1])), ct);
-			if (obj != null)
+			// Parse the id safely - format should be "collection/key"
+			var parts = id.Split('/');
+			if (parts.Length == 2 && int.TryParse(parts[1], out var key))
 			{
-				yield return obj;
+				var obj = await GetBaseObjectNodeAsync(new DBRef(key), ct);
+				if (obj != null)
+				{
+					yield return obj;
+				}
 			}
 		}
 	}
