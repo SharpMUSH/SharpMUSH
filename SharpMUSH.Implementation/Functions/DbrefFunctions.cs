@@ -1183,15 +1183,38 @@ LOCATE()
 						return Errors.ErrorNoSideFx;
 					}
 
-					// Zone setting would be implemented here when @chzone is implemented
-					// For now, return an error indicating it's not implemented
-					return "#-1 ZONE SETTING NOT YET IMPLEMENTED";
+					// Handle zone setting like @chzone
+					var arg1Str = arg1Value!.Message!.ToPlainText();
+					
+					// Check if removing zone (setting to "none")
+					if (arg1Str.Equals("none", StringComparison.OrdinalIgnoreCase))
+					{
+						// TODO: Check ChZone lock and permissions
+						await Mediator!.Send(new UnsetObjectZoneCommand(target));
+						return string.Empty;
+					}
+					
+					// Locate the zone object
+					var maybeZone = await LocateService!.Locate(parser, executor, executor, arg1Str, LocateFlags.All);
+					if (!maybeZone.IsValid())
+					{
+						return "#-1 INVALID ZONE";
+					}
+					
+					var zone = maybeZone.AsAnyObject;
+					
+					// TODO: Check ChZone lock and permissions
+					// TODO: Handle flag/power stripping
+					await Mediator!.Send(new SetObjectZoneCommand(target, zone));
+					return string.Empty;
 				}
 
-				// TODO: Implement zone retrieval when zone infrastructure is complete
-				// Zones in PennMUSH are typically stored as a special parent or attribute
-				// For now, return #-1 (no zone)
-				return "#-1";
+				// Get zone of the target object - query fresh from database
+				var freshTarget = await Mediator!.Send(new GetObjectNodeQuery(target.Object().DBRef));
+				var zoneObj = await freshTarget.Known.Object().Zone.WithCancellation(CancellationToken.None);
+				return zoneObj.IsNone 
+					? "#-1" 
+					: zoneObj.Known.Object().DBRef.ToString();
 			});
 	}
 

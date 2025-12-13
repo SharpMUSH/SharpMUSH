@@ -55,6 +55,17 @@ public partial class Commands
 			await executor.Object().Owner.WithCancellation(CancellationToken.None),
 			location.Known.AsContainer));
 		
+		// Inherit zone from creator
+		var creatorZone = await executor.Object().Zone.WithCancellation(CancellationToken.None);
+		if (!creatorZone.IsNone)
+		{
+			var newThing = await Mediator.Send(new GetObjectNodeQuery(thing));
+			if (!newThing.IsNone)
+			{
+				await Mediator.Send(new SetObjectZoneCommand(newThing.Known, creatorZone.Known));
+			}
+		}
+		
 		await NotifyService!.Notify(executor, $"Created {name} ({thing}).");
 
 		// Trigger OBJECT`CREATE event
@@ -558,7 +569,7 @@ public partial class Commands
 				// Handle "none" to remove zone
 				if (zoneName.Equals("none", StringComparison.InvariantCultureIgnoreCase))
 				{
-					await AttributeService!.SetAttributeAsync(executor, obj, "ZONE", MModule.single(""));
+					await Mediator!.Send(new UnsetObjectZoneCommand(obj));
 					await NotifyService!.Notify(executor, "Zone cleared.");
 					return CallState.Empty;
 				}
@@ -567,9 +578,25 @@ public partial class Commands
 					executor, executor, zoneName, LocateFlags.All,
 					async zoneObj =>
 					{
-						// Set the zone attribute
-						await AttributeService!.SetAttributeAsync(executor, obj, "ZONE", 
-							MModule.single(zoneObj.Object().DBRef.ToString()));
+						// Check if executor can control the zone or passes ChZone lock
+						bool canZone = await PermissionService!.Controls(executor, zoneObj);
+						
+						// If not controlled, check ChZone lock
+						if (!canZone && !LockService!.Evaluate(LockType.ChZone, zoneObj, executor))
+						{
+							await NotifyService!.Notify(executor, "Permission denied: You cannot zone to that object.");
+							return Errors.ErrorPerm;
+						}
+
+						// Set the zone using database edge
+						await Mediator!.Send(new SetObjectZoneCommand(obj, zoneObj));
+
+						// Auto-set ChZone lock if not present on zone object
+						// Default ChZone lock is the zone object itself (allows controlled objects)
+						if (!zoneObj.Object().Locks.ContainsKey("ChZone"))
+						{
+							await Mediator.Send(new SetLockCommand(zoneObj.Object(), "ChZone", zoneObj.Object().DBRef.ToString()));
+						}
 						
 						// Clear privileged flags and powers unless /preserve is used
 						if (!preserve && !obj.IsPlayer)
@@ -587,6 +614,7 @@ public partial class Commands
 							{
 								await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "!TRUST", false);
 							}
+							// TODO: Strip powers
 						}
 
 						await NotifyService!.Notify(executor, "Zone set.");
@@ -624,6 +652,17 @@ public partial class Commands
 		var response = await Mediator!.Send(new CreateRoomCommand(MModule.plainText(roomName),
 			await executor.Owner.WithCancellation(CancellationToken.None)));
 		await NotifyService!.Notify(executor.DBRef, $"{roomName} created with room number #{response.Number}.");
+
+		// Inherit zone from creator
+		var creatorZone = await executor.Zone.WithCancellation(CancellationToken.None);
+		if (!creatorZone.IsNone)
+		{
+			var newRoom = await Mediator.Send(new GetObjectNodeQuery(response));
+			if (!newRoom.IsNone)
+			{
+				await Mediator.Send(new SetObjectZoneCommand(newRoom.Known, creatorZone.Known));
+			}
+		}
 
 		if (!string.IsNullOrWhiteSpace(exitTo?.ToString()))
 		{
@@ -779,6 +818,17 @@ public partial class Commands
 			sourceRoom,
 			await executor.Object().Owner.WithCancellation(CancellationToken.None)
 		));
+
+		// Inherit zone from creator
+		var creatorZone = await executor.Object().Zone.WithCancellation(CancellationToken.None);
+		if (!creatorZone.IsNone)
+		{
+			var newExit = await Mediator.Send(new GetObjectNodeQuery(exitDbRef));
+			if (!newExit.IsNone)
+			{
+				await Mediator.Send(new SetObjectZoneCommand(newExit.Known, creatorZone.Known));
+			}
+		}
 
 		await NotifyService!.Notify(executor, $"Opened exit {primaryName} with dbref #{exitDbRef.Number}.");
 

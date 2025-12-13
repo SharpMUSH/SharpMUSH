@@ -309,15 +309,46 @@ public partial class LocateService(IMediator mediator,
 			{
 				if (location.IsRoom && flags.HasFlag(LocateFlags.ExitsPreference))
 				{
+					// Step 1: Match exits in the current location (PennMUSH order)
+					if (location.IsRoom)
+					{
+						var exits = mediator
+							.CreateStream(new GetContentsQuery(location))
+							.Where(x => x.IsExit)
+							.Select(x => new AnySharpObject(x.AsExit));
+						
+						(bestMatch, final, curr, right_type, exact, c) = await Match_List(parser, exits, looker, where, bestMatch,
+							exact, final, curr, right_type, flags, name);
+						
+						if (c == ControlFlow.Break) break;
+						if (c == ControlFlow.Return) break;
+					}
+
+					// Step 2: Match exits in Zone Master Room if location has a zone that is a room (PennMUSH order)
 					if (flags.HasFlag(LocateFlags.MatchRemoteContents)
 					    && !flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation |
 					                      LocateFlags.OnlyMatchObjectsInLookerInventory))
-						/* TODO: && IsRoom(Zone(loc) */
 					{
-						/* TODO: MATCH_LIST(Exits(Zone(loc))); */
-						throw new NotImplementedException();
+						// Check if the location has a zone and if that zone is a room (ZMR)
+						var locationZone = await location.WithExitOption().Object().Zone.WithCancellation(CancellationToken.None);
+						if (!locationZone.IsNone && locationZone.Known.IsRoom)
+						{
+							// Zone Master Room: Match exits in the ZMR
+							AnySharpContainer zmr = locationZone.Known.AsRoom;
+							var zmrExits = mediator
+								.CreateStream(new GetContentsQuery(zmr))
+								.Where(x => x.IsExit)
+								.Select(x => new AnySharpObject(x.AsExit));
+
+							(bestMatch, final, curr, right_type, exact, c) = await Match_List(parser, zmrExits, looker, where, bestMatch,
+								exact, final, curr, right_type, flags, name);
+							
+							if (c == ControlFlow.Break) break;
+							if (c == ControlFlow.Return) break;
+						}
 					}
 
+					// Step 3: Match exits in Master Room (global exits) last (PennMUSH order)
 					if (flags.HasFlag(LocateFlags.All)
 					    && !flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation |
 					                      LocateFlags.OnlyMatchObjectsInLookerInventory))
@@ -328,20 +359,6 @@ public partial class LocateService(IMediator mediator,
 							.Where(x => x.IsExit)
 							.Select(x => new AnySharpObject(x.AsExit));
 
-						(bestMatch, final, curr, right_type, exact, c) = await Match_List(parser, exits, looker, where, bestMatch,
-							exact, final, curr, right_type, flags, name);
-						
-						if (c == ControlFlow.Break) break;
-						if (c == ControlFlow.Return) break;
-					}
-
-					if (location.IsRoom)
-					{
-						var exits = mediator
-							.CreateStream(new GetContentsQuery(location))
-							.Where(x => x.IsExit)
-							.Select(x => new AnySharpObject(x.AsExit));
-						
 						(bestMatch, final, curr, right_type, exact, c) = await Match_List(parser, exits, looker, where, bestMatch,
 							exact, final, curr, right_type, flags, name);
 						

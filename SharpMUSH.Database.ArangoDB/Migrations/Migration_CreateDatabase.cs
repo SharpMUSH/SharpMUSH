@@ -867,6 +867,23 @@ public class Migration_CreateDatabase : IArangoMigration
 							}
 						],
 						Name = DatabaseConstants.GraphMail
+					},
+					new()
+					{
+						EdgeDefinitions =
+						[
+							new ArangoEdgeDefinition()
+							{
+								Collection = DatabaseConstants.HasZone,
+								To = [
+									DatabaseConstants.Objects
+								],
+								From = [
+									DatabaseConstants.Objects
+								]
+							}
+						],
+						Name = DatabaseConstants.GraphZones
 					}
 				]
 			},
