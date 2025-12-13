@@ -104,6 +104,46 @@ public class ListFunctionUnitTests
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
+	[Test, NotInParallel]
+	public async Task SimpleAnsiTest()
+	{
+		// Simple test to check if ansi works at all
+		var result = (await Parser.FunctionParse(MModule.single("ansi(hr,test)")))?.Message!;
+		Console.WriteLine($"Result: {result.ToString()}");
+		Console.WriteLine($"Expected ANSI codes (bright red): ESC[1;31mESC[0m");
+		
+		// Should contain ANSI escape codes
+		await Assert.That(result.ToString()).Contains("\u001b[");
+	}
+
+	[Test, NotInParallel]
+	public async Task IterationWithAnsiMarkup()
+	{
+		// Test case from issue: iter should preserve ANSI markup
+		// The problem: iter(lnum(1,5),%i0 --> [ansi(hr,%i0)],,%r)
+		// loses the ANSI markup
+		
+		// First, test the working equivalent as a baseline
+		var expected = (await Parser.FunctionParse(
+			MModule.single("1 --> [ansi(hr,1)]%r2 --> [ansi(hr,2)]%r3 --> [ansi(hr,3)]%r4 --> [ansi(hr,4)]%r5 --> [ansi(hr,5)]")))?.Message!;
+		
+		// Now test the iter version - it should produce the same byte array
+		var actual = (await Parser.FunctionParse(
+			MModule.single("iter(lnum(1,5),%i0 --> [ansi(hr,%i0)],,%r)")))?.Message!;
+		
+		// Debug output
+		Console.WriteLine($"Expected: {expected.ToString()}");
+		Console.WriteLine($"Actual:   {actual.ToString()}");
+		Console.WriteLine($"Expected bytes: {BitConverter.ToString(System.Text.Encoding.UTF8.GetBytes(expected.ToString()))}");
+		Console.WriteLine($"Actual bytes:   {BitConverter.ToString(System.Text.Encoding.UTF8.GetBytes(actual.ToString()))}");
+		
+		// Compare byte arrays to ensure ANSI codes are preserved
+		var expectedBytes = System.Text.Encoding.UTF8.GetBytes(expected.ToString());
+		var actualBytes = System.Text.Encoding.UTF8.GetBytes(actual.ToString());
+		
+		await Assert.That(actualBytes).IsEqualTo(expectedBytes);
+	}
+
 	[Test]
 	[Arguments("rest(1|2|3)", "")]
 	[Arguments("rest(%b)", "")]
