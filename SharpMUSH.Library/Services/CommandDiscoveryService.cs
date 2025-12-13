@@ -12,12 +12,6 @@ namespace SharpMUSH.Library.Services;
 
 public partial class CommandDiscoveryService(IMediator mediator) : ICommandDiscoveryService
 {
-	public void InvalidateCache(DBRef dbReference)
-	{
-		// No-op: Cache invalidation is now handled by the Mediator pipeline
-		// via CacheInvalidationBehavior when attribute commands are executed
-	}
-
 	private async IAsyncEnumerable<(AnySharpObject Obj, SharpAttribute Attr, Regex Regex, bool IsRegex)> MatchUserDefinedCommandSelectMany(AnySharpObject sharpObj)
 	{
 		// Use Mediator query to get cached command attributes

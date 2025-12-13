@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Tests.Services;
 
@@ -21,20 +20,6 @@ public class CommandDiscoveryServiceTests
 	}
 
 	[Test]
-	public async ValueTask InvalidateCache_DoesNotThrow()
-	{
-		// Verify that cache invalidation can be called without errors
-		var service = WebAppFactoryArg.Services.GetRequiredService<ICommandDiscoveryService>();
-		var testDbRef = new DBRef(12345);
-		
-		// This should not throw
-		service.InvalidateCache(testDbRef);
-		
-		// Verify service is still usable after invalidation
-		await Assert.That(service).IsNotNull();
-	}
-
-	[Test]
 	[Skip("Integration test - requires database setup with command attributes")]
 	public async ValueTask MatchUserDefinedCommand_WithCaching_ReturnsSameResults()
 	{
@@ -45,9 +30,10 @@ public class CommandDiscoveryServiceTests
 
 	[Test]
 	[Skip("Integration test - requires database setup with command attributes")]
-	public async ValueTask MatchUserDefinedCommand_AfterInvalidation_RebuildsCache()
+	public async ValueTask MatchUserDefinedCommand_AfterCacheInvalidation_RebuildsCache()
 	{
-		// This test would verify that after cache invalidation, the cache is rebuilt
+		// This test would verify that after cache invalidation (via attribute commands), the cache is rebuilt
+		// Cache is invalidated automatically when attribute commands execute via Mediator pipeline
 		// Would need proper database setup with objects that have $command: attributes
 		await ValueTask.CompletedTask;
 	}
