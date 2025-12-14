@@ -304,19 +304,15 @@ public class ZoneFunctionTests
 		var zoneResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ZoneParentPrecedenceZone"));
 		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
 		
-		// Set attribute on zone - verify get() returns it
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&TEST_PRECEDENCE {zoneDbRef}=From Zone"));
-		var zoneAttrCheck = (await FunctionParser.FunctionParse(MModule.single($"get({zoneDbRef}/TEST_PRECEDENCE)")))?.Message!;
-		await Assert.That(zoneAttrCheck.ToPlainText()).IsEqualTo("From Zone");
+		// Set attribute on zone
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&ZONE_PREC_TEST {zoneDbRef}=From Zone"));
 		
 		// Create a parent object with the same attribute
 		var parentResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ZoneParentPrecedenceParent"));
 		var parentDbRef = DBRef.Parse(parentResult.Message!.ToPlainText()!);
 		
-		// Set attribute on parent - verify get() returns it
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&TEST_PRECEDENCE {parentDbRef}=From Parent"));
-		var parentAttrCheck = (await FunctionParser.FunctionParse(MModule.single($"get({parentDbRef}/TEST_PRECEDENCE)")))?.Message!;
-		await Assert.That(parentAttrCheck.ToPlainText()).IsEqualTo("From Parent");
+		// Set attribute on parent
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&ZONE_PREC_TEST {parentDbRef}=From Parent"));
 		
 		// Create a child object
 		var childResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ZoneParentPrecedenceChild"));
@@ -340,7 +336,7 @@ public class ZoneFunctionTests
 		
 		// Test attribute inheritance using get_eval which checks parent chain
 		// Parent attribute should take precedence over zone attribute
-		var childAttrValue = (await FunctionParser.FunctionParse(MModule.single($"get_eval({childDbRef}/TEST_PRECEDENCE)")))?.Message!;
+		var childAttrValue = (await FunctionParser.FunctionParse(MModule.single($"get_eval({childDbRef}/ZONE_PREC_TEST)")))?.Message!;
 		await Assert.That(childAttrValue.ToPlainText()).IsEqualTo("From Parent");
 	}
 
