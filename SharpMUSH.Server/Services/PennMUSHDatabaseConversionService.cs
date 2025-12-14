@@ -15,6 +15,7 @@ public class PennMUSHDatabaseConversionService : BackgroundService
 	private readonly IOptions<SharpMUSHOptions> _options;
 	private readonly ILogger<PennMUSHDatabaseConversionService> _logger;
 	private readonly IHostApplicationLifetime _lifetime;
+	private readonly bool _stopOnFailure;
 
 	public PennMUSHDatabaseConversionService(
 		IPennMUSHDatabaseConverter converter,
@@ -26,6 +27,7 @@ public class PennMUSHDatabaseConversionService : BackgroundService
 		_options = options;
 		_logger = logger;
 		_lifetime = lifetime;
+		_stopOnFailure = Environment.GetEnvironmentVariable("PENNMUSH_CONVERSION_STOP_ON_FAILURE")?.ToLowerInvariant() == "true";
 	}
 
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -93,8 +95,7 @@ public class PennMUSHDatabaseConversionService : BackgroundService
 				}
 
 				// Optionally stop the application on conversion failure
-				var stopOnFailure = Environment.GetEnvironmentVariable("PENNMUSH_CONVERSION_STOP_ON_FAILURE");
-				if (stopOnFailure?.ToLowerInvariant() == "true")
+				if (_stopOnFailure)
 				{
 					_logger.LogCritical("Stopping application due to conversion failure");
 					_lifetime.StopApplication();
@@ -106,8 +107,7 @@ public class PennMUSHDatabaseConversionService : BackgroundService
 			_logger.LogError(ex, "Fatal error during PennMUSH database conversion");
 
 			// Optionally stop the application on conversion exception
-			var stopOnFailure = Environment.GetEnvironmentVariable("PENNMUSH_CONVERSION_STOP_ON_FAILURE");
-			if (stopOnFailure?.ToLowerInvariant() == "true")
+			if (_stopOnFailure)
 			{
 				_logger.LogCritical("Stopping application due to conversion exception");
 				_lifetime.StopApplication();
