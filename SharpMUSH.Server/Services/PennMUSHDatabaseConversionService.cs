@@ -28,7 +28,10 @@ public class PennMUSHDatabaseConversionService : BackgroundService
 		_options = options;
 		_logger = logger;
 		_lifetime = lifetime;
-		_stopOnFailure = Environment.GetEnvironmentVariable("PENNMUSH_CONVERSION_STOP_ON_FAILURE")?.ToLowerInvariant() == "true";
+		_stopOnFailure = string.Equals(
+			Environment.GetEnvironmentVariable("PENNMUSH_CONVERSION_STOP_ON_FAILURE"),
+			"true",
+			StringComparison.OrdinalIgnoreCase);
 		_databaseFilePath = Environment.GetEnvironmentVariable("PENNMUSH_DATABASE_PATH");
 	}
 

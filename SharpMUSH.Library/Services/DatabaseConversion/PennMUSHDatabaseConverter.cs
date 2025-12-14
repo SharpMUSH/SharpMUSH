@@ -12,6 +12,9 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	private readonly ISharpDatabase _database;
 	private readonly PennMUSHDatabaseParser _parser;
 	private readonly ILogger<PennMUSHDatabaseConverter> _logger;
+	
+	// TODO: This mapping will be used to track PennMUSH DBRef -> SharpMUSH DBRef conversions
+	// when object creation is fully implemented
 	private readonly Dictionary<int, DBRef> _dbrefMapping = [];
 
 	public PennMUSHDatabaseConverter(
