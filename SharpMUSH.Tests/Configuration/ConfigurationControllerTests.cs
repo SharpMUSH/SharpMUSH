@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
@@ -93,5 +94,63 @@ public class ConfigurationControllerTests
 		
 		await Assert.That(response.Configuration).IsNotNull();
 		await Assert.That(response.Metadata).IsNotNull();
+	}
+
+	[Test]
+	public async Task ImportConfiguration_UpdatesOptionsMonitor()
+	{
+		// Arrange
+		var database = WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+		var configReloadService = WebAppFactoryArg.Services.GetRequiredService<ConfigurationReloadService>();
+		var logger = WebAppFactoryArg.Services.GetRequiredService<ILogger<ConfigurationController>>();
+		
+		// Get the real IOptionsMonitor to test change notifications
+		var optionsMonitor = WebAppFactoryArg.Services.GetRequiredService<IOptionsMonitor<SharpMUSHOptions>>();
+		
+		// Track if the change callback was triggered
+		bool changeDetected = false;
+		string? newMudName = null;
+		
+		// Register a change callback on the options monitor
+		var disposable = optionsMonitor.OnChange((options, name) =>
+		{
+			changeDetected = true;
+			newMudName = options.Net.MudName;
+		});
+
+		try
+		{
+			const string configContent = """
+			# Test configuration
+			mud_name Test Options Monitor Update
+			port 4209
+			ssl_port 4208
+			""";
+
+			// Parse and store the configuration directly (simulating what the controller does)
+			var tempFile = Path.GetTempFileName();
+			await System.IO.File.WriteAllTextAsync(tempFile, configContent);
+			var importedOptions = ReadPennMushConfig.Create(tempFile);
+			System.IO.File.Delete(tempFile);
+
+			// Store in database
+			await database.SetExpandedServerData(nameof(SharpMUSHOptions), importedOptions);
+
+			// Signal the change
+			configReloadService.SignalChange();
+
+			// Wait for the change callback to be triggered
+			await Task.Delay(200);
+
+			// Assert - Verify that the change was detected
+			await Assert.That(changeDetected).IsTrue();
+			
+			// Verify that the callback received configuration data
+			await Assert.That(newMudName).IsNotNull();
+		}
+		finally
+		{
+			disposable?.Dispose();
+		}
 	}
 }
