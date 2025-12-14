@@ -38,6 +38,21 @@ The parser handles:
 
 The converter returns a `ConversionResult` with statistics and any errors/warnings encountered.
 
+#### ANSI and Pueblo Handling
+
+During attribute conversion, the converter strips ANSI escape sequences and Pueblo HTML tags from attribute values. This is currently a simple stripping operation to ensure clean text storage.
+
+**Current behavior:**
+- ANSI escape sequences (e.g., `\x1b[31m` for red text) are removed
+- Pueblo HTML tags (e.g., `<COLOR>`, `<B>`) are removed
+- Raw text is preserved
+
+**Future enhancement (TODO):**
+The converter should be enhanced to convert these escape sequences to SharpMUSH's native MarkupString format, preserving the intended formatting:
+- Map ANSI color codes to MarkupString color markup
+- Convert Pueblo HTML to equivalent MarkupString formatting
+- Preserve bold, underline, and other text attributes
+
 ### 4. Background Service
 
 **PennMUSHDatabaseConversionService.cs** is a background service that runs on server startup and performs database conversion if configured.
@@ -166,8 +181,10 @@ Where:
 - ✅ Relationship establishment (locations, exit destinations)
 - ✅ Attribute creation with flags
 - ✅ Lock creation
+- ✅ ANSI and Pueblo escape sequence stripping from attributes
 
 ### To Do
+- ⏳ Convert ANSI escape sequences to MarkupStrings (currently stripped)
 - ⏳ Handle home location setting for players/things
 - ⏳ Handle parent relationships
 - ⏳ Handle zone relationships

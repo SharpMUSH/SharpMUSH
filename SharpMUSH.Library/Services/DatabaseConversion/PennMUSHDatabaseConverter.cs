@@ -448,8 +448,19 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				{
 					try
 					{
+						// Strip ANSI and Pueblo escape sequences from attribute value
+						// TODO: Convert these to proper MarkupStrings instead of stripping
+						var cleanedValue = StripEscapeSequences(pennAttr.Value);
+						
+						// Log if escape sequences were removed
+						if (cleanedValue != pennAttr.Value)
+						{
+							_logger.LogTrace("Stripped escape sequences from attribute {AttrName} on object #{DBRef}", 
+								pennAttr.Name, pennObj.DBRef);
+						}
+						
 						// Convert PennMUSH attribute value to MString
-						var value = MModule.single(pennAttr.Value);
+						var value = MModule.single(cleanedValue);
 
 						// Set the attribute using AttributeService
 						var result = await _attributeService.SetAttributeAsync(
@@ -589,5 +600,40 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			exit => throw new InvalidOperationException("Exit cannot be container"),
 			thing => thing,
 			_ => throw new InvalidOperationException("None cannot be container"));
+	}
+
+	/// <summary>
+	/// Strips ANSI escape sequences and Pueblo HTML tags from text.
+	/// TODO: Convert ANSI sequences to proper MarkupStrings instead of stripping them.
+	/// This will require mapping PennMUSH ANSI codes to SharpMUSH MarkupString format.
+	/// </summary>
+	/// <param name="text">Text potentially containing escape sequences</param>
+	/// <returns>Text with escape sequences removed</returns>
+	private static string StripEscapeSequences(string text)
+	{
+		if (string.IsNullOrEmpty(text))
+		{
+			return text;
+		}
+
+		// Strip ANSI escape sequences (ESC[ followed by parameters and a letter)
+		// Pattern: \x1b\[[0-9;]*[A-Za-z]
+		var ansiPattern = @"\x1b\[[0-9;]*[A-Za-z]";
+		text = System.Text.RegularExpressions.Regex.Replace(text, ansiPattern, string.Empty);
+
+		// Strip other ANSI escape sequences (ESC followed by a single character)
+		// Pattern: \x1b[A-Za-z]
+		var simpleAnsiPattern = @"\x1b[A-Za-z]";
+		text = System.Text.RegularExpressions.Regex.Replace(text, simpleAnsiPattern, string.Empty);
+
+		// Strip Pueblo HTML tags (basic HTML tag removal)
+		// This is a simple approach; more sophisticated HTML parsing could be added
+		var puebloPattern = @"<[^>]+>";
+		text = System.Text.RegularExpressions.Regex.Replace(text, puebloPattern, string.Empty);
+
+		// Strip any remaining ESC characters
+		text = text.Replace("\x1b", string.Empty);
+
+		return text;
 	}
 }
