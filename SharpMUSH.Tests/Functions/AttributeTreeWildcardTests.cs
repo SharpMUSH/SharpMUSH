@@ -10,7 +10,6 @@ public class AttributeTreeWildcardTests
 	public required WebAppFactory WebAppFactoryArg { get; init; }
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
-	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 
 	// Setup helper to create a comprehensive attribute tree for testing
 	private async Task SetupAttributeTree()
@@ -218,10 +217,8 @@ public class AttributeTreeWildcardTests
 		await Assert.That(attrs).Contains("ROOTOTHER");
 		
 		// Match only ROOT`CHILDx (not grandchildren)
-		// [12] is a regex character class matching '1' or '2'
-		// In C# string: \\[12\\] becomes \[12\] after string processing
-		// MUSH parser sees: \[12\] and unescapes to [12] for the regex engine
-		// Final regex pattern: [12] (character class)
+		// Pattern uses [12] as a regex character class to match '1' or '2'
+		// Brackets are escaped with \\[ \\] for the MUSH parser
 		var result2 = (await Parser.FunctionParse(MModule.single("[reglattr(%!/ROOT`CHILD\\[12\\])]")))?.Message!;
 		var attrs2 = result2.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries).ToArray();
 		
