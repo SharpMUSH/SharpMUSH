@@ -243,6 +243,7 @@
 	private IBrowserFile? _selectedFile;
 	private bool _isUploading;
 	private bool _isConverting;
+	private bool _isUpdatingProgress;
 	private string? _sessionId;
 	private ConversionProgress? _progress;
 	private ConversionResult? _result;
@@ -279,8 +280,8 @@
 				_isConverting = true;
 				StateHasChanged();
 
-				// Start polling for progress
-				_progressTimer = new System.Threading.Timer(async _ => await UpdateProgress(), null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
+				// Start polling for progress with synchronous timer callback
+				_progressTimer = new System.Threading.Timer(_ => _ = UpdateProgressAsync(), null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
 			}
 		}
 		catch (Exception ex)
@@ -291,10 +292,13 @@
 		}
 	}
 
-	private async Task UpdateProgress()
+	private async Task UpdateProgressAsync()
 	{
-		if (_sessionId == null || !_isConverting)
+		// Prevent concurrent executions
+		if (_isUpdatingProgress || _sessionId == null || !_isConverting)
 			return;
+
+		_isUpdatingProgress = true;
 
 		try
 		{
@@ -315,6 +319,11 @@
 			await JSRuntime.InvokeVoidAsync("console.error", $"Error updating progress: {ex.Message}");
 			// Stop polling on error
 			_progressTimer?.Dispose();
+			_isConverting = false;
+		}
+		finally
+		{
+			_isUpdatingProgress = false;
 		}
 	}
 

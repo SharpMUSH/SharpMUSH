@@ -168,8 +168,13 @@ public static class DatabaseConversionSession
 					}
 					else if (task.IsFaulted)
 					{
-						logger.LogError(task.Exception, "Error during conversion");
-						throw task.Exception!;
+						logger.LogError(task.Exception?.InnerException, "Error during conversion");
+						// Preserve the original exception by throwing the inner exception
+						if (task.Exception?.InnerException != null)
+						{
+							throw task.Exception.InnerException;
+						}
+						throw new InvalidOperationException("Conversion failed with unknown error");
 					}
 					else
 					{
@@ -189,7 +194,27 @@ public static class DatabaseConversionSession
 		_ = Task.Delay(TimeSpan.FromHours(1), cancellationToken)
 			.ContinueWith(_ =>
 			{
-				_sessions.TryRemove(sessionId, out var _);
+				try
+				{
+					_sessions.TryRemove(sessionId, out var removedSession);
+					
+					// Clean up any remaining temp files
+					if (removedSession != null && File.Exists(removedSession.TempFilePath))
+					{
+						try
+						{
+							File.Delete(removedSession.TempFilePath);
+						}
+						catch (IOException ex)
+						{
+							logger.LogWarning(ex, "Failed to delete temp file during cleanup: {Path}", removedSession.TempFilePath);
+						}
+					}
+				}
+				catch (Exception ex)
+				{
+					logger.LogError(ex, "Error during session cleanup for {SessionId}", sessionId);
+				}
 			}, TaskScheduler.Default);
 	}
 
@@ -242,7 +267,7 @@ public static class DatabaseConversionSession
 
 		session.CancellationSource.Cancel();
 		
-		// Clean up temp file
+		// Clean up temp file - ignore specific expected exceptions during cleanup
 		try
 		{
 			if (File.Exists(session.TempFilePath))
@@ -250,15 +275,13 @@ public static class DatabaseConversionSession
 				File.Delete(session.TempFilePath);
 			}
 		}
-		catch (IOException ex)
+		catch (IOException)
 		{
-			// File is in use or access denied - log but don't fail
-			System.Diagnostics.Debug.WriteLine($"Could not delete temp file: {ex.Message}");
+			// File is in use or access denied - expected during cancellation, ignore
 		}
-		catch (UnauthorizedAccessException ex)
+		catch (UnauthorizedAccessException)
 		{
-			// No permission to delete - log but don't fail
-			System.Diagnostics.Debug.WriteLine($"No permission to delete temp file: {ex.Message}");
+			// No permission to delete - expected, ignore
 		}
 
 		return true;
