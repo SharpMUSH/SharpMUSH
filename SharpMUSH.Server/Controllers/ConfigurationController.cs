@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.API;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Server.Controllers;
@@ -14,7 +14,7 @@ namespace SharpMUSH.Server.Controllers;
 public class ConfigurationController(
 	IOptionsWrapper<SharpMUSHOptions> options,
 	ISharpDatabase database,
-	IOptionsMonitorCache<SharpMUSHOptions> optionsCache,
+	ConfigurationReloadService configReloadService,
 	ILogger<ConfigurationController> logger)
 	: ControllerBase
 {
@@ -54,8 +54,9 @@ public class ConfigurationController(
 			// Pass the object directly - the database will handle serialization
 			await database.SetExpandedServerData(nameof(SharpMUSHOptions), importedOptions);
 
-			// Invalidate the options cache to force reload on next access
-			optionsCache.TryRemove(Options.DefaultName);
+			// Signal that configuration has changed using the proper Microsoft pattern
+			// This notifies IOptionsMonitor consumers via change tokens
+			configReloadService.SignalChange();
 
 			logger.LogInformation("Configuration imported and persisted successfully");
 

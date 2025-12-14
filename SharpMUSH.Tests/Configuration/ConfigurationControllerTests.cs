@@ -1,11 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.API;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Controllers;
 
@@ -22,10 +22,10 @@ public class ConfigurationControllerTests
 		// Arrange
 		var database = WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 		var optionsWrapper = WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
-		var optionsCache = WebAppFactoryArg.Services.GetRequiredService<IOptionsMonitorCache<SharpMUSHOptions>>();
+		var configReloadService = WebAppFactoryArg.Services.GetRequiredService<ConfigurationReloadService>();
 		var logger = WebAppFactoryArg.Services.GetRequiredService<ILogger<ConfigurationController>>();
 		
-		var controller = new ConfigurationController(optionsWrapper, database, optionsCache, logger);
+		var controller = new ConfigurationController(optionsWrapper, database, configReloadService, logger);
 
 		const string configContent = """
 		# Test configuration
@@ -55,10 +55,10 @@ public class ConfigurationControllerTests
 		// Arrange
 		var database = WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 		var optionsWrapper = WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
-		var optionsCache = WebAppFactoryArg.Services.GetRequiredService<IOptionsMonitorCache<SharpMUSHOptions>>();
+		var configReloadService = WebAppFactoryArg.Services.GetRequiredService<ConfigurationReloadService>();
 		var logger = WebAppFactoryArg.Services.GetRequiredService<ILogger<ConfigurationController>>();
 		
-		var controller = new ConfigurationController(optionsWrapper, database, optionsCache, logger);
+		var controller = new ConfigurationController(optionsWrapper, database, configReloadService, logger);
 
 		// Empty config content that will fail file creation
 		const string configContent = "";
@@ -77,10 +77,10 @@ public class ConfigurationControllerTests
 		// Arrange
 		var database = WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 		var optionsWrapper = WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
-		var optionsCache = WebAppFactoryArg.Services.GetRequiredService<IOptionsMonitorCache<SharpMUSHOptions>>();
+		var configReloadService = WebAppFactoryArg.Services.GetRequiredService<ConfigurationReloadService>();
 		var logger = WebAppFactoryArg.Services.GetRequiredService<ILogger<ConfigurationController>>();
 		
-		var controller = new ConfigurationController(optionsWrapper, database, optionsCache, logger);
+		var controller = new ConfigurationController(optionsWrapper, database, configReloadService, logger);
 
 		// Act
 		var result = controller.GetConfiguration();
