@@ -196,8 +196,66 @@ public class BuildingCommandTests
 	}
 
 	[Test]
+	public async ValueTask ParentSetAndGet()
+	{
+		// Create two objects
+		var parentResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create ParentTestObject"));
+		var parentDbRef = DBRef.Parse(parentResult.Message!.ToPlainText()!);
+		
+		var childResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create ChildTestObject"));
+		var childDbRef = DBRef.Parse(childResult.Message!.ToPlainText()!);
+		
+		// Verify both objects exist
+		var parentObj = await Mediator.Send(new GetObjectNodeQuery(parentDbRef));
+		var childObj = await Mediator.Send(new GetObjectNodeQuery(childDbRef));
+		await Assert.That(parentObj.IsNone).IsFalse();
+		await Assert.That(childObj.IsNone).IsFalse();
+		
+		// Verify child has no parent initially
+		var initialParent = await childObj.Known.Object().Parent.WithCancellation(CancellationToken.None);
+		await Assert.That(initialParent.IsNone).IsTrue();
+		
+		// Set parent using @parent command
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {childDbRef}={parentDbRef}"));
+		
+		// Verify parent was set by querying database directly
+		var updatedChild = await Mediator.Send(new GetObjectNodeQuery(childDbRef));
+		var setParent = await updatedChild.Known.Object().Parent.WithCancellation(CancellationToken.None);
+		await Assert.That(setParent.IsNone).IsFalse();
+		await Assert.That(setParent.Known.Object().DBRef.Number).IsEqualTo(parentDbRef.Number);
+	}
+
+	[Test]
+	[DependsOn(nameof(ParentSetAndGet))]
+	public async ValueTask ParentUnset()
+	{
+		// Create two objects
+		var parentResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create ParentUnsetTest_Parent"));
+		var parentDbRef = DBRef.Parse(parentResult.Message!.ToPlainText()!);
+		
+		var childResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create ParentUnsetTest_Child"));
+		var childDbRef = DBRef.Parse(childResult.Message!.ToPlainText()!);
+		
+		// Set parent
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {childDbRef}={parentDbRef}"));
+		
+		// Verify parent was set
+		var childWithParent = await Mediator.Send(new GetObjectNodeQuery(childDbRef));
+		var parentSet = await childWithParent.Known.Object().Parent.WithCancellation(CancellationToken.None);
+		await Assert.That(parentSet.IsNone).IsFalse();
+		
+		// Unset parent
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {childDbRef}=none"));
+		
+		// Verify parent was cleared
+		var childNoParent = await Mediator.Send(new GetObjectNodeQuery(childDbRef));
+		var parentCleared = await childNoParent.Known.Object().Parent.WithCancellation(CancellationToken.None);
+		await Assert.That(parentCleared.IsNone).IsTrue();
+	}
+
+	[Test]
 	[DependsOn(nameof(CloneObject))]
-	[Skip("Not Yet Implemented")]
+	[Skip("Not Yet Implemented - replaced by ParentSetAndGet")]
 	public async ValueTask SetParent()
 	{
 		// Create two objects
