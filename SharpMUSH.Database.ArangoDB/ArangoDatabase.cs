@@ -1586,7 +1586,7 @@ public partial class ArangoDatabase(
 			new Dictionary<string, object>
 			{
 				{ StartVertex, startVertex },
-				{ "pattern", pattern }
+				{ "pattern", $"^{pattern}$" }
 			}, cancellationToken: cancellationToken);
 
 		return result2
@@ -1609,7 +1609,7 @@ public partial class ArangoDatabase(
 		
 		var pattern = WildcardToRegex().Replace(attributePattern, m => m.Value switch
 		{
-			"**" => ".*?",
+			"**" => ".*",
 			"*" => "[^`]*",
 			"?" => ".",
 			_ => $"\\{m.Value}"
