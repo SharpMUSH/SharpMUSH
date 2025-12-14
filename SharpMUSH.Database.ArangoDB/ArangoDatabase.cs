@@ -407,18 +407,18 @@ public partial class ArangoDatabase(
 		var fromId = obj.Object().Id!;
 		var toId = parent?.Object().Id;
 		
-		var response = await arangoDb.Query.ExecuteAsync<string>(handle,
-			$"FOR v,e IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphParents} RETURN e._id",
+		var response = await arangoDb.Query.ExecuteAsync<SharpEdgeQueryResult>(handle,
+			$"FOR v,e IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphParents} RETURN e",
 			new Dictionary<string, object> { { StartVertex, fromId } }, cancellationToken: ct);
 
-		var contentEdge = response.FirstOrDefault();
+		var parentEdge = response.FirstOrDefault();
 
-		if (contentEdge is null && parent is null)
+		if (parentEdge is null && parent is null)
 		{
 			return;
 		}
 
-		if (contentEdge is null && parent != null)
+		if (parentEdge is null && parent != null)
 		{
 			await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphParents, DatabaseConstants.HasParent,
 				new { _from = fromId, _to = toId }, cancellationToken: ct);
@@ -426,12 +426,12 @@ public partial class ArangoDatabase(
 		else if (parent is null)
 		{
 			await arangoDb.Graph.Edge.RemoveAsync<object>(handle, DatabaseConstants.GraphParents, DatabaseConstants.HasParent,
-				contentEdge, cancellationToken: ct);
+				parentEdge!.Key, cancellationToken: ct);
 		}
 		else
 		{
 			await arangoDb.Graph.Edge.UpdateAsync(handle, DatabaseConstants.GraphParents, DatabaseConstants.HasParent,
-				contentEdge, new { _to = toId }, cancellationToken: ct);
+				parentEdge!.Key, new { _to = toId }, cancellationToken: ct);
 		}
 	}
 
