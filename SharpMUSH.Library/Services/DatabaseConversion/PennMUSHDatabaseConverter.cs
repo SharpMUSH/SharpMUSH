@@ -179,6 +179,13 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 		_logger.LogInformation("Object creation phase - converting {Count} objects", pennDatabase.Objects.Count);
 
+		// If the database is empty, there's nothing to convert
+		if (pennDatabase.Objects.Count == 0)
+		{
+			_logger.LogInformation("Empty database - no objects to convert");
+			return (0, 0, 0, 0);
+		}
+
 		// First, we need to create a temporary player #1 (usually God) to own initial objects
 		// Find player #1 (God) in the PennMUSH database
 		var godPennObject = pennDatabase.GetObject(1);

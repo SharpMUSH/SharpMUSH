@@ -282,7 +282,7 @@ public partial class PennMUSHDatabaseParser
 	private async Task<PennMUSHAttribute?> ParseAttributeAsync(StreamReader reader, string headerLine, CancellationToken cancellationToken)
 	{
 		// Parse attribute header: <name>^owner^flags^derefs
-		var header = headerLine.TrimStart('<').TrimEnd('>');
+		var header = headerLine.TrimStart('<');
 		var parts = header.Split('^');
 
 		if (parts.Length < 1)
@@ -290,7 +290,7 @@ public partial class PennMUSHDatabaseParser
 			return null;
 		}
 
-		var name = parts[0];
+		var name = parts[0].TrimEnd('>');
 		var owner = parts.Length > 1 ? ParseInt(parts[1]) : (int?)null;
 		var flagsStr = parts.Length > 2 ? parts[2] : "";
 		var derefCount = parts.Length > 3 ? ParseInt(parts[3]) : 0;
