@@ -2,6 +2,7 @@
 using OneOf.Types;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Database;
 using SharpMUSH.Implementation.Commands.ChannelCommand;
 using SharpMUSH.Implementation.Commands.MailCommand;
 using SharpMUSH.Implementation.Common;
@@ -1144,7 +1145,37 @@ public partial class Commands
 
 		if (switches.Contains("ZONE"))
 		{
-			// TODO: Zone Match
+			// Get the zone of the executor's location
+			if (executor.IsContent)
+			{
+				var location = await executor.AsContent.Location();
+				var locationZone = await location.Object().Zone.WithCancellation(CancellationToken.None);
+				
+				if (!locationZone.IsNone)
+				{
+					var zoneObject = locationZone.Known;
+					
+					// Get contents of the zone master object
+					var zoneContents = Mediator!.CreateStream(new GetContentsQuery(zoneObject.Object().DBRef))
+						?? AsyncEnumerable.Empty<AnySharpContent>();
+					
+					// Match user-defined commands in zone contents
+					var zoneMatched =
+						await CommandDiscoveryService!.MatchUserDefinedCommand(parser,
+							zoneContents.Select(x => x.WithRoomOption()),
+							arg0);
+					
+					if (zoneMatched.IsSome())
+					{
+						foreach (var (i, (obj, attr, _)) in zoneMatched.AsValue().Index())
+						{
+							runningOutput.Add($"#{obj.Object().DBRef.Number}/{attr.LongName}");
+							await NotifyService!.Notify(executor,
+								$"{obj.Object().Name}\t[{i}: #{obj.Object().DBRef.Number}/{attr.LongName}]");
+						}
+					}
+				}
+			}
 		}
 
 		if (switches.Contains("GLOBAL"))
@@ -2779,13 +2810,23 @@ public partial class Commands
 			executor,
 			zoneName,
 			LocateFlags.All,
-			zone =>
+			async zone =>
 			{
-				// TODO: Implement zone emission - requires zone system support
-				// For now, this is a placeholder that would need to:
-				// 1. Find all rooms with zone == zone parameter
-				// 2. Send message to each of those rooms
-				// This requires zone system infrastructure not yet implemented
+				// Find all objects in the zone
+				var zoneObjects = Mediator!.CreateStream(new GetObjectsByZoneQuery(zone));
+				
+				// Get all rooms in the zone
+				var rooms = zoneObjects.Where(obj => obj.Type == DatabaseConstants.TypeRoom);
+				
+				// Send message to each room
+				await foreach (var room in rooms)
+				{
+					var roomContents = Mediator!.CreateStream(new GetContentsQuery(new DBRef(room.Key)))!;
+					await foreach (var content in roomContents)
+					{
+						await NotifyService!.Notify(content.WithRoomOption(), message, executor, notificationType);
+					}
+				}
 
 				return CallState.Empty;
 			});
@@ -3085,13 +3126,23 @@ public partial class Commands
 			executor,
 			zoneName,
 			LocateFlags.All,
-			zone =>
+			async zone =>
 			{
-				// TODO: Implement zone emission - requires zone system support
-				// For now, this is a placeholder that would need to:
-				// 1. Find all rooms with zone == zone parameter
-				// 2. Send message to each of those rooms
-				// This requires zone system infrastructure not yet implemented
+				// Find all objects in the zone
+				var zoneObjects = Mediator!.CreateStream(new GetObjectsByZoneQuery(zone));
+				
+				// Get all rooms in the zone
+				var rooms = zoneObjects.Where(obj => obj.Type == DatabaseConstants.TypeRoom);
+				
+				// Send message to each room
+				await foreach (var room in rooms)
+				{
+					var roomContents = Mediator!.CreateStream(new GetContentsQuery(new DBRef(room.Key)))!;
+					await foreach (var content in roomContents)
+					{
+						await NotifyService!.Notify(content.WithRoomOption(), message, executor, INotifyService.NotificationType.Emit);
+					}
+				}
 
 				return CallState.Empty;
 			});

@@ -17,4 +17,5 @@ public static class CacheTags
 	public const string FlagList = "flag-list";
 	public const string PowerList = "power-list";
 	public const string ConnectionLogs = "connection-logs";
+	public const string ZoneObjects = "zone-objects";
 }

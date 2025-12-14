@@ -404,31 +404,34 @@ public partial class ArangoDatabase(
 
 	public async ValueTask SetObjectParent(AnySharpObject obj, AnySharpObject? parent, CancellationToken ct = default)
 	{
-		var response = await arangoDb.Query.ExecuteAsync<string>(handle,
-			$"FOR v,e IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphParents} RETURN e._id",
-			new Dictionary<string, object> { { StartVertex, obj.Object().Id! } }, cancellationToken: ct);
+		var fromId = obj.Object().Id!;
+		var toId = parent?.Object().Id;
+		
+		var response = await arangoDb.Query.ExecuteAsync<SharpEdgeQueryResult>(handle,
+			$"FOR v,e IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphParents} RETURN e",
+			new Dictionary<string, object> { { StartVertex, fromId } }, cancellationToken: ct);
 
-		var contentEdge = response.FirstOrDefault();
+		var parentEdge = response.FirstOrDefault();
 
-		if (contentEdge is null && parent is null)
+		if (parentEdge is null && parent is null)
 		{
 			return;
 		}
 
-		if (contentEdge is null && parent != null)
+		if (parentEdge is null && parent != null)
 		{
 			await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphParents, DatabaseConstants.HasParent,
-				new { _from = obj.Object().Id, _to = parent.Object().Id }, cancellationToken: ct);
+				new { _from = fromId, _to = toId }, cancellationToken: ct);
 		}
 		else if (parent is null)
 		{
 			await arangoDb.Graph.Edge.RemoveAsync<object>(handle, DatabaseConstants.GraphParents, DatabaseConstants.HasParent,
-				contentEdge, cancellationToken: ct);
+				parentEdge!.Key, cancellationToken: ct);
 		}
 		else
 		{
 			await arangoDb.Graph.Edge.UpdateAsync(handle, DatabaseConstants.GraphParents, DatabaseConstants.HasParent,
-				contentEdge, new { _to = parent.Object().Id }, cancellationToken: ct);
+				parentEdge!.Key, new { _to = toId }, cancellationToken: ct);
 		}
 	}
 
@@ -1109,8 +1112,9 @@ public partial class ArangoDatabase(
 	public async ValueTask<AnyOptionalSharpObject> GetParentAsync(string id, CancellationToken ct = default)
 	{
 		// Optimized query: Get parent ID directly instead of just the key
+		// cache: false to ensure fresh data after parent changes
 		var parentId = (await arangoDb.Query.ExecuteAsync<string>(handle,
-				$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphParents} RETURN v._id", cache: true,
+				$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphParents} RETURN v._id", cache: false,
 				cancellationToken: ct))
 			.FirstOrDefault();
 		if (parentId is null)
@@ -1137,9 +1141,10 @@ public partial class ArangoDatabase(
 	}
 
 	private IAsyncEnumerable<SharpObject>? GetChildrenAsync(string id, CancellationToken ct = default)
-		=> arangoDb.Query.ExecuteStreamAsync<SharpObject>(handle,
+		=> arangoDb.Query.ExecuteStreamAsync<SharpObjectQueryResult>(handle,
 			$"FOR v IN 1..1 INBOUND {id} GRAPH {DatabaseConstants.GraphParents} RETURN v", cache: true,
-			cancellationToken: ct);
+			cancellationToken: ct)
+		.Select(SharpObjectQueryToSharpObject);
 
 	public IAsyncEnumerable<SharpPower> GetObjectPowersAsync(string id, CancellationToken ct = default)
 		=> arangoDb.Query.ExecuteStreamAsync<SharpPower>(handle,
@@ -2755,6 +2760,36 @@ public partial class ArangoDatabase(
 		);
 		
 		return true;
+	}
+
+	public async IAsyncEnumerable<SharpObject> GetObjectsByZoneAsync(AnySharpObject zone, 
+		[EnumeratorCancellation] CancellationToken ct = default)
+	{
+		var zoneId = zone.Object().Id!;
+		
+		// Query to find all objects that have this zone set
+		const string zoneQuery =
+			$"FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphZones} RETURN v._id";
+		
+		var queryIds = await arangoDb.Query.ExecuteAsync<string>(handle, zoneQuery,
+			new Dictionary<string, object>
+			{
+				{ StartVertex, zoneId }
+			}, cancellationToken: ct);
+		
+		await foreach (var id in queryIds.ToAsyncEnumerable().WithCancellation(ct))
+		{
+			// Parse the id safely - format should be "collection/key"
+			var parts = id.Split('/');
+			if (parts.Length == 2 && int.TryParse(parts[1], out var key))
+			{
+				var obj = await GetBaseObjectNodeAsync(new DBRef(key), ct);
+				if (obj != null)
+				{
+					yield return obj;
+				}
+			}
+		}
 	}
 
 	[GeneratedRegex(@"\*\*|[.*+?^${}()|[\]/]")]

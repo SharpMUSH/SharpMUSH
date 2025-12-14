@@ -263,17 +263,48 @@ public static partial class HelperFunctions
 	/// <returns>Whether there's a loop or not</returns>
 	public static async ValueTask<bool> SafeToAddParent(AnySharpObject start, AnySharpObject newParent)
 	{
+		var startDbRef = start.Object().DBRef;
 		var newParentDbRef = newParent.Object().DBRef;
 
-		var parent = await start.Object().Parent.WithCancellation(CancellationToken.None); 
-		if (!parent.IsNone && parent.Object()!.DBRef == newParentDbRef)
+		// Check for self-parent (object trying to be its own parent)
+		if (startDbRef == newParentDbRef)
+		{
+			return false;
+		}
+
+		// Check if newParent is already the parent - that's OK (no-op)
+		var currentParent = await start.Object().Parent.WithCancellation(CancellationToken.None); 
+		if (!currentParent.IsNone && currentParent.Object()!.DBRef == newParentDbRef)
 		{
 			return true;
 		}
 
-		var children = start.Object().Children.Value ?? AsyncEnumerable.Empty<SharpObject>();
-
-		return await children.AllAsync(x => x.DBRef != newParentDbRef);
+		// Check if start is in newParent's parent chain (would create a loop)
+		var checkObj = newParent;
+		var depth = 0;
+		const int maxDepth = 100; // Prevent infinite loops
+		
+		while (depth < maxDepth)
+		{
+			var checkParent = await checkObj.Object().Parent.WithCancellation(CancellationToken.None);
+			if (checkParent.IsNone)
+			{
+				// Reached end of parent chain without finding start - safe!
+				return true;
+			}
+			
+			if (checkParent.Object()!.DBRef == startDbRef)
+			{
+				// Found start in newParent's parent chain - would create loop!
+				return false;
+			}
+			
+			checkObj = checkParent.Known;
+			depth++;
+		}
+		
+		// Reached max depth - assume unsafe to prevent potential issues
+		return false;
 	}
 
 	public static OneOf<(string db, string? Attribute), bool> SplitDbRefAndOptionalAttr(string DBRefAttr)
