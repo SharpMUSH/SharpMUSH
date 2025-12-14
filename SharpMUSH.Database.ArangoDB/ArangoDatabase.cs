@@ -1109,8 +1109,9 @@ public partial class ArangoDatabase(
 	public async ValueTask<AnyOptionalSharpObject> GetParentAsync(string id, CancellationToken ct = default)
 	{
 		// Optimized query: Get parent ID directly instead of just the key
+		// cache: false to ensure fresh data after parent changes
 		var parentId = (await arangoDb.Query.ExecuteAsync<string>(handle,
-				$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphParents} RETURN v._id", cache: true,
+				$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphParents} RETURN v._id", cache: false,
 				cancellationToken: ct))
 			.FirstOrDefault();
 		if (parentId is null)
