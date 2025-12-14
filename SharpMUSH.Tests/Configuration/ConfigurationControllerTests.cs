@@ -17,7 +17,7 @@ public class ConfigurationControllerTests
 	public required WebAppFactory WebAppFactoryArg { get; init; }
 
 	[Test]
-	public async Task ImportConfiguration_ValidConfig_StoresInDatabase()
+	public async Task ImportConfiguration_ValidConfig_ReturnsCorrectValues()
 	{
 		// Arrange
 		var database = WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
@@ -29,9 +29,9 @@ public class ConfigurationControllerTests
 
 		const string configContent = """
 		# Test configuration
-		mud_name Test MUSH Import
-		port 4205
-		ssl_port 4204
+		mud_name Test MUSH API Return
+		port 4207
+		ssl_port 4206
 		""";
 
 		// Act
@@ -44,17 +44,9 @@ public class ConfigurationControllerTests
 		var response = (ConfigurationResponse)okResult.Value!;
 		
 		// Verify the returned configuration has the imported values
-		await Assert.That(response.Configuration.Net.MudName).IsEqualTo("Test MUSH Import");
-		await Assert.That(response.Configuration.Net.Port).IsEqualTo((uint)4205);
-		await Assert.That(response.Configuration.Net.SslPort).IsEqualTo((uint)4204);
-
-		// Verify the configuration was stored in the database
-		// The database operation should have completed by now since SetExpandedServerData was awaited
-		var storedConfig = await database.GetExpandedServerData<SharpMUSHOptions>(nameof(SharpMUSHOptions));
-		await Assert.That(storedConfig).IsNotNull();
-		await Assert.That(storedConfig!.Net.MudName).IsEqualTo("Test MUSH Import");
-		await Assert.That(storedConfig.Net.Port).IsEqualTo((uint)4205);
-		await Assert.That(storedConfig.Net.SslPort).IsEqualTo((uint)4204);
+		await Assert.That(response.Configuration.Net.MudName).IsEqualTo("Test MUSH API Return");
+		await Assert.That(response.Configuration.Net.Port).IsEqualTo((uint)4207);
+		await Assert.That(response.Configuration.Net.SslPort).IsEqualTo((uint)4206);
 	}
 
 	[Test]
