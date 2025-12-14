@@ -263,7 +263,14 @@ public static partial class HelperFunctions
 	/// <returns>Whether there's a loop or not</returns>
 	public static async ValueTask<bool> SafeToAddParent(AnySharpObject start, AnySharpObject newParent)
 	{
+		var startDbRef = start.Object().DBRef;
 		var newParentDbRef = newParent.Object().DBRef;
+
+		// Check for self-parent (object trying to be its own parent)
+		if (startDbRef == newParentDbRef)
+		{
+			return false;
+		}
 
 		// Check if newParent is already the parent - that's OK (no-op)
 		var currentParent = await start.Object().Parent.WithCancellation(CancellationToken.None); 
@@ -273,7 +280,6 @@ public static partial class HelperFunctions
 		}
 
 		// Check if start is in newParent's parent chain (would create a loop)
-		var startDbRef = start.Object().DBRef;
 		var checkObj = newParent;
 		var depth = 0;
 		const int maxDepth = 100; // Prevent infinite loops
