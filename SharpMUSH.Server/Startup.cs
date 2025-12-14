@@ -24,6 +24,7 @@ using SharpMUSH.Library.Behaviors;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
+using SharpMUSH.Library.Services.DatabaseConversion;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Extensions;
 using SharpMUSH.Server.Strategy.ArangoDB;
@@ -112,6 +113,8 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, Prometh
 		services.AddSingleton<IHookService, HookService>();
 		services.AddSingleton<IEventService, EventService>();
 		services.AddSingleton<IWarningService, WarningService>();
+		services.AddSingleton<PennMUSHDatabaseParser>();
+		services.AddSingleton<IPennMUSHDatabaseConverter, PennMUSHDatabaseConverter>();
 		services.AddSingleton<ILibraryProvider<FunctionDefinition>, Functions>();
 		services.AddSingleton<ILibraryProvider<CommandDefinition>, Commands>();
 		services.AddSingleton(x => x.GetService<ILibraryProvider<FunctionDefinition>>()!.Get());
@@ -174,6 +177,7 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, Prometh
 		services.AddHostedService<Services.ConnectionLoggingService>();
 		services.AddHostedService<Services.HealthMonitoringService>();
 		services.AddHostedService<Services.WarningCheckService>();
+		services.AddHostedService<Services.PennMUSHDatabaseConversionService>();
 
 		services.AddLogging(logging =>
 		{
