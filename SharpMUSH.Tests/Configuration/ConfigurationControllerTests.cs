@@ -49,6 +49,9 @@ public class ConfigurationControllerTests
 		await Assert.That(response.Configuration.Net.Port).IsEqualTo((uint)4205);
 		await Assert.That(response.Configuration.Net.SslPort).IsEqualTo((uint)4204);
 
+		// Add a small delay to ensure the database write completes
+		await Task.Delay(100);
+
 		// Verify the configuration was stored in the database
 		var storedConfig = await database.GetExpandedServerData<SharpMUSHOptions>(nameof(SharpMUSHOptions));
 		await Assert.That(storedConfig).IsNotNull();

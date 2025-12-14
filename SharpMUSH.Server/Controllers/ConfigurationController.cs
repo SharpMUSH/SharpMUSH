@@ -6,7 +6,6 @@ using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.Services.Interfaces;
-using System.Text.Json;
 
 namespace SharpMUSH.Server.Controllers;
 
@@ -52,8 +51,8 @@ public class ConfigurationController(
 			System.IO.File.Delete(tempFile);
 
 			// Store the new configuration in the database
-			var configJson = JsonSerializer.Serialize(importedOptions);
-			await database.SetExpandedServerData(nameof(SharpMUSHOptions), configJson);
+			// Pass the object directly - the database will handle serialization
+			await database.SetExpandedServerData(nameof(SharpMUSHOptions), importedOptions);
 
 			// Invalidate the options cache to force reload on next access
 			optionsCache.TryRemove(Options.DefaultName);
