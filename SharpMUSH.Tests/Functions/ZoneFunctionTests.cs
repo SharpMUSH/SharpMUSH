@@ -187,4 +187,34 @@ public class ZoneFunctionTests
 		var zoneOfZone = (await FunctionParser.FunctionParse(MModule.single($"zone({zoneDbRef})")))?.Message!;
 		await Assert.That(zoneOfZone.ToPlainText()).IsEqualTo("#-1");
 	}
+
+	[Test]
+	[DependsOn(nameof(ZoneChainTest))]
+	public async Task ZfindListsObjectsInZone()
+	{
+		// Clear player zone
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single("@chzone me=none"));
+		
+		// Create a zone master
+		var zoneResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ZfindTestZone"));
+		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
+		
+		// Create multiple objects in the zone
+		var obj1Result = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ZfindObj1"));
+		var obj1DbRef = DBRef.Parse(obj1Result.Message!.ToPlainText()!);
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@chzone {obj1DbRef}={zoneDbRef}"));
+		
+		var obj2Result = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ZfindObj2"));
+		var obj2DbRef = DBRef.Parse(obj2Result.Message!.ToPlainText()!);
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@chzone {obj2DbRef}={zoneDbRef}"));
+		
+		// Call zfind to get all objects in the zone
+		var result = (await FunctionParser.FunctionParse(MModule.single($"zfind({zoneDbRef})")))?.Message!;
+		var resultText = result.ToPlainText()!;
+		
+		// Should contain both objects (check that result is not empty and contains at least the object references)
+		await Assert.That(resultText).IsNotEmpty();
+		await Assert.That(resultText).Contains($"{obj1DbRef.Number}");
+		await Assert.That(resultText).Contains($"{obj2DbRef.Number}");
+	}
 }
