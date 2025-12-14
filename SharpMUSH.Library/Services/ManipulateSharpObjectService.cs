@@ -372,8 +372,13 @@ public class ManipulateSharpObjectService(
 	public async ValueTask<CallState> SetParent(AnySharpObject executor, AnySharpObject obj, AnySharpObject newParent,
 		bool notify)
 	{
-		if (!await permissionService.Controls(executor, newParent)
-		    || (!await obj.HasFlag("LINK_OK") && !permissionService.PassesLock(executor, newParent, LockType.Parent)))
+		// Allow if: executor controls newParent OR obj has LINK_OK OR executor passes Parent lock
+		// Deny if: NOT(controls newParent) AND NOT(LINK_OK) AND NOT(passes Parent lock)
+		var controls = await permissionService.Controls(executor, newParent);
+		var hasLinkOk = await obj.HasFlag("LINK_OK");
+		var passesLock = permissionService.PassesLock(executor, newParent, LockType.Parent);
+		
+		if (!controls && !hasLinkOk && !passesLock)
 		{
 			if (notify)
 			{
@@ -383,7 +388,9 @@ public class ManipulateSharpObjectService(
 			return Errors.ErrorPerm;
 		}
 
-		if (!await HelperFunctions.SafeToAddParent(obj, newParent))
+		var safeToAdd = await HelperFunctions.SafeToAddParent(obj, newParent);
+		
+		if (!safeToAdd)
 		{
 			if (notify)
 			{
@@ -394,6 +401,11 @@ public class ManipulateSharpObjectService(
 		}
 
 		await mediator.Send(new SetObjectParentCommand(obj, newParent));
+
+		if (notify)
+		{
+			await notifyService.Notify(executor, $"Parent set.");
+		}
 
 		return true;
 	}
