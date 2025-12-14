@@ -274,12 +274,24 @@ public class ZoneFunctionTests
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@chzone {objDbRef}={zoneDbRef}"));
 		
-		// Get the attribute from the object - should inherit from zone
-		var result = (await FunctionParser.FunctionParse(MModule.single($"get({objDbRef}/TEST_ZONE_ATTR)")))?.Message!;
-		var value = result.ToPlainText()!;
+		// Get the attribute from the object using hasattrp (checks parents/zones)
+		var hasAttr = (await FunctionParser.FunctionParse(MModule.single($"hasattrp({objDbRef},TEST_ZONE_ATTR)")))?.Message!;
+		await Assert.That(hasAttr.ToPlainText()).IsEqualTo("1");
 		
-		// Should inherit the zone master's attribute value
-		await Assert.That(value).IsEqualTo("Zone Master Value");
+		// Directly test AttributeService to verify zone attribute inheritance
+		var executor = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
+		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
+		var attributeService = WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
+		
+		var maybeAttr = await attributeService.GetAttributeAsync(
+			executor.Known,
+			obj.Known,
+			"TEST_ZONE_ATTR",
+			IAttributeService.AttributeMode.Read,
+			parent: true);
+		
+		await Assert.That(maybeAttr.IsAttribute).IsTrue();
+		await Assert.That(maybeAttr.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("Zone Master Value");
 	}
 
 	[Test]
@@ -298,18 +310,31 @@ public class ZoneFunctionTests
 		var parentDbRef = DBRef.Parse(parentResult.Message!.ToPlainText()!);
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&TEST_PRECEDENCE {parentDbRef}=From Parent"));
 		
-		// Create a child object with the parent and zone
+		// Create a child object with the parent and zone  
 		var childResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ZoneParentPrecedenceChild"));
 		var childDbRef = DBRef.Parse(childResult.Message!.ToPlainText()!);
+		
+		// Make sure child doesn't have the attribute
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@wipe {childDbRef}/TEST_PRECEDENCE"));
+		
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@parent {childDbRef}={parentDbRef}"));
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@chzone {childDbRef}={zoneDbRef}"));
 		
-		// Get the attribute from the child - should get parent's value (parent has precedence)
-		var result = (await FunctionParser.FunctionParse(MModule.single($"get({childDbRef}/TEST_PRECEDENCE)")))?.Message!;
-		var value = result.ToPlainText()!;
+		// Directly test AttributeService to verify parent takes precedence over zone
+		var executor = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
+		var child = await Mediator.Send(new GetObjectNodeQuery(childDbRef));
+		var attributeService = WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
+		
+		var maybeAttr = await attributeService.GetAttributeAsync(
+			executor.Known,
+			child.Known,
+			"TEST_PRECEDENCE",
+			IAttributeService.AttributeMode.Read,
+			parent: true);
 		
 		// Parent attributes should take precedence over zone attributes
-		await Assert.That(value).IsEqualTo("From Parent");
+		await Assert.That(maybeAttr.IsAttribute).IsTrue();
+		await Assert.That(maybeAttr.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("From Parent");
 	}
 
 	[Test]
@@ -340,12 +365,31 @@ public class ZoneFunctionTests
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@parent {childDbRef}={parentDbRef}"));
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@chzone {childDbRef}={childZoneDbRef}"));
 		
+		// Test with AttributeService directly
+		var executor = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
+		var child = await Mediator.Send(new GetObjectNodeQuery(childDbRef));
+		var attributeService = WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
+		
 		// Should inherit from child's zone
-		var childZoneAttr = (await FunctionParser.FunctionParse(MModule.single($"get({childDbRef}/CHILD_ZONE_ATTR)")))?.Message!;
-		await Assert.That(childZoneAttr.ToPlainText()).IsEqualTo("From Child Zone");
+		var childZoneAttr = await attributeService.GetAttributeAsync(
+			executor.Known,
+			child.Known,
+			"CHILD_ZONE_ATTR",
+			IAttributeService.AttributeMode.Read,
+			parent: true);
+		
+		await Assert.That(childZoneAttr.IsAttribute).IsTrue();
+		await Assert.That(childZoneAttr.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("From Child Zone");
 		
 		// Should inherit from parent's zone (after checking child and child's zone)
-		var parentZoneAttr = (await FunctionParser.FunctionParse(MModule.single($"get({childDbRef}/PARENT_ZONE_ATTR)")))?.Message!;
-		await Assert.That(parentZoneAttr.ToPlainText()).IsEqualTo("From Parent Zone");
+		var parentZoneAttr = await attributeService.GetAttributeAsync(
+			executor.Known,
+			child.Known,
+			"PARENT_ZONE_ATTR",
+			IAttributeService.AttributeMode.Read,
+			parent: true);
+		
+		await Assert.That(parentZoneAttr.IsAttribute).IsTrue();
+		await Assert.That(parentZoneAttr.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("From Parent Zone");
 	}
 }

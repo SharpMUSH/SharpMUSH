@@ -58,26 +58,49 @@ public class AttributeService(
 			_ => throw new InvalidOperationException(nameof(IAttributeService.AttributeMode))
 		};
 
-		// Walk through object hierarchy: object -> parent -> parent's parent -> etc.
-		// At each level, also check that object's zone chain
+		// Walk through parent hierarchy first: object -> parent -> grandparent -> etc.
+		// Then check zone hierarchy for each level
+		var currentObj = obj;
+		
+		// First pass: check object and all parents
 		while (true)
 		{
 			// Try to find attribute on current object
-			var attr = mediator.CreateStream(new GetAttributeQuery(curObj.Object().DBRef, attributePath));
+			var attr = mediator.CreateStream(new GetAttributeQuery(currentObj.Object().DBRef, attributePath));
 			var attrArr = await attr.ToArrayAsync();
 
 			if (attrArr.Length == attributePath.Length)
 			{
-				return await permissionPredicate(executor, curObj, attrArr)
+				return await permissionPredicate(executor, currentObj, attrArr)
 					? attrArr
 					: new Error<string>(permissionFailureType);
 			}
 
-			// If checkParent is enabled, check the zone chain for this object level
-			if (checkParent)
+			// Move to parent if available and checkParent is enabled
+			if (!checkParent)
 			{
-				var zone = await curObj.Object().Zone.WithCancellation(CancellationToken.None);
+				break;
+			}
+
+			var parent = await currentObj.Object().Parent.WithCancellation(CancellationToken.None);
+			if (parent.IsNone)
+			{
+				break;
+			}
+
+			currentObj = parent.Known;
+		}
+		
+		// Second pass: check zones for object and all parents
+		if (checkParent)
+		{
+			currentObj = obj;
+			
+			while (true)
+			{
+				var zone = await currentObj.Object().Zone.WithCancellation(CancellationToken.None);
 				
+				// Check this level's zone chain
 				while (!zone.IsNone)
 				{
 					var zoneAttr = mediator.CreateStream(new GetAttributeQuery(zone.Known.Object().DBRef, attributePath));
@@ -93,21 +116,16 @@ public class AttributeService(
 					// Walk up the zone chain
 					zone = await zone.Known.Object().Zone.WithCancellation(CancellationToken.None);
 				}
+				
+				// Move to parent to check parent's zones
+				var parent = await currentObj.Object().Parent.WithCancellation(CancellationToken.None);
+				if (parent.IsNone)
+				{
+					break;
+				}
+				
+				currentObj = parent.Known;
 			}
-
-			// Move to parent if available and checkParent is enabled
-			if (!checkParent)
-			{
-				break;
-			}
-
-			var parent = await curObj.Object().Parent.WithCancellation(CancellationToken.None);
-			if (parent.IsNone)
-			{
-				break;
-			}
-
-			curObj = parent.Known;
 		}
 		
 		return new None();
@@ -140,26 +158,49 @@ public class AttributeService(
 			_ => throw new InvalidOperationException(nameof(IAttributeService.AttributeMode))
 		};
 
-		// Walk through object hierarchy: object -> parent -> parent's parent -> etc.
-		// At each level, also check that object's zone chain
+		// Walk through parent hierarchy first: object -> parent -> grandparent -> etc.
+		// Then check zone hierarchy for each level
+		var currentObj = obj;
+		
+		// First pass: check object and all parents
 		while (true)
 		{
 			// Try to find attribute on current object
-			var attr = mediator.CreateStream(new GetLazyAttributeQuery(curObj.Object().DBRef, attributePath));
+			var attr = mediator.CreateStream(new GetLazyAttributeQuery(currentObj.Object().DBRef, attributePath));
 			var attrArr = await attr.ToArrayAsync(CancellationToken.None);
 			
 			if (attrArr.Length == attributePath.Length)
 			{
-				return await permissionPredicate(executor, curObj, attrArr)
+				return await permissionPredicate(executor, currentObj, attrArr)
 					? attrArr
 					: new Error<string>(permissionFailureType);
 			}
 
-			// If checkParent is enabled, check the zone chain for this object level
-			if (checkParent)
+			// Move to parent if available and checkParent is enabled
+			if (!checkParent)
 			{
-				var zone = await curObj.Object().Zone.WithCancellation(CancellationToken.None);
+				break;
+			}
+
+			var parent = await currentObj.Object().Parent.WithCancellation(CancellationToken.None);
+			if (parent.IsNone)
+			{
+				break;
+			}
+
+			currentObj = parent.Known;
+		}
+		
+		// Second pass: check zones for object and all parents
+		if (checkParent)
+		{
+			currentObj = obj;
+			
+			while (true)
+			{
+				var zone = await currentObj.Object().Zone.WithCancellation(CancellationToken.None);
 				
+				// Check this level's zone chain
 				while (!zone.IsNone)
 				{
 					var zoneAttr = mediator.CreateStream(new GetLazyAttributeQuery(zone.Known.Object().DBRef, attributePath));
@@ -175,21 +216,16 @@ public class AttributeService(
 					// Walk up the zone chain
 					zone = await zone.Known.Object().Zone.WithCancellation(CancellationToken.None);
 				}
+				
+				// Move to parent to check parent's zones
+				var parent = await currentObj.Object().Parent.WithCancellation(CancellationToken.None);
+				if (parent.IsNone)
+				{
+					break;
+				}
+				
+				currentObj = parent.Known;
 			}
-
-			// Move to parent if available and checkParent is enabled
-			if (!checkParent)
-			{
-				break;
-			}
-
-			var parent = await curObj.Object().Parent.WithCancellation(CancellationToken.None);
-			if (parent.IsNone)
-			{
-				break;
-			}
-
-			curObj = parent.Known;
 		}
 		
 		return new None();
