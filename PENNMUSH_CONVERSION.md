@@ -158,19 +158,22 @@ Where:
 - ✅ PennMUSH database parser
 - ✅ Data models for PennMUSH objects
 - ✅ Converter service interface
-- ✅ Basic converter implementation structure
+- ✅ Complete converter implementation
 - ✅ Background service for automatic conversion
 - ✅ Service registration in Startup.cs
 - ✅ Conversion result reporting
+- ✅ Object creation (players, rooms, things, exits)
+- ✅ Relationship establishment (locations, exit destinations)
+- ✅ Attribute creation with flags
+- ✅ Lock creation
 
 ### To Do
-- ⏳ Complete object creation logic (currently placeholder)
-- ⏳ Implement relationship establishment
-- ⏳ Implement attribute creation
-- ⏳ Implement lock creation
+- ⏳ Handle home location setting for players/things
+- ⏳ Handle parent relationships
+- ⏳ Handle zone relationships
+- ⏳ Handle ownership transfer after initial creation
 - ⏳ Handle password migration (SHA1 to modern hashing)
 - ⏳ Handle flags and powers mapping
-- ⏳ Handle zone and parent relationships
 - ⏳ Add unit tests
 - ⏳ Add integration tests with sample databases
 - ⏳ Add progress reporting during long conversions
