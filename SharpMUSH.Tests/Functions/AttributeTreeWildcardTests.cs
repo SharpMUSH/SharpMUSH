@@ -218,8 +218,10 @@ public class AttributeTreeWildcardTests
 		await Assert.That(attrs).Contains("ROOTOTHER");
 		
 		// Match only ROOT`CHILDx (not grandchildren)
-		// Note: [12] is a regex character class matching '1' or '2'
-		// Brackets need to be escaped for the MUSH parser with \\[ and \\]
+		// [12] is a regex character class matching '1' or '2'
+		// In C# string: \\[12\\] becomes \[12\] after string processing
+		// MUSH parser sees: \[12\] and unescapes to [12] for the regex engine
+		// Final regex pattern: [12] (character class)
 		var result2 = (await Parser.FunctionParse(MModule.single("[reglattr(%!/ROOT`CHILD\\[12\\])]")))?.Message!;
 		var attrs2 = result2.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries).ToArray();
 		
