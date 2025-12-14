@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -255,5 +256,96 @@ public class ZoneFunctionTests
 		// First should be ZoneB (immediate zone), then ZoneA
 		await Assert.That(zoneChain[0]).IsEqualTo(zoneBDbRef.Number);
 		await Assert.That(zoneChain[1]).IsEqualTo(zoneADbRef.Number);
+	}
+
+	[Test]
+	[DependsOn(nameof(ZoneHierarchyTraversal))]
+	public async Task ZoneAttributeInheritance()
+	{
+		// Create a zone master with an attribute
+		var zoneResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ZoneAttrMaster"));
+		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
+		
+		// Set an attribute on the zone master
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&TEST_ZONE_ATTR {zoneDbRef}=Zone Master Value"));
+		
+		// Create an object and zone it to the master
+		var objResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ZoneAttrObj"));
+		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@chzone {objDbRef}={zoneDbRef}"));
+		
+		// Get the attribute from the object - should inherit from zone
+		var result = (await FunctionParser.FunctionParse(MModule.single($"get({objDbRef}/TEST_ZONE_ATTR)")))?.Message!;
+		var value = result.ToPlainText()!;
+		
+		// Should inherit the zone master's attribute value
+		await Assert.That(value).IsEqualTo("Zone Master Value");
+	}
+
+	[Test]
+	[DependsOn(nameof(ZoneAttributeInheritance))]
+	public async Task ZoneAttributeInheritanceWithParent()
+	{
+		// Test that parent attributes take precedence over zone attributes
+		
+		// Create a zone master with an attribute
+		var zoneResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ZoneParentPrecedenceZone"));
+		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&TEST_PRECEDENCE {zoneDbRef}=From Zone"));
+		
+		// Create a parent object with the same attribute
+		var parentResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ZoneParentPrecedenceParent"));
+		var parentDbRef = DBRef.Parse(parentResult.Message!.ToPlainText()!);
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&TEST_PRECEDENCE {parentDbRef}=From Parent"));
+		
+		// Create a child object with the parent and zone
+		var childResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ZoneParentPrecedenceChild"));
+		var childDbRef = DBRef.Parse(childResult.Message!.ToPlainText()!);
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@parent {childDbRef}={parentDbRef}"));
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@chzone {childDbRef}={zoneDbRef}"));
+		
+		// Get the attribute from the child - should get parent's value (parent has precedence)
+		var result = (await FunctionParser.FunctionParse(MModule.single($"get({childDbRef}/TEST_PRECEDENCE)")))?.Message!;
+		var value = result.ToPlainText()!;
+		
+		// Parent attributes should take precedence over zone attributes
+		await Assert.That(value).IsEqualTo("From Parent");
+	}
+
+	[Test]
+	[DependsOn(nameof(ZoneAttributeInheritanceWithParent))]
+	public async Task ZoneAttributeInheritanceParentHasDifferentZone()
+	{
+		// Test that each parent can have a different zone
+		// Lookup order: child -> child's zone -> parent -> parent's zone
+		
+		// Create zone for child
+		var childZoneResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ChildZoneMaster"));
+		var childZoneDbRef = DBRef.Parse(childZoneResult.Message!.ToPlainText()!);
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&CHILD_ZONE_ATTR {childZoneDbRef}=From Child Zone"));
+		
+		// Create zone for parent
+		var parentZoneResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ParentZoneMaster"));
+		var parentZoneDbRef = DBRef.Parse(parentZoneResult.Message!.ToPlainText()!);
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&PARENT_ZONE_ATTR {parentZoneDbRef}=From Parent Zone"));
+		
+		// Create parent with its zone
+		var parentResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create MultiZoneParent"));
+		var parentDbRef = DBRef.Parse(parentResult.Message!.ToPlainText()!);
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@chzone {parentDbRef}={parentZoneDbRef}"));
+		
+		// Create child with parent and different zone
+		var childResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create MultiZoneChild"));
+		var childDbRef = DBRef.Parse(childResult.Message!.ToPlainText()!);
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@parent {childDbRef}={parentDbRef}"));
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@chzone {childDbRef}={childZoneDbRef}"));
+		
+		// Should inherit from child's zone
+		var childZoneAttr = (await FunctionParser.FunctionParse(MModule.single($"get({childDbRef}/CHILD_ZONE_ATTR)")))?.Message!;
+		await Assert.That(childZoneAttr.ToPlainText()).IsEqualTo("From Child Zone");
+		
+		// Should inherit from parent's zone (after checking child and child's zone)
+		var parentZoneAttr = (await FunctionParser.FunctionParse(MModule.single($"get({childDbRef}/PARENT_ZONE_ATTR)")))?.Message!;
+		await Assert.That(parentZoneAttr.ToPlainText()).IsEqualTo("From Parent Zone");
 	}
 }
