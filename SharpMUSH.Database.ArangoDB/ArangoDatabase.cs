@@ -404,9 +404,12 @@ public partial class ArangoDatabase(
 
 	public async ValueTask SetObjectParent(AnySharpObject obj, AnySharpObject? parent, CancellationToken ct = default)
 	{
+		var fromId = obj.Object().Id!;
+		var toId = parent?.Object().Id;
+		
 		var response = await arangoDb.Query.ExecuteAsync<string>(handle,
 			$"FOR v,e IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphParents} RETURN e._id",
-			new Dictionary<string, object> { { StartVertex, obj.Object().Id! } }, cancellationToken: ct);
+			new Dictionary<string, object> { { StartVertex, fromId } }, cancellationToken: ct);
 
 		var contentEdge = response.FirstOrDefault();
 
@@ -418,7 +421,7 @@ public partial class ArangoDatabase(
 		if (contentEdge is null && parent != null)
 		{
 			await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphParents, DatabaseConstants.HasParent,
-				new { _from = obj.Object().Id, _to = parent.Object().Id }, cancellationToken: ct);
+				new { _from = fromId, _to = toId }, cancellationToken: ct);
 		}
 		else if (parent is null)
 		{
@@ -428,7 +431,7 @@ public partial class ArangoDatabase(
 		else
 		{
 			await arangoDb.Graph.Edge.UpdateAsync(handle, DatabaseConstants.GraphParents, DatabaseConstants.HasParent,
-				contentEdge, new { _to = parent.Object().Id }, cancellationToken: ct);
+				contentEdge, new { _to = toId }, cancellationToken: ct);
 		}
 	}
 
@@ -1138,9 +1141,10 @@ public partial class ArangoDatabase(
 	}
 
 	private IAsyncEnumerable<SharpObject>? GetChildrenAsync(string id, CancellationToken ct = default)
-		=> arangoDb.Query.ExecuteStreamAsync<SharpObject>(handle,
+		=> arangoDb.Query.ExecuteStreamAsync<SharpObjectQueryResult>(handle,
 			$"FOR v IN 1..1 INBOUND {id} GRAPH {DatabaseConstants.GraphParents} RETURN v", cache: true,
-			cancellationToken: ct);
+			cancellationToken: ct)
+		.Select(SharpObjectQueryToSharpObject);
 
 	public IAsyncEnumerable<SharpPower> GetObjectPowersAsync(string id, CancellationToken ct = default)
 		=> arangoDb.Query.ExecuteStreamAsync<SharpPower>(handle,
