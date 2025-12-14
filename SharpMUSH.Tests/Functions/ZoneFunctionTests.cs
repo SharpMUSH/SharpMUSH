@@ -320,6 +320,17 @@ public class ZoneFunctionTests
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@parent {childDbRef}={parentDbRef}"));
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@chzone {childDbRef}={zoneDbRef}"));
 		
+		// Verify parent was set correctly
+		var childCheck = await Mediator.Send(new GetObjectNodeQuery(childDbRef));
+		var childParent = await childCheck.Known.Object().Parent.WithCancellation(CancellationToken.None);
+		await Assert.That(childParent.IsNone).IsFalse();
+		await Assert.That(childParent.Known.Object().DBRef.Number).IsEqualTo(parentDbRef.Number);
+		
+		// Verify zone was set correctly
+		var childZone = await childCheck.Known.Object().Zone.WithCancellation(CancellationToken.None);
+		await Assert.That(childZone.IsNone).IsFalse();
+		await Assert.That(childZone.Known.Object().DBRef.Number).IsEqualTo(zoneDbRef.Number);
+		
 		// Directly test AttributeService to verify parent takes precedence over zone
 		var executor = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
 		var child = await Mediator.Send(new GetObjectNodeQuery(childDbRef));

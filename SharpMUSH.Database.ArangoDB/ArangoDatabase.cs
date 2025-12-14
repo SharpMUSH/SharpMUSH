@@ -2760,7 +2760,7 @@ public partial class ArangoDatabase(
 	public async IAsyncEnumerable<SharpObject> GetObjectsByZoneAsync(AnySharpObject zone, 
 		[EnumeratorCancellation] CancellationToken ct = default)
 	{
-		var zoneId = zone.Id;
+		var zoneId = zone.Object().Id!;
 		
 		// Query to find all objects that have this zone set
 		const string zoneQuery =
