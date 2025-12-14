@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
 using FileOptions = SharpMUSH.Configuration.Options.FileOptions;
@@ -18,9 +17,8 @@ public class OptionsService(ISharpDatabase database) : IOptionsFactory<SharpMUSH
 		}
 
 		var defaultSettings = Default();
-		var defaultSettingsJson = JsonSerializer.Serialize(defaultSettings);
 			
-		database.SetExpandedServerData(nameof(SharpMUSHOptions), defaultSettingsJson)
+		database.SetExpandedServerData(nameof(SharpMUSHOptions), defaultSettings)
 			.AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
 
 		return defaultSettings;
