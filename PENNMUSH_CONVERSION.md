@@ -40,14 +40,14 @@ The converter returns a `ConversionResult` with statistics and any errors/warnin
 
 #### ANSI and Pueblo Escape Sequence Handling
 
-During attribute conversion, the converter strips raw ANSI escape sequences and HTML tags from attribute values. PennMUSH stores these as literal escape sequences in the database file.
+During attribute conversion, the converter strips Pueblo ANSI escape sequences from attribute values. PennMUSH stores these as literal escape sequences in the database file. **Standard HTML tags are preserved** as they may be intentional content in attributes.
 
 **Current behavior:**
 - **ANSI CSI sequences** are removed (e.g., `ESC[31m` for red text, `ESC[1m` for bold, `ESC[0m` for reset)
 - **ANSI 256-color codes** are removed (e.g., `ESC[38;5;196m` for foreground color)
 - **ANSI RGB color codes** are removed (e.g., `ESC[38;2;255;0;0m` for RGB foreground)
-- **ANSI OSC sequences** are removed (operating system commands)
-- **HTML/Pueblo tags** are removed (e.g., `<b>`, `</b>`, `<color red>`, `</color>`)
+- **Pueblo ANSI OSC sequences** are removed (Pueblo-specific escape sequences)
+- **Standard HTML tags are preserved** (e.g., `<b>`, `<i>`, `<a href="...">`)
 - Raw text content is preserved
 
 **Future enhancement (TODO):**
@@ -56,7 +56,7 @@ The converter should be enhanced to convert these escape sequences to SharpMUSH'
 - Convert ANSI 256-color palette codes to MarkupString colors
 - Convert ANSI RGB color codes to MarkupString colors
 - Map text styles (bold, underline, inverse, etc.) to MarkupString formatting
-- Convert Pueblo HTML tags to equivalent MarkupString formatting
+- Convert Pueblo OSC sequences to equivalent MarkupString formatting
 
 ### 4. Background Service
 

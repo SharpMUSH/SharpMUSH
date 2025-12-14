@@ -27,8 +27,6 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	private static readonly Regex AnsiEscapePattern = new(@"\x1b\[[0-9;]*[A-Za-z]", RegexOptions.Compiled);
 	private static readonly Regex AnsiOscPattern = new(@"\x1b\][^\x1b]*(\x1b\\|\x07)", RegexOptions.Compiled);
 	private static readonly Regex SimpleAnsiPattern = new(@"\x1b[A-Za-z]", RegexOptions.Compiled);
-	// HTML/Pueblo tags in case they're stored as actual HTML
-	private static readonly Regex HtmlTagPattern = new(@"<[^>]+>", RegexOptions.Compiled);
 
 	public PennMUSHDatabaseConverter(
 		ISharpDatabase database,
@@ -612,14 +610,14 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	}
 
 	/// <summary>
-	/// Strips raw ANSI escape sequences and HTML tags from text as stored in PennMUSH database files.
+	/// Strips Pueblo ANSI escape sequences from text as stored in PennMUSH database files.
 	/// PennMUSH stores ANSI escape codes as literal ESC sequences in attribute text.
+	/// Standard HTML tags are preserved as they may be intentional content.
 	/// 
-	/// Handles various ANSI formats:
+	/// Handles Pueblo-specific ANSI formats:
 	/// - CSI sequences: ESC[...m (colors, styles) - e.g., ESC[31m (red), ESC[1m (bold), ESC[38;5;n]m (256-color)
-	/// - OSC sequences: ESC]...ESC\ (operating system commands)
+	/// - OSC sequences: ESC]...ESC\ (Pueblo escape sequences, operating system commands)
 	/// - Simple escapes: ESC followed by single character
-	/// - HTML/Pueblo tags: &lt;tag&gt; format
 	/// 
 	/// TODO: Convert these escape sequences to proper MarkupStrings instead of stripping them.
 	/// This will require:
@@ -627,10 +625,10 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	/// - Mapping ANSI 256-color codes (ESC[38;5;nm, ESC[48;5;nm) to MarkupString colors
 	/// - Mapping ANSI RGB codes (ESC[38;2;r;g;bm, ESC[48;2;r;g;bm) to MarkupString colors
 	/// - Converting bold (ESC[1m), underline (ESC[4m), etc. to MarkupString formatting
-	/// - Handling Pueblo HTML tags and converting to MarkupString equivalents
+	/// - Handling Pueblo OSC sequences and converting to MarkupString equivalents
 	/// </summary>
-	/// <param name="text">Text potentially containing raw ANSI escape sequences</param>
-	/// <returns>Text with escape sequences removed, or empty string if input is null</returns>
+	/// <param name="text">Text potentially containing Pueblo ANSI escape sequences</param>
+	/// <returns>Text with escape sequences removed but standard HTML preserved, or empty string if input is null</returns>
 	private static string StripEscapeSequences(string? text)
 	{
 		if (string.IsNullOrEmpty(text))
@@ -648,15 +646,12 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		text = AnsiEscapePattern.Replace(text, string.Empty);
 
 		// Strip OSC (Operating System Command) sequences: ESC] ... ESC\ or ESC] ... BEL
+		// This includes Pueblo-specific escape sequences
 		text = AnsiOscPattern.Replace(text, string.Empty);
 
 		// Strip other ANSI escape sequences (ESC followed by a single character)
 		// This handles simpler escape codes
 		text = SimpleAnsiPattern.Replace(text, string.Empty);
-
-		// Strip HTML/Pueblo tags (stored as actual HTML in attributes)
-		// Examples: <b>, </b>, <color red>, </color>, <send>, </send>
-		text = HtmlTagPattern.Replace(text, string.Empty);
 
 		// Strip any remaining ESC characters that weren't part of sequences
 		text = text.Replace("\x1b", string.Empty);
