@@ -217,4 +217,43 @@ public class ZoneFunctionTests
 		await Assert.That(resultText).Contains($"{obj1DbRef.Number}");
 		await Assert.That(resultText).Contains($"{obj2DbRef.Number}");
 	}
+
+	[Test]
+	[DependsOn(nameof(ZfindListsObjectsInZone))]
+	public async Task ZoneHierarchyTraversal()
+	{
+		// Create a zone hierarchy: ZoneA <- ZoneB <- Object
+		// where ZoneB has ZoneA as its zone, and Object has ZoneB as its zone
+		
+		var zoneAResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ZoneHierarchyA"));
+		var zoneADbRef = DBRef.Parse(zoneAResult.Message!.ToPlainText()!);
+		
+		var zoneBResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ZoneHierarchyB"));
+		var zoneBDbRef = DBRef.Parse(zoneBResult.Message!.ToPlainText()!);
+		
+		var objResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ZoneHierarchyObj"));
+		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+		
+		// Set up hierarchy
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@chzone {zoneBDbRef}={zoneADbRef}"));
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@chzone {objDbRef}={zoneBDbRef}"));
+		
+		// Verify the zone chain
+		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
+		var zoneChain = new List<int>();
+		
+		await foreach (var zone in obj.Known.GetZoneChain())
+		{
+			zoneChain.Add(zone.Object().DBRef.Number);
+		}
+		
+		// Should have both ZoneB and ZoneA in the chain
+		await Assert.That(zoneChain).Contains(zoneBDbRef.Number);
+		await Assert.That(zoneChain).Contains(zoneADbRef.Number);
+		await Assert.That(zoneChain.Count).IsEqualTo(2);
+		
+		// First should be ZoneB (immediate zone), then ZoneA
+		await Assert.That(zoneChain[0]).IsEqualTo(zoneBDbRef.Number);
+		await Assert.That(zoneChain[1]).IsEqualTo(zoneADbRef.Number);
+	}
 }
