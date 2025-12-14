@@ -1,9 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Text.Json;
 
 namespace SharpMUSH.Server.Controllers;
 
@@ -11,6 +14,8 @@ namespace SharpMUSH.Server.Controllers;
 [Route("api/[controller]")]
 public class ConfigurationController(
 	IOptionsWrapper<SharpMUSHOptions> options,
+	ISharpDatabase database,
+	IOptionsMonitorCache<SharpMUSHOptions> optionsCache,
 	ILogger<ConfigurationController> logger)
 	: ControllerBase
 {
@@ -43,10 +48,17 @@ public class ConfigurationController(
 			// Use ReadPennMushConfig to parse it
 			var importedOptions = ReadPennMushConfig.Create(tempFile);
 
-			// TODO: Store the new config data.
-
 			// Clean up temp file
 			System.IO.File.Delete(tempFile);
+
+			// Store the new configuration in the database
+			var configJson = JsonSerializer.Serialize(importedOptions);
+			await database.SetExpandedServerData(nameof(SharpMUSHOptions), configJson);
+
+			// Invalidate the options cache to force reload on next access
+			optionsCache.TryRemove(Options.DefaultName);
+
+			logger.LogInformation("Configuration imported and persisted successfully");
 
 			return Ok(OptionHelper.OptionsToConfigurationResponse(importedOptions));
 		}
