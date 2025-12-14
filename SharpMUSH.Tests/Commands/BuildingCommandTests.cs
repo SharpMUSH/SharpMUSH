@@ -254,6 +254,146 @@ public class BuildingCommandTests
 	}
 
 	[Test]
+	[DependsOn(nameof(ParentUnset))]
+	public async ValueTask ParentCycleDetection_DirectCycle()
+	{
+		// Create two objects A and B
+		var objAResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create CycleTest_A"));
+		var objADbRef = DBRef.Parse(objAResult.Message!.ToPlainText()!);
+		
+		var objBResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create CycleTest_B"));
+		var objBDbRef = DBRef.Parse(objBResult.Message!.ToPlainText()!);
+		
+		// Set A's parent to B
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {objADbRef}={objBDbRef}"));
+		
+		// Verify A's parent is B
+		var objA = await Mediator.Send(new GetObjectNodeQuery(objADbRef));
+		var parentOfA = await objA.Known.Object().Parent.WithCancellation(CancellationToken.None);
+		await Assert.That(parentOfA.IsNone).IsFalse();
+		await Assert.That(parentOfA.Known.Object().DBRef.Number).IsEqualTo(objBDbRef.Number);
+		
+		// Try to set B's parent to A (would create direct cycle: A -> B -> A)
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {objBDbRef}={objADbRef}"));
+		
+		// Verify B's parent was NOT set (cycle prevention)
+		var objB = await Mediator.Send(new GetObjectNodeQuery(objBDbRef));
+		var parentOfB = await objB.Known.Object().Parent.WithCancellation(CancellationToken.None);
+		await Assert.That(parentOfB.IsNone).IsTrue();
+		
+		// Verify notification was sent about the cycle
+		await NotifyService
+			.Received(Quantity.AtLeast(1))
+			.Notify(Arg.Any<DBRef>(), Arg.Is<string>(s => s.Contains("loop") || s.Contains("cycle") || s.Contains("circular")));
+	}
+
+	[Test]
+	[DependsOn(nameof(ParentCycleDetection_DirectCycle))]
+	public async ValueTask ParentCycleDetection_IndirectCycle()
+	{
+		// Create three objects A, B, and C
+		var objAResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create IndirectCycle_A"));
+		var objADbRef = DBRef.Parse(objAResult.Message!.ToPlainText()!);
+		
+		var objBResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create IndirectCycle_B"));
+		var objBDbRef = DBRef.Parse(objBResult.Message!.ToPlainText()!);
+		
+		var objCResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create IndirectCycle_C"));
+		var objCDbRef = DBRef.Parse(objCResult.Message!.ToPlainText()!);
+		
+		// Create chain: A -> B -> C
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {objADbRef}={objBDbRef}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {objBDbRef}={objCDbRef}"));
+		
+		// Verify the chain is established
+		var objA = await Mediator.Send(new GetObjectNodeQuery(objADbRef));
+		var parentOfA = await objA.Known.Object().Parent.WithCancellation(CancellationToken.None);
+		await Assert.That(parentOfA.IsNone).IsFalse();
+		await Assert.That(parentOfA.Known.Object().DBRef.Number).IsEqualTo(objBDbRef.Number);
+		
+		var objB = await Mediator.Send(new GetObjectNodeQuery(objBDbRef));
+		var parentOfB = await objB.Known.Object().Parent.WithCancellation(CancellationToken.None);
+		await Assert.That(parentOfB.IsNone).IsFalse();
+		await Assert.That(parentOfB.Known.Object().DBRef.Number).IsEqualTo(objCDbRef.Number);
+		
+		// Try to set C's parent to A (would create indirect cycle: A -> B -> C -> A)
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {objCDbRef}={objADbRef}"));
+		
+		// Verify C's parent was NOT set (cycle prevention)
+		var objC = await Mediator.Send(new GetObjectNodeQuery(objCDbRef));
+		var parentOfC = await objC.Known.Object().Parent.WithCancellation(CancellationToken.None);
+		await Assert.That(parentOfC.IsNone).IsTrue();
+		
+		// Verify notification was sent about the cycle
+		await NotifyService
+			.Received(Quantity.AtLeast(1))
+			.Notify(Arg.Any<DBRef>(), Arg.Is<string>(s => s.Contains("loop") || s.Contains("cycle") || s.Contains("circular")));
+	}
+
+	[Test]
+	[DependsOn(nameof(ParentCycleDetection_IndirectCycle))]
+	public async ValueTask ParentCycleDetection_SelfParent()
+	{
+		// Create object
+		var objResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create SelfParentTest"));
+		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+		
+		// Try to set object as its own parent (self-cycle)
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {objDbRef}={objDbRef}"));
+		
+		// Verify parent was NOT set (self-cycle prevention)
+		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
+		var parent = await obj.Known.Object().Parent.WithCancellation(CancellationToken.None);
+		await Assert.That(parent.IsNone).IsTrue();
+		
+		// Verify notification was sent about the cycle
+		await NotifyService
+			.Received(Quantity.AtLeast(1))
+			.Notify(Arg.Any<DBRef>(), Arg.Is<string>(s => s.Contains("loop") || s.Contains("cycle") || s.Contains("circular") || s.Contains("itself")));
+	}
+
+	[Test]
+	[DependsOn(nameof(ParentCycleDetection_SelfParent))]
+	public async ValueTask ParentCycleDetection_LongChain()
+	{
+		// Create a long chain of 5 objects
+		var objDbRefs = new List<DBRef>();
+		for (int i = 0; i < 5; i++)
+		{
+			var result = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create LongChain_{i}"));
+			objDbRefs.Add(DBRef.Parse(result.Message!.ToPlainText()!));
+		}
+		
+		// Create chain: 0 -> 1 -> 2 -> 3 -> 4
+		for (int i = 0; i < 4; i++)
+		{
+			await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {objDbRefs[i]}={objDbRefs[i + 1]}"));
+		}
+		
+		// Verify the chain is established
+		for (int i = 0; i < 4; i++)
+		{
+			var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRefs[i]));
+			var parent = await obj.Known.Object().Parent.WithCancellation(CancellationToken.None);
+			await Assert.That(parent.IsNone).IsFalse();
+			await Assert.That(parent.Known.Object().DBRef.Number).IsEqualTo(objDbRefs[i + 1].Number);
+		}
+		
+		// Try to set 4's parent to 0 (would create long cycle: 0 -> 1 -> 2 -> 3 -> 4 -> 0)
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {objDbRefs[4]}={objDbRefs[0]}"));
+		
+		// Verify 4's parent was NOT set (cycle prevention)
+		var obj4 = await Mediator.Send(new GetObjectNodeQuery(objDbRefs[4]));
+		var parentOf4 = await obj4.Known.Object().Parent.WithCancellation(CancellationToken.None);
+		await Assert.That(parentOf4.IsNone).IsTrue();
+		
+		// Verify notification was sent about the cycle
+		await NotifyService
+			.Received(Quantity.AtLeast(1))
+			.Notify(Arg.Any<DBRef>(), Arg.Is<string>(s => s.Contains("loop") || s.Contains("cycle") || s.Contains("circular")));
+	}
+
+	[Test]
 	[DependsOn(nameof(CloneObject))]
 	[Skip("Not Yet Implemented - replaced by ParentSetAndGet")]
 	public async ValueTask SetParent()
