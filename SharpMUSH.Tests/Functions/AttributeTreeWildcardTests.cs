@@ -218,13 +218,12 @@ public class AttributeTreeWildcardTests
 		await Assert.That(attrs).Contains("ROOTOTHER");
 		
 		// Match only ROOT`CHILDx (not grandchildren)
-		// Note: Using a simpler pattern that should definitely match
-		// Brackets need to be escaped for the MUSH parser
+		// Note: [12] is a regex character class matching '1' or '2'
+		// Brackets need to be escaped for the MUSH parser with \\[ and \\]
 		var result2 = (await Parser.FunctionParse(MModule.single("[reglattr(%!/ROOT`CHILD\\[12\\])]")))?.Message!;
 		var attrs2 = result2.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries).ToArray();
 		
-		// The regex should find attributes containing ROOT`CHILD1 or ROOT`CHILD2
-		// Note: We're being lenient here - as long as it finds the children, we're good
+		// The regex should find attributes matching ROOT`CHILD1 or ROOT`CHILD2
 		await Assert.That(attrs2.Length).IsGreaterThanOrEqualTo(2);
 		await Assert.That(attrs2.Any(a => a.Contains("CHILD1"))).IsTrue();
 		await Assert.That(attrs2.Any(a => a.Contains("CHILD2"))).IsTrue();
@@ -239,13 +238,16 @@ public class AttributeTreeWildcardTests
 	{
 		await SetupAttributeTree();
 		
-		// wildgrep with ** should search in entire tree
+		// wildgrep searches attribute VALUES (not names) for the wildcard pattern
+		// The pattern ** in the attribute name matches the entire tree
+		// The pattern *child* in the value matches values containing "child"
 		var result = (await Parser.FunctionParse(MModule.single("[wildgrep(%!,ROOT**,*child*)]")))?.Message!;
 		var attrs = result.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries).ToArray();
 		
+		// Should find ROOT`CHILD1 and ROOT`CHILD2 because their values 
+		// ("child1_value" and "child2_value") contain "child"
 		await Assert.That(attrs).Contains("ROOT`CHILD1");
 		await Assert.That(attrs).Contains("ROOT`CHILD2");
-		// Note: Values are "child1_value" and "child2_value" which match *child*
 	}
 
 	/// <summary>
