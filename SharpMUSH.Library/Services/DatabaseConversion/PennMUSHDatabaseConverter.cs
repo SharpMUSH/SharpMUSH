@@ -92,7 +92,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			if (progress == null) return;
 
 			var elapsed = stopwatch.Elapsed;
-			TimeSpan? estimatedRemaining = percentComplete > 0 
+			TimeSpan? estimatedRemaining = percentComplete > 0.001 
 				? TimeSpan.FromSeconds(elapsed.TotalSeconds / percentComplete * (1 - percentComplete))
 				: null;
 

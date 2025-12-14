@@ -191,12 +191,16 @@ public static class DatabaseConversionSession
 		_sessions[sessionId] = sessionData;
 
 		// Schedule cleanup of old sessions after 1 hour using a background timer
-		_ = Task.Delay(TimeSpan.FromHours(1), cancellationToken)
+		// Use CancellationToken.None to ensure cleanup runs even if request is cancelled
+		_ = Task.Delay(TimeSpan.FromHours(1), CancellationToken.None)
 			.ContinueWith(_ =>
 			{
 				try
 				{
 					_sessions.TryRemove(sessionId, out var removedSession);
+					
+					// Dispose of cancellation token source
+					removedSession?.CancellationSource?.Dispose();
 					
 					// Clean up any remaining temp files
 					if (removedSession != null && File.Exists(removedSession.TempFilePath))

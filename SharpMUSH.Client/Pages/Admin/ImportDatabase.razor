@@ -280,8 +280,8 @@
 				_isConverting = true;
 				StateHasChanged();
 
-				// Start polling for progress with synchronous timer callback
-				_progressTimer = new System.Threading.Timer(_ => _ = UpdateProgressAsync(), null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
+				// Start polling for progress with timer callback
+				_progressTimer = new System.Threading.Timer(OnTimerCallback, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
 			}
 		}
 		catch (Exception ex)
@@ -290,6 +290,25 @@
 			_isUploading = false;
 			StateHasChanged();
 		}
+	}
+
+	private void OnTimerCallback(object? state)
+	{
+		// Fire-and-forget with exception handling
+		_ = Task.Run(async () =>
+		{
+			try
+			{
+				await UpdateProgressAsync();
+			}
+			catch (Exception ex)
+			{
+				// Log error and stop polling
+				await JSRuntime.InvokeVoidAsync("console.error", $"Progress update failed: {ex.Message}");
+				_progressTimer?.Dispose();
+				_isConverting = false;
+			}
+		});
 	}
 
 	private async Task UpdateProgressAsync()
