@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -102,8 +103,7 @@ public class DatabaseConversionController(
 /// </summary>
 public static class DatabaseConversionSession
 {
-	private static readonly Dictionary<string, SessionData> _sessions = new();
-	private static readonly object _lock = new();
+	private static readonly ConcurrentDictionary<string, SessionData> _sessions = new();
 
 	private class SessionData
 	{
@@ -121,106 +121,98 @@ public static class DatabaseConversionSession
 		ILogger logger,
 		CancellationToken cancellationToken)
 	{
-		lock (_lock)
+		var sessionData = new SessionData
 		{
-			var sessionData = new SessionData
+			TempFilePath = tempFilePath
+		};
+
+		var progress = new Progress<ConversionProgress>(p =>
+		{
+			if (_sessions.TryGetValue(sessionId, out var session))
 			{
-				TempFilePath = tempFilePath
-			};
+				session.CurrentProgress = p;
+			}
+		});
 
-			var progress = new Progress<ConversionProgress>(p =>
-			{
-				lock (_lock)
-				{
-					if (_sessions.TryGetValue(sessionId, out var session))
-					{
-						session.CurrentProgress = p;
-					}
-				}
-			});
+		var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+			cancellationToken,
+			sessionData.CancellationSource.Token);
 
-			var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
-				cancellationToken,
-				sessionData.CancellationSource.Token);
-
-			sessionData.ConversionTask = Task.Run(async () =>
+		sessionData.ConversionTask = converter.ConvertDatabaseAsync(tempFilePath, progress, linkedCts.Token)
+			.ContinueWith(task =>
 			{
 				try
 				{
-					var result = await converter.ConvertDatabaseAsync(tempFilePath, progress, linkedCts.Token);
-					
-					lock (_lock)
+					if (task.IsCompletedSuccessfully)
 					{
+						var result = task.Result;
 						if (_sessions.TryGetValue(sessionId, out var session))
 						{
 							session.Result = result;
 						}
-					}
 
-					// Clean up temp file
-					try
-					{
-						if (System.IO.File.Exists(tempFilePath))
+						// Clean up temp file
+						try
 						{
-							System.IO.File.Delete(tempFilePath);
+							if (File.Exists(tempFilePath))
+							{
+								File.Delete(tempFilePath);
+							}
 						}
-					}
-					catch (Exception ex)
-					{
-						logger.LogWarning(ex, "Failed to delete temporary file: {Path}", tempFilePath);
-					}
+						catch (Exception ex)
+						{
+							logger.LogWarning(ex, "Failed to delete temporary file: {Path}", tempFilePath);
+						}
 
-					return result;
+						return result;
+					}
+					else if (task.IsFaulted)
+					{
+						logger.LogError(task.Exception, "Error during conversion");
+						throw task.Exception!;
+					}
+					else
+					{
+						throw new OperationCanceledException("Conversion was cancelled");
+					}
 				}
 				catch (Exception ex)
 				{
-					logger.LogError(ex, "Error during conversion");
+					logger.LogError(ex, "Error processing conversion result");
 					throw;
 				}
-			}, linkedCts.Token);
+			}, TaskScheduler.Default);
 
-			_sessions[sessionId] = sessionData;
+		_sessions[sessionId] = sessionData;
 
-			// Clean up old sessions after 1 hour
-			_ = Task.Run(async () =>
+		// Schedule cleanup of old sessions after 1 hour using a background timer
+		_ = Task.Delay(TimeSpan.FromHours(1), cancellationToken)
+			.ContinueWith(_ =>
 			{
-				await Task.Delay(TimeSpan.FromHours(1));
-				lock (_lock)
-				{
-					_sessions.Remove(sessionId);
-				}
-			});
-		}
+				_sessions.TryRemove(sessionId, out var _);
+			}, TaskScheduler.Default);
 	}
 
 	public static ConversionProgress? GetProgress(string sessionId)
 	{
-		lock (_lock)
-		{
-			return _sessions.TryGetValue(sessionId, out var session) 
-				? session.CurrentProgress 
-				: null;
-		}
+		return _sessions.TryGetValue(sessionId, out var session) 
+			? session.CurrentProgress 
+			: null;
 	}
 
 	public static async Task<ConversionResult?> GetResult(string sessionId)
 	{
-		Task<ConversionResult>? task;
-		lock (_lock)
+		if (!_sessions.TryGetValue(sessionId, out var session))
 		{
-			if (!_sessions.TryGetValue(sessionId, out var session))
-			{
-				return null;
-			}
-
-			if (session.Result != null)
-			{
-				return session.Result;
-			}
-
-			task = session.ConversionTask;
+			return null;
 		}
 
+		if (session.Result != null)
+		{
+			return session.Result;
+		}
+
+		var task = session.ConversionTask;
 		if (task == null || !task.IsCompleted)
 		{
 			return null;
@@ -230,7 +222,7 @@ public static class DatabaseConversionSession
 		{
 			return await task;
 		}
-		catch
+		catch (Exception)
 		{
 			return null;
 		}
@@ -238,34 +230,37 @@ public static class DatabaseConversionSession
 
 	public static bool CancelConversion(string sessionId)
 	{
-		lock (_lock)
+		if (!_sessions.TryGetValue(sessionId, out var session))
 		{
-			if (!_sessions.TryGetValue(sessionId, out var session))
-			{
-				return false;
-			}
-
-			if (session.ConversionTask?.IsCompleted == true)
-			{
-				return false;
-			}
-
-			session.CancellationSource.Cancel();
-			
-			// Clean up temp file
-			try
-			{
-				if (System.IO.File.Exists(session.TempFilePath))
-				{
-					System.IO.File.Delete(session.TempFilePath);
-				}
-			}
-			catch
-			{
-				// Ignore cleanup errors
-			}
-
-			return true;
+			return false;
 		}
+
+		if (session.ConversionTask?.IsCompleted == true)
+		{
+			return false;
+		}
+
+		session.CancellationSource.Cancel();
+		
+		// Clean up temp file
+		try
+		{
+			if (File.Exists(session.TempFilePath))
+			{
+				File.Delete(session.TempFilePath);
+			}
+		}
+		catch (IOException ex)
+		{
+			// File is in use or access denied - log but don't fail
+			System.Diagnostics.Debug.WriteLine($"Could not delete temp file: {ex.Message}");
+		}
+		catch (UnauthorizedAccessException ex)
+		{
+			// No permission to delete - log but don't fail
+			System.Diagnostics.Debug.WriteLine($"No permission to delete temp file: {ex.Message}");
+		}
+
+		return true;
 	}
 }
