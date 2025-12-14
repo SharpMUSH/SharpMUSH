@@ -186,72 +186,114 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			return (0, 0, 0, 0);
 		}
 
-		// First, we need to create a temporary player #1 (usually God) to own initial objects
-		// Find player #1 (God) in the PennMUSH database
-		var godPennObject = pennDatabase.GetObject(1);
+		// Check if default objects from migration already exist (#0, #1, #2)
+		// If they do, we'll reuse them instead of creating new ones
 		DBRef tempGodDbRef;
+		var existingPlayer1 = await _database.GetObjectNodeAsync(new DBRef(1), cancellationToken);
 		
-		if (godPennObject?.Type == PennMUSHObjectType.Player)
+		if (existingPlayer1.IsT0)
 		{
-			// Create God player first
-			tempGodDbRef = await _database.CreatePlayerAsync(
-				godPennObject.Name,
-				godPennObject.Password ?? "NEEDS_RESET",
-				new DBRef(0), // Limbo room (will create next)
-				new DBRef(0), // Home is also Limbo
-				godPennObject.Pennies > 0 ? godPennObject.Pennies : 1000,
-				cancellationToken);
-			
+			// Player #1 already exists (from database migration), reuse it
+			tempGodDbRef = new DBRef(1);
 			_dbrefMapping[1] = tempGodDbRef;
-			playersConverted++;
-			_logger.LogInformation("Created God player #{PennDBRef} -> {SharpDBRef}: {Name}", 1, tempGodDbRef, godPennObject.Name);
+			_logger.LogInformation("Reusing existing God player #1 from database migration");
+			
+			// Update the name and password from PennMUSH if available
+			var godPennObject = pennDatabase.GetObject(1);
+			if (godPennObject?.Type == PennMUSHObjectType.Player)
+			{
+				// TODO: Update God player name/password from PennMUSH data
+				_logger.LogDebug("PennMUSH God player #{PennDBRef} data available: {Name}", 1, godPennObject.Name);
+			}
 		}
 		else
 		{
-			// Create a default God player
-			tempGodDbRef = await _database.CreatePlayerAsync(
-				"God",
-				"NEEDS_RESET",
-				new DBRef(0),
-				new DBRef(0),
-				10000,
-				cancellationToken);
-			_dbrefMapping[1] = tempGodDbRef;
-			playersConverted++;
-			_logger.LogWarning("Created default God player as #{PennDBRef} was not a player", 1);
+			// No existing player, create one
+			var godPennObject = pennDatabase.GetObject(1);
+			
+			if (godPennObject?.Type == PennMUSHObjectType.Player)
+			{
+				// Create God player first
+				tempGodDbRef = await _database.CreatePlayerAsync(
+					godPennObject.Name,
+					godPennObject.Password ?? "NEEDS_RESET",
+					new DBRef(0), // Limbo room (will create or reuse next)
+					new DBRef(0), // Home is also Limbo
+					godPennObject.Pennies > 0 ? godPennObject.Pennies : 1000,
+					cancellationToken);
+				
+				_dbrefMapping[1] = tempGodDbRef;
+				playersConverted++;
+				_logger.LogInformation("Created God player #{PennDBRef} -> {SharpDBRef}: {Name}", 1, tempGodDbRef, godPennObject.Name);
+			}
+			else
+			{
+				// Create a default God player
+				tempGodDbRef = await _database.CreatePlayerAsync(
+					"God",
+					"NEEDS_RESET",
+					new DBRef(0),
+					new DBRef(0),
+					10000,
+					cancellationToken);
+				_dbrefMapping[1] = tempGodDbRef;
+				playersConverted++;
+				_logger.LogWarning("Created default God player as #{PennDBRef} was not a player", 1);
+			}
 		}
 
 		// Get the God player object for use as creator
 		var godPlayerObj = await _database.GetObjectNodeAsync(tempGodDbRef, cancellationToken);
 		if (!godPlayerObj.TryPickT0(out var godPlayerWrapped, out _))
 		{
-			throw new InvalidOperationException("Failed to retrieve God player after creation");
+			throw new InvalidOperationException("Failed to retrieve God player after creation or reuse");
 		}
 		var godPlayer = godPlayerWrapped; // This is SharpPlayer directly
 
-		// Create Room #0 (usually Limbo/Master Room)
-		var room0Penn = pennDatabase.GetObject(0);
+		// Check if Room #0 already exists (from database migration)
 		DBRef tempRoom0DbRef;
+		var existingRoom0 = await _database.GetObjectNodeAsync(new DBRef(0), cancellationToken);
 		
-		if (room0Penn?.Type == PennMUSHObjectType.Room)
+		if (existingRoom0.IsT0)
 		{
-			tempRoom0DbRef = await _database.CreateRoomAsync(
-				room0Penn.Name,
-				godPlayer,
-				cancellationToken);
+			// Room #0 already exists (from database migration), reuse it
+			tempRoom0DbRef = new DBRef(0);
 			_dbrefMapping[0] = tempRoom0DbRef;
-			roomsConverted++;
-			_logger.LogInformation("Created Limbo room #{PennDBRef} -> {SharpDBRef}: {Name}", 0, tempRoom0DbRef, room0Penn.Name);
+			_logger.LogInformation("Reusing existing Limbo room #0 from database migration");
+			
+			// Update the name from PennMUSH if available
+			var room0Penn = pennDatabase.GetObject(0);
+			if (room0Penn?.Type == PennMUSHObjectType.Room)
+			{
+				// TODO: Update Room #0 name from PennMUSH data
+				_logger.LogDebug("PennMUSH Limbo room #{PennDBRef} data available: {Name}", 0, room0Penn.Name);
+			}
 		}
 		else
 		{
-			tempRoom0DbRef = await _database.CreateRoomAsync(
-				"Limbo",
-				godPlayer,
-				cancellationToken);
-			_dbrefMapping[0] = tempRoom0DbRef;
-			roomsConverted++;
-			_logger.LogWarning("Created default Limbo room as #{PennDBRef} was not a room", 0);
+			// No existing room, create one
+			var room0Penn = pennDatabase.GetObject(0);
+			
+			if (room0Penn?.Type == PennMUSHObjectType.Room)
+			{
+				tempRoom0DbRef = await _database.CreateRoomAsync(
+					room0Penn.Name,
+					godPlayer,
+					cancellationToken);
+				_dbrefMapping[0] = tempRoom0DbRef;
+				roomsConverted++;
+				_logger.LogInformation("Created Limbo room #{PennDBRef} -> {SharpDBRef}: {Name}", 0, tempRoom0DbRef, room0Penn.Name);
+			}
+			else
+			{
+				tempRoom0DbRef = await _database.CreateRoomAsync(
+					"Limbo",
+					godPlayer,
+					cancellationToken);
+				_dbrefMapping[0] = tempRoom0DbRef;
+				roomsConverted++;
+				_logger.LogWarning("Created default Limbo room as #{PennDBRef} was not a room", 0);
+			}
 		}
 
 		// Now create all other objects
