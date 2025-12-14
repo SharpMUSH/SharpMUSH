@@ -16,6 +16,7 @@ public class PennMUSHDatabaseConversionService : BackgroundService
 	private readonly ILogger<PennMUSHDatabaseConversionService> _logger;
 	private readonly IHostApplicationLifetime _lifetime;
 	private readonly bool _stopOnFailure;
+	private readonly string? _databaseFilePath;
 
 	public PennMUSHDatabaseConversionService(
 		IPennMUSHDatabaseConverter converter,
@@ -28,31 +29,29 @@ public class PennMUSHDatabaseConversionService : BackgroundService
 		_logger = logger;
 		_lifetime = lifetime;
 		_stopOnFailure = Environment.GetEnvironmentVariable("PENNMUSH_CONVERSION_STOP_ON_FAILURE")?.ToLowerInvariant() == "true";
+		_databaseFilePath = Environment.GetEnvironmentVariable("PENNMUSH_DATABASE_PATH");
 	}
 
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 	{
 		// Check if conversion is enabled via configuration
-		// For now, check environment variable
-		var conversionFilePath = Environment.GetEnvironmentVariable("PENNMUSH_DATABASE_PATH");
-
-		if (string.IsNullOrWhiteSpace(conversionFilePath))
+		if (string.IsNullOrWhiteSpace(_databaseFilePath))
 		{
 			_logger.LogInformation("PennMUSH database conversion not configured (PENNMUSH_DATABASE_PATH not set)");
 			return;
 		}
 
-		if (!File.Exists(conversionFilePath))
+		if (!File.Exists(_databaseFilePath))
 		{
-			_logger.LogError("PennMUSH database file not found: {FilePath}", conversionFilePath);
+			_logger.LogError("PennMUSH database file not found: {FilePath}", _databaseFilePath);
 			return;
 		}
 
-		_logger.LogInformation("Starting PennMUSH database conversion from: {FilePath}", conversionFilePath);
+		_logger.LogInformation("Starting PennMUSH database conversion from: {FilePath}", _databaseFilePath);
 
 		try
 		{
-			var result = await _converter.ConvertDatabaseAsync(conversionFilePath, stoppingToken);
+			var result = await _converter.ConvertDatabaseAsync(_databaseFilePath, stoppingToken);
 
 			if (result.IsSuccessful)
 			{
