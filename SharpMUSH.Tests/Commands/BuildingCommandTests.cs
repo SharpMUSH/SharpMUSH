@@ -283,8 +283,8 @@ public class BuildingCommandTests
 		
 		// Verify notification was sent about the cycle
 		await NotifyService
-			.Received(Quantity.AtLeast(1))
-			.Notify(Arg.Any<DBRef>(), Arg.Is<string>(s => s.Contains("loop") || s.Contains("cycle") || s.Contains("circular")));
+			.Received()
+			.Notify(Arg.Any<DBRef>(), Arg.Is<OneOf<MString, string>>(s => s.Value.ToString()!.Contains("loop") || s.Value.ToString()!.Contains("cycle") || s.Value.ToString()!.Contains("circular")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
@@ -326,8 +326,8 @@ public class BuildingCommandTests
 		
 		// Verify notification was sent about the cycle
 		await NotifyService
-			.Received(Quantity.AtLeast(1))
-			.Notify(Arg.Any<DBRef>(), Arg.Is<string>(s => s.Contains("loop") || s.Contains("cycle") || s.Contains("circular")));
+			.Received()
+			.Notify(Arg.Any<DBRef>(), Arg.Is<OneOf<MString, string>>(s => s.Value.ToString()!.Contains("loop") || s.Value.ToString()!.Contains("cycle") || s.Value.ToString()!.Contains("circular")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
@@ -348,8 +348,8 @@ public class BuildingCommandTests
 		
 		// Verify notification was sent about the cycle
 		await NotifyService
-			.Received(Quantity.AtLeast(1))
-			.Notify(Arg.Any<DBRef>(), Arg.Is<string>(s => s.Contains("loop") || s.Contains("cycle") || s.Contains("circular") || s.Contains("itself")));
+			.Received()
+			.Notify(Arg.Any<DBRef>(), Arg.Is<OneOf<MString, string>>(s => s.Value.ToString()!.Contains("loop") || s.Value.ToString()!.Contains("cycle") || s.Value.ToString()!.Contains("circular") || s.Value.ToString()!.Contains("itself")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
@@ -389,8 +389,8 @@ public class BuildingCommandTests
 		
 		// Verify notification was sent about the cycle
 		await NotifyService
-			.Received(Quantity.AtLeast(1))
-			.Notify(Arg.Any<DBRef>(), Arg.Is<string>(s => s.Contains("loop") || s.Contains("cycle") || s.Contains("circular")));
+			.Received()
+			.Notify(Arg.Any<DBRef>(), Arg.Is<OneOf<MString, string>>(s => s.Value.ToString()!.Contains("loop") || s.Value.ToString()!.Contains("cycle") || s.Value.ToString()!.Contains("circular")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
