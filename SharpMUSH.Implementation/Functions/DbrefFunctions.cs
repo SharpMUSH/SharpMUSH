@@ -1189,7 +1189,12 @@ LOCATE()
 					// Check if removing zone (setting to "none")
 					if (arg1Str.Equals("none", StringComparison.OrdinalIgnoreCase))
 					{
-						// TODO: Check ChZone lock and permissions
+						// Check permissions
+						if (!await PermissionService!.Controls(executor, target))
+						{
+							return Errors.ErrorPerm;
+						}
+						
 						await Mediator!.Send(new UnsetObjectZoneCommand(target));
 						return string.Empty;
 					}
@@ -1203,8 +1208,36 @@ LOCATE()
 					
 					var zone = maybeZone.AsAnyObject;
 					
-					// TODO: Check ChZone lock and permissions
-					// TODO: Handle flag/power stripping
+					// Check permissions - must control both object and zone, or pass ChZone lock
+					if (!await PermissionService!.Controls(executor, target))
+					{
+						return Errors.ErrorPerm;
+					}
+					
+					bool canZone = await PermissionService.Controls(executor, zone);
+					if (!canZone && !LockService!.Evaluate(LockType.ChZone, zone, executor))
+					{
+						return Errors.ErrorPerm;
+					}
+					
+					// Handle flag/power stripping (simplified - no /preserve in function)
+					if (!target.IsPlayer)
+					{
+						// Clear privileged flags
+						if (await target.HasFlag("WIZARD"))
+						{
+							await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, target, "!WIZARD", false);
+						}
+						if (await target.HasFlag("ROYALTY"))
+						{
+							await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, target, "!ROYALTY", false);
+						}
+						if (await target.HasFlag("TRUST"))
+						{
+							await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, target, "!TRUST", false);
+						}
+					}
+					
 					await Mediator!.Send(new SetObjectZoneCommand(target, zone));
 					return string.Empty;
 				}

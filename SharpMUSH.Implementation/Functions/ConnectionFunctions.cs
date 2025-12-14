@@ -1077,13 +1077,48 @@ public partial class Functions
 		var hasSeeAll = await executor.HasPower("SEE_ALL");
 		if (!hasSeeAll)
 		{
-			// TODO: Check zone lock when zone lock checking is implemented
-			return new CallState(Errors.ErrorPerm);
+			// Check if executor passes the zone lock
+			if (!LockService!.Evaluate(LockType.Zone, zone, executor))
+			{
+				return new CallState(Errors.ErrorPerm);
+			}
 		}
 
-		// TODO: Zone matching infrastructure not yet fully implemented
-		// For now, return empty list
-		return new CallState(string.Empty);
+		// Get all players in rooms that are in this zone (excluding dark/hidden players)
+		var playersInZone = new List<string>();
+		var allPlayers = Mediator!.CreateStream(new GetAllPlayersQuery())!;
+		
+		await foreach (var player in allPlayers)
+		{
+			// Skip dark/hidden players unless executor has SEE_ALL
+			if (!hasSeeAll)
+			{
+				AnySharpObject playerObj = player;
+				var isDark = await playerObj.HasFlag("DARK");
+				if (isDark)
+				{
+					continue;
+				}
+			}
+			
+			// Get player's location
+			var playerLocation = await player.Location.WithCancellation(CancellationToken.None);
+			
+			// Check if the location's zone matches
+			var locationObj = playerLocation.WithExitOption();
+			var locationZone = await locationObj.Object().Zone.WithCancellation(CancellationToken.None);
+			
+			if (!locationZone.IsNone)
+			{
+				if (locationZone.Known.Object().DBRef.Number == zone.Object().DBRef.Number)
+				{
+					playersInZone.Add(player.Object.DBRef.ToString());
+				}
+			}
+		}
+
+		// Default: space-separated list
+		return new CallState(string.Join(" ", playersInZone));
 	}
 
 	[SharpFunction(Name = "zwho", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -1105,7 +1140,7 @@ public partial class Functions
 		if (!hasSeeAll)
 		{
 			// Check if executor passes the zone lock
-			if (!PermissionService!.PassesLock(executor, zone, LockType.Zone))
+			if (!LockService!.Evaluate(LockType.Zone, zone, executor))
 			{
 				return new CallState(Errors.ErrorPerm);
 			}
@@ -1146,6 +1181,66 @@ public partial class Functions
 
 		// Default: space-separated list
 		return new CallState(string.Join(" ", playersInZone));
+	}
+
+	[SharpFunction(Name = "zfind", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public static async ValueTask<CallState> ZoneFind(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var args = parser.CurrentState.Arguments;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var arg0 = args["0"].Message!.ToPlainText();
+
+		var maybeZone = await LocateService!.LocateAndNotifyIfInvalid(parser, executor, executor, arg0, LocateFlags.All);
+		if (maybeZone.IsNone || maybeZone.IsError)
+		{
+			return new CallState(maybeZone.IsNone ? "#-1" : maybeZone.AsError.Value);
+		}
+
+		var zone = maybeZone.AsAnyObject;
+
+		var hasSeeAll = await executor.HasPower("SEE_ALL");
+		if (!hasSeeAll)
+		{
+			// Check if executor passes the zone lock
+			if (!LockService!.Evaluate(LockType.Zone, zone, executor))
+			{
+				return new CallState(Errors.ErrorPerm);
+			}
+		}
+
+		// Get all objects in the zone
+		var zoneObjects = Mediator!.CreateStream(new GetObjectsByZoneQuery(zone));
+		var objectList = new List<string>();
+		
+		await foreach (var obj in zoneObjects)
+		{
+			// Get the full object to check permissions
+			var fullObj = await Mediator!.Send(new GetObjectNodeQuery(new DBRef(obj.Key)));
+			if (fullObj.IsNone)
+			{
+				continue;
+			}
+			
+			// Check if executor can see this object
+			if (hasSeeAll || await PermissionService!.CanExamine(executor, fullObj.Known))
+			{
+				objectList.Add($"#{obj.Key}");
+			}
+		}
+
+		// Handle output format parameter if provided
+		if (args.TryGetValue("1", out var arg1Value))
+		{
+			var format = arg1Value.Message!.ToPlainText();
+			if (!string.IsNullOrWhiteSpace(format))
+			{
+				// Format output with specified delimiter
+				return new CallState(string.Join(format, objectList));
+			}
+		}
+
+		// Default: space-separated list
+		return new CallState(string.Join(" ", objectList));
 	}
 
 	[SharpFunction(Name = "poll", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]

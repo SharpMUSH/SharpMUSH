@@ -1,4 +1,5 @@
-﻿using SharpMUSH.Implementation.Common;
+﻿using SharpMUSH.Database;
+using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -348,13 +349,23 @@ public partial class Functions
 			executor,
 			zoneName,
 			LocateFlags.All,
-			zone =>
+			async zone =>
 			{
-				// TODO: Implement zone emission - requires zone system support
-				// For now, this is a placeholder that would need to:
-				// 1. Find all rooms with zone == zone parameter
-				// 2. Send message to each of those rooms
-				// This requires zone system infrastructure not yet implemented
+				// Find all objects in the zone
+				var zoneObjects = Mediator!.CreateStream(new GetObjectsByZoneQuery(zone));
+				
+				// Get all rooms in the zone
+				var rooms = zoneObjects.Where(obj => obj.Type == DatabaseConstants.TypeRoom);
+				
+				// Send message to each room
+				await foreach (var room in rooms)
+				{
+					var roomContents = Mediator!.CreateStream(new GetContentsQuery(new DBRef(room.Key)))!;
+					await foreach (var content in roomContents)
+					{
+						await NotifyService!.Notify(content.WithRoomOption(), message, executor, notificationType);
+					}
+				}
 
 				return CallState.Empty;
 			});
@@ -564,27 +575,19 @@ public partial class Functions
 			LocateFlags.All,
 			async zone =>
 			{
-				// Find all rooms with this zone and send message to each
-				var allObjects = Mediator!.CreateStream(new GetAllObjectsQuery())!;
+				// Find all objects in the zone
+				var zoneObjects = Mediator!.CreateStream(new GetObjectsByZoneQuery(zone));
 				
-				await foreach (var obj in allObjects)
+				// Get all rooms in the zone
+				var rooms = zoneObjects.Where(obj => obj.Type == DatabaseConstants.TypeRoom);
+				
+				// Send message to each room
+				await foreach (var room in rooms)
 				{
-					// Only send to rooms
-					if (obj.Type != "ROOM") continue;
-					
-					// Check if this object is in the zone
-					var objZone = await obj.Zone.WithCancellation(CancellationToken.None);
-					if (!objZone.IsNone)
+					var roomContents = Mediator!.CreateStream(new GetContentsQuery(new DBRef(room.Key)))!;
+					await foreach (var content in roomContents)
 					{
-						if (objZone.Known.Object().DBRef.Number == zone.Object().DBRef.Number)
-						{
-							// Send the message to everyone in this room
-							var roomObj = await Mediator.Send(new GetObjectNodeQuery(obj.DBRef));
-							if (!roomObj.IsNone && roomObj.IsRoom)
-							{
-								await NotifyService!.Notify(roomObj.AsRoom, message);
-							}
-						}
+						await NotifyService!.Notify(content.WithRoomOption(), message, executor, INotifyService.NotificationType.Emit);
 					}
 				}
 

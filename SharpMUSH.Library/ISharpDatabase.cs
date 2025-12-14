@@ -581,6 +581,14 @@ public interface ISharpDatabase
 
 	ValueTask<SharpMail?> GetSentMailAsync(SharpObject sender, SharpPlayer recipient, int mail, CancellationToken cancellationToken = default);
 
+	/// <summary>
+	/// Get all objects that belong to a specific zone.
+	/// </summary>
+	/// <param name="zone">The zone object</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
+	/// <returns>An async enumerable of all objects in the zone</returns>
+	IAsyncEnumerable<SharpObject> GetObjectsByZoneAsync(AnySharpObject zone, CancellationToken cancellationToken = default);
+
 	ValueTask<string[]> GetMailFoldersAsync(SharpPlayer id, CancellationToken cancellationToken = default);
 	
 	ValueTask SendMailAsync(SharpObject from, SharpPlayer to, SharpMail mail, CancellationToken cancellationToken = default);

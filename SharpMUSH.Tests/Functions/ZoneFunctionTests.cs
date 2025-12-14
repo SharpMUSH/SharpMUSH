@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -186,5 +187,209 @@ public class ZoneFunctionTests
 		// Verify zone master itself has no zone (should be #-1)
 		var zoneOfZone = (await FunctionParser.FunctionParse(MModule.single($"zone({zoneDbRef})")))?.Message!;
 		await Assert.That(zoneOfZone.ToPlainText()).IsEqualTo("#-1");
+	}
+
+	[Test]
+	[DependsOn(nameof(ZoneChainTest))]
+	public async Task ZfindListsObjectsInZone()
+	{
+		// Clear player zone
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single("@chzone me=none"));
+		
+		// Create a zone master
+		var zoneResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ZfindTestZone"));
+		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
+		
+		// Create multiple objects in the zone
+		var obj1Result = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ZfindObj1"));
+		var obj1DbRef = DBRef.Parse(obj1Result.Message!.ToPlainText()!);
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@chzone {obj1DbRef}={zoneDbRef}"));
+		
+		var obj2Result = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ZfindObj2"));
+		var obj2DbRef = DBRef.Parse(obj2Result.Message!.ToPlainText()!);
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@chzone {obj2DbRef}={zoneDbRef}"));
+		
+		// Call zfind to get all objects in the zone
+		var result = (await FunctionParser.FunctionParse(MModule.single($"zfind({zoneDbRef})")))?.Message!;
+		var resultText = result.ToPlainText()!;
+		
+		// Should contain both objects (check that result is not empty and contains at least the object references)
+		await Assert.That(resultText).IsNotEmpty();
+		await Assert.That(resultText).Contains($"{obj1DbRef.Number}");
+		await Assert.That(resultText).Contains($"{obj2DbRef.Number}");
+	}
+
+	[Test]
+	[DependsOn(nameof(ZfindListsObjectsInZone))]
+	public async Task ZoneHierarchyTraversal()
+	{
+		// Create a zone hierarchy: ZoneA <- ZoneB <- Object
+		// where ZoneB has ZoneA as its zone, and Object has ZoneB as its zone
+		
+		var zoneAResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ZoneHierarchyA"));
+		var zoneADbRef = DBRef.Parse(zoneAResult.Message!.ToPlainText()!);
+		
+		var zoneBResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ZoneHierarchyB"));
+		var zoneBDbRef = DBRef.Parse(zoneBResult.Message!.ToPlainText()!);
+		
+		var objResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ZoneHierarchyObj"));
+		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+		
+		// Set up hierarchy
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@chzone {zoneBDbRef}={zoneADbRef}"));
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@chzone {objDbRef}={zoneBDbRef}"));
+		
+		// Verify the zone chain
+		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
+		var zoneChain = new List<int>();
+		
+		await foreach (var zone in obj.Known.GetZoneChain())
+		{
+			zoneChain.Add(zone.Object().DBRef.Number);
+		}
+		
+		// Should have both ZoneB and ZoneA in the chain
+		await Assert.That(zoneChain).Contains(zoneBDbRef.Number);
+		await Assert.That(zoneChain).Contains(zoneADbRef.Number);
+		await Assert.That(zoneChain.Count).IsEqualTo(2);
+		
+		// First should be ZoneB (immediate zone), then ZoneA
+		await Assert.That(zoneChain[0]).IsEqualTo(zoneBDbRef.Number);
+		await Assert.That(zoneChain[1]).IsEqualTo(zoneADbRef.Number);
+	}
+
+	[Test]
+	[DependsOn(nameof(ZoneHierarchyTraversal))]
+	public async Task ZoneAttributeInheritance()
+	{
+		// Create a zone master with an attribute
+		var zoneResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ZoneAttrMaster"));
+		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
+		
+		// Set an attribute on the zone master
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&TEST_ZONE_ATTR {zoneDbRef}=Zone Master Value"));
+		
+		// Create an object and zone it to the master
+		var objResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ZoneAttrObj"));
+		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@chzone {objDbRef}={zoneDbRef}"));
+		
+		// Get the attribute from the object using hasattrp (checks parents/zones)
+		var hasAttr = (await FunctionParser.FunctionParse(MModule.single($"hasattrp({objDbRef},TEST_ZONE_ATTR)")))?.Message!;
+		await Assert.That(hasAttr.ToPlainText()).IsEqualTo("1");
+		
+		// Directly test AttributeService to verify zone attribute inheritance
+		var executor = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
+		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
+		var attributeService = WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
+		
+		var maybeAttr = await attributeService.GetAttributeAsync(
+			executor.Known,
+			obj.Known,
+			"TEST_ZONE_ATTR",
+			IAttributeService.AttributeMode.Read,
+			parent: true);
+		
+		await Assert.That(maybeAttr.IsAttribute).IsTrue();
+		await Assert.That(maybeAttr.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("Zone Master Value");
+	}
+
+	[Test]
+	[DependsOn(nameof(ZoneAttributeInheritance))]
+	public async Task ZoneAttributeInheritanceWithParent()
+	{
+		// Test that parent attributes take precedence over zone attributes
+		
+		// Create a zone master with an attribute
+		var zoneResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ZoneParentPrecedenceZone"));
+		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&TEST_PRECEDENCE {zoneDbRef}=From Zone"));
+		
+		// Create a parent object with the same attribute
+		var parentResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ZoneParentPrecedenceParent"));
+		var parentDbRef = DBRef.Parse(parentResult.Message!.ToPlainText()!);
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&TEST_PRECEDENCE {parentDbRef}=From Parent"));
+		
+		// Create a child object with the parent and zone  
+		var childResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ZoneParentPrecedenceChild"));
+		var childDbRef = DBRef.Parse(childResult.Message!.ToPlainText()!);
+		
+		// Make sure child doesn't have the attribute
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@wipe {childDbRef}/TEST_PRECEDENCE"));
+		
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@parent {childDbRef}={parentDbRef}"));
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@chzone {childDbRef}={zoneDbRef}"));
+		
+		// Directly test AttributeService to verify parent takes precedence over zone
+		var executor = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
+		var child = await Mediator.Send(new GetObjectNodeQuery(childDbRef));
+		var attributeService = WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
+		
+		var maybeAttr = await attributeService.GetAttributeAsync(
+			executor.Known,
+			child.Known,
+			"TEST_PRECEDENCE",
+			IAttributeService.AttributeMode.Read,
+			parent: true);
+		
+		// Parent attributes should take precedence over zone attributes
+		await Assert.That(maybeAttr.IsAttribute).IsTrue();
+		await Assert.That(maybeAttr.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("From Parent");
+	}
+
+	[Test]
+	[DependsOn(nameof(ZoneAttributeInheritanceWithParent))]
+	public async Task ZoneAttributeInheritanceParentHasDifferentZone()
+	{
+		// Test that each parent can have a different zone
+		// Lookup order: child -> child's zone -> parent -> parent's zone
+		
+		// Create zone for child
+		var childZoneResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ChildZoneMaster"));
+		var childZoneDbRef = DBRef.Parse(childZoneResult.Message!.ToPlainText()!);
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&CHILD_ZONE_ATTR {childZoneDbRef}=From Child Zone"));
+		
+		// Create zone for parent
+		var parentZoneResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ParentZoneMaster"));
+		var parentZoneDbRef = DBRef.Parse(parentZoneResult.Message!.ToPlainText()!);
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&PARENT_ZONE_ATTR {parentZoneDbRef}=From Parent Zone"));
+		
+		// Create parent with its zone
+		var parentResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create MultiZoneParent"));
+		var parentDbRef = DBRef.Parse(parentResult.Message!.ToPlainText()!);
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@chzone {parentDbRef}={parentZoneDbRef}"));
+		
+		// Create child with parent and different zone
+		var childResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create MultiZoneChild"));
+		var childDbRef = DBRef.Parse(childResult.Message!.ToPlainText()!);
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@parent {childDbRef}={parentDbRef}"));
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@chzone {childDbRef}={childZoneDbRef}"));
+		
+		// Test with AttributeService directly
+		var executor = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
+		var child = await Mediator.Send(new GetObjectNodeQuery(childDbRef));
+		var attributeService = WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
+		
+		// Should inherit from child's zone
+		var childZoneAttr = await attributeService.GetAttributeAsync(
+			executor.Known,
+			child.Known,
+			"CHILD_ZONE_ATTR",
+			IAttributeService.AttributeMode.Read,
+			parent: true);
+		
+		await Assert.That(childZoneAttr.IsAttribute).IsTrue();
+		await Assert.That(childZoneAttr.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("From Child Zone");
+		
+		// Should inherit from parent's zone (after checking child and child's zone)
+		var parentZoneAttr = await attributeService.GetAttributeAsync(
+			executor.Known,
+			child.Known,
+			"PARENT_ZONE_ATTR",
+			IAttributeService.AttributeMode.Read,
+			parent: true);
+		
+		await Assert.That(parentZoneAttr.IsAttribute).IsTrue();
+		await Assert.That(parentZoneAttr.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("From Parent Zone");
 	}
 }
