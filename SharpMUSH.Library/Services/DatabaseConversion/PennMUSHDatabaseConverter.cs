@@ -25,6 +25,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	// Compiled regex patterns for efficient escape sequence stripping
 	// Raw ANSI escape sequences as stored in PennMUSH database files
 	private static readonly Regex AnsiEscapePattern = new(@"\x1b\[[0-9;]*[A-Za-z]", RegexOptions.Compiled);
+	private static readonly Regex AnsiOscPattern = new(@"\x1b\][^\x1b]*(\x1b\\|\x07)", RegexOptions.Compiled);
 	private static readonly Regex SimpleAnsiPattern = new(@"\x1b[A-Za-z]", RegexOptions.Compiled);
 	// HTML/Pueblo tags in case they're stored as actual HTML
 	private static readonly Regex HtmlTagPattern = new(@"<[^>]+>", RegexOptions.Compiled);
@@ -615,7 +616,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	/// PennMUSH stores ANSI escape codes as literal ESC sequences in attribute text.
 	/// 
 	/// Handles various ANSI formats:
-	/// - CSI sequences: ESC[...m (colors, styles) - e.g., ESC[31m (red), ESC[1m (bold), ESC[38;5;n⟩m (256-color)
+	/// - CSI sequences: ESC[...m (colors, styles) - e.g., ESC[31m (red), ESC[1m (bold), ESC[38;5;n]m (256-color)
 	/// - OSC sequences: ESC]...ESC\ (operating system commands)
 	/// - Simple escapes: ESC followed by single character
 	/// - HTML/Pueblo tags: &lt;tag&gt; format
@@ -647,7 +648,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		text = AnsiEscapePattern.Replace(text, string.Empty);
 
 		// Strip OSC (Operating System Command) sequences: ESC] ... ESC\ or ESC] ... BEL
-		text = Regex.Replace(text, @"\x1b\][^\x1b]*(\x1b\\|\x07)", string.Empty);
+		text = AnsiOscPattern.Replace(text, string.Empty);
 
 		// Strip other ANSI escape sequences (ESC followed by a single character)
 		// This handles simpler escape codes
