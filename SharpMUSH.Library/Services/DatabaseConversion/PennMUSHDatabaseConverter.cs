@@ -176,6 +176,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		}
 
 		// Now create all other objects
+		SharpRoom? room0 = null; // Cache the limbo room to avoid repeated lookups
+		
 		foreach (var pennObj in pennDatabase.Objects)
 		{
 			cancellationToken.ThrowIfCancellationRequested();
@@ -221,10 +223,13 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 					case PennMUSHObjectType.Thing:
 					{
 						// Things need location and home - use Limbo temporarily
-						var room0Obj = await _database.GetObjectNodeAsync(tempRoom0DbRef, cancellationToken);
-						if (!room0Obj.TryPickT1(out var room0, out _))
+						if (room0 == null)
 						{
-							throw new InvalidOperationException("Failed to retrieve Limbo room");
+							var room0Obj = await _database.GetObjectNodeAsync(tempRoom0DbRef, cancellationToken);
+							if (!room0Obj.TryPickT1(out room0, out _))
+							{
+								throw new InvalidOperationException("Failed to retrieve Limbo room");
+							}
 						}
 						
 						newDbRef = await _database.CreateThingAsync(
@@ -240,10 +245,13 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 					case PennMUSHObjectType.Exit:
 					{
 						// Exits need location - use Limbo temporarily
-						var room0Obj = await _database.GetObjectNodeAsync(tempRoom0DbRef, cancellationToken);
-						if (!room0Obj.TryPickT1(out var room0, out _))
+						if (room0 == null)
 						{
-							throw new InvalidOperationException("Failed to retrieve Limbo room");
+							var room0Obj = await _database.GetObjectNodeAsync(tempRoom0DbRef, cancellationToken);
+							if (!room0Obj.TryPickT1(out room0, out _))
+							{
+								throw new InvalidOperationException("Failed to retrieve Limbo room");
+							}
 						}
 						
 						var aliases = ExtractAliases(pennObj.Name);
@@ -315,55 +323,42 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 					if (_dbrefMapping.TryGetValue(pennObj.Location, out var locationDbRef))
 					{
 						var locationObj = await _database.GetObjectNodeAsync(locationDbRef, cancellationToken);
-						if (!locationObj.IsNone)
+						var container = TryGetContainer(locationObj);
+
+						if (container != null)
 						{
-							// Convert to a container (player, room, or thing)
-							var hasContainer = locationObj.Match(
+							// Convert object to content (player, exit, or thing)
+							var hasContent = sharpObj.Match(
 								player => true,
-								room => true,
-								exit => false, // Exits can't be containers
+								room => false, // Rooms aren't content
+								exit => true,
 								thing => true,
 								_ => false);
 
-							if (hasContainer)
+							if (hasContent)
 							{
-								var container = locationObj.Match<AnySharpContainer>(
+								var content = sharpObj.Match<AnySharpContent>(
 									player => player,
-									room => room,
-									exit => throw new InvalidOperationException("Exit cannot be container"),
+									room => throw new InvalidOperationException("Room cannot be content"),
+									exit => exit,
 									thing => thing,
-									_ => throw new InvalidOperationException("None cannot be container"));
+									_ => throw new InvalidOperationException("None cannot be content"));
 
-								// Convert object to content (player, exit, or thing)
-								var hasContent = sharpObj.Match(
-									player => true,
-									room => false, // Rooms aren't content
-									exit => true,
-									thing => true,
-									_ => false);
+								// Use MoveService to properly move the object
+								// Note: Passing null for parser as this is a system operation during conversion
+								var moveResult = await _moveService.ExecuteMoveAsync(
+									null!, // No parser context during conversion
+									content,
+									container,
+									null, // System move
+									"conversion",
+									silent: true);
 
-								if (hasContent)
+								if (moveResult.IsT1)
 								{
-									var content = sharpObj.Match<AnySharpContent>(
-										player => player,
-										room => throw new InvalidOperationException("Room cannot be content"),
-										exit => exit,
-										thing => thing,
-										_ => throw new InvalidOperationException("None cannot be content"));
-
-									// Use MoveService to properly move the object
-									var moveResult = await _moveService.ExecuteMoveAsync(
-										null!, // No parser context during conversion
-										content,
-										container,
-										null, // System move
-										"conversion",
-										silent: true);
-
-									if (moveResult.IsT1)
-									{
-										warnings.Add($"Failed to move object #{pennObj.DBRef} to location #{pennObj.Location}: {moveResult.AsT1.Value}");
-									}
+									var errorMsg = $"Failed to move object #{pennObj.DBRef} to location #{pennObj.Location}: {moveResult.AsT1.Value}";
+									warnings.Add(errorMsg);
+									_logger.LogDebug("Move error during conversion: {Error}", errorMsg);
 								}
 							}
 						}
@@ -376,20 +371,12 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 					if (_dbrefMapping.TryGetValue(pennObj.Link, out var destDbRef))
 					{
 						var destObj = await _database.GetObjectNodeAsync(destDbRef, cancellationToken);
-						if (!destObj.IsNone && !destObj.IsExit)
-						{
-							var container = destObj.Match<AnySharpContainer>(
-								player => player,
-								room => room,
-								exit => throw new InvalidOperationException("Exit cannot be container"),
-								thing => thing,
-								_ => throw new InvalidOperationException("None cannot be container"));
+						var container = TryGetContainer(destObj);
 
-							if (sharpObj.IsExit)
-							{
-								await _database.LinkExitAsync(sharpObj.AsExit, container, cancellationToken);
-								_logger.LogDebug("Linked exit #{PennDBRef} to destination #{DestDBRef}", pennObj.DBRef, pennObj.Link);
-							}
+						if (container != null && sharpObj.IsExit)
+						{
+							await _database.LinkExitAsync(sharpObj.AsExit, container, cancellationToken);
+							_logger.LogDebug("Linked exit #{PennDBRef} to destination #{DestDBRef}", pennObj.DBRef, pennObj.Link);
 						}
 					}
 				}
@@ -583,5 +570,24 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		var name = parts.Length > 0 ? parts[0] : nameString;
 		var aliases = parts.Length > 1 ? parts[1..] : [];
 		return (name, aliases);
+	}
+
+	/// <summary>
+	/// Helper method to convert an AnyOptionalSharpObject to AnySharpContainer if possible.
+	/// Returns null if the object is None or an Exit (which can't be containers).
+	/// </summary>
+	private static AnySharpContainer? TryGetContainer(AnyOptionalSharpObject obj)
+	{
+		if (obj.IsNone || obj.IsExit)
+		{
+			return null;
+		}
+
+		return obj.Match<AnySharpContainer>(
+			player => player,
+			room => room,
+			exit => throw new InvalidOperationException("Exit cannot be container"),
+			thing => thing,
+			_ => throw new InvalidOperationException("None cannot be container"));
 	}
 }
