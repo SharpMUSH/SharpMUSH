@@ -50,29 +50,94 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		return await ConvertDatabaseAsync(pennDatabase, cancellationToken);
 	}
 
+	public async Task<ConversionResult> ConvertDatabaseAsync(
+		string databaseFilePath, 
+		IProgress<ConversionProgress> progress,
+		CancellationToken cancellationToken = default)
+	{
+		_logger.LogInformation("Starting conversion of PennMUSH database from: {FilePath}", databaseFilePath);
+
+		var pennDatabase = await _parser.ParseFileAsync(databaseFilePath, cancellationToken);
+		return await ConvertDatabaseAsync(pennDatabase, progress, cancellationToken);
+	}
+
 	public async Task<ConversionResult> ConvertDatabaseAsync(PennMUSHDatabase pennDatabase, CancellationToken cancellationToken = default)
+	{
+		return await ConvertDatabaseAsync(pennDatabase, null, cancellationToken);
+	}
+
+	public async Task<ConversionResult> ConvertDatabaseAsync(
+		PennMUSHDatabase pennDatabase, 
+		IProgress<ConversionProgress>? progress,
+		CancellationToken cancellationToken = default)
 	{
 		var stopwatch = Stopwatch.StartNew();
 		var result = new ConversionResult();
 		var errors = new List<string>();
 		var warnings = new List<string>();
+		
+		var totalObjects = pennDatabase.Objects.Count;
+		var playersConverted = 0;
+		var roomsConverted = 0;
+		var thingsConverted = 0;
+		var exitsConverted = 0;
+		var attributesConverted = 0;
+		var locksConverted = 0;
 
-		_logger.LogInformation("Converting {Count} PennMUSH objects to SharpMUSH format", pennDatabase.Objects.Count);
+		_logger.LogInformation("Converting {Count} PennMUSH objects to SharpMUSH format", totalObjects);
+
+		// Helper to report progress
+		void ReportProgress(string phase, double percentComplete)
+		{
+			if (progress == null) return;
+
+			var elapsed = stopwatch.Elapsed;
+			TimeSpan? estimatedRemaining = percentComplete > 0 
+				? TimeSpan.FromSeconds(elapsed.TotalSeconds / percentComplete * (1 - percentComplete))
+				: null;
+
+			progress.Report(new ConversionProgress
+			{
+				TotalObjects = totalObjects,
+				ProcessedObjects = playersConverted + roomsConverted + thingsConverted + exitsConverted,
+				PlayersCreated = playersConverted,
+				RoomsCreated = roomsConverted,
+				ThingsCreated = thingsConverted,
+				ExitsCreated = exitsConverted,
+				AttributesCreated = attributesConverted,
+				LocksCreated = locksConverted,
+				CurrentPhase = phase,
+				PercentageComplete = percentComplete * 100,
+				ElapsedTime = elapsed,
+				EstimatedTimeRemaining = estimatedRemaining,
+				RecentErrors = errors.TakeLast(5).ToList(),
+				RecentWarnings = warnings.TakeLast(5).ToList()
+			});
+		}
 
 		try
 		{
-			// First pass: Create all objects without relationships
-			var (playersConverted, roomsConverted, thingsConverted, exitsConverted) = 
-				await CreateObjectsAsync(pennDatabase, errors, warnings, cancellationToken);
+			ReportProgress("Creating objects", 0.0);
+			
+			// First pass: Create all objects without relationships (25% of work)
+			var objectCounts = await CreateObjectsAsync(pennDatabase, errors, warnings, cancellationToken);
+			playersConverted = objectCounts.players;
+			roomsConverted = objectCounts.rooms;
+			thingsConverted = objectCounts.things;
+			exitsConverted = objectCounts.exits;
+			ReportProgress("Objects created", 0.25);
 
-			// Second pass: Set up relationships (location, contents, exits, etc.)
+			// Second pass: Set up relationships (25% of work)
 			await EstablishRelationshipsAsync(pennDatabase, errors, warnings, cancellationToken);
+			ReportProgress("Relationships established", 0.50);
 
-			// Third pass: Create attributes
-			var attributesConverted = await CreateAttributesAsync(pennDatabase, errors, warnings, cancellationToken);
+			// Third pass: Create attributes (25% of work)
+			attributesConverted = await CreateAttributesAsync(pennDatabase, errors, warnings, cancellationToken);
+			ReportProgress("Attributes created", 0.75);
 
-			// Fourth pass: Set up locks
-			var locksConverted = await CreateLocksAsync(pennDatabase, errors, warnings, cancellationToken);
+			// Fourth pass: Set up locks (25% of work)
+			locksConverted = await CreateLocksAsync(pennDatabase, errors, warnings, cancellationToken);
+			ReportProgress("Locks created", 1.0);
 
 			stopwatch.Stop();
 

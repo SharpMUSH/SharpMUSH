@@ -1,0 +1,361 @@
+@page "/admin/database/import"
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Library.Services.DatabaseConversion
+@inject DatabaseConversionService ConversionService
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
+
+<div class="pa-4">
+	<MudText Typo="Typo.h4" GutterBottom="true">Import PennMUSH Database</MudText>
+	<MudText Typo="Typo.body1" Class="mb-4">
+		Upload a PennMUSH database file to convert and import into SharpMUSH. The conversion process will create all objects, establish relationships, and set attributes and locks.
+	</MudText>
+
+	@if (!_isConverting && _result == null)
+	{
+		<MudPaper Class="pa-4">
+			<MudFileUpload T="IBrowserFile" 
+			               Accept=".db,.txt" 
+			               FilesChanged="OnFileSelected" 
+			               MaximumFileCount="1"
+			               MaxFileSize="104857600">
+				<ActivatorContent>
+					<MudCard Outlined="true" Style="min-height: 200px; border: 2px dashed #ccc;">
+						<MudCardContent>
+							<div class="d-flex flex-column align-center justify-center" style="min-height: 150px;">
+								<MudIcon Icon="Icons.Material.Filled.CloudUpload" Size="Size.Large" />
+								<MudText Typo="Typo.h6">Drop PennMUSH database file here or click</MudText>
+								<MudText Typo="Typo.body2" Class="mt-2">
+									Supported formats: .db, .txt (max 100MB)
+								</MudText>
+							</div>
+						</MudCardContent>
+					</MudCard>
+				</ActivatorContent>
+			</MudFileUpload>
+		</MudPaper>
+
+		@if (_selectedFile != null)
+		{
+			<MudPaper Class="pa-4 mt-4">
+				<MudText Typo="Typo.h6" GutterBottom="true">Selected File</MudText>
+				<MudStack Row="true" Spacing="2" Style="align-items: center;">
+					<MudIcon Icon="Icons.Material.Filled.Description" />
+					<MudText>@_selectedFile.Name</MudText>
+					<MudText Typo="Typo.caption">(@($"{_selectedFile.Size / 1024.0 / 1024.0:F1}") MB)</MudText>
+				</MudStack>
+
+				<MudStack Row="true" Justify="Justify.SpaceBetween" Class="mt-4">
+					<MudButton StartIcon="Icons.Material.Filled.Clear" 
+					           OnClick="ClearSelection">
+						Clear Selection
+					</MudButton>
+					
+					<MudButton StartIcon="Icons.Material.Filled.Upload" 
+					           Color="Color.Primary" 
+					           Variant="Variant.Filled"
+					           OnClick="StartConversion"
+					           Disabled="_isUploading">
+						@if (_isUploading)
+						{
+							<MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+							<MudText Class="ms-2">Uploading...</MudText>
+						}
+						else
+						{
+							<MudText>Start Conversion</MudText>
+						}
+					</MudButton>
+				</MudStack>
+			</MudPaper>
+		}
+	}
+	else if (_isConverting && _progress != null)
+	{
+		<MudPaper Class="pa-4">
+			<MudText Typo="Typo.h5" GutterBottom="true">Converting Database</MudText>
+			
+			<MudProgressLinear Value="@_progress.PercentageComplete" 
+			                   Color="Color.Primary" 
+			                   Size="Size.Large" 
+			                   Class="mt-4 mb-2" />
+			
+			<MudText Typo="Typo.body1" Align="Align.Center" Class="mb-4">
+				@($"{_progress.PercentageComplete:F1}% Complete - {_progress.CurrentPhase}")
+			</MudText>
+
+			<MudGrid>
+				<MudItem xs="12" md="6">
+					<MudPaper Class="pa-3" Elevation="2">
+						<MudText Typo="Typo.h6" GutterBottom="true">Progress</MudText>
+						<MudStack Spacing="2">
+							<MudText>Phase: <strong>@_progress.CurrentPhase</strong></MudText>
+							<MudText>Elapsed: <strong>@FormatTimeSpan(_progress.ElapsedTime)</strong></MudText>
+							@if (_progress.EstimatedTimeRemaining.HasValue)
+							{
+								<MudText>Estimated Remaining: <strong>@FormatTimeSpan(_progress.EstimatedTimeRemaining.Value)</strong></MudText>
+							}
+						</MudStack>
+					</MudPaper>
+				</MudItem>
+
+				<MudItem xs="12" md="6">
+					<MudPaper Class="pa-3" Elevation="2">
+						<MudText Typo="Typo.h6" GutterBottom="true">Objects Created</MudText>
+						<MudStack Spacing="2">
+							<MudText>Players: <strong>@_progress.PlayersCreated</strong></MudText>
+							<MudText>Rooms: <strong>@_progress.RoomsCreated</strong></MudText>
+							<MudText>Things: <strong>@_progress.ThingsCreated</strong></MudText>
+							<MudText>Exits: <strong>@_progress.ExitsCreated</strong></MudText>
+							<MudText>Total: <strong>@_progress.ProcessedObjects / @_progress.TotalObjects</strong></MudText>
+						</MudStack>
+					</MudPaper>
+				</MudItem>
+
+				<MudItem xs="12" md="6">
+					<MudPaper Class="pa-3" Elevation="2">
+						<MudText Typo="Typo.h6" GutterBottom="true">Additional Data</MudText>
+						<MudStack Spacing="2">
+							<MudText>Attributes: <strong>@_progress.AttributesCreated</strong></MudText>
+							<MudText>Locks: <strong>@_progress.LocksCreated</strong></MudText>
+						</MudStack>
+					</MudPaper>
+				</MudItem>
+
+				@if (_progress.RecentErrors.Any() || _progress.RecentWarnings.Any())
+				{
+					<MudItem xs="12" md="6">
+						<MudPaper Class="pa-3" Elevation="2">
+							<MudText Typo="Typo.h6" GutterBottom="true">Issues</MudText>
+							@if (_progress.RecentErrors.Any())
+							{
+								<MudAlert Severity="Severity.Error" Dense="true" Class="mb-2">
+									@_progress.RecentErrors.Count error(s)
+								</MudAlert>
+							}
+							@if (_progress.RecentWarnings.Any())
+							{
+								<MudAlert Severity="Severity.Warning" Dense="true">
+									@_progress.RecentWarnings.Count warning(s)
+								</MudAlert>
+							}
+						</MudPaper>
+					</MudItem>
+				}
+			</MudGrid>
+
+			<MudButton StartIcon="Icons.Material.Filled.Cancel" 
+			           Color="Color.Error" 
+			           Variant="Variant.Outlined"
+			           OnClick="CancelConversion"
+			           Class="mt-4">
+				Cancel Conversion
+			</MudButton>
+		</MudPaper>
+	}
+	else if (_result != null)
+	{
+		<MudPaper Class="pa-4">
+			<MudAlert Severity="@(_result.IsSuccessful ? Severity.Success : Severity.Error)" Class="mb-4">
+				@if (_result.IsSuccessful)
+				{
+					<MudText Typo="Typo.h5">Conversion Completed Successfully!</MudText>
+				}
+				else
+				{
+					<MudText Typo="Typo.h5">Conversion Completed with Errors</MudText>
+				}
+			</MudAlert>
+
+			<MudGrid>
+				<MudItem xs="12" md="6">
+					<MudPaper Class="pa-3" Elevation="2">
+						<MudText Typo="Typo.h6" GutterBottom="true">Objects Converted</MudText>
+						<MudStack Spacing="2">
+							<MudText>Players: <strong>@_result.PlayersConverted</strong></MudText>
+							<MudText>Rooms: <strong>@_result.RoomsConverted</strong></MudText>
+							<MudText>Things: <strong>@_result.ThingsConverted</strong></MudText>
+							<MudText>Exits: <strong>@_result.ExitsConverted</strong></MudText>
+							<MudText>Total Objects: <strong>@_result.TotalObjects</strong></MudText>
+						</MudStack>
+					</MudPaper>
+				</MudItem>
+
+				<MudItem xs="12" md="6">
+					<MudPaper Class="pa-3" Elevation="2">
+						<MudText Typo="Typo.h6" GutterBottom="true">Additional Data</MudText>
+						<MudStack Spacing="2">
+							<MudText>Attributes: <strong>@_result.AttributesConverted</strong></MudText>
+							<MudText>Locks: <strong>@_result.LocksConverted</strong></MudText>
+							<MudText>Duration: <strong>@FormatTimeSpan(_result.Duration)</strong></MudText>
+						</MudStack>
+					</MudPaper>
+				</MudItem>
+
+				@if (_result.Errors.Any())
+				{
+					<MudItem xs="12">
+						<MudPaper Class="pa-3" Elevation="2">
+							<MudText Typo="Typo.h6" GutterBottom="true" Color="Color.Error">Errors (@_result.Errors.Count)</MudText>
+							<MudList T="string" Dense="true">
+								@foreach (var error in _result.Errors)
+								{
+									<MudListItem T="string">
+										<MudText Color="Color.Error">@error</MudText>
+									</MudListItem>
+								}
+							</MudList>
+						</MudPaper>
+					</MudItem>
+				}
+
+				@if (_result.Warnings.Any())
+				{
+					<MudItem xs="12">
+						<MudPaper Class="pa-3" Elevation="2">
+							<MudText Typo="Typo.h6" GutterBottom="true" Color="Color.Warning">Warnings (@_result.Warnings.Count)</MudText>
+							<MudList T="string" Dense="true">
+								@foreach (var warning in _result.Warnings)
+								{
+									<MudListItem T="string">
+										<MudText Color="Color.Warning">@warning</MudText>
+									</MudListItem>
+								}
+							</MudList>
+						</MudPaper>
+					</MudItem>
+				}
+			</MudGrid>
+
+			<MudButton StartIcon="Icons.Material.Filled.Refresh" 
+			           Color="Color.Primary" 
+			           Variant="Variant.Filled"
+			           OnClick="Reset"
+			           Class="mt-4">
+				Import Another Database
+			</MudButton>
+		</MudPaper>
+	}
+</div>
+
+@code {
+	private IBrowserFile? _selectedFile;
+	private bool _isUploading;
+	private bool _isConverting;
+	private string? _sessionId;
+	private ConversionProgress? _progress;
+	private ConversionResult? _result;
+	private System.Threading.Timer? _progressTimer;
+
+	private async Task OnFileSelected(IBrowserFile? file)
+	{
+		_selectedFile = file;
+		StateHasChanged();
+	}
+
+	private void ClearSelection()
+	{
+		_selectedFile = null;
+		StateHasChanged();
+	}
+
+	private async Task StartConversion()
+	{
+		if (_selectedFile is null)
+			return;
+
+		_isUploading = true;
+		StateHasChanged();
+
+		try
+		{
+			await using var stream = _selectedFile.OpenReadStream(maxAllowedSize: 104857600); // 100MB
+			_sessionId = await ConversionService.UploadDatabaseAsync(stream, _selectedFile.Name);
+
+			if (_sessionId != null)
+			{
+				_isUploading = false;
+				_isConverting = true;
+				StateHasChanged();
+
+				// Start polling for progress
+				_progressTimer = new System.Threading.Timer(async _ => await UpdateProgress(), null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
+			}
+		}
+		catch (Exception ex)
+		{
+			await JSRuntime.InvokeVoidAsync("console.error", $"Error starting conversion: {ex.Message}");
+			_isUploading = false;
+			StateHasChanged();
+		}
+	}
+
+	private async Task UpdateProgress()
+	{
+		if (_sessionId == null || !_isConverting)
+			return;
+
+		try
+		{
+			_progress = await ConversionService.GetProgressAsync(_sessionId);
+
+			// Check if conversion is complete
+			if (_progress?.PercentageComplete >= 100)
+			{
+				_result = await ConversionService.GetResultAsync(_sessionId);
+				_isConverting = false;
+				_progressTimer?.Dispose();
+			}
+
+			await InvokeAsync(StateHasChanged);
+		}
+		catch (Exception ex)
+		{
+			await JSRuntime.InvokeVoidAsync("console.error", $"Error updating progress: {ex.Message}");
+		}
+	}
+
+	private async Task CancelConversion()
+	{
+		if (_sessionId == null)
+			return;
+
+		try
+		{
+			await ConversionService.CancelConversionAsync(_sessionId);
+			_isConverting = false;
+			_progressTimer?.Dispose();
+			Reset();
+		}
+		catch (Exception ex)
+		{
+			await JSRuntime.InvokeVoidAsync("console.error", $"Error cancelling conversion: {ex.Message}");
+		}
+	}
+
+	private void Reset()
+	{
+		_selectedFile = null;
+		_sessionId = null;
+		_progress = null;
+		_result = null;
+		_isConverting = false;
+		_isUploading = false;
+		_progressTimer?.Dispose();
+		StateHasChanged();
+	}
+
+	private string FormatTimeSpan(TimeSpan ts)
+	{
+		if (ts.TotalHours >= 1)
+			return $"{ts.Hours}h {ts.Minutes}m {ts.Seconds}s";
+		if (ts.TotalMinutes >= 1)
+			return $"{ts.Minutes}m {ts.Seconds}s";
+		return $"{ts.Seconds}s";
+	}
+
+	public void Dispose()
+	{
+		_progressTimer?.Dispose();
+	}
+}
