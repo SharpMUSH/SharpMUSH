@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using NSubstitute;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
@@ -49,10 +48,8 @@ public class ConfigurationControllerTests
 		await Assert.That(response.Configuration.Net.Port).IsEqualTo((uint)4205);
 		await Assert.That(response.Configuration.Net.SslPort).IsEqualTo((uint)4204);
 
-		// Add a small delay to ensure the database write completes
-		await Task.Delay(100);
-
 		// Verify the configuration was stored in the database
+		// The database operation should have completed by now since SetExpandedServerData was awaited
 		var storedConfig = await database.GetExpandedServerData<SharpMUSHOptions>(nameof(SharpMUSHOptions));
 		await Assert.That(storedConfig).IsNotNull();
 		await Assert.That(storedConfig!.Net.MudName).IsEqualTo("Test MUSH Import");
