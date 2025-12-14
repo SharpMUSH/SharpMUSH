@@ -616,7 +616,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	/// 
 	/// Handles Pueblo-specific ANSI formats:
 	/// - CSI sequences: ESC[...m (colors, styles) - e.g., ESC[31m (red), ESC[1m (bold), ESC[38;5;n]m (256-color)
-	/// - OSC sequences: ESC]...ESC\ (Pueblo escape sequences, operating system commands)
+	/// - OSC sequences: ESC]...ESC\ (operating system commands, used by Pueblo for special markup)
 	/// - Simple escapes: ESC followed by single character
 	/// 
 	/// TODO: Convert these escape sequences to proper MarkupStrings instead of stripping them.
@@ -646,7 +646,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		text = AnsiEscapePattern.Replace(text, string.Empty);
 
 		// Strip OSC (Operating System Command) sequences: ESC] ... ESC\ or ESC] ... BEL
-		// This includes Pueblo-specific escape sequences
+		// These are used by Pueblo for special markup and hyperlinks
 		text = AnsiOscPattern.Replace(text, string.Empty);
 
 		// Strip other ANSI escape sequences (ESC followed by a single character)
