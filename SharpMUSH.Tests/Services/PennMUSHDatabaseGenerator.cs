@@ -91,7 +91,9 @@ public static class PennMUSHDatabaseGenerator
 	{
 		var name = GenerateObjectName(dbref, type);
 		var location = dbref > 0 ? Random.Next(-1, dbref) : -1;
-		var owner = dbref > 0 ? Random.Next(1, Math.Max(2, dbref)) : 1;
+		// Owner must be #1 (God) for all objects to ensure it exists
+		// In real PennMUSH databases, most objects are owned by players, but for testing we need valid owners
+		var owner = 1;
 		var creationTime = DateTimeOffset.UtcNow.AddDays(-Random.Next(0, 365)).ToUnixTimeSeconds();
 		var modTime = DateTimeOffset.UtcNow.AddDays(-Random.Next(0, 30)).ToUnixTimeSeconds();
 		var pennies = Random.Next(0, 10000);
@@ -175,7 +177,8 @@ public static class PennMUSHDatabaseGenerator
 			attrName += "`" + Random.Next(1, 100);
 		}
 
-		var owner = Random.Next(0, 10) < 8 ? defaultOwner : Random.Next(1, defaultOwner + 1);
+		// Owner must always be #1 (God) to ensure it exists
+		var owner = 1;
 		var flagCount = Random.Next(0, 3);
 		var flags = Enumerable.Range(0, flagCount)
 			.Select(_ => new[] { "no_command", "visual", "regexp", "case", "locked", "mortal_dark", "hidden", "prefixmatch", "veiled", "debug" }[Random.Next(10)])
