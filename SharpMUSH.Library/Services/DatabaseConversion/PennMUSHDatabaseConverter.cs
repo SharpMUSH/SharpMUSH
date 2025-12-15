@@ -296,6 +296,29 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			}
 		}
 
+		// Check if Master Room #2 already exists (from database migration)
+		var existingRoom2 = await _database.GetObjectNodeAsync(new DBRef(2), cancellationToken);
+		
+		if (existingRoom2.IsT0)
+		{
+			// Master Room #2 already exists (from database migration), reuse it
+			_dbrefMapping[2] = new DBRef(2);
+			_logger.LogInformation("Reusing existing Master Room #2 from database migration");
+			
+			// Update the name from PennMUSH if available
+			var room2Penn = pennDatabase.GetObject(2);
+			if (room2Penn?.Type == PennMUSHObjectType.Room)
+			{
+				// TODO: Update Master Room #2 name from PennMUSH data
+				_logger.LogDebug("PennMUSH Master Room #{PennDBRef} data available: {Name}", 2, room2Penn.Name);
+			}
+		}
+		else
+		{
+			// No existing Master Room, it will be created normally in the loop below
+			_logger.LogDebug("Master Room #2 does not exist, will be created if present in PennMUSH database");
+		}
+
 		// Now create all other objects
 		SharpRoom? room0 = null; // Cache the limbo room to avoid repeated lookups
 		
@@ -303,8 +326,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		{
 			cancellationToken.ThrowIfCancellationRequested();
 
-			// Skip already created objects (God and Limbo)
-			if (pennObj.DBRef == 0 || pennObj.DBRef == 1)
+			// Skip already created or reused objects (God, Limbo, and potentially Master Room)
+			if (pennObj.DBRef == 0 || pennObj.DBRef == 1 || (pennObj.DBRef == 2 && _dbrefMapping.ContainsKey(2)))
 			{
 				continue;
 			}
