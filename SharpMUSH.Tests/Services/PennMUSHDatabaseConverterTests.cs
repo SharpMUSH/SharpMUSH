@@ -37,8 +37,14 @@ public class PennMUSHDatabaseConverterTests
 		await Assert.That(result.IsSuccessful).IsTrue();
 	}
 
+	/// <summary>
+	/// Tests conversion statistics with a small database.
+	/// NOTE: This test uses [NotInParallel] to prevent interference with other tests
+	/// that may be creating objects concurrently. The converter itself is isolated
+	/// but the database state is shared across the test session.
+	/// </summary>
 	[Test]
-	[Skip("Creates objects in shared database that affect other tests - needs isolated database")]
+	[NotInParallel("PennMUSHConversion")]
 	public async ValueTask ConversionResultIncludesStatistics()
 	{
 		var converter = GetConverter();
