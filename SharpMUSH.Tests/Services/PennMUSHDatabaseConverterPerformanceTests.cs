@@ -8,28 +8,24 @@ namespace SharpMUSH.Tests.Services;
 /// Performance tests for PennMUSH database converter.
 /// These tests measure import performance with large databases.
 /// </summary>
-public class PennMUSHDatabaseConverterPerformanceTests
+[ClassDataSource<WebAppFactory>(Shared = SharedType.Keyed, Key = "PennMUSHConversion")]
+public class PennMUSHDatabaseConverterPerformanceTests(WebAppFactory webAppFactory)
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
 	private IPennMUSHDatabaseConverter GetConverter()
 	{
-		return WebAppFactoryArg.Services.GetRequiredService<IPennMUSHDatabaseConverter>();
+		return webAppFactory.Services.GetRequiredService<IPennMUSHDatabaseConverter>();
 	}
 
 	private PennMUSHDatabaseParser GetParser()
 	{
-		return WebAppFactoryArg.Services.GetRequiredService<PennMUSHDatabaseParser>();
+		return webAppFactory.Services.GetRequiredService<PennMUSHDatabaseParser>();
 	}
 
 	/// <summary>
 	/// Tests conversion performance with a large 10MB+ PennMUSH database.
 	/// Runs 10 times to get consistent performance measurements.
-	/// NOTE: This test uses [NotInParallel] to prevent interference with other tests.
 	/// </summary>
 	[Test]
-	[NotInParallel("PennMUSHConversion")]
 	[Repeat(10)]
 	[Category("Performance")]
 	[Category("LongRunning")]
@@ -96,10 +92,8 @@ public class PennMUSHDatabaseConverterPerformanceTests
 	/// <summary>
 	/// Tests conversion performance with a database containing exactly 1000 objects.
 	/// Useful for consistent benchmarking across test runs.
-	/// NOTE: This test uses [NotInParallel] to prevent interference with other tests.
 	/// </summary>
 	[Test]
-	[NotInParallel("PennMUSHConversion")]
 	[Repeat(10)]
 	[Category("Performance")]
 	public async ValueTask FixedSizeDatabaseConversionPerformance()
@@ -148,10 +142,8 @@ public class PennMUSHDatabaseConverterPerformanceTests
 	/// <summary>
 	/// Tests converter scaling with various database sizes.
 	/// Measures performance across different object counts.
-	/// NOTE: This test uses [NotInParallel] to prevent interference with other tests.
 	/// </summary>
 	[Test]
-	[NotInParallel("PennMUSHConversion")]
 	[Category("Performance")]
 	[Category("LongRunning")]
 	public async ValueTask ScalabilityTest()
