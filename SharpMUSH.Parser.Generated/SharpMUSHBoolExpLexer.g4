@@ -33,14 +33,15 @@ fragment J: [jJ];
 fragment WS: ' ';
 
 // Keyword lock tokens - MUST come first to have priority over STRING
-NAME: N A M E;
-BIT_FLAG: F L A G;
-BIT_POWER: P O W E R;
-BIT_TYPE: T Y P E;
-DBREFLIST: D B R E F L I S T;
-CHANNEL: C H A N N E L;
-IP: I P;
-HOSTNAME: H O S T N A M E;
+// Include CARET in token definition so lexer can distinguish "name" from "name^"
+NAME: N A M E CARET;
+BIT_FLAG: F L A G CARET;
+BIT_POWER: P O W E R CARET;
+BIT_TYPE: T Y P E CARET;
+DBREFLIST: D B R E F L I S T CARET;
+CHANNEL: C H A N N E L CARET;
+IP: I P CARET;
+HOSTNAME: H O S T N A M E CARET;
 // Special symbols and operators
 OPEN: WS* '(' WS*;
 CLOSE: WS* ')' WS*;
@@ -54,7 +55,6 @@ EVALUATION: '/';
 EXACTOBJECT: '=';
 FALSE: POUND F A L S E;
 TRUE: POUND T R U E;
-CARET_TOKEN: '^';
 ATTRIBUTE_COLON: ':';
 // STRING - must come BEFORE ATTRIBUTENAME so it matches in `string` parser rules
 STRING: ~( '#' | '&' | '|' | ':' | '!' | ')' | '(' | '^' | ' ' | '/')+;
