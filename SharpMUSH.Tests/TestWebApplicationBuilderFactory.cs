@@ -52,23 +52,11 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 				sc.RemoveAll<ISqlService>();
 				sc.AddSingleton<ISqlService>(new SqlService(sqlConnectionString));
 				
-				// If a custom database name is provided, override the ArangoContext configuration
+				// If a custom database name is provided, override the ArangoHandle
 				if (!string.IsNullOrEmpty(databaseName))
 				{
-					sc.RemoveAll<IArangoContext>();
-					sc.AddSingleton<IArangoContext>(sp =>
-					{
-						// Get the original configuration but with the custom database
-						var config = sp.GetRequiredService<ArangoConfiguration>();
-						var customConfig = new ArangoConfiguration
-						{
-							ConnectionString = config.ConnectionString,
-							Database = databaseName,
-							HttpClient = config.HttpClient,
-							Serializer = config.Serializer
-						};
-						return new ArangoContext(customConfig);
-					});
+					sc.RemoveAll<ArangoHandle>();
+					sc.AddSingleton(new ArangoHandle(databaseName));
 				}
 			}
 		);
