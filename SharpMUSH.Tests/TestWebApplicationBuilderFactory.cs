@@ -21,7 +21,8 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 	string sqlConnectionString,
 	string configFile,
 	INotifyService notifier,
-	string prometheusUrl) :
+	string prometheusUrl,
+	string? databaseName = null) :
 	WebApplicationFactory<TProgram> where TProgram : class
 {
 	protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -50,6 +51,25 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 
 				sc.RemoveAll<ISqlService>();
 				sc.AddSingleton<ISqlService>(new SqlService(sqlConnectionString));
+				
+				// If a custom database name is provided, override the ArangoContext configuration
+				if (!string.IsNullOrEmpty(databaseName))
+				{
+					sc.RemoveAll<IArangoContext>();
+					sc.AddSingleton<IArangoContext>(sp =>
+					{
+						// Get the original configuration but with the custom database
+						var config = sp.GetRequiredService<ArangoConfiguration>();
+						var customConfig = new ArangoConfiguration
+						{
+							ConnectionString = config.ConnectionString,
+							Database = databaseName,
+							HttpClient = config.HttpClient,
+							Serializer = config.Serializer
+						};
+						return new ArangoContext(customConfig);
+					});
+				}
 			}
 		);
 	}

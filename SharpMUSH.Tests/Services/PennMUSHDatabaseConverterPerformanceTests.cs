@@ -7,31 +7,26 @@ namespace SharpMUSH.Tests.Services;
 /// <summary>
 /// Performance tests for PennMUSH database converter.
 /// These tests measure import performance with large databases.
+/// Uses isolated database to prevent pollution of shared test database.
 /// </summary>
-public class PennMUSHDatabaseConverterPerformanceTests
+[ClassDataSource<PennMUSHConverterWebAppFactory>(Shared = SharedType.Keyed, Key = "PennMUSHConversion")]
+public class PennMUSHDatabaseConverterPerformanceTests(PennMUSHConverterWebAppFactory factory)
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
 	private IPennMUSHDatabaseConverter GetConverter()
 	{
-		return WebAppFactoryArg.Services.GetRequiredService<IPennMUSHDatabaseConverter>();
+		return factory.Services.GetRequiredService<IPennMUSHDatabaseConverter>();
 	}
 
 	private PennMUSHDatabaseParser GetParser()
 	{
-		return WebAppFactoryArg.Services.GetRequiredService<PennMUSHDatabaseParser>();
+		return factory.Services.GetRequiredService<PennMUSHDatabaseParser>();
 	}
 
 	/// <summary>
 	/// Tests conversion performance with a large 10MB+ PennMUSH database.
 	/// Runs 10 times to get consistent performance measurements.
-	/// IMPORTANT: This test is skipped by default because it creates thousands of objects
-	/// that pollute the shared database and cause other tests to fail. Run manually when
-	/// performance testing is needed.
 	/// </summary>
 	[Test]
-	[Skip("Performance test that pollutes shared database - run manually when needed")]
 	[Repeat(10)]
 	[Category("Performance")]
 	[Category("LongRunning")]
@@ -98,12 +93,8 @@ public class PennMUSHDatabaseConverterPerformanceTests
 	/// <summary>
 	/// Tests conversion performance with a database containing exactly 1000 objects.
 	/// Useful for consistent benchmarking across test runs.
-	/// IMPORTANT: This test is skipped by default because it creates thousands of objects
-	/// that pollute the shared database and cause other tests to fail. Run manually when
-	/// performance testing is needed.
 	/// </summary>
 	[Test]
-	[Skip("Performance test that pollutes shared database - run manually when needed")]
 	[Repeat(10)]
 	[Category("Performance")]
 	public async ValueTask FixedSizeDatabaseConversionPerformance()
@@ -152,12 +143,8 @@ public class PennMUSHDatabaseConverterPerformanceTests
 	/// <summary>
 	/// Tests converter scaling with various database sizes.
 	/// Measures performance across different object counts.
-	/// IMPORTANT: This test is skipped by default because it creates thousands of objects
-	/// that pollute the shared database and cause other tests to fail. Run manually when
-	/// performance testing is needed.
 	/// </summary>
 	[Test]
-	[Skip("Performance test that pollutes shared database - run manually when needed")]
 	[Category("Performance")]
 	[Category("LongRunning")]
 	public async ValueTask ScalabilityTest()

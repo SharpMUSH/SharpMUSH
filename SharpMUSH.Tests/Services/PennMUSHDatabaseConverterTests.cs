@@ -3,14 +3,12 @@ using SharpMUSH.Library.Services.DatabaseConversion;
 
 namespace SharpMUSH.Tests.Services;
 
-public class PennMUSHDatabaseConverterTests
+[ClassDataSource<PennMUSHConverterWebAppFactory>(Shared = SharedType.Keyed, Key = "PennMUSHConversion")]
+public class PennMUSHDatabaseConverterTests(PennMUSHConverterWebAppFactory factory)
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
 	private IPennMUSHDatabaseConverter GetConverter()
 	{
-		return WebAppFactoryArg.Services.GetRequiredService<IPennMUSHDatabaseConverter>();
+		return factory.Services.GetRequiredService<IPennMUSHDatabaseConverter>();
 	}
 
 	[Test]
@@ -38,7 +36,6 @@ public class PennMUSHDatabaseConverterTests
 	}
 
 	[Test]
-	[Skip("Creates objects in shared database that affect other tests - needs isolated database")]
 	public async ValueTask ConversionResultIncludesStatistics()
 	{
 		var converter = GetConverter();
