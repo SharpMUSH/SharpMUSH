@@ -57,7 +57,8 @@ FALSE: POUND F A L S E;
 TRUE: POUND T R U E;
 ATTRIBUTE_COLON: ':';
 // STRING - must come BEFORE ATTRIBUTENAME so it matches in `string` parser rules
-STRING: ~( '#' | '&' | '|' | ':' | '!' | ')' | '(' | '^' | ' ' | '/')+;
+// Exclude all special operator characters: + $ @ = and those already excluded
+STRING: ~( '#' | '&' | '|' | ':' | '!' | ')' | '(' | '^' | ' ' | '/' | '+' | '$' | '@' | '=')+;
 ATTRIBUTENAME:
-    ~('#' | '&' | '|' | ':' | '!' | ')' | '(' | '/' | ' ' | '^')+
+    ~('#' | '&' | '|' | ':' | '!' | ')' | '(' | '/' | ' ' | '^' | '+' | '$' | '@' | '=')+
 ;

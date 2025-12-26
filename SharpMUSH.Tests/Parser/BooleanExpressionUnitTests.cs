@@ -96,8 +96,7 @@ public class BooleanExpressionUnitTests
 		await Assert.That(bep.Validate(input, dbn)).IsEqualTo(expected);
 	}
 
-	[Arguments("name^God", true)]  // DBRef #1 is typically "God" or "One" player
-	[Arguments("name^One", true)]
+	[Arguments("name^God", true)]  // DBRef #1 is named "God"
 	[Arguments("name^NonExistent", false)]  // This player name shouldn't exist
 	[Test]
 	public async Task NameExpressionMatching(string input, bool expected)
