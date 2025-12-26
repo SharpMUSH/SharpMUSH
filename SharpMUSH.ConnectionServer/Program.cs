@@ -5,10 +5,10 @@ using OpenTelemetry.Resources;
 using SharpMUSH.ConnectionServer.Consumers;
 using SharpMUSH.ConnectionServer.ProtocolHandlers;
 using SharpMUSH.ConnectionServer.Services;
+using SharpMUSH.ConnectionServer.Strategy;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Extensions;
-using StackExchange.Redis;
 using Testcontainers.Redpanda;
 using Serilog;
 
@@ -36,15 +36,26 @@ if (kafkaHost == null)
 	kafkaHost = "localhost";
 }
 
-// Configure Redis connection
-var redisConnection = Environment.GetEnvironmentVariable("REDIS_CONNECTION") ?? "localhost:6379";
-builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+// Initialize Redis strategy
+var redisStrategy = RedisStrategyProvider.GetStrategy();
+await redisStrategy.InitializeAsync();
+
+// Configure Redis connection using strategy pattern
+builder.Services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(sp =>
 {
-	var configuration = ConfigurationOptions.Parse(redisConnection);
-	configuration.AbortOnConnectFail = false;
-	configuration.ConnectRetry = 3;
-	configuration.ConnectTimeout = 5000;
-	return ConnectionMultiplexer.Connect(configuration);
+	var logger = sp.GetRequiredService<ILogger<StackExchange.Redis.ConnectionMultiplexer>>();
+	
+	try
+	{
+		var multiplexer = redisStrategy.GetConnectionAsync().AsTask().GetAwaiter().GetResult();
+		logger.LogInformation("Connected to Redis successfully");
+		return multiplexer;
+	}
+	catch (Exception ex)
+	{
+		logger.LogWarning(ex, "Failed to connect to Redis. Connection state will not be shared.");
+		throw;
+	}
 });
 
 // Add Redis-backed connection state store
@@ -122,13 +133,20 @@ builder.Services.AddOpenTelemetry()
 
 var app = builder.Build();
 
-// Map API endpoints
-app.MapControllers();
-app.MapGet("/", () => "SharpMUSH Connection Server");
-app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTimeOffset.UtcNow }));
-app.MapGet("/ready", () => Results.Ok(new { status = "ready", timestamp = DateTimeOffset.UtcNow }));
+try
+{
+	// Map API endpoints
+	app.MapControllers();
+	app.MapGet("/", () => "SharpMUSH Connection Server");
+	app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTimeOffset.UtcNow }));
+	app.MapGet("/ready", () => Results.Ok(new { status = "ready", timestamp = DateTimeOffset.UtcNow }));
 
-// Prometheus metrics endpoint
-app.MapPrometheusScrapingEndpoint();
+	// Prometheus metrics endpoint
+	app.MapPrometheusScrapingEndpoint();
 
-app.Run();
+	await app.RunAsync();
+}
+finally
+{
+	await redisStrategy.DisposeAsync();
+}

@@ -28,12 +28,13 @@ using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Extensions;
 using SharpMUSH.Server.Strategy.ArangoDB;
 using SharpMUSH.Server.Strategy.Prometheus;
+using SharpMUSH.Server.Strategy.Redis;
 using ZiggyCreatures.Caching.Fusion;
 using TaskScheduler = SharpMUSH.Library.Services.TaskScheduler;
 
 namespace SharpMUSH.Server;
 
-public class Startup(ArangoConfiguration arangoConfig, string colorFile, PrometheusStrategy prometheusStrategy)
+public class Startup(ArangoConfiguration arangoConfig, string colorFile, PrometheusStrategy prometheusStrategy, RedisStrategy redisStrategy)
 {
 	// This method gets called by the runtime. Use this method to add services to the container.
 	// For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
@@ -96,25 +97,20 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, Prometh
 			return new PrometheusQueryService(httpClient, logger, prometheusUrl);
 		});
 		
-		// Configure Redis connection
-		var redisConnection = Environment.GetEnvironmentVariable("REDIS_CONNECTION") ?? "localhost:6379";
+		// Configure Redis connection using strategy pattern
 		services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(sp =>
 		{
 			var logger = sp.GetRequiredService<ILogger<StackExchange.Redis.ConnectionMultiplexer>>();
-			var configuration = StackExchange.Redis.ConfigurationOptions.Parse(redisConnection);
-			configuration.AbortOnConnectFail = false;
-			configuration.ConnectRetry = 3;
-			configuration.ConnectTimeout = 5000;
 			
 			try
 			{
-				var multiplexer = StackExchange.Redis.ConnectionMultiplexer.Connect(configuration);
-				logger.LogInformation("Connected to Redis at {RedisConnection}", redisConnection);
+				var multiplexer = redisStrategy.GetConnectionAsync().AsTask().GetAwaiter().GetResult();
+				logger.LogInformation("Connected to Redis successfully");
 				return multiplexer;
 			}
 			catch (Exception ex)
 			{
-				logger.LogWarning(ex, "Failed to connect to Redis at {RedisConnection}. Connection state will not be shared.", redisConnection);
+				logger.LogWarning(ex, "Failed to connect to Redis. Connection state will not be shared.");
 				throw;
 			}
 		});

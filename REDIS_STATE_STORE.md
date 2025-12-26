@@ -4,6 +4,8 @@
 
 SharpMUSH now uses Redis as a shared state store for connection management, solving the connection desync problem that occurred when the Server process restarted.
 
+The implementation uses a **Strategy Pattern** for Redis configuration, automatically selecting between TestContainer for local development and external Redis for production environments.
+
 ## Problem Solved
 
 **Before**: 
@@ -15,6 +17,7 @@ SharpMUSH now uses Redis as a shared state store for connection management, solv
 - Both processes share connection state via Redis
 - Server can rebuild its state from Redis on startup
 - Existing connections survive Server restarts
+- Automatic Redis container startup for local development (no configuration needed)
 
 ## Architecture
 
@@ -72,7 +75,47 @@ Hosted service that reconciles state on Server startup:
 - Creates Kafka output functions for each connection
 - Non-fatal errors (allows startup even if Redis unavailable)
 
+### 4. Redis Strategy Pattern
+Locations:
+- `SharpMUSH.Server/Strategy/Redis/`
+- `SharpMUSH.ConnectionServer/Strategy/`
+
+**Strategy Classes**:
+- **RedisStrategy** (abstract): Base class for Redis configuration strategies
+- **RedisStrategyProvider** (static): Selects appropriate strategy based on environment
+- **RedisTestContainerStrategy**: Automatically starts Redis TestContainer for local development
+- **RedisExternalStrategy**: Connects to external Redis instance (Docker Compose, Kubernetes, production)
+
+**How It Works**:
+```csharp
+// Automatically selects strategy based on REDIS_CONNECTION environment variable
+var redisStrategy = RedisStrategyProvider.GetStrategy();
+await redisStrategy.InitializeAsync();
+var connection = await redisStrategy.GetConnectionAsync();
+```
+
+**Strategy Selection**:
+- If `REDIS_CONNECTION` environment variable is **not set**: Uses `RedisTestContainerStrategy`
+  - Automatically starts Redis 7 Alpine container
+  - Random port mapping to avoid conflicts
+  - No configuration needed for local development
+- If `REDIS_CONNECTION` environment variable is **set**: Uses `RedisExternalStrategy`
+  - Connects to specified Redis instance
+  - Used in Docker Compose, Kubernetes, production
+
 ## Configuration
+
+### Local Development (Automatic)
+**No configuration needed!** When `REDIS_CONNECTION` is not set:
+- RedisTestContainerStrategy automatically starts a Redis container
+- Random port mapping (e.g., localhost:32768)
+- AOF persistence enabled
+- Container lifecycle managed by strategy
+
+```bash
+# Just run the server - Redis starts automatically
+dotnet run --project SharpMUSH.Server
+```
 
 ### Docker Compose
 Redis container added to `docker-compose.yml`:
