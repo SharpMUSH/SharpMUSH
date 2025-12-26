@@ -7,7 +7,10 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.Services;
 
-public class ConnectionService(IPublisher publisher, ITelemetryService? telemetryService = null) : IConnectionService
+public class ConnectionService(
+	IPublisher publisher, 
+	IConnectionStateStore? stateStore = null,
+	ITelemetryService? telemetryService = null) : IConnectionService
 {
 	private readonly ConcurrentDictionary<long, IConnectionService.ConnectionData> _sessionState = [];
 	private readonly List<Action<(long handle, DBRef? Ref, IConnectionService.ConnectionState OldState, IConnectionService.ConnectionState NewState)>> _handlers = [];
@@ -27,6 +30,12 @@ public class ConnectionService(IPublisher publisher, ITelemetryService? telemetr
 			IConnectionService.ConnectionState.Disconnected));
 
 		_sessionState.Remove(handle, out _);
+		
+		// Remove from Redis if available
+		if (stateStore != null)
+		{
+			await stateStore.RemoveConnectionAsync(handle);
+		}
 		
 		// Record disconnection event
 		telemetryService?.RecordConnectionEvent("disconnected");
@@ -58,6 +67,12 @@ public class ConnectionService(IPublisher publisher, ITelemetryService? telemetr
 			_ => throw new InvalidDataException("Tried to add a new handle during Login."),
 			(_, y) => y with { Ref = player, State = IConnectionService.ConnectionState.LoggedIn });
 
+		// Update Redis if available
+		if (stateStore != null)
+		{
+			await stateStore.SetPlayerBindingAsync(handle, player);
+		}
+
 		foreach (var handler in _handlers)
 		{
 			handler(new ValueTuple<long, DBRef?, IConnectionService.ConnectionState, IConnectionService.ConnectionState>(handle, player, get.State, IConnectionService.ConnectionState.LoggedIn));
@@ -83,6 +98,22 @@ public class ConnectionService(IPublisher publisher, ITelemetryService? telemetr
 				y.Metadata.AddOrUpdate(key, value, (_, _) => value);
 				return y;
 			});
+
+		// Update Redis if available (fire and forget for performance)
+		if (stateStore != null)
+		{
+			_ = Task.Run(async () =>
+			{
+				try
+				{
+					await stateStore.UpdateMetadataAsync(handle, key, value);
+				}
+				catch
+				{
+					// Ignore errors in background update
+				}
+			});
+		}
 	}
 
 	public async ValueTask Register(long handle, string ipaddr, string host,
@@ -90,16 +121,36 @@ public class ConnectionService(IPublisher publisher, ITelemetryService? telemetr
 		Func<byte[], ValueTask> outputFunction, Func<byte[], ValueTask> promptOutputFunction, Func<Encoding> encoding,
 		ConcurrentDictionary<string, string>? metaData = null)
 	{
+		var metadata = metaData ?? new ConcurrentDictionary<string, string>(new Dictionary<string, string>
+		{
+			{"ConnectionStartTime", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() },
+			{"LastConnectionSignal", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() },
+			{"InternetProtocolAddress", ipaddr},
+			{"HostName", host},
+			{"ConnectionType", connectionType}
+		});
+
 		_sessionState.AddOrUpdate(handle,
-			_ => new IConnectionService.ConnectionData(handle, null, IConnectionService.ConnectionState.Connected, outputFunction, promptOutputFunction, encoding, metaData ??
-				new ConcurrentDictionary<string, string>(new Dictionary<string, string> {
-					{"ConnectionStartTime", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() },
-					{"LastConnectionSignal", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() },
-					{"InternetProtocolAddress", ipaddr},
-					{"HostName", host},
-					{"ConnectionType", connectionType}
-				})),
+			_ => new IConnectionService.ConnectionData(handle, null, IConnectionService.ConnectionState.Connected, 
+				outputFunction, promptOutputFunction, encoding, metadata),
 			(_, _) => throw new InvalidDataException("Tried to replace an existing handle during Register."));
+
+		// Store in Redis if available
+		if (stateStore != null)
+		{
+			await stateStore.SetConnectionAsync(handle, new ConnectionStateData
+			{
+				Handle = handle,
+				PlayerRef = null,
+				State = "Connected",
+				IpAddress = ipaddr,
+				Hostname = host,
+				ConnectionType = connectionType,
+				ConnectedAt = DateTimeOffset.UtcNow,
+				LastSeen = DateTimeOffset.UtcNow,
+				Metadata = new Dictionary<string, string>(metadata)
+			});
+		}
 
 		foreach (var handler in _handlers)
 		{
@@ -111,6 +162,48 @@ public class ConnectionService(IPublisher publisher, ITelemetryService? telemetr
 		
 		// Record connection event
 		telemetryService?.RecordConnectionEvent("connected");
+		UpdateConnectionMetrics();
+	}
+	
+	/// <summary>
+	/// Reconcile state from Redis on startup.
+	/// Should be called during application initialization.
+	/// </summary>
+	public async Task ReconcileFromStateStoreAsync(
+		Func<long, Func<byte[], ValueTask>> createOutputFunction,
+		Func<long, Func<byte[], ValueTask>> createPromptOutputFunction,
+		Func<Encoding> encodingFunction)
+	{
+		if (stateStore == null) return;
+
+		var connections = await stateStore.GetAllConnectionsAsync();
+		
+		foreach (var (handle, data) in connections)
+		{
+			// Skip if already in memory (shouldn't happen on startup)
+			if (_sessionState.ContainsKey(handle)) continue;
+
+			// Reconstruct ConnectionData from Redis
+			var state = data.State switch
+			{
+				"LoggedIn" => IConnectionService.ConnectionState.LoggedIn,
+				"Connected" => IConnectionService.ConnectionState.Connected,
+				_ => IConnectionService.ConnectionState.Connected
+			};
+
+			var metadata = new ConcurrentDictionary<string, string>(data.Metadata);
+
+			_sessionState.TryAdd(handle, new IConnectionService.ConnectionData(
+				handle,
+				data.PlayerRef,
+				state,
+				createOutputFunction(handle),
+				createPromptOutputFunction(handle),
+				encodingFunction,
+				metadata
+			));
+		}
+
 		UpdateConnectionMetrics();
 	}
 	

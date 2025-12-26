@@ -5,11 +5,12 @@ using OpenTelemetry.Resources;
 using SharpMUSH.ConnectionServer.Consumers;
 using SharpMUSH.ConnectionServer.ProtocolHandlers;
 using SharpMUSH.ConnectionServer.Services;
-using SharpMUSH.Messaging.Extensions;
-using Testcontainers.Redpanda;
-using Serilog;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Messaging.Extensions;
+using StackExchange.Redis;
+using Testcontainers.Redpanda;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -35,6 +36,19 @@ if (kafkaHost == null)
 	kafkaHost = "localhost";
 }
 
+// Configure Redis connection
+var redisConnection = Environment.GetEnvironmentVariable("REDIS_CONNECTION") ?? "localhost:6379";
+builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+{
+	var configuration = ConfigurationOptions.Parse(redisConnection);
+	configuration.AbortOnConnectFail = false;
+	configuration.ConnectRetry = 3;
+	configuration.ConnectTimeout = 5000;
+	return ConnectionMultiplexer.Connect(configuration);
+});
+
+// Add Redis-backed connection state store
+builder.Services.AddSingleton<IConnectionStateStore, RedisConnectionStateStore>();
 
 // Add ConnectionService
 builder.Services.AddSingleton<IConnectionServerService, ConnectionServerService>();

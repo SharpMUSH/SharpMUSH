@@ -95,6 +95,33 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, Prometh
 			var prometheusUrl = prometheusStrategy.GetPrometheusUrl();
 			return new PrometheusQueryService(httpClient, logger, prometheusUrl);
 		});
+		
+		// Configure Redis connection
+		var redisConnection = Environment.GetEnvironmentVariable("REDIS_CONNECTION") ?? "localhost:6379";
+		services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(sp =>
+		{
+			var logger = sp.GetRequiredService<ILogger<StackExchange.Redis.ConnectionMultiplexer>>();
+			var configuration = StackExchange.Redis.ConfigurationOptions.Parse(redisConnection);
+			configuration.AbortOnConnectFail = false;
+			configuration.ConnectRetry = 3;
+			configuration.ConnectTimeout = 5000;
+			
+			try
+			{
+				var multiplexer = StackExchange.Redis.ConnectionMultiplexer.Connect(configuration);
+				logger.LogInformation("Connected to Redis at {RedisConnection}", redisConnection);
+				return multiplexer;
+			}
+			catch (Exception ex)
+			{
+				logger.LogWarning(ex, "Failed to connect to Redis at {RedisConnection}. Connection state will not be shared.", redisConnection);
+				throw;
+			}
+		});
+		
+		// Add Redis-backed connection state store
+		services.AddSingleton<IConnectionStateStore, RedisConnectionStateStore>();
+		
 		services.AddSingleton<INotifyService, NotifyService>();
 		services.AddSingleton<ILocateService, LocateService>();
 		services.AddSingleton<IMoveService, MoveService>();
@@ -171,6 +198,7 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, Prometh
 		services.AddControllers();
 		services.AddQuartzHostedService();
 		services.AddHostedService<StartupHandler>();
+		services.AddHostedService<Services.ConnectionReconciliationService>();
 		services.AddHostedService<Services.ConnectionLoggingService>();
 		services.AddHostedService<Services.HealthMonitoringService>();
 		services.AddHostedService<Services.WarningCheckService>();
