@@ -3,6 +3,7 @@ using TUnit.Core;
 using SharpMUSH.Client.Pages;
 using SharpMUSH.Client.Services;
 using Microsoft.Extensions.DependencyInjection;
+using MudBlazor.Services;
 using NSubstitute;
 using System.Net.WebSockets;
 
@@ -11,18 +12,21 @@ namespace SharpMUSH.Tests.Client.Components;
 /// <summary>
 /// Tests for the WebSocketTest component to verify WebSocket client functionality.
 /// </summary>
-public class WebSocketTestTests : MudBlazorTestContext
+public class WebSocketTestTests
 {
 	[Test]
 	public async Task WebSocketTest_InitialState_ShowsDisconnected()
 	{
 		// Arrange
+		using var ctx = new Bunit.TestContext();
+		ctx.Services.AddMudServices();
+		
 		var mockWebSocketClient = Substitute.For<IWebSocketClientService>();
 		mockWebSocketClient.IsConnected.Returns(false);
-		Services.AddSingleton(mockWebSocketClient);
+		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
-		var cut = RenderComponent<WebSocketTest>();
+		var cut = ctx.RenderComponent<WebSocketTest>();
 
 		// Assert
 		var chip = cut.Find("div.mud-chip");
@@ -33,11 +37,14 @@ public class WebSocketTestTests : MudBlazorTestContext
 	public async Task WebSocketTest_RendersPageTitle()
 	{
 		// Arrange
+		using var ctx = new Bunit.TestContext();
+		ctx.Services.AddMudServices();
+		
 		var mockWebSocketClient = Substitute.For<IWebSocketClientService>();
-		Services.AddSingleton(mockWebSocketClient);
+		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
-		var cut = RenderComponent<WebSocketTest>();
+		var cut = ctx.RenderComponent<WebSocketTest>();
 
 		// Assert
 		var heading = cut.Find("h4");
@@ -48,11 +55,14 @@ public class WebSocketTestTests : MudBlazorTestContext
 	public async Task WebSocketTest_HasServerUriField()
 	{
 		// Arrange
+		using var ctx = new Bunit.TestContext();
+		ctx.Services.AddMudServices();
+		
 		var mockWebSocketClient = Substitute.For<IWebSocketClientService>();
-		Services.AddSingleton(mockWebSocketClient);
+		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
-		var cut = RenderComponent<WebSocketTest>();
+		var cut = ctx.RenderComponent<WebSocketTest>();
 
 		// Assert
 		var serverUriField = cut.Find("input[placeholder='ws://localhost:4202/ws']");
@@ -63,11 +73,14 @@ public class WebSocketTestTests : MudBlazorTestContext
 	public async Task WebSocketTest_HasConnectButton()
 	{
 		// Arrange
+		using var ctx = new Bunit.TestContext();
+		ctx.Services.AddMudServices();
+		
 		var mockWebSocketClient = Substitute.For<IWebSocketClientService>();
-		Services.AddSingleton(mockWebSocketClient);
+		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
-		var cut = RenderComponent<WebSocketTest>();
+		var cut = ctx.RenderComponent<WebSocketTest>();
 
 		// Assert
 		var buttons = cut.FindAll("button");
@@ -79,11 +92,14 @@ public class WebSocketTestTests : MudBlazorTestContext
 	public async Task WebSocketTest_HasDisconnectButton()
 	{
 		// Arrange
+		using var ctx = new Bunit.TestContext();
+		ctx.Services.AddMudServices();
+		
 		var mockWebSocketClient = Substitute.For<IWebSocketClientService>();
-		Services.AddSingleton(mockWebSocketClient);
+		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
-		var cut = RenderComponent<WebSocketTest>();
+		var cut = ctx.RenderComponent<WebSocketTest>();
 
 		// Assert
 		var buttons = cut.FindAll("button");
@@ -95,12 +111,15 @@ public class WebSocketTestTests : MudBlazorTestContext
 	public async Task WebSocketTest_DisconnectButton_DisabledWhenDisconnected()
 	{
 		// Arrange
+		using var ctx = new Bunit.TestContext();
+		ctx.Services.AddMudServices();
+		
 		var mockWebSocketClient = Substitute.For<IWebSocketClientService>();
 		mockWebSocketClient.IsConnected.Returns(false);
-		Services.AddSingleton(mockWebSocketClient);
+		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
-		var cut = RenderComponent<WebSocketTest>();
+		var cut = ctx.RenderComponent<WebSocketTest>();
 
 		// Assert
 		var buttons = cut.FindAll("button");
@@ -112,11 +131,14 @@ public class WebSocketTestTests : MudBlazorTestContext
 	public async Task WebSocketTest_HasMessageInputField()
 	{
 		// Arrange
+		using var ctx = new Bunit.TestContext();
+		ctx.Services.AddMudServices();
+		
 		var mockWebSocketClient = Substitute.For<IWebSocketClientService>();
-		Services.AddSingleton(mockWebSocketClient);
+		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
-		var cut = RenderComponent<WebSocketTest>();
+		var cut = ctx.RenderComponent<WebSocketTest>();
 
 		// Assert
 		var inputs = cut.FindAll("input");
@@ -128,11 +150,14 @@ public class WebSocketTestTests : MudBlazorTestContext
 	public async Task WebSocketTest_HasSendMessageButton()
 	{
 		// Arrange
+		using var ctx = new Bunit.TestContext();
+		ctx.Services.AddMudServices();
+		
 		var mockWebSocketClient = Substitute.For<IWebSocketClientService>();
-		Services.AddSingleton(mockWebSocketClient);
+		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
-		var cut = RenderComponent<WebSocketTest>();
+		var cut = ctx.RenderComponent<WebSocketTest>();
 
 		// Assert
 		var buttons = cut.FindAll("button");
@@ -144,12 +169,15 @@ public class WebSocketTestTests : MudBlazorTestContext
 	public async Task WebSocketTest_SendButton_DisabledWhenDisconnected()
 	{
 		// Arrange
+		using var ctx = new Bunit.TestContext();
+		ctx.Services.AddMudServices();
+		
 		var mockWebSocketClient = Substitute.For<IWebSocketClientService>();
 		mockWebSocketClient.IsConnected.Returns(false);
-		Services.AddSingleton(mockWebSocketClient);
+		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
-		var cut = RenderComponent<WebSocketTest>();
+		var cut = ctx.RenderComponent<WebSocketTest>();
 
 		// Assert
 		var buttons = cut.FindAll("button");
@@ -161,11 +189,14 @@ public class WebSocketTestTests : MudBlazorTestContext
 	public async Task WebSocketTest_HasMessagesSection()
 	{
 		// Arrange
+		using var ctx = new Bunit.TestContext();
+		ctx.Services.AddMudServices();
+		
 		var mockWebSocketClient = Substitute.For<IWebSocketClientService>();
-		Services.AddSingleton(mockWebSocketClient);
+		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
-		var cut = RenderComponent<WebSocketTest>();
+		var cut = ctx.RenderComponent<WebSocketTest>();
 
 		// Assert
 		var messagesHeading = cut.FindAll("h6").FirstOrDefault(h => h.TextContent.Contains("Messages"));
@@ -176,11 +207,14 @@ public class WebSocketTestTests : MudBlazorTestContext
 	public async Task WebSocketTest_DefaultServerUri_IsCorrect()
 	{
 		// Arrange
+		using var ctx = new Bunit.TestContext();
+		ctx.Services.AddMudServices();
+		
 		var mockWebSocketClient = Substitute.For<IWebSocketClientService>();
-		Services.AddSingleton(mockWebSocketClient);
+		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
-		var cut = RenderComponent<WebSocketTest>();
+		var cut = ctx.RenderComponent<WebSocketTest>();
 
 		// Assert
 		var serverUriInput = cut.Find("input[placeholder='ws://localhost:4202/ws']");
@@ -191,11 +225,14 @@ public class WebSocketTestTests : MudBlazorTestContext
 	public async Task WebSocketTest_ConnectButton_CallsConnectAsync()
 	{
 		// Arrange
+		using var ctx = new Bunit.TestContext();
+		ctx.Services.AddMudServices();
+		
 		var mockWebSocketClient = Substitute.For<IWebSocketClientService>();
 		mockWebSocketClient.IsConnected.Returns(false);
-		Services.AddSingleton(mockWebSocketClient);
+		ctx.Services.AddSingleton(mockWebSocketClient);
 
-		var cut = RenderComponent<WebSocketTest>();
+		var cut = ctx.RenderComponent<WebSocketTest>();
 		var buttons = cut.FindAll("button");
 		var connectButton = buttons.FirstOrDefault(b => b.TextContent.Contains("Connect") && !b.TextContent.Contains("Disconnect"));
 
@@ -210,11 +247,14 @@ public class WebSocketTestTests : MudBlazorTestContext
 	public async Task WebSocketTest_Dispose_UnsubscribesFromEvents()
 	{
 		// Arrange
+		using var ctx = new Bunit.TestContext();
+		ctx.Services.AddMudServices();
+		
 		var mockWebSocketClient = Substitute.For<IWebSocketClientService>();
-		Services.AddSingleton(mockWebSocketClient);
+		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
-		var cut = RenderComponent<WebSocketTest>();
+		var cut = ctx.RenderComponent<WebSocketTest>();
 		cut.Dispose();
 
 		// Assert - Component disposed successfully without errors
