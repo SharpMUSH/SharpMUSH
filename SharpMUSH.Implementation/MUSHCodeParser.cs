@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OneOf.Types;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Implementation.Services;
 using SharpMUSH.Implementation.Visitors;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -34,6 +35,32 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	private readonly ICommandDiscoveryService _commandDiscoveryService = ServiceProvider.GetRequiredService<ICommandDiscoveryService>();
 	private readonly IAttributeService _attributeService = ServiceProvider.GetRequiredService<IAttributeService>();
 	private readonly IHookService _hookService = ServiceProvider.GetRequiredService<IHookService>();
+	
+	// Command trie for efficient prefix-based command lookup
+	private readonly CommandTrie _commandTrie = BuildCommandTrie(CommandLibrary);
+	
+	/// <summary>
+	/// Gets the command trie for efficient prefix-based command lookups.
+	/// </summary>
+	public CommandTrie CommandTrie => _commandTrie;
+	
+	/// <summary>
+	/// Builds a trie from the command library for efficient prefix matching.
+	/// </summary>
+	private static CommandTrie BuildCommandTrie(LibraryService<string, CommandDefinition> commandLibrary)
+	{
+		var trie = new CommandTrie();
+		
+		foreach (var (commandName, commandInfo) in commandLibrary)
+		{
+			if (commandInfo.IsSystem) // Only add system commands to trie
+			{
+				trie.Add(commandName, commandInfo.LibraryInformation);
+			}
+		}
+		
+		return trie;
+	}
 	
 	public ParserState CurrentState => State.Peek();
 

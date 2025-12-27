@@ -428,25 +428,21 @@ public class SharpMUSHParserVisitor(
 			// Who would rely on a room alias being & anyway?
 			// Step 5: Check @COMMAND in command library
 
-			// TODO: Optimize
-			// TODO: Get the Switches and send them along as a list of items!
+			// Use CommandTrie for efficient prefix matching instead of LINQ
 			var slashIndex = command.AsSpan().IndexOf('/');
 			var rootCommand =
 				command[..(slashIndex > -1 ? slashIndex : command.Length)];
 			var switchString = command[(slashIndex > -1 ? slashIndex : command.Length)..];
 			var switches = switchString.Split('/').Where(s => !string.IsNullOrWhiteSpace(s));
 
-			var broaderSearch = parser.CommandLibrary.Keys
-				.Where(x => x.StartsWith(rootCommand, StringComparison.CurrentCultureIgnoreCase))
-				.OrderBy(x => x.Length)
-				.FirstOrDefault();
+			var matchResult = rootCommand.Equals("HUH_COMMAND", StringComparison.CurrentCultureIgnoreCase)
+				? null
+				: (parser as MUSHCodeParser)?.CommandTrie.FindShortestMatch(rootCommand);
 			
-			if (broaderSearch is not null 
-			    && parser.CommandLibrary.TryGetValue(broaderSearch, out var libraryCommandDefinition)
-			    && !rootCommand.Equals("HUH_COMMAND", StringComparison.CurrentCultureIgnoreCase))
+			if (matchResult != null)
 			{
 				return await HandleInternalCommandPattern(parser, src, context, rootCommand, switches,
-					libraryCommandDefinition.LibraryInformation);
+					matchResult.Value.Definition);
 			}
 
 			// Step 6: Check @attribute setting
