@@ -167,18 +167,49 @@ public class RedisConnectionStateStore : IConnectionStateStore, IAsyncDisposable
 	{
 		try
 		{
-			var data = await GetConnectionAsync(handle, ct);
-			if (data == null)
+			var connectionKey = GetConnectionKey(handle);
+			
+			// Use optimistic locking with transactions to handle concurrent updates
+			var retries = 0;
+			const int maxRetries = 10;
+			
+			while (retries < maxRetries)
 			{
-				_logger.LogWarning("Cannot update metadata for non-existent connection {Handle}", handle);
-				return;
+				// Watch the key for changes
+				var data = await GetConnectionAsync(handle, ct);
+				if (data == null)
+				{
+					_logger.LogWarning("Cannot update metadata for non-existent connection {Handle}", handle);
+					return;
+				}
+
+				// Start transaction
+				var tran = _db.CreateTransaction();
+				
+				// Add condition - key must not have changed
+				tran.AddCondition(Condition.StringEqual(connectionKey, JsonSerializer.Serialize(data)));
+				
+				// Update metadata
+				data.Metadata[key] = value;
+				data.LastSeen = DateTimeOffset.UtcNow;
+				
+				// Queue the update
+				var json = JsonSerializer.Serialize(data);
+				_ = tran.StringSetAsync(connectionKey, json, _defaultExpiry);
+				
+				// Execute transaction
+				if (await tran.ExecuteAsync())
+				{
+					_logger.LogDebug("Updated metadata for handle {Handle}: {Key}={Value}", handle, key, value);
+					return;
+				}
+				
+				// Transaction failed due to concurrent modification, retry
+				retries++;
+				await Task.Delay(10 * retries, ct); // Exponential backoff
 			}
-
-			data.Metadata[key] = value;
-			data.LastSeen = DateTimeOffset.UtcNow;
-
-			await SetConnectionAsync(handle, data, ct);
-			_logger.LogDebug("Updated metadata for handle {Handle}: {Key}={Value}", handle, key, value);
+			
+			_logger.LogWarning("Failed to update metadata after {Retries} retries for handle {Handle}", maxRetries, handle);
 		}
 		catch (Exception ex)
 		{
