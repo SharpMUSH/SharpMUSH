@@ -196,6 +196,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			// Player #1 already exists (from database migration), reuse it
 			tempGodDbRef = new DBRef(1);
 			_dbrefMapping[1] = tempGodDbRef;
+			playersConverted++; // Count reused object in totals
 			_logger.LogInformation("Reusing existing God player #1 from database migration");
 			
 			// Update the name and password from PennMUSH if available
@@ -259,6 +260,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			// Room #0 already exists (from database migration), reuse it
 			tempRoom0DbRef = new DBRef(0);
 			_dbrefMapping[0] = tempRoom0DbRef;
+			roomsConverted++; // Count reused object in totals
 			_logger.LogInformation("Reusing existing Limbo room #0 from database migration");
 			
 			// Update the name from PennMUSH if available
@@ -303,6 +305,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		{
 			// Master Room #2 already exists (from database migration), reuse it
 			_dbrefMapping[2] = new DBRef(2);
+			roomsConverted++; // Count reused object in totals
 			_logger.LogInformation("Reusing existing Master Room #2 from database migration");
 			
 			// Update the name from PennMUSH if available
@@ -315,8 +318,22 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		}
 		else
 		{
-			// No existing Master Room, it will be created normally in the loop below
-			_logger.LogDebug("Master Room #2 does not exist, will be created if present in PennMUSH database");
+			// No existing Master Room, create it if present in PennMUSH database
+			var room2Penn = pennDatabase.GetObject(2);
+			if (room2Penn?.Type == PennMUSHObjectType.Room)
+			{
+				var room2DbRef = await _database.CreateRoomAsync(
+					room2Penn.Name,
+					godPlayer,
+					cancellationToken);
+				_dbrefMapping[2] = room2DbRef;
+				roomsConverted++;
+				_logger.LogInformation("Created Master Room #{PennDBRef} -> {SharpDBRef}: {Name}", 2, room2DbRef, room2Penn.Name);
+			}
+			else
+			{
+				_logger.LogDebug("Master Room #2 does not exist in PennMUSH database or is not a room");
+			}
 		}
 
 		// Now create all other objects
