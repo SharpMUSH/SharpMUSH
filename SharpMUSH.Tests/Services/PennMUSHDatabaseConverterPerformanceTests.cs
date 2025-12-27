@@ -27,6 +27,7 @@ public class PennMUSHDatabaseConverterPerformanceTests(PennMUSHConverterWebAppFa
 	/// Runs 10 times to get consistent performance measurements.
 	/// </summary>
 	[Test]
+	[Explicit]
 	[Repeat(10)]
 	[Category("Performance")]
 	[Category("LongRunning")]
@@ -95,6 +96,7 @@ public class PennMUSHDatabaseConverterPerformanceTests(PennMUSHConverterWebAppFa
 	/// Useful for consistent benchmarking across test runs.
 	/// </summary>
 	[Test]
+	[Explicit]
 	[Repeat(10)]
 	[Category("Performance")]
 	public async ValueTask FixedSizeDatabaseConversionPerformance()
@@ -145,6 +147,7 @@ public class PennMUSHDatabaseConverterPerformanceTests(PennMUSHConverterWebAppFa
 	/// Measures performance across different object counts.
 	/// </summary>
 	[Test]
+	[Explicit]
 	[Category("Performance")]
 	[Category("LongRunning")]
 	public async ValueTask ScalabilityTest()
