@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Text;
 using MassTransit;
+using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messages;
 
 namespace SharpMUSH.ConnectionServer.Services;
@@ -8,7 +9,10 @@ namespace SharpMUSH.ConnectionServer.Services;
 /// <summary>
 /// Manages active connections in the ConnectionServer
 /// </summary>
-public class ConnectionServerService(ILogger<ConnectionServerService> logger, IBus publishEndpoint) : IConnectionServerService
+public class ConnectionServerService(
+	ILogger<ConnectionServerService> logger, 
+	IBus publishEndpoint,
+	IConnectionStateStore? stateStore = null) : IConnectionServerService
 {
 	private readonly ConcurrentDictionary<long, ConnectionData> _sessionState = [];
 
@@ -36,6 +40,30 @@ public class ConnectionServerService(ILogger<ConnectionServerService> logger, IB
 			_sessionState.AddOrUpdate(handle, data, (_, _) =>
 				throw new InvalidOperationException("Handle already registered"));
 
+			// Store in Redis if available
+			if (stateStore != null)
+			{
+				await stateStore.SetConnectionAsync(handle, new ConnectionStateData
+				{
+					Handle = handle,
+					PlayerRef = null,
+					State = "Connected",
+					IpAddress = ipAddress,
+					Hostname = hostname,
+					ConnectionType = connectionType,
+					ConnectedAt = DateTimeOffset.UtcNow,
+					LastSeen = DateTimeOffset.UtcNow,
+					Metadata = new Dictionary<string, string>
+					{
+						{ "ConnectionStartTime", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() },
+						{ "LastConnectionSignal", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() },
+						{ "InternetProtocolAddress", ipAddress },
+						{ "HostName", hostname },
+						{ "ConnectionType", connectionType }
+					}
+				});
+			}
+
 			// Publish connection established message to MainProcess
 			await publishEndpoint.Publish(new ConnectionEstablishedMessage(
 				handle,
@@ -56,6 +84,12 @@ public class ConnectionServerService(ILogger<ConnectionServerService> logger, IB
 	{
 		if (_sessionState.TryRemove(handle, out var data))
 		{
+			// Remove from Redis if available
+			if (stateStore != null)
+			{
+				await stateStore.RemoveConnectionAsync(handle);
+			}
+
 			// Publish connection closed message to MainProcess
 			await publishEndpoint.Publish(new ConnectionClosedMessage(
 				handle,
