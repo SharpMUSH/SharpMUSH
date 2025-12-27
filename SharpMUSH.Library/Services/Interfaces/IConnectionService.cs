@@ -76,4 +76,13 @@ public interface IConnectionService
 	/// </summary>
 	/// <param name="handler">A handling function.</param>
 	void ListenState(Action<(long, DBRef?, ConnectionState, ConnectionState)> handler);
+
+	/// <summary>
+	/// Reconcile state from Redis on startup.
+	/// Should be called during application initialization.
+	/// </summary>
+	Task ReconcileFromStateStoreAsync(
+		Func<long, Func<byte[], ValueTask>> createOutputFunction,
+		Func<long, Func<byte[], ValueTask>> createPromptOutputFunction,
+		Func<Encoding> encodingFunction);
 }
