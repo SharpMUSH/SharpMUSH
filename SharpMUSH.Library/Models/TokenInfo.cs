@@ -42,6 +42,7 @@ public record TokenInfo
 
 	/// <summary>
 	/// Gets the length of the token.
+	/// Note: EndIndex is inclusive in ANTLR4 token positions, so length = EndIndex - StartIndex + 1
 	/// </summary>
 	public int Length => EndIndex - StartIndex + 1;
 }

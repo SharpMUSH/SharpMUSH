@@ -541,10 +541,10 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 					break;
 			}
 		}
-		catch
+		catch (RecognitionException)
 		{
 			// Errors are collected by the error listener
-			// We don't need to do anything special with exceptions here
+			// RecognitionException is expected during error recovery
 		}
 		
 		return errorListener.Errors;

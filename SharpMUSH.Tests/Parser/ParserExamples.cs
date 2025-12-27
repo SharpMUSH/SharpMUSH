@@ -66,7 +66,7 @@ public class ParserExamples
 		{
 			var displayType = token.Type.PadRight(15);
 			var displayText = token.Text.Length > 20 
-				? token.Text.Substring(0, 17) + "..." 
+				? token.Text[..17] + "..." 
 				: token.Text;
 			
 			Console.WriteLine($"  [{displayType}] '{displayText}' at position {token.StartIndex}-{token.EndIndex}");

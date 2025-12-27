@@ -84,8 +84,10 @@ public class ParserErrorListener : BaseErrorListener
 
 			return expectedTokens.Count > 0 ? expectedTokens : null;
 		}
-		catch
+		catch (Exception ex) when (ex is NullReferenceException or InvalidOperationException)
 		{
+			// Expected token extraction can fail if vocabulary is incomplete
+			// This is not critical - we just won't have expected token suggestions
 			return null;
 		}
 	}
