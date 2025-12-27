@@ -1,5 +1,6 @@
-using Antlr4.Runtime;
+	using Antlr4.Runtime;
 using SharpMUSH.Library.Models;
+using LspRange = SharpMUSH.Library.Models.Range;
 
 namespace SharpMUSH.Implementation;
 
@@ -46,12 +47,35 @@ public class ParserErrorListener : BaseErrorListener
 		// Create a more informative error message
 		var enhancedMessage = EnhanceErrorMessage(msg, offendingSymbol, expectedTokens);
 
+		// Determine the error range
+		LspRange? errorRange = null;
+		if (offendingSymbol is not null)
+		{
+			// Range spans the offending token
+			errorRange = new LspRange
+			{
+				Start = new Position(line - 1, charPositionInLine),
+				End = new Position(line - 1, charPositionInLine + offendingSymbol.Text.Length)
+			};
+		}
+		else if (e?.OffendingToken is not null)
+		{
+			// Use exception's offending token if available
+			var token = e.OffendingToken;
+			errorRange = new LspRange
+			{
+				Start = new Position(token.Line - 1, token.Column),
+				End = new Position(token.Line - 1, token.Column + token.Text.Length)
+			};
+		}
+
 		var error = new ParseError
 		{
 			Line = line,
 			Column = charPositionInLine,
+			Range = errorRange,
 			Message = enhancedMessage,
-			OffendingToken = offendingSymbol?.Text,
+			OffendingToken = offendingSymbol?.Text ?? e?.OffendingToken?.Text,
 			ExpectedTokens = expectedTokens,
 			InputText = _inputText
 		};

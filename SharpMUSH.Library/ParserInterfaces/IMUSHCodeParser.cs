@@ -36,12 +36,39 @@ public interface IMUSHCodeParser
 	
 	/// <summary>
 	/// Parses the input text and returns any errors encountered.
-	/// Uses two-stage parsing (SLL first, then LL) for better error messages.
+	/// Uses the configured prediction mode (SLL or LL) for parsing.
 	/// </summary>
 	/// <param name="text">The text to parse.</param>
 	/// <param name="parseType">The type of parsing to perform (Function, Command, etc.).</param>
 	/// <returns>A list of parse errors, or an empty list if parsing succeeded.</returns>
 	IReadOnlyList<ParseError> ValidateAndGetErrors(MString text, ParseType parseType = ParseType.Function);
+	
+	/// <summary>
+	/// Parses the input text and returns diagnostics (LSP-compatible errors/warnings).
+	/// This is the LSP-compatible version of ValidateAndGetErrors with error ranges.
+	/// </summary>
+	/// <param name="text">The text to parse.</param>
+	/// <param name="parseType">The type of parsing to perform (Function, Command, etc.).</param>
+	/// <returns>A list of diagnostics, or an empty list if parsing succeeded.</returns>
+	IReadOnlyList<Diagnostic> GetDiagnostics(MString text, ParseType parseType = ParseType.Function);
+	
+	/// <summary>
+	/// Performs semantic analysis on the input text and returns semantic tokens.
+	/// Semantic tokens provide information about the meaning of code elements beyond syntax.
+	/// </summary>
+	/// <param name="text">The text to analyze.</param>
+	/// <param name="parseType">The type of parsing to perform (Function, Command, etc.).</param>
+	/// <returns>A list of semantic tokens with type and modifier information.</returns>
+	IReadOnlyList<SemanticToken> GetSemanticTokens(MString text, ParseType parseType = ParseType.Function);
+	
+	/// <summary>
+	/// Performs semantic analysis and returns tokens in LSP delta-encoded format.
+	/// This is optimized for transmission over the network in LSP scenarios.
+	/// </summary>
+	/// <param name="text">The text to analyze.</param>
+	/// <param name="parseType">The type of parsing to perform (Function, Command, etc.).</param>
+	/// <returns>Semantic tokens data in LSP delta-encoded format.</returns>
+	SemanticTokensData GetSemanticTokensData(MString text, ParseType parseType = ParseType.Function);
 }
 
 /// <summary>

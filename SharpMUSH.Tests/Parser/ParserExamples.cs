@@ -48,7 +48,8 @@ public class ParserExamples
 			}
 		}
 
-		await Assert.That(true).IsTrue();
+		// Just verify we got through the test
+		await Assert.That(testCases.Length).IsGreaterThan(0);
 	}
 
 	[Test]
@@ -74,7 +75,7 @@ public class ParserExamples
 
 		Console.WriteLine($"\nTotal tokens: {tokens.Count}");
 		
-		await Assert.That(true).IsTrue();
+		await Assert.That(tokens.Count).IsGreaterThan(0);
 	}
 
 	[Test]
@@ -100,6 +101,6 @@ public class ParserExamples
 			Console.WriteLine($"  Token types: {string.Join(", ", tokenTypes)}\n");
 		}
 
-		await Assert.That(true).IsTrue();
+		await Assert.That(examples.Count).IsGreaterThan(0);
 	}
 }
