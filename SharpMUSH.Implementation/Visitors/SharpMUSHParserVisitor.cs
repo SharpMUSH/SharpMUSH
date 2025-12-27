@@ -354,18 +354,22 @@ public class SharpMUSHParserVisitor(
 			}
 
 			// Step 1: Check if it's a SOCKET command
-			// TODO: Optimize
+			// Use AlternativeLookup for zero-allocation case-insensitive lookup
 			var socketCommandPattern = parser.CommandLibrary.Where(x
 				=> parser.CurrentState.Handle is not null
 				   && x.Value.IsSystem
 				   && x.Key.Equals(command, StringComparison.CurrentCultureIgnoreCase)
 				   && x.Value.LibraryInformation.Attribute.Behavior.HasFlag(CommandBehavior.SOCKET)).ToList();
 
-			if (socketCommandPattern.Any() &&
-			    parser.CommandLibrary.TryGetValue(command.ToUpper(), out var librarySocketCommandDefinition))
+			if (socketCommandPattern.Any())
 			{
-				return await HandleSocketCommandPattern(parser, src, context, command, socketCommandPattern,
-					librarySocketCommandDefinition.LibraryInformation);
+				// Use AlternativeLookup to avoid string allocation from command.ToUpper()
+				var lookup = parser.CommandLibrary.GetAlternateLookup<ReadOnlySpan<char>>();
+				if (lookup.TryGetValue(command.AsSpan(), out var librarySocketCommandDefinition))
+				{
+					return await HandleSocketCommandPattern(parser, src, context, command, socketCommandPattern,
+						librarySocketCommandDefinition.LibraryInformation);
+				}
 			}
 
 			if (parser.CurrentState.Executor is null && parser.CurrentState.Handle is not null)
