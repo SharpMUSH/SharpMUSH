@@ -67,6 +67,9 @@ builder.Services.AddSingleton<IConnectionServerService, ConnectionServerService>
 // Add TelemetryService
 builder.Services.AddSingleton<ITelemetryService, TelemetryService>();
 
+// Add WebSocketServer
+builder.Services.AddSingleton<WebSocketServer>();
+
 // Add batching service for @dolist performance optimization
 builder.Services.AddSingleton<TelnetOutputBatchingService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<TelnetOutputBatchingService>());
@@ -100,6 +103,10 @@ builder.Services.AddConnectionServerMessaging(
 		x.AddConsumer<TelnetPromptConsumer>();
 		x.AddConsumer<BroadcastConsumer>();
 		x.AddConsumer<DisconnectConnectionConsumer>();
+		
+		// Register WebSocket consumers
+		x.AddConsumer<WebSocketOutputConsumer>();
+		x.AddConsumer<WebSocketPromptConsumer>();
 	});
 
 // TODO: This should be configurable via environment variables or config files
@@ -135,6 +142,18 @@ var app = builder.Build();
 
 try
 {
+	// Enable WebSocket support
+	app.UseWebSockets();
+
+	// Get WebSocketServer instance for the endpoint
+	var webSocketHandler = app.Services.GetRequiredService<WebSocketServer>();
+
+	// Map WebSocket endpoint
+	app.Map("/ws", async context =>
+	{
+		await webSocketHandler.HandleWebSocketAsync(context);
+	});
+
 	// Map API endpoints
 	app.MapControllers();
 	app.MapGet("/", () => "SharpMUSH Connection Server");
