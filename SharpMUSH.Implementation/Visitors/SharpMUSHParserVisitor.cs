@@ -159,8 +159,9 @@ public class SharpMUSHParserVisitor(
 					return new CallState(string.Format(Errors.ErrorNoSuchFunction, name), context.Depth());
 				}
 
-				parser.FunctionLibrary.Add(name, (functionValue, true));
-				libraryMatch = parser.FunctionLibrary[name];
+				// Avoid double lookup: store result and add to library
+				libraryMatch = (functionValue, true);
+				parser.FunctionLibrary.Add(name, libraryMatch);
 			}
 
 			var (attribute, function) = libraryMatch.LibraryInformation;
@@ -353,18 +354,22 @@ public class SharpMUSHParserVisitor(
 			}
 
 			// Step 1: Check if it's a SOCKET command
-			// TODO: Optimize
+			// Use AlternativeLookup for zero-allocation case-insensitive lookup
 			var socketCommandPattern = parser.CommandLibrary.Where(x
 				=> parser.CurrentState.Handle is not null
 				   && x.Value.IsSystem
 				   && x.Key.Equals(command, StringComparison.CurrentCultureIgnoreCase)
 				   && x.Value.LibraryInformation.Attribute.Behavior.HasFlag(CommandBehavior.SOCKET)).ToList();
 
-			if (socketCommandPattern.Any() &&
-			    parser.CommandLibrary.TryGetValue(command.ToUpper(), out var librarySocketCommandDefinition))
+			if (socketCommandPattern.Any())
 			{
-				return await HandleSocketCommandPattern(parser, src, context, command, socketCommandPattern,
-					librarySocketCommandDefinition.LibraryInformation);
+				// Use AlternativeLookup to avoid string allocation from command.ToUpper()
+				var lookup = parser.CommandLibrary.GetAlternateLookup<ReadOnlySpan<char>>();
+				if (lookup.TryGetValue(command.AsSpan(), out var librarySocketCommandDefinition))
+				{
+					return await HandleSocketCommandPattern(parser, src, context, command, socketCommandPattern,
+						librarySocketCommandDefinition.LibraryInformation);
+				}
 			}
 
 			if (parser.CurrentState.Executor is null && parser.CurrentState.Handle is not null)
@@ -428,25 +433,21 @@ public class SharpMUSHParserVisitor(
 			// Who would rely on a room alias being & anyway?
 			// Step 5: Check @COMMAND in command library
 
-			// TODO: Optimize
-			// TODO: Get the Switches and send them along as a list of items!
+			// Use CommandTrie for efficient prefix matching instead of LINQ
 			var slashIndex = command.AsSpan().IndexOf('/');
 			var rootCommand =
 				command[..(slashIndex > -1 ? slashIndex : command.Length)];
 			var switchString = command[(slashIndex > -1 ? slashIndex : command.Length)..];
 			var switches = switchString.Split('/').Where(s => !string.IsNullOrWhiteSpace(s));
 
-			var broaderSearch = parser.CommandLibrary.Keys
-				.Where(x => x.StartsWith(rootCommand, StringComparison.CurrentCultureIgnoreCase))
-				.OrderBy(x => x.Length)
-				.FirstOrDefault();
+			var matchResult = rootCommand.Equals("HUH_COMMAND", StringComparison.CurrentCultureIgnoreCase)
+				? null
+				: (parser as MUSHCodeParser)?.CommandTrie.FindShortestMatch(rootCommand);
 			
-			if (broaderSearch is not null 
-			    && parser.CommandLibrary.TryGetValue(broaderSearch, out var libraryCommandDefinition)
-			    && !rootCommand.Equals("HUH_COMMAND", StringComparison.CurrentCultureIgnoreCase))
+			if (matchResult != null)
 			{
 				return await HandleInternalCommandPattern(parser, src, context, rootCommand, switches,
-					libraryCommandDefinition.LibraryInformation);
+					matchResult.Value.Definition);
 			}
 
 			// Step 6: Check @attribute setting

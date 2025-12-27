@@ -44,9 +44,14 @@ public class SharpMUSHBooleanExpressionVisitor(
 	private readonly Expression<Func<AnySharpObject, string, bool>> _isType = (dbRef, type)
 		=> dbRef.Object().Type == type;
 
-	private readonly Expression<Func<AnySharpObject, string, bool>> _matchesName = (dbRef, pattern) =>
-		Regex.IsMatch(dbRef.Object().Name, MModule.getWildcardMatchAsRegex2(pattern), RegexOptions.IgnoreCase)
-		|| (dbRef.Aliases != null && dbRef.Aliases.Any(alias => Regex.IsMatch(alias.Trim(), MModule.getWildcardMatchAsRegex2(pattern), RegexOptions.IgnoreCase)));
+	// For name matching, we need to convert the pattern to regex outside the expression tree
+	// because MModule.getWildcardMatchAsRegex2 cannot be compiled into an expression tree
+	private bool MatchesName(AnySharpObject dbRef, string pattern)
+	{
+		var regexPattern = MModule.getWildcardMatchAsRegex2(pattern);
+		return Regex.IsMatch(dbRef.Object().Name, regexPattern, RegexOptions.IgnoreCase)
+			|| (dbRef.Aliases != null && dbRef.Aliases.Any(alias => Regex.IsMatch(alias.Trim(), regexPattern, RegexOptions.IgnoreCase)));
+	}
 
 	private static readonly string[] defaultStringArrayValue = [];
 
@@ -438,9 +443,12 @@ public class SharpMUSHBooleanExpressionVisitor(
 	{
 		var pattern = context.@string().GetText();
 		
-		// Use the _matchesName lambda to check if the unlocker's name matches the pattern
-		// This supports wildcards and checks both name and aliases
-		return Expression.Invoke(_matchesName, unlocker, Expression.Constant(pattern));
+		// Create a lambda that calls our MatchesName method
+		// We can't use Expression.Invoke with a method call directly, so we create a Func
+		Func<AnySharpObject, AnySharpObject, string, bool> func = (gatedObj, unlockerObj, pat) =>
+			MatchesName(unlockerObj, pat);
+		
+		return Expression.Invoke(Expression.Constant(func), gated, unlocker, Expression.Constant(pattern));
 	}
 
 	public override Expression VisitExactObjectExpr(SharpMUSHBoolExpParser.ExactObjectExprContext context)

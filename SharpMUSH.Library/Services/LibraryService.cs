@@ -5,6 +5,14 @@ namespace SharpMUSH.Library.Services;
 public class LibraryService<TKey, TValue> : Dictionary<TKey, (TValue LibraryInformation, bool IsSystem)>
 	where TKey : notnull
 {
+	public LibraryService() : base()
+	{
+	}
+
+	protected LibraryService(IEqualityComparer<TKey>? comparer) : base(comparer)
+	{
+	}
+
 	public static LibraryService<TKey, TValue> FromDictionary(Dictionary<TKey, TValue> dictionary)
 	{
 		var newDict = new LibraryService<TKey, TValue>();
@@ -19,8 +27,18 @@ public class LibraryService<TKey, TValue> : Dictionary<TKey, (TValue LibraryInfo
 }
 
 public class FunctionLibraryService : 
-	LibraryService<string, FunctionDefinition> { }
+	LibraryService<string, FunctionDefinition> 
+{ 
+	public FunctionLibraryService() : base(StringComparer.OrdinalIgnoreCase)
+	{
+	}
+}
 	
 
 public class CommandLibraryService : 
-	LibraryService<string, CommandDefinition> { }
+	LibraryService<string, CommandDefinition> 
+{ 
+	public CommandLibraryService() : base(StringComparer.OrdinalIgnoreCase)
+	{
+	}
+}
