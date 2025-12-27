@@ -1,4 +1,3 @@
-using System.Net;
 using System.Net.WebSockets;
 using System.Text;
 using MassTransit;
@@ -76,8 +75,7 @@ public class WebSocketServer
 			{
 				if (webSocket.State == WebSocketState.Open)
 				{
-					webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Connection closed", CancellationToken.None)
-						.GetAwaiter().GetResult();
+					_ = webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Connection closed", CancellationToken.None);
 				}
 			});
 
