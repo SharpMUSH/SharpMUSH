@@ -95,6 +95,7 @@ public class PennMUSHDatabaseConverterPerformanceTests
 	/// </summary>
 	[Test]
 	[Category("Performance")]
+	[Explicit("Performance test - run manually for benchmarking")]
 	public async ValueTask FixedSizeDatabaseConversionPerformance()
 	{
 		// Generate a database with exactly 1000 objects
@@ -145,6 +146,7 @@ public class PennMUSHDatabaseConverterPerformanceTests
 	[Test]
 	[Category("Performance")]
 	[Category("LongRunning")]
+	[Explicit("Performance test - run manually for benchmarking")]
 	public async ValueTask ScalabilityTest()
 	{
 		var objectCounts = new[] { 100, 500, 1000, 2000, 5000 };
