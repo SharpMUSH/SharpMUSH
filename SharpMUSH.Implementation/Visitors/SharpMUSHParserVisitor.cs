@@ -159,8 +159,9 @@ public class SharpMUSHParserVisitor(
 					return new CallState(string.Format(Errors.ErrorNoSuchFunction, name), context.Depth());
 				}
 
-				parser.FunctionLibrary.Add(name, (functionValue, true));
-				libraryMatch = parser.FunctionLibrary[name];
+				// Avoid double lookup: store result and add to library
+				libraryMatch = (functionValue, true);
+				parser.FunctionLibrary.Add(name, libraryMatch);
 			}
 
 			var (attribute, function) = libraryMatch.LibraryInformation;
@@ -353,18 +354,14 @@ public class SharpMUSHParserVisitor(
 			}
 
 			// Step 1: Check if it's a SOCKET command
-			// TODO: Optimize
-			var socketCommandPattern = parser.CommandLibrary.Where(x
-				=> parser.CurrentState.Handle is not null
-				   && x.Value.IsSystem
-				   && x.Key.Equals(command, StringComparison.CurrentCultureIgnoreCase)
-				   && x.Value.LibraryInformation.Attribute.Behavior.HasFlag(CommandBehavior.SOCKET)).ToList();
-
-			if (socketCommandPattern.Any() &&
-			    parser.CommandLibrary.TryGetValue(command.ToUpper(), out var librarySocketCommandDefinition))
+			// Use indexed lookup instead of LINQ for O(1) performance
+			if (parser.CurrentState.Handle is not null &&
+			    parser is MUSHCodeParser mushParser &&
+			    mushParser.SocketCommands.TryGetValue(command, out var socketCommandDef))
 			{
-				return await HandleSocketCommandPattern(parser, src, context, command, socketCommandPattern,
-					librarySocketCommandDefinition.LibraryInformation);
+				return await HandleSocketCommandPattern(parser, src, context, command, 
+					new[] { new KeyValuePair<string, (CommandDefinition LibraryInformation, bool IsSystem)>(command, (socketCommandDef, true)) },
+					socketCommandDef);
 			}
 
 			if (parser.CurrentState.Executor is null && parser.CurrentState.Handle is not null)
@@ -391,15 +388,21 @@ public class SharpMUSHParserVisitor(
 			}
 
 			// Step 2b: Check for a single-token command
-			// TODO: Optimize
-			var singleTokenCommandPattern = parser.CommandLibrary.Where(x
-				=> x.Key.Equals(command[..1], StringComparison.CurrentCultureIgnoreCase)
-				   && x.Value.IsSystem
-				   && x.Value.LibraryInformation.Attribute.Behavior.HasFlag(CommandBehavior.SingleToken)).ToList();
-
-			if (singleTokenCommandPattern.Count != 0)
+			// Use indexed lookup instead of LINQ for O(1) performance
+			if (command.Length > 0 &&
+			    parser is MUSHCodeParser mushParser2 &&
+			    mushParser2.SingleTokenCommands.TryGetValue(char.ToLowerInvariant(command[0]), out var singleTokenList))
 			{
-				return await HandleSingleTokenCommandPattern(parser, src, context, command, singleTokenCommandPattern);
+				// Convert to the format expected by HandleSingleTokenCommandPattern
+				var singleTokenCommandPattern = singleTokenList
+					.Select(x => new KeyValuePair<string, (CommandDefinition LibraryInformation, bool IsSystem)>(
+						x.Name, (x.Definition, true)))
+					.ToList();
+				
+				if (singleTokenCommandPattern.Count != 0)
+				{
+					return await HandleSingleTokenCommandPattern(parser, src, context, command, singleTokenCommandPattern);
+				}
 			}
 
 			var executorObject = (await parser.CurrentState.ExecutorObject(Mediator)).WithoutNone();

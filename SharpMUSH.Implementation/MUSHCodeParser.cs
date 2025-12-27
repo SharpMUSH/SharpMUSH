@@ -39,10 +39,24 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	// Command trie for efficient prefix-based command lookup
 	private readonly CommandTrie _commandTrie = BuildCommandTrie(CommandLibrary);
 	
+	// Behavior-based command indexes for fast lookups
+	private readonly Dictionary<string, CommandDefinition> _socketCommands = BuildSocketCommandIndex(CommandLibrary);
+	private readonly Dictionary<char, List<(string Name, CommandDefinition Definition)>> _singleTokenCommands = BuildSingleTokenCommandIndex(CommandLibrary);
+	
 	/// <summary>
 	/// Gets the command trie for efficient prefix-based command lookups.
 	/// </summary>
 	public CommandTrie CommandTrie => _commandTrie;
+	
+	/// <summary>
+	/// Gets socket commands indexed by name for O(1) lookup.
+	/// </summary>
+	public IReadOnlyDictionary<string, CommandDefinition> SocketCommands => _socketCommands;
+	
+	/// <summary>
+	/// Gets single-token commands indexed by first character for O(1) lookup.
+	/// </summary>
+	public IReadOnlyDictionary<char, List<(string Name, CommandDefinition Definition)>> SingleTokenCommands => _singleTokenCommands;
 	
 	/// <summary>
 	/// Builds a trie from the command library for efficient prefix matching.
@@ -60,6 +74,53 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		}
 		
 		return trie;
+	}
+	
+	/// <summary>
+	/// Builds an index of socket commands for fast lookup.
+	/// </summary>
+	private static Dictionary<string, CommandDefinition> BuildSocketCommandIndex(LibraryService<string, CommandDefinition> commandLibrary)
+	{
+		var index = new Dictionary<string, CommandDefinition>(StringComparer.OrdinalIgnoreCase);
+		
+		foreach (var (commandName, commandInfo) in commandLibrary)
+		{
+			if (commandInfo.IsSystem && 
+			    commandInfo.LibraryInformation.Attribute.Behavior.HasFlag(CommandBehavior.SOCKET))
+			{
+				index[commandName] = commandInfo.LibraryInformation;
+			}
+		}
+		
+		return index;
+	}
+	
+	/// <summary>
+	/// Builds an index of single-token commands grouped by first character.
+	/// </summary>
+	private static Dictionary<char, List<(string, CommandDefinition)>> BuildSingleTokenCommandIndex(LibraryService<string, CommandDefinition> commandLibrary)
+	{
+		var index = new Dictionary<char, List<(string, CommandDefinition)>>();
+		
+		foreach (var (commandName, commandInfo) in commandLibrary)
+		{
+			if (commandInfo.IsSystem && 
+			    commandInfo.LibraryInformation.Attribute.Behavior.HasFlag(CommandBehavior.SingleToken) &&
+			    commandName.Length > 0)
+			{
+				var firstChar = char.ToLowerInvariant(commandName[0]);
+				
+				if (!index.TryGetValue(firstChar, out var list))
+				{
+					list = new List<(string, CommandDefinition)>();
+					index[firstChar] = list;
+				}
+				
+				list.Add((commandName, commandInfo.LibraryInformation));
+			}
+		}
+		
+		return index;
 	}
 	
 	public ParserState CurrentState => State.Peek();
