@@ -25,11 +25,8 @@ public class PennMUSHDatabaseConverterPerformanceTests
 
 	/// <summary>
 	/// Tests conversion performance with a large 10MB+ PennMUSH database.
-	/// Runs 10 times to get consistent performance measurements.
 	/// </summary>
 	[Test]
-	[Skip("Database pollution: Each iteration creates objects that persist, causing subsequent iterations to fail. Run manually outside shared database.")]
-	[Repeat(10)]
 	[Category("Performance")]
 	[Category("LongRunning")]
 	public async ValueTask LargeDatabaseConversionPerformance()
@@ -97,8 +94,6 @@ public class PennMUSHDatabaseConverterPerformanceTests
 	/// Useful for consistent benchmarking across test runs.
 	/// </summary>
 	[Test]
-	[Skip("Database pollution: Each of 10 iterations creates 1000 objects that persist, causing subsequent iterations to fail (expected 1000, found 0/1/13/16/56/81/207/757/995). Run manually outside shared database.")]
-	[Repeat(10)]
 	[Category("Performance")]
 	public async ValueTask FixedSizeDatabaseConversionPerformance()
 	{
@@ -148,7 +143,6 @@ public class PennMUSHDatabaseConverterPerformanceTests
 	/// Measures performance across different object counts.
 	/// </summary>
 	[Test]
-	[Skip("Database pollution: Creates 100+500+1000+2000+5000=8600 objects total that persist in shared database. Run manually outside shared database.")]
 	[Category("Performance")]
 	[Category("LongRunning")]
 	public async ValueTask ScalabilityTest()
