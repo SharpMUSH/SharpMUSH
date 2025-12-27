@@ -305,35 +305,40 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		{
 			// Master Room #2 already exists (from database migration), reuse it
 			_dbrefMapping[2] = new DBRef(2);
-			roomsConverted++; // Count reused object in totals
-			_logger.LogInformation("Reusing existing Master Room #2 from database migration");
 			
-			// Update the name from PennMUSH if available
+			// Count reused object in appropriate counter based on PennMUSH type
 			var room2Penn = pennDatabase.GetObject(2);
-			if (room2Penn?.Type == PennMUSHObjectType.Room)
+			if (room2Penn != null)
 			{
-				// TODO: Update Master Room #2 name from PennMUSH data
-				_logger.LogDebug("PennMUSH Master Room #{PennDBRef} data available: {Name}", 2, room2Penn.Name);
+				switch (room2Penn.Type)
+				{
+					case PennMUSHObjectType.Room:
+						roomsConverted++;
+						break;
+					case PennMUSHObjectType.Thing:
+						thingsConverted++;
+						break;
+					case PennMUSHObjectType.Exit:
+						exitsConverted++;
+						break;
+					case PennMUSHObjectType.Player:
+						playersConverted++;
+						break;
+				}
+				_logger.LogInformation("Reusing existing object #2 from database migration as {Type}", room2Penn.Type);
+			}
+			else
+			{
+				// Object #2 doesn't exist in PennMUSH database, but exists in Sharp
+				roomsConverted++; // Assume it's a room from migration
+				_logger.LogInformation("Reusing existing Master Room #2 from database migration (not in PennMUSH database)");
 			}
 		}
 		else
 		{
-			// No existing Master Room, create it if present in PennMUSH database
-			var room2Penn = pennDatabase.GetObject(2);
-			if (room2Penn?.Type == PennMUSHObjectType.Room)
-			{
-				var room2DbRef = await _database.CreateRoomAsync(
-					room2Penn.Name,
-					godPlayer,
-					cancellationToken);
-				_dbrefMapping[2] = room2DbRef;
-				roomsConverted++;
-				_logger.LogInformation("Created Master Room #{PennDBRef} -> {SharpDBRef}: {Name}", 2, room2DbRef, room2Penn.Name);
-			}
-			else
-			{
-				_logger.LogDebug("Master Room #2 does not exist in PennMUSH database or is not a room");
-			}
+			// No existing #2 in Sharp database
+			// It will be created in the main loop below based on its actual type in PennMUSH
+			_logger.LogDebug("Object #2 does not pre-exist in Sharp database, will be created in main loop");
 		}
 
 		// Now create all other objects
@@ -343,8 +348,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		{
 			cancellationToken.ThrowIfCancellationRequested();
 
-			// Skip already created or reused objects (God, Limbo, and potentially Master Room)
-			if (pennObj.DBRef == 0 || pennObj.DBRef == 1 || (pennObj.DBRef == 2 && _dbrefMapping.ContainsKey(2)))
+			// Skip already created or reused objects (God, Limbo, and potentially #2 if it was reused)
+			if (pennObj.DBRef == 0 || pennObj.DBRef == 1 || _dbrefMapping.ContainsKey(pennObj.DBRef))
 			{
 				continue;
 			}
