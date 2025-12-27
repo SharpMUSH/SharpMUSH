@@ -1,7 +1,7 @@
 @page "/websocket-test"
 @using SharpMUSH.Client.Services
 @using System.Net.WebSockets
-@inject WebSocketClientService WebSocketClient
+@inject IWebSocketClientService WebSocketClient
 @implements IAsyncDisposable
 
 <PageTitle>WebSocket Test</PageTitle>

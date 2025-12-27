@@ -7,7 +7,7 @@ namespace SharpMUSH.Client.Services;
 /// <summary>
 /// Service for managing WebSocket connections to SharpMUSH ConnectionServer
 /// </summary>
-public class WebSocketClientService : IAsyncDisposable
+public class WebSocketClientService : IWebSocketClientService
 {
 	private readonly ILogger<WebSocketClientService> _logger;
 	private ClientWebSocket? _webSocket;

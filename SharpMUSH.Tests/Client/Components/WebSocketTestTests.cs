@@ -17,8 +17,7 @@ public class WebSocketTestTests : MudBlazorTestContext
 	public async Task WebSocketTest_InitialState_ShowsDisconnected()
 	{
 		// Arrange
-		var mockWebSocketClient = Substitute.For<WebSocketClientService>(
-			Substitute.For<Microsoft.Extensions.Logging.ILogger<WebSocketClientService>>());
+		var mockWebSocketClient = Substitute.For<IWebSocketClientService>();
 		mockWebSocketClient.IsConnected.Returns(false);
 		Services.AddSingleton(mockWebSocketClient);
 
@@ -34,8 +33,7 @@ public class WebSocketTestTests : MudBlazorTestContext
 	public async Task WebSocketTest_RendersPageTitle()
 	{
 		// Arrange
-		var mockWebSocketClient = Substitute.For<WebSocketClientService>(
-			Substitute.For<Microsoft.Extensions.Logging.ILogger<WebSocketClientService>>());
+		var mockWebSocketClient = Substitute.For<IWebSocketClientService>();
 		Services.AddSingleton(mockWebSocketClient);
 
 		// Act
@@ -50,8 +48,7 @@ public class WebSocketTestTests : MudBlazorTestContext
 	public async Task WebSocketTest_HasServerUriField()
 	{
 		// Arrange
-		var mockWebSocketClient = Substitute.For<WebSocketClientService>(
-			Substitute.For<Microsoft.Extensions.Logging.ILogger<WebSocketClientService>>());
+		var mockWebSocketClient = Substitute.For<IWebSocketClientService>();
 		Services.AddSingleton(mockWebSocketClient);
 
 		// Act
@@ -66,8 +63,7 @@ public class WebSocketTestTests : MudBlazorTestContext
 	public async Task WebSocketTest_HasConnectButton()
 	{
 		// Arrange
-		var mockWebSocketClient = Substitute.For<WebSocketClientService>(
-			Substitute.For<Microsoft.Extensions.Logging.ILogger<WebSocketClientService>>());
+		var mockWebSocketClient = Substitute.For<IWebSocketClientService>();
 		Services.AddSingleton(mockWebSocketClient);
 
 		// Act
@@ -83,8 +79,7 @@ public class WebSocketTestTests : MudBlazorTestContext
 	public async Task WebSocketTest_HasDisconnectButton()
 	{
 		// Arrange
-		var mockWebSocketClient = Substitute.For<WebSocketClientService>(
-			Substitute.For<Microsoft.Extensions.Logging.ILogger<WebSocketClientService>>());
+		var mockWebSocketClient = Substitute.For<IWebSocketClientService>();
 		Services.AddSingleton(mockWebSocketClient);
 
 		// Act
@@ -100,8 +95,7 @@ public class WebSocketTestTests : MudBlazorTestContext
 	public async Task WebSocketTest_DisconnectButton_DisabledWhenDisconnected()
 	{
 		// Arrange
-		var mockWebSocketClient = Substitute.For<WebSocketClientService>(
-			Substitute.For<Microsoft.Extensions.Logging.ILogger<WebSocketClientService>>());
+		var mockWebSocketClient = Substitute.For<IWebSocketClientService>();
 		mockWebSocketClient.IsConnected.Returns(false);
 		Services.AddSingleton(mockWebSocketClient);
 
@@ -118,8 +112,7 @@ public class WebSocketTestTests : MudBlazorTestContext
 	public async Task WebSocketTest_HasMessageInputField()
 	{
 		// Arrange
-		var mockWebSocketClient = Substitute.For<WebSocketClientService>(
-			Substitute.For<Microsoft.Extensions.Logging.ILogger<WebSocketClientService>>());
+		var mockWebSocketClient = Substitute.For<IWebSocketClientService>();
 		Services.AddSingleton(mockWebSocketClient);
 
 		// Act
@@ -135,8 +128,7 @@ public class WebSocketTestTests : MudBlazorTestContext
 	public async Task WebSocketTest_HasSendMessageButton()
 	{
 		// Arrange
-		var mockWebSocketClient = Substitute.For<WebSocketClientService>(
-			Substitute.For<Microsoft.Extensions.Logging.ILogger<WebSocketClientService>>());
+		var mockWebSocketClient = Substitute.For<IWebSocketClientService>();
 		Services.AddSingleton(mockWebSocketClient);
 
 		// Act
@@ -152,8 +144,7 @@ public class WebSocketTestTests : MudBlazorTestContext
 	public async Task WebSocketTest_SendButton_DisabledWhenDisconnected()
 	{
 		// Arrange
-		var mockWebSocketClient = Substitute.For<WebSocketClientService>(
-			Substitute.For<Microsoft.Extensions.Logging.ILogger<WebSocketClientService>>());
+		var mockWebSocketClient = Substitute.For<IWebSocketClientService>();
 		mockWebSocketClient.IsConnected.Returns(false);
 		Services.AddSingleton(mockWebSocketClient);
 
@@ -170,8 +161,7 @@ public class WebSocketTestTests : MudBlazorTestContext
 	public async Task WebSocketTest_HasMessagesSection()
 	{
 		// Arrange
-		var mockWebSocketClient = Substitute.For<WebSocketClientService>(
-			Substitute.For<Microsoft.Extensions.Logging.ILogger<WebSocketClientService>>());
+		var mockWebSocketClient = Substitute.For<IWebSocketClientService>();
 		Services.AddSingleton(mockWebSocketClient);
 
 		// Act
@@ -186,8 +176,7 @@ public class WebSocketTestTests : MudBlazorTestContext
 	public async Task WebSocketTest_DefaultServerUri_IsCorrect()
 	{
 		// Arrange
-		var mockWebSocketClient = Substitute.For<WebSocketClientService>(
-			Substitute.For<Microsoft.Extensions.Logging.ILogger<WebSocketClientService>>());
+		var mockWebSocketClient = Substitute.For<IWebSocketClientService>();
 		Services.AddSingleton(mockWebSocketClient);
 
 		// Act
@@ -202,8 +191,7 @@ public class WebSocketTestTests : MudBlazorTestContext
 	public async Task WebSocketTest_ConnectButton_CallsConnectAsync()
 	{
 		// Arrange
-		var mockWebSocketClient = Substitute.For<WebSocketClientService>(
-			Substitute.For<Microsoft.Extensions.Logging.ILogger<WebSocketClientService>>());
+		var mockWebSocketClient = Substitute.For<IWebSocketClientService>();
 		mockWebSocketClient.IsConnected.Returns(false);
 		Services.AddSingleton(mockWebSocketClient);
 
@@ -222,8 +210,7 @@ public class WebSocketTestTests : MudBlazorTestContext
 	public async Task WebSocketTest_Dispose_UnsubscribesFromEvents()
 	{
 		// Arrange
-		var mockWebSocketClient = Substitute.For<WebSocketClientService>(
-			Substitute.For<Microsoft.Extensions.Logging.ILogger<WebSocketClientService>>());
+		var mockWebSocketClient = Substitute.For<IWebSocketClientService>();
 		Services.AddSingleton(mockWebSocketClient);
 
 		// Act
