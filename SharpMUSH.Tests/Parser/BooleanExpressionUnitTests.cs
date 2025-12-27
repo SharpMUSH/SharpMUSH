@@ -96,8 +96,7 @@ public class BooleanExpressionUnitTests
 		await Assert.That(bep.Validate(input, dbn)).IsEqualTo(expected);
 	}
 
-	[Arguments("name^God", true), Skip("TODO: Failing")]  // DBRef #1 is typically "God" or "One" player
-	[Arguments("name^One", true), Skip("TODO: Failing")]
+	[Arguments("name^God", true)]  // DBRef #1 is named "God"
 	[Arguments("name^NonExistent", false)]  // This player name shouldn't exist
 	[Test]
 	public async Task NameExpressionMatching(string input, bool expected)
@@ -109,9 +108,9 @@ public class BooleanExpressionUnitTests
 		await Assert.That(bep.Compile(input)(player, player)).IsEqualTo(expected);
 	}
 
-	[Arguments("=#1", true), Skip("TODO: Failing")]  // Player #1 matches itself
+	[Arguments("=#1", true)]  // Player #1 matches itself
 	[Arguments("=#2", false)]  // Player #1 doesn't match #2
-	[Arguments("=me", true), Skip("TODO: Failing")]  // Player #1 owned by itself, "me" should match
+	[Arguments("=me", true)]  // Player #1 owned by itself, "me" should match
 	[Test]
 	public async Task ExactObjectMatching(string input, bool expected)
 	{
