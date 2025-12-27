@@ -6,18 +6,47 @@ SharpMUSH now supports WebSocket connections in addition to traditional Telnet c
 
 ## Server Configuration
 
+### Configuration File
+
+The ConnectionServer can be configured via `appsettings.json`:
+
+```json
+{
+  "ConnectionServer": {
+    "TelnetPort": 4201,
+    "HttpPort": 4202,
+    "TelnetDescriptorStart": 0,
+    "WebSocketDescriptorStart": 1000000
+  }
+}
+```
+
+Configuration options:
+- **TelnetPort**: Port for Telnet connections (default: 4201)
+- **HttpPort**: Port for HTTP/WebSocket connections (default: 4202)
+- **TelnetDescriptorStart**: Starting descriptor number for Telnet connections (default: 0)
+- **WebSocketDescriptorStart**: Starting descriptor number for WebSocket connections (default: 1000000)
+
+### Environment Variables
+
+Configuration can also be set via environment variables:
+- `ConnectionServer__TelnetPort`
+- `ConnectionServer__HttpPort`
+- `ConnectionServer__TelnetDescriptorStart`
+- `ConnectionServer__WebSocketDescriptorStart`
+
 ### WebSocket Endpoint
 
 The WebSocket server is available at:
 - **Endpoint**: `/ws`
-- **Port**: 4202 (same as the HTTP API)
+- **Port**: Configured via `HttpPort` (default: 4202)
 - **Full URL**: `ws://localhost:4202/ws`
 
 ### Connection Flow
 
 1. Client initiates WebSocket connection to `/ws`
 2. ConnectionServer accepts the WebSocket handshake
-3. A unique connection handle is assigned (starting from 1000000)
+3. A unique connection handle is assigned from the configured descriptor start
 4. Connection is registered with the ConnectionService
 5. Messages flow through the same Kafka/RedPanda message bus as Telnet connections
 

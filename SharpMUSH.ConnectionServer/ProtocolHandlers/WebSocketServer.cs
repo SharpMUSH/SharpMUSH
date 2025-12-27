@@ -15,16 +15,18 @@ public class WebSocketServer
 	private readonly ILogger<WebSocketServer> _logger;
 	private readonly IConnectionServerService _connectionService;
 	private readonly IBus _publishEndpoint;
-	private readonly NextUnoccupiedNumberGenerator _descriptorGenerator = new(1000000);
+	private readonly IDescriptorGeneratorService _descriptorGenerator;
 
 	public WebSocketServer(
 		ILogger<WebSocketServer> logger,
 		IConnectionServerService connectionService,
-		IBus publishEndpoint)
+		IBus publishEndpoint,
+		IDescriptorGeneratorService descriptorGenerator)
 	{
 		_logger = logger;
 		_connectionService = connectionService;
 		_publishEndpoint = publishEndpoint;
+		_descriptorGenerator = descriptorGenerator;
 	}
 
 	public async Task HandleWebSocketAsync(HttpContext context)
@@ -36,7 +38,7 @@ public class WebSocketServer
 		}
 
 		var webSocket = await context.WebSockets.AcceptWebSocketAsync();
-		var nextPort = _descriptorGenerator.Get().Take(1).First();
+		var nextPort = _descriptorGenerator.GetNextWebSocketDescriptor();
 		var ct = context.RequestAborted;
 
 		var remoteIp = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
