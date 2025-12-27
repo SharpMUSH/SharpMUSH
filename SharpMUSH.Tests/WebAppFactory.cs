@@ -36,6 +36,9 @@ public class WebAppFactory : IAsyncInitializer
 	
 	[ClassDataSource<PrometheusTestServer>(Shared = SharedType.PerTestSession)]
 	public required PrometheusTestServer PrometheusTestServer { get; init; }
+	
+	[ClassDataSource<RedisTestServer>(Shared = SharedType.PerTestSession)]
+	public required RedisTestServer RedisTestServer { get; init; }
 
 	public IServiceProvider Services => _server!.Services;
 	private TestWebApplicationBuilderFactory<Program>? _server;
@@ -125,6 +128,11 @@ public class WebAppFactory : IAsyncInitializer
 
 		// Get Prometheus URL from the test container
 		var prometheusUrl = $"http://localhost:{PrometheusTestServer.Instance.GetMappedPublicPort(9090)}";
+
+		// Get Redis connection from the test container
+		var redisPort = RedisTestServer.Instance.GetMappedPublicPort(6379);
+		var redisConnection = $"localhost:{redisPort}";
+		Environment.SetEnvironmentVariable("REDIS_CONNECTION", redisConnection);
 
 		_server = new TestWebApplicationBuilderFactory<Program>(
 			MySqlTestServer.Instance.GetConnectionString(), 
