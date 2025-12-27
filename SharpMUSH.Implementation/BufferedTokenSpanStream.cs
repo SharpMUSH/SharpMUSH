@@ -20,7 +20,8 @@ namespace SharpMUSH.Implementation
 		//     A collection of all tokens fetched from the token source. The list is considered
 		//     a complete view of the input once Antlr4.Runtime.BufferedTokenStream.fetchedEOF
 		//     is set to true .
-		protected internal List<IToken> tokens = new(100);
+		// Initial capacity increased from 100 to 256 to reduce list resizing for typical MUSH commands/functions
+	protected internal List<IToken> tokens = new(256);
 
 		protected internal IToken[]? TokenArray;
 		
