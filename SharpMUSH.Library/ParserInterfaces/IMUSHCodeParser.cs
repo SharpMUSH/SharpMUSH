@@ -1,6 +1,7 @@
 ﻿using System.Collections.Immutable;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -25,4 +26,34 @@ public interface IMUSHCodeParser
 	IMUSHCodeParser Push(ParserState state);
 	IMUSHCodeParser FromState(ParserState state);
 	Option<ParserState> StateHistory(uint index);
+	
+	/// <summary>
+	/// Tokenizes the input text and returns token information for syntax highlighting.
+	/// </summary>
+	/// <param name="text">The text to tokenize.</param>
+	/// <returns>A list of tokens with their types, positions, and text.</returns>
+	IReadOnlyList<TokenInfo> Tokenize(MString text);
+	
+	/// <summary>
+	/// Parses the input text and returns any errors encountered.
+	/// Uses two-stage parsing (SLL first, then LL) for better error messages.
+	/// </summary>
+	/// <param name="text">The text to parse.</param>
+	/// <param name="parseType">The type of parsing to perform (Function, Command, etc.).</param>
+	/// <returns>A list of parse errors, or an empty list if parsing succeeded.</returns>
+	IReadOnlyList<ParseError> ValidateAndGetErrors(MString text, ParseType parseType = ParseType.Function);
+}
+
+/// <summary>
+/// The type of parsing to perform for validation.
+/// </summary>
+public enum ParseType
+{
+	Function,
+	Command,
+	CommandList,
+	CommandSingleArg,
+	CommandCommaArgs,
+	CommandEqSplitArgs,
+	CommandEqSplit
 }

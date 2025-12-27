@@ -11,6 +11,7 @@ using SharpMUSH.Implementation.Services;
 using SharpMUSH.Implementation.Visitors;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
@@ -101,6 +102,19 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		ParserState state) : this(logger, functionLibrary, commandLibrary, config, serviceProvider)
 		=> State = [state];
 
+	/// <summary>
+	/// Gets the configured ANTLR prediction mode based on configuration.
+	/// </summary>
+	private PredictionMode GetPredictionMode()
+	{
+		return Configuration.CurrentValue.Debug.ParserPredictionMode switch
+		{
+			ParserPredictionMode.SLL => PredictionMode.SLL,
+			ParserPredictionMode.LL => PredictionMode.LL,
+			_ => PredictionMode.LL // Default to LL
+		};
+	}
+
 	public ValueTask<CallState?> FunctionParse(MString text)
 	{
 		AntlrInputStreamSpan inputStream = new(MModule.plainText(text).AsMemory(), nameof(FunctionParse));
@@ -111,7 +125,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		{
 			Interpreter =
 			{
-				PredictionMode = PredictionMode.LL
+				PredictionMode = GetPredictionMode()
 			},
 			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
 		};
@@ -146,7 +160,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		{
 			Interpreter =
 			{
-				PredictionMode = PredictionMode.LL
+				PredictionMode = GetPredictionMode()
 			},
 			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
 		};
@@ -180,7 +194,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		{
 			Interpreter =
 			{
-				PredictionMode = PredictionMode.LL
+				PredictionMode = GetPredictionMode()
 			},
 			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
 		};
@@ -239,7 +253,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		{
 			Interpreter =
 			{
-				PredictionMode = PredictionMode.LL
+				PredictionMode = GetPredictionMode()
 			},
 			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
 		};
@@ -279,7 +293,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		{
 			Interpreter =
 			{
-				PredictionMode = PredictionMode.LL
+				PredictionMode = GetPredictionMode()
 			},
 			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
 		};
@@ -314,7 +328,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		{
 			Interpreter =
 			{
-				PredictionMode = PredictionMode.LL
+				PredictionMode = GetPredictionMode()
 			},
 			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
 		};
@@ -347,7 +361,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		{
 			Interpreter =
 			{
-				PredictionMode = PredictionMode.LL
+				PredictionMode = GetPredictionMode()
 			},
 			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
 		};
@@ -380,7 +394,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		{
 			Interpreter =
 			{
-				PredictionMode = PredictionMode.LL
+				PredictionMode = GetPredictionMode()
 			},
 			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
 		};
@@ -413,7 +427,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		{
 			Interpreter =
 			{
-				PredictionMode = PredictionMode.LL
+				PredictionMode = GetPredictionMode()
 			},
 			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
 		};
@@ -434,5 +448,105 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			_hookService, text);
 
 		return visitor.Visit(chatContext);
+	}
+
+	/// <summary>
+	/// Tokenizes the input text and returns token information for syntax highlighting.
+	/// </summary>
+	public IReadOnlyList<TokenInfo> Tokenize(MString text)
+	{
+		var plaintext = MModule.plainText(text);
+		AntlrInputStreamSpan inputStream = new(plaintext.AsMemory(), nameof(Tokenize));
+		SharpMUSHLexer sharpLexer = new(inputStream);
+		
+		var tokens = new List<TokenInfo>();
+		IToken token;
+		
+		while ((token = sharpLexer.NextToken()).Type != TokenConstants.EOF)
+		{
+			var tokenInfo = new TokenInfo
+			{
+				Type = sharpLexer.Vocabulary.GetSymbolicName(token.Type) ?? $"Token{token.Type}",
+				StartIndex = token.StartIndex,
+				EndIndex = token.StopIndex,
+				Text = token.Text ?? string.Empty,
+				Line = token.Line,
+				Column = token.Column,
+				Channel = token.Channel
+			};
+			
+			tokens.Add(tokenInfo);
+		}
+		
+		return tokens;
+	}
+
+	/// <summary>
+	/// Parses the input text and returns any errors encountered.
+	/// Uses the configured prediction mode (SLL or LL) for parsing.
+	/// </summary>
+	public IReadOnlyList<ParseError> ValidateAndGetErrors(MString text, ParseType parseType = ParseType.Function)
+	{
+		var plaintext = MModule.plainText(text);
+		AntlrInputStreamSpan inputStream = new(plaintext.AsMemory(), nameof(ValidateAndGetErrors));
+		SharpMUSHLexer sharpLexer = new(inputStream);
+		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
+		bufferedTokenSpanStream.Fill();
+		
+		SharpMUSHParser sharpParser = new(bufferedTokenSpanStream)
+		{
+			Interpreter =
+			{
+				PredictionMode = GetPredictionMode()
+			},
+			Trace = false // Don't trace during validation
+		};
+		
+		// Create custom error listener to collect errors
+		var errorListener = new ParserErrorListener(plaintext.ToString());
+		
+		// Remove default error listeners and add our custom one
+		sharpParser.RemoveErrorListeners();
+		sharpParser.AddErrorListener(errorListener);
+		
+		try
+		{
+			// Parse based on the specified parse type
+			// We just need to trigger the parsing - we don't use the result
+			switch (parseType)
+			{
+				case ParseType.Function:
+					_ = sharpParser.startPlainString();
+					break;
+				case ParseType.Command:
+					_ = sharpParser.startSingleCommandString();
+					break;
+				case ParseType.CommandList:
+					_ = sharpParser.startCommandString();
+					break;
+				case ParseType.CommandSingleArg:
+					_ = sharpParser.startPlainSingleCommandArg();
+					break;
+				case ParseType.CommandCommaArgs:
+					_ = sharpParser.startPlainCommaCommandArgs();
+					break;
+				case ParseType.CommandEqSplitArgs:
+					_ = sharpParser.startEqSplitCommandArgs();
+					break;
+				case ParseType.CommandEqSplit:
+					_ = sharpParser.startEqSplitCommand();
+					break;
+				default:
+					_ = sharpParser.startPlainString();
+					break;
+			}
+		}
+		catch
+		{
+			// Errors are collected by the error listener
+			// We don't need to do anything special with exceptions here
+		}
+		
+		return errorListener.Errors;
 	}
 }
