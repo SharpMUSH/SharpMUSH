@@ -647,11 +647,8 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		// Access the internal token list from BufferedTokenSpanStream
 		var tokenList = tokenStream.tokens;
 
-		foreach (var token in tokenList)
+		foreach (var token in tokenList.Where(t => t.Type != TokenConstants.EOF))
 		{
-			if (token.Type == TokenConstants.EOF)
-				continue;
-
 			var semanticType = ClassifyToken(token, context, sourceText);
 			var modifiers = GetTokenModifiers(token, semanticType);
 
