@@ -18,7 +18,7 @@ fragment T: [tT];
 fragment R: [rR];
 fragment U: [uU];
 fragment N: [nN];
-fragment M: [nN];
+fragment M: [mM];
 fragment G: [gG];
 fragment P: [pP];
 fragment O: [oO];
@@ -57,8 +57,9 @@ FALSE: POUND F A L S E;
 TRUE: POUND T R U E;
 ATTRIBUTE_COLON: ':';
 // STRING - must come BEFORE ATTRIBUTENAME so it matches in `string` parser rules
-// Exclude all special operator characters: + $ @ = and those already excluded
-STRING: ~( '#' | '&' | '|' | ':' | '!' | ')' | '(' | '^' | ' ' | '/' | '+' | '$' | '@' | '=')+;
+// Exclude operator characters but allow # (needed for dbrefs like #1, #123)
+// FALSE/TRUE tokens will match #FALSE and #TRUE before STRING can
+STRING: ~( '&' | '|' | ':' | '!' | ')' | '(' | '^' | ' ' | '/' | '+' | '$' | '@' | '=')+;
 ATTRIBUTENAME:
-    ~('#' | '&' | '|' | ':' | '!' | ')' | '(' | '/' | ' ' | '^' | '+' | '$' | '@' | '=')+
+    ~('&' | '|' | ':' | '!' | ')' | '(' | '/' | ' ' | '^' | '+' | '$' | '@' | '=')+
 ;

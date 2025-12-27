@@ -48,19 +48,9 @@ public class SharpMUSHBooleanExpressionVisitor(
 	// because MModule.getWildcardMatchAsRegex2 cannot be compiled into an expression tree
 	private bool MatchesName(AnySharpObject dbRef, string pattern)
 	{
-		var name = dbRef.Object().Name;
-		var aliases = dbRef.Aliases;
 		var regexPattern = MModule.getWildcardMatchAsRegex2(pattern);
-		
-		Console.WriteLine($"[MatchesName] Checking '{name}' against pattern '{pattern}' (regex: '{regexPattern}')");
-		
-		var nameMatches = Regex.IsMatch(name, regexPattern, RegexOptions.IgnoreCase);
-		Console.WriteLine($"[MatchesName] Name match: {nameMatches}");
-		
-		var aliasMatches = aliases != null && aliases.Any(alias => Regex.IsMatch(alias.Trim(), regexPattern, RegexOptions.IgnoreCase));
-		Console.WriteLine($"[MatchesName] Alias match: {aliasMatches} (aliases: {aliases?.Length ?? 0})");
-		
-		return nameMatches || aliasMatches;
+		return Regex.IsMatch(dbRef.Object().Name, regexPattern, RegexOptions.IgnoreCase)
+			|| (dbRef.Aliases != null && dbRef.Aliases.Any(alias => Regex.IsMatch(alias.Trim(), regexPattern, RegexOptions.IgnoreCase)));
 	}
 
 	private static readonly string[] defaultStringArrayValue = [];
@@ -468,46 +458,30 @@ public class SharpMUSHBooleanExpressionVisitor(
 		// Check if unlocker matches the exact target object
 		Func<AnySharpObject, AnySharpObject, string, bool> func = (gatedObj, unlockerObj, target) =>
 		{
-			Console.WriteLine($"[ExactObjectExpr] Checking unlocker against target '{target}'");
-			Console.WriteLine($"[ExactObjectExpr] Unlocker DBRef: {unlockerObj.Object().DBRef}, Number: {unlockerObj.Object().DBRef.Number}");
-			Console.WriteLine($"[ExactObjectExpr] Unlocker Name: {unlockerObj.Object().Name}");
-			
 			// If target is "me", it refers to the gated object's owner
 			if (target.Equals("me", StringComparison.OrdinalIgnoreCase))
 			{
 				var ownerTask = gatedObj.Object().Owner.WithCancellation(CancellationToken.None);
 				var owner = ownerTask.GetAwaiter().GetResult();
-				Console.WriteLine($"[ExactObjectExpr] 'me' check - Owner DBRef: {owner.Object.DBRef}");
-				var result = unlockerObj.Object().DBRef == owner.Object.DBRef;
-				Console.WriteLine($"[ExactObjectExpr] 'me' result: {result}");
-				return result;
+				return unlockerObj.Object().DBRef == owner.Object.DBRef;
 			}
 			
 			// Try to parse as DBRef
 			if (target.StartsWith('#') && int.TryParse(target.Substring(1), out int dbrefNum))
 			{
 				// Compare DBRef numbers (ignoring creation time for now)
-				var result = unlockerObj.Object().DBRef.Number == dbrefNum;
-				Console.WriteLine($"[ExactObjectExpr] DBRef check - {unlockerObj.Object().DBRef.Number} == {dbrefNum}: {result}");
-				return result;
+				return unlockerObj.Object().DBRef.Number == dbrefNum;
 			}
 			
 			// Otherwise try exact name match
 			// Check if the unlocker itself matches
 			if (unlockerObj.Object().Name.Equals(target, StringComparison.OrdinalIgnoreCase))
-			{
-				Console.WriteLine($"[ExactObjectExpr] Name match: true");
 				return true;
-			}
 			
 			// Check aliases
 			if (unlockerObj.Aliases != null && unlockerObj.Aliases.Any(a => a.Equals(target, StringComparison.OrdinalIgnoreCase)))
-			{
-				Console.WriteLine($"[ExactObjectExpr] Alias match: true");
 				return true;
-			}
 			
-			Console.WriteLine($"[ExactObjectExpr] No match found");
 			return false;
 		};
 
