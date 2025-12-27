@@ -7,7 +7,7 @@ namespace SharpMUSH.Tests.Client.Components;
 /// <summary>
 /// Tests for the Counter component to verify basic Blazor component behavior.
 /// </summary>
-public class CounterTests : Bunit.TestContext
+public class CounterTests : MudBlazorTestContext
 {
 	[Test]
 	public async Task Counter_InitialState_DisplaysZero()

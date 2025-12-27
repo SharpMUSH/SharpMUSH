@@ -1,6 +1,7 @@
 using Bunit;
 using Bunit.TestDoubles;
 using TUnit.Core;
+using MudBlazor.Services;
 using SharpMUSH.Client.Layout;
 
 namespace SharpMUSH.Tests.Client.Components;
@@ -8,16 +9,19 @@ namespace SharpMUSH.Tests.Client.Components;
 /// <summary>
 /// Tests for the LoginDisplay component to verify authorization state behavior.
 /// </summary>
-public class LoginDisplayTests : Bunit.TestContext
+public class LoginDisplayTests
 {
 	[Test]
 	public async Task LoginDisplay_WhenNotAuthenticated_ShowsLoginButton()
 	{
 		// Arrange
-		this.AddTestAuthorization();
+		using var ctx = new Bunit.TestContext();
+		ctx.AddTestAuthorization();
+		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
+		ctx.Services.AddMudServices();
 
 		// Act
-		var cut = RenderComponent<LoginDisplay>();
+		var cut = ctx.RenderComponent<LoginDisplay>();
 
 		// Assert
 		var loginButton = cut.Find("a[href='authentication/login']");
@@ -29,11 +33,14 @@ public class LoginDisplayTests : Bunit.TestContext
 	public async Task LoginDisplay_WhenAuthenticated_ShowsUsername()
 	{
 		// Arrange
-		var authContext = this.AddTestAuthorization();
+		using var ctx = new Bunit.TestContext();
+		var authContext = ctx.AddTestAuthorization();
 		authContext.SetAuthorized("TestUser");
+		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
+		ctx.Services.AddMudServices();
 
 		// Act
-		var cut = RenderComponent<LoginDisplay>();
+		var cut = ctx.RenderComponent<LoginDisplay>();
 
 		// Assert
 		var markup = cut.Markup;
@@ -44,11 +51,14 @@ public class LoginDisplayTests : Bunit.TestContext
 	public async Task LoginDisplay_WhenAuthenticated_ShowsLogoutButton()
 	{
 		// Arrange
-		var authContext = this.AddTestAuthorization();
+		using var ctx = new Bunit.TestContext();
+		var authContext = ctx.AddTestAuthorization();
 		authContext.SetAuthorized("TestUser");
+		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
+		ctx.Services.AddMudServices();
 
 		// Act
-		var cut = RenderComponent<LoginDisplay>();
+		var cut = ctx.RenderComponent<LoginDisplay>();
 
 		// Assert
 		var logoutButton = cut.Find("button");
@@ -59,10 +69,13 @@ public class LoginDisplayTests : Bunit.TestContext
 	public async Task LoginDisplay_WhenNotAuthenticated_DoesNotShowUsername()
 	{
 		// Arrange
-		this.AddTestAuthorization();
+		using var ctx = new Bunit.TestContext();
+		ctx.AddTestAuthorization();
+		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
+		ctx.Services.AddMudServices();
 
 		// Act
-		var cut = RenderComponent<LoginDisplay>();
+		var cut = ctx.RenderComponent<LoginDisplay>();
 
 		// Assert
 		var markup = cut.Markup;

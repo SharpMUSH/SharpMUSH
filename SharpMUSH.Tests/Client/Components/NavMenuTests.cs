@@ -7,7 +7,7 @@ namespace SharpMUSH.Tests.Client.Components;
 /// <summary>
 /// Tests for the NavMenu component to verify navigation menu behavior.
 /// </summary>
-public class NavMenuTests : Bunit.TestContext
+public class NavMenuTests : MudBlazorTestContext
 {
 	[Test]
 	public async Task NavMenu_RendersAllNavigationLinks()

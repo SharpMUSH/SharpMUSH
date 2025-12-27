@@ -2,32 +2,34 @@ using Bunit;
 using Bunit.TestDoubles;
 using TUnit.Core;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
+using MudBlazor.Services;
 using SharpMUSH.Client.Components;
 using SharpMUSH.Client.Models;
 using SharpMUSH.Client.Services;
-using NSubstitute;
 
 namespace SharpMUSH.Tests.Client.Components;
 
 /// <summary>
 /// Tests for the WikiDisplay component to verify article rendering with parameters.
 /// </summary>
-public class WikiDisplayTests : Bunit.TestContext
+public class WikiDisplayTests
 {
 	[Test]
 	public async Task WikiDisplay_WithArticle_DisplaysTitle()
 	{
 		// Arrange
-		var wikiService = Substitute.For<WikiService>(
-			Substitute.For<ILogger<WikiService>>(),
-			Substitute.For<IHttpClientFactory>());
-		Services.AddSingleton(wikiService);
+		using var ctx = new Bunit.TestContext();
+		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
+		ctx.AddTestAuthorization(); // Required for AuthorizeView component
+		ctx.Services.AddMudServices();
+
+		// Add WikiService required by component
+		ctx.Services.AddSingleton<WikiService>();
 
 		var article = new WikiArticle("Test Article", "This is test content", null);
 
 		// Act
-		var cut = RenderComponent<WikiDisplay>(parameters => parameters
+		var cut = ctx.RenderComponent<WikiDisplay>(parameters => parameters
 			.Add(p => p.Slug, "test-article")
 			.Add(p => p.Article, article)
 			.Add(p => p.ActivateEditMode, () => Task.CompletedTask));
@@ -41,15 +43,18 @@ public class WikiDisplayTests : Bunit.TestContext
 	public async Task WikiDisplay_WithArticle_RendersContent()
 	{
 		// Arrange
-		var wikiService = Substitute.For<WikiService>(
-			Substitute.For<ILogger<WikiService>>(),
-			Substitute.For<IHttpClientFactory>());
-		Services.AddSingleton(wikiService);
+		using var ctx = new Bunit.TestContext();
+		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
+		ctx.AddTestAuthorization();
+		ctx.Services.AddMudServices();
+
+		// Add WikiService required by component
+		ctx.Services.AddSingleton<WikiService>();
 
 		var article = new WikiArticle("Test Article", "This is **bold** content", null);
 
 		// Act
-		var cut = RenderComponent<WikiDisplay>(parameters => parameters
+		var cut = ctx.RenderComponent<WikiDisplay>(parameters => parameters
 			.Add(p => p.Slug, "test-article")
 			.Add(p => p.Article, article)
 			.Add(p => p.ActivateEditMode, () => Task.CompletedTask));
@@ -64,14 +69,16 @@ public class WikiDisplayTests : Bunit.TestContext
 	public async Task WikiDisplay_WithoutArticle_ShowsInfoMessage()
 	{
 		// Arrange
-		var wikiService = Substitute.For<WikiService>(
-			Substitute.For<ILogger<WikiService>>(),
-			Substitute.For<IHttpClientFactory>());
-		Services.AddSingleton(wikiService);
-		this.AddTestAuthorization();
+		using var ctx = new Bunit.TestContext();
+		ctx.AddTestAuthorization();
+		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
+		ctx.Services.AddMudServices();
+
+		// Add WikiService required by component
+		ctx.Services.AddSingleton<WikiService>();
 
 		// Act
-		var cut = RenderComponent<WikiDisplay>(parameters => parameters
+		var cut = ctx.RenderComponent<WikiDisplay>(parameters => parameters
 			.Add(p => p.Slug, "nonexistent")
 			.Add(p => p.Article, null)
 			.Add(p => p.ActivateEditMode, () => Task.CompletedTask));
@@ -85,16 +92,17 @@ public class WikiDisplayTests : Bunit.TestContext
 	public async Task WikiDisplay_WithoutArticle_WhenAuthorized_ShowsCreateOption()
 	{
 		// Arrange
-		var wikiService = Substitute.For<WikiService>(
-			Substitute.For<ILogger<WikiService>>(),
-			Substitute.For<IHttpClientFactory>());
-		Services.AddSingleton(wikiService);
-		
-		var authContext = this.AddTestAuthorization();
+		using var ctx = new Bunit.TestContext();
+		var authContext = ctx.AddTestAuthorization();
 		authContext.SetAuthorized("TestUser");
+		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
+		ctx.Services.AddMudServices();
+
+		// Add WikiService required by component
+		ctx.Services.AddSingleton<WikiService>();
 
 		// Act
-		var cut = RenderComponent<WikiDisplay>(parameters => parameters
+		var cut = ctx.RenderComponent<WikiDisplay>(parameters => parameters
 			.Add(p => p.Slug, "new-page")
 			.Add(p => p.Article, null)
 			.Add(p => p.ActivateEditMode, () => Task.CompletedTask));
@@ -109,18 +117,19 @@ public class WikiDisplayTests : Bunit.TestContext
 	public async Task WikiDisplay_WhenAuthorized_ShowsEditButton()
 	{
 		// Arrange
-		var wikiService = Substitute.For<WikiService>(
-			Substitute.For<ILogger<WikiService>>(),
-			Substitute.For<IHttpClientFactory>());
-		Services.AddSingleton(wikiService);
-
-		var authContext = this.AddTestAuthorization();
+		using var ctx = new Bunit.TestContext();
+		var authContext = ctx.AddTestAuthorization();
 		authContext.SetAuthorized("TestUser");
+		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
+		ctx.Services.AddMudServices();
+
+		// Add WikiService required by component
+		ctx.Services.AddSingleton<WikiService>();
 
 		var article = new WikiArticle("Test Article", "Content", null);
 
 		// Act
-		var cut = RenderComponent<WikiDisplay>(parameters => parameters
+		var cut = ctx.RenderComponent<WikiDisplay>(parameters => parameters
 			.Add(p => p.Slug, "test-article")
 			.Add(p => p.Article, article)
 			.Add(p => p.ActivateEditMode, () => Task.CompletedTask));
@@ -135,17 +144,18 @@ public class WikiDisplayTests : Bunit.TestContext
 	public async Task WikiDisplay_WhenNotAuthorized_DoesNotShowEditButton()
 	{
 		// Arrange
-		var wikiService = Substitute.For<WikiService>(
-			Substitute.For<ILogger<WikiService>>(),
-			Substitute.For<IHttpClientFactory>());
-		Services.AddSingleton(wikiService);
+		using var ctx = new Bunit.TestContext();
+		ctx.AddTestAuthorization(); // Not authorized
+		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
+		ctx.Services.AddMudServices();
 
-		this.AddTestAuthorization(); // Not authorized
+		// Add WikiService required by component
+		ctx.Services.AddSingleton<WikiService>();
 
 		var article = new WikiArticle("Test Article", "Content", null);
 
 		// Act
-		var cut = RenderComponent<WikiDisplay>(parameters => parameters
+		var cut = ctx.RenderComponent<WikiDisplay>(parameters => parameters
 			.Add(p => p.Slug, "test-article")
 			.Add(p => p.Article, article)
 			.Add(p => p.ActivateEditMode, () => Task.CompletedTask));
@@ -159,15 +169,18 @@ public class WikiDisplayTests : Bunit.TestContext
 	public async Task WikiDisplay_HomeSlug_DisplaysAsHero()
 	{
 		// Arrange
-		var wikiService = Substitute.For<WikiService>(
-			Substitute.For<ILogger<WikiService>>(),
-			Substitute.For<IHttpClientFactory>());
-		Services.AddSingleton(wikiService);
+		using var ctx = new Bunit.TestContext();
+		ctx.AddTestAuthorization();
+		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
+		ctx.Services.AddMudServices();
+
+		// Add WikiService required by component
+		ctx.Services.AddSingleton<WikiService>();
 
 		var article = new WikiArticle("Home", "Welcome", null);
 
 		// Act
-		var cut = RenderComponent<WikiDisplay>(parameters => parameters
+		var cut = ctx.RenderComponent<WikiDisplay>(parameters => parameters
 			.Add(p => p.Slug, "home")
 			.Add(p => p.Article, article)
 			.Add(p => p.ActivateEditMode, () => Task.CompletedTask));
