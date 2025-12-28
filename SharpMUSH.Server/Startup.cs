@@ -24,16 +24,18 @@ using SharpMUSH.Library.Behaviors;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
+using SharpMUSH.Library.Services.DatabaseConversion;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Extensions;
 using SharpMUSH.Server.Strategy.ArangoDB;
 using SharpMUSH.Server.Strategy.Prometheus;
+using SharpMUSH.Server.Strategy.Redis;
 using ZiggyCreatures.Caching.Fusion;
 using TaskScheduler = SharpMUSH.Library.Services.TaskScheduler;
 
 namespace SharpMUSH.Server;
 
-public class Startup(ArangoConfiguration arangoConfig, string colorFile, PrometheusStrategy prometheusStrategy)
+public class Startup(ArangoConfiguration arangoConfig, string colorFile, PrometheusStrategy prometheusStrategy, RedisStrategy redisStrategy)
 {
 	// This method gets called by the runtime. Use this method to add services to the container.
 	// For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
@@ -95,6 +97,28 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, Prometh
 			var prometheusUrl = prometheusStrategy.GetPrometheusUrl();
 			return new PrometheusQueryService(httpClient, logger, prometheusUrl);
 		});
+		
+		// Configure Redis connection using strategy pattern
+		services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(sp =>
+		{
+			var logger = sp.GetRequiredService<ILogger<StackExchange.Redis.ConnectionMultiplexer>>();
+			
+			try
+			{
+				var multiplexer = redisStrategy.GetConnectionAsync().AsTask().GetAwaiter().GetResult();
+				logger.LogInformation("Connected to Redis successfully");
+				return multiplexer;
+			}
+			catch (Exception ex)
+			{
+				logger.LogWarning(ex, "Failed to connect to Redis. Connection state will not be shared.");
+				throw;
+			}
+		});
+		
+		// Add Redis-backed connection state store
+		services.AddSingleton<IConnectionStateStore, RedisConnectionStateStore>();
+		
 		services.AddSingleton<INotifyService, NotifyService>();
 		services.AddSingleton<ILocateService, LocateService>();
 		services.AddSingleton<IMoveService, MoveService>();
@@ -112,12 +136,16 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, Prometh
 		services.AddSingleton<IHookService, HookService>();
 		services.AddSingleton<IEventService, EventService>();
 		services.AddSingleton<IWarningService, WarningService>();
+		services.AddSingleton<PennMUSHDatabaseParser>();
+		services.AddSingleton<IPennMUSHDatabaseConverter, PennMUSHDatabaseConverter>();
 		services.AddSingleton<ILibraryProvider<FunctionDefinition>, Functions>();
 		services.AddSingleton<ILibraryProvider<CommandDefinition>, Commands>();
 		services.AddSingleton(x => x.GetService<ILibraryProvider<FunctionDefinition>>()!.Get());
 		services.AddSingleton(x => x.GetService<ILibraryProvider<CommandDefinition>>()!.Get());
 		services.AddSingleton<IOptionsFactory<SharpMUSHOptions>, OptionsService>();
 		services.AddSingleton<IOptionsFactory<ColorsOptions>, ReadColorsOptionsFactory>();
+		services.AddSingleton<ConfigurationReloadService>();
+		services.AddSingleton<IOptionsChangeTokenSource<SharpMUSHOptions>>(sp => sp.GetRequiredService<ConfigurationReloadService>());
 		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(CacheInvalidationBehavior<,>));
 		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(QueryCachingBehavior<,>));
 		services.AddSingleton(new ArangoHandle("CurrentSharpMUSHWorld"));
@@ -169,9 +197,11 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, Prometh
 		services.AddControllers();
 		services.AddQuartzHostedService();
 		services.AddHostedService<StartupHandler>();
+		services.AddHostedService<Services.ConnectionReconciliationService>();
 		services.AddHostedService<Services.ConnectionLoggingService>();
 		services.AddHostedService<Services.HealthMonitoringService>();
 		services.AddHostedService<Services.WarningCheckService>();
+		services.AddHostedService<Services.PennMUSHDatabaseConversionService>();
 
 		services.AddLogging(logging =>
 		{

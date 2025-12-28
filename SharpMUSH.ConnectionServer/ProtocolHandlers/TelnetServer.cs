@@ -20,24 +20,26 @@ public class TelnetServer : ConnectionHandler
 	private readonly ILogger _logger;
 	private readonly IConnectionServerService _connectionService;
 	private readonly IBus _publishEndpoint;
+	private readonly IDescriptorGeneratorService _descriptorGenerator;
 	private readonly MSSPConfig _msspConfig = new() { Name = "SharpMUSH", UTF_8 = true };
 	private readonly SemaphoreSlim _semaphoreSlimForWriter = new(1, 1);
-	private readonly NextUnoccupiedNumberGenerator _descriptorGenerator = new(0);
 
 	public TelnetServer(
 		ILogger<TelnetServer> logger,
 		IConnectionServerService connectionService,
-		IBus publishEndpoint)
+		IBus publishEndpoint,
+		IDescriptorGeneratorService descriptorGenerator)
 	{
 		Console.OutputEncoding = Encoding.UTF8;
 		_logger = logger;
 		_connectionService = connectionService;
 		_publishEndpoint = publishEndpoint;
+		_descriptorGenerator = descriptorGenerator;
 	}
 
 	public override async Task OnConnectedAsync(ConnectionContext connection)
 	{
-		var nextPort = _descriptorGenerator.Get().Take(1).First();
+		var nextPort = _descriptorGenerator.GetNextTelnetDescriptor();
 		var ct = connection.ConnectionClosed;
 
 		var MSDPHandler = new MSDPServerHandler(new MSDPServerModel(async resetVar =>

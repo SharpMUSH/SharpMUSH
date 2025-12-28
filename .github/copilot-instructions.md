@@ -71,6 +71,49 @@ public static ValueTask<CallState> Name(IMUSHCodeParser parser, SharpFunctionAtt
 - Command tests should verify both success and error cases
 - Function tests should validate return values and argument handling
 
+### Running Filtered Tests
+SharpMUSH uses [TUnit](https://tunit.dev/) as its testing framework, which supports powerful test filtering capabilities.
+
+#### Running All Tests
+```bash
+dotnet test
+# or
+dotnet run --project SharpMUSH.Tests
+```
+
+#### Filtering to a Specific Test Class
+To run all tests in a specific test class, use the `--treenode-filter` argument:
+```bash
+dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/BuildingCommandTests/*"
+dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/CommandDiscoveryServiceTests/*"
+```
+
+#### Filtering to a Specific Test Method
+To run a single test method within a class:
+```bash
+dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/BuildingCommandTests/CreateObject"
+dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/WarningLockChecksTests/WarningLock_ShouldSucceedWithCorrectOwner"
+```
+
+#### Pattern Format
+The treenode-filter pattern follows the format: `/<assembly>/<namespace>/<class>/<method>`
+- Use `*` as a wildcard to match any value
+- Use `[Property=Value]` for attribute-based filtering
+- Combine filters with `and`, `or`, `starts with`, `ends with`, `equals` operators
+
+#### Additional Resources
+- [TUnit Test Filters Documentation](https://tunit.dev/docs/execution/test-filters/)
+- [Microsoft TestFx Graph Query Filtering](https://github.com/microsoft/testfx/blob/main/docs/mstest-runner-graphqueryfiltering/graph-query-filtering.md)
+
+#### Useful Test Options
+```bash
+# Run with detailed output
+dotnet run --project SharpMUSH.Tests -- --output detailed
+
+# Combine filter with detailed output
+dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/BuildingCommandTests/*" --output detailed
+```
+
 ## Build Requirements
 - .NET 10 (as specified in global.json)
 - Build with: `dotnet build`
