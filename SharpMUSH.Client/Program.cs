@@ -17,6 +17,7 @@ builder.Services.AddSingleton<ISlugHelper, SlugHelper>();
 builder.Services.AddSingleton<WikiService>();
 builder.Services.AddSingleton<AdminConfigService>();
 builder.Services.AddSingleton<IWebSocketClientService, WebSocketClientService>();
+builder.Services.AddSingleton<DatabaseConversionService>();
 
 builder.Services.AddHttpClient("api", sp =>
 {
