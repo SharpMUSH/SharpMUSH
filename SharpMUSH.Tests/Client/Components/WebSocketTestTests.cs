@@ -14,15 +14,30 @@ namespace SharpMUSH.Tests.Client.Components;
 /// </summary>
 public class WebSocketTestTests
 {
+	/// <summary>
+	/// Concrete test context for WebSocket tests that sets up MudBlazor services.
+	/// </summary>
+	private class WebSocketTestContext : Bunit.TestContext
+	{
+		public WebSocketTestContext()
+		{
+			Services.AddMudServices();
+		}
+	}
+
+	private IWebSocketClientService CreateMockWebSocketClient(bool isConnected = false)
+	{
+		var mock = Substitute.For<IWebSocketClientService>();
+		mock.IsConnected.Returns(isConnected);
+		return mock;
+	}
+
 	[Test]
 	public async Task WebSocketTest_InitialState_ShowsDisconnected()
 	{
 		// Arrange
-		using var ctx = new Bunit.TestContext();
-		ctx.Services.AddMudServices();
-		
-		var mockWebSocketClient = Substitute.For<IWebSocketClientService>();
-		mockWebSocketClient.IsConnected.Returns(false);
+		using var ctx = new WebSocketTestContext();
+		var mockWebSocketClient = CreateMockWebSocketClient(false);
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
@@ -37,10 +52,8 @@ public class WebSocketTestTests
 	public async Task WebSocketTest_RendersPageTitle()
 	{
 		// Arrange
-		using var ctx = new Bunit.TestContext();
-		ctx.Services.AddMudServices();
-		
-		var mockWebSocketClient = Substitute.For<IWebSocketClientService>();
+		using var ctx = new WebSocketTestContext();
+		var mockWebSocketClient = CreateMockWebSocketClient();
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
@@ -55,10 +68,8 @@ public class WebSocketTestTests
 	public async Task WebSocketTest_HasServerUriField()
 	{
 		// Arrange
-		using var ctx = new Bunit.TestContext();
-		ctx.Services.AddMudServices();
-		
-		var mockWebSocketClient = Substitute.For<IWebSocketClientService>();
+		using var ctx = new WebSocketTestContext();
+		var mockWebSocketClient = CreateMockWebSocketClient();
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
@@ -73,10 +84,8 @@ public class WebSocketTestTests
 	public async Task WebSocketTest_HasConnectButton()
 	{
 		// Arrange
-		using var ctx = new Bunit.TestContext();
-		ctx.Services.AddMudServices();
-		
-		var mockWebSocketClient = Substitute.For<IWebSocketClientService>();
+		using var ctx = new WebSocketTestContext();
+		var mockWebSocketClient = CreateMockWebSocketClient();
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
@@ -92,10 +101,8 @@ public class WebSocketTestTests
 	public async Task WebSocketTest_HasDisconnectButton()
 	{
 		// Arrange
-		using var ctx = new Bunit.TestContext();
-		ctx.Services.AddMudServices();
-		
-		var mockWebSocketClient = Substitute.For<IWebSocketClientService>();
+		using var ctx = new WebSocketTestContext();
+		var mockWebSocketClient = CreateMockWebSocketClient();
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
@@ -111,11 +118,8 @@ public class WebSocketTestTests
 	public async Task WebSocketTest_DisconnectButton_DisabledWhenDisconnected()
 	{
 		// Arrange
-		using var ctx = new Bunit.TestContext();
-		ctx.Services.AddMudServices();
-		
-		var mockWebSocketClient = Substitute.For<IWebSocketClientService>();
-		mockWebSocketClient.IsConnected.Returns(false);
+		using var ctx = new WebSocketTestContext();
+		var mockWebSocketClient = CreateMockWebSocketClient(false);
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
@@ -131,10 +135,8 @@ public class WebSocketTestTests
 	public async Task WebSocketTest_HasMessageInputField()
 	{
 		// Arrange
-		using var ctx = new Bunit.TestContext();
-		ctx.Services.AddMudServices();
-		
-		var mockWebSocketClient = Substitute.For<IWebSocketClientService>();
+		using var ctx = new WebSocketTestContext();
+		var mockWebSocketClient = CreateMockWebSocketClient();
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
@@ -150,10 +152,8 @@ public class WebSocketTestTests
 	public async Task WebSocketTest_HasSendMessageButton()
 	{
 		// Arrange
-		using var ctx = new Bunit.TestContext();
-		ctx.Services.AddMudServices();
-		
-		var mockWebSocketClient = Substitute.For<IWebSocketClientService>();
+		using var ctx = new WebSocketTestContext();
+		var mockWebSocketClient = CreateMockWebSocketClient();
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
@@ -169,11 +169,8 @@ public class WebSocketTestTests
 	public async Task WebSocketTest_SendButton_DisabledWhenDisconnected()
 	{
 		// Arrange
-		using var ctx = new Bunit.TestContext();
-		ctx.Services.AddMudServices();
-		
-		var mockWebSocketClient = Substitute.For<IWebSocketClientService>();
-		mockWebSocketClient.IsConnected.Returns(false);
+		using var ctx = new WebSocketTestContext();
+		var mockWebSocketClient = CreateMockWebSocketClient(false);
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
@@ -189,10 +186,8 @@ public class WebSocketTestTests
 	public async Task WebSocketTest_HasMessagesSection()
 	{
 		// Arrange
-		using var ctx = new Bunit.TestContext();
-		ctx.Services.AddMudServices();
-		
-		var mockWebSocketClient = Substitute.For<IWebSocketClientService>();
+		using var ctx = new WebSocketTestContext();
+		var mockWebSocketClient = CreateMockWebSocketClient();
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
@@ -207,10 +202,8 @@ public class WebSocketTestTests
 	public async Task WebSocketTest_DefaultServerUri_IsCorrect()
 	{
 		// Arrange
-		using var ctx = new Bunit.TestContext();
-		ctx.Services.AddMudServices();
-		
-		var mockWebSocketClient = Substitute.For<IWebSocketClientService>();
+		using var ctx = new WebSocketTestContext();
+		var mockWebSocketClient = CreateMockWebSocketClient();
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
@@ -225,11 +218,8 @@ public class WebSocketTestTests
 	public async Task WebSocketTest_ConnectButton_CallsConnectAsync()
 	{
 		// Arrange
-		using var ctx = new Bunit.TestContext();
-		ctx.Services.AddMudServices();
-		
-		var mockWebSocketClient = Substitute.For<IWebSocketClientService>();
-		mockWebSocketClient.IsConnected.Returns(false);
+		using var ctx = new WebSocketTestContext();
+		var mockWebSocketClient = CreateMockWebSocketClient(false);
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		var cut = ctx.RenderComponent<WebSocketTest>();
@@ -247,10 +237,8 @@ public class WebSocketTestTests
 	public async Task WebSocketTest_Dispose_UnsubscribesFromEvents()
 	{
 		// Arrange
-		using var ctx = new Bunit.TestContext();
-		ctx.Services.AddMudServices();
-		
-		var mockWebSocketClient = Substitute.For<IWebSocketClientService>();
+		using var ctx = new WebSocketTestContext();
+		var mockWebSocketClient = CreateMockWebSocketClient();
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
