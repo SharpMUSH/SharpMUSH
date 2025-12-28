@@ -1373,28 +1373,68 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "testlock", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "testlock", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> TestLock(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var objectName = args["0"].Message!.ToPlainText();
-		var lockString = args["1"].Message!.ToPlainText();
-
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor, executor, objectName, LocateFlags.All,
-			async lockedObject =>
-			{
-				// Validate the lock string
-				if (!LockService!.Validate(lockString, lockedObject))
+		
+		// Two forms:
+		// testlock(<lock key>, <victim>) - test a lock expression against a victim
+		// testlock(<object>, <victim>, <lock name>) - test a named lock on object against victim
+		
+		if (args.Count == 2)
+		{
+			// Form 1: testlock(<lock key>, <victim>)
+			var lockString = args["0"].Message!.ToPlainText();
+			var victimName = args["1"].Message!.ToPlainText();
+			
+			return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+				executor, executor, victimName, LocateFlags.All,
+				victim =>
 				{
-					return new CallState("#-1 INVALID LOCK");
-				}
+					// Validate the lock string
+					if (!LockService!.Validate(lockString, executor))
+					{
+						return ValueTask.FromResult(new CallState("#-1 INVALID LOCK"));
+					}
 
-				// Evaluate the lock
-				var passes = LockService.Evaluate(lockString, lockedObject, executor);
-				return new CallState(passes ? "1" : "0");
-			});
+					// Evaluate the lock: does victim pass the lock expression?
+					var passes = LockService.Evaluate(lockString, executor, victim);
+					return ValueTask.FromResult(new CallState(passes ? "1" : "0"));
+				});
+		}
+		else
+		{
+			// Form 2: testlock(<object>, <victim>, <lock name>)
+			var objectName = args["0"].Message!.ToPlainText();
+			var victimName = args["1"].Message!.ToPlainText();
+			var lockName = args["2"].Message!.ToPlainText();
+			
+			return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+				executor, executor, objectName, LocateFlags.All,
+				async lockedObject =>
+				{
+					// Locate the victim
+					var victimResult = await LocateService!.Locate(parser, executor, executor, victimName, LocateFlags.All);
+					if (!victimResult.IsValid())
+					{
+						return new CallState("#-1 INVALID VICTIM");
+					}
+					var victim = victimResult.AsAnyObject;
+					
+					// Get the named lock from the object
+					if (!lockedObject.Object().Locks.TryGetValue(lockName, out var lockString))
+					{
+						// No lock set means it passes
+						return new CallState("1");
+					}
+
+					// Evaluate the lock: does victim pass this lock?
+					var passes = LockService!.Evaluate(lockString, lockedObject, victim);
+					return new CallState(passes ? "1" : "0");
+				});
+		}
 	}
 
 	[SharpFunction(Name = "textentries", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
