@@ -45,13 +45,29 @@ if (kafkaBootstrap == null)
 }
 
 // Parse bootstrap address to get host and port
-// GetBootstrapAddress() returns format like "//127.0.0.1:port/" with leading slashes and trailing slash
-kafkaBootstrap = kafkaBootstrap.Trim('/');
-var parts = kafkaBootstrap.Split(':', 2);
-kafkaHost = parts[0];
-if (parts.Length > 1)
+// GetBootstrapAddress() might return formats like "//127.0.0.1:port/" or "127.0.0.1:port"
+if (!string.IsNullOrEmpty(kafkaBootstrap))
 {
-	kafkaPort = int.Parse(parts[1]);
+	// Remove protocol if present (e.g., "kafka://")
+	if (kafkaBootstrap.Contains("://"))
+	{
+		kafkaBootstrap = kafkaBootstrap.Substring(kafkaBootstrap.IndexOf("://") + 3);
+	}
+	
+	// Trim slashes
+	kafkaBootstrap = kafkaBootstrap.Trim('/');
+	
+	// Split host and port
+	var lastColon = kafkaBootstrap.LastIndexOf(':');
+	if (lastColon > 0)
+	{
+		kafkaHost = kafkaBootstrap.Substring(0, lastColon);
+		kafkaPort = int.Parse(kafkaBootstrap.Substring(lastColon + 1));
+	}
+	else
+	{
+		kafkaHost = kafkaBootstrap;
+	}
 }
 
 // Initialize Redis strategy
