@@ -21,6 +21,7 @@ using SharpMUSH.Library.Queries;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services.Interfaces;
+using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Concurrent;
 using System.Drawing;
 using System.Linq;
@@ -1161,7 +1162,8 @@ public partial class Commands
 				break;
 			case "SETQ":
 				// Modify Q-registers of the first waiting task
-				var modified = await Scheduler!.ModifyQRegisters(dbRefAttribute, qRegisters!);
+				var scheduler = parser.ServiceProvider.GetRequiredService<ITaskScheduler>();
+				var modified = await scheduler.ModifyQRegisters(dbRefAttribute, qRegisters!);
 				if (!modified)
 				{
 					await NotifyService!.Notify(executor, "No task is waiting on that semaphore.");

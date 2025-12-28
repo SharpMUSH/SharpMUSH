@@ -23,7 +23,6 @@ public class SemaphoreCommandTests
 	private IAttributeService AttributeService => WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
 
 	[Test]
-	[Explicit("Test infrastructure issue - hangs during initialization. Needs investigation of WebAppFactory/scheduler interaction")]
 	public async ValueTask NotifyCommand_WithObject_ShouldShowNotifiedMessage()
 	{
 		// Arrange
@@ -57,6 +56,7 @@ public class SemaphoreCommandTests
 	}
 
 	[Test]
+	[Explicit("Requires Quartz scheduler to process queued tasks - tests queued iteration context")]
 	public async ValueTask DolistDefault_ShouldQueueWithIterationContext()
 	{
 		// Arrange
@@ -77,6 +77,7 @@ public class SemaphoreCommandTests
 	}
 
 	[Test]
+	[Explicit("Requires Quartz scheduler to process queued tasks and semaphore operations")]
 	public async ValueTask NotifySetQ_ShouldModifyQRegisters()
 	{
 		// Arrange
@@ -124,6 +125,7 @@ public class SemaphoreCommandTests
 	}
 
 	[Test]
+	[Explicit("Requires Quartz scheduler to process queued tasks - tests timed waits")]
 	public async ValueTask WaitCommand_WithTime_CanExecute()
 	{
 		// Arrange & Act - just verify @wait command can execute
