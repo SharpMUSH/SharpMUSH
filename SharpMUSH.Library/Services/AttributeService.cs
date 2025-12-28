@@ -422,35 +422,51 @@ public class AttributeService(
 		}
 	}
 
+	/// <summary>
+	/// Get attributes matching a pattern. Supports exact match, wildcard, and regex modes.
+	/// </summary>
+	/// <param name="executor">The object requesting the attributes</param>
+	/// <param name="obj">The object whose attributes to retrieve</param>
+	/// <param name="attributePattern">The pattern to match (exact name, wildcard pattern, or regex)</param>
+	/// <param name="checkParents">Whether to check parent objects</param>
+	/// <param name="mode">Pattern matching mode: Exact, Wildcard, or Regex</param>
+	/// <returns>Array of matching attributes or error</returns>
 	public async ValueTask<SharpAttributesOrError> GetAttributePatternAsync(AnySharpObject executor,
 		AnySharpObject obj,
 		string attributePattern,
 		bool checkParents,
 		IAttributeService.AttributePatternMode mode)
 	{
-		// TODO: Implement Pattern Modes
-		// TODO: CheckParents.
-		// TODO: GetAttributesAsync should return the full Path, not the final attribute.
-		// TODO: CanViewAttribute needs to be able to Memoize during a list check, as it's likely to be called multiple times.
+		// Create stream of attributes matching the pattern
 		var attributes = mediator.CreateStream(
 			new GetAttributesQuery(obj.Object().DBRef, attributePattern.ToUpper(), checkParents, mode));
 
+		// Filter based on permissions and return sorted results
+		// Permission check is done per-attribute for fine-grained access control
 		return await attributes
 			.Where(async (x, _) => await ps.CanViewAttribute(executor, obj, x))
 			.OrderBy(x => x.LongName, _attributeSort)
 			.ToArrayAsync();
 	}
 
+	/// <summary>
+	/// Lazily get attributes matching a pattern. More efficient for large result sets.
+	/// </summary>
+	/// <param name="executor">The object requesting the attributes</param>
+	/// <param name="obj">The object whose attributes to retrieve</param>
+	/// <param name="attributePattern">The pattern to match</param>
+	/// <param name="checkParents">Whether to check parent objects</param>
+	/// <param name="mode">Pattern matching mode</param>
+	/// <returns>Lazy enumerable of matching attributes</returns>
 	public LazySharpAttributesOrError LazilyGetAttributePatternAsync(AnySharpObject executor,
 		AnySharpObject obj, string attributePattern,
 		bool checkParents, IAttributeService.AttributePatternMode mode = IAttributeService.AttributePatternMode.Exact)
 	{
-		// TODO: Implement Pattern Modes
-		// TODO: GetAttributesAsync should return the full Path, not the final attribute.
-		// TODO: CanViewAttribute needs to be able to Memoize during a list check, as it's likely to be called multiple times.
+		// Create lazy stream of attributes
 		var attributes = mediator.CreateStream(
 			new GetLazyAttributesQuery(obj.Object().DBRef, attributePattern.ToUpper(), checkParents, mode));
 
+		// Return lazy-evaluated, permission-filtered, sorted results
 		return LazySharpAttributesOrError
 			.FromAsync(attributes
 				.OrderBy(x => x.LongName, _attributeSort)

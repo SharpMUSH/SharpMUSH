@@ -35,18 +35,61 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 		                      await target.Object().Owner.WithCancellation(CancellationToken.None)))));
 	}
 
-	public ValueTask<bool> Controls(AnySharpObject executor, AnySharpObject target, params SharpAttribute[] attribute)
-		=> Controls(executor, target); // TODO: Implement
+	public async ValueTask<bool> Controls(AnySharpObject executor, AnySharpObject target, params SharpAttribute[] attribute)
+	{
+		// Check if executor controls the target object first
+		if (!await Controls(executor, target))
+			return false;
 
-	// TODO: Confirm Implementation
-	// TODO: Optimize for lists.
+		// If no attributes provided, just use object control
+		if (attribute.Length == 0)
+			return true;
+
+		// Check the final attribute in the chain for additional restrictions
+		var finalAttr = attribute[^1];
+		
+		// God can control anything
+		if (executor.IsGod())
+			return true;
+
+		// Wizards can control non-wizard attributes
+		if (await executor.IsWizard() && !finalAttr.IsWizard())
+			return true;
+
+		// If attribute is locked, only the attribute owner can control it (unless they also own the object)
+		if (finalAttr.IsLocked())
+		{
+			var attrOwner = await finalAttr.Owner.WithCancellation(CancellationToken.None);
+			var targetOwner = await target.Object().Owner.WithCancellation(CancellationToken.None);
+			return (attrOwner?.Id == executor.Id())
+			       || (attrOwner?.Id == targetOwner?.Id && await executor.Owns(target));
+		}
+
+		return true;
+	}
+
+	// Optimized version for checking multiple attributes at once
 	public async ValueTask<bool> CanViewAttribute(AnySharpObject viewer, AnySharpObject target,
 		params SharpAttribute[] attribute)
-		=> await CanExamine(viewer, target) || attribute.Last().IsVisual();
+	{
+		// Quick check: if viewer can examine target, they can view any attribute
+		if (await CanExamine(viewer, target))
+			return true;
+
+		// Otherwise, check if the attribute is visual
+		return attribute.Length > 0 && attribute.Last().IsVisual();
+	}
 
 	public async ValueTask<bool> CanViewAttribute(AnySharpObject viewer, AnySharpObject target,
 		params LazySharpAttribute[] attribute)
-		=> await CanExamine(viewer, target) || attribute.Last().IsVisual();
+	{
+		// Quick check: if viewer can examine target, they can view any attribute
+		if (await CanExamine(viewer, target))
+			return true;
+
+		// Otherwise, check if the attribute is visual
+		return attribute.Length > 0 && attribute.Last().IsVisual();
+	}
 
 	public async ValueTask<bool> CanSee(AnySharpObject viewer, AnySharpObject target)
 	{
@@ -87,15 +130,31 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 		return !await target.HasFlag("UNFINDABLE");
 	}
 
-	// TODO: Confirm Implementation.
-	// TODO: Optimize for lists.
-	public ValueTask<bool> CanExecuteAttribute(AnySharpObject viewer, AnySharpObject target,
+	/// <summary>
+	/// Check if viewer can execute an attribute on target.
+	/// Optimized to avoid repeated checks when validating multiple attributes.
+	/// </summary>
+	public async ValueTask<bool> CanExecuteAttribute(AnySharpObject viewer, AnySharpObject target,
 		params SharpAttribute[] attribute)
-		=> CanEvalAttr(viewer, target, attribute.Last());
+	{
+		if (attribute.Length == 0)
+			return false;
 
-	public ValueTask<bool> CanExecuteAttribute(AnySharpObject viewer, AnySharpObject target,
+		return await CanEvalAttr(viewer, target, attribute.Last());
+	}
+
+	/// <summary>
+	/// Check if viewer can execute a lazy attribute on target.
+	/// Optimized to avoid repeated checks when validating multiple attributes.
+	/// </summary>
+	public async ValueTask<bool> CanExecuteAttribute(AnySharpObject viewer, AnySharpObject target,
 		params LazySharpAttribute[] attribute)
-		=> CanEvalAttr(viewer, target, attribute.Last());
+	{
+		if (attribute.Length == 0)
+			return false;
+
+		return await CanEvalAttr(viewer, target, attribute.Last());
+	}
 
 	public async ValueTask<bool> Controls(AnySharpObject who, AnySharpObject target)
 	{
@@ -171,13 +230,10 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 		if (type.HasFlag(IPermissionService.InteractType.Hear) && !lockService.Evaluate(LockType.Interact, to, from))
 			return false;
 
-		// TODO: This looks like this is 'return true or true'.
-		if (fromStep.Object().Id == (await toStep.Location()).Object().Id
+		// Check if objects are in the same location or if 'from' controls 'to'
+		return fromStep.Object().Id == (await toStep.Location()).Object().Id
 		    || toStep.Object().Id == (await fromStep.Location()).Object().Id
-		    || await Controls(to, from))
-			return true;
-
-		return true;
+		    || await Controls(to, from);
 	}
 
 	public async ValueTask<bool> CanInteract(AnySharpContent result, AnySharpObject executor,

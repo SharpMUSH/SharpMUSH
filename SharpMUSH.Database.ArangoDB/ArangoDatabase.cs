@@ -1663,10 +1663,13 @@ public partial class ArangoDatabase(
 			return null;
 		}
 
-		// TODO: This is a lazy implementation and does not appropriately support the ` section of pattern matching for attribute trees.
-		// TODO: A pattern with a wildcard can match multiple levels of attributes.
-		// This means it can also match attributes deeper in its structure that need to be reported on.
-		// It already does this right now. But not in a sorted manner!
+		// Note: This implementation matches attributes at any depth in the attribute tree.
+		// For hierarchical attributes (e.g., FOO`BAR`BAZ), patterns can match intermediate nodes.
+		// Results include all matching nodes but may not be sorted hierarchically.
+		// Future enhancement: Add SORT clause to return results in tree order (parent before children).
+		//
+		// Limitation: The ` backtick section syntax for matching specific tree levels is not yet fully supported.
+		// For now, patterns match against the full LongName path of each attribute.
 
 		// OPTIONS { indexHint: "inverted_index_name", forceIndexHint: true }
 		// This doesn't seem like it can be done on a GRAPH query?
@@ -1699,10 +1702,13 @@ public partial class ArangoDatabase(
 			return null;
 		}
 
-		// TODO: This is a lazy implementation and does not appropriately support the ` section of pattern matching for attribute trees.
-		// TODO: A pattern with a wildcard can match multiple levels of attributes.
-		// This means it can also match attributes deeper in its structure that need to be reported on.
-		// It already does this right now. But not in a sorted manner!
+		// Note: This implementation matches attributes at any depth in the attribute tree.
+		// For hierarchical attributes (e.g., FOO`BAR`BAZ), patterns can match intermediate nodes.
+		// Results include all matching nodes but may not be sorted hierarchically.
+		// Future enhancement: Add SORT clause to return results in tree order (parent before children).
+		//
+		// Limitation: The ` backtick section syntax for matching specific tree levels is not yet fully supported.
+		// For now, patterns match against the full LongName path of each attribute.
 
 		// OPTIONS { indexHint: "inverted_index_name", forceIndexHint: true }
 		// This doesn't seem like it can be done on a GRAPH query?
