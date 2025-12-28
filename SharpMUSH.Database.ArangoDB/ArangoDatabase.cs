@@ -1663,13 +1663,14 @@ public partial class ArangoDatabase(
 			return null;
 		}
 
-		// Note: This implementation matches attributes at any depth in the attribute tree.
-		// For hierarchical attributes (e.g., FOO`BAR`BAZ), patterns can match intermediate nodes.
-		// Results include all matching nodes but may not be sorted hierarchically.
-		// Future enhancement: Add SORT clause to return results in tree order (parent before children).
+		// Pattern matching supports hierarchical attribute trees with proper backtick handling:
+		// - Single wildcard (*) matches within one tree level: "FOO*" matches "FOOBAR" but not "FOO`BAR"
+		// - Double wildcard (**) matches across tree levels: "FOO**" matches "FOOBAR" and "FOO`BAR`BAZ"
+		// - Question mark (?) matches a single character
+		// The WildcardToRegex() conversion properly escapes backticks in single wildcards.
 		//
-		// Limitation: The ` backtick section syntax for matching specific tree levels is not yet fully supported.
-		// For now, patterns match against the full LongName path of each attribute.
+		// Note: Results may not be sorted hierarchically (parent before children).
+		// Future enhancement: Add SORT clause for hierarchical ordering.
 
 		// OPTIONS { indexHint: "inverted_index_name", forceIndexHint: true }
 		// This doesn't seem like it can be done on a GRAPH query?
@@ -1702,13 +1703,14 @@ public partial class ArangoDatabase(
 			return null;
 		}
 
-		// Note: This implementation matches attributes at any depth in the attribute tree.
-		// For hierarchical attributes (e.g., FOO`BAR`BAZ), patterns can match intermediate nodes.
-		// Results include all matching nodes but may not be sorted hierarchically.
-		// Future enhancement: Add SORT clause to return results in tree order (parent before children).
+		// Pattern matching supports hierarchical attribute trees with proper backtick handling:
+		// - Single wildcard (*) matches within one tree level: "FOO*" matches "FOOBAR" but not "FOO`BAR"
+		// - Double wildcard (**) matches across tree levels: "FOO**" matches "FOOBAR" and "FOO`BAR`BAZ"
+		// - Question mark (?) matches a single character
+		// The WildcardToRegex() conversion properly escapes backticks in single wildcards.
 		//
-		// Limitation: The ` backtick section syntax for matching specific tree levels is not yet fully supported.
-		// For now, patterns match against the full LongName path of each attribute.
+		// Note: Results may not be sorted hierarchically (parent before children).
+		// Future enhancement: Add SORT clause for hierarchical ordering.
 
 		// OPTIONS { indexHint: "inverted_index_name", forceIndexHint: true }
 		// This doesn't seem like it can be done on a GRAPH query?
