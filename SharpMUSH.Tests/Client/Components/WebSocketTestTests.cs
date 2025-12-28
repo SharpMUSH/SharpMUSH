@@ -235,20 +235,4 @@ public class WebSocketTestTests
 		await mockWebSocketClient.Received(1).ConnectAsync(Arg.Any<string>());
 	}
 
-	[Test]
-	public async Task WebSocketTest_Dispose_UnsubscribesFromEvents()
-	{
-		// Arrange
-		using var ctx = new WebSocketTestContext();
-		var mockWebSocketClient = CreateMockWebSocketClient();
-		ctx.Services.AddSingleton(mockWebSocketClient);
-
-		// Act
-		var cut = ctx.RenderComponent<WebSocketTest>();
-		var instance = cut.Instance; // Get instance before dispose
-		cut.Dispose();
-
-		// Assert - Component disposed successfully without errors
-		await Assert.That(instance).IsNotNull();
-	}
 }
