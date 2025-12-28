@@ -43,7 +43,7 @@ public class WebAppFactory : IAsyncInitializer
 	public required RedisTestServer RedisTestServer { get; init; }
 
 	public IServiceProvider Services => _server!.Services;
-	private TestWebApplicationBuilderFactory<Program>? _server;
+	private TestWebApplicationBuilderFactory<SharpMUSH.Server.Program>? _server;
 	private DBRef _one;
 
 	public IMUSHCodeParser FunctionParser
@@ -143,7 +143,7 @@ public class WebAppFactory : IAsyncInitializer
 		// Create required Kafka topics before starting the application
 		await CreateKafkaTopicsAsync(kafkaHost);
 
-		_server = new TestWebApplicationBuilderFactory<Program>(
+		_server = new TestWebApplicationBuilderFactory<SharpMUSH.Server.Program>(
 			MySqlTestServer.Instance.GetConnectionString(), 
 			configFile,
 			Substitute.For<INotifyService>(),
