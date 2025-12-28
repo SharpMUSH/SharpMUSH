@@ -165,7 +165,7 @@ Additionally, hooks can use `%u` to access the entire command string entered.
 - [ ] Integration with HUH_COMMAND hook
 - [ ] Individual player @chatformat support in mogrifier
 - [ ] Channel recall buffer support for mogrifier
-- [ ] Unit tests for @hook command
+- [x] Unit tests for @hook command
 - [ ] Integration tests for hook execution
 - [ ] Unit tests for mogrifier
 - [ ] Performance optimization for hook lookup
