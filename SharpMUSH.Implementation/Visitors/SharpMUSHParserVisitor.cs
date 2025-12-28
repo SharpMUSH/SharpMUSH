@@ -690,6 +690,11 @@ public class SharpMUSHParserVisitor(
 		}
 		namedRegisters["LSAC"] = MModule.single(arguments.Count.ToString());
 		
+		// Construct full command string for $-command matching (command + switches + args)
+		var commandWithSwitches = switchArray.Length > 0 
+			? MModule.single($"{rootCommand}/{string.Join("/", switchArray)} {src.ToPlainText()}") 
+			: MModule.single($"{rootCommand} {src.ToPlainText()}");
+		
 		// Execute hooks with the new parser state that includes named registers
 		return await prs.With(state =>
 			{
@@ -739,13 +744,12 @@ public class SharpMUSHParserVisitor(
 					// Result is discarded
 				}
 				
-				// 3. Check for /override hook  
+				// 3. Check for /override hook with $-command matching
 				var overrideHook = await HookService.GetHookAsync(rootCommand, "OVERRIDE");
 				if (overrideHook.IsSome())
 				{
-					// TODO: Implement $-command matching for override
-					// For now, just execute the hook attribute code directly
-					var overrideResult = await ExecuteHookCode(newParser, executor, overrideHook.AsValue());
+					Option<MString> overrideInput = commandWithSwitches;
+					var overrideResult = await ExecuteHookCode(newParser, executor, overrideHook.AsValue(), overrideInput);
 					if (overrideResult.IsSome())
 					{
 						// 5. Check for /after hook before returning
@@ -757,6 +761,35 @@ public class SharpMUSHParserVisitor(
 						}
 						return overrideResult.AsValue();
 					}
+				}
+				
+				// Validate switches and check for /extend hook if invalid switches are found
+				var allowedSwitches = libraryCommandDefinition.Attribute.Switches ?? [];
+				var invalidSwitches = switchArray.Where(s => !allowedSwitches.Contains(s, StringComparer.OrdinalIgnoreCase)).ToArray();
+				
+				if (invalidSwitches.Length > 0)
+				{
+					// Check for /extend hook to handle invalid switches
+					var extendHook = await HookService.GetHookAsync(rootCommand, "EXTEND");
+					if (extendHook.IsSome())
+					{
+						Option<MString> extendInput = commandWithSwitches;
+						var extendResult = await ExecuteHookCode(newParser, executor, extendHook.AsValue(), extendInput);
+						if (extendResult.IsSome())
+						{
+							// Execute /after hook before returning
+							var afterHook = await HookService.GetHookAsync(rootCommand, "AFTER");
+							if (afterHook.IsSome())
+							{
+								await ExecuteHookCode(newParser, executor, afterHook.AsValue());
+							}
+							return extendResult.AsValue();
+						}
+					}
+					
+					// No extend hook or it didn't match - return error for invalid switches
+					var invalidSwitchList = string.Join(", ", invalidSwitches);
+					return new CallState($"#-1 INVALID SWITCH: {invalidSwitchList}");
 				}
 				
 				// 4. Execute the built-in command
@@ -792,9 +825,11 @@ public class SharpMUSHParserVisitor(
 	}
 	
 	/// <summary>
-	/// Executes hook code from an attribute on an object
+	/// Executes hook code from an attribute on an object.
+	/// For OVERRIDE and EXTEND hooks, performs $-command matching.
+	/// For other hooks, executes the attribute directly.
 	/// </summary>
-	private async ValueTask<Option<CallState>> ExecuteHookCode(IMUSHCodeParser parser, AnyOptionalSharpObject executor, CommandHook hook)
+	private async ValueTask<Option<CallState>> ExecuteHookCode(IMUSHCodeParser parser, AnyOptionalSharpObject executor, CommandHook hook, Option<MString> commandInput = default!)
 	{
 		// Get the target object
 		var targetObject = await Mediator.Send(new GetObjectNodeQuery(hook.TargetObject));
@@ -806,7 +841,31 @@ public class SharpMUSHParserVisitor(
 		var targetObj = targetObject.Known();
 		var executorObj = executor.IsNone ? targetObj : executor.Known();
 		
-		// Execute the attribute using EvaluateAttributeFunctionAsync
+		// For OVERRIDE and EXTEND hooks, perform $-command matching
+		if ((hook.HookType == "OVERRIDE" || hook.HookType == "EXTEND") && commandInput.IsSome())
+		{
+			// Try to match $-commands on the hook object
+			var matchResult = await CommandDiscoveryService.MatchUserDefinedCommand(
+				parser,
+				new[] { targetObj }.ToAsyncEnumerable(),
+				commandInput.AsValue());
+			
+			if (matchResult.IsSome())
+			{
+				// Execute the matched $-command
+				var matches = matchResult.AsValue();
+				var firstMatch = matches.FirstOrDefault();
+				if (firstMatch != default)
+				{
+					return await HandleUserDefinedCommand(parser, matches);
+				}
+			}
+			
+			// No match found for override/extend
+			return new None();
+		}
+		
+		// For other hook types (IGNORE, BEFORE, AFTER), execute the attribute directly
 		var result = await AttributeService.EvaluateAttributeFunctionAsync(
 			parser,
 			executorObj,
