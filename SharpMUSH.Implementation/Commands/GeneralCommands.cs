@@ -21,6 +21,8 @@ using SharpMUSH.Library.Queries;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services.Interfaces;
+using Microsoft.Extensions.DependencyInjection;
+using System.Collections.Concurrent;
 using System.Drawing;
 using System.Linq;
 using System.Reflection;
@@ -35,6 +37,9 @@ namespace SharpMUSH.Implementation.Commands;
 
 public partial class Commands
 {
+	private const string DefaultSemaphoreAttribute = "SEMAPHORE";
+	private static readonly string[] DefaultSemaphoreAttributeArray = [DefaultSemaphoreAttribute];
+
 	[SharpCommand(Name = "@@", Switches = [], Behavior = CB.Default | CB.NoParse, MinArgs = 0, MaxArgs = 0)]
 	public static ValueTask<Option<CallState>> At(IMUSHCodeParser parser, SharpCommandAttribute _2)
 		=> ValueTask.FromResult(new Option<CallState>(CallState.Empty));
@@ -129,6 +134,7 @@ public partial class Commands
 	public static async ValueTask<Option<CallState>> DoList(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).WithoutNone();
+		var switches = parser.CurrentState.Switches;
 
 		if (parser.CurrentState.Arguments.Count < 2)
 		{
@@ -137,29 +143,95 @@ public partial class Commands
 		}
 
 		var list = MModule.split(" ", parser.CurrentState.Arguments["0"].Message!);
-
-		var wrappedIteration = new IterationWrapper<MString>
-			{ Value = MModule.empty(), Break = false, NoBreak = false, Iteration = 0 };
-		parser.CurrentState.IterationRegisters.Push(wrappedIteration);
 		var command = parser.CurrentState.Arguments["1"].Message!;
 
-		// Use context-based batching that batches notifications to any target
-		using (NotifyService!.BeginBatchingContext())
+		// Check if we should run inline or queue
+		var isInline = switches.Contains("INLINE") || switches.Contains("INPLACE");
+
+		if (isInline)
 		{
-			var lastCallState = CallState.Empty;
-			var visitorFunc = parser.CommandListParseVisitor(command);
+			// Inline execution - run immediately (original behavior)
+			var noBreak = switches.Contains("NOBREAK") || switches.Contains("INPLACE");
+			var wrappedIteration = new IterationWrapper<MString>
+				{ Value = MModule.empty(), Break = false, NoBreak = noBreak, Iteration = 0 };
+			parser.CurrentState.IterationRegisters.Push(wrappedIteration);
+
+			// Use context-based batching that batches notifications to any target
+			using (NotifyService!.BeginBatchingContext())
+			{
+				var lastCallState = CallState.Empty;
+				var visitorFunc = parser.CommandListParseVisitor(command);
+				foreach (var item in list)
+				{
+					wrappedIteration.Value = item!;
+					wrappedIteration.Iteration++;
+
+					// TODO: This should not need parsing each time. Just evaluation by getting the Context and visiting the children multiple times.
+					lastCallState = await visitorFunc();
+				}
+
+				parser.CurrentState.IterationRegisters.TryPop(out _);
+
+				// If /notify switch is present with /inline, queue "@notify me" after inline execution
+				if (switches.Contains("NOTIFY"))
+				{
+					await Mediator!.Publish(new QueueCommandListRequest(
+						MModule.single("@notify me"),
+						parser.CurrentState,
+						new DbRefAttribute(enactor.Object().DBRef, DefaultSemaphoreAttributeArray),
+						-1));
+				}
+
+				return lastCallState!;
+			}
+		}
+		else
+		{
+			// Default behavior - queue each iteration with proper iteration context
+			var iteration = 0u;
+			var noBreak = switches.Contains("NOBREAK") || switches.Contains("INPLACE");
+			
 			foreach (var item in list)
 			{
-				wrappedIteration.Value = item!;
-				wrappedIteration.Iteration++;
-
-				// TODO: This should not need parsing each time. Just evaluation by getting the Context and visiting the children multiple times.
-				lastCallState = await visitorFunc();
+				iteration++;
+				
+				// Create iteration context for this queued command
+				var iterationWrapper = new IterationWrapper<MString>
+				{
+					Value = item!,
+					Break = false,
+					NoBreak = noBreak,
+					Iteration = iteration
+				};
+				
+				// Clone the current parser state and add the iteration context
+				var iterationStack = new ConcurrentStack<IterationWrapper<MString>>();
+				iterationStack.Push(iterationWrapper);
+				
+				var stateForIteration = parser.CurrentState with
+				{
+					IterationRegisters = iterationStack
+				};
+				
+				// Queue each iteration as a separate command with its iteration context
+				await Mediator!.Publish(new QueueCommandListRequest(
+					command,
+					stateForIteration,
+					new DbRefAttribute(enactor.Object().DBRef, DefaultSemaphoreAttributeArray),
+					-1));
 			}
 
-			parser.CurrentState.IterationRegisters.TryPop(out _);
+			// If /notify switch is present, queue "@notify me" after all iterations
+			if (switches.Contains("NOTIFY"))
+			{
+				await Mediator!.Publish(new QueueCommandListRequest(
+					MModule.single("@notify me"),
+					parser.CurrentState,
+					new DbRefAttribute(enactor.Object().DBRef, DefaultSemaphoreAttributeArray),
+					-1));
+			}
 
-			return lastCallState!;
+			return CallState.Empty;
 		}
 	}
 
@@ -967,7 +1039,7 @@ public partial class Commands
 
 	[SharpCommand(Name = "@NOTIFY", Switches = ["ALL", "ANY", "SETQ", "QUIET"],
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs,
-		MinArgs = 0, MaxArgs = int.MaxValue)]
+		MinArgs = 1, MaxArgs = 2)]
 	public static async ValueTask<Option<CallState>> Notify(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -992,6 +1064,9 @@ public partial class Commands
 			case ["SETQ"]:
 				notifyType = "SETQ";
 				break;
+			case []:
+				// No switches - default to ANY
+				break;
 			default:
 				return new CallState(Errors.ErrorTooManySwitches);
 		}
@@ -1011,11 +1086,7 @@ public partial class Commands
 		if (maybeObject.IsError) return maybeObject.AsError;
 		var objectToNotify = maybeObject.AsSharpObject;
 
-		string attribute = "SEMAPHORE";
-		if (!string.IsNullOrEmpty(maybeAttributeString))
-		{
-			attribute = maybeAttributeString;
-		}
+		var attribute = string.IsNullOrEmpty(maybeAttributeString) ? DefaultSemaphoreAttribute : maybeAttributeString;
 
 		var attributeContents = await AttributeService!.GetAttributeAsync(executor, objectToNotify, attribute,
 			IAttributeService.AttributeMode.Execute, false);
@@ -1032,24 +1103,78 @@ public partial class Commands
 			oldSemaphoreCount = semaphoreCount;
 		}
 
+		// Check for =<number> parameter or =<qreg>,<value> pairs for /setq
+		int notifyCount = 1;
+		Dictionary<string, MString>? qRegisters = null;
+		
+		if (notifyType == "SETQ")
+		{
+			// Parse qreg,value pairs
+			if (args.Count < 2 || string.IsNullOrEmpty(args["1"].Message?.ToPlainText()))
+			{
+				await NotifyService!.Notify(executor, "You must specify Q-register assignments.");
+				return new CallState("#-1 MISSING QREG ASSIGNMENTS");
+			}
+			
+			var qregPairs = args["1"].Message!.ToPlainText().Split(',');
+			if (qregPairs.Length % 2 != 0)
+			{
+				await NotifyService!.Notify(executor, "Q-register assignments must be in pairs: qreg,value[,qreg,value...]");
+				return new CallState("#-1 INVALID QREG PAIRS");
+			}
+			
+			qRegisters = new Dictionary<string, MString>();
+			for (var i = 0; i < qregPairs.Length; i += 2)
+			{
+				var qregName = qregPairs[i].Trim();
+				var qregValue = qregPairs[i + 1];
+				qRegisters[qregName] = MModule.single(qregValue);
+			}
+		}
+		else if (args.Count > 1 && args.TryGetValue("1", out var arg1))
+		{
+			var countArg = arg1.Message?.ToPlainText();
+			if (!string.IsNullOrEmpty(countArg) &&
+			    (!int.TryParse(countArg, out notifyCount) || notifyCount < 1))
+			{
+				await NotifyService!.Notify(executor, "Invalid number specified.");
+				return new CallState("#-1 INVALID NUMBER");
+			}
+		}
+
 		var dbRefAttribute = new DbRefAttribute(objectToNotify.Object().DBRef, attribute.Split("`"));
 
 		switch (notifyType)
 		{
-			// TODO: Handle <number> case.
 			case "ANY":
-				await Mediator!.Send(new NotifySemaphoreRequest(dbRefAttribute, oldSemaphoreCount));
-				await AttributeService.SetAttributeAsync(executor, objectToNotify, attribute,
-					MModule.single((oldSemaphoreCount - 1).ToString()));
+				// Notify specified number of tasks (default 1)
+				await Mediator!.Send(new NotifySemaphoreRequest(dbRefAttribute, oldSemaphoreCount, notifyCount));
+				var newCount = oldSemaphoreCount - notifyCount;
+				await AttributeService!.SetAttributeAsync(executor, objectToNotify, attribute,
+					MModule.single(newCount.ToString()));
 				break;
 			case "ALL":
 				await Mediator!.Send(new NotifyAllSemaphoreRequest(dbRefAttribute));
-				await AttributeService.SetAttributeAsync(executor, objectToNotify, attribute,
+				await AttributeService!.SetAttributeAsync(executor, objectToNotify, attribute,
 					MModule.single(0.ToString()));
 				break;
+			case "SETQ":
+				// Modify Q-registers of the first waiting task
+				var scheduler = parser.ServiceProvider.GetRequiredService<ITaskScheduler>();
+				var modified = await scheduler.ModifyQRegisters(dbRefAttribute, qRegisters!);
+				if (!modified)
+				{
+					await NotifyService!.Notify(executor, "No task is waiting on that semaphore.");
+					return new CallState("#-1 NO WAITING TASK");
+				}
+				// Don't show "Notified." for /setq since we didn't actually notify
+				return new None();
 		}
 
-		// TODO: Handle SETQ case, as it affects the State of an already-queued Job.
+		if (!parser.CurrentState.Switches.Contains("QUIET"))
+		{
+			await NotifyService!.Notify(executor, "Notified.");
+		}
 
 		return new None();
 	}
@@ -1307,7 +1432,7 @@ public partial class Commands
 				return new CallState(Errors.ErrorPerm);
 			}
 
-			await QueueSemaphore(parser, located, ["SEMAPHORE"], arg1);
+			await QueueSemaphore(parser, located, DefaultSemaphoreAttributeArray, arg1);
 			return CallState.Empty;
 		}
 
@@ -1336,12 +1461,12 @@ public partial class Commands
 
 				var newUntilTime = DateTimeOffset.FromUnixTimeSeconds((long)untilTime) - DateTimeOffset.UtcNow;
 
-				await QueueSemaphoreWithDelay(parser, foundObject, ["SEMAPHORE"], newUntilTime, arg1);
+				await QueueSemaphoreWithDelay(parser, foundObject, DefaultSemaphoreAttributeArray, newUntilTime, arg1);
 				return CallState.Empty;
 			}
 
 			case 2 when double.TryParse(splitBySlashes[1], out untilTime):
-				await QueueSemaphoreWithDelay(parser, foundObject, ["SEMAPHORE"], TimeSpan.FromSeconds(untilTime), arg1);
+				await QueueSemaphoreWithDelay(parser, foundObject, DefaultSemaphoreAttributeArray, TimeSpan.FromSeconds(untilTime), arg1);
 				return CallState.Empty;
 
 			// TODO: Ensure the attribute has the same flags as the SEMAPHORE @attribute, otherwise it can't be used!
@@ -1378,7 +1503,7 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var one = await Mediator!.Send(new GetObjectNodeQuery(new DBRef(0)));
-		var attrValues = Mediator.CreateStream(new GetAttributeQuery(located.Object().DBRef, ["SEMAPHORE"]));
+		var attrValues = Mediator.CreateStream(new GetAttributeQuery(located.Object().DBRef, DefaultSemaphoreAttributeArray));
 		var attrValue = await attrValues.LastOrDefaultAsync();
 
 		if (attrValue is null)
@@ -1673,7 +1798,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@DRAIN", Switches = ["ALL", "ANY"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs, MinArgs = 1,
-		MaxArgs = 0)]
+		MaxArgs = 2)]
 	public static async ValueTask<Option<CallState>> Drain(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
@@ -1708,28 +1833,41 @@ public partial class Commands
 		}
 
 		var objectToDrain = maybeObject.AsAnyObject;
-		var attribute = maybeAttribute?.Split("`") ?? ["SEMAPHORE"];
+		var attribute = maybeAttribute?.Split("`") ?? DefaultSemaphoreAttributeArray;
+		var hasAll = switches.Contains("ALL");
+		var hasAny = switches.Contains("ANY");
+
+		// Parse the number parameter if provided
+		int? drainCount = null;
+		if (!string.IsNullOrEmpty(arg1))
+		{
+			if (!int.TryParse(arg1, out var count) || count < 1)
+			{
+				await NotifyService!.Notify(executor, "Invalid number specified.");
+				return new CallState("#-1 INVALID NUMBER");
+			}
+			drainCount = count;
+		}
+
+		// Cannot specify both /any and a specific attribute
+		if (hasAny && maybeAttribute is not null)
+		{
+			await NotifyService!.Notify(executor, "You may not specify both /any and a specific attribute.");
+			return new CallState("#-1 INVALID COMBINATION");
+		}
+
+		// Cannot specify both /all and a number
+		if (hasAll && drainCount.HasValue)
+		{
+			await NotifyService!.Notify(executor, "You may not specify both /all and a number.");
+			return new CallState("#-1 INVALID COMBINATION");
+		}
 
 		//   @drain[/any][/all] <object>[/<attribute>][=<number>]
-		if (maybeAttribute is not null && (switches.Contains("ANY") || switches.Length == 0))
+		if (hasAny)
 		{
-			var maybeFoundAttributes =
-				Mediator.CreateStream(new GetAttributeQuery(objectToDrain.Object().DBRef, attribute));
-			var maybeFoundAttribute = await maybeFoundAttributes.LastOrDefaultAsync();
-
-			if (maybeFoundAttribute is null)
-			{
-				await Mediator.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, attribute,
-					MModule.single("-1"),
-					one.AsPlayer));
-			}
-
-			await Mediator.Publish(
-				new DrainSemaphoreRequest(new DbRefAttribute(objectToDrain.Object().DBRef, attribute)));
-		}
-		else if (maybeAttribute is null && (switches.Contains("ANY") || switches.Length == 0))
-		{
-			var pids = Mediator.CreateStream(new ScheduleSemaphoreQuery(objectToDrain.Object().DBRef));
+			// Drain all semaphores on the object
+			var pids = Mediator!.CreateStream(new ScheduleSemaphoreQuery(objectToDrain.Object().DBRef));
 			var filteredPids = pids
 				.GroupBy(data => string.Join('`', data.SemaphoreSource.Attribute), x => x.SemaphoreSource)
 				.Select(x => x.First());
@@ -1737,15 +1875,70 @@ public partial class Commands
 			await foreach (var uniqueAttribute in filteredPids)
 			{
 				var dbRefAttrToDrain = uniqueAttribute;
-				await Mediator.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, dbRefAttrToDrain.Attribute,
-					MModule.single("-1"),
-					one.AsPlayer));
-				await Mediator.Publish(new DrainSemaphoreRequest(dbRefAttrToDrain));
+				if (hasAll || !drainCount.HasValue)
+				{
+					// Drain all entries and clear attribute
+					await Mediator.Publish(new DrainSemaphoreRequest(dbRefAttrToDrain, null));
+					await Mediator.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, dbRefAttrToDrain.Attribute,
+						MModule.single("0"),
+						one.AsPlayer));
+				}
+				else
+				{
+					// Drain specified number
+					await Mediator.Publish(new DrainSemaphoreRequest(dbRefAttrToDrain, drainCount.Value));
+					// Adjust semaphore count
+					var currentAttr = await Mediator.CreateStream(
+						new GetAttributeQuery(objectToDrain.Object().DBRef, dbRefAttrToDrain.Attribute)).LastOrDefaultAsync();
+					if (currentAttr is not null && int.TryParse(currentAttr.Value.ToPlainText(), out var currentCount))
+					{
+						var newCount = currentCount + drainCount.Value;
+						await Mediator.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, dbRefAttrToDrain.Attribute,
+							MModule.single(newCount.ToString()),
+							one.AsPlayer));
+					}
+				}
 			}
 		}
-		else if (switches.Contains("ALL"))
+		else
 		{
-			// TODO: Figure out the wording of the helpfile, or go rummaging in the source docs, because something feels funky.
+			// Drain specific semaphore (or SEMAPHORE if not specified)
+			var dbRefAttribute = new DbRefAttribute(objectToDrain.Object().DBRef, attribute);
+			
+			if (hasAll || !drainCount.HasValue)
+			{
+				// Drain all entries (default if no number specified)
+				await Mediator!.Publish(new DrainSemaphoreRequest(dbRefAttribute, null));
+				if (hasAll)
+				{
+					// /all also clears the semaphore attribute
+					await Mediator.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, attribute,
+						MModule.single("0"),
+						one.AsPlayer));
+				}
+				else
+				{
+					// Without /all, just set to -1 to indicate no tasks waiting
+					await Mediator.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, attribute,
+						MModule.single("-1"),
+						one.AsPlayer));
+				}
+			}
+			else
+			{
+				// Drain specified number
+				await Mediator!.Publish(new DrainSemaphoreRequest(dbRefAttribute, drainCount.Value));
+				// Adjust semaphore count
+				var currentAttr = await Mediator.CreateStream(
+					new GetAttributeQuery(objectToDrain.Object().DBRef, attribute)).LastOrDefaultAsync();
+				if (currentAttr is not null && int.TryParse(currentAttr.Value.ToPlainText(), out var currentCount))
+				{
+					var newCount = currentCount + drainCount.Value;
+					await Mediator.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, attribute,
+						MModule.single(newCount.ToString()),
+						one.AsPlayer));
+				}
+			}
 		}
 
 		return CallState.Empty;

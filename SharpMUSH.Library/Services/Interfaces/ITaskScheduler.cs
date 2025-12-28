@@ -87,7 +87,8 @@ public interface ITaskScheduler
 	/// </summary>
 	/// <param name="dbAttribute">DbRef and Attribute with a value</param>
 	/// <param name="oldValue">The old value, before notifying.</param>
-	ValueTask Notify(DbRefAttribute dbAttribute, int oldValue);
+	/// <param name="count">Number of tasks to notify (default 1)</param>
+	ValueTask Notify(DbRefAttribute dbAttribute, int oldValue, int count = 1);
 
 	/// <summary>
 	/// Notify a Semaphore trigger to trigger all waiting jobs.
@@ -96,10 +97,19 @@ public interface ITaskScheduler
 	ValueTask NotifyAll(DbRefAttribute dbAttribute);
 	
 	/// <summary>
+	/// Modify Q-registers of the first waiting task on a semaphore.
+	/// </summary>
+	/// <param name="dbAttribute">DbRef and Attribute with a value</param>
+	/// <param name="qRegisters">Dictionary of Q-register names to values</param>
+	/// <returns>True if a task was found and modified, false otherwise</returns>
+	ValueTask<bool> ModifyQRegisters(DbRefAttribute dbAttribute, Dictionary<string, MString> qRegisters);
+	
+	/// <summary>
 	/// Drains a series of Jobs, removing them from jobs to be performed.
 	/// </summary>
 	/// <param name="dbAttribute">DbRef and Attribute with a value</param>
-	ValueTask Drain(DbRefAttribute dbAttribute);
+	/// <param name="count">Optional number of tasks to drain (null = all)</param>
+	ValueTask Drain(DbRefAttribute dbAttribute, int? count = null);
 	
 	/// <summary>
 	/// Removes all non-Semaphore jobs related to a DBRef from executing immediately.

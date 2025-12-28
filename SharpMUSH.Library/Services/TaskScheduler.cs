@@ -155,26 +155,30 @@ public class TaskScheduler(
 					$"{SemaphoreGroup}:{dbRefAttribute}").Build());
 	}
 
-	public async ValueTask Notify(DbRefAttribute dbAttribute, int oldValue)
+	public async ValueTask Notify(DbRefAttribute dbAttribute, int oldValue, int count = 1)
 	{
 		var semaphoresForObject = await _scheduler
 			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals($"{SemaphoreGroup}:{dbAttribute}"));
 
-		if (oldValue < 0)
+		// If oldValue is negative, we notify the specified number of tasks
+		// If oldValue is >= 0, we notify based on count
+		var tasksToNotify = oldValue < 0 ? Math.Min(count, 0 - oldValue) : count;
+
+		var immediatelyRun = semaphoresForObject.Take(tasksToNotify).ToAsyncEnumerable();
+		await foreach (var trigger in immediatelyRun)
 		{
-			var immediatelyRun = semaphoresForObject.Take(0 - oldValue).ToAsyncEnumerable();
-			await foreach (var trigger in immediatelyRun)
+			try
 			{
-				try
-				{
-					var to = await _scheduler.GetTrigger(trigger, CancellationToken.None);
-					var job = to.JobKey;
-					await _scheduler.TriggerJob(job);
-				}
-				catch
-				{
-					// Intentionally do nothing for that job. It likely no longer exists somehow.
-				}
+				var to = await _scheduler.GetTrigger(trigger, CancellationToken.None);
+				if (to == null) continue;
+				
+				var job = to.JobKey;
+				await _scheduler.TriggerJob(job);
+			}
+			catch (Exception)
+			{
+				// Job may have been removed between getting the trigger and triggering it
+				// This is expected in concurrent scenarios, so we continue processing other triggers
 			}
 		}
 	}
@@ -200,12 +204,93 @@ public class TaskScheduler(
 		}
 	}
 
-	public async ValueTask Drain(DbRefAttribute dbAttribute)
+	public async ValueTask<bool> ModifyQRegisters(DbRefAttribute dbAttribute, Dictionary<string, MString> qRegisters)
+	{
+		if (qRegisters == null || qRegisters.Count == 0)
+		{
+			return false;
+		}
+
+		var semaphoresForObject = await _scheduler
+			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals($"{SemaphoreGroup}:{dbAttribute}"));
+
+		// Get the first waiting task
+		var firstTrigger = semaphoresForObject.FirstOrDefault();
+		if (firstTrigger == null)
+		{
+			return false; // No tasks waiting
+		}
+
+		try
+		{
+			var trigger = await _scheduler.GetTrigger(firstTrigger, CancellationToken.None);
+			if (trigger == null)
+			{
+				return false;
+			}
+
+			var job = await _scheduler.GetJobDetail(trigger.JobKey);
+			if (job == null)
+			{
+				return false;
+			}
+
+			var data = job.JobDataMap;
+			
+			// Get the current ParserState
+			if (!data.TryGetValue("State", out var stateObj) || stateObj is not ParserState state)
+			{
+				return false;
+			}
+			
+			// Modify the Q-registers in the state
+			// We need to get the top dictionary from the Registers stack and add/update the Q-registers
+			if (state.Registers.TryPeek(out var registers))
+			{
+				foreach (var qreg in qRegisters)
+				{
+					registers[qreg.Key.ToUpper()] = qreg.Value;
+				}
+			}
+			else
+			{
+				// If no registers stack exists, create one
+				var newRegisters = new Dictionary<string, MString>();
+				foreach (var qreg in qRegisters)
+				{
+					newRegisters[qreg.Key.ToUpper()] = qreg.Value;
+				}
+				state.Registers.Push(newRegisters);
+			}
+			
+			// Update the job data with the modified state
+			data["State"] = state;
+			
+			return true;
+		}
+		catch (Exception)
+		{
+			// Job may have been removed or modified concurrently
+			return false;
+		}
+	}
+
+	public async ValueTask Drain(DbRefAttribute dbAttribute, int? count = null)
 	{
 		var semaphoresForObject = await _scheduler
 			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals($"{SemaphoreGroup}:{dbAttribute}"));
 
-		await _scheduler.UnscheduleJobs(semaphoresForObject);
+		if (count.HasValue)
+		{
+			// Drain only the specified number of tasks
+			var tasksToDrain = semaphoresForObject.Take(count.Value).ToList();
+			await _scheduler.UnscheduleJobs(tasksToDrain);
+		}
+		else
+		{
+			// Drain all tasks
+			await _scheduler.UnscheduleJobs(semaphoresForObject);
+		}
 	}
 
 	public async ValueTask Halt(DBRef dbRef)

@@ -9,6 +9,7 @@ namespace SharpMUSH.Library.ParserInterfaces;
 
 public interface IMUSHCodeParser
 {	
+	IServiceProvider ServiceProvider { get; }
 	ParserState CurrentState { get; }
 	IImmutableStack<ParserState> State { get; }
 	LibraryService<string, FunctionDefinition> FunctionLibrary {get;}

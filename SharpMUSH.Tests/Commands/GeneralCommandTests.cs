@@ -48,7 +48,7 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask DoListSimple()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist 1 2 3=@pemit #1=3 This is a test"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3=@pemit #1=3 This is a test"));
 
 		await NotifyService
 			.Received()
@@ -60,7 +60,7 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask DoListSimple2()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist 1 2 3=@pemit #1={4 This is, a test};"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3=@pemit #1={4 This is, a test};"));
 
 		await NotifyService
 			.Received()
@@ -73,7 +73,7 @@ public class GeneralCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask DolistCommand()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist 1 2 3=think ##"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3=think ##"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
@@ -85,7 +85,7 @@ public class GeneralCommandTests
 	public async ValueTask DoListComplex()
 	{
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("@dolist 1 2 3={@pemit #1=5 This is a test; @pemit #1=6 This is also a test}"));
+			MModule.single("@dolist/inline 1 2 3={@pemit #1=5 This is a test; @pemit #1=6 This is also a test}"));
 
 		await NotifyService
 			.Received()
@@ -105,7 +105,7 @@ public class GeneralCommandTests
 	{
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single(
-				"@dolist 1 2 3={@pemit #1=7 This is a test; @pemit #1=8 This is also a test}; @pemit #1=9 Repeat 3 times in this mode."));
+				"@dolist/inline 1 2 3={@pemit #1=7 This is a test; @pemit #1=8 This is also a test}; @pemit #1=9 Repeat 3 times in this mode."));
 
 		await NotifyService
 			.Received()
@@ -130,7 +130,7 @@ public class GeneralCommandTests
 	{
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single(
-				"@dolist 1={@dolist 1 2 3=@pemit #1=10 This is a test}; @pemit #1=11 Repeat 1 times in this mode."));
+				"@dolist/inline 1={@dolist/inline 1 2 3=@pemit #1=10 This is a test}; @pemit #1=11 Repeat 1 times in this mode."));
 
 		await NotifyService
 			.Received()
@@ -149,7 +149,7 @@ public class GeneralCommandTests
 	{
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single(
-				"@dolist 1 2={@dolist 1 2 3=@pemit #1=12 This is a test}; @pemit #1=13 Repeat 2 times in this mode."));
+				"@dolist/inline 1 2={@dolist/inline 1 2 3=@pemit #1=12 This is a test}; @pemit #1=13 Repeat 2 times in this mode."));
 
 		await NotifyService
 			.Received()
@@ -168,7 +168,7 @@ public class GeneralCommandTests
 	{
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single(
-				"@dolist a b={@dolist 1 2 3=@pemit #1=14 This is a test %i0}; @pemit #1=15 Repeat 1 times in this mode %i0"));
+				"@dolist/inline a b={@dolist/inline 1 2 3=@pemit #1=14 This is a test %i0}; @pemit #1=15 Repeat 1 times in this mode %i0"));
 
 		await NotifyService
 			.Received()
@@ -202,7 +202,7 @@ public class GeneralCommandTests
 	{
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single(
-				"@dolist a b={@dolist 1 2 3={@ifelse eq(%i0,1)=think %i0 is 1; @ifelse eq(%i0,2)=think %i0 is 2,think {%i0 is 1, or 3}}}"));
+				"@dolist/inline a b={@dolist/inline 1 2 3={@ifelse eq(%i0,1)=think %i0 is 1; @ifelse eq(%i0,2)=think %i0 is 2,think {%i0 is 1, or 3}}}"));
 
 		await NotifyService
 			.Received()
@@ -624,7 +624,7 @@ public class GeneralCommandTests
 		
 		// Use @pemit which uses Notify(AnySharpObject) -> Notify(DBRef)
 		// This should call Notify three times with the same message
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist 1 2 3=@pemit #1=Batched test message"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3=@pemit #1=Batched test message"));
 
 		// Verify that Notify was called 3 times (once per iteration)
 		// All three should have been batched together internally, but we verify they all went through
@@ -646,7 +646,7 @@ public class GeneralCommandTests
 		NotifyService.ClearReceivedCalls();
 		
 		// Send to player #2 (different from enactor #1)
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist a b c=@pemit #2=Message to other player"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline a b c=@pemit #2=Message to other player"));
 
 		// Verify all three notifications were called
 		await NotifyService
@@ -666,7 +666,7 @@ public class GeneralCommandTests
 		NotifyService.ClearReceivedCalls();
 		
 		// Nested @dolist: outer has 2 items, inner has 2 items = 4 total pemits
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist 1 2={@dolist a b=@pemit #1=Nested message}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2={@dolist/inline a b=@pemit #1=Nested message}"));
 
 		// Verify 4 notifications were called (2 outer * 2 inner)
 		await NotifyService
@@ -684,7 +684,7 @@ public class GeneralCommandTests
 		
 		NotifyService.ClearReceivedCalls();
 		
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist 1 2 3=@pemit #1=Message"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3=@pemit #1=Message"));
 
 		// Should receive exactly 3 messages (one per iteration)
 		await NotifyService
@@ -704,7 +704,7 @@ public class GeneralCommandTests
 		NotifyService.ClearReceivedCalls();
 		
 		// @break after first message - note: using command structure where @pemit runs, then @break stops further iterations
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist 1 2 3={@pemit #1=Message ##;@break}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3={@pemit #1=Message ##;@break}"));
 
 		// With {@pemit; @break}, @pemit runs in each iteration then @break happens
 		// So we get 3 messages (one per loop start) but @break doesn't prevent them
@@ -725,7 +725,7 @@ public class GeneralCommandTests
 		NotifyService.ClearReceivedCalls();
 		
 		// Loop with @break - both @pemit and @break execute in each iteration
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist 1 2 3={@pemit #1=Message before break; @break}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3={@pemit #1=Message before break; @break}"));
 
 		// With command list {@pemit; @break}, both execute in each iteration
 		// So we get 3 messages, and batching still works
@@ -740,7 +740,7 @@ public class GeneralCommandTests
 	[NotInParallel]
 	public async ValueTask NestedDoListWithBreakFlushesMessages()
 	{
-		// This test validates that @break in a nested @dolist properly handles
+		// This test validates that @break in a nested @dolist/inline properly handles
 		// the ref-counted batching context and still flushes messages.
 		// Note: With the command structure {@pemit; @break}, both commands execute
 		// in each iteration, so @break happens after the @pemit.
@@ -750,7 +750,7 @@ public class GeneralCommandTests
 		// Outer loop runs twice, inner loop has 3 items
 		// With {@pemit; @break}, the @pemit runs in each inner iteration
 		// Expected: 2 outer iterations * 3 inner iterations = 6 messages
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist 1 2={@dolist a b c={@pemit #1=Inner message; @break}}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2={@dolist/inline a b c={@pemit #1=Inner message; @break}}"));
 
 		// Should receive 6 messages (all inner iterations run, @break is after @pemit)
 		// This validates that batching still works and flushes correctly even with @break
