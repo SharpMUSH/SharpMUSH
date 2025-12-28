@@ -134,6 +134,10 @@ public class WebAppFactory : IAsyncInitializer
 		var redisConnection = $"localhost:{redisPort}";
 		Environment.SetEnvironmentVariable("REDIS_CONNECTION", redisConnection);
 
+		// Get Kafka/RedPanda connection from the test container
+		var kafkaHost = RedPandaTestServer.Instance.GetBootstrapAddress();
+		Environment.SetEnvironmentVariable("KAFKA_HOST", kafkaHost);
+
 		_server = new TestWebApplicationBuilderFactory<Program>(
 			MySqlTestServer.Instance.GetConnectionString(), 
 			configFile,

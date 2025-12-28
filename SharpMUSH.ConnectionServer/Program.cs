@@ -28,18 +28,30 @@ builder.Services.AddLogging(logging => logging.AddSerilog(
 ));
 
 // Get Kafka/RedPanda configuration from environment or configuration
-var kafkaHost = Environment.GetEnvironmentVariable("KAFKA_HOST");
+var kafkaBootstrap = Environment.GetEnvironmentVariable("KAFKA_HOST");
+var kafkaHost = "localhost";
+var kafkaPort = 9092;
 
 RedpandaContainer? container = null;
 
-if (kafkaHost == null)
+if (kafkaBootstrap == null)
 {
 	container = new RedpandaBuilder()
-		.WithPortBinding(9092, 9092)
+		.WithPortBinding(9092, true) // Use dynamic port to avoid conflicts
 		.Build();
 	await container.StartAsync();
 	
-	kafkaHost = "localhost";
+	kafkaBootstrap = container.GetBootstrapAddress();
+}
+
+// Parse bootstrap address to get host and port
+// GetBootstrapAddress() returns format like "//127.0.0.1:port/" with leading slashes and trailing slash
+kafkaBootstrap = kafkaBootstrap.Trim('/');
+var parts = kafkaBootstrap.Split(':', 2);
+kafkaHost = parts[0];
+if (parts.Length > 1)
+{
+	kafkaPort = int.Parse(parts[1]);
 }
 
 // Initialize Redis strategy
@@ -91,7 +103,7 @@ builder.Services.AddConnectionServerMessaging(
 	options =>
 	{
 		options.Host = kafkaHost!;
-		options.Port = 9092;
+		options.Port = kafkaPort;
 		options.MaxMessageBytes = 6 * 1024 * 1024; // 6MB
 		
 		// Configure batching for @dolist performance optimization

@@ -161,13 +161,28 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, Prometh
 		services.AddMediator();
 
 		// Configure MassTransit with Kafka/RedPanda for message queue integration
-		var kafkaHost = Environment.GetEnvironmentVariable("KAFKA_HOST") ?? "localhost";
+		var kafkaBootstrap = Environment.GetEnvironmentVariable("KAFKA_HOST");
+		var kafkaHost = "localhost";
+		var kafkaPort = 9092;
+		
+		if (kafkaBootstrap != null)
+		{
+			// Parse bootstrap address to get host and port
+			// GetBootstrapAddress() returns format like "//127.0.0.1:port/" with leading slashes and trailing slash
+			kafkaBootstrap = kafkaBootstrap.Trim('/');
+			var parts = kafkaBootstrap.Split(':', 2);
+			kafkaHost = parts[0];
+			if (parts.Length > 1)
+			{
+				kafkaPort = int.Parse(parts[1]);
+			}
+		}
 
 		services.AddMainProcessMessaging(
 			options =>
 			{
 				options.Host = kafkaHost;
-				options.Port = 9092;
+				options.Port = kafkaPort;
 				options.MaxMessageBytes = 6 * 1024 * 1024; // 6MB
 			},
 			x =>
