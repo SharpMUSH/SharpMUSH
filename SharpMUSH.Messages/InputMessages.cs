@@ -40,3 +40,8 @@ public record ConnectionEstablishedMessage(
 /// Message sent from ConnectionServer to MainProcess when a connection is closed
 /// </summary>
 public record ConnectionClosedMessage(long Handle, DateTimeOffset Timestamp);
+
+/// <summary>
+/// Message sent from ConnectionServer to MainProcess when a WebSocket client submits input
+/// </summary>
+public record WebSocketInputMessage(long Handle, string Input);

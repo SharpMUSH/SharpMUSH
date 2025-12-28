@@ -1,0 +1,149 @@
+@page "/websocket-test"
+@using SharpMUSH.Client.Services
+@using System.Net.WebSockets
+@inject IWebSocketClientService WebSocketClient
+@implements IAsyncDisposable
+
+<PageTitle>WebSocket Test</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+	<MudText Typo="Typo.h4" GutterBottom>WebSocket Connection Test</MudText>
+	
+	<MudPaper Class="pa-4 ma-2">
+		<MudStack Spacing="3">
+			<MudTextField @bind-Value="serverUri" Label="Server URI" Variant="Variant.Outlined" 
+						  Placeholder="ws://localhost:4202/ws" />
+			
+			<MudStack Row="true" Spacing="2">
+				<MudButton Variant="Variant.Filled" Color="Color.Primary" 
+						   OnClick="Connect" Disabled="isConnected">
+					Connect
+				</MudButton>
+				<MudButton Variant="Variant.Filled" Color="Color.Secondary" 
+						   OnClick="Disconnect" Disabled="!isConnected">
+					Disconnect
+				</MudButton>
+			</MudStack>
+			
+			<MudChip T="string" Color="@(isConnected ? Color.Success : Color.Error)">
+				@(isConnected ? "Connected" : "Disconnected")
+			</MudChip>
+		</MudStack>
+	</MudPaper>
+
+	<MudPaper Class="pa-4 ma-2">
+		<MudStack Spacing="2">
+			<MudTextField @bind-Value="messageToSend" Label="Message" Variant="Variant.Outlined"
+						  OnKeyDown="OnKeyDown" Disabled="!isConnected" />
+			<MudButton Variant="Variant.Filled" Color="Color.Primary" 
+					   OnClick="SendMessage" Disabled="!isConnected">
+				Send Message
+			</MudButton>
+		</MudStack>
+	</MudPaper>
+
+	<MudPaper Class="pa-4 ma-2" Style="max-height: 400px; overflow-y: auto;">
+		<MudText Typo="Typo.h6" GutterBottom>Messages</MudText>
+		<MudDivider />
+		@foreach (var msg in messages)
+		{
+			<MudText Typo="Typo.body2" Class="my-1">@msg</MudText>
+		}
+	</MudPaper>
+</MudContainer>
+
+@code {
+	private string serverUri = "ws://localhost:4202/ws";
+	private string messageToSend = "";
+	private bool isConnected = false;
+	private List<string> messages = new();
+
+	protected override void OnInitialized()
+	{
+		WebSocketClient.MessageReceived += OnMessageReceived;
+		WebSocketClient.ConnectionStateChanged += OnConnectionStateChanged;
+	}
+
+	private async Task Connect()
+	{
+		try
+		{
+			await WebSocketClient.ConnectAsync(serverUri);
+			AddMessage($"[System] Connected to {serverUri}");
+		}
+		catch (Exception ex)
+		{
+			AddMessage($"[Error] Failed to connect: {ex.Message}");
+		}
+	}
+
+	private async Task Disconnect()
+	{
+		try
+		{
+			await WebSocketClient.DisconnectAsync();
+			AddMessage("[System] Disconnected");
+		}
+		catch (Exception ex)
+		{
+			AddMessage($"[Error] Failed to disconnect: {ex.Message}");
+		}
+	}
+
+	private async Task SendMessage()
+	{
+		if (string.IsNullOrWhiteSpace(messageToSend))
+			return;
+
+		try
+		{
+			await WebSocketClient.SendAsync(messageToSend);
+			AddMessage($"[Sent] {messageToSend}");
+			messageToSend = "";
+		}
+		catch (Exception ex)
+		{
+			AddMessage($"[Error] Failed to send: {ex.Message}");
+		}
+	}
+
+	private async Task OnKeyDown(KeyboardEventArgs args)
+	{
+		if (args.Key == "Enter" && !string.IsNullOrWhiteSpace(messageToSend))
+		{
+			await SendMessage();
+		}
+	}
+
+	private void OnMessageReceived(object? sender, string message)
+	{
+		AddMessage($"[Received] {message}");
+		InvokeAsync(StateHasChanged);
+	}
+
+	private void OnConnectionStateChanged(object? sender, WebSocketState state)
+	{
+		isConnected = state == WebSocketState.Open;
+		InvokeAsync(StateHasChanged);
+	}
+
+	private void AddMessage(string message)
+	{
+		messages.Add($"[{DateTime.Now:HH:mm:ss}] {message}");
+		if (messages.Count > 100)
+		{
+			messages.RemoveAt(0);
+		}
+	}
+
+	public async ValueTask DisposeAsync()
+	{
+		WebSocketClient.MessageReceived -= OnMessageReceived;
+		WebSocketClient.ConnectionStateChanged -= OnConnectionStateChanged;
+		
+		if (WebSocketClient.IsConnected)
+		{
+			await WebSocketClient.DisconnectAsync();
+		}
+	}
+}
