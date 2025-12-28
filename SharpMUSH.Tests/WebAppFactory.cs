@@ -162,6 +162,14 @@ public class WebAppFactory : IAsyncInitializer
 		_one = realOne.Object()!.DBRef;
 		await connectionService.Register(1, "localhost", "locahost","test", _ => ValueTask.CompletedTask,  _ => ValueTask.CompletedTask, () => Encoding.UTF8);
 		await connectionService.Bind(1, _one);
+		
+		// Start the Quartz scheduler for test environment
+		var schedulerFactory = provider.GetRequiredService<ISchedulerFactory>();
+		var scheduler = await schedulerFactory.GetScheduler();
+		if (!scheduler.IsStarted)
+		{
+			await scheduler.Start();
+		}
 	}
 
 	private static async Task CreateKafkaTopicsAsync(string bootstrapServers)
