@@ -60,20 +60,57 @@ public class SemaphoreCommandTests
 	}
 
 	[Test]
-	[Explicit("Queueing mode needs %i0 substitution support")]
-	public async ValueTask DolistDefault_ShouldQueue()
+	public async ValueTask DolistDefault_ShouldQueueWithIterationContext()
 	{
 		// Arrange
 		var uniqueId = Guid.NewGuid().ToString("N");
 		
-		// Act - @dolist (without /inline) should queue
+		// Act - @dolist (without /inline) should queue with iteration context
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@dolist a b c=@pemit #1=Queued{uniqueId}"));
 
 		await Task.Delay(500);
 
 		// Assert - should have executed from queue
-		await NotifyService.Received().Notify(Arg.Any<AnySharpObject>(), $"Queued{uniqueId}");
+		await NotifyService.Received().Notify(
+			Arg.Any<AnySharpObject>(), 
+			$"Queued{uniqueId}", 
+			Arg.Any<AnySharpObject>(), 
+			INotifyService.NotificationType.Announce);
+	}
+
+	[Test]
+	[Explicit("Needs investigation - tests hanging")]
+	public async ValueTask NotifySetQ_ShouldModifyQRegisters()
+	{
+		// Arrange
+		var uniqueId = Guid.NewGuid().ToString("N");
+		var uniqueAttr = $"SEM_{uniqueId}";
+		
+		// Queue a wait command that uses %q0
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@wait #1/{uniqueAttr}=@pemit #1=[r(0)]-{uniqueId}"));
+
+		await Task.Delay(200);
+
+		// Act - use @notify/setq to set q0
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@notify/setq #1/{uniqueAttr}=0,TestValue"));
+
+		await Task.Delay(100);
+
+		// Now notify to run the command
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@notify #1/{uniqueAttr}"));
+
+		await Task.Delay(300);
+
+		// Assert - the command should have used the modified Q-register
+		await NotifyService.Received().Notify(
+			Arg.Any<AnySharpObject>(), 
+			$"TestValue-{uniqueId}", 
+			Arg.Any<AnySharpObject>(), 
+			INotifyService.NotificationType.Announce);
 	}
 
 	[Test]

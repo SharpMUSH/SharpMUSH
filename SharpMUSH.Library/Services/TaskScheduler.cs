@@ -201,6 +201,58 @@ public class TaskScheduler(
 		}
 	}
 
+	public async ValueTask<bool> ModifyQRegisters(DbRefAttribute dbAttribute, Dictionary<string, MString> qRegisters)
+	{
+		var semaphoresForObject = await _scheduler
+			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals($"{SemaphoreGroup}:{dbAttribute}"));
+
+		// Get the first waiting task
+		var firstTrigger = semaphoresForObject.FirstOrDefault();
+		if (firstTrigger == null)
+		{
+			return false; // No tasks waiting
+		}
+
+		try
+		{
+			var trigger = await _scheduler.GetTrigger(firstTrigger, CancellationToken.None);
+			var job = await _scheduler.GetJobDetail(trigger.JobKey);
+			var data = job.JobDataMap;
+			
+			// Get the current ParserState
+			var state = (ParserState)data["State"];
+			
+			// Modify the Q-registers in the state
+			// We need to get the top dictionary from the Registers stack and add/update the Q-registers
+			if (state.Registers.TryPeek(out var registers))
+			{
+				foreach (var qreg in qRegisters)
+				{
+					registers[qreg.Key.ToUpper()] = qreg.Value;
+				}
+			}
+			else
+			{
+				// If no registers stack exists, create one
+				var newRegisters = new Dictionary<string, MString>();
+				foreach (var qreg in qRegisters)
+				{
+					newRegisters[qreg.Key.ToUpper()] = qreg.Value;
+				}
+				state.Registers.Push(newRegisters);
+			}
+			
+			// Update the job data with the modified state
+			data["State"] = state;
+			
+			return true;
+		}
+		catch
+		{
+			return false;
+		}
+	}
+
 	public async ValueTask Drain(DbRefAttribute dbAttribute, int? count = null)
 	{
 		var semaphoresForObject = await _scheduler

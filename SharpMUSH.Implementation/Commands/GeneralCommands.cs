@@ -21,6 +21,7 @@ using SharpMUSH.Library.Queries;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Collections.Concurrent;
 using System.Drawing;
 using System.Linq;
 using System.Reflection;
@@ -181,19 +182,34 @@ public partial class Commands
 		}
 		else
 		{
-			// Default behavior - queue each iteration
-			var iteration = 0;
+			// Default behavior - queue each iteration with proper iteration context
+			var iteration = 0u;
 			foreach (var item in list)
 			{
 				iteration++;
-				// TODO: We need to properly set up iteration context for queued commands
-				// For now, we'll queue the commands but iteration substitutions won't work correctly
-				// This needs the command to be pre-processed with %i0, inum(0), etc. before queueing
 				
-				// Queue each iteration as a separate command
+				// Create iteration context for this queued command
+				var iterationWrapper = new IterationWrapper<MString>
+				{
+					Value = item!,
+					Break = false,
+					NoBreak = false,
+					Iteration = iteration
+				};
+				
+				// Clone the current parser state and add the iteration context
+				var iterationStack = new ConcurrentStack<IterationWrapper<MString>>();
+				iterationStack.Push(iterationWrapper);
+				
+				var stateForIteration = parser.CurrentState with
+				{
+					IterationRegisters = iterationStack
+				};
+				
+				// Queue each iteration as a separate command with its iteration context
 				await Mediator!.Publish(new QueueCommandListRequest(
 					command,
-					parser.CurrentState,
+					stateForIteration,
 					new DbRefAttribute(enactor.Object().DBRef, ["SEMAPHORE"]),
 					-1));
 			}
@@ -1084,9 +1100,35 @@ public partial class Commands
 			oldSemaphoreCount = semaphoreCount;
 		}
 
-		// Check for =<number> parameter
+		// Check for =<number> parameter or =<qreg>,<value> pairs for /setq
 		int notifyCount = 1;
-		if (args.Count > 1 && args.ContainsKey("1"))
+		Dictionary<string, MString>? qRegisters = null;
+		
+		if (notifyType == "SETQ")
+		{
+			// Parse qreg,value pairs
+			if (args.Count < 2 || string.IsNullOrEmpty(args["1"].Message?.ToPlainText()))
+			{
+				await NotifyService!.Notify(executor, "You must specify Q-register assignments.");
+				return new CallState("#-1 MISSING QREG ASSIGNMENTS");
+			}
+			
+			var qregPairs = args["1"].Message!.ToPlainText().Split(',');
+			if (qregPairs.Length % 2 != 0)
+			{
+				await NotifyService!.Notify(executor, "Q-register assignments must be in pairs: qreg,value[,qreg,value...]");
+				return new CallState("#-1 INVALID QREG PAIRS");
+			}
+			
+			qRegisters = new Dictionary<string, MString>();
+			for (var i = 0; i < qregPairs.Length; i += 2)
+			{
+				var qregName = qregPairs[i].Trim();
+				var qregValue = qregPairs[i + 1];
+				qRegisters[qregName] = MModule.single(qregValue);
+			}
+		}
+		else if (args.Count > 1 && args.ContainsKey("1"))
 		{
 			var countArg = args["1"].Message?.ToPlainText();
 			if (!string.IsNullOrEmpty(countArg))
@@ -1115,9 +1157,17 @@ public partial class Commands
 				await AttributeService!.SetAttributeAsync(executor, objectToNotify, attribute,
 					MModule.single(0.ToString()));
 				break;
+			case "SETQ":
+				// Modify Q-registers of the first waiting task
+				var modified = await Scheduler!.ModifyQRegisters(dbRefAttribute, qRegisters!);
+				if (!modified)
+				{
+					await NotifyService!.Notify(executor, "No task is waiting on that semaphore.");
+					return new CallState("#-1 NO WAITING TASK");
+				}
+				// Don't show "Notified." for /setq since we didn't actually notify
+				return new None();
 		}
-
-		// TODO: Handle SETQ case, as it affects the State of an already-queued Job.
 
 		if (!parser.CurrentState.Switches.Contains("QUIET"))
 		{

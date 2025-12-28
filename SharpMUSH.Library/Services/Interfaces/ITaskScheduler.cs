@@ -97,6 +97,14 @@ public interface ITaskScheduler
 	ValueTask NotifyAll(DbRefAttribute dbAttribute);
 	
 	/// <summary>
+	/// Modify Q-registers of the first waiting task on a semaphore.
+	/// </summary>
+	/// <param name="dbAttribute">DbRef and Attribute with a value</param>
+	/// <param name="qRegisters">Dictionary of Q-register names to values</param>
+	/// <returns>True if a task was found and modified, false otherwise</returns>
+	ValueTask<bool> ModifyQRegisters(DbRefAttribute dbAttribute, Dictionary<string, MString> qRegisters);
+	
+	/// <summary>
 	/// Drains a series of Jobs, removing them from jobs to be performed.
 	/// </summary>
 	/// <param name="dbAttribute">DbRef and Attribute with a value</param>
