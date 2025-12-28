@@ -1,4 +1,5 @@
 using Bunit;
+using Bunit.TestDoubles;
 using TUnit.Core;
 using SharpMUSH.Client.Pages;
 using SharpMUSH.Client.Services;
@@ -21,6 +22,7 @@ public class WebSocketTestTests
 	{
 		public WebSocketTestContext()
 		{
+			JSInterop.Mode = JSRuntimeMode.Loose;
 			Services.AddMudServices();
 		}
 	}
@@ -243,9 +245,10 @@ public class WebSocketTestTests
 
 		// Act
 		var cut = ctx.RenderComponent<WebSocketTest>();
+		var instance = cut.Instance; // Get instance before dispose
 		cut.Dispose();
 
 		// Assert - Component disposed successfully without errors
-		await Assert.That(cut.Instance).IsNotNull();
+		await Assert.That(instance).IsNotNull();
 	}
 }
