@@ -426,8 +426,9 @@ public partial class Commands
 					return new CallState("#-1 NO SUCH LOCK");
 				}
 				
-				// For now, notify that the feature is not fully implemented
-				// TODO: Implement lock flag storage
+				// NOTE: Lock flags (visual, no_inherit, no_clone, wizard, owner, locked) are not yet persisted
+				// They would need to be stored as additional metadata alongside the lock string
+				// For now, acknowledge the command but don't persist the flags
 				await NotifyService!.Notify(executor, $"Flag {flagName} {(isClearing ? "cleared" : "set")} on {lockType} lock.");
 				return CallState.Empty;
 			}

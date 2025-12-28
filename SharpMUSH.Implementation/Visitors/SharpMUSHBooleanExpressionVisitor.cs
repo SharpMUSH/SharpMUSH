@@ -592,8 +592,10 @@ public class SharpMUSHBooleanExpressionVisitor(
 						return false;
 						
 					// Get the attribute value and evaluate it
-					// TODO: The attribute should be evaluated with %# = unlocker, %! = gated object
-					// For now, we just get the plaintext value
+					// NOTE: For full PennMUSH compatibility, the attribute should be evaluated with:
+					// %# = unlocker (the object trying to pass the lock)
+					// %! = gated object (the object being locked)
+					// This would require parser context injection
 					var actualValue = MModule.plainText(attributes.First().Value);
 					
 					// Compare with expected value (case-insensitive)

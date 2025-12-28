@@ -3562,7 +3562,23 @@ public partial class Commands
 				outputs.Add($"{prefix}@power {objectRef}={power.Name}");
 			}
 			
-			// TODO: Set locks
+			// Set locks
+			foreach (var lockEntry in obj.Locks)
+			{
+				var lockName = lockEntry.Key;
+				var lockValue = lockEntry.Value;
+				
+				// For basic lock, use @lock without slash
+				if (lockName.Equals("Basic", StringComparison.OrdinalIgnoreCase))
+				{
+					outputs.Add($"{prefix}@lock {objectRef}={lockValue}");
+				}
+				else
+				{
+					outputs.Add($"{prefix}@lock/{lockName} {objectRef}={lockValue}");
+				}
+			}
+			
 			// TODO: Set parent if not default
 		}
 		

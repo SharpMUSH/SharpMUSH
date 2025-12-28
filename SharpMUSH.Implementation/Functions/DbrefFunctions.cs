@@ -387,6 +387,33 @@ public partial class Functions
 		return new CallState(string.Empty);
 	}
 
+	[SharpFunction(Name = "lockflags", MinArgs = 0, MaxArgs = 1,
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public static async ValueTask<CallState> LockFlagsObject(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		// lockflags() returns lock flags for a specific lock on an object
+		// Format: lockflags([<object>[/<locktype>]])
+		await ValueTask.CompletedTask;
+		var args = parser.CurrentState.Arguments;
+		
+		if (args.Count == 0)
+		{
+			// Return all available lock flag letters
+			// In PennMUSH: v=visual, i=no_inherit, c=no_clone, w=wizard, o=owner, l=locked
+			return new CallState("vicwol");
+		}
+		
+		// Parse object/locktype
+		var argStr = args["0"].Message!.ToPlainText();
+		var parts = argStr.Split('/', 2);
+		var objectRef = parts[0];
+		var lockType = parts.Length > 1 ? parts[1] : "Basic";
+		
+		// For now, return empty as lock flags aren't fully stored yet
+		// TODO: This needs lock flag storage implementation
+		return new CallState(string.Empty);
+	}
+
 	[SharpFunction(Name = "elock", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> EvaluateLock(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -431,6 +458,26 @@ public partial class Functions
 			}
 			target = maybeTarget.AsAnyObject;
 		}
+
+		// Get all lock names from the object
+		var lockNames = target.Object().Locks.Keys;
+		return new CallState(string.Join(" ", lockNames));
+	}
+
+	[SharpFunction(Name = "locks", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public static async ValueTask<CallState> LocksRequired(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		// locks() is like llocks() but requires an object argument
+		// Format: locks(<object>)
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var objStr = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		
+		var maybeTarget = await LocateService!.Locate(parser, executor, executor, objStr, LocateFlags.All);
+		if (!maybeTarget.IsValid())
+		{
+			return new CallState("#-1 INVALID OBJECT");
+		}
+		var target = maybeTarget.AsAnyObject;
 
 		// Get all lock names from the object
 		var lockNames = target.Object().Locks.Keys;
