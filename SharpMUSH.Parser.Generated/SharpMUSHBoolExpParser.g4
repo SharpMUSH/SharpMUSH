@@ -52,7 +52,7 @@ bitTypeExpr: BIT_TYPE objectType;
 
 objectType: STRING;
 channelExpr: CHANNEL string;
-dbRefListExpr: DBREFLIST attributeName;
+dbRefListExpr: DBREFLIST string;
 ipExpr: IP string;
 hostNameExpr: HOSTNAME string;
 nameExpr: NAME string;

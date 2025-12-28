@@ -299,7 +299,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 
 	public override Expression VisitDbRefListExpr(SharpMUSHBoolExpParser.DbRefListExprContext context)
 	{
-		var attributeName = context.attributeName().GetText();
+		var attributeName = context.@string().GetText();
 
 		// DBRef list locks check if the unlocker's dbref is in a space-separated list stored in an attribute
 		Func<AnySharpObject, AnySharpObject, string, bool> func = (gatedObj, unlockerObj, attrName) =>

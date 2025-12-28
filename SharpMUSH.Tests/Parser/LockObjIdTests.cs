@@ -88,7 +88,6 @@ public class LockObjIdTests
 	}
 
 	[Test]
-	[Skip("DBRefList lock syntax needs parser investigation - see issue with dbreflist^ATTRNAME")]
 	public async Task DbRefListLock_BareDbRef_MatchesAnyObjectWithSameNumber()
 	{
 		// Create a test object
@@ -103,10 +102,10 @@ public class LockObjIdTests
 		var lockHolderDbRef = HelperFunctions.ParseDbRef(lockHolderDbRefStr).AsValue();
 		var lockHolder = (await Database.GetObjectNodeAsync(lockHolderDbRef)).Known();
 		
-		// Set an attribute with a bare dbref
-		await Parser.FunctionParse(MModule.single($"attrib_set({lockHolderDbRefStr},ALLOWED_LIST,#{testObjDbRef.Number})"));
+		// Set an attribute with a bare dbref  
+		await Parser.FunctionParse(MModule.single($"attrib_set({lockHolderDbRefStr}/allowedlist,#{testObjDbRef.Number})"));
 		
-		var lockString = "dbreflist^ALLOWED_LIST";
+		var lockString = "dbreflist^allowedlist";
 		
 		var bep = BooleanParser;
 		
@@ -118,7 +117,6 @@ public class LockObjIdTests
 	}
 
 	[Test]
-	[Skip("DBRefList lock syntax needs parser investigation - see issue with dbreflist^ATTRNAME")]
 	public async Task DbRefListLock_ObjId_MatchesOnlyObjectWithSameNumberAndCreationTime()
 	{
 		// Create a test object
@@ -134,9 +132,9 @@ public class LockObjIdTests
 		var lockHolder = (await Database.GetObjectNodeAsync(lockHolderDbRef)).Known();
 		
 		// Set an attribute with a full objid
-		await Parser.FunctionParse(MModule.single($"attrib_set({lockHolderDbRefStr},ALLOWED_LIST_OBJID,#{testObjDbRef.Number}:{testObjDbRef.CreationMilliseconds})"));
+		await Parser.FunctionParse(MModule.single($"attrib_set({lockHolderDbRefStr}/allowedlistobjid,#{testObjDbRef.Number}:{testObjDbRef.CreationMilliseconds})"));
 		
-		var lockString = "dbreflist^ALLOWED_LIST_OBJID";
+		var lockString = "dbreflist^allowedlistobjid";
 		
 		var bep = BooleanParser;
 		
@@ -148,7 +146,6 @@ public class LockObjIdTests
 	}
 
 	[Test]
-	[Skip("DBRefList lock syntax needs parser investigation - see issue with dbreflist^ATTRNAME")]
 	public async Task DbRefListLock_ObjId_DoesNotMatchObjectWithDifferentCreationTime()
 	{
 		// Create a test object
@@ -165,9 +162,9 @@ public class LockObjIdTests
 		
 		// Set an attribute with objid but DIFFERENT creation time
 		var differentCreationTime = (testObjDbRef.CreationMilliseconds ?? 0) + 1000;
-		await Parser.FunctionParse(MModule.single($"attrib_set({lockHolderDbRefStr},ALLOWED_LIST_DIFF,#{testObjDbRef.Number}:{differentCreationTime})"));
+		await Parser.FunctionParse(MModule.single($"attrib_set({lockHolderDbRefStr}/allowedlistdiff,#{testObjDbRef.Number}:{differentCreationTime})"));
 		
-		var lockString = "dbreflist^ALLOWED_LIST_DIFF";
+		var lockString = "dbreflist^allowedlistdiff";
 		
 		var bep = BooleanParser;
 		
@@ -179,7 +176,6 @@ public class LockObjIdTests
 	}
 
 	[Test]
-	[Skip("DBRefList lock syntax needs parser investigation - see issue with dbreflist^ATTRNAME")]
 	public async Task DbRefListLock_MultipleObjIds_MatchesCorrectObject()
 	{
 		// Create two test objects
@@ -200,9 +196,9 @@ public class LockObjIdTests
 		var lockHolder = (await Database.GetObjectNodeAsync(lockHolderDbRef)).Known();
 		
 		// Set an attribute with multiple objids
-		await Parser.FunctionParse(MModule.single($"attrib_set({lockHolderDbRefStr},MULTI_LIST,#{testObjDbRef1.Number}:{testObjDbRef1.CreationMilliseconds} #{testObjDbRef2.Number}:{testObjDbRef2.CreationMilliseconds})"));
+		await Parser.FunctionParse(MModule.single($"attrib_set({lockHolderDbRefStr}/multilist,#{testObjDbRef1.Number}:{testObjDbRef1.CreationMilliseconds} #{testObjDbRef2.Number}:{testObjDbRef2.CreationMilliseconds})"));
 		
-		var lockString = "dbreflist^MULTI_LIST";
+		var lockString = "dbreflist^multilist";
 		
 		var bep = BooleanParser;
 		

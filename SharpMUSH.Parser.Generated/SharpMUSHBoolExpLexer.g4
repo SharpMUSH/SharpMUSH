@@ -60,6 +60,8 @@ ATTRIBUTE_COLON: ':';
 // Allow colons for objid format (#123:456) but exclude other operator characters
 // FALSE/TRUE tokens will match #FALSE and #TRUE before STRING can
 STRING: ~( '&' | '|' | '!' | ')' | '(' | '^' | ' ' | '/' | '+' | '$' | '@' | '=')+;
+// ATTRIBUTENAME - used specifically for attribute names in certain contexts
+// Excludes colons to distinguish from general strings with objid format
 ATTRIBUTENAME:
     ~('&' | '|' | ':' | '!' | ')' | '(' | '/' | ' ' | '^' | '+' | '$' | '@' | '=')+
 ;

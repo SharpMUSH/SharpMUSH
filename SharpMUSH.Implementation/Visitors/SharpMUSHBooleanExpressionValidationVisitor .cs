@@ -74,7 +74,7 @@ public class SharpMUSHBooleanExpressionValidationVisitor(AnySharpObject invoker)
 	public override bool? VisitDbRefListExpr(SharpMUSHBoolExpParser.DbRefListExprContext context)
 	{
 		// DBRef list locks are always valid syntactically
-		var value = context.attributeName().GetText();
+		var value = context.@string().GetText();
 		return true;
 	}
 

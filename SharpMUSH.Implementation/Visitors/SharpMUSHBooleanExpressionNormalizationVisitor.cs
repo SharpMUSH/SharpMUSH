@@ -84,7 +84,7 @@ public class SharpMUSHBooleanExpressionNormalizationVisitor(IMediator med)
 
 	public override string VisitDbRefListExpr(SharpMUSHBoolExpParser.DbRefListExprContext context)
 	{
-		var attrName = context.attributeName().GetText();
+		var attrName = context.@string().GetText();
 		// Note: The dbrefs in the attribute list will need to be normalized separately
 		// when the attribute is set, not when the lock is set
 		return $"dbreflist^{attrName}";
