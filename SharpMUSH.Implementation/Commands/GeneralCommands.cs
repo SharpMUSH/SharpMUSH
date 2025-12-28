@@ -1134,13 +1134,11 @@ public partial class Commands
 		else if (args.Count > 1 && args.TryGetValue("1", out var arg1))
 		{
 			var countArg = arg1.Message?.ToPlainText();
-			if (!string.IsNullOrEmpty(countArg))
+			if (!string.IsNullOrEmpty(countArg) &&
+			    (!int.TryParse(countArg, out notifyCount) || notifyCount < 1))
 			{
-				if (!int.TryParse(countArg, out notifyCount) || notifyCount < 1)
-				{
-					await NotifyService!.Notify(executor, "Invalid number specified.");
-					return new CallState("#-1 INVALID NUMBER");
-				}
+				await NotifyService!.Notify(executor, "Invalid number specified.");
+				return new CallState("#-1 INVALID NUMBER");
 			}
 		}
 
