@@ -36,6 +36,9 @@ namespace SharpMUSH.Implementation.Commands;
 
 public partial class Commands
 {
+	private const string DefaultSemaphoreAttribute = "SEMAPHORE";
+	private static readonly string[] DefaultSemaphoreAttributeArray = [DefaultSemaphoreAttribute];
+
 	[SharpCommand(Name = "@@", Switches = [], Behavior = CB.Default | CB.NoParse, MinArgs = 0, MaxArgs = 0)]
 	public static ValueTask<Option<CallState>> At(IMUSHCodeParser parser, SharpCommandAttribute _2)
 		=> ValueTask.FromResult(new Option<CallState>(CallState.Empty));
@@ -174,7 +177,7 @@ public partial class Commands
 					await Mediator!.Publish(new QueueCommandListRequest(
 						MModule.single("@notify me"),
 						parser.CurrentState,
-						new DbRefAttribute(enactor.Object().DBRef, ["SEMAPHORE"]),
+						new DbRefAttribute(enactor.Object().DBRef, DefaultSemaphoreAttributeArray),
 						-1));
 				}
 
@@ -213,7 +216,7 @@ public partial class Commands
 				await Mediator!.Publish(new QueueCommandListRequest(
 					command,
 					stateForIteration,
-					new DbRefAttribute(enactor.Object().DBRef, ["SEMAPHORE"]),
+					new DbRefAttribute(enactor.Object().DBRef, DefaultSemaphoreAttributeArray),
 					-1));
 			}
 
@@ -223,7 +226,7 @@ public partial class Commands
 				await Mediator!.Publish(new QueueCommandListRequest(
 					MModule.single("@notify me"),
 					parser.CurrentState,
-					new DbRefAttribute(enactor.Object().DBRef, ["SEMAPHORE"]),
+					new DbRefAttribute(enactor.Object().DBRef, DefaultSemaphoreAttributeArray),
 					-1));
 			}
 
@@ -1082,11 +1085,7 @@ public partial class Commands
 		if (maybeObject.IsError) return maybeObject.AsError;
 		var objectToNotify = maybeObject.AsSharpObject;
 
-		string attribute = "SEMAPHORE";
-		if (!string.IsNullOrEmpty(maybeAttributeString))
-		{
-			attribute = maybeAttributeString;
-		}
+		var attribute = string.IsNullOrEmpty(maybeAttributeString) ? DefaultSemaphoreAttribute : maybeAttributeString;
 
 		var attributeContents = await AttributeService!.GetAttributeAsync(executor, objectToNotify, attribute,
 			IAttributeService.AttributeMode.Execute, false);
@@ -1433,7 +1432,7 @@ public partial class Commands
 				return new CallState(Errors.ErrorPerm);
 			}
 
-			await QueueSemaphore(parser, located, ["SEMAPHORE"], arg1);
+			await QueueSemaphore(parser, located, DefaultSemaphoreAttributeArray, arg1);
 			return CallState.Empty;
 		}
 
@@ -1462,12 +1461,12 @@ public partial class Commands
 
 				var newUntilTime = DateTimeOffset.FromUnixTimeSeconds((long)untilTime) - DateTimeOffset.UtcNow;
 
-				await QueueSemaphoreWithDelay(parser, foundObject, ["SEMAPHORE"], newUntilTime, arg1);
+				await QueueSemaphoreWithDelay(parser, foundObject, DefaultSemaphoreAttributeArray, newUntilTime, arg1);
 				return CallState.Empty;
 			}
 
 			case 2 when double.TryParse(splitBySlashes[1], out untilTime):
-				await QueueSemaphoreWithDelay(parser, foundObject, ["SEMAPHORE"], TimeSpan.FromSeconds(untilTime), arg1);
+				await QueueSemaphoreWithDelay(parser, foundObject, DefaultSemaphoreAttributeArray, TimeSpan.FromSeconds(untilTime), arg1);
 				return CallState.Empty;
 
 			// TODO: Ensure the attribute has the same flags as the SEMAPHORE @attribute, otherwise it can't be used!
@@ -1504,7 +1503,7 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var one = await Mediator!.Send(new GetObjectNodeQuery(new DBRef(0)));
-		var attrValues = Mediator.CreateStream(new GetAttributeQuery(located.Object().DBRef, ["SEMAPHORE"]));
+		var attrValues = Mediator.CreateStream(new GetAttributeQuery(located.Object().DBRef, DefaultSemaphoreAttributeArray));
 		var attrValue = await attrValues.LastOrDefaultAsync();
 
 		if (attrValue is null)
@@ -1834,7 +1833,7 @@ public partial class Commands
 		}
 
 		var objectToDrain = maybeObject.AsAnyObject;
-		var attribute = maybeAttribute?.Split("`") ?? ["SEMAPHORE"];
+		var attribute = maybeAttribute?.Split("`") ?? DefaultSemaphoreAttributeArray;
 		var hasAll = switches.Contains("ALL");
 		var hasAny = switches.Contains("ANY");
 

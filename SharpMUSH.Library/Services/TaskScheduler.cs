@@ -170,12 +170,15 @@ public class TaskScheduler(
 			try
 			{
 				var to = await _scheduler.GetTrigger(trigger, CancellationToken.None);
+				if (to == null) continue;
+				
 				var job = to.JobKey;
 				await _scheduler.TriggerJob(job);
 			}
-			catch
+			catch (Exception)
 			{
-				// Intentionally do nothing for that job. It likely no longer exists somehow.
+				// Job may have been removed between getting the trigger and triggering it
+				// This is expected in concurrent scenarios, so we continue processing other triggers
 			}
 		}
 	}
@@ -203,6 +206,11 @@ public class TaskScheduler(
 
 	public async ValueTask<bool> ModifyQRegisters(DbRefAttribute dbAttribute, Dictionary<string, MString> qRegisters)
 	{
+		if (qRegisters == null || qRegisters.Count == 0)
+		{
+			return false;
+		}
+
 		var semaphoresForObject = await _scheduler
 			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals($"{SemaphoreGroup}:{dbAttribute}"));
 
@@ -216,11 +224,24 @@ public class TaskScheduler(
 		try
 		{
 			var trigger = await _scheduler.GetTrigger(firstTrigger, CancellationToken.None);
+			if (trigger == null)
+			{
+				return false;
+			}
+
 			var job = await _scheduler.GetJobDetail(trigger.JobKey);
+			if (job == null)
+			{
+				return false;
+			}
+
 			var data = job.JobDataMap;
 			
 			// Get the current ParserState
-			var state = (ParserState)data["State"];
+			if (!data.TryGetValue("State", out var stateObj) || stateObj is not ParserState state)
+			{
+				return false;
+			}
 			
 			// Modify the Q-registers in the state
 			// We need to get the top dictionary from the Registers stack and add/update the Q-registers
@@ -247,8 +268,9 @@ public class TaskScheduler(
 			
 			return true;
 		}
-		catch
+		catch (Exception)
 		{
+			// Job may have been removed or modified concurrently
 			return false;
 		}
 	}
