@@ -82,7 +82,7 @@ public class ScheduleDrainHandler(ITaskScheduler scheduler) : IRequestHandler<Dr
 {
 	public async ValueTask<Unit> Handle(DrainSemaphoreRequest request, CancellationToken cancellationToken)
 	{
-		await scheduler.Drain(request.DbRefAttribute);
+		await scheduler.Drain(request.DbRefAttribute, request.Count);
 		return await Unit.ValueTask;
 	}
 }

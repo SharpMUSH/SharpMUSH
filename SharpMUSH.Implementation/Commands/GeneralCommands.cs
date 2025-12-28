@@ -1746,7 +1746,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@DRAIN", Switches = ["ALL", "ANY"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs, MinArgs = 1,
-		MaxArgs = 0)]
+		MaxArgs = 2)]
 	public static async ValueTask<Option<CallState>> Drain(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
@@ -1782,27 +1782,40 @@ public partial class Commands
 
 		var objectToDrain = maybeObject.AsAnyObject;
 		var attribute = maybeAttribute?.Split("`") ?? ["SEMAPHORE"];
+		var hasAll = switches.Contains("ALL");
+		var hasAny = switches.Contains("ANY");
+
+		// Parse the number parameter if provided
+		int? drainCount = null;
+		if (!string.IsNullOrEmpty(arg1))
+		{
+			if (!int.TryParse(arg1, out var count) || count < 1)
+			{
+				await NotifyService!.Notify(executor, "Invalid number specified.");
+				return new CallState("#-1 INVALID NUMBER");
+			}
+			drainCount = count;
+		}
+
+		// Cannot specify both /any and a specific attribute
+		if (hasAny && maybeAttribute is not null)
+		{
+			await NotifyService!.Notify(executor, "You may not specify both /any and a specific attribute.");
+			return new CallState("#-1 INVALID COMBINATION");
+		}
+
+		// Cannot specify both /all and a number
+		if (hasAll && drainCount.HasValue)
+		{
+			await NotifyService!.Notify(executor, "You may not specify both /all and a number.");
+			return new CallState("#-1 INVALID COMBINATION");
+		}
 
 		//   @drain[/any][/all] <object>[/<attribute>][=<number>]
-		if (maybeAttribute is not null && (switches.Contains("ANY") || switches.Length == 0))
+		if (hasAny)
 		{
-			var maybeFoundAttributes =
-				Mediator.CreateStream(new GetAttributeQuery(objectToDrain.Object().DBRef, attribute));
-			var maybeFoundAttribute = await maybeFoundAttributes.LastOrDefaultAsync();
-
-			if (maybeFoundAttribute is null)
-			{
-				await Mediator.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, attribute,
-					MModule.single("-1"),
-					one.AsPlayer));
-			}
-
-			await Mediator.Publish(
-				new DrainSemaphoreRequest(new DbRefAttribute(objectToDrain.Object().DBRef, attribute)));
-		}
-		else if (maybeAttribute is null && (switches.Contains("ANY") || switches.Length == 0))
-		{
-			var pids = Mediator.CreateStream(new ScheduleSemaphoreQuery(objectToDrain.Object().DBRef));
+			// Drain all semaphores on the object
+			var pids = Mediator!.CreateStream(new ScheduleSemaphoreQuery(objectToDrain.Object().DBRef));
 			var filteredPids = pids
 				.GroupBy(data => string.Join('`', data.SemaphoreSource.Attribute), x => x.SemaphoreSource)
 				.Select(x => x.First());
@@ -1810,15 +1823,70 @@ public partial class Commands
 			await foreach (var uniqueAttribute in filteredPids)
 			{
 				var dbRefAttrToDrain = uniqueAttribute;
-				await Mediator.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, dbRefAttrToDrain.Attribute,
-					MModule.single("-1"),
-					one.AsPlayer));
-				await Mediator.Publish(new DrainSemaphoreRequest(dbRefAttrToDrain));
+				if (hasAll || !drainCount.HasValue)
+				{
+					// Drain all entries and clear attribute
+					await Mediator.Publish(new DrainSemaphoreRequest(dbRefAttrToDrain, null));
+					await Mediator.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, dbRefAttrToDrain.Attribute,
+						MModule.single("0"),
+						one.AsPlayer));
+				}
+				else
+				{
+					// Drain specified number
+					await Mediator.Publish(new DrainSemaphoreRequest(dbRefAttrToDrain, drainCount.Value));
+					// Adjust semaphore count
+					var currentAttr = await Mediator.CreateStream(
+						new GetAttributeQuery(objectToDrain.Object().DBRef, dbRefAttrToDrain.Attribute)).LastOrDefaultAsync();
+					if (currentAttr is not null && int.TryParse(currentAttr.Value.ToPlainText(), out var currentCount))
+					{
+						var newCount = currentCount + drainCount.Value;
+						await Mediator.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, dbRefAttrToDrain.Attribute,
+							MModule.single(newCount.ToString()),
+							one.AsPlayer));
+					}
+				}
 			}
 		}
-		else if (switches.Contains("ALL"))
+		else
 		{
-			// TODO: Figure out the wording of the helpfile, or go rummaging in the source docs, because something feels funky.
+			// Drain specific semaphore (or SEMAPHORE if not specified)
+			var dbRefAttribute = new DbRefAttribute(objectToDrain.Object().DBRef, attribute);
+			
+			if (hasAll || !drainCount.HasValue)
+			{
+				// Drain all entries (default if no number specified)
+				await Mediator!.Publish(new DrainSemaphoreRequest(dbRefAttribute, null));
+				if (hasAll)
+				{
+					// /all also clears the semaphore attribute
+					await Mediator.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, attribute,
+						MModule.single("0"),
+						one.AsPlayer));
+				}
+				else
+				{
+					// Without /all, just set to -1 to indicate no tasks waiting
+					await Mediator.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, attribute,
+						MModule.single("-1"),
+						one.AsPlayer));
+				}
+			}
+			else
+			{
+				// Drain specified number
+				await Mediator!.Publish(new DrainSemaphoreRequest(dbRefAttribute, drainCount.Value));
+				// Adjust semaphore count
+				var currentAttr = await Mediator.CreateStream(
+					new GetAttributeQuery(objectToDrain.Object().DBRef, attribute)).LastOrDefaultAsync();
+				if (currentAttr is not null && int.TryParse(currentAttr.Value.ToPlainText(), out var currentCount))
+				{
+					var newCount = currentCount + drainCount.Value;
+					await Mediator.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, attribute,
+						MModule.single(newCount.ToString()),
+						one.AsPlayer));
+				}
+			}
 		}
 
 		return CallState.Empty;

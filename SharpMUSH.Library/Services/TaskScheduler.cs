@@ -201,12 +201,22 @@ public class TaskScheduler(
 		}
 	}
 
-	public async ValueTask Drain(DbRefAttribute dbAttribute)
+	public async ValueTask Drain(DbRefAttribute dbAttribute, int? count = null)
 	{
 		var semaphoresForObject = await _scheduler
 			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals($"{SemaphoreGroup}:{dbAttribute}"));
 
-		await _scheduler.UnscheduleJobs(semaphoresForObject);
+		if (count.HasValue)
+		{
+			// Drain only the specified number of tasks
+			var tasksToDrain = semaphoresForObject.Take(count.Value).ToList();
+			await _scheduler.UnscheduleJobs(tasksToDrain);
+		}
+		else
+		{
+			// Drain all tasks
+			await _scheduler.UnscheduleJobs(semaphoresForObject);
+		}
 	}
 
 	public async ValueTask Halt(DBRef dbRef)
