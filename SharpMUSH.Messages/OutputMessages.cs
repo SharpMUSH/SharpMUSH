@@ -19,3 +19,13 @@ public record BroadcastMessage(byte[] Data);
 /// Message sent from MainProcess to ConnectionServer to disconnect a connection
 /// </summary>
 public record DisconnectConnectionMessage(long Handle, string? Reason);
+
+/// <summary>
+/// Message sent from MainProcess to ConnectionServer to output text to a WebSocket connection
+/// </summary>
+public record WebSocketOutputMessage(long Handle, string Data);
+
+/// <summary>
+/// Message sent from MainProcess to ConnectionServer to output a prompt to a WebSocket connection
+/// </summary>
+public record WebSocketPromptMessage(long Handle, string Data);

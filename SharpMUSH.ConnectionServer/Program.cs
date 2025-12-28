@@ -2,6 +2,7 @@ using MassTransit;
 using Microsoft.AspNetCore.Connections;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
+using SharpMUSH.ConnectionServer.Configuration;
 using SharpMUSH.ConnectionServer.Consumers;
 using SharpMUSH.ConnectionServer.ProtocolHandlers;
 using SharpMUSH.ConnectionServer.Services;
@@ -13,6 +14,11 @@ using Testcontainers.Redpanda;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Configure ConnectionServer options
+var connectionServerOptions = new ConnectionServerOptions();
+builder.Configuration.GetSection("ConnectionServer").Bind(connectionServerOptions);
+builder.Services.AddSingleton(connectionServerOptions);
 
 builder.Services.AddLogging(logging => logging.AddSerilog(
 	new LoggerConfiguration()
@@ -64,8 +70,14 @@ builder.Services.AddSingleton<IConnectionStateStore, RedisConnectionStateStore>(
 // Add ConnectionService
 builder.Services.AddSingleton<IConnectionServerService, ConnectionServerService>();
 
+// Add DescriptorGeneratorService
+builder.Services.AddSingleton<IDescriptorGeneratorService, DescriptorGeneratorService>();
+
 // Add TelemetryService
 builder.Services.AddSingleton<ITelemetryService, TelemetryService>();
+
+// Add WebSocketServer
+builder.Services.AddSingleton<WebSocketServer>();
 
 // Add batching service for @dolist performance optimization
 builder.Services.AddSingleton<TelnetOutputBatchingService>();
@@ -100,22 +112,25 @@ builder.Services.AddConnectionServerMessaging(
 		x.AddConsumer<TelnetPromptConsumer>();
 		x.AddConsumer<BroadcastConsumer>();
 		x.AddConsumer<DisconnectConnectionConsumer>();
+		
+		// Register WebSocket consumers
+		x.AddConsumer<WebSocketOutputConsumer>();
+		x.AddConsumer<WebSocketPromptConsumer>();
 	});
 
-// TODO: This should be configurable via environment variables or config files
-// Configure Kestrel to listen for Telnet connections
+// Configure Kestrel to listen for Telnet and WebSocket connections
 builder.WebHost.ConfigureKestrel((context, options) =>
 {
 	options.AddServerHeader = true;
 
-	// Listen for Telnet connections on port 4201
-	options.ListenAnyIP(4201, listenOptions =>
+	// Listen for Telnet connections on configured port
+	options.ListenAnyIP(connectionServerOptions.TelnetPort, listenOptions =>
 	{
 		listenOptions.UseConnectionHandler<TelnetServer>();
 	});
 
-	// HTTP API port (4202)
-	options.ListenAnyIP(4202);
+	// HTTP API port (for WebSocket and HTTP endpoints)
+	options.ListenAnyIP(connectionServerOptions.HttpPort);
 });
 
 // Add API controllers
@@ -135,6 +150,18 @@ var app = builder.Build();
 
 try
 {
+	// Enable WebSocket support
+	app.UseWebSockets();
+
+	// Get WebSocketServer instance for the endpoint
+	var webSocketHandler = app.Services.GetRequiredService<WebSocketServer>();
+
+	// Map WebSocket endpoint
+	app.Map("/ws", async context =>
+	{
+		await webSocketHandler.HandleWebSocketAsync(context);
+	});
+
 	// Map API endpoints
 	app.MapControllers();
 	app.MapGet("/", () => "SharpMUSH Connection Server");
