@@ -1130,9 +1130,9 @@ public partial class Commands
 				qRegisters[qregName] = MModule.single(qregValue);
 			}
 		}
-		else if (args.Count > 1 && args.ContainsKey("1"))
+		else if (args.Count > 1 && args.TryGetValue("1", out var arg1))
 		{
-			var countArg = args["1"].Message?.ToPlainText();
+			var countArg = arg1.Message?.ToPlainText();
 			if (!string.IsNullOrEmpty(countArg))
 			{
 				if (!int.TryParse(countArg, out notifyCount) || notifyCount < 1)
