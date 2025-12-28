@@ -134,28 +134,92 @@ Additionally, hooks can use `%u` to access the entire command string entered.
 - [x] @hook command implementation (all switches)
 - [x] Dependency injection wiring
 - [x] Documentation of architecture
-
-### Implemented
 - [x] Hook execution in command flow
 - [x] Named register population (ARGS, LS, RS, LSAx, LSAC, EQUALS, SWITCHES)
 - [x] Hook code execution via AttributeService.EvaluateAttributeFunctionAsync
 - [x] /ignore hook - executed before command, skips if returns false
 - [x] /before hook - executed before command, result discarded
 - [x] /after hook - executed after command, result discarded
-- [x] /override hook - executes hook code instead of built-in command
-
-### Completed (Session Persistence)
+- [x] /override hook - uses $-command matching instead of built-in command
+- [x] /extend hook - handles invalid switches via $-command matching
+- [x] $-command matching for /override and /extend hooks
+- [x] Switch validation before command execution
 - [x] In-memory hook storage (intended design - hooks persist for server session)
+- [x] Complete @mogrifier system implementation with all MOGRIFY` attributes
 
 ### To Be Implemented
-- [ ] $-command matching for /override and /extend hooks (currently using direct attribute execution)
-- [ ] /extend hook for invalid switches
-- [ ] Inline execution handling (queue vs immediate)
-- [ ] Q-register management (localize, clearregs, nobreak)
+- [ ] Inline execution handling (queue vs immediate) for /inline modifier
+- [ ] Q-register management (localize, clearregs, nobreak) for inline hooks
 - [ ] Integration with HUH_COMMAND hook
+- [ ] Individual player @chatformat support in mogrifier
+- [ ] Channel recall buffer support for mogrifier
 - [ ] Unit tests for @hook command
 - [ ] Integration tests for hook execution
+- [ ] Unit tests for mogrifier
 - [ ] Performance optimization for hook lookup
+
+## @mogrifier System Implementation
+
+### Overview
+The @mogrifier system has been fully implemented in ChannelMessageRequestHandler. It allows complete customization of channel message output before it reaches individual players.
+
+### Mogrification Pipeline
+
+When a channel message is sent, the following steps occur:
+
+1. **Check for Mogrifier**: If the channel has a mogrifier object set, load it from the database
+2. **Use Lock Check**: Verify that the speaker passes the mogrifier object's Use lock
+3. **Control Mogrifiers** (executed first):
+   - `MOGRIFY`BLOCK` - If returns non-empty, send result to speaker only and block broadcast
+   - `MOGRIFY`OVERRIDE` - If returns true, skip individual @chatformats
+   - `MOGRIFY`NOBUFFER` - If returns true, don't add message to recall buffer
+4. **Part Mogrifiers** (modify individual components):
+   - `MOGRIFY`CHANNAME` - Alter the channel display name (default: `<ChannelName>`)
+   - `MOGRIFY`TITLE` - Alter the player's title
+   - `MOGRIFY`PLAYERNAME` - Alter the player's name
+   - `MOGRIFY`SPEECHTEXT` - Alter the "says" text
+   - `MOGRIFY`MESSAGE` - Alter the message content
+5. **Format Mogrifier**:
+   - `MOGRIFY`FORMAT` - Channel-wide message format (like @chatformat)
+6. **Individual @chatformat**: Applied unless `MOGRIFY`OVERRIDE` returned true
+7. **Buffer**: Message logged unless `MOGRIFY`NOBUFFER` returned true
+
+### Arguments Passed to Mogrifiers
+
+**Control Mogrifiers** (BLOCK, OVERRIDE, NOBUFFER):
+- %0: Chat type character (", :, ;, @)
+- %1: Channel name (unmogrified)
+- %2: Message text
+- %3: Player name
+- %4: Player title
+
+**Part Mogrifiers** (CHANNAME, TITLE, PLAYERNAME, SPEECHTEXT, MESSAGE):
+- %0: Current value of that part (potentially already mogrified)
+- %1: Channel name (unmogrified)
+- %2: Chat type character (", :, ;, @)
+- %3: Message text
+- %4: Player title
+- %5: Player name
+- %6: "Says" text
+- %7: Space-separated options (e.g., "silent" or "noisy")
+
+**Format Mogrifier** (FORMAT):
+- %0: Chat type character
+- %1: Channel name
+- %2: Message text (mogrified)
+- %3: Player name (mogrified)
+- %4: Player title (mogrified)
+- %5: Default formatted message
+- %6: "Says" text (mogrified)
+- %7: Options
+
+### Chat Type Handling
+
+The mogrifier correctly handles different chat types:
+- `"` (say): Standard speech with says/name/message
+- `:` (pose): Pose with optional title/name/message
+- `;` (semipose): Semipose with optional title and name merged with message
+- `@` (emit): Direct emit of message only
 
 ## Design Decisions
 
