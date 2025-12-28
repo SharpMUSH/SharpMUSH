@@ -490,8 +490,8 @@ public class SharpMUSHBooleanExpressionVisitor(
 				// This prevents locks from matching recycled dbrefs after objects are destroyed
 				if (lockDbRef.CreationMilliseconds.HasValue)
 				{
-					return lockDbRef.Number == unlockerDbRef.Number 
-					       && lockDbRef.CreationMilliseconds == unlockerDbRef.CreationMilliseconds;
+					return (lockDbRef.Number == unlockerDbRef.Number) 
+					       && (lockDbRef.CreationMilliseconds == unlockerDbRef.CreationMilliseconds);
 				}
 				// If lock doesn't specify creation time (bare dbref), only match number for backward compatibility
 				else
