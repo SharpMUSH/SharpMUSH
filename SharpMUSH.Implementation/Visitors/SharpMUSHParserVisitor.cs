@@ -828,6 +828,7 @@ public class SharpMUSHParserVisitor(
 	/// Executes hook code from an attribute on an object.
 	/// For OVERRIDE and EXTEND hooks, performs $-command matching.
 	/// For other hooks, executes the attribute directly.
+	/// Handles inline execution with proper q-register management.
 	/// </summary>
 	private async ValueTask<Option<CallState>> ExecuteHookCode(IMUSHCodeParser parser, AnyOptionalSharpObject executor, CommandHook hook, Option<MString> commandInput = default!)
 	{
@@ -841,41 +842,116 @@ public class SharpMUSHParserVisitor(
 		var targetObj = targetObject.Known();
 		var executorObj = executor.IsNone ? targetObj : executor.Known();
 		
-		// For OVERRIDE and EXTEND hooks, perform $-command matching
-		if ((hook.HookType == "OVERRIDE" || hook.HookType == "EXTEND") && commandInput.IsSome())
+		// Save q-registers if /localize is set
+		Dictionary<string, MString>? savedRegisters = null;
+		if (hook.Inline && hook.Localize)
 		{
-			// Try to match $-commands on the hook object
-			var matchResult = await CommandDiscoveryService.MatchUserDefinedCommand(
-				parser,
-				new[] { targetObj }.ToAsyncEnumerable(),
-				commandInput.AsValue());
-			
-			if (matchResult.IsSome())
+			if (parser.CurrentState.Registers.TryPeek(out var currentRegs))
 			{
-				// Execute the matched $-command
-				var matches = matchResult.AsValue();
-				var firstMatch = matches.FirstOrDefault();
-				if (firstMatch != default)
-				{
-					return await HandleUserDefinedCommand(parser, matches);
-				}
+				savedRegisters = new Dictionary<string, MString>(currentRegs);
 			}
-			
-			// No match found for override/extend
-			return new None();
 		}
 		
-		// For other hook types (IGNORE, BEFORE, AFTER), execute the attribute directly
-		var result = await AttributeService.EvaluateAttributeFunctionAsync(
-			parser,
-			executorObj,
-			targetObj,
-			hook.AttributeName,
-			new Dictionary<string, CallState>(),
-			evalParent: true,
-			ignorePermissions: false);
+		// Clear q-registers if /clearregs is set
+		if (hook.Inline && hook.ClearRegs)
+		{
+			if (parser.CurrentState.Registers.TryPeek(out var currentRegs))
+			{
+				currentRegs.Clear();
+			}
+		}
 		
-		return new CallState(result);
+		try
+		{
+			// For OVERRIDE and EXTEND hooks, perform $-command matching
+			if ((hook.HookType == "OVERRIDE" || hook.HookType == "EXTEND") && commandInput.IsSome())
+			{
+				// Try to match $-commands on the hook object
+				var matchResult = await CommandDiscoveryService.MatchUserDefinedCommand(
+					parser,
+					new[] { targetObj }.ToAsyncEnumerable(),
+					commandInput.AsValue());
+				
+				if (matchResult.IsSome())
+				{
+					// Execute the matched $-command
+					var matches = matchResult.AsValue();
+					if (hook.Inline)
+					{
+						// For inline execution, execute immediately
+						return await HandleUserDefinedCommandInline(parser, matches);
+					}
+					else
+					{
+						// For queued execution, use normal handler
+						return await HandleUserDefinedCommand(parser, matches);
+					}
+				}
+				
+				// No match found for override/extend
+				return new None();
+			}
+			
+			// For other hook types (IGNORE, BEFORE, AFTER), execute the attribute directly
+			var result = await AttributeService.EvaluateAttributeFunctionAsync(
+				parser,
+				executorObj,
+				targetObj,
+				hook.AttributeName,
+				new Dictionary<string, CallState>(),
+				evalParent: true,
+				ignorePermissions: false);
+			
+			return new CallState(result);
+		}
+		finally
+		{
+			// Restore q-registers if /localize was set
+			if (hook.Inline && hook.Localize && savedRegisters != null)
+			{
+				if (parser.CurrentState.Registers.TryPeek(out var currentRegs))
+				{
+					currentRegs.Clear();
+					foreach (var (key, value) in savedRegisters)
+					{
+						currentRegs[key] = value;
+					}
+				}
+			}
+		}
+	}
+	
+	/// <summary>
+	/// Handles user-defined command execution inline (immediate, not queued).
+	/// Used for /inline hooks.
+	/// </summary>
+	private async ValueTask<Option<CallState>> HandleUserDefinedCommandInline(
+		IMUSHCodeParser prs,
+		IEnumerable<(AnySharpObject Obj, SharpAttribute Attr, Dictionary<string, CallState> Arguments)> matches)
+	{
+		// Execute inline - directly parse and return result instead of queueing
+		foreach (var (obj, attr, arguments) in matches)
+		{
+			var newParser = prs.Push(prs.CurrentState with
+			{
+				CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attr.Name),
+				EnvironmentRegisters = arguments,
+				Arguments = arguments,
+				Function = null,
+				Executor = obj.Object().DBRef
+			});
+
+			// Execute inline by parsing the command list directly
+			var commandList = MModule.substring(
+				attr.CommandListIndex!.Value,
+				MModule.getLength(attr.Value) - attr.CommandListIndex!.Value,
+				attr.Value);
+				
+			// Parse and execute the command list synchronously
+			await newParser.CommandListParse(commandList);
+		}
+
+		return CallState.Empty;
 	}
 
 	private static async ValueTask<Option<CallState>> HandleSocketCommandPattern(IMUSHCodeParser prs, MString src,

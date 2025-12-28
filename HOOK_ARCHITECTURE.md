@@ -63,6 +63,16 @@ The @hook command provides the user interface for managing hooks. It supports:
 - `/clearregs` - Clear q-registers before hook execution
 - `/inplace` - Shorthand for `/inline/localize/clearregs/nobreak`
 
+**Inline Execution Behavior:**
+When a hook is marked with `/inline`, it executes immediately in the current execution context rather than being queued. This allows hooked commands to behave exactly like built-in commands with output appearing in the correct order.
+
+**Q-Register Management:**
+- `/localize` - Saves all q-registers before hook execution and restores them afterward, isolating the hook's register changes
+- `/clearregs` - Clears all q-registers before executing the hook, ensuring a clean register state
+- `/nobreak` - Prevents @break commands within the hook from stopping the calling action list (currently not implemented as @break propagation is handled differently)
+
+These modifiers enable writing softcoded commands that integrate seamlessly with the command execution flow.
+
 #### Usage
 ```
 @hook/<type> <command>=<object>[,<attribute>]
@@ -146,10 +156,12 @@ Additionally, hooks can use `%u` to access the entire command string entered.
 - [x] Switch validation before command execution
 - [x] In-memory hook storage (intended design - hooks persist for server session)
 - [x] Complete @mogrifier system implementation with all MOGRIFY` attributes
+- [x] Inline execution handling (/inline modifier)
+- [x] Q-register management (/localize, /clearregs modifiers)
 
 ### To Be Implemented
-- [ ] Inline execution handling (queue vs immediate) for /inline modifier
-- [ ] Q-register management (localize, clearregs, nobreak) for inline hooks
+- [x] Inline execution handling (queue vs immediate) for /inline modifier
+- [x] Q-register management (localize, clearregs, nobreak) for inline hooks
 - [ ] Integration with HUH_COMMAND hook
 - [ ] Individual player @chatformat support in mogrifier
 - [ ] Channel recall buffer support for mogrifier
