@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
 using System.Text;
+using Confluent.Kafka;
+using Confluent.Kafka.Admin;
 using Core.Arango;
 using Core.Arango.Serialization.Json;
 using Microsoft.Extensions.DependencyInjection;
@@ -138,6 +140,9 @@ public class WebAppFactory : IAsyncInitializer
 		var kafkaHost = RedPandaTestServer.Instance.GetBootstrapAddress();
 		Environment.SetEnvironmentVariable("KAFKA_HOST", kafkaHost);
 
+		// Create required Kafka topics before starting the application
+		await CreateKafkaTopicsAsync(kafkaHost);
+
 		_server = new TestWebApplicationBuilderFactory<Program>(
 			MySqlTestServer.Instance.GetConnectionString(), 
 			configFile,
@@ -156,5 +161,62 @@ public class WebAppFactory : IAsyncInitializer
 		_one = realOne.Object()!.DBRef;
 		await connectionService.Register(1, "localhost", "locahost","test", _ => ValueTask.CompletedTask,  _ => ValueTask.CompletedTask, () => Encoding.UTF8);
 		await connectionService.Bind(1, _one);
+	}
+
+	private static async Task CreateKafkaTopicsAsync(string bootstrapServers)
+	{
+		// Parse the bootstrap servers address to handle various formats
+		// Format can be: "//127.0.0.1:9092/", "kafka://127.0.0.1:9092", or "127.0.0.1:9092"
+		var cleanedAddress = bootstrapServers;
+		
+		// Remove protocol prefix if present
+		if (cleanedAddress.Contains("://"))
+		{
+			cleanedAddress = cleanedAddress.Substring(cleanedAddress.IndexOf("://") + 3);
+		}
+		
+		// Remove leading slashes
+		cleanedAddress = cleanedAddress.TrimStart('/');
+		
+		// Remove trailing slashes
+		cleanedAddress = cleanedAddress.TrimEnd('/');
+		
+		var config = new AdminClientConfig
+		{
+			BootstrapServers = cleanedAddress,
+			SocketTimeoutMs = 10000,
+			ApiVersionRequestTimeoutMs = 10000
+		};
+
+		using var adminClient = new AdminClientBuilder(config).Build();
+
+		var topics = new List<string>
+		{
+			"telnet-input",
+			"telnet-output",
+			"telnet-prompt",
+			"websocket-input",
+			"websocket-output",
+			"websocket-prompt"
+		};
+
+		var topicSpecifications = topics.Select(topic => new TopicSpecification
+		{
+			Name = topic,
+			NumPartitions = 1,
+			ReplicationFactor = 1
+		}).ToList();
+
+		try
+		{
+			await adminClient.CreateTopicsAsync(topicSpecifications);
+			
+			// Wait a bit for topics to be ready
+			await Task.Delay(2000);
+		}
+		catch (CreateTopicsException ex) when (ex.Results.All(r => r.Error.Code == ErrorCode.TopicAlreadyExists || r.Error.Code == ErrorCode.NoError))
+		{
+			// Topics already exist or were created successfully, which is fine
+		}
 	}
 }
