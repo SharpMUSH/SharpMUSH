@@ -147,8 +147,9 @@ public partial class Commands
 		if (isInline)
 		{
 			// Inline execution - run immediately (original behavior)
+			var noBreak = switches.Contains("NOBREAK") || switches.Contains("INPLACE");
 			var wrappedIteration = new IterationWrapper<MString>
-				{ Value = MModule.empty(), Break = false, NoBreak = false, Iteration = 0 };
+				{ Value = MModule.empty(), Break = false, NoBreak = noBreak, Iteration = 0 };
 			parser.CurrentState.IterationRegisters.Push(wrappedIteration);
 
 			// Use context-based batching that batches notifications to any target
@@ -184,6 +185,8 @@ public partial class Commands
 		{
 			// Default behavior - queue each iteration with proper iteration context
 			var iteration = 0u;
+			var noBreak = switches.Contains("NOBREAK") || switches.Contains("INPLACE");
+			
 			foreach (var item in list)
 			{
 				iteration++;
@@ -193,7 +196,7 @@ public partial class Commands
 				{
 					Value = item!,
 					Break = false,
-					NoBreak = false,
+					NoBreak = noBreak,
 					Iteration = iteration
 				};
 				
