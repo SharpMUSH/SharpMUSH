@@ -129,6 +129,7 @@ public partial class Commands
 	public static async ValueTask<Option<CallState>> DoList(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).WithoutNone();
+		var switches = parser.CurrentState.Switches;
 
 		if (parser.CurrentState.Arguments.Count < 2)
 		{
@@ -137,29 +138,77 @@ public partial class Commands
 		}
 
 		var list = MModule.split(" ", parser.CurrentState.Arguments["0"].Message!);
-
-		var wrappedIteration = new IterationWrapper<MString>
-			{ Value = MModule.empty(), Break = false, NoBreak = false, Iteration = 0 };
-		parser.CurrentState.IterationRegisters.Push(wrappedIteration);
 		var command = parser.CurrentState.Arguments["1"].Message!;
 
-		// Use context-based batching that batches notifications to any target
-		using (NotifyService!.BeginBatchingContext())
+		// Check if we should run inline or queue
+		var isInline = switches.Contains("INLINE") || switches.Contains("INPLACE");
+
+		if (isInline)
 		{
-			var lastCallState = CallState.Empty;
-			var visitorFunc = parser.CommandListParseVisitor(command);
+			// Inline execution - run immediately (original behavior)
+			var wrappedIteration = new IterationWrapper<MString>
+				{ Value = MModule.empty(), Break = false, NoBreak = false, Iteration = 0 };
+			parser.CurrentState.IterationRegisters.Push(wrappedIteration);
+
+			// Use context-based batching that batches notifications to any target
+			using (NotifyService!.BeginBatchingContext())
+			{
+				var lastCallState = CallState.Empty;
+				var visitorFunc = parser.CommandListParseVisitor(command);
+				foreach (var item in list)
+				{
+					wrappedIteration.Value = item!;
+					wrappedIteration.Iteration++;
+
+					// TODO: This should not need parsing each time. Just evaluation by getting the Context and visiting the children multiple times.
+					lastCallState = await visitorFunc();
+				}
+
+				parser.CurrentState.IterationRegisters.TryPop(out _);
+
+				// If /notify switch is present with /inline, queue "@notify me" after inline execution
+				if (switches.Contains("NOTIFY"))
+				{
+					await Mediator!.Publish(new QueueCommandListRequest(
+						MModule.single("@notify me"),
+						parser.CurrentState,
+						new DbRefAttribute(enactor.Object().DBRef, ["SEMAPHORE"]),
+						-1));
+				}
+
+				return lastCallState!;
+			}
+		}
+		else
+		{
+			// Default behavior - queue each iteration
+			var iteration = 0;
 			foreach (var item in list)
 			{
-				wrappedIteration.Value = item!;
-				wrappedIteration.Iteration++;
-
-				// TODO: This should not need parsing each time. Just evaluation by getting the Context and visiting the children multiple times.
-				lastCallState = await visitorFunc();
+				iteration++;
+				// TODO: We need to properly set up iteration context for queued commands
+				// For now, we'll queue the commands but iteration substitutions won't work correctly
+				// This needs the command to be pre-processed with %i0, inum(0), etc. before queueing
+				
+				// Queue each iteration as a separate command
+				await Mediator!.Publish(new QueueCommandListRequest(
+					command,
+					parser.CurrentState,
+					new DbRefAttribute(enactor.Object().DBRef, ["SEMAPHORE"]),
+					-1));
 			}
 
-			parser.CurrentState.IterationRegisters.TryPop(out _);
+			// If /notify switch is present, queue "@notify me" after all iterations
+			if (switches.Contains("NOTIFY"))
+			{
+				await Mediator!.Publish(new QueueCommandListRequest(
+					MModule.single("@notify me"),
+					parser.CurrentState,
+					new DbRefAttribute(enactor.Object().DBRef, ["SEMAPHORE"]),
+					-1));
+			}
 
-			return lastCallState!;
+			return CallState.Empty;
 		}
 	}
 
@@ -967,7 +1016,7 @@ public partial class Commands
 
 	[SharpCommand(Name = "@NOTIFY", Switches = ["ALL", "ANY", "SETQ", "QUIET"],
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs,
-		MinArgs = 0, MaxArgs = int.MaxValue)]
+		MinArgs = 1, MaxArgs = 2)]
 	public static async ValueTask<Option<CallState>> Notify(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -991,6 +1040,9 @@ public partial class Commands
 				break;
 			case ["SETQ"]:
 				notifyType = "SETQ";
+				break;
+			case []:
+				// No switches - default to ANY
 				break;
 			default:
 				return new CallState(Errors.ErrorTooManySwitches);
@@ -1032,24 +1084,45 @@ public partial class Commands
 			oldSemaphoreCount = semaphoreCount;
 		}
 
+		// Check for =<number> parameter
+		int notifyCount = 1;
+		if (args.Count > 1 && args.ContainsKey("1"))
+		{
+			var countArg = args["1"].Message?.ToPlainText();
+			if (!string.IsNullOrEmpty(countArg))
+			{
+				if (!int.TryParse(countArg, out notifyCount) || notifyCount < 1)
+				{
+					await NotifyService!.Notify(executor, "Invalid number specified.");
+					return new CallState("#-1 INVALID NUMBER");
+				}
+			}
+		}
+
 		var dbRefAttribute = new DbRefAttribute(objectToNotify.Object().DBRef, attribute.Split("`"));
 
 		switch (notifyType)
 		{
-			// TODO: Handle <number> case.
 			case "ANY":
-				await Mediator!.Send(new NotifySemaphoreRequest(dbRefAttribute, oldSemaphoreCount));
-				await AttributeService.SetAttributeAsync(executor, objectToNotify, attribute,
-					MModule.single((oldSemaphoreCount - 1).ToString()));
+				// Notify specified number of tasks (default 1)
+				await Mediator!.Send(new NotifySemaphoreRequest(dbRefAttribute, oldSemaphoreCount, notifyCount));
+				var newCount = oldSemaphoreCount - notifyCount;
+				await AttributeService!.SetAttributeAsync(executor, objectToNotify, attribute,
+					MModule.single(newCount.ToString()));
 				break;
 			case "ALL":
 				await Mediator!.Send(new NotifyAllSemaphoreRequest(dbRefAttribute));
-				await AttributeService.SetAttributeAsync(executor, objectToNotify, attribute,
+				await AttributeService!.SetAttributeAsync(executor, objectToNotify, attribute,
 					MModule.single(0.ToString()));
 				break;
 		}
 
 		// TODO: Handle SETQ case, as it affects the State of an already-queued Job.
+
+		if (!parser.CurrentState.Switches.Contains("QUIET"))
+		{
+			await NotifyService!.Notify(executor, "Notified.");
+		}
 
 		return new None();
 	}

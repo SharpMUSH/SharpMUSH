@@ -55,7 +55,7 @@ public class ScheduleNotifyHandler(ITaskScheduler scheduler) : IRequestHandler<N
 {
 	public async ValueTask<Unit> Handle(NotifySemaphoreRequest request, CancellationToken cancellationToken)
 	{
-		await scheduler.Notify(request.DbRefAttribute, request.OldValue);
+		await scheduler.Notify(request.DbRefAttribute, request.OldValue, request.Count);
 		return await Unit.ValueTask;
 	}
 }

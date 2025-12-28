@@ -87,7 +87,8 @@ public interface ITaskScheduler
 	/// </summary>
 	/// <param name="dbAttribute">DbRef and Attribute with a value</param>
 	/// <param name="oldValue">The old value, before notifying.</param>
-	ValueTask Notify(DbRefAttribute dbAttribute, int oldValue);
+	/// <param name="count">Number of tasks to notify (default 1)</param>
+	ValueTask Notify(DbRefAttribute dbAttribute, int oldValue, int count = 1);
 
 	/// <summary>
 	/// Notify a Semaphore trigger to trigger all waiting jobs.

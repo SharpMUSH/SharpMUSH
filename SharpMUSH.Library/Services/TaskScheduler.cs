@@ -155,26 +155,27 @@ public class TaskScheduler(
 					$"{SemaphoreGroup}:{dbRefAttribute}").Build());
 	}
 
-	public async ValueTask Notify(DbRefAttribute dbAttribute, int oldValue)
+	public async ValueTask Notify(DbRefAttribute dbAttribute, int oldValue, int count = 1)
 	{
 		var semaphoresForObject = await _scheduler
 			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals($"{SemaphoreGroup}:{dbAttribute}"));
 
-		if (oldValue < 0)
+		// If oldValue is negative, we notify the specified number of tasks
+		// If oldValue is >= 0, we notify based on count
+		var tasksToNotify = oldValue < 0 ? Math.Min(count, 0 - oldValue) : count;
+
+		var immediatelyRun = semaphoresForObject.Take(tasksToNotify).ToAsyncEnumerable();
+		await foreach (var trigger in immediatelyRun)
 		{
-			var immediatelyRun = semaphoresForObject.Take(0 - oldValue).ToAsyncEnumerable();
-			await foreach (var trigger in immediatelyRun)
+			try
 			{
-				try
-				{
-					var to = await _scheduler.GetTrigger(trigger, CancellationToken.None);
-					var job = to.JobKey;
-					await _scheduler.TriggerJob(job);
-				}
-				catch
-				{
-					// Intentionally do nothing for that job. It likely no longer exists somehow.
-				}
+				var to = await _scheduler.GetTrigger(trigger, CancellationToken.None);
+				var job = to.JobKey;
+				await _scheduler.TriggerJob(job);
+			}
+			catch
+			{
+				// Intentionally do nothing for that job. It likely no longer exists somehow.
 			}
 		}
 	}
