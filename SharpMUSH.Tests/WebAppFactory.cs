@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using OneOf.Types;
+using Quartz;
 using Serilog;
 using Serilog.Sinks.SystemConsole.Themes;
 using SharpMUSH.Configuration.Options;
@@ -161,6 +162,14 @@ public class WebAppFactory : IAsyncInitializer
 		_one = realOne.Object()!.DBRef;
 		await connectionService.Register(1, "localhost", "locahost","test", _ => ValueTask.CompletedTask,  _ => ValueTask.CompletedTask, () => Encoding.UTF8);
 		await connectionService.Bind(1, _one);
+		
+		// Start the Quartz scheduler for tests that need it
+		var schedulerFactory = provider.GetRequiredService<Quartz.ISchedulerFactory>();
+		var scheduler = await schedulerFactory.GetScheduler();
+		if (!scheduler.IsStarted)
+		{
+			await scheduler.Start();
+		}
 	}
 
 	private static async Task CreateKafkaTopicsAsync(string bootstrapServers)

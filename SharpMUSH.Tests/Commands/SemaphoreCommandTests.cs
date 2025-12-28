@@ -56,7 +56,6 @@ public class SemaphoreCommandTests
 	}
 
 	[Test]
-	[Explicit("Requires Quartz scheduler to be running - queued commands need scheduler")]
 	public async ValueTask DolistDefault_ShouldQueueWithIterationContext()
 	{
 		// Arrange
@@ -77,7 +76,6 @@ public class SemaphoreCommandTests
 	}
 
 	[Test]
-	[Explicit("Needs investigation - tests hanging")]
 	public async ValueTask NotifySetQ_ShouldModifyQRegisters()
 	{
 		// Arrange
@@ -125,7 +123,6 @@ public class SemaphoreCommandTests
 	}
 
 	[Test]
-	[Explicit("Requires Quartz scheduler to be running - timed waits need scheduler")]
 	public async ValueTask WaitCommand_WithTime_CanExecute()
 	{
 		// Arrange & Act - just verify @wait command can execute
