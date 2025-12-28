@@ -44,4 +44,24 @@ public class BooleanExpressionParser(IMediator mediator) : IBooleanExpressionPar
 
 		return valid;
 	}
+	
+	/// <summary>
+	/// Normalizes a lock expression by converting bare dbrefs to objids.
+	/// This ensures locks reference specific object instances and won't match recycled dbrefs.
+	/// </summary>
+	/// <param name="text">The lock expression to normalize</param>
+	/// <returns>The normalized lock expression with objids instead of bare dbrefs</returns>
+	public string Normalize(string text)
+	{
+		AntlrInputStreamSpan inputStream = new(text.AsMemory(), nameof(Normalize));
+		SharpMUSHBoolExpLexer sharpLexer = new(inputStream);
+		BufferedTokenSpanStream commonTokenStream = new(sharpLexer);
+		SharpMUSHBoolExpParser sharpParser = new(commonTokenStream);
+		var chatContext = sharpParser.@lock();
+		SharpMUSHBooleanExpressionNormalizationVisitor visitor = new(mediator);
+		
+		var normalized = visitor.Visit(chatContext);
+		
+		return normalized;
+	}
 }
