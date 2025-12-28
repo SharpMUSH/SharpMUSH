@@ -14,6 +14,7 @@ using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server;
 using SharpMUSH.Server.Strategy.ArangoDB;
 using SharpMUSH.Server.Strategy.Prometheus;
+using SharpMUSH.Server.Strategy.Redis;
 
 namespace SharpMUSH.Tests;
 
@@ -21,7 +22,8 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 	string sqlConnectionString,
 	string configFile,
 	INotifyService notifier,
-	string prometheusUrl) :
+	string prometheusUrl,
+	string? databaseName = null) :
 	WebApplicationFactory<TProgram> where TProgram : class
 {
 	protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -37,6 +39,26 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 		// Set Prometheus URL as environment variable so the PrometheusStrategyProvider will use ExternalStrategy
 		Environment.SetEnvironmentVariable("PROMETHEUS_URL", prometheusUrl);
 
+		// Ensure colors.json exists for the startup
+		var colorFile = Path.Combine(AppContext.BaseDirectory, "colors.json");
+		if (!File.Exists(colorFile))
+		{
+			// Create a minimal colors.json for testing if it doesn't exist
+			var tempColorFile = Path.Combine(Path.GetTempPath(), "colors.json");
+			File.WriteAllText(tempColorFile, "{}");
+			// Create symlink or copy to expected location
+			try
+			{
+				Directory.CreateDirectory(AppContext.BaseDirectory);
+				File.Copy(tempColorFile, colorFile, true);
+			}
+			catch
+			{
+				// If we can't create it in the base directory, that's OK
+				// The startup will handle the missing file
+			}
+		}
+
 		builder.ConfigureTestServices(sc =>
 			{
 				var substitute = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
@@ -50,6 +72,13 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 
 				sc.RemoveAll<ISqlService>();
 				sc.AddSingleton<ISqlService>(new SqlService(sqlConnectionString));
+				
+				// If a custom database name is provided, override the ArangoHandle
+				if (!string.IsNullOrEmpty(databaseName))
+				{
+					sc.RemoveAll<ArangoHandle>();
+					sc.AddSingleton(new ArangoHandle(databaseName));
+				}
 			}
 		);
 	}

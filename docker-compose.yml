@@ -47,6 +47,22 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    container_name: sharpmush-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - sharpmush-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: redis-server --appendonly yes
+
   prometheus:
     image: prom/prometheus:latest
     container_name: sharpmush-prometheus
@@ -98,10 +114,13 @@ services:
       - KAFKA_HOST=redpanda
       - KAFKA_PORT=9092
       - PROMETHEUS_URL=http://prometheus:9090
+      - REDIS_CONNECTION=redis:6379
     depends_on:
       redpanda:
         condition: service_healthy
       prometheus:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     ports:
       - "4201:4201" # Telnet
@@ -119,12 +138,15 @@ services:
       - KAFKA_HOST=redpanda
       - KAFKA_PORT=9092
       - PROMETHEUS_URL=http://prometheus:9090
+      - REDIS_CONNECTION=redis:6379
     depends_on:
       arangodb:
         condition: service_started
       redpanda:
         condition: service_healthy
       prometheus:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       connectionserver:
         condition: service_started
@@ -140,6 +162,7 @@ volumes:
   redpanda-data:
   prometheus-data:
   grafana-data:
+  redis-data:
   
 networks:
   sharpmush-net:
