@@ -323,16 +323,29 @@ public class SharpMUSHBooleanExpressionVisitor(
 					// Check if unlocker's dbref is in the list
 					foreach (var dbrefStr in dbrefs)
 					{
-						// Handle both #123 and #123:timestamp formats
-						if (dbrefStr.StartsWith('#'))
+						// Parse the dbref (handles both #123 and #123:timestamp formats)
+						var parsedDbRef = HelperFunctions.ParseDbRef(dbrefStr);
+						if (parsedDbRef.IsSome())
 						{
-							var colonIndex = dbrefStr.IndexOf(':');
-							var numStr = colonIndex > 0 ? dbrefStr.Substring(1, colonIndex - 1) : dbrefStr.Substring(1);
+							var lockDbRef = parsedDbRef.AsValue();
 							
-							if (int.TryParse(numStr, out int dbrefNum))
+							// If lock specifies creation time (objid format), both number and timestamp must match
+							// This prevents locks from matching recycled dbrefs after objects are destroyed
+							if (lockDbRef.CreationMilliseconds.HasValue)
 							{
-								if (unlockerDbRef.Number == dbrefNum)
+								if (lockDbRef.Number == unlockerDbRef.Number 
+								    && lockDbRef.CreationMilliseconds == unlockerDbRef.CreationMilliseconds)
+								{
 									return true;
+								}
+							}
+							// If lock doesn't specify creation time (bare dbref), only match number for backward compatibility
+							else
+							{
+								if (lockDbRef.Number == unlockerDbRef.Number)
+								{
+									return true;
+								}
 							}
 						}
 					}
@@ -466,11 +479,25 @@ public class SharpMUSHBooleanExpressionVisitor(
 				return unlockerObj.Object().DBRef == owner.Object.DBRef;
 			}
 			
-			// Try to parse as DBRef
-			if (target.StartsWith('#') && int.TryParse(target.Substring(1), out int dbrefNum))
+			// Try to parse as DBRef (supports both #123 and #123:timestamp formats)
+			var parsedDbRef = HelperFunctions.ParseDbRef(target);
+			if (parsedDbRef.IsSome())
 			{
-				// Compare DBRef numbers (ignoring creation time for now)
-				return unlockerObj.Object().DBRef.Number == dbrefNum;
+				var lockDbRef = parsedDbRef.AsValue();
+				var unlockerDbRef = unlockerObj.Object().DBRef;
+				
+				// If lock specifies creation time (objid format), both number and timestamp must match
+				// This prevents locks from matching recycled dbrefs after objects are destroyed
+				if (lockDbRef.CreationMilliseconds.HasValue)
+				{
+					return lockDbRef.Number == unlockerDbRef.Number 
+					       && lockDbRef.CreationMilliseconds == unlockerDbRef.CreationMilliseconds;
+				}
+				// If lock doesn't specify creation time (bare dbref), only match number for backward compatibility
+				else
+				{
+					return lockDbRef.Number == unlockerDbRef.Number;
+				}
 			}
 			
 			// Otherwise try exact name match
