@@ -175,7 +175,7 @@ public partial class Commands
 				// If /notify switch is present with /inline, queue "@notify me" after inline execution
 				if (switches.Contains("NOTIFY"))
 				{
-					await Mediator!.Publish(new QueueCommandListRequest(
+					await Mediator!.Send(new QueueCommandListRequest(
 						MModule.single("@notify me"),
 						parser.CurrentState,
 						new DbRefAttribute(enactor.Object().DBRef, DefaultSemaphoreAttributeArray),
@@ -214,7 +214,7 @@ public partial class Commands
 				};
 				
 				// Queue each iteration as a separate command with its iteration context
-				await Mediator!.Publish(new QueueCommandListRequest(
+				await Mediator!.Send(new QueueCommandListRequest(
 					command,
 					stateForIteration,
 					new DbRefAttribute(enactor.Object().DBRef, DefaultSemaphoreAttributeArray),
@@ -224,7 +224,7 @@ public partial class Commands
 			// If /notify switch is present, queue "@notify me" after all iterations
 			if (switches.Contains("NOTIFY"))
 			{
-				await Mediator!.Publish(new QueueCommandListRequest(
+				await Mediator!.Send(new QueueCommandListRequest(
 					MModule.single("@notify me"),
 					parser.CurrentState,
 					new DbRefAttribute(enactor.Object().DBRef, DefaultSemaphoreAttributeArray),
@@ -1530,7 +1530,7 @@ public partial class Commands
 		{
 			await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single("0"),
 				one.AsPlayer));
-			await Mediator.Publish(new QueueCommandListRequest(arg1, parser.CurrentState,
+			await Mediator.Send(new QueueCommandListRequest(arg1, parser.CurrentState,
 				new DbRefAttribute(located.Object().DBRef, attribute), 0));
 			return;
 		}
@@ -1543,7 +1543,7 @@ public partial class Commands
 
 		await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single($"{last + 1}"),
 			one.AsPlayer));
-		await Mediator.Publish(new QueueCommandListRequest(arg1, parser.CurrentState,
+		await Mediator.Send(new QueueCommandListRequest(arg1, parser.CurrentState,
 			new DbRefAttribute(located.Object().DBRef, attribute), last));
 	}
 
