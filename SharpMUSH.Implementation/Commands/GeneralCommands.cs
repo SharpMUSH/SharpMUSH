@@ -1057,8 +1057,8 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@NOTIFY", Switches = ["ALL", "ANY", "SETQ", "QUIET"],
-		Behavior = CB.Default | CB.EqSplit,
-		MinArgs = 1, MaxArgs = 2)]
+		Behavior = CB.Default | CB.EqSplit | CB.RSArgs,
+		MinArgs = 1, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Notify(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -1128,25 +1128,26 @@ public partial class Commands
 		
 		if (notifyType == "SETQ")
 		{
-			// Parse qreg,value pairs
-			if (args.Count < 2 || string.IsNullOrEmpty(args["1"].Message?.ToPlainText()))
+			// With CB.RSArgs, each comma-separated value becomes a separate argument
+			// So @notify/setq obj=0,val1,1,val2 becomes: args[0]=obj, args[1]=0, args[2]=val1, args[3]=1, args[4]=val2
+			if (args.Count < 3) // Need at least object, qreg, and value
 			{
 				await NotifyService!.Notify(executor, "You must specify Q-register assignments.");
 				return new CallState("#-1 MISSING QREG ASSIGNMENTS");
 			}
 			
-			var qregPairs = args["1"].Message!.ToPlainText().Split(',');
-			if (qregPairs.Length % 2 != 0)
+			var qregArgCount = args.Count - 1; // Subtract 1 for arg[0] which is the object
+			if (qregArgCount % 2 != 0)
 			{
 				await NotifyService!.Notify(executor, "Q-register assignments must be in pairs: qreg,value[,qreg,value...]");
 				return new CallState("#-1 INVALID QREG PAIRS");
 			}
 			
 			qRegisters = new Dictionary<string, MString>();
-			for (var i = 0; i < qregPairs.Length; i += 2)
+			for (var i = 1; i < args.Count; i += 2)
 			{
-				var qregName = qregPairs[i].Trim();
-				var qregValue = qregPairs[i + 1];
+				var qregName = args[i.ToString()].Message!.ToPlainText().Trim();
+				var qregValue = args[(i + 1).ToString()].Message!.ToPlainText();
 				qRegisters[qregName] = MModule.single(qregValue);
 			}
 		}

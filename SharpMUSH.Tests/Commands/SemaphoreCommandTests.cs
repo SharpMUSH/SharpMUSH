@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
+using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -106,7 +107,7 @@ public class SemaphoreCommandTests
 	public async ValueTask NotifySetQ_CommandShouldAcceptParameters()
 	{
 		// This test verifies that @notify/setq accepts qreg parameters
-		// There appears to be a bug in the command where CB.RSArgs interferes with comma parsing
+		// Fixed bug where CB.RSArgs was interfering with comma parsing
 		var uniqueId = Guid.NewGuid().ToString("N");
 		var uniqueAttr = $"SEM_{uniqueId}";
 		
