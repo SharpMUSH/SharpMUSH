@@ -559,6 +559,20 @@ public class SharpMUSHParserVisitor(
 			}
 
 			// Step 16: HUH_COMMAND is run
+			// Check for HUH_COMMAND hook before running the built-in HUH_COMMAND
+			var huhHook = await HookService.GetHookAsync("HUH_COMMAND", "OVERRIDE");
+			if (huhHook.IsSome())
+			{
+				var executor = await parser.CurrentState.ExecutorObject(Mediator);
+				// Construct the full command input for $-command matching
+				Option<MString> huhInput = src;
+				var huhResult = await ExecuteHookCode(parser, executor, huhHook.AsValue(), huhInput);
+				if (huhResult.IsSome())
+				{
+					return huhResult.AsValue();
+				}
+			}
+			
 			var newParser = parser.Push(parser.CurrentState with
 			{
 				Command = "HUH_COMMAND",
@@ -690,6 +704,11 @@ public class SharpMUSHParserVisitor(
 		}
 		namedRegisters["LSAC"] = MModule.single(arguments.Count.ToString());
 		
+		// Construct full command string for $-command matching (command + switches + args)
+		var commandWithSwitches = switchArray.Length > 0 
+			? MModule.single($"{rootCommand}/{string.Join("/", switchArray)} {src.ToPlainText()}") 
+			: MModule.single($"{rootCommand} {src.ToPlainText()}");
+		
 		// Execute hooks with the new parser state that includes named registers
 		return await prs.With(state =>
 			{
@@ -739,13 +758,12 @@ public class SharpMUSHParserVisitor(
 					// Result is discarded
 				}
 				
-				// 3. Check for /override hook  
+				// 3. Check for /override hook with $-command matching
 				var overrideHook = await HookService.GetHookAsync(rootCommand, "OVERRIDE");
 				if (overrideHook.IsSome())
 				{
-					// TODO: Implement $-command matching for override
-					// For now, just execute the hook attribute code directly
-					var overrideResult = await ExecuteHookCode(newParser, executor, overrideHook.AsValue());
+					Option<MString> overrideInput = commandWithSwitches;
+					var overrideResult = await ExecuteHookCode(newParser, executor, overrideHook.AsValue(), overrideInput);
 					if (overrideResult.IsSome())
 					{
 						// 5. Check for /after hook before returning
@@ -757,6 +775,35 @@ public class SharpMUSHParserVisitor(
 						}
 						return overrideResult.AsValue();
 					}
+				}
+				
+				// Validate switches and check for /extend hook if invalid switches are found
+				var allowedSwitches = libraryCommandDefinition.Attribute.Switches ?? [];
+				var invalidSwitches = switchArray.Where(s => !allowedSwitches.Contains(s, StringComparer.OrdinalIgnoreCase)).ToArray();
+				
+				if (invalidSwitches.Length > 0)
+				{
+					// Check for /extend hook to handle invalid switches
+					var extendHook = await HookService.GetHookAsync(rootCommand, "EXTEND");
+					if (extendHook.IsSome())
+					{
+						Option<MString> extendInput = commandWithSwitches;
+						var extendResult = await ExecuteHookCode(newParser, executor, extendHook.AsValue(), extendInput);
+						if (extendResult.IsSome())
+						{
+							// Execute /after hook before returning
+							var afterHook = await HookService.GetHookAsync(rootCommand, "AFTER");
+							if (afterHook.IsSome())
+							{
+								await ExecuteHookCode(newParser, executor, afterHook.AsValue());
+							}
+							return extendResult.AsValue();
+						}
+					}
+					
+					// No extend hook or it didn't match - return error for invalid switches
+					var invalidSwitchList = string.Join(", ", invalidSwitches);
+					return new CallState($"#-1 INVALID SWITCH: {invalidSwitchList}");
 				}
 				
 				// 4. Execute the built-in command
@@ -792,9 +839,12 @@ public class SharpMUSHParserVisitor(
 	}
 	
 	/// <summary>
-	/// Executes hook code from an attribute on an object
+	/// Executes hook code from an attribute on an object.
+	/// For OVERRIDE and EXTEND hooks, performs $-command matching.
+	/// For other hooks, executes the attribute directly.
+	/// Handles inline execution with proper q-register management.
 	/// </summary>
-	private async ValueTask<Option<CallState>> ExecuteHookCode(IMUSHCodeParser parser, AnyOptionalSharpObject executor, CommandHook hook)
+	private async ValueTask<Option<CallState>> ExecuteHookCode(IMUSHCodeParser parser, AnyOptionalSharpObject executor, CommandHook hook, Option<MString> commandInput = default!)
 	{
 		// Get the target object
 		var targetObject = await Mediator.Send(new GetObjectNodeQuery(hook.TargetObject));
@@ -806,17 +856,116 @@ public class SharpMUSHParserVisitor(
 		var targetObj = targetObject.Known();
 		var executorObj = executor.IsNone ? targetObj : executor.Known();
 		
-		// Execute the attribute using EvaluateAttributeFunctionAsync
-		var result = await AttributeService.EvaluateAttributeFunctionAsync(
-			parser,
-			executorObj,
-			targetObj,
-			hook.AttributeName,
-			new Dictionary<string, CallState>(),
-			evalParent: true,
-			ignorePermissions: false);
+		// Save q-registers if /localize is set
+		Dictionary<string, MString>? savedRegisters = null;
+		if (hook.Inline && hook.Localize)
+		{
+			if (parser.CurrentState.Registers.TryPeek(out var currentRegs))
+			{
+				savedRegisters = new Dictionary<string, MString>(currentRegs);
+			}
+		}
 		
-		return new CallState(result);
+		// Clear q-registers if /clearregs is set
+		if (hook.Inline && hook.ClearRegs)
+		{
+			if (parser.CurrentState.Registers.TryPeek(out var currentRegs))
+			{
+				currentRegs.Clear();
+			}
+		}
+		
+		try
+		{
+			// For OVERRIDE and EXTEND hooks, perform $-command matching
+			if ((hook.HookType == "OVERRIDE" || hook.HookType == "EXTEND") && commandInput.IsSome())
+			{
+				// Try to match $-commands on the hook object
+				var matchResult = await CommandDiscoveryService.MatchUserDefinedCommand(
+					parser,
+					new[] { targetObj }.ToAsyncEnumerable(),
+					commandInput.AsValue());
+				
+				if (matchResult.IsSome())
+				{
+					// Execute the matched $-command
+					var matches = matchResult.AsValue();
+					if (hook.Inline)
+					{
+						// For inline execution, execute immediately
+						return await HandleUserDefinedCommandInline(parser, matches);
+					}
+					else
+					{
+						// For queued execution, use normal handler
+						return await HandleUserDefinedCommand(parser, matches);
+					}
+				}
+				
+				// No match found for override/extend
+				return new None();
+			}
+			
+			// For other hook types (IGNORE, BEFORE, AFTER), execute the attribute directly
+			var result = await AttributeService.EvaluateAttributeFunctionAsync(
+				parser,
+				executorObj,
+				targetObj,
+				hook.AttributeName,
+				new Dictionary<string, CallState>(),
+				evalParent: true,
+				ignorePermissions: false);
+			
+			return new CallState(result);
+		}
+		finally
+		{
+			// Restore q-registers if /localize was set
+			if (hook.Inline && hook.Localize && savedRegisters != null)
+			{
+				if (parser.CurrentState.Registers.TryPeek(out var currentRegs))
+				{
+					currentRegs.Clear();
+					foreach (var (key, value) in savedRegisters)
+					{
+						currentRegs[key] = value;
+					}
+				}
+			}
+		}
+	}
+	
+	/// <summary>
+	/// Handles user-defined command execution inline (immediate, not queued).
+	/// Used for /inline hooks.
+	/// </summary>
+	private async ValueTask<Option<CallState>> HandleUserDefinedCommandInline(
+		IMUSHCodeParser prs,
+		IEnumerable<(AnySharpObject Obj, SharpAttribute Attr, Dictionary<string, CallState> Arguments)> matches)
+	{
+		// Execute inline - directly parse and return result instead of queueing
+		foreach (var (obj, attr, arguments) in matches)
+		{
+			var newParser = prs.Push(prs.CurrentState with
+			{
+				CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attr.Name),
+				EnvironmentRegisters = arguments,
+				Arguments = arguments,
+				Function = null,
+				Executor = obj.Object().DBRef
+			});
+
+			// Execute inline by parsing the command list directly
+			var commandList = MModule.substring(
+				attr.CommandListIndex!.Value,
+				MModule.getLength(attr.Value) - attr.CommandListIndex!.Value,
+				attr.Value);
+				
+			// Parse and execute the command list synchronously
+			await newParser.CommandListParse(commandList);
+		}
+
+		return CallState.Empty;
 	}
 
 	private static async ValueTask<Option<CallState>> HandleSocketCommandPattern(IMUSHCodeParser prs, MString src,
