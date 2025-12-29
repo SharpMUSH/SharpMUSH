@@ -18,7 +18,7 @@ public readonly struct DbRefAttribute(DBRef dbref, string[] attribute)
 		=> HashCode.Combine(DbRef.GetHashCode(), string.Join("`", Attribute));
 
 	public override string ToString()
-		=> DbRef + string.Join("`", Attribute);
+		=> $"{DbRef}/{string.Join("`", Attribute)}";
 
 	public static bool operator ==(DbRefAttribute left, DbRefAttribute right) => left.Equals(right);
 
