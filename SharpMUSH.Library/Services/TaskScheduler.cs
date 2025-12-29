@@ -185,7 +185,7 @@ public class TaskScheduler(
 				var job = to.JobKey;
 				await _scheduler.TriggerJob(job);
 			}
-			catch (Exception ex)
+			catch (Exception)
 			{
 				// Job may have been removed between getting the trigger and triggering it
 				// This is expected in concurrent scenarios, so we continue processing other triggers
