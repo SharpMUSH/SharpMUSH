@@ -1532,8 +1532,19 @@ public partial class Commands
 		if (attrValue is null)
 		{
 			Console.WriteLine($"[DIAGNOSTIC QueueSemaphore] Attribute is null, creating new with value 0");
-			await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single("0"),
-				one.AsPlayer));
+			Console.WriteLine($"[DIAGNOSTIC QueueSemaphore] About to call SetAttributeCommand...");
+			
+			try
+			{
+				await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single("0"),
+					one.AsPlayer));
+				Console.WriteLine($"[DIAGNOSTIC QueueSemaphore] SetAttributeCommand completed successfully");
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"[DIAGNOSTIC QueueSemaphore] SetAttributeCommand threw exception: {ex.Message}");
+				throw;
+			}
 			
 			var dbRefAttr = new DbRefAttribute(located.Object().DBRef, attribute);
 			Console.WriteLine($"[DIAGNOSTIC QueueSemaphore] Calling Mediator.Send with DbRefAttribute: {dbRefAttr}");
