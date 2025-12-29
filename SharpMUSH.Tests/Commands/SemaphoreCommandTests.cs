@@ -104,6 +104,7 @@ public class SemaphoreCommandTests
 
 		// Assert - verify the command executed without throwing
 		// Since there's no waiting task, we expect "Notified." message (queue was empty)
+		// Use Received() instead of Received(Quantity.Exactly()) to avoid issues with accumulated calls
 		await NotifyService.Received().Notify(
 			Arg.Any<AnySharpObject>(), 
 			"Notified.");
