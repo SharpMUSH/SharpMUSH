@@ -84,6 +84,38 @@ When no command is found in the command discovery process, the system checks for
 
 The hook receives the full command input and can perform $-command matching to provide custom behavior.
 
+### Individual Player @chatformat Support
+
+Players can customize how they see channel messages by setting a `CHATFORMAT`<channel>` attribute on themselves. This works in conjunction with the mogrifier system:
+
+**Execution Order:**
+1. Channel-wide mogrification (if mogrifier is set)
+2. Individual player @chatformat (unless MOGRIFY`OVERRIDE is true)
+
+**Attribute Format:**
+```
+&CHATFORMAT`<CHANNEL> <player>=<format string>
+```
+
+**Arguments passed to @chatformat:**
+- %0 = chat type character (", :, ;, @)
+- %1 = channel name
+- %2 = message text (post-mogrification)
+- %3 = player name (post-mogrification)
+- %4 = player title (post-mogrification)
+- %5 = default formatted message
+- %6 = says text (post-mogrification)
+- %7 = options (space-separated: "silent", "noisy")
+
+**Example:**
+```
+> &CHATFORMAT`PUBLIC me=[ansi(hc,%1)] %3 says, "%2"
+> +public Hello world
+[PUBLIC] Alice says, "Hello world"
+```
+
+This allows each player to customize their channel experience while respecting the channel's mogrification rules.
+
 #### Usage
 ```
 @hook/<type> <command>=<object>[,<attribute>]
@@ -173,15 +205,18 @@ Additionally, hooks can use `%u` to access the entire command string entered.
 - [x] Performance optimization (ConcurrentDictionary with O(1) lookups)
 - [x] Unit tests for @hook command (9 tests)
 - [x] Unit tests for @mogrifier system (8 tests)
+- [x] Integration tests for @hook system (10 tests)
+- [x] Integration tests for @mogrifier system (8 tests)
+- [x] Individual player @chatformat support
 
 ### To Be Implemented
 - [x] Inline execution handling (queue vs immediate) for /inline modifier
 - [x] Q-register management (localize, clearregs, nobreak) for inline hooks
 - [x] Integration with HUH_COMMAND hook
-- [ ] Individual player @chatformat support in mogrifier
-- [ ] Channel recall buffer support for mogrifier
+- [x] Individual player @chatformat support in mogrifier
+- [ ] Channel recall buffer support for mogrifier (requires database schema)
 - [x] Unit tests for @hook command
-- [ ] Integration tests for hook execution
+- [x] Integration tests for hook execution
 - [x] Unit tests for mogrifier
 - [x] Performance optimization for hook lookup
 

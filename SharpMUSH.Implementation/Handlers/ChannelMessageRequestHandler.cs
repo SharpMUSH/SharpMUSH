@@ -199,8 +199,18 @@ public class ChannelMessageRequestHandler(
 					var finalMessage = message;
 					if (!skipChatFormat)
 					{
-						// TODO: Apply individual player's @chatformat here
-						// For now, just use the mogrified message
+						// Apply individual player's @chatformat
+						finalMessage = await ApplyPlayerChatFormat(
+							member,
+							notification.Source,
+							chatType,
+							notification.Channel.Name,
+							mogrifiedMessage,
+							mogrifiedPlayerName,
+							mogrifiedTitle,
+							message,
+							mogrifiedSays,
+							notification.Options);
 					}
 					
 					await notifyService.Notify(member, finalMessage, notification.Source.Known, notification.MessageType);
@@ -212,6 +222,87 @@ public class ChannelMessageRequestHandler(
 				logger.LogInformation("{ChannelMessage}", MModule.serialize(message));
 				// TODO: Add to channel recall buffer
 			}
+		}
+	}
+	
+	/// <summary>
+	/// Applies individual player's @chatformat to channel messages.
+	/// Checks for CHATFORMAT`<channel> attribute on the player.
+	/// </summary>
+	private async ValueTask<MString> ApplyPlayerChatFormat(
+		AnySharpObject player,
+		AnyOptionalSharpObject source,
+		string chatType,
+		MString channelName,
+		MString message,
+		MString playerName,
+		MString title,
+		MString defaultFormat,
+		MString says,
+		string[] options)
+	{
+		try
+		{
+			// Look for CHATFORMAT`<channel> attribute on the player
+			var chatFormatAttrName = $"CHATFORMAT`{channelName.ToPlainText().ToUpper()}";
+			
+			// Try to get the attribute
+			var attrResult = await attributeService.GetAttributeAsync(
+				player,
+				player,
+				chatFormatAttrName,
+				IAttributeService.AttributeMode.Read);
+			
+			// If attribute doesn't exist or is empty, return default
+			if (attrResult.IsError || attrResult.IsNone)
+			{
+				return defaultFormat;
+			}
+			
+			var attribute = attrResult.AsAttribute.Last();
+			if (MModule.getLength(attribute.Value) == 0)
+			{
+				return defaultFormat;
+			}
+			
+			// Evaluate the chatformat attribute with standard arguments:
+			// %0 = chat type character (", :, ;, @)
+			// %1 = channel name
+			// %2 = message
+			// %3 = player name
+			// %4 = title
+			// %5 = default formatted message
+			// %6 = says text
+			// %7 = options (space-separated)
+			var formatArgs = new Dictionary<string, CallState>
+			{
+				["0"] = new CallState(MModule.single(chatType)),
+				["1"] = new CallState(channelName),
+				["2"] = new CallState(message),
+				["3"] = new CallState(playerName),
+				["4"] = new CallState(title),
+				["5"] = new CallState(defaultFormat),
+				["6"] = new CallState(says),
+				["7"] = new CallState(MModule.single(string.Join(" ", options)))
+			};
+			
+			var sourceObj = source.IsNone ? player : source.Known();
+			var result = await attributeService.EvaluateAttributeFunctionAsync(
+				null!, // parser - not needed for attribute evaluation
+				sourceObj,
+				player,
+				chatFormatAttrName,
+				formatArgs,
+				evalParent: true,
+				ignorePermissions: false);
+			
+			// If evaluation returns empty, use default
+			return MModule.getLength(result) > 0 ? result : defaultFormat;
+		}
+		catch
+		{
+			// On any error, return the default format
+			return defaultFormat;
 		}
 	}
 	
