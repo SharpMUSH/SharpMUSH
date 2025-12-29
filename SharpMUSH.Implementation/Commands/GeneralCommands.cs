@@ -1530,27 +1530,13 @@ public partial class Commands
 		if (attrValue is null)
 		{
 			
-			try
-			{
-				await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single("0"),
-					one.AsPlayer));
-			}
-			catch (Exception ex)
-			{
-				throw;
-			}
+			await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single("0"),
+				one.AsPlayer));
 			
 			var dbRefAttr = new DbRefAttribute(located.Object().DBRef, attribute);
 			
-			try
-			{
-				await Mediator.Send(new QueueCommandListRequest(arg1, parser.CurrentState,
-					dbRefAttr, 0));
-			}
-			catch (Exception ex)
-			{
-				throw;
-			}
+			await Mediator.Send(new QueueCommandListRequest(arg1, parser.CurrentState,
+				dbRefAttr, 0));
 			
 			return;
 		}
@@ -1583,7 +1569,7 @@ public partial class Commands
 		{
 			await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single("0"),
 				one.AsPlayer));
-			await Mediator.Publish(new QueueCommandListWithTimeoutRequest(arg1, parser.CurrentState,
+			await Mediator.Send(new QueueCommandListWithTimeoutRequest(arg1, parser.CurrentState,
 				new DbRefAttribute(located.Object().DBRef, attribute), 0, delay));
 			return;
 		}
@@ -1596,7 +1582,7 @@ public partial class Commands
 
 		await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single($"{last + 1}"),
 			one.AsPlayer));
-		await Mediator.Publish(new QueueCommandListWithTimeoutRequest(arg1, parser.CurrentState,
+		await Mediator.Send(new QueueCommandListWithTimeoutRequest(arg1, parser.CurrentState,
 			new DbRefAttribute(located.Object().DBRef, attribute), last, delay));
 	}
 
