@@ -1446,11 +1446,19 @@ public partial class ArangoDatabase(
 			Locks = (obj.Locks ?? [])
 				.ToImmutableDictionary(
 					kvp => kvp.Key,
-					kvp => new Library.Models.SharpLockData(
-						kvp.Value.LockString,
-						string.IsNullOrEmpty(kvp.Value.Flags) 
-							? Library.Services.LockService.LockFlags.Default 
-							: Enum.Parse<Library.Services.LockService.LockFlags>(kvp.Value.Flags))),
+					kvp =>
+					{
+						var flags = Library.Services.LockService.LockFlags.Default;
+						if (!string.IsNullOrEmpty(kvp.Value.Flags))
+						{
+							if (!Enum.TryParse<Library.Services.LockService.LockFlags>(kvp.Value.Flags, out flags))
+							{
+								// If parsing fails (corrupted data), use Default flags
+								flags = Library.Services.LockService.LockFlags.Default;
+							}
+						}
+						return new Library.Models.SharpLockData(kvp.Value.LockString, flags);
+					}),
 			CreationTime = obj.CreationTime,
 			ModifiedTime = obj.ModifiedTime,
 			Flags =

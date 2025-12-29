@@ -62,49 +62,49 @@ public class LockService(IFusionCache cache, IBooleanExpressionParser bep, IMedi
 	public enum LockFlags
 	{
 		/// <summary>
+		/// Use default flags when setting lock
+		/// </summary>
+		Default = 0,
+
+		/// <summary>
 		/// Anyone can see this lock with lock()/elock()
 		/// </summary> 
-		Visual,
+		Visual = 1,
 
 		/// <summary>
 		/// This lock doesn't get inherited
 		/// </summary>
-		Private,
+		Private = 2,
 
 		/// <summary>
 		/// Only wizards can set/unset this lock
 		/// </summary>
-		Wizard,
+		Wizard = 4,
 
 		/// <summary>
 		/// Only the lock's owner can set/unset it
 		/// </summary>
-		Locked,
+		Locked = 8,
 
 		/// <summary>
 		/// This lock isn't copied in @clone
 		/// </summary>
-		NoClone,
+		NoClone = 16,
 
 		/// <summary>
 		/// This lock doesn't have an \@a-action for success.
 		/// </summary>
-		NoSuccessAction,
+		NoSuccessAction = 32,
 
 		/// <summary>
 		/// This lock doesn't have an \@a-action for failure
 		/// </summary>
-		NoFailureAction,
+		NoFailureAction = 64,
 
 		/// <summary>
 		/// Lock can only be set/unset by object's owner
 		/// </summary>
-		Owner,
-
-		/// <summary>
-		/// Use default flags when setting lock
-		/// </summary>
-		Default
+		Owner = 128
 	}
 
 	// TODO: Optimize #TRUE calls, we don't need to cache those.
