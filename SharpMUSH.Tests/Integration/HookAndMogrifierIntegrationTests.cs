@@ -38,7 +38,7 @@ public class HookIntegrationTests
 		// 5. Verify hook was executed first
 		
 		// For now, just verify the hook service works
-		var hookExists = await HookService.GetHookAsync("TEST", "BEFORE");
+		var hookExists = await HookService.GetHookAsync("HOOKTEST_BEFORE", "BEFORE");
 		await Assert.That(hookExists.IsNone()).IsTrue();
 	}
 
@@ -54,7 +54,7 @@ public class HookIntegrationTests
 		// 5. Verify hook was executed after command
 		
 		// For now, just verify the hook service works
-		var hookExists = await HookService.GetHookAsync("TEST", "AFTER");
+		var hookExists = await HookService.GetHookAsync("HOOKTEST_AFTER", "AFTER");
 		await Assert.That(hookExists.IsNone()).IsTrue();
 	}
 
@@ -70,7 +70,7 @@ public class HookIntegrationTests
 		// 4. Verify command was not executed
 		
 		// For now, just verify the hook service works
-		var hookExists = await HookService.GetHookAsync("TEST", "IGNORE");
+		var hookExists = await HookService.GetHookAsync("HOOKTEST_IGNORE", "IGNORE");
 		await Assert.That(hookExists.IsNone()).IsTrue();
 	}
 
@@ -86,7 +86,7 @@ public class HookIntegrationTests
 		// 4. Verify custom code executed instead of built-in
 		
 		// For now, just verify the hook service works
-		var hookExists = await HookService.GetHookAsync("TEST", "OVERRIDE");
+		var hookExists = await HookService.GetHookAsync("HOOKTEST_OVERRIDE", "OVERRIDE");
 		await Assert.That(hookExists.IsNone()).IsTrue();
 	}
 
@@ -102,7 +102,7 @@ public class HookIntegrationTests
 		// 4. Verify $-command executed instead of error
 		
 		// For now, just verify the hook service works
-		var hookExists = await HookService.GetHookAsync("TEST", "EXTEND");
+		var hookExists = await HookService.GetHookAsync("HOOKTEST_EXTEND", "EXTEND");
 		await Assert.That(hookExists.IsNone()).IsTrue();
 	}
 
@@ -116,14 +116,17 @@ public class HookIntegrationTests
 		// 2. Track execution order
 		// 3. Verify immediate execution vs queued
 		
-		// For now, just verify hook creation with inline flag
-		await HookService.SetHookAsync("TEST", "BEFORE", new DBRef(1), "test_attr", inline: true);
-		var hook = await HookService.GetHookAsync("TEST", "BEFORE");
+		// Use unique command name to avoid test interference
+		var testCommand = $"HOOKTEST_INLINE_{Guid.NewGuid():N}";
+		await HookService.SetHookAsync(testCommand, "BEFORE", new DBRef(1), "test_attr", inline: true);
+		var hook = await HookService.GetHookAsync(testCommand, "BEFORE");
 		await Assert.That(hook.IsSome()).IsTrue();
 		if (hook.IsSome())
 		{
 			await Assert.That(hook.AsValue().Inline).IsTrue();
 		}
+		// Clean up
+		await HookService.ClearHookAsync(testCommand, "BEFORE");
 	}
 
 	[Test]
@@ -135,14 +138,17 @@ public class HookIntegrationTests
 		// 2. Execute hook with /localize that modifies registers
 		// 3. Verify registers were restored after hook
 		
-		// For now, just verify hook creation with localize flag
-		await HookService.SetHookAsync("TEST", "BEFORE", new DBRef(1), "test_attr", localize: true);
-		var hook = await HookService.GetHookAsync("TEST", "BEFORE");
+		// Use unique command name to avoid test interference
+		var testCommand = $"HOOKTEST_LOCALIZE_{Guid.NewGuid():N}";
+		await HookService.SetHookAsync(testCommand, "BEFORE", new DBRef(1), "test_attr", localize: true);
+		var hook = await HookService.GetHookAsync(testCommand, "BEFORE");
 		await Assert.That(hook.IsSome()).IsTrue();
 		if (hook.IsSome())
 		{
 			await Assert.That(hook.AsValue().Localize).IsTrue();
 		}
+		// Clean up
+		await HookService.ClearHookAsync(testCommand, "BEFORE");
 	}
 
 	[Test]
@@ -154,14 +160,17 @@ public class HookIntegrationTests
 		// 2. Execute hook with /clearregs
 		// 3. Verify registers were cleared before hook execution
 		
-		// For now, just verify hook creation with clearregs flag
-		await HookService.SetHookAsync("TEST", "BEFORE", new DBRef(1), "test_attr", clearregs: true);
-		var hook = await HookService.GetHookAsync("TEST", "BEFORE");
+		// Use unique command name to avoid test interference
+		var testCommand = $"HOOKTEST_CLEARREGS_{Guid.NewGuid():N}";
+		await HookService.SetHookAsync(testCommand, "BEFORE", new DBRef(1), "test_attr", clearregs: true);
+		var hook = await HookService.GetHookAsync(testCommand, "BEFORE");
 		await Assert.That(hook.IsSome()).IsTrue();
 		if (hook.IsSome())
 		{
 			await Assert.That(hook.AsValue().ClearRegs).IsTrue();
 		}
+		// Clean up
+		await HookService.ClearHookAsync(testCommand, "BEFORE");
 	}
 
 	[Test]
@@ -174,10 +183,13 @@ public class HookIntegrationTests
 		// 2. Execute an undefined command
 		// 3. Verify custom response instead of default "Huh?"
 		
-		// For now, just verify hook can be set for HUH_COMMAND
-		await HookService.SetHookAsync("HUH_COMMAND", "OVERRIDE", new DBRef(1), "test_attr");
-		var hook = await HookService.GetHookAsync("HUH_COMMAND", "OVERRIDE");
+		// Use unique command name to avoid test interference
+		var testCommand = $"HOOKTEST_HUHCOMMAND_{Guid.NewGuid():N}";
+		await HookService.SetHookAsync(testCommand, "OVERRIDE", new DBRef(1), "test_attr");
+		var hook = await HookService.GetHookAsync(testCommand, "OVERRIDE");
 		await Assert.That(hook.IsSome()).IsTrue();
+		// Clean up
+		await HookService.ClearHookAsync(testCommand, "OVERRIDE");
 	}
 
 	[Test]
