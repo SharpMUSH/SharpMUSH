@@ -1057,7 +1057,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@NOTIFY", Switches = ["ALL", "ANY", "SETQ", "QUIET"],
-		Behavior = CB.Default | CB.EqSplit | CB.RSArgs,
+		Behavior = CB.Default | CB.EqSplit,
 		MinArgs = 1, MaxArgs = 2)]
 	public static async ValueTask<Option<CallState>> Notify(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
