@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace SharpMUSH.Library.Definitions;
 
 /// <summary>
@@ -56,6 +58,7 @@ public static class ErrorMessages
 		public const string InvalidPassword = "#-1 INVALID PASSWORD";
 		public const string InvalidFlag = "#-1 INVALID FLAG FOR THIS OBJECT";
 		public const string ObjectAttributeString = "#-1 INVALID OBJECT/ATTRIBUTE VALUE";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string BadArgumentFormat = "#-1 BAD ARGUMENT FORMAT TO {0}";
 		public const string ArgRange = "#-1 ARGUMENT OUT OF RANGE";
 		public const string TimeInteger = "#-1 TIME INTEGER OUT OF RANGE";
@@ -64,6 +67,7 @@ public static class ErrorMessages
 		public const string NoSuchAttribute = "#-1 NO SUCH ATTRIBUTE";
 		
 		// Function and feature errors
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string NoSuchFunction = "#-1 COULD NOT FIND FUNCTION: {0}";
 		public const string NoSuchPower = "#-1 NO SUCH POWER";
 		public const string NoSuchFlag = "#-1 NO SUCH FLAG";
@@ -81,10 +85,15 @@ public static class ErrorMessages
 		public const string TooManySwitches = "#-1 TOO MANY SWITCHES, OR A BAD COMBINATION OF SWITCHES";
 		
 		// Function argument errors
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string TooFewArguments = "#-1 FUNCTION ({0}) EXPECTS AT LEAST {1} ARGUMENTS BUT GOT {2}";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string TooManyArguments = "#-1 FUNCTION ({0}) EXPECTS AT MOST {1} ARGUMENTS BUT GOT {2}";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string GotEvenArgs = "#-1 FUNCTION ({0}) EXPECTS AN ODD NUMBER OF ARGUMENTS";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string GotUnEvenArgs = "#-1 FUNCTION ({0}) EXPECTS AN EVEN NUMBER OF ARGUMENTS";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string WrongArgumentsRange = "#-1 FUNCTION ({0}) EXPECTS AT LEAST {1} ARGUMENTS AND AT MOST {2} BUT GOT {3}";
 		
 		// State and operation errors
@@ -126,11 +135,13 @@ public static class ErrorMessages
 		// Permission notifications
 		public const string PermissionDenied = "Permission denied.";
 		public const string NoPermission = "You don't have permission to do that.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string PermissionDeniedSetAttribute = "Permission denied to set attribute on {0}.";
 		public const string LackSpoofingPermissions = "Permission denied: You lack spoofing permissions.";
 		
 		// Argument and validation notifications
 		public const string InvalidArgument = "Invalid argument.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string InvalidArguments = "Invalid arguments to {0}.";
 		public const string InvalidDbref = "That's not a valid object reference.";
 		
@@ -143,9 +154,12 @@ public static class ErrorMessages
 		public const string FunctionDisabled = "That function is disabled.";
 		
 		// Operation result notifications
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string Created = "Created {0} ({1}).";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string WipedAttributes = "Wiped attributes matching {0}.";
 		public const string CouldNotFindNewOwner = "Could not find new owner.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string CouldNotFindDestination = "Could not find destination: {0}";
 	}
 }
