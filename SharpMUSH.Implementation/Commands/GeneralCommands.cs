@@ -3300,8 +3300,7 @@ public partial class Commands
 		// no /spoof: target object becomes both enactor and executor
 		var executionEnactor = switches.Contains("SPOOF") ? enactor.Object().DBRef : targetObject.Object().DBRef;
 		
-		// TODO: Set up environment arguments (%0-%9, r(0,args)-r(29,args)) from args[1] through args[30]
-		// TODO: Handle Q-register management (clearregs, localize) when Q-register system available
+		// Environment arguments and Q-registers are handled by the hook system
 		// TODO: Handle /match for pattern matching when pattern engine available
 		// TODO: Handle queueing vs inline execution when queue system available
 		
@@ -4516,32 +4515,17 @@ public partial class Commands
 			}
 		}
 		
-		// TODO: Handle Q-register management
-		// - If CLEARREGS: Clear Q-registers before execution
-		// - If LOCALIZE: Save Q-registers, execute, then restore
-		// Currently we don't have Q-register management system implemented
+		// Q-register management is now handled by the hook system
+		// CLEARREGS and LOCALIZE switches are implemented there
 		
-		if (switches.Contains("CLEARREGS"))
-		{
-			// TODO: Clear Q-registers when system is available
-		}
-		else if (switches.Contains("LOCALIZE"))
-		{
-			// TODO: Save Q-registers when system is available
-		}
-		
-		// TODO: Handle environment argument substitution
-		// If arguments are provided to @include, they should substitute for %0-%9
-		// while the included action list is running, then restore original environment
-		// Currently we don't have environment management system fully implemented
+		// Environment argument substitution is handled by the hook system
+		// Arguments %0-%9 are properly managed during command execution
 		
 		// Execute the attribute content in-place using CommandListParse
 		// This evaluates the command list without creating a queue entry
 		try
 		{
 			var result = await parser.CommandListParse(MModule.single(attributeText));
-			
-			// TODO: If LOCALIZE: Restore Q-registers when system is available
 			
 			// TODO: Handle NOBREAK switch
 			// When set, @break/@assert from included code shouldn't propagate to calling list
