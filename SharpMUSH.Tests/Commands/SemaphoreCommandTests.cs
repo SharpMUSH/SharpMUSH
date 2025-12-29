@@ -23,18 +23,30 @@ public class SemaphoreCommandTests
 	private IAttributeService AttributeService => WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
 
 	[Test]
-	public async ValueTask NotifyCommand_WithObject_ShouldShowNotifiedMessage()
+	public async ValueTask NotifyCommand_WithObject_ShouldWakeWaitingTask()
 	{
-		// Arrange
+		// Arrange - create a unique semaphore and test message
 		var uniqueId = Guid.NewGuid().ToString("N");
 		var uniqueAttr = $"SEM_{uniqueId}";
+		var testMessage = $"TaskExecuted_{uniqueId}";
 		
-		// Act - notify the semaphore (no wait queued)
+		// Queue a task that waits on the semaphore
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@wait #1/{uniqueAttr}=@pemit #1={testMessage}"));
+		
+		// Act - notify the semaphore to wake the waiting task
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@notify #1/{uniqueAttr}"));
+		
+		// Give the scheduler time to execute the queued task
+		await Task.Delay(100);
 
-		// Assert - should show "Notified." message
-		await NotifyService.Received().Notify(Arg.Any<AnySharpObject>(), "Notified.");
+		// Assert - verify the waiting task was executed
+		await NotifyService.Received().Notify(
+			Arg.Any<AnySharpObject>(), 
+			testMessage,
+			Arg.Any<AnySharpObject>(),
+			INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -93,21 +105,29 @@ public class SemaphoreCommandTests
 	[Test]
 	public async ValueTask NotifySetQ_ShouldAcceptQRegisterParameters()
 	{
-		// Arrange
+		// Arrange - create a unique semaphore and test value
 		var uniqueId = Guid.NewGuid().ToString("N");
 		var uniqueAttr = $"SEM_{uniqueId}";
+		var testValue = $"TestValue_{uniqueId}";
 		
-		// Act - use @notify/setq with qreg parameters
-		// This tests that the command parses and executes without errors
+		// Queue a task that waits on the semaphore and will emit the Q-register value
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@notify/setq #1/{uniqueAttr}=0,TestValue"));
-
-		// Assert - verify the command executed without throwing
-		// Since there's no waiting task, we expect "Notified." message (queue was empty)
-		// Use Received() instead of Received(Quantity.Exactly()) to avoid issues with accumulated calls
+			MModule.single($"@wait #1/{uniqueAttr}=@pemit #1=QRegValue:%q0"));
+		
+		// Act - notify the semaphore with /setq to set Q-register 0
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@notify/setq #1/{uniqueAttr}=0,{testValue}"));
+		
+		// Give the scheduler time to execute the queued task
+		await Task.Delay(100);
+		
+		// Assert - verify the task executed with the correct Q-register value
+		// The waiting task should have been executed with %q0 set to our test value
 		await NotifyService.Received().Notify(
 			Arg.Any<AnySharpObject>(), 
-			"Notified.");
+			$"QRegValue:{testValue}",
+			Arg.Any<AnySharpObject>(),
+			INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
