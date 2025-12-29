@@ -6,174 +6,152 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Library.Helpers;
 
 /// <summary>
-/// Unified error handling helper that both returns CallState errors and sends user notifications.
-/// Provides consistent error handling patterns across commands and functions.
+/// Unified error handling helper following the pattern:
+/// await NotifyService.Notify(executor, notifyMessage); 
+/// return errorReturn;
+/// 
+/// The notify message and error return are SEPARATE and can be different strings.
 /// </summary>
 public static class ErrorNotifier
 {
 	/// <summary>
-	/// Returns error CallState and optionally notifies the user.
+	/// Core error pattern: optionally notify user, then return error.
 	/// </summary>
 	/// <param name="notifyService">Notification service</param>
 	/// <param name="target">Object to notify (DBRef)</param>
-	/// <param name="errorCode">Error code (e.g., "#-1")</param>
-	/// <param name="errorMessage">User-facing error message</param>
+	/// <param name="errorReturn">Error string for return value (e.g., "#-1 PERMISSION DENIED")</param>
+	/// <param name="notifyMessage">Message to show user (e.g., "You don't have permission to do that.")</param>
 	/// <param name="shouldNotify">Whether to send notification to user (required parameter)</param>
-	/// <returns>CallState with error message</returns>
-	public static async ValueTask<CallState> ReturnError(
+	/// <returns>CallState with error return string</returns>
+	public static async ValueTask<CallState> NotifyAndReturn(
 		INotifyService notifyService,
 		DBRef target,
-		string errorCode,
-		string errorMessage,
+		string errorReturn,
+		string notifyMessage,
 		bool shouldNotify)
 	{
-		var fullError = $"{errorCode} {errorMessage}";
-		
 		if (shouldNotify)
 		{
-			await notifyService.Notify(target, fullError);
+			await notifyService.Notify(target, notifyMessage);
 		}
 		
-		return new CallState(fullError);
+		return new CallState(errorReturn);
 	}
 
 	/// <summary>
-	/// Permission denied error - returns error and optionally notifies.
+	/// Permission denied error.
+	/// Return: "#-1 PERMISSION DENIED"
+	/// Notify: "You don't have permission to do that."
 	/// </summary>
-	/// <param name="shouldNotify">Whether to send notification to user (required parameter)</param>
 	public static ValueTask<CallState> PermissionDenied(
 		INotifyService notifyService,
 		DBRef target,
 		bool shouldNotify)
-		=> ReturnError(
+		=> NotifyAndReturn(
 			notifyService,
 			target,
-			ErrorMessages.Codes.PermissionDenied,
-			ErrorMessages.English.PermissionDenied,
+			ErrorMessages.Returns.PermissionDenied,
+			ErrorMessages.Notifications.PermissionDenied,
 			shouldNotify);
 
 	/// <summary>
-	/// No such object error - returns error and optionally notifies.
+	/// No such object error.
+	/// Return: "#-1 NO SUCH OBJECT"
+	/// Notify: "I can't find that." or custom message
 	/// </summary>
-	/// <param name="shouldNotify">Whether to send notification to user (required parameter)</param>
 	public static ValueTask<CallState> NoSuchObject(
 		INotifyService notifyService,
 		DBRef target,
 		bool shouldNotify,
-		string? objectName = null)
-	{
-		var message = objectName != null
-			? $"{ErrorMessages.English.NoSuchObject}: {objectName}"
-			: ErrorMessages.English.NoSuchObject;
-
-		return ReturnError(
+		string? customNotifyMessage = null)
+		=> NotifyAndReturn(
 			notifyService,
 			target,
-			ErrorMessages.Codes.NoSuchObject,
-			message,
+			ErrorMessages.Returns.NoSuchObject,
+			customNotifyMessage ?? ErrorMessages.Notifications.NoSuchObject,
 			shouldNotify);
-	}
 
 	/// <summary>
-	/// Invalid argument error - returns error and optionally notifies.
+	/// Invalid argument error.
+	/// Return: "#-1 INVALID ARGUMENT"
+	/// Notify: "Invalid argument." or custom message
 	/// </summary>
-	/// <param name="shouldNotify">Whether to send notification to user (required parameter)</param>
 	public static ValueTask<CallState> InvalidArgument(
 		INotifyService notifyService,
 		DBRef target,
 		bool shouldNotify,
-		string? argumentName = null)
-	{
-		var message = argumentName != null
-			? $"{ErrorMessages.English.InvalidArgument}: {argumentName}"
-			: ErrorMessages.English.InvalidArgument;
-
-		return ReturnError(
+		string? customNotifyMessage = null)
+		=> NotifyAndReturn(
 			notifyService,
 			target,
-			ErrorMessages.Codes.InvalidArgument,
-			message,
+			ErrorMessages.Returns.InvalidArgument,
+			customNotifyMessage ?? ErrorMessages.Notifications.InvalidArgument,
 			shouldNotify);
-	}
 
 	/// <summary>
-	/// Bad object name error - returns error and optionally notifies.
+	/// Bad object name error.
+	/// Return: "#-1 BAD OBJECT NAME"
+	/// Notify: "I don't understand that object name." or custom message
 	/// </summary>
-	/// <param name="shouldNotify">Whether to send notification to user (required parameter)</param>
 	public static ValueTask<CallState> BadObjectName(
 		INotifyService notifyService,
 		DBRef target,
 		bool shouldNotify,
-		string? objectName = null)
-	{
-		var message = objectName != null
-			? $"{ErrorMessages.English.BadObjectName}: {objectName}"
-			: ErrorMessages.English.BadObjectName;
-
-		return ReturnError(
+		string? customNotifyMessage = null)
+		=> NotifyAndReturn(
 			notifyService,
 			target,
-			ErrorMessages.Codes.BadObjectName,
-			message,
+			ErrorMessages.Returns.BadObjectName,
+			customNotifyMessage ?? ErrorMessages.Notifications.BadObjectName,
 			shouldNotify);
-	}
 
 	/// <summary>
-	/// No match error - returns error and optionally notifies.
+	/// No match error.
+	/// Return: "#-1 NO MATCH"
+	/// Notify: "I don't see that here."
 	/// </summary>
-	/// <param name="shouldNotify">Whether to send notification to user (required parameter)</param>
 	public static ValueTask<CallState> NoMatch(
 		INotifyService notifyService,
 		DBRef target,
 		bool shouldNotify)
-		=> ReturnError(
+		=> NotifyAndReturn(
 			notifyService,
 			target,
-			ErrorMessages.Codes.NoMatch,
-			ErrorMessages.English.NoMatch,
+			ErrorMessages.Returns.NoMatch,
+			ErrorMessages.Notifications.NoMatch,
 			shouldNotify);
 
 	/// <summary>
-	/// Not a room error - returns error and optionally notifies.
+	/// Not a room error.
+	/// Return: "#-1 NOT A ROOM"
+	/// Notify: "That's not a room." or custom message
 	/// </summary>
-	/// <param name="shouldNotify">Whether to send notification to user (required parameter)</param>
 	public static ValueTask<CallState> NotARoom(
 		INotifyService notifyService,
 		DBRef target,
 		bool shouldNotify,
-		string? objectName = null)
-	{
-		var message = objectName != null
-			? $"{ErrorMessages.English.NotARoom}: {objectName}"
-			: ErrorMessages.English.NotARoom;
-
-		return ReturnError(
+		string? customNotifyMessage = null)
+		=> NotifyAndReturn(
 			notifyService,
 			target,
-			ErrorMessages.Codes.NotARoom,
-			message,
+			ErrorMessages.Returns.NotARoom,
+			customNotifyMessage ?? ErrorMessages.Notifications.NotARoom,
 			shouldNotify);
-	}
 
 	/// <summary>
-	/// Ambiguous match error - returns error and optionally notifies.
+	/// Ambiguous match error.
+	/// Return: "#-2 I DON'T KNOW WHICH ONE YOU MEAN"
+	/// Notify: "I don't know which one you mean." or custom message
 	/// </summary>
-	/// <param name="shouldNotify">Whether to send notification to user (required parameter)</param>
 	public static ValueTask<CallState> AmbiguousMatch(
 		INotifyService notifyService,
 		DBRef target,
 		bool shouldNotify,
-		string? pattern = null)
-	{
-		var message = pattern != null
-			? $"{ErrorMessages.English.AmbiguousMatch}: {pattern}"
-			: ErrorMessages.English.AmbiguousMatch;
-
-		return ReturnError(
+		string? customNotifyMessage = null)
+		=> NotifyAndReturn(
 			notifyService,
 			target,
-			ErrorMessages.Codes.AmbiguousMatch,
-			message,
+			ErrorMessages.Returns.AmbiguousMatch,
+			customNotifyMessage ?? ErrorMessages.Notifications.AmbiguousMatch,
 			shouldNotify);
-	}
 }
