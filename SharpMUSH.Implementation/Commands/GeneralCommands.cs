@@ -1535,7 +1535,7 @@ public partial class Commands
 			return;
 		}
 
-		if (int.TryParse(attrValue.Value.ToPlainText(), out var last))
+		if (!int.TryParse(attrValue.Value.ToPlainText(), out var last))
 		{
 			await NotifyService!.Notify(executor, Errors.ErrorInteger);
 			return;
@@ -1564,7 +1564,7 @@ public partial class Commands
 			return;
 		}
 
-		if (int.TryParse(attrValue.Value.ToPlainText(), out var last))
+		if (!int.TryParse(attrValue.Value.ToPlainText(), out var last))
 		{
 			await NotifyService!.Notify(executor, Errors.ErrorInteger);
 			return;

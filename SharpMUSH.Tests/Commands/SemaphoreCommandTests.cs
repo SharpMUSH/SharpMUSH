@@ -35,12 +35,15 @@ public class SemaphoreCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@wait #1/{uniqueAttr}=@pemit #1={testMessage}"));
 		
+		// Give time for the task to be registered with the scheduler
+		await Task.Delay(100);
+		
 		// Act - notify the semaphore to wake the waiting task
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@notify #1/{uniqueAttr}"));
 		
 		// Give the scheduler time to execute the queued task
-		await Task.Delay(500);
+		await Task.Delay(1000);
 
 		// Assert - verify the waiting task was executed
 		await NotifyService.Received().Notify(
@@ -137,12 +140,15 @@ public class SemaphoreCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@wait #1/{uniqueAttr}=@pemit #1=QRegValue:%q0"));
 		
+		// Give time for the task to be registered with the scheduler
+		await Task.Delay(100);
+		
 		// Act - notify the semaphore with /setq to set Q-register 0
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@notify/setq #1/{uniqueAttr}=0,{testValue}"));
 		
 		// Give the scheduler time to execute the queued task
-		await Task.Delay(500);
+		await Task.Delay(1000);
 		
 		// Assert - verify the task executed with the correct Q-register value
 		// The waiting task should have been executed with %q0 set to our test value
