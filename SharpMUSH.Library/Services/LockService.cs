@@ -160,4 +160,23 @@ public class LockService(IFusionCache cache, IBooleanExpressionParser bep, IMedi
 
 		return true;
 	}
+
+	/// <summary>
+	/// Format lock flags for display (e.g., "v" for Visual, "n" for Private)
+	/// </summary>
+	public string FormatLockFlags(LockFlags flags)
+	{
+		if (flags == LockFlags.Default)
+			return string.Empty;
+
+		var flagChars = new List<string>();
+		foreach (var (_, (symbol, flag)) in LockPrivileges)
+		{
+			if (flags.HasFlag(flag))
+			{
+				flagChars.Add(symbol);
+			}
+		}
+		return string.Join("", flagChars);
+	}
 }

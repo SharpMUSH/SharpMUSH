@@ -1448,7 +1448,9 @@ public partial class ArangoDatabase(
 					kvp => kvp.Key,
 					kvp => new Library.Models.SharpLockData(
 						kvp.Value.LockString,
-						(Library.Services.LockService.LockFlags)kvp.Value.Flags)),
+						string.IsNullOrEmpty(kvp.Value.Flags) 
+							? Library.Services.LockService.LockFlags.Default 
+							: Enum.Parse<Library.Services.LockService.LockFlags>(kvp.Value.Flags))),
 			CreationTime = obj.CreationTime,
 			ModifiedTime = obj.ModifiedTime,
 			Flags =
@@ -1780,7 +1782,7 @@ public partial class ArangoDatabase(
 		var dbLockData = new SharpLockDataQueryResult
 		{
 			LockString = lockData.LockString,
-			Flags = (int)lockData.Flags
+			Flags = lockData.Flags.ToString()
 		};
 		
 		await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Objects, new
@@ -1792,7 +1794,7 @@ public partial class ArangoDatabase(
 					new SharpLockDataQueryResult
 					{
 						LockString = kvp.Value.LockString,
-						Flags = (int)kvp.Value.Flags
+						Flags = kvp.Value.Flags.ToString()
 					}))
 				.Append(new KeyValuePair<string, SharpLockDataQueryResult>(lockName, dbLockData))
 				.ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
@@ -1811,7 +1813,7 @@ public partial class ArangoDatabase(
 					new SharpLockDataQueryResult
 					{
 						LockString = kvp.Value.LockString,
-						Flags = (int)kvp.Value.Flags
+						Flags = kvp.Value.Flags.ToString()
 					}))
 				.ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
 		}, mergeObjects: true, cancellationToken: ct);

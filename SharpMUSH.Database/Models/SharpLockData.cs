@@ -11,7 +11,7 @@ public record SharpLockDataQueryResult
 	public string LockString { get; init; } = "#TRUE";
 	
 	/// <summary>
-	/// Lock flags as an integer (flags enum value)
+	/// Lock flags as a string (e.g., "Visual|Private|NoClone")
 	/// </summary>
-	public int Flags { get; init; } = 0;
+	public string Flags { get; init; } = string.Empty;
 }

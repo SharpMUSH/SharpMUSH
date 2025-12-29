@@ -631,7 +631,26 @@ public partial class Commands
 		
 		outputSections.Add(MModule.single($"Parent: {objParent.Object()?.Name ?? "*NOTHING*"}"));
 		
-		// TODO: LOCK LIST
+		// Display locks with flags
+		if (obj.Locks.Count > 0)
+		{
+			var lockLines = obj.Locks
+				.Select(kvp => 
+				{
+					var lockName = kvp.Key;
+					var lockData = kvp.Value;
+					var flagsStr = LockService!.FormatLockFlags(lockData.Flags);
+					var flagsDisplay = string.IsNullOrEmpty(flagsStr) ? "" : $"[{flagsStr}]";
+					return $"{lockName}{flagsDisplay}: {lockData.LockString}";
+				})
+				.ToList();
+			
+			outputSections.Add(MModule.single($"Locks:"));
+			foreach (var lockLine in lockLines)
+			{
+				outputSections.Add(MModule.single($"  {lockLine}"));
+			}
+		}
 		
 		var powersList = await objPowers.Select(x => x.Name).ToArrayAsync();
 		if (powersList.Length > 0)
