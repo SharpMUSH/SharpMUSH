@@ -20,7 +20,7 @@ public class SharpObject
 
 	public required string Type { get; set; }
 
-	public required IImmutableDictionary<string, string> Locks { get; set; }
+	public required IImmutableDictionary<string, SharpLockData> Locks { get; set; }
 
 	public long CreationTime { get; set; } = DateTimeOffset.Now.ToUnixTimeMilliseconds();
 

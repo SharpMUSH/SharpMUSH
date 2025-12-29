@@ -118,9 +118,9 @@ public interface ISharpDatabase
 	/// </summary>
 	/// <param name="target">What object to lock</param>
 	/// <param name="lockName">The name of the lock</param>
-	/// <param name="lockString">The string of the Lock</param>
+	/// <param name="lockData">The lock data including string and flags</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
-	ValueTask SetLockAsync(SharpObject target, string lockName, string lockString, CancellationToken cancellationToken = default);
+	ValueTask SetLockAsync(SharpObject target, string lockName, Models.SharpLockData lockData, CancellationToken cancellationToken = default);
 	
 	/// <summary>
 	/// Unset the lock of an object.
