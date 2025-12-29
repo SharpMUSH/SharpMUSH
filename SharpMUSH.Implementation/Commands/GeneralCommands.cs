@@ -1525,7 +1525,7 @@ public partial class Commands
 		Console.WriteLine($"[DIAGNOSTIC QueueSemaphore] Located object DBRef: {located.Object().DBRef}");
 		
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var one = await Mediator!.Send(new GetObjectNodeQuery(new DBRef(0)));
+		var one = await Mediator!.Send(new GetObjectNodeQuery(new DBRef(1)));
 		var attrValues = Mediator.CreateStream(new GetAttributeQuery(located.Object().DBRef, attribute));
 		var attrValue = await attrValues.LastOrDefaultAsync();
 
@@ -1592,7 +1592,7 @@ public partial class Commands
 		string[] attribute, TimeSpan delay, MString arg1)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var one = await Mediator!.Send(new GetObjectNodeQuery(new DBRef(0)));
+		var one = await Mediator!.Send(new GetObjectNodeQuery(new DBRef(1)));
 		var attrValues = Mediator.CreateStream(new GetAttributeQuery(located.Object().DBRef, attribute));
 		var attrValue = await attrValues.LastOrDefaultAsync();
 
@@ -1866,7 +1866,7 @@ public partial class Commands
 		var arg1 = parser.CurrentState.Arguments.GetValueOrDefault("1")?.Message?.ToPlainText();
 		var switches = parser.CurrentState.Switches.ToArray();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var one = await Mediator!.Send(new GetObjectNodeQuery(new DBRef(0)));
+		var one = await Mediator!.Send(new GetObjectNodeQuery(new DBRef(1)));
 
 		if (switches.Length > 1)
 		{
