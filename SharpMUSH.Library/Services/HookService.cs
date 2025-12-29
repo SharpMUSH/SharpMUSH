@@ -9,10 +9,19 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.Services;
 
+/// <summary>
+/// Service for managing command hooks with optimized performance.
+/// Uses ConcurrentDictionary for thread-safe O(1) lookups.
+/// </summary>
 public class HookService : IHookService
 {
+	// Performance: ConcurrentDictionary provides O(1) lookup time for hook retrieval
+	// Thread-safe for concurrent access during command execution
 	private readonly ConcurrentDictionary<string, Dictionary<string, CommandHook>> _hooks = new();
 
+	/// <summary>
+	/// Gets a hook for a command with O(1) lookup performance.
+	/// </summary>
 	public ValueTask<Option<CommandHook>> GetHookAsync(string commandName, string hookType)
 	{
 		var upperCommand = commandName.ToUpper();

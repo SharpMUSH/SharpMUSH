@@ -559,6 +559,20 @@ public class SharpMUSHParserVisitor(
 			}
 
 			// Step 16: HUH_COMMAND is run
+			// Check for HUH_COMMAND hook before running the built-in HUH_COMMAND
+			var huhHook = await HookService.GetHookAsync("HUH_COMMAND", "OVERRIDE");
+			if (huhHook.IsSome())
+			{
+				var executor = await parser.CurrentState.ExecutorObject(Mediator);
+				// Construct the full command input for $-command matching
+				Option<MString> huhInput = src;
+				var huhResult = await ExecuteHookCode(parser, executor, huhHook.AsValue(), huhInput);
+				if (huhResult.IsSome())
+				{
+					return huhResult.AsValue();
+				}
+			}
+			
 			var newParser = parser.Push(parser.CurrentState with
 			{
 				Command = "HUH_COMMAND",

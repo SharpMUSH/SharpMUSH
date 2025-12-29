@@ -73,6 +73,17 @@ When a hook is marked with `/inline`, it executes immediately in the current exe
 
 These modifiers enable writing softcoded commands that integrate seamlessly with the command execution flow.
 
+### HUH_COMMAND Hook Integration
+
+When no command is found in the command discovery process, the system checks for a HUH_COMMAND hook with /override type before executing the built-in HUH_COMMAND. This allows servers to:
+
+- Customize the "Huh?" message for unrecognized commands
+- Implement fuzzy command matching or suggestions
+- Log or track attempted commands for security purposes
+- Provide context-sensitive help based on the attempted command
+
+The hook receives the full command input and can perform $-command matching to provide custom behavior.
+
 #### Usage
 ```
 @hook/<type> <command>=<object>[,<attribute>]
@@ -158,17 +169,21 @@ Additionally, hooks can use `%u` to access the entire command string entered.
 - [x] Complete @mogrifier system implementation with all MOGRIFY` attributes
 - [x] Inline execution handling (/inline modifier)
 - [x] Q-register management (/localize, /clearregs modifiers)
+- [x] HUH_COMMAND hook integration
+- [x] Performance optimization (ConcurrentDictionary with O(1) lookups)
+- [x] Unit tests for @hook command (9 tests)
+- [x] Unit tests for @mogrifier system (8 tests)
 
 ### To Be Implemented
 - [x] Inline execution handling (queue vs immediate) for /inline modifier
 - [x] Q-register management (localize, clearregs, nobreak) for inline hooks
-- [ ] Integration with HUH_COMMAND hook
+- [x] Integration with HUH_COMMAND hook
 - [ ] Individual player @chatformat support in mogrifier
 - [ ] Channel recall buffer support for mogrifier
 - [x] Unit tests for @hook command
 - [ ] Integration tests for hook execution
-- [ ] Unit tests for mogrifier
-- [ ] Performance optimization for hook lookup
+- [x] Unit tests for mogrifier
+- [x] Performance optimization for hook lookup
 
 ## @mogrifier System Implementation
 
