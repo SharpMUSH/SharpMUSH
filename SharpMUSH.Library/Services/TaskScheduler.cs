@@ -44,6 +44,10 @@ public class TaskScheduler(
 	public const string SemaphoreGroup = "semaphore";
 	public const string DelayGroup = "delay";
 
+	// Helper method to create consistent semaphore group keys without timestamps
+	private static string SemaphoreGroupKey(DbRefAttribute dbRefAttribute)
+		=> $"{SemaphoreGroup}:#{dbRefAttribute.DbRef.Number}/{string.Join("`", dbRefAttribute.Attribute)}";
+
 	[Flags]
 	private enum TaskQueueType
 	{
@@ -93,6 +97,9 @@ public class TaskScheduler(
 			return;
 		}
 
+		var triggerIdentity = $"dbref:{state.Executor}-{NextPid()}";
+		var triggerGroup = SemaphoreGroupKey(dbRefAttribute);
+		
 		await _scheduler.ScheduleJob(
 			JobBuilder
 				.CreateForAsync<SemaphoreTask>()
@@ -104,9 +111,8 @@ public class TaskScheduler(
 				.Build(),
 			TriggerBuilder.Create()
 				.WithSimpleSchedule(x => x.WithRepeatCount(0))
-				.WithIdentity(
-					$"dbref:{state.Executor}-{NextPid()}",
-					$"{SemaphoreGroup}:{dbRefAttribute}").Build());
+				.WithIdentity(triggerIdentity, triggerGroup).Build());
+		
 	}
 
 	public async ValueTask WriteAsyncAttribute(Func<ValueTask<ParserState>> function,
@@ -152,14 +158,15 @@ public class TaskScheduler(
 				.StartAt(DateTimeOffset.Now + timeout)
 				.WithIdentity(
 					$"dbref:{state.Executor}-{NextPid()}",
-					$"{SemaphoreGroup}:{dbRefAttribute}").Build());
+					SemaphoreGroupKey(dbRefAttribute)).Build());
 	}
 
 	public async ValueTask Notify(DbRefAttribute dbAttribute, int oldValue, int count = 1)
 	{
 		var semaphoresForObject = await _scheduler
-			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals($"{SemaphoreGroup}:{dbAttribute}"));
+			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals(SemaphoreGroupKey(dbAttribute)));
 
+		
 		// If oldValue is negative, we notify the specified number of tasks
 		// If oldValue is >= 0, we notify based on count
 		var tasksToNotify = oldValue < 0 ? Math.Min(count, 0 - oldValue) : count;
@@ -170,12 +177,15 @@ public class TaskScheduler(
 			try
 			{
 				var to = await _scheduler.GetTrigger(trigger, CancellationToken.None);
-				if (to == null) continue;
+				if (to == null)
+				{
+					continue;
+				}
 				
 				var job = to.JobKey;
 				await _scheduler.TriggerJob(job);
 			}
-			catch (Exception)
+			catch (Exception ex)
 			{
 				// Job may have been removed between getting the trigger and triggering it
 				// This is expected in concurrent scenarios, so we continue processing other triggers
@@ -186,7 +196,7 @@ public class TaskScheduler(
 	public async ValueTask NotifyAll(DbRefAttribute dbAttribute)
 	{
 		var semaphoresForObject = await _scheduler
-			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals($"{SemaphoreGroup}:{dbAttribute}"));
+			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals(SemaphoreGroupKey(dbAttribute)));
 
 		var immediatelyRun = semaphoresForObject.ToAsyncEnumerable();
 		await foreach (var trigger in immediatelyRun)
@@ -212,7 +222,7 @@ public class TaskScheduler(
 		}
 
 		var semaphoresForObject = await _scheduler
-			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals($"{SemaphoreGroup}:{dbAttribute}"));
+			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals(SemaphoreGroupKey(dbAttribute)));
 
 		// Get the first waiting task
 		var firstTrigger = semaphoresForObject.FirstOrDefault();
@@ -278,7 +288,7 @@ public class TaskScheduler(
 	public async ValueTask Drain(DbRefAttribute dbAttribute, int? count = null)
 	{
 		var semaphoresForObject = await _scheduler
-			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals($"{SemaphoreGroup}:{dbAttribute}"));
+			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals(SemaphoreGroupKey(dbAttribute)));
 
 		if (count.HasValue)
 		{
@@ -334,7 +344,7 @@ public class TaskScheduler(
 
 	public async IAsyncEnumerable<SemaphoreTaskData> GetSemaphoreTasks(DBRef obj)
 	{
-		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupStartsWith($"{SemaphoreGroup}:{obj}"));
+		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupStartsWith($"{SemaphoreGroup}:#{obj.Number}"));
 		var keyTriggers = keys.ToAsyncEnumerable()
 			.Select<TriggerKey, SemaphoreTaskData>(async (triggerKey, _) =>
 				await MapSemaphoreTaskData(_scheduler, triggerKey));
@@ -362,7 +372,7 @@ public class TaskScheduler(
 	public async IAsyncEnumerable<SemaphoreTaskData> GetSemaphoreTasks(DbRefAttribute objAttribute)
 	{
 		var keys = await _scheduler.GetTriggerKeys(
-			GroupMatcher<TriggerKey>.GroupEquals($"{SemaphoreGroup}:{objAttribute}"));
+			GroupMatcher<TriggerKey>.GroupEquals(SemaphoreGroupKey(objAttribute)));
 		var keyTriggers = keys.ToAsyncEnumerable()
 			.Select<TriggerKey, SemaphoreTaskData>(async (triggerKey, _) =>
 				await MapSemaphoreTaskData(_scheduler, triggerKey));
