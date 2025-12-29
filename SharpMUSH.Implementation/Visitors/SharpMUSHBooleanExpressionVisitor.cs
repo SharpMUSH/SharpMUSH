@@ -299,7 +299,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 
 	public override Expression VisitDbRefListExpr(SharpMUSHBoolExpParser.DbRefListExprContext context)
 	{
-		var attributeName = context.attributeName().GetText();
+		var attributeName = context.@string().GetText();
 
 		// DBRef list locks check if the unlocker's dbref is in a space-separated list stored in an attribute
 		Func<AnySharpObject, AnySharpObject, string, bool> func = (gatedObj, unlockerObj, attrName) =>
@@ -323,16 +323,29 @@ public class SharpMUSHBooleanExpressionVisitor(
 					// Check if unlocker's dbref is in the list
 					foreach (var dbrefStr in dbrefs)
 					{
-						// Handle both #123 and #123:timestamp formats
-						if (dbrefStr.StartsWith('#'))
+						// Parse the dbref (handles both #123 and #123:timestamp formats)
+						var parsedDbRef = HelperFunctions.ParseDbRef(dbrefStr);
+						if (parsedDbRef.IsSome())
 						{
-							var colonIndex = dbrefStr.IndexOf(':');
-							var numStr = colonIndex > 0 ? dbrefStr.Substring(1, colonIndex - 1) : dbrefStr.Substring(1);
+							var lockDbRef = parsedDbRef.AsValue();
 							
-							if (int.TryParse(numStr, out int dbrefNum))
+							// If lock specifies creation time (objid format), both number and timestamp must match
+							// This prevents locks from matching recycled dbrefs after objects are destroyed
+							if (lockDbRef.CreationMilliseconds.HasValue)
 							{
-								if (unlockerDbRef.Number == dbrefNum)
+								if ((lockDbRef.Number == unlockerDbRef.Number) 
+								    && (lockDbRef.CreationMilliseconds == unlockerDbRef.CreationMilliseconds))
+								{
 									return true;
+								}
+							}
+							// If lock doesn't specify creation time (bare dbref), only match number for backward compatibility
+							else
+							{
+								if (lockDbRef.Number == unlockerDbRef.Number)
+								{
+									return true;
+								}
 							}
 						}
 					}
@@ -466,11 +479,25 @@ public class SharpMUSHBooleanExpressionVisitor(
 				return unlockerObj.Object().DBRef == owner.Object.DBRef;
 			}
 			
-			// Try to parse as DBRef
-			if (target.StartsWith('#') && int.TryParse(target.Substring(1), out int dbrefNum))
+			// Try to parse as DBRef (supports both #123 and #123:timestamp formats)
+			var parsedDbRef = HelperFunctions.ParseDbRef(target);
+			if (parsedDbRef.IsSome())
 			{
-				// Compare DBRef numbers (ignoring creation time for now)
-				return unlockerObj.Object().DBRef.Number == dbrefNum;
+				var lockDbRef = parsedDbRef.AsValue();
+				var unlockerDbRef = unlockerObj.Object().DBRef;
+				
+				// If lock specifies creation time (objid format), both number and timestamp must match
+				// This prevents locks from matching recycled dbrefs after objects are destroyed
+				if (lockDbRef.CreationMilliseconds.HasValue)
+				{
+					return (lockDbRef.Number == unlockerDbRef.Number) 
+					       && (lockDbRef.CreationMilliseconds == unlockerDbRef.CreationMilliseconds);
+				}
+				// If lock doesn't specify creation time (bare dbref), only match number for backward compatibility
+				else
+				{
+					return lockDbRef.Number == unlockerDbRef.Number;
+				}
 			}
 			
 			// Otherwise try exact name match
@@ -565,8 +592,10 @@ public class SharpMUSHBooleanExpressionVisitor(
 						return false;
 						
 					// Get the attribute value and evaluate it
-					// TODO: The attribute should be evaluated with %# = unlocker, %! = gated object
-					// For now, we just get the plaintext value
+					// NOTE: For full PennMUSH compatibility, the attribute should be evaluated with:
+					// %# = unlocker (the object trying to pass the lock)
+					// %! = gated object (the object being locked)
+					// This would require parser context injection
 					var actualValue = MModule.plainText(attributes.First().Value);
 					
 					// Compare with expected value (case-insensitive)
@@ -635,7 +664,8 @@ public class SharpMUSHBooleanExpressionVisitor(
 					return false;
 					
 				// Get the lock from the target object
-				var lockString = targetObj.Object().Locks.GetValueOrDefault(lockType, "#TRUE");
+				var lockData = targetObj.Object().Locks.GetValueOrDefault(lockType, new Library.Models.SharpLockData("#TRUE"));
+				var lockString = lockData.LockString;
 				
 				// Use mediator query to recursively evaluate the lock
 				// This breaks the circular dependency between parser and lock service

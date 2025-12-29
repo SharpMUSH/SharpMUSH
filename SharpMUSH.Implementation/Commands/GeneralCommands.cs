@@ -631,7 +631,26 @@ public partial class Commands
 		
 		outputSections.Add(MModule.single($"Parent: {objParent.Object()?.Name ?? "*NOTHING*"}"));
 		
-		// TODO: LOCK LIST
+		// Display locks with flags
+		if (obj.Locks.Count > 0)
+		{
+			var lockLines = obj.Locks
+				.Select(kvp => 
+				{
+					var lockName = kvp.Key;
+					var lockData = kvp.Value;
+					var flagsStr = LockService!.FormatLockFlags(lockData.Flags);
+					var flagsDisplay = string.IsNullOrEmpty(flagsStr) ? "" : $"[{flagsStr}]";
+					return $"{lockName}{flagsDisplay}: {lockData.LockString}";
+				})
+				.ToList();
+			
+			outputSections.Add(MModule.single($"Locks:"));
+			foreach (var lockLine in lockLines)
+			{
+				outputSections.Add(MModule.single($"  {lockLine}"));
+			}
+		}
 		
 		var powersList = await objPowers.Select(x => x.Name).ToArrayAsync();
 		if (powersList.Length > 0)
@@ -3562,7 +3581,24 @@ public partial class Commands
 				outputs.Add($"{prefix}@power {objectRef}={power.Name}");
 			}
 			
-			// TODO: Set locks
+			// Set locks
+			foreach (var lockEntry in obj.Locks)
+			{
+				var lockName = lockEntry.Key;
+				var lockData = lockEntry.Value;
+				var lockValue = lockData.LockString;
+				
+				// For basic lock, use @lock without slash
+				if (lockName.Equals("Basic", StringComparison.OrdinalIgnoreCase))
+				{
+					outputs.Add($"{prefix}@lock {objectRef}={lockValue}");
+				}
+				else
+				{
+					outputs.Add($"{prefix}@lock/{lockName} {objectRef}={lockValue}");
+				}
+			}
+			
 			// TODO: Set parent if not default
 		}
 		

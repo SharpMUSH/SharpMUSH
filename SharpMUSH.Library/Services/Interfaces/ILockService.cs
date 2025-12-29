@@ -18,4 +18,9 @@ public interface ILockService
 	bool Set(LockType standardType, string lockString, AnySharpObject lockee);
 
 	bool Validate(string lockString, AnySharpObject lockee);
+
+	/// <summary>
+	/// Format lock flags for display (e.g., "v" for Visual, "n" for Private)
+	/// </summary>
+	string FormatLockFlags(LockService.LockFlags flags);
 }

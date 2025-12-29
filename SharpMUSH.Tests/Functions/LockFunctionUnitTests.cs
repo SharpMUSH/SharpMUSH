@@ -10,7 +10,6 @@ public class LockFunctionUnitTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("testlock(%#,%#,basic)", "1")]
 	public async Task Testlock(string str, string expected)
 	{
@@ -19,7 +18,6 @@ public class LockFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("lockowner(%#,basic)", "")]
 	public async Task Lockowner(string str, string expected)
 	{
@@ -28,7 +26,6 @@ public class LockFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("lockfilter(#0,basic)", "")]
 	public async Task Lockfilter(string str, string expected)
 	{
@@ -37,7 +34,6 @@ public class LockFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("llocks(%#)", "")]
 	public async Task Llocks(string str, string expected)
 	{
@@ -46,7 +42,6 @@ public class LockFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("llockflags(%#,basic)", "")]
 	public async Task Llockflags(string str, string expected)
 	{
@@ -55,7 +50,6 @@ public class LockFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("atrlock(%#,testattr)", "")]
 	public async Task Atrlock(string str, string expected)
 	{

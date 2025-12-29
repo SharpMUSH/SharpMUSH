@@ -57,9 +57,11 @@ FALSE: POUND F A L S E;
 TRUE: POUND T R U E;
 ATTRIBUTE_COLON: ':';
 // STRING - must come BEFORE ATTRIBUTENAME so it matches in `string` parser rules
-// Exclude operator characters but allow # (needed for dbrefs like #1, #123)
+// Allow colons for objid format (#123:456) but exclude other operator characters
 // FALSE/TRUE tokens will match #FALSE and #TRUE before STRING can
-STRING: ~( '&' | '|' | ':' | '!' | ')' | '(' | '^' | ' ' | '/' | '+' | '$' | '@' | '=')+;
+STRING: ~( '&' | '|' | '!' | ')' | '(' | '^' | ' ' | '/' | '+' | '$' | '@' | '=')+;
+// ATTRIBUTENAME - used specifically for attribute names in certain contexts
+// Excludes colons to distinguish from general strings with objid format
 ATTRIBUTENAME:
     ~('&' | '|' | ':' | '!' | ')' | '(' | '/' | ' ' | '^' | '+' | '$' | '@' | '=')+
 ;

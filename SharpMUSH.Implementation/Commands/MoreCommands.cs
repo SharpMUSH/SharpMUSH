@@ -420,14 +420,24 @@ public partial class Commands
 				}
 				
 				// Check if lock exists
-				if (!obj.Object().Locks.ContainsKey(lockType))
+				if (!obj.Object().Locks.TryGetValue(lockType, out var lockData))
 				{
 					await NotifyService!.Notify(executor, $"No such lock: {lockType}");
 					return new CallState("#-1 NO SUCH LOCK");
 				}
 				
-				// For now, notify that the feature is not fully implemented
-				// TODO: Implement lock flag storage
+				// Update the lock flags
+				var currentFlags = lockData.Flags;
+				var newFlags = isClearing 
+					? currentFlags & ~flagInfo.Item2  // Clear the flag
+					: currentFlags | flagInfo.Item2;  // Set the flag
+				
+				// Create updated lock data
+				var updatedLockData = new Library.Models.SharpLockData(lockData.LockString, newFlags);
+				
+				// Save to database via mediator command
+				await Mediator!.Send(new SetLockCommand(obj.Object(), lockType, updatedLockData.LockString));
+				
 				await NotifyService!.Notify(executor, $"Flag {flagName} {(isClearing ? "cleared" : "set")} on {lockType} lock.");
 				return CallState.Empty;
 			}
@@ -777,6 +787,27 @@ public partial class Commands
 		
 		// Parent row
 		outputSections.Add(MModule.single($"Parent: {objParent.Object()?.Name ?? "*NOTHING*"}"));
+		
+		// Display locks with flags
+		if (obj.Locks.Count > 0)
+		{
+			var lockLines = obj.Locks
+				.Select(kvp => 
+				{
+					var lockName = kvp.Key;
+					var lockData = kvp.Value;
+					var flagsStr = LockService!.FormatLockFlags(lockData.Flags);
+					var flagsDisplay = string.IsNullOrEmpty(flagsStr) ? "" : $"[{flagsStr}]";
+					return $"{lockName}{flagsDisplay}: {lockData.LockString}";
+				})
+				.ToList();
+			
+			outputSections.Add(MModule.single($"Locks:"));
+			foreach (var lockLine in lockLines)
+			{
+				outputSections.Add(MModule.single($"  {lockLine}"));
+			}
+		}
 		
 		// Powers row
 		var powersList = await objPowers.Select(x => x.Name).ToArrayAsync();
