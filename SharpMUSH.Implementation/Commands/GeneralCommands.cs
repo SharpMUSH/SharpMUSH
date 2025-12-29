@@ -1521,6 +1521,9 @@ public partial class Commands
 	private static async ValueTask QueueSemaphore(IMUSHCodeParser parser, AnySharpObject located, string[] attribute,
 		MString arg1)
 	{
+		Console.WriteLine($"[DIAGNOSTIC QueueSemaphore] Called with attribute: {string.Join("`", attribute)}");
+		Console.WriteLine($"[DIAGNOSTIC QueueSemaphore] Located object DBRef: {located.Object().DBRef}");
+		
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var one = await Mediator!.Send(new GetObjectNodeQuery(new DBRef(0)));
 		var attrValues = Mediator.CreateStream(new GetAttributeQuery(located.Object().DBRef, attribute));
@@ -1528,23 +1531,50 @@ public partial class Commands
 
 		if (attrValue is null)
 		{
+			Console.WriteLine($"[DIAGNOSTIC QueueSemaphore] Attribute is null, creating new with value 0");
 			await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single("0"),
 				one.AsPlayer));
-			await Mediator.Send(new QueueCommandListRequest(arg1, parser.CurrentState,
-				new DbRefAttribute(located.Object().DBRef, attribute), 0));
+			
+			var dbRefAttr = new DbRefAttribute(located.Object().DBRef, attribute);
+			Console.WriteLine($"[DIAGNOSTIC QueueSemaphore] Calling Mediator.Send with DbRefAttribute: {dbRefAttr}");
+			Console.WriteLine($"[DIAGNOSTIC QueueSemaphore] DbRef.Number: {dbRefAttr.DbRef.Number}, CreationMilliseconds: {dbRefAttr.DbRef.CreationMilliseconds}");
+			
+			try
+			{
+				await Mediator.Send(new QueueCommandListRequest(arg1, parser.CurrentState,
+					dbRefAttr, 0));
+				Console.WriteLine($"[DIAGNOSTIC QueueSemaphore] Mediator.Send completed successfully");
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"[DIAGNOSTIC QueueSemaphore] Exception during Mediator.Send: {ex.Message}");
+				Console.WriteLine($"[DIAGNOSTIC QueueSemaphore] Exception type: {ex.GetType().Name}");
+				Console.WriteLine($"[DIAGNOSTIC QueueSemaphore] StackTrace: {ex.StackTrace}");
+				throw;
+			}
+			
 			return;
 		}
 
 		if (!int.TryParse(attrValue.Value.ToPlainText(), out var last))
 		{
+			Console.WriteLine($"[DIAGNOSTIC QueueSemaphore] Failed to parse attribute value as integer");
 			await NotifyService!.Notify(executor, Errors.ErrorInteger);
 			return;
 		}
 
+		Console.WriteLine($"[DIAGNOSTIC QueueSemaphore] Attribute exists with value: {last}");
 		await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single($"{last + 1}"),
 			one.AsPlayer));
+		
+		var dbRefAttr2 = new DbRefAttribute(located.Object().DBRef, attribute);
+		Console.WriteLine($"[DIAGNOSTIC QueueSemaphore] Calling Mediator.Send with DbRefAttribute: {dbRefAttr2}");
+		Console.WriteLine($"[DIAGNOSTIC QueueSemaphore] DbRef.Number: {dbRefAttr2.DbRef.Number}, CreationMilliseconds: {dbRefAttr2.DbRef.CreationMilliseconds}");
+		
 		await Mediator.Send(new QueueCommandListRequest(arg1, parser.CurrentState,
-			new DbRefAttribute(located.Object().DBRef, attribute), last));
+			dbRefAttr2, last));
+		
+		Console.WriteLine($"[DIAGNOSTIC QueueSemaphore] Mediator.Send completed");
 	}
 
 	private static async ValueTask QueueSemaphoreWithDelay(IMUSHCodeParser parser, AnySharpObject located,
