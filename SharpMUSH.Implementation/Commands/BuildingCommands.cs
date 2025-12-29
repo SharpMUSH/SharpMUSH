@@ -2,8 +2,10 @@
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Helpers;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -234,8 +236,12 @@ public partial class Commands
 			{
 				if (!await PermissionService!.Controls(executor, obj))
 				{
-					await NotifyService!.Notify(executor, Errors.ErrorPerm);
-					return Errors.ErrorPerm;
+					return await ErrorNotifier.NotifyAndReturn(
+						NotifyService!,
+						executor.Object().DBRef,
+						errorReturn: ErrorMessages.Returns.PermissionDenied,
+						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
+						shouldNotify: true);
 				}
 
 				return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
