@@ -24,28 +24,33 @@ public class SemaphoreCommandTests
 	private IAttributeService AttributeService => WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
 
 	[Test]
-	public async ValueTask NotifyCommand_ShouldAcceptValidSemaphore()
+	public async ValueTask NotifyCommand_ShouldWakeWaitingTask()
 	{
-		// Arrange - create a unique semaphore
+		// Arrange - create a unique semaphore and test message with underscore separator
 		var uniqueId = Guid.NewGuid().ToString("N");
 		var uniqueAttr = $"SEM_{uniqueId}";
+		var testMessage = $"TaskExecuted_{uniqueId}";
 		
-		// Queue a task that waits on the semaphore
+		// Queue a task that waits on the semaphore - use think to ensure output
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@wait #1/{uniqueAttr}=think Test"));
+			MModule.single($"@wait #1/{uniqueAttr}=think {testMessage}"));
 		
-		// Act - notify the semaphore
+		// Give time for the task to be registered with the scheduler
+		await Task.Delay(200);
+		
+		// Act - notify the semaphore to wake the waiting task
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@notify #1/{uniqueAttr}"));
 		
-		// Assert - command should execute without error
-		// Should receive either "Notified." or the task output
+		// Give the scheduler time to execute the queued task
+		await Task.Delay(2000);
+
+		// Assert - verify the waiting task was executed
 		await NotifyService.Received().Notify(
 			Arg.Any<AnySharpObject>(), 
-			Arg.Is<OneOf.OneOf<MString, string>>(msg => 
-				msg.ToString()!.Contains("Notified.") || msg.ToString()!.Contains("Test")),
-			Arg.Any<AnySharpObject?>(),
-			Arg.Any<INotifyService.NotificationType>());
+			testMessage,
+			Arg.Any<AnySharpObject>(),
+			INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -124,29 +129,34 @@ public class SemaphoreCommandTests
 	}
 
 	[Test]
-	public async ValueTask NotifySetQ_ShouldAcceptQRegisterParameters()
+	public async ValueTask NotifySetQ_ShouldSetQRegisterForWaitingTask()
 	{
-		// Arrange - create a unique semaphore
+		// Arrange - create a unique semaphore with a unique test value
 		var uniqueId = Guid.NewGuid().ToString("N");
 		var uniqueAttr = $"SEM_{uniqueId}";
-		var testValue = "TestABC123";
+		var testValue = $"TestValue_{uniqueId.Substring(0, 8)}"; // Use unique value with GUID prefix
 		
-		// Queue a task that waits on the semaphore
+		// Queue a task that waits on the semaphore and will output the Q-register value
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@wait #1/{uniqueAttr}=think Task"));
+			MModule.single($"@wait #1/{uniqueAttr}=think QRegValue:%q0"));
 		
-		// Act - notify with setq parameters
+		// Give time for the task to be registered with the scheduler
+		await Task.Delay(200);
+		
+		// Act - notify the semaphore with /setq to set Q-register 0
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@notify/setq #1/{uniqueAttr}=0,{testValue}"));
 		
-		// Assert - command should execute without error
-		// Should NOT receive parsing error about "must be in pairs"
-		await NotifyService.DidNotReceive().Notify(
+		// Give the scheduler time to execute the queued task
+		await Task.Delay(2000);
+		
+		// Assert - verify the task executed with the correct Q-register value
+		// The waiting task should have been executed with %q0 set to our test value
+		await NotifyService.Received().Notify(
+			Arg.Any<AnySharpObject>(), 
+			$"QRegValue:{testValue}",
 			Arg.Any<AnySharpObject>(),
-			Arg.Is<OneOf.OneOf<MString, string>>(msg => 
-				msg.ToString()!.Contains("must be in pairs")),
-			Arg.Any<AnySharpObject?>(),
-			Arg.Any<INotifyService.NotificationType>());
+			INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
