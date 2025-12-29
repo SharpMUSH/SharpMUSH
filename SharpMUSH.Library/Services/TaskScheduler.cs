@@ -97,10 +97,6 @@ public class TaskScheduler(
 		var triggerGroup = $"{SemaphoreGroup}:{dbRefAttribute}";
 		
 		// DIAGNOSTIC: Log the group key being used for job creation
-		Console.WriteLine($"[DIAGNOSTIC WriteCommandList] Creating job with group: '{triggerGroup}'");
-		Console.WriteLine($"[DIAGNOSTIC WriteCommandList] DbRefAttribute.ToString(): '{dbRefAttribute}'");
-		Console.WriteLine($"[DIAGNOSTIC WriteCommandList] DbRef.Number: {dbRefAttribute.DbRef.Number}");
-		Console.WriteLine($"[DIAGNOSTIC WriteCommandList] DbRef.CreationMilliseconds: {dbRefAttribute.DbRef.CreationMilliseconds}");
 		
 		await _scheduler.ScheduleJob(
 			JobBuilder
@@ -168,15 +164,10 @@ public class TaskScheduler(
 		var groupKey = $"{SemaphoreGroup}:{dbAttribute}";
 		
 		// DIAGNOSTIC: Log the group key being used for notification lookup
-		Console.WriteLine($"[DIAGNOSTIC Notify] Searching for jobs with group: '{groupKey}'");
-		Console.WriteLine($"[DIAGNOSTIC Notify] DbRefAttribute.ToString(): '{dbAttribute}'");
-		Console.WriteLine($"[DIAGNOSTIC Notify] DbRef.Number: {dbAttribute.DbRef.Number}");
-		Console.WriteLine($"[DIAGNOSTIC Notify] DbRef.CreationMilliseconds: {dbAttribute.DbRef.CreationMilliseconds}");
 		
 		var semaphoresForObject = await _scheduler
 			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals(groupKey));
 
-		Console.WriteLine($"[DIAGNOSTIC Notify] Found {semaphoresForObject.Count} triggers for group '{groupKey}'");
 		
 		// If oldValue is negative, we notify the specified number of tasks
 		// If oldValue is >= 0, we notify based on count
