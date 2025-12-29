@@ -3566,7 +3566,8 @@ public partial class Commands
 			foreach (var lockEntry in obj.Locks)
 			{
 				var lockName = lockEntry.Key;
-				var lockValue = lockEntry.Value;
+				var lockData = lockEntry.Value;
+				var lockValue = lockData.LockString;
 				
 				// For basic lock, use @lock without slash
 				if (lockName.Equals("Basic", StringComparison.OrdinalIgnoreCase))

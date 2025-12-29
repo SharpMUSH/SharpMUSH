@@ -109,7 +109,10 @@ public class LockService(IFusionCache cache, IBooleanExpressionParser bep, IMedi
 
 	// TODO: Optimize #TRUE calls, we don't need to cache those.
 	public static string Get(LockType standardType, AnySharpObject lockee)
-		=> lockee.Object().Locks.GetValueOrDefault(standardType.ToString(), "#TRUE");
+	{
+		var defaultLockData = new Models.SharpLockData { LockString = "#TRUE", Flags = LockFlags.Default };
+		return lockee.Object().Locks.GetValueOrDefault(standardType.ToString(), defaultLockData).LockString;
+	}
 
 	public bool Evaluate(
 		string lockString,

@@ -420,15 +420,24 @@ public partial class Commands
 				}
 				
 				// Check if lock exists
-				if (!obj.Object().Locks.ContainsKey(lockType))
+				if (!obj.Object().Locks.TryGetValue(lockType, out var lockData))
 				{
 					await NotifyService!.Notify(executor, $"No such lock: {lockType}");
 					return new CallState("#-1 NO SUCH LOCK");
 				}
 				
-				// NOTE: Lock flags (visual, no_inherit, no_clone, wizard, owner, locked) are not yet persisted
-				// They would need to be stored as additional metadata alongside the lock string
-				// For now, acknowledge the command but don't persist the flags
+				// Update the lock flags
+				var currentFlags = lockData.Flags;
+				var newFlags = isClearing 
+					? currentFlags & ~flagInfo.Item2  // Clear the flag
+					: currentFlags | flagInfo.Item2;  // Set the flag
+				
+				// Create updated lock data
+				var updatedLockData = new Library.Models.SharpLockData(lockData.LockString, newFlags);
+				
+				// Save to database via mediator command
+				await Mediator!.Send(new SetLockCommand(obj.Object(), lockType, updatedLockData.LockString));
+				
 				await NotifyService!.Notify(executor, $"Flag {flagName} {(isClearing ? "cleared" : "set")} on {lockType} lock.");
 				return CallState.Empty;
 			}

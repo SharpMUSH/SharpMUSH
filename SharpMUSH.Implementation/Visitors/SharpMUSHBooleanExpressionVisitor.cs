@@ -664,7 +664,8 @@ public class SharpMUSHBooleanExpressionVisitor(
 					return false;
 					
 				// Get the lock from the target object
-				var lockString = targetObj.Object().Locks.GetValueOrDefault(lockType, "#TRUE");
+				var lockData = targetObj.Object().Locks.GetValueOrDefault(lockType, new Library.Models.SharpLockData("#TRUE"));
+				var lockString = lockData.LockString;
 				
 				// Use mediator query to recursively evaluate the lock
 				// This breaks the circular dependency between parser and lock service

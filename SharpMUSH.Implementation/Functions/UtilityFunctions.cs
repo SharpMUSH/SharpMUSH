@@ -1424,14 +1424,14 @@ public partial class Functions
 					var victim = victimResult.AsAnyObject;
 					
 					// Get the named lock from the object
-					if (!lockedObject.Object().Locks.TryGetValue(lockName, out var lockString))
+					if (!lockedObject.Object().Locks.TryGetValue(lockName, out var lockData))
 					{
 						// No lock set means it passes
 						return new CallState("1");
 					}
 
 					// Evaluate the lock: does victim pass this lock?
-					var passes = LockService!.Evaluate(lockString, lockedObject, victim);
+					var passes = LockService!.Evaluate(lockData.LockString, lockedObject, victim);
 					return new CallState(passes ? "1" : "0");
 				});
 		}
