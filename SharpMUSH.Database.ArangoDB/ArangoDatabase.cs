@@ -1406,8 +1406,7 @@ public partial class ArangoDatabase(
 			Type = type,
 			CreationTime = obj.GetProperty("CreationTime").GetInt64(),
 			ModifiedTime = obj.GetProperty("ModifiedTime").GetInt64(),
-			Locks = ImmutableDictionary<string, string>
-				.Empty, // FIX: ((Dictionary<string, string>?)obj.Locks ?? []).ToImmutableDictionary(),
+			Locks = ImmutableDictionary<string, Library.Models.SharpLockData>.Empty, // Empty locks for JSON element conversion
 			Flags = new(() => GetObjectFlagsAsync(id, type.ToUpper(), CancellationToken.None)),
 			Powers = new(() => GetPowersAsync(id, CancellationToken.None)),
 			Attributes = new(() => GetTopLevelAttributesAsync(id, CancellationToken.None)),
@@ -1444,7 +1443,22 @@ public partial class ArangoDatabase(
 			Type = obj.Type,
 			Id = obj.Id,
 			Key = int.Parse(obj.Key),
-			Locks = (obj.Locks ?? []).ToImmutableDictionary(),
+			Locks = (obj.Locks ?? [])
+				.ToImmutableDictionary(
+					kvp => kvp.Key,
+					kvp =>
+					{
+						var flags = Library.Services.LockService.LockFlags.Default;
+						if (!string.IsNullOrEmpty(kvp.Value.Flags))
+						{
+							if (!Enum.TryParse<Library.Services.LockService.LockFlags>(kvp.Value.Flags, out flags))
+							{
+								// If parsing fails (corrupted data), use Default flags
+								flags = Library.Services.LockService.LockFlags.Default;
+							}
+						}
+						return new Library.Models.SharpLockData(kvp.Value.LockString, flags);
+					}),
 			CreationTime = obj.CreationTime,
 			ModifiedTime = obj.ModifiedTime,
 			Flags =
@@ -1770,20 +1784,48 @@ public partial class ArangoDatabase(
 			.Select(SharpAttributeQueryToSharpAttribute);
 	}
 
-	public async ValueTask SetLockAsync(SharpObject target, string lockName, string lockString,
+	public async ValueTask SetLockAsync(SharpObject target, string lockName, Library.Models.SharpLockData lockData,
 		CancellationToken ct = default)
-		=> await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Objects, new
+	{
+		var dbLockData = new SharpLockDataQueryResult
+		{
+			LockString = lockData.LockString,
+			Flags = lockData.Flags.ToString()
+		};
+		
+		await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Objects, new
 		{
 			target.Key,
-			Locks = target.Locks.Add(lockName, lockString)
+			Locks = target.Locks
+				.Select(kvp => new KeyValuePair<string, SharpLockDataQueryResult>(
+					kvp.Key,
+					new SharpLockDataQueryResult
+					{
+						LockString = kvp.Value.LockString,
+						Flags = kvp.Value.Flags.ToString()
+					}))
+				.Append(new KeyValuePair<string, SharpLockDataQueryResult>(lockName, dbLockData))
+				.ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
 		}, mergeObjects: true, cancellationToken: ct);
+	}
 
 	public async ValueTask UnsetLockAsync(SharpObject target, string lockName, CancellationToken ct = default)
-		=> await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Objects, new
+	{
+		await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Objects, new
 		{
 			target.Key,
-			Locks = target.Locks.Remove(lockName)
+			Locks = target.Locks
+				.Where(kvp => kvp.Key != lockName)
+				.Select(kvp => new KeyValuePair<string, SharpLockDataQueryResult>(
+					kvp.Key,
+					new SharpLockDataQueryResult
+					{
+						LockString = kvp.Value.LockString,
+						Flags = kvp.Value.Flags.ToString()
+					}))
+				.ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
 		}, mergeObjects: true, cancellationToken: ct);
+	}
 
 	public async ValueTask<IAsyncEnumerable<SharpAttribute>?> GetAttributeAsync(DBRef dbref, string[] attribute,
 		CancellationToken ct = default)

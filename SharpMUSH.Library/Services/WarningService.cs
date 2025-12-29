@@ -206,8 +206,9 @@ public class WarningService(
 			var locks = targetObj.Locks;
 			
 			// Check each lock on the object
-			foreach (var (lockName, lockString) in locks)
+			foreach (var (lockName, lockData) in locks)
 			{
+				var lockString = lockData.LockString;
 				// Skip empty locks
 				if (string.IsNullOrWhiteSpace(lockString))
 				{

@@ -30,7 +30,7 @@ public class TestObjectFactory
 				Key = key,
 				Name = name,
 				Type = "Room",
-				Locks = ImmutableDictionary<string, string>.Empty,
+				Locks = ImmutableDictionary<string, Library.Models.SharpLockData>.Empty,
 				Owner = new(async ct => { await ValueTask.CompletedTask; return null!; }),
 				Powers = new(() => AsyncEnumerable.Empty<SharpPower>()),
 				Attributes = new(() => AsyncEnumerable.Empty<SharpAttribute>()),
@@ -66,7 +66,7 @@ public class TestObjectFactory
 			CreationTime = 0L, // Use 0 for test objects to make DBRef comparisons easier
 			Name = name,
 			Type = "Player",
-			Locks = ImmutableDictionary<string, string>.Empty,
+			Locks = ImmutableDictionary<string, Library.Models.SharpLockData>.Empty,
 			Owner = new(async ct => 
 			{
 				await ValueTask.CompletedTask;
@@ -118,7 +118,7 @@ public class TestObjectFactory
 			CreationTime = 0L, // Use 0 for test objects to make DBRef comparisons easier
 			Name = name,
 			Type = "Thing",
-			Locks = ImmutableDictionary<string, string>.Empty,
+			Locks = ImmutableDictionary<string, Library.Models.SharpLockData>.Empty,
 			Owner = new(async ct => 
 			{
 				await ValueTask.CompletedTask;
