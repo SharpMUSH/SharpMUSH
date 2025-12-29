@@ -24,7 +24,6 @@ public class SemaphoreCommandTests
 	private IAttributeService AttributeService => WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
 
 	[Test]
-	[Skip("Async scheduler integration test - requires Quartz scheduler to be fully initialized and running")]
 	public async ValueTask NotifyCommand_ShouldWakeWaitingTask()
 	{
 		// Arrange - create a unique semaphore and test message
@@ -130,7 +129,6 @@ public class SemaphoreCommandTests
 	}
 
 	[Test]
-	[Skip("Async scheduler integration test - requires Quartz scheduler to be fully initialized and running")]
 	public async ValueTask NotifySetQ_ShouldSetQRegisterForWaitingTask()
 	{
 		// Arrange - create a unique semaphore with a simpler test value

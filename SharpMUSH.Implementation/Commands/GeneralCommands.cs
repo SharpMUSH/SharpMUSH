@@ -1523,7 +1523,7 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var one = await Mediator!.Send(new GetObjectNodeQuery(new DBRef(0)));
-		var attrValues = Mediator.CreateStream(new GetAttributeQuery(located.Object().DBRef, DefaultSemaphoreAttributeArray));
+		var attrValues = Mediator.CreateStream(new GetAttributeQuery(located.Object().DBRef, attribute));
 		var attrValue = await attrValues.LastOrDefaultAsync();
 
 		if (attrValue is null)
