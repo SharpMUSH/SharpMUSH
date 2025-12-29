@@ -71,63 +71,44 @@ public partial class ValidateService(
 
 	private bool ValidateLockType(MString value)
 	{
-		/*
-/** Check to see that the lock type is a valid type. Valid types are either:
- * 1) in the lock table of standard lock types,
- * 2) prefixed with "user:", a valid attr name and don't contain '|' chars
- * 3) the name of an already-existing lock set on 'thing'
- * It was previously stated that '|' in lock names interfered with the db
- * reading routines; I (MG) don't believe that's the case any longer, though.
- * \param player the enactor, for notification.
- * \param thing object on which to check the lock.
- * \param silent skip specific error notifications to player?
- * \param name name of lock type.
- * \retval NULL invalid lock type
- * \retval locktype the name of the valid lock type, minus user: prefix
- * /
-lock_type
-check_lock_type(dbref player, dbref thing, lock_type name, bool silent)
-{
-  lock_type ll;
-  char *user_name;
-  char *colon;
-
-  /* Special-case for basic locks. * /
-  if (!name || !*name)
-    return Basic_Lock;
-
-  /* Normal locks. * /
-  ll = match_lock(name);
-  if (ll != NULL)
-    return ll;
-
-  /* If the lock is set, it's allowed, whether it exists normally or not. * /
-  if (getlock(thing, name) != TRUE_BOOLEXP)
-    return name;
-
-  /* Check to see if it's a well-formed user-defined lock. * /
-  if (!string_prefix(name, "User:")) {
-    if (!silent)
-      notify(player, T("Unknown lock type."));
-    return NULL;
-  }
-  if (strchr(name, '|')) {
-    if (!silent)
-      notify(player, T("The character \'|\' may not be used in lock names."));
-    return NULL;
-  }
-  colon = strchr(name, ':') + 1;
-  user_name = strupper(colon);
-
-  if (!good_atr_name(user_name)) {
-    if (!silent)
-      notify(player, T("That is not a valid lock name."));
-    return NULL;
-  }
-
-  return colon;
-}*/
-		throw new NotImplementedException();
+		var lockTypeName = value.ToPlainText();
+		
+		// Empty or null means "Basic" lock
+		if (string.IsNullOrEmpty(lockTypeName))
+		{
+			return true;
+		}
+		
+		// Check if it's a standard lock type (try to parse the enum)
+		if (Enum.TryParse<LockType>(lockTypeName, ignoreCase: true, out _))
+		{
+			return true;
+		}
+		
+		// Check for user-defined locks (format: "User:AttributeName")
+		if (lockTypeName.StartsWith("User:", StringComparison.OrdinalIgnoreCase))
+		{
+			// Cannot contain pipe character
+			if (lockTypeName.Contains('|'))
+			{
+				return false;
+			}
+			
+			// Extract the attribute name after "User:"
+			var colonIndex = lockTypeName.IndexOf(':');
+			if (colonIndex >= 0 && colonIndex < lockTypeName.Length - 1)
+			{
+				var attributeName = lockTypeName.Substring(colonIndex + 1).ToUpper();
+				
+				// Validate as attribute name
+				return ValidAttributeNameRegex().IsMatch(attributeName);
+			}
+			
+			return false;
+		}
+		
+		// Unknown lock type
+		return false;
 	}
 
 	[GeneratedRegex(@"^\P{C}+$")]
@@ -176,7 +157,30 @@ check_lock_type(dbref player, dbref thing, lock_type name, bool silent)
 
 	private static bool ValidatePlayerAlias(MString value, AnySharpObject target)
 	{
-		throw new NotImplementedException();
+		// Player aliases should be non-empty and contain valid characters
+		// They're less strict than full player names but still need basic validation
+		var plainAlias = value.ToPlainText();
+		
+		if (string.IsNullOrWhiteSpace(plainAlias))
+		{
+			return false;
+		}
+		
+		// Aliases cannot be magic cookies
+		var magicCookie = new HashSet<string>((string[])["me", "here", "!", "home"]);
+		if (magicCookie.Contains(plainAlias.ToLower()))
+		{
+			return false;
+		}
+		
+		// Aliases should not contain control characters
+		if (plainAlias.Any(c => char.IsControl(c)))
+		{
+			return false;
+		}
+		
+		// Aliases must be ASCII
+		return plainAlias.EnumerateRunes().All(x => x.IsAscii);
 	}
 
 	private async ValueTask<bool> ValidatePlayerName(MString name, AnySharpObject target)
