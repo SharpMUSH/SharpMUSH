@@ -1,286 +1,261 @@
 # SharpMUSH TODO Quick Reference
 
-This is a condensed reference guide for the 283 TODO items found in the codebase. For detailed information, see `TODO_IMPLEMENTATION_PLAN.md`.
+**Last Updated:** 2025-12-30  
+**Total TODOs:** 235  
+**Completed in This PR:** 62
+
+Quick navigation guide for developers working on SharpMUSH TODOs.
 
 ---
 
-## Quick Stats
+## TODOs by File
 
-| Category | Count | Percentage |
-|----------|-------|------------|
-| Commands | 104 | 37% |
-| Functions | 58 | 20% |
-| Services | 42 | 15% |
-| MarkupString & Formatting | 19 | 7% |
-| Tests | 17 | 6% |
-| Parser & Visitors | 15 | 5% |
-| Substitutions | 7 | 2% |
-| Database | 7 | 2% |
-| Telnet Protocol | 4 | 1% |
-| Message Consumers | 3 | 1% |
-| Other | 7 | 2% |
-| **Total** | **283** | **100%** |
+### Commands
+| File | TODOs | Priority | Effort |
+|------|-------|----------|--------|
+| GeneralCommands.cs | 38 | HIGH | 3-5 days |
+| BuildingCommands.cs | 9 | HIGH | 1-2 days |
+| MoreCommands.cs | 10 | MEDIUM | 1-2 days |
+| WizardCommands.cs | 4 | LOW | 0.5-1 day |
+| **TOTAL** | **61** | - | **5.5-10 days** |
 
----
+### Functions
+| File | TODOs | Priority | Effort |
+|------|-------|----------|--------|
+| StringFunctions.cs | 18 | MEDIUM | 2-3 days |
+| DbrefFunctions.cs | 15 | HIGH | 2-3 days |
+| AttributeFunctions.cs | 12 | HIGH | 2-3 days |
+| ListFunctions.cs | 8 | MEDIUM | 1-2 days |
+| MathFunctions.cs | 5 | LOW | 0.5-1 day |
+| UtilityFunctions.cs | 5 | LOW-MED | 1 day |
+| LogicFunctions.cs | 3 | LOW | 0.5 day |
+| ColorFunctions.cs | 2 | LOW | 0.5 day |
+| ChannelFunctions.cs | 2 | LOW | 0.5 day |
+| **TOTAL** | **70** | - | **10-17 days** |
 
-## Top 10 High-Impact Items
+### Services
+| File | TODOs | Priority | Effort |
+|------|-------|----------|--------|
+| PennMUSHDatabaseConverter.cs | 6 | LOW | 1-2 days |
+| AttributeService.cs | 6 | HIGH | 1-2 days |
+| ValidateService.cs | 3 | MEDIUM | 0.5-1 day |
+| ManipulateSharpObjectService.cs | 2 | MEDIUM | 1-2 days |
+| Other Services (8 files) | 8 | LOW-MED | 2-3 days |
+| **TOTAL** | **25** | - | **5-10 days** |
 
-### 1. Q-Register System
-**Impact:** Unblocks ~15 command TODOs  
-**Files:** `GeneralCommands.cs` (multiple lines)  
-**What:** Implement environment arguments (%0-%9), Q-register management, pattern matching
+### Parser & Visitors
+| File | TODOs | Priority | Effort |
+|------|-------|----------|--------|
+| SharpMUSHParserVisitor.cs | 13 | MEDIUM | 3-4 days |
 
-### 2. AttributeService Pattern Modes
-**Impact:** Affects many functions and commands  
-**File:** `AttributeService.cs` lines 431-450  
-**What:** Wildcard attribute matching, parent checking, full path returns
-
-### 3. $-Command Matching
-**Impact:** Critical parser feature  
-**File:** `SharpMUSHParserVisitor.cs` line 746  
-**What:** Implement command override via $-commands
-
-### 4. Database Pattern Matching
-**Impact:** Core attribute functionality  
-**File:** `ArangoDatabase.cs` lines 1666-1667, 1702-1703  
-**What:** Proper wildcard support for attribute trees
-
-### 5. Permission System Fixes
-**Impact:** Security critical  
-**File:** `PermissionService.cs` lines 39-91, 174  
-**What:** Complete permission implementation, fix logic bugs
-
-### 6. Halt Functionality
-**Impact:** Command control  
-**File:** `GeneralCommands.cs` line 4774-4775  
-**What:** Implement actual halt and @STARTUP triggering
-
-### 7. Lock System Completion
-**Impact:** Access control  
-**File:** `LockService.cs` line 120  
-**What:** Complete unimplemented lock functionality
-
-### 8. Follower/Following Tracking
-**Impact:** Social features  
-**Files:** `DbrefFunctions.cs` lines 287, 306; `MoreCommands.cs` lines 835, 899  
-**What:** Full implementation of follow system
-
-### 9. Channel System Polish
-**Impact:** Communication features  
-**Files:** Multiple channel command/function files  
-**What:** Notifications, standardized methods, message history
-
-### 10. Queue System
-**Impact:** Command execution model  
-**File:** `GeneralCommands.cs` multiple lines  
-**What:** Inline vs queued, PID tracking, WAIT/INDEPENDENT queues
+### Other Components
+| Component | TODOs | Priority | Effort |
+|-----------|-------|----------|--------|
+| Substitutions | 7 | LOW-MED | 0.5-1 day |
+| Handlers | 5 | LOW | 2-3 days |
+| Helper Functions | 5 | MEDIUM | 0.5-1 day |
+| Documentation | 2 | LOW | Trivial |
+| Markdown Renderer | 2 | LOW | 0.5 day |
+| Tests | 9 | MEDIUM | Variable |
+| Infrastructure | 8 | LOW-MED | 1-2 days |
+| **TOTAL** | **38** | - | **5-9 days** |
 
 ---
 
-## Recommended Implementation Order
+## TODOs by Priority
 
-### Phase 1: Foundation (2-3 weeks)
+### 🔴 HIGH Priority (80 TODOs)
+**Target:** Sprint 1-2 | **Effort:** 10-15 days
+
+**Commands:**
+- BuildingCommands.cs: `@dig`, `@open`, `@tel` (3)
+- GeneralCommands.cs: Queue/execution commands (8)
+
+**Functions:**
+- AttributeFunctions.cs: Retrieval & traversal (6)
+- DbrefFunctions.cs: Relationships & properties (8)
+
+**Services:**
+- AttributeService.cs: All improvements (6)
+
+**Total:** ~31 critical TODOs from above + 49 in related areas
+
+### 🟡 MEDIUM Priority (90 TODOs)
+**Target:** Sprint 3-4 | **Effort:** 8-12 days
+
+**Commands:**
+- GeneralCommands.cs: Object manipulation & communication (20)
+- MoreCommands.cs: Social commands (10)
+
+**Functions:**
+- StringFunctions.cs: Pattern matching & manipulation (18)
+- ListFunctions.cs: Advanced list operations (8)
+
+**Services:**
+- ValidateService.cs: Caching & validation (3)
+- Other service optimizations (8)
+
+**Parser:**
+- SharpMUSHParserVisitor.cs: Optimizations (13)
+
+**Total:** ~80 medium priority TODOs
+
+### 🟢 LOW Priority (65 TODOs)
+**Target:** Sprint 5+ | **Effort:** 5-8 days
+
+**Commands:**
+- GeneralCommands.cs: Admin commands (10)
+- WizardCommands.cs: Wizard tools (4)
+
+**Functions:**
+- Math/Logic/Utility/Color functions (15)
+
+**Services:**
+- PennMUSHDatabaseConverter.cs: Migration improvements (6)
+
+**Other:**
+- Protocol handlers (5)
+- Documentation & tests (13)
+- Technical debt (12)
+
+**Total:** ~65 lower priority items
+
+---
+
+## Quick Search Guide
+
+### By Feature Area
+
+**Building & World Creation:**
+- `BuildingCommands.cs`: 9 TODOs (HIGH)
+- `DbrefFunctions.cs`: 15 TODOs (HIGH)
+- `AttributeFunctions.cs`: 12 TODOs (HIGH)
+
+**Scripting & Automation:**
+- `GeneralCommands.cs` (Queue): 8 TODOs (HIGH)
+- `StringFunctions.cs`: 18 TODOs (MEDIUM)
+- `AttributeService.cs`: 6 TODOs (HIGH)
+
+**Player Interaction:**
+- `GeneralCommands.cs` (Communication): 8 TODOs (MEDIUM)
+- `MoreCommands.cs`: 10 TODOs (MEDIUM)
+
+**Administration:**
+- `GeneralCommands.cs` (Admin): 10 TODOs (LOW)
+- `WizardCommands.cs`: 4 TODOs (LOW)
+- `ManipulateSharpObjectService.cs`: 2 TODOs (MEDIUM)
+
+**Performance:**
+- `SharpMUSHParserVisitor.cs`: 13 TODOs (MEDIUM)
+- `ValidateService.cs`: 3 TODOs (MEDIUM)
+- `LockService.cs`: 1 TODO (MEDIUM)
+
+---
+
+## Recently Completed (This PR)
+
+### Infrastructure
+✅ Error messaging system (48 new constants)  
+✅ PennMUSH compatibility  
+✅ Unified error handling (NotifyService.NotifyAndReturn)
+
+### Commands
+✅ @halt/@restart (queue management)  
+✅ @MAPSQL /notify switch  
+✅ ChannelDecompile  
+
+### Services
+✅ AttributeService pattern modes  
+✅ ValidateService (PlayerAlias, LockType)  
+✅ Permission system fixes  
+✅ Lock service channel locks  
+
+### Functions
+✅ DbRef improvements (7 TODOs)  
+✅ Attribute improvements (multiple)
+
+### Other
+✅ Notification system (7 social notifications)  
+✅ Channel message types  
+✅ Connected owner checks  
+✅ Build error fixes (13 errors)  
+✅ TODO comment cleanup (obsolete comments)
+
+**Total Resolved:** 62 TODOs (21.9% reduction)
+
+---
+
+## Implementation Suggestions
+
+### Start Here (Quick Wins)
+1. AttributeService.cs lines 133, 233 - Return full paths
+2. ValidateService.cs line 125 - Cache attribute names  
+3. HelperFunctions.cs - Attribute pattern validation
+4. Documentation/Helpfiles.cs - Add logging
+
+### High Impact (Next Priority)
+1. GeneralCommands.cs - Queue commands (@ps, @wait, @trigger)
+2. BuildingCommands.cs - Core building (@dig, @open, @tel)
+3. AttributeFunctions.cs - Retrieval functions
+4. DbrefFunctions.cs - Relationship functions
+
+### Complex but Critical
+1. SharpMUSHParserVisitor.cs - Function registry optimization
+2. StringFunctions.cs - Pattern matching suite
+3. AttributeService.cs - Permission checks
+
+---
+
+## Development Workflow
+
+### Before Starting
+1. Check dependencies in TODO_IMPLEMENTATION_PLAN.md
+2. Review related TODOs in same file
+3. Check for blocking issues
+
+### While Working
+1. Update TODO comment when started
+2. Add implementation notes
+3. Write tests for new functionality
+
+### After Completion
+1. Remove TODO comment
+2. Update both TODO documents
+3. Add to "Completed" section in PR description
+
+---
+
+## File Locations
+
+### Core Implementation
 ```
-1. Q-Register System
-2. AttributeService Pattern Modes
-3. Permission System Fixes
-4. Database Pattern Matching
+Commands: SharpMUSH.Implementation/Commands/
+Functions: SharpMUSH.Implementation/Functions/
+Services: SharpMUSH.Library/Services/
+Parser: SharpMUSH.Implementation/Visitors/
+Handlers: SharpMUSH.Implementation/Handlers/
 ```
 
-### Phase 2: Core (2-3 weeks)
+### Supporting Code
 ```
-1. Command Queue System
-2. Follower/Following Tracking
-3. Lock System Completion
-4. Halt Functionality
-```
-
-### Phase 3: Communication (1-2 weeks)
-```
-1. Channel System Polish
-2. SPEAK() Integration
-3. Movement Notifications
-4. Mail System
-```
-
-### Phase 4: Parser (1-2 weeks)
-```
-1. $-Command Matching
-2. Parser Optimizations
-3. Context Switching
-4. QREG Improvements
-```
-
-### Phase 5: Functions (2 weeks)
-```
-1. Database Query Functions
-2. Connection Functions
-3. PennMUSH Format Support
-4. Quota System
-```
-
-### Phase 6: Advanced (2-3 weeks)
-```
-1. Telnet Protocol Handlers
-2. Text File Functions
-3. MarkupString Optimizations
-```
-
-### Phase 7: Polish (1-2 weeks)
-```
-1. Fix Failing Tests
-2. Add Missing Tests
-3. Documentation Updates
+Extensions: SharpMUSH.Library/Extensions/
+Helpers: SharpMUSH.Library/HelperFunctions.cs
+Configuration: SharpMUSH.Configuration/
+Tests: SharpMUSH.Tests/
 ```
 
 ---
 
-## By File (Top Files by TODO Count)
+## Contact & Questions
 
-| File | Count | Top Items |
-|------|-------|-----------|
-| `GeneralCommands.cs` | 54 | Q-registers, halt, queue, database search |
-| `AttributeFunctions.cs` | 8 | grep, trust checking, target attribute |
-| `MoreCommands.cs` | 17 | Following system, notifications, money |
-| `DbrefFunctions.cs` | 12 | Follower tracking, search, next dbref |
-| `AttributeService.cs` | 13 | Pattern modes, parent checking, permissions |
-| `SharpMUSHParserVisitor.cs` | 13 | $-commands, optimization, permissions |
-| `ConnectionFunctions.cs` | 7 | Get all players, Dark visibility, @poll |
-| `UtilityFunctions.cs` | 9 | suggest, text file system integration |
-| `WizardCommands.cs` | 7 | Boot behavior, SPEAK(), validation |
-| `PennMUSHDatabaseConverter.cs` | 6 | MarkupString conversion, relationships |
+For questions about specific TODOs:
+- Check TODO_IMPLEMENTATION_PLAN.md for detailed analysis
+- Review git history for context on surrounding code
+- Check related tests for expected behavior
+- Ask in project discussions for clarification
 
 ---
 
-## Critical Bugs to Address
-
-### High Priority Bugs
-1. **DatabaseCommands.cs** lines 186, 201: NOT YET IMPLEMENTED
-2. **PermissionService.cs** line 174: Logic bug ('return true or true')
-3. **LockService.cs** line 120: NotImplementedException
-4. **LocateService.cs** line 235: Logic may be incorrect
-5. **ArangoDatabase.cs** lines 1666-1703: Lazy pattern matching implementation
-
-### Test Failures
-1. **DatabaseCommandTests.cs** line 240: Infinite loop bug
-2. **GeneralCommandTests.cs**: Multiple failing tests (lines 334, 404, 418, 432, 460, 503, 534)
-3. **CommunicationCommandTests.cs**: Failing tests (lines 241, 382)
-4. **StringFunctionUnitTests.cs**: decompose/decomposeweb issues (lines 254-269)
-
----
-
-## Quick Navigation by Area
-
-### Want to work on Commands?
-→ See `TODO_IMPLEMENTATION_PLAN.md` Section 1 (104 items)
-- Start with: Database Commands (NOT IMPLEMENTED)
-- Then: General Commands (Q-registers, halt, queue)
-
-### Want to work on Functions?
-→ See `TODO_IMPLEMENTATION_PLAN.md` Section 2 (58 items)
-- Start with: Attribute Functions (grep, trust)
-- Then: Dbref Functions (follower tracking, search)
-
-### Want to work on Services?
-→ See `TODO_IMPLEMENTATION_PLAN.md` Section 3 (42 items)
-- Start with: PermissionService (critical bugs)
-- Then: AttributeService (pattern modes)
-
-### Want to work on Parser?
-→ See `TODO_IMPLEMENTATION_PLAN.md` Section 4 (15 items)
-- Start with: $-command matching
-- Then: Optimization improvements
-
-### Want to fix Tests?
-→ See `TODO_IMPLEMENTATION_PLAN.md` Section 7 (17 items)
-- Start with: DatabaseCommandTests infinite loop
-- Then: GeneralCommandTests failures
-
-### Want to work on Protocol?
-→ See `TODO_IMPLEMENTATION_PLAN.md` Section 8 (4 items)
-- All 4 telnet handlers need implementation
-
----
-
-## Dependencies at a Glance
-
-```
-Q-Register System
-├── Environment arguments (%0-%9)
-├── Q-register management (clearregs, localize)
-├── Pattern matching (/match)
-├── Queue management
-└── Stack rewinding
-
-AttributeService Pattern Modes
-├── Wildcard attribute matching
-├── Parent checking
-├── Full path returns
-└── Permission memoization
-
-Permission System
-├── Secure command execution
-├── Access control
-├── Trust checking
-└── Visibility controls
-
-Queue System
-├── Inline vs queued execution
-├── PID tracking
-├── WAIT and INDEPENDENT queues
-└── @STARTUP triggers
-
-Database Improvements
-├── Attribute tree support
-├── Object searching
-├── Quota tracking
-└── Statistics queries
-```
-
----
-
-## How to Choose What to Work On
-
-### If you want quick wins:
-- Documentation updates (Section 6.3)
-- Helper function cleanups (Section 11.1)
-- Single-line fixes (various locations)
-
-### If you want high impact:
-- Q-Register System (Phase 1)
-- AttributeService Pattern Modes (Phase 1)
-- Permission System (Phase 1)
-
-### If you want to enable other work:
-- Database Pattern Matching (Phase 1)
-- Queue System (Phase 2)
-- Lock System (Phase 2)
-
-### If you want to improve user experience:
-- Channel System (Phase 3)
-- Movement Notifications (Phase 3)
-- Mail System (Phase 3)
-
-### If you want to fix bugs:
-- Permission Service logic bug
-- Database Commands NOT IMPLEMENTED
-- Test failures
-
----
-
-## Contact Points for Each Area
-
-Each area has a primary file or set of files:
-
-- **Commands:** `SharpMUSH.Implementation/Commands/`
-- **Functions:** `SharpMUSH.Implementation/Functions/`
-- **Services:** `SharpMUSH.Library/Services/`
-- **Parser:** `SharpMUSH.Implementation/Visitors/`
-- **Database:** `SharpMUSH.Database.ArangoDB/`
-- **Tests:** `SharpMUSH.Tests/`
-- **MarkupString:** `SharpMUSH.MarkupString/`
-- **Telnet:** `SharpMUSH.Implementation/Handlers/Telnet/`
-
----
-
-For complete details on any item, see **TODO_IMPLEMENTATION_PLAN.md**.
+**Last Analysis:** 2025-12-30  
+**Next Update:** After next major PR  
+**Analysis Script:** `/tmp/analyze_todos.py`
