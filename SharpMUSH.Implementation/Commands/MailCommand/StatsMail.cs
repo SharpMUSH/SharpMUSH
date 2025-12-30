@@ -1,12 +1,12 @@
 ﻿using Mediator;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
-using Errors = SharpMUSH.Library.Definitions.Errors;
 
 namespace SharpMUSH.Implementation.Commands.MailCommand;
 
@@ -26,8 +26,12 @@ public static class StatsMail
 		{
 			if (!(executor.IsGod() || await executor.IsWizard()))
 			{
-				await notifyService.Notify(executor, Errors.ErrorPerm);
-				return MModule.single(Errors.ErrorPerm);
+				var errorResult = await notifyService.NotifyAndReturn(
+					executor.Object().DBRef,
+					errorReturn: ErrorMessages.Returns.PermissionDenied,
+					notifyMessage: ErrorMessages.Notifications.PermissionDenied,
+					shouldNotify: true);
+				return errorResult.Message!;
 			}
 
 			var maybeTarget = await locateService.LocateAndNotifyIfInvalid(
@@ -41,7 +45,12 @@ public static class StatsMail
 
 			if (maybeTarget.IsNone)
 			{
-				return MModule.single(Errors.ErrorCantSeeThat);
+				var noTargetError = await notifyService.NotifyAndReturn(
+					executor.Object().DBRef,
+					errorReturn: ErrorMessages.Returns.NoSuchObject,
+					notifyMessage: ErrorMessages.Notifications.CantSeeThat,
+					shouldNotify: true);
+				return noTargetError.Message!;
 			}
 
 			target = maybeTarget.AsPlayer;

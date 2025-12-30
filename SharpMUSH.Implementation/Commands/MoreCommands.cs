@@ -13,7 +13,6 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
-using Errors = SharpMUSH.Library.Definitions.Errors;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -415,8 +414,11 @@ public partial class Commands
 				// Check permissions
 				if (!await PermissionService!.Controls(executor, obj))
 				{
-					await NotifyService!.Notify(executor, Errors.ErrorPerm);
-					return new CallState(Errors.ErrorPerm);
+					return await NotifyService!.NotifyAndReturn(
+						executor.Object().DBRef,
+						errorReturn: ErrorMessages.Returns.PermissionDenied,
+						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
+						shouldNotify: true);
 				}
 				
 				// Check if lock exists
@@ -1068,8 +1070,13 @@ public partial class Commands
 			var odropMsg = odropAttr.AsT0[0].Value;
 			if (!string.IsNullOrEmpty(odropMsg.ToPlainText()))
 			{
-				// TODO: Notify others in room (exclude executor)
-				// await NotifyService!.NotifyExcept(currentRoom, executor, odropMsg);
+				// Notify others in room (exclude executor)
+				await CommunicationService!.SendToRoomAsync(
+					executor,
+					currentRoom,
+					_ => odropMsg,
+					INotifyService.NotificationType.Emit,
+					excludeObjects: new[] { executor });
 			}
 		}
 		
@@ -1446,7 +1453,14 @@ public partial class Commands
 				var oefailMsg = oefailAttr.AsT0[0].Value;
 				if (!string.IsNullOrEmpty(oefailMsg.ToPlainText()))
 				{
-					// TODO: Notify others in current location (exclude executor)
+					// Notify others in current location (exclude executor)
+					var currentLocation = await executor.Where();
+					await CommunicationService!.SendToRoomAsync(
+						executor,
+						currentLocation,
+						_ => oefailMsg,
+						INotifyService.NotificationType.Emit,
+						excludeObjects: new[] { executor });
 				}
 			}
 			
@@ -1506,8 +1520,13 @@ public partial class Commands
 			var oenterMsg = oenterAttr.AsT0[0].Value;
 			if (!string.IsNullOrEmpty(oenterMsg.ToPlainText()))
 			{
-				// TODO: Notify others inside object (exclude executor)
-				// await NotifyService!.NotifyExcept(containerToEnter, executor, oenterMsg);
+				// Notify others inside object (exclude executor)
+				await CommunicationService!.SendToRoomAsync(
+					executor,
+					containerToEnter,
+					_ => oenterMsg,
+					INotifyService.NotificationType.Emit,
+					excludeObjects: new[] { executor });
 			}
 		}
 
@@ -1518,8 +1537,13 @@ public partial class Commands
 			var oxenterMsg = oxenterAttr.AsT0[0].Value;
 			if (!string.IsNullOrEmpty(oxenterMsg.ToPlainText()))
 			{
-				// TODO: Notify others in old location (exclude executor)
-				// await NotifyService!.NotifyExcept(oldLocation, executor, oxenterMsg);
+				// Notify others in old location (exclude executor)
+				await CommunicationService!.SendToRoomAsync(
+					executor,
+					oldLocation,
+					_ => oxenterMsg,
+					INotifyService.NotificationType.Emit,
+					excludeObjects: new[] { executor });
 			}
 		}
 
@@ -1737,8 +1761,13 @@ public partial class Commands
 			var osuccessMsg = osuccessAttr.AsT0[0].Value;
 			if (!string.IsNullOrEmpty(osuccessMsg.ToPlainText()))
 			{
-				// TODO: Notify others in source location (exclude executor)
-				// await NotifyService!.NotifyExcept(sourceLocation, executor, osuccessMsg);
+				// Notify others in source location (exclude executor)
+				await CommunicationService!.SendToRoomAsync(
+					executor,
+					sourceLocation,
+					_ => osuccessMsg,
+					INotifyService.NotificationType.Emit,
+					excludeObjects: new[] { executor });
 			}
 		}
 		
@@ -1903,7 +1932,14 @@ public partial class Commands
 			var ogiveMsg = ogiveAttr.AsT0[0].Value;
 			if (!string.IsNullOrEmpty(ogiveMsg.ToPlainText()))
 			{
-				// TODO: Notify others in room (exclude executor and recipient)
+				// Notify others in room (exclude executor and recipient)
+				var executorLocation = await executor.Where();
+				await CommunicationService!.SendToRoomAsync(
+					executor,
+					executorLocation,
+					_ => ogiveMsg,
+					INotifyService.NotificationType.Emit,
+					excludeObjects: new[] { executor, recipient });
 			}
 		}
 		
@@ -1940,7 +1976,14 @@ public partial class Commands
 			var oreceiveMsg = oreceiveAttr.AsT0[0].Value;
 			if (!string.IsNullOrEmpty(oreceiveMsg.ToPlainText()))
 			{
-				// TODO: Notify others in room (exclude executor and recipient)
+				// Notify others in room (exclude executor and recipient)
+				var recipientLocation = await recipient.Where();
+				await CommunicationService!.SendToRoomAsync(
+					executor,
+					recipientLocation,
+					_ => oreceiveMsg,
+					INotifyService.NotificationType.Emit,
+					excludeObjects: new[] { executor, recipient });
 			}
 		}
 		

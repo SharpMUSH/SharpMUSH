@@ -3,6 +3,7 @@ using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -17,8 +18,12 @@ public static class AdminMail
 
 		if (!(executor.IsGod() || await executor.IsWizard()))
 		{
-			await notifyService!.Notify(executor, Errors.ErrorPerm);
-			return MModule.single(Errors.ErrorPerm);
+			var errorResult = await notifyService!.NotifyAndReturn(
+				executor.Object().DBRef,
+				errorReturn: ErrorMessages.Returns.PermissionDenied,
+				notifyMessage: ErrorMessages.Notifications.PermissionDenied,
+				shouldNotify: true);
+			return errorResult.Message!;
 		}
 		
 		switch (switches)

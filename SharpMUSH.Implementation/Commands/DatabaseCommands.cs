@@ -182,23 +182,26 @@ public partial class Commands
 						rowNumber++;
 					}
 
-					// If /notify switch, queue @notify command
-					// TODO: NOT YET IMPLEMENTED 
-					/*
+					// If /notify switch, queue @notify command to signal completion
 					if (notifySwitch)
 					{
-						await Mediator!.Publish(new QueueCommandListRequest(
+						await Mediator!.Send(new QueueCommandListRequest(
 							MModule.single("@notify me"),
 							parser.CurrentState,
-							dbRefAttr.Value,
+							new DbRefAttribute(found.Object().DBRef, attribute.LongName!.Split("`")),
 							0));
-					}*/
+					}
 
 					// Note: SPOOF switch affects who the queued attributes execute as
 					// This is handled at the parser/execution level, not here
 					// The attribute will execute with the permissions of the enactor rather than executor
 
-					return new CallState("#-1 TODO: NOT YET IMPLEMENTED");
+					// Return success - rows have been queued for execution
+					var message = rowNumber == 1 
+						? "No rows returned." 
+						: $"{rowNumber - 1} row{(rowNumber > 2 ? "s" : "")} queued for execution.";
+					await NotifyService!.Notify(executor, message);
+					return new CallState(MModule.single(message));
 				}
 				catch (MySqlException ex)
 				{

@@ -36,6 +36,10 @@ public class GetAttributesQueryHandler(ISharpDatabase database)
 				database.GetAttributesAsync(request.DBRef, request.Pattern.ToUpper(), cancellationToken)
 					.AsTask().GetAwaiter().GetResult()
 				?? AsyncEnumerable.Empty<SharpAttribute>(),
+			IAttributeService.AttributePatternMode.Wildcard =>
+				database.GetAttributesAsync(request.DBRef, request.Pattern.ToUpper(), cancellationToken)
+					.AsTask().GetAwaiter().GetResult()
+				?? AsyncEnumerable.Empty<SharpAttribute>(),
 			IAttributeService.AttributePatternMode.Regex =>
 				database.GetAttributesByRegexAsync(
 						request.DBRef,
@@ -56,6 +60,10 @@ public class GetLazyAttributesQueryHandler(ISharpDatabase database)
 		=> request.Mode switch
 		{
 			IAttributeService.AttributePatternMode.Exact =>
+				database.GetLazyAttributesAsync(request.DBRef, request.Pattern.ToUpper(), cancellationToken)
+					.AsTask().GetAwaiter().GetResult()
+				?? AsyncEnumerable.Empty<LazySharpAttribute>(),
+			IAttributeService.AttributePatternMode.Wildcard =>
 				database.GetLazyAttributesAsync(request.DBRef, request.Pattern.ToUpper(), cancellationToken)
 					.AsTask().GetAwaiter().GetResult()
 				?? AsyncEnumerable.Empty<LazySharpAttribute>(),

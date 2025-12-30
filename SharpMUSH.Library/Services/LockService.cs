@@ -120,13 +120,16 @@ public class LockService(IFusionCache cache, IBooleanExpressionParser bep, IMedi
 		AnySharpObject unlocker)
 		=> bep.Compile(lockString)(gated, unlocker);
 
-	// TODO: throw new NotImplementedException(); 
 	public bool Evaluate(string lockString, SharpChannel gatedChannel, AnySharpObject unlocker)
 	{
 		if(lockString is "#TRUE" or "") return true;
 		
 		var compile = bep.Compile(lockString);
-		return true;
+		// For channel locks, we need to evaluate the lock against the unlocker
+		// Channels don't have the same object structure, so we pass a synthetic object representation
+		var channelOwner = gatedChannel.Owner.WithCancellation(CancellationToken.None).GetAwaiter().GetResult();
+		var syntheticGated = new AnySharpObject(channelOwner);
+		return compile(syntheticGated, unlocker);
 	}
 
 	public bool Evaluate(

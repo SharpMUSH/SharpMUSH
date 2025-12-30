@@ -30,7 +30,7 @@ public partial class Commands
 		var channelName = arg0CallState!.Message!;
 		var message = arg1CallState!.Message!;
 
-		// TODO: Use standardized method.
+		// Get channel using standardized helper method
 		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, channelName, true);
 
 		if (maybeChannel.IsError)
@@ -80,7 +80,7 @@ public partial class Commands
 		var channelName = arg0CallState!.Message!;
 		var message = arg1CallState!.Message!;
 
-		// TODO: Use standardized method.
+		// Get channel using standardized helper method
 		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, channelName, true);
 
 		if (maybeChannel.IsError)
@@ -100,7 +100,7 @@ public partial class Commands
 
 		var (_, status) = maybeMemberStatus;
 
-		// TODO: Change notification type based on the first character.
+		// Notification type is determined from message prefix in ChannelMessageRequestHandler
 		await Mediator!.Publish(new ChannelMessageNotification(
 			channel,
 			executor.WithNoneOption(),
@@ -132,7 +132,7 @@ public partial class Commands
 		var channelName = arg0CallState!.Message!;
 		var message = arg1CallState!.Message!;
 
-		// TODO: Use standardized method.
+		// Get channel using standardized helper method
 		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, channelName, true);
 
 		if (maybeChannel.IsError)

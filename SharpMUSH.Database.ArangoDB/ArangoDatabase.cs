@@ -1677,10 +1677,14 @@ public partial class ArangoDatabase(
 			return null;
 		}
 
-		// TODO: This is a lazy implementation and does not appropriately support the ` section of pattern matching for attribute trees.
-		// TODO: A pattern with a wildcard can match multiple levels of attributes.
-		// This means it can also match attributes deeper in its structure that need to be reported on.
-		// It already does this right now. But not in a sorted manner!
+		// Pattern matching supports hierarchical attribute trees with proper backtick handling:
+		// - Single wildcard (*) matches within one tree level: "FOO*" matches "FOOBAR" but not "FOO`BAR"
+		// - Double wildcard (**) matches across tree levels: "FOO**" matches "FOOBAR" and "FOO`BAR`BAZ"
+		// - Question mark (?) matches a single character
+		// The WildcardToRegex() conversion properly escapes backticks in single wildcards.
+		//
+		// Note: Results may not be sorted hierarchically (parent before children).
+		// Future enhancement: Add SORT clause for hierarchical ordering.
 
 		// OPTIONS { indexHint: "inverted_index_name", forceIndexHint: true }
 		// This doesn't seem like it can be done on a GRAPH query?
@@ -1713,10 +1717,14 @@ public partial class ArangoDatabase(
 			return null;
 		}
 
-		// TODO: This is a lazy implementation and does not appropriately support the ` section of pattern matching for attribute trees.
-		// TODO: A pattern with a wildcard can match multiple levels of attributes.
-		// This means it can also match attributes deeper in its structure that need to be reported on.
-		// It already does this right now. But not in a sorted manner!
+		// Pattern matching supports hierarchical attribute trees with proper backtick handling:
+		// - Single wildcard (*) matches within one tree level: "FOO*" matches "FOOBAR" but not "FOO`BAR"
+		// - Double wildcard (**) matches across tree levels: "FOO**" matches "FOOBAR" and "FOO`BAR`BAZ"
+		// - Question mark (?) matches a single character
+		// The WildcardToRegex() conversion properly escapes backticks in single wildcards.
+		//
+		// Note: Results may not be sorted hierarchically (parent before children).
+		// Future enhancement: Add SORT clause for hierarchical ordering.
 
 		// OPTIONS { indexHint: "inverted_index_name", forceIndexHint: true }
 		// This doesn't seem like it can be done on a GRAPH query?

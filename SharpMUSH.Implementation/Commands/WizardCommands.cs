@@ -589,8 +589,11 @@ public partial class Commands
 		// Check permission - wizard only
 		if (!await executor.IsWizard())
 		{
-			await NotifyService!.Notify(executor, "Permission denied.");
-			return new CallState(Errors.ErrorPerm);
+			return await NotifyService!.NotifyAndReturn(
+				executor.Object().DBRef,
+				errorReturn: ErrorMessages.Returns.PermissionDenied,
+				notifyMessage: ErrorMessages.Notifications.PermissionDenied,
+				shouldNotify: true);
 		}
 		
 		if (parser.CurrentState.Arguments.Count < 1)
@@ -1427,8 +1430,11 @@ public partial class Commands
 		
 		if (!await executor.IsWizard())
 		{
-			await NotifyService!.Notify(executor, "Permission denied.");
-			return new CallState(Errors.ErrorPerm);
+			return await NotifyService!.NotifyAndReturn(
+				executor.Object().DBRef,
+				errorReturn: ErrorMessages.Returns.PermissionDenied,
+				notifyMessage: ErrorMessages.Notifications.PermissionDenied,
+				shouldNotify: true);
 		}
 		
 		if (args.Count == 0)
@@ -1735,8 +1741,11 @@ public partial class Commands
 		{
 			if (!await executor.IsWizard())
 			{
-				await NotifyService!.Notify(executor, "Permission denied.");
-				return new CallState(Errors.ErrorPerm);
+				return await NotifyService!.NotifyAndReturn(
+					executor.Object().DBRef,
+					errorReturn: ErrorMessages.Returns.PermissionDenied,
+					notifyMessage: ErrorMessages.Notifications.PermissionDenied,
+					shouldNotify: true);
 			}
 			
 			if (args.Count < 2)
@@ -1776,8 +1785,11 @@ public partial class Commands
 		{
 			if (!await executor.IsWizard())
 			{
-				await NotifyService!.Notify(executor, "Permission denied.");
-				return new CallState(Errors.ErrorPerm);
+				return await NotifyService!.NotifyAndReturn(
+					executor.Object().DBRef,
+					errorReturn: ErrorMessages.Returns.PermissionDenied,
+					notifyMessage: ErrorMessages.Notifications.PermissionDenied,
+					shouldNotify: true);
 			}
 			
 			await NotifyService!.Notify(executor, "Quota listing for all players:");
@@ -2028,8 +2040,11 @@ public partial class Commands
 			{
 				if (!player.IsPlayer)
 				{
-					await NotifyService!.Notify(executor, "First argument must be a player.");
-					return Errors.ErrorInvalidPlayer;
+					return await NotifyService!.NotifyAndReturn(
+						executor.Object().DBRef,
+						errorReturn: ErrorMessages.Returns.InvalidPlayer,
+						notifyMessage: ErrorMessages.Notifications.MustBePlayer,
+						shouldNotify: true);
 				}
 
 				// Handle clearing zones with "none"

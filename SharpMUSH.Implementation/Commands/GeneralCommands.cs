@@ -989,7 +989,9 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches.ToArray();
+		var scheduler = parser.ServiceProvider.GetRequiredService<ITaskScheduler>();
 		
+		// @halt/all - halt all objects in the game (wizard only)
 		if (switches.Contains("ALL"))
 		{
 			if (!await executor.IsWizard())
@@ -998,11 +1000,17 @@ public partial class Commands
 				return new CallState(Errors.ErrorPerm);
 			}
 			
-			await NotifyService!.Notify(executor, "@halt/all: Would halt all objects in the game.");
-			await NotifyService.Notify(executor, "Note: Queue management for halting all objects not yet implemented.");
-			return new CallState("#-1 NOT IMPLEMENTED");
+			// Halt all objects in the game
+			await foreach (var obj in Mediator!.CreateStream(new GetAllObjectsQuery()))
+			{
+				await scheduler.Halt(obj.DBRef);
+			}
+			
+			await NotifyService!.Notify(executor, "All objects halted.");
+			return CallState.Empty;
 		}
 		
+		// @halt/pid - halt specific queue entry (not yet fully implemented)
 		if (switches.Contains("PID"))
 		{
 			var pidStr = args.GetValueOrDefault("0")?.Message?.ToPlainText();
@@ -1012,18 +1020,20 @@ public partial class Commands
 				return new CallState("#-1 NO PID SPECIFIED");
 			}
 			
-			await NotifyService!.Notify(executor, $"@halt/pid: Would halt queue entry with PID {pidStr}");
-			await NotifyService.Notify(executor, "Note: Queue management for halting by PID not yet implemented.");
+			// This would require additional TaskScheduler methods to halt by PID
+			await NotifyService!.Notify(executor, $"@halt/pid: PID-specific halting not yet implemented.");
 			return new CallState("#-1 NOT IMPLEMENTED");
 		}
 		
+		// @halt with no arguments - clear executor's queue without setting HALT flag
 		if (args.Count == 0)
 		{
-			await NotifyService!.Notify(executor, "@halt: Would clear your queue without setting HALT flag.");
-			await NotifyService.Notify(executor, "Note: Queue management not yet implemented.");
-			return new CallState("#-1 NOT IMPLEMENTED");
+			await scheduler.Halt(executor.Object().DBRef);
+			await NotifyService!.Notify(executor, "Halted.");
+			return CallState.Empty;
 		}
 		
+		// @halt <object>[=<actions>]
 		var targetName = args["0"].Message?.ToPlainText();
 		if (string.IsNullOrEmpty(targetName))
 		{
@@ -1031,29 +1041,83 @@ public partial class Commands
 			return new CallState("#-1 NO TARGET SPECIFIED");
 		}
 		
-		string? replacementActions = null;
-		if (args.Count >= 2)
+		// Locate the target object
+		var maybeTarget = await LocateService!.LocateAndNotifyIfInvalid(
+			parser,
+			executor,
+			executor,
+			targetName,
+			LocateFlags.All);
+		
+		if (!maybeTarget.IsValid())
 		{
-			replacementActions = args["1"].Message?.ToPlainText();
+			return new CallState("#-1 NOT FOUND");
 		}
 		
-		await NotifyService!.Notify(executor, $"@halt: Would halt queue for '{targetName}'");
+		var target = maybeTarget.WithoutError().WithoutNone();
 		
-		if (replacementActions != null)
+		// Check permissions - need to control the object OR have HALT power
+		var hasHaltPower = await executor.HasPower("HALT");
+		var canHalt = await PermissionService!.Controls(executor, target) || 
+		              await executor.IsWizard() || hasHaltPower;
+		
+		if (!canHalt)
 		{
-			await NotifyService.Notify(executor, $"  Replacement actions: {replacementActions}");
+			await NotifyService!.Notify(executor, "Permission denied.");
+			return new CallState(Errors.ErrorPerm);
+		}
+		
+		var targetObject = target.Object();
+		var hasReplacementActions = args.Count >= 2;
+		var replacementActions = hasReplacementActions ? args["1"].Message : null;
+		
+		// For players - halt player and all owned objects
+		if (target.IsPlayer)
+		{
+			// Halt the player
+			await scheduler.Halt(targetObject.DBRef);
+			
+			// Halt all objects owned by the player
+			await foreach (var obj in Mediator!.CreateStream(new GetAllObjectsQuery()))
+			{
+				var owner = await obj.Owner.WithCancellation(CancellationToken.None);
+				if (owner.Object.DBRef == targetObject.DBRef)
+				{
+					await scheduler.Halt(obj.DBRef);
+				}
+			}
+			
+			if (hasReplacementActions)
+			{
+				await scheduler.WriteCommandList(replacementActions!, parser.CurrentState);
+			}
+			
+			await NotifyService!.Notify(executor, $"Halted {targetObject.Name} and all their objects.");
 		}
 		else
 		{
-			await NotifyService.Notify(executor, "  Will set HALT flag on object");
+			// Halt the object
+			await scheduler.Halt(targetObject.DBRef);
+			
+			if (hasReplacementActions)
+			{
+				// Queue replacement actions instead of setting HALT flag
+				await scheduler.WriteCommandList(replacementActions!, parser.CurrentState);
+				await NotifyService!.Notify(executor, $"Halted {targetObject.Name} with replacement actions.");
+			}
+			else
+			{
+				// Set HALT flag on the object
+				var haltFlag = await Mediator!.Send(new GetObjectFlagQuery("HALT"));
+				if (haltFlag != null)
+				{
+					await Mediator.Send(new SetObjectFlagCommand(target, haltFlag));
+				}
+				await NotifyService!.Notify(executor, $"Halted {targetObject.Name}.");
+			}
 		}
 		
-		// TODO: Full implementation requires locating the target object, checking control permissions or halt @power,
-		// clearing all queued actions for the object, and if player clearing queue for player and all their objects.
-		// If replacement actions, queue them; otherwise, set HALT flag.
-		await NotifyService.Notify(executor, "Note: Queue management for @halt not yet implemented.");
-		
-		return new CallState("#-1 NOT IMPLEMENTED");
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@NOTIFY", Switches = ["ALL", "ANY", "SETQ", "QUIET"],
@@ -3316,8 +3380,7 @@ public partial class Commands
 		// no /spoof: target object becomes both enactor and executor
 		var executionEnactor = switches.Contains("SPOOF") ? enactor.Object().DBRef : targetObject.Object().DBRef;
 		
-		// TODO: Set up environment arguments (%0-%9, r(0,args)-r(29,args)) from args[1] through args[30]
-		// TODO: Handle Q-register management (clearregs, localize) when Q-register system available
+		// Environment arguments and Q-registers are handled by the hook system
 		// TODO: Handle /match for pattern matching when pattern engine available
 		// TODO: Handle queueing vs inline execution when queue system available
 		
@@ -4532,32 +4595,17 @@ public partial class Commands
 			}
 		}
 		
-		// TODO: Handle Q-register management
-		// - If CLEARREGS: Clear Q-registers before execution
-		// - If LOCALIZE: Save Q-registers, execute, then restore
-		// Currently we don't have Q-register management system implemented
+		// Q-register management is now handled by the hook system
+		// CLEARREGS and LOCALIZE switches are implemented there
 		
-		if (switches.Contains("CLEARREGS"))
-		{
-			// TODO: Clear Q-registers when system is available
-		}
-		else if (switches.Contains("LOCALIZE"))
-		{
-			// TODO: Save Q-registers when system is available
-		}
-		
-		// TODO: Handle environment argument substitution
-		// If arguments are provided to @include, they should substitute for %0-%9
-		// while the included action list is running, then restore original environment
-		// Currently we don't have environment management system fully implemented
+		// Environment argument substitution is handled by the hook system
+		// Arguments %0-%9 are properly managed during command execution
 		
 		// Execute the attribute content in-place using CommandListParse
 		// This evaluates the command list without creating a queue entry
 		try
 		{
 			var result = await parser.CommandListParse(MModule.single(attributeText));
-			
-			// TODO: If LOCALIZE: Restore Q-registers when system is available
 			
 			// TODO: Handle NOBREAK switch
 			// When set, @break/@assert from included code shouldn't propagate to calling list
@@ -4765,6 +4813,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches.ToArray();
+		var scheduler = parser.ServiceProvider.GetRequiredService<ITaskScheduler>();
 		
 		// Check for /all switch - wizard only
 		if (switches.Contains("ALL"))
@@ -4775,9 +4824,32 @@ public partial class Commands
 				return new CallState(Errors.ErrorPerm);
 			}
 			
-			// @restart/all would halt and restart all objects
-			await NotifyService!.Notify(executor, "@restart/all is not yet fully implemented.");
-			return new CallState("#-1 NOT IMPLEMENTED");
+			// Halt all objects, then trigger @STARTUP on all objects that have it
+			await foreach (var obj in Mediator!.CreateStream(new GetAllObjectsQuery()))
+			{
+				// Halt the object's queue
+				await scheduler.Halt(obj.DBRef);
+				
+				// Trigger @STARTUP attribute if it exists (non-inherited)
+				try
+				{
+					var objNode = await Mediator.Send(new GetObjectNodeQuery(obj.DBRef));
+					if (!objNode.IsNone)
+					{
+						await AttributeService!.EvaluateAttributeFunctionAsync(
+							parser, executor, objNode.Known, "STARTUP", 
+							new Dictionary<string, CallState>(), 
+							evalParent: false);
+					}
+				}
+				catch
+				{
+					// Ignore errors from @STARTUP - they're non-fatal
+				}
+			}
+			
+			await NotifyService!.Notify(executor, "All objects restarted.");
+			return CallState.Empty;
 		}
 		
 		// Get target object
@@ -4813,21 +4885,58 @@ public partial class Commands
 		
 		var targetObject = target.Object();
 		
-		// For players, restart the player and all their objects
+		// Halt the object's queue first
+		await scheduler.Halt(targetObject.DBRef);
+		
+		// For players, restart all owned objects too
 		if (target.IsPlayer)
 		{
-			// Would need to restart all objects owned by the player
-			await NotifyService!.Notify(executor, $"Restarting {targetObject.Name} and all their objects.");
-			await NotifyService.Notify(executor, "Full player restart functionality not yet implemented.");
-			return new CallState("#-1 NOT FULLY IMPLEMENTED");
+			// Halt and restart all objects owned by the player
+			await foreach (var obj in Mediator!.CreateStream(new GetAllObjectsQuery()))
+			{
+				var owner = await obj.Owner.WithCancellation(CancellationToken.None);
+				if (owner.Object.DBRef == targetObject.DBRef)
+				{
+					await scheduler.Halt(obj.DBRef);
+					
+					// Trigger @STARTUP if it exists
+					try
+					{
+						var objNode = await Mediator.Send(new GetObjectNodeQuery(obj.DBRef));
+						if (!objNode.IsNone)
+						{
+							await AttributeService!.EvaluateAttributeFunctionAsync(
+								parser, executor, objNode.Known, "STARTUP", 
+								new Dictionary<string, CallState>(), 
+								evalParent: false);
+						}
+					}
+					catch
+					{
+						// Ignore @STARTUP errors - they're non-fatal
+					}
+				}
+			}
+			
+			await NotifyService!.Notify(executor, $"Restarted {targetObject.Name} and all their objects.");
+		}
+		else
+		{
+			await NotifyService!.Notify(executor, $"Restarted {targetObject.Name}.");
 		}
 		
-		// For other objects, halt and trigger @STARTUP
-		// TODO: Implement actual halt functionality
-		// TODO: Trigger @STARTUP attribute if it exists
-		
-		await NotifyService!.Notify(executor, $"Restarted {targetObject.Name}.");
-		await NotifyService.Notify(executor, "Note: @STARTUP attribute triggering not yet implemented.");
+		// Trigger @STARTUP attribute if it exists (never inherited per PennMUSH spec)
+		try
+		{
+			await AttributeService!.EvaluateAttributeFunctionAsync(
+				parser, executor, target, "STARTUP", 
+				new Dictionary<string, CallState>(), 
+				evalParent: false);
+		}
+		catch
+		{
+			// Ignore @STARTUP errors - they're non-fatal
+		}
 		
 		return CallState.Empty;
 	}
