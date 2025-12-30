@@ -569,9 +569,9 @@ public partial class Commands
 
 		// Update warnings
 		var oldWarnings = targetObj.Warnings;
-		targetObj.Warnings = newWarnings;
 		
-		// TODO: Persist the change to the database
+		// Persist the change to the database
+		await Mediator!.Send(new SetObjectWarningsCommand(target.AsSharpObject, newWarnings));
 
 		if (newWarnings != WarningType.None)
 		{
