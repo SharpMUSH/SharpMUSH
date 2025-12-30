@@ -278,6 +278,9 @@ public class TaskScheduler(
 			// Update the job data with the modified state
 			data["State"] = state;
 			
+			// Need to re-add the job to persist the changes
+			await _scheduler.AddJob(job, replace: true, storeNonDurableWhileAwaitingScheduling: true);
+			
 			return true;
 		}
 		catch (Exception)

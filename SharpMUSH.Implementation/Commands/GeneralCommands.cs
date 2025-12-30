@@ -1179,7 +1179,7 @@ public partial class Commands
 					MModule.single(0.ToString()));
 				break;
 			case "SETQ":
-				// Modify Q-registers of the first waiting task
+				// Modify Q-registers of the first waiting task, then trigger it
 				var scheduler = parser.ServiceProvider.GetRequiredService<ITaskScheduler>();
 				var modified = await scheduler.ModifyQRegisters(dbRefAttribute, qRegisters!);
 				if (!modified)
@@ -1187,7 +1187,12 @@ public partial class Commands
 					await NotifyService!.Notify(executor, "No task is waiting on that semaphore.");
 					return new CallState("#-1 NO WAITING TASK");
 				}
-				// Don't show "Notified." for /setq since we didn't actually notify
+				// After modifying Q-registers, trigger the task execution (same as regular @notify but only 1 task)
+				await Mediator!.Send(new NotifySemaphoreRequest(dbRefAttribute, oldSemaphoreCount, 1));
+				var newCountSetQ = oldSemaphoreCount - 1;
+				await AttributeService!.SetAttributeAsync(executor, objectToNotify, attribute,
+					MModule.single(newCountSetQ.ToString()));
+				// Don't show "Notified." for /setq (different from regular @notify)
 				return new None();
 		}
 
