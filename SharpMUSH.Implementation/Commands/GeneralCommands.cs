@@ -658,7 +658,15 @@ public partial class Commands
 			outputSections.Add(MModule.single($"Powers: {string.Join(" ", powersList)}"));
 		}
 		
-		// TODO: Channels, Warnings Checked
+		// Display warnings if any are set
+		if (obj.Warnings != WarningType.None)
+		{
+			var warningsList = WarningTypeHelper.UnparseWarnings(obj.Warnings);
+			outputSections.Add(MModule.single($"Warnings: {warningsList}"));
+		}
+		
+		// Display channels if player is on any (would require channel membership query)
+		// For now, this would need channel service integration
 		
 		if (switches.Contains("DEBUG") && await executor.IsWizard())
 		{
