@@ -662,15 +662,15 @@ public partial class Functions
 	[SharpFunction(Name = "mwho", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> MortalWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// TODO: Create a "mortal" viewer context - can't see hidden players
+		// Mortal viewer context - can't see hidden (DARK) players unless executor is a wizard
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-
+		var isWizard = await executor.IsWizard();
 
 		var nonHiddenConnections = ConnectionService!
 			.GetAll()
 			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
 			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
-			.Where(async (x, _) => !await x.HasFlag("DARK"))
+			.Where(async (x, _) => isWizard || !await x.HasFlag("DARK"))
 			.Select(player => $"#{player.Object().DBRef.Number}");
 		
 		return new CallState(string.Join(" ", await nonHiddenConnections.ToArrayAsync()));
@@ -679,11 +679,15 @@ public partial class Functions
 	[SharpFunction(Name = "mwhoid", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> MortalWhoObjectIds(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		// Mortal viewer context - can't see hidden (DARK) players unless executor is a wizard
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var isWizard = await executor.IsWizard();
+		
 		var nonHiddenConnectionsObjIds = ConnectionService!
 			.GetAll()
 			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
 			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
-			.Where(async (x, _) => !await x.HasFlag("DARK"))
+			.Where(async (x, _) => isWizard || !await x.HasFlag("DARK"))
 			.Select(x => x.Object().DBRef);
 
 		return new CallState(string.Join(" ", await nonHiddenConnectionsObjIds.ToArrayAsync()));

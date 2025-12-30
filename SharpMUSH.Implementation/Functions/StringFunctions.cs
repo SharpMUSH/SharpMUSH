@@ -85,17 +85,12 @@ public partial class Functions
 		var open = ArgHelpers.NoParseDefaultNoParseArgument(args, 5, "\"");
 		var close = ArgHelpers.NoParseDefaultNoParseArgument(args, 6, "\"");
 
-		// TODO: This behavior gets re-used, so best to create a HelperFunction for this.
-
-		var messageType = speakString.ToPlainText() switch
-		{
-			[':', .. _] => INotifyService.NotificationType.Pose,
-			[';', .. _] => INotifyService.NotificationType.SemiPose,
-			['|', .. _] => INotifyService.NotificationType.Emit,
-			_ => INotifyService.NotificationType.Say
-		};
-
-		speakString = speakString.ToPlainText() switch
+		// Determine message type and strip prefix using helper
+		var plainSpeak = speakString.ToPlainText();
+		var messageType = MessageHelpers.DetermineMessageType(plainSpeak);
+		
+		// Strip the prefix (including quotes)
+		speakString = plainSpeak switch
 		{
 			[':', .. _]
 				or [';', .. _]
