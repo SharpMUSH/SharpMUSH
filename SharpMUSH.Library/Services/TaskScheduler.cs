@@ -93,6 +93,11 @@ public class TaskScheduler(
 			return;
 		}
 
+		var triggerIdentity = $"dbref:{state.Executor}-{NextPid()}";
+		var triggerGroup = $"{SemaphoreGroup}:{dbRefAttribute}";
+		
+		// DIAGNOSTIC: Log the group key being used for job creation
+		
 		await _scheduler.ScheduleJob(
 			JobBuilder
 				.CreateForAsync<SemaphoreTask>()
@@ -104,9 +109,9 @@ public class TaskScheduler(
 				.Build(),
 			TriggerBuilder.Create()
 				.WithSimpleSchedule(x => x.WithRepeatCount(0))
-				.WithIdentity(
-					$"dbref:{state.Executor}-{NextPid()}",
-					$"{SemaphoreGroup}:{dbRefAttribute}").Build());
+				.StartAt(DateTimeOffset.UtcNow.AddYears(100))  // Far future - will be triggered manually by @notify
+				.WithIdentity(triggerIdentity, triggerGroup).Build());
+		
 	}
 
 	public async ValueTask WriteAsyncAttribute(Func<ValueTask<ParserState>> function,
@@ -157,9 +162,14 @@ public class TaskScheduler(
 
 	public async ValueTask Notify(DbRefAttribute dbAttribute, int oldValue, int count = 1)
 	{
+		var groupKey = $"{SemaphoreGroup}:{dbAttribute}";
+		
+		// DIAGNOSTIC: Log the group key being used for notification lookup
+		
 		var semaphoresForObject = await _scheduler
-			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals($"{SemaphoreGroup}:{dbAttribute}"));
+			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals(groupKey));
 
+		
 		// If oldValue is negative, we notify the specified number of tasks
 		// If oldValue is >= 0, we notify based on count
 		var tasksToNotify = oldValue < 0 ? Math.Min(count, 0 - oldValue) : count;
@@ -170,7 +180,10 @@ public class TaskScheduler(
 			try
 			{
 				var to = await _scheduler.GetTrigger(trigger, CancellationToken.None);
-				if (to == null) continue;
+				if (to == null)
+				{
+					continue;
+				}
 				
 				var job = to.JobKey;
 				await _scheduler.TriggerJob(job);
@@ -266,6 +279,9 @@ public class TaskScheduler(
 			// Update the job data with the modified state
 			data["State"] = state;
 			
+			// Need to re-add the job to persist the changes
+			await _scheduler.AddJob(job, replace: true, storeNonDurableWhileAwaitingScheduling: true);
+			
 			return true;
 		}
 		catch (Exception)
@@ -334,7 +350,7 @@ public class TaskScheduler(
 
 	public async IAsyncEnumerable<SemaphoreTaskData> GetSemaphoreTasks(DBRef obj)
 	{
-		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupStartsWith($"{SemaphoreGroup}:{obj}"));
+		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupStartsWith($"{SemaphoreGroup}:#{obj.Number}"));
 		var keyTriggers = keys.ToAsyncEnumerable()
 			.Select<TriggerKey, SemaphoreTaskData>(async (triggerKey, _) =>
 				await MapSemaphoreTaskData(_scheduler, triggerKey));
