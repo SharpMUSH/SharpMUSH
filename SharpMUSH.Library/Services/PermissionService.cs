@@ -76,8 +76,9 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 		if (await CanExamine(viewer, target))
 			return true;
 
-		// Otherwise, check if the attribute is visual
-		return attribute.Length > 0 && attribute.Last().IsVisual();
+		// Check the full attribute path for visibility permissions
+		// All attributes in the path must be visual for the viewer to see the final attribute
+		return attribute.Length > 0 && attribute.All(attr => attr.IsVisual());
 	}
 
 	public async ValueTask<bool> CanViewAttribute(AnySharpObject viewer, AnySharpObject target,
@@ -87,8 +88,9 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 		if (await CanExamine(viewer, target))
 			return true;
 
-		// Otherwise, check if the attribute is visual
-		return attribute.Length > 0 && attribute.Last().IsVisual();
+		// Check the full attribute path for visibility permissions
+		// All attributes in the path must be visual for the viewer to see the final attribute
+		return attribute.Length > 0 && attribute.All(attr => attr.IsVisual());
 	}
 
 	public async ValueTask<bool> CanSee(AnySharpObject viewer, AnySharpObject target)
@@ -132,7 +134,7 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 
 	/// <summary>
 	/// Check if viewer can execute an attribute on target.
-	/// Optimized to avoid repeated checks when validating multiple attributes.
+	/// Checks full attribute path - all parent attributes must allow evaluation.
 	/// </summary>
 	public async ValueTask<bool> CanExecuteAttribute(AnySharpObject viewer, AnySharpObject target,
 		params SharpAttribute[] attribute)
@@ -140,12 +142,20 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 		if (attribute.Length == 0)
 			return false;
 
-		return await CanEvalAttr(viewer, target, attribute.Last());
+		// Check all attributes in the path for execution permissions
+		// All must allow evaluation for the final attribute to be executable
+		foreach (var attr in attribute)
+		{
+			if (!await CanEvalAttr(viewer, target, attr))
+				return false;
+		}
+		
+		return true;
 	}
 
 	/// <summary>
 	/// Check if viewer can execute a lazy attribute on target.
-	/// Optimized to avoid repeated checks when validating multiple attributes.
+	/// Checks full attribute path - all parent attributes must allow evaluation.
 	/// </summary>
 	public async ValueTask<bool> CanExecuteAttribute(AnySharpObject viewer, AnySharpObject target,
 		params LazySharpAttribute[] attribute)
@@ -153,7 +163,15 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 		if (attribute.Length == 0)
 			return false;
 
-		return await CanEvalAttr(viewer, target, attribute.Last());
+		// Check all attributes in the path for execution permissions
+		// All must allow evaluation for the final attribute to be executable
+		foreach (var attr in attribute)
+		{
+			if (!await CanEvalAttr(viewer, target, attr))
+				return false;
+		}
+		
+		return true;
 	}
 
 	public async ValueTask<bool> Controls(AnySharpObject who, AnySharpObject target)

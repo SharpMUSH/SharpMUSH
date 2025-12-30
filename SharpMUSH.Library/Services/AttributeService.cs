@@ -129,8 +129,6 @@ public class AttributeService(
 		}
 		
 		return new None();
-
-		// TODO: Currently this only returns the last piece. We should return the full path.
 	}
 
 	public async ValueTask<OptionalLazySharpAttributeOrError> LazilyGetAttributeAsync(AnySharpObject executor,
@@ -318,6 +316,14 @@ public class AttributeService(
 			return MModule.single(Errors.ErrorObjectAttributeString);
 		}
 		
+		var realExecutor = executor;
+		
+		if (ignorePermissions)
+		{
+			var maybeOne = await mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
+			realExecutor = maybeOne.Known;
+		}
+		
 		// #apply evaluations. 
 		if (applyPredicate && !ignoreLambda)
 		{
@@ -332,9 +338,47 @@ public class AttributeService(
 				.Range(0, argN)
 				.ToDictionary(argK => argK.ToString(), argK => args[argK.ToString()]);
 
-			// TODO: This is skipping function permission checks.
 			if (parser.FunctionLibrary.TryGetValue(obj.ToPlainText().Remove(0, 6).ToLower(), out var applyFunction))
 			{
+				// Check function permission flags
+				var functionFlags = applyFunction.LibraryInformation.Attribute.Flags;
+				
+				// Check wizard/admin/god restrictions
+				if (functionFlags.HasFlag(FunctionFlags.GodOnly) && !await realExecutor.IsRoyalty())
+				{
+					return MModule.single(Errors.ErrorAttrEvalPermissions);
+				}
+				if (functionFlags.HasFlag(FunctionFlags.AdminOnly) && !await realExecutor.IsRoyalty())
+				{
+					return MModule.single(Errors.ErrorAttrEvalPermissions);
+				}
+				if (functionFlags.HasFlag(FunctionFlags.WizardOnly) && !await realExecutor.IsWizard())
+				{
+					return MModule.single(Errors.ErrorAttrEvalPermissions);
+				}
+				if (functionFlags.HasFlag(FunctionFlags.NoGuest) && await realExecutor.IsGuest())
+				{
+					return MModule.single(Errors.ErrorAttrEvalPermissions);
+				}
+				
+				// Check custom restrictions
+				if (applyFunction.LibraryInformation.Attribute.Restrict.Length > 0)
+				{
+					var hasRestriction = false;
+					foreach (var restriction in applyFunction.LibraryInformation.Attribute.Restrict)
+					{
+						if (await realExecutor.HasPower(restriction))
+						{
+							hasRestriction = true;
+							break;
+						}
+					}
+					if (!hasRestriction)
+					{
+						return MModule.single(Errors.ErrorAttrEvalPermissions);
+					}
+				}
+				
 				var result = await parser.With(
 					s => s with { Arguments = slimArgs, EnvironmentRegisters = slimArgs },
 					async np => await applyFunction.LibraryInformation.Function.Invoke(np)
