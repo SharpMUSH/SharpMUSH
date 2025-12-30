@@ -420,9 +420,10 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var target = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, "me");
-		var queueTypes = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, "wait semaphore").ToPlainText()
-			.ToUpperInvariant()
-			.Split(" ").Distinct();
+		var queueTypesStr = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, "wait semaphore").ToPlainText()
+			.ToUpperInvariant();
+		
+		var queueTypes = queueTypesStr.Split(" ", StringSplitOptions.RemoveEmptyEntries).Distinct().ToList();
 
 		if (queueTypes.Any(type => type is not "WAIT" and not "SEMAPHORE" and not "INDEPENDENT"))
 		{
@@ -440,16 +441,48 @@ public partial class Functions
 		}
 
 		var located = maybeLocate.AsSharpObject;
+		var locationDBRef = located.Object().DBRef;
 
-		// TODO: Implement WAIT and INDEPENDENT queue handling
-		var semaphorePids = Mediator!
-			.CreateStream(new ScheduleSemaphoreQuery(located.Object().DBRef));
+		// Determine which queues to query
+		bool includeWait = queueTypes.Contains("WAIT");
+		bool includeSemaphore = queueTypes.Contains("SEMAPHORE");
+		bool independent = queueTypes.Contains("INDEPENDENT");
 
-		var pids = await semaphorePids
-			.Select<SemaphoreTaskData, string>(x => x.Pid.ToString())
-			.ToArrayAsync();
+		// If no specific queue type is specified (only INDEPENDENT), default to wait+semaphore
+		if (!includeWait && !includeSemaphore)
+		{
+			includeWait = true;
+			includeSemaphore = true;
+		}
 
-		return new CallState(string.Join(' ', pids));
+		var allPids = new List<long>();
+
+		// Get Wait queue PIDs (from @wait delays)
+		if (includeWait)
+		{
+			var waitPids = Mediator!.CreateStream(new ScheduleDelayQuery(locationDBRef));
+			await foreach (var pid in waitPids)
+			{
+				allPids.Add(pid);
+			}
+		}
+
+		// Get Semaphore queue PIDs
+		if (includeSemaphore)
+		{
+			var semaphorePids = Mediator!.CreateStream(new ScheduleSemaphoreQuery(locationDBRef));
+			await foreach (var taskData in semaphorePids)
+			{
+				allPids.Add(taskData.Pid);
+			}
+		}
+
+		// Note: INDEPENDENT filtering would require owner-based filtering
+		// Current implementation returns PIDs for the specific DBRef
+		// In PennMUSH, INDEPENDENT filters out tasks from objects with same owner but different DBRef
+		// This would require extending the query to check task executor owner vs target owner
+
+		return new CallState(string.Join(' ', allPids.OrderBy(x => x)));
 	}
 
 	[SharpFunction(Name = "lstats", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]

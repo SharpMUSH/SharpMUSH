@@ -15,13 +15,13 @@ public class LoginDisplayTests
 	public async Task LoginDisplay_WhenNotAuthenticated_ShowsLoginButton()
 	{
 		// Arrange
-		using var ctx = new Bunit.TestContext();
-		ctx.AddTestAuthorization();
+		await using var ctx = new BunitContext();
+		ctx.AddAuthorization();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
 
 		// Act
-		var cut = ctx.RenderComponent<LoginDisplay>();
+		var cut = ctx.Render<LoginDisplay>();
 
 		// Assert
 		var loginButton = cut.Find("a[href='authentication/login']");
@@ -33,14 +33,14 @@ public class LoginDisplayTests
 	public async Task LoginDisplay_WhenAuthenticated_ShowsUsername()
 	{
 		// Arrange
-		using var ctx = new Bunit.TestContext();
-		var authContext = ctx.AddTestAuthorization();
+		await using var ctx = new BunitContext();
+		var authContext = ctx.AddAuthorization();
 		authContext.SetAuthorized("TestUser");
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
 
 		// Act
-		var cut = ctx.RenderComponent<LoginDisplay>();
+		var cut = ctx.Render<LoginDisplay>();
 
 		// Assert
 		var markup = cut.Markup;
@@ -51,14 +51,14 @@ public class LoginDisplayTests
 	public async Task LoginDisplay_WhenAuthenticated_ShowsLogoutButton()
 	{
 		// Arrange
-		using var ctx = new Bunit.TestContext();
-		var authContext = ctx.AddTestAuthorization();
+		await using var ctx = new BunitContext();
+		var authContext = ctx.AddAuthorization();
 		authContext.SetAuthorized("TestUser");
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
 
 		// Act
-		var cut = ctx.RenderComponent<LoginDisplay>();
+		var cut = ctx.Render<LoginDisplay>();
 
 		// Assert
 		var logoutButton = cut.Find("button");
@@ -69,13 +69,13 @@ public class LoginDisplayTests
 	public async Task LoginDisplay_WhenNotAuthenticated_DoesNotShowUsername()
 	{
 		// Arrange
-		using var ctx = new Bunit.TestContext();
-		ctx.AddTestAuthorization();
+		await using var ctx = new BunitContext();
+		ctx.AddAuthorization();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
 
 		// Act
-		var cut = ctx.RenderComponent<LoginDisplay>();
+		var cut = ctx.Render<LoginDisplay>();
 
 		// Assert
 		var markup = cut.Markup;

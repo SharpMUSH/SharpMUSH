@@ -1,6 +1,7 @@
 using Mediator;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Commands.ChannelCommand;
@@ -35,18 +36,19 @@ public static class ChannelRecall
 			}
 		}
 
-		/*
-		var messages = await Mediator!.Send(new GetChannelMessagesQuery(channel.Id, linesInt));
-		var messageList = messages.Select(x => x.Message).ToList();
-		var message = MModule.multiple(messageList);
+		// Retrieve messages from the recall buffer
+		var messages = await Mediator.CreateStream(new GetChannelMessagesQuery(channel.Id ?? string.Empty, linesInt))
+			.Select(x => x.Message)
+			.ToListAsync();
+			
+		var message = MModule.multiple(messages);
 
 		if (switches.Contains("QUIET"))
 		{
 			return message;
 		}
-		*/
 
-		// await NotifyService!.Notify(executor, message, executor);
+		await NotifyService.Notify(executor, message, executor);
 		return new CallState(string.Empty);
 	}
 }

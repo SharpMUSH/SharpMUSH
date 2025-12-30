@@ -62,76 +62,95 @@ public class LockService(IFusionCache cache, IBooleanExpressionParser bep, IMedi
 	public enum LockFlags
 	{
 		/// <summary>
+		/// Use default flags when setting lock
+		/// </summary>
+		Default = 0,
+
+		/// <summary>
 		/// Anyone can see this lock with lock()/elock()
 		/// </summary> 
-		Visual,
+		Visual = 1,
 
 		/// <summary>
 		/// This lock doesn't get inherited
 		/// </summary>
-		Private,
+		Private = 2,
 
 		/// <summary>
 		/// Only wizards can set/unset this lock
 		/// </summary>
-		Wizard,
+		Wizard = 4,
 
 		/// <summary>
 		/// Only the lock's owner can set/unset it
 		/// </summary>
-		Locked,
+		Locked = 8,
 
 		/// <summary>
 		/// This lock isn't copied in @clone
 		/// </summary>
-		NoClone,
+		NoClone = 16,
 
 		/// <summary>
 		/// This lock doesn't have an \@a-action for success.
 		/// </summary>
-		NoSuccessAction,
+		NoSuccessAction = 32,
 
 		/// <summary>
 		/// This lock doesn't have an \@a-action for failure
 		/// </summary>
-		NoFailureAction,
+		NoFailureAction = 64,
 
 		/// <summary>
 		/// Lock can only be set/unset by object's owner
 		/// </summary>
-		Owner,
-
-		/// <summary>
-		/// Use default flags when setting lock
-		/// </summary>
-		Default
+		Owner = 128
 	}
 
-	// TODO: Optimize #TRUE calls, we don't need to cache those.
 	public static string Get(LockType standardType, AnySharpObject lockee)
-		=> lockee.Object().Locks.GetValueOrDefault(standardType.ToString(), "#TRUE");
+	{
+		var defaultLockData = new Models.SharpLockData { LockString = "#TRUE", Flags = LockFlags.Default };
+		return lockee.Object().Locks.GetValueOrDefault(standardType.ToString(), defaultLockData).LockString;
+	}
 
 	public bool Evaluate(
 		string lockString,
 		AnySharpObject gated,
 		AnySharpObject unlocker)
-		=> bep.Compile(lockString)(gated, unlocker);
+	{
+		// Optimize #TRUE - no need to compile or cache
+		if (lockString is "#TRUE" or "")
+			return true;
+		
+		return bep.Compile(lockString)(gated, unlocker);
+	}
 
-	// TODO: throw new NotImplementedException(); 
 	public bool Evaluate(string lockString, SharpChannel gatedChannel, AnySharpObject unlocker)
 	{
 		if(lockString is "#TRUE" or "") return true;
 		
 		var compile = bep.Compile(lockString);
-		return true;
+		// For channel locks, we need to evaluate the lock against the unlocker
+		// Channels don't have the same object structure, so we pass a synthetic object representation
+		var channelOwner = gatedChannel.Owner.WithCancellation(CancellationToken.None).GetAwaiter().GetResult();
+		var syntheticGated = new AnySharpObject(channelOwner);
+		return compile(syntheticGated, unlocker);
 	}
 
 	public bool Evaluate(
 		LockType standardType,
 		AnySharpObject gated,
 		AnySharpObject unlocker)
-		=> cache.GetOrSet($"lock:{gated.Object().DBRef}:{standardType.ToString()}", bep.Compile(Get(standardType, gated)))(
+	{
+		var lockString = Get(standardType, gated);
+		
+		// Optimize #TRUE - no need to compile or cache
+		if (lockString is "#TRUE" or "")
+			return true;
+		
+		return cache.GetOrSet($"lock:{gated.Object().DBRef}:{standardType.ToString()}", bep.Compile(lockString))(
 			gated, unlocker);
+	}
 
 	public IEnumerable<bool> Evaluate(
 		LockType standardType,
@@ -156,5 +175,24 @@ public class LockService(IFusionCache cache, IBooleanExpressionParser bep, IMedi
 		_ = med.Send(new SetLockCommand(lockee.Object(), standardType.ToString(), lockString)).AsTask().Result;
 
 		return true;
+	}
+
+	/// <summary>
+	/// Format lock flags for display (e.g., "v" for Visual, "n" for Private)
+	/// </summary>
+	public string FormatLockFlags(LockFlags flags)
+	{
+		if (flags == LockFlags.Default)
+			return string.Empty;
+
+		var flagChars = new List<string>();
+		foreach (var (_, (symbol, flag)) in LockPrivileges)
+		{
+			if (flags.HasFlag(flag))
+			{
+				flagChars.Add(symbol);
+			}
+		}
+		return string.Join("", flagChars);
 	}
 }

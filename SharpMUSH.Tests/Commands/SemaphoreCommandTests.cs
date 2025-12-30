@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
+using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -23,18 +24,33 @@ public class SemaphoreCommandTests
 	private IAttributeService AttributeService => WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
 
 	[Test]
-	public async ValueTask NotifyCommand_WithObject_ShouldShowNotifiedMessage()
+	public async ValueTask NotifyCommand_ShouldWakeWaitingTask()
 	{
-		// Arrange
+		// Arrange - create a unique semaphore and test message with underscore separator
 		var uniqueId = Guid.NewGuid().ToString("N");
 		var uniqueAttr = $"SEM_{uniqueId}";
+		var testMessage = $"TaskExecuted_{uniqueId}";
 		
-		// Act - notify the semaphore (no wait queued)
+		// Queue a task that waits on the semaphore - use think to ensure output
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@wait #1/{uniqueAttr}=think {testMessage}"));
+		
+		// Give time for the task to be registered with the scheduler
+		await Task.Delay(200);
+		
+		// Act - notify the semaphore to wake the waiting task
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@notify #1/{uniqueAttr}"));
+		
+		// Give the scheduler time to execute the queued task
+		await Task.Delay(2000);
 
-		// Assert - should show "Notified." message
-		await NotifyService.Received().Notify(Arg.Any<AnySharpObject>(), "Notified.");
+		// Assert - verify the waiting task was executed
+		await NotifyService.Received().Notify(
+			Arg.Any<AnySharpObject>(), 
+			testMessage,
+			Arg.Any<AnySharpObject>(),
+			INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -91,22 +107,56 @@ public class SemaphoreCommandTests
 	}
 
 	[Test]
-	public async ValueTask NotifySetQ_ShouldAcceptQRegisterParameters()
+	public async ValueTask NotifySetQ_CommandShouldAcceptParameters()
 	{
-		// Arrange
+		// This test verifies that @notify/setq accepts qreg parameters
+		// Fixed bug where CB.RSArgs was interfering with comma parsing
 		var uniqueId = Guid.NewGuid().ToString("N");
 		var uniqueAttr = $"SEM_{uniqueId}";
 		
-		// Act - use @notify/setq with qreg parameters
-		// This tests that the command parses and executes without errors
-		await Parser.CommandParse(1, ConnectionService,
+		// Try calling @notify/setq without waiting task first to test parameter parsing
+		var result = await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@notify/setq #1/{uniqueAttr}=0,TestValue"));
+		
+		// The command should not generate a parsing error about pairs
+		// It might say "no queue entry" but shouldn't say "must be in pairs"
+		await NotifyService.DidNotReceive().Notify(
+			Arg.Any<AnySharpObject>(),
+			Arg.Is<OneOf<MString, string>>(msg => 
+				msg.Value.ToString()!.Contains("must be in pairs")),
+			Arg.Any<AnySharpObject?>(),
+			Arg.Any<INotifyService.NotificationType>());
+	}
 
-		// Assert - verify the command executed without throwing
-		// Since there's no waiting task, we expect "Notified." message (queue was empty)
+	[Test]
+	public async ValueTask NotifySetQ_ShouldSetQRegisterForWaitingTask()
+	{
+		// Arrange - create a unique semaphore with a unique test value
+		var uniqueId = Guid.NewGuid().ToString("N");
+		var uniqueAttr = $"SEM_{uniqueId}";
+		var testValue = $"TestValue_{uniqueId.Substring(0, 8)}"; // Use unique value with GUID prefix
+		
+		// Queue a task that waits on the semaphore and will output the Q-register value
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@wait #1/{uniqueAttr}=think QRegValue:%q0"));
+		
+		// Give time for the task to be registered with the scheduler
+		await Task.Delay(200);
+		
+		// Act - notify the semaphore with /setq to set Q-register 0
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@notify/setq #1/{uniqueAttr}=0,{testValue}"));
+		
+		// Give the scheduler time to execute the queued task
+		await Task.Delay(2000);
+		
+		// Assert - verify the task executed with the correct Q-register value
+		// The waiting task should have been executed with %q0 set to our test value
 		await NotifyService.Received().Notify(
 			Arg.Any<AnySharpObject>(), 
-			"Notified.");
+			$"QRegValue:{testValue}",
+			Arg.Any<AnySharpObject>(),
+			INotifyService.NotificationType.Announce);
 	}
 
 	[Test]

@@ -8,7 +8,7 @@ namespace SharpMUSH.Tests.Client;
 /// Base class for Blazor component tests that use MudBlazor components.
 /// Provides proper setup for MudBlazor services required for testing.
 /// </summary>
-public abstract class MudBlazorTestContext : Bunit.TestContext
+public abstract class MudBlazorTestContext : BunitContext
 {
 	protected MudBlazorTestContext()
 	{

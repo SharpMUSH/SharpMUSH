@@ -217,7 +217,7 @@ public partial class LocateService(IMediator mediator,
 			    && name.StartsWith('*'))
 		    && (flags.HasFlag(LocateFlags.PlayersPreference) || flags.HasFlag(LocateFlags.NoTypePreference)))
 		{
-			// TODO: Fix Async
+			// Async streaming pattern is correct - mediator creates IAsyncEnumerable
 			var maybeMatch = await mediator
 				.CreateStream(new GetPlayerQuery(name))
 				.FirstOrDefaultAsync();

@@ -6,6 +6,7 @@ using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messages;
 
@@ -247,8 +248,34 @@ public class NotifyService(IBus publishEndpoint, IConnectionService connections,
 
 	public async ValueTask NotifyExcept(DBRef who, OneOf<MString, string> what, DBRef[] except, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
-		// TODO: Implement when we have DBRef to handle mapping
-		await ValueTask.CompletedTask;
+		if (what.Match(
+			markupString => MModule.getLength(markupString) == 0,
+			str => str.Length == 0
+		))
+		{
+			return;
+		}
+
+		// Get all handles for the target location/object
+		var targetHandles = await connections.Get(who).Select(x => x.Handle).ToArrayAsync();
+		
+		// Get all handles to exclude
+		var excludeHandles = new HashSet<long>();
+		foreach (var exceptDbRef in except)
+		{
+			await foreach (var conn in connections.Get(exceptDbRef))
+			{
+				excludeHandles.Add(conn.Handle);
+			}
+		}
+		
+		// Filter out excluded handles and notify the rest
+		var notifyHandles = targetHandles.Where(h => !excludeHandles.Contains(h)).ToArray();
+		
+		if (notifyHandles.Length > 0)
+		{
+			await Notify(notifyHandles, what, sender, type);
+		}
 	}
 
 	public ValueTask NotifyExcept(AnySharpObject who, OneOf<MString, string> what, DBRef[] except, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
@@ -388,5 +415,29 @@ public class NotifyService(IBus publishEndpoint, IConnectionService connections,
 				}
 			}
 		}
+	}
+
+	/// <summary>
+	/// Unified error handling: optionally notify user, then return error.
+	/// The notify message and error return are SEPARATE and can be different strings.
+	/// Callers choose which error and notification to use via ErrorMessages constants.
+	/// </summary>
+	/// <param name="target">Object to notify (DBRef)</param>
+	/// <param name="errorReturn">Error string for return value (e.g., "#-1 PERMISSION DENIED")</param>
+	/// <param name="notifyMessage">Message to show user (e.g., "You don't have permission to do that.")</param>
+	/// <param name="shouldNotify">Whether to send notification to user (required parameter)</param>
+	/// <returns>CallState with error return string</returns>
+	public async ValueTask<CallState> NotifyAndReturn(
+		DBRef target,
+		string errorReturn,
+		string notifyMessage,
+		bool shouldNotify)
+	{
+		if (shouldNotify)
+		{
+			await Notify(target, notifyMessage, sender: null);
+		}
+		
+		return new CallState(errorReturn);
 	}
 }

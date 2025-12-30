@@ -14,6 +14,39 @@ public static class MessageHelpers
 	private const string SpecialRecipientDbref = "#-2";
 	private const string RecipientReplacementToken = "##";
 	
+	/// <summary>
+	/// Determines the notification type based on the prefix character of the message.
+	/// Used for commands like @pemit, say, etc.
+	/// </summary>
+	/// <param name="message">The message to analyze</param>
+	/// <returns>The appropriate notification type</returns>
+	public static INotifyService.NotificationType DetermineMessageType(string message)
+	{
+		return message switch
+		{
+			[':', .. _] => INotifyService.NotificationType.Pose,
+			[';', .. _] => INotifyService.NotificationType.SemiPose,
+			['|', .. _] => INotifyService.NotificationType.Emit,
+			_ => INotifyService.NotificationType.Say
+		};
+	}
+	
+	/// <summary>
+	/// Strips the message type prefix from the message if present.
+	/// </summary>
+	/// <param name="message">The message to strip</param>
+	/// <returns>The message without the prefix</returns>
+	public static string StripMessageTypePrefix(string message)
+	{
+		return message switch
+		{
+			[':', .. var rest] => new string(rest.ToArray()),
+			[';', .. var rest] => new string(rest.ToArray()),
+			['|', .. var rest] => new string(rest.ToArray()),
+			_ => message
+		};
+	}
+	
 	public static async ValueTask<CallState> ProcessMessageAsync(
 		IMUSHCodeParser parser,
 		IMediator mediator,

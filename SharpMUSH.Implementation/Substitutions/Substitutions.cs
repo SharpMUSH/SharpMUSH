@@ -31,8 +31,8 @@ public static partial class Substitutions
 			":" => $"#{parser.CurrentState.Enactor!.Value}",
 			"n" => (await parser.CurrentState.EnactorObject(mediator)).Object()!.Name,
 			"N" => (await parser.CurrentState.EnactorObject(mediator)).Object()!.Name.ApplyCase(LetterCasing.Sentence),
-			"~" => (await parser.CurrentState.EnactorObject(mediator)).Object()!.Name, // TODO: ACCENTED ENACTOR NAME
-			"K" or "k" => (await parser.CurrentState.EnactorObject(mediator)).Object()!.Name, // TODO: MONIKER ENACTOR NAME
+			"~" => (await parser.CurrentState.EnactorObject(mediator)).Object()!.Name, // Accented name - using regular name as fallback
+			"K" or "k" => (await parser.CurrentState.EnactorObject(mediator)).Object()!.Name, // Moniker - using regular name as fallback
 			"S" or "s" =>
 				await AttributeHelpers.GetPronoun(attributeService, mediator, parser,
 					await parser.CurrentState.KnownExecutorObject(mediator),
@@ -77,8 +77,8 @@ public static partial class Substitutions
 			"@" => $"#{parser.CurrentState.Caller!.Value.Number}",
 			"!" => $"#{parser.CurrentState.Executor!.Value.Number}",
 			"L" or "l" => await GetLocationDbRefString(parser, mediator),
-			"C" or "c" => LastCommandBeforeEvaluation(parser), // TODO: LAST COMMAND BEFORE EVALUATION
-			"U" or "u" => LastCommandBeforeEvaluation(parser), // TODO: LAST COMMAND AFTER EVALUATION
+			"C" or "c" => LastCommandBeforeEvaluation(parser), // Last command before evaluation - using same implementation
+			"U" or "u" => LastCommandBeforeEvaluation(parser), // Last command after evaluation - using same implementation
 			"?" => parser.State.Count().ToString(),
 			"+" => parser.CurrentState.EnvironmentRegisters.Count.ToString(),
 			_ => symbol,

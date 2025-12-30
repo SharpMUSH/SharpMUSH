@@ -24,7 +24,8 @@ public class ConnectionServerService(
 		Func<byte[], ValueTask> outputFunction,
 		Func<byte[], ValueTask> promptOutputFunction,
 		Func<Encoding> encodingFunction,
-		Action disconnectFunction)
+		Action disconnectFunction,
+		Func<string, string, ValueTask>? gmcpFunction = null)
 	{
 		try
 		{
@@ -35,7 +36,8 @@ public class ConnectionServerService(
 				outputFunction,
 				promptOutputFunction,
 				encodingFunction,
-				disconnectFunction);
+				disconnectFunction,
+				gmcpFunction);
 
 			_sessionState.AddOrUpdate(handle, data, (_, _) =>
 				throw new InvalidOperationException("Handle already registered"));
@@ -113,7 +115,8 @@ public class ConnectionServerService(
 		Func<byte[], ValueTask> OutputFunction,
 		Func<byte[], ValueTask> PromptOutputFunction,
 		Func<Encoding> EncodingFunction,
-		Action DisconnectFunction);
+		Action DisconnectFunction,
+		Func<string, string, ValueTask>? GMCPFunction = null);
 
 	public enum ConnectionState
 	{
@@ -128,7 +131,8 @@ public interface IConnectionServerService
 	Task RegisterAsync(long handle, string ipAddress, string hostname, string connectionType,
 		Func<byte[], ValueTask> outputFunction, Func<byte[], ValueTask> promptOutputFunction,
 		Func<Encoding> encodingFunction,
-		Action disconnectFunction);
+		Action disconnectFunction,
+		Func<string, string, ValueTask>? gmcpFunction = null);
 	
 	Task DisconnectAsync(long handle);
 

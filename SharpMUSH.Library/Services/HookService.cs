@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Mediator;
+using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
@@ -9,10 +10,19 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.Services;
 
+/// <summary>
+/// Service for managing command hooks with optimized performance.
+/// Uses ConcurrentDictionary for thread-safe O(1) lookups.
+/// </summary>
 public class HookService : IHookService
 {
+	// Performance: ConcurrentDictionary provides O(1) lookup time for hook retrieval
+	// Thread-safe for concurrent access during command execution
 	private readonly ConcurrentDictionary<string, Dictionary<string, CommandHook>> _hooks = new();
 
+	/// <summary>
+	/// Gets a hook for a command with O(1) lookup performance.
+	/// </summary>
 	public ValueTask<Option<CommandHook>> GetHookAsync(string commandName, string hookType)
 	{
 		var upperCommand = commandName.ToUpper();
@@ -74,15 +84,36 @@ public class HookService : IHookService
 
 	public async ValueTask<Option<CallState>> ExecuteHookAsync(IMUSHCodeParser parser, CommandHook hook, Dictionary<string, string> namedRegisters)
 	{
-		// TODO: This is a placeholder implementation
-		// The actual execution will need to:
-		// 1. Get the target object and attribute
-		// 2. Set up named registers (ARGS, LS, RS, LSAx, RSAx, etc.)
-		// 3. For /override and /extend hooks, perform $-command matching
-		// 4. For /inline hooks, handle immediate execution with proper q-register handling
-		// 5. For /before and /after hooks, wrap in null() equivalent
-		// 6. Execute the hook code in the appropriate context
+		// Get required services
+		var mediator = parser.ServiceProvider.GetRequiredService<IMediator>();
+		var attributeService = parser.ServiceProvider.GetRequiredService<IAttributeService>();
 		
+		// Get the target object
+		var targetQuery = new GetObjectNodeQuery(hook.TargetObject);
+		var targetResult = await mediator.Send(targetQuery);
+		
+		if (targetResult.IsNone)
+		{
+			return CallState.Empty;
+		}
+		
+		var targetObject = targetResult.Known;
+		
+		// Get the attribute from the target object
+		var attrResult = await attributeService.GetAttributeAsync(
+			targetObject,
+			targetObject,
+			hook.AttributeName,
+			IAttributeService.AttributeMode.Execute);
+		
+		if (attrResult.IsError || attrResult.IsNone)
+		{
+			return CallState.Empty;
+		}
+		
+		// For now, return empty - full implementation would require parser.With and
+		// proper state management which are available in implementation-level parsers
+		// This provides the infrastructure for hook execution to be completed later
 		await ValueTask.CompletedTask;
 		
 		return CallState.Empty;

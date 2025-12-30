@@ -83,6 +83,20 @@ public interface ITaskScheduler
 	IAsyncEnumerable<SemaphoreTaskData> GetSemaphoreTasks(DbRefAttribute obj);
 
 	/// <summary>
+	/// Get all Delay queue tasks (from @wait) for a specific DBRef.
+	/// </summary>
+	/// <param name="obj">DBRef to query delay tasks for</param>
+	/// <returns>PIDs of delay queue tasks</returns>
+	IAsyncEnumerable<long> GetDelayTasks(DBRef obj);
+
+	/// <summary>
+	/// Get all Enqueue tasks for a specific DBRef.
+	/// </summary>
+	/// <param name="obj">DBRef to query enqueue tasks for</param>
+	/// <returns>PIDs of enqueue tasks (currently not tracked, returns 0)</returns>
+	IAsyncEnumerable<long> GetEnqueueTasks(DBRef obj);
+
+	/// <summary>
 	/// Notify a Semaphore trigger to trigger one or more waiting jobs.
 	/// </summary>
 	/// <param name="dbAttribute">DbRef and Attribute with a value</param>

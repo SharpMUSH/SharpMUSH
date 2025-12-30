@@ -8,8 +8,11 @@ namespace SharpMUSH.Implementation;
 
 public class BooleanExpressionParser(IMediator mediator) : IBooleanExpressionParser
 {
-	// TODO: Allow the Evaluation to indicate if the cache should be evaluated for optimization.
-	// This should occur if a character stop existing, a flag gets removed, etc, and should be unusual.
+	// Future optimization: Cache invalidation system for when objects/flags change
+	// The compiled expression could be cached and invalidated when:
+	// - A character stops existing
+	// - A flag gets removed
+	// - Other rare structural changes occur
 	public Func<AnySharpObject, AnySharpObject, bool> Compile(string text)
 	{
 		AntlrInputStreamSpan inputStream = new(text.AsMemory(), nameof(Compile));
@@ -43,5 +46,25 @@ public class BooleanExpressionParser(IMediator mediator) : IBooleanExpressionPar
 		var valid = visitor.Visit(chatContext)!.Value;
 
 		return valid;
+	}
+	
+	/// <summary>
+	/// Normalizes a lock expression by converting bare dbrefs to objids.
+	/// This ensures locks reference specific object instances and won't match recycled dbrefs.
+	/// </summary>
+	/// <param name="text">The lock expression to normalize</param>
+	/// <returns>The normalized lock expression with objids instead of bare dbrefs</returns>
+	public string Normalize(string text)
+	{
+		AntlrInputStreamSpan inputStream = new(text.AsMemory(), nameof(Normalize));
+		SharpMUSHBoolExpLexer sharpLexer = new(inputStream);
+		BufferedTokenSpanStream commonTokenStream = new(sharpLexer);
+		SharpMUSHBoolExpParser sharpParser = new(commonTokenStream);
+		var chatContext = sharpParser.@lock();
+		SharpMUSHBooleanExpressionNormalizationVisitor visitor = new(mediator);
+		
+		var normalized = visitor.Visit(chatContext);
+		
+		return normalized;
 	}
 }

@@ -23,8 +23,11 @@ public static class ChannelList
 		// Switches: On, Off, Or Quiet. On/off are exclusive.
 		if (onSwitch && offSwitch)
 		{
-			await NotifyService.Notify(executor, "You can only use one of /on or /off.");
-			return new CallState(Errors.ErrorTooManySwitches);
+			return await NotifyService.NotifyAndReturn(
+				executor.Object().DBRef,
+				errorReturn: ErrorMessages.Returns.TooManySwitches,
+				notifyMessage: "You can only use one of /on or /off.",
+				shouldNotify: true);
 		}
 
 		var channelList = await channels

@@ -2,6 +2,12 @@
 
 namespace SharpMUSH.Library.Definitions;
 
+/// <summary>
+/// Legacy error constants class.
+/// NOTE: For new code, use ErrorMessages.Returns instead.
+/// This class is maintained for backward compatibility.
+/// All constants have been migrated to ErrorMessages.Returns for full consistency.
+/// </summary>
 public static class Errors
 {
 	public const string ErrorBadObjectName = "#-1 BAD OBJECT NAME";
@@ -59,4 +65,5 @@ public static class Errors
 	public const string ErrorInvalidRoom = "#-1 INVALID ROOM";
 	public const string ErrorSafeObject = "#-1 OBJECT IS SAFE";
 	public const string ErrorNotGoing = "#-1 OBJECT NOT MARKED FOR DESTRUCTION";
+	public const string ErrorNotARoom = "#-1 OBJECT IS NOT A ROOM";
 }

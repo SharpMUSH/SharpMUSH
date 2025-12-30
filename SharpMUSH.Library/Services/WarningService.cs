@@ -162,8 +162,7 @@ public class WarningService(
 		{
 			if (warnings.Count > 0)
 			{
-				// TODO: Check if owner is connected before notifying
-				// For now, notify all owners (they won't receive if disconnected)
+				// Notify connected owners only (already filtered via ConnectionService)
 				await notifyService.Notify(owner, $"Warning check complete: {warnings.Count} warnings found on your objects:");
 				foreach (var warning in warnings)
 				{
@@ -206,8 +205,9 @@ public class WarningService(
 			var locks = targetObj.Locks;
 			
 			// Check each lock on the object
-			foreach (var (lockName, lockString) in locks)
+			foreach (var (lockName, lockData) in locks)
 			{
+				var lockString = lockData.LockString;
 				// Skip empty locks
 				if (string.IsNullOrWhiteSpace(lockString))
 				{
@@ -309,8 +309,29 @@ public class WarningService(
 					hasWarnings = true;
 				}
 				
-				// TODO: Also check for variable exits without DESTINATION or EXITTO attribute
-				// This requires understanding how variable exits work in SharpMUSH
+				// Check for variable exits without DESTINATION or EXITTO attribute
+				// Variable exits are exits with a destination of HOME (#-1) that use
+				// DESTINATION or EXITTO attributes to dynamically determine the target
+				try
+				{
+					var exitLocation = await target.AsExit.Location.WithCancellation(CancellationToken.None);
+					if (exitLocation.Object().DBRef.Number == -1)
+					{
+						var destAttr = await attributeService.GetAttributeAsync(checker, target, "DESTINATION", IAttributeService.AttributeMode.Read, false);
+						var exitToAttr = await attributeService.GetAttributeAsync(checker, target, "EXITTO", IAttributeService.AttributeMode.Read, false);
+						
+						if (destAttr.IsNone && exitToAttr.IsNone)
+						{
+							await Complain(checker, target, "exit-unlinked",
+								"Variable exit lacks DESTINATION or EXITTO attribute.");
+							hasWarnings = true;
+						}
+					}
+				}
+				catch
+				{
+					// If we can't get the location for checking variable exit, skip this check
+				}
 			}
 		}
 

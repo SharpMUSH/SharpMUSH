@@ -256,8 +256,7 @@ public partial class Functions
 
 				if (!locate.IsRoom)
 				{
-					// TODO: Create a proper error constant for this.
-					return "#-1 OBJECT IS NOT A ROOM";
+					return Errors.ErrorNotARoom;
 				}
 
 				// Todo: Turn Content into async enumerable.
@@ -387,6 +386,58 @@ public partial class Functions
 		return new CallState(string.Empty);
 	}
 
+	[SharpFunction(Name = "lockflags", MinArgs = 0, MaxArgs = 1,
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public static async ValueTask<CallState> LockFlagsObject(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		// lockflags() returns lock flags for a specific lock on an object
+		// Format: lockflags([<object>[/<locktype>]])
+		var args = parser.CurrentState.Arguments;
+		
+		if (args.Count == 0)
+		{
+			// Return all available lock flag letters
+			// In PennMUSH: v=visual, n=no_inherit, c=no_clone, w=wizard, o=owner, l=locked
+			return new CallState("vncwol");
+		}
+		
+		// Parse object/locktype
+		var argStr = args["0"].Message!.ToPlainText();
+		var parts = argStr.Split('/', 2);
+		var objectRef = parts[0];
+		var lockType = parts.Length > 1 ? parts[1] : "Basic";
+		
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+			parser, executor, executor, objectRef, LocateFlags.All,
+			found =>
+			{
+				// Get the lock data
+				if (!found.Object().Locks.TryGetValue(lockType, out var lockData))
+				{
+					return ValueTask.FromResult(new CallState(string.Empty));
+				}
+				
+				// Convert flags to string
+				var flagChars = new List<char>();
+				if (lockData.Flags.HasFlag(Library.Services.LockService.LockFlags.Visual))
+					flagChars.Add('v');
+				if (lockData.Flags.HasFlag(Library.Services.LockService.LockFlags.Private))
+					flagChars.Add('n');
+				if (lockData.Flags.HasFlag(Library.Services.LockService.LockFlags.NoClone))
+					flagChars.Add('c');
+				if (lockData.Flags.HasFlag(Library.Services.LockService.LockFlags.Wizard))
+					flagChars.Add('w');
+				if (lockData.Flags.HasFlag(Library.Services.LockService.LockFlags.Owner))
+					flagChars.Add('o');
+				if (lockData.Flags.HasFlag(Library.Services.LockService.LockFlags.Locked))
+					flagChars.Add('l');
+				
+				return ValueTask.FromResult(new CallState(new string(flagChars.ToArray())));
+			});
+	}
+
 	[SharpFunction(Name = "elock", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> EvaluateLock(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -401,13 +452,13 @@ public partial class Functions
 			found =>
 			{
 				// Get the lock string from the object
-				if (!found.Object().Locks.TryGetValue(lockName, out var lockString))
+				if (!found.Object().Locks.TryGetValue(lockName, out var lockData))
 				{
 					return ValueTask.FromResult(new CallState("#-1 NO SUCH LOCK"));
 				}
 
 				// Evaluate the lock with the executor as the unlocker
-				var result = LockService!.Evaluate(lockString, found, executor);
+				var result = LockService!.Evaluate(lockData.LockString, found, executor);
 				return ValueTask.FromResult(new CallState(result));
 			});
 	}
@@ -431,6 +482,26 @@ public partial class Functions
 			}
 			target = maybeTarget.AsAnyObject;
 		}
+
+		// Get all lock names from the object
+		var lockNames = target.Object().Locks.Keys;
+		return new CallState(string.Join(" ", lockNames));
+	}
+
+	[SharpFunction(Name = "locks", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public static async ValueTask<CallState> LocksRequired(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		// locks() is like llocks() but requires an object argument
+		// Format: locks(<object>)
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var objStr = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		
+		var maybeTarget = await LocateService!.Locate(parser, executor, executor, objStr, LocateFlags.All);
+		if (!maybeTarget.IsValid())
+		{
+			return new CallState("#-1 INVALID OBJECT");
+		}
+		var target = maybeTarget.AsAnyObject;
 
 		// Get all lock names from the object
 		var lockNames = target.Object().Locks.Keys;
@@ -633,12 +704,12 @@ LOCATE()
 			found =>
 			{
 				// Get the lock string from the object
-				if (!found.Object().Locks.TryGetValue(lockName, out var lockString))
+				if (!found.Object().Locks.TryGetValue(lockName, out var lockData))
 				{
 					return ValueTask.FromResult(new CallState(string.Empty));
 				}
 
-				return ValueTask.FromResult(new CallState(lockString));
+				return ValueTask.FromResult(new CallState(lockData.LockString));
 			});
 	}
 
@@ -670,7 +741,7 @@ LOCATE()
 			var found = maybeObj.AsAnyObject;
 
 			// Check if object has the lock
-			if (!found.Object().Locks.TryGetValue(lockName, out var lockString))
+			if (!found.Object().Locks.TryGetValue(lockName, out var lockData))
 			{
 				// No lock means it passes if we're looking for passes
 				if (!shouldPass)
@@ -681,7 +752,7 @@ LOCATE()
 			}
 
 			// Evaluate the lock
-			var passes = LockService!.Evaluate(lockString, found, executor);
+			var passes = LockService!.Evaluate(lockData.LockString, found, executor);
 			
 			if (passes == shouldPass)
 			{

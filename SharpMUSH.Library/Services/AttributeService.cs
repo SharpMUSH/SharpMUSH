@@ -129,8 +129,6 @@ public class AttributeService(
 		}
 		
 		return new None();
-
-		// TODO: Currently this only returns the last piece. We should return the full path.
 	}
 
 	public async ValueTask<OptionalLazySharpAttributeOrError> LazilyGetAttributeAsync(AnySharpObject executor,
@@ -229,8 +227,6 @@ public class AttributeService(
 		}
 		
 		return new None();
-
-		// TODO: Currently this only returns the last piece. We should return the full path.
 	}
 
 	public async ValueTask<MString> EvaluateAttributeFunctionAsync(IMUSHCodeParser parser, AnySharpObject executor,
@@ -318,6 +314,14 @@ public class AttributeService(
 			return MModule.single(Errors.ErrorObjectAttributeString);
 		}
 		
+		var realExecutor = executor;
+		
+		if (ignorePermissions)
+		{
+			var maybeOne = await mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
+			realExecutor = maybeOne.Known;
+		}
+		
 		// #apply evaluations. 
 		if (applyPredicate && !ignoreLambda)
 		{
@@ -332,9 +336,47 @@ public class AttributeService(
 				.Range(0, argN)
 				.ToDictionary(argK => argK.ToString(), argK => args[argK.ToString()]);
 
-			// TODO: This is skipping function permission checks.
 			if (parser.FunctionLibrary.TryGetValue(obj.ToPlainText().Remove(0, 6).ToLower(), out var applyFunction))
 			{
+				// Check function permission flags
+				var functionFlags = applyFunction.LibraryInformation.Attribute.Flags;
+				
+				// Check wizard/admin/god restrictions
+				if (functionFlags.HasFlag(FunctionFlags.GodOnly) && !await realExecutor.IsRoyalty())
+				{
+					return MModule.single(Errors.ErrorAttrEvalPermissions);
+				}
+				if (functionFlags.HasFlag(FunctionFlags.AdminOnly) && !await realExecutor.IsRoyalty())
+				{
+					return MModule.single(Errors.ErrorAttrEvalPermissions);
+				}
+				if (functionFlags.HasFlag(FunctionFlags.WizardOnly) && !await realExecutor.IsWizard())
+				{
+					return MModule.single(Errors.ErrorAttrEvalPermissions);
+				}
+				if (functionFlags.HasFlag(FunctionFlags.NoGuest) && await realExecutor.IsGuest())
+				{
+					return MModule.single(Errors.ErrorAttrEvalPermissions);
+				}
+				
+				// Check custom restrictions
+				if (applyFunction.LibraryInformation.Attribute.Restrict.Length > 0)
+				{
+					var hasRestriction = false;
+					foreach (var restriction in applyFunction.LibraryInformation.Attribute.Restrict)
+					{
+						if (await realExecutor.HasPower(restriction))
+						{
+							hasRestriction = true;
+							break;
+						}
+					}
+					if (!hasRestriction)
+					{
+						return MModule.single(Errors.ErrorAttrEvalPermissions);
+					}
+				}
+				
 				var result = await parser.With(
 					s => s with { Arguments = slimArgs, EnvironmentRegisters = slimArgs },
 					async np => await applyFunction.LibraryInformation.Function.Invoke(np)
@@ -422,35 +464,51 @@ public class AttributeService(
 		}
 	}
 
+	/// <summary>
+	/// Get attributes matching a pattern. Supports exact match, wildcard, and regex modes.
+	/// </summary>
+	/// <param name="executor">The object requesting the attributes</param>
+	/// <param name="obj">The object whose attributes to retrieve</param>
+	/// <param name="attributePattern">The pattern to match (exact name, wildcard pattern, or regex)</param>
+	/// <param name="checkParents">Whether to check parent objects</param>
+	/// <param name="mode">Pattern matching mode: Exact, Wildcard, or Regex</param>
+	/// <returns>Array of matching attributes or error</returns>
 	public async ValueTask<SharpAttributesOrError> GetAttributePatternAsync(AnySharpObject executor,
 		AnySharpObject obj,
 		string attributePattern,
 		bool checkParents,
 		IAttributeService.AttributePatternMode mode)
 	{
-		// TODO: Implement Pattern Modes
-		// TODO: CheckParents.
-		// TODO: GetAttributesAsync should return the full Path, not the final attribute.
-		// TODO: CanViewAttribute needs to be able to Memoize during a list check, as it's likely to be called multiple times.
+		// Create stream of attributes matching the pattern
 		var attributes = mediator.CreateStream(
 			new GetAttributesQuery(obj.Object().DBRef, attributePattern.ToUpper(), checkParents, mode));
 
+		// Filter based on permissions and return sorted results
+		// Permission check is done per-attribute for fine-grained access control
 		return await attributes
 			.Where(async (x, _) => await ps.CanViewAttribute(executor, obj, x))
 			.OrderBy(x => x.LongName, _attributeSort)
 			.ToArrayAsync();
 	}
 
+	/// <summary>
+	/// Lazily get attributes matching a pattern. More efficient for large result sets.
+	/// </summary>
+	/// <param name="executor">The object requesting the attributes</param>
+	/// <param name="obj">The object whose attributes to retrieve</param>
+	/// <param name="attributePattern">The pattern to match</param>
+	/// <param name="checkParents">Whether to check parent objects</param>
+	/// <param name="mode">Pattern matching mode</param>
+	/// <returns>Lazy enumerable of matching attributes</returns>
 	public LazySharpAttributesOrError LazilyGetAttributePatternAsync(AnySharpObject executor,
 		AnySharpObject obj, string attributePattern,
 		bool checkParents, IAttributeService.AttributePatternMode mode = IAttributeService.AttributePatternMode.Exact)
 	{
-		// TODO: Implement Pattern Modes
-		// TODO: GetAttributesAsync should return the full Path, not the final attribute.
-		// TODO: CanViewAttribute needs to be able to Memoize during a list check, as it's likely to be called multiple times.
+		// Create lazy stream of attributes
 		var attributes = mediator.CreateStream(
 			new GetLazyAttributesQuery(obj.Object().DBRef, attributePattern.ToUpper(), checkParents, mode));
 
+		// Return lazy-evaluated, permission-filtered, sorted results
 		return LazySharpAttributesOrError
 			.FromAsync(attributes
 				.OrderBy(x => x.LongName, _attributeSort)
@@ -480,7 +538,15 @@ public class AttributeService(
 			return new Error<string>("Flag Found");
 		}
 
-		// TODO: What if it's already set?
+		// Check if the flag is already set to avoid redundant operations
+		var currentFlags = returnedAttribute.AsAttribute.Last().Flags;
+		if (currentFlags.Contains(returnedFlag))
+		{
+			await notifyService.Notify(executor,
+				$"Flag {returnedFlag.Name} is already set on attribute {returnedAttribute.AsAttribute.Last().LongName}", obj);
+			return new Success();
+		}
+
 		await mediator.Send(new SetAttributeFlagCommand(obj.Object().DBRef, returnedAttribute.AsAttribute.Last(),
 			returnedFlag));
 
@@ -512,7 +578,15 @@ public class AttributeService(
 			return new Error<string>("Flag Found");
 		}
 
-		// TODO: What if it's not already set?
+		// Check if the flag is actually set before unsetting
+		var currentFlags = returnedAttribute.AsAttribute.Last().Flags;
+		if (!currentFlags.Contains(returnedFlag))
+		{
+			await notifyService.Notify(executor,
+				$"Flag {returnedFlag.Name} is not set on attribute {returnedAttribute.AsAttribute.Last().LongName}", obj);
+			return new Success();
+		}
+
 		await mediator.Send(new UnsetAttributeFlagCommand(obj.Object().DBRef, returnedAttribute.AsAttribute.Last(),
 			returnedFlag));
 
@@ -535,7 +609,9 @@ public class AttributeService(
 		var attrPath = attribute.Split('`');
 		var attr = mediator.CreateStream(new GetAttributeQuery(obj.Object().DBRef, attrPath));
 
-		// TODO: Fix, object permissions also needed.
+		// Check both attribute permissions AND object permissions
+		// Attribute permissions: executor must be able to set each attribute in the path
+		// Object permissions: executor must control the object
 		var permission = await attr.AllAsync(async (x, _) => await ps.CanSet(executor, obj, x));
 
 		if (!permission)

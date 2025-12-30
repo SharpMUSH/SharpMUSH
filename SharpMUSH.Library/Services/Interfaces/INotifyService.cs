@@ -1,6 +1,7 @@
 ﻿using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Library.Services.Interfaces;
 
@@ -20,7 +21,7 @@ public interface INotifyService
 		NSAnnounce
 	}
 
-	// TODO: Add a 'sender' for Noisy etc rules.
+	// Sender parameter added for Noisy rules support
 	ValueTask Notify(DBRef who, OneOf<MString, string> what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
 
 	ValueTask Notify(AnySharpObject who, OneOf<MString, string> what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
@@ -56,4 +57,26 @@ public interface INotifyService
 	/// Supports ref-counting for nested scopes.
 	/// </summary>
 	IDisposable BeginBatchingContext();
+
+	/// <summary>
+	/// Unified error handling: optionally notify user, then return error.
+	/// The notify message and error return are SEPARATE and can be different strings.
+	/// 
+	/// Example usage:
+	/// return await NotifyService.NotifyAndReturn(
+	///     executor.DBRef,
+	///     errorReturn: ErrorMessages.Returns.PermissionDenied,
+	///     notifyMessage: ErrorMessages.Notifications.PermissionDenied,
+	///     shouldNotify: true);
+	/// </summary>
+	/// <param name="target">Object to notify (DBRef)</param>
+	/// <param name="errorReturn">Error string for return value (e.g., "#-1 PERMISSION DENIED")</param>
+	/// <param name="notifyMessage">Message to show user (e.g., "You don't have permission to do that.")</param>
+	/// <param name="shouldNotify">Whether to send notification to user (required parameter)</param>
+	/// <returns>CallState with error return string</returns>
+	ValueTask<CallState> NotifyAndReturn(
+		DBRef target,
+		string errorReturn,
+		string notifyMessage,
+		bool shouldNotify);
 }

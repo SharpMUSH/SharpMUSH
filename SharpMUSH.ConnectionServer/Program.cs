@@ -112,6 +112,7 @@ builder.Services.AddConnectionServerMessaging(
 		x.AddConsumer<TelnetPromptConsumer>();
 		x.AddConsumer<BroadcastConsumer>();
 		x.AddConsumer<DisconnectConnectionConsumer>();
+		x.AddConsumer<GMCPOutputConsumer>();
 		
 		// Register WebSocket consumers
 		x.AddConsumer<WebSocketOutputConsumer>();

@@ -10,6 +10,8 @@ public class ScheduleHandler(ITaskScheduler scheduler) : IRequestHandler<QueueCo
 {
 	public async ValueTask<Unit> Handle(QueueCommandListRequest request, CancellationToken cancellationToken)
 	{
+		// DIAGNOSTIC: Prove the handler is being invoked
+		
 		await scheduler.WriteCommandList(request.Command, request.State, request.DbRefAttribute, request.OldValue);
 		return await Unit.ValueTask;
 	}
@@ -30,6 +32,14 @@ public class GetScheduledTasksHandler(ITaskScheduler scheduler)
 	public IAsyncEnumerable<SemaphoreTaskData> Handle(ScheduleSemaphoreQuery query,
 		CancellationToken cancellationToken)
 		=> query.Query.Match(scheduler.GetSemaphoreTasks, scheduler.GetSemaphoreTasks, scheduler.GetSemaphoreTasks);
+}
+
+public class GetDelayTasksHandler(ITaskScheduler scheduler)
+	: IStreamQueryHandler<ScheduleDelayQuery, long>
+{
+	public IAsyncEnumerable<long> Handle(ScheduleDelayQuery query,
+		CancellationToken cancellationToken)
+		=> scheduler.GetDelayTasks(query.Query);
 }
 
 public class DelayedScheduleHandler(ITaskScheduler scheduler) : IRequestHandler<QueueDelayedCommandListRequest>

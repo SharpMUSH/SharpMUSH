@@ -712,10 +712,11 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				{
 					try
 					{
+						var lockData = new Models.SharpLockData { LockString = lockString, Flags = Services.LockService.LockFlags.Default };
 						await _database.SetLockAsync(
 							sharpObj.Object(),
 							lockName,
-							lockString,
+							lockData,
 							cancellationToken);
 
 						count++;
