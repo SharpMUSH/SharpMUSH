@@ -175,7 +175,7 @@ public partial class Commands
 				// If /notify switch is present with /inline, queue "@notify me" after inline execution
 				if (switches.Contains("NOTIFY"))
 				{
-					await Mediator!.Publish(new QueueCommandListRequest(
+					await Mediator!.Send(new QueueCommandListRequest(
 						MModule.single("@notify me"),
 						parser.CurrentState,
 						new DbRefAttribute(enactor.Object().DBRef, DefaultSemaphoreAttributeArray),
@@ -214,7 +214,7 @@ public partial class Commands
 				};
 				
 				// Queue each iteration as a separate command with its iteration context
-				await Mediator!.Publish(new QueueCommandListRequest(
+				await Mediator!.Send(new QueueCommandListRequest(
 					command,
 					stateForIteration,
 					new DbRefAttribute(enactor.Object().DBRef, DefaultSemaphoreAttributeArray),
@@ -224,7 +224,7 @@ public partial class Commands
 			// If /notify switch is present, queue "@notify me" after all iterations
 			if (switches.Contains("NOTIFY"))
 			{
-				await Mediator!.Publish(new QueueCommandListRequest(
+				await Mediator!.Send(new QueueCommandListRequest(
 					MModule.single("@notify me"),
 					parser.CurrentState,
 					new DbRefAttribute(enactor.Object().DBRef, DefaultSemaphoreAttributeArray),
@@ -1058,7 +1058,7 @@ public partial class Commands
 
 	[SharpCommand(Name = "@NOTIFY", Switches = ["ALL", "ANY", "SETQ", "QUIET"],
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs,
-		MinArgs = 1, MaxArgs = 2)]
+		MinArgs = 1, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Notify(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -1128,25 +1128,26 @@ public partial class Commands
 		
 		if (notifyType == "SETQ")
 		{
-			// Parse qreg,value pairs
-			if (args.Count < 2 || string.IsNullOrEmpty(args["1"].Message?.ToPlainText()))
+			// With CB.RSArgs, each comma-separated value becomes a separate argument
+			// So @notify/setq obj=0,val1,1,val2 becomes: args[0]=obj, args[1]=0, args[2]=val1, args[3]=1, args[4]=val2
+			if (args.Count < 3) // Need at least object, qreg, and value
 			{
 				await NotifyService!.Notify(executor, "You must specify Q-register assignments.");
 				return new CallState("#-1 MISSING QREG ASSIGNMENTS");
 			}
 			
-			var qregPairs = args["1"].Message!.ToPlainText().Split(',');
-			if (qregPairs.Length % 2 != 0)
+			var qregArgCount = args.Count - 1; // Subtract 1 for arg[0] which is the object
+			if (qregArgCount % 2 != 0)
 			{
 				await NotifyService!.Notify(executor, "Q-register assignments must be in pairs: qreg,value[,qreg,value...]");
 				return new CallState("#-1 INVALID QREG PAIRS");
 			}
 			
 			qRegisters = new Dictionary<string, MString>();
-			for (var i = 0; i < qregPairs.Length; i += 2)
+			for (var i = 1; i < args.Count; i += 2)
 			{
-				var qregName = qregPairs[i].Trim();
-				var qregValue = qregPairs[i + 1];
+				var qregName = args[i.ToString()].Message!.ToPlainText().Trim();
+				var qregValue = args[(i + 1).ToString()].Message!.ToPlainText();
 				qRegisters[qregName] = MModule.single(qregValue);
 			}
 		}
@@ -1178,7 +1179,7 @@ public partial class Commands
 					MModule.single(0.ToString()));
 				break;
 			case "SETQ":
-				// Modify Q-registers of the first waiting task
+				// Modify Q-registers of the first waiting task, then trigger it
 				var scheduler = parser.ServiceProvider.GetRequiredService<ITaskScheduler>();
 				var modified = await scheduler.ModifyQRegisters(dbRefAttribute, qRegisters!);
 				if (!modified)
@@ -1186,7 +1187,12 @@ public partial class Commands
 					await NotifyService!.Notify(executor, "No task is waiting on that semaphore.");
 					return new CallState("#-1 NO WAITING TASK");
 				}
-				// Don't show "Notified." for /setq since we didn't actually notify
+				// After modifying Q-registers, trigger the task execution (same as regular @notify but only 1 task)
+				await Mediator!.Send(new NotifySemaphoreRequest(dbRefAttribute, oldSemaphoreCount, 1));
+				var newCountSetQ = oldSemaphoreCount - 1;
+				await AttributeService!.SetAttributeAsync(executor, objectToNotify, attribute,
+					MModule.single(newCountSetQ.ToString()));
+				// Don't show "Notified." for /setq (different from regular @notify)
 				return new None();
 		}
 
@@ -1520,21 +1526,27 @@ public partial class Commands
 	private static async ValueTask QueueSemaphore(IMUSHCodeParser parser, AnySharpObject located, string[] attribute,
 		MString arg1)
 	{
+		
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var one = await Mediator!.Send(new GetObjectNodeQuery(new DBRef(0)));
-		var attrValues = Mediator.CreateStream(new GetAttributeQuery(located.Object().DBRef, DefaultSemaphoreAttributeArray));
+		var one = await Mediator!.Send(new GetObjectNodeQuery(new DBRef(1)));
+		var attrValues = Mediator.CreateStream(new GetAttributeQuery(located.Object().DBRef, attribute));
 		var attrValue = await attrValues.LastOrDefaultAsync();
 
 		if (attrValue is null)
 		{
+			
 			await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single("0"),
 				one.AsPlayer));
-			await Mediator.Publish(new QueueCommandListRequest(arg1, parser.CurrentState,
-				new DbRefAttribute(located.Object().DBRef, attribute), 0));
+			
+			var dbRefAttr = new DbRefAttribute(located.Object().DBRef, attribute);
+			
+			await Mediator.Send(new QueueCommandListRequest(arg1, parser.CurrentState,
+				dbRefAttr, 0));
+			
 			return;
 		}
 
-		if (int.TryParse(attrValue.Value.ToPlainText(), out var last))
+		if (!int.TryParse(attrValue.Value.ToPlainText(), out var last))
 		{
 			await NotifyService!.Notify(executor, Errors.ErrorInteger);
 			return;
@@ -1542,15 +1554,19 @@ public partial class Commands
 
 		await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single($"{last + 1}"),
 			one.AsPlayer));
-		await Mediator.Publish(new QueueCommandListRequest(arg1, parser.CurrentState,
-			new DbRefAttribute(located.Object().DBRef, attribute), last));
+		
+		var dbRefAttr2 = new DbRefAttribute(located.Object().DBRef, attribute);
+		
+		await Mediator.Send(new QueueCommandListRequest(arg1, parser.CurrentState,
+			dbRefAttr2, last));
+		
 	}
 
 	private static async ValueTask QueueSemaphoreWithDelay(IMUSHCodeParser parser, AnySharpObject located,
 		string[] attribute, TimeSpan delay, MString arg1)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var one = await Mediator!.Send(new GetObjectNodeQuery(new DBRef(0)));
+		var one = await Mediator!.Send(new GetObjectNodeQuery(new DBRef(1)));
 		var attrValues = Mediator.CreateStream(new GetAttributeQuery(located.Object().DBRef, attribute));
 		var attrValue = await attrValues.LastOrDefaultAsync();
 
@@ -1558,12 +1574,12 @@ public partial class Commands
 		{
 			await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single("0"),
 				one.AsPlayer));
-			await Mediator.Publish(new QueueCommandListWithTimeoutRequest(arg1, parser.CurrentState,
+			await Mediator.Send(new QueueCommandListWithTimeoutRequest(arg1, parser.CurrentState,
 				new DbRefAttribute(located.Object().DBRef, attribute), 0, delay));
 			return;
 		}
 
-		if (int.TryParse(attrValue.Value.ToPlainText(), out var last))
+		if (!int.TryParse(attrValue.Value.ToPlainText(), out var last))
 		{
 			await NotifyService!.Notify(executor, Errors.ErrorInteger);
 			return;
@@ -1571,7 +1587,7 @@ public partial class Commands
 
 		await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single($"{last + 1}"),
 			one.AsPlayer));
-		await Mediator.Publish(new QueueCommandListWithTimeoutRequest(arg1, parser.CurrentState,
+		await Mediator.Send(new QueueCommandListWithTimeoutRequest(arg1, parser.CurrentState,
 			new DbRefAttribute(located.Object().DBRef, attribute), last, delay));
 	}
 
@@ -1824,7 +1840,7 @@ public partial class Commands
 		var arg1 = parser.CurrentState.Arguments.GetValueOrDefault("1")?.Message?.ToPlainText();
 		var switches = parser.CurrentState.Switches.ToArray();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var one = await Mediator!.Send(new GetObjectNodeQuery(new DBRef(0)));
+		var one = await Mediator!.Send(new GetObjectNodeQuery(new DBRef(1)));
 
 		if (switches.Length > 1)
 		{
