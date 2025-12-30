@@ -29,3 +29,8 @@ public record WebSocketOutputMessage(long Handle, string Data);
 /// Message sent from MainProcess to ConnectionServer to output a prompt to a WebSocket connection
 /// </summary>
 public record WebSocketPromptMessage(long Handle, string Data);
+
+/// <summary>
+/// Message sent from MainProcess to ConnectionServer to send GMCP data to a connection
+/// </summary>
+public record GMCPOutputMessage(long Handle, string Module, string Message);

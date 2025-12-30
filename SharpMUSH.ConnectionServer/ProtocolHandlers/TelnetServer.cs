@@ -121,7 +121,26 @@ public class TelnetServer : ConnectionHandler
 			telnet.SendAsync,
 			telnet.SendPromptAsync,
 			() => telnet.CurrentEncoding,
-			connection.Abort);
+			connection.Abort,
+			async (module, message) =>
+			{
+				// Send GMCP message via telnet protocol
+				// Format: IAC SB GMCP <module> <data> IAC SE
+				// GMCP = 201, IAC = 255, SB = 250, SE = 240
+				var gmcpData = $"{module} {message}";
+				var gmcpBytes = Encoding.UTF8.GetBytes(gmcpData);
+				
+				// Build GMCP subnegotiation: IAC SB GMCP <data> IAC SE
+				var packet = new byte[gmcpBytes.Length + 5];
+				packet[0] = 255; // IAC
+				packet[1] = 250; // SB
+				packet[2] = 201; // GMCP
+				Array.Copy(gmcpBytes, 0, packet, 3, gmcpBytes.Length);
+				packet[^2] = 255; // IAC
+				packet[^1] = 240; // SE
+				
+				await telnet.SendAsync(packet);
+			});
 
 		try
 		{
