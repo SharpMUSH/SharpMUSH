@@ -8,8 +8,11 @@ namespace SharpMUSH.Implementation;
 
 public class BooleanExpressionParser(IMediator mediator) : IBooleanExpressionParser
 {
-	// TODO: Allow the Evaluation to indicate if the cache should be evaluated for optimization.
-	// This should occur if a character stop existing, a flag gets removed, etc, and should be unusual.
+	// Future optimization: Cache invalidation system for when objects/flags change
+	// The compiled expression could be cached and invalidated when:
+	// - A character stops existing
+	// - A flag gets removed
+	// - Other rare structural changes occur
 	public Func<AnySharpObject, AnySharpObject, bool> Compile(string text)
 	{
 		AntlrInputStreamSpan inputStream = new(text.AsMemory(), nameof(Compile));
