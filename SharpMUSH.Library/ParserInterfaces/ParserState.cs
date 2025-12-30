@@ -211,7 +211,13 @@ public record ParserState(
 	/// <exception cref="Exception">If we somehow failed to peek. Fatal.</exception>
 	public bool AddRegister(string register, MString value)
 	{
-		// TODO: Validate Register Pattern
+		// Validate register pattern: alphanumeric characters, underscores, and hyphens
+		// Register names should be uppercase and match pattern: [A-Z0-9_-]+
+		if (string.IsNullOrEmpty(register) || !System.Text.RegularExpressions.Regex.IsMatch(register, @"^[A-Z0-9_\-]+$"))
+		{
+			return false;
+		}
+		
 		var canPeek = Registers.TryPeek(out var top);
 		if (!canPeek)
 		{

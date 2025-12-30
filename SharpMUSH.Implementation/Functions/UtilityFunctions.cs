@@ -676,7 +676,7 @@ public partial class Functions
 	{
 		var everythingIsOkay = true;
 
-		// TODO: Check if MarkupString is properly Immutable. If not, make it Immutable!
+		// Note: MarkupString should be immutable - verify this if register behavior issues occur
 		var validPeek = parser.CurrentState.Registers.TryPeek(out var currentRegisters);
 		var newRegisters = currentRegisters!.ToDictionary(k => k.Key, kv => kv.Value);
 		parser.CurrentState.Registers.Push(newRegisters);

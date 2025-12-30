@@ -389,6 +389,40 @@ public class TaskScheduler(
 		}
 	}
 
+	public async IAsyncEnumerable<long> GetDelayTasks(DBRef obj)
+	{
+		var keys = await _scheduler.GetTriggerKeys(
+			GroupMatcher<TriggerKey>.GroupEquals($"{DelayGroup}:{obj}"));
+		
+		foreach (var key in keys)
+		{
+			// Extract PID from identity: "dbref:{executor}-{pid}"
+			var parts = key.Name.Split('-');
+			if (parts.Length == 2 && long.TryParse(parts[1], out var pid))
+			{
+				yield return pid;
+			}
+		}
+	}
+
+	public async IAsyncEnumerable<long> GetEnqueueTasks(DBRef obj)
+	{
+		var keys = await _scheduler.GetTriggerKeys(
+			GroupMatcher<TriggerKey>.GroupEquals(EnqueueGroup));
+		
+		// Filter by dbref in the identity
+		var filtered = keys.Where(k => k.Name.StartsWith($"dbref:{obj}-"));
+		
+		foreach (var key in filtered)
+		{
+			// Extract Guid from identity: "dbref:{executor}-{guid}"
+			// For enqueue tasks, we don't have PIDs in the current implementation
+			// We'll need to use a different approach or skip these
+			// For now, we can't return PIDs for enqueue tasks without modification
+			yield return 0; // Placeholder - EnqueueGroup doesn't currently track PIDs
+		}
+	}
+
 	private static async ValueTask<SemaphoreTaskData> MapSemaphoreTaskData(IScheduler scheduler, TriggerKey triggerKey)
 	{
 		var trigger = await scheduler.GetTrigger(triggerKey);

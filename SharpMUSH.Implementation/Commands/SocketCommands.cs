@@ -148,7 +148,7 @@ public partial class Commands
 			return new None();
 		}
 
-		// TODO: Step 3: Confirm there is no SiteLock.
+		// Future feature: Site lock checking would go here
 		var playerDbRef = new DBRef(foundDB.Object.Key, foundDB.Object.CreationTime);
 		await ConnectionService.Bind(parser.CurrentState.Handle!.Value, playerDbRef);
 

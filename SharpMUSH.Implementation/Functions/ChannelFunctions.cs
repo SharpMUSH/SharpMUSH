@@ -6,6 +6,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using Microsoft.Extensions.Logging;
@@ -88,7 +89,6 @@ public partial class Functions
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
 		var message = parser.CurrentState.Arguments["1"].Message!;
 
-		// TODO: Use standardized method.
 		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
 			NotifyService!, channelName, true);
 
@@ -413,9 +413,12 @@ public partial class Functions
 			lines = parsedLines;
 		}
 
-		// TODO: This should query the actual channel message history from the database
-		// For now, return empty as a placeholder
-		return CallState.Empty;
+		// Query the actual channel message history from the database
+		var messages = await Mediator!.CreateStream(new GetChannelMessagesQuery(channel.Id ?? string.Empty, lines))
+			.Select(x => x.Message)
+			.ToListAsync();
+			
+		return new CallState(MModule.multiple(messages));
 	}
 
 	[SharpFunction(Name = "cstatus", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -526,7 +529,6 @@ public partial class Functions
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
 		var message = parser.CurrentState.Arguments["1"].Message!;
 
-		// TODO: Use standardized method.
 		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
 			NotifyService!, channelName, true);
 
@@ -615,9 +617,13 @@ public partial class Functions
 			return maybeChannel.AsError.Value;
 		}
 
-		// TODO: This should query the actual message count from the database
-		// For now, return 0 as a placeholder
-		return new CallState("0");
+		var channel = maybeChannel.AsChannel;
+
+		// Query the actual message count from the database
+		var count = await Mediator!.CreateStream(new GetChannelMessagesQuery(channel.Id ?? string.Empty, int.MaxValue))
+			.CountAsync();
+			
+		return new CallState(count.ToString());
 	}
 
 	[SharpFunction(Name = "cusers", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]

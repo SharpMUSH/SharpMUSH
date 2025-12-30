@@ -309,8 +309,29 @@ public class WarningService(
 					hasWarnings = true;
 				}
 				
-				// TODO: Also check for variable exits without DESTINATION or EXITTO attribute
-				// This requires understanding how variable exits work in SharpMUSH
+				// Check for variable exits without DESTINATION or EXITTO attribute
+				// Variable exits are exits with a destination of HOME (#-1) that use
+				// DESTINATION or EXITTO attributes to dynamically determine the target
+				try
+				{
+					var exitLocation = await target.AsExit.Location.WithCancellation(CancellationToken.None);
+					if (exitLocation.Object().DBRef.Number == -1)
+					{
+						var destAttr = await attributeService.GetAttributeAsync(checker, target, "DESTINATION", IAttributeService.AttributeMode.Read, false);
+						var exitToAttr = await attributeService.GetAttributeAsync(checker, target, "EXITTO", IAttributeService.AttributeMode.Read, false);
+						
+						if (destAttr.IsNone && exitToAttr.IsNone)
+						{
+							await Complain(checker, target, "exit-unlinked",
+								"Variable exit lacks DESTINATION or EXITTO attribute.");
+							hasWarnings = true;
+						}
+					}
+				}
+				catch
+				{
+					// If we can't get the location for checking variable exit, skip this check
+				}
 			}
 		}
 

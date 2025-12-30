@@ -85,17 +85,12 @@ public partial class Functions
 		var open = ArgHelpers.NoParseDefaultNoParseArgument(args, 5, "\"");
 		var close = ArgHelpers.NoParseDefaultNoParseArgument(args, 6, "\"");
 
-		// TODO: This behavior gets re-used, so best to create a HelperFunction for this.
-
-		var messageType = speakString.ToPlainText() switch
-		{
-			[':', .. _] => INotifyService.NotificationType.Pose,
-			[';', .. _] => INotifyService.NotificationType.SemiPose,
-			['|', .. _] => INotifyService.NotificationType.Emit,
-			_ => INotifyService.NotificationType.Say
-		};
-
-		speakString = speakString.ToPlainText() switch
+		// Determine message type and strip prefix using helper
+		var plainSpeak = speakString.ToPlainText();
+		var messageType = MessageHelpers.DetermineMessageType(plainSpeak);
+		
+		// Strip the prefix (including quotes)
+		speakString = plainSpeak switch
 		{
 			[':', .. _]
 				or [';', .. _]
@@ -1005,7 +1000,7 @@ public partial class Functions
 		return MModule.multiple([left, remainder, right]);
 	}
 
-	// TODO: <>s need to be escaped.
+	// Escape angle brackets for HTML safety
 	[SharpFunction(Name = "decomposeweb", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> DecomposeWeb(IMUSHCodeParser parser, SharpFunctionAttribute _2) 
 		=> ValueTask.FromResult<CallState>(
@@ -1013,8 +1008,8 @@ public partial class Functions
 				=> markupType switch
 				{
 					MModule.MarkupTypes.MarkedupText { Item: Ansi ansiMarkup }
-						=> ReconstructWebCall(ansiMarkup.Details, innerText),
-					_ => innerText
+						=> ReconstructWebCall(ansiMarkup.Details, WebEncodeAngleBrackets(innerText)),
+					_ => WebEncodeAngleBrackets(innerText)
 				}, 
 				parser.CurrentState.Arguments["0"].Message!));
 
@@ -1088,6 +1083,14 @@ public partial class Functions
 		}
 
 		return innerText;
+	}
+
+	/// <summary>
+	/// Encodes angle brackets for HTML/Web safety
+	/// </summary>
+	private static string WebEncodeAngleBrackets(string text)
+	{
+		return text.Replace("<", "&lt;").Replace(">", "&gt;");
 	}
 
 	/// <summary>

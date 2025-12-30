@@ -121,7 +121,12 @@ public class TelnetServer : ConnectionHandler
 			telnet.SendAsync,
 			telnet.SendPromptAsync,
 			() => telnet.CurrentEncoding,
-			connection.Abort);
+			connection.Abort,
+			async (module, message) =>
+			{
+				// Send GMCP message using TelnetNegotiationCore library method
+				await telnet.SendGMCPCommand(module, message);
+			});
 
 		try
 		{

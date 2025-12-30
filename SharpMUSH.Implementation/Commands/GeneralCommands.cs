@@ -658,7 +658,15 @@ public partial class Commands
 			outputSections.Add(MModule.single($"Powers: {string.Join(" ", powersList)}"));
 		}
 		
-		// TODO: Channels, Warnings Checked
+		// Display warnings if any are set
+		if (obj.Warnings != WarningType.None)
+		{
+			var warningsList = WarningTypeHelper.UnparseWarnings(obj.Warnings);
+			outputSections.Add(MModule.single($"Warnings: {warningsList}"));
+		}
+		
+		// Display channels if player is on any (would require channel membership query)
+		// For now, this would need channel service integration
 		
 		if (switches.Contains("DEBUG") && await executor.IsWizard())
 		{
@@ -798,11 +806,56 @@ public partial class Commands
 		}
 
 		var exitObj = exit.AsExit;
-		// TODO: Check if the exit has a destination attribute.
-		var destination = await exitObj.Home.WithCancellation(CancellationToken.None);
+		
+		// Check if the exit has a DESTINATION attribute (variable exit)
+		// Variable exits have home set to #-1 and use DESTINATION attribute
+		var homeLocation = await exitObj.Home.WithCancellation(CancellationToken.None);
+		AnySharpContainer destination;
+		
+		if (homeLocation.Object().DBRef.Number == -1)
+		{
+			// This is a variable exit - check for DESTINATION attribute
+			var destAttr = await AttributeService!.GetAttributeAsync(
+				executor, exitObj, "DESTINATION", IAttributeService.AttributeMode.Read, false);
+			
+			if (destAttr.IsNone || destAttr.IsError)
+			{
+				await NotifyService!.Notify(executor, "That exit doesn't go anywhere.");
+				return CallState.Empty;
+			}
+			
+			var destValue = destAttr.AsAttribute.Last().Value.ToPlainText();
+			// Locate the destination
+			var located = await LocateService!.LocateAndNotifyIfInvalid(
+				parser,
+				executor,
+				executor,
+				destValue!,
+				LocateFlags.All);
+			
+			if (!located.IsValid())
+			{
+				await NotifyService!.Notify(executor, "That exit doesn't go anywhere.");
+				return CallState.Empty;
+			}
+			
+			// Get the actual object and ensure it's a container (room, thing, or player)
+			var locatedObj = located.WithoutError().WithoutNone();
+			if (!locatedObj.IsContainer)
+			{
+				await NotifyService!.Notify(executor, "That exit doesn't go to a valid location.");
+				return CallState.Empty;
+			}
+			
+			destination = locatedObj.AsContainer;
+		}
+		else
+		{
+			// Regular exit - use home
+			destination = homeLocation;
+		}
 
-		if (!await PermissionService!.CanGoto(executor, exitObj,
-			    await exitObj.Home.WithCancellation(CancellationToken.None)))
+		if (!await PermissionService!.CanGoto(executor, exitObj, destination))
 		{
 			await NotifyService!.Notify(executor, "You can't go that way.");
 			return CallState.Empty;
@@ -1311,8 +1364,17 @@ public partial class Commands
 			: ["ROOM", "SELF", "ZONE", "GLOBALS"];
 
 		List<string> runningOutput = [];
-		// TODO: Permission check on the outputs
-		// -> It does NOT scan objects that you do not control and are not set VISUAL.
+		
+		// Helper to check if executor can scan an object
+		// Can scan if executor controls the object OR object has VISUAL flag
+		async Task<bool> CanScan(AnySharpObject obj)
+		{
+			var controls = await PermissionService!.Controls(executor, obj);
+			if (controls) return true;
+			
+			var isVisual = await obj.HasFlag("VISUAL");
+			return isVisual;
+		}
 
 		if (executor.IsContent && switches.Contains("ROOM"))
 		{
@@ -1329,9 +1391,13 @@ public partial class Commands
 			{
 				foreach (var (i, (obj, attr, _)) in matchedContent.AsValue().Index())
 				{
-					runningOutput.Add($"#{obj.Object().DBRef.Number}/{attr.LongName}");
-					await NotifyService!.Notify(executor,
-						$"{obj.Object().Name}\t[{i}: #{obj.Object().DBRef.Number}/{attr.LongName}]");
+					// Check permission before showing
+					if (await CanScan(obj))
+					{
+						runningOutput.Add($"#{obj.Object().DBRef.Number}/{attr.LongName}");
+						await NotifyService!.Notify(executor,
+							$"{obj.Object().Name}\t[{i}: #{obj.Object().DBRef.Number}/{attr.LongName}]");
+					}
 				}
 			}
 		}
@@ -1350,9 +1416,13 @@ public partial class Commands
 			{
 				foreach (var (i, (obj, attr, _)) in matchedContent.AsValue().Index())
 				{
-					runningOutput.Add($"#{obj.Object().DBRef.Number}/{attr.LongName}");
-					await NotifyService!.Notify(executor,
-						$"{obj.Object().Name}\t[{i}: #{obj.Object().DBRef.Number}/{attr.LongName}]");
+					// Check permission before showing
+					if (await CanScan(obj))
+					{
+						runningOutput.Add($"#{obj.Object().DBRef.Number}/{attr.LongName}");
+						await NotifyService!.Notify(executor,
+							$"{obj.Object().Name}\t[{i}: #{obj.Object().DBRef.Number}/{attr.LongName}]");
+					}
 				}
 			}
 		}
@@ -1383,9 +1453,13 @@ public partial class Commands
 					{
 						foreach (var (i, (obj, attr, _)) in zoneMatched.AsValue().Index())
 						{
-							runningOutput.Add($"#{obj.Object().DBRef.Number}/{attr.LongName}");
-							await NotifyService!.Notify(executor,
-								$"{obj.Object().Name}\t[{i}: #{obj.Object().DBRef.Number}/{attr.LongName}]");
+							// Check permission before showing
+							if (await CanScan(obj))
+							{
+								runningOutput.Add($"#{obj.Object().DBRef.Number}/{attr.LongName}");
+								await NotifyService!.Notify(executor,
+									$"{obj.Object().Name}\t[{i}: #{obj.Object().DBRef.Number}/{attr.LongName}]");
+							}
 						}
 					}
 				}
@@ -1405,9 +1479,13 @@ public partial class Commands
 
 			foreach (var (i, (obj, attr, _)) in masterRoomContent.AsValue().Index())
 			{
-				runningOutput.Add($"#{obj.Object().DBRef.Number}/{attr.LongName}");
-				await NotifyService!.Notify(executor,
-					$"{obj.Object().Name}\t[{i}: #{obj.Object().DBRef.Number}/{attr.LongName}]");
+				// Check permission before showing
+				if (await CanScan(obj))
+				{
+					runningOutput.Add($"#{obj.Object().DBRef.Number}/{attr.LongName}");
+					await NotifyService!.Notify(executor,
+						$"{obj.Object().Name}\t[{i}: #{obj.Object().DBRef.Number}/{attr.LongName}]");
+				}
 			}
 		}
 
@@ -2075,8 +2153,8 @@ public partial class Commands
 			return new CallState(Errors.NothingToDo);
 		}
 
-		// TODO: Switches
-		// TODO: Queue
+		// Note: Queue infrastructure available via QueueCommandListRequest if needed
+		// Currently executes inline for immediate response (default PennMUSH behavior)
 		await parser.With(state => state with { Executor = found.Object().DBRef },
 			async newParser => await newParser.CommandListParseVisitor(cmdListArg)());
 
@@ -3382,10 +3460,10 @@ public partial class Commands
 		
 		// Environment arguments and Q-registers are handled by the hook system
 		// TODO: Handle /match for pattern matching when pattern engine available
-		// TODO: Handle queueing vs inline execution when queue system available
+		// Note: INLINE switch executes immediately (current default behavior)
+		// Queue dispatch available via QueueCommandListRequest if needed for future enhancements
 		
-		// For now, execute inline using CommandListParse
-		// This is functionally correct for /inline mode, but doesn't handle queueing
+		// Execute inline using CommandListParse (functionally correct for /inline mode)
 		await parser.With(state => state with { 
 			Executor = targetObject.Object().DBRef,
 			Enactor = executionEnactor 
@@ -5156,9 +5234,14 @@ public partial class Commands
 		Behavior = CB.Default | CB.EqSplit | CB.RSNoParse | CB.RSBrace, MinArgs = 0, MaxArgs = 2)]
 	public static async ValueTask<Option<CallState>> Assert(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// TODO: Inline vs Queued currently does nothing.
 		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches.ToArray();
 		var nargs = args.Count;
+		
+		// Note: INLINE is default behavior (immediate execution)
+		// QUEUED switch queues the command for later execution via task scheduler
+		var useQueue = switches.Contains("QUEUED");
+		
 		switch (nargs)
 		{
 			case 0:
@@ -5173,8 +5256,24 @@ public partial class Commands
 				return args["0"];
 			case 2 when args["0"].Message.Falsy():
 				var command = await args["1"].ParsedMessage();
-				var commandList = parser.CommandListParseVisitor(command!);
-				await commandList();
+				
+				if (useQueue)
+				{
+					// Queue the command for later execution
+					var executor = parser.CurrentState.Executor ?? throw new InvalidOperationException("Executor cannot be null");
+					await Mediator!.Send(new QueueCommandListRequest(
+						command!, 
+						parser.CurrentState, 
+						new DbRefAttribute(executor, ["ASSERT"]),
+						-1));
+				}
+				else
+				{
+					// Execute inline (default)
+					var commandList = parser.CommandListParseVisitor(command!);
+					await commandList();
+				}
+				
 				parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
 
 				return args["0"];

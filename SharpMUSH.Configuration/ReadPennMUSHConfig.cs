@@ -40,7 +40,7 @@ public static partial class ReadPennMushConfig
 			throw;
 		}
 
-		// TODO: Use a Regex to split the values.
+		// Parse config lines using regex pattern
 		foreach (var configLine in text
 							 .Where(line => configDictionary.Keys.Any(line.Trim().StartsWith))
 							 .Select(line => splitter.Match(line.Trim()))

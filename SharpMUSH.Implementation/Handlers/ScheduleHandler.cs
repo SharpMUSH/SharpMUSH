@@ -34,6 +34,14 @@ public class GetScheduledTasksHandler(ITaskScheduler scheduler)
 		=> query.Query.Match(scheduler.GetSemaphoreTasks, scheduler.GetSemaphoreTasks, scheduler.GetSemaphoreTasks);
 }
 
+public class GetDelayTasksHandler(ITaskScheduler scheduler)
+	: IStreamQueryHandler<ScheduleDelayQuery, long>
+{
+	public IAsyncEnumerable<long> Handle(ScheduleDelayQuery query,
+		CancellationToken cancellationToken)
+		=> scheduler.GetDelayTasks(query.Query);
+}
+
 public class DelayedScheduleHandler(ITaskScheduler scheduler) : IRequestHandler<QueueDelayedCommandListRequest>
 {
 	public async ValueTask<Unit> Handle(QueueDelayedCommandListRequest request, CancellationToken cancellationToken)

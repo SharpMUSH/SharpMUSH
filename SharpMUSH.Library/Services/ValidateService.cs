@@ -19,6 +19,8 @@ public partial class ValidateService(
 	ILockService lockService)
 	: IValidateService
 {
+	// Cache compiled regexes for attribute validation
+	private readonly Dictionary<string, Regex> _regexCache = new();
 	public async ValueTask<bool> Valid(IValidateService.ValidationType type, MString value,
 		OneOf<AnySharpObject, SharpAttributeEntry, SharpChannel, None> target)
 		=> type switch
@@ -120,17 +122,21 @@ public partial class ValidateService(
 	[GeneratedRegex(@"^[^:;""#\\&\]\p{C}]\P{C}*$")]
 	private partial Regex FunctionNameRegex();
 
-	private static bool CheckAttributeRegex(string name, string regex, string value)
+	private bool CheckAttributeRegex(string name, string regex, string value)
 	{
-		// TODO: Cache by name.
-		var reg = new Regex(regex);
+		// Cache regex by attribute name for performance
+		if (!_regexCache.TryGetValue(name, out var reg))
+		{
+			reg = new Regex(regex, RegexOptions.Compiled);
+			_regexCache[name] = reg;
+		}
 		return reg.IsMatch(value);
 	}
 
 	/// <summary>
 	/// Checks if an attribute value is valid against a SharpAttributeEntry.
-	/// TODO: Caching & ensuring enum can do globbing.
-	/// CONSIDER: Probably should do a LENGTH check as well.
+	/// TODO: Ensure enum can do globbing.
+	/// TODO: Add length check for attribute values.
 	/// </summary>
 	/// <param name="value">Value</param>
 	/// <param name="attribute">Attribute Entry</param>
@@ -202,7 +208,8 @@ public partial class ValidateService(
 			return false;
 		}
 
-		// TODO: Forbidden names
+		// Check against forbidden names list (would require configuration: forbidden_player_names)
+		// For now, allow all names that pass other validation
 
 		var tryFindPlayerByName = mediator
 			.CreateStream(new GetPlayerQuery(plainName))

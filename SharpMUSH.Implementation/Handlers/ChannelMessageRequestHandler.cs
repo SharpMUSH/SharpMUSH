@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Commands;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -220,7 +221,27 @@ public class ChannelMessageRequestHandler(
 			if (!skipBuffer)
 			{
 				logger.LogInformation("{ChannelMessage}", MModule.serialize(message));
-				// TODO: Add to channel recall buffer
+				
+				// Add to channel recall buffer - only if there's an actual source
+				if (!notification.Source.IsNone)
+				{
+					var sourceDbRef = notification.Source.Match(
+						player => player.Object.DBRef,
+						room => room.Object.DBRef,
+						exit => exit.Object.DBRef,
+						thing => thing.Object.DBRef,
+						_ => new DBRef(0));
+						
+					var channelMessage = new SharpChannelMessage
+					{
+						ChannelId = notification.Channel.Id ?? string.Empty,
+						Timestamp = DateTimeOffset.UtcNow,
+						Sender = sourceDbRef,
+						Message = message,
+						MessageType = notification.MessageType.ToString()
+					};
+					await mediator.Send(new AddChannelMessageCommand(channelMessage), cancellationToken);
+				}
 			}
 		}
 	}

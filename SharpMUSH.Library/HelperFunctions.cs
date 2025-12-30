@@ -20,6 +20,7 @@ public static partial class HelperFunctions
 	private static readonly Regex ObjectWithAttributeRegex = ObjectWithAttribute();
 	private static readonly Regex OptionalDatabaseReferenceWithAttributeRegex = OptionalDatabaseReferenceWithAttribute();
 	private static readonly Regex DatabaseReferenceWithOptionalAttributeRegex = DatabaseReferenceWithOptionalAttribute();
+	private static readonly Regex AttributeNameValidationRegex = AttributeNameValidation();
 
 	public static async ValueTask<AnySharpObject> GetGod(IMediator mediator)
 		=> (await mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Known;
@@ -215,8 +216,9 @@ public static partial class HelperFunctions
 		var match = DatabaseReferenceWithAttributeRegex.Match(dbReferenceAttr);
 		var obj = match.Groups["Object"].Value;
 
-		// TODO: Validate Attribute Pattern!
 		var attr = match.Groups["Attribute"].Value;
+		if (!IsValidAttributeName(attr))
+			return new None();
 
 		return !string.IsNullOrEmpty(attr) && DBRef.TryParse(obj, out var dbRef)
 				? new DbRefAttribute(dbRef!.Value, attr.ToUpper().Split("`").ToArray())
@@ -234,8 +236,9 @@ public static partial class HelperFunctions
 		var match = ObjectWithAttributeRegex.Match(objectAttr);
 		var obj = match.Groups["Object"].Value;
 
-		// TODO: Validate Attribute Pattern!
 		var attr = match.Groups["Attribute"].Value;
+		if (!IsValidAttributeName(attr))
+			return new None();
 
 		return string.IsNullOrEmpty(attr) || string.IsNullOrEmpty(obj)
 			? new None()
@@ -247,8 +250,9 @@ public static partial class HelperFunctions
 		var match = OptionalDatabaseReferenceWithAttributeRegex.Match(ObjectAttr);
 		var obj = match.Groups["Object"].Value;
 
-		// TODO: Validate Attribute Pattern!
 		var attr = match.Groups["Attribute"].Value;
+		if (!IsValidAttributeName(attr))
+			return false;
 
 		return string.IsNullOrEmpty(attr)
 			? false
@@ -312,8 +316,10 @@ public static partial class HelperFunctions
 		var match = DatabaseReferenceWithOptionalAttributeRegex.Match(DBRefAttr);
 		var obj = match.Groups["Object"].Value;
 
-		// TODO: Validate Attribute Pattern!
 		var attr = match.Groups["Attribute"].Value;
+		// Attribute is optional in this method, so only validate if present
+		if (!string.IsNullOrEmpty(attr) && !IsValidAttributeName(attr))
+			return false;
 
 		return string.IsNullOrEmpty(obj)
 			? false
@@ -367,4 +373,23 @@ public static partial class HelperFunctions
 	/// <returns>A regex that has a named group for the Object and Attribute.</returns>
 	[GeneratedRegex(@"^(?<Object>[^/]+)(?:/(?<Attribute>[a-zA-Z0-9@_\-\.`\?\*\[\]\(\)\+\<\>\^\$]+))?$")]
 	private static partial Regex DatabaseReferenceWithOptionalAttribute();
+	
+	/// <summary>
+	/// Validates basic attribute name format (alphanumeric, underscores, hyphens, backticks)
+	/// </summary>
+	[GeneratedRegex(@"^[a-zA-Z0-9@_\-\.`\?\*\[\]\(\)\+\<\>\^\$]+$")]
+	private static partial Regex AttributeNameValidation();
+	
+	/// <summary>
+	/// Validates that an attribute name is well-formed
+	/// </summary>
+	/// <param name="attributeName">The attribute name to validate</param>
+	/// <returns>True if valid, false otherwise</returns>
+	private static bool IsValidAttributeName(string attributeName)
+	{
+		if (string.IsNullOrEmpty(attributeName))
+			return false;
+		
+		return AttributeNameValidationRegex.IsMatch(attributeName);
+	}
 }
