@@ -10,7 +10,7 @@ namespace SharpMUSH.Implementation.Common;
 
 public static class AttributeHelpers
 {
-	// TODO: Cache the Attribute Configuration for performance.
+	// Future optimization: Consider caching attribute configuration values to reduce lookups
 
 	public static async ValueTask<CallState> GetPronoun(
 		IAttributeService attributeService,
