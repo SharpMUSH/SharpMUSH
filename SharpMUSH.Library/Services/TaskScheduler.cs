@@ -109,6 +109,7 @@ public class TaskScheduler(
 				.Build(),
 			TriggerBuilder.Create()
 				.WithSimpleSchedule(x => x.WithRepeatCount(0))
+				.StartAt(DateTimeOffset.MaxValue)  // Don't execute until @notify explicitly triggers it
 				.WithIdentity(triggerIdentity, triggerGroup).Build());
 		
 	}
