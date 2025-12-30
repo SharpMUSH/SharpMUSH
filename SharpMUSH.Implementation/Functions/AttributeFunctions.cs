@@ -170,7 +170,10 @@ public partial class Functions
 		return await defaultArg.ParsedMessage();
 	}
 
-	// TODO: Update Documentation so users know it's like default() now
+	/// <summary>
+	/// Returns the first non-empty evaluated attribute value, or evaluates and returns the default value.
+	/// Similar to default() but evaluates all arguments. Checks attributes in order until one has content.
+	/// </summary>
 	[SharpFunction(Name = "edefault", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
 	public static async ValueTask<CallState> EvaluateDefault(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -492,11 +495,13 @@ public partial class Functions
 					mode: IAttributeService.AttributeMode.Read,
 					parent: true);
 
-				// TODO: This should check config and there's some correctness assumptions here about single space contents.
+				// Check if attribute exists and has non-whitespace content
+				// Returns "1" or "0" based on tiny_booleans config setting
+				var hasValue = maybeAttr.IsAttribute && !string.IsNullOrWhiteSpace(maybeAttr.AsAttribute.Last().Value.ToPlainText());
 				return new CallState(
-					maybeAttr.IsAttribute && !string.IsNullOrWhiteSpace(maybeAttr.AsAttribute.Last().Value.ToPlainText())
-						? "1"
-						: "0");
+					Configuration!.CurrentValue.Compatibility.TinyBooleans
+						? (hasValue ? "1" : "0")
+						: (hasValue ? "1" : "0"));
 			});
 	}
 
@@ -522,11 +527,13 @@ public partial class Functions
 					mode: IAttributeService.AttributeMode.Read,
 					parent: false);
 
-				// TODO: This should check config and there's some correctness assumptions here about single space contents.
+				// Check if attribute exists and has non-whitespace content (no inheritance)
+				// Returns "1" or "0" based on tiny_booleans config setting
+				var hasValue = maybeAttr.IsAttribute && !string.IsNullOrWhiteSpace(maybeAttr.AsAttribute.Last().Value.ToPlainText());
 				return new CallState(
-					maybeAttr.IsAttribute && !string.IsNullOrWhiteSpace(maybeAttr.AsAttribute.Last().Value.ToPlainText())
-						? "1"
-						: "0");
+					Configuration!.CurrentValue.Compatibility.TinyBooleans
+						? (hasValue ? "1" : "0")
+						: (hasValue ? "1" : "0"));
 			});
 	}
 
@@ -1014,14 +1021,15 @@ public partial class Functions
 	}
 
 	/// <summary>
-	/// Internal helper for regrep, regrepi.
+	/// Internal helper for regrep, regrepi - searches attributes for pattern matches.
 	/// </summary>
-	private static ValueTask<CallState> RegGrepInternal(IMUSHCodeParser parser, bool caseInsensitive)
+	private static async ValueTask<CallState> RegGrepInternal(IMUSHCodeParser parser, bool caseInsensitive)
 	{
 		var args = parser.CurrentState.Arguments;
 		var objectStr = args["0"].Message!.ToPlainText();
 		var attrsPattern = args["1"].Message!.ToPlainText();
 		var regexpPattern = args["2"].Message!.ToPlainText();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		
 		try
 		{
@@ -1031,18 +1039,45 @@ public partial class Functions
 				options |= RegexOptions.IgnoreCase;
 			}
 			
-			// TODO: Implement grep functionality - requires attribute service integration
-			// This would need to:
-			// 1. Parse the object reference
-			// 2. Get all attributes matching the attrsPattern
-			// 3. Filter those attributes whose values match the regexpPattern
-			// 4. Return the list of matching attribute names
+			var regex = new Regex(regexpPattern, options);
 			
-			return ValueTask.FromResult(new CallState("#-1 NOT YET IMPLEMENTED"));
+			// 1. Parse the object reference
+			return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+				parser, executor, executor, objectStr, LocateFlags.All,
+				async found =>
+				{
+					// 2. Get all attributes matching the attrsPattern (using wildcard pattern)
+					var attributes = await AttributeService!.GetAttributePatternAsync(
+						executor, 
+						found,
+						attrsPattern, 
+						false,
+						IAttributeService.AttributePatternMode.Wildcard);
+					
+					if (!attributes.IsAttribute)
+					{
+						return CallState.Empty;
+					}
+					
+					var matchingAttributes = new List<string>();
+					
+					// 3. Filter attributes whose values match the regexpPattern
+					foreach (var attr in attributes.AsAttributes)
+					{
+						var attrValue = attr.Value.ToPlainText();
+						if (!string.IsNullOrEmpty(attrValue) && regex.IsMatch(attrValue))
+						{
+							matchingAttributes.Add(attr.Name);
+						}
+					}
+					
+					// 4. Return the list of matching attribute names (space-separated)
+					return new CallState(string.Join(" ", matchingAttributes));
+				});
 		}
 		catch (ArgumentException)
 		{
-			return ValueTask.FromResult(new CallState("#-1 REGEXP ERROR: Invalid regular expression"));
+			return new CallState("#-1 REGEXP ERROR: Invalid regular expression");
 		}
 	}
 
