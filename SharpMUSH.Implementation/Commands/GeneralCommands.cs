@@ -1001,7 +1001,7 @@ public partial class Commands
 			}
 			
 			// Halt all objects in the game
-			await foreach (var obj in Mediator.CreateStream(new GetAllObjectsQuery()))
+			await foreach (var obj in Mediator!.CreateStream(new GetAllObjectsQuery()))
 			{
 				await scheduler.Halt(obj.DBRef);
 			}
@@ -1078,9 +1078,10 @@ public partial class Commands
 			await scheduler.Halt(targetObject.DBRef);
 			
 			// Halt all objects owned by the player
-			await foreach (var obj in Mediator.CreateStream(new GetAllObjectsQuery()))
+			await foreach (var obj in Mediator!.CreateStream(new GetAllObjectsQuery()))
 			{
-				if (obj.Owner == targetObject.DBRef)
+				var owner = await obj.Owner.WithCancellation(CancellationToken.None);
+				if (owner.Object.DBRef == targetObject.DBRef)
 				{
 					await scheduler.Halt(obj.DBRef);
 				}
@@ -1107,10 +1108,10 @@ public partial class Commands
 			else
 			{
 				// Set HALT flag on the object
-				var haltFlag = await Mediator.Send(new GetObjectFlagQuery("HALT"));
+				var haltFlag = await Mediator!.Send(new GetObjectFlagQuery("HALT"));
 				if (haltFlag != null)
 				{
-					await ManipulateSharpObjectService!.AddFlag(targetObject, haltFlag);
+					await Mediator.Send(new SetObjectFlagCommand(target, haltFlag));
 				}
 				await NotifyService!.Notify(executor, $"Halted {targetObject.Name}.");
 			}
@@ -4824,7 +4825,7 @@ public partial class Commands
 			}
 			
 			// Halt all objects, then trigger @STARTUP on all objects that have it
-			await foreach (var obj in Mediator.CreateStream(new GetAllObjectsQuery()))
+			await foreach (var obj in Mediator!.CreateStream(new GetAllObjectsQuery()))
 			{
 				// Halt the object's queue
 				await scheduler.Halt(obj.DBRef);
@@ -4833,10 +4834,10 @@ public partial class Commands
 				try
 				{
 					var objNode = await Mediator.Send(new GetObjectNodeQuery(obj.DBRef));
-					if (objNode != null)
+					if (!objNode.IsNone)
 					{
 						await AttributeService!.EvaluateAttributeFunctionAsync(
-							parser, executor, objNode, "STARTUP", 
+							parser, executor, objNode.Known, "STARTUP", 
 							new Dictionary<string, CallState>(), 
 							evalParent: false);
 					}
@@ -4891,9 +4892,10 @@ public partial class Commands
 		if (target.IsPlayer)
 		{
 			// Halt and restart all objects owned by the player
-			await foreach (var obj in Mediator.CreateStream(new GetAllObjectsQuery()))
+			await foreach (var obj in Mediator!.CreateStream(new GetAllObjectsQuery()))
 			{
-				if (obj.Owner == targetObject.DBRef)
+				var owner = await obj.Owner.WithCancellation(CancellationToken.None);
+				if (owner.Object.DBRef == targetObject.DBRef)
 				{
 					await scheduler.Halt(obj.DBRef);
 					
@@ -4901,10 +4903,10 @@ public partial class Commands
 					try
 					{
 						var objNode = await Mediator.Send(new GetObjectNodeQuery(obj.DBRef));
-						if (objNode != null)
+						if (!objNode.IsNone)
 						{
 							await AttributeService!.EvaluateAttributeFunctionAsync(
-								parser, executor, objNode, "STARTUP", 
+								parser, executor, objNode.Known, "STARTUP", 
 								new Dictionary<string, CallState>(), 
 								evalParent: false);
 						}

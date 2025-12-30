@@ -31,7 +31,7 @@ public static class StatsMail
 					errorReturn: ErrorMessages.Returns.PermissionDenied,
 					notifyMessage: ErrorMessages.Notifications.PermissionDenied,
 					shouldNotify: true);
-				return MModule.single(errorResult.Message);
+				return errorResult.Message!;
 			}
 
 			var maybeTarget = await locateService.LocateAndNotifyIfInvalid(
@@ -45,7 +45,12 @@ public static class StatsMail
 
 			if (maybeTarget.IsNone)
 			{
-				return MModule.single(ErrorMessages.Returns.CantSeeThat);
+				var noTargetError = await notifyService.NotifyAndReturn(
+					executor.Object().DBRef,
+					errorReturn: ErrorMessages.Returns.NoSuchObject,
+					notifyMessage: ErrorMessages.Notifications.CantSeeThat,
+					shouldNotify: true);
+				return noTargetError.Message!;
 			}
 
 			target = maybeTarget.AsPlayer;
