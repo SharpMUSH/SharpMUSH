@@ -109,7 +109,7 @@ public class TaskScheduler(
 				.Build(),
 			TriggerBuilder.Create()
 				.WithSimpleSchedule(x => x.WithRepeatCount(0))
-				.StartAt(DateTimeOffset.MaxValue)  // Don't execute until @notify explicitly triggers it
+				.StartAt(DateTimeOffset.UtcNow.AddYears(100))  // Far future - will be triggered manually by @notify
 				.WithIdentity(triggerIdentity, triggerGroup).Build());
 		
 	}
