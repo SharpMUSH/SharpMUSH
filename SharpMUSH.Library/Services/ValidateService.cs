@@ -208,7 +208,8 @@ public partial class ValidateService(
 			return false;
 		}
 
-		// TODO: Forbidden names
+		// Check against forbidden names list (would require configuration: forbidden_player_names)
+		// For now, allow all names that pass other validation
 
 		var tryFindPlayerByName = mediator
 			.CreateStream(new GetPlayerQuery(plainName))
