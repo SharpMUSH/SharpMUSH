@@ -83,6 +83,25 @@ public static class ErrorMessages
 		public const string BadRegName = "#-1 REGISTER NAME INVALID";
 		public const string TooManyRegs = "#-1 TOO MANY REGISTERS";
 		public const string TooManySwitches = "#-1 TOO MANY SWITCHES, OR A BAD COMBINATION OF SWITCHES";
+		public const string OutOfRange = "#-1 OUT OF RANGE";
+		
+		// Configuration and database errors
+		public const string NoSuchConfigOption = "#-1 NO SUCH CONFIG OPTION";
+		public const string InvalidZone = "#-1 INVALID ZONE";
+		public const string SeparatorMustBeOneChar = "#-1 SEPARATOR MUST BE ONE CHARACTER";
+		public const string MissingArguments = "#-1 MISSING ARGUMENTS";
+		public const string NoSuchRecord = "#-1 NO SUCH RECORD";
+		
+		// SQL/Database errors (for future SQL support)
+		public const string SqlNoConnection = "#-1 SQL ERROR: NO DATABASE CONNECTED";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string SqlError = "#-1 SQL ERROR: {0}";
+		public const string SqliteError = "#-1 SQLITE ERROR";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string SqliteErrorDetail = "#-1 SQLITE ERROR: {0}";
+		
+		// Channel errors
+		public const string AmbiguousChannelName = "#-2 AMBIGUOUS CHANNEL NAME";
 		
 		// Function argument errors
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
@@ -121,7 +140,16 @@ public static class ErrorMessages
 		public const string NoSuchObject = "I can't find that.";
 		public const string CouldNotFind = "Could not find that.";
 		public const string CouldNotFindPlayer = "Could not find that player.";
+		public const string CantFindThatPlayer = "I can't find that player";
 		public const string AmbiguousMatch = "I don't know which one you mean.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string DontKnowWhichYouMean = "I don't know which {0} you mean!";
+		public const string DontSeeWhatYouWantToLock = "I don't see what you want to lock!";
+		public const string DontKnowWhichOneToLock = "I don't know which one you want to lock!";
+		public const string DontSeeThatHere = "I don't see that here.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string DontSeeThatHereFormat = "I don't see {0} here.";
+		public const string DontKnowWhoYouMean = "I don't know who you mean!";
 		
 		// Object type notifications
 		public const string NotARoom = "That's not a room.";
@@ -138,12 +166,29 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string PermissionDeniedSetAttribute = "Permission denied to set attribute on {0}.";
 		public const string LackSpoofingPermissions = "Permission denied: You lack spoofing permissions.";
+		public const string AttributeCannotBeChanged = "That attribute cannot be changed by you.";
+		public const string AttributePermissionsCannotBeChanged = "That attribute's permissions cannot be changed.";
+		public const string NoPermissionToChown = "You don't have the permission to chown that.";
+		public const string CantRemakeWorld = "You can't remake the world in your image.";
+		public const string CannotDoWhileGagged = "You cannot do that while gagged.";
+		public const string CantTeleportToNothing = "You can't teleport to nothing!";
+		public const string HavenFlagSet = "Your HAVEN flag is set. You cannot receive pages.";
 		
 		// Argument and validation notifications
 		public const string InvalidArgument = "Invalid argument.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string InvalidArguments = "Invalid arguments to {0}.";
 		public const string InvalidDbref = "That's not a valid object reference.";
+		public const string DontUnderstandThosePermissions = "I don't understand those permissions.";
+		public const string DontUnderstandThatKey = "I don't understand that key.";
+		public const string DontUnderstandListOfTypes = "I don't understand the list of types.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string DontUnderstandSwitch = "I don't understand switch '{0}'.";
+		public const string DontUnderstandWhatYouWantToList = "I don't understand what you want to @list.";
+		public const string DontUnderstandWhatYouWantToDo = "I don't understand what you want to do.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string DontKnowThat = "I don't know that {0}.";
+		public const string DontKnowThatAttribute = "I don't know that attribute.";
 		
 		// Name and alias notifications
 		public const string PlayerNameInUse = "That player name is already in use.";
@@ -156,10 +201,35 @@ public static class ErrorMessages
 		// Operation result notifications
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string Created = "Created {0} ({1}).";
+		public const string CreatedObject = "Created: Object {0}.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string WipedAttributes = "Wiped attributes matching {0}.";
 		public const string CouldNotFindNewOwner = "Could not find new owner.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string CouldNotFindDestination = "Could not find destination: {0}";
+		
+		// Channel notifications
+		public const string DontRecognizeThatChannel = "I don't recognise that channel.";
+		public const string DontKnowWhichChannel = "I don't know which channel you mean.";
+		
+		// Mail and communication notifications
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string DontThinkWantsToHearFrom = "I don't think #{0} wants to hear from {1}.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string DontThinkWantsMail = "I don't think #{0} wants {1}'s mail.";
+		
+		// Economic notifications
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string NotEnoughMoneyToLink = "You don't have enough {0} to link.";
+		public const string CantBuyThingsByTakingMoney = "You can't buy things by taking money.";
+		
+		// Administrative notifications
+		public const string DontLookLikeGod = "You don't look like God.";
+		public const string NotAnAdmin = "You don't look like an admin to me.";
+		public const string CantAliasCommandToThat = "I can't alias a command to that!";
+		public const string CantMakeMultipleRequests = "You can't make multiple requests at the same time!";
+		
+		// HTTP/Network notifications
+		public const string CannotSetContentLengthHeader = "You cannot set Content-Length header.";
 	}
 }
