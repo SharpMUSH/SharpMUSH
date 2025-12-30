@@ -1319,8 +1319,17 @@ public partial class Commands
 			: ["ROOM", "SELF", "ZONE", "GLOBALS"];
 
 		List<string> runningOutput = [];
-		// TODO: Permission check on the outputs
-		// -> It does NOT scan objects that you do not control and are not set VISUAL.
+		
+		// Helper to check if executor can scan an object
+		// Can scan if executor controls the object OR object has VISUAL flag
+		async Task<bool> CanScan(AnySharpObject obj)
+		{
+			var controls = await PermissionService!.Controls(executor, obj);
+			if (controls) return true;
+			
+			var isVisual = await obj.HasFlag("VISUAL");
+			return isVisual;
+		}
 
 		if (executor.IsContent && switches.Contains("ROOM"))
 		{
@@ -1337,9 +1346,13 @@ public partial class Commands
 			{
 				foreach (var (i, (obj, attr, _)) in matchedContent.AsValue().Index())
 				{
-					runningOutput.Add($"#{obj.Object().DBRef.Number}/{attr.LongName}");
-					await NotifyService!.Notify(executor,
-						$"{obj.Object().Name}\t[{i}: #{obj.Object().DBRef.Number}/{attr.LongName}]");
+					// Check permission before showing
+					if (await CanScan(obj))
+					{
+						runningOutput.Add($"#{obj.Object().DBRef.Number}/{attr.LongName}");
+						await NotifyService!.Notify(executor,
+							$"{obj.Object().Name}\t[{i}: #{obj.Object().DBRef.Number}/{attr.LongName}]");
+					}
 				}
 			}
 		}
@@ -1358,9 +1371,13 @@ public partial class Commands
 			{
 				foreach (var (i, (obj, attr, _)) in matchedContent.AsValue().Index())
 				{
-					runningOutput.Add($"#{obj.Object().DBRef.Number}/{attr.LongName}");
-					await NotifyService!.Notify(executor,
-						$"{obj.Object().Name}\t[{i}: #{obj.Object().DBRef.Number}/{attr.LongName}]");
+					// Check permission before showing
+					if (await CanScan(obj))
+					{
+						runningOutput.Add($"#{obj.Object().DBRef.Number}/{attr.LongName}");
+						await NotifyService!.Notify(executor,
+							$"{obj.Object().Name}\t[{i}: #{obj.Object().DBRef.Number}/{attr.LongName}]");
+					}
 				}
 			}
 		}
@@ -1391,9 +1408,13 @@ public partial class Commands
 					{
 						foreach (var (i, (obj, attr, _)) in zoneMatched.AsValue().Index())
 						{
-							runningOutput.Add($"#{obj.Object().DBRef.Number}/{attr.LongName}");
-							await NotifyService!.Notify(executor,
-								$"{obj.Object().Name}\t[{i}: #{obj.Object().DBRef.Number}/{attr.LongName}]");
+							// Check permission before showing
+							if (await CanScan(obj))
+							{
+								runningOutput.Add($"#{obj.Object().DBRef.Number}/{attr.LongName}");
+								await NotifyService!.Notify(executor,
+									$"{obj.Object().Name}\t[{i}: #{obj.Object().DBRef.Number}/{attr.LongName}]");
+							}
 						}
 					}
 				}
@@ -1413,9 +1434,13 @@ public partial class Commands
 
 			foreach (var (i, (obj, attr, _)) in masterRoomContent.AsValue().Index())
 			{
-				runningOutput.Add($"#{obj.Object().DBRef.Number}/{attr.LongName}");
-				await NotifyService!.Notify(executor,
-					$"{obj.Object().Name}\t[{i}: #{obj.Object().DBRef.Number}/{attr.LongName}]");
+				// Check permission before showing
+				if (await CanScan(obj))
+				{
+					runningOutput.Add($"#{obj.Object().DBRef.Number}/{attr.LongName}");
+					await NotifyService!.Notify(executor,
+						$"{obj.Object().Name}\t[{i}: #{obj.Object().DBRef.Number}/{attr.LongName}]");
+				}
 			}
 		}
 
