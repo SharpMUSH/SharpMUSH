@@ -136,6 +136,7 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, Prometh
 		services.AddSingleton<IHookService, HookService>();
 		services.AddSingleton<IEventService, EventService>();
 		services.AddSingleton<IWarningService, WarningService>();
+		services.AddSingleton<IChannelBufferService, InMemoryChannelBufferService>();
 		services.AddSingleton<PennMUSHDatabaseParser>();
 		services.AddSingleton<IPennMUSHDatabaseConverter, PennMUSHDatabaseConverter>();
 		services.AddSingleton<ILibraryProvider<FunctionDefinition>, Functions>();
