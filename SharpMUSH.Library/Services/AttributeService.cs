@@ -227,8 +227,6 @@ public class AttributeService(
 		}
 		
 		return new None();
-
-		// TODO: Currently this only returns the last piece. We should return the full path.
 	}
 
 	public async ValueTask<MString> EvaluateAttributeFunctionAsync(IMUSHCodeParser parser, AnySharpObject executor,
@@ -540,7 +538,15 @@ public class AttributeService(
 			return new Error<string>("Flag Found");
 		}
 
-		// TODO: What if it's already set?
+		// Check if the flag is already set to avoid redundant operations
+		var currentFlags = returnedAttribute.AsAttribute.Last().Flags;
+		if (currentFlags.Contains(returnedFlag))
+		{
+			await notifyService.Notify(executor,
+				$"Flag {returnedFlag.Name} is already set on attribute {returnedAttribute.AsAttribute.Last().LongName}", obj);
+			return new Success();
+		}
+
 		await mediator.Send(new SetAttributeFlagCommand(obj.Object().DBRef, returnedAttribute.AsAttribute.Last(),
 			returnedFlag));
 
@@ -572,7 +578,15 @@ public class AttributeService(
 			return new Error<string>("Flag Found");
 		}
 
-		// TODO: What if it's not already set?
+		// Check if the flag is actually set before unsetting
+		var currentFlags = returnedAttribute.AsAttribute.Last().Flags;
+		if (!currentFlags.Contains(returnedFlag))
+		{
+			await notifyService.Notify(executor,
+				$"Flag {returnedFlag.Name} is not set on attribute {returnedAttribute.AsAttribute.Last().LongName}", obj);
+			return new Success();
+		}
+
 		await mediator.Send(new UnsetAttributeFlagCommand(obj.Object().DBRef, returnedAttribute.AsAttribute.Last(),
 			returnedFlag));
 
@@ -595,7 +609,9 @@ public class AttributeService(
 		var attrPath = attribute.Split('`');
 		var attr = mediator.CreateStream(new GetAttributeQuery(obj.Object().DBRef, attrPath));
 
-		// TODO: Fix, object permissions also needed.
+		// Check both attribute permissions AND object permissions
+		// Attribute permissions: executor must be able to set each attribute in the path
+		// Object permissions: executor must control the object
 		var permission = await attr.AllAsync(async (x, _) => await ps.CanSet(executor, obj, x));
 
 		if (!permission)
