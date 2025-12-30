@@ -18,7 +18,7 @@ public class WebSocketTestTests
 	/// <summary>
 	/// Concrete test context for WebSocket tests that sets up MudBlazor services.
 	/// </summary>
-	private class WebSocketTestContext : Bunit.TestContext
+	private class WebSocketTestContext : BunitContext
 	{
 		public WebSocketTestContext()
 		{
@@ -43,7 +43,7 @@ public class WebSocketTestTests
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
-		var cut = ctx.RenderComponent<WebSocketTest>();
+		var cut = ctx.Render<WebSocketTest>();
 
 		// Assert
 		var chip = cut.Find("div.mud-chip");
@@ -59,7 +59,7 @@ public class WebSocketTestTests
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
-		var cut = ctx.RenderComponent<WebSocketTest>();
+		var cut = ctx.Render<WebSocketTest>();
 
 		// Assert
 		var heading = cut.Find("h4");
@@ -75,7 +75,7 @@ public class WebSocketTestTests
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
-		var cut = ctx.RenderComponent<WebSocketTest>();
+		var cut = ctx.Render<WebSocketTest>();
 
 		// Assert
 		var serverUriField = cut.Find("input[placeholder='ws://localhost:4202/ws']");
@@ -91,7 +91,7 @@ public class WebSocketTestTests
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
-		var cut = ctx.RenderComponent<WebSocketTest>();
+		var cut = ctx.Render<WebSocketTest>();
 
 		// Assert
 		var buttons = cut.FindAll("button");
@@ -108,7 +108,7 @@ public class WebSocketTestTests
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
-		var cut = ctx.RenderComponent<WebSocketTest>();
+		var cut = ctx.Render<WebSocketTest>();
 
 		// Assert
 		var buttons = cut.FindAll("button");
@@ -125,7 +125,7 @@ public class WebSocketTestTests
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
-		var cut = ctx.RenderComponent<WebSocketTest>();
+		var cut = ctx.Render<WebSocketTest>();
 
 		// Assert
 		var buttons = cut.FindAll("button");
@@ -142,7 +142,7 @@ public class WebSocketTestTests
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
-		var cut = ctx.RenderComponent<WebSocketTest>();
+		var cut = ctx.Render<WebSocketTest>();
 
 		// Assert
 		var inputs = cut.FindAll("input");
@@ -159,7 +159,7 @@ public class WebSocketTestTests
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
-		var cut = ctx.RenderComponent<WebSocketTest>();
+		var cut = ctx.Render<WebSocketTest>();
 
 		// Assert
 		var buttons = cut.FindAll("button");
@@ -176,7 +176,7 @@ public class WebSocketTestTests
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
-		var cut = ctx.RenderComponent<WebSocketTest>();
+		var cut = ctx.Render<WebSocketTest>();
 
 		// Assert
 		var buttons = cut.FindAll("button");
@@ -193,7 +193,7 @@ public class WebSocketTestTests
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
-		var cut = ctx.RenderComponent<WebSocketTest>();
+		var cut = ctx.Render<WebSocketTest>();
 
 		// Assert
 		var messagesHeading = cut.FindAll("h6").FirstOrDefault(h => h.TextContent.Contains("Messages"));
@@ -209,7 +209,7 @@ public class WebSocketTestTests
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
-		var cut = ctx.RenderComponent<WebSocketTest>();
+		var cut = ctx.Render<WebSocketTest>();
 
 		// Assert
 		var serverUriInput = cut.Find("input[placeholder='ws://localhost:4202/ws']");
@@ -224,7 +224,7 @@ public class WebSocketTestTests
 		var mockWebSocketClient = CreateMockWebSocketClient(false);
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
-		var cut = ctx.RenderComponent<WebSocketTest>();
+		var cut = ctx.Render<WebSocketTest>();
 		var buttons = cut.FindAll("button");
 		var connectButton = buttons.FirstOrDefault(b => b.TextContent.Contains("Connect") && !b.TextContent.Contains("Disconnect"));
 
