@@ -441,7 +441,10 @@ public partial class Functions
 
 		var located = maybeLocate.AsSharpObject;
 
-		// TODO: Implement WAIT and INDEPENDENT queue handling
+		// Get semaphore queue PIDs
+		// Note: Currently only semaphore queue tracking is fully implemented
+		// WAIT and INDEPENDENT filtering would require extending ScheduleSemaphoreQuery
+		// to return tasks from DelayGroup and EnqueueGroup with proper filtering
 		var semaphorePids = Mediator!
 			.CreateStream(new ScheduleSemaphoreQuery(located.Object().DBRef));
 

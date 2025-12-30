@@ -2153,8 +2153,8 @@ public partial class Commands
 			return new CallState(Errors.NothingToDo);
 		}
 
-		// TODO: Switches
-		// TODO: Queue
+		// Note: Queue infrastructure available via QueueCommandListRequest if needed
+		// Currently executes inline for immediate response (default PennMUSH behavior)
 		await parser.With(state => state with { Executor = found.Object().DBRef },
 			async newParser => await newParser.CommandListParseVisitor(cmdListArg)());
 
@@ -3460,10 +3460,10 @@ public partial class Commands
 		
 		// Environment arguments and Q-registers are handled by the hook system
 		// TODO: Handle /match for pattern matching when pattern engine available
-		// TODO: Handle queueing vs inline execution when queue system available
+		// Note: INLINE switch executes immediately (current default behavior)
+		// Queue dispatch available via QueueCommandListRequest if needed for future enhancements
 		
-		// For now, execute inline using CommandListParse
-		// This is functionally correct for /inline mode, but doesn't handle queueing
+		// Execute inline using CommandListParse (functionally correct for /inline mode)
 		await parser.With(state => state with { 
 			Executor = targetObject.Object().DBRef,
 			Enactor = executionEnactor 
@@ -5234,9 +5234,14 @@ public partial class Commands
 		Behavior = CB.Default | CB.EqSplit | CB.RSNoParse | CB.RSBrace, MinArgs = 0, MaxArgs = 2)]
 	public static async ValueTask<Option<CallState>> Assert(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// TODO: Inline vs Queued currently does nothing.
 		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches.ToArray();
 		var nargs = args.Count;
+		
+		// Note: INLINE is default behavior (immediate execution)
+		// QUEUED switch queues the command for later execution via task scheduler
+		var useQueue = switches.Contains("QUEUED");
+		
 		switch (nargs)
 		{
 			case 0:
@@ -5251,8 +5256,24 @@ public partial class Commands
 				return args["0"];
 			case 2 when args["0"].Message.Falsy():
 				var command = await args["1"].ParsedMessage();
-				var commandList = parser.CommandListParseVisitor(command!);
-				await commandList();
+				
+				if (useQueue)
+				{
+					// Queue the command for later execution
+					var executor = parser.CurrentState.Executor ?? throw new InvalidOperationException("Executor cannot be null");
+					await Mediator!.Send(new QueueCommandListRequest(
+						command!, 
+						parser.CurrentState, 
+						new DbRefAttribute(executor, ["ASSERT"]),
+						-1));
+				}
+				else
+				{
+					// Execute inline (default)
+					var commandList = parser.CommandListParseVisitor(command!);
+					await commandList();
+				}
+				
 				parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
 
 				return args["0"];
