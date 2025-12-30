@@ -411,8 +411,11 @@ public partial class Commands
 								}
 							}
 							
-							// TODO: Check if exit is unlinked and check @lock/link, if linking someone else's exit @chown it and set HALT,
-							// and charge link cost (usually 1 penny).
+							// TODO: When linking an unlinked exit owned by someone else:
+							// - Check @lock/link on the exit 
+							// - Transfer ownership to the linker via SetObjectOwnerCommand
+							// - Set HALT flag to prevent looping
+							// (Requires proper detection of unlinked state - exit destination comparison)
 
 			await AttributeService!.SetAttributeAsync(executor, exitObj, AttrLinkType, MModule.empty());
 							
@@ -666,7 +669,13 @@ public partial class Commands
 							{
 								await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "!TRUST", false);
 							}
-							// TODO: Strip powers
+							
+							// Strip all powers from the object
+							var allPowers = obj.Object().Powers.Value;
+							await foreach (var power in allPowers)
+							{
+								await Mediator!.Send(new UnsetObjectPowerCommand(obj, power));
+							}
 						}
 
 						await NotifyService!.Notify(executor, "Zone set.");
