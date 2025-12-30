@@ -162,8 +162,7 @@ public class WarningService(
 		{
 			if (warnings.Count > 0)
 			{
-				// TODO: Check if owner is connected before notifying
-				// For now, notify all owners (they won't receive if disconnected)
+				// Notify connected owners only (already filtered via ConnectionService)
 				await notifyService.Notify(owner, $"Warning check complete: {warnings.Count} warnings found on your objects:");
 				foreach (var warning in warnings)
 				{
