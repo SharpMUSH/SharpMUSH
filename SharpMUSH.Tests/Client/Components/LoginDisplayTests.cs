@@ -15,7 +15,7 @@ public class LoginDisplayTests
 	public async Task LoginDisplay_WhenNotAuthenticated_ShowsLoginButton()
 	{
 		// Arrange
-		using var ctx = new BunitContext();
+		await using var ctx = new BunitContext();
 		ctx.AddAuthorization();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
@@ -33,7 +33,7 @@ public class LoginDisplayTests
 	public async Task LoginDisplay_WhenAuthenticated_ShowsUsername()
 	{
 		// Arrange
-		using var ctx = new BunitContext();
+		await using var ctx = new BunitContext();
 		var authContext = ctx.AddAuthorization();
 		authContext.SetAuthorized("TestUser");
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
@@ -51,7 +51,7 @@ public class LoginDisplayTests
 	public async Task LoginDisplay_WhenAuthenticated_ShowsLogoutButton()
 	{
 		// Arrange
-		using var ctx = new BunitContext();
+		await using var ctx = new BunitContext();
 		var authContext = ctx.AddAuthorization();
 		authContext.SetAuthorized("TestUser");
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
@@ -69,7 +69,7 @@ public class LoginDisplayTests
 	public async Task LoginDisplay_WhenNotAuthenticated_DoesNotShowUsername()
 	{
 		// Arrange
-		using var ctx = new BunitContext();
+		await using var ctx = new BunitContext();
 		ctx.AddAuthorization();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();

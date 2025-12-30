@@ -18,7 +18,7 @@ public class WikiDisplayTests
 	public async Task WikiDisplay_WithArticle_DisplaysTitle()
 	{
 		// Arrange
-		using var ctx = new BunitContext();
+		await using var ctx = new BunitContext();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.AddAuthorization(); // Required for AuthorizeView component
 		ctx.Services.AddMudServices();
@@ -43,7 +43,7 @@ public class WikiDisplayTests
 	public async Task WikiDisplay_WithArticle_RendersContent()
 	{
 		// Arrange
-		using var ctx = new BunitContext();
+		await using var ctx = new BunitContext();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.AddAuthorization();
 		ctx.Services.AddMudServices();
@@ -69,7 +69,7 @@ public class WikiDisplayTests
 	public async Task WikiDisplay_WithoutArticle_ShowsInfoMessage()
 	{
 		// Arrange
-		using var ctx = new BunitContext();
+		await using var ctx = new BunitContext();
 		ctx.AddAuthorization();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
@@ -92,7 +92,7 @@ public class WikiDisplayTests
 	public async Task WikiDisplay_WithoutArticle_WhenAuthorized_ShowsCreateOption()
 	{
 		// Arrange
-		using var ctx = new BunitContext();
+		await using var ctx = new BunitContext();
 		var authContext = ctx.AddAuthorization();
 		authContext.SetAuthorized("TestUser");
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
@@ -117,7 +117,7 @@ public class WikiDisplayTests
 	public async Task WikiDisplay_WhenAuthorized_ShowsEditButton()
 	{
 		// Arrange
-		using var ctx = new BunitContext();
+		await using var ctx = new BunitContext();
 		var authContext = ctx.AddAuthorization();
 		authContext.SetAuthorized("TestUser");
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
@@ -144,7 +144,7 @@ public class WikiDisplayTests
 	public async Task WikiDisplay_WhenNotAuthorized_DoesNotShowEditButton()
 	{
 		// Arrange
-		using var ctx = new BunitContext();
+		await using var ctx = new BunitContext();
 		ctx.AddAuthorization(); // Not authorized
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
@@ -169,7 +169,7 @@ public class WikiDisplayTests
 	public async Task WikiDisplay_HomeSlug_DisplaysAsHero()
 	{
 		// Arrange
-		using var ctx = new BunitContext();
+		await using var ctx = new BunitContext();
 		ctx.AddAuthorization();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
