@@ -38,7 +38,7 @@ public class WebSocketTestTests
 	public async Task WebSocketTest_InitialState_ShowsDisconnected()
 	{
 		// Arrange
-		using var ctx = new WebSocketTestContext();
+		await using var ctx = new WebSocketTestContext();
 		var mockWebSocketClient = CreateMockWebSocketClient(false);
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
@@ -54,7 +54,7 @@ public class WebSocketTestTests
 	public async Task WebSocketTest_RendersPageTitle()
 	{
 		// Arrange
-		using var ctx = new WebSocketTestContext();
+		await using var ctx = new WebSocketTestContext();
 		var mockWebSocketClient = CreateMockWebSocketClient();
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
@@ -70,7 +70,7 @@ public class WebSocketTestTests
 	public async Task WebSocketTest_HasServerUriField()
 	{
 		// Arrange
-		using var ctx = new WebSocketTestContext();
+		await using var ctx = new WebSocketTestContext();
 		var mockWebSocketClient = CreateMockWebSocketClient();
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
@@ -86,7 +86,7 @@ public class WebSocketTestTests
 	public async Task WebSocketTest_HasConnectButton()
 	{
 		// Arrange
-		using var ctx = new WebSocketTestContext();
+		await using var ctx = new WebSocketTestContext();
 		var mockWebSocketClient = CreateMockWebSocketClient();
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
@@ -103,7 +103,7 @@ public class WebSocketTestTests
 	public async Task WebSocketTest_HasDisconnectButton()
 	{
 		// Arrange
-		using var ctx = new WebSocketTestContext();
+		await using var ctx = new WebSocketTestContext();
 		var mockWebSocketClient = CreateMockWebSocketClient();
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
@@ -120,7 +120,7 @@ public class WebSocketTestTests
 	public async Task WebSocketTest_DisconnectButton_DisabledWhenDisconnected()
 	{
 		// Arrange
-		using var ctx = new WebSocketTestContext();
+		await using var ctx = new WebSocketTestContext();
 		var mockWebSocketClient = CreateMockWebSocketClient(false);
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
@@ -137,7 +137,7 @@ public class WebSocketTestTests
 	public async Task WebSocketTest_HasMessageInputField()
 	{
 		// Arrange
-		using var ctx = new WebSocketTestContext();
+		await using var ctx = new WebSocketTestContext();
 		var mockWebSocketClient = CreateMockWebSocketClient();
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
@@ -154,7 +154,7 @@ public class WebSocketTestTests
 	public async Task WebSocketTest_HasSendMessageButton()
 	{
 		// Arrange
-		using var ctx = new WebSocketTestContext();
+		await using var ctx = new WebSocketTestContext();
 		var mockWebSocketClient = CreateMockWebSocketClient();
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
@@ -171,7 +171,7 @@ public class WebSocketTestTests
 	public async Task WebSocketTest_SendButton_DisabledWhenDisconnected()
 	{
 		// Arrange
-		using var ctx = new WebSocketTestContext();
+		await using var ctx = new WebSocketTestContext();
 		var mockWebSocketClient = CreateMockWebSocketClient(false);
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
@@ -188,7 +188,7 @@ public class WebSocketTestTests
 	public async Task WebSocketTest_HasMessagesSection()
 	{
 		// Arrange
-		using var ctx = new WebSocketTestContext();
+		await using var ctx = new WebSocketTestContext();
 		var mockWebSocketClient = CreateMockWebSocketClient();
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
@@ -204,7 +204,7 @@ public class WebSocketTestTests
 	public async Task WebSocketTest_DefaultServerUri_IsCorrect()
 	{
 		// Arrange
-		using var ctx = new WebSocketTestContext();
+		await using var ctx = new WebSocketTestContext();
 		var mockWebSocketClient = CreateMockWebSocketClient();
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
@@ -220,7 +220,7 @@ public class WebSocketTestTests
 	public async Task WebSocketTest_ConnectButton_CallsConnectAsync()
 	{
 		// Arrange
-		using var ctx = new WebSocketTestContext();
+		await using var ctx = new WebSocketTestContext();
 		var mockWebSocketClient = CreateMockWebSocketClient(false);
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
