@@ -107,7 +107,6 @@ public class LockService(IFusionCache cache, IBooleanExpressionParser bep, IMedi
 		Owner = 128
 	}
 
-	// TODO: Optimize #TRUE calls, we don't need to cache those.
 	public static string Get(LockType standardType, AnySharpObject lockee)
 	{
 		var defaultLockData = new Models.SharpLockData { LockString = "#TRUE", Flags = LockFlags.Default };
@@ -118,7 +117,13 @@ public class LockService(IFusionCache cache, IBooleanExpressionParser bep, IMedi
 		string lockString,
 		AnySharpObject gated,
 		AnySharpObject unlocker)
-		=> bep.Compile(lockString)(gated, unlocker);
+	{
+		// Optimize #TRUE - no need to compile or cache
+		if (lockString is "#TRUE" or "")
+			return true;
+		
+		return bep.Compile(lockString)(gated, unlocker);
+	}
 
 	public bool Evaluate(string lockString, SharpChannel gatedChannel, AnySharpObject unlocker)
 	{
@@ -136,8 +141,16 @@ public class LockService(IFusionCache cache, IBooleanExpressionParser bep, IMedi
 		LockType standardType,
 		AnySharpObject gated,
 		AnySharpObject unlocker)
-		=> cache.GetOrSet($"lock:{gated.Object().DBRef}:{standardType.ToString()}", bep.Compile(Get(standardType, gated)))(
+	{
+		var lockString = Get(standardType, gated);
+		
+		// Optimize #TRUE - no need to compile or cache
+		if (lockString is "#TRUE" or "")
+			return true;
+		
+		return cache.GetOrSet($"lock:{gated.Object().DBRef}:{standardType.ToString()}", bep.Compile(lockString))(
 			gated, unlocker);
+	}
 
 	public IEnumerable<bool> Evaluate(
 		LockType standardType,
