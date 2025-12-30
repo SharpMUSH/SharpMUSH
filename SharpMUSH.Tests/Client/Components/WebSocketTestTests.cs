@@ -18,7 +18,7 @@ public class WebSocketTestTests
 	/// <summary>
 	/// Concrete test context for WebSocket tests that sets up MudBlazor services.
 	/// </summary>
-	private class WebSocketTestContext : Bunit.TestContext
+	private class WebSocketTestContext : BunitContext
 	{
 		public WebSocketTestContext()
 		{
@@ -38,12 +38,12 @@ public class WebSocketTestTests
 	public async Task WebSocketTest_InitialState_ShowsDisconnected()
 	{
 		// Arrange
-		using var ctx = new WebSocketTestContext();
+		await using var ctx = new WebSocketTestContext();
 		var mockWebSocketClient = CreateMockWebSocketClient(false);
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
-		var cut = ctx.RenderComponent<WebSocketTest>();
+		var cut = ctx.Render<WebSocketTest>();
 
 		// Assert
 		var chip = cut.Find("div.mud-chip");
@@ -54,12 +54,12 @@ public class WebSocketTestTests
 	public async Task WebSocketTest_RendersPageTitle()
 	{
 		// Arrange
-		using var ctx = new WebSocketTestContext();
+		await using var ctx = new WebSocketTestContext();
 		var mockWebSocketClient = CreateMockWebSocketClient();
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
-		var cut = ctx.RenderComponent<WebSocketTest>();
+		var cut = ctx.Render<WebSocketTest>();
 
 		// Assert
 		var heading = cut.Find("h4");
@@ -70,12 +70,12 @@ public class WebSocketTestTests
 	public async Task WebSocketTest_HasServerUriField()
 	{
 		// Arrange
-		using var ctx = new WebSocketTestContext();
+		await using var ctx = new WebSocketTestContext();
 		var mockWebSocketClient = CreateMockWebSocketClient();
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
-		var cut = ctx.RenderComponent<WebSocketTest>();
+		var cut = ctx.Render<WebSocketTest>();
 
 		// Assert
 		var serverUriField = cut.Find("input[placeholder='ws://localhost:4202/ws']");
@@ -86,12 +86,12 @@ public class WebSocketTestTests
 	public async Task WebSocketTest_HasConnectButton()
 	{
 		// Arrange
-		using var ctx = new WebSocketTestContext();
+		await using var ctx = new WebSocketTestContext();
 		var mockWebSocketClient = CreateMockWebSocketClient();
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
-		var cut = ctx.RenderComponent<WebSocketTest>();
+		var cut = ctx.Render<WebSocketTest>();
 
 		// Assert
 		var buttons = cut.FindAll("button");
@@ -103,12 +103,12 @@ public class WebSocketTestTests
 	public async Task WebSocketTest_HasDisconnectButton()
 	{
 		// Arrange
-		using var ctx = new WebSocketTestContext();
+		await using var ctx = new WebSocketTestContext();
 		var mockWebSocketClient = CreateMockWebSocketClient();
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
-		var cut = ctx.RenderComponent<WebSocketTest>();
+		var cut = ctx.Render<WebSocketTest>();
 
 		// Assert
 		var buttons = cut.FindAll("button");
@@ -120,12 +120,12 @@ public class WebSocketTestTests
 	public async Task WebSocketTest_DisconnectButton_DisabledWhenDisconnected()
 	{
 		// Arrange
-		using var ctx = new WebSocketTestContext();
+		await using var ctx = new WebSocketTestContext();
 		var mockWebSocketClient = CreateMockWebSocketClient(false);
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
-		var cut = ctx.RenderComponent<WebSocketTest>();
+		var cut = ctx.Render<WebSocketTest>();
 
 		// Assert
 		var buttons = cut.FindAll("button");
@@ -137,12 +137,12 @@ public class WebSocketTestTests
 	public async Task WebSocketTest_HasMessageInputField()
 	{
 		// Arrange
-		using var ctx = new WebSocketTestContext();
+		await using var ctx = new WebSocketTestContext();
 		var mockWebSocketClient = CreateMockWebSocketClient();
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
-		var cut = ctx.RenderComponent<WebSocketTest>();
+		var cut = ctx.Render<WebSocketTest>();
 
 		// Assert
 		var inputs = cut.FindAll("input");
@@ -154,12 +154,12 @@ public class WebSocketTestTests
 	public async Task WebSocketTest_HasSendMessageButton()
 	{
 		// Arrange
-		using var ctx = new WebSocketTestContext();
+		await using var ctx = new WebSocketTestContext();
 		var mockWebSocketClient = CreateMockWebSocketClient();
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
-		var cut = ctx.RenderComponent<WebSocketTest>();
+		var cut = ctx.Render<WebSocketTest>();
 
 		// Assert
 		var buttons = cut.FindAll("button");
@@ -171,12 +171,12 @@ public class WebSocketTestTests
 	public async Task WebSocketTest_SendButton_DisabledWhenDisconnected()
 	{
 		// Arrange
-		using var ctx = new WebSocketTestContext();
+		await using var ctx = new WebSocketTestContext();
 		var mockWebSocketClient = CreateMockWebSocketClient(false);
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
-		var cut = ctx.RenderComponent<WebSocketTest>();
+		var cut = ctx.Render<WebSocketTest>();
 
 		// Assert
 		var buttons = cut.FindAll("button");
@@ -188,12 +188,12 @@ public class WebSocketTestTests
 	public async Task WebSocketTest_HasMessagesSection()
 	{
 		// Arrange
-		using var ctx = new WebSocketTestContext();
+		await using var ctx = new WebSocketTestContext();
 		var mockWebSocketClient = CreateMockWebSocketClient();
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
-		var cut = ctx.RenderComponent<WebSocketTest>();
+		var cut = ctx.Render<WebSocketTest>();
 
 		// Assert
 		var messagesHeading = cut.FindAll("h6").FirstOrDefault(h => h.TextContent.Contains("Messages"));
@@ -204,12 +204,12 @@ public class WebSocketTestTests
 	public async Task WebSocketTest_DefaultServerUri_IsCorrect()
 	{
 		// Arrange
-		using var ctx = new WebSocketTestContext();
+		await using var ctx = new WebSocketTestContext();
 		var mockWebSocketClient = CreateMockWebSocketClient();
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
 		// Act
-		var cut = ctx.RenderComponent<WebSocketTest>();
+		var cut = ctx.Render<WebSocketTest>();
 
 		// Assert
 		var serverUriInput = cut.Find("input[placeholder='ws://localhost:4202/ws']");
@@ -220,11 +220,11 @@ public class WebSocketTestTests
 	public async Task WebSocketTest_ConnectButton_CallsConnectAsync()
 	{
 		// Arrange
-		using var ctx = new WebSocketTestContext();
+		await using var ctx = new WebSocketTestContext();
 		var mockWebSocketClient = CreateMockWebSocketClient(false);
 		ctx.Services.AddSingleton(mockWebSocketClient);
 
-		var cut = ctx.RenderComponent<WebSocketTest>();
+		var cut = ctx.Render<WebSocketTest>();
 		var buttons = cut.FindAll("button");
 		var connectButton = buttons.FirstOrDefault(b => b.TextContent.Contains("Connect") && !b.TextContent.Contains("Disconnect"));
 

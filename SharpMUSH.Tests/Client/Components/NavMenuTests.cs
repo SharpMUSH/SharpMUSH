@@ -13,7 +13,7 @@ public class NavMenuTests : MudBlazorTestContext
 	public async Task NavMenu_RendersAllNavigationLinks()
 	{
 		// Arrange & Act
-		var cut = RenderComponent<NavMenu>();
+		var cut = Render<NavMenu>();
 
 		// Assert - Verify all expected navigation links are present
 		var homeLink = cut.Find("a[href='/']");
@@ -31,7 +31,7 @@ public class NavMenuTests : MudBlazorTestContext
 	public async Task NavMenu_HomeLinkText_IsCorrect()
 	{
 		// Arrange & Act
-		var cut = RenderComponent<NavMenu>();
+		var cut = Render<NavMenu>();
 
 		// Assert
 		var homeLink = cut.Find("a[href='/']");
@@ -42,7 +42,7 @@ public class NavMenuTests : MudBlazorTestContext
 	public async Task NavMenu_CounterLinkText_IsCorrect()
 	{
 		// Arrange & Act
-		var cut = RenderComponent<NavMenu>();
+		var cut = Render<NavMenu>();
 
 		// Assert
 		var counterLink = cut.Find("a[href='/counter']");
@@ -53,7 +53,7 @@ public class NavMenuTests : MudBlazorTestContext
 	public async Task NavMenu_WeatherLinkText_IsCorrect()
 	{
 		// Arrange & Act
-		var cut = RenderComponent<NavMenu>();
+		var cut = Render<NavMenu>();
 
 		// Assert
 		var weatherLink = cut.Find("a[href='/weather']");
@@ -64,7 +64,7 @@ public class NavMenuTests : MudBlazorTestContext
 	public async Task NavMenu_SettingsGroupExists()
 	{
 		// Arrange & Act
-		var cut = RenderComponent<NavMenu>();
+		var cut = Render<NavMenu>();
 
 		// Assert - Verify Settings group with Config link exists
 		var configLink = cut.Find("a[href='/admin/config']");
@@ -76,7 +76,7 @@ public class NavMenuTests : MudBlazorTestContext
 	public async Task NavMenu_SecurityLinkExists()
 	{
 		// Arrange & Act
-		var cut = RenderComponent<NavMenu>();
+		var cut = Render<NavMenu>();
 
 		// Assert
 		var securityLink = cut.Find("a[href='/security']");
@@ -88,7 +88,7 @@ public class NavMenuTests : MudBlazorTestContext
 	public async Task NavMenu_ApplicationTitleExists()
 	{
 		// Arrange & Act
-		var cut = RenderComponent<NavMenu>();
+		var cut = Render<NavMenu>();
 
 		// Assert
 		var markup = cut.Markup;
@@ -99,7 +99,7 @@ public class NavMenuTests : MudBlazorTestContext
 	public async Task NavMenu_SecondaryTextExists()
 	{
 		// Arrange & Act
-		var cut = RenderComponent<NavMenu>();
+		var cut = Render<NavMenu>();
 
 		// Assert
 		var markup = cut.Markup;
