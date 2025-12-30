@@ -41,14 +41,20 @@ public partial class Commands
 		
 		if (location.IsNone || location.IsExit)
 		{
-			await NotifyService!.Notify(executor, "Default home location is invalid.");
-			return new CallState(Errors.ErrorInvalidRoom);
+		return await NotifyService!.NotifyAndReturn(
+			executor.Object().DBRef,
+			errorReturn: ErrorMessages.Returns.NotARoom,
+			notifyMessage: "Default home location is invalid.",
+			shouldNotify: true);
 		}
 
 		if (!await ValidateService!.Valid(IValidateService.ValidationType.Name, name, new None()))
 		{
-			await NotifyService!.Notify(executor, "Invalid name for a thing.");
-			return new CallState(Errors.ErrorBadObjectName);
+			return await NotifyService!.NotifyAndReturn(
+				executor.Object().DBRef,
+				errorReturn: ErrorMessages.Returns.BadObjectName,
+				notifyMessage: ErrorMessages.Notifications.InvalidNameThing,
+				shouldNotify: true);
 		}
 		
 		var thing = await Mediator!.Send(new CreateThingCommand(name.ToPlainText(),
@@ -248,8 +254,11 @@ public partial class Commands
 					{
 						if (!newOwnerObj.IsPlayer)
 						{
-							await NotifyService!.Notify(executor, "New owner must be a player.");
-							return Errors.ErrorInvalidPlayer;
+					return await NotifyService!.NotifyAndReturn(
+						executor.Object().DBRef,
+						errorReturn: ErrorMessages.Returns.InvalidPlayer,
+						notifyMessage: ErrorMessages.Notifications.MustBePlayer,
+						shouldNotify: true);
 						}
 
 						var result = await ManipulateSharpObjectService!.SetOwner(executor, obj, newOwnerObj.AsPlayer, true);
@@ -297,8 +306,11 @@ public partial class Commands
 
 				if (await obj.HasFlag("SAFE") && !override_)
 				{
-					await NotifyService!.Notify(executor, "That object is SAFE. Use @nuke to override.");
-					return Errors.ErrorSafeObject;
+				return await NotifyService!.NotifyAndReturn(
+					executor.Object().DBRef,
+					errorReturn: ErrorMessages.Returns.SafeObject,
+					notifyMessage: "That object is SAFE. Use @nuke to override.",
+					shouldNotify: true);
 				}
 
 				if (await obj.HasFlag("GOING"))
@@ -373,8 +385,11 @@ public partial class Commands
 						{
 							if (!destObj.IsRoom)
 							{
-								await NotifyService!.Notify(executor, "Invalid destination for exit.");
-								return Errors.ErrorInvalidDestination;
+						return await NotifyService!.NotifyAndReturn(
+							executor.Object().DBRef,
+							errorReturn: ErrorMessages.Returns.InvalidDestination,
+							notifyMessage: "Invalid destination for exit.",
+							shouldNotify: true);
 							}
 
 							var destinationRoom = destObj.AsRoom;
@@ -416,8 +431,11 @@ public partial class Commands
 						{
 							if (!destObj.IsRoom)
 							{
-								await NotifyService!.Notify(executor, "Home must be a room.");
-								return Errors.ErrorInvalidDestination;
+						return await NotifyService!.NotifyAndReturn(
+							executor.Object().DBRef,
+							errorReturn: ErrorMessages.Returns.InvalidDestination,
+							notifyMessage: "Home must be a room.",
+							shouldNotify: true);
 							}
 
 							// Convert to AnySharpContent for SetObjectHomeCommand
@@ -437,8 +455,11 @@ public partial class Commands
 						{
 							if (!destObj.IsRoom)
 							{
-								await NotifyService!.Notify(executor, "Drop-to must be a room.");
-								return Errors.ErrorInvalidDestination;
+						return await NotifyService!.NotifyAndReturn(
+							executor.Object().DBRef,
+							errorReturn: ErrorMessages.Returns.InvalidDestination,
+							notifyMessage: "Drop-to must be a room.",
+							shouldNotify: true);
 							}
 
 							// Link the room to its drop-to
@@ -449,8 +470,11 @@ public partial class Commands
 					);
 				}
 
-				await NotifyService!.Notify(executor, "Invalid object type for linking.");
-				return Errors.ErrorInvalidObjectType;
+				return await NotifyService!.NotifyAndReturn(
+					executor.Object().DBRef,
+					errorReturn: ErrorMessages.Returns.InvalidObjectType,
+					notifyMessage: "Invalid object type for linking.",
+					shouldNotify: true);
 			}
 		);
 	}
@@ -533,8 +557,11 @@ public partial class Commands
 				// Check if marked for destruction
 				if (!await obj.HasFlag("GOING"))
 				{
-					await NotifyService!.Notify(executor, "That object is not marked for destruction.");
-					return Errors.ErrorNotGoing;
+				return await NotifyService!.NotifyAndReturn(
+					executor.Object().DBRef,
+					errorReturn: ErrorMessages.Returns.NotGoing,
+					notifyMessage: "That object is not marked for destruction.",
+					shouldNotify: true);
 				}
 
 				// Remove GOING and GOING_TWICE flags
@@ -830,7 +857,7 @@ public partial class Commands
 			if (locateResult.IsError || !locateResult.AsSharpObject.IsRoom)
 			{
 				await NotifyService!.Notify(executor, "Source must be a room.");
-				return new CallState(Errors.ErrorInvalidRoom);
+				return new CallState(ErrorMessages.Returns.NotARoom);
 			}
 			sourceRoom = locateResult.AsSharpObject.AsRoom;
 		}
@@ -899,8 +926,11 @@ public partial class Commands
 		
 		if (location.IsNone || location.IsExit)
 		{
-			await NotifyService!.Notify(executor, "Default home location is invalid.");
-			return new CallState(Errors.ErrorInvalidRoom);
+		return await NotifyService!.NotifyAndReturn(
+			executor.Object().DBRef,
+			errorReturn: ErrorMessages.Returns.NotARoom,
+			notifyMessage: "Default home location is invalid.",
+			shouldNotify: true);
 		}
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
@@ -918,8 +948,11 @@ public partial class Commands
 
 				if (obj.IsPlayer)
 				{
-					await NotifyService!.Notify(executor, "You cannot clone players.");
-					return Errors.ErrorInvalidObjectType;
+					return await NotifyService!.NotifyAndReturn(
+						executor.Object().DBRef,
+						errorReturn: ErrorMessages.Returns.InvalidObjectType,
+						notifyMessage: "You cannot clone players.",
+						shouldNotify: true);
 				}
 
 				// Determine new name
@@ -961,8 +994,11 @@ public partial class Commands
 				}
 				else
 				{
-					await NotifyService!.Notify(executor, "Cannot clone this object type.");
-					return Errors.ErrorInvalidObjectType;
+					return await NotifyService!.NotifyAndReturn(
+						executor.Object().DBRef,
+						errorReturn: ErrorMessages.Returns.InvalidObjectType,
+						notifyMessage: "Cannot clone this object type.",
+						shouldNotify: true);
 				}
 
 				// Get the cloned object
@@ -1106,8 +1142,11 @@ public partial class Commands
 					return CallState.Empty;
 				}
 
-				await NotifyService!.Notify(executor, "Invalid object type for unlinking.");
-				return Errors.ErrorInvalidObjectType;
+					return await NotifyService!.NotifyAndReturn(
+						executor.Object().DBRef,
+						errorReturn: ErrorMessages.Returns.InvalidObjectType,
+						notifyMessage: "Invalid object type.",
+						shouldNotify: true);
 			}
 		);
 	}
