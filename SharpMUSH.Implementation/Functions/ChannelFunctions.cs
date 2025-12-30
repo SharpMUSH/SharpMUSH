@@ -88,7 +88,6 @@ public partial class Functions
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
 		var message = parser.CurrentState.Arguments["1"].Message!;
 
-		// TODO: Use standardized method.
 		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
 			NotifyService!, channelName, true);
 
@@ -526,7 +525,6 @@ public partial class Functions
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
 		var message = parser.CurrentState.Arguments["1"].Message!;
 
-		// TODO: Use standardized method.
 		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
 			NotifyService!, channelName, true);
 

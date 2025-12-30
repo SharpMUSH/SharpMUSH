@@ -107,9 +107,20 @@ public partial class Functions
 
 		if (int.TryParse(arg0, out var port))
 		{
-			// TODO: CanSee in case of Dark.
 			var data2 = ConnectionService!.Get(port);
-			return new CallState(data2?.Connected?.TotalSeconds.ToString(CultureInfo.InvariantCulture) ?? "-1");
+			if (data2 is null || data2.Ref is null)
+			{
+				return new CallState("-1");
+			}
+
+			// Check visibility of the connected player
+			var connectedPlayer = await Mediator!.Send(new GetObjectNodeQuery(data2.Ref.Value));
+			if (!await PermissionService!.CanSee(executor, connectedPlayer.Known))
+			{
+				return new CallState("-1");
+			}
+
+			return new CallState(data2.Connected?.TotalSeconds.ToString(CultureInfo.InvariantCulture) ?? "-1");
 		}
 
 		var maybeLocate = await LocateService!.LocatePlayerAndNotifyIfInvalid(parser, executor, executor,
@@ -121,7 +132,12 @@ public partial class Functions
 
 		var located = maybeLocate.AsPlayer;
 
-		// TODO: CanSee in case of Dark.
+		// Check visibility before returning connection information
+		if (!await PermissionService!.CanSee(executor, located.Object))
+		{
+			return new CallState("-1");
+		}
+
 		var data = await ConnectionService!.Get(located.Object.DBRef).FirstAsync();
 		return new CallState(data.Connected?.TotalSeconds.ToString(CultureInfo.InvariantCulture) ?? "-1");
 	}
@@ -419,10 +435,20 @@ public partial class Functions
 
 		if (int.TryParse(arg0, out var port))
 		{
-			// TODO: CanSee in case of Dark.
-
 			var data2 = ConnectionService!.Get(port);
-			return new CallState(data2?.Idle?.TotalSeconds.ToString(CultureInfo.InvariantCulture) ?? "-1");
+			if (data2 is null || data2.Ref is null)
+			{
+				return new CallState("-1");
+			}
+
+			// Check visibility of the connected player
+			var connectedPlayer = await Mediator!.Send(new GetObjectNodeQuery(data2.Ref.Value));
+			if (!await PermissionService!.CanSee(executor, connectedPlayer.Known))
+			{
+				return new CallState("-1");
+			}
+
+			return new CallState(data2.Idle?.TotalSeconds.ToString(CultureInfo.InvariantCulture) ?? "-1");
 		}
 
 		var maybeLocate = await LocateService!.LocatePlayerAndNotifyIfInvalid(parser, executor, executor,
@@ -433,9 +459,14 @@ public partial class Functions
 		}
 
 		var locate = maybeLocate.AsPlayer;
-		var data = ConnectionService!.Get(locate.Object.DBRef);
 
-		// TODO: CanSee in case of Dark.
+		// Check visibility before returning connection information
+		if (!await PermissionService!.CanSee(executor, locate.Object))
+		{
+			return new CallState("-1");
+		}
+
+		var data = ConnectionService!.Get(locate.Object.DBRef);
 		return new CallState(await data
 			.Select(x => x.Idle?.TotalSeconds ?? -1)
 			.MinAsync());

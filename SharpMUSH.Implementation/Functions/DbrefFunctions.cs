@@ -256,8 +256,7 @@ public partial class Functions
 
 				if (!locate.IsRoom)
 				{
-					// TODO: Create a proper error constant for this.
-					return "#-1 OBJECT IS NOT A ROOM";
+					return Errors.ErrorNotARoom;
 				}
 
 				// Todo: Turn Content into async enumerable.

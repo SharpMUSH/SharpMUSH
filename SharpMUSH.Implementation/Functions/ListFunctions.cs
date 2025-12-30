@@ -72,14 +72,12 @@ public partial class Functions
 
 		if (!int.TryParse(first, out var firstNumber))
 		{
-			// TODO: Indicate arg number.
-			return new CallState(Errors.ErrorInteger);
+			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, "FIRST (arg 2)"));
 		}
 
 		if (!int.TryParse(length, out var lengthNumber))
 		{
-			// TODO: Indicate arg number.
-			return new CallState(Errors.ErrorInteger);
+			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, "LENGTH (arg 3)"));
 		}
 
 		var list = MModule.split2(delimiter, listArg);
