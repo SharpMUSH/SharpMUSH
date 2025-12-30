@@ -28,7 +28,6 @@ public class WizardCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask AllhaltCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@allhalt"));
@@ -209,7 +208,6 @@ public class WizardCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask PollCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@poll"));
@@ -365,6 +363,97 @@ public class WizardCommandTests
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s 
 				=> s.Value.ToString()!.Contains("already visible")));
+	}
+
+	[Test]
+	public async ValueTask PurgeCommand()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@purge"));
+
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+	}
+
+	[Test]
+	public async ValueTask ReadCacheCommand()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@readcache"));
+
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("startup")));
+	}
+
+	[Test]
+	public async ValueTask ShutdownCommand()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@shutdown"));
+
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("SHUTDOWN") || s.Contains("web application")));
+	}
+
+	[Test]
+	public async ValueTask ShutdownRebootCommand()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@shutdown/reboot"));
+
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("REBOOT") || s.Contains("web")));
+	}
+
+	[Test]
+	public async ValueTask ChownallCommand()
+	{
+		// This test may need adjustment based on actual player setup
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@chownall #1"));
+
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+	}
+
+	[Test]
+	public async ValueTask SuggestListCommand()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@suggest/list"));
+
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+	}
+
+	[Test]
+	public async ValueTask SuggestAddCommand()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@suggest/add test=word"));
+
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Added")));
+	}
+
+	[Test]
+	public async ValueTask PollSetCommand()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@poll Test poll message"));
+
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("set") || s.Contains("Permission")));
+	}
+
+	[Test]
+	public async ValueTask PollClearCommand()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@poll/clear"));
+
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("cleared") || s.Contains("Permission")));
 	}
 
 
