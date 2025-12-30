@@ -806,11 +806,56 @@ public partial class Commands
 		}
 
 		var exitObj = exit.AsExit;
-		// TODO: Check if the exit has a destination attribute.
-		var destination = await exitObj.Home.WithCancellation(CancellationToken.None);
+		
+		// Check if the exit has a DESTINATION attribute (variable exit)
+		// Variable exits have home set to #-1 and use DESTINATION attribute
+		var homeLocation = await exitObj.Home.WithCancellation(CancellationToken.None);
+		AnySharpContainer destination;
+		
+		if (homeLocation.Object().DBRef.Number == -1)
+		{
+			// This is a variable exit - check for DESTINATION attribute
+			var destAttr = await AttributeService!.GetAttributeAsync(
+				executor, exitObj, "DESTINATION", IAttributeService.AttributeMode.Read, false);
+			
+			if (destAttr.IsNone || destAttr.IsError)
+			{
+				await NotifyService!.Notify(executor, "That exit doesn't go anywhere.");
+				return CallState.Empty;
+			}
+			
+			var destValue = destAttr.AsAttribute.Last().Value.ToPlainText();
+			// Locate the destination
+			var located = await LocateService!.LocateAndNotifyIfInvalid(
+				parser,
+				executor,
+				executor,
+				destValue!,
+				LocateFlags.All);
+			
+			if (!located.IsValid())
+			{
+				await NotifyService!.Notify(executor, "That exit doesn't go anywhere.");
+				return CallState.Empty;
+			}
+			
+			// Get the actual object and ensure it's a container (room, thing, or player)
+			var locatedObj = located.WithoutError().WithoutNone();
+			if (!locatedObj.IsContainer)
+			{
+				await NotifyService!.Notify(executor, "That exit doesn't go to a valid location.");
+				return CallState.Empty;
+			}
+			
+			destination = locatedObj.AsContainer;
+		}
+		else
+		{
+			// Regular exit - use home
+			destination = homeLocation;
+		}
 
-		if (!await PermissionService!.CanGoto(executor, exitObj,
-			    await exitObj.Home.WithCancellation(CancellationToken.None)))
+		if (!await PermissionService!.CanGoto(executor, exitObj, destination))
 		{
 			await NotifyService!.Notify(executor, "You can't go that way.");
 			return CallState.Empty;
