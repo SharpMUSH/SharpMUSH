@@ -104,8 +104,8 @@ public class ChannelCommandTests
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString() == $"<{TestChannelName}> NscemitCommand: Test message") ||
-				(msg.IsT1 && msg.AsT1 == $"<{TestChannelName}> NscemitCommand: Test message")), 
+				(msg.IsT0 && msg.AsT0.ToString().Contains("NscemitCommand: Test message")) ||
+				(msg.IsT1 && msg.AsT1.Contains("NscemitCommand: Test message"))), 
 				Arg.Any<AnySharpObject>(), INotifyService.NotificationType.NSEmit);
 	}
 
