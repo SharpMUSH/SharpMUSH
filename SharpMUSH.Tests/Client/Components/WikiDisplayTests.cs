@@ -18,9 +18,9 @@ public class WikiDisplayTests
 	public async Task WikiDisplay_WithArticle_DisplaysTitle()
 	{
 		// Arrange
-		using var ctx = new Bunit.TestContext();
+		using var ctx = new BunitContext();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
-		ctx.AddTestAuthorization(); // Required for AuthorizeView component
+		ctx.AddAuthorization(); // Required for AuthorizeView component
 		ctx.Services.AddMudServices();
 
 		// Add WikiService required by component
@@ -29,7 +29,7 @@ public class WikiDisplayTests
 		var article = new WikiArticle("Test Article", "This is test content", null);
 
 		// Act
-		var cut = ctx.RenderComponent<WikiDisplay>(parameters => parameters
+		var cut = ctx.Render<WikiDisplay>(parameters => parameters
 			.Add(p => p.Slug, "test-article")
 			.Add(p => p.Article, article)
 			.Add(p => p.ActivateEditMode, () => Task.CompletedTask));
@@ -43,9 +43,9 @@ public class WikiDisplayTests
 	public async Task WikiDisplay_WithArticle_RendersContent()
 	{
 		// Arrange
-		using var ctx = new Bunit.TestContext();
+		using var ctx = new BunitContext();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
-		ctx.AddTestAuthorization();
+		ctx.AddAuthorization();
 		ctx.Services.AddMudServices();
 
 		// Add WikiService required by component
@@ -54,7 +54,7 @@ public class WikiDisplayTests
 		var article = new WikiArticle("Test Article", "This is **bold** content", null);
 
 		// Act
-		var cut = ctx.RenderComponent<WikiDisplay>(parameters => parameters
+		var cut = ctx.Render<WikiDisplay>(parameters => parameters
 			.Add(p => p.Slug, "test-article")
 			.Add(p => p.Article, article)
 			.Add(p => p.ActivateEditMode, () => Task.CompletedTask));
@@ -69,8 +69,8 @@ public class WikiDisplayTests
 	public async Task WikiDisplay_WithoutArticle_ShowsInfoMessage()
 	{
 		// Arrange
-		using var ctx = new Bunit.TestContext();
-		ctx.AddTestAuthorization();
+		using var ctx = new BunitContext();
+		ctx.AddAuthorization();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
 
@@ -78,7 +78,7 @@ public class WikiDisplayTests
 		ctx.Services.AddSingleton<WikiService>();
 
 		// Act
-		var cut = ctx.RenderComponent<WikiDisplay>(parameters => parameters
+		var cut = ctx.Render<WikiDisplay>(parameters => parameters
 			.Add(p => p.Slug, "nonexistent")
 			.Add(p => p.Article, null)
 			.Add(p => p.ActivateEditMode, () => Task.CompletedTask));
@@ -92,8 +92,8 @@ public class WikiDisplayTests
 	public async Task WikiDisplay_WithoutArticle_WhenAuthorized_ShowsCreateOption()
 	{
 		// Arrange
-		using var ctx = new Bunit.TestContext();
-		var authContext = ctx.AddTestAuthorization();
+		using var ctx = new BunitContext();
+		var authContext = ctx.AddAuthorization();
 		authContext.SetAuthorized("TestUser");
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
@@ -102,7 +102,7 @@ public class WikiDisplayTests
 		ctx.Services.AddSingleton<WikiService>();
 
 		// Act
-		var cut = ctx.RenderComponent<WikiDisplay>(parameters => parameters
+		var cut = ctx.Render<WikiDisplay>(parameters => parameters
 			.Add(p => p.Slug, "new-page")
 			.Add(p => p.Article, null)
 			.Add(p => p.ActivateEditMode, () => Task.CompletedTask));
@@ -117,8 +117,8 @@ public class WikiDisplayTests
 	public async Task WikiDisplay_WhenAuthorized_ShowsEditButton()
 	{
 		// Arrange
-		using var ctx = new Bunit.TestContext();
-		var authContext = ctx.AddTestAuthorization();
+		using var ctx = new BunitContext();
+		var authContext = ctx.AddAuthorization();
 		authContext.SetAuthorized("TestUser");
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
@@ -129,7 +129,7 @@ public class WikiDisplayTests
 		var article = new WikiArticle("Test Article", "Content", null);
 
 		// Act
-		var cut = ctx.RenderComponent<WikiDisplay>(parameters => parameters
+		var cut = ctx.Render<WikiDisplay>(parameters => parameters
 			.Add(p => p.Slug, "test-article")
 			.Add(p => p.Article, article)
 			.Add(p => p.ActivateEditMode, () => Task.CompletedTask));
@@ -144,8 +144,8 @@ public class WikiDisplayTests
 	public async Task WikiDisplay_WhenNotAuthorized_DoesNotShowEditButton()
 	{
 		// Arrange
-		using var ctx = new Bunit.TestContext();
-		ctx.AddTestAuthorization(); // Not authorized
+		using var ctx = new BunitContext();
+		ctx.AddAuthorization(); // Not authorized
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
 
@@ -155,7 +155,7 @@ public class WikiDisplayTests
 		var article = new WikiArticle("Test Article", "Content", null);
 
 		// Act
-		var cut = ctx.RenderComponent<WikiDisplay>(parameters => parameters
+		var cut = ctx.Render<WikiDisplay>(parameters => parameters
 			.Add(p => p.Slug, "test-article")
 			.Add(p => p.Article, article)
 			.Add(p => p.ActivateEditMode, () => Task.CompletedTask));
@@ -169,8 +169,8 @@ public class WikiDisplayTests
 	public async Task WikiDisplay_HomeSlug_DisplaysAsHero()
 	{
 		// Arrange
-		using var ctx = new Bunit.TestContext();
-		ctx.AddTestAuthorization();
+		using var ctx = new BunitContext();
+		ctx.AddAuthorization();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
 
@@ -180,7 +180,7 @@ public class WikiDisplayTests
 		var article = new WikiArticle("Home", "Welcome", null);
 
 		// Act
-		var cut = ctx.RenderComponent<WikiDisplay>(parameters => parameters
+		var cut = ctx.Render<WikiDisplay>(parameters => parameters
 			.Add(p => p.Slug, "home")
 			.Add(p => p.Article, article)
 			.Add(p => p.ActivateEditMode, () => Task.CompletedTask));

@@ -13,7 +13,7 @@ public class CounterTests : MudBlazorTestContext
 	public async Task Counter_InitialState_DisplaysZero()
 	{
 		// Arrange & Act
-		var cut = RenderComponent<Counter>();
+		var cut = Render<Counter>();
 
 		// Assert
 		var statusParagraph = cut.Find("p[role='status']");
@@ -24,7 +24,7 @@ public class CounterTests : MudBlazorTestContext
 	public async Task Counter_ClickButton_IncrementsCount()
 	{
 		// Arrange
-		var cut = RenderComponent<Counter>();
+		var cut = Render<Counter>();
 
 		// Act
 		var button = cut.Find("button");
@@ -39,7 +39,7 @@ public class CounterTests : MudBlazorTestContext
 	public async Task Counter_MultipleClicks_IncrementsCorrectly()
 	{
 		// Arrange
-		var cut = RenderComponent<Counter>();
+		var cut = Render<Counter>();
 		var button = cut.Find("button");
 
 		// Act
@@ -56,7 +56,7 @@ public class CounterTests : MudBlazorTestContext
 	public async Task Counter_RendersTitle()
 	{
 		// Arrange & Act
-		var cut = RenderComponent<Counter>();
+		var cut = Render<Counter>();
 
 		// Assert
 		var heading = cut.Find("h1");
@@ -67,7 +67,7 @@ public class CounterTests : MudBlazorTestContext
 	public async Task Counter_ButtonHasCorrectText()
 	{
 		// Arrange & Act
-		var cut = RenderComponent<Counter>();
+		var cut = Render<Counter>();
 
 		// Assert
 		var button = cut.Find("button");
