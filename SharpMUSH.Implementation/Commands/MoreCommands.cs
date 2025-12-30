@@ -13,7 +13,6 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
-using Errors = SharpMUSH.Library.Definitions.Errors;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -415,8 +414,11 @@ public partial class Commands
 				// Check permissions
 				if (!await PermissionService!.Controls(executor, obj))
 				{
-					await NotifyService!.Notify(executor, Errors.ErrorPerm);
-					return new CallState(Errors.ErrorPerm);
+					return await NotifyService!.NotifyAndReturn(
+						executor.Object().DBRef,
+						errorReturn: ErrorMessages.Returns.PermissionDenied,
+						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
+						shouldNotify: true);
 				}
 				
 				// Check if lock exists

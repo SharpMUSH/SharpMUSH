@@ -17,8 +17,12 @@ public static class AdminMail
 
 		if (!(executor.IsGod() || await executor.IsWizard()))
 		{
-			await notifyService!.Notify(executor, Errors.ErrorPerm);
-			return MModule.single(Errors.ErrorPerm);
+			var errorResult = await notifyService!.NotifyAndReturn(
+				executor.Object().DBRef,
+				errorReturn: ErrorMessages.Returns.PermissionDenied,
+				notifyMessage: ErrorMessages.Notifications.PermissionDenied,
+				shouldNotify: true);
+			return MModule.single(errorResult.Message);
 		}
 		
 		switch (switches)
