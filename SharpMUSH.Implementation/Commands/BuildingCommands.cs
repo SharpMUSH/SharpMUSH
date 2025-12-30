@@ -5,7 +5,6 @@ using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
-using SharpMUSH.Library.Helpers;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -125,7 +124,7 @@ public partial class Commands
 				
 				// If rename was successful, trigger OBJECT`RENAME event
 				// PennMUSH spec: object`rename (objid, new name, old name)
-				if (result.ToString() != Errors.ErrorPerm)
+				if (result.ToString() != ErrorMessages.Returns.PermissionDenied)
 				{
 					await EventService!.TriggerEventAsync(
 						parser,
@@ -236,8 +235,7 @@ public partial class Commands
 			{
 				if (!await PermissionService!.Controls(executor, obj))
 				{
-					return await ErrorNotifier.NotifyAndReturn(
-						NotifyService!,
+					return await NotifyService!.NotifyAndReturn(
 						executor.Object().DBRef,
 						errorReturn: ErrorMessages.Returns.PermissionDenied,
 						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
@@ -290,8 +288,11 @@ public partial class Commands
 			{
 				if (!await PermissionService!.Controls(executor, obj))
 				{
-					await NotifyService!.Notify(executor, Errors.ErrorPerm);
-					return Errors.ErrorPerm;
+					return await NotifyService!.NotifyAndReturn(
+						executor.Object().DBRef,
+						errorReturn: ErrorMessages.Returns.PermissionDenied,
+						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
+						shouldNotify: true);
 				}
 
 				if (await obj.HasFlag("SAFE") && !override_)
@@ -343,8 +344,11 @@ public partial class Commands
 			{
 				if (!await PermissionService!.Controls(executor, exitObj))
 				{
-					await NotifyService!.Notify(executor, Errors.ErrorPerm);
-					return Errors.ErrorPerm;
+					return await NotifyService!.NotifyAndReturn(
+						executor.Object().DBRef,
+						errorReturn: ErrorMessages.Returns.PermissionDenied,
+						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
+						shouldNotify: true);
 				}
 
 				// Handle different link types
@@ -384,15 +388,18 @@ public partial class Commands
 								
 								if (!hasLinkOk)
 								{
-									await NotifyService!.Notify(executor, "You can't link to that.");
-									return Errors.ErrorPerm;
+									return await NotifyService!.NotifyAndReturn(
+										executor.Object().DBRef,
+										errorReturn: ErrorMessages.Returns.PermissionDenied,
+										notifyMessage: "You can't link to that.",
+										shouldNotify: true);
 								}
 							}
 							
 							// TODO: Check if exit is unlinked and check @lock/link, if linking someone else's exit @chown it and set HALT,
 							// and charge link cost (usually 1 penny).
 
-							await AttributeService!.SetAttributeAsync(executor, exitObj, AttrLinkType, MModule.empty());
+			await AttributeService!.SetAttributeAsync(executor, exitObj, AttrLinkType, MModule.empty());
 							
 							await Mediator!.Send(new LinkExitCommand(exitObj.AsExit, destinationRoom));
 
@@ -462,8 +469,11 @@ public partial class Commands
 			{
 				if (!await PermissionService!.Controls(executor, obj))
 				{
-					await NotifyService!.Notify(executor, Errors.ErrorPerm);
-					return Errors.ErrorPerm;
+					return await NotifyService!.NotifyAndReturn(
+						executor.Object().DBRef,
+						errorReturn: ErrorMessages.Returns.PermissionDenied,
+						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
+						shouldNotify: true);
 				}
 
 				// @nuke bypasses SAFE flag
@@ -513,8 +523,11 @@ public partial class Commands
 			{
 				if (!await PermissionService!.Controls(executor, obj))
 				{
-					await NotifyService!.Notify(executor, Errors.ErrorPerm);
-					return Errors.ErrorPerm;
+					return await NotifyService!.NotifyAndReturn(
+						executor.Object().DBRef,
+						errorReturn: ErrorMessages.Returns.PermissionDenied,
+						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
+						shouldNotify: true);
 				}
 
 				// Check if marked for destruction
@@ -568,8 +581,11 @@ public partial class Commands
 			{
 				if (!await PermissionService!.Controls(executor, obj))
 				{
-					await NotifyService!.Notify(executor, Errors.ErrorPerm);
-					return Errors.ErrorPerm;
+					return await NotifyService!.NotifyAndReturn(
+						executor.Object().DBRef,
+						errorReturn: ErrorMessages.Returns.PermissionDenied,
+						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
+						shouldNotify: true);
 				}
 
 				// Handle "none" to remove zone
@@ -590,8 +606,11 @@ public partial class Commands
 						// If not controlled, check ChZone lock
 						if (!canZone && !LockService!.Evaluate(LockType.ChZone, zoneObj, executor))
 						{
-							await NotifyService!.Notify(executor, "Permission denied: You cannot zone to that object.");
-							return Errors.ErrorPerm;
+							return await NotifyService!.NotifyAndReturn(
+								executor.Object().DBRef,
+								errorReturn: ErrorMessages.Returns.PermissionDenied,
+								notifyMessage: "Permission denied: You cannot zone to that object.",
+								shouldNotify: true);
 						}
 
 						// Set the zone using database edge
@@ -738,8 +757,11 @@ public partial class Commands
 			{
 				if (!await PermissionService!.Controls(executor, obj))
 				{
-					await NotifyService!.Notify(executor, Errors.ErrorPerm);
-					return Errors.ErrorPerm;
+					return await NotifyService!.NotifyAndReturn(
+						executor.Object().DBRef,
+						errorReturn: ErrorMessages.Returns.PermissionDenied,
+						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
+						shouldNotify: true);
 				}
 
 				await Mediator!.Send(new SetLockCommand(obj.Object(), lockType, lockKey));
@@ -770,8 +792,11 @@ public partial class Commands
 			{
 				if (!await PermissionService!.Controls(executor, obj))
 				{
-					await NotifyService!.Notify(executor, Errors.ErrorPerm);
-					return Errors.ErrorPerm;
+					return await NotifyService!.NotifyAndReturn(
+						executor.Object().DBRef,
+						errorReturn: ErrorMessages.Returns.PermissionDenied,
+						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
+						shouldNotify: true);
 				}
 
 				await Mediator!.Send(new UnsetLockCommand(obj.Object(), lockType));
@@ -813,8 +838,11 @@ public partial class Commands
 		// Check permissions
 		if (!await PermissionService!.Controls(executor, sourceRoom.WithExitOption()))
 		{
-			await NotifyService!.Notify(executor, Errors.ErrorPerm);
-			return new CallState(Errors.ErrorPerm);
+			return await NotifyService!.NotifyAndReturn(
+				executor.Object().DBRef,
+				errorReturn: ErrorMessages.Returns.PermissionDenied,
+				notifyMessage: ErrorMessages.Notifications.PermissionDenied,
+				shouldNotify: true);
 		}
 
 		// Create the exit
@@ -881,8 +909,11 @@ public partial class Commands
 			{
 				if (!await PermissionService!.Controls(executor, obj))
 				{
-					await NotifyService!.Notify(executor, Errors.ErrorPerm);
-					return Errors.ErrorPerm;
+					return await NotifyService!.NotifyAndReturn(
+						executor.Object().DBRef,
+						errorReturn: ErrorMessages.Returns.PermissionDenied,
+						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
+						shouldNotify: true);
 				}
 
 				if (obj.IsPlayer)
@@ -976,8 +1007,11 @@ public partial class Commands
 			{
 				if (!await PermissionService!.Controls(executor, obj))
 				{
-					await NotifyService!.Notify(executor, Errors.ErrorPerm);
-					return Errors.ErrorPerm;
+					return await NotifyService!.NotifyAndReturn(
+						executor.Object().DBRef,
+						errorReturn: ErrorMessages.Returns.PermissionDenied,
+						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
+						shouldNotify: true);
 				}
 
 				// If no moniker provided, clear it
@@ -1008,8 +1042,11 @@ public partial class Commands
 			{
 				if (!await PermissionService!.Controls(executor, target))
 				{
-					await NotifyService!.Notify(executor, Errors.ErrorPerm);
-					return Errors.ErrorPerm;
+					return await NotifyService!.NotifyAndReturn(
+						executor.Object().DBRef,
+						errorReturn: ErrorMessages.Returns.PermissionDenied,
+						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
+						shouldNotify: true);
 				}
 
 				switch (args)
@@ -1045,8 +1082,11 @@ public partial class Commands
 			{
 				if (!await PermissionService!.Controls(executor, obj))
 				{
-					await NotifyService!.Notify(executor, Errors.ErrorPerm);
-					return Errors.ErrorPerm;
+					return await NotifyService!.NotifyAndReturn(
+						executor.Object().DBRef,
+						errorReturn: ErrorMessages.Returns.PermissionDenied,
+						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
+						shouldNotify: true);
 				}
 
 				if (obj.IsExit)

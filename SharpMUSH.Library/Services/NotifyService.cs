@@ -6,6 +6,7 @@ using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messages;
 
@@ -388,5 +389,29 @@ public class NotifyService(IBus publishEndpoint, IConnectionService connections,
 				}
 			}
 		}
+	}
+
+	/// <summary>
+	/// Unified error handling: optionally notify user, then return error.
+	/// The notify message and error return are SEPARATE and can be different strings.
+	/// Callers choose which error and notification to use via ErrorMessages constants.
+	/// </summary>
+	/// <param name="target">Object to notify (DBRef)</param>
+	/// <param name="errorReturn">Error string for return value (e.g., "#-1 PERMISSION DENIED")</param>
+	/// <param name="notifyMessage">Message to show user (e.g., "You don't have permission to do that.")</param>
+	/// <param name="shouldNotify">Whether to send notification to user (required parameter)</param>
+	/// <returns>CallState with error return string</returns>
+	public async ValueTask<CallState> NotifyAndReturn(
+		DBRef target,
+		string errorReturn,
+		string notifyMessage,
+		bool shouldNotify)
+	{
+		if (shouldNotify)
+		{
+			await Notify(target, notifyMessage, sender: null);
+		}
+		
+		return new CallState(errorReturn);
 	}
 }
