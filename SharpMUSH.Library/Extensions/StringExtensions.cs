@@ -8,7 +8,8 @@ public static class StringExtensions
 	private const string Question = "\\?";
 
 	/// <summary>
-	/// TODO: Turn into a proper method of MModule instead.
+	/// Converts a glob pattern to a regex pattern.
+	/// Future consideration: Move to MModule for consistency with F# string handling.
 	/// </summary>
 	/// <param name="str">Glob Pattern</param>
 	/// <returns>Regex Pattern</returns>

@@ -4,7 +4,8 @@ using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Library.Requests;
 
-// TODO: Make it return the new PID so it can be output.
+// Future enhancement: Return the new PID for output/tracking
+// Currently IRequest doesn't support return values
 public record QueueCommandListRequest(
 	MString Command,
 	ParserState State,
@@ -20,7 +21,8 @@ public record QueueDelayedCommandListRequest(
 	ParserState State,
 	TimeSpan Delay) : IRequest;
 
-// TODO: Make it return the new PID so it can be output.
+// Future enhancement: Return the new PID for output/tracking
+// Currently IRequest doesn't support return values
 public record QueueCommandListWithTimeoutRequest(
 	MString Command,
 	ParserState State,

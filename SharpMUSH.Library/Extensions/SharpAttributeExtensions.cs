@@ -40,8 +40,11 @@ public static class SharpAttributeExtensions
 	public static bool IsSafe(this SharpAttribute attribute)
 		=> attribute.Flags.Any(x => x.Name == "SAFE");
 
+	/// <summary>
+	/// Checks if an attribute is a command pattern ($-command).
+	/// Note: This pattern check is centralized here to avoid duplication.
+	/// </summary>
 	public static bool IsCommand(this SharpAttribute attribute)
-		// TODO: Command Pattern. This code is repeated in several places.
 		=> attribute.Flags.All(x => x.Name != "NO_COMMAND") && attribute.Value.ToString().StartsWith('$');
 
 	public static bool IsListen(this SharpAttribute attribute)
