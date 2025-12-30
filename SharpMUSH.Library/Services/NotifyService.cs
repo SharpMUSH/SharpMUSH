@@ -248,8 +248,34 @@ public class NotifyService(IBus publishEndpoint, IConnectionService connections,
 
 	public async ValueTask NotifyExcept(DBRef who, OneOf<MString, string> what, DBRef[] except, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
-		// TODO: Implement when we have DBRef to handle mapping
-		await ValueTask.CompletedTask;
+		if (what.Match(
+			markupString => MModule.getLength(markupString) == 0,
+			str => str.Length == 0
+		))
+		{
+			return;
+		}
+
+		// Get all handles for the target location/object
+		var targetHandles = await connections.Get(who).Select(x => x.Handle).ToArrayAsync();
+		
+		// Get all handles to exclude
+		var excludeHandles = new HashSet<long>();
+		foreach (var exceptDbRef in except)
+		{
+			await foreach (var conn in connections.Get(exceptDbRef))
+			{
+				excludeHandles.Add(conn.Handle);
+			}
+		}
+		
+		// Filter out excluded handles and notify the rest
+		var notifyHandles = targetHandles.Where(h => !excludeHandles.Contains(h)).ToArray();
+		
+		if (notifyHandles.Length > 0)
+		{
+			await Notify(notifyHandles, what, sender, type);
+		}
 	}
 
 	public ValueTask NotifyExcept(AnySharpObject who, OneOf<MString, string> what, DBRef[] except, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
