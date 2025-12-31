@@ -58,7 +58,6 @@ public partial class Commands
 			return new CallState("#-1 NO MATCH");
 		}
 
-		// Check if we're querying or setting lock status
 		if (!args.TryGetValue("1", out var valueArg))
 		{
 			// Query mode - show lock status
