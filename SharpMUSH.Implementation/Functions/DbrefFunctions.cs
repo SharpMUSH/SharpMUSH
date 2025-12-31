@@ -219,15 +219,67 @@ public partial class Functions
 		}
 
 		var exits = Mediator!.CreateStream(new GetEntrancesQuery(target.Object().DBRef));
-		var entrances = new List<string>();
+		var entrances = new List<AnySharpObject>();
 
 		await foreach (var exit in exits)
 		{
-			entrances.Add(exit.Object.DBRef.ToString());
+			entrances.Add(exit);
 		}
 
-		// TODO: Implement type, start, and count filtering when arguments are provided
-		return new CallState(string.Join(" ", entrances));
+		// Parse type filter (default: all)
+		var typeFilter = "a";
+		if (args.TryGetValue("1", out var typeArg))
+		{
+			typeFilter = typeArg.Message!.ToPlainText()?.ToLower() ?? "a";
+		}
+
+		// Parse begin filter (default: 0)
+		var beginFilter = 0;
+		if (args.TryGetValue("2", out var beginArg))
+		{
+			if (int.TryParse(beginArg.Message!.ToPlainText(), out var begin))
+			{
+				beginFilter = begin;
+			}
+		}
+
+		// Parse end filter (default: int.MaxValue)
+		var endFilter = int.MaxValue;
+		if (args.TryGetValue("3", out var endArg))
+		{
+			if (int.TryParse(endArg.Message!.ToPlainText(), out var end))
+			{
+				endFilter = end;
+			}
+		}
+
+		// Filter by type and dbref range
+		var filtered = entrances.Where(entrance =>
+		{
+			var obj = entrance.Object();
+			var dbrefNum = obj.DBRef.Number;
+
+			// Filter by dbref range
+			if (dbrefNum < beginFilter || dbrefNum > endFilter)
+			{
+				return false;
+			}
+
+			// Filter by type
+			if (typeFilter.Contains('a'))
+			{
+				return true; // 'a' means all types
+			}
+
+			if (typeFilter.Contains('e') && entrance.IsExit) return true;
+			if (typeFilter.Contains('t') && entrance.IsThing) return true;
+			if (typeFilter.Contains('p') && entrance.IsPlayer) return true;
+			if (typeFilter.Contains('r') && entrance.IsRoom) return true;
+
+			return false;
+		}).Select(e => e.Object().DBRef.ToString());
+
+		return new CallState(string.Join(" ", filtered));
 	}
 
 	[SharpFunction(Name = "exit", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
