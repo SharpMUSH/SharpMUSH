@@ -3880,7 +3880,6 @@ public partial class Commands
 		MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Emit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// TODO: Make NoEval work
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
@@ -5153,15 +5152,16 @@ public partial class Commands
 	public static async ValueTask<Option<CallState>> Version(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var uptimeData = await ObjectDataService!.GetExpandedServerDataAsync<UptimeData>();
 
-		// TODO: Last Restarted
 		var result = MModule.multipleWithDelimiter(
 			MModule.single("\n"),
 			[
 				MModule.concat(MModule.single("You are connected to "),
 					MModule.single(Configuration!.CurrentValue.Net.MudName)),
 				MModule.concat(MModule.single("Address: "), MModule.single(Configuration.CurrentValue.Net.MudUrl)),
-				MModule.single("SharpMUSH version 0")
+				MModule.single("SharpMUSH version 0"),
+				MModule.single($"Last restarted: {uptimeData!.LastRebootTime:ddd MMM dd HH:mm:ss yyyy}")
 			]);
 
 		await NotifyService!.Notify(executor, result);
